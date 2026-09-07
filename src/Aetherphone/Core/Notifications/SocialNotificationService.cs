@@ -23,6 +23,7 @@ internal sealed class SocialNotificationService : IDisposable
         SocialActivity.VelvetApp,
         SocialActivity.YellowPagesApp,
         SocialActivity.MessageApp,
+        SocialActivity.MusicApp,
     };
 
     private readonly AethernetSession session;

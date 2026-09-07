@@ -11,12 +11,26 @@ internal static class EmptyState
     private const float ActionPadding = 44f;
     private const float ActionMinWidth = 132f;
 
-    public static void Draw(Rect body, AppSkin ui, FontAwesomeIcon icon, string title, string hint) =>
-        DrawBody(body, ui, icon, title, hint);
+    private const float FontAwesomeGlyph = 1.7f;
+    private const float PhoneGlyph = 34f;
 
-    public static bool Draw(Rect body, AppSkin ui, FontAwesomeIcon icon, string title, string hint, string actionLabel)
+    public static void Draw(Rect body, AppSkin ui, FontAwesomeIcon icon, string title, string hint) =>
+        DrawBody(body, ui, IconGlyph.Of(icon), title, hint, 0f);
+
+    public static void Draw(Rect body, AppSkin ui, string glyph, string title, string hint) =>
+        DrawBody(body, ui, glyph, title, hint, PhoneGlyph);
+
+    public static bool Draw(Rect body, AppSkin ui, FontAwesomeIcon icon, string title, string hint,
+        string actionLabel) =>
+        DrawWithAction(body, ui, IconGlyph.Of(icon), title, hint, actionLabel, 0f);
+
+    public static bool Draw(Rect body, AppSkin ui, string glyph, string title, string hint, string actionLabel) =>
+        DrawWithAction(body, ui, glyph, title, hint, actionLabel, PhoneGlyph);
+
+    private static bool DrawWithAction(Rect body, AppSkin ui, string glyph, string title, string hint,
+        string actionLabel, float glyphHeight)
     {
-        var bottom = DrawBody(body, ui, icon, title, hint);
+        var bottom = DrawBody(body, ui, glyph, title, hint, glyphHeight);
         if (actionLabel.Length == 0)
         {
             return false;
@@ -32,7 +46,7 @@ internal static class EmptyState
             "emptyState.action");
     }
 
-    private static float DrawBody(Rect body, AppSkin ui, FontAwesomeIcon icon, string title, string hint)
+    private static float DrawBody(Rect body, AppSkin ui, string glyph, string title, string hint, float glyphHeight)
     {
         var scale = UiScale.Current;
         var centerX = body.Center.X;
@@ -40,7 +54,15 @@ internal static class EmptyState
         var drawList = ImGui.GetWindowDrawList();
         var iconCenter = new Vector2(centerX, baseY);
         drawList.AddCircleFilled(iconCenter, 34f * scale, ImGui.GetColorU32(ui.FieldSurface), 32);
-        AppSkin.Icon(iconCenter, IconGlyph.Of(icon), ui.MutedInk, 1.7f);
+        if (glyphHeight > 0f)
+        {
+            PhoneIcon.Draw(drawList, iconCenter, glyph, ui.MutedInk, glyphHeight * scale);
+        }
+        else
+        {
+            AppSkin.Icon(iconCenter, glyph, ui.MutedInk, FontAwesomeGlyph);
+        }
+
         var titleY = baseY + 58f * scale;
         Typography.DrawCentered(new Vector2(centerX, titleY), title, ui.TitleInk, TextStyles.Title3);
         if (hint.Length == 0)

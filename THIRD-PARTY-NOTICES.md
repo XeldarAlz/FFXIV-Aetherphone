@@ -20,7 +20,7 @@ Bold) are redistributed unmodified.
 
 The application icons under `src/Aetherphone/Icons/` are derived from
 [Tabler Icons](https://tabler.io/icons) (recolored and rasterized to PNG).
-`src/Aetherphone/Fonts/TablerIcons.ttf` is a 30 glyph subset of the same
+`src/Aetherphone/Fonts/TablerIcons.ttf` is a 97 glyph subset of the same
 project's webfont, remapped into a private codepoint range; see
 `tools/icon-font/` for the generator.
 

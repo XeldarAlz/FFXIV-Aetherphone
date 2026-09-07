@@ -64,7 +64,7 @@ internal static class AppPalettes
     public static readonly AppPalette Market = For("market");
     public static readonly AppPalette Aethergram = For("aethergram");
     public static readonly AppPalette Velvet = For("velvet");
-    public static readonly AppPalette Message = For("message");
+    public static readonly AppPalette Message = MessageChrome(AppAccents.For("message"));
     public static readonly AppPalette Venues = For("venues");
     public static readonly AppPalette Strats = For("strats");
     public static readonly AppPalette Games = Neutral(AppAccents.For("games"));
@@ -87,6 +87,26 @@ internal static class AppPalettes
     public static readonly AppPalette Fishing = For("fishing");
     public static readonly AppPalette AetherStream = For("aetherstream");
     public static readonly AppPalette Hunts = For("hunts");
+
+    private static AppPalette MessageChrome(Vector4 accent) => new()
+    {
+        Accent = accent,
+        TitleInk = new(0.914f, 0.929f, 0.937f, 1f),
+        BodyInk = new(0.851f, 0.871f, 0.882f, 0.96f),
+        MutedInk = new(0.529f, 0.600f, 0.643f, 1f),
+        HeaderInk = Palette.WithAlpha(Palette.Lighten(accent, 0.55f), 0.95f),
+        HeadingInk = new(0.914f, 0.929f, 0.937f, 1f),
+        BackdropTop = new(0.043f, 0.078f, 0.102f, 1f),
+        BackdropBottom = new(0.043f, 0.078f, 0.102f, 1f),
+        BloomTop = Palette.WithAlpha(accent, 0.06f),
+        BloomBottom = new(0f, 0f, 0f, 0f),
+        CardFill = new(0.125f, 0.173f, 0.200f, 1f),
+        CardStroke = new(1f, 1f, 1f, 0.04f),
+        FieldSurface = new(0.125f, 0.173f, 0.200f, 1f),
+        HoverTint = DefaultHover,
+        Hairline = new(1f, 1f, 1f, 0.07f),
+        HoverWash = DefaultHoverWash,
+    };
 
     public static readonly AppPalette Casino = new()
     {

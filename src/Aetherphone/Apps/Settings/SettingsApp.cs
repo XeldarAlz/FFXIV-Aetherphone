@@ -37,6 +37,9 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
     private readonly SafetyPage safetyPage;
     private readonly SafetyLauncher safetyLauncher;
     private readonly EncryptionSetupLauncher encryptionSetupLauncher;
+    private readonly SettingsLauncher settingsLauncher;
+    private readonly NotificationsPage notificationsPage;
+    private readonly CallsPage callsPage;
     private readonly NamePage namePage;
     private readonly ProfilePage profilePage;
     private readonly EncryptionPage encryptionPage;
@@ -76,7 +79,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
         var language = new LanguagePage(configuration, services.Translation);
         var general = new GeneralPage(configuration, services.Translation, confirm);
         var tutorials = new TutorialsPage(configuration);
-        var callsPage = new CallsPage(calls, configuration);
+        callsPage = new CallsPage(calls, configuration);
         var appNotifications = new AppNotificationPage(configuration, sound);
         var notificationSoundPage = new SoundSettingsPage(sound, SoundKind.Notification, L.Settings.NotificationSound,
             FontAwesomeIcon.Bell, new Vector4(0.98f, 0.27f, 0.25f, 1f), "settings.notificationVolume",
@@ -89,7 +92,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
                 configuration.NotificationVolume = volume;
                 configuration.Save();
             });
-        var notifications = new NotificationsPage(configuration, this, appNotifications, services.Installer);
+        notificationsPage = new NotificationsPage(configuration, this, appNotifications, services.Installer);
         var ringtonePage = new SoundSettingsPage(sound, SoundKind.Ringtone, L.Settings.Ringtone, FontAwesomeIcon.Music,
             new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume",
             () => configuration.RingtoneSound, token =>
@@ -105,6 +108,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
         safetyPage = new SafetyPage(aethernetSession, services.ModerationArchive, this);
         safetyLauncher = services.SafetyLauncher;
         encryptionSetupLauncher = services.EncryptionSetup;
+        settingsLauncher = services.SettingsLauncher;
         var commands = new CommandsPage();
         tagsMentionsPage = new TagsMentionsPage(aethernetSession, aethernet.Account, this);
         privacyPage = new PrivacyPage(configuration, aethernetSession, aethernet.Account, aethernet.Safety,
@@ -113,7 +117,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
         changelogPage = new ChangelogPage(configuration);
         var groups = new[]
         {
-            new ISettingsPage[] { general, appearance, sounds, notifications, callsPage, language },
+            new ISettingsPage[] { general, appearance, sounds, notificationsPage, callsPage, language },
             new ISettingsPage[] { privacyPage, safetyPage },
             new ISettingsPage[] { tutorials, commands, changelogPage, about },
         };
@@ -250,6 +254,13 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
             router.Push(encryptionPage);
         }
 
+        var requestedPage = settingsLauncher.TryConsume();
+        if (requestedPage != SettingsPageKind.None)
+        {
+            router.Reset();
+            router.Push(PageFor(requestedPage));
+        }
+
         frameTheme = context.Theme;
         frameNavigation = context.Navigation;
         router.Draw(context.Content, context.Theme.AppBackground, ImGui.GetIO().DeltaTime, drawPage);
@@ -270,6 +281,14 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         page.Draw(context, body);
     }
+
+    private ISettingsPage PageFor(SettingsPageKind kind) => kind switch
+    {
+        SettingsPageKind.Notifications => notificationsPage,
+        SettingsPageKind.Privacy => privacyPage,
+        SettingsPageKind.Calls => callsPage,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
 
     private void PopBack()
     {

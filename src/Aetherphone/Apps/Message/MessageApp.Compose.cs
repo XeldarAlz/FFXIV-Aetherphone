@@ -6,111 +6,174 @@ using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
-using Aetherphone.Core.Social;
 
 namespace Aetherphone.Apps.Message;
 
 internal sealed partial class MessageApp
 {
+    private const float PickRowHeight = 60f;
+    private const float PickRowAvatarRadius = 21f;
+    private const float PickCheckSize = 24f;
+    private const float ComposeActionHeight = 62f;
+    private const float ComposeGroupActionHeight = 118f;
+    private const int GroupTitleMaxLength = 60;
+
+    private readonly List<ContactDto> composeRows = new();
     private volatile bool composeBusy;
 
     private void DrawNewChat(Rect area)
     {
         var scale = UiScale.Current;
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.DirectMessages.NewMessage), back);
+        DrawScreenHeader(area, Loc.T(L.Message.NewChat));
         var top = area.Min.Y + AppHeader.Height * scale;
-        var mutual = MutualContacts();
-        if (mutual.Count == 0)
+        var searchRect = new Rect(new Vector2(area.Min.X + CellPadX * scale, top),
+            new Vector2(area.Max.X - CellPadX * scale, top + ChatSearchHeight * scale));
+        SearchField.Draw(searchRect, "##msgNewFilter", Loc.T(L.Phone.FilterHint), ref filter, ui.Palette);
+        var listRect = new Rect(new Vector2(area.Min.X, searchRect.Max.Y), area.Max);
+        CollectMutualContacts(composeRows, excludeMembers: false);
+        var query = filter.Trim();
+        using (AppSurface.BeginEdgeToEdge(listRect))
         {
-            var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-            EmptyState.Draw(body, ui, FontAwesomeIcon.UserPlus, Loc.T(L.DirectMessages.NoMutualTitle),
-                Loc.T(L.DirectMessages.NoMutualFriends));
+            var drawList = ImGui.GetWindowDrawList();
+            if (query.Length == 0)
+            {
+                if (DrawActionRow(drawList, PhoneIcons.Users, Loc.T(L.Message.NewGroup)))
+                {
+                    selectedContacts.Clear();
+                    groupTitleDraft = string.Empty;
+                    filter = string.Empty;
+                    router.Push(MessageRoute.NewGroup);
+                }
+
+                if (DrawActionRow(drawList, PhoneIcons.UserPlus, Loc.T(L.Message.NewContact)))
+                {
+                    addError = string.Empty;
+                    router.Push(MessageRoute.AddContact);
+                }
+            }
+
+            if (composeRows.Count == 0)
+            {
+                DrawInlineEmpty(drawList, query.Length > 0
+                    ? Loc.T(L.Phone.NoOneFound)
+                    : Loc.T(L.DirectMessages.NoMutualFriends));
+            }
+            else
+            {
+                DrawSectionLabel(Loc.T(L.Phone.ContactsSection));
+                var lastLetter = string.Empty;
+                for (var index = 0; index < composeRows.Count; index++)
+                {
+                    var contact = composeRows[index];
+                    var letter = TrimmedLetter(ContactBook.DisplayLabel(contact));
+                    if (!string.Equals(letter, lastLetter, StringComparison.Ordinal))
+                    {
+                        DrawLetterHeader(drawList, letter);
+                        lastLetter = letter;
+                    }
+
+                    var row = BeginPersonRow(drawList, PickRowHeight, PickRowAvatarRadius, 0f, true, out var avatarCenter);
+                    DrawContactAvatar(drawList, contact, avatarCenter, PickRowAvatarRadius * scale);
+                    DrawRowTitleAndSub(drawList, new MarqueeId("compose.contact.", contact.UserId),
+                        ContactBook.DisplayLabel(contact), ContactBook.Format(contact.PhoneNumber), row.TextLeft,
+                        row.TextRight, row.Bounds.Center.Y, ink.TitleInk, ink.MutedInk);
+                    if (row.Tapped)
+                    {
+                        StartMessage(contact);
+                    }
+
+                    EndPersonRow(drawList, row);
+                }
+            }
+
+            ImGui.Dummy(new Vector2(0f, 24f * scale));
+        }
+    }
+
+    private void DrawNewGroup(Rect area)
+    {
+        var scale = UiScale.Current;
+        CollectMutualContacts(composeRows, excludeMembers: false);
+        var selectedCount = CountSelected(composeRows);
+        DrawScreenHeader(area, Loc.T(L.Message.NewGroup),
+            subtitle: selectedCount > 0 ? Loc.T(L.Message.SelectedCount, selectedCount) : string.Empty);
+        var top = area.Min.Y + AppHeader.Height * scale;
+        if (contacts.Contacts.Length == 0)
+        {
+            EmptyState.Draw(new Rect(new Vector2(area.Min.X, top), area.Max), ui, PhoneIcons.UserPlus,
+                Loc.T(L.DirectMessages.NoMutualTitle), Loc.T(L.DirectMessages.NoMutualFriends));
             return;
         }
 
-        var searchHeight = 52f * scale;
-        SearchField.DrawSubmit(new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + searchHeight)),
-            "##msgNewFilter", Loc.T(L.Phone.FilterHint), ref filter, AppPalettes.Message);
-
-        var selectedCount = CountSelected(mutual);
-        var actionHeight = selectedCount >= 2 ? 116f * scale : (selectedCount == 1 ? 62f * scale : 0f);
-        var listRect = new Rect(new Vector2(area.Min.X, top + searchHeight),
+        var searchRect = new Rect(new Vector2(area.Min.X + CellPadX * scale, top),
+            new Vector2(area.Max.X - CellPadX * scale, top + ChatSearchHeight * scale));
+        SearchField.Draw(searchRect, "##msgGroupFilter", Loc.T(L.Phone.FilterHint), ref filter, ui.Palette);
+        var actionHeight = selectedCount >= 1 ? ComposeGroupActionHeight * scale : 0f;
+        var listRect = new Rect(new Vector2(area.Min.X, searchRect.Max.Y),
             new Vector2(area.Max.X, area.Max.Y - actionHeight));
-        using (AppSurface.Begin(listRect))
+        DrawPickList(listRect, composeRows);
+        if (selectedCount >= 1)
         {
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-            var card = GroupCard.Begin(ui, mutual.Count, 56f);
-            for (var index = 0; index < mutual.Count; index++)
-            {
-                DrawPickRow(card.NextRow(), mutual[index], scale);
-            }
-
-            card.End();
-            ImGui.Dummy(new Vector2(0f, 16f * scale));
-        }
-
-        if (actionHeight > 0f)
-        {
-            DrawComposeAction(area, mutual, selectedCount, scale);
+            DrawGroupCreateBar(area, actionHeight, scale);
         }
     }
 
-    private void DrawComposeAction(Rect area, List<ContactDto> mutual, int selectedCount, float scale)
+    private void DrawPickList(Rect listRect, List<ContactDto> rows)
     {
-        var sideInset = 16f * scale;
-        var buttonHeight = 46f * scale;
-        if (selectedCount >= 2)
+        var scale = UiScale.Current;
+        using (AppSurface.BeginEdgeToEdge(listRect))
         {
-            var fieldTop = area.Max.Y - 116f * scale + 8f * scale;
-            var fieldRect = new Rect(new Vector2(area.Min.X + sideInset, fieldTop),
-                new Vector2(area.Max.X - sideInset, fieldTop + buttonHeight));
-            PillField(fieldRect, "##msgGroupName", Loc.T(L.DirectMessages.GroupNameHint), ref groupTitleDraft, 60);
-            var buttonTop = fieldRect.Max.Y + 10f * scale;
-            var buttonRect = new Rect(new Vector2(area.Min.X + sideInset, buttonTop),
-                new Vector2(area.Max.X - sideInset, buttonTop + buttonHeight));
-            if (ui.PillButton(buttonRect, Loc.T(L.DirectMessages.CreateGroup), true) && !composeBusy)
+            var drawList = ImGui.GetWindowDrawList();
+            if (rows.Count == 0)
             {
-                SubmitGroup(mutual);
+                DrawInlineEmpty(drawList, Loc.T(L.Phone.NoOneFound));
             }
-        }
-        else
-        {
-            var buttonTop = area.Max.Y - 62f * scale + 8f * scale;
-            var buttonRect = new Rect(new Vector2(area.Min.X + sideInset, buttonTop),
-                new Vector2(area.Max.X - sideInset, buttonTop + buttonHeight));
-            if (ui.PillButton(buttonRect, Loc.T(L.DirectMessages.StartChat), true) && !composeBusy)
+
+            var lastLetter = string.Empty;
+            for (var index = 0; index < rows.Count; index++)
             {
-                SubmitDirect(mutual);
+                var letter = TrimmedLetter(ContactBook.DisplayLabel(rows[index]));
+                if (!string.Equals(letter, lastLetter, StringComparison.Ordinal))
+                {
+                    DrawLetterHeader(drawList, letter);
+                    lastLetter = letter;
+                }
+
+                DrawPickRow(drawList, rows[index]);
             }
+
+            ImGui.Dummy(new Vector2(0f, 24f * scale));
         }
     }
 
-    private void SubmitDirect(List<ContactDto> mutual)
+    private void DrawGroupCreateBar(Rect area, float actionHeight, float scale)
     {
-        var target = FirstSelected(mutual);
-        if (target is null)
+        var drawList = ImGui.GetWindowDrawList();
+        var barTop = area.Max.Y - actionHeight;
+        SocialChrome.PaintBarBackdrop(ui, drawList, new Rect(new Vector2(area.Min.X, barTop), area.Max), screenRect);
+        drawList.AddLine(new Vector2(area.Min.X, barTop), new Vector2(area.Max.X, barTop), ImGui.GetColorU32(ui.Hairline),
+            1f);
+        var sideInset = CellPadX * scale;
+        var buttonHeight = FieldHeight * scale;
+        var fieldTop = barTop + 10f * scale;
+        var fieldRect = new Rect(new Vector2(area.Min.X + sideInset, fieldTop),
+            new Vector2(area.Max.X - sideInset, fieldTop + buttonHeight));
+        var submitted = PillField(fieldRect, "##msgGroupName", Loc.T(L.DirectMessages.GroupNameHint),
+            ref groupTitleDraft, GroupTitleMaxLength);
+        var buttonTop = fieldRect.Max.Y + 10f * scale;
+        var buttonRect = new Rect(new Vector2(area.Min.X + sideInset, buttonTop),
+            new Vector2(area.Max.X - sideInset, buttonTop + buttonHeight));
+        if ((ui.PillButton(buttonRect, Loc.T(L.DirectMessages.CreateGroup), true) || submitted) && !composeBusy)
         {
-            return;
+            SubmitGroup(composeRows);
         }
-
-        composeBusy = true;
-        store.CreateDirect(target, id =>
-        {
-            composeBusy = false;
-            if (!string.IsNullOrEmpty(id))
-            {
-                composeResult = id;
-            }
-        });
     }
 
     private void SubmitGroup(List<ContactDto> mutual)
     {
         var ids = SelectedIds(mutual);
-        if (ids.Length < 2)
+        if (ids.Length < 1)
         {
             return;
         }
@@ -126,56 +189,37 @@ internal sealed partial class MessageApp
         });
     }
 
-    private void DrawPickRow(Rect row, ContactDto contact, float scale)
+    private void DrawPickRow(ImDrawListPtr drawList, ContactDto contact)
     {
-        var drawList = ImGui.GetWindowDrawList();
+        var scale = UiScale.Current;
         var selected = selectedContacts.Contains(contact.UserId);
-        var band = RowBand(row, scale);
-        if (selected)
-        {
-            Squircle.Fill(drawList, new Vector2(band.Min.X + 4f * scale, band.Min.Y + 3f * scale),
-                new Vector2(band.Max.X - 4f * scale, band.Max.Y - 3f * scale), 12f * scale,
-                ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.10f)));
-        }
-
-        var radius = 18f * scale;
-        var avatarCenter = new Vector2(row.Min.X + radius, row.Center.Y);
-        var label = ContactBook.DisplayLabel(contact);
-        AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, contact.AvatarUrl, images,
-            lodestone, 0.85f, 32, 1f, Frames.Of(contact.FrameId));
-        var textLeft = avatarCenter.X + radius + 12f * scale;
-        var checkCenter = new Vector2(row.Max.X - 11f * scale, row.Center.Y);
-        var labelRight = checkCenter.X - 22f * scale;
-        var labelWidth = labelRight - textLeft;
-        var labelY = row.Center.Y - 9f * scale;
-        var labelHover = UiInteract.Hover(new Vector2(textLeft, labelY),
-            new Vector2(labelRight, labelY + Typography.Measure(label, 1f, FontWeight.SemiBold).Y));
-        Marquee.DrawLeft(new MarqueeId("compose.pick.", contact.UserId), label, textLeft, labelY, labelWidth,
-            new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, labelHover);
-        if (selected)
-        {
-            drawList.AddCircleFilled(checkCenter, 11f * scale, ImGui.GetColorU32(ui.Accent), 24);
-            AppSkin.Icon(checkCenter, IconGlyph.Of(FontAwesomeIcon.Check), White, 0.7f);
-        }
-        else
-        {
-            drawList.AddCircle(checkCenter, 11f * scale, ImGui.GetColorU32(ui.MutedInk), 24, 1.5f);
-        }
-
-        if (UiInteract.HoverClick(band.Min, band.Max))
+        var row = BeginPersonRow(drawList, PickRowHeight, PickRowAvatarRadius, PickCheckSize * scale, true,
+            out var avatarCenter);
+        DrawContactAvatar(drawList, contact, avatarCenter, PickRowAvatarRadius * scale);
+        DrawRowTitleAndSub(drawList, new MarqueeId("compose.pick.", contact.UserId), ContactBook.DisplayLabel(contact),
+            ContactBook.Format(contact.PhoneNumber), row.TextLeft, row.TextRight, row.Bounds.Center.Y, ink.TitleInk,
+            ink.MutedInk);
+        var checkCenter = new Vector2(row.Bounds.Max.X - CellPadX * scale - PickCheckSize * 0.5f * scale,
+            row.Bounds.Center.Y);
+        PhoneIcon.Draw(drawList, checkCenter, selected ? PhoneIcons.CircleCheckFilled : PhoneIcons.Circle,
+            selected ? ink.Accent : ink.FaintInk, PickCheckSize * scale);
+        if (row.Tapped)
         {
             if (!selectedContacts.Add(contact.UserId))
             {
                 selectedContacts.Remove(contact.UserId);
             }
         }
+
+        EndPersonRow(drawList, row);
     }
 
-    private List<ContactDto> MutualContacts()
+    private void CollectMutualContacts(List<ContactDto> target, bool excludeMembers)
     {
+        target.Clear();
         var snapshot = contacts.Contacts;
-        var list = new List<ContactDto>(snapshot.Length);
         var query = filter.Trim();
+        var members = excludeMembers ? store.Members : Array.Empty<ConversationMemberDto>();
         for (var index = 0; index < snapshot.Length; index++)
         {
             var contact = snapshot[index];
@@ -184,16 +228,31 @@ internal sealed partial class MessageApp
                 continue;
             }
 
-            if (query.Length == 0 || ContactBook.DisplayLabel(contact).Contains(query,
-                    StringComparison.OrdinalIgnoreCase))
+            if (excludeMembers && IsActiveMember(members, contact.UserId))
             {
-                list.Add(contact);
+                continue;
+            }
+
+            if (query.Length == 0 || MatchesContact(contact, query))
+            {
+                target.Add(contact);
             }
         }
 
-        list.Sort(static (left, right) => string.Compare(ContactBook.DisplayLabel(left), ContactBook.DisplayLabel(right),
-            StringComparison.OrdinalIgnoreCase));
-        return list;
+        target.Sort(CompareContactsByLabel);
+    }
+
+    private static bool IsActiveMember(ConversationMemberDto[] members, string userId)
+    {
+        for (var index = 0; index < members.Length; index++)
+        {
+            if (members[index].IsActive && members[index].UserId == userId)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private int CountSelected(List<ContactDto> mutual)
@@ -208,19 +267,6 @@ internal sealed partial class MessageApp
         }
 
         return count;
-    }
-
-    private string? FirstSelected(List<ContactDto> mutual)
-    {
-        for (var index = 0; index < mutual.Count; index++)
-        {
-            if (selectedContacts.Contains(mutual[index].UserId))
-            {
-                return mutual[index].UserId;
-            }
-        }
-
-        return null;
     }
 
     private string[] SelectedIds(List<ContactDto> mutual)

@@ -381,6 +381,17 @@ internal static class TimeText
         return Until(DateTimeOffset.FromUnixTimeSeconds(unixSeconds) - DateTimeOffset.UtcNow);
     }
 
+    public static string Stamp(long unixSeconds)
+    {
+        var clock = Clock(unixSeconds);
+        if (SameLocalDay(unixSeconds, DateTimeOffset.UtcNow.ToUnixTimeSeconds()))
+        {
+            return clock;
+        }
+
+        return string.Concat(DayLabel(unixSeconds), ", ", clock);
+    }
+
     public static bool SameLocalDay(long firstUnix, long secondUnix) =>
         DateTimeOffset.FromUnixTimeSeconds(firstUnix).ToLocalTime().Date ==
         DateTimeOffset.FromUnixTimeSeconds(secondUnix).ToLocalTime().Date;

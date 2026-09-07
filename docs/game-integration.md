@@ -50,7 +50,7 @@ Dalamud is the plugin framework that loads Aetherphone inside FFXIV. It provides
 | `ITextureSubstitutionProvider` | Texture replacement interop |
 | `IGameGui` | Hovered item, opening map links |
 | `INamePlateGui` | Nameplate interop |
-| `IContextMenu` | The "Search the market" context menu entry |
+| `IContextMenu` | The "Search the Market" and "Open a Linkpearl chat" context menu entries, each behind a General settings switch |
 | `IPluginLog` | Logging |
 | `IGameConfig` | Game configuration values |
 | `IUnlockState` | Mount, minion, emote, orchestrion, and other unlock checks |

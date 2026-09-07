@@ -1,6 +1,7 @@
 using Aetherphone.Core.Emoji;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Theme;
+using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
 
@@ -10,34 +11,57 @@ internal sealed class ChatRunSet
     public ChatChunk[] Targets = Array.Empty<ChatChunk>();
     public bool HasLinks;
     public bool HasEmoji;
+    public int LastUsedFrame;
 }
 
 internal static class ChatRuns
 {
-    private const int CacheLimit = 192;
+    private const int SweepThreshold = 192;
 
     private static readonly Dictionary<string, ChatRunSet> Cache = new(StringComparer.Ordinal);
+    private static int lastSweepFrame = -1;
     private static readonly List<TextRun> RunScratch = new(16);
     private static readonly List<ChatChunk> TargetScratch = new(8);
     private static readonly List<EmojiSpan> EmojiScratch = new(8);
 
     public static void Reset() => Cache.Clear();
 
-    public static ChatRunSet For(ChatEntry entry)
+    public static ChatRunSet For(ChatEntry entry) => For(entry, 0);
+
+    public static ChatRunSet For(ChatEntry entry, int frame)
     {
         if (Cache.TryGetValue(entry.Id, out var cached))
         {
+            cached.LastUsedFrame = frame;
             return cached;
         }
 
-        if (Cache.Count > CacheLimit)
+        if (Cache.Count > SweepThreshold)
         {
-            Cache.Clear();
+            SweepIdle(frame);
         }
 
         var set = Build(entry);
+        set.LastUsedFrame = frame;
         Cache[entry.Id] = set;
         return set;
+    }
+
+    private static void SweepIdle(int frame)
+    {
+        if (lastSweepFrame == frame)
+        {
+            return;
+        }
+
+        lastSweepFrame = frame;
+        foreach (var pair in Cache)
+        {
+            if (pair.Value.LastUsedFrame < frame - 1)
+            {
+                Cache.Remove(pair.Key);
+            }
+        }
     }
 
     public static Vector4 TintFor(ChatChunkKind kind) => kind switch

@@ -39,6 +39,8 @@ internal static class DragScrollHost
 
         public bool Dragging { get; }
 
+        public bool Scrolling => region is not null && region.Scroller.IsControlling;
+
         public void JumpToTop() => JumpTo(0f);
 
         public void JumpTo(float scrollY)

@@ -40,7 +40,7 @@ internal sealed class ChipRail
         Draw(ReserveRow(this, UiScale.Current), ui, labels, active, false, anchorKey, labelPadding);
 
     public int Draw(Rect row, AppSkin ui, ReadOnlySpan<string> labels, ReadOnlySpan<bool> active, bool overlay = false,
-        string? anchorKey = null, float labelPadding = DefaultLabelPadding)
+        string? anchorKey = null, float labelPadding = DefaultLabelPadding, bool centered = false)
     {
         if (labels.Length == 0)
         {
@@ -71,7 +71,8 @@ internal sealed class ChipRail
             || (canPageForward && Hovered(forwardArrow.Min, forwardArrow.Max, overlay));
         var drawList = ImGui.GetWindowDrawList();
         drawList.PushClipRect(row.Min, row.Max, true);
-        var cursorX = row.Min.X + SidePad * scale - offset;
+        var slack = centered ? MathF.Max(0f, row.Width - content) * 0.5f : 0f;
+        var cursorX = row.Min.X + SidePad * scale - offset + slack;
         var tapped = -1;
         for (var index = 0; index < labels.Length; index++)
         {

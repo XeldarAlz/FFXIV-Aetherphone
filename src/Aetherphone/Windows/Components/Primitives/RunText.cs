@@ -12,6 +12,7 @@ internal sealed class RunTextLayout
     public float FontSize;
     public int FontGeneration;
     public int RunCount;
+    public int LastUsedFrame;
 }
 
 internal readonly struct RunPiece
@@ -32,10 +33,11 @@ internal readonly struct RunPiece
 
 internal static class RunText
 {
-    private const int CacheLimit = 192;
+    private const int SweepThreshold = 192;
     private const float UnderlineInset = 1f;
 
     private static readonly Dictionary<string, RunTextLayout> Cache = new(StringComparer.Ordinal);
+    private static int lastSweepFrame = -1;
 
     public static void Reset() => Cache.Clear();
 
@@ -43,23 +45,42 @@ internal static class RunText
     {
         var fontSize = ImGui.GetFontSize();
         var generation = Plugin.Fonts.Generation;
+        var frame = ImGui.GetFrameCount();
         if (Cache.TryGetValue(key, out var cached) && cached.RunCount == runs.Length &&
             Math.Abs(cached.WrapWidth - wrapWidth) < 0.5f && Math.Abs(cached.FontSize - fontSize) < 0.01f &&
             cached.FontGeneration == generation)
         {
+            cached.LastUsedFrame = frame;
             return cached;
         }
 
-        if (Cache.Count > CacheLimit)
+        if (cached is null && Cache.Count > SweepThreshold)
         {
-            Cache.Clear();
-            cached = null;
+            SweepIdle(frame);
         }
 
         cached ??= new RunTextLayout();
         Build(cached, runs, wrapWidth, fontSize, generation);
+        cached.LastUsedFrame = frame;
         Cache[key] = cached;
         return cached;
+    }
+
+    private static void SweepIdle(int frame)
+    {
+        if (lastSweepFrame == frame)
+        {
+            return;
+        }
+
+        lastSweepFrame = frame;
+        foreach (var pair in Cache)
+        {
+            if (pair.Value.LastUsedFrame < frame - 1)
+            {
+                Cache.Remove(pair.Key);
+            }
+        }
     }
 
     public static int Draw(ImDrawListPtr drawList, RunTextLayout layout, ReadOnlySpan<TextRun> runs, Vector2 origin,

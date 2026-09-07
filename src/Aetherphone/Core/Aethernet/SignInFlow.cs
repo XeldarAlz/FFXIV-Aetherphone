@@ -22,13 +22,10 @@ internal sealed class SignInFlow : IDisposable
     private volatile string xivUserCode = string.Empty;
     private volatile string? xivVerificationUri;
 
-    private readonly Action? signedIn;
-
-    public SignInFlow(AethernetSession session, AuthClient client, Action? signedIn = null)
+    public SignInFlow(AethernetSession session, AuthClient client)
     {
         this.session = session;
         this.client = client;
-        this.signedIn = signedIn;
     }
 
     public bool Busy => busy;
@@ -158,7 +155,6 @@ internal sealed class SignInFlow : IDisposable
                 if (result.Auth is { } auth)
                 {
                     session.SignIn(auth.Token, auth.User);
-                    signedIn?.Invoke();
                     Reset();
                     return;
                 }
@@ -245,7 +241,6 @@ internal sealed class SignInFlow : IDisposable
             if (result.Auth is { } auth)
             {
                 session.SignIn(auth.Token, auth.User);
-                signedIn?.Invoke();
                 Reset();
                 return;
             }

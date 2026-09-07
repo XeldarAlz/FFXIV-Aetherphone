@@ -49,9 +49,9 @@ internal static class SearchField
             theme.AppBackground, maxLength, focus);
 
     public static void Draw(Rect bar, string imguiId, string hint, ref string text, in AppPalette palette,
-        int maxLength = 100) =>
+        int maxLength = 100, bool focus = false) =>
         Draw(bar, imguiId, hint, ref text, palette.FieldSurface, palette.MutedInk, palette.TitleInk,
-            new Vector4(1f, 1f, 1f, 0.14f), palette.BackdropBottom, maxLength);
+            new Vector4(1f, 1f, 1f, 0.14f), palette.BackdropBottom, maxLength, focus);
 
     public static void Draw(Rect bar, string imguiId, string hint, ref string text, Vector4 fieldSurface,
         Vector4 mutedInk, Vector4 titleInk, Vector4 clearFill, Vector4 clearCross, int maxLength,

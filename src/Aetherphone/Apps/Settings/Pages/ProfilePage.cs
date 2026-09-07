@@ -16,7 +16,7 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class ProfilePage : ISettingsPage, IDisposable
 {
     public string Title => Loc.T(L.Profile.Title);
-    public string Summary => SocialRegion.EffectiveCode(configuration, gameData);
+    public string Summary => SocialRegion.EffectiveCode(session, gameData);
     public FontAwesomeIcon Icon => FontAwesomeIcon.IdCard;
     public Vector4 Tint => new(0.42f, 0.58f, 0.86f, 1f);
     private readonly Configuration configuration;
@@ -97,31 +97,40 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
     private void DrawRegionSection(PhoneTheme theme)
     {
         SettingsSection.Header(Loc.T(L.Profile.RegionSection), theme, Loc.T(L.Profile.RegionHelp));
-        var card = GroupCard.Begin(theme, SocialRegion.Codes.Length + 1);
-        var autoLabel = $"{Loc.T(L.Profile.RegionAutomatic)}  ({SocialRegion.AutoCode(gameData)})";
-        if (SettingsRow.Selectable(card.NextRow(), autoLabel, !configuration.RegionManual, theme) &&
-            configuration.RegionManual)
+        var autoCode = SocialRegion.AutoCode(session, gameData);
+        if (!session.IsSignedIn)
         {
-            configuration.RegionManual = false;
-            configuration.Save();
-            PushRegion();
+            var infoCard = GroupCard.Begin(theme, 1);
+            SettingsRow.Info(infoCard.NextRow(), Loc.T(L.Profile.RegionAutomatic), autoCode, theme);
+            infoCard.End();
+            return;
+        }
+
+        var manual = session.ManualRegion;
+        var card = GroupCard.Begin(theme, SocialRegion.Codes.Length + 1);
+        var autoLabel = $"{Loc.T(L.Profile.RegionAutomatic)}  ({autoCode})";
+        if (SettingsRow.Selectable(card.NextRow(), autoLabel, manual.Length == 0, theme) && manual.Length > 0)
+        {
+            ChooseRegion(string.Empty);
         }
 
         for (var index = 0; index < SocialRegion.Codes.Length; index++)
         {
             var code = SocialRegion.Codes[index];
-            var selected = configuration.RegionManual &&
-                           string.Equals(configuration.ManualRegion, code, StringComparison.Ordinal);
+            var selected = string.Equals(manual, code, StringComparison.Ordinal);
             if (SettingsRow.Selectable(card.NextRow(), code, selected, theme) && !selected)
             {
-                configuration.RegionManual = true;
-                configuration.ManualRegion = code;
-                configuration.Save();
-                PushRegion();
+                ChooseRegion(code);
             }
         }
 
         card.End();
+    }
+
+    private void ChooseRegion(string code)
+    {
+        session.SetManualRegion(code);
+        RegionSync.Push(session, client, gameData, cancellation.Token);
     }
 
     private void DrawOffsetStepper(Rect row, PhoneTheme theme)
@@ -181,9 +190,6 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
         configuration.Save();
         PushTimeZone(null);
     }
-
-    private void PushRegion() =>
-        RegionSync.Push(session, client, configuration, gameData, cancellation.Token);
 
     private void PushTimeZone(bool? share)
     {

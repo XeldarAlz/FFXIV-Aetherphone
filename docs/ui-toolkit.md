@@ -242,13 +242,13 @@ if (tapped >= 0)
 }
 ```
 
-A tap only registers if the pointer traveled less than the drag slop, so panning does not select chips.
+A tap only registers if the pointer traveled less than the drag slop, so panning does not select chips. Pass `centered: true` to the `Rect` overload to center the chips inside the row when they all fit; an overflowing rail still starts at the left edge and pans.
 
 ### Other frequently used widgets
 
 | Widget | One-liner |
 | --- | --- |
-| `EmptyState.Draw(body, ui, icon, title, hint)` | Centered icon, title, and wrapped hint for empty lists (src/Aetherphone/Windows/Components/EmptyState.cs) |
+| `EmptyState.Draw(body, ui, glyph, title, hint)` | Centered icon, title, and wrapped hint for empty lists; takes a `PhoneIcons` glyph or a `FontAwesomeIcon` (src/Aetherphone/Windows/Components/Fields/EmptyState.cs) |
 | `AvatarView.Draw` / `AvatarView.DrawRemote` | Circular avatar with monogram fallback, loading pulse, and fade-in (src/Aetherphone/Windows/Components/AvatarView.cs) |
 | `SoftWrapField.Multiline(id, ref value, maxLength, size, wrapWidth)` | Multiline composer input; wraps visually without inserting real newlines, supports `MentionAutocomplete` (src/Aetherphone/Windows/Components/SoftWrapField.cs) |
 | `SearchField.Draw` / `SearchField.DrawSubmit` | Pill search input with search icon; `Draw` adds a clear button, `DrawSubmit` returns true on Enter (src/Aetherphone/Windows/Components/SearchField.cs) |

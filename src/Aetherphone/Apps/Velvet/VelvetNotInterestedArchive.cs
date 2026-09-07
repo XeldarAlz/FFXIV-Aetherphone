@@ -9,6 +9,14 @@ namespace Aetherphone.Apps.Velvet;
 internal sealed class StoredNotInterestedList
 {
     [JsonProperty("ids")] public List<string> UserIds { get; set; } = new();
+
+    [JsonProperty("passes")] public Dictionary<string, long> Passes { get; set; } = new();
+}
+
+internal readonly record struct NotInterestedSnapshot(string[] UserIds, Dictionary<string, long> Passes)
+{
+    public static readonly NotInterestedSnapshot Empty =
+        new(Array.Empty<string>(), new Dictionary<string, long>(StringComparer.Ordinal));
 }
 
 internal sealed class VelvetNotInterestedArchive
@@ -25,11 +33,11 @@ internal sealed class VelvetNotInterestedArchive
         }
     }
 
-    public string[] Load(string accountId)
+    public NotInterestedSnapshot Load(string accountId)
     {
         if (accountId.Length == 0)
         {
-            return Array.Empty<string>();
+            return NotInterestedSnapshot.Empty;
         }
 
         try
@@ -37,20 +45,26 @@ internal sealed class VelvetNotInterestedArchive
             var path = PathFor(accountId);
             if (!File.Exists(path))
             {
-                return Array.Empty<string>();
+                return NotInterestedSnapshot.Empty;
             }
 
             var stored = JsonConvert.DeserializeObject<StoredNotInterestedList>(File.ReadAllText(path));
-            return stored?.UserIds is { Count: > 0 } ids ? ids.ToArray() : Array.Empty<string>();
+            if (stored is null)
+            {
+                return NotInterestedSnapshot.Empty;
+            }
+
+            var ids = stored.UserIds is { Count: > 0 } list ? list.ToArray() : Array.Empty<string>();
+            return new NotInterestedSnapshot(ids, new Dictionary<string, long>(stored.Passes, StringComparer.Ordinal));
         }
         catch (Exception exception)
         {
             AepLog.Warning(exception, $"VelvetNotInterestedArchive load failed for {accountId}");
-            return Array.Empty<string>();
+            return NotInterestedSnapshot.Empty;
         }
     }
 
-    public void Save(string accountId, IReadOnlyCollection<string> userIds)
+    public void Save(string accountId, IReadOnlyCollection<string> userIds, IReadOnlyDictionary<string, long> passes)
     {
         if (accountId.Length == 0)
         {
@@ -63,7 +77,11 @@ internal sealed class VelvetNotInterestedArchive
             {
                 var path = PathFor(accountId);
                 var temp = path + ".tmp";
-                var stored = new StoredNotInterestedList { UserIds = userIds.ToList() };
+                var stored = new StoredNotInterestedList
+                {
+                    UserIds = userIds.ToList(),
+                    Passes = new Dictionary<string, long>(passes, StringComparer.Ordinal),
+                };
                 File.WriteAllText(temp, JsonConvert.SerializeObject(stored));
                 File.Move(temp, path, true);
             }

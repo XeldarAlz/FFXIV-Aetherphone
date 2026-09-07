@@ -3,7 +3,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -14,7 +13,7 @@ internal sealed partial class VelvetShell
     private void DrawPostTags(Rect area)
     {
         var scale = UiScale.Current;
-        if (VHeader.Push(area, Loc.T(L.Velvet.PostTagsTitle), theme))
+        if (VHeader.Push(area, Loc.T(L.Velvet.PostTagsTitle)))
         {
             router.Pop();
             return;
@@ -39,7 +38,7 @@ internal sealed partial class VelvetShell
             for (var index = 0; index < categories.Length; index++)
             {
                 var category = categories[index];
-                VSectionHeader.Card(FontAwesomeIcon.Hashtag, Loc.T(category.Title));
+                VSectionHeader.Card(PhoneIcons.Hash, Loc.T(category.Title));
                 Gap(6f);
                 DrawPostTagChips(category.Tags, category.Hue, width, scale);
                 Gap(16f);
@@ -57,16 +56,17 @@ internal sealed partial class VelvetShell
 
     private void DrawPostTagChips(string[] options, Vector4 accent, float width, float scale)
     {
-        var models = new VChipModel[options.Length];
+        chipModels.Clear();
         for (var index = 0; index < options.Length; index++)
         {
             var token = options[index];
-            models[index] = post.HasTag(token)
-                ? new VChipModel(token, VChipStyle.Solid, accent, FontAwesomeIcon.Check)
-                : new VChipModel(token, VChipStyle.Ghost, VelvetTheme.Moonlight);
+            var label = VelvetTokenLabels.Of(token);
+            chipModels.Add(post.HasTag(token)
+                ? new VChipModel(label, VChipStyle.Solid, accent, PhoneIcons.Check)
+                : new VChipModel(label, VChipStyle.Ghost, VelvetTheme.Moonlight));
         }
 
-        var clicked = VChipFlow.Draw(models, width, scale);
+        var clicked = DrawChipFlow(width, scale);
         if (clicked < 0)
         {
             return;

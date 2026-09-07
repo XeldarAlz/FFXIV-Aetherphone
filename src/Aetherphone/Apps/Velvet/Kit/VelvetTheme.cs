@@ -5,6 +5,8 @@ namespace Aetherphone.Apps.Velvet.Kit;
 
 internal static class VelvetTheme
 {
+    private const float ToneInkMix = 0.6f;
+
     public static readonly Vector4 GroundTop = new(0.094f, 0.039f, 0.110f, 1f);
     public static readonly Vector4 GroundBottom = new(0.024f, 0.012f, 0.031f, 1f);
     public static readonly Vector4 PlumWell = new(0.071f, 0.027f, 0.078f, 1f);
@@ -74,6 +76,8 @@ internal static class VelvetTheme
     public static Vector4 Alpha(Vector4 color, float alpha) => new(color.X, color.Y, color.Z, alpha);
 
     public static Vector4 Lerp(Vector4 from, Vector4 to, float amount) => Vector4.Lerp(from, to, amount);
+
+    public static Vector4 ToneInk(Vector4 tone) => Vector4.Lerp(tone, OnAccent, ToneInkMix);
 
     public static Vector4 PresenceColor(int presence) =>
         presence switch

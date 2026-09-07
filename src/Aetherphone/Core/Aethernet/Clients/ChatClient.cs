@@ -108,10 +108,16 @@ internal sealed class ChatClient
         return net.SendAsync(HttpMethod.Delete, $"/chats/{Uri.EscapeDataString(conversationId)}/members/{Uri.EscapeDataString(userId)}", token, null, onFailure);
     }
 
-    public Task<ConversationDetailDto?> RenameConversationAsync(string conversationId, string title, CancellationToken token,
-        Action<AepFailure>? onFailure = null)
+    public Task<ConversationDetailDto?> UpdateConversationAsync(string conversationId, UpdateConversationRequest request,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
     {
-        return net.SendJsonAsync(HttpMethod.Patch, $"/chats/{Uri.EscapeDataString(conversationId)}", new RenameConversationRequest(title), AethernetJsonContext.Default.RenameConversationRequest, AethernetJsonContext.Default.ConversationDetailDto, token, null, onFailure);
+        return net.SendJsonAsync(HttpMethod.Patch, $"/chats/{Uri.EscapeDataString(conversationId)}", request, AethernetJsonContext.Default.UpdateConversationRequest, AethernetJsonContext.Default.ConversationDetailDto, token, null, onFailure);
+    }
+
+    public Task<ConversationDetailDto?> SetMemberRoleAsync(string conversationId, string userId, int role,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.SendJsonAsync(HttpMethod.Post, $"/chats/{Uri.EscapeDataString(conversationId)}/members/{Uri.EscapeDataString(userId)}/role", new SetMemberRoleRequest(role), AethernetJsonContext.Default.SetMemberRoleRequest, AethernetJsonContext.Default.ConversationDetailDto, token, null, onFailure);
     }
 
     public Task<bool> SendTypingAsync(string conversationId, CancellationToken token,

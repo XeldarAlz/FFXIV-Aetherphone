@@ -7,10 +7,15 @@ namespace Aetherphone.Windows.Components;
 
 internal static class AppSurface
 {
+    public const float SidePadding = 16f;
+
     public static bool ActiveFreshVisit { get; private set; }
 
     public static SurfaceScope Begin(Rect area, bool disableMouseWheelScroll = false) =>
-        BeginCore(area, 16f, disableMouseWheelScroll);
+        BeginCore(area, SidePadding, disableMouseWheelScroll);
+
+    public static SurfaceScope Begin(Rect area, float sidePadding, bool disableMouseWheelScroll = false) =>
+        BeginCore(area, sidePadding, disableMouseWheelScroll);
 
     public static SurfaceScope BeginEdgeToEdge(Rect area, bool disableMouseWheelScroll = false) =>
         BeginCore(area, 0f, disableMouseWheelScroll);
@@ -73,6 +78,8 @@ internal static class AppSurface
         public readonly float Pull => surface.Pull;
 
         public readonly bool Dragging => surface.Dragging;
+
+        public readonly bool Scrolling => surface.Scrolling;
 
         public readonly bool FreshVisit => freshVisit;
 

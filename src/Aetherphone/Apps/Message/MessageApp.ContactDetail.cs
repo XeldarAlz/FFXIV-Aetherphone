@@ -7,7 +7,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Message;
@@ -16,6 +15,20 @@ internal sealed partial class MessageApp
 {
     private const int NotesMaxLength = 500;
     private const float NotesSaveDelaySeconds = 1f;
+    private const float HeroAvatarRadius = 48f;
+    private const float HeroTopPad = 18f;
+    private const float HeroNameGap = 16f;
+    private const float HeroActionHeight = 62f;
+    private const float HeroActionGap = 8f;
+    private const float NotesCardHeight = 96f;
+
+    private static readonly Vector4 TintGold = new(0.93f, 0.68f, 0.18f, 1f);
+    private static readonly Vector4 TintRed = new(0.92f, 0.33f, 0.31f, 1f);
+    private static readonly Vector4 TintTeal = new(0.13f, 0.63f, 0.62f, 1f);
+    private static readonly Vector4 TintAzure = new(0.20f, 0.55f, 0.92f, 1f);
+    private static readonly Vector4 TintSlate = new(0.50f, 0.54f, 0.60f, 1f);
+    private static readonly Vector4 TintGreen = new(0.20f, 0.68f, 0.38f, 1f);
+    private static readonly Vector4 TintViolet = new(0.60f, 0.45f, 0.92f, 1f);
 
     private string notesDraft = string.Empty;
     private string? notesLoadedFor;
@@ -29,12 +42,20 @@ internal sealed partial class MessageApp
     private void DrawContactDetail(Rect area, string userId)
     {
         var scale = UiScale.Current;
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, string.Empty, back);
+        var headerDrawList = ImGui.GetWindowDrawList();
         var contact = contacts.Find(userId);
+        DrawScreenHeader(area, string.Empty, contact is null ? 0 : 1);
         if (contact is null)
         {
             return;
+        }
+
+        if (DrawHeaderIcon(headerDrawList, SocialChrome.HeaderSlot(area, 0), PhoneIcons.Pencil, Loc.T(L.Friends.EditName),
+                editingContactName))
+        {
+            editingContactName = !editingContactName;
+            contactNameDraft = contact.Alias;
+            renameError = string.Empty;
         }
 
         if (notesLoadedFor != userId)
@@ -50,21 +71,19 @@ internal sealed partial class MessageApp
 
         ProcessRenameOutcome();
         TickNotes(userId);
-        DrawFavoriteToggle(area, userId, scale);
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
         using (AppSurface.Begin(body))
         {
             var drawList = ImGui.GetWindowDrawList();
-            var width = ImGui.GetContentRegionAvail().X;
+            var width = ScrollLayout.StableContentWidth();
             var origin = ImGui.GetCursorScreenPos();
             var centerX = origin.X + width * 0.5f;
-            var radius = 44f * scale;
-            var avatarCenter = new Vector2(centerX, origin.Y + 24f * scale + radius);
-            AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, ContactBook.DisplayLabel(contact),
-                string.Empty, contact.AvatarUrl, images, lodestone, 1.8f, 48, 1f, Frames.Of(contact.FrameId));
+            var radius = HeroAvatarRadius * scale;
+            var avatarCenter = new Vector2(centerX, origin.Y + HeroTopPad * scale + radius);
+            DrawContactAvatar(drawList, contact, avatarCenter, radius);
             avatarLightbox.TryOpen(avatarCenter, radius, contact.AvatarUrl, images);
-            var nameY = avatarCenter.Y + radius + 20f * scale;
+            var nameY = avatarCenter.Y + radius + HeroNameGap * scale;
             float afterName;
             if (editingContactName)
             {
@@ -73,54 +92,84 @@ internal sealed partial class MessageApp
             else
             {
                 var label = ContactBook.DisplayLabel(contact);
-                Typography.DrawCentered(new Vector2(centerX, nameY), label, ui.TitleInk, TextStyles.Title2);
-                var labelSize = Typography.Measure(label, TextStyles.Title2);
-                var pencilCenter = new Vector2(centerX + labelSize.X * 0.5f + 18f * scale, nameY);
-                if (ui.IconButton(pencilCenter, 13f * scale, IconGlyph.Of(FontAwesomeIcon.Pen), ui.MutedInk,
-                        Transparent, 0.85f, Loc.T(L.Friends.EditName), HoverLabelSide.Below))
-                {
-                    editingContactName = true;
-                    contactNameDraft = contact.Alias;
-                    renameError = string.Empty;
-                }
-
-                afterName = nameY + 24f * scale;
+                var labelHeight = Typography.DrawWrappedCentered(new Vector2(centerX, nameY), label, ink.TitleInk,
+                    TextStyles.Title2, width - 24f * scale);
+                afterName = nameY + labelHeight + 4f * scale;
+                var number = ContactBook.Format(contact.PhoneNumber);
+                afterName += Typography.DrawWrappedCentered(new Vector2(centerX, afterName), number, ink.MutedInk,
+                    TextStyles.Subheadline, width - 24f * scale) + 4f * scale;
             }
+
             if (!contact.IsMutual)
             {
-                Typography.DrawCentered(new Vector2(centerX, afterName), Loc.T(L.Friends.Pending), ui.MutedInk,
-                    TextStyles.Subheadline);
-                afterName += 26f * scale;
+                afterName += Typography.DrawWrappedCentered(new Vector2(centerX, afterName), Loc.T(L.Friends.Pending),
+                    ink.MutedInk, TextStyles.Footnote, width - 24f * scale) + 4f * scale;
             }
 
-            var actionsY = afterName + 26f * scale;
-            DrawContactActions(contact, centerX, actionsY, scale);
-            ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 40f * scale));
+            var actionsTop = afterName + 14f * scale;
+            var actionsBottom = DrawContactActions(drawList, contact, userId, origin.X, width, actionsTop, scale);
+            ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsBottom + Metrics.Space.Lg * scale));
             ImGui.Dummy(new Vector2(width, 0f));
-            DrawContactInfoCard(contact, scale);
+            DrawContactInfoCard(drawList, contact);
+            DrawContactChatCard(drawList, userId);
             DrawContactNotesCard(userId, scale);
-            var sideInset = 16f * scale;
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-            var removeRect = ActionRect(sideInset, scale);
-            if (ui.DangerGhostButton(removeRect, Loc.T(L.Friends.Remove)))
+            var dangerCard = GroupCard.Begin(ui, 1, SettingRowHeight);
+            if (DrawCardDangerRow(drawList, dangerCard.NextRow(), PhoneIcons.Trash, Loc.T(L.Message.RemoveContact)))
             {
                 AskRemoveContact(contact);
             }
 
+            dangerCard.End();
             ImGui.Dummy(new Vector2(0f, 30f * scale));
         }
     }
 
+    private float DrawContactActions(ImDrawListPtr drawList, ContactDto contact, string userId, float left,
+        float width, float top, float scale)
+    {
+        var gap = HeroActionGap * scale;
+        var buttonWidth = (width - gap * 2f) / 3f;
+        var height = HeroActionHeight * scale;
+        var canMessage = contact.IsMutual;
+        var canCall = contact.IsMutual && calls.Enabled;
+        var favorite = configuration.MessageFavoriteContacts.Contains(userId);
+        var messageRect = new Rect(new Vector2(left, top), new Vector2(left + buttonWidth, top + height));
+        if (DrawHeroActionButton(drawList, messageRect, PhoneIcons.MessageCircle, Loc.T(L.DirectMessages.StartChat),
+                canMessage))
+        {
+            StartMessage(contact);
+        }
+
+        var callRect = new Rect(new Vector2(messageRect.Max.X + gap, top),
+            new Vector2(messageRect.Max.X + gap + buttonWidth, top + height));
+        if (DrawHeroActionButton(drawList, callRect, PhoneIcons.Phone, Loc.T(L.Friends.Call), canCall))
+        {
+            StartCall(contact);
+        }
+
+        var favoriteRect = new Rect(new Vector2(callRect.Max.X + gap, top), new Vector2(left + width, top + height));
+        if (DrawHeroActionButton(drawList, favoriteRect, favorite ? PhoneIcons.StarFilled : PhoneIcons.Star,
+                Loc.T(favorite ? L.Message.FavoritedLabel : L.Message.FavoriteLabel), true))
+        {
+            if (!configuration.MessageFavoriteContacts.Remove(userId))
+            {
+                configuration.MessageFavoriteContacts.Add(userId);
+            }
+
+            configuration.Save();
+        }
+
+        return top + height;
+    }
+
     private float DrawContactNameEditor(ContactDto contact, float left, float width, float nameY, float scale)
     {
-        var sideInset = 16f * scale;
         var fieldHeight = FieldHeight * scale;
         var iconRadius = 15f * scale;
         var gap = 10f * scale;
         var iconSpan = (iconRadius * 2f + gap) * 2f;
-        var top = nameY - fieldHeight * 0.5f;
-        var fieldRect = new Rect(new Vector2(left + sideInset, top),
-            new Vector2(left + width - sideInset - iconSpan, top + fieldHeight));
+        var top = nameY;
+        var fieldRect = new Rect(new Vector2(left, top), new Vector2(left + width - iconSpan, top + fieldHeight));
         var submitted = PillField(fieldRect, "##msgContactRename", contact.DisplayName, ref contactNameDraft,
             AliasMaxLength);
         var centerY = top + fieldHeight * 0.5f;
@@ -128,15 +177,15 @@ internal sealed partial class MessageApp
         var canSave = !renameBusy && !string.Equals(contactNameDraft.Trim(), contact.Alias, StringComparison.Ordinal);
         var saveBackground = canSave ? ui.Accent : ui.FieldSurface;
         var saveInk = canSave ? White : ui.MutedInk;
-        if ((ui.IconButton(saveCenter, iconRadius, IconGlyph.Of(FontAwesomeIcon.Check), saveInk, saveBackground,
-                0.95f, Loc.T(L.DirectMessages.Save), HoverLabelSide.Below) || submitted) && canSave)
+        if ((ui.IconButton(saveCenter, iconRadius, PhoneIcons.Check, saveInk, saveBackground, 0.95f,
+                Loc.T(L.DirectMessages.Save), HoverLabelSide.Below) || submitted) && canSave)
         {
             SubmitRename(contact.UserId);
         }
 
         var cancelCenter = new Vector2(saveCenter.X + iconRadius + gap + iconRadius, centerY);
-        if (ui.IconButton(cancelCenter, iconRadius, IconGlyph.Of(FontAwesomeIcon.Times), ui.MutedInk,
-                ui.FieldSurface, 0.95f, Loc.T(L.Common.Cancel), HoverLabelSide.Below))
+        if (ui.IconButton(cancelCenter, iconRadius, PhoneIcons.X, ui.MutedInk, ui.FieldSurface, 0.95f,
+                Loc.T(L.Common.Cancel), HoverLabelSide.Below))
         {
             editingContactName = false;
             renameError = string.Empty;
@@ -145,9 +194,8 @@ internal sealed partial class MessageApp
         var afterName = top + fieldHeight + 10f * scale;
         if (renameError.Length > 0)
         {
-            Typography.DrawCentered(new Vector2(left + width * 0.5f, afterName), renameError, theme.Danger,
-                TextStyles.Footnote);
-            afterName += 22f * scale;
+            afterName += Typography.DrawWrappedCentered(new Vector2(left + width * 0.5f, afterName), renameError,
+                theme.Danger, TextStyles.Footnote, width - 24f * scale) + 6f * scale;
         }
 
         return afterName;
@@ -181,50 +229,7 @@ internal sealed partial class MessageApp
         }
     }
 
-    private void DrawFavoriteToggle(Rect area, string userId, float scale)
-    {
-        var favorite = configuration.MessageFavoriteContacts.Contains(userId);
-        var starCenter = new Vector2(area.Max.X - 24f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f);
-        var tooltip = Loc.T(favorite ? L.Message.RemoveFavorite : L.Message.AddFavorite);
-        var color = favorite ? new Vector4(0.98f, 0.78f, 0.22f, 1f) : ui.MutedInk;
-        if (ui.IconButton(starCenter, 16f * scale, IconGlyph.Of(FontAwesomeIcon.Star), color, Transparent,
-                favorite ? 1.15f : 1.05f, tooltip, HoverLabelSide.Below))
-        {
-            if (!configuration.MessageFavoriteContacts.Remove(userId))
-            {
-                configuration.MessageFavoriteContacts.Add(userId);
-            }
-
-            configuration.Save();
-        }
-    }
-
-    private void DrawContactActions(ContactDto contact, float centerX, float centerY, float scale)
-    {
-        var buttonRadius = 24f * scale;
-        var gap = 38f * scale;
-        var canMessage = contact.IsMutual;
-        var canCall = contact.IsMutual && calls.Enabled;
-        var messageCenter = new Vector2(centerX - gap, centerY);
-        var messageBackground = canMessage ? ui.Accent : ui.FieldSurface;
-        var messageInk = canMessage ? White : ui.MutedInk;
-        if (ui.IconButton(messageCenter, buttonRadius, IconGlyph.Of(FontAwesomeIcon.Comment), messageInk,
-                messageBackground, 1.1f, Loc.T(L.DirectMessages.StartChat), HoverLabelSide.Below) && canMessage)
-        {
-            StartMessage(contact);
-        }
-
-        var callCenter = new Vector2(centerX + gap, centerY);
-        var callBackground = canCall ? CallGreen : ui.FieldSurface;
-        var callInk = canCall ? White : ui.MutedInk;
-        if (ui.IconButton(callCenter, buttonRadius, IconGlyph.Of(FontAwesomeIcon.Phone), callInk,
-                callBackground, 1.1f, Loc.T(L.Friends.Call), HoverLabelSide.Below) && canCall)
-        {
-            StartCall(contact);
-        }
-    }
-
-    private void DrawContactInfoCard(ContactDto contact, float scale)
+    private void DrawContactInfoCard(ImDrawListPtr drawList, ContactDto contact)
     {
         var rowCount = 3;
         var localTime = ContactLocalTime(contact.UserId);
@@ -233,61 +238,88 @@ internal sealed partial class MessageApp
             rowCount++;
         }
 
-        var card = GroupCard.Begin(ui, rowCount, 40f);
-        DrawInfoRow(card.NextRow(), Loc.T(L.Message.Number), ContactBook.Format(contact.PhoneNumber));
-        DrawInfoRow(card.NextRow(), Loc.T(L.Message.Handle), "@" + contact.Handle);
+        var card = GroupCard.Begin(ui, rowCount, 42f);
+        DrawInfoRow(drawList, card.NextRow(), Loc.T(L.Message.Number), ContactBook.Format(contact.PhoneNumber));
+        DrawInfoRow(drawList, card.NextRow(), Loc.T(L.Message.Handle), "@" + contact.Handle);
         if (localTime.Length > 0)
         {
-            DrawInfoRow(card.NextRow(), Loc.T(L.Message.LocalTime), localTime);
+            DrawInfoRow(drawList, card.NextRow(), Loc.T(L.Message.LocalTime), localTime);
         }
 
-        DrawInfoRow(card.NextRow(), Loc.T(L.Message.Added),
+        DrawInfoRow(drawList, card.NextRow(), Loc.T(L.Message.Added),
             DateTimeOffset.FromUnixTimeSeconds(contact.CreatedAtUnix).ToLocalTime().ToString("d", Loc.Culture));
         card.End();
-        ImGui.Dummy(new Vector2(0f, 12f * scale));
+        DrawCardGap();
     }
 
-    private void DrawInfoRow(Rect row, string label, string value)
+    private void DrawContactChatCard(ImDrawListPtr drawList, string userId)
     {
-        var scale = UiScale.Current;
-        var centerY = row.Center.Y;
-        var labelSize = Typography.Measure(label, TextStyles.Footnote);
-        Typography.Draw(new Vector2(row.Min.X, centerY - 8f * scale), label, ui.MutedInk, TextStyles.Footnote);
-        var valueMaxWidth = MathF.Max(1f, row.Width - labelSize.X - 10f * scale);
-        var valueHovering = UiInteract.Hover(new Vector2(row.Max.X - valueMaxWidth, row.Min.Y),
-            new Vector2(row.Max.X, row.Max.Y));
-        Marquee.DrawRight(new MarqueeId(label, ":value"), value, row.Max.X,
-            centerY - Typography.Measure(value, TextStyles.Subheadline).Y * 0.5f,
-            valueMaxWidth, TextStyles.Subheadline, ui.BodyInk, valueHovering);
+        var conversation = FindDirectConversation(userId);
+        if (conversation is null)
+        {
+            return;
+        }
+
+        var starredCount = StarredCountIn(conversation.Id);
+        var card = GroupCard.Begin(ui, 4, SettingRowHeight);
+        if (DrawCardRow(drawList, card.NextRow(), PhoneIcons.Star, TintGold, Loc.T(L.Message.StarredTitle),
+                starredCount > 0 ? starredCount.ToString(Loc.Culture) : string.Empty))
+        {
+            router.Push(MessageRoute.StarredIn(conversation.Id));
+        }
+
+        var muted = DrawCardSwitchRow(drawList, card.NextRow(), PhoneIcons.BellOff, TintRed,
+            Loc.T(L.Message.MuteNotifications), conversation.Muted, "message.contact.mute");
+        if (muted != conversation.Muted)
+        {
+            store.SetMuted(conversation.Id, muted, _ => { });
+        }
+
+        if (DrawCardRow(drawList, card.NextRow(), PhoneIcons.Wallpaper, TintTeal, Loc.T(L.Message.Wallpaper)))
+        {
+            router.Push(MessageRoute.ChatWallpaper(conversation.Id));
+        }
+
+        if (DrawCardRow(drawList, card.NextRow(), PhoneIcons.Lock, TintAzure, Loc.T(L.Encryption.InfoTitle)))
+        {
+            router.Push(MessageRoute.Encryption(conversation.Id));
+        }
+
+        card.End();
+        DrawCardGap();
     }
 
-    private string ContactLocalTime(string userId)
+    private ConversationDto? FindDirectConversation(string userId)
     {
         var snapshot = store.Conversations;
         for (var index = 0; index < snapshot.Length; index++)
         {
-            var item = snapshot[index];
-            if (!item.IsGroup && item.OtherUserId == userId && item.UtcOffsetMinutes is { } offsetMinutes)
+            if (!snapshot[index].IsGroup && snapshot[index].OtherUserId == userId)
             {
-                return SocialTimeZone.Describe(offsetMinutes);
+                return snapshot[index];
             }
         }
 
-        return string.Empty;
+        return null;
+    }
+
+    private string ContactLocalTime(string userId)
+    {
+        var conversation = FindDirectConversation(userId);
+        return conversation?.UtcOffsetMinutes is { } offsetMinutes
+            ? SocialTimeZone.Describe(offsetMinutes)
+            : string.Empty;
     }
 
     private void DrawContactNotesCard(string userId, float scale)
     {
-        var sideInset = 16f * scale;
+        DrawInsetSectionLabel(Loc.T(L.Message.Notes));
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        ImGui.SetCursorScreenPos(new Vector2(origin.X + sideInset + 4f * scale, origin.Y));
-        ui.SectionLabel(Loc.T(L.Message.Notes));
-        var cardTop = ImGui.GetCursorScreenPos().Y;
+        var width = ScrollLayout.StableContentWidth();
         var pad = 12f * scale;
-        var cardMin = new Vector2(origin.X + sideInset, cardTop);
-        var cardMax = new Vector2(origin.X + width - sideInset, cardTop + 96f * scale);
-        ui.Card(ImGui.GetWindowDrawList(), cardMin, cardMax, 14f * scale);
+        var cardMin = origin;
+        var cardMax = new Vector2(origin.X + width, origin.Y + NotesCardHeight * scale);
+        ui.Card(ImGui.GetWindowDrawList(), cardMin, cardMax, Metrics.Radius.Md * scale);
         ImGui.SetCursorScreenPos(cardMin + new Vector2(pad, pad));
         var inputWidth = cardMax.X - cardMin.X - pad * 2f;
         var wrapWidth = inputWidth - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
@@ -314,7 +346,8 @@ internal sealed partial class MessageApp
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, cardMax.Y - origin.Y + 12f * scale));
+        ImGui.Dummy(new Vector2(width, cardMax.Y - origin.Y));
+        DrawCardGap();
     }
 
     private void TickNotes(string userId)

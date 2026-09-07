@@ -11,14 +11,16 @@ internal sealed class RichTextCache
         public MentionDto[]? Source;
         public MentionSpan[] Mentions = Array.Empty<MentionSpan>();
         public RichTextLayout? Layout;
+        public int LastUsedFrame;
     }
 
-    private const int CacheLimit = 256;
+    private const int SweepThreshold = 256;
 
     private static readonly MentionSpan[] NoMentions = Array.Empty<MentionSpan>();
 
     private readonly Dictionary<string, Entry> entries = new(StringComparer.Ordinal);
     private readonly bool scanHashtags;
+    private int lastSweepFrame = -1;
 
     public RichTextCache(bool scanHashtags = false)
     {
@@ -27,15 +29,16 @@ internal sealed class RichTextCache
 
     public RichTextLayout? LayoutFor(string key, string text, MentionDto[]? mentions, float wrapWidth)
     {
+        var frame = ImGui.GetFrameCount();
         if (entries.TryGetValue(key, out var entry) && Matches(entry, text, mentions, wrapWidth))
         {
+            entry.LastUsedFrame = frame;
             return entry.Layout;
         }
 
-        if (entries.Count > CacheLimit)
+        if (entry is null && entries.Count > SweepThreshold)
         {
-            entries.Clear();
-            entry = null;
+            SweepIdle(frame);
         }
 
         entry ??= new Entry();
@@ -43,8 +46,26 @@ internal sealed class RichTextCache
         entry.Source = mentions;
         entry.Mentions = Convert(mentions);
         entry.Layout = RichText.Build(text, entry.Mentions, wrapWidth, scanHashtags);
+        entry.LastUsedFrame = frame;
         entries[key] = entry;
         return entry.Layout;
+    }
+
+    private void SweepIdle(int frame)
+    {
+        if (lastSweepFrame == frame)
+        {
+            return;
+        }
+
+        lastSweepFrame = frame;
+        foreach (var pair in entries)
+        {
+            if (pair.Value.LastUsedFrame < frame - 1)
+            {
+                entries.Remove(pair.Key);
+            }
+        }
     }
 
     public void Clear()

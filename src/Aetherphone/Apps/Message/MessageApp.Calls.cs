@@ -8,15 +8,25 @@ using Aetherphone.Core.Telephony.Contracts;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Message;
 
 internal sealed partial class MessageApp
 {
-    private const float CallRowHeight = 62f;
+    private const float CallRowHeight = 64f;
     private const float CallSearchHeight = 52f;
     private const float ReturnBannerHeight = 44f;
+    private const float CallRowAvatarRadius = 23f;
+    private const float CallDirectionGlyph = 15f;
+    private const float CallInfoRadius = 16f;
+    private const float CallInfoGlyph = 22f;
+    private const float CallFavoriteGlyph = 20f;
+    private const float CallFavoriteRadius = 17f;
+    private const int MicSilentWarningSeconds = 30;
+
+    private readonly PullToRefresh contactsRefresh = new();
+    private readonly List<ContactDto> favoriteContacts = new();
+    private readonly List<ContactDto> callableContacts = new();
 
     private float DrawReturnToCallBanner(Rect rect)
     {
@@ -33,12 +43,12 @@ internal sealed partial class MessageApp
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, pulse)), 16);
         var status = StatusLine(currentCall);
         var statusSize = Typography.Measure(status, TextStyles.Footnote);
-        Typography.Draw(new Vector2(max.X - 16f * scale - statusSize.X, centerY - statusSize.Y * 0.5f), status,
-            White, TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(max.X - 16f * scale - statusSize.X, centerY - statusSize.Y * 0.5f),
+            status, White, TextStyles.Footnote);
         var label = Loc.T(L.Phone.ReturnToCall);
         var labelWidth = max.X - min.X - 48f * scale - statusSize.X;
         var labelSize = Typography.Measure(label, TextStyles.SubheadlineEmphasized);
-        Typography.Draw(new Vector2(min.X + 28f * scale, centerY - labelSize.Y * 0.5f),
+        Typography.Draw(drawList, new Vector2(min.X + 28f * scale, centerY - labelSize.Y * 0.5f),
             Typography.FitText(label, labelWidth, TextStyles.SubheadlineEmphasized), White,
             TextStyles.SubheadlineEmphasized);
         if (UiInteract.HoverClick(min, max))
@@ -58,7 +68,7 @@ internal sealed partial class MessageApp
         }
 
         var scale = UiScale.Current;
-        AppHeader.Draw(new PhoneContext(area, theme, navigation), string.Empty, back);
+        DrawScreenHeader(area, string.Empty);
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         DrawCallScreen(new PhoneContext(body, theme, navigation), view);
     }
@@ -82,7 +92,7 @@ internal sealed partial class MessageApp
         var scale = UiScale.Current;
         if (!session.IsSignedIn)
         {
-            EmptyState.Draw(area, ui, FontAwesomeIcon.Phone, Loc.T(L.Phone.SignInTitle), Loc.T(L.Phone.SignInPrompt));
+            EmptyState.Draw(area, ui, PhoneIcons.Phone, Loc.T(L.Phone.SignInTitle), Loc.T(L.Phone.SignInPrompt));
             return;
         }
 
@@ -95,106 +105,163 @@ internal sealed partial class MessageApp
         calls.MarkLogSeen();
         socialNotifications.MarkSeen(SocialActivity.MessageApp);
         var log = calls.CallLog;
-        if (log.Length == 0)
+        CollectFavorites(favoriteContacts);
+        using (AppSurface.BeginEdgeToEdge(area))
         {
-            EmptyState.Draw(area, ui, FontAwesomeIcon.Phone, Loc.T(L.Phone.NoRecentCalls),
-                Loc.T(L.Phone.NoRecentCallsHint));
-        }
-        else
-        {
-            using (AppSurface.BeginEdgeToEdge(area))
+            var drawList = ImGui.GetWindowDrawList();
+            DrawSectionLabel(Loc.T(L.Message.Favorites));
+            for (var index = 0; index < favoriteContacts.Count; index++)
             {
-                ImGui.Dummy(new Vector2(0f, 4f * scale));
-                for (var index = 0; index < log.Length; index++)
-                {
-                    DrawLogRow(log[index], scale);
-                }
-
-                ImGui.Dummy(new Vector2(0f, 72f * scale));
+                DrawFavoriteCallRow(drawList, favoriteContacts[index]);
             }
+
+            if (DrawActionRow(drawList, PhoneIcons.Star, Loc.T(L.Message.AddFavorite)))
+            {
+                SelectTab(MessageTab.Contacts);
+            }
+
+            DrawSectionLabel(Loc.T(L.Message.Recent));
+            if (log.Length == 0)
+            {
+                DrawInlineEmpty(drawList, Loc.T(L.Phone.NoRecentCallsHint));
+            }
+
+            for (var index = 0; index < log.Length; index++)
+            {
+                DrawLogRow(drawList, log[index]);
+            }
+
+            ImGui.Dummy(new Vector2(0f, 24f * scale));
         }
 
         DrawConnectingHint(area, scale);
-        if (ComposeFab.Draw(area, "##msgNewCallFab", ui.Accent, IconGlyph.Of(FontAwesomeIcon.Phone),
-                Loc.T(L.Phone.NewCall), "message.newcall"))
-        {
-            searchDraft = string.Empty;
-            router.Push(MessageRoute.NewCall);
-        }
     }
 
-    private void DrawLogRow(CallLogEntry entry, float scale)
+    private void DrawInlineEmpty(ImDrawListPtr drawList, string text)
     {
+        var scale = UiScale.Current;
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var height = Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, origin.Y + 12f * scale), text,
+            ink.MutedInk, RowSubStyle, width - CellPadX * 4f * scale);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height + 28f * scale));
+    }
+
+    private void CollectFavorites(List<ContactDto> target)
+    {
+        target.Clear();
+        var snapshot = contacts.Contacts;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].IsMutual && configuration.MessageFavoriteContacts.Contains(snapshot[index].UserId))
+            {
+                target.Add(snapshot[index]);
+            }
+        }
+
+        target.Sort(CompareContactsByLabel);
+    }
+
+    private void DrawFavoriteCallRow(ImDrawListPtr drawList, ContactDto contact)
+    {
+        var scale = UiScale.Current;
+        var label = ContactBook.DisplayLabel(contact);
+        var row = BeginPersonRow(drawList, CallRowHeight, CallRowAvatarRadius, CallFavoriteRadius * 2f * scale, true,
+            out var avatarCenter);
+        DrawContactAvatar(drawList, contact, avatarCenter, CallRowAvatarRadius * scale);
+        DrawRowTitleAndSub(drawList, new MarqueeId("messageapp.calls.favorite.", contact.UserId), label,
+            ContactBook.Format(contact.PhoneNumber), row.TextLeft, row.TextRight, row.Bounds.Center.Y, ink.TitleInk,
+            ink.MutedInk);
+        var callCenter = new Vector2(row.Bounds.Max.X - CellPadX * scale - CallFavoriteRadius * scale,
+            row.Bounds.Center.Y);
+        var callExtent = new Vector2(CallFavoriteRadius * scale, CallFavoriteRadius * scale);
+        var callHovered = UiInteract.Hover(callCenter - callExtent, callCenter + callExtent);
+        PhoneIcon.Draw(drawList, callCenter, PhoneIcons.Phone, callHovered ? ink.AccentLink : ink.Accent,
+            CallFavoriteGlyph * scale);
+        HoverTooltip.Show(new Rect(callCenter - callExtent, callCenter + callExtent), Loc.T(L.Friends.Call),
+            HoverLabelSide.Above);
+        if (UiInteract.Click(callCenter - callExtent, callCenter + callExtent, callHovered) || row.Tapped)
+        {
+            Place(new CallContact(contact.UserId, string.Empty, string.Empty, label), addMode: false);
+        }
+
+        EndPersonRow(drawList, row);
+    }
+
+    private void DrawLogRow(ImDrawListPtr drawList, CallLogEntry entry)
+    {
+        var scale = UiScale.Current;
         var known = contacts.Find(entry.UserId);
         var name = known is not null ? ContactBook.DisplayLabel(known) : entry.DisplayName;
         var title = entry.Count > 1 ? $"{name} ({entry.Count})" : name;
-        var rowHeight = CallRowHeight * scale;
-        var drawList = ImGui.GetWindowDrawList();
         var callable = known is not null && known.IsMutual;
-        var cell = FeedCell.Begin(drawList, rowHeight, ui.HoverWash, known is not null);
-        var origin = cell.Bounds.Min;
-        var rowMax = cell.Bounds.Max;
-        var pad = FeedCell.PadX * scale;
-        var radius = 22f * scale;
-        var avatarCenter = new Vector2(origin.X + pad + radius, origin.Y + rowHeight * 0.5f);
+        var infoReserve = known is not null ? CallInfoRadius * 2f * scale + RowTrailingGap * scale : 0f;
+        var row = BeginPersonRow(drawList, CallRowHeight, CallRowAvatarRadius, infoReserve, known is not null,
+            out var avatarCenter);
         if (known is not null && !string.IsNullOrEmpty(known.AvatarUrl))
         {
-            AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, name, string.Empty, known.AvatarUrl, images,
-                lodestone, 1f, 32, 1f, Frames.Of(known.FrameId));
+            DrawContactAvatar(drawList, known, avatarCenter, CallRowAvatarRadius * scale);
         }
         else
         {
-            AvatarView.Draw(drawList, avatarCenter, radius, theme.Accent, Initials.Of(name), 1f,
-                lodestone.Avatar(entry.Name, entry.World, radius * 2f), 32);
+            AvatarView.Draw(drawList, avatarCenter, CallRowAvatarRadius * scale, theme.Accent, Initials.Of(name), 1f,
+                lodestone.Avatar(entry.Name, entry.World, CallRowAvatarRadius * 2f * scale), 32);
         }
 
-        var actionLeft = rowMax.X - pad;
+        var right = row.TextRight;
         if (known is not null)
         {
-            var infoCenter = new Vector2(rowMax.X - pad - 16f * scale, avatarCenter.Y);
-            actionLeft = infoCenter.X - 22f * scale;
-            if (ui.IconButton(infoCenter, 16f * scale, IconGlyph.Of(FontAwesomeIcon.InfoCircle), ui.MutedInk,
-                    Transparent, 1.1f, Loc.T(L.Phone.ContactInfo), HoverLabelSide.Above))
+            var infoCenter = new Vector2(row.Bounds.Max.X - CellPadX * scale - CallInfoRadius * scale,
+                row.Bounds.Center.Y);
+            var infoExtent = new Vector2(CallInfoRadius * scale, CallInfoRadius * scale);
+            var infoHovered = UiInteract.Hover(infoCenter - infoExtent, infoCenter + infoExtent);
+            PhoneIcon.Draw(drawList, infoCenter, PhoneIcons.InfoCircle, infoHovered ? ink.AccentLink : ink.MutedInk,
+                CallInfoGlyph * scale);
+            HoverTooltip.Show(new Rect(infoCenter - infoExtent, infoCenter + infoExtent), Loc.T(L.Phone.ContactInfo),
+                HoverLabelSide.Above);
+            if (UiInteract.Click(infoCenter - infoExtent, infoCenter + infoExtent, infoHovered))
             {
                 router.Push(MessageRoute.Contact(known.UserId));
             }
         }
 
         var time = TimeText.Short(entry.TimestampUnix);
-        if (time.Length > 0)
-        {
-            var timeSize = Typography.Measure(time, TextStyles.Footnote);
-            Typography.Draw(new Vector2(actionLeft - timeSize.X, avatarCenter.Y - timeSize.Y * 0.5f), time,
-                ui.MutedInk, TextStyles.Footnote);
-            actionLeft -= timeSize.X + 10f * scale;
-        }
+        var timeSize = Typography.Measure(time, RowMetaStyle);
+        Typography.Draw(drawList, new Vector2(right - timeSize.X, row.Bounds.Center.Y - timeSize.Y * 0.5f), time,
+            ink.MutedInk, RowMetaStyle);
+        right -= timeSize.X + RowTrailingGap * scale;
 
         var missed = entry.Direction == CallDirection.Missed;
-        var textLeft = avatarCenter.X + radius + 14f * scale;
-        var textWidth = actionLeft - textLeft;
-        var titleTop = origin.Y + 13f * scale;
-        var titleSize = Typography.Measure(title, TextStyles.Headline);
-        var titleHovering = UiInteract.Hover(new Vector2(textLeft, titleTop),
-            new Vector2(textLeft + textWidth, titleTop + titleSize.Y));
-        Marquee.DrawLeft(new MarqueeId("messageapp.calls.title.", entry.UserId + entry.TimestampUnix), title, textLeft, titleTop,
-            textWidth, TextStyles.Headline, missed ? theme.Danger : ui.TitleInk, titleHovering);
-        var directionIcon = entry.Direction == CallDirection.Outgoing
-            ? FontAwesomeIcon.ArrowUp
-            : FontAwesomeIcon.ArrowDown;
-        var directionInk = missed ? theme.Danger : ui.MutedInk;
+        var titleHeight = Typography.LineHeight(RowTitleStyle);
+        var subHeight = Typography.LineHeight(RowSubStyle);
+        var top = row.Bounds.Center.Y - (titleHeight + RowLineGap * scale + subHeight) * 0.5f;
+        var width = MathF.Max(1f, right - row.TextLeft);
+        var hovering = UiInteract.Hover(new Vector2(row.TextLeft, top), new Vector2(right, top + titleHeight));
+        Marquee.DrawLeft(drawList, new MarqueeId("messageapp.calls.title.", entry.UserId + entry.TimestampUnix), title,
+            row.TextLeft, top, width, RowTitleStyle, missed ? ink.Danger : ink.TitleInk, hovering);
+        var directionGlyph = entry.Direction switch
+        {
+            CallDirection.Outgoing => PhoneIcons.PhoneOutgoing,
+            CallDirection.Incoming => PhoneIcons.PhoneIncoming,
+            _ => PhoneIcons.PhoneX,
+        };
+        var directionInk = missed ? ink.Danger : ink.MutedInk;
         var directionLabel = entry.Direction switch
         {
             CallDirection.Outgoing => Loc.T(L.Phone.Outgoing),
             CallDirection.Incoming => Loc.T(L.Phone.Incoming),
             _ => Loc.T(L.Phone.Missed),
         };
-        AppSkin.Icon(new Vector2(textLeft + 5f * scale, origin.Y + 42f * scale), IconGlyph.Of(directionIcon),
-            directionInk, 0.6f);
-        Typography.Draw(new Vector2(textLeft + 15f * scale, origin.Y + 35f * scale),
-            Typography.FitText(directionLabel, textWidth - 15f * scale, TextStyles.Footnote), directionInk,
-            TextStyles.Footnote);
+        var subTop = top + titleHeight + RowLineGap * scale;
+        PhoneIcon.Draw(drawList, new Vector2(row.TextLeft + CallDirectionGlyph * 0.5f * scale, subTop + subHeight * 0.5f),
+            directionGlyph, directionInk, CallDirectionGlyph * scale);
+        var labelLeft = row.TextLeft + CallDirectionGlyph * scale + 5f * scale;
+        Typography.Draw(drawList, new Vector2(labelLeft, subTop),
+            Typography.FitText(directionLabel, MathF.Max(1f, right - labelLeft), RowSubStyle), ink.MutedInk,
+            RowSubStyle);
 
-        if (cell.Tapped)
+        if (row.Tapped)
         {
             if (callable)
             {
@@ -206,13 +273,13 @@ internal sealed partial class MessageApp
             }
         }
 
-        FeedCell.End(drawList, cell, ui.Hairline);
+        EndPersonRow(drawList, row);
     }
 
     private void DrawNewCall(Rect area)
     {
         var scale = UiScale.Current;
-        AppHeader.Draw(new PhoneContext(area, theme, navigation), Loc.T(L.Phone.NewCall), back);
+        DrawScreenHeader(area, Loc.T(L.Phone.NewCall));
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         DrawContactPicker(body, addMode: false);
     }
@@ -220,7 +287,7 @@ internal sealed partial class MessageApp
     private void DrawAddToCall(Rect area)
     {
         var scale = UiScale.Current;
-        AppHeader.Draw(new PhoneContext(area, theme, navigation), Loc.T(L.Phone.AddToCall), back);
+        DrawScreenHeader(area, Loc.T(L.Phone.AddToCall));
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         DrawContactPicker(body, addMode: true);
     }
@@ -228,13 +295,13 @@ internal sealed partial class MessageApp
     private void DrawContactPicker(Rect body, bool addMode)
     {
         var scale = UiScale.Current;
-        var searchRect = new Rect(body.Min, new Vector2(body.Max.X, body.Min.Y + CallSearchHeight * scale));
-        SearchField.DrawSubmit(searchRect, "##msgCallSearch", Loc.T(L.Phone.FilterHint), ref searchDraft,
-            AppPalettes.Message);
+        var searchRect = new Rect(new Vector2(body.Min.X + CellPadX * scale, body.Min.Y),
+            new Vector2(body.Max.X - CellPadX * scale, body.Min.Y + CallSearchHeight * scale));
+        SearchField.Draw(searchRect, "##msgCallSearch", Loc.T(L.Phone.FilterHint), ref searchDraft, ui.Palette);
         var listRect = new Rect(new Vector2(body.Min.X, searchRect.Max.Y), body.Max);
 
         var query = searchDraft.Trim();
-        var callable = new List<ContactDto>();
+        callableContacts.Clear();
         var snapshot = contacts.Contacts;
         for (var index = 0; index < snapshot.Length; index++)
         {
@@ -249,19 +316,19 @@ internal sealed partial class MessageApp
                 continue;
             }
 
-            callable.Add(entry);
+            callableContacts.Add(entry);
         }
 
-        callable.Sort(CompareContactsByLabel);
-        if (callable.Count == 0)
+        callableContacts.Sort(CompareContactsByLabel);
+        if (callableContacts.Count == 0)
         {
             if (query.Length > 0)
             {
-                EmptyState.Draw(listRect, ui, FontAwesomeIcon.Search, Loc.T(L.Phone.NoOneFound), string.Empty);
+                EmptyState.Draw(listRect, ui, PhoneIcons.Search, Loc.T(L.Phone.NoOneFound), string.Empty);
             }
             else
             {
-                EmptyState.Draw(listRect, ui, FontAwesomeIcon.Users, Loc.T(L.Phone.NoContactsTitle),
+                EmptyState.Draw(listRect, ui, PhoneIcons.Users, Loc.T(L.Phone.NoContactsTitle),
                     Loc.T(L.Message.NoContacts));
             }
 
@@ -270,46 +337,44 @@ internal sealed partial class MessageApp
 
         using (AppSurface.BeginEdgeToEdge(listRect))
         {
+            var drawList = ImGui.GetWindowDrawList();
             ImGui.Dummy(new Vector2(0f, 4f * scale));
-            for (var index = 0; index < callable.Count; index++)
+            var lastLetter = string.Empty;
+            for (var index = 0; index < callableContacts.Count; index++)
             {
-                DrawPickerRow(callable[index], scale, addMode);
+                var letter = TrimmedLetter(ContactBook.DisplayLabel(callableContacts[index]));
+                if (!string.Equals(letter, lastLetter, StringComparison.Ordinal))
+                {
+                    DrawLetterHeader(drawList, letter);
+                    lastLetter = letter;
+                }
+
+                DrawPickerRow(drawList, callableContacts[index], addMode);
             }
 
             ImGui.Dummy(new Vector2(0f, 24f * scale));
         }
     }
 
-    private void DrawPickerRow(ContactDto contact, float scale, bool addMode)
+    private void DrawPickerRow(ImDrawListPtr drawList, ContactDto contact, bool addMode)
     {
+        var scale = UiScale.Current;
         var label = ContactBook.DisplayLabel(contact);
-        var rowHeight = CallRowHeight * scale;
-        var drawList = ImGui.GetWindowDrawList();
-        var cell = FeedCell.Begin(drawList, rowHeight, ui.HoverWash);
-        var origin = cell.Bounds.Min;
-        var rowMax = cell.Bounds.Max;
-        var pad = FeedCell.PadX * scale;
-        var radius = 22f * scale;
-        var avatarCenter = new Vector2(origin.X + pad + radius, origin.Y + rowHeight * 0.5f);
-        AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, contact.AvatarUrl, images,
-            lodestone, 1f, 32, 1f, Frames.Of(contact.FrameId));
-        var callCenter = new Vector2(rowMax.X - pad - 18f * scale, avatarCenter.Y);
-        var actionLeft = callCenter.X - 24f * scale;
-        var textLeft = avatarCenter.X + radius + 14f * scale;
-        var textWidth = actionLeft - textLeft;
-        Typography.Draw(new Vector2(textLeft, origin.Y + 13f * scale),
-            Typography.FitText(label, textWidth, TextStyles.Headline), ui.TitleInk, TextStyles.Headline);
-        Typography.Draw(new Vector2(textLeft, origin.Y + 35f * scale),
-            Typography.FitText(ContactBook.Format(contact.PhoneNumber), textWidth, TextStyles.Footnote), ui.MutedInk,
-            TextStyles.Footnote);
-        if (ui.IconButton(callCenter, 18f * scale, IconGlyph.Of(FontAwesomeIcon.Phone), White, CallGreen, 0.9f,
-                Loc.T(L.Friends.Call), HoverLabelSide.Above)
-            || cell.Tapped)
+        var row = BeginPersonRow(drawList, CallRowHeight, CallRowAvatarRadius, CallFavoriteRadius * 2f * scale, true,
+            out var avatarCenter);
+        DrawContactAvatar(drawList, contact, avatarCenter, CallRowAvatarRadius * scale);
+        DrawRowTitleAndSub(drawList, new MarqueeId("messageapp.calls.pick.", contact.UserId), label,
+            ContactBook.Format(contact.PhoneNumber), row.TextLeft, row.TextRight, row.Bounds.Center.Y, ink.TitleInk,
+            ink.MutedInk);
+        var callCenter = new Vector2(row.Bounds.Max.X - CellPadX * scale - CallFavoriteRadius * scale,
+            row.Bounds.Center.Y);
+        PhoneIcon.Draw(drawList, callCenter, PhoneIcons.Phone, ink.Accent, CallFavoriteGlyph * scale);
+        if (row.Tapped)
         {
             Place(new CallContact(contact.UserId, string.Empty, string.Empty, label), addMode);
         }
 
-        FeedCell.End(drawList, cell, ui.Hairline);
+        EndPersonRow(drawList, row);
     }
 
     private void DrawEnablePrompt(Rect body, float scale)
@@ -319,7 +384,7 @@ internal sealed partial class MessageApp
         var drawList = ImGui.GetWindowDrawList();
         var iconCenter = new Vector2(centerX, baseY);
         drawList.AddCircleFilled(iconCenter, 34f * scale, ImGui.GetColorU32(ui.FieldSurface), 32);
-        AppSkin.Icon(iconCenter, IconGlyph.Of(FontAwesomeIcon.Phone), CallGreen, 1.7f);
+        PhoneIcon.Draw(drawList, iconCenter, PhoneIcons.Phone, CallGreen, 34f * scale);
         Typography.DrawCentered(new Vector2(centerX, baseY + 56f * scale), Loc.T(L.Phone.EnableTitle), ui.TitleInk,
             TextStyles.Title3);
         var maxWidth = MathF.Min(body.Width - 56f * scale, 300f * scale);
@@ -360,7 +425,7 @@ internal sealed partial class MessageApp
         {
             var radius = 56f * scale;
             var avatarCenter = new Vector2(centerX, avatarTop + radius);
-            DrawAvatarBloom(drawList, avatarCenter, radius, screenTheme, scale);
+            DrawAvatarBloom(drawList, avatarCenter, radius, ui.Accent, scale);
             if (connecting)
             {
                 DrawCallingPulse(drawList, avatarCenter, radius, scale);
@@ -373,12 +438,12 @@ internal sealed partial class MessageApp
                     DrawSpeakingHalo(drawList, avatarCenter, radius, calls.LevelOf(others[0]), scale);
                 }
 
-                AvatarView.Draw(drawList, avatarCenter, radius, screenTheme.Accent, Initial(view.PeerLabel), 2.6f,
+                AvatarView.Draw(drawList, avatarCenter, radius, ui.Accent, Initial(view.PeerLabel), 2.6f,
                     lodestone.Avatar(others[0].Name, others[0].World, radius * 2f), 64);
             }
             else
             {
-                drawList.AddCircleFilled(avatarCenter, radius, ImGui.GetColorU32(screenTheme.Accent), 64);
+                drawList.AddCircleFilled(avatarCenter, radius, ImGui.GetColorU32(ui.Accent), 64);
                 Typography.DrawCentered(avatarCenter, Initial(view.PeerLabel), White, TextStyles.LargeTitle);
             }
 
@@ -395,10 +460,9 @@ internal sealed partial class MessageApp
 
     private void DrawCallHeadings(float centerX, float nameCenterY, CallView view, PhoneTheme screenTheme, float scale)
     {
-        Typography.DrawCentered(new Vector2(centerX, nameCenterY), view.PeerLabel, screenTheme.TextStrong,
-            TextStyles.Title1);
+        Typography.DrawCentered(new Vector2(centerX, nameCenterY), view.PeerLabel, ui.TitleInk, TextStyles.Title1);
         var statusColor = view.Connected
-            ? Palette.WithAlpha(screenTheme.TextStrong, 0.72f)
+            ? Palette.WithAlpha(ui.TitleInk, 0.72f)
             : Palette.WithAlpha(CallGreen, 0.95f);
         Typography.DrawCentered(new Vector2(centerX, nameCenterY + 32f * scale), StatusLine(view), statusColor,
             TextStyles.Callout);
@@ -417,21 +481,18 @@ internal sealed partial class MessageApp
             else
             {
                 Typography.DrawCentered(new Vector2(centerX, nameCenterY + 58f * scale), Loc.T(L.Phone.UseHeadphones),
-                    Palette.WithAlpha(screenTheme.TextStrong, 0.45f), TextStyles.Footnote);
+                    Palette.WithAlpha(ui.TitleInk, 0.45f), TextStyles.Footnote);
             }
         }
     }
 
-    private const int MicSilentWarningSeconds = 30;
-
-    private static void DrawAvatarBloom(ImDrawListPtr drawList, Vector2 center, float radius, PhoneTheme screenTheme,
+    private static void DrawAvatarBloom(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 accent,
         float scale)
     {
         for (var ring = 3; ring >= 1; ring--)
         {
             var bloomRadius = radius + ring * 15f * scale;
-            drawList.AddCircleFilled(center, bloomRadius,
-                ImGui.GetColorU32(Palette.WithAlpha(screenTheme.Accent, 0.05f)), 64);
+            drawList.AddCircleFilled(center, bloomRadius, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.05f)), 64);
         }
     }
 
@@ -459,10 +520,10 @@ internal sealed partial class MessageApp
             var cellCenterY = top + radius + row * (radius * 2f + 22f * scale);
             var center = new Vector2(cellCenterX, cellCenterY);
             DrawSpeakingHalo(drawList, center, radius, calls.LevelOf(others[index]), scale);
-            AvatarView.Draw(drawList, center, radius, screenTheme.Accent, Initial(others[index].DisplayName), 1.2f,
+            AvatarView.Draw(drawList, center, radius, ui.Accent, Initial(others[index].DisplayName), 1.2f,
                 lodestone.Avatar(others[index].Name, others[index].World, radius * 2f), 48);
             Typography.DrawCentered(new Vector2(cellCenterX, cellCenterY + radius + 12f * scale),
-                UiText.Truncate(others[index].DisplayName, 10), screenTheme.TextStrong, 0.78f);
+                UiText.Truncate(others[index].DisplayName, 10), ui.TitleInk, 0.78f);
         }
     }
 
@@ -472,34 +533,33 @@ internal sealed partial class MessageApp
         var centerX = content.Center.X;
         var controlsY = content.Max.Y - 74f * scale;
         var spacing = 84f * scale;
-        var frost = Palette.WithAlpha(screenTheme.TextStrong, 0.16f);
-        var ink = screenTheme.TextStrong;
-        var labelColor = Palette.WithAlpha(screenTheme.TextStrong, 0.72f);
+        var frost = Palette.WithAlpha(ui.TitleInk, 0.16f);
+        var labelColor = Palette.WithAlpha(ui.TitleInk, 0.72f);
         var muteFill = view.Muted ? White : frost;
-        var muteInk = view.Muted ? new Vector4(0.10f, 0.11f, 0.14f, 1f) : ink;
+        var muteInk = view.Muted ? MessageThemes.Body : ui.TitleInk;
         if (ControlButton(new Vector2(centerX - spacing, controlsY), 27f * scale,
-                view.Muted ? FontAwesomeIcon.MicrophoneSlash : FontAwesomeIcon.Microphone, muteFill, muteInk,
-                Loc.T(L.Message.MuteAction), labelColor, 1f, true))
+                view.Muted ? PhoneIcons.MicrophoneOff : PhoneIcons.Microphone, muteFill, muteInk,
+                Loc.T(L.Message.MuteAction), labelColor, 24f, true))
         {
             calls.ToggleMute();
         }
 
-        if (ControlButton(new Vector2(centerX, controlsY), 33f * scale, FontAwesomeIcon.PhoneSlash, screenTheme.Danger,
-                White, Loc.T(L.Phone.End), labelColor, 1.15f, true))
+        if (ControlButton(new Vector2(centerX, controlsY), 33f * scale, PhoneIcons.PhoneX, screenTheme.Danger,
+                White, Loc.T(L.Phone.End), labelColor, 30f, true))
         {
             calls.Hangup();
         }
 
         var canAdd = view.State == CallState.Active;
-        if (ControlButton(new Vector2(centerX + spacing, controlsY), 27f * scale, FontAwesomeIcon.UserPlus, frost, ink,
-                Loc.T(L.Friends.Add), labelColor, 1f, canAdd) && canAdd)
+        if (ControlButton(new Vector2(centerX + spacing, controlsY), 27f * scale, PhoneIcons.UserPlus, frost,
+                ui.TitleInk, Loc.T(L.Friends.Add), labelColor, 24f, canAdd) && canAdd)
         {
             router.Push(MessageRoute.AddToCall);
         }
     }
 
-    private static bool ControlButton(Vector2 center, float radius, FontAwesomeIcon icon, Vector4 fill, Vector4 ink,
-        string label, Vector4 labelColor, float iconScale, bool enabled)
+    private static bool ControlButton(Vector2 center, float radius, string glyph, Vector4 fill, Vector4 glyphInk,
+        string label, Vector4 labelColor, float glyphSize, bool enabled)
     {
         var drawList = ImGui.GetWindowDrawList();
         var scale = UiScale.Current;
@@ -509,10 +569,10 @@ internal sealed partial class MessageApp
         var baseFill = hovered ? Palette.Mix(fill, White, 0.14f) : fill;
         var fillAlpha = enabled ? MathF.Max(baseFill.W, 0.16f) : baseFill.W * 0.4f;
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(baseFill, fillAlpha)), 40);
-        AppSkin.Icon(center, IconGlyph.Of(icon), Palette.WithAlpha(ink, enabled ? 1f : 0.45f), iconScale);
+        PhoneIcon.Draw(drawList, center, glyph, Palette.WithAlpha(glyphInk, enabled ? 1f : 0.45f), glyphSize * scale);
         if (label.Length > 0)
         {
-            Typography.DrawCentered(new Vector2(center.X, max.Y + 14f * scale), label,
+            Typography.DrawCentered(drawList, new Vector2(center.X, max.Y + 14f * scale), label,
                 Palette.WithAlpha(labelColor, enabled ? 1f : 0.45f), TextStyles.Caption1);
         }
 
@@ -585,5 +645,4 @@ internal sealed partial class MessageApp
     }
 
     private static string Initial(string value) => value.Length > 0 ? value.Substring(0, 1).ToUpperInvariant() : "?";
-
 }

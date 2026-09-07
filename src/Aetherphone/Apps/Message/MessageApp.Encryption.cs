@@ -3,19 +3,24 @@ using System.Security.Cryptography;
 using System.Text;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
-using Aetherphone.Core.Social;
 
 namespace Aetherphone.Apps.Message;
 
 internal sealed partial class MessageApp
 {
+    private const float EncryptionHeroRadius = 34f;
+    private const float EncryptionHeroGlyph = 34f;
+    private const float EncryptionMemberRowHeight = 56f;
+    private const float EncryptionMemberGlyph = 18f;
+    private const float EncryptionSidePadding = 32f;
+
+    private static readonly TextStyle SecurityCodeStyle = new(1.02f, FontWeight.Medium);
+
     private string? encryptionPeerRequestedFor;
     private string securityCode = string.Empty;
     private string securityCodeKey = string.Empty;
@@ -23,8 +28,7 @@ internal sealed partial class MessageApp
     private void DrawEncryptionInfo(Rect area, string conversationId)
     {
         var scale = UiScale.Current;
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Encryption.InfoTitle), back);
+        DrawScreenHeader(area, Loc.T(L.Encryption.InfoTitle));
         var conversation = store.Conversation;
         if (conversation is null || conversation.Id != conversationId)
         {
@@ -39,50 +43,50 @@ internal sealed partial class MessageApp
 
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-        using (AppSurface.Begin(body))
+        using (AppSurface.Begin(body, EncryptionSidePadding))
         {
+            var drawList = ImGui.GetWindowDrawList();
             var encrypted = store.EncryptingCurrent;
-            DrawEncryptionHero(encrypted, scale);
+            DrawEncryptionHero(drawList, encrypted, scale);
             DrawEncryptionSummary(encrypted, scale);
             threadView.DrawEncryptionEmbedded();
             if (conversation.IsGroup)
             {
-                DrawEncryptionMembers(scale);
+                DrawEncryptionMembers(drawList, scale);
             }
             else
             {
-                DrawSecurityCode(conversation, encrypted, scale);
+                DrawSecurityCode(drawList, conversation, encrypted, scale);
             }
 
             ImGui.Dummy(new Vector2(0f, 30f * scale));
         }
     }
 
-    private void DrawEncryptionHero(bool encrypted, float scale)
+    private void DrawEncryptionHero(ImDrawListPtr drawList, bool encrypted, float scale)
     {
-        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var radius = 34f * scale;
+        var width = ScrollLayout.StableContentWidth();
+        var radius = EncryptionHeroRadius * scale;
         var center = new Vector2(origin.X + width * 0.5f, origin.Y + 16f * scale + radius);
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.16f)), 48);
-        AppSkin.Icon(center, IconGlyph.Of((encrypted ? FontAwesomeIcon.Lock : FontAwesomeIcon.LockOpen)),
-            encrypted ? ui.Accent : ui.MutedInk, 1.7f);
+        PhoneIcon.Draw(drawList, center, encrypted ? PhoneIcons.Lock : PhoneIcons.LockOpen,
+            encrypted ? ink.AccentLink : ink.MutedInk, EncryptionHeroGlyph * scale);
         var headline = encrypted ? Loc.T(L.Encryption.EncryptedIndicator) : Loc.T(L.Encryption.PlaintextIndicator);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + radius + 20f * scale), headline,
-            theme.TextStrong, 1.05f, FontWeight.SemiBold);
+        var headlineHeight = Typography.DrawWrappedCentered(new Vector2(center.X, center.Y + radius + 14f * scale),
+            headline, ink.TitleInk, TextStyles.Headline, width - 24f * scale);
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, 16f * scale + radius * 2f + 40f * scale));
+        ImGui.Dummy(new Vector2(width, 16f * scale + radius * 2f + 14f * scale + headlineHeight + 12f * scale));
     }
 
     private void DrawEncryptionSummary(bool encrypted, float scale)
     {
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var maxWidth = width - 40f * scale;
+        var width = ScrollLayout.StableContentWidth();
+        var maxWidth = width - 24f * scale;
         var text = encrypted ? Loc.T(L.Encryption.Intro) : NotEncryptedSummary();
         var height = Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, origin.Y), text,
-            ui.MutedInk, TextStyles.Subheadline, maxWidth);
+            ink.MutedInk, TextStyles.Subheadline, maxWidth);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height + 22f * scale));
     }
@@ -131,9 +135,7 @@ internal sealed partial class MessageApp
             {
                 if (members[memberIndex].UserId == userIds[index])
                 {
-                    name = members[memberIndex].DisplayName.Length > 0
-                        ? members[memberIndex].DisplayName
-                        : members[memberIndex].Handle;
+                    name = DirectMessagesStore.MemberLabel(members[memberIndex]);
                     break;
                 }
             }
@@ -149,29 +151,28 @@ internal sealed partial class MessageApp
         return builder.ToString();
     }
 
-    private void DrawSecurityCode(ConversationDto conversation, bool encrypted, float scale)
+    private void DrawSecurityCode(ImDrawListPtr drawList, ConversationDto conversation, bool encrypted, float scale)
     {
-        DrawSectionLabel(Loc.T(L.Encryption.SecurityCode), scale);
+        DrawInsetSectionLabel(Loc.T(L.Encryption.SecurityCode));
         var code = SecurityCodeFor(conversation.OtherUserId);
-        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
+        var width = ScrollLayout.StableContentWidth();
         if (code.Length == 0 || !encrypted)
         {
-            var maxWidth = width - 40f * scale;
+            var maxWidth = width - 24f * scale;
             var height = Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, origin.Y),
-                Loc.T(L.Encryption.SecurityCodeUnavailable), ui.MutedInk, TextStyles.Footnote, maxWidth);
+                Loc.T(L.Encryption.SecurityCodeUnavailable), ink.MutedInk, TextStyles.Footnote, maxWidth);
             ImGui.SetCursorScreenPos(origin);
             ImGui.Dummy(new Vector2(width, height + 16f * scale));
             return;
         }
 
-        var lineHeight = Typography.Measure("0", 1.02f, FontWeight.Medium).Y;
+        var lineHeight = Typography.LineHeight(SecurityCodeStyle);
         var pad = 16f * scale;
         var lineGap = 7f * scale;
         var cardHeight = pad * 2f + lineHeight * 4f + lineGap * 3f;
         var cardMax = new Vector2(origin.X + width, origin.Y + cardHeight);
-        ui.Card(drawList, origin, cardMax, 18f * scale);
+        ui.Card(drawList, origin, cardMax, Metrics.Radius.Md * scale);
         var centerX = (origin.X + cardMax.X) * 0.5f;
         var lineTop = origin.Y + pad;
         var remaining = code.AsSpan();
@@ -179,8 +180,8 @@ internal sealed partial class MessageApp
         {
             var breakIndex = remaining.IndexOf('\n');
             var line = breakIndex >= 0 ? remaining[..breakIndex] : remaining;
-            Typography.DrawCentered(new Vector2(centerX, lineTop + lineHeight * 0.5f), line.ToString(),
-                theme.TextStrong, 1.02f, FontWeight.Medium);
+            Typography.DrawCentered(drawList, new Vector2(centerX, lineTop + lineHeight * 0.5f), line.ToString(),
+                ink.TitleInk, SecurityCodeStyle);
             lineTop += lineHeight + lineGap;
             remaining = breakIndex >= 0 ? remaining[(breakIndex + 1)..] : ReadOnlySpan<char>.Empty;
         }
@@ -199,7 +200,7 @@ internal sealed partial class MessageApp
             ? Loc.T(L.Friends.Copied)
             : Loc.T(L.Encryption.SecurityCodeHint, DirectMessagesStore.DisplayTitle(conversation));
         var hintHeight = Typography.DrawWrappedCentered(new Vector2(hintOrigin.X + width * 0.5f, hintOrigin.Y), hint,
-            copiedTimer > 0f ? ui.Accent : ui.MutedInk, TextStyles.Footnote, width - 40f * scale);
+            copiedTimer > 0f ? ink.AccentLink : ink.MutedInk, TextStyles.Footnote, width - 24f * scale);
         ImGui.SetCursorScreenPos(hintOrigin);
         ImGui.Dummy(new Vector2(width, hintHeight + 14f * scale));
     }
@@ -254,9 +255,9 @@ internal sealed partial class MessageApp
         return builder.ToString();
     }
 
-    private void DrawEncryptionMembers(float scale)
+    private void DrawEncryptionMembers(ImDrawListPtr drawList, float scale)
     {
-        DrawSectionLabel(Loc.T(L.DirectMessages.Members), scale);
+        DrawInsetSectionLabel(Loc.T(L.DirectMessages.Members));
         var members = store.Members;
         var waiting = store.CurrentKeyStatus.MembersWithoutKeys;
         var rowCount = 0;
@@ -273,7 +274,7 @@ internal sealed partial class MessageApp
             return;
         }
 
-        var card = GroupCard.Begin(ui, rowCount, 56f);
+        var card = GroupCard.Begin(ui, rowCount, EncryptionMemberRowHeight);
         for (var index = 0; index < members.Length; index++)
         {
             var member = members[index];
@@ -292,32 +293,33 @@ internal sealed partial class MessageApp
                 }
             }
 
-            DrawEncryptionMemberRow(card.NextRow(), member, hasKey, scale);
+            DrawEncryptionMemberRow(drawList, card.NextRow(), member, hasKey, scale);
         }
 
         card.End();
-        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        DrawCardGap();
     }
 
-    private void DrawEncryptionMemberRow(Rect row, ConversationMemberDto member, bool hasKey, float scale)
+    private void DrawEncryptionMemberRow(ImDrawListPtr drawList, Rect row, ConversationMemberDto member, bool hasKey,
+        float scale)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var radius = 17f * scale;
+        var radius = ReceiptAvatarRadius * scale;
         var avatarCenter = new Vector2(row.Min.X + radius, row.Center.Y);
-        var label = member.DisplayName.Length > 0 ? member.DisplayName : member.Handle;
-        AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, member.AvatarUrl, images,
-            lodestone, 0.85f, 32, 1f, Frames.Of(member.FrameId));
-        var textLeft = avatarCenter.X + radius + 12f * scale;
-        var textMaxWidth = MathF.Max(1f, row.Max.X - 28f * scale - textLeft);
+        DrawMemberAvatar(drawList, member, avatarCenter, radius);
+        var textLeft = avatarCenter.X + radius + RowTextGap * scale;
+        var textMaxWidth = MathF.Max(1f, row.Max.X - EncryptionMemberGlyph * scale - RowTrailingGap * scale - textLeft);
         var band = RowBand(row, scale);
         var rowHovering = UiInteract.Hover(band.Min, band.Max);
-        UserName.Draw(drawList, "messageapp.encryption.member." + member.UserId, label, member.Badges, member.BadgeIds, textLeft,
-            row.Min.Y + 10f * scale, textMaxWidth, new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong,
-            rowHovering, theme);
-        Typography.Draw(new Vector2(textLeft, row.Min.Y + 31f * scale),
-            Loc.T(hasKey ? L.Encryption.MemberReady : L.Encryption.MemberNoKey), ui.MutedInk, TextStyles.Footnote);
-        AppSkin.Icon(new Vector2(row.Max.X - 8f * scale, row.Center.Y),
-            IconGlyph.Of((hasKey ? FontAwesomeIcon.Lock : FontAwesomeIcon.LockOpen)),
-            hasKey ? ui.Accent : ui.MutedInk, 0.95f);
+        var titleHeight = Typography.LineHeight(RowTitleStyle);
+        var subHeight = Typography.LineHeight(RowSubStyle);
+        var top = row.Center.Y - (titleHeight + RowLineGap * scale + subHeight) * 0.5f;
+        UserName.Draw(drawList, "messageapp.encryption.member." + member.UserId, DirectMessagesStore.MemberLabel(member), member.Badges,
+            member.BadgeIds, textLeft, top, textMaxWidth, RowTitleStyle, ink.TitleInk, rowHovering, theme);
+        Typography.Draw(drawList, new Vector2(textLeft, top + titleHeight + RowLineGap * scale),
+            Typography.FitText(Loc.T(hasKey ? L.Encryption.MemberReady : L.Encryption.MemberNoKey), textMaxWidth,
+                RowSubStyle), ink.MutedInk, RowSubStyle);
+        PhoneIcon.Draw(drawList, new Vector2(row.Max.X - EncryptionMemberGlyph * 0.5f * scale, row.Center.Y),
+            hasKey ? PhoneIcons.Lock : PhoneIcons.LockOpen, hasKey ? ink.AccentLink : ink.MutedInk,
+            EncryptionMemberGlyph * scale);
     }
 }

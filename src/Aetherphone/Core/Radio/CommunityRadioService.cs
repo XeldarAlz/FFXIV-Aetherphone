@@ -32,6 +32,7 @@ internal sealed class CommunityRadioService : IDisposable
     private volatile string tracksStationId = string.Empty;
     private volatile bool tracksFailed;
     private volatile int liveCount;
+    private volatile int followedLiveCount;
     private volatile CommunityStationDto? viewed;
     private volatile string viewedId = string.Empty;
     private volatile CommunityStationLoad viewedState;
@@ -55,12 +56,28 @@ internal sealed class CommunityRadioService : IDisposable
 
     public int LiveCount => liveCount;
 
+    public int FollowedLiveCount => followedLiveCount;
+
     private static int CountLive(CommunityStationDto[] snapshot)
     {
         var count = 0;
         for (var index = 0; index < snapshot.Length; index++)
         {
             if (snapshot[index].IsLive)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static int CountFollowedLive(CommunityStationDto[] snapshot)
+    {
+        var count = 0;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].IsLive && snapshot[index].IsFollowing)
             {
                 count++;
             }
@@ -190,6 +207,8 @@ internal sealed class CommunityRadioService : IDisposable
             Array.Copy(snapshot, copy, snapshot.Length);
             copy[index] = updated;
             stations = copy;
+            liveCount = CountLive(copy);
+            followedLiveCount = CountFollowedLive(copy);
             return;
         }
     }
@@ -392,6 +411,7 @@ internal sealed class CommunityRadioService : IDisposable
             {
                 stations = items;
                 liveCount = CountLive(items);
+                followedLiveCount = CountFollowedLive(items);
                 loaded = true;
                 Volatile.Write(ref lastFetchTick, Environment.TickCount64);
                 return;

@@ -264,7 +264,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public List<string> CustomAlbumOrder { get; set; } = new();
     public Dictionary<string, List<string>> CustomAlbumPhotos { get; set; } = new();
     public const int VelvetGateVersion = 1;
-    public const int VelvetOnboardVersion = 2;
+    public const int VelvetOnboardVersion = 3;
     public bool VelvetAcknowledgedGate { get; set; }
     public bool VelvetOnboarded { get; set; }
     public int VelvetOnboardedVersion { get; set; }
@@ -280,6 +280,11 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Dictionary<string, string> MessageContactNotes { get; set; } = new();
     public Dictionary<string, string> MessageDrafts { get; set; } = new();
     public List<StarredMessage> MessageStarredMessages { get; set; } = new();
+    public string MessageChatTheme { get; set; } = string.Empty;
+    public List<MessagePopoutState> MessagePopouts { get; set; } = new();
+    public string MessageWallpaper { get; set; } = string.Empty;
+    public bool MessageWallpaperPattern { get; set; } = true;
+    public Dictionary<string, string> MessageChatWallpapers { get; set; } = new();
     public bool ArchiveTellsToDisk { get; set; } = true;
     public bool LinkpearlNotificationsPaused { get; set; }
     public bool MessageMigrated { get; set; }
@@ -315,7 +320,6 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool LinkpearlHotkeyEnabled { get; set; }
     public int LinkpearlHotkeyModifier { get; set; }
     public int LinkpearlHotkeyKey { get; set; }
-    public bool LinkpearlPlayerContextMenu { get; set; } = true;
     public bool LinkpearlComposerMultiline { get; set; } = true;
     public int LinkpearlComposerMaxLines { get; set; } = 4;
     public bool LinkpearlDoubleEnterSend { get; set; }
@@ -337,8 +341,6 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool? Use24HourClock { get; set; }
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }
-    public bool RegionManual { get; set; }
-    public string ManualRegion { get; set; } = string.Empty;
     public long LastFeedbackSentUnix { get; set; }
     public List<CalendarCustomEvent> CalendarCustomEvents { get; set; } = new();
     public List<PhoneNote> Notes { get; set; } = new();
@@ -354,6 +356,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool ChangelogSeenInitialized { get; set; }
     
     public bool MarketContextMenu { get; set; } = true;
+    public bool LinkpearlContextMenu { get; set; }
 
     public bool HasUnseenChangelog => LastSeenChangelogVersion != ChangelogData.LatestVersion;
 

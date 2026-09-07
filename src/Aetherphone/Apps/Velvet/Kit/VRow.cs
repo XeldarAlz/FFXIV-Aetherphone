@@ -4,7 +4,6 @@ using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Aetherphone.Core.Social;
 
 namespace Aetherphone.Apps.Velvet.Kit;
@@ -22,7 +21,6 @@ internal enum VRowHit
     Body,
     Pill,
     Overflow,
-    Decline,
 }
 
 internal struct VRowModel
@@ -36,8 +34,9 @@ internal struct VRowModel
     public string World;
     public string? AvatarUrl;
     public int Presence;
-    public FontAwesomeIcon TileIcon;
+    public string TileIcon;
     public Vector4 TileTint;
+    public string? Value;
     public string? Pill;
     public bool PillFilled;
     public bool PillEnabled;
@@ -49,12 +48,15 @@ internal struct VRowModel
     public string? UserId;
     public string Time;
     public bool Chevron;
-    public bool Decline;
 }
 
 internal static class VRow
 {
     private const float DefaultHeight = 64f;
+    private const float PillHeight = 30f;
+    private const float PillLabelInset = 36f;
+
+    private static readonly TextStyle PillLabel = new(0.90f, FontWeight.SemiBold);
 
     public static VRowHit Cell(in VRowModel model, AppSkin ui, PhoneTheme theme, RemoteImageCache images,
         LodestoneService lodestone)
@@ -149,8 +151,8 @@ internal static class VRow
             var tileMax = new Vector2(tileMin.X + tile, centerY + tile * 0.5f);
             Squircle.Fill(drawList, tileMin, tileMax, Metrics.Radius.Sm * scale,
                 VelvetTheme.Alpha(model.TileTint, 0.20f).Packed());
-            AppSkin.Icon(new Vector2((tileMin.X + tileMax.X) * 0.5f, centerY), IconGlyph.Of(model.TileIcon),
-                model.TileTint, 0.8f);
+            PhoneIcon.Draw(drawList, new Vector2((tileMin.X + tileMax.X) * 0.5f, centerY), model.TileIcon,
+                model.TileTint, VIcon.Row * scale);
             textLeft = tileMax.X + Metrics.Space.Md * scale;
         }
         else
@@ -161,30 +163,25 @@ internal static class VRow
         var rightEdge = max.X - leftPad;
         if (model.Chevron)
         {
-            AppSkin.Icon(new Vector2(rightEdge - 8f * scale, centerY), IconGlyph.Of(FontAwesomeIcon.ChevronRight),
-                VelvetTheme.MutedInk, 0.78f);
+            PhoneIcon.Draw(drawList, new Vector2(rightEdge - 8f * scale, centerY), PhoneIcons.ChevronRight,
+                VelvetTheme.MutedInk, VIcon.Row * scale);
             rightEdge -= 22f * scale;
         }
 
-        if (model.Decline)
+        if (model.Value is { Length: > 0 } valueText)
         {
-            var declineCenter = new Vector2(rightEdge - 10f * scale, centerY);
-            var declineRadius = 13f * scale;
-            var declineHit = new Vector2(declineRadius, declineRadius);
-            overControl |= UiInteract.Hover(declineCenter - declineHit, declineCenter + declineHit);
-            if (ui.IconButton(declineCenter, declineRadius,
-                    IconGlyph.Of(FontAwesomeIcon.Times), VelvetTheme.MutedInk, AppSkin.Transparent, 0.9f))
-            {
-                hit = VRowHit.Decline;
-            }
-
-            rightEdge -= 30f * scale;
+            var valueSize = Typography.Measure(valueText, TextStyles.Subheadline);
+            var valueWidth = MathF.Min(valueSize.X, (max.X - min.X) * 0.42f);
+            Typography.Draw(drawList, new Vector2(rightEdge - valueWidth, centerY - valueSize.Y * 0.5f),
+                Typography.FitText(valueText, valueWidth, TextStyles.Subheadline), VelvetTheme.MutedInk,
+                TextStyles.Subheadline);
+            rightEdge -= valueWidth + Metrics.Space.Sm * scale;
         }
 
         if (model.Pill != null)
         {
-            var pillHeight = 30f * scale;
-            var pillWidth = Typography.Measure(model.Pill, 0.9f, FontWeight.SemiBold).X + 26f * scale;
+            var pillHeight = PillHeight * scale;
+            var pillWidth = Typography.Measure(model.Pill, PillLabel).X + PillLabelInset * scale;
             var pillRect = new Rect(new Vector2(rightEdge - pillWidth, centerY - pillHeight * 0.5f),
                 new Vector2(rightEdge, centerY + pillHeight * 0.5f));
             if (model.PillEnabled)
@@ -198,8 +195,7 @@ internal static class VRow
             else
             {
                 Squircle.Fill(drawList, pillRect.Min, pillRect.Max, pillHeight * 0.5f, VelvetTheme.PlumWell.Packed());
-                Typography.DrawCentered(drawList, pillRect.Center, model.Pill, VelvetTheme.MutedInk, 0.9f,
-                    FontWeight.SemiBold);
+                Typography.DrawCentered(drawList, pillRect.Center, model.Pill, VelvetTheme.MutedInk, PillLabel);
             }
 
             rightEdge -= pillWidth + Metrics.Space.Sm * scale;
@@ -214,7 +210,8 @@ internal static class VRow
 
         if (model.Badge > 0)
         {
-            VBadge.Count(drawList, new Vector2(rightEdge, max.Y - 16f * scale), model.Badge);
+            SocialChrome.DrawCountBadge(drawList, new Vector2(rightEdge - 10f * scale, max.Y - 16f * scale),
+                model.Badge, VelvetInk.Shared);
         }
 
         var textRight = rightEdge - Metrics.Space.Sm * scale;

@@ -10,9 +10,6 @@ namespace Aetherphone.Windows.Components;
 internal static class ComposeFab
 {
     private const float DefaultRadius = 26f;
-    private const float GlowReach = 10f;
-    private const int GlowRings = 10;
-    private const float GlowRingAlpha = 0.035f;
     private const float HoverGrow = 0.12f;
     private const float HoverSmoothTime = 0.11f;
     private const float HoverTopLift = 0.18f;
@@ -29,7 +26,7 @@ internal static class ComposeFab
     {
         var scale = UiScale.Current;
         var radius = radiusUnscaled * scale;
-        var glowPad = gradientBottom is null ? 0f : GlowReach * scale;
+        var glowPad = gradientBottom is null ? 0f : AccentGloss.GlowReach * scale;
         var scrollbarInset = DragScrollHost.Enabled ? 0f : ImGui.GetStyle().ScrollbarSize;
         var box = ComputeBoxRect(area, radiusUnscaled, scale, glowPad, scrollbarInset);
         var boxSize = box.Width;
@@ -51,7 +48,7 @@ internal static class ComposeFab
         var drawRadius = radius * (1f + HoverGrow * eased) * press;
         if (gradientBottom is { } deep)
         {
-            DrawGradientBody(drawList, center, drawRadius, Palette.Mix(accent, White, HoverTopLift * eased),
+            AccentGloss.Circle(drawList, center, drawRadius, Palette.Mix(accent, White, HoverTopLift * eased),
                 Palette.Mix(deep, White, HoverBottomLift * eased), scale, eased);
         }
         else
@@ -108,21 +105,5 @@ internal static class ComposeFab
             MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         HoverSprings[key] = spring;
         return Math.Clamp(spring.Value, 0f, 1f);
-    }
-
-    private static void DrawGradientBody(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 top,
-        Vector4 bottom, float scale, float eased)
-    {
-        var ringAlpha = GlowRingAlpha * (1f + eased);
-        for (var ring = GlowRings; ring >= 1; ring--)
-        {
-            var reach = GlowReach * scale * ring / GlowRings;
-            drawList.AddCircleFilled(center, radius + reach, ImGui.GetColorU32(Palette.WithAlpha(top, ringAlpha)),
-                48);
-        }
-        Squircle.FillCircleVerticalGradient(drawList, center, radius, ImGui.GetColorU32(top),
-            ImGui.GetColorU32(bottom));
-        drawList.AddCircleFilled(center - new Vector2(0f, radius * 0.42f), radius * 0.55f,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)), 32);
     }
 }

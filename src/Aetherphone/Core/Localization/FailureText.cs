@@ -37,6 +37,7 @@ internal static class FailureCodes
     public const string ChatNotMutualContact = "chat_not_mutual_contact";
     public const string ChatBlocked = "chat_blocked";
     public const string ChatNotOwner = "chat_not_owner";
+    public const string ChatNotAdmin = "chat_not_admin";
     public const string ChatGroupFull = "chat_group_full";
     public const string ChatHistoryOrphaned = "chat_history_orphaned";
     public const string ChatStoryUnavailable = "chat_story_unavailable";
@@ -225,6 +226,8 @@ internal static class FailureText
                 return Loc.T(L.Failure.ChatBlocked);
             case FailureCodes.ChatNotOwner:
                 return Loc.T(L.Failure.ChatNotOwner);
+            case FailureCodes.ChatNotAdmin:
+                return Loc.T(L.Failure.ChatNotAdmin);
             case FailureCodes.ChatGroupFull:
                 return Valued(L.Failure.ChatGroupFull, failure);
             case FailureCodes.ChatHistoryOrphaned:

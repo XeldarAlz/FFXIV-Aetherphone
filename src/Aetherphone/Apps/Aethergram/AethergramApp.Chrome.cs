@@ -220,7 +220,7 @@ internal sealed partial class AethergramApp
         var drawList = ImGui.GetWindowDrawList();
         var maxWidth = MathF.Max(1f, area.Width - CellPadX * 2f * scale);
         var top = area.Min.Y + EmptyStateTop * scale;
-        var titleHeight = Typography.DrawWrappedCentered(drawList, title, EmptyTitleStyle, Ink.TitleInk,
+        var titleBottom = Typography.DrawWrappedCentered(drawList, title, EmptyTitleStyle, Ink.TitleInk,
             new Vector2(area.Center.X, top), maxWidth);
         if (body.Length == 0)
         {
@@ -228,6 +228,6 @@ internal sealed partial class AethergramApp
         }
 
         Typography.DrawWrappedCentered(drawList, body, EmptyBodyStyle, Ink.MutedInk,
-            new Vector2(area.Center.X, top + titleHeight + 8f * scale), maxWidth);
+            new Vector2(area.Center.X, titleBottom + 8f * scale), maxWidth);
     }
 }

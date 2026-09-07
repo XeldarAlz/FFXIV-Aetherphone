@@ -3,25 +3,30 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
-using Aetherphone.Core.Social;
 
 namespace Aetherphone.Apps.Message;
 
 internal sealed partial class MessageApp
 {
-    private const float ContactRowHeight = 58f;
+    private const float ContactRowHeight = 64f;
+    private const float ContactRowAvatarRadius = 23f;
+    private const float ProfileRowHeight = 84f;
+    private const float ProfileAvatarRadius = 30f;
     private const float FieldHeight = 46f;
     private const int NumberMaxLength = 16;
     private const int AliasMaxLength = 40;
     private const int ReasonMaxLength = 500;
     private const float CopiedSeconds = 1.6f;
+    private const float PendingChipPadX = 10f;
+    private const float PendingChipPadY = 5f;
 
-    private readonly PullToRefresh contactsRefresh = new();
+    private readonly List<ContactDto> favoriteRows = new();
+    private readonly List<ContactDto> otherRows = new();
 
     private string numberDraft = string.Empty;
     private string aliasDraft = string.Empty;
@@ -75,110 +80,112 @@ internal sealed partial class MessageApp
         var scale = UiScale.Current;
         if (!session.IsSignedIn)
         {
-            Typography.DrawCentered(area.Center, Loc.T(L.Message.SignInPrompt), ui.MutedInk);
+            EmptyState.Draw(area, ui, PhoneIcons.Users, Loc.T(L.Apps.Contacts), Loc.T(L.Message.SignInPrompt));
             return;
         }
 
-        var searchHeight = 52f * scale;
-        SearchField.DrawSubmit(new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + searchHeight)),
-            "##msgContactsFilter", Loc.T(L.Phone.FilterHint), ref filter, AppPalettes.Message);
-        var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + searchHeight), area.Max);
+        var searchRect = new Rect(new Vector2(area.Min.X + CellPadX * scale, area.Min.Y),
+            new Vector2(area.Max.X - CellPadX * scale, area.Min.Y + ChatSearchHeight * scale));
+        SearchField.Draw(searchRect, "##msgContactsFilter", Loc.T(L.Phone.FilterHint), ref filter, ui.Palette);
+        var listRect = new Rect(new Vector2(area.Min.X, searchRect.Max.Y), area.Max);
         using (var surface = AppSurface.BeginEdgeToEdge(listRect))
         {
+            var drawList = ImGui.GetWindowDrawList();
             contactsRefresh.Draw(listRect, surface.Pull, surface.Dragging, contacts.Loading, ui.MutedInk,
                 refreshContacts);
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-            DrawMyNumberCard(scale);
-            var favorites = new List<ContactDto>();
-            var others = new List<ContactDto>();
-            CollectContacts(favorites, others);
-            if (favorites.Count == 0 && others.Count == 0)
+            var query = filter.Trim();
+            if (query.Length == 0)
             {
-                var emptyCenter = new Vector2(listRect.Center.X, listRect.Min.Y + 150f * scale);
-                Typography.DrawCentered(emptyCenter,
-                    filter.Trim().Length > 0 ? Loc.T(L.Phone.NoOneFound) : Loc.T(L.Friends.Empty), ui.MutedInk);
-                if (filter.Trim().Length == 0)
+                DrawMyProfileRow(drawList);
+                if (DrawActionRow(drawList, PhoneIcons.UserPlus, Loc.T(L.Message.NewContact)))
                 {
-                    Typography.DrawCentered(emptyCenter + new Vector2(0f, 26f * scale), Loc.T(L.Friends.EmptyHint),
-                        ui.MutedInk, TextStyles.Subheadline);
+                    addError = string.Empty;
+                    router.Push(MessageRoute.AddContact);
                 }
+            }
 
-                ImGui.Dummy(new Vector2(0f, 200f * scale));
+            CollectContacts(favoriteRows, otherRows);
+            if (favoriteRows.Count == 0 && otherRows.Count == 0)
+            {
+                DrawInlineEmpty(drawList, query.Length > 0 ? Loc.T(L.Phone.NoOneFound) : Loc.T(L.Friends.EmptyHint));
             }
             else
             {
-                if (favorites.Count > 0)
+                if (favoriteRows.Count > 0)
                 {
-                    ListSection.Label(ui, Loc.T(L.Message.Favorites));
-                    for (var index = 0; index < favorites.Count; index++)
+                    DrawSectionLabel(Loc.T(L.Message.Favorites));
+                    for (var index = 0; index < favoriteRows.Count; index++)
                     {
-                        DrawContactRow(favorites[index], scale);
+                        DrawContactRow(drawList, favoriteRows[index]);
                     }
                 }
 
-                if (others.Count > 0)
+                if (otherRows.Count > 0)
                 {
-                    if (favorites.Count > 0)
+                    DrawSectionLabel(Loc.T(L.Phone.ContactsSection));
+                    var lastLetter = string.Empty;
+                    for (var index = 0; index < otherRows.Count; index++)
                     {
-                        ListSection.Label(ui, Loc.T(L.Phone.ContactsSection));
-                    }
+                        var letter = TrimmedLetter(ContactBook.DisplayLabel(otherRows[index]));
+                        if (!string.Equals(letter, lastLetter, StringComparison.Ordinal))
+                        {
+                            DrawLetterHeader(drawList, letter);
+                            lastLetter = letter;
+                        }
 
-                    for (var index = 0; index < others.Count; index++)
-                    {
-                        DrawContactRow(others[index], scale);
+                        DrawContactRow(drawList, otherRows[index]);
                     }
                 }
-
-                ImGui.Dummy(new Vector2(0f, 72f * scale));
             }
-        }
 
-        if (ComposeFab.Draw(listRect, "##msgAddFab", ui.Accent, IconGlyph.Of(FontAwesomeIcon.UserPlus),
-                Loc.T(L.Friends.AddFriend), "message.addcontact"))
-        {
-            addError = string.Empty;
-            router.Push(MessageRoute.AddContact);
+            ImGui.Dummy(new Vector2(0f, 24f * scale));
         }
     }
 
-    private void DrawMyNumberCard(float scale)
+    private void DrawMyProfileRow(ImDrawListPtr drawList)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var pad = 16f * scale;
-        var inset = FeedCell.PadX * scale;
-        var cardHeight = 104f * scale;
-        var cardMin = new Vector2(origin.X + inset, origin.Y);
-        var cardMax = new Vector2(origin.X + width - inset, origin.Y + cardHeight);
-        UiAnchors.Report("message.mynumber", new Rect(cardMin, cardMax));
-        ui.Card(drawList, cardMin, cardMax, 18f * scale, elevated: true);
-        Typography.Draw(new Vector2(cardMin.X + pad, cardMin.Y + 14f * scale), Loc.T(L.Friends.MyNumber),
-            ui.HeaderInk, TextStyles.FootnoteEmphasized);
+        var scale = UiScale.Current;
+        var row = BeginPersonRow(drawList, ProfileRowHeight, ProfileAvatarRadius, 0f, true, out var avatarCenter);
+        UiAnchors.Report("message.mynumber", row.Bounds);
+        var me = session.CurrentUser;
+        var name = me is null ? DisplayName : SocialIdentity.Name(me.DisplayName, me.Handle);
+        AvatarView.DrawRemote(drawList, avatarCenter, ProfileAvatarRadius * scale, theme, me?.Name ?? name,
+            me?.World ?? string.Empty, me?.AvatarUrl, images, lodestone, 1.2f, 40);
         var number = contacts.MyNumber;
         var display = number.Length > 0 ? ContactBook.Format(number) : "…";
-        Typography.Draw(new Vector2(cardMin.X + pad, cardMin.Y + 34f * scale), display, ui.TitleInk,
-            TextStyles.Title1);
-        var hint = copiedTimer > 0f ? Loc.T(L.Friends.Copied) : Loc.T(L.Friends.ShareHint);
-        Typography.Draw(new Vector2(cardMin.X + pad, cardMax.Y - 26f * scale), hint,
-            copiedTimer > 0f ? ui.Accent : ui.MutedInk, TextStyles.Footnote);
-        if (number.Length > 0)
+        var copyCenter = new Vector2(row.Bounds.Max.X - CellPadX * scale - RowStatusGlyph * 0.5f * scale,
+            row.Bounds.Center.Y);
+        PhoneIcon.Draw(drawList, copyCenter, PhoneIcons.Copy, copiedTimer > 0f ? ink.AccentLink : ink.MutedInk,
+            RowStatusGlyph * 1.2f * scale);
+        var textRight = copyCenter.X - RowStatusGlyph * scale;
+        var titleHeight = Typography.LineHeight(RowTitleStyle);
+        var subHeight = Typography.LineHeight(RowSubStyle);
+        var metaHeight = Typography.LineHeight(RowMetaStyle);
+        var top = row.Bounds.Center.Y - (titleHeight + subHeight + metaHeight + RowLineGap * 2f * scale) * 0.5f;
+        var width = MathF.Max(1f, textRight - row.TextLeft);
+        var hovering = UiInteract.Hover(new Vector2(row.TextLeft, top), new Vector2(textRight, top + titleHeight));
+        Marquee.DrawLeft(drawList, "messageapp.contacts.me", name, row.TextLeft, top, width, RowTitleStyle,
+            ink.TitleInk, hovering);
+        Typography.Draw(drawList, new Vector2(row.TextLeft, top + titleHeight + RowLineGap * scale),
+            Typography.FitText(display, width, RowSubStyle), ink.BodyInk, RowSubStyle);
+        var hint = copiedTimer > 0f ? Loc.T(L.Friends.Copied) : Loc.T(L.Message.ProfileHint);
+        Typography.Draw(drawList,
+            new Vector2(row.TextLeft, top + titleHeight + subHeight + RowLineGap * 2f * scale),
+            Typography.FitText(hint, width, RowMetaStyle), copiedTimer > 0f ? ink.AccentLink : ink.MutedInk,
+            RowMetaStyle);
+        if (row.Tapped && number.Length > 0)
         {
-            AppSkin.Icon(new Vector2(cardMax.X - 24f * scale, cardMin.Y + cardHeight * 0.5f),
-                IconGlyph.Of(FontAwesomeIcon.Copy), ui.MutedInk, 1f);
-            if (UiInteract.HoverClick(cardMin, cardMax))
-            {
-                ImGui.SetClipboardText(display);
-                copiedTimer = CopiedSeconds;
-            }
+            ImGui.SetClipboardText(display);
+            copiedTimer = CopiedSeconds;
         }
 
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, cardHeight + 12f * scale));
+        EndPersonRow(drawList, row);
     }
 
     private void CollectContacts(List<ContactDto> favoritesTarget, List<ContactDto> othersTarget)
     {
+        favoritesTarget.Clear();
+        othersTarget.Clear();
         var snapshot = contacts.Contacts;
         var query = filter.Trim();
         for (var index = 0; index < snapshot.Length; index++)
@@ -216,59 +223,40 @@ internal sealed partial class MessageApp
             || ContactBook.Format(contact.PhoneNumber).Contains(query, StringComparison.Ordinal);
     }
 
-    private void DrawContactRow(ContactDto contact, float scale)
+    private void DrawContactRow(ImDrawListPtr drawList, ContactDto contact)
     {
-        var rowHeight = ContactRowHeight * scale;
-        var drawList = ImGui.GetWindowDrawList();
-        var cell = FeedCell.Begin(drawList, rowHeight, ui.HoverWash);
-        var origin = cell.Bounds.Min;
-        var width = cell.Bounds.Width;
-        var pad = FeedCell.PadX * scale;
-        var radius = 20f * scale;
-        var avatarCenter = new Vector2(origin.X + pad + radius, origin.Y + rowHeight * 0.5f);
-        AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, ContactBook.DisplayLabel(contact), string.Empty,
-            contact.AvatarUrl, images, lodestone, 0.95f, 32, 1f, Frames.Of(contact.FrameId));
-        var textLeft = avatarCenter.X + radius + 12f * scale;
-        var actionLeft = origin.X + width - pad;
-        if (!contact.IsMutual)
+        var scale = UiScale.Current;
+        var pendingLabel = contact.IsMutual ? string.Empty : Loc.T(L.Friends.PendingShort);
+        var pendingSize = pendingLabel.Length > 0 ? Typography.Measure(pendingLabel, RowMetaStyle) : Vector2.Zero;
+        var reserve = pendingLabel.Length > 0 ? pendingSize.X + PendingChipPadX * 2f * scale + RowTrailingGap * scale : 0f;
+        var row = BeginPersonRow(drawList, ContactRowHeight, ContactRowAvatarRadius, reserve, true, out var avatarCenter);
+        DrawContactAvatar(drawList, contact, avatarCenter, ContactRowAvatarRadius * scale);
+        if (pendingLabel.Length > 0)
         {
-            var label = Loc.T(L.Friends.PendingShort);
-            var labelSize = Typography.Measure(label, TextStyles.FootnoteEmphasized);
-            var chipPad = 10f * scale;
-            var chipMin = new Vector2(origin.X + width - pad - labelSize.X - chipPad * 2f,
-                origin.Y + rowHeight * 0.5f - labelSize.Y * 0.5f - 5f * scale);
-            var chipMax = new Vector2(origin.X + width - pad, origin.Y + rowHeight * 0.5f + labelSize.Y * 0.5f + 5f * scale);
-            Squircle.Fill(drawList, chipMin, chipMax, (chipMax.Y - chipMin.Y) * 0.5f,
-                ImGui.GetColorU32(ui.FieldSurface));
-            Typography.DrawCentered((chipMin + chipMax) * 0.5f, label, ui.MutedInk, TextStyles.FootnoteEmphasized);
-            actionLeft = chipMin.X - 6f * scale;
+            var chipMax = new Vector2(row.Bounds.Max.X - CellPadX * scale,
+                row.Bounds.Center.Y + pendingSize.Y * 0.5f + PendingChipPadY * scale);
+            var chipMin = new Vector2(chipMax.X - pendingSize.X - PendingChipPadX * 2f * scale,
+                row.Bounds.Center.Y - pendingSize.Y * 0.5f - PendingChipPadY * scale);
+            Squircle.Fill(drawList, chipMin, chipMax, (chipMax.Y - chipMin.Y) * 0.5f, ImGui.GetColorU32(ink.ChipFill));
+            Typography.DrawCentered(drawList, (chipMin + chipMax) * 0.5f, pendingLabel, ink.MutedInk, RowMetaStyle);
         }
 
-        var textWidth = actionLeft - textLeft;
-        var nameTop = origin.Y + 12f * scale;
-        var contactName = ContactBook.DisplayLabel(contact);
-        var nameSize = Typography.Measure(contactName, 1f, FontWeight.SemiBold);
-        var nameHovering = UiInteract.Hover(new Vector2(textLeft, nameTop),
-            new Vector2(textLeft + textWidth, nameTop + nameSize.Y));
-        Marquee.DrawLeft(new MarqueeId("messageapp.contacts.name.", contact.UserId), contactName, textLeft, nameTop, textWidth,
-            new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, nameHovering);
-        Typography.Draw(new Vector2(textLeft, origin.Y + 33f * scale),
-            Typography.FitText(ContactBook.Format(contact.PhoneNumber), textWidth, 0.85f, FontWeight.Regular),
-            ui.MutedInk, 0.85f);
-        if (cell.Tapped)
+        DrawRowTitleAndSub(drawList, new MarqueeId("messageapp.contacts.name.", contact.UserId),
+            ContactBook.DisplayLabel(contact), ContactBook.Format(contact.PhoneNumber), row.TextLeft, row.TextRight,
+            row.Bounds.Center.Y, ink.TitleInk, ink.MutedInk);
+        if (row.Tapped)
         {
             router.Push(MessageRoute.Contact(contact.UserId));
         }
 
-        FeedCell.End(drawList, cell, ui.Hairline);
+        EndPersonRow(drawList, row);
     }
 
     private void DrawAddContact(Rect area)
     {
         var scale = UiScale.Current;
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Friends.AddFriend), back);
-        var sideInset = 16f * scale;
+        DrawScreenHeader(area, Loc.T(L.Message.NewContact));
+        var sideInset = CellPadX * scale;
         var top = area.Min.Y + AppHeader.Height * scale + 12f * scale;
         var fieldHeight = FieldHeight * scale;
         var numberRect = new Rect(new Vector2(area.Min.X + sideInset, top),
@@ -283,12 +271,14 @@ internal sealed partial class MessageApp
         var afterFields = aliasRect.Max.Y + 14f * scale;
         if (addError.Length > 0)
         {
-            Typography.Draw(new Vector2(aliasRect.Min.X + 4f * scale, afterFields), addError, theme.Danger,
-                TextStyles.Callout);
-            afterFields += 28f * scale;
+            afterFields += Typography.DrawWrappedLeft(new Vector2(aliasRect.Min.X + 4f * scale, afterFields), addError,
+                theme.Danger, TextStyles.Callout, aliasRect.Width - 8f * scale) + 10f * scale;
         }
 
-        var buttonTop = afterFields + 16f * scale;
+        var hintTop = afterFields;
+        afterFields += Typography.DrawWrappedLeft(new Vector2(aliasRect.Min.X + 4f * scale, hintTop),
+            Loc.T(L.Friends.EmptyHint), ink.MutedInk, TextStyles.Footnote, aliasRect.Width - 8f * scale);
+        var buttonTop = afterFields + 22f * scale;
         var buttonRect = new Rect(new Vector2(area.Min.X + sideInset, buttonTop),
             new Vector2(area.Max.X - sideInset, buttonTop + fieldHeight));
         var canAdd = !addBusy && numberDraft.Trim().Length > 0;
@@ -326,46 +316,36 @@ internal sealed partial class MessageApp
     private void DrawSafety(Rect area)
     {
         var scale = UiScale.Current;
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Friends.NewNumberTitle), back);
-        var sideInset = 16f * scale;
+        DrawScreenHeader(area, Loc.T(L.Friends.NewNumberTitle));
+        var sideInset = CellPadX * scale;
         var top = area.Min.Y + AppHeader.Height * scale + 12f * scale;
         var textWidth = area.Width - sideInset * 2f;
-        ImGui.SetCursorScreenPos(new Vector2(area.Min.X + sideInset, top));
-        using (Typography.WrapAt(area.Min.X + sideInset + textWidth))
-        using (Plugin.Fonts.Push(TextStyles.Callout.Scale))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.BodyInk))
-        {
-            Typography.Wrapped(Loc.T(L.Friends.NewNumberBody));
-        }
-
-        var afterBody = ImGui.GetItemRectMax().Y + 18f * scale;
+        var afterBody = top + Typography.DrawWrappedLeft(new Vector2(area.Min.X + sideInset, top),
+            Loc.T(L.Friends.NewNumberBody), ui.BodyInk, TextStyles.Callout, textWidth) + 18f * scale;
 
         var request = contacts.NumberChange;
         if (request is not null && request.Status == "pending")
         {
-            Typography.Draw(new Vector2(area.Min.X + sideInset, afterBody), Loc.T(L.Friends.RequestPending),
-                ui.Accent, TextStyles.SubheadlineEmphasized);
+            Typography.DrawWrappedLeft(new Vector2(area.Min.X + sideInset, afterBody), Loc.T(L.Friends.RequestPending),
+                ui.Accent, TextStyles.SubheadlineEmphasized, textWidth);
             return;
         }
 
         if (request is not null && request.Status == "approved")
         {
-            Typography.Draw(new Vector2(area.Min.X + sideInset, afterBody), Loc.T(L.Friends.RequestApproved),
-                ui.Accent, TextStyles.Subheadline);
-            afterBody += 32f * scale;
+            afterBody += Typography.DrawWrappedLeft(new Vector2(area.Min.X + sideInset, afterBody),
+                Loc.T(L.Friends.RequestApproved), ui.Accent, TextStyles.Subheadline, textWidth) + 14f * scale;
         }
         else if (request is not null && request.Status == "denied")
         {
-            Typography.Draw(new Vector2(area.Min.X + sideInset, afterBody), Loc.T(L.Friends.RequestDenied),
-                ui.MutedInk, TextStyles.Subheadline);
-            afterBody += 32f * scale;
+            afterBody += Typography.DrawWrappedLeft(new Vector2(area.Min.X + sideInset, afterBody),
+                Loc.T(L.Friends.RequestDenied), ui.MutedInk, TextStyles.Subheadline, textWidth) + 14f * scale;
         }
 
         var drawList = ImGui.GetWindowDrawList();
         var fieldMin = new Vector2(area.Min.X + sideInset, afterBody);
         var fieldMax = new Vector2(area.Max.X - sideInset, afterBody + 118f * scale);
-        ui.Card(drawList, fieldMin, fieldMax, 14f * scale);
+        ui.Card(drawList, fieldMin, fieldMax, Metrics.Radius.Md * scale);
         var pad = 12f * scale;
         ImGui.SetCursorScreenPos(fieldMin + new Vector2(pad, pad));
         var inputWidth = fieldMax.X - fieldMin.X - pad * 2f;

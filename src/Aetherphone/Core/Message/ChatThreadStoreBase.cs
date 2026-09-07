@@ -38,6 +38,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected readonly StoreWork work;
     protected readonly MessageCipher cipher;
     private readonly string logTag;
+    private readonly bool tracksInbox;
     private readonly NotificationService notifications;
     private readonly AppGate gate;
     private readonly PollCadence inboxCadence;
@@ -88,8 +89,9 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected ChatThreadStoreBase(string logTag, AethernetSession session, SafetyClient safety, MediaClient media,
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, DecryptedHistoryStore chatHistory,
         PhoneVisibility visibility,
-        AppGate gate)
+        AppGate gate, bool tracksInbox = true)
     {
+        this.tracksInbox = tracksInbox;
         this.session = session;
         this.safety = safety;
         this.media = media;
@@ -213,6 +215,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected abstract int ThreadUnreadCountOf(TThread thread);
 
     protected abstract PhoneNotification BuildInboxNotification(TThread thread);
+
+    protected virtual PhoneNotification? BuildArrivalNotification(TThread thread) => null;
 
     protected virtual bool TickActive => session.IsSignedIn && gate.Open;
 
@@ -417,13 +421,17 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             return;
         }
 
-        EnsureVaultRefreshed();
+        if (tracksInbox)
+        {
+            EnsureVaultRefreshed();
+        }
+
         var now = DateTime.UtcNow;
         EnsureCurrentThreadKeysFresh(now);
         ResumePendingThreadOpen(now);
         ConsumePendingThreadRefresh(now);
 
-        if (inboxPolling || !inboxCadence.Due(now))
+        if (!tracksInbox || inboxPolling || !inboxCadence.Due(now))
         {
             return;
         }
@@ -575,6 +583,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private readonly record struct InboxMark(long LastMessageAt, int Unread);
 
     private static readonly TimeSpan InboxNotifyDeferralLimit = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan InboxPreviewRetryDelay = TimeSpan.FromSeconds(3);
     private readonly ConcurrentDictionary<string, DateTime> inboxNotifyDeferrals = new(StringComparer.Ordinal);
 
     protected virtual bool IsInboxPreviewReady(TThread item)
@@ -591,7 +600,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             var key = ThreadKeyOf(item);
             var lastMessageAt = ThreadLastMessageAtOf(item);
             var unread = ThreadUnreadCountOf(item);
-            var previous = inboxMarks.GetValueOrDefault(key);
+            var known = inboxMarks.TryGetValue(key, out var previous);
 
             if (!primed || IsThreadMuted(item))
             {
@@ -604,19 +613,28 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             if (!isNew || unread <= 0)
             {
                 inboxNotifyDeferrals.TryRemove(key, out _);
+                if (!known)
+                {
+                    NotifyArrival(item, key, lastMessageAt, unread);
+                }
+
                 continue;
             }
 
             if (!IsInboxPreviewReady(item))
             {
+                var now = DateTime.UtcNow;
                 if (!inboxNotifyDeferrals.TryGetValue(key, out var deferredSince))
                 {
-                    deferredSince = DateTime.UtcNow;
+                    deferredSince = now;
                     inboxNotifyDeferrals[key] = deferredSince;
                 }
 
-                if (DateTime.UtcNow - deferredSince < InboxNotifyDeferralLimit)
+                if (now - deferredSince < InboxNotifyDeferralLimit)
                 {
+                    inboxCadence.RequestAt(now - deferredSince < InboxPreviewRetryDelay
+                        ? deferredSince + InboxPreviewRetryDelay
+                        : deferredSince + InboxNotifyDeferralLimit);
                     continue;
                 }
             }
@@ -632,6 +650,20 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         }
 
         inboxPrimed = true;
+    }
+
+    private void NotifyArrival(TThread item, string key, long lastMessageAt, int unread)
+    {
+        if (BuildArrivalNotification(item) is not { } arrival)
+        {
+            return;
+        }
+
+        inboxMarks[key] = new InboxMark(lastMessageAt, unread);
+        if (!IsBeingViewed(key))
+        {
+            notifications.Notify(arrival);
+        }
     }
 
     protected void RefreshThreadListCore()
@@ -756,6 +788,17 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     public void RequestThreadKeyRefresh()
     {
         keyStatusRefreshForced = true;
+    }
+
+    public void RefreshThreadDetail()
+    {
+        var current = currentThreadId;
+        if (current is null)
+        {
+            return;
+        }
+
+        work.Run("thread detail", async token => await PrefetchThreadAsync(current, token).ConfigureAwait(false));
     }
 
     public void RequestThreadRefresh(string? threadId = null)

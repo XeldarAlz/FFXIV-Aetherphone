@@ -27,7 +27,7 @@ using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Interface;
+using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -71,6 +71,8 @@ internal sealed partial class VelvetShell : IResumableApp
     private readonly PhotoCarousel carousel = new();
     private readonly PullToRefresh pullToRefresh = new();
     private readonly AvatarComposer avatar;
+    private readonly AvatarComposer cardPhotos;
+    private readonly Func<IDalamudTextureWrap?> viewerSource;
     private readonly VelvetPostComposer post;
     private string? pendingSharedPhoto;
     private readonly ViewRouter<VelvetView> router;
@@ -78,14 +80,17 @@ internal sealed partial class VelvetShell : IResumableApp
     private readonly Action back;
 
     private PhoneTheme theme = PhoneTheme.Default;
+    private Rect screenRect;
     private INavigator navigation = null!;
     private VelvetPage activeTab = VelvetPage.Discover;
     private float sinceHeartbeat = HeartbeatSeconds;
     private bool cachedLalafell;
+    private int localRaceId;
     private bool raceKnown;
     private ulong raceContentId;
     private readonly VelvetFilterSelection discoverInclude = new();
     private readonly VelvetFilterSelection feedInclude = new();
+    private readonly string[] whoLabels = new string[3];
     private readonly ActionSheet postSheet = new();
     private readonly ActionSheet threadSheet = new();
     private VelvetMessagesTab messagesTab = VelvetMessagesTab.Chats;
@@ -106,6 +111,7 @@ internal sealed partial class VelvetShell : IResumableApp
         store = new VelvetStore(session, net.Velvet, net.Account, net.Safety, net.Media, notifications, configuration,
             keyVault, conversationKeys, chatHistory, visibility, realtimeSignals, installer, notInterestedArchive);
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
+        editCaptionMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         stories = new StoryPresenter(session, net.Grams, net.Media, images, lodestone, VelvetArt.StoryRing, VelvetTheme.Palette,
             new StoryConfirmLabels(L.Velvet.DeleteConfirm, L.Velvet.DeleteCancel, L.Velvet.Saving), confirm,
             translation, realtimeSignals, "Velvet stories", StartStoryCompose, openProfile: OpenProfile);
@@ -129,6 +135,11 @@ internal sealed partial class VelvetShell : IResumableApp
             new AvatarComposerLabels(L.Velvet.ChangePhoto, L.Velvet.ImportFromPc, L.Velvet.NoPhotos,
                 L.Velvet.MoveAndScale, L.Velvet.Use, L.Velvet.Saving, L.Velvet.GestureHint), library,
             wallpaperImages, confirm, () => store.AvatarFailure);
+        cardPhotos = new AvatarComposer(() => store.CardPhotoBusy, store.AddCardPhoto,
+            new AvatarComposerLabels(L.Velvet.AddPhoto, L.Velvet.ImportFromPc, L.Velvet.NoPhotos,
+                L.Velvet.MoveAndScale, L.Velvet.Use, L.Velvet.Saving, L.Velvet.GestureHint), library,
+            wallpaperImages, confirm, () => store.CardPhotoFailure, CardPhotoAspect);
+        viewerSource = () => images.Get(viewerUrl);
         post = new VelvetPostComposer(store, stories, library, images, lodestone, wallpaperImages, OpenPostTags);
         router = new ViewRouter<VelvetView>(VelvetView.Root);
         drawView = DrawView;
@@ -180,8 +191,11 @@ internal sealed partial class VelvetShell : IResumableApp
         router.Reset();
         activeTab = VelvetPage.Discover;
         messagesTab = VelvetMessagesTab.Chats;
+        ResetChatsSearch();
+        profileTab = VelvetProfileTab.About;
         avatarLightbox.Reset();
         store.ClearDiscover();
+        ResetDeck();
         discoverInclude.Clear();
         feedInclude.Clear();
         RefreshAndConsumeLaunch();
@@ -228,6 +242,8 @@ internal sealed partial class VelvetShell : IResumableApp
     {
         postSheet.Close();
         threadSheet.Close();
+        profileMenu.Close();
+        photoSheet.Close();
         stories.Close();
     }
 
@@ -241,7 +257,7 @@ internal sealed partial class VelvetShell : IResumableApp
         if (!store.IsSignedIn)
         {
             TourHolds.Hold(Id);
-            EmptyState.Draw(context.Content, ui, FontAwesomeIcon.Moon, Loc.T(L.Velvet.SignedOutTitle),
+            EmptyState.Draw(context.Content, ui, PhoneIcons.Moon, Loc.T(L.Velvet.SignedOutTitle),
                 Loc.T(L.Velvet.SignedOutHint));
             return;
         }
@@ -252,7 +268,7 @@ internal sealed partial class VelvetShell : IResumableApp
             store.EnsureMe();
             TickHeartbeat();
             var reason = store.RegionBlocked ? L.Velvet.UnavailableRegionBody : L.Velvet.UnavailableBody;
-            EmptyState.Draw(context.Content, ui, FontAwesomeIcon.Ban, Loc.T(L.Velvet.UnavailableTitle),
+            EmptyState.Draw(context.Content, ui, PhoneIcons.Ban, Loc.T(L.Velvet.UnavailableTitle),
                 Loc.T(reason));
             return;
         }
@@ -276,6 +292,7 @@ internal sealed partial class VelvetShell : IResumableApp
         TickHeartbeat();
         GateMenus();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
+        screenRect = screen;
         ui.Backdrop(screen);
         ConsumeSharedPhoto();
         stories.Advance();
@@ -291,9 +308,10 @@ internal sealed partial class VelvetShell : IResumableApp
             return;
         }
 
+        var appArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
         using (InputShield.Engage(avatarLightbox.Expanded))
         {
-            router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+            router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         }
 
         if (avatarLightbox.Active)
@@ -303,6 +321,8 @@ internal sealed partial class VelvetShell : IResumableApp
 
         DrawPostSheet(screen);
         DrawThreadSheet(screen);
+        DrawProfileMenu(screen);
+        DrawPhotoSheet(screen);
     }
 
     public void Dispose()
@@ -322,7 +342,7 @@ internal sealed partial class VelvetShell : IResumableApp
         if (sinceHeartbeat >= HeartbeatSeconds)
         {
             sinceHeartbeat = 0f;
-            store.Heartbeat(SocialRegion.EffectiveCode(configuration, gameData), LocalRaceIsLalafell);
+            store.Heartbeat(LocalRaceIsLalafell, localRaceId);
         }
     }
 
@@ -339,6 +359,7 @@ internal sealed partial class VelvetShell : IResumableApp
             raceContentId = contentId;
             raceKnown = false;
             cachedLalafell = false;
+            localRaceId = 0;
         }
 
         if (raceKnown || contentId == 0)
@@ -359,7 +380,8 @@ internal sealed partial class VelvetShell : IResumableApp
             return;
         }
 
-        cachedLalafell = customize[raceIndex] == LalafellRaceId;
+        localRaceId = customize[raceIndex];
+        cachedLalafell = localRaceId == LalafellRaceId;
         raceKnown = true;
     }
 
@@ -421,11 +443,26 @@ internal sealed partial class VelvetShell : IResumableApp
             case VelvetScreenId.Filters:
                 DrawFilters(area);
                 break;
+            case VelvetScreenId.Search:
+                DrawSearch(area);
+                break;
+            case VelvetScreenId.CardPreview:
+                DrawCardPreview(area);
+                break;
             case VelvetScreenId.PostTags:
                 DrawPostTags(area);
                 break;
+            case VelvetScreenId.TagPosts:
+                DrawTagPosts(area, view.Arg ?? string.Empty);
+                break;
+            case VelvetScreenId.EditCaption:
+                DrawEditCaption(area);
+                break;
             case VelvetScreenId.Encryption:
                 threadView.DrawEncryptionScreen(area);
+                break;
+            case VelvetScreenId.UserPosts:
+                DrawUserPosts(area, view.Arg ?? string.Empty);
                 break;
             default:
                 DrawRoot(area);
@@ -437,7 +474,7 @@ internal sealed partial class VelvetShell : IResumableApp
     {
         var scale = UiScale.Current;
         var headerHeight = VHeader.Height * scale;
-        var tabHeight = VTabBar.Height * scale;
+        var tabHeight = TabBarHeight * scale;
         var headerRect = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + headerHeight));
         var tabRect = new Rect(new Vector2(area.Min.X, area.Max.Y - tabHeight), area.Max);
         var bodyRect = new Rect(new Vector2(area.Min.X, headerRect.Max.Y),
@@ -460,42 +497,11 @@ internal sealed partial class VelvetShell : IResumableApp
             activeTab = VelvetPage.Discover;
         }
 
-        var bellCenter = new Vector2(headerRect.Max.X - 20f * scale, headerRect.Min.Y + headerHeight * 0.5f);
-        UiAnchors.Report("velvet.activity", AnchorBox(bellCenter, 18f * scale));
-
-        var title = activeTab switch
-        {
-            VelvetPage.Feed => Loc.T(L.Velvet.TabFeed),
-            VelvetPage.Messages => Loc.T(L.Velvet.Messages),
-            VelvetPage.Me => Loc.T(L.Velvet.TabMe),
-            _ => Loc.T(L.Velvet.TabDiscover),
-        };
-        if (VHeader.Root(headerRect, title, theme, 0))
-        {
-            activityFeed.Invalidate();
-            router.Push(VelvetView.Activity);
-        }
+        DrawRootTopBar(headerRect);
 
         if (activeTab == VelvetPage.Feed)
         {
-            var refreshCenter = new Vector2(headerRect.Max.X - 92f * scale, headerRect.Min.Y + headerHeight * 0.5f);
-            if (store.LoadingFeed)
-            {
-                LoadingPulse.Spinner(refreshCenter, 8f * scale, ui.Accent);
-            }
-            else if (ui.IconButton(refreshCenter, 16f * scale, IconGlyph.Of(FontAwesomeIcon.Sync),
-                         VelvetTheme.TitleInk, AppSkin.Transparent, 0.9f, Loc.T(L.Common.Refresh),
-                         HoverLabelSide.Below))
-            {
-                RefreshFeed();
-            }
-        }
-
-        var rulesCenter = new Vector2(headerRect.Max.X - 56f * scale, headerRect.Min.Y + headerHeight * 0.5f);
-        if (ui.IconButton(rulesCenter, 16f * scale, IconGlyph.Of(FontAwesomeIcon.QuestionCircle),
-                VelvetTheme.MutedInk, AppSkin.Transparent, 0.9f, Loc.T(L.Conduct.Eyebrow), HoverLabelSide.Below))
-        {
-            conduct.ShowRules(Id);
+            bodyRect = DrawFeedScopeTabs(bodyRect);
         }
 
         switch (activeTab)
@@ -514,39 +520,7 @@ internal sealed partial class VelvetShell : IResumableApp
                 break;
         }
 
-        var messageBadge = store.UnreadCount + store.RequestCount;
-        var tabs = new[]
-        {
-            new VTabDef(FontAwesomeIcon.Compass, Loc.T(L.Velvet.TabDiscover)),
-            new VTabDef(FontAwesomeIcon.Image, Loc.T(L.Velvet.TabFeed)),
-            new VTabDef(FontAwesomeIcon.Comment, Loc.T(L.Velvet.Messages), messageBadge),
-            new VTabDef(FontAwesomeIcon.User, Loc.T(L.Velvet.TabMe)),
-        };
-        var tabMargin = 12f * scale;
-        var cellWidth = (tabRect.Width - tabMargin * 2f) / 4f;
-        var tabLeft = tabRect.Min.X + tabMargin;
-        var tabMidY = (tabRect.Min.Y + 6f * scale + tabRect.Max.Y - 12f * scale) * 0.5f;
-        UiAnchors.Report("velvet.tab.discover", AnchorBox(new Vector2(tabLeft + cellWidth * 0.5f, tabMidY), 22f * scale));
-        UiAnchors.Report("velvet.tab.feed", AnchorBox(new Vector2(tabLeft + cellWidth * 1.5f, tabMidY), 22f * scale));
-        UiAnchors.Report("velvet.tab.messages", AnchorBox(new Vector2(tabLeft + cellWidth * 2.5f, tabMidY), 22f * scale));
-        UiAnchors.Report("velvet.tab.me", AnchorBox(new Vector2(tabLeft + cellWidth * 3.5f, tabMidY), 22f * scale));
-
-        var picked = VTabBar.Draw(tabRect, tabs, (int)activeTab, scale);
-        if (picked >= 0)
-        {
-            if (picked == (int)VelvetPage.Feed && activeTab == VelvetPage.Feed)
-            {
-                RefreshFeed();
-            }
-
-            if (picked != (int)activeTab)
-            {
-                postSheet.Close();
-                threadSheet.Close();
-            }
-
-            activeTab = (VelvetPage)picked;
-        }
+        DrawTabBar(tabRect);
     }
 
     private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin)
@@ -571,6 +545,7 @@ internal sealed partial class VelvetShell : IResumableApp
             return;
         }
 
+        profileTab = VelvetProfileTab.About;
         store.OpenProfile(userId);
         router.Push(VelvetView.Profile(userId));
     }

@@ -278,9 +278,7 @@ internal sealed partial class ChirperApp
         var height = SocialChrome.MetaChipHeight * scale;
         var centerY = top + height * 0.5f;
         var cursorX = left;
-        var regionCode = user.IsMe
-            ? SocialRegion.EffectiveCode(configuration, gameData)
-            : SocialRegion.Resolve(user.Region, user.World, gameData);
+        var regionCode = SocialRegion.Resolve(user.Region, user.World, gameData);
         if (regionCode.Length > 0)
         {
             SocialChrome.DrawMetaChip(drawList, ref cursorX, right, centerY, PhoneIcons.Pin, regionCode,

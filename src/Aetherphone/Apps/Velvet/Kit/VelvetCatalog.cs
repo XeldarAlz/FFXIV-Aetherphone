@@ -1,10 +1,10 @@
 using Aetherphone.Core.Localization;
-using Dalamud.Interface;
+using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Velvet.Kit;
 
 internal readonly record struct VelvetIntentDef(int Flag, LocString Label, LocString Blurb, Vector4 Hue,
-    FontAwesomeIcon Icon);
+    string Glyph);
 
 internal static class VelvetIntent
 {
@@ -24,23 +24,23 @@ internal static class VelvetIntent
     public static readonly VelvetIntentDef[] All =
     {
         new(Erp, L.Velvet.IntentErp, L.Velvet.IntentErpBlurb, new Vector4(0.898f, 0.102f, 0.357f, 1f),
-            FontAwesomeIcon.Heart),
+            PhoneIcons.Heart),
         new(Gpose, L.Velvet.IntentGpose, L.Velvet.IntentGposeBlurb, new Vector4(0.722f, 0.612f, 0.878f, 1f),
-            FontAwesomeIcon.Camera),
+            PhoneIcons.Camera),
         new(Relationship, L.Velvet.IntentRelationship, L.Velvet.IntentRelationshipBlurb,
-            new Vector4(0.890f, 0.604f, 0.416f, 1f), FontAwesomeIcon.HandHoldingHeart),
+            new Vector4(0.890f, 0.604f, 0.416f, 1f), PhoneIcons.HeartHandshake),
         new(Collab, L.Velvet.IntentCollab, L.Velvet.IntentCollabBlurb, new Vector4(0.647f, 0.482f, 0.839f, 1f),
-            FontAwesomeIcon.Feather),
+            PhoneIcons.Feather),
         new(Friends, L.Velvet.IntentFriends, L.Velvet.IntentFriendsBlurb, new Vector4(0.420f, 0.780f, 0.753f, 1f),
-            FontAwesomeIcon.Users),
+            PhoneIcons.Users),
         new(Sharing, L.Velvet.IntentSharing, L.Velvet.IntentSharingBlurb, new Vector4(0.776f, 0.294f, 0.690f, 1f),
-            FontAwesomeIcon.Image),
+            PhoneIcons.Photo),
         new(Wandering, L.Velvet.IntentWandering, L.Velvet.IntentWanderingBlurb, new Vector4(0.549f, 0.627f, 0.878f, 1f),
-            FontAwesomeIcon.Compass),
+            PhoneIcons.Compass),
         new(Irl, L.Velvet.IntentIrl, L.Velvet.IntentIrlBlurb, new Vector4(0.427f, 0.757f, 0.549f, 1f),
-            FontAwesomeIcon.Globe),
+            PhoneIcons.World),
         new(NonIrl, L.Velvet.IntentNonIrl, L.Velvet.IntentNonIrlBlurb, new Vector4(0.502f, 0.588f, 0.851f, 1f),
-            FontAwesomeIcon.Gamepad),
+            PhoneIcons.Gamepad),
     };
 
     public static bool Has(int mask, int flag) => (mask & flag) != 0;
@@ -106,8 +106,27 @@ internal static class VelvetIntent
         return builder.ToString();
     }
 
-    public static string Summary(int mask) =>
-        Sanitize(mask) == 0 ? Loc.T(L.Velvet.OpenToAnything) : Loc.T(L.Velvet.LookingForOne, Describe(mask));
+    private static readonly Dictionary<int, string> Summaries = new();
+    private static LanguageInfo? summaryLanguage;
+
+    public static string Summary(int mask)
+    {
+        mask = Sanitize(mask);
+        if (!ReferenceEquals(summaryLanguage, Loc.Current))
+        {
+            summaryLanguage = Loc.Current;
+            Summaries.Clear();
+        }
+
+        if (Summaries.TryGetValue(mask, out var cached))
+        {
+            return cached;
+        }
+
+        var summary = mask == 0 ? Loc.T(L.Velvet.OpenToAnything) : Loc.T(L.Velvet.LookingForOne, Describe(mask));
+        Summaries[mask] = summary;
+        return summary;
+    }
 
     public static int Primary(int mask)
     {
@@ -124,42 +143,188 @@ internal static class VelvetIntent
     }
 }
 
+internal readonly record struct VelvetRoleDef(string Token, LocString Label);
+
+internal static class VelvetRoles
+{
+    public static readonly VelvetRoleDef[] All =
+    {
+        new("dom", L.Velvet.RoleDom),
+        new("sub", L.Velvet.RoleSub),
+        new("switch", L.Velvet.RoleSwitch),
+    };
+
+    public static readonly string[] Tokens = BuildTokens();
+
+    public static bool TryLabel(string token, out string label)
+    {
+        for (var index = 0; index < All.Length; index++)
+        {
+            if (string.Equals(All[index].Token, token, StringComparison.OrdinalIgnoreCase))
+            {
+                label = Loc.T(All[index].Label);
+                return true;
+            }
+        }
+
+        label = token;
+        return false;
+    }
+
+    private static string[] BuildTokens()
+    {
+        var tokens = new string[All.Length];
+        for (var index = 0; index < All.Length; index++)
+        {
+            tokens[index] = All[index].Token;
+        }
+
+        return tokens;
+    }
+}
+
+internal sealed class VelvetTokenSet
+{
+    public readonly string[] Tokens;
+
+    private readonly string[] labels;
+
+    public VelvetTokenSet(string[] labels)
+    {
+        this.labels = labels;
+        Tokens = new string[labels.Length];
+        for (var index = 0; index < labels.Length; index++)
+        {
+            Tokens[index] = labels[index].ToLowerInvariant();
+        }
+    }
+
+    public bool TryLabel(string token, out string label)
+    {
+        for (var index = 0; index < Tokens.Length; index++)
+        {
+            if (string.Equals(Tokens[index], token, StringComparison.OrdinalIgnoreCase))
+            {
+                label = labels[index];
+                return true;
+            }
+        }
+
+        label = token;
+        return false;
+    }
+}
+
+internal static class VelvetKinks
+{
+    private static readonly VelvetTokenSet Set = new(new[]
+    {
+        "Sadist", "Masochist", "Handler", "Pet", "Rigger", "Rope bunny", "Brat", "Brat tamer", "Master", "Slave",
+        "Watersports", "Gangbang", "SFW till trust", "Vanilla",
+    });
+
+    public static string[] Tokens => Set.Tokens;
+
+    public static bool TryLabel(string token, out string label) => Set.TryLabel(token, out label);
+}
+
+internal static class VelvetLimits
+{
+    private static readonly VelvetTokenSet Set = new(new[]
+    {
+        "Pain", "Permadeath", "Drugs", "Non-con", "IRL", "Fade to black", "Gore", "Vore", "Watersports", "Feet",
+        "Anal",
+    });
+
+    public static string[] Tokens => Set.Tokens;
+
+    public static bool TryLabel(string token, out string label) => Set.TryLabel(token, out label);
+}
+
+internal static class VelvetTokenLabels
+{
+    public static string Of(string token)
+    {
+        if (VelvetRoles.TryLabel(token, out var role))
+        {
+            return role;
+        }
+
+        if (VelvetKinks.TryLabel(token, out var kink))
+        {
+            return kink;
+        }
+
+        if (VelvetLimits.TryLabel(token, out var limit))
+        {
+            return limit;
+        }
+
+        return VelvetSuggestions.TryTagLabel(token, out var tag) ? tag : token;
+    }
+}
+
 internal static class VelvetSuggestions
 {
-    public static readonly string[] Limits =
+    private static readonly VelvetTokenSet Tone = new(new[]
     {
-        "pain", "permadeath", "drugs", "non-con", "irl", "fade to black", "sfw till trust", "gore", "vore",
-        "watersports", "feet",
-    };
+        "Romantic", "Passionate", "Tender", "Rough", "Playful", "Dark", "Wholesome",
+    });
 
-    public static readonly string[] Roles = { "dom", "sub", "switch", "soft dom", "hard dom" };
-
-    public static readonly string[] Kinks =
+    private static readonly VelvetTokenSet Pace = new(new[]
     {
-        "sadist", "masochist", "handler", "pet", "rigger", "rope bunny", "brat", "brat tamer", "master", "slave",
-        "watersports", "gangbang", "vanilla",
-    };
+        "Slow burn", "Long-term", "Casual", "Slice-of-life", "One-shot", "Late night",
+    });
+
+    private static readonly VelvetTokenSet Style = new(new[]
+    {
+        "Para", "Multi-para", "Literate", "Walk-up", "Tell-first", "Lore-friendly", "Canon", "OC", "Immersive",
+        "Venue",
+    });
 
     public static readonly VelvetTagCategory[] TagCategories =
     {
-        new(L.Velvet.CatTone, new Vector4(0.961f, 0.361f, 0.541f, 1f),
-            new[] { "romantic", "passionate", "tender", "rough", "playful", "dark", "wholesome" }),
-        new(L.Velvet.CatPace, new Vector4(0.890f, 0.604f, 0.416f, 1f),
-            new[] { "slow burn", "long-term", "casual", "slice-of-life", "one-shot", "late night" }),
-        new(L.Velvet.CatStyle, new Vector4(0.549f, 0.627f, 0.878f, 1f),
-            new[] { "para", "multi-para", "literate", "walk-up", "tell-first", "lore-friendly", "canon", "oc",
-                "immersive", "venue" }),
+        new(L.Velvet.CatTone, new Vector4(0.961f, 0.361f, 0.541f, 1f), Tone.Tokens),
+        new(L.Velvet.CatPace, new Vector4(0.890f, 0.604f, 0.416f, 1f), Pace.Tokens),
+        new(L.Velvet.CatStyle, new Vector4(0.549f, 0.627f, 0.878f, 1f), Style.Tokens),
     };
 
     public static readonly Vector4 KinkHue = new(0.647f, 0.482f, 0.839f, 1f);
 
     public static readonly VelvetTagCategory[] PostTagCategories = BuildPostTagCategories();
 
+    public static readonly string[] PostTagTokens = BuildPostTagTokens();
+
+    public static bool TryTagLabel(string token, out string label) =>
+        Tone.TryLabel(token, out label) || Pace.TryLabel(token, out label) || Style.TryLabel(token, out label);
+
+    private static string[] BuildPostTagTokens()
+    {
+        var count = 0;
+        for (var index = 0; index < PostTagCategories.Length; index++)
+        {
+            count += PostTagCategories[index].Tags.Length;
+        }
+
+        var tokens = new string[count];
+        var cursor = 0;
+        for (var index = 0; index < PostTagCategories.Length; index++)
+        {
+            var tags = PostTagCategories[index].Tags;
+            for (var tagIndex = 0; tagIndex < tags.Length; tagIndex++)
+            {
+                tokens[cursor++] = tags[tagIndex];
+            }
+        }
+
+        return tokens;
+    }
+
     private static VelvetTagCategory[] BuildPostTagCategories()
     {
         var categories = new VelvetTagCategory[TagCategories.Length + 2];
-        categories[0] = new VelvetTagCategory(L.Velvet.CardKinks, KinkHue, Kinks);
-        categories[1] = new VelvetTagCategory(L.Velvet.CardLimits, VelvetTheme.Gold, Limits);
+        categories[0] = new VelvetTagCategory(L.Velvet.CardKinks, KinkHue, VelvetKinks.Tokens);
+        categories[1] = new VelvetTagCategory(L.Velvet.CardLimits, VelvetTheme.Gold, VelvetLimits.Tokens);
         for (var index = 0; index < TagCategories.Length; index++)
         {
             categories[index + 2] = TagCategories[index];

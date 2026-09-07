@@ -1,4 +1,3 @@
-using System.Linq;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
@@ -17,15 +16,16 @@ using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Velvet;
 
-internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, VelvetThreadDto>
+internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, VelvetThreadDto>
 {
     private const int PostSize = 1080;
+    private const int CardPhotoWidth = 864;
+    private const int CardPhotoHeight = 1080;
     private readonly VelvetClient client;
     private readonly AccountClient account;
     private readonly Configuration configuration;
     private readonly RealtimeSignalBus signals;
     private readonly RetryGate meGate = new RetryGate(TimeSpan.FromSeconds(30));
-    private readonly RetryGate userPostsGate = new RetryGate(TimeSpan.FromSeconds(15));
     private readonly FeedLane<VelvetPostDto>[] feedLanes =
     {
         new FeedLane<VelvetPostDto>(ByNewestFirst, ByCreatedAtUnix),
@@ -38,10 +38,13 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile bool accessBlocked;
     private volatile bool regionBlocked;
     private volatile bool avatarBusy;
+    private volatile bool cardPhotoBusy;
+    private volatile AvatarUploadOutcome cardPhotoFailure = AvatarUploadOutcome.Unreachable;
     private volatile AvatarUploadOutcome avatarFailure = AvatarUploadOutcome.Unreachable;
     private volatile bool introBusy;
     private volatile VelvetProfileDto[] discoverResults = Array.Empty<VelvetProfileDto>();
-    private volatile string[] notInterestedFromDiscover = Array.Empty<string>();
+    private volatile HashSet<string> notInterestedIds = EmptyIds;
+    private volatile Dictionary<string, long> passedAt = EmptyPasses;
     private volatile bool loadingDiscover;
     private volatile bool discoverLoaded;
     private volatile AepFailureBox? discoverFailureBox;
@@ -51,6 +54,10 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile string discoverTags = string.Empty;
     private volatile string discoverRegion = string.Empty;
     private volatile int discoverEpoch;
+    private volatile VelvetProfileDto[] searchResults = Array.Empty<VelvetProfileDto>();
+    private volatile bool loadingSearch;
+    private volatile bool searchLoaded;
+    private volatile int searchEpoch;
     private volatile VelvetConnectionDto[] connections = Array.Empty<VelvetConnectionDto>();
     private volatile bool loadingConnections;
     private volatile bool connectionsLoaded;
@@ -65,14 +72,6 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile bool profileLoading;
     private volatile bool profileFailed;
     private volatile bool profileRevalidating;
-    private volatile string? userPostsUserId;
-    private volatile VelvetPostDto[] userPosts = Array.Empty<VelvetPostDto>();
-    private volatile int userPostsTotal;
-    private volatile string? userPostsCursor;
-    private volatile bool userPostsLoadingMore;
-    private volatile bool userPostsLoading;
-    private volatile bool userPostsLoaded;
-    private volatile bool userPostsFailed;
     private volatile string? detailPostId;
     private volatile VelvetCommentDto[] detailComments = Array.Empty<VelvetCommentDto>();
     private volatile string? commentsCursor;
@@ -84,6 +83,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile int feedScope = (int)VelvetFeedScope.All;
     private volatile VelvetDiscoverFilter feedFilter = VelvetDiscoverFilter.Empty;
     private volatile string feedRegion = string.Empty;
+    private volatile string[] feedPostTags = Array.Empty<string>();
     private volatile int feedEpoch;
     private volatile bool posting;
     private volatile VelvetPostDto? fetchedPost;
@@ -100,6 +100,9 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile bool blockedLoaded;
     private volatile VelvetProfileDto[] notInterested = Array.Empty<VelvetProfileDto>();
     private readonly VelvetNotInterestedArchive notInterestedArchive;
+    private static readonly HashSet<string> EmptyIds = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, long> EmptyPasses = new(StringComparer.Ordinal);
+    private const long PassLifetimeSeconds = 30L * 24L * 60L * 60L;
     private volatile bool notInterestedIdsLoaded;
     private volatile bool notInterestedLoaded;
     private volatile bool loadingNotInterested;
@@ -172,6 +175,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public bool AvatarBusy => avatarBusy;
 
     public AvatarUploadOutcome AvatarFailure => avatarFailure;
+    public bool CardPhotoBusy => cardPhotoBusy;
+    public AvatarUploadOutcome CardPhotoFailure => cardPhotoFailure;
     public bool IntroBusy => introBusy;
     public VelvetProfileDto[] DiscoverResults => discoverResults;
     public bool LoadingDiscover => loadingDiscover;
@@ -182,6 +187,10 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public AepFailure DiscoverFailure => discoverFailureBox?.Failure ?? AepFailure.None;
     public bool HasMoreDiscover => discoverCursor is not null;
     public bool LoadingMoreDiscover => loadingMoreDiscover;
+    public int PassCount => passedAt.Count;
+    public VelvetProfileDto[] SearchResults => searchResults;
+    public bool LoadingSearch => loadingSearch;
+    public bool SearchLoaded => searchLoaded;
     public VelvetConnectionDto[] Connections => connections;
     public bool LoadingConnections => loadingConnections;
     public bool ConnectionsLoaded => connectionsLoaded;
@@ -196,13 +205,6 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public VelvetProfileDto? ProfileUser => profileUser;
     public bool ProfileLoading => profileLoading;
     public bool ProfileFailed => profileFailed;
-    public string? UserPostsUserId => userPostsUserId;
-    public VelvetPostDto[] UserPosts => userPosts;
-    public int UserPostsTotal => userPostsTotal;
-    public bool UserPostsLoaded => userPostsLoaded;
-    public bool UserPostsFailed => userPostsFailed;
-    public bool UserPostsLoadingMore => userPostsLoadingMore;
-    public bool HasMoreUserPosts => userPostsCursor is not null;
     public VelvetThreadDto[] Threads => ThreadListItems;
     public bool LoadingThreads => LoadingThreadList;
     public bool ThreadsLoaded => ThreadListLoaded;
@@ -262,9 +264,16 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         regionBlocked = false;
         meGate.Reset();
         discoverResults = Array.Empty<VelvetProfileDto>();
+        ResetUserPosts();
+        ResetTagPosts();
 
-        notInterestedFromDiscover = Array.Empty<string>();
+        notInterestedIds = EmptyIds;
+        passedAt = EmptyPasses;
         notInterestedLoaded = false;
+        searchEpoch++;
+        searchResults = Array.Empty<VelvetProfileDto>();
+        loadingSearch = false;
+        searchLoaded = false;
         notInterestedIdsLoaded = false;
         notInterested = Array.Empty<VelvetProfileDto>();
         discoverCursor = null;
@@ -282,12 +291,6 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         profileUserId = null;
         profileUser = null;
         profileFailed = false;
-        userPostsUserId = null;
-        userPosts = Array.Empty<VelvetPostDto>();
-        userPostsTotal = 0;
-        userPostsCursor = null;
-        userPostsLoaded = false;
-        userPostsFailed = false;
         detailPostId = null;
         detailComments = Array.Empty<VelvetCommentDto>();
         commentsCursor = null;
@@ -516,1202 +519,6 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         return cipher.TryDecryptMedia(scope, generation, sealedBytes, message.SenderId, message.Kind);
     }
 
-    public void EnsureMe()
-    {
-        ReconcileAccountBadges();
-        if (!session.IsSignedIn || me is not null || loadingMe)
-        {
-            return;
-        }
-
-        if (!meGate.TryPass())
-        {
-            return;
-        }
-
-        loadingMe = true;
-        var epoch = accountEpoch;
-        work.Run("profile load", async token =>
-        {
-            var status = 0;
-            var refusal = AepFailure.None;
-            var profile = await client.MeAsync(token, code => status = code, failure => refusal = failure)
-                .ConfigureAwait(false);
-            if (epoch != accountEpoch)
-            {
-                return;
-            }
-
-            if (profile is not null)
-            {
-                me = profile;
-                accessBlocked = false;
-                regionBlocked = false;
-            }
-            else if (status == 403)
-            {
-                accessBlocked = true;
-                regionBlocked = refusal.Code == FailureCodes.VelvetRegionBlocked;
-            }
-        }, () => loadingMe = false);
-    }
-
-    private void ReconcileAccountBadges()
-    {
-        var current = me;
-        var signedInUser = session.CurrentUser;
-        if (current is null || signedInUser is null || current.Badges == signedInUser.Badges)
-        {
-            return;
-        }
-
-        me = current with { Badges = signedInUser.Badges };
-    }
-
-    public void AcceptGate(int gateVersion, Action<bool> onComplete)
-    {
-        work.Run("gate accept", async token =>
-        {
-            var profile = await client.AcceptGateAsync(gateVersion, token).ConfigureAwait(false);
-            if (profile is null)
-            {
-                return false;
-            }
-
-            me = profile;
-            return true;
-        }, onComplete);
-    }
-
-    public void UpdateAvatar(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
-    {
-        if (avatarBusy)
-        {
-            return;
-        }
-
-        avatarBusy = true;
-        work.Run("avatar update", async token =>
-        {
-            var result = await AvatarUpload.RunAsync(account, media, sourcePath, crop, token).ConfigureAwait(false);
-            avatarFailure = result.Outcome;
-            if (!result.Ok)
-            {
-                return false;
-            }
-
-            var current = me;
-            if (current is not null)
-            {
-                me = current with { AvatarUrl = result.PublicUrl };
-            }
-
-            return true;
-        }, onComplete, () => avatarBusy = false);
-    }
-
-    public void UpdateIdentity(string displayName, string handle, Action<bool> onComplete)
-    {
-        work.Run("identity update", async token =>
-        {
-            var request = new UpdateProfileRequest(displayName.Length > 0 ? displayName : null,
-                handle.Length > 0 ? handle : null, null);
-            var updated = await account.UpdateProfileAsync(request, token).ConfigureAwait(false);
-            if (updated is null)
-            {
-                return false;
-            }
-
-            var current = me;
-            if (current is not null)
-            {
-                me = current with { DisplayName = updated.DisplayName, Handle = updated.Handle };
-            }
-
-            return true;
-        }, onComplete);
-    }
-
-    public void UpdateProfile(UpdateVelvetProfileRequest request, Action<bool> onComplete)
-    {
-        work.Run("profile update", async token =>
-        {
-            var updated = await client.UpdateProfileAsync(request, token).ConfigureAwait(false);
-            if (updated is null)
-            {
-                return false;
-            }
-
-            me = updated;
-            return true;
-        }, onComplete);
-    }
-
-    public void RefreshDiscover(VelvetDiscoverFilter filter, string tags, string region)
-    {
-        if (!session.IsSignedIn)
-        {
-            return;
-        }
-
-        var epoch = ++discoverEpoch;
-        discoverFilter = filter;
-        discoverTags = tags;
-        discoverRegion = region;
-        discoverCursor = null;
-        loadingDiscover = true;
-        EnsureNotInterestedLoaded();
-        work.Run("discover", async token =>
-        {
-            var reported = AepFailure.None;
-            var page = await client.DiscoverAsync(filter, tags, region, null, token, failure => reported = failure)
-                .ConfigureAwait(false);
-            if (epoch != discoverEpoch)
-            {
-                return;
-            }
-
-            if (page is null)
-            {
-                discoverFailureBox = new AepFailureBox(reported.Failed
-                    ? reported
-                    : AepFailure.Transport(AepFailureKind.Offline));
-                AepLog.Warning($"Velvet discover failed: {discoverFailureBox.Failure.Describe()}");
-                return;
-            }
-
-            discoverFailureBox = null;
-            discoverResults = WithoutNotInterested(page.Users);
-            discoverCursor = page.NextCursor;
-        }, () =>
-        {
-            loadingDiscover = false;
-            discoverLoaded = true;
-        });
-    }
-
-    public void LoadMoreDiscover()
-    {
-        if (!session.IsSignedIn)
-        {
-            return;
-        }
-
-        var cursor = discoverCursor;
-        if (cursor is null || loadingMoreDiscover || loadingDiscover)
-        {
-            return;
-        }
-
-        var epoch = discoverEpoch;
-        loadingMoreDiscover = true;
-        work.Run("discover more", async token =>
-        {
-            var page = await client.DiscoverAsync(discoverFilter, discoverTags, discoverRegion, cursor, token)
-                .ConfigureAwait(false);
-            if (page is not null && epoch == discoverEpoch)
-            {
-                discoverResults = AppendUniqueDiscover(discoverResults, WithoutNotInterested(page.Users));
-                discoverCursor = page.NextCursor;
-            }
-        }, () => loadingMoreDiscover = false);
-    }
-
-    private VelvetProfileDto[] WithoutNotInterested(VelvetProfileDto[] incoming)
-    {
-        var notInterested = notInterestedFromDiscover;
-        if (notInterested.Length == 0)
-        {
-            return incoming;
-        }
-
-        var kept = new VelvetProfileDto[incoming.Length];
-        var count = 0;
-        for (var index = 0; index < incoming.Length; index++)
-        {
-            if (Array.IndexOf(notInterested, incoming[index].UserId) < 0)
-            {
-                kept[count] = incoming[index];
-                count++;
-            }
-        }
-
-        if (count == incoming.Length)
-        {
-            return incoming;
-        }
-
-        var trimmed = new VelvetProfileDto[count];
-        Array.Copy(kept, trimmed, count);
-        return trimmed;
-    }
-
-    private static VelvetProfileDto[] AppendUniqueDiscover(VelvetProfileDto[] existing, VelvetProfileDto[] incoming)
-    {
-        if (incoming.Length == 0)
-        {
-            return existing;
-        }
-
-        var seen = new HashSet<string>(existing.Length + incoming.Length);
-        for (var index = 0; index < existing.Length; index++)
-        {
-            seen.Add(existing[index].UserId);
-        }
-
-        var picked = new VelvetProfileDto[incoming.Length];
-        var count = 0;
-        for (var index = 0; index < incoming.Length; index++)
-        {
-            if (seen.Add(incoming[index].UserId))
-            {
-                picked[count] = incoming[index];
-                count++;
-            }
-        }
-
-        if (count == 0)
-        {
-            return existing;
-        }
-
-        var merged = new VelvetProfileDto[existing.Length + count];
-        Array.Copy(existing, merged, existing.Length);
-        Array.Copy(picked, 0, merged, existing.Length, count);
-        return merged;
-    }
-
-    public void RefreshConnections()
-    {
-        if (!session.IsSignedIn)
-        {
-            return;
-        }
-
-        loadingConnections = true;
-        work.Run("connections", async token =>
-        {
-            var page = await client.ConnectionsAsync(null, token).ConfigureAwait(false);
-            if (page is not null)
-            {
-                connections = page.Items;
-            }
-        }, () =>
-        {
-            loadingConnections = false;
-            connectionsLoaded = true;
-        });
-    }
-
-    public void Heartbeat(string region, bool? isLalafell)
-    {
-        if (!session.IsSignedIn)
-        {
-            return;
-        }
-
-        var offset = SocialTimeZone.EffectiveOffsetMinutes(configuration);
-        work.Run("heartbeat", async token =>
-            await client.HeartbeatAsync(offset, region, isLalafell, token).ConfigureAwait(false));
-    }
-
-    public void EnsureUserPosts(string userId)
-    {
-        if (!session.IsSignedIn)
-        {
-            return;
-        }
-
-        if (userPostsUserId == userId && (userPostsLoaded || userPostsLoading))
-        {
-            return;
-        }
-
-        if (userPostsUserId != userId)
-        {
-            userPostsGate.Reset();
-        }
-
-        if (!userPostsGate.TryPass())
-        {
-            return;
-        }
-
-        userPostsUserId = userId;
-        userPosts = Array.Empty<VelvetPostDto>();
-        userPostsTotal = 0;
-        userPostsCursor = null;
-        userPostsLoaded = false;
-        userPostsFailed = false;
-        userPostsLoading = true;
-        work.Run("user posts", async token =>
-        {
-            var page = await client.UserPostsAsync(userId, null, token).ConfigureAwait(false);
-            if (userPostsUserId != userId)
-            {
-                return;
-            }
-
-            if (page is null)
-            {
-                userPostsFailed = true;
-                return;
-            }
-
-            userPosts = page.Items;
-            userPostsTotal = page.TotalCount;
-            userPostsCursor = page.NextCursor;
-            userPostsLoaded = true;
-        }, () => userPostsLoading = false);
-    }
-
-    public void LoadMoreUserPosts()
-    {
-        var userId = userPostsUserId;
-        var cursor = userPostsCursor;
-        if (!session.IsSignedIn || userId is null || cursor is null || userPostsLoadingMore || userPostsLoading)
-        {
-            return;
-        }
-
-        userPostsLoadingMore = true;
-        work.Run("user posts more", async token =>
-        {
-            var page = await client.UserPostsAsync(userId, cursor, token).ConfigureAwait(false);
-            if (page is null || userPostsUserId != userId)
-            {
-                return;
-            }
-
-            userPosts = CopyOnWrite.AppendPageById(userPosts, page.Items);
-            userPostsTotal = page.TotalCount;
-            userPostsCursor = page.NextCursor;
-        }, () => userPostsLoadingMore = false);
-    }
-
-    public void RefreshRequests()
-    {
-        if (!session.IsSignedIn || loadingRequests)
-        {
-            return;
-        }
-
-        loadingRequests = true;
-        work.Run("requests", async token =>
-        {
-            var page = await client.RequestsAsync(token).ConfigureAwait(false);
-            if (page is not null)
-            {
-                requests = page.Items;
-            }
-        }, () =>
-        {
-            loadingRequests = false;
-            requestsLoaded = true;
-        });
-    }
-
-    public void RefreshSentRequests()
-    {
-        if (!session.IsSignedIn)
-        {
-            return;
-        }
-
-        loadingSentRequests = true;
-        work.Run("sent requests", async token =>
-        {
-            var page = await client.SentRequestsAsync(token).ConfigureAwait(false);
-            if (page is not null)
-            {
-                sentRequests = page.Items;
-            }
-        }, () =>
-        {
-            loadingSentRequests = false;
-            sentRequestsLoaded = true;
-        });
-    }
-
-    public void AcceptRequest(string userId)
-    {
-        var index = Array.FindIndex(requests, item => item.UserId == userId);
-        var accepted = index >= 0 ? requests[index] : null;
-        requests = RemoveConnection(requests, userId);
-        if (accepted is not null)
-        {
-            connections = CopyOnWrite.Append(RemoveConnection(connections, userId),
-                accepted with { State = VelvetConnectionState.Connected });
-        }
-
-        connectionsLoaded = false;
-        SetConnectionStateEverywhere(userId, VelvetConnectionState.Connected);
-        work.Run("accept", async token => await client.ConnectAsync(userId, string.Empty, token).ConfigureAwait(false));
-    }
-
-    public void DeclineRequest(string userId)
-    {
-        requests = RemoveConnection(requests, userId);
-        SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
-        work.Run("decline", async token => await client.DeclineRequestAsync(userId, token).ConfigureAwait(false));
-    }
-
-    public void CancelRequest(string userId)
-    {
-        sentRequests = RemoveConnection(sentRequests, userId);
-        SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
-        work.Run("cancel request",
-            async token => await client.DisconnectAsync(userId, token).ConfigureAwait(false));
-    }
-
-    public void SetFeedScope(VelvetFeedScope scope)
-    {
-        feedScope = (int)scope;
-    }
-
-    public void SetFeedFilter(VelvetDiscoverFilter filter, string region)
-    {
-        if (feedFilter.Matches(filter) && string.Equals(feedRegion, region, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        feedEpoch++;
-        feedFilter = filter;
-        feedRegion = region;
-        for (var index = 0; index < feedLanes.Length; index++)
-        {
-            feedLanes[index].Clear();
-        }
-
-        feedLoadedAll = false;
-        feedLoadedConnections = false;
-        RefreshFeed();
-    }
-
-    public void RefreshFeed()
-    {
-        if (!session.IsSignedIn)
-        {
-            return;
-        }
-
-        var scope = FeedScope;
-        var lane = feedLanes[(int)scope];
-        var epoch = feedEpoch;
-        var filter = feedFilter;
-        var region = feedRegion;
-        lane.Loading = true;
-        work.Run("feed", async token =>
-        {
-            var page = await client.FeedAsync(ScopeKey(scope), filter, region, null, token).ConfigureAwait(false);
-            if (page is not null && epoch == feedEpoch)
-            {
-                lane.ApplyRefresh(page.Items, page.NextCursor);
-            }
-        }, () =>
-        {
-            lane.Loading = false;
-            if (epoch != feedEpoch)
-            {
-                return;
-            }
-
-            if (scope == VelvetFeedScope.All)
-            {
-                feedLoadedAll = true;
-            }
-            else
-            {
-                feedLoadedConnections = true;
-            }
-        });
-    }
-
-    public void LoadMoreFeed()
-    {
-        if (!session.IsSignedIn)
-        {
-            return;
-        }
-
-        var scope = FeedScope;
-        var lane = feedLanes[(int)scope];
-        var cursor = lane.Cursor;
-        if (cursor is null || lane.LoadingMore || lane.Loading)
-        {
-            return;
-        }
-
-        var epoch = feedEpoch;
-        var filter = feedFilter;
-        var region = feedRegion;
-        lane.LoadingMore = true;
-        work.Run("feed more", async token =>
-        {
-            var page = await client.FeedAsync(ScopeKey(scope), filter, region, cursor, token).ConfigureAwait(false);
-            if (page is not null && epoch == feedEpoch)
-            {
-                lane.ApplyMore(page.Items, page.NextCursor);
-            }
-        }, () => lane.LoadingMore = false);
-    }
-
-    private static string ScopeKey(VelvetFeedScope scope) =>
-        scope == VelvetFeedScope.All ? "all" : "connections";
-
-    private static int ByNewestFirst(VelvetPostDto left, VelvetPostDto right)
-    {
-        var byTime = right.CreatedAtUnix.CompareTo(left.CreatedAtUnix);
-        return byTime != 0 ? byTime : string.CompareOrdinal(right.Id, left.Id);
-    }
-
-    private static long ByCreatedAtUnix(VelvetPostDto post) => post.CreatedAtUnix;
-
-    public void OpenProfile(string userId)
-    {
-        if (profileUserId == userId && (profileUser is not null || profileLoading))
-        {
-            if (profileUser is not null && !profileLoading && !profileRevalidating)
-            {
-                RevalidateProfile(userId);
-            }
-
-            return;
-        }
-
-        profileUserId = userId;
-        profileUser = null;
-        profileFailed = false;
-        profileLoading = true;
-        work.Run("profile open", async token =>
-        {
-            var user = await client.UserAsync(userId, token).ConfigureAwait(false);
-            if (profileUserId != userId)
-            {
-                return;
-            }
-
-            if (user is null)
-            {
-                profileFailed = true;
-            }
-            else
-            {
-                profileUser = user;
-            }
-        }, () =>
-        {
-            if (profileUserId == userId)
-            {
-                profileLoading = false;
-            }
-        });
-    }
-
-    private void RevalidateProfile(string userId)
-    {
-        profileRevalidating = true;
-        work.Run("profile revalidate", async token =>
-        {
-            var user = await client.UserAsync(userId, token).ConfigureAwait(false);
-            if (profileUserId != userId)
-            {
-                return;
-            }
-
-            if (user is not null)
-            {
-                profileUser = user;
-            }
-        }, () => profileRevalidating = false);
-    }
-
-    public void Connect(string userId)
-    {
-        sentRequestsLoaded = false;
-        SetConnectionStateEverywhere(userId, VelvetConnectionState.OutgoingRequest);
-        work.Run("connect", async token => await client.ConnectAsync(userId, string.Empty, token).ConfigureAwait(false));
-    }
-
-    public void Connect(string userId, string intro)
-    {
-        sentRequestsLoaded = false;
-        SetConnectionStateEverywhere(userId, VelvetConnectionState.OutgoingRequest);
-        work.Run("connect", async token => await client.ConnectAsync(userId, intro, token).ConfigureAwait(false));
-    }
-
-    public void SendIntro(string userId, string intro, Action<bool> onComplete)
-    {
-        var trimmed = intro.Trim();
-        if (trimmed.Length == 0 || introBusy)
-        {
-            return;
-        }
-
-        introBusy = true;
-        sentRequestsLoaded = false;
-        SetConnectionStateEverywhere(userId, VelvetConnectionState.OutgoingRequest);
-        work.Run("intro", async token =>
-        {
-            await client.ConnectAsync(userId, trimmed, token).ConfigureAwait(false);
-            var status = await keys.EnsureVelvetKeysAsync(userId, MyUserId, token).ConfigureAwait(false);
-            var scope = ScopeFor(userId);
-            var encoded = default(EncryptedOutbound);
-            var encrypted = status.CanEncrypt
-                && cipher.TryEncrypt(scope, status.CurrentGeneration, trimmed, MyUserId, out encoded);
-            if (DowngradeBlocked(userId, "intro", encrypted, status))
-            {
-                return false;
-            }
-
-            if (encrypted)
-            {
-                var sent = await SendMessageRequestAsync(userId, encoded.Envelope, 0, token, null, 0, 0,
-                    EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag, null, 0).ConfigureAwait(false);
-                if (sent is not null)
-                {
-                    cipher.RecordDecrypted(sent.Id, trimmed, encoded.FrankingKeyBase64);
-                }
-            }
-            else
-            {
-                await SendMessageRequestAsync(userId, trimmed, 0, token, null, 0, 0, 0, null, null, 0)
-                    .ConfigureAwait(false);
-            }
-
-            return true;
-        }, onComplete, () => introBusy = false);
-    }
-
-    public void Disconnect(string userId)
-    {
-        ForgetConnection(userId, VelvetConnectionState.None);
-        work.Run("disconnect", async token => await client.DisconnectAsync(userId, token).ConfigureAwait(false));
-    }
-
-    public void Block(string userId, Action<bool> onComplete, Action<AepFailure>? onFailure = null)
-    {
-        blockedLoaded = false;
-        ForgetConnection(userId, VelvetConnectionState.Blocked);
-        HideFromDiscover(userId);
-        work.Run("block", async token =>
-        {
-            var blocked = await safety.BlockAsync(userId, token, onFailure).ConfigureAwait(false);
-            if (!blocked)
-            {
-                AepLog.Warning($"Velvet block of {userId} failed; the local hide is being undone");
-                RefreshConnections();
-                RefreshDiscover(discoverFilter, discoverTags, discoverRegion);
-            }
-
-            return blocked;
-        }, onComplete);
-    }
-
-    public void HideFromDiscover(string userId)
-    {
-        notInterestedLoaded = false;
-        discoverResults = RemoveDiscover(discoverResults, userId);
-
-        var accountId = MyUserId;
-        var epoch = accountEpoch;
-        work.Run("discover not interested save", async token =>
-        {
-            await EnsureNotInterestedLoadedAsync(token).ConfigureAwait(false);
-            if (epoch != accountEpoch)
-            {
-                return;
-            }
-
-            var current = notInterestedFromDiscover;
-            if (Array.IndexOf(current, userId) < 0)
-            {
-                var grown = new string[current.Length + 1];
-                Array.Copy(current, grown, current.Length);
-                grown[current.Length] = userId;
-                notInterestedFromDiscover = grown;
-            }
-
-            await Task.Run(() => notInterestedArchive.Save(accountId, notInterestedFromDiscover), token)
-                .ConfigureAwait(false);
-        });
-    }
-
-    public void RemoveFromNotInterested(string userId)
-    {
-        notInterested = RemoveProfile(notInterested, userId);
-        discoverLoaded = false;
-
-        var accountId = MyUserId;
-        var epoch = accountEpoch;
-        work.Run("discover not interested remove", async token =>
-        {
-            await EnsureNotInterestedLoadedAsync(token).ConfigureAwait(false);
-            if (epoch != accountEpoch)
-            {
-                return;
-            }
-
-            var current = notInterestedFromDiscover;
-            var index = Array.IndexOf(current, userId);
-            if (index >= 0)
-            {
-                var trimmed = new string[current.Length - 1];
-                Array.Copy(current, trimmed, index);
-                Array.Copy(current, index + 1, trimmed, index, current.Length - index - 1);
-                notInterestedFromDiscover = trimmed;
-            }
-
-            await Task.Run(() => notInterestedArchive.Save(accountId, notInterestedFromDiscover), token)
-                .ConfigureAwait(false);
-        });
-    }
-
-    private static VelvetProfileDto[] RemoveDiscover(VelvetProfileDto[] source, string userId)
-    {
-        for (var index = 0; index < source.Length; index++)
-        {
-            if (source[index].UserId != userId)
-            {
-                continue;
-            }
-
-            var trimmed = new VelvetProfileDto[source.Length - 1];
-            Array.Copy(source, trimmed, index);
-            Array.Copy(source, index + 1, trimmed, index, source.Length - index - 1);
-            return trimmed;
-        }
-
-        return source;
-    }
-
-    public void Unblock(string userId)
-    {
-        blocked = CopyOnWrite.RemoveById(blocked, userId);
-        SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
-        work.Run("unblock", async token => await safety.UnblockAsync(userId, token).ConfigureAwait(false));
-    }
-
-    public void RefreshBlocked()
-    {
-        if (!session.IsSignedIn)
-        {
-            return;
-        }
-
-        loadingBlocked = true;
-        work.Run("blocked", async token =>
-        {
-            var page = await safety.BlockedUsersAsync(token).ConfigureAwait(false);
-            if (page is not null)
-            {
-                blocked = page.Users;
-            }
-        }, () =>
-        {
-            loadingBlocked = false;
-            blockedLoaded = true;
-        });
-    }
-
-    public void RefreshNotInterested()
-    {
-        if (!session.IsSignedIn || loadingNotInterested)
-        {
-            return;
-        }
-
-        loadingNotInterested = true;
-        var epoch = accountEpoch;
-        work.Run("notInterested", async token =>
-        {
-            try
-            {
-                await EnsureNotInterestedLoadedAsync(token).ConfigureAwait(false);
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning(exception, "Velvet not-interested ids load failed");
-                return false;
-            }
-
-            if (epoch != accountEpoch)
-            {
-                return false;
-            }
-
-            var ids = notInterestedFromDiscover;
-            var list = new List<VelvetProfileDto>(ids.Length);
-            for (var index = 0; index < ids.Length; index++)
-            {
-                var user = await client.UserAsync(ids[index], token).ConfigureAwait(false);
-                if (epoch != accountEpoch)
-                {
-                    return false;
-                }
-
-                if (user is not null)
-                {
-                    list.Add(user);
-                }
-            }
-
-            notInterested = list.ToArray();
-            return true;
-        }, succeeded =>
-        {
-            if (epoch == accountEpoch && succeeded)
-            {
-                notInterestedLoaded = true;
-            }
-
-            loadingNotInterested = false;
-        });
-    }
-
-    // aspects holds one choice per photo, framed exactly as AethergramStore.CreateGram does.
-    public void CreatePost(string[] sourcePaths, WallpaperCrop[] crops, PostAspect[] aspects, string caption,
-        string[] tags, int audience, Action<bool> onComplete)
-    {
-        if (posting || sourcePaths.Length == 0)
-        {
-            return;
-        }
-
-        posting = true;
-        work.Run("create post", async token =>
-        {
-            var mediaKeys = new string[sourcePaths.Length];
-            var (containerWidth, containerHeight) = PostAspects.Size(aspects[0], PostSize);
-            for (var index = 0; index < sourcePaths.Length; index++)
-            {
-                var (bakedWidth, bakedHeight) = PostAspects.Size(aspects[index], PostSize);
-                var baked = ImageProcessor.BakeCroppedJpeg(sourcePaths[index], crops[index], bakedWidth, bakedHeight,
-                    PostAspects.RevealsWholeImage(aspects[index]));
-                var upload = await media.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
-                if (upload is null)
-                {
-                    return false;
-                }
-
-                var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
-                    .ConfigureAwait(false);
-                if (!uploaded)
-                {
-                    return false;
-                }
-
-                mediaKeys[index] = upload.Key;
-            }
-
-            var request = new CreateVelvetPostRequest(mediaKeys[0], containerWidth, containerHeight, caption, tags,
-                mediaKeys, audience);
-            var created = await client.CreatePostAsync(request, token).ConfigureAwait(false);
-            if (created is null)
-            {
-                return false;
-            }
-
-            if (userPostsLoaded && userPostsUserId == MyUserId)
-            {
-                userPosts = CopyOnWrite.Prepend(userPosts, created);
-                userPostsTotal++;
-            }
-
-            return true;
-        }, onComplete, () => posting = false);
-    }
-
-    public VelvetCommentDto[] DetailComments => detailComments;
-    public bool LoadingComments => loadingComments;
-    public bool CommentsLoadingMore => commentsLoadingMore;
-    public bool HasMoreComments => commentsCursor is not null;
-    public bool Commenting => commenting;
-
-    public void EnsurePost(string postId)
-    {
-        if (fetchingPostId == postId || fetchedPost?.Id == postId)
-        {
-            return;
-        }
-
-        fetchingPostId = postId;
-        fetchedPost = null;
-        work.Run("post by id", async token =>
-        {
-            var post = await client.PostAsync(postId, token).ConfigureAwait(false);
-            if (fetchingPostId == postId && post is not null)
-            {
-                fetchedPost = post;
-            }
-        });
-    }
-
-    public void OpenLikers(string postId)
-    {
-        if (likersPostId == postId && likersLoading)
-        {
-            return;
-        }
-
-        var generation = Interlocked.Increment(ref likersGeneration);
-        var keepStaleRows = likersPostId == postId && likers.Length > 0;
-        var staleCursor = likersCursor;
-        likersPostId = postId;
-        if (!keepStaleRows)
-        {
-            likers = Array.Empty<UserDto>();
-        }
-
-        likersCursor = null;
-        likersFailed = false;
-        likersLoading = !keepStaleRows;
-        work.Run("likers", async token =>
-        {
-            var page = await client.PostLikersAsync(postId, null, token).ConfigureAwait(false);
-            if (Volatile.Read(ref likersGeneration) != generation)
-            {
-                return;
-            }
-
-            if (page is null)
-            {
-                likersFailed = !keepStaleRows;
-                likersCursor = keepStaleRows ? staleCursor : null;
-            }
-            else
-            {
-                likers = page.Items;
-                likersCursor = page.NextCursor;
-            }
-        }, () =>
-        {
-            if (Volatile.Read(ref likersGeneration) == generation)
-            {
-                likersLoading = false;
-            }
-        });
-    }
-
-    public void LoadMoreLikers()
-    {
-        var postId = likersPostId;
-        var cursor = likersCursor;
-        if (!session.IsSignedIn || postId is null || cursor is null || likersLoadingMore || likersLoading)
-        {
-            return;
-        }
-
-        var generation = Volatile.Read(ref likersGeneration);
-        likersLoadingMore = true;
-        work.Run("likers more", async token =>
-        {
-            var page = await client.PostLikersAsync(postId, cursor, token).ConfigureAwait(false);
-            if (page is null || Volatile.Read(ref likersGeneration) != generation)
-            {
-                return;
-            }
-
-            likers = CopyOnWrite.AppendPageById(likers, page.Items);
-            likersCursor = page.NextCursor;
-        }, () => likersLoadingMore = false);
-    }
-
-    public void OpenComments(string postId)
-    {
-        detailPostId = postId;
-        detailComments = Array.Empty<VelvetCommentDto>();
-        commentsCursor = null;
-        loadingComments = true;
-        work.Run("comments", async token =>
-        {
-            var page = await client.CommentsAsync(postId, null, token).ConfigureAwait(false);
-            if (detailPostId == postId && page is not null)
-            {
-                detailComments = page.Items;
-                commentsCursor = page.NextCursor;
-            }
-        }, () =>
-        {
-            if (detailPostId == postId)
-            {
-                loadingComments = false;
-            }
-        });
-    }
-
-    public void LoadMoreComments()
-    {
-        var postId = detailPostId;
-        var cursor = commentsCursor;
-        if (!session.IsSignedIn || postId is null || cursor is null || commentsLoadingMore || loadingComments)
-        {
-            return;
-        }
-
-        commentsLoadingMore = true;
-        work.Run("comments more", async token =>
-        {
-            var page = await client.CommentsAsync(postId, cursor, token).ConfigureAwait(false);
-            if (page is null || detailPostId != postId)
-            {
-                return;
-            }
-
-            detailComments = CopyOnWrite.AppendPageById(detailComments, page.Items);
-            commentsCursor = page.NextCursor;
-        }, () => commentsLoadingMore = false);
-    }
-
-    public void AddComment(string postId, string text, Action<bool> onComplete,
-        Action<AepFailure>? onFailure = null)
-    {
-        var trimmed = text.Trim();
-        if (trimmed.Length == 0 || commenting)
-        {
-            return;
-        }
-
-        commenting = true;
-        work.Run("comment", async token =>
-        {
-            var created = await client.AddCommentAsync(postId, trimmed, token, onFailure).ConfigureAwait(false);
-            if (created is null)
-            {
-                AepLog.Warning($"Velvet comment on {postId} was not accepted");
-                return false;
-            }
-
-            if (detailPostId == postId)
-            {
-                detailComments = CopyOnWrite.Append(detailComments, created);
-            }
-
-            return true;
-        }, onComplete, () => commenting = false);
-    }
-
-    public void ToggleCommentLike(VelvetCommentDto comment)
-    {
-        var liked = !comment.Liked;
-        detailComments = CopyOnWrite.MapById(detailComments, comment.Id, stored => stored.Liked == liked
-            ? stored
-            : stored with { Liked = liked, LikeCount = Math.Max(0, stored.LikeCount + (liked ? 1 : -1)) });
-        work.Run("comment like", async token =>
-        {
-            var updated = liked
-                ? await client.LikeCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false)
-                : await client.UnlikeCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false);
-            if (updated is not null && detailPostId == comment.PostId)
-            {
-                detailComments = CopyOnWrite.Replace(detailComments, updated);
-            }
-        });
-    }
-
-    public void DeletePost(string postId)
-    {
-        RemovePost(postId);
-        work.Run("delete post",
-            async token => await client.DeletePostAsync(postId, token).ConfigureAwait(false));
-    }
-
-    public void SetPostAudience(VelvetPostDto post, int audience)
-    {
-        AcceptPostEverywhere(post with { Audience = audience });
-        work.Run("post audience", async token =>
-        {
-            var result = await client.SetPostAudienceAsync(post.Id, audience, token).ConfigureAwait(false);
-            if (result is not null)
-            {
-                AcceptPostEverywhere(result);
-            }
-        });
-    }
-
-    public void ToggleReaction(VelvetPostDto post, int kind)
-    {
-        var target = post.MyReaction == kind ? -1 : kind;
-        AcceptPostEverywhere(ApplyReaction(post, target));
-        work.Run("reaction", async token =>
-        {
-            var result = target < 0
-                ? await client.RemoveReactionAsync(post.Id, token).ConfigureAwait(false)
-                : await client.ReactAsync(post.Id, target, token).ConfigureAwait(false);
-            if (result is not null)
-            {
-                AcceptPostEverywhere(result);
-            }
-        });
-    }
-
-    private void AcceptPostEverywhere(VelvetPostDto post)
-    {
-        for (var laneIndex = 0; laneIndex < feedLanes.Length; laneIndex++)
-        {
-            feedLanes[laneIndex].Items = CopyOnWrite.Replace(feedLanes[laneIndex].Items, post);
-        }
-
-        userPosts = CopyOnWrite.Replace(userPosts, post);
-        if (fetchedPost?.Id == post.Id)
-        {
-            fetchedPost = post;
-        }
-    }
-
-    private static VelvetPostDto ApplyReaction(VelvetPostDto post, int nextKind)
-    {
-        var (counts, total) = ReactionTally.Shift(post.ReactionCounts, post.MyReaction, nextKind);
-        return post with { ReactionCounts = counts, TotalReactions = total, MyReaction = nextKind };
-    }
-
-    public void Report(string targetType, string targetId, string? reason, Action<bool> onComplete)
-    {
-        work.Run("report",
-            async token => await safety.ReportAsync(targetType, targetId, reason, token).ConfigureAwait(false),
-            onComplete);
-    }
-
-    public void DeletePost(string postId, Action<bool> onComplete)
-    {
-        work.Run("delete post", async token =>
-        {
-            var succeeded = await client.DeletePostAsync(postId, token).ConfigureAwait(false);
-            if (succeeded)
-            {
-                RemovePost(postId);
-            }
-
-            return succeeded;
-        }, onComplete);
-    }
-
-    public void DeleteComment(string postId, string commentId)
-    {
-        if (detailPostId == postId)
-        {
-            detailComments = CopyOnWrite.RemoveById(detailComments, commentId);
-        }
-
-        work.Run("comment delete",
-            async token => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
-    }
-
-    public void DeleteComment(string postId, string commentId, Action<bool> onComplete)
-    {
-        work.Run("comment delete", async token =>
-        {
-            var succeeded = await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false);
-            if (succeeded && detailPostId == postId)
-            {
-                detailComments = CopyOnWrite.RemoveById(detailComments, commentId);
-            }
-
-            return succeeded;
-        }, onComplete);
-    }
-
     public void ClearDiscover()
     {
         discoverResults = Array.Empty<VelvetProfileDto>();
@@ -1779,6 +586,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
             feedLanes[laneIndex].Items = CopyOnWrite.RemoveById(feedLanes[laneIndex].Items, postId);
         }
 
+        tagLane.Items = CopyOnWrite.RemoveById(tagLane.Items, postId);
         var remainingUserPosts = CopyOnWrite.RemoveById(userPosts, postId);
         if (!ReferenceEquals(remainingUserPosts, userPosts))
         {
@@ -1841,13 +649,14 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
                 return;
             }
 
-            var ids = await Task.Run(() => notInterestedArchive.Load(accountId), token).ConfigureAwait(false);
+            var snapshot = await Task.Run(() => notInterestedArchive.Load(accountId), token).ConfigureAwait(false);
             if (epoch != accountEpoch)
             {
                 return;
             }
 
-            notInterestedFromDiscover = MergeNotInterested(notInterestedFromDiscover, ids);
+            notInterestedIds = MergeNotInterested(notInterestedIds, snapshot.UserIds);
+            passedAt = MergePasses(passedAt, snapshot.Passes, UnixNow());
             discoverResults = WithoutNotInterested(discoverResults);
             loaded = true;
         }
@@ -1865,16 +674,40 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         }
     }
 
-    private static string[] MergeNotInterested(string[] existing, string[] incoming)
+    private static long UnixNow() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+    private static bool PassActive(Dictionary<string, long> passes, string userId, long now) =>
+        passes.TryGetValue(userId, out var stamp) && now - stamp < PassLifetimeSeconds;
+
+    private static Dictionary<string, long> MergePasses(Dictionary<string, long> existing,
+        Dictionary<string, long> incoming, long now)
     {
-        var set = new HashSet<string>(existing, StringComparer.Ordinal);
+        var merged = new Dictionary<string, long>(existing, StringComparer.Ordinal);
+        var changed = false;
+        foreach (var (userId, stamp) in incoming)
+        {
+            if (now - stamp >= PassLifetimeSeconds || merged.ContainsKey(userId))
+            {
+                continue;
+            }
+
+            merged[userId] = stamp;
+            changed = true;
+        }
+
+        return changed ? merged : existing;
+    }
+
+    private static HashSet<string> MergeNotInterested(HashSet<string> existing, string[] incoming)
+    {
+        var merged = new HashSet<string>(existing, StringComparer.Ordinal);
         var added = false;
         for (var index = 0; index < incoming.Length; index++)
         {
-            added |= set.Add(incoming[index]);
+            added |= merged.Add(incoming[index]);
         }
 
-        return added ? set.ToArray() : existing;
+        return added ? merged : existing;
     }
 
     private static VelvetProfileDto[] RemoveProfile(VelvetProfileDto[] source, string userId)

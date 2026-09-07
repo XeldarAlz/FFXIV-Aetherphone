@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Confirm;
@@ -15,14 +16,58 @@ internal sealed partial class VelvetShell
     {
         var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
+        var width = ScrollLayout.StableContentWidth();
         var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + heightUnscaled * scale));
         ImGui.Dummy(new Vector2(width, heightUnscaled * scale));
         return rect;
     }
 
-    private static Rect Inset(Rect rect, float inset) =>
-        new(new Vector2(rect.Min.X + inset, rect.Min.Y), new Vector2(rect.Max.X - inset, rect.Max.Y));
+    private readonly List<VChipModel> chipModels = new();
+
+    private int DrawChipFlow(float width, float scale) =>
+        VChipFlow.Draw(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chipModels), width, scale);
+
+    private float MeasureChipFlow(float width, float scale) =>
+        VChipFlow.Measure(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chipModels), width, scale);
+
+    private static void DrawInsetHelpText(string text)
+    {
+        var scale = UiScale.Current;
+        var pad = SocialChrome.CellPadX * scale;
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var height = Typography.DrawWrappedLeft(new Vector2(origin.X + pad, origin.Y), text, VelvetTheme.MutedInk,
+            TextStyles.Footnote, MathF.Max(1f, width - pad * 2f));
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+    }
+
+    private const float EmptyStateTop = 76f;
+    private const float EmptyStateGap = 8f;
+
+    private static float DrawEmpty(Rect area, string title, string body)
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var maxWidth = MathF.Max(1f, area.Width - FeedCell.PadX * 2f * scale);
+        var top = area.Min.Y + EmptyStateTop * scale;
+        var titleBottom = Typography.DrawWrappedCentered(drawList, title, TextStyles.Headline, VelvetTheme.TitleInk,
+            new Vector2(area.Center.X, top), maxWidth);
+        if (body.Length == 0)
+        {
+            return titleBottom;
+        }
+
+        return Typography.DrawWrappedCentered(drawList, body, TextStyles.Subheadline, VelvetTheme.MutedInk,
+            new Vector2(area.Center.X, titleBottom + EmptyStateGap * scale), maxWidth);
+    }
+
+    private void FillWhoLabels()
+    {
+        whoLabels[0] = Loc.T(L.Velvet.WhoEveryone);
+        whoLabels[1] = Loc.T(L.Velvet.WhoFriends);
+        whoLabels[2] = Loc.T(L.Velvet.WhoNoOne);
+    }
 
     private static void Gap(float pixels)
     {
@@ -79,6 +124,7 @@ internal sealed partial class VelvetShell
 
         if (store.Me is { } me && me.UserId == post.OwnerId)
         {
+            AddPostSheetItem(PostSheetAction.Edit, Loc.T(L.Velvet.EditCaption), false);
             AddPostSheetItem(PostSheetAction.Audience,
                 Loc.T(post.Audience == VelvetPostAudience.Public ? L.Velvet.MakeConnections : L.Velvet.MakePublic),
                 false);
@@ -119,6 +165,9 @@ internal sealed partial class VelvetShell
             case PostSheetAction.View:
                 OpenPostDetail(post.Id);
                 break;
+            case PostSheetAction.Edit:
+                OpenEditCaption(post);
+                break;
             case PostSheetAction.Audience:
                 store.SetPostAudience(post, post.Audience == VelvetPostAudience.Public
                     ? VelvetPostAudience.Connections
@@ -132,6 +181,81 @@ internal sealed partial class VelvetShell
                 break;
             case PostSheetAction.Block:
                 AskBlock(post.OwnerId, DisplayNameOf(post.OwnerDisplayName, post.OwnerHandle));
+                break;
+        }
+    }
+
+    private void OpenProfileMenu(VelvetProfileDto user)
+    {
+        profileMenuUserId = user.UserId;
+        profileMenuName = DisplayNameOf(user.DisplayName, user.Handle);
+        profileMenuCount = 0;
+        if (store.Me?.UserId == user.UserId)
+        {
+            AddProfileMenuItem(ProfileMenuAction.Settings, Loc.T(L.Velvet.Settings), false);
+            AddProfileMenuItem(ProfileMenuAction.Rules, Loc.T(L.Conduct.Eyebrow), false);
+        }
+        else
+        {
+            if (user.ConnectionState == VelvetConnectionState.Connected)
+            {
+                AddProfileMenuItem(ProfileMenuAction.Disconnect, Loc.T(L.Velvet.Disconnect), false);
+            }
+
+            AddProfileMenuItem(ProfileMenuAction.NotInterested, Loc.T(L.Velvet.NotInterested), false);
+            if (!AlreadyReported(user.UserId))
+            {
+                AddProfileMenuItem(ProfileMenuAction.Report, Loc.T(L.Velvet.Report), true);
+            }
+
+            AddProfileMenuItem(ProfileMenuAction.Block, Loc.T(L.Velvet.Block), true);
+        }
+
+        profileMenu.Open();
+    }
+
+    private void AddProfileMenuItem(ProfileMenuAction action, string label, bool danger)
+    {
+        profileMenuActions[profileMenuCount] = action;
+        profileMenuItems[profileMenuCount] = new ActionSheet.Item(label, string.Empty, danger);
+        profileMenuCount++;
+    }
+
+    private void DrawProfileMenu(Rect screen)
+    {
+        if (!profileMenu.CapturesPointer)
+        {
+            return;
+        }
+
+        var picked = profileMenu.Draw(screen, ActionSheetStyle.From(ui),
+            profileMenuItems.AsSpan(0, profileMenuCount), Loc.T(L.Common.Cancel), false, profileMenuName);
+        if (picked < 0)
+        {
+            return;
+        }
+
+        switch (profileMenuActions[picked])
+        {
+            case ProfileMenuAction.Settings:
+                settingsLoaded = false;
+                router.Push(VelvetView.Settings);
+                break;
+            case ProfileMenuAction.Rules:
+                conduct.ShowRules(Id);
+                break;
+            case ProfileMenuAction.Report:
+                OpenReport("velvet_profile", profileMenuUserId, Loc.T(L.Velvet.ReportProfile));
+                break;
+            case ProfileMenuAction.NotInterested:
+                store.HideFromDiscover(profileMenuUserId);
+                router.Pop();
+                break;
+            case ProfileMenuAction.Disconnect:
+                AskDisconnect(profileMenuUserId);
+                break;
+            case ProfileMenuAction.Block:
+                AskBlock(profileMenuUserId, profileMenuName);
                 break;
         }
     }

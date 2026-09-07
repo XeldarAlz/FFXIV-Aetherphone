@@ -371,7 +371,18 @@ internal sealed record VelvetProfileDto(
     string Region = "",
     string[]? BadgeIds = null,
     string FrameId = "",
-    string? IntroLang = null);
+    string? IntroLang = null,
+    int Race = 0,
+    int Presence = 0,
+    VelvetCardPhotoDto[]? Photos = null,
+    int RaceOverride = 0,
+    int Languages = 0);
+
+internal sealed record VelvetCardPhotoDto(string Id, string Url, int Width, int Height);
+
+internal sealed record AddVelvetCardPhotoRequest(string MediaKey, int Width, int Height);
+
+internal sealed record ReorderVelvetCardPhotosRequest(string[] PhotoIds);
 
 internal sealed record UpdateVelvetProfileRequest(
     string? Intro,
@@ -385,7 +396,9 @@ internal sealed record UpdateVelvetProfileRequest(
     int? WhoCanMessage = null,
     int? Gender = null,
     int? Sexuality = null,
-    string[]? Kinks = null);
+    string[]? Kinks = null,
+    int? Race = null,
+    int? Languages = null);
 
 internal sealed record GateAcceptRequest(int GateVersion);
 
@@ -415,7 +428,8 @@ internal sealed record VelvetPostDto(
     string[]? OwnerBadgeIds = null,
     string OwnerFrameId = "",
     bool Sensitive = false,
-    string? Lang = null) : IIdentified;
+    string? Lang = null,
+    long? EditedAtUnix = null) : IIdentified;
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
 
@@ -431,6 +445,8 @@ internal sealed record CreateVelvetPostRequest(
     int Audience = 0);
 
 internal sealed record UpdateVelvetPostAudienceRequest(int Audience);
+
+internal sealed record EditVelvetCaptionRequest(string Caption);
 
 internal sealed record VelvetCommentDto(
     string Id,
@@ -629,7 +645,9 @@ internal sealed record ContactDto(
     string Alias,
     bool IsMutual,
     long CreatedAtUnix,
-    string FrameId = "");
+    string FrameId = "",
+    int Presence = 0,
+    long? LastSeenAtUnix = null);
 
 internal sealed record ContactListResult(ContactDto[] Contacts, string MyNumber);
 
@@ -663,7 +681,8 @@ internal sealed record ConversationDto(
     string LastMessageSenderId = "",
     bool Muted = false,
     long? LastSeenAtUnix = null,
-    string FrameId = "") : IIdentified;
+    string FrameId = "",
+    string? Description = null) : IIdentified;
 
 internal sealed record ConversationMemberDto(
     string UserId,
@@ -748,7 +767,9 @@ internal sealed record SendChatMessageRequest(
 
 internal sealed record AddMembersRequest(string[] MemberIds);
 
-internal sealed record RenameConversationRequest(string Title);
+internal sealed record UpdateConversationRequest(string? Title = null, string? Description = null, string? AvatarUrl = null);
+
+internal sealed record SetMemberRoleRequest(int Role);
 
 internal sealed record ChatTypingDto(string[] TypingUserIds);
 

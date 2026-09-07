@@ -91,8 +91,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         this.photoLibrary = photoLibrary;
         this.confirm = confirm;
         this.wallpaperImages = wallpaperImages;
-        flow = new SignInFlow(session, auth,
-            () => RegionSync.Push(session, account, configuration, gameData, cancellation.Token));
+        flow = new SignInFlow(session, auth);
         patreonFlow = new PatreonLinkFlow(account, accountState.RefreshNow);
     }
 

@@ -375,7 +375,7 @@ internal abstract class SocialFeedStore : IDisposable
 
     public void EnsureMe()
     {
-        ReconcileAccountBadges();
+        ReconcileAccountFields();
         if (!session.IsSignedIn || me is not null || loadingMe)
         {
             return;
@@ -397,16 +397,22 @@ internal abstract class SocialFeedStore : IDisposable
         }, () => loadingMe = false);
     }
 
-    private void ReconcileAccountBadges()
+    private void ReconcileAccountFields()
     {
         var current = me;
         var signedInUser = session.CurrentUser;
-        if (current is null || signedInUser is null || current.Badges == signedInUser.Badges)
+        if (current is null || signedInUser is null)
         {
             return;
         }
 
-        me = current with { Badges = signedInUser.Badges };
+        if (current.Badges == signedInUser.Badges &&
+            string.Equals(current.Region, signedInUser.Region, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        me = current with { Badges = signedInUser.Badges, Region = signedInUser.Region };
     }
 
     public void SetFeedRegions(string? regionsCsv)

@@ -74,7 +74,7 @@ internal sealed class LinkpearlPopoutWindow : Window
     private readonly ConfirmService confirm;
     private readonly ConfirmOverlay confirmOverlay;
     private readonly int confirmHost = ConfirmHosts.Reserve();
-    private readonly DropdownMenu switchMenu = new();
+    private readonly DropdownMenu switchMenu = new() { Detached = true };
     private readonly List<DropdownMenu.Item> switchItems = new(SwitchMenuLimit);
     private readonly List<string> switchKeys = new(SwitchMenuLimit);
     private readonly List<byte> switchActions = new(SwitchMenuLimit);
@@ -135,6 +135,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         collapseButtonId = "linkpearl.popout.collapse." + slotText;
         chatMenu = new GameChatMenu("linkpearl.popout.menu." + slotText)
         {
+            Detached = true,
             SendTell = owner.OpenTell,
             LookUp = owner.LookUpInPhone,
             OpenMarket = owner.OpenMarketInPhone,
@@ -587,7 +588,7 @@ internal sealed class LinkpearlPopoutWindow : Window
                 }
 
                 DrawSwitchMenu(theme);
-                chatMenu.Draw(frame, theme);
+                chatMenu.Draw(PhoneBounds.Viewport(), theme);
             }
 
             ShellToast.DrawSecondary(frame, theme);
@@ -1132,7 +1133,7 @@ internal sealed class LinkpearlPopoutWindow : Window
             return;
         }
 
-        var picked = switchMenu.Draw(frame, theme, CollectionsMarshal.AsSpan(switchItems));
+        var picked = switchMenu.Draw(PhoneBounds.Viewport(), theme, CollectionsMarshal.AsSpan(switchItems));
         if (picked < 0)
         {
             return;

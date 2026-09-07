@@ -217,6 +217,8 @@ internal sealed class FontService : IDisposable
         return new FontToken(textHandles[(int)weight, NearestSize(scale)].Push());
     }
 
+    public float NearestScale(float scale) => SizeMultipliers[NearestSize(scale)];
+
     public FontToken PushIcon(float pixelHeight, string glyph)
     {
         MaybeRebuildLearned();

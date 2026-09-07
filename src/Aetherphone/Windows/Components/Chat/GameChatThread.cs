@@ -31,18 +31,25 @@ internal readonly struct GameChatTarget
     }
 }
 
-internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
+internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscriptPaging, IDisposable
 {
     private const long GroupWindowSeconds = 240;
     private const float FailureHeight = 26f;
     private const float SearchBarHeight = 40f;
     private const float JumpPillHeight = 26f;
+    private const float LoadOlderThreshold = 48f;
+    private const int WindowPageLines = 100;
+    private const int LineSweepThreshold = 256;
+    private const int RevealMarginLines = 8;
+    private const int CompactRestoreFrames = 3;
     private const string SelfId = "linkpearl.self";
 
     private readonly ChatStreamView view;
     private readonly ChatSend send;
     private readonly GameData gameData;
     private readonly ChatTranscript transcript = new();
+    private readonly Dictionary<string, LineHeight> lineHeights = new(StringComparer.Ordinal);
+    private int lastLineSweepFrame = -1;
     private readonly ChatEntranceTracker entrance = new();
     private readonly GameComposer composer = new();
     private readonly List<PendingSend> ghostSends = new(4);
@@ -51,6 +58,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
     private int mappedCount;
     private int mappedRequired = -1;
     private int mappedStyleRevision = -1;
+    private int mappedWindowStart = -1;
     private long mappedRevision = -1;
     private GameChatTarget target;
     private string activeChannel = string.Empty;
@@ -66,6 +74,12 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
     private bool searchFocus;
     private bool atBottom = true;
     private string? seenTailId;
+    private int shownLines = WindowPageLines;
+    private string? firstDrawnId;
+    private float firstDrawnContentY;
+    private float compactRestoreTarget;
+    private float compactRestoreShift;
+    private int compactRestoreFrames;
 
     public GameChatThread(ChatLog log, ChatSend send, GameData gameData)
     {
@@ -121,7 +135,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
         composer.Bind(next.Key);
         followBottom = true;
         snapToBottom = revealId is null;
-        mappedRevision = -1;
+        ResetWindow();
     }
 
     public void Close()
@@ -134,7 +148,14 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
 
         target = default;
         trackedKey = string.Empty;
+        ResetWindow();
     }
+
+    bool IChatTranscriptPaging.HasMoreOlder => HasOlderVisible();
+
+    bool IChatTranscriptPaging.LoadingOlder => false;
+
+    void IChatTranscriptPaging.LoadOlder() => GrowWindow();
 
     public void Draw(Rect area, PhoneTheme theme)
     {
@@ -169,6 +190,8 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
 
         var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + searchHeight),
             new Vector2(area.Max.X, composerBar.Min.Y - failureBlock));
+        ShrinkWindow();
+        EnsureRevealShown(view.Entries);
         if (target.Density == ChatDensity.Bubbles)
         {
             DrawBubbles(listRect, theme);
@@ -265,7 +288,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
             return;
         }
 
-        var targets = ChatRuns.For(entry).Targets;
+        var targets = ChatRuns.For(entry, ImGui.GetFrameCount()).Targets;
         if (target >= 0 && target < targets.Length)
         {
             handler(entry, targets[target]);
@@ -288,7 +311,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
         var entries = view.Entries;
         entrance.Sync(target.Key, entries.Count, entries.Count > 0 ? entries[entries.Count - 1].Id : null,
             ImGui.GetIO().DeltaTime, false);
-        using (AppSurface.BeginEdgeToEdge(listRect))
+        using (var surface = AppSurface.BeginEdgeToEdge(listRect))
         {
             if (entries.Count == 0 && ghostEntries.Count == 0)
             {
@@ -298,9 +321,18 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
             }
 
             SyncFollow();
+            SettleCompactRestore();
+            var seamId = MaybeGrowCompact(surface.Scrolling);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
+            var contentOrigin = ImGui.GetWindowPos().Y - ImGui.GetScrollY();
+            var lineWidth = ScrollLayout.StableContentWidth();
+            var recordFirst = surface.Pull <= 0f;
+            string? nextFirstId = null;
+            var nextFirstContentY = 0f;
+            var seamFound = false;
+            var seamShift = 0f;
             ChatEntry? previous = null;
-            for (var index = 0; index < entries.Count; index++)
+            for (var index = WindowStart(entries.Count); index < entries.Count; index++)
             {
                 var entry = entries[index];
                 if (Hidden(entry))
@@ -317,12 +349,36 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
                     ImGui.Dummy(new Vector2(0f, Metrics.Space.Xxs * scale));
                 }
 
-                var style = new ChatLineStyle(RailFor(entry), previous is null || !Grouped(previous, entry), false,
-                    entrance.Progress(index));
+                var contentTop = ImGui.GetCursorScreenPos().Y - contentOrigin;
+                if (seamId is not null && string.Equals(entry.Id, seamId, StringComparison.Ordinal))
+                {
+                    seamShift = contentTop - firstDrawnContentY;
+                    seamFound = true;
+                    seamId = null;
+                }
+
+                if (nextFirstId is null)
+                {
+                    nextFirstId = entry.Id;
+                    nextFirstContentY = contentTop;
+                }
+
+                var headsLine = previous is null || !Grouped(previous, entry);
+                var style = new ChatLineStyle(RailFor(entry), headsLine, false, entrance.Progress(index));
+                var lineStart = ImGui.GetCursorScreenPos();
+                var isReveal = revealId is not null && string.Equals(entry.Id, revealId, StringComparison.Ordinal);
+                if (!isReveal && TryCullLine(entry, headsLine, lineWidth, scale, lineStart))
+                {
+                    previous = entry;
+                    continue;
+                }
+
                 if (ChatLineView.Draw(entry, theme, style, theme.Accent, out var tapped))
                 {
                     Context?.Invoke(entry);
                 }
+
+                RecordLine(entry, headsLine, lineWidth, scale, ImGui.GetCursorScreenPos().Y - lineStart.Y);
 
                 if (tapped >= 0)
                 {
@@ -337,6 +393,18 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
                 }
 
                 previous = entry;
+            }
+
+            if (recordFirst)
+            {
+                firstDrawnId = nextFirstId;
+                firstDrawnContentY = nextFirstContentY;
+            }
+
+            if (seamFound && MathF.Abs(seamShift) >= 0.5f)
+            {
+                ApplyCompactShift(seamShift);
+                compactRestoreFrames = CompactRestoreFrames;
             }
 
             for (var index = 0; index < ghostEntries.Count; index++)
@@ -499,9 +567,11 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
             BodyInk = theme.TextStrong,
             EmptyText = Loc.T(L.Messages.Empty),
             LoadingText = Loc.T(L.Messages.Empty),
+            SidePadding = AppSurface.SidePadding,
             IsGroup = target.Streams.Length > 1 || target.SendTarget.Length == 0,
             LabelsOwnMessages = target.Streams.Length > 1 || target.SendTarget.Length == 0,
             Interactions = this,
+            Paging = this,
         };
         if (snapToBottom)
         {
@@ -521,10 +591,11 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
     private void Remap(PhoneTheme theme)
     {
         var entries = view.Entries;
-        var required = entries.Count + ghostEntries.Count;
+        var windowStart = WindowStart(entries.Count);
+        var required = entries.Count - windowStart + ghostEntries.Count;
         var styleRevision = ChannelStyles.Shared.Revision;
         if (mappedRevision == view.Revision && mappedRequired == required &&
-            mappedStyleRevision == styleRevision)
+            mappedStyleRevision == styleRevision && mappedWindowStart == windowStart)
         {
             return;
         }
@@ -532,13 +603,14 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
         mappedRevision = view.Revision;
         mappedRequired = required;
         mappedStyleRevision = styleRevision;
+        mappedWindowStart = windowStart;
         if (mapped.Length < required)
         {
             mapped = new TranscriptMessage[Math.Max(required, 64)];
         }
 
         var written = 0;
-        for (var index = 0; index < entries.Count; index++)
+        for (var index = windowStart; index < entries.Count; index++)
         {
             var entry = entries[index];
             if (Hidden(entry))
@@ -560,6 +632,187 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
     private static bool Hidden(ChatEntry entry) =>
         entry.IsSelf && ChannelStyles.Shared.HidesOutgoing(entry.ChannelKey);
 
+    private int WindowStart(int entryCount) => Math.Max(0, entryCount - shownLines);
+
+    private void ResetWindow()
+    {
+        shownLines = WindowPageLines;
+        firstDrawnId = null;
+        compactRestoreFrames = 0;
+        mappedRevision = -1;
+    }
+
+    private bool TryCullLine(ChatEntry entry, bool headsLine, float width, float scale, Vector2 lineStart)
+    {
+        if (!lineHeights.TryGetValue(entry.Id, out var cached)
+            || !cached.Matches(width, scale, Plugin.Fonts.Generation, headsLine))
+        {
+            return false;
+        }
+
+        if (ImGui.IsRectVisible(new Vector2(width, cached.Height)))
+        {
+            return false;
+        }
+
+        cached.LastUsedFrame = ImGui.GetFrameCount();
+        ImGui.SetCursorScreenPos(new Vector2(lineStart.X, lineStart.Y + cached.Height));
+        return true;
+    }
+
+    private void RecordLine(ChatEntry entry, bool headsLine, float width, float scale, float height)
+    {
+        var frame = ImGui.GetFrameCount();
+        if (!lineHeights.TryGetValue(entry.Id, out var cached))
+        {
+            if (lineHeights.Count > LineSweepThreshold)
+            {
+                SweepIdleLines(frame);
+            }
+
+            cached = new LineHeight();
+            lineHeights[entry.Id] = cached;
+        }
+
+        cached.Remember(width, scale, Plugin.Fonts.Generation, headsLine, height, frame);
+    }
+
+    private void SweepIdleLines(int frame)
+    {
+        if (lastLineSweepFrame == frame)
+        {
+            return;
+        }
+
+        lastLineSweepFrame = frame;
+        foreach (var pair in lineHeights)
+        {
+            if (pair.Value.LastUsedFrame < frame - 1)
+            {
+                lineHeights.Remove(pair.Key);
+            }
+        }
+    }
+
+    private void ShrinkWindow()
+    {
+        if (shownLines <= WindowPageLines || revealId is not null || compactRestoreFrames > 0)
+        {
+            return;
+        }
+
+        var following = target.Density == ChatDensity.Bubbles ? transcript.AtBottom : followBottom;
+        if (!following)
+        {
+            return;
+        }
+
+        shownLines = WindowPageLines;
+        firstDrawnId = null;
+    }
+
+    private void GrowWindow()
+    {
+        var entries = view.Entries;
+        var start = WindowStart(entries.Count);
+        var added = 0;
+        while (start > 0 && added < WindowPageLines)
+        {
+            start--;
+            if (!Hidden(entries[start]))
+            {
+                added++;
+            }
+        }
+
+        shownLines = entries.Count - start;
+    }
+
+    private bool HasOlderVisible()
+    {
+        var entries = view.Entries;
+        for (var index = WindowStart(entries.Count) - 1; index >= 0; index--)
+        {
+            if (!Hidden(entries[index]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void EnsureRevealShown(IReadOnlyList<ChatEntry> entries)
+    {
+        if (revealId is null)
+        {
+            return;
+        }
+
+        for (var index = entries.Count - 1; index >= 0; index--)
+        {
+            if (!string.Equals(entries[index].Id, revealId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var needed = Math.Min(entries.Count, entries.Count - index + RevealMarginLines);
+            if (needed > shownLines)
+            {
+                shownLines = needed;
+            }
+
+            return;
+        }
+    }
+
+    private string? MaybeGrowCompact(bool scrolling)
+    {
+        if (compactRestoreFrames > 0 || scrolling || followBottom || firstDrawnId is null || !HasOlderVisible())
+        {
+            return null;
+        }
+
+        if (ImGui.GetScrollMaxY() <= 0f || ImGui.GetScrollY() > LoadOlderThreshold * UiScale.Current)
+        {
+            return null;
+        }
+
+        GrowWindow();
+        return firstDrawnId;
+    }
+
+    private void SettleCompactRestore()
+    {
+        if (compactRestoreFrames <= 0)
+        {
+            return;
+        }
+
+        if (followBottom || revealId is not null)
+        {
+            compactRestoreFrames = 0;
+            return;
+        }
+
+        var expected = Math.Clamp(compactRestoreTarget, 0f, ImGui.GetScrollMaxY());
+        if (MathF.Abs(ImGui.GetScrollY() - expected) <= 1f)
+        {
+            compactRestoreFrames = 0;
+            return;
+        }
+
+        compactRestoreFrames--;
+        ApplyCompactShift(compactRestoreShift);
+    }
+
+    private void ApplyCompactShift(float shift)
+    {
+        compactRestoreShift = shift;
+        compactRestoreTarget = ImGui.GetScrollY() + shift;
+        ImGui.SetScrollY(compactRestoreTarget);
+    }
+
     private TranscriptMessage Map(ChatEntry entry, PhoneTheme theme, byte flags)
     {
         var tag = string.Empty;
@@ -570,7 +823,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
             tagTint = channel.Tint;
         }
 
-        var runs = ChatRuns.For(entry);
+        var runs = ChatRuns.For(entry, ImGui.GetFrameCount());
         var overrides = ChannelStyles.Shared.For(entry.ChannelKey);
         var packedName = overrides is null ? 0u : entry.IsSelf ? overrides.OutgoingName : overrides.IncomingName;
         var packedBody = overrides is null ? 0u : entry.IsSelf ? overrides.OutgoingBody : overrides.IncomingBody;
@@ -759,6 +1012,29 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IDisposable
         (entry.At - previous.At).TotalSeconds <= GroupWindowSeconds;
 
     private static long Seconds(DateTime at) => new DateTimeOffset(at).ToUnixTimeSeconds();
+
+    private sealed class LineHeight
+    {
+        public float Height;
+        public int LastUsedFrame;
+        private float width;
+        private float scale;
+        private int fontGeneration;
+        private bool headsLine;
+
+        public bool Matches(float rowWidth, float uiScale, int fonts, bool heads) =>
+            Height > 0f && width == rowWidth && scale == uiScale && fontGeneration == fonts && headsLine == heads;
+
+        public void Remember(float rowWidth, float uiScale, int fonts, bool heads, float rowHeight, int frame)
+        {
+            width = rowWidth;
+            scale = uiScale;
+            fontGeneration = fonts;
+            headsLine = heads;
+            Height = rowHeight;
+            LastUsedFrame = frame;
+        }
+    }
 }
 
 internal static class GameChatTargets

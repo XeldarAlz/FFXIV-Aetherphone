@@ -14,7 +14,7 @@ internal sealed partial class VelvetShell
     private void DrawActivity(Rect area)
     {
         var scale = UiScale.Current;
-        if (VHeader.Push(area, Loc.T(L.Velvet.Activity), theme))
+        if (VHeader.Push(area, Loc.T(L.Velvet.Activity)))
         {
             router.Pop();
             return;

@@ -69,6 +69,8 @@ internal sealed class DropdownMenu
 
     public bool KeepOpen { get; set; }
 
+    public bool Detached { get; set; }
+
     public int Draw(Rect screen, PhoneTheme theme, ReadOnlySpan<Item> items, out RowAction action)
     {
         action = RowAction.Select;
@@ -136,11 +138,18 @@ internal sealed class DropdownMenu
             top = anchor.Min.Y - 4f * scale - height;
         }
 
+        var topLimit = screen.Min.Y + 8f * scale;
+        top = Math.Clamp(top, topLimit, MathF.Max(topLimit, screen.Max.Y - 8f * scale - height));
         var pivot = new Vector2(Math.Clamp(anchor.Center.X, left, left + width), top < anchor.Min.Y ? top + height : top);
         var revealScale = 0.94f + 0.06f * reveal;
         var min = pivot + (new Vector2(left, top) - pivot) * revealScale;
         var max = pivot + (new Vector2(left + width, top + height) - pivot) * revealScale;
         PopoverSurface.Draw(drawList, min, max, 14f * scale, theme, scale, alpha);
+        if (Detached && ImGui.IsMouseHoveringRect(min, max, false))
+        {
+            ImGui.SetNextFrameWantCaptureMouse(true);
+        }
+
         var clicked = -1;
         var clickedAction = RowAction.Select;
         var headerOffset = headerHeight * revealScale;
@@ -176,8 +185,8 @@ internal sealed class DropdownMenu
                 cursorRight -= actionSlot;
             }
 
-            var rowHovered = UiInteract.HoverWindowOnly(rowMin, rowMax);
-            var editHovered = item.CanEdit && editRect is { } er && UiInteract.HoverWindowOnly(er.Min, er.Max);
+            var rowHovered = Hovering(rowMin, rowMax, true);
+            var editHovered = item.CanEdit && editRect is { } er && Hovering(er.Min, er.Max, true);
             if (rowHovered)
             {
                 Squircle.Fill(drawList, rowMin, rowMax, 9f * scale,
@@ -234,7 +243,7 @@ internal sealed class DropdownMenu
             return clicked;
         }
 
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !UiInteract.HoverWindowOnly(min, max, false) &&
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !Hovering(min, max, false) &&
             ImGui.GetFrameCount() != openedFrame)
         {
             Close();
@@ -242,6 +251,9 @@ internal sealed class DropdownMenu
 
         return -1;
     }
+
+    private bool Hovering(Vector2 min, Vector2 max, bool clip) =>
+        Detached ? ImGui.IsMouseHoveringRect(min, max, false) : UiInteract.HoverWindowOnly(min, max, clip);
 
     private static void DrawCheck(ImDrawListPtr drawList, Vector2 center, Vector4 accent, float alpha, float scale)
     {

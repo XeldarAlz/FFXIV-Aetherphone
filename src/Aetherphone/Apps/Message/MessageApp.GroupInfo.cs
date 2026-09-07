@@ -3,277 +3,661 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Telephony;
+using Aetherphone.Core.Message;
+using Aetherphone.Core.Social;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
-using Aetherphone.Core.Social;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Message;
 
 internal sealed partial class MessageApp
 {
-    private string renameDraft = string.Empty;
-    private string? renameLoadedFor;
+    private const byte MemberActMessage = 0;
+    private const byte MemberActView = 1;
+    private const byte MemberActPromote = 2;
+    private const byte MemberActDemote = 3;
+    private const byte MemberActRemove = 4;
+    private const float MemberRowHeight = 60f;
+    private const float MemberAvatarRadius = 21f;
+    private const float GroupCameraBadgeRadius = 14f;
+    private const float GroupCameraGlyph = 15f;
+    private const float DescriptionCardPad = 14f;
+    private const float DescriptionFieldHeight = 110f;
+    private const int DescriptionMaxLength = 500;
 
-    private void DrawGroupInfo(Rect area, string conversationId)
+    private readonly ActionSheet memberSheet = new();
+    private readonly ActionSheet.Item[] memberSheetItems = new ActionSheet.Item[5];
+    private readonly byte[] memberSheetActions = new byte[5];
+    private readonly ActionSheet groupPhotoSheet = new();
+    private readonly ActionSheet.Item[] groupPhotoSheetItems = new ActionSheet.Item[2];
+    private readonly ImagePickCrop groupPhotoPicker;
+    private int memberSheetCount;
+    private string memberSheetTitle = string.Empty;
+    private string? memberSheetUserId;
+    private string? memberSheetConversationId;
+    private int groupPhotoSheetCount;
+    private string? groupPhotoConversationId;
+    private volatile bool groupPhotoBusy;
+    private volatile int groupPhotoOutcome;
+    private string editGroupTitle = string.Empty;
+    private string editGroupDescription = string.Empty;
+    private string? editGroupLoadedFor;
+    private volatile bool editGroupBusy;
+    private volatile int editGroupOutcome;
+
+    private void ProcessGroupOutcomes()
     {
-        var scale = UiScale.Current;
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.DirectMessages.Details), back);
-        var conversation = store.Conversation;
-        if (conversation is null || !conversation.IsGroup || conversation.Id != conversationId)
+        var photo = groupPhotoOutcome;
+        if (photo != 0)
+        {
+            groupPhotoOutcome = 0;
+            groupPhotoBusy = false;
+            if (photo == 1)
+            {
+                if (router.Current.Screen == MessageScreen.GroupPhoto)
+                {
+                    router.Pop();
+                }
+            }
+            else
+            {
+                ShellToast.Show(Loc.T(L.Message.PhotoFailed));
+            }
+        }
+
+        var edit = editGroupOutcome;
+        if (edit == 0)
         {
             return;
         }
 
-        if (renameLoadedFor != conversationId)
+        editGroupOutcome = 0;
+        editGroupBusy = false;
+        if (edit == 1)
         {
-            renameLoadedFor = conversationId;
-            renameDraft = conversation.Title;
+            editGroupLoadedFor = null;
+            if (router.Current.Screen == MessageScreen.EditGroup)
+            {
+                router.Pop();
+            }
+        }
+        else
+        {
+            ShellToast.Show(Loc.T(L.Message.SaveFailed));
+        }
+    }
+
+    private void DrawGroupInfo(Rect area, string conversationId)
+    {
+        var scale = UiScale.Current;
+        var headerDrawList = ImGui.GetWindowDrawList();
+        var conversation = store.Conversation;
+        var valid = conversation is not null && conversation.IsGroup && conversation.Id == conversationId;
+        var canManage = valid && ChatRoles.CanManage(store.MyRole);
+        DrawScreenHeader(area, string.Empty, canManage ? 1 : 0);
+        if (!valid || conversation is null)
+        {
+            return;
         }
 
-        var owner = IsOwner();
+        if (canManage && DrawHeaderIcon(headerDrawList, SocialChrome.HeaderSlot(area, 0), PhoneIcons.Pencil,
+                Loc.T(L.Message.EditGroup)))
+        {
+            OpenEditGroup(conversation);
+        }
+
         var top = area.Min.Y + AppHeader.Height * scale;
-        var sideInset = 16f * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
+        var title = DirectMessagesStore.DisplayTitle(conversation);
         using (AppSurface.Begin(body))
         {
-            ImGui.Dummy(new Vector2(0f, 6f * scale));
-            if (owner)
+            var drawList = ImGui.GetWindowDrawList();
+            var width = ScrollLayout.StableContentWidth();
+            var origin = ImGui.GetCursorScreenPos();
+            var centerX = origin.X + width * 0.5f;
+            var radius = HeroAvatarRadius * scale;
+            var avatarCenter = new Vector2(centerX, origin.Y + HeroTopPad * scale + radius);
+            DrawGroupAvatar(drawList, avatarCenter, radius, title, conversation.AvatarUrl);
+            var avatarExtent = new Vector2(radius, radius);
+            var avatarHovered = UiInteract.Hover(avatarCenter - avatarExtent, avatarCenter + avatarExtent);
+            if (canManage)
             {
-                DrawRenameRow(conversationId, sideInset, scale);
-            }
-
-            DrawSectionLabel(Loc.T(L.DirectMessages.Members), scale);
-            var members = store.Members;
-            if (members.Length > 0)
-            {
-                var card = GroupCard.Begin(ui, members.Length, 52f);
-                for (var index = 0; index < members.Length; index++)
+                var badgeCenter = avatarCenter + new Vector2(radius * 0.7f, radius * 0.7f);
+                drawList.AddCircleFilled(badgeCenter, GroupCameraBadgeRadius * scale + 2f * scale,
+                    ImGui.GetColorU32(MessageThemes.Body), 24);
+                drawList.AddCircleFilled(badgeCenter, GroupCameraBadgeRadius * scale, ImGui.GetColorU32(ui.Accent), 24);
+                PhoneIcon.Draw(drawList, badgeCenter, PhoneIcons.Camera, White, GroupCameraGlyph * scale);
+                HoverTooltip.Show(new Rect(avatarCenter - avatarExtent, avatarCenter + avatarExtent),
+                    Loc.T(L.Message.GroupPhoto), HoverLabelSide.Below);
+                if (UiInteract.Click(avatarCenter - avatarExtent, avatarCenter + avatarExtent, avatarHovered))
                 {
-                    DrawMemberRow(card.NextRow(), conversationId, members[index], owner, scale);
+                    OpenGroupPhotoSheet(conversation);
                 }
-
-                card.End();
-                ImGui.Dummy(new Vector2(0f, 8f * scale));
             }
-
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-            var addRect = ActionRect(sideInset, scale);
-            if (ui.PillButton(addRect, Loc.T(L.DirectMessages.AddPeople), true))
+            else
             {
-                selectedContacts.Clear();
-                filter = string.Empty;
-                router.Push(MessageRoute.AddMembers(conversationId));
+                avatarLightbox.TryOpen(avatarCenter, radius, conversation.AvatarUrl, images);
             }
 
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-            var leaveRect = ActionRect(sideInset, scale);
-            if (ui.DangerGhostButton(leaveRect, Loc.T(L.DirectMessages.LeaveChat)))
+            var nameY = avatarCenter.Y + radius + HeroNameGap * scale;
+            var afterName = nameY + Typography.DrawWrappedCentered(new Vector2(centerX, nameY), title, ink.TitleInk,
+                TextStyles.Title2, width - 24f * scale) + 4f * scale;
+            afterName += Typography.DrawWrappedCentered(new Vector2(centerX, afterName),
+                Loc.T(L.Message.GroupSubtitle, conversation.MemberCount), ink.MutedInk, TextStyles.Subheadline,
+                width - 24f * scale) + 4f * scale;
+            var actionsTop = afterName + 14f * scale;
+            var actionsBottom = DrawGroupActions(drawList, conversation, origin.X, width, actionsTop, scale);
+            ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsBottom + Metrics.Space.Lg * scale));
+            ImGui.Dummy(new Vector2(width, 0f));
+            DrawGroupDescriptionCard(drawList, conversation, canManage, scale);
+            DrawGroupMembers(drawList, conversation, canManage, scale);
+            var chatCard = GroupCard.Begin(ui, 2, SettingRowHeight);
+            if (DrawCardRow(drawList, chatCard.NextRow(), PhoneIcons.Wallpaper, TintTeal, Loc.T(L.Message.Wallpaper)))
             {
-                AskLeave(conversationId);
+                router.Push(MessageRoute.ChatWallpaper(conversation.Id));
             }
 
+            if (DrawCardRow(drawList, chatCard.NextRow(), PhoneIcons.Lock, TintAzure, Loc.T(L.Encryption.InfoTitle)))
+            {
+                router.Push(MessageRoute.Encryption(conversation.Id));
+            }
+
+            chatCard.End();
+            DrawCardGap();
+            var dangerCard = GroupCard.Begin(ui, 1, SettingRowHeight);
+            if (DrawCardDangerRow(drawList, dangerCard.NextRow(), PhoneIcons.Logout, Loc.T(L.Message.ExitGroup)))
+            {
+                AskLeave(conversation.Id);
+            }
+
+            dangerCard.End();
             ImGui.Dummy(new Vector2(0f, 30f * scale));
         }
     }
 
-    private void DrawRenameRow(string conversationId, float sideInset, float scale)
+    private float DrawGroupActions(ImDrawListPtr drawList, ConversationDto conversation, float left, float width,
+        float top, float scale)
     {
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var fieldHeight = 46f * scale;
-        var buttonWidth = 84f * scale;
-        var gap = 8f * scale;
-        var fieldRect = new Rect(new Vector2(origin.X + sideInset, origin.Y),
-            new Vector2(origin.X + width - sideInset - buttonWidth - gap, origin.Y + fieldHeight));
-        PillField(fieldRect, "##msgRename", Loc.T(L.DirectMessages.RenameHint), ref renameDraft, 60);
-        var buttonRect = new Rect(new Vector2(fieldRect.Max.X + gap, origin.Y),
-            new Vector2(origin.X + width - sideInset, origin.Y + fieldHeight));
-        var canSave = renameDraft.Trim().Length > 0 && renameDraft.Trim() != (store.Conversation?.Title ?? string.Empty);
-        if (ui.PillButton(buttonRect, Loc.T(L.DirectMessages.Save), canSave) && canSave)
+        var gap = HeroActionGap * scale;
+        var buttonWidth = (width - gap * 2f) / 3f;
+        var height = HeroActionHeight * scale;
+        var addRect = new Rect(new Vector2(left, top), new Vector2(left + buttonWidth, top + height));
+        if (DrawHeroActionButton(drawList, addRect, PhoneIcons.UserPlus, Loc.T(L.DirectMessages.Add), true))
         {
-            store.Rename(conversationId, renameDraft.Trim(), _ => { });
+            OpenAddMembers(conversation.Id);
         }
 
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, fieldHeight + 16f * scale));
+        var muteRect = new Rect(new Vector2(addRect.Max.X + gap, top),
+            new Vector2(addRect.Max.X + gap + buttonWidth, top + height));
+        if (DrawHeroActionButton(drawList, muteRect, conversation.Muted ? PhoneIcons.Bell : PhoneIcons.BellOff,
+                Loc.T(conversation.Muted ? L.Message.UnmuteAction : L.Message.MuteAction), true))
+        {
+            store.SetMuted(conversation.Id, !conversation.Muted, _ => { });
+        }
+
+        var starredRect = new Rect(new Vector2(muteRect.Max.X + gap, top), new Vector2(left + width, top + height));
+        var starredCount = StarredCountIn(conversation.Id);
+        if (DrawHeroActionButton(drawList, starredRect, PhoneIcons.Star, Loc.T(L.Message.StarAction),
+                starredCount > 0))
+        {
+            router.Push(MessageRoute.StarredIn(conversation.Id));
+        }
+
+        return top + height;
     }
 
-    private void DrawSectionLabel(string label, float scale)
-    {
-        var origin = ImGui.GetCursorScreenPos();
-        Typography.Draw(new Vector2(origin.X + 20f * scale, origin.Y), label, ui.MutedInk,
-            TextStyles.FootnoteEmphasized);
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, 24f * scale));
-    }
-
-    private static Rect RowBand(Rect row, float scale) =>
-        new(new Vector2(row.Min.X - Metrics.Space.Lg * scale, row.Min.Y),
-            new Vector2(row.Max.X + Metrics.Space.Lg * scale, row.Max.Y));
-
-    private void DrawMemberRow(Rect row, string conversationId, ConversationMemberDto member, bool viewerIsOwner,
+    private void DrawGroupDescriptionCard(ImDrawListPtr drawList, ConversationDto conversation, bool canManage,
         float scale)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var radius = 17f * scale;
-        var avatarCenter = new Vector2(row.Min.X + radius, row.Center.Y);
-        var label = member.DisplayName.Length > 0 ? member.DisplayName : member.Handle;
-        AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, member.AvatarUrl, images,
-            lodestone, 0.85f, 32, 1f, Frames.Of(member.FrameId));
-        var textLeft = avatarCenter.X + radius + 12f * scale;
-        var isOwner = member.Role == 1;
-        var canRemove = !isOwner && viewerIsOwner && member.UserId != store.MyUserId;
-        var ownerLabel = isOwner ? Loc.T(L.DirectMessages.Owner) : string.Empty;
-        var rightReserve = isOwner ? Typography.Measure(ownerLabel, TextStyles.Footnote).X + 12f * scale
-            : canRemove ? 28f * scale : 0f;
-        var labelMaxWidth = MathF.Max(1f, row.Max.X - rightReserve - textLeft);
-        var band = RowBand(row, scale);
-        var rowHovering = UiInteract.Hover(band.Min, band.Max);
-        Marquee.DrawLeft(new MarqueeId("messageapp.groupinfo.member.", member.UserId), label, textLeft,
-            row.Center.Y - 9f * scale, labelMaxWidth, new TextStyle(1f, FontWeight.SemiBold),
-            theme.TextStrong, rowHovering);
-        if (isOwner)
+        var description = conversation.Description ?? string.Empty;
+        if (description.Length == 0)
         {
-            Typography.Draw(new Vector2(row.Max.X - Typography.Measure(ownerLabel,
-                TextStyles.Footnote).X, row.Center.Y - 7f * scale), ownerLabel,
-                ui.MutedInk, TextStyles.Footnote);
-        }
-        else if (canRemove)
-        {
-            var removeCenter = new Vector2(row.Max.X - 6f * scale, row.Center.Y);
-            if (ui.IconButton(removeCenter, 14f * scale, IconGlyph.Of(FontAwesomeIcon.Times),
-                    ui.MutedInk, AppSkin.Transparent, 0.9f, Loc.T(L.Common.Close)))
+            if (!canManage)
             {
-                store.RemoveMember(conversationId, member.UserId, ok =>
+                return;
+            }
+
+            var addCard = GroupCard.Begin(ui, 1, SettingRowHeight);
+            if (DrawCardRow(drawList, addCard.NextRow(), string.Empty, default, Loc.T(L.Message.AddDescription),
+                    labelInk: ink.AccentLink))
+            {
+                OpenEditGroup(conversation);
+            }
+
+            addCard.End();
+            DrawCardGap();
+            return;
+        }
+
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var pad = DescriptionCardPad * scale;
+        var textWidth = width - pad * 2f;
+        var textHeight = Typography.MeasureWrappedBlock(description, TextStyles.Subheadline, textWidth).Y;
+        var cardMax = new Vector2(origin.X + width, origin.Y + textHeight + pad * 2f);
+        ui.Card(drawList, origin, cardMax, Metrics.Radius.Md * scale);
+        Typography.DrawWrappedLeft(new Vector2(origin.X + pad, origin.Y + pad), description, ink.BodyInk,
+            TextStyles.Subheadline, textWidth);
+        if (canManage && UiInteract.HoverClick(origin, cardMax))
+        {
+            OpenEditGroup(conversation);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, cardMax.Y - origin.Y));
+        DrawCardGap();
+    }
+
+    private void DrawGroupMembers(ImDrawListPtr drawList, ConversationDto conversation, bool canManage, float scale)
+    {
+        var members = store.Members;
+        var activeCount = 0;
+        for (var index = 0; index < members.Length; index++)
+        {
+            if (members[index].IsActive)
+            {
+                activeCount++;
+            }
+        }
+
+        DrawInsetSectionLabel(Loc.T(L.DirectMessages.MembersCount, activeCount));
+        var card = GroupCard.Begin(ui, activeCount + 1, MemberRowHeight);
+        var addRow = card.NextRow();
+        var addTileRadius = MemberAvatarRadius * scale;
+        var addTileCenter = new Vector2(addRow.Min.X + addTileRadius, addRow.Center.Y);
+        var addBand = RowBand(addRow, scale);
+        var addHovered = UiInteract.Hover(addBand.Min, addBand.Max);
+        if (addHovered)
+        {
+            drawList.AddRectFilled(addBand.Min, addBand.Max, ImGui.GetColorU32(ui.HoverWash));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        drawList.AddCircleFilled(addTileCenter, addTileRadius, ImGui.GetColorU32(ui.Accent), 32);
+        PhoneIcon.Draw(drawList, addTileCenter, PhoneIcons.UserPlus, White, ActionTileGlyph * scale);
+        var addLabelHeight = Typography.LineHeight(RowTitleStyle);
+        Typography.Draw(drawList, new Vector2(addTileCenter.X + addTileRadius + RowTextGap * scale,
+            addRow.Center.Y - addLabelHeight * 0.5f), Loc.T(L.DirectMessages.AddPeople), ink.TitleInk, RowTitleStyle);
+        if (UiInteract.Click(addBand.Min, addBand.Max, addHovered))
+        {
+            OpenAddMembers(conversation.Id);
+        }
+
+        var myId = store.MyUserId;
+        for (var index = 0; index < members.Length; index++)
+        {
+            var member = members[index];
+            if (!member.IsActive)
+            {
+                continue;
+            }
+
+            DrawMemberRow(drawList, card.NextRow(), conversation, member, member.UserId == myId, canManage, scale);
+        }
+
+        card.End();
+        if (canManage)
+        {
+            var hintOrigin = ImGui.GetCursorScreenPos();
+            var hintWidth = ScrollLayout.StableContentWidth();
+            var hintHeight = Typography.DrawWrappedLeft(new Vector2(hintOrigin.X + 4f * scale, hintOrigin.Y + 8f * scale),
+                Loc.T(L.Message.GroupMembersHint), ink.FaintInk, TextStyles.Footnote, hintWidth - 8f * scale);
+            ImGui.SetCursorScreenPos(hintOrigin);
+            ImGui.Dummy(new Vector2(hintWidth, hintHeight + 8f * scale));
+        }
+
+        DrawCardGap();
+    }
+
+    private void DrawMemberRow(ImDrawListPtr drawList, Rect row, ConversationDto conversation,
+        ConversationMemberDto member, bool isMe, bool canManage, float scale)
+    {
+        var band = RowBand(row, scale);
+        var interactive = !isMe;
+        var hovered = interactive && UiInteract.Hover(band.Min, band.Max);
+        if (hovered)
+        {
+            drawList.AddRectFilled(band.Min, band.Max, ImGui.GetColorU32(ui.HoverWash));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        var radius = MemberAvatarRadius * scale;
+        var avatarCenter = new Vector2(row.Min.X + radius, row.Center.Y);
+        DrawMemberAvatar(drawList, member, avatarCenter, radius);
+        var textLeft = avatarCenter.X + radius + RowTextGap * scale;
+        var right = row.Max.X;
+        if (member.Role == ChatRoles.Owner)
+        {
+            DrawRoleTag(drawList, right, row.Center.Y, Loc.T(L.DirectMessages.Owner), out right);
+            right -= RowTrailingGap * scale;
+        }
+        else if (member.Role == ChatRoles.Admin)
+        {
+            DrawRoleTag(drawList, right, row.Center.Y, Loc.T(L.Message.Admin), out right);
+            right -= RowTrailingGap * scale;
+        }
+
+        var label = isMe ? Loc.T(L.Message.You) : DirectMessagesStore.MemberLabel(member);
+        var subtitle = member.Handle.Length > 0 ? "@" + member.Handle : string.Empty;
+        var titleHeight = Typography.LineHeight(RowTitleStyle);
+        var subHeight = subtitle.Length > 0 ? Typography.LineHeight(RowSubStyle) : 0f;
+        var top = row.Center.Y - (titleHeight + (subtitle.Length > 0 ? RowLineGap * scale + subHeight : 0f)) * 0.5f;
+        var maxWidth = MathF.Max(1f, right - textLeft);
+        UserName.Draw(drawList, "messageapp.groupinfo.member." + member.UserId, label, member.Badges, member.BadgeIds,
+            textLeft, top, maxWidth, RowTitleStyle, ink.TitleInk, hovered, theme);
+        if (subtitle.Length > 0)
+        {
+            Typography.Draw(drawList, new Vector2(textLeft, top + titleHeight + RowLineGap * scale),
+                Typography.FitText(subtitle, maxWidth, RowSubStyle), ink.MutedInk, RowSubStyle);
+        }
+
+        if (interactive && UiInteract.Click(band.Min, band.Max, hovered))
+        {
+            OpenMemberSheet(conversation, member, canManage);
+        }
+    }
+
+    private void OpenMemberSheet(ConversationDto conversation, ConversationMemberDto member, bool canManage)
+    {
+        memberSheetConversationId = conversation.Id;
+        memberSheetUserId = member.UserId;
+        memberSheetTitle = DirectMessagesStore.MemberLabel(member);
+        var count = 0;
+        var contact = contacts.Find(member.UserId);
+        if (contact is { IsMutual: true })
+        {
+            memberSheetItems[count] = new ActionSheet.Item(Loc.T(L.DirectMessages.StartChat), PhoneIcons.MessageCircle);
+            memberSheetActions[count++] = MemberActMessage;
+        }
+
+        if (contact is not null)
+        {
+            memberSheetItems[count] = new ActionSheet.Item(Loc.T(L.Message.ViewContact), PhoneIcons.UserCircle);
+            memberSheetActions[count++] = MemberActView;
+        }
+
+        var myRole = store.MyRole;
+        if (canManage && member.Role != ChatRoles.Owner)
+        {
+            if (member.Role == ChatRoles.Admin)
+            {
+                memberSheetItems[count] = new ActionSheet.Item(Loc.T(L.Message.DismissAdmin), PhoneIcons.ShieldCheck);
+                memberSheetActions[count++] = MemberActDemote;
+            }
+            else
+            {
+                memberSheetItems[count] = new ActionSheet.Item(Loc.T(L.Message.MakeAdmin), PhoneIcons.ShieldCheck);
+                memberSheetActions[count++] = MemberActPromote;
+            }
+
+            if (member.Role != ChatRoles.Admin || myRole == ChatRoles.Owner)
+            {
+                memberSheetItems[count] = new ActionSheet.Item(Loc.T(L.Message.RemoveFromGroup), PhoneIcons.Trash, true);
+                memberSheetActions[count++] = MemberActRemove;
+            }
+        }
+
+        memberSheetCount = count;
+        if (count == 0)
+        {
+            return;
+        }
+
+        memberSheet.Open();
+    }
+
+    private void DrawMemberSheet(Rect screen)
+    {
+        if (!memberSheet.CapturesPointer)
+        {
+            return;
+        }
+
+        var picked = memberSheet.Draw(screen, ActionSheetStyle.From(ui), memberSheetItems.AsSpan(0, memberSheetCount),
+            Loc.T(L.Common.Cancel), false, memberSheetTitle);
+        if (picked < 0 || memberSheetConversationId is not { } conversationId || memberSheetUserId is not { } userId)
+        {
+            return;
+        }
+
+        switch (memberSheetActions[picked])
+        {
+            case MemberActMessage:
+                if (contacts.Find(userId) is { } contact)
+                {
+                    StartMessage(contact);
+                }
+
+                break;
+            case MemberActView:
+                router.Push(MessageRoute.Contact(userId));
+                break;
+            case MemberActPromote:
+                store.SetMemberRole(conversationId, userId, ChatRoles.Admin, ok => NoteGroupOutcome(ok));
+                break;
+            case MemberActDemote:
+                store.SetMemberRole(conversationId, userId, ChatRoles.Member, ok => NoteGroupOutcome(ok));
+                break;
+            case MemberActRemove:
+                store.RemoveMember(conversationId, userId, ok =>
                 {
                     if (ok)
                     {
-                        store.RefreshDetail();
+                        store.RefreshThreadDetail();
                     }
+
+                    NoteGroupOutcome(ok);
                 });
+                break;
+        }
+    }
+
+    private void NoteGroupOutcome(bool ok)
+    {
+        if (!ok)
+        {
+            ShellToast.Show(Loc.T(L.Message.SaveFailed));
+        }
+    }
+
+    private void OpenGroupPhotoSheet(ConversationDto conversation)
+    {
+        groupPhotoConversationId = conversation.Id;
+        var count = 0;
+        groupPhotoSheetItems[count++] = new ActionSheet.Item(Loc.T(L.Common.ChangePhoto), PhoneIcons.Photo);
+        if (!string.IsNullOrEmpty(conversation.AvatarUrl))
+        {
+            groupPhotoSheetItems[count++] = new ActionSheet.Item(Loc.T(L.Message.RemovePhoto), PhoneIcons.Trash, true);
+        }
+
+        groupPhotoSheetCount = count;
+        groupPhotoSheet.Open();
+    }
+
+    private void DrawGroupPhotoSheet(Rect screen)
+    {
+        if (!groupPhotoSheet.CapturesPointer)
+        {
+            return;
+        }
+
+        var picked = groupPhotoSheet.Draw(screen, ActionSheetStyle.From(ui),
+            groupPhotoSheetItems.AsSpan(0, groupPhotoSheetCount), Loc.T(L.Common.Cancel), false,
+            Loc.T(L.Message.GroupPhoto));
+        if (picked < 0 || groupPhotoConversationId is not { } conversationId)
+        {
+            return;
+        }
+
+        if (picked == 0)
+        {
+            groupPhotoPicker.Open();
+            router.Push(MessageRoute.GroupPhoto(conversationId));
+            return;
+        }
+
+        store.UpdateGroup(conversationId, new UpdateConversationRequest(AvatarUrl: string.Empty), NoteGroupOutcome);
+    }
+
+    private void DrawGroupPhoto(Rect area, string conversationId)
+    {
+        var context = new PhoneContext(area, theme, navigation);
+        var labels = new ImagePickCropLabels(Loc.T(L.Message.GroupPhoto), Loc.T(L.Common.ImportFromPc),
+            Loc.T(L.Common.NoPhotos), Loc.T(L.Account.MoveAndScale), Loc.T(L.Account.Use), Loc.T(L.Account.Saving),
+            Loc.T(L.Account.GestureHint));
+        var result = groupPhotoPicker.Draw(area, context, labels, ui.Accent, groupPhotoBusy);
+        if (result == ImagePickCropEvent.Cancelled)
+        {
+            router.Pop();
+            return;
+        }
+
+        if (result != ImagePickCropEvent.Committed || groupPhotoBusy)
+        {
+            return;
+        }
+
+        groupPhotoBusy = true;
+        store.SetGroupPhoto(conversationId, groupPhotoPicker.SourcePath, groupPhotoPicker.Crop,
+            ok => groupPhotoOutcome = ok ? 1 : 2);
+    }
+
+    private void OpenEditGroup(ConversationDto conversation)
+    {
+        editGroupLoadedFor = conversation.Id;
+        editGroupTitle = conversation.Title;
+        editGroupDescription = conversation.Description ?? string.Empty;
+        router.Push(MessageRoute.EditGroup(conversation.Id));
+    }
+
+    private void DrawEditGroup(Rect area, string conversationId)
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        DrawScreenHeader(area, Loc.T(L.Message.EditGroup));
+        var conversation = store.Conversation;
+        if (conversation is null || conversation.Id != conversationId)
+        {
+            return;
+        }
+
+        if (editGroupLoadedFor != conversationId)
+        {
+            editGroupLoadedFor = conversationId;
+            editGroupTitle = conversation.Title;
+            editGroupDescription = conversation.Description ?? string.Empty;
+        }
+
+        var sideInset = CellPadX * scale;
+        var top = area.Min.Y + AppHeader.Height * scale + 12f * scale;
+        var fieldRect = new Rect(new Vector2(area.Min.X + sideInset, top),
+            new Vector2(area.Max.X - sideInset, top + FieldHeight * scale));
+        PillField(fieldRect, "##msgEditGroupName", Loc.T(L.DirectMessages.RenameHint), ref editGroupTitle,
+            GroupTitleMaxLength);
+        var labelTop = fieldRect.Max.Y + 18f * scale;
+        Typography.Draw(drawList, new Vector2(fieldRect.Min.X + 4f * scale, labelTop),
+            Loc.Upper(Loc.T(L.Message.GroupDescription)), ink.FaintInk, SectionStyle);
+        var cardMin = new Vector2(fieldRect.Min.X, labelTop + Typography.LineHeight(SectionStyle) + 8f * scale);
+        var cardMax = new Vector2(fieldRect.Max.X, cardMin.Y + DescriptionFieldHeight * scale);
+        ui.Card(drawList, cardMin, cardMax, Metrics.Radius.Md * scale);
+        var pad = 12f * scale;
+        ImGui.SetCursorScreenPos(cardMin + new Vector2(pad, pad));
+        var inputWidth = cardMax.X - cardMin.X - pad * 2f;
+        var wrapWidth = inputWidth - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent))
+        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        {
+            SoftWrapField.Multiline("##msgEditGroupDescription", ref editGroupDescription, DescriptionMaxLength,
+                new Vector2(inputWidth, cardMax.Y - cardMin.Y - pad * 2f), wrapWidth);
+        }
+
+        if (editGroupDescription.Length == 0)
+        {
+            ImGui.SetCursorScreenPos(cardMin + new Vector2(pad + 4f * scale, pad + 2f * scale));
+            using (ImRaii.PushColor(ImGuiCol.Text, ui.MutedInk))
+            {
+                Typography.Plain(Loc.T(L.Message.AddDescription));
             }
         }
+
+        var buttonTop = cardMax.Y + 18f * scale;
+        var buttonRect = new Rect(new Vector2(fieldRect.Min.X, buttonTop),
+            new Vector2(fieldRect.Max.X, buttonTop + FieldHeight * scale));
+        var title = editGroupTitle.Trim();
+        var description = editGroupDescription.Trim();
+        var changed = !string.Equals(title, conversation.Title, StringComparison.Ordinal)
+            || !string.Equals(description, conversation.Description ?? string.Empty, StringComparison.Ordinal);
+        var canSave = changed && !editGroupBusy && title.Length > 0;
+        if (ui.PillButton(buttonRect, editGroupBusy ? Loc.T(L.Account.Saving) : Loc.T(L.DirectMessages.Save), canSave)
+            && canSave)
+        {
+            editGroupBusy = true;
+            store.UpdateGroup(conversationId, new UpdateConversationRequest(title, description),
+                ok => editGroupOutcome = ok ? 1 : 2);
+        }
+    }
+
+    private void OpenAddMembers(string conversationId)
+    {
+        selectedContacts.Clear();
+        filter = string.Empty;
+        router.Push(MessageRoute.AddMembers(conversationId));
     }
 
     private void DrawAddMembers(Rect area, string conversationId)
     {
         var scale = UiScale.Current;
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.DirectMessages.AddPeople), back);
+        var drawList = ImGui.GetWindowDrawList();
+        CollectMutualContacts(composeRows, excludeMembers: true);
+        var selectedCount = CountSelected(composeRows);
+        DrawScreenHeader(area, Loc.T(L.DirectMessages.AddPeople),
+            subtitle: selectedCount > 0 ? Loc.T(L.Message.SelectedCount, selectedCount) : string.Empty);
         var top = area.Min.Y + AppHeader.Height * scale;
-        var candidates = AddableContacts();
-        if (candidates.Count == 0)
+        if (composeRows.Count == 0 && filter.Trim().Length == 0)
         {
-            var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-            EmptyState.Draw(body, ui, FontAwesomeIcon.UserPlus, Loc.T(L.DirectMessages.NoMutualTitle),
-                Loc.T(L.DirectMessages.NoMutualFriends));
+            EmptyState.Draw(new Rect(new Vector2(area.Min.X, top), area.Max), ui, PhoneIcons.UserPlus,
+                Loc.T(L.DirectMessages.NoMutualTitle), Loc.T(L.DirectMessages.NoMutualFriends));
             return;
         }
 
-        var searchHeight = 52f * scale;
-        SearchField.DrawSubmit(new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + searchHeight)),
-            "##msgAddFilter", Loc.T(L.Phone.FilterHint), ref filter, AppPalettes.Message);
-        var selectedCount = CountSelected(candidates);
-        var actionHeight = selectedCount > 0 ? 62f * scale : 0f;
-        var listRect = new Rect(new Vector2(area.Min.X, top + searchHeight),
+        var searchRect = new Rect(new Vector2(area.Min.X + CellPadX * scale, top),
+            new Vector2(area.Max.X - CellPadX * scale, top + ChatSearchHeight * scale));
+        SearchField.Draw(searchRect, "##msgAddFilter", Loc.T(L.Phone.FilterHint), ref filter, ui.Palette);
+        var actionHeight = selectedCount > 0 ? ComposeActionHeight * scale : 0f;
+        var listRect = new Rect(new Vector2(area.Min.X, searchRect.Max.Y),
             new Vector2(area.Max.X, area.Max.Y - actionHeight));
-        using (AppSurface.Begin(listRect))
+        DrawPickList(listRect, composeRows);
+        if (selectedCount == 0)
         {
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-            var card = GroupCard.Begin(ui, candidates.Count, 56f);
-            for (var index = 0; index < candidates.Count; index++)
-            {
-                DrawPickRow(card.NextRow(), candidates[index], scale);
-            }
-
-            card.End();
-            ImGui.Dummy(new Vector2(0f, 16f * scale));
+            return;
         }
 
-        if (actionHeight > 0f)
+        var barTop = area.Max.Y - actionHeight;
+        SocialChrome.PaintBarBackdrop(ui, drawList, new Rect(new Vector2(area.Min.X, barTop), area.Max), screenRect);
+        var sideInset = CellPadX * scale;
+        var buttonTop = barTop + 8f * scale;
+        var buttonRect = new Rect(new Vector2(area.Min.X + sideInset, buttonTop),
+            new Vector2(area.Max.X - sideInset, buttonTop + FieldHeight * scale));
+        if (ui.PillButton(buttonRect, Loc.T(L.DirectMessages.Add), true) && !composeBusy)
         {
-            var sideInset = 16f * scale;
-            var buttonTop = area.Max.Y - 62f * scale + 8f * scale;
-            var buttonRect = new Rect(new Vector2(area.Min.X + sideInset, buttonTop),
-                new Vector2(area.Max.X - sideInset, buttonTop + 46f * scale));
-            if (ui.PillButton(buttonRect, Loc.T(L.DirectMessages.Add), true) && !composeBusy)
+            var ids = SelectedIds(composeRows);
+            if (ids.Length == 0)
             {
-                var ids = SelectedIds(candidates);
-                if (ids.Length > 0)
+                return;
+            }
+
+            composeBusy = true;
+            store.AddMembers(conversationId, ids, ok =>
+            {
+                composeBusy = false;
+                if (ok)
                 {
-                    composeBusy = true;
-                    store.AddMembers(conversationId, ids, ok =>
-                    {
-                        composeBusy = false;
-                        if (ok)
-                        {
-                            backToDetailPending = true;
-                        }
-                    });
+                    backToDetailPending = true;
                 }
-            }
+            });
         }
-    }
-
-    private List<ContactDto> AddableContacts()
-    {
-        var members = store.Members;
-        var existing = new HashSet<string>(members.Length);
-        for (var index = 0; index < members.Length; index++)
-        {
-            existing.Add(members[index].UserId);
-        }
-
-        var snapshot = contacts.Contacts;
-        var list = new List<ContactDto>(snapshot.Length);
-        var query = filter.Trim();
-        for (var index = 0; index < snapshot.Length; index++)
-        {
-            var contact = snapshot[index];
-            if (!contact.IsMutual || existing.Contains(contact.UserId))
-            {
-                continue;
-            }
-
-            if (query.Length == 0 || ContactBook.DisplayLabel(contact).Contains(query,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                list.Add(contact);
-            }
-        }
-
-        list.Sort(static (left, right) => string.Compare(ContactBook.DisplayLabel(left), ContactBook.DisplayLabel(right),
-            StringComparison.OrdinalIgnoreCase));
-        return list;
-    }
-
-    private bool IsOwner()
-    {
-        var members = store.Members;
-        var myId = store.MyUserId;
-        for (var index = 0; index < members.Length; index++)
-        {
-            if (members[index].UserId == myId)
-            {
-                return members[index].Role == 1;
-            }
-        }
-
-        return false;
-    }
-
-    private Rect ActionRect(float sideInset, float scale)
-    {
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var rect = new Rect(new Vector2(origin.X + sideInset, origin.Y),
-            new Vector2(origin.X + width - sideInset, origin.Y + 46f * scale));
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, 46f * scale));
-        return rect;
     }
 
     private void AskLeave(string conversationId)
@@ -282,11 +666,12 @@ internal sealed partial class MessageApp
         confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.DirectMessages.ConfirmLeave),
-            ConfirmLabel = Loc.T(L.DirectMessages.LeaveChat),
+            ConfirmLabel = Loc.T(L.Message.ExitGroup),
             CancelLabel = Loc.T(L.Common.Cancel),
             BusyLabel = Loc.T(L.DirectMessages.Leaving),
             FailedMessage = Loc.T(L.DirectMessages.LeaveFailed),
             Danger = true,
+            Sheet = true,
             ConfirmAsync = done => store.RemoveMember(conversationId, myId, ok =>
             {
                 if (ok)

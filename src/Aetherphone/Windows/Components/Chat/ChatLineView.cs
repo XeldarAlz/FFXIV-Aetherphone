@@ -48,7 +48,7 @@ internal static class ChatLineView
         var wrap = MathF.Max(24f * scale, available - TextInset * scale - 4f * scale);
         var alpha = Math.Clamp(style.Entrance, 0f, 1f) * (style.Ghost ? GhostAlpha : 1f);
         var senderHeight = style.ShowSender ? Typography.LineHeight(TextStyles.FootnoteEmphasized) : 0f;
-        var runs = ChatRuns.For(entry);
+        var runs = ChatRuns.For(entry, ImGui.GetFrameCount());
         float bodyHeight;
         using (Plugin.Fonts.Push(TextStyles.Callout.Scale, TextStyles.Callout.Weight))
         {

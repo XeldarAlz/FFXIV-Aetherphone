@@ -16,7 +16,13 @@ internal sealed record VelvetDiscoverFilter(
     string[] LimitsInclude,
     string[] LimitsExclude,
     string[] TagsInclude,
-    string[] TagsExclude)
+    string[] TagsExclude,
+    int RaceInclude = 0,
+    int RaceExclude = 0,
+    int ActiveWithinDays = 0,
+    bool HasPhoto = false,
+    int LanguagesInclude = 0,
+    int LanguagesExclude = 0)
 {
     public static readonly VelvetDiscoverFilter Empty = new(0, 0, 0, 0, 0, 0, 0, 0,
         Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>(),
@@ -29,7 +35,10 @@ internal sealed record VelvetDiscoverFilter(
         && RolesInclude.Length == 0 && RolesExclude.Length == 0
         && KinksInclude.Length == 0 && KinksExclude.Length == 0
         && LimitsInclude.Length == 0 && LimitsExclude.Length == 0
-        && TagsInclude.Length == 0 && TagsExclude.Length == 0;
+        && TagsInclude.Length == 0 && TagsExclude.Length == 0
+        && RaceInclude == 0 && RaceExclude == 0
+        && ActiveWithinDays == 0 && !HasPhoto
+        && LanguagesInclude == 0 && LanguagesExclude == 0;
 
     public bool Matches(VelvetDiscoverFilter other) =>
         IntentInclude == other.IntentInclude && IntentExclude == other.IntentExclude
@@ -39,9 +48,12 @@ internal sealed record VelvetDiscoverFilter(
         && SameTokens(RolesInclude, other.RolesInclude) && SameTokens(RolesExclude, other.RolesExclude)
         && SameTokens(KinksInclude, other.KinksInclude) && SameTokens(KinksExclude, other.KinksExclude)
         && SameTokens(LimitsInclude, other.LimitsInclude) && SameTokens(LimitsExclude, other.LimitsExclude)
-        && SameTokens(TagsInclude, other.TagsInclude) && SameTokens(TagsExclude, other.TagsExclude);
+        && SameTokens(TagsInclude, other.TagsInclude) && SameTokens(TagsExclude, other.TagsExclude)
+        && RaceInclude == other.RaceInclude && RaceExclude == other.RaceExclude
+        && ActiveWithinDays == other.ActiveWithinDays && HasPhoto == other.HasPhoto
+        && LanguagesInclude == other.LanguagesInclude && LanguagesExclude == other.LanguagesExclude;
 
-    private static bool SameTokens(string[] left, string[] right)
+    public static bool SameTokens(string[] left, string[] right)
     {
         if (left.Length != right.Length)
         {

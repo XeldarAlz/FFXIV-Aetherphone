@@ -6,16 +6,17 @@ namespace Aetherphone.Core.Social;
 
 internal static class RegionSync
 {
-    public static void Push(AethernetSession session, AccountClient client, Configuration configuration,
-        GameData gameData, CancellationToken token)
+    public static void Push(AethernetSession session, AccountClient client, GameData gameData,
+        CancellationToken token)
     {
-        if (!session.IsSignedIn)
+        var user = session.CurrentUser;
+        if (!session.IsSignedIn || user is null)
         {
             return;
         }
 
-        var region = SocialRegion.EffectiveCode(configuration, gameData);
-        if (region.Length == 0 || string.Equals(session.CurrentUser?.Region, region, StringComparison.Ordinal))
+        var region = SocialRegion.EffectiveCode(session, gameData);
+        if (region.Length == 0 || string.Equals(user.Region, region, StringComparison.Ordinal))
         {
             return;
         }

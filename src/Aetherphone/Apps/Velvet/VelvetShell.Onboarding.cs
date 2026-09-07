@@ -3,52 +3,113 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Net;
+using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetShell
 {
     private const int OnboardStepCount = 4;
+    private const int OnboardStepIdentity = 0;
+    private const int OnboardStepIntent = 1;
+    private const int OnboardStepAbout = 2;
+    private const int OnboardStepReady = 3;
+    private const int OnboardIdentitySaved = 1;
+    private const int OnboardIdentityRejected = 2;
+    private const float OnboardChromeHeight = 132f;
+    private const float OnboardFooterHeight = 96f;
+    private const float OnboardProgressTop = 30f;
+    private const float OnboardProgressHeight = 4f;
+    private const float OnboardProgressGap = 6f;
+    private const float OnboardProgressMaxWidth = 240f;
+    private const float OnboardTitleTop = 68f;
+    private const float OnboardSubtitleTop = 98f;
+    private const float OnboardSubtitleMaxWidth = 300f;
+    private const float OnboardBackInset = 24f;
+    private const float OnboardCtaHeight = 50f;
+    private const float OnboardCtaMaxWidth = 320f;
+    private const float OnboardCtaBottom = 26f;
+    private const float OnboardCtaDisabledFill = 0.28f;
+    private const float OnboardCtaDisabledInk = 0.55f;
+    private const float OnboardPhotoHeight = 200f;
+    private const float OnboardPhotoBlock = 236f;
+    private const float OnboardPhotoHintGap = 10f;
+    private const float OnboardPhotoBadgeRadius = 14f;
+    private const float OnboardPhotoBadgeInset = 0.72f;
+    private const float OnboardFieldRowHeight = 50f;
+    private const float OnboardFieldLabelWidth = 108f;
+    private const float OnboardFieldPrefixGap = 2f;
+    private const float OnboardFootGap = 10f;
+    private const float OnboardFootInset = 4f;
+    private const float OnboardIntroHeight = 120f;
+    private const float OnboardIntentCardHeight = 72f;
+    private const float OnboardIntentTile = 44f;
+    private const float OnboardIntentGlyph = 22f;
+    private const float OnboardIntentCheckRadius = 11f;
+    private const float OnboardCoverAspect = 1.05f;
+    private const float OnboardCoverMaxShare = 0.62f;
+    private const float OnboardCoverInset = 12f;
+    private const float OnboardSettingsRowHeight = 52f;
+    private const float OnboardSegmentHeight = 34f;
+    private const float OnboardSegmentPadBottom = 12f;
+
+    private static readonly VelvetEditSection[] OnboardSections =
+    {
+        VelvetEditSection.Gender,
+        VelvetEditSection.Sexuality,
+        VelvetEditSection.Languages,
+        VelvetEditSection.Role,
+        VelvetEditSection.Kinks,
+        VelvetEditSection.Limits,
+        VelvetEditSection.Tags,
+    };
+
+    private static readonly int[] OnboardSlots = BuildOnboardSlots();
 
     private bool onboardSeeded;
     private int onboardStep;
-    private int onboardIntent;
-    private int onboardGender;
-    private int onboardSexuality;
     private int onboardWho;
-    private string onboardName = string.Empty;
-    private string onboardHandle = string.Empty;
-    private string onboardIntro = string.Empty;
     private bool onboardDiscoverable = true;
-    private bool onboardAvatarEditing;
-    private readonly List<string> onboardTags = new();
-    private readonly List<string> onboardRole = new();
-    private readonly List<string> onboardKinks = new();
+    private bool onboardPhotoEditing;
+    private volatile bool onboardIdentityBusy;
+    private volatile int onboardIdentityOutcome;
+    private AepFailure onboardIdentityFailure;
+    private readonly FailureSlot onboardIdentityError = new();
+    private bool onboardHandleInvalid;
+    private VelvetProfileDto? onboardPreview;
+    private string onboardPreviewNameId = string.Empty;
+    private string onboardPreviewMeta = string.Empty;
+
+    private static int[] BuildOnboardSlots()
+    {
+        var slots = new int[OnboardSections.Length];
+        for (var index = 0; index < OnboardSections.Length; index++)
+        {
+            slots[index] = Array.IndexOf(EditSections, OnboardSections[index]);
+        }
+
+        return slots;
+    }
 
     private void DrawOnboarding(Rect area)
     {
         var scale = UiScale.Current;
         store.EnsureMe();
-        if (!onboardSeeded && store.Me is { } seed)
-        {
-            onboardName = seed.DisplayName;
-            onboardHandle = seed.Handle;
-            onboardGender = VelvetGender.Sanitize(seed.Gender);
-            onboardSexuality = VelvetSexuality.Sanitize(seed.Sexuality);
-            onboardSeeded = true;
-        }
+        SeedOnboarding();
+        ConsumeIdentityOutcome();
 
-        if (onboardAvatarEditing)
+        if (onboardPhotoEditing)
         {
             var overlay = SceneChrome.ScreenFrom(area, theme, scale);
             ui.Backdrop(overlay);
             var overlayContext = new PhoneContext(area, theme, navigation);
-            if (avatar.Draw(area, overlayContext, ui.Accent))
+            if (cardPhotos.Draw(area, overlayContext, ui.Accent))
             {
-                onboardAvatarEditing = false;
+                onboardPhotoEditing = false;
             }
 
             return;
@@ -61,17 +122,17 @@ internal sealed partial class VelvetShell
 
         DrawOnboardChrome(area);
 
-        var body = new Rect(new Vector2(area.Min.X, area.Min.Y + 132f * scale),
-            new Vector2(area.Max.X, area.Max.Y - 96f * scale));
+        var body = new Rect(new Vector2(area.Min.X, area.Min.Y + OnboardChromeHeight * scale),
+            new Vector2(area.Max.X, area.Max.Y - OnboardFooterHeight * scale));
         switch (onboardStep)
         {
-            case 1:
+            case OnboardStepIntent:
                 DrawOnboardIntentStep(body);
                 break;
-            case 2:
+            case OnboardStepAbout:
                 DrawOnboardAboutStep(body);
                 break;
-            case 3:
+            case OnboardStepReady:
                 DrawOnboardReadyStep(body);
                 break;
             default:
@@ -82,17 +143,57 @@ internal sealed partial class VelvetShell
         DrawOnboardFooter(area);
     }
 
+    private void SeedOnboarding()
+    {
+        if (onboardSeeded || store.Me is not { } seed)
+        {
+            return;
+        }
+
+        BeginEditProfile();
+        if (editLanguages == 0)
+        {
+            editLanguages = VelvetLanguages.Suggested();
+            editSummariesDirty = true;
+        }
+
+        onboardWho = seed.WhoCanMessage;
+        onboardDiscoverable = seed.Discoverable;
+        onboardSeeded = true;
+    }
+
+    private void ConsumeIdentityOutcome()
+    {
+        var outcome = onboardIdentityOutcome;
+        if (outcome == 0)
+        {
+            return;
+        }
+
+        onboardIdentityOutcome = 0;
+        if (outcome == OnboardIdentitySaved)
+        {
+            onboardIdentityError.Clear();
+            onboardStep = OnboardStepIntent;
+            return;
+        }
+
+        onboardIdentityError.Set(onboardIdentityFailure.Failed
+            ? onboardIdentityFailure
+            : AepFailure.Transport(AepFailureKind.Offline));
+    }
+
     private void DrawOnboardChrome(Rect area)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
 
-        var trackWidth = MathF.Min(area.Width - 96f * scale, 240f * scale);
-        var segGap = 6f * scale;
+        var trackWidth = MathF.Min(area.Width - 96f * scale, OnboardProgressMaxWidth * scale);
+        var segGap = OnboardProgressGap * scale;
         var segWidth = (trackWidth - segGap * (OnboardStepCount - 1)) / OnboardStepCount;
-        var segHeight = 4f * scale;
+        var segHeight = OnboardProgressHeight * scale;
         var trackLeft = area.Center.X - trackWidth * 0.5f;
-        var trackY = area.Min.Y + 30f * scale;
+        var trackY = area.Min.Y + OnboardProgressTop * scale;
         for (var index = 0; index < OnboardStepCount; index++)
         {
             var segMin = new Vector2(trackLeft + index * (segWidth + segGap), trackY);
@@ -101,11 +202,11 @@ internal sealed partial class VelvetShell
             Squircle.Fill(drawList, segMin, segMax, segHeight * 0.5f, color.Packed());
         }
 
-        if (onboardStep > 0)
+        if (onboardStep > 0 && !onboardIdentityBusy)
         {
-            var backCenter = new Vector2(area.Min.X + 24f * scale, area.Min.Y + 68f * scale);
-            if (ui.IconButton(backCenter, 16f * scale, IconGlyph.Of(FontAwesomeIcon.ChevronLeft), VelvetTheme.TitleInk,
-                    AppSkin.Transparent, 0.85f, Loc.T(L.Velvet.Back), HoverLabelSide.Below))
+            var backCenter = new Vector2(area.Min.X + OnboardBackInset * scale, area.Min.Y + OnboardTitleTop * scale);
+            if (VIcon.Button(backCenter, 16f * scale, PhoneIcons.ChevronLeft, VIcon.Header,
+                    VelvetTheme.TitleInk, Loc.T(L.Velvet.Back), HoverLabelSide.Below))
             {
                 onboardStep--;
             }
@@ -113,46 +214,62 @@ internal sealed partial class VelvetShell
 
         var title = onboardStep switch
         {
-            1 => Loc.T(L.Velvet.OnboardIntent),
-            2 => Loc.T(L.Velvet.ObTitleAbout),
-            3 => Loc.T(L.Velvet.ObTitleReady),
+            OnboardStepIntent => Loc.T(L.Velvet.OnboardIntent),
+            OnboardStepAbout => Loc.T(L.Velvet.ObTitleAbout),
+            OnboardStepReady => Loc.T(L.Velvet.ObTitleReady),
             _ => Loc.T(L.Velvet.ObTitleIdentity),
         };
         var subtitle = onboardStep switch
         {
-            1 => Loc.T(L.Velvet.ObSubIntent),
-            2 => Loc.T(L.Velvet.ObSubAbout),
-            3 => Loc.T(L.Velvet.ObSubReady),
+            OnboardStepIntent => Loc.T(L.Velvet.ObSubIntent),
+            OnboardStepAbout => Loc.T(L.Velvet.ObSubAbout),
+            OnboardStepReady => Loc.T(L.Velvet.ObSubReady),
             _ => Loc.T(L.Velvet.ObSubIdentity),
         };
-        Typography.DrawCentered(new Vector2(area.Center.X, area.Min.Y + 68f * scale), title, VelvetTheme.TitleInk,
-            TextStyles.Title1);
-        Typography.DrawWrappedCentered(new Vector2(area.Center.X, area.Min.Y + 98f * scale), subtitle,
-            VelvetTheme.MutedInk, TextStyles.Subheadline, MathF.Min(area.Width - 64f * scale, 300f * scale));
+        Typography.DrawCentered(new Vector2(area.Center.X, area.Min.Y + OnboardTitleTop * scale), title,
+            VelvetTheme.TitleInk, TextStyles.Title1);
+        Typography.DrawWrappedCentered(new Vector2(area.Center.X, area.Min.Y + OnboardSubtitleTop * scale), subtitle,
+            VelvetTheme.MutedInk, TextStyles.Subheadline,
+            MathF.Min(area.Width - 64f * scale, OnboardSubtitleMaxWidth * scale));
     }
 
     private void DrawOnboardFooter(Rect area)
     {
         var scale = UiScale.Current;
-        var buttonWidth = MathF.Min(area.Width - 44f * scale, 320f * scale);
-        var buttonHeight = 50f * scale;
+        var buttonWidth = MathF.Min(area.Width - 44f * scale, OnboardCtaMaxWidth * scale);
+        var buttonHeight = OnboardCtaHeight * scale;
         var left = area.Center.X - buttonWidth * 0.5f;
-        var top = area.Max.Y - buttonHeight - 26f * scale;
+        var top = area.Max.Y - buttonHeight - OnboardCtaBottom * scale;
         var rect = new Rect(new Vector2(left, top), new Vector2(left + buttonWidth, top + buttonHeight));
-        var isLast = onboardStep >= OnboardStepCount - 1;
-        var label = isLast ? Loc.T(L.Velvet.EnterVelvet) : Loc.T(L.Velvet.Continue);
+        var isLast = onboardStep == OnboardStepReady;
+        var label = onboardIdentityBusy
+            ? Loc.T(L.Velvet.Saving)
+            : isLast ? Loc.T(L.Velvet.EnterVelvet) : Loc.T(L.Velvet.Continue);
         if (!DrawOnboardPrimary(rect, label, CanAdvanceOnboard()))
         {
             return;
         }
 
-        if (isLast)
+        AdvanceOnboard();
+    }
+
+    private void AdvanceOnboard()
+    {
+        switch (onboardStep)
         {
-            FinishOnboarding();
-        }
-        else
-        {
-            onboardStep++;
+            case OnboardStepIdentity:
+                ContinueFromIdentity();
+                break;
+            case OnboardStepAbout:
+                BuildOnboardPreview();
+                onboardStep = OnboardStepReady;
+                break;
+            case OnboardStepReady:
+                FinishOnboarding();
+                break;
+            default:
+                onboardStep++;
+                break;
         }
     }
 
@@ -165,70 +282,172 @@ internal sealed partial class VelvetShell
 
         var drawList = ImGui.GetWindowDrawList();
         Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f,
-            VelvetTheme.Alpha(VelvetTheme.Rose, 0.28f).Packed());
-        Typography.DrawCentered(rect.Center, label, VelvetTheme.Alpha(VelvetTheme.OnAccent, 0.55f), 0.9f,
-            FontWeight.SemiBold);
+            VelvetTheme.Alpha(VelvetTheme.Rose, OnboardCtaDisabledFill).Packed());
+        Typography.DrawCentered(rect.Center, label, VelvetTheme.Alpha(VelvetTheme.OnAccent, OnboardCtaDisabledInk),
+            0.9f, FontWeight.SemiBold);
         return false;
     }
 
     private bool CanAdvanceOnboard() => onboardStep switch
     {
-        0 => onboardName.Trim().Length > 0,
-        1 => VelvetIntent.Sanitize(onboardIntent) != 0,
-        2 => onboardIntro.Trim().Length > 0,
+        OnboardStepIdentity => !onboardIdentityBusy && onboardSeeded && HasIdentityBasics(),
+        OnboardStepIntent => VelvetIntent.Sanitize(editIntent) != 0,
+        OnboardStepAbout => editIntro.Trim().Length > 0,
         _ => true,
     };
+
+    private bool HasIdentityBasics() =>
+        editDisplayName.Trim().Length > 0 && editHandle.Trim().Length > 0
+        && store.Me is { Photos: { Length: > 0 } };
+
+    private void ContinueFromIdentity()
+    {
+        var name = editDisplayName.Trim();
+        var handle = editHandle.Trim();
+        onboardHandleInvalid = !SocialIdentity.IsHandleValid(handle);
+        if (onboardHandleInvalid || store.Me is not { } me)
+        {
+            return;
+        }
+
+        onboardIdentityError.Clear();
+        if (name == me.DisplayName && handle == me.Handle)
+        {
+            onboardStep = OnboardStepIntent;
+            return;
+        }
+
+        onboardIdentityBusy = true;
+        onboardIdentityFailure = AepFailure.None;
+        store.UpdateIdentity(name, handle, saved =>
+        {
+            onboardIdentityBusy = false;
+            onboardIdentityOutcome = saved ? OnboardIdentitySaved : OnboardIdentityRejected;
+        }, failure => onboardIdentityFailure = failure);
+    }
 
     private void DrawOnboardIdentityStep(Rect body)
     {
         using (AppSurface.Begin(body))
         {
-            Gap(6f);
-            DrawOnboardAvatar();
-            Gap(18f);
-            ui.Field(Loc.T(L.Velvet.DisplayNameLabel), "##ob_name", ref onboardName, 40, false);
-            Gap(10f);
-            ui.Field(Loc.T(L.Velvet.HandleLabel), "##ob_handle", ref onboardHandle, 15, false);
-            Gap(12f);
-            ui.HelpText(Loc.T(L.Velvet.ObHandleHelp));
+            var width = ScrollLayout.StableContentWidth();
+            Gap(4f);
+            DrawOnboardCardPhoto();
+            Gap(14f);
+            DrawOnboardIdentityCard(width);
+            Gap(OnboardFootGap);
+            DrawOnboardIdentityFoot(width);
             Gap(24f);
         }
     }
 
-    private void DrawOnboardAvatar()
+    private void DrawOnboardCardPhoto()
     {
         var scale = UiScale.Current;
-        var block = Reserve(150f);
+        var block = Reserve(OnboardPhotoBlock);
         var drawList = ImGui.GetWindowDrawList();
-        var radius = 52f * scale;
-        var center = new Vector2(block.Center.X, block.Min.Y + 8f * scale + radius);
-        var me = store.Me;
-        VAvatar.Draw(drawList, center, radius, theme, DisplayNameOf(onboardName, onboardHandle),
-            me?.World ?? string.Empty, me?.AvatarUrl, images, lodestone, -1, VelvetTheme.Rose);
+        var tileHeight = OnboardPhotoHeight * scale;
+        var tileWidth = tileHeight * CardPhotoAspect;
+        var min = new Vector2(block.Center.X - tileWidth * 0.5f, block.Min.Y);
+        var max = new Vector2(min.X + tileWidth, min.Y + tileHeight);
+        var photos = store.Me is { } me ? CardPhotos(me) : NoCardPhotos;
+        var busy = store.CardPhotoBusy;
+        var tapped = photos.Length > 0
+            ? DrawCardPhotoTile(drawList, min, max, photos[0], true)
+            : DrawEmptyPhotoSlot(drawList, min, max, true, busy);
 
-        var badgeCenter = new Vector2(center.X + radius * 0.70f, center.Y + radius * 0.70f);
-        drawList.AddCircleFilled(badgeCenter, 15f * scale, VelvetTheme.GroundBottom.Packed(), 24);
-        drawList.AddCircleFilled(badgeCenter, 13f * scale, VelvetTheme.Rose.Packed(), 24);
-        AppSkin.Icon(badgeCenter, IconGlyph.Of(FontAwesomeIcon.Camera), VelvetTheme.OnAccent, 0.6f);
-
-        var avatarMin = new Vector2(center.X - radius, center.Y - radius);
-        var avatarMax = new Vector2(center.X + radius, center.Y + radius);
-        var hovered = UiInteract.Hover(avatarMin, avatarMax);
-        if (hovered)
+        if (photos.Length > 0)
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            var badgeCenter = new Vector2(max.X - OnboardPhotoBadgeRadius * scale * OnboardPhotoBadgeInset,
+                max.Y - OnboardPhotoBadgeRadius * scale * OnboardPhotoBadgeInset);
+            drawList.AddCircleFilled(badgeCenter, (OnboardPhotoBadgeRadius + 2f) * scale,
+                VelvetTheme.GroundBottom.Packed(), 24);
+            drawList.AddCircleFilled(badgeCenter, OnboardPhotoBadgeRadius * scale, VelvetTheme.Rose.Packed(), 24);
+            PhoneIcon.Draw(drawList, badgeCenter, PhoneIcons.Camera, VelvetTheme.OnAccent, VIcon.Small * scale);
+        }
+        else
+        {
+            var hint = Loc.T(L.Velvet.AddPhoto);
+            var hintSize = Typography.Measure(hint, TextStyles.Footnote);
+            Typography.Draw(drawList,
+                new Vector2(block.Center.X - hintSize.X * 0.5f, max.Y + OnboardPhotoHintGap * scale), hint,
+                VelvetTheme.RoseInk, TextStyles.Footnote);
         }
 
-        var hint = me?.AvatarUrl is { Length: > 0 } ? Loc.T(L.Velvet.ChangePhoto) : Loc.T(L.Velvet.AddPhoto);
-        var hintSize = Typography.Measure(hint, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(center.X - hintSize.X * 0.5f, center.Y + radius + 12f * scale), hint,
-            VelvetTheme.RoseInk, TextStyles.Footnote);
-
-        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (tapped && !busy && photos.Length < MaxCardPhotos)
         {
-            avatar.Open();
-            onboardAvatarEditing = true;
+            cardPhotos.Open();
+            onboardPhotoEditing = true;
         }
+    }
+
+    private void DrawOnboardIdentityCard(float width)
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var rowHeight = OnboardFieldRowHeight * scale;
+        var card = VCard.Begin(drawList, width, rowHeight * 2f, scale, 0f);
+        var labelWidth = OnboardFieldLabelWidth * scale;
+        var right = card.ContentOrigin.X + card.ContentWidth;
+
+        var nameTop = card.ContentOrigin.Y;
+        DrawOnboardFieldLabel(drawList, card.ContentOrigin.X, nameTop, rowHeight, Loc.T(L.Velvet.DisplayNameLabel));
+        DrawOnboardInput("##ob_name", card.ContentOrigin.X + labelWidth, right, nameTop, rowHeight,
+            ref editDisplayName, SocialProfilePages.DisplayNameMax, ImGuiInputTextFlags.None, VelvetTheme.TitleInk);
+        FeedCell.Hairline(drawList, card.ContentOrigin.X, right, nameTop + rowHeight, VelvetTheme.Hairline);
+
+        var handleTop = nameTop + rowHeight;
+        DrawOnboardFieldLabel(drawList, card.ContentOrigin.X, handleTop, rowHeight, Loc.T(L.Velvet.HandleLabel));
+        var prefixSize = Typography.Measure("@", TextStyles.Body);
+        Typography.Draw(drawList,
+            new Vector2(card.ContentOrigin.X + labelWidth, handleTop + (rowHeight - prefixSize.Y) * 0.5f), "@",
+            VelvetTheme.Faint, TextStyles.Body);
+        var handleValid = !onboardHandleInvalid || SocialIdentity.IsHandleValid(editHandle);
+        if (DrawOnboardInput("##ob_handle", card.ContentOrigin.X + labelWidth + prefixSize.X + OnboardFieldPrefixGap * scale,
+                right, handleTop, rowHeight, ref editHandle, SocialIdentity.HandleMaxLength,
+                ImGuiInputTextFlags.CharsNoBlank, handleValid ? VelvetTheme.TitleInk : VelvetTheme.Danger))
+        {
+            editHandle = editHandle.ToLowerInvariant();
+            onboardHandleInvalid = false;
+            onboardIdentityError.Clear();
+        }
+
+        VCard.End(card);
+    }
+
+    private static void DrawOnboardFieldLabel(ImDrawListPtr drawList, float left, float rowTop, float rowHeight,
+        string label)
+    {
+        var size = Typography.Measure(label, TextStyles.Body);
+        Typography.Draw(drawList, new Vector2(left, rowTop + (rowHeight - size.Y) * 0.5f), label,
+            VelvetTheme.MutedInk, TextStyles.Body);
+    }
+
+    private static bool DrawOnboardInput(string id, float left, float right, float rowTop, float rowHeight,
+        ref string value, int maxLength, ImGuiInputTextFlags flags, Vector4 ink)
+    {
+        ImGui.SetCursorScreenPos(new Vector2(left, rowTop + rowHeight * 0.5f - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetNextItemWidth(MathF.Max(1f, right - left));
+        Plugin.Fonts.NoticeText(value);
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (ImRaii.PushColor(ImGuiCol.Text, ink))
+        {
+            return ImGui.InputText(id, ref value, maxLength, flags);
+        }
+    }
+
+    private void DrawOnboardIdentityFoot(float width)
+    {
+        var scale = UiScale.Current;
+        var origin = ImGui.GetCursorScreenPos();
+        var failed = onboardIdentityError.Failed;
+        var text = failed ? onboardIdentityError.Text() : Loc.T(L.Velvet.ObHandleRules);
+        var ink = failed || onboardHandleInvalid ? VelvetTheme.Danger : VelvetTheme.Faint;
+        var inset = OnboardFootInset * scale;
+        var height = Typography.DrawWrappedLeft(new Vector2(origin.X + inset, origin.Y), text, ink,
+            TextStyles.Footnote, MathF.Max(1f, width - inset * 2f));
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
     }
 
     private void DrawOnboardIntentStep(Rect body)
@@ -240,10 +459,11 @@ internal sealed partial class VelvetShell
             for (var index = 0; index < defs.Length; index++)
             {
                 var def = defs[index];
-                var rect = Reserve(72f);
-                if (DrawOnboardIntentCard(rect, def, VelvetIntent.Has(onboardIntent, def.Flag)))
+                var rect = Reserve(OnboardIntentCardHeight);
+                if (DrawOnboardIntentCard(rect, def, VelvetIntent.Has(editIntent, def.Flag)))
                 {
-                    onboardIntent = VelvetIntent.Toggle(onboardIntent, def.Flag);
+                    editIntent = VelvetIntent.Toggle(editIntent, def.Flag);
+                    editSummariesDirty = true;
                 }
 
                 Gap(10f);
@@ -266,14 +486,14 @@ internal sealed partial class VelvetShell
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, fill.Packed());
         Squircle.Stroke(drawList, rect.Min, rect.Max, radius,
             (selected ? VelvetTheme.Alpha(def.Hue, 0.85f) : VelvetTheme.CardStroke).Packed(),
-            (selected ? 1.5f : 1f) * scale);
+            (selected ? Metrics.Stroke.Thin : Metrics.Stroke.Hairline) * scale);
 
-        var tileSize = 44f * scale;
+        var tileSize = OnboardIntentTile * scale;
         var tileMin = new Vector2(rect.Min.X + 14f * scale, rect.Center.Y - tileSize * 0.5f);
         var tileMax = new Vector2(tileMin.X + tileSize, tileMin.Y + tileSize);
         Squircle.Fill(drawList, tileMin, tileMax, tileSize * 0.32f, def.Hue.Packed());
-        AppSkin.Icon(new Vector2((tileMin.X + tileMax.X) * 0.5f, (tileMin.Y + tileMax.Y) * 0.5f),
-            IconGlyph.Of(def.Icon), VelvetTheme.OnAccent, 0.95f);
+        PhoneIcon.Draw(drawList, new Vector2((tileMin.X + tileMax.X) * 0.5f, (tileMin.Y + tileMax.Y) * 0.5f),
+            def.Glyph, VelvetTheme.OnAccent, OnboardIntentGlyph * scale);
 
         var textLeft = tileMax.X + 14f * scale;
         var textWidth = rect.Max.X - 46f * scale - textLeft;
@@ -282,9 +502,9 @@ internal sealed partial class VelvetShell
         var labelSize = Typography.Measure(label, TextStyles.Headline);
         var blurbSize = Typography.Measure(blurb, TextStyles.Subheadline);
         var textTop = rect.Center.Y - (labelSize.Y + 3f * scale + blurbSize.Y) * 0.5f;
-        Typography.Draw(new Vector2(textLeft, textTop), label, VelvetTheme.TitleInk, TextStyles.Headline);
-        Typography.Draw(new Vector2(textLeft, textTop + labelSize.Y + 3f * scale), blurb, VelvetTheme.MutedInk,
-            TextStyles.Subheadline);
+        Typography.Draw(drawList, new Vector2(textLeft, textTop), label, VelvetTheme.TitleInk, TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(textLeft, textTop + labelSize.Y + 3f * scale), blurb,
+            VelvetTheme.MutedInk, TextStyles.Subheadline);
 
         DrawOnboardCheck(drawList, new Vector2(rect.Max.X - 26f * scale, rect.Center.Y), selected, def.Hue, scale);
 
@@ -293,68 +513,96 @@ internal sealed partial class VelvetShell
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     private static void DrawOnboardCheck(ImDrawListPtr drawList, Vector2 center, bool selected, Vector4 hue, float scale)
     {
-        var radius = 11f * scale;
+        var radius = OnboardIntentCheckRadius * scale;
         if (!selected)
         {
             drawList.AddCircle(center, radius, VelvetTheme.Alpha(VelvetTheme.Moonlight, 0.30f).Packed(), 24,
-                1.5f * scale);
+                Metrics.Stroke.Thin * scale);
             return;
         }
 
         drawList.AddCircleFilled(center, radius, hue.Packed(), 24);
-        var tick = VelvetTheme.OnAccent.Packed();
-        var thickness = 2f * scale;
-        drawList.AddLine(center + new Vector2(-4.5f * scale, 0.2f * scale),
-            center + new Vector2(-1.4f * scale, 3.6f * scale), tick, thickness);
-        drawList.AddLine(center + new Vector2(-1.4f * scale, 3.6f * scale),
-            center + new Vector2(5f * scale, -3.8f * scale), tick, thickness);
+        PhoneIcon.Draw(drawList, center, PhoneIcons.Check, VelvetTheme.OnAccent, VIcon.Chip * scale);
     }
 
     private void DrawOnboardAboutStep(Rect body)
     {
         using (AppSurface.Begin(body))
+        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
         {
-            Gap(2f);
-            ui.Field(Loc.T(L.Velvet.YourIntro), "##ob_intro", ref onboardIntro, 400, true, 120f);
-            Gap(18f);
-
-            VSectionHeader.Card(FontAwesomeIcon.VenusMars, Loc.T(L.Velvet.CardGender));
-            Gap(6f);
-            DrawGenderPicker(ref onboardGender);
-            Gap(18f);
-
-            VSectionHeader.Card(FontAwesomeIcon.Rainbow, Loc.T(L.Velvet.CardSexuality));
-            Gap(6f);
-            DrawSexualityPicker(ref onboardSexuality);
-            Gap(18f);
-
-            if (VelvetIntent.IncludesErp(onboardIntent))
+            var width = ScrollLayout.StableContentWidth();
+            Gap(4f);
+            DrawOnboardIntroCard(width);
+            SyncEditSummaries();
+            var includesErp = VelvetIntent.IncludesErp(editIntent);
+            for (var index = 0; index < OnboardSections.Length; index++)
             {
-                VSectionHeader.Card(FontAwesomeIcon.Heart, Loc.T(L.Velvet.YourRole));
-                Gap(4f);
-                ui.HelpText(Loc.T(L.Velvet.RoleErpHelp));
-                Gap(8f);
-                DrawTagFlow(VelvetSuggestions.Roles, onboardRole, VelvetTheme.Rose, true);
-                Gap(18f);
+                var section = OnboardSections[index];
+                if (!includesErp && IsErpSection(section))
+                {
+                    continue;
+                }
 
-                VSectionHeader.Card(FontAwesomeIcon.Fire, Loc.T(L.Velvet.CardKinks));
-                Gap(8f);
-                DrawTagFlow(VelvetSuggestions.Kinks, onboardKinks, new Vector4(0.647f, 0.482f, 0.839f, 1f), true);
-                Gap(18f);
+                DrawEditSection(section, OnboardSlots[index]);
             }
 
-            VSectionHeader.Card(FontAwesomeIcon.Hashtag, Loc.T(L.Velvet.DynamicLabel));
-            Gap(4f);
-            ui.HelpText(Loc.T(L.Velvet.VibeOptionalHelp));
-            Gap(8f);
-            DrawCategoryPicker(VelvetSuggestions.TagCategories, onboardTags);
-            Gap(28f);
+            Gap(30f);
         }
+    }
+
+    private static bool IsErpSection(VelvetEditSection section) =>
+        section is VelvetEditSection.Role or VelvetEditSection.Kinks or VelvetEditSection.Limits;
+
+    private void DrawOnboardIntroCard(float width)
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var fieldHeight = OnboardIntroHeight * scale;
+        var card = VCard.Begin(drawList, width, fieldHeight, scale);
+        ImGui.SetCursorScreenPos(card.ContentOrigin);
+        var fieldSize = new Vector2(card.ContentWidth, fieldHeight);
+        var framePad = ImGui.GetStyle().FramePadding;
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
+        {
+            var wrapWidth = fieldSize.X - framePad.X * 2f - 4f * scale;
+            SoftWrapField.Multiline("##ob_intro", ref editIntro, EditIntroMaxLength, fieldSize, wrapWidth);
+        }
+
+        if (editIntro.Length == 0 && !ImGui.IsItemActive())
+        {
+            Typography.Draw(drawList, card.ContentOrigin + framePad, Loc.T(L.Velvet.IntroduceYourself),
+                VelvetTheme.Faint, TextStyles.Body);
+        }
+
+        VCard.End(card);
+    }
+
+    private void BuildOnboardPreview()
+    {
+        if (store.Me is not { } me)
+        {
+            onboardPreview = null;
+            return;
+        }
+
+        onboardPreview = me with
+        {
+            DisplayName = editDisplayName.Trim(),
+            Handle = editHandle.Trim(),
+            Intro = editIntro.Trim(),
+            LookingFor = VelvetIntent.Sanitize(editIntent),
+            Gender = VelvetGender.Sanitize(editGender),
+            Sexuality = VelvetSexuality.Sanitize(editSexuality),
+            Languages = VelvetLanguages.Sanitize(editLanguages),
+        };
+        onboardPreviewNameId = "velvet.onboard.name." + me.UserId;
+        onboardPreviewMeta = CardMetaLine(onboardPreview);
     }
 
     private void DrawOnboardReadyStep(Rect body)
@@ -362,58 +610,62 @@ internal sealed partial class VelvetShell
         var scale = UiScale.Current;
         using (AppSurface.Begin(body))
         {
-            Gap(6f);
-            DrawOnboardSummaryCard();
-            Gap(20f);
-
-            VSectionHeader.Overline(Loc.T(L.Velvet.DiscoveryHeader));
-            Gap(2f);
-            ui.ToggleRow(Loc.T(L.Velvet.DiscoverableLabel), ref onboardDiscoverable);
-            Gap(6f);
-            ui.HelpText(Loc.T(L.Velvet.ObDiscoverableHelp));
-            Gap(22f);
-
-            VSectionHeader.Overline(Loc.T(L.Velvet.WhoCanMessage));
-            Gap(10f);
-            var whoRect = Reserve(34f);
-            var who = VSegmented.Draw("velvetObWho", whoRect,
-                new[] { Loc.T(L.Velvet.WhoEveryone), Loc.T(L.Velvet.WhoFriends), Loc.T(L.Velvet.WhoNoOne) }, onboardWho,
-                scale);
-            if (who >= 0)
+            var width = ScrollLayout.StableContentWidth();
+            Gap(4f);
+            if (onboardPreview is { } preview && store.Me is { } me)
             {
-                onboardWho = who;
+                var drawList = ImGui.GetWindowDrawList();
+                var inset = OnboardCoverInset * scale;
+                var origin = ImGui.GetCursorScreenPos();
+                var innerWidth = MathF.Max(1f, width - inset * 2f);
+                var coverHeight = MathF.Min(innerWidth * OnboardCoverAspect, body.Height * OnboardCoverMaxShare);
+                var cover = new Rect(new Vector2(origin.X + inset, origin.Y),
+                    new Vector2(origin.X + inset + innerWidth, origin.Y + coverHeight));
+                DrawCardCover(drawList, preview, CardPhotos(me), cover, scale, onboardPreviewNameId,
+                    onboardPreviewMeta, false);
+                ImGui.SetCursorScreenPos(origin);
+                ImGui.Dummy(new Vector2(width, coverHeight));
             }
 
-            Gap(10f);
-            ui.HelpText(Loc.T(L.Velvet.WhoHelp));
-            Gap(22f);
-
-            ui.HelpText(Loc.T(L.Velvet.ObConductHelp));
-            Gap(28f);
+            Gap(VCard.Gap);
+            DrawOnboardSettingsCard(width);
+            Gap(30f);
         }
     }
 
-    private void DrawOnboardSummaryCard()
+    private void DrawOnboardSettingsCard(float width)
     {
         var scale = UiScale.Current;
-        var rect = Reserve(84f);
         var drawList = ImGui.GetWindowDrawList();
-        ui.Card(drawList, rect.Min, rect.Max, Metrics.Radius.Card * scale, true);
+        var rowHeight = OnboardSettingsRowHeight * scale;
+        var segmentHeight = OnboardSegmentHeight * scale;
+        var contentHeight = rowHeight * 2f + segmentHeight + OnboardSegmentPadBottom * scale;
+        var card = VCard.Begin(drawList, width, contentHeight, scale, 0f);
+        var left = card.ContentOrigin.X;
+        var right = left + card.ContentWidth;
 
-        var radius = 28f * scale;
-        var center = new Vector2(rect.Min.X + 18f * scale + radius, rect.Center.Y);
-        var me = store.Me;
-        VAvatar.Draw(drawList, center, radius, theme, DisplayNameOf(onboardName, onboardHandle),
-            me?.World ?? string.Empty, me?.AvatarUrl, images, lodestone, -1, VelvetTheme.Rose);
+        var discoverTop = card.ContentOrigin.Y;
+        var discoverRow = new Rect(new Vector2(left, discoverTop), new Vector2(right, discoverTop + rowHeight));
+        VCard.RowLabel(drawList, discoverRow.Min, rowHeight, PhoneIcons.Compass, VelvetTheme.Rose,
+            Loc.T(L.Velvet.DiscoverableLabel), card.ContentWidth - (VToggle.TrackWidth + Metrics.Space.Md) * scale,
+            scale);
+        onboardDiscoverable = VToggle.Draw(drawList, "velvetObDiscoverable", discoverRow, onboardDiscoverable, scale);
+        FeedCell.Hairline(drawList, left, right, discoverTop + rowHeight, VelvetTheme.Hairline);
 
-        var textLeft = center.X + radius + 16f * scale;
-        var textWidth = rect.Max.X - 16f * scale - textLeft;
-        var name = DisplayNameOf(onboardName, onboardHandle);
-        var intent = VelvetIntent.Summary(onboardIntent);
-        Marquee.DrawLeftAuto("velvet.onboard.summary.name", name, textLeft, rect.Center.Y - 20f * scale, textWidth,
-            TextStyles.Headline, VelvetTheme.TitleInk);
-        Marquee.DrawLeftAuto("velvet.onboard.summary.intent", intent, textLeft, rect.Center.Y + 3f * scale, textWidth,
-            TextStyles.Subheadline, VelvetTheme.RoseInk);
+        var whoTop = discoverTop + rowHeight;
+        VCard.RowLabel(drawList, new Vector2(left, whoTop), rowHeight, PhoneIcons.MessageCircle,
+            VelvetTheme.Moonlight, Loc.T(L.Velvet.WhoCanMessage), card.ContentWidth, scale);
+        var segmentTop = whoTop + rowHeight;
+        FillWhoLabels();
+        var who = VSegmented.Draw("velvetObWho",
+            new Rect(new Vector2(left, segmentTop), new Vector2(right, segmentTop + segmentHeight)), whoLabels,
+            onboardWho, scale);
+        if (who >= 0)
+        {
+            onboardWho = who;
+        }
+
+        VCard.End(card);
     }
 
     private void FinishOnboarding()
@@ -421,26 +673,6 @@ internal sealed partial class VelvetShell
         configuration.VelvetOnboarded = true;
         configuration.VelvetOnboardedVersion = Configuration.VelvetOnboardVersion;
         configuration.Save();
-
-        var includesErp = VelvetIntent.IncludesErp(onboardIntent);
-        var role = includesErp ? onboardRole.ToArray() : Array.Empty<string>();
-        var kinks = includesErp ? onboardKinks.ToArray() : Array.Empty<string>();
-        var dynamic = VelvetTags.Join(role);
-        var request = new UpdateVelvetProfileRequest(onboardIntro.Trim(), null, dynamic, onboardTags.ToArray(), null,
-            VelvetIntent.Sanitize(onboardIntent), null, onboardDiscoverable, onboardWho,
-            VelvetGender.Sanitize(onboardGender), VelvetSexuality.Sanitize(onboardSexuality), kinks);
-
-        var me = store.Me;
-        var identityChanged = me is not null &&
-            (onboardName.Trim() != me.DisplayName || onboardHandle.Trim() != me.Handle);
-        if (identityChanged)
-        {
-            store.UpdateIdentity(onboardName.Trim(), onboardHandle.Trim(),
-                _ => store.UpdateProfile(request, _ => { }));
-        }
-        else
-        {
-            store.UpdateProfile(request, _ => { });
-        }
+        store.UpdateProfile(BuildEditRequest(onboardDiscoverable, onboardWho), _ => { });
     }
 }

@@ -43,6 +43,16 @@ internal sealed class AethernetSession
     public bool FollowsCharacter => configuration.FollowCharacterAccount;
     public bool MatchesPlayedCharacter => playingContentId == 0 || playingContentId == activeContentId;
     public bool LegacyClaimPending { get; private set; }
+    public string ManualRegion => ActiveSlot?.ManualRegion ?? string.Empty;
+
+    public string AccountWorld
+    {
+        get
+        {
+            var world = CurrentUser?.World;
+            return string.IsNullOrEmpty(world) ? ActiveSlot?.World ?? string.Empty : world;
+        }
+    }
 
     public event Action? Changed;
 
@@ -262,6 +272,18 @@ internal sealed class AethernetSession
         configuration.Save();
     }
 
+    public void SetManualRegion(string code)
+    {
+        var slot = ActiveSlot;
+        if (slot is null)
+        {
+            return;
+        }
+
+        slot.ManualRegion = code;
+        configuration.Save();
+    }
+
     public void AdoptLegacy(ulong contentId, UserDto user)
     {
         if (contentId != activeContentId || !LegacyClaimPending)
@@ -304,6 +326,11 @@ internal sealed class AethernetSession
             configuration.SaveNow();
         });
     }
+
+    private CharacterSession? ActiveSlot =>
+        activeContentId != 0 && configuration.CharacterSessions.TryGetValue(activeContentId, out var slot)
+            ? slot
+            : null;
 
     private void AdoptLegacyEncryptionKey(UserDto user)
     {

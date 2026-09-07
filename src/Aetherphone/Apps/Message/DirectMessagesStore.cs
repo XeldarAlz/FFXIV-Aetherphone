@@ -8,13 +8,17 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Message;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Runtime;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Message;
 
 internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, ConversationDto>
 {
+    private const int SystemMessageKind = 2;
+
     private readonly ChatClient client;
     private readonly PeerKeyDirectory peers;
     private readonly RealtimeSignalBus signals;
@@ -25,9 +29,9 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     public DirectMessagesStore(AethernetSession session, ChatClient client, SafetyClient safety, MediaClient media,
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers,
         DecryptedHistoryStore chatHistory, PhoneVisibility visibility, RealtimeSignalBus signals,
-        AppInstaller installer)
+        AppInstaller installer, bool tracksInbox = true)
         : base("Messages", session, safety, media, notifications, vault, keys, chatHistory, visibility,
-            installer.Gate("message"))
+            installer.Gate("message"), tracksInbox)
     {
         this.client = client;
         this.peers = peers;
@@ -53,6 +57,11 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
         {
             ApplyPushedMessage(pushed);
             return;
+        }
+
+        if (signal.Message is null && signal.ConversationId is { } changed && ConversationId == changed)
+        {
+            RefreshThreadDetail();
         }
 
         RequestThreadKeyRefresh();
@@ -222,7 +231,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
         };
     }
 
-    protected override bool ShouldRevealForReport(ChatMessageDto message) => message.Kind != 2;
+    protected override bool ShouldRevealForReport(ChatMessageDto message) => message.Kind != SystemMessageKind;
 
     protected override string ThreadKeyOf(ConversationDto thread) => thread.Id;
 
@@ -238,6 +247,17 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
             AppPalettes.Message.Accent, thread.Id);
     }
 
+    protected override PhoneNotification? BuildArrivalNotification(ConversationDto thread)
+    {
+        if (!thread.IsGroup || thread.LastMessageKind != SystemMessageKind || thread.LastMessageSenderId == MyUserId)
+        {
+            return null;
+        }
+
+        return new PhoneNotification("message", DisplayTitle(thread), Loc.T(L.Message.AddedToGroup), DateTime.Now,
+            AppPalettes.Message.Accent, thread.Id);
+    }
+
     protected override bool IsInboxPreviewReady(ConversationDto thread)
     {
         return thread.LastMessageEncVersion != EnvelopeCodec.VersionEnvelope
@@ -245,6 +265,9 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     }
 
     public static string DisplayTitle(ConversationDto item) => ConversationTitle.Of(item);
+
+    public static string MemberLabel(ConversationMemberDto member) =>
+        member.DisplayName.Length > 0 ? member.DisplayName : member.Handle;
 
     private static string PreviewText(ConversationDto item)
     {
@@ -276,25 +299,6 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
         }
     }
 
-    public void RefreshDetail()
-    {
-        var current = ConversationId;
-        if (current is null)
-        {
-            return;
-        }
-
-        work.Run("thread detail", async token =>
-        {
-            var detail = await client.ConversationAsync(current, token).ConfigureAwait(false);
-            if (ConversationId == current && detail is not null)
-            {
-                conversation = detail.Conversation;
-                members = detail.Members;
-            }
-        });
-    }
-
     public byte[]? DecryptMedia(ChatMessageDto message, byte[] sealedBytes)
     {
         if (message.EncVersion != EnvelopeCodec.VersionEnvelope
@@ -318,6 +322,11 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
             }
 
             ThreadListItems = ApplyLocalMute(ThreadListItems, id, muted);
+            if (conversation is { } current && current.Id == id)
+            {
+                conversation = current with { Muted = muted };
+            }
+
             return true;
         }, onComplete);
     }
@@ -493,25 +502,82 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
         }, onComplete);
     }
 
-    public void Rename(string id, string title, Action<bool> onComplete)
+    public void UpdateGroup(string id, UpdateConversationRequest request, Action<bool> onComplete)
     {
-        work.Run("rename", async token =>
+        work.Run("update group", async token =>
         {
-            var detail = await client.RenameConversationAsync(id, title, token).ConfigureAwait(false);
-            if (detail is null)
+            var detail = await client.UpdateConversationAsync(id, request, token).ConfigureAwait(false);
+            return AcceptDetail(id, detail);
+        }, onComplete);
+    }
+
+    public void SetGroupPhoto(string id, string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
+    {
+        work.Run("group photo", async token =>
+        {
+            var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, AvatarUpload.Size);
+            var upload = await media.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
+            if (upload is null)
             {
                 return false;
             }
 
-            if (ConversationId == id)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                .ConfigureAwait(false);
+            if (!uploaded)
             {
-                conversation = detail.Conversation;
-                members = detail.Members;
+                return false;
             }
 
-            InvalidateThreadList();
-            return true;
+            var detail = await client
+                .UpdateConversationAsync(id, new UpdateConversationRequest(AvatarUrl: upload.PublicUrl), token)
+                .ConfigureAwait(false);
+            return AcceptDetail(id, detail);
         }, onComplete);
+    }
+
+    public void SetMemberRole(string id, string userId, int role, Action<bool> onComplete)
+    {
+        work.Run("member role", async token =>
+        {
+            var detail = await client.SetMemberRoleAsync(id, userId, role, token).ConfigureAwait(false);
+            return AcceptDetail(id, detail);
+        }, onComplete);
+    }
+
+    private bool AcceptDetail(string id, ConversationDetailDto? detail)
+    {
+        if (detail is null)
+        {
+            return false;
+        }
+
+        if (ConversationId == id)
+        {
+            conversation = detail.Conversation;
+            members = detail.Members;
+        }
+
+        InvalidateThreadList();
+        return true;
+    }
+
+    public int MyRole
+    {
+        get
+        {
+            var snapshot = members;
+            var myId = MyUserId;
+            for (var index = 0; index < snapshot.Length; index++)
+            {
+                if (snapshot[index].UserId == myId)
+                {
+                    return snapshot[index].Role;
+                }
+            }
+
+            return ChatRoles.Member;
+        }
     }
 
     private ConversationDto? FindConversation(string id)

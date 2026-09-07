@@ -67,6 +67,7 @@ internal sealed class PhoneServices : IDisposable
     public required ModerationNoticePresenter ModerationPresenter { get; init; }
     public required ModerationNoticeArchive ModerationArchive { get; init; }
     public required SafetyLauncher SafetyLauncher { get; init; }
+    public required SettingsLauncher SettingsLauncher { get; init; }
     public required SoundService Sound { get; init; }
     public required UiSoundService UiSound { get; init; }
     public required FrameworkTicker UiSoundTicker { get; init; }
@@ -391,6 +392,7 @@ internal sealed class PhoneServices : IDisposable
             ModerationPresenter = moderationPresenter,
             ModerationArchive = moderationArchive,
             SafetyLauncher = safetyLauncher,
+            SettingsLauncher = new SettingsLauncher(),
             Sound = sound,
             UiSound = uiSound,
             UiSoundTicker = uiSoundTicker,

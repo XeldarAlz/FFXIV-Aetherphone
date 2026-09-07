@@ -10,6 +10,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Net;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Playback;
@@ -84,7 +85,7 @@ internal sealed partial class MusicApp : IResumableApp
     public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Music);
     public string Glyph => "M";
-    public int BadgeCount => community.LiveCount + rolladeck.LiveCountWithAddress;
+    public int BadgeCount => socialNotifications.UnseenCount(Id);
     public bool BadgeAsDot => true;
     private readonly RadioService radio;
     private readonly SongSearchService songSearch;
@@ -97,6 +98,7 @@ internal sealed partial class MusicApp : IResumableApp
     private readonly AethernetApi aethernet;
     private readonly RadioLauncher launcher;
     private readonly CommunityRadioService community;
+    private readonly SocialNotificationService socialNotifications;
     private readonly ReportService report;
     private readonly PhotoLibrary photoLibrary;
     private readonly WallpaperImageCache wallpaperImages;
@@ -168,10 +170,12 @@ internal sealed partial class MusicApp : IResumableApp
         PlaylistStore playlists, MediaCache media, HttpService http, ArtworkCache artwork,
         AethernetApi aethernet, AethernetSession session, ReportService report, PhotoLibrary photoLibrary,
         WallpaperImageCache wallpaperImages, ConfirmService confirm, Configuration configuration,
-        RemoteImageCache images, LodestoneService lodestone, GameData gameData, RadioLauncher launcher)
+        RemoteImageCache images, LodestoneService lodestone, GameData gameData, RadioLauncher launcher,
+        SocialNotificationService socialNotifications)
     {
         this.aethernet = aethernet;
         this.launcher = launcher;
+        this.socialNotifications = socialNotifications;
         this.report = report;
         this.photoLibrary = photoLibrary;
         this.wallpaperImages = wallpaperImages;
@@ -238,6 +242,7 @@ internal sealed partial class MusicApp : IResumableApp
         featured = Array.Empty<Song>();
         featuredFetch?.Cancel();
         LoadFavoriteRadioStations();
+        socialNotifications.MarkSeen(Id);
         rolladeck.EnsureFresh();
         OnLiveDjsOpened();
         if (launcher.TryConsumeStation(out var stationId))
@@ -257,6 +262,7 @@ internal sealed partial class MusicApp : IResumableApp
     {
         miniPresence.SnapTo(playback.IsActive ? 1f : 0f);
         LoadFavoriteRadioStations();
+        socialNotifications.MarkSeen(Id);
         rolladeck.EnsureFresh();
         if (launcher.TryConsumeStation(out var stationId))
         {
@@ -341,7 +347,7 @@ internal sealed partial class MusicApp : IResumableApp
     private void DrawTabBar(Rect bar, float scale)
     {
         navTabs[0] = new NavTab(FontAwesomeIcon.Home, Loc.T(L.Music.TabHome));
-        navTabs[1] = new NavTab(FontAwesomeIcon.BroadcastTower, Loc.T(L.Music.TabLive), community.LiveCount + rolladeck.LiveCountWithAddress);
+        navTabs[1] = new NavTab(FontAwesomeIcon.BroadcastTower, Loc.T(L.Music.TabLive), community.FollowedLiveCount);
         navTabs[2] = new NavTab(FontAwesomeIcon.Podcast, Loc.T(L.Music.TabRadio), AnchorKey: "music.categories");
         navTabs[3] = new NavTab(FontAwesomeIcon.LayerGroup, Loc.T(L.Music.TabLibrary));
         var tapped = bottomNav.Draw(bar, ui, theme, navTabs, (int)tab, true);

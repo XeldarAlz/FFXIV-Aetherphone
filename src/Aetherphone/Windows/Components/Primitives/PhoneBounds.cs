@@ -1,3 +1,4 @@
+using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
@@ -27,6 +28,12 @@ internal static class PhoneBounds
     {
         var portrait = ClampWidth(configuration.PhoneWidth);
         return ClampLandscapeWidth(PhoneSizeCatalog.LandscapeWidthFor(portrait, configuration.LandscapePhoneWidth));
+    }
+
+    public static Rect Viewport()
+    {
+        var viewport = ImGui.GetMainViewport();
+        return new Rect(viewport.Pos, viewport.Pos + viewport.Size);
     }
 
     public static Vector2 ViewportRoom()

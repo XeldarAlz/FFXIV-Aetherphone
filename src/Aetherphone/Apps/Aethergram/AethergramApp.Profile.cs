@@ -364,9 +364,8 @@ internal sealed partial class AethergramApp
         return tappable && UiInteract.Click(min, max, hovered);
     }
 
-    private string ProfileRegionCode(UserDto user) => user.IsMe
-        ? SocialRegion.EffectiveCode(configuration, gameData)
-        : SocialRegion.Resolve(user.Region, user.World, gameData);
+    private string ProfileRegionCode(UserDto user) =>
+        SocialRegion.Resolve(user.Region, user.World, gameData);
 
     private static bool HasProfileChips(UserDto user, string regionCode) =>
         regionCode.Length > 0 || user.UtcOffsetMinutes is not null || (!user.IsMe && user.FollowsYou);

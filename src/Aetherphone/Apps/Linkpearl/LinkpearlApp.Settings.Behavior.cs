@@ -80,7 +80,7 @@ internal sealed partial class LinkpearlApp
     private void DrawOpenChatSettings()
     {
         SettingsSection.Header(Loc.T(L.Linkpearl.OpenChatSection), frameTheme);
-        var card = GroupCard.Begin(frameTheme, 4);
+        var card = GroupCard.Begin(frameTheme, 3);
         var hotkeyEnabled = SettingsRow.Bool(card.NextRow(), Loc.T(L.Linkpearl.HotkeyEnabled),
             configuration.LinkpearlHotkeyEnabled, frameTheme, "linkpearl.settings.hotkeyEnabled");
         if (hotkeyEnabled != configuration.LinkpearlHotkeyEnabled)
@@ -103,15 +103,6 @@ internal sealed partial class LinkpearlApp
                 frameTheme, KeyMenuId, dimmed))
         {
             settingsMenu.Toggle(KeyMenuId, keyRow);
-        }
-
-        var playerMenu = SettingsRow.Bool(card.NextRow(), Loc.T(L.Linkpearl.PlayerContextMenu),
-            configuration.LinkpearlPlayerContextMenu, frameTheme, "linkpearl.settings.playerContextMenu",
-            Loc.T(L.Linkpearl.PlayerContextMenuHint));
-        if (playerMenu != configuration.LinkpearlPlayerContextMenu)
-        {
-            configuration.LinkpearlPlayerContextMenu = playerMenu;
-            configuration.Save();
         }
 
         card.End();

@@ -1,7 +1,7 @@
 # Icon font generator
 
 Builds `src/Aetherphone/Fonts/TablerIcons.ttf` and its
-`src/Aetherphone/Windows/Components/PhoneIcons.cs` constants from
+`src/Aetherphone/Windows/Components/Primitives/PhoneIcons.cs` constants from
 [Tabler Icons](https://tabler.io/icons) (MIT), the same family the app icons in
 `tools/icon-generator/` come from.
 
@@ -15,11 +15,13 @@ python3 -m venv .venv && .venv/bin/pip install fonttools
 The script downloads the pinned `@tabler/icons-webfont` tarball, subsets it to
 the glyphs listed in `OUTLINE` and `FILLED`, and merges the two source fonts
 into one. Both outputs are generated: edit the lists in the script, never
-`PhoneIcons.cs` by hand.
+`PhoneIcons.cs` by hand. Adding a glyph moves the last codepoint, so bump
+`IconPlan.LastTablerCodepoint` to match the range the run prints, or
+`IconFontCoverageTests` fails.
 
 ## Why a subset
 
-The two source fonts are 2.7 MB and 297 KB. The shipped subset is about 10 KB.
+The two source fonts are 2.7 MB and 297 KB. The shipped subset of 97 glyphs is about 36 KB.
 
 ## Why the codepoints move
 

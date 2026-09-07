@@ -96,8 +96,7 @@ internal sealed partial class SetupOverlay : IDisposable
         this.configuration = configuration;
         this.confirm = confirm;
         this.themes = themes;
-        flow = new SignInFlow(session, aethernet.Auth,
-            () => RegionSync.Push(session, aethernet.Account, configuration, gameData, cancellation.Token));
+        flow = new SignInFlow(session, aethernet.Auth);
         picker = new ImagePickCrop(photoLibrary, wallpaperImages);
         prefersDark = configuration.ThemeMode != ThemeMode.Light;
         dynamicAppearance = configuration.ThemeMode == ThemeMode.Auto;

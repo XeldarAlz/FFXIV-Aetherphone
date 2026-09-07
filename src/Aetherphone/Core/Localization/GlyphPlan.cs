@@ -190,14 +190,23 @@ internal static class GlyphPlan
         var coverage = new GlyphCoverage();
         for (var languageIndex = 0; languageIndex < Languages.All.Length; languageIndex++)
         {
-            var name = Languages.All[languageIndex].NativeName;
-            for (var charIndex = 0; charIndex < name.Length; charIndex++)
-            {
-                coverage.Add(name[charIndex]);
-            }
+            AddName(coverage, Languages.All[languageIndex].NativeName);
+        }
+
+        for (var languageIndex = 0; languageIndex < SpokenLanguages.All.Length; languageIndex++)
+        {
+            AddName(coverage, SpokenLanguages.All[languageIndex].NativeName);
         }
 
         var ranges = coverage.ToRanges(0x0020);
         return ranges[ranges.Length - 1] == 0 ? ranges[..^1] : ranges;
+    }
+
+    private static void AddName(GlyphCoverage coverage, string name)
+    {
+        for (var charIndex = 0; charIndex < name.Length; charIndex++)
+        {
+            coverage.Add(name[charIndex]);
+        }
     }
 }

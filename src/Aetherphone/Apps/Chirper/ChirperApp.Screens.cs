@@ -248,9 +248,7 @@ internal sealed partial class ChirperApp
             _ => Loc.T(L.Chirper.Follow),
         };
         var pillWidth = pillLabel.Length > 0 ? Typography.Measure(pillLabel, SmallPillStyle).X / scale + 30f : 0f;
-        var regionCode = user.IsMe
-            ? SocialRegion.EffectiveCode(configuration, gameData)
-            : SocialRegion.Resolve(user.Region, user.World, gameData);
+        var regionCode = SocialRegion.Resolve(user.Region, user.World, gameData);
         var sub = user.Bio.Length > 0 && user.Handle.Length > 0
             ? $"@{user.Handle} · {user.Bio}"
             : SocialIdentity.ProfileMeta(user.Handle, regionCode);

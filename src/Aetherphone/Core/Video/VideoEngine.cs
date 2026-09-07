@@ -33,6 +33,8 @@ internal sealed class VideoEngine : IDisposable
     private const int MaxRecoveryRestartsPerUrl = 2;
     private const long StallWatchdogMilliseconds = 10 * 1000;
     private const long BufferingWatchdogMilliseconds = 30 * 1000;
+    private const long HealthyPlaybackForgivesRestartsMilliseconds = 5 * 60 * 1000;
+    private const long AudioReopenEscalationWindowMilliseconds = 60 * 1000;
     private const double StallPositionTolerance = 0.05;
     private const double StallEndGuardSeconds = 5.0;
 
@@ -77,6 +79,8 @@ internal sealed class VideoEngine : IDisposable
     private long stallProgressAtTicks;
     private long framesProgressAtTicks;
     private long audioProgressAtTicks;
+    private long healthyPlaybackSinceTicks;
+    private long audioReopenAtTicks = long.MinValue;
     private int lastObservedFrameVersion;
     private double lastObservedPosition;
     private double lastObservedAudioPosition;
@@ -372,12 +376,14 @@ internal sealed class VideoEngine : IDisposable
             && now - audioProgressAtTicks >= StallWatchdogMilliseconds;
         if (!positionStalled && !framesStalled && !audioStalled)
         {
+            ForgiveRestartsAfterHealthyPlayback(info, now);
             return;
         }
 
         stallProgressAtTicks = now;
         framesProgressAtTicks = now;
         audioProgressAtTicks = now;
+        healthyPlaybackSinceTicks = now;
         var stall = positionStalled ? "position" : framesStalled ? "video frames" : "audio";
 
         if (RefusedStreamUrl() is { } refusedUrl)
@@ -402,6 +408,16 @@ internal sealed class VideoEngine : IDisposable
 
         if (player.CurrentUrl is not { Length: > 0 } stalledUrl)
         {
+            return;
+        }
+
+        var onlyAudioStalled = audioStalled && !positionStalled && !framesStalled;
+        if (onlyAudioStalled && now - audioReopenAtTicks >= AudioReopenEscalationWindowMilliseconds)
+        {
+            audioReopenAtTicks = now;
+            AepLog.Warning(
+                $"[Video] Playback audio stalled; seeking to {info.PositionSeconds:F1}s to reopen the audio track.");
+            player.Seek(info.PositionSeconds);
             return;
         }
 
@@ -431,6 +447,25 @@ internal sealed class VideoEngine : IDisposable
         stallProgressAtTicks = now;
         framesProgressAtTicks = now;
         audioProgressAtTicks = now;
+        healthyPlaybackSinceTicks = now;
+    }
+
+    private void ForgiveRestartsAfterHealthyPlayback(in MpvPlaybackInfo info, long now)
+    {
+        if (info.CoreIdle || now - stallProgressAtTicks >= StallWatchdogMilliseconds)
+        {
+            healthyPlaybackSinceTicks = now;
+            return;
+        }
+
+        if (recoveryRestartsForUrl == 0 || now - healthyPlaybackSinceTicks < HealthyPlaybackForgivesRestartsMilliseconds)
+        {
+            return;
+        }
+
+        recoveryRestartsForUrl = 0;
+        recoveryExhaustedUrl = null;
+        AepLog.Info("[Video] Playback has been healthy for a while; the restart budget for this link is available again.");
     }
 
     private async Task RestartStalledAsync(string stalledUrl, double resumeSeconds)

@@ -56,6 +56,12 @@ internal sealed class GameChatMenu
 
     public bool IsOpen => menu.Open;
 
+    public bool Detached
+    {
+        get => menu.Detached;
+        set => menu.Detached = value;
+    }
+
     public void Gate() => menu.Gate();
 
     public void Close() => menu.Close();

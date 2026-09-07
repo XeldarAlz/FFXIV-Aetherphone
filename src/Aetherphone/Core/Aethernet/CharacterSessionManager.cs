@@ -4,6 +4,7 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Inventory;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Social;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Aethernet;
@@ -46,7 +47,11 @@ internal sealed class CharacterSessionManager : IDisposable
 
         started = true;
         framework.Update += OnTick;
+        session.Changed += OnSessionChanged;
     }
+
+    private void OnSessionChanged() =>
+        RegionSync.Push(session, account, gameData, cancellation.Token);
 
     private void OnTick(IFramework _)
     {
@@ -206,6 +211,7 @@ internal sealed class CharacterSessionManager : IDisposable
         if (started)
         {
             framework.Update -= OnTick;
+            session.Changed -= OnSessionChanged;
         }
 
         cancellation.Cancel();
