@@ -21,6 +21,16 @@ internal static class HuntDataCenterWorlds
         return lookup.TryGetValue(worldSlug, out var rowId) ? rowId : 0u;
     }
 
+    public static string SlugFor(uint worldRowId)
+    {
+        if (worldRowId == 0 || !Plugin.DataManager.GetExcelSheet<World>().TryGetRow(worldRowId, out var world))
+        {
+            return string.Empty;
+        }
+
+        return world.Name.ExtractText().ToLowerInvariant();
+    }
+
     private static Dictionary<string, uint> BuildRowIdLookup()
     {
         if (!GameSheets.Available)

@@ -1,4 +1,3 @@
-using Aetherphone.Apps.Message;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
@@ -16,8 +15,9 @@ using Aetherphone.Core.Runtime;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Translation;
 using Aetherphone.Core.Wallpapers;
+using Dalamud.Interface.Windowing;
 
-namespace Aetherphone.Windows;
+namespace Aetherphone.Apps.Message;
 
 internal sealed class MessagePopoutServices
 {
@@ -48,7 +48,7 @@ internal sealed class MessagePopoutServices
             Visibility, Signals, Installer, tracksInbox: false);
 }
 
-internal sealed class MessagePopouts : IDisposable
+internal sealed class MessagePopouts : IMessagePopouts
 {
     public const int MaxWindows = 4;
 
@@ -81,7 +81,7 @@ internal sealed class MessagePopouts : IDisposable
         Plugin.ClientState.Logout += OnLogout;
     }
 
-    public IReadOnlyList<MessagePopoutWindow> Windows => windows;
+    public IReadOnlyList<Window> Windows => windows;
 
     public IPhoneApp Owner { get; set; } = null!;
 

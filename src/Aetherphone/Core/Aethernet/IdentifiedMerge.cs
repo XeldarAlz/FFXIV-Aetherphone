@@ -40,6 +40,37 @@ internal static class IdentifiedMerge
         return merged.ToArray();
     }
 
+    public static T[] AppendNew<T>(T[] existing, T[] incoming) where T : class, IIdentified
+    {
+        if (existing.Length == 0)
+        {
+            return incoming;
+        }
+
+        if (incoming.Length == 0)
+        {
+            return existing;
+        }
+
+        var knownIds = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < existing.Length; index++)
+        {
+            knownIds.Add(existing[index].Id);
+        }
+
+        var merged = new List<T>(existing.Length + incoming.Length);
+        merged.AddRange(existing);
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            if (knownIds.Add(incoming[index].Id))
+            {
+                merged.Add(incoming[index]);
+            }
+        }
+
+        return merged.ToArray();
+    }
+
     public static T[] ReconcileNewestPage<T>(T[] existing, T[] incoming, Comparison<T> order)
         where T : class, IIdentified
     {

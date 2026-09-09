@@ -21,6 +21,7 @@ internal static class ModerationNoticeKinds
     public const int MarkedSensitive = 10;
     public const int FrameGranted = 11;
     public const int FrameRevoked = 12;
+    public const int NameReset = 13;
 }
 
 internal static class ModerationNoticeText
@@ -51,6 +52,15 @@ internal static class ModerationNoticeText
             && notice.Kind != ModerationNoticeKinds.MarkedSensitive;
     }
 
+    // The phone is holding a name the server has just replaced, so it has to pull the
+    // account again before anything renders it.
+    public static bool RefreshesAccount(ModerationNoticeDto notice)
+    {
+        return IsCosmeticGrant(notice)
+            || notice.Kind == ModerationNoticeKinds.EconomyAction
+            || notice.Kind == ModerationNoticeKinds.NameReset;
+    }
+
     public static bool IsCosmeticGrant(ModerationNoticeDto notice)
     {
         return notice.Kind == ModerationNoticeKinds.BadgeGranted
@@ -75,6 +85,7 @@ internal static class ModerationNoticeText
             ModerationNoticeKinds.FrameRevoked => Loc.T(L.Moderation.NoticeFrameRevokedTitle),
             ModerationNoticeKinds.EconomyAction => Loc.T(L.Moderation.NoticeCoinTitle),
             ModerationNoticeKinds.MarkedSensitive => Loc.T(L.Moderation.NoticeSensitiveTitle),
+            ModerationNoticeKinds.NameReset => Loc.T(L.Moderation.NoticeNameResetTitle),
             _ => Loc.T(L.Moderation.NoticeThanksTitle),
         };
     }
@@ -135,7 +146,24 @@ internal static class ModerationNoticeText
             Append(body, Loc.T(L.Moderation.NoticeProfileClearedFields, notice.Detail));
         }
 
-        AppendQuote(body, notice);
+        if (notice.Kind == ModerationNoticeKinds.NameReset)
+        {
+            Append(body, Loc.T(L.Moderation.NoticeNameResetIntro));
+            if (notice.ContentExcerpt.Length > 0)
+            {
+                Append(body, Loc.T(L.Moderation.NoticeNameResetHandle, notice.ContentExcerpt));
+            }
+
+            if (notice.Detail.Length > 0)
+            {
+                Append(body, Loc.T(L.Moderation.NoticeNameResetWhere, notice.Detail));
+            }
+        }
+        else
+        {
+            // The excerpt here is the new handle, not something the player wrote.
+            AppendQuote(body, notice);
+        }
 
         if (notice.ModeratorNote.Length > 0)
         {
@@ -200,6 +228,12 @@ internal static class ModerationNoticeText
         if (notice.Kind == ModerationNoticeKinds.SignedOut)
         {
             sections.Add(ConfirmSection.Paragraph(Loc.T(L.Moderation.NoticeSignedOutBody)));
+            return;
+        }
+
+        if (notice.Kind == ModerationNoticeKinds.NameReset)
+        {
+            sections.Add(ConfirmSection.Paragraph(Loc.T(L.Moderation.NoticeNameResetIntro)));
         }
     }
 
@@ -221,6 +255,22 @@ internal static class ModerationNoticeText
 
     private static void AddEvidence(List<ConfirmSection> sections, ModerationNoticeDto notice)
     {
+        if (notice.Kind == ModerationNoticeKinds.NameReset)
+        {
+            if (notice.ContentExcerpt.Length > 0)
+            {
+                sections.Add(ConfirmSection.Divider());
+                sections.Add(ConfirmSection.Chip(Loc.T(L.Moderation.NoticeNameResetLabel), notice.ContentExcerpt));
+            }
+
+            if (notice.Detail.Length > 0)
+            {
+                sections.Add(ConfirmSection.Paragraph(Loc.T(L.Moderation.NoticeNameResetWhere, notice.Detail)));
+            }
+
+            return;
+        }
+
         var label = Loc.T(L.Moderation.NoticeRemovedContentLabel);
         if (notice.Kind == ModerationNoticeKinds.ProfileTextCleared && notice.Detail.Length > 0)
         {

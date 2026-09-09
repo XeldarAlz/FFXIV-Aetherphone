@@ -148,13 +148,16 @@ internal sealed partial class AetherStreamApp
     {
         var pos = screen.Engine.ScreenPosition;
         var yaw = screen.Engine.ScreenYaw;
+        var pitch = screen.Engine.ScreenPitch;
+        var roll = screen.Engine.ScreenRoll;
         var positionScale = screen.Engine.ScreenScale;
         var anchor = screen.Engine.ScreenSpawnAnchor;
         const float range = VideoEngine.ScreenPositionSliderRange;
         const float yawRange = 2f * MathF.PI;
+        const float tiltRange = MathF.PI;
         var transformChanged = false;
 
-        var card = GroupCard.Begin(accentedTheme, 5);
+        var card = GroupCard.Begin(accentedTheme, 7);
         transformChanged |= DrawTransformRow(card.NextRow(), "aetherstream.screen.x", "X", ref pos.X,
             anchor.X - range, anchor.X + range, $"{pos.X:F1}", scale);
         transformChanged |= DrawTransformRow(card.NextRow(), "aetherstream.screen.y", "Y", ref pos.Y,
@@ -167,12 +170,20 @@ internal sealed partial class AetherStreamApp
         transformChanged |= DrawTransformRow(card.NextRow(), "aetherstream.screen.yaw",
             Loc.T(L.AetherStream.CastingRotate), ref yaw, -yawRange, yawRange,
             $"{yaw * 180f / MathF.PI:F0}°", scale);
+        transformChanged |= DrawTransformRow(card.NextRow(), "aetherstream.screen.pitch",
+            Loc.T(L.AetherStream.CastingTilt), ref pitch, -tiltRange, tiltRange,
+            $"{pitch * 180f / MathF.PI:F0}°", scale);
+        transformChanged |= DrawTransformRow(card.NextRow(), "aetherstream.screen.roll",
+            Loc.T(L.AetherStream.CastingRoll), ref roll, -tiltRange, tiltRange,
+            $"{roll * 180f / MathF.PI:F0}°", scale);
         card.End();
 
         if (transformChanged)
         {
-            screen.Engine.SetScreenTransform(pos, yaw, positionScale);
+            screen.Engine.SetScreenTransform(pos, yaw, pitch, roll, positionScale);
         }
+
+        DrawScreenShapeRow(scale);
 
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
         var recenterOrigin = ImGui.GetCursorScreenPos();
@@ -184,6 +195,25 @@ internal sealed partial class AetherStreamApp
 
         ImGui.SetCursorScreenPos(recenterOrigin);
         ImGui.Dummy(new Vector2(width, 36f * scale));
+    }
+
+    private void DrawScreenShapeRow(float scale)
+    {
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
+        var wasFlat = !screen.Engine.ScreenCurved;
+        var card = GroupCard.Begin(accentedTheme, 1);
+        var flat = SettingsRow.Bool(card.NextRow(), Loc.T(L.AetherStream.CastingFlatScreen), wasFlat, accentedTheme,
+            hint: Loc.T(L.AetherStream.CastingFlatScreenHint));
+        card.End();
+
+        if (flat == wasFlat)
+        {
+            return;
+        }
+
+        screen.Engine.ScreenCurved = !flat;
+        configuration.VideoScreenCurved = !flat;
+        configuration.Save();
     }
 
     private bool DrawTransformRow(Rect row, string id, string label, ref float value, float min, float max,
@@ -291,6 +321,8 @@ internal sealed partial class AetherStreamApp
             if (UiInteract.Click(row.Min, applyMax, hovered))
             {
                 screen.Engine.ApplyScreenPreset(preset);
+                configuration.VideoScreenCurved = screen.Engine.ScreenCurved;
+                configuration.Save();
             }
         }
 

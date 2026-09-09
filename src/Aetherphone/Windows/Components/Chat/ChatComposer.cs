@@ -43,6 +43,7 @@ internal struct ChatComposerModel
 internal sealed class ChatComposer : IDisposable
 {
     private const int TextKind = 0;
+    private const int MaxLines = 6;
     private const float AccessoryBarHeight = 46f;
     private const float BarHeight = 56f;
     private const float PillComposerHeight = 66f;
@@ -80,7 +81,8 @@ internal sealed class ChatComposer : IDisposable
     private readonly EmojiPicker emojiPicker = new();
     private readonly DropdownMenu attachMenu = new();
     private readonly DropdownMenu.Item[] attachItems = new DropdownMenu.Item[2];
-    private string draft = string.Empty;
+    private readonly SoftWrapEditor editor = new();
+    private float fieldGrowth;
     private bool focus;
     private bool emojiOpen;
     private int emojiOpenedFrame = -1;
@@ -93,8 +95,8 @@ internal sealed class ChatComposer : IDisposable
 
     public string Draft
     {
-        get => draft;
-        set => draft = value;
+        get => editor.Text;
+        set => editor.Adopt(value);
     }
 
     public bool IsEditing => editTargetId is not null;
@@ -107,12 +109,18 @@ internal sealed class ChatComposer : IDisposable
         ? AccessoryBarHeight * UiScale.Current
         : 0f;
 
-    public static float Height(ChatComposerStyle style) => style switch
+    private static float Height(ChatComposerStyle style) => style switch
     {
         ChatComposerStyle.Pill => PillComposerHeight * UiScale.Current,
         ChatComposerStyle.Plus => PlusComposerHeight * UiScale.Current,
         _ => BarHeight * UiScale.Current,
     };
+
+    public float Measure(ChatComposerStyle style, float ceiling)
+    {
+        var baseHeight = Height(style);
+        return MathF.Max(baseHeight, MathF.Min(baseHeight + fieldGrowth, ceiling));
+    }
 
     public void Gate() => attachMenu.Gate();
 
@@ -130,7 +138,7 @@ internal sealed class ChatComposer : IDisposable
         ClearReply();
         editTargetId = messageId;
         editBarPreview = ChatText.QuotePreview(body, TextKind);
-        draft = body;
+        editor.Adopt(body);
         focus = true;
     }
 
@@ -149,7 +157,7 @@ internal sealed class ChatComposer : IDisposable
         }
 
         editTargetId = null;
-        draft = string.Empty;
+        editor.Adopt(string.Empty);
     }
 
     public void ClearTargets()
@@ -163,7 +171,7 @@ internal sealed class ChatComposer : IDisposable
     public void Clear()
     {
         ClearTargets();
-        draft = string.Empty;
+        editor.Adopt(string.Empty);
     }
 
     public void CancelVoice()
@@ -202,12 +210,14 @@ internal sealed class ChatComposer : IDisposable
         var surface = PaintSurface(composerRect, model);
         if (model.Blocked)
         {
+            fieldGrowth = 0f;
             DrawBlockedComposer(surface, model);
             return;
         }
 
         if (recorder.Recording)
         {
+            fieldGrowth = 0f;
             DrawRecordingComposer(surface, model);
             return;
         }
@@ -227,6 +237,43 @@ internal sealed class ChatComposer : IDisposable
         DrawInputComposer(composerRect, model);
     }
 
+    private bool DrawField(Rect pill, float textLeft, float textRight, in ChatComposerModel model)
+    {
+        var scale = UiScale.Current;
+        var padding = ImGui.GetStyle().FramePadding;
+        var fieldWidth = MathF.Max(1f, textRight - textLeft);
+        editor.Rewrap(MathF.Max(1f, fieldWidth - padding.X * 2f - 4f * scale));
+        var lineHeight = ImGui.GetTextLineHeight();
+        var fits = Math.Max(1, (int)MathF.Floor((pill.Max.Y - pill.Min.Y - padding.Y * 2f) / lineHeight));
+        var lines = Math.Clamp(editor.LineCount, 1, Math.Min(MaxLines, fits));
+        fieldGrowth = (lines - 1) * lineHeight;
+        var fieldHeight = lines * lineHeight + padding.Y * 2f;
+        var fieldTop = (pill.Min.Y + pill.Max.Y) * 0.5f - fieldHeight * 0.5f;
+        ImGui.SetCursorScreenPos(new Vector2(textLeft, fieldTop));
+        if (focus)
+        {
+            ImGui.SetKeyboardFocusHere();
+            focus = false;
+        }
+
+        bool submitted;
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (ImRaii.PushColor(ImGuiCol.Text, model.Ui.Theme.TextStrong))
+        {
+            submitted = editor.Draw("##chatComposerInput", new Vector2(fieldWidth, fieldHeight), model.MaxLength, 0);
+        }
+
+        if (editor.Text.Length == 0)
+        {
+            Plugin.Fonts.NoticeText(model.Hint);
+            var hint = Typography.FitText(model.Hint, fieldWidth - padding.X * 2f, TextStyles.Body);
+            Typography.Draw(ImGui.GetWindowDrawList(), new Vector2(textLeft + padding.X, fieldTop + padding.Y), hint,
+                model.Ui.Theme.TextMuted, TextStyles.Body);
+        }
+
+        return submitted;
+    }
+
     private void DrawPlusComposer(Rect area, in ChatComposerModel model)
     {
         var ui = model.Ui;
@@ -234,7 +281,7 @@ internal sealed class ChatComposer : IDisposable
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var edgePad = PlusEdgePad * scale;
-        var centerY = area.Center.Y;
+        var centerY = area.Max.Y - PlusComposerHeight * scale * 0.5f;
         var showAttach = model.CanImage || model.CanLocation;
         var pillLeft = area.Min.X + edgePad;
         if (showAttach)
@@ -266,7 +313,9 @@ internal sealed class ChatComposer : IDisposable
         var sendCenter = new Vector2(area.Max.X - edgePad - sendRadius, centerY);
         var pillMin = new Vector2(pillLeft, area.Min.Y + PlusPillInsetY * scale);
         var pillMax = new Vector2(sendCenter.X - sendRadius - PlusPillGap * scale, area.Max.Y - PlusPillInsetY * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(FieldFill));
+        var pillRounding = MathF.Min(pillMax.Y - pillMin.Y,
+            (PlusComposerHeight - PlusPillInsetY * 2f) * scale) * 0.5f;
+        Squircle.Fill(drawList, pillMin, pillMax, pillRounding, ImGui.GetColorU32(FieldFill));
 
         var emojiRadius = PlusEmojiRadius * scale;
         var emojiCenter = new Vector2(pillMax.X - PlusEmojiInset * scale - emojiRadius, centerY);
@@ -288,27 +337,8 @@ internal sealed class ChatComposer : IDisposable
 
         var textLeft = pillMin.X + PlusTextPad * scale;
         var textRight = emojiCenter.X - emojiRadius - 4f * scale;
-        ImGui.SetCursorScreenPos(new Vector2(textLeft, centerY - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(MathF.Max(1f, textRight - textLeft));
-        if (focus)
-        {
-            ImGui.SetKeyboardFocusHere();
-            focus = false;
-        }
-
-        var submitted = false;
-        Plugin.Fonts.NoticeText(draft);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-        {
-            if (ImGui.InputTextWithHint("##chatComposerInput", model.Hint, ref draft, model.MaxLength,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
-            {
-                submitted = true;
-            }
-        }
-
-        var hasDraft = draft.Trim().Length > 0;
+        var submitted = DrawField(new Rect(pillMin, pillMax), textLeft, textRight, model);
+        var hasDraft = editor.HasContent;
         var canSend = hasDraft && !model.Sending;
         var sendExtent = new Vector2(sendRadius, sendRadius);
         var sendRect = new Rect(sendCenter - sendExtent, sendCenter + sendExtent);
@@ -417,7 +447,7 @@ internal sealed class ChatComposer : IDisposable
         var scale = UiScale.Current;
         var pill = new Rect(new Vector2(area.Min.X + PillEdgePad * scale, area.Min.Y + PillInsetY * scale),
             new Vector2(area.Max.X - PillEdgePad * scale, area.Max.Y - PillInsetY * scale));
-        var rounding = pill.Height * 0.5f;
+        var rounding = MathF.Min(pill.Height, (PillComposerHeight - PillInsetY * 2f) * scale) * 0.5f;
         Squircle.Fill(drawList, pill.Min, pill.Max, rounding, ImGui.GetColorU32(PillFill));
         Squircle.Stroke(drawList, pill.Min, pill.Max, rounding, ImGui.GetColorU32(PillStroke), 1f * scale);
         return pill;
@@ -459,12 +489,14 @@ internal sealed class ChatComposer : IDisposable
         var buttonRadius = 18f * scale;
         var iconRadius = 15f * scale;
         var edgePad = 10f * scale;
-        var sendCenter = new Vector2(area.Max.X - edgePad - buttonRadius, area.Center.Y);
+        var centerY = area.Max.Y - BarHeight * scale * 0.5f;
+        var sendCenter = new Vector2(area.Max.X - edgePad - buttonRadius, centerY);
         var pillMin = new Vector2(area.Min.X + edgePad, area.Min.Y + 7f * scale);
         var pillMax = new Vector2(sendCenter.X - buttonRadius - 8f * scale, area.Max.Y - 7f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(FieldFill));
+        var pillRounding = MathF.Min(pillMax.Y - pillMin.Y, (BarHeight - 14f) * scale) * 0.5f;
+        Squircle.Fill(drawList, pillMin, pillMax, pillRounding, ImGui.GetColorU32(FieldFill));
 
-        var emojiCenter = new Vector2(pillMin.X + iconRadius + 5f * scale, area.Center.Y);
+        var emojiCenter = new Vector2(pillMin.X + iconRadius + 5f * scale, centerY);
         var emojiMin = emojiCenter - new Vector2(iconRadius, iconRadius);
         var emojiMax = emojiCenter + new Vector2(iconRadius, iconRadius);
         var emojiHovered = UiInteract.Hover(emojiMin, emojiMax);
@@ -484,7 +516,7 @@ internal sealed class ChatComposer : IDisposable
         var trailingIconX = pillMax.X - iconRadius - 5f * scale;
         if (model.CanImage)
         {
-            var pictureCenter = new Vector2(trailingIconX, area.Center.Y);
+            var pictureCenter = new Vector2(trailingIconX, centerY);
             var pictureMin = pictureCenter - new Vector2(iconRadius, iconRadius);
             var pictureMax = pictureCenter + new Vector2(iconRadius, iconRadius);
             var pictureHovered = UiInteract.Hover(pictureMin, pictureMax);
@@ -506,7 +538,7 @@ internal sealed class ChatComposer : IDisposable
 
         if (model.CanLocation)
         {
-            var locationCenter = new Vector2(trailingIconX, area.Center.Y);
+            var locationCenter = new Vector2(trailingIconX, centerY);
             var locationMin = locationCenter - new Vector2(iconRadius, iconRadius);
             var locationMax = locationCenter + new Vector2(iconRadius, iconRadius);
             var locationHovered = UiInteract.Hover(locationMin, locationMax);
@@ -527,28 +559,8 @@ internal sealed class ChatComposer : IDisposable
         }
 
         var textLeft = emojiMax.X + 4f * scale;
-        ImGui.SetCursorScreenPos(new Vector2(textLeft,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(MathF.Max(1f, textRight - textLeft));
-        if (focus)
-        {
-            ImGui.SetKeyboardFocusHere();
-            focus = false;
-        }
-
-        var submitted = false;
-        Plugin.Fonts.NoticeText(draft);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-        {
-            if (ImGui.InputTextWithHint("##chatComposerInput", model.Hint, ref draft, model.MaxLength,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
-            {
-                submitted = true;
-            }
-        }
-
-        var hasDraft = draft.Trim().Length > 0;
+        var submitted = DrawField(new Rect(pillMin, pillMax), textLeft, textRight, model);
+        var hasDraft = editor.HasContent;
         var canSend = hasDraft && !model.Sending;
         var sendRect = new Rect(sendCenter - new Vector2(buttonRadius, buttonRadius),
             sendCenter + new Vector2(buttonRadius, buttonRadius));
@@ -605,11 +617,13 @@ internal sealed class ChatComposer : IDisposable
         var theme = ui.Theme;
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var centerY = pill.Center.Y;
+        var rowHeight = (PillComposerHeight - PillInsetY * 2f) * scale;
+        var rowTop = pill.Max.Y - rowHeight;
+        var centerY = pill.Max.Y - rowHeight * 0.5f;
         var textLeft = pill.Min.X + PillTextGap * scale;
         if (model.CanImage)
         {
-            var cameraRadius = pill.Height * 0.5f - PillCameraInset * scale;
+            var cameraRadius = rowHeight * 0.5f - PillCameraInset * scale;
             var cameraCenter = new Vector2(pill.Min.X + PillCameraInset * scale + cameraRadius, centerY);
             var cameraExtent = new Vector2(cameraRadius, cameraRadius);
             var cameraHovered = UiInteract.Hover(cameraCenter - cameraExtent, cameraCenter + cameraExtent);
@@ -631,7 +645,7 @@ internal sealed class ChatComposer : IDisposable
         }
 
         var idleInk = Palette.WithAlpha(theme.TextStrong, PillIdleAlpha);
-        var hasDraft = draft.Trim().Length > 0;
+        var hasDraft = editor.HasContent;
         var submitted = false;
         var rightEdge = pill.Max.X - PillIconEdge * scale;
         if (hasDraft)
@@ -639,7 +653,7 @@ internal sealed class ChatComposer : IDisposable
             var label = Loc.T(L.Velvet.Send);
             var labelSize = Typography.Measure(label, SendStyle);
             var sendPad = PillSendPad * scale;
-            var sendMin = new Vector2(rightEdge - labelSize.X - sendPad * 2f, pill.Min.Y);
+            var sendMin = new Vector2(rightEdge - labelSize.X - sendPad * 2f, rowTop);
             var sendMax = new Vector2(rightEdge, pill.Max.Y);
             var canSend = !model.Sending;
             var sendHovered = canSend && UiInteract.Hover(sendMin, sendMax);
@@ -686,26 +700,9 @@ internal sealed class ChatComposer : IDisposable
         }
 
         var textRight = rightEdge - PillTextGap * scale;
-        ImGui.SetCursorScreenPos(new Vector2(textLeft, centerY - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(MathF.Max(1f, textRight - textLeft));
-        if (focus)
-        {
-            ImGui.SetKeyboardFocusHere();
-            focus = false;
-        }
+        submitted |= DrawField(pill, textLeft, textRight, model);
 
-        Plugin.Fonts.NoticeText(draft);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-        {
-            if (ImGui.InputTextWithHint("##chatComposerInput", model.Hint, ref draft, model.MaxLength,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
-            {
-                submitted = true;
-            }
-        }
-
-        if (submitted && draft.Trim().Length > 0 && !model.Sending)
+        if (submitted && editor.HasContent && !model.Sending)
         {
             Submit(model);
         }
@@ -750,16 +747,22 @@ internal sealed class ChatComposer : IDisposable
 
     private void Submit(in ChatComposerModel model)
     {
+        var body = editor.Text.Trim();
+        if (body.Length == 0)
+        {
+            return;
+        }
+
         if (editTargetId is { } editId)
         {
-            model.OnEditText(model.ConversationId, editId, draft);
+            model.OnEditText(model.ConversationId, editId, body);
             ClearEdit();
         }
         else
         {
-            model.OnSendText(model.ConversationId, draft, replyTargetId);
+            model.OnSendText(model.ConversationId, body, replyTargetId);
             UiFeedback.Play(UiSound.MessageSent);
-            draft = string.Empty;
+            editor.Adopt(string.Empty);
             ClearReply();
         }
 
@@ -781,10 +784,10 @@ internal sealed class ChatComposer : IDisposable
             return;
         }
 
-        if (draft.Length + picked.Length < model.MaxLength)
+        if (editor.Text.Length + picked.Length < model.MaxLength)
         {
-            draft += picked;
-            Plugin.Fonts.NoticeText(draft);
+            editor.Append(picked);
+            Plugin.Fonts.NoticeText(editor.Text);
         }
     }
 

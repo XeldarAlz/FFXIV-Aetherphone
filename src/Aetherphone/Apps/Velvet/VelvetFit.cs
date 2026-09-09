@@ -83,6 +83,30 @@ internal static class VelvetFit
         }
     }
 
+    public static int Headline(List<VelvetFitItem> items)
+    {
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (Warns(items[index].Kind))
+            {
+                return index;
+            }
+        }
+
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (items[index].Kind != VelvetFitKind.NoConflicts)
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    public static bool Warns(VelvetFitKind kind) =>
+        kind is VelvetFitKind.Conflict or VelvetFitKind.NoSharedLanguage;
+
     public static int Score(VelvetProfileDto? me, VelvetProfileDto other)
     {
         var score = other.Presence switch

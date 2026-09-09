@@ -9,34 +9,55 @@ internal sealed class DeviceLinkWatcher : IDisposable
     private readonly KeyVault vault;
     private readonly AethernetSession session;
     private readonly ConfirmService confirm;
+    private readonly RealtimeSignalBus signals;
     private readonly CancellationTokenSource cancellation = new();
     private readonly HashSet<string> handled = new(StringComparer.Ordinal);
     private float sincePoll;
     private volatile bool polling;
     private volatile bool prompting;
+    private volatile bool probeRequested;
+    private bool wasEligible;
 
-    private const float PollSeconds = 6f;
+    private const float OfflinePollSeconds = 300f;
 
-    public DeviceLinkWatcher(KeyVault vault, AethernetSession session, ConfirmService confirm)
+    public DeviceLinkWatcher(KeyVault vault, AethernetSession session, ConfirmService confirm,
+        RealtimeSignalBus signals)
     {
         this.vault = vault;
         this.session = session;
         this.confirm = confirm;
+        this.signals = signals;
+        signals.DeviceLinkRequested += OnDeviceLinkRequested;
+        signals.ConnectedChanged += OnRealtimeConnectedChanged;
     }
 
     public void Tick(float deltaSeconds)
     {
-        if (polling || prompting || !session.IsSignedIn || vault.State != KeyVaultState.Unlocked)
+        var eligible = session.IsSignedIn && vault.State == KeyVaultState.Unlocked;
+        if (!eligible)
+        {
+            wasEligible = false;
+            return;
+        }
+
+        if (!wasEligible)
+        {
+            wasEligible = true;
+            probeRequested = true;
+        }
+
+        if (polling || prompting)
         {
             return;
         }
 
         sincePoll += deltaSeconds;
-        if (sincePoll < PollSeconds)
+        if (!probeRequested && (signals.RealtimeActive || sincePoll < OfflinePollSeconds))
         {
             return;
         }
 
+        probeRequested = false;
         sincePoll = 0f;
         polling = true;
         _ = Task.Run(async () =>
@@ -76,6 +97,19 @@ internal sealed class DeviceLinkWatcher : IDisposable
         });
     }
 
+    private void OnDeviceLinkRequested()
+    {
+        probeRequested = true;
+    }
+
+    private void OnRealtimeConnectedChanged(bool connected)
+    {
+        if (connected)
+        {
+            probeRequested = true;
+        }
+    }
+
     private void Prompt(string requestId, string verificationCode, string ephemeralPublicKey)
     {
         prompting = true;
@@ -101,6 +135,7 @@ internal sealed class DeviceLinkWatcher : IDisposable
                     finally
                     {
                         prompting = false;
+                        probeRequested = true;
                         done(true);
                     }
                 });
@@ -109,6 +144,7 @@ internal sealed class DeviceLinkWatcher : IDisposable
             Cancel = () =>
             {
                 prompting = false;
+                probeRequested = true;
                 vault.CancelDeviceLink(requestId);
             },
         });
@@ -116,6 +152,8 @@ internal sealed class DeviceLinkWatcher : IDisposable
 
     public void Dispose()
     {
+        signals.DeviceLinkRequested -= OnDeviceLinkRequested;
+        signals.ConnectedChanged -= OnRealtimeConnectedChanged;
         cancellation.Cancel();
         cancellation.Dispose();
     }

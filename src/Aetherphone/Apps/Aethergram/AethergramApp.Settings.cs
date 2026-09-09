@@ -55,6 +55,12 @@ internal sealed partial class AethergramApp
             }
 
             DrawSettingsHint(Loc.T(L.Aethergram.PrivateAccountHint));
+            ImGui.Dummy(new Vector2(0f, 12f * scale));
+            if (DrawSettingsLinkRow(Loc.T(L.Social.FeedHowItWorks)))
+            {
+                feedExplainer.Open();
+            }
+
             ImGui.Dummy(new Vector2(0f, 24f * scale));
         }
     }
@@ -77,6 +83,23 @@ internal sealed partial class AethergramApp
             PhoneIcon.Draw(drawList, checkCenter, PhoneIcons.Check, Ink.AccentLink, SettingsCheckSize * scale);
         }
 
+        FeedCell.End(drawList, cell, Ink.Hairline);
+        return cell.Tapped;
+    }
+
+    private bool DrawSettingsLinkRow(string label)
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var cell = FeedCell.Begin(drawList, SettingsRowHeight * scale, Ink.HoverTint);
+        var left = cell.Bounds.Min.X + CellPadX * scale;
+        var chevronCenter = new Vector2(cell.Bounds.Max.X - CellPadX * scale - SettingsCheckSize * 0.5f * scale,
+            cell.Bounds.Center.Y);
+        var fitted = Typography.FitText(label, MathF.Max(1f, chevronCenter.X - SettingsCheckSize * scale - left), SettingsRowStyle);
+        var size = Typography.Measure(fitted, SettingsRowStyle);
+        Typography.Draw(drawList, new Vector2(left, cell.Bounds.Center.Y - size.Y * 0.5f), fitted, Ink.TitleInk,
+            SettingsRowStyle);
+        PhoneIcon.Draw(drawList, chevronCenter, PhoneIcons.ChevronRight, Ink.MutedInk, SettingsCheckSize * scale);
         FeedCell.End(drawList, cell, Ink.Hairline);
         return cell.Tapped;
     }

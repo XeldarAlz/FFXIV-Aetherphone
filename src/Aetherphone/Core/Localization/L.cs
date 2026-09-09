@@ -59,6 +59,18 @@ internal static class L
 
     internal static class Social
     {
+        public static readonly LocString FeedLatest = new("social.feedLatest", "Latest");
+        public static readonly LocString FeedEveryone = new("social.feedEveryone", "Everyone");
+        public static readonly LocString FeedCaughtUp = new("social.feedCaughtUp", "You're all caught up");
+        public static readonly LocString FeedCaughtUpHint = new("social.feedCaughtUpHint", "Older posts continue below");
+        public static readonly LocString FeedSuggested = new("social.feedSuggested", "Suggested for you");
+        public static readonly LocString FeedSuggestedTaste = new("social.feedSuggestedTaste", "Liked by people with your taste");
+        public static readonly LocString FeedSuggestedFresh = new("social.feedSuggestedFresh", "New post, you are among the first to see it");
+        public static readonly LocString FeedHowItWorks = new("social.feedHowItWorks", "How your feed works");
+        public static readonly LocString FeedHowItWorksIntro = new("social.feedHowItWorksIntro", "For You shows the posts you have not seen yet, in the order we think you will enjoy them. Latest is every post, newest first, and it is always one tap away.");
+        public static readonly LocString FeedHowItWorksQuality = new("social.feedHowItWorksQuality", "A post rises on how the people who saw it responded, never on how many followers its author has. Comments and replies count far more than a heart.");
+        public static readonly LocString FeedHowItWorksPeople = new("social.feedHowItWorksPeople", "People you interact with, and players who like the same posts you do, lift what appears for you.");
+        public static readonly LocString FeedHowItWorksFair = new("social.feedHowItWorksFair", "Posting hour does not decide reach. A post made while most players are asleep waits for them instead of expiring, and every new post is shown to a few people before it competes on numbers.");
         public static readonly LocString RoleManagement = new("social.roleManagement", "Management");
         public static readonly LocString RoleDeveloper = new("social.roleDeveloper", "Developer");
         public static readonly LocString RoleModerator = new("social.roleModerator", "Moderator");
@@ -246,6 +258,11 @@ internal static class L
         public static readonly LocString NoticeFrameRevokedBodyOne = new("moderation.notice.frameRevokedBodyOne", "The {0} frame was removed from your account and no longer sits around your picture. If you think this was a mistake, reach out to us on our Discord server.");
         public static readonly LocString NoticeFrameRevokedBodyMany = new("moderation.notice.frameRevokedBodyMany", "These frames were removed from your account: {0}. They no longer sit around your picture. If you think this was a mistake, reach out to us on our Discord server.");
         public static readonly LocString NoticeFrameRevokedBodyFallback = new("moderation.notice.frameRevokedBodyFallback", "An avatar frame was removed from your account. If you think this was a mistake, reach out to us on our Discord server.");
+        public static readonly LocString NoticeNameResetTitle = new("moderation.notice.nameResetTitle", "Your name was reset");
+        public static readonly LocString NoticeNameResetIntro = new("moderation.notice.nameResetIntro", "A moderator reset the name you go by, so it is back to the random handle a new account starts with. Open Settings and pick a new one whenever you like.");
+        public static readonly LocString NoticeNameResetHandle = new("moderation.notice.nameResetHandle", "You are now {0}");
+        public static readonly LocString NoticeNameResetWhere = new("moderation.notice.nameResetWhere", "Reset on: {0}");
+        public static readonly LocString NoticeNameResetLabel = new("moderation.notice.nameResetLabel", "New handle");
     }
 
     internal static class Apps
@@ -1279,15 +1296,33 @@ internal static class L
             new("hunts.historyRequiresLoginTooltip", "Log in to Faloop to see hunt history");
         public static readonly LocString HistoryEmpty = new("hunts.historyEmpty", "No recent hunts found");
         public static readonly LocString ListTab = new("hunts.listTab", "List");
-        public static readonly LocString NotificationSettingsTab =
+        public static readonly LocString SettingsTab = new("hunts.settingsTab", "Settings");
+        public static readonly LocString NotificationsSectionHeader =
             new("hunts.notificationSettingsTab", "Notifications");
-        public static readonly LocString NotificationSettingsTitle =
-            new("hunts.notificationSettingsTitle", "Notification Settings");
-        public static readonly LocString NotificationSettingsRequiresLoginTooltip =
-            new("hunts.notificationSettingsRequiresLoginTooltip",
-                "Log in to Faloop to receive live spawn notifications");
+        public static readonly LocString NotificationsSignInHint =
+            new("hunts.notificationsSignInHint", "Log in to Faloop to receive these notifications");
         public static readonly LocString ResetToDefault = new("hunts.resetToDefault", "Reset to Default");
         public static readonly LocString ResetTutorial = new("hunts.resetTutorial", "Reset Tutorial");
+        public static readonly LocString NativeMapMarkersLabel =
+            new("hunts.nativeMapMarkersLabel", "Show Map Markers");
+        public static readonly LocString NativeMapMarkersIndicator =
+            new("hunts.nativeMapMarkersIndicator", "Hunt markers on");
+        public static readonly LocString NativeMapMarkersInstanceIndicator = new(
+            "hunts.nativeMapMarkersInstanceIndicator", "Currently showing instance {0}");
+        public static readonly LocString NativeMapLegendCandidate = new("hunts.nativeMapLegendCandidate",
+            "Potential");
+        public static readonly LocString NativeMapLegendSighted = new("hunts.nativeMapLegendSighted",
+            "Unclaimed by S Rank");
+        public static readonly LocString NativeMapLegendConfirmed = new("hunts.nativeMapLegendConfirmed",
+            "Claimed by S Rank");
+        public static readonly LocString NativeMapLegendActiveMinion = new("hunts.nativeMapLegendActiveMinion",
+            "SS minion");
+        public static readonly LocString NativeMapLegendSsSpawn = new("hunts.nativeMapLegendSsSpawn", "SS spawn");
+        public static readonly LocString NativeMapLegendFateInactive = new("hunts.nativeMapLegendFateInactive",
+            "FATE inactive");
+        public static readonly LocString NativeMapLegendFateActive = new("hunts.nativeMapLegendFateActive",
+            "FATE active");
+        public static readonly LocString NativeMapLegendToggle = new("hunts.nativeMapLegendToggle", "Legend");
         public static readonly LocString NotifyModeDefault = new("hunts.notifyModeDefault", "Default");
         public static readonly LocString NotifyModeEnabled = new("hunts.notifyModeEnabled", "Enabled");
         public static readonly LocString NotifyModeEnabledOnWorldValue =
@@ -1582,7 +1617,7 @@ internal static class L
         public static readonly LocString PhoneSize = new("settings.phoneSize", "Phone Size");
         public static readonly LocString ClockFormat = new("settings.clockFormat", "Clock");
         public static readonly LocString Use24HourClock = new("settings.use24HourClock", "24-hour time");
-        public static readonly LocString Notifications = new("settings.notifications", "Notifications");
+        public static readonly LocString Notifications = new("settings.notifications", "Notifications and Badges");
         public static readonly LocString DoNotDisturb = new("settings.doNotDisturb", "Do Not Disturb");
         public static readonly LocString Vibration = new("settings.vibration", "Vibration");
         public static readonly LocString VibrationHint = new("settings.vibrationHint", "The phone shakes briefly when a notification arrives.");
@@ -1593,6 +1628,9 @@ internal static class L
         public static readonly LocString NotificationApps = new("settings.notificationApps", "Apps");
         public static readonly LocString AllowNotifications = new("settings.allowNotifications", "Allow Notifications");
         public static readonly LocString NotificationsOff = new("settings.notificationsOff", "Off");
+        public static readonly LocString NotificationOnly = new("settings.notificationOnly", "Notification only");
+        public static readonly LocString BadgeOnly = new("settings.badgeOnly", "Badge only");
+        public static readonly LocString ShowBadge = new("settings.showBadge", "Show badge");
         public static readonly LocString SoundDefault = new("settings.soundDefault", "Default");
         public static readonly LocString General = new("settings.general", "General");
         public static readonly LocString Startup = new("settings.startup", "Startup");
@@ -1644,6 +1682,10 @@ internal static class L
         public static readonly LocString Plugin = new("settings.plugin", "Plugin");
         public static readonly LocString Version = new("settings.version", "Version");
         public static readonly LocString Command = new("settings.command", "Command");
+        public static readonly LocString TestServer = new("settings.testServer", "Test server");
+
+        public static readonly LocString TestServerHint = new("settings.testServerHint",
+            "Beta builds talk to the Aethernet test server, which keeps its own accounts, messages and posts. Turn this off to use the live server instead. Switching signs you out, so you sign in again on the other server.");
         public static readonly LocString CopySupportInfo = new("settings.copySupportInfo", "Copy Support Info");
         public static readonly LocString SupportInfoCopied = new("settings.supportInfoCopied", "Copied to clipboard");
         public static readonly LocString SupportAetherphone = new("settings.supportAetherphone", "Support Aetherphone");
@@ -1702,13 +1744,16 @@ internal static class L
     {
         public static readonly LocString SectionMessaging = new("changelog.sectionMessaging", "Messaging");
         public static readonly LocString SectionPhone = new("changelog.sectionPhone", "Phone");
+        public static readonly LocString SectionSocial = new("changelog.sectionSocial", "Chirper and Aethergram");
 
         public static readonly LocString[] Release1020Velvet =
         {
+            new("changelog.r1020.50",
+                "Added a One person at a time button to Discover's header in Velvet, which turns the list into a card deck with Pass and Connect"),
             new("changelog.r1020.2",
                 "Overhauled Velvet from top to bottom: the feed, discover, profiles, messages, the composer and the filters"),
             new("changelog.r1020.3",
-                "Discover is now a card deck, one person at a time with their photos"),
+                "Discover shows people as a scrolling list of photo cards, each with a line about what you two share"),
             new("changelog.r1020.5",
                 "Added a race filter, and you pick the race you are shown as"),
             new("changelog.r1020.6",
@@ -1745,6 +1790,8 @@ internal static class L
                 "Group chats now show the sender's photo next to their messages and their name inside the bubble"),
             new("changelog.r1020.22",
                 "Starred messages now carry a star in the thread"),
+            new("changelog.r1020.59",
+                "Shift and Enter now makes a new line in a message, in ChocoChat, Aethergram, Velvet and Yellow Pages inquiries, and the box grows as you type. Enter still sends"),
         };
 
         public static readonly LocString[] Release1020Linkpearl =
@@ -1753,10 +1800,32 @@ internal static class L
                 "Long histories no longer drag the game down: a conversation with a full stream draws the part you are looking at and reaches further back as you scroll up"),
             new("changelog.r1020.28",
                 "Fixed Open a Linkpearl chat showing on NPCs, and its switch moved to Settings > General, where it now starts off"),
+            new("changelog.r1020.38",
+                "Fixed messages splitting into several when they fit in one: backspacing over a word that had just wrapped onto a new line turned the wrap into a real line break"),
+        };
+
+        public static readonly LocString[] Release1020Hunts =
+        {
+            new("changelog.r1020.39",
+                "Added hunt markers on the game's own map and minimap: turn on Show Map Markers in the Settings tab and the candidate spawn points of the zone you are looking at are drawn there, contributed by Deldee"),
+            new("changelog.r1020.40",
+                "Added a legend in the corner that names every marker and tells you which instance the markers are following"),
+            new("changelog.r1020.41",
+                "Markers follow what hunters report: a spot ruled out and the spot the S rank has claimed stand apart from the ones still in play"),
+            new("changelog.r1020.42",
+                "Spots an S rank can never use stay grey, even where an A or B rank shares the same point"),
+            new("changelog.r1020.43",
+                "Notification settings moved into a Settings tab, where Show Map Markers and Reset Tutorial sit above them and work without a Faloop account"),
+            new("changelog.r1020.44",
+                "Fixed spawn window percentages drifting away from Faloop once a window passed its cap, and a window whose numbers do not work out now shows a question mark instead of 0%"),
+            new("changelog.r1020.45",
+                "Fixed tapping an aetheryte on a zone map dropping a flag instead of taking you there"),
         };
 
         public static readonly LocString[] Release1020AetherStream =
         {
+            new("changelog.r1020.51",
+                "The MogCast screen tilts and rolls as well as turns, so it can hang overhead, lean back against a wall, or sit at an angle, and a Flat Screen switch drops the cinema curve"),
             new("changelog.r1020.29",
                 "Fixed long videos losing their sound after 20 to 50 minutes while the picture kept playing"),
         };
@@ -1765,10 +1834,36 @@ internal static class L
         {
             new("changelog.r1020.35",
                 "Fixed the Music icon carrying a badge at all times: it now lights only when a radio station you follow goes on air, and clears when you open the app"),
+            new("changelog.r1020.37",
+                "Fixed songs failing outright when the link resolver fell behind: Music now updates it on its own and retries, the way MogCast already does"),
+        };
+
+        public static readonly LocString[] Release1020Games =
+        {
+            new("changelog.r1020.49",
+                "Fixed Uno showing an error instead of the table when you entered a new room with the same number of players as the last one"),
+        };
+
+        public static readonly LocString[] Release1020Polls =
+        {
+            new("changelog.r1020.52",
+                "Poll results now stay hidden until you vote: the bars, the counts and the total only appear once you pick an option"),
+        };
+
+        public static readonly LocString[] Release1020Notes =
+        {
+            new("changelog.r1020.57",
+                "Notes now wraps a long line onto the next line instead of running it off the side of the screen, and the wrap is only for reading: the note is stored exactly as you typed it"),
+            new("changelog.r1020.58",
+                "Added a copy button to a note, so what you paste elsewhere comes out as the clean paragraphs you wrote"),
         };
 
         public static readonly LocString[] Release1020Settings =
         {
+            new("changelog.r1020.47",
+                "Added a Show badge switch for every app that puts a count on its home icon, on the Notifications and Badges page in Settings, contributed by Deldee"),
+            new("changelog.r1020.48",
+                "Moved the badge switches that lived inside Wallet, Dailies and Activity onto that same page, contributed by Deldee"),
             new("changelog.r1020.36",
                 "Fixed the changelog slowing the game down while it was open, it now draws only the releases on screen instead of every release at once"),
         };
@@ -1785,6 +1880,26 @@ internal static class L
                 "Fixed your social region following the character you are playing instead of the account you are signed into, every account now starts on Automatic and keeps its own choice"),
             new("changelog.r1020.34",
                 "Fixed a layout slip after icon tiles that could shift whatever was drawn next on Activity, Collections, Dailies, Fishing, Health, Muster, Timers, Venues and Yellow Pages, contributed by BluntEXE"),
+            new("changelog.r1020.46",
+                "Fixed removing a widget leaving the home screen unresponsive until the plugin was reloaded, contributed by jambalong"),
+        };
+
+        public static readonly LocString[] Release1020Social =
+        {
+            new("changelog.r1020.53",
+                "Added a For You tab with a new smart feed to both apps: the posts you have not seen yet, ordered by how people actually responded, who you interact with, and players who share your taste"),
+            new("changelog.r1020.54",
+                "Latest sits beside it with the newest-first feed and an Everyone or Following switch"),
+            new("changelog.r1020.55",
+                "For You switches on in waves. Until yours does, it shows the newest posts as before"),
+            new("changelog.r1020.56",
+                "Give it about a week. The feed learns from what people actually read and react to, so it gets better as it goes"),
+        };
+
+        public static readonly LocString[] Release10110Phone =
+        {
+            new("changelog.r10110.0",
+                "Fixed an issue where the phone was causing Too many requests errors, background communication with the server is now much lighter"),
         };
 
         public static readonly LocString[] Release1019Phone =
@@ -3912,8 +4027,6 @@ internal static class L
         public static readonly LocString RingClosedBody = new("character.ringClosedBody", "You reached today's goal.");
         public static readonly LocString AllRingsTitle = new("character.allRingsTitle", "All rings closed");
         public static readonly LocString AllRingsBody = new("character.allRingsBody", "You hit all three goals today. Perfect day!");
-        public static readonly LocString ShowBadge = new("character.showBadge", "Show retainer ventures badge");
-        public static readonly LocString HideBadge = new("character.hideBadge", "Hide retainer ventures badge");
     }
 
     internal static class Camera
@@ -4384,6 +4497,7 @@ internal static class L
         public static readonly LocString DiscoveryHeader = new("velvet.discoveryHeader", "Discovery");
         public static readonly LocString DiscoverableHelp =
             new("velvet.discoverableHelp", "When on, your profile can be found by others in Discover.");
+        public static readonly LocString DeckModeLabel = new("velvet.deckModeLabel", "One person at a time");
         public static readonly LocString WhoCanMessage = new("velvet.whoCanMessage", "Who can message you");
         public static readonly LocString WhoEveryone = new("velvet.whoEveryone", "Everyone");
         public static readonly LocString WhoFriends = new("velvet.whoFriends", "Friends");
@@ -4513,6 +4627,11 @@ internal static class L
             "Saved Presets");
         public static readonly LocString CastingScale = new("aetherstream.castingScale", "Scale");
         public static readonly LocString CastingRotate = new("aetherstream.castingRotate", "Rotate");
+        public static readonly LocString CastingTilt = new("aetherstream.castingTilt", "Tilt");
+        public static readonly LocString CastingRoll = new("aetherstream.castingRoll", "Roll");
+        public static readonly LocString CastingFlatScreen = new("aetherstream.castingFlatScreen", "Flat Screen");
+        public static readonly LocString CastingFlatScreenHint = new("aetherstream.castingFlatScreenHint",
+            "Off, the screen curves gently toward you like a cinema panel. On, it stays perfectly flat.");
         public static readonly LocString CastingRecenter = new("aetherstream.castingRecenter",
             "Recenter in front of me");
 
@@ -4787,6 +4906,7 @@ internal static class L
         public static readonly LocString NewNote = new("notes.newNote", "New Note");
         public static readonly LocString Untitled = new("notes.untitled", "New Note");
         public static readonly LocString NoAdditionalText = new("notes.noAdditionalText", "No additional text");
+        public static readonly LocString CopyNote = new("notes.copyNote", "Copy Note");
         public static readonly LocString DeleteNote = new("notes.deleteNote", "Delete Note");
         public static readonly LocString DeleteNoteConfirm = new("notes.deleteNoteConfirm", "Delete this note?");
         public static readonly LocString NewReminder = new("notes.newReminder", "New Reminder");
@@ -4862,8 +4982,6 @@ internal static class L
         public static readonly LocString NothingLeft = new("dailies.nothingLeft", "Nothing left to do");
         public static readonly LocString Remaining = new("dailies.remaining", "{0} remaining");
         public static readonly LocString Resets = new("dailies.resets", "Resets {0}");
-        public static readonly LocString ShowBadge = new("dailies.showBadge", "Show badge");
-        public static readonly LocString ShowBadgeNote = new("dailies.showBadgeNote", "Count unfinished tasks on the Home icon");
         public static readonly LocString AutoTracked = new("dailies.autoTracked", "Auto");
         public static readonly LocString DutyRoulettes = new("dailies.dutyRoulettes", "Duty Roulettes");
         public static readonly LocString BeastTribe = new("dailies.beastTribe", "Tribal Quests");
@@ -5027,8 +5145,6 @@ internal static class L
         public static readonly LocString SectionPvp = new("wallet.sectionPvp", "PvP");
         public static readonly LocString SectionCrafting = new("wallet.sectionCrafting", "Crafting & Gathering");
         public static readonly LocString SectionOther = new("wallet.sectionOther", "Other");
-        public static readonly LocString ShowBadge = new("wallet.showBadge", "Show badge");
-        public static readonly LocString HideBadge = new("wallet.hideBadge", "Hide badge");
     }
 
     internal static class Jobs
@@ -5387,6 +5503,18 @@ internal static class L
         public static readonly LocString Coin = new("minimized.coin", "Aether Coin");
         public static readonly LocString Ventures = new("minimized.ventures", "Ventures");
         public static readonly LocString Rings = new("minimized.rings", "Activity rings");
+        public static readonly LocString Shape = new("minimized.shape", "Shape");
+        public static readonly LocString ShapePhone = new("minimized.shapePhone", "Mini phone");
+        public static readonly LocString ShapeMinimap = new("minimized.shapeMinimap", "Minimap");
+        public static readonly LocString ShapeHint = new("minimized.shapeHint", "Choose what the phone collapses into. The minimap draws the zone map around you, so it can sit where the game minimap does.");
+        public static readonly LocString Wallpaper = new("minimized.wallpaper", "Show wallpaper");
+        public static readonly LocString WallpaperHint = new("minimized.wallpaperHint", "Paints your home wallpaper behind the mini phone, dimmed so the clock stays readable.");
+        public static readonly LocString Size = new("minimized.size", "Size");
+        public static readonly LocString SizeSmall = new("minimized.sizeSmall", "Small");
+        public static readonly LocString SizeMedium = new("minimized.sizeMedium", "Medium");
+        public static readonly LocString SizeLarge = new("minimized.sizeLarge", "Large");
+        public static readonly LocString MinimapHint = new("minimized.minimapHint", "The map faces north and shows your heading, the zone name and your coordinates. Tap it to open the phone, hold it to close.");
+        public static readonly LocString NoMap = new("minimized.noMap", "No map here");
     }
 
     internal static class Time
@@ -5454,6 +5582,7 @@ internal static class L
         public static readonly LocString Empty = new("polls.empty", "No polls yet");
         public static readonly LocString EmptySubtitle = new("polls.emptySubtitle", "New polls will land here.");
         public static readonly LocString FinalResults = new("polls.finalResults", "Final results");
+        public static readonly LocString HiddenResults = new("polls.hiddenResults", "Vote to see results");
         public static readonly LocPlural Votes = new("polls.votes", "{0} vote", "{0} votes");
     }
 
@@ -6329,8 +6458,8 @@ internal static class L
         public static readonly LocString NotesRemindersBody = new("onboarding.notesRemindersBody", "Switch to the Reminders tab for a simple to-do list. Give one a due date and the phone nudges you when it's time.");
         public static readonly LocString CalculatorBody = new("onboarding.calculatorBody", "A simple calculator for quick everyday sums, with a running tape of your recent results to scroll back through.");
         public static readonly LocString PollsBody = new("onboarding.pollsBody", "Community polls from across Aethernet. Tap an option to cast your vote and see where everyone stands.");
-        public static readonly LocString PollsResultsTitle = new("onboarding.pollsResultsTitle", "Live results");
-        public static readonly LocString PollsResultsBody = new("onboarding.pollsResultsBody", "Every vote updates the bars in real time. Once a poll closes, you'll see the final tally.");
+        public static readonly LocString PollsResultsTitle = new("onboarding.pollsResultsTitle", "Results after you vote");
+        public static readonly LocString PollsResultsBody = new("onboarding.pollsResultsBody", "Nobody sees the tally before voting. Pick an option and the bars appear, live from then on.");
         public static readonly LocString ChirperTabsTitle = new("onboarding.chirperTabsTitle", "Two feeds");
         public static readonly LocString ChirperTabsBody = new("onboarding.chirperTabsBody", "For You shows chirps from everyone; Following keeps it to the people you follow. Swap between them any time.");
         public static readonly LocString ChirperSearchTitle = new("onboarding.chirperSearchTitle", "Find people");
@@ -6440,8 +6569,6 @@ internal static class L
         public static readonly LocString TimersRemindersBody = new("onboarding.timersRemindersBody", "Flip a toggle and the phone pings you when that reset hits or a retainer venture finishes.");
         public static readonly LocString DailiesCadenceTitle = new("onboarding.dailiesCadenceTitle", "Two rhythms");
         public static readonly LocString DailiesCadenceBody = new("onboarding.dailiesCadenceBody", "Your routines split into Daily and Weekly. Tap here to flip over to the weekly list.");
-        public static readonly LocString DailiesBadgeTitle = new("onboarding.dailiesBadgeTitle", "Quiet the badge");
-        public static readonly LocString DailiesBadgeBody = new("onboarding.dailiesBadgeBody", "The Home icon counts what is still unfinished. Turn it off and the app stays quiet until you open it.");
         public static readonly LocString FishingHeroTitle = new("onboarding.fishingHeroTitle", "Next voyage");
         public static readonly LocString FishingHeroBody = new("onboarding.fishingHeroBody", "This card is your next boarding window, with the route, its time of day and a countdown to departure.");
         public static readonly LocString FishingBlueTitle = new("onboarding.fishingBlueTitle", "Blue fish aboard");
@@ -6584,6 +6711,10 @@ internal static class L
         public static readonly LocString HuntsSignInBody = new("onboarding.huntsSignInBody", "Tap here to sign in or create a Faloop account and start getting live spawns.");
         public static readonly LocString HuntsGuideTitle = new("onboarding.huntsGuideTitle", "Learn more");
         public static readonly LocString HuntsGuideBody = new("onboarding.huntsGuideBody", "Want to learn more about hunts? Check our guide for more information.");
+        public static readonly LocString HuntsSettingsTitle = new("onboarding.huntsSettingsTitle", "Settings");
+        public static readonly LocString HuntsSettingsBody = new("onboarding.huntsSettingsBody", "Tap here to reset this tutorial and, once you sign in, manage which notifications you get.");
+        public static readonly LocString HuntsMapMarkersTitle = new("onboarding.huntsMapMarkersTitle", "In-game map markers");
+        public static readonly LocString HuntsMapMarkersBody = new("onboarding.huntsMapMarkersBody", "Turn on Show Map Markers to add candidate spawn points to FFXIV's own map and minimap.");
     }
 
     internal static class Setup

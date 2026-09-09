@@ -11,6 +11,7 @@ namespace Aetherphone.Core.Social;
 internal enum SocialFeedScope
 {
     ForYou,
+    Latest,
     Following,
 }
 
@@ -33,11 +34,19 @@ internal abstract class SocialFeedStore : IDisposable
     protected readonly MediaClient media;
     protected readonly RealtimeSignalBus signals;
     protected readonly StoreWork work;
+    private readonly FeedImpressions impressions = new();
+    private readonly FeedSignalQueue feedSignals;
     private readonly RetryGate meGate = new(TimeSpan.FromSeconds(30));
     private volatile UserDto? me;
     private volatile AvatarUploadOutcome avatarFailure = AvatarUploadOutcome.Unreachable;
-    protected readonly FeedLane<PostDto> forYouLane = new(ByNewestFirst, ByCreatedAtUnix);
+    protected readonly FeedLane<PostDto> forYouLane = FeedLane<PostDto>.ServerOrdered();
+    protected readonly FeedLane<PostDto> latestLane = new(ByNewestFirst, ByCreatedAtUnix);
     protected readonly FeedLane<PostDto> followingLane = new(ByNewestFirst, ByCreatedAtUnix);
+    private static readonly Dictionary<string, FeedItemNote> NoNotes = new(StringComparer.Ordinal);
+    private volatile Dictionary<string, FeedItemNote> forYouNotes = NoNotes;
+    private volatile string? caughtUpAfterId;
+    private volatile bool caughtUpAtTop;
+    private volatile bool forYouRanked;
     private readonly FeedLane<PostDto> savedLane = new(ByNewestFirst);
     private readonly FeedLane<PostDto> likedLane = new(ByNewestFirst);
     private volatile UserDto[] followRequests = Array.Empty<UserDto>();
@@ -100,6 +109,7 @@ internal abstract class SocialFeedStore : IDisposable
         this.media = media;
         this.signals = signals;
         work = new StoreWork(logTag);
+        feedSignals = new FeedSignalQueue(client.ReportSeenAsync, client.ReportSignalAsync, work);
         session.Changed += OnSessionChanged;
         signals.ContentRemoved += OnContentRemoved;
     }
@@ -130,7 +140,12 @@ internal abstract class SocialFeedStore : IDisposable
         me = null;
         meGate.Reset();
         forYouLane.Clear();
+        latestLane.Clear();
         followingLane.Clear();
+        forYouNotes = NoNotes;
+        caughtUpAfterId = null;
+        caughtUpAtTop = false;
+        forYouRanked = false;
         profileLane.Clear();
         detailPost = null;
         profileUserId = null;
@@ -156,8 +171,34 @@ internal abstract class SocialFeedStore : IDisposable
         followRequests = Array.Empty<UserDto>();
         followRequestsCursor = null;
         followRequestsLoaded = false;
+        impressions.Reset();
+        feedSignals.Reset();
         ClearTagged();
         ClearHashtag();
+    }
+
+    public void BeginImpressions(float windowTop, float windowBottom, float deltaSeconds)
+    {
+        impressions.BeginFrame(windowTop, windowBottom, deltaSeconds);
+        feedSignals.Tick(DateTime.UtcNow);
+    }
+
+    public void ObserveImpression(string postId, float rowTop, float rowBottom)
+    {
+        if (impressions.Observe(postId, rowTop, rowBottom))
+        {
+            feedSignals.MarkSeen(postId);
+        }
+    }
+
+    public void ReportFeedSignal(string postId, int kind)
+    {
+        feedSignals.Signal(postId, kind);
+    }
+
+    public void FlushFeedSignals()
+    {
+        feedSignals.Flush(DateTime.UtcNow);
     }
 
     public MentionSuggestions NewMentionSuggestions() => new(account, work);
@@ -178,11 +219,79 @@ internal abstract class SocialFeedStore : IDisposable
 
     public ITrimmable FeedSource(SocialFeedScope scope) => Lane(scope);
 
-    private FeedLane<PostDto> Lane(SocialFeedScope scope) =>
-        scope == SocialFeedScope.ForYou ? forYouLane : followingLane;
+    private FeedLane<PostDto> Lane(SocialFeedScope scope) => scope switch
+    {
+        SocialFeedScope.ForYou => forYouLane,
+        SocialFeedScope.Latest => latestLane,
+        _ => followingLane,
+    };
 
-    private static string FeedKey(SocialFeedScope scope) =>
-        scope == SocialFeedScope.ForYou ? "explore" : "following";
+    private static string FeedKey(SocialFeedScope scope) => scope switch
+    {
+        SocialFeedScope.ForYou => "foryou",
+        SocialFeedScope.Latest => "explore",
+        _ => "following",
+    };
+
+    public bool ForYouRanked => forYouRanked;
+
+    public bool CaughtUpAtTop => caughtUpAtTop;
+
+    public string? CaughtUpAfterId => caughtUpAfterId;
+
+    public bool TryGetFeedNote(string postId, out FeedItemNote note) => forYouNotes.TryGetValue(postId, out note);
+
+    private void RecordForYouPage(FeedPage page, bool refresh)
+    {
+        var notes = refresh || forYouNotes.Count == 0
+            ? new Dictionary<string, FeedItemNote>(page.Items.Length, StringComparer.Ordinal)
+            : new Dictionary<string, FeedItemNote>(forYouNotes, StringComparer.Ordinal);
+        if (page.Notes is not null)
+        {
+            var count = Math.Min(page.Notes.Length, page.Items.Length);
+            for (var index = 0; index < count; index++)
+            {
+                notes[page.Items[index].Id] = page.Notes[index];
+            }
+        }
+
+        forYouNotes = notes;
+        if (refresh)
+        {
+            forYouRanked = page.Ranked;
+            caughtUpAtTop = false;
+            caughtUpAfterId = null;
+        }
+
+        if (page.CaughtUpAfter is not int caughtUp)
+        {
+            return;
+        }
+
+        if (caughtUp <= 0)
+        {
+            caughtUpAtTop = refresh || forYouLane.Items.Length == page.Items.Length;
+            caughtUpAfterId = caughtUpAtTop || forYouLane.Items.Length == 0 ? null : LastBeforePage(page);
+            return;
+        }
+
+        caughtUpAfterId = page.Items[Math.Min(caughtUp, page.Items.Length) - 1].Id;
+    }
+
+    private string? LastBeforePage(FeedPage page)
+    {
+        var items = forYouLane.Items;
+        var firstIncoming = page.Items.Length > 0 ? page.Items[0].Id : null;
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (string.Equals(items[index].Id, firstIncoming, StringComparison.Ordinal))
+            {
+                return index > 0 ? items[index - 1].Id : null;
+            }
+        }
+
+        return items.Length > 0 ? items[^1].Id : null;
+    }
 
     public string? ProfileUserId => profileUserId;
     public UserDto? ProfileUser => profileUser;
@@ -424,11 +533,13 @@ internal abstract class SocialFeedStore : IDisposable
 
         feedRegions = regionsCsv;
         forYouLane.Clear();
+        latestLane.Clear();
         RefreshFeed(SocialFeedScope.ForYou);
+        RefreshFeed(SocialFeedScope.Latest);
     }
 
     private string? RegionsFor(SocialFeedScope scope) =>
-        scope == SocialFeedScope.ForYou ? feedRegions : null;
+        scope == SocialFeedScope.Following ? null : feedRegions;
 
     public void RefreshFeed(SocialFeedScope scope)
     {
@@ -448,6 +559,11 @@ internal abstract class SocialFeedStore : IDisposable
             if (page is not null)
             {
                 lane.ApplyRefresh(page.Items, page.NextCursor);
+                if (scope == SocialFeedScope.ForYou)
+                {
+                    RecordForYouPage(page, true);
+                }
+
                 return;
             }
 
@@ -479,6 +595,11 @@ internal abstract class SocialFeedStore : IDisposable
                 .ConfigureAwait(false);
             if (page is not null)
             {
+                if (scope == SocialFeedScope.ForYou)
+                {
+                    RecordForYouPage(page, false);
+                }
+
                 lane.ApplyMore(page.Items, page.NextCursor);
                 return;
             }

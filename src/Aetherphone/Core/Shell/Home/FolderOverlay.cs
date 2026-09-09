@@ -17,6 +17,7 @@ internal sealed class FolderOverlay
     private readonly HomeLayoutService layout;
     private readonly ShortcutStore shortcuts;
     private readonly ShortcutRunner runner;
+    private readonly Configuration configuration;
     private HomeTile? folder;
     private bool closing;
     private Spring anim;
@@ -25,11 +26,13 @@ internal sealed class FolderOverlay
     private float scrollY;
     private int openedFrame;
 
-    public FolderOverlay(HomeLayoutService layout, ShortcutStore shortcuts, ShortcutRunner runner)
+    public FolderOverlay(HomeLayoutService layout, ShortcutStore shortcuts, ShortcutRunner runner,
+        Configuration configuration)
     {
         this.layout = layout;
         this.shortcuts = shortcuts;
         this.runner = runner;
+        this.configuration = configuration;
     }
 
     public bool Active => folder is not null;
@@ -155,7 +158,7 @@ internal sealed class FolderOverlay
             }
             else
             {
-                HomeTileView.DrawApp(center, iconSize, member.App!, theme, 1f, 1f, true, cellWidth);
+                HomeTileView.DrawApp(center, iconSize, member.App!, theme, 1f, 1f, true, cellWidth, configuration);
             }
 
             var half = iconSize * 0.5f;

@@ -44,10 +44,10 @@ internal sealed class NotesApp : IResumableApp, ISpotlightNotes
     private INavigator navigation = null!;
     private int activeTab;
 
+    private readonly SoftWrapEditor noteEditor = new(SoftWrapLines.BreakOnReturn);
     private PhoneNote? editingNote;
     private Guid? pendingNoteId;
     private bool pendingNewNote;
-    private string noteBuffer = string.Empty;
     private bool noteDirty;
 
     private Guid editingReminderId;
@@ -350,7 +350,7 @@ internal sealed class NotesApp : IResumableApp, ISpotlightNotes
     private void StartEditNote(PhoneNote note)
     {
         editingNote = note;
-        noteBuffer = note.Body;
+        noteEditor.Adopt(note.Body);
         noteDirty = false;
         router.Push(NotesScreen.EditNote);
     }
@@ -373,6 +373,14 @@ internal sealed class NotesApp : IResumableApp, ISpotlightNotes
             AskDeleteNote(editingNote);
         }
 
+        var copyCenter = new Vector2(trashCenter.X - radius * 2f - Metrics.Space.Sm * scale, trashCenter.Y);
+        if (ui.IconButton(copyCenter, radius, IconGlyph.Of(FontAwesomeIcon.Copy), ui.TitleInk,
+                Palette.WithAlpha(ui.TitleInk, 0.12f), 0.55f, Loc.T(L.Notes.CopyNote)))
+        {
+            ImGui.SetClipboardText(noteEditor.Text);
+            ShellToast.Show();
+        }
+
         var margin = Metrics.Space.Lg * scale;
         var top = content.Min.Y + AppHeader.Height * scale + Metrics.Space.Sm * scale;
         var area = new Rect(new Vector2(content.Min.X + margin, top),
@@ -385,10 +393,11 @@ internal sealed class NotesApp : IResumableApp, ISpotlightNotes
         {
             var fieldSize = new Vector2(area.Width - Metrics.Space.Md * 2f * scale,
                 area.Height - Metrics.Space.Sm * 2f * scale);
-            if (ImGui.InputTextMultiline("##noteBody", ref noteBuffer, NoteMaxLength, fieldSize,
-                    ImGuiInputTextFlags.None))
+            noteEditor.Rewrap(fieldSize.X - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale);
+            noteEditor.Draw("##noteBody", fieldSize, NoteMaxLength, 0);
+            if (noteEditor.Edited)
             {
-                editingNote.Body = noteBuffer;
+                editingNote.Body = noteEditor.Text;
                 editingNote.UpdatedAt = DateTime.Now;
                 noteDirty = true;
             }
@@ -571,14 +580,14 @@ internal sealed class NotesApp : IResumableApp, ISpotlightNotes
             return;
         }
 
-        if (noteBuffer.Trim().Length == 0)
+        if (!noteEditor.HasContent)
         {
             configuration.Notes.Remove(editingNote);
             configuration.Save();
         }
         else if (noteDirty)
         {
-            editingNote.Body = noteBuffer;
+            editingNote.Body = noteEditor.Text;
             configuration.Save();
         }
 

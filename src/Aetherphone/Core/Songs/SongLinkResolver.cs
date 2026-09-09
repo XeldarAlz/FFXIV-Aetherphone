@@ -22,6 +22,7 @@ internal sealed class SongLinkResolver
     private const string SearchPrintTemplate = "%(id)s\t%(duration)s\t%(channel,uploader)s\t%(title)s";
     private const int ErrorExcerptLength = 300;
     private const int ExitPollMilliseconds = 200;
+    private const long UpdateCheckCooldownMilliseconds = 10 * 60 * 1000;
     private static readonly TimeSpan FetchTimeout = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan SearchTimeout = TimeSpan.FromSeconds(45);
@@ -29,6 +30,7 @@ internal sealed class SongLinkResolver
 
     private readonly string stagingDirectory;
     private volatile MediaDependencies? dependencies;
+    private long lastUpdateCheckAtTicks = long.MinValue;
 
     public SongLinkResolver(string stagingDirectory)
     {
@@ -39,6 +41,8 @@ internal sealed class SongLinkResolver
 
     public bool IsInstalled => dependencies is { LinkResolverPath: not null, JsRuntimePath: not null };
 
+    private bool HasResolver => dependencies?.LinkResolverPath is not null;
+
     public void Attach(MediaDependencies mediaDependencies)
     {
         dependencies = mediaDependencies;
@@ -46,8 +50,7 @@ internal sealed class SongLinkResolver
 
     public SongResolvedAudio? Fetch(string videoId, CancellationToken token)
     {
-        var resolverPath = dependencies?.LinkResolverPath;
-        if (resolverPath is null || token.IsCancellationRequested)
+        if (!HasResolver || token.IsCancellationRequested)
         {
             return null;
         }
@@ -56,16 +59,19 @@ internal sealed class SongLinkResolver
         DeleteStagedFiles(videoId);
         try
         {
-            var startInfo = BuildStartInfo(resolverPath);
-            startInfo.ArgumentList.Add("--no-playlist");
-            startInfo.ArgumentList.Add("--force-overwrites");
-            startInfo.ArgumentList.Add("-f");
-            startInfo.ArgumentList.Add(FormatSelector);
-            startInfo.ArgumentList.Add("-o");
-            startInfo.ArgumentList.Add(Path.Combine(stagingDirectory, videoId + ".%(ext)s"));
-            startInfo.ArgumentList.Add("--");
-            startInfo.ArgumentList.Add(WatchUrlPrefix + videoId);
-            if (RunResolver(startInfo, FetchTimeout, token) is null)
+            var outputTemplate = Path.Combine(stagingDirectory, videoId + ".%(ext)s");
+            var output = Run(startInfo =>
+            {
+                startInfo.ArgumentList.Add("--no-playlist");
+                startInfo.ArgumentList.Add("--force-overwrites");
+                startInfo.ArgumentList.Add("-f");
+                startInfo.ArgumentList.Add(FormatSelector);
+                startInfo.ArgumentList.Add("-o");
+                startInfo.ArgumentList.Add(outputTemplate);
+                startInfo.ArgumentList.Add("--");
+                startInfo.ArgumentList.Add(WatchUrlPrefix + videoId);
+            }, FetchTimeout, token);
+            if (output is null)
             {
                 return null;
             }
@@ -98,25 +104,25 @@ internal sealed class SongLinkResolver
 
     public SongResolvedStream? ResolveStreamUrl(string videoId, CancellationToken token)
     {
-        var resolverPath = dependencies?.LinkResolverPath;
-        if (resolverPath is null || token.IsCancellationRequested)
+        if (!HasResolver || token.IsCancellationRequested)
         {
             return null;
         }
 
         try
         {
-            var startInfo = BuildStartInfo(resolverPath);
-            startInfo.ArgumentList.Add("--no-playlist");
-            startInfo.ArgumentList.Add("-f");
-            startInfo.ArgumentList.Add(FormatSelector);
-            startInfo.ArgumentList.Add("--print");
-            startInfo.ArgumentList.Add("url");
-            startInfo.ArgumentList.Add("--print");
-            startInfo.ArgumentList.Add("acodec");
-            startInfo.ArgumentList.Add("--");
-            startInfo.ArgumentList.Add(WatchUrlPrefix + videoId);
-            var output = RunResolver(startInfo, ResolveTimeout, token);
+            var output = Run(startInfo =>
+            {
+                startInfo.ArgumentList.Add("--no-playlist");
+                startInfo.ArgumentList.Add("-f");
+                startInfo.ArgumentList.Add(FormatSelector);
+                startInfo.ArgumentList.Add("--print");
+                startInfo.ArgumentList.Add("url");
+                startInfo.ArgumentList.Add("--print");
+                startInfo.ArgumentList.Add("acodec");
+                startInfo.ArgumentList.Add("--");
+                startInfo.ArgumentList.Add(WatchUrlPrefix + videoId);
+            }, ResolveTimeout, token);
             if (output is null)
             {
                 return null;
@@ -148,21 +154,21 @@ internal sealed class SongLinkResolver
 
     public SongSearchEntry[]? Search(string query, int fetchCount, CancellationToken token)
     {
-        var resolverPath = dependencies?.LinkResolverPath;
-        if (resolverPath is null || token.IsCancellationRequested)
+        if (!HasResolver || token.IsCancellationRequested)
         {
             return null;
         }
 
         try
         {
-            var startInfo = BuildStartInfo(resolverPath);
-            startInfo.ArgumentList.Add("--flat-playlist");
-            startInfo.ArgumentList.Add("--print");
-            startInfo.ArgumentList.Add(SearchPrintTemplate);
-            startInfo.ArgumentList.Add("--");
-            startInfo.ArgumentList.Add($"ytsearch{fetchCount}:{query}");
-            var output = RunResolver(startInfo, SearchTimeout, token);
+            var output = Run(startInfo =>
+            {
+                startInfo.ArgumentList.Add("--flat-playlist");
+                startInfo.ArgumentList.Add("--print");
+                startInfo.ArgumentList.Add(SearchPrintTemplate);
+                startInfo.ArgumentList.Add("--");
+                startInfo.ArgumentList.Add($"ytsearch{fetchCount}:{query}");
+            }, SearchTimeout, token);
             if (output is null)
             {
                 return null;
@@ -218,6 +224,58 @@ internal sealed class SongLinkResolver
         return entries.ToArray();
     }
 
+    private string? Run(Action<ProcessStartInfo> configure, TimeSpan timeout, CancellationToken token)
+    {
+        var first = RunResolver(configure, timeout, token);
+        if (first.Output is not null || !first.ExitedWithError || !TryUpdateResolver(token))
+        {
+            return first.Output;
+        }
+
+        return RunResolver(configure, timeout, token).Output;
+    }
+
+    private bool TryUpdateResolver(CancellationToken token)
+    {
+        var media = dependencies;
+        if (media is null)
+        {
+            return false;
+        }
+
+        var now = Environment.TickCount64;
+        var lastCheck = Interlocked.Read(ref lastUpdateCheckAtTicks);
+        if (lastCheck != long.MinValue && now - lastCheck < UpdateCheckCooldownMilliseconds)
+        {
+            return false;
+        }
+
+        if (Interlocked.CompareExchange(ref lastUpdateCheckAtTicks, now, lastCheck) != lastCheck)
+        {
+            return false;
+        }
+
+        try
+        {
+            var outcome = media.UpdateIfNewerAsync(media.LinkResolver, token).GetAwaiter().GetResult();
+            if (outcome == ResolverUpdateOutcome.Updated)
+            {
+                AepLog.Warning(
+                    $"Song link resolver failed; updated to {media.LinkResolver.RemoteVersion} and retrying");
+                return true;
+            }
+
+            AepLog.Warning(
+                $"Song link resolver failed with a current install ({media.InstalledVersion(media.LinkResolver) ?? "unknown version"})");
+            return false;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Debug(exception, "Song link resolver update check did not complete");
+            return false;
+        }
+    }
+
     private static ProcessStartInfo BuildStartInfo(string resolverPath)
     {
         var startInfo = new ProcessStartInfo
@@ -235,13 +293,21 @@ internal sealed class SongLinkResolver
         return startInfo;
     }
 
-    private static string? RunResolver(ProcessStartInfo startInfo, TimeSpan timeout, CancellationToken token)
+    private ResolverRun RunResolver(Action<ProcessStartInfo> configure, TimeSpan timeout, CancellationToken token)
     {
+        var resolverPath = dependencies?.LinkResolverPath;
+        if (resolverPath is null)
+        {
+            return default;
+        }
+
+        var startInfo = BuildStartInfo(resolverPath);
+        configure(startInfo);
         using var process = Process.Start(startInfo);
         if (process is null)
         {
             AepLog.Warning("Song link resolver process could not be started");
-            return null;
+            return default;
         }
 
         var standardOutput = process.StandardOutput.ReadToEndAsync();
@@ -255,18 +321,18 @@ internal sealed class SongLinkResolver
             }
 
             KillQuietly(process);
-            return null;
+            return default;
         }
 
         var outputText = standardOutput.GetAwaiter().GetResult();
         var errorText = standardError.GetAwaiter().GetResult();
         if (process.ExitCode == 0)
         {
-            return outputText;
+            return new ResolverRun(outputText, false);
         }
 
         AepLog.Warning($"Song link resolver exited with code {process.ExitCode}: {Excerpt(errorText)}");
-        return null;
+        return new ResolverRun(null, true);
     }
 
     private static void KillQuietly(Process process)
@@ -326,4 +392,6 @@ internal sealed class SongLinkResolver
         var trimmed = text.Trim();
         return trimmed.Length <= ErrorExcerptLength ? trimmed : trimmed[..ErrorExcerptLength];
     }
+
+    private readonly record struct ResolverRun(string? Output, bool ExitedWithError);
 }

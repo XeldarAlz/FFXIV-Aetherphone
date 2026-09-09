@@ -20,10 +20,11 @@ internal sealed partial class YellowPagesApp
     private const float InquiryRowHeight = 74f;
     private const float ComposerHeight = 52f;
     private const int InquiryBodyMax = 1000;
+    private const int InquiryMaxLines = 6;
 
     private readonly ActionSheet.Item[] inquirySheetItems = new ActionSheet.Item[2];
 
-    private string inquiryDraft = string.Empty;
+    private readonly SoftWrapEditor inquiryEditor = new();
     private string inquirySheetMessageId = string.Empty;
     private bool inquiryBusy;
     private bool inquirySendFailed;
@@ -197,7 +198,7 @@ internal sealed partial class YellowPagesApp
         ChatHeaderControls.DrawLock(ui, area, area.Min.Y + AppHeader.Height * scale * 0.5f, inquiries.CanEncrypt,
             inquiries.VaultState, () => router.Push(YellowPagesRoute.Encryption));
         var top = area.Min.Y + AppHeader.Height * scale;
-        var composerTop = area.Max.Y - ComposerHeight * scale;
+        var composerTop = area.Max.Y - ComposerHeight * scale - inquiryEditor.Growth(InquiryMaxLines);
         var body = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, composerTop));
         DrawInquiryVaultBanner(ref body);
         if (thread is null)
@@ -386,10 +387,10 @@ internal sealed partial class YellowPagesApp
             return;
         }
 
-        var submitted = SubmitField.Draw(fieldRect, "##adInquiryDraft", Loc.T(L.YellowPages.InquiryHint),
-            ref inquiryDraft, theme, InquiryBodyMax);
-        var sendCenter = new Vector2(bar.Max.X - inset - sendSide * 0.5f, (fieldRect.Min.Y + fieldRect.Max.Y) * 0.5f);
-        var canSend = TrimmedLength(inquiryDraft) > 0 && !inquiries.Sending;
+        var submitted = SubmitField.Multiline(fieldRect, "##adInquiryDraft", Loc.T(L.YellowPages.InquiryHint),
+            inquiryEditor, theme, InquiryBodyMax, InquiryMaxLines);
+        var sendCenter = new Vector2(bar.Max.X - inset - sendSide * 0.5f, fieldRect.Max.Y - sendSide * 0.5f);
+        var canSend = TrimmedLength(inquiryEditor.Text) > 0 && !inquiries.Sending;
         if (inquiries.Sending)
         {
             LoadingPulse.Spinner(sendCenter, 9f * scale, ui.Accent);
@@ -403,14 +404,14 @@ internal sealed partial class YellowPagesApp
             return;
         }
 
-        var body = inquiryDraft.Trim();
-        inquiryDraft = string.Empty;
+        var body = inquiryEditor.Text.Trim();
+        inquiryEditor.Adopt(string.Empty);
         inquirySendFailed = false;
         inquiries.Send(inquiryId, otherUserId, body, ok =>
         {
             if (!ok)
             {
-                inquiryDraft = body;
+                inquiryEditor.Adopt(body);
                 inquirySendFailed = true;
             }
         });
@@ -423,7 +424,7 @@ internal sealed partial class YellowPagesApp
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, ad?.Title ?? Loc.T(L.YellowPages.InquireAction), back);
         var top = area.Min.Y + AppHeader.Height * scale;
-        var composerTop = area.Max.Y - ComposerHeight * scale;
+        var composerTop = area.Max.Y - ComposerHeight * scale - inquiryEditor.Growth(InquiryMaxLines);
         var body = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, composerTop));
         if (ad is null)
         {
@@ -476,16 +477,16 @@ internal sealed partial class YellowPagesApp
             return;
         }
 
-        var submitted = SubmitField.Draw(fieldRect, "##adInquiryNew", Loc.T(L.YellowPages.InquiryHint),
-            ref inquiryDraft, theme, InquiryBodyMax);
-        var sendCenter = new Vector2(bar.Max.X - inset - sendSide * 0.5f, (fieldRect.Min.Y + fieldRect.Max.Y) * 0.5f);
+        var submitted = SubmitField.Multiline(fieldRect, "##adInquiryNew", Loc.T(L.YellowPages.InquiryHint),
+            inquiryEditor, theme, InquiryBodyMax, InquiryMaxLines);
+        var sendCenter = new Vector2(bar.Max.X - inset - sendSide * 0.5f, fieldRect.Max.Y - sendSide * 0.5f);
         if (inquiryBusy)
         {
             LoadingPulse.Spinner(sendCenter, 9f * scale, ui.Accent);
             return;
         }
 
-        var canSend = TrimmedLength(inquiryDraft) > 0;
+        var canSend = TrimmedLength(inquiryEditor.Text) > 0;
         var tapped = ui.IconButton(sendCenter, sendSide * 0.5f, IconGlyph.Of(FontAwesomeIcon.PaperPlane),
             canSend ? ui.Accent : AppPalettes.YellowPages.MutedInk, AppSkin.Transparent, 0.9f);
         if (!canSend || (!tapped && !submitted))
@@ -493,15 +494,15 @@ internal sealed partial class YellowPagesApp
             return;
         }
 
-        var text = inquiryDraft.Trim();
-        inquiryDraft = string.Empty;
+        var text = inquiryEditor.Text.Trim();
+        inquiryEditor.Adopt(string.Empty);
         inquiryBusy = true;
         inquiries.OpenForAd(adId, ownerId, text, thread =>
         {
             inquiryBusy = false;
             if (thread is null)
             {
-                inquiryDraft = text;
+                inquiryEditor.Adopt(text);
                 inquirySendFailed = true;
                 return;
             }
@@ -528,7 +529,7 @@ internal sealed partial class YellowPagesApp
             return;
         }
 
-        inquiryDraft = string.Empty;
+        inquiryEditor.Adopt(string.Empty);
         router.Push(YellowPagesRoute.NewInquiry(ad.Id));
     }
 
@@ -636,7 +637,7 @@ internal sealed partial class YellowPagesApp
 
     private void OpenInquiryThread(string inquiryId, bool animate = true)
     {
-        inquiryDraft = string.Empty;
+        inquiryEditor.Adopt(string.Empty);
         inquiries.Open(inquiryId);
         router.Push(YellowPagesRoute.Thread(inquiryId), animate);
     }

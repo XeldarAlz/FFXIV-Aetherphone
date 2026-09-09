@@ -5,139 +5,71 @@ namespace Aetherphone.Windows.Components;
 
 internal static class SoftWrapField
 {
-    private sealed class Editor
-    {
-        public string Display = string.Empty;
-        public string Logical = string.Empty;
-        public float WrapWidth;
-        public int MaxLength;
-        public string? PendingHandle;
-        public int LogicalCursor;
-        public int? RestoreCursor;
-        public bool TabRequested;
-        public readonly ImGui.ImGuiInputTextCallbackPtrDelegate Callback;
-
-        public Editor(int maxLength)
-        {
-            MaxLength = maxLength;
-            Callback = Apply;
-        }
-
-        private int Apply(ImGuiInputTextCallbackDataPtr data)
-        {
-            if (data.EventFlag == ImGuiInputTextFlags.CallbackCompletion)
-            {
-                TabRequested = true;
-                return 0;
-            }
-
-            if (data.EventFlag != ImGuiInputTextFlags.CallbackAlways)
-            {
-                return SoftWrap.ApplyEdit(data, WrapWidth, MaxLength);
-            }
-
-            SoftWrap.ReadLogical(data, out var display, out var logical, out var cursor);
-            if (RestoreCursor is { } target)
-            {
-                RestoreCursor = null;
-                LogicalCursor = target;
-                SoftWrap.SetCursor(data, display, target);
-                return 0;
-            }
-
-            if (PendingHandle is null)
-            {
-                LogicalCursor = cursor;
-                return 0;
-            }
-
-            var handle = PendingHandle;
-            PendingHandle = null;
-            if (!MentionTokenScanner.TryFind(logical, LogicalCursor, out var start, out var length))
-            {
-                return 0;
-            }
-
-            var replacement = "@" + handle + " ";
-            var updated = string.Concat(logical.AsSpan(0, start), replacement, logical.AsSpan(start + length));
-            if (updated.Length > MaxLength)
-            {
-                return 0;
-            }
-
-            LogicalCursor = start + replacement.Length;
-            SoftWrap.WriteLogical(data, updated, LogicalCursor, WrapWidth);
-            Logical = updated;
-            Display = SoftWrap.WrapText(updated, WrapWidth);
-            return 0;
-        }
-    }
-
-    private static readonly Dictionary<string, Editor> Editors = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, SoftWrapEditor> Editors = new(StringComparer.Ordinal);
 
     public static void Multiline(string id, ref string value, int maxLength, Vector2 size, float wrapWidth,
         MentionAutocomplete? mentions = null)
     {
-        var editor = GetEditor(id, maxLength);
-        editor.WrapWidth = wrapWidth;
-        editor.MaxLength = maxLength;
-        editor.TabRequested = false;
-
+        var editor = GetEditor(id, mentions is not null);
         var logical = value ?? string.Empty;
-        if (!string.Equals(editor.Logical, logical, StringComparison.Ordinal))
+        if (!string.Equals(editor.Text, logical, StringComparison.Ordinal))
         {
-            editor.Logical = logical;
-            editor.Display = SoftWrap.WrapText(logical, wrapWidth);
+            editor.Adopt(logical);
         }
 
-        var navigated = false;
-        if (mentions is not null)
-        {
-            navigated = mentions.HandleNavigation();
-            if (navigated)
-            {
-                editor.RestoreCursor = editor.LogicalCursor;
-            }
-
-            mentions.ConsumedEscape();
-            if (mentions.TryTakeCommit(out var handle))
-            {
-                editor.PendingHandle = handle;
-            }
-        }
-
-        Plugin.Fonts.NoticeText(editor.Display);
-        var bufferBytes = maxLength * 4 + 1024;
-        var flags = ImGuiInputTextFlags.CallbackEdit | ImGuiInputTextFlags.CallbackCharFilter;
-        if (mentions is not null)
-        {
-            flags |= ImGuiInputTextFlags.CallbackAlways | ImGuiInputTextFlags.CallbackCompletion;
-        }
-
-        if (editor.PendingHandle is not null)
-        {
-            ImGui.SetKeyboardFocusHere();
-        }
-
-        var edited = ImGui.InputTextMultiline(id, ref editor.Display, bufferBytes, size, flags, editor.Callback);
-        if (edited)
-        {
-            editor.Logical = SoftWrap.StripNewlines(editor.Display);
-        }
-
-        value = editor.Logical;
+        editor.Rewrap(wrapWidth);
+        var navigated = mentions is not null && Prepare(editor, mentions, maxLength);
+        editor.Draw(id, size, maxLength, 0);
+        value = editor.Text;
 
         if (mentions is null)
         {
             return;
         }
 
+        Follow(editor, mentions, navigated);
+    }
+
+    private static bool Prepare(SoftWrapEditor editor, MentionAutocomplete mentions, int maxLength)
+    {
+        var navigated = mentions.HandleNavigation();
+        if (navigated)
+        {
+            editor.MoveCursor(editor.Cursor);
+        }
+
+        mentions.ConsumedEscape();
+        if (!mentions.TryTakeCommit(out var handle))
+        {
+            return navigated;
+        }
+
+        if (!MentionTokenScanner.TryFind(editor.Text, editor.Cursor, out var start, out var length))
+        {
+            return navigated;
+        }
+
+        var replacement = string.Concat("@", handle, " ");
+        var updated = string.Concat(editor.Text.AsSpan(0, start), replacement,
+            editor.Text.AsSpan(start + length));
+        if (updated.Length > maxLength)
+        {
+            return navigated;
+        }
+
+        editor.Replace(updated, start + replacement.Length);
+        ImGui.SetKeyboardFocusHere();
+        return navigated;
+    }
+
+    private static void Follow(SoftWrapEditor editor, MentionAutocomplete mentions, bool navigated)
+    {
         if (ImGui.IsItemActive())
         {
             mentions.Anchor = new Rect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
             if (!navigated)
             {
-                mentions.Track(editor.Logical, editor.LogicalCursor, ImGui.GetIO().DeltaTime);
+                mentions.Track(editor.Text, editor.Cursor, ImGui.GetIO().DeltaTime);
             }
         }
         else if (!mentions.PointerOverPopup)
@@ -145,17 +77,17 @@ internal static class SoftWrapField
             mentions.Close();
         }
 
-        if (editor.TabRequested)
+        if (editor.CompletionRequested)
         {
             mentions.RequestCommit();
         }
     }
 
-    private static Editor GetEditor(string id, int maxLength)
+    private static SoftWrapEditor GetEditor(string id, bool completesOnTab)
     {
         if (!Editors.TryGetValue(id, out var editor))
         {
-            editor = new Editor(maxLength);
+            editor = new SoftWrapEditor(SoftWrapLines.SingleLine, completesOnTab);
             Editors[id] = editor;
         }
 

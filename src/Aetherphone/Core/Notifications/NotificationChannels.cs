@@ -8,6 +8,7 @@ internal readonly record struct NotificationChannel(string AppId, LocString Name
 internal static class NotificationChannels
 {
     public const string PhoneChannel = "phone";
+    public const string NotificationsAppId = "notifications";
 
     public static readonly IReadOnlyList<NotificationChannel> All = new NotificationChannel[]
     {
@@ -34,4 +35,17 @@ internal static class NotificationChannels
         new("casino", L.Apps.Casino, AppAccents.For("casino")),
         new("hunts", L.Apps.Hunts, AppAccents.For("hunts")),
     };
+
+    public static bool Contains(string appId)
+    {
+        for (var index = 0; index < All.Count; index++)
+        {
+            if (string.Equals(All[index].AppId, appId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

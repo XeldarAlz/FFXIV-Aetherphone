@@ -23,6 +23,7 @@ internal sealed class RadioPlayer : IDisposable
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(20);
     private static readonly int[] ReconnectDelaysMilliseconds = { 1000, 2000, 5000, 10000, 20000, 20000 };
     private const long StableSessionMilliseconds = 30000;
+    private const string StreamUserAgent = "Aetherphone";
     private readonly HttpClient client;
     private readonly object gate = new();
     private CancellationTokenSource? cancellation;
@@ -40,6 +41,7 @@ internal sealed class RadioPlayer : IDisposable
     public RadioPlayer()
     {
         client = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(StreamUserAgent);
     }
 
     public RadioPlaybackState State => state;

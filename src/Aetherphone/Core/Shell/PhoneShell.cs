@@ -198,7 +198,7 @@ internal sealed class PhoneShell : IDisposable
 
     public Vector2 MinimizedSize => minimizedPhone.Measure(UiScale.Global);
 
-    public Vector2 MinimizedIdleSize => MinimizedPhone.IdleSize(UiScale.Global);
+    public Vector2 MinimizedIdleSize => minimizedPhone.IdleSize(UiScale.Global);
 
     public MinimizedDrag ConsumeMinimizedDrag() => minimizedPhone.ConsumeDrag();
 

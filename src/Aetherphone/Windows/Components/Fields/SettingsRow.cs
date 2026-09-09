@@ -89,10 +89,10 @@ internal static class SettingsRow
     }
 
     public static bool Link(Rect row, FontAwesomeIcon icon, Vector4 tint, string label, string value, PhoneTheme theme,
-        bool badge = false, string? id = null)
+        bool badge = false, string? id = null, bool interactive = true)
     {
         var scale = UiScale.Current;
-        var hovered = UiInteract.Hover(row.Min, row.Max);
+        var hovered = interactive && UiInteract.Hover(row.Min, row.Max);
         if (hovered)
         {
             DrawRowHighlight(row, theme);
@@ -114,7 +114,7 @@ internal static class SettingsRow
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(row.Min, row.Max, hovered);
+        return interactive && UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     public static bool AppLink(Rect row, string appId, Vector4 tint, string label, string value, PhoneTheme theme,
@@ -154,10 +154,10 @@ internal static class SettingsRow
     }
 
     public static bool Disclosure(Rect row, string label, string value, PhoneTheme theme, string? id = null,
-        bool dimmed = false)
+        bool dimmed = false, bool interactive = true)
     {
         var scale = UiScale.Current;
-        var hovered = UiInteract.Hover(row.Min, row.Max);
+        var hovered = interactive && UiInteract.Hover(row.Min, row.Max);
         if (hovered)
         {
             DrawRowHighlight(row, theme);
@@ -177,7 +177,7 @@ internal static class SettingsRow
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(row.Min, row.Max, hovered);
+        return interactive && UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     private static void DrawTwoColumnText(Rect row, string label, string value, PhoneTheme theme, float labelStartX,
@@ -252,9 +252,9 @@ internal static class SettingsRow
         return interactive && UiInteract.Click(row.Min, row.Max, hovered);
     }
 
-    public static bool Action(Rect row, string label, Vector4 color, PhoneTheme theme)
+    public static bool Action(Rect row, string label, Vector4 color, PhoneTheme theme, bool interactive = true)
     {
-        var hovered = UiInteract.Hover(row.Min, row.Max);
+        var hovered = interactive && UiInteract.Hover(row.Min, row.Max);
         if (hovered)
         {
             DrawRowHighlight(row, theme);
@@ -268,7 +268,7 @@ internal static class SettingsRow
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(row.Min, row.Max, hovered);
+        return interactive && UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     private static Vector2 DrawIconTile(Rect row, FontAwesomeIcon icon, Vector4 tint, PhoneTheme theme, bool hovered,

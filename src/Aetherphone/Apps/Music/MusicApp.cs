@@ -86,6 +86,7 @@ internal sealed partial class MusicApp : IResumableApp
     public string DisplayName => Loc.T(L.Apps.Music);
     public string Glyph => "M";
     public int BadgeCount => socialNotifications.UnseenCount(Id);
+    public bool HasBadge => true;
     public bool BadgeAsDot => true;
     private readonly RadioService radio;
     private readonly SongSearchService songSearch;

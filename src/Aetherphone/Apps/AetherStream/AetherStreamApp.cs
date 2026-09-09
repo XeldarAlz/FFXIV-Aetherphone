@@ -77,6 +77,7 @@ internal sealed partial class AetherStreamApp : IPhoneApp
         video.AllowInsecureDirectUrls = configuration.VideoAllowInsecureDirectUrls;
         video.MaxQualityHeight = configuration.VideoMaxQualityHeight;
         screen.Engine.ScreenVisible = configuration.VideoScreenVisible;
+        screen.Engine.ScreenCurved = configuration.VideoScreenCurved;
     }
 
     public string Id => "aetherstream";
@@ -84,6 +85,7 @@ internal sealed partial class AetherStreamApp : IPhoneApp
     public string Glyph => "V";
     public Vector4 Accent => AppAccents.For(Id);
     public int BadgeCount => watchAlong.PendingRequests.Count + watchAlong.PendingQueueSuggestions.Count;
+    public bool HasBadge => true;
 
     public void OnOpened()
     {

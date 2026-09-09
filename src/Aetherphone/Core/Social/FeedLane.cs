@@ -8,7 +8,7 @@ namespace Aetherphone.Core.Social;
 internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentified
 {
     private readonly object gate = new();
-    private readonly Comparison<TPost> order;
+    private readonly Comparison<TPost>? order;
     private readonly Func<TPost, long>? createdAtUnix;
     private volatile TPost[] items = Array.Empty<TPost>();
     private volatile string? cursor;
@@ -21,6 +21,14 @@ internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentif
         this.order = order;
         this.createdAtUnix = createdAtUnix;
     }
+
+    private FeedLane()
+    {
+    }
+
+    public static FeedLane<TPost> ServerOrdered() => new();
+
+    public bool KeepsServerOrder => order is null;
 
     public TPost[] Items
     {
@@ -64,6 +72,13 @@ internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentif
         failureBox = null;
         lock (gate)
         {
+            if (order is null)
+            {
+                items = incoming;
+                cursor = nextCursor;
+                return;
+            }
+
             var wasEmpty = items.Length == 0;
             items = IdentifiedMerge.ReconcileNewestPage(items, incoming, order);
             if (wasEmpty)
@@ -78,14 +93,16 @@ internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentif
         failureBox = null;
         lock (gate)
         {
-            items = IdentifiedMerge.MergeById(items, incoming, order);
+            items = order is null
+                ? IdentifiedMerge.AppendNew(items, incoming)
+                : IdentifiedMerge.MergeById(items, incoming, order);
             cursor = nextCursor;
         }
     }
 
     public void Trim(int max)
     {
-        if (max <= 0)
+        if (max <= 0 || order is null)
         {
             return;
         }

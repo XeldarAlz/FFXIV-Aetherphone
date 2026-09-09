@@ -32,7 +32,7 @@ public sealed class TourRegistryTests
         { "notes", (2, 4) },
         { "calculator", (2, 2) },
         { "timers", (2, 3) },
-        { "dailies", (2, 3) },
+        { "dailies", (2, 2) },
         { "fishing", (2, 4) },
         { "notifications", (2, 2) },
         { "message", (2, 7) },
@@ -50,7 +50,7 @@ public sealed class TourRegistryTests
         { "housing", (1, 7) },
         { "casino", (1, 8) },
         { "aetherstream", (1, 7) },
-        { "hunts", (2, 3) },
+        { "hunts", (5, 5) },
     };
 
     [Fact]

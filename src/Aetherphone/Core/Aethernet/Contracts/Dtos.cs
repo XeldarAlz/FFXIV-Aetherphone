@@ -226,7 +226,18 @@ internal sealed record PostDto(
     string? Lang = null,
     long? EditedAtUnix = null) : IIdentified;
 
-internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
+internal sealed record FeedPage(
+    PostDto[] Items,
+    string? NextCursor,
+    bool Ranked = false,
+    int? CaughtUpAfter = null,
+    FeedItemNote[]? Notes = null);
+
+internal readonly record struct FeedItemNote(string Source, double Score, string? Breakdown);
+
+internal sealed record FeedSeenRequest(string[] PostIds);
+
+internal sealed record FeedSignalRequest(string PostId, int Kind);
 
 internal sealed record UserSearchResult(UserDto[] Users);
 

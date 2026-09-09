@@ -113,7 +113,7 @@ internal sealed partial class AethergramApp
         PostSource.Tagged => store.TaggedPosts,
         PostSource.Saved => store.SavedPosts,
         PostSource.Hashtag => store.HashtagPosts,
-        PostSource.Explore => store.Feed(SocialFeedScope.ForYou),
+        PostSource.Explore => store.Feed(SocialFeedScope.Latest),
         _ => store.ProfilePosts,
     };
 
@@ -122,7 +122,7 @@ internal sealed partial class AethergramApp
         PostSource.Tagged => store.TaggedLoading,
         PostSource.Saved => store.SavedLoading,
         PostSource.Hashtag => store.HashtagLoading,
-        PostSource.Explore => store.IsLoading(SocialFeedScope.ForYou),
+        PostSource.Explore => store.IsLoading(SocialFeedScope.Latest),
         _ => store.ProfileLoading,
     };
 
@@ -131,7 +131,7 @@ internal sealed partial class AethergramApp
         PostSource.Tagged => store.TaggedLoadingMore,
         PostSource.Saved => store.SavedLoadingMore,
         PostSource.Hashtag => store.HashtagLoadingMore,
-        PostSource.Explore => store.LoadingMore(SocialFeedScope.ForYou),
+        PostSource.Explore => store.LoadingMore(SocialFeedScope.Latest),
         _ => store.ProfileLoadingMore,
     };
 
@@ -140,7 +140,7 @@ internal sealed partial class AethergramApp
         PostSource.Tagged => store.HasMoreTagged,
         PostSource.Saved => store.HasMoreSaved,
         PostSource.Hashtag => store.HasMoreHashtagPosts,
-        PostSource.Explore => store.HasMoreFeed(SocialFeedScope.ForYou),
+        PostSource.Explore => store.HasMoreFeed(SocialFeedScope.Latest),
         _ => store.HasMoreProfilePosts,
     };
 
@@ -158,7 +158,7 @@ internal sealed partial class AethergramApp
                 store.LoadMoreHashtagPosts();
                 break;
             case PostSource.Explore:
-                store.LoadMoreFeed(SocialFeedScope.ForYou);
+                store.LoadMoreFeed(SocialFeedScope.Latest);
                 break;
             default:
                 store.LoadMoreProfilePosts();

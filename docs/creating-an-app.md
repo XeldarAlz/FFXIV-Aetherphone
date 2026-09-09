@@ -66,6 +66,7 @@ You must implement `Id`, `DisplayName`, `Glyph`, `BadgeCount`, `OnOpened`, `OnCl
 | Member | Default | Meaning |
 | --- | --- | --- |
 | `Accent` | `AppAccents.For(Id)` | Home tile color; unknown ids get a grey fallback |
+| `HasBadge` | `false` | Opts into the shared, user-toggleable badge switch and the "Show badge" row on this app's Settings > Notifications and Badges page; apps that always return `BadgeCount => 0` can skip it |
 | `BadgeAsDot` | `false` | `true` renders the badge as a dot instead of a number |
 | `WantsTransparentScreen` | `false` | Skip the opaque screen fill behind the app |
 | `WantsSystemTheme` | `false` | Receive the phone's light/dark theme in `context.Theme` |
@@ -217,7 +218,7 @@ Each of these is one small addition; each links to the doc that owns the details
 - **More screens.** Give the app an enum of screens and a `ViewRouter<TScreen>` (src/Aetherphone/Core/Apps/ViewRouter.cs). Construct it with the root screen, cache the `RouterDraw<TScreen>` delegate in a field, then call `router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView)` from `Draw` and `router.Push`, `router.Pop`, `router.Reset` to navigate. NotesApp is the template. Details in [the app framework](app-framework.md).
 - **Persist state.** Take `Configuration` (src/Aetherphone/Configuration.cs) as a constructor argument, pass `services.Configuration` in AppRegistry, add a property for your data, and call `configuration.Save()` after mutations, exactly as NotesApp does with `configuration.Notes`. Details in [state and persistence](state-and-persistence.md).
 - **Post a notification.** Take `NotificationService` (`services.Notifications`) and call `notifications.Notify(new PhoneNotification(Id, title, body, DateTime.Now, Accent));`. See src/Aetherphone/Apps/Announcements/AnnouncementsStore.cs for a real call, and [notifications](notifications.md) for channels, sounds, and deep links.
-- **Badge count.** Return a live number from `BadgeCount` (compare `AnnouncementsApp`: `store.UnreadCount`), or set `BadgeAsDot => true` for a dot. The getter runs every frame the home screen is visible, so keep it a cheap field or property read.
+- **Badge count.** Return a live number from `BadgeCount` (compare `AnnouncementsApp`: `store.UnreadCount`), or set `BadgeAsDot => true` for a dot. The getter runs every frame the home screen is visible, so keep it a cheap field or property read; the user's on/off preference is applied by the caller, not the getter. Also override `HasBadge => true`, or the badge always shows and never gets a "Show badge" row on Settings > Notifications and Badges. See [Notifications](notifications.md#hiding-a-badge).
 - **Accept shares.** Declare `AcceptedShares => ShareKindSet.Photo`, implement `OnShare(in ShareItem item)` to stash `item.LocalPath`, and optionally `ShareLabel(ShareKind kind)` for a custom caption. SettingsApp (src/Aetherphone/Apps/Settings/SettingsApp.cs) is a compact example. Note the order in `ShareService`: `OnShare` fires first, then the navigator opens your app, so stash the payload and consume it on the next `Draw` or in `OnOpened`.
 
 ## Add a Settings page

@@ -72,7 +72,7 @@ internal sealed class ModerationNoticePresenter : IDisposable
 
     private void Present(ModerationNoticeDto notice)
     {
-        if (ModerationNoticeText.IsCosmeticGrant(notice) || notice.Kind == ModerationNoticeKinds.EconomyAction)
+        if (ModerationNoticeText.RefreshesAccount(notice))
         {
             accountState.RefreshNow();
         }

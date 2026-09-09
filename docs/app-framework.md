@@ -55,6 +55,7 @@ internal interface IPhoneApp : IDisposable
     string Glyph { get; }
     Vector4 Accent => AppAccents.For(Id);
     int BadgeCount { get; }
+    bool HasBadge => false;
     bool BadgeAsDot => false;
     bool WantsTransparentScreen => false;
     bool WantsSystemTheme => false;
@@ -80,7 +81,8 @@ Members with a `=>` body are C# default interface implementations: you only over
 | `DisplayName` | Label under the home tile and in the app header. Real apps return `Loc.T(...)` so it follows the phone language (see [Localization](localization.md)). |
 | `Glyph` | One- or two-character fallback text drawn on the tile when no icon texture exists for `Id`. `HomeTileView.DrawApp` (src/Aetherphone/Windows/Components/HomeTileView.cs) tries `AppIconArt.TryDraw` first and falls back to the glyph. |
 | `Accent` | Tile and highlight color. The default delegates to `AppAccents.For(Id)`; keep it that way and add your color to the `AppAccents` table instead of hardcoding one. Unknown ids get a gray fallback. |
-| `BadgeCount` | Unread count shown on the home tile. Read every frame; return a cached field, never compute or allocate here. `0` means no badge. |
+| `BadgeCount` | Unread count shown on the home tile. Read every frame; return a cached field, never compute or allocate here. `0` means no badge. Always return the raw count here; the user's on/off preference is applied centrally, not by this getter. |
+| `HasBadge` | Opts the app into the shared, user-toggleable badge switch (`Configuration.BadgeSettings`, default on) and into a "Show badge" row on that app's Settings > Notifications and Badges page. Default `false`, so `BadgeCount => 0` apps need not override it. See [Notifications](notifications.md#hiding-a-badge). |
 | `BadgeAsDot` | When true, a badge is drawn as a small dot instead of a number. `SettingsApp` uses it for the unseen-changelog marker. |
 | `WantsTransparentScreen` | Skips the opaque screen fill so the app paints (or deliberately does not paint) its own background. `CameraApp` uses it to show the game world. |
 | `WantsSystemTheme` | Opt into the user's Light/Dark theme. Default is false: apps get the dark theme regardless, because most apps paint their own gradient backdrop. See the theming section. |
@@ -237,9 +239,9 @@ Accent colors have exactly one source: `AppAccents.For(id)` (src/Aetherphone/Cor
 
 ## Badges
 
-`HomeTileView.DrawApp` reads `BadgeCount` (and `BadgeAsDot`) every frame the home screen is visible and draws `AppBadge` in the tile corner when the count is positive. Folder tiles sum the numeric counts of the apps inside; a dot is shown only if no numeric badge exists but some member wants a dot.
+`HomeTileView.DrawApp` (src/Aetherphone/Windows/Components/Chrome/HomeTileView.cs) reads `BadgeCount` (and `BadgeAsDot`) every frame the home screen is visible and draws `AppBadge` in the tile corner when the count is positive and the app's badge is not turned off (`HasBadge`/`Configuration.IsAppBadgeEnabled`, see [Notifications](notifications.md#hiding-a-badge)). Folder tiles sum the numeric counts of the apps inside; a dot is shown only if no numeric badge exists but some member wants a dot.
 
-Real examples: `MessageApp` returns `store.UnreadTotal + calls.UnseenMissed`, `AnnouncementsApp` returns `store.UnreadCount`, `DailiesApp` gates its count behind a configuration toggle. All of them are cheap reads of already-maintained counters; none of them query anything inside the getter.
+Real examples: `MessageApp` returns `store.UnreadTotal + calls.UnseenMissed`, `AnnouncementsApp` returns `store.UnreadCount`, `DailiesApp` returns a cached `outstandingCount` field it recomputes whenever daily state changes. All of them are cheap reads of already-maintained counters; none of them query anything inside the getter, and none of them check the user's on/off preference themselves.
 
 ## Availability and the server kill switch
 

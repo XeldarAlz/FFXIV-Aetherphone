@@ -29,6 +29,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     where TThread : class, IIdentified
 {
     protected const int MessageMax = 1000;
+    private const float MinTranscriptHeight = 90f;
     private const float ReactorEmojiSize = 26f;
 
     protected readonly ChatThreadStoreBase<TMessage, TThread> store;
@@ -308,8 +309,9 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerStyle = ComposerStyle;
-        var composerHeight = ChatComposer.Height(composerStyle);
         var accessoryHeight = composer.AccessoryHeight;
+        var composerHeight = composer.Measure(composerStyle,
+            area.Max.Y - top - accessoryHeight - MinTranscriptHeight * scale);
         var transcriptMessages = BuildTranscript(store.Messages);
         SweepTranslations(threadId, transcriptMessages);
         if (searchController.Open)

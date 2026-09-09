@@ -26,6 +26,7 @@ internal sealed partial class AnnouncementsApp : IPhoneApp
     public string DisplayName => Loc.T(L.Apps.Announcements);
     public string Glyph => "An";
     public int BadgeCount => store.UnreadCount;
+    public bool HasBadge => true;
 
     private readonly AnnouncementsStore store;
     private readonly FailureSlot listFailure = new();

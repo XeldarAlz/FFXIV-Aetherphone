@@ -21,8 +21,11 @@ internal sealed unsafe class ScreenPainter : IDisposable
 
 	internal Vector3 WorldPosition;
 	internal float WorldYaw;
+	internal float WorldPitch;
+	internal float WorldRoll;
 	internal float Scale = 1.0f;
 	internal bool Visible { get; set; } = true;
+	internal bool Curved { get; set; } = true;
 
 	private readonly VertexShader vertexShader;
 	private readonly PixelShader pixelShader;
@@ -44,7 +47,7 @@ internal sealed unsafe class ScreenPainter : IDisposable
 	private const int MaxUiRects = 64;
 
 	private const int CurveSegments = 24;
-	private const float Curvature = 0.12f;
+	private const float CurvedDepth = 0.12f;
 	private const int VertexCount = (CurveSegments + 1) * 2;
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -186,10 +189,12 @@ internal sealed unsafe class ScreenPainter : IDisposable
 		}
 	}
 
-	internal void SetTransform(Vector3 worldPosition, float worldYaw, float scale)
+	internal void SetTransform(Vector3 worldPosition, float worldYaw, float worldPitch, float worldRoll, float scale)
 	{
 		WorldPosition = worldPosition;
 		WorldYaw = worldYaw;
+		WorldPitch = worldPitch;
+		WorldRoll = worldRoll;
 		Scale = scale;
 	}
 
@@ -269,7 +274,11 @@ internal sealed unsafe class ScreenPainter : IDisposable
 
 		try
 		{
-			var p = new ScreenParams { WorldViewProj = worldViewProj.Value, Curvature = Curvature };
+			var p = new ScreenParams
+			{
+				WorldViewProj = worldViewProj.Value,
+				Curvature = Curved ? CurvedDepth : 0f,
+			};
 			if (cachedDepthView != null)
 			{
 				p.DepthTexelScaleX = (float)targets.RenderWidth / targets.Width;
@@ -548,7 +557,7 @@ internal sealed unsafe class ScreenPainter : IDisposable
 
 		var world =
 			NumericsMatrix4x4.CreateScale(BaseWidth * Scale, BaseHeight * Scale, Scale) *
-			NumericsMatrix4x4.CreateFromAxisAngle(Vector3.UnitY, WorldYaw) *
+			NumericsMatrix4x4.CreateFromYawPitchRoll(WorldYaw, WorldPitch, WorldRoll) *
 			NumericsMatrix4x4.CreateTranslation(WorldPosition);
 
 		return world * view * proj;

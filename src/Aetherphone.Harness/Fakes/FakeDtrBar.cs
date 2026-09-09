@@ -65,5 +65,7 @@ internal sealed class FakeDtrBar : IDtrBar
         public (Vector2 Min, Vector2 Max) ScreenBounds => (Vector2.Zero, Vector2.Zero);
 
         public void Remove() => owner.Remove(Title);
+
+        public void Dispose() => Remove();
     }
 }

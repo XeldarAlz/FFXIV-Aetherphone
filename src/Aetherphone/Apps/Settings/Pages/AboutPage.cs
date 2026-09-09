@@ -4,6 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Platform;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -36,10 +37,15 @@ internal sealed class AboutPage : ISettingsPage
         using (AppSurface.Begin(body))
         {
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * UiScale.Current));
-            var card = GroupCard.Begin(theme, 4);
+            var card = GroupCard.Begin(theme, AepConstants.IsPrerelease ? 5 : 4);
             SettingsRow.Info(card.NextRow(), Loc.T(L.Settings.Plugin), AepConstants.Name, theme);
             SettingsRow.Info(card.NextRow(), Loc.T(L.Settings.Version), AepConstants.Version, theme);
             SettingsRow.Info(card.NextRow(), Loc.T(L.Settings.Command), AepConstants.PrimaryCommand, theme);
+            if (AepConstants.IsPrerelease)
+            {
+                DrawTestServerRow(card.NextRow(), theme);
+            }
+
             var copied = DateTime.UtcNow - copiedAt < CopiedFlashWindow;
             var copyLabel = copied ? Loc.T(L.Settings.SupportInfoCopied) : Loc.T(L.Settings.CopySupportInfo);
             if (SettingsRow.Action(card.NextRow(), copyLabel, theme.Accent, theme))
@@ -50,5 +56,22 @@ internal sealed class AboutPage : ISettingsPage
 
             card.End();
         }
+    }
+
+    private void DrawTestServerRow(Rect row, PhoneTheme theme)
+    {
+        var current = string.Equals(configuration.AethernetBaseUrl, Configuration.TestAethernetBaseUrl,
+            StringComparison.OrdinalIgnoreCase);
+        var next = SettingsRow.Bool(row, Loc.T(L.Settings.TestServer), current, theme,
+            hint: Loc.T(L.Settings.TestServerHint));
+        if (next == current)
+        {
+            return;
+        }
+
+        configuration.AethernetBaseUrl =
+            next ? Configuration.TestAethernetBaseUrl : Configuration.LiveAethernetBaseUrl;
+        configuration.Save();
+        aethernetSession.SignOut();
     }
 }

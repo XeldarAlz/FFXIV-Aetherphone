@@ -66,6 +66,11 @@ internal sealed partial class AethergramApp : IResumableApp
     private const float CardAvatarRadius = 16f;
     private const float CardRingGap = 3f;
     private const float CardHeaderBlock = 36f;
+    private const float CardBannerGap = 6f;
+    private const float LatestScopeRowHeight = 40f;
+    private const float LatestScopePillHeight = 28f;
+    private const float LatestScopePillPadX = 14f;
+    private const float LatestScopePillGap = 8f;
     private const float CardNameGap = 10f;
     private const float CardMediaGap = 8f;
     private const float CardMoreRadius = 16f;
@@ -87,9 +92,11 @@ internal sealed partial class AethergramApp : IResumableApp
     public string DisplayName => Loc.T(L.Apps.Aethergram);
     public string Glyph => "Ag";
     public int BadgeCount => dmStore.UnreadCount + social.UnseenCount(Id);
+    public bool HasBadge => true;
     public ShareKindSet AcceptedShares => store.IsSignedIn ? ShareKindSet.Photo : ShareKindSet.None;
     private static readonly TextStyle CardNameStyle = new(0.97f, FontWeight.SemiBold);
     private static readonly TextStyle CardMetaStyle = new(0.85f, FontWeight.Regular);
+    private static readonly TextStyle LatestScopeStyle = new(0.86f, FontWeight.SemiBold);
     private static readonly TextStyle CardCountStyle = TextStyles.SubheadlineEmphasized;
     private static readonly TextStyle CardLinkStyle = new(0.88f, FontWeight.Regular);
     private static readonly TextStyle CardTimeStyle = TextStyles.Footnote;
@@ -103,8 +110,11 @@ internal sealed partial class AethergramApp : IResumableApp
     private readonly Dictionary<SocialFeedScope, PullToRefresh> pullToRefresh = new()
     {
         { SocialFeedScope.ForYou, new() },
+        { SocialFeedScope.Latest, new() },
         { SocialFeedScope.Following, new() }
     };
+    private readonly InfoSheet feedExplainer = new();
+    private readonly string[] feedExplainerParagraphs = new string[4];
     private readonly AethergramStore store;
     private readonly GramDmStore dmStore;
     private readonly AccountClient account;
@@ -162,6 +172,7 @@ internal sealed partial class AethergramApp : IResumableApp
     private INavigator navigation = null!;
     private AethergramTab activeTab = AethergramTab.Home;
     private SocialFeedScope activeScope = SocialFeedScope.ForYou;
+    private SocialFeedScope latestScope = SocialFeedScope.Latest;
     private bool feedScrollTopPending;
     private bool commentFocusPending;
     private readonly PhotoComposeSession composeSession;
@@ -279,8 +290,9 @@ internal sealed partial class AethergramApp : IResumableApp
     {
         if (store.IsSignedIn)
         {
+            RestoreFeedScope();
             store.RefreshFeed(SocialFeedScope.ForYou);
-            store.RefreshFeed(SocialFeedScope.Following);
+            store.RefreshFeed(latestScope);
             stories.RefreshTray();
         }
 
@@ -315,6 +327,7 @@ internal sealed partial class AethergramApp : IResumableApp
 
     public void OnClosed()
     {
+        store.FlushFeedSignals();
         threadView.OnAppClosed();
         stories.Close();
     }
@@ -326,6 +339,7 @@ internal sealed partial class AethergramApp : IResumableApp
         ui.Theme = theme;
         postSheet.Gate();
         filterSheet.Gate();
+        feedExplainer.Gate();
         commentSheet.Gate();
         profileMenu.Gate();
         profileActionSheet.Gate();
@@ -362,6 +376,7 @@ internal sealed partial class AethergramApp : IResumableApp
 
         DrawFilterSheet(screen);
         DrawPostSheet(screen);
+        DrawFeedExplainer(screen);
         DrawCommentSheet(screen);
         DrawProfileMenu(screen);
         DrawProfileActionSheet(screen);
@@ -496,14 +511,15 @@ internal sealed partial class AethergramApp : IResumableApp
         DrawHomeTopBar(area);
         var top = area.Min.Y + AppHeader.Height * scale;
         var rowRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + FeedTabRowHeight * scale));
-        var picked = UnderlineTabs.Draw(rowRect, Loc.T(L.Aethergram.ForYou), Loc.T(L.Aethergram.Following),
-            activeScope == SocialFeedScope.Following, ref tabSegment, Ink, FeedTabsStyle);
+        var picked = UnderlineTabs.Draw(rowRect, Loc.T(L.Aethergram.ForYou), Loc.T(L.Social.FeedLatest),
+            activeScope != SocialFeedScope.ForYou, ref tabSegment, Ink, FeedTabsStyle);
         if (picked >= 0)
         {
-            SelectScope(picked == 1 ? SocialFeedScope.Following : SocialFeedScope.ForYou);
+            SelectScope(picked == 1 ? latestScope : SocialFeedScope.ForYou);
         }
 
-        var listRect = new Rect(new Vector2(area.Min.X, rowRect.Max.Y), area.Max);
+        var listTop = activeScope == SocialFeedScope.ForYou ? rowRect.Max.Y : DrawLatestScopeRow(area, rowRect.Max.Y);
+        var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
         if (ComposeFab.Draw(listRect, "##aethergramComposeFab", Ink.Accent, PhoneIcons.Plus,
                 Loc.T(L.Aethergram.NewPost), "aethergram.compose", Ink.AccentDeep, FabRadius, true))
@@ -690,6 +706,15 @@ internal sealed partial class AethergramApp : IResumableApp
             {
                 ImGui.Dummy(new Vector2(0f, 4f * UiScale.Current));
                 feedVirtualizer.BeginFrame(store.FeedSource(scope));
+                var viewportTop = ImGui.GetWindowPos().Y;
+                store.BeginImpressions(viewportTop, viewportTop + ImGui.GetWindowSize().Y, ImGui.GetIO().DeltaTime);
+                var ranked = scope == SocialFeedScope.ForYou && store.ForYouRanked;
+                if (ranked && store.CaughtUpAtTop)
+                {
+                    DrawCaughtUpLine();
+                }
+
+                var caughtUpAfterId = ranked ? store.CaughtUpAfterId : null;
                 for (var index = 0; index < snapshot.Length; index++)
                 {
                     var post = snapshot[index];
@@ -699,13 +724,29 @@ internal sealed partial class AethergramApp : IResumableApp
                     }
 
                     var revision = post.CommentCount > 0 ? 1 : 0;
+                    var closesRankedBlock = caughtUpAfterId is not null
+                        && string.Equals(post.Id, caughtUpAfterId, StringComparison.Ordinal);
                     if (feedVirtualizer.Skip(post.Id, revision))
                     {
+                        if (closesRankedBlock)
+                        {
+                            DrawCaughtUpLine();
+                        }
+
                         continue;
                     }
 
-                    DrawGramCard(post);
+                    var suggestion = ranked && !post.IsFollowing && store.TryGetFeedNote(post.Id, out var note)
+                        ? FeedNotes.SuggestionLabel(note)
+                        : null;
+                    var rowTop = ImGui.GetCursorScreenPos().Y;
+                    DrawGramCard(post, suggestion: suggestion);
+                    store.ObserveImpression(post.Id, rowTop, ImGui.GetCursorScreenPos().Y);
                     feedVirtualizer.Record(post.Id, revision);
+                    if (closesRankedBlock)
+                    {
+                        DrawCaughtUpLine();
+                    }
                 }
 
                 if (store.LoadingMore(scope))
@@ -722,7 +763,19 @@ internal sealed partial class AethergramApp : IResumableApp
         }
     }
 
-    private void DrawGramCard(PostDto post, bool detail = false)
+    private static void DrawSuggestionBanner(ImDrawListPtr drawList, float left, float top, float width, string label)
+    {
+        var scale = UiScale.Current;
+        var lineHeight = Typography.LineHeight(CardMetaStyle);
+        var iconSize = 13f * scale;
+        PhoneIcon.Draw(drawList, new Vector2(left + iconSize * 0.5f, top + lineHeight * 0.5f), PhoneIcons.Sparkles,
+            Ink.MutedInk, iconSize);
+        var textLeft = left + iconSize + 6f * scale;
+        Typography.Draw(drawList, new Vector2(textLeft, top),
+            Typography.FitText(label, MathF.Max(1f, width - iconSize - 6f * scale), CardMetaStyle), Ink.MutedInk, CardMetaStyle);
+    }
+
+    private void DrawGramCard(PostDto post, bool detail = false, string? suggestion = null)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -756,12 +809,18 @@ internal sealed partial class AethergramApp : IResumableApp
         var showCommentsLink = !detail && post.CommentCount > 0;
         var commentsHeight = showCommentsLink ? Typography.LineHeight(CardLinkStyle) + lineGap : 0f;
         var timeHeight = Typography.LineHeight(CardTimeStyle);
-        var cellHeight = CardPadTop * scale + headerBlock + CardMediaGap * scale + mediaHeight + actionsHeight
+        var bannerHeight = suggestion is null ? 0f : Typography.LineHeight(CardMetaStyle) + CardBannerGap * scale;
+        var cellHeight = CardPadTop * scale + bannerHeight + headerBlock + CardMediaGap * scale + mediaHeight + actionsHeight
             + CardTextGap * scale + captionHeight + commentsHeight + timeHeight + CardPadBottom * scale;
         var cell = FeedCell.Begin(drawList, cellHeight, Ink.HoverTint, false);
         var origin = cell.Bounds.Min;
         var innerX = origin.X + inset;
-        var headerTop = origin.Y + CardPadTop * scale;
+        if (suggestion is not null)
+        {
+            DrawSuggestionBanner(drawList, innerX, origin.Y + CardPadTop * scale, innerWidth, suggestion);
+        }
+
+        var headerTop = origin.Y + CardPadTop * scale + bannerHeight;
         var imageTop = headerTop + headerBlock + CardMediaGap * scale;
         var imageBottom = imageTop + mediaHeight;
         var actionsTop = imageBottom;
@@ -812,7 +871,7 @@ internal sealed partial class AethergramApp : IResumableApp
         else if (!overRing && UiInteract.HoverClick(new Vector2(innerX, headerTop),
                      new Vector2(headerTextRight, headerTop + headerBlock)))
         {
-            OpenProfile(post.AuthorId);
+            OpenProfileFromPost(post.AuthorId, post.Id);
         }
 
         var moreExtent = new Vector2(moreRadius, moreRadius);
@@ -1292,6 +1351,12 @@ internal sealed partial class AethergramApp : IResumableApp
         router.Push(AethergramRoute.Profile(userId));
     }
 
+    private void OpenProfileFromPost(string userId, string postId)
+    {
+        store.ReportFeedSignal(postId, FeedSignalKinds.ProfileOpen);
+        OpenProfile(userId);
+    }
+
     private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin)
     {
         var ink = new RichTextInk(Ink.BodyInk, Ink.AccentLink, Ink.AccentLink);
@@ -1314,6 +1379,7 @@ internal sealed partial class AethergramApp : IResumableApp
 
     private void OpenDetail(PostDto post, bool focusComment = false)
     {
+        store.ReportFeedSignal(post.Id, FeedSignalKinds.DetailOpen);
         store.OpenDetail(post);
         commentDraft = string.Empty;
         commentFocusPending = focusComment;
@@ -1444,8 +1510,83 @@ internal sealed partial class AethergramApp : IResumableApp
         }
 
         activeScope = scope;
+        if (scope != SocialFeedScope.ForYou)
+        {
+            latestScope = scope;
+        }
+
+        configuration.AethergramFeedScope = (int)scope;
+        configuration.Save();
         feedScrollTopPending = true;
         profile.EnsureLoaded(activeScope);
+    }
+
+    private void RestoreFeedScope()
+    {
+        var saved = (SocialFeedScope)Math.Clamp(configuration.AethergramFeedScope, 0, (int)SocialFeedScope.Following);
+        activeScope = saved;
+        latestScope = saved == SocialFeedScope.ForYou ? SocialFeedScope.Latest : saved;
+    }
+
+    private float DrawLatestScopeRow(Rect area, float top)
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var rowHeight = LatestScopeRowHeight * scale;
+        var pillHeight = LatestScopePillHeight * scale;
+        var pillTop = top + (rowHeight - pillHeight) * 0.5f;
+        var left = area.Min.X + CellPadX * scale;
+        var everyoneLabel = Loc.T(L.Social.FeedEveryone);
+        var followingLabel = Loc.T(L.Aethergram.Following);
+        var everyoneWidth = Typography.Measure(everyoneLabel, LatestScopeStyle).X + LatestScopePillPadX * 2f * scale;
+        var followingWidth = Typography.Measure(followingLabel, LatestScopeStyle).X + LatestScopePillPadX * 2f * scale;
+        var everyoneRect = new Rect(new Vector2(left, pillTop), new Vector2(left + everyoneWidth, pillTop + pillHeight));
+        var followingLeft = everyoneRect.Max.X + LatestScopePillGap * scale;
+        var followingRect = new Rect(new Vector2(followingLeft, pillTop),
+            new Vector2(followingLeft + followingWidth, pillTop + pillHeight));
+        if (DrawLatestScopePill(drawList, everyoneRect, everyoneLabel, activeScope == SocialFeedScope.Latest, pillHeight))
+        {
+            SelectScope(SocialFeedScope.Latest);
+        }
+
+        if (DrawLatestScopePill(drawList, followingRect, followingLabel, activeScope == SocialFeedScope.Following, pillHeight))
+        {
+            SelectScope(SocialFeedScope.Following);
+        }
+
+        return top + rowHeight;
+    }
+
+    private static bool DrawLatestScopePill(ImDrawListPtr drawList, Rect rect, string label, bool active, float pillHeight)
+    {
+        return active
+            ? SocialPill.Flat(drawList, rect, label, Ink.AccentWash, Ink.AccentWash, Palette.WithAlpha(Ink.Accent, 0.5f),
+                Ink.AccentLink, LatestScopeStyle, pillHeight * 0.5f)
+            : SocialPill.Flat(drawList, rect, label, Ink.ChipHover, Ink.HoverTint, Ink.Hairline, Ink.MutedInk,
+                LatestScopeStyle, pillHeight * 0.5f);
+    }
+
+    private void DrawFeedExplainer(Rect screen)
+    {
+        if (!feedExplainer.CapturesPointer)
+        {
+            return;
+        }
+
+        feedExplainerParagraphs[0] = Loc.T(L.Social.FeedHowItWorksIntro);
+        feedExplainerParagraphs[1] = Loc.T(L.Social.FeedHowItWorksQuality);
+        feedExplainerParagraphs[2] = Loc.T(L.Social.FeedHowItWorksPeople);
+        feedExplainerParagraphs[3] = Loc.T(L.Social.FeedHowItWorksFair);
+        feedExplainer.Draw(screen, Ink, Loc.T(L.Social.FeedHowItWorks), feedExplainerParagraphs, Loc.T(L.Common.Close));
+    }
+
+    private void DrawCaughtUpLine()
+    {
+        if (CaughtUpDivider.Draw(Ink, Loc.T(L.Social.FeedCaughtUp), Loc.T(L.Social.FeedCaughtUpHint),
+                Loc.T(L.Social.FeedHowItWorks)))
+        {
+            feedExplainer.Open();
+        }
     }
 
 }

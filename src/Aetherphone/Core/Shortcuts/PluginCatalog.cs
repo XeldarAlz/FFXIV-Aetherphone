@@ -23,7 +23,7 @@ internal sealed class PluginEntry
 
 internal sealed class PluginCatalog
 {
-    private const string OwnInternalName = "Aetherphone";
+    private static readonly string OwnInternalName = AepConstants.Name;
     private const long RecheckIntervalMilliseconds = 1000;
     private const string DistRepoRoot = "https://raw.githubusercontent.com/goatcorp/PluginDistD17/main";
     private static readonly string[] DistChannels = { "stable", "testing/live" };

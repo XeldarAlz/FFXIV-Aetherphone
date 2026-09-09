@@ -32,6 +32,7 @@ internal sealed partial class YellowPagesApp : IPhoneApp
     public string DisplayName => Loc.T(L.Apps.YellowPages);
     public string Glyph => "Yp";
     public int BadgeCount => socialNotifications.UnseenCount(Id);
+    public bool HasBadge => true;
 
     private readonly YellowPagesStore store;
     private readonly AdInquiryStore inquiries;

@@ -121,6 +121,7 @@ internal sealed partial class HousingApp : IPhoneApp
     public string Glyph => "Ho";
 
     public int BadgeCount => housing.Watch.FiredReminderCount;
+    public bool HasBadge => true;
 
     public bool BadgeAsDot => true;
 

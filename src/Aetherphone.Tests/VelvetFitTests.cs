@@ -147,6 +147,41 @@ public sealed class VelvetFitTests
         Assert.True(VelvetFit.Score(me, unset) > VelvetFit.Score(me, japaneseOnly));
     }
 
+    [Fact]
+    public void HeadlinePrefersAWarningOverAnyMatch()
+    {
+        var me = Profile("me", kinks: new[] { "praise", "rigger" }, limits: new[] { "gore" },
+            lookingFor: VelvetIntent.Erp | VelvetIntent.Friends);
+        var other = Profile("other", kinks: new[] { "praise", "rigger", "gore" },
+            lookingFor: VelvetIntent.Erp | VelvetIntent.Friends);
+        var items = new List<VelvetFitItem>();
+
+        VelvetFit.Describe(me, other, items);
+
+        Assert.Equal(VelvetFitKind.SharedKinks, items[0].Kind);
+        Assert.Equal(VelvetFitKind.Conflict, items[VelvetFit.Headline(items)].Kind);
+    }
+
+    [Fact]
+    public void HeadlineFallsBackToTheFirstMatchAndSkipsNoConflicts()
+    {
+        var me = Profile("me", kinks: new[] { "praise" }, limits: new[] { "gore" }, tags: new[] { "venue" });
+        var matching = Profile("matching", tags: new[] { "venue" }, limits: new[] { "pain" });
+        var boundariesOnly = Profile("boundaries", limits: new[] { "pain" });
+        var stranger = Profile("stranger");
+        var items = new List<VelvetFitItem>();
+
+        VelvetFit.Describe(me, matching, items);
+        Assert.Equal(VelvetFitKind.SharedTag, items[VelvetFit.Headline(items)].Kind);
+
+        VelvetFit.Describe(me, boundariesOnly, items);
+        Assert.Single(items);
+        Assert.Equal(-1, VelvetFit.Headline(items));
+
+        VelvetFit.Describe(me, stranger, items);
+        Assert.Equal(-1, VelvetFit.Headline(items));
+    }
+
     private static VelvetProfileDto Profile(string id, string[]? kinks = null, string[]? limits = null,
         string[]? tags = null, int lookingFor = VelvetIntent.Friends, string? avatar = "https://example/avatar.png",
         string intro = "Hello there", int languages = 0) =>

@@ -28,6 +28,7 @@ internal sealed class HuntsRealtimeClient : IDisposable
 
     public bool Connected => connected;
     public event Action<HuntsSocketMobReport>? MobReportReceived;
+    public event Action<HuntsSocketSightingReport>? SightingReportReceived;
     public event Action<HuntLogEntryDto>? MobWorldKillReceived;
     public event Action<bool>? ConnectedChanged;
 
@@ -249,6 +250,15 @@ internal sealed class HuntsRealtimeClient : IDisposable
 
     private void DispatchMobReport(JsonElement payload)
     {
+        if (payload.TryGetProperty("data", out var reportElement) &&
+            reportElement.TryGetProperty("action", out var actionElement) &&
+            actionElement.GetString() is { } action &&
+            action is "sighting_set" or "sighting_replace" or "sighting_clear")
+        {
+            DispatchSightingReport(action, reportElement);
+            return;
+        }
+
         var message = JsonSerializer.Deserialize(payload.GetRawText(), HuntsJsonContext.Default.HuntsSocketMessage);
         if (message is not { Type: "mob", Data: { } report })
         {
@@ -256,6 +266,52 @@ internal sealed class HuntsRealtimeClient : IDisposable
         }
 
         MobReportReceived?.Invoke(report);
+    }
+
+    private void DispatchSightingReport(string action, JsonElement reportElement)
+    {
+        if (!reportElement.TryGetProperty("id", out var idElement) ||
+            !reportElement.TryGetProperty("data", out var dataElement))
+        {
+            return;
+        }
+
+        var identity = JsonSerializer.Deserialize(idElement.GetRawText(),
+            HuntsJsonContext.Default.HuntsSocketSightingIdentity);
+        if (identity is not { MobId.Length: > 0, WorldId.Length: > 0 })
+        {
+            return;
+        }
+
+        if (action == "sighting_replace")
+        {
+            var entries = JsonSerializer.Deserialize(dataElement.GetRawText(),
+                HuntsJsonContext.Default.HuntSightingEntryDtoArray);
+            SightingReportReceived?.Invoke(new HuntsSocketSightingReport
+            {
+                Action = action,
+                MobId = identity.MobId,
+                WorldId = identity.WorldId,
+                ZoneInstance = identity.ZoneInstance,
+                ReplaceEntries = entries ?? Array.Empty<HuntSightingEntryDto>(),
+            });
+            return;
+        }
+
+        var poi = JsonSerializer.Deserialize(dataElement.GetRawText(), HuntsJsonContext.Default.HuntsSocketSightingPoi);
+        if (poi is not { ZonePoiId: > 0 })
+        {
+            return;
+        }
+
+        SightingReportReceived?.Invoke(new HuntsSocketSightingReport
+        {
+            Action = action,
+            MobId = identity.MobId,
+            WorldId = identity.WorldId,
+            ZoneInstance = identity.ZoneInstance,
+            ZonePoiId = poi.ZonePoiId,
+        });
     }
 
     private void DispatchMobWorldKill(JsonElement payload)

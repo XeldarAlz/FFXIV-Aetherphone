@@ -7,6 +7,7 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Message;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
@@ -55,13 +56,14 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IKeyState KeyState { get; set; } = null!;
     [PluginService] internal static IGamepadState GamepadState { get; set; } = null!;
     [PluginService] internal static IAetheryteList AetheryteList { get; set; } = null!;
-    internal static Plugin Instance { get; set; } = null!;
-    internal static Configuration Cfg { get; set; } = null!;
-    internal static FontService Fonts { get; set; } = null!;
-    internal static WallpaperLibrary Wallpapers { get; set; } = null!;
-    internal static DeviceStatus Device { get; set; } = null!;
-    internal static UpdateCheckService Updates { get; set; } = null!;
-    internal static PhotoWindow PhotoWindow { get; set; } = null!;
+    [PluginService] internal static IAddonLifecycle AddonLifecycle { get; set; } = null!;
+    internal static Plugin Instance { get; private set; } = null!;
+    internal static Configuration Cfg { get; private set; } = null!;
+    internal static FontService Fonts { get; private set; } = null!;
+    internal static WallpaperLibrary Wallpapers { get; private set; } = null!;
+    internal static DeviceStatus Device { get; private set; } = null!;
+    internal static UpdateCheckService Updates { get; private set; } = null!;
+    internal static PhotoWindow PhotoWindow { get; private set; } = null!;
     internal PhoneShell Shell => shell;
     internal PhoneWindow MainWindow => phoneWindow;
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
@@ -76,8 +78,9 @@ public sealed class Plugin : IDalamudPlugin
     private readonly VideoDebugWindow videoDebugWindow;
     private readonly AetherStreamScreenWindow screenWindow;
     private readonly UpdateChipWindow updateChipWindow;
+    private readonly HuntsMapMarkersIndicatorWindow huntsMapMarkersIndicatorWindow;
     private readonly LinkpearlPopouts linkpearlPopouts;
-    private readonly MessagePopouts messagePopouts;
+    private readonly IMessagePopouts messagePopouts;
     private readonly PopoutPresence linkpearlPresence;
     private readonly LinkpearlHotkey linkpearlHotkey;
     private readonly AppGate linkpearlGate;
@@ -105,9 +108,11 @@ public sealed class Plugin : IDalamudPlugin
             Cfg.MigrateSoundSettings();
             Cfg.MigrateUiSoundDefaults(freshInstall);
             Cfg.MigrateChangelogSeen();
+            Cfg.MigrateBadgeSettings();
             Cfg.MigrateMessage();
             Cfg.MigrateMessagesMerge();
             Cfg.MigrateSetupCompleted();
+            Cfg.SkipOnboardingOnBeta();
             Cfg.MigrateChirperMediaFilters();
             Cfg.MigratePhoneWidth();
             Cfg.MigrateControlPanelRepack();
@@ -150,9 +155,12 @@ public sealed class Plugin : IDalamudPlugin
             phoneWindow = new PhoneWindow(shell, Cfg);
             Updates = new UpdateCheckService(services.Http, PluginInterface);
             updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
+            huntsMapMarkersIndicatorWindow =
+                new HuntsMapMarkersIndicatorWindow(services.HuntsMapMarkers, services.Themes);
             PhotoWindow = new PhotoWindow(services.Themes);
             windowSystem.AddWindow(phoneWindow);
             windowSystem.AddWindow(updateChipWindow);
+            windowSystem.AddWindow(huntsMapMarkersIndicatorWindow);
             windowSystem.AddWindow(PhotoWindow);
             windowSystem.AddWindow(videoDebugWindow);
             windowSystem.AddWindow(screenWindow);
@@ -191,6 +199,7 @@ public sealed class Plugin : IDalamudPlugin
             dtrEntry = DtrBar.Get(AepConstants.Name);
             dtrEntry.OnClick = _ => phoneWindow.ToggleShell();
             services.Notifications.Changed += UpdateDtrBadge;
+            Cfg.BadgeSettingsChanged += UpdateDtrBadge;
             UpdateDtrBadge();
             services.MarketIndex.EnsureBuilt();
             ContextMenu.OnMenuOpened += OnMenuOpened;
@@ -252,6 +261,7 @@ public sealed class Plugin : IDalamudPlugin
         if (services is not null)
         {
             services.Notifications.Changed -= UpdateDtrBadge;
+            Cfg.BadgeSettingsChanged -= UpdateDtrBadge;
             services.Calls.IncomingCallPresented -= OnIncomingCall;
         }
 
@@ -392,6 +402,7 @@ public sealed class Plugin : IDalamudPlugin
         Framework.Update -= OnVideoFrameworkUpdate;
         Framework.Update -= OnLinkpearlPresenceTick;
         services.Notifications.Changed -= UpdateDtrBadge;
+        Cfg.BadgeSettingsChanged -= UpdateDtrBadge;
         services.Calls.IncomingCallPresented -= OnIncomingCall;
         ContextMenu.OnMenuOpened -= OnMenuOpened;
         dtrEntry.Remove();
@@ -481,7 +492,9 @@ public sealed class Plugin : IDalamudPlugin
 
     private void UpdateDtrBadge()
     {
-        var unread = services.Notifications.UnreadCount;
+        var unread = Cfg.IsAppBadgeEnabled(NotificationChannels.NotificationsAppId)
+            ? services.Notifications.UnreadCount
+            : 0;
         dtrEntry.Text = unread > 0 ? $"{AepConstants.Name} ({unread})" : AepConstants.Name;
     }
 

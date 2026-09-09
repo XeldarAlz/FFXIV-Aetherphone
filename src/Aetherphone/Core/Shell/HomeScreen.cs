@@ -29,13 +29,13 @@ internal sealed class HomeScreen
     {
         this.configuration = configuration;
         layout = new HomeLayoutService(apps, widgets, shortcuts, configuration);
-        folder = new FolderOverlay(layout, shortcuts, runner);
+        folder = new FolderOverlay(layout, shortcuts, runner, configuration);
         sizeMenu = new WidgetSizeMenu(layout);
         gallery = new WidgetGallery(layout, widgets);
         spotlight = new SpotlightOverlay(spotlightIndex);
         interaction = new HomeInteractionController(layout, widgets, pager, folder, sizeMenu, gallery, spotlight,
             poses, runner);
-        renderer = new HomeGridRenderer(layout, pager, poses, interaction, shortcuts, confirm);
+        renderer = new HomeGridRenderer(layout, pager, poses, interaction, shortcuts, confirm, configuration);
         chrome = new HomeChrome(pager, interaction, spotlight);
     }
 
@@ -99,6 +99,7 @@ internal sealed class HomeScreen
     {
         gallery.CloseImmediate();
         spotlight.CloseImmediate();
+        sizeMenu.CloseImmediate();
         interaction.ResetForReveal();
         var page = PageContaining(appId);
         if (page >= 0)
@@ -192,7 +193,7 @@ internal sealed class HomeScreen
         var anchor = interaction.CommittedRect(metrics, tile);
         if (anchor is not { } rect)
         {
-            sizeMenu.Close();
+            sizeMenu.CloseImmediate();
             return;
         }
 

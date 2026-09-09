@@ -35,6 +35,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
     public string Glyph => "Lp";
     public Vector4 Accent => AppAccents.For(Id);
     public int BadgeCount => inbox.TotalUnread;
+    public bool HasBadge => true;
     public bool WantsSystemTheme => true;
     private readonly ChatInbox inbox;
     private readonly TabStore tabs;

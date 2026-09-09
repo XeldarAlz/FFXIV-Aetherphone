@@ -57,7 +57,7 @@ internal static class ChatText
             return Loc.T(L.YellowPages.AdPreview);
         }
 
-        return UiText.Truncate(text.Replace('\n', ' ').Replace('\r', ' '), PreviewLength);
+        return UiText.Truncate(Flatten(text), PreviewLength);
     }
 
     public static int EffectiveKind(string? body, int kind)
@@ -97,6 +97,16 @@ internal static class ChatText
             return Loc.T(L.YellowPages.AdPreview);
         }
 
-        return text ?? string.Empty;
+        return Flatten(text ?? string.Empty);
+    }
+
+    public static string Flatten(string text)
+    {
+        if (text.IndexOf('\n') < 0 && text.IndexOf('\r') < 0)
+        {
+            return text;
+        }
+
+        return text.Replace('\n', ' ').Replace('\r', ' ');
     }
 }

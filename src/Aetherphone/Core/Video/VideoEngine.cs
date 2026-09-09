@@ -37,6 +37,7 @@ internal sealed class VideoEngine : IDisposable
     private const long AudioReopenEscalationWindowMilliseconds = 60 * 1000;
     private const double StallPositionTolerance = 0.05;
     private const double StallEndGuardSeconds = 5.0;
+    private const double AudioTrackEndGuardSeconds = 30.0;
 
     private static readonly Regex YouTubeHost =
         new(@"^\w+://[^/]*youtube\.\w+/|^\w+://youtu\.be/", RegexOptions.Compiled);
@@ -103,6 +104,8 @@ internal sealed class VideoEngine : IDisposable
 
     internal Vector3 ScreenPosition { get; private set; }
     internal float ScreenYaw { get; private set; }
+    internal float ScreenPitch { get; private set; }
+    internal float ScreenRoll { get; private set; }
     internal float ScreenScale { get; private set; } = 1.0f;
     internal Vector3 ScreenSpawnAnchor { get; private set; }
 
@@ -190,9 +193,11 @@ internal sealed class VideoEngine : IDisposable
                 lastObservedPosition = startSeconds;
                 stallProgressAtTicks = Environment.TickCount64;
                 framesProgressAtTicks = stallProgressAtTicks;
+                audioProgressAtTicks = stallProgressAtTicks;
+                audioPositionSeen = false;
                 lastObservedFrameVersion = player.FrameVersion;
                 active = true;
-                screenPainter?.SetTransform(ScreenPosition, ScreenYaw, ScreenScale);
+                screenPainter?.SetTransform(ScreenPosition, ScreenYaw, ScreenPitch, ScreenRoll, ScreenScale);
                 return PlayStart.Started;
             }
             finally
@@ -353,27 +358,27 @@ internal sealed class VideoEngine : IDisposable
             framesProgressAtTicks = now;
         }
 
-        if (info.CoreIdle || !info.HasAudioPosition)
+        if (info.CoreIdle || (!info.HasAudioPosition && !audioPositionSeen))
         {
             lastObservedAudioPosition = info.AudioPositionSeconds;
             audioProgressAtTicks = now;
         }
-        else if (!audioPositionSeen
-                 || Math.Abs(info.AudioPositionSeconds - lastObservedAudioPosition) > StallPositionTolerance)
+        else if (info.HasAudioPosition
+                 && (!audioPositionSeen
+                     || Math.Abs(info.AudioPositionSeconds - lastObservedAudioPosition) > StallPositionTolerance))
         {
             audioPositionSeen = true;
             lastObservedAudioPosition = info.AudioPositionSeconds;
             audioProgressAtTicks = now;
         }
 
-        var nearEnd = info.DurationSeconds > 0d
-            && info.PositionSeconds >= info.DurationSeconds - StallEndGuardSeconds;
+        var endGuardSeconds = info.HasAudioPosition ? StallEndGuardSeconds : AudioTrackEndGuardSeconds;
+        var nearEnd = info.DurationSeconds > 0d && info.PositionSeconds >= info.DurationSeconds - endGuardSeconds;
         var positionWindow = info.CoreIdle ? BufferingWatchdogMilliseconds : StallWatchdogMilliseconds;
         var positionStalled = (player.SawHttpForbidden || player.SawStreamError)
             && now - stallProgressAtTicks >= positionWindow;
         var framesStalled = info.HasMovingVideo && now - framesProgressAtTicks >= StallWatchdogMilliseconds;
-        var audioStalled = audioPositionSeen && info.HasAudioPosition && !nearEnd
-            && now - audioProgressAtTicks >= StallWatchdogMilliseconds;
+        var audioStalled = audioPositionSeen && !nearEnd && now - audioProgressAtTicks >= StallWatchdogMilliseconds;
         if (!positionStalled && !framesStalled && !audioStalled)
         {
             ForgiveRestartsAfterHealthyPlayback(info, now);
@@ -384,7 +389,10 @@ internal sealed class VideoEngine : IDisposable
         framesProgressAtTicks = now;
         audioProgressAtTicks = now;
         healthyPlaybackSinceTicks = now;
-        var stall = positionStalled ? "position" : framesStalled ? "video frames" : "audio";
+        var stall = positionStalled ? "position"
+            : framesStalled ? "video frames"
+            : info.HasAudioPosition ? "audio"
+            : "audio (track ended)";
 
         if (RefusedStreamUrl() is { } refusedUrl)
         {
@@ -416,7 +424,7 @@ internal sealed class VideoEngine : IDisposable
         {
             audioReopenAtTicks = now;
             AepLog.Warning(
-                $"[Video] Playback audio stalled; seeking to {info.PositionSeconds:F1}s to reopen the audio track.");
+                $"[Video] Playback {stall} stalled; seeking to {info.PositionSeconds:F1}s to reopen the audio track.");
             player.Seek(info.PositionSeconds);
             return;
         }
@@ -443,7 +451,6 @@ internal sealed class VideoEngine : IDisposable
         lastObservedPosition = info.PositionSeconds;
         lastObservedFrameVersion = frameVersion;
         lastObservedAudioPosition = info.AudioPositionSeconds;
-        audioPositionSeen = false;
         stallProgressAtTicks = now;
         framesProgressAtTicks = now;
         audioProgressAtTicks = now;
@@ -740,20 +747,34 @@ internal sealed class VideoEngine : IDisposable
         var position = localPlayer.Position + forward * DefaultScreenSpawnDistance
             + new Vector3(0, DefaultScreenHeightOffset, 0);
         ScreenSpawnAnchor = position;
-        SetScreenTransform(position, yaw + MathF.PI, 1.0f);
+        SetScreenTransform(position, yaw + MathF.PI, 0f, 0f, 1.0f);
     }
 
     internal void RecenterScreen() => SpawnScreenInFrontOfLocalPlayer();
 
-    internal void SetScreenTransform(Vector3 position, float yaw, float scale)
+    internal void SetScreenTransform(Vector3 position, float yaw, float pitch, float roll, float scale)
     {
         ScreenPosition = position;
         ScreenYaw = yaw;
+        ScreenPitch = pitch;
+        ScreenRoll = roll;
         ScreenScale = Math.Clamp(scale, MinScreenScale, MaxScreenScale);
 
         if (active)
         {
-            screenPainter?.SetTransform(ScreenPosition, ScreenYaw, ScreenScale);
+            screenPainter?.SetTransform(ScreenPosition, ScreenYaw, ScreenPitch, ScreenRoll, ScreenScale);
+        }
+    }
+
+    internal bool ScreenCurved
+    {
+        get => screenPainter?.Curved ?? false;
+        set
+        {
+            if (screenPainter is not null)
+            {
+                screenPainter.Curved = value;
+            }
         }
     }
 
@@ -770,7 +791,7 @@ internal sealed class VideoEngine : IDisposable
         screenPresets.Add(new ScreenPositionPreset
         {
             Name = name, X = ScreenPosition.X, Y = ScreenPosition.Y, Z = ScreenPosition.Z, Yaw = ScreenYaw,
-            Scale = ScreenScale,
+            Pitch = ScreenPitch, Roll = ScreenRoll, Scale = ScreenScale, Flat = !ScreenCurved,
         });
 
         Plugin.Cfg.ScreenPresets = screenPresets;
@@ -788,13 +809,14 @@ internal sealed class VideoEngine : IDisposable
     {
         var position = new Vector3(preset.X, preset.Y, preset.Z);
         ScreenSpawnAnchor = position;
-        SetScreenTransform(position, preset.Yaw, preset.Scale);
+        ScreenCurved = !preset.Flat;
+        SetScreenTransform(position, preset.Yaw, preset.Pitch, preset.Roll, preset.Scale);
     }
 
     internal void ApplyRemoteScreenTransform(Vector3 position, float yaw, float scale)
     {
         ScreenSpawnAnchor = position;
-        SetScreenTransform(position, yaw, scale);
+        SetScreenTransform(position, yaw, ScreenPitch, ScreenRoll, scale);
     }
 
     private void PrepareScreenForSession()

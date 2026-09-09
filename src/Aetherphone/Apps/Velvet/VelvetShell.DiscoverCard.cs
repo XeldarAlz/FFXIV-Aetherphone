@@ -248,9 +248,6 @@ internal sealed partial class VelvetShell
             _ => Loc.T(L.Velvet.FitNoConflicts),
         };
 
-    private static bool FitWarns(VelvetFitKind kind) =>
-        kind is VelvetFitKind.Conflict or VelvetFitKind.NoSharedLanguage;
-
     private void EnsureStamps()
     {
         if (ReferenceEquals(stampLanguage, Loc.Current))
@@ -290,7 +287,7 @@ internal sealed partial class VelvetShell
         var badgeLeft = cover.Min.X + DeckCoverPad * scale;
         badgeLeft = DrawDeckSeenBadge(drawList, profile.UserId, cover, badgeLeft, scale);
         DrawDeckPhotoBadge(drawList, photos.Length, cover, badgeLeft, scale);
-        DrawDeckPresence(drawList, profile.Presence, cover, scale);
+        DrawDeckPresence(drawList, profile.Presence, cover, pad, scale);
 
         var textLeft = cover.Min.X + pad;
         var textWidth = MathF.Max(1f, cover.Width - pad * 2f);
@@ -381,7 +378,7 @@ internal sealed partial class VelvetShell
         return max.X + DeckBadgeGap * scale;
     }
 
-    private static void DrawDeckPresence(ImDrawListPtr drawList, int presence, Rect cover, float scale)
+    private static void DrawDeckPresence(ImDrawListPtr drawList, int presence, Rect cover, float inset, float scale)
     {
         if (!VelvetTheme.PresenceActive(presence))
         {
@@ -392,8 +389,8 @@ internal sealed partial class VelvetShell
         var textSize = Typography.Measure(label, TextStyles.Footnote);
         var pad = DeckBadgePad * scale;
         var dot = DeckPresenceDot * scale;
-        var top = cover.Min.Y + DeckCoverPad * scale;
-        var max = new Vector2(cover.Max.X - DeckCoverPad * scale, top + DeckBadgeHeight * scale);
+        var top = cover.Min.Y + inset;
+        var max = new Vector2(cover.Max.X - inset, top + DeckBadgeHeight * scale);
         var min = new Vector2(max.X - pad * 2f - dot * 2f - DeckBadgeGlyphGap * scale - textSize.X, top);
         var centerY = (min.Y + max.Y) * 0.5f;
         Squircle.Fill(drawList, min, max, DeckBadgeHeight * scale * 0.5f, DeckBadgeFill.Packed());
@@ -449,7 +446,7 @@ internal sealed partial class VelvetShell
         var rowTop = card.ContentOrigin.Y + VCard.HeaderBlock * scale;
         for (var index = 0; index < fitLabels.Count; index++)
         {
-            var conflict = FitWarns(fitItems[index].Kind);
+            var conflict = VelvetFit.Warns(fitItems[index].Kind);
             var tone = conflict ? VelvetTheme.Danger : VelvetTheme.Online;
             var ink = conflict ? VelvetTheme.ToneInk(VelvetTheme.Danger) : VelvetTheme.BodyInk;
             var centerY = rowTop + rowHeight * 0.5f;
@@ -488,7 +485,7 @@ internal sealed partial class VelvetShell
     }
 
     private void DrawCoverImage(ImDrawListPtr drawList, Vector2 min, Vector2 max, string url, float rounding,
-        string fallbackName)
+        string fallbackName, float focusY = ImageFit.CenterFocus)
     {
         var texture = url.Length > 0 ? images.Get(url) : null;
         if (texture is null)
@@ -504,7 +501,7 @@ internal sealed partial class VelvetShell
             return;
         }
 
-        var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, max.X - min.X, max.Y - min.Y);
+        var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, max.X - min.X, max.Y - min.Y, focusY);
         drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
     }
 }

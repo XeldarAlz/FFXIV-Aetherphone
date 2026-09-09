@@ -5,49 +5,6 @@ namespace Aetherphone.Windows.Components;
 
 internal static class SoftWrap
 {
-    public static int ApplyEdit(ImGuiInputTextCallbackDataPtr data, float wrapWidth, int maxLength)
-    {
-        if (data.EventFlag == ImGuiInputTextFlags.CallbackCharFilter)
-        {
-            if (data.EventChar is '\n' or '\r')
-            {
-                data.EventChar = 0;
-            }
-
-            return 0;
-        }
-
-        var current = Encoding.UTF8.GetString(data.BufSpan[..data.BufTextLen]);
-        var charCursor = ByteIndexToCharIndex(current, data.CursorPos);
-        var logicalCursor = charCursor - CountNewlines(current, charCursor);
-
-        var logical = StripNewlines(current);
-        if (logical.Length > maxLength)
-        {
-            logical = logical[..maxLength];
-            if (logicalCursor > maxLength)
-            {
-                logicalCursor = maxLength;
-            }
-        }
-
-        var wrapped = WrapText(logical, wrapWidth);
-        if (string.Equals(wrapped, current, StringComparison.Ordinal))
-        {
-            return 0;
-        }
-
-        var wrappedCursor = LogicalToWrappedIndex(wrapped, logicalCursor);
-        var byteCursor = Encoding.UTF8.GetByteCount(wrapped.AsSpan(0, wrappedCursor));
-
-        data.DeleteChars(0, data.BufTextLen);
-        data.InsertChars(0, wrapped);
-        data.CursorPos = byteCursor;
-        data.SelectionStart = byteCursor;
-        data.SelectionEnd = byteCursor;
-        return 0;
-    }
-
     public static string WrapText(string text, float wrapWidth)
     {
         if (text.Length == 0 || wrapWidth <= 0f)
@@ -64,10 +21,7 @@ internal static class SoftWrap
         var index = 0;
         while (index < text.Length)
         {
-            var runeLength = char.IsHighSurrogate(text[index]) && index + 1 < text.Length &&
-                             char.IsLowSurrogate(text[index + 1])
-                ? 2
-                : 1;
+            var runeLength = RuneLength(text, index);
             var isSpace = runeLength == 1 && text[index] is ' ' or '\t';
             var characterWidth = ImGui.CalcTextSize(text.Substring(index, runeLength)).X;
 
@@ -107,76 +61,14 @@ internal static class SoftWrap
         return text.IndexOf('\n') < 0 ? text : text.Replace("\n", string.Empty);
     }
 
-    public static void ReadLogical(ImGuiInputTextCallbackDataPtr data, out string display, out string logical,
-        out int logicalCursor)
+    public static int RuneLength(string text, int index)
     {
-        display = Encoding.UTF8.GetString(data.BufSpan[..data.BufTextLen]);
-        var charCursor = ByteIndexToCharIndex(display, data.CursorPos);
-        logicalCursor = charCursor - CountNewlines(display, charCursor);
-        logical = StripNewlines(display);
+        return char.IsHighSurrogate(text[index]) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1])
+            ? 2
+            : 1;
     }
 
-    public static void SetCursor(ImGuiInputTextCallbackDataPtr data, string display, int logicalCursor)
-    {
-        var wrappedCursor = LogicalToWrappedIndex(display, logicalCursor);
-        var byteCursor = Encoding.UTF8.GetByteCount(display.AsSpan(0, wrappedCursor));
-        data.CursorPos = byteCursor;
-        data.SelectionStart = byteCursor;
-        data.SelectionEnd = byteCursor;
-    }
-
-    public static void WriteLogical(ImGuiInputTextCallbackDataPtr data, string logical, int logicalCursor,
-        float wrapWidth)
-    {
-        var wrapped = WrapText(logical, wrapWidth);
-        var wrappedCursor = LogicalToWrappedIndex(wrapped, logicalCursor);
-        var byteCursor = Encoding.UTF8.GetByteCount(wrapped.AsSpan(0, wrappedCursor));
-        data.DeleteChars(0, data.BufTextLen);
-        data.InsertChars(0, wrapped);
-        data.CursorPos = byteCursor;
-        data.SelectionStart = byteCursor;
-        data.SelectionEnd = byteCursor;
-    }
-
-    public static int LogicalLength(string text)
-    {
-        var length = text.Length;
-        for (var index = 0; index < text.Length; index++)
-        {
-            if (text[index] == '\n')
-            {
-                length--;
-            }
-        }
-
-        return length;
-    }
-
-    private static float MeasureRange(StringBuilder builder, int start)
-    {
-        if (start >= builder.Length)
-        {
-            return 0f;
-        }
-
-        return ImGui.CalcTextSize(builder.ToString(start, builder.Length - start)).X;
-    }
-
-    private static int CountNewlines(string text, int limit)
-    {
-        var count = 0;
-        for (var index = 0; index < limit; index++)
-        {
-            if (text[index] == '\n')
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static int ByteIndexToCharIndex(string text, int byteIndex)
+    public static int CharIndexOf(string text, int byteIndex)
     {
         if (byteIndex <= 0)
         {
@@ -187,10 +79,7 @@ internal static class SoftWrap
         var index = 0;
         while (index < text.Length && bytes < byteIndex)
         {
-            var runeLength = char.IsHighSurrogate(text[index]) && index + 1 < text.Length &&
-                             char.IsLowSurrogate(text[index + 1])
-                ? 2
-                : 1;
+            var runeLength = RuneLength(text, index);
             bytes += Encoding.UTF8.GetByteCount(text.AsSpan(index, runeLength));
             index += runeLength;
         }
@@ -198,20 +87,13 @@ internal static class SoftWrap
         return index;
     }
 
-    private static int LogicalToWrappedIndex(string wrapped, int logicalCursor)
+    private static float MeasureRange(StringBuilder builder, int start)
     {
-        var seen = 0;
-        var index = 0;
-        while (index < wrapped.Length && seen < logicalCursor)
+        if (start >= builder.Length)
         {
-            if (wrapped[index] != '\n')
-            {
-                seen++;
-            }
-
-            index++;
+            return 0f;
         }
 
-        return index;
+        return ImGui.CalcTextSize(builder.ToString(start, builder.Length - start)).X;
     }
 }

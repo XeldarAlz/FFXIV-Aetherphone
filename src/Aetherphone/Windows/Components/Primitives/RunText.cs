@@ -187,6 +187,20 @@ internal static class RunText
             var start = 0;
             while (start < text.Length)
             {
+                if (text[start] == '\n')
+                {
+                    cursorX = 0f;
+                    cursorY += lineHeight;
+                    start++;
+                    continue;
+                }
+
+                if (text[start] == '\r')
+                {
+                    start++;
+                    continue;
+                }
+
                 var wordEnd = WordEnd(text, start);
                 var word = text[start..wordEnd];
                 var width = ImGui.CalcTextSize(word).X;
@@ -231,7 +245,7 @@ internal static class RunText
         }
 
         var index = start;
-        while (index < text.Length && text[index] != ' ')
+        while (index < text.Length && text[index] != ' ' && !IsBreak(text[index]))
         {
             index++;
         }
@@ -239,11 +253,13 @@ internal static class RunText
         return index;
     }
 
+    private static bool IsBreak(char value) => value is '\n' or '\r';
+
     private static int BreakLongWord(string text, int start, float wrapWidth, out float width)
     {
         var end = start + 1;
         width = ImGui.CalcTextSize(text[start..end]).X;
-        while (end < text.Length && text[end] != ' ')
+        while (end < text.Length && text[end] != ' ' && !IsBreak(text[end]))
         {
             var candidate = ImGui.CalcTextSize(text[start..(end + 1)]).X;
             if (candidate > wrapWidth)

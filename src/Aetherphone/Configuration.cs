@@ -27,6 +27,7 @@ using Aetherphone.Core.Venues;
 using Aetherphone.Core.Video;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Configuration;
+using Newtonsoft.Json;
 
 namespace Aetherphone;
 
@@ -38,7 +39,10 @@ internal sealed class ScreenPositionPreset
     public float Y { get; set; }
     public float Z { get; set; }
     public float Yaw { get; set; }
+    public float Pitch { get; set; }
+    public float Roll { get; set; }
     public float Scale { get; set; } = 1.0f;
+    public bool Flat { get; set; }
 }
 
 [Serializable]
@@ -76,6 +80,9 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Vector2? MinimizedPosition { get; set; }
     public Vector2? LandscapePosition { get; set; }
     public MinimizedLayout? MinimizedLayout { get; set; }
+    public MinimizedShape MinimizedShape { get; set; } = MinimizedShape.Phone;
+    public MinimizedMapSize MinimizedMapSize { get; set; } = MinimizedMapSize.Medium;
+    public bool MinimizedWallpaper { get; set; }
     public bool DoNotDisturb { get; set; }
     public bool QuietWhileBusy { get; set; } = true;
     public bool Vibration { get; set; } = true;
@@ -90,15 +97,22 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool AethergramShowCommentMedia { get; set; } = true;
     public int ChirperFeedRegionMask { get; set; }
     public int AethergramFeedRegionMask { get; set; }
+    public int ChirperFeedScope { get; set; }
+    public int AethergramFeedScope { get; set; }
     public bool ShowSensitiveContent { get; set; }
     public Dictionary<string, AppNotificationSetting> NotificationSettings { get; set; } = new();
     public bool NotifyDailyReset { get; set; }
     public bool NotifyWeeklyReset { get; set; }
     public bool NotifyGrandCompanyReset { get; set; }
     public bool NotifyRetainerVentures { get; set; }
-    public bool ShowWalletBadge { get; set; } = true;
-    public bool ShowDailiesBadge { get; set; } = true;
-    public bool ShowActivityBadge { get; set; } = true;
+    [JsonProperty("ShowWalletBadge")]
+    public bool LegacyShowWalletBadge { get; set; } = true;
+    [JsonProperty("ShowDailiesBadge")]
+    public bool LegacyShowDailiesBadge { get; set; } = true;
+    [JsonProperty("ShowActivityBadge")]
+    public bool LegacyShowActivityBadge { get; set; } = true;
+    public Dictionary<string, bool> BadgeSettings { get; set; } = new();
+    public bool BadgeSettingsMigrated { get; set; }
     public List<DailyCheckRecord> DailyChecks { get; set; } = new();
     public float ActivityGoalLevels { get; set; } = 1f;
     public int ActivityGoalDuties { get; set; } = 3;
@@ -162,14 +176,17 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool VideoStreamApprovalRequired { get; set; }
     public bool VideoStreamDiscoverable { get; set; } = true;
     public bool VideoScreenVisible { get; set; } = true;
+    public bool VideoScreenCurved { get; set; } = true;
     public List<ScreenPositionPreset> ScreenPresets { get; set; } = new();
     public List<VideoQueueRecord> VideoQueue { get; set; } = new();
     public List<VideoLocalFileMapRecord> VideoLocalFileMap { get; set; } = new();
     public bool GameSoundsCleared { get; set; }
-    #if DEBUG
-    public const string DefaultAethernetBaseUrl = "https://aethernet-dev-production.up.railway.app";
+    public const string TestAethernetBaseUrl = "https://aethernet-dev-production.up.railway.app";
+    public const string LiveAethernetBaseUrl = "https://api.aetherphone.net";
+    #if DEBUG || BETA
+    public const string DefaultAethernetBaseUrl = TestAethernetBaseUrl;
     #else
-    public const string DefaultAethernetBaseUrl = "https://api.aetherphone.net";
+    public const string DefaultAethernetBaseUrl = LiveAethernetBaseUrl;
     #endif
     private const string LegacyAethernetHost = "ffxiv-aethernet-production.up.railway.app";
     public string AethernetBaseUrl { get; set; } = DefaultAethernetBaseUrl;
@@ -192,6 +209,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public HuntsFilterSnapshot? HuntsFilterSettings { get; set; }
     public Core.Strats.StratsSnapshot? StratsSettings { get; set; }
     public HuntsNotificationSnapshot? HuntsNotificationSettings { get; set; }
+    public bool HuntsNativeMapMarkers { get; set; }
     public bool EncryptionRecoveryNudgeDismissed { get; set; }
     public Dictionary<string, int> KnownPeerKeyVersions { get; set; } = new();
     public Dictionary<ulong, CharacterSession> CharacterSessions { get; set; } = new();
@@ -272,6 +290,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
 
     public bool IsVelvetOnboarded() => VelvetOnboarded && VelvetOnboardedVersion >= VelvetOnboardVersion;
     public bool VelvetBlurByDefault { get; set; } = true;
+    public bool VelvetDiscoverDeck { get; set; }
     public VelvetMutePreferences VelvetMutes { get; set; } = new();
     public List<string> VelvetPinnedThreads { get; set; } = new();
     public List<string> MessagePinnedChats { get; set; } = new();
@@ -391,6 +410,19 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
         }
 
         SetupCompleted = true;
+        Save();
+    }
+
+    public void SkipOnboardingOnBeta()
+    {
+        if (!AepConstants.IsBeta || SetupCompleted)
+        {
+            return;
+        }
+
+        WelcomeShown = true;
+        SetupCompleted = true;
+        TutorialsEnabled = false;
         Save();
     }
 
@@ -725,6 +757,59 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
 
     public string ResolveNotificationToken(string appId) => AppSoundOverride(appId) ?? NotificationSound;
 
+    public event Action? BadgeSettingsChanged;
+
+    public bool IsAppBadgeEnabled(string appId) =>
+        !BadgeSettings.TryGetValue(appId, out var enabled) || enabled;
+
+    public void SetAppBadgeEnabled(string appId, bool enabled)
+    {
+        ApplyAppBadgeEnabled(appId, enabled);
+        Save();
+    }
+
+    internal void ApplyAppBadgeEnabled(string appId, bool enabled)
+    {
+        BadgeSettings[appId] = enabled;
+        BadgeSettingsChanged?.Invoke();
+    }
+
+    public void MigrateBadgeSettings()
+    {
+        if (!ApplyBadgeSettingsMigration())
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    internal bool ApplyBadgeSettingsMigration()
+    {
+        if (BadgeSettingsMigrated)
+        {
+            return false;
+        }
+
+        if (!LegacyShowWalletBadge)
+        {
+            BadgeSettings["wallet"] = false;
+        }
+
+        if (!LegacyShowDailiesBadge)
+        {
+            BadgeSettings["dailies"] = false;
+        }
+
+        if (!LegacyShowActivityBadge)
+        {
+            BadgeSettings["character"] = false;
+        }
+
+        BadgeSettingsMigrated = true;
+        return true;
+    }
+
     public void MigrateSoundSettings()
     {
         if (GameSoundsCleared)
@@ -810,7 +895,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
             return true;
         }
 
-#if DEBUG
+#if DEBUG || BETA
         return false;
 #else
         return parsed.IsLoopback;

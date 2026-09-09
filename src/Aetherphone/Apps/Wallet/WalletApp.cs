@@ -25,11 +25,6 @@ internal sealed class WalletApp : IPhoneApp
     {
         get
         {
-            if (!configuration.ShowWalletBadge)
-            {
-                return 0;
-            }
-
             var now = Environment.TickCount64;
             if (now >= nextBadgeTick)
             {
@@ -41,9 +36,10 @@ internal sealed class WalletApp : IPhoneApp
         }
     }
 
+    public bool HasBadge => true;
+
     private readonly GameData gameData;
     private readonly ITextureProvider textures;
-    private readonly Configuration configuration;
     private readonly AppSkin ui = new(AppPalettes.Wallet);
     private WalletEntry? gil;
     private WalletSection[] sections = Array.Empty<WalletSection>();
@@ -51,11 +47,10 @@ internal sealed class WalletApp : IPhoneApp
     private int cappedBadge;
     private long nextBadgeTick;
 
-    public WalletApp(GameData gameData, ITextureProvider textures, Configuration configuration)
+    public WalletApp(GameData gameData, ITextureProvider textures)
     {
         this.gameData = gameData;
         this.textures = textures;
-        this.configuration = configuration;
     }
 
     public void OnOpened() => Rebuild();
@@ -89,11 +84,6 @@ internal sealed class WalletApp : IPhoneApp
         ui.Theme = theme;
         ui.Backdrop(SceneChrome.ScreenFrom(content, theme, scale));
         DrawHeader(content, scale);
-        if (DrawBadgeToggle(content, scale))
-        {
-            configuration.ShowWalletBadge = !configuration.ShowWalletBadge;
-            configuration.Save();
-        }
 
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
         if (gil is null)
@@ -148,14 +138,6 @@ internal sealed class WalletApp : IPhoneApp
         var rowCenterY = content.Min.Y + AppHeader.Height * scale * 0.5f;
         Typography.DrawCentered(new Vector2(content.Center.X, rowCenterY), DisplayName, AppPalettes.Wallet.TitleInk,
             1.15f, FontWeight.SemiBold);
-    }
-
-    private bool DrawBadgeToggle(Rect content, float scale)
-    {
-        return NotificationToggleButton.Draw(content, scale, "wallet.notifications.toggle",
-            AlertSuppression.Badge, !configuration.ShowWalletBadge, AppPalettes.Wallet.Accent,
-            AppPalettes.Wallet.TitleInk, AppPalettes.Wallet.MutedInk, Loc.T(L.Wallet.ShowBadge),
-            Loc.T(L.Wallet.HideBadge));
     }
 
     private Rect DrawSectionCard(WalletSection section, float scale)

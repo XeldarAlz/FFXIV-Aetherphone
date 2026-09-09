@@ -73,6 +73,10 @@ internal sealed partial class ChirperApp : IResumableApp
     private const int PostSheetMaxItems = 5;
     private const float TopBarButtonRadius = 18f;
     private const float FeedTabRowHeight = 44f;
+    private const float LatestScopeRowHeight = 40f;
+    private const float LatestScopePillHeight = 28f;
+    private const float LatestScopePillPadX = 14f;
+    private const float LatestScopePillGap = 8f;
     private const float FeedTabUnderline = 4f;
     private const float TabBarHeight = 58f;
     private const float TabBarIconSize = 24f;
@@ -141,6 +145,7 @@ internal sealed partial class ChirperApp : IResumableApp
     private static readonly TextStyle DateStyle = new(0.9f, FontWeight.Regular);
     private static readonly TextStyle CapsuleStyle = new(0.87f, FontWeight.SemiBold);
     private static readonly TextStyle FeedTabStyle = new(1.07f, FontWeight.SemiBold);
+    private static readonly TextStyle LatestScopeStyle = new(0.86f, FontWeight.SemiBold);
     private static readonly TextStyle FeedTabIdleStyle = new(1.07f, FontWeight.Medium);
     private static readonly UnderlineTabStyle FeedTabsStyle = new(FeedTabStyle, FeedTabIdleStyle,
         ChirperInk.AccentLink, ChirperInk.SegmentIdleInk, ChirperInk.Accent, FeedTabUnderline, CellPadX,
@@ -160,6 +165,7 @@ internal sealed partial class ChirperApp : IResumableApp
     public string DisplayName => Loc.T(L.Apps.Chirper);
     public string Glyph => "Ch";
     public int BadgeCount => social.UnseenCount(Id);
+    public bool HasBadge => true;
     public ShareKindSet AcceptedShares => store.IsSignedIn ? ShareKindSet.Photo : ShareKindSet.None;
     private readonly ChirperStore store;
     private readonly SocialLauncher launcher;
@@ -197,8 +203,11 @@ internal sealed partial class ChirperApp : IResumableApp
     private readonly Dictionary<SocialFeedScope, PullToRefresh> pullToRefresh = new()
     {
         { SocialFeedScope.ForYou, new() },
+        { SocialFeedScope.Latest, new() },
         { SocialFeedScope.Following, new() }
     };
+    private readonly InfoSheet feedExplainer = new();
+    private readonly string[] feedExplainerParagraphs = new string[4];
     private readonly ViewRouter<ChirperRoute> router;
     private readonly RouterDraw<ChirperRoute> drawView;
     private readonly Action back;
@@ -206,6 +215,7 @@ internal sealed partial class ChirperApp : IResumableApp
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private SocialFeedScope activeScope = SocialFeedScope.ForYou;
+    private SocialFeedScope latestScope = SocialFeedScope.Latest;
     private HomeTab homeTab;
     private Spring tabSegment;
     private Spring replySendReveal;
@@ -336,8 +346,9 @@ internal sealed partial class ChirperApp : IResumableApp
         if (store.IsSignedIn)
         {
             store.EnsureMe();
+            RestoreFeedScope();
             store.RefreshFeed(SocialFeedScope.ForYou);
-            store.RefreshFeed(SocialFeedScope.Following);
+            store.RefreshFeed(latestScope);
         }
 
         if (store.IsSignedIn && launcher.TryConsume(Id, out var link))
@@ -355,6 +366,7 @@ internal sealed partial class ChirperApp : IResumableApp
 
     public void OnClosed()
     {
+        store.FlushFeedSignals();
     }
 
     public void Draw(in PhoneContext context)
@@ -364,6 +376,7 @@ internal sealed partial class ChirperApp : IResumableApp
         ui.Theme = theme;
         sheet.Gate();
         filterSheet.Gate();
+        feedExplainer.Gate();
         actions.Tick(MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         TickReactionsExpansion();
         if (actions.IsOpen)
@@ -395,6 +408,7 @@ internal sealed partial class ChirperApp : IResumableApp
 
         DrawSheet(screen);
         DrawFilterSheet(screen);
+        DrawFeedExplainer(screen);
         toast.Draw(screen, ToastStyle);
     }
 
@@ -495,7 +509,8 @@ internal sealed partial class ChirperApp : IResumableApp
         var top = area.Min.Y + AppHeader.Height * scale;
         var rowRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + FeedTabRowHeight * scale));
         DrawFeedTabs(rowRect);
-        var listRect = new Rect(new Vector2(area.Min.X, rowRect.Max.Y), area.Max);
+        var listTop = activeScope == SocialFeedScope.ForYou ? rowRect.Max.Y : DrawLatestScopeRow(area, rowRect.Max.Y);
+        var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
         if (ComposeFab.Draw(listRect, "##chirperComposeFab", ChirperInk.Accent,
                 PhoneIcons.Feather, Loc.T(L.Chirper.NewChirp), "chirper.compose",
@@ -519,23 +534,103 @@ internal sealed partial class ChirperApp : IResumableApp
     private void DrawFeedTabs(Rect row)
     {
         UiAnchors.Report("chirper.tabs", row);
-        var picked = UnderlineTabs.Draw(row, Loc.T(L.Chirper.ForYou), Loc.T(L.Chirper.Following),
-            activeScope == SocialFeedScope.Following, ref tabSegment, ChirperInk.Shared, FeedTabsStyle);
+        var picked = UnderlineTabs.Draw(row, Loc.T(L.Chirper.ForYou), Loc.T(L.Social.FeedLatest),
+            activeScope != SocialFeedScope.ForYou, ref tabSegment, ChirperInk.Shared, FeedTabsStyle);
         if (picked < 0)
         {
             return;
         }
 
-        var scope = picked == 1 ? SocialFeedScope.Following : SocialFeedScope.ForYou;
+        SelectScope(picked == 1 ? latestScope : SocialFeedScope.ForYou);
+    }
+
+    private float DrawLatestScopeRow(Rect area, float top)
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var rowHeight = LatestScopeRowHeight * scale;
+        var pillHeight = LatestScopePillHeight * scale;
+        var pillTop = top + (rowHeight - pillHeight) * 0.5f;
+        var left = area.Min.X + CellPadX * scale;
+        var everyoneLabel = Loc.T(L.Social.FeedEveryone);
+        var followingLabel = Loc.T(L.Chirper.Following);
+        var everyoneWidth = Typography.Measure(everyoneLabel, LatestScopeStyle).X + LatestScopePillPadX * 2f * scale;
+        var followingWidth = Typography.Measure(followingLabel, LatestScopeStyle).X + LatestScopePillPadX * 2f * scale;
+        var everyoneRect = new Rect(new Vector2(left, pillTop), new Vector2(left + everyoneWidth, pillTop + pillHeight));
+        var followingLeft = everyoneRect.Max.X + LatestScopePillGap * scale;
+        var followingRect = new Rect(new Vector2(followingLeft, pillTop),
+            new Vector2(followingLeft + followingWidth, pillTop + pillHeight));
+        if (DrawLatestScopePill(drawList, everyoneRect, everyoneLabel, activeScope == SocialFeedScope.Latest, pillHeight))
+        {
+            SelectScope(SocialFeedScope.Latest);
+        }
+
+        if (DrawLatestScopePill(drawList, followingRect, followingLabel, activeScope == SocialFeedScope.Following, pillHeight))
+        {
+            SelectScope(SocialFeedScope.Following);
+        }
+
+        return top + rowHeight;
+    }
+
+    private static bool DrawLatestScopePill(ImDrawListPtr drawList, Rect rect, string label, bool active, float pillHeight)
+    {
+        return active
+            ? SocialPill.Flat(drawList, rect, label, ChirperInk.AccentWash, ChirperInk.AccentWash,
+                Palette.WithAlpha(ChirperInk.Accent, 0.5f), ChirperInk.AccentLink, LatestScopeStyle, pillHeight * 0.5f)
+            : SocialPill.Flat(drawList, rect, label, ChirperInk.Shared.ChipHover, ChirperInk.HoverTint,
+                ChirperInk.Hairline, ChirperInk.MutedInk, LatestScopeStyle, pillHeight * 0.5f);
+    }
+
+    private void SelectScope(SocialFeedScope scope)
+    {
         if (scope == activeScope)
         {
             return;
         }
 
         activeScope = scope;
+        if (scope != SocialFeedScope.ForYou)
+        {
+            latestScope = scope;
+        }
+
+        configuration.ChirperFeedScope = (int)scope;
+        configuration.Save();
         actions.Reset();
         feedScrollTopPending = true;
         profile.EnsureLoaded(activeScope);
+    }
+
+    private void RestoreFeedScope()
+    {
+        var saved = (SocialFeedScope)Math.Clamp(configuration.ChirperFeedScope, 0, (int)SocialFeedScope.Following);
+        activeScope = saved;
+        latestScope = saved == SocialFeedScope.ForYou ? SocialFeedScope.Latest : saved;
+    }
+
+    private void DrawFeedExplainer(Rect screen)
+    {
+        if (!feedExplainer.CapturesPointer)
+        {
+            return;
+        }
+
+        feedExplainerParagraphs[0] = Loc.T(L.Social.FeedHowItWorksIntro);
+        feedExplainerParagraphs[1] = Loc.T(L.Social.FeedHowItWorksQuality);
+        feedExplainerParagraphs[2] = Loc.T(L.Social.FeedHowItWorksPeople);
+        feedExplainerParagraphs[3] = Loc.T(L.Social.FeedHowItWorksFair);
+        feedExplainer.Draw(screen, ChirperInk.Shared, Loc.T(L.Social.FeedHowItWorks), feedExplainerParagraphs,
+            Loc.T(L.Chirper.Done));
+    }
+
+    private void DrawCaughtUpLine()
+    {
+        if (CaughtUpDivider.Draw(ChirperInk.Shared, Loc.T(L.Social.FeedCaughtUp), Loc.T(L.Social.FeedCaughtUpHint),
+                Loc.T(L.Social.FeedHowItWorks)))
+        {
+            feedExplainer.Open();
+        }
     }
 
     private void DrawTabBar(Rect bar)
@@ -920,7 +1015,16 @@ internal sealed partial class ChirperApp : IResumableApp
             {
                 ImGui.Dummy(new Vector2(0f, FeedTopPadding * UiScale.Current));
                 feedVirtualizer.BeginFrame(store.FeedSource(scope));
+                var viewportTop = ImGui.GetWindowPos().Y;
+                store.BeginImpressions(viewportTop, viewportTop + ImGui.GetWindowSize().Y, ImGui.GetIO().DeltaTime);
                 renderedUnderlyingIds.Clear();
+                var ranked = scope == SocialFeedScope.ForYou && store.ForYouRanked;
+                if (ranked && store.CaughtUpAtTop)
+                {
+                    DrawCaughtUpLine();
+                }
+
+                var caughtUpAfterId = ranked ? store.CaughtUpAfterId : null;
                 for (var index = 0; index < snapshot.Length; index++)
                 {
                     var post = snapshot[index];
@@ -934,13 +1038,29 @@ internal sealed partial class ChirperApp : IResumableApp
                         continue;
                     }
 
+                    var closesRankedBlock = caughtUpAfterId is not null
+                        && string.Equals(post.Id, caughtUpAfterId, StringComparison.Ordinal);
                     if (feedVirtualizer.Skip(post.Id))
                     {
+                        if (closesRankedBlock)
+                        {
+                            DrawCaughtUpLine();
+                        }
+
                         continue;
                     }
 
-                    DrawPost(post);
+                    var suggestion = ranked && !post.IsFollowing && store.TryGetFeedNote(post.Id, out var note)
+                        ? FeedNotes.SuggestionLabel(note)
+                        : null;
+                    var rowTop = ImGui.GetCursorScreenPos().Y;
+                    DrawPost(post, suggestion: suggestion);
+                    store.ObserveImpression(post.RepostOfId ?? post.Id, rowTop, ImGui.GetCursorScreenPos().Y);
                     feedVirtualizer.Record(post.Id);
+                    if (closesRankedBlock)
+                    {
+                        DrawCaughtUpLine();
+                    }
                 }
 
                 if (store.LoadingMore(scope))
@@ -957,7 +1077,7 @@ internal sealed partial class ChirperApp : IResumableApp
         }
     }
 
-    private void DrawPost(PostDto post, bool isThreadHead = false, PostDto? repostBy = null)
+    private void DrawPost(PostDto post, bool isThreadHead = false, PostDto? repostBy = null, string? suggestion = null)
     {
         if (post.RepostOfId is not null)
         {
@@ -979,7 +1099,7 @@ internal sealed partial class ChirperApp : IResumableApp
         var width = ImGui.GetContentRegionAvail().X;
         var padX = CellPadX * scale;
         var cellRight = origin.X + width;
-        var bannerHeight = repostBy is not null ? Typography.LineHeight(BannerStyle) + 6f * scale : 0f;
+        var bannerHeight = repostBy is not null || suggestion is not null ? Typography.LineHeight(BannerStyle) + 6f * scale : 0f;
         var headerTop = origin.Y + CellPadTop * scale + bannerHeight;
         var avatarRadius = FeedAvatarRadius * scale;
         var avatarCenter = new Vector2(origin.X + padX + avatarRadius, headerTop + avatarRadius);
@@ -1032,6 +1152,10 @@ internal sealed partial class ChirperApp : IResumableApp
         {
             DrawRepostBanner(origin, cellRight, repostBy);
         }
+        else if (suggestion is not null)
+        {
+            DrawBanner(origin, cellRight, PhoneIcons.Sparkles, suggestion);
+        }
 
         DrawAvatar(drawList, avatarCenter, avatarRadius,
             SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle), string.Empty, post.AuthorAvatarUrl,
@@ -1039,7 +1163,7 @@ internal sealed partial class ChirperApp : IResumableApp
         if (UiInteract.HoverClick(avatarCenter - new Vector2(avatarRadius, avatarRadius),
                 avatarCenter + new Vector2(avatarRadius, avatarRadius)))
         {
-            OpenProfile(post.AuthorId);
+            OpenProfileFromPost(post.AuthorId, post.Id);
         }
 
         var rawDisplayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
@@ -1056,7 +1180,7 @@ internal sealed partial class ChirperApp : IResumableApp
 
         if (UiInteract.HoverClick(nameMin, nameMax))
         {
-            OpenProfile(post.AuthorId);
+            OpenProfileFromPost(post.AuthorId, post.Id);
         }
 
         var meta = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
@@ -1184,18 +1308,22 @@ internal sealed partial class ChirperApp : IResumableApp
 
     private void DrawRepostBanner(Vector2 origin, float cellRight, PostDto repostBy)
     {
+        var mine = store.Me is { } me && me.Id == repostBy.AuthorId;
+        var label = mine
+            ? Loc.T(L.Chirper.YouReposted)
+            : Loc.T(L.Chirper.Reposted, SocialIdentity.Name(repostBy.AuthorDisplayName, repostBy.AuthorHandle));
+        DrawBanner(origin, cellRight, PhoneIcons.Repeat, label);
+    }
+
+    private static void DrawBanner(Vector2 origin, float cellRight, string icon, string label)
+    {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var lineHeight = Typography.LineHeight(BannerStyle);
         var top = origin.Y + CellPadTop * scale;
         var iconLeft = origin.X + (CellPadX + 30f) * scale;
         var centerY = top + lineHeight * 0.5f;
-        PhoneIcon.Draw(drawList, new Vector2(iconLeft + 6.5f * scale, centerY), PhoneIcons.Repeat,
-            ChirperInk.MutedInk, 13f * scale);
-        var mine = store.Me is { } me && me.Id == repostBy.AuthorId;
-        var label = mine
-            ? Loc.T(L.Chirper.YouReposted)
-            : Loc.T(L.Chirper.Reposted, SocialIdentity.Name(repostBy.AuthorDisplayName, repostBy.AuthorHandle));
+        PhoneIcon.Draw(drawList, new Vector2(iconLeft + 6.5f * scale, centerY), icon, ChirperInk.MutedInk, 13f * scale);
         var textLeft = iconLeft + 20f * scale;
         var fitted = Typography.FitText(label, MathF.Max(1f, cellRight - CellPadX * scale - textLeft), BannerStyle);
         Typography.Draw(drawList, new Vector2(textLeft, top), fitted, ChirperInk.MutedInk, BannerStyle);
@@ -2155,6 +2283,12 @@ internal sealed partial class ChirperApp : IResumableApp
         router.Push(ChirperRoute.Profile(userId));
     }
 
+    private void OpenProfileFromPost(string userId, string postId)
+    {
+        store.ReportFeedSignal(postId, FeedSignalKinds.ProfileOpen);
+        OpenProfile(userId);
+    }
+
     private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin)
     {
         var ink = new RichTextInk(ChirperInk.BodyInk, ChirperInk.AccentLink, ChirperInk.AccentLink);
@@ -2179,6 +2313,7 @@ internal sealed partial class ChirperApp : IResumableApp
     {
         actions.Reset();
         commentDraft = string.Empty;
+        store.ReportFeedSignal(post.Id, FeedSignalKinds.DetailOpen);
         store.OpenDetail(post);
         router.Push(ChirperRoute.Thread(post.Id));
     }

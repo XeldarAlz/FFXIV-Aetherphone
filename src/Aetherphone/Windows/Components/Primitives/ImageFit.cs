@@ -34,8 +34,14 @@ internal static class ImageFit
         return new Rect(region.Center - half, region.Center + half);
     }
 
+    public const float CenterFocus = 0.5f;
+
     public static (Vector2 Uv0, Vector2 Uv1) Cover(float imageWidth, float imageHeight, float targetWidth,
-        float targetHeight)
+        float targetHeight) =>
+        Cover(imageWidth, imageHeight, targetWidth, targetHeight, CenterFocus);
+
+    public static (Vector2 Uv0, Vector2 Uv1) Cover(float imageWidth, float imageHeight, float targetWidth,
+        float targetHeight, float focusY)
     {
         if (imageWidth <= 0f || imageHeight <= 0f || targetWidth <= 0f || targetHeight <= 0f)
         {
@@ -52,8 +58,8 @@ internal static class ImageFit
         }
 
         var verticalSpan = imageAspect / targetAspect;
-        var verticalInset = (1f - verticalSpan) * 0.5f;
-        return (new Vector2(0f, verticalInset), new Vector2(1f, 1f - verticalInset));
+        var verticalTop = (1f - verticalSpan) * Math.Clamp(focusY, 0f, 1f);
+        return (new Vector2(0f, verticalTop), new Vector2(1f, verticalTop + verticalSpan));
     }
 
     public static (Vector2 Uv0, Vector2 Uv1) CoverSquare(float imageWidth, float imageHeight) =>

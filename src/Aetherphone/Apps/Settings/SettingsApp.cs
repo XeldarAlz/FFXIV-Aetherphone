@@ -21,6 +21,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
     public string DisplayName => Loc.T(L.Apps.Settings);
     public string Glyph => "S";
     public int BadgeCount => configuration.HasUnseenChangelog ? 1 : 0;
+    public bool HasBadge => true;
     public bool BadgeAsDot => true;
     public bool WantsSystemTheme => true;
     public ShareKindSet AcceptedShares => ShareKindSet.Photo;
@@ -52,7 +53,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
     private readonly Action<string> assignWallpaper;
     private string? pendingSharedWallpaper;
 
-    public SettingsApp(PhoneServices services, PhotoLibrary photoLibrary)
+    public SettingsApp(PhoneServices services, PhotoLibrary photoLibrary, IReadOnlyList<IPhoneApp> apps)
     {
         sound = services.Sound;
         configuration = services.Configuration;
@@ -92,7 +93,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
                 configuration.NotificationVolume = volume;
                 configuration.Save();
             });
-        notificationsPage = new NotificationsPage(configuration, this, appNotifications, services.Installer);
+        notificationsPage = new NotificationsPage(configuration, this, appNotifications, services.Installer, apps);
         var ringtonePage = new SoundSettingsPage(sound, SoundKind.Ringtone, L.Settings.Ringtone, FontAwesomeIcon.Music,
             new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume",
             () => configuration.RingtoneSound, token =>

@@ -1,0 +1,22 @@
+{
+    "Author": "XeldarAlz",
+    "Name": "Aetherphone Beta",
+    "InternalName": "AetherphoneBeta",
+    "Punchline": "The next Aetherphone, before everyone else.",
+    "Description": "The beta channel for Aetherphone: builds straight off the development branch, installed side by side with the stable plugin so you can test what is coming next without giving up the phone you use every day.",
+    "ApplicableVersion": "any",
+    "RepoUrl": "https://github.com/XeldarAlz/Aetherphone-Beta",
+    "IconUrl": "https://raw.githubusercontent.com/XeldarAlz/FFXIV-Aetherphone/master/src/Aetherphone/Images/Icon.png",
+    "Tags": [
+        "phone",
+        "aether",
+        "aetherphone",
+        "beta",
+        "messages",
+        "social",
+        "ui",
+        "quality of life",
+        "device",
+        "call"
+    ]
+}

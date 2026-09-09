@@ -165,7 +165,7 @@ internal sealed partial class AethergramApp
     private void DrawExploreGrid(Rect listRect)
     {
         var scale = UiScale.Current;
-        const SocialFeedScope scope = SocialFeedScope.ForYou;
+        const SocialFeedScope scope = SocialFeedScope.Latest;
         profile.EnsureLoaded(scope);
         refreshExplore ??= RefreshExploreFeed;
         loadMoreExplore ??= LoadMoreExploreFeed;
@@ -199,9 +199,9 @@ internal sealed partial class AethergramApp
         }
     }
 
-    private void RefreshExploreFeed() => RefreshFeed(SocialFeedScope.ForYou);
+    private void RefreshExploreFeed() => RefreshFeed(SocialFeedScope.Latest);
 
-    private void LoadMoreExploreFeed() => store.LoadMoreFeed(SocialFeedScope.ForYou);
+    private void LoadMoreExploreFeed() => store.LoadMoreFeed(SocialFeedScope.Latest);
 
     private static void DrawExploreSkeleton(Rect listRect)
     {

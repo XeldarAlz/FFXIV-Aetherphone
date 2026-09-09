@@ -128,6 +128,32 @@ public sealed class ModerationNoticeTests
     }
 
     [Fact]
+    public void ANameResetSaysWhatTheNewHandleIsAndAsksForANewOne()
+    {
+        var notice = Notice(
+            kind: ModerationNoticeKinds.NameReset,
+            contentType: "profile_name",
+            excerpt: "@a1b2c3d4e5",
+            detail: "Account @a1b2c3d4e5, Velvet @f6g7h8i9j0",
+            ruleTitle: "Hate speech or slurs",
+            ruleSummary: "Discriminatory language.");
+
+        Assert.Equal("Your name was reset", ModerationNoticeText.Title(notice));
+
+        var body = ModerationNoticeText.Body(notice);
+        Assert.Contains("@a1b2c3d4e5", body);
+        Assert.Contains("Account @a1b2c3d4e5, Velvet @f6g7h8i9j0", body);
+        Assert.Contains("Settings", body);
+        Assert.Contains("Hate speech or slurs", body);
+        // The excerpt is the new handle, not something the player wrote.
+        Assert.DoesNotContain("You posted", body);
+
+        Assert.True(ModerationNoticeText.IsBlocking(notice));
+        Assert.True(ModerationNoticeText.RefreshesAccount(notice));
+        Assert.False(ModerationNoticeText.IsCosmeticGrant(notice));
+    }
+
+    [Fact]
     public void TheReporterThankYouCreditsTheModerationTeam()
     {
         var body = ModerationNoticeText.Body(Notice(kind: ModerationNoticeKinds.ReportOutcome));

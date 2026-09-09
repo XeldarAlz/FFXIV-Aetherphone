@@ -16,6 +16,12 @@
     <ProjectDepsFileName>AetherphoneDev.deps.json</ProjectDepsFileName>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(AetherphoneBeta)' == 'true'">
+    <TargetName>AetherphoneBeta</TargetName>
+    <ProjectDepsFileName>AetherphoneBeta.deps.json</ProjectDepsFileName>
+    <DefineConstants>$(DefineConstants);BETA</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="Words\*.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -85,6 +85,7 @@ internal sealed unsafe class PhoneHost : IDisposable
         Plugin.KeyState = NullProxy.Create<IKeyState>();
         Plugin.GamepadState = NullProxy.Create<IGamepadState>();
         Plugin.AetheryteList = NullProxy.Create<IAetheryteList>();
+        Plugin.AddonLifecycle = NullProxy.Create<IAddonLifecycle>();
         fontAtlas.RebuildIfDirty();
         plugin = new Plugin();
         uiBuilder.PinWindow(plugin.MainWindow, new Vector2(PhoneMargin, PhoneMargin));

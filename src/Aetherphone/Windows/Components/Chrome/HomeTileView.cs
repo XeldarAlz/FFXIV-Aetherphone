@@ -10,7 +10,7 @@ namespace Aetherphone.Windows.Components;
 internal static class HomeTileView
 {
     public static void DrawApp(Vector2 center, float size, IPhoneApp app, PhoneTheme theme, float drawScale,
-        float labelAlpha, bool showLabels, float labelWidth, float zoom = 1f)
+        float labelAlpha, bool showLabels, float labelWidth, Configuration configuration, float zoom = 1f)
     {
         var scale = UiScale.Current * zoom;
         var dl = ImGui.GetWindowDrawList();
@@ -31,11 +31,14 @@ internal static class HomeTileView
         }
 
         DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha, showLabels, labelWidth, zoom);
-        if (app.BadgeCount > 0)
+        if (app.BadgeCount > 0 && IsBadgeVisible(app, configuration))
         {
             DrawBadge(center, size, app.BadgeCount, app.BadgeAsDot, theme, scale);
         }
     }
+
+    private static bool IsBadgeVisible(IPhoneApp app, Configuration configuration) =>
+        !app.HasBadge || configuration.IsAppBadgeEnabled(app.Id);
 
     public static void DrawShortcut(Vector2 center, float size, ShortcutEntry shortcut, IDalamudTextureWrap? icon,
         PhoneTheme theme, float drawScale, float labelAlpha, bool showLabels, float labelWidth, float zoom = 1f)
@@ -47,7 +50,7 @@ internal static class HomeTileView
 
     public static void DrawFolder(Vector2 center, float size, HomeTile folder, PhoneTheme theme, float drawScale,
         float labelAlpha, bool showLabels, string fallbackName, float labelWidth,
-        Func<ShortcutEntry, IDalamudTextureWrap?> shortcutIcon, float zoom = 1f)
+        Func<ShortcutEntry, IDalamudTextureWrap?> shortcutIcon, Configuration configuration, float zoom = 1f)
     {
         var scale = UiScale.Current * zoom;
         var dl = ImGui.GetWindowDrawList();
@@ -91,7 +94,7 @@ internal static class HomeTileView
         for (var memberIndex = 0; memberIndex < folder.Members.Count; memberIndex++)
         {
             var folderApp = folder.Members[memberIndex].App;
-            if (folderApp is null || folderApp.BadgeCount <= 0)
+            if (folderApp is null || folderApp.BadgeCount <= 0 || !IsBadgeVisible(folderApp, configuration))
             {
                 continue;
             }

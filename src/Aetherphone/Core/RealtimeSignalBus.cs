@@ -25,6 +25,7 @@ internal sealed class RealtimeSignalBus
 
     public event Action<ChatSignal>? ChatPinged;
     public event Action? KeysWentStale;
+    public event Action? DeviceLinkRequested;
     public event Action? VelvetPinged;
     public event Action? GramPinged;
     public event Action? SocialPinged;
@@ -57,6 +58,11 @@ internal sealed class RealtimeSignalBus
     public void PublishKeysStale()
     {
         KeysWentStale?.Invoke();
+    }
+
+    public void PublishDeviceLinkRequested()
+    {
+        DeviceLinkRequested?.Invoke();
     }
 
     public void PublishVelvet()

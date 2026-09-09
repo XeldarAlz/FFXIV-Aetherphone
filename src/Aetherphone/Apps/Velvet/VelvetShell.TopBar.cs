@@ -75,7 +75,7 @@ internal sealed partial class VelvetShell
     private static int RootTrailingSlots(VelvetPage tab) =>
         tab switch
         {
-            VelvetPage.Discover => 3,
+            VelvetPage.Discover => 4,
             VelvetPage.Feed => 2,
             VelvetPage.Me => 2,
             VelvetPage.Messages => 2,
@@ -124,6 +124,13 @@ internal sealed partial class VelvetShell
                         TopBarIconSize, Loc.T(L.Common.Search), VelvetInk.Shared, VelvetTheme.TitleInk))
                 {
                     OpenSearch();
+                }
+
+                if (SocialChrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(area, 3), radius,
+                        PhoneIcons.UserSquareRounded, TopBarIconSize, Loc.T(L.Velvet.DeckModeLabel), VelvetInk.Shared,
+                        VelvetTheme.TitleInk, configuration.VelvetDiscoverDeck))
+                {
+                    ToggleDeckMode();
                 }
 
                 break;

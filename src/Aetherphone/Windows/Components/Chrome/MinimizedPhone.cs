@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Maps;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.Shell;
@@ -61,6 +62,8 @@ internal sealed class MinimizedPhone : IDisposable
     private const float CardSmoothTime = 0.20f;
     private const float HoldSmoothTime = 0.07f;
     private const float ControlThreshold = 0.6f;
+    private const float CalmWallpaperScrim = 0.30f;
+    private const float HarshWallpaperScrim = 0.58f;
     private const string MusicAppId = "music";
     private const string CallAppId = "message";
     private static readonly TimeSpan ShowingGrace = TimeSpan.FromSeconds(0.5);
@@ -73,6 +76,7 @@ internal sealed class MinimizedPhone : IDisposable
     private readonly Configuration configuration;
     private readonly MinimizedLayoutService layout;
     private readonly MinimizedFeed feed;
+    private readonly MinimapReader minimap;
     private readonly Queue<PhoneNotification> queuedCards = new();
     private Spring hover;
     private Spring expand;
@@ -140,9 +144,11 @@ internal sealed class MinimizedPhone : IDisposable
         this.layout = layout;
         feed = new MinimizedFeed(services.Weather, services.Coins, services.AethernetSession, services.Activity,
             services.GameData);
+        minimap = new MinimapReader(services.ZoneMapTextures);
         notifications.Changed += RefreshBadge;
         notifications.Presented += OnPresented;
         notifications.Vibration += OnVibration;
+        configuration.BadgeSettingsChanged += RefreshBadge;
         RefreshBadge();
     }
 
@@ -150,13 +156,27 @@ internal sealed class MinimizedPhone : IDisposable
 
     public Vector2 Measure(float scale)
     {
+        if (ShowsMinimap)
+        {
+            return MinimapBounds(scale);
+        }
+
         var band = ChassisGeometry.PuckBand(BodyWidth * scale);
         var height = MathF.Max(MinBodyHeight * scale - band, ContentHeight(scale)) + band;
         return new Vector2(MathF.Round(BodyWidth * scale), MathF.Round(height));
     }
 
-    public static Vector2 IdleSize(float scale) =>
-        new(MathF.Round(BodyWidth * scale), MathF.Round(MinBodyHeight * scale));
+    public Vector2 IdleSize(float scale) =>
+        ShowsMinimap ? MinimapBounds(scale) : new Vector2(MathF.Round(BodyWidth * scale),
+            MathF.Round(MinBodyHeight * scale));
+
+    private bool ShowsMinimap => configuration.MinimizedShape == MinimizedShape.Minimap;
+
+    private Vector2 MinimapBounds(float scale)
+    {
+        var side = MathF.Round(MinimizedShapes.MapSide(configuration.MinimizedMapSize) * scale);
+        return new Vector2(side, side);
+    }
 
     public MinimizedDrag ConsumeDrag()
     {
@@ -182,6 +202,11 @@ internal sealed class MinimizedPhone : IDisposable
     {
         clock += delta;
         feed.Update(delta);
+        if (ShowsMinimap)
+        {
+            minimap.Update(delta);
+        }
+
         if (interactive)
         {
             lastInteractiveDrawUtc = DateTime.UtcNow;
@@ -197,7 +222,12 @@ internal sealed class MinimizedPhone : IDisposable
             return MinimizedAction.None;
         }
 
-        RefreshText(scale);
+        var minimapShape = ShowsMinimap;
+        if (!minimapShape)
+        {
+            RefreshText(scale);
+        }
+
         frameTheme = theme;
         frameView = view;
         frameScale = scale;
@@ -211,8 +241,22 @@ internal sealed class MinimizedPhone : IDisposable
         controlHovered = false;
         drawnCardPresence = 0f;
         var screen = geometry.Screen;
+        var fullBleed = minimapShape || configuration.MinimizedWallpaper;
         dl.PushClipRect(screen.Min, screen.Max, true);
-        DrawParts(dl, screen, scale);
+        if (minimapShape)
+        {
+            MinimapFace.Draw(dl, screen, minimap, theme, alpha, scale);
+        }
+        else
+        {
+            if (fullBleed)
+            {
+                DrawWallpaperBackdrop(dl, geometry, theme, alpha);
+            }
+
+            DrawParts(dl, screen, scale);
+        }
+
         var holdValue = Math.Clamp(hold.Value, 0f, 1f);
         if (holdValue > 0.005f)
         {
@@ -220,6 +264,11 @@ internal sealed class MinimizedPhone : IDisposable
         }
 
         dl.PopClipRect();
+        if (fullBleed)
+        {
+            DeviceChrome.MaskScreenCorners(dl, geometry, theme, scale);
+        }
+
         if (cardNotification is { } stroked && drawnCardPresence > 0.01f)
         {
             MinimizedPhoneRenderer.DrawCardStroke(dl, geometry, stroked.Accent, alpha * drawnCardPresence, cardHovered,
@@ -427,6 +476,27 @@ internal sealed class MinimizedPhone : IDisposable
         var section = SectionRect(screen, y, height);
         MinimizedWidgetRenderer.Draw(dl, section, part, feed, configuration, frameTheme, frameAlpha, frameScale);
         return section.Max.Y;
+    }
+
+    private static void DrawWallpaperBackdrop(ImDrawListPtr dl, in ChassisGeometry geometry, PhoneTheme theme,
+        float alpha)
+    {
+        var screen = geometry.Screen;
+        var library = Plugin.Wallpapers;
+        var aspect = screen.Height > 0f ? screen.Width / screen.Height : 0.5f;
+        WallpaperRenderer.DrawSingle(dl, screen, geometry.ScreenRadius, library.Resolve(theme.LightWallpaperId),
+            aspect, alpha, theme.ScreenBase);
+        var darkness = library.ThemeDarkness;
+        if (darkness > 0.001f)
+        {
+            WallpaperRenderer.DrawSingle(dl, screen, geometry.ScreenRadius, library.Resolve(theme.DarkWallpaperId),
+                aspect, alpha * darkness, null);
+        }
+
+        var scrim = CalmWallpaperScrim +
+                    (HarshWallpaperScrim - CalmWallpaperScrim) * WallpaperLegibility.Strength(theme);
+        Squircle.Fill(dl, screen.Min, screen.Max, geometry.ScreenRadius,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, scrim * alpha)));
     }
 
     private Rect SectionRect(Rect screen, float top, float height) =>
@@ -713,6 +783,14 @@ internal sealed class MinimizedPhone : IDisposable
 
     private void RefreshBadge()
     {
+        if (!configuration.IsAppBadgeEnabled(NotificationChannels.NotificationsAppId))
+        {
+            countValue = 0;
+            countLabel = string.Empty;
+            badgeAppId = null;
+            return;
+        }
+
         var unread = notifications.UnreadCount;
         if (unread != countValue)
         {
@@ -803,5 +881,6 @@ internal sealed class MinimizedPhone : IDisposable
         notifications.Changed -= RefreshBadge;
         notifications.Presented -= OnPresented;
         notifications.Vibration -= OnVibration;
+        configuration.BadgeSettingsChanged -= RefreshBadge;
     }
 }

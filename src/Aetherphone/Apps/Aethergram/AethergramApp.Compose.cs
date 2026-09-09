@@ -128,7 +128,7 @@ internal sealed partial class AethergramApp
             {
                 caption = string.Empty;
                 composeSensitive = false;
-                store.RefreshFeed(SocialFeedScope.ForYou);
+                store.RefreshFeed(SocialFeedScope.Latest);
                 store.RefreshFeed(SocialFeedScope.Following);
                 feedScrollTopPending = true;
             }

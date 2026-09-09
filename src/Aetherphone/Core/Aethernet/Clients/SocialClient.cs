@@ -29,6 +29,18 @@ internal sealed class SocialClient
         return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token, null, onFailure);
     }
 
+    public Task<bool> ReportSeenAsync(string[] postIds, CancellationToken token)
+    {
+        return net.SendJsonForStatusAsync(HttpMethod.Post, "/feed/seen", new FeedSeenRequest(postIds),
+            AethernetJsonContext.Default.FeedSeenRequest, token);
+    }
+
+    public Task<bool> ReportSignalAsync(string postId, int kind, CancellationToken token)
+    {
+        return net.SendJsonForStatusAsync(HttpMethod.Post, "/feed/signals", new FeedSignalRequest(postId, kind),
+            AethernetJsonContext.Default.FeedSignalRequest, token);
+    }
+
     public Task<PostDto?> CreatePostAsync(string text, string[]? mediaKeys, int mediaWidth, int mediaHeight, bool sensitive, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {

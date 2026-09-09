@@ -104,7 +104,7 @@ internal sealed class AppearancePage : ISettingsPage
                 TimeText.Use24Hour, theme, null, TimeText.Clock(DateTime.Now));
             if (SettingsRow.Disclosure(displayCard.NextRow(), Loc.T(L.Minimized.Title), string.Empty, theme))
             {
-                navigator.Open(new MinimizedPhonePage(minimizedLayout));
+                navigator.Open(new MinimizedPhonePage(minimizedLayout, configuration));
             }
 
             displayCard.End();

@@ -151,7 +151,6 @@ internal sealed partial class VelvetShell
 
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
         store.EnsureUserPosts(userId);
-        SyncFeedRelations();
         var posts = store.UserPostsUserId == userId ? store.UserPosts : Array.Empty<VelvetPostDto>();
         using (var surface = AppSurface.BeginEdgeToEdge(body))
         {

@@ -218,6 +218,18 @@ internal sealed class VelvetClient
         return net.GetAsync(path.ToString(), AethernetJsonContext.Default.VelvetFeedPage, token, null, onFailure);
     }
 
+    public Task<bool> ReportSeenAsync(string[] postIds, CancellationToken token)
+    {
+        return net.SendJsonForStatusAsync(HttpMethod.Post, "/feed/seen", new FeedSeenRequest(postIds),
+            AethernetJsonContext.Default.FeedSeenRequest, token);
+    }
+
+    public Task<bool> ReportSignalAsync(string postId, int kind, CancellationToken token)
+    {
+        return net.SendJsonForStatusAsync(HttpMethod.Post, "/feed/signals", new FeedSignalRequest(postId, kind),
+            AethernetJsonContext.Default.FeedSignalRequest, token);
+    }
+
     public Task<VelvetPostDto?> PostAsync(string postId, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {

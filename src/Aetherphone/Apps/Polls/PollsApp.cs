@@ -19,6 +19,7 @@ internal sealed class PollsApp : IPhoneApp
     private const float RefreshSeconds = 30f;
     private const float FillSmoothTime = 0.26f;
     private const float CheckSmoothTime = 0.16f;
+    private const float RevealSmoothTime = 0.28f;
     private const float OptionFontScale = 0.98f;
     private const float CountFontScale = 0.92f;
     private const float RadioRadius = 9f;
@@ -28,6 +29,9 @@ internal sealed class PollsApp : IPhoneApp
     private const float BarGap = 10f;
     private const float RowTopPad = 2f;
     private const float RowBottomPad = 4f;
+    private const float HiddenRowPad = 7f;
+    private const float FooterFontScale = 0.85f;
+    private const float RevealEpsilon = 0.01f;
 
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
@@ -35,6 +39,7 @@ internal sealed class PollsApp : IPhoneApp
     public string DisplayName => Loc.T(L.Apps.Polls);
     public string Glyph => "Po";
     public int BadgeCount => store.UnvotedCount;
+    public bool HasBadge => true;
 
     private readonly PollsStore store;
     private readonly AppSkin ui = new(AppPalettes.Polls);
@@ -154,14 +159,26 @@ internal sealed class PollsApp : IPhoneApp
         var text = LocalizedFor(poll);
         var questionHeight = Typography.MeasureWrapped(text.Question, contentWidth, 1.08f, FontWeight.SemiBold);
         var optionGap = 10f * scale;
-        var footerHeight = 18f * scale;
+        var footerHeight = Typography.MeasureWrapped(text.Footer, contentWidth, FooterFontScale);
         var optionsTop = origin.Y + pad + questionHeight + 14f * scale;
+
+        var motion = MotionFor(poll);
+        var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var revealTarget = ResultsVisible(poll) ? 1f : 0f;
+        if (!motion.Primed)
+        {
+            motion.Primed = true;
+            motion.Reveal.SnapTo(revealTarget);
+        }
+
+        var reveal = motion.Reveal.Step(revealTarget, RevealSmoothTime, deltaSeconds);
+        var showResults = revealTarget > 0f || reveal > RevealEpsilon;
 
         var heights = EnsureRowBuffer(poll.Options.Length);
         var optionsHeight = 0f;
         for (var index = 0; index < poll.Options.Length; index++)
         {
-            heights[index] = OptionRowHeight(poll, index, text.Options[index], contentLeft, contentWidth, scale);
+            heights[index] = OptionRowHeight(text, index, contentLeft, contentWidth, scale, showResults, reveal);
             optionsHeight += heights[index];
             if (index > 0)
             {
@@ -186,28 +203,30 @@ internal sealed class PollsApp : IPhoneApp
             Typography.Wrapped(text.Question);
         }
 
-        var motion = MotionFor(poll);
-        var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var rowTop = optionsTop;
         for (var index = 0; index < poll.Options.Length; index++)
         {
-            DrawOption(drawList, poll, text.Options[index], motion, index, contentLeft, rowTop, contentWidth,
-                heights[index], scale, deltaSeconds);
+            DrawOption(drawList, poll, text, motion, index, contentLeft, rowTop, contentWidth, heights[index], scale,
+                deltaSeconds, showResults, reveal);
             rowTop += heights[index] + optionGap;
         }
 
-        var votesLabel = Loc.Plural(L.Polls.Votes, poll.TotalVotes);
-        var footer = poll.Closed
-            ? $"{votesLabel} · {Loc.T(L.Polls.FinalResults)}"
-            : $"{votesLabel} · {TimeText.Short(poll.CreatedAtUnix)}";
-        Typography.Draw(new Vector2(contentLeft, footerTop), footer, ui.MutedInk, 0.85f);
+        ImGui.SetCursorScreenPos(new Vector2(contentLeft, footerTop));
+        using (Typography.WrapAt(contentRight))
+        using (Plugin.Fonts.Push(FooterFontScale, FontWeight.Regular))
+        using (ImRaii.PushColor(ImGuiCol.Text, ui.MutedInk))
+        {
+            Typography.Wrapped(text.Footer);
+        }
 
         FeedCell.End(drawList, cell, ui.Hairline);
     }
 
-    private void DrawOption(ImDrawListPtr drawList, PollDto poll, string optionLabel, PollMotion motion,
-        int optionIndex, float left, float top, float width, float height, float scale, float deltaSeconds)
+    private void DrawOption(ImDrawListPtr drawList, PollDto poll, LocalizedPoll text, PollMotion motion,
+        int optionIndex, float left, float top, float width, float height, float scale, float deltaSeconds,
+        bool showResults, float reveal)
     {
+        var optionLabel = text.Options[optionIndex];
         var selected = poll.MyVote == optionIndex;
         var interactive = !poll.Closed;
         var rowMin = new Vector2(left - 8f * scale, top - 4f * scale);
@@ -242,12 +261,9 @@ internal sealed class PollsApp : IPhoneApp
                 radioCenter + new Vector2(0.46f * markScale, -0.30f * markScale), markColor, 1.8f * scale);
         }
 
-        var labelLeft = left + radioRadius * 2f + LabelGap * scale;
-        var count = poll.VoteCounts[optionIndex].ToString(Loc.Culture);
-        var countSize = Typography.Measure(count, CountFontScale, FontWeight.Medium);
-        var countLeft = left + width - countSize.X;
+        var labelLeft = LabelLeft(left, scale);
         var labelInk = selected ? ui.TitleInk : ui.BodyInk;
-        var labelWidth = countLeft - labelLeft - CountGap * scale;
+        var labelWidth = LabelWidth(text, optionIndex, left, width, scale, showResults);
 
         ImGui.SetCursorScreenPos(new Vector2(labelLeft, top + RowTopPad * scale));
         using (Typography.WrapAt(labelLeft + labelWidth))
@@ -257,24 +273,30 @@ internal sealed class PollsApp : IPhoneApp
             Typography.Wrapped(optionLabel);
         }
 
-        Typography.Draw(new Vector2(countLeft, firstLineCenterY - countSize.Y * 0.5f), count,
-            Palette.WithAlpha(ui.MutedInk, inkAlpha), CountFontScale, FontWeight.Medium);
-
-        var barHeight = BarHeight * scale;
-        var barTop = top + height - barHeight - RowBottomPad * scale;
-        var barMin = new Vector2(labelLeft, barTop);
-        var barMax = new Vector2(left + width, barTop + barHeight);
-        var rounding = barHeight * 0.5f;
-        Squircle.Fill(drawList, barMin, barMax, rounding, ImGui.GetColorU32(ui.FieldSurface));
-
-        var fraction = poll.TotalVotes > 0 ? (float)poll.VoteCounts[optionIndex] / poll.TotalVotes : 0f;
-        var animated = motion.Fills[optionIndex].Step(fraction, FillSmoothTime, deltaSeconds);
-        if (animated > 0.001f)
+        if (showResults && reveal > RevealEpsilon)
         {
-            var fillWidth = MathF.Max((barMax.X - barMin.X) * animated, barHeight);
-            var fillColor = selected ? ui.Accent : Palette.WithAlpha(ui.Accent, 0.45f);
-            Squircle.Fill(drawList, barMin, new Vector2(barMin.X + fillWidth, barMax.Y), rounding,
-                ImGui.GetColorU32(Palette.WithAlpha(fillColor, fillColor.W * inkAlpha)));
+            var count = text.Counts[optionIndex];
+            var countSize = Typography.Measure(count, CountFontScale, FontWeight.Medium);
+            Typography.Draw(new Vector2(left + width - countSize.X, firstLineCenterY - countSize.Y * 0.5f), count,
+                Palette.WithAlpha(ui.MutedInk, inkAlpha * reveal), CountFontScale, FontWeight.Medium);
+
+            var barHeight = BarHeight * scale * reveal;
+            var barTop = top + height - barHeight - RowBottomPad * scale;
+            var barMin = new Vector2(labelLeft, barTop);
+            var barMax = new Vector2(left + width, barTop + barHeight);
+            var rounding = barHeight * 0.5f;
+            Squircle.Fill(drawList, barMin, barMax, rounding,
+                ImGui.GetColorU32(Palette.WithAlpha(ui.FieldSurface, ui.FieldSurface.W * reveal)));
+
+            var fraction = poll.TotalVotes > 0 ? (float)poll.VoteCounts[optionIndex] / poll.TotalVotes : 0f;
+            var animated = motion.Fills[optionIndex].Step(fraction, FillSmoothTime, deltaSeconds);
+            if (animated > 0.001f)
+            {
+                var fillWidth = MathF.Max((barMax.X - barMin.X) * animated, BarHeight * scale);
+                var fillColor = selected ? ui.Accent : Palette.WithAlpha(ui.Accent, 0.45f);
+                Squircle.Fill(drawList, barMin, new Vector2(barMin.X + fillWidth, barMax.Y), rounding,
+                    ImGui.GetColorU32(Palette.WithAlpha(fillColor, fillColor.W * inkAlpha * reveal)));
+            }
         }
 
         if (UiInteract.Click(rowMin, rowMax, hovered))
@@ -301,6 +323,8 @@ internal sealed class PollsApp : IPhoneApp
         cached.LangCode = code;
         cached.Question = poll.Question;
         cached.Options = poll.Options;
+        cached.Counts = CountLabels(cached.Counts, poll.VoteCounts);
+        cached.Footer = FooterText(poll);
 
         var translations = poll.Translations ?? Array.Empty<PollTranslationDto>();
         for (var index = 0; index < translations.Length; index++)
@@ -353,6 +377,7 @@ internal sealed class PollsApp : IPhoneApp
         {
             motion.Fills = new Spring[poll.Options.Length];
             motion.Checks = new Spring[poll.Options.Length];
+            motion.Primed = false;
         }
 
         return motion;
@@ -368,23 +393,67 @@ internal sealed class PollsApp : IPhoneApp
         return rowHeights;
     }
 
-    private static float OptionRowHeight(PollDto poll, int optionIndex, string label, float left, float width,
-        float scale)
+    private static float OptionRowHeight(LocalizedPoll text, int optionIndex, float left, float width, float scale,
+        bool showResults, float reveal)
     {
-        var radioRadius = RadioRadius * scale;
-        var labelLeft = left + radioRadius * 2f + LabelGap * scale;
-        var count = poll.VoteCounts[optionIndex].ToString(Loc.Culture);
-        var countSize = Typography.Measure(count, CountFontScale, FontWeight.Medium);
-        var countLeft = left + width - countSize.X;
-        var labelWidth = countLeft - labelLeft - CountGap * scale;
-        var labelHeight = Typography.MeasureWrapped(label, labelWidth, OptionFontScale, FontWeight.SemiBold);
-        return labelHeight + (RowTopPad + BarGap + BarHeight + RowBottomPad) * scale;
+        var labelWidth = LabelWidth(text, optionIndex, left, width, scale, showResults);
+        var labelHeight = Typography.MeasureWrapped(text.Options[optionIndex], labelWidth, OptionFontScale,
+            FontWeight.SemiBold);
+        return labelHeight + (RowTopPad + RowBottomPad) * scale + (BarGap + BarHeight) * scale * reveal
+               + HiddenRowPad * scale * (1f - reveal);
+    }
+
+    private static float LabelLeft(float left, float scale)
+    {
+        return left + RadioRadius * scale * 2f + LabelGap * scale;
+    }
+
+    private static float LabelWidth(LocalizedPoll text, int optionIndex, float left, float width, float scale,
+        bool showResults)
+    {
+        var labelLeft = LabelLeft(left, scale);
+        if (!showResults)
+        {
+            return left + width - labelLeft;
+        }
+
+        var countSize = Typography.Measure(text.Counts[optionIndex], CountFontScale, FontWeight.Medium);
+        return left + width - countSize.X - CountGap * scale - labelLeft;
+    }
+
+    private static bool ResultsVisible(PollDto poll)
+    {
+        return poll.MyVote >= 0;
+    }
+
+    private static string[] CountLabels(string[] reuse, int[] counts)
+    {
+        var labels = reuse.Length == counts.Length ? reuse : new string[counts.Length];
+        for (var index = 0; index < counts.Length; index++)
+        {
+            labels[index] = counts[index].ToString(Loc.Culture);
+        }
+
+        return labels;
+    }
+
+    private static string FooterText(PollDto poll)
+    {
+        var stamp = poll.Closed ? Loc.T(L.Polls.FinalResults) : TimeText.Short(poll.CreatedAtUnix);
+        if (ResultsVisible(poll))
+        {
+            return $"{Loc.Plural(L.Polls.Votes, poll.TotalVotes)} · {stamp}";
+        }
+
+        return poll.Closed ? stamp : $"{Loc.T(L.Polls.HiddenResults)} · {stamp}";
     }
 
     private sealed class PollMotion
     {
         public Spring[] Fills = Array.Empty<Spring>();
         public Spring[] Checks = Array.Empty<Spring>();
+        public Spring Reveal;
+        public bool Primed;
     }
 
     private sealed class LocalizedPoll
@@ -393,6 +462,8 @@ internal sealed class PollsApp : IPhoneApp
         public string LangCode = string.Empty;
         public string Question = string.Empty;
         public string[] Options = Array.Empty<string>();
+        public string[] Counts = Array.Empty<string>();
+        public string Footer = string.Empty;
     }
 
     public void Dispose()

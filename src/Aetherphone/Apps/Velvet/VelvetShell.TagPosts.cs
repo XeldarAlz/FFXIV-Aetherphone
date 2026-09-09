@@ -38,7 +38,6 @@ internal sealed partial class VelvetShell
 
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
         store.EnsureTagPosts(token, MutesFilter());
-        SyncFeedRelations();
         var showing = string.Equals(store.TagToken, token, StringComparison.Ordinal);
         var posts = showing ? store.TagPosts : Array.Empty<VelvetPostDto>();
         using (AppSurface.BeginEdgeToEdge(body))

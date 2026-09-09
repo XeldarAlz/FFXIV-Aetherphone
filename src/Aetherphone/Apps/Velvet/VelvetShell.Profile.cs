@@ -27,6 +27,7 @@ internal sealed partial class VelvetShell
     private const float ProfileBlockGap = 10f;
     private const float ProfileTabHeight = 44f;
     private const float ProfileActionHeight = 40f;
+    private const float ProfileActionGap = 10f;
     private const float ProfileBottomPad = 14f;
     private const float ProfileGridGap = 1.5f;
     private const float ProfileTabUnderline = 2f;
@@ -268,6 +269,7 @@ internal sealed partial class VelvetShell
 
     private void DrawProfileAction(VelvetProfileDto user, bool isMe, Rect rect)
     {
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var rounding = rect.Height * 0.5f;
         if (isMe)
@@ -317,13 +319,24 @@ internal sealed partial class VelvetShell
 
                 break;
             default:
-                if (SocialPill.Accent(drawList, rect, Loc.T(L.Velvet.IntroduceYourself), VelvetInk.Shared,
+            {
+                var half = (rect.Width - ProfileActionGap * scale) * 0.5f;
+                var connect = new Rect(rect.Min, new Vector2(rect.Min.X + half, rect.Max.Y));
+                var say = new Rect(new Vector2(rect.Max.X - half, rect.Min.Y), rect.Max);
+                if (SocialPill.Accent(drawList, connect, Loc.T(L.Velvet.Connect), VelvetInk.Shared,
                         TextStyles.SubheadlineEmphasized, rounding))
+                {
+                    store.Connect(user.UserId);
+                }
+
+                if (SocialPill.Outline(drawList, say, Loc.T(L.Velvet.DeckSay), VelvetInk.Shared,
+                        TextStyles.SubheadlineEmphasized, rounding, VelvetInk.Shared.ButtonFill))
                 {
                     RequestIntro(user.UserId, user.DisplayName, user.Handle, user.AvatarUrl);
                 }
 
                 break;
+            }
         }
     }
 

@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using Aetherphone.Apps.Message;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
@@ -8,12 +7,13 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Message;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 
-namespace Aetherphone.Windows;
+namespace Aetherphone.Apps.Message;
 
 internal sealed class MessagePopoutWindow : Window
 {

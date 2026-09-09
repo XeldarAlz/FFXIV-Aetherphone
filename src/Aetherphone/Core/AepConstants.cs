@@ -6,10 +6,26 @@ internal static class AepConstants
     public const string Name = "AetherphoneDev";
     public const string PrimaryCommand = "/phonedev";
     public const string AliasCommand = "/aetherphonedev";
+    #elif BETA
+    public const string Name = "AetherphoneBeta";
+    public const string PrimaryCommand = "/phonebeta";
+    public const string AliasCommand = "/aetherphonebeta";
     #else
     public const string Name = "Aetherphone";
     public const string PrimaryCommand = "/phone";
     public const string AliasCommand = "/aetherphone";
+    #endif
+
+    #if DEBUG || BETA
+    public static readonly bool IsPrerelease = true;
+    #else
+    public static readonly bool IsPrerelease = false;
+    #endif
+
+    #if BETA
+    public static readonly bool IsBeta = true;
+    #else
+    public static readonly bool IsBeta = false;
     #endif
     public const string DiscordUrl = "https://discord.gg/3HbJCscMyS";
     public const string WebsiteUrl = "https://www.aetherphone.net";
