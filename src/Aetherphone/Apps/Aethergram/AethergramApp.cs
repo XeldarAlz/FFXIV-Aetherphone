@@ -234,6 +234,9 @@ internal sealed partial class AethergramApp : IResumableApp
         this.lodestone = lodestone;
         this.library = library;
         composeSession = new PhotoComposeSession(library, wallpaperImages);
+        composeEditBack = composeSession.EditBack;
+        composeCaptionBack = composeSession.CaptionBack;
+        composeExitTagMode = ExitTagMode;
         this.images = images;
         this.http = http;
         this.social = social;

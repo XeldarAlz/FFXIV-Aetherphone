@@ -41,7 +41,7 @@ internal readonly struct PhotoEditPanelStyle
 
     public static PhotoEditPanelStyle ForComposer(in PhotoComposeStyle compose, Vector4 ink, Vector4 iconBackground)
     {
-        return new PhotoEditPanelStyle(AppSkin.Transparent, ink, compose.MutedInk, compose.ScrubberTrack,
+        return new PhotoEditPanelStyle(AppSkin.Transparent, ink, compose.MutedInk, compose.Rail,
             compose.Accent, iconBackground, false);
     }
 }
@@ -59,6 +59,10 @@ internal static class PhotoEditPanel
     private const float DockHeight = 44f;
     private const float DockBottomInset = 8f;
     private const float DockItemWidth = 60f;
+    private const float DockLabeledItemWidth = 108f;
+    private const float DockLabelGap = 7f;
+    private const float DockLabelIconWidth = 18f;
+    private const float DockLabelIconScale = 0.9f;
     private const float DockPillInset = 4f;
     private const float DockIconScale = 1.05f;
     private const float DockSmoothTime = 0.16f;
@@ -107,19 +111,24 @@ internal static class PhotoEditPanel
 
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 KnobShadow = new(0f, 0f, 0f, 0.28f);
-    private static readonly PhotoEditTool[] Tools = { PhotoEditTool.Adjust, PhotoEditTool.Looks, PhotoEditTool.Crop };
+    private static readonly PhotoEditTool[] GalleryTools =
+    {
+        PhotoEditTool.Adjust,
+        PhotoEditTool.Looks,
+        PhotoEditTool.Crop,
+    };
 
     public static Rect FooterRect(Rect area, float bottom, float scale)
     {
         return new Rect(new Vector2(area.Min.X, bottom - (Height * scale)), new Vector2(area.Max.X, bottom));
     }
 
-    public static float UpperRowCenterY(Rect footer, float scale)
+    private static float UpperRowCenterY(Rect footer, float scale)
     {
         return footer.Max.Y - (UpperRowCenterFromBottom * scale);
     }
 
-    public static Rect RulerRect(Rect footer, float scale)
+    private static Rect RulerRect(Rect footer, float scale)
     {
         var width = footer.Width * RulerWidthFraction;
         var bottom = footer.Max.Y - (RulerBottomInset * scale);
@@ -127,9 +136,9 @@ internal static class PhotoEditPanel
             new Vector2(footer.Center.X + (width * 0.5f), bottom));
     }
 
-    private static Rect DockRect(Rect footer, float scale)
+    private static Rect DockRect(Rect footer, float scale, int itemCount, float itemWidth)
     {
-        var width = DockItemWidth * Tools.Length * scale;
+        var width = itemWidth * itemCount;
         var bottom = footer.Max.Y - (DockBottomInset * scale);
         return new Rect(new Vector2(footer.Center.X - (width * 0.5f), bottom - (DockHeight * scale)),
             new Vector2(footer.Center.X + (width * 0.5f), bottom));
@@ -175,11 +184,11 @@ internal static class PhotoEditPanel
                 DrawGalleryCrop(session, footer, ui, style, scale, interactive);
                 break;
             default:
-                DrawAdjust(session.Controls, footer, style, scale, interactive);
+                DrawAdjust(session.Controls, footer, style, scale, interactive, false);
                 break;
         }
 
-        DrawDock(session.Controls, footer, style, scale, interactive);
+        DrawDock(session.Controls, footer, style, scale, interactive, GalleryTools, false);
     }
 
     private static void PaintPanel(Rect panel, in PhotoEditPanelStyle style, float scale)
@@ -233,8 +242,10 @@ internal static class PhotoEditPanel
         }
     }
 
+    // Composers have no Crop tool, so rotate and flip flank the adjustment ruler there, the way
+    // Instagram keeps them under Adjust.
     public static void DrawAdjust(PhotoEditControls controls, Rect footer, in PhotoEditPanelStyle style,
-        float scale, bool interactive)
+        float scale, bool interactive, bool orientationButtons)
     {
         var drawList = ImGui.GetWindowDrawList();
         var adjustments = PhotoEditControls.Adjustments;
@@ -286,6 +297,11 @@ internal static class PhotoEditPanel
         if (updated != fraction)
         {
             controls.Adjust(controls.Adjustment, min + (updated * (max - min)));
+        }
+
+        if (orientationButtons)
+        {
+            DrawOrientationButtons(ruler, controls, style, scale, interactive);
         }
     }
 
@@ -443,7 +459,7 @@ internal static class PhotoEditPanel
         controls.LookShelfOffset = Math.Clamp(controls.LookShelfOffset, 0f, maxOffset);
     }
 
-    public static void DrawLabelLine(Rect footer, string name, string value, in PhotoEditPanelStyle style,
+    private static void DrawLabelLine(Rect footer, string name, string value, in PhotoEditPanelStyle style,
         float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
@@ -466,7 +482,7 @@ internal static class PhotoEditPanel
             style.Accent, TextStyles.SubheadlineEmphasized);
     }
 
-    public static float DrawRuler(Rect rect, float value, bool bipolar, in PhotoEditPanelStyle style, float scale,
+    private static float DrawRuler(Rect rect, float value, bool bipolar, in PhotoEditPanelStyle style, float scale,
         float alpha, bool interactive)
     {
         var drawList = ImGui.GetWindowDrawList();
@@ -517,7 +533,7 @@ internal static class PhotoEditPanel
         return result;
     }
 
-    public static void DrawOrientationButtons(Rect ruler, PhotoEditControls controls, in PhotoEditPanelStyle style,
+    private static void DrawOrientationButtons(Rect ruler, PhotoEditControls controls, in PhotoEditPanelStyle style,
         float scale, bool interactive)
     {
         var radius = OrientationRadius * scale;
@@ -558,15 +574,15 @@ internal static class PhotoEditPanel
     }
 
     public static void DrawDock(PhotoEditControls controls, Rect footer, in PhotoEditPanelStyle style, float scale,
-        bool interactive)
+        bool interactive, PhotoEditTool[] tools, bool labeled)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var dock = DockRect(footer, scale);
+        var itemWidth = (labeled ? DockLabeledItemWidth : DockItemWidth) * scale;
+        var dock = DockRect(footer, scale, tools.Length, itemWidth);
         var rounding = dock.Height * 0.5f;
         Material.Glass(drawList, dock.Min, dock.Max, rounding, style.Ink, scale);
-        var itemWidth = DockItemWidth * scale;
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, MaxDeltaSeconds);
-        var activeIndex = Array.IndexOf(Tools, controls.Tool);
+        var activeIndex = Array.IndexOf(tools, controls.Tool);
         var animated = controls.DockSpring.Step(activeIndex, DockSmoothTime, deltaSeconds);
         var pillInset = DockPillInset * scale;
         var pillMin = new Vector2(dock.Min.X + pillInset + (animated * itemWidth), dock.Min.Y + pillInset);
@@ -576,17 +592,25 @@ internal static class PhotoEditPanel
             ImGui.GetColorU32(style.Accent with { W = DockPillAlpha }));
         Squircle.Stroke(drawList, pillMin, pillMax, pillRounding,
             ImGui.GetColorU32(style.Accent with { W = DockPillStrokeAlpha }), Metrics.Stroke.Hairline * scale);
-        for (var index = 0; index < Tools.Length; index++)
+        for (var index = 0; index < tools.Length; index++)
         {
-            var tool = Tools[index];
+            var tool = tools[index];
             var min = new Vector2(dock.Min.X + (index * itemWidth), dock.Min.Y);
             var max = new Vector2(min.X + itemWidth, dock.Max.Y);
             var center = (min + max) * 0.5f;
             var active = tool == controls.Tool;
             var hovered = interactive && UiInteract.Hover(min, max);
             var color = active ? style.Accent : hovered ? style.Ink : style.MutedInk;
-            AppSkin.Icon(drawList, center, IconGlyph.Of(ToolIcon(tool)), color, DockIconScale);
-            HoverTooltip.Show(new Rect(min, max), Loc.T(ToolLabel(tool)), HoverLabelSide.Above);
+            if (labeled)
+            {
+                DrawDockLabel(drawList, center, tool, color, scale);
+            }
+            else
+            {
+                AppSkin.Icon(drawList, center, IconGlyph.Of(ToolIcon(tool)), color, DockIconScale);
+                HoverTooltip.Show(new Rect(min, max), Loc.T(ToolLabel(tool)), HoverLabelSide.Above);
+            }
+
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -597,6 +621,20 @@ internal static class PhotoEditPanel
                 controls.Tool = tool;
             }
         }
+    }
+
+    private static void DrawDockLabel(ImDrawListPtr drawList, Vector2 center, PhotoEditTool tool, Vector4 color,
+        float scale)
+    {
+        var label = Loc.T(ToolLabel(tool));
+        var labelSize = Typography.Measure(label, TextStyles.SubheadlineEmphasized);
+        var iconWidth = DockLabelIconWidth * scale;
+        var gap = DockLabelGap * scale;
+        var left = center.X - ((iconWidth + gap + labelSize.X) * 0.5f);
+        AppSkin.Icon(drawList, new Vector2(left + (iconWidth * 0.5f), center.Y), IconGlyph.Of(ToolIcon(tool)), color,
+            DockLabelIconScale);
+        Typography.Draw(drawList, new Vector2(left + iconWidth + gap, center.Y - (labelSize.Y * 0.5f)), label, color,
+            TextStyles.SubheadlineEmphasized);
     }
 
     private static FontAwesomeIcon AdjustmentIcon(PhotoAdjustment adjustment)

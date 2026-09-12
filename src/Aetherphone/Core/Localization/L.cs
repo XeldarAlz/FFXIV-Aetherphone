@@ -35,7 +35,6 @@ internal static class L
         public static readonly LocString Next = new("common.next", "Next");
         public static readonly LocString Previous = new("common.previous", "Previous");
         public static readonly LocString PhotoCounter = new("common.photoCounter", "{0}/{1}");
-        public static readonly LocString PhotoStep = new("common.photoStep", "Photo {0} of {1}");
         public static readonly LocString PhotoLimit = new("common.photoLimit", "You can add up to {0} photos");
         public static readonly LocString ImageFailed = new("common.imageFailed", "Couldn't load image");
         public static readonly LocString Pin = new("common.pin", "Pin");
@@ -83,6 +82,9 @@ internal static class L
         public static readonly LocString AspectSquare = new("social.aspectSquare", "Square");
         public static readonly LocString AspectPortrait = new("social.aspectPortrait", "Portrait");
         public static readonly LocString AspectLandscape = new("social.aspectLandscape", "Landscape");
+        public static readonly LocString ComposeEditTitle = new("social.compose.editTitle", "Edit");
+        public static readonly LocString ComposeChoosePhoto = new("social.compose.choosePhoto", "Choose a photo");
+        public static readonly LocString ComposeTapToEdit = new("social.compose.tapToEdit", "Tap to edit");
         public static readonly LocString LikedChirp = new("social.likedChirp", "liked your chirp");
         public static readonly LocString LikedPhoto = new("social.likedPhoto", "liked your photo");
         public static readonly LocString LikedComment = new("social.likedComment", "liked your comment");
@@ -1754,12 +1756,15 @@ internal static class L
                 "The editor also crops to a ratio, straightens, rotates and flips; saving keeps the original and adds the edited photo beside it"),
         };
 
-        private static readonly LocString ComposerEditTab = new("changelog.r1030.4",
-            "The photo step of new posts and stories now has Adjust and Looks tools beside Crop: set brightness, contrast, saturation, warmth and vignette, pick a look, or rotate and flip before you crop");
+        private static readonly LocString ComposerFlow = new("changelog.r1030.4",
+            "Redesigned how a new post or story comes together: frame each photo while you pick it, tap the corner button to switch between Square, Portrait and Landscape, then polish it with Looks and Adjust on one Edit screen");
 
-        public static readonly LocString[] Release1030Aethergram = { ComposerEditTab };
+        private static readonly LocString ComposerShareScreen = new("changelog.r1030.20",
+            "The last step of a new post is a proper share screen: the caption sits in its own card with a bigger emoji button, the post options sit in a card below it, and a single Share button waits at the bottom");
 
-        public static readonly LocString[] Release1030Velvet = { ComposerEditTab };
+        public static readonly LocString[] Release1030Aethergram = { ComposerFlow, ComposerShareScreen };
+
+        public static readonly LocString[] Release1030Velvet = { ComposerFlow, ComposerShareScreen };
 
         public static readonly LocString[] Release1030Phone =
         {
@@ -4231,10 +4236,7 @@ internal static class L
         public static readonly LocString NewPost = new("aethergram.newPost", "New Post");
         public static readonly LocString NewAvatar = new("aethergram.newAvatar", "New Photo");
         public static readonly LocString ImportFromPc = new("aethergram.importFromPc", "Import from PC");
-        public static readonly LocString MoveAndScale = new("aethergram.moveAndScale", "Move and Scale");
-        public static readonly LocString GestureHint = new("aethergram.gestureHint", "Drag to move · scroll to zoom");
         public static readonly LocString CaptionHint = new("aethergram.captionHint", "Write a caption…");
-        public static readonly LocString TapToAdjust = new("aethergram.tapToAdjust", "Tap the photo to adjust the crop");
         public static readonly LocString Next = new("aethergram.next", "Next");
         public static readonly LocString PeopleSection = new("aethergram.peopleSection", "People");
         public static readonly LocString TagsSection = new("aethergram.tagsSection", "Tags");
