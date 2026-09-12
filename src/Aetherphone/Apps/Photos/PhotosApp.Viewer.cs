@@ -10,6 +10,7 @@ internal sealed partial class PhotosApp
 {
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 WhiteMuted = new(1f, 1f, 1f, 0.74f);
+    private static readonly Vector4 ViewerBackdrop = new(0.02f, 0.02f, 0.03f, 1f);
 
     private void DrawViewer(Rect screen)
     {
@@ -24,7 +25,7 @@ internal sealed partial class PhotosApp
         var path = viewerPaths[viewerIndex];
         var safe = ContentWithin(screen);
         var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0.02f, 0.02f, 0.03f, 1f)));
+        drawList.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(ViewerBackdrop));
 
         var texture = GetFull(path) ?? thumbnails.Get(path);
         if (texture is not null)
@@ -79,12 +80,21 @@ internal sealed partial class PhotosApp
             return;
         }
 
+        PhotosChrome.BottomScrim(drawList, screen.Min, screen.Max, (frameTheme.BottomZoneHeight + 40f) * scale);
+        var editLabel = Loc.T(L.Photos.Edit);
+        var editWidth = TextButton.Width(editLabel, scale);
+        var editCenter = new Vector2(safe.Min.X + 8f * scale + editWidth * 0.5f, safe.Max.Y - 15f * scale);
+        if (!zoomView.IsZoomed && TextButton.Draw(editCenter, editLabel, White, scale))
+        {
+            OpenEditor(path);
+            return;
+        }
+
         if (viewerPaths.Length <= 1)
         {
             return;
         }
 
-        PhotosChrome.BottomScrim(drawList, screen.Min, screen.Max, (frameTheme.BottomZoneHeight + 40f) * scale);
         Typography.DrawCentered(drawList, new Vector2(screen.Center.X, safe.Max.Y - 15f * scale),
             $"{viewerIndex + 1} / {viewerPaths.Length}", WhiteMuted, TextStyles.SubheadlineEmphasized);
         if (zoomView.IsZoomed)

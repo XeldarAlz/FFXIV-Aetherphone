@@ -99,6 +99,7 @@ internal sealed partial class PhotosApp : IPhoneApp
 
     public void OnClosed()
     {
+        editSession.Close();
         router.Reset();
     }
 
@@ -125,6 +126,12 @@ internal sealed partial class PhotosApp : IPhoneApp
         if (view.Route == PhotoRoute.Viewer)
         {
             DrawViewer(area);
+            return;
+        }
+
+        if (view.Route == PhotoRoute.Editor)
+        {
+            DrawEditor(area);
             return;
         }
 
@@ -523,12 +530,12 @@ internal sealed partial class PhotosApp : IPhoneApp
         library.Delete(path);
         if (thumbnails.TryRemove(path, out var thumbWrap))
         {
-            DisposeLater(thumbWrap);
+            DeferredDispose.Later(thumbWrap);
         }
 
         if (fullImages.TryRemove(path, out var fullWrap))
         {
-            DisposeLater(fullWrap);
+            DeferredDispose.Later(fullWrap);
         }
 
         var removedAt = Array.IndexOf(viewerPaths, path);
@@ -693,15 +700,10 @@ internal sealed partial class PhotosApp : IPhoneApp
         }
     }
 
-    private static void DisposeLater(IDisposable disposable)
-    {
-        _ = Task.Delay(TimeSpan.FromSeconds(1))
-            .ContinueWith(_ => Plugin.Framework.RunOnFrameworkThread(disposable.Dispose), TaskScheduler.Default);
-    }
-
     public void Dispose()
     {
         cancellation.Cancel();
+        editSession.Dispose();
         thumbnails.DisposeAll();
         fullImages.DisposeAll();
         cancellation.Dispose();

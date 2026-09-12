@@ -15,9 +15,41 @@ internal sealed class PhotoLibrary
 
     public void Save(byte[] pixels, int width, int height)
     {
-        var fileName = $"AEP_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png";
-        var path = Path.Combine(directory, fileName);
+        var path = FreePath(DateTime.Now, ".png");
+        if (path is null)
+        {
+            return;
+        }
+
         Task.Run(() => Write(path, pixels, width, height));
+    }
+
+    public string? SaveEdited(byte[] pixels, int width, int height)
+    {
+        var path = FreePath(DateTime.Now, ".png");
+        if (path is null)
+        {
+            return null;
+        }
+
+        return Write(path, pixels, width, height) ? path : null;
+    }
+
+    private string? FreePath(DateTime stamp, string extension)
+    {
+        const int attemptLimit = 100;
+        for (var attempt = 0; attempt < attemptLimit; attempt++)
+        {
+            var candidate = Path.Combine(directory,
+                $"AEP_{stamp.AddMilliseconds(attempt):yyyyMMdd_HHmmss_fff}{extension}");
+            if (!File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        AepLog.Warning($"[Photos] could not find a free photo name near {stamp:yyyyMMdd_HHmmss_fff}");
+        return null;
     }
 
     public string[] List()
@@ -111,7 +143,7 @@ internal sealed class PhotoLibrary
         }
     }
 
-    private static void Write(string path, byte[] pixels, int width, int height)
+    private static bool Write(string path, byte[] pixels, int width, int height)
     {
         try
         {
@@ -119,10 +151,12 @@ internal sealed class PhotoLibrary
             var temp = path + ".tmp";
             File.WriteAllBytes(temp, encoded);
             File.Move(temp, path, true);
+            return true;
         }
         catch (Exception exception)
         {
             Plugin.Log.Error(exception, "[Photos] failed to save photo");
+            return false;
         }
     }
 }

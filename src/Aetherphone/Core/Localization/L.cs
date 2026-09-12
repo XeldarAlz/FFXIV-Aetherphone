@@ -1746,10 +1746,20 @@ internal static class L
         public static readonly LocString SectionPhone = new("changelog.sectionPhone", "Phone");
         public static readonly LocString SectionSocial = new("changelog.sectionSocial", "Chirper and Aethergram");
 
+        public static readonly LocString[] Release1022Photos =
+        {
+            new("changelog.r1022.1",
+                "Added an editor to Photos: tap Edit on any photo to adjust brightness, contrast, saturation, warmth and vignette, or pick a look such as Warm, Film or Noir"),
+            new("changelog.r1022.2",
+                "The editor also crops to a ratio, straightens, rotates and flips; saving keeps the original and adds the edited photo beside it"),
+        };
+
         public static readonly LocString[] Release1022Phone =
         {
             new("changelog.r1022.0",
                 "Fixed the scattered red, blue and white dashes some PCs added to uploaded photos: Aetherphone now writes every JPEG itself instead of relying on a library that misbehaved on those machines"),
+            new("changelog.r1022.3",
+                "Fixed photos from a phone camera showing up sideways: a picture's own orientation tag is now honoured everywhere a photo is previewed or uploaded"),
         };
 
         public static readonly LocString[] Release1021Message =
@@ -5110,6 +5120,37 @@ internal static class L
         public static readonly LocString NoAlbums = new("photos.noAlbums", "No Albums");
         public static readonly LocString AlbumNamePlaceholder = new("photos.albumNamePlaceholder", "My Album");
         public static readonly LocString CreateAlbumHint = new("photos.noAlbumsHint", "Take a photo or create an album");
+        public static readonly LocString Edit = new("photos.edit", "Edit");
+        public static readonly LocString Save = new("photos.save", "Save");
+        public static readonly LocString Reset = new("photos.reset", "Reset");
+        public static readonly LocString ToolAdjust = new("photos.tool.adjust", "Adjust");
+        public static readonly LocString ToolLooks = new("photos.tool.looks", "Looks");
+        public static readonly LocString ToolCrop = new("photos.tool.crop", "Crop");
+        public static readonly LocString Brightness = new("photos.adjust.brightness", "Brightness");
+        public static readonly LocString Contrast = new("photos.adjust.contrast", "Contrast");
+        public static readonly LocString Saturation = new("photos.adjust.saturation", "Saturation");
+        public static readonly LocString Warmth = new("photos.adjust.warmth", "Warmth");
+        public static readonly LocString Vignette = new("photos.adjust.vignette", "Vignette");
+        public static readonly LocString Straighten = new("photos.adjust.straighten", "Straighten");
+        public static readonly LocString Rotate = new("photos.rotate", "Rotate");
+        public static readonly LocString Flip = new("photos.flip", "Flip");
+        public static readonly LocString Strength = new("photos.strength", "Strength");
+        public static readonly LocString LookOriginal = new("photos.look.original", "Original");
+        public static readonly LocString LookWarm = new("photos.look.warm", "Warm");
+        public static readonly LocString LookCool = new("photos.look.cool", "Cool");
+        public static readonly LocString LookVivid = new("photos.look.vivid", "Vivid");
+        public static readonly LocString LookFilm = new("photos.look.film", "Film");
+        public static readonly LocString LookFade = new("photos.look.fade", "Fade");
+        public static readonly LocString LookMono = new("photos.look.mono", "Mono");
+        public static readonly LocString LookNoir = new("photos.look.noir", "Noir");
+        public static readonly LocString AspectOriginal = new("photos.aspect.original", "Original");
+        public static readonly LocString AspectSquare = new("photos.aspect.square", "Square");
+        public static readonly LocString AspectFourByThree = new("photos.aspect.fourByThree", "4:3");
+        public static readonly LocString AspectThreeByFour = new("photos.aspect.threeByFour", "3:4");
+        public static readonly LocString AspectSixteenByNine = new("photos.aspect.sixteenByNine", "16:9");
+        public static readonly LocString AspectNineBySixteen = new("photos.aspect.nineBySixteen", "9:16");
+        public static readonly LocString EditFailed = new("photos.editFailed", "The edited photo could not be saved");
+        public static readonly LocString EditOpenFailed = new("photos.editOpenFailed", "This photo could not be opened for editing");
     }
 
     internal static class Skywatcher

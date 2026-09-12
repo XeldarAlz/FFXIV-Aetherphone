@@ -72,9 +72,19 @@ internal static class ImageProcessor
     {
         EnsureDecodable(stream, maxPixels);
         var image = Image.Load<Rgba32>(SingleFrame, stream);
+        image.Mutate(context => context.AutoOrient());
         ScaleWithin(image, maxDimension);
         length = checked(image.Width * image.Height * 4);
         return image;
+    }
+
+    public static PixelImage DecodeLocalRgba32(string path, int maxDimension)
+    {
+        using var stream = File.OpenRead(path);
+        using var image = LoadRgba32(stream, MaxLocalDecodePixels, maxDimension, out var length);
+        var pixels = new byte[length];
+        image.CopyPixelDataTo(pixels);
+        return new PixelImage(pixels, image.Width, image.Height);
     }
 
     private static void ScaleWithin(Image image, int maxDimension)
@@ -107,6 +117,7 @@ internal static class ImageProcessor
         using var sourceStream = File.OpenRead(sourcePath);
         EnsureDecodable(sourceStream, MaxLocalDecodePixels);
         using var image = Image.Load<Rgba32>(SingleFrame, sourceStream);
+        image.Mutate(context => context.AutoOrient());
         var size = new Vector2(image.Width, image.Height);
         var aspect = (float)targetWidth / targetHeight;
         var minZoom = revealWholeImage
@@ -143,6 +154,7 @@ internal static class ImageProcessor
         using var sourceStream = File.OpenRead(sourcePath);
         EnsureDecodable(sourceStream, MaxLocalDecodePixels);
         using var image = Image.Load<Rgba32>(SingleFrame, sourceStream);
+        image.Mutate(context => context.AutoOrient());
         ScaleWithin(image, maxDimension);
         return new BakedImage(EncodeJpeg(image), image.Width, image.Height);
     }
