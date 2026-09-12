@@ -56,6 +56,16 @@ internal sealed partial class LinkpearlApp
         }
 
         SettingsSection.Hint(Loc.T(L.Linkpearl.ChannelStyleHint), frameTheme);
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
+        var importCard = GroupCard.Begin(frameTheme, 1);
+        if (SettingsRow.Action(importCard.NextRow(), Loc.T(L.Linkpearl.ImportGameColors), frameTheme.Accent,
+                frameTheme))
+        {
+            GameLogColors.ImportAll(ChannelStyles.Shared);
+            ShellToast.Show(Loc.T(L.Linkpearl.ImportedGameColors));
+        }
+
+        importCard.End();
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
         var channels = GameChannels.All;
         var expanded = ExpandedChannelIndex(channels);

@@ -241,6 +241,11 @@ internal sealed class TabStore
             }
         }
 
+        if (string.Equals(tab.SendChannel, GameChannels.FollowGameKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         if (tab.SendChannel.Length > 0 && tab.Channels.Contains(tab.SendChannel) &&
             GameChannels.TryByKey(tab.SendChannel, out var current) && current.CanSend)
         {

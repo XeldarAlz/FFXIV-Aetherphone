@@ -188,12 +188,13 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         send.Tick();
         ChatDrafts.Tick();
         SyncGhosts();
+        var resolvedChannel = ResolveActiveChannel();
         var model = new GameComposerModel
         {
             Theme = theme,
             Screen = area,
             Channels = target.SendChannels,
-            ActiveChannel = activeChannel.Length > 0 ? activeChannel : target.SendChannelKey,
+            ActiveChannel = resolvedChannel,
             SendTarget = target.SendTarget,
         };
         var composerBar = new Rect(new Vector2(area.Min.X, area.Max.Y - composer.Measure(area.Width, model)),
@@ -228,7 +229,11 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         }
 
         var result = composer.Draw(composerBar, model);
-        activeChannel = result.ChannelKey;
+        if (!string.Equals(result.ChannelKey, resolvedChannel, StringComparison.Ordinal))
+        {
+            activeChannel = result.ChannelKey;
+        }
+
         if (!result.Submitted)
         {
             return;
@@ -244,13 +249,56 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
             return;
         }
 
-        if (!GameChannels.TryByKey(activeChannel, out var channel) || !Submit(channel, result.Text))
+        if (!GameChannels.TryByKey(result.ChannelKey, out var channel) || !Submit(channel, result.Text))
         {
             return;
         }
 
         composer.Clear();
         snapToBottom = true;
+        if (result.ChannelFromCommand)
+        {
+            activeChannel = target.SendChannelKey;
+        }
+    }
+
+    private string ResolveActiveChannel()
+    {
+        var key = activeChannel.Length > 0 ? activeChannel : target.SendChannelKey;
+        if (!string.Equals(key, GameChannels.FollowGameKey, StringComparison.Ordinal))
+        {
+            return key;
+        }
+
+        var live = GameChatMode.CurrentChannelKey();
+        return live.Length > 0 && Offers(live) ? live : FirstSendable();
+    }
+
+    private bool Offers(string channelKey)
+    {
+        for (var index = 0; index < target.SendChannels.Length; index++)
+        {
+            if (string.Equals(target.SendChannels[index], channelKey, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private string FirstSendable()
+    {
+        for (var index = 0; index < target.SendChannels.Length; index++)
+        {
+            if (GameChannels.TryByKey(target.SendChannels[index], out var channel) && channel.CanSend
+                && !channel.NeedsTarget)
+            {
+                return channel.Key;
+            }
+        }
+
+        return GameChannels.FollowGameKey;
     }
 
     private bool Submit(GameChannel channel, string text)
@@ -322,7 +370,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
     {
         var name = message.SenderName;
         var world = WorldOf(message.SenderId);
-        var portrait = Lodestone is null ? default : Lodestone.Avatar(name, world, radius * 2f);
+        var portrait = Lodestone is null || NameMask.Enabled ? default : Lodestone.Avatar(name, world, radius * 2f);
         AvatarView.Draw(drawList, center, radius, SenderTint.Of(name), Initials.Of(name), SenderAvatarMonogramScale,
             portrait, SenderAvatarSegments);
     }
@@ -960,7 +1008,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
             : entry.IsSelf ? theme.Accent : SenderTint.Of(entry.AuthorName);
         var bodyInk = packedBody != 0u ? ChannelInk.Unpack(packedBody) : default;
         return new TranscriptMessage(entry.Id, entry.IsSelf ? SelfId : entry.SenderKey, entry.Text, 0,
-            Seconds(entry.At), 0, 0, null, entry.AuthorName, senderTint, flags,
+            Seconds(entry.At), 0, 0, null, NameMask.Display(entry.AuthorName), senderTint, flags,
             channelTag: tag, channelTint: tagTint, runs: runs.HasLinks || runs.HasEmoji ? runs.Runs : null,
             bodyInk: bodyInk);
     }

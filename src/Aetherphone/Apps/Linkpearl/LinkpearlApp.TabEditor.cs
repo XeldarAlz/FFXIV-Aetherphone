@@ -321,6 +321,9 @@ internal sealed partial class LinkpearlApp
         {
             editorItems.Clear();
             editorKeys.Clear();
+            editorItems.Add(new DropdownMenu.Item(Loc.T(L.Linkpearl.FollowGameMode), string.Empty, false,
+                string.Equals(tab.SendChannel, GameChannels.FollowGameKey, StringComparison.Ordinal)));
+            editorKeys.Add(GameChannels.FollowGameKey);
             for (var index = 0; index < tab.Channels.Count; index++)
             {
                 if (!GameChannels.TryByKey(tab.Channels[index], out var channel) || !channel.CanSend)
@@ -427,10 +430,17 @@ internal sealed partial class LinkpearlApp
         router.Pop();
     }
 
-    private string SendChannelLabel(ChatTab tab) =>
-        GameChannels.TryByKey(tab.SendChannel, out var channel)
+    private string SendChannelLabel(ChatTab tab)
+    {
+        if (string.Equals(tab.SendChannel, GameChannels.FollowGameKey, StringComparison.Ordinal))
+        {
+            return Loc.T(L.Linkpearl.FollowGameMode);
+        }
+
+        return GameChannels.TryByKey(tab.SendChannel, out var channel)
             ? LinkshellNames.Label(channel)
             : Loc.T(L.Linkpearl.ChannelReadOnly);
+    }
 
     private string HistoryLabel(ChatTab tab)
     {

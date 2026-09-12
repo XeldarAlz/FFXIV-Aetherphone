@@ -1,13 +1,25 @@
 namespace Aetherphone.Core.GameChat;
 
-internal readonly record struct PresenceSettings(bool HideInCombat, bool HideInDuty, bool FieldOperationsExempt);
+internal readonly record struct PresenceSettings(bool HideInCombat, bool HideInDuty, bool FieldOperationsExempt,
+    bool HideInCutscene = false, bool HideWhenUiHidden = false);
 
-internal readonly record struct PresenceState(bool InCombat, bool BoundByDuty, bool InFieldOperation);
+internal readonly record struct PresenceState(bool InCombat, bool BoundByDuty, bool InFieldOperation,
+    bool InCutscene = false, bool UiHidden = false);
 
 internal static class PopoutPresenceGate
 {
     public static bool ShouldSuppress(in PresenceState state, in PresenceSettings settings)
     {
+        if (settings.HideInCutscene && state.InCutscene)
+        {
+            return true;
+        }
+
+        if (settings.HideWhenUiHidden && state.UiHidden)
+        {
+            return true;
+        }
+
         if (settings.HideInCombat && state.InCombat)
         {
             return true;

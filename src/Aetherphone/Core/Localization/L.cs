@@ -4082,6 +4082,16 @@ internal static class L
         public static readonly LocString ScopeLodestone = new("linkpearl.scopeLodestone", "Lodestone");
         public static readonly LocString TabInfo = new("linkpearl.tabInfo", "Tab info");
         public static readonly LocString LodestoneProfile = new("linkpearl.lodestoneProfile", "Lodestone profile");
+        public static readonly LocString FollowGameMode = new("linkpearl.followGameMode", "Follow the game's chat mode");
+        public static readonly LocString HideInCutscene = new("linkpearl.hideInCutscene", "Hide in cutscenes");
+        public static readonly LocString HideWhenUiHidden = new("linkpearl.hideWhenUiHidden", "Hide when the HUD is hidden");
+        public static readonly LocString ImportGameColors = new("linkpearl.importGameColors", "Import the game's log colors");
+        public static readonly LocString ImportedGameColors = new("linkpearl.importedGameColors", "Game colors imported");
+        public static readonly LocString ScreenshotMode = new("linkpearl.screenshotMode", "Screenshot mode");
+        public static readonly LocString ScreenshotModeHint = new("linkpearl.screenshotModeHint", "Replaces player names in chat with anonymous labels until you turn it off.");
+        public static readonly LocString ExportHistory = new("linkpearl.exportHistory", "Export history");
+        public static readonly LocString ExportedHistory = new("linkpearl.exportedHistory", "History exported to the exports folder");
+        public static readonly LocString ExportFailed = new("linkpearl.exportFailed", "Couldn't export the history");
     }
 
     internal static class Character

@@ -76,6 +76,13 @@ internal static class GameChatTiles
             return;
         }
 
+        if (NameMask.Enabled)
+        {
+            AvatarView.Draw(drawList, center, radius, accent, Initials.Of(NameMask.Of(row.Title)),
+                PortraitMonogramScale, default, PortraitSegments);
+            return;
+        }
+
         AvatarView.Draw(drawList, center, radius, accent, Initials.Of(row.Title), PortraitMonogramScale,
             lodestone.Avatar(row.Title, row.World, radius * 2f), PortraitSegments);
     }

@@ -37,7 +37,23 @@ internal sealed partial class LinkpearlApp
     private void DrawPresenceSettings(float scale)
     {
         SettingsSection.Header(Loc.T(L.Linkpearl.PresenceSection), frameTheme);
-        var card = GroupCard.Begin(frameTheme, 4);
+        var card = GroupCard.Begin(frameTheme, 6);
+        var hideInCutscene = SettingsRow.Bool(card.NextRow(), Loc.T(L.Linkpearl.HideInCutscene),
+            configuration.LinkpearlPopoutHideInCutscene, frameTheme, "linkpearl.settings.hideInCutscene");
+        if (hideInCutscene != configuration.LinkpearlPopoutHideInCutscene)
+        {
+            configuration.LinkpearlPopoutHideInCutscene = hideInCutscene;
+            configuration.Save();
+        }
+
+        var hideWhenUiHidden = SettingsRow.Bool(card.NextRow(), Loc.T(L.Linkpearl.HideWhenUiHidden),
+            configuration.LinkpearlPopoutHideWhenUiHidden, frameTheme, "linkpearl.settings.hideWhenUiHidden");
+        if (hideWhenUiHidden != configuration.LinkpearlPopoutHideWhenUiHidden)
+        {
+            configuration.LinkpearlPopoutHideWhenUiHidden = hideWhenUiHidden;
+            configuration.Save();
+        }
+
         var hideInCombat = SettingsRow.Bool(card.NextRow(), Loc.T(L.Linkpearl.HideInCombat),
             configuration.LinkpearlPopoutHideInCombat, frameTheme, "linkpearl.settings.hideInCombat");
         if (hideInCombat != configuration.LinkpearlPopoutHideInCombat)

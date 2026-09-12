@@ -510,5 +510,5 @@ internal sealed partial class LinkpearlApp
         router.Push(LinkpearlRoute.Conversation(key));
     }
 
-    private static string Title(InboxRow row) => row.Tab is { } tab ? tab.Name : row.Title;
+    private static string Title(InboxRow row) => row.Tab is { } tab ? tab.Name : NameMask.Display(row.Title);
 }

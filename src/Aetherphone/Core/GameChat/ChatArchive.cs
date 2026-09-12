@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Aetherphone.Core.Game;
@@ -54,6 +55,9 @@ internal sealed class ChatArchive : IDisposable
 {
     private const int MaxStoredLines = ChatLog.MaxLinesPerStream;
     private const int RetentionDays = 30;
+    private const string ExportFolder = "exports";
+    private const string ExportPrefix = "linkpearl-";
+    private const long UnixMillisecondThreshold = 99_999_999_999L;
     private const long FlushIntervalMilliseconds = 30_000;
 
     private readonly object sync = new();
@@ -127,6 +131,78 @@ internal sealed class ChatArchive : IDisposable
             dirty.Clear();
             lastFlushMilliseconds = Environment.TickCount64;
         }
+    }
+
+    public string? Export()
+    {
+        lock (sync)
+        {
+            Flush();
+            if (activeRoot is null)
+            {
+                return null;
+            }
+
+            try
+            {
+                var exports = new DirectoryInfo(Path.Combine(baseDir.FullName, ExportFolder));
+                if (!exports.Exists)
+                {
+                    exports.Create();
+                }
+
+                var lines = new List<StoredChatLine>(MaxStoredLines);
+                var files = activeRoot.GetFiles("*.json");
+                for (var index = 0; index < files.Length; index++)
+                {
+                    var stored = TryRead(files[index]);
+                    if (stored is not null)
+                    {
+                        lines.AddRange(stored.Lines);
+                    }
+                }
+
+                lines.Sort(static (left, right) => left.AtUnix.CompareTo(right.AtUnix));
+                var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+                var textPath = Path.Combine(exports.FullName, string.Concat(ExportPrefix, stamp, ".txt"));
+                using (var writer = new StreamWriter(textPath, false, new UTF8Encoding(false)))
+                {
+                    for (var index = 0; index < lines.Count; index++)
+                    {
+                        writer.WriteLine(FormatExportLine(lines[index]));
+                    }
+                }
+
+                File.WriteAllText(Path.Combine(exports.FullName, string.Concat(ExportPrefix, stamp, ".json")),
+                    JsonConvert.SerializeObject(lines));
+                return exports.FullName;
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning(exception, "ChatArchive export failed");
+                return null;
+            }
+        }
+    }
+
+    private static string FormatExportLine(StoredChatLine line)
+    {
+        var at = line.AtUnix > UnixMillisecondThreshold
+            ? DateTimeOffset.FromUnixTimeMilliseconds(line.AtUnix)
+            : DateTimeOffset.FromUnixTimeSeconds(line.AtUnix);
+        var stamp = at.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+        var code = GameChannels.TryByKey(line.ChannelKey, out var channel)
+            ? GameChannels.ShortCode(channel)
+            : line.ChannelKey;
+        if (line.AuthorName.Length == 0)
+        {
+            return string.Concat(stamp, " [", code, "] ", line.Text);
+        }
+
+        var author = line.AuthorWorld.Length > 0
+            ? string.Concat(line.AuthorName, "@", line.AuthorWorld)
+            : line.AuthorName;
+        return string.Concat(stamp, " [", code, "] ", author, ": ", line.Text);
     }
 
     public void Delete(string streamKey)

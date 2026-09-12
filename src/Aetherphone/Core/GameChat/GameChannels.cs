@@ -18,6 +18,7 @@ internal static class GameChannels
     public const string EchoKey = "echo";
     public const string SystemKey = "system";
     public const string EmoteKey = "emote";
+    public const string FollowGameKey = "game";
 
     private static readonly GameChannel[] Catalog = BuildCatalog();
     private static readonly FrozenDictionary<XivChatType, GameChannel> ByKind = BuildKindIndex();

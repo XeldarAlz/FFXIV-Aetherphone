@@ -129,9 +129,10 @@ internal static class ChatRuns
             return;
         }
 
-        set.NamePrefix = string.Concat(entry.AuthorName, NameSeparator);
+        var author = NameMask.Display(entry.AuthorName);
+        set.NamePrefix = string.Concat(author, NameSeparator);
         set.NameWorldPrefix = entry.AuthorWorld.Length > 0
-            ? string.Concat(entry.AuthorName, WorldSeparator, entry.AuthorWorld, NameSeparator)
+            ? string.Concat(author, WorldSeparator, entry.AuthorWorld, NameSeparator)
             : set.NamePrefix;
         set.LogKey = string.Concat(entry.Id, LogKeySuffix);
         set.LogWorldKey = string.Concat(entry.Id, LogWorldKeySuffix);

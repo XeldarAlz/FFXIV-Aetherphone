@@ -33,7 +33,8 @@ internal sealed class PopoutPresence : IDisposable
     public void Tick(float deltaSeconds)
     {
         var settings = new PresenceSettings(configuration.LinkpearlPopoutHideInCombat,
-            configuration.LinkpearlPopoutHideInDuty, configuration.LinkpearlPopoutFieldOperationsExempt);
+            configuration.LinkpearlPopoutHideInDuty, configuration.LinkpearlPopoutFieldOperationsExempt,
+            configuration.LinkpearlPopoutHideInCutscene, configuration.LinkpearlPopoutHideWhenUiHidden);
         var target = PopoutPresenceGate.ShouldSuppress(ReadState(), settings);
         if (!debounce.Step(target, deltaSeconds, DelayFor(target)))
         {
@@ -82,7 +83,10 @@ internal sealed class PopoutPresence : IDisposable
         var condition = Plugin.Condition;
         var boundByDuty = condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56] ||
                           condition[ConditionFlag.BoundByDuty95];
-        return new PresenceState(condition[ConditionFlag.InCombat], boundByDuty, InFieldOperation());
+        var inCutscene = condition[ConditionFlag.OccupiedInCutSceneEvent] || condition[ConditionFlag.WatchingCutscene]
+                         || condition[ConditionFlag.WatchingCutscene78];
+        return new PresenceState(condition[ConditionFlag.InCombat], boundByDuty, InFieldOperation(), inCutscene,
+            Plugin.GameGui.GameUiHidden);
     }
 
     private bool InFieldOperation()

@@ -93,6 +93,17 @@ internal sealed partial class LinkpearlApp
                 notificationGate.SetPaused(paused);
             }
 
+            chrome.DrawSectionLabel(Loc.T(L.Settings.Privacy));
+            var screenshotMode = chrome.DrawSwitchRow(drawList, PhoneIcons.Eye, ChatListChrome.TintSlate,
+                Loc.T(L.Linkpearl.ScreenshotMode), NameMask.Enabled, "linkpearl.settings.screenshotMode",
+                separator: false);
+            if (screenshotMode != NameMask.Enabled)
+            {
+                NameMask.Set(screenshotMode);
+                ChatRuns.Reset();
+                RunText.Reset();
+            }
+
             chrome.DrawSectionLabel(Loc.T(L.Linkpearl.ChatSettings));
             for (var index = 0; index < SettingsSections.Length; index++)
             {
@@ -339,6 +350,14 @@ internal sealed partial class LinkpearlApp
 
         card.End();
         SettingsSection.Hint(Loc.T(L.Linkpearl.StoredOnThisPc), frameTheme);
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
+        var exportCard = GroupCard.Begin(frameTheme, 1);
+        if (SettingsRow.Action(exportCard.NextRow(), Loc.T(L.Linkpearl.ExportHistory), frameTheme.Accent, frameTheme))
+        {
+            ShellToast.Show(Loc.T(archive.Export() is null ? L.Linkpearl.ExportFailed : L.Linkpearl.ExportedHistory));
+        }
+
+        exportCard.End();
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
         var dangerCard = GroupCard.Begin(frameTheme, 1);
         if (SettingsRow.Action(dangerCard.NextRow(), Loc.T(L.Linkpearl.ClearAllHistory), frameTheme.Danger, frameTheme))

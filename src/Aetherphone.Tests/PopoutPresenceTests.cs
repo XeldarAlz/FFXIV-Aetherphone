@@ -42,6 +42,25 @@ public sealed class PopoutPresenceTests
     }
 
     [Fact]
+    public void CutscenesSuppressOnlyWhenTheCutsceneGateIsOn()
+    {
+        var state = new PresenceState(false, false, false, InCutscene: true);
+
+        Assert.False(PopoutPresenceGate.ShouldSuppress(state, Defaults));
+        Assert.True(PopoutPresenceGate.ShouldSuppress(state, new PresenceSettings(true, false, true, HideInCutscene: true)));
+    }
+
+    [Fact]
+    public void AHiddenHudSuppressesOnlyWhenTheHudGateIsOn()
+    {
+        var state = new PresenceState(false, false, false, UiHidden: true);
+
+        Assert.False(PopoutPresenceGate.ShouldSuppress(state, Defaults));
+        Assert.True(PopoutPresenceGate.ShouldSuppress(state,
+            new PresenceSettings(true, false, true, HideWhenUiHidden: true)));
+    }
+
+    [Fact]
     public void CombatInAnExemptFieldOperationStillSuppresses()
     {
         var state = new PresenceState(true, true, true);

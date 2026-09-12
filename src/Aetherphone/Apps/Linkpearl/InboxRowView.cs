@@ -83,8 +83,9 @@ internal static class InboxRowView
         var titleHovering = UiInteract.Hover(new Vector2(person.TextLeft, titleTop),
             new Vector2(person.TextLeft + titleWidth, titleTop + titleHeight));
         var titleInk = row.Muted ? Palette.WithAlpha(ink.TitleInk, MutedTitleAlpha) : ink.TitleInk;
-        Marquee.DrawLeft(drawList, new MarqueeId("linkpearl.row.", row.Key), row.Title, person.TextLeft, titleTop,
-            titleWidth, ChatListChrome.RowTitleStyle, titleInk, titleHovering);
+        Marquee.DrawLeft(drawList, new MarqueeId("linkpearl.row.", row.Key),
+            row.IsTell ? NameMask.Display(row.Title) : row.Title, person.TextLeft, titleTop, titleWidth,
+            ChatListChrome.RowTitleStyle, titleInk, titleHovering);
 
         var lineTop = titleTop + titleHeight + ChatListChrome.RowLineGap * scale;
         var lineCenter = lineTop + Typography.LineHeight(ChatListChrome.RowSubStyle) * 0.5f;
@@ -284,7 +285,8 @@ internal static class InboxRowView
 
         if (row.PreviewSender.Length > 0)
         {
-            var sender = Typography.FitText(string.Concat(FirstName(row.PreviewSender), ": "), remaining * 0.5f,
+            var senderName = NameMask.Enabled ? NameMask.Of(row.PreviewSender) : FirstName(row.PreviewSender);
+            var sender = Typography.FitText(string.Concat(senderName, ": "), remaining * 0.5f,
                 ChatListChrome.RowSubStyle);
             var senderSize = Typography.Measure(sender, ChatListChrome.RowSubStyle);
             Typography.Draw(drawList, new Vector2(cursor, top), sender, ink.BodyInk, ChatListChrome.RowSubStyle);

@@ -24,13 +24,16 @@ internal readonly struct GameComposerResult
     public readonly bool IsCommand;
     public readonly string Text;
     public readonly string ChannelKey;
+    public readonly bool ChannelFromCommand;
 
-    public GameComposerResult(bool submitted, bool isCommand, string text, string channelKey)
+    public GameComposerResult(bool submitted, bool isCommand, string text, string channelKey,
+        bool channelFromCommand)
     {
         Submitted = submitted;
         IsCommand = isCommand;
         Text = text;
         ChannelKey = channelKey;
+        ChannelFromCommand = channelFromCommand;
     }
 }
 
@@ -79,6 +82,10 @@ internal sealed class GameComposer
     private long lastEnterMilliseconds;
     private bool enterPressed;
     private bool focus;
+    private bool fieldActive;
+    private bool channelFromCommand;
+    private int recallIndex = -1;
+    private string recallStash = string.Empty;
 
     public string Draft => editor.Text;
 
@@ -102,6 +109,7 @@ internal sealed class GameComposer
         editor.Adopt(ChatDrafts.Load(nextConversationKey));
         focus = false;
         channelMenu.Close();
+        ResetRecall();
     }
 
     public void Unbind()
@@ -112,6 +120,7 @@ internal sealed class GameComposer
         editor.Adopt(string.Empty);
         focus = false;
         channelMenu.Close();
+        ResetRecall();
     }
 
     public void Reset()
@@ -120,18 +129,64 @@ internal sealed class GameComposer
         focus = false;
         channelMenu.Close();
         emoji.Close();
+        ResetRecall();
     }
 
     public void Refill(string text)
     {
         editor.Adopt(text);
         focus = true;
+        ResetRecall();
     }
 
     public void Clear()
     {
         editor.Adopt(string.Empty);
         ChatDrafts.Store(conversationKey, string.Empty);
+        channelFromCommand = false;
+        ResetRecall();
+    }
+
+    private void ResetRecall()
+    {
+        recallIndex = -1;
+        recallStash = string.Empty;
+    }
+
+    private void RecallHistory()
+    {
+        var recent = Plugin.Cfg?.LinkpearlRecentSent;
+        if (!fieldActive || recent is null || recent.Count == 0)
+        {
+            return;
+        }
+
+        var text = editor.Text;
+        var atRecalled = recallIndex >= 0 && recallIndex < recent.Count &&
+                         string.Equals(text, recent[recallIndex].Text, StringComparison.Ordinal);
+        if (ImGui.IsKeyPressed(ImGuiKey.UpArrow) && (text.Length == 0 || atRecalled))
+        {
+            if (recallIndex < 0)
+            {
+                recallStash = text;
+            }
+
+            if (recallIndex + 1 < recent.Count)
+            {
+                recallIndex++;
+                editor.Adopt(recent[recallIndex].Text);
+            }
+
+            return;
+        }
+
+        if (!ImGui.IsKeyPressed(ImGuiKey.DownArrow) || recallIndex < 0 || !atRecalled)
+        {
+            return;
+        }
+
+        recallIndex--;
+        editor.Adopt(recallIndex < 0 ? recallStash : recent[recallIndex].Text);
     }
 
     public float Measure(float barWidth, in GameComposerModel model)
@@ -157,7 +212,7 @@ internal sealed class GameComposer
         if (!Sendable(model, out var channel))
         {
             DrawReadOnly(bar, theme);
-            return new GameComposerResult(false, false, string.Empty, channelKey);
+            return new GameComposerResult(false, false, string.Empty, channelKey, channelFromCommand);
         }
 
         var indicator = Indicator;
@@ -216,8 +271,10 @@ internal sealed class GameComposer
         {
             editor.Adopt(remainder);
             channelKey = absorbed.Key;
+            channelFromCommand = true;
         }
 
+        RecallHistory();
         ChatDrafts.Store(conversationKey, editor.Text);
         var used = Encoding.UTF8.GetByteCount(editor.Text);
         var hasText = editor.HasContent;
@@ -233,16 +290,17 @@ internal sealed class GameComposer
         if (picked.Length > 0)
         {
             channelKey = picked;
+            channelFromCommand = false;
         }
 
         if (!submitted || !hasText)
         {
-            return new GameComposerResult(false, false, string.Empty, channelKey);
+            return new GameComposerResult(false, false, string.Empty, channelKey, channelFromCommand);
         }
 
         var text = editor.Text.Trim();
         focus = true;
-        return new GameComposerResult(true, text[0] == '/', text, channelKey);
+        return new GameComposerResult(true, text[0] == '/', text, channelKey, channelFromCommand);
     }
 
     private static bool Multiline => Plugin.Cfg?.LinkpearlComposerMultiline ?? true;
@@ -283,6 +341,7 @@ internal sealed class GameComposer
             }
         }
 
+        fieldActive = ImGui.IsItemActive();
         if (!string.Equals(line, editor.Text, StringComparison.Ordinal))
         {
             editor.Adopt(line);
@@ -311,6 +370,7 @@ internal sealed class GameComposer
             }
         }
 
+        fieldActive = ImGui.IsItemActive();
         if (editor.Text.Length > 0)
         {
             return;
