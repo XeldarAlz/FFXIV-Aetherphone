@@ -75,9 +75,7 @@ internal sealed partial class MessageApp
         return picked;
     }
 
-    private static bool PickerMatches(ConversationDto item, string query) =>
-        query.Length == 0 ||
-        DirectMessagesStore.DisplayTitle(item).Contains(query, StringComparison.OrdinalIgnoreCase);
+    private bool PickerMatches(ConversationDto item, string query) => store.TitleMatches(item, query);
 
     private bool DrawConversationPickerRow(ImDrawListPtr drawList, ConversationDto item)
     {
@@ -86,7 +84,7 @@ internal sealed partial class MessageApp
             out var avatarCenter);
         DrawConversationAvatar(drawList, item, avatarCenter, PickerRowAvatarRadius * scale);
         var subtitle = item.IsGroup ? Loc.T(L.DirectMessages.MembersCount, item.MemberCount) : string.Empty;
-        DrawRowTitleAndSub(drawList, new MarqueeId("picker.row.", item.Id), DirectMessagesStore.DisplayTitle(item),
+        DrawRowTitleAndSub(drawList, new MarqueeId("picker.row.", item.Id), store.DisplayTitle(item),
             subtitle, row.TextLeft, row.TextRight, row.Bounds.Center.Y, ink.TitleInk, ink.MutedInk);
         PhoneIcon.Draw(drawList, new Vector2(row.Bounds.Max.X - CellPadX * scale - ChevronSize * 0.5f * scale,
             row.Bounds.Center.Y), PhoneIcons.ArrowForwardUp, ink.FaintInk, ChevronSize * scale);

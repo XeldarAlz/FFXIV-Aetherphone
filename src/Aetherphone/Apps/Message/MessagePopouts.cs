@@ -12,6 +12,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Runtime;
+using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Translation;
 using Aetherphone.Core.Wallpapers;
@@ -31,6 +32,7 @@ internal sealed class MessagePopoutServices
     public required PhoneVisibility Visibility { get; init; }
     public required RealtimeSignalBus Signals { get; init; }
     public required AppInstaller Installer { get; init; }
+    public required ContactBook Contacts { get; init; }
     public required RemoteImageCache Images { get; init; }
     public required LodestoneService Lodestone { get; init; }
     public required HttpService Http { get; init; }
@@ -45,7 +47,7 @@ internal sealed class MessagePopoutServices
 
     public DirectMessagesStore CreateDetachedStore() =>
         new(Session, Net.Chats, Net.Safety, Net.Media, Notifications, Vault, ConversationKeys, PeerKeys, ChatHistory,
-            Visibility, Signals, Installer, tracksInbox: false);
+            Visibility, Signals, Installer, Contacts, tracksInbox: false);
 }
 
 internal sealed class MessagePopouts : IMessagePopouts

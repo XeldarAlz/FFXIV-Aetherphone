@@ -299,8 +299,7 @@ internal sealed partial class MessageApp
                 continue;
             }
 
-            if (query.Length > 0 && !DirectMessagesStore.DisplayTitle(item).Contains(query,
-                    StringComparison.OrdinalIgnoreCase))
+            if (!store.TitleMatches(item, query))
             {
                 continue;
             }
@@ -332,7 +331,7 @@ internal sealed partial class MessageApp
         var scale = UiScale.Current;
         var row = BeginPersonRow(drawList, ChatRowHeight, ChatRowAvatarRadius, 0f, true, out var avatarCenter);
         DrawConversationAvatar(drawList, item, avatarCenter, ChatRowAvatarRadius * scale);
-        var title = DirectMessagesStore.DisplayTitle(item);
+        var title = store.DisplayTitle(item);
         var unread = item.UnreadCount > 0;
         var lineTop = row.Bounds.Min.Y + ChatRowTitleTop * scale;
         var titleHeight = Typography.LineHeight(RowTitleStyle);
@@ -464,7 +463,7 @@ internal sealed partial class MessageApp
     {
         var id = conversation.Id;
         sheetConversationId = id;
-        chatSheetTitle = DirectMessagesStore.DisplayTitle(conversation);
+        chatSheetTitle = store.DisplayTitle(conversation);
         var isPinned = configuration.MessagePinnedChats.Contains(id);
         var isArchived = configuration.MessageArchivedChats.Contains(id);
         chatSheetItems[0] = new ActionSheet.Item(Loc.T(isPinned ? L.Common.Unpin : L.Common.Pin),

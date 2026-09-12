@@ -30,6 +30,7 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
     protected readonly DirectMessagesStore messages;
     private readonly WallpaperImageCache wallpapers;
     private ConversationMemberDto[] memberLineSource = Array.Empty<ConversationMemberDto>();
+    private int memberLineContactsVersion = -1;
     private string memberLine = string.Empty;
 
     protected MessageThreadViewBase(DirectMessagesStore store, AppSkin ui, RemoteImageCache images,
@@ -75,6 +76,8 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
     protected override float TranscriptSidePadding => ThreadSidePadding;
 
     protected override IChatTranscriptSenders? Senders => this;
+
+    protected override int TranscriptVersion => messages.Contacts.Version;
 
     public void DrawAvatar(ImDrawListPtr drawList, in TranscriptMessage message, Vector2 center, float radius)
     {
@@ -186,7 +189,7 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
 
         var senderName = message.SenderId == MyUserId
             ? Loc.T(L.Message.You)
-            : message.SenderDisplayName;
+            : messages.SenderLabel(message);
         composer.BeginReply(messageId, senderName, ChatText.QuotePreview(message.Body, message.Kind));
     }
 
@@ -199,7 +202,7 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
         }
 
         var dismissUserId = conversation.OtherUserId;
-        var text = Loc.T(L.Encryption.SafetyChanged, DirectMessagesStore.DisplayTitle(conversation));
+        var text = Loc.T(L.Encryption.SafetyChanged, messages.DisplayTitle(conversation));
         ChatHeaderControls.DrawBanner(ui, ref listRect, text, ui.MutedInk,
             () => messages.ClearRotationNotice(dismissUserId));
     }
@@ -212,12 +215,14 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
             return Loc.T(L.DirectMessages.MembersCount, conversation.MemberCount);
         }
 
-        if (ReferenceEquals(members, memberLineSource))
+        var contactsVersion = messages.Contacts.Version;
+        if (ReferenceEquals(members, memberLineSource) && contactsVersion == memberLineContactsVersion)
         {
             return memberLine;
         }
 
         memberLineSource = members;
+        memberLineContactsVersion = contactsVersion;
         var builder = new System.Text.StringBuilder(64);
         var myId = MyUserId;
         for (var index = 0; index < members.Length; index++)
@@ -234,7 +239,7 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
 
             builder.Append(members[index].UserId == myId
                 ? Loc.T(L.Message.You)
-                : DirectMessagesStore.MemberLabel(members[index]));
+                : messages.MemberLabel(members[index]));
         }
 
         memberLine = builder.ToString();
@@ -275,7 +280,7 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
                 continue;
             }
 
-            var senderName = isGroup ? message.SenderDisplayName : string.Empty;
+            var senderName = isGroup ? messages.SenderLabel(message) : string.Empty;
             var senderAvatar = isGroup ? message.SenderAvatarUrl : null;
             var tint = isGroup ? SenderTint.Of(message.SenderDisplayName) : default;
             if (message.Deleted)
@@ -293,7 +298,9 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
             {
                 replySender = message.ReplySenderId == MyUserId
                     ? Loc.T(L.Message.You)
-                    : message.ReplySenderName ?? Loc.T(L.Message.OriginalUnavailable);
+                    : message.ReplySenderName is { } replySenderName
+                        ? messages.Contacts.NameFor(message.ReplySenderId, replySenderName)
+                        : Loc.T(L.Message.OriginalUnavailable);
                 replyKind = ChatText.EffectiveKind(message.ReplyBody, replyKind);
                 replyBody = ChatText.QuotePreview(message.ReplyBody, replyKind);
             }
@@ -371,9 +378,9 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
         return flags;
     }
 
-    private static string SystemText(ChatMessageDto message)
+    private string SystemText(ChatMessageDto message)
     {
-        var actor = message.SenderDisplayName;
+        var actor = messages.SenderLabel(message);
         var body = message.Body ?? string.Empty;
         var separator = (char)0x1F;
         var separatorIndex = body.IndexOf(separator);

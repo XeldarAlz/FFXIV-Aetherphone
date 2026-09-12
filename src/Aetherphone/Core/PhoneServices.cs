@@ -167,6 +167,7 @@ internal sealed class PhoneServices : IDisposable
     public required ActivityTracker Activity { get; init; }
     public required ActivityRingNotifier RingNotifier { get; init; }
     public required HealthTracker Health { get; init; }
+    public required ContactBook Contacts { get; init; }
     public required CallHub Calls { get; init; }
     public required StreamSignalRouter StreamSignals { get; init; }
     public required PhoneVisibility Visibility { get; init; }
@@ -323,8 +324,9 @@ internal sealed class PhoneServices : IDisposable
         var deviceLinks = new DeviceLinkWatcher(keyVault, aethernetSession, confirm, realtimeSignals);
         var encryptionGuide = new EncryptionGuide(keyVault, aethernetSession, notifications);
         Windows.UrlActions.Configure(confirm);
+        var contacts = new ContactBook(aethernet.Contacts, aethernetSession);
         var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals,
-            confirm, installer.Gate("message"));
+            confirm, installer.Gate("message"), contacts);
         var streamSignals = new StreamSignalRouter(calls.Router);
         var characterSwitcher = new CharacterSessionManager(framework, aethernetSession, aethernet.Account,
             gameData, configuration, confirm);
@@ -483,6 +485,7 @@ internal sealed class PhoneServices : IDisposable
             Activity = activity,
             RingNotifier = ringNotifier,
             Health = health,
+            Contacts = contacts,
             Calls = calls,
             StreamSignals = streamSignals,
             Visibility = visibility,
@@ -520,6 +523,7 @@ internal sealed class PhoneServices : IDisposable
         KeyVault.Dispose();
         StreamSignals.Dispose();
         Calls.Dispose();
+        Contacts.Dispose();
         Collections.Dispose();
         InventoryCapture.Dispose();
         RingNotifier.Dispose();

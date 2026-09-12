@@ -63,7 +63,7 @@ internal sealed partial class MessageApp
 
     private void DrawConversationAvatar(ImDrawListPtr drawList, ConversationDto item, Vector2 center, float radius)
     {
-        ConversationAvatar.Draw(drawList, item, center, radius, theme, ui, images, lodestone);
+        ConversationAvatar.Draw(drawList, item, store.DisplayTitle(item), center, radius, theme, ui, images, lodestone);
         if (!item.IsGroup && ChatPresence.IsOnline(item.Presence))
         {
             chrome.DrawPresenceDot(drawList, center, radius);
@@ -86,7 +86,7 @@ internal sealed partial class MessageApp
 
     private void DrawMemberAvatar(ImDrawListPtr drawList, ConversationMemberDto member, Vector2 center, float radius)
     {
-        AvatarView.DrawRemote(drawList, center, radius, theme, DirectMessagesStore.MemberLabel(member), string.Empty, member.AvatarUrl,
+        AvatarView.DrawRemote(drawList, center, radius, theme, store.MemberLabel(member), string.Empty, member.AvatarUrl,
             images, lodestone, 0.9f, 32, 1f, Frames.Of(member.FrameId));
     }
 

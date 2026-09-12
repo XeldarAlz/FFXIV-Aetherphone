@@ -18,11 +18,15 @@ internal sealed class ContactBook : IDisposable
 {
     private const long RefreshIntervalMs = 15_000;
 
+    private static readonly Dictionary<string, string> NoAliases = new(StringComparer.Ordinal);
+
     private readonly ContactsClient client;
     private readonly AethernetSession session;
     private readonly CancellationTokenSource cancellation = new();
     private readonly object gate = new();
     private volatile ContactDto[] contacts = Array.Empty<ContactDto>();
+    private volatile Dictionary<string, string> aliases = NoAliases;
+    private volatile int version;
     private volatile string myNumber = string.Empty;
     private volatile NumberChangeStatusDto? numberChange;
     private volatile bool loading;
@@ -46,7 +50,7 @@ internal sealed class ContactBook : IDisposable
         }
 
         lastAccountId = accountId;
-        contacts = Array.Empty<ContactDto>();
+        Publish(Array.Empty<ContactDto>());
         myNumber = string.Empty;
         numberChange = null;
         numberChangeLoaded = false;
@@ -54,6 +58,7 @@ internal sealed class ContactBook : IDisposable
     }
 
     public ContactDto[] Contacts => contacts;
+    public int Version => version;
     public string MyNumber => myNumber;
     public NumberChangeStatusDto? NumberChange => numberChange;
     public bool Loading => loading;
@@ -92,7 +97,7 @@ internal sealed class ContactBook : IDisposable
                 var list = await client.ListAsync(token).ConfigureAwait(false);
                 if (list is not null)
                 {
-                    contacts = list.Contacts;
+                    Publish(list.Contacts);
                     myNumber = list.MyNumber;
                 }
 
@@ -236,6 +241,9 @@ internal sealed class ContactBook : IDisposable
         return null;
     }
 
+    public string NameFor(string? userId, string fallback) =>
+        userId is not null && aliases.TryGetValue(userId, out var alias) ? alias : fallback;
+
     public static string DisplayLabel(ContactDto contact) =>
         contact.Alias.Length > 0 ? contact.Alias
         : contact.DisplayName.Length > 0 ? contact.DisplayName
@@ -280,7 +288,7 @@ internal sealed class ContactBook : IDisposable
                 list.Add(added);
             }
 
-            contacts = list.ToArray();
+            Publish(list.ToArray());
         }
     }
 
@@ -298,7 +306,34 @@ internal sealed class ContactBook : IDisposable
                 }
             }
 
-            contacts = list.ToArray();
+            Publish(list.ToArray());
+        }
+    }
+
+    private void Publish(ContactDto[] list)
+    {
+        var aliasIndex = NoAliases;
+        for (var contactIndex = 0; contactIndex < list.Length; contactIndex++)
+        {
+            var contact = list[contactIndex];
+            if (contact.Alias.Length == 0)
+            {
+                continue;
+            }
+
+            if (ReferenceEquals(aliasIndex, NoAliases))
+            {
+                aliasIndex = new Dictionary<string, string>(StringComparer.Ordinal);
+            }
+
+            aliasIndex[contact.UserId] = contact.Alias;
+        }
+
+        lock (gate)
+        {
+            aliases = aliasIndex;
+            contacts = list;
+            version++;
         }
     }
 

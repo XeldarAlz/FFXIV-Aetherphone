@@ -61,7 +61,7 @@ internal sealed class IncomingCallOverlay
         dl.AddRectFilled(screen.Min, screen.Max,
             ImGui.GetColorU32(new Vector4(0.02f, 0.03f, 0.05f, 0.78f * alpha)));
         var centerX = screen.Center.X;
-        var caller = view.IncomingFrom?.DisplayName ?? view.PeerLabel;
+        var caller = view.PeerLabel;
         var avatarRadius = 50f * scale * (0.9f + 0.1f * reveal);
         var avatarCenter = new Vector2(centerX, screen.Min.Y + 150f * scale + rise);
         var pulse = 0.5f + 0.5f * MathF.Sin(clock * 2.2f);

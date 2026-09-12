@@ -522,9 +522,10 @@ internal sealed class MessagePopoutWindow : Window
         var avatarRadius = AvatarRadius * scale;
         var avatarCenter = new Vector2(bar.Min.X + EdgeInset * scale + avatarRadius, centerY);
         var conversation = store?.Conversation;
+        var headerTitle = HeaderTitle();
         if (conversation is not null && Holds(conversation.Id))
         {
-            ConversationAvatar.Draw(drawList, conversation, avatarCenter, avatarRadius, theme, ui,
+            ConversationAvatar.Draw(drawList, conversation, headerTitle, avatarCenter, avatarRadius, theme, ui,
                 services.Images, services.Lodestone);
         }
         else
@@ -535,7 +536,6 @@ internal sealed class MessagePopoutWindow : Window
         var textLeft = avatarCenter.X + avatarRadius + Metrics.Space.Sm * scale;
         var textLimit = collapseCenter.X - radius - Metrics.Space.Sm * scale;
         var caretWidth = 10f * scale;
-        var headerTitle = HeaderTitle();
         var titleSize = Typography.Measure(headerTitle, TitleStyle);
         var titleWidth = MathF.Min(titleSize.X, MathF.Max(1f, textLimit - textLeft - caretWidth));
         var subtitle = Subtitle(conversation);
@@ -586,9 +586,9 @@ internal sealed class MessagePopoutWindow : Window
     private string HeaderTitle()
     {
         var conversation = store?.Conversation;
-        if (conversation is not null && Holds(conversation.Id))
+        if (store is not null && conversation is not null && Holds(conversation.Id))
         {
-            return DirectMessagesStore.DisplayTitle(conversation);
+            return store.DisplayTitle(conversation);
         }
 
         return title.Length > 0 ? title : Loc.T(L.Apps.Message);
@@ -632,11 +632,12 @@ internal sealed class MessagePopoutWindow : Window
         switchItems.Clear();
         switchIds.Clear();
         switchTitles.Clear();
-        var conversations = owner.Inbox.Conversations;
+        var inbox = owner.Inbox;
+        var conversations = inbox.Conversations;
         for (var index = 0; index < conversations.Length && switchItems.Count < SwitchMenuLimit; index++)
         {
             var item = conversations[index];
-            var label = DirectMessagesStore.DisplayTitle(item);
+            var label = inbox.DisplayTitle(item);
             switchItems.Add(new DropdownMenu.Item(label,
                 IconGlyph.Of(item.IsGroup ? FontAwesomeIcon.Users : FontAwesomeIcon.User), false, Holds(item.Id)));
             switchIds.Add(item.Id);

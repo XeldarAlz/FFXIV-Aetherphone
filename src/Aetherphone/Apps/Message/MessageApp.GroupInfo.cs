@@ -110,7 +110,7 @@ internal sealed partial class MessageApp
 
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-        var title = DirectMessagesStore.DisplayTitle(conversation);
+        var title = store.DisplayTitle(conversation);
         using (AppSurface.Begin(body))
         {
             var drawList = ImGui.GetWindowDrawList();
@@ -339,7 +339,7 @@ internal sealed partial class MessageApp
             right -= RowTrailingGap * scale;
         }
 
-        var label = isMe ? Loc.T(L.Message.You) : DirectMessagesStore.MemberLabel(member);
+        var label = isMe ? Loc.T(L.Message.You) : store.MemberLabel(member);
         var subtitle = member.Handle.Length > 0 ? "@" + member.Handle : string.Empty;
         var titleHeight = Typography.LineHeight(RowTitleStyle);
         var subHeight = subtitle.Length > 0 ? Typography.LineHeight(RowSubStyle) : 0f;
@@ -363,7 +363,7 @@ internal sealed partial class MessageApp
     {
         memberSheetConversationId = conversation.Id;
         memberSheetUserId = member.UserId;
-        memberSheetTitle = DirectMessagesStore.MemberLabel(member);
+        memberSheetTitle = store.MemberLabel(member);
         var count = 0;
         var contact = contacts.Find(member.UserId);
         if (contact is { IsMutual: true })

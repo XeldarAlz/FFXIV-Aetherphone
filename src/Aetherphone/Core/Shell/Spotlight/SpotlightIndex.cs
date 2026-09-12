@@ -478,8 +478,9 @@ internal sealed class SpotlightIndex
         for (var index = 0; index < threads.Length && added < MaxDmThreads; index++)
         {
             var thread = threads[index];
-            var title = ConversationTitle.Of(thread);
+            var title = ConversationTitle.Of(thread, contacts);
             var score = Math.Max(Match(title, query), Match(thread.OtherHandle, query));
+            score = Math.Max(score, Match(thread.OtherDisplayName, query));
             if (score == 0)
             {
                 score = Match(thread.LastMessagePreview, query) / 2;

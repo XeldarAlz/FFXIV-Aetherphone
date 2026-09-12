@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Message;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -15,18 +14,17 @@ internal static class ConversationAvatar
     private const float RemoteFit = 0.95f;
     private const int Segments = 32;
 
-    public static void Draw(ImDrawListPtr drawList, ConversationDto item, Vector2 center, float radius,
+    public static void Draw(ImDrawListPtr drawList, ConversationDto item, string title, Vector2 center, float radius,
         PhoneTheme theme, AppSkin ui, RemoteImageCache images, LodestoneService lodestone)
     {
         if (item.IsGroup)
         {
-            DrawGroup(drawList, center, radius, DirectMessagesTitle(item), item.AvatarUrl, theme, ui, images,
-                lodestone);
+            DrawGroup(drawList, center, radius, title, item.AvatarUrl, theme, ui, images, lodestone);
             return;
         }
 
-        AvatarView.DrawRemote(drawList, center, radius, theme, DirectMessagesTitle(item), string.Empty,
-            item.OtherAvatarUrl, images, lodestone, RemoteFit, Segments, 1f, Frames.Of(item.FrameId));
+        AvatarView.DrawRemote(drawList, center, radius, theme, title, string.Empty, item.OtherAvatarUrl, images,
+            lodestone, RemoteFit, Segments, 1f, Frames.Of(item.FrameId));
     }
 
     public static void DrawGroup(ImDrawListPtr drawList, Vector2 center, float radius, string title,
@@ -42,6 +40,4 @@ internal static class ConversationAvatar
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(ui.FieldSurface), Segments);
         PhoneIcon.Draw(drawList, center, PhoneIcons.Users, ui.MutedInk, radius * GroupGlyphFactor);
     }
-
-    private static string DirectMessagesTitle(ConversationDto item) => ConversationTitle.Of(item);
 }

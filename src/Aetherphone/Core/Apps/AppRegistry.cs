@@ -54,7 +54,7 @@ internal static class AppRegistry
         AetherStreamQueue videoQueue, WatchAlongSession watchAlong, StreamSuggestionNotifier streamSuggestions,
         AetherStreamScreenWindow screenWindow, LinkpearlPopouts linkpearlPopouts)
     {
-        var contactBook = new ContactBook(services.Aethernet.Contacts, services.AethernetSession);
+        var contactBook = services.Contacts;
         var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);
         var apps = new List<IPhoneApp>
         {
@@ -64,7 +64,7 @@ internal static class AppRegistry
         };
 
         var dmNet = new AethernetApi(services.Http, services.AethernetSession, "dm");
-        var messageStore = new DirectMessagesStore(services.AethernetSession, dmNet.Chats, dmNet.Safety, dmNet.Media, services.Notifications, services.KeyVault, services.ConversationKeys, services.PeerKeys, services.ChatHistory, services.Visibility, services.RealtimeSignals, services.Installer);
+        var messageStore = new DirectMessagesStore(services.AethernetSession, dmNet.Chats, dmNet.Safety, dmNet.Media, services.Notifications, services.KeyVault, services.ConversationKeys, services.PeerKeys, services.ChatHistory, services.Visibility, services.RealtimeSignals, services.Installer, contactBook);
         var messagePopouts = new MessagePopouts(new MessagePopoutServices
         {
             Session = services.AethernetSession,
@@ -77,6 +77,7 @@ internal static class AppRegistry
             Visibility = services.Visibility,
             Signals = services.RealtimeSignals,
             Installer = services.Installer,
+            Contacts = contactBook,
             Images = services.RemoteImages,
             Lodestone = services.Lodestone,
             Http = services.Http,

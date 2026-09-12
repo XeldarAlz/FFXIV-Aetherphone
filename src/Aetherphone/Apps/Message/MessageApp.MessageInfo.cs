@@ -264,7 +264,7 @@ internal sealed partial class MessageApp
         var band = RowBand(row, scale);
         var rowHovering = UiInteract.Hover(band.Min, band.Max);
         var labelHeight = Typography.LineHeight(RowTitleStyle);
-        Marquee.DrawLeft(drawList, new MarqueeId("messageapp.messageinfo.member.", member.UserId), DirectMessagesStore.MemberLabel(member),
+        Marquee.DrawLeft(drawList, new MarqueeId("messageapp.messageinfo.member.", member.UserId), store.MemberLabel(member),
             textLeft, row.Center.Y - labelHeight * 0.5f, MathF.Max(1f, right - textLeft), RowTitleStyle, ink.TitleInk,
             rowHovering);
     }

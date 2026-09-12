@@ -593,6 +593,5 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
     {
         threadView.Dispose();
         store.Dispose();
-        contacts.Dispose();
     }
 }

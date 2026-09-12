@@ -520,10 +520,11 @@ internal sealed partial class MessageApp
             var cellCenterY = top + radius + row * (radius * 2f + 22f * scale);
             var center = new Vector2(cellCenterX, cellCenterY);
             DrawSpeakingHalo(drawList, center, radius, calls.LevelOf(others[index]), scale);
-            AvatarView.Draw(drawList, center, radius, ui.Accent, Initial(others[index].DisplayName), 1.2f,
+            var participantName = contacts.NameFor(others[index].UserId, others[index].DisplayName);
+            AvatarView.Draw(drawList, center, radius, ui.Accent, Initial(participantName), 1.2f,
                 lodestone.Avatar(others[index].Name, others[index].World, radius * 2f), 48);
             Typography.DrawCentered(new Vector2(cellCenterX, cellCenterY + radius + 12f * scale),
-                UiText.Truncate(others[index].DisplayName, 10), ui.TitleInk, 0.78f);
+                UiText.Truncate(participantName, 10), ui.TitleInk, 0.78f);
         }
     }
 

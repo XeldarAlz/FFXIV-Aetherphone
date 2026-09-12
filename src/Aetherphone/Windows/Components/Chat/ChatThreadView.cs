@@ -72,6 +72,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     private volatile string? pendingVoicePlay;
     private TMessage[] transcriptSource = Array.Empty<TMessage>();
     private TranscriptMessage[] transcriptCache = Array.Empty<TranscriptMessage>();
+    private int transcriptVersion;
     private bool transcriptStale;
     private TMessage[] sweptSource = Array.Empty<TMessage>();
     private bool sweptTranslated;
@@ -162,6 +163,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     protected virtual IChatTranscriptStoryReplies? StoryReplies => null;
 
     protected virtual IChatTranscriptSenders? Senders => null;
+
+    protected virtual int TranscriptVersion => 0;
 
     protected virtual ChatBubbleStyle BubbleStyle => default;
 
@@ -458,13 +461,15 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     private ReadOnlySpan<TranscriptMessage> BuildTranscript(TMessage[] source)
     {
-        if (!transcriptStale && ReferenceEquals(source, transcriptSource))
+        var version = TranscriptVersion;
+        if (!transcriptStale && version == transcriptVersion && ReferenceEquals(source, transcriptSource))
         {
             return transcriptCache;
         }
 
         transcriptStale = false;
         transcriptSource = source;
+        transcriptVersion = version;
         transcriptCache = MapTranscript(source);
         return transcriptCache;
     }
