@@ -1797,7 +1797,13 @@ internal static class L
                 "Edit post replaces Edit caption on your own posts: change the caption, tag or untag people on any photo, and switch the sensitive mark, all from one screen"),
         };
 
-        public static readonly LocString[] Release1030Velvet = { ComposerFlow, ComposerShareScreen };
+        public static readonly LocString[] Release1030Velvet =
+        {
+            ComposerFlow,
+            ComposerShareScreen,
+            new("changelog.r1030.41",
+                "Edit post replaces Edit caption on your own posts: change the caption, the tags, and who can see the post from one screen, with the photos right above"),
+        };
 
         public static readonly LocString[] Release1030Phone =
         {
@@ -4445,8 +4451,8 @@ internal static class L
         public static readonly LocString PresenceDnd = new("velvet.presenceDnd", "Do not disturb");
         public static readonly LocString PresenceOffline = new("velvet.presenceOffline", "Offline");
         public static readonly LocString EditProfile = new("velvet.editProfile", "Edit profile");
-        public static readonly LocString EditCaption = new("velvet.editCaption", "Edit caption");
-        public static readonly LocString EditCaptionFailed = new("velvet.editCaptionFailed", "Couldn't save the caption");
+        public static readonly LocString EditPost = new("velvet.editPost", "Edit post");
+        public static readonly LocString EditPostFailed = new("velvet.editPostFailed", "Couldn't save the changes");
         public static readonly LocString EditedStamp = new("velvet.editedStamp", "{0} · Edited");
         public static readonly LocString PronounsLabel = new("velvet.pronounsLabel", "Pronouns");
         public static readonly LocString DiscoverableLabel = new("velvet.discoverableLabel", "Appear in Discover");

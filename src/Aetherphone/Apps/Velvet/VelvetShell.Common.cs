@@ -124,7 +124,7 @@ internal sealed partial class VelvetShell
 
         if (store.Me is { } me && me.UserId == post.OwnerId)
         {
-            AddPostSheetItem(PostSheetAction.Edit, Loc.T(L.Velvet.EditCaption), false);
+            AddPostSheetItem(PostSheetAction.Edit, Loc.T(L.Velvet.EditPost), false);
             AddPostSheetItem(PostSheetAction.Audience,
                 Loc.T(post.Audience == VelvetPostAudience.Public ? L.Velvet.MakeConnections : L.Velvet.MakePublic),
                 false);
@@ -166,7 +166,7 @@ internal sealed partial class VelvetShell
                 OpenPostDetail(post.Id);
                 break;
             case PostSheetAction.Edit:
-                OpenEditCaption(post);
+                OpenEditPost(post);
                 break;
             case PostSheetAction.Audience:
                 store.SetPostAudience(post, post.Audience == VelvetPostAudience.Public

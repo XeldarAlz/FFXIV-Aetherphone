@@ -114,7 +114,6 @@ internal sealed partial class VelvetShell : IResumableApp
         store = new VelvetStore(session, net.Velvet, net.Account, net.Safety, net.Media, notifications, configuration,
             keyVault, conversationKeys, chatHistory, visibility, realtimeSignals, installer, notInterestedArchive);
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
-        editCaptionMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         stories = new StoryPresenter(session, net.Grams, net.Media, images, lodestone, VelvetArt.StoryRing, VelvetTheme.Palette,
             new StoryConfirmLabels(L.Velvet.DeleteConfirm, L.Velvet.DeleteCancel, L.Velvet.Saving), confirm,
             translation, realtimeSignals, "Velvet stories", StartStoryCompose, openProfile: OpenProfile);
@@ -462,8 +461,8 @@ internal sealed partial class VelvetShell : IResumableApp
             case VelvetScreenId.TagPosts:
                 DrawTagPosts(area, view.Arg ?? string.Empty);
                 break;
-            case VelvetScreenId.EditCaption:
-                DrawEditCaption(area);
+            case VelvetScreenId.EditPost:
+                DrawEditPost(area, view.Arg ?? string.Empty);
                 break;
             case VelvetScreenId.Encryption:
                 threadView.DrawEncryptionScreen(area);

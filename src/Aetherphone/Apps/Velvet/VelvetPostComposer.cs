@@ -1,5 +1,6 @@
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
@@ -18,6 +19,7 @@ internal enum VelvetComposeResult
     Open,
     Closed,
     Posted,
+    Edited,
 }
 
 internal sealed class VelvetPostComposer
@@ -51,6 +53,7 @@ internal sealed class VelvetPostComposer
     private const float NoticeHeight = 22f;
     private const float StatusGap = 8f;
     private const float PreviewShadow = 0.9f;
+    private const float EditDotsHeight = 18f;
     private const int CounterWarning = 50;
     private const int CircleSegments = 24;
 
@@ -64,8 +67,13 @@ internal sealed class VelvetPostComposer
     private readonly MentionAutocomplete captionMentions;
     private readonly EmojiComposer captionEmoji = new();
     private readonly PhotoComposeSession session;
+    private readonly PhotoCarousel carousel = new();
+    private readonly Action<ImDrawListPtr, Vector2, Vector2, float, string?> editPreviewPage;
     private readonly Action openTags;
     private readonly List<string> tags = new();
+    private VelvetPostDto? editing;
+    private string[] editingPhotos = Array.Empty<string>();
+    private volatile bool editBusy;
     private string tagsLabel = string.Empty;
     private bool storyMode;
     private volatile int outcome;
@@ -86,6 +94,7 @@ internal sealed class VelvetPostComposer
         this.openTags = openTags;
         captionMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         session = new PhotoComposeSession(library, wallpaperImages);
+        editPreviewPage = DrawEditPreviewPage;
     }
 
     public int TagCount => tags.Count;
@@ -137,13 +146,16 @@ internal sealed class VelvetPostComposer
 
     private static float StoryAspect => (float)StoryStore.StoryWidth / StoryStore.StoryHeight;
 
-    private float Aspect => storyMode ? StoryAspect : PostAspects.Ratio(session.Aspect);
+    private float Aspect => editing is { } post
+        ? PostAspects.DisplayRatio(post.MediaWidth, post.MediaHeight)
+        : storyMode ? StoryAspect : PostAspects.Ratio(session.Aspect);
 
     private bool AllowsReveal => !storyMode && PostAspects.RevealsWholeImage(session.Aspect);
 
-    private string Title => storyMode ? Loc.T(L.Story.NewStory) : Loc.T(L.Velvet.NewPost);
+    private string Title => editing is not null ? Loc.T(L.Velvet.EditPost)
+        : storyMode ? Loc.T(L.Story.NewStory) : Loc.T(L.Velvet.NewPost);
 
-    private bool Posting => storyMode ? stories.Posting : store.Posting;
+    private bool Posting => editing is not null ? editBusy : storyMode ? stories.Posting : store.Posting;
 
     public void OpenWith(string photoPath)
     {
@@ -154,6 +166,8 @@ internal sealed class VelvetPostComposer
 
     public void Open(bool story = false)
     {
+        editing = null;
+        editingPhotos = Array.Empty<string>();
         storyMode = story;
         outcome = 0;
         closeRequested = false;
@@ -166,24 +180,51 @@ internal sealed class VelvetPostComposer
         session.Open(story);
     }
 
+    public void OpenEdit(VelvetPostDto post)
+    {
+        editing = post;
+        editingPhotos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
+        storyMode = false;
+        outcome = 0;
+        closeRequested = false;
+        caption = post.Caption;
+        counterLength = -1;
+        status = string.Empty;
+        audience = post.Audience;
+        ClearTags();
+        for (var index = 0; index < post.Tags.Length; index++)
+        {
+            ToggleTag(post.Tags[index]);
+        }
+
+        captionEmoji.Close();
+    }
+
     public VelvetComposeResult Draw(Rect area, AppSkin ui, in PhoneContext context)
     {
         if (outcome == 1)
         {
             outcome = 0;
-            return storyMode ? VelvetComposeResult.Closed : VelvetComposeResult.Posted;
+            return editing is not null ? VelvetComposeResult.Edited
+                : storyMode ? VelvetComposeResult.Closed : VelvetComposeResult.Posted;
         }
 
         if (outcome == 2)
         {
             outcome = 0;
-            status = Loc.T(L.Account.CannotReach);
+            status = editing is not null ? Loc.T(L.Velvet.EditPostFailed) : Loc.T(L.Account.CannotReach);
         }
 
         if (closeRequested)
         {
             closeRequested = false;
             return VelvetComposeResult.Closed;
+        }
+
+        if (editing is not null)
+        {
+            DrawCaption(area, ui, context);
+            return VelvetComposeResult.Open;
         }
 
         session.ConsumePendingImport();
@@ -287,7 +328,7 @@ internal sealed class VelvetPostComposer
         var busy = Posting;
         if (VHeader.Push(area, Title))
         {
-            session.CaptionBack();
+            CaptionBack();
             return;
         }
 
@@ -305,14 +346,19 @@ internal sealed class VelvetPostComposer
         var captionBottom = storyMode ? cardsBottom : optionsCard.Min.Y - CardGap * scale;
         var captionHeight = (CardPad * 2f + CaptionFieldHeight + CaptionMetaGap + CaptionMetaHeight) * scale;
         var captionCard = new Rect(new Vector2(left, captionBottom - captionHeight), new Vector2(right, captionBottom));
-        var stripHeight = session.SelectedCount > 1 ? PhotoComposeSession.StripHeight * scale : 0f;
-        var stripBlock = stripHeight > 0f ? stripHeight + StripGap * scale : 0f;
+        var stripHeight = editing is null && session.SelectedCount > 1 ? PhotoComposeSession.StripHeight * scale : 0f;
+        var dotsHeight = editingPhotos.Length > 1 ? EditDotsHeight * scale : 0f;
+        var stripBlock = stripHeight > 0f ? stripHeight + StripGap * scale : dotsHeight;
         var previewTop = area.Min.Y + (VHeader.Height + PreviewGap) * scale;
         var halfWidth = area.Width * PreviewWidthFraction * 0.5f;
         var previewRegion = new Rect(new Vector2(area.Center.X - halfWidth, previewTop),
             new Vector2(area.Center.X + halfWidth, captionCard.Min.Y - PreviewGap * scale - stripBlock));
         var preview = ImageFit.CenteredRect(previewRegion, Aspect);
-        if (DrawCaptionPreview(preview, scale))
+        if (editing is not null)
+        {
+            DrawEditPreview(preview, scale, dotsHeight);
+        }
+        else if (DrawCaptionPreview(preview, scale))
         {
             session.OpenEdit(session.ClampedPreviewIndex);
             return;
@@ -356,7 +402,9 @@ internal sealed class VelvetPostComposer
         }
 
         mentionPopup.Gate(captionMentions);
-        if (RosePill(shareRect, busy ? Loc.T(L.Velvet.Saving) : Loc.T(L.Velvet.Share), !busy, TextStyles.Headline))
+        var actionLabel = busy ? Loc.T(L.Velvet.Saving)
+            : editing is not null ? Loc.T(L.Velvet.Save) : Loc.T(L.Velvet.Share);
+        if (RosePill(shareRect, actionLabel, !busy, TextStyles.Headline))
         {
             Commit();
         }
@@ -552,6 +600,12 @@ internal sealed class VelvetPostComposer
 
     private void Commit()
     {
+        if (editing is { } post)
+        {
+            CommitEdit(post);
+            return;
+        }
+
         if (!session.HasSelection || Posting)
         {
             return;
@@ -567,6 +621,85 @@ internal sealed class VelvetPostComposer
 
         store.CreatePost(session.SelectedArray(), session.CropsArray(), session.AspectsArray(), session.EditsArray(),
             caption, tags.ToArray(), audience, ok => outcome = ok ? 1 : 2);
+    }
+
+    private void CommitEdit(VelvetPostDto post)
+    {
+        if (editBusy)
+        {
+            return;
+        }
+
+        var trimmed = caption.Trim();
+        if (string.Equals(trimmed, post.Caption, StringComparison.Ordinal) && audience == post.Audience
+            && SameTags(post.Tags))
+        {
+            closeRequested = true;
+            return;
+        }
+
+        status = string.Empty;
+        editBusy = true;
+        store.EditPost(post.Id, trimmed, tags.ToArray(), audience, ok =>
+        {
+            editBusy = false;
+            outcome = ok ? 1 : 2;
+        });
+    }
+
+    private bool SameTags(string[] existing)
+    {
+        if (existing.Length != tags.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < existing.Length; index++)
+        {
+            if (!string.Equals(existing[index], tags[index], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void CaptionBack()
+    {
+        if (editing is not null)
+        {
+            closeRequested = true;
+            return;
+        }
+
+        session.CaptionBack();
+    }
+
+    private void DrawEditPreview(Rect preview, float scale, float dotsHeight)
+    {
+        if (editing is not { } post || preview.Width <= 0f || preview.Height <= 0f)
+        {
+            return;
+        }
+
+        var rounding = Metrics.Radius.Lg * scale;
+        var drawList = ImGui.GetWindowDrawList();
+        Elevation.Card(drawList, preview.Min, preview.Max, rounding, scale, PreviewShadow);
+        var result = carousel.Draw(drawList, preview, post.Id, editingPhotos, rounding, editPreviewPage);
+        Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
+        if (dotsHeight <= 0f)
+        {
+            return;
+        }
+
+        PhotoCarousel.DrawDots(drawList, new Vector2(preview.Center.X, preview.Max.Y + dotsHeight * 0.5f),
+            editingPhotos.Length, result.Index, preview.Width, VelvetTheme.MutedInk);
+    }
+
+    private void DrawEditPreviewPage(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, string? url)
+    {
+        VMediaTile.DrawPhoto(drawList, min, max, url ?? string.Empty, rounding, images);
     }
 
     public void Dispose()

@@ -257,10 +257,12 @@ internal sealed class VelvetClient
         return net.SendJsonAsync(HttpMethod.Put, $"/velvet/posts/{Uri.EscapeDataString(postId)}/audience", new UpdateVelvetPostAudienceRequest(audience), AethernetJsonContext.Default.UpdateVelvetPostAudienceRequest, AethernetJsonContext.Default.VelvetPostDto, token, null, onFailure);
     }
 
-    public Task<VelvetPostDto?> EditCaptionAsync(string postId, string caption, CancellationToken token,
-        Action<AepFailure>? onFailure = null)
+    public Task<VelvetPostDto?> EditPostAsync(string postId, string caption, string[] tags, int audience,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
     {
-        return net.SendJsonAsync(HttpMethod.Put, $"/velvet/posts/{Uri.EscapeDataString(postId)}/caption", new EditVelvetCaptionRequest(caption), AethernetJsonContext.Default.EditVelvetCaptionRequest, AethernetJsonContext.Default.VelvetPostDto, token, null, onFailure);
+        return net.SendJsonAsync(HttpMethod.Put, $"/velvet/posts/{Uri.EscapeDataString(postId)}",
+            new EditVelvetPostRequest(caption, tags, audience), AethernetJsonContext.Default.EditVelvetPostRequest,
+            AethernetJsonContext.Default.VelvetPostDto, token, null, onFailure);
     }
 
     public Task<VelvetPostDto?> ReactAsync(string postId, int kind, CancellationToken token,

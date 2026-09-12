@@ -446,21 +446,7 @@ internal sealed partial class VelvetShell
             return;
         }
 
-        var texture = images.Get(url);
-        if (texture is null)
-        {
-            VMediaTile.Placeholder(drawList, min, max, rounding);
-            Typography.DrawCentered(new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f),
-                images.Failed(url) ? Loc.T(L.Velvet.ImageUnavailable) : Loc.T(L.Common.Loading), VelvetTheme.MutedInk,
-                TextStyles.Footnote);
-        }
-        else
-        {
-            var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, max.X - min.X, max.Y - min.Y);
-            drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
-                ImDrawFlags.RoundCornersAll);
-        }
-
+        VMediaTile.DrawPhoto(drawList, min, max, url, rounding, images);
         ModerationOverlay.Draw(drawList, min, max, rounding, scanStatus);
     }
 

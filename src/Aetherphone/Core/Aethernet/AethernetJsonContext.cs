@@ -69,7 +69,7 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(VelvetUserPostsPage))]
 [JsonSerializable(typeof(CreateVelvetPostRequest))]
 [JsonSerializable(typeof(UpdateVelvetPostAudienceRequest))]
-[JsonSerializable(typeof(EditVelvetCaptionRequest))]
+[JsonSerializable(typeof(EditVelvetPostRequest))]
 [JsonSerializable(typeof(VelvetDiscoverPage))]
 [JsonSerializable(typeof(VelvetConnectionDto))]
 [JsonSerializable(typeof(VelvetConnectionPage))]

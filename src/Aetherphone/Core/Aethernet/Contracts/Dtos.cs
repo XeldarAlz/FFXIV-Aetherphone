@@ -455,7 +455,7 @@ internal sealed record CreateVelvetPostRequest(
 
 internal sealed record UpdateVelvetPostAudienceRequest(int Audience);
 
-internal sealed record EditVelvetCaptionRequest(string Caption);
+internal sealed record EditVelvetPostRequest(string Caption, string[] Tags, int Audience);
 
 internal sealed record VelvetCommentDto(
     string Id,

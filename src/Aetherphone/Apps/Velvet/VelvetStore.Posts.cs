@@ -575,11 +575,11 @@ internal sealed partial class VelvetStore
             async token => await client.DeletePostAsync(postId, token).ConfigureAwait(false));
     }
 
-    public void EditCaption(string postId, string caption, Action<bool> onComplete)
+    public void EditPost(string postId, string caption, string[] tags, int audience, Action<bool> onComplete)
     {
-        work.Run("edit caption", async token =>
+        work.Run("edit post", async token =>
         {
-            var result = await client.EditCaptionAsync(postId, caption, token).ConfigureAwait(false);
+            var result = await client.EditPostAsync(postId, caption, tags, audience, token).ConfigureAwait(false);
             if (result is null)
             {
                 return false;

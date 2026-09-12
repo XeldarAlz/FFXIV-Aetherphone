@@ -1,4 +1,5 @@
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -9,6 +10,24 @@ internal static class VMediaTile
     public static void Placeholder(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius)
     {
         Squircle.Fill(drawList, min, max, radius, VelvetTheme.Sunken.Packed());
+    }
+
+    public static void DrawPhoto(ImDrawListPtr drawList, Vector2 min, Vector2 max, string url, float radius,
+        RemoteImageCache images)
+    {
+        var texture = images.Get(url);
+        if (texture is null)
+        {
+            Placeholder(drawList, min, max, radius);
+            Typography.DrawCentered(drawList, new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f),
+                images.Failed(url) ? Loc.T(L.Velvet.ImageUnavailable) : Loc.T(L.Common.Loading), VelvetTheme.MutedInk,
+                TextStyles.Footnote);
+            return;
+        }
+
+        var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, max.X - min.X, max.Y - min.Y);
+        drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, radius,
+            ImDrawFlags.RoundCornersAll);
     }
 
     public static void Conceal(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, string label,
