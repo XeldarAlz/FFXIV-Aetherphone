@@ -56,6 +56,13 @@ internal sealed class ChatListChrome
     public static readonly TextStyle SectionStyle = TextStyles.FootnoteEmphasized;
     public static readonly TextStyle RoleTagStyle = TextStyles.Caption1;
     public static readonly Vector4 OnlineDot = new(0.204f, 0.816f, 0.478f, 1f);
+    public static readonly Vector4 TintGold = new(0.93f, 0.68f, 0.18f, 1f);
+    public static readonly Vector4 TintRed = new(0.92f, 0.33f, 0.31f, 1f);
+    public static readonly Vector4 TintTeal = new(0.13f, 0.63f, 0.62f, 1f);
+    public static readonly Vector4 TintAzure = new(0.20f, 0.55f, 0.92f, 1f);
+    public static readonly Vector4 TintSlate = new(0.50f, 0.54f, 0.60f, 1f);
+    public static readonly Vector4 TintGreen = new(0.20f, 0.68f, 0.38f, 1f);
+    public static readonly Vector4 TintViolet = new(0.60f, 0.45f, 0.92f, 1f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
     private readonly AppSkin ui;

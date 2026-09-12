@@ -6,7 +6,6 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Linkpearl;
 
@@ -21,73 +20,87 @@ internal enum InboxRowAction : byte
 
 internal static class InboxRowView
 {
-    public const float Height = 66f;
+    public const float Height = 72f;
 
-    private const float AvatarRadius = 22f;
+    private const float AvatarRadius = 25f;
+    private const float TitleTop = 13f;
     private const float QuickRadius = 17f;
     private const float QuickPitch = 38f;
+    private const float QuickGlyph = 18f;
     private const float RevealSmoothTime = 0.10f;
     private const float MaxFrameSeconds = 0.1f;
-    private const float MarkGlyphScale = 0.72f;
-    private const float MarkGap = 18f;
+    private const float StatusGlyph = 16f;
+    private const float StatusPitch = 20f;
+    private const float TimeGap = 8f;
+    private const float TagPadX = 6f;
+    private const float TagHeight = 16f;
+    private const float TagGap = 6f;
+    private const float TagMaxFraction = 0.42f;
+    private const float TagFillAlpha = 0.18f;
+    private const float BadgeHeight = 20f;
+    private const float BadgePadX = 6f;
+    private const float MutedTitleAlpha = 0.72f;
+    private const float DotRadius = 4f;
 
+    private static readonly TextStyle UnreadCountStyle = new(0.68f, FontWeight.SemiBold);
+    private static readonly TextStyle TagStyle = TextStyles.Caption2;
     private static readonly Dictionary<string, Spring> Reveals = new(StringComparer.Ordinal);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
-    public static InboxRowAction Draw(in FeedCellScope cell, InboxRow row, PhoneTheme theme,
+    public static InboxRowAction Draw(ChatListChrome chrome, in ChatTheme theme, InboxRow row,
         LodestoneService lodestone, bool quickActions)
     {
+        var ink = chrome.Ink;
         var scale = UiScale.Current;
-        var min = cell.Bounds.Min;
-        var max = cell.Bounds.Max;
-        var hovered = cell.Hovered;
         var drawList = ImGui.GetWindowDrawList();
+        var person = chrome.BeginPersonRow(drawList, Height, AvatarRadius, 0f, true, out var avatarCenter);
+        var bounds = person.Bounds;
+        var hovered = UiInteract.Hover(bounds.Min, bounds.Max);
+        GameChatTiles.DrawAvatar(drawList, avatarCenter, AvatarRadius * scale, row, lodestone, ink.Accent);
         var reveal = StepReveal(row.Key, hovered && quickActions);
-        var avatarCenter = new Vector2(min.X + 14f * scale + AvatarRadius * scale, min.Y + Height * scale * 0.5f);
-        DrawAvatar(drawList, avatarCenter, row, theme, lodestone, scale);
-        var textLeft = avatarCenter.X + AvatarRadius * scale + Metrics.Space.Md * scale;
-        var textRight = max.X - 14f * scale;
         var restAlpha = 1f - reveal;
+        var titleTop = bounds.Min.Y + TitleTop * scale;
+        var titleHeight = Typography.LineHeight(ChatListChrome.RowTitleStyle);
+        var right = person.TextRight;
+        var titleRight = right;
         var action = InboxRowAction.None;
         var overActions = false;
         if (reveal > 0.01f)
         {
-            action = DrawQuickActions(drawList, row, theme, max, min.Y + Height * scale * 0.5f, reveal, scale,
-                out overActions);
+            action = DrawQuickActions(drawList, row, ink, right, bounds.Center.Y, reveal, scale, out overActions);
         }
 
-        var titleRight = textRight;
         if (restAlpha > 0.01f)
         {
-            titleRight = DrawTrailing(drawList, row, theme, textRight, min.Y, restAlpha, scale);
+            titleRight = DrawTime(drawList, row, ink, right, titleTop, restAlpha, scale);
         }
         else
         {
-            titleRight = max.X - (QuickPitch * 3f + 8f) * scale;
+            titleRight = right - (QuickPitch * 2f + QuickRadius * 2f + TimeGap) * scale;
         }
 
-        var titleWidth = MathF.Max(1f, titleRight - Metrics.Space.Sm * scale - textLeft);
-        var titleY = min.Y + 11f * scale;
-        var titleHovering = UiInteract.Hover(new Vector2(textLeft, titleY),
-            new Vector2(textLeft + titleWidth, titleY + Typography.LineHeight(TextStyles.Headline)));
-        var titleInk = row.Muted ? Palette.WithAlpha(theme.TextStrong, 0.72f) : theme.TextStrong;
-        Marquee.DrawLeft(new MarqueeId("linkpearl.row.", row.Key), row.Title, textLeft, titleY, titleWidth, TextStyles.Headline,
-            titleInk, titleHovering);
-        var previewRight = textRight;
-        if (row.HasBadge && restAlpha > 0.01f)
+        var titleWidth = MathF.Max(1f, titleRight - person.TextLeft);
+        var titleHovering = UiInteract.Hover(new Vector2(person.TextLeft, titleTop),
+            new Vector2(person.TextLeft + titleWidth, titleTop + titleHeight));
+        var titleInk = row.Muted ? Palette.WithAlpha(ink.TitleInk, MutedTitleAlpha) : ink.TitleInk;
+        Marquee.DrawLeft(drawList, new MarqueeId("linkpearl.row.", row.Key), row.Title, person.TextLeft, titleTop,
+            titleWidth, ChatListChrome.RowTitleStyle, titleInk, titleHovering);
+
+        var lineTop = titleTop + titleHeight + ChatListChrome.RowLineGap * scale;
+        var lineCenter = lineTop + Typography.LineHeight(ChatListChrome.RowSubStyle) * 0.5f;
+        var previewRight = right;
+        if (restAlpha > 0.01f)
         {
-            previewRight = DrawBadge(drawList, row.Unread, textRight, min.Y + 42f * scale, theme, restAlpha, scale);
+            previewRight = DrawTrailing(drawList, row, theme, ink, right, lineCenter, restAlpha, scale);
         }
-        else if (row.Muted && row.Unread > 0 && restAlpha > 0.01f)
-        {
-            previewRight = DrawDot(drawList, textRight, min.Y + 42f * scale, theme, restAlpha, scale);
-        }
-        else if (reveal > 0.5f)
+        else
         {
             previewRight = titleRight;
         }
 
-        DrawPreview(drawList, row, theme, textLeft, min.Y + 34f * scale, previewRight - textLeft, scale);
+        DrawPreview(drawList, row, ink, person.TextLeft, lineTop, previewRight - TimeGap * scale - person.TextLeft,
+            scale);
+        chrome.EndPersonRow(drawList, person);
         if (action != InboxRowAction.None)
         {
             return action;
@@ -98,7 +111,7 @@ internal static class InboxRowView
             return InboxRowAction.Menu;
         }
 
-        return cell.Tapped && !overActions ? InboxRowAction.Open : InboxRowAction.None;
+        return person.Tapped && !overActions ? InboxRowAction.Open : InboxRowAction.None;
     }
 
     private static float StepReveal(string key, bool target)
@@ -113,38 +126,51 @@ internal static class InboxRowView
         return Math.Clamp(spring.Value, 0f, 1f);
     }
 
-    private static InboxRowAction DrawQuickActions(ImDrawListPtr drawList, InboxRow row, PhoneTheme theme,
-        Vector2 max, float centerY, float reveal, float scale, out bool overActions)
+    private static float DrawTime(ImDrawListPtr drawList, InboxRow row, SocialInk ink, float right, float titleTop,
+        float alpha, float scale)
     {
-        var delta = MathF.Min(ImGui.GetIO().DeltaTime, MaxFrameSeconds);
+        var time = row.LastActivity == default ? string.Empty : TimeText.Short(row.LastActivity);
+        if (time.Length == 0)
+        {
+            return right;
+        }
+
+        var timeSize = Typography.Measure(time, ChatListChrome.RowMetaStyle);
+        var timeInk = row.HasBadge ? ink.AccentLink : ink.MutedInk;
+        var titleHeight = Typography.LineHeight(ChatListChrome.RowTitleStyle);
+        Typography.Draw(drawList, new Vector2(right - timeSize.X, titleTop + (titleHeight - timeSize.Y) * 0.5f), time,
+            Palette.WithAlpha(timeInk, timeInk.W * alpha), ChatListChrome.RowMetaStyle);
+        return right - timeSize.X - TimeGap * scale;
+    }
+
+    private static InboxRowAction DrawQuickActions(ImDrawListPtr drawList, InboxRow row, SocialInk ink, float right,
+        float centerY, float reveal, float scale, out bool overActions)
+    {
         var interactive = reveal > 0.5f;
         var radius = QuickRadius * scale;
-        var right = max.X - 12f * scale - radius;
-        var moreCenter = new Vector2(right, centerY);
-        var bellCenter = new Vector2(right - QuickPitch * scale, centerY);
-        var pinCenter = new Vector2(right - QuickPitch * 2f * scale, centerY);
+        var moreCenter = new Vector2(right - radius, centerY);
+        var bellCenter = new Vector2(moreCenter.X - QuickPitch * scale, centerY);
+        var pinCenter = new Vector2(moreCenter.X - QuickPitch * 2f * scale, centerY);
         var bandMin = new Vector2(pinCenter.X - radius, centerY - radius);
         var bandMax = new Vector2(moreCenter.X + radius, centerY + radius);
         overActions = interactive && UiInteract.Hover(bandMin, bandMax);
         var action = InboxRowAction.None;
-        if (HoverButton.Circle(drawList, "inbox.pin." + row.Key, pinCenter, radius, FontAwesomeIcon.Thumbtack,
-                AppSkin.Transparent, row.Pinned ? theme.Accent : theme.TextMuted, delta, reveal, interactive,
-                Loc.T(row.Pinned ? L.Common.Unpin : L.Common.Pin), HoverLabelSide.Above))
+        if (DrawQuickButton(drawList, pinCenter, radius, row.Pinned ? PhoneIcons.PinFilled : PhoneIcons.Pin,
+                row.Pinned ? ink.AccentLink : ink.MutedInk, ink, reveal, interactive,
+                Loc.T(row.Pinned ? L.Common.Unpin : L.Common.Pin), scale))
         {
             action = InboxRowAction.TogglePin;
         }
 
-        if (HoverButton.Circle(drawList, "inbox.mute." + row.Key, bellCenter, radius,
-                row.Muted ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell, AppSkin.Transparent,
-                row.Muted ? theme.Accent : theme.TextMuted, delta, reveal, interactive,
-                Loc.T(row.Muted ? L.Linkpearl.Unmute : L.Linkpearl.Mute), HoverLabelSide.Above))
+        if (DrawQuickButton(drawList, bellCenter, radius, row.Muted ? PhoneIcons.BellOff : PhoneIcons.Bell,
+                row.Muted ? ink.AccentLink : ink.MutedInk, ink, reveal, interactive,
+                Loc.T(row.Muted ? L.Linkpearl.Unmute : L.Linkpearl.Mute), scale))
         {
             action = InboxRowAction.ToggleMute;
         }
 
-        if (HoverButton.Circle(drawList, "inbox.more." + row.Key, moreCenter, radius, FontAwesomeIcon.EllipsisH,
-                AppSkin.Transparent, theme.TextMuted, delta, reveal, interactive, Loc.T(L.Linkpearl.More),
-                HoverLabelSide.Above))
+        if (DrawQuickButton(drawList, moreCenter, radius, PhoneIcons.Dots, ink.MutedInk, ink, reveal, interactive,
+                Loc.T(L.Linkpearl.More), scale))
         {
             action = InboxRowAction.Menu;
         }
@@ -152,82 +178,81 @@ internal static class InboxRowView
         return action;
     }
 
-    private static float DrawTrailing(ImDrawListPtr drawList, InboxRow row, PhoneTheme theme, float right,
-        float top, float alpha, float scale)
+    private static bool DrawQuickButton(ImDrawListPtr drawList, Vector2 center, float radius, string glyph,
+        Vector4 glyphInk, SocialInk ink, float alpha, bool interactive, string tooltip, float scale)
     {
-        var cursor = right;
-        var time = row.LastActivity == default ? string.Empty : TimeText.Short(row.LastActivity);
-        if (time.Length > 0)
+        var half = new Vector2(radius, radius);
+        var hovered = interactive && UiInteract.Hover(center - half, center + half);
+        if (hovered)
         {
-            var timeSize = Typography.Measure(time, TextStyles.Caption1);
-            var timeInk = row.HasBadge ? theme.Accent : theme.TextMuted;
-            Typography.Draw(drawList, new Vector2(cursor - timeSize.X, top + 13f * scale), time,
-                Palette.WithAlpha(timeInk, timeInk.W * alpha), TextStyles.Caption1);
-            cursor -= timeSize.X + Metrics.Space.Xs * scale;
+            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(ink.FieldFill, ink.FieldFill.W * alpha)), 32);
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var markY = top + 19f * scale;
+        PhoneIcon.Draw(drawList, center, glyph, Palette.WithAlpha(glyphInk, glyphInk.W * alpha), QuickGlyph * scale);
+        if (!interactive)
+        {
+            return false;
+        }
+
+        HoverTooltip.Show(new Rect(center - half, center + half), tooltip, HoverLabelSide.Above);
+        return UiInteract.Click(center - half, center + half, hovered);
+    }
+
+    private static float DrawTrailing(ImDrawListPtr drawList, InboxRow row, in ChatTheme theme, SocialInk ink,
+        float right, float centerY, float alpha, float scale)
+    {
+        var cursor = right;
+        if (row.HasBadge)
+        {
+            cursor = DrawBadge(drawList, row.Unread, theme, cursor, centerY, alpha, scale);
+        }
+        else if (row.Muted && row.Unread > 0)
+        {
+            cursor = DrawDot(drawList, ink, cursor, centerY, alpha, scale);
+        }
+
         if (row.Muted)
         {
-            AppSkin.Icon(drawList, new Vector2(cursor - 6f * scale, markY), IconGlyph.Of(FontAwesomeIcon.BellSlash),
-                Palette.WithAlpha(theme.TextMuted, theme.TextMuted.W * alpha), MarkGlyphScale);
-            cursor -= MarkGap * scale;
+            PhoneIcon.Draw(drawList, new Vector2(cursor - StatusGlyph * 0.5f * scale, centerY), PhoneIcons.BellOff,
+                Palette.WithAlpha(ink.MutedInk, ink.MutedInk.W * alpha), StatusGlyph * scale);
+            cursor -= StatusPitch * scale;
         }
 
         if (row.Pinned)
         {
-            AppSkin.Icon(drawList, new Vector2(cursor - 6f * scale, markY), IconGlyph.Of(FontAwesomeIcon.Thumbtack),
-                Palette.WithAlpha(theme.TextMuted, theme.TextMuted.W * alpha), MarkGlyphScale);
-            cursor -= MarkGap * scale;
+            PhoneIcon.Draw(drawList, new Vector2(cursor - StatusGlyph * 0.5f * scale, centerY), PhoneIcons.PinFilled,
+                Palette.WithAlpha(ink.MutedInk, ink.MutedInk.W * alpha), StatusGlyph * scale);
+            cursor -= StatusPitch * scale;
         }
 
         return cursor;
     }
 
-    private static void DrawAvatar(ImDrawListPtr drawList, Vector2 center, InboxRow row, PhoneTheme theme,
-        LodestoneService lodestone, float scale)
-    {
-        var radius = AvatarRadius * scale;
-        if (row.IsTell)
-        {
-            AvatarView.Draw(drawList, center, radius, theme.Accent, Initials.Of(row.Title), 1.2f,
-                lodestone.Avatar(row.Title, row.World, radius * 2f), 32);
-            return;
-        }
-
-        var min = center - new Vector2(radius, radius);
-        var max = center + new Vector2(radius, radius);
-        Squircle.Fill(drawList, min, max, radius * 0.62f, ImGui.GetColorU32(Palette.WithAlpha(row.Tint, 0.22f)));
-        Squircle.Stroke(drawList, min, max, radius * 0.62f, ImGui.GetColorU32(Palette.WithAlpha(row.Tint, 0.35f)),
-            Metrics.Stroke.Hairline);
-        Typography.DrawCentered(drawList, center, Initials.Of(row.Title), row.Tint, TextStyles.SubheadlineEmphasized);
-    }
-
-    private static float DrawBadge(ImDrawListPtr drawList, int unread, float right, float centerY, PhoneTheme theme,
+    private static float DrawBadge(ImDrawListPtr drawList, int unread, in ChatTheme theme, float right, float centerY,
         float alpha, float scale)
     {
         var label = unread > 99 ? "99+" : unread.ToString(Loc.Culture);
-        var labelSize = Typography.Measure(label, TextStyles.Caption1);
-        var height = 18f * scale;
-        var badgeWidth = MathF.Max(labelSize.X + 12f * scale, height);
-        var min = new Vector2(right - badgeWidth, centerY - height * 0.5f);
+        var labelSize = Typography.Measure(label, UnreadCountStyle);
+        var height = BadgeHeight * scale;
+        var width = MathF.Max(labelSize.X + BadgePadX * 2f * scale, height);
+        var min = new Vector2(right - width, centerY - height * 0.5f);
         var max = new Vector2(right, centerY + height * 0.5f);
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, alpha)));
-        Typography.DrawCentered(drawList, (min + max) * 0.5f, label, Palette.WithAlpha(White, alpha),
-            TextStyles.Caption1);
-        return min.X - Metrics.Space.Sm * scale;
+        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(Palette.WithAlpha(theme.Badge, alpha)));
+        Typography.DrawCentered(drawList, (min + max) * 0.5f, label, Palette.WithAlpha(White, alpha), UnreadCountStyle);
+        return min.X - TimeGap * scale;
     }
 
-    private static float DrawDot(ImDrawListPtr drawList, float right, float centerY, PhoneTheme theme, float alpha,
+    private static float DrawDot(ImDrawListPtr drawList, SocialInk ink, float right, float centerY, float alpha,
         float scale)
     {
-        var radius = 4f * scale;
+        var radius = DotRadius * scale;
         var center = new Vector2(right - radius, centerY);
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, 0.7f * alpha)), 12);
-        return center.X - radius - Metrics.Space.Sm * scale;
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(ink.MutedInk, 0.7f * alpha)), 12);
+        return center.X - radius - TimeGap * scale;
     }
 
-    private static void DrawPreview(ImDrawListPtr drawList, InboxRow row, PhoneTheme theme, float left, float top,
+    private static void DrawPreview(ImDrawListPtr drawList, InboxRow row, SocialInk ink, float left, float top,
         float width, float scale)
     {
         if (width <= 0f)
@@ -236,17 +261,19 @@ internal static class InboxRowView
         }
 
         var cursor = left;
+        var lineHeight = Typography.LineHeight(ChatListChrome.RowSubStyle);
         if (row.PreviewChannel.Length > 0 && GameChannels.TryByKey(row.PreviewChannel, out var channel))
         {
             var tag = LinkshellNames.Label(channel);
-            var tagLabel = Typography.FitText(tag, width * 0.42f, TextStyles.Caption2);
-            var tagSize = Typography.Measure(tagLabel, TextStyles.Caption2);
-            var tagMin = new Vector2(cursor, top + 1f * scale);
-            var tagMax = tagMin + tagSize + new Vector2(8f * scale, 3f * scale);
-            Squircle.Fill(drawList, tagMin, tagMax, (tagMax.Y - tagMin.Y) * 0.5f,
-                ImGui.GetColorU32(Palette.WithAlpha(channel.Tint, 0.18f)));
-            Typography.DrawCentered(drawList, (tagMin + tagMax) * 0.5f, tagLabel, channel.Tint, TextStyles.Caption2);
-            cursor = tagMax.X + Metrics.Space.Xs * scale;
+            var tagLabel = Typography.FitText(tag, width * TagMaxFraction, TagStyle);
+            var tagSize = Typography.Measure(tagLabel, TagStyle);
+            var tagHeight = TagHeight * scale;
+            var tagMin = new Vector2(cursor, top + (lineHeight - tagHeight) * 0.5f);
+            var tagMax = new Vector2(tagMin.X + tagSize.X + TagPadX * 2f * scale, tagMin.Y + tagHeight);
+            Squircle.Fill(drawList, tagMin, tagMax, tagHeight * 0.5f,
+                ImGui.GetColorU32(Palette.WithAlpha(channel.Tint, TagFillAlpha)));
+            Typography.DrawCentered(drawList, (tagMin + tagMax) * 0.5f, tagLabel, channel.Tint, TagStyle);
+            cursor = tagMax.X + TagGap * scale;
         }
 
         var remaining = left + width - cursor;
@@ -258,9 +285,9 @@ internal static class InboxRowView
         if (row.PreviewSender.Length > 0)
         {
             var sender = Typography.FitText(string.Concat(FirstName(row.PreviewSender), ": "), remaining * 0.5f,
-                TextStyles.Caption1);
-            var senderSize = Typography.Measure(sender, TextStyles.Caption1);
-            Typography.Draw(drawList, new Vector2(cursor, top), sender, theme.TextStrong, TextStyles.Caption1);
+                ChatListChrome.RowSubStyle);
+            var senderSize = Typography.Measure(sender, ChatListChrome.RowSubStyle);
+            Typography.Draw(drawList, new Vector2(cursor, top), sender, ink.BodyInk, ChatListChrome.RowSubStyle);
             cursor += senderSize.X;
             remaining = left + width - cursor;
         }
@@ -271,8 +298,9 @@ internal static class InboxRowView
         }
 
         var preview = row.PreviewText.Length > 0 ? row.PreviewText : Loc.T(L.Linkpearl.NoMessagesYetPreview);
-        Typography.Draw(drawList, new Vector2(cursor, top), Typography.FitText(preview, remaining,
-            TextStyles.Caption1), theme.TextMuted, TextStyles.Caption1);
+        Typography.Draw(drawList, new Vector2(cursor, top),
+            Typography.FitText(preview, remaining, ChatListChrome.RowSubStyle), ink.MutedInk,
+            ChatListChrome.RowSubStyle);
     }
 
     private static string FirstName(string name)

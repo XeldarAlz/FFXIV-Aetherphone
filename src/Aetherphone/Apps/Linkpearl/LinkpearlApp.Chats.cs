@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Localization;
@@ -8,7 +9,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Linkpearl;
 
@@ -22,11 +22,13 @@ internal sealed partial class LinkpearlApp
         Unread,
     }
 
-    private const float SearchRowHeight = 44f;
+    private const float CellPadX = ChatListChrome.CellPadX;
+    private const float ChatSearchHeight = 52f;
+    private const float ChatChipsHeight = 44f;
+    private const float ChatSearchRevealSeconds = 0.16f;
     private const float HitRowHeight = 56f;
-    private const float PausedBannerHeight = 34f;
-    private const float SectionLabelHeight = 22f;
-    private const int FilterRailMinimumRows = 4;
+    private const float PausedBannerHeight = 36f;
+    private const float EmptyTop = 60f;
     private const byte MenuPopout = 0;
     private const byte MenuMarkRead = 1;
     private const byte MenuTogglePin = 2;
@@ -40,6 +42,9 @@ internal sealed partial class LinkpearlApp
     private readonly bool[] filterActive = new bool[4];
     private readonly List<ActionSheet.Item> conversationItems = new(7);
     private readonly List<byte> conversationActions = new(7);
+    private Spring chatSearchReveal;
+    private bool chatSearchOpen;
+    private bool chatSearchFocus;
     private string conversationSheetKey = string.Empty;
     private string conversationSheetTitle = string.Empty;
 
@@ -48,10 +53,18 @@ internal sealed partial class LinkpearlApp
         inbox.Sync();
         var scale = UiScale.Current;
         UiAnchors.Report("messages.list", content);
-        if (inbox.Count == 0 && !search.Active)
+        var top = DrawChatSearchRow(content, scale);
+        search.Run(chatSearchQuery, inbox, chatLog);
+        if (search.Active)
         {
-            if (EmptyState.Draw(content, ui, FontAwesomeIcon.Comments, Loc.T(L.Linkpearl.EmptyTitle),
-                    Loc.T(L.Linkpearl.EmptyHint), Loc.T(L.Linkpearl.StartChat)))
+            DrawSearchResults(new Rect(new Vector2(content.Min.X, top), content.Max));
+            return;
+        }
+
+        if (inbox.Count == 0)
+        {
+            if (EmptyState.Draw(new Rect(new Vector2(content.Min.X, top), content.Max), ui, PhoneIcons.MessageCircle,
+                    Loc.T(L.Linkpearl.EmptyTitle), Loc.T(L.Linkpearl.EmptyHint), Loc.T(L.Linkpearl.StartChat)))
             {
                 OpenNewChat();
             }
@@ -59,35 +72,74 @@ internal sealed partial class LinkpearlApp
             return;
         }
 
-        var pad = Metrics.Space.Lg * scale;
-        var searchBar = new Rect(new Vector2(content.Min.X + pad, content.Min.Y),
-            new Vector2(content.Max.X - pad, content.Min.Y + SearchRowHeight * scale));
-        SearchField.Draw(searchBar, "##linkpearlSearch", Loc.T(L.Linkpearl.SearchHint), ref chatSearchQuery,
-            frameTheme);
-        search.Run(chatSearchQuery, inbox, chatLog);
-        var top = searchBar.Max.Y;
-        if (search.Active)
+        if (notificationGate.Paused)
         {
-            DrawSearchResults(new Rect(new Vector2(content.Min.X, top + Metrics.Space.Xs * scale), content.Max));
+            top = DrawPausedBanner(new Rect(
+                new Vector2(content.Min.X + CellPadX * scale, top + Metrics.Space.Xs * scale),
+                new Vector2(content.Max.X - CellPadX * scale,
+                    top + Metrics.Space.Xs * scale + PausedBannerHeight * scale)));
+        }
+
+        var railTop = top + (ChatChipsHeight - ChipRail.RowHeight) * 0.5f * scale;
+        DrawFilterRail(new Rect(new Vector2(content.Min.X + CellPadX * scale, railTop),
+            new Vector2(content.Max.X - CellPadX * scale, railTop + ChipRail.RowHeight * scale)));
+        top += ChatChipsHeight * scale;
+        DrawConversationList(new Rect(new Vector2(content.Min.X, top), content.Max), scale);
+    }
+
+    private float DrawChatSearchRow(Rect area, float scale)
+    {
+        var target = chatSearchOpen ? 1f : 0f;
+        var frameSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
+        var reveal = chatSearchReveal.Step(target, ChatSearchRevealSeconds, frameSeconds);
+        if (chatSearchReveal.IsResting(target, 0.005f, 0.05f))
+        {
+            chatSearchReveal.SnapTo(target);
+            reveal = target;
+        }
+
+        var height = ChatSearchHeight * scale * Math.Clamp(reveal, 0f, 1f);
+        if (height < 1f)
+        {
+            return area.Min.Y;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var bottom = area.Min.Y + height;
+        drawList.PushClipRect(area.Min, new Vector2(area.Max.X, bottom), true);
+        var bar = new Rect(new Vector2(area.Min.X + CellPadX * scale, bottom - ChatSearchHeight * scale),
+            new Vector2(area.Max.X - CellPadX * scale, bottom));
+        SearchField.Draw(bar, "##linkpearlSearch", Loc.T(L.Linkpearl.SearchHint), ref chatSearchQuery, ui.Palette,
+            focus: chatSearchFocus);
+        chatSearchFocus = false;
+        drawList.PopClipRect();
+        return bottom;
+    }
+
+    private void ToggleChatSearch()
+    {
+        if (chatSearchOpen)
+        {
+            CloseChatSearch();
             return;
         }
 
-        if (notificationGate.Paused)
-        {
-            top = DrawPausedBanner(new Rect(new Vector2(content.Min.X + pad, top + Metrics.Space.Xs * scale),
-                new Vector2(content.Max.X - pad, top + Metrics.Space.Xs * scale + PausedBannerHeight * scale)));
-        }
+        chatSearchOpen = true;
+        chatSearchFocus = true;
+    }
 
-        if (inbox.Count >= FilterRailMinimumRows)
-        {
-            var rail = new Rect(new Vector2(content.Min.X + pad, top + Metrics.Space.Xs * scale),
-                new Vector2(content.Max.X - pad, top + Metrics.Space.Xs * scale + ChipRail.RowHeight * scale));
-            DrawFilterRail(rail);
-            top = rail.Max.Y;
-        }
+    private void CloseChatSearch()
+    {
+        chatSearchOpen = false;
+        chatSearchFocus = false;
+        chatSearchQuery = string.Empty;
+        search.Clear();
+    }
 
-        var body = new Rect(new Vector2(content.Min.X, top + Metrics.Space.Xs * scale), content.Max);
-        DrawConversationList(body, scale);
+    private void ResetChatSearch()
+    {
+        CloseChatSearch();
+        chatSearchReveal.SnapTo(0f);
     }
 
     private void DrawFilterRail(Rect rail)
@@ -113,20 +165,19 @@ internal sealed partial class LinkpearlApp
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        Squircle.Fill(drawList, banner.Min, banner.Max, banner.Height * 0.5f,
-            ImGui.GetColorU32(Palette.WithAlpha(frameTheme.Accent, 0.14f)));
+        Squircle.Fill(drawList, banner.Min, banner.Max, banner.Height * 0.5f, ImGui.GetColorU32(ink.AccentWash));
         var iconCenter = new Vector2(banner.Min.X + 18f * scale, banner.Center.Y);
-        AppSkin.Icon(drawList, iconCenter, IconGlyph.Of(FontAwesomeIcon.BellSlash), frameTheme.Accent, 0.88f);
+        PhoneIcon.Draw(drawList, iconCenter, PhoneIcons.BellOff, ink.AccentLink, 18f * scale);
         var resume = Loc.T(L.Linkpearl.Resume);
         var resumeSize = Typography.Measure(resume, TextStyles.FootnoteEmphasized);
         var resumeCenter = new Vector2(banner.Max.X - Metrics.Space.Lg * scale - resumeSize.X * 0.5f, banner.Center.Y);
-        var labelLeft = iconCenter.X + 14f * scale;
+        var labelLeft = iconCenter.X + 16f * scale;
         var labelWidth = resumeCenter.X - resumeSize.X * 0.5f - Metrics.Space.Md * scale - labelLeft;
         var label = Typography.FitText(Loc.T(L.Linkpearl.NotificationsPaused), labelWidth, TextStyles.Footnote);
         var labelSize = Typography.Measure(label, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(labelLeft, banner.Center.Y - labelSize.Y * 0.5f), label,
-            frameTheme.TextStrong, TextStyles.Footnote);
-        if (TextButton.Draw(resumeCenter, resume, frameTheme.Accent, scale))
+        Typography.Draw(drawList, new Vector2(labelLeft, banner.Center.Y - labelSize.Y * 0.5f), label, ink.TitleInk,
+            TextStyles.Footnote);
+        if (TextButton.Draw(resumeCenter, resume, ink.AccentLink, scale))
         {
             notificationGate.SetPaused(false);
         }
@@ -149,7 +200,7 @@ internal sealed partial class LinkpearlApp
 
                 if (!drewPinned)
                 {
-                    DrawSectionLabel(Loc.T(L.Linkpearl.PinnedSection), scale);
+                    chrome.DrawSectionLabel(Loc.T(L.Linkpearl.PinnedSection));
                     drewPinned = true;
                 }
 
@@ -167,7 +218,7 @@ internal sealed partial class LinkpearlApp
 
                 if (!drewRows && drewPinned)
                 {
-                    DrawSectionLabel(Loc.T(L.Messages.TabChats), scale);
+                    chrome.DrawSectionLabel(Loc.T(L.Messages.TabChats));
                 }
 
                 drewRows = true;
@@ -176,31 +227,17 @@ internal sealed partial class LinkpearlApp
 
             if (!drewPinned && !drewRows)
             {
-                Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 60f * scale),
-                    Loc.T(L.Linkpearl.NoFilterMatches), frameTheme.TextMuted);
+                Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + EmptyTop * scale),
+                    Loc.T(L.Linkpearl.NoFilterMatches), ink.MutedInk);
             }
 
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
         }
     }
 
-    private void DrawSectionLabel(string text, float scale)
-    {
-        var origin = ImGui.GetCursorScreenPos();
-        var label = Loc.Culture.TextInfo.ToUpper(text);
-        var size = Typography.Measure(label, TextStyles.Caption2);
-        Typography.Draw(ImGui.GetWindowDrawList(),
-            new Vector2(origin.X + Metrics.Space.Lg * scale, origin.Y + SectionLabelHeight * scale - size.Y - 2f * scale),
-            label, frameTheme.TextMuted, TextStyles.Caption2);
-        ImGui.Dummy(new Vector2(0f, SectionLabelHeight * scale));
-    }
-
     private void DrawRow(InboxRow row)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var cell = FeedCell.Begin(drawList, InboxRowView.Height * UiScale.Current, frameTheme.HoverWash);
-        var action = InboxRowView.Draw(cell, row, frameTheme, lodestone, true);
-        FeedCell.End(drawList, cell, frameTheme.Hairline);
+        var action = InboxRowView.Draw(chrome, activeTheme, row, lodestone, true);
         switch (action)
         {
             case InboxRowAction.Open:
@@ -243,8 +280,8 @@ internal sealed partial class LinkpearlApp
         var hits = search.Hits;
         if (hits.Count == 0)
         {
-            Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 60f * scale),
-                Loc.T(L.Linkpearl.NoMatches), frameTheme.TextMuted);
+            Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + EmptyTop * scale),
+                Loc.T(L.Linkpearl.NoMatches), ink.MutedInk);
             return;
         }
 
@@ -263,24 +300,24 @@ internal sealed partial class LinkpearlApp
     private bool DrawHitRow(ChatHit hit, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var cell = FeedCell.Begin(drawList, HitRowHeight * scale, frameTheme.HoverWash);
+        var cell = FeedCell.Begin(drawList, HitRowHeight * scale, ui.HoverWash);
         var row = cell.Bounds;
-        var left = row.Min.X + Metrics.Space.Lg * scale;
-        var right = row.Max.X - Metrics.Space.Lg * scale;
+        var left = row.Min.X + CellPadX * scale;
+        var right = row.Max.X - CellPadX * scale;
         var stamp = TimeText.Short(hit.Entry.At);
-        var stampSize = Typography.Measure(stamp, TextStyles.Caption2);
-        Typography.Draw(drawList, new Vector2(right - stampSize.X, row.Min.Y + 9f * scale), stamp,
-            frameTheme.TextMuted, TextStyles.Caption2);
+        var stampSize = Typography.Measure(stamp, TextStyles.Caption1);
+        Typography.Draw(drawList, new Vector2(right - stampSize.X, row.Min.Y + 9f * scale), stamp, ink.MutedInk,
+            TextStyles.Caption1);
         var titleWidth = right - stampSize.X - Metrics.Space.Sm * scale - left;
         Typography.Draw(drawList, new Vector2(left, row.Min.Y + 8f * scale),
-            Typography.FitText(hit.Title, titleWidth, TextStyles.SubheadlineEmphasized), frameTheme.TextStrong,
+            Typography.FitText(hit.Title, titleWidth, TextStyles.SubheadlineEmphasized), ink.TitleInk,
             TextStyles.SubheadlineEmphasized);
         var preview = hit.Entry.AuthorName.Length > 0
             ? string.Concat(hit.Entry.AuthorName, ": ", hit.Entry.Text)
             : hit.Entry.Text;
         Typography.Draw(drawList, new Vector2(left, row.Min.Y + 29f * scale),
-            Typography.FitText(preview, right - left, TextStyles.Caption1), frameTheme.TextMuted, TextStyles.Caption1);
-        FeedCell.End(drawList, cell, frameTheme.Hairline);
+            Typography.FitText(preview, right - left, TextStyles.Footnote), ink.MutedInk, TextStyles.Footnote);
+        chrome.DrawRowHairline(drawList, cell, left);
         return cell.Tapped;
     }
 

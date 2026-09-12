@@ -1,24 +1,21 @@
 using System.Runtime.InteropServices;
 using Aetherphone.Core;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Linkpearl;
 
 internal sealed partial class LinkpearlApp
 {
-    private const float SettingsSliderRowHeight = 52f;
     private const float SliderLabelWidth = 0.42f;
     private const float PopoutOpacityMinimum = 0.5f;
-    private const float SettingsLinkRowHeight = 62f;
     private const float IdleOpacityMinimum = 0.15f;
     private const float OpacityEpsilon = 0.002f;
+    private const float SettingsBottomPad = 24f;
 
     private static readonly float[] TextScaleChoices = { 0.8f, 0.9f, 1f, 1.15f, 1.3f, 1.5f };
 
@@ -32,54 +29,57 @@ internal sealed partial class LinkpearlApp
 
     private static readonly Vector4[] SettingsSectionTints =
     {
-        new(0.36f, 0.55f, 0.95f, 1f),
-        new(0.95f, 0.68f, 0.25f, 1f),
-        new(0.20f, 0.70f, 0.62f, 1f),
-        new(0.62f, 0.45f, 0.92f, 1f),
-        new(0.40f, 0.62f, 0.48f, 1f),
+        ChatListChrome.TintAzure, ChatListChrome.TintGold, ChatListChrome.TintTeal, ChatListChrome.TintViolet,
+        ChatListChrome.TintGreen,
     };
 
-    private void DrawSettings(Rect area)
+    private void DrawSettingsTab(Rect area)
     {
         var scale = UiScale.Current;
-        var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, Loc.T(L.Linkpearl.ChatSettings), backToList);
-        var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        using (AppSurface.Begin(body))
+        using (AppSurface.BeginEdgeToEdge(area))
         {
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
-            var alerts = GroupCard.Begin(frameTheme, 1);
-            var paused = SettingsRow.Bool(alerts.NextRow(), Loc.T(L.Messages.PauseNotifications),
-                notificationGate.Paused, frameTheme, "linkpearl.settings.pause");
+            var drawList = ImGui.GetWindowDrawList();
+            chrome.DrawSectionLabel(Loc.T(L.Linkpearl.Appearance));
+            if (chrome.DrawSettingRow(drawList, PhoneIcons.Palette, activeTheme.Accent, Loc.T(L.Message.ChatTheme),
+                    Loc.T(activeTheme.Name)))
+            {
+                router.Push(LinkpearlRoute.ChatTheme);
+            }
+
+            if (chrome.DrawSettingRow(drawList, PhoneIcons.Wallpaper, ChatListChrome.TintViolet,
+                    Loc.T(L.Message.Wallpaper), separator: false))
+            {
+                router.Push(LinkpearlRoute.Wallpaper(string.Empty));
+            }
+
+            chrome.DrawSectionLabel(Loc.T(L.Settings.Notifications));
+            var paused = chrome.DrawSwitchRow(drawList, PhoneIcons.BellOff, ChatListChrome.TintSlate,
+                Loc.T(L.Messages.PauseNotifications), notificationGate.Paused, "linkpearl.settings.pause",
+                separator: false);
             if (paused != notificationGate.Paused)
             {
                 notificationGate.SetPaused(paused);
             }
 
-            alerts.End();
-            SettingsSection.Hint(Loc.T(L.Linkpearl.PauseHint), frameTheme);
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
-            var card = GroupCard.Begin(frameTheme, SettingsSections.Length, SettingsLinkRowHeight);
+            chrome.DrawSectionLabel(Loc.T(L.Linkpearl.ChatSettings));
             for (var index = 0; index < SettingsSections.Length; index++)
             {
                 var section = SettingsSections[index];
-                if (SettingsRow.Link(card.NextRow(), SectionIcon(section), SettingsSectionTints[index],
-                        Loc.T(SectionTitle(section)), string.Empty, frameTheme))
+                if (chrome.DrawSettingRow(drawList, SectionGlyph(section), SettingsSectionTints[index],
+                        Loc.T(SectionTitle(section)), separator: index < SettingsSections.Length - 1))
                 {
                     router.Push(LinkpearlRoute.SettingsFor(section));
                 }
             }
 
-            card.End();
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xxl * scale));
+            ImGui.Dummy(new Vector2(0f, SettingsBottomPad * scale));
         }
     }
 
     private void DrawSettingsSection(Rect area, LinkpearlSettingsSection section)
     {
         var scale = UiScale.Current;
-        var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, Loc.T(SectionTitle(section)), backToSettings);
+        chrome.DrawScreenHeader(area, Loc.T(SectionTitle(section)), backToSettings);
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))
         {
@@ -108,13 +108,13 @@ internal sealed partial class LinkpearlApp
         DrawSettingsMenu(area);
     }
 
-    private static FontAwesomeIcon SectionIcon(LinkpearlSettingsSection section) => section switch
+    private static string SectionGlyph(LinkpearlSettingsSection section) => section switch
     {
-        LinkpearlSettingsSection.Popouts => FontAwesomeIcon.ExternalLinkAlt,
-        LinkpearlSettingsSection.Behavior => FontAwesomeIcon.SlidersH,
-        LinkpearlSettingsSection.Composer => FontAwesomeIcon.PenAlt,
-        LinkpearlSettingsSection.Channels => FontAwesomeIcon.Hashtag,
-        _ => FontAwesomeIcon.History,
+        LinkpearlSettingsSection.Popouts => PhoneIcons.ExternalLink,
+        LinkpearlSettingsSection.Behavior => PhoneIcons.AdjustmentsHorizontal,
+        LinkpearlSettingsSection.Composer => PhoneIcons.Pencil,
+        LinkpearlSettingsSection.Channels => PhoneIcons.Hash,
+        _ => PhoneIcons.Clock,
     };
 
     private static LocString SectionTitle(LinkpearlSettingsSection section) => section switch

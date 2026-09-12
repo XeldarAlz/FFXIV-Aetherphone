@@ -4070,6 +4070,8 @@ internal static class L
         public static readonly LocString MoveTabOut = new("linkpearl.moveTabOut", "Move to its own window");
         public static readonly LocString CloseTab = new("linkpearl.closeTab", "Close this tab");
         public static readonly LocString PopoutTabLimit = new("linkpearl.popoutTabLimit", "A pop-out holds up to {0} conversations.");
+        public static readonly LocString Appearance = new("linkpearl.appearance", "Appearance");
+        public static readonly LocString ChatThemeHint = new("linkpearl.chatThemeHint", "The color of your messages, buttons and badges in Linkpearl.");
     }
 
     internal static class Character

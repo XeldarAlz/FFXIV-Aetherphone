@@ -312,6 +312,10 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public string MessageWallpaper { get; set; } = string.Empty;
     public bool MessageWallpaperPattern { get; set; } = true;
     public Dictionary<string, string> MessageChatWallpapers { get; set; } = new();
+    public string LinkpearlChatTheme { get; set; } = string.Empty;
+    public string LinkpearlWallpaper { get; set; } = string.Empty;
+    public bool LinkpearlWallpaperPattern { get; set; } = true;
+    public Dictionary<string, string> LinkpearlChatWallpapers { get; set; } = new();
     public bool ArchiveTellsToDisk { get; set; } = true;
     public bool LinkpearlNotificationsPaused { get; set; }
     public bool MessageMigrated { get; set; }

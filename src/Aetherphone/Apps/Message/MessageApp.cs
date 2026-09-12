@@ -136,6 +136,11 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
         drawView = DrawView;
         back = () => router.Pop();
         chrome = new ChatListChrome(ui, ink);
+        pickers = new ChatAppearancePickers(chrome, wallpaperImages, library);
+        pickTheme = SetTheme;
+        pickWallpaper = id => SetWallpaper(wallpaperScope, id);
+        setWallpaperPattern = SetWallpaperPattern;
+        clearWallpaperOverride = ClearWallpaperOverride;
         refreshContacts = () => contacts.Refresh(force: true);
         groupPhotoPicker = new ImagePickCrop(library, wallpaperImages);
         threadView = new ThreadView(this);

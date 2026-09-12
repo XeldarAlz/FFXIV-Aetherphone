@@ -2070,6 +2070,8 @@
   "linkpearl.moveTabOut": "別のウィンドウに移動",
   "linkpearl.closeTab": "このタブを閉じる",
   "linkpearl.popoutTabLimit": "1つのポップアウトには最大{0}件の会話を入れられます。",
+  "linkpearl.appearance": "外観",
+  "linkpearl.chatThemeHint": "Linkpearlのメッセージ、ボタン、バッジの色。",
   "character.logInToView": "ログインしてキャラクターを見る",
   "character.activity": "アクティビティ",
   "character.today": "今日",

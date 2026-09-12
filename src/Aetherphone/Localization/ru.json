@@ -2070,6 +2070,8 @@
   "linkpearl.moveTabOut": "Перенести в отдельное окно",
   "linkpearl.closeTab": "Закрыть эту вкладку",
   "linkpearl.popoutTabLimit": "В одном окне помещается до {0} бесед.",
+  "linkpearl.appearance": "Оформление",
+  "linkpearl.chatThemeHint": "Цвет ваших сообщений, кнопок и значков в Linkpearl.",
   "character.logInToView": "Войдите, чтобы увидеть персонажа",
   "character.activity": "Активность",
   "character.today": "Сегодня",

@@ -16,8 +16,9 @@ internal enum LinkpearlScreen : byte
     Root,
     Conversation,
     TabEditor,
-    Settings,
     SettingsSection,
+    ChatTheme,
+    Wallpaper,
     FriendDetail,
     CharacterDetail,
     FreeCompanyDetail,
@@ -28,7 +29,7 @@ internal readonly struct LinkpearlRoute
     public static readonly LinkpearlRoute Root = new(LinkpearlScreen.Root, string.Empty, null, string.Empty,
         string.Empty, string.Empty);
 
-    public static readonly LinkpearlRoute Settings = new(LinkpearlScreen.Settings, string.Empty, null,
+    public static readonly LinkpearlRoute ChatTheme = new(LinkpearlScreen.ChatTheme, string.Empty, null,
         string.Empty, string.Empty, string.Empty);
 
     public readonly LinkpearlScreen Screen;
@@ -53,6 +54,9 @@ internal readonly struct LinkpearlRoute
 
     public static LinkpearlRoute SettingsFor(LinkpearlSettingsSection section) =>
         new(LinkpearlScreen.SettingsSection, string.Empty, null, string.Empty, string.Empty, string.Empty, section);
+
+    public static LinkpearlRoute Wallpaper(string conversationKey) =>
+        new(LinkpearlScreen.Wallpaper, conversationKey, null, string.Empty, string.Empty, string.Empty);
 
     public static LinkpearlRoute Conversation(string key) =>
         new(LinkpearlScreen.Conversation, key, null, string.Empty, string.Empty, string.Empty);

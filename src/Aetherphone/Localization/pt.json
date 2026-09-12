@@ -2070,6 +2070,8 @@
   "linkpearl.moveTabOut": "Mover para uma janela própria",
   "linkpearl.closeTab": "Fechar esta aba",
   "linkpearl.popoutTabLimit": "Um pop-out comporta até {0} conversas.",
+  "linkpearl.appearance": "Aparência",
+  "linkpearl.chatThemeHint": "A cor das suas mensagens, botões e emblemas no Linkpearl.",
   "character.logInToView": "Entre para ver seu personagem",
   "character.activity": "Atividade",
   "character.today": "Hoje",

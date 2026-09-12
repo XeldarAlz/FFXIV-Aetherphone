@@ -2070,6 +2070,8 @@
   "linkpearl.moveTabOut": "移到独立窗口",
   "linkpearl.closeTab": "关闭此标签页",
   "linkpearl.popoutTabLimit": "一个弹出窗口最多可容纳 {0} 个会话。",
+  "linkpearl.appearance": "外观",
+  "linkpearl.chatThemeHint": "Linkpearl 中消息、按钮和徽章的颜色。",
   "character.logInToView": "登录后查看你的角色",
   "character.activity": "活跃度",
   "character.today": "今天",

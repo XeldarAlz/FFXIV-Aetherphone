@@ -22,13 +22,13 @@ internal sealed partial class MessageApp
     private const float HeroActionGap = 8f;
     private const float NotesCardHeight = 96f;
 
-    private static readonly Vector4 TintGold = new(0.93f, 0.68f, 0.18f, 1f);
-    private static readonly Vector4 TintRed = new(0.92f, 0.33f, 0.31f, 1f);
-    private static readonly Vector4 TintTeal = new(0.13f, 0.63f, 0.62f, 1f);
-    private static readonly Vector4 TintAzure = new(0.20f, 0.55f, 0.92f, 1f);
-    private static readonly Vector4 TintSlate = new(0.50f, 0.54f, 0.60f, 1f);
-    private static readonly Vector4 TintGreen = new(0.20f, 0.68f, 0.38f, 1f);
-    private static readonly Vector4 TintViolet = new(0.60f, 0.45f, 0.92f, 1f);
+    private static readonly Vector4 TintGold = ChatListChrome.TintGold;
+    private static readonly Vector4 TintRed = ChatListChrome.TintRed;
+    private static readonly Vector4 TintTeal = ChatListChrome.TintTeal;
+    private static readonly Vector4 TintAzure = ChatListChrome.TintAzure;
+    private static readonly Vector4 TintSlate = ChatListChrome.TintSlate;
+    private static readonly Vector4 TintGreen = ChatListChrome.TintGreen;
+    private static readonly Vector4 TintViolet = ChatListChrome.TintViolet;
 
     private string notesDraft = string.Empty;
     private string? notesLoadedFor;

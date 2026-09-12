@@ -41,7 +41,7 @@ internal sealed class BottomTabBar
     private Spring[] hover = Array.Empty<Spring>();
 
     public int Draw(Rect bar, AppSkin ui, PhoneTheme theme, ReadOnlySpan<NavTab> tabs, int active,
-        bool showLabels = false)
+        bool showLabels = false, Vector4? activeInk = null)
     {
         if (tabs.Length == 0)
         {
@@ -72,7 +72,7 @@ internal sealed class BottomTabBar
                 ? DrawRaised(drawList, ui, tabs[index], center, index, scale)
                 : showLabels
                     ? DrawLabelledTab(drawList, ui, theme, tabs[index], bar, slot, index, index == active, scale)
-                    : DrawTab(ui, theme, tabs[index], center, index, index == active, scale);
+                    : DrawTab(ui, theme, tabs[index], center, index, index == active, scale, activeInk);
             if (picked)
             {
                 tapped = index;
@@ -148,7 +148,7 @@ internal sealed class BottomTabBar
     }
 
     private bool DrawTab(AppSkin ui, PhoneTheme theme, in NavTab tab, Vector2 center, int slot, bool active,
-        float scale)
+        float scale, Vector4? activeInk)
     {
         if (tab.Disabled)
         {
@@ -159,7 +159,7 @@ internal sealed class BottomTabBar
         }
 
         DrawHoverPill(ui, center, StepHover(slot, center, HitRadius * scale), scale);
-        var ink = active ? ui.TitleInk : ui.MutedInk;
+        var ink = active ? activeInk ?? ui.TitleInk : ui.MutedInk;
         var picked = tab.UsesPhoneGlyph
             ? DrawPhoneGlyphTab(tab, center, ink, active, scale)
             : ui.IconButton(center, HitRadius * scale, IconGlyph.Of(tab.Icon), ink, AppSkin.Transparent,

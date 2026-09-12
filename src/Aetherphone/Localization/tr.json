@@ -2070,6 +2070,8 @@
   "linkpearl.moveTabOut": "Kendi penceresine taşı",
   "linkpearl.closeTab": "Bu sekmeyi kapat",
   "linkpearl.popoutTabLimit": "Bir pop-out en fazla {0} sohbet tutar.",
+  "linkpearl.appearance": "Görünüm",
+  "linkpearl.chatThemeHint": "Linkpearl'deki mesajlarının, düğmelerin ve rozetlerin rengi.",
   "character.logInToView": "Karakterini görmek için oturum aç",
   "character.activity": "Etkinlik",
   "character.today": "Bugün",

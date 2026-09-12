@@ -55,14 +55,14 @@ internal static class AppRegistry
         AetherStreamScreenWindow screenWindow, LinkpearlPopouts linkpearlPopouts)
     {
         var contactBook = new ContactBook(services.Aethernet.Contacts, services.AethernetSession);
+        var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);
         var apps = new List<IPhoneApp>
         {
-            new LinkpearlApp(services.ChatInbox, services.ChatTabs, services.ChatArchive, services.LinkpearlNotificationGate, services.LinkpearlLauncher, services.Lodestone, services.MarketLauncher, services.Notifications, services.GameData, services.Lookup, services.Confirm, services.ChatLog, services.ChatSend, services.Configuration, linkpearlPopouts),
+            new LinkpearlApp(services.ChatInbox, services.ChatTabs, services.ChatArchive, services.LinkpearlNotificationGate, services.LinkpearlLauncher, services.Lodestone, services.MarketLauncher, services.Notifications, services.GameData, services.Lookup, services.Confirm, services.ChatLog, services.ChatSend, services.Configuration, linkpearlPopouts, services.WallpaperImages, photoLibrary),
             new ActivityApp(services.GameData, services.Activity, services.Configuration),
             new HealthApp(services.Health, services.GameData, services.Confirm),
         };
 
-        var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);
         var dmNet = new AethernetApi(services.Http, services.AethernetSession, "dm");
         var messageStore = new DirectMessagesStore(services.AethernetSession, dmNet.Chats, dmNet.Safety, dmNet.Media, services.Notifications, services.KeyVault, services.ConversationKeys, services.PeerKeys, services.ChatHistory, services.Visibility, services.RealtimeSignals, services.Installer);
         var messagePopouts = new MessagePopouts(new MessagePopoutServices
