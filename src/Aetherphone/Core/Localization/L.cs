@@ -4079,6 +4079,9 @@ internal static class L
         public static readonly LocString LogGameColors = new("linkpearl.logGameColors", "Color lines like the game");
         public static readonly LocString LogGroupLines = new("linkpearl.logGroupLines", "Group consecutive lines");
         public static readonly LocString CollapseDuplicates = new("linkpearl.collapseDuplicates", "Collapse duplicate messages");
+        public static readonly LocString ScopeLodestone = new("linkpearl.scopeLodestone", "Lodestone");
+        public static readonly LocString TabInfo = new("linkpearl.tabInfo", "Tab info");
+        public static readonly LocString LodestoneProfile = new("linkpearl.lodestoneProfile", "Lodestone profile");
     }
 
     internal static class Character

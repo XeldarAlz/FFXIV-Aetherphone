@@ -144,7 +144,7 @@ internal sealed partial class LinkpearlApp
     {
         if (row.Tab is { } tab)
         {
-            OpenTabEditor(tab);
+            router.Push(LinkpearlRoute.TabInfo(tab.Id));
             return;
         }
 

@@ -32,8 +32,6 @@ internal sealed partial class LinkpearlApp
             L.Linkpearl.PresetLocalHint),
     };
 
-    private bool peopleFocusPending;
-
     private void OpenNewChat()
     {
         newChatSheet.Open();
@@ -97,7 +95,8 @@ internal sealed partial class LinkpearlApp
         {
             newChatSheet.Close();
             SelectTab(MessagesTab.People);
-            peopleFocusPending = true;
+            peopleSearchOpen = true;
+            peopleSearchFocus = true;
         }
     }
 

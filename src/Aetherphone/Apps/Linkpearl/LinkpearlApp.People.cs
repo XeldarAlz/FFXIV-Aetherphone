@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Onboarding;
@@ -9,96 +10,180 @@ namespace Aetherphone.Apps.Linkpearl;
 
 internal sealed partial class LinkpearlApp
 {
-    private const float PeopleSearchHeight = 44f;
-    private const float PeopleScopeHeight = 36f;
+    private enum PeopleScope : byte
+    {
+        Friends,
+        Online,
+        Lodestone,
+    }
 
-    private readonly string[] peopleScopeLabels = new string[2];
+    private const float PeopleSearchHeight = 52f;
+    private const float PeopleChipsHeight = 44f;
+    private const float PeopleSearchRevealSeconds = 0.16f;
+    private const float PeopleEmptyTop = 60f;
+
+    private readonly ChipRail peopleRail = new();
+    private readonly string[] peopleScopeLabels = new string[3];
+    private readonly bool[] peopleScopeActive = new bool[3];
     private string peopleSearch = string.Empty;
-    private int peopleScope;
+    private PeopleScope peopleScope;
+    private Spring peopleSearchReveal;
+    private bool peopleSearchOpen;
+    private bool peopleSearchFocus;
 
     private void ResetPeopleState()
     {
         peopleSearch = string.Empty;
-        peopleScope = 0;
+        peopleScope = PeopleScope.Friends;
+        peopleSearchOpen = false;
+        peopleSearchFocus = false;
+        peopleSearchReveal.SnapTo(0f);
         ResetFindState();
+    }
+
+    private void TogglePeopleSearch()
+    {
+        if (peopleSearchOpen)
+        {
+            peopleSearchOpen = false;
+            peopleSearch = string.Empty;
+            return;
+        }
+
+        peopleSearchOpen = true;
+        peopleSearchFocus = true;
     }
 
     private void DrawPeopleTab(Rect content)
     {
         var scale = UiScale.Current;
-        var pad = Metrics.Space.Lg * scale;
-        var searchBar = new Rect(new Vector2(content.Min.X + pad, content.Min.Y),
-            new Vector2(content.Max.X - pad, content.Min.Y + PeopleSearchHeight * scale));
-        UiAnchors.Report("people.search", searchBar);
-        if (peopleFocusPending)
-        {
-            ImGui.SetKeyboardFocusHere();
-            peopleFocusPending = false;
-        }
-
-        if (SearchField.DrawSubmit(searchBar, "##peopleSearch", Loc.T(L.Common.Search), ref peopleSearch, frameTheme)
-            && peopleScope == 1)
-        {
-            SubmitPeopleSearch();
-        }
-
-        var scopeTop = searchBar.Max.Y + Metrics.Space.Sm * scale;
-        var scopeRow = new Rect(new Vector2(content.Min.X + pad, scopeTop),
-            new Vector2(content.Max.X - pad, scopeTop + PeopleScopeHeight * scale));
-        UiAnchors.Report("people.scope", scopeRow);
+        var lodestoneScope = peopleScope == PeopleScope.Lodestone;
+        var top = DrawPeopleSearchRow(content, scale, lodestoneScope);
+        var railTop = top + (PeopleChipsHeight - ChipRail.RowHeight) * 0.5f * scale;
+        var rail = new Rect(new Vector2(content.Min.X + CellPadX * scale, railTop),
+            new Vector2(content.Max.X - CellPadX * scale, railTop + ChipRail.RowHeight * scale));
+        UiAnchors.Report("people.scope", rail);
         peopleScopeLabels[0] = Loc.T(L.Linkpearl.ScopeFriends);
-        peopleScopeLabels[1] = Loc.T(L.Linkpearl.ScopeEveryone);
-        var scope = SegmentStrip.Draw("people.scope", scopeRow, peopleScopeLabels, peopleScope, frameTheme);
-        if (scope != peopleScope)
+        peopleScopeLabels[1] = Loc.T(L.Contacts.Online);
+        peopleScopeLabels[2] = Loc.T(L.Linkpearl.ScopeLodestone);
+        for (var index = 0; index < peopleScopeActive.Length; index++)
         {
-            peopleScope = scope;
-            if (peopleScope == 1 && peopleSearch.Trim().Length > 0)
+            peopleScopeActive[index] = (int)peopleScope == index;
+        }
+
+        var tapped = peopleRail.Draw(rail, ui, peopleScopeLabels, peopleScopeActive, false, "people.scope",
+            ChipRail.CompactLabelPadding);
+        if (tapped >= 0 && tapped != (int)peopleScope)
+        {
+            peopleScope = (PeopleScope)tapped;
+            if (peopleScope == PeopleScope.Lodestone)
+            {
+                peopleSearchFocus = true;
+                if (peopleSearch.Trim().Length > 0)
+                {
+                    SubmitPeopleSearch();
+                }
+            }
+        }
+
+        top += PeopleChipsHeight * scale;
+        var body = new Rect(new Vector2(content.Min.X, top), content.Max);
+        if (lodestoneScope)
+        {
+            DrawLodestoneScope(body, scale);
+            return;
+        }
+
+        DrawFriendsScope(body, peopleScope == PeopleScope.Online, scale);
+    }
+
+    private float DrawPeopleSearchRow(Rect area, float scale, bool forced)
+    {
+        var target = peopleSearchOpen || forced ? 1f : 0f;
+        var frameSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
+        var reveal = peopleSearchReveal.Step(target, PeopleSearchRevealSeconds, frameSeconds);
+        if (peopleSearchReveal.IsResting(target, 0.005f, 0.05f))
+        {
+            peopleSearchReveal.SnapTo(target);
+            reveal = target;
+        }
+
+        var height = PeopleSearchHeight * scale * Math.Clamp(reveal, 0f, 1f);
+        if (height < 1f)
+        {
+            return area.Min.Y;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var bottom = area.Min.Y + height;
+        drawList.PushClipRect(area.Min, new Vector2(area.Max.X, bottom), true);
+        var bar = new Rect(new Vector2(area.Min.X + CellPadX * scale, bottom - PeopleSearchHeight * scale),
+            new Vector2(area.Max.X - CellPadX * scale, bottom));
+        UiAnchors.Report("people.search", bar);
+        if (forced)
+        {
+            if (peopleSearchFocus)
+            {
+                ImGui.SetKeyboardFocusHere();
+            }
+
+            if (SearchField.DrawSubmit(bar, "##peopleSearch", Loc.T(L.FindPeople.NameHint), ref peopleSearch,
+                    ui.Palette))
             {
                 SubmitPeopleSearch();
             }
         }
-
-        var body = new Rect(new Vector2(content.Min.X, scopeRow.Max.Y + Metrics.Space.Xs * scale), content.Max);
-        if (peopleScope == 0)
+        else
         {
-            DrawFriendsScope(body);
-            return;
+            SearchField.Draw(bar, "##peopleSearch", Loc.T(L.Common.Search), ref peopleSearch, ui.Palette,
+                focus: peopleSearchFocus);
         }
 
-        DrawEveryoneScope(body, pad, scale);
+        peopleSearchFocus = false;
+        drawList.PopClipRect();
+        return bottom;
     }
 
-    private void DrawFriendsScope(Rect body)
+    private void DrawFriendsScope(Rect body, bool onlineOnly, float scale)
     {
         UiAnchors.Report("people.list", body);
         if (friends.Count == 0)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Contacts.Empty), frameTheme.TextMuted);
+            Typography.DrawCentered(body.Center, Loc.T(L.Contacts.Empty), ink.MutedInk);
             return;
         }
 
         using (AppSurface.BeginEdgeToEdge(body))
         {
-            DrawFriendSection(Loc.T(L.Contacts.Online), true);
-            DrawFriendSection(Loc.T(L.Contacts.Offline), false);
-            if (!AnyFriendMatches())
+            DrawFriendSection(true);
+            if (!onlineOnly)
             {
-                Typography.DrawCentered(
-                    new Vector2(body.Center.X, body.Min.Y + 60f * UiScale.Current),
-                    Loc.T(L.Linkpearl.NoMatches), frameTheme.TextMuted);
+                DrawFriendSection(false);
             }
+
+            if (!AnyFriendMatches(onlineOnly))
+            {
+                Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + PeopleEmptyTop * scale),
+                    Loc.T(L.Linkpearl.NoMatches), ink.MutedInk);
+            }
+
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
         }
     }
 
-    private void DrawEveryoneScope(Rect body, float pad, float scale)
+    private void DrawLodestoneScope(Rect body, float scale)
     {
-        var kindRow = new Rect(new Vector2(body.Min.X + pad, body.Min.Y),
-            new Vector2(body.Max.X - pad, body.Min.Y + FindSegmentRowHeight * scale));
+        var kindTop = body.Min.Y + Metrics.Space.Xs * scale;
+        var kindRow = new Rect(new Vector2(body.Min.X + CellPadX * scale, kindTop),
+            new Vector2(body.Max.X - CellPadX * scale, kindTop + ChipRail.RowHeight * scale));
         UiAnchors.Report("findpeople.kind", kindRow);
         findSegmentLabels[0] = Loc.T(L.FindPeople.Character);
         findSegmentLabels[1] = Loc.T(L.FindPeople.FreeCompany);
-        var selected = SegmentStrip.Draw("findpeople.kind", kindRow, findSegmentLabels, (int)findKind, frameTheme);
-        if (selected != (int)findKind)
+        findSegmentActive[0] = findKind == LookupKind.Character;
+        findSegmentActive[1] = findKind == LookupKind.FreeCompany;
+        var selected = findRail.Draw(kindRow, ui, findSegmentLabels, findSegmentActive, false, "findpeople.kind",
+            ChipRail.CompactLabelPadding);
+        if (selected >= 0 && selected != (int)findKind)
         {
             findKind = (LookupKind)selected;
             if (hasQuery)
@@ -108,8 +193,8 @@ internal sealed partial class LinkpearlApp
         }
 
         var worldTop = kindRow.Max.Y + Metrics.Space.Sm * scale;
-        var worldBar = new Rect(new Vector2(body.Min.X + pad, worldTop),
-            new Vector2(body.Max.X - pad, worldTop + FindFieldRowHeight * scale));
+        var worldBar = new Rect(new Vector2(body.Min.X + CellPadX * scale, worldTop),
+            new Vector2(body.Max.X - CellPadX * scale, worldTop + FindFieldRowHeight * scale));
         UiAnchors.Report("findpeople.name", worldBar);
         if (SubmitField.Draw(worldBar, "##peopleWorldField", Loc.T(L.FindPeople.WorldHint), ref findWorldInput,
                 frameTheme))
@@ -117,20 +202,20 @@ internal sealed partial class LinkpearlApp
             SubmitPeopleSearch();
         }
 
-        var results = new Rect(new Vector2(body.Min.X, worldBar.Max.Y + Metrics.Space.Xs * scale), body.Max);
+        var results = new Rect(new Vector2(body.Min.X, worldBar.Max.Y + Metrics.Space.Sm * scale), body.Max);
         if (!hasQuery)
         {
-            DrawFindPrompt(results, frameTheme, scale);
+            DrawFindPrompt(results, scale);
             return;
         }
 
         if (findKind == LookupKind.Character)
         {
-            DrawCharacterResults(results, frameTheme, scale);
+            DrawCharacterResults(results, scale);
         }
         else
         {
-            DrawFreeCompanyResults(results, frameTheme, scale);
+            DrawFreeCompanyResults(results, scale);
         }
     }
 
@@ -140,11 +225,11 @@ internal sealed partial class LinkpearlApp
         SubmitSearch();
     }
 
-    private bool AnyFriendMatches()
+    private bool AnyFriendMatches(bool onlineOnly)
     {
         for (var index = 0; index < friends.Count; index++)
         {
-            if (MatchesContact(friends[index]))
+            if ((!onlineOnly || friends[index].Online) && MatchesContact(friends[index]))
             {
                 return true;
             }

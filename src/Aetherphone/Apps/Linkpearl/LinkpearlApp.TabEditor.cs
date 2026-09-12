@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using Aetherphone.Core;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
@@ -73,8 +72,7 @@ internal sealed partial class LinkpearlApp
         }
 
         var scale = UiScale.Current;
-        var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, Loc.T(L.Linkpearl.EditTab), leaveTabEditor);
+        chrome.DrawScreenHeader(area, Loc.T(L.Linkpearl.EditTab), leaveTabEditor);
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))
         {
@@ -86,17 +84,7 @@ internal sealed partial class LinkpearlApp
                 DrawCategory(tab, PickerOrder[index], scale);
             }
 
-            SettingsSection.Header(Loc.T(L.Linkpearl.TabSettings), frameTheme);
-            DrawTabSettings(tab);
             SettingsSection.Hint(Loc.T(L.Linkpearl.StoredOnThisPc), frameTheme);
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
-            var dangerCard = GroupCard.Begin(frameTheme, 1);
-            if (SettingsRow.Action(dangerCard.NextRow(), Loc.T(L.Linkpearl.DeleteTab), frameTheme.Danger, frameTheme))
-            {
-                AskDeleteTab(tab);
-            }
-
-            dangerCard.End();
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Xxl * scale));
         }
 
@@ -282,40 +270,53 @@ internal sealed partial class LinkpearlApp
         drawList.AddLine(tip, new Vector2(tip.X + 7f * scale, tip.Y - 8f * scale), color, 2f * scale);
     }
 
-    private void DrawTabSettings(ChatTab tab)
-    {
-        var card = GroupCard.Begin(frameTheme, 4);
-        var sendRow = card.NextRow();
-        if (SettingsRow.Disclosure(sendRow, Loc.T(L.Linkpearl.RepliesGoTo), SendChannelLabel(tab), frameTheme))
-        {
-            editorMenu.Toggle("linkpearl.editor.send", sendRow);
-        }
-
-        var layoutRow = card.NextRow();
-        if (SettingsRow.Disclosure(layoutRow, Loc.T(L.Linkpearl.Layout), Loc.T(
-                tab.Density == ChatDensity.Bubbles ? L.Linkpearl.LayoutBubbles : L.Linkpearl.LayoutLog),
-                frameTheme))
-        {
-            editorMenu.Toggle("linkpearl.editor.layout", layoutRow);
-        }
-
-        var alertsRow = card.NextRow();
-        if (SettingsRow.Disclosure(alertsRow, Loc.T(L.Linkpearl.Alerts), Loc.T(AlertLabel(tab.Alerts)), frameTheme))
-        {
-            editorMenu.Toggle("linkpearl.editor.alerts", alertsRow);
-        }
-
-        var historyRow = card.NextRow();
-        if (SettingsRow.Disclosure(historyRow, Loc.T(L.Linkpearl.KeepHistory), HistoryLabel(tab), frameTheme))
-        {
-            editorMenu.Toggle("linkpearl.editor.history", historyRow);
-        }
-
-        card.End();
-    }
-
     private void DrawEditorMenu(Rect area, ChatTab tab)
     {
+        if (editorMenu.IsOpenFor("linkpearl.info.timestamps"))
+        {
+            editorItems.Clear();
+            editorItems.Add(new DropdownMenu.Item(Loc.T(L.Message.WallpaperDefault), string.Empty, false,
+                tab.Timestamps is null));
+            editorItems.Add(new DropdownMenu.Item(Loc.T(L.Common.On), string.Empty, false, tab.Timestamps == true));
+            editorItems.Add(new DropdownMenu.Item(Loc.T(L.Common.Off), string.Empty, false, tab.Timestamps == false));
+            var pickedTimestamps = DrawEditorList(area);
+            if (pickedTimestamps >= 0)
+            {
+                tab.Timestamps = pickedTimestamps switch
+                {
+                    0 => null,
+                    1 => true,
+                    _ => false,
+                };
+                tabs.Update(tab);
+                threadKey = string.Empty;
+            }
+
+            return;
+        }
+
+        if (editorMenu.IsOpenFor("linkpearl.info.textScale"))
+        {
+            editorItems.Clear();
+            editorItems.Add(new DropdownMenu.Item(Loc.T(L.Message.WallpaperDefault), string.Empty, false,
+                tab.TextScale <= 0f));
+            for (var index = 0; index < TextScaleChoices.Length; index++)
+            {
+                editorItems.Add(new DropdownMenu.Item(PercentLabel(TextScaleChoices[index]), string.Empty, false,
+                    tab.TextScale > 0f && MathF.Abs(TextScaleChoices[index] - tab.TextScale) < 0.01f));
+            }
+
+            var pickedScale = DrawEditorList(area);
+            if (pickedScale >= 0)
+            {
+                tab.TextScale = pickedScale == 0 ? 0f : TextScaleChoices[pickedScale - 1];
+                tabs.Update(tab);
+                threadKey = string.Empty;
+            }
+
+            return;
+        }
+
         if (editorMenu.IsOpenFor("linkpearl.editor.send"))
         {
             editorItems.Clear();

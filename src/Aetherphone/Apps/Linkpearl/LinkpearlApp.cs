@@ -258,6 +258,9 @@ internal sealed partial class LinkpearlApp : IResumableApp
             case LinkpearlScreen.TabEditor:
                 DrawTabEditor(area, route.ConversationKey);
                 break;
+            case LinkpearlScreen.TabInfo:
+                DrawTabInfo(area, route.ConversationKey);
+                break;
             case LinkpearlScreen.SettingsSection:
                 DrawSettingsSection(area, route.Section);
                 break;
@@ -322,12 +325,18 @@ internal sealed partial class LinkpearlApp : IResumableApp
         switch (activeTab)
         {
             case MessagesTab.People:
-                chrome.DrawTabHeader(header, Loc.T(L.Linkpearl.People), backToList, 1);
+                chrome.DrawTabHeader(header, Loc.T(L.Linkpearl.People), backToList, 2);
                 var refreshCenter = SocialChrome.HeaderSlot(header, 0);
                 UiAnchors.Report("contacts.refresh", HeaderHit(refreshCenter));
                 if (chrome.DrawHeaderIcon(drawList, refreshCenter, PhoneIcons.Refresh, Loc.T(L.Common.Refresh)))
                 {
                     RequestRefresh();
+                }
+
+                if (chrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(header, 1), PhoneIcons.Search,
+                        Loc.T(L.Common.Search), peopleSearchOpen))
+                {
+                    TogglePeopleSearch();
                 }
 
                 break;

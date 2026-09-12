@@ -1,14 +1,10 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.Contacts;
+using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Lodestone;
-using Aetherphone.Core.Onboarding;
-using Aetherphone.Core.Theme;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Linkpearl;
 
@@ -18,11 +14,30 @@ internal sealed partial class LinkpearlApp
     private const float PostRequestReadIntervalSeconds = 0.5f;
     private const float PostRequestPollWindowSeconds = 6f;
     private const float RequestCooldownSeconds = 5f;
+    private const float HeroAvatarRadius = 48f;
+    private const float HeroTopPad = 18f;
+    private const float HeroNameGap = 16f;
+    private const float HeroLineGap = 6f;
+    private const float HeroActionsGap = 18f;
+    private const float HeroActionHeight = 62f;
+    private const float HeroActionGap = 8f;
+    private const float PresenceRingGap = 5.5f;
+    private const float PresenceRingWidth = 3f;
+    private const int HeroAvatarSegments = 64;
+    private const float HeroMonogramScale = 2.0f;
+    private const int HeroActionCount = 4;
+    private const string SectionSeparator = " · ";
 
     private readonly List<FriendEntry> friends = new();
     private float sinceRead;
     private float sinceRequest = RequestCooldownSeconds;
     private float pollWindowRemaining;
+    private string onlineLabel = string.Empty;
+    private int onlineLabelCount = -1;
+    private string offlineLabel = string.Empty;
+    private int offlineLabelCount = -1;
+    private ulong detailFriendId;
+    private string detailTellKey = string.Empty;
 
     private void TickContacts(float delta)
     {
@@ -69,7 +84,7 @@ internal sealed partial class LinkpearlApp
         return string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
     }
 
-    private void DrawFriendSection(string title, bool online)
+    private void DrawFriendSection(bool online)
     {
         var count = 0;
         for (var index = 0; index < friends.Count; index++)
@@ -85,9 +100,9 @@ internal sealed partial class LinkpearlApp
             return;
         }
 
-        ListSection.Header($"{title} · {count}", frameTheme.TextMuted);
-        var drawList = ImGui.GetWindowDrawList();
-        var rowHeight = ContactRow.Height * UiScale.Current;
+        chrome.DrawSectionLabel(online
+            ? SectionLabel(ref onlineLabel, ref onlineLabelCount, Loc.T(L.Contacts.Online), count)
+            : SectionLabel(ref offlineLabel, ref offlineLabelCount, Loc.T(L.Contacts.Offline), count));
         for (var index = 0; index < friends.Count; index++)
         {
             if (friends[index].Online != online || !MatchesContact(friends[index]))
@@ -95,14 +110,23 @@ internal sealed partial class LinkpearlApp
                 continue;
             }
 
-            var cell = FeedCell.Begin(drawList, rowHeight, frameTheme.HoverWash);
-            if (ContactRow.Draw(cell, friends[index], frameTheme, lodestone))
+            if (FriendRow.Draw(chrome, friends[index], lodestone))
             {
                 router.Push(LinkpearlRoute.Detail(friends[index]));
             }
-
-            FeedCell.End(drawList, cell, frameTheme.Hairline);
         }
+    }
+
+    private static string SectionLabel(ref string cached, ref int cachedCount, string title, int count)
+    {
+        if (cachedCount == count && cached.StartsWith(title, StringComparison.Ordinal))
+        {
+            return cached;
+        }
+
+        cachedCount = count;
+        cached = string.Concat(title, SectionSeparator, count.ToString(Loc.Culture));
+        return cached;
     }
 
     private bool MatchesContact(FriendEntry friend) =>
@@ -110,118 +134,179 @@ internal sealed partial class LinkpearlApp
 
     private void DrawFriendDetail(Rect area, FriendEntry friend)
     {
-        var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, Loc.T(L.Contacts.Detail), backToList);
         var scale = UiScale.Current;
-        var theme = frameTheme;
+        var drawList = ImGui.GetWindowDrawList();
+        chrome.DrawScreenHeader(area, string.Empty, backToList, 1);
+        if (chrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(area, 0), PhoneIcons.Refresh,
+                Loc.T(L.Common.Refresh)))
+        {
+            RequestRefresh();
+        }
+
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))
         {
-            DrawFriendHero(friend, theme, lodestone);
-            ImGui.Dummy(new Vector2(0f, 12f * scale));
-            DrawFriendActions(friend, theme);
-            var card = GroupCard.Begin(theme, 1);
-            if (SettingsRow.Link(card.NextRow(), FontAwesomeIcon.InfoCircle, new Vector4(0.40f, 0.42f, 0.50f, 1f),
-                    Loc.T(L.Contacts.SearchInfo), string.Empty, theme))
-            {
-                FriendActions.OpenSearchInfo(friend.ContentId);
-            }
-
-            card.End();
+            var width = ScrollLayout.StableContentWidth();
+            DrawFriendHero(friend, width, scale);
+            DrawFriendActions(friend, width, scale);
+            DrawFriendCards(friend, scale);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
         }
     }
 
-    private static void DrawFriendHero(FriendEntry friend, PhoneTheme theme, LodestoneService lodestone)
+    private void DrawFriendHero(FriendEntry friend, float width, float scale)
     {
-        var scale = UiScale.Current;
-        var dl = ImGui.GetWindowDrawList();
+        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var hasLocation = friend.Online && friend.Location.Length > 0;
-        var heroHeight = (hasLocation ? 184f : 164f) * scale;
-        var heroMin = origin;
-        var heroMax = new Vector2(origin.X + width, origin.Y + heroHeight);
-        var rounding = 22f * scale;
-        Elevation.Card(dl, heroMin, heroMax, rounding, scale);
-        Squircle.Fill(dl, heroMin, heroMax, rounding, ImGui.GetColorU32(theme.GroupedCard));
-        var tint = friend.Online ? theme.Accent : theme.SurfaceMuted;
-        Material.TopGlow(dl, heroMin, heroMax, rounding, tint, 0.82f, 0.15f);
-        Material.EdgeSquircle(dl, heroMin, heroMax, rounding, scale);
-        var centerX = heroMin.X + width * 0.5f;
-        var avatarRadius = 36f * scale;
-        var avatarCenter = new Vector2(centerX, heroMin.Y + 20f * scale + avatarRadius);
+        var centerX = origin.X + width * 0.5f;
+        var radius = HeroAvatarRadius * scale;
+        var avatarCenter = new Vector2(centerX, origin.Y + HeroTopPad * scale + radius);
+        AvatarView.Draw(drawList, avatarCenter, radius, friend.Online ? ink.Accent : ink.FaintInk,
+            Initials.Of(friend.Name), HeroMonogramScale,
+            lodestone.Avatar(friend.Name, friend.WorldName, radius * 2f), HeroAvatarSegments);
         if (friend.Online)
         {
-            ProgressRing.Glow(avatarCenter, avatarRadius, theme.Accent, 0.5f);
+            drawList.AddCircle(avatarCenter, radius + PresenceRingGap * scale, ImGui.GetColorU32(ink.PresenceGreen),
+                HeroAvatarSegments, PresenceRingWidth * scale);
         }
 
-        var baseColor = friend.Online ? theme.Accent : theme.SurfaceMuted;
-        AvatarView.Draw(dl, avatarCenter, avatarRadius, baseColor, Initials.Of(friend.Name), 2.0f,
-            lodestone.Avatar(friend.Name, friend.WorldName, avatarRadius * 2f), 64);
-        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 18f * scale), friend.Name,
-            theme.TextStrong, TextStyles.Title2);
-        var statusWord = friend.Online ? Loc.T(L.Contacts.Online) : Loc.T(L.Contacts.Offline);
-        var status = friend.Online && friend.JobName.Length > 0
-            ? $"{friend.WorldName} · {friend.JobName} · {statusWord}"
-            : $"{friend.WorldName} · {statusWord}";
-        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 42f * scale), status,
-            theme.TextMuted, TextStyles.Subheadline);
-        if (hasLocation)
-        {
-            Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 63f * scale), friend.Location,
-                theme.TextMuted, TextStyles.Footnote);
-        }
-
+        var top = avatarCenter.Y + radius + HeroNameGap * scale;
+        var nameHeight = Typography.DrawWrappedCentered(new Vector2(centerX, top), friend.Name, ink.TitleInk,
+            TextStyles.Title2, width - Metrics.Space.Xl * scale);
+        top += nameHeight + HeroLineGap * scale;
+        var meta = FriendLabels.HeroMeta(friend);
+        var metaHeight = Typography.DrawWrappedCentered(new Vector2(centerX, top), meta, ink.MutedInk,
+            TextStyles.Subheadline, width - Metrics.Space.Xl * scale);
+        top += metaHeight + HeroLineGap * scale;
+        var presenceHeight = Typography.DrawWrappedCentered(new Vector2(centerX, top), FriendLabels.Presence(friend),
+            friend.Online ? ink.AccentLink : ink.MutedInk, TextStyles.Footnote, width - Metrics.Space.Xl * scale);
+        top += presenceHeight + HeroActionsGap * scale;
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, heroHeight));
+        ImGui.Dummy(new Vector2(width, top - origin.Y));
     }
 
-    private void DrawFriendActions(FriendEntry friend, PhoneTheme theme)
+    private void DrawFriendActions(FriendEntry friend, float width, float scale)
     {
-        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
+        var gap = HeroActionGap * scale;
+        var buttonWidth = (width - gap * (HeroActionCount - 1)) / HeroActionCount;
+        var height = HeroActionHeight * scale;
         var canInvite = friend.Online;
         var canVisit = friend.HomeWorldId != 0 && gameData.LocalCurrentWorldId == friend.HomeWorldId;
-        var count = 2 + (canInvite ? 1 : 0) + (canVisit ? 1 : 0);
-        var radius = 26f * scale;
-        var rowHeight = radius * 2f + 30f * scale;
-        var spacing = width / count;
-        var centerY = origin.Y + radius + 2f * scale;
-        var slot = 0;
-        if (QuickAction.Draw("contact.message", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY), radius,
-                FontAwesomeIcon.CommentDots, new Vector4(0.30f, 0.78f, 0.42f, 1f), Loc.T(L.Contacts.Message), theme))
+        if (chrome.DrawHeroActionButton(drawList, ActionRect(origin, 0, buttonWidth, gap, height),
+                PhoneIcons.MessageCircle, Loc.T(L.Contacts.Message), true))
         {
             OpenDirectThread(friend.Name, SendTarget(friend));
         }
 
-        slot++;
-        if (QuickAction.Draw("contact.plate", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY), radius,
-                FontAwesomeIcon.IdCard, new Vector4(0.45f, 0.55f, 0.95f, 1f), Loc.T(L.Contacts.Plate), theme))
+        if (chrome.DrawHeroActionButton(drawList, ActionRect(origin, 1, buttonWidth, gap, height),
+                PhoneIcons.UserSquareRounded, Loc.T(L.Contacts.Plate), true))
         {
             FriendActions.OpenAdventurerPlate(friend.ContentId);
         }
 
-        slot++;
-        if (canInvite)
+        if (chrome.DrawHeroActionButton(drawList, ActionRect(origin, 2, buttonWidth, gap, height),
+                PhoneIcons.UserPlus, Loc.T(L.Contacts.Party), canInvite))
         {
-            if (QuickAction.Draw("contact.party", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY), radius,
-                    FontAwesomeIcon.UserPlus, theme.Accent, Loc.T(L.Contacts.Party), theme))
-            {
-                FriendActions.InviteToParty(friend.ContentId, friend.CurrentWorldId);
-            }
-
-            slot++;
+            FriendActions.InviteToParty(friend.ContentId, friend.CurrentWorldId);
         }
 
-        if (canVisit && QuickAction.Draw("contact.visit", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY),
-                radius, FontAwesomeIcon.Home, new Vector4(0.96f, 0.65f, 0.20f, 1f), Loc.T(L.Contacts.Visit), theme))
+        if (chrome.DrawHeroActionButton(drawList, ActionRect(origin, 3, buttonWidth, gap, height),
+                PhoneIcons.Home, Loc.T(L.Contacts.Visit), canVisit))
         {
             FriendActions.VisitEstate(friend.ContentId);
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rowHeight));
+        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Lg * scale));
+    }
+
+    private static Rect ActionRect(Vector2 origin, int index, float buttonWidth, float gap, float height)
+    {
+        var min = new Vector2(origin.X + index * (buttonWidth + gap), origin.Y);
+        return new Rect(min, min + new Vector2(buttonWidth, height));
+    }
+
+    private void DrawFriendCards(FriendEntry friend, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var hasFreeCompany = friend.FreeCompany.Length > 0;
+        var card = GroupCard.Begin(ui, hasFreeCompany ? 3 : 2, ChatListChrome.SettingRowHeight);
+        if (chrome.DrawCardRow(drawList, card.NextRow(), PhoneIcons.InfoCircle, ChatListChrome.TintSlate,
+                Loc.T(L.Contacts.SearchInfo)))
+        {
+            FriendActions.OpenSearchInfo(friend.ContentId);
+        }
+
+        if (chrome.DrawCardRow(drawList, card.NextRow(), PhoneIcons.World, ChatListChrome.TintAzure,
+                Loc.T(L.Linkpearl.LodestoneProfile)))
+        {
+            router.Push(LinkpearlRoute.Character(string.Empty, friend.Name, friend.WorldName));
+        }
+
+        if (hasFreeCompany)
+        {
+            chrome.DrawCardRow(drawList, card.NextRow(), PhoneIcons.Shield, ChatListChrome.TintTeal,
+                Loc.T(L.FindPeople.FreeCompany), friend.FreeCompany, chevron: false);
+        }
+
+        card.End();
+        var tellRow = inbox.Find(TellKeyFor(friend));
+        if (tellRow is null)
+        {
+            return;
+        }
+
+        ChatListChrome.DrawCardGap();
+        chrome.DrawInsetSectionLabel(Loc.T(L.Linkpearl.FilterTells));
+        var tells = GroupCard.Begin(ui, 5, ChatListChrome.SettingRowHeight);
+        var pinned = chrome.DrawCardSwitchRow(drawList, tells.NextRow(), PhoneIcons.PinFilled, ChatListChrome.TintGold,
+            Loc.T(L.Common.Pin), tellRow.Pinned, "linkpearl.contact.pin");
+        if (pinned != tellRow.Pinned)
+        {
+            TogglePin(tellRow);
+        }
+
+        var muted = chrome.DrawCardSwitchRow(drawList, tells.NextRow(), PhoneIcons.BellOff, ChatListChrome.TintSlate,
+            Loc.T(L.Linkpearl.Mute), tellRow.Muted, "linkpearl.contact.mute");
+        if (muted != tellRow.Muted)
+        {
+            inbox.ToggleMuted(tellRow);
+        }
+
+        if (chrome.DrawCardRow(drawList, tells.NextRow(), PhoneIcons.Wallpaper, ChatListChrome.TintViolet,
+                Loc.T(L.Message.Wallpaper)))
+        {
+            router.Push(LinkpearlRoute.Wallpaper(tellRow.Key));
+        }
+
+        var popoutOpen = popouts.IsOpen(tellRow.Key);
+        if (chrome.DrawCardRow(drawList, tells.NextRow(), PhoneIcons.ExternalLink, ChatListChrome.TintGreen,
+                Loc.T(popoutOpen ? L.Linkpearl.ClosePopout : L.Linkpearl.OpenPopout), chevron: false)
+            && !popouts.Toggle(tellRow.Key))
+        {
+            ShellToast.Show(Loc.T(L.Linkpearl.PopoutLimit, LinkpearlPopouts.MaxWindows));
+        }
+
+        if (chrome.DrawCardDangerRow(drawList, tells.NextRow(), PhoneIcons.Trash, Loc.T(L.Linkpearl.ClearHistory)))
+        {
+            AskClearHistory(tellRow);
+        }
+
+        tells.End();
+    }
+
+    private string TellKeyFor(FriendEntry friend)
+    {
+        if (detailFriendId == friend.ContentId && detailTellKey.Length > 0)
+        {
+            return detailTellKey;
+        }
+
+        detailFriendId = friend.ContentId;
+        detailTellKey = ChatStreams.ForTell(SendTarget(friend));
+        return detailTellKey;
     }
 
     private void OpenDirectThread(string display, string sendTarget)
@@ -235,5 +320,5 @@ internal sealed partial class LinkpearlApp
     }
 
     private static string SendTarget(FriendEntry friend) =>
-        friend.WorldName.Length > 0 ? $"{friend.Name}@{friend.WorldName}" : friend.Name;
+        friend.WorldName.Length > 0 ? string.Concat(friend.Name, "@", friend.WorldName) : friend.Name;
 }

@@ -1,23 +1,32 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Linkpearl;
 
 internal sealed partial class LinkpearlApp
 {
-    private const float FindSegmentRowHeight = 36f;
     private const float FindFieldRowHeight = 44f;
     private const float FindResultRowHeight = 60f;
     private const float FindResultAvatarRadius = 20f;
+    private const float FindPromptGlyph = 36f;
+    private const float FindPromptRise = 26f;
+    private const float FindPromptTitleDrop = 18f;
+    private const float FindPromptHintDrop = 42f;
+    private const float LookupHeroAvatarRadius = 48f;
+    private const float LookupCrestSize = 72f;
+    private const float PagerButtonRadius = 16f;
+    private const float PagerGlyph = 18f;
+    private const int LookupAvatarSegments = 48;
+    private const float LookupMonogramScale = 1.4f;
+
+    private readonly ChipRail findRail = new();
     private readonly string[] findSegmentLabels = new string[2];
+    private readonly bool[] findSegmentActive = new bool[2];
     private LookupKind findKind = LookupKind.Character;
     private string findNameInput = string.Empty;
     private string findWorldInput = string.Empty;
@@ -50,25 +59,25 @@ internal sealed partial class LinkpearlApp
         forceSearch = false;
     }
 
-    private void DrawFindPrompt(Rect body, PhoneTheme theme, float scale)
+    private void DrawFindPrompt(Rect body, float scale)
     {
         var center = body.Center;
-        ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.Users, theme.TextMuted,
-            36f * scale);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 18f * scale), Loc.T(L.FindPeople.Prompt),
-            theme.TextStrong, 1.0f, FontWeight.SemiBold);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 42f * scale), Loc.T(L.FindPeople.PromptHint),
-            theme.TextMuted, 0.85f, FontWeight.Regular);
+        PhoneIcon.Draw(ImGui.GetWindowDrawList(), new Vector2(center.X, center.Y - FindPromptRise * scale),
+            PhoneIcons.Users, ink.MutedInk, FindPromptGlyph * scale);
+        Typography.DrawCentered(new Vector2(center.X, center.Y + FindPromptTitleDrop * scale),
+            Loc.T(L.FindPeople.Prompt), ink.TitleInk, TextStyles.Headline);
+        Typography.DrawCentered(new Vector2(center.X, center.Y + FindPromptHintDrop * scale),
+            Loc.T(L.FindPeople.PromptHint), ink.MutedInk, TextStyles.Subheadline);
     }
 
-    private void DrawCharacterResults(Rect body, PhoneTheme theme, float scale)
+    private void DrawCharacterResults(Rect body, float scale)
     {
         var result = lookup.SearchCharacters(submittedName, submittedRegion, submittedRegionIsDataCenter, forceSearch);
         forceSearch = false;
         var matches = result.Matches;
         if (matches.Length == 0)
         {
-            if (DrawLookupState(body, result.State, theme, scale))
+            if (DrawLookupState(body, result.State, scale))
             {
                 forceSearch = true;
             }
@@ -79,25 +88,22 @@ internal sealed partial class LinkpearlApp
         var hintWorld = submittedRegionIsDataCenter ? string.Empty : submittedRegion;
         using (AppSurface.BeginEdgeToEdge(body))
         {
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-            var drawList = ImGui.GetWindowDrawList();
             for (var index = 0; index < matches.Length; index++)
             {
                 var match = matches[index];
                 var world = match.World.Length > 0 ? match.World : hintWorld;
-                var cell = FeedCell.Begin(drawList, FindResultRowHeight * scale, theme.HoverWash);
-                if (DrawResultCell(cell, theme, scale, match.Name, world,
-                        lodestone.Avatar(match.Name, world, FindResultAvatarRadius * 2f * scale)))
+                if (DrawLookupRow(match.Name, world, lodestone.Avatar(match.Name, world,
+                        FindResultAvatarRadius * 2f * scale)))
                 {
                     router.Push(LinkpearlRoute.Character(match.Id, match.Name, world));
                 }
-
-                FeedCell.End(drawList, cell, theme.Hairline);
             }
+
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
         }
     }
 
-    private void DrawFreeCompanyResults(Rect body, PhoneTheme theme, float scale)
+    private void DrawFreeCompanyResults(Rect body, float scale)
     {
         var result =
             lookup.SearchFreeCompanies(submittedName, submittedRegion, submittedRegionIsDataCenter, forceSearch);
@@ -105,7 +111,7 @@ internal sealed partial class LinkpearlApp
         var matches = result.Matches;
         if (matches.Length == 0)
         {
-            if (DrawLookupState(body, result.State, theme, scale))
+            if (DrawLookupState(body, result.State, scale))
             {
                 forceSearch = true;
             }
@@ -115,90 +121,73 @@ internal sealed partial class LinkpearlApp
 
         using (AppSurface.BeginEdgeToEdge(body))
         {
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-            var drawList = ImGui.GetWindowDrawList();
             for (var index = 0; index < matches.Length; index++)
             {
                 var match = matches[index];
-                var cell = FeedCell.Begin(drawList, FindResultRowHeight * scale, theme.HoverWash);
-                if (DrawResultCell(cell, theme, scale, match.Name, match.Subtitle,
+                if (DrawLookupRow(match.Name, match.Subtitle,
                         lodestone.Remote(match.CrestKey, match.Crest, FindResultAvatarRadius * 2f * scale)))
                 {
                     router.Push(LinkpearlRoute.FreeCompany(match.Id, match.Name, match.World));
                 }
-
-                FeedCell.End(drawList, cell, theme.Hairline);
             }
+
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
         }
     }
 
-    private static bool DrawResultCell(in FeedCellScope cell, PhoneTheme theme, float scale, string title,
-        string subtitle, AvatarHandle image)
+    private bool DrawLookupRow(string title, string subtitle, AvatarHandle image)
     {
-        var inset = FeedCell.PadX * scale;
-        var row = new Rect(new Vector2(cell.Bounds.Min.X + inset, cell.Bounds.Min.Y),
-            new Vector2(cell.Bounds.Max.X - inset, cell.Bounds.Max.Y));
-        DrawResultContent(row, theme, scale, title, subtitle, image, cell.Hovered);
-        return cell.Tapped;
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var person = chrome.BeginPersonRow(drawList, FindResultRowHeight, FindResultAvatarRadius,
+            ChatListChrome.ChevronSize * scale, true, out var avatarCenter);
+        AvatarView.Draw(drawList, avatarCenter, FindResultAvatarRadius * scale, ink.FaintInk, Initials.Of(title),
+            LookupMonogramScale, image, LookupAvatarSegments);
+        chrome.DrawRowTitleAndSub(drawList, new MarqueeId("linkpearl.result.", title), title, subtitle,
+            person.TextLeft, person.TextRight, person.Bounds.Center.Y, ink.TitleInk, ink.MutedInk);
+        PhoneIcon.Draw(drawList,
+            new Vector2(person.Bounds.Max.X - ChatListChrome.CellPadX * scale - ChatListChrome.ChevronSize * 0.5f * scale,
+                person.Bounds.Center.Y), PhoneIcons.ChevronRight, ink.FaintInk, ChatListChrome.ChevronSize * scale);
+        chrome.EndPersonRow(drawList, person);
+        return person.Tapped;
     }
 
-    private static bool DrawResultRow(Rect row, PhoneTheme theme, float scale, string title, string subtitle,
-        AvatarHandle image)
+    private bool DrawRosterRow(Rect row, string title, string subtitle, AvatarHandle image)
     {
-        var hovered = UiInteract.Hover(row.Min, row.Max);
-        DrawResultContent(row, theme, scale, title, subtitle, image, hovered);
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var band = ChatListChrome.RowBand(row, scale);
+        var hovered = UiInteract.Hover(band.Min, band.Max);
         if (hovered)
         {
+            drawList.AddRectFilled(band.Min, band.Max, ImGui.GetColorU32(ui.HoverWash));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(row.Min, row.Max, hovered);
-    }
-
-    private static void DrawResultContent(Rect row, PhoneTheme theme, float scale, string title, string subtitle,
-        AvatarHandle image, bool hovered)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var avatarRadius = FindResultAvatarRadius * scale;
-        var avatarCenter = new Vector2(row.Min.X + avatarRadius, row.Center.Y);
-        AvatarView.Draw(drawList, avatarCenter, avatarRadius, theme.SurfaceMuted, Initials.Of(title), 1.4f, image, 48);
-        var textX = avatarCenter.X + avatarRadius + 12f * scale;
-        var textRight = row.Max.X - 14f * scale;
-        var textMaxWidth = MathF.Max(1f, textRight - textX);
-        var titleY = row.Center.Y - 16f * scale;
-        var titleSize = Typography.Measure(title, 0.95f, FontWeight.Medium);
-        var titleHovering = UiInteract.Hover(new Vector2(textX, titleY),
-            new Vector2(textX + textMaxWidth, titleY + titleSize.Y));
-        Marquee.DrawLeft(new MarqueeId("linkpearl.result.", title + "." + subtitle), title, textX, titleY,
-            textMaxWidth, new TextStyle(0.95f, FontWeight.Medium), theme.TextStrong, titleHovering);
-        if (subtitle.Length > 0)
-        {
-            var subtitleY = row.Center.Y + 3f * scale;
-            var subtitleSize = Typography.Measure(subtitle, 0.8f, FontWeight.Regular);
-            var subtitleHovering = UiInteract.Hover(new Vector2(textX, subtitleY),
-                new Vector2(textX + textMaxWidth, subtitleY + subtitleSize.Y));
-            Marquee.DrawLeft(new MarqueeId("linkpearl.result.sub.", title + "." + subtitle), subtitle, textX,
-                subtitleY, textMaxWidth, new TextStyle(0.8f, FontWeight.Regular), theme.TextMuted,
-                subtitleHovering);
-        }
-
-        DrawChevronRight(new Vector2(row.Max.X, row.Center.Y), 6f * scale, 2.2f * scale,
-            hovered ? theme.TextStrong : theme.TextMuted);
+        var radius = FindResultAvatarRadius * scale;
+        var avatarCenter = new Vector2(row.Min.X + radius, row.Center.Y);
+        AvatarView.Draw(drawList, avatarCenter, radius, ink.FaintInk, Initials.Of(title), LookupMonogramScale, image,
+            LookupAvatarSegments);
+        var textLeft = avatarCenter.X + radius + ChatListChrome.RowAvatarGap * scale;
+        var textRight = row.Max.X - ChatListChrome.ChevronSize * scale - ChatListChrome.RowTrailingGap * scale;
+        chrome.DrawRowTitleAndSub(drawList, new MarqueeId("linkpearl.roster.", title), title, subtitle, textLeft,
+            textRight, row.Center.Y, ink.TitleInk, ink.MutedInk);
+        PhoneIcon.Draw(drawList, new Vector2(row.Max.X - ChatListChrome.ChevronSize * 0.5f * scale, row.Center.Y),
+            PhoneIcons.ChevronRight, ink.FaintInk, ChatListChrome.ChevronSize * scale);
+        return UiInteract.Click(band.Min, band.Max, hovered);
     }
 
     private void DrawCharacterDetail(Rect area, LinkpearlRoute route)
     {
-        var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, Loc.T(L.FindPeople.CharacterTitle), backToList);
         var scale = UiScale.Current;
-        var theme = frameTheme;
+        chrome.DrawScreenHeader(area, Loc.T(L.FindPeople.CharacterTitle), backToList);
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var result = lookup.CharacterDetail(route.LookupId, route.LookupName, route.LookupWorld, forceDetail);
         forceDetail = false;
         var detail = result.Detail;
         if (detail is null)
         {
-            if (DrawLookupState(body, result.State, theme, scale))
+            if (DrawLookupState(body, result.State, scale))
             {
                 forceDetail = true;
             }
@@ -208,69 +197,62 @@ internal sealed partial class LinkpearlApp
 
         using (AppSurface.Begin(body))
         {
-            DrawCharacterHero(detail, theme, scale);
-            ImGui.Dummy(new Vector2(0f, 12f * scale));
-            DrawCharacterActions(detail, theme, scale);
-            DrawInfoCard(detail, theme);
-            DrawJobsCard(detail.Jobs, JobCategory.Combat, Loc.T(L.FindPeople.Combat), theme);
-            DrawJobsCard(detail.Jobs, JobCategory.Crafter, Loc.T(L.FindPeople.Crafter), theme);
-            DrawJobsCard(detail.Jobs, JobCategory.Gatherer, Loc.T(L.FindPeople.Gatherer), theme);
-            DrawGearCard(detail.Gear, theme);
-            ImGui.Dummy(new Vector2(0f, 16f * scale));
+            var width = ScrollLayout.StableContentWidth();
+            DrawCharacterHero(detail, width, scale);
+            DrawCharacterActions(detail, width, scale);
+            DrawInfoCard(detail);
+            DrawJobsCard(detail.Jobs, JobCategory.Combat, Loc.T(L.FindPeople.Combat));
+            DrawJobsCard(detail.Jobs, JobCategory.Crafter, Loc.T(L.FindPeople.Crafter));
+            DrawJobsCard(detail.Jobs, JobCategory.Gatherer, Loc.T(L.FindPeople.Gatherer));
+            DrawGearCard(detail.Gear);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
         }
     }
 
-    private void DrawCharacterHero(CharacterDetail detail, PhoneTheme theme, float scale)
+    private void DrawCharacterHero(CharacterDetail detail, float width, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var hasTitle = detail.Title.Length > 0;
-        var heroHeight = (hasTitle ? 196f : 178f) * scale;
-        var heroMax = new Vector2(origin.X + width, origin.Y + heroHeight);
-        var rounding = 22f * scale;
-        Elevation.Card(drawList, origin, heroMax, rounding, scale);
-        Squircle.Fill(drawList, origin, heroMax, rounding, ImGui.GetColorU32(theme.GroupedCard));
-        Material.TopGlow(drawList, origin, heroMax, rounding, theme.Accent, 0.82f, 0.16f);
-        Material.EdgeSquircle(drawList, origin, heroMax, rounding, scale);
         var centerX = origin.X + width * 0.5f;
-        var avatarRadius = 40f * scale;
-        var avatarCenter = new Vector2(centerX, origin.Y + 22f * scale + avatarRadius);
-        ProgressRing.Glow(avatarCenter, avatarRadius, theme.Accent, 0.4f);
-        AvatarView.Draw(drawList, avatarCenter, avatarRadius, theme.SurfaceMuted, Initials.Of(detail.Name), 2.0f,
-            lodestone.Remote(detail.PortraitKey, detail.Portrait, avatarRadius * 2f), 72);
-        var cursorY = avatarCenter.Y + avatarRadius + 16f * scale;
-        Typography.DrawCentered(new Vector2(centerX, cursorY), detail.Name, theme.TextStrong, TextStyles.Title2);
-        cursorY += 24f * scale;
-        if (hasTitle)
+        var radius = LookupHeroAvatarRadius * scale;
+        var avatarCenter = new Vector2(centerX, origin.Y + HeroTopPad * scale + radius);
+        AvatarView.Draw(drawList, avatarCenter, radius, ink.FaintInk, Initials.Of(detail.Name), HeroMonogramScale,
+            lodestone.Remote(detail.PortraitKey, detail.Portrait, radius * 2f), HeroAvatarSegments);
+        var top = avatarCenter.Y + radius + HeroNameGap * scale;
+        var maxWidth = width - Metrics.Space.Xl * scale;
+        top += Typography.DrawWrappedCentered(new Vector2(centerX, top), detail.Name, ink.TitleInk, TextStyles.Title2,
+            maxWidth) + HeroLineGap * scale;
+        if (detail.Title.Length > 0)
         {
-            Typography.DrawCentered(new Vector2(centerX, cursorY), detail.Title, theme.Accent, TextStyles.Footnote);
-            cursorY += 18f * scale;
+            top += Typography.DrawWrappedCentered(new Vector2(centerX, top), detail.Title, ink.AccentLink,
+                TextStyles.Footnote, maxWidth) + HeroLineGap * scale;
         }
 
-        Typography.DrawCentered(new Vector2(centerX, cursorY), detail.World, theme.TextMuted, TextStyles.Subheadline);
+        top += Typography.DrawWrappedCentered(new Vector2(centerX, top), detail.World, ink.MutedInk,
+            TextStyles.Subheadline, maxWidth) + HeroActionsGap * scale;
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, heroHeight));
+        ImGui.Dummy(new Vector2(width, top - origin.Y));
     }
 
-    private void DrawCharacterActions(CharacterDetail detail, PhoneTheme theme, float scale)
+    private void DrawCharacterActions(CharacterDetail detail, float width, float scale)
     {
+        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var radius = 26f * scale;
-        var rowHeight = radius * 2f + 30f * scale;
-        if (QuickAction.Draw("findpeople.message", new Vector2(origin.X + width * 0.5f, origin.Y + radius + 2f * scale),
-                radius, FontAwesomeIcon.CommentDots, new Vector4(0.30f, 0.78f, 0.42f, 1f), Loc.T(L.FindPeople.Message),
-                theme))
+        var gap = HeroActionGap * scale;
+        var buttonWidth = (width - gap * (HeroActionCount - 1)) / HeroActionCount;
+        var height = HeroActionHeight * scale;
+        var min = new Vector2(origin.X + (width - buttonWidth) * 0.5f, origin.Y);
+        if (chrome.DrawHeroActionButton(drawList, new Rect(min, min + new Vector2(buttonWidth, height)),
+                PhoneIcons.MessageCircle, Loc.T(L.FindPeople.Message), true))
         {
             OpenDirectThread(detail.Name, SendTarget(detail.Name, detail.World));
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rowHeight));
+        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Lg * scale));
     }
 
-    private void DrawInfoCard(CharacterDetail detail, PhoneTheme theme)
+    private void DrawInfoCard(CharacterDetail detail)
     {
         var rows = 1;
         var hasGrandCompany = detail.GrandCompany.Length > 0;
@@ -285,23 +267,25 @@ internal sealed partial class LinkpearlApp
             rows++;
         }
 
-        SettingsSection.Header(Loc.T(L.FindPeople.CharacterTitle), theme);
-        var card = GroupCard.Begin(theme, rows);
-        SettingsRow.Info(card.NextRow(), Loc.T(L.FindPeople.Character), detail.RaceClan, theme);
+        var drawList = ImGui.GetWindowDrawList();
+        chrome.DrawInsetSectionLabel(Loc.T(L.FindPeople.CharacterTitle));
+        var card = GroupCard.Begin(ui, rows, ChatListChrome.SettingRowHeight);
+        chrome.DrawInfoRow(drawList, card.NextRow(), Loc.T(L.FindPeople.Character), detail.RaceClan);
         if (hasGrandCompany)
         {
-            SettingsRow.Info(card.NextRow(), Loc.T(L.FindPeople.GrandCompany), detail.GrandCompany, theme);
+            chrome.DrawInfoRow(drawList, card.NextRow(), Loc.T(L.FindPeople.GrandCompany), detail.GrandCompany);
         }
 
         if (hasFreeCompany)
         {
-            SettingsRow.Info(card.NextRow(), Loc.T(L.FindPeople.FreeCompany), detail.FreeCompany, theme);
+            chrome.DrawInfoRow(drawList, card.NextRow(), Loc.T(L.FindPeople.FreeCompany), detail.FreeCompany);
         }
 
         card.End();
+        ChatListChrome.DrawCardGap();
     }
 
-    private void DrawJobsCard(IReadOnlyList<ClassJobLevel> jobs, JobCategory category, string header, PhoneTheme theme)
+    private void DrawJobsCard(IReadOnlyList<ClassJobLevel> jobs, JobCategory category, string header)
     {
         var count = 0;
         for (var index = 0; index < jobs.Count; index++)
@@ -317,8 +301,9 @@ internal sealed partial class LinkpearlApp
             return;
         }
 
-        SettingsSection.Header(header, theme);
-        var card = GroupCard.Begin(theme, count);
+        var drawList = ImGui.GetWindowDrawList();
+        chrome.DrawInsetSectionLabel(header);
+        var card = GroupCard.Begin(ui, count, ChatListChrome.SettingRowHeight);
         for (var index = 0; index < jobs.Count; index++)
         {
             var job = jobs[index];
@@ -327,25 +312,27 @@ internal sealed partial class LinkpearlApp
                 continue;
             }
 
-            SettingsRow.Info(card.NextRow(), job.Name, job.LevelLabel, theme);
+            chrome.DrawInfoRow(drawList, card.NextRow(), job.Name, job.LevelLabel);
         }
 
         card.End();
+        ChatListChrome.DrawCardGap();
     }
 
-    private void DrawGearCard(IReadOnlyList<GearPiece> gear, PhoneTheme theme)
+    private void DrawGearCard(IReadOnlyList<GearPiece> gear)
     {
         if (gear.Count == 0)
         {
             return;
         }
 
-        SettingsSection.Header(Loc.T(L.FindPeople.Gear), theme);
-        var card = GroupCard.Begin(theme, gear.Count);
+        var drawList = ImGui.GetWindowDrawList();
+        chrome.DrawInsetSectionLabel(Loc.T(L.FindPeople.Gear));
+        var card = GroupCard.Begin(ui, gear.Count, ChatListChrome.SettingRowHeight);
         for (var index = 0; index < gear.Count; index++)
         {
             var piece = gear[index];
-            SettingsRow.Info(card.NextRow(), piece.ItemName, piece.ItemLevelLabel, theme);
+            chrome.DrawInfoRow(drawList, card.NextRow(), piece.ItemName, piece.ItemLevelLabel);
         }
 
         card.End();
@@ -353,17 +340,15 @@ internal sealed partial class LinkpearlApp
 
     private void DrawFreeCompanyDetail(Rect area, LinkpearlRoute route)
     {
-        var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, Loc.T(L.FindPeople.FreeCompanyTitle), backToList);
         var scale = UiScale.Current;
-        var theme = frameTheme;
+        chrome.DrawScreenHeader(area, Loc.T(L.FindPeople.FreeCompanyTitle), backToList);
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var result = lookup.FreeCompanyDetail(route.LookupId, forceDetail);
         forceDetail = false;
         var detail = result.Detail;
         if (detail is null)
         {
-            if (DrawLookupState(body, result.State, theme, scale))
+            if (DrawLookupState(body, result.State, scale))
             {
                 forceDetail = true;
             }
@@ -373,57 +358,51 @@ internal sealed partial class LinkpearlApp
 
         using (AppSurface.Begin(body))
         {
-            DrawFreeCompanyHero(detail, theme, scale);
-            ImGui.Dummy(new Vector2(0f, 12f * scale));
+            var width = ScrollLayout.StableContentWidth();
+            DrawFreeCompanyHero(detail, width, scale);
             if (detail.Slogan.Length > 0)
             {
-                SettingsSection.Header(Loc.T(L.FindPeople.Slogan), theme);
-                var sloganCard = GroupCard.Begin(theme, 1, 56f);
-                DrawSloganRow(sloganCard.NextRow(), detail.Slogan, theme);
+                chrome.DrawInsetSectionLabel(Loc.T(L.FindPeople.Slogan));
+                var sloganCard = GroupCard.Begin(ui, 1, ChatListChrome.ActionRowHeight);
+                DrawSloganRow(sloganCard.NextRow(), detail.Slogan);
                 sloganCard.End();
+                ChatListChrome.DrawCardGap();
             }
 
-            DrawRoster(route.LookupId, result, theme, scale);
-            ImGui.Dummy(new Vector2(0f, 16f * scale));
+            DrawRoster(route.LookupId, result, scale);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
         }
     }
 
-    private void DrawFreeCompanyHero(FreeCompanyDetail detail, PhoneTheme theme, float scale)
+    private void DrawFreeCompanyHero(FreeCompanyDetail detail, float width, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var heroHeight = 192f * scale;
-        var heroMax = new Vector2(origin.X + width, origin.Y + heroHeight);
-        var rounding = 22f * scale;
-        Elevation.Card(drawList, origin, heroMax, rounding, scale);
-        Squircle.Fill(drawList, origin, heroMax, rounding, ImGui.GetColorU32(theme.GroupedCard));
-        Material.TopGlow(drawList, origin, heroMax, rounding, theme.Accent, 0.82f, 0.16f);
-        Material.EdgeSquircle(drawList, origin, heroMax, rounding, scale);
         var centerX = origin.X + width * 0.5f;
-        var crestSize = 64f * scale;
-        var crestCenter = new Vector2(centerX, origin.Y + 22f * scale + crestSize * 0.5f);
-        DrawCrest(drawList, crestCenter, crestSize, detail, theme);
-        var cursorY = crestCenter.Y + crestSize * 0.5f + 14f * scale;
-        Typography.DrawCentered(new Vector2(centerX, cursorY), detail.Heading, theme.TextStrong, TextStyles.Title3);
-        cursorY += 22f * scale;
-        Typography.DrawCentered(new Vector2(centerX, cursorY), detail.World, theme.TextMuted, TextStyles.Subheadline);
-        cursorY += 22f * scale;
-        var recruitColor = detail.Recruiting ? new Vector4(0.30f, 0.78f, 0.46f, 1f) : theme.TextMuted;
+        var crestSize = LookupCrestSize * scale;
+        var crestCenter = new Vector2(centerX, origin.Y + HeroTopPad * scale + crestSize * 0.5f);
+        DrawCrest(drawList, crestCenter, crestSize, detail);
+        var top = crestCenter.Y + crestSize * 0.5f + HeroNameGap * scale;
+        var maxWidth = width - Metrics.Space.Xl * scale;
+        top += Typography.DrawWrappedCentered(new Vector2(centerX, top), detail.Heading, ink.TitleInk,
+            TextStyles.Title2, maxWidth) + HeroLineGap * scale;
+        top += Typography.DrawWrappedCentered(new Vector2(centerX, top), detail.World, ink.MutedInk,
+            TextStyles.Subheadline, maxWidth) + HeroLineGap * scale;
         var recruit = detail.Recruiting ? Loc.T(L.FindPeople.Recruiting) : Loc.T(L.FindPeople.Closed);
-        var sideMaxWidth = 84f * scale;
-        var membersLabel = Typography.FitText(detail.MembersLabel, sideMaxWidth, TextStyles.Footnote);
-        var recruitText = Typography.FitText(recruit, sideMaxWidth, TextStyles.Footnote);
-        Typography.DrawCentered(new Vector2(centerX - 44f * scale, cursorY), membersLabel, theme.TextMuted,
-            TextStyles.Footnote);
-        Typography.DrawCentered(new Vector2(centerX + 52f * scale, cursorY), recruitText, recruitColor,
-            TextStyles.Footnote);
+        var membersSize = Typography.Measure(detail.MembersLabel, TextStyles.Footnote);
+        var recruitSize = Typography.Measure(recruit, TextStyles.Footnote);
+        var gap = Metrics.Space.Lg * scale;
+        var lineWidth = membersSize.X + gap + recruitSize.X;
+        var lineLeft = centerX - lineWidth * 0.5f;
+        Typography.Draw(drawList, new Vector2(lineLeft, top), detail.MembersLabel, ink.MutedInk, TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(lineLeft + membersSize.X + gap, top), recruit,
+            detail.Recruiting ? ink.PresenceGreen : ink.MutedInk, TextStyles.Footnote);
+        top += membersSize.Y + HeroActionsGap * scale;
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, heroHeight));
+        ImGui.Dummy(new Vector2(width, top - origin.Y));
     }
 
-    private void DrawCrest(ImDrawListPtr drawList, Vector2 center, float size, FreeCompanyDetail detail,
-        PhoneTheme theme)
+    private void DrawCrest(ImDrawListPtr drawList, Vector2 center, float size, FreeCompanyDetail detail)
     {
         var handle = lodestone.Remote(detail.CrestKey, detail.Crest, size);
         var half = new Vector2(size * 0.5f, size * 0.5f);
@@ -433,21 +412,21 @@ internal sealed partial class LinkpearlApp
             return;
         }
 
-        drawList.AddCircleFilled(center, size * 0.5f, ImGui.GetColorU32(theme.SurfaceMuted), 32);
+        drawList.AddCircleFilled(center, size * 0.5f, ImGui.GetColorU32(ui.Palette.CardFill), LookupAvatarSegments);
         var initial = detail.Tag.Length > 0 ? detail.Tag.Substring(0, 1).ToUpperInvariant() : Initials.Of(detail.Name);
-        Typography.DrawCentered(center, initial, theme.TextStrong, 1.8f, FontWeight.SemiBold);
+        Typography.DrawCentered(drawList, center, initial, ink.TitleInk, TextStyles.Title1);
     }
 
-    private static void DrawSloganRow(Rect row, string slogan, PhoneTheme theme)
+    private void DrawSloganRow(Rect row, string slogan)
     {
-        var style = new TextStyle(0.86f, FontWeight.Regular);
-        var maxWidth = MathF.Max(1f, row.Width);
+        var style = TextStyles.Subheadline;
         var hovering = UiInteract.Hover(row.Min, row.Max);
-        Marquee.DrawLeft(new MarqueeId("linkpearl.slogan.", slogan), slogan, row.Min.X, row.Center.Y - Typography.Measure(slogan, style).Y * 0.5f,
-            maxWidth, style, theme.TextMuted, hovering);
+        Marquee.DrawLeft(ImGui.GetWindowDrawList(), new MarqueeId("linkpearl.slogan.", slogan), slogan, row.Min.X,
+            row.Center.Y - Typography.LineHeight(style) * 0.5f, MathF.Max(1f, row.Width), style, ink.MutedInk,
+            hovering);
     }
 
-    private void DrawRoster(string companyId, FreeCompanyDetailResult result, PhoneTheme theme, float scale)
+    private void DrawRoster(string companyId, FreeCompanyDetailResult result, float scale)
     {
         var roster = result.Roster;
         if (roster.Members.Length == 0)
@@ -455,12 +434,12 @@ internal sealed partial class LinkpearlApp
             return;
         }
 
-        SettingsSection.Header(Loc.T(L.FindPeople.Roster), theme);
-        var card = GroupCard.Begin(theme, roster.Members.Length, FindResultRowHeight);
+        chrome.DrawInsetSectionLabel(Loc.T(L.FindPeople.Roster));
+        var card = GroupCard.Begin(ui, roster.Members.Length, FindResultRowHeight);
         for (var index = 0; index < roster.Members.Length; index++)
         {
             var member = roster.Members[index];
-            if (DrawResultRow(card.NextRow(), theme, scale, member.Name, member.Subtitle,
+            if (DrawRosterRow(card.NextRow(), member.Name, member.Subtitle,
                     lodestone.Remote(member.AvatarKey, member.Avatar, FindResultAvatarRadius * 2f * scale)))
             {
                 router.Push(LinkpearlRoute.Character(member.Id, member.Name, member.World));
@@ -470,53 +449,51 @@ internal sealed partial class LinkpearlApp
         card.End();
         if (roster.PageCount > 1)
         {
-            DrawRosterPager(companyId, result, roster, theme, scale);
+            DrawRosterPager(companyId, result, roster, scale);
         }
     }
 
-    private void DrawRosterPager(string companyId, FreeCompanyDetailResult result, RosterSnapshot roster,
-        PhoneTheme theme, float scale)
+    private void DrawRosterPager(string companyId, FreeCompanyDetailResult result, RosterSnapshot roster, float scale)
     {
-        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var center = new Vector2(origin.X + width * 0.5f, origin.Y + 16f * scale);
+        var width = ScrollLayout.StableContentWidth();
+        var center = new Vector2(origin.X + width * 0.5f, origin.Y + PagerButtonRadius * scale);
         var loading = result.RosterLoading;
-        if (DrawPagerButton(new Vector2(origin.X + 40f * scale, center.Y), FontAwesomeIcon.ChevronLeft,
-                roster.Page > 0 && !loading, theme, scale))
+        if (DrawPagerButton(new Vector2(origin.X + PagerButtonRadius * 2.5f * scale, center.Y), PhoneIcons.ChevronLeft,
+                roster.Page > 0 && !loading, scale))
         {
             lookup.RequestRosterPage(companyId, result, roster.Page - 1);
         }
 
-        if (DrawPagerButton(new Vector2(origin.X + width - 40f * scale, center.Y), FontAwesomeIcon.ChevronRight,
-                roster.Page < roster.PageCount - 1 && !loading, theme, scale))
+        if (DrawPagerButton(new Vector2(origin.X + width - PagerButtonRadius * 2.5f * scale, center.Y),
+                PhoneIcons.ChevronRight, roster.Page < roster.PageCount - 1 && !loading, scale))
         {
             lookup.RequestRosterPage(companyId, result, roster.Page + 1);
         }
 
         if (loading)
         {
-            ProgressRing.Sweep(center, 9f * scale, 2.4f * scale, theme.TextMuted, 900.0, 1.8f, 0.95f);
+            ProgressRing.Sweep(center, 9f * scale, 2.4f * scale, ink.MutedInk, 900.0, 1.8f, 0.95f);
         }
         else
         {
             Typography.DrawCentered(center, Loc.T(L.FindPeople.PageOf, roster.Page + 1, roster.PageCount),
-                theme.TextMuted, 0.82f, FontWeight.Medium);
+                ink.MutedInk, TextStyles.FootnoteEmphasized);
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, 32f * scale));
+        ImGui.Dummy(new Vector2(width, PagerButtonRadius * 2f * scale));
     }
 
-    private static bool DrawPagerButton(Vector2 center, FontAwesomeIcon icon, bool enabled, PhoneTheme theme,
-        float scale)
+    private bool DrawPagerButton(Vector2 center, string glyph, bool enabled, float scale)
     {
-        var box = 16f * scale;
+        var box = PagerButtonRadius * scale;
         var min = center - new Vector2(box, box);
         var max = center + new Vector2(box, box);
         var hovered = enabled && UiInteract.Hover(min, max);
-        var color = enabled ? (hovered ? theme.TextStrong : theme.Accent) : Palette.WithAlpha(theme.TextMuted, 0.35f);
-        ProgressRing.CenterIcon(center, icon, color, 16f * scale);
+        var color = enabled ? hovered ? ink.TitleInk : ink.AccentLink : ink.FaintInk;
+        PhoneIcon.Draw(ImGui.GetWindowDrawList(), center, glyph, color, PagerGlyph * scale);
         if (!enabled)
         {
             return false;
@@ -530,39 +507,32 @@ internal sealed partial class LinkpearlApp
         return UiInteract.Click(min, max, hovered);
     }
 
-    private bool DrawLookupState(Rect body, LookupState state, PhoneTheme theme, float scale)
+    private bool DrawLookupState(Rect body, LookupState state, float scale)
     {
         var center = body.Center;
+        var drawList = ImGui.GetWindowDrawList();
         if (state == LookupState.Failed)
         {
-            ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.CloudDownloadAlt,
-                theme.TextMuted, 34f * scale);
-            Typography.DrawCentered(new Vector2(center.X, center.Y + 18f * scale), Loc.T(L.FindPeople.Failed),
-                theme.TextMuted, 0.95f, FontWeight.Medium);
-            return TextButton.Draw(new Vector2(center.X, center.Y + 48f * scale), Loc.T(L.FindPeople.TryAgain), Accent,
-                scale);
+            PhoneIcon.Draw(drawList, new Vector2(center.X, center.Y - FindPromptRise * scale), PhoneIcons.CloudDownload,
+                ink.MutedInk, FindPromptGlyph * scale);
+            Typography.DrawCentered(new Vector2(center.X, center.Y + FindPromptTitleDrop * scale),
+                Loc.T(L.FindPeople.Failed), ink.MutedInk, TextStyles.Subheadline);
+            return TextButton.Draw(new Vector2(center.X, center.Y + 48f * scale), Loc.T(L.FindPeople.TryAgain),
+                ink.AccentLink, scale);
         }
 
         if (state == LookupState.Empty)
         {
-            ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 24f * scale), FontAwesomeIcon.UserSlash,
-                theme.TextMuted, 34f * scale);
-            Typography.DrawCentered(new Vector2(center.X, center.Y + 20f * scale), Loc.T(L.FindPeople.NoResults),
-                theme.TextMuted, 0.95f, FontWeight.Medium);
+            PhoneIcon.Draw(drawList, new Vector2(center.X, center.Y - FindPromptRise * scale), PhoneIcons.Search,
+                ink.MutedInk, FindPromptGlyph * scale);
+            Typography.DrawCentered(new Vector2(center.X, center.Y + FindPromptTitleDrop * scale),
+                Loc.T(L.FindPeople.NoResults), ink.MutedInk, TextStyles.Subheadline);
             return false;
         }
 
-        LoadingPulse.Draw(new Vector2(center.X, center.Y - 14f * scale), 13f * scale, Accent, theme.TextMuted,
+        LoadingPulse.Draw(new Vector2(center.X, center.Y - 14f * scale), 13f * scale, ink.AccentLink, ink.MutedInk,
             Loc.T(L.Common.Searching));
         return false;
-    }
-
-    private static void DrawChevronRight(Vector2 tip, float size, float thickness, Vector4 color)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var packed = ImGui.GetColorU32(color);
-        drawList.AddLine(new Vector2(tip.X - size, tip.Y - size), tip, packed, thickness);
-        drawList.AddLine(tip, new Vector2(tip.X - size, tip.Y + size), packed, thickness);
     }
 
     private static string SendTarget(string name, string world) =>

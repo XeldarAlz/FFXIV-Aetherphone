@@ -16,6 +16,7 @@ internal enum LinkpearlScreen : byte
     Root,
     Conversation,
     TabEditor,
+    TabInfo,
     SettingsSection,
     ChatTheme,
     Wallpaper,
@@ -63,6 +64,9 @@ internal readonly struct LinkpearlRoute
 
     public static LinkpearlRoute TabEditor(string tabId) =>
         new(LinkpearlScreen.TabEditor, tabId, null, string.Empty, string.Empty, string.Empty);
+
+    public static LinkpearlRoute TabInfo(string tabId) =>
+        new(LinkpearlScreen.TabInfo, tabId, null, string.Empty, string.Empty, string.Empty);
 
     public static LinkpearlRoute Detail(FriendEntry friend) =>
         new(LinkpearlScreen.FriendDetail, string.Empty, friend, string.Empty, string.Empty, string.Empty);
