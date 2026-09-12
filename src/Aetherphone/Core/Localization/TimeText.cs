@@ -16,8 +16,11 @@ internal static class TimeText
     private static readonly ConcurrentDictionary<long, string> ClockCache = new();
     private static readonly ConcurrentDictionary<int, string> MinutesSecondsCache = new();
     private static readonly ConcurrentDictionary<int, string> DurationCache = new();
+    private static readonly DateTime MorningProbe = new(2000, 1, 1, 0, 0, 0, DateTimeKind.Unspecified);
+    private static readonly DateTime AfternoonProbe = new(2000, 1, 1, 12, 0, 0, DateTimeKind.Unspecified);
     private static string[]? hourLabels;
     private static string[]? minuteLabels;
+    private static (string Morning, string Afternoon)? clockProbes;
     private static int cachedFormatVersion = -1;
     private static LanguageInfo? cachedLanguage;
 
@@ -26,6 +29,16 @@ internal static class TimeText
     public static int FormatVersion => formatVersion;
 
     public static string ClockPattern => use24Hour ? Pattern24Hour : Pattern12Hour;
+
+    public static (string Morning, string Afternoon) ClockProbes
+    {
+        get
+        {
+            EnsureFresh();
+            clockProbes ??= (Clock(MorningProbe), Clock(AfternoonProbe));
+            return clockProbes.Value;
+        }
+    }
 
     public static void ApplyClockPreference(bool? preference)
     {
@@ -49,6 +62,7 @@ internal static class TimeText
         DurationCache.Clear();
         hourLabels = null;
         minuteLabels = null;
+        clockProbes = null;
     }
 
     public static string Clock(DateTime moment) => ClockOf(moment.Ticks, ClockPattern, moment, null);

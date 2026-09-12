@@ -39,6 +39,7 @@ internal static class ChatLineView
 {
     private const float SidePad = 16f;
     private const float ColumnGap = 8f;
+    private const float TimeGap = 10f;
     private const float LineGap = 4f;
     private const float RailWidth = 2f;
     private const float MentionTint = 0.10f;
@@ -47,7 +48,6 @@ internal static class ChatLineView
     private const float RepeatHeight = 16f;
     private const float MinimumWrap = 24f;
     private const int RepeatLabelCache = 100;
-    private const string TimeProbe = "00:00";
 
     private static readonly string[] RepeatLabels = new string[RepeatLabelCache];
 
@@ -74,10 +74,13 @@ internal static class ChatLineView
         var left = origin.X + SidePad * scale;
         var right = origin.X + available - SidePad * scale;
         var cursorX = left;
-        var timeWidth = style.Timestamp ? Typography.Measure(TimeProbe, timeStyle).X : 0f;
+        var timeWidth = 0f;
         if (style.Timestamp)
         {
-            cursorX += timeWidth + ColumnGap * scale;
+            var probes = TimeText.ClockProbes;
+            timeWidth = MathF.Max(Typography.Measure(probes.Morning, timeStyle).X,
+                Typography.Measure(probes.Afternoon, timeStyle).X);
+            cursorX += timeWidth + TimeGap * scale;
         }
 
         var runs = ChatRuns.For(entry, ImGui.GetFrameCount());
@@ -132,7 +135,8 @@ internal static class ChatLineView
         {
             var stamp = TimeText.Clock(entry.At);
             var stampSize = Typography.Measure(stamp, timeStyle);
-            Typography.Draw(drawList, new Vector2(left, origin.Y + (lineHeight - stampSize.Y) * 0.5f), stamp,
+            Typography.Draw(drawList,
+                new Vector2(left + timeWidth - stampSize.X, origin.Y + (lineHeight - stampSize.Y) * 0.5f), stamp,
                 Palette.WithAlpha(theme.TextMuted, theme.TextMuted.W * alpha), timeStyle);
         }
 

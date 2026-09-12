@@ -141,6 +141,17 @@ public sealed class TimeTextCacheTests
     }
 
     [Fact]
+    public void ClockProbesFollowTheClockPatternAndStayCached()
+    {
+        var (morning, afternoon) = TimeText.ClockProbes;
+        Assert.Equal(ExpectedClock(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Unspecified)), morning);
+        Assert.Equal(ExpectedClock(new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Unspecified)), afternoon);
+        var again = TimeText.ClockProbes;
+        Assert.Same(morning, again.Morning);
+        Assert.Same(afternoon, again.Afternoon);
+    }
+
+    [Fact]
     public void RepeatedCallsReturnAStableValue()
     {
         var moment = new DateTime(2026, 7, 4, 18, 5, 12, DateTimeKind.Local);
