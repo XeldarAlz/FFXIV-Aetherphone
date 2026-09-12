@@ -22,7 +22,6 @@ internal sealed class MinimizedPhonePage : ISettingsPage
     private readonly MinimizedLayoutService layout;
     private readonly Configuration configuration;
     private readonly string[] shapeLabels = new string[MinimizedShapes.ShapeCount];
-    private readonly string[] mapSizeLabels = new string[MinimizedShapes.MapSizeCount];
     private int moveIndex = -1;
     private int moveDelta;
 
@@ -81,25 +80,8 @@ internal sealed class MinimizedPhonePage : ISettingsPage
         configuration.Save();
     }
 
-    private void DrawMinimapSettings(PhoneTheme theme, float scale)
+    private static void DrawMinimapSettings(PhoneTheme theme, float scale)
     {
-        for (var index = 0; index < mapSizeLabels.Length; index++)
-        {
-            mapSizeLabels[index] = Loc.T(MinimizedShapes.Label((MinimizedMapSize)index));
-        }
-
-        SettingsSection.Header(Loc.T(L.Minimized.Size), theme);
-        var card = GroupCard.Begin(theme, 1);
-        var picked = SegmentStrip.Draw("minimized.mapSize", card.NextRow(), mapSizeLabels,
-            (int)configuration.MinimizedMapSize, theme);
-        card.End();
-        if (picked != (int)configuration.MinimizedMapSize)
-        {
-            configuration.MinimizedMapSize = (MinimizedMapSize)picked;
-            configuration.Save();
-        }
-
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
         SettingsSection.Hint(Loc.T(L.Minimized.MinimapHint), theme);
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
         SettingsSection.Hint(Loc.T(L.Minimized.MinimapZoomHint), theme);

@@ -81,7 +81,6 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Vector2? LandscapePosition { get; set; }
     public MinimizedLayout? MinimizedLayout { get; set; }
     public MinimizedShape MinimizedShape { get; set; } = MinimizedShape.Phone;
-    public MinimizedMapSize MinimizedMapSize { get; set; } = MinimizedMapSize.Medium;
     public int MinimizedMapZoom { get; set; } = MinimizedShapes.DefaultMapZoom;
     public bool MinimizedWallpaper { get; set; }
     public float MinimizedScale { get; set; } = 1f;

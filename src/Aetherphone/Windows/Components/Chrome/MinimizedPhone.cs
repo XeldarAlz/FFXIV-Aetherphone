@@ -177,19 +177,9 @@ internal sealed class MinimizedPhone : IDisposable
 
     private bool ShowsMinimap => configuration.MinimizedShape == MinimizedShape.Minimap;
 
-    private Vector2 IdleUnits
-    {
-        get
-        {
-            if (!ShowsMinimap)
-            {
-                return new Vector2(BodyWidth, MinBodyHeight);
-            }
-
-            var side = MinimizedShapes.MapSide(configuration.MinimizedMapSize);
-            return new Vector2(side, side);
-        }
-    }
+    private Vector2 IdleUnits => ShowsMinimap
+        ? new Vector2(MinimizedShapes.MapSide, MinimizedShapes.MapSide)
+        : new Vector2(BodyWidth, MinBodyHeight);
 
     public MinimizedDrag ConsumeDrag()
     {
