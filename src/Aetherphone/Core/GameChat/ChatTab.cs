@@ -2,7 +2,7 @@ namespace Aetherphone.Core.GameChat;
 
 internal enum ChatDensity : byte
 {
-    Compact,
+    Log,
     Bubbles,
 }
 
@@ -40,6 +40,10 @@ internal sealed class ChatTab
     public AlertPolicy Alerts { get; set; }
 
     public bool Pinned { get; set; }
+
+    public float TextScale { get; set; }
+
+    public bool? Timestamps { get; set; }
 
     public bool Includes(string channelKey) => Channels.Contains(channelKey);
 

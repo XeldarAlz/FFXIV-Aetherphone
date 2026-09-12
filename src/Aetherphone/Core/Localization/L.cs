@@ -3953,7 +3953,7 @@ internal static class L
         public static readonly LocString EmptySlot = new("linkpearl.emptySlot", "Empty slot");
         public static readonly LocString RepliesGoTo = new("linkpearl.repliesGoTo", "Replies go to");
         public static readonly LocString Layout = new("linkpearl.layout", "Layout");
-        public static readonly LocString LayoutCompact = new("linkpearl.layoutCompact", "Compact");
+        public static readonly LocString LayoutLog = new("linkpearl.layoutLog", "Log");
         public static readonly LocString LayoutBubbles = new("linkpearl.layoutBubbles", "Bubbles");
         public static readonly LocString KeepHistory = new("linkpearl.keepHistory", "Keep history");
         public static readonly LocString HistoryOff = new("linkpearl.historyOff", "Off");
@@ -4072,6 +4072,13 @@ internal static class L
         public static readonly LocString PopoutTabLimit = new("linkpearl.popoutTabLimit", "A pop-out holds up to {0} conversations.");
         public static readonly LocString Appearance = new("linkpearl.appearance", "Appearance");
         public static readonly LocString ChatThemeHint = new("linkpearl.chatThemeHint", "The color of your messages, buttons and badges in Linkpearl.");
+        public static readonly LocString DefaultLayout = new("linkpearl.defaultLayout", "Layout for tabs");
+        public static readonly LocString TextSize = new("linkpearl.textSize", "Text size");
+        public static readonly LocString LogTimestamps = new("linkpearl.logTimestamps", "Timestamps");
+        public static readonly LocString LogWorldNames = new("linkpearl.logWorldNames", "Show world names");
+        public static readonly LocString LogGameColors = new("linkpearl.logGameColors", "Color lines like the game");
+        public static readonly LocString LogGroupLines = new("linkpearl.logGroupLines", "Group consecutive lines");
+        public static readonly LocString CollapseDuplicates = new("linkpearl.collapseDuplicates", "Collapse duplicate messages");
     }
 
     internal static class Character

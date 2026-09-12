@@ -180,7 +180,7 @@ internal sealed partial class LinkpearlApp
             return;
         }
 
-        tab.Density = tab.Density == ChatDensity.Bubbles ? ChatDensity.Compact : ChatDensity.Bubbles;
+        tab.Density = tab.Density == ChatDensity.Bubbles ? ChatDensity.Log : ChatDensity.Bubbles;
         tabs.Update(tab);
         inbox.Invalidate();
         threadKey = string.Empty;

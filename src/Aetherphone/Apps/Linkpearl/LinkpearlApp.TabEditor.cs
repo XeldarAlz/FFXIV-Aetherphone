@@ -293,7 +293,7 @@ internal sealed partial class LinkpearlApp
 
         var layoutRow = card.NextRow();
         if (SettingsRow.Disclosure(layoutRow, Loc.T(L.Linkpearl.Layout), Loc.T(
-                tab.Density == ChatDensity.Bubbles ? L.Linkpearl.LayoutBubbles : L.Linkpearl.LayoutCompact),
+                tab.Density == ChatDensity.Bubbles ? L.Linkpearl.LayoutBubbles : L.Linkpearl.LayoutLog),
                 frameTheme))
         {
             editorMenu.Toggle("linkpearl.editor.layout", layoutRow);
@@ -346,14 +346,14 @@ internal sealed partial class LinkpearlApp
         if (editorMenu.IsOpenFor("linkpearl.editor.layout"))
         {
             editorItems.Clear();
-            editorItems.Add(new DropdownMenu.Item(Loc.T(L.Linkpearl.LayoutCompact), string.Empty, false,
-                tab.Density == ChatDensity.Compact));
+            editorItems.Add(new DropdownMenu.Item(Loc.T(L.Linkpearl.LayoutLog), string.Empty, false,
+                tab.Density == ChatDensity.Log));
             editorItems.Add(new DropdownMenu.Item(Loc.T(L.Linkpearl.LayoutBubbles), string.Empty, false,
                 tab.Density == ChatDensity.Bubbles));
             var picked = DrawEditorList(area);
             if (picked >= 0)
             {
-                tab.Density = picked == 1 ? ChatDensity.Bubbles : ChatDensity.Compact;
+                tab.Density = picked == 1 ? ChatDensity.Bubbles : ChatDensity.Log;
                 tabs.Update(tab);
                 threadKey = string.Empty;
             }

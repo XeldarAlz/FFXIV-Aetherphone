@@ -9,6 +9,12 @@ internal sealed class ChatRunSet
 {
     public TextRun[] Runs = Array.Empty<TextRun>();
     public ChatChunk[] Targets = Array.Empty<ChatChunk>();
+    public TextRun[] LogRuns = Array.Empty<TextRun>();
+    public ChatChunk[] LogTargets = Array.Empty<ChatChunk>();
+    public string NamePrefix = string.Empty;
+    public string NameWorldPrefix = string.Empty;
+    public string LogKey = string.Empty;
+    public string LogWorldKey = string.Empty;
     public bool HasLinks;
     public bool HasEmoji;
     public int LastUsedFrame;
@@ -17,6 +23,10 @@ internal sealed class ChatRunSet
 internal static class ChatRuns
 {
     private const int SweepThreshold = 192;
+    private const string NameSeparator = ": ";
+    private const string WorldSeparator = "@";
+    private const string LogKeySuffix = ":log";
+    private const string LogWorldKeySuffix = ":logw";
 
     private static readonly Dictionary<string, ChatRunSet> Cache = new(StringComparer.Ordinal);
     private static int lastSweepFrame = -1;
@@ -104,7 +114,42 @@ internal static class ChatRuns
             set.HasEmoji |= set.Runs[index].IsEmoji;
         }
 
+        BuildLogVariant(entry, set);
         return set;
+    }
+
+    private static void BuildLogVariant(ChatEntry entry, ChatRunSet set)
+    {
+        if (entry.AuthorName.Length == 0)
+        {
+            set.LogRuns = set.Runs;
+            set.LogTargets = set.Targets;
+            set.LogKey = entry.Id;
+            set.LogWorldKey = entry.Id;
+            return;
+        }
+
+        set.NamePrefix = string.Concat(entry.AuthorName, NameSeparator);
+        set.NameWorldPrefix = entry.AuthorWorld.Length > 0
+            ? string.Concat(entry.AuthorName, WorldSeparator, entry.AuthorWorld, NameSeparator)
+            : set.NamePrefix;
+        set.LogKey = string.Concat(entry.Id, LogKeySuffix);
+        set.LogWorldKey = string.Concat(entry.Id, LogWorldKeySuffix);
+        var runs = new TextRun[set.Runs.Length + 1];
+        runs[0] = TextRun.Link(set.NamePrefix, LinkTints.Player, 0);
+        for (var index = 0; index < set.Runs.Length; index++)
+        {
+            var run = set.Runs[index];
+            runs[index + 1] = run.Interactive
+                ? new TextRun(run.Text, run.Tint, run.Target + 1, true, run.EmojiFile)
+                : run;
+        }
+
+        var targets = new ChatChunk[set.Targets.Length + 1];
+        targets[0] = ChatChunk.Player(entry.AuthorName, entry.AuthorWorld);
+        Array.Copy(set.Targets, 0, targets, 1, set.Targets.Length);
+        set.LogRuns = runs;
+        set.LogTargets = targets;
     }
 
     private static void AddLink(ChatChunk chunk)

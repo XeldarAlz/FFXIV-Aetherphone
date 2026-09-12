@@ -316,6 +316,13 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public string LinkpearlWallpaper { get; set; } = string.Empty;
     public bool LinkpearlWallpaperPattern { get; set; } = true;
     public Dictionary<string, string> LinkpearlChatWallpapers { get; set; } = new();
+    public int LinkpearlDefaultDensity { get; set; }
+    public float LinkpearlTextScale { get; set; } = 1f;
+    public bool LinkpearlLogTimestamps { get; set; } = true;
+    public bool LinkpearlLogWorldNames { get; set; } = true;
+    public bool LinkpearlLogGameColors { get; set; }
+    public bool LinkpearlLogGroupLines { get; set; }
+    public bool LinkpearlCollapseDuplicates { get; set; }
     public bool ArchiveTellsToDisk { get; set; } = true;
     public bool LinkpearlNotificationsPaused { get; set; }
     public bool MessageMigrated { get; set; }

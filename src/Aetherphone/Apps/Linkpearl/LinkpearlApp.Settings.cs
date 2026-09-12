@@ -47,10 +47,42 @@ internal sealed partial class LinkpearlApp
             }
 
             if (chrome.DrawSettingRow(drawList, PhoneIcons.Wallpaper, ChatListChrome.TintViolet,
-                    Loc.T(L.Message.Wallpaper), separator: false))
+                    Loc.T(L.Message.Wallpaper)))
             {
                 router.Push(LinkpearlRoute.Wallpaper(string.Empty));
             }
+
+            var layoutRow = NextSettingRow(scale);
+            var bubblesDefault = configuration.LinkpearlDefaultDensity == (int)ChatDensity.Bubbles;
+            if (chrome.DrawSettingRow(drawList, PhoneIcons.LayoutList, ChatListChrome.TintAzure,
+                    Loc.T(L.Linkpearl.DefaultLayout),
+                    Loc.T(bubblesDefault ? L.Linkpearl.LayoutBubbles : L.Linkpearl.LayoutLog)))
+            {
+                settingsMenu.Toggle("linkpearl.settings.layout", layoutRow);
+            }
+
+            var textSizeRow = NextSettingRow(scale);
+            if (chrome.DrawSettingRow(drawList, PhoneIcons.TextSize, ChatListChrome.TintTeal,
+                    Loc.T(L.Linkpearl.TextSize), PercentLabel(configuration.LinkpearlTextScale)))
+            {
+                settingsMenu.Toggle("linkpearl.settings.textScale", textSizeRow);
+            }
+
+            DrawLogSwitch(drawList, PhoneIcons.Clock, ChatListChrome.TintSlate, L.Linkpearl.LogTimestamps,
+                configuration.LinkpearlLogTimestamps, "linkpearl.settings.logTimestamps",
+                static (configuration, value) => configuration.LinkpearlLogTimestamps = value);
+            DrawLogSwitch(drawList, PhoneIcons.World, ChatListChrome.TintAzure, L.Linkpearl.LogWorldNames,
+                configuration.LinkpearlLogWorldNames, "linkpearl.settings.logWorldNames",
+                static (configuration, value) => configuration.LinkpearlLogWorldNames = value);
+            DrawLogSwitch(drawList, PhoneIcons.Brush, ChatListChrome.TintGold, L.Linkpearl.LogGameColors,
+                configuration.LinkpearlLogGameColors, "linkpearl.settings.logGameColors",
+                static (configuration, value) => configuration.LinkpearlLogGameColors = value);
+            DrawLogSwitch(drawList, PhoneIcons.Users, ChatListChrome.TintGreen, L.Linkpearl.LogGroupLines,
+                configuration.LinkpearlLogGroupLines, "linkpearl.settings.logGroupLines",
+                static (configuration, value) => configuration.LinkpearlLogGroupLines = value);
+            DrawLogSwitch(drawList, PhoneIcons.Checks, ChatListChrome.TintViolet, L.Linkpearl.CollapseDuplicates,
+                configuration.LinkpearlCollapseDuplicates, "linkpearl.settings.collapseDuplicates",
+                static (configuration, value) => configuration.LinkpearlCollapseDuplicates = value, false);
 
             chrome.DrawSectionLabel(Loc.T(L.Settings.Notifications));
             var paused = chrome.DrawSwitchRow(drawList, PhoneIcons.BellOff, ChatListChrome.TintSlate,
@@ -74,6 +106,28 @@ internal sealed partial class LinkpearlApp
 
             ImGui.Dummy(new Vector2(0f, SettingsBottomPad * scale));
         }
+
+        DrawSettingsMenu(area);
+    }
+
+    private static Rect NextSettingRow(float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        return new Rect(origin,
+            new Vector2(origin.X + ScrollLayout.StableContentWidth(), origin.Y + ChatListChrome.SettingRowHeight * scale));
+    }
+
+    private void DrawLogSwitch(ImDrawListPtr drawList, string glyph, Vector4 tint, LocString label, bool value,
+        string id, Action<Configuration, bool> apply, bool separator = true)
+    {
+        var next = chrome.DrawSwitchRow(drawList, glyph, tint, Loc.T(label), value, id, separator);
+        if (next == value)
+        {
+            return;
+        }
+
+        apply(configuration, next);
+        configuration.Save();
     }
 
     private void DrawSettingsSection(Rect area, LinkpearlSettingsSection section)
@@ -297,6 +351,43 @@ internal sealed partial class LinkpearlApp
 
     private void DrawSettingsMenu(Rect area)
     {
+        if (settingsMenu.IsOpenFor("linkpearl.settings.layout"))
+        {
+            settingsItems.Clear();
+            var bubbles = configuration.LinkpearlDefaultDensity == (int)ChatDensity.Bubbles;
+            settingsItems.Add(new DropdownMenu.Item(Loc.T(L.Linkpearl.LayoutLog), string.Empty, false, !bubbles));
+            settingsItems.Add(new DropdownMenu.Item(Loc.T(L.Linkpearl.LayoutBubbles), string.Empty, false, bubbles));
+            var pickedLayout = settingsMenu.Draw(area, frameTheme, CollectionsMarshal.AsSpan(settingsItems));
+            if (pickedLayout >= 0)
+            {
+                configuration.LinkpearlDefaultDensity = pickedLayout == 1
+                    ? (int)ChatDensity.Bubbles
+                    : (int)ChatDensity.Log;
+                configuration.Save();
+            }
+
+            return;
+        }
+
+        if (settingsMenu.IsOpenFor("linkpearl.settings.textScale"))
+        {
+            settingsItems.Clear();
+            for (var index = 0; index < TextScaleChoices.Length; index++)
+            {
+                settingsItems.Add(new DropdownMenu.Item(PercentLabel(TextScaleChoices[index]), string.Empty, false,
+                    MathF.Abs(TextScaleChoices[index] - configuration.LinkpearlTextScale) < 0.01f));
+            }
+
+            var pickedScale = settingsMenu.Draw(area, frameTheme, CollectionsMarshal.AsSpan(settingsItems));
+            if (pickedScale >= 0)
+            {
+                configuration.LinkpearlTextScale = TextScaleChoices[pickedScale];
+                configuration.Save();
+            }
+
+            return;
+        }
+
         if (settingsMenu.IsOpenFor("linkpearl.settings.textSize"))
         {
             settingsItems.Clear();

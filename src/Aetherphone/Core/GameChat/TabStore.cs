@@ -54,7 +54,9 @@ internal sealed class TabStore
             Name = name,
             Channels = new List<string>(channels),
             Alerts = AlertPolicy.Mentions,
-            Density = ChatDensity.Bubbles,
+            Density = configuration.LinkpearlDefaultDensity == (int)ChatDensity.Bubbles
+                ? ChatDensity.Bubbles
+                : ChatDensity.Log,
         };
         for (var index = 0; index < tab.Channels.Count; index++)
         {

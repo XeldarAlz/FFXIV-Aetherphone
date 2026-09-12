@@ -17,9 +17,11 @@ internal readonly struct GameChatTarget
     public readonly string SendTarget;
     public readonly ChatDensity Density;
     public readonly bool ShowTags;
+    public readonly float TextScale;
+    public readonly bool? Timestamps;
 
     public GameChatTarget(string key, string[] streams, string[] sendChannels, string sendChannelKey,
-        string sendTarget, ChatDensity density, bool showTags)
+        string sendTarget, ChatDensity density, bool showTags, float textScale, bool? timestamps)
     {
         Key = key;
         Streams = streams;
@@ -28,6 +30,8 @@ internal readonly struct GameChatTarget
         SendTarget = sendTarget;
         Density = density;
         ShowTags = showTags;
+        TextScale = textScale;
+        Timestamps = timestamps;
     }
 }
 
@@ -337,10 +341,51 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
 
     public void Dispose() => view.Dispose();
 
+    private readonly struct LogOptions
+    {
+        public readonly bool Timestamps;
+        public readonly bool WorldNames;
+        public readonly bool GameColors;
+        public readonly bool GroupLines;
+        public readonly bool CollapseDuplicates;
+        public readonly float TextScale;
+        public readonly int Variant;
+
+        public LogOptions(bool timestamps, bool worldNames, bool gameColors, bool groupLines,
+            bool collapseDuplicates, float textScale)
+        {
+            Timestamps = timestamps;
+            WorldNames = worldNames;
+            GameColors = gameColors;
+            GroupLines = groupLines;
+            CollapseDuplicates = collapseDuplicates;
+            TextScale = textScale;
+            Variant = (timestamps ? 1 : 0) | (worldNames ? 2 : 0) | (gameColors ? 4 : 0) | (groupLines ? 8 : 0)
+                      | (collapseDuplicates ? 16 : 0) | ((int)MathF.Round(textScale * 100f) << 5);
+        }
+    }
+
+    private LogOptions ResolveLogOptions()
+    {
+        var configuration = Plugin.Cfg;
+        if (configuration is null)
+        {
+            return new LogOptions(target.Timestamps ?? true, true, false, false, false,
+                target.TextScale > 0f ? target.TextScale : 1f);
+        }
+
+        return new LogOptions(target.Timestamps ?? configuration.LinkpearlLogTimestamps,
+            configuration.LinkpearlLogWorldNames, configuration.LinkpearlLogGameColors,
+            configuration.LinkpearlLogGroupLines, configuration.LinkpearlCollapseDuplicates,
+            target.TextScale > 0f ? target.TextScale : configuration.LinkpearlTextScale);
+    }
+
     private void DrawCompact(Rect listRect, PhoneTheme theme)
     {
         var scale = UiScale.Current;
         var entries = view.Entries;
+        var options = ResolveLogOptions();
+        var localWorld = LocalWorld();
         entrance.Sync(target.Key, entries.Count, entries.Count > 0 ? entries[entries.Count - 1].Id : null,
             ImGui.GetIO().DeltaTime, false);
         using (var surface = AppSurface.BeginEdgeToEdge(listRect))
@@ -372,11 +417,17 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
                     continue;
                 }
 
+                if (options.CollapseDuplicates && previous is not null && Duplicate(previous, entry))
+                {
+                    continue;
+                }
+
+                var grouped = options.GroupLines && previous is not null && Grouped(previous, entry);
                 if (previous is null || !TimeText.SameLocalDay(Seconds(previous.At), Seconds(entry.At)))
                 {
                     DrawDaySeparator(entry.At, theme);
                 }
-                else if (!Grouped(previous, entry))
+                else if (!grouped)
                 {
                     ImGui.Dummy(new Vector2(0f, Metrics.Space.Xxs * scale));
                 }
@@ -395,26 +446,30 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
                     nextFirstContentY = contentTop;
                 }
 
-                var headsLine = previous is null || !Grouped(previous, entry);
-                var style = new ChatLineStyle(RailFor(entry), headsLine, false, entrance.Progress(index));
+                var headsLine = !grouped;
+                var repeats = options.CollapseDuplicates ? CountRepeats(entries, index) : 1;
+                var style = new ChatLineStyle(MarkerFor(entry), headsLine, false, entrance.Progress(index),
+                    options.Timestamps, options.WorldNames, options.GameColors, options.TextScale, repeats,
+                    localWorld);
                 var lineStart = ImGui.GetCursorScreenPos();
                 var isReveal = revealId is not null && string.Equals(entry.Id, revealId, StringComparison.Ordinal);
-                if (!isReveal && TryCullLine(entry, headsLine, lineWidth, scale, lineStart))
+                if (!isReveal && TryCullLine(entry, headsLine, lineWidth, scale, options.Variant, lineStart))
                 {
                     previous = entry;
                     continue;
                 }
 
-                if (ChatLineView.Draw(entry, theme, style, theme.Accent, out var tapped))
+                if (ChatLineView.Draw(entry, theme, style, theme.Accent, out var link, out var linkClicked))
                 {
                     Context?.Invoke(entry);
                 }
 
-                RecordLine(entry, headsLine, lineWidth, scale, ImGui.GetCursorScreenPos().Y - lineStart.Y);
+                RecordLine(entry, headsLine, lineWidth, scale, options.Variant,
+                    ImGui.GetCursorScreenPos().Y - lineStart.Y);
 
-                if (tapped >= 0)
+                if (linkClicked)
                 {
-                    RaiseLink(entry, tapped);
+                    Link?.Invoke(entry, link);
                 }
 
                 if (revealId is not null && string.Equals(entry.Id, revealId, StringComparison.Ordinal))
@@ -442,7 +497,9 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
             for (var index = 0; index < ghostEntries.Count; index++)
             {
                 var ghost = ghostEntries[index];
-                ChatLineView.Draw(ghost, theme, new ChatLineStyle(RailFor(ghost), true, true), theme.Accent, out _);
+                var ghostStyle = new ChatLineStyle(MarkerFor(ghost), true, true, 1f, options.Timestamps,
+                    options.WorldNames, options.GameColors, options.TextScale, 1, localWorld);
+                ChatLineView.Draw(ghost, theme, ghostStyle, theme.Accent, out _, out _);
             }
 
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
@@ -452,6 +509,30 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
             }
         }
     }
+
+    private static bool Duplicate(ChatEntry previous, ChatEntry entry) =>
+        string.Equals(previous.SenderKey, entry.SenderKey, StringComparison.Ordinal) &&
+        string.Equals(previous.ChannelKey, entry.ChannelKey, StringComparison.Ordinal) &&
+        string.Equals(previous.Text, entry.Text, StringComparison.Ordinal);
+
+    private static int CountRepeats(IReadOnlyList<ChatEntry> entries, int index)
+    {
+        var repeats = 1;
+        for (var next = index + 1; next < entries.Count; next++)
+        {
+            if (!Duplicate(entries[index], entries[next]))
+            {
+                break;
+            }
+
+            repeats++;
+        }
+
+        return repeats;
+    }
+
+    private GameChannel? MarkerFor(ChatEntry entry) =>
+        target.ShowTags && GameChannels.TryByKey(entry.ChannelKey, out var channel) ? channel : null;
 
     private void DrawSearchBar(Rect bar, PhoneTheme theme)
     {
@@ -688,10 +769,11 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         mappedRevision = -1;
     }
 
-    private bool TryCullLine(ChatEntry entry, bool headsLine, float width, float scale, Vector2 lineStart)
+    private bool TryCullLine(ChatEntry entry, bool headsLine, float width, float scale, int variant,
+        Vector2 lineStart)
     {
         if (!lineHeights.TryGetValue(entry.Id, out var cached)
-            || !cached.Matches(width, scale, Plugin.Fonts.Generation, headsLine))
+            || !cached.Matches(width, scale, Plugin.Fonts.Generation, headsLine, variant))
         {
             return false;
         }
@@ -706,7 +788,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         return true;
     }
 
-    private void RecordLine(ChatEntry entry, bool headsLine, float width, float scale, float height)
+    private void RecordLine(ChatEntry entry, bool headsLine, float width, float scale, int variant, float height)
     {
         var frame = ImGui.GetFrameCount();
         if (!lineHeights.TryGetValue(entry.Id, out var cached))
@@ -720,7 +802,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
             lineHeights[entry.Id] = cached;
         }
 
-        cached.Remember(width, scale, Plugin.Fonts.Generation, headsLine, height, frame);
+        cached.Remember(width, scale, Plugin.Fonts.Generation, headsLine, variant, height, frame);
     }
 
     private void SweepIdleLines(int frame)
@@ -997,16 +1079,6 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         ImGui.SetCursorScreenPos(new Vector2(origin.X, chipMax.Y + 8f * scale));
     }
 
-    private Vector4 RailFor(ChatEntry entry)
-    {
-        if (!target.ShowTags || !GameChannels.TryByKey(entry.ChannelKey, out var channel))
-        {
-            return default;
-        }
-
-        return channel.Tint;
-    }
-
     private bool Owns(PendingSend pending)
     {
         if (string.Equals(pending.ChannelKey, GameChannels.TellKey, StringComparison.Ordinal))
@@ -1066,16 +1138,20 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         private float scale;
         private int fontGeneration;
         private bool headsLine;
+        private int variant;
 
-        public bool Matches(float rowWidth, float uiScale, int fonts, bool heads) =>
-            Height > 0f && width == rowWidth && scale == uiScale && fontGeneration == fonts && headsLine == heads;
+        public bool Matches(float rowWidth, float uiScale, int fonts, bool heads, int options) =>
+            Height > 0f && width == rowWidth && scale == uiScale && fontGeneration == fonts && headsLine == heads
+            && variant == options;
 
-        public void Remember(float rowWidth, float uiScale, int fonts, bool heads, float rowHeight, int frame)
+        public void Remember(float rowWidth, float uiScale, int fonts, bool heads, int options, float rowHeight,
+            int frame)
         {
             width = rowWidth;
             scale = uiScale;
             fontGeneration = fonts;
             headsLine = heads;
+            variant = options;
             Height = rowHeight;
             LastUsedFrame = frame;
         }
@@ -1090,12 +1166,12 @@ internal static class GameChatTargets
         {
             var channels = tab.Channels.ToArray();
             return new GameChatTarget(row.Key, channels, channels, tab.SendChannel, string.Empty, tab.Density,
-                channels.Length > 1);
+                channels.Length > 1, tab.TextScale, tab.Timestamps);
         }
 
         var target = ChatStreams.IsTell(row.Key) ? SendTarget(row) : string.Empty;
         return new GameChatTarget(row.Key, new[] { row.StreamKey }, new[] { GameChannels.TellKey },
-            GameChannels.TellKey, target, ChatDensity.Bubbles, false);
+            GameChannels.TellKey, target, ChatDensity.Bubbles, false, 0f, null);
     }
 
     public static string SendTarget(InboxRow row) =>

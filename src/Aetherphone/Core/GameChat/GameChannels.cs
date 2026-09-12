@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Globalization;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Game.Text;
@@ -16,14 +17,55 @@ internal static class GameChannels
     public const string NoviceKey = "novice";
     public const string EchoKey = "echo";
     public const string SystemKey = "system";
+    public const string EmoteKey = "emote";
 
     private static readonly GameChannel[] Catalog = BuildCatalog();
     private static readonly FrozenDictionary<XivChatType, GameChannel> ByKind = BuildKindIndex();
     private static readonly FrozenDictionary<string, GameChannel> ByKey = BuildKeyIndex();
     private static readonly string[] Names = new string[Catalog.Length];
+    private static readonly string[] ShortCodes = BuildShortCodes();
     private static LanguageInfo? namesLanguage;
 
     public static ReadOnlySpan<GameChannel> All => Catalog;
+
+    public static string ShortCode(GameChannel channel) => ShortCodes[channel.Index];
+
+    private static string[] BuildShortCodes()
+    {
+        var codes = new string[Catalog.Length];
+        for (var index = 0; index < Catalog.Length; index++)
+        {
+            codes[index] = ShortCodeFor(Catalog[index]);
+        }
+
+        return codes;
+    }
+
+    private static string ShortCodeFor(GameChannel channel)
+    {
+        var slot = (channel.Slot + 1).ToString(CultureInfo.InvariantCulture);
+        return channel.Category switch
+        {
+            ChannelCategory.Linkshell => string.Concat("LS", slot),
+            ChannelCategory.CrossWorld => string.Concat("CW", slot),
+            _ => channel.Key switch
+            {
+                SayKey => "Say",
+                "shout" => "Sh",
+                "yell" => "Y",
+                EmoteKey => "Em",
+                PartyKey => "P",
+                AllianceKey => "A",
+                "pvpteam" => "PvP",
+                FreeCompanyKey => "FC",
+                NoviceKey => "NN",
+                TellKey => "Tell",
+                EchoKey => "Echo",
+                SystemKey => "Sys",
+                _ => channel.Key.ToUpperInvariant(),
+            },
+        };
+    }
 
     public static bool TryResolve(XivChatType kind, out GameChannel channel) => ByKind.TryGetValue(kind, out channel!);
 

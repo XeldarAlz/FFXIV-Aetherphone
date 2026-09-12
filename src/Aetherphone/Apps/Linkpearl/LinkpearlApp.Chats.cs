@@ -342,7 +342,7 @@ internal sealed partial class LinkpearlApp
             if (row.Tab is { } tab)
             {
                 var bubbles = tab.Density == ChatDensity.Bubbles;
-                AddSheetItem(bubbles ? L.Linkpearl.LayoutCompact : L.Linkpearl.LayoutBubbles, MenuLayout,
+                AddSheetItem(bubbles ? L.Linkpearl.LayoutLog : L.Linkpearl.LayoutBubbles, MenuLayout,
                     bubbles ? PhoneIcons.LayoutList : PhoneIcons.MessageCircle);
             }
 
