@@ -52,7 +52,6 @@ internal sealed class MinimizeMorphView
         var geometry = ChassisGeometry.Morph(body, theme, scale, eased);
 
         var shell = ImGui.GetWindowDrawList();
-        Elevation.Squircle(shell, geometry.Body.Min, geometry.Body.Max, geometry.BodyRadius, scale, eased);
         DeviceChrome.DrawShell(shell, geometry, scale, theme, 1f, true);
         DrawRailButtons(shell, geometry, theme, scale, eased);
         RevealMorphContent(DeviceChrome.Chassis(device, theme), theme, geometry, eased, device.IsLandscape());

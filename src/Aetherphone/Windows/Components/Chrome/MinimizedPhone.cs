@@ -216,8 +216,6 @@ internal sealed class MinimizedPhone : IDisposable
         var scale = Scale;
         var geometry = ChassisGeometry.Puck(body);
         var dl = ImGui.GetForegroundDrawList();
-        var lift = Math.Clamp(hover.Value, 0f, 1f);
-        Elevation.Squircle(dl, geometry.Body.Min, geometry.Body.Max, geometry.BodyRadius, scale, 0.85f + 0.35f * lift);
         DeviceChrome.DrawShell(dl, geometry, scale, theme, 1f);
         return DrawFace(dl, geometry, theme, delta, true, 1f);
     }
