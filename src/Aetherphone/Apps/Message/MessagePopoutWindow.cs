@@ -286,7 +286,7 @@ internal sealed class MessagePopoutWindow : Window
         using (Plugin.Fonts.Push(1f))
         {
             var theme = CurrentTheme;
-            ui.Palette = MessageThemes.PaletteFor(configuration.MessageChatTheme);
+            ui.Palette = ChatThemes.PaletteFor(configuration.MessageChatTheme);
             ui.Theme = theme;
             var scale = UiScale.Current;
             var barHeight = MathF.Min(TitleHeight * scale, frame.Height);
@@ -697,7 +697,7 @@ internal sealed class MessagePopoutWindow : Window
 
         protected override Action BackAction => back;
 
-        protected override MessageTheme ChatTheme => MessageThemes.Resolve(configuration.MessageChatTheme);
+        protected override ChatTheme ChatTheme => ChatThemes.Resolve(configuration.MessageChatTheme);
 
         protected override void DrawHeader(Rect area, string threadId)
         {

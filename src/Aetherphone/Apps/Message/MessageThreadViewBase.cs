@@ -43,7 +43,7 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
         wallpapers = wallpaperImages;
     }
 
-    protected abstract MessageTheme ChatTheme { get; }
+    protected abstract ChatTheme ChatTheme { get; }
 
     protected override string MyUserId => messages.MyUserId;
 
@@ -69,8 +69,8 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
 
     protected override string ComposerHint => Loc.T(L.DirectMessages.StartChat);
 
-    protected override ChatBubbleStyle BubbleStyle => new(ChatTheme.OutgoingBubble, MessageThemes.OutgoingInk,
-        MessageThemes.IncomingBubble, MessageThemes.IncomingInk, BubbleRounding, true);
+    protected override ChatBubbleStyle BubbleStyle => new(ChatTheme.OutgoingBubble, ChatThemes.OutgoingInk,
+        ChatThemes.IncomingBubble, ChatThemes.IncomingInk, BubbleRounding, true);
 
     protected override float TranscriptSidePadding => ThreadSidePadding;
 
@@ -112,9 +112,9 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
     protected override void PaintTranscriptBackdrop(Rect listRect)
     {
         var conversationId = messages.CurrentThreadId ?? string.Empty;
-        MessageWallpapers.Paint(ImGui.GetWindowDrawList(), listRect,
-            MessageWallpapers.Effective(configuration, conversationId), configuration.MessageWallpaperPattern,
-            wallpapers);
+        ChatWallpapers.Paint(ImGui.GetWindowDrawList(), listRect,
+            ChatWallpapers.Effective(configuration.MessageChatWallpapers, configuration.MessageWallpaper,
+                conversationId), configuration.MessageWallpaperPattern, wallpapers);
     }
 
     protected override bool IsDeleted(ChatMessageDto message) => message.Deleted;

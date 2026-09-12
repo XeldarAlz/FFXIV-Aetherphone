@@ -135,6 +135,7 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
         router = new ViewRouter<MessageRoute>(MessageRoute.Root);
         drawView = DrawView;
         back = () => router.Pop();
+        chrome = new ChatListChrome(ui, ink);
         refreshContacts = () => contacts.Refresh(force: true);
         groupPhotoPicker = new ImagePickCrop(library, wallpaperImages);
         threadView = new ThreadView(this);
@@ -225,6 +226,7 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
         groupPhotoSheet.Gate();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
         screenRect = screen;
+        chrome.ScreenRect = screen;
         ui.Backdrop(screen);
         using (InputShield.Engage(avatarLightbox.Expanded))
         {

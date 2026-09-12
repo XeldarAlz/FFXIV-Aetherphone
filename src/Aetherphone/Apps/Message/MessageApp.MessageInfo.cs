@@ -106,9 +106,9 @@ internal sealed partial class MessageApp
         Squircle.Fill(drawList, bubbleMin, bubbleMax, MessageThreadViewBase.BubbleRounding * scale,
             ImGui.GetColorU32(activeTheme.OutgoingBubble));
         Typography.DrawWrappedLeft(new Vector2(bubbleMin.X + paddingX, bubbleMin.Y + paddingY), text,
-            MessageThemes.OutgoingInk, TextStyles.Body, wrap);
+            ChatThemes.OutgoingInk, TextStyles.Body, wrap);
         Typography.Draw(drawList, new Vector2(bubbleMax.X - paddingX - timeSize.X, bubbleMax.Y - paddingY - timeSize.Y),
-            time, Core.Theme.Palette.WithAlpha(MessageThemes.OutgoingInk, 0.72f), InfoStampStyle);
+            time, Core.Theme.Palette.WithAlpha(ChatThemes.OutgoingInk, 0.72f), InfoStampStyle);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, bubbleHeight + 18f * scale));
     }

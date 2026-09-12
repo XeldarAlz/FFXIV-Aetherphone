@@ -13,4 +13,5 @@ node_modules/
 
 # Icon font generator scratch (tools/icon-font)
 tools/icon-font/build/
+tools/icon-font/.venv/
 /docs/plans

@@ -1,47 +1,48 @@
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows.Components;
 
-namespace Aetherphone.Apps.Message;
+namespace Aetherphone.Windows.Components;
 
-internal readonly struct MessageTheme
+internal readonly struct ChatTheme
 {
     public readonly string Id;
     public readonly LocString Name;
     public readonly Vector4 Accent;
 
-    public MessageTheme(string id, LocString name, Vector4 accent)
+    public ChatTheme(string id, LocString name, Vector4 accent)
     {
         Id = id;
         Name = name;
         Accent = accent;
     }
 
-    public Vector4 OutgoingBubble => Palette.Mix(Accent, MessageThemes.Body, MessageThemes.OutgoingMix);
+    public Vector4 OutgoingBubble => Palette.Mix(Accent, ChatThemes.Body, ChatThemes.OutgoingMix);
 
-    public Vector4 Badge => Palette.Lighten(Accent, MessageThemes.BadgeLift);
+    public Vector4 Badge => Palette.Lighten(Accent, ChatThemes.BadgeLift);
 }
 
-internal static class MessageThemes
+internal static class ChatThemes
 {
     public const float OutgoingMix = 0.55f;
     public const float BadgeLift = 0.12f;
+    public const float BubbleRounding = 9f;
 
     public static readonly Vector4 Body = new(0.043f, 0.078f, 0.102f, 1f);
     public static readonly Vector4 IncomingBubble = new(0.125f, 0.173f, 0.200f, 1f);
     public static readonly Vector4 IncomingInk = new(0.914f, 0.929f, 0.937f, 1f);
     public static readonly Vector4 OutgoingInk = new(0.914f, 0.929f, 0.937f, 1f);
 
-    public static readonly MessageTheme[] All =
+    public static readonly ChatTheme[] All =
     {
-        new("chocobo", L.Message.ThemeChocobo, AccentRing.Orange),
-        new("emerald", L.Message.ThemeEmerald, new Vector4(0.000f, 0.659f, 0.518f, 1f)),
-        new("ocean", L.Message.ThemeOcean, AccentRing.Azure),
-        new("lavender", L.Message.ThemeLavender, AccentRing.Violet),
-        new("rose", L.Message.ThemeRose, AccentRing.Rose),
-        new("sunset", L.Message.ThemeSunset, AccentRing.Red),
-        new("sky", L.Message.ThemeSky, AccentRing.Cyan),
-        new("slate", L.Message.ThemeSlate, AccentRing.Slate),
+        new("chocobo", L.Chat.ThemeChocobo, AccentRing.Orange),
+        new("leaf", L.Chat.ThemeLeaf, AccentRing.Green),
+        new("emerald", L.Chat.ThemeEmerald, new Vector4(0.000f, 0.659f, 0.518f, 1f)),
+        new("ocean", L.Chat.ThemeOcean, AccentRing.Azure),
+        new("lavender", L.Chat.ThemeLavender, AccentRing.Violet),
+        new("rose", L.Chat.ThemeRose, AccentRing.Rose),
+        new("sunset", L.Chat.ThemeSunset, AccentRing.Red),
+        new("sky", L.Chat.ThemeSky, AccentRing.Cyan),
+        new("slate", L.Chat.ThemeSlate, AccentRing.Slate),
     };
 
     private static readonly SocialInk?[] InkCache = new SocialInk?[All.Length];
@@ -60,7 +61,16 @@ internal static class MessageThemes
         return 0;
     }
 
-    public static MessageTheme Resolve(string id) => All[IndexOf(id)];
+    public static ChatTheme Resolve(string id, string fallbackId)
+    {
+        var index = id.Length > 0 ? IndexOf(id) : IndexOf(fallbackId);
+        return All[index];
+    }
+
+    public static ChatTheme Resolve(string id) => All[IndexOf(id)];
+
+    public static ChatBubbleStyle BubbleStyleFor(in ChatTheme theme) =>
+        new(theme.OutgoingBubble, OutgoingInk, IncomingBubble, IncomingInk, BubbleRounding, tails: true);
 
     public static AppPalette PaletteFor(string id)
     {

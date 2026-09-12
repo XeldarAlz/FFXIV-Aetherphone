@@ -114,14 +114,14 @@ internal sealed partial class MessageApp
             DrawHintParagraph(Loc.T(L.Message.ChatThemeHint), width);
             var previewOrigin = ImGui.GetCursorScreenPos();
             var previewRect = new Rect(previewOrigin, new Vector2(previewOrigin.X + width, previewOrigin.Y + PreviewHeight * scale));
-            DrawChatPreview(drawList, previewRect, MessageWallpapers.Effective(configuration, string.Empty),
+            DrawChatPreview(drawList, previewRect, ChatWallpapers.Effective(configuration.MessageChatWallpapers, configuration.MessageWallpaper,string.Empty),
                 configuration.MessageWallpaperPattern, activeTheme);
             ImGui.SetCursorScreenPos(previewOrigin);
             ImGui.Dummy(new Vector2(width, previewRect.Height + Metrics.Space.Lg * scale));
 
             var gridOrigin = ImGui.GetCursorScreenPos();
             var cellWidth = width / SwatchColumns;
-            var themes = MessageThemes.All;
+            var themes = ChatThemes.All;
             var rows = (themes.Length + SwatchColumns - 1) / SwatchColumns;
             for (var index = 0; index < themes.Length; index++)
             {
@@ -172,10 +172,10 @@ internal sealed partial class MessageApp
     }
 
     private void DrawChatPreview(ImDrawListPtr drawList, Rect rect, string wallpaperId, bool pattern,
-        in MessageTheme previewTheme)
+        in ChatTheme previewTheme)
     {
         var scale = UiScale.Current;
-        MessageWallpapers.Paint(drawList, rect, wallpaperId, pattern, wallpaperImages);
+        ChatWallpapers.Paint(drawList, rect, wallpaperId, pattern, wallpaperImages);
         Squircle.Stroke(drawList, rect.Min, rect.Max, 0f, ImGui.GetColorU32(ui.Palette.CardStroke), 1f);
         var pad = PreviewPad * scale;
         var maxBubbleWidth = rect.Width * 0.72f;
@@ -183,10 +183,10 @@ internal sealed partial class MessageApp
         var outgoing = Loc.T(L.Message.PreviewOutgoing);
         var incomingTop = rect.Min.Y + pad;
         var incomingBottom = DrawPreviewBubble(drawList, new Vector2(rect.Min.X + pad, incomingTop), incoming,
-            MessageThemes.IncomingBubble, MessageThemes.IncomingInk, maxBubbleWidth, false, rect.Max.X - pad);
+            ChatThemes.IncomingBubble, ChatThemes.IncomingInk, maxBubbleWidth, false, rect.Max.X - pad);
         var outgoingTop = incomingBottom + PreviewBubbleGap * scale;
         DrawPreviewBubble(drawList, new Vector2(rect.Max.X - pad, outgoingTop), outgoing,
-            previewTheme.OutgoingBubble, MessageThemes.OutgoingInk, maxBubbleWidth, true, rect.Max.X - pad);
+            previewTheme.OutgoingBubble, ChatThemes.OutgoingInk, maxBubbleWidth, true, rect.Max.X - pad);
     }
 
     private float DrawPreviewBubble(ImDrawListPtr drawList, Vector2 anchor, string text, Vector4 fill, Vector4 textInk,
@@ -232,7 +232,7 @@ internal sealed partial class MessageApp
         var scoped = conversationId.Length > 0;
         DrawScreenHeader(area, Loc.T(L.Message.Wallpaper));
         var top = area.Min.Y + AppHeader.Height * scale;
-        var current = MessageWallpapers.Effective(configuration, conversationId);
+        var current = ChatWallpapers.Effective(configuration.MessageChatWallpapers, configuration.MessageWallpaper,conversationId);
         var hasOverride = scoped && configuration.MessageChatWallpapers.ContainsKey(conversationId);
         using (AppSurface.Begin(new Rect(new Vector2(area.Min.X, top), area.Max)))
         {
@@ -281,9 +281,9 @@ internal sealed partial class MessageApp
         var gap = WallpaperTileGap * scale;
         var tileWidth = (width - gap * (WallpaperColumns - 1)) / WallpaperColumns;
         var tileHeight = WallpaperTileHeight * scale;
-        var colors = MessageWallpapers.Colors;
+        var colors = ChatWallpapers.Colors;
         var rows = (colors.Length + WallpaperColumns - 1) / WallpaperColumns;
-        var selectedIsColor = !MessageWallpapers.IsPhoto(current);
+        var selectedIsColor = !ChatWallpapers.IsPhoto(current);
         for (var index = 0; index < colors.Length; index++)
         {
             var column = index % WallpaperColumns;
@@ -335,7 +335,7 @@ internal sealed partial class MessageApp
         var scrollY = ImGui.GetScrollY();
         var viewHeight = ImGui.GetWindowSize().Y;
         var windowTop = ImGui.GetWindowPos().Y;
-        var selectedPath = MessageWallpapers.PhotoPath(current);
+        var selectedPath = ChatWallpapers.PhotoPath(current);
         for (var index = 0; index < wallpaperPhotos.Length; index++)
         {
             var column = index % PhotoColumns;
@@ -378,7 +378,7 @@ internal sealed partial class MessageApp
 
             if (UiInteract.Click(min, max, hovered))
             {
-                SetWallpaper(conversationId, MessageWallpapers.PhotoId(wallpaperPhotos[index]));
+                SetWallpaper(conversationId, ChatWallpapers.PhotoId(wallpaperPhotos[index]));
             }
         }
 

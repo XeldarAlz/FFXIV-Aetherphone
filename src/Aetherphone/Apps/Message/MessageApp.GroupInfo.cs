@@ -126,7 +126,7 @@ internal sealed partial class MessageApp
             {
                 var badgeCenter = avatarCenter + new Vector2(radius * 0.7f, radius * 0.7f);
                 drawList.AddCircleFilled(badgeCenter, GroupCameraBadgeRadius * scale + 2f * scale,
-                    ImGui.GetColorU32(MessageThemes.Body), 24);
+                    ImGui.GetColorU32(ChatThemes.Body), 24);
                 drawList.AddCircleFilled(badgeCenter, GroupCameraBadgeRadius * scale, ImGui.GetColorU32(ui.Accent), 24);
                 PhoneIcon.Draw(drawList, badgeCenter, PhoneIcons.Camera, White, GroupCameraGlyph * scale);
                 HoverTooltip.Show(new Rect(avatarCenter - avatarExtent, avatarCenter + avatarExtent),

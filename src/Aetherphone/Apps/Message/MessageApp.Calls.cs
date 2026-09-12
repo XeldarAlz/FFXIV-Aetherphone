@@ -536,7 +536,7 @@ internal sealed partial class MessageApp
         var frost = Palette.WithAlpha(ui.TitleInk, 0.16f);
         var labelColor = Palette.WithAlpha(ui.TitleInk, 0.72f);
         var muteFill = view.Muted ? White : frost;
-        var muteInk = view.Muted ? MessageThemes.Body : ui.TitleInk;
+        var muteInk = view.Muted ? ChatThemes.Body : ui.TitleInk;
         if (ControlButton(new Vector2(centerX - spacing, controlsY), 27f * scale,
                 view.Muted ? PhoneIcons.MicrophoneOff : PhoneIcons.Microphone, muteFill, muteInk,
                 Loc.T(L.Message.MuteAction), labelColor, 24f, true))

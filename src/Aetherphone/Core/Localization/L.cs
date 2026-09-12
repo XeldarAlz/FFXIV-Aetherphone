@@ -693,14 +693,6 @@ internal static class L
         public static readonly LocString WallpaperColors = new("message.wallpaperColors", "Colors");
         public static readonly LocString WallpaperPhotos = new("message.wallpaperPhotos", "My photos");
         public static readonly LocString WallpaperPattern = new("message.wallpaperPattern", "Show pattern");
-        public static readonly LocString ThemeChocobo = new("message.themeChocobo", "Chocobo");
-        public static readonly LocString ThemeEmerald = new("message.themeEmerald", "Emerald");
-        public static readonly LocString ThemeOcean = new("message.themeOcean", "Ocean");
-        public static readonly LocString ThemeLavender = new("message.themeLavender", "Lavender");
-        public static readonly LocString ThemeRose = new("message.themeRose", "Rose");
-        public static readonly LocString ThemeSunset = new("message.themeSunset", "Sunset");
-        public static readonly LocString ThemeSky = new("message.themeSky", "Sky");
-        public static readonly LocString ThemeSlate = new("message.themeSlate", "Slate");
         public static readonly LocString PreviewIncoming = new("message.previewIncoming", "Are you around for the raid tonight?");
         public static readonly LocString PreviewOutgoing = new("message.previewOutgoing", "On my way, see you at the plaza!");
         public static readonly LocString Recent = new("message.recent", "Recent");
@@ -736,6 +728,19 @@ internal static class L
         public static readonly LocString PopoutSwitch = new("message.popoutSwitch", "Switch conversation");
         public static readonly LocString PopoutSignedOut = new("message.popoutSignedOut", "Sign in on the phone to keep chatting here.");
         public static readonly LocString OpensSettings = new("message.opensSettings", "Notifications, privacy and calls are managed in the Settings app.");
+    }
+
+    internal static class Chat
+    {
+        public static readonly LocString ThemeChocobo = new("chat.themeChocobo", "Chocobo");
+        public static readonly LocString ThemeLeaf = new("chat.themeLeaf", "Leaf");
+        public static readonly LocString ThemeEmerald = new("chat.themeEmerald", "Emerald");
+        public static readonly LocString ThemeOcean = new("chat.themeOcean", "Ocean");
+        public static readonly LocString ThemeLavender = new("chat.themeLavender", "Lavender");
+        public static readonly LocString ThemeRose = new("chat.themeRose", "Rose");
+        public static readonly LocString ThemeSunset = new("chat.themeSunset", "Sunset");
+        public static readonly LocString ThemeSky = new("chat.themeSky", "Sky");
+        public static readonly LocString ThemeSlate = new("chat.themeSlate", "Slate");
     }
 
     internal static class FindPeople

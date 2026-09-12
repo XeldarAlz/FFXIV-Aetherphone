@@ -56,7 +56,7 @@ internal sealed partial class MessageApp
 
         protected override Action BackAction => app.back;
 
-        protected override MessageTheme ChatTheme => app.activeTheme;
+        protected override ChatTheme ChatTheme => app.activeTheme;
 
         protected override ChatMenuModel BuildMenuModel()
         {
@@ -214,16 +214,6 @@ internal sealed partial class MessageApp
                 app.router.Push(MessageRoute.Contact(conversation.OtherUserId));
             }
         }
-    }
-
-    private Rect PaintHeaderBand(Rect area)
-    {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        var band = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + AppHeader.Height * scale));
-        ui.PaintGradient(drawList, band, screenRect, 0f);
-        drawList.AddLine(new Vector2(band.Min.X, band.Max.Y), band.Max, ImGui.GetColorU32(ui.Hairline), 1f);
-        return band;
     }
 
     private void OpenThreadSheet(ConversationDto conversation)

@@ -362,7 +362,7 @@ internal sealed partial class MessageApp
             Squircle.Fill(drawList, badgeMin, badgeMax, badgeRadius,
                 ImGui.GetColorU32(item.Muted ? ink.MutedInk : activeTheme.Badge));
             Typography.DrawCentered(drawList, (badgeMin + badgeMax) * 0.5f, label,
-                item.Muted ? MessageThemes.Body : White, UnreadCountStyle);
+                item.Muted ? ChatThemes.Body : White, UnreadCountStyle);
             right = badgeMin.X - RowTrailingGap * scale;
         }
 

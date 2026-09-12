@@ -120,6 +120,13 @@ OUTLINE = [
     ("ExternalLink", "external-link"),
     ("LibraryPhoto", "library-photo"),
     ("ArrowsSort", "arrows-sort"),
+    ("Link", "link"),
+    ("LayoutList", "layout-list"),
+    ("TextSize", "text-size"),
+    ("Download", "download"),
+    ("Eye", "eye"),
+    ("DeviceMobile", "device-mobile"),
+    ("ChevronUp", "chevron-up"),
 ]
 
 FILLED = [
