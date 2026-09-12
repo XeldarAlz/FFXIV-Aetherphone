@@ -90,6 +90,7 @@ internal static class Slider
         drawList.AddCircleFilled(knobCenter, knobSize, ImGui.GetColorU32(KnobInk), 24);
         if (hovered || dragging)
         {
+            UiInteract.ReportGestureSurface();
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
