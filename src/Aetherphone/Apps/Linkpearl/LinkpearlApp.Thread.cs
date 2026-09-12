@@ -12,7 +12,7 @@ internal sealed partial class LinkpearlApp
     private const float ThreadAvatarGap = 6f;
     private const float ThreadNameGap = 10f;
     private const float ThreadBackInset = 12f;
-    private const int ThreadHeaderSlots = 3;
+    private const int ThreadHeaderSlots = 2;
     private const float PopoutMarkRadius = 3.5f;
     private const float PopoutMarkOffset = 10f;
 
@@ -70,14 +70,8 @@ internal sealed partial class LinkpearlApp
             OpenConversationSheet(row, true);
         }
 
-        if (chrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(header, 1), PhoneIcons.Search,
-                Loc.T(L.Common.Search), chatThread.SearchOpen))
-        {
-            chatThread.ToggleSearch();
-        }
-
         var bubbles = row.Density == ChatDensity.Bubbles;
-        if (chrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(header, 2),
+        if (chrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(header, 1),
                 bubbles ? PhoneIcons.LayoutList : PhoneIcons.MessageCircle,
                 Loc.T(bubbles ? L.Linkpearl.ShowAsLog : L.Linkpearl.ShowAsBubbles)))
         {
