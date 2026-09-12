@@ -133,6 +133,13 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool CameraFlash { get; set; } = true;
     public bool CameraShowUi { get; set; }
     public int PhotosSegment { get; set; }
+    public int PhotosSortKey { get; set; }
+    public bool PhotosSortAscending { get; set; }
+    public int PhotosFilter { get; set; }
+    public int PhotosGridColumns { get; set; }
+    public bool PhotosAspectGrid { get; set; }
+    public bool PhotosMonthlyAlbums { get; set; }
+    public bool PhotosMonthlyAlbumsAsked { get; set; }
     public string Language { get; set; } = string.Empty;
     public string TranslationTargetLanguage { get; set; } = string.Empty;
     public bool TranslationDisclosureSeen { get; set; }
@@ -282,6 +289,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public List<RadioStationRecord> RadioFavorites { get; set; } = new();
     public List<string> CustomAlbumOrder { get; set; } = new();
     public Dictionary<string, List<string>> CustomAlbumPhotos { get; set; } = new();
+    public List<string> PhotoFavorites { get; set; } = new();
     public const int VelvetGateVersion = 1;
     public const int VelvetOnboardVersion = 3;
     public bool VelvetAcknowledgedGate { get; set; }

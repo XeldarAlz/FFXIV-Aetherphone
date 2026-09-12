@@ -2,12 +2,18 @@ namespace Aetherphone.Core.Photos;
 
 internal sealed class PhotoLibrary
 {
+    public const int TrashRetentionDays = 30;
+
+    private const int FreeNameAttempts = 100;
+
     private static readonly string[] Extensions = { ".png", ".jpg", ".jpeg", ".gif" };
     private readonly string directory;
+    private readonly string trashDirectory;
 
     public PhotoLibrary(DirectoryInfo configDirectory)
     {
         directory = Path.Combine(configDirectory.FullName, "Photos");
+        trashDirectory = Path.Combine(directory, ".trash");
         Directory.CreateDirectory(directory);
     }
 
@@ -37,8 +43,7 @@ internal sealed class PhotoLibrary
 
     private string? FreePath(DateTime stamp, string extension)
     {
-        const int attemptLimit = 100;
-        for (var attempt = 0; attempt < attemptLimit; attempt++)
+        for (var attempt = 0; attempt < FreeNameAttempts; attempt++)
         {
             var candidate = Path.Combine(directory,
                 $"AEP_{stamp.AddMilliseconds(attempt):yyyyMMdd_HHmmss_fff}{extension}");
@@ -52,9 +57,13 @@ internal sealed class PhotoLibrary
         return null;
     }
 
-    public string[] List()
+    public string[] List() => ListIn(directory);
+
+    public string[] ListTrash() => ListIn(trashDirectory);
+
+    private static string[] ListIn(string folder)
     {
-        if (!Directory.Exists(directory))
+        if (!Directory.Exists(folder))
         {
             return Array.Empty<string>();
         }
@@ -62,7 +71,7 @@ internal sealed class PhotoLibrary
         var files = new List<string>();
         for (var index = 0; index < Extensions.Length; index++)
         {
-            files.AddRange(Directory.GetFiles(directory, "*" + Extensions[index]));
+            files.AddRange(Directory.GetFiles(folder, "*" + Extensions[index]));
         }
 
         var result = files.ToArray();
@@ -92,7 +101,7 @@ internal sealed class PhotoLibrary
         }
 
         var extension = Path.GetExtension(sourcePath).ToLowerInvariant();
-        for (var attempt = 0; attempt < 100; attempt++)
+        for (var attempt = 0; attempt < FreeNameAttempts; attempt++)
         {
             var stamp = takenLocal.AddMilliseconds(attempt);
             var target = Path.Combine(directory, $"AEP_{stamp:yyyyMMdd_HHmmss_fff}{extension}");
@@ -130,8 +139,51 @@ internal sealed class PhotoLibrary
     {
         try
         {
-            File.Delete(path);
-            var thumbnail = ThumbnailPathFor(path);
+            Directory.CreateDirectory(trashDirectory);
+            var target = FreeSibling(trashDirectory, Path.GetFileName(path));
+            File.Move(path, target);
+            File.SetCreationTimeUtc(target, DateTime.UtcNow);
+        }
+        catch (Exception exception)
+        {
+            Plugin.Log.Error(exception, "[Photos] failed to move a photo to Recently Deleted");
+        }
+    }
+
+    public DateTime ExpiresAt(string trashPath)
+    {
+        try
+        {
+            return File.GetCreationTime(trashPath).AddDays(TrashRetentionDays);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, $"[Photos] could not read when {Path.GetFileName(trashPath)} was deleted");
+            return DateTime.Now;
+        }
+    }
+
+    public string? Restore(string trashPath)
+    {
+        try
+        {
+            var target = FreeSibling(directory, Path.GetFileName(trashPath));
+            File.Move(trashPath, target);
+            return target;
+        }
+        catch (Exception exception)
+        {
+            Plugin.Log.Error(exception, "[Photos] failed to recover a photo");
+            return null;
+        }
+    }
+
+    public void DeletePermanently(string trashPath)
+    {
+        try
+        {
+            File.Delete(trashPath);
+            var thumbnail = ThumbnailPathFor(trashPath);
             if (File.Exists(thumbnail))
             {
                 File.Delete(thumbnail);
@@ -139,8 +191,54 @@ internal sealed class PhotoLibrary
         }
         catch (Exception exception)
         {
-            Plugin.Log.Error(exception, "[Photos] failed to delete photo");
+            Plugin.Log.Error(exception, "[Photos] failed to delete a photo");
         }
+    }
+
+    public void PurgeExpired()
+    {
+        var trashed = ListTrash();
+        var now = DateTime.UtcNow;
+        for (var index = 0; index < trashed.Length; index++)
+        {
+            DateTime deletedAt;
+            try
+            {
+                deletedAt = File.GetCreationTimeUtc(trashed[index]);
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning(exception, $"[Photos] could not read when {Path.GetFileName(trashed[index])} was deleted");
+                continue;
+            }
+
+            if (now - deletedAt >= TimeSpan.FromDays(TrashRetentionDays))
+            {
+                DeletePermanently(trashed[index]);
+            }
+        }
+    }
+
+    private static string FreeSibling(string folder, string fileName)
+    {
+        var candidate = Path.Combine(folder, fileName);
+        if (!File.Exists(candidate))
+        {
+            return candidate;
+        }
+
+        var stem = Path.GetFileNameWithoutExtension(fileName);
+        var extension = Path.GetExtension(fileName);
+        for (var attempt = 1; attempt < FreeNameAttempts; attempt++)
+        {
+            candidate = Path.Combine(folder, $"{stem}-{attempt}{extension}");
+            if (!File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return Path.Combine(folder, $"{stem}-{Guid.NewGuid():N}{extension}");
     }
 
     private static bool Write(string path, byte[] pixels, int width, int height)

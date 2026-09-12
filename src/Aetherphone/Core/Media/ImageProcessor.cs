@@ -292,6 +292,13 @@ internal static class ImageProcessor
         return (info.Width, info.Height);
     }
 
+    public static (int Width, int Height) IdentifyDimensions(string path)
+    {
+        using var stream = File.OpenRead(path);
+        var info = Image.Identify(stream);
+        return (info.Width, info.Height);
+    }
+
     public static async Task<AnimatedImage> DecodeAnimationAsync(ITextureProvider textures, byte[] bytes,
         AnimationKind kind, string tag, int maxDimension, CancellationToken token)
     {

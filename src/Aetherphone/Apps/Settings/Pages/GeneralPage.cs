@@ -35,11 +35,13 @@ internal sealed class GeneralPage : ISettingsPage
         {
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
             var translationRow = translation.Enabled ? 1 : 0;
-            var card = GroupCard.Begin(theme, 6 + translationRow);
+            var card = GroupCard.Begin(theme, 7 + translationRow);
             var showInGpose = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ShowInGpose),
                 configuration.ShowInGpose, theme, null, Loc.T(L.Settings.ShowInGposeHint));
             var importScreenshots = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ImportScreenshots),
                 configuration.ImportScreenshots, theme, null, Loc.T(L.Settings.ImportScreenshotsHint));
+            var monthlyAlbums = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.MonthlyAlbums),
+                configuration.PhotosMonthlyAlbums, theme, null, Loc.T(L.Settings.MonthlyAlbumsHint));
             var usesNativeFileDialog = configuration.UseNativeFileDialog ?? NativeFileDialog.IsSupported;
             var nativeFileDialog = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.NativeFileDialog),
                 usesNativeFileDialog, theme, null, Loc.T(L.Settings.NativeFileDialogHint));
@@ -72,6 +74,13 @@ internal sealed class GeneralPage : ISettingsPage
             if (importScreenshots != configuration.ImportScreenshots)
             {
                 configuration.ImportScreenshots = importScreenshots;
+                configuration.Save();
+            }
+
+            if (monthlyAlbums != configuration.PhotosMonthlyAlbums)
+            {
+                configuration.PhotosMonthlyAlbums = monthlyAlbums;
+                configuration.PhotosMonthlyAlbumsAsked = true;
                 configuration.Save();
             }
 

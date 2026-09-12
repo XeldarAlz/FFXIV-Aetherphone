@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
@@ -16,18 +17,21 @@ namespace Aetherphone.Apps.Photos;
 
 internal sealed partial class PhotosApp : IPhoneApp
 {
-    private const int Columns = 3;
+    private const int DefaultColumns = 3;
+    private const int MinColumns = 2;
+    private const int MaxColumns = 5;
     private const int ThumbnailMaxDimension = 256;
     private const long ThumbnailBudgetBytes = 48L * 1024 * 1024;
     private const long FullImageBudgetBytes = 96L * 1024 * 1024;
-    private const float SegmentHeight = 34f;
-    private const int FirstCustomAlbumId = 2;
+    private const int FirstCustomAlbumId = 100;
 
     public string Id => "photos";
     public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Photos);
     public string Glyph => "P";
     public int BadgeCount => 0;
+
+    private static readonly SocialInk Ink = new(AppPalettes.Photos);
 
     private readonly PhotoLibrary library;
     private readonly ConfirmService confirm;
@@ -43,36 +47,68 @@ internal sealed partial class PhotosApp : IPhoneApp
     private readonly ViewRouter<PhotoView> router;
     private readonly RouterDraw<PhotoView> drawView;
     private readonly Action back;
+    private readonly Action<Rect> drawNameSheet;
     private readonly List<MonthAlbum> albums = new();
     private readonly List<GridBand> bands = new();
-    private readonly string[] segmentLabels = new string[2];
     private readonly List<CustomAlbum> customAlbums = new();
     private readonly List<string> customAlbumOrder = new();
     private readonly Dictionary<string, List<string>> customAlbumPhotos = new(StringComparer.OrdinalIgnoreCase);
-    private readonly DropdownMenu albumMenu = new();
     private readonly Dictionary<string, int> customAlbumIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<int, string[]> cachedCustomAlbumPaths = new();
-    private int nextCustomAlbumId = FirstCustomAlbumId;
-    private string newAlbumDraft = string.Empty;
-    private string renameAlbumDraft = string.Empty;
     private readonly List<string> pickerSelection = new();
-    private DropdownMenu.Item[]? customAlbumMenuItemsCache;
-    private string? customAlbumMenuItemsLocale;
-    private int? pickerMembershipAlbumKey;
     private readonly HashSet<string> pickerMembership = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> pickerSelectionOrder = new(StringComparer.OrdinalIgnoreCase);
-    private DropdownMenu.Item[]? photoMenuItemsCache;
-    private string? photoMenuItemsLocale;
-    private string? photoMenuKey;
+    private readonly HashSet<string> favorites = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> selection = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> selectionOrder = new();
+    private readonly BottomTabBar tabs = new();
+    private readonly NavTab[] navTabs = new NavTab[2];
+    private readonly PanRail monthsRail = new();
+    private readonly ActionSheet albumSheet = new();
+    private readonly ActionSheet.Item[] albumSheetItems = new ActionSheet.Item[AlbumSheetItemCount];
+    private readonly ActionSheet photoSheet = new();
+    private readonly ActionSheet.Item[] photoSheetItems = new ActionSheet.Item[1];
+    private readonly SheetSurface nameSheet = new("photos.albumName");
+    private readonly DropdownMenu sortMenu = new();
+    private readonly DropdownMenu.Item[] sortMenuItems = new DropdownMenu.Item[SortMenuItemCount];
+    private readonly Dictionary<string, long> sizeCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, long> pixelCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Comparison<PhotoEntry> compareEntries;
+    private readonly Comparison<string> comparePaths;
+    private readonly Dictionary<string, DateTime> trashExpiry = new(StringComparer.OrdinalIgnoreCase);
+    private readonly string[] daysLeftLabels = new string[PhotoLibrary.TrashRetentionDays + 1];
+    private string daysLeftLocale = string.Empty;
+    private bool scanningDimensions;
+    private readonly SheetSurface infoSheet = new("photos.info");
+    private readonly Action<Rect> drawInfoSheet;
+    private readonly ActionSheet trashSheet = new();
+    private readonly ActionSheet.Item[] trashSheetItems = new ActionSheet.Item[TrashSheetItemCount];
+    private int nextCustomAlbumId = FirstCustomAlbumId;
+    private int? pickerMembershipAlbumKey;
+    private int albumSheetKey;
+    private int photoSheetAlbumKey;
+    private string photoSheetPath = string.Empty;
+    private NameSheetMode nameSheetMode;
+    private int nameSheetAlbumKey;
+    private string[]? nameSheetPhotoPaths;
+    private string nameDraft = string.Empty;
+    private bool nameSheetFocus;
+    private string albumsLocale = string.Empty;
 
     private PhotoEntry[] entries = Array.Empty<PhotoEntry>();
     private string[] viewerPaths = Array.Empty<string>();
+    private string[] favoritePaths = Array.Empty<string>();
+    private string[] trashPaths = Array.Empty<string>();
+    private string[] addTargets = Array.Empty<string>();
+    private bool viewerInTrash;
+    private bool selecting;
+    private SelectionScope selectionScope;
     private int viewerIndex;
     private int segment;
     private bool resetScroll;
-    private bool focusAlbumName;
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
+    private Rect frameScreen;
 
     public PhotosApp(PhotoLibrary library, ConfirmService confirm, ShareService share, Configuration configuration)
     {
@@ -82,25 +118,47 @@ internal sealed partial class PhotosApp : IPhoneApp
         this.configuration = configuration;
         router = new ViewRouter<PhotoView>(PhotoView.Grid());
         drawView = DrawView;
+        drawNameSheet = DrawNameSheetContent;
+        drawInfoSheet = DrawInfoSheetContent;
+        compareEntries = CompareEntries;
+        comparePaths = ComparePaths;
         back = () => router.Pop();
         LoadCustomAlbums();
+        LoadFavorites();
     }
 
     public void OnOpened()
     {
         router.Reset();
-        segment = Math.Clamp(configuration.PhotosSegment, 0, 1);
+        segment = Math.Clamp(configuration.PhotosSegment, LibraryTab, AlbumsTab);
         viewerPaths = Array.Empty<string>();
         viewerIndex = 0;
         resetScroll = true;
+        viewerInTrash = false;
+        addTargets = Array.Empty<string>();
+        monthsRail.Reset();
+        EndSelect();
+        CloseSheets();
         LoadCustomAlbums();
+        LoadFavorites();
         Refresh();
     }
 
     public void OnClosed()
     {
         editSession.Close();
+        CloseSheets();
         router.Reset();
+    }
+
+    private void CloseSheets()
+    {
+        albumSheet.Close();
+        photoSheet.Close();
+        nameSheet.Close();
+        sortMenu.Close();
+        trashSheet.Close();
+        infoSheet.Close();
     }
 
     public void Draw(in PhoneContext context)
@@ -113,12 +171,32 @@ internal sealed partial class PhotosApp : IPhoneApp
             router.Pop(false);
         }
 
-        albumMenu.Gate();
+        if (!string.Equals(albumsLocale, Loc.Current.Code, StringComparison.Ordinal))
+        {
+            BuildAlbums();
+        }
+
+        albumSheet.Gate();
+        photoSheet.Gate();
+        sortMenu.Gate();
+        trashSheet.Gate();
 
         var scale = UiScale.Current;
         var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
+        frameScreen = screen;
         ui.Backdrop(screen);
-        router.Draw(screen, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        using (InputShield.Engage(nameSheet.CapturesPointer || infoSheet.CapturesPointer))
+        {
+            router.Draw(screen, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        }
+
+        DrawSortMenu(screen);
+        DrawAlbumSheet(screen);
+        DrawPhotoSheet(screen);
+        DrawTrashSheet(screen);
+        var sheetArea = AppAreaWithin(screen);
+        DrawNameSheet(sheetArea);
+        DrawInfoSheet(sheetArea);
     }
 
     private void DrawView(PhotoView view, Rect area, int depth)
@@ -135,20 +213,8 @@ internal sealed partial class PhotosApp : IPhoneApp
             return;
         }
 
-        var content = ContentWithin(area);
+        var content = AppAreaWithin(area);
         ui.Body(content);
-        if (view.Route == PhotoRoute.CreateAlbum)
-        {
-            DrawCreateAlbumPage(content);
-            return;
-        }
-
-        if (view.Route == PhotoRoute.RenameAlbum)
-        {
-            DrawRenameAlbumPage(content, view.AlbumKey);
-            return;
-        }
-
         if (view.Route == PhotoRoute.AlbumPicker)
         {
             DrawAlbumPicker(content, view.AlbumKey);
@@ -180,21 +246,31 @@ internal sealed partial class PhotosApp : IPhoneApp
         return new Rect(min, max);
     }
 
-    private void DrawNavBar(Rect area, string title, Action? onBack, float rightReserve = 0f) =>
-        AppHeader.DrawNavBar(area, "photos.back", title, ui.TitleInk, onBack, rightReserve);
+    private Rect AppAreaWithin(Rect screen)
+    {
+        var scale = UiScale.Current;
+        return new Rect(new Vector2(screen.Min.X, screen.Min.Y + frameTheme.TopZoneHeight * scale),
+            new Vector2(screen.Max.X, screen.Max.Y - frameTheme.BottomZoneHeight * scale));
+    }
 
     private void Refresh()
     {
         var paths = library.List();
         var pathSet = new HashSet<string>(paths, StringComparer.OrdinalIgnoreCase);
-        var built = new PhotoEntry[paths.Length];
-        for (var index = 0; index < paths.Length; index++)
+        var visible = FilteredPaths(paths);
+        var built = new PhotoEntry[visible.Length];
+        for (var index = 0; index < visible.Length; index++)
         {
-            built[index] = new PhotoEntry(paths[index], ResolveTaken(paths[index]));
+            built[index] = MetadataFor(visible[index]);
         }
 
-        Array.Sort(built, static (left, right) => right.Taken.CompareTo(left.Taken));
+        Array.Sort(built, compareEntries);
         entries = built;
+        if (SortKey == PhotoSortKey.Dimensions)
+        {
+            ScanMissingDimensions(visible);
+        }
+
         BuildAlbums();
         var pruned = PruneCustomAlbumPaths(pathSet);
         BuildCustomAlbums();
@@ -202,6 +278,15 @@ internal sealed partial class PhotosApp : IPhoneApp
         {
             SaveCustomAlbums();
         }
+
+        if (PruneFavorites(pathSet))
+        {
+            SaveFavorites();
+        }
+
+        BuildFavorites();
+        library.PurgeExpired();
+        RefreshTrash();
     }
     
     private bool PruneCustomAlbumPaths(HashSet<string> validPaths)
@@ -252,6 +337,12 @@ internal sealed partial class PhotosApp : IPhoneApp
     private void BuildAlbums()
     {
         albums.Clear();
+        albumsLocale = Loc.Current.Code;
+        if (SortKey != PhotoSortKey.Date)
+        {
+            return;
+        }
+
         var index = 0;
         while (index < entries.Length)
         {
@@ -269,7 +360,8 @@ internal sealed partial class PhotosApp : IPhoneApp
                 index++;
             }
 
-            albums.Add(new MonthAlbum(key, start, index - start, new DateTime(taken.Year, taken.Month, 1)));
+            var month = new DateTime(taken.Year, taken.Month, 1);
+            albums.Add(new MonthAlbum(key, start, index - start, Capitalize(month.ToString("MMMM yyyy", Loc.Culture))));
         }
     }
     
@@ -303,21 +395,24 @@ internal sealed partial class PhotosApp : IPhoneApp
         return false;
     }
     
-    private void CreateCustomAlbumInternal(string name)
+    private int CreateCustomAlbumInternal(string name)
     {
         name = name.Trim();
         if (name.Length == 0)
         {
-            return;
+            return 0;
         }
+
         if (ContainsOrdinalIgnoreCase(customAlbumOrder, name))
         {
-            return;
+            return 0;
         }
+
         customAlbumOrder.Add(name);
         customAlbumPhotos[name] = new List<string>();
         BuildCustomAlbums();
         SaveCustomAlbums();
+        return -GetOrAssignCustomAlbumId(name);
     }
 
     private void DeleteCustomAlbumInternal(int key)
@@ -418,14 +513,197 @@ internal sealed partial class PhotosApp : IPhoneApp
             return Array.Empty<string>();
         }
         var sorted = unordered.ToArray();
-        Array.Sort(sorted, static (left, right) =>
-        {
-            var takenLeft = ResolveTaken(left);
-            var takenRight = ResolveTaken(right);
-            return takenRight.CompareTo(takenLeft);
-        });
+        Array.Sort(sorted, comparePaths);
         return sorted;
     }
+
+    private PhotoSortKey SortKey =>
+        (PhotoSortKey)Math.Clamp(configuration.PhotosSortKey, 0, (int)PhotoSortKey.Dimensions);
+
+    private PhotoFilter Filter => (PhotoFilter)Math.Clamp(configuration.PhotosFilter, 0, (int)PhotoFilter.NotInAlbum);
+
+    private int Columns => Math.Clamp(configuration.PhotosGridColumns == 0 ? DefaultColumns : configuration.PhotosGridColumns,
+        MinColumns, MaxColumns);
+
+    private string[] FilteredPaths(string[] paths)
+    {
+        var filter = Filter;
+        if (filter == PhotoFilter.All)
+        {
+            return paths;
+        }
+
+        var kept = new List<string>(paths.Length);
+        if (filter == PhotoFilter.Favorites)
+        {
+            for (var index = 0; index < paths.Length; index++)
+            {
+                if (favorites.Contains(paths[index]))
+                {
+                    kept.Add(paths[index]);
+                }
+            }
+
+            return kept.ToArray();
+        }
+
+        var inAlbums = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var photos in customAlbumPhotos.Values)
+        {
+            inAlbums.UnionWith(photos);
+        }
+
+        for (var index = 0; index < paths.Length; index++)
+        {
+            if (!inAlbums.Contains(paths[index]))
+            {
+                kept.Add(paths[index]);
+            }
+        }
+
+        return kept.ToArray();
+    }
+
+    private int DaysLeft(string trashPath)
+    {
+        if (!trashExpiry.TryGetValue(trashPath, out var expiry))
+        {
+            return 0;
+        }
+
+        var days = (int)Math.Ceiling((expiry - DateTime.Now).TotalDays);
+        return Math.Clamp(days, 0, PhotoLibrary.TrashRetentionDays);
+    }
+
+    private string DaysLeftLabel(int days)
+    {
+        if (!string.Equals(daysLeftLocale, Loc.Current.Code, StringComparison.Ordinal))
+        {
+            Array.Clear(daysLeftLabels);
+            daysLeftLocale = Loc.Current.Code;
+        }
+
+        return daysLeftLabels[days] ??= Loc.Plural(L.Photos.DaysLeft, days);
+    }
+
+    private PhotoEntry MetadataFor(string path) =>
+        new(path, ResolveTaken(path), SizeOf(path), pixelCache.TryGetValue(path, out var pixels) ? pixels : 0L);
+
+    private long SizeOf(string path)
+    {
+        if (sizeCache.TryGetValue(path, out var cached))
+        {
+            return cached;
+        }
+
+        if (SortKey != PhotoSortKey.Size)
+        {
+            return 0L;
+        }
+
+        long size;
+        try
+        {
+            size = new FileInfo(path).Length;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, $"[Photos] could not read the size of {Path.GetFileName(path)}");
+            size = 0L;
+        }
+
+        sizeCache[path] = size;
+        return size;
+    }
+
+    private void ScanMissingDimensions(string[] paths)
+    {
+        if (scanningDimensions)
+        {
+            return;
+        }
+
+        var missing = new List<string>();
+        for (var index = 0; index < paths.Length; index++)
+        {
+            if (!pixelCache.ContainsKey(paths[index]))
+            {
+                missing.Add(paths[index]);
+            }
+        }
+
+        if (missing.Count == 0)
+        {
+            return;
+        }
+
+        scanningDimensions = true;
+        _ = ScanDimensionsAsync(missing);
+    }
+
+    private async Task ScanDimensionsAsync(List<string> paths)
+    {
+        try
+        {
+            await Task.Run(() =>
+            {
+                for (var index = 0; index < paths.Count; index++)
+                {
+                    if (cancellation.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        var (width, height) = ImageProcessor.IdentifyDimensions(paths[index]);
+                        pixelCache[paths[index]] = (long)width * height;
+                    }
+                    catch (Exception exception)
+                    {
+                        pixelCache[paths[index]] = 0L;
+                        AepLog.Warning(exception,
+                            $"[Photos] could not read the dimensions of {Path.GetFileName(paths[index])}");
+                    }
+                }
+            }, cancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await Plugin.Framework.RunOnFrameworkThread(() =>
+        {
+            scanningDimensions = false;
+            if (SortKey == PhotoSortKey.Dimensions)
+            {
+                Refresh();
+            }
+        }).ConfigureAwait(false);
+    }
+
+    private int CompareEntries(PhotoEntry left, PhotoEntry right)
+    {
+        var result = SortKey switch
+        {
+            PhotoSortKey.Name => Path.GetFileName(left.Path.AsSpan())
+                .CompareTo(Path.GetFileName(right.Path.AsSpan()), StringComparison.OrdinalIgnoreCase),
+            PhotoSortKey.Size => left.Size.CompareTo(right.Size),
+            PhotoSortKey.Dimensions => left.Pixels.CompareTo(right.Pixels),
+            _ => 0,
+        };
+        if (result == 0)
+        {
+            result = left.Taken.CompareTo(right.Taken);
+        }
+
+        return configuration.PhotosSortAscending ? result : -result;
+    }
+
+    private int ComparePaths(string left, string right) => CompareEntries(MetadataFor(left), MetadataFor(right));
+
+    private static bool DefaultAscending(PhotoSortKey key) => key == PhotoSortKey.Name;
     
     private void EnsurePickerMembership(int albumKey)
     {
@@ -501,6 +779,7 @@ internal sealed partial class PhotosApp : IPhoneApp
     {
         viewerPaths = SlicePaths(sliceStart, sliceCount);
         viewerIndex = Math.Clamp(absoluteIndex - sliceStart, 0, viewerPaths.Length - 1);
+        viewerInTrash = false;
         zoomView.Reset();
         router.Push(PhotoView.Viewer());
     }
@@ -509,60 +788,9 @@ internal sealed partial class PhotosApp : IPhoneApp
     {
         viewerPaths = paths;
         viewerIndex = Math.Clamp(index, 0, paths.Length - 1);
+        viewerInTrash = false;
         zoomView.Reset();
         router.Push(PhotoView.Viewer());
-    }
-
-    private void AskDelete(string path)
-    {
-        confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Photos.DeleteConfirmMessage),
-            ConfirmLabel = Loc.T(L.Photos.DeleteConfirm),
-            CancelLabel = Loc.T(L.Photos.DeleteCancel),
-            Sheet = true,
-            Confirm = () => DeletePhoto(path),
-        });
-    }
-
-    private void DeletePhoto(string path)
-    {
-        library.Delete(path);
-        if (thumbnails.TryRemove(path, out var thumbWrap))
-        {
-            DeferredDispose.Later(thumbWrap);
-        }
-
-        if (fullImages.TryRemove(path, out var fullWrap))
-        {
-            DeferredDispose.Later(fullWrap);
-        }
-
-        var removedAt = Array.IndexOf(viewerPaths, path);
-        if (removedAt >= 0)
-        {
-            var trimmed = new string[viewerPaths.Length - 1];
-            for (var index = 0; index < removedAt; index++)
-            {
-                trimmed[index] = viewerPaths[index];
-            }
-
-            for (var index = removedAt + 1; index < viewerPaths.Length; index++)
-            {
-                trimmed[index - 1] = viewerPaths[index];
-            }
-
-            viewerPaths = trimmed;
-        }
-
-        Refresh();
-        if (viewerPaths.Length == 0)
-        {
-            router.Pop(false);
-            return;
-        }
-
-        viewerIndex = Math.Clamp(removedAt >= 0 ? removedAt : viewerIndex, 0, viewerPaths.Length - 1);
     }
 
     private static DateTime ResolveTaken(string path)
@@ -709,15 +937,34 @@ internal sealed partial class PhotosApp : IPhoneApp
         cancellation.Dispose();
     }
 
+    private enum PhotoSortKey : byte
+    {
+        Date,
+        Name,
+        Size,
+        Dimensions,
+    }
+
+    private enum PhotoFilter : byte
+    {
+        All,
+        Favorites,
+        NotInAlbum,
+    }
+
     private readonly struct PhotoEntry
     {
         public readonly string Path;
         public readonly DateTime Taken;
+        public readonly long Size;
+        public readonly long Pixels;
 
-        public PhotoEntry(string path, DateTime taken)
+        public PhotoEntry(string path, DateTime taken, long size, long pixels)
         {
             Path = path;
             Taken = taken;
+            Size = size;
+            Pixels = pixels;
         }
     }
 
@@ -726,14 +973,14 @@ internal sealed partial class PhotosApp : IPhoneApp
         public readonly int Key;
         public readonly int Start;
         public readonly int Count;
-        public readonly DateTime Month;
+        public readonly string Title;
 
-        public MonthAlbum(int key, int start, int count, DateTime month)
+        public MonthAlbum(int key, int start, int count, string title)
         {
             Key = key;
             Start = start;
             Count = count;
-            Month = month;
+            Title = title;
         }
     }
 

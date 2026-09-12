@@ -165,6 +165,7 @@ All user media lives under `<config>` next to the config file. Bundled read-only
 | --- | --- |
 | `<config>/Photos/` | The photo library: camera saves and imported screenshots |
 | `<config>/Photos/.thumbs/` | JPEG thumbnails, one per photo (`PhotoLibrary.ThumbnailPathFor`) |
+| `<config>/Photos/.trash/` | Recently Deleted: `PhotoLibrary.Delete` moves photos here and stamps the file creation time; `PurgeExpired` removes them 30 days later, `Restore` moves them back |
 | `<config>/Sounds/Ringtones/`, `<config>/Sounds/Notifications/` | User custom sounds (mp3, wav), copied in by `SoundLibrary.AddUserFile` |
 | `<config>/Wallpapers/` | Imported wallpapers, named `custom-<guid>` by `WallpaperLibrary.AddCustom` |
 | `<config>/cache/media/`, `.../images/`, `.../audio/`, `.../collections/` | `DiskCache` folders with byte budgets of 64, 128, 256, and 32 MB (set in `PhoneServices.Build`) |

@@ -1647,6 +1647,8 @@ internal static class L
         public static readonly LocString ShowInGposeHint = new("settings.showInGposeHint", "Keep the phone available while you're in Group Pose, so you can open it during photo shoots. Turn it off to keep your screen clear for screenshots.");
         public static readonly LocString ImportScreenshots = new("settings.importScreenshots", "Import screenshots");
         public static readonly LocString ImportScreenshotsHint = new("settings.importScreenshotsHint", "Copy screenshots you take into the Photos gallery, including ones from ReShade and GShade. Only shots taken while the phone is running are copied, and the originals stay where they are.");
+        public static readonly LocString MonthlyAlbums = new("settings.monthlyAlbums", "Monthly albums in Photos");
+        public static readonly LocString MonthlyAlbumsHint = new("settings.monthlyAlbumsHint", "Add an album for each month to the Albums tab in Photos automatically. Photos asks once the first time you open Albums.");
         public static readonly LocString NativeFileDialog = new("settings.nativeFileDialog", "Windows file browser");
         public static readonly LocString NativeFileDialogHint = new("settings.nativeFileDialogHint", "Pick photos and sounds with the Windows file browser. Turn it off if importing a file crashes your game.");
         public static readonly LocString ChirperShowPhotos = new("settings.chirperShowPhotos", "Show photo chirps");
@@ -1754,6 +1756,26 @@ internal static class L
                 "Added an editor to Photos: tap Edit on any photo to adjust brightness, contrast, saturation, warmth and vignette, or pick a look such as Warm, Film or Noir"),
             new("changelog.r1030.2",
                 "The editor also crops to a ratio, straightens, rotates and flips; saving keeps the original and adds the edited photo beside it"),
+            new("changelog.r1030.5",
+                "Photos has a new look: Library and Albums now sit in a tab bar at the bottom, the grid runs edge to edge, and album cards match the social apps"),
+            new("changelog.r1030.6",
+                "Albums are easier to make and manage: tap the plus in the Albums tab or the New Album tile, name it in a sheet, then add photos, rename or delete it from the album menu"),
+            new("changelog.r1030.7",
+                "The photo viewer keeps Share, Add to Album and Delete in a bar at the bottom, with Edit at the top right; Add to Album can now create the album on the spot"),
+            new("changelog.r1030.8",
+                "Monthly albums are now a choice: Photos asks once on the Albums tab, and the switch lives in Settings under General"),
+            new("changelog.r1030.9",
+                "A sort menu in the Library header orders the library by date, name, size or dimensions in either direction, filters it to favorites or photos not in an album, and zooms the grid in and out"),
+            new("changelog.r1030.10",
+                "Favorites: tap the heart on a photo and find it again in the new Favorites collection on the Albums tab"),
+            new("changelog.r1030.11",
+                "Select mode: pick several photos in the library or an album, then favorite them, add them to an album or delete them together"),
+            new("changelog.r1030.12",
+                "Deleting a photo now moves it to Recently Deleted, where it can be recovered for 30 days before it is removed for good"),
+            new("changelog.r1030.13",
+                "The viewer's Info button shows when a photo was taken, its size in pixels and on disk, and its file name"),
+            new("changelog.r1030.14",
+                "Recently Deleted shows on each thumbnail how many days are left before the photo is removed"),
         };
 
         private static readonly LocString ComposerFlow = new("changelog.r1030.4",
@@ -5102,7 +5124,6 @@ internal static class L
         public static readonly LocString UseCameraHint = new("photos.useCameraHint", "Use the Camera to take a shot");
         public static readonly LocPlural Count = new("photos.count", "{0} Photo", "{0} Photos");
         public static readonly LocString Delete = new("photos.delete", "Delete");
-        public static readonly LocString DeleteConfirmMessage = new("photos.deleteConfirmMessage", "Delete this photo? This can't be undone.");
         public static readonly LocString DeleteConfirm = new("photos.deleteConfirm", "Delete");
         public static readonly LocString DeleteCancel = new("photos.deleteCancel", "Cancel");
         public static readonly LocString Library = new("photos.library", "Library");
@@ -5126,9 +5147,6 @@ internal static class L
         public static readonly LocString EmptyAlbum = new("photos.emptyAlbum", "No photos yet");
         public static readonly LocString AlbumExists = new("photos.albumExists", "An album with this name already exists");
         public static readonly LocString Done = new("photos.done", "Done");
-        public static readonly LocString NoAlbums = new("photos.noAlbums", "No Albums");
-        public static readonly LocString AlbumNamePlaceholder = new("photos.albumNamePlaceholder", "My Album");
-        public static readonly LocString CreateAlbumHint = new("photos.noAlbumsHint", "Take a photo or create an album");
         public static readonly LocString Edit = new("photos.edit", "Edit");
         public static readonly LocString Save = new("photos.save", "Save");
         public static readonly LocString Reset = new("photos.reset", "Reset");
@@ -5160,6 +5178,67 @@ internal static class L
         public static readonly LocString AspectNineBySixteen = new("photos.aspect.nineBySixteen", "9:16");
         public static readonly LocString EditFailed = new("photos.editFailed", "The edited photo could not be saved");
         public static readonly LocString EditOpenFailed = new("photos.editOpenFailed", "This photo could not be opened for editing");
+        public static readonly LocString MyAlbums = new("photos.myAlbums", "My Albums");
+        public static readonly LocString Months = new("photos.months", "Months");
+        public static readonly LocPlural Selected = new("photos.selected", "{0} selected", "{0} selected");
+        public static readonly LocString AlbumOptions = new("photos.albumOptions", "Album options");
+        public static readonly LocString EmptyAlbumHint = new("photos.emptyAlbumHint", "Add photos from your library");
+        public static readonly LocString RemoveFromAlbumConfirm =
+            new("photos.removeFromAlbumConfirm", "Remove this photo from {0}? It stays in your library.");
+        public static readonly LocString SortNewestFirst = new("photos.sortNewestFirst", "Newest First");
+        public static readonly LocString SortOldestFirst = new("photos.sortOldestFirst", "Oldest First");
+        public static readonly LocString SortBy = new("photos.sortBy", "Sort by");
+        public static readonly LocString SortDate = new("photos.sortDate", "Sort by Date");
+        public static readonly LocString SortName = new("photos.sortName", "Sort by Name");
+        public static readonly LocString SortSize = new("photos.sortSize", "Sort by Size");
+        public static readonly LocString SortDimensions = new("photos.sortDimensions", "Sort by Dimensions");
+        public static readonly LocString SortAToZ = new("photos.sortAToZ", "A to Z");
+        public static readonly LocString SortZToA = new("photos.sortZToA", "Z to A");
+        public static readonly LocString SortLargestFirst = new("photos.sortLargestFirst", "Largest first");
+        public static readonly LocString SortSmallestFirst = new("photos.sortSmallestFirst", "Smallest first");
+        public static readonly LocString Filter = new("photos.filter", "Filter");
+        public static readonly LocString FilterAll = new("photos.filterAll", "All Items");
+        public static readonly LocString FilterNotInAlbum = new("photos.filterNotInAlbum", "Not in an Album");
+        public static readonly LocString ViewOptions = new("photos.viewOptions", "View Options");
+        public static readonly LocString ZoomIn = new("photos.zoomIn", "Zoom In");
+        public static readonly LocString ZoomOut = new("photos.zoomOut", "Zoom Out");
+        public static readonly LocString AspectRatioGrid = new("photos.aspectRatioGrid", "Aspect Ratio Grid");
+        public static readonly LocString MenuBack = new("photos.menuBack", "Back");
+        public static readonly LocPlural DaysLeft = new("photos.daysLeft", "{0} day", "{0} days");
+        public static readonly LocString MonthlyAlbums = new("photos.monthlyAlbums", "Monthly Albums");
+        public static readonly LocString MonthlyAlbumsPrompt = new("photos.monthlyAlbumsPrompt",
+            "Photos can add an album for each month on its own. Turn on monthly albums? You can change this later in Settings.");
+        public static readonly LocString MonthlyAlbumsOn = new("photos.monthlyAlbumsOn", "Turn On");
+        public static readonly LocString MonthlyAlbumsNotNow = new("photos.monthlyAlbumsNotNow", "Not Now");
+        public static readonly LocString Favorites = new("photos.favorites", "Favorites");
+        public static readonly LocString Favorite = new("photos.favorite", "Favorite");
+        public static readonly LocString Unfavorite = new("photos.unfavorite", "Unfavorite");
+        public static readonly LocString NoFavorites = new("photos.noFavorites", "No Favorites");
+        public static readonly LocString NoFavoritesHint =
+            new("photos.noFavoritesHint", "Tap the heart on a photo to keep it here");
+        public static readonly LocString RecentlyDeleted = new("photos.recentlyDeleted", "Recently Deleted");
+        public static readonly LocString RecentlyDeletedHint =
+            new("photos.recentlyDeletedHint", "Photos stay here for 30 days, then they are removed for good.");
+        public static readonly LocString TrashEmpty = new("photos.trashEmpty", "Nothing Deleted");
+        public static readonly LocString TrashEmptyHint = new("photos.trashEmptyHint", "Deleted photos wait here for 30 days");
+        public static readonly LocString Recover = new("photos.recover", "Recover");
+        public static readonly LocString RecoverAll = new("photos.recoverAll", "Recover All");
+        public static readonly LocString DeletePermanently = new("photos.deletePermanently", "Delete Permanently");
+        public static readonly LocString DeleteAll = new("photos.deleteAll", "Delete All");
+        public static readonly LocPlural DeleteToTrash = new("photos.deleteToTrash",
+            "Move this photo to Recently Deleted?", "Move {0} photos to Recently Deleted?");
+        public static readonly LocPlural DeleteForever = new("photos.deleteForever",
+            "Delete this photo for good? This can't be undone.", "Delete {0} photos for good? This can't be undone.");
+        public static readonly LocString Select = new("photos.select", "Select");
+        public static readonly LocString SelectPhotos = new("photos.selectPhotos", "Select Photos");
+        public static readonly LocString Collections = new("photos.collections", "Collections");
+        public static readonly LocString Info = new("photos.info", "Info");
+        public static readonly LocString InfoTaken = new("photos.infoTaken", "Taken");
+        public static readonly LocString InfoDimensions = new("photos.infoDimensions", "Dimensions");
+        public static readonly LocString InfoSize = new("photos.infoSize", "Size");
+        public static readonly LocString InfoName = new("photos.infoName", "File name");
+        public static readonly LocString SizeKilobytes = new("photos.sizeKilobytes", "{0} KB");
+        public static readonly LocString SizeMegabytes = new("photos.sizeMegabytes", "{0} MB");
     }
 
     internal static class Skywatcher
