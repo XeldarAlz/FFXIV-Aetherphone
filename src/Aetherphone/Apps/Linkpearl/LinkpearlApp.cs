@@ -250,6 +250,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
 
     private void DrawView(LinkpearlRoute route, Rect area, int depth)
     {
+        ui.Body(area);
         switch (route.Screen)
         {
             case LinkpearlScreen.Conversation:
@@ -316,7 +317,8 @@ internal sealed partial class LinkpearlApp : IResumableApp
             DrawBottomNav(navRect);
         }
 
-        newChatSheet.Draw(area, frameTheme, Loc.T(L.Linkpearl.NewChat), NewChatSheetFraction(area), drawNewChatSheet);
+        newChatSheet.Draw(area, NewChatSkin(), Loc.T(L.Linkpearl.NewChat), NewChatSheetFraction(area),
+            drawNewChatSheet);
     }
 
     private void DrawRootHeader(Rect header)
