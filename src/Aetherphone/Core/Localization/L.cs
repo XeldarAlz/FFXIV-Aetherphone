@@ -1801,6 +1801,26 @@ internal static class L
                 "Fixed photos from a phone camera showing up sideways: a picture's own orientation tag is now honoured everywhere a photo is previewed or uploaded"),
         };
 
+        public static readonly LocString[] Release1030Linkpearl =
+        {
+            new("changelog.r1030.30",
+                "Added chat themes and wallpapers to Linkpearl: pick one of nine color themes, and a wallpaper for every chat or for a single one, the same ones ChocoChat offers"),
+            new("changelog.r1030.31",
+                "Added a Log layout in place of Compact: one line per message in the game's own channel colors, with a timestamp column and clickable names, and each tab can choose Log or Bubbles, its own text size and whether it shows timestamps"),
+            new("changelog.r1030.32",
+                "Added the game chat options people asked for: import the game's log colors, a tab that follows the game chat box, a screenshot mode that masks names, hiding during cutscenes and with the HUD, a text size setting and history export"),
+            new("changelog.r1030.33",
+                "Added a placement setting for pop-outs: a new window lands beside the phone or in the corner you pick, instead of always at the bottom right"),
+            new("changelog.r1030.34",
+                "Redesigned Linkpearl on the same chrome as ChocoChat: Chats, People and Settings sit in a tab bar at the bottom, every screen runs edge to edge, the thread has a proper header with avatars, and a green theme is the default"),
+            new("changelog.r1030.35",
+                "Rebuilt People: friends, party and Free Company rows with portraits and subtitles that no longer cut off, a friend card with Message, Plate, Party and Visit, and Lodestone pages for characters and Free Companies"),
+            new("changelog.r1030.36",
+                "New chats now open as a tab in the pop-out you are using instead of a new window each time; the title strip is the tab rail, and a collapsed window shows the stacked avatars, the names and one count of new messages"),
+            new("changelog.r1030.37",
+                "Pop-out windows have a glass look that follows your chat theme and wallpaper"),
+        };
+
         public static readonly LocString[] Release1021Message =
         {
             new("changelog.r1021.0",

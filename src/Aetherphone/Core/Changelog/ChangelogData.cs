@@ -11,6 +11,7 @@ internal static class ChangelogData
             new(L.Apps.Photos, L.Changelog.Release1030Photos),
             new(L.Apps.Aethergram, L.Changelog.Release1030Aethergram),
             new(L.Apps.Velvet, L.Changelog.Release1030Velvet),
+            new(L.Apps.Linkpearl, L.Changelog.Release1030Linkpearl),
             new(L.Changelog.SectionPhone, L.Changelog.Release1030Phone),
         }),
         new ChangelogEntry("1.0.2.1", "2026-09-10", new ChangelogSection[]
