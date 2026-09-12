@@ -5151,7 +5151,7 @@
   "changelog.r1030.1": "Fotoğraflar'a bir düzenleyici eklendi: herhangi bir fotoğrafta Düzenle'ye dokunarak parlaklık, kontrast, doygunluk, sıcaklık ve vinyeti ayarlayın ya da Sıcak, Film veya Noir gibi bir stil seçin",
   "changelog.r1030.2": "Düzenleyici ayrıca bir orana göre kırpar, düzleştirir, döndürür ve çevirir; kaydedince orijinal korunur ve düzenlenen fotoğraf yanına eklenir",
   "changelog.r1030.3": "Telefon kamerasından gelen fotoğrafların yan görünmesi düzeltildi: bir resmin kendi yön bilgisi artık fotoğrafın önizlendiği veya yüklendiği her yerde dikkate alınıyor",
-  "changelog.r1030.4": "Yeni gönderi ve hikayelerdeki fotoğraf adımına bir Düzenle sekmesi eklendi: kırpmadan önce parlaklık, kontrast, doygunluk, sıcaklık ve vinyeti ayarlayın, bir stil seçin ya da fotoğrafı döndürüp çevirin",
+  "changelog.r1030.4": "Yeni gönderi ve hikayelerdeki fotoğraf adımında artık Kırp'ın yanında Ayarla ve Stiller araçları var: kırpmadan önce parlaklık, kontrast, doygunluk, sıcaklık ve vinyeti ayarlayın, bir stil seçin ya da fotoğrafı döndürüp çevirin",
   "changelog.r1021.0": "Yapıştırılan metnin kendiliğinden gönderilmesi düzeltildi: içinde satır sonu olan bir metni yapıştırdığınızda artık Enter'a basana kadar kutuda bekliyor",
   "changelog.r1020.2": "Velvet baştan aşağı elden geçirildi: akış, Keşfet, profiller, mesajlar, gönderi oluşturucu ve filtreler",
   "changelog.r1020.3": "Keşfet artık insanları fotoğraf kartlarından oluşan bir listede gösteriyor, her kartta ortak noktanızı anlatan bir satırla",

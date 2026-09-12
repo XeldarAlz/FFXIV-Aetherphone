@@ -1755,7 +1755,7 @@ internal static class L
         };
 
         private static readonly LocString ComposerEditTab = new("changelog.r1030.4",
-            "Added an Edit tab to the photo step of new posts and stories: adjust brightness, contrast, saturation, warmth and vignette, pick a look, or rotate and flip before you crop");
+            "The photo step of new posts and stories now has Adjust and Looks tools beside Crop: set brightness, contrast, saturation, warmth and vignette, pick a look, or rotate and flip before you crop");
 
         public static readonly LocString[] Release1030Aethergram = { ComposerEditTab };
 

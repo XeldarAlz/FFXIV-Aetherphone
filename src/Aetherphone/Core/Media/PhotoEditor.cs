@@ -157,6 +157,56 @@ internal static class PhotoEditor
         }
     }
 
+    public static PixelImage Downscale(in PixelImage source, int maxDimension)
+    {
+        if (source.IsEmpty || maxDimension <= 0 || (source.Width <= maxDimension && source.Height <= maxDimension))
+        {
+            return source;
+        }
+
+        var factor = MathF.Min((float)maxDimension / source.Width, (float)maxDimension / source.Height);
+        var width = Math.Max(1, (int)MathF.Round(source.Width * factor));
+        var height = Math.Max(1, (int)MathF.Round(source.Height * factor));
+        var pixels = new byte[width * height * PixelImage.BytesPerPixel];
+        var sourcePixels = source.Pixels;
+        for (var y = 0; y < height; y++)
+        {
+            var sourceTop = y * source.Height / height;
+            var sourceBottom = Math.Max(sourceTop + 1, (y + 1) * source.Height / height);
+            for (var x = 0; x < width; x++)
+            {
+                var sourceLeft = x * source.Width / width;
+                var sourceRight = Math.Max(sourceLeft + 1, (x + 1) * source.Width / width);
+                var red = 0;
+                var green = 0;
+                var blue = 0;
+                var alpha = 0;
+                var count = 0;
+                for (var sourceY = sourceTop; sourceY < sourceBottom; sourceY++)
+                {
+                    var rowOffset = sourceY * source.Width;
+                    for (var sourceX = sourceLeft; sourceX < sourceRight; sourceX++)
+                    {
+                        var index = (rowOffset + sourceX) * PixelImage.BytesPerPixel;
+                        red += sourcePixels[index];
+                        green += sourcePixels[index + 1];
+                        blue += sourcePixels[index + 2];
+                        alpha += sourcePixels[index + 3];
+                        count++;
+                    }
+                }
+
+                var target = ((y * width) + x) * PixelImage.BytesPerPixel;
+                pixels[target] = (byte)(red / count);
+                pixels[target + 1] = (byte)(green / count);
+                pixels[target + 2] = (byte)(blue / count);
+                pixels[target + 3] = (byte)(alpha / count);
+            }
+        }
+
+        return new PixelImage(pixels, width, height);
+    }
+
     public static PixelImage Grade(in PixelImage source, in PhotoEdit edit)
     {
         if (source.IsEmpty || !edit.ChangesColor)

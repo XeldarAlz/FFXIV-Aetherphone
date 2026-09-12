@@ -81,10 +81,12 @@ internal sealed partial class PhotosApp
         }
 
         PhotosChrome.BottomScrim(drawList, screen.Min, screen.Max, (frameTheme.BottomZoneHeight + 40f) * scale);
-        var editLabel = Loc.T(L.Photos.Edit);
-        var editWidth = TextButton.Width(editLabel, scale);
-        var editCenter = new Vector2(safe.Min.X + 8f * scale + editWidth * 0.5f, safe.Max.Y - 15f * scale);
-        if (!zoomView.IsZoomed && TextButton.Draw(editCenter, editLabel, White, scale))
+        var buttonRadius = PhotoZoomView.ButtonRadiusUnits * scale;
+        var buttonMargin = PhotoZoomView.ButtonMarginUnits * scale;
+        var editCenter = new Vector2(
+            safe.Min.X + buttonMargin + (buttonRadius * 3f) + (PhotoZoomView.ButtonGapUnits * scale),
+            safe.Max.Y - buttonRadius - buttonMargin);
+        if (PhotosChrome.Edit(editCenter, buttonRadius, scale))
         {
             OpenEditor(path);
             return;

@@ -26,7 +26,7 @@ internal sealed class VelvetPostComposer
 
     private const int CaptionLimit = 500;
     private const int HeaderActionSlots = 2;
-    private const float AspectPickerReserve = 42f;
+    private const float AspectRowHeight = 28f;
     private const float BodySide = 16f;
     private const float BodyBottom = 16f;
     private const float PreviewGap = 10f;
@@ -188,7 +188,7 @@ internal sealed class VelvetPostComposer
         switch (session.Stage)
         {
             case PhotoComposeStage.Crop:
-                DrawCrop(area, ui);
+                DrawCrop(area);
                 break;
             case PhotoComposeStage.Caption:
                 DrawCaption(area, ui, context);
@@ -268,7 +268,7 @@ internal sealed class VelvetPostComposer
         }
     }
 
-    private void DrawCrop(Rect area, AppSkin ui)
+    private void DrawCrop(Rect area)
     {
         var scale = UiScale.Current;
         var title = session.SelectedCount > 1
@@ -285,23 +285,14 @@ internal sealed class VelvetPostComposer
             session.CropAdvance();
         }
 
-        session.DrawCropModeStrip(area, ui, scale, "velvet.cropMode");
-        if (session.CropMode == PhotoCropMode.Edit)
-        {
-            session.DrawCropCanvas(area, scale, CropAspect, Style, string.Empty, PhotoComposeSession.EditFooterReserve,
-                CropAllowsReveal, PhotoComposeSession.CropModeStripReserve, false);
-            PhotoEditPanel.DrawComposerTools(session.EditControls, PhotoComposeSession.EditPanelRect(area, scale), ui,
-                EditStyle, scale, !Posting);
-            return;
-        }
-
-        var reserve = storyMode ? 0f : AspectPickerReserve;
-        session.DrawCropCanvas(area, scale, CropAspect, Style, Loc.T(L.Velvet.GestureHint), reserve, CropAllowsReveal,
-            PhotoComposeSession.CropModeStripReserve);
-        if (!storyMode)
+        var cropping = session.ActiveTool(true) == PhotoEditTool.Crop;
+        session.DrawCropCanvas(area, scale, CropAspect, Style, CropAllowsReveal, cropping);
+        if (cropping && !storyMode)
         {
             DrawAspectPicker(area, scale);
         }
+
+        session.DrawComposerFooter(area, scale, EditStyle, Loc.T(L.Velvet.GestureHint), !Posting, true);
     }
 
     private static PhotoEditPanelStyle EditStyle =>
@@ -310,9 +301,9 @@ internal sealed class VelvetPostComposer
     private void DrawAspectPicker(Rect area, float scale)
     {
         var width = MathF.Min(area.Width - 32f * scale, 260f * scale);
-        var rowTop = area.Max.Y - (96f + AspectPickerReserve - 8f) * scale;
+        var rowTop = PhotoComposeSession.AspectRowTop(area, scale, AspectRowHeight);
         var row = new Rect(new Vector2(area.Center.X - width * 0.5f, rowTop),
-            new Vector2(area.Center.X + width * 0.5f, rowTop + 28f * scale));
+            new Vector2(area.Center.X + width * 0.5f, rowTop + AspectRowHeight * scale));
         for (var index = 0; index < PostAspects.All.Length; index++)
         {
             aspectLabels[index] = Loc.T(AspectLabels.For(PostAspects.All[index]));

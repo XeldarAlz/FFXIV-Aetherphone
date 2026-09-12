@@ -15,9 +15,9 @@ internal sealed class PhotoZoomView
     private const float ButtonStep = 1.5f;
     private const float WheelStep = 0.16f;
     private const float SmoothTime = 0.12f;
-    private const float ButtonRadiusUnits = 17f;
-    private const float ButtonGapUnits = 10f;
-    private const float ButtonMarginUnits = 12f;
+    public const float ButtonRadiusUnits = 17f;
+    public const float ButtonGapUnits = 10f;
+    public const float ButtonMarginUnits = 12f;
 
     public const float ControlBandUnits = 52f;
 

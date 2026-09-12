@@ -14,7 +14,6 @@ namespace Aetherphone.Apps.Aethergram;
 
 internal sealed partial class AethergramApp
 {
-    private const float AspectPickerReserve = 42f;
     private const float ComposeThumbSize = 64f;
     private const float ComposeRowHeight = 52f;
     private const float ComposeRowGlyph = 22f;
@@ -272,28 +271,17 @@ internal sealed partial class AethergramApp
             CropAdvance();
         }
 
-        var topInset = 0f;
-        if (!composeAvatarMode)
-        {
-            topInset = PhotoComposeSession.CropModeStripReserve;
-            composeSession.DrawCropModeStrip(area, ui, scale, "gram.cropMode");
-            if (composeSession.CropMode == PhotoCropMode.Edit)
-            {
-                composeSession.DrawCropCanvas(area, scale, ComposeCropAspect, ComposeStyle, string.Empty,
-                    PhotoComposeSession.EditFooterReserve, ComposeCropAllowsReveal, topInset, false);
-                PhotoEditPanel.DrawComposerTools(composeSession.EditControls,
-                    PhotoComposeSession.EditPanelRect(area, scale), ui, ComposeEditStyle, scale, !store.Posting);
-                return;
-            }
-        }
-
-        var reserve = ComposeAllowsAspectChoice ? AspectPickerReserve : 0f;
-        composeSession.DrawCropCanvas(area, scale, ComposeCropAspect, ComposeStyle,
-            Loc.T(L.Aethergram.GestureHint), reserve, ComposeCropAllowsReveal, topInset);
-        if (ComposeAllowsAspectChoice)
+        var allowEdit = !composeAvatarMode;
+        var cropping = composeSession.ActiveTool(allowEdit) == PhotoEditTool.Crop;
+        composeSession.DrawCropCanvas(area, scale, ComposeCropAspect, ComposeStyle, ComposeCropAllowsReveal,
+            cropping);
+        if (cropping && ComposeAllowsAspectChoice)
         {
             DrawAspectPicker(area, scale);
         }
+
+        composeSession.DrawComposerFooter(area, scale, ComposeEditStyle, Loc.T(L.Aethergram.GestureHint),
+            !store.Posting, allowEdit);
     }
 
     private PhotoEditPanelStyle ComposeEditStyle =>
@@ -306,7 +294,7 @@ internal sealed partial class AethergramApp
         var gap = ComposeAspectChipGap * scale;
         var total = count * chipWidth + (count - 1) * gap;
         var left = area.Center.X - total * 0.5f;
-        var rowTop = area.Max.Y - (96f + AspectPickerReserve - 8f) * scale;
+        var rowTop = PhotoComposeSession.AspectRowTop(area, scale, PillHeight);
         var current = composeSession.CurrentAspect;
         for (var index = 0; index < count; index++)
         {

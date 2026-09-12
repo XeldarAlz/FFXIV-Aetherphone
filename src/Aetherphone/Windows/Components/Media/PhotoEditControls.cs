@@ -1,3 +1,4 @@
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Media;
 
 namespace Aetherphone.Windows.Components;
@@ -21,12 +22,7 @@ internal sealed class PhotoEditControls
         PhotoAdjustment.Straighten,
     };
 
-    public readonly ChipRail AdjustmentRail = new();
-    public readonly ChipRail LookRail = new();
-    public readonly string[] AdjustmentLabels = new string[Adjustments.Length];
-    public readonly bool[] AdjustmentActive = new bool[Adjustments.Length];
-    public readonly string[] LookLabels = new string[PhotoLooks.All.Length];
-    public readonly bool[] LookActive = new bool[PhotoLooks.All.Length];
+    public Spring DockSpring = new(0f);
 
     private string valueLabel = string.Empty;
     private float valueLabelFor = float.NaN;
@@ -37,6 +33,16 @@ internal sealed class PhotoEditControls
     public PhotoEditTool Tool { get; set; }
 
     public PhotoAdjustment Adjustment { get; set; }
+
+    public float LookShelfOffset { get; set; }
+
+    public bool LookShelfDragging { get; set; }
+
+    public float LookShelfLastMouseX { get; set; }
+
+    public float LookShelfTravel { get; set; }
+
+    public int LookShelfPressedIndex { get; set; } = -1;
 
     public void Load(in PhotoEdit edit)
     {
@@ -49,6 +55,10 @@ internal sealed class PhotoEditControls
         Load(PhotoEdit.None);
         Tool = PhotoEditTool.Adjust;
         Adjustment = PhotoAdjustment.Brightness;
+        DockSpring.SnapTo(0f);
+        LookShelfOffset = 0f;
+        LookShelfDragging = false;
+        LookShelfPressedIndex = -1;
     }
 
     public void Adjust(PhotoAdjustment adjustment, float value)

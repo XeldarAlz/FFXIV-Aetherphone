@@ -3,6 +3,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Apps.Photos;
@@ -144,6 +145,19 @@ internal static class PhotosChrome
             new Vector2(center.X, arrowTop), ink, thickness);
         HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
             Loc.T(L.Share.Action));
+        return Tapped(hovered);
+    }
+
+    public static bool Edit(Vector2 center, float radius, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var corner = new Vector2(radius, radius);
+        var hovered = UiInteract.Hover(center - corner, center + corner);
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, hovered ? 0.30f : 0.20f)),
+            32);
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.16f)), 32, 1f * scale);
+        AppSkin.Icon(drawList, center, IconGlyph.Of(FontAwesomeIcon.Pen), new Vector4(1f, 1f, 1f, 0.95f), 0.78f);
+        HoverTooltip.Show(new Rect(center - corner, center + corner), Loc.T(L.Photos.Edit), HoverLabelSide.Above);
         return Tapped(hovered);
     }
 

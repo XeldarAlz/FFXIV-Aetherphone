@@ -18,12 +18,6 @@ internal enum PhotoComposeStage
     Caption,
 }
 
-internal enum PhotoCropMode : byte
-{
-    Crop,
-    Edit,
-}
-
 internal readonly record struct PhotoComposeStyle(
     Vector4 Accent,
     Vector4 MutedInk,
@@ -35,15 +29,9 @@ internal readonly record struct PhotoComposeStyle(
 internal sealed class PhotoComposeSession : IDisposable
 {
     public const int GridColumns = 3;
-    public const float CanvasFooter = 96f;
-    public const float CropModeStripReserve = 44f;
     private const float CropSmoothTime = 0.10f;
     private const float RatioEpsilon = 0.0001f;
-    private const float CropModeStripGap = 6f;
-    private const float CropModeStripHeight = 30f;
-    private const float CropModeStripWidth = 200f;
-    private const float EditPanelGap = 8f;
-    private readonly string[] cropModeLabels = new string[2];
+    private const float FooterGap = 8f;
 
     private readonly PhotoLibrary library;
     private readonly WallpaperImageCache wallpaperImages;
@@ -65,6 +53,7 @@ internal sealed class PhotoComposeSession : IDisposable
     private float targetCenterY = 0.5f;
     private bool cropDragging;
     private Vector2 cropLastDrag;
+    private float lastMinZoom = WallpaperCrop.MinZoom;
 
     public readonly PhotoEditControls EditControls = new();
 
@@ -77,7 +66,6 @@ internal sealed class PhotoComposeSession : IDisposable
     private static WallpaperCrop DefaultCrop => new(1f, 0.5f, 0.5f);
 
     public PhotoComposeStage Stage { get; set; }
-    public PhotoCropMode CropMode { get; set; }
     public bool SingleSelect { get; private set; }
     public bool AllowGif { get; private set; }
     public bool GifSelected => AllowGif && selected.Count == 1 && GifMedia.IsGif(selected[0]);
@@ -152,7 +140,6 @@ internal sealed class PhotoComposeSession : IDisposable
         SingleSelect = singleSelect;
         AllowGif = allowGif && !singleSelect;
         Stage = PhotoComposeStage.Pick;
-        CropMode = PhotoCropMode.Crop;
         selected.Clear();
         crops.Clear();
         aspects.Clear();
@@ -160,6 +147,8 @@ internal sealed class PhotoComposeSession : IDisposable
         framedForRatio.Clear();
         ClosePreviews();
         EditControls.Reset();
+        EditControls.Tool = PhotoEditTool.Crop;
+        EditControls.DockSpring.SnapTo(2f);
         CropIndex = 0;
         PreviewIndex = 0;
         Notice = string.Empty;
@@ -256,7 +245,7 @@ internal sealed class PhotoComposeSession : IDisposable
         }
 
         PreviewIndex = 0;
-        CropMode = PhotoCropMode.Crop;
+        EditControls.Tool = PhotoEditTool.Crop;
         if (GifSelected)
         {
             Stage = PhotoComposeStage.Caption;
@@ -386,23 +375,63 @@ internal sealed class PhotoComposeSession : IDisposable
         previews.Clear();
     }
 
-    public static float EditFooterReserve => PhotoEditPanel.ComposerHeight + EditPanelGap - CanvasFooter;
-
-    public static Rect EditPanelRect(Rect area, float scale)
+    public static Rect FooterRect(Rect area, float scale)
     {
-        return new Rect(new Vector2(area.Min.X, area.Max.Y - (PhotoEditPanel.ComposerHeight * scale)), area.Max);
+        return PhotoEditPanel.FooterRect(area, area.Max.Y, scale);
     }
 
-    public void DrawCropModeStrip(Rect area, AppSkin ui, float scale, string id)
+    public static float AspectRowTop(Rect area, float scale, float rowHeight)
     {
-        cropModeLabels[0] = Loc.T(L.Photos.ToolCrop);
-        cropModeLabels[1] = Loc.T(L.Photos.Edit);
-        var top = area.Min.Y + ((AppHeader.Height + CropModeStripGap) * scale);
-        var width = MathF.Min(area.Width - (32f * scale), CropModeStripWidth * scale);
-        var row = new Rect(new Vector2(area.Center.X - (width * 0.5f), top),
-            new Vector2(area.Center.X + (width * 0.5f), top + (CropModeStripHeight * scale)));
-        var picked = SegmentStrip.Draw(id, row, cropModeLabels, (int)CropMode, ui.Palette);
-        CropMode = picked == 1 ? PhotoCropMode.Edit : PhotoCropMode.Crop;
+        return PhotoEditPanel.UpperRowCenterY(FooterRect(area, scale), scale) - (rowHeight * 0.5f * scale);
+    }
+
+    public PhotoEditTool ActiveTool(bool allowEdit)
+    {
+        return allowEdit ? EditControls.Tool : PhotoEditTool.Crop;
+    }
+
+    // The crop stage owns the footer for every tool: Crop keeps the host's aspect row plus the zoom
+    // ruler, Adjust and Looks swap in the shared panel rows, and the dock sits under all three.
+    public void DrawComposerFooter(Rect area, float scale, in PhotoEditPanelStyle editStyle, string gestureHint,
+        bool interactive, bool allowEdit)
+    {
+        var footer = FooterRect(area, scale);
+        switch (ActiveTool(allowEdit))
+        {
+            case PhotoEditTool.Adjust:
+                PhotoEditPanel.DrawAdjust(EditControls, footer, editStyle, scale, interactive);
+                break;
+            case PhotoEditTool.Looks:
+                PhotoEditPanel.DrawLooks(EditControls, PreviewFor(CropIndex), footer, editStyle, scale, interactive);
+                break;
+            default:
+                DrawCropFooter(footer, scale, editStyle, gestureHint, interactive, allowEdit);
+                break;
+        }
+
+        if (allowEdit)
+        {
+            PhotoEditPanel.DrawDock(EditControls, footer, editStyle, scale, interactive);
+        }
+    }
+
+    private void DrawCropFooter(Rect footer, float scale, in PhotoEditPanelStyle editStyle, string gestureHint,
+        bool interactive, bool allowEdit)
+    {
+        PhotoEditPanel.DrawLabelLine(footer, gestureHint, string.Empty, editStyle, scale);
+        var ruler = PhotoEditPanel.RulerRect(footer, scale);
+        var zoomRange = WallpaperCrop.MaxZoom - lastMinZoom;
+        var fraction = zoomRange > 0f ? Math.Clamp((targetZoom - lastMinZoom) / zoomRange, 0f, 1f) : 0f;
+        var updated = PhotoEditPanel.DrawRuler(ruler, fraction, false, editStyle, scale, 1f, interactive);
+        if (updated != fraction)
+        {
+            targetZoom = lastMinZoom + (updated * zoomRange);
+        }
+
+        if (allowEdit)
+        {
+            PhotoEditPanel.DrawOrientationButtons(ruler, EditControls, editStyle, scale, interactive);
+        }
     }
 
     public void DrawPickGrid(Rect gridRect, float scale, in PhotoComposeStyle style, bool showBadges)
@@ -498,16 +527,16 @@ internal sealed class PhotoComposeSession : IDisposable
 
     // Avatar and story crops pass allowReveal false: a letterboxed avatar, or a story that does not
     // fill the screen, would read as broken rather than as framing. With interactive false the
-    // canvas only shows the framed photo, for the edit mode that owns the space below it.
-    public void DrawCropCanvas(Rect area, float scale, float aspect, in PhotoComposeStyle style, string gestureHint,
-        float footerReserve, bool allowReveal, float topInset = 0f, bool interactive = true)
+    // canvas only shows the framed photo, for the Adjust and Looks tools that own the footer.
+    public void DrawCropCanvas(Rect area, float scale, float aspect, in PhotoComposeStyle style, bool allowReveal,
+        bool interactive)
     {
         SyncCurrentEdit();
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         var drawList = ImGui.GetWindowDrawList();
-        var top = area.Min.Y + (AppHeader.Height + topInset) * scale;
+        var top = area.Min.Y + AppHeader.Height * scale;
         var stageRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
-            new Vector2(area.Max.X - 16f * scale, area.Max.Y - (CanvasFooter + footerReserve) * scale));
+            new Vector2(area.Max.X - 16f * scale, area.Max.Y - (PhotoEditPanel.Height + FooterGap) * scale));
         var preview = ImageFit.CenteredRect(stageRect, aspect);
         var rounding = 18f * scale;
         var texture = TextureFor(CropIndex, ImGui.GetTime());
@@ -532,21 +561,13 @@ internal sealed class PhotoComposeSession : IDisposable
             Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
         }
 
+        lastMinZoom = minZoom;
         if (!interactive)
         {
             return;
         }
 
         HandleCropGestures(preview, size, uv1 - uv0, aspect, minZoom);
-        Typography.DrawCentered(new Vector2(area.Center.X, area.Max.Y - 70f * scale), gestureHint, style.MutedInk,
-            0.78f);
-        var trackWidth = area.Width * 0.62f;
-        var track = new Rect(new Vector2(area.Center.X - trackWidth * 0.5f, area.Max.Y - 48f * scale),
-            new Vector2(area.Center.X + trackWidth * 0.5f, area.Max.Y - 44f * scale));
-        var zoomRange = WallpaperCrop.MaxZoom - minZoom;
-        var zoomNormalized = zoomRange > 0f ? (targetZoom - minZoom) / zoomRange : 0f;
-        var updatedZoom = Scrubber.Draw(track, zoomNormalized, style.ScrubberActive, style.ScrubberTrack, 1f);
-        targetZoom = minZoom + updatedZoom * zoomRange;
     }
 
     // The ratio is recorded on every aspect change, not just revealing ones, so that switching

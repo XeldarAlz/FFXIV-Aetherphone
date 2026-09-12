@@ -5151,7 +5151,7 @@
   "changelog.r1030.1": "Ajout d'un éditeur dans Photos : touchez Modifier sur une photo pour régler la luminosité, le contraste, la saturation, la chaleur et le vignettage, ou choisir un style comme Chaud, Pellicule ou Noir",
   "changelog.r1030.2": "L'éditeur recadre aussi selon un ratio, redresse, pivote et retourne ; l'enregistrement conserve l'original et ajoute la photo modifiée à côté",
   "changelog.r1030.3": "Correction des photos prises avec un téléphone qui s'affichaient de travers : l'orientation propre à l'image est désormais respectée partout où une photo est prévisualisée ou envoyée",
-  "changelog.r1030.4": "L'étape photo des nouvelles publications et stories a maintenant un onglet Modifier : réglez la luminosité, le contraste, la saturation, la chaleur et le vignettage, choisissez un style, ou pivotez et retournez la photo avant de recadrer",
+  "changelog.r1030.4": "L'étape photo des nouvelles publications et stories propose maintenant les outils Réglages et Styles à côté de Recadrer : réglez la luminosité, le contraste, la saturation, la chaleur et le vignettage, choisissez un style, ou pivotez et retournez la photo avant de recadrer",
   "changelog.r1021.0": "Correction du texte collé qui s'envoyait tout seul : un texte collé contenant un saut de ligne attend maintenant dans le champ jusqu'à ce que vous appuyiez sur Entrée",
   "changelog.r1020.2": "Velvet revu de fond en comble : le fil, Découvrir, les profils, les messages, le compositeur et les filtres",
   "changelog.r1020.3": "Découvrir affiche les gens sous forme de liste de cartes photo, chacune avec une ligne sur ce que vous partagez",

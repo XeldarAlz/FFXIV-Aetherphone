@@ -10,7 +10,7 @@ internal readonly struct PhotoEditPanelStyle
 {
     private static readonly Vector4 DarkFill = new(0.07f, 0.07f, 0.09f, 0.96f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
-    private static readonly Vector4 WhiteMuted = new(1f, 1f, 1f, 0.72f);
+    private static readonly Vector4 WhiteMuted = new(1f, 1f, 1f, 0.68f);
     private static readonly Vector4 WhiteRail = new(1f, 1f, 1f, 0.22f);
     private static readonly Vector4 WhiteWell = new(1f, 1f, 1f, 0.10f);
 
@@ -48,31 +48,94 @@ internal readonly struct PhotoEditPanelStyle
 
 internal static class PhotoEditPanel
 {
-    public const float Height = 168f;
-    public const float ComposerHeight = 140f;
-    private const float TabRowHeight = 54f;
+    public const float Height = 172f;
     private const float PanelRounding = 22f;
     private const float StageRounding = 14f;
     private const float StageInset = 12f;
-    private const float ChipRowTop = 12f;
-    private const float ScrubberGap = 30f;
-    private const float ScrubberThickness = 4f;
-    private const float ValueWidth = 52f;
     private const float SideInset = 18f;
-    private const float TabWidth = 84f;
-    private const float TabIconOffset = 19f;
-    private const float TabLabelOffset = 40f;
-    private const float IconRadius = 17f;
-    private const float IconGap = 42f;
-    private const float IconGlyphScale = 0.85f;
-    private const float TabGlyphScale = 0.95f;
-    private const float DimmedAlpha = 0.35f;
-    private const float KnobExtra = 4f;
-    private const float CenterTickHeight = 3f;
     private const float LoadingRadius = 13f;
     private const float HairlineAlpha = 0.10f;
 
-    private static readonly PhotoEditTool[] AllTools = { PhotoEditTool.Adjust, PhotoEditTool.Looks, PhotoEditTool.Crop };
+    private const float DockHeight = 44f;
+    private const float DockBottomInset = 8f;
+    private const float DockItemWidth = 76f;
+    private const float DockPillInset = 4f;
+    private const float DockIconOffset = -7f;
+    private const float DockLabelOffset = 12f;
+    private const float DockIconScale = 0.9f;
+    private const float DockSmoothTime = 0.16f;
+    private const float DockPillAlpha = 0.22f;
+    private const float DockPillStrokeAlpha = 0.35f;
+
+    private const float RulerHeight = 28f;
+    private const float RulerBottomInset = 62f;
+    private const float RulerWidthFraction = 0.68f;
+    private const int RulerTickCount = 21;
+    private const int RulerMajorEvery = 5;
+    private const float RulerMinorTick = 6f;
+    private const float RulerMajorTick = 10f;
+    private const float RulerCenterTick = 13f;
+    private const float RulerBaselineInset = 4f;
+    private const float RulerKnobWidth = 3f;
+    private const float RulerKnobHeight = 22f;
+    private const float RulerHitPad = 14f;
+    private const float RulerWheelStep = 0.02f;
+    private const float RulerTickAlpha = 0.55f;
+
+    private const float LabelCenterFromBottom = 100f;
+    private const float LabelGap = 8f;
+    private const float UpperRowCenterFromBottom = 139f;
+
+    private const float DialRadius = 18f;
+    private const float DialSpacing = 50f;
+    private const float RingRadius = 21.5f;
+    private const float RingThickness = 2.2f;
+    private const int RingSegments = 32;
+    private const float DialIconScale = 0.8f;
+    private const float RingEpsilon = 0.002f;
+
+    private const float TileSide = 48f;
+    private const float TileGap = 8f;
+    private const float TileRounding = 12f;
+    private const float TileStroke = 2f;
+    private const float ShelfDragSlop = 5f;
+    private const float ShelfWheelStep = 40f;
+
+    private const float OrientationRadius = 17f;
+    private const float OrientationGap = 6f;
+    private const float OrientationIconScale = 0.8f;
+    private const float DimmedAlpha = 0.35f;
+    private const float MaxDeltaSeconds = 0.1f;
+
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 KnobShadow = new(0f, 0f, 0f, 0.28f);
+    private static readonly PhotoEditTool[] Tools = { PhotoEditTool.Adjust, PhotoEditTool.Looks, PhotoEditTool.Crop };
+
+    public static Rect FooterRect(Rect area, float bottom, float scale)
+    {
+        return new Rect(new Vector2(area.Min.X, bottom - (Height * scale)), new Vector2(area.Max.X, bottom));
+    }
+
+    public static float UpperRowCenterY(Rect footer, float scale)
+    {
+        return footer.Max.Y - (UpperRowCenterFromBottom * scale);
+    }
+
+    public static Rect RulerRect(Rect footer, float scale)
+    {
+        var width = footer.Width * RulerWidthFraction;
+        var bottom = footer.Max.Y - (RulerBottomInset * scale);
+        return new Rect(new Vector2(footer.Center.X - (width * 0.5f), bottom - (RulerHeight * scale)),
+            new Vector2(footer.Center.X + (width * 0.5f), bottom));
+    }
+
+    private static Rect DockRect(Rect footer, float scale)
+    {
+        var width = DockItemWidth * Tools.Length * scale;
+        var bottom = footer.Max.Y - (DockBottomInset * scale);
+        return new Rect(new Vector2(footer.Center.X - (width * 0.5f), bottom - (DockHeight * scale)),
+            new Vector2(footer.Center.X + (width * 0.5f), bottom));
+    }
 
     public static void DrawStage(PhotoEditSession session, Rect stage, in PhotoEditPanelStyle style, float scale,
         double now)
@@ -103,35 +166,22 @@ internal static class PhotoEditPanel
         in PhotoEditPanelStyle style, float scale)
     {
         PaintPanel(panel, style, scale);
-        var tabs = new Rect(new Vector2(panel.Min.X, contentBottom - (TabRowHeight * scale)),
-            new Vector2(panel.Max.X, contentBottom));
-        var content = new Rect(panel.Min, new Vector2(panel.Max.X, tabs.Min.Y));
+        var footer = FooterRect(panel, contentBottom, scale);
         var interactive = !session.Saving;
-        if (session.Controls.Tool == PhotoEditTool.Crop)
+        switch (session.Controls.Tool)
         {
-            DrawCrop(session, content, ui, style, scale, interactive);
-        }
-        else
-        {
-            DrawColorTools(session.Controls, content, ui, style, scale, interactive, false);
-        }
-
-        DrawTabs(session.Controls, tabs, style, scale, interactive, true);
-    }
-
-    public static void DrawComposerTools(PhotoEditControls controls, Rect panel, AppSkin ui,
-        in PhotoEditPanelStyle style, float scale, bool interactive)
-    {
-        PaintPanel(panel, style, scale);
-        var tabs = new Rect(new Vector2(panel.Min.X, panel.Max.Y - (TabRowHeight * scale)), panel.Max);
-        var content = new Rect(panel.Min, new Vector2(panel.Max.X, tabs.Min.Y));
-        if (controls.Tool == PhotoEditTool.Crop)
-        {
-            controls.Tool = PhotoEditTool.Adjust;
+            case PhotoEditTool.Looks:
+                DrawLooks(session.Controls, session.Preview, footer, style, scale, interactive);
+                break;
+            case PhotoEditTool.Crop:
+                DrawGalleryCrop(session, footer, ui, style, scale, interactive);
+                break;
+            default:
+                DrawAdjust(session.Controls, footer, style, scale, interactive);
+                break;
         }
 
-        DrawColorTools(controls, content, ui, style, scale, interactive, true);
-        DrawTabs(controls, tabs, style, scale, interactive, false);
+        DrawDock(session.Controls, footer, style, scale, interactive);
     }
 
     private static void PaintPanel(Rect panel, in PhotoEditPanelStyle style, float scale)
@@ -148,131 +198,8 @@ internal static class PhotoEditPanel
             ImGui.GetColorU32(style.Ink with { W = HairlineAlpha }), Metrics.Stroke.Hairline * scale);
     }
 
-    private static Rect ChipRow(Rect content, float scale)
-    {
-        var top = content.Min.Y + (ChipRowTop * scale);
-        return new Rect(new Vector2(content.Min.X + (SideInset * scale), top),
-            new Vector2(content.Max.X - (SideInset * scale), top + (ChipRail.RowHeight * scale)));
-    }
-
-    private static Rect ScrubberTrack(Rect content, float top, float scale, float leftInset, float rightInset)
-    {
-        var centerY = top + (ScrubberGap * scale);
-        var half = ScrubberThickness * 0.5f * scale;
-        return new Rect(new Vector2(content.Min.X + leftInset, centerY - half),
-            new Vector2(content.Max.X - rightInset, centerY + half));
-    }
-
-    private static float DrawOrientationButtons(Rect content, float rowCenterY, AppSkin ui,
-        in PhotoEditPanelStyle style, float scale, bool interactive, PhotoEditControls controls)
-    {
-        var rotateCenter = new Vector2(content.Min.X + ((SideInset + IconRadius) * scale), rowCenterY);
-        var flipCenter = new Vector2(rotateCenter.X + (IconGap * scale), rowCenterY);
-        if (ui.IconButton(rotateCenter, IconRadius * scale, IconGlyph.Of(FontAwesomeIcon.Redo), style.Ink,
-                style.IconBackground, IconGlyphScale, Loc.T(L.Photos.Rotate)) && interactive)
-        {
-            controls.Rotate();
-        }
-
-        if (ui.IconButton(flipCenter, IconRadius * scale, IconGlyph.Of(FontAwesomeIcon.ArrowsAltH), style.Ink,
-                style.IconBackground, IconGlyphScale, Loc.T(L.Photos.Flip)) && interactive)
-        {
-            controls.Flip();
-        }
-
-        return flipCenter.X + ((IconRadius + SideInset) * scale) - content.Min.X;
-    }
-
-    private static void DrawColorTools(PhotoEditControls controls, Rect content, AppSkin ui,
-        in PhotoEditPanelStyle style, float scale, bool interactive, bool withOrientation)
-    {
-        if (controls.Tool == PhotoEditTool.Looks)
-        {
-            DrawLooks(controls, content, ui, style, scale, interactive, withOrientation);
-            return;
-        }
-
-        DrawAdjust(controls, content, ui, style, scale, interactive, withOrientation);
-    }
-
-    private static void DrawAdjust(PhotoEditControls controls, Rect content, AppSkin ui, in PhotoEditPanelStyle style,
-        float scale, bool interactive, bool withOrientation)
-    {
-        var adjustments = PhotoEditControls.Adjustments;
-        for (var index = 0; index < adjustments.Length; index++)
-        {
-            controls.AdjustmentLabels[index] = Loc.T(AdjustmentLabel(adjustments[index]));
-            controls.AdjustmentActive[index] = adjustments[index] == controls.Adjustment;
-        }
-
-        var row = ChipRow(content, scale);
-        var picked = controls.AdjustmentRail.Draw(row, ui, controls.AdjustmentLabels, controls.AdjustmentActive,
-            style.Overlay, centered: true, interactive: interactive);
-        if (picked >= 0)
-        {
-            controls.Adjustment = adjustments[picked];
-        }
-
-        var rowCenterY = row.Max.Y + (ScrubberGap * scale);
-        var leftInset = withOrientation
-            ? DrawOrientationButtons(content, rowCenterY, ui, style, scale, interactive, controls)
-            : SideInset * scale;
-        var (min, max) = PhotoEdit.RangeOf(controls.Adjustment);
-        var value = controls.Edit.ValueOf(controls.Adjustment);
-        var track = ScrubberTrack(content, row.Max.Y, scale, leftInset, (SideInset + ValueWidth) * scale);
-        var fraction = (value - min) / (max - min);
-        var updated = DrawScrubber(track, fraction, min < 0f, style, scale, 1f, interactive);
-        if (updated != fraction)
-        {
-            controls.Adjust(controls.Adjustment, min + (updated * (max - min)));
-        }
-
-        var label = controls.ValueLabel(controls.Adjustment, controls.Edit.ValueOf(controls.Adjustment), Loc.Culture);
-        Typography.DrawCentered(ImGui.GetWindowDrawList(),
-            new Vector2(track.Max.X + (ValueWidth * 0.5f * scale), track.Center.Y), label, style.Ink,
-            TextStyles.SubheadlineEmphasized);
-    }
-
-    private static void DrawLooks(PhotoEditControls controls, Rect content, AppSkin ui, in PhotoEditPanelStyle style,
-        float scale, bool interactive, bool withOrientation)
-    {
-        var looks = PhotoLooks.All;
-        for (var index = 0; index < looks.Length; index++)
-        {
-            controls.LookLabels[index] = Loc.T(LookLabel(looks[index]));
-            controls.LookActive[index] = looks[index] == controls.Edit.Look;
-        }
-
-        var row = ChipRow(content, scale);
-        var picked = controls.LookRail.Draw(row, ui, controls.LookLabels, controls.LookActive, style.Overlay,
-            centered: true, interactive: interactive);
-        if (picked >= 0)
-        {
-            controls.SetLook(looks[picked]);
-        }
-
-        var rowCenterY = row.Max.Y + (ScrubberGap * scale);
-        var leftInset = withOrientation
-            ? DrawOrientationButtons(content, rowCenterY, ui, style, scale, interactive, controls)
-            : SideInset * scale;
-        var hasLook = controls.Edit.Look != PhotoLook.None;
-        var track = ScrubberTrack(content, row.Max.Y, scale, leftInset, (SideInset + ValueWidth) * scale);
-        var strength = controls.Edit.LookStrength;
-        var updated = DrawScrubber(track, strength, false, style, scale, hasLook ? 1f : DimmedAlpha,
-            interactive && hasLook);
-        if (hasLook && updated != strength)
-        {
-            controls.SetLookStrength(updated);
-        }
-
-        var label = controls.ValueLabel(PhotoAdjustment.Vignette, hasLook ? strength : 0f, Loc.Culture);
-        Typography.DrawCentered(ImGui.GetWindowDrawList(),
-            new Vector2(track.Max.X + (ValueWidth * 0.5f * scale), track.Center.Y), label,
-            hasLook ? style.Ink : style.MutedInk, TextStyles.SubheadlineEmphasized);
-    }
-
-    private static void DrawCrop(PhotoEditSession session, Rect content, AppSkin ui, in PhotoEditPanelStyle style,
-        float scale, bool interactive)
+    private static void DrawGalleryCrop(PhotoEditSession session, Rect footer, AppSkin ui,
+        in PhotoEditPanelStyle style, float scale, bool interactive)
     {
         var aspects = PhotoCropAspects.All;
         for (var index = 0; index < aspects.Length; index++)
@@ -281,101 +208,418 @@ internal static class PhotoEditPanel
             session.AspectActive[index] = aspects[index] == session.Aspect;
         }
 
-        var row = ChipRow(content, scale);
+        var rowCenterY = UpperRowCenterY(footer, scale);
+        var row = new Rect(new Vector2(footer.Min.X + (SideInset * scale), rowCenterY - (ChipRail.RowHeight * 0.5f * scale)),
+            new Vector2(footer.Max.X - (SideInset * scale), rowCenterY + (ChipRail.RowHeight * 0.5f * scale)));
         var picked = session.AspectRail.Draw(row, ui, session.AspectLabels, session.AspectActive, style.Overlay,
-            centered: true, interactive: interactive);
+            labelPadding: ChipRail.CompactLabelPadding, centered: true, interactive: interactive);
         if (picked >= 0)
         {
             session.Aspect = aspects[picked];
         }
 
-        var rowCenterY = row.Max.Y + (ScrubberGap * scale);
-        var leftInset = DrawOrientationButtons(content, rowCenterY, ui, style, scale, interactive, session.Controls);
         var size = session.StageTextureSize;
+        var ruler = RulerRect(footer, scale);
+        DrawOrientationButtons(ruler, session.Controls, style, scale, interactive);
         if (size.X <= 0f)
         {
             return;
         }
 
-        var track = ScrubberTrack(content, row.Max.Y, scale, leftInset, SideInset * scale);
         var ratio = session.CropRatio;
         var fraction = session.Crop.ZoomFraction(size, ratio, false);
-        var updated = DrawScrubber(track, fraction, false, style, scale, 1f, interactive);
+        var updated = DrawRuler(ruler, fraction, false, style, scale, 1f, interactive);
         if (updated != fraction)
         {
             session.Crop.SetZoomFraction(updated, size, ratio, false);
         }
     }
 
-    private static void DrawTabs(PhotoEditControls controls, Rect tabs, in PhotoEditPanelStyle style, float scale,
-        bool interactive, bool includeCrop)
+    public static void DrawAdjust(PhotoEditControls controls, Rect footer, in PhotoEditPanelStyle style,
+        float scale, bool interactive)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var count = includeCrop ? AllTools.Length : AllTools.Length - 1;
-        var width = TabWidth * scale;
-        var left = tabs.Center.X - (width * count * 0.5f);
-        for (var index = 0; index < count; index++)
+        var adjustments = PhotoEditControls.Adjustments;
+        var centerY = UpperRowCenterY(footer, scale);
+        var spacing = DialSpacing * scale;
+        var startX = footer.Center.X - ((adjustments.Length - 1) * spacing * 0.5f);
+        var radius = DialRadius * scale;
+        var hit = new Vector2(RingRadius * scale, RingRadius * scale);
+        for (var index = 0; index < adjustments.Length; index++)
         {
-            var tool = AllTools[index];
-            var rect = new Rect(new Vector2(left + (index * width), tabs.Min.Y),
-                new Vector2(left + ((index + 1) * width), tabs.Max.Y));
-            var active = tool == controls.Tool;
-            var hovered = interactive && UiInteract.Hover(rect.Min, rect.Max);
-            var color = active ? style.Accent : hovered ? style.Ink : style.MutedInk;
-            var iconCenter = new Vector2(rect.Center.X, rect.Min.Y + (TabIconOffset * scale));
-            AppSkin.Icon(drawList, iconCenter, IconGlyph.Of(TabIcon(tool)), color, TabGlyphScale);
-            Typography.DrawCentered(drawList, new Vector2(rect.Center.X, rect.Min.Y + (TabLabelOffset * scale)),
-                Loc.T(TabLabel(tool)), color, TextStyles.Caption1);
+            var adjustment = adjustments[index];
+            var center = new Vector2(startX + (index * spacing), centerY);
+            var selected = adjustment == controls.Adjustment;
+            var hovered = interactive && UiInteract.Hover(center - hit, center + hit);
+            var face = selected
+                ? style.Accent
+                : hovered
+                    ? Core.Theme.Palette.Mix(style.IconBackground, style.Ink, 0.08f)
+                    : style.IconBackground;
+            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(face), 32);
+            if (!selected)
+            {
+                drawList.AddCircle(center, radius, ImGui.GetColorU32(style.Ink with { W = HairlineAlpha }), 32,
+                    Metrics.Stroke.Hairline * scale);
+            }
+
+            DrawValueRing(drawList, center, controls.Edit.ValueOf(adjustment), adjustment, style, scale, selected);
+            AppSkin.Icon(drawList, center, IconGlyph.Of(AdjustmentIcon(adjustment)),
+                selected ? White : hovered ? style.Ink : style.MutedInk, DialIconScale);
+            HoverTooltip.Show(new Rect(center - hit, center + hit), Loc.T(AdjustmentLabel(adjustment)));
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            if (UiInteract.Click(rect.Min, rect.Max, hovered))
+            if (UiInteract.Click(center - hit, center + hit, hovered))
+            {
+                controls.Adjustment = adjustment;
+            }
+        }
+
+        var (min, max) = PhotoEdit.RangeOf(controls.Adjustment);
+        var value = controls.Edit.ValueOf(controls.Adjustment);
+        DrawLabelLine(footer, Loc.T(AdjustmentLabel(controls.Adjustment)),
+            controls.ValueLabel(controls.Adjustment, value, Loc.Culture), style, scale);
+        var ruler = RulerRect(footer, scale);
+        var fraction = (value - min) / (max - min);
+        var updated = DrawRuler(ruler, fraction, min < 0f, style, scale, 1f, interactive);
+        if (updated != fraction)
+        {
+            controls.Adjust(controls.Adjustment, min + (updated * (max - min)));
+        }
+    }
+
+    private static void DrawValueRing(ImDrawListPtr drawList, Vector2 center, float value,
+        PhotoAdjustment adjustment, in PhotoEditPanelStyle style, float scale, bool selected)
+    {
+        var (min, max) = PhotoEdit.RangeOf(adjustment);
+        var bipolar = min < 0f;
+        var fraction = bipolar ? value / max : (value - min) / (max - min);
+        if (MathF.Abs(fraction) < RingEpsilon)
+        {
+            return;
+        }
+
+        const float top = -MathF.PI * 0.5f;
+        float start;
+        float end;
+        if (bipolar)
+        {
+            var sweep = MathF.Abs(fraction) * MathF.PI;
+            start = fraction > 0f ? top : top - sweep;
+            end = fraction > 0f ? top + sweep : top;
+        }
+        else
+        {
+            start = top;
+            end = top + (fraction * MathF.PI * 2f);
+        }
+
+        drawList.PathArcTo(center, RingRadius * scale, start, end, RingSegments);
+        drawList.PathStroke(ImGui.GetColorU32(selected ? style.Accent : style.Ink with { W = 0.55f }),
+            ImDrawFlags.None, RingThickness * scale);
+    }
+
+    public static void DrawLooks(PhotoEditControls controls, PhotoEditPreview? preview, Rect footer,
+        in PhotoEditPanelStyle style, float scale, bool interactive)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var looks = PhotoLooks.All;
+        var side = TileSide * scale;
+        var gap = TileGap * scale;
+        var centerY = UpperRowCenterY(footer, scale);
+        var row = new Rect(new Vector2(footer.Min.X + (SideInset * scale), centerY - (side * 0.5f)),
+            new Vector2(footer.Max.X - (SideInset * scale), centerY + (side * 0.5f)));
+        var contentWidth = (looks.Length * side) + ((looks.Length - 1) * gap);
+        var maxOffset = MathF.Max(0f, contentWidth - row.Width);
+        HandleShelfDrag(controls, row, maxOffset, interactive);
+        var startX = maxOffset > 0f ? row.Min.X - controls.LookShelfOffset : row.Center.X - (contentWidth * 0.5f);
+        var rowHovered = interactive && UiInteract.Hover(row.Min, row.Max);
+        var released = ImGui.IsMouseReleased(ImGuiMouseButton.Left);
+        var tapped = released && controls.LookShelfTravel < ShelfDragSlop * scale;
+        drawList.PushClipRect(row.Min, row.Max, true);
+        for (var index = 0; index < looks.Length; index++)
+        {
+            var min = new Vector2(startX + (index * (side + gap)), row.Min.Y);
+            var max = new Vector2(min.X + side, row.Max.Y);
+            var selected = looks[index] == controls.Edit.Look;
+            var hovered = rowHovered && ImGui.IsMouseHoveringRect(min, max);
+            var texture = preview?.LookTexture(index);
+            if (texture is null)
+            {
+                Squircle.Fill(drawList, min, max, TileRounding * scale, ImGui.GetColorU32(style.IconBackground));
+            }
+            else
+            {
+                var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
+                drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, TileRounding * scale,
+                    ImDrawFlags.RoundCornersAll);
+            }
+
+            if (selected)
+            {
+                Squircle.Stroke(drawList, min, max, TileRounding * scale, ImGui.GetColorU32(style.Accent),
+                    TileStroke * scale);
+            }
+            else
+            {
+                Squircle.Stroke(drawList, min, max, TileRounding * scale,
+                    ImGui.GetColorU32(style.Ink with { W = hovered ? 0.35f : HairlineAlpha }),
+                    Metrics.Stroke.Hairline * scale);
+            }
+
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                HoverTooltip.Show(new Rect(min, max), Loc.T(LookLabel(looks[index])));
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    controls.LookShelfPressedIndex = index;
+                }
+
+                if (tapped && controls.LookShelfPressedIndex == index)
+                {
+                    controls.SetLook(looks[index]);
+                }
+            }
+        }
+
+        drawList.PopClipRect();
+        if (released)
+        {
+            controls.LookShelfPressedIndex = -1;
+        }
+
+        var hasLook = controls.Edit.Look != PhotoLook.None;
+        var strength = controls.Edit.LookStrength;
+        DrawLabelLine(footer, Loc.T(LookLabel(controls.Edit.Look)),
+            hasLook ? controls.ValueLabel(PhotoAdjustment.Vignette, strength, Loc.Culture) : string.Empty, style,
+            scale);
+        var ruler = RulerRect(footer, scale);
+        var updated = DrawRuler(ruler, strength, false, style, scale, hasLook ? 1f : DimmedAlpha,
+            interactive && hasLook);
+        if (hasLook && updated != strength)
+        {
+            controls.SetLookStrength(updated);
+        }
+    }
+
+    private static void HandleShelfDrag(PhotoEditControls controls, Rect row, float maxOffset, bool interactive)
+    {
+        var scale = UiScale.Current;
+        var hovered = interactive && UiInteract.Hover(row.Min, row.Max);
+        if (hovered)
+        {
+            var wheel = ImGui.GetIO().MouseWheel;
+            if (wheel != 0f)
+            {
+                controls.LookShelfOffset -= wheel * ShelfWheelStep * scale;
+            }
+
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                controls.LookShelfDragging = true;
+                controls.LookShelfLastMouseX = ImGui.GetMousePos().X;
+                controls.LookShelfTravel = 0f;
+            }
+        }
+
+        if (controls.LookShelfDragging)
+        {
+            if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
+            {
+                var mouseX = ImGui.GetMousePos().X;
+                var delta = mouseX - controls.LookShelfLastMouseX;
+                controls.LookShelfLastMouseX = mouseX;
+                controls.LookShelfTravel += MathF.Abs(delta);
+                controls.LookShelfOffset -= delta;
+            }
+            else
+            {
+                controls.LookShelfDragging = false;
+            }
+        }
+
+        controls.LookShelfOffset = Math.Clamp(controls.LookShelfOffset, 0f, maxOffset);
+    }
+
+    public static void DrawLabelLine(Rect footer, string name, string value, in PhotoEditPanelStyle style,
+        float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var centerY = footer.Max.Y - (LabelCenterFromBottom * scale);
+        var nameSize = Typography.Measure(name, TextStyles.SubheadlineEmphasized);
+        if (value.Length == 0)
+        {
+            Typography.DrawCentered(drawList, new Vector2(footer.Center.X, centerY), name, style.MutedInk,
+                TextStyles.SubheadlineEmphasized);
+            return;
+        }
+
+        var valueSize = Typography.Measure(value, TextStyles.SubheadlineEmphasized);
+        var gap = LabelGap * scale;
+        var total = nameSize.X + gap + valueSize.X;
+        var left = footer.Center.X - (total * 0.5f);
+        Typography.Draw(drawList, new Vector2(left, centerY - (nameSize.Y * 0.5f)), name, style.Ink,
+            TextStyles.SubheadlineEmphasized);
+        Typography.Draw(drawList, new Vector2(left + nameSize.X + gap, centerY - (valueSize.Y * 0.5f)), value,
+            style.Accent, TextStyles.SubheadlineEmphasized);
+    }
+
+    public static float DrawRuler(Rect rect, float value, bool bipolar, in PhotoEditPanelStyle style, float scale,
+        float alpha, bool interactive)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var result = Math.Clamp(value, 0f, 1f);
+        var pad = new Vector2(0f, RulerHitPad * scale);
+        var hovered = interactive && UiInteract.Hover(rect.Min - pad, rect.Max + pad);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeEw);
+            var wheel = ImGui.GetIO().MouseWheel;
+            if (wheel != 0f)
+            {
+                result = Math.Clamp(result + (wheel * RulerWheelStep), 0f, 1f);
+            }
+
+            if (ImGui.IsMouseDown(ImGuiMouseButton.Left) && rect.Width > 0f)
+            {
+                result = Math.Clamp((ImGui.GetMousePos().X - rect.Min.X) / rect.Width, 0f, 1f);
+            }
+        }
+
+        var baselineY = rect.Max.Y - (RulerBaselineInset * scale);
+        var tickColor = ImGui.GetColorU32(style.MutedInk with { W = style.MutedInk.W * RulerTickAlpha * alpha });
+        var centerColor = ImGui.GetColorU32(style.Ink with { W = style.Ink.W * alpha });
+        var thickness = Metrics.Stroke.Hairline * scale;
+        for (var index = 0; index < RulerTickCount; index++)
+        {
+            var x = rect.Min.X + (rect.Width * index / (RulerTickCount - 1));
+            var isCenter = bipolar && index == (RulerTickCount - 1) / 2;
+            var major = index % RulerMajorEvery == 0;
+            var height = (isCenter ? RulerCenterTick : major ? RulerMajorTick : RulerMinorTick) * scale;
+            drawList.AddLine(new Vector2(x, baselineY - height), new Vector2(x, baselineY),
+                isCenter ? centerColor : tickColor, isCenter ? Metrics.Stroke.Thin * scale : thickness);
+        }
+
+        var knobX = rect.Min.X + (rect.Width * result);
+        var fillStart = bipolar ? rect.Center.X : rect.Min.X;
+        drawList.AddLine(new Vector2(MathF.Min(fillStart, knobX), baselineY),
+            new Vector2(MathF.Max(fillStart, knobX), baselineY),
+            ImGui.GetColorU32(style.Accent with { W = style.Accent.W * alpha }), Metrics.Stroke.Ring * scale);
+        var knobHalf = new Vector2(RulerKnobWidth * 0.5f * scale, RulerKnobHeight * 0.5f * scale);
+        var knobCenter = new Vector2(knobX, rect.Center.Y);
+        var shadowOffset = new Vector2(0f, 1f * scale);
+        drawList.AddRectFilled(knobCenter - knobHalf + shadowOffset, knobCenter + knobHalf + shadowOffset,
+            ImGui.GetColorU32(KnobShadow with { W = KnobShadow.W * alpha }), knobHalf.X);
+        drawList.AddRectFilled(knobCenter - knobHalf, knobCenter + knobHalf,
+            ImGui.GetColorU32(style.Accent with { W = style.Accent.W * alpha }), knobHalf.X);
+        return result;
+    }
+
+    public static void DrawOrientationButtons(Rect ruler, PhotoEditControls controls, in PhotoEditPanelStyle style,
+        float scale, bool interactive)
+    {
+        var radius = OrientationRadius * scale;
+        var rotateCenter = new Vector2(ruler.Min.X - (OrientationGap * scale) - radius, ruler.Center.Y);
+        var flipCenter = new Vector2(ruler.Max.X + (OrientationGap * scale) + radius, ruler.Center.Y);
+        if (CircleIconButton(rotateCenter, radius, FontAwesomeIcon.Redo, Loc.T(L.Photos.Rotate), style, scale,
+                interactive))
+        {
+            controls.Rotate();
+        }
+
+        if (CircleIconButton(flipCenter, radius, FontAwesomeIcon.ArrowsAltH, Loc.T(L.Photos.Flip), style, scale,
+                interactive))
+        {
+            controls.Flip();
+        }
+    }
+
+    private static bool CircleIconButton(Vector2 center, float radius, FontAwesomeIcon icon, string tooltip,
+        in PhotoEditPanelStyle style, float scale, bool interactive)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var hit = new Vector2(radius, radius);
+        var hovered = interactive && UiInteract.Hover(center - hit, center + hit);
+        var face = hovered ? Core.Theme.Palette.Mix(style.IconBackground, style.Ink, 0.08f) : style.IconBackground;
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(face), 32);
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(style.Ink with { W = HairlineAlpha }), 32,
+            Metrics.Stroke.Hairline * scale);
+        AppSkin.Icon(drawList, center, IconGlyph.Of(icon), hovered ? style.Ink : style.MutedInk,
+            OrientationIconScale);
+        HoverTooltip.Show(new Rect(center - hit, center + hit), tooltip);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return UiInteract.Click(center - hit, center + hit, hovered);
+    }
+
+    public static void DrawDock(PhotoEditControls controls, Rect footer, in PhotoEditPanelStyle style, float scale,
+        bool interactive)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var dock = DockRect(footer, scale);
+        var rounding = dock.Height * 0.5f;
+        Material.Glass(drawList, dock.Min, dock.Max, rounding, style.Ink, scale);
+        var itemWidth = DockItemWidth * scale;
+        var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, MaxDeltaSeconds);
+        var activeIndex = Array.IndexOf(Tools, controls.Tool);
+        var animated = controls.DockSpring.Step(activeIndex, DockSmoothTime, deltaSeconds);
+        var pillInset = DockPillInset * scale;
+        var pillMin = new Vector2(dock.Min.X + pillInset + (animated * itemWidth), dock.Min.Y + pillInset);
+        var pillMax = new Vector2(pillMin.X + itemWidth - (pillInset * 2f), dock.Max.Y - pillInset);
+        var pillRounding = (pillMax.Y - pillMin.Y) * 0.5f;
+        Squircle.Fill(drawList, pillMin, pillMax, pillRounding,
+            ImGui.GetColorU32(style.Accent with { W = DockPillAlpha }));
+        Squircle.Stroke(drawList, pillMin, pillMax, pillRounding,
+            ImGui.GetColorU32(style.Accent with { W = DockPillStrokeAlpha }), Metrics.Stroke.Hairline * scale);
+        for (var index = 0; index < Tools.Length; index++)
+        {
+            var tool = Tools[index];
+            var min = new Vector2(dock.Min.X + (index * itemWidth), dock.Min.Y);
+            var max = new Vector2(min.X + itemWidth, dock.Max.Y);
+            var center = (min + max) * 0.5f;
+            var active = tool == controls.Tool;
+            var hovered = interactive && UiInteract.Hover(min, max);
+            var color = active ? style.Accent : hovered ? style.Ink : style.MutedInk;
+            AppSkin.Icon(drawList, new Vector2(center.X, center.Y + (DockIconOffset * scale)),
+                IconGlyph.Of(ToolIcon(tool)), color, DockIconScale);
+            Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + (DockLabelOffset * scale)),
+                Loc.T(ToolLabel(tool)), color, TextStyles.Caption2);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (UiInteract.Click(min, max, hovered))
             {
                 controls.Tool = tool;
             }
         }
     }
 
-    private static float DrawScrubber(Rect track, float value, bool bipolar, in PhotoEditPanelStyle style,
-        float scale, float alpha, bool interactive)
+    private static FontAwesomeIcon AdjustmentIcon(PhotoAdjustment adjustment)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var midY = track.Center.Y;
-        var left = track.Min.X;
-        var width = track.Width;
-        var thickness = track.Height;
-        var result = Math.Clamp(value, 0f, 1f);
-        if (interactive && Scrubber.IsHovered(track))
+        switch (adjustment)
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseDown(ImGuiMouseButton.Left) && width > 0f)
-            {
-                result = Math.Clamp((ImGui.GetMousePos().X - left) / width, 0f, 1f);
-            }
+            case PhotoAdjustment.Contrast:
+                return FontAwesomeIcon.Adjust;
+            case PhotoAdjustment.Saturation:
+                return FontAwesomeIcon.Tint;
+            case PhotoAdjustment.Warmth:
+                return FontAwesomeIcon.ThermometerHalf;
+            case PhotoAdjustment.Vignette:
+                return FontAwesomeIcon.DotCircle;
+            case PhotoAdjustment.Straighten:
+                return FontAwesomeIcon.RulerHorizontal;
+            default:
+                return FontAwesomeIcon.Sun;
         }
-
-        var railMin = new Vector2(left, midY - (thickness * 0.5f));
-        var railMax = new Vector2(track.Max.X, midY + (thickness * 0.5f));
-        drawList.AddRectFilled(railMin, railMax, ImGui.GetColorU32(style.Rail with { W = style.Rail.W * alpha }),
-            thickness * 0.5f);
-        var knobX = left + (width * result);
-        var fillStart = bipolar ? left + (width * 0.5f) : left;
-        var fillMin = new Vector2(MathF.Min(fillStart, knobX), railMin.Y);
-        var fillMax = new Vector2(MathF.Max(fillStart, knobX), railMax.Y);
-        drawList.AddRectFilled(fillMin, fillMax,
-            ImGui.GetColorU32(style.Accent with { W = style.Accent.W * alpha }), thickness * 0.5f);
-        if (bipolar)
-        {
-            var tickHalf = thickness * CenterTickHeight * 0.5f;
-            drawList.AddLine(new Vector2(fillStart, midY - tickHalf), new Vector2(fillStart, midY + tickHalf),
-                ImGui.GetColorU32(style.Ink with { W = 0.5f * alpha }), Metrics.Stroke.Thin * scale);
-        }
-
-        drawList.AddCircleFilled(new Vector2(knobX, midY), (thickness * 0.5f) + (KnobExtra * scale),
-            ImGui.GetColorU32(style.Ink with { W = alpha }), 24);
-        return result;
     }
 
     private static LocString AdjustmentLabel(PhotoAdjustment adjustment)
@@ -439,7 +683,7 @@ internal static class PhotoEditPanel
         }
     }
 
-    private static LocString TabLabel(PhotoEditTool tool)
+    private static LocString ToolLabel(PhotoEditTool tool)
     {
         switch (tool)
         {
@@ -452,7 +696,7 @@ internal static class PhotoEditPanel
         }
     }
 
-    private static FontAwesomeIcon TabIcon(PhotoEditTool tool)
+    private static FontAwesomeIcon ToolIcon(PhotoEditTool tool)
     {
         switch (tool)
         {
