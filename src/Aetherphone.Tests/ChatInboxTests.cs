@@ -329,6 +329,42 @@ public sealed class ChatInboxTests
         Assert.Null(inbox.Find(row.Key));
     }
 
+    [Fact]
+    public void TellsShowBubblesUntilALayoutIsStoredForThem()
+    {
+        var (log, inbox, configuration) = Build();
+        using var scope = inbox;
+        var tell = new ChatEntry(log.NextSequence(), GameChannels.TellKey, "Rin", "Siren", "hey",
+            new[] { ChatChunk.Plain("hey") }, DateTime.Now, ChatEntryFlags.None);
+        log.Append(tell);
+        inbox.Sync();
+        Assert.Equal(ChatDensity.Bubbles, inbox.Find(tell.StreamKey)!.Density);
+
+        configuration.LinkpearlTellLayouts[tell.StreamKey] = (int)ChatDensity.Log;
+        var stored = new ChatInbox(log, new TabStoreStub(configuration).Store, new TellPreferences(configuration),
+            configuration);
+        using var storedScope = stored;
+        stored.Sync();
+        Assert.Equal(ChatDensity.Log, stored.Find(tell.StreamKey)!.Density);
+    }
+
+    [Fact]
+    public void TabRowsReportTheirTabLayout()
+    {
+        var tab = Tab("FC", "fc");
+        tab.Density = ChatDensity.Bubbles;
+        var (_, inbox, _) = Build(tab);
+        using var scope = inbox;
+        inbox.Sync();
+
+        var row = inbox.Find("tab:FC");
+        Assert.NotNull(row);
+        Assert.Equal(ChatDensity.Bubbles, row!.Density);
+
+        tab.Density = ChatDensity.Log;
+        Assert.Equal(ChatDensity.Log, row.Density);
+    }
+
     private sealed class TabStoreStub
     {
         public TabStoreStub(Configuration configuration) =>

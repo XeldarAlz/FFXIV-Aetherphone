@@ -110,6 +110,8 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
 
     public LodestoneService? Lodestone { get; set; }
 
+    public ChatDensity Density => target.Density;
+
     public void Gate() => composer.Gate();
 
     public void CloseMenus() => composer.CloseMenus();
@@ -1219,7 +1221,7 @@ internal static class GameChatTargets
 
         var target = ChatStreams.IsTell(row.Key) ? SendTarget(row) : string.Empty;
         return new GameChatTarget(row.Key, new[] { row.StreamKey }, new[] { GameChannels.TellKey },
-            GameChannels.TellKey, target, ChatDensity.Bubbles, false, 0f, null);
+            GameChannels.TellKey, target, row.Density, false, 0f, null);
     }
 
     public static string SendTarget(InboxRow row) =>

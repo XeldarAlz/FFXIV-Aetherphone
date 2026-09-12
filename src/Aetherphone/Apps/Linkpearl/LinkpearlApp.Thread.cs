@@ -12,7 +12,7 @@ internal sealed partial class LinkpearlApp
     private const float ThreadAvatarGap = 6f;
     private const float ThreadNameGap = 10f;
     private const float ThreadBackInset = 12f;
-    private const int ThreadHeaderSlots = 2;
+    private const int ThreadHeaderSlots = 3;
     private const float PopoutMarkRadius = 3.5f;
     private const float PopoutMarkOffset = 10f;
 
@@ -74,6 +74,14 @@ internal sealed partial class LinkpearlApp
                 Loc.T(L.Common.Search), chatThread.SearchOpen))
         {
             chatThread.ToggleSearch();
+        }
+
+        var bubbles = row.Density == ChatDensity.Bubbles;
+        if (chrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(header, 2),
+                bubbles ? PhoneIcons.LayoutList : PhoneIcons.MessageCircle,
+                Loc.T(bubbles ? L.Linkpearl.ShowAsLog : L.Linkpearl.ShowAsBubbles)))
+        {
+            ToggleLayout(row);
         }
 
         if (popouts.IsOpen(row.Key))
@@ -164,7 +172,8 @@ internal sealed partial class LinkpearlApp
 
     private void OpenThread(InboxRow row)
     {
-        if (string.Equals(threadKey, row.Key, StringComparison.Ordinal) && chatThread.IsOpenFor(row.Key))
+        if (string.Equals(threadKey, row.Key, StringComparison.Ordinal) && chatThread.IsOpenFor(row.Key)
+            && chatThread.Density == row.Density)
         {
             return;
         }
@@ -173,16 +182,6 @@ internal sealed partial class LinkpearlApp
         chatThread.Open(GameChatTargets.For(row));
     }
 
-    private void ToggleLayout(InboxRow row)
-    {
-        if (row.Tab is not { } tab)
-        {
-            return;
-        }
-
-        tab.Density = tab.Density == ChatDensity.Bubbles ? ChatDensity.Log : ChatDensity.Bubbles;
-        tabs.Update(tab);
-        inbox.Invalidate();
-        threadKey = string.Empty;
-    }
+    private void ToggleLayout(InboxRow row) =>
+        inbox.SetDensity(row, row.Density == ChatDensity.Bubbles ? ChatDensity.Log : ChatDensity.Bubbles);
 }

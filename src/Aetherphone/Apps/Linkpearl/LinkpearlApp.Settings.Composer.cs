@@ -159,7 +159,7 @@ internal sealed partial class LinkpearlApp
 
     private void DrawIndicatorRow(Rect row, float scale)
     {
-        var labelWidth = row.Width * SliderLabelWidth;
+        var labelWidth = row.Width * LinkpearlSettingRows.SliderLabelWidth;
         DrawSliderLabel(row, Loc.T(L.Linkpearl.SplitIndicator), labelWidth, scale);
         if (!splitIndicatorActive)
         {
@@ -189,7 +189,7 @@ internal sealed partial class LinkpearlApp
     private Slider.Result DrawLabeledSlider(Rect row, string id, string label, string value, float normalized,
         float scale)
     {
-        var labelWidth = row.Width * SliderLabelWidth;
+        var labelWidth = row.Width * LinkpearlSettingRows.SliderLabelWidth;
         var valueSize = Typography.Measure(value, TextStyles.Caption1);
         DrawSliderLabel(row, label, labelWidth - valueSize.X - Metrics.Space.Sm * scale, scale);
         Typography.Draw(ImGui.GetWindowDrawList(),

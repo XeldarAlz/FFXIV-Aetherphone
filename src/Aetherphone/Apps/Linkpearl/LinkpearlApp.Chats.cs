@@ -37,8 +37,7 @@ internal sealed partial class LinkpearlApp
     private const byte MenuDeleteTab = 5;
     private const byte MenuClearHistory = 6;
     private const byte MenuSearch = 7;
-    private const byte MenuLayout = 8;
-    private const byte MenuWallpaper = 9;
+    private const byte MenuWallpaper = 8;
 
     private readonly ChipRail filterRail = new();
     private readonly string[] filterLabels = new string[4];
@@ -339,13 +338,6 @@ internal sealed partial class LinkpearlApp
         if (fromThread)
         {
             AddSheetItem(L.Common.Search, MenuSearch, PhoneIcons.Search, chatThread.SearchOpen);
-            if (row.Tab is { } tab)
-            {
-                var bubbles = tab.Density == ChatDensity.Bubbles;
-                AddSheetItem(bubbles ? L.Linkpearl.LayoutLog : L.Linkpearl.LayoutBubbles, MenuLayout,
-                    bubbles ? PhoneIcons.LayoutList : PhoneIcons.MessageCircle);
-            }
-
             AddSheetItem(L.Message.Wallpaper, MenuWallpaper, PhoneIcons.Wallpaper);
         }
 
@@ -409,9 +401,6 @@ internal sealed partial class LinkpearlApp
         {
             case MenuSearch:
                 chatThread.ToggleSearch();
-                break;
-            case MenuLayout:
-                ToggleLayout(row);
                 break;
             case MenuWallpaper:
                 router.Push(LinkpearlRoute.Wallpaper(row.Key));

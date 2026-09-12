@@ -341,6 +341,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Dictionary<string, long> LinkpearlSeen { get; set; } = new();
     public List<string> LinkpearlPinnedTells { get; set; } = new();
     public List<string> LinkpearlMutedTells { get; set; } = new();
+    public Dictionary<string, int> LinkpearlTellLayouts { get; set; } = new();
     public bool LinkpearlPopoutTells { get; set; } = true;
     public float LinkpearlPopoutOpacity { get; set; } = 0.96f;
     public float LinkpearlPopoutTextScale { get; set; } = 1f;

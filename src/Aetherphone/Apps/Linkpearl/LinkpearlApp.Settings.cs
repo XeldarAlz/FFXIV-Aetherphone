@@ -11,13 +11,7 @@ namespace Aetherphone.Apps.Linkpearl;
 
 internal sealed partial class LinkpearlApp
 {
-    private const float SliderLabelWidth = 0.42f;
-    private const float PopoutOpacityMinimum = 0.5f;
-    private const float IdleOpacityMinimum = 0.15f;
-    private const float OpacityEpsilon = 0.002f;
     private const float SettingsBottomPad = 24f;
-
-    private static readonly float[] TextScaleChoices = { 0.8f, 0.9f, 1f, 1.15f, 1.3f, 1.5f };
 
     private readonly List<DropdownMenu.Item> settingsItems = new(6);
 
@@ -63,7 +57,7 @@ internal sealed partial class LinkpearlApp
 
             var textSizeRow = NextSettingRow(scale);
             if (chrome.DrawSettingRow(drawList, PhoneIcons.TextSize, ChatListChrome.TintTeal,
-                    Loc.T(L.Linkpearl.TextSize), PercentLabel(configuration.LinkpearlTextScale)))
+                    Loc.T(L.Linkpearl.TextSize), LinkpearlSettingRows.PercentLabel(configuration.LinkpearlTextScale)))
             {
                 settingsMenu.Toggle("linkpearl.settings.textScale", textSizeRow);
             }
@@ -265,7 +259,7 @@ internal sealed partial class LinkpearlApp
 
         var textSizeRow = look.NextRow();
         if (SettingsRow.Disclosure(textSizeRow, Loc.T(L.Linkpearl.PopoutTextSize),
-                PercentLabel(configuration.LinkpearlPopoutTextScale), frameTheme, "linkpearl.settings.textSize"))
+                LinkpearlSettingRows.PercentLabel(configuration.LinkpearlPopoutTextScale), frameTheme, "linkpearl.settings.textSize"))
         {
             settingsMenu.Toggle("linkpearl.settings.textSize", textSizeRow);
         }
@@ -298,9 +292,9 @@ internal sealed partial class LinkpearlApp
 
     private void DrawOpacityRow(Rect row, float scale)
     {
-        configuration.LinkpearlPopoutOpacity = DrawOpacitySlider(row, scale, "linkpearl.settings.opacity",
-            Loc.T(L.Linkpearl.PopoutOpacity), configuration.LinkpearlPopoutOpacity, PopoutOpacityMinimum,
-            out var released);
+        configuration.LinkpearlPopoutOpacity = LinkpearlSettingRows.OpacitySlider(row, scale,
+            "linkpearl.settings.opacity", Loc.T(L.Linkpearl.PopoutOpacity), configuration.LinkpearlPopoutOpacity,
+            LinkpearlSettingRows.PopoutOpacityMinimum, frameTheme, out var released);
         if (released)
         {
             configuration.Save();
@@ -309,30 +303,14 @@ internal sealed partial class LinkpearlApp
 
     private void DrawIdleOpacityRow(Rect row, float scale)
     {
-        configuration.LinkpearlPopoutIdleOpacity = DrawOpacitySlider(row, scale, "linkpearl.settings.idleOpacity",
-            Loc.T(L.Linkpearl.PopoutIdleOpacity), configuration.LinkpearlPopoutIdleOpacity, IdleOpacityMinimum,
+        configuration.LinkpearlPopoutIdleOpacity = LinkpearlSettingRows.OpacitySlider(row, scale,
+            "linkpearl.settings.idleOpacity", Loc.T(L.Linkpearl.PopoutIdleOpacity),
+            configuration.LinkpearlPopoutIdleOpacity, LinkpearlSettingRows.IdleOpacityMinimum, frameTheme,
             out var released);
         if (released)
         {
             configuration.Save();
         }
-    }
-
-    private float DrawOpacitySlider(Rect row, float scale, string id, string label, float value, float minimum,
-        out bool released)
-    {
-        var labelSize = Typography.Measure(label, TextStyles.BodyEmphasized);
-        var labelWidth = row.Width * SliderLabelWidth;
-        Typography.Draw(ImGui.GetWindowDrawList(), new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f),
-            Typography.FitText(label, labelWidth, TextStyles.BodyEmphasized), frameTheme.TextStrong,
-            TextStyles.BodyEmphasized);
-        var span = 1f - minimum;
-        var normalized = (Math.Clamp(value, minimum, 1f) - minimum) / span;
-        var result = Slider.Draw(id, row, normalized, frameTheme, labelWidth + Metrics.Space.Md * scale,
-            Metrics.Space.Xs * scale);
-        released = result.Released;
-        var next = minimum + result.Value * span;
-        return MathF.Abs(next - value) > OpacityEpsilon ? next : value;
     }
 
     private void DrawHistorySettings(float scale)
@@ -433,16 +411,16 @@ internal sealed partial class LinkpearlApp
         if (settingsMenu.IsOpenFor("linkpearl.settings.textScale"))
         {
             settingsItems.Clear();
-            for (var index = 0; index < TextScaleChoices.Length; index++)
+            for (var index = 0; index < LinkpearlSettingRows.TextScaleChoices.Length; index++)
             {
-                settingsItems.Add(new DropdownMenu.Item(PercentLabel(TextScaleChoices[index]), string.Empty, false,
-                    MathF.Abs(TextScaleChoices[index] - configuration.LinkpearlTextScale) < 0.01f));
+                settingsItems.Add(new DropdownMenu.Item(LinkpearlSettingRows.PercentLabel(LinkpearlSettingRows.TextScaleChoices[index]), string.Empty, false,
+                    MathF.Abs(LinkpearlSettingRows.TextScaleChoices[index] - configuration.LinkpearlTextScale) < 0.01f));
             }
 
             var pickedScale = settingsMenu.Draw(area, frameTheme, CollectionsMarshal.AsSpan(settingsItems));
             if (pickedScale >= 0)
             {
-                configuration.LinkpearlTextScale = TextScaleChoices[pickedScale];
+                configuration.LinkpearlTextScale = LinkpearlSettingRows.TextScaleChoices[pickedScale];
                 configuration.Save();
             }
 
@@ -452,16 +430,16 @@ internal sealed partial class LinkpearlApp
         if (settingsMenu.IsOpenFor("linkpearl.settings.textSize"))
         {
             settingsItems.Clear();
-            for (var index = 0; index < TextScaleChoices.Length; index++)
+            for (var index = 0; index < LinkpearlSettingRows.TextScaleChoices.Length; index++)
             {
-                settingsItems.Add(new DropdownMenu.Item(PercentLabel(TextScaleChoices[index]), string.Empty, false,
-                    MathF.Abs(TextScaleChoices[index] - configuration.LinkpearlPopoutTextScale) < 0.01f));
+                settingsItems.Add(new DropdownMenu.Item(LinkpearlSettingRows.PercentLabel(LinkpearlSettingRows.TextScaleChoices[index]), string.Empty, false,
+                    MathF.Abs(LinkpearlSettingRows.TextScaleChoices[index] - configuration.LinkpearlPopoutTextScale) < 0.01f));
             }
 
             var picked = settingsMenu.Draw(area, frameTheme, CollectionsMarshal.AsSpan(settingsItems));
             if (picked >= 0)
             {
-                configuration.LinkpearlPopoutTextScale = TextScaleChoices[picked];
+                configuration.LinkpearlPopoutTextScale = LinkpearlSettingRows.TextScaleChoices[picked];
                 configuration.Save();
             }
 
@@ -508,7 +486,4 @@ internal sealed partial class LinkpearlApp
                 threadKey = string.Empty;
             },
         });
-
-    private static string PercentLabel(float value) =>
-        string.Concat(MathF.Round(value * 100f).ToString(Loc.Culture), "%");
 }

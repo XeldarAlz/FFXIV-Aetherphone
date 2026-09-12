@@ -25,9 +25,26 @@ internal sealed class TellPreferences
     public bool ToggleMuted(string streamKey) =>
         Toggle(muted, configuration.LinkpearlMutedTells, streamKey);
 
+    public ChatDensity Layout(string streamKey) =>
+        configuration.LinkpearlTellLayouts.TryGetValue(streamKey, out var stored)
+            ? (ChatDensity)stored
+            : ChatDensity.Bubbles;
+
+    public void SetLayout(string streamKey, ChatDensity density)
+    {
+        if (Layout(streamKey) == density)
+        {
+            return;
+        }
+
+        configuration.LinkpearlTellLayouts[streamKey] = (int)density;
+        Commit();
+    }
+
     public void Forget(string streamKey)
     {
-        var changed = pinned.Remove(streamKey) | muted.Remove(streamKey);
+        var changed = pinned.Remove(streamKey) | muted.Remove(streamKey)
+                      | configuration.LinkpearlTellLayouts.Remove(streamKey);
         if (!changed)
         {
             return;

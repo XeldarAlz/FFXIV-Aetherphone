@@ -146,7 +146,7 @@ internal sealed partial class LinkpearlApp
         var textSizeRow = card.NextRow();
         if (chrome.DrawCardRow(drawList, textSizeRow, PhoneIcons.TextSize, ChatListChrome.TintTeal,
                 Loc.T(L.Linkpearl.TextSize),
-                tab.TextScale > 0f ? PercentLabel(tab.TextScale) : Loc.T(L.Message.WallpaperDefault)))
+                tab.TextScale > 0f ? LinkpearlSettingRows.PercentLabel(tab.TextScale) : Loc.T(L.Message.WallpaperDefault)))
         {
             editorMenu.Toggle("linkpearl.info.textScale", textSizeRow);
         }

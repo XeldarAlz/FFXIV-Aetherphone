@@ -300,16 +300,16 @@ internal sealed partial class LinkpearlApp
             editorItems.Clear();
             editorItems.Add(new DropdownMenu.Item(Loc.T(L.Message.WallpaperDefault), string.Empty, false,
                 tab.TextScale <= 0f));
-            for (var index = 0; index < TextScaleChoices.Length; index++)
+            for (var index = 0; index < LinkpearlSettingRows.TextScaleChoices.Length; index++)
             {
-                editorItems.Add(new DropdownMenu.Item(PercentLabel(TextScaleChoices[index]), string.Empty, false,
-                    tab.TextScale > 0f && MathF.Abs(TextScaleChoices[index] - tab.TextScale) < 0.01f));
+                editorItems.Add(new DropdownMenu.Item(LinkpearlSettingRows.PercentLabel(LinkpearlSettingRows.TextScaleChoices[index]), string.Empty, false,
+                    tab.TextScale > 0f && MathF.Abs(LinkpearlSettingRows.TextScaleChoices[index] - tab.TextScale) < 0.01f));
             }
 
             var pickedScale = DrawEditorList(area);
             if (pickedScale >= 0)
             {
-                tab.TextScale = pickedScale == 0 ? 0f : TextScaleChoices[pickedScale - 1];
+                tab.TextScale = pickedScale == 0 ? 0f : LinkpearlSettingRows.TextScaleChoices[pickedScale - 1];
                 tabs.Update(tab);
                 threadKey = string.Empty;
             }

@@ -18,8 +18,11 @@ internal sealed class InboxRow
     public Vector4 Tint { get; set; }
     public bool Pinned { get; set; }
     public bool Muted { get; set; }
+    public ChatDensity TellDensity { get; set; } = ChatDensity.Bubbles;
 
     public bool IsTell => Tab is null;
+
+    public ChatDensity Density => Tab?.Density ?? TellDensity;
 
     public bool HasBadge => Unread > 0 && !Muted;
 }
@@ -103,6 +106,7 @@ internal sealed class ChatInbox : IDisposable
             Tint = ChannelTints.Tell,
             Pinned = tellPreferences.IsPinned(key),
             Muted = tellPreferences.IsMuted(key),
+            TellDensity = tellPreferences.Layout(key),
         };
         rows.Insert(0, transient);
         return transient;
@@ -225,6 +229,26 @@ internal sealed class ChatInbox : IDisposable
         else
         {
             tellPreferences.ToggleMuted(row.Key);
+        }
+
+        stale = true;
+    }
+
+    public void SetDensity(InboxRow row, ChatDensity density)
+    {
+        if (row.Density == density)
+        {
+            return;
+        }
+
+        if (row.Tab is { } tab)
+        {
+            tab.Density = density;
+            tabs.Update(tab);
+        }
+        else
+        {
+            tellPreferences.SetLayout(row.Key, density);
         }
 
         stale = true;
@@ -358,6 +382,7 @@ internal sealed class ChatInbox : IDisposable
             {
                 transient.Pinned = tellPreferences.IsPinned(transient.Key);
                 transient.Muted = tellPreferences.IsMuted(transient.Key);
+                transient.TellDensity = tellPreferences.Layout(transient.Key);
                 Place(transient);
             }
         }
@@ -432,6 +457,7 @@ internal sealed class ChatInbox : IDisposable
             Tint = ChannelTints.Tell,
             Pinned = tellPreferences.IsPinned(streamKey),
             Muted = tellPreferences.IsMuted(streamKey),
+            TellDensity = tellPreferences.Layout(streamKey),
         };
         var watermark = Watermark(streamKey);
         for (var index = 0; index < lines.Count; index++)

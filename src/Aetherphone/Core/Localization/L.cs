@@ -1829,6 +1829,10 @@ internal static class L
                 "New chats now open as a tab in the pop-out you are using instead of a new window each time; the title strip is the tab rail, and a collapsed window shows the stacked avatars, the names and one count of new messages"),
             new("changelog.r1030.37",
                 "Pop-out windows have a glass look that follows your chat theme and wallpaper"),
+            new("changelog.r1030.38",
+                "Switch any chat between the Log and Bubbles layouts with one tap on the thread header, tells included"),
+            new("changelog.r1030.39",
+                "Pop-out windows have a settings button on the bar: change the layout, text size, opacity and fade without opening the phone"),
         };
 
         public static readonly LocString[] Release1021Message =
@@ -4129,6 +4133,9 @@ internal static class L
         public static readonly LocString ExportHistory = new("linkpearl.exportHistory", "Export history");
         public static readonly LocString ExportedHistory = new("linkpearl.exportedHistory", "History exported to the exports folder");
         public static readonly LocString ExportFailed = new("linkpearl.exportFailed", "Couldn't export the history");
+        public static readonly LocString ThisChat = new("linkpearl.thisChat", "This chat");
+        public static readonly LocString ShowAsLog = new("linkpearl.showAsLog", "Show as a log");
+        public static readonly LocString ShowAsBubbles = new("linkpearl.showAsBubbles", "Show as bubbles");
     }
 
     internal static class Character

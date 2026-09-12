@@ -15,7 +15,7 @@ using Dalamud.Interface.Windowing;
 
 namespace Aetherphone.Windows;
 
-internal sealed class LinkpearlPopoutWindow : Window
+internal sealed partial class LinkpearlPopoutWindow : Window
 {
     public const float DefaultWidth = 336f;
     public const float DefaultHeight = 430f;
@@ -152,6 +152,8 @@ internal sealed class LinkpearlPopoutWindow : Window
         var slotText = slot.ToString(Loc.Culture);
         switchMenuId = "linkpearl.popout.switch." + slotText;
         addMenuId = "linkpearl.popout.add." + slotText;
+        textSizeMenuId = "linkpearl.popout.textSize." + slotText;
+        settingIds = new PopoutSettingIds(slotText);
         chatMenu = new GameChatMenu("linkpearl.popout.menu." + slotText)
         {
             Detached = true,
@@ -208,6 +210,7 @@ internal sealed class LinkpearlPopoutWindow : Window
 
         threadKey = string.Empty;
         attended = false;
+        settingsOpen = false;
         savedPlacement = saved;
         placePending = true;
         fadeSpring.SnapTo(1f);
@@ -272,6 +275,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         {
             attended = false;
             threadKey = string.Empty;
+            settingsOpen = false;
             chatMenu.Close();
         }
 
@@ -375,6 +379,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         }
 
         CloseMenus();
+        settingsOpen = false;
         confirm.CancelHost(confirmHost);
         return true;
     }
@@ -419,6 +424,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         keys[active] = conversationKey;
         threadKey = string.Empty;
         attended = false;
+        settingsOpen = false;
         InvalidateTitles();
         thread.Close();
         chatMenu.Close();
@@ -436,6 +442,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         active = 0;
         threadKey = string.Empty;
         attended = false;
+        settingsOpen = false;
         dragging = false;
         dropTarget = null;
         InvalidateTitles();
@@ -610,6 +617,10 @@ internal sealed class LinkpearlPopoutWindow : Window
                         Typography.DrawCentered(ImGui.GetWindowDrawList(), body.Center, Loc.T(L.Messages.Empty),
                             ink.MutedInk, TextStyles.Callout);
                     }
+                    else if (settingsOpen)
+                    {
+                        DrawSettingsPanel(body, theme, row);
+                    }
                     else
                     {
                         OpenThread(row);
@@ -733,6 +744,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         attended = false;
         active = index;
         threadKey = string.Empty;
+        settingsOpen = false;
         chatMenu.Close();
         Touch();
     }
@@ -773,7 +785,8 @@ internal sealed class LinkpearlPopoutWindow : Window
 
     private void OpenThread(InboxRow row)
     {
-        if (string.Equals(threadKey, row.Key, StringComparison.Ordinal) && thread.IsOpenFor(row.Key))
+        if (string.Equals(threadKey, row.Key, StringComparison.Ordinal) && thread.IsOpenFor(row.Key)
+            && thread.Density == row.Density)
         {
             return;
         }
@@ -840,6 +853,18 @@ internal sealed class LinkpearlPopoutWindow : Window
         }
 
         var buttonsLeft = collapseCenter.X - radius - Metrics.Space.Sm * scale;
+        if (!collapsed)
+        {
+            var settingsCenter = new Vector2(collapseCenter.X - ButtonPitch * scale, centerY);
+            if (SocialChrome.DrawHeaderIcon(drawList, settingsCenter, radius, PhoneIcons.Settings, ButtonGlyph,
+                    Loc.T(L.Linkpearl.ChatSettings), ink, ink.MutedInk, settingsOpen))
+            {
+                ToggleSettings();
+            }
+
+            buttonsLeft = settingsCenter.X - radius - Metrics.Space.Sm * scale;
+        }
+
         BuildTabLabels();
         if (collapsed)
         {
@@ -1348,6 +1373,12 @@ internal sealed class LinkpearlPopoutWindow : Window
 
     private void DrawSwitchMenu(PhoneTheme theme)
     {
+        if (switchMenu.IsOpenFor(textSizeMenuId))
+        {
+            DrawTextSizeMenu(theme);
+            return;
+        }
+
         if (!switchMenu.IsOpenFor(addMenuId) && !switchMenu.IsOpenFor(switchMenuId))
         {
             return;
