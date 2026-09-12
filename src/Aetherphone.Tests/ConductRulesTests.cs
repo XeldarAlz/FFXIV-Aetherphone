@@ -23,6 +23,7 @@ public sealed class ConductRulesTests
     {
         Assert.Same(ConductRules.Coin, ConductRules.For(ConductRules.Coin.AppId));
         Assert.Same(ConductRules.Casino, ConductRules.For(ConductRules.Casino.AppId));
+        Assert.Same(ConductRules.KindKupo, ConductRules.For(ConductRules.KindKupo.AppId));
         Assert.Null(ConductRules.For("calculator"));
     }
 }

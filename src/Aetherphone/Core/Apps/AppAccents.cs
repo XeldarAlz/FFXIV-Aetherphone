@@ -73,6 +73,7 @@ internal static class AppAccents
         ["beat"] = AccentRing.Rose,
         ["blade"] = AccentRing.Red,
         ["trivia"] = AccentRing.Indigo,
+        ["kindkupo"] = AccentRing.Rose,
         ["skyfall"] = AccentRing.Orange,
         ["invaders"] = AccentRing.Violet,
         ["capman"] = AccentRing.Gold,
