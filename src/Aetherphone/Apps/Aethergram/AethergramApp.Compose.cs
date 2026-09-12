@@ -272,14 +272,32 @@ internal sealed partial class AethergramApp
             CropAdvance();
         }
 
+        var topInset = 0f;
+        if (!composeAvatarMode)
+        {
+            topInset = PhotoComposeSession.CropModeStripReserve;
+            composeSession.DrawCropModeStrip(area, ui, scale, "gram.cropMode");
+            if (composeSession.CropMode == PhotoCropMode.Edit)
+            {
+                composeSession.DrawCropCanvas(area, scale, ComposeCropAspect, ComposeStyle, string.Empty,
+                    PhotoComposeSession.EditFooterReserve, ComposeCropAllowsReveal, topInset, false);
+                PhotoEditPanel.DrawComposerTools(composeSession.EditControls,
+                    PhotoComposeSession.EditPanelRect(area, scale), ui, ComposeEditStyle, scale, !store.Posting);
+                return;
+            }
+        }
+
         var reserve = ComposeAllowsAspectChoice ? AspectPickerReserve : 0f;
         composeSession.DrawCropCanvas(area, scale, ComposeCropAspect, ComposeStyle,
-            Loc.T(L.Aethergram.GestureHint), reserve, ComposeCropAllowsReveal);
+            Loc.T(L.Aethergram.GestureHint), reserve, ComposeCropAllowsReveal, topInset);
         if (ComposeAllowsAspectChoice)
         {
             DrawAspectPicker(area, scale);
         }
     }
+
+    private PhotoEditPanelStyle ComposeEditStyle =>
+        PhotoEditPanelStyle.ForComposer(ComposeStyle, Ink.TitleInk, theme.SurfaceMuted);
 
     private void DrawAspectPicker(Rect area, float scale)
     {
@@ -700,6 +718,7 @@ internal sealed partial class AethergramApp
 
         composeStatus = string.Empty;
         store.CreateGram(composeSession.SelectedArray(), composeSession.CropsArray(), composeSession.AspectsArray(),
+            composeSession.EditsArray(),
             caption, ComposeTagInputs(), composeSensitive, ok => composeOutcome = ok ? 1 : 2);
     }
 
@@ -712,7 +731,8 @@ internal sealed partial class AethergramApp
 
         composeStatus = string.Empty;
         var crop = composeSession.CropCount > 0 ? composeSession.CropAt(0) : composeSession.CurrentTargetCrop;
-        stories.CreateStory(composeSession.FirstSelected, crop, caption, ok => composeOutcome = ok ? 1 : 2);
+        stories.CreateStory(composeSession.FirstSelected, crop, composeSession.EditAt(0), caption,
+            ok => composeOutcome = ok ? 1 : 2);
     }
 
     private void CommitAvatar()

@@ -1,6 +1,4 @@
-using Aetherphone.Core.Media;
-
-namespace Aetherphone.Core.Photos;
+namespace Aetherphone.Core.Media;
 
 internal static class PhotoEditor
 {

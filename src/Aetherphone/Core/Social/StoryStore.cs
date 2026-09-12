@@ -262,7 +262,8 @@ internal sealed class StoryStore : IDisposable
         HoldAuthorSeen(story.AuthorId);
     }
 
-    public void CreateStory(string sourcePath, WallpaperCrop crop, string caption, Action<bool> onComplete)
+    public void CreateStory(string sourcePath, WallpaperCrop crop, PhotoEdit edit, string caption,
+        Action<bool> onComplete)
     {
         if (posting)
         {
@@ -272,7 +273,7 @@ internal sealed class StoryStore : IDisposable
         posting = true;
         work.Run("create story", async token =>
         {
-            var baked = ImageProcessor.BakeCroppedJpeg(sourcePath, crop, StoryWidth, StoryHeight);
+            var baked = ImageProcessor.BakeCroppedJpeg(sourcePath, crop, StoryWidth, StoryHeight, false, edit);
             var upload = await media.UploadUrlAsync("image/jpeg", "story", token).ConfigureAwait(false);
             if (upload is null)
             {

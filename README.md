@@ -51,7 +51,7 @@ Aetherphone is the first and only fully working phone plugin for FINAL FANTASY X
 - **Every game chat channel, reorganized.** Linkpearl puts all of game chat in tabs you build yourself, with tells as their own conversations, per-channel colors, and a composer that splits and paces messages the game would cut off.
 - **Chat with the phone closed.** Pop any conversation into a floating window, merge windows into tabs, and let them hide during combat and duties, then come back on their own.
 - **Apps that play the game with you.** Strats for raid cheatsheets with your spot marked on each mechanic, Hunts for marks and trains, Fishing for ocean voyages, plus Market, Housing, Maps, Venues, Dailies, Collections, and Inventory.
-- **The everyday utilities too.** Notes, Calendar, Timers for resets and retainers, Calculator, Wallet, Camera and Photos, Clock, Skywatcher for weather, and Shortcuts you can fire from a hotbar macro.
+- **The everyday utilities too.** Notes, Calendar, Timers for resets and retainers, Calculator, Wallet, Camera and Photos with a built-in photo editor, Clock, Skywatcher for weather, and Shortcuts you can fire from a hotbar macro.
 - **Watch and listen together.** MogCast casts video onto an in-world screen with playback synced for everyone present, and Music brings live community radio and Rolladeck DJ sets in game.
 - **Speaks your language.** One-tap translation on posts, profiles, and private messages, with feeds and chats able to translate everything as it arrives.
 - **Downtime built in.** Gamba is a play-money casino with blackjack, slots, scratch cards, bingo, and a communal wheel, and nothing there has cash value. Games is an arcade of thirty-plus titles with Doom among them, plus Uno, Chess, and Pool against friends online.

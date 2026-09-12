@@ -1,4 +1,4 @@
-namespace Aetherphone.Core.Photos;
+namespace Aetherphone.Core.Media;
 
 internal enum PhotoLook : byte
 {

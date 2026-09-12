@@ -1,4 +1,5 @@
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Wallpapers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
@@ -46,6 +47,32 @@ public sealed class ImageProcessorBakeTests
             Assert.Equal(Height / 2, baked.Height);
             Assert.Equal(baked.Width, decodedWidth);
             Assert.Equal(baked.Height, decodedHeight);
+        }
+        finally
+        {
+            File.Delete(sourcePath);
+        }
+    }
+
+    [Fact]
+    public void BakeCroppedJpegAppliesTheEditBeforeCropping()
+    {
+        const int tolerance = 3;
+        var sourcePath = WriteGradientPng();
+        try
+        {
+            var mono = PhotoEdit.None.WithLook(PhotoLook.Mono, 1f).RotatedClockwise();
+
+            var baked = ImageProcessor.BakeCroppedJpeg(sourcePath, WallpaperCrop.Cover, Height, Width, false, mono);
+            var (decoded, decodedWidth, decodedHeight) = ScalarJpegEncoderTests.Decode(baked.Bytes);
+
+            Assert.Equal(Height, decodedWidth);
+            Assert.Equal(Width, decodedHeight);
+            for (var index = 0; index < decoded.Length; index += 4)
+            {
+                Assert.InRange(decoded[index + 1], decoded[index] - tolerance, decoded[index] + tolerance);
+                Assert.InRange(decoded[index + 2], decoded[index] - tolerance, decoded[index] + tolerance);
+            }
         }
         finally
         {

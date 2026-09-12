@@ -1,14 +1,55 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Photos;
+using Aetherphone.Core.Media;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
 namespace Aetherphone.Windows.Components;
 
+internal readonly struct PhotoEditPanelStyle
+{
+    private static readonly Vector4 DarkFill = new(0.07f, 0.07f, 0.09f, 0.96f);
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 WhiteMuted = new(1f, 1f, 1f, 0.72f);
+    private static readonly Vector4 WhiteRail = new(1f, 1f, 1f, 0.22f);
+    private static readonly Vector4 WhiteWell = new(1f, 1f, 1f, 0.10f);
+
+    public readonly Vector4 PanelFill;
+    public readonly Vector4 Ink;
+    public readonly Vector4 MutedInk;
+    public readonly Vector4 Rail;
+    public readonly Vector4 Accent;
+    public readonly Vector4 IconBackground;
+    public readonly bool Overlay;
+
+    public PhotoEditPanelStyle(Vector4 panelFill, Vector4 ink, Vector4 mutedInk, Vector4 rail, Vector4 accent,
+        Vector4 iconBackground, bool overlay)
+    {
+        PanelFill = panelFill;
+        Ink = ink;
+        MutedInk = mutedInk;
+        Rail = rail;
+        Accent = accent;
+        IconBackground = iconBackground;
+        Overlay = overlay;
+    }
+
+    public static PhotoEditPanelStyle Dark(Vector4 accent)
+    {
+        return new PhotoEditPanelStyle(DarkFill, White, WhiteMuted, WhiteRail, accent, WhiteWell, true);
+    }
+
+    public static PhotoEditPanelStyle ForComposer(in PhotoComposeStyle compose, Vector4 ink, Vector4 iconBackground)
+    {
+        return new PhotoEditPanelStyle(AppSkin.Transparent, ink, compose.MutedInk, compose.ScrubberTrack,
+            compose.Accent, iconBackground, false);
+    }
+}
+
 internal static class PhotoEditPanel
 {
     public const float Height = 168f;
+    public const float ComposerHeight = 140f;
     private const float TabRowHeight = 54f;
     private const float PanelRounding = 22f;
     private const float StageRounding = 14f;
@@ -23,25 +64,24 @@ internal static class PhotoEditPanel
     private const float TabLabelOffset = 40f;
     private const float IconRadius = 17f;
     private const float IconGap = 42f;
+    private const float IconGlyphScale = 0.85f;
+    private const float TabGlyphScale = 0.95f;
     private const float DimmedAlpha = 0.35f;
     private const float KnobExtra = 4f;
     private const float CenterTickHeight = 3f;
     private const float LoadingRadius = 13f;
+    private const float HairlineAlpha = 0.10f;
 
-    private static readonly Vector4 PanelFill = new(0.07f, 0.07f, 0.09f, 0.96f);
-    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
-    private static readonly Vector4 WhiteMuted = new(1f, 1f, 1f, 0.72f);
-    private static readonly Vector4 Rail = new(1f, 1f, 1f, 0.22f);
-    private static readonly Vector4 Hairline = new(1f, 1f, 1f, 0.10f);
-    private static readonly Vector4 IconBackground = new(1f, 1f, 1f, 0.10f);
+    private static readonly PhotoEditTool[] AllTools = { PhotoEditTool.Adjust, PhotoEditTool.Looks, PhotoEditTool.Crop };
 
-    public static void DrawStage(PhotoEditSession session, Rect stage, AppSkin ui, float scale, double now)
+    public static void DrawStage(PhotoEditSession session, Rect stage, in PhotoEditPanelStyle style, float scale,
+        double now)
     {
         var drawList = ImGui.GetWindowDrawList();
         var frame = stage.Inset(StageInset * scale);
         if (session.Preview.Failed)
         {
-            Typography.DrawCentered(drawList, frame.Center, Loc.T(L.Photos.EditOpenFailed), WhiteMuted,
+            Typography.DrawCentered(drawList, frame.Center, Loc.T(L.Photos.EditOpenFailed), style.MutedInk,
                 TextStyles.Subheadline);
             return;
         }
@@ -49,124 +89,190 @@ internal static class PhotoEditPanel
         var texture = session.Preview.Texture(session.Edit, now);
         if (texture is null)
         {
-            LoadingPulse.Draw(frame.Center, LoadingRadius * scale, ui.Accent, WhiteMuted, Loc.T(L.Common.Loading));
+            LoadingPulse.Draw(frame.Center, LoadingRadius * scale, style.Accent, style.MutedInk,
+                Loc.T(L.Common.Loading));
             return;
         }
 
         session.StageTextureSize = texture.Size;
-        var interactive = session.Tool == PhotoEditTool.Crop && !session.Saving;
+        var interactive = session.Controls.Tool == PhotoEditTool.Crop && !session.Saving;
         session.Crop.Draw(frame, texture, session.CropRatio, false, StageRounding * scale, interactive);
     }
 
-    public static void DrawTools(PhotoEditSession session, Rect panel, float contentBottom, AppSkin ui, float scale)
+    public static void DrawTools(PhotoEditSession session, Rect panel, float contentBottom, AppSkin ui,
+        in PhotoEditPanelStyle style, float scale)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        Squircle.Fill(drawList, panel.Min, panel.Max, PanelRounding * scale, ImGui.GetColorU32(PanelFill));
-        drawList.AddLine(new Vector2(panel.Min.X + PanelRounding * scale, panel.Min.Y),
-            new Vector2(panel.Max.X - PanelRounding * scale, panel.Min.Y), ImGui.GetColorU32(Hairline),
-            Metrics.Stroke.Hairline * scale);
-        var tabs = new Rect(new Vector2(panel.Min.X, contentBottom - TabRowHeight * scale),
+        PaintPanel(panel, style, scale);
+        var tabs = new Rect(new Vector2(panel.Min.X, contentBottom - (TabRowHeight * scale)),
             new Vector2(panel.Max.X, contentBottom));
         var content = new Rect(panel.Min, new Vector2(panel.Max.X, tabs.Min.Y));
         var interactive = !session.Saving;
-        switch (session.Tool)
+        if (session.Controls.Tool == PhotoEditTool.Crop)
         {
-            case PhotoEditTool.Looks:
-                DrawLooks(session, content, ui, scale, interactive);
-                break;
-            case PhotoEditTool.Crop:
-                DrawCrop(session, content, ui, scale, interactive);
-                break;
-            default:
-                DrawAdjust(session, content, ui, scale, interactive);
-                break;
+            DrawCrop(session, content, ui, style, scale, interactive);
+        }
+        else
+        {
+            DrawColorTools(session.Controls, content, ui, style, scale, interactive, false);
         }
 
-        DrawTabs(session, tabs, ui, scale, interactive);
+        DrawTabs(session.Controls, tabs, style, scale, interactive, true);
+    }
+
+    public static void DrawComposerTools(PhotoEditControls controls, Rect panel, AppSkin ui,
+        in PhotoEditPanelStyle style, float scale, bool interactive)
+    {
+        PaintPanel(panel, style, scale);
+        var tabs = new Rect(new Vector2(panel.Min.X, panel.Max.Y - (TabRowHeight * scale)), panel.Max);
+        var content = new Rect(panel.Min, new Vector2(panel.Max.X, tabs.Min.Y));
+        if (controls.Tool == PhotoEditTool.Crop)
+        {
+            controls.Tool = PhotoEditTool.Adjust;
+        }
+
+        DrawColorTools(controls, content, ui, style, scale, interactive, true);
+        DrawTabs(controls, tabs, style, scale, interactive, false);
+    }
+
+    private static void PaintPanel(Rect panel, in PhotoEditPanelStyle style, float scale)
+    {
+        if (style.PanelFill.W <= 0f)
+        {
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        Squircle.Fill(drawList, panel.Min, panel.Max, PanelRounding * scale, ImGui.GetColorU32(style.PanelFill));
+        drawList.AddLine(new Vector2(panel.Min.X + (PanelRounding * scale), panel.Min.Y),
+            new Vector2(panel.Max.X - (PanelRounding * scale), panel.Min.Y),
+            ImGui.GetColorU32(style.Ink with { W = HairlineAlpha }), Metrics.Stroke.Hairline * scale);
     }
 
     private static Rect ChipRow(Rect content, float scale)
     {
-        var top = content.Min.Y + ChipRowTop * scale;
-        return new Rect(new Vector2(content.Min.X + SideInset * scale, top),
-            new Vector2(content.Max.X - SideInset * scale, top + ChipRail.RowHeight * scale));
+        var top = content.Min.Y + (ChipRowTop * scale);
+        return new Rect(new Vector2(content.Min.X + (SideInset * scale), top),
+            new Vector2(content.Max.X - (SideInset * scale), top + (ChipRail.RowHeight * scale)));
     }
 
     private static Rect ScrubberTrack(Rect content, float top, float scale, float leftInset, float rightInset)
     {
-        var centerY = top + ScrubberGap * scale;
+        var centerY = top + (ScrubberGap * scale);
         var half = ScrubberThickness * 0.5f * scale;
         return new Rect(new Vector2(content.Min.X + leftInset, centerY - half),
             new Vector2(content.Max.X - rightInset, centerY + half));
     }
 
-    private static void DrawAdjust(PhotoEditSession session, Rect content, AppSkin ui, float scale, bool interactive)
+    private static float DrawOrientationButtons(Rect content, float rowCenterY, AppSkin ui,
+        in PhotoEditPanelStyle style, float scale, bool interactive, PhotoEditControls controls)
     {
-        var adjustments = PhotoEditSession.Adjustments;
+        var rotateCenter = new Vector2(content.Min.X + ((SideInset + IconRadius) * scale), rowCenterY);
+        var flipCenter = new Vector2(rotateCenter.X + (IconGap * scale), rowCenterY);
+        if (ui.IconButton(rotateCenter, IconRadius * scale, IconGlyph.Of(FontAwesomeIcon.Redo), style.Ink,
+                style.IconBackground, IconGlyphScale, Loc.T(L.Photos.Rotate)) && interactive)
+        {
+            controls.Rotate();
+        }
+
+        if (ui.IconButton(flipCenter, IconRadius * scale, IconGlyph.Of(FontAwesomeIcon.ArrowsAltH), style.Ink,
+                style.IconBackground, IconGlyphScale, Loc.T(L.Photos.Flip)) && interactive)
+        {
+            controls.Flip();
+        }
+
+        return flipCenter.X + ((IconRadius + SideInset) * scale) - content.Min.X;
+    }
+
+    private static void DrawColorTools(PhotoEditControls controls, Rect content, AppSkin ui,
+        in PhotoEditPanelStyle style, float scale, bool interactive, bool withOrientation)
+    {
+        if (controls.Tool == PhotoEditTool.Looks)
+        {
+            DrawLooks(controls, content, ui, style, scale, interactive, withOrientation);
+            return;
+        }
+
+        DrawAdjust(controls, content, ui, style, scale, interactive, withOrientation);
+    }
+
+    private static void DrawAdjust(PhotoEditControls controls, Rect content, AppSkin ui, in PhotoEditPanelStyle style,
+        float scale, bool interactive, bool withOrientation)
+    {
+        var adjustments = PhotoEditControls.Adjustments;
         for (var index = 0; index < adjustments.Length; index++)
         {
-            session.AdjustmentLabels[index] = Loc.T(AdjustmentLabel(adjustments[index]));
-            session.AdjustmentActive[index] = adjustments[index] == session.Adjustment;
+            controls.AdjustmentLabels[index] = Loc.T(AdjustmentLabel(adjustments[index]));
+            controls.AdjustmentActive[index] = adjustments[index] == controls.Adjustment;
         }
 
         var row = ChipRow(content, scale);
-        var picked = session.AdjustmentRail.Draw(row, ui, session.AdjustmentLabels, session.AdjustmentActive, true,
-            centered: true, interactive: interactive);
+        var picked = controls.AdjustmentRail.Draw(row, ui, controls.AdjustmentLabels, controls.AdjustmentActive,
+            style.Overlay, centered: true, interactive: interactive);
         if (picked >= 0)
         {
-            session.Adjustment = adjustments[picked];
+            controls.Adjustment = adjustments[picked];
         }
 
-        var (min, max) = PhotoEdit.RangeOf(session.Adjustment);
-        var value = session.Edit.ValueOf(session.Adjustment);
-        var track = ScrubberTrack(content, row.Max.Y, scale, SideInset * scale, (SideInset + ValueWidth) * scale);
+        var rowCenterY = row.Max.Y + (ScrubberGap * scale);
+        var leftInset = withOrientation
+            ? DrawOrientationButtons(content, rowCenterY, ui, style, scale, interactive, controls)
+            : SideInset * scale;
+        var (min, max) = PhotoEdit.RangeOf(controls.Adjustment);
+        var value = controls.Edit.ValueOf(controls.Adjustment);
+        var track = ScrubberTrack(content, row.Max.Y, scale, leftInset, (SideInset + ValueWidth) * scale);
         var fraction = (value - min) / (max - min);
-        var updated = DrawScrubber(track, fraction, min < 0f, ui.Accent, scale, 1f, interactive);
+        var updated = DrawScrubber(track, fraction, min < 0f, style, scale, 1f, interactive);
         if (updated != fraction)
         {
-            session.Adjust(session.Adjustment, min + (updated * (max - min)));
+            controls.Adjust(controls.Adjustment, min + (updated * (max - min)));
         }
 
-        var label = session.ValueLabel(session.Adjustment, session.Edit.ValueOf(session.Adjustment), Loc.Culture);
+        var label = controls.ValueLabel(controls.Adjustment, controls.Edit.ValueOf(controls.Adjustment), Loc.Culture);
         Typography.DrawCentered(ImGui.GetWindowDrawList(),
-            new Vector2(track.Max.X + (ValueWidth * 0.5f * scale), track.Center.Y), label, White,
+            new Vector2(track.Max.X + (ValueWidth * 0.5f * scale), track.Center.Y), label, style.Ink,
             TextStyles.SubheadlineEmphasized);
     }
 
-    private static void DrawLooks(PhotoEditSession session, Rect content, AppSkin ui, float scale, bool interactive)
+    private static void DrawLooks(PhotoEditControls controls, Rect content, AppSkin ui, in PhotoEditPanelStyle style,
+        float scale, bool interactive, bool withOrientation)
     {
         var looks = PhotoLooks.All;
         for (var index = 0; index < looks.Length; index++)
         {
-            session.LookLabels[index] = Loc.T(LookLabel(looks[index]));
-            session.LookActive[index] = looks[index] == session.Edit.Look;
+            controls.LookLabels[index] = Loc.T(LookLabel(looks[index]));
+            controls.LookActive[index] = looks[index] == controls.Edit.Look;
         }
 
         var row = ChipRow(content, scale);
-        var picked = session.LookRail.Draw(row, ui, session.LookLabels, session.LookActive, true, centered: true,
-            interactive: interactive);
+        var picked = controls.LookRail.Draw(row, ui, controls.LookLabels, controls.LookActive, style.Overlay,
+            centered: true, interactive: interactive);
         if (picked >= 0)
         {
-            session.SetLook(looks[picked]);
+            controls.SetLook(looks[picked]);
         }
 
-        var hasLook = session.Edit.Look != PhotoLook.None;
-        var track = ScrubberTrack(content, row.Max.Y, scale, SideInset * scale, (SideInset + ValueWidth) * scale);
-        var strength = session.Edit.LookStrength;
-        var updated = DrawScrubber(track, strength, false, ui.Accent, scale, hasLook ? 1f : DimmedAlpha,
+        var rowCenterY = row.Max.Y + (ScrubberGap * scale);
+        var leftInset = withOrientation
+            ? DrawOrientationButtons(content, rowCenterY, ui, style, scale, interactive, controls)
+            : SideInset * scale;
+        var hasLook = controls.Edit.Look != PhotoLook.None;
+        var track = ScrubberTrack(content, row.Max.Y, scale, leftInset, (SideInset + ValueWidth) * scale);
+        var strength = controls.Edit.LookStrength;
+        var updated = DrawScrubber(track, strength, false, style, scale, hasLook ? 1f : DimmedAlpha,
             interactive && hasLook);
         if (hasLook && updated != strength)
         {
-            session.SetLookStrength(updated);
+            controls.SetLookStrength(updated);
         }
 
-        var label = session.ValueLabel(PhotoAdjustment.Vignette, hasLook ? strength : 0f, Loc.Culture);
+        var label = controls.ValueLabel(PhotoAdjustment.Vignette, hasLook ? strength : 0f, Loc.Culture);
         Typography.DrawCentered(ImGui.GetWindowDrawList(),
             new Vector2(track.Max.X + (ValueWidth * 0.5f * scale), track.Center.Y), label,
-            hasLook ? White : WhiteMuted, TextStyles.SubheadlineEmphasized);
+            hasLook ? style.Ink : style.MutedInk, TextStyles.SubheadlineEmphasized);
     }
 
-    private static void DrawCrop(PhotoEditSession session, Rect content, AppSkin ui, float scale, bool interactive)
+    private static void DrawCrop(PhotoEditSession session, Rect content, AppSkin ui, in PhotoEditPanelStyle style,
+        float scale, bool interactive)
     {
         var aspects = PhotoCropAspects.All;
         for (var index = 0; index < aspects.Length; index++)
@@ -176,7 +282,7 @@ internal static class PhotoEditPanel
         }
 
         var row = ChipRow(content, scale);
-        var picked = session.AspectRail.Draw(row, ui, session.AspectLabels, session.AspectActive, true,
+        var picked = session.AspectRail.Draw(row, ui, session.AspectLabels, session.AspectActive, style.Overlay,
             centered: true, interactive: interactive);
         if (picked >= 0)
         {
@@ -184,52 +290,40 @@ internal static class PhotoEditPanel
         }
 
         var rowCenterY = row.Max.Y + (ScrubberGap * scale);
-        var rotateCenter = new Vector2(content.Min.X + (SideInset + IconRadius) * scale, rowCenterY);
-        var flipCenter = new Vector2(rotateCenter.X + (IconGap * scale), rowCenterY);
-        if (ui.IconButton(rotateCenter, IconRadius * scale, IconGlyph.Of(FontAwesomeIcon.Redo), White,
-                IconBackground, 0.85f, Loc.T(L.Photos.Rotate)) && interactive)
-        {
-            session.Rotate();
-        }
-
-        if (ui.IconButton(flipCenter, IconRadius * scale, IconGlyph.Of(FontAwesomeIcon.ArrowsAltH), White,
-                IconBackground, 0.85f, Loc.T(L.Photos.Flip)) && interactive)
-        {
-            session.Flip();
-        }
-
+        var leftInset = DrawOrientationButtons(content, rowCenterY, ui, style, scale, interactive, session.Controls);
         var size = session.StageTextureSize;
         if (size.X <= 0f)
         {
             return;
         }
 
-        var leftInset = flipCenter.X + ((IconRadius + SideInset) * scale) - content.Min.X;
         var track = ScrubberTrack(content, row.Max.Y, scale, leftInset, SideInset * scale);
         var ratio = session.CropRatio;
         var fraction = session.Crop.ZoomFraction(size, ratio, false);
-        var updated = DrawScrubber(track, fraction, false, ui.Accent, scale, 1f, interactive);
+        var updated = DrawScrubber(track, fraction, false, style, scale, 1f, interactive);
         if (updated != fraction)
         {
             session.Crop.SetZoomFraction(updated, size, ratio, false);
         }
     }
 
-    private static void DrawTabs(PhotoEditSession session, Rect tabs, AppSkin ui, float scale, bool interactive)
+    private static void DrawTabs(PhotoEditControls controls, Rect tabs, in PhotoEditPanelStyle style, float scale,
+        bool interactive, bool includeCrop)
     {
         var drawList = ImGui.GetWindowDrawList();
+        var count = includeCrop ? AllTools.Length : AllTools.Length - 1;
         var width = TabWidth * scale;
-        var left = tabs.Center.X - (width * 1.5f);
-        for (var index = 0; index < 3; index++)
+        var left = tabs.Center.X - (width * count * 0.5f);
+        for (var index = 0; index < count; index++)
         {
-            var tool = (PhotoEditTool)index;
+            var tool = AllTools[index];
             var rect = new Rect(new Vector2(left + (index * width), tabs.Min.Y),
                 new Vector2(left + ((index + 1) * width), tabs.Max.Y));
-            var active = tool == session.Tool;
+            var active = tool == controls.Tool;
             var hovered = interactive && UiInteract.Hover(rect.Min, rect.Max);
-            var color = active ? ui.Accent : hovered ? White : WhiteMuted;
+            var color = active ? style.Accent : hovered ? style.Ink : style.MutedInk;
             var iconCenter = new Vector2(rect.Center.X, rect.Min.Y + (TabIconOffset * scale));
-            AppSkin.Icon(drawList, iconCenter, IconGlyph.Of(TabIcon(tool)), color, 0.95f);
+            AppSkin.Icon(drawList, iconCenter, IconGlyph.Of(TabIcon(tool)), color, TabGlyphScale);
             Typography.DrawCentered(drawList, new Vector2(rect.Center.X, rect.Min.Y + (TabLabelOffset * scale)),
                 Loc.T(TabLabel(tool)), color, TextStyles.Caption1);
             if (hovered)
@@ -239,13 +333,13 @@ internal static class PhotoEditPanel
 
             if (UiInteract.Click(rect.Min, rect.Max, hovered))
             {
-                session.Tool = tool;
+                controls.Tool = tool;
             }
         }
     }
 
-    private static float DrawScrubber(Rect track, float value, bool bipolar, Vector4 accent, float scale, float alpha,
-        bool interactive)
+    private static float DrawScrubber(Rect track, float value, bool bipolar, in PhotoEditPanelStyle style,
+        float scale, float alpha, bool interactive)
     {
         var drawList = ImGui.GetWindowDrawList();
         var midY = track.Center.Y;
@@ -264,23 +358,23 @@ internal static class PhotoEditPanel
 
         var railMin = new Vector2(left, midY - (thickness * 0.5f));
         var railMax = new Vector2(track.Max.X, midY + (thickness * 0.5f));
-        drawList.AddRectFilled(railMin, railMax, ImGui.GetColorU32(Rail with { W = Rail.W * alpha }),
+        drawList.AddRectFilled(railMin, railMax, ImGui.GetColorU32(style.Rail with { W = style.Rail.W * alpha }),
             thickness * 0.5f);
         var knobX = left + (width * result);
         var fillStart = bipolar ? left + (width * 0.5f) : left;
         var fillMin = new Vector2(MathF.Min(fillStart, knobX), railMin.Y);
         var fillMax = new Vector2(MathF.Max(fillStart, knobX), railMax.Y);
-        drawList.AddRectFilled(fillMin, fillMax, ImGui.GetColorU32(accent with { W = accent.W * alpha }),
-            thickness * 0.5f);
+        drawList.AddRectFilled(fillMin, fillMax,
+            ImGui.GetColorU32(style.Accent with { W = style.Accent.W * alpha }), thickness * 0.5f);
         if (bipolar)
         {
             var tickHalf = thickness * CenterTickHeight * 0.5f;
             drawList.AddLine(new Vector2(fillStart, midY - tickHalf), new Vector2(fillStart, midY + tickHalf),
-                ImGui.GetColorU32(White with { W = 0.5f * alpha }), Metrics.Stroke.Thin * scale);
+                ImGui.GetColorU32(style.Ink with { W = 0.5f * alpha }), Metrics.Stroke.Thin * scale);
         }
 
         drawList.AddCircleFilled(new Vector2(knobX, midY), (thickness * 0.5f) + (KnobExtra * scale),
-            ImGui.GetColorU32(White with { W = alpha }), 24);
+            ImGui.GetColorU32(style.Ink with { W = alpha }), 24);
         return result;
     }
 

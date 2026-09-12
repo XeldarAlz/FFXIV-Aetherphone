@@ -1746,19 +1746,26 @@ internal static class L
         public static readonly LocString SectionPhone = new("changelog.sectionPhone", "Phone");
         public static readonly LocString SectionSocial = new("changelog.sectionSocial", "Chirper and Aethergram");
 
-        public static readonly LocString[] Release1022Photos =
+        public static readonly LocString[] Release1030Photos =
         {
-            new("changelog.r1022.1",
+            new("changelog.r1030.1",
                 "Added an editor to Photos: tap Edit on any photo to adjust brightness, contrast, saturation, warmth and vignette, or pick a look such as Warm, Film or Noir"),
-            new("changelog.r1022.2",
+            new("changelog.r1030.2",
                 "The editor also crops to a ratio, straightens, rotates and flips; saving keeps the original and adds the edited photo beside it"),
         };
 
-        public static readonly LocString[] Release1022Phone =
+        private static readonly LocString ComposerEditTab = new("changelog.r1030.4",
+            "Added an Edit tab to the photo step of new posts and stories: adjust brightness, contrast, saturation, warmth and vignette, pick a look, or rotate and flip before you crop");
+
+        public static readonly LocString[] Release1030Aethergram = { ComposerEditTab };
+
+        public static readonly LocString[] Release1030Velvet = { ComposerEditTab };
+
+        public static readonly LocString[] Release1030Phone =
         {
-            new("changelog.r1022.0",
+            new("changelog.r1030.0",
                 "Fixed the scattered red, blue and white dashes some PCs added to uploaded photos: Aetherphone now writes every JPEG itself instead of relying on a library that misbehaved on those machines"),
-            new("changelog.r1022.3",
+            new("changelog.r1030.3",
                 "Fixed photos from a phone camera showing up sideways: a picture's own orientation tag is now honoured everywhere a photo is previewed or uploaded"),
         };
 

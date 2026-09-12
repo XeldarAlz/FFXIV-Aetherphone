@@ -1355,6 +1355,7 @@ internal sealed partial class AethergramApp : IResumableApp
     {
         settingsCancellation.Cancel();
         settingsCancellation.Dispose();
+        composeSession.Dispose();
         threadView.Dispose();
         dmStore.Dispose();
         store.Dispose();

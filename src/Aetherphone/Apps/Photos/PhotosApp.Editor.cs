@@ -47,8 +47,9 @@ internal sealed partial class PhotosApp
         var panel = new Rect(new Vector2(screen.Min.X, panelTop), screen.Max);
         var stage = new Rect(new Vector2(screen.Min.X, safe.Min.Y + (EditorTopBarHeight * scale)),
             new Vector2(screen.Max.X, panelTop));
-        PhotoEditPanel.DrawStage(editSession, stage, ui, scale, ImGui.GetTime());
-        PhotoEditPanel.DrawTools(editSession, panel, safe.Max.Y, ui, scale);
+        var style = PhotoEditPanelStyle.Dark(ui.Accent);
+        PhotoEditPanel.DrawStage(editSession, stage, style, scale, ImGui.GetTime());
+        PhotoEditPanel.DrawTools(editSession, panel, safe.Max.Y, ui, style, scale);
         DrawEditorTopBar(screen, safe, scale);
         if (editSession.IsDirty && !editSession.Saving)
         {

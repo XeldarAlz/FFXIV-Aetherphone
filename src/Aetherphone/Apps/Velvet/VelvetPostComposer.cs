@@ -285,13 +285,27 @@ internal sealed class VelvetPostComposer
             session.CropAdvance();
         }
 
+        session.DrawCropModeStrip(area, ui, scale, "velvet.cropMode");
+        if (session.CropMode == PhotoCropMode.Edit)
+        {
+            session.DrawCropCanvas(area, scale, CropAspect, Style, string.Empty, PhotoComposeSession.EditFooterReserve,
+                CropAllowsReveal, PhotoComposeSession.CropModeStripReserve, false);
+            PhotoEditPanel.DrawComposerTools(session.EditControls, PhotoComposeSession.EditPanelRect(area, scale), ui,
+                EditStyle, scale, !Posting);
+            return;
+        }
+
         var reserve = storyMode ? 0f : AspectPickerReserve;
-        session.DrawCropCanvas(area, scale, CropAspect, Style, Loc.T(L.Velvet.GestureHint), reserve, CropAllowsReveal);
+        session.DrawCropCanvas(area, scale, CropAspect, Style, Loc.T(L.Velvet.GestureHint), reserve, CropAllowsReveal,
+            PhotoComposeSession.CropModeStripReserve);
         if (!storyMode)
         {
             DrawAspectPicker(area, scale);
         }
     }
+
+    private static PhotoEditPanelStyle EditStyle =>
+        PhotoEditPanelStyle.ForComposer(Style, VelvetTheme.TitleInk, VelvetTheme.PlumWell);
 
     private void DrawAspectPicker(Rect area, float scale)
     {
@@ -567,11 +581,17 @@ internal sealed class VelvetPostComposer
         status = string.Empty;
         if (storyMode)
         {
-            stories.CreateStory(session.FirstSelected, session.CropAt(0), caption, ok => outcome = ok ? 1 : 2);
+            stories.CreateStory(session.FirstSelected, session.CropAt(0), session.EditAt(0), caption,
+                ok => outcome = ok ? 1 : 2);
             return;
         }
 
-        store.CreatePost(session.SelectedArray(), session.CropsArray(), session.AspectsArray(), caption,
-            tags.ToArray(), audience, ok => outcome = ok ? 1 : 2);
+        store.CreatePost(session.SelectedArray(), session.CropsArray(), session.AspectsArray(), session.EditsArray(),
+            caption, tags.ToArray(), audience, ok => outcome = ok ? 1 : 2);
+    }
+
+    public void Dispose()
+    {
+        session.Dispose();
     }
 }

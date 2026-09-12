@@ -1,6 +1,5 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Photos;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 

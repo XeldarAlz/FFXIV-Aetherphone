@@ -76,8 +76,9 @@ internal sealed class StoryPresenter : IDisposable
 
     public bool TryRing(string authorId, out StoryRingDto ring) => stories.TryRing(authorId, out ring);
 
-    public void CreateStory(string sourcePath, WallpaperCrop crop, string caption, Action<bool> onComplete) =>
-        stories.CreateStory(sourcePath, crop, caption, onComplete);
+    public void CreateStory(string sourcePath, WallpaperCrop crop, Aetherphone.Core.Media.PhotoEdit edit,
+        string caption, Action<bool> onComplete) =>
+        stories.CreateStory(sourcePath, crop, edit, caption, onComplete);
 
     public void DrawTray(PhoneTheme theme, string? ownAvatarUrl = null, string ownName = "",
         string? ownFrameId = null) =>

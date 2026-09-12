@@ -114,10 +114,13 @@ internal static class ImageProcessor
     public static BakedImage BakeCroppedJpeg(string sourcePath, WallpaperCrop crop, int targetWidth, int targetHeight,
         bool revealWholeImage = false)
     {
-        using var sourceStream = File.OpenRead(sourcePath);
-        EnsureDecodable(sourceStream, MaxLocalDecodePixels);
-        using var image = Image.Load<Rgba32>(SingleFrame, sourceStream);
-        image.Mutate(context => context.AutoOrient());
+        return BakeCroppedJpeg(sourcePath, crop, targetWidth, targetHeight, revealWholeImage, PhotoEdit.None);
+    }
+
+    public static BakedImage BakeCroppedJpeg(string sourcePath, WallpaperCrop crop, int targetWidth, int targetHeight,
+        bool revealWholeImage, in PhotoEdit edit)
+    {
+        using var image = LoadForBake(sourcePath, edit);
         var size = new Vector2(image.Width, image.Height);
         var aspect = (float)targetWidth / targetHeight;
         var minZoom = revealWholeImage
@@ -151,12 +154,30 @@ internal static class ImageProcessor
 
     public static BakedImage BakeJpeg(string sourcePath, int maxDimension)
     {
-        using var sourceStream = File.OpenRead(sourcePath);
-        EnsureDecodable(sourceStream, MaxLocalDecodePixels);
-        using var image = Image.Load<Rgba32>(SingleFrame, sourceStream);
-        image.Mutate(context => context.AutoOrient());
+        using var image = LoadForBake(sourcePath, PhotoEdit.None);
         ScaleWithin(image, maxDimension);
         return new BakedImage(EncodeJpeg(image), image.Width, image.Height);
+    }
+
+    private static Image<Rgba32> LoadForBake(string sourcePath, in PhotoEdit edit)
+    {
+        using var sourceStream = File.OpenRead(sourcePath);
+        EnsureDecodable(sourceStream, MaxLocalDecodePixels);
+        var loaded = Image.Load<Rgba32>(SingleFrame, sourceStream);
+        loaded.Mutate(context => context.AutoOrient());
+        if (edit.IsIdentity)
+        {
+            return loaded;
+        }
+
+        using (loaded)
+        {
+            var length = checked(loaded.Width * loaded.Height * 4);
+            var pixels = new byte[length];
+            loaded.CopyPixelDataTo(pixels);
+            var edited = PhotoEditor.Apply(new PixelImage(pixels, loaded.Width, loaded.Height), edit);
+            return Image.LoadPixelData<Rgba32>(edited.Pixels, edited.Width, edited.Height);
+        }
     }
 
     private static byte[] EncodeJpeg(Image<Rgba32> image)

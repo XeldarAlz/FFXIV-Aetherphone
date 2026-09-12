@@ -1,15 +1,7 @@
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Photos;
 using Aetherphone.Core.Wallpapers;
 
 namespace Aetherphone.Windows.Components;
-
-internal enum PhotoEditTool : byte
-{
-    Adjust,
-    Looks,
-    Crop,
-}
 
 internal enum PhotoCropAspect : byte
 {
@@ -71,39 +63,16 @@ internal readonly struct PhotoSaveRequest
 
 internal sealed class PhotoEditSession : IDisposable
 {
-    public static readonly PhotoAdjustment[] Adjustments =
-    {
-        PhotoAdjustment.Brightness,
-        PhotoAdjustment.Contrast,
-        PhotoAdjustment.Saturation,
-        PhotoAdjustment.Warmth,
-        PhotoAdjustment.Vignette,
-        PhotoAdjustment.Straighten,
-    };
-
+    public readonly PhotoEditControls Controls = new();
     public readonly CropCanvas Crop = new();
     public readonly PhotoEditPreview Preview = new();
-    public readonly ChipRail AdjustmentRail = new();
-    public readonly ChipRail LookRail = new();
     public readonly ChipRail AspectRail = new();
-    public readonly string[] AdjustmentLabels = new string[Adjustments.Length];
-    public readonly bool[] AdjustmentActive = new bool[Adjustments.Length];
-    public readonly string[] LookLabels = new string[PhotoLooks.All.Length];
-    public readonly bool[] LookActive = new bool[PhotoLooks.All.Length];
     public readonly string[] AspectLabels = new string[PhotoCropAspects.All.Length];
     public readonly bool[] AspectActive = new bool[PhotoCropAspects.All.Length];
 
-    private string valueLabel = string.Empty;
-    private float valueLabelFor = float.NaN;
-    private PhotoAdjustment valueLabelAdjustment;
-
     public string Path { get; private set; } = string.Empty;
 
-    public PhotoEdit Edit { get; private set; } = PhotoEdit.None;
-
-    public PhotoEditTool Tool { get; set; }
-
-    public PhotoAdjustment Adjustment { get; set; }
+    public PhotoEdit Edit => Controls.Edit;
 
     public PhotoCropAspect Aspect { get; set; }
 
@@ -148,14 +117,11 @@ internal sealed class PhotoEditSession : IDisposable
     public void Open(string path)
     {
         Path = path;
-        Edit = PhotoEdit.None;
-        Tool = PhotoEditTool.Adjust;
-        Adjustment = PhotoAdjustment.Brightness;
+        Controls.Reset();
         Aspect = PhotoCropAspect.Original;
         Saving = false;
         Notice = string.Empty;
         StageTextureSize = Vector2.Zero;
-        valueLabelFor = float.NaN;
         Crop.Reset();
         Preview.Open(path);
     }
@@ -167,52 +133,12 @@ internal sealed class PhotoEditSession : IDisposable
         Preview.Close();
     }
 
-    public void Adjust(PhotoAdjustment adjustment, float value)
-    {
-        Edit = Edit.With(adjustment, value);
-    }
-
-    public void SetLook(PhotoLook look)
-    {
-        Edit = Edit.WithLook(look, Edit.LookStrength);
-    }
-
-    public void SetLookStrength(float strength)
-    {
-        Edit = Edit.WithLook(Edit.Look, strength);
-    }
-
-    public void Rotate()
-    {
-        Edit = Edit.RotatedClockwise();
-    }
-
-    public void Flip()
-    {
-        Edit = Edit.Flipped();
-    }
-
     public void Reset()
     {
-        Edit = PhotoEdit.None;
+        Controls.Load(PhotoEdit.None);
         Aspect = PhotoCropAspect.Original;
         Notice = string.Empty;
         Crop.Reset();
-    }
-
-    public string ValueLabel(PhotoAdjustment adjustment, float value, IFormatProvider culture)
-    {
-        if (adjustment == valueLabelAdjustment && value == valueLabelFor)
-        {
-            return valueLabel;
-        }
-
-        valueLabelAdjustment = adjustment;
-        valueLabelFor = value;
-        valueLabel = adjustment == PhotoAdjustment.Straighten
-            ? value.ToString("+0.0;-0.0;0.0", culture) + "°"
-            : MathF.Round(value * 100f).ToString("+0;-0;0", culture);
-        return valueLabel;
     }
 
     public PhotoSaveRequest Snapshot()

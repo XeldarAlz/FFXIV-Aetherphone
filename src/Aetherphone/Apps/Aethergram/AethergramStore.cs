@@ -40,8 +40,8 @@ internal sealed class AethergramStore : SocialFeedStore
     // real baked size (GIFs already send theirs), so the feed frame matches that photo's shape;
     // the other carousel photos are baked to their own boxes and cover-fit into the frame at
     // draw time.
-    public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, PostAspect[] aspects, string caption,
-        PhotoTagInput[]? photoTags, bool sensitive, Action<bool> onComplete)
+    public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, PostAspect[] aspects, PhotoEdit[] edits,
+        string caption, PhotoTagInput[]? photoTags, bool sensitive, Action<bool> onComplete)
     {
         if (posting || sourcePaths.Length == 0)
         {
@@ -78,7 +78,7 @@ internal sealed class AethergramStore : SocialFeedStore
                 {
                     var (bakedWidth, bakedHeight) = PostAspects.Size(aspects[index], GramSize);
                     var baked = ImageProcessor.BakeCroppedJpeg(sourcePaths[index], crops[index], bakedWidth,
-                        bakedHeight, PostAspects.RevealsWholeImage(aspects[index]));
+                        bakedHeight, PostAspects.RevealsWholeImage(aspects[index]), edits[index]);
                     bytes = baked.Bytes;
                     contentType = "image/jpeg";
                     if (index == 0)

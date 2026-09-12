@@ -333,6 +333,7 @@ internal sealed partial class VelvetShell : IResumableApp
 
     public void Dispose()
     {
+        post.Dispose();
         threadView.Dispose();
         stories.Dispose();
         store.Dispose();

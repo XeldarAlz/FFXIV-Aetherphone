@@ -1,5 +1,4 @@
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Photos;
 using Xunit;
 
 namespace Aetherphone.Tests;

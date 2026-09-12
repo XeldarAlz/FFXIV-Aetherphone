@@ -18,6 +18,12 @@ internal enum PhotoComposeStage
     Caption,
 }
 
+internal enum PhotoCropMode : byte
+{
+    Crop,
+    Edit,
+}
+
 internal readonly record struct PhotoComposeStyle(
     Vector4 Accent,
     Vector4 MutedInk,
@@ -26,17 +32,26 @@ internal readonly record struct PhotoComposeStyle(
     Vector4 ScrubberTrack,
     bool EdgeFrame);
 
-internal sealed class PhotoComposeSession
+internal sealed class PhotoComposeSession : IDisposable
 {
     public const int GridColumns = 3;
+    public const float CanvasFooter = 96f;
+    public const float CropModeStripReserve = 44f;
     private const float CropSmoothTime = 0.10f;
     private const float RatioEpsilon = 0.0001f;
+    private const float CropModeStripGap = 6f;
+    private const float CropModeStripHeight = 30f;
+    private const float CropModeStripWidth = 200f;
+    private const float EditPanelGap = 8f;
+    private readonly string[] cropModeLabels = new string[2];
 
     private readonly PhotoLibrary library;
     private readonly WallpaperImageCache wallpaperImages;
     private readonly List<string> selected = new();
     private readonly List<WallpaperCrop> crops = new();
     private readonly List<PostAspect> aspects = new();
+    private readonly List<PhotoEdit> edits = new();
+    private readonly List<PhotoEditPreview?> previews = new();
     // The ratio each photo was last framed at, so a change of aspect re-frames it exactly once
     // instead of fighting the user's own zoom and pan every frame.
     private readonly List<float?> framedForRatio = new();
@@ -51,6 +66,8 @@ internal sealed class PhotoComposeSession
     private bool cropDragging;
     private Vector2 cropLastDrag;
 
+    public readonly PhotoEditControls EditControls = new();
+
     public PhotoComposeSession(PhotoLibrary library, WallpaperImageCache wallpaperImages)
     {
         this.library = library;
@@ -60,6 +77,7 @@ internal sealed class PhotoComposeSession
     private static WallpaperCrop DefaultCrop => new(1f, 0.5f, 0.5f);
 
     public PhotoComposeStage Stage { get; set; }
+    public PhotoCropMode CropMode { get; set; }
     public bool SingleSelect { get; private set; }
     public bool AllowGif { get; private set; }
     public bool GifSelected => AllowGif && selected.Count == 1 && GifMedia.IsGif(selected[0]);
@@ -83,6 +101,10 @@ internal sealed class PhotoComposeSession
 
     public PostAspect CurrentAspect => AspectAt(CropIndex);
 
+    public PhotoEdit CurrentEdit => EditControls.Edit;
+
+    public bool CurrentEditIsDirty => !EditControls.Edit.IsIdentity;
+
     // The first photo sets the carousel frame for the whole post; any other photo whose aspect
     // differs is contain-fit inside it rather than reframing the carousel as you swipe.
     public PostAspect ContainerAspect => AspectAt(0);
@@ -93,7 +115,15 @@ internal sealed class PhotoComposeSession
 
     public PostAspect[] AspectsArray() => aspects.ToArray();
 
+    public PhotoEdit[] EditsArray()
+    {
+        SyncCurrentEdit();
+        return edits.ToArray();
+    }
+
     public PostAspect AspectAt(int index) => index >= 0 && index < aspects.Count ? aspects[index] : PostAspect.Square;
+
+    public PhotoEdit EditAt(int index) => index >= 0 && index < edits.Count ? edits[index] : PhotoEdit.None;
 
     public void SetAspect(int index, PostAspect aspect)
     {
@@ -103,15 +133,33 @@ internal sealed class PhotoComposeSession
         }
     }
 
+    public void SyncCurrentEdit()
+    {
+        if (CropIndex >= 0 && CropIndex < edits.Count)
+        {
+            edits[CropIndex] = EditControls.Edit;
+        }
+    }
+
+    public void ResetCurrentEdit()
+    {
+        EditControls.Load(PhotoEdit.None);
+        SyncCurrentEdit();
+    }
+
     public void Open(bool singleSelect, bool allowGif = false)
     {
         SingleSelect = singleSelect;
         AllowGif = allowGif && !singleSelect;
         Stage = PhotoComposeStage.Pick;
+        CropMode = PhotoCropMode.Crop;
         selected.Clear();
         crops.Clear();
         aspects.Clear();
+        edits.Clear();
         framedForRatio.Clear();
+        ClosePreviews();
+        EditControls.Reset();
         CropIndex = 0;
         PreviewIndex = 0;
         Notice = string.Empty;
@@ -195,15 +243,20 @@ internal sealed class PhotoComposeSession
     {
         crops.Clear();
         aspects.Clear();
+        edits.Clear();
         framedForRatio.Clear();
+        ClosePreviews();
         for (var index = 0; index < selected.Count; index++)
         {
             crops.Add(DefaultCrop);
             aspects.Add(PostAspect.Square);
+            edits.Add(PhotoEdit.None);
             framedForRatio.Add(null);
+            previews.Add(null);
         }
 
         PreviewIndex = 0;
+        CropMode = PhotoCropMode.Crop;
         if (GifSelected)
         {
             Stage = PhotoComposeStage.Caption;
@@ -231,6 +284,8 @@ internal sealed class PhotoComposeSession
         {
             crops[CropIndex] = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY);
         }
+
+        SyncCurrentEdit();
     }
 
     public WallpaperCrop CropAt(int index) => index >= 0 && index < crops.Count ? crops[index] : DefaultCrop;
@@ -283,6 +338,71 @@ internal sealed class PhotoComposeSession
         centerXSpring.SnapTo(crop.CenterX);
         centerYSpring.SnapTo(crop.CenterY);
         cropDragging = false;
+        EditControls.Load(EditAt(index));
+    }
+
+    private PhotoEditPreview PreviewFor(int index)
+    {
+        while (previews.Count <= index)
+        {
+            previews.Add(null);
+        }
+
+        if (previews[index] is { } existing)
+        {
+            return existing;
+        }
+
+        var opened = new PhotoEditPreview();
+        opened.Open(selected[index]);
+        previews[index] = opened;
+        return opened;
+    }
+
+    private IDalamudTextureWrap? TextureFor(int index, double now)
+    {
+        if (index < 0 || index >= selected.Count)
+        {
+            return null;
+        }
+
+        var source = wallpaperImages.Get(selected[index]);
+        var edit = EditAt(index);
+        if (edit.IsIdentity)
+        {
+            return source;
+        }
+
+        return PreviewFor(index).Texture(edit, now) ?? source;
+    }
+
+    private void ClosePreviews()
+    {
+        for (var index = 0; index < previews.Count; index++)
+        {
+            previews[index]?.Dispose();
+        }
+
+        previews.Clear();
+    }
+
+    public static float EditFooterReserve => PhotoEditPanel.ComposerHeight + EditPanelGap - CanvasFooter;
+
+    public static Rect EditPanelRect(Rect area, float scale)
+    {
+        return new Rect(new Vector2(area.Min.X, area.Max.Y - (PhotoEditPanel.ComposerHeight * scale)), area.Max);
+    }
+
+    public void DrawCropModeStrip(Rect area, AppSkin ui, float scale, string id)
+    {
+        cropModeLabels[0] = Loc.T(L.Photos.ToolCrop);
+        cropModeLabels[1] = Loc.T(L.Photos.Edit);
+        var top = area.Min.Y + ((AppHeader.Height + CropModeStripGap) * scale);
+        var width = MathF.Min(area.Width - (32f * scale), CropModeStripWidth * scale);
+        var row = new Rect(new Vector2(area.Center.X - (width * 0.5f), top),
+            new Vector2(area.Center.X + (width * 0.5f), top + (CropModeStripHeight * scale)));
+        var picked = SegmentStrip.Draw(id, row, cropModeLabels, (int)CropMode, ui.Palette);
+        CropMode = picked == 1 ? PhotoCropMode.Edit : PhotoCropMode.Crop;
     }
 
     public void DrawPickGrid(Rect gridRect, float scale, in PhotoComposeStyle style, bool showBadges)
@@ -352,9 +472,14 @@ internal sealed class PhotoComposeSession
     public void DrawLocalThumbnail(string path, Vector2 min, Vector2 max, float scale, Vector4 placeholderFill,
         bool hovered)
     {
+        DrawThumbnail(wallpaperImages.Get(path), min, max, scale, placeholderFill, hovered);
+    }
+
+    private static void DrawThumbnail(IDalamudTextureWrap? texture, Vector2 min, Vector2 max, float scale,
+        Vector4 placeholderFill, bool hovered)
+    {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 10f * scale;
-        var texture = wallpaperImages.Get(path);
         if (texture is null)
         {
             Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(placeholderFill));
@@ -372,18 +497,20 @@ internal sealed class PhotoComposeSession
     }
 
     // Avatar and story crops pass allowReveal false: a letterboxed avatar, or a story that does not
-    // fill the screen, would read as broken rather than as framing.
+    // fill the screen, would read as broken rather than as framing. With interactive false the
+    // canvas only shows the framed photo, for the edit mode that owns the space below it.
     public void DrawCropCanvas(Rect area, float scale, float aspect, in PhotoComposeStyle style, string gestureHint,
-        float footerReserve, bool allowReveal)
+        float footerReserve, bool allowReveal, float topInset = 0f, bool interactive = true)
     {
+        SyncCurrentEdit();
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         var drawList = ImGui.GetWindowDrawList();
-        var top = area.Min.Y + AppHeader.Height * scale;
+        var top = area.Min.Y + (AppHeader.Height + topInset) * scale;
         var stageRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
-            new Vector2(area.Max.X - 16f * scale, area.Max.Y - (96f + footerReserve) * scale));
+            new Vector2(area.Max.X - 16f * scale, area.Max.Y - (CanvasFooter + footerReserve) * scale));
         var preview = ImageFit.CenteredRect(stageRect, aspect);
         var rounding = 18f * scale;
-        var texture = wallpaperImages.Get(CurrentPath);
+        var texture = TextureFor(CropIndex, ImGui.GetTime());
         if (texture is null)
         {
             Squircle.Fill(drawList, preview.Min, preview.Max, rounding, ImGui.GetColorU32(style.PlaceholderFill));
@@ -403,6 +530,11 @@ internal sealed class PhotoComposeSession
         if (style.EdgeFrame)
         {
             Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
+        }
+
+        if (!interactive)
+        {
+            return;
         }
 
         HandleCropGestures(preview, size, uv1 - uv0, aspect, minZoom);
@@ -498,11 +630,12 @@ internal sealed class PhotoComposeSession
         var span = side * count + gap * (count - 1);
         var startX = strip.Center.X - span * 0.5f;
         var drawList = ImGui.GetWindowDrawList();
+        var now = ImGui.GetTime();
         for (var index = 0; index < count; index++)
         {
             var min = new Vector2(startX + index * (side + gap), strip.Min.Y);
             var max = min + new Vector2(side, side);
-            DrawLocalThumbnail(selected[index], min, max, scale, style.PlaceholderFill, UiInteract.Hover(min, max));
+            DrawThumbnail(TextureFor(index, now), min, max, scale, style.PlaceholderFill, UiInteract.Hover(min, max));
             if (index == PreviewIndex)
             {
                 drawList.AddRect(min, max, ImGui.GetColorU32(style.Accent), 8f * scale, ImDrawFlags.RoundCornersAll,
@@ -526,7 +659,7 @@ internal sealed class PhotoComposeSession
         out Vector2 uv1)
     {
         var index = ClampedPreviewIndex;
-        var loaded = wallpaperImages.Get(index < selected.Count ? selected[index] : string.Empty);
+        var loaded = TextureFor(index, ImGui.GetTime());
         if (loaded is null)
         {
             texture = null!;
@@ -540,5 +673,10 @@ internal sealed class PhotoComposeSession
         var crop = crops[index].Clamped(loaded.Size, aspect, minZoom);
         (uv0, uv1) = crop.ComputeUv(loaded.Size, aspect, minZoom);
         return true;
+    }
+
+    public void Dispose()
+    {
+        ClosePreviews();
     }
 }
