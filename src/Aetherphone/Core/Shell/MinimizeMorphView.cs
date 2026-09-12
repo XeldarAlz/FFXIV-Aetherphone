@@ -44,9 +44,8 @@ internal sealed class MinimizeMorphView
     {
         var scale = UiScale.Current;
         var theme = themes.Chrome;
-        var puckScale = UiScale.Global;
         var startBody = DeviceChrome.BodyRect(device, theme);
-        var endBody = MinimizedRect(device, puckScale);
+        var endBody = MinimizedRect(device);
         var eased = minimize.EasedProgress;
         var body = new Rect(Vector2.Lerp(startBody.Min, endBody.Min, eased),
             Vector2.Lerp(startBody.Max, endBody.Max, eased));
@@ -117,5 +116,5 @@ internal sealed class MinimizeMorphView
         return false;
     }
 
-    private Rect MinimizedRect(Rect device, float scale) => new(device.Min, device.Min + minimizedPhone.Measure(scale));
+    private Rect MinimizedRect(Rect device) => new(device.Min, device.Min + minimizedPhone.Measure());
 }

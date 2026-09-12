@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Shell;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
@@ -22,6 +23,14 @@ internal static class PhoneBounds
         var widest = room.X / PhoneSizeCatalog.AspectRatio;
         var tallest = room.Y;
         return ClampTo(width, MathF.Min(widest, tallest));
+    }
+
+    public static float ClampMinimizedScale(float scale, Vector2 idleUnits)
+    {
+        var room = ViewportRoom();
+        var ceiling = MathF.Min(room.X / MathF.Max(idleUnits.X, 1f), room.Y / MathF.Max(idleUnits.Y, 1f));
+        var limit = MathF.Max(MathF.Min(ceiling, MinimizedShapes.MaxScale), MinimizedShapes.MinScale);
+        return Math.Clamp(scale, MinimizedShapes.MinScale, limit);
     }
 
     public static float LandscapeWidth(Configuration configuration)

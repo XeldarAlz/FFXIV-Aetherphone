@@ -261,5 +261,5 @@ internal static class MinimizedWidgetRenderer
         valueHeight = Typography.Measure(HeightSample, ValueStyle()).Y;
     }
 
-    private static float Text(float scale) => scale / UiScale.Phone;
+    private static float Text(float scale) => UiScale.MinimizedText(scale);
 }

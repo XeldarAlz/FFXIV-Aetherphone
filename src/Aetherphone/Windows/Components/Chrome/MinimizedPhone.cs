@@ -64,6 +64,7 @@ internal sealed class MinimizedPhone : IDisposable
     private const float ZoomSmoothTime = 0.18f;
     private const float ZoomSaveDelay = 0.9f;
     private const float ControlThreshold = 0.6f;
+    private const float GripSizeFactor = 0.7f;
     private const float CalmWallpaperScrim = 0.30f;
     private const float HarshWallpaperScrim = 0.58f;
     private const string MusicAppId = "music";
@@ -79,6 +80,7 @@ internal sealed class MinimizedPhone : IDisposable
     private readonly MinimizedLayoutService layout;
     private readonly MinimizedFeed feed;
     private readonly MinimapReader minimap;
+    private readonly ResizeGrip resizeGrip = new();
     private readonly Queue<PhoneNotification> queuedCards = new();
     private Spring hover;
     private Spring expand;
@@ -91,6 +93,8 @@ internal sealed class MinimizedPhone : IDisposable
     private Spring mapSpan;
     private float zoomSaveDue;
     private bool zoomDirty;
+    private float resizeStartScale;
+    private Vector2 resizeStartSize;
     private PhoneNotification? cardNotification;
     private bool cardDismissed;
     private float cardElapsed;
@@ -160,28 +164,43 @@ internal sealed class MinimizedPhone : IDisposable
 
     public bool IsShowing => DateTime.UtcNow - lastInteractiveDrawUtc < ShowingGrace;
 
-    public Vector2 Measure(float scale)
+    public float Zoom => PhoneBounds.ClampMinimizedScale(configuration.MinimizedScale, IdleUnits);
+
+    public Vector2 Measure()
     {
         if (ShowsMinimap)
         {
-            return MinimapBounds(scale);
+            return IdleSize();
         }
 
+        var scale = Scale;
         var band = ChassisGeometry.PuckBand(BodyWidth * scale);
         var height = MathF.Max(MinBodyHeight * scale - band, ContentHeight(scale)) + band;
         return new Vector2(MathF.Round(BodyWidth * scale), MathF.Round(height));
     }
 
-    public Vector2 IdleSize(float scale) =>
-        ShowsMinimap ? MinimapBounds(scale) : new Vector2(MathF.Round(BodyWidth * scale),
-            MathF.Round(MinBodyHeight * scale));
+    public Vector2 IdleSize()
+    {
+        var size = IdleUnits * Scale;
+        return new Vector2(MathF.Round(size.X), MathF.Round(size.Y));
+    }
+
+    private static float Scale => UiScale.Global * UiScale.Minimized;
 
     private bool ShowsMinimap => configuration.MinimizedShape == MinimizedShape.Minimap;
 
-    private Vector2 MinimapBounds(float scale)
+    private Vector2 IdleUnits
     {
-        var side = MathF.Round(MinimizedShapes.MapSide(configuration.MinimizedMapSize) * scale);
-        return new Vector2(side, side);
+        get
+        {
+            if (!ShowsMinimap)
+            {
+                return new Vector2(BodyWidth, MinBodyHeight);
+            }
+
+            var side = MinimizedShapes.MapSide(configuration.MinimizedMapSize);
+            return new Vector2(side, side);
+        }
     }
 
     public MinimizedDrag ConsumeDrag()
@@ -194,7 +213,7 @@ internal sealed class MinimizedPhone : IDisposable
 
     public MinimizedAction Draw(Rect body, PhoneTheme theme, float delta)
     {
-        var scale = UiScale.Global;
+        var scale = Scale;
         var geometry = ChassisGeometry.Puck(body);
         var dl = ImGui.GetForegroundDrawList();
         var lift = Math.Clamp(hover.Value, 0f, 1f);
@@ -218,7 +237,7 @@ internal sealed class MinimizedPhone : IDisposable
             lastInteractiveDrawUtc = DateTime.UtcNow;
         }
 
-        var scale = UiScale.Global;
+        var scale = Scale;
         var body = geometry.Body;
         var bodyHovered = interactive && UiInteract.Hover(body.Min, body.Max);
         var view = calls.Snapshot();
@@ -292,7 +311,35 @@ internal sealed class MinimizedPhone : IDisposable
             return MinimizedAction.None;
         }
 
+        UpdateResize(dl, body, scale, delta);
         return HandleGesture(body, scale, delta, bodyHovered, controlHovered);
+    }
+
+    private void UpdateResize(ImDrawListPtr dl, Rect body, float scale, float delta)
+    {
+        var grab = resizeGrip.Track(dl, body.Max, scale * GripSizeFactor, delta);
+        controlHovered |= grab.Engaged;
+        if (grab.Started)
+        {
+            resizeStartScale = UiScale.Minimized;
+            resizeStartSize = body.Size;
+        }
+
+        if (grab.Active)
+        {
+            var along = Vector2.Dot(grab.Delta, resizeStartSize) / MathF.Max(resizeStartSize.LengthSquared(), 1f);
+            var clamped = PhoneBounds.ClampMinimizedScale(resizeStartScale * (1f + along), IdleUnits);
+            var next = MinimizedShapes.SnapScale(clamped);
+            if (MathF.Abs(next - configuration.MinimizedScale) > 0.001f)
+            {
+                configuration.MinimizedScale = next;
+            }
+        }
+
+        if (grab.Committed)
+        {
+            configuration.Save();
+        }
     }
 
     private void DrawMinimap(ImDrawListPtr dl, Rect screen, PhoneTheme theme, float alpha, float scale,
@@ -646,7 +693,7 @@ internal sealed class MinimizedPhone : IDisposable
 
     private MinimizedAction HandleGesture(Rect body, float scale, float delta, bool bodyHovered, bool hoveredControl)
     {
-        if (bodyHovered)
+        if (bodyHovered && !hoveredControl)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
@@ -831,7 +878,7 @@ internal sealed class MinimizedPhone : IDisposable
         return durationLabel;
     }
 
-    private static float TextScale(float scale) => scale / UiScale.Phone;
+    private static float TextScale(float scale) => UiScale.MinimizedText(scale);
 
     private void RefreshBadge()
     {

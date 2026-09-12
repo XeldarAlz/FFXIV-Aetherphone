@@ -333,5 +333,5 @@ internal static class MinimizedPhoneRenderer
     private static bool Hovered(Vector2 center, float radius) =>
         UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
 
-    private static float Text(float scale) => scale / UiScale.Phone;
+    private static float Text(float scale) => UiScale.MinimizedText(scale);
 }

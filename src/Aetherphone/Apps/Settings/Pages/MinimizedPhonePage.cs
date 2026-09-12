@@ -43,6 +43,8 @@ internal sealed class MinimizedPhonePage : ISettingsPage
             DrawShapePicker(theme);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
             SettingsSection.Hint(Loc.T(L.Minimized.ShapeHint), theme);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
+            SettingsSection.Hint(Loc.T(L.Minimized.ResizeHint), theme);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
             if (configuration.MinimizedShape == MinimizedShape.Minimap)
             {

@@ -188,5 +188,5 @@ internal static class MinimapFace
         return new Vector2(direction.X * cosine - direction.Y * sine, direction.X * sine + direction.Y * cosine);
     }
 
-    private static float Text(float scale) => scale / UiScale.Phone;
+    private static float Text(float scale) => UiScale.MinimizedText(scale);
 }

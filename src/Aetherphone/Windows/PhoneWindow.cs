@@ -146,7 +146,9 @@ internal sealed class PhoneWindow : Window
         var phase = shell.MinimizePhase;
         var minimized = phase == MinimizePhase.Minimized;
         var landscape = turn.ShowsLandscape;
-        var zoom = minimized ? 1f : PhoneSizeCatalog.ZoomFor(landscape ? landscapeWidth : portraitWidth);
+        var minimizedZoom = shell.MinimizedZoom;
+        UiScale.SetMinimized(minimizedZoom);
+        var zoom = minimized ? minimizedZoom : PhoneSizeCatalog.ZoomFor(landscape ? landscapeWidth : portraitWidth);
         UiScale.SetPhone(zoom);
         Plugin.Fonts.SetPhoneZoom(zoom);
         var dockSize = shell.MinimizedSize;

@@ -1799,6 +1799,8 @@ internal static class L
                 "Fixed the scattered red, blue and white dashes some PCs added to uploaded photos: Aetherphone now writes every JPEG itself instead of relying on a library that misbehaved on those machines"),
             new("changelog.r1030.3",
                 "Fixed photos from a phone camera showing up sideways: a picture's own orientation tag is now honoured everywhere a photo is previewed or uploaded"),
+            new("changelog.r1030.38",
+                "The minimized phone can be resized: drag its bottom right corner, the same way the full phone resizes, and the mini phone or minimap scales with it"),
         };
 
         public static readonly LocString[] Release1030Linkpearl =
@@ -5729,6 +5731,7 @@ internal static class L
         public static readonly LocString MinimapHint = new("minimized.minimapHint", "The map faces north and shows your heading, the zone name and your coordinates. Tap it to open the phone, hold it to close.");
         public static readonly LocString MinimapZoomHint = new("minimized.minimapZoomHint", "Scroll the wheel over the map to zoom, or use the plus and minus buttons that fade in when you hover it.");
         public static readonly LocString NoMap = new("minimized.noMap", "No map here");
+        public static readonly LocString ResizeHint = new("minimized.resizeHint", "Drag its bottom right corner to make the minimized phone bigger or smaller.");
     }
 
     internal static class Time

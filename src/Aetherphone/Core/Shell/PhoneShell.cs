@@ -192,9 +192,11 @@ internal sealed class PhoneShell : IDisposable
 
     public float MinimizeEased => minimize.EasedProgress;
 
-    public Vector2 MinimizedSize => minimizedPhone.Measure(UiScale.Global);
+    public Vector2 MinimizedSize => minimizedPhone.Measure();
 
-    public Vector2 MinimizedIdleSize => minimizedPhone.IdleSize(UiScale.Global);
+    public Vector2 MinimizedIdleSize => minimizedPhone.IdleSize();
+
+    public float MinimizedZoom => minimizedPhone.Zoom;
 
     public MinimizedDrag ConsumeMinimizedDrag() => minimizedPhone.ConsumeDrag();
 

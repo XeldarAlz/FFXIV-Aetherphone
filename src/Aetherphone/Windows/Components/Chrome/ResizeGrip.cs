@@ -22,6 +22,24 @@ internal sealed class ResizeGrip
         }
     }
 
+    public readonly struct Grab
+    {
+        public readonly Vector2 Delta;
+        public readonly bool Started;
+        public readonly bool Active;
+        public readonly bool Committed;
+        public readonly bool Engaged;
+
+        public Grab(Vector2 delta, bool started, bool active, bool committed, bool engaged)
+        {
+            Delta = delta;
+            Started = started;
+            Active = active;
+            Committed = committed;
+            Engaged = engaged;
+        }
+    }
+
     private const float ZoneUnits = 34f;
     private const float NearInsetUnits = 15f;
     private const float FarInsetUnits = 23f;
@@ -37,36 +55,41 @@ internal sealed class ResizeGrip
 
     public Result Update(in ChassisGeometry chassis, float width, bool landscape, float deltaSeconds)
     {
-        var scale = UiScale.Current;
-        var corner = chassis.Body.Max;
-        var zone = new Rect(corner - new Vector2(ZoneUnits * scale, ZoneUnits * scale), corner);
-        var hovered = UiInteract.Hover(zone.Min, zone.Max);
-        if (drag.Begin(zone))
+        var grab = Track(ImGui.GetWindowDrawList(), chassis.Body.Max, UiScale.Current, deltaSeconds);
+        if (grab.Started)
         {
             startWidth = width;
         }
 
+        var next = grab.Active ? WidthFromDrag(startWidth, grab.Delta, landscape) : width;
+        return new Result(next, grab.Active, grab.Committed);
+    }
+
+    public Grab Track(ImDrawListPtr drawList, Vector2 corner, float scale, float deltaSeconds)
+    {
+        var zone = new Rect(corner - new Vector2(ZoneUnits * scale, ZoneUnits * scale), corner);
+        var hovered = UiInteract.Hover(zone.Min, zone.Max);
+        var started = drag.Begin(zone);
         var active = drag.Active;
-        var next = width;
+        var delta = drag.Delta;
         if (active)
         {
             UiInteract.BlockThisFrame();
             UiInteract.CancelPendingTap();
-            next = WidthFromDrag(startWidth, drag.Delta, landscape);
         }
 
         var committed = drag.Released(out _, out _);
-        if (hovered || active)
+        var engaged = hovered || active;
+        if (engaged)
         {
             UiInteract.ReportGestureSurface();
             ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeNwse);
             HoverTooltip.Show(zone, Loc.T(L.Plugin.ResizeHint), HoverLabelSide.Above);
         }
 
-        var target = hovered || active ? 1f : 0f;
-        reveal = Approach(reveal, target, deltaSeconds);
-        Draw(corner, scale, active);
-        return new Result(next, active, committed);
+        reveal = Approach(reveal, engaged ? 1f : 0f, deltaSeconds);
+        Draw(drawList, corner, scale, active);
+        return new Grab(delta, started, active, committed, engaged);
     }
 
     private static float WidthFromDrag(float startWidth, Vector2 delta, bool landscape)
@@ -86,14 +109,13 @@ internal sealed class ResizeGrip
         return target > value ? MathF.Min(target, value + step) : MathF.Max(target, value - step);
     }
 
-    private void Draw(Vector2 corner, float scale, bool active)
+    private void Draw(ImDrawListPtr drawList, Vector2 corner, float scale, bool active)
     {
         if (reveal <= 0.001f)
         {
             return;
         }
 
-        var drawList = ImGui.GetWindowDrawList();
         var alpha = (active ? ActiveAlpha : RestAlpha) * reveal;
         var color = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha));
         var thickness = MathF.Max(1f, Metrics.Stroke.Thin * scale);

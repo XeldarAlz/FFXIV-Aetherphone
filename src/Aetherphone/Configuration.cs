@@ -84,6 +84,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public MinimizedMapSize MinimizedMapSize { get; set; } = MinimizedMapSize.Medium;
     public int MinimizedMapZoom { get; set; } = MinimizedShapes.DefaultMapZoom;
     public bool MinimizedWallpaper { get; set; }
+    public float MinimizedScale { get; set; } = 1f;
     public bool DoNotDisturb { get; set; }
     public bool QuietWhileBusy { get; set; } = true;
     public bool Vibration { get; set; } = true;
