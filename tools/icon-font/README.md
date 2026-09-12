@@ -21,7 +21,7 @@ into one. Both outputs are generated: edit the lists in the script, never
 
 ## Why a subset
 
-The two source fonts are 2.7 MB and 297 KB. The shipped subset of 97 glyphs is about 36 KB.
+The two source fonts are 2.7 MB and 297 KB. The shipped subset of 100 glyphs is about 37 KB.
 
 ## Why the codepoints move
 

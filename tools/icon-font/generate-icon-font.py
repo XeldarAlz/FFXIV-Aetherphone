@@ -118,6 +118,8 @@ OUTLINE = [
     ("FileText", "file-text"),
     ("Sparkles", "sparkles"),
     ("ExternalLink", "external-link"),
+    ("LibraryPhoto", "library-photo"),
+    ("ArrowsSort", "arrows-sort"),
 ]
 
 FILLED = [
@@ -132,6 +134,7 @@ FILLED = [
     ("StarFilled", "star"),
     ("CircleCheckFilled", "circle-check"),
     ("PhoneFilled", "phone"),
+    ("PhotoFilled", "photo"),
 ]
 
 

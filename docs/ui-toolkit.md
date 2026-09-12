@@ -45,6 +45,7 @@ A component used by exactly one app does not belong here. It lives in that app, 
 | src/Aetherphone/Windows/Components/ShellToast.cs | Shell-level bottom-pill toast (replaced the mouse-anchored CopyToast) |
 | src/Aetherphone/Windows/Components/Toggle.cs | iOS-style switch |
 | src/Aetherphone/Windows/Components/ChipRail.cs | Single pannable row of filter chips |
+| src/Aetherphone/Windows/Components/Layout/PanRail.cs | Horizontal kinetic pan state for a row of cards drawn by the caller (Photos month rail) |
 | src/Aetherphone/Windows/Components/SoftWrapField.cs | Multiline input with soft wrapping and mention support |
 | src/Aetherphone/Windows/Components/ConfirmOverlay.cs | Modal confirm layer driven by `ConfirmService` |
 | src/Aetherphone/Windows/Components/EmojiRender.cs | Draws emoji images inline with text |
