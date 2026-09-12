@@ -137,12 +137,12 @@ internal static class ChatRuns
         set.LogKey = string.Concat(entry.Id, LogKeySuffix);
         set.LogWorldKey = string.Concat(entry.Id, LogWorldKeySuffix);
         var runs = new TextRun[set.Runs.Length + 1];
-        runs[0] = TextRun.Link(set.NamePrefix, LinkTints.Player, 0);
+        runs[0] = TextRun.Name(set.NamePrefix, LinkTints.Player, 0);
         for (var index = 0; index < set.Runs.Length; index++)
         {
             var run = set.Runs[index];
             runs[index + 1] = run.Interactive
-                ? new TextRun(run.Text, run.Tint, run.Target + 1, true, run.EmojiFile)
+                ? new TextRun(run.Text, run.Tint, run.Target + 1, true, run.Underlined, run.EmojiFile)
                 : run;
         }
 

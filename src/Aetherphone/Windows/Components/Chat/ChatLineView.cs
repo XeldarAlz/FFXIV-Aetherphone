@@ -41,10 +41,6 @@ internal static class ChatLineView
     private const float ColumnGap = 8f;
     private const float LineGap = 4f;
     private const float RailWidth = 2f;
-    private const float MarkerHeight = 16f;
-    private const float MarkerPadX = 5f;
-    private const float MarkerRounding = 4f;
-    private const float MarkerFillAlpha = 0.16f;
     private const float MentionTint = 0.10f;
     private const float GhostAlpha = 0.55f;
     private const float RepeatPadX = 6f;
@@ -53,7 +49,6 @@ internal static class ChatLineView
     private const int RepeatLabelCache = 100;
     private const string TimeProbe = "00:00";
 
-    private static readonly TextStyle MarkerStyle = new(0.60f, FontWeight.SemiBold);
     private static readonly string[] RepeatLabels = new string[RepeatLabelCache];
 
     public static bool Draw(ChatEntry entry, PhoneTheme theme, in ChatLineStyle style, Vector4 accent,
@@ -75,7 +70,6 @@ internal static class ChatLineView
         var alpha = Math.Clamp(style.Entrance, 0f, 1f) * (style.Ghost ? GhostAlpha : 1f);
         var bodyStyle = new TextStyle(TextStyles.Callout.Scale * textScale, FontWeight.Regular);
         var timeStyle = new TextStyle(TextStyles.Caption1.Scale * textScale, FontWeight.Regular);
-        var markerStyle = new TextStyle(MarkerStyle.Scale * textScale, MarkerStyle.Weight);
         var lineHeight = Typography.LineHeight(bodyStyle);
         var left = origin.X + SidePad * scale;
         var right = origin.X + available - SidePad * scale;
@@ -84,15 +78,6 @@ internal static class ChatLineView
         if (style.Timestamp)
         {
             cursorX += timeWidth + ColumnGap * scale;
-        }
-
-        var markerWidth = 0f;
-        var code = string.Empty;
-        if (style.Channel is { } channel)
-        {
-            code = GameChannels.ShortCode(channel);
-            markerWidth = Typography.Measure(code, markerStyle).X + MarkerPadX * 2f * scale;
-            cursorX += markerWidth + ColumnGap * scale;
         }
 
         var runs = ChatRuns.For(entry, ImGui.GetFrameCount());
@@ -107,7 +92,7 @@ internal static class ChatLineView
         {
             var showWorld = style.WorldName && entry.AuthorWorld.Length > 0 &&
                             !string.Equals(entry.AuthorWorld, style.LocalWorld, StringComparison.OrdinalIgnoreCase);
-            runs.LogRuns[0] = TextRun.Link(showWorld ? runs.NameWorldPrefix : runs.NamePrefix, nameInk, 0);
+            runs.LogRuns[0] = TextRun.Name(showWorld ? runs.NameWorldPrefix : runs.NamePrefix, nameInk, 0);
             spans = runs.LogRuns;
             targets = runs.LogTargets;
             layoutKey = showWorld ? runs.LogWorldKey : runs.LogKey;
@@ -149,18 +134,6 @@ internal static class ChatLineView
             var stampSize = Typography.Measure(stamp, timeStyle);
             Typography.Draw(drawList, new Vector2(left, origin.Y + (lineHeight - stampSize.Y) * 0.5f), stamp,
                 Palette.WithAlpha(theme.TextMuted, theme.TextMuted.W * alpha), timeStyle);
-        }
-
-        if (style.Channel is not null)
-        {
-            var markerHeight = MarkerHeight * scale * textScale;
-            var markerLeft = left + (style.Timestamp ? timeWidth + ColumnGap * scale : 0f);
-            var markerMin = new Vector2(markerLeft, origin.Y + (lineHeight - markerHeight) * 0.5f);
-            var markerMax = new Vector2(markerLeft + markerWidth, markerMin.Y + markerHeight);
-            Squircle.Fill(drawList, markerMin, markerMax, MarkerRounding * scale,
-                ImGui.GetColorU32(Palette.WithAlpha(channelTint, MarkerFillAlpha * alpha)));
-            Typography.DrawCentered(drawList, (markerMin + markerMax) * 0.5f, code,
-                Palette.WithAlpha(channelTint, channelTint.W * alpha), markerStyle);
         }
 
         var interactive = !style.Ghost && style.Entrance >= 1f;

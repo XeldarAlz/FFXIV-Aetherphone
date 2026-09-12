@@ -130,7 +130,7 @@ internal static class RunText
 
             drawList.AddText(font, fontSize, position,
                 ImGui.GetColorU32(Palette.WithAlpha(ink, ink.W * alpha)), piece.Text);
-            if (!run.Interactive)
+            if (!run.Interactive || (!run.Underlined && piece.Run != hovered))
             {
                 continue;
             }
