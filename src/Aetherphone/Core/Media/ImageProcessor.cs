@@ -6,7 +6,6 @@ using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -29,10 +28,7 @@ internal readonly struct BakedImage
 internal static class ImageProcessor
 {
     private const int JpegQuality = 88;
-    private const int EncodeAttemptLimit = 3;
-    private const float LumaDeltaLimit = 80f;
-    private const float ChromaDeltaLimit = 64f;
-    private const int CorruptSampleLimit = 3;
+    private const JpegChromaSubsampling JpegSubsampling = JpegChromaSubsampling.Ratio420;
 
     public const long MaxDecodePixels = 4096L * 4096L;
     public const long MaxLocalDecodePixels = 8192L * 8192L;
@@ -110,7 +106,7 @@ internal static class ImageProcessor
     {
         using var sourceStream = File.OpenRead(sourcePath);
         EnsureDecodable(sourceStream, MaxLocalDecodePixels);
-        using var image = Image.Load(SingleFrame, sourceStream);
+        using var image = Image.Load<Rgba32>(SingleFrame, sourceStream);
         var size = new Vector2(image.Width, image.Height);
         var aspect = (float)targetWidth / targetHeight;
         var minZoom = revealWholeImage
@@ -126,7 +122,7 @@ internal static class ImageProcessor
         image.Mutate(context => context
             .Crop(new Rectangle(x, y, width, height))
             .Resize(containedWidth, containedHeight));
-        return new BakedImage(EncodeJpegVerified(image), containedWidth, containedHeight);
+        return new BakedImage(EncodeJpeg(image), containedWidth, containedHeight);
     }
 
     public static (int Width, int Height) ContainSize(int width, int height, int targetWidth, int targetHeight)
@@ -146,124 +142,25 @@ internal static class ImageProcessor
     {
         using var sourceStream = File.OpenRead(sourcePath);
         EnsureDecodable(sourceStream, MaxLocalDecodePixels);
-        using var image = Image.Load(SingleFrame, sourceStream);
+        using var image = Image.Load<Rgba32>(SingleFrame, sourceStream);
         ScaleWithin(image, maxDimension);
-        return new BakedImage(EncodeJpegVerified(image), image.Width, image.Height);
+        return new BakedImage(EncodeJpeg(image), image.Width, image.Height);
     }
 
-    private static byte[] EncodeJpegVerified(Image image)
+    private static byte[] EncodeJpeg(Image<Rgba32> image)
     {
-        using var reference = image.CloneAs<Rgba32>();
-        var length = checked(reference.Width * reference.Height * 4);
-        var referencePixels = ArrayPool<byte>.Shared.Rent(length);
-        var decodedPixels = ArrayPool<byte>.Shared.Rent(length);
+        var length = checked(image.Width * image.Height * 4);
+        var pixels = ArrayPool<byte>.Shared.Rent(length);
         try
         {
-            reference.CopyPixelDataTo(referencePixels.AsSpan(0, length));
-            var encoded = Array.Empty<byte>();
-            for (var attempt = 1; attempt <= EncodeAttemptLimit; attempt++)
-            {
-                using var stream = new MemoryStream();
-                image.SaveAsJpeg(stream, new JpegEncoder { Quality = JpegQuality });
-                encoded = stream.ToArray();
-                using var decodedStream = new MemoryStream(encoded);
-                using var decoded = Image.Load<Rgba32>(SingleFrame, decodedStream);
-                decoded.CopyPixelDataTo(decodedPixels.AsSpan(0, length));
-                if (!HasEncodeCorruption(referencePixels.AsSpan(0, length), decodedPixels.AsSpan(0, length),
-                        reference.Width, reference.Height))
-                {
-                    return encoded;
-                }
-
-                AepLog.Warning($"[Media] jpeg encode attempt {attempt} of {EncodeAttemptLimit} " +
-                    "produced corrupt samples, re-encoding");
-            }
-
-            return encoded;
+            image.CopyPixelDataTo(pixels.AsSpan(0, length));
+            return ScalarJpegEncoder.Encode(pixels.AsSpan(0, length), image.Width, image.Height, JpegQuality,
+                JpegSubsampling);
         }
         finally
         {
-            ArrayPool<byte>.Shared.Return(referencePixels);
-            ArrayPool<byte>.Shared.Return(decodedPixels);
+            ArrayPool<byte>.Shared.Return(pixels);
         }
-    }
-
-    internal static bool HasEncodeCorruption(ReadOnlySpan<byte> sourceRgba, ReadOnlySpan<byte> decodedRgba,
-        int width, int height)
-    {
-        var corruptSamples = 0;
-        for (var cellY = 0; cellY < height; cellY += 2)
-        {
-            for (var cellX = 0; cellX < width; cellX += 2)
-            {
-                var sourceChromaBlueSum = 0f;
-                var sourceChromaRedSum = 0f;
-                var decodedChromaBlueSum = 0f;
-                var decodedChromaRedSum = 0f;
-                var sampleCount = 0;
-                for (var offsetY = 0; offsetY < 2; offsetY++)
-                {
-                    var pixelY = cellY + offsetY;
-                    if (pixelY >= height)
-                    {
-                        continue;
-                    }
-
-                    for (var offsetX = 0; offsetX < 2; offsetX++)
-                    {
-                        var pixelX = cellX + offsetX;
-                        if (pixelX >= width)
-                        {
-                            continue;
-                        }
-
-                        var index = ((pixelY * width) + pixelX) * 4;
-                        if (MathF.Abs(LumaOf(sourceRgba, index) - LumaOf(decodedRgba, index)) > LumaDeltaLimit)
-                        {
-                            corruptSamples++;
-                        }
-
-                        sourceChromaBlueSum += ChromaBlueOf(sourceRgba, index);
-                        sourceChromaRedSum += ChromaRedOf(sourceRgba, index);
-                        decodedChromaBlueSum += ChromaBlueOf(decodedRgba, index);
-                        decodedChromaRedSum += ChromaRedOf(decodedRgba, index);
-                        sampleCount++;
-                    }
-                }
-
-                if (sampleCount > 0)
-                {
-                    var chromaBlueDelta = MathF.Abs(sourceChromaBlueSum - decodedChromaBlueSum) / sampleCount;
-                    var chromaRedDelta = MathF.Abs(sourceChromaRedSum - decodedChromaRedSum) / sampleCount;
-                    if (chromaBlueDelta > ChromaDeltaLimit || chromaRedDelta > ChromaDeltaLimit)
-                    {
-                        corruptSamples++;
-                    }
-                }
-
-                if (corruptSamples >= CorruptSampleLimit)
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static float LumaOf(ReadOnlySpan<byte> rgba, int index)
-    {
-        return (0.299f * rgba[index]) + (0.587f * rgba[index + 1]) + (0.114f * rgba[index + 2]);
-    }
-
-    private static float ChromaBlueOf(ReadOnlySpan<byte> rgba, int index)
-    {
-        return (-0.168736f * rgba[index]) - (0.331264f * rgba[index + 1]) + (0.5f * rgba[index + 2]);
-    }
-
-    private static float ChromaRedOf(ReadOnlySpan<byte> rgba, int index)
-    {
-        return (0.5f * rgba[index]) - (0.418688f * rgba[index + 1]) - (0.081312f * rgba[index + 2]);
     }
 
     private static (byte[] Pixels, int Length, int Width, int Height) DecodeRgba32Pooled(Stream stream, long maxPixels,

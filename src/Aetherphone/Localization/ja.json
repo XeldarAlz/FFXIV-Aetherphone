@@ -5116,6 +5116,7 @@
   "changelog.sectionMessaging": "メッセージ",
   "changelog.sectionPhone": "本体",
   "changelog.sectionSocial": "ChirperとAethergram",
+  "changelog.r1022.0": "一部の PC でアップロードした写真に赤、青、白の細かな線が混ざる問題を修正しました。Aetherphone はそれらの環境で不具合を起こしていたライブラリに頼らず、JPEG を自前で書き出すようになりました",
   "changelog.r1021.0": "貼り付けた文章がそのまま送信される問題を修正しました。改行を含む文章を貼り付けても、Enter キーを押すまで入力欄に残ります",
   "changelog.r1020.2": "Velvetを全面的に刷新しました。フィード、見つける、プロフィール、メッセージ、投稿作成画面、フィルター",
   "changelog.r1020.3": "見つけるは写真カードのリストで人を表示し、各カードにふたりの共通点が一行で示されます",

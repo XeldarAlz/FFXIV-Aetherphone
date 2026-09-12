@@ -217,6 +217,8 @@ Uploads are a three-step dance, visible end to end in `AvatarUpload.RunAsync` (s
 
 For end-to-end encrypted attachments, `MessageCipher.PrepareOutboundMedia` seals the bytes before step 2, so the storage layer only ever holds ciphertext.
 
+Every JPEG the client uploads comes out of `ScalarJpegEncoder` (src/Aetherphone/Core/Media/ScalarJpegEncoder.cs), a baseline encoder written as plain loops; ImageSharp only decodes, crops, and resizes. It exists because ImageSharp's SIMD encoder produced +128 dashes on machines where an injected overlay drops the upper AVX lanes across a thread suspension, and the server stores whatever bytes it receives. Keep the encoder free of `Vector<T>` and intrinsics, or that guarantee goes away.
+
 Downloads go through `HttpService.GetBytesAsync` (up to 3 attempts with backoff). Display-side caching is layered: `DiskCache` persists bytes under the plugin config directory with a size budget, and `MediaCache` turns bytes into GPU textures with a 96 MB texture budget, 30-day disk age, and a 2-minute cooldown after a failed fetch. Encrypted attachments are fetched sealed and decrypted with `MessageCipher.TryDecryptMedia` before display.
 
 ## Dev vs prod endpoints

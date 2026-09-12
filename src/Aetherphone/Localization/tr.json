@@ -5116,6 +5116,7 @@
   "changelog.sectionMessaging": "Mesajlaşma",
   "changelog.sectionPhone": "Telefon",
   "changelog.sectionSocial": "Chirper ve Aethergram",
+  "changelog.r1022.0": "Bazı bilgisayarların yüklenen fotoğraflara eklediği dağınık kırmızı, mavi ve beyaz çizgiler düzeltildi: Aetherphone artık her JPEG'i, o makinelerde hata yapan bir kütüphaneye güvenmek yerine kendisi yazıyor",
   "changelog.r1021.0": "Yapıştırılan metnin kendiliğinden gönderilmesi düzeltildi: içinde satır sonu olan bir metni yapıştırdığınızda artık Enter'a basana kadar kutuda bekliyor",
   "changelog.r1020.2": "Velvet baştan aşağı elden geçirildi: akış, Keşfet, profiller, mesajlar, gönderi oluşturucu ve filtreler",
   "changelog.r1020.3": "Keşfet artık insanları fotoğraf kartlarından oluşan bir listede gösteriyor, her kartta ortak noktanızı anlatan bir satırla",

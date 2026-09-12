@@ -1746,6 +1746,12 @@ internal static class L
         public static readonly LocString SectionPhone = new("changelog.sectionPhone", "Phone");
         public static readonly LocString SectionSocial = new("changelog.sectionSocial", "Chirper and Aethergram");
 
+        public static readonly LocString[] Release1022Phone =
+        {
+            new("changelog.r1022.0",
+                "Fixed the scattered red, blue and white dashes some PCs added to uploaded photos: Aetherphone now writes every JPEG itself instead of relying on a library that misbehaved on those machines"),
+        };
+
         public static readonly LocString[] Release1021Message =
         {
             new("changelog.r1021.0",

@@ -5116,6 +5116,7 @@
   "changelog.sectionMessaging": "Mensajería",
   "changelog.sectionPhone": "Teléfono",
   "changelog.sectionSocial": "Chirper y Aethergram",
+  "changelog.r1022.0": "Corregidas las rayas rojas, azules y blancas que algunos PC añadían a las fotos subidas: Aetherphone ahora escribe cada JPEG por sí mismo en lugar de depender de una biblioteca que fallaba en esos equipos",
   "changelog.r1021.0": "Corregido que el texto pegado se enviara solo: un texto pegado con un salto de línea ahora espera en el cuadro hasta que pulsas Intro",
   "changelog.r1020.2": "Velvet renovado de arriba abajo: el feed, Descubrir, los perfiles, los mensajes, el editor y los filtros",
   "changelog.r1020.3": "Descubrir muestra a la gente como una lista de tarjetas con foto, cada una con una línea sobre lo que compartís",

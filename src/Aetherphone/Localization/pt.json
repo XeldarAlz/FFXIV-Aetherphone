@@ -5116,6 +5116,7 @@
   "changelog.sectionMessaging": "Mensagens",
   "changelog.sectionPhone": "Telefone",
   "changelog.sectionSocial": "Chirper e Aethergram",
+  "changelog.r1022.0": "Corrigidos os traços vermelhos, azuis e brancos que alguns PCs adicionavam às fotos enviadas: o Aetherphone agora grava cada JPEG por conta própria em vez de depender de uma biblioteca que falhava nessas máquinas",
   "changelog.r1021.0": "Corrigido o texto colado que se enviava sozinho: um texto colado com uma quebra de linha agora fica no campo até você pressionar Enter",
   "changelog.r1020.2": "Velvet reformulado de cima a baixo: o feed, Descobrir, os perfis, as mensagens, o compositor e os filtros",
   "changelog.r1020.3": "Descobrir mostra as pessoas como uma lista de cartões com foto, cada um com uma linha sobre o que vocês têm em comum",

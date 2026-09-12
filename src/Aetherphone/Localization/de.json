@@ -5116,6 +5116,7 @@
   "changelog.sectionMessaging": "Nachrichten",
   "changelog.sectionPhone": "Telefon",
   "changelog.sectionSocial": "Chirper und Aethergram",
+  "changelog.r1022.0": "Behoben, dass manche PCs hochgeladenen Fotos verstreute rote, blaue und weiße Striche hinzufügten: Aetherphone schreibt jetzt jedes JPEG selbst, statt sich auf eine Bibliothek zu verlassen, die auf diesen Rechnern Fehler machte",
   "changelog.r1021.0": "Behoben, dass eingefügter Text sich selbst absendete: Text mit einem Zeilenumbruch bleibt jetzt im Feld stehen, bis du die Eingabetaste drückst",
   "changelog.r1020.2": "Velvet von Grund auf überarbeitet: Feed, Entdecken, Profile, Nachrichten, der Editor und die Filter",
   "changelog.r1020.3": "Entdecken zeigt Leute jetzt als scrollbare Liste aus Fotokarten, jede mit einer Zeile dazu, was ihr beide teilt",
