@@ -128,11 +128,12 @@ internal sealed class AethergramStore : SocialFeedStore
             () => posting = false);
     }
 
-    public void EditCaption(string postId, string caption, Action<bool> onComplete)
+    public void EditPost(string postId, string caption, PhotoTagInput[] photoTags, bool sensitive,
+        Action<bool> onComplete)
     {
-        work.Run("edit caption", async token =>
+        work.Run("edit post", async token =>
         {
-            var result = await client.EditCaptionAsync(postId, caption, token).ConfigureAwait(false);
+            var result = await grams.EditAsync(postId, caption, photoTags, sensitive, token).ConfigureAwait(false);
             if (result is null)
             {
                 return false;

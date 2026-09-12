@@ -1789,7 +1789,13 @@ internal static class L
         private static readonly LocString ComposerShareScreen = new("changelog.r1030.20",
             "The last step of a new post is a proper share screen: the caption sits in its own card with a bigger emoji button, the post options sit in a card below it, and a single Share button waits at the bottom");
 
-        public static readonly LocString[] Release1030Aethergram = { ComposerFlow, ComposerShareScreen };
+        public static readonly LocString[] Release1030Aethergram =
+        {
+            ComposerFlow,
+            ComposerShareScreen,
+            new("changelog.r1030.40",
+                "Edit post replaces Edit caption on your own posts: change the caption, tag or untag people on any photo, and switch the sensitive mark, all from one screen"),
+        };
 
         public static readonly LocString[] Release1030Velvet = { ComposerFlow, ComposerShareScreen };
 
@@ -4354,8 +4360,8 @@ internal static class L
         public static readonly LocString DeleteConfirm = new("aethergram.deleteConfirm", "Delete");
         public static readonly LocString DeleteCancel = new("aethergram.deleteCancel", "Cancel");
         public static readonly LocString DeleteFailed = new("aethergram.deleteFailed", "Couldn't delete the post");
-        public static readonly LocString EditCaption = new("aethergram.editCaption", "Edit caption");
-        public static readonly LocString EditCaptionFailed = new("aethergram.editCaptionFailed", "Couldn't save the caption");
+        public static readonly LocString EditPost = new("aethergram.editPost", "Edit post");
+        public static readonly LocString EditPostFailed = new("aethergram.editPostFailed", "Couldn't save the changes");
         public static readonly LocString EditedStamp = new("aethergram.editedStamp", "{0} · Edited");
         public static readonly LocString DeleteCommentFailed = new("aethergram.deleteCommentFailed", "Couldn't delete the comment");
         public static readonly LocString DeleteComment = new("aethergram.deleteComment", "Delete comment");

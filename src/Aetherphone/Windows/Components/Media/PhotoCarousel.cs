@@ -38,6 +38,11 @@ internal sealed class PhotoCarousel
         dragPostId = string.Empty;
     }
 
+    public void CancelTap()
+    {
+        pressActive = false;
+    }
+
     public int IndexOf(string postId, int count)
     {
         if (count <= 1 || !pagers.TryGetValue(postId, out var pager))

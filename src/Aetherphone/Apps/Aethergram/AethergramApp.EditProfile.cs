@@ -32,12 +32,54 @@ internal sealed partial class AethergramApp
     private volatile bool editBusy;
     private volatile int editOutcome;
 
-    private void DrawEditProfile(Rect area)
+    private bool DrawEditHeader(Rect area, string title, bool canSave, bool busy)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var me = store.Me ?? (store.ProfileUser is { IsMe: true } self ? self : null);
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
+        var cancelLabel = Loc.T(L.Common.Cancel);
+        var cancelSize = Typography.Measure(cancelLabel, EditWordStyle);
+        var cancelMin = new Vector2(area.Min.X, area.Min.Y);
+        var cancelMax = new Vector2(area.Min.X + CellPadX * scale + cancelSize.X + 12f * scale,
+            area.Min.Y + AppHeader.Height * scale);
+        var cancelHovered = UiInteract.Hover(cancelMin, cancelMax);
+        Typography.Draw(drawList, new Vector2(area.Min.X + CellPadX * scale, rowCenterY - cancelSize.Y * 0.5f),
+            cancelLabel, cancelHovered ? Ink.TitleInk : Ink.BodyInk, EditWordStyle);
+        if (cancelHovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(cancelMin, cancelMax, cancelHovered))
+        {
+            back();
+        }
+
+        var doneLabel = busy ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.Done);
+        var doneSize = Typography.Measure(doneLabel, EditWordStyle);
+        var doneMax = new Vector2(area.Max.X, area.Min.Y + AppHeader.Height * scale);
+        var doneMin = new Vector2(area.Max.X - CellPadX * scale - doneSize.X - 12f * scale, area.Min.Y);
+        var doneHovered = canSave && UiInteract.Hover(doneMin, doneMax);
+        Typography.Draw(drawList, new Vector2(area.Max.X - CellPadX * scale - doneSize.X, rowCenterY - doneSize.Y * 0.5f),
+            doneLabel, !canSave ? Ink.FaintInk : doneHovered ? Ink.TitleInk : Ink.AccentLink, EditWordStyle);
+        if (doneHovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        var save = UiInteract.Click(doneMin, doneMax, doneHovered);
+        var reserve = MathF.Max(cancelMax.X - area.Min.X, area.Max.X - doneMin.X);
+        var titleFitted = Typography.FitText(title, MathF.Max(1f, area.Width - reserve * 2f - 8f * scale),
+            ScreenTitleStyle);
+        Typography.DrawCentered(drawList, new Vector2(area.Center.X, rowCenterY), titleFitted, Ink.TitleInk,
+            ScreenTitleStyle);
+        return save;
+    }
+
+    private void DrawEditProfile(Rect area)
+    {
+        var scale = UiScale.Current;
+        var me = store.Me ?? (store.ProfileUser is { IsMe: true } self ? self : null);
         if (me is null)
         {
             store.EnsureMe();
@@ -69,48 +111,12 @@ internal sealed partial class AethergramApp
             editStatus = string.Empty;
         }
 
-        var cancelLabel = Loc.T(L.Common.Cancel);
-        var cancelSize = Typography.Measure(cancelLabel, EditWordStyle);
-        var cancelMin = new Vector2(area.Min.X, area.Min.Y);
-        var cancelMax = new Vector2(area.Min.X + CellPadX * scale + cancelSize.X + 12f * scale,
-            area.Min.Y + AppHeader.Height * scale);
-        var cancelHovered = UiInteract.Hover(cancelMin, cancelMax);
-        Typography.Draw(drawList, new Vector2(area.Min.X + CellPadX * scale, rowCenterY - cancelSize.Y * 0.5f),
-            cancelLabel, cancelHovered ? Ink.TitleInk : Ink.BodyInk, EditWordStyle);
-        if (cancelHovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        if (UiInteract.Click(cancelMin, cancelMax, cancelHovered))
-        {
-            back();
-        }
-
         var handleValid = SocialProfilePages.IsHandleValid(editHandle);
         var canSave = !editBusy && !string.IsNullOrWhiteSpace(editDisplay) && handleValid;
-        var doneLabel = editBusy ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.Done);
-        var doneSize = Typography.Measure(doneLabel, EditWordStyle);
-        var doneMax = new Vector2(area.Max.X, area.Min.Y + AppHeader.Height * scale);
-        var doneMin = new Vector2(area.Max.X - CellPadX * scale - doneSize.X - 12f * scale, area.Min.Y);
-        var doneHovered = canSave && UiInteract.Hover(doneMin, doneMax);
-        Typography.Draw(drawList, new Vector2(area.Max.X - CellPadX * scale - doneSize.X, rowCenterY - doneSize.Y * 0.5f),
-            doneLabel, !canSave ? Ink.FaintInk : doneHovered ? Ink.TitleInk : Ink.AccentLink, EditWordStyle);
-        if (doneHovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        if (UiInteract.Click(doneMin, doneMax, doneHovered))
+        if (DrawEditHeader(area, Loc.T(L.Aethergram.EditProfile), canSave, editBusy))
         {
             SaveProfile();
         }
-
-        var reserve = MathF.Max(cancelMax.X - area.Min.X, area.Max.X - doneMin.X);
-        var titleFitted = Typography.FitText(Loc.T(L.Aethergram.EditProfile),
-            MathF.Max(1f, area.Width - reserve * 2f - 8f * scale), ScreenTitleStyle);
-        Typography.DrawCentered(drawList, new Vector2(area.Center.X, rowCenterY), titleFitted, Ink.TitleInk,
-            ScreenTitleStyle);
 
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))

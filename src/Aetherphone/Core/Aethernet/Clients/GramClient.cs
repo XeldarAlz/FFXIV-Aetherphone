@@ -18,6 +18,14 @@ internal sealed class GramClient
         return net.PostAsync("/grams", new CreateGramRequest(caption, mediaKeys[0], width, height, mediaKeys, photoTags, sensitive), AethernetJsonContext.Default.CreateGramRequest, AethernetJsonContext.Default.PostDto, token, null, onFailure);
     }
 
+    public Task<PostDto?> EditAsync(string postId, string caption, PhotoTagInput[] photoTags, bool sensitive,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.SendJsonAsync(HttpMethod.Put, $"/posts/{Uri.EscapeDataString(postId)}",
+            new EditGramRequest(caption, photoTags, sensitive), AethernetJsonContext.Default.EditGramRequest,
+            AethernetJsonContext.Default.PostDto, token, null, onFailure);
+    }
+
     public Task<FeedPage?> FeedAsync(string scope, string? cursor, string? regions, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {

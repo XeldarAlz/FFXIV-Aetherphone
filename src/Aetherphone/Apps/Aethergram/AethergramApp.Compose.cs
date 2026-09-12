@@ -335,10 +335,10 @@ internal sealed partial class AethergramApp
             }
         }
 
-        DrawCaptionCard(captionCard, area, scale);
-        if (showOptions)
+        DrawCaptionCard(captionCard, area, scale, "##gramCaption", ref caption, composeMentions);
+        if (showOptions && DrawComposeOptionsCard(optionsCard, scale, ref composeSensitive))
         {
-            DrawComposeOptionsCard(optionsCard, scale);
+            composeTagMode = true;
         }
 
         if (statusHeight > 0f)
@@ -379,19 +379,21 @@ internal sealed partial class AethergramApp
         CommitGram();
     }
 
-    private void DrawCaptionCard(Rect card, Rect screen, float scale)
+    private void DrawCaptionCard(Rect card, Rect screen, float scale, string fieldId, ref string text,
+        MentionAutocomplete mentions)
     {
         ui.Card(ImGui.GetWindowDrawList(), card.Min, card.Max, ComposeCardRounding * scale, true);
         var pad = ComposeCardPad * scale;
         var field = new Rect(new Vector2(card.Min.X + pad, card.Min.Y + pad),
             new Vector2(card.Max.X - pad, card.Min.Y + pad + ComposeCaptionFieldHeight * scale));
-        DrawCaptionField(field, screen, scale);
+        DrawCaptionField(field, screen, scale, fieldId, ref text, mentions);
         var metaTop = field.Max.Y + ComposeMetaGap * scale;
         DrawCaptionMetaRow(new Rect(new Vector2(field.Min.X, metaTop),
-            new Vector2(field.Max.X, metaTop + ComposeMetaRowHeight * scale)), scale);
+            new Vector2(field.Max.X, metaTop + ComposeMetaRowHeight * scale)), scale, text.Length);
     }
 
-    private void DrawCaptionField(Rect field, Rect screen, float scale)
+    private void DrawCaptionField(Rect field, Rect screen, float scale, string fieldId, ref string text,
+        MentionAutocomplete mentions)
     {
         ImGui.SetCursorScreenPos(field.Min);
         if (captionFocus)
@@ -404,18 +406,17 @@ internal sealed partial class AethergramApp
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, Ink.TitleInk))
         {
-            SoftWrapField.Multiline("##gramCaption", ref caption, MaxCaptionLength, field.Size, wrapWidth,
-                composeMentions);
+            SoftWrapField.Multiline(fieldId, ref text, MaxCaptionLength, field.Size, wrapWidth, mentions);
         }
 
-        var pickedMention = mentionPopup.Draw(composeMentions, screen, theme, images, lodestone);
+        var pickedMention = mentionPopup.Draw(mentions, screen, theme, images, lodestone);
         if (pickedMention >= 0)
         {
-            composeMentions.Pick(pickedMention);
+            mentions.Pick(pickedMention);
         }
 
-        mentionPopup.Gate(composeMentions);
-        if (caption.Length > 0)
+        mentionPopup.Gate(mentions);
+        if (text.Length > 0)
         {
             return;
         }
@@ -426,7 +427,7 @@ internal sealed partial class AethergramApp
             TextStyles.Body);
     }
 
-    private void DrawCaptionMetaRow(Rect row, float scale)
+    private void DrawCaptionMetaRow(Rect row, float scale, int textLength)
     {
         var drawList = ImGui.GetWindowDrawList();
         var emojiRadius = ComposeEmojiRadius * scale;
@@ -436,39 +437,37 @@ internal sealed partial class AethergramApp
         drawList.AddCircleFilled(emojiCenter, emojiRadius, ImGui.GetColorU32(emojiLit ? Ink.ButtonHover : Ink.ButtonFill),
             CircleSegments);
         captionEmoji.DrawToggle(ui, emojiCenter, emojiRadius, Accent, Ink.TitleInk, Loc.T(L.Common.Emoji));
-        SyncComposeCounter();
+        SyncComposeCounter(textLength);
         var counterSize = Typography.Measure(composeCounter, ComposeCounterStyle);
-        var counterInk = caption.Length >= MaxCaptionLength - ComposeCounterWarning ? Ink.Danger : Ink.MutedInk;
+        var counterInk = textLength >= MaxCaptionLength - ComposeCounterWarning ? Ink.Danger : Ink.MutedInk;
         Typography.Draw(drawList, new Vector2(row.Max.X - counterSize.X, row.Center.Y - counterSize.Y * 0.5f),
             composeCounter, counterInk, ComposeCounterStyle);
     }
 
-    private void SyncComposeCounter()
+    private void SyncComposeCounter(int textLength)
     {
-        if (composeCounterLength == caption.Length)
+        if (composeCounterLength == textLength)
         {
             return;
         }
 
-        composeCounterLength = caption.Length;
+        composeCounterLength = textLength;
         composeCounter = string.Concat(composeCounterLength.ToString(Loc.Culture), "/",
             MaxCaptionLength.ToString(Loc.Culture));
     }
 
-    private void DrawComposeOptionsCard(Rect card, float scale)
+    private bool DrawComposeOptionsCard(Rect card, float scale, ref bool sensitive)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = ComposeCardRounding * scale;
         ui.Card(drawList, card.Min, card.Max, rounding);
         var tagRow = new Rect(card.Min, new Vector2(card.Max.X, card.Min.Y + ComposeRowHeight * scale));
-        if (DrawComposeLinkRow(tagRow, PhoneIcons.UserPlus, Loc.T(L.PhotoTag.TagPeople), composeTags.Count, rounding))
-        {
-            composeTagMode = true;
-        }
-
+        var tagRowTapped = DrawComposeLinkRow(tagRow, PhoneIcons.UserPlus, Loc.T(L.PhotoTag.TagPeople),
+            composeTags.Count, rounding);
         DrawHairline(drawList, ComposeRowLabelLeft(tagRow, scale), card.Max.X - ComposeCardPad * scale, tagRow.Max.Y);
         var sensitiveRow = new Rect(new Vector2(card.Min.X, tagRow.Max.Y), card.Max);
-        DrawComposeToggleRow(sensitiveRow, PhoneIcons.EyeOff, Loc.T(L.Moderation.MarkSensitive), ref composeSensitive);
+        DrawComposeToggleRow(sensitiveRow, PhoneIcons.EyeOff, Loc.T(L.Moderation.MarkSensitive), ref sensitive);
+        return tagRowTapped;
     }
 
     private bool DrawComposeLinkRow(Rect row, string glyph, string label, int count, float rounding)
@@ -545,7 +544,7 @@ internal sealed partial class AethergramApp
         var preview = ImageFit.CenteredRect(previewRegion, ComposeAspect);
         if (DrawCaptionPreview(preview, scale, string.Empty))
         {
-            PlaceTagAt(preview);
+            PlaceTagAt(preview, composeSession.ClampedPreviewIndex);
         }
 
         var stackY = preview.Max.Y;
@@ -562,6 +561,11 @@ internal sealed partial class AethergramApp
             stackY += stripGap + stripHeight;
         }
 
+        DrawTaggingFooter(area, stackY, margin, hintHeight, scale);
+    }
+
+    private void DrawTaggingFooter(Rect area, float stackY, float margin, float hintHeight, float scale)
+    {
         var hint = composeTags.Count >= MaxPhotoTags
             ? Loc.T(L.PhotoTag.TagLimit, MaxPhotoTags)
             : Loc.T(L.PhotoTag.TapToTag);
@@ -580,7 +584,7 @@ internal sealed partial class AethergramApp
         }
     }
 
-    private void PlaceTagAt(Rect preview)
+    private void PlaceTagAt(Rect preview, int photoIndex)
     {
         if (composeTags.Count >= MaxPhotoTags)
         {
@@ -589,7 +593,7 @@ internal sealed partial class AethergramApp
         }
 
         composeTagPoint = PhotoTagGeometry.ToNormalized(preview, ImGui.GetMousePos());
-        composeTagPhotoIndex = composeSession.ClampedPreviewIndex;
+        composeTagPhotoIndex = photoIndex;
         personPicker.Open();
     }
 
@@ -631,8 +635,9 @@ internal sealed partial class AethergramApp
         return inputs;
     }
 
-    private void DrawComposeTags(ImDrawListPtr drawList, Rect preview, int photoIndex, float scale)
+    private bool DrawComposeTags(ImDrawListPtr drawList, Rect preview, int photoIndex, float scale)
     {
+        var removed = false;
         for (var index = composeTags.Count - 1; index >= 0; index--)
         {
             var tag = composeTags[index];
@@ -662,8 +667,11 @@ internal sealed partial class AethergramApp
                     closeCenter + new Vector2(8f * scale, 8f * scale)))
             {
                 composeTags.RemoveAt(index);
+                removed = true;
             }
         }
+
+        return removed;
     }
 
     private bool DrawCaptionPreview(Rect preview, float scale, string tooltip)
@@ -686,7 +694,11 @@ internal sealed partial class AethergramApp
 
         ImageFit.DrawLetterboxed(drawList, texture, preview, uv0, uv1, rounding);
         Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
-        DrawComposeTags(drawList, preview, composeSession.ClampedPreviewIndex, scale);
+        if (DrawComposeTags(drawList, preview, composeSession.ClampedPreviewIndex, scale))
+        {
+            return false;
+        }
+
         var hovered = UiInteract.Hover(preview.Min, preview.Max);
         if (tooltip.Length > 0)
         {
