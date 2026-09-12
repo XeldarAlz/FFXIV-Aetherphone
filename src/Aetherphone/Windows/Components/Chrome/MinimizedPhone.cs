@@ -13,13 +13,6 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
 
-internal enum MinimizedAction : byte
-{
-    None,
-    Expand,
-    Close,
-}
-
 internal readonly struct MinimizedDrag
 {
     public readonly Vector2 Delta;
@@ -50,7 +43,6 @@ internal sealed class MinimizedPhone : IDisposable
     private const float ClockMaxScale = 1.45f;
     private const float ClockMinScale = 0.95f;
     private const float DateScale = 0.72f;
-    private const float HoldSeconds = 0.55f;
     private const float DragSlop = 5f;
     private const float CardHoldSeconds = 4.5f;
     private const float PulseSeconds = 0.8f;
@@ -60,7 +52,6 @@ internal sealed class MinimizedPhone : IDisposable
     private const float HoverSmoothTime = 0.12f;
     private const float ExpandSmoothTime = 0.17f;
     private const float CardSmoothTime = 0.20f;
-    private const float HoldSmoothTime = 0.07f;
     private const float ZoomSmoothTime = 0.18f;
     private const float ZoomSaveDelay = 0.9f;
     private const float ControlThreshold = 0.6f;
@@ -89,7 +80,6 @@ internal sealed class MinimizedPhone : IDisposable
     private Spring badge;
     private Spring dnd;
     private Spring card;
-    private Spring hold;
     private Spring mapSpan;
     private float zoomSaveDue;
     private bool zoomDirty;
@@ -103,8 +93,6 @@ internal sealed class MinimizedPhone : IDisposable
     private Vector4 pulseAccent;
     private bool pressed;
     private bool dragging;
-    private bool holdFired;
-    private float held;
     private Vector2 pressOrigin;
     private Vector2 dragDelta;
     private bool dragReleased;
@@ -211,7 +199,7 @@ internal sealed class MinimizedPhone : IDisposable
         return result;
     }
 
-    public MinimizedAction Draw(Rect body, PhoneTheme theme, float delta)
+    public bool Draw(Rect body, PhoneTheme theme, float delta)
     {
         var scale = Scale;
         var geometry = ChassisGeometry.Puck(body);
@@ -220,7 +208,7 @@ internal sealed class MinimizedPhone : IDisposable
         return DrawFace(dl, geometry, theme, delta, true, 1f);
     }
 
-    public MinimizedAction DrawFace(ImDrawListPtr dl, in ChassisGeometry geometry, PhoneTheme theme, float delta,
+    public bool DrawFace(ImDrawListPtr dl, in ChassisGeometry geometry, PhoneTheme theme, float delta,
         bool interactive, float alpha)
     {
         clock += delta;
@@ -242,7 +230,7 @@ internal sealed class MinimizedPhone : IDisposable
         StepState(delta, interactive, bodyHovered, view);
         if (alpha <= 0.001f)
         {
-            return MinimizedAction.None;
+            return false;
         }
 
         var minimapShape = ShowsMinimap;
@@ -280,12 +268,6 @@ internal sealed class MinimizedPhone : IDisposable
             DrawParts(dl, screen, scale);
         }
 
-        var holdValue = Math.Clamp(hold.Value, 0f, 1f);
-        if (holdValue > 0.005f)
-        {
-            MinimizedPhoneRenderer.DrawHoldSweep(dl, geometry, theme, holdValue * alpha, scale);
-        }
-
         dl.PopClipRect();
         if (fullBleed)
         {
@@ -306,11 +288,11 @@ internal sealed class MinimizedPhone : IDisposable
 
         if (!interactive)
         {
-            return MinimizedAction.None;
+            return false;
         }
 
         UpdateResize(dl, body, scale, delta);
-        return HandleGesture(body, scale, delta, bodyHovered, controlHovered);
+        return HandleGesture(body, scale, bodyHovered, controlHovered);
     }
 
     private void UpdateResize(ImDrawListPtr dl, Rect body, float scale, float delta)
@@ -611,8 +593,6 @@ internal sealed class MinimizedPhone : IDisposable
         hover.Step(interactive && bodyHovered ? 1f : 0f, HoverSmoothTime, delta);
         var wantsExpand = interactive && bodyHovered && (musicShown || callShown) && !dragging;
         expand.Step(wantsExpand ? 1f : 0f, ExpandSmoothTime, delta);
-        var holdTarget = pressed && !dragging ? Math.Clamp(held / HoldSeconds, 0f, 1f) : 0f;
-        hold.Step(holdTarget, HoldSmoothTime, delta);
         mapSpan.Step(MinimizedShapes.MapSpan(configuration.MinimizedMapZoom), ZoomSmoothTime, delta);
         if (zoomDirty && clock >= zoomSaveDue)
         {
@@ -689,7 +669,7 @@ internal sealed class MinimizedPhone : IDisposable
         }
     }
 
-    private MinimizedAction HandleGesture(Rect body, float scale, float delta, bool bodyHovered, bool hoveredControl)
+    private bool HandleGesture(Rect body, float scale, bool bodyHovered, bool hoveredControl)
     {
         if (bodyHovered && !hoveredControl)
         {
@@ -700,12 +680,10 @@ internal sealed class MinimizedPhone : IDisposable
         {
             pressed = true;
             dragging = false;
-            holdFired = false;
-            held = 0f;
             pressOrigin = ImGui.GetMousePos();
         }
 
-        var action = MinimizedAction.None;
+        var expandRequested = false;
         if (pressed)
         {
             if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
@@ -720,15 +698,6 @@ internal sealed class MinimizedPhone : IDisposable
                 {
                     dragDelta += ImGui.GetIO().MouseDelta;
                 }
-                else
-                {
-                    held += delta;
-                    if (held >= HoldSeconds && !holdFired)
-                    {
-                        holdFired = true;
-                        action = MinimizedAction.Close;
-                    }
-                }
             }
             else
             {
@@ -736,14 +705,14 @@ internal sealed class MinimizedPhone : IDisposable
                 {
                     dragReleased = true;
                 }
-                else if (!holdFired && bodyHovered)
+                else if (bodyHovered)
                 {
-                    action = Tap();
+                    Tap();
+                    expandRequested = true;
                 }
 
                 pressed = false;
                 dragging = false;
-                held = 0f;
             }
         }
 
@@ -757,17 +726,17 @@ internal sealed class MinimizedPhone : IDisposable
             HoverTooltip.Show("minimized.phone", body, Loc.T(L.Plugin.MinimizedHint), side);
         }
 
-        return action;
+        return expandRequested;
     }
 
-    private MinimizedAction Tap()
+    private void Tap()
     {
         if (cardHovered && cardNotification is { } notification && !cardDismissed)
         {
             router.Open(notification);
             cardDismissed = true;
             queuedCards.Clear();
-            return MinimizedAction.Expand;
+            return;
         }
 
         if (musicHovered)
@@ -779,8 +748,6 @@ internal sealed class MinimizedPhone : IDisposable
             calls.RequestCallScreen();
             navigation.Open(CallAppId);
         }
-
-        return MinimizedAction.Expand;
     }
 
     private float Presence(MinimizedPart part) => part switch

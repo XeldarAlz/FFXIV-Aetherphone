@@ -1801,6 +1801,8 @@ internal static class L
                 "Fixed photos from a phone camera showing up sideways: a picture's own orientation tag is now honoured everywhere a photo is previewed or uploaded"),
             new("changelog.r1030.38",
                 "The minimized phone can be resized: drag its bottom right corner, the same way the full phone resizes, and the mini phone or minimap scales with it"),
+            new("changelog.r1030.39",
+                "The minimized phone no longer turns off when you hold it: that was easy to trip while starting a drag, and the side button, the server info bar entry and the chat command still turn the phone off"),
         };
 
         public static readonly LocString[] Release1030Linkpearl =
@@ -5728,7 +5730,7 @@ internal static class L
         public static readonly LocString SizeSmall = new("minimized.sizeSmall", "Small");
         public static readonly LocString SizeMedium = new("minimized.sizeMedium", "Medium");
         public static readonly LocString SizeLarge = new("minimized.sizeLarge", "Large");
-        public static readonly LocString MinimapHint = new("minimized.minimapHint", "The map faces north and shows your heading, the zone name and your coordinates. Tap it to open the phone, hold it to close.");
+        public static readonly LocString MinimapHint = new("minimized.minimapHint", "The map faces north and shows your heading, the zone name and your coordinates. Tap it to open the phone.");
         public static readonly LocString MinimapZoomHint = new("minimized.minimapZoomHint", "Scroll the wheel over the map to zoom, or use the plus and minus buttons that fade in when you hover it.");
         public static readonly LocString NoMap = new("minimized.noMap", "No map here");
         public static readonly LocString ResizeHint = new("minimized.resizeHint", "Drag its bottom right corner to make the minimized phone bigger or smaller.");
@@ -5763,7 +5765,7 @@ internal static class L
         public static readonly LocString ShortcutNotFound = new("plugin.shortcutNotFound", "No shortcut named {0}.");
         public static readonly LocString SearchTheMarket = new("plugin.searchTheMarket", "Search the Market");
         public static readonly LocString SideButtonHint = new("plugin.sideButtonHint", "Tap to minimize · Hold to turn off");
-        public static readonly LocString MinimizedHint = new("plugin.minimizedHint", "Tap to open · Hold to turn off");
+        public static readonly LocString MinimizedHint = new("plugin.minimizedHint", "Tap to open");
         public static readonly LocString LockPositionHint = new("plugin.lockPositionHint", "Lock position");
         public static readonly LocString UnlockPositionHint = new("plugin.unlockPositionHint", "Unlock position");
         public static readonly LocString ResizeHint = new("plugin.resizeHint", "Drag to resize");
@@ -6585,7 +6587,7 @@ internal static class L
         public static readonly LocString BatteryTourTitle = new("onboarding.batteryTourTitle", "Real battery");
         public static readonly LocString BatteryTourBody = new("onboarding.batteryTourBody", "And this is your device's actual battery, read straight from your computer.");
         public static readonly LocString MinimizeTitle = new("onboarding.minimizeTitle", "Tuck it away");
-        public static readonly LocString MinimizeBody = new("onboarding.minimizeBody", "This side button shrinks the phone into a small one in the corner that keeps showing the time, your music and new alerts. Tap it to bring the phone back, or hold it to turn off.");
+        public static readonly LocString MinimizeBody = new("onboarding.minimizeBody", "This side button shrinks the phone into a small one in the corner that keeps showing the time, your music and new alerts. Tap it to bring the phone back.");
         public static readonly LocString LockTitle = new("onboarding.lockTitle", "Lock it in place");
         public static readonly LocString LockBody = new("onboarding.lockBody", "This button locks the phone's position on your screen so it stays put while you play. That's the tour: enjoy your Aetherphone.");
         public static readonly LocString MessagesTitle = new("onboarding.messagesTitle", "Messages");

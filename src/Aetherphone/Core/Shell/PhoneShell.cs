@@ -272,11 +272,7 @@ internal sealed class PhoneShell : IDisposable
                 loading.Cancel();
             }
 
-            if (morph.Draw(device, delta))
-            {
-                closeRequested = true;
-            }
-
+            morph.Draw(device, delta);
             HoverTooltip.Flush();
             ShellToast.Draw(device, themes.Chrome);
             return;

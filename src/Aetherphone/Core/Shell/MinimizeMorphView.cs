@@ -29,15 +29,18 @@ internal sealed class MinimizeMorphView
         this.configuration = configuration;
     }
 
-    public bool Draw(Rect device, float delta)
+    public void Draw(Rect device, float delta)
     {
         if (minimize.MorphActive)
         {
             DrawMorph(device, delta);
-            return false;
+            return;
         }
 
-        return DrawResting(device, delta);
+        if (minimizedPhone.Draw(device, themes.Chrome, delta))
+        {
+            minimize.BeginExpand();
+        }
     }
 
     private void DrawMorph(Rect device, float delta)
@@ -99,20 +102,6 @@ internal sealed class MinimizeMorphView
                 ImGui.GetColorU32(Palette.WithAlpha(theme.ScreenBase, eased)));
             DeviceChrome.MaskScreenCorners(drawList, geometry, theme, UiScale.Current);
         }
-    }
-
-    private bool DrawResting(Rect device, float delta)
-    {
-        switch (minimizedPhone.Draw(device, themes.Chrome, delta))
-        {
-            case MinimizedAction.Expand:
-                minimize.BeginExpand();
-                break;
-            case MinimizedAction.Close:
-                return true;
-        }
-
-        return false;
     }
 
     private Rect MinimizedRect(Rect device) => new(device.Min, device.Min + minimizedPhone.Measure());
