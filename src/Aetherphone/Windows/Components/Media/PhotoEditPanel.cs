@@ -58,11 +58,9 @@ internal static class PhotoEditPanel
 
     private const float DockHeight = 44f;
     private const float DockBottomInset = 8f;
-    private const float DockItemWidth = 76f;
+    private const float DockItemWidth = 60f;
     private const float DockPillInset = 4f;
-    private const float DockIconOffset = -7f;
-    private const float DockLabelOffset = 12f;
-    private const float DockIconScale = 0.9f;
+    private const float DockIconScale = 1.05f;
     private const float DockSmoothTime = 0.16f;
     private const float DockPillAlpha = 0.22f;
     private const float DockPillStrokeAlpha = 0.35f;
@@ -587,10 +585,8 @@ internal static class PhotoEditPanel
             var active = tool == controls.Tool;
             var hovered = interactive && UiInteract.Hover(min, max);
             var color = active ? style.Accent : hovered ? style.Ink : style.MutedInk;
-            AppSkin.Icon(drawList, new Vector2(center.X, center.Y + (DockIconOffset * scale)),
-                IconGlyph.Of(ToolIcon(tool)), color, DockIconScale);
-            Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + (DockLabelOffset * scale)),
-                Loc.T(ToolLabel(tool)), color, TextStyles.Caption2);
+            AppSkin.Icon(drawList, center, IconGlyph.Of(ToolIcon(tool)), color, DockIconScale);
+            HoverTooltip.Show(new Rect(min, max), Loc.T(ToolLabel(tool)), HoverLabelSide.Above);
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
