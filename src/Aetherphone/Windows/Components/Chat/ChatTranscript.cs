@@ -213,6 +213,7 @@ internal readonly ref struct ChatTranscriptModel
     public bool Loading { get; init; }
     public bool IsGroup { get; init; }
     public bool LabelsOwnMessages { get; init; }
+    public bool FullSenderNames { get; init; }
     public ChatBubbleStyle Bubbles { get; init; }
     public IChatTranscriptMedia? Media { get; init; }
     public IChatTranscriptInteractions? Interactions { get; init; }
@@ -294,6 +295,7 @@ internal sealed class ChatTranscript
     private float flashElapsed;
     private bool tailPending;
     private bool senderHeaderPending;
+    private bool fullSenderNames;
     private float rowWidth;
 
     public bool AtBottom => followBottom;
@@ -312,6 +314,7 @@ internal sealed class ChatTranscript
     {
         var scale = UiScale.Current;
         var delta = ImGui.GetIO().DeltaTime;
+        fullSenderNames = model.FullSenderNames;
         var tailId = model.Messages.Length > 0 ? model.Messages[model.Messages.Length - 1].Id : null;
         entrances.Sync(model.ThreadId, model.Messages.Length, tailId, delta, model.Loading);
         var loadingOlder = model.Paging is { LoadingOlder: true };
@@ -633,7 +636,7 @@ internal sealed class ChatTranscript
         var origin = ImGui.GetCursorScreenPos();
         var available = rowWidth;
         var maxWidth = available - 4f * scale;
-        var name = FirstName(message.SenderName);
+        var name = DisplayName(message.SenderName);
         var nameStyle = new TextStyle(0.78f, FontWeight.SemiBold);
         var nameWidth = MathF.Min(maxWidth, Typography.Measure(name, nameStyle).X);
         var tagWidth = message.ChannelTag.Length > 0
@@ -685,13 +688,17 @@ internal sealed class ChatTranscript
     {
         public readonly float Height;
         public readonly float Width;
+        public readonly float NameWidth;
 
-        public SenderHeader(float height, float width)
+        public SenderHeader(float height, float width, float nameWidth)
         {
             Height = height;
             Width = width;
+            NameWidth = nameWidth;
         }
     }
+
+    private string DisplayName(string senderName) => fullSenderNames ? senderName : FirstName(senderName);
 
     private SenderHeader TakeSenderHeader(TranscriptMessage message, float maxWidth, float scale)
     {
@@ -701,13 +708,18 @@ internal sealed class ChatTranscript
         }
 
         senderHeaderPending = false;
-        var name = FirstName(message.SenderName);
+        var name = DisplayName(message.SenderName);
         var reserve = UserName.Reserve(message.SenderBadges, message.SenderBadgeIds, SenderNameStyle);
-        var width = MathF.Min(MathF.Max(1f, maxWidth), Typography.Measure(name, SenderNameStyle).X + reserve);
-        return new SenderHeader(Typography.LineHeight(SenderNameStyle) + SenderHeaderGap * scale, width);
+        var limit = MathF.Max(1f, maxWidth);
+        var nameWidth = MathF.Min(limit, Typography.Measure(name, SenderNameStyle).X + reserve);
+        var tagWidth = message.ChannelTag.Length > 0
+            ? 16f * scale + Typography.Measure(message.ChannelTag, TextStyles.Caption2).X
+            : 0f;
+        var width = MathF.Min(limit, nameWidth + tagWidth);
+        return new SenderHeader(Typography.LineHeight(SenderNameStyle) + SenderHeaderGap * scale, width, nameWidth);
     }
 
-    private static void DrawSenderHeader(TranscriptMessage message, in SenderHeader header, Vector2 topLeft,
+    private void DrawSenderHeader(TranscriptMessage message, in SenderHeader header, Vector2 topLeft,
         in BubblePop fx, PhoneTheme theme)
     {
         if (header.Height <= 0f)
@@ -715,13 +727,19 @@ internal sealed class ChatTranscript
             return;
         }
 
-        var name = FirstName(message.SenderName);
+        var name = DisplayName(message.SenderName);
         var origin = fx.Apply(topLeft);
         var bounds = new Rect(origin, new Vector2(origin.X + header.Width, origin.Y + header.Height));
         var hovering = UiInteract.Hover(bounds.Min, bounds.Max);
         UserName.Draw("chattranscript.sender." + message.Id, name, message.SenderBadges, message.SenderBadgeIds,
-            origin.X, origin.Y, header.Width, SenderNameStyle,
+            origin.X, origin.Y, header.NameWidth, SenderNameStyle,
             Palette.WithAlpha(message.SenderTint, message.SenderTint.W * fx.Alpha), hovering, theme);
+        if (message.ChannelTag.Length > 0 && header.Width > header.NameWidth)
+        {
+            DrawChannelTag(message, origin.X + header.NameWidth + 6f * UiScale.Current, origin.Y,
+                origin.X + header.Width, UiScale.Current);
+        }
+
         if (!string.Equals(name, message.SenderName, StringComparison.Ordinal))
         {
             HoverTooltip.Show("chattranscript.senderfull." + message.Id, bounds, message.SenderName,

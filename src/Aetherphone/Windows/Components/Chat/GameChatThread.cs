@@ -2,9 +2,9 @@ using Aetherphone.Core;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Windows.Components;
 
@@ -31,11 +31,19 @@ internal readonly struct GameChatTarget
     }
 }
 
-internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscriptPaging, IDisposable
+internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscriptPaging, IChatTranscriptSenders,
+    IDisposable
 {
     private const long GroupWindowSeconds = 240;
     private const float FailureHeight = 26f;
-    private const float SearchBarHeight = 40f;
+    private const float SearchBarHeight = 44f;
+    private const float SearchFieldHeight = 32f;
+    private const float SearchControlsWidth = 100f;
+    private const float SearchButtonRadius = 12f;
+    private const float SearchGlyph = 18f;
+    private const float TranscriptSidePadding = 24f;
+    private const float SenderAvatarMonogramScale = 0.9f;
+    private const int SenderAvatarSegments = 24;
     private const float JumpPillHeight = 26f;
     private const float LoadOlderThreshold = 48f;
     private const int WindowPageLines = 100;
@@ -91,6 +99,12 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
     public Action<ChatEntry>? Context { get; set; }
 
     public Action<ChatEntry, ChatChunk>? Link { get; set; }
+
+    public Action<Rect>? Backdrop { get; set; }
+
+    public ChatBubbleStyle BubbleStyle { get; set; }
+
+    public LodestoneService? Lodestone { get; set; }
 
     public void Gate() => composer.Gate();
 
@@ -192,6 +206,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
             new Vector2(area.Max.X, composerBar.Min.Y - failureBlock));
         ShrinkWindow();
         EnsureRevealShown(view.Entries);
+        Backdrop?.Invoke(listRect);
         if (target.Density == ChatDensity.Bubbles)
         {
             DrawBubbles(listRect, theme);
@@ -298,6 +313,23 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
     public void OnQuoteClick(string messageId)
     {
     }
+
+    public void DrawAvatar(ImDrawListPtr drawList, in TranscriptMessage message, Vector2 center, float radius)
+    {
+        var name = message.SenderName;
+        var world = WorldOf(message.SenderId);
+        var portrait = Lodestone is null ? default : Lodestone.Avatar(name, world, radius * 2f);
+        AvatarView.Draw(drawList, center, radius, SenderTint.Of(name), Initials.Of(name), SenderAvatarMonogramScale,
+            portrait, SenderAvatarSegments);
+    }
+
+    private static string WorldOf(string senderKey)
+    {
+        var at = senderKey.IndexOf('@');
+        return at >= 0 ? senderKey[(at + 1)..] : string.Empty;
+    }
+
+    private bool IsGroupTarget => target.Streams.Length > 1 || target.SendTarget.Length == 0;
 
     public void OnReactionClick(string messageId, string token)
     {
@@ -425,9 +457,12 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
     {
         var scale = UiScale.Current;
         var entries = view.Entries;
-        var controls = 96f * scale;
-        var field = new Rect(new Vector2(bar.Min.X + Metrics.Space.Md * scale, bar.Min.Y + 4f * scale),
-            new Vector2(bar.Max.X - controls, bar.Max.Y - 4f * scale));
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.AddLine(new Vector2(bar.Min.X, bar.Max.Y), bar.Max, ImGui.GetColorU32(theme.Hairline), 1f);
+        var controls = SearchControlsWidth * scale;
+        var fieldHeight = SearchFieldHeight * scale;
+        var field = new Rect(new Vector2(bar.Min.X + Metrics.Space.Md * scale, bar.Center.Y - fieldHeight * 0.5f),
+            new Vector2(bar.Max.X - controls, bar.Center.Y + fieldHeight * 0.5f));
         if (searchFocus)
         {
             ImGui.SetKeyboardFocusHere();
@@ -444,31 +479,39 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         var label = matches.Count == 0
             ? appliedQuery.Trim().Length == 0 ? string.Empty : "0"
             : string.Concat((matchCursor + 1).ToString(Loc.Culture), "/", matches.Count.ToString(Loc.Culture));
-        var drawList = ImGui.GetWindowDrawList();
+        var buttonRadius = SearchButtonRadius * scale;
+        var upCenter = new Vector2(bar.Max.X - 66f * scale, bar.Center.Y);
+        var downCenter = new Vector2(bar.Max.X - 42f * scale, bar.Center.Y);
+        var closeCenter = new Vector2(bar.Max.X - 18f * scale, bar.Center.Y);
         if (label.Length > 0)
         {
-            var size = Typography.Measure(label, TextStyles.Caption1);
-            Typography.Draw(drawList, new Vector2(bar.Max.X - controls + 4f * scale, bar.Center.Y - size.Y * 0.5f),
-                label, theme.TextMuted, TextStyles.Caption1);
+            var size = Typography.Measure(label, TextStyles.Footnote);
+            Typography.Draw(drawList, new Vector2(upCenter.X - buttonRadius - 4f * scale - size.X,
+                bar.Center.Y - size.Y * 0.5f), label, theme.TextMuted, TextStyles.Footnote);
         }
 
-        var upCenter = new Vector2(bar.Max.X - 46f * scale, bar.Center.Y);
-        var downCenter = new Vector2(bar.Max.X - 22f * scale, bar.Center.Y);
         var enabled = matches.Count > 0;
-        var ink = enabled ? theme.Accent : theme.TextMuted;
-        AppSkin.Icon(drawList, upCenter, IconGlyph.Of(FontAwesomeIcon.ChevronUp), ink, 0.9f);
-        AppSkin.Icon(drawList, downCenter, IconGlyph.Of(FontAwesomeIcon.ChevronDown), ink, 0.9f);
+        var stepInk = enabled ? theme.TextStrong : theme.TextMuted;
+        PhoneIcon.Draw(drawList, upCenter, PhoneIcons.ChevronUp, stepInk, SearchGlyph * scale);
+        PhoneIcon.Draw(drawList, downCenter, PhoneIcons.ChevronDown, stepInk, SearchGlyph * scale);
+        PhoneIcon.Draw(drawList, closeCenter, PhoneIcons.X, theme.TextMuted, SearchGlyph * scale);
+        if (UiInteract.HoverClickCircle(closeCenter, buttonRadius) || ImGui.IsKeyPressed(ImGuiKey.Escape))
+        {
+            ToggleSearch();
+            return;
+        }
+
         if (!enabled)
         {
             return;
         }
 
-        if (UiInteract.HoverClickCircle(upCenter, 12f * scale))
+        if (UiInteract.HoverClickCircle(upCenter, buttonRadius))
         {
             Step(-1, entries);
         }
 
-        if (UiInteract.HoverClickCircle(downCenter, 12f * scale))
+        if (UiInteract.HoverClickCircle(downCenter, buttonRadius))
         {
             Step(1, entries);
         }
@@ -542,8 +585,8 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(theme.GroupedCard));
         Squircle.Stroke(drawList, min, max, height * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(theme.TextMuted, 0.35f)), 1f);
-        AppSkin.Icon(drawList, new Vector2(min.X + 13f * scale, min.Y + height * 0.5f),
-            IconGlyph.Of(FontAwesomeIcon.ArrowDown), theme.Accent, 0.78f);
+        PhoneIcon.Draw(drawList, new Vector2(min.X + 13f * scale, min.Y + height * 0.5f), PhoneIcons.ChevronDown,
+            theme.Accent, 16f * scale);
         Typography.Draw(drawList, new Vector2(min.X + 22f * scale, min.Y + height * 0.5f - size.Y * 0.5f), label,
             theme.TextStrong, TextStyles.Caption1);
         if (UiInteract.HoverClick(min, max))
@@ -567,9 +610,12 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
             BodyInk = theme.TextStrong,
             EmptyText = Loc.T(L.Messages.Empty),
             LoadingText = Loc.T(L.Messages.Empty),
-            SidePadding = AppSurface.SidePadding,
-            IsGroup = target.Streams.Length > 1 || target.SendTarget.Length == 0,
-            LabelsOwnMessages = target.Streams.Length > 1 || target.SendTarget.Length == 0,
+            SidePadding = TranscriptSidePadding,
+            IsGroup = IsGroupTarget,
+            LabelsOwnMessages = IsGroupTarget,
+            FullSenderNames = true,
+            Bubbles = BubbleStyle,
+            Senders = IsGroupTarget ? this : null,
             Interactions = this,
             Paging = this,
         };
@@ -914,8 +960,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         var retrySize = Typography.Measure(retry, TextStyles.FootnoteEmphasized);
         var left = bar.Min.X + Metrics.Space.Lg * scale;
         var center = bar.Min.Y + bar.Height * 0.5f;
-        AppSkin.Icon(drawList, new Vector2(left, center), IconGlyph.Of(FontAwesomeIcon.ExclamationCircle),
-            theme.Danger, 0.62f);
+        PhoneIcon.Draw(drawList, new Vector2(left, center), PhoneIcons.InfoCircle, theme.Danger, 14f * scale);
         Typography.Draw(drawList, new Vector2(left + 12f * scale, center - labelSize.Y * 0.5f), label, theme.Danger,
             TextStyles.Caption1);
         var retryMin = new Vector2(bar.Max.X - Metrics.Space.Lg * scale - retrySize.X, center - retrySize.Y * 0.5f);
@@ -1076,5 +1121,42 @@ internal static class GameChatTargets
         }
 
         return joined;
+    }
+
+    public static string CollapsedSubtitle(ChatTab tab, float width, in TextStyle style)
+    {
+        var joined = string.Empty;
+        var shown = 0;
+        var total = 0;
+        for (var index = 0; index < tab.Channels.Count; index++)
+        {
+            if (GameChannels.TryByKey(tab.Channels[index], out _))
+            {
+                total++;
+            }
+        }
+
+        for (var index = 0; index < tab.Channels.Count; index++)
+        {
+            if (!GameChannels.TryByKey(tab.Channels[index], out var channel))
+            {
+                continue;
+            }
+
+            var label = LinkshellNames.Label(channel);
+            var candidate = joined.Length == 0 ? label : string.Concat(joined, " · ", label);
+            var remaining = total - shown - 1;
+            var suffix = remaining > 0 ? string.Concat(" +", remaining.ToString(Loc.Culture)) : string.Empty;
+            if (shown > 0 && Typography.Measure(string.Concat(candidate, suffix), style).X > width)
+            {
+                break;
+            }
+
+            joined = candidate;
+            shown++;
+        }
+
+        var hidden = total - shown;
+        return hidden > 0 ? string.Concat(joined, " +", hidden.ToString(Loc.Culture)) : joined;
     }
 }

@@ -36,6 +36,9 @@ internal sealed partial class LinkpearlApp
     private const byte MenuEditTab = 4;
     private const byte MenuDeleteTab = 5;
     private const byte MenuClearHistory = 6;
+    private const byte MenuSearch = 7;
+    private const byte MenuLayout = 8;
+    private const byte MenuWallpaper = 9;
 
     private readonly ChipRail filterRail = new();
     private readonly string[] filterLabels = new string[4];
@@ -327,29 +330,45 @@ internal sealed partial class LinkpearlApp
         OpenConversation(hit.ConversationKey);
     }
 
-    private void OpenConversationSheet(InboxRow row)
+    private void OpenConversationSheet(InboxRow row, bool fromThread = false)
     {
         conversationSheetKey = row.Key;
         conversationSheetTitle = Title(row);
         conversationItems.Clear();
         conversationActions.Clear();
-        AddSheetItem(popouts.IsOpen(row.Key) ? L.Linkpearl.ClosePopout : L.Linkpearl.OpenPopout, MenuPopout);
+        if (fromThread)
+        {
+            AddSheetItem(L.Common.Search, MenuSearch, PhoneIcons.Search, chatThread.SearchOpen);
+            if (row.Tab is { } tab)
+            {
+                var bubbles = tab.Density == ChatDensity.Bubbles;
+                AddSheetItem(bubbles ? L.Linkpearl.LayoutCompact : L.Linkpearl.LayoutBubbles, MenuLayout,
+                    bubbles ? PhoneIcons.LayoutList : PhoneIcons.MessageCircle);
+            }
+
+            AddSheetItem(L.Message.Wallpaper, MenuWallpaper, PhoneIcons.Wallpaper);
+        }
+
+        AddSheetItem(popouts.IsOpen(row.Key) ? L.Linkpearl.ClosePopout : L.Linkpearl.OpenPopout, MenuPopout,
+            PhoneIcons.ExternalLink);
         if (row.Unread > 0)
         {
-            AddSheetItem(L.Linkpearl.MarkRead, MenuMarkRead);
+            AddSheetItem(L.Linkpearl.MarkRead, MenuMarkRead, PhoneIcons.Checks);
         }
 
-        AddSheetItem(row.Pinned ? L.Common.Unpin : L.Common.Pin, MenuTogglePin);
-        AddSheetItem(row.Muted ? L.Linkpearl.Unmute : L.Linkpearl.Mute, MenuToggleMute);
+        AddSheetItem(row.Pinned ? L.Common.Unpin : L.Common.Pin, MenuTogglePin,
+            row.Pinned ? PhoneIcons.PinFilled : PhoneIcons.Pin);
+        AddSheetItem(row.Muted ? L.Linkpearl.Unmute : L.Linkpearl.Mute, MenuToggleMute,
+            row.Muted ? PhoneIcons.Bell : PhoneIcons.BellOff);
         if (row.Tab is not null)
         {
-            AddSheetItem(L.Linkpearl.EditTab, MenuEditTab);
+            AddSheetItem(L.Linkpearl.EditTab, MenuEditTab, PhoneIcons.Pencil);
         }
 
-        AddSheetItem(L.Linkpearl.ClearHistory, MenuClearHistory, true);
+        AddSheetItem(L.Linkpearl.ClearHistory, MenuClearHistory, PhoneIcons.Trash, danger: true);
         if (row.Tab is not null)
         {
-            AddSheetItem(L.Linkpearl.DeleteTab, MenuDeleteTab, true);
+            AddSheetItem(L.Linkpearl.DeleteTab, MenuDeleteTab, PhoneIcons.X, danger: true);
         }
 
         conversationSheet.Open();
@@ -378,9 +397,9 @@ internal sealed partial class LinkpearlApp
         RunConversationAction(row, conversationActions[picked]);
     }
 
-    private void AddSheetItem(LocString label, byte action, bool danger = false)
+    private void AddSheetItem(LocString label, byte action, string glyph, bool selected = false, bool danger = false)
     {
-        conversationItems.Add(new ActionSheet.Item(Loc.T(label), string.Empty, danger));
+        conversationItems.Add(new ActionSheet.Item(Loc.T(label), glyph, danger, selected));
         conversationActions.Add(action);
     }
 
@@ -388,6 +407,15 @@ internal sealed partial class LinkpearlApp
     {
         switch (action)
         {
+            case MenuSearch:
+                chatThread.ToggleSearch();
+                break;
+            case MenuLayout:
+                ToggleLayout(row);
+                break;
+            case MenuWallpaper:
+                router.Push(LinkpearlRoute.Wallpaper(row.Key));
+                break;
             case MenuPopout:
                 if (!popouts.Toggle(row.Key))
                 {

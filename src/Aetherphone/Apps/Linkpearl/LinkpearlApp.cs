@@ -124,6 +124,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
         };
         drawView = DrawView;
         drawNewChatSheet = DrawNewChatSheet;
+        paintThreadBackdrop = PaintThreadBackdrop;
         backToList = () =>
         {
             chatMenu.Close();

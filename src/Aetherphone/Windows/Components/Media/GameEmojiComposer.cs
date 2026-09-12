@@ -17,6 +17,7 @@ internal sealed class GameEmojiComposer
     private const float SuggestionGapUnits = 4f;
     private const float SuggestionIconUnits = 16f;
     private const int SuggestionLimit = 6;
+    private const float ToggleGlyphFactor = 1.5f;
 
     private readonly EmojiPicker picker = new() { Compact = true };
     private readonly EmojiShortcode[] suggestions = new EmojiShortcode[SuggestionLimit];
@@ -56,7 +57,7 @@ internal sealed class GameEmojiComposer
         var max = center + new Vector2(radius, radius);
         var hovered = UiInteract.Hover(min, max);
         var color = open ? theme.Accent : hovered ? theme.TextStrong : theme.TextMuted;
-        AppSkin.Icon(center, IconGlyph.Of(FontAwesomeIcon.Smile), color, 1.1f);
+        PhoneIcon.Draw(ImGui.GetWindowDrawList(), center, PhoneIcons.MoodSmile, color, radius * ToggleGlyphFactor);
         HoverTooltip.Show(new Rect(min, max), Loc.T(L.Common.Emoji), HoverLabelSide.Above);
         if (!hovered)
         {
