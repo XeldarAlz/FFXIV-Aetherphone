@@ -430,6 +430,32 @@ internal sealed class ChatListChrome
         return UiInteract.Click(band.Min, band.Max, hovered);
     }
 
+    public bool DrawCardActionRow(ImDrawListPtr drawList, Rect row, string glyph, Vector4 tint, string label,
+        string subtitle, string marqueePrefix)
+    {
+        var scale = UiScale.Current;
+        var band = RowBand(row, scale);
+        var hovered = UiInteract.Hover(band.Min, band.Max);
+        if (hovered)
+        {
+            drawList.AddRectFilled(band.Min, band.Max, ImGui.GetColorU32(ui.HoverWash));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        var tileHalf = SettingTileSize * 0.5f * scale;
+        var tileCenter = new Vector2(row.Min.X + tileHalf, row.Center.Y);
+        Squircle.Fill(drawList, tileCenter - new Vector2(tileHalf, tileHalf), tileCenter + new Vector2(tileHalf, tileHalf),
+            SettingTileRounding * scale, ImGui.GetColorU32(tint));
+        PhoneIcon.Draw(drawList, tileCenter, glyph, White, SettingTileGlyph * scale);
+        PhoneIcon.Draw(drawList, new Vector2(row.Max.X - ChevronSize * 0.5f * scale, row.Center.Y),
+            PhoneIcons.ChevronRight, Ink.FaintInk, ChevronSize * scale);
+        var textLeft = tileCenter.X + tileHalf + RowTextGap * scale;
+        var textRight = row.Max.X - (ChevronSize + RowTrailingGap) * scale;
+        DrawRowTitleAndSub(drawList, new MarqueeId(marqueePrefix, label), label, subtitle, textLeft, textRight,
+            row.Center.Y, Ink.TitleInk, Ink.MutedInk);
+        return UiInteract.Click(band.Min, band.Max, hovered);
+    }
+
     public bool DrawCardSwitchRow(ImDrawListPtr drawList, Rect row, string glyph, Vector4 tint, string label,
         bool value, string id)
     {

@@ -4,49 +4,63 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Linkpearl;
 
 internal sealed partial class LinkpearlApp
 {
-    private readonly record struct QuickTab(TabPreset Preset, FontAwesomeIcon Icon, Vector4 Tint, string ProbeChannel,
-        LocString Hint);
+    private readonly record struct QuickTab(TabPreset Preset, string Glyph, string ProbeChannel, LocString Hint);
 
-    private const float QuickTileGap = 10f;
-    private const float QuickIconRadius = 17f;
+    private const float QuickTileGap = 8f;
+    private const float QuickTileInset = 14f;
+    private const float QuickTileRadius = 16f;
+    private const float QuickNameGap = 10f;
     private const int QuickHintLines = 2;
-    private const float SheetRowHeight = 50f;
-    private const float SheetLabelHeight = 24f;
+    private const float QuickAddedBadge = 18f;
+    private const float SheetSectionPadTop = 6f;
+    private const float SheetSectionPadX = 4f;
+    private const float SheetSectionExtra = 12f;
+    private const float SheetSectionGap = 14f;
     private const float SheetMinimumFraction = 0.5f;
     private const float SheetMaximumFraction = 0.94f;
+    private const string LinkshellProbeKey = "ls1";
+    private const string NewChatMarqueePrefix = "linkpearl.newChat";
 
     private static readonly QuickTab[] QuickTabs =
     {
-        new(TabPreset.FreeCompany, FontAwesomeIcon.ShieldAlt, ChannelTints.FreeCompany, GameChannels.FreeCompanyKey,
+        new(TabPreset.FreeCompany, GameChatTiles.GlyphFor(ChannelCategory.Community), GameChannels.FreeCompanyKey,
             L.Linkpearl.PresetFreeCompanyHint),
-        new(TabPreset.Linkshells, FontAwesomeIcon.Link, ChannelTints.Linkshell, "ls1", L.Linkpearl.PresetLinkshellsHint),
-        new(TabPreset.Party, FontAwesomeIcon.UserFriends, ChannelTints.Party, GameChannels.PartyKey,
+        new(TabPreset.Linkshells, GameChatTiles.GlyphFor(ChannelCategory.Linkshell), LinkshellProbeKey,
+            L.Linkpearl.PresetLinkshellsHint),
+        new(TabPreset.Party, GameChatTiles.GlyphFor(ChannelCategory.Group), GameChannels.PartyKey,
             L.Linkpearl.PresetPartyHint),
-        new(TabPreset.Local, FontAwesomeIcon.MapMarkerAlt, ChannelTints.Say, GameChannels.SayKey,
+        new(TabPreset.Local, GameChatTiles.GlyphFor(ChannelCategory.Local), GameChannels.SayKey,
             L.Linkpearl.PresetLocalHint),
     };
 
-    private void OpenNewChat()
-    {
-        newChatSheet.Open();
-    }
+    private readonly string[][] quickHintLines = new string[QuickTabs.Length][];
+    private readonly string[] quickHintSources = new string[QuickTabs.Length];
+    private readonly float[] quickHintWidths = new float[QuickTabs.Length];
+
+    private void OpenNewChat() => newChatSheet.Open();
+
+    private SheetSkin NewChatSkin() => SheetSkin.From(ui.Palette, ink);
+
+    private static float SheetSectionHeight(float scale) =>
+        Typography.LineHeight(ChatListChrome.SectionStyle) + SheetSectionExtra * scale;
 
     private static float QuickTileHeight(float scale) =>
-        (Metrics.Space.Md * 2f + QuickIconRadius * 2f + Metrics.Space.Xs) * scale +
-        Typography.LineHeight(TextStyles.BodyEmphasized) + QuickHintLines * Typography.LineHeight(TextStyles.Caption1);
+        (QuickTileInset * 2f + QuickTileRadius * 2f + QuickNameGap + ChatListChrome.RowLineGap) * scale +
+        Typography.LineHeight(ChatListChrome.RowTitleStyle) +
+        QuickHintLines * Typography.LineHeight(ChatListChrome.RowMetaStyle);
 
     private static float NewChatSheetFraction(Rect area)
     {
         var scale = UiScale.Current;
         var rows = QuickTabs.Length / 2;
-        var content = SheetLabelHeight * scale + rows * QuickTileHeight(scale) + (rows - 1) * QuickTileGap * scale +
-                      Metrics.Space.Lg * scale + SheetLabelHeight * scale + SheetRowHeight * 2f * scale;
+        var content = SheetSectionHeight(scale) * 2f + rows * QuickTileHeight(scale) +
+                      (rows - 1) * QuickTileGap * scale + SheetSectionGap * scale +
+                      ChatListChrome.ActionRowHeight * 2f * scale;
         var fraction = (content + SheetSurface.ChromeHeight()) / MathF.Max(1f, area.Height);
         return Math.Clamp(fraction, SheetMinimumFraction, SheetMaximumFraction);
     }
@@ -55,9 +69,8 @@ internal sealed partial class LinkpearlApp
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var cursorY = content.Min.Y;
-        DrawSheetLabel(drawList, Loc.T(L.Linkpearl.QuickTabs), content.Min.X, cursorY, scale);
-        cursorY += SheetLabelHeight * scale;
+        var cursorY = DrawSheetSectionLabel(drawList, Loc.T(L.Linkpearl.QuickTabs), content.Min.X, content.Min.Y,
+            scale);
         var gap = QuickTileGap * scale;
         var tileWidth = (content.Width - gap) * 0.5f;
         var tileHeight = QuickTileHeight(scale);
@@ -67,74 +80,94 @@ internal sealed partial class LinkpearlApp
             var column = index % 2;
             var rowIndex = index / 2;
             var min = new Vector2(content.Min.X + column * (tileWidth + gap), cursorY + rowIndex * (tileHeight + gap));
-            var max = min + new Vector2(tileWidth, tileHeight);
-            DrawQuickTile(drawList, new Rect(min, max), QuickTabs[index], scale);
+            DrawQuickTile(drawList, index, new Rect(min, min + new Vector2(tileWidth, tileHeight)), scale);
         }
 
-        cursorY += tileRows * tileHeight + (tileRows - 1) * gap + Metrics.Space.Lg * scale;
-        DrawSheetLabel(drawList, Loc.T(L.Linkpearl.OrStartFresh), content.Min.X, cursorY, scale);
-        cursorY += SheetLabelHeight * scale;
-        var rowHeight = SheetRowHeight * scale;
+        cursorY += tileRows * tileHeight + (tileRows - 1) * gap + SheetSectionGap * scale;
+        cursorY = DrawSheetSectionLabel(drawList, Loc.T(L.Linkpearl.OrStartFresh), content.Min.X, cursorY, scale);
+        var rowHeight = ChatListChrome.ActionRowHeight * scale;
         var cardMin = new Vector2(content.Min.X, cursorY);
         var cardMax = new Vector2(content.Max.X, cursorY + rowHeight * 2f);
-        Squircle.Fill(drawList, cardMin, cardMax, Metrics.Radius.Md * scale, ImGui.GetColorU32(frameTheme.GroupedCard));
-        Material.EdgeSquircle(drawList, cardMin, cardMax, Metrics.Radius.Md * scale, scale);
-        var customRow = new Rect(cardMin, new Vector2(cardMax.X, cardMin.Y + rowHeight));
-        var tellRow = new Rect(new Vector2(cardMin.X, customRow.Max.Y), cardMax);
-        drawList.AddLine(new Vector2(cardMin.X + Metrics.Space.Lg * scale, customRow.Max.Y),
-            new Vector2(cardMax.X, customRow.Max.Y), ImGui.GetColorU32(frameTheme.Separator), Metrics.Stroke.Hairline);
-        if (DrawSheetRow(drawList, customRow, FontAwesomeIcon.SlidersH, frameTheme.Accent,
-                Loc.T(L.Linkpearl.CustomTab), Loc.T(L.Linkpearl.CustomTabHint), scale))
+        var rounding = Metrics.Radius.Card * scale;
+        Squircle.Fill(drawList, cardMin, cardMax, rounding, ImGui.GetColorU32(ink.FieldFill));
+        Squircle.Stroke(drawList, cardMin, cardMax, rounding, ImGui.GetColorU32(ink.ChipStroke),
+            Metrics.Stroke.Hairline);
+        var rowInset = Metrics.Space.Lg * scale;
+        var customRow = new Rect(new Vector2(cardMin.X + rowInset, cardMin.Y),
+            new Vector2(cardMax.X - rowInset, cardMin.Y + rowHeight));
+        var tellRow = new Rect(new Vector2(customRow.Min.X, customRow.Max.Y), new Vector2(customRow.Max.X, cardMax.Y));
+        drawList.PushClipRect(cardMin, cardMax, true);
+        var customTapped = chrome.DrawCardActionRow(drawList, customRow, PhoneIcons.AdjustmentsHorizontal, ink.Accent,
+            Loc.T(L.Linkpearl.CustomTab), Loc.T(L.Linkpearl.CustomTabHint), NewChatMarqueePrefix);
+        FeedCell.Hairline(drawList,
+            customRow.Min.X + (ChatListChrome.SettingTileSize + ChatListChrome.RowTextGap) * scale, customRow.Max.X,
+            customRow.Max.Y, ui.Hairline);
+        var tellTapped = chrome.DrawCardActionRow(drawList, tellRow, PhoneIcons.MessagePlus, ChannelTints.Tell,
+            Loc.T(L.Linkpearl.SendTell), Loc.T(L.Linkpearl.SendTellHint), NewChatMarqueePrefix);
+        drawList.PopClipRect();
+        if (customTapped)
         {
             newChatSheet.Close();
             CreateTab();
+            return;
         }
 
-        if (DrawSheetRow(drawList, tellRow, FontAwesomeIcon.PenAlt, ChannelTints.Tell, Loc.T(L.Linkpearl.SendTell),
-                Loc.T(L.Linkpearl.SendTellHint), scale))
+        if (!tellTapped)
         {
-            newChatSheet.Close();
-            SelectTab(MessagesTab.People);
-            peopleSearchOpen = true;
-            peopleSearchFocus = true;
+            return;
         }
+
+        newChatSheet.Close();
+        SelectTab(MessagesTab.People);
+        peopleSearchOpen = true;
+        peopleSearchFocus = true;
     }
 
-    private void DrawSheetLabel(ImDrawListPtr drawList, string text, float left, float top, float scale)
+    private float DrawSheetSectionLabel(ImDrawListPtr drawList, string text, float left, float top, float scale)
     {
-        var label = Loc.Culture.TextInfo.ToUpper(text);
-        Typography.Draw(drawList, new Vector2(left + Metrics.Space.Xs * scale, top + 2f * scale), label,
-            frameTheme.TextMuted, TextStyles.Caption2);
+        Typography.Draw(drawList, new Vector2(left + SheetSectionPadX * scale, top + SheetSectionPadTop * scale),
+            Loc.Upper(text), ink.FaintInk, ChatListChrome.SectionStyle);
+        return top + SheetSectionHeight(scale);
     }
 
-    private void DrawQuickTile(ImDrawListPtr drawList, Rect tile, in QuickTab quick, float scale)
+    private void DrawQuickTile(ImDrawListPtr drawList, int index, Rect tile, float scale)
     {
+        var quick = QuickTabs[index];
         var existing = tabs.FirstTabWith(quick.ProbeChannel);
         var added = existing is not null;
         var hovered = UiInteract.Hover(tile.Min, tile.Max);
         var rounding = Metrics.Radius.Card * scale;
-        var fill = Palette.WithAlpha(quick.Tint, hovered ? 0.22f : 0.14f);
-        Squircle.Fill(drawList, tile.Min, tile.Max, rounding, ImGui.GetColorU32(fill));
+        Squircle.Fill(drawList, tile.Min, tile.Max, rounding,
+            ImGui.GetColorU32(hovered ? ink.ButtonFill : ink.FieldFill));
         Squircle.Stroke(drawList, tile.Min, tile.Max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(quick.Tint, hovered ? 0.5f : 0.28f)), Metrics.Stroke.Hairline);
-        var inset = Metrics.Space.Md * scale;
-        var iconRadius = QuickIconRadius * scale;
-        var iconCenter = new Vector2(tile.Min.X + inset + iconRadius, tile.Min.Y + inset + iconRadius);
-        drawList.AddCircleFilled(iconCenter, iconRadius, ImGui.GetColorU32(Palette.WithAlpha(quick.Tint, 0.28f)), 28);
-        AppSkin.Icon(drawList, iconCenter, IconGlyph.Of(quick.Icon), quick.Tint, 0.95f);
+            ImGui.GetColorU32(hovered ? ink.GlassStroke : ink.ChipStroke), Metrics.Stroke.Hairline);
+        var inset = QuickTileInset * scale;
+        var tileRadius = QuickTileRadius * scale;
+        var glyphCenter = new Vector2(tile.Min.X + inset + tileRadius, tile.Min.Y + inset + tileRadius);
+        GameChatTiles.DrawTile(drawList, glyphCenter, tileRadius, TabStore.PresetTint(quick.Preset), quick.Glyph);
+        if (added)
+        {
+            PhoneIcon.Draw(drawList, new Vector2(tile.Max.X - inset - QuickAddedBadge * 0.5f * scale, glyphCenter.Y),
+                PhoneIcons.CircleCheckFilled, ink.Accent, QuickAddedBadge * scale);
+        }
+
         var textLeft = tile.Min.X + inset;
         var textWidth = tile.Width - inset * 2f;
         var name = Loc.T(TabStore.PresetLabel(quick.Preset));
-        var nameTop = iconCenter.Y + iconRadius + Metrics.Space.Xs * scale;
-        Typography.Draw(drawList, new Vector2(textLeft, nameTop), Typography.FitText(name, textWidth, TextStyles.BodyEmphasized),
-            frameTheme.TextStrong, TextStyles.BodyEmphasized);
-        var hint = added ? Loc.T(L.Linkpearl.PresetAdded) : Loc.T(quick.Hint);
-        DrawTileHint(drawList, hint, new Vector2(textLeft, nameTop + Typography.LineHeight(TextStyles.BodyEmphasized)),
-            textWidth, added ? quick.Tint : frameTheme.TextMuted);
-        if (added)
+        var nameTop = glyphCenter.Y + tileRadius + QuickNameGap * scale;
+        Typography.Draw(drawList, new Vector2(textLeft, nameTop),
+            Typography.FitText(name, textWidth, ChatListChrome.RowTitleStyle), ink.TitleInk,
+            ChatListChrome.RowTitleStyle);
+        var hint = Loc.T(added ? L.Linkpearl.PresetAdded : quick.Hint);
+        var lines = QuickHintLinesFor(index, hint, textWidth);
+        var hintTop = nameTop + Typography.LineHeight(ChatListChrome.RowTitleStyle) +
+                      ChatListChrome.RowLineGap * scale;
+        var lineHeight = Typography.LineHeight(ChatListChrome.RowMetaStyle);
+        var hintInk = added ? ink.AccentLink : ink.MutedInk;
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
-            AppSkin.Icon(drawList, new Vector2(tile.Max.X - inset - 6f * scale, iconCenter.Y),
-                IconGlyph.Of(FontAwesomeIcon.Check), quick.Tint, 0.7f);
+            Typography.Draw(drawList, new Vector2(textLeft, hintTop + lineIndex * lineHeight), lines[lineIndex],
+                hintInk, ChatListChrome.RowMetaStyle);
         }
 
         if (hovered)
@@ -161,52 +194,28 @@ internal sealed partial class LinkpearlApp
         OpenConversation(ChatInbox.KeyForTab(created));
     }
 
-    private static void DrawTileHint(ImDrawListPtr drawList, string hint, Vector2 topLeft, float width, Vector4 ink)
+    private string[] QuickHintLinesFor(int index, string hint, float width)
     {
-        var lines = Typography.WrapText(hint, TextStyles.Caption1, width);
-        var lineHeight = Typography.LineHeight(TextStyles.Caption1);
-        var shown = Math.Min(lines.Length, QuickHintLines);
-        for (var index = 0; index < shown; index++)
+        if (ReferenceEquals(quickHintSources[index], hint) && quickHintWidths[index] == width &&
+            quickHintLines[index] is { } cached)
         {
-            var line = lines[index];
-            if (index == QuickHintLines - 1 && lines.Length > QuickHintLines)
-            {
-                line = Typography.FitText(string.Join(' ', lines, index, lines.Length - index), width,
-                    TextStyles.Caption1);
-            }
-
-            Typography.Draw(drawList, new Vector2(topLeft.X, topLeft.Y + index * lineHeight), line, ink,
-                TextStyles.Caption1);
-        }
-    }
-
-    private bool DrawSheetRow(ImDrawListPtr drawList, Rect row, FontAwesomeIcon icon, Vector4 tint, string title,
-        string hint, float scale)
-    {
-        var hovered = UiInteract.Hover(row.Min, row.Max);
-        if (hovered)
-        {
-            SettingsRow.DrawRowHighlight(new Rect(new Vector2(row.Min.X + Metrics.Space.Sm * scale, row.Min.Y + 2f * scale),
-                new Vector2(row.Max.X - Metrics.Space.Sm * scale, row.Max.Y - 2f * scale)), frameTheme);
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            return cached;
         }
 
-        var iconRadius = 14f * scale;
-        var iconCenter = new Vector2(row.Min.X + Metrics.Space.Lg * scale + iconRadius, row.Center.Y);
-        drawList.AddCircleFilled(iconCenter, iconRadius, ImGui.GetColorU32(Palette.WithAlpha(tint, 0.2f)), 24);
-        AppSkin.Icon(drawList, iconCenter, IconGlyph.Of(icon), tint, 0.78f);
-        var textLeft = iconCenter.X + iconRadius + Metrics.Space.Md * scale;
-        var textWidth = row.Max.X - Metrics.Space.Xl * scale - textLeft;
-        var titleSize = Typography.Measure(title, TextStyles.BodyEmphasized);
-        Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y - titleSize.Y - 1f * scale),
-            Typography.FitText(title, textWidth, TextStyles.BodyEmphasized), frameTheme.TextStrong,
-            TextStyles.BodyEmphasized);
-        Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y + 1f * scale),
-            Typography.FitText(hint, textWidth, TextStyles.Caption1), frameTheme.TextMuted, TextStyles.Caption1);
-        var chevronTip = new Vector2(row.Max.X - Metrics.Space.Lg * scale, row.Center.Y);
-        var chevron = ImGui.GetColorU32(frameTheme.TextMuted);
-        drawList.AddLine(new Vector2(chevronTip.X - 6f * scale, chevronTip.Y - 6f * scale), chevronTip, chevron, 2f * scale);
-        drawList.AddLine(chevronTip, new Vector2(chevronTip.X - 6f * scale, chevronTip.Y + 6f * scale), chevron, 2f * scale);
-        return UiInteract.Click(row.Min, row.Max, hovered);
+        var wrapped = Typography.WrapText(hint, ChatListChrome.RowMetaStyle, width);
+        if (wrapped.Length > QuickHintLines)
+        {
+            var shown = new string[QuickHintLines];
+            Array.Copy(wrapped, shown, QuickHintLines - 1);
+            shown[QuickHintLines - 1] = Typography.FitText(
+                string.Join(' ', wrapped, QuickHintLines - 1, wrapped.Length - QuickHintLines + 1), width,
+                ChatListChrome.RowMetaStyle);
+            wrapped = shown;
+        }
+
+        quickHintSources[index] = hint;
+        quickHintWidths[index] = width;
+        quickHintLines[index] = wrapped;
+        return wrapped;
     }
 }

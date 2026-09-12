@@ -62,7 +62,10 @@ internal sealed class SheetSurface
         Open();
     }
 
-    internal void Draw(Rect screen, PhoneTheme theme, string title, float heightFraction, Action<Rect> drawContent)
+    internal void Draw(Rect screen, PhoneTheme theme, string title, float heightFraction, Action<Rect> drawContent) =>
+        Draw(screen, SheetSkin.From(theme), title, heightFraction, drawContent);
+
+    internal void Draw(Rect screen, in SheetSkin skin, string title, float heightFraction, Action<Rect> drawContent)
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         reveal.Step(open ? 1f : 0f, RevealSmoothTime, delta);
@@ -91,20 +94,20 @@ internal sealed class SheetSurface
             var rounding = PanelRounding * scale;
 
             Squircle.Fill(drawList, panelMin, panelMax, rounding,
-                ImGui.GetColorU32(Palette.WithAlpha(theme.Surface, opacity)));
+                ImGui.GetColorU32(Palette.WithAlpha(skin.Panel, opacity)));
             Squircle.Stroke(drawList, panelMin, panelMax, rounding,
-                ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f * opacity)), Metrics.Stroke.Hairline);
+                ImGui.GetColorU32(Palette.WithAlpha(skin.Stroke, skin.Stroke.W * opacity)), Metrics.Stroke.Hairline);
 
             var grabberWidth = GrabberWidth * scale;
             var grabberHeight = GrabberHeight * scale;
             var grabberMin = new Vector2(screen.Center.X - grabberWidth * 0.5f, panelTop + Metrics.Space.Md * scale);
             drawList.AddRectFilled(grabberMin, grabberMin + new Vector2(grabberWidth, grabberHeight),
-                ImGui.GetColorU32(Palette.WithAlpha(theme.TextMuted, 0.35f * opacity)), grabberHeight * 0.5f);
+                ImGui.GetColorU32(Palette.WithAlpha(skin.Grabber, skin.Grabber.W * opacity)), grabberHeight * 0.5f);
 
             var titleHeight = Typography.LineHeight(TextStyles.Headline);
             var titleY = grabberMin.Y + grabberHeight + Metrics.Space.Md * scale;
             Typography.DrawCentered(drawList, new Vector2(screen.Center.X, titleY + titleHeight * 0.5f), title,
-                Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.Headline);
+                Palette.WithAlpha(skin.Title, skin.Title.W * opacity), TextStyles.Headline);
 
             var contentTop = titleY + titleHeight + Metrics.Space.Md * scale;
             var margin = Metrics.Space.Lg * scale;

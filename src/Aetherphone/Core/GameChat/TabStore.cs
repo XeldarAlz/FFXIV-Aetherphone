@@ -178,10 +178,22 @@ internal sealed class TabStore
             return tab;
         }
 
+        tab.Tint = PresetTintIndex(preset);
         tab.Alerts = AlertPolicy.Off;
         Commit();
         return tab;
     }
+
+    public static Vector4 PresetTint(TabPreset preset) => preset switch
+    {
+        TabPreset.FreeCompany => ChannelTints.FreeCompany,
+        TabPreset.Linkshells => ChannelTints.Linkshell,
+        TabPreset.Local => ChannelTints.Shout,
+        _ => ChannelTints.Party,
+    };
+
+    public static int PresetTintIndex(TabPreset preset) =>
+        Math.Max(0, Array.IndexOf(ChannelTints.TabPalette, PresetTint(preset)));
 
     public static LocString PresetLabel(TabPreset preset) => preset switch
     {
