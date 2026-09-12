@@ -194,13 +194,21 @@ internal sealed partial class LinkpearlApp
     private void DrawPopoutSettings(float scale)
     {
         SettingsSection.Header(Loc.T(L.Linkpearl.PopoutSection), frameTheme);
-        var behaviour = GroupCard.Begin(frameTheme, 5);
+        var behaviour = GroupCard.Begin(frameTheme, 6);
         var grouped = SettingsRow.Bool(behaviour.NextRow(), Loc.T(L.Linkpearl.PopoutTabs),
             configuration.LinkpearlPopoutTabs, frameTheme, "linkpearl.settings.popoutTabs");
         if (grouped != configuration.LinkpearlPopoutTabs)
         {
             configuration.LinkpearlPopoutTabs = grouped;
             configuration.Save();
+        }
+
+        var placementRow = behaviour.NextRow();
+        if (SettingsRow.Disclosure(placementRow, Loc.T(L.Linkpearl.PopoutPlacement),
+                Loc.T(PlacementLabel(configuration.LinkpearlPopoutPlacement)), frameTheme,
+                "linkpearl.settings.placement"))
+        {
+            settingsMenu.Toggle("linkpearl.settings.placement", placementRow);
         }
 
         var popTells = SettingsRow.Bool(behaviour.NextRow(), Loc.T(L.Linkpearl.PopoutTells),
@@ -368,8 +376,42 @@ internal sealed partial class LinkpearlApp
         dangerCard.End();
     }
 
+    private static readonly PopoutPlacement[] PlacementChoices =
+    {
+        PopoutPlacement.BesidePhone, PopoutPlacement.TopLeft, PopoutPlacement.TopRight, PopoutPlacement.BottomLeft,
+        PopoutPlacement.BottomRight,
+    };
+
+    private static LocString PlacementLabel(int placement) => (PopoutPlacement)placement switch
+    {
+        PopoutPlacement.TopLeft => L.Linkpearl.PlacementTopLeft,
+        PopoutPlacement.TopRight => L.Linkpearl.PlacementTopRight,
+        PopoutPlacement.BottomLeft => L.Linkpearl.PlacementBottomLeft,
+        PopoutPlacement.BottomRight => L.Linkpearl.PlacementBottomRight,
+        _ => L.Linkpearl.PlacementBesidePhone,
+    };
+
     private void DrawSettingsMenu(Rect area)
     {
+        if (settingsMenu.IsOpenFor("linkpearl.settings.placement"))
+        {
+            settingsItems.Clear();
+            for (var index = 0; index < PlacementChoices.Length; index++)
+            {
+                settingsItems.Add(new DropdownMenu.Item(Loc.T(PlacementLabel((int)PlacementChoices[index])),
+                    string.Empty, false, configuration.LinkpearlPopoutPlacement == (int)PlacementChoices[index]));
+            }
+
+            var pickedPlacement = settingsMenu.Draw(area, frameTheme, CollectionsMarshal.AsSpan(settingsItems));
+            if (pickedPlacement >= 0)
+            {
+                configuration.LinkpearlPopoutPlacement = (int)PlacementChoices[pickedPlacement];
+                configuration.Save();
+            }
+
+            return;
+        }
+
         if (settingsMenu.IsOpenFor("linkpearl.settings.layout"))
         {
             settingsItems.Clear();

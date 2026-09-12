@@ -143,7 +143,7 @@ public sealed class Plugin : IDalamudPlugin
             linkpearlPopouts = new LinkpearlPopouts(Cfg, services.ChatInbox, services.ChatLog, services.ChatSend,
                 services.ChatTabs, services.TellPreferences, services.LinkpearlNotificationGate, services.Visibility,
                 linkpearlGate, services.GameData, services.Themes, services.Lodestone,
-                services.Notifications, services.Confirm);
+                services.Notifications, services.Confirm, services.WallpaperImages);
             linkpearlPresence = new PopoutPresence(Cfg, linkpearlPopouts, services.ChatLog, services.ChatInbox);
             linkpearlHotkey = new LinkpearlHotkey(Cfg, services.ChatInbox, linkpearlPopouts);
             var bundle = AppRegistry.BuildDefault(services, video, screenController, videoQueue, watchAlong,
@@ -181,7 +181,10 @@ public sealed class Plugin : IDalamudPlugin
             linkpearlPopouts.OpenMarketInPhone = OpenMarketItem;
             linkpearlPopouts.Restore();
             Framework.Update += OnLinkpearlPresenceTick;
-            services.Visibility.Bind(() => phoneWindow is { IsOpen: true, IsMinimized: false });
+            services.Visibility.Bind(() => phoneWindow is { IsOpen: true, IsMinimized: false },
+                () => phoneWindow is { IsOpen: true }
+                    ? new Rect(phoneWindow.LastPosition, phoneWindow.LastPosition + phoneWindow.LastSize)
+                    : default);
             phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
                 () => services.Visibility.IsVisible);
             timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications, services.Installer.Gate("timers"));

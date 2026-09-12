@@ -8,9 +8,9 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 
 namespace Aetherphone.Windows;
@@ -33,22 +33,32 @@ internal sealed class LinkpearlPopoutWindow : Window
     private const float TitleHeight = 44f;
     private const float Rounding = 18f;
     private const float BodyInset = 4f;
-    private const float AvatarRadius = 13f;
     private const float ButtonRadius = 14f;
     private const float ButtonPitch = 31f;
-    private const float EdgeInset = 14f;
-    private const float CaretGap = 6f;
-    private const float StaggerStep = 28f;
-    private const float ViewportMargin = 24f;
+    private const float ButtonGlyph = 18f;
+    private const float EdgeInset = 8f;
+    private const float ChipHeight = 30f;
+    private const float ChipTileRadius = 10f;
+    private const float ChipPadLeft = 5f;
+    private const float ChipPadRight = 10f;
+    private const float ChipGap = 4f;
+    private const float ChipTextGap = 6f;
+    private const float ChipMaxLabel = 110f;
+    private const float PillHeight = 16f;
+    private const float PillPadX = 5f;
+    private const float PillGap = 6f;
+    private const float StackedAvatarRadius = 12f;
+    private const float StackedOverlap = 6f;
+    private const int StackedAvatarLimit = 3;
+    private const float NewPillHeight = 18f;
+    private const float NewPillPadX = 7f;
+    private const float StripAccentMix = 0.08f;
+    private const float MinOpacity = 0.35f;
     private const float GripArm = 9f;
     private const float MinBodyHeight = 96f;
     private const float FlashStrength = 0.72f;
-    private const float TabRailInset = 8f;
-    private const float TabRailGap = 4f;
     private const float DragThreshold = 2f;
     private const float MinIdleOpacity = 0.15f;
-    private const float DropHighlightFill = 0.16f;
-    private const float DropHighlightStroke = 0.85f;
     private const int SwitchMenuLimit = 14;
     private const byte MenuActivateTab = 0;
     private const byte MenuAddTab = 1;
@@ -56,10 +66,15 @@ internal sealed class LinkpearlPopoutWindow : Window
     private const byte MenuDetachTab = 3;
     private const byte MenuCloseTab = 4;
     private const byte MenuSwitchTo = 5;
+    private const byte MenuToggleMute = 6;
+    private const string TitleSeparator = ", ";
 
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 GripInk = new(1f, 1f, 1f, 0.22f);
     private static readonly Vector4 FlashInk = new(1f, 0.839f, 0.039f, 1f);
+    private static readonly TextStyle ChipStyle = TextStyles.Footnote;
+    private static readonly TextStyle ChipActiveStyle = TextStyles.FootnoteEmphasized;
+    private static readonly TextStyle PillStyle = new(0.62f, FontWeight.SemiBold);
 
     private readonly LinkpearlPopouts owner;
     private readonly int slot;
@@ -69,6 +84,7 @@ internal sealed class LinkpearlPopoutWindow : Window
     private readonly ThemeProvider themes;
     private readonly LodestoneService lodestone;
     private readonly NotificationService notifications;
+    private readonly WallpaperImageCache wallpaperImages;
     private readonly GameChatThread thread;
     private readonly GameChatMenu chatMenu;
     private readonly ConfirmService confirm;
@@ -79,18 +95,22 @@ internal sealed class LinkpearlPopoutWindow : Window
     private readonly List<string> switchKeys = new(SwitchMenuLimit);
     private readonly List<byte> switchActions = new(SwitchMenuLimit);
     private readonly List<string> keys = new(PopoutTabs.MaxTabs);
-    private readonly string[] tabLabels = new string[PopoutTabs.MaxTabs];
     private readonly string[] tabTitles = new string[PopoutTabs.MaxTabs];
     private readonly int[] tabUnread = new int[PopoutTabs.MaxTabs];
-    private readonly bool[] tabSelected = new bool[PopoutTabs.MaxTabs];
-    private readonly ChipRail tabRail = new();
-    private readonly AppSkin railSkin = new(AppPalettes.Linkpearl(PhoneTheme.Default));
+    private readonly string[] pillTexts = new string[PopoutTabs.MaxTabs];
+    private readonly int[] pillCounts = new int[PopoutTabs.MaxTabs];
+    private readonly float[] chipWidths = new float[PopoutTabs.MaxTabs];
+    private readonly bool[] chipLabelled = new bool[PopoutTabs.MaxTabs];
+    private readonly Action<Rect> paintBackdrop;
     private readonly string switchMenuId;
     private readonly string addMenuId;
-    private readonly string closeButtonId;
-    private readonly string phoneButtonId;
-    private readonly string bellButtonId;
-    private readonly string collapseButtonId;
+    private SocialInk ink = ChatThemes.InkFor(ChatThemes.LinkpearlDefaultId);
+    private ChatTheme chatTheme = ChatThemes.Resolve(ChatThemes.LinkpearlDefaultId);
+    private string collapsedTitle = string.Empty;
+    private int collapsedTitleRevision = -1;
+    private int titlesRevision;
+    private string newPillText = string.Empty;
+    private int newPillCount = -1;
     private int active;
     private string threadKey = string.Empty;
     private bool attended;
@@ -109,11 +129,13 @@ internal sealed class LinkpearlPopoutWindow : Window
     private Vector2 expandedSize;
     private Vector2 lastPosition;
     private Rect titleAnchor;
+    private Rect chipsBand;
     private Rect frame;
 
     public LinkpearlPopoutWindow(LinkpearlPopouts owner, int slot, Configuration configuration, ChatInbox inbox,
         TabStore tabs, ChatLog log, ChatSend send, GameData gameData, ThemeProvider themes,
-        LodestoneService lodestone, NotificationService notifications, ConfirmService confirm)
+        LodestoneService lodestone, NotificationService notifications, ConfirmService confirm,
+        WallpaperImageCache wallpaperImages)
         : base($"{AepConstants.Name}##LinkpearlPopout{slot}", PopoutFlags)
     {
         this.owner = owner;
@@ -125,14 +147,11 @@ internal sealed class LinkpearlPopoutWindow : Window
         this.lodestone = lodestone;
         this.notifications = notifications;
         this.confirm = confirm;
+        this.wallpaperImages = wallpaperImages;
         confirmOverlay = new ConfirmOverlay(confirm, confirmHost);
         var slotText = slot.ToString(Loc.Culture);
         switchMenuId = "linkpearl.popout.switch." + slotText;
         addMenuId = "linkpearl.popout.add." + slotText;
-        closeButtonId = "linkpearl.popout.close." + slotText;
-        phoneButtonId = "linkpearl.popout.phone." + slotText;
-        bellButtonId = "linkpearl.popout.bell." + slotText;
-        collapseButtonId = "linkpearl.popout.collapse." + slotText;
         chatMenu = new GameChatMenu("linkpearl.popout.menu." + slotText)
         {
             Detached = true,
@@ -140,10 +159,12 @@ internal sealed class LinkpearlPopoutWindow : Window
             LookUp = owner.LookUpInPhone,
             OpenMarket = owner.OpenMarketInPhone,
         };
+        paintBackdrop = PaintBackdrop;
         thread = new GameChatThread(log, send, gameData)
         {
             Context = chatMenu.Open,
             Link = chatMenu.OpenLink,
+            Lodestone = lodestone,
         };
         RespectCloseHotkey = false;
     }
@@ -190,6 +211,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         savedPlacement = saved;
         placePending = true;
         fadeSpring.SnapTo(1f);
+        InvalidateTitles();
         Touch();
         IsOpen = !suppressed && Bound;
         BringToFront();
@@ -218,6 +240,7 @@ internal sealed class LinkpearlPopoutWindow : Window
             return false;
         }
 
+        InvalidateTitles();
         if (activate)
         {
             SetActive(keys.Count - 1);
@@ -238,6 +261,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         inbox.SetAttended(keys[index], false);
         var wasActive = index == active;
         active = PopoutTabs.Remove(keys, active, index);
+        InvalidateTitles();
         if (keys.Count == 0)
         {
             Unbind();
@@ -296,7 +320,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         pendingSize = new Vector2(expandedSize.X, HeightFor(zoom));
         pendingPosition = saved is not null
             ? new Vector2(saved.X, saved.Y)
-            : DefaultPosition(pendingSize * UiScale.Global);
+            : owner.DefaultPosition(pendingSize * UiScale.Global);
     }
 
     private float HeightFor(float zoom)
@@ -362,6 +386,13 @@ internal sealed class LinkpearlPopoutWindow : Window
         thread.CloseMenus();
     }
 
+    private void InvalidateTitles()
+    {
+        Array.Clear(tabTitles);
+        Array.Clear(pillTexts);
+        titlesRevision++;
+    }
+
     private void ToggleCollapsed(bool value)
     {
         if (SetCollapsed(value))
@@ -388,6 +419,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         keys[active] = conversationKey;
         threadKey = string.Empty;
         attended = false;
+        InvalidateTitles();
         thread.Close();
         chatMenu.Close();
         Touch();
@@ -406,6 +438,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         attended = false;
         dragging = false;
         dropTarget = null;
+        InvalidateTitles();
         thread.Close();
         chatMenu.Close();
         switchMenu.Close();
@@ -548,14 +581,14 @@ internal sealed class LinkpearlPopoutWindow : Window
             HandleConfirmEscape();
         }
 
+        ResolveTheme();
         using (ConfirmHosts.Enter(confirmHost))
         using (Plugin.Fonts.Push(1f))
         {
-            var theme = themes.ForApp(true);
+            var theme = PhoneTheme.WithAccent(themes.ForApp(false), chatTheme.Accent);
             var scale = UiScale.Current;
             var barHeight = MathF.Min(TitleHeight * scale, frame.Height);
-            var railHeight = TabbedNow ? (ChipRail.RowHeight + TabRailGap * 2f) * scale : 0f;
-            var bodyOpen = frame.Height - barHeight - railHeight >= MinBodyHeight * scale;
+            var bodyOpen = frame.Height - barHeight >= MinBodyHeight * scale;
             if (!collapsed && collapseSpring.Value <= 0f)
             {
                 expandedSize = frame.Size / UiScale.Global;
@@ -564,23 +597,24 @@ internal sealed class LinkpearlPopoutWindow : Window
             using (InputShield.Engage(confirming))
             {
                 var flashing = configuration.LinkpearlPopoutFlash && TitleUnread(row) > 0;
-                DrawSurface(theme, scale, lively, barHeight + (bodyOpen ? railHeight : 0f), flashing);
-                var titleBar = new Rect(frame.Min, new Vector2(frame.Max.X, frame.Min.Y + barHeight));
-                DrawTitleBar(titleBar, row, theme, scale, delta, flashing);
+                DrawSurface(scale, lively, barHeight, flashing);
+                var strip = new Rect(frame.Min, new Vector2(frame.Max.X, frame.Min.Y + barHeight));
+                DrawStrip(strip, row, scale, flashing);
                 if (bodyOpen)
                 {
-                    var bodyTop = DrawTabRail(titleBar.Max.Y, theme, scale);
                     var inset = BodyInset * scale;
-                    var body = new Rect(new Vector2(frame.Min.X + inset, bodyTop),
+                    var body = new Rect(new Vector2(frame.Min.X + inset, strip.Max.Y),
                         new Vector2(frame.Max.X - inset, frame.Max.Y - inset));
                     if (row is null)
                     {
                         Typography.DrawCentered(ImGui.GetWindowDrawList(), body.Center, Loc.T(L.Messages.Empty),
-                            theme.TextMuted, TextStyles.Callout);
+                            ink.MutedInk, TextStyles.Callout);
                     }
                     else
                     {
                         OpenThread(row);
+                        thread.BubbleStyle = ChatThemes.BubbleStyleFor(chatTheme);
+                        thread.Backdrop = paintBackdrop;
                         thread.Draw(body, theme);
                     }
 
@@ -593,11 +627,35 @@ internal sealed class LinkpearlPopoutWindow : Window
 
             ShellToast.DrawSecondary(frame, theme);
             confirmOverlay.Draw(frame, theme);
-            DrawDropHighlight(theme, scale);
+            DrawDropHighlight(scale);
         }
 
         HoverTooltip.Flush();
     }
+
+    private void ResolveTheme()
+    {
+        var id = configuration.LinkpearlChatTheme.Length > 0
+            ? configuration.LinkpearlChatTheme
+            : ChatThemes.LinkpearlDefaultId;
+        chatTheme = ChatThemes.Resolve(id);
+        ink = ChatThemes.InkFor(id);
+    }
+
+    private void PaintBackdrop(Rect listRect)
+    {
+        var id = ChatWallpapers.Effective(configuration.LinkpearlChatWallpapers, configuration.LinkpearlWallpaper,
+            Key);
+        if (id.Length == 0 && !configuration.LinkpearlWallpaperPattern)
+        {
+            return;
+        }
+
+        ChatWallpapers.Paint(ImGui.GetWindowDrawList(), listRect, id, configuration.LinkpearlWallpaperPattern,
+            wallpaperImages, Opacity());
+    }
+
+    private float Opacity() => Math.Clamp(configuration.LinkpearlPopoutOpacity, MinOpacity, 1f);
 
     private void HandleConfirmEscape()
     {
@@ -650,7 +708,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         return false;
     }
 
-    private void DrawDropHighlight(PhoneTheme theme, float scale)
+    private void DrawDropHighlight(float scale)
     {
         if (dropTarget is not { Bound: true } target)
         {
@@ -659,55 +717,10 @@ internal sealed class LinkpearlPopoutWindow : Window
 
         var drawList = ImGui.GetForegroundDrawList();
         var rounding = Rounding * scale;
-        Squircle.Fill(drawList, target.Frame.Min, target.Frame.Max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, DropHighlightFill)));
-        Squircle.Stroke(drawList, target.Frame.Min, target.Frame.Max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, DropHighlightStroke)), Metrics.Stroke.Ring * scale);
+        Squircle.Fill(drawList, target.Frame.Min, target.Frame.Max, rounding, ImGui.GetColorU32(ink.AccentWash));
+        Squircle.Stroke(drawList, target.Frame.Min, target.Frame.Max, rounding, ImGui.GetColorU32(ink.AccentLink),
+            Metrics.Stroke.Ring * scale);
     }
-
-    private float DrawTabRail(float top, PhoneTheme theme, float scale)
-    {
-        if (!TabbedNow)
-        {
-            return top;
-        }
-
-        BuildTabLabels();
-        railSkin.Palette = AppPalettes.Linkpearl(theme);
-        railSkin.Theme = theme;
-        var inset = TabRailInset * scale;
-        var rail = new Rect(new Vector2(frame.Min.X + inset, top + TabRailGap * scale),
-            new Vector2(frame.Max.X - inset, top + (TabRailGap + ChipRail.RowHeight) * scale));
-        var tapped = tabRail.Draw(rail, railSkin, tabLabels.AsSpan(0, keys.Count),
-            tabSelected.AsSpan(0, keys.Count), false, null, ChipRail.CompactLabelPadding);
-        if (tapped >= 0)
-        {
-            SetActive(tapped);
-        }
-
-        return rail.Max.Y + TabRailGap * scale;
-    }
-
-    private void BuildTabLabels()
-    {
-        for (var index = 0; index < keys.Count; index++)
-        {
-            var row = inbox.Find(keys[index]);
-            var title = row?.Title ?? FallbackTitleFor(keys[index]);
-            var unread = row is { HasBadge: true } && index != active ? row.Unread : 0;
-            if (!string.Equals(tabTitles[index], title, StringComparison.Ordinal) || tabUnread[index] != unread)
-            {
-                tabTitles[index] = title;
-                tabUnread[index] = unread;
-                tabLabels[index] = unread > 0 ? UnreadLabel(title, unread) : title;
-            }
-
-            tabSelected[index] = index == active;
-        }
-    }
-
-    private static string UnreadLabel(string title, int unread) =>
-        string.Concat(title, " · ", unread > 99 ? "99+" : unread.ToString(Loc.Culture));
 
     private void SetActive(int index)
     {
@@ -728,17 +741,6 @@ internal sealed class LinkpearlPopoutWindow : Window
     {
         var phoneZoom = PhoneSizeCatalog.ZoomFor(PhoneBounds.ClampWidth(configuration.PhoneWidth));
         return phoneZoom * Math.Clamp(configuration.LinkpearlPopoutTextScale, 0.6f, 1.8f);
-    }
-
-    private Vector2 DefaultPosition(Vector2 scaledSize)
-    {
-        var viewport = ImGui.GetMainViewport();
-        var margin = ViewportMargin * UiScale.Global;
-        var stagger = StaggerStep * UiScale.Global * slot;
-        var target = viewport.Pos + viewport.Size - scaledSize - new Vector2(margin + stagger, margin + stagger);
-        target.X = MathF.Max(viewport.Pos.X, target.X);
-        target.Y = MathF.Max(viewport.Pos.Y, target.Y);
-        return target;
     }
 
     private void UpdateAttention(InboxRow? row, bool attending)
@@ -780,18 +782,21 @@ internal sealed class LinkpearlPopoutWindow : Window
         thread.Open(GameChatTargets.For(row));
     }
 
-    private void DrawSurface(PhoneTheme theme, float scale, bool lively, float stripHeight, bool flashing)
+    private void DrawSurface(float scale, bool lively, float stripHeight, bool flashing)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = Rounding * scale;
-        var opacity = Math.Clamp(configuration.LinkpearlPopoutOpacity, 0.35f, 1f);
+        var opacity = Opacity();
         Elevation.Floating(drawList, frame.Min, frame.Max, rounding, scale, lively ? 1f : 0.7f);
-        var surface = ImGui.GetColorU32(Palette.WithAlpha(theme.AppBackground, opacity));
+        var surface = ImGui.GetColorU32(Palette.WithAlpha(ChatThemes.Body, opacity));
         Squircle.FillVerticalGradient(drawList, frame.Min, frame.Max, rounding, surface, surface);
         var titleBottom = MathF.Min(frame.Min.Y + stripHeight, frame.Max.Y);
-        var stripInk = flashing
-            ? Vector4.Lerp(theme.GroupedCard, FlashInk, Pulse.Wave() * FlashStrength)
-            : theme.GroupedCard;
+        var stripInk = Palette.Mix(ChatThemes.Body, chatTheme.Accent, StripAccentMix);
+        if (flashing)
+        {
+            stripInk = Vector4.Lerp(stripInk, FlashInk, Pulse.Wave() * FlashStrength);
+        }
+
         var strip = ImGui.GetColorU32(Palette.WithAlpha(stripInk, opacity));
         drawList.PushClipRect(frame.Min, new Vector2(frame.Max.X, titleBottom), true);
         Squircle.FillVerticalGradient(drawList, frame.Min, frame.Max, rounding, strip, strip);
@@ -799,107 +804,342 @@ internal sealed class LinkpearlPopoutWindow : Window
         if (titleBottom < frame.Max.Y)
         {
             drawList.AddLine(new Vector2(frame.Min.X, titleBottom), new Vector2(frame.Max.X, titleBottom),
-                ImGui.GetColorU32(Palette.WithAlpha(theme.Separator, theme.Separator.W * opacity)),
-                Metrics.Stroke.Hairline);
+                ImGui.GetColorU32(Palette.WithAlpha(ink.Hairline, ink.Hairline.W * opacity)), Metrics.Stroke.Hairline);
         }
 
-        Material.EdgeSquircle(drawList, frame.Min, frame.Max, rounding, scale, lively ? 1f : 0.6f);
+        Squircle.Stroke(drawList, frame.Min, frame.Max, rounding,
+            ImGui.GetColorU32(Palette.WithAlpha(ink.GlassStroke, ink.GlassStroke.W * (lively ? 1f : 0.7f))), 1f);
     }
 
-    private void DrawTitleBar(Rect bar, InboxRow? row, PhoneTheme theme, float scale, float delta, bool flashing)
+    private void DrawStrip(Rect bar, InboxRow? row, float scale, bool flashing)
     {
         var drawList = ImGui.GetWindowDrawList();
         var centerY = bar.Center.Y;
         var radius = ButtonRadius * scale;
-        var closeCenter = new Vector2(bar.Max.X - EdgeInset * scale - radius * 0.5f, centerY);
+        var closeCenter = new Vector2(bar.Max.X - EdgeInset * scale - radius, centerY);
         var phoneCenter = new Vector2(closeCenter.X - ButtonPitch * scale, centerY);
-        var bellCenter = new Vector2(phoneCenter.X - ButtonPitch * scale, centerY);
-        var collapseCenter = new Vector2(bellCenter.X - ButtonPitch * scale, centerY);
-        var muted = row?.Muted ?? false;
-        if (HoverButton.Circle(drawList, closeButtonId, closeCenter, radius, FontAwesomeIcon.Times,
-                AppSkin.Transparent, theme.TextMuted, delta, 1f, true, Loc.T(L.Common.Close)))
+        var collapseCenter = new Vector2(phoneCenter.X - ButtonPitch * scale, centerY);
+        if (SocialChrome.DrawHeaderIcon(drawList, closeCenter, radius, PhoneIcons.X, ButtonGlyph, Loc.T(L.Common.Close),
+                ink, ink.MutedInk))
         {
             owner.Close(Key);
             return;
         }
 
-        if (HoverButton.Circle(drawList, phoneButtonId, phoneCenter, radius, FontAwesomeIcon.MobileAlt,
-                AppSkin.Transparent, theme.TextMuted, delta, 1f, true, Loc.T(L.Linkpearl.OpenInPhone)))
+        if (SocialChrome.DrawHeaderIcon(drawList, phoneCenter, radius, PhoneIcons.DeviceMobile, ButtonGlyph,
+                Loc.T(L.Linkpearl.OpenInPhone), ink, ink.MutedInk))
         {
             owner.OpenInPhone?.Invoke(Key);
         }
 
-        if (row is not null && HoverButton.Circle(drawList, bellButtonId, bellCenter, radius,
-                muted ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell, AppSkin.Transparent,
-                muted ? theme.Accent : theme.TextMuted, delta, 1f, true,
-                Loc.T(muted ? L.Linkpearl.Unmute : L.Linkpearl.Mute)))
-        {
-            inbox.ToggleMuted(row);
-        }
-
-        if (HoverButton.Circle(drawList, collapseButtonId, collapseCenter, radius,
-                collapsed ? FontAwesomeIcon.ChevronDown : FontAwesomeIcon.ChevronUp, AppSkin.Transparent,
-                theme.TextMuted, delta, 1f, true, Loc.T(collapsed ? L.Linkpearl.Expand : L.Linkpearl.Collapse)))
+        if (SocialChrome.DrawHeaderIcon(drawList, collapseCenter, radius,
+                collapsed ? PhoneIcons.ChevronDown : PhoneIcons.ChevronUp, ButtonGlyph,
+                Loc.T(collapsed ? L.Linkpearl.Expand : L.Linkpearl.Collapse), ink, ink.MutedInk))
         {
             ToggleCollapsed(!collapsed);
         }
 
-        var avatarRadius = AvatarRadius * scale;
-        var avatarCenter = new Vector2(bar.Min.X + EdgeInset * scale + avatarRadius, centerY);
-        DrawAvatar(drawList, avatarCenter, avatarRadius, row, theme);
-        var textLeft = avatarCenter.X + avatarRadius + Metrics.Space.Sm * scale;
-        var textLimit = collapseCenter.X - radius - Metrics.Space.Sm * scale;
-        var title = row?.Title ?? FallbackTitleFor(Key);
-        var unread = flashing ? 0 : TitleUnread(row);
-        var badgeWidth = 0f;
-        if (unread > 0)
+        var buttonsLeft = collapseCenter.X - radius - Metrics.Space.Sm * scale;
+        BuildTabLabels();
+        if (collapsed)
         {
-            badgeWidth = BadgeWidth(unread, scale) + Metrics.Space.Xs * scale;
+            DrawCollapsedStrip(bar, buttonsLeft, scale, flashing);
+        }
+        else
+        {
+            DrawTabChips(bar, buttonsLeft, scale, flashing);
         }
 
-        var caretWidth = 10f * scale;
-        var titleStyle = TextStyles.Headline;
-        var titleSize = Typography.Measure(title, titleStyle);
-        var titleWidth = MathF.Min(titleSize.X, MathF.Max(1f, textLimit - textLeft - caretWidth - badgeWidth));
-        var titleTop = centerY - titleSize.Y * 0.5f;
-        var hitMin = new Vector2(textLeft - 4f * scale, bar.Min.Y + 6f * scale);
-        var hitMax = new Vector2(textLeft + titleWidth + caretWidth + 4f * scale, bar.Max.Y - 6f * scale);
-        var titleHovered = UiInteract.Hover(hitMin, hitMax);
-        if (titleHovered)
+        if (BarDoubleClicked(bar, chipsBand, buttonsLeft))
         {
-            Squircle.Fill(drawList, hitMin, hitMax, Metrics.Radius.Sm * scale,
-                ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.06f)));
+            ToggleCollapsed(!collapsed);
+        }
+    }
+
+    private void DrawTabChips(Rect bar, float buttonsLeft, float scale, bool flashing)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var centerY = bar.Center.Y;
+        var left = bar.Min.X + EdgeInset * scale;
+        var showPlus = configuration.LinkpearlPopoutTabs && keys.Count < PopoutTabs.MaxTabs && HasAddCandidates();
+        var plusRadius = ButtonRadius * scale;
+        var plusWidth = showPlus ? plusRadius * 2f + ChipGap * scale : 0f;
+        var available = MathF.Max(0f, buttonsLeft - left - plusWidth);
+        var gap = ChipGap * scale;
+        var total = 0f;
+        for (var index = 0; index < keys.Count; index++)
+        {
+            chipLabelled[index] = true;
+            chipWidths[index] = ChipWidth(index, true, flashing, scale);
+            total += chipWidths[index] + (index > 0 ? gap : 0f);
+        }
+
+        if (total > available)
+        {
+            var others = 0f;
+            for (var index = 0; index < keys.Count; index++)
+            {
+                if (index == active)
+                {
+                    continue;
+                }
+
+                chipLabelled[index] = false;
+                chipWidths[index] = ChipWidth(index, false, flashing, scale);
+                others += chipWidths[index] + gap;
+            }
+
+            chipWidths[active] = MathF.Max(ChipWidth(active, false, flashing, scale),
+                MathF.Min(chipWidths[active], available - others));
+        }
+
+        var x = left;
+        var chipHeight = ChipHeight * scale;
+        for (var index = 0; index < keys.Count; index++)
+        {
+            var rect = new Rect(new Vector2(x, centerY - chipHeight * 0.5f),
+                new Vector2(x + chipWidths[index], centerY + chipHeight * 0.5f));
+            DrawChip(drawList, index, rect, index == active, chipLabelled[index], flashing, scale);
+            x = rect.Max.X + gap;
+        }
+
+        chipsBand = new Rect(new Vector2(left, bar.Min.Y), new Vector2(x, bar.Max.Y));
+        if (!showPlus)
+        {
+            return;
+        }
+
+        var plusCenter = new Vector2(x + plusRadius, centerY);
+        if (SocialChrome.DrawHeaderIcon(drawList, plusCenter, plusRadius, PhoneIcons.Plus, ButtonGlyph,
+                Loc.T(L.Linkpearl.AddTab), ink, ink.MutedInk))
+        {
+            OpenAddMenu();
+        }
+
+        chipsBand = new Rect(chipsBand.Min, new Vector2(plusCenter.X + plusRadius, bar.Max.Y));
+    }
+
+    private float ChipWidth(int index, bool labelled, bool flashing, float scale)
+    {
+        var width = (ChipPadLeft + ChipTileRadius * 2f) * scale;
+        if (labelled)
+        {
+            var style = index == active ? ChipActiveStyle : ChipStyle;
+            width += ChipTextGap * scale + MathF.Min(ChipMaxLabel * scale, Typography.Measure(tabTitles[index], style).X);
+        }
+
+        var unread = ChipUnread(index, flashing);
+        if (unread > 0)
+        {
+            width += PillGap * scale + PillWidth(PillLabel(index, unread), scale);
+        }
+
+        return width + (labelled ? ChipPadRight : ChipPadLeft) * scale;
+    }
+
+    private string PillLabel(int index, int unread)
+    {
+        if (pillCounts[index] == unread && pillTexts[index] is not null)
+        {
+            return pillTexts[index];
+        }
+
+        pillCounts[index] = unread;
+        pillTexts[index] = CountText(unread);
+        return pillTexts[index];
+    }
+
+    private static string CountText(int count) => count > 99 ? "99+" : count.ToString(Loc.Culture);
+
+    private int ChipUnread(int index, bool flashing)
+    {
+        if (index == active)
+        {
+            return flashing ? 0 : tabUnread[index];
+        }
+
+        return tabUnread[index];
+    }
+
+    private static float PillWidth(string label, float scale)
+    {
+        var height = PillHeight * scale;
+        return MathF.Max(Typography.Measure(label, PillStyle).X + PillPadX * 2f * scale, height);
+    }
+
+    private void DrawChip(ImDrawListPtr drawList, int index, Rect rect, bool isActive, bool labelled, bool flashing,
+        float scale)
+    {
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
+        var rounding = rect.Height * 0.5f;
+        if (isActive)
+        {
+            Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(ink.AccentWash));
+        }
+        else if (hovered)
+        {
+            Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(ink.FieldFill));
+        }
+
+        var tileRadius = ChipTileRadius * scale;
+        var tileCenter = new Vector2(rect.Min.X + ChipPadLeft * scale + tileRadius, rect.Center.Y);
+        var row = inbox.Find(keys[index]);
+        DrawTabAvatar(drawList, tileCenter, tileRadius, row);
+        var cursor = tileCenter.X + tileRadius;
+        var unread = ChipUnread(index, flashing);
+        var pillLabel = unread > 0 ? PillLabel(index, unread) : string.Empty;
+        var pillWidth = unread > 0 ? PillWidth(pillLabel, scale) : 0f;
+        if (labelled)
+        {
+            var style = isActive ? ChipActiveStyle : ChipStyle;
+            var labelLeft = cursor + ChipTextGap * scale;
+            var labelRight = rect.Max.X - ChipPadRight * scale - (unread > 0 ? pillWidth + PillGap * scale : 0f);
+            var label = Typography.FitText(tabTitles[index], MathF.Max(1f, labelRight - labelLeft), style);
+            var labelSize = Typography.Measure(label, style);
+            Typography.Draw(drawList, new Vector2(labelLeft, rect.Center.Y - labelSize.Y * 0.5f), label,
+                isActive ? ink.TitleInk : ink.MutedInk, style);
+            cursor = labelLeft + labelSize.X;
+        }
+        else
+        {
+            HoverTooltip.Show(rect, tabTitles[index], HoverLabelSide.Below);
+        }
+
+        if (unread > 0)
+        {
+            DrawPill(drawList, pillLabel, cursor + PillGap * scale, rect.Center.Y, pillWidth, scale);
+        }
+
+        if (hovered)
+        {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        Marquee.DrawLeft(drawList, new MarqueeId(switchMenuId, ".title"), title, textLeft, titleTop, titleWidth, titleStyle,
-            theme.TextStrong, titleHovered);
-        AppSkin.Icon(drawList, new Vector2(textLeft + titleWidth + CaretGap * scale, centerY + 1f * scale),
-            IconGlyph.Of(FontAwesomeIcon.ChevronDown), theme.TextMuted, 0.55f);
+        if (isActive)
+        {
+            titleAnchor = rect;
+            HoverTooltip.Show(rect, Loc.T(L.Linkpearl.SwitchConversation), HoverLabelSide.Below);
+        }
+
+        if (!UiInteract.Click(rect.Min, rect.Max, hovered))
+        {
+            return;
+        }
+
+        if (isActive)
+        {
+            OpenSwitchMenu(rect);
+        }
+        else
+        {
+            SetActive(index);
+        }
+    }
+
+    private void DrawPill(ImDrawListPtr drawList, string label, float left, float centerY, float width, float scale)
+    {
+        var height = PillHeight * scale;
+        var min = new Vector2(left, centerY - height * 0.5f);
+        var max = new Vector2(left + width, centerY + height * 0.5f);
+        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(chatTheme.Badge));
+        Typography.DrawCentered(drawList, (min + max) * 0.5f, label, White, PillStyle);
+    }
+
+    private void DrawCollapsedStrip(Rect bar, float buttonsLeft, float scale, bool flashing)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var centerY = bar.Center.Y;
+        var radius = StackedAvatarRadius * scale;
+        var x = bar.Min.X + EdgeInset * scale + radius;
+        var shown = Math.Min(keys.Count, StackedAvatarLimit);
+        for (var index = 0; index < shown; index++)
+        {
+            var center = new Vector2(x + index * (radius * 2f - StackedOverlap * scale), centerY);
+            drawList.AddCircleFilled(center, radius + 1.5f * scale, ImGui.GetColorU32(ChatThemes.Body), 24);
+            DrawTabAvatar(drawList, center, radius, inbox.Find(keys[index]));
+        }
+
+        var textLeft = x + radius + (shown - 1) * (radius * 2f - StackedOverlap * scale) + ChipTextGap * scale;
+        var unread = flashing ? 0 : GroupUnread();
+        var pillWidth = 0f;
         if (unread > 0)
         {
-            DrawBadge(drawList, unread, textLeft + titleWidth + caretWidth + Metrics.Space.Xs * scale, centerY,
-                theme, scale);
+            var pill = NewPill(unread);
+            var pillSize = Typography.Measure(pill, PillStyle);
+            pillWidth = pillSize.X + NewPillPadX * 2f * scale;
+            var pillHeight = NewPillHeight * scale;
+            var pillMin = new Vector2(buttonsLeft - pillWidth, centerY - pillHeight * 0.5f);
+            var pillMax = new Vector2(buttonsLeft, centerY + pillHeight * 0.5f);
+            Squircle.Fill(drawList, pillMin, pillMax, pillHeight * 0.5f, ImGui.GetColorU32(chatTheme.Badge));
+            Typography.DrawCentered(drawList, (pillMin + pillMax) * 0.5f, pill, White, PillStyle);
+            pillWidth += PillGap * scale;
         }
 
-        titleAnchor = new Rect(hitMin, hitMax);
-        HoverTooltip.Show(titleAnchor, Loc.T(collapsed ? L.Linkpearl.Expand : L.Linkpearl.SwitchConversation),
-            HoverLabelSide.Below);
-        if (UiInteract.Click(hitMin, hitMax, titleHovered))
+        var textRight = buttonsLeft - pillWidth;
+        var title = CollapsedTitle();
+        var titleTop = centerY - Typography.LineHeight(ChipActiveStyle) * 0.5f;
+        var hovered = UiInteract.Hover(new Vector2(textLeft, bar.Min.Y), new Vector2(textRight, bar.Max.Y));
+        Marquee.DrawLeft(drawList, new MarqueeId(switchMenuId, ".collapsed"), title, textLeft, titleTop,
+            MathF.Max(1f, textRight - textLeft), ChipActiveStyle, ink.TitleInk, hovered);
+        titleAnchor = new Rect(new Vector2(textLeft, bar.Min.Y), new Vector2(textRight, bar.Max.Y));
+        chipsBand = titleAnchor;
+        HoverTooltip.Show(titleAnchor, Loc.T(L.Linkpearl.Expand), HoverLabelSide.Below);
+        if (hovered)
         {
-            if (collapsed)
-            {
-                ToggleCollapsed(false);
-            }
-            else
-            {
-                OpenSwitchMenu(titleAnchor);
-            }
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        if (BarDoubleClicked(bar, titleAnchor, collapseCenter.X - radius))
+        if (UiInteract.Click(titleAnchor.Min, titleAnchor.Max, hovered))
         {
-            ToggleCollapsed(!collapsed);
+            ToggleCollapsed(false);
+        }
+    }
+
+    private string NewPill(int unread)
+    {
+        if (newPillCount == unread)
+        {
+            return newPillText;
+        }
+
+        newPillCount = unread;
+        newPillText = Loc.T(L.Linkpearl.NewCount, CountText(unread));
+        return newPillText;
+    }
+
+    private string CollapsedTitle()
+    {
+        if (collapsedTitleRevision == titlesRevision)
+        {
+            return collapsedTitle;
+        }
+
+        collapsedTitleRevision = titlesRevision;
+        collapsedTitle = keys.Count switch
+        {
+            0 => string.Empty,
+            1 => tabTitles[0],
+            _ => string.Join(TitleSeparator, tabTitles, 0, keys.Count),
+        };
+        return collapsedTitle;
+    }
+
+    private void BuildTabLabels()
+    {
+        for (var index = 0; index < keys.Count; index++)
+        {
+            var row = inbox.Find(keys[index]);
+            var title = row is not null
+                ? row.IsTell ? NameMask.Display(row.Title) : row.Title
+                : tabTitles[index] ?? FallbackTitleFor(keys[index]);
+            var unread = row is { HasBadge: true } && (index != active || !attended) ? row.Unread : 0;
+            if (!string.Equals(tabTitles[index], title, StringComparison.Ordinal))
+            {
+                tabTitles[index] = title;
+                titlesRevision++;
+            }
+
+            tabUnread[index] = unread;
         }
     }
 
@@ -928,7 +1168,7 @@ internal sealed class LinkpearlPopoutWindow : Window
         return total;
     }
 
-    private static bool BarDoubleClicked(in Rect bar, in Rect titleHit, float buttonsLeft)
+    private static bool BarDoubleClicked(in Rect bar, in Rect exclusion, float buttonsLeft)
     {
         if (!UiInteract.Hover(bar.Min, bar.Max) || !ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
         {
@@ -936,28 +1176,18 @@ internal sealed class LinkpearlPopoutWindow : Window
         }
 
         var mouse = ImGui.GetMousePos();
-        return mouse.X < buttonsLeft && !titleHit.Contains(mouse);
+        return mouse.X < buttonsLeft && !exclusion.Contains(mouse);
     }
 
-    private void DrawAvatar(ImDrawListPtr drawList, Vector2 center, float radius, InboxRow? row, PhoneTheme theme)
+    private void DrawTabAvatar(ImDrawListPtr drawList, Vector2 center, float radius, InboxRow? row)
     {
         if (row is null)
         {
-            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(theme.SurfaceMuted), 24);
+            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(ink.FieldFill), 24);
             return;
         }
 
-        if (row.IsTell)
-        {
-            AvatarView.Draw(drawList, center, radius, theme.Accent, Initials.Of(row.Title), 0.7f,
-                lodestone.Avatar(row.Title, row.World, radius * 2f), 24);
-            return;
-        }
-
-        var min = center - new Vector2(radius, radius);
-        var max = center + new Vector2(radius, radius);
-        Squircle.Fill(drawList, min, max, radius * 0.62f, ImGui.GetColorU32(Palette.WithAlpha(row.Tint, 0.24f)));
-        Typography.DrawCentered(drawList, center, Initials.Of(row.Title), row.Tint, TextStyles.Caption2);
+        GameChatTiles.DrawAvatar(drawList, center, radius, row, lodestone, ink.Accent);
     }
 
     private string FallbackTitleFor(string conversationKey)
@@ -971,25 +1201,6 @@ internal sealed class LinkpearlPopoutWindow : Window
         var at = target.IndexOf('@');
         var name = at >= 0 ? target[..at] : target;
         return name.Length > 0 ? Loc.Culture.TextInfo.ToTitleCase(name) : Loc.T(L.Apps.Linkpearl);
-    }
-
-    private static float BadgeWidth(int unread, float scale)
-    {
-        var label = unread > 99 ? "99+" : unread.ToString(Loc.Culture);
-        var height = 16f * scale;
-        return MathF.Max(Typography.Measure(label, TextStyles.Caption2).X + 10f * scale, height);
-    }
-
-    private static void DrawBadge(ImDrawListPtr drawList, int unread, float left, float centerY, PhoneTheme theme,
-        float scale)
-    {
-        var label = unread > 99 ? "99+" : unread.ToString(Loc.Culture);
-        var height = 16f * scale;
-        var width = BadgeWidth(unread, scale);
-        var min = new Vector2(left, centerY - height * 0.5f);
-        var max = new Vector2(left + width, centerY + height * 0.5f);
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(theme.Accent));
-        Typography.DrawCentered(drawList, (min + max) * 0.5f, label, White, TextStyles.Caption2);
     }
 
     private void DrawGrip(float scale)
@@ -1020,22 +1231,26 @@ internal sealed class LinkpearlPopoutWindow : Window
             }
         }
 
+        if (inbox.Find(Key) is { } current)
+        {
+            AddMenuRow(MenuToggleMute, Key, Loc.T(current.Muted ? L.Linkpearl.Unmute : L.Linkpearl.Mute),
+                current.Muted ? PhoneIcons.Bell : PhoneIcons.BellOff, false, false);
+        }
+
         if (configuration.LinkpearlPopoutTabs && keys.Count < PopoutTabs.MaxTabs && HasAddCandidates())
         {
-            AddMenuRow(MenuAddTab, string.Empty, Loc.T(L.Linkpearl.AddTab), IconGlyph.Of(FontAwesomeIcon.Plus), false,
-                false);
+            AddMenuRow(MenuAddTab, string.Empty, Loc.T(L.Linkpearl.AddTab), PhoneIcons.Plus, false, false);
         }
 
         if (grouped)
         {
             if (owner.CanDetach)
             {
-                AddMenuRow(MenuDetachTab, string.Empty, Loc.T(L.Linkpearl.MoveTabOut),
-                    IconGlyph.Of(FontAwesomeIcon.ExternalLinkAlt), false, false);
+                AddMenuRow(MenuDetachTab, string.Empty, Loc.T(L.Linkpearl.MoveTabOut), PhoneIcons.ExternalLink, false,
+                    false);
             }
 
-            AddMenuRow(MenuCloseTab, string.Empty, Loc.T(L.Linkpearl.CloseTab), IconGlyph.Of(FontAwesomeIcon.Times),
-                false, true);
+            AddMenuRow(MenuCloseTab, string.Empty, Loc.T(L.Linkpearl.CloseTab), PhoneIcons.X, false, true);
         }
         else
         {
@@ -1115,14 +1330,19 @@ internal sealed class LinkpearlPopoutWindow : Window
         switchActions.Add(action);
     }
 
-    private static string RowGlyph(InboxRow? row) =>
-        row is null || row.IsTell ? IconGlyph.Of(FontAwesomeIcon.User) : IconGlyph.Of(FontAwesomeIcon.Hashtag);
+    private static string RowGlyph(InboxRow? row) => row is null || row.IsTell ? PhoneIcons.User : PhoneIcons.Hash;
 
-    private static string RowLabel(InboxRow row) => row.HasBadge ? UnreadLabel(row.Title, row.Unread) : row.Title;
+    private static string RowLabel(InboxRow row)
+    {
+        var title = row.IsTell ? NameMask.Display(row.Title) : row.Title;
+        return row.HasBadge ? UnreadLabel(title, row.Unread) : title;
+    }
+
+    private static string UnreadLabel(string title, int unread) => string.Concat(title, " · ", CountText(unread));
 
     private string TabMenuLabel(int index, InboxRow? row)
     {
-        var title = row?.Title ?? FallbackTitleFor(keys[index]);
+        var title = tabTitles[index] ?? FallbackTitleFor(keys[index]);
         return row is { HasBadge: true } ? UnreadLabel(title, row.Unread) : title;
     }
 
@@ -1163,6 +1383,13 @@ internal sealed class LinkpearlPopoutWindow : Window
                 return;
             case MenuSwitchTo:
                 owner.Switch(this, conversationKey);
+                return;
+            case MenuToggleMute:
+                if (inbox.Find(conversationKey) is { } row)
+                {
+                    inbox.ToggleMuted(row);
+                }
+
                 return;
         }
     }

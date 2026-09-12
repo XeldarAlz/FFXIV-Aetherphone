@@ -28,7 +28,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
         Settings,
     }
 
-    public const string DefaultThemeId = "leaf";
+    public const string DefaultThemeId = ChatThemes.LinkpearlDefaultId;
 
     public string Id => "messages";
     public string DisplayName => Loc.T(L.Apps.Linkpearl);

@@ -8,6 +8,7 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Runtime;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Windows;
@@ -15,6 +16,9 @@ namespace Aetherphone.Windows;
 internal sealed class LinkpearlPopouts : IDisposable
 {
     public const int MaxWindows = 6;
+
+    private const float ViewportMargin = 24f;
+    private const float StaggerStep = 28f;
 
     private readonly LinkpearlPopoutWindow[] windows;
     private readonly Configuration configuration;
@@ -26,13 +30,11 @@ internal sealed class LinkpearlPopouts : IDisposable
     private readonly PhoneVisibility visibility;
     private readonly AppGate installed;
     private readonly List<LinkpearlPopoutState> restoreQueue = new(MaxWindows);
-    private readonly int[] tabCounts = new int[MaxWindows];
-    private readonly long[] lastActive = new long[MaxWindows];
 
     public LinkpearlPopouts(Configuration configuration, ChatInbox inbox, ChatLog log, ChatSend send, TabStore tabs,
         TellPreferences tellPreferences, LinkpearlNotificationGate gate, PhoneVisibility visibility,
         AppGate installed, GameData gameData, ThemeProvider themes, LodestoneService lodestone,
-        NotificationService notifications, ConfirmService confirm)
+        NotificationService notifications, ConfirmService confirm, WallpaperImageCache wallpaperImages)
     {
         this.configuration = configuration;
         this.inbox = inbox;
@@ -46,7 +48,7 @@ internal sealed class LinkpearlPopouts : IDisposable
         for (var slot = 0; slot < MaxWindows; slot++)
         {
             windows[slot] = new LinkpearlPopoutWindow(this, slot, configuration, inbox, tabs, log, send, gameData,
-                themes, lodestone, notifications, confirm);
+                themes, lodestone, notifications, confirm, wallpaperImages);
         }
 
         var saved = configuration.LinkpearlPopouts;
@@ -71,7 +73,7 @@ internal sealed class LinkpearlPopouts : IDisposable
 
     public Action<uint>? OpenMarketInPhone { get; set; }
 
-    public bool CanOpenMore => Free() is not null || Roomiest() is not null;
+    public bool CanOpenMore => Free() is not null || Host() is not null;
 
     public bool CanDetach => Free() is not null;
 
@@ -140,23 +142,50 @@ internal sealed class LinkpearlPopouts : IDisposable
             return true;
         }
 
-        var window = Free();
-        if (window is not null)
+        var host = Host();
+        if (host is not null)
         {
-            window.Bind(key, null);
+            host.AddTab(key, true);
+            host.Focus();
             Persist();
             return true;
         }
 
-        var host = Roomiest();
-        if (host is null)
+        return OpenInNewWindow(key);
+    }
+
+    public bool OpenInNewWindow(string key)
+    {
+        if (!installed.Open || key.Length == 0)
         {
             return false;
         }
 
-        host.AddTab(key, true);
+        if (Holder(key) is { } existing)
+        {
+            existing.FocusTab(key);
+            return true;
+        }
+
+        var window = Free();
+        if (window is null)
+        {
+            return false;
+        }
+
+        window.Bind(key, null);
         Persist();
         return true;
+    }
+
+    public Vector2 DefaultPosition(Vector2 scaledSize)
+    {
+        var mode = (PopoutPlacement)Math.Clamp(configuration.LinkpearlPopoutPlacement, 0,
+            (int)PopoutPlacement.BottomRight);
+        Rect? phone = visibility.TryGetFrame(out var frame) ? frame : null;
+        var margin = ViewportMargin * UiScale.Global;
+        var stagger = StaggerStep * UiScale.Global * OpenCount;
+        return PopoutPlacements.Resolve(mode, PhoneBounds.Viewport(), phone, scaledSize, margin, stagger);
     }
 
     public void Close(string key)
@@ -314,11 +343,6 @@ internal sealed class LinkpearlPopouts : IDisposable
 
     public LinkpearlPopoutWindow? DropTargetAt(LinkpearlPopoutWindow source, Vector2 point)
     {
-        if (!configuration.LinkpearlPopoutTabs)
-        {
-            return null;
-        }
-
         for (var index = 0; index < windows.Length; index++)
         {
             var window = windows[index];
@@ -413,21 +437,29 @@ internal sealed class LinkpearlPopouts : IDisposable
         return null;
     }
 
-    private LinkpearlPopoutWindow? Roomiest()
+    private LinkpearlPopoutWindow? Host()
     {
         if (!configuration.LinkpearlPopoutTabs)
         {
             return null;
         }
 
+        LinkpearlPopoutWindow? best = null;
         for (var index = 0; index < windows.Length; index++)
         {
-            tabCounts[index] = windows[index].Bound ? windows[index].TabCount : 0;
-            lastActive[index] = windows[index].LastActiveTick;
+            var window = windows[index];
+            if (!window.Bound || window.TabCount >= PopoutTabs.MaxTabs)
+            {
+                continue;
+            }
+
+            if (best is null || window.LastActiveTick > best.LastActiveTick)
+            {
+                best = window;
+            }
         }
 
-        var slot = PopoutTabs.LeastRecentlyActive(tabCounts, lastActive);
-        return slot < 0 ? null : windows[slot];
+        return best;
     }
 
     private void OnAppended(ChatEntry entry)

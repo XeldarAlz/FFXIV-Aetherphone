@@ -356,6 +356,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool LinkpearlPopoutFieldOperationsExempt { get; set; } = true;
     public bool LinkpearlPopoutReopenAfterCombat { get; set; } = true;
     public bool LinkpearlPopoutHideInCutscene { get; set; } = true;
+    public int LinkpearlPopoutPlacement { get; set; }
     public bool LinkpearlPopoutHideWhenUiHidden { get; set; } = true;
     public bool LinkpearlHotkeyEnabled { get; set; }
     public int LinkpearlHotkeyModifier { get; set; }

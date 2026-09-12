@@ -88,7 +88,7 @@ internal static class ChatWallpapers
     }
 
     public static void Paint(ImDrawListPtr drawList, Rect area, string id, bool pattern,
-        WallpaperImageCache images)
+        WallpaperImageCache images, float alpha = 1f)
     {
         drawList.PushClipRect(area.Min, area.Max, true);
         var painted = false;
@@ -98,15 +98,17 @@ internal static class ChatWallpapers
             if (texture is not null)
             {
                 var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, area.Width, area.Height);
-                drawList.AddImage(texture.Handle, area.Min, area.Max, uv0, uv1);
-                drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, PhotoVeil)));
+                drawList.AddImage(texture.Handle, area.Min, area.Max, uv0, uv1,
+                    ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)));
+                drawList.AddRectFilled(area.Min, area.Max,
+                    ImGui.GetColorU32(new Vector4(0f, 0f, 0f, PhotoVeil * alpha)));
                 painted = true;
             }
         }
 
         if (!painted)
         {
-            drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(ColorOf(id)));
+            drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(Palette.WithAlpha(ColorOf(id), alpha)));
             if (pattern)
             {
                 PaintPattern(drawList, area);

@@ -4058,7 +4058,14 @@ internal static class L
         public static readonly LocString Expand = new("linkpearl.expand", "Expand");
         public static readonly LocString CollapseAllPopouts = new("linkpearl.collapseAllPopouts", "Collapse all pop-outs ({0})");
         public static readonly LocString ExpandAllPopouts = new("linkpearl.expandAllPopouts", "Expand all pop-outs ({0})");
-        public static readonly LocString PopoutTabs = new("linkpearl.popoutTabs", "Group chats as tabs");
+        public static readonly LocString PopoutTabs = new("linkpearl.popoutTabs", "New chats open as tabs");
+        public static readonly LocString PopoutPlacement = new("linkpearl.popoutPlacement", "Placement");
+        public static readonly LocString PlacementBesidePhone = new("linkpearl.placementBesidePhone", "Beside the phone");
+        public static readonly LocString PlacementTopLeft = new("linkpearl.placementTopLeft", "Top left");
+        public static readonly LocString PlacementTopRight = new("linkpearl.placementTopRight", "Top right");
+        public static readonly LocString PlacementBottomLeft = new("linkpearl.placementBottomLeft", "Bottom left");
+        public static readonly LocString PlacementBottomRight = new("linkpearl.placementBottomRight", "Bottom right");
+        public static readonly LocString NewCount = new("linkpearl.newCount", "{0} new");
         public static readonly LocString PopoutTabsHint = new("linkpearl.popoutTabsHint", "Drag a pop-out onto another to merge them into one window.");
         public static readonly LocString PopoutOutgoingTells = new("linkpearl.popoutOutgoingTells", "Pop up tells you send too");
         public static readonly LocString PopoutCloseOnLogout = new("linkpearl.popoutCloseOnLogout", "Close pop-outs when you log out");

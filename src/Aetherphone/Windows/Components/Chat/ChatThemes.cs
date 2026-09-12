@@ -26,6 +26,7 @@ internal static class ChatThemes
     public const float OutgoingMix = 0.55f;
     public const float BadgeLift = 0.12f;
     public const float BubbleRounding = 9f;
+    public const string LinkpearlDefaultId = "leaf";
 
     public static readonly Vector4 Body = new(0.043f, 0.078f, 0.102f, 1f);
     public static readonly Vector4 IncomingBubble = new(0.125f, 0.173f, 0.200f, 1f);
