@@ -6102,6 +6102,7 @@
   "failure.chatNotMutualContact": "Ihr müsst euch zuerst gegenseitig als Kontakt hinzufügen.",
   "failure.chatBlocked": "Du kannst dieser Person nicht schreiben.",
   "failure.chatNotOwner": "Das kann nur der Inhaber der Gruppe tun.",
+  "failure.chatMemberBlocked": "Zwischen dieser Person und jemandem in dieser Gruppe besteht eine Blockierung.",
   "failure.chatNotAdmin": "Das können nur Gruppenadmins.",
   "failure.chatGroupFull": "Diese Gruppe hat das Limit von {0} Personen erreicht.",
   "failure.chatHistoryOrphaned": "Nach dem Zurücksetzen des Schlüssels lassen sich ältere Nachrichten nicht mehr öffnen.",

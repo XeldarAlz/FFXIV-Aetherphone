@@ -467,13 +467,16 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
         });
     }
 
-    public void AddMembers(string id, string[] memberIds, Action<bool> onComplete)
+    public void AddMembers(string id, string[] memberIds, Action<bool> onComplete, Action<AepFailure> onFailure)
     {
         work.Run("add members", async token =>
         {
-            var detail = await client.AddMembersAsync(id, memberIds, token).ConfigureAwait(false);
+            var reported = AepFailure.None;
+            var detail = await client.AddMembersAsync(id, memberIds, token, failure => reported = failure)
+                .ConfigureAwait(false);
             if (detail is null)
             {
+                onFailure(reported.Failed ? reported : AepFailure.Transport(AepFailureKind.Offline));
                 return false;
             }
 

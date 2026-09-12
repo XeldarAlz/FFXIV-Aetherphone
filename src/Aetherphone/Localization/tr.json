@@ -6102,6 +6102,7 @@
   "failure.chatNotMutualContact": "Önce birbirinizi kişilerinize eklemeniz gerekiyor.",
   "failure.chatBlocked": "Bu kişiye mesaj gönderemezsin.",
   "failure.chatNotOwner": "Bunu yalnızca grup sahibi yapabilir.",
+  "failure.chatMemberBlocked": "Bu kişiyle gruptaki biri arasında bir engelleme var.",
   "failure.chatNotAdmin": "Bunu yalnızca grup yöneticileri yapabilir.",
   "failure.chatGroupFull": "Bu grup {0} kişiyle dolu.",
   "failure.chatHistoryOrphaned": "Anahtar sıfırlandıktan sonra eski mesajlar açılamaz.",

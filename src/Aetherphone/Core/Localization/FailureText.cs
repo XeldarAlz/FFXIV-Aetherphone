@@ -36,6 +36,7 @@ internal static class FailureCodes
     public const string ChatNotMember = "chat_not_member";
     public const string ChatNotMutualContact = "chat_not_mutual_contact";
     public const string ChatBlocked = "chat_blocked";
+    public const string ChatMemberBlocked = "chat_member_blocked";
     public const string ChatNotOwner = "chat_not_owner";
     public const string ChatNotAdmin = "chat_not_admin";
     public const string ChatGroupFull = "chat_group_full";
@@ -224,6 +225,8 @@ internal static class FailureText
                 return Loc.T(L.Failure.ChatNotMutualContact);
             case FailureCodes.ChatBlocked:
                 return Loc.T(L.Failure.ChatBlocked);
+            case FailureCodes.ChatMemberBlocked:
+                return Loc.T(L.Failure.ChatMemberBlocked);
             case FailureCodes.ChatNotOwner:
                 return Loc.T(L.Failure.ChatNotOwner);
             case FailureCodes.ChatNotAdmin:

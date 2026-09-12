@@ -6102,6 +6102,7 @@
   "failure.chatNotMutualContact": "先にお互いを連絡先に追加する必要があります。",
   "failure.chatBlocked": "この相手にはメッセージを送れません。",
   "failure.chatNotOwner": "この操作はグループのオーナーだけができます。",
+  "failure.chatMemberBlocked": "その人とこのグループの誰かの間にブロックがあります。",
   "failure.chatNotAdmin": "それはグループ管理者だけができます。",
   "failure.chatGroupFull": "このグループは{0}人で満員です。",
   "failure.chatHistoryOrphaned": "暗号化キーをリセットする前のメッセージは開けません。",

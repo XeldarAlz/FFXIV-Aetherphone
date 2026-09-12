@@ -96,6 +96,7 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
     private volatile string? composeResult;
     private volatile bool backToListPending;
     private volatile bool backToDetailPending;
+    private volatile AepFailureBox? addMembersFailure;
     private string addError = string.Empty;
     private float copiedTimer;
     private volatile bool removePending;

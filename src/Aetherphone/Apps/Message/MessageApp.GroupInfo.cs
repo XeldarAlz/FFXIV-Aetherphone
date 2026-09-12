@@ -4,6 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Message;
+using Aetherphone.Core.Net;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -49,6 +50,13 @@ internal sealed partial class MessageApp
 
     private void ProcessGroupOutcomes()
     {
+        var addFailure = addMembersFailure;
+        if (addFailure is not null)
+        {
+            addMembersFailure = null;
+            ShellToast.Show(FailureText.Resolve(addFailure.Failure));
+        }
+
         var photo = groupPhotoOutcome;
         if (photo != 0)
         {
@@ -656,7 +664,7 @@ internal sealed partial class MessageApp
                 {
                     backToDetailPending = true;
                 }
-            });
+            }, failure => addMembersFailure = new AepFailureBox(failure));
         }
     }
 

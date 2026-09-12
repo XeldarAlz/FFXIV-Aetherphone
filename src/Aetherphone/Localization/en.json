@@ -6102,6 +6102,7 @@
   "failure.chatNotMutualContact": "You both need to add each other as contacts first.",
   "failure.chatBlocked": "You can't message this person.",
   "failure.chatNotOwner": "Only the group owner can do that.",
+  "failure.chatMemberBlocked": "There's a block between that person and someone in this group.",
   "failure.chatNotAdmin": "Only group admins can do that.",
   "failure.chatGroupFull": "This group is full at {0} people.",
   "failure.chatHistoryOrphaned": "Older messages can't be opened after a key reset.",

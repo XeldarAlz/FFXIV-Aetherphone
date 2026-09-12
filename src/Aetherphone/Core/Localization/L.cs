@@ -7848,6 +7848,7 @@ internal static class L
         public static readonly LocString ChatHistoryOrphaned = new("failure.chatHistoryOrphaned", "Older messages can't be opened after a key reset.");
         public static readonly LocString ChatStoryUnavailable = new("failure.chatStoryUnavailable", "That story is no longer available.");
         public static readonly LocString ChatMessagePolicy = new("failure.chatMessagePolicy", "This person isn't accepting messages from you.");
+        public static readonly LocString ChatMemberBlocked = new("failure.chatMemberBlocked", "There's a block between that person and someone in this group.");
         public static readonly LocString ChatRecipientUnavailable = new("failure.chatRecipientUnavailable", "That account is unavailable.");
         public static readonly LocString ChatMessageExpired = new("failure.chatMessageExpired", "That message is too old to change.");
         public static readonly LocString CommentLength = new("failure.commentLength", "Keep the comment to {0} characters.");
