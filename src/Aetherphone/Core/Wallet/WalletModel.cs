@@ -7,6 +7,7 @@ internal enum CurrencyKind
     Generic,
     Gil,
     Tomestone,
+    LimitedTomestone,
 }
 
 internal sealed class WalletEntry
@@ -26,6 +27,37 @@ internal sealed class WalletEntry
     public long Cap { get; }
     public CurrencyKind Kind { get; }
     public long Amount { get; set; }
+    public long WeeklyAmount { get; set; }
+    public long WeeklyCap { get; set; }
+    public bool HasWeeklyCap => Kind == CurrencyKind.LimitedTomestone && WeeklyCap > 0;
+
+    private long cachedWeeklyAmount = -1;
+    private long cachedWeeklyCap = -1;
+    private LanguageInfo? cachedWeeklyLanguage;
+    private string cachedWeeklyText = string.Empty;
+
+    public string WeeklyCapText
+    {
+        get
+        {
+            if (!HasWeeklyCap)
+            {
+                return string.Empty;
+            }
+
+            if (cachedWeeklyAmount == WeeklyAmount && cachedWeeklyCap == WeeklyCap &&
+                ReferenceEquals(cachedWeeklyLanguage, Loc.Current))
+            {
+                return cachedWeeklyText;
+            }
+
+            cachedWeeklyAmount = WeeklyAmount;
+            cachedWeeklyCap = WeeklyCap;
+            cachedWeeklyLanguage = Loc.Current;
+            cachedWeeklyText = Loc.T(L.Wallet.WeeklyCap, NumberText.Group(WeeklyAmount), NumberText.Group(WeeklyCap));
+            return cachedWeeklyText;
+        }
+    }
 }
 
 internal sealed class WalletSection

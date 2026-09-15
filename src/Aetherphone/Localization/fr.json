@@ -2961,6 +2961,7 @@
   "wallet.sectionPvp": "JcJ",
   "wallet.sectionCrafting": "Artisanat et récolte",
   "wallet.sectionOther": "Autres",
+  "wallet.weeklyCap": "Cette semaine : {0} / {1}",
   "jobs.logInToView": "Connectez-vous pour voir vos jobs",
   "jobs.noGearsets": "Créez un ensemble d'équipement pour un job en jeu pour le voir ici.",
   "jobs.noGearset": "Aucun ensemble",

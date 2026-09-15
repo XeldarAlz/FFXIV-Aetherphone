@@ -2961,6 +2961,7 @@
   "wallet.sectionPvp": "PvP",
   "wallet.sectionCrafting": "クラフター＆ギャザラー",
   "wallet.sectionOther": "その他",
+  "wallet.weeklyCap": "今週：{0} / {1}",
   "jobs.logInToView": "ログインしてジョブを見る",
   "jobs.noGearsets": "ゲーム内でジョブのギアセットを登録すると、ここに表示されます。",
   "jobs.noGearset": "ギアセットなし",

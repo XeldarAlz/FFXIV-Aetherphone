@@ -89,7 +89,13 @@ internal static unsafe class WalletReader
             var entries = sections[sectionIndex].Entries;
             for (var entryIndex = 0; entryIndex < entries.Length; entryIndex++)
             {
-                entries[entryIndex].Amount = ReadAmount(manager, entries[entryIndex]);
+                var entry = entries[entryIndex];
+                entry.Amount = ReadAmount(manager, entry);
+                if (entry.Kind == CurrencyKind.LimitedTomestone)
+                {
+                    entry.WeeklyAmount = manager->GetWeeklyAcquiredTomestoneCount();
+                    entry.WeeklyCap = InventoryManager.GetLimitedTomestoneWeeklyLimit();
+                }
             }
         }
     }
@@ -105,7 +111,7 @@ internal static unsafe class WalletReader
         var count = CountCappedDefs(manager, HuntDefs) + CountCappedDefs(manager, PvpDefs) +
                     CountCappedDefs(manager, ScripDefs) + CountCappedDefs(manager, OtherDefs);
         TomestoneScratch.Clear();
-        gameData.CollectTomestoneItemIds(TomestoneScratch);
+        gameData.CollectTomestoneItemIds(TomestoneScratch, out _);
         for (var index = 0; index < TomestoneScratch.Count; index++)
         {
             if ((long)manager->GetTomestoneCount(TomestoneScratch[index]) >= TomestoneCap)
@@ -167,7 +173,7 @@ internal static unsafe class WalletReader
     private static void AddTomestones(List<WalletSection> sections, GameData gameData)
     {
         var ids = new List<uint>(4);
-        gameData.CollectTomestoneItemIds(ids);
+        gameData.CollectTomestoneItemIds(ids, out var limitedItemId);
         var entries = new List<WalletEntry>(ids.Count);
         for (var index = 0; index < ids.Count; index++)
         {
@@ -177,7 +183,8 @@ internal static unsafe class WalletReader
                 continue;
             }
 
-            entries.Add(new WalletEntry(ids[index], iconId, name, TomestoneCap, CurrencyKind.Tomestone));
+            var kind = ids[index] == limitedItemId ? CurrencyKind.LimitedTomestone : CurrencyKind.Tomestone;
+            entries.Add(new WalletEntry(ids[index], iconId, name, TomestoneCap, kind));
         }
 
         if (entries.Count > 0)
@@ -215,7 +222,7 @@ internal static unsafe class WalletReader
         return entry.Kind switch
         {
             CurrencyKind.Gil => (long)manager->GetGil(),
-            CurrencyKind.Tomestone => (long)manager->GetTomestoneCount(entry.ItemId),
+            CurrencyKind.Tomestone or CurrencyKind.LimitedTomestone => (long)manager->GetTomestoneCount(entry.ItemId),
             _ => (long)manager->GetInventoryItemCount(entry.ItemId, false, true, true, 0),
         };
     }
@@ -228,6 +235,7 @@ internal static unsafe class WalletReader
             for (var entryIndex = 0; entryIndex < entries.Length; entryIndex++)
             {
                 entries[entryIndex].Amount = 0;
+                entries[entryIndex].WeeklyAmount = 0;
             }
         }
     }
