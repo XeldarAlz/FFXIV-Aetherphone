@@ -7,6 +7,7 @@ namespace Aetherphone.Apps.Maps;
 internal static class MapGlyphs
 {
     private const float HighlightBleed = 8f;
+    public static readonly Vector4 FavoriteFill = new(1f, 0.78f, 0.25f, 1f);
 
     public static void Highlight(Rect row, Vector4 color, float verticalInset, float scale)
     {

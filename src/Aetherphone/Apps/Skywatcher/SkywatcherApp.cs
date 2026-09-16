@@ -22,7 +22,6 @@ internal sealed partial class SkywatcherApp : IPhoneApp
 {
     private const int WindowCount = 8;
     private const int HourlyStripCount = 5;
-    private const float RefreshIntervalSeconds = 5f;
     private const float NavHeight = 60f;
     public string Id => "skywatcher";
     public string DisplayName => Loc.T(L.Apps.Skywatcher);
@@ -30,22 +29,32 @@ internal sealed partial class SkywatcherApp : IPhoneApp
     public int BadgeCount => 0;
     private readonly WeatherService weather;
     private readonly WeatherControl control;
+    private readonly Configuration configuration;
     private readonly List<WeatherWindow> forecast = new();
     private string zone = string.Empty;
-    private float sinceRefresh;
+    private long lastWindowStartUnix = -1;
     private SkywatcherTab activeTab;
     private bool scrubbing;
+    private bool showingBrowse = true;
+    private uint viewedTerritoryId;
+    private bool pendingScrollReset;
+    private string search = string.Empty;
 
-    public SkywatcherApp(WeatherService weather, WeatherControl control)
+    public SkywatcherApp(WeatherService weather, WeatherControl control, Configuration configuration)
     {
         this.weather = weather;
         this.control = control;
+        this.configuration = configuration;
     }
 
     public void OnOpened()
     {
         activeTab = SkywatcherTab.Forecast;
         scrubbing = false;
+        showingBrowse = true;
+        viewedTerritoryId = weather.CurrentTerritoryId;
+        search = string.Empty;
+        SyncFavorites();
         Refresh();
     }
 
@@ -53,19 +62,47 @@ internal sealed partial class SkywatcherApp : IPhoneApp
     {
     }
 
-    private void Refresh()
+    private void Refresh() => Refresh(WeatherService.CurrentWindowStartUnix());
+
+    private void Refresh(long windowStart)
     {
-        zone = weather.CurrentZone();
-        weather.Forecast(forecast, WindowCount);
-        sinceRefresh = 0f;
+        if (showingBrowse)
+        {
+            viewedTerritoryId = weather.CurrentTerritoryId;
+            RefreshRowWeather();
+            RefreshFavoriteForecasts();
+        }
+
+        zone = weather.ZoneName(viewedTerritoryId);
+        weather.Forecast(viewedTerritoryId, forecast, WindowCount);
+        lastWindowStartUnix = windowStart;
+    }
+
+    private void OpenDetail(uint territoryId)
+    {
+        showingBrowse = false;
+        viewedTerritoryId = territoryId;
+        zone = weather.ZoneName(territoryId);
+        weather.Forecast(territoryId, forecast, WindowCount);
+        pendingScrollReset = true;
+    }
+
+    private void CloseDetail()
+    {
+        showingBrowse = true;
+        Refresh();
+        pendingScrollReset = true;
     }
 
     public void Draw(in PhoneContext context)
     {
-        sinceRefresh += ImGui.GetIO().DeltaTime;
-        if (sinceRefresh >= RefreshIntervalSeconds)
+        var windowStart = WeatherService.CurrentWindowStartUnix();
+        var zoneChanged = showingBrowse && weather.CurrentTerritoryId != viewedTerritoryId;
+        var liveDiverged = viewedTerritoryId == weather.CurrentTerritoryId && forecast.Count > 0 &&
+            weather.LiveRenderedWeather() is { } live && live.Id != forecast[0].Weather.Id;
+        if (zoneChanged || liveDiverged || windowStart != lastWindowStartUnix)
         {
-            Refresh();
+            Refresh(windowStart);
         }
 
         var scale = UiScale.Current;
@@ -81,7 +118,15 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         WeatherSky.Paint(screen, theme.ScreenRounding * scale, palette, kind, isDay);
         WeatherAmbience.Draw(ImGui.GetWindowDrawList(), screen, theme.ScreenRounding * scale, kind, isDay, palette,
             scale, 1f, false);
-        SceneChrome.BackChevron(content, context.Navigation, palette.Ink, scale);
+        if (activeTab == SkywatcherTab.Forecast && !showingBrowse)
+        {
+            DrawDetailBackChevron(content, palette.Ink, scale);
+        }
+        else
+        {
+            SceneChrome.BackChevron(content, context.Navigation, palette.Ink, scale);
+        }
+
         var navRect = new Rect(new Vector2(content.Min.X, content.Max.Y - NavHeight * scale), content.Max);
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + 40f * scale),
             new Vector2(content.Max.X, navRect.Min.Y));
@@ -95,6 +140,12 @@ internal sealed partial class SkywatcherApp : IPhoneApp
             {
                 AppSurface.ResetScrollOnNewVisit();
                 var surface = DragScrollHost.Begin(skyKey);
+                if (pendingScrollReset)
+                {
+                    surface.JumpToTop();
+                    pendingScrollReset = false;
+                }
+
                 DrawTab(screen, palette, kind, isDay, hasData, scale);
                 if (scrubbing)
                 {
@@ -106,11 +157,31 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         DrawBottomNav(navRect, palette, scale);
     }
 
+    private void DrawDetailBackChevron(Rect content, Vector4 ink, float scale)
+    {
+        var rowCenterY = content.Min.Y + 20f * scale;
+        var hitMin = new Vector2(content.Min.X, content.Min.Y);
+        var hitMax = new Vector2(content.Min.X + 46f * scale, content.Min.Y + 40f * scale);
+        UiAnchors.Report("chrome.back", new Rect(hitMin, hitMax));
+        var hovered = UiInteract.Hover(hitMin, hitMax);
+        var center = new Vector2(content.Min.X + 15f * scale, rowCenterY);
+        if (BackButton.Draw("chrome.back", center, 15f * scale, ink, hovered, scale, shadow: true))
+        {
+            CloseDetail();
+        }
+    }
+
     private void DrawTab(Rect screen, in SkyPalette palette, WeatherKind kind, bool isDay, bool hasData, float scale)
     {
         if (activeTab == SkywatcherTab.Control)
         {
             DrawControl(palette, scale);
+            return;
+        }
+
+        if (showingBrowse)
+        {
+            DrawBrowse(palette, scale);
             return;
         }
 

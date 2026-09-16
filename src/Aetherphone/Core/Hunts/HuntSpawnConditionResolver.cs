@@ -9,16 +9,10 @@ internal readonly record struct HuntConditionWindow(DateTimeOffset Start, DateTi
 
 internal static class HuntSpawnConditionResolver
 {
-    private const double EorzeaSecondsPerRealSecond = 144.0 / 7.0;
-    private const long EorzeaSecondsPerHour = 3600;
-    private const long EorzeaSecondsPerDay = 86400;
-
-    private const long MoonPhaseEorzeaSeconds = 4 * EorzeaSecondsPerDay;
+    private const long MoonPhaseEorzeaSeconds = 4 * EorzeaTime.SecondsPerDay;
     private const long MoonCycleEorzeaSeconds = 8 * MoonPhaseEorzeaSeconds;
     private const int FullMoonPhaseNumber = 5;
     private const int NewMoonPhaseNumber = 1;
-
-    private const long RealSecondsPerWeatherWindow = 1400;
 
     private const int MaxCycleAttempts = 500;
     private const int MaxWeatherStepAttempts = 1000;
@@ -153,7 +147,7 @@ internal static class HuntSpawnConditionResolver
 
         for (var attempt = 0; attempt < MaxCycleAttempts; attempt++)
         {
-            var cycleStart = FloorTo(cycleCursor, MoonCycleEorzeaSeconds) - EorzeaSecondsPerHour * 12;
+            var cycleStart = FloorTo(cycleCursor, MoonCycleEorzeaSeconds) - EorzeaTime.SecondsPerHour * 12;
             var phaseStart = cycleStart + MoonPhaseEorzeaSeconds * (phaseNumber - 1);
 
             long windowStart;
@@ -203,13 +197,13 @@ internal static class HuntSpawnConditionResolver
         }
 
         var nowEorzea = ToEorzeaSeconds(at);
-        var dayCursor = FloorTo(nowEorzea, EorzeaSecondsPerDay) - EorzeaSecondsPerDay;
+        var dayCursor = FloorTo(nowEorzea, EorzeaTime.SecondsPerDay) - EorzeaTime.SecondsPerDay;
 
         for (var attempt = 0; attempt < MaxCycleAttempts; attempt++)
         {
             for (var index = 0; index < hours.Length; index++)
             {
-                var windowStart = dayCursor + hours[index] * EorzeaSecondsPerHour;
+                var windowStart = dayCursor + hours[index] * EorzeaTime.SecondsPerHour;
                 var windowEnd = windowStart + durationEorzeaSeconds;
                 if (windowEnd > nowEorzea)
                 {
@@ -217,7 +211,7 @@ internal static class HuntSpawnConditionResolver
                 }
             }
 
-            dayCursor += EorzeaSecondsPerDay;
+            dayCursor += EorzeaTime.SecondsPerDay;
         }
 
         return null;
@@ -251,7 +245,7 @@ internal static class HuntSpawnConditionResolver
     private static long BackdateToStreakStart(long nowUnix, HuntWeatherProbability[] probabilities,
         string[] matching)
     {
-        var windowStart = nowUnix - Mod(nowUnix, RealSecondsPerWeatherWindow);
+        var windowStart = nowUnix - Mod(nowUnix, WeatherService.RealSecondsPerWindow);
         if (!IsMatching(windowStart, probabilities, matching))
         {
             return windowStart;
@@ -259,7 +253,7 @@ internal static class HuntSpawnConditionResolver
 
         for (var attempt = 0; attempt < MaxWeatherStreakEndAttempts; attempt++)
         {
-            var earlier = windowStart - RealSecondsPerWeatherWindow;
+            var earlier = windowStart - WeatherService.RealSecondsPerWindow;
             if (!IsMatching(earlier, probabilities, matching))
             {
                 return windowStart;
@@ -287,23 +281,23 @@ internal static class HuntSpawnConditionResolver
                 return null;
             }
 
-            cursor += RealSecondsPerWeatherWindow;
+            cursor += WeatherService.RealSecondsPerWindow;
         }
 
-        var remaining = offsetSeconds - RealSecondsPerWeatherWindow;
+        var remaining = offsetSeconds - WeatherService.RealSecondsPerWindow;
         for (var attempt = 0; remaining > 0 && attempt < MaxWeatherStepAttempts; attempt++)
         {
-            cursor += RealSecondsPerWeatherWindow;
+            cursor += WeatherService.RealSecondsPerWindow;
             if (!IsMatching(cursor, probabilities, matching))
             {
                 return null;
             }
 
-            remaining -= RealSecondsPerWeatherWindow;
+            remaining -= WeatherService.RealSecondsPerWindow;
         }
 
-        var endUnix = cursor + RealSecondsPerWeatherWindow;
-        var startUnix = cursor + remaining + RealSecondsPerWeatherWindow;
+        var endUnix = cursor + WeatherService.RealSecondsPerWindow;
+        var startUnix = cursor + remaining + WeatherService.RealSecondsPerWindow;
         for (var attempt = 0; attempt < MaxWeatherStreakEndAttempts; attempt++)
         {
             if (!IsMatching(endUnix, probabilities, matching))
@@ -311,7 +305,7 @@ internal static class HuntSpawnConditionResolver
                 break;
             }
 
-            endUnix += RealSecondsPerWeatherWindow;
+            endUnix += WeatherService.RealSecondsPerWindow;
         }
 
         cursor = endUnix;
@@ -325,24 +319,15 @@ internal static class HuntSpawnConditionResolver
     private static string ResolveWeatherId(long unixSeconds, HuntWeatherProbability[] probabilities)
     {
         var target = WeatherService.ForecastTarget(unixSeconds);
-        var cumulative = 0;
-        for (var index = 0; index < probabilities.Length; index++)
-        {
-            cumulative += probabilities[index].Chance;
-            if (target < cumulative)
-            {
-                return probabilities[index].Condition;
-            }
-        }
-
-        return probabilities.Length > 0 ? probabilities[^1].Condition : string.Empty;
+        var index = WeatherService.ResolveChanceIndex(probabilities, target);
+        return index >= 0 ? probabilities[index].Condition : string.Empty;
     }
 
     private static long ToEorzeaSeconds(DateTimeOffset at) =>
-        (long)Math.Round(at.ToUnixTimeSeconds() * EorzeaSecondsPerRealSecond);
+        (long)Math.Round(at.ToUnixTimeSeconds() * EorzeaTime.EorzeaSecondsPerRealSecond);
 
     private static DateTimeOffset FromEorzeaSeconds(long eorzeaSeconds) =>
-        DateTimeOffset.FromUnixTimeSeconds((long)Math.Round(eorzeaSeconds / EorzeaSecondsPerRealSecond));
+        DateTimeOffset.FromUnixTimeSeconds((long)Math.Round(eorzeaSeconds / EorzeaTime.EorzeaSecondsPerRealSecond));
 
     private static long FloorTo(long value, long step) => value - (((value % step) + step) % step);
 

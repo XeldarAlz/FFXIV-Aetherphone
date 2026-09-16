@@ -5386,6 +5386,10 @@ internal static class L
 
         public static readonly LocString NothingToChange = new("skywatcher.nothingToChange",
             "No weather to change here");
+
+        public static readonly LocString FieldOpsRegion = new("skywatcher.fieldOpsRegion", "Field Ops");
+        public static readonly LocString MiscellaneousRegion = new("skywatcher.miscellaneousRegion", "Miscellaneous");
+        public static readonly LocString Favorites = new("skywatcher.favorites", "Favorites");
     }
 
     internal static class News

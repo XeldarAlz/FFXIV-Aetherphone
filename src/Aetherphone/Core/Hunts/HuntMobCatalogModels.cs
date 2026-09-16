@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Aetherphone.Core.Game;
 
 namespace Aetherphone.Core.Hunts;
 
@@ -87,7 +88,7 @@ internal sealed class HuntConditionPeriod
     public int To { get; set; }
 }
 
-internal sealed class HuntWeatherProbability
+internal sealed class HuntWeatherProbability : IWeatherChance
 {
     [JsonPropertyName("chance")]
     public int Chance { get; set; }

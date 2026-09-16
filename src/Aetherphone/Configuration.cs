@@ -267,6 +267,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int YellowPagesScope { get; set; }
     public bool YellowPagesAfterDark { get; set; }
     public List<uint> MapFavorites { get; set; } = new();
+    public List<uint> SkywatcherFavorites { get; set; } = new();
     public uint HousingWorldId { get; set; }
     public uint HousingDistrictId { get; set; } = 339u;
     public int HousingWard { get; set; } = HousingDefaults.DefaultWard;

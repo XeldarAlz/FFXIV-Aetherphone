@@ -5,12 +5,14 @@ namespace Aetherphone.Core.Game;
 internal readonly record struct EorzeaTime(int Hour, int Minute)
 {
     public const int MinutesPerDay = 1440;
-    private const long SecondsPerDay = 86400;
+    public const long SecondsPerHour = 3600;
+    public const long SecondsPerDay = 86400;
+    public const double EorzeaSecondsPerRealSecond = 144.0 / 7.0;
 
     public static EorzeaTime Now()
     {
         var seconds = CurrentSeconds();
-        return new EorzeaTime((int)(seconds / 3600 % 24), (int)(seconds / 60 % 60));
+        return new EorzeaTime((int)(seconds / SecondsPerHour % 24), (int)(seconds / 60 % 60));
     }
 
     public static unsafe long CurrentSeconds()
