@@ -499,6 +499,9 @@ internal static class L
         public static readonly LocString GamesSub = new("storeCopy.gamesSub", "Pocket distractions");
         public static readonly LocString GamesBody = new("storeCopy.gamesBody",
             "A small arcade for queue times, with high scores worth chasing.");
+        public static readonly LocString AetherStreamSub = new("storeCopy.aetherstreamSub", "Watch videos together");
+        public static readonly LocString AetherStreamBody = new("storeCopy.aetherstreamBody",
+            "Watch content and show a screen in the world, viewable by your friends and the people around you.");
         public static readonly LocString NewsSub = new("storeCopy.newsSub", "Patch notes and posts");
         public static readonly LocString NewsBody = new("storeCopy.newsBody",
             "The Lodestone straight to your phone: maintenance, patch notes and announcements.");
@@ -535,12 +538,18 @@ internal static class L
         public static readonly LocString CoinSub = new("storeCopy.coinSub", "Earn by living here");
         public static readonly LocString CoinBody = new("storeCopy.coinBody",
             "Check in, play, and talk to earn Aether Coin, then spend it on frames and badges. Never pay to win.");
+        public static readonly LocString CasinoSub = new("storeCopy.casinoSub", "Gambling from your pocket");
+        public static readonly LocString CasinoBody = new("storeCopy.casinoBody",
+            "Gamble your Aether Coin with Blackjack, Slots, Scratch and more.");
         public static readonly LocString MarketSub = new("storeCopy.marketSub", "Prices, live");
         public static readonly LocString MarketBody = new("storeCopy.marketBody",
             "Universalis prices for any item, with alerts when something drops.");
         public static readonly LocString DailiesSub = new("storeCopy.dailiesSub", "Never miss a reset");
         public static readonly LocString DailiesBody = new("storeCopy.dailiesBody",
             "Daily and weekly duties, what is done, and when the next reset lands.");
+        public static readonly LocString HuntsSub = new("storeCopy.huntsSub", "Track Hunt marks");
+        public static readonly LocString HuntsBody = new("storeCopy.huntsBody",
+            "Follow S rank spawns and get alerts for the marks you pick.");
         public static readonly LocString NotesSub = new("storeCopy.notesSub", "Quick thoughts");
         public static readonly LocString NotesBody = new("storeCopy.notesBody",
             "Jot down macros, rotations and reminders, and find them again later.");
