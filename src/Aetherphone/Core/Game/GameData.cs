@@ -74,7 +74,7 @@ internal sealed class GameData
 
     public string JobAbbreviation(uint rowId)
     {
-        if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))
+        if (rowId != 0 && data.GetLocalizedSheet<ClassJob>().TryGetRow(rowId, out var job))
         {
             return job.Abbreviation.ExtractText();
         }
@@ -84,7 +84,7 @@ internal sealed class GameData
 
     public string JobName(uint rowId)
     {
-        if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))
+        if (rowId != 0 && data.GetLocalizedSheet<ClassJob>().TryGetRow(rowId, out var job))
         {
             return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(job.Name.ExtractText());
         }
@@ -374,7 +374,7 @@ internal sealed class GameData
 
     public string RaceName(uint raceId, bool female)
     {
-        if (raceId != 0 && data.GetExcelSheet<Race>().TryGetRow(raceId, out var race))
+        if (raceId != 0 && data.GetLocalizedSheet<Race>().TryGetRow(raceId, out var race))
         {
             return (female ? race.Feminine : race.Masculine).ExtractText();
         }
@@ -384,7 +384,7 @@ internal sealed class GameData
 
     public string ClanName(uint tribeId, bool female)
     {
-        if (tribeId != 0 && data.GetExcelSheet<Tribe>().TryGetRow(tribeId, out var tribe))
+        if (tribeId != 0 && data.GetLocalizedSheet<Tribe>().TryGetRow(tribeId, out var tribe))
         {
             return (female ? tribe.Feminine : tribe.Masculine).ExtractText();
         }
@@ -394,7 +394,7 @@ internal sealed class GameData
 
     public string GuardianDeityName(uint rowId)
     {
-        if (rowId != 0 && data.GetExcelSheet<GuardianDeity>().TryGetRow(rowId, out var deity))
+        if (rowId != 0 && data.GetLocalizedSheet<GuardianDeity>().TryGetRow(rowId, out var deity))
         {
             return deity.Name.ExtractText();
         }
@@ -404,7 +404,7 @@ internal sealed class GameData
 
     public string CityStateName(uint townId)
     {
-        if (townId != 0 && data.GetExcelSheet<Town>().TryGetRow(townId, out var town))
+        if (townId != 0 && data.GetLocalizedSheet<Town>().TryGetRow(townId, out var town))
         {
             return town.Name.ExtractText();
         }
@@ -414,7 +414,7 @@ internal sealed class GameData
 
     public string GrandCompanyName(uint rowId)
     {
-        if (rowId != 0 && data.GetExcelSheet<GrandCompany>().TryGetRow(rowId, out var company))
+        if (rowId != 0 && data.GetLocalizedSheet<GrandCompany>().TryGetRow(rowId, out var company))
         {
             return company.Name.ExtractText();
         }
@@ -427,7 +427,7 @@ internal sealed class GameData
         name = string.Empty;
         iconId = 0;
         itemLevel = 0;
-        if (itemId == 0 || !data.GetExcelSheet<Item>().TryGetRow(itemId, out var item))
+        if (itemId == 0 || !data.GetLocalizedSheet<Item>().TryGetRow(itemId, out var item))
         {
             return false;
         }
@@ -574,7 +574,7 @@ internal sealed class GameData
 
     public NamedIcon ActionEntry(uint rowId)
     {
-        if (!data.GetExcelSheet<ActionSheet>().TryGetRow(rowId, out var row))
+        if (!data.GetLocalizedSheet<ActionSheet>().TryGetRow(rowId, out var row))
         {
             return default;
         }
@@ -584,7 +584,7 @@ internal sealed class GameData
 
     public NamedIcon EmoteEntry(uint rowId)
     {
-        if (!data.GetExcelSheet<EmoteSheet>().TryGetRow(rowId, out var row))
+        if (!data.GetLocalizedSheet<EmoteSheet>().TryGetRow(rowId, out var row))
         {
             return default;
         }
@@ -594,7 +594,7 @@ internal sealed class GameData
 
     public NamedIcon MountEntry(uint rowId)
     {
-        if (!data.GetExcelSheet<Mount>().TryGetRow(rowId, out var row))
+        if (!data.GetLocalizedSheet<Mount>().TryGetRow(rowId, out var row))
         {
             return default;
         }
@@ -604,7 +604,7 @@ internal sealed class GameData
 
     public NamedIcon MinionEntry(uint rowId)
     {
-        if (!data.GetExcelSheet<Companion>().TryGetRow(rowId, out var row))
+        if (!data.GetLocalizedSheet<Companion>().TryGetRow(rowId, out var row))
         {
             return default;
         }

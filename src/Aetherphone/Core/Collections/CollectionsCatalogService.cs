@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Net;
+using Dalamud.Game;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
 using EmoteSheet = Lumina.Excel.Sheets.Emote;
@@ -84,6 +86,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     private readonly ConcurrentDictionary<string, OwnedEntry> owned = new();
     private readonly ConcurrentDictionary<string, SummaryEntry> summaries = new();
     private readonly ConcurrentDictionary<CollectionCategory, LocalUnlocks> localUnlocks = new();
+    private SheetLanguageGate catalogsGate;
 
     public CollectionsCatalogService(HttpService http, DiskCache disk, IDataManager dataManager,
         IUnlockState unlockState, IFramework framework)
@@ -98,6 +101,13 @@ internal sealed class CollectionsCatalogService : IDisposable
 
     public CatalogEntry RequestCatalog(CollectionCategory category)
     {
+        var gate = GameSheetLanguage.CurrentGate();
+        if (catalogsGate != gate)
+        {
+            catalogs.Clear();
+            catalogsGate = gate;
+        }
+
         var entry = catalogs.GetOrAdd(category, static _ => new CatalogEntry());
 
         if (entry.State == CollectionState.Idle)
@@ -190,13 +200,24 @@ internal sealed class CollectionsCatalogService : IDisposable
         summaries.Clear();
     }
 
+    private static string? CollectLanguageQuery() =>
+        GameSheetLanguage.Resolve() switch
+        {
+            ClientLanguage.German => "de",
+            ClientLanguage.English => "en",
+            ClientLanguage.French => "fr",
+            ClientLanguage.Japanese => "ja",
+            _ => null,
+        };
+
     private async Task LoadCatalogAsync(CollectionCategory category, CatalogEntry entry)
     {
         try
         {
             var token = cancellation.Token;
             var path = CollectionCategories.CatalogPath(category);
-            var cacheKey = string.Concat("collect:catalog:", path);
+            var language = CollectLanguageQuery();
+            var cacheKey = string.Concat("collect:catalog:", path, ":", language ?? "en");
             var cached = disk.Get(cacheKey, CatalogFreshFor);
             CollectionResponse? response;
 
@@ -206,7 +227,9 @@ internal sealed class CollectionsCatalogService : IDisposable
             }
             else
             {
-                var url = string.Concat(ApiRoot, "/", path);
+                var url = language is null
+                    ? string.Concat(ApiRoot, "/", path)
+                    : string.Concat(ApiRoot, "/", path, "?language=", language);
                 response = await FetchCatalogAsync(url, token).ConfigureAwait(false);
                 if (response?.Results is not null)
                 {
@@ -310,7 +333,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     {
         var ids = new HashSet<int>();
         var total = 0;
-        foreach (var row in dataManager.GetExcelSheet<Mount>())
+        foreach (var row in dataManager.GetLocalizedSheet<Mount>())
         {
             if (row.Singular == "" || row.Order == -1)
             {
@@ -331,7 +354,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     {
         var ids = new HashSet<int>();
         var total = 0;
-        foreach (var row in dataManager.GetExcelSheet<Companion>())
+        foreach (var row in dataManager.GetLocalizedSheet<Companion>())
         {
             if (row.Singular == "")
             {
@@ -352,7 +375,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     {
         var ids = new HashSet<int>();
         var total = 0;
-        foreach (var row in dataManager.GetExcelSheet<EmoteSheet>())
+        foreach (var row in dataManager.GetLocalizedSheet<EmoteSheet>())
         {
             if (row.Name == "" || row.Icon == 0 || row.UnlockLink == 0)
             {
@@ -373,7 +396,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     {
         var ids = new HashSet<int>();
         var total = 0;
-        foreach (var row in dataManager.GetExcelSheet<Orchestrion>())
+        foreach (var row in dataManager.GetLocalizedSheet<Orchestrion>())
         {
             if (row.Name == "" || row.Name == "0")
             {
@@ -394,7 +417,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     {
         var ids = new HashSet<int>();
         var seen = new HashSet<int>();
-        foreach (var row in dataManager.GetExcelSheet<CharaMakeCustomize>())
+        foreach (var row in dataManager.GetLocalizedSheet<CharaMakeCustomize>())
         {
             if (!row.IsPurchasable || row.Icon == HiddenHairstyleIcon)
             {
@@ -420,7 +443,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     {
         var ids = new HashSet<int>();
         var total = 0;
-        foreach (var row in dataManager.GetExcelSheet<Glasses>())
+        foreach (var row in dataManager.GetLocalizedSheet<Glasses>())
         {
             if (row.Icon == 0 || !row.Style.IsValid || row.Name != row.Style.Value.Name)
             {
@@ -441,7 +464,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     {
         var ids = new HashSet<int>();
         var total = 0;
-        foreach (var row in dataManager.GetExcelSheet<TripleTriadCard>())
+        foreach (var row in dataManager.GetLocalizedSheet<TripleTriadCard>())
         {
             if (row.Name == "" || row.Name == "0")
             {

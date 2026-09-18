@@ -884,6 +884,8 @@
   "settings.commandMarket": "Abrir el tablón de mercado, opcionalmente buscando un objeto",
   "settings.commandReset": "Mover el teléfono de vuelta al centro de la pantalla",
   "settings.commandTest": "Enviar una notificación de prueba",
+  "settings.preferPhoneLocaleForGameData": "Ajustar nombres del juego al idioma del teléfono",
+  "settings.preferPhoneLocaleForGameDataHint": "Los nombres de zonas, objetos y otros elementos del juego intentan usar primero el idioma de esta app, luego el de tu cliente del juego, antes de recurrir al inglés.",
   "settings.translateInto": "Traducir a",
   "settings.translateSameAsPhone": "Igual que el idioma del teléfono",
   "settings.translateIntoHint": "Las publicaciones, comentarios y mensajes escritos en otros idiomas reciben un enlace Traducir que los muestra en este idioma con un toque.",

@@ -884,6 +884,8 @@
   "settings.commandMarket": "Öffnet das Marktbrett, optional mit Gegenstandssuche",
   "settings.commandReset": "Holt das Telefon zurück in die Bildschirmmitte",
   "settings.commandTest": "Sendet eine Beispielbenachrichtigung",
+  "settings.preferPhoneLocaleForGameData": "Spielnamen an Telefonsprache angleichen",
+  "settings.preferPhoneLocaleForGameDataHint": "Zonen-, Gegenstands- und andere Spielnamen versuchen zuerst die Sprache dieser App, dann die Sprache deines Spielclients, bevor sie auf Englisch zurückfallen.",
   "settings.translateInto": "Übersetzen in",
   "settings.translateSameAsPhone": "Wie die Telefonsprache",
   "settings.translateIntoHint": "Beiträge, Kommentare und Nachrichten in anderen Sprachen bekommen einen Übersetzen-Link, der sie mit einem Tipp in dieser Sprache anzeigt.",

@@ -45,7 +45,8 @@ internal sealed partial class HuntsApp
     private string detailMobId = string.Empty;
     private string detailMapZoneId = string.Empty;
     private readonly List<HuntPoiEntry> detailMapAetherytePoints = new();
-    private readonly Dictionary<(uint TerritoryId, string ZoneId, string Language), string> zoneLabelCache = new();
+    private readonly Dictionary<(uint TerritoryId, string ZoneId), string> zoneLabelCache = new();
+    private SheetLanguageGate zoneLabelCacheGate;
     private readonly PhotoZoomView detailMapZoom = new();
     private bool detailMapHovered;
     private bool detailMapPendingFocus;
@@ -418,7 +419,14 @@ internal sealed partial class HuntsApp
 
     private string ResolveZoneLabel(string zoneId, uint territoryId)
     {
-        var key = (territoryId, zoneId, HuntUiLanguage.Key());
+        var gate = GameSheetLanguage.CurrentGate();
+        if (zoneLabelCacheGate != gate)
+        {
+            zoneLabelCache.Clear();
+            zoneLabelCacheGate = gate;
+        }
+
+        var key = (territoryId, zoneId);
         if (zoneLabelCache.TryGetValue(key, out var cached))
         {
             return cached;
@@ -429,11 +437,19 @@ internal sealed partial class HuntsApp
         return label;
     }
 
-    private static string? ResolveLiveZoneName(uint territoryId) =>
-        territoryId != 0 && Plugin.DataManager.GetExcelSheet<TerritoryType>(HuntUiLanguage.SheetLanguage())
-            .TryGetRow(territoryId, out var territory) && territory.PlaceName.RowId != 0
-            ? territory.PlaceName.Value.Name.ExtractText()
+    private static string? ResolveLiveZoneName(uint territoryId)
+    {
+        if (territoryId == 0 ||
+            !Plugin.DataManager.GetLocalizedSheet<TerritoryType>().TryGetRow(territoryId, out var territory) ||
+            territory.PlaceName.RowId == 0)
+        {
+            return null;
+        }
+
+        return Plugin.DataManager.GetLocalizedSheet<PlaceName>().TryGetRow(territory.PlaceName.RowId, out var placeName)
+            ? placeName.Name.ExtractText()
             : null;
+    }
 
     private void DrawDetailZoneMapContent(Rect stage, IDalamudTextureWrap texture, float scale,
         IReadOnlyList<HuntPoiState> states, HuntsView view, uint territoryId)

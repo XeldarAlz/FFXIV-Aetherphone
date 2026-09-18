@@ -884,6 +884,8 @@
   "settings.commandMarket": "Открыть рынок, при желании с поиском предмета",
   "settings.commandReset": "Вернуть телефон в центр экрана",
   "settings.commandTest": "Отправить тестовое уведомление",
+  "settings.preferPhoneLocaleForGameData": "Подстраивать игровые названия под язык телефона",
+  "settings.preferPhoneLocaleForGameDataHint": "Названия зон, предметов и другие игровые названия сначала пробуют язык этого приложения, затем язык вашего игрового клиента, и только потом английский.",
   "settings.translateInto": "Переводить на",
   "settings.translateSameAsPhone": "Как язык телефона",
   "settings.translateIntoHint": "Посты, комментарии и сообщения на других языках получают ссылку «Перевести», которая одним касанием показывает их на этом языке.",

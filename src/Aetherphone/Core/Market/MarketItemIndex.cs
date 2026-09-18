@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
 
@@ -33,6 +34,7 @@ internal sealed class MarketItemIndex
     private Dictionary<uint, int> indexById = new();
     private volatile bool building;
     private volatile bool ready;
+    private SheetLanguageGate builtGate;
 
     public MarketItemIndex(IDataManager data)
     {
@@ -43,14 +45,15 @@ internal sealed class MarketItemIndex
 
     public void EnsureBuilt()
     {
-        if (ready || building)
+        var gate = GameSheetLanguage.CurrentGate();
+        if (building || (ready && builtGate == gate))
         {
             return;
         }
 
         lock (sync)
         {
-            if (ready || building)
+            if (building || (ready && builtGate == gate))
             {
                 return;
             }
@@ -113,7 +116,7 @@ internal sealed class MarketItemIndex
         try
         {
             var vendorItems = BuildVendorSet();
-            var sheet = data.GetExcelSheet<Item>();
+            var sheet = data.GetLocalizedSheet<Item>();
             var bufferIds = new List<uint>(8192);
             var bufferNames = new List<string>(8192);
             var bufferIcons = new List<uint>(8192);
@@ -156,11 +159,15 @@ internal sealed class MarketItemIndex
             vendorPrices = localVendor;
             lowerNames = localLower;
             indexById = localIndex;
+            builtGate = GameSheetLanguage.CurrentGate();
             ready = true;
         }
         catch (Exception exception)
         {
             AepLog.Warning(exception, "Market item index build failed");
+        }
+        finally
+        {
             building = false;
         }
     }

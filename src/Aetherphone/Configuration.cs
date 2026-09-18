@@ -142,6 +142,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool PhotosMonthlyAlbums { get; set; }
     public bool PhotosMonthlyAlbumsAsked { get; set; }
     public string Language { get; set; } = string.Empty;
+    public bool PreferPhoneLocaleForGameData { get; set; }
     public string TranslationTargetLanguage { get; set; } = string.Empty;
     public bool TranslationDisclosureSeen { get; set; }
     public bool AutoTranslatePosts { get; set; }

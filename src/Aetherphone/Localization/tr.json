@@ -884,6 +884,8 @@
   "settings.commandMarket": "Pazar tahtasını açar, isteğe bağlı eşya araması yapar",
   "settings.commandReset": "Telefonu ekranın ortasına geri getirir",
   "settings.commandTest": "Örnek bir bildirim gönderir",
+  "settings.preferPhoneLocaleForGameData": "Oyun içi adları telefon diliyle eşleştir",
+  "settings.preferPhoneLocaleForGameDataHint": "Bölge, eşya ve diğer oyun içi adlar önce bu uygulamanın dilini, ardından oyun istemcinizin dilini dener; bunlar olmazsa İngilizceye döner.",
   "settings.translateInto": "Şu dile çevir",
   "settings.translateSameAsPhone": "Telefon diliyle aynı",
   "settings.translateIntoHint": "Başka dillerde yazılmış gönderiler, yorumlar ve mesajlar tek dokunuşla bu dilde gösteren bir Çevir bağlantısı alır.",

@@ -884,6 +884,8 @@
   "settings.commandMarket": "打开市场布告板，支持搜索物品",
   "settings.commandReset": "将手机移回屏幕中央",
   "settings.commandTest": "发送测试通知",
+  "settings.preferPhoneLocaleForGameData": "让游戏内名称匹配手机语言",
+  "settings.preferPhoneLocaleForGameDataHint": "区域、物品等游戏内名称会先尝试使用本应用的语言，然后是你的游戏客户端语言，最后才会回退到英语。",
   "settings.translateInto": "翻译成",
   "settings.translateSameAsPhone": "与手机语言相同",
   "settings.translateIntoHint": "用其他语言撰写的帖子、评论和消息会显示一个翻译链接，点一下即可以此语言显示。",

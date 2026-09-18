@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Maps;
 using Dalamud.Game;
 using Lumina.Excel.Exceptions;
@@ -101,10 +102,11 @@ internal sealed class HuntZoneCatalog
     private static Dictionary<string, uint> BuildTerritoryIdLookup()
     {
         var lookup = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
+        var englishLanguage = GameSheetLanguage.Resolve(SheetLanguageOverride.English) ?? ClientLanguage.English;
         Lumina.Excel.ExcelSheet<TerritoryType> sheet;
         try
         {
-            sheet = Plugin.DataManager.GetExcelSheet<TerritoryType>(ClientLanguage.English);
+            sheet = Plugin.DataManager.GetExcelSheet<TerritoryType>(englishLanguage);
         }
         catch (UnsupportedLanguageException exception)
         {
