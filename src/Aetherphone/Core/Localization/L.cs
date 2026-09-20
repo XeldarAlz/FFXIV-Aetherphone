@@ -6003,6 +6003,10 @@ internal static class L
         public static readonly LocString OnlinePickTarget = new("games.onlinePickTarget", "Tap a player to swap hands");
         public static readonly LocPlural OnlineBackToLobby = new("games.onlineBackToLobby", "Returning to the lobby in {0} second", "Returning to the lobby in {0} seconds");
         public static readonly LocString OnlineTapToSkip = new("games.onlineTapToSkip", "Tap to skip");
+        public static readonly LocString OnlineConnectFour = new("games.onlineConnectFour", "Connect Four");
+        public static readonly LocString OnlineConnectFourHostHint = new("games.onlineConnectFourHostHint", "Head-to-head, 30 seconds a turn");
+        public static readonly LocString OnlineConnectFourWin = new("games.onlineConnectFourWin", "{0} connects four and wins!");
+        public static readonly LocString OnlineConnectFourDraw = new("games.onlineConnectFourDraw", "Draw, the board is full");
     }
 
     internal static class Minimized

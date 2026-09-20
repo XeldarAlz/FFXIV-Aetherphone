@@ -16,6 +16,11 @@ internal static class GamesOnlineText
             return L.Games.OnlinePool;
         }
 
+        if (string.Equals(gameKind, Core.Games.GameRoomWire.ConnectFourKind, StringComparison.Ordinal))
+        {
+            return L.Games.OnlineConnectFour;
+        }
+
         return L.Games.OnlineUno;
     }
 

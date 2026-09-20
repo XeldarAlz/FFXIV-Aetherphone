@@ -65,8 +65,8 @@ public sealed class GamesLibraryTests
 
         Assert.Equal(new[]
         {
-            "online.uno", "online.chess", "online.pool", "doom", "wordrun", "chess", "tetris", "minesweeper",
-            "snake", "breakout",
+            "online.connectfour", "online.uno", "online.chess", "online.pool", "doom", "wordrun", "chess", "tetris",
+            "minesweeper", "snake", "breakout",
         }, ids);
     }
 
@@ -77,7 +77,7 @@ public sealed class GamesLibraryTests
 
         var latest = library.Latest.ToArray();
 
-        Assert.Equal(5, latest.Length);
+        Assert.Single(latest);
         for (var index = 0; index < latest.Length; index++)
         {
             Assert.NotEqual("chess", library.Entries[latest[index]].Id);
@@ -115,7 +115,7 @@ public sealed class GamesLibraryTests
         Assert.Equal(2, arcade.Length);
         Assert.Equal(GameGenre.Arcade, library.Entries[arcade[0]].Genre);
         Assert.Equal(GameGenre.Arcade, library.Entries[arcade[1]].Genre);
-        Assert.Equal(3, friends.Length);
+        Assert.Equal(4, friends.Length);
         Assert.True(library.Entries[friends[0]].Online);
     }
 
