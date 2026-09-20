@@ -66,7 +66,8 @@ internal sealed record GameRoomActionRequest(
     float Angle = 0f,
     float Power = 0f,
     float PlaceX = 0f,
-    float PlaceY = 0f);
+    float PlaceY = 0f,
+    int Column = -1);
 
 internal sealed record GameRoomActionResultDto(bool Granted = false, string Reason = "", int ActionCount = 0);
 
@@ -131,6 +132,28 @@ internal sealed record ChessRoomStateDto(
     int LastTo = -1,
     bool InCheck = false,
     int MoveCount = 0,
+    int ActionCount = 0,
+    string LastKind = "",
+    string EndKind = "",
+    int WinnerSeat = -1);
+
+internal sealed record ConnectFourPlayerDto(
+    string UserId = "",
+    string DisplayName = "",
+    int Seat = 0,
+    bool Away = false,
+    int Wins = 0);
+
+internal sealed record ConnectFourRoomStateDto(
+    long RoundIndex = 0,
+    string HostUserId = "",
+    ConnectFourPlayerDto[]? Players = null,
+    int[]? Cells = null,
+    int TurnSeat = -1,
+    int TurnSeconds = 0,
+    int LastColumn = -1,
+    int LastRow = -1,
+    int LastSeat = -1,
     int ActionCount = 0,
     string LastKind = "",
     string EndKind = "",

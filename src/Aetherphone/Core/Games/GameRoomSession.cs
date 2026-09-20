@@ -29,6 +29,7 @@ internal sealed record GameRoomState(
     UnoRoomStateDto? Uno,
     ChessRoomStateDto? Chess,
     PoolRoomStateDto? Pool,
+    ConnectFourRoomStateDto? ConnectFour,
     GameRoomRoster? Roster);
 
 internal sealed record GameRoomPrivate(
@@ -333,22 +334,48 @@ internal sealed class GameRoomSession
         if (string.Equals(snapshot.GameKind, GameRoomWire.UnoKind, StringComparison.Ordinal))
         {
             var uno = Parse(snapshot.GameState, AethernetJsonContext.Default.UnoRoomStateDto);
-            return new GameRoomState(roomId, epoch, seq, snapshot, uno, null, null, RosterOf(uno));
+            return new GameRoomState(roomId, epoch, seq, snapshot, uno, null, null, null, RosterOf(uno));
         }
 
         if (string.Equals(snapshot.GameKind, GameRoomWire.ChessKind, StringComparison.Ordinal))
         {
             var chess = Parse(snapshot.GameState, AethernetJsonContext.Default.ChessRoomStateDto);
-            return new GameRoomState(roomId, epoch, seq, snapshot, null, chess, null, RosterOf(chess));
+            return new GameRoomState(roomId, epoch, seq, snapshot, null, chess, null, null, RosterOf(chess));
         }
 
         if (string.Equals(snapshot.GameKind, GameRoomWire.PoolKind, StringComparison.Ordinal))
         {
             var pool = Parse(snapshot.GameState, AethernetJsonContext.Default.PoolRoomStateDto);
-            return new GameRoomState(roomId, epoch, seq, snapshot, null, null, pool, RosterOf(pool));
+            return new GameRoomState(roomId, epoch, seq, snapshot, null, null, pool, null, RosterOf(pool));
         }
 
-        return new GameRoomState(roomId, epoch, seq, snapshot, null, null, null, null);
+        if (string.Equals(snapshot.GameKind, GameRoomWire.ConnectFourKind, StringComparison.Ordinal))
+        {
+            var connectFour = Parse(snapshot.GameState, AethernetJsonContext.Default.ConnectFourRoomStateDto);
+            return new GameRoomState(roomId, epoch, seq, snapshot, null, null, null, connectFour,
+                RosterOf(connectFour));
+        }
+
+        return new GameRoomState(roomId, epoch, seq, snapshot, null, null, null, null, null);
+    }
+
+    private static GameRoomRoster? RosterOf(ConnectFourRoomStateDto? connectFour)
+    {
+        if (connectFour is null)
+        {
+            return null;
+        }
+
+        var players = connectFour.Players ?? Array.Empty<ConnectFourPlayerDto>();
+        var members = new GameRoomMemberView[players.Length];
+        for (var index = 0; index < players.Length; index++)
+        {
+            var player = players[index];
+            members[index] = new GameRoomMemberView(player.UserId, player.DisplayName, player.Seat,
+                player.Away, player.Wins);
+        }
+
+        return new GameRoomRoster(connectFour.HostUserId, members, connectFour.ActionCount, connectFour.WinnerSeat);
     }
 
     private static GameRoomRoster? RosterOf(PoolRoomStateDto? pool)

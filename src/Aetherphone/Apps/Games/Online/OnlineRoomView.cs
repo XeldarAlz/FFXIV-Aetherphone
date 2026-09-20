@@ -30,6 +30,7 @@ internal sealed class OnlineRoomView
     private readonly OnlineUnoTable unoTable;
     private readonly OnlineChessTable chessTable;
     private readonly OnlinePoolTable poolTable;
+    private readonly OnlineConnectFourTable connectFourTable;
     private readonly OnlineFinishHold finishHold = new();
 
     private string inlineReason = string.Empty;
@@ -44,6 +45,7 @@ internal sealed class OnlineRoomView
         unoTable = new OnlineUnoTable(store);
         chessTable = new OnlineChessTable(store);
         poolTable = new OnlinePoolTable(store);
+        connectFourTable = new OnlineConnectFourTable(store);
     }
 
     public void Enter()
@@ -55,6 +57,7 @@ internal sealed class OnlineRoomView
         unoTable.Reset();
         chessTable.Reset();
         poolTable.Reset();
+        connectFourTable.Reset();
         finishHold.Clear();
         lastSeenPhase = -1;
     }
@@ -115,6 +118,13 @@ internal sealed class OnlineRoomView
                     fullScreenTable ? back : null, finishHold);
                 return;
             }
+
+            if (held.ConnectFour is not null)
+            {
+                connectFourTable.Draw(body, theme, scale, held.Snapshot, held.ConnectFour, FreshNotice(),
+                    finishHold);
+                return;
+            }
         }
 
         DrawLobby(body, theme, scale, held);
@@ -143,7 +153,8 @@ internal sealed class OnlineRoomView
 
     private bool ShowsTable(GameRoomState? held)
     {
-        if (held is null || held.Roster is null || (held.Uno is null && held.Chess is null && held.Pool is null))
+        if (held is null || held.Roster is null
+            || (held.Uno is null && held.Chess is null && held.Pool is null && held.ConnectFour is null))
         {
             return false;
         }
@@ -442,6 +453,21 @@ internal sealed class OnlineRoomView
                 GameRoomWire.PoolEndTimeout => Loc.T(L.Games.OnlineTimeoutWin, winnerName),
                 GameRoomWire.PoolEndResign => Loc.T(L.Games.OnlineResignWin, winnerName),
                 GameRoomWire.PoolEndDesertion => Loc.T(L.Games.OnlineDesertWin, winnerName),
+                _ => winnerName.Length > 0
+                    ? Loc.T(L.Games.OnlineWinner, winnerName)
+                    : Loc.T(L.Games.OnlineRoundVoid),
+            };
+        }
+
+        if (held.ConnectFour is not null)
+        {
+            return held.ConnectFour.EndKind switch
+            {
+                GameRoomWire.ConnectFourEndConnect => Loc.T(L.Games.OnlineConnectFourWin, winnerName),
+                GameRoomWire.ConnectFourEndDraw => Loc.T(L.Games.OnlineConnectFourDraw),
+                GameRoomWire.ConnectFourEndTimeout => Loc.T(L.Games.OnlineTimeoutWin, winnerName),
+                GameRoomWire.ConnectFourEndResign => Loc.T(L.Games.OnlineResignWin, winnerName),
+                GameRoomWire.ConnectFourEndDesertion => Loc.T(L.Games.OnlineDesertWin, winnerName),
                 _ => winnerName.Length > 0
                     ? Loc.T(L.Games.OnlineWinner, winnerName)
                     : Loc.T(L.Games.OnlineRoundVoid),

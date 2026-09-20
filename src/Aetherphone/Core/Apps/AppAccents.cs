@@ -68,6 +68,7 @@ internal static class AppAccents
         ["chess"] = AccentRing.Gold,
         ["uno"] = AccentRing.Rose,
         ["pool"] = AccentRing.Green,
+        ["connectfour"] = AccentRing.Cyan,
         ["stack"] = AccentRing.Indigo,
         ["crystaldrop"] = AccentRing.Violet,
         ["beat"] = AccentRing.Rose,
