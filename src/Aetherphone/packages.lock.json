@@ -34,11 +34,11 @@
       },
       "NAudio.Wasapi": {
         "type": "Direct",
-        "requested": "[2.3.0, )",
-        "resolved": "2.3.0",
-        "contentHash": "y5K2BxrLnvohgu5znzg5wRsai3YcuNXfrpo68i7PmCQqpK5MC/R24e5aO3OyN/XhfRr12e0QYV0OnUWEHi5SzA==",
+        "requested": "[3.1.0, )",
+        "resolved": "3.1.0",
+        "contentHash": "iTG+oBJaiID344yz84PrTiVF98av5SsuOUu7ICskcUd6f5ShHDMskG9sE4XUM05Vdlwy88bMQDDC3e+85Mv8yw==",
         "dependencies": {
-          "NAudio.Core": "2.3.0"
+          "NAudio.Core": "3.1.0"
         }
       },
       "NAudio.WinMM": {
@@ -168,8 +168,11 @@
       },
       "NAudio.Core": {
         "type": "Transitive",
-        "resolved": "2.3.0",
-        "contentHash": "jMd7r6dB6tAtXhOYL58ntPqwERNm1/Rhw5MKOIYvsnXzuX+PTGsa2VMam6n0npZYSwlSidKa4GAm4bFcXFUlcg=="
+        "resolved": "3.1.0",
+        "contentHash": "8Hrd3Uqb2wEB64eZYF+0vl9xBadeSn6JnFDsHuGrw87ucJ+pB7u5NzVpHl8OlCNvIvH+sD9b2h4JOqXBuZGYwg==",
+        "dependencies": {
+          "System.Numerics.Tensors": "9.0.0"
+        }
       },
       "NETStandard.Library": {
         "type": "Transitive",
@@ -213,6 +216,11 @@
         "dependencies": {
           "SharpGen.Runtime": "2.4.2-beta"
         }
+      },
+      "System.Numerics.Tensors": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "hyJB4UlpAi19Xr9AXzu2NuagKC4lPfHObNMEAA0HmqFz2rX7wKgzeYzO/jM/eBHDhnUGFFEjk5cOoJaxqg5J4A=="
       },
       "Vortice.DirectX": {
         "type": "Transitive",
