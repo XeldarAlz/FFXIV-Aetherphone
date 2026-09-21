@@ -90,8 +90,9 @@ internal static class SearchField
             return;
         }
 
-        var hovered = UiInteract.Hover(clearCenter - new Vector2(clearRadius, clearRadius),
-            clearCenter + new Vector2(clearRadius, clearRadius));
+        var clearMin = clearCenter - new Vector2(clearRadius, clearRadius);
+        var clearMax = clearCenter + new Vector2(clearRadius, clearRadius);
+        var hovered = !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(clearMin, clearMax);
         drawList.AddCircleFilled(clearCenter, clearRadius,
             ImGui.GetColorU32(hovered ? mutedInk : clearFill), 16);
         var arm = 3.2f * scale;
@@ -103,9 +104,9 @@ internal static class SearchField
         {
             return;
         }
-
+        
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(clearMin, clearMax, hovered) || ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             text = string.Empty;
         }
