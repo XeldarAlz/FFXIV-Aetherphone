@@ -1814,6 +1814,12 @@ internal static class L
                 "Fixed tapping a notification that a station went live stacking another copy of the station page on top of the one already open"),
         };
 
+        public static readonly LocString[] Release1034ChirperAethergramVelvet =
+        {
+            new("changelog.r1034.9",
+                "Fixed a display name changed in Settings not reaching your Chirper, Aethergram and Velvet profiles"),
+        };
+
         public static readonly LocString[] Release1033Social =
         {
             new("changelog.r1033.0",
