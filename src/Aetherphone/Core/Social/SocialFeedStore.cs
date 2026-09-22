@@ -38,6 +38,7 @@ internal abstract class SocialFeedStore : IDisposable
     private readonly FeedImpressions impressions = new();
     private readonly FeedSignalQueue feedSignals;
     private readonly RetryGate meGate = new(TimeSpan.FromSeconds(30));
+    private readonly AccountIdentityTracker accountIdentity = new();
     private volatile UserDto? me;
     private volatile AvatarUploadOutcome avatarFailure = AvatarUploadOutcome.Unreachable;
     protected readonly FeedLane<PostDto> forYouLane = FeedLane<PostDto>.ServerOrdered();
@@ -135,13 +136,20 @@ internal abstract class SocialFeedStore : IDisposable
 
     private void OnSessionChanged()
     {
-        var accountId = session.CurrentUser?.Id;
+        var user = session.CurrentUser;
+        var accountId = user?.Id;
         if (string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
         {
+            if (accountIdentity.Track(user) && me is not null && !loadingMe)
+            {
+                LoadMe();
+            }
+
             return;
         }
 
         lastAccountId = accountId;
+        accountIdentity.Track(user);
         me = null;
         meGate.Reset();
         forYouLane.Clear();
@@ -523,13 +531,18 @@ internal abstract class SocialFeedStore : IDisposable
             return;
         }
 
+        LoadMe();
+    }
+
+    private void LoadMe()
+    {
         loadingMe = true;
         work.Run("profile load", async token =>
         {
             var profile = await account.MeAsync(token).ConfigureAwait(false);
             if (profile is not null)
             {
-                me = profile;
+                AcceptMe(profile);
             }
         }, () => loadingMe = false);
     }

@@ -41,6 +41,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private readonly NotificationService notifications;
     private readonly AppGate gate;
     private readonly PollCadence inboxCadence;
+    private readonly AccountIdentityTracker accountIdentity = new();
     private readonly object messagesLock = new();
     private readonly ConcurrentDictionary<string, InboxMark> inboxMarks = new();
     private static readonly TimeSpan MediaUrlFailureRetryFor = TimeSpan.FromMinutes(2);
@@ -109,13 +110,25 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     private void OnSessionAccountChanged()
     {
-        var accountId = session.CurrentUser?.Id;
-        if (accountId is null || string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
+        var user = session.CurrentUser;
+        var accountId = user?.Id;
+        if (accountId is null)
         {
             return;
         }
 
+        if (string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
+        {
+            if (accountIdentity.Track(user))
+            {
+                OnAccountEdited();
+            }
+
+            return;
+        }
+
         lastAccountId = accountId;
+        accountIdentity.Track(user);
         inboxMarks.Clear();
         threadList = Array.Empty<TThread>();
         threadListCursor = null;
@@ -231,6 +244,10 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     }
 
     protected virtual void OnAccountSwitched()
+    {
+    }
+
+    protected virtual void OnAccountEdited()
     {
     }
 
