@@ -49,11 +49,14 @@ internal sealed class DecryptedHistoryStore : IDisposable
             return;
         }
 
-        var entry = new RememberedBody(Interlocked.Increment(ref sequence), text);
-        if (bodies.TryAdd(messageId, entry))
+        if (bodies.TryGetValue(messageId, out var existing)
+            && string.Equals(existing.Text, text, StringComparison.Ordinal))
         {
-            dirty = true;
+            return;
         }
+
+        bodies[messageId] = new RememberedBody(Interlocked.Increment(ref sequence), text);
+        dirty = true;
     }
 
     public void Tick(float deltaSeconds)

@@ -121,7 +121,7 @@ internal sealed partial class VelvetStore
                     EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag, null, 0).ConfigureAwait(false);
                 if (sent is not null)
                 {
-                    cipher.RecordDecrypted(sent.Id, trimmed, encoded.FrankingKeyBase64);
+                    cipher.RecordDecrypted(sent.Id, encoded.Envelope, trimmed, encoded.FrankingKeyBase64);
                 }
             }
             else

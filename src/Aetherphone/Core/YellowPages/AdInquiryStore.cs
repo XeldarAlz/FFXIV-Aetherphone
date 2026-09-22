@@ -308,7 +308,7 @@ internal sealed class AdInquiryStore : IDisposable
                 return false;
             }
 
-            cipher.RecordDecrypted(sent.Id, body, sealedBody.Value.FrankingKeyBase64);
+            cipher.RecordDecrypted(sent.Id, sealedBody.Value.Envelope, body, sealedBody.Value.FrankingKeyBase64);
             messages = Append(messages, sent);
             return true;
         }, ok =>

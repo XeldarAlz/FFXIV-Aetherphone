@@ -1009,7 +1009,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                     .ConfigureAwait(false);
                 if (sent is not null)
                 {
-                    cipher.RecordDecrypted(sent.Id, trimmed, encoded.FrankingKeyBase64);
+                    cipher.RecordDecrypted(sent.Id, encoded.Envelope, trimmed, encoded.FrankingKeyBase64);
                     sent = WithBody(sent, trimmed);
                 }
             }
@@ -1166,7 +1166,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             return sent;
         }
 
-        cipher.RecordDecrypted(sent.Id, caption, outbound.FrankingKey);
+        cipher.RecordDecrypted(sent.Id, outbound.Body, caption, outbound.FrankingKey);
         cipher.RecordGeneration(sent.Id, outbound.Generation);
         return WithBody(sent, caption);
     }
@@ -1296,7 +1296,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                     EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag).ConfigureAwait(false);
                 if (edited is not null)
                 {
-                    cipher.RecordDecrypted(edited.Id, trimmed, encoded.FrankingKeyBase64);
+                    cipher.RecordDecrypted(edited.Id, encoded.Envelope, trimmed, encoded.FrankingKeyBase64);
                     edited = WithBody(edited, trimmed);
                 }
             }

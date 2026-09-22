@@ -33,8 +33,8 @@ internal sealed class MessageCipher
     private readonly KeyVault vault;
     private readonly ConversationKeyStore keys;
     private readonly DecryptedHistoryStore? history;
-    private readonly ConcurrentDictionary<string, DmDecryptedBody> decryptedBodies = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, (long AtUnix, string Text)> previewCache = new(StringComparer.Ordinal);
+    private readonly SealedTextCache<DmDecryptedBody> decryptedBodies = new();
+    private readonly SealedTextCache<string> previewCache = new();
     private readonly ConcurrentDictionary<string, int> generationByMessage = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> olderKeyMessagesByScope = new(StringComparer.Ordinal);
 
@@ -49,7 +49,7 @@ internal sealed class MessageCipher
 
     public DmDecryptedBody DecryptionState(string messageId)
     {
-        return decryptedBodies.TryGetValue(messageId, out var state)
+        return decryptedBodies.TryGetLatest(messageId, out var state)
             ? state
             : new DmDecryptedBody(DmBodyState.Plain, string.Empty, null, false);
     }
@@ -82,7 +82,7 @@ internal sealed class MessageCipher
 
     public void Forget(string messageId)
     {
-        decryptedBodies.TryRemove(messageId, out _);
+        decryptedBodies.Forget(messageId);
         foreach (var messages in olderKeyMessagesByScope.Values)
         {
             messages.TryRemove(messageId, out _);
@@ -102,9 +102,10 @@ internal sealed class MessageCipher
         return false;
     }
 
-    public void RecordDecrypted(string messageId, string plaintext, string frankingKeyBase64)
+    public void RecordDecrypted(string messageId, string envelope, string plaintext, string frankingKeyBase64)
     {
-        decryptedBodies[messageId] = new DmDecryptedBody(DmBodyState.Decrypted, plaintext, frankingKeyBase64, true);
+        decryptedBodies.Set(messageId, envelope,
+            new DmDecryptedBody(DmBodyState.Decrypted, plaintext, frankingKeyBase64, true));
     }
 
     public OutboundMedia PrepareOutboundMedia(string scope, int generation, string senderId, byte[] plaintextBytes,
@@ -191,7 +192,7 @@ internal sealed class MessageCipher
 
     public DmDecryptedBody ResolveBody(string scope, string messageId, string body, string senderId, string? commitmentTag)
     {
-        if (decryptedBodies.TryGetValue(messageId, out var cached)
+        if (decryptedBodies.TryGet(messageId, body, out var cached)
             && cached.State is DmBodyState.Decrypted or DmBodyState.Malformed or DmBodyState.Remembered)
         {
             return cached;
@@ -234,13 +235,13 @@ internal sealed class MessageCipher
             resolved.State == DmBodyState.NoKey && vault.State == KeyVaultState.Unlocked);
 
         if (resolved.State is DmBodyState.NoKey or DmBodyState.Malformed
-            && (!decryptedBodies.TryGetValue(messageId, out var previous) || previous.State != resolved.State))
+            && (!decryptedBodies.TryGetLatest(messageId, out var previous) || previous.State != resolved.State))
         {
             AepLog.Warning(
                 $"[Crypto] message {messageId} in {scope} generation {generation} resolved as {resolved.State} (vault {vault.State}, scope hydrated {keys.IsScopeHydrated(scope)}, current generation {keys.CurrentGeneration(scope)}).");
         }
 
-        decryptedBodies[messageId] = resolved;
+        decryptedBodies.Set(messageId, body, resolved);
         return resolved;
     }
 
@@ -267,7 +268,7 @@ internal sealed class MessageCipher
             return Loc.T(L.Encryption.EncryptedPlaceholder);
         }
 
-        if (decryptedBodies.TryGetValue(replyToId, out var cached) && cached.State == DmBodyState.Decrypted)
+        if (decryptedBodies.TryGetLatest(replyToId, out var cached) && cached.State == DmBodyState.Decrypted)
         {
             return cached.Text;
         }
@@ -286,11 +287,11 @@ internal sealed class MessageCipher
         return decoded.Status == EnvelopeDecodeStatus.Success ? decoded.Body : Loc.T(L.Encryption.OlderKeyPlaceholder);
     }
 
-    public string ResolvePreview(string cacheKey, string scope, long atUnix, string preview, string senderId)
+    public string ResolvePreview(string cacheKey, string scope, string preview, string senderId)
     {
-        if (previewCache.TryGetValue(cacheKey, out var cached) && cached.AtUnix == atUnix)
+        if (previewCache.TryGet(cacheKey, preview, out var cached))
         {
-            return cached.Text;
+            return cached;
         }
 
         var text = Loc.T(L.Encryption.EncryptedPlaceholder);
@@ -312,15 +313,15 @@ internal sealed class MessageCipher
         }
         else
         {
-            AepLog.Warning($"[Crypto] preview for {scope} at {atUnix} failed to decode as {decoded.Status}.");
+            AepLog.Warning($"[Crypto] preview for {scope} failed to decode as {decoded.Status}.");
         }
 
-        previewCache[cacheKey] = (atUnix, text);
+        previewCache.Set(cacheKey, preview, text);
         return text;
     }
 
-    public bool IsPreviewResolved(string cacheKey, long atUnix)
+    public bool IsPreviewResolved(string cacheKey, string preview)
     {
-        return previewCache.TryGetValue(cacheKey, out var cached) && cached.AtUnix == atUnix;
+        return previewCache.TryGet(cacheKey, preview, out _);
     }
 }
