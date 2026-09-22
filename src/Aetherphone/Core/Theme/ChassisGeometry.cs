@@ -4,10 +4,6 @@ namespace Aetherphone.Core.Theme;
 
 internal readonly struct ChassisGeometry
 {
-    private const float PuckRoundingFraction = 0.300f;
-    private const float PuckMetalFraction = 0.030f;
-    private const float PuckGlassFraction = 0.060f;
-
     public readonly Rect Body;
     public readonly Rect Glass;
     public readonly Rect Screen;
@@ -49,18 +45,30 @@ internal readonly struct ChassisGeometry
             new Vector2(window.Max.X - rail, window.Max.Y));
     }
 
-    public static ChassisGeometry Puck(Rect body) =>
-        new(body, body.Width * PuckRoundingFraction, body.Width * PuckMetalFraction,
-            body.Width * PuckGlassFraction);
+    public static ChassisGeometry Puck(Rect body, PhoneCaseKind kind)
+    {
+        var metrics = ChassisMetrics.ForPuck(kind, body.Width);
+        return new ChassisGeometry(body, metrics.DeviceRounding, metrics.MetalWidth, metrics.GlassWidth);
+    }
 
-    public static float PuckBand(float width) =>
-        (MathF.Max(MathF.Round(width * PuckMetalFraction), 1f) + MathF.Max(MathF.Round(width * PuckGlassFraction), 1f)) *
-        2f;
+    public static float PuckBand(float width, PhoneCaseKind kind)
+    {
+        var metrics = ChassisMetrics.ForPuck(kind, width);
+        return (MathF.Max(MathF.Round(metrics.MetalWidth), 1f) + MathF.Max(MathF.Round(metrics.GlassWidth), 1f)) * 2f;
+    }
 
-    public static ChassisGeometry Morph(Rect body, PhoneTheme theme, float scale, float eased) =>
-        new(body, Easing.Lerp(theme.DeviceRounding * scale, body.Width * PuckRoundingFraction, eased),
-            Easing.Lerp(theme.MetalWidth * scale, body.Width * PuckMetalFraction, eased),
-            Easing.Lerp(theme.GlassWidth * scale, body.Width * PuckGlassFraction, eased));
+    public static ChassisGeometry Morph(Rect body, PhoneTheme theme, float scale, float eased)
+    {
+        if (theme.CaseKind == PhoneCaseKind.Art)
+        {
+            return Puck(body, PhoneCaseKind.Art);
+        }
+
+        var puck = ChassisMetrics.ForPuck(theme.CaseKind, body.Width);
+        return new ChassisGeometry(body, Easing.Lerp(theme.DeviceRounding * scale, puck.DeviceRounding, eased),
+            Easing.Lerp(theme.MetalWidth * scale, puck.MetalWidth, eased),
+            Easing.Lerp(theme.GlassWidth * scale, puck.GlassWidth, eased));
+    }
 
     public static ChassisGeometry Preview(Rect body, PhoneCaseKind kind)
     {

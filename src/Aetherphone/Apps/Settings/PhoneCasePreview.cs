@@ -34,7 +34,7 @@ internal static class PhoneCasePreview
         {
             Squircle.Fill(drawList, chassis.Body.Min, chassis.Body.Max, chassis.BodyRadius,
                 ImGui.GetColorU32(finish.Frame));
-            CaseArt.QuadClipped(drawList, thumb, CaseArt.RectFor(chassis.Body), false, CaseArt.Tint(1f));
+            CaseArt.QuadClipped(drawList, thumb, chassis.Body, false, CaseArt.Tint(1f));
             Squircle.Fill(drawList, chassis.Glass.Min, chassis.Glass.Max, chassis.GlassRadius,
                 ImGui.GetColorU32(finish.Glass));
             Squircle.Fill(drawList, chassis.Screen.Min, chassis.Screen.Max, chassis.ScreenRadius,

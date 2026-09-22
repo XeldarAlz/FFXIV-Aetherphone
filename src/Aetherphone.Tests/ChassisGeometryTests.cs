@@ -87,11 +87,14 @@ public sealed class ChassisGeometryTests
         Assert.Equal(first.ScreenRadius, second.ScreenRadius, Tolerance);
     }
 
-    [Fact]
-    public void MorphEndpointsMatchDeviceAndPuck()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void MorphEndpointsMatchDeviceAndPuck(bool art)
     {
-        var theme = ThemeFor(360f);
-        var body = new Rect(new Vector2(10f, 20f), new Vector2(356f, 800f));
+        var kind = art ? PhoneCaseKind.Art : PhoneCaseKind.Color;
+        var theme = ThemeFor(360f, kind);
+        var body = new Rect(new Vector2(10f, 20f), new Vector2(10f + 360f - 2f * theme.RailWidth, 800f));
         var puckBody = new Rect(new Vector2(10f, 20f), new Vector2(92f, 176f));
         var atStart = ChassisGeometry.Morph(body, theme, 1f, 0f);
         var device = ChassisGeometry.Device(Grow(body, theme.RailWidth), theme, 1f);
@@ -100,30 +103,69 @@ public sealed class ChassisGeometryTests
         Assert.Equal(device.Screen, atStart.Screen);
 
         var atEnd = ChassisGeometry.Morph(puckBody, theme, 1f, 1f);
-        var puck = ChassisGeometry.Puck(puckBody);
+        var puck = ChassisGeometry.Puck(puckBody, kind);
         Assert.Equal(puck.BodyRadius, atEnd.BodyRadius, Tolerance);
         Assert.Equal(puck.ScreenRadius, atEnd.ScreenRadius, Tolerance);
         Assert.Equal(puck.Screen, atEnd.Screen);
     }
 
     [Theory]
-    [InlineData(1f)]
-    [InlineData(1.25f)]
-    [InlineData(1.5f)]
-    [InlineData(2f)]
-    public void PuckBandMatchesPuckGeometry(float scale)
+    [InlineData(0.25f)]
+    [InlineData(0.5f)]
+    [InlineData(0.75f)]
+    public void ArtMorphKeepsTheCaseTemplateAtEveryStep(float eased)
     {
+        var theme = ThemeFor(360f, PhoneCaseKind.Art);
+        var body = new Rect(new Vector2(10f, 20f), new Vector2(210f, 420f));
+        var morph = ChassisGeometry.Morph(body, theme, 1f, eased);
+        var template = ChassisGeometry.Puck(body, PhoneCaseKind.Art);
+        Assert.Equal(template.BodyRadius, morph.BodyRadius, Tolerance);
+        Assert.Equal(template.Glass, morph.Glass);
+        Assert.Equal(template.Screen, morph.Screen);
+    }
+
+    [Theory]
+    [InlineData(82f, 156f)]
+    [InlineData(82f, 260f)]
+    [InlineData(148f, 148f)]
+    [InlineData(205f, 390f)]
+    public void ArtPuckWearsTheCaseTemplateBands(float width, float height)
+    {
+        var body = new Rect(new Vector2(0f, 0f), new Vector2(width, height));
+        var puck = ChassisGeometry.Puck(body, PhoneCaseKind.Art);
+        var template = ChassisMetrics.ForBody(PhoneCaseKind.Art, width);
+        Assert.Equal(MathF.Round(template.MetalWidth), puck.Glass.Min.X - puck.Body.Min.X, Tolerance);
+        Assert.Equal(MathF.Round(template.MetalWidth), puck.Glass.Min.Y - puck.Body.Min.Y, Tolerance);
+        Assert.Equal(MathF.Round(template.GlassWidth), puck.Screen.Min.X - puck.Glass.Min.X, Tolerance);
+        Assert.Equal(template.DeviceRounding, puck.BodyRadius, Tolerance);
+    }
+
+    [Theory]
+    [InlineData(1f, false)]
+    [InlineData(1.25f, false)]
+    [InlineData(1.5f, false)]
+    [InlineData(2f, false)]
+    [InlineData(1f, true)]
+    [InlineData(1.25f, true)]
+    [InlineData(1.5f, true)]
+    [InlineData(2f, true)]
+    public void PuckBandMatchesPuckGeometry(float scale, bool art)
+    {
+        var kind = art ? PhoneCaseKind.Art : PhoneCaseKind.Color;
         var body = new Rect(new Vector2(0f, 0f), new Vector2(82f * scale, 156f * scale));
-        var puck = ChassisGeometry.Puck(body);
-        var band = ChassisGeometry.PuckBand(body.Width);
+        var puck = ChassisGeometry.Puck(body, kind);
+        var band = ChassisGeometry.PuckBand(body.Width, kind);
         Assert.Equal(puck.Body.Width - band, puck.Screen.Width, Tolerance);
         Assert.Equal(puck.Body.Height - band, puck.Screen.Height, Tolerance);
     }
 
-    [Fact]
-    public void DegenerateBodyClampsWithoutNegatives()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DegenerateBodyClampsWithoutNegatives(bool art)
     {
-        var chassis = ChassisGeometry.Puck(new Rect(new Vector2(0f, 0f), new Vector2(6f, 6f)));
+        var kind = art ? PhoneCaseKind.Art : PhoneCaseKind.Color;
+        var chassis = ChassisGeometry.Puck(new Rect(new Vector2(0f, 0f), new Vector2(6f, 6f)), kind);
         Assert.True(chassis.BodyRadius >= 0f);
         Assert.True(chassis.GlassRadius >= 0f);
         Assert.True(chassis.ScreenRadius >= 0f);
@@ -162,10 +204,17 @@ public sealed class ChassisGeometryTests
         Assert.Equal(window.DeviceRounding, body.DeviceRounding, Tolerance);
     }
 
-    private static PhoneTheme ThemeFor(float deviceWidth) =>
-        PhoneTheme.Dark(new Vector4(0.55f, 0.45f, 0.95f, 1f),
-            PhoneCase.Color("Titanium", new Vector4(0.145f, 0.145f, 0.170f, 1f)),
-            ChassisMetrics.For(PhoneCaseKind.Color, deviceWidth), "DuskLight", "DuskDark");
+    private static PhoneTheme ThemeFor(float deviceWidth) => ThemeFor(deviceWidth, PhoneCaseKind.Color);
+
+    private static PhoneTheme ThemeFor(float deviceWidth, PhoneCaseKind kind)
+    {
+        var tint = new Vector4(0.145f, 0.145f, 0.170f, 1f);
+        var phoneCase = kind == PhoneCaseKind.Art
+            ? PhoneCase.Art("Silkie", PhoneCaseCategory.ArtistSeries, tint, "Silkie")
+            : PhoneCase.Color("Titanium", tint);
+        return PhoneTheme.Dark(new Vector4(0.55f, 0.45f, 0.95f, 1f), phoneCase,
+            ChassisMetrics.For(kind, deviceWidth), "DuskLight", "DuskDark");
+    }
 
     private static ChassisGeometry Device(float width, float height, float scale)
     {

@@ -89,8 +89,7 @@ internal static class DeviceChrome
         var paintMetal = true;
         if (theme.WantsCaseArt && PhoneCaseTextures.Skin(theme.CaseTextureId) is { } bandTexture)
         {
-            CaseArt.QuadExcluding(dl, bandTexture, CaseArt.RectFor(chassis.Body), band,
-                chassis.Body.IsLandscape());
+            CaseArt.QuadExcluding(dl, bandTexture, chassis.Body, band, chassis.Body.IsLandscape());
             paintMetal = false;
         }
 
@@ -145,8 +144,7 @@ internal static class DeviceChrome
                 ImGui.GetColorU32(theme.FrameMetal));
         }
 
-        CaseArt.Quad(dl, texture, CaseArt.RectFor(chassis.Body), !portraitArt && chassis.Body.IsLandscape(),
-            CaseArt.Tint(artAlpha));
+        CaseArt.Quad(dl, texture, chassis.Body, !portraitArt && chassis.Body.IsLandscape(), CaseArt.Tint(artAlpha));
         Squircle.Fill(dl, chassis.Glass.Min, chassis.Glass.Max, chassis.GlassRadius, ImGui.GetColorU32(theme.Glass));
         Squircle.Fill(dl, chassis.Screen.Min, chassis.Screen.Max, chassis.ScreenRadius,
             ImGui.GetColorU32(theme.ScreenBase));
@@ -187,7 +185,7 @@ internal static class DeviceChrome
             return;
         }
 
-        CaseArt.Quad(dl, texture, CaseArt.RectFor(chassis.Body), chassis.Body.IsLandscape(), CaseArt.Tint(alpha));
+        CaseArt.Quad(dl, texture, chassis.Body, chassis.Body.IsLandscape(), CaseArt.Tint(alpha));
     }
 
     private static void DrawViewportBody(ImDrawListPtr dl, in ChassisGeometry chassis, Rect band, uint frame,
