@@ -77,6 +77,7 @@ internal sealed partial class GamesApp : IPhoneApp
     private const float CoinChipRingRadius = 7f;
     private const float CoinChipGap = 5f;
     private const float CoinChipReserve = 72f;
+    private const string CoinChipTooltipId = "games.coinChip";
     private const float PausedFadeSeconds = 0.12f;
     private const int FeaturedStep = 5;
     private readonly GameStatsStore stats;
@@ -378,7 +379,15 @@ internal sealed partial class GamesApp : IPhoneApp
             ProgressRing.CenterIcon(ImGui.GetWindowDrawList(), ringCenter, FontAwesomeIcon.Check, accent,
                 ringRadius * 1.05f);
         }
+        else
+        {
+            CurrencyGlyph.Draw(ImGui.GetWindowDrawList(), CurrencyKind.Coins, ringCenter, ringRadius * 1.1f);
+        }
 
+        var hoverHalfHeight = HeaderHeight * scale * 0.35f;
+        var hoverRect = new Rect(new Vector2(ringCenter.X - ringRadius - thickness, rowCenterY - hoverHalfHeight),
+            new Vector2(right, rowCenterY + hoverHalfHeight));
+        HoverTooltip.Show(CoinChipTooltipId, hoverRect, CoinChipHint(chip));
         if (chip.Label.Length == 0)
         {
             return;
@@ -386,6 +395,16 @@ internal sealed partial class GamesApp : IPhoneApp
 
         Typography.DrawCentered(new Vector2(right - textSize.X * 0.5f, rowCenterY), chip.Label, theme.TextStrong,
             TextStyles.Caption1);
+    }
+
+    private static string CoinChipHint(in CoinSessionChip chip)
+    {
+        if (!chip.Qualified)
+        {
+            return Loc.T(L.Games.CoinTimerHint);
+        }
+
+        return chip.Label.Length > 0 ? Loc.T(L.Games.CoinTimerDeepHint) : Loc.T(L.Games.CoinTimerDoneHint);
     }
 
     private static bool RuleExhausted(CoinWalletDto wallet, string ruleId)
