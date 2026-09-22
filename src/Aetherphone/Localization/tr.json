@@ -5289,6 +5289,7 @@
   "changelog.r1034.10": "Hiç favori işaretlenmemişken Favoriler gibi eşleşen fotoğrafı olmayan bir filtre seçildiğinde sıralama ve filtre menüsünün gizlenmesi, Son Öğeler ile albüm fotoğraf seçicisinin boşalması ve Tüm Öğeler'e dönüş yolu kalmaması düzeltildi",
   "changelog.r1034.11": "Henüz mesaj olmayan bağlantıların boş sohbetten çıkınca kaybolması düzeltildi; artık biri yazana kadar 'Merhaba de' ipucuyla Sohbetler'de kalıyorlar",
   "changelog.r1034.12": "ChocoChat, Aethergram ve Velvet'te düzenlenen bir mesajın diğer herkeste hem sohbette hem de sohbet listesi önizlemesinde eski metniyle kalması ve yalnızca düzenlendi işaretinin değişmesi düzeltildi",
+  "changelog.r1034.13": "Emoji seçicinin arama kutusundaki temizleme düğmesinin dokunuşlara tepki vermemesi düzeltildi, Haydooners katkısıyla",
   "changelog.r1032.0": "Telefonun 'Çok fazla istek. N sn sonra yeniden denenecek' gösterip birkaç saniye donması sorunu düzeltildi, en çok bir sohbet açılırken oluyordu; sunucuyla iletişim artık daha hafif ve kendi kendine toparlanıyor",
   "changelog.r1031.0": "Ayrı pencerelerin yerini unutması düzeltildi: kapattığınız bir pencere aynı yerde ve aynı boyutta yeniden açılıyor",
   "changelog.r1030.0": "Bazı bilgisayarların yüklenen fotoğraflara kırmızı, mavi ve beyaz çizgiler eklemesi düzeltildi",

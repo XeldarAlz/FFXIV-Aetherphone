@@ -5289,6 +5289,7 @@
   "changelog.r1034.10": "Corrigido um filtro sem fotos correspondentes, como Favoritos sem nenhuma marcada, que escondia o menu de ordenar e filtrar e esvaziava Recentes e o seletor de fotos dos álbuns, sem forma de voltar a Todos os itens",
   "changelog.r1034.11": "Corrigido que conexões ainda sem mensagens sumiam assim que você saía da conversa vazia; agora elas ficam em Conversas com o aviso 'Diga olá' até alguém escrever",
   "changelog.r1034.12": "Corrigido que uma mensagem editada mantinha o texto antigo para as outras pessoas, tanto na conversa quanto na prévia da lista de conversas, mudando apenas a marca de editado, no ChocoChat, Aethergram e Velvet",
+  "changelog.r1034.13": "Corrigido que o botão de limpar da caixa de busca do seletor de emojis ignorava os toques, contribuição de Haydooners",
   "changelog.r1032.0": "Corrigido um problema em que o telefone mostrava 'Solicitações demais. Nova tentativa em Ns' e travava por alguns segundos, principalmente ao abrir um chat; a comunicação com o servidor agora é mais leve e se recupera sozinha",
   "changelog.r1031.0": "Corrigidas as janelas flutuantes que esqueciam seu lugar: uma janela flutuante que você fecha reabre onde estava, no mesmo tamanho",
   "changelog.r1030.0": "Corrigidos os traços vermelhos, azuis e brancos que alguns PCs adicionavam às fotos enviadas",

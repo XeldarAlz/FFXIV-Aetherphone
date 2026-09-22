@@ -5289,6 +5289,7 @@
   "changelog.r1034.10": "Correction d'un filtre sans photo correspondante, comme Favoris sans aucune photo marquée, qui masquait le menu de tri et de filtre et vidait Récents et le sélecteur de photos des albums, sans moyen de revenir à Tous les éléments",
   "changelog.r1034.11": "Correction des connexions sans message qui disparaissaient dès que vous quittiez la discussion vide ; elles restent désormais dans Discussions avec l'invite 'Dis bonjour' jusqu'à ce que quelqu'un écrive",
   "changelog.r1034.12": "Correction d'un message modifié qui gardait son ancien texte chez les autres, dans la discussion comme dans l'aperçu de la liste des discussions, seule la mention modifié changeant, dans ChocoChat, Aethergram et Velvet",
+  "changelog.r1034.13": "Correction du bouton d'effacement du champ de recherche du sélecteur d'emojis qui ignorait les touchers, proposé par Haydooners",
   "changelog.r1032.0": "Correction d'un problème où le téléphone affichait 'Trop de requêtes. Nouvel essai dans Ns' et se figeait quelques secondes, surtout à l'ouverture d'une discussion ; la communication avec le serveur est désormais plus légère et se rétablit d'elle-même",
   "changelog.r1031.0": "Correction des fenêtres flottantes qui oubliaient leur place : une fenêtre flottante fermée se rouvre là où elle était, à la même taille",
   "changelog.r1030.0": "Correction des tirets rouges, bleus et blancs que certains PC ajoutaient aux photos envoyées",
