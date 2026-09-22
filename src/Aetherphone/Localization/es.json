@@ -5274,6 +5274,7 @@
   "changelog.r1034.1": "Añadidas descripciones y categorías para Cacerías, MogCast y Gamba, contribución de Deldee",
   "changelog.r1034.2": "Añadido el progreso de esta semana hacia el límite semanal en la fila de la piedra allagan limitada, contribución de Deldee",
   "changelog.r1034.3": "Corregido que algunas ventanas de cacería aparecieran cerradas hace cientos de miles de días tras el mantenimiento, contribución de Deldee",
+  "changelog.r1034.4": "Corregido que las ubicaciones compartidas desde dentro de una casa nombraran el distrito residencial del diseño interior en lugar del distrito en el que está la casa",
   "changelog.r1032.0": "Corregido un problema por el que el teléfono mostraba 'Demasiadas solicitudes. Reintento en Ns' y se congelaba unos segundos, sobre todo al abrir un chat; la comunicación con el servidor ahora es más ligera y se recupera sola",
   "changelog.r1031.0": "Corregido que las ventanas flotantes olvidaran su sitio: una ventana flotante que cierras vuelve a abrirse donde estaba, con el mismo tamaño",
   "changelog.r1030.0": "Corregidas las rayas rojas, azules y blancas que algunos PC añadían a las fotos subidas",
