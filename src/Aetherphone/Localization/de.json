@@ -5275,6 +5275,8 @@
   "changelog.r1034.2": "Den Fortschritt dieser Woche zur Wochengrenze in der Zeile des begrenzten Allagischen Steins hinzugefügt, beigetragen von Deldee",
   "changelog.r1034.3": "Behoben, dass manche Jagdfenster nach der Wartung als vor Hunderttausenden von Tagen geschlossen angezeigt wurden, beigetragen von Deldee",
   "changelog.r1034.4": "Behoben, dass aus einem Haus heraus geteilte Standorte das Wohngebiet der Inneneinrichtung statt des Wohngebiets nannten, in dem das Haus steht",
+  "changelog.r1034.5": "Behoben, dass das Antippen einer Chat-Benachrichtigung eine weitere Kopie des bereits geöffneten Chats aufstapelte, sodass Zurück pro Benachrichtigung einen Tipp brauchte, um zur Chatliste zu gelangen, in ChocoChat, Aethergram und Velvet",
+  "changelog.r1034.6": "Behoben, dass das Antippen einer Benachrichtigung, dass ein Sender live gegangen ist, eine weitere Kopie der Senderseite über die bereits geöffnete stapelte",
   "changelog.r1032.0": "Behoben, dass das Telefon 'Zu viele Anfragen. Neuer Versuch in Ns' anzeigte und einige Sekunden einfror, meist beim Öffnen eines Chats; die Kommunikation mit dem Server ist jetzt leichter und fängt sich von selbst",
   "changelog.r1031.0": "Behoben, dass Pop-outs ihren Platz vergaßen: ein geschlossenes Pop-out öffnet sich wieder dort, wo es war, in derselben Größe",
   "changelog.r1030.0": "Behoben, dass manche PCs hochgeladenen Fotos rote, blaue und weiße Striche hinzufügten",

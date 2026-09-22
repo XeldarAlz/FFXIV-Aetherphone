@@ -1800,6 +1800,14 @@ internal static class L
         {
             new("changelog.r1034.4",
                 "Fixed locations shared from inside a house naming the residential district of the interior design instead of the one the house stands in"),
+            new("changelog.r1034.5",
+                "Fixed tapping a chat notification stacking another copy of the chat you already had open, so Back took one tap per notification to reach the chat list, in ChocoChat, Aethergram and Velvet"),
+        };
+
+        public static readonly LocString[] Release1034Music =
+        {
+            new("changelog.r1034.6",
+                "Fixed tapping a notification that a station went live stacking another copy of the station page on top of the one already open"),
         };
 
         public static readonly LocString[] Release1033Social =

@@ -5275,6 +5275,8 @@
   "changelog.r1034.2": "Sınırlı Allag taşı satırına bu haftanın haftalık sınıra ilerlemesi eklendi, Deldee katkısıyla",
   "changelog.r1034.3": "Bazı av pencerelerinin bakımdan sonra yüz binlerce gün önce kapanmış gibi görünmesi düzeltildi, Deldee katkısıyla",
   "changelog.r1034.4": "Bir evin içinden paylaşılan konumların, evin bulunduğu yerleşim bölgesi yerine iç tasarımın bölgesini göstermesi düzeltildi",
+  "changelog.r1034.5": "ChocoChat, Aethergram ve Velvet'te bir sohbet bildirimine dokununca zaten açık olan sohbetin üstüne bir kopyasının daha yığılması ve sohbet listesine dönmek için her bildirim başına bir Geri dokunuşu gerekmesi düzeltildi",
+  "changelog.r1034.6": "Bir istasyonun yayına girdiği bildirimine dokununca zaten açık olan istasyon sayfasının üstüne bir kopyasının daha yığılması düzeltildi",
   "changelog.r1032.0": "Telefonun 'Çok fazla istek. N sn sonra yeniden denenecek' gösterip birkaç saniye donması sorunu düzeltildi, en çok bir sohbet açılırken oluyordu; sunucuyla iletişim artık daha hafif ve kendi kendine toparlanıyor",
   "changelog.r1031.0": "Ayrı pencerelerin yerini unutması düzeltildi: kapattığınız bir pencere aynı yerde ve aynı boyutta yeniden açılıyor",
   "changelog.r1030.0": "Bazı bilgisayarların yüklenen fotoğraflara kırmızı, mavi ve beyaz çizgiler eklemesi düzeltildi",
