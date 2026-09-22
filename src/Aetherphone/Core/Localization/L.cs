@@ -1794,6 +1794,8 @@ internal static class L
         {
             new("changelog.r1034.0",
                 "Fixed the Tetris tile on the Games tab not showing your best score from the Modern ruleset"),
+            new("changelog.r1034.7",
+                "Fixed the House Rules seven in Uno not swapping hands with the player you tapped, which left every seven unplayable in rooms of three or more"),
         };
 
         public static readonly LocString[] Release1034Messaging =
