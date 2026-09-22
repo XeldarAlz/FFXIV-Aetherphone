@@ -5281,6 +5281,7 @@
   "changelog.r1034.5": "Fixed tapping a chat notification stacking another copy of the chat you already had open, so Back took one tap per notification to reach the chat list, in ChocoChat, Aethergram and Velvet",
   "changelog.r1034.6": "Fixed tapping a notification that a station went live stacking another copy of the station page on top of the one already open",
   "changelog.r1034.7": "Fixed the House Rules seven in Uno not swapping hands with the player you tapped, which left every seven unplayable in rooms of three or more",
+  "changelog.r1034.8": "Added a coin mark and a hover explanation to the Aether Coin timer in the game header, which keeps counting while the game is paused",
   "changelog.r1032.0": "Fixed an issue where the phone showed 'Too many requests. Retrying in Ns' and froze for a few seconds, most often when opening a chat; communication with the server is now lighter and recovers on its own",
   "changelog.r1031.0": "Fixed pop-out chat windows forgetting their place: a pop-out you close reopens where it was, at the same size",
   "changelog.r1030.0": "Fixed some PCs adding red, blue and white dashes to uploaded photos",

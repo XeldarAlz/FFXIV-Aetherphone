@@ -5281,6 +5281,7 @@
   "changelog.r1034.5": "ChocoChat, Aethergram ve Velvet'te bir sohbet bildirimine dokununca zaten açık olan sohbetin üstüne bir kopyasının daha yığılması ve sohbet listesine dönmek için her bildirim başına bir Geri dokunuşu gerekmesi düzeltildi",
   "changelog.r1034.6": "Bir istasyonun yayına girdiği bildirimine dokununca zaten açık olan istasyon sayfasının üstüne bir kopyasının daha yığılması düzeltildi",
   "changelog.r1034.7": "Uno'da Ev Kuralları ile oynanan yedinin dokunduğun oyuncuyla el değiştirmemesi ve bu yüzden üç veya daha fazla kişilik odalarda hiçbir yedinin oynanamaması düzeltildi",
+  "changelog.r1034.8": "Oyun başlığındaki Aether Coin sayacına bir coin işareti ve üzerine gelince açıklama eklendi; sayaç oyun duraklatılmışken de devam eder",
   "changelog.r1032.0": "Telefonun 'Çok fazla istek. N sn sonra yeniden denenecek' gösterip birkaç saniye donması sorunu düzeltildi, en çok bir sohbet açılırken oluyordu; sunucuyla iletişim artık daha hafif ve kendi kendine toparlanıyor",
   "changelog.r1031.0": "Ayrı pencerelerin yerini unutması düzeltildi: kapattığınız bir pencere aynı yerde ve aynı boyutta yeniden açılıyor",
   "changelog.r1030.0": "Bazı bilgisayarların yüklenen fotoğraflara kırmızı, mavi ve beyaz çizgiler eklemesi düzeltildi",

@@ -1792,6 +1792,8 @@ internal static class L
 
         public static readonly LocString[] Release1034Games =
         {
+            new("changelog.r1034.8",
+                "Added a coin mark and a hover explanation to the Aether Coin timer in the game header, which keeps counting while the game is paused"),
             new("changelog.r1034.0",
                 "Fixed the Tetris tile on the Games tab not showing your best score from the Modern ruleset"),
             new("changelog.r1034.7",

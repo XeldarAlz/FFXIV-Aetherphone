@@ -5281,6 +5281,7 @@
   "changelog.r1034.5": "Corrigido que tocar em uma notificação de chat empilhava outra cópia do chat que você já tinha aberto, de modo que Voltar precisava de um toque por notificação para chegar à lista de chats, no ChocoChat, Aethergram e Velvet",
   "changelog.r1034.6": "Corrigido que tocar em uma notificação de que uma estação entrou ao vivo empilhava outra cópia da página da estação sobre a que já estava aberta",
   "changelog.r1034.7": "Corrigido o sete das Regras da Casa no Uno não trocar a mão com o jogador que você tocou, o que deixava todos os setes injogáveis em salas com três ou mais jogadores",
+  "changelog.r1034.8": "Adicionados uma marca de moeda e uma explicação ao passar o cursor no cronômetro de Aether Coin no topo do jogo, que continua contando enquanto o jogo está pausado",
   "changelog.r1032.0": "Corrigido um problema em que o telefone mostrava 'Solicitações demais. Nova tentativa em Ns' e travava por alguns segundos, principalmente ao abrir um chat; a comunicação com o servidor agora é mais leve e se recupera sozinha",
   "changelog.r1031.0": "Corrigidas as janelas flutuantes que esqueciam seu lugar: uma janela flutuante que você fecha reabre onde estava, no mesmo tamanho",
   "changelog.r1030.0": "Corrigidos os traços vermelhos, azuis e brancos que alguns PCs adicionavam às fotos enviadas",
