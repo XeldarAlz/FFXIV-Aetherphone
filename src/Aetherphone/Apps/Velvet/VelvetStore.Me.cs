@@ -31,6 +31,11 @@ internal sealed partial class VelvetStore
             return;
         }
 
+        LoadMe();
+    }
+
+    private void LoadMe()
+    {
         loadingMe = true;
         var epoch = accountEpoch;
         work.Run("profile load", async token =>

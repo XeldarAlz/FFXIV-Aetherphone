@@ -278,6 +278,16 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         velvetKeysHydrated = false;
     }
 
+    protected override void OnAccountEdited()
+    {
+        if (me is null || loadingMe)
+        {
+            return;
+        }
+
+        LoadMe();
+    }
+
     protected override void OnAccountSwitched()
     {
         accountEpoch++;
