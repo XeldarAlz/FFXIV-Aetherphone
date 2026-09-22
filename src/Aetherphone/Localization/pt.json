@@ -5287,6 +5287,7 @@
   "changelog.r1034.8": "Adicionados uma marca de moeda e uma explicação ao passar o cursor no cronômetro de Aether Coin no topo do jogo, que continua contando enquanto o jogo está pausado",
   "changelog.r1034.9": "Corrigido um nome de exibição alterado em Ajustes que não chegava aos seus perfis do Chirper, Aethergram e Velvet",
   "changelog.r1034.10": "Corrigido um filtro sem fotos correspondentes, como Favoritos sem nenhuma marcada, que escondia o menu de ordenar e filtrar e esvaziava Recentes e o seletor de fotos dos álbuns, sem forma de voltar a Todos os itens",
+  "changelog.r1034.11": "Corrigido que conexões ainda sem mensagens sumiam assim que você saía da conversa vazia; agora elas ficam em Conversas com o aviso 'Diga olá' até alguém escrever",
   "changelog.r1032.0": "Corrigido um problema em que o telefone mostrava 'Solicitações demais. Nova tentativa em Ns' e travava por alguns segundos, principalmente ao abrir um chat; a comunicação com o servidor agora é mais leve e se recupera sozinha",
   "changelog.r1031.0": "Corrigidas as janelas flutuantes que esqueciam seu lugar: uma janela flutuante que você fecha reabre onde estava, no mesmo tamanho",
   "changelog.r1030.0": "Corrigidos os traços vermelhos, azuis e brancos que alguns PCs adicionavam às fotos enviadas",
