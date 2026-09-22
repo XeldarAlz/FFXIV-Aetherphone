@@ -1772,6 +1772,12 @@ internal static class L
         public static readonly LocString SectionAethergramVelvet = new("changelog.sectionAethergramVelvet", "Aethergram and Velvet");
         public static readonly LocString SectionChirperAethergramVelvet = new("changelog.sectionChirperAethergramVelvet", "Chirper, Aethergram and Velvet");
 
+        public static readonly LocString[] Release1034Games =
+        {
+            new("changelog.r1034.0",
+                "Fixed the Tetris tile on the Games tab not showing your best score from the Modern ruleset"),
+        };
+
         public static readonly LocString[] Release1033Social =
         {
             new("changelog.r1033.0",

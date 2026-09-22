@@ -5270,6 +5270,7 @@
   "changelog.r1033.5": "Adicionado Mostrar grams sensíveis aos filtros do feed: desative para deixar de fora dos seus feeds os grams marcados como sensíveis",
   "changelog.r1033.6": "Corrigido o X de uma marcação na foto que não removia a marcação",
   "changelog.r1033.7": "Estabilidade melhorada: os valores das moedas agora são lidos no ritmo do jogo em vez de durante o desenho da tela, contribuição de Deldee",
+  "changelog.r1034.0": "Corrigido o bloco de Tetris na aba Jogos que não mostrava sua melhor pontuação das regras Moderno",
   "changelog.r1032.0": "Corrigido um problema em que o telefone mostrava 'Solicitações demais. Nova tentativa em Ns' e travava por alguns segundos, principalmente ao abrir um chat; a comunicação com o servidor agora é mais leve e se recupera sozinha",
   "changelog.r1031.0": "Corrigidas as janelas flutuantes que esqueciam seu lugar: uma janela flutuante que você fecha reabre onde estava, no mesmo tamanho",
   "changelog.r1030.0": "Corrigidos os traços vermelhos, azuis e brancos que alguns PCs adicionavam às fotos enviadas",

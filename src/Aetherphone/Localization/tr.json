@@ -5270,6 +5270,7 @@
   "changelog.r1033.5": "Akış filtrelerine Hassas gramları göster eklendi: hassas olarak işaretlenen gramları akışlarınızın dışında tutmak için kapatın",
   "changelog.r1033.6": "Fotoğraftaki bir etiketin X düğmesinin etiketi kaldırmaması düzeltildi",
   "changelog.r1033.7": "Kararlılık iyileştirildi: para birimi miktarları artık ekran çizilirken değil, oyunla aynı adımda okunuyor, Deldee katkısıyla",
+  "changelog.r1034.0": "Oyunlar sekmesindeki Tetris kutucuğunun Modern kurallardaki en iyi skorunu göstermemesi düzeltildi",
   "changelog.r1032.0": "Telefonun 'Çok fazla istek. N sn sonra yeniden denenecek' gösterip birkaç saniye donması sorunu düzeltildi, en çok bir sohbet açılırken oluyordu; sunucuyla iletişim artık daha hafif ve kendi kendine toparlanıyor",
   "changelog.r1031.0": "Ayrı pencerelerin yerini unutması düzeltildi: kapattığınız bir pencere aynı yerde ve aynı boyutta yeniden açılıyor",
   "changelog.r1030.0": "Bazı bilgisayarların yüklenen fotoğraflara kırmızı, mavi ve beyaz çizgiler eklemesi düzeltildi",
