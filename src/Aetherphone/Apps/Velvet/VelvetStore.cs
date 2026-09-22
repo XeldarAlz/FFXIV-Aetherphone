@@ -530,8 +530,8 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
             var scope = ScopeFor(item.OtherUserId);
             decorated[index] = item with
             {
-                LastMessagePreview = cipher.ResolvePreview(item.OtherUserId, scope, item.LastMessageAtUnix,
-                    item.LastMessagePreview, item.LastMessageSenderId),
+                LastMessagePreview = cipher.ResolvePreview(item.OtherUserId, scope, item.LastMessagePreview,
+                    item.LastMessageSenderId),
             };
         }
 
@@ -541,7 +541,7 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
     protected override bool IsInboxPreviewReady(VelvetThreadDto thread)
     {
         return thread.LastMessageEncVersion != EnvelopeCodec.VersionEnvelope
-            || cipher.IsPreviewResolved(thread.OtherUserId, thread.LastMessageAtUnix);
+            || cipher.IsPreviewResolved(thread.OtherUserId, thread.LastMessagePreview);
     }
 
     public byte[]? DecryptMedia(VelvetMessageDto message, byte[] sealedBytes, string threadPartnerId)

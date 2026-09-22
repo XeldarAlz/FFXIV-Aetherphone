@@ -5288,6 +5288,7 @@
   "changelog.r1034.9": "Corregido que un nombre para mostrar cambiado en Ajustes no llegara a tus perfiles de Chirper, Aethergram y Velvet",
   "changelog.r1034.10": "Corregido que un filtro sin fotos coincidentes, como Favoritos sin ninguna marcada, ocultara el menú de ordenar y filtrar y vaciara Recientes y el selector de fotos de los álbumes, sin forma de volver a Todos los elementos",
   "changelog.r1034.11": "Corregido que las conexiones sin mensajes desaparecieran al salir del chat vacío; ahora se quedan en Chats con el aviso 'Di hola' hasta que alguien escriba",
+  "changelog.r1034.12": "Corregido que un mensaje editado conservara su texto antiguo para los demás, tanto en el chat como en la vista previa de la lista de chats, y solo cambiara la marca de editado, en ChocoChat, Aethergram y Velvet",
   "changelog.r1032.0": "Corregido un problema por el que el teléfono mostraba 'Demasiadas solicitudes. Reintento en Ns' y se congelaba unos segundos, sobre todo al abrir un chat; la comunicación con el servidor ahora es más ligera y se recupera sola",
   "changelog.r1031.0": "Corregido que las ventanas flotantes olvidaran su sitio: una ventana flotante que cierras vuelve a abrirse donde estaba, con el mismo tamaño",
   "changelog.r1030.0": "Corregidas las rayas rojas, azules y blancas que algunos PC añadían a las fotos subidas",

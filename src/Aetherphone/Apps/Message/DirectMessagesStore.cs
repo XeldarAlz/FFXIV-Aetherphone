@@ -268,7 +268,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     protected override bool IsInboxPreviewReady(ConversationDto thread)
     {
         return thread.LastMessageEncVersion != EnvelopeCodec.VersionEnvelope
-            || cipher.IsPreviewResolved(thread.Id, thread.LastMessageAtUnix);
+            || cipher.IsPreviewResolved(thread.Id, thread.LastMessagePreview);
     }
 
     public string DisplayTitle(ConversationDto item) => ConversationTitle.Of(item, contacts);
@@ -409,7 +409,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
                         forwarded: true).ConfigureAwait(false);
                     if (sent is not null)
                     {
-                        cipher.RecordDecrypted(sent.Id, plaintext, encoded.FrankingKeyBase64);
+                        cipher.RecordDecrypted(sent.Id, encoded.Envelope, plaintext, encoded.FrankingKeyBase64);
                         sent = sent with { Body = plaintext };
                     }
                 }
@@ -658,8 +658,8 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
             var scope = ConversationKeyStore.ChatScope(item.Id);
             decorated[index] = item with
             {
-                LastMessagePreview = cipher.ResolvePreview(item.Id, scope, item.LastMessageAtUnix,
-                    item.LastMessagePreview, item.LastMessageSenderId),
+                LastMessagePreview = cipher.ResolvePreview(item.Id, scope, item.LastMessagePreview,
+                    item.LastMessageSenderId),
             };
         }
 

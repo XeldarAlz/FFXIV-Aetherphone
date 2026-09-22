@@ -1806,6 +1806,8 @@ internal static class L
                 "Fixed locations shared from inside a house naming the residential district of the interior design instead of the one the house stands in"),
             new("changelog.r1034.5",
                 "Fixed tapping a chat notification stacking another copy of the chat you already had open, so Back took one tap per notification to reach the chat list, in ChocoChat, Aethergram and Velvet"),
+            new("changelog.r1034.12",
+                "Fixed an edited message keeping its old text for everyone else, both in the chat and in the chat list preview, with only the edited marker updating, in ChocoChat, Aethergram and Velvet"),
         };
 
         public static readonly LocString[] Release1034Music =

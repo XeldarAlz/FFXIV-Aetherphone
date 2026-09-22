@@ -217,7 +217,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
                     EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag, null, 0).ConfigureAwait(false);
                 if (sent is not null)
                 {
-                    cipher.RecordDecrypted(sent.Id, postId, encoded.FrankingKeyBase64);
+                    cipher.RecordDecrypted(sent.Id, encoded.Envelope, postId, encoded.FrankingKeyBase64);
                     sent = sent with { Body = postId };
                 }
             }
@@ -268,7 +268,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
                     EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag, null, 0, storyId).ConfigureAwait(false);
                 if (sent is not null)
                 {
-                    cipher.RecordDecrypted(sent.Id, text, encoded.FrankingKeyBase64);
+                    cipher.RecordDecrypted(sent.Id, encoded.Envelope, text, encoded.FrankingKeyBase64);
                     sent = sent with { Body = text };
                 }
             }
@@ -416,7 +416,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
     {
         return thread.LastMessageKind == PostShareKind
             || thread.LastMessageEncVersion != EnvelopeCodec.VersionEnvelope
-            || cipher.IsPreviewResolved(thread.OtherUserId, thread.LastMessageAtUnix);
+            || cipher.IsPreviewResolved(thread.OtherUserId, thread.LastMessagePreview);
     }
 
     protected override GramMessageDto[] DecorateMessages(string threadId, GramMessageDto[] items)
@@ -479,8 +479,8 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
             var scope = ScopeFor(item.OtherUserId);
             decorated[index] = item with
             {
-                LastMessagePreview = cipher.ResolvePreview(item.OtherUserId, scope, item.LastMessageAtUnix,
-                    item.LastMessagePreview, item.LastMessageSenderId),
+                LastMessagePreview = cipher.ResolvePreview(item.OtherUserId, scope, item.LastMessagePreview,
+                    item.LastMessageSenderId),
             };
         }
 
