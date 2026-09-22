@@ -46,8 +46,7 @@ internal static class LocationShare
 
         var (ward, plot, room) = ReadHousing();
         var worldId = player.CurrentWorld.RowId;
-        if (ZoneName(currentTerritoryId).Length == 0
-            && TryCaptureHousePlot(ward, plot, room, worldId, out var housePlot))
+        if (TryCaptureHousePlot(ward, plot, room, worldId, out var housePlot))
         {
             return housePlot;
         }
@@ -70,13 +69,14 @@ internal static class LocationShare
         return new SharedLocation(currentTerritoryId, mapId, mapX, mapY, worldId, ward, plot, room);
     }
 
-    // Since patch 7.1 every house interior loads into one shared, nameless territory that can wear any
-    // district's design, so only the house address knows the district and only the plot outside has a map.
+    // Since patch 7.1 a house can wear any district's interior, so the territory it loads into names the
+    // design's district (a classic design) or nothing at all (a newer one); only the house address knows
+    // where it stands and only the plot outside has a map.
     private static bool TryCaptureHousePlot(short ward, short plot, short room, uint worldId,
         out SharedLocation location)
     {
         location = default;
-        var districtId = ReadHouseDistrict();
+        var districtId = ReadIndoorHouseDistrict();
         if (districtId == 0 || ZoneName(districtId).Length == 0)
         {
             return false;
@@ -87,21 +87,24 @@ internal static class LocationShare
         return true;
     }
 
-    private static uint ReadHouseDistrict()
+    private static uint ReadIndoorHouseDistrict()
     {
         try
         {
             unsafe
             {
                 var housing = FFXIVClientStructs.FFXIV.Client.Game.HousingManager.Instance();
-                if (housing == null)
+                if (housing == null || housing->IndoorTerritory == null)
                 {
                     return 0;
                 }
 
-                var house = housing->IndoorTerritory != null
-                    ? housing->GetCurrentIndoorHouseId()
-                    : housing->GetCurrentHouseId();
+                var house = housing->GetCurrentIndoorHouseId();
+                if (house.IsApartment || house.IsWorkshop)
+                {
+                    return 0;
+                }
+
                 return house.TerritoryTypeId;
             }
         }
