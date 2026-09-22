@@ -5282,6 +5282,7 @@
   "changelog.r1034.6": "Behoben, dass das Antippen einer Benachrichtigung, dass ein Sender live gegangen ist, eine weitere Kopie der Senderseite über die bereits geöffnete stapelte",
   "changelog.r1034.7": "Behoben, dass die Sieben mit Hausregeln in Uno die Hand nicht mit dem angetippten Spieler tauschte, wodurch in Räumen mit drei oder mehr Spielern keine Sieben spielbar war",
   "changelog.r1034.8": "Dem Aether-Coin-Timer in der Spielleiste ein Coin-Symbol und eine Erklärung beim Darüberfahren hinzugefügt; er läuft weiter, während das Spiel pausiert ist",
+  "changelog.r1034.9": "Behoben, dass ein in den Einstellungen geänderter Anzeigename nicht in deinen Chirper-, Aethergram- und Velvet-Profilen ankam",
   "changelog.r1032.0": "Behoben, dass das Telefon 'Zu viele Anfragen. Neuer Versuch in Ns' anzeigte und einige Sekunden einfror, meist beim Öffnen eines Chats; die Kommunikation mit dem Server ist jetzt leichter und fängt sich von selbst",
   "changelog.r1031.0": "Behoben, dass Pop-outs ihren Platz vergaßen: ein geschlossenes Pop-out öffnet sich wieder dort, wo es war, in derselben Größe",
   "changelog.r1030.0": "Behoben, dass manche PCs hochgeladenen Fotos rote, blaue und weiße Striche hinzufügten",
