@@ -5289,6 +5289,7 @@
   "changelog.r1034.10": "Behoben, dass ein Filter ohne passende Fotos, etwa Favoriten ohne markierte Fotos, das Sortier- und Filtermenü ausblendete und Zuletzt sowie die Fotoauswahl für Alben leerte, sodass es keinen Weg zurück zu Alle Objekte gab",
   "changelog.r1034.11": "Behoben, dass Verbindungen ohne Nachrichten verschwanden, sobald du den leeren Chat verlassen hast; sie bleiben jetzt mit dem Hinweis 'Sag Hallo' in den Chats, bis jemand schreibt",
   "changelog.r1034.12": "Behoben, dass eine bearbeitete Nachricht bei allen anderen ihren alten Text behielt, sowohl im Chat als auch in der Vorschau der Chatliste, und sich nur die Markierung 'bearbeitet' änderte, in ChocoChat, Aethergram und Velvet",
+  "changelog.r1034.13": "Behoben, dass der Löschen-Button im Suchfeld der Emoji-Auswahl nicht auf Tipper reagierte, beigetragen von Haydooners",
   "changelog.r1032.0": "Behoben, dass das Telefon 'Zu viele Anfragen. Neuer Versuch in Ns' anzeigte und einige Sekunden einfror, meist beim Öffnen eines Chats; die Kommunikation mit dem Server ist jetzt leichter und fängt sich von selbst",
   "changelog.r1031.0": "Behoben, dass Pop-outs ihren Platz vergaßen: ein geschlossenes Pop-out öffnet sich wieder dort, wo es war, in derselben Größe",
   "changelog.r1030.0": "Behoben, dass manche PCs hochgeladenen Fotos rote, blaue und weiße Striche hinzufügten",

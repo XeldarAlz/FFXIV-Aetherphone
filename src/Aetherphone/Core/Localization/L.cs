@@ -1834,6 +1834,12 @@ internal static class L
                 "Fixed connections with no messages yet vanishing once you left the empty chat; they now stay in Chats with a Say hello prompt until someone writes"),
         };
 
+        public static readonly LocString[] Release1034Phone =
+        {
+            new("changelog.r1034.13",
+                "Fixed the clear button in the emoji picker's search box ignoring taps, contributed by Haydooners"),
+        };
+
         public static readonly LocString[] Release1033Social =
         {
             new("changelog.r1033.0",
