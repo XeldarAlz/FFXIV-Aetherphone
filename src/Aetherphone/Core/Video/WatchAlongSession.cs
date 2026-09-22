@@ -37,6 +37,8 @@ internal sealed class WatchAlongSession : IDisposable
     private const double StaleStateSeconds = 30.0;
     private const long AutoReplayInitialDelayMilliseconds = 10 * 1000;
     private const long AutoReplayMaxDelayMilliseconds = 60 * 1000;
+    private const long AutoReplayBotCheckDelayMilliseconds = 5 * 60 * 1000;
+    private const long AutoReplayBotCheckMaxDelayMilliseconds = 15 * 60 * 1000;
     private const int MaxSharedQueueEntries = 32;
     private const int MaxLocalFileMapEntries = 64;
 
@@ -443,10 +445,20 @@ internal sealed class WatchAlongSession : IDisposable
         }
 
         var now = Environment.TickCount64;
+        var botCheck = video.FailureKind == PlaybackFailureKind.BotCheck;
         if (autoReplayUrl != failedUrl)
         {
             autoReplayUrl = failedUrl;
-            autoReplayDelayMilliseconds = AutoReplayInitialDelayMilliseconds;
+            autoReplayDelayMilliseconds = botCheck
+                ? AutoReplayBotCheckDelayMilliseconds
+                : AutoReplayInitialDelayMilliseconds;
+            autoReplayNextAtTicks = now + autoReplayDelayMilliseconds;
+            return;
+        }
+
+        if (botCheck && autoReplayDelayMilliseconds < AutoReplayBotCheckDelayMilliseconds)
+        {
+            autoReplayDelayMilliseconds = AutoReplayBotCheckDelayMilliseconds;
             autoReplayNextAtTicks = now + autoReplayDelayMilliseconds;
             return;
         }
@@ -456,7 +468,8 @@ internal sealed class WatchAlongSession : IDisposable
             return;
         }
 
-        autoReplayDelayMilliseconds = Math.Min(autoReplayDelayMilliseconds * 2, AutoReplayMaxDelayMilliseconds);
+        var maxDelayMilliseconds = botCheck ? AutoReplayBotCheckMaxDelayMilliseconds : AutoReplayMaxDelayMilliseconds;
+        autoReplayDelayMilliseconds = Math.Min(autoReplayDelayMilliseconds * 2, maxDelayMilliseconds);
         autoReplayNextAtTicks = now + autoReplayDelayMilliseconds;
         video.Play(failedUrl, ProjectRemotePosition(message), !(message.Paused ?? false));
     }

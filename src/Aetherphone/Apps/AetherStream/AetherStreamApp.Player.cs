@@ -257,6 +257,13 @@ internal sealed partial class AetherStreamApp
 
     private bool TryDescribeFailure(out string title, out string body)
     {
+        if (video.State == VideoPlaybackState.Failed && video.FailureKind == PlaybackFailureKind.BotCheck)
+        {
+            title = Loc.T(L.AetherStream.FailureBotCheckTitle);
+            body = Loc.T(L.AetherStream.FailureBotCheckBody);
+            return true;
+        }
+
         if (video.State == VideoPlaybackState.Failed)
         {
             title = Loc.T(L.AetherStream.FailureTitle);
@@ -280,9 +287,12 @@ internal sealed partial class AetherStreamApp
     {
         var viewing = watchAlong.IsViewing;
         var countdown = viewing ? watchAlong.AutoReplayInSeconds : 0f;
-        var footnote = countdown > 0f
-            ? string.Format(Loc.Culture, Loc.T(L.AetherStream.FailureRetryingIn), (int)MathF.Ceiling(countdown))
-            : null;
+        var footnote = countdown <= 0f
+            ? null
+            : countdown >= 60f
+                ? string.Format(Loc.Culture, Loc.T(L.AetherStream.FailureRetryingInMinutes),
+                    (int)MathF.Ceiling(countdown / 60f))
+                : string.Format(Loc.Culture, Loc.T(L.AetherStream.FailureRetryingIn), (int)MathF.Ceiling(countdown));
         var canSkip = !viewing && queue.HasNext;
         DrawActionCard(width, scale, theme.Danger, title, theme.Danger, body, footnote,
             Loc.T(L.AetherStream.FailureRetry), canSkip ? Loc.T(L.AetherStream.FailureSkip) : null,

@@ -14,6 +14,14 @@ internal enum MpvEndReason : byte
     Redirect,
 }
 
+internal enum PlaybackFailureKind : byte
+{
+    Unknown,
+    BotCheck,
+}
+
+internal readonly record struct PlaybackEnding(MpvEndReason Reason, string? Detail, PlaybackFailureKind FailureKind);
+
 internal sealed class MpvRenderer : IDisposable
 {
     private const string Library = "libmpv-2";
@@ -47,6 +55,7 @@ internal sealed class MpvRenderer : IDisposable
     private const string ResolverLogPrefix = "ytdl_hook";
     private const string ResolverErrorPrefix = "ERROR: ";
     private const string ResolverFailedPrefix = "youtube-dl failed: ";
+    private const string BotCheckMarker = "not a bot";
 
     private static readonly Regex ResolverSitePrefix = new(@"^\[[^\]]+\]\s+\S+:\s+", RegexOptions.Compiled);
 
@@ -209,15 +218,18 @@ internal sealed class MpvRenderer : IDisposable
     private int consecutiveRenderFailures;
     private int httpForbiddenHits;
     private int streamErrorHits;
+    private int botCheckHits;
 
     internal event Action? FileLoaded;
-    internal event Action<MpvEndReason, string?>? FileEnded;
+    internal event Action<PlaybackEnding>? FileEnded;
 
     internal bool IsRunning => started && !disposed;
 
     internal bool SawHttpForbidden => Volatile.Read(ref httpForbiddenHits) > 0;
 
     internal bool SawStreamError => Volatile.Read(ref streamErrorHits) > 0;
+
+    internal bool SawBotCheck => Volatile.Read(ref botCheckHits) > 0;
 
     internal string? LastErrorDetail => lastErrorDetail;
 
@@ -368,6 +380,7 @@ internal sealed class MpvRenderer : IDisposable
             lastErrorFromResolver = false;
             Interlocked.Exchange(ref httpForbiddenHits, 0);
             Interlocked.Exchange(ref streamErrorHits, 0);
+            Interlocked.Exchange(ref botCheckHits, 0);
             _ = MpvCommand(mpvContext, ["set", "speed", "1", null]);
             var result = MpvCommand(mpvContext, ["loadfile", url, "replace", "0", options, null]);
             if (result < 0)
@@ -692,9 +705,9 @@ internal sealed class MpvRenderer : IDisposable
             return;
         }
 
-        var prefix = Marshal.PtrToStringAnsi(Marshal.ReadIntPtr(data));
-        var level = Marshal.PtrToStringAnsi(Marshal.ReadIntPtr(data + 8));
-        var text = Marshal.PtrToStringAnsi(Marshal.ReadIntPtr(data + 16))?.Trim();
+        var prefix = Marshal.PtrToStringUTF8(Marshal.ReadIntPtr(data));
+        var level = Marshal.PtrToStringUTF8(Marshal.ReadIntPtr(data + 8));
+        var text = Marshal.PtrToStringUTF8(Marshal.ReadIntPtr(data + 16))?.Trim();
         if (text is null || text.Length == 0)
         {
             return;
@@ -712,6 +725,11 @@ internal sealed class MpvRenderer : IDisposable
                 Interlocked.Increment(ref streamErrorHits);
             }
 
+            if (IsBotCheckText(text))
+            {
+                Interlocked.Increment(ref botCheckHits);
+            }
+
             RememberErrorDetail(prefix, text);
             AepLog.Warning($"[MPV/{prefix}] {text}");
             return;
@@ -724,6 +742,9 @@ internal sealed class MpvRenderer : IDisposable
         text.Contains("403", StringComparison.Ordinal)
         && (text.Contains("http", StringComparison.OrdinalIgnoreCase)
             || text.Contains("forbidden", StringComparison.OrdinalIgnoreCase));
+
+    internal static bool IsBotCheckText(string text) =>
+        text.Contains(BotCheckMarker, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsStreamErrorText(string text)
     {
@@ -829,14 +850,16 @@ internal sealed class MpvRenderer : IDisposable
         };
 
         string? detail = null;
+        var failureKind = PlaybackFailureKind.Unknown;
         if (reason == MpvEndReason.Failed)
         {
             var errorText = ErrorText(errorCode);
             detail = lastErrorDetail is { Length: > 0 } logged ? logged : errorText;
+            failureKind = SawBotCheck ? PlaybackFailureKind.BotCheck : PlaybackFailureKind.Unknown;
             AepLog.Warning($"[MPV] Playback failed ({errorText}): {detail}");
         }
 
-        FileEnded?.Invoke(reason, detail);
+        FileEnded?.Invoke(new PlaybackEnding(reason, detail, failureKind));
     }
 
     private static string ErrorText(int error)
@@ -846,7 +869,7 @@ internal sealed class MpvRenderer : IDisposable
             var pointer = mpv_error_string(error);
             return pointer == IntPtr.Zero
                 ? error.ToString(CultureInfo.InvariantCulture)
-                : Marshal.PtrToStringAnsi(pointer) ?? error.ToString(CultureInfo.InvariantCulture);
+                : Marshal.PtrToStringUTF8(pointer) ?? error.ToString(CultureInfo.InvariantCulture);
         }
         catch (Exception)
         {

@@ -1848,6 +1848,16 @@ internal static class L
                 "Fixed cases not fitting the minimized phone: the case now sits flush on the mini phone and the minimap, with its corners and charms kept in shape"),
         };
 
+        public static readonly LocString[] Release1034MogCast =
+        {
+            new("changelog.r1034.17",
+                "Added an explanation card for YouTube's not-a-bot check in watch parties, and retries now wait minutes instead of seconds so the check clears sooner"),
+            new("changelog.r1034.18",
+                "Fixed YouTube refusing links with a sign-in bot check on some connections: the link resolver now picks its own YouTube players instead of one fixed player"),
+            new("changelog.r1034.19",
+                "Fixed apostrophes and accents in playback error messages turning into question marks"),
+        };
+
         public static readonly LocString[] Release1033Social =
         {
             new("changelog.r1033.0",
@@ -5116,6 +5126,12 @@ internal static class L
         public static readonly LocString FailureSkip = new("aetherstream.failureSkip", "Skip");
         public static readonly LocString FailureRetryingIn = new("aetherstream.failureRetryingIn",
             "Retrying in {0}s");
+        public static readonly LocString FailureRetryingInMinutes = new("aetherstream.failureRetryingInMinutes",
+            "Retrying in {0} min");
+        public static readonly LocString FailureBotCheckTitle = new("aetherstream.failureBotCheckTitle",
+            "YouTube is checking this connection");
+        public static readonly LocString FailureBotCheckBody = new("aetherstream.failureBotCheckBody",
+            "YouTube wants this connection to sign in to prove it is not a bot. Quick retries make the check last longer: wait a few minutes, or turn off any VPN, then retry.");
         public static readonly LocString FailureViewersTitle = new("aetherstream.failureViewersTitle",
             "{0} of {1} watching can't play this");
         public static readonly LocString FailureViewersHint = new("aetherstream.failureViewersHint",

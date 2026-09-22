@@ -20,7 +20,7 @@ internal readonly record struct PlaybackProgress(float Position, float Duration,
 internal sealed class VideoPlayer : IDisposable
 {
     private readonly VideoEngine engine;
-    private readonly ConcurrentQueue<(MpvEndReason Reason, string? Detail)> pendingEndings = new();
+    private readonly ConcurrentQueue<PlaybackEnding> pendingEndings = new();
     private volatile bool pendingLoaded;
     private int startGeneration;
 
@@ -37,6 +37,7 @@ internal sealed class VideoPlayer : IDisposable
     internal VideoPlaybackState State { get; private set; } = VideoPlaybackState.Idle;
     internal PlaybackProgress Progress { get; private set; }
     internal string? LastError { get; private set; }
+    internal PlaybackFailureKind FailureKind { get; private set; }
     internal string? RecoveryNotice => engine.RecoveryNotice;
     internal bool RecoveryExhausted => HasMedia && engine.RecoveryExhausted;
 
@@ -68,6 +69,7 @@ internal sealed class VideoPlayer : IDisposable
     internal void Play(string url, double startSeconds = 0d, bool playing = true)
     {
         LastError = null;
+        FailureKind = PlaybackFailureKind.Unknown;
         State = VideoPlaybackState.Loading;
         engine.ClearError();
         var generation = Interlocked.Increment(ref startGeneration);
@@ -79,7 +81,8 @@ internal sealed class VideoPlayer : IDisposable
         var started = await start.ConfigureAwait(false);
         if (started == PlayStart.Failed && generation == Volatile.Read(ref startGeneration))
         {
-            pendingEndings.Enqueue((MpvEndReason.Failed, engine.LastError));
+            pendingEndings.Enqueue(new PlaybackEnding(MpvEndReason.Failed, engine.LastError,
+                PlaybackFailureKind.Unknown));
         }
     }
 
@@ -100,6 +103,7 @@ internal sealed class VideoPlayer : IDisposable
     {
         engine.StopVideo();
         State = VideoPlaybackState.Idle;
+        FailureKind = PlaybackFailureKind.Unknown;
         Progress = default;
         while (pendingEndings.TryDequeue(out _))
         {
@@ -116,7 +120,7 @@ internal sealed class VideoPlayer : IDisposable
     {
         while (pendingEndings.TryDequeue(out var ending))
         {
-            ApplyEnding(ending.Reason, ending.Detail);
+            ApplyEnding(ending);
         }
 
         if (pendingLoaded)
@@ -151,9 +155,9 @@ internal sealed class VideoPlayer : IDisposable
         }
     }
 
-    private void ApplyEnding(MpvEndReason reason, string? detail)
+    private void ApplyEnding(PlaybackEnding ending)
     {
-        switch (reason)
+        switch (ending.Reason)
         {
             case MpvEndReason.Finished:
                 if (State == VideoPlaybackState.Loading)
@@ -167,7 +171,8 @@ internal sealed class VideoPlayer : IDisposable
                 return;
             case MpvEndReason.Failed:
                 State = VideoPlaybackState.Failed;
-                LastError = detail ?? engine.LastError ?? Loc.T(L.AetherStream.PlaybackFailed);
+                FailureKind = ending.FailureKind;
+                LastError = ending.Detail ?? engine.LastError ?? Loc.T(L.AetherStream.PlaybackFailed);
                 Progress = default;
                 Failed?.Invoke(LastError);
                 return;
@@ -183,7 +188,7 @@ internal sealed class VideoPlayer : IDisposable
 
     private void OnEngineLoaded() => pendingLoaded = true;
 
-    private void OnEngineEnded(MpvEndReason reason, string? detail) => pendingEndings.Enqueue((reason, detail));
+    private void OnEngineEnded(PlaybackEnding ending) => pendingEndings.Enqueue(ending);
 
     public void Dispose()
     {
