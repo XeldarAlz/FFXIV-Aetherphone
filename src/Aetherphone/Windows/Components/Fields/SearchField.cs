@@ -106,6 +106,7 @@ internal static class SearchField
         {
             return;
         }
+
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         if (UiInteract.Click(clearMin, clearMax, hovered))
         {
