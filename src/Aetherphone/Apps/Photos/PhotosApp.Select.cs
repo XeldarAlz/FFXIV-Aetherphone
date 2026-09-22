@@ -90,6 +90,7 @@ internal sealed partial class PhotosApp
 
         BuildFavorites();
         SaveFavorites();
+        ApplyFilter();
     }
 
     private bool DrawSelectHeaderIcon(Rect area, int slot)

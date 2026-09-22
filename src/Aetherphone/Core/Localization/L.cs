@@ -1820,6 +1820,12 @@ internal static class L
                 "Fixed a display name changed in Settings not reaching your Chirper, Aethergram and Velvet profiles"),
         };
 
+        public static readonly LocString[] Release1034Photos =
+        {
+            new("changelog.r1034.10",
+                "Fixed picking a filter with no matching photos, such as Favorites with none marked, hiding the sort and filter menu and emptying Recents and the album picker, which left no way back to All Items"),
+        };
+
         public static readonly LocString[] Release1033Social =
         {
             new("changelog.r1033.0",
@@ -5375,6 +5381,10 @@ internal static class L
         public static readonly LocString Filter = new("photos.filter", "Filter");
         public static readonly LocString FilterAll = new("photos.filterAll", "All Items");
         public static readonly LocString FilterNotInAlbum = new("photos.filterNotInAlbum", "Not in an Album");
+        public static readonly LocString FilterEmpty = new("photos.filterEmpty", "No Matching Photos");
+        public static readonly LocString FilterEmptyHint =
+            new("photos.filterEmptyHint", "No photos match the current filter");
+        public static readonly LocString ShowAllItems = new("photos.showAllItems", "Show All Items");
         public static readonly LocString ViewOptions = new("photos.viewOptions", "View Options");
         public static readonly LocString ZoomIn = new("photos.zoomIn", "Zoom In");
         public static readonly LocString ZoomOut = new("photos.zoomOut", "Zoom Out");

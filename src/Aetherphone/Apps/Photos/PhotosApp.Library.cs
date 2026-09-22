@@ -97,7 +97,8 @@ internal sealed partial class PhotosApp
 
         var radius = SocialChrome.HeaderIconRadius * scale;
         var libraryTools = !withNewAlbum && entries.Length > 0;
-        var lastSlot = SocialChrome.HeaderSlot(area, libraryTools ? 1 : 0);
+        var canSelect = libraryTools && filteredEntries.Length > 0;
+        var lastSlot = SocialChrome.HeaderSlot(area, canSelect ? 1 : 0);
         var titleLeft = logoCenter.X + logoSize * 0.5f + LogoGap * scale;
         var titleRight = lastSlot.X - radius - Metrics.Space.Sm * scale;
         var titleHeight = Typography.LineHeight(WordmarkStyle);
@@ -139,7 +140,7 @@ internal sealed partial class PhotosApp
             sortMenu.Toggle(SortMenuId, new Rect(sortSlot - extent, sortSlot + extent));
         }
 
-        if (DrawSelectHeaderIcon(area, 1))
+        if (canSelect && DrawSelectHeaderIcon(area, 1))
         {
             BeginSelect(SelectionScope.Library);
         }
@@ -294,7 +295,7 @@ internal sealed partial class PhotosApp
 
         configuration.PhotosFilter = (int)filter;
         configuration.Save();
-        Refresh();
+        ApplyFilter();
         resetScroll = true;
     }
 
@@ -383,7 +384,13 @@ internal sealed partial class PhotosApp
             return;
         }
 
-        DrawPhotoGrid(body, 0, entries.Length);
+        if (filteredEntries.Length == 0)
+        {
+            DrawFilterEmpty(body);
+            return;
+        }
+
+        DrawPhotoGrid(body, filteredEntries, 0, filteredEntries.Length);
         if (!selecting)
         {
             DrawOpenFolderFab(body);
@@ -399,7 +406,19 @@ internal sealed partial class PhotosApp
         }
     }
 
-    private void DrawPhotoGrid(Rect body, int start, int count)
+    private void DrawFilterEmpty(Rect body)
+    {
+        var favoritesOnly = Filter == PhotoFilter.Favorites;
+        if (EmptyState.Draw(body, ui, favoritesOnly ? PhoneIcons.Heart : PhoneIcons.Photo,
+                Loc.T(favoritesOnly ? L.Photos.NoFavorites : L.Photos.FilterEmpty),
+                Loc.T(favoritesOnly ? L.Photos.NoFavoritesHint : L.Photos.FilterEmptyHint),
+                Loc.T(L.Photos.ShowAllItems)))
+        {
+            SetFilter(PhotoFilter.All);
+        }
+    }
+
+    private void DrawPhotoGrid(Rect body, PhotoEntry[] source, int start, int count)
     {
         var scale = UiScale.Current;
         var gridKey = ImGui.GetID("##photoGrid");
@@ -425,7 +444,7 @@ internal sealed partial class PhotosApp
             var gap = GridGap * scale;
             var avail = ScrollLayout.StableContentWidth();
             var cell = (avail - gap * (Columns - 1)) / Columns;
-            var total = LayoutBands(start, count, cell, gap, scale);
+            var total = LayoutBands(source, start, count, cell, gap, scale);
             var drawList = ImGui.GetWindowDrawList();
             var scrollY = ImGui.GetScrollY();
             var viewHeight = ImGui.GetWindowSize().Y;
@@ -446,7 +465,7 @@ internal sealed partial class PhotosApp
                     continue;
                 }
 
-                DrawPhotoRow(drawList, band, origin.X, screenTop, cell, gap, start, count, scale);
+                DrawPhotoRow(drawList, band, origin.X, screenTop, cell, gap, source, start, count, scale);
             }
 
             ImGui.SetCursorScreenPos(origin);
@@ -454,7 +473,7 @@ internal sealed partial class PhotosApp
         }
     }
 
-    private float LayoutBands(int start, int count, float cell, float gap, float scale)
+    private float LayoutBands(PhotoEntry[] source, int start, int count, float cell, float gap, float scale)
     {
         bands.Clear();
         var headerHeight = SectionHeaderHeight * scale;
@@ -485,9 +504,9 @@ internal sealed partial class PhotosApp
 
         while (index < end)
         {
-            var day = entries[index].Taken.Date;
+            var day = source[index].Taken.Date;
             var dayStart = index;
-            while (index < end && entries[index].Taken.Date == day)
+            while (index < end && source[index].Taken.Date == day)
             {
                 index++;
             }
@@ -496,7 +515,7 @@ internal sealed partial class PhotosApp
             bands.Add(new GridBand
             {
                 Header = true,
-                Day = entries[dayStart].Taken,
+                Day = source[dayStart].Taken,
                 DayCount = dayCount,
                 Top = y,
                 Height = headerHeight,
@@ -541,16 +560,16 @@ internal sealed partial class PhotosApp
     }
 
     private void DrawPhotoRow(ImDrawListPtr drawList, GridBand band, float leftX, float top, float cell, float gap,
-        int sliceStart, int sliceCount, float scale)
+        PhotoEntry[] source, int sliceStart, int sliceCount, float scale)
     {
         for (var column = 0; column < band.PhotoCount; column++)
         {
             var absolute = band.PhotoStart + column;
             var min = new Vector2(leftX + column * (cell + gap), top);
             var max = new Vector2(min.X + cell, min.Y + cell);
-            if (DrawTile(drawList, min, max, entries[absolute].Path, false, scale) == TileHit.Open)
+            if (DrawTile(drawList, min, max, source[absolute].Path, false, scale) == TileHit.Open)
             {
-                OpenViewer(sliceStart, sliceCount, absolute);
+                OpenViewer(source, sliceStart, sliceCount, absolute);
             }
         }
     }

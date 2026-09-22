@@ -96,6 +96,7 @@ internal sealed partial class PhotosApp : IPhoneApp
     private string albumsLocale = string.Empty;
 
     private PhotoEntry[] entries = Array.Empty<PhotoEntry>();
+    private PhotoEntry[] filteredEntries = Array.Empty<PhotoEntry>();
     private string[] viewerPaths = Array.Empty<string>();
     private string[] favoritePaths = Array.Empty<string>();
     private string[] trashPaths = Array.Empty<string>();
@@ -257,18 +258,17 @@ internal sealed partial class PhotosApp : IPhoneApp
     {
         var paths = library.List();
         var pathSet = new HashSet<string>(paths, StringComparer.OrdinalIgnoreCase);
-        var visible = FilteredPaths(paths);
-        var built = new PhotoEntry[visible.Length];
-        for (var index = 0; index < visible.Length; index++)
+        var built = new PhotoEntry[paths.Length];
+        for (var index = 0; index < paths.Length; index++)
         {
-            built[index] = MetadataFor(visible[index]);
+            built[index] = MetadataFor(paths[index]);
         }
 
         Array.Sort(built, compareEntries);
         entries = built;
         if (SortKey == PhotoSortKey.Dimensions)
         {
-            ScanMissingDimensions(visible);
+            ScanMissingDimensions(paths);
         }
 
         BuildAlbums();
@@ -285,6 +285,7 @@ internal sealed partial class PhotosApp : IPhoneApp
         }
 
         BuildFavorites();
+        ApplyFilter();
         library.PurgeExpired();
         RefreshTrash();
     }
@@ -427,6 +428,7 @@ internal sealed partial class PhotosApp : IPhoneApp
         customAlbumIds.Remove(found.Name);
         BuildCustomAlbums();
         SaveCustomAlbums();
+        ApplyFilter();
     }
     
     private void RenameCustomAlbumInternal(int key, string newName)
@@ -483,6 +485,7 @@ internal sealed partial class PhotosApp : IPhoneApp
         }
         BuildCustomAlbums();
         SaveCustomAlbums();
+        ApplyFilter();
         InvalidatePickerMembership();
     }
     
@@ -499,6 +502,7 @@ internal sealed partial class PhotosApp : IPhoneApp
         photos.Remove(path);
         BuildCustomAlbums();
         SaveCustomAlbums();
+        ApplyFilter();
         InvalidatePickerMembership();
     }
 
@@ -525,26 +529,28 @@ internal sealed partial class PhotosApp : IPhoneApp
     private int Columns => Math.Clamp(configuration.PhotosGridColumns == 0 ? DefaultColumns : configuration.PhotosGridColumns,
         MinColumns, MaxColumns);
 
-    private string[] FilteredPaths(string[] paths)
+    private void ApplyFilter()
     {
         var filter = Filter;
         if (filter == PhotoFilter.All)
         {
-            return paths;
+            filteredEntries = entries;
+            return;
         }
 
-        var kept = new List<string>(paths.Length);
+        var kept = new List<PhotoEntry>(entries.Length);
         if (filter == PhotoFilter.Favorites)
         {
-            for (var index = 0; index < paths.Length; index++)
+            for (var index = 0; index < entries.Length; index++)
             {
-                if (favorites.Contains(paths[index]))
+                if (favorites.Contains(entries[index].Path))
                 {
-                    kept.Add(paths[index]);
+                    kept.Add(entries[index]);
                 }
             }
 
-            return kept.ToArray();
+            filteredEntries = kept.ToArray();
+            return;
         }
 
         var inAlbums = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -553,15 +559,15 @@ internal sealed partial class PhotosApp : IPhoneApp
             inAlbums.UnionWith(photos);
         }
 
-        for (var index = 0; index < paths.Length; index++)
+        for (var index = 0; index < entries.Length; index++)
         {
-            if (!inAlbums.Contains(paths[index]))
+            if (!inAlbums.Contains(entries[index].Path))
             {
-                kept.Add(paths[index]);
+                kept.Add(entries[index]);
             }
         }
 
-        return kept.ToArray();
+        filteredEntries = kept.ToArray();
     }
 
     private int DaysLeft(string trashPath)
@@ -764,20 +770,20 @@ internal sealed partial class PhotosApp : IPhoneApp
         }
     }
 
-    private string[] SlicePaths(int start, int count)
+    private static string[] SlicePaths(PhotoEntry[] source, int start, int count)
     {
         var slice = new string[count];
         for (var index = 0; index < count; index++)
         {
-            slice[index] = entries[start + index].Path;
+            slice[index] = source[start + index].Path;
         }
 
         return slice;
     }
 
-    private void OpenViewer(int sliceStart, int sliceCount, int absoluteIndex)
+    private void OpenViewer(PhotoEntry[] source, int sliceStart, int sliceCount, int absoluteIndex)
     {
-        viewerPaths = SlicePaths(sliceStart, sliceCount);
+        viewerPaths = SlicePaths(source, sliceStart, sliceCount);
         viewerIndex = Math.Clamp(absoluteIndex - sliceStart, 0, viewerPaths.Length - 1);
         viewerInTrash = false;
         zoomView.Reset();

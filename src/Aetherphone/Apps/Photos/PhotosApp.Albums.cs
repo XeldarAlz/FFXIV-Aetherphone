@@ -374,7 +374,7 @@ internal sealed partial class PhotosApp
             return;
         }
 
-        DrawPhotoGrid(body, start, count);
+        DrawPhotoGrid(body, entries, start, count);
         DrawSelectToolbarIfActive(area);
     }
 

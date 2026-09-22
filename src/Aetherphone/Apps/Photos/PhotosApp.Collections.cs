@@ -60,6 +60,7 @@ internal sealed partial class PhotosApp
 
         BuildFavorites();
         SaveFavorites();
+        ApplyFilter();
     }
 
     private void ToggleFavorite(string path) => SetFavorite(path, !favorites.Contains(path));
