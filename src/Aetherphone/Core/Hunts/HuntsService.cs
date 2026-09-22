@@ -421,6 +421,7 @@ internal sealed class HuntsService : IDisposable
             await RefreshAppSessionAsync(token).ConfigureAwait(false);
 
             var combined = new List<HuntWindowDto>(fetched);
+            RepairWindowsMissingStartedAt(combined);
             SynthesizeMissingWindows(combined, dataCenter);
             var merged = combined.ToArray();
             Array.Sort(merged, static (left, right) => right.StartedAt.CompareTo(left.StartedAt));
@@ -499,6 +500,44 @@ internal sealed class HuntsService : IDisposable
         worldMaintenanceOverrides is { } overrides && overrides.TryGetValue(worldId, out var worldRestart)
             ? worldRestart
             : dataCenterMaintenanceStart;
+
+    private void RepairWindowsMissingStartedAt(List<HuntWindowDto> combined)
+    {
+        for (var index = 0; index < combined.Count; index++)
+        {
+            var window = combined[index];
+            if (window.StartedAtNormal is not null || window.StartedAtSniped is not null)
+            {
+                continue;
+            }
+
+            var identity = new HuntsSocketMobIdentity
+            {
+                MobId = window.MobId,
+                WorldId = window.WorldId,
+                ZoneInstance = window.ZoneInstance,
+            };
+
+            if (!TryResolveSnipedFallback(identity, window.Num, window.SnipedNum, out var startedAtNormal,
+                    out var startedAtSniped, out var useMaintenanceTiming))
+            {
+                continue;
+            }
+
+            combined[index] = new HuntWindowDto
+            {
+                Num = window.Num,
+                StartedAtNormal = startedAtNormal,
+                StartedAtSniped = startedAtSniped,
+                PrevStartedAt = window.PrevStartedAt,
+                SnipedNum = window.SnipedNum,
+                MobId = window.MobId,
+                WorldId = window.WorldId,
+                ZoneInstance = window.ZoneInstance,
+                UseMaintenanceTiming = useMaintenanceTiming,
+            };
+        }
+    }
 
     private static HuntWindowDto BuildMaintenanceWindow(string mobId, string worldId, int zoneInstance,
         DateTimeOffset maintenanceStart) =>
