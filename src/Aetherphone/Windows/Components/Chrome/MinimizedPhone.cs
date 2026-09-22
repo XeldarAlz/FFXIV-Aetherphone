@@ -69,6 +69,7 @@ internal sealed class MinimizedPhone : IDisposable
     private readonly INavigator navigation;
     private readonly Configuration configuration;
     private readonly MinimizedLayoutService layout;
+    private readonly ThemeProvider themes;
     private readonly MinimizedFeed feed;
     private readonly MinimapReader minimap;
     private readonly ResizeGrip resizeGrip = new();
@@ -139,6 +140,7 @@ internal sealed class MinimizedPhone : IDisposable
         this.router = router;
         this.navigation = navigation;
         this.layout = layout;
+        themes = services.Themes;
         feed = new MinimizedFeed(services.Weather, services.Coins, services.AethernetSession, services.Activity,
             services.GameData);
         minimap = new MinimapReader(services.ZoneMapTextures);
@@ -162,7 +164,7 @@ internal sealed class MinimizedPhone : IDisposable
         }
 
         var scale = Scale;
-        var band = ChassisGeometry.PuckBand(BodyWidth * scale);
+        var band = ChassisGeometry.PuckBand(BodyWidth * scale, CaseKind);
         var height = MathF.Max(MinBodyHeight * scale - band, ContentHeight(scale)) + band;
         return new Vector2(MathF.Round(BodyWidth * scale), MathF.Round(height));
     }
@@ -176,6 +178,8 @@ internal sealed class MinimizedPhone : IDisposable
     private static float Scale => UiScale.Global * UiScale.Minimized;
 
     private bool ShowsMinimap => configuration.MinimizedShape == MinimizedShape.Minimap;
+
+    private PhoneCaseKind CaseKind => themes.Chrome.CaseKind;
 
     private Vector2 IdleUnits => ShowsMinimap
         ? new Vector2(MinimizedShapes.MapSide, MinimizedShapes.MapSide)
@@ -192,7 +196,7 @@ internal sealed class MinimizedPhone : IDisposable
     public bool Draw(Rect body, PhoneTheme theme, float delta)
     {
         var scale = Scale;
-        var geometry = ChassisGeometry.Puck(body);
+        var geometry = ChassisGeometry.Puck(body, theme.CaseKind);
         var dl = ImGui.GetForegroundDrawList();
         DeviceChrome.DrawShell(dl, geometry, scale, theme, 1f);
         return DrawFace(dl, geometry, theme, delta, true, 1f);
@@ -803,7 +807,8 @@ internal sealed class MinimizedPhone : IDisposable
         }
 
         textCulture = Loc.Culture;
-        var textWidth = BodyWidth * scale - ChassisGeometry.PuckBand(BodyWidth * scale) - SidePadding * 2f * scale;
+        var textWidth = BodyWidth * scale - ChassisGeometry.PuckBand(BodyWidth * scale, CaseKind) -
+                        SidePadding * 2f * scale;
         var timeWidth = textWidth;
         if (meridiemInline && meridiemLabel.Length > 0)
         {

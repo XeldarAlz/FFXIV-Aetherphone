@@ -8,6 +8,9 @@ internal readonly struct ChassisMetrics
     private const float ColorGlassFraction = 0.0135f;
     private const float ArtMetalFraction = 0.0365f;
     private const float ArtGlassFraction = 0.0155f;
+    private const float PuckRoundingFraction = 0.300f;
+    private const float PuckMetalFraction = 0.030f;
+    private const float PuckGlassFraction = 0.060f;
 
     public readonly float RailWidth;
     public readonly float MetalWidth;
@@ -33,6 +36,17 @@ internal readonly struct ChassisMetrics
 
     public static ChassisMetrics ForBody(PhoneCaseKind kind, float bodyWidth) =>
         For(kind, bodyWidth / (1f - 2f * RailFraction));
+
+    public static ChassisMetrics ForPuck(PhoneCaseKind kind, float bodyWidth)
+    {
+        if (kind == PhoneCaseKind.Art)
+        {
+            return ForBody(kind, bodyWidth);
+        }
+
+        return new ChassisMetrics(0f, PuckMetalFraction * bodyWidth, PuckGlassFraction * bodyWidth,
+            PuckRoundingFraction * bodyWidth);
+    }
 
     public static ChassisMetrics Default => For(PhoneCaseKind.Color, PhoneSizeCatalog.DesignWidth);
 }
