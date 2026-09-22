@@ -126,7 +126,7 @@ internal sealed class VideoEngine : IDisposable
         lastRecoveryRestartAtTicks = long.MinValue;
     }
 
-    internal event Action<MpvEndReason, string?>? PlaybackEnded;
+    internal event Action<PlaybackEnding>? PlaybackEnded;
     internal event Action? PlaybackLoaded;
 
     internal void ClearError()
@@ -299,9 +299,10 @@ internal sealed class VideoEngine : IDisposable
         PlaybackLoaded?.Invoke();
     }
 
-    private void OnFileEnded(MpvEndReason reason, string? detail)
+    private void OnFileEnded(PlaybackEnding ending)
     {
-        if (reason == MpvEndReason.Failed)
+        var detail = ending.Detail;
+        if (ending.Reason == MpvEndReason.Failed)
         {
             if (RefusedStreamUrl() is { } refusedUrl)
             {
@@ -322,7 +323,7 @@ internal sealed class VideoEngine : IDisposable
             LastError = detail;
         }
 
-        PlaybackEnded?.Invoke(reason, detail);
+        PlaybackEnded?.Invoke(ending with { Detail = detail });
     }
 
     private static string FailureText(string? detail) => detail is { Length: > 0 }
@@ -636,7 +637,7 @@ internal sealed class VideoEngine : IDisposable
     {
         recoveryNotice = null;
         LastError = message;
-        PlaybackEnded?.Invoke(MpvEndReason.Failed, message);
+        PlaybackEnded?.Invoke(new PlaybackEnding(MpvEndReason.Failed, message, PlaybackFailureKind.Unknown));
     }
 
     private string RefusedStreamText() => lastResolverOutcome switch

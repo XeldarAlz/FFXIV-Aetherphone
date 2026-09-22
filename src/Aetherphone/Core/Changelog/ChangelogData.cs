@@ -12,6 +12,7 @@ internal static class ChangelogData
             new(L.Apps.Wallet, L.Changelog.Release1034Wallet),
             new(L.Apps.Hunts, L.Changelog.Release1034Hunts),
             new(L.Apps.Games, L.Changelog.Release1034Games),
+            new(L.Apps.AetherStream, L.Changelog.Release1034MogCast),
             new(L.Changelog.SectionMessaging, L.Changelog.Release1034Messaging),
             new(L.Apps.Music, L.Changelog.Release1034Music),
             new(L.Changelog.SectionChirperAethergramVelvet, L.Changelog.Release1034ChirperAethergramVelvet),

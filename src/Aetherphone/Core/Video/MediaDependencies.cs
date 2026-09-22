@@ -114,7 +114,8 @@ internal sealed class MediaDependencies : IDisposable
     private const long MinimumLibraryBytes = 1 << 20;
     private const long MissRecheckMilliseconds = 1000;
     private const string ResolverConfigurationName = "yt-dlp.conf";
-    private const string ResolverPlayerClient = "web_embedded";
+    private const string ResolverPlayerClient = "default";
+    private const string ResolverOutputEncoding = "utf-8";
 
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(10);
     private static readonly UTF8Encoding ResolverConfigurationEncoding = new(encoderShouldEmitUTF8Identifier: true);
@@ -564,6 +565,7 @@ internal sealed class MediaDependencies : IDisposable
 
             File.WriteAllText(configurationPath,
                 $"--extractor-args \"youtube:player_client={ResolverPlayerClient}\"\n"
+                + $"--encoding {ResolverOutputEncoding}\n"
                 + $"--js-runtimes \"{JsRuntime.Id}:{runtimePath}\"\n",
                 ResolverConfigurationEncoding);
         }
