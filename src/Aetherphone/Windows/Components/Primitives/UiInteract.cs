@@ -87,6 +87,9 @@ internal static class UiInteract
     public static bool ClickedOutside(Vector2 min, Vector2 max, bool clip) =>
         WindowHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(min, max, clip);
 
+    public static bool ClickedOutside(bool hoveringContent) =>
+        WindowHovered && !hoveringContent && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+
     public static bool Hover(Vector2 min, Vector2 max, bool clip) =>
         !InputBlocked && !MouseOverOverlay && WindowHovered && ImGui.IsMouseHoveringRect(min, max, clip);
 
