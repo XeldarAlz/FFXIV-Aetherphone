@@ -246,17 +246,7 @@ internal sealed partial class MusicApp : IResumableApp
         socialNotifications.MarkSeen(Id);
         rolladeck.EnsureFresh();
         OnLiveDjsOpened();
-        if (launcher.TryConsumeStation(out var stationId))
-        {
-            viewedStationId = stationId;
-            community.OpenStation(stationId, null);
-            community.EnsureFresh(true);
-            tab = MusicTab.Live;
-            Router.Push(View.Station, false);
-            return;
-        }
-
-        community.EnsureFresh(false);
+        ConsumeLaunchRequests();
     }
 
     public void OnResumed()
@@ -265,17 +255,28 @@ internal sealed partial class MusicApp : IResumableApp
         LoadFavoriteRadioStations();
         socialNotifications.MarkSeen(Id);
         rolladeck.EnsureFresh();
-        if (launcher.TryConsumeStation(out var stationId))
+        ConsumeLaunchRequests();
+    }
+
+    private void ConsumeLaunchRequests()
+    {
+        if (!launcher.TryConsumeStation(out var stationId))
         {
-            viewedStationId = stationId;
-            community.OpenStation(stationId, null);
-            community.EnsureFresh(true);
-            tab = MusicTab.Live;
-            Router.Push(View.Station, false);
+            community.EnsureFresh(false);
             return;
         }
 
-        community.EnsureFresh(false);
+        viewedStationId = stationId;
+        community.OpenStation(stationId, null);
+        community.EnsureFresh(true);
+        tab = MusicTab.Live;
+        if (Router.Current == View.Station)
+        {
+            return;
+        }
+
+        Router.Reset();
+        Router.Push(View.Station, false);
     }
 
     public void OnClosed()
