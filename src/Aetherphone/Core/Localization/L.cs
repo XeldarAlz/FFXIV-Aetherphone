@@ -1772,6 +1772,24 @@ internal static class L
         public static readonly LocString SectionAethergramVelvet = new("changelog.sectionAethergramVelvet", "Aethergram and Velvet");
         public static readonly LocString SectionChirperAethergramVelvet = new("changelog.sectionChirperAethergramVelvet", "Chirper, Aethergram and Velvet");
 
+        public static readonly LocString[] Release1034AppStore =
+        {
+            new("changelog.r1034.1",
+                "Added descriptions and categories for Hunts, MogCast and Gamba, contributed by Deldee"),
+        };
+
+        public static readonly LocString[] Release1034Wallet =
+        {
+            new("changelog.r1034.2",
+                "Added this week's progress toward the weekly cap on the limited tomestone row, contributed by Deldee"),
+        };
+
+        public static readonly LocString[] Release1034Hunts =
+        {
+            new("changelog.r1034.3",
+                "Fixed some hunt windows showing as closed hundreds of thousands of days ago after maintenance, contributed by Deldee"),
+        };
+
         public static readonly LocString[] Release1034Games =
         {
             new("changelog.r1034.0",
