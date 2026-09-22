@@ -5277,6 +5277,7 @@
   "changelog.r1034.4": "Corregido que las ubicaciones compartidas desde dentro de una casa nombraran el distrito residencial del diseño interior en lugar del distrito en el que está la casa",
   "changelog.r1034.5": "Corregido que al tocar una notificación de chat se apilara otra copia del chat que ya tenías abierto, de modo que Atrás necesitaba un toque por notificación para llegar a la lista de chats, en ChocoChat, Aethergram y Velvet",
   "changelog.r1034.6": "Corregido que al tocar una notificación de que una emisora está en directo se apilara otra copia de la página de la emisora sobre la que ya estaba abierta",
+  "changelog.r1034.7": "Corregido que el siete con Reglas de la casa en Uno no intercambiara la mano con el jugador que tocabas, lo que dejaba todos los sietes injugables en salas de tres o más jugadores",
   "changelog.r1032.0": "Corregido un problema por el que el teléfono mostraba 'Demasiadas solicitudes. Reintento en Ns' y se congelaba unos segundos, sobre todo al abrir un chat; la comunicación con el servidor ahora es más ligera y se recupera sola",
   "changelog.r1031.0": "Corregido que las ventanas flotantes olvidaran su sitio: una ventana flotante que cierras vuelve a abrirse donde estaba, con el mismo tamaño",
   "changelog.r1030.0": "Corregidas las rayas rojas, azules y blancas que algunos PC añadían a las fotos subidas",

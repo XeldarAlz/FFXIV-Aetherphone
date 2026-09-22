@@ -5277,6 +5277,7 @@
   "changelog.r1034.4": "Correction des positions partagées depuis l'intérieur d'une maison qui indiquaient le quartier résidentiel du style intérieur au lieu de celui où se trouve la maison",
   "changelog.r1034.5": "Correction d'un problème où toucher une notification de discussion empilait une nouvelle copie de la discussion déjà ouverte, si bien que Retour demandait un appui par notification pour revenir à la liste des discussions, dans ChocoChat, Aethergram et Velvet",
   "changelog.r1034.6": "Correction d'un problème où toucher une notification de passage en direct d'une station empilait une nouvelle copie de la page de la station par-dessus celle déjà ouverte",
+  "changelog.r1034.7": "Correction du sept des Règles maison dans Uno qui n'échangeait pas la main avec le joueur touché, ce qui rendait tous les sept injouables dans les salons de trois joueurs ou plus",
   "changelog.r1032.0": "Correction d'un problème où le téléphone affichait 'Trop de requêtes. Nouvel essai dans Ns' et se figeait quelques secondes, surtout à l'ouverture d'une discussion ; la communication avec le serveur est désormais plus légère et se rétablit d'elle-même",
   "changelog.r1031.0": "Correction des fenêtres flottantes qui oubliaient leur place : une fenêtre flottante fermée se rouvre là où elle était, à la même taille",
   "changelog.r1030.0": "Correction des tirets rouges, bleus et blancs que certains PC ajoutaient aux photos envoyées",

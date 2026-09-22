@@ -744,6 +744,7 @@ internal sealed class OnlineUnoTable
         }
 
         var pickingTarget = sevenPendingCard >= 0;
+        var overTarget = false;
         if (pickingTarget)
         {
             var promptPos = Absolute(new Vector2((deckAnchor.X + discardAnchor.X) * 0.5f, 10f * scale));
@@ -764,8 +765,9 @@ internal sealed class OnlineUnoTable
             if (pickingTarget && !player.Away)
             {
                 var hitRadius = SeatHitRadius * scale;
+                overTarget |= (ImGui.GetMousePos() - anchor).LengthSquared() <= hitRadius * hitRadius;
                 ProgressRing.Glow(anchor, hitRadius, accent, 0.3f + 0.25f * Pulse.Wave(Pulse.Calm));
-                if (UiInteract.HoverClickCircle(anchor, hitRadius))
+                if (UiInteract.HoverClickCircle(anchor, hitRadius) && !store.ActInFlight)
                 {
                     store.SendPlay(sevenPendingCard, seat);
                     sevenPendingCard = -1;
@@ -803,7 +805,7 @@ internal sealed class OnlineUnoTable
         }
 
         if (sevenPendingCard >= 0 && ImGui.GetFrameCount() != sevenOpenedFrame
-            && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            && UiInteract.ClickedOutside(overTarget))
         {
             sevenPendingCard = -1;
         }
