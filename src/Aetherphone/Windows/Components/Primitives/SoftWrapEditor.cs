@@ -117,13 +117,33 @@ internal sealed class SoftWrapEditor
             flags |= ImGuiInputTextFlags.CallbackCompletion;
         }
 
+        var clipped = PushLineClip(size);
         ImGui.InputTextMultiline(id, ref display, buffer, size, flags, callback);
+        if (clipped)
+        {
+            ImGui.PopClipRect();
+        }
+
         if (!ImGui.IsItemActive())
         {
             pendingSync = false;
         }
 
         return enterPressed;
+    }
+
+    private static bool PushLineClip(Vector2 size)
+    {
+        if (size.X <= 0f || size.Y <= 0f)
+        {
+            return false;
+        }
+
+        var origin = ImGui.GetCursorScreenPos();
+        var inset = ImGui.GetStyle().FramePadding.Y;
+        ImGui.PushClipRect(new Vector2(origin.X, origin.Y + inset),
+            new Vector2(origin.X + size.X, origin.Y + size.Y - inset), true);
+        return true;
     }
 
     private int OnCallback(ImGuiInputTextCallbackDataPtr data)

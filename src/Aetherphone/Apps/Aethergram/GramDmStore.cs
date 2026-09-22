@@ -178,10 +178,10 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
 
     protected override async Task<GramMessageDto?> SendMessageRequestAsync(string threadId, string body, int kind,
         CancellationToken token, string? mediaKey, int mediaWidth, int mediaHeight, int encVersion,
-        string? commitmentTag, string? replyToId, int durationSecs)
+        string? commitmentTag, string? replyToId, int durationSecs, Action<AepFailure>? onFailure = null)
     {
         var sent = await client.SendMessageAsync(threadId, body, kind, token, mediaKey, mediaWidth, mediaHeight,
-            encVersion, commitmentTag, replyToId, durationSecs).ConfigureAwait(false);
+            encVersion, commitmentTag, replyToId, durationSecs, onFailure: onFailure).ConfigureAwait(false);
         if (sent is not null)
         {
             AcceptThreadIfPending(threadId);

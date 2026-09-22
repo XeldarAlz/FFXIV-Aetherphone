@@ -150,10 +150,10 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     protected override Task<ChatMessageDto?> SendMessageRequestAsync(string threadId, string body, int kind,
         CancellationToken token, string? mediaKey, int mediaWidth, int mediaHeight, int encVersion,
-        string? commitmentTag, string? replyToId, int durationSecs)
+        string? commitmentTag, string? replyToId, int durationSecs, Action<AepFailure>? onFailure = null)
     {
         return client.SendMessageAsync(threadId, body, kind, token, mediaKey, mediaWidth, mediaHeight, encVersion,
-            commitmentTag, replyToId, durationSecs: durationSecs);
+            commitmentTag, replyToId, durationSecs: durationSecs, onFailure: onFailure);
     }
 
     protected override Task<ChatMessageDto?> EditMessageRequestAsync(string messageId, string body,

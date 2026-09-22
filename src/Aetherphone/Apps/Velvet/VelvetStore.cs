@@ -376,10 +376,10 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
 
     protected override Task<VelvetMessageDto?> SendMessageRequestAsync(string threadId, string body, int kind,
         CancellationToken token, string? mediaKey, int mediaWidth, int mediaHeight, int encVersion,
-        string? commitmentTag, string? replyToId, int durationSecs)
+        string? commitmentTag, string? replyToId, int durationSecs, Action<AepFailure>? onFailure = null)
     {
         return client.SendMessageAsync(threadId, body, kind, null, token, mediaKey, mediaWidth, mediaHeight,
-            encVersion, commitmentTag, replyToId, durationSecs);
+            encVersion, commitmentTag, replyToId, durationSecs, onFailure);
     }
 
     protected override Task<VelvetMessageDto?> EditMessageRequestAsync(string messageId, string body,

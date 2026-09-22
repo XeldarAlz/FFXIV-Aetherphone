@@ -70,6 +70,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private int pollFailureStreak;
     private DateTime pollBackoffUntilUtc = DateTime.MinValue;
     private volatile bool sending;
+    private AepFailure lastSendFailure;
+    private readonly Action<AepFailure> noteSendFailure;
     private volatile bool otherTyping;
 
     private volatile bool inboxPolling;
@@ -102,6 +104,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         work = new StoreWork(logTag);
         cipher = new MessageCipher(vault, keys, chatHistory);
         messageOrder = CompareByCreatedAt;
+        noteSendFailure = NoteSendFailure;
         inboxCadence = new PollCadence(visibility, ForegroundInboxPollInterval, BackgroundInboxPollInterval);
         vault.Changed += OnVaultChanged;
         session.Changed += OnSessionAccountChanged;
@@ -174,7 +177,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     protected abstract Task<TMessage?> SendMessageRequestAsync(string threadId, string body, int kind,
         CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0,
-        int encVersion = 0, string? commitmentTag = null, string? replyToId = null, int durationSecs = 0);
+        int encVersion = 0, string? commitmentTag = null, string? replyToId = null, int durationSecs = 0,
+        Action<AepFailure>? onFailure = null);
 
     protected abstract Task<TMessage?> EditMessageRequestAsync(string messageId, string body, CancellationToken token,
         int encVersion = 0, string? commitmentTag = null);
@@ -286,6 +290,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     public bool HasMoreOlder => hasMoreOlder;
     public bool LoadingThread => loadingThread;
     public bool Sending => sending;
+    public AepFailure LastSendFailure => lastSendFailure;
     public bool OtherTyping => otherTyping;
     public KeyVaultState VaultState => vault.State;
     public KeyVault Vault => vault;
@@ -986,6 +991,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         }, () => refreshingTyping = false);
     }
 
+    private void NoteSendFailure(AepFailure failure) => lastSendFailure = failure;
+
     public void SendMessage(string id, string body, Action<bool> onComplete, string? replyToId = null)
     {
         var trimmed = body.Trim();
@@ -995,6 +1002,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         }
 
         sending = true;
+        lastSendFailure = AepFailure.None;
         work.Run("send", async token =>
         {
             TMessage? sent;
@@ -1005,7 +1013,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             {
                 sent = await SendMessageRequestAsync(id, encoded.Envelope, 0, token,
                     encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
-                    replyToId: replyToId)
+                    replyToId: replyToId, onFailure: noteSendFailure)
                     .ConfigureAwait(false);
                 if (sent is not null)
                 {
@@ -1015,7 +1023,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             }
             else
             {
-                sent = await SendMessageRequestAsync(id, trimmed, 0, token, replyToId: replyToId)
+                sent = await SendMessageRequestAsync(id, trimmed, 0, token, replyToId: replyToId,
+                        onFailure: noteSendFailure)
                     .ConfigureAwait(false);
             }
 

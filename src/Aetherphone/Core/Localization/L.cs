@@ -674,6 +674,8 @@ internal static class L
         public static readonly LocString ShareLocationConfirm = new("message.shareLocationConfirm", "Send your current location?");
         public static readonly LocString LocationUnavailable = new("message.locationUnavailable", "Your location could not be read.");
         public static readonly LocString LocationSendFailed = new("message.locationSendFailed", "Could not send your location.");
+        public static readonly LocString SendFailed = new("message.sendFailed", "Message not sent.");
+        public static readonly LocString SendFailedReason = new("message.sendFailedReason", "Message not sent: {0}");
         public static readonly LocString EditAction = new("message.editAction", "Edit");
         public static readonly LocString EditingLabel = new("message.editingLabel", "Editing message");
         public static readonly LocString EditedAt = new("message.editedAt", "edited {0}");
@@ -1808,6 +1810,10 @@ internal static class L
                 "Fixed tapping a chat notification stacking another copy of the chat you already had open, so Back took one tap per notification to reach the chat list, in ChocoChat, Aethergram and Velvet"),
             new("changelog.r1034.12",
                 "Fixed an edited message keeping its old text for everyone else, both in the chat and in the chat list preview, with only the edited marker updating, in ChocoChat, Aethergram and Velvet"),
+            new("changelog.r1034.15",
+                "Fixed the chat box showing the tails of letters from the line above once your message wrapped; the box now grows with the message instead of scrolling it, in ChocoChat, Aethergram and Velvet"),
+            new("changelog.r1034.16",
+                "Fixed a message that failed to send vanishing with no explanation; the chat now says why it was not sent and keeps your text, in ChocoChat, Aethergram and Velvet"),
         };
 
         public static readonly LocString[] Release1034Music =
