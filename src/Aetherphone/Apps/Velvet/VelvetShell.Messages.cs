@@ -48,9 +48,18 @@ internal sealed partial class VelvetShell
     private static readonly TextStyle HeroHandleStyle = TextStyles.Subheadline;
     private static readonly TextStyle IntroSendStyle = TextStyles.SubheadlineEmphasized;
 
-    private readonly List<VelvetThreadDto> chatsFiltered = new();
-    private VelvetThreadDto[] chatsFilterSource = Array.Empty<VelvetThreadDto>();
-    private string chatsFilterQuery = string.Empty;
+    private static readonly Comparison<VelvetChatRow> ChatRowsNewestFirst = (left, right) =>
+    {
+        var byActivity = right.ActivityUnix.CompareTo(left.ActivityUnix);
+        return byActivity != 0 ? byActivity : string.CompareOrdinal(left.UserId, right.UserId);
+    };
+
+    private readonly List<VelvetChatRow> chatRows = new();
+    private readonly HashSet<string> chatRowThreadUserIds = new(StringComparer.Ordinal);
+    private VelvetThreadDto[] chatRowsThreads = Array.Empty<VelvetThreadDto>();
+    private VelvetConnectionDto[] chatRowsConnections = Array.Empty<VelvetConnectionDto>();
+    private string chatRowsQuery = string.Empty;
+    private int chatRowsSourceCount;
     private string chatsDraft = string.Empty;
     private bool chatsSearchOpen;
     private bool chatsSearchFocus;
@@ -191,31 +200,57 @@ internal sealed partial class VelvetShell
         chatsSearchReveal.SnapTo(0f);
     }
 
-    private void RefreshChatsFilter(VelvetThreadDto[] threads)
+    private void RefreshChatRows(VelvetThreadDto[] threads, VelvetConnectionDto[] connections)
     {
         var query = chatsDraft.Trim();
-        if (ReferenceEquals(threads, chatsFilterSource) &&
-            string.Equals(query, chatsFilterQuery, StringComparison.Ordinal))
+        if (ReferenceEquals(threads, chatRowsThreads) && ReferenceEquals(connections, chatRowsConnections)
+            && string.Equals(query, chatRowsQuery, StringComparison.Ordinal))
         {
             return;
         }
 
-        chatsFilterSource = threads;
-        chatsFilterQuery = query;
-        chatsFiltered.Clear();
+        chatRowsThreads = threads;
+        chatRowsConnections = connections;
+        chatRowsQuery = query;
+        chatRows.Clear();
+        chatRowThreadUserIds.Clear();
+        chatRowsSourceCount = threads.Length;
         for (var index = 0; index < threads.Length; index++)
         {
             var thread = threads[index];
+            chatRowThreadUserIds.Add(thread.OtherUserId);
             if (query.Length == 0 || ChatRowMatches(thread, query))
             {
-                chatsFiltered.Add(thread);
+                chatRows.Add(new VelvetChatRow(thread));
             }
         }
+
+        for (var index = 0; index < connections.Length; index++)
+        {
+            var connection = connections[index];
+            if (connection.State != VelvetConnectionState.Connected
+                || chatRowThreadUserIds.Contains(connection.UserId))
+            {
+                continue;
+            }
+
+            chatRowsSourceCount++;
+            if (query.Length == 0 || ChatRowMatches(connection, query))
+            {
+                chatRows.Add(new VelvetChatRow(connection));
+            }
+        }
+
+        chatRows.Sort(ChatRowsNewestFirst);
     }
 
     private static bool ChatRowMatches(VelvetThreadDto thread, string query) =>
         thread.OtherDisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)
         || thread.OtherHandle.Contains(query, StringComparison.OrdinalIgnoreCase);
+
+    private static bool ChatRowMatches(VelvetConnectionDto connection, string query) =>
+        connection.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)
+        || connection.Handle.Contains(query, StringComparison.OrdinalIgnoreCase);
 
     private void DrawChatsList(Rect listRect)
     {
@@ -230,12 +265,11 @@ internal sealed partial class VelvetShell
             store.RefreshConnections();
         }
 
-        var threads = store.Threads;
-        RefreshChatsFilter(threads);
-        if (chatsFiltered.Count == 0)
+        RefreshChatRows(store.Threads, store.Connections);
+        if (chatRows.Count == 0)
         {
             var empty = new Rect(new Vector2(listRect.Min.X, ImGui.GetCursorScreenPos().Y), listRect.Max);
-            if (threads.Length > 0)
+            if (chatRowsSourceCount > 0)
             {
                 DrawEmpty(empty, Loc.T(L.Social.ListEmpty), string.Empty);
             }
@@ -248,34 +282,16 @@ internal sealed partial class VelvetShell
         }
 
         Gap(2f);
-        for (var index = 0; index < chatsFiltered.Count; index++)
+        for (var index = 0; index < chatRows.Count; index++)
         {
-            var thread = chatsFiltered[index];
-            var preview = string.IsNullOrEmpty(thread.LastMessagePreview)
-                ? Loc.T(L.Velvet.ThreadEmpty)
-                : ChatText.ListPreview(thread.LastMessagePreview);
-            var model = new VRowModel
+            var row = chatRows[index];
+            if (row.Thread is { } thread)
             {
-                Title = DisplayNameOf(thread.OtherDisplayName, thread.OtherHandle),
-                Subtitle = preview,
-                Height = 64f,
-                Leading = VRowLeading.Avatar,
-                AvatarRadius = 22f,
-                Name = DisplayNameOf(thread.OtherDisplayName, thread.OtherHandle),
-                World = string.Empty,
-                AvatarUrl = thread.OtherAvatarUrl,
-                Presence = thread.Presence,
-                Time = TimeText.Short(thread.LastMessageAtUnix),
-                Badge = thread.UnreadCount,
-            };
-            var hit = VRow.Cell(in model, ui, theme, images, lodestone);
-            if (hit == VRowHit.Body)
-            {
-                OpenThread(thread.OtherUserId);
+                DrawChatRow(thread);
             }
-            else if (hit == VRowHit.Overflow)
+            else if (row.Connection is { } connection)
             {
-                OpenThreadSheet(thread.OtherUserId);
+                DrawSilentConnectionRow(connection);
             }
         }
 
@@ -289,6 +305,57 @@ internal sealed partial class VelvetShell
         }
 
         Gap(40f);
+    }
+
+    private void DrawChatRow(VelvetThreadDto thread)
+    {
+        var preview = string.IsNullOrEmpty(thread.LastMessagePreview)
+            ? Loc.T(L.Velvet.ThreadEmpty)
+            : ChatText.ListPreview(thread.LastMessagePreview);
+        var model = new VRowModel
+        {
+            Title = DisplayNameOf(thread.OtherDisplayName, thread.OtherHandle),
+            Subtitle = preview,
+            Height = 64f,
+            Leading = VRowLeading.Avatar,
+            AvatarRadius = 22f,
+            Name = DisplayNameOf(thread.OtherDisplayName, thread.OtherHandle),
+            World = string.Empty,
+            AvatarUrl = thread.OtherAvatarUrl,
+            Presence = thread.Presence,
+            Time = TimeText.Short(thread.LastMessageAtUnix),
+            Badge = thread.UnreadCount,
+        };
+        var hit = VRow.Cell(in model, ui, theme, images, lodestone);
+        if (hit == VRowHit.Body)
+        {
+            OpenThread(thread.OtherUserId);
+        }
+        else if (hit == VRowHit.Overflow)
+        {
+            OpenThreadSheet(thread.OtherUserId);
+        }
+    }
+
+    private void DrawSilentConnectionRow(VelvetConnectionDto connection)
+    {
+        var model = new VRowModel
+        {
+            Title = DisplayNameOf(connection.DisplayName, connection.Handle),
+            Subtitle = Loc.T(L.Velvet.ThreadEmpty),
+            Height = 64f,
+            Leading = VRowLeading.Avatar,
+            AvatarRadius = 22f,
+            Name = DisplayNameOf(connection.DisplayName, connection.Handle),
+            World = string.Empty,
+            AvatarUrl = connection.AvatarUrl,
+            Presence = connection.Presence,
+            Time = TimeText.Short(connection.ConnectedAtUnix),
+        };
+        if (VRow.Cell(in model, ui, theme, images, lodestone) == VRowHit.Body)
+        {
+            OpenThread(connection.UserId);
+        }
     }
 
     private void DrawRequestsList(Rect listRect)
@@ -770,4 +837,28 @@ internal sealed partial class VelvetShell
 
     private static string IntroLineOf(VelvetConnectionDto request) =>
         string.IsNullOrWhiteSpace(request.Intro) ? Loc.T(L.Velvet.WantsToConnect) : request.Intro;
+}
+
+internal readonly struct VelvetChatRow
+{
+    public readonly VelvetThreadDto? Thread;
+    public readonly VelvetConnectionDto? Connection;
+    public readonly long ActivityUnix;
+    public readonly string UserId;
+
+    public VelvetChatRow(VelvetThreadDto thread)
+    {
+        Thread = thread;
+        Connection = null;
+        ActivityUnix = thread.LastMessageAtUnix;
+        UserId = thread.OtherUserId;
+    }
+
+    public VelvetChatRow(VelvetConnectionDto connection)
+    {
+        Thread = null;
+        Connection = connection;
+        ActivityUnix = connection.ConnectedAtUnix;
+        UserId = connection.UserId;
+    }
 }

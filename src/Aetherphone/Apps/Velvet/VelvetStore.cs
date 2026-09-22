@@ -144,10 +144,13 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
 
     private void OnSocialPinged()
     {
-        if (TickActive)
+        if (!TickActive)
         {
-            RefreshRequests();
+            return;
         }
+
+        RefreshRequests();
+        connectionsLoaded = false;
     }
 
     private void OnRealtimeConnected(bool active)

@@ -5287,6 +5287,7 @@
   "changelog.r1034.8": "Ajout d'une marque de pièce et d'une explication au survol pour le minuteur Aether Coin dans l'en-tête du jeu, qui continue pendant que le jeu est en pause",
   "changelog.r1034.9": "Correction d'un nom affiché modifié dans les Réglages qui n'atteignait pas vos profils Chirper, Aethergram et Velvet",
   "changelog.r1034.10": "Correction d'un filtre sans photo correspondante, comme Favoris sans aucune photo marquée, qui masquait le menu de tri et de filtre et vidait Récents et le sélecteur de photos des albums, sans moyen de revenir à Tous les éléments",
+  "changelog.r1034.11": "Correction des connexions sans message qui disparaissaient dès que vous quittiez la discussion vide ; elles restent désormais dans Discussions avec l'invite 'Dis bonjour' jusqu'à ce que quelqu'un écrive",
   "changelog.r1032.0": "Correction d'un problème où le téléphone affichait 'Trop de requêtes. Nouvel essai dans Ns' et se figeait quelques secondes, surtout à l'ouverture d'une discussion ; la communication avec le serveur est désormais plus légère et se rétablit d'elle-même",
   "changelog.r1031.0": "Correction des fenêtres flottantes qui oubliaient leur place : une fenêtre flottante fermée se rouvre là où elle était, à la même taille",
   "changelog.r1030.0": "Correction des tirets rouges, bleus et blancs que certains PC ajoutaient aux photos envoyées",
