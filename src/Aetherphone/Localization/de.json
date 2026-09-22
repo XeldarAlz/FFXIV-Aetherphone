@@ -5293,6 +5293,8 @@
   "changelog.r1034.12": "Behoben, dass eine bearbeitete Nachricht bei allen anderen ihren alten Text behielt, sowohl im Chat als auch in der Vorschau der Chatliste, und sich nur die Markierung 'bearbeitet' änderte, in ChocoChat, Aethergram und Velvet",
   "changelog.r1034.13": "Behoben, dass der Löschen-Button im Suchfeld der Emoji-Auswahl nicht auf Tipper reagierte, beigetragen von Haydooners",
   "changelog.r1034.14": "Behoben, dass Hüllen nicht auf das minimierte Telefon passten: die Hülle sitzt jetzt bündig auf dem Mini-Telefon und der Minikarte, und Ecken wie Anhänger behalten ihre Form",
+  "changelog.r1034.15": "Behoben, dass das Chatfeld nach einem Zeilenumbruch die Unterlängen der Zeile darüber zeigte; das Feld wächst jetzt mit der Nachricht mit, statt sie zu scrollen, in ChocoChat, Aethergram und Velvet",
+  "changelog.r1034.16": "Behoben, dass eine nicht gesendete Nachricht ohne Erklärung verschwand; der Chat sagt jetzt, warum sie nicht gesendet wurde, und behält deinen Text, in ChocoChat, Aethergram und Velvet",
   "changelog.r1032.0": "Behoben, dass das Telefon 'Zu viele Anfragen. Neuer Versuch in Ns' anzeigte und einige Sekunden einfror, meist beim Öffnen eines Chats; die Kommunikation mit dem Server ist jetzt leichter und fängt sich von selbst",
   "changelog.r1031.0": "Behoben, dass Pop-outs ihren Platz vergaßen: ein geschlossenes Pop-out öffnet sich wieder dort, wo es war, in derselben Größe",
   "changelog.r1030.0": "Behoben, dass manche PCs hochgeladenen Fotos rote, blaue und weiße Striche hinzufügten",

@@ -5293,6 +5293,8 @@
   "changelog.r1034.12": "Correction d'un message modifié qui gardait son ancien texte chez les autres, dans la discussion comme dans l'aperçu de la liste des discussions, seule la mention modifié changeant, dans ChocoChat, Aethergram et Velvet",
   "changelog.r1034.13": "Correction du bouton d'effacement du champ de recherche du sélecteur d'emojis qui ignorait les touchers, proposé par Haydooners",
   "changelog.r1034.14": "Correction des coques qui ne s'ajustaient pas au téléphone réduit : la coque épouse désormais le mini téléphone et la minicarte, et ses coins comme ses breloques gardent leur forme",
+  "changelog.r1034.15": "Correction du champ de saisie qui laissait apparaître le bas des lettres de la ligne précédente dès que le message passait à la ligne ; le champ s'agrandit désormais avec le message au lieu de le faire défiler, dans ChocoChat, Aethergram et Velvet",
+  "changelog.r1034.16": "Correction d'un message impossible à envoyer qui disparaissait sans explication ; la discussion indique désormais pourquoi l'envoi a échoué et conserve votre texte, dans ChocoChat, Aethergram et Velvet",
   "changelog.r1032.0": "Correction d'un problème où le téléphone affichait 'Trop de requêtes. Nouvel essai dans Ns' et se figeait quelques secondes, surtout à l'ouverture d'une discussion ; la communication avec le serveur est désormais plus légère et se rétablit d'elle-même",
   "changelog.r1031.0": "Correction des fenêtres flottantes qui oubliaient leur place : une fenêtre flottante fermée se rouvre là où elle était, à la même taille",
   "changelog.r1030.0": "Correction des tirets rouges, bleus et blancs que certains PC ajoutaient aux photos envoyées",
