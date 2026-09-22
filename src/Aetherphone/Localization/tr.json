@@ -2982,6 +2982,7 @@
   "wallet.sectionPvp": "PvP",
   "wallet.sectionCrafting": "Zanaat ve toplama",
   "wallet.sectionOther": "Diğer",
+  "wallet.weeklyCap": "Bu hafta: {0} / {1}",
   "jobs.logInToView": "Sınıflarını görmek için giriş yap",
   "jobs.noGearsets": "Oyun içinde bir sınıf için ekipman seti oluştur, burada görünsün.",
   "jobs.noGearset": "Set yok",

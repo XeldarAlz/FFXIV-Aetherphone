@@ -2982,6 +2982,7 @@
   "wallet.sectionPvp": "PvP",
   "wallet.sectionCrafting": "Handwerk & Sammeln",
   "wallet.sectionOther": "Sonstiges",
+  "wallet.weeklyCap": "Diese Woche: {0} / {1}",
   "jobs.logInToView": "Melde dich an, um deine Jobs zu sehen",
   "jobs.noGearsets": "Lege im Spiel ein Gearset für einen Job an, damit er hier auftaucht.",
   "jobs.noGearset": "Kein Gearset",

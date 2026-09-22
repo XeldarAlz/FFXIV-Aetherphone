@@ -145,18 +145,25 @@ internal sealed class WalletApp : IPhoneApp
         var width = ImGui.GetContentRegionAvail().X;
         var rowCount = section.Entries.Length;
         var origin = ImGui.GetCursorScreenPos();
-        var card = GroupCard.Begin(ui, rowCount, CurrencyRow.Height);
+        var totalHeight = 0f;
         for (var entryIndex = 0; entryIndex < rowCount; entryIndex++)
         {
-            var contentRect = card.NextRow();
+            totalHeight += CurrencyRow.HeightFor(section.Entries[entryIndex]);
+        }
+
+        var card = GroupCard.Begin(ui, totalHeight);
+        for (var entryIndex = 0; entryIndex < rowCount; entryIndex++)
+        {
+            var entry = section.Entries[entryIndex];
+            var contentRect = card.NextRow(CurrencyRow.HeightFor(entry));
             var band = new Rect(new Vector2(origin.X, contentRect.Min.Y),
                 new Vector2(origin.X + width, contentRect.Max.Y));
-            CurrencyRow.Draw(band, contentRect, section.Entries[entryIndex], textures, ui.Palette,
+            CurrencyRow.Draw(band, contentRect, entry, textures, ui.Palette,
                 Metrics.Radius.Md * scale, entryIndex == 0, entryIndex == rowCount - 1);
         }
 
         card.End();
-        return new Rect(origin, origin + new Vector2(width, rowCount * CurrencyRow.Height * scale));
+        return new Rect(origin, origin + new Vector2(width, totalHeight * scale));
     }
 
     public void Dispose()

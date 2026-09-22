@@ -2982,6 +2982,7 @@
   "wallet.sectionPvp": "PvP",
   "wallet.sectionCrafting": "Ремесло и сбор",
   "wallet.sectionOther": "Прочее",
+  "wallet.weeklyCap": "На этой неделе: {0} / {1}",
   "jobs.logInToView": "Войдите, чтобы увидеть классы",
   "jobs.noGearsets": "Создайте в игре набор экипировки для класса, и он появится здесь.",
   "jobs.noGearset": "Нет набора",

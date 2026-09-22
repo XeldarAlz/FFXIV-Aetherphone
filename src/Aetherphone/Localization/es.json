@@ -2982,6 +2982,7 @@
   "wallet.sectionPvp": "PvP",
   "wallet.sectionCrafting": "Artesanía y recolección",
   "wallet.sectionOther": "Otros",
+  "wallet.weeklyCap": "Esta semana: {0} / {1}",
   "jobs.logInToView": "Inicia sesión para ver tus trabajos",
   "jobs.noGearsets": "Crea un conjunto de equipo para un trabajo en el juego para verlo aquí.",
   "jobs.noGearset": "Sin conjunto",

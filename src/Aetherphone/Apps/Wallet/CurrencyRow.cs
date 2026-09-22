@@ -11,14 +11,18 @@ namespace Aetherphone.Apps.Wallet;
 
 internal static class CurrencyRow
 {
-    public const float Height = 62f;
+    private const float Height = 62f;
+    private const float WeeklyRowExtra = 18f;
     private const float HeroHeight = 132f;
     private const float HeroRounding = 24f;
     private const float IconSize = 38f;
     private const float TextGap = 14f;
+    private const float WeeklyLineGap = 4f;
 
     private static readonly Vector4 CappedTint = new(0.98f, 0.80f, 0.36f, 1f);
     private static readonly Vector4 IconBacking = new(1f, 1f, 1f, 0.05f);
+
+    public static float HeightFor(WalletEntry entry) => entry.HasWeeklyCap ? Height + WeeklyRowExtra : Height;
 
     public static Rect Hero(WalletEntry gil, ITextureProvider textures, in AppPalette palette)
     {
@@ -95,7 +99,11 @@ internal static class CurrencyRow
         var capped = entry.Amount >= entry.Cap;
         var accent = capped ? CappedTint : palette.Accent;
         var barTop = content.Max.Y - 15f * scale;
-        var lineCenterY = (content.Min.Y + barTop) * 0.5f;
+        var hasWeekly = entry.HasWeeklyCap;
+        var weeklyText = hasWeekly ? entry.WeeklyCapText : string.Empty;
+        var weeklySize = hasWeekly ? Typography.Measure(weeklyText, TextStyles.Caption1) : Vector2.Zero;
+        var textZoneBottom = hasWeekly ? barTop - WeeklyLineGap * scale - weeklySize.Y : barTop;
+        var lineCenterY = (content.Min.Y + textZoneBottom) * 0.5f;
         var capText = " / " + Format(entry.Cap);
         var capSize = Typography.Measure(capText, TextStyles.Footnote);
         var amountMeasure = Typography.Measure(amountText, TextStyles.Title3);
@@ -104,6 +112,11 @@ internal static class CurrencyRow
         Typography.Draw(drawList, new Vector2(amountX2, amountY), amountText, accent, TextStyles.Title3);
         Typography.Draw(drawList, new Vector2(content.Max.X - capSize.X, amountY + 4f * scale), capText,
             palette.MutedInk, TextStyles.Footnote);
+        if (hasWeekly)
+        {
+            Typography.Draw(drawList, new Vector2(content.Max.X - weeklySize.X, textZoneBottom), weeklyText,
+                palette.MutedInk, TextStyles.Caption1);
+        }
 
         var labelMaxWidth = MathF.Max(1f, amountX2 - 12f * scale - textLeft);
         var labelSize = Typography.Measure(entry.Name, TextStyles.Headline);
