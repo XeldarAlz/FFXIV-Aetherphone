@@ -493,6 +493,8 @@
   "message.shareLocationConfirm": "Deinen aktuellen Standort senden?",
   "message.locationUnavailable": "Dein Standort konnte nicht ermittelt werden.",
   "message.locationSendFailed": "Standort konnte nicht gesendet werden.",
+  "message.sendFailed": "Nachricht nicht gesendet.",
+  "message.sendFailedReason": "Nachricht nicht gesendet: {0}",
   "message.editAction": "Bearbeiten",
   "message.editingLabel": "Nachricht bearbeiten",
   "message.editedAt": "{0} bearbeitet",

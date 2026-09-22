@@ -493,6 +493,8 @@
   "message.shareLocationConfirm": "Отправить текущую геопозицию?",
   "message.locationUnavailable": "Не удалось определить геопозицию.",
   "message.locationSendFailed": "Не удалось отправить геопозицию.",
+  "message.sendFailed": "Сообщение не отправлено.",
+  "message.sendFailedReason": "Сообщение не отправлено: {0}",
   "message.editAction": "Изменить",
   "message.editingLabel": "Изменение сообщения",
   "message.editedAt": "{0} изменено",

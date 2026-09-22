@@ -493,6 +493,8 @@
   "message.shareLocationConfirm": "发送你当前的位置？",
   "message.locationUnavailable": "无法读取你的位置。",
   "message.locationSendFailed": "无法发送你的位置。",
+  "message.sendFailed": "消息未发送。",
+  "message.sendFailedReason": "消息未发送：{0}",
   "message.editAction": "编辑",
   "message.editingLabel": "正在编辑消息",
   "message.editedAt": "{0} 已编辑",

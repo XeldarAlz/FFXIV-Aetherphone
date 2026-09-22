@@ -53,6 +53,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     private readonly Dictionary<string, string> sessionDrafts = new(StringComparer.Ordinal);
     private volatile string? failedSendThreadId;
     private volatile string? failedSendText;
+    private AepFailure failedSendFailure;
     private static readonly TimeSpan VoiceFailureRetryFor = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan SyncBannerFloor = TimeSpan.FromSeconds(2);
     private readonly ConcurrentDictionary<string, byte[]> voiceBytes = new(StringComparer.Ordinal);
@@ -786,6 +787,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         }
 
         failedSendThreadId = threadId;
+        failedSendFailure = store.LastSendFailure;
         failedSendText = text;
     }
 
@@ -799,10 +801,12 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
         failedSendText = null;
         failedSendThreadId = null;
-        if (composer.Draft.Length == 0)
-        {
-            composer.Draft = text;
-        }
+        var reason = FailureText.Resolve(failedSendFailure);
+        ShellToast.Show(reason.Length == 0
+            ? Loc.T(L.Message.SendFailed)
+            : Loc.T(L.Message.SendFailedReason, reason));
+        var draft = composer.Draft;
+        composer.Draft = draft.Length == 0 ? text : $"{text} {draft}";
     }
 
     private void ComposerSendVoice(string threadId, byte[] wavBytes, int durationSecs)

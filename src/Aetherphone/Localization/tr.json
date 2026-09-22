@@ -493,6 +493,8 @@
   "message.shareLocationConfirm": "Şu anki konumun gönderilsin mi?",
   "message.locationUnavailable": "Konumun okunamadı.",
   "message.locationSendFailed": "Konumun gönderilemedi.",
+  "message.sendFailed": "Mesaj gönderilemedi.",
+  "message.sendFailedReason": "Mesaj gönderilemedi: {0}",
   "message.editAction": "Düzenle",
   "message.editingLabel": "Mesaj düzenleniyor",
   "message.editedAt": "{0} düzenlendi",

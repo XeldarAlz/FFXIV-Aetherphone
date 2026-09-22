@@ -674,6 +674,8 @@ internal static class L
         public static readonly LocString ShareLocationConfirm = new("message.shareLocationConfirm", "Send your current location?");
         public static readonly LocString LocationUnavailable = new("message.locationUnavailable", "Your location could not be read.");
         public static readonly LocString LocationSendFailed = new("message.locationSendFailed", "Could not send your location.");
+        public static readonly LocString SendFailed = new("message.sendFailed", "Message not sent.");
+        public static readonly LocString SendFailedReason = new("message.sendFailedReason", "Message not sent: {0}");
         public static readonly LocString EditAction = new("message.editAction", "Edit");
         public static readonly LocString EditingLabel = new("message.editingLabel", "Editing message");
         public static readonly LocString EditedAt = new("message.editedAt", "edited {0}");
