@@ -1,5 +1,6 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.Online;
+using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
@@ -352,7 +353,6 @@ internal sealed class GamesLibrary
             case "flap":
             case "whack":
             case "snake":
-            case "tetris":
             case "stack":
             case "crystaldrop":
             case "beat":
@@ -366,6 +366,11 @@ internal sealed class GamesLibrary
             case "wordrun":
             {
                 var best = stats.Get(gameId).BestScore;
+                return best > 0 ? BestPrefix(GameNumber.Label(best)) : string.Empty;
+            }
+            case "tetris":
+            {
+                var best = Math.Max(stats.Get(gameId).BestScore, stats.Get(TetrisApp.ModernStatId).BestScore);
                 return best > 0 ? BestPrefix(GameNumber.Label(best)) : string.Empty;
             }
             case "watersort":

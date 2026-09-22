@@ -19,7 +19,7 @@ internal sealed class TetrisApp : IMiniGame
         new(0.96f, 0.62f, 0.32f, 1f), new(0.50f, 0.86f, 0.58f, 1f), new(0.95f, 0.48f, 0.52f, 1f),
     };
 
-    private const string ModernStatId = "tetris.modern";
+    internal const string ModernStatId = "tetris.modern";
     private const float RulesetStripHeight = 26f;
     private const string HoldKeyLabel = "C";
     private const string LeftKeyLabel = "A";
