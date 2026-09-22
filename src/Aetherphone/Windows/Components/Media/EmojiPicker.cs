@@ -78,7 +78,8 @@ internal sealed class EmojiPicker
                 new Vector2(innerRight, searchTop + rowHeight));
             var appearing = ImGui.GetFrameCount() - lastDrawnFrame > 1;
             lastDrawnFrame = ImGui.GetFrameCount();
-            SearchField.Draw(searchRect, "##emojiSearch", Loc.T(L.Common.Search), ref search, theme, 100, appearing);
+            SearchField.Draw(searchRect, "##emojiSearch", Loc.T(L.Common.Search), ref search, theme, 
+                100, appearing, overlayOwned: true);
 
             RebuildViewIfNeeded();
 
