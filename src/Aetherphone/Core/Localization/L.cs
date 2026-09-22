@@ -1796,6 +1796,12 @@ internal static class L
                 "Fixed the Tetris tile on the Games tab not showing your best score from the Modern ruleset"),
         };
 
+        public static readonly LocString[] Release1034Messaging =
+        {
+            new("changelog.r1034.4",
+                "Fixed locations shared from inside a house naming the residential district of the interior design instead of the one the house stands in"),
+        };
+
         public static readonly LocString[] Release1033Social =
         {
             new("changelog.r1033.0",
