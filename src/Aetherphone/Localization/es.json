@@ -5290,6 +5290,7 @@
   "changelog.r1034.11": "Corregido que las conexiones sin mensajes desaparecieran al salir del chat vacío; ahora se quedan en Chats con el aviso 'Di hola' hasta que alguien escriba",
   "changelog.r1034.12": "Corregido que un mensaje editado conservara su texto antiguo para los demás, tanto en el chat como en la vista previa de la lista de chats, y solo cambiara la marca de editado, en ChocoChat, Aethergram y Velvet",
   "changelog.r1034.13": "Corregido que el botón de borrar del cuadro de búsqueda del selector de emojis ignorara los toques, contribuido por Haydooners",
+  "changelog.r1034.14": "Corregido que las fundas no encajaran en el teléfono minimizado: la funda ahora queda ajustada al teléfono pequeño y al minimapa, y sus esquinas y adornos conservan su forma",
   "changelog.r1032.0": "Corregido un problema por el que el teléfono mostraba 'Demasiadas solicitudes. Reintento en Ns' y se congelaba unos segundos, sobre todo al abrir un chat; la comunicación con el servidor ahora es más ligera y se recupera sola",
   "changelog.r1031.0": "Corregido que las ventanas flotantes olvidaran su sitio: una ventana flotante que cierras vuelve a abrirse donde estaba, con el mismo tamaño",
   "changelog.r1030.0": "Corregidas las rayas rojas, azules y blancas que algunos PC añadían a las fotos subidas",

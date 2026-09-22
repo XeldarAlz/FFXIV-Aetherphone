@@ -5290,6 +5290,7 @@
   "changelog.r1034.11": "Fixed connections with no messages yet vanishing once you left the empty chat; they now stay in Chats with a Say hello prompt until someone writes",
   "changelog.r1034.12": "Fixed an edited message keeping its old text for everyone else, both in the chat and in the chat list preview, with only the edited marker updating, in ChocoChat, Aethergram and Velvet",
   "changelog.r1034.13": "Fixed the clear button in the emoji picker's search box ignoring taps, contributed by Haydooners",
+  "changelog.r1034.14": "Fixed cases not fitting the minimized phone: the case now sits flush on the mini phone and the minimap, with its corners and charms kept in shape",
   "changelog.r1032.0": "Fixed an issue where the phone showed 'Too many requests. Retrying in Ns' and froze for a few seconds, most often when opening a chat; communication with the server is now lighter and recovers on its own",
   "changelog.r1031.0": "Fixed pop-out chat windows forgetting their place: a pop-out you close reopens where it was, at the same size",
   "changelog.r1030.0": "Fixed some PCs adding red, blue and white dashes to uploaded photos",

@@ -1838,6 +1838,8 @@ internal static class L
         {
             new("changelog.r1034.13",
                 "Fixed the clear button in the emoji picker's search box ignoring taps, contributed by Haydooners"),
+            new("changelog.r1034.14",
+                "Fixed cases not fitting the minimized phone: the case now sits flush on the mini phone and the minimap, with its corners and charms kept in shape"),
         };
 
         public static readonly LocString[] Release1033Social =
