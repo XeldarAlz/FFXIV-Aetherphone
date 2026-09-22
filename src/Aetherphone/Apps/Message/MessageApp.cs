@@ -183,7 +183,7 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
 
         if (launcher.TryConsumeConversation(out var conversationId))
         {
-            router.Push(MessageRoute.Thread(conversationId), false);
+            ShowLaunchedThread(conversationId);
             return;
         }
 
@@ -199,6 +199,19 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
                 composeResult = id;
             }
         });
+    }
+
+    private void ShowLaunchedThread(string conversationId)
+    {
+        activeTab = MessageTab.Chats;
+        var target = MessageRoute.Thread(conversationId);
+        if (router.Current == target)
+        {
+            return;
+        }
+
+        router.Reset();
+        router.Push(target, false);
     }
 
     public void OnClosed()

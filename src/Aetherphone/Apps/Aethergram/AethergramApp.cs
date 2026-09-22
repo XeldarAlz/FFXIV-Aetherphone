@@ -299,7 +299,7 @@ internal sealed partial class AethergramApp : IResumableApp
 
         if (store.IsSignedIn && dmLauncher.TryConsume(out var threadUserId, out var threadDraft))
         {
-            router.Push(AethergramRoute.Thread(threadUserId), false);
+            ShowLaunchedThread(threadUserId);
             if (!string.IsNullOrEmpty(threadDraft))
             {
                 threadView.PrefillDraft(threadDraft);
@@ -324,6 +324,18 @@ internal sealed partial class AethergramApp : IResumableApp
                 OpenDetailFromLink(link.Id);
             }
         }
+    }
+
+    private void ShowLaunchedThread(string userId)
+    {
+        var target = AethergramRoute.Thread(userId);
+        if (router.Current == target)
+        {
+            return;
+        }
+
+        router.Reset();
+        router.Push(target, false);
     }
 
     public void OnClosed()

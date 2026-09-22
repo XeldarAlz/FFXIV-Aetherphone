@@ -223,7 +223,7 @@ internal sealed partial class VelvetShell : IResumableApp
         if (GateAccepted && configuration.IsVelvetOnboarded() && store.IsSignedIn &&
             launcher.TryConsume(out var targetUserId))
         {
-            OpenThread(targetUserId);
+            ShowLaunchedThread(targetUserId);
         }
 
         if (GateAccepted && configuration.IsVelvetOnboarded() && store.IsSignedIn &&
@@ -239,6 +239,24 @@ internal sealed partial class VelvetShell : IResumableApp
                 router.Push(VelvetView.PostDetail(link.Id));
             }
         }
+    }
+
+    private void ShowLaunchedThread(string userId)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return;
+        }
+
+        activeTab = VelvetPage.Messages;
+        var target = VelvetView.Thread(userId);
+        if (router.Current == target)
+        {
+            return;
+        }
+
+        router.Reset();
+        router.Push(target, false);
     }
 
     public void OnClosed()
