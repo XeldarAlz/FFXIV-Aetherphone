@@ -5327,6 +5327,7 @@
   "changelog.r1034.18": "Corrigido o YouTube recusar links com uma verificação antibot de login em algumas conexões: o resolvedor de links agora escolhe seus próprios players do YouTube em vez de um único fixo",
   "changelog.r1034.19": "Corrigido que apóstrofos e acentos nas mensagens de erro de reprodução viravam pontos de interrogação",
   "changelog.r1034.20": "Adicionadas cinco capas novas: Bom Boko, Borb, Drippy, Pod e Scathatch, contribuído por Silkie",
+  "changelog.r1034.21": "Adicionadas nove molduras novas à loja do Aether Coin, contribuído por nox",
   "changelog.r1032.0": "Corrigido um problema em que o telefone mostrava 'Solicitações demais. Nova tentativa em Ns' e travava por alguns segundos, principalmente ao abrir um chat; a comunicação com o servidor agora é mais leve e se recupera sozinha",
   "changelog.r1031.0": "Corrigidas as janelas flutuantes que esqueciam seu lugar: uma janela flutuante que você fecha reabre onde estava, no mesmo tamanho",
   "changelog.r1030.0": "Corrigidos os traços vermelhos, azuis e brancos que alguns PCs adicionavam às fotos enviadas",

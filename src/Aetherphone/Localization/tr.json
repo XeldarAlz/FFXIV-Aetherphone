@@ -5327,6 +5327,7 @@
   "changelog.r1034.18": "YouTube'un bazı bağlantılarda linkleri oturum açma isteyen bot denetimiyle reddetmesi düzeltildi: link çözümleyici artık tek bir sabit oynatıcı yerine YouTube oynatıcılarını kendisi seçiyor",
   "changelog.r1034.19": "Oynatma hata mesajlarındaki kesme işaretlerinin ve aksanlı harflerin soru işaretine dönüşmesi düzeltildi",
   "changelog.r1034.20": "Beş yeni telefon kılıfı eklendi: Bom Boko, Borb, Drippy, Pod ve Scathatch, Silkie katkısıyla",
+  "changelog.r1034.21": "Aether Coin dükkanına dokuz yeni çerçeve eklendi, nox katkısıyla",
   "changelog.r1032.0": "Telefonun 'Çok fazla istek. N sn sonra yeniden denenecek' gösterip birkaç saniye donması sorunu düzeltildi, en çok bir sohbet açılırken oluyordu; sunucuyla iletişim artık daha hafif ve kendi kendine toparlanıyor",
   "changelog.r1031.0": "Ayrı pencerelerin yerini unutması düzeltildi: kapattığınız bir pencere aynı yerde ve aynı boyutta yeniden açılıyor",
   "changelog.r1030.0": "Bazı bilgisayarların yüklenen fotoğraflara kırmızı, mavi ve beyaz çizgiler eklemesi düzeltildi",
