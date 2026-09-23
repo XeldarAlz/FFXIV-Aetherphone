@@ -67,7 +67,7 @@ Aetherphone 是 FINAL FANTASY XIV 上第一款也是唯一一款真正可用的�
 在游戏中：`/xlsettings` → **Experimental** → 粘贴到 **Custom Plugin Repositories**：
 
 ```
-https://raw.githubusercontent.com/XeldarAlz/DalamudPlugins/main/repo.json
+https://aetherphone.net/repo.json
 ```
 
 勾选 **Enabled**，点击 **+**，然后点击 **Save and Close**。打开 `/xlplugins` → **All Plugins**，搜索 **Aetherphone** 并安装。

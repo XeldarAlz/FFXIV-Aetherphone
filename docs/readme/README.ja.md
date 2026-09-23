@@ -67,7 +67,7 @@ Aetherphone は FINAL FANTASY XIV で唯一、本当に動作する初めての�
 ゲーム内で：`/xlsettings` → **Experimental** → **Custom Plugin Repositories** に貼り付け：
 
 ```
-https://raw.githubusercontent.com/XeldarAlz/DalamudPlugins/main/repo.json
+https://aetherphone.net/repo.json
 ```
 
 **Enabled** にチェックを入れ、**+** をクリックし、**Save and Close** を押します。`/xlplugins` → **All Plugins** を開き、**Aetherphone** を検索してインストールします。

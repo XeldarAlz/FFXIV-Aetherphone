@@ -67,7 +67,7 @@ Forty-two apps in all. Full feature tour, screenshots, and details live on the w
 In-game: `/xlsettings` → **Experimental** → paste into **Custom Plugin Repositories**:
 
 ```
-https://raw.githubusercontent.com/XeldarAlz/DalamudPlugins/main/repo.json
+https://aetherphone.net/repo.json
 ```
 
 Tick **Enabled**, click **+**, then **Save and Close**. Open `/xlplugins` → **All Plugins**, search for **Aetherphone**, and install.

@@ -67,7 +67,7 @@ Aetherphone é o primeiro e único plugin de telefone totalmente funcional para 
 No jogo: `/xlsettings` → **Experimental** → cole em **Custom Plugin Repositories**:
 
 ```
-https://raw.githubusercontent.com/XeldarAlz/DalamudPlugins/main/repo.json
+https://aetherphone.net/repo.json
 ```
 
 Marque **Enabled**, clique em **+** e depois em **Save and Close**. Abra `/xlplugins` → **All Plugins**, busque **Aetherphone** e instale.

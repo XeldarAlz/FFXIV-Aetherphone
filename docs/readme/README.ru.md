@@ -67,7 +67,7 @@ Aetherphone это первый и единственный полноценно
 В игре: `/xlsettings` → **Experimental** → вставьте в **Custom Plugin Repositories**:
 
 ```
-https://raw.githubusercontent.com/XeldarAlz/DalamudPlugins/main/repo.json
+https://aetherphone.net/repo.json
 ```
 
 Поставьте галочку **Enabled**, нажмите **+**, затем **Save and Close**. Откройте `/xlplugins` → **All Plugins**, найдите **Aetherphone** и установите.

@@ -67,7 +67,7 @@ Toplam 42 uygulama. Tüm özellik turu, ekran görüntüleri ve ayrıntılar web
 Oyun içinde: `/xlsettings` → **Experimental** → **Custom Plugin Repositories** alanına yapıştırın:
 
 ```
-https://raw.githubusercontent.com/XeldarAlz/DalamudPlugins/main/repo.json
+https://aetherphone.net/repo.json
 ```
 
 **Enabled** kutusunu işaretleyin, **+** düğmesine tıklayın, ardından **Save and Close** deyin. `/xlplugins` → **All Plugins** açın, **Aetherphone** araması yapın ve kurun.
