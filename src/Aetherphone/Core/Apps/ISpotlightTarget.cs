@@ -8,6 +8,8 @@ internal interface ISpotlightPages
 
     string SpotlightPageTitle(int pageIndex);
 
+    bool IsSpotlightPageHidden(int pageIndex);
+
     void RequestSpotlightPage(int pageIndex);
 }
 

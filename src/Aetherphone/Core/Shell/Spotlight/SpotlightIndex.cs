@@ -508,6 +508,11 @@ internal sealed class SpotlightIndex
         var pageCount = settingsPages.SpotlightPageCount;
         for (var index = 0; index < pageCount && added < MaxSettings; index++)
         {
+            if (settingsPages.IsSpotlightPageHidden(index))
+            {
+                continue;
+            }
+
             var title = settingsPages.SpotlightPageTitle(index);
             var score = Match(title, query);
             if (score == 0)

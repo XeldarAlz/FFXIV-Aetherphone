@@ -33,8 +33,10 @@ internal sealed class LinkedDevicesPage : ISettingsPage, IDisposable
     private static readonly Vector4 QrCardFill = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 QrModuleInk = new(0.043f, 0.039f, 0.086f, 1f);
 
+    private readonly Configuration configuration;
     private readonly AethernetSession session;
     private readonly AuthClient client;
+    private readonly ISettingsNavigator navigator;
     private readonly CancellationTokenSource cancellation = new();
     private readonly object gate = new();
 
@@ -47,16 +49,20 @@ internal sealed class LinkedDevicesPage : ISettingsPage, IDisposable
     private volatile bool requestInFlight;
     private volatile bool statusInFlight;
 
-    public LinkedDevicesPage(AethernetSession session, AuthClient client)
+    public LinkedDevicesPage(Configuration configuration, AethernetSession session, AuthClient client,
+        ISettingsNavigator navigator)
     {
+        this.configuration = configuration;
         this.session = session;
         this.client = client;
+        this.navigator = navigator;
     }
 
     public string Title => Loc.T(L.Settings.LinkedDevices);
     public string Summary => string.Empty;
     public FontAwesomeIcon Icon => FontAwesomeIcon.Qrcode;
     public Vector4 Tint => new(0.545f, 0.486f, 0.973f, 1f);
+    public bool IsHidden => !configuration.LinkedDevicesUnlocked;
 
     public void Dispose()
     {
@@ -67,36 +73,62 @@ internal sealed class LinkedDevicesPage : ISettingsPage, IDisposable
     public void Draw(in PhoneContext context, Rect body)
     {
         var theme = context.Theme;
-        if (!session.IsSignedIn)
+        using (AppSurface.Begin(body))
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Settings.LinkedDevicesSignIn), theme.TextMuted, 0.86f);
+            if (session.IsSignedIn)
+            {
+                Advance();
+                DrawStage(theme);
+            }
+            else
+            {
+                SettingsSection.Header(Loc.T(L.Settings.LinkedDevices), theme,
+                    Loc.T(L.Settings.LinkedDevicesSignIn));
+            }
+
+            DrawHideRow(theme);
+        }
+    }
+
+    private void DrawHideRow(PhoneTheme theme)
+    {
+        ImGui.Dummy(new Vector2(1f, Metrics.Space.Md * UiScale.Current));
+        var card = GroupCard.Begin(theme, 1);
+        var hide = SettingsRow.Action(card.NextRow(), Loc.T(L.Settings.LinkedDevicesHide), theme.Danger, theme);
+        card.End();
+        if (!hide)
+        {
             return;
         }
 
-        Advance();
-        using (AppSurface.Begin(body))
+        configuration.LinkedDevicesUnlocked = false;
+        configuration.Save();
+        ShellToast.Show(Loc.T(L.Settings.LinkedDevicesHidden));
+        navigator.Back();
+    }
+
+    private void DrawStage(PhoneTheme theme)
+    {
+        switch (stage)
         {
-            switch (stage)
-            {
-                case LinkStage.Showing:
-                    DrawShowing(theme);
-                    break;
-                case LinkStage.Claimed:
-                    DrawClaimed(theme);
-                    break;
-                case LinkStage.Approving:
-                    DrawSpinnerBlock(theme, Loc.T(L.Settings.LinkedDevicesApprove));
-                    break;
-                case LinkStage.Linked:
-                    DrawLinked(theme);
-                    break;
-                case LinkStage.Failed:
-                    DrawFailed(theme);
-                    break;
-                default:
-                    DrawSpinnerBlock(theme, string.Empty);
-                    break;
-            }
+            case LinkStage.Showing:
+                DrawShowing(theme);
+                break;
+            case LinkStage.Claimed:
+                DrawClaimed(theme);
+                break;
+            case LinkStage.Approving:
+                DrawSpinnerBlock(theme, Loc.T(L.Settings.LinkedDevicesApprove));
+                break;
+            case LinkStage.Linked:
+                DrawLinked(theme);
+                break;
+            case LinkStage.Failed:
+                DrawFailed(theme);
+                break;
+            default:
+                DrawSpinnerBlock(theme, string.Empty);
+                break;
         }
     }
 

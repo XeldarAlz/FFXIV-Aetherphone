@@ -117,7 +117,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
             confirm, this, tagsMentionsPage);
         var about = new AboutPage(configuration, gameData, aethernetSession);
         changelogPage = new ChangelogPage(configuration);
-        linkedDevicesPage = new LinkedDevicesPage(aethernetSession, aethernet.Auth);
+        linkedDevicesPage = new LinkedDevicesPage(configuration, aethernetSession, aethernet.Auth, this);
         var groups = new[]
         {
             new ISettingsPage[] { general, appearance, sounds, notificationsPage, callsPage, language },
@@ -223,6 +223,8 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
     public int SpotlightPageCount => searchablePages.Length;
 
     public string SpotlightPageTitle(int pageIndex) => searchablePages[pageIndex].Title;
+
+    public bool IsSpotlightPageHidden(int pageIndex) => searchablePages[pageIndex].IsHidden;
 
     public void RequestSpotlightPage(int pageIndex) => pendingPage = searchablePages[pageIndex];
 

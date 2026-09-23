@@ -16,7 +16,12 @@ internal sealed class AboutPage : ISettingsPage
     private readonly Configuration configuration;
     private readonly GameData gameData;
     private readonly AethernetSession aethernetSession;
+    private const int VersionTapsToUnlock = 10;
+    private const int VersionTapCountdown = 3;
+    private static readonly TimeSpan VersionTapWindow = TimeSpan.FromSeconds(1.5);
     private DateTime copiedAt;
+    private DateTime lastVersionTapAt;
+    private int versionTaps;
 
     public AboutPage(Configuration configuration, GameData gameData, AethernetSession aethernetSession)
     {
@@ -39,7 +44,7 @@ internal sealed class AboutPage : ISettingsPage
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * UiScale.Current));
             var card = GroupCard.Begin(theme, AepConstants.IsPrerelease ? 5 : 4);
             SettingsRow.Info(card.NextRow(), Loc.T(L.Settings.Plugin), AepConstants.Name, theme);
-            SettingsRow.Info(card.NextRow(), Loc.T(L.Settings.Version), AepConstants.Version, theme);
+            DrawVersionRow(card.NextRow(), theme);
             SettingsRow.Info(card.NextRow(), Loc.T(L.Settings.Command), AepConstants.PrimaryCommand, theme);
             if (AepConstants.IsPrerelease)
             {
@@ -56,6 +61,46 @@ internal sealed class AboutPage : ISettingsPage
 
             card.End();
         }
+    }
+
+    private void DrawVersionRow(Rect row, PhoneTheme theme)
+    {
+        SettingsRow.Info(row, Loc.T(L.Settings.Version), AepConstants.Version, theme);
+        if (!UiInteract.Click(row.Min, row.Max, UiInteract.Hover(row.Min, row.Max), false))
+        {
+            return;
+        }
+
+        RegisterVersionTap();
+    }
+
+    private void RegisterVersionTap()
+    {
+        var now = DateTime.UtcNow;
+        versionTaps = now - lastVersionTapAt <= VersionTapWindow ? versionTaps + 1 : 1;
+        lastVersionTapAt = now;
+        if (configuration.LinkedDevicesUnlocked)
+        {
+            ShellToast.Show(Loc.T(L.Settings.LinkedDevicesAlreadyShown));
+            return;
+        }
+
+        var remaining = VersionTapsToUnlock - versionTaps;
+        if (remaining > VersionTapCountdown)
+        {
+            return;
+        }
+
+        if (remaining > 0)
+        {
+            ShellToast.Show(Loc.T(L.Settings.LinkedDevicesTapsLeft, remaining));
+            return;
+        }
+
+        versionTaps = 0;
+        configuration.LinkedDevicesUnlocked = true;
+        configuration.Save();
+        ShellToast.Show(Loc.T(L.Settings.LinkedDevicesShown));
     }
 
     private void DrawTestServerRow(Rect row, PhoneTheme theme)

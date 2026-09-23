@@ -1742,6 +1742,11 @@ internal static class L
         public static readonly LocString LinkedDevicesSignIn = new("settings.linkedDevicesSignIn", "Sign in to Aethernet to link a phone.");
         public static readonly LocString LinkedDevicesFailed = new("settings.linkedDevicesFailed", "Could not get a link code. Check your connection and try again.");
         public static readonly LocString LinkedDevicesRetry = new("settings.linkedDevicesRetry", "Try again");
+        public static readonly LocString LinkedDevicesHide = new("settings.linkedDevicesHide", "Hide Linked Devices");
+        public static readonly LocString LinkedDevicesHidden = new("settings.linkedDevicesHidden", "Linked Devices is hidden. Tap Version in About 10 times to show it again.");
+        public static readonly LocString LinkedDevicesTapsLeft = new("settings.linkedDevicesTapsLeft", "Taps left to show Linked Devices: {0}");
+        public static readonly LocString LinkedDevicesShown = new("settings.linkedDevicesShown", "Linked Devices is now in Settings.");
+        public static readonly LocString LinkedDevicesAlreadyShown = new("settings.linkedDevicesAlreadyShown", "Linked Devices is already in Settings.");
         public static readonly LocString TellArchiveTitle = new("settings.tellArchiveTitle", "Chat History");
         public static readonly LocString TellArchive = new("settings.tellArchive", "Save tell history on this PC");
         public static readonly LocString TellArchiveHint = new("settings.tellArchiveHint", "Tells are saved as plain text files on this PC so conversations survive a restart. They are never uploaded anywhere. Turn this off to keep new tells in memory only. Deleting a conversation also deletes its file.");

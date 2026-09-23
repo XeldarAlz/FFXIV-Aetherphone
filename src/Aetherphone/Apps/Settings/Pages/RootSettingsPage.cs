@@ -137,10 +137,15 @@ internal sealed class RootSettingsPage : ISettingsPage
         {
             ImGui.Dummy(new Vector2(0f, CardGap * scale));
             var pages = groups[groupIndex];
-            var card = GroupCard.Begin(theme, pages.Length);
+            var card = GroupCard.Begin(theme, VisibleCount(pages));
             for (var index = 0; index < pages.Length; index++)
             {
                 var page = pages[index];
+                if (page.IsHidden)
+                {
+                    continue;
+                }
+
                 var row = card.NextRow();
                 if (page.GuideAnchor is { } anchorKey)
                 {
@@ -155,6 +160,20 @@ internal sealed class RootSettingsPage : ISettingsPage
 
             card.End();
         }
+    }
+
+    private static int VisibleCount(ISettingsPage[] pages)
+    {
+        var count = 0;
+        for (var index = 0; index < pages.Length; index++)
+        {
+            if (!pages[index].IsHidden)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private static void DrawLinks(PhoneTheme theme)

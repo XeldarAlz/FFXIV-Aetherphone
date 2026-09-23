@@ -161,6 +161,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public float RingtoneVolume { get; set; } = 0.8f;
     public float NotificationVolume { get; set; } = 0.8f;
     public bool SilentMode { get; set; }
+    public bool LinkedDevicesUnlocked { get; set; }
     public bool RingtoneEnabled { get; set; } = true;
     public bool NotificationSoundsEnabled { get; set; } = true;
     public bool UiSounds { get; set; } = true;
