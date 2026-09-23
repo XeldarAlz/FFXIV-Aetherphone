@@ -114,7 +114,7 @@ internal sealed class MediaDependencies : IDisposable
     private const long MinimumLibraryBytes = 1 << 20;
     private const long MissRecheckMilliseconds = 1000;
     private const string ResolverConfigurationName = "yt-dlp.conf";
-    private const string ResolverPlayerClient = "default";
+    private const string ResolverPlayerClient = "default,web_embedded";
     private const string ResolverOutputEncoding = "utf-8";
 
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(10);
