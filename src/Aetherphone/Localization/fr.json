@@ -3239,6 +3239,7 @@
   "games.coinTimerHint": "Minuteur Aether Coin : restez dans ce jeu jusqu'à la fin du compte à rebours pour gagner des pièces. Il continue pendant que le jeu est en pause.",
   "games.coinTimerDeepHint": "Pièces gagnées. Restez dans ce jeu jusqu'à la fin du compte à rebours pour le bonus de longue session. Il continue pendant que le jeu est en pause.",
   "games.coinTimerDoneHint": "Pièces gagnées pour ce jeu, bonus de longue session compris.",
+  "games.coinTimerCooldownHint": "Le minuteur Aether Coin démarre bientôt : un nouveau minuteur peut commencer une minute après le début du précédent. Restez dans ce jeu et il démarrera tout seul.",
   "games.lines": "Lignes",
   "games.level": "Niveau",
   "games.moves": "Coups",

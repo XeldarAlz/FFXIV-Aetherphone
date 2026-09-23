@@ -3239,6 +3239,7 @@
   "games.coinTimerHint": "以太积分计时：在这个游戏中停留到倒计时结束即可获得积分。游戏暂停时计时仍会继续。",
   "games.coinTimerDeepHint": "已获得积分。继续停留到倒计时结束可获得长时间游戏奖励。游戏暂停时计时仍会继续。",
   "games.coinTimerDoneHint": "已获得这个游戏的积分，包括长时间游戏奖励。",
+  "games.coinTimerCooldownHint": "以太积分计时即将开始：上一次计时开始一分钟后才能开始新的计时。留在这个游戏中，计时会自动开始。",
   "games.lines": "行数",
   "games.level": "等级",
   "games.moves": "步数",

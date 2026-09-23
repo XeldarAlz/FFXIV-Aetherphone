@@ -3239,6 +3239,7 @@
   "games.coinTimerHint": "Aether Coin sayacı: coin kazanmak için geri sayım bitene kadar bu oyunda kal. Oyun duraklatılmışken de saymaya devam eder.",
   "games.coinTimerDeepHint": "Coin kazanıldı. Uzun oturum bonusu için geri sayım bitene kadar bu oyunda kal. Oyun duraklatılmışken de saymaya devam eder.",
   "games.coinTimerDoneHint": "Bu oyun için coin kazanıldı, uzun oturum bonusu dahil.",
+  "games.coinTimerCooldownHint": "Aether Coin sayacı birazdan başlıyor: yeni bir sayaç, bir öncekinin başlamasından bir dakika sonra başlayabilir. Bu oyunda kal, kendiliğinden başlayacak.",
   "games.lines": "Satır",
   "games.level": "Seviye",
   "games.moves": "Hamle",

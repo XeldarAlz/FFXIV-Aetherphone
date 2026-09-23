@@ -5681,6 +5681,8 @@ internal static class L
             "Coins earned. Stay in this game until the countdown ends for the long session bonus. It keeps counting while the game is paused.");
         public static readonly LocString CoinTimerDoneHint = new("games.coinTimerDoneHint",
             "Coins earned for this game, including the long session bonus.");
+        public static readonly LocString CoinTimerCooldownHint = new("games.coinTimerCooldownHint",
+            "Aether Coin timer starts soon: a new timer can begin one minute after the last one started. Stay in this game and it starts on its own.");
         public static readonly LocString Lines = new("games.lines", "Lines");
         public static readonly LocString Level = new("games.level", "Level");
         public static readonly LocString Moves = new("games.moves", "Moves");

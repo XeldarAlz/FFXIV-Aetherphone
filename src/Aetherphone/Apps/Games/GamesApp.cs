@@ -60,13 +60,15 @@ internal sealed partial class GamesApp : IPhoneApp
         public readonly string Label;
         public readonly float Fraction;
         public readonly bool Qualified;
+        public readonly bool CoolingDown;
         public readonly bool Visible;
 
-        public CoinSessionChip(string label, float fraction, bool qualified)
+        public CoinSessionChip(string label, float fraction, bool qualified, bool coolingDown = false)
         {
             Label = label;
             Fraction = fraction;
             Qualified = qualified;
+            CoolingDown = coolingDown;
             Visible = true;
         }
     }
@@ -334,16 +336,17 @@ internal sealed partial class GamesApp : IPhoneApp
 
     private CoinSessionChip BuildCoinSessionChip()
     {
-        var seconds = coinSessions.OpenSessionSeconds;
-        if (seconds < 0)
-        {
-            return default;
-        }
-
         var wallet = coins.Wallet;
         if (wallet is not null && RuleExhausted(wallet, "game.session") && RuleExhausted(wallet, "game.deep"))
         {
             return default;
+        }
+
+        var seconds = coinSessions.OpenSessionSeconds;
+        if (seconds < 0)
+        {
+            var cooldown = coinSessions.CooldownSeconds;
+            return cooldown > 0 ? new CoinSessionChip(TimeText.Duration(cooldown), 0f, false, true) : default;
         }
 
         var minSeconds = coinSessions.OpenMinSeconds;
@@ -399,6 +402,11 @@ internal sealed partial class GamesApp : IPhoneApp
 
     private static string CoinChipHint(in CoinSessionChip chip)
     {
+        if (chip.CoolingDown)
+        {
+            return Loc.T(L.Games.CoinTimerCooldownHint);
+        }
+
         if (!chip.Qualified)
         {
             return Loc.T(L.Games.CoinTimerHint);

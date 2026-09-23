@@ -3239,6 +3239,7 @@
   "games.coinTimerHint": "Cronômetro de Aether Coin: fique neste jogo até a contagem terminar para ganhar moedas. Ele continua contando enquanto o jogo está pausado.",
   "games.coinTimerDeepHint": "Moedas ganhas. Fique neste jogo até a contagem terminar para o bônus de sessão longa. Ele continua contando enquanto o jogo está pausado.",
   "games.coinTimerDoneHint": "Moedas ganhas neste jogo, incluindo o bônus de sessão longa.",
+  "games.coinTimerCooldownHint": "O cronômetro de Aether Coin começa em breve: um novo cronômetro pode começar um minuto depois do início do anterior. Fique neste jogo e ele começa sozinho.",
   "games.lines": "Linhas",
   "games.level": "Nível",
   "games.moves": "Movimentos",
