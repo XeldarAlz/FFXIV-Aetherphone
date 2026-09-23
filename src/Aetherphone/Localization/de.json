@@ -3239,6 +3239,7 @@
   "games.coinTimerHint": "Aether-Coin-Timer: Bleib in diesem Spiel, bis der Countdown abläuft, um Coins zu verdienen. Er läuft weiter, während das Spiel pausiert ist.",
   "games.coinTimerDeepHint": "Coins verdient. Bleib in diesem Spiel, bis der Countdown abläuft, für den Bonus für eine lange Runde. Er läuft weiter, während das Spiel pausiert ist.",
   "games.coinTimerDoneHint": "Coins für dieses Spiel verdient, einschließlich des Bonus für eine lange Runde.",
+  "games.coinTimerCooldownHint": "Der Aether-Coin-Timer startet gleich: Ein neuer Timer kann eine Minute nach dem Start des letzten beginnen. Bleib in diesem Spiel, dann startet er von selbst.",
   "games.lines": "Linien",
   "games.level": "Level",
   "games.moves": "Züge",

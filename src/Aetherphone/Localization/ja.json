@@ -3239,6 +3239,7 @@
   "games.coinTimerHint": "Aether Coinタイマー：カウントダウンが終わるまでこのゲームを続けるとコインを獲得できます。ゲームの一時停止中もカウントは進みます。",
   "games.coinTimerDeepHint": "コインを獲得しました。カウントダウンが終わるまで続けると、長めのセッションのボーナスを獲得できます。ゲームの一時停止中もカウントは進みます。",
   "games.coinTimerDoneHint": "このゲームのコインを獲得しました（長めのセッションのボーナスを含む）。",
+  "games.coinTimerCooldownHint": "Aether Coinタイマーはまもなく始まります：新しいタイマーは前回の開始から1分後に始められます。このゲームを続けていれば自動で始まります。",
   "games.lines": "ライン",
   "games.level": "レベル",
   "games.moves": "手数",
