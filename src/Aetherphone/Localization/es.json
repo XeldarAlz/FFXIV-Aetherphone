@@ -5327,6 +5327,7 @@
   "changelog.r1034.18": "Corregido que YouTube rechazara enlaces con una comprobación antibots de inicio de sesión en algunas conexiones: el resolutor de enlaces ahora elige sus propios reproductores de YouTube en lugar de uno fijo",
   "changelog.r1034.19": "Corregido que los apóstrofos y los acentos de los mensajes de error de reproducción se convirtieran en signos de interrogación",
   "changelog.r1034.20": "Se añadieron cinco fundas nuevas: Bom Boko, Borb, Drippy, Pod y Scathatch, contribuido por Silkie",
+  "changelog.r1034.21": "Se añadieron nueve marcos nuevos a la tienda de Aether Coin, contribuido por nox",
   "changelog.r1032.0": "Corregido un problema por el que el teléfono mostraba 'Demasiadas solicitudes. Reintento en Ns' y se congelaba unos segundos, sobre todo al abrir un chat; la comunicación con el servidor ahora es más ligera y se recupera sola",
   "changelog.r1031.0": "Corregido que las ventanas flotantes olvidaran su sitio: una ventana flotante que cierras vuelve a abrirse donde estaba, con el mismo tamaño",
   "changelog.r1030.0": "Corregidas las rayas rojas, azules y blancas que algunos PC añadían a las fotos subidas",

@@ -5327,6 +5327,7 @@
   "changelog.r1034.18": "Behoben, dass YouTube Links auf manchen Verbindungen mit einer Anmelde-Bot-Prüfung ablehnte: Der Link-Resolver wählt seine YouTube-Player jetzt selbst statt eines festen Players",
   "changelog.r1034.19": "Behoben, dass Apostrophe und Akzente in Wiedergabe-Fehlermeldungen zu Fragezeichen wurden",
   "changelog.r1034.20": "Fünf neue Telefonhüllen hinzugefügt: Bom Boko, Borb, Drippy, Pod und Scathatch, beigetragen von Silkie",
+  "changelog.r1034.21": "Neun neue Rahmen im Aether Coin Shop hinzugefügt, beigetragen von nox",
   "changelog.r1032.0": "Behoben, dass das Telefon 'Zu viele Anfragen. Neuer Versuch in Ns' anzeigte und einige Sekunden einfror, meist beim Öffnen eines Chats; die Kommunikation mit dem Server ist jetzt leichter und fängt sich von selbst",
   "changelog.r1031.0": "Behoben, dass Pop-outs ihren Platz vergaßen: ein geschlossenes Pop-out öffnet sich wieder dort, wo es war, in derselben Größe",
   "changelog.r1030.0": "Behoben, dass manche PCs hochgeladenen Fotos rote, blaue und weiße Striche hinzufügten",

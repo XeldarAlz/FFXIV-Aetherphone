@@ -5327,6 +5327,7 @@
   "changelog.r1034.18": "Fixed YouTube refusing links with a sign-in bot check on some connections: the link resolver now picks its own YouTube players instead of one fixed player",
   "changelog.r1034.19": "Fixed apostrophes and accents in playback error messages turning into question marks",
   "changelog.r1034.20": "Added five new phone cases: Bom Boko, Borb, Drippy, Pod and Scathatch, contributed by Silkie",
+  "changelog.r1034.21": "Added nine new frames to the Aether Coin shop, contributed by nox",
   "changelog.r1032.0": "Fixed an issue where the phone showed 'Too many requests. Retrying in Ns' and froze for a few seconds, most often when opening a chat; communication with the server is now lighter and recovers on its own",
   "changelog.r1031.0": "Fixed pop-out chat windows forgetting their place: a pop-out you close reopens where it was, at the same size",
   "changelog.r1030.0": "Fixed some PCs adding red, blue and white dashes to uploaded photos",

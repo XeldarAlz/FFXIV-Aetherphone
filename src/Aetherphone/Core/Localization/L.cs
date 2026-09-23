@@ -1803,6 +1803,8 @@ internal static class L
         {
             new("changelog.r1034.2",
                 "Added this week's progress toward the weekly cap on the limited tomestone row, contributed by Deldee"),
+            new("changelog.r1034.21",
+                "Added nine new frames to the Aether Coin shop, contributed by nox"),
         };
 
         public static readonly LocString[] Release1034Hunts =
