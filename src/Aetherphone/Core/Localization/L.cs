@@ -1861,6 +1861,8 @@ internal static class L
 
         public static readonly LocString[] Release1034Phone =
         {
+            new("changelog.r1034.20",
+                "Added five new phone cases: Bom Boko, Borb, Drippy, Pod and Scathatch, contributed by Silkie"),
             new("changelog.r1034.13",
                 "Fixed the clear button in the emoji picker's search box ignoring taps, contributed by Haydooners"),
             new("changelog.r1034.14",
@@ -6690,6 +6692,11 @@ internal static class L
         public static readonly LocString CaseWarrior = new("catalog.case.warrior", "Warrior");
         public static readonly LocString CaseEmetSelch = new("catalog.case.emetselch", "Emet-Selch");
         public static readonly LocString CaseBubbles = new("catalog.case.bubbles", "Bubbles");
+        public static readonly LocString CaseBomBoko = new("catalog.case.bomboko", "Bom Boko");
+        public static readonly LocString CaseBorb = new("catalog.case.borb", "Borb");
+        public static readonly LocString CaseDrippy = new("catalog.case.drippy", "Drippy");
+        public static readonly LocString CasePod = new("catalog.case.pod", "Pod");
+        public static readonly LocString CaseScathatch = new("catalog.case.scathatch", "Scathatch");
         public static readonly LocString RingtoneSilent = new("catalog.ringtone.silent", "Silent");
         public static readonly LocString RadioLofi = new("catalog.radio.lofi", "Lofi");
         public static readonly LocString RadioChillout = new("catalog.radio.chillout", "Chillout");

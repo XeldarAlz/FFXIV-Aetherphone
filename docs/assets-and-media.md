@@ -193,7 +193,7 @@ Wallpaper luminance is a separate coupling, for legibility rather than theme cho
 A phone case is the chassis art around the screen. `PhoneCaseKind` (src/Aetherphone/Core/Theme/PhoneCase.cs) has two kinds:
 
 - `Color`: a flat tint, drawn procedurally (the default `Titanium`, the only shipped one).
-- `Art`: a painted PNG skin, drawn under everything by `CaseArt` (src/Aetherphone/Windows/Components/CaseArt.cs), which stretches one quad and swaps UVs to rotate the artwork when the phone is in landscape camera mode. 43 art cases ship alongside `Titanium`.
+- `Art`: a painted PNG skin, drawn under everything by `CaseArt` (src/Aetherphone/Windows/Components/CaseArt.cs), which stretches one quad and swaps UVs to rotate the artwork when the phone is in landscape camera mode. 58 art cases ship alongside `Titanium`.
 
 The catalog is `ThemeCatalog.BuiltInCases` (src/Aetherphone/Core/Theme/ThemeCatalog.cs), exposed as `ThemeCatalog.Cases`; each entry is `PhoneCase.Color(id, tint)` or `PhoneCase.Art(id, category, tint, artistName, artistUrl)`. Every case carries a `PhoneCaseCategory` (`Colors`, `Gradients`, or `ArtistSeries`), and art cases record artist attribution (`ArtistName`, optionally `ArtistUrl`). The `Art` factory sets `TextureId` to the case id, and `PhoneCaseTextures` (src/Aetherphone/Windows/Components/PhoneCaseTextures.cs) keys on `TextureId`, not `CaseId`: it resolves `Cases/<TextureId>.png` for the skin and `Cases/<TextureId>.thumb.png` for the Settings picker, falling back to the skin when the thumb is missing.
 

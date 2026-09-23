@@ -69,6 +69,11 @@ internal static class ThemeCatalog
         PhoneCase.Art("Warrior", PhoneCaseCategory.ArtistSeries, new Vector4(0.406f, 0.369f, 0.259f, 1f), "kingzafar"),
         PhoneCase.Art("EmetSelch", PhoneCaseCategory.ArtistSeries, new Vector4(0.511f, 0.346f, 0.336f, 1f), "mapleterra"),
         PhoneCase.Art("Bubbles", PhoneCaseCategory.ArtistSeries, new Vector4(0.425f, 0.745f, 0.736f, 1f), "mapleterra"),
+        PhoneCase.Art("BomBoko", PhoneCaseCategory.ArtistSeries, new Vector4(0.607f, 0.708f, 0.557f, 1f), "Silkie"),
+        PhoneCase.Art("Borb", PhoneCaseCategory.ArtistSeries, new Vector4(0.683f, 0.563f, 0.446f, 1f), "Silkie"),
+        PhoneCase.Art("Drippy", PhoneCaseCategory.ArtistSeries, new Vector4(0.727f, 0.850f, 0.828f, 1f), "Silkie"),
+        PhoneCase.Art("Pod", PhoneCaseCategory.ArtistSeries, new Vector4(0.665f, 0.538f, 0.457f, 1f), "Silkie"),
+        PhoneCase.Art("Scathatch", PhoneCaseCategory.ArtistSeries, new Vector4(0.488f, 0.419f, 0.455f, 1f), "Silkie"),
     };
 
     public static IReadOnlyList<PhoneCase> Cases { get; } = BuiltInCases;
