@@ -26,6 +26,7 @@ internal sealed class CoinGameSessionTracker : IDisposable
     private int generation;
     private long openStartTicks;
     private long lastIssuedTicks;
+    private long cooldownStartTicks;
     private long cooldownEndTicks;
     private volatile int openMinSeconds = 180;
     private volatile int openDeepSeconds = 900;
@@ -71,6 +72,21 @@ internal sealed class CoinGameSessionTracker : IDisposable
 
             var remaining = end - Environment.TickCount64;
             return remaining <= 0 ? 0 : (int)((remaining + 999) / 1000);
+        }
+    }
+
+    public float CooldownProgress
+    {
+        get
+        {
+            var end = Volatile.Read(ref cooldownEndTicks);
+            var start = Volatile.Read(ref cooldownStartTicks);
+            if (end <= start)
+            {
+                return 1f;
+            }
+
+            return Math.Clamp((Environment.TickCount64 - start) / (float)(end - start), 0f, 1f);
         }
     }
 
@@ -196,12 +212,23 @@ internal sealed class CoinGameSessionTracker : IDisposable
         }
 
         var now = Environment.TickCount64;
-        var lastIssued = Volatile.Read(ref lastIssuedTicks);
-        var end = lastIssued != 0 && lastIssued + IssueCooldownMilliseconds > now
-            ? lastIssued + IssueCooldownMilliseconds
-            : now + IssueCooldownMilliseconds;
+        var end = now + CooldownMilliseconds(issued, now);
+        Volatile.Write(ref cooldownStartTicks, now);
         Volatile.Write(ref cooldownEndTicks, end);
         return end;
+    }
+
+    private long CooldownMilliseconds(CoinGameSessionDto issued, long now)
+    {
+        if (issued.CooldownSeconds > 0)
+        {
+            return issued.CooldownSeconds * 1000L;
+        }
+
+        var lastIssued = Volatile.Read(ref lastIssuedTicks);
+        var sinceLastIssue = lastIssued == 0 ? IssueCooldownMilliseconds : now - lastIssued;
+        return Math.Clamp(IssueCooldownMilliseconds - sinceLastIssue, MinimumRetryMilliseconds,
+            IssueCooldownMilliseconds);
     }
 
     private static long ServerStartTicks(CoinGameSessionDto issued)

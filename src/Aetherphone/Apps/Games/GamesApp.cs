@@ -346,7 +346,9 @@ internal sealed partial class GamesApp : IPhoneApp
         if (seconds < 0)
         {
             var cooldown = coinSessions.CooldownSeconds;
-            return cooldown > 0 ? new CoinSessionChip(TimeText.Duration(cooldown), 0f, false, true) : default;
+            return cooldown > 0
+                ? new CoinSessionChip(TimeText.Duration(cooldown), coinSessions.CooldownProgress, false, true)
+                : default;
         }
 
         var minSeconds = coinSessions.OpenMinSeconds;
@@ -367,7 +369,7 @@ internal sealed partial class GamesApp : IPhoneApp
 
     private static void DrawCoinSessionChip(in CoinSessionChip chip, Rect content, PhoneTheme theme, float scale)
     {
-        var accent = AppAccents.For("coin");
+        var accent = chip.CoolingDown ? theme.TextMuted : AppAccents.For("coin");
         var ringRadius = CoinChipRingRadius * scale;
         var thickness = Metrics.Stroke.Ring * scale;
         var rowCenterY = content.Min.Y + HeaderHeight * scale * 0.5f;
@@ -377,7 +379,12 @@ internal sealed partial class GamesApp : IPhoneApp
         var ringCenter = new Vector2(right - labelSpan - ringRadius, rowCenterY);
         ProgressRing.Track(ringCenter, ringRadius, thickness, Palette.WithAlpha(accent, 0.28f));
         ProgressRing.Fill(ringCenter, ringRadius, thickness, chip.Fraction, accent);
-        if (chip.Qualified)
+        if (chip.CoolingDown)
+        {
+            ProgressRing.CenterIcon(ImGui.GetWindowDrawList(), ringCenter, FontAwesomeIcon.HourglassHalf, accent,
+                ringRadius * 0.95f);
+        }
+        else if (chip.Qualified)
         {
             ProgressRing.CenterIcon(ImGui.GetWindowDrawList(), ringCenter, FontAwesomeIcon.Check, accent,
                 ringRadius * 1.05f);
@@ -396,8 +403,8 @@ internal sealed partial class GamesApp : IPhoneApp
             return;
         }
 
-        Typography.DrawCentered(new Vector2(right - textSize.X * 0.5f, rowCenterY), chip.Label, theme.TextStrong,
-            TextStyles.Caption1);
+        Typography.DrawCentered(new Vector2(right - textSize.X * 0.5f, rowCenterY), chip.Label,
+            chip.CoolingDown ? theme.TextMuted : theme.TextStrong, TextStyles.Caption1);
     }
 
     private static string CoinChipHint(in CoinSessionChip chip)
