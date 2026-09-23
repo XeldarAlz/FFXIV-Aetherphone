@@ -80,6 +80,11 @@ internal static class CatalogLabels
             "Warrior" => Loc.T(L.Catalogs.CaseWarrior),
             "EmetSelch" => Loc.T(L.Catalogs.CaseEmetSelch),
             "Bubbles" => Loc.T(L.Catalogs.CaseBubbles),
+            "BomBoko" => Loc.T(L.Catalogs.CaseBomBoko),
+            "Borb" => Loc.T(L.Catalogs.CaseBorb),
+            "Drippy" => Loc.T(L.Catalogs.CaseDrippy),
+            "Pod" => Loc.T(L.Catalogs.CasePod),
+            "Scathatch" => Loc.T(L.Catalogs.CaseScathatch),
             _ => identifier,
         };
 
