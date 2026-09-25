@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Aetherphone.Core;
 using Aetherphone.Core.Calendar;
 using Aetherphone.Core.Apps;
@@ -12,15 +13,20 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Calendar;
 
-internal sealed class CalendarApp : IPhoneApp
+internal sealed partial class CalendarApp : IPhoneApp
 {
     private enum CalendarScreen : byte
     {
         Month,
-        AddEvent,
+        EditEvent,
+        Groups,
+        EditGroup,
     }
 
-    private const int TitleMaxLength = 60;
+    private const float HeaderButtonRadius = 15f;
+    private const float HeaderButtonInset = 16f;
+    private const float HeaderGlyphScale = 0.62f;
+    private const float EditorFieldHeight = 46f;
 
     public string Id => "calendar";
     public string DisplayName => Loc.T(L.Calendar.Title);
@@ -35,14 +41,26 @@ internal sealed class CalendarApp : IPhoneApp
     private readonly ViewRouter<CalendarScreen> router;
     private readonly RouterDraw<CalendarScreen> drawView;
     private readonly Action back;
+    private readonly Action<Guid> deleteCustomEvent;
+    private readonly Action<Guid> editCustomEvent;
+    private readonly Action stepDateBack;
+    private readonly Action stepDateForward;
+    private readonly Action stepHourBack;
+    private readonly Action stepHourForward;
+    private readonly Action stepMinuteBack;
+    private readonly Action stepMinuteForward;
+    private readonly Action stepLeadBack;
+    private readonly Action stepLeadForward;
+    private readonly Action stepGroupBack;
+    private readonly Action stepGroupForward;
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private int monthOffset;
     private DateTime selectedDate;
-    private string newEventTitle = string.Empty;
-    private DateTime newEventDate;
-    private int newEventHour;
-    private int newEventMinute;
+    private FrozenDictionary<long, ParsedEvent[]> merged = FrozenDictionary<long, ParsedEvent[]>.Empty;
+    private FrozenDictionary<long, ParsedEvent[]> mergedRemote = FrozenDictionary<long, ParsedEvent[]>.Empty;
+    private Vector4 mergedAccent;
+    private int mergedRevision = -1;
 
     public CalendarApp(Configuration configuration, CalendarEvents events, ConfirmService confirm)
     {
@@ -53,6 +71,18 @@ internal sealed class CalendarApp : IPhoneApp
         router = new ViewRouter<CalendarScreen>(CalendarScreen.Month);
         drawView = DrawView;
         back = () => router.Pop();
+        deleteCustomEvent = AskDeleteCustomEvent;
+        editCustomEvent = StartEditEvent;
+        stepDateBack = () => editDate = editDate.AddDays(-1);
+        stepDateForward = () => editDate = editDate.AddDays(1);
+        stepHourBack = () => editHour = (editHour + HoursPerDay - 1) % HoursPerDay;
+        stepHourForward = () => editHour = (editHour + 1) % HoursPerDay;
+        stepMinuteBack = () => editMinute = (editMinute + MinutesPerHour - MinuteStep) % MinutesPerHour;
+        stepMinuteForward = () => editMinute = (editMinute + MinuteStep) % MinutesPerHour;
+        stepLeadBack = () => editLeadIndex = (editLeadIndex + LeadOptionCount - 1) % LeadOptionCount;
+        stepLeadForward = () => editLeadIndex = (editLeadIndex + 1) % LeadOptionCount;
+        stepGroupBack = () => editGroupIndex = (editGroupIndex + GroupChoiceCount - 1) % GroupChoiceCount;
+        stepGroupForward = () => editGroupIndex = (editGroupIndex + 1) % GroupChoiceCount;
     }
 
     public void OnOpened()
@@ -86,13 +116,21 @@ internal sealed class CalendarApp : IPhoneApp
     {
         var scale = UiScale.Current;
         ui.Body(area);
-        if (screen == CalendarScreen.AddEvent)
+        switch (screen)
         {
-            DrawAddEvent(area, scale);
-            return;
+            case CalendarScreen.EditEvent:
+                DrawEventEditor(area, scale);
+                return;
+            case CalendarScreen.Groups:
+                DrawGroups(area, scale);
+                return;
+            case CalendarScreen.EditGroup:
+                DrawGroupEditor(area, scale);
+                return;
+            default:
+                DrawMonth(area, scale);
+                return;
         }
-
-        DrawMonth(area, scale);
     }
 
     private void DrawMonth(Rect content, float scale)
@@ -120,16 +158,33 @@ internal sealed class CalendarApp : IPhoneApp
                 return;
             }
 
-            var merged = CalendarEventMerger.Merge(events.Events, configuration.CalendarCustomEvents, ui.Accent);
+            var visible = MergedEvents();
             var detailReserved = Math.Clamp(body.Height * 0.30f, 130f * scale, 220f * scale);
             var monthTarget = body.Height - detailReserved;
-            var monthBottom = CalendarMonthView.Draw(ui, body, monthTarget, ref monthOffset, ref selectedDate, merged);
+            var monthBottom = CalendarMonthView.Draw(ui, body, monthTarget, ref monthOffset, ref selectedDate, visible);
             ImGui.Dummy(new Vector2(0f, 8f * scale));
 
             var detailArea = new Rect(new Vector2(body.Min.X, monthBottom), new Vector2(body.Max.X, body.Max.Y));
             UiAnchors.Report("calendar.agenda", detailArea);
-            CalendarDayList.Draw(ui, detailArea, selectedDate, merged, scale, AskDeleteCustomEvent);
+            CalendarDayList.Draw(ui, detailArea, selectedDate, visible, scale, deleteCustomEvent, editCustomEvent);
         }
+    }
+
+    private FrozenDictionary<long, ParsedEvent[]> MergedEvents()
+    {
+        var remote = events.Events;
+        var accent = ui.Accent;
+        if (mergedRevision == events.CustomRevision && ReferenceEquals(remote, mergedRemote) && accent == mergedAccent)
+        {
+            return merged;
+        }
+
+        merged = CalendarEventMerger.Merge(remote, configuration.CalendarCustomEvents, configuration.CalendarGroups,
+            configuration.CalendarGameEventsInApp, CalendarSurface.App, accent);
+        mergedRemote = remote;
+        mergedAccent = accent;
+        mergedRevision = events.CustomRevision;
+        return merged;
     }
 
     private void DrawTopBar(Rect content, float scale)
@@ -139,25 +194,35 @@ internal sealed class CalendarApp : IPhoneApp
         Typography.Draw(new Vector2(content.Center.X - textSize.X * 0.5f, centerY - textSize.Y * 0.5f), DisplayName,
             ui.TitleInk, 1.15f, FontWeight.SemiBold);
 
-        var buttonRadius = 15f * scale;
-        var buttonCenter = new Vector2(content.Max.X - 16f * scale - buttonRadius, centerY);
+        var radius = HeaderButtonRadius * scale;
+        var addCenter = new Vector2(content.Max.X - HeaderButtonInset * scale - radius, centerY);
         UiAnchors.Report("calendar.new",
-            new Rect(buttonCenter - new Vector2(buttonRadius, buttonRadius),
-                buttonCenter + new Vector2(buttonRadius, buttonRadius)));
-        DrawAddButton(buttonCenter, buttonRadius);
+            new Rect(addCenter - new Vector2(radius, radius), addCenter + new Vector2(radius, radius)));
+        if (DrawHeaderButton(addCenter, radius, FontAwesomeIcon.Plus, Loc.T(L.Calendar.NewEvent)))
+        {
+            StartNewEvent();
+        }
+
+        var groupsCenter = new Vector2(content.Min.X + HeaderButtonInset * scale + radius, centerY);
+        if (DrawHeaderButton(groupsCenter, radius, FontAwesomeIcon.LayerGroup, Loc.T(L.Calendar.Groups)))
+        {
+            router.Push(CalendarScreen.Groups);
+        }
     }
 
-    private void DrawAddButton(Vector2 center, float radius)
+    private bool DrawHeaderButton(Vector2 center, float radius, FontAwesomeIcon icon, string tooltip)
     {
         var drawList = ImGui.GetWindowDrawList();
         var iconColor = ui.Theme.TextStrong;
-        var hovered = UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var min = center - new Vector2(radius, radius);
+        var max = center + new Vector2(radius, radius);
+        var hovered = UiInteract.Hover(min, max);
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(iconColor, hovered ? 0.20f : 0.12f)), 32);
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
-            var glyph = IconGlyph.Of(FontAwesomeIcon.Plus);
-            var fontSize = ImGui.GetFontSize() * 0.62f;
-            var size = ImGui.CalcTextSize(glyph) * 0.62f;
+            var glyph = IconGlyph.Of(icon);
+            var fontSize = ImGui.GetFontSize() * HeaderGlyphScale;
+            var size = ImGui.CalcTextSize(glyph) * HeaderGlyphScale;
             drawList.AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(iconColor), glyph);
         }
 
@@ -166,104 +231,55 @@ internal sealed class CalendarApp : IPhoneApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
-            Loc.T(L.Calendar.NewEvent));
-
-        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-        {
-            StartAddEvent();
-        }
+        HoverTooltip.Show(new Rect(min, max), tooltip);
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    private void StartAddEvent()
-    {
-        newEventTitle = string.Empty;
-        newEventDate = selectedDate;
-        var now = DateTime.Now;
-        newEventHour = now.Hour;
-        newEventMinute = now.Minute / 5 * 5;
-        router.Push(CalendarScreen.AddEvent);
-    }
-
-    private void DrawAddEvent(Rect content, float scale)
-    {
-        var context = new PhoneContext(content, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Calendar.NewEvent), back);
-        var margin = 16f * scale;
-        var top = content.Min.Y + AppHeader.Height * scale + 16f * scale;
-        var fieldHeight = 46f * scale;
-        var gap = 12f * scale;
-
-        var titleRect = new Rect(new Vector2(content.Min.X + margin, top),
-            new Vector2(content.Max.X - margin, top + fieldHeight));
-        DrawTitleField(titleRect, scale);
-
-        var labelHeight = Typography.Measure("A", TextStyles.Footnote).Y;
-        var dateLabelY = titleRect.Max.Y + gap;
-        Typography.Draw(new Vector2(content.Min.X + margin, dateLabelY), Loc.T(L.Calendar.EventDate), ui.MutedInk,
-            TextStyles.Footnote);
-        var dateTop = dateLabelY + labelHeight + 4f * scale;
-        var dateRect = new Rect(new Vector2(content.Min.X + margin, dateTop),
-            new Vector2(content.Max.X - margin, dateTop + fieldHeight));
-        StepperField.Draw(ui, dateRect, newEventDate.ToString("dddd, MMM d", Loc.Culture), scale, () => newEventDate = newEventDate.AddDays(-1),
-            () => newEventDate = newEventDate.AddDays(1));
-
-        var timeLabelY = dateRect.Max.Y + gap;
-        Typography.Draw(new Vector2(content.Min.X + margin, timeLabelY), Loc.T(L.Calendar.EventTime), ui.MutedInk,
-            TextStyles.Footnote);
-        var timeRowTop = timeLabelY + labelHeight + 4f * scale;
-        var timeRowRect = new Rect(new Vector2(content.Min.X + margin, timeRowTop),
-            new Vector2(content.Max.X - margin, timeRowTop + fieldHeight));
-        var half = timeRowRect.Width * 0.5f - gap * 0.5f;
-        var hourRect = new Rect(timeRowRect.Min, new Vector2(timeRowRect.Min.X + half, timeRowRect.Max.Y));
-        var minuteRect = new Rect(new Vector2(timeRowRect.Max.X - half, timeRowRect.Min.Y), timeRowRect.Max);
-        StepperField.Draw(ui, hourRect, newEventHour.ToString("D2"), scale, () => newEventHour = (newEventHour + 23) % 24,
-            () => newEventHour = (newEventHour + 1) % 24);
-        StepperField.Draw(ui, minuteRect, newEventMinute.ToString("D2"), scale,
-            () => newEventMinute = (newEventMinute + 55) % 60, () => newEventMinute = (newEventMinute + 5) % 60);
-
-        var saveHeight = 46f * scale;
-        var saveRect = new Rect(new Vector2(content.Min.X + margin, content.Max.Y - margin - saveHeight),
-            new Vector2(content.Max.X - margin, content.Max.Y - margin));
-        var enabled = newEventTitle.Trim().Length > 0;
-        if (ui.AccentPill(saveRect, Loc.T(L.Calendar.Save), enabled, TextStyles.Headline) && enabled)
-        {
-            CommitNewEvent();
-        }
-    }
-
-    private void DrawTitleField(Rect rect, float scale)
+    private void DrawTextField(Rect rect, float scale, string id, string hint, ref string value, int maxLength)
     {
         var drawList = ImGui.GetWindowDrawList();
-        ui.Card(drawList, rect.Min, rect.Max, 12f * scale);
-        ImGui.SetCursorScreenPos(new Vector2(rect.Min.X + 12f * scale,
+        ui.Card(drawList, rect.Min, rect.Max, Metrics.Radius.Md * scale);
+        ImGui.SetCursorScreenPos(new Vector2(rect.Min.X + Metrics.Space.Md * scale,
             rect.Min.Y + rect.Height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(rect.Width - 24f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        ImGui.SetNextItemWidth(rect.Width - Metrics.Space.Md * 2f * scale);
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
         using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
         {
-            ImGui.InputTextWithHint("##calNewEventTitle", Loc.T(L.Calendar.TitlePlaceholder), ref newEventTitle,
-                TitleMaxLength, ImGuiInputTextFlags.None);
+            ImGui.InputTextWithHint(id, hint, ref value, maxLength, ImGuiInputTextFlags.None);
         }
     }
 
-    private void CommitNewEvent()
+    private static bool HasText(string value)
     {
-        var title = newEventTitle.Trim();
-        if (title.Length == 0)
+        for (var index = 0; index < value.Length; index++)
         {
-            return;
+            if (!char.IsWhiteSpace(value[index]))
+            {
+                return true;
+            }
         }
 
-        var when = new DateTime(newEventDate.Year, newEventDate.Month, newEventDate.Day, newEventHour,
-            newEventMinute, 0);
-        configuration.CalendarCustomEvents.Add(new CalendarCustomEvent { Title = title, When = when });
-        configuration.Save();
+        return false;
+    }
 
-        selectedDate = when.Date;
-        var today = DateTime.Today;
-        monthOffset = ((when.Year - today.Year) * 12) + when.Month - today.Month;
-        router.Pop();
+    private void SaveCalendar()
+    {
+        configuration.Save();
+        events.MarkCustomChanged();
+    }
+
+    private CalendarCustomEvent? FindCustomEvent(Guid id)
+    {
+        var customEvents = configuration.CalendarCustomEvents;
+        for (var index = 0; index < customEvents.Count; index++)
+        {
+            if (customEvents[index].Id == id)
+            {
+                return customEvents[index];
+            }
+        }
+
+        return null;
     }
 
     private void AskDeleteCustomEvent(Guid id)
@@ -281,7 +297,7 @@ internal sealed class CalendarApp : IPhoneApp
     private void DeleteCustomEvent(Guid id)
     {
         configuration.CalendarCustomEvents.RemoveAll(entry => entry.Id == id);
-        configuration.Save();
+        SaveCalendar();
     }
 
     public void Dispose()

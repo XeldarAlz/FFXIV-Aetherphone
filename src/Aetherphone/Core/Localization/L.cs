@@ -1853,6 +1853,16 @@ internal static class L
                 "Added a five-second countdown when an online round of Uno, Chess or 8-Ball Pool ends, so everyone sees the last card or shot land before the room returns to the lobby"),
         };
 
+        public static readonly LocString[] Release1035Calendar =
+        {
+            new("changelog.r1035.8",
+                "Added event groups: sort your own events into groups and choose per group whether it shows in Calendar, on the home widget, both, or neither; in-game events are a built-in group you can hide the same way"),
+            new("changelog.r1035.9",
+                "Added event editing: tap one of your events to change its name, date, time, alert, or group"),
+            new("changelog.r1035.10",
+                "Added alert lead times: get an event's reminder at its start or 5 minutes to a day ahead"),
+        };
+
         public static readonly LocString[] Release1034AppStore =
         {
             new("changelog.r1034.1",
@@ -6814,6 +6824,28 @@ internal static class L
         public static readonly LocString DeleteConfirmMessage = new("calendar.deleteConfirmMessage", "Are you sure you want to delete this event?");
         public static readonly LocString DeleteConfirm = new("calendar.deleteConfirm", "Delete");
         public static readonly LocString DeleteCancel = new("calendar.deleteCancel", "Cancel");
+        public static readonly LocString EditEvent = new("calendar.editEvent", "Edit Event");
+        public static readonly LocString Alert = new("calendar.alert", "Alert");
+        public static readonly LocString AlertNone = new("calendar.alertNone", "None");
+        public static readonly LocString AlertAtTime = new("calendar.alertAtTime", "At time of event");
+        public static readonly LocString AlertMinutes5 = new("calendar.alertMinutes5", "5 minutes before");
+        public static readonly LocString AlertMinutes10 = new("calendar.alertMinutes10", "10 minutes before");
+        public static readonly LocString AlertMinutes15 = new("calendar.alertMinutes15", "15 minutes before");
+        public static readonly LocString AlertMinutes30 = new("calendar.alertMinutes30", "30 minutes before");
+        public static readonly LocString AlertHour1 = new("calendar.alertHour1", "1 hour before");
+        public static readonly LocString AlertHours2 = new("calendar.alertHours2", "2 hours before");
+        public static readonly LocString AlertDay1 = new("calendar.alertDay1", "1 day before");
+        public static readonly LocString Group = new("calendar.group", "Group");
+        public static readonly LocString NoGroup = new("calendar.noGroup", "No group");
+        public static readonly LocString Groups = new("calendar.groups", "Groups");
+        public static readonly LocString GameEvents = new("calendar.gameEvents", "In-game events");
+        public static readonly LocString ShowInApp = new("calendar.showInApp", "Show in Calendar");
+        public static readonly LocString ShowInWidget = new("calendar.showInWidget", "Show in widget");
+        public static readonly LocString NewGroup = new("calendar.newGroup", "New Group");
+        public static readonly LocString RenameGroup = new("calendar.renameGroup", "Rename Group");
+        public static readonly LocString GroupNamePlaceholder = new("calendar.groupNamePlaceholder", "Group name");
+        public static readonly LocString DeleteGroup = new("calendar.deleteGroup", "Delete Group");
+        public static readonly LocString DeleteGroupConfirmMessage = new("calendar.deleteGroupConfirmMessage", "Delete this group? Its events stay in the calendar without a group.");
     }
 
     internal static class Spotlight

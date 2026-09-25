@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Calendar;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
@@ -32,6 +33,7 @@ internal sealed class CalendarWidget : IHomeWidget
     private readonly CalendarEvents events;
     private readonly List<UpcomingEvent> upcoming = new();
     private float sinceRefresh = RefreshIntervalSeconds;
+    private int seenRevision = -1;
 
     public CalendarWidget(Configuration configuration, CalendarEvents events)
     {
@@ -61,14 +63,16 @@ internal sealed class CalendarWidget : IHomeWidget
     private void Advance(float delta, Vector4 accent)
     {
         sinceRefresh += delta;
-        if (sinceRefresh < RefreshIntervalSeconds)
+        if (sinceRefresh < RefreshIntervalSeconds && seenRevision == events.CustomRevision)
         {
             return;
         }
 
         sinceRefresh = 0f;
+        seenRevision = events.CustomRevision;
         upcoming.Clear();
-        var merged = CalendarEventMerger.Merge(events.Events, configuration.CalendarCustomEvents, accent);
+        var merged = CalendarEventMerger.Merge(events.Events, configuration.CalendarCustomEvents,
+            configuration.CalendarGroups, configuration.CalendarGameEventsInWidget, CalendarSurface.Widget, accent);
         var now = DateTime.Now;
         for (var day = 0; day < LookaheadDays; day++)
         {
