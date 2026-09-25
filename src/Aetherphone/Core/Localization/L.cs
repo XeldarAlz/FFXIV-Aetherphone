@@ -1816,6 +1816,18 @@ internal static class L
         public static readonly LocString SectionAethergramVelvet = new("changelog.sectionAethergramVelvet", "Aethergram and Velvet");
         public static readonly LocString SectionChirperAethergramVelvet = new("changelog.sectionChirperAethergramVelvet", "Chirper, Aethergram and Velvet");
 
+        public static readonly LocString[] Release1035AethergramVelvet =
+        {
+            new("changelog.r1035.0",
+                "Added pinned posts: pin up to three posts to the top of your profile from the post menu, newest pin first, with a pin badge on the grid and a Pinned label on the post"),
+            new("changelog.r1035.1",
+                "Added post archiving: archive a post to hide it from your profile and every feed without deleting it, then bring it back from the new Archive screen in the profile menu and it returns to its original place with its likes and comments"),
+            new("changelog.r1035.2",
+                "Added pinned chats: pin up to three chats to the top of the inbox from the chat menu"),
+            new("changelog.r1035.3",
+                "Added archived chats: archive a chat to move it behind an Archived row at the top of the inbox and bring it back from there"),
+        };
+
         public static readonly LocString[] Release1034AppStore =
         {
             new("changelog.r1034.1",
