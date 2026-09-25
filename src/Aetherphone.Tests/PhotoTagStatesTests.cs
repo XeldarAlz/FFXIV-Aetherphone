@@ -71,6 +71,17 @@ public sealed class PhotoTagStatesTests
         Assert.Null(PhotoTagStates.Without(null, "mine"));
     }
 
+    [Fact]
+    public void MineForSkipsRejectedTagsAndOtherPeople()
+    {
+        var rejected = new[] { Tag("gone", Me, PhotoTagStates.Rejected), Tag("theirs", Friend, PhotoTagStates.Approved) };
+        var approved = new[] { Tag("theirs", Friend, PhotoTagStates.Approved), Tag("mine", Me, PhotoTagStates.Approved) };
+
+        Assert.Null(PhotoTagStates.MineFor(rejected, Me));
+        Assert.Equal("mine", PhotoTagStates.MineFor(approved, Me)!.Id);
+        Assert.Null(PhotoTagStates.MineFor(approved, null));
+    }
+
     private static PhotoTagDto Tag(string id, string userId, int state) =>
         new(id, userId, userId, userId, 0, 0.5f, 0.5f, state);
 }

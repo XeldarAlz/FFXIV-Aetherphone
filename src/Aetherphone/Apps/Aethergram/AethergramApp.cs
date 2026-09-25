@@ -43,6 +43,7 @@ internal sealed partial class AethergramApp : IResumableApp
         Restore,
         Delete,
         Follow,
+        RemoveTag,
         Report,
         Block,
     }
@@ -698,6 +699,11 @@ internal sealed partial class AethergramApp : IResumableApp
         {
             AddPostSheetItem(PostSheetAction.Follow,
                 Loc.T(post.IsFollowing ? L.Aethergram.Unfollow : L.Aethergram.Follow), false);
+            if (PhotoTagStates.MineFor(post.PhotoTags, store.Me?.Id) is not null)
+            {
+                AddPostSheetItem(PostSheetAction.RemoveTag, Loc.T(L.PhotoTag.RemoveMe), true);
+            }
+
             AddPostSheetItem(PostSheetAction.Report, Loc.T(L.Report.Action), true);
             AddPostSheetItem(PostSheetAction.Block, Loc.T(L.Social.BlockAction), true);
         }
@@ -752,6 +758,13 @@ internal sealed partial class AethergramApp : IResumableApp
             case PostSheetAction.Follow:
                 store.SetFollow(post.AuthorId, !post.IsFollowing);
                 break;
+            case PostSheetAction.RemoveTag:
+                if (PhotoTagStates.MineFor(post.PhotoTags, store.Me?.Id) is { } mine)
+                {
+                    AskRemoveTag(post, mine);
+                }
+
+                break;
             case PostSheetAction.Report:
                 profile.OpenReport("post", post.Id, Loc.T(L.Report.PostTitle));
                 break;
@@ -759,6 +772,29 @@ internal sealed partial class AethergramApp : IResumableApp
                 profile.AskBlock(post.AuthorDisplayName, post.AuthorHandle, post.AuthorId);
                 break;
         }
+    }
+
+    private void AskRemoveTag(PostDto post, PhotoTagDto tag)
+    {
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.PhotoTag.RemoveMeTitle),
+            Message = Loc.T(L.PhotoTag.RemoveMeMessage),
+            ConfirmLabel = Loc.T(L.PhotoTag.Remove),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Sheet = true,
+            BusyLabel = Loc.T(L.Aethergram.Saving),
+            FailedMessage = Loc.T(L.PhotoTag.RemoveFailed),
+            ConfirmAsync = done => store.RemoveTag(post.Id, tag.Id, removed =>
+            {
+                if (removed)
+                {
+                    QueuePostNotice(PostNotice.TagRemoved, post.Id, false);
+                }
+
+                done(removed);
+            }),
+        });
     }
 
     private void PinPost(string postId)

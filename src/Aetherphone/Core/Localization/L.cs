@@ -195,6 +195,9 @@ internal static class L
         public static readonly LocString RemovedToast = new("photoTag.removedToast", "Tag removed");
         public static readonly LocString ApproveFailed = new("photoTag.approveFailed", "Couldn't approve the tag");
         public static readonly LocString RemoveFailed = new("photoTag.removeFailed", "Couldn't remove the tag");
+        public static readonly LocString RemoveMe = new("photoTag.removeMe", "Remove me from this post");
+        public static readonly LocString RemoveMeTitle = new("photoTag.removeMeTitle", "Remove yourself from this post?");
+        public static readonly LocString RemoveMeMessage = new("photoTag.removeMeMessage", "It leaves your Tagged tab, and the author can't tag you on this post again.");
     }
 
     internal static class Story
@@ -1834,6 +1837,8 @@ internal static class L
                 "Added pinned chats: pin up to three chats to the top of the inbox from the chat menu"),
             new("changelog.r1035.3",
                 "Added archived chats: archive a chat to move it behind an Archived row at the top of the inbox and bring it back from there"),
+            new("changelog.r1035.6",
+                "Added Remove me from this post to the post menu of a photo you are tagged in, which takes it off your Tagged tab"),
             new("changelog.r1035.5",
                 "Fixed manually approved tags having nowhere to be approved: a photo you are tagged in now shows Approve and Remove on the post, so held tags can reach your Tagged tab"),
         };
