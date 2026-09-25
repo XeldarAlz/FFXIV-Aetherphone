@@ -88,7 +88,8 @@ internal sealed record UserDto(
     long CoinsDailyCap = 0,
     string FrameId = "",
     string? BioLang = null,
-    string? BannerUrl = null) : IIdentified;
+    string? BannerUrl = null,
+    int PendingPhotoTags = 0) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null,
     string? BannerUrl = null);
@@ -207,8 +208,6 @@ internal sealed record PhotoTagDto(
     float X,
     float Y,
     int State);
-
-internal sealed record PhotoTagPage(PhotoTagDto[] Items);
 
 internal sealed record PostDto(
     string Id,

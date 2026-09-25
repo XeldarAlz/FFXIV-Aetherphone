@@ -40,7 +40,6 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(PhotoTagInput[]))]
 [JsonSerializable(typeof(PhotoTagDto))]
 [JsonSerializable(typeof(PhotoTagDto[]))]
-[JsonSerializable(typeof(PhotoTagPage))]
 [JsonSerializable(typeof(PostDto))]
 [JsonSerializable(typeof(FeedPage))]
 [JsonSerializable(typeof(PinPostResponse))]

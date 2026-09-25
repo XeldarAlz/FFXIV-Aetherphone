@@ -785,7 +785,7 @@ internal sealed partial class AethergramApp : IResumableApp
             Sheet = true,
             BusyLabel = Loc.T(L.Aethergram.Saving),
             FailedMessage = Loc.T(L.PhotoTag.RemoveFailed),
-            ConfirmAsync = done => store.RemoveTag(post.Id, tag.Id, removed =>
+            ConfirmAsync = done => store.RemoveTag(post.Id, tag, removed =>
             {
                 if (removed)
                 {
@@ -893,7 +893,7 @@ internal sealed partial class AethergramApp : IResumableApp
         tagDecisionPostId = post.Id;
         if (approve)
         {
-            store.ApproveTag(post.Id, tag.Id, succeeded =>
+            store.ApproveTag(post.Id, tag, succeeded =>
             {
                 tagDecisionPostId = null;
                 QueuePostNotice(succeeded ? PostNotice.TagApproved : PostNotice.TagApproveFailed, post.Id, false);
@@ -901,7 +901,7 @@ internal sealed partial class AethergramApp : IResumableApp
             return;
         }
 
-        store.RemoveTag(post.Id, tag.Id, succeeded =>
+        store.RemoveTag(post.Id, tag, succeeded =>
         {
             tagDecisionPostId = null;
             QueuePostNotice(succeeded ? PostNotice.TagRemoved : PostNotice.TagRemoveFailed, post.Id, false);

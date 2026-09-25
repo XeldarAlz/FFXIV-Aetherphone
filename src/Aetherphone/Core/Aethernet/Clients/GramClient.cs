@@ -114,6 +114,18 @@ internal sealed class GramClient
         return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token, null, onFailure);
     }
 
+    public Task<FeedPage?> PendingTaggedAsync(string? cursor, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        var path = "/phototags/pending/posts";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token, null, onFailure);
+    }
+
     public Task<bool> ApproveTagAsync(string tagId, CancellationToken token, Action<AepFailure>? onFailure = null)
     {
         return net.SendAsync(HttpMethod.Post, $"/phototags/{Uri.EscapeDataString(tagId)}/approve", token, null,
