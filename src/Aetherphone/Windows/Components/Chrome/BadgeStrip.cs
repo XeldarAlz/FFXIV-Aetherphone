@@ -12,7 +12,7 @@ internal static class BadgeStrip
     private const float GapFraction = 0.34f;
     private const uint FullTint = 0xFFFFFFFFu;
 
-    public static float Reserve(string[]? badgeIds, in TextStyle textStyle, int maxBadges = 2)
+    public static float Reserve(string[]? badgeIds, in TextStyle textStyle, int maxBadges = LoadoutStore.BadgeSlots)
     {
         var shown = Shown(badgeIds, maxBadges);
         if (shown == 0)
@@ -24,7 +24,8 @@ internal static class BadgeStrip
     }
 
     public static float Draw(ImDrawListPtr drawList, string id, string[]? badgeIds, BadgeCatalogStore catalog,
-        RemoteImageCache images, float left, float y, in TextStyle textStyle, bool light, int maxBadges = 2)
+        RemoteImageCache images, float left, float y, in TextStyle textStyle, bool light,
+        int maxBadges = LoadoutStore.BadgeSlots)
     {
         var shown = Shown(badgeIds, maxBadges);
         if (shown == 0)

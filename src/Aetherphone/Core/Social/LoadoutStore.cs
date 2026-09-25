@@ -10,6 +10,8 @@ internal sealed class LoadoutStore : IDisposable
 
     public const string FrameKind = "frame";
 
+    public const int BadgeSlots = 2;
+
     private const long RefreshAfterMilliseconds = 60_000;
     private const long RefreshOnEnterMilliseconds = 5_000;
     private const long RetryAfterAttemptMilliseconds = 20_000;

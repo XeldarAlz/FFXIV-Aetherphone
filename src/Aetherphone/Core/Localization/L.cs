@@ -6085,6 +6085,9 @@ internal static class L
         public static readonly LocString Full = new("loadout.full", "Take one off first");
         public static readonly LocString Wear = new("loadout.wear", "Wear");
         public static readonly LocString SettingsMoved = new("loadout.settingsMoved", "Badges and frames moved to Aether Coin, Items");
+        public static readonly LocString BadgesHint = new("loadout.badgesHint", "Both worn badges show next to your name. The first one colors it.");
+        public static readonly LocString ColorsName = new("loadout.colorsName", "Colors your name");
+        public static readonly LocString UseForNameColor = new("loadout.useForNameColor", "Use for name color");
     }
 
     internal static class Coin
