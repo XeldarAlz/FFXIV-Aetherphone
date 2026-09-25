@@ -31,12 +31,14 @@ internal sealed class AppearancePage : ISettingsPage
     private readonly WallpaperLibrary wallpapers;
     private readonly WallpaperImageCache wallpaperImages;
     private readonly MinimizedLayoutService minimizedLayout;
+    private readonly HomeLookService looks;
 
     public AppearancePage(Configuration configuration, ThemeProvider themes, ISettingsNavigator navigator,
         PhotoLibrary photos, ConfirmService confirm, WallpaperLibrary wallpapers,
-        WallpaperImageCache wallpaperImages, MinimizedLayoutService minimizedLayout)
+        WallpaperImageCache wallpaperImages, MinimizedLayoutService minimizedLayout, HomeLookService looks)
     {
         this.minimizedLayout = minimizedLayout;
+        this.looks = looks;
         this.configuration = configuration;
         this.themes = themes;
         this.navigator = navigator;
@@ -192,7 +194,12 @@ internal sealed class AppearancePage : ISettingsPage
     private void DrawHomeSection(PhoneTheme theme)
     {
         SettingsSection.Header(Loc.T(L.Home.HomeScreen), theme);
-        var card = GroupCard.Begin(theme, 3);
+        var card = GroupCard.Begin(theme, 4);
+        if (SettingsRow.Disclosure(card.NextRow(), Loc.T(L.Home.Looks), LooksPage.NameOf(looks.Active), theme))
+        {
+            navigator.Open(new LooksPage(looks, wallpapers, navigator, confirm));
+        }
+
         var densityIndex = SegmentStrip.Draw("settings.homeGrid", card.NextRow(), DensityLabels(),
             DensityIndex(configuration.HomeGridRows), theme);
         var rows = GridRowOptions[densityIndex];

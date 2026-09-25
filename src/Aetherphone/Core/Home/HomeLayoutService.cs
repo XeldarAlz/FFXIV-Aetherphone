@@ -87,6 +87,13 @@ internal sealed class HomeLayoutService
         return placements[index];
     }
 
+    public void Reload()
+    {
+        rows = ClampRows(configuration.HomeGridRows);
+        Load();
+        Save();
+    }
+
     public void EnsureCurrent()
     {
         if (configuration.Home is null)

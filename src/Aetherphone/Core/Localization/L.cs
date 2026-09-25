@@ -5419,6 +5419,19 @@ internal static class L
         public static readonly LocString ResetLayoutMessage = new("home.resetLayoutMessage",
             "Restore the default icon, widget, and dock arrangement? Folders will be removed.");
         public static readonly LocString ResetLayoutConfirm = new("home.resetLayoutConfirm", "Reset");
+        public static readonly LocString Looks = new("home.looks", "Looks");
+        public static readonly LocString LooksHint = new("home.looksHint",
+            "A Look bundles the Home Screen layout, theme, accent, case and wallpapers. Tap one to use it on the character you are playing; the phone switches Looks along with your character.");
+        public static readonly LocString LookDefaultName = new("home.lookDefaultName", "Default");
+        public static readonly LocString LookNewName = new("home.lookNewName", "New Look");
+        public static readonly LocString LookNew = new("home.lookNew", "New Look from Current");
+        public static readonly LocString LookName = new("home.lookName", "Name");
+        public static readonly LocString LookDetailHint = new("home.lookDetailHint",
+            "Changes you make in Appearance, Wallpaper and on the Home Screen are saved into the Look in use.");
+        public static readonly LocString LookDelete = new("home.lookDelete", "Delete Look");
+        public static readonly LocString LookDeleteMessage = new("home.lookDeleteMessage",
+            "Delete {0}? Characters using it go back to the first Look.");
+        public static readonly LocString LookDeleteConfirm = new("home.lookDeleteConfirm", "Delete");
     }
 
     internal static class Photos

@@ -107,6 +107,7 @@ internal sealed class PhoneShell : IDisposable
         home = new HomeScreen(apps, bundle.Widgets, services.Shortcuts, services.ShortcutRunner, configuration,
             services.Confirm, spotlightIndex);
         services.Installer.Bind(home.Layout);
+        services.Looks.Bind(home.Layout);
         services.Shortcuts.Bind(home.Layout);
         navigation.ReturningHome += home.PrepareReveal;
         var incomingOverlay = new IncomingCallOverlay(calls);

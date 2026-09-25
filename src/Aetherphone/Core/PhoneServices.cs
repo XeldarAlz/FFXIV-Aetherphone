@@ -49,6 +49,7 @@ internal sealed class PhoneServices : IDisposable
     public required Home.AppInstaller Installer { get; init; }
     public required Configuration Configuration { get; init; }
     public required ThemeProvider Themes { get; init; }
+    public required Home.HomeLookService Looks { get; init; }
     public required GameData GameData { get; init; }
     public required CharacterWatch CharacterWatch { get; init; }
     public required MapData Maps { get; init; }
@@ -219,6 +220,7 @@ internal sealed class PhoneServices : IDisposable
         UiFeedback.Bind(uiSound);
         var notifications = new NotificationService(sound, configuration, installer, framework);
         var characterWatch = new CharacterWatch(framework);
+        var looks = new Home.HomeLookService(configuration, themes, characterWatch);
         var messageArchive = new MessageArchive(new DirectoryInfo(Path.Combine(configDirectory.FullName, "Messages")));
         var linkpearlNotificationGate = new LinkpearlNotificationGate(configuration);
         var linkpearlGate = installer.Gate("messages");
@@ -382,6 +384,7 @@ internal sealed class PhoneServices : IDisposable
             Configuration = configuration,
             MinimizedLayout = new Shell.MinimizedLayoutService(configuration),
             Themes = themes,
+            Looks = looks,
             GameData = gameData,
             CharacterWatch = characterWatch,
             Maps = maps,
@@ -511,6 +514,7 @@ internal sealed class PhoneServices : IDisposable
     public void Dispose()
     {
         CharacterSwitcher.Dispose();
+        Looks.Dispose();
         CharacterWatch.Dispose();
         WeatherControl.Dispose();
         GameUiVisibility.Dispose();
