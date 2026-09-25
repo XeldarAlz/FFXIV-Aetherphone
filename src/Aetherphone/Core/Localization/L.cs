@@ -1828,6 +1828,12 @@ internal static class L
                 "Added archived chats: archive a chat to move it behind an Archived row at the top of the inbox and bring it back from there"),
         };
 
+        public static readonly LocString[] Release1035Games =
+        {
+            new("changelog.r1035.4",
+                "Added a five-second countdown when an online round of Uno, Chess or 8-Ball Pool ends, so everyone sees the last card or shot land before the room returns to the lobby"),
+        };
+
         public static readonly LocString[] Release1034AppStore =
         {
             new("changelog.r1034.1",
@@ -5933,6 +5939,8 @@ internal static class L
         public static readonly LocString OnlineHandsRotated = new("games.onlineHandsRotated", "Hands Rotated!");
         public static readonly LocString OnlineHandSwapped = new("games.onlineHandSwapped", "Hand Swapped!");
         public static readonly LocString OnlinePickTarget = new("games.onlinePickTarget", "Tap a player to swap hands");
+        public static readonly LocPlural OnlineBackToLobby = new("games.onlineBackToLobby", "Returning to the lobby in {0} second", "Returning to the lobby in {0} seconds");
+        public static readonly LocString OnlineTapToSkip = new("games.onlineTapToSkip", "Tap to skip");
     }
 
     internal static class Minimized
