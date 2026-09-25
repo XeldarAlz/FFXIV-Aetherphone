@@ -102,7 +102,7 @@ internal sealed partial class AethergramApp
             case PostSource.Saved:
                 return Loc.T(L.Aethergram.SavedTitle);
             case PostSource.Archive:
-                return Loc.T(L.Aethergram.ArchiveTitle);
+                return Loc.T(L.Social.ArchiveTitle);
             case PostSource.Hashtag:
                 return store.HashtagTag is { } tag ? HashtagTitle(tag) : string.Empty;
             default:

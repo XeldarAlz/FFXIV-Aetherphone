@@ -658,20 +658,20 @@ internal sealed partial class AethergramApp : IResumableApp
             AddPostSheetItem(PostSheetAction.Edit, Loc.T(L.Aethergram.EditPost), false);
             if (post.ArchivedAtUnix is not null)
             {
-                AddPostSheetItem(PostSheetAction.Restore, Loc.T(L.Aethergram.ShowOnProfile), false);
+                AddPostSheetItem(PostSheetAction.Restore, Loc.T(L.Social.ShowOnProfile), false);
             }
             else
             {
                 if (post.PinnedAtUnix is null)
                 {
-                    AddPostSheetItem(PostSheetAction.Pin, Loc.T(L.Aethergram.PinToProfile), false);
+                    AddPostSheetItem(PostSheetAction.Pin, Loc.T(L.Social.PinToProfile), false);
                 }
                 else
                 {
-                    AddPostSheetItem(PostSheetAction.Unpin, Loc.T(L.Aethergram.UnpinFromProfile), false);
+                    AddPostSheetItem(PostSheetAction.Unpin, Loc.T(L.Social.UnpinFromProfile), false);
                 }
 
-                AddPostSheetItem(PostSheetAction.Archive, Loc.T(L.Aethergram.ArchiveAction), false);
+                AddPostSheetItem(PostSheetAction.Archive, Loc.T(L.Social.ArchiveAction), false);
             }
 
             AddPostSheetItem(PostSheetAction.Delete, Loc.T(L.Aethergram.DeleteConfirm), true);
@@ -794,30 +794,30 @@ internal sealed partial class AethergramApp : IResumableApp
                 AskReplacePinnedPost(pendingNoticePostId);
                 break;
             case PostNotice.PinFailed:
-                confirm.Alert(null, Loc.T(L.Aethergram.PinFailed), Loc.T(L.Common.Close));
+                confirm.Alert(null, Loc.T(L.Social.PinFailed), Loc.T(L.Common.Close));
                 break;
             case PostNotice.UnpinFailed:
-                confirm.Alert(null, Loc.T(L.Aethergram.UnpinFailed), Loc.T(L.Common.Close));
+                confirm.Alert(null, Loc.T(L.Social.UnpinFailed), Loc.T(L.Common.Close));
                 break;
             case PostNotice.Pinned:
-                toast.Show(Loc.T(L.Aethergram.PinnedToast));
+                toast.Show(Loc.T(L.Social.PinnedToast));
                 break;
             case PostNotice.Unpinned:
-                toast.Show(Loc.T(L.Aethergram.UnpinnedToast));
+                toast.Show(Loc.T(L.Social.UnpinnedToast));
                 break;
             case PostNotice.Archived:
-                toast.Show(Loc.T(L.Aethergram.ArchivedToast));
+                toast.Show(Loc.T(L.Social.ArchivedToast));
                 LeaveDetailAfterNotice();
                 break;
             case PostNotice.Unarchived:
-                toast.Show(Loc.T(L.Aethergram.UnarchivedToast));
+                toast.Show(Loc.T(L.Social.UnarchivedToast));
                 LeaveDetailAfterNotice();
                 break;
             case PostNotice.ArchiveFailed:
-                confirm.Alert(null, Loc.T(L.Aethergram.ArchiveFailed), Loc.T(L.Common.Close));
+                confirm.Alert(null, Loc.T(L.Social.ArchiveFailed), Loc.T(L.Common.Close));
                 break;
             case PostNotice.UnarchiveFailed:
-                confirm.Alert(null, Loc.T(L.Aethergram.UnarchiveFailed), Loc.T(L.Common.Close));
+                confirm.Alert(null, Loc.T(L.Social.UnarchiveFailed), Loc.T(L.Common.Close));
                 break;
         }
     }
@@ -834,14 +834,14 @@ internal sealed partial class AethergramApp : IResumableApp
     {
         confirm.Ask(new ConfirmRequest
         {
-            Title = Loc.T(L.Aethergram.PinReplaceTitle),
-            Message = Loc.T(L.Aethergram.PinReplaceMessage, MaxPinnedPosts),
-            ConfirmLabel = Loc.T(L.Aethergram.PinReplaceConfirm),
+            Title = Loc.T(L.Social.PinReplaceTitle),
+            Message = Loc.T(L.Social.PinReplaceMessage, MaxPinnedPosts),
+            ConfirmLabel = Loc.T(L.Social.PinReplaceConfirm),
             CancelLabel = Loc.T(L.Common.Cancel),
             Danger = false,
             Sheet = true,
             BusyLabel = Loc.T(L.Aethergram.Saving),
-            FailedMessage = Loc.T(L.Aethergram.PinFailed),
+            FailedMessage = Loc.T(L.Social.PinFailed),
             ConfirmAsync = done => store.PinPost(postId, true, outcome =>
             {
                 var pinned = outcome == PinOutcome.Pinned;
@@ -1069,7 +1069,7 @@ internal sealed partial class AethergramApp : IResumableApp
         if (showPinned && post.PinnedAtUnix is not null)
         {
             metaLeft += DrawPinnedGlyph(drawList, nameLeft, metaTop, metaHeight);
-            meta = $"{Loc.T(L.Aethergram.PinnedLabel)} · {meta}";
+            meta = $"{Loc.T(L.Social.PinnedLabel)} · {meta}";
         }
 
         Typography.Draw(drawList, new Vector2(metaLeft, metaTop),

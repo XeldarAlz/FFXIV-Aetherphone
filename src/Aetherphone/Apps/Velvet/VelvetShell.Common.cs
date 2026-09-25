@@ -125,9 +125,27 @@ internal sealed partial class VelvetShell
         if (store.Me is { } me && me.UserId == post.OwnerId)
         {
             AddPostSheetItem(PostSheetAction.Edit, Loc.T(L.Velvet.EditPost), false);
-            AddPostSheetItem(PostSheetAction.Audience,
-                Loc.T(post.Audience == VelvetPostAudience.Public ? L.Velvet.MakeConnections : L.Velvet.MakePublic),
-                false);
+            if (post.ArchivedAtUnix is not null)
+            {
+                AddPostSheetItem(PostSheetAction.Restore, Loc.T(L.Social.ShowOnProfile), false);
+            }
+            else
+            {
+                AddPostSheetItem(PostSheetAction.Audience,
+                    Loc.T(post.Audience == VelvetPostAudience.Public ? L.Velvet.MakeConnections : L.Velvet.MakePublic),
+                    false);
+                if (post.PinnedAtUnix is null)
+                {
+                    AddPostSheetItem(PostSheetAction.Pin, Loc.T(L.Social.PinToProfile), false);
+                }
+                else
+                {
+                    AddPostSheetItem(PostSheetAction.Unpin, Loc.T(L.Social.UnpinFromProfile), false);
+                }
+
+                AddPostSheetItem(PostSheetAction.Archive, Loc.T(L.Social.ArchiveAction), false);
+            }
+
             AddPostSheetItem(PostSheetAction.Delete, Loc.T(L.Velvet.DeleteConfirm), true);
         }
         else
@@ -173,6 +191,18 @@ internal sealed partial class VelvetShell
                     ? VelvetPostAudience.Connections
                     : VelvetPostAudience.Public);
                 break;
+            case PostSheetAction.Pin:
+                PinPost(post.Id);
+                break;
+            case PostSheetAction.Unpin:
+                UnpinPost(post.Id);
+                break;
+            case PostSheetAction.Archive:
+                ArchivePost(post.Id, !sheetPostInFeed);
+                break;
+            case PostSheetAction.Restore:
+                RestorePost(post.Id, !sheetPostInFeed);
+                break;
             case PostSheetAction.Delete:
                 AskDeletePost(post.Id, sheetPostInFeed ? null : back);
                 break;
@@ -193,6 +223,7 @@ internal sealed partial class VelvetShell
         if (store.Me?.UserId == user.UserId)
         {
             AddProfileMenuItem(ProfileMenuAction.Settings, Loc.T(L.Velvet.Settings), false);
+            AddProfileMenuItem(ProfileMenuAction.Archive, Loc.T(L.Social.ArchiveTitle), false);
             AddProfileMenuItem(ProfileMenuAction.Rules, Loc.T(L.Conduct.Eyebrow), false);
         }
         else
@@ -240,6 +271,9 @@ internal sealed partial class VelvetShell
             case ProfileMenuAction.Settings:
                 settingsLoaded = false;
                 router.Push(VelvetView.Settings);
+                break;
+            case ProfileMenuAction.Archive:
+                OpenArchive();
                 break;
             case ProfileMenuAction.Rules:
                 conduct.ShowRules(Id);

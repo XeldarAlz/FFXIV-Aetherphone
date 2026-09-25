@@ -18,7 +18,11 @@ internal sealed partial class VelvetShell
     private const float GridTeaserBottom = 34f;
     private const float GridUnlockBottom = 30f;
     private const float GridBadgeInset = 8f;
+    private const float GridPinSize = 14f;
+    private const float GridPinGap = 6f;
     private const float UserPostsBottomPad = 40f;
+
+    private static readonly Vector4 GridPinInk = new(1f, 1f, 1f, 0.95f);
 
     private readonly FeedVirtualizer userPostsVirtualizer = new(400f);
     private string userPostsStartId = string.Empty;
@@ -70,10 +74,18 @@ internal sealed partial class VelvetShell
             var max = new Vector2(min.X + cell, min.Y + cell);
             var veiled = SensitiveReveals.ShouldVeil(post.Sensitive, post.Id, configuration.ShowSensitiveContent);
             DrawMedia(drawList, min, max, post.MediaUrl, 0f, veiled: veiled);
+            var badgeTopRight = new Vector2(max.X - GridBadgeInset * scale, min.Y + GridBadgeInset * scale);
+            if (post.PinnedAtUnix is not null)
+            {
+                var pinSize = GridPinSize * scale;
+                PhoneIcon.Draw(drawList, badgeTopRight + new Vector2(-pinSize * 0.5f, pinSize * 0.5f),
+                    PhoneIcons.PinFilled, GridPinInk, pinSize);
+                badgeTopRight.X -= pinSize + GridPinGap * scale;
+            }
+
             if (!veiled && PostMedia.Photos(post.MediaUrls, post.MediaUrl).Length > 1)
             {
-                MultiPhotoBadge.Draw(drawList,
-                    new Vector2(max.X - GridBadgeInset * scale, min.Y + GridBadgeInset * scale), scale);
+                MultiPhotoBadge.Draw(drawList, badgeTopRight, scale);
             }
 
             if (UiInteract.Click(min, max))
@@ -178,7 +190,7 @@ internal sealed partial class VelvetShell
                     continue;
                 }
 
-                DrawPostCard(post, width);
+                DrawPostCard(post, width, showPinned: true);
                 userPostsVirtualizer.Record(post.Id);
             }
 

@@ -11,6 +11,10 @@ internal sealed partial class VelvetShell
         View,
         Edit,
         Audience,
+        Pin,
+        Unpin,
+        Archive,
+        Restore,
         Delete,
         Report,
         Block,
@@ -19,6 +23,7 @@ internal sealed partial class VelvetShell
     private enum ProfileMenuAction
     {
         Settings,
+        Archive,
         Rules,
         Report,
         NotInterested,
@@ -26,7 +31,7 @@ internal sealed partial class VelvetShell
         Block,
     }
 
-    private const int PostSheetMaxItems = 4;
+    private const int PostSheetMaxItems = 6;
     private const int ProfileMenuMaxItems = 5;
 
     private readonly ActionSheet.Item[] postSheetItems = new ActionSheet.Item[PostSheetMaxItems];
