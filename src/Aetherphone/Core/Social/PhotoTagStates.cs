@@ -27,6 +27,25 @@ internal static class PhotoTagStates
         return null;
     }
 
+    public static PhotoTagDto? MineFor(PhotoTagDto[]? tags, string? userId)
+    {
+        if (tags is null || string.IsNullOrEmpty(userId))
+        {
+            return null;
+        }
+
+        for (var index = 0; index < tags.Length; index++)
+        {
+            var tag = tags[index];
+            if (tag.State != Rejected && string.Equals(tag.UserId, userId, StringComparison.Ordinal))
+            {
+                return tag;
+            }
+        }
+
+        return null;
+    }
+
     public static PhotoTagDto[]? WithState(PhotoTagDto[]? tags, string tagId, int state)
     {
         if (tags is null)
