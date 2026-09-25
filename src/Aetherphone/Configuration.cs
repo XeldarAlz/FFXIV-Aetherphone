@@ -303,6 +303,9 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool VelvetBlurByDefault { get; set; } = true;
     public VelvetMutePreferences VelvetMutes { get; set; } = new();
     public List<string> VelvetPinnedThreads { get; set; } = new();
+    public List<string> VelvetArchivedThreads { get; set; } = new();
+    public List<string> AethergramPinnedThreads { get; set; } = new();
+    public List<string> AethergramArchivedThreads { get; set; } = new();
     public List<string> MessagePinnedChats { get; set; } = new();
     public List<string> MessageArchivedChats { get; set; } = new();
     public List<string> MessageFavoriteContacts { get; set; } = new();
