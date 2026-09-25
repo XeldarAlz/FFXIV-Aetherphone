@@ -186,7 +186,15 @@ internal static class L
         public static readonly LocString AllowTags = new("photoTag.allowTags", "Allow tags from");
         public static readonly LocString AudienceHint = new("photoTag.audienceHint", "Choose who can mention you in posts and comments, and who can tag you in photos.");
         public static readonly LocString ApproveManually = new("photoTag.approveManually", "Manually approve tags");
-        public static readonly LocString ApproveHint = new("photoTag.approveHint", "Tags stay hidden until you approve them, and never reach your Tagged tab without you.");
+        public static readonly LocString ApproveHint = new("photoTag.approveHint", "Tags wait on the post itself: open it from Activity and tap Approve or Remove. Nothing reaches your Tagged tab without you.");
+        public static readonly LocString PendingTitle = new("photoTag.pendingTitle", "You're tagged in this photo");
+        public static readonly LocString PendingHint = new("photoTag.pendingHint", "It stays off your Tagged tab until you approve it.");
+        public static readonly LocString Approve = new("photoTag.approve", "Approve");
+        public static readonly LocString Remove = new("photoTag.remove", "Remove");
+        public static readonly LocString ApprovedToast = new("photoTag.approvedToast", "Added to your Tagged tab");
+        public static readonly LocString RemovedToast = new("photoTag.removedToast", "Tag removed");
+        public static readonly LocString ApproveFailed = new("photoTag.approveFailed", "Couldn't approve the tag");
+        public static readonly LocString RemoveFailed = new("photoTag.removeFailed", "Couldn't remove the tag");
     }
 
     internal static class Story
@@ -1826,6 +1834,8 @@ internal static class L
                 "Added pinned chats: pin up to three chats to the top of the inbox from the chat menu"),
             new("changelog.r1035.3",
                 "Added archived chats: archive a chat to move it behind an Archived row at the top of the inbox and bring it back from there"),
+            new("changelog.r1035.5",
+                "Fixed manually approved tags having nowhere to be approved: a photo you are tagged in now shows Approve and Remove on the post, so held tags can reach your Tagged tab"),
         };
 
         public static readonly LocString[] Release1035Games =
