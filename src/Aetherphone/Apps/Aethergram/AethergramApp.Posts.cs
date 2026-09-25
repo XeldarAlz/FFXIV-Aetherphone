@@ -101,6 +101,8 @@ internal sealed partial class AethergramApp
                 return user.Handle.Length > 0 ? user.Handle : user.DisplayName;
             case PostSource.Saved:
                 return Loc.T(L.Aethergram.SavedTitle);
+            case PostSource.Archive:
+                return Loc.T(L.Aethergram.ArchiveTitle);
             case PostSource.Hashtag:
                 return store.HashtagTag is { } tag ? HashtagTitle(tag) : string.Empty;
             default:
@@ -112,6 +114,7 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.TaggedPosts,
         PostSource.Saved => store.SavedPosts,
+        PostSource.Archive => store.ArchivedPosts,
         PostSource.Hashtag => store.HashtagPosts,
         PostSource.Explore => store.Feed(SocialFeedScope.Latest),
         _ => store.ProfilePosts,
@@ -121,6 +124,7 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.TaggedLoading,
         PostSource.Saved => store.SavedLoading,
+        PostSource.Archive => store.ArchivedLoading,
         PostSource.Hashtag => store.HashtagLoading,
         PostSource.Explore => store.IsLoading(SocialFeedScope.Latest),
         _ => store.ProfileLoading,
@@ -130,6 +134,7 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.TaggedLoadingMore,
         PostSource.Saved => store.SavedLoadingMore,
+        PostSource.Archive => store.ArchivedLoadingMore,
         PostSource.Hashtag => store.HashtagLoadingMore,
         PostSource.Explore => store.LoadingMore(SocialFeedScope.Latest),
         _ => store.ProfileLoadingMore,
@@ -139,6 +144,7 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.HasMoreTagged,
         PostSource.Saved => store.HasMoreSaved,
+        PostSource.Archive => store.HasMoreArchived,
         PostSource.Hashtag => store.HasMoreHashtagPosts,
         PostSource.Explore => store.HasMoreFeed(SocialFeedScope.Latest),
         _ => store.HasMoreProfilePosts,
@@ -153,6 +159,9 @@ internal sealed partial class AethergramApp
                 break;
             case PostSource.Saved:
                 store.LoadMoreSaved();
+                break;
+            case PostSource.Archive:
+                store.LoadMoreArchived();
                 break;
             case PostSource.Hashtag:
                 store.LoadMoreHashtagPosts();

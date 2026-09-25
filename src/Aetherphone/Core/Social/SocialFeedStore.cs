@@ -190,6 +190,11 @@ internal abstract class SocialFeedStore : IDisposable
         feedSignals.Reset();
         ClearTagged();
         ClearHashtag();
+        OnAccountReset();
+    }
+
+    protected virtual void OnAccountReset()
+    {
     }
 
     public void BeginImpressions(float windowTop, float windowBottom, float deltaSeconds)
@@ -1694,17 +1699,24 @@ internal abstract class SocialFeedStore : IDisposable
         forYouLane.Items = CopyOnWrite.Prepend(forYouLane.Items, created);
         latestLane.Items = CopyOnWrite.Prepend(latestLane.Items, created);
         followingLane.Items = CopyOnWrite.Prepend(followingLane.Items, created);
-        if (profileUserId is not null && profileUserId == created.AuthorId)
-        {
-            var current = profileLane.Items;
-            var items = CopyOnWrite.Prepend(current, created);
-            if (!ReferenceEquals(items, current))
-            {
-                Array.Sort(items, PostOrder.PinnedThenNewest);
-            }
+        AcceptProfilePost(created);
+    }
 
-            profileLane.Items = items;
+    protected void AcceptProfilePost(PostDto post)
+    {
+        if (profileUserId is null || profileUserId != post.AuthorId)
+        {
+            return;
         }
+
+        var current = profileLane.Items;
+        var items = CopyOnWrite.Prepend(current, post);
+        if (!ReferenceEquals(items, current))
+        {
+            Array.Sort(items, PostOrder.PinnedThenNewest);
+        }
+
+        profileLane.Items = items;
     }
 
     protected void ReplacePost(PostDto updated)

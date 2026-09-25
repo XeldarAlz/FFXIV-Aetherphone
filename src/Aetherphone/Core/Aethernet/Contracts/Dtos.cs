@@ -246,7 +246,8 @@ internal sealed record PostDto(
     bool SensitiveLocked = false,
     string? Lang = null,
     long? EditedAtUnix = null,
-    long? PinnedAtUnix = null) : IIdentified;
+    long? PinnedAtUnix = null,
+    long? ArchivedAtUnix = null) : IIdentified;
 
 internal sealed record FeedPage(
     PostDto[] Items,

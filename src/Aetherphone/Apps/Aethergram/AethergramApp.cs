@@ -39,13 +39,15 @@ internal sealed partial class AethergramApp : IResumableApp
         Edit,
         Pin,
         Unpin,
+        Archive,
+        Restore,
         Delete,
         Follow,
         Report,
         Block,
     }
 
-    private enum PinNotice
+    private enum PostNotice
     {
         None,
         Replace,
@@ -53,6 +55,10 @@ internal sealed partial class AethergramApp : IResumableApp
         UnpinFailed,
         Pinned,
         Unpinned,
+        Archived,
+        Unarchived,
+        ArchiveFailed,
+        UnarchiveFailed,
     }
 
     private const int MaxCaptionLength = 500;
@@ -95,7 +101,7 @@ internal sealed partial class AethergramApp : IResumableApp
     private const float CardLineGap = 4f;
     private const float CardCaptionScale = 0.95f;
     private const int GridColumns = 3;
-    private const int PostSheetMaxItems = 4;
+    private const int PostSheetMaxItems = 5;
     private const int MaxPinnedPosts = 3;
     private const float CardPinGlyphSize = 12f;
     private const float CardPinGlyphGap = 3f;
@@ -157,8 +163,9 @@ internal sealed partial class AethergramApp : IResumableApp
     private readonly PostSheetAction[] postSheetActions = new PostSheetAction[PostSheetMaxItems];
     private int postSheetCount;
     private string postSheetTitle = string.Empty;
-    private volatile PinNotice pendingPinNotice;
-    private string pendingPinPostId = string.Empty;
+    private volatile PostNotice pendingPostNotice;
+    private string pendingNoticePostId = string.Empty;
+    private bool pendingNoticeLeavesDetail;
     private readonly ScreenToast toast = new();
     private readonly Action<NotificationDto> openActivityActor;
     private readonly Action<NotificationDto> openActivityPost;
@@ -406,7 +413,7 @@ internal sealed partial class AethergramApp : IResumableApp
         }
 
         DrawFilterSheet(screen);
-        DrainPinNotices();
+        DrainPostNotices();
         DrawPostSheet(screen);
         DrawFeedExplainer(screen);
         DrawCommentSheet(screen);
@@ -474,6 +481,9 @@ internal sealed partial class AethergramApp : IResumableApp
                 break;
             case AethergramScreen.Encryption:
                 threadView.DrawEncryptionScreen(ChatArea(area));
+                break;
+            case AethergramScreen.Archive:
+                DrawArchive(area);
                 break;
             case AethergramScreen.Hashtag:
                 DrawHashtag(area, route.Id!);
@@ -646,13 +656,22 @@ internal sealed partial class AethergramApp : IResumableApp
         if (IsOwnPost(post))
         {
             AddPostSheetItem(PostSheetAction.Edit, Loc.T(L.Aethergram.EditPost), false);
-            if (post.PinnedAtUnix is null)
+            if (post.ArchivedAtUnix is not null)
             {
-                AddPostSheetItem(PostSheetAction.Pin, Loc.T(L.Aethergram.PinToProfile), false);
+                AddPostSheetItem(PostSheetAction.Restore, Loc.T(L.Aethergram.ShowOnProfile), false);
             }
             else
             {
-                AddPostSheetItem(PostSheetAction.Unpin, Loc.T(L.Aethergram.UnpinFromProfile), false);
+                if (post.PinnedAtUnix is null)
+                {
+                    AddPostSheetItem(PostSheetAction.Pin, Loc.T(L.Aethergram.PinToProfile), false);
+                }
+                else
+                {
+                    AddPostSheetItem(PostSheetAction.Unpin, Loc.T(L.Aethergram.UnpinFromProfile), false);
+                }
+
+                AddPostSheetItem(PostSheetAction.Archive, Loc.T(L.Aethergram.ArchiveAction), false);
             }
 
             AddPostSheetItem(PostSheetAction.Delete, Loc.T(L.Aethergram.DeleteConfirm), true);
@@ -703,6 +722,12 @@ internal sealed partial class AethergramApp : IResumableApp
             case PostSheetAction.Unpin:
                 UnpinPost(post.Id);
                 break;
+            case PostSheetAction.Archive:
+                ArchivePost(post.Id);
+                break;
+            case PostSheetAction.Restore:
+                RestorePost(post.Id);
+                break;
             case PostSheetAction.Delete:
                 profile.AskDeletePost(post.Id, router.Current.Screen == AethergramScreen.Detail ? back : null);
                 break;
@@ -720,49 +745,88 @@ internal sealed partial class AethergramApp : IResumableApp
 
     private void PinPost(string postId)
     {
-        store.PinPost(postId, false, outcome =>
+        store.PinPost(postId, false, outcome => QueuePostNotice(outcome switch
         {
-            pendingPinPostId = postId;
-            pendingPinNotice = outcome switch
-            {
-                PinOutcome.Pinned => PinNotice.Pinned,
-                PinOutcome.LimitReached => PinNotice.Replace,
-                _ => PinNotice.PinFailed,
-            };
-        });
+            PinOutcome.Pinned => PostNotice.Pinned,
+            PinOutcome.LimitReached => PostNotice.Replace,
+            _ => PostNotice.PinFailed,
+        }, postId, false));
     }
 
     private void UnpinPost(string postId)
     {
-        store.UnpinPost(postId, ok => pendingPinNotice = ok ? PinNotice.Unpinned : PinNotice.UnpinFailed);
+        store.UnpinPost(postId, ok => QueuePostNotice(ok ? PostNotice.Unpinned : PostNotice.UnpinFailed, postId, false));
     }
 
-    private void DrainPinNotices()
+    private void ArchivePost(string postId)
     {
-        var notice = pendingPinNotice;
-        if (notice == PinNotice.None)
+        var fromDetail = router.Current.Screen == AethergramScreen.Detail;
+        store.ArchivePost(postId,
+            ok => QueuePostNotice(ok ? PostNotice.Archived : PostNotice.ArchiveFailed, postId, fromDetail));
+    }
+
+    private void RestorePost(string postId)
+    {
+        var fromDetail = router.Current.Screen == AethergramScreen.Detail;
+        store.UnarchivePost(postId,
+            ok => QueuePostNotice(ok ? PostNotice.Unarchived : PostNotice.UnarchiveFailed, postId, fromDetail));
+    }
+
+    private void QueuePostNotice(PostNotice notice, string postId, bool leavesDetail)
+    {
+        pendingNoticePostId = postId;
+        pendingNoticeLeavesDetail = leavesDetail;
+        pendingPostNotice = notice;
+    }
+
+    private void DrainPostNotices()
+    {
+        var notice = pendingPostNotice;
+        if (notice == PostNotice.None)
         {
             return;
         }
 
-        pendingPinNotice = PinNotice.None;
+        pendingPostNotice = PostNotice.None;
         switch (notice)
         {
-            case PinNotice.Replace:
-                AskReplacePinnedPost(pendingPinPostId);
+            case PostNotice.Replace:
+                AskReplacePinnedPost(pendingNoticePostId);
                 break;
-            case PinNotice.PinFailed:
+            case PostNotice.PinFailed:
                 confirm.Alert(null, Loc.T(L.Aethergram.PinFailed), Loc.T(L.Common.Close));
                 break;
-            case PinNotice.UnpinFailed:
+            case PostNotice.UnpinFailed:
                 confirm.Alert(null, Loc.T(L.Aethergram.UnpinFailed), Loc.T(L.Common.Close));
                 break;
-            case PinNotice.Pinned:
+            case PostNotice.Pinned:
                 toast.Show(Loc.T(L.Aethergram.PinnedToast));
                 break;
-            case PinNotice.Unpinned:
+            case PostNotice.Unpinned:
                 toast.Show(Loc.T(L.Aethergram.UnpinnedToast));
                 break;
+            case PostNotice.Archived:
+                toast.Show(Loc.T(L.Aethergram.ArchivedToast));
+                LeaveDetailAfterNotice();
+                break;
+            case PostNotice.Unarchived:
+                toast.Show(Loc.T(L.Aethergram.UnarchivedToast));
+                LeaveDetailAfterNotice();
+                break;
+            case PostNotice.ArchiveFailed:
+                confirm.Alert(null, Loc.T(L.Aethergram.ArchiveFailed), Loc.T(L.Common.Close));
+                break;
+            case PostNotice.UnarchiveFailed:
+                confirm.Alert(null, Loc.T(L.Aethergram.UnarchiveFailed), Loc.T(L.Common.Close));
+                break;
+        }
+    }
+
+    private void LeaveDetailAfterNotice()
+    {
+        if (pendingNoticeLeavesDetail && router.Current.Screen == AethergramScreen.Detail)
+        {
+            back();
         }
     }
 
@@ -783,7 +847,7 @@ internal sealed partial class AethergramApp : IResumableApp
                 var pinned = outcome == PinOutcome.Pinned;
                 if (pinned)
                 {
-                    pendingPinNotice = PinNotice.Pinned;
+                    QueuePostNotice(PostNotice.Pinned, postId, false);
                 }
 
                 done(pinned);

@@ -45,6 +45,29 @@ internal sealed class GramClient
             AethernetJsonContext.Default.PostDto, token, null, onFailure);
     }
 
+    public Task<PostDto?> ArchiveAsync(string postId, CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.RequestAsync(HttpMethod.Put, $"/posts/{Uri.EscapeDataString(postId)}/archive",
+            AethernetJsonContext.Default.PostDto, token, null, onFailure);
+    }
+
+    public Task<PostDto?> UnarchiveAsync(string postId, CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.RequestAsync(HttpMethod.Delete, $"/posts/{Uri.EscapeDataString(postId)}/archive",
+            AethernetJsonContext.Default.PostDto, token, null, onFailure);
+    }
+
+    public Task<FeedPage?> ArchivedAsync(string? cursor, CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        var path = "/me/archived?kind=1";
+        if (cursor is not null)
+        {
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token, null, onFailure);
+    }
+
     public Task<FeedPage?> FeedAsync(string scope, string? cursor, string? regions, bool includeSensitive, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
