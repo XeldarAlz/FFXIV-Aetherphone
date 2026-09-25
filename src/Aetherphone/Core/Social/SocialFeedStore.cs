@@ -42,21 +42,21 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile UserDto? me;
     private volatile AvatarUploadOutcome avatarFailure = AvatarUploadOutcome.Unreachable;
     protected readonly FeedLane<PostDto> forYouLane = FeedLane<PostDto>.ServerOrdered();
-    protected readonly FeedLane<PostDto> latestLane = new(ByNewestFirst, ByCreatedAtUnix);
-    protected readonly FeedLane<PostDto> followingLane = new(ByNewestFirst, ByCreatedAtUnix);
+    protected readonly FeedLane<PostDto> latestLane = new(PostOrder.NewestFirst, PostOrder.CreatedAtUnix);
+    protected readonly FeedLane<PostDto> followingLane = new(PostOrder.NewestFirst, PostOrder.CreatedAtUnix);
     private static readonly Dictionary<string, FeedItemNote> NoNotes = new(StringComparer.Ordinal);
     private volatile Dictionary<string, FeedItemNote> forYouNotes = NoNotes;
     private volatile string? caughtUpAfterId;
     private volatile bool caughtUpAtTop;
     private volatile bool forYouRanked;
-    private readonly FeedLane<PostDto> savedLane = new(ByNewestFirst);
-    private readonly FeedLane<PostDto> likedLane = new(ByNewestFirst);
+    private readonly FeedLane<PostDto> savedLane = new(PostOrder.NewestFirst);
+    private readonly FeedLane<PostDto> likedLane = new(PostOrder.NewestFirst);
     private volatile UserDto[] followRequests = Array.Empty<UserDto>();
     private volatile string? followRequestsCursor;
     private volatile bool followRequestsLoadingMore;
     private volatile bool followRequestsLoading;
     private volatile bool followRequestsLoaded;
-    protected readonly FeedLane<PostDto> profileLane = new(ByNewestFirst);
+    protected readonly FeedLane<PostDto> profileLane = new(PostOrder.PinnedThenNewest);
     protected volatile PostDto? detailPost;
     protected volatile bool posting;
     private volatile string? profileUserId;
@@ -88,9 +88,9 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile int userListReactionFilter = -1;
     private volatile int userListTotal = -1;
     private int userListGeneration;
-    private readonly FeedLane<PostDto> taggedLane = new(ByNewestFirst);
+    private readonly FeedLane<PostDto> taggedLane = new(PostOrder.NewestFirst);
     private volatile string? taggedUserId;
-    private readonly FeedLane<PostDto> hashtagLane = new(ByNewestFirst);
+    private readonly FeedLane<PostDto> hashtagLane = new(PostOrder.NewestFirst);
     private volatile string? hashtagTag;
     private volatile string? feedRegions;
     private volatile bool feedIncludesSensitive = true;
@@ -668,14 +668,6 @@ internal abstract class SocialFeedStore : IDisposable
         }, () => lane.LoadingMore = false);
     }
 
-    private static int ByNewestFirst(PostDto left, PostDto right)
-    {
-        var byTime = right.CreatedAtUnix.CompareTo(left.CreatedAtUnix);
-        return byTime != 0 ? byTime : string.CompareOrdinal(right.Id, left.Id);
-    }
-
-    private static long ByCreatedAtUnix(PostDto post) => post.CreatedAtUnix;
-
     public void OpenDetail(PostDto post) => LoadDetail(post.Id, post);
 
     public void OpenDetailById(string postId) => LoadDetail(postId, null);
@@ -1196,6 +1188,38 @@ internal abstract class SocialFeedStore : IDisposable
             post => post.Id == postId && post.Sensitive != sensitive,
             post => post with { Sensitive = sensitive });
 
+    protected void ApplyPinnedEverywhere(string postId, long? pinnedAtUnix)
+    {
+        forYouLane.Items = MapPinned(forYouLane.Items, postId, pinnedAtUnix);
+        latestLane.Items = MapPinned(latestLane.Items, postId, pinnedAtUnix);
+        followingLane.Items = MapPinned(followingLane.Items, postId, pinnedAtUnix);
+        profileLane.Items = ReorderPinned(profileLane.Items, postId, pinnedAtUnix);
+        taggedLane.Items = MapPinned(taggedLane.Items, postId, pinnedAtUnix);
+        hashtagLane.Items = MapPinned(hashtagLane.Items, postId, pinnedAtUnix);
+        savedLane.Items = MapPinned(savedLane.Items, postId, pinnedAtUnix);
+        likedLane.Items = MapPinned(likedLane.Items, postId, pinnedAtUnix);
+        if (detailPost is { } current && current.Id == postId)
+        {
+            detailPost = current with { PinnedAtUnix = pinnedAtUnix };
+        }
+    }
+
+    private static PostDto[] ReorderPinned(PostDto[] source, string postId, long? pinnedAtUnix)
+    {
+        var mapped = MapPinned(source, postId, pinnedAtUnix);
+        if (!ReferenceEquals(mapped, source))
+        {
+            Array.Sort(mapped, PostOrder.PinnedThenNewest);
+        }
+
+        return mapped;
+    }
+
+    private static PostDto[] MapPinned(PostDto[] source, string postId, long? pinnedAtUnix) =>
+        CopyOnWrite.Map(source,
+            post => post.Id == postId && post.PinnedAtUnix != pinnedAtUnix,
+            post => post with { PinnedAtUnix = pinnedAtUnix });
+
     private void ApplySavedEverywhere(string postId, bool saved)
     {
         forYouLane.Items = MapSaved(forYouLane.Items, postId, saved);
@@ -1672,7 +1696,14 @@ internal abstract class SocialFeedStore : IDisposable
         followingLane.Items = CopyOnWrite.Prepend(followingLane.Items, created);
         if (profileUserId is not null && profileUserId == created.AuthorId)
         {
-            profileLane.Items = CopyOnWrite.Prepend(profileLane.Items, created);
+            var current = profileLane.Items;
+            var items = CopyOnWrite.Prepend(current, created);
+            if (!ReferenceEquals(items, current))
+            {
+                Array.Sort(items, PostOrder.PinnedThenNewest);
+            }
+
+            profileLane.Items = items;
         }
     }
 

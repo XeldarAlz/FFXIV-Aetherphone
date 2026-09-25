@@ -37,10 +37,20 @@ internal sealed partial class AethergramApp : IResumableApp
     {
         View,
         Edit,
+        Pin,
+        Unpin,
         Delete,
         Follow,
         Report,
         Block,
+    }
+
+    private enum PinPrompt
+    {
+        None,
+        Replace,
+        PinFailed,
+        UnpinFailed,
     }
 
     private const int MaxCaptionLength = 500;
@@ -84,6 +94,7 @@ internal sealed partial class AethergramApp : IResumableApp
     private const float CardCaptionScale = 0.95f;
     private const int GridColumns = 3;
     private const int PostSheetMaxItems = 4;
+    private const int MaxPinnedPosts = 3;
 
     public string Id => "aethergram";
     public Vector4 Accent => AppAccents.For(Id);
@@ -142,6 +153,8 @@ internal sealed partial class AethergramApp : IResumableApp
     private readonly PostSheetAction[] postSheetActions = new PostSheetAction[PostSheetMaxItems];
     private int postSheetCount;
     private string postSheetTitle = string.Empty;
+    private volatile PinPrompt pendingPinPrompt;
+    private string pendingPinPostId = string.Empty;
     private readonly Action<NotificationDto> openActivityActor;
     private readonly Action<NotificationDto> openActivityPost;
     private readonly SocialActivityFeed activityFeed;
@@ -388,6 +401,7 @@ internal sealed partial class AethergramApp : IResumableApp
         }
 
         DrawFilterSheet(screen);
+        DrainPinPrompts();
         DrawPostSheet(screen);
         DrawFeedExplainer(screen);
         DrawCommentSheet(screen);
@@ -626,6 +640,15 @@ internal sealed partial class AethergramApp : IResumableApp
         if (IsOwnPost(post))
         {
             AddPostSheetItem(PostSheetAction.Edit, Loc.T(L.Aethergram.EditPost), false);
+            if (post.PinnedAtUnix is null)
+            {
+                AddPostSheetItem(PostSheetAction.Pin, Loc.T(L.Aethergram.PinToProfile), false);
+            }
+            else
+            {
+                AddPostSheetItem(PostSheetAction.Unpin, Loc.T(L.Aethergram.UnpinFromProfile), false);
+            }
+
             AddPostSheetItem(PostSheetAction.Delete, Loc.T(L.Aethergram.DeleteConfirm), true);
         }
         else
@@ -668,6 +691,12 @@ internal sealed partial class AethergramApp : IResumableApp
             case PostSheetAction.Edit:
                 OpenEditPost(post);
                 break;
+            case PostSheetAction.Pin:
+                PinPost(post.Id);
+                break;
+            case PostSheetAction.Unpin:
+                UnpinPost(post.Id);
+                break;
             case PostSheetAction.Delete:
                 profile.AskDeletePost(post.Id, router.Current.Screen == AethergramScreen.Detail ? back : null);
                 break;
@@ -681,6 +710,70 @@ internal sealed partial class AethergramApp : IResumableApp
                 profile.AskBlock(post.AuthorDisplayName, post.AuthorHandle, post.AuthorId);
                 break;
         }
+    }
+
+    private void PinPost(string postId)
+    {
+        store.PinPost(postId, false, outcome =>
+        {
+            if (outcome == PinOutcome.Pinned)
+            {
+                return;
+            }
+
+            pendingPinPostId = postId;
+            pendingPinPrompt = outcome == PinOutcome.LimitReached ? PinPrompt.Replace : PinPrompt.PinFailed;
+        });
+    }
+
+    private void UnpinPost(string postId)
+    {
+        store.UnpinPost(postId, ok =>
+        {
+            if (!ok)
+            {
+                pendingPinPrompt = PinPrompt.UnpinFailed;
+            }
+        });
+    }
+
+    private void DrainPinPrompts()
+    {
+        var prompt = pendingPinPrompt;
+        if (prompt == PinPrompt.None)
+        {
+            return;
+        }
+
+        pendingPinPrompt = PinPrompt.None;
+        switch (prompt)
+        {
+            case PinPrompt.Replace:
+                AskReplacePinnedPost(pendingPinPostId);
+                break;
+            case PinPrompt.PinFailed:
+                confirm.Alert(null, Loc.T(L.Aethergram.PinFailed), Loc.T(L.Common.Close));
+                break;
+            case PinPrompt.UnpinFailed:
+                confirm.Alert(null, Loc.T(L.Aethergram.UnpinFailed), Loc.T(L.Common.Close));
+                break;
+        }
+    }
+
+    private void AskReplacePinnedPost(string postId)
+    {
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Aethergram.PinReplaceTitle),
+            Message = Loc.T(L.Aethergram.PinReplaceMessage, MaxPinnedPosts),
+            ConfirmLabel = Loc.T(L.Aethergram.PinReplaceConfirm),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = false,
+            Sheet = true,
+            BusyLabel = Loc.T(L.Aethergram.Saving),
+            FailedMessage = Loc.T(L.Aethergram.PinFailed),
+            ConfirmAsync = done => store.PinPost(postId, true, outcome => done(outcome == PinOutcome.Pinned)),
+        });
     }
 
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)
