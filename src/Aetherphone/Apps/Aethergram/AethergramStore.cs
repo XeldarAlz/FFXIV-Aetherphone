@@ -23,12 +23,23 @@ internal sealed class AethergramStore : SocialFeedStore
     private const int GramSize = 1080;
 
     private readonly GramClient grams;
+    private readonly FeedLane<PostDto> archivedLane = new(PostOrder.NewestFirst);
+
+    public PostDto[] ArchivedPosts => archivedLane.Items;
+    public bool ArchivedLoading => archivedLane.Loading;
+    public bool ArchivedLoadingMore => archivedLane.LoadingMore;
+    public bool HasMoreArchived => archivedLane.HasMore;
 
     public AethergramStore(AethernetSession session, AccountClient account, SocialClient client, GramClient grams,
         SafetyClient safety, MediaClient media, RealtimeSignalBus signals)
         : base(session, account, client, safety, media, signals, "Aethergram")
     {
         this.grams = grams;
+    }
+
+    protected override void OnAccountReset()
+    {
+        archivedLane.Clear();
     }
 
     protected override Task<FeedPage?> FetchFeedAsync(string feedKey, string? cursor, string? regions, bool includeSensitive,
@@ -191,6 +202,83 @@ internal sealed class AethergramStore : SocialFeedStore
             }
 
             ApplyPinnedEverywhere(postId, null);
+            return true;
+        }, onComplete);
+    }
+
+    public void RefreshArchived()
+    {
+        if (!IsSignedIn || archivedLane.Loading)
+        {
+            return;
+        }
+
+        archivedLane.Loading = true;
+        work.Run("archive refresh", async token =>
+        {
+            var page = await grams.ArchivedAsync(null, token).ConfigureAwait(false);
+            if (page is not null)
+            {
+                archivedLane.ApplyRefresh(page.Items, page.NextCursor);
+            }
+        }, () => archivedLane.Loading = false);
+    }
+
+    public void LoadMoreArchived()
+    {
+        var cursor = archivedLane.Cursor;
+        if (!IsSignedIn || cursor is null || archivedLane.LoadingMore || archivedLane.Loading)
+        {
+            return;
+        }
+
+        archivedLane.LoadingMore = true;
+        work.Run("archive more", async token =>
+        {
+            var page = await grams.ArchivedAsync(cursor, token).ConfigureAwait(false);
+            if (page is not null)
+            {
+                archivedLane.ApplyMore(page.Items, page.NextCursor);
+            }
+        }, () => archivedLane.LoadingMore = false);
+    }
+
+    public void ArchivePost(string postId, Action<bool> onComplete)
+    {
+        work.Run("archive post", async token =>
+        {
+            var archived = await grams.ArchiveAsync(postId, token).ConfigureAwait(false);
+            if (archived is null)
+            {
+                return false;
+            }
+
+            RemovePost(postId);
+            var current = archivedLane.Items;
+            var items = CopyOnWrite.Prepend(current, archived);
+            if (!ReferenceEquals(items, current))
+            {
+                Array.Sort(items, PostOrder.NewestFirst);
+            }
+
+            archivedLane.Items = items;
+            return true;
+        }, onComplete);
+    }
+
+    public void UnarchivePost(string postId, Action<bool> onComplete)
+    {
+        work.Run("restore post", async token =>
+        {
+            var restored = await grams.UnarchiveAsync(postId, token).ConfigureAwait(false);
+            if (restored is null)
+            {
+                return false;
+            }
+
+            archivedLane.Items = CopyOnWrite.RemoveById(archivedLane.Items, postId);
+            AcceptProfilePost(restored);
+            ReplacePost(restored);
             return true;
         }, onComplete);
     }

@@ -4545,6 +4545,15 @@ internal static class L
         public static readonly LocString PinnedLabel = new("aethergram.pinnedLabel", "Pinned");
         public static readonly LocString PinnedToast = new("aethergram.pinnedToast", "Pinned to your profile");
         public static readonly LocString UnpinnedToast = new("aethergram.unpinnedToast", "Unpinned from your profile");
+        public static readonly LocString ArchiveAction = new("aethergram.archiveAction", "Archive");
+        public static readonly LocString ShowOnProfile = new("aethergram.showOnProfile", "Show on profile");
+        public static readonly LocString ArchiveTitle = new("aethergram.archiveTitle", "Archive");
+        public static readonly LocString ArchiveEmpty = new("aethergram.archiveEmpty", "Nothing archived");
+        public static readonly LocString ArchiveEmptyHint = new("aethergram.archiveEmptyHint", "Posts you archive leave your profile and wait here until you show them again.");
+        public static readonly LocString ArchivedToast = new("aethergram.archivedToast", "Post archived");
+        public static readonly LocString UnarchivedToast = new("aethergram.unarchivedToast", "Shown on your profile");
+        public static readonly LocString ArchiveFailed = new("aethergram.archiveFailed", "Couldn't archive the post");
+        public static readonly LocString UnarchiveFailed = new("aethergram.unarchiveFailed", "Couldn't restore the post");
         public static readonly LocString EditedStamp = new("aethergram.editedStamp", "{0} · Edited");
         public static readonly LocString DeleteCommentFailed = new("aethergram.deleteCommentFailed", "Couldn't delete the comment");
         public static readonly LocString DeleteComment = new("aethergram.deleteComment", "Delete comment");
