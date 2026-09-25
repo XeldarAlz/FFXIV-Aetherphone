@@ -18,7 +18,8 @@ internal static class CalendarDayList
     private const float ListTailPadding = 8f;
 
     public static void Draw(AppSkin ui, Rect area, DateTime selectedDate,
-        FrozenDictionary<long, ParsedEvent[]> events, float scale, Action<Guid> onDeleteCustom)
+        FrozenDictionary<long, ParsedEvent[]> events, float scale, Action<Guid> onDeleteCustom,
+        Action<Guid> onEditCustom)
     {
         var dateLabel = selectedDate.ToString("dddd, MMMM d", Loc.Culture);
         Typography.Draw(new Vector2(area.Min.X + FeedCell.PadX * scale, area.Min.Y), dateLabel, ui.TitleInk,
@@ -54,11 +55,12 @@ internal static class CalendarDayList
                 surface.JumpToTop();
             }
 
-            DrawCells(ui, dayEvents, scale, onDeleteCustom);
+            DrawCells(ui, dayEvents, scale, onDeleteCustom, onEditCustom);
         }
     }
 
-    private static void DrawCells(AppSkin ui, ParsedEvent[] dayEvents, float scale, Action<Guid> onDeleteCustom)
+    private static void DrawCells(AppSkin ui, ParsedEvent[] dayEvents, float scale, Action<Guid> onDeleteCustom,
+        Action<Guid> onEditCustom)
     {
         var drawList = ImGui.GetWindowDrawList();
         var contentWidth = ScrollLayout.StableContentWidth();
@@ -77,7 +79,7 @@ internal static class CalendarDayList
             var textHeight = nameSize.Y + 3f * scale + dateSize.Y;
             var cellHeight = Math.Max(textHeight + CellPaddingY * 2f * scale, 40f * scale);
             var cellMax = new Vector2(cellMin.X + contentWidth, cellMin.Y + cellHeight);
-            var clickable = !string.IsNullOrEmpty(dayEvent.Url);
+            var clickable = dayEvent.IsCustom || !string.IsNullOrEmpty(dayEvent.Url);
             var cellHovered = UiInteract.Hover(cellMin, cellMax);
             var hovered = clickable && cellHovered;
             if (hovered)
@@ -103,7 +105,11 @@ internal static class CalendarDayList
 
             if (dayEvent.IsCustom)
             {
-                DrawDeleteButton(drawList, cellMax, scale, ui, dayEvent.CustomId, onDeleteCustom);
+                var overDelete = DrawDeleteButton(drawList, cellMax, scale, ui, dayEvent.CustomId, onDeleteCustom);
+                if (!overDelete && UiInteract.Click(cellMin, cellMax, cellHovered))
+                {
+                    onEditCustom(dayEvent.CustomId);
+                }
             }
             else if (clickable && UiInteract.HoverClick(cellMin, cellMax))
             {
@@ -132,7 +138,7 @@ internal static class CalendarDayList
         return true;
     }
 
-    private static void DrawDeleteButton(ImDrawListPtr drawList, Vector2 cellMax, float scale, AppSkin ui,
+    private static bool DrawDeleteButton(ImDrawListPtr drawList, Vector2 cellMax, float scale, AppSkin ui,
         Guid customId, Action<Guid> onDeleteCustom)
     {
         var radius = 12f * scale;
@@ -161,6 +167,8 @@ internal static class CalendarDayList
         {
             onDeleteCustom(customId);
         }
+
+        return hovered;
     }
 
     private static string FormatDateRange(in ParsedEvent dayEvent)
@@ -170,7 +178,8 @@ internal static class CalendarDayList
 
         if (dayEvent.IsCustom)
         {
-            return string.Concat(begin.ToString("MMM d", Loc.Culture), ", ", TimeText.Clock(begin));
+            var when = string.Concat(begin.ToString("MMM d", Loc.Culture), ", ", TimeText.Clock(begin));
+            return string.IsNullOrEmpty(dayEvent.GroupName) ? when : string.Concat(when, " · ", dayEvent.GroupName);
         }
 
         if (begin.Date == end.Date)

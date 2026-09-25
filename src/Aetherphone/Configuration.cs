@@ -394,6 +394,9 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int ManualUtcOffsetMinutes { get; set; }
     public long LastFeedbackSentUnix { get; set; }
     public List<CalendarCustomEvent> CalendarCustomEvents { get; set; } = new();
+    public List<CalendarEventGroup> CalendarGroups { get; set; } = new();
+    public bool CalendarGameEventsInApp { get; set; } = true;
+    public bool CalendarGameEventsInWidget { get; set; } = true;
     public List<PhoneNote> Notes { get; set; } = new();
     public List<ShortcutEntry> Shortcuts { get; set; } = new();
     public List<string> CustomShortcutIconIds { get; set; } = new();

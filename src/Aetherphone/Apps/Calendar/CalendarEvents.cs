@@ -33,10 +33,12 @@ internal sealed class CalendarEvents : IDisposable
     private bool loaded;
     private bool loading;
     private bool failed;
+    private int customRevision;
 
     public bool IsLoaded => loaded;
     public bool IsLoading => loading;
     public bool HasFailed => failed;
+    public int CustomRevision => customRevision;
     public FrozenDictionary<long, ParsedEvent[]> Events => events;
 
     public CalendarEvents(HttpService http, AethernetSession session)
@@ -231,6 +233,11 @@ internal sealed class CalendarEvents : IDisposable
         return events.ContainsKey(day.Date.Ticks);
     }
 
+    public void MarkCustomChanged()
+    {
+        customRevision++;
+    }
+
     private static IEnumerable<DateTime> EachDay(DateTime begin, DateTime end)
     {
         for (var day = begin.Date; day <= end.Date; day = day.AddDays(1))
@@ -277,4 +284,5 @@ internal struct ParsedEvent
     public float Spacing;
     public bool IsCustom;
     public Guid CustomId;
+    public string GroupName;
 }
