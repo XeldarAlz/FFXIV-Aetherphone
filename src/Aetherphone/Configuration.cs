@@ -64,8 +64,8 @@ internal sealed class VideoLocalFileMapRecord
 }
 
 [Serializable]
-internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, IControlConfiguration,
-    IMinimizedConfiguration
+internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, ILookConfiguration,
+    IControlConfiguration, IMinimizedConfiguration
 {
     public int Version { get; set; } = 1;
     public bool OpenOnStartup { get; set; } = true;
@@ -254,6 +254,9 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Dictionary<string, bool> AppFlags { get; set; } = new();
     public int HomeGridRows { get; set; } = 6;
     public bool ShowAppNames { get; set; } = true;
+    public List<HomeLook> Looks { get; set; } = new();
+    public Dictionary<ulong, Guid> LookByCharacter { get; set; } = new();
+    public Guid ActiveLookId { get; set; }
     public ControlLayout? ControlPanel { get; set; }
     public bool ControlPanelRepacked { get; set; }
     public VenueTimeFilter VenueTimeFilter { get; set; } = VenueTimeFilter.LiveNow;
@@ -526,6 +529,20 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
             EncryptionKeyCacheUserId = string.Empty;
         }
 
+        Save();
+    }
+
+    public void MigrateHomeLooks()
+    {
+        if (Looks.Count > 0)
+        {
+            return;
+        }
+
+        var look = new HomeLook { Id = Guid.NewGuid() };
+        HomeLookMirror.Capture(this, look);
+        Looks.Add(look);
+        ActiveLookId = look.Id;
         Save();
     }
 

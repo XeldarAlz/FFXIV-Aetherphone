@@ -55,7 +55,7 @@ Aetherphone is the first and only fully working phone plugin for FINAL FANTASY X
 - **Watch and listen together.** MogCast casts video onto an in-world screen with playback synced for everyone present, and Music brings live community radio and Rolladeck DJ sets in game.
 - **Speaks your language.** One-tap translation on posts, profiles, and private messages, with feeds and chats able to translate everything as it arrives.
 - **Downtime built in.** Gamba is a play-money casino with blackjack, slots, scratch cards, bingo, and a communal wheel, and nothing there has cash value. Games is an arcade of thirty-plus titles with Doom among them, plus Uno, Chess, and Pool against friends online.
-- **Make it yours.** Custom wallpapers, your own ringtone and notification sounds, any accent color, Lodestone character portraits, subtle interface sounds, and a text-size zoom.
+- **Make it yours.** Custom wallpapers, your own ringtone and notification sounds, any accent color, Lodestone character portraits, subtle interface sounds, and a text-size zoom. Save the whole setup as a Look and each character keeps its own: the home screen switches with the character you log in as.
 - **Private by design.** Messages, attachments, and voice notes are end-to-end encrypted, calls are encrypted in transit, and a human moderation team reviews public posts and images.
 
 Forty-two apps in all. Full feature tour, screenshots, and details live on the website:
