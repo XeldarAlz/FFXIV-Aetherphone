@@ -452,6 +452,9 @@ internal sealed partial class AethergramApp : IResumableApp
             case AethergramScreen.Inbox:
                 DrawInbox(area);
                 break;
+            case AethergramScreen.InboxArchived:
+                DrawInboxArchived(area);
+                break;
             case AethergramScreen.NewMessage:
                 DrawNewMessage(area);
                 break;

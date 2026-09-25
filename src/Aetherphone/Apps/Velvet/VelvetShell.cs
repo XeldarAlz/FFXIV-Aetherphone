@@ -493,6 +493,9 @@ internal sealed partial class VelvetShell : IResumableApp
             case VelvetScreenId.Archive:
                 DrawArchive(area);
                 break;
+            case VelvetScreenId.ArchivedChats:
+                DrawArchivedChats(area);
+                break;
             default:
                 DrawRoot(area);
                 break;

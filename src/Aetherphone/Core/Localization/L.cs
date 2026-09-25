@@ -163,6 +163,10 @@ internal static class L
         public static readonly LocString UnarchivedToast = new("social.unarchivedToast", "Shown on your profile");
         public static readonly LocString ArchiveFailed = new("social.archiveFailed", "Couldn't archive the post");
         public static readonly LocString UnarchiveFailed = new("social.unarchiveFailed", "Couldn't restore the post");
+        public static readonly LocString ArchivedChats = new("social.archivedChats", "Archived");
+        public static readonly LocString UnarchiveAction = new("social.unarchiveAction", "Unarchive");
+        public static readonly LocString NoArchivedChats = new("social.noArchivedChats", "No archived chats");
+        public static readonly LocString PinChatLimit = new("social.pinChatLimit", "You can pin up to {0} chats.");
     }
 
     internal static class PhotoTag

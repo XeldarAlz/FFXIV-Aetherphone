@@ -19,6 +19,11 @@ internal sealed partial class AethergramApp
     private const float InboxHeadingHeight = 44f;
     private const float InboxUnreadDotInset = 8f;
     private const float InboxTextGap = 12f;
+    private const float InboxArchivedRowHeight = 52f;
+    private const float InboxArchiveGlyph = 21f;
+    private const float InboxPinGlyph = 14f;
+    private const float InboxPinGap = 6f;
+    private const int MaxPinnedChats = 3;
     private const long MinuteTicks = 60000;
 
     private static readonly TextStyle InboxHeadingStyle = TextStyles.Title3;
@@ -28,13 +33,18 @@ internal sealed partial class AethergramApp
     private static readonly TextStyle InboxPreviewUnreadStyle = TextStyles.SubheadlineEmphasized;
     private static readonly TextStyle InboxPreviewStyle = TextStyles.Subheadline;
 
-    private readonly ActionSheet.Item[] inboxRowSheetItems = new ActionSheet.Item[1];
+    private readonly ActionSheet.Item[] inboxRowSheetItems = new ActionSheet.Item[3];
+    private readonly List<GramThreadDto> inboxPinned = new();
     private readonly List<GramThreadDto> inboxFiltered = new();
     private readonly Dictionary<string, InboxPreviewLine> inboxPreviews = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RichLineFit> inboxPreviewFits = new(StringComparer.Ordinal);
     private GramThreadDto[] inboxFilterSource = Array.Empty<GramThreadDto>();
     private string inboxFilterQuery = string.Empty;
     private bool inboxFilterRequests;
+    private bool inboxFilterArchived;
+    private bool inboxFilterDirty;
+    private string inboxArchivedCountLabel = string.Empty;
+    private int inboxArchivedCountValue = -1;
     private string inboxDraft = string.Empty;
     private bool inboxShowRequests;
     private string inboxRequestsLabel = string.Empty;
@@ -68,16 +78,26 @@ internal sealed partial class AethergramApp
                 new Vector2(searchOrigin.X + width - CellPadX * scale, searchOrigin.Y + InboxSearchHeight * scale)),
                 "##aethergramInboxSearch", Loc.T(L.Common.Search), ref inboxDraft);
             DrawInboxHeading(dmStore.RequestCount);
-            RefreshInboxFilter(threads);
-            if (inboxFiltered.Count == 0)
+            RefreshInboxFilter(threads, false);
+            if (!inboxShowRequests && inboxFilterQuery.Length == 0 && configuration.AethergramArchivedThreads.Count > 0)
+            {
+                DrawInboxArchivedRow();
+            }
+
+            if (inboxPinned.Count == 0 && inboxFiltered.Count == 0)
             {
                 DrawInboxEmptyState(listRect, threads.Length);
                 return;
             }
 
+            for (var index = 0; index < inboxPinned.Count; index++)
+            {
+                DrawInboxRow(inboxPinned[index], true);
+            }
+
             for (var index = 0; index < inboxFiltered.Count; index++)
             {
-                DrawInboxRow(inboxFiltered[index]);
+                DrawInboxRow(inboxFiltered[index], false);
             }
 
             if (dmStore.LoadingMoreThreads)
@@ -154,23 +174,31 @@ internal sealed partial class AethergramApp
         return inboxRequestsLabel;
     }
 
-    private void RefreshInboxFilter(GramThreadDto[] threads)
+    private void RefreshInboxFilter(GramThreadDto[] threads, bool archivedView)
     {
         var query = inboxDraft.Trim();
-        if (ReferenceEquals(threads, inboxFilterSource) && inboxFilterRequests == inboxShowRequests
-            && string.Equals(query, inboxFilterQuery, StringComparison.Ordinal))
+        if (!inboxFilterDirty && ReferenceEquals(threads, inboxFilterSource) && inboxFilterRequests == inboxShowRequests
+            && inboxFilterArchived == archivedView && string.Equals(query, inboxFilterQuery, StringComparison.Ordinal))
         {
             return;
         }
 
+        inboxFilterDirty = false;
         inboxFilterSource = threads;
         inboxFilterRequests = inboxShowRequests;
+        inboxFilterArchived = archivedView;
         inboxFilterQuery = query;
+        inboxPinned.Clear();
         inboxFiltered.Clear();
         for (var index = 0; index < threads.Length; index++)
         {
             var thread = threads[index];
-            if (thread.Pending != inboxShowRequests)
+            if (!archivedView && thread.Pending != inboxShowRequests)
+            {
+                continue;
+            }
+
+            if (configuration.AethergramArchivedThreads.Contains(thread.OtherUserId) != archivedView)
             {
                 continue;
             }
@@ -180,7 +208,69 @@ internal sealed partial class AethergramApp
                 continue;
             }
 
-            inboxFiltered.Add(thread);
+            if (!archivedView && configuration.AethergramPinnedThreads.Contains(thread.OtherUserId))
+            {
+                inboxPinned.Add(thread);
+            }
+            else
+            {
+                inboxFiltered.Add(thread);
+            }
+        }
+    }
+
+    private void DrawInboxArchivedRow()
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var cell = FeedCell.Begin(drawList, InboxArchivedRowHeight * scale, Ink.HoverTint);
+        var pad = CellPadX * scale;
+        var glyphCenter = new Vector2(cell.Bounds.Min.X + pad + InboxAvatarRadius * scale, cell.Bounds.Center.Y);
+        PhoneIcon.Draw(drawList, glyphCenter, PhoneIcons.Archive, Ink.MutedInk, InboxArchiveGlyph * scale);
+        var textLeft = glyphCenter.X + InboxAvatarRadius * scale + InboxTextGap * scale;
+        var count = configuration.AethergramArchivedThreads.Count;
+        if (inboxArchivedCountValue != count)
+        {
+            inboxArchivedCountValue = count;
+            inboxArchivedCountLabel = count.ToString(Loc.Culture);
+        }
+
+        var countSize = Typography.Measure(inboxArchivedCountLabel, InboxPreviewStyle);
+        Typography.Draw(drawList,
+            new Vector2(cell.Bounds.Max.X - pad - countSize.X, cell.Bounds.Center.Y - countSize.Y * 0.5f),
+            inboxArchivedCountLabel, Ink.MutedInk, InboxPreviewStyle);
+        var labelHeight = Typography.LineHeight(InboxNameStyle);
+        Typography.Draw(drawList, new Vector2(textLeft, cell.Bounds.Center.Y - labelHeight * 0.5f),
+            Loc.T(L.Social.ArchivedChats), Ink.TitleInk, InboxNameStyle);
+        if (cell.Tapped)
+        {
+            router.Push(AethergramRoute.InboxArchived);
+        }
+
+        FeedCell.End(drawList, cell, Ink.Hairline, false);
+    }
+
+    private void DrawInboxArchived(Rect area)
+    {
+        var scale = UiScale.Current;
+        DrawScreenHeader(area, Loc.T(L.Social.ArchivedChats));
+        var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
+        var threads = dmStore.Threads;
+        using (AppSurface.BeginEdgeToEdge(listRect))
+        {
+            RefreshInboxFilter(threads, true);
+            if (inboxFiltered.Count == 0)
+            {
+                DrawEmptyState(listRect, Loc.T(L.Social.NoArchivedChats), string.Empty);
+                return;
+            }
+
+            for (var index = 0; index < inboxFiltered.Count; index++)
+            {
+                DrawInboxRow(inboxFiltered[index], false);
+            }
+
+            ImGui.Dummy(new Vector2(0f, 24f * scale));
         }
     }
 
@@ -212,7 +302,7 @@ internal sealed partial class AethergramApp
         DrawEmptyState(area, Loc.T(L.Aethergram.InboxEmpty), Loc.T(L.Aethergram.InboxEmptyHint));
     }
 
-    private void DrawInboxRow(GramThreadDto thread)
+    private void DrawInboxRow(GramThreadDto thread, bool pinned)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -230,7 +320,16 @@ internal sealed partial class AethergramApp
         PresenceDot(drawList, new Vector2(avatarCenter.X + dotInset, avatarCenter.Y + dotInset), thread.Presence);
         var unread = thread.UnreadCount > 0;
         var textLeft = avatarCenter.X + avatarRadius + InboxTextGap * scale;
-        var textRight = origin.X + width - pad - (unread ? 20f * scale : 0f);
+        var trailing = unread ? 20f * scale : 0f;
+        if (pinned)
+        {
+            var glyph = InboxPinGlyph * scale;
+            PhoneIcon.Draw(drawList, new Vector2(origin.X + width - pad - trailing - glyph * 0.5f, avatarCenter.Y),
+                PhoneIcons.PinFilled, Ink.MutedInk, glyph);
+            trailing += glyph + InboxPinGap * scale;
+        }
+
+        var textRight = origin.X + width - pad - trailing;
         var textWidth = MathF.Max(1f, textRight - textLeft);
         var nameStyle = unread ? InboxNameUnreadStyle : InboxNameStyle;
         var previewStyle = unread ? InboxPreviewUnreadStyle : InboxPreviewStyle;
@@ -309,7 +408,13 @@ internal sealed partial class AethergramApp
     {
         inboxSheetThreadId = thread.OtherUserId;
         inboxSheetTitle = SocialIdentity.Name(thread.OtherDisplayName, thread.OtherHandle);
-        inboxRowSheetItems[0] = new ActionSheet.Item(Loc.T(L.Aethergram.DeleteConversation), string.Empty, true);
+        var pinned = configuration.AethergramPinnedThreads.Contains(thread.OtherUserId);
+        var archived = configuration.AethergramArchivedThreads.Contains(thread.OtherUserId);
+        inboxRowSheetItems[0] = new ActionSheet.Item(Loc.T(pinned ? L.Common.Unpin : L.Common.Pin),
+            pinned ? PhoneIcons.PinFilled : PhoneIcons.Pin);
+        inboxRowSheetItems[1] = new ActionSheet.Item(
+            Loc.T(archived ? L.Social.UnarchiveAction : L.Social.ArchiveAction), PhoneIcons.Archive);
+        inboxRowSheetItems[2] = new ActionSheet.Item(Loc.T(L.Aethergram.DeleteConversation), PhoneIcons.Trash, true);
         inboxRowSheet.Open();
     }
 
@@ -320,17 +425,63 @@ internal sealed partial class AethergramApp
             return;
         }
 
-        if (inboxRowSheet.IsOpen && router.Current.Screen != AethergramScreen.Inbox)
+        if (inboxRowSheet.IsOpen
+            && router.Current.Screen is not (AethergramScreen.Inbox or AethergramScreen.InboxArchived))
         {
             inboxRowSheet.Close();
         }
 
         var picked = inboxRowSheet.Draw(screen, ActionSheetStyle.From(ui), inboxRowSheetItems,
             Loc.T(L.Common.Cancel), false, inboxSheetTitle);
-        if (picked == 0 && inboxSheetThreadId is { } otherId)
+        if (picked < 0 || inboxSheetThreadId is not { } otherId)
         {
-            AskDeleteConversation(otherId);
+            return;
         }
+
+        switch (picked)
+        {
+            case 0:
+                ToggleInboxPinned(otherId);
+                break;
+            case 1:
+                ToggleInboxArchived(otherId);
+                break;
+            case 2:
+                AskDeleteConversation(otherId);
+                break;
+        }
+    }
+
+    private void ToggleInboxPinned(string otherId)
+    {
+        var pinned = configuration.AethergramPinnedThreads;
+        if (!pinned.Remove(otherId))
+        {
+            if (pinned.Count >= MaxPinnedChats)
+            {
+                toast.Show(Loc.T(L.Social.PinChatLimit, MaxPinnedChats));
+                return;
+            }
+
+            pinned.Add(otherId);
+            configuration.AethergramArchivedThreads.Remove(otherId);
+        }
+
+        configuration.Save();
+        inboxFilterDirty = true;
+    }
+
+    private void ToggleInboxArchived(string otherId)
+    {
+        var archived = configuration.AethergramArchivedThreads;
+        if (!archived.Remove(otherId))
+        {
+            archived.Add(otherId);
+            configuration.AethergramPinnedThreads.Remove(otherId);
+        }
+
+        configuration.Save();
+        inboxFilterDirty = true;
     }
 
     private void AskDeleteConversation(string otherId)
@@ -351,6 +502,12 @@ internal sealed partial class AethergramApp
     {
         var current = router.Current;
         var threadOpen = current.Screen == AethergramScreen.Thread && current.Id == otherId;
+        if (configuration.AethergramPinnedThreads.Remove(otherId) | configuration.AethergramArchivedThreads.Remove(otherId))
+        {
+            configuration.Save();
+            inboxFilterDirty = true;
+        }
+
         dmStore.DeleteThread(otherId);
         if (threadOpen)
         {
