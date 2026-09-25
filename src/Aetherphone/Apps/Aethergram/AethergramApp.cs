@@ -45,12 +45,14 @@ internal sealed partial class AethergramApp : IResumableApp
         Block,
     }
 
-    private enum PinPrompt
+    private enum PinNotice
     {
         None,
         Replace,
         PinFailed,
         UnpinFailed,
+        Pinned,
+        Unpinned,
     }
 
     private const int MaxCaptionLength = 500;
@@ -95,6 +97,8 @@ internal sealed partial class AethergramApp : IResumableApp
     private const int GridColumns = 3;
     private const int PostSheetMaxItems = 4;
     private const int MaxPinnedPosts = 3;
+    private const float CardPinGlyphSize = 12f;
+    private const float CardPinGlyphGap = 3f;
 
     public string Id => "aethergram";
     public Vector4 Accent => AppAccents.For(Id);
@@ -153,8 +157,9 @@ internal sealed partial class AethergramApp : IResumableApp
     private readonly PostSheetAction[] postSheetActions = new PostSheetAction[PostSheetMaxItems];
     private int postSheetCount;
     private string postSheetTitle = string.Empty;
-    private volatile PinPrompt pendingPinPrompt;
+    private volatile PinNotice pendingPinNotice;
     private string pendingPinPostId = string.Empty;
+    private readonly ScreenToast toast = new();
     private readonly Action<NotificationDto> openActivityActor;
     private readonly Action<NotificationDto> openActivityPost;
     private readonly SocialActivityFeed activityFeed;
@@ -401,13 +406,14 @@ internal sealed partial class AethergramApp : IResumableApp
         }
 
         DrawFilterSheet(screen);
-        DrainPinPrompts();
+        DrainPinNotices();
         DrawPostSheet(screen);
         DrawFeedExplainer(screen);
         DrawCommentSheet(screen);
         DrawProfileMenu(screen);
         DrawProfileActionSheet(screen);
         DrawInboxRowSheet(screen);
+        toast.Draw(screen, ScreenToastStyle.From(ui));
     }
 
     private void DrawView(AethergramRoute route, Rect area, int depth)
@@ -716,46 +722,46 @@ internal sealed partial class AethergramApp : IResumableApp
     {
         store.PinPost(postId, false, outcome =>
         {
-            if (outcome == PinOutcome.Pinned)
-            {
-                return;
-            }
-
             pendingPinPostId = postId;
-            pendingPinPrompt = outcome == PinOutcome.LimitReached ? PinPrompt.Replace : PinPrompt.PinFailed;
+            pendingPinNotice = outcome switch
+            {
+                PinOutcome.Pinned => PinNotice.Pinned,
+                PinOutcome.LimitReached => PinNotice.Replace,
+                _ => PinNotice.PinFailed,
+            };
         });
     }
 
     private void UnpinPost(string postId)
     {
-        store.UnpinPost(postId, ok =>
-        {
-            if (!ok)
-            {
-                pendingPinPrompt = PinPrompt.UnpinFailed;
-            }
-        });
+        store.UnpinPost(postId, ok => pendingPinNotice = ok ? PinNotice.Unpinned : PinNotice.UnpinFailed);
     }
 
-    private void DrainPinPrompts()
+    private void DrainPinNotices()
     {
-        var prompt = pendingPinPrompt;
-        if (prompt == PinPrompt.None)
+        var notice = pendingPinNotice;
+        if (notice == PinNotice.None)
         {
             return;
         }
 
-        pendingPinPrompt = PinPrompt.None;
-        switch (prompt)
+        pendingPinNotice = PinNotice.None;
+        switch (notice)
         {
-            case PinPrompt.Replace:
+            case PinNotice.Replace:
                 AskReplacePinnedPost(pendingPinPostId);
                 break;
-            case PinPrompt.PinFailed:
+            case PinNotice.PinFailed:
                 confirm.Alert(null, Loc.T(L.Aethergram.PinFailed), Loc.T(L.Common.Close));
                 break;
-            case PinPrompt.UnpinFailed:
+            case PinNotice.UnpinFailed:
                 confirm.Alert(null, Loc.T(L.Aethergram.UnpinFailed), Loc.T(L.Common.Close));
+                break;
+            case PinNotice.Pinned:
+                toast.Show(Loc.T(L.Aethergram.PinnedToast));
+                break;
+            case PinNotice.Unpinned:
+                toast.Show(Loc.T(L.Aethergram.UnpinnedToast));
                 break;
         }
     }
@@ -772,8 +778,26 @@ internal sealed partial class AethergramApp : IResumableApp
             Sheet = true,
             BusyLabel = Loc.T(L.Aethergram.Saving),
             FailedMessage = Loc.T(L.Aethergram.PinFailed),
-            ConfirmAsync = done => store.PinPost(postId, true, outcome => done(outcome == PinOutcome.Pinned)),
+            ConfirmAsync = done => store.PinPost(postId, true, outcome =>
+            {
+                var pinned = outcome == PinOutcome.Pinned;
+                if (pinned)
+                {
+                    pendingPinNotice = PinNotice.Pinned;
+                }
+
+                done(pinned);
+            }),
         });
+    }
+
+    private float DrawPinnedGlyph(ImDrawListPtr drawList, float left, float top, float lineHeight)
+    {
+        var scale = UiScale.Current;
+        var glyphSize = CardPinGlyphSize * scale;
+        PhoneIcon.Draw(drawList, new Vector2(left + glyphSize * 0.5f, top + lineHeight * 0.5f), PhoneIcons.PinFilled,
+            Ink.MutedInk, glyphSize);
+        return glyphSize + CardPinGlyphGap * scale;
     }
 
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)
@@ -891,7 +915,7 @@ internal sealed partial class AethergramApp : IResumableApp
             Typography.FitText(label, MathF.Max(1f, width - iconSize - 6f * scale), CardMetaStyle), Ink.MutedInk, CardMetaStyle);
     }
 
-    private void DrawGramCard(PostDto post, bool detail = false, string? suggestion = null)
+    private void DrawGramCard(PostDto post, bool detail = false, string? suggestion = null, bool showPinned = false)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -976,8 +1000,17 @@ internal sealed partial class AethergramApp : IResumableApp
             meta = $"{meta} · {Loc.T(L.Moderation.InReview)}";
         }
 
-        Typography.Draw(drawList, new Vector2(nameLeft, nameTop + nameHeight + 1f * scale),
-            Typography.FitText(meta, headerTextMaxWidth, CardMetaStyle), Ink.MutedInk, CardMetaStyle);
+        var metaTop = nameTop + nameHeight + 1f * scale;
+        var metaLeft = nameLeft;
+        if (showPinned && post.PinnedAtUnix is not null)
+        {
+            metaLeft += DrawPinnedGlyph(drawList, nameLeft, metaTop, metaHeight);
+            meta = $"{Loc.T(L.Aethergram.PinnedLabel)} · {meta}";
+        }
+
+        Typography.Draw(drawList, new Vector2(metaLeft, metaTop),
+            Typography.FitText(meta, MathF.Max(1f, headerTextRight - metaLeft), CardMetaStyle), Ink.MutedInk,
+            CardMetaStyle);
         var ringExtent = new Vector2(ringRadius, ringRadius);
         var overRing = hasStory && UiInteract.Hover(avatarCenter - ringExtent, avatarCenter + ringExtent);
         if (hasStory && UiInteract.HoverClickCircle(avatarCenter, ringRadius))

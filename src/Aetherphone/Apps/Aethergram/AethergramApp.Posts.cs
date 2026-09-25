@@ -59,7 +59,7 @@ internal sealed partial class AethergramApp
                     continue;
                 }
 
-                DrawGramCard(post);
+                DrawGramCard(post, showPinned: source == PostSource.Profile);
                 postsVirtualizer.Record(post.Id, revision);
             }
 
