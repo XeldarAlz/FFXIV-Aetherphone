@@ -17,11 +17,22 @@ internal sealed class AethergramStore : SocialFeedStore
 
     private readonly GramClient grams;
     private readonly FeedLane<PostDto> archivedLane = new(PostOrder.NewestFirst);
+    private readonly FeedLane<PostDto> pendingTagsLane = new(PostOrder.NewestFirst);
+    private volatile bool pendingTagsLoaded;
 
     public PostDto[] ArchivedPosts => archivedLane.Items;
     public bool ArchivedLoading => archivedLane.Loading;
     public bool ArchivedLoadingMore => archivedLane.LoadingMore;
     public bool HasMoreArchived => archivedLane.HasMore;
+    public PostDto[] PendingTagPosts => pendingTagsLane.Items;
+    public bool PendingTagsLoading => pendingTagsLane.Loading;
+    public bool PendingTagsLoadingMore => pendingTagsLane.LoadingMore;
+    public bool HasMorePendingTags => pendingTagsLane.HasMore;
+
+    public int PendingTagCount =>
+        pendingTagsLoaded && !pendingTagsLane.HasMore
+            ? pendingTagsLane.Items.Length
+            : Math.Max(pendingTagsLane.Items.Length, Me?.PendingPhotoTags ?? 0);
 
     public AethergramStore(AethernetSession session, AccountClient account, SocialClient client, GramClient grams,
         SafetyClient safety, MediaClient media, RealtimeSignalBus signals)
@@ -33,6 +44,8 @@ internal sealed class AethergramStore : SocialFeedStore
     protected override void OnAccountReset()
     {
         archivedLane.Clear();
+        pendingTagsLane.Clear();
+        pendingTagsLoaded = false;
     }
 
     protected override Task<FeedPage?> FetchFeedAsync(string feedKey, string? cursor, string? regions, bool includeSensitive,
@@ -156,34 +169,107 @@ internal sealed class AethergramStore : SocialFeedStore
         }, onComplete);
     }
 
-    public void ApproveTag(string postId, string tagId, Action<bool> onComplete)
+    public void ApproveTag(string postId, PhotoTagDto tag, Action<bool> onComplete)
     {
         work.Run("tag approve", async token =>
         {
-            if (!await grams.ApproveTagAsync(tagId, token).ConfigureAwait(false))
+            if (!await grams.ApproveTagAsync(tag.Id, token).ConfigureAwait(false))
             {
                 return false;
             }
 
             MapPostEverywhere(postId,
-                post => post with { PhotoTags = PhotoTagStates.WithState(post.PhotoTags, tagId, PhotoTagStates.Approved) });
+                post => post with { PhotoTags = PhotoTagStates.WithState(post.PhotoTags, tag.Id, PhotoTagStates.Approved) });
+            SettlePendingTag(postId, tag);
             ClearTagged();
             return true;
         }, onComplete);
     }
 
-    public void RemoveTag(string postId, string tagId, Action<bool> onComplete)
+    public void RemoveTag(string postId, PhotoTagDto tag, Action<bool> onComplete)
     {
         work.Run("tag remove", async token =>
         {
-            if (!await grams.RemoveTagAsync(tagId, token).ConfigureAwait(false))
+            if (!await grams.RemoveTagAsync(tag.Id, token).ConfigureAwait(false))
             {
                 return false;
             }
 
-            MapPostEverywhere(postId, post => post with { PhotoTags = PhotoTagStates.Without(post.PhotoTags, tagId) });
+            MapPostEverywhere(postId, post => post with { PhotoTags = PhotoTagStates.Without(post.PhotoTags, tag.Id) });
+            SettlePendingTag(postId, tag);
             return true;
         }, onComplete);
+    }
+
+    private void SettlePendingTag(string postId, PhotoTagDto tag)
+    {
+        if (tag.State != PhotoTagStates.Pending)
+        {
+            return;
+        }
+
+        pendingTagsLane.Items = CopyOnWrite.RemoveById(pendingTagsLane.Items, postId);
+        AdjustPendingPhotoTags(-1);
+    }
+
+    public void EnsurePendingTags()
+    {
+        if (pendingTagsLoaded)
+        {
+            return;
+        }
+
+        RefreshPendingTags();
+    }
+
+    public void RefreshPendingTags()
+    {
+        if (!IsSignedIn || pendingTagsLane.Loading)
+        {
+            return;
+        }
+
+        pendingTagsLane.Loading = true;
+        work.Run("pending tags", async token =>
+        {
+            var page = await grams.PendingTaggedAsync(null, token).ConfigureAwait(false);
+            if (page is null)
+            {
+                return;
+            }
+
+            pendingTagsLane.ApplyRefresh(page.Items, page.NextCursor);
+            pendingTagsLoaded = true;
+            if (page.NextCursor is null)
+            {
+                SyncPendingPhotoTags(page.Items.Length);
+            }
+        }, () => pendingTagsLane.Loading = false);
+    }
+
+    public void LoadMorePendingTags()
+    {
+        var cursor = pendingTagsLane.Cursor;
+        if (!IsSignedIn || cursor is null || pendingTagsLane.LoadingMore || pendingTagsLane.Loading)
+        {
+            return;
+        }
+
+        pendingTagsLane.LoadingMore = true;
+        work.Run("pending tags more", async token =>
+        {
+            var page = await grams.PendingTaggedAsync(cursor, token).ConfigureAwait(false);
+            if (page is null)
+            {
+                return;
+            }
+
+            pendingTagsLane.ApplyMore(page.Items, page.NextCursor);
+            if (page.NextCursor is null)
+            {
+                SyncPendingPhotoTags(pendingTagsLane.Items.Length);
+            }
+        }, () => pendingTagsLane.LoadingMore = false);
     }
 
     public void PinPost(string postId, bool replace, Action<PinOutcome> onComplete)

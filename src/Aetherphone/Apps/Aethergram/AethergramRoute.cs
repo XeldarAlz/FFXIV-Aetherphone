@@ -17,6 +17,7 @@ internal enum PostSource
     Hashtag,
     Explore,
     Archive,
+    PendingTags,
 }
 
 internal enum AethergramScreen

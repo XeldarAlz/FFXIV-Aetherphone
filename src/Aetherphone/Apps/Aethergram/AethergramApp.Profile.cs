@@ -186,6 +186,17 @@ internal sealed partial class AethergramApp
             }
 
             store.EnsureTaggedPosts(userId);
+            if (user.IsMe)
+            {
+                store.EnsurePendingTags();
+                var pendingTagCount = store.PendingTagCount;
+                if (pendingTagCount > 0
+                    && DrawRequestRow(pendingTagCount, PhoneIcons.UserSquareRounded, Loc.T(L.PhotoTag.PendingTags)))
+                {
+                    OpenPendingTags();
+                }
+            }
+
             DrawPostGrid(store.TaggedPosts, L.PhotoTag.NoTagged, store.HasMoreTagged, store.TaggedLoadingMore,
                 store.LoadMoreTaggedPosts, SquareGrid, PostSource.Tagged);
         }

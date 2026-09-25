@@ -1070,6 +1070,22 @@ internal abstract class SocialFeedStore : IDisposable
         }
     }
 
+    protected void SyncPendingPhotoTags(int count)
+    {
+        if (me is { } current && current.PendingPhotoTags != count)
+        {
+            me = current with { PendingPhotoTags = count };
+        }
+    }
+
+    protected void AdjustPendingPhotoTags(int delta)
+    {
+        if (me is { } current)
+        {
+            me = current with { PendingPhotoTags = Math.Max(0, current.PendingPhotoTags + delta) };
+        }
+    }
+
     public void RefreshSaved()
     {
         if (!session.IsSignedIn || savedLane.Loading)
