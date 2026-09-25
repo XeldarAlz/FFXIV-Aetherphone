@@ -40,6 +40,7 @@ internal enum VelvetScreenId
     EditPost,
     Encryption,
     UserPosts,
+    Archive,
 }
 
 internal readonly record struct VelvetView(VelvetScreenId Screen, string? Arg = null)
@@ -56,6 +57,7 @@ internal readonly record struct VelvetView(VelvetScreenId Screen, string? Arg = 
     public static readonly VelvetView CardPreview = new(VelvetScreenId.CardPreview);
     public static readonly VelvetView PostTags = new(VelvetScreenId.PostTags);
     public static readonly VelvetView Encryption = new(VelvetScreenId.Encryption);
+    public static readonly VelvetView Archive = new(VelvetScreenId.Archive);
 
     public static VelvetView Profile(string userId) => new(VelvetScreenId.Profile, userId);
     public static VelvetView Thread(string userId) => new(VelvetScreenId.Thread, userId);

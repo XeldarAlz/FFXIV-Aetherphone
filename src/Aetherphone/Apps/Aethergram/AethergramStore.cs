@@ -10,13 +10,6 @@ using Aetherphone.Core.Wallpapers;
 
 namespace Aetherphone.Apps.Aethergram;
 
-internal enum PinOutcome
-{
-    Pinned,
-    LimitReached,
-    Failed,
-}
-
 internal sealed class AethergramStore : SocialFeedStore
 {
     private const int LoveKind = 1;

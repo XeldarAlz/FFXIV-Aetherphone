@@ -302,6 +302,7 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         discoverResults = Array.Empty<VelvetProfileDto>();
         ResetUserPosts();
         ResetTagPosts();
+        ResetArchived();
 
         notInterestedIds = EmptyIds;
         notInterestedLoaded = false;

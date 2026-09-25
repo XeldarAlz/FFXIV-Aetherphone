@@ -592,7 +592,7 @@ internal sealed partial class AethergramApp
     private void DrawArchive(Rect area)
     {
         var scale = UiScale.Current;
-        DrawScreenHeader(area, Loc.T(L.Aethergram.ArchiveTitle));
+        DrawScreenHeader(area, Loc.T(L.Social.ArchiveTitle));
         var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var posts = store.ArchivedPosts;
         using (AppSurface.BeginEdgeToEdge(listRect))
@@ -600,7 +600,7 @@ internal sealed partial class AethergramApp
             if (posts.Length > 0)
             {
                 ImGui.Dummy(new Vector2(0f, 2f * scale));
-                DrawPostGrid(posts, L.Aethergram.ArchiveEmpty, store.HasMoreArchived, store.ArchivedLoadingMore,
+                DrawPostGrid(posts, L.Social.ArchiveEmpty, store.HasMoreArchived, store.ArchivedLoadingMore,
                     store.LoadMoreArchived, SquareGrid, PostSource.Archive);
                 return;
             }
@@ -611,7 +611,7 @@ internal sealed partial class AethergramApp
                 return;
             }
 
-            DrawEmptyState(listRect, Loc.T(L.Aethergram.ArchiveEmpty), Loc.T(L.Aethergram.ArchiveEmptyHint));
+            DrawEmptyState(listRect, Loc.T(L.Social.ArchiveEmpty), Loc.T(L.Social.ArchiveEmptyHint));
         }
     }
 
@@ -620,7 +620,7 @@ internal sealed partial class AethergramApp
         profileMenuCount = 0;
         AddProfileMenuItem(Loc.T(L.Aethergram.Settings), ProfileMenuAction.Settings);
         AddProfileMenuItem(Loc.T(L.Aethergram.SavedTitle), ProfileMenuAction.Saved);
-        AddProfileMenuItem(Loc.T(L.Aethergram.ArchiveTitle), ProfileMenuAction.Archive);
+        AddProfileMenuItem(Loc.T(L.Social.ArchiveTitle), ProfileMenuAction.Archive);
         AddProfileMenuItem(Loc.T(L.Social.BadgeProgress), ProfileMenuAction.BadgeProgress);
         var pending = store.PendingFollowRequestCount;
         AddProfileMenuItem(pending > 0 ? Loc.T(L.Social.FollowRequestsCount, pending) : Loc.T(L.Social.FollowRequests),

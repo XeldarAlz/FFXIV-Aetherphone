@@ -144,6 +144,25 @@ internal static class L
         public static readonly LocString BadgeProgressHint = new("social.badgeProgressHint", "Reach both goals to earn the badge.");
         public static readonly LocString BadgeEarned = new("social.badgeEarned", "Earned");
         public static readonly LocString BadgeGoalFollowers = new("social.badgeGoalFollowers", "Followers");
+        public static readonly LocString PinToProfile = new("social.pinToProfile", "Pin to your profile");
+        public static readonly LocString UnpinFromProfile = new("social.unpinFromProfile", "Unpin from profile");
+        public static readonly LocString PinReplaceTitle = new("social.pinReplaceTitle", "Replace your oldest pinned post?");
+        public static readonly LocString PinReplaceMessage = new("social.pinReplaceMessage", "You can pin up to {0} posts. Pinning this one unpins the post you pinned first.");
+        public static readonly LocString PinReplaceConfirm = new("social.pinReplaceConfirm", "Replace");
+        public static readonly LocString PinFailed = new("social.pinFailed", "Couldn't pin the post");
+        public static readonly LocString UnpinFailed = new("social.unpinFailed", "Couldn't unpin the post");
+        public static readonly LocString PinnedLabel = new("social.pinnedLabel", "Pinned");
+        public static readonly LocString PinnedToast = new("social.pinnedToast", "Pinned to your profile");
+        public static readonly LocString UnpinnedToast = new("social.unpinnedToast", "Unpinned from your profile");
+        public static readonly LocString ArchiveAction = new("social.archiveAction", "Archive");
+        public static readonly LocString ShowOnProfile = new("social.showOnProfile", "Show on profile");
+        public static readonly LocString ArchiveTitle = new("social.archiveTitle", "Archive");
+        public static readonly LocString ArchiveEmpty = new("social.archiveEmpty", "Nothing archived");
+        public static readonly LocString ArchiveEmptyHint = new("social.archiveEmptyHint", "Posts you archive leave your profile and wait here until you show them again.");
+        public static readonly LocString ArchivedToast = new("social.archivedToast", "Post archived");
+        public static readonly LocString UnarchivedToast = new("social.unarchivedToast", "Shown on your profile");
+        public static readonly LocString ArchiveFailed = new("social.archiveFailed", "Couldn't archive the post");
+        public static readonly LocString UnarchiveFailed = new("social.unarchiveFailed", "Couldn't restore the post");
     }
 
     internal static class PhotoTag
@@ -4535,25 +4554,6 @@ internal static class L
         public static readonly LocString DeleteFailed = new("aethergram.deleteFailed", "Couldn't delete the post");
         public static readonly LocString EditPost = new("aethergram.editPost", "Edit post");
         public static readonly LocString EditPostFailed = new("aethergram.editPostFailed", "Couldn't save the changes");
-        public static readonly LocString PinToProfile = new("aethergram.pinToProfile", "Pin to your profile");
-        public static readonly LocString UnpinFromProfile = new("aethergram.unpinFromProfile", "Unpin from profile");
-        public static readonly LocString PinReplaceTitle = new("aethergram.pinReplaceTitle", "Replace your oldest pinned post?");
-        public static readonly LocString PinReplaceMessage = new("aethergram.pinReplaceMessage", "You can pin up to {0} posts. Pinning this one unpins the post you pinned first.");
-        public static readonly LocString PinReplaceConfirm = new("aethergram.pinReplaceConfirm", "Replace");
-        public static readonly LocString PinFailed = new("aethergram.pinFailed", "Couldn't pin the post");
-        public static readonly LocString UnpinFailed = new("aethergram.unpinFailed", "Couldn't unpin the post");
-        public static readonly LocString PinnedLabel = new("aethergram.pinnedLabel", "Pinned");
-        public static readonly LocString PinnedToast = new("aethergram.pinnedToast", "Pinned to your profile");
-        public static readonly LocString UnpinnedToast = new("aethergram.unpinnedToast", "Unpinned from your profile");
-        public static readonly LocString ArchiveAction = new("aethergram.archiveAction", "Archive");
-        public static readonly LocString ShowOnProfile = new("aethergram.showOnProfile", "Show on profile");
-        public static readonly LocString ArchiveTitle = new("aethergram.archiveTitle", "Archive");
-        public static readonly LocString ArchiveEmpty = new("aethergram.archiveEmpty", "Nothing archived");
-        public static readonly LocString ArchiveEmptyHint = new("aethergram.archiveEmptyHint", "Posts you archive leave your profile and wait here until you show them again.");
-        public static readonly LocString ArchivedToast = new("aethergram.archivedToast", "Post archived");
-        public static readonly LocString UnarchivedToast = new("aethergram.unarchivedToast", "Shown on your profile");
-        public static readonly LocString ArchiveFailed = new("aethergram.archiveFailed", "Couldn't archive the post");
-        public static readonly LocString UnarchiveFailed = new("aethergram.unarchiveFailed", "Couldn't restore the post");
         public static readonly LocString EditedStamp = new("aethergram.editedStamp", "{0} · Edited");
         public static readonly LocString DeleteCommentFailed = new("aethergram.deleteCommentFailed", "Couldn't delete the comment");
         public static readonly LocString DeleteComment = new("aethergram.deleteComment", "Delete comment");

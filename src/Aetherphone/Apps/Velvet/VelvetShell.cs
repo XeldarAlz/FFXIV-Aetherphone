@@ -342,10 +342,12 @@ internal sealed partial class VelvetShell : IResumableApp
             avatarLightbox.Draw(screen, theme);
         }
 
+        DrainPostNotices();
         DrawPostSheet(screen);
         DrawThreadSheet(screen);
         DrawProfileMenu(screen);
         DrawPhotoSheet(screen);
+        toast.Draw(screen, ScreenToastStyle.From(ui));
     }
 
     public void Dispose()
@@ -487,6 +489,9 @@ internal sealed partial class VelvetShell : IResumableApp
                 break;
             case VelvetScreenId.UserPosts:
                 DrawUserPosts(area, view.Arg ?? string.Empty);
+                break;
+            case VelvetScreenId.Archive:
+                DrawArchive(area);
                 break;
             default:
                 DrawRoot(area);

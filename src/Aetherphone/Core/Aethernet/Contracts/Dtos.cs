@@ -463,9 +463,13 @@ internal sealed record VelvetPostDto(
     string OwnerFrameId = "",
     bool Sensitive = false,
     string? Lang = null,
-    long? EditedAtUnix = null) : IIdentified;
+    long? EditedAtUnix = null,
+    long? PinnedAtUnix = null,
+    long? ArchivedAtUnix = null) : IIdentified;
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
+
+internal sealed record VelvetPinPostResponse(VelvetPostDto Post, string? ReplacedPostId);
 
 internal sealed record VelvetUserPostsPage(VelvetPostDto[] Items, int TotalCount, string? NextCursor);
 
