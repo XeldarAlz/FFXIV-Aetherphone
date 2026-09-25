@@ -222,7 +222,7 @@ internal sealed partial class ChirperApp
         var cursorY = MathF.Max(avatarCenter.Y + avatarRadius, actionTop + ProfileActionHeight * scale) + 10f * scale;
         var nameHeight = Typography.LineHeight(ProfileNameStyle);
         UserName.DrawAuto(drawList, "chirper.profile.name." + user.Id, displayName, user.Badges, user.ProfileBadges,
-            innerLeft, cursorY, innerWidth, ProfileNameStyle, ChirperInk.TitleInk, theme, 2);
+            innerLeft, cursorY, innerWidth, ProfileNameStyle, ChirperInk.TitleInk, theme);
         cursorY += nameHeight + 2f * scale;
         if (user.Handle.Length > 0)
         {
