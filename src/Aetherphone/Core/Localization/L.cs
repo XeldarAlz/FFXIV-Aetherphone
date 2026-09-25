@@ -4535,6 +4535,13 @@ internal static class L
         public static readonly LocString DeleteFailed = new("aethergram.deleteFailed", "Couldn't delete the post");
         public static readonly LocString EditPost = new("aethergram.editPost", "Edit post");
         public static readonly LocString EditPostFailed = new("aethergram.editPostFailed", "Couldn't save the changes");
+        public static readonly LocString PinToProfile = new("aethergram.pinToProfile", "Pin to your profile");
+        public static readonly LocString UnpinFromProfile = new("aethergram.unpinFromProfile", "Unpin from profile");
+        public static readonly LocString PinReplaceTitle = new("aethergram.pinReplaceTitle", "Replace your oldest pinned post?");
+        public static readonly LocString PinReplaceMessage = new("aethergram.pinReplaceMessage", "You can pin up to {0} posts. Pinning this one unpins the post you pinned first.");
+        public static readonly LocString PinReplaceConfirm = new("aethergram.pinReplaceConfirm", "Replace");
+        public static readonly LocString PinFailed = new("aethergram.pinFailed", "Couldn't pin the post");
+        public static readonly LocString UnpinFailed = new("aethergram.unpinFailed", "Couldn't unpin the post");
         public static readonly LocString EditedStamp = new("aethergram.editedStamp", "{0} · Edited");
         public static readonly LocString DeleteCommentFailed = new("aethergram.deleteCommentFailed", "Couldn't delete the comment");
         public static readonly LocString DeleteComment = new("aethergram.deleteComment", "Delete comment");

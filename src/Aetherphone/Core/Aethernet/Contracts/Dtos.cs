@@ -245,7 +245,8 @@ internal sealed record PostDto(
     bool Sensitive = false,
     bool SensitiveLocked = false,
     string? Lang = null,
-    long? EditedAtUnix = null) : IIdentified;
+    long? EditedAtUnix = null,
+    long? PinnedAtUnix = null) : IIdentified;
 
 internal sealed record FeedPage(
     PostDto[] Items,
@@ -253,6 +254,8 @@ internal sealed record FeedPage(
     bool Ranked = false,
     int? CaughtUpAfter = null,
     FeedItemNote[]? Notes = null);
+
+internal sealed record PinPostResponse(PostDto Post, string? ReplacedPostId);
 
 internal readonly record struct FeedItemNote(string Source, double Score, string? Breakdown);
 

@@ -27,6 +27,7 @@ internal static class FailureCodes
     public const string ValidationFailed = "validation_failed";
     public const string Conflict = "conflict";
     public const string PostNotChirp = "post_not_chirp";
+    public const string PostPinLimit = "post_pin_limit";
     public const string GramCaptionTooLong = "gram_caption_too_long";
     public const string GramImageCount = "gram_image_count";
     public const string GramTooManyTags = "gram_too_many_tags";
