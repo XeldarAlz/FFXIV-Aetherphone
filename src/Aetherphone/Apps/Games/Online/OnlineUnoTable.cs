@@ -155,7 +155,7 @@ internal sealed class OnlineUnoTable
     }
 
     public void Draw(Rect body, PhoneTheme theme, float scale, GameRoomSnapshotDto snapshot,
-        UnoRoomStateDto board, string notice)
+        UnoRoomStateDto board, string notice, OnlineFinishHold hold)
     {
         using var surface = AppSurface.Begin(body, true);
         ImGui.Dummy(new Vector2(MathF.Max(1f, body.Width - 32f * scale), body.Height - 16f * scale));
@@ -198,8 +198,12 @@ internal sealed class OnlineUnoTable
 
         DrawSeats(drawList, theme, scale, board, players, mySeat, remaining, accent, delta);
         DrawCenter(drawList, theme, scale, board, myTurn, ambient, accent, delta);
-        DrawStatus(drawList, body, theme, scale, board, players, hand, myTurn, pending, remaining, accent, notice,
-            delta);
+        if (!hold.Holding)
+        {
+            DrawStatus(drawList, body, theme, scale, board, players, hand, myTurn, pending, remaining, accent,
+                notice, delta);
+        }
+
         DrawHand(drawList, body, theme, scale, board, mine, myTurn, pending, accent, delta);
         DrawFlights(drawList, scale);
         particles.Draw(drawList, scale);
@@ -209,6 +213,9 @@ internal sealed class OnlineUnoTable
                 discardAnchor.Y - (TableCardWidth * UnoCardArt.Aspect * 0.5f + 44f) * scale));
             GameBanner.Draw(drawList, bannerCenter, bannerText, bannerAccent, theme, bannerProgress);
         }
+
+        hold.Draw(drawList, Absolute(new Vector2(body.Width * 0.5f, discardAnchor.Y + 106f * scale)),
+            body.Width - 32f * scale, theme, scale, flightCount == 0);
 
         if (wildPendingCard >= 0)
         {
@@ -289,6 +296,7 @@ internal sealed class OnlineUnoTable
         if (!myTurn)
         {
             sevenPendingCard = -1;
+            wildPendingCard = -1;
         }
 
         var first = seenActionCount < 0;

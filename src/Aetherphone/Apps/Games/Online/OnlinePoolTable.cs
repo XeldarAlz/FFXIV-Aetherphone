@@ -144,7 +144,7 @@ internal sealed class OnlinePoolTable
     }
 
     public void Draw(Rect body, PhoneTheme theme, float scale, GameRoomSnapshotDto snapshot,
-        PoolRoomStateDto board, string notice, Action? back)
+        PoolRoomStateDto board, string notice, Action? back, OnlineFinishHold hold)
     {
         using var surface = AppSurface.Begin(body, true);
         ImGui.Dummy(new Vector2(MathF.Max(1f, body.Width - 32f * scale), body.Height - 16f * scale));
@@ -194,7 +194,17 @@ internal sealed class OnlinePoolTable
             accent, myTurn);
         DrawSeatPanel(drawList, theme, scale, layout.TheirPanel, layout.Landscape, board, players, theirSide,
             snapshot, accent, false);
-        DrawStatus(drawList, theme, layout, board, players, mySeat, myTurn, replaying, notice);
+        if (hold.Holding)
+        {
+            var holdCenter = layout.Landscape
+                ? new Vector2(layout.Status.Center.X, layout.Status.Min.Y + 32f * scale)
+                : new Vector2(layout.Status.Center.X, (layout.Status.Min.Y + body.Max.Y) * 0.5f);
+            hold.Draw(drawList, holdCenter, layout.Status.Width, theme, scale, !replaying);
+        }
+        else
+        {
+            DrawStatus(drawList, theme, layout, board, players, mySeat, myTurn, replaying, notice);
+        }
 
         if (back is not null && layout.Landscape && GameHud.LandscapeBack(layout.BackCenter, BackRadius * scale, theme))
         {

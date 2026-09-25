@@ -47,7 +47,7 @@ internal sealed class OnlineChessTable
     }
 
     public void Draw(Rect body, PhoneTheme theme, float scale, GameRoomSnapshotDto snapshot,
-        ChessRoomStateDto board, string notice)
+        ChessRoomStateDto board, string notice, OnlineFinishHold hold)
     {
         using var surface = AppSurface.Begin(body, true);
         ImGui.Dummy(new Vector2(MathF.Max(1f, body.Width - 32f * scale), body.Height - 16f * scale));
@@ -62,6 +62,11 @@ internal sealed class OnlineChessTable
         var moverSeat = MoverSeat(board, players.Length);
         var live = board.WinnerSeat < 0 && board.EndKind.Length == 0;
         var myTurn = live && mySeat >= 0 && mySeat == moverSeat;
+        if (!myTurn)
+        {
+            promotionFrom = -1;
+            promotionTo = -1;
+        }
 
         var rowHeight = 30f * scale;
         var side = MathF.Min(body.Width - 20f * scale, body.Height - (rowHeight * 2f + 96f * scale));
@@ -87,8 +92,16 @@ internal sealed class OnlineChessTable
             new Rect(new Vector2(origin.X, myRowTop), new Vector2(origin.X + side, myRowTop + rowHeight)),
             board, players, flip ? 1 - board.WhiteSeat : board.WhiteSeat, moverSeat, moverRemaining, accent);
 
-        DrawStatus(drawList, theme, scale, body, myRowTop + rowHeight + 8f * scale, board, players, mySeat,
-            myTurn, notice);
+        var footerTop = myRowTop + rowHeight + 8f * scale;
+        if (hold.Holding)
+        {
+            hold.Draw(drawList, new Vector2(body.Center.X, (footerTop + body.Max.Y) * 0.5f),
+                body.Width - 32f * scale, theme, scale, true);
+        }
+        else
+        {
+            DrawStatus(drawList, theme, scale, body, footerTop, board, players, mySeat, myTurn, notice);
+        }
 
         if (mySeat >= 0 && live && GameHud.Button(
                 new Vector2(body.Center.X, body.Max.Y - 26f * scale),
