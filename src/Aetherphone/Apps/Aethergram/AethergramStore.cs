@@ -156,6 +156,36 @@ internal sealed class AethergramStore : SocialFeedStore
         }, onComplete);
     }
 
+    public void ApproveTag(string postId, string tagId, Action<bool> onComplete)
+    {
+        work.Run("tag approve", async token =>
+        {
+            if (!await grams.ApproveTagAsync(tagId, token).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            MapPostEverywhere(postId,
+                post => post with { PhotoTags = PhotoTagStates.WithState(post.PhotoTags, tagId, PhotoTagStates.Approved) });
+            ClearTagged();
+            return true;
+        }, onComplete);
+    }
+
+    public void RemoveTag(string postId, string tagId, Action<bool> onComplete)
+    {
+        work.Run("tag remove", async token =>
+        {
+            if (!await grams.RemoveTagAsync(tagId, token).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            MapPostEverywhere(postId, post => post with { PhotoTags = PhotoTagStates.Without(post.PhotoTags, tagId) });
+            return true;
+        }, onComplete);
+    }
+
     public void PinPost(string postId, bool replace, Action<PinOutcome> onComplete)
     {
         var outcome = PinOutcome.Failed;

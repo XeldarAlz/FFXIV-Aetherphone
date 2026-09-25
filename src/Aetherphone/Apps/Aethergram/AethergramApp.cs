@@ -59,6 +59,10 @@ internal sealed partial class AethergramApp : IResumableApp
         Unarchived,
         ArchiveFailed,
         UnarchiveFailed,
+        TagApproved,
+        TagRemoved,
+        TagApproveFailed,
+        TagRemoveFailed,
     }
 
     private const int MaxCaptionLength = 500;
@@ -105,6 +109,15 @@ internal sealed partial class AethergramApp : IResumableApp
     private const int MaxPinnedPosts = 3;
     private const float CardPinGlyphSize = 12f;
     private const float CardPinGlyphGap = 3f;
+    private const float TagPromptPad = 12f;
+    private const float TagPromptRounding = 12f;
+    private const float TagPromptIconSize = 18f;
+    private const float TagPromptIconGap = 8f;
+    private const float TagPromptTitleGap = 2f;
+    private const float TagPromptRowGap = 10f;
+    private const float TagPromptPillHeight = 30f;
+    private const float TagPromptPillWidth = 88f;
+    private const float TagPromptPillGap = 8f;
 
     public string Id => "aethergram";
     public Vector4 Accent => AppAccents.For(Id);
@@ -208,6 +221,7 @@ internal sealed partial class AethergramApp : IResumableApp
     private Vector2 composeTagPoint;
     private readonly List<PhotoTagDto> composeTags = new();
     private readonly PhotoTagOverlay tagOverlay = new();
+    private volatile string? tagDecisionPostId;
     private readonly PersonPicker personPicker;
     private string caption = string.Empty;
     private bool composeSensitive;
@@ -557,6 +571,7 @@ internal sealed partial class AethergramApp : IResumableApp
     private void DrawFeedTab(Rect area)
     {
         var scale = UiScale.Current;
+        store.EnsureMe();
         DrawHomeTopBar(area);
         var top = area.Min.Y + AppHeader.Height * scale;
         var rowRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + FeedTabRowHeight * scale));
@@ -822,7 +837,39 @@ internal sealed partial class AethergramApp : IResumableApp
             case PostNotice.UnarchiveFailed:
                 confirm.Alert(null, Loc.T(L.Social.UnarchiveFailed), Loc.T(L.Common.Close));
                 break;
+            case PostNotice.TagApproved:
+                toast.Show(Loc.T(L.PhotoTag.ApprovedToast));
+                break;
+            case PostNotice.TagRemoved:
+                toast.Show(Loc.T(L.PhotoTag.RemovedToast));
+                break;
+            case PostNotice.TagApproveFailed:
+                confirm.Alert(null, Loc.T(L.PhotoTag.ApproveFailed), Loc.T(L.Common.Close));
+                break;
+            case PostNotice.TagRemoveFailed:
+                confirm.Alert(null, Loc.T(L.PhotoTag.RemoveFailed), Loc.T(L.Common.Close));
+                break;
         }
+    }
+
+    private void DecideTag(PostDto post, PhotoTagDto tag, bool approve)
+    {
+        tagDecisionPostId = post.Id;
+        if (approve)
+        {
+            store.ApproveTag(post.Id, tag.Id, succeeded =>
+            {
+                tagDecisionPostId = null;
+                QueuePostNotice(succeeded ? PostNotice.TagApproved : PostNotice.TagApproveFailed, post.Id, false);
+            });
+            return;
+        }
+
+        store.RemoveTag(post.Id, tag.Id, succeeded =>
+        {
+            tagDecisionPostId = null;
+            QueuePostNotice(succeeded ? PostNotice.TagRemoved : PostNotice.TagRemoveFailed, post.Id, false);
+        });
     }
 
     private void LeaveDetailAfterNotice()
@@ -982,6 +1029,57 @@ internal sealed partial class AethergramApp : IResumableApp
             Typography.FitText(label, MathF.Max(1f, width - iconSize - 6f * scale), CardMetaStyle), Ink.MutedInk, CardMetaStyle);
     }
 
+    private static float TagPromptTextWidth(float innerWidth, float scale) =>
+        MathF.Max(1f, innerWidth - (TagPromptPad * 2f + TagPromptIconSize + TagPromptIconGap) * scale);
+
+    private static float TagPromptHeight(float innerWidth, float scale)
+    {
+        var hintHeight = Typography.MeasureWrapped(Loc.T(L.PhotoTag.PendingHint), TagPromptTextWidth(innerWidth, scale),
+            CardMetaStyle.Scale, CardMetaStyle.Weight);
+        return (TagPromptPad * 2f + TagPromptRowGap + TagPromptPillHeight + CardBannerGap) * scale
+            + Typography.LineHeight(CardNameStyle) + TagPromptTitleGap * scale + hintHeight;
+    }
+
+    private void DrawTagPrompt(ImDrawListPtr drawList, PostDto post, PhotoTagDto tag, Rect panel)
+    {
+        var scale = UiScale.Current;
+        Squircle.Fill(drawList, panel.Min, panel.Max, TagPromptRounding * scale, ImGui.GetColorU32(Ink.FieldFill));
+        var pad = TagPromptPad * scale;
+        var iconSize = TagPromptIconSize * scale;
+        var titleHeight = Typography.LineHeight(CardNameStyle);
+        var titleTop = panel.Min.Y + pad;
+        PhoneIcon.Draw(drawList, new Vector2(panel.Min.X + pad + iconSize * 0.5f, titleTop + titleHeight * 0.5f),
+            PhoneIcons.UserSquareRounded, Ink.AccentLink, iconSize);
+        var textLeft = panel.Min.X + pad + iconSize + TagPromptIconGap * scale;
+        var textWidth = TagPromptTextWidth(panel.Width, scale);
+        Typography.Draw(drawList, new Vector2(textLeft, titleTop),
+            Typography.FitText(Loc.T(L.PhotoTag.PendingTitle), textWidth, CardNameStyle), Ink.TitleInk, CardNameStyle);
+        ImGui.SetCursorScreenPos(new Vector2(textLeft, titleTop + titleHeight + TagPromptTitleGap * scale));
+        using (Typography.WrapAt(textLeft + textWidth))
+        using (ImRaii.PushColor(ImGuiCol.Text, Ink.MutedInk))
+        using (Plugin.Fonts.Push(CardMetaStyle.Scale, CardMetaStyle.Weight))
+        {
+            Typography.Wrapped(Loc.T(L.PhotoTag.PendingHint));
+        }
+
+        var pillHeight = TagPromptPillHeight * scale;
+        var pillWidth = TagPromptPillWidth * scale;
+        var pillTop = panel.Max.Y - pad - pillHeight;
+        var approveRect = new Rect(new Vector2(textLeft, pillTop), new Vector2(textLeft + pillWidth, pillTop + pillHeight));
+        var removeLeft = approveRect.Max.X + TagPromptPillGap * scale;
+        var removeRect = new Rect(new Vector2(removeLeft, pillTop), new Vector2(removeLeft + pillWidth, pillTop + pillHeight));
+        var busy = string.Equals(tagDecisionPostId, post.Id, StringComparison.Ordinal);
+        if (DrawAccentPill(approveRect, Loc.T(L.PhotoTag.Approve), !busy))
+        {
+            DecideTag(post, tag, true);
+        }
+
+        if (DrawGrayPill(removeRect, Loc.T(L.PhotoTag.Remove)) && !busy)
+        {
+            DecideTag(post, tag, false);
+        }
+    }
+
     private void DrawGramCard(PostDto post, bool detail = false, string? suggestion = null, bool showPinned = false)
     {
         var scale = UiScale.Current;
@@ -1017,8 +1115,11 @@ internal sealed partial class AethergramApp : IResumableApp
         var commentsHeight = showCommentsLink ? Typography.LineHeight(CardLinkStyle) + lineGap : 0f;
         var timeHeight = Typography.LineHeight(CardTimeStyle);
         var bannerHeight = suggestion is null ? 0f : Typography.LineHeight(CardMetaStyle) + CardBannerGap * scale;
-        var cellHeight = CardPadTop * scale + bannerHeight + headerBlock + CardMediaGap * scale + mediaHeight + actionsHeight
-            + CardTextGap * scale + captionHeight + commentsHeight + timeHeight + CardPadBottom * scale;
+        var pendingTag = PhotoTagStates.PendingFor(post.PhotoTags, store.Me?.Id);
+        var tagPromptHeight = pendingTag is null ? 0f : TagPromptHeight(innerWidth, scale);
+        var cellHeight = CardPadTop * scale + bannerHeight + tagPromptHeight + headerBlock + CardMediaGap * scale
+            + mediaHeight + actionsHeight + CardTextGap * scale + captionHeight + commentsHeight + timeHeight
+            + CardPadBottom * scale;
         var cell = FeedCell.Begin(drawList, cellHeight, Ink.HoverTint, false);
         var origin = cell.Bounds.Min;
         var innerX = origin.X + inset;
@@ -1027,7 +1128,15 @@ internal sealed partial class AethergramApp : IResumableApp
             DrawSuggestionBanner(drawList, innerX, origin.Y + CardPadTop * scale, innerWidth, suggestion);
         }
 
-        var headerTop = origin.Y + CardPadTop * scale + bannerHeight;
+        if (pendingTag is not null)
+        {
+            DrawTagPrompt(drawList, post, pendingTag,
+                new Rect(new Vector2(innerX, origin.Y + CardPadTop * scale + bannerHeight),
+                    new Vector2(innerX + innerWidth, origin.Y + CardPadTop * scale + bannerHeight + tagPromptHeight
+                        - CardBannerGap * scale)));
+        }
+
+        var headerTop = origin.Y + CardPadTop * scale + bannerHeight + tagPromptHeight;
         var imageTop = headerTop + headerBlock + CardMediaGap * scale;
         var imageBottom = imageTop + mediaHeight;
         var actionsTop = imageBottom;

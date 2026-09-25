@@ -1719,6 +1719,22 @@ internal abstract class SocialFeedStore : IDisposable
         profileLane.Items = items;
     }
 
+    protected void MapPostEverywhere(string postId, Func<PostDto, PostDto> transform)
+    {
+        forYouLane.Items = CopyOnWrite.MapById(forYouLane.Items, postId, transform);
+        latestLane.Items = CopyOnWrite.MapById(latestLane.Items, postId, transform);
+        followingLane.Items = CopyOnWrite.MapById(followingLane.Items, postId, transform);
+        profileLane.Items = CopyOnWrite.MapById(profileLane.Items, postId, transform);
+        savedLane.Items = CopyOnWrite.MapById(savedLane.Items, postId, transform);
+        taggedLane.Items = CopyOnWrite.MapById(taggedLane.Items, postId, transform);
+        hashtagLane.Items = CopyOnWrite.MapById(hashtagLane.Items, postId, transform);
+        likedLane.Items = CopyOnWrite.MapById(likedLane.Items, postId, transform);
+        if (detailPost is { } current && current.Id == postId)
+        {
+            detailPost = transform(current);
+        }
+    }
+
     protected void ReplacePost(PostDto updated)
     {
         forYouLane.Items = CopyOnWrite.Replace(forYouLane.Items, updated);
