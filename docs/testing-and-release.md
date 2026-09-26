@@ -159,10 +159,10 @@ Copy rules for bullets (see [Localization](localization.md) for the full set):
 
 Two webhooks, two very different behaviors:
 
-- **Releases** (the announce step inside release.yml): posts a rich embed with the release notes, version, channel, and total install count to the `RELEASE_WEBHOOK_URL` secret. If the `RELEASE_PING_ROLE_ID` repository variable is set, the message pings that role, with `allowed_mentions` scoped to only that role.
+- **Releases** (the announce step inside release.yml): posts a rich embed with the version, channel, total install count, and the full English changelog of the release to the `RELEASE_WEBHOOK_URL` secret. The changelog comes from .github/scripts/Get-ChangelogNotes.ps1, which finds the version's `ChangelogEntry` in ChangelogData.cs and resolves every section title and bullet from L.cs, so the post reads like the in-app Changelog page: one bold header per section, one bullet per highlight, flat entries as plain bullets. A changelog longer than one embed continues in follow-up embeds posted one after another; nothing is truncated. When the version has no changelog entry the step warns and falls back to the auto-generated GitHub release notes. If the `RELEASE_PING_ROLE_ID` repository variable is set, the first message pings that role, with `allowed_mentions` scoped to only that role. The step runs with `continue-on-error`, so a failed webhook never blocks the repo.json bump or the hub ping.
 - **Commits** (.github/workflows/announce-commits.yml): on every master push, posts up to ten commit subject lines to the `COMMITS_WEBHOOK_URL` secret. It never pings anyone: no role mention, no content ping, ever.
 
-Both scrub em and en dashes from the text they post (the release notes in release.yml, the commit subjects in announce-commits.yml); release.yml goes further and fails the step if one survives anywhere in the final payload. Both exit quietly when their webhook secret is unset, so forks run green without any configuration.
+Both scrub em and en dashes from the text they post (the changelog pages in release.yml, the commit subjects in announce-commits.yml); release.yml goes further and fails the step if one survives anywhere in the final payload. Both exit quietly when their webhook secret is unset, so forks run green without any configuration.
 
 ## Issue template version updater
 
