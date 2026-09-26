@@ -8,6 +8,14 @@ internal static class GameRoomWire
 
     public const string PoolKind = "games.pool";
 
+    public const string ConnectFourKind = "games.connectfour";
+
+    public const int ConnectFourColumns = 7;
+
+    public const int ConnectFourRows = 6;
+
+    public const int ConnectFourCellCount = ConnectFourColumns * ConnectFourRows;
+
     public const string UnoHandEvent = "uno.hand";
 
     public const string UnoPlayEvent = "uno.play";
@@ -65,6 +73,18 @@ internal static class GameRoomWire
     public const string ActionMove = "move";
 
     public const string ActionResign = "resign";
+
+    public const string ActionDrop = "drop";
+
+    public const string ConnectFourEndConnect = "connect";
+
+    public const string ConnectFourEndDraw = "draw";
+
+    public const string ConnectFourEndResign = "resign";
+
+    public const string ConnectFourEndDesertion = "desertion";
+
+    public const string ConnectFourEndTimeout = "timeout";
 
     public const string ChessEndCheckmate = "checkmate";
 

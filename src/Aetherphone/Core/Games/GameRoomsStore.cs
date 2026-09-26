@@ -262,6 +262,11 @@ internal sealed class GameRoomsStore : IDisposable
         SendAction(GameRoomWire.ActionResign, -1, -1);
     }
 
+    public void SendDrop(int column)
+    {
+        SendAction(GameRoomWire.ActionDrop, -1, -1, column: column);
+    }
+
     public void SendShoot(float angle, float power)
     {
         SendAction(GameRoomWire.ActionShoot, -1, -1, -1, -1, angle, power);
@@ -276,7 +281,7 @@ internal sealed class GameRoomsStore : IDisposable
     // stale rather than applying it twice, so a lost response costs one refresh and never a double
     // move.
     private void SendAction(string action, int card, int color, int from = -1, int to = -1,
-        float angle = 0f, float power = 0f, float placeX = 0f, float placeY = 0f)
+        float angle = 0f, float power = 0f, float placeX = 0f, float placeY = 0f, int column = -1)
     {
         var target = room.RoomId;
         var roster = room.State?.Roster;
@@ -286,7 +291,7 @@ internal sealed class GameRoomsStore : IDisposable
         }
 
         var request = new GameRoomActionRequest(action, roster.ActionCount, card, color,
-            Guid.NewGuid().ToString("N"), from, to, angle, power, placeX, placeY);
+            Guid.NewGuid().ToString("N"), from, to, angle, power, placeX, placeY, column);
         actInFlight = true;
         work.Run("room action", async token =>
         {

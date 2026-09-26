@@ -75,6 +75,7 @@ internal sealed class GamesLibrary
         new("invaders", 2026, 8, 24), new("skyfall", 2026, 8, 24), new("squadron", 2026, 8, 24),
         new("wordrun", 2026, 8, 24),
         new("online.uno", 2026, 8, 25), new("online.chess", 2026, 8, 25), new("online.pool", 2026, 8, 25),
+        new("online.connectfour", 2026, 9, 19),
     };
 
     private readonly IMiniGame[] games;
