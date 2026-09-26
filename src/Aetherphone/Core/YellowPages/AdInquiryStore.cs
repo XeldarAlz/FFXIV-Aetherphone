@@ -4,194 +4,84 @@ using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Home;
-using Aetherphone.Core.Report;
+using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
+using Aetherphone.Core.Message;
+using Aetherphone.Core.Net;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Runtime;
-using Dalamud.Plugin.Services;
+using Aetherphone.Core.Social;
+using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Core.YellowPages;
 
-internal sealed class AdInquiryStore : IDisposable
+internal sealed class AdInquiryStore : ChatThreadStoreBase<AdInquiryMessageDto, AdInquiryDto>
 {
-    private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(180);
-    private static readonly TimeSpan ThreadPollInterval = TimeSpan.FromSeconds(4);
+    private const int MaxThreadLookupPages = 5;
 
-    private const string ReportTargetType = "ad_message";
-
-    private readonly AethernetSession session;
     private readonly YellowPagesClient client;
-    private readonly SafetyClient safety;
-    private readonly ConversationKeyStore keys;
-    private readonly KeyVault vault;
-    private readonly MessageCipher cipher;
     private readonly RealtimeSignalBus signals;
-    private readonly AppGate gate;
-    private readonly PollCadence cadence;
-    private readonly StoreWork work = new("YellowPagesInquiries");
+    private readonly ConcurrentDictionary<string, string> otherByInquiry = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, string> scopeByUser = new(StringComparer.Ordinal);
+    private volatile bool adKeysHydrated;
 
-    private string? lastAccountId;
-    private volatile AdInquiryDto[] threads = Array.Empty<AdInquiryDto>();
-    private volatile string? threadsCursor;
-    private volatile bool threadsLoadingMore;
-    private volatile AdInquiryMessageDto[] messages = Array.Empty<AdInquiryMessageDto>();
-    private volatile string? messagesCursor;
-    private volatile bool messagesLoadingOlder;
-    private volatile bool loading;
-    private volatile bool loadedOnce;
-    private volatile bool sending;
-    private string? openThreadId;
-    private DateTime nextThreadPoll = DateTime.MinValue;
-    private readonly ConcurrentDictionary<string, string> scopeCache = new(StringComparer.Ordinal);
-
-    public AdInquiryStore(AethernetSession session, YellowPagesClient client, SafetyClient safety, KeyVault vault,
-        ConversationKeyStore keys, DecryptedHistoryStore chatHistory, PhoneVisibility visibility,
-        RealtimeSignalBus signals, AppGate gate)
+    public AdInquiryStore(AethernetSession session, YellowPagesClient client, SafetyClient safety, MediaClient media,
+        NotificationService notifications, KeyVault vault, ConversationKeyStore keys,
+        DecryptedHistoryStore chatHistory, PhoneVisibility visibility, RealtimeSignalBus signals, AppGate gate)
+        : base("YellowPagesInquiries", session, safety, media, notifications, vault, keys, chatHistory, visibility,
+            gate)
     {
-        this.session = session;
         this.client = client;
-        this.safety = safety;
-        this.keys = keys;
-        this.vault = vault;
-        cipher = new MessageCipher(vault, keys, chatHistory);
         this.signals = signals;
-        this.gate = gate;
-        cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
-        session.Changed += OnSessionChanged;
+        signals.AdsPinged += OnAdsPinged;
         signals.ConnectedChanged += OnRealtimeConnected;
-        Plugin.Framework.Update += OnFrameworkUpdate;
     }
 
-    public string MyUserId => session.CurrentUser?.Id ?? string.Empty;
+    public override bool RealtimePushActive => signals.RealtimeActive;
 
-    public bool CanEncrypt => cipher.IsUnlocked;
+    public override bool SendWouldDowngrade => !EncryptingCurrent;
 
-    public KeyVault Vault => vault;
+    public AdInquiryDto[] Threads => ThreadListItems;
 
-    public KeyVaultState VaultState => vault.State;
+    public bool LoadingThreads => LoadingThreadList;
 
-    public string ScopeFor(string otherUserId)
+    public bool ThreadsLoaded => ThreadListLoaded;
+
+    public int UnreadCount => ComputeUnread();
+
+    public void RefreshThreads() => RefreshThreadListCore();
+
+    public AdInquiryDto? Thread(string inquiryId)
     {
-        if (scopeCache.TryGetValue(otherUserId, out var cached))
-        {
-            return cached;
-        }
-
-        var scope = ConversationKeyStore.AdScope(ConversationKeyStore.Pair(MyUserId, otherUserId));
-        scopeCache[otherUserId] = scope;
-        return scope;
-    }
-
-    public string Reveal(string otherUserId, AdInquiryMessageDto message)
-    {
-        if (message.EncVersion != EnvelopeCodec.VersionEnvelope)
-        {
-            return message.Body;
-        }
-
-        return cipher.ResolveBody(ScopeFor(otherUserId), message.Id, message.Body, message.SenderId,
-            message.CommitmentTag).Text;
-    }
-
-    public void ReportMessage(string otherUserId, string messageId, string? reason, Action<bool> onComplete)
-    {
-        var snapshot = messages;
-        var scope = ScopeFor(otherUserId);
-        if (!ReportReveals.TryCollect(snapshot, messageId,
-                message => RevealForReport(scope, message), out var revealed))
-        {
-            onComplete(false);
-            return;
-        }
-
-        work.Run("report inquiry message",
-            async token => await safety.ReportAsync(ReportTargetType, messageId, reason, token, revealed)
-                .ConfigureAwait(false),
-            onComplete);
-    }
-
-    private RevealedMessageDto? RevealForReport(string scope, AdInquiryMessageDto message)
-    {
-        if (message.Deleted)
-        {
-            return null;
-        }
-
-        if (message.EncVersion == EnvelopeCodec.VersionPlaintext)
-        {
-            return new RevealedMessageDto(message.Id, message.Body, null);
-        }
-
-        var body = cipher.ResolveBody(scope, message.Id, message.Body, message.SenderId, message.CommitmentTag);
-        return body.State == DmBodyState.Decrypted
-            ? new RevealedMessageDto(message.Id, body.Text, body.FrankingKey)
-            : null;
-    }
-
-    public string RevealPreview(AdInquiryDto thread)
-    {
-        if (thread.LastEncVersion != EnvelopeCodec.VersionEnvelope || thread.LastMessageId is null
-            || thread.LastBody.Length == 0)
-        {
-            return thread.LastBody;
-        }
-
-        return cipher.ResolveBody(ScopeFor(thread.OtherUserId), thread.LastMessageId, thread.LastBody,
-            thread.LastSenderId, thread.LastCommitmentTag).Text;
-    }
-
-    public AdInquiryDto[] Threads => threads;
-
-    public bool ThreadsLoadingMore => threadsLoadingMore;
-
-    public bool HasMoreThreads => threadsCursor is not null;
-
-    public AdInquiryMessageDto[] Messages => messages;
-
-    public bool MessagesLoadingOlder => messagesLoadingOlder;
-
-    public bool HasOlderMessages => messagesCursor is not null;
-
-    public bool Loading => loading;
-
-    public bool LoadedOnce => loadedOnce;
-
-    public bool Sending => sending;
-
-    public string? OpenThreadId => openThreadId;
-
-    public int UnreadTotal
-    {
-        get
-        {
-            var snapshot = threads;
-            var total = 0;
-            for (var index = 0; index < snapshot.Length; index++)
-            {
-                total += snapshot[index].UnreadCount;
-            }
-
-            return total;
-        }
-    }
-
-    public int UnreadForAd(string adId)
-    {
-        var snapshot = threads;
-        var total = 0;
+        var snapshot = ThreadListItems;
         for (var index = 0; index < snapshot.Length; index++)
         {
-            if (snapshot[index].AdId == adId)
+            if (snapshot[index].Id == inquiryId)
             {
-                total += snapshot[index].UnreadCount;
+                return snapshot[index];
             }
         }
 
-        return total;
+        return null;
+    }
+
+    public AdInquiryDto? ThreadForAd(string adId)
+    {
+        var snapshot = ThreadListItems;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].AdId == adId && !snapshot[index].Mine)
+            {
+                return snapshot[index];
+            }
+        }
+
+        return null;
     }
 
     public int CountForAd(string adId)
     {
-        var snapshot = threads;
+        var snapshot = ThreadListItems;
         var total = 0;
         for (var index = 0; index < snapshot.Length; index++)
         {
@@ -204,171 +94,23 @@ internal sealed class AdInquiryStore : IDisposable
         return total;
     }
 
-    public AdInquiryDto? Thread(string inquiryId)
+    public int UnreadForAd(string adId)
     {
-        var snapshot = threads;
+        var snapshot = ThreadListItems;
+        var total = 0;
         for (var index = 0; index < snapshot.Length; index++)
         {
-            if (snapshot[index].Id == inquiryId)
+            if (snapshot[index].AdId == adId)
             {
-                return snapshot[index];
+                total += snapshot[index].UnreadCount;
             }
         }
 
-        return null;
+        return total;
     }
 
-    public void Refresh()
-    {
-        if (!session.IsSignedIn || loading)
-        {
-            return;
-        }
-
-        loading = true;
-        work.Run("inquiries", async token =>
-        {
-            await keys.HydrateAdsAsync(token).ConfigureAwait(false);
-            var page = await client.InquiriesAsync(null, token).ConfigureAwait(false);
-            if (page is not null)
-            {
-                var wasEmpty = threads.Length == 0;
-                threads = IdentifiedMerge.MergeById(threads, page.Items, ByNewestActivity);
-                if (wasEmpty)
-                {
-                    threadsCursor = page.NextCursor;
-                }
-
-                loadedOnce = true;
-            }
-        }, () => loading = false);
-    }
-
-    public void LoadMoreThreads()
-    {
-        var cursor = threadsCursor;
-        if (!session.IsSignedIn || cursor is null || threadsLoadingMore || loading)
-        {
-            return;
-        }
-
-        threadsLoadingMore = true;
-        work.Run("inquiries more", async token =>
-        {
-            var page = await client.InquiriesAsync(cursor, token).ConfigureAwait(false);
-            if (page is null)
-            {
-                return;
-            }
-
-            threads = IdentifiedMerge.MergeById(threads, page.Items, ByNewestActivity);
-            threadsCursor = page.NextCursor;
-        }, () => threadsLoadingMore = false);
-    }
-
-    public void Open(string inquiryId)
-    {
-        openThreadId = inquiryId;
-        messages = Array.Empty<AdInquiryMessageDto>();
-        messagesCursor = null;
-        nextThreadPoll = DateTime.MinValue;
-        HydrateKeys();
-        FetchMessages(inquiryId);
-        MarkRead(inquiryId);
-    }
-
-    public void Close()
-    {
-        openThreadId = null;
-        messages = Array.Empty<AdInquiryMessageDto>();
-        messagesCursor = null;
-    }
-
-    public void Send(string inquiryId, string otherUserId, string body, Action<bool> done)
-    {
-        if (!session.IsSignedIn || sending)
-        {
-            done(false);
-            return;
-        }
-
-        sending = true;
-        work.Run("inquiry send", async token =>
-        {
-            var sealedBody = await SealAsync(otherUserId, body, token).ConfigureAwait(false);
-            if (sealedBody is null)
-            {
-                return false;
-            }
-
-            var sent = await client.SendInquiryAsync(inquiryId, sealedBody.Value.Envelope,
-                sealedBody.Value.CommitmentTag, token).ConfigureAwait(false);
-            if (sent is null)
-            {
-                return false;
-            }
-
-            cipher.RecordDecrypted(sent.Id, sealedBody.Value.Envelope, body, sealedBody.Value.FrankingKeyBase64);
-            messages = Append(messages, sent);
-            return true;
-        }, ok =>
-        {
-            sending = false;
-            if (ok)
-            {
-                Refresh();
-            }
-
-            done(ok);
-        });
-    }
-
-    public void Delete(string inquiryId, string messageId, Action<bool> done)
-    {
-        if (!session.IsSignedIn)
-        {
-            done(false);
-            return;
-        }
-
-        work.Run("inquiry delete", async token =>
-        {
-            var ok = await client.DeleteInquiryMessageAsync(inquiryId, messageId, token).ConfigureAwait(false);
-            if (ok)
-            {
-                messages = Tombstone(messages, messageId);
-            }
-
-            return ok;
-        }, ok =>
-        {
-            if (ok)
-            {
-                Refresh();
-            }
-
-            done(ok);
-        });
-    }
-
-    private async Task<EncryptedOutbound?> SealAsync(string otherUserId, string body, CancellationToken token)
-    {
-        if (!cipher.IsUnlocked)
-        {
-            return null;
-        }
-
-        var status = await keys.EnsureAdKeysAsync(otherUserId, MyUserId, token).ConfigureAwait(false);
-        if (!status.CanEncrypt)
-        {
-            return null;
-        }
-
-        var scope = ScopeFor(otherUserId);
-        return cipher.TryEncrypt(scope, keys.CurrentGeneration(scope), body, MyUserId, out var encoded)
-            ? encoded
-            : null;
-    }
+    public string? OtherUserOf(string inquiryId) =>
+        otherByInquiry.TryGetValue(inquiryId, out var otherId) ? otherId : null;
 
     public void OpenForAd(string adId, string ownerId, string body, Action<AdInquiryDto?> done)
     {
@@ -381,203 +123,400 @@ internal sealed class AdInquiryStore : IDisposable
         AdInquiryDto? opened = null;
         work.Run("inquiry open", async token =>
         {
-            var sealedBody = await SealAsync(ownerId, body, token).ConfigureAwait(false);
-            if (sealedBody is null)
+            if (!cipher.IsUnlocked)
             {
                 return false;
             }
 
-            opened = await client.OpenInquiryAsync(adId, sealedBody.Value.Envelope,
-                sealedBody.Value.CommitmentTag, token).ConfigureAwait(false);
-            return opened is not null;
+            var status = await keys.EnsureAdKeysAsync(ownerId, MyUserId, token).ConfigureAwait(false);
+            if (!status.CanEncrypt)
+            {
+                return false;
+            }
+
+            var scope = ScopeForUser(ownerId);
+            if (!cipher.TryEncrypt(scope, keys.CurrentGeneration(scope), body, MyUserId, out var encoded))
+            {
+                return false;
+            }
+
+            var request = new SendAdInquiryRequest(encoded.Envelope, EnvelopeCodec.VersionEnvelope,
+                encoded.CommitmentTag);
+            opened = await client.OpenInquiryAsync(adId, request, token).ConfigureAwait(false);
+            if (opened is null)
+            {
+                return false;
+            }
+
+            if (opened.LastMessageId is { } messageId)
+            {
+                cipher.RecordDecrypted(messageId, encoded.Envelope, body, encoded.FrankingKeyBase64);
+            }
+
+            Remember(opened);
+            return true;
         }, ok =>
         {
             if (ok)
             {
-                Refresh();
+                InvalidateThreadList();
+                RefreshThreadListCore();
             }
 
             done(opened);
         });
     }
 
-    private void HydrateKeys()
+    public byte[]? DecryptMedia(AdInquiryMessageDto message, byte[] sealedBytes, string threadId)
     {
-        work.Run("inquiry keys", async token =>
+        if (message.EncVersion != EnvelopeCodec.VersionEnvelope)
         {
-            await keys.HydrateAdsAsync(token).ConfigureAwait(false);
-        });
+            return null;
+        }
+
+        return cipher.TryDecryptMedia(message.Id, ScopeFor(threadId), sealedBytes, message.SenderId, message.Kind);
     }
 
-    private void FetchMessages(string inquiryId)
+    public static string PreviewFor(AdInquiryDto thread, string revealedBody)
     {
-        work.Run("inquiry messages", async token =>
+        return thread.LastKind switch
         {
-            var page = await client.InquiryMessagesAsync(inquiryId, null, token).ConfigureAwait(false);
-            if (page is not null && openThreadId == inquiryId)
-            {
-                var wasEmpty = messages.Length == 0;
-                messages = IdentifiedMerge.MergeById(messages, page.Items, ByOldestFirst);
-                if (wasEmpty)
-                {
-                    messagesCursor = page.NextCursor;
-                }
-            }
-        });
+            ImageMediaKind => Loc.T(L.DirectMessages.PhotoPreview),
+            VoiceMediaKind => Loc.T(L.DirectMessages.VoicePreview),
+            _ => ChatText.ListPreview(revealedBody),
+        };
     }
 
-    public void LoadOlderMessages()
+    protected override string ImageUploadScope => "ad-dm";
+
+    protected override string VoiceUploadScope => "ad-voice";
+
+    protected override string ReportTargetType => "ad_message";
+
+    protected override string ScopeFor(string threadId)
     {
-        var inquiryId = openThreadId;
-        var cursor = messagesCursor;
-        if (!session.IsSignedIn || inquiryId is null || cursor is null || messagesLoadingOlder)
+        return otherByInquiry.TryGetValue(threadId, out var otherId)
+            ? ScopeForUser(otherId)
+            : ConversationKeyStore.AdScope(threadId);
+    }
+
+    private string ScopeForUser(string otherId)
+    {
+        if (scopeByUser.TryGetValue(otherId, out var cached))
+        {
+            return cached;
+        }
+
+        var scope = ConversationKeyStore.AdScope(ConversationKeyStore.Pair(MyUserId, otherId));
+        scopeByUser[otherId] = scope;
+        return scope;
+    }
+
+    protected override Task HydrateKeysAsync(CancellationToken token) => EnsureAdsHydratedAsync(token);
+
+    protected override async Task<ChatKeyStatus> EnsureThreadKeysAsync(string threadId, CancellationToken token)
+    {
+        var otherId = await EnsureOtherAsync(threadId, token).ConfigureAwait(false);
+        if (otherId is null)
+        {
+            return ChatKeyStatus.None;
+        }
+
+        return await keys.EnsureAdKeysAsync(otherId, MyUserId, token).ConfigureAwait(false);
+    }
+
+    protected override void OnCipherCleared()
+    {
+        adKeysHydrated = false;
+    }
+
+    protected override void OnAccountSwitched()
+    {
+        otherByInquiry.Clear();
+        scopeByUser.Clear();
+        adKeysHydrated = false;
+    }
+
+    private async Task EnsureAdsHydratedAsync(CancellationToken token)
+    {
+        if (adKeysHydrated || vault.State != KeyVaultState.Unlocked)
         {
             return;
         }
 
-        messagesLoadingOlder = true;
-        work.Run("inquiry messages older", async token =>
+        adKeysHydrated = true;
+        await keys.HydrateAdsAsync(token).ConfigureAwait(false);
+    }
+
+    private async Task<string?> EnsureOtherAsync(string threadId, CancellationToken token)
+    {
+        if (otherByInquiry.TryGetValue(threadId, out var known))
         {
-            var page = await client.InquiryMessagesAsync(inquiryId, cursor, token).ConfigureAwait(false);
-            if (page is null || openThreadId != inquiryId)
+            return known;
+        }
+
+        string? cursor = null;
+        for (var page = 0; page < MaxThreadLookupPages; page++)
+        {
+            var result = await client.InquiriesAsync(cursor, token).ConfigureAwait(false);
+            if (result is null)
             {
-                return;
+                return null;
             }
 
-            messages = IdentifiedMerge.MergeById(messages, page.Items, ByOldestFirst);
-            messagesCursor = page.NextCursor;
-        }, () => messagesLoadingOlder = false);
+            for (var index = 0; index < result.Items.Length; index++)
+            {
+                Remember(result.Items[index]);
+            }
+
+            if (otherByInquiry.TryGetValue(threadId, out var found))
+            {
+                return found;
+            }
+
+            cursor = result.NextCursor;
+            if (cursor is null)
+            {
+                return null;
+            }
+        }
+
+        return null;
     }
 
-    private static int ByNewestActivity(AdInquiryDto left, AdInquiryDto right)
+    private void Remember(AdInquiryDto thread)
     {
-        var byTime = right.LastMessageAtUnix.CompareTo(left.LastMessageAtUnix);
-        return byTime != 0 ? byTime : string.CompareOrdinal(right.Id, left.Id);
+        otherByInquiry[thread.Id] = thread.OtherUserId;
     }
 
-    private static int ByOldestFirst(AdInquiryMessageDto left, AdInquiryMessageDto right)
+    protected override async Task<ThreadListPage?> FetchThreadListAsync(string? cursor, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
     {
-        var byTime = left.CreatedAtUnix.CompareTo(right.CreatedAtUnix);
-        return byTime != 0 ? byTime : string.CompareOrdinal(left.Id, right.Id);
-    }
-
-    private void MarkRead(string inquiryId)
-    {
-        work.Run("inquiry read", async token =>
+        await EnsureAdsHydratedAsync(token).ConfigureAwait(false);
+        var page = await client.InquiriesAsync(cursor, token, onFailure).ConfigureAwait(false);
+        if (page is null)
         {
-            await client.MarkInquiryReadAsync(inquiryId, token).ConfigureAwait(false);
-        }, () => ClearUnread(inquiryId));
+            return null;
+        }
+
+        for (var index = 0; index < page.Items.Length; index++)
+        {
+            Remember(page.Items[index]);
+        }
+
+        return new ThreadListPage(page.Items, page.NextCursor);
     }
 
-    private void ClearUnread(string inquiryId)
+    protected override async Task<MessagePage?> FetchMessagesPageAsync(string threadId, string? cursor,
+        CancellationToken token)
     {
-        var snapshot = threads;
-        for (var index = 0; index < snapshot.Length; index++)
+        await EnsureOtherAsync(threadId, token).ConfigureAwait(false);
+        var page = await client.InquiryMessagesAsync(threadId, cursor, token).ConfigureAwait(false);
+        return page is null ? null : new MessagePage(page.Items, page.NextCursor);
+    }
+
+    protected override Task<AdInquiryMessageDto?> SendMessageRequestAsync(string threadId, string body, int kind,
+        CancellationToken token, string? mediaKey, int mediaWidth, int mediaHeight, int encVersion,
+        string? commitmentTag, string? replyToId, int durationSecs, Action<AepFailure>? onFailure = null)
+    {
+        if (encVersion != EnvelopeCodec.VersionEnvelope)
         {
-            if (snapshot[index].Id != inquiryId || snapshot[index].UnreadCount == 0)
+            return Task.FromResult<AdInquiryMessageDto?>(null);
+        }
+
+        var request = new SendAdInquiryRequest(body, encVersion, commitmentTag, kind, mediaKey, mediaWidth,
+            mediaHeight, replyToId, durationSecs);
+        return client.SendInquiryAsync(threadId, request, token, onFailure);
+    }
+
+    protected override Task<AdInquiryMessageDto?> EditMessageRequestAsync(string messageId, string body,
+        CancellationToken token, int encVersion, string? commitmentTag)
+    {
+        if (encVersion != EnvelopeCodec.VersionEnvelope)
+        {
+            return Task.FromResult<AdInquiryMessageDto?>(null);
+        }
+
+        return client.EditInquiryMessageAsync(messageId, body, encVersion, commitmentTag, token);
+    }
+
+    protected override Task<bool> DeleteMessageRequestAsync(string messageId, CancellationToken token) =>
+        client.DeleteInquiryMessageAsync(messageId, token);
+
+    protected override Task<bool> DeleteThreadRequestAsync(string threadId, CancellationToken token) =>
+        client.ClearInquiryAsync(threadId, token);
+
+    protected override Task SetReactionRequestAsync(string messageId, string reactionToken, CancellationToken token) =>
+        client.SetInquiryReactionAsync(messageId, reactionToken, token);
+
+    protected override Task<ReactionListDto?> FetchReactionsAsync(string messageId, CancellationToken token) =>
+        client.InquiryReactionsAsync(messageId, token);
+
+    protected override Task SendTypingRequestAsync(string threadId, CancellationToken token) =>
+        client.SendInquiryTypingAsync(threadId, token);
+
+    protected override async Task<bool?> FetchOtherTypingAsync(string threadId, CancellationToken token)
+    {
+        var result = await client.InquiryTypingAsync(threadId, token).ConfigureAwait(false);
+        return result?.OtherTyping;
+    }
+
+    protected override async Task<string?> FetchMediaUrlRequestAsync(string messageId, CancellationToken token)
+    {
+        var result = await client.InquiryMediaUrlAsync(messageId, token).ConfigureAwait(false);
+        return result?.Url;
+    }
+
+    protected override long MessageTimeOf(AdInquiryMessageDto message) => message.CreatedAtUnix;
+
+    protected override int MessageEncVersionOf(AdInquiryMessageDto message) => message.EncVersion;
+
+    protected override string MessageBodyOf(AdInquiryMessageDto message) => message.Body;
+
+    protected override int MessageKindOf(AdInquiryMessageDto message) => message.Kind;
+
+    protected override string MessageSenderIdOf(AdInquiryMessageDto message) => message.SenderId;
+
+    protected override ReactionSummaryDto[]? ReactionsOf(AdInquiryMessageDto message) => message.Reactions;
+
+    protected override AdInquiryMessageDto WithReactions(AdInquiryMessageDto message,
+        ReactionSummaryDto[]? reactions) => message with { Reactions = reactions };
+
+    protected override AdInquiryMessageDto WithBody(AdInquiryMessageDto message, string body) =>
+        message with { Body = body };
+
+    protected override AdInquiryMessageDto PreserveLocalFields(AdInquiryMessageDto updated,
+        AdInquiryMessageDto existing) =>
+        updated with { Reactions = existing.Reactions, ReadAtUnix = existing.ReadAtUnix };
+
+    protected override AdInquiryMessageDto Tombstone(AdInquiryMessageDto message) => message with
+    {
+        Deleted = true,
+        Body = string.Empty,
+        EncVersion = 0,
+        CommitmentTag = null,
+        DurationSecs = 0,
+        Reactions = null,
+    };
+
+    protected override AdInquiryMessageDto ResolveOutgoingReply(string scope, AdInquiryMessageDto message)
+    {
+        if (message.ReplyEncVersion != EnvelopeCodec.VersionEnvelope)
+        {
+            return message;
+        }
+
+        return message with
+        {
+            ReplyBody = cipher.ResolveQuotedBody(scope, message.ReplyToId, message.ReplyBody, message.ReplySenderId),
+        };
+    }
+
+    protected override AdInquiryMessageDto[] DecorateMessages(string threadId, AdInquiryMessageDto[] items)
+    {
+        var scope = ScopeFor(threadId);
+        AdInquiryMessageDto[]? decorated = null;
+        for (var index = 0; index < items.Length; index++)
+        {
+            var item = items[index];
+            var needsBody = item.EncVersion == EnvelopeCodec.VersionEnvelope;
+            var needsReply = item.ReplyEncVersion == EnvelopeCodec.VersionEnvelope;
+            if (!needsBody && !needsReply)
             {
                 continue;
             }
 
-            var next = (AdInquiryDto[])snapshot.Clone();
-            next[index] = next[index] with { UnreadCount = 0 };
-            threads = next;
-            return;
+            var updated = item;
+            if (needsBody)
+            {
+                updated = updated with
+                {
+                    Body = cipher.ResolveBody(scope, item.Id, item.Body, item.SenderId, item.CommitmentTag).Text,
+                };
+            }
+
+            if (needsReply)
+            {
+                updated = updated with
+                {
+                    ReplyBody = cipher.ResolveQuotedBody(scope, item.ReplyToId, item.ReplyBody, item.ReplySenderId),
+                };
+            }
+
+            decorated ??= (AdInquiryMessageDto[])items.Clone();
+            decorated[index] = updated;
         }
+
+        return decorated ?? items;
     }
 
-    private void OnFrameworkUpdate(IFramework framework)
+    protected override AdInquiryDto[] DecorateThreadList(AdInquiryDto[] items)
     {
-        if (!session.IsSignedIn || !gate.Open)
+        AdInquiryDto[]? decorated = null;
+        for (var index = 0; index < items.Length; index++)
         {
-            return;
+            var item = items[index];
+            if (item.LastEncVersion != EnvelopeCodec.VersionEnvelope || item.LastBody.Length == 0)
+            {
+                continue;
+            }
+
+            decorated ??= (AdInquiryDto[])items.Clone();
+            decorated[index] = item with
+            {
+                LastBody = cipher.ResolvePreview(item.Id, ScopeForUser(item.OtherUserId), item.LastBody,
+                    item.LastSenderId),
+            };
         }
 
-        var now = DateTime.UtcNow;
-        if (openThreadId is { } inquiryId && now >= nextThreadPoll)
-        {
-            nextThreadPoll = now + ThreadPollInterval;
-            FetchMessages(inquiryId);
-        }
+        return decorated ?? items;
+    }
 
-        if (cadence.Due(now))
+    protected override string ThreadKeyOf(AdInquiryDto thread) => thread.Id;
+
+    protected override long ThreadLastMessageAtOf(AdInquiryDto thread) => thread.LastMessageAtUnix;
+
+    protected override int ThreadUnreadCountOf(AdInquiryDto thread) => thread.UnreadCount;
+
+    protected override AdInquiryDto WithUnreadCleared(AdInquiryDto thread) => thread with { UnreadCount = 0 };
+
+    protected override PhoneNotification BuildInboxNotification(AdInquiryDto thread)
+    {
+        var name = SocialIdentity.Name(thread.OtherName, thread.OtherHandle);
+        var preview = PreviewFor(thread, thread.LastBody);
+        var body = thread.AdTitle.Length > 0 ? $"{thread.AdTitle} · {preview}" : preview;
+        return new PhoneNotification(YellowPagesStore.AppId, name, body, DateTime.Now,
+            AppPalettes.YellowPages.Accent, thread.Id)
         {
-            Refresh();
-        }
+            ActorId = thread.OtherUserId,
+            SocialType = SocialActivity.TypeAdInquiry,
+        };
+    }
+
+    protected override bool IsInboxPreviewReady(AdInquiryDto thread)
+    {
+        return thread.LastKind != 0
+            || thread.LastEncVersion != EnvelopeCodec.VersionEnvelope
+            || cipher.IsPreviewResolved(thread.Id, thread.LastBody);
+    }
+
+    private void OnAdsPinged()
+    {
+        InboxCadence.RequestImmediate();
+        RequestThreadRefresh();
     }
 
     private void OnRealtimeConnected(bool connected)
     {
         if (connected)
         {
-            cadence.RequestAfterReconnect();
+            InboxCadence.RequestAfterReconnect();
         }
     }
 
-    private void OnSessionChanged()
+    protected override void DisposeCore()
     {
-        var accountId = session.CurrentUser?.Id;
-        if (string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        lastAccountId = accountId;
-        threads = Array.Empty<AdInquiryDto>();
-        threadsCursor = null;
-        messages = Array.Empty<AdInquiryMessageDto>();
-        messagesCursor = null;
-        openThreadId = null;
-        loadedOnce = false;
-        scopeCache.Clear();
-        cipher.Clear();
-        cadence.Reset();
-    }
-
-    private static AdInquiryMessageDto[] Tombstone(AdInquiryMessageDto[] source, string messageId)
-    {
-        for (var index = 0; index < source.Length; index++)
-        {
-            if (source[index].Id != messageId)
-            {
-                continue;
-            }
-
-            var next = (AdInquiryMessageDto[])source.Clone();
-            next[index] = next[index] with
-            {
-                Body = string.Empty,
-                EncVersion = 0,
-                CommitmentTag = null,
-                Deleted = true,
-            };
-            return next;
-        }
-
-        return source;
-    }
-
-    private static AdInquiryMessageDto[] Append(AdInquiryMessageDto[] source, AdInquiryMessageDto message)
-    {
-        for (var index = 0; index < source.Length; index++)
-        {
-            if (source[index].Id == message.Id)
-            {
-                return source;
-            }
-        }
-
-        var next = new AdInquiryMessageDto[source.Length + 1];
-        Array.Copy(source, next, source.Length);
-        next[^1] = message;
-        return next;
-    }
-
-    public void Dispose()
-    {
-        Plugin.Framework.Update -= OnFrameworkUpdate;
-        session.Changed -= OnSessionChanged;
+        signals.AdsPinged -= OnAdsPinged;
         signals.ConnectedChanged -= OnRealtimeConnected;
-        work.Dispose();
     }
 }

@@ -28,6 +28,7 @@ internal sealed class RealtimeSignalBus
     public event Action? DeviceLinkRequested;
     public event Action? VelvetPinged;
     public event Action? GramPinged;
+    public event Action? AdsPinged;
     public event Action? SocialPinged;
     public event Action? MusterPinged;
     public event Action? AnnouncementsPinged;
@@ -73,6 +74,11 @@ internal sealed class RealtimeSignalBus
     public void PublishGram()
     {
         GramPinged?.Invoke();
+    }
+
+    public void PublishAds()
+    {
+        AdsPinged?.Invoke();
     }
 
     public void PublishSocial()

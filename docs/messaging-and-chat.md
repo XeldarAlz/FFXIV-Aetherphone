@@ -17,7 +17,6 @@ Two terms you will see throughout: Dalamud is the plugin framework that loads Ae
 | src/Aetherphone/Windows/Components/ChatEntranceTracker.cs | Detects newly appended messages and drives their entrance animation |
 | src/Aetherphone/Windows/Components/ChatText.cs | Message kind constants, preview text, and token-to-kind resolution |
 | src/Aetherphone/Windows/Components/ChatActions.cs | Copy-message-to-clipboard helper |
-| src/Aetherphone/Windows/Components/ChatBubble.cs | Lightweight standalone bubble, now used only by Yellow Pages inquiries |
 | src/Aetherphone/Windows/Components/ChatHeaderControls.cs | Encryption lock, search toggle, and dismissible banners in thread headers |
 | src/Aetherphone/Core/Aethernet/Clients/ChatClient.cs | HTTP endpoints for Message app conversations |
 | src/Aetherphone/Core/Aethernet/Contracts/Dtos.cs | `ChatMessageDto`, `ConversationDto`, and their page records |
@@ -61,6 +60,8 @@ There are two chat stacks in the codebase:
 
 Both stacks share `ChatEntranceTracker` for the pop-in animation and the same visual language.
 
+Yellow Pages inquiries are the one vertical whose thread id is not the other user id: an inquiry is keyed per (ad, reader), so `AdInquiryStore` maps the inquiry id to the other user before it resolves the `ads:<pair>` key scope, and it refuses to send anything that is not sealed, because the server rejects plaintext inquiries.
+
 ## Who consumes the stack
 
 | App | In-app name | App class | Thread view | Store |
@@ -70,6 +71,7 @@ Both stacks share `ChatEntranceTracker` for the pop-in animation and the same vi
 The Message app (ChocoChat to users, the name every surface shows) is the WhatsApp-shaped one: four icon-only tabs with hover tooltips (Chats, Calls, Contacts, Settings) drawn by `MessageApp.cs`, a Chats header whose search button slides a `SearchField` in above a centered filter `ChipRail`, one partial file per screen, and its own chrome helpers in `MessageApp.Chrome.cs` (header band, person rows, action rows, grouped card rows). Its colors come from the neutral `AppPalettes.Message` chrome plus a user-chosen chat theme (`MessageThemes`, stored as `Configuration.MessageChatTheme`) that recolors the accent, the sent bubbles, badges and buttons; the Settings tab hosts the theme and wallpaper pickers. Groups carry a photo and a description (`ConversationDto.AvatarUrl` and `Description`, edited through `PATCH /chats/{id}` with `UpdateConversationRequest`) and member roles (`ChatRoles`: member 0, owner 1, admin 2; `POST /chats/{id}/members/{userId}/role`); owners and admins can rename, describe, re-photo and manage members, and only the owner can remove or demote an admin. The group photo upload reuses the `avatar` media scope, so the server validates it exactly like a profile picture.
 | Velvet (id `velvet`) | "Velvet" | src/Aetherphone/Apps/Velvet/VelvetShell.cs | `ThreadView : ChatThreadView<VelvetMessageDto, VelvetThreadDto>` in src/Aetherphone/Apps/Velvet/VelvetShell.Thread.cs | `VelvetStore` in src/Aetherphone/Apps/Velvet/VelvetStore.cs |
 | Aethergram | "Aethergram" | src/Aetherphone/Apps/Aethergram/AethergramApp.cs | `ThreadView : ChatThreadView<GramMessageDto, GramThreadDto>` in src/Aetherphone/Apps/Aethergram/AethergramApp.Thread.cs | `GramDmStore` in src/Aetherphone/Apps/Aethergram/GramDmStore.cs |
+| Yellow Pages (id `yellowpages`) | "Yellow Pages" | src/Aetherphone/Apps/YellowPages/YellowPagesApp.cs | `ThreadView : ChatThreadView<AdInquiryMessageDto, AdInquiryDto>` in src/Aetherphone/Apps/YellowPages/YellowPagesApp.Thread.cs | `AdInquiryStore` in src/Aetherphone/Core/YellowPages/AdInquiryStore.cs |
 | Linkpearl (id `messages`) | "Linkpearl" (`L.Apps.Linkpearl`) | src/Aetherphone/Apps/Linkpearl/LinkpearlApp.cs | `GameChatThread` in src/Aetherphone/Windows/Components/ | `ChatLog`, `ChatInbox` and `TabStore` in src/Aetherphone/Core/GameChat/ |
 
 Naming note: the Message app is the one user-facing changelogs call "ChocoChat" (see `changelog.r0920.1` in src/Aetherphone/Localization/en.json). In code and localization keys it is always `message` / `MessageApp`.

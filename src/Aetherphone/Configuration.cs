@@ -270,6 +270,11 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int YellowPagesCategoryFilter { get; set; }
     public int YellowPagesScope { get; set; }
     public bool YellowPagesAfterDark { get; set; }
+    public int YellowPagesDirection { get; set; }
+    public int YellowPagesSort { get; set; }
+    public bool YellowPagesCompactCards { get; set; }
+    public List<string> YellowPagesPinnedInquiries { get; set; } = new();
+    public List<string> YellowPagesArchivedInquiries { get; set; } = new();
     public List<uint> MapFavorites { get; set; } = new();
     public uint HousingWorldId { get; set; }
     public uint HousingDistrictId { get; set; } = 339u;

@@ -297,7 +297,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     public ChatKeyStatus CurrentKeyStatus => currentKeyStatus;
     public bool EncryptingCurrent => cipher.IsUnlocked && currentKeyStatus.CanEncrypt;
 
-    public bool SendWouldDowngrade => !EncryptingCurrent && IsEncryptedThread(currentKeyStatus);
+    public virtual bool SendWouldDowngrade => !EncryptingCurrent && IsEncryptedThread(currentKeyStatus);
 
     private bool RefuseDowngrade(string threadId, string what)
     {

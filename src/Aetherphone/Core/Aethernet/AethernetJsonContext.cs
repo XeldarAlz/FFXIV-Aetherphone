@@ -138,6 +138,8 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(AdInquiryMessageDto))]
 [JsonSerializable(typeof(AdInquiryMessagePage))]
 [JsonSerializable(typeof(SendAdInquiryRequest))]
+[JsonSerializable(typeof(AdInquiryTypingDto))]
+[JsonSerializable(typeof(AdInquiryMediaUrlDto))]
 [JsonSerializable(typeof(ContactDto))]
 [JsonSerializable(typeof(ContactListResult))]
 [JsonSerializable(typeof(AddContactRequest))]

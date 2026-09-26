@@ -352,8 +352,9 @@ internal sealed class PhoneServices : IDisposable
             visibility, realtimeSignals, installer.Gate(MusterStore.AppId));
         var yellowPages = new YellowPagesStore(aethernetSession, aethernet.Ads, aethernet.Media, configuration,
             visibility, realtimeSignals, installer.Gate(YellowPagesStore.AppId));
-        var adInquiries = new AdInquiryStore(aethernetSession, aethernet.Ads, aethernet.Safety, keyVault, conversationKeys,
-            chatHistory, visibility, realtimeSignals, installer.Gate(YellowPagesStore.AppId));
+        var adInquiries = new AdInquiryStore(aethernetSession, aethernet.Ads, aethernet.Safety, aethernet.Media,
+            notifications, keyVault, conversationKeys, chatHistory, visibility, realtimeSignals,
+            installer.Gate(YellowPagesStore.AppId));
         var huntMobsFile = new FileInfo(Path.Combine(
             Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Hunts", "HuntMob.json"));
         var huntMobCatalog = new HuntMobCatalog(huntMobsFile);
