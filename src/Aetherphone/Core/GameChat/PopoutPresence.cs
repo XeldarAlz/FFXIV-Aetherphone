@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Aetherphone.Windows;
 using Dalamud.Game.ClientState.Conditions;
 using Lumina.Excel.Sheets;
@@ -8,9 +9,6 @@ internal sealed class PopoutPresence : IDisposable
 {
     private const float SuppressDelaySeconds = 0.35f;
     private const float RestoreDelaySeconds = 1f;
-    private const uint EurekaIntendedUse = 41;
-    private const uint BozjaIntendedUse = 48;
-    private const uint OccultCrescentIntendedUse = 61;
 
     private readonly Configuration configuration;
     private readonly LinkpearlPopouts popouts;
@@ -110,8 +108,7 @@ internal sealed class PopoutPresence : IDisposable
             return false;
         }
 
-        var intendedUse = territory.TerritoryIntendedUse.RowId;
-        return intendedUse is EurekaIntendedUse or BozjaIntendedUse or OccultCrescentIntendedUse;
+        return FieldOperations.IsFieldOperationZone(territory.TerritoryIntendedUse.RowId);
     }
 
     private void OnAppended(ChatEntry entry)

@@ -18,7 +18,6 @@ internal sealed class MapsApp : IPhoneApp
     private const float DestinationRowHeight = 50f;
     private const float ExpansionHeaderHeight = 40f;
     private static readonly Vector4 MapAccent = AppAccents.For("maps");
-    private static readonly Vector4 FavoriteStar = new(1f, 0.78f, 0.25f, 1f);
     public string Id => "maps";
     public string DisplayName => Loc.T(L.Apps.Maps);
     public string Glyph => "Ma";
@@ -306,7 +305,7 @@ internal sealed class MapsApp : IPhoneApp
         }
 
         var isFavorite = favorites.Contains(aetheryte.RowId);
-        MapGlyphs.Star(drawList, starCenter, starRadius, isFavorite, FavoriteStar,
+        FavoriteGlyph.Star(drawList, starCenter, starRadius, isFavorite, FavoriteGlyph.Fill,
             Palette.WithAlpha(frameTheme.TextMuted, 0.6f), scale);
         var textLeft = starCenter.X + starRadius + 12f * scale;
         var textRight = row.Max.X - 14f * scale;

@@ -18,8 +18,6 @@ internal static class HuntSpawnConditionResolver
     private const int FullMoonPhaseNumber = 5;
     private const int NewMoonPhaseNumber = 1;
 
-    private const long RealSecondsPerWeatherWindow = 1400;
-
     private const int MaxCycleAttempts = 500;
     private const int MaxWeatherStepAttempts = 1000;
     private const int MaxWeatherStreakEndAttempts = 5000;
@@ -251,7 +249,7 @@ internal static class HuntSpawnConditionResolver
     private static long BackdateToStreakStart(long nowUnix, HuntWeatherProbability[] probabilities,
         string[] matching)
     {
-        var windowStart = nowUnix - Mod(nowUnix, RealSecondsPerWeatherWindow);
+        var windowStart = nowUnix - Mod(nowUnix, WeatherService.RealSecondsPerWindow);
         if (!IsMatching(windowStart, probabilities, matching))
         {
             return windowStart;
@@ -259,7 +257,7 @@ internal static class HuntSpawnConditionResolver
 
         for (var attempt = 0; attempt < MaxWeatherStreakEndAttempts; attempt++)
         {
-            var earlier = windowStart - RealSecondsPerWeatherWindow;
+            var earlier = windowStart - WeatherService.RealSecondsPerWindow;
             if (!IsMatching(earlier, probabilities, matching))
             {
                 return windowStart;
@@ -287,23 +285,23 @@ internal static class HuntSpawnConditionResolver
                 return null;
             }
 
-            cursor += RealSecondsPerWeatherWindow;
+            cursor += WeatherService.RealSecondsPerWindow;
         }
 
-        var remaining = offsetSeconds - RealSecondsPerWeatherWindow;
+        var remaining = offsetSeconds - WeatherService.RealSecondsPerWindow;
         for (var attempt = 0; remaining > 0 && attempt < MaxWeatherStepAttempts; attempt++)
         {
-            cursor += RealSecondsPerWeatherWindow;
+            cursor += WeatherService.RealSecondsPerWindow;
             if (!IsMatching(cursor, probabilities, matching))
             {
                 return null;
             }
 
-            remaining -= RealSecondsPerWeatherWindow;
+            remaining -= WeatherService.RealSecondsPerWindow;
         }
 
-        var endUnix = cursor + RealSecondsPerWeatherWindow;
-        var startUnix = cursor + remaining + RealSecondsPerWeatherWindow;
+        var endUnix = cursor + WeatherService.RealSecondsPerWindow;
+        var startUnix = cursor + remaining + WeatherService.RealSecondsPerWindow;
         for (var attempt = 0; attempt < MaxWeatherStreakEndAttempts; attempt++)
         {
             if (!IsMatching(endUnix, probabilities, matching))
@@ -311,7 +309,7 @@ internal static class HuntSpawnConditionResolver
                 break;
             }
 
-            endUnix += RealSecondsPerWeatherWindow;
+            endUnix += WeatherService.RealSecondsPerWindow;
         }
 
         cursor = endUnix;
@@ -325,17 +323,8 @@ internal static class HuntSpawnConditionResolver
     private static string ResolveWeatherId(long unixSeconds, HuntWeatherProbability[] probabilities)
     {
         var target = WeatherService.ForecastTarget(unixSeconds);
-        var cumulative = 0;
-        for (var index = 0; index < probabilities.Length; index++)
-        {
-            cumulative += probabilities[index].Chance;
-            if (target < cumulative)
-            {
-                return probabilities[index].Condition;
-            }
-        }
-
-        return probabilities.Length > 0 ? probabilities[^1].Condition : string.Empty;
+        var index = WeatherService.ResolveChanceIndex(probabilities, target);
+        return index >= 0 ? probabilities[index].Condition : string.Empty;
     }
 
     private static long ToEorzeaSeconds(DateTimeOffset at) =>

@@ -1,3 +1,4 @@
+using Aetherphone.Core.Localization;
 using Dalamud.Game;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Environment;
@@ -9,19 +10,43 @@ internal readonly record struct WeatherEntry(byte Id, string Name, string Englis
 
 internal readonly record struct WeatherWindow(WeatherEntry Weather, int MinutesFromNow, bool IsCurrent, int StartBell);
 
+internal readonly record struct WeatherZoneEntry(uint TerritoryId, string ZoneName);
+
+internal readonly record struct WeatherRegionGroup(string Region, string RegionUpper, IReadOnlyList<WeatherZoneEntry> Zones,
+    bool IsFieldOps = false);
+
+internal interface IWeatherChance
+{
+    int Chance { get; }
+}
+
 internal sealed class WeatherService
 {
+    public const long RealSecondsPerWindow = 1400;
     private const long RealSecondsPerEorzeaHour = 175;
-    private const long RealSecondsPerWindow = 1400;
     private const long RealSecondsPerEorzeaDay = 4200;
+    private const string UnknownRegionPlaceholder = "???";
+    private const string FieldOpsRegionKey = "fieldops";
+    private const string MiscRegionKey = "misc";
     private readonly IDataManager data;
     private readonly IClientState clientState;
     private readonly Dictionary<byte, WeatherEntry> entries = new();
-    private readonly List<WeatherEntry> zoneWeathers = new();
-    private readonly List<WeatherChance> chances = new();
-    private uint cachedTerritory = uint.MaxValue;
+    private readonly Dictionary<uint, ZoneWeatherTable> tablesByWeatherRate = new();
+    private readonly Dictionary<uint, string> zoneNames = new();
+    private readonly Dictionary<uint, string> regionNames = new();
+    private List<WeatherRegionGroup>? regionGroups;
+    private string regionGroupsLocale = string.Empty;
+    private string namesLocale = string.Empty;
 
-    private readonly record struct WeatherChance(byte Id, int Cumulative);
+    private readonly record struct WeatherChance(byte Id, int Chance) : IWeatherChance;
+
+    private sealed class ZoneWeatherTable
+    {
+        public readonly List<WeatherChance> Chances = new();
+        public readonly List<WeatherEntry> Weathers = new();
+    }
+
+    private static readonly ZoneWeatherTable EmptyZoneTable = new();
 
     public WeatherService(IDataManager data, IClientState clientState)
     {
@@ -29,22 +54,134 @@ internal sealed class WeatherService
         this.clientState = clientState;
     }
 
-    public string CurrentZone()
+    public uint CurrentTerritoryId => clientState.TerritoryType;
+
+    public string CurrentZone() => ZoneName(clientState.TerritoryType);
+
+    public string ZoneName(uint territoryId)
     {
-        var territoryId = clientState.TerritoryType;
-        if (territoryId != 0 && data.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
+        EnsureNamesCurrentLocale();
+        if (zoneNames.TryGetValue(territoryId, out var cached))
         {
-            return territory.PlaceName.Value.Name.ExtractText();
+            return cached;
         }
 
-        return string.Empty;
+        var name = string.Empty;
+        if (territoryId != 0 &&
+            data.GetExcelSheet<TerritoryType>(GameSheetLanguage.Current()).TryGetRow(territoryId, out var territory) &&
+            territory.PlaceName.IsValid)
+        {
+            name = territory.PlaceName.Value.Name.ExtractText();
+        }
+
+        zoneNames[territoryId] = name;
+        return name;
     }
 
-    public IReadOnlyList<WeatherEntry> ZoneWeathers()
+    public string RegionName(uint territoryId)
     {
-        RefreshZone();
-        return zoneWeathers;
+        EnsureNamesCurrentLocale();
+        if (regionNames.TryGetValue(territoryId, out var cached))
+        {
+            return cached;
+        }
+
+        var region = string.Empty;
+        if (territoryId != 0 &&
+            data.GetExcelSheet<TerritoryType>(GameSheetLanguage.Current()).TryGetRow(territoryId, out var territory) &&
+            territory.PlaceNameRegion.IsValid)
+        {
+            var regionName = territory.PlaceNameRegion.Value.Name.ExtractText();
+            region = regionName == UnknownRegionPlaceholder ? string.Empty : regionName;
+        }
+
+        regionNames[territoryId] = region;
+        return region;
     }
+
+    private void EnsureNamesCurrentLocale()
+    {
+        if (namesLocale == Loc.Current.Code)
+        {
+            return;
+        }
+
+        zoneNames.Clear();
+        regionNames.Clear();
+        namesLocale = Loc.Current.Code;
+    }
+
+    public IReadOnlyList<WeatherRegionGroup> ZonesByRegion()
+    {
+        if (regionGroups != null && regionGroupsLocale == Loc.Current.Code)
+        {
+            return regionGroups;
+        }
+
+        var groups = new Dictionary<string, Dictionary<string, WeatherZoneEntry>>();
+        foreach (var territory in data.GetExcelSheet<TerritoryType>(GameSheetLanguage.Current()))
+        {
+            if (GetZoneTable(territory.RowId).Weathers.Count <= 1)
+            {
+                continue;
+            }
+
+            var zoneName = ZoneName(territory.RowId);
+            if (zoneName.Length == 0)
+            {
+                continue;
+            }
+
+            var region = RegionName(territory.RowId);
+            if (region.Length == 0)
+            {
+                region = FieldOperations.IsFieldOperationZone(territory.TerritoryIntendedUse.RowId)
+                    ? FieldOpsRegionKey
+                    : MiscRegionKey;
+            }
+
+            if (!groups.TryGetValue(region, out var zones))
+            {
+                zones = new Dictionary<string, WeatherZoneEntry>();
+                groups[region] = zones;
+            }
+
+            if (!zones.TryGetValue(zoneName, out var existing) || territory.RowId < existing.TerritoryId)
+            {
+                zones[zoneName] = new WeatherZoneEntry(territory.RowId, zoneName);
+            }
+        }
+
+        var regionKeys = new List<string>(groups.Keys);
+
+        var built = new List<WeatherRegionGroup>(regionKeys.Count);
+        for (var index = 0; index < regionKeys.Count; index++)
+        {
+            var zones = new List<WeatherZoneEntry>(groups[regionKeys[index]].Values);
+            zones.Sort(CompareByTerritoryId);
+            var regionKey = regionKeys[index];
+            switch (regionKey)
+            {
+                case FieldOpsRegionKey:
+                    built.Add(new WeatherRegionGroup(string.Empty, string.Empty, zones, true));
+                    break;
+                case MiscRegionKey:
+                    built.Add(new WeatherRegionGroup(string.Empty, string.Empty, zones));
+                    break;
+                default:
+                    built.Add(new WeatherRegionGroup(regionKey, Loc.Culture.TextInfo.ToUpper(regionKey), zones));
+                    break;
+            }
+        }
+
+        regionGroups = built;
+        regionGroupsLocale = Loc.Current.Code;
+        return built;
+    }
+
+    public IReadOnlyList<WeatherEntry> ZoneWeathers() => ZoneWeathers(clientState.TerritoryType);
+
+    public IReadOnlyList<WeatherEntry> ZoneWeathers(uint territoryId) => GetZoneTable(territoryId).Weathers;
 
     public unsafe WeatherEntry? LiveRenderedWeather()
     {
@@ -57,35 +194,55 @@ internal sealed class WeatherService
         return Entry(environment->ActiveWeather);
     }
 
-    public byte NaturalNow()
+    public byte NaturalNow() => NaturalNow(clientState.TerritoryType);
+
+    public byte NaturalNow(uint territoryId)
     {
-        if (!RefreshZone())
+        var table = GetZoneTable(territoryId);
+        if (table.Chances.Count == 0)
         {
             return 0;
         }
 
-        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        return Resolve(ForecastTarget(nowUnix - nowUnix % RealSecondsPerWindow));
+        return Resolve(table, ForecastTarget(CurrentWindowStartUnix()));
     }
 
-    public void Forecast(List<WeatherWindow> into, int count)
+    public static long CurrentWindowStartUnix()
+    {
+        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        return nowUnix - nowUnix % RealSecondsPerWindow;
+    }
+
+    public void Forecast(List<WeatherWindow> into, int count) => Forecast(clientState.TerritoryType, into, count);
+
+    public void Forecast(uint territoryId, List<WeatherWindow> into, int count)
     {
         into.Clear();
-        if (!RefreshZone())
+        var table = GetZoneTable(territoryId);
+        if (table.Chances.Count == 0)
         {
             return;
         }
 
-        var live = LiveRenderedWeather();
+        var live = territoryId == clientState.TerritoryType ? LiveRenderedWeather() : null;
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var startUnix = nowUnix - nowUnix % RealSecondsPerWindow;
         for (var index = 0; index < count; index++)
         {
             var timestamp = startUnix + index * RealSecondsPerWindow;
-            var entry = index == 0 && live.HasValue ? live.Value : Entry(Resolve(ForecastTarget(timestamp)));
+            var entry = index == 0 && live.HasValue ? live.Value : Entry(Resolve(table, ForecastTarget(timestamp)));
             var minutes = (int)((timestamp - nowUnix) / 60);
             var windowBell = (int)(timestamp / RealSecondsPerEorzeaHour % 24);
             into.Add(new WeatherWindow(entry, minutes, index == 0, windowBell));
+        }
+    }
+
+    public static void RefreshMinutesFromNow(List<WeatherWindow> windows, long windowStart, long nowUnix)
+    {
+        for (var index = 0; index < windows.Count; index++)
+        {
+            var timestamp = windowStart + index * RealSecondsPerWindow;
+            windows[index] = windows[index] with { MinutesFromNow = (int)((timestamp - nowUnix) / 60) };
         }
     }
 
@@ -113,35 +270,34 @@ internal sealed class WeatherService
         return entry;
     }
 
-    private bool RefreshZone()
+    private ZoneWeatherTable GetZoneTable(uint territoryId)
     {
-        var territoryId = clientState.TerritoryType;
-        if (territoryId != cachedTerritory)
-        {
-            cachedTerritory = territoryId;
-            Rebuild(territoryId);
-        }
-
-        return chances.Count > 0;
-    }
-
-    private void Rebuild(uint territoryId)
-    {
-        chances.Clear();
-        zoneWeathers.Clear();
         if (territoryId == 0 || !data.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
         {
-            return;
+            return EmptyZoneTable;
         }
 
-        if (!data.GetExcelSheet<WeatherRate>().TryGetRow(territory.WeatherRate.RowId, out var rate))
+        var weatherRateRowId = territory.WeatherRate.RowId;
+        if (tablesByWeatherRate.TryGetValue(weatherRateRowId, out var cached))
         {
-            return;
+            return cached;
+        }
+
+        var table = BuildZoneTable(weatherRateRowId);
+        tablesByWeatherRate[weatherRateRowId] = table;
+        return table;
+    }
+
+    private ZoneWeatherTable BuildZoneTable(uint weatherRateRowId)
+    {
+        var table = new ZoneWeatherTable();
+        if (!data.GetExcelSheet<WeatherRate>().TryGetRow(weatherRateRowId, out var rate))
+        {
+            return table;
         }
 
         var rates = rate.Rate;
         var weathers = rate.Weather;
-        var cumulative = 0;
         for (var index = 0; index < rates.Count; index++)
         {
             var id = (byte)weathers[index].RowId;
@@ -151,20 +307,21 @@ internal sealed class WeatherService
                 continue;
             }
 
-            cumulative += chance;
-            chances.Add(new WeatherChance(id, cumulative));
-            if (!KnownInZone(id))
+            table.Chances.Add(new WeatherChance(id, chance));
+            if (!ContainsWeather(table.Weathers, id))
             {
-                zoneWeathers.Add(Entry(id));
+                table.Weathers.Add(Entry(id));
             }
         }
+
+        return table;
     }
 
-    private bool KnownInZone(byte id)
+    private static bool ContainsWeather(List<WeatherEntry> weathers, byte id)
     {
-        for (var index = 0; index < zoneWeathers.Count; index++)
+        for (var index = 0; index < weathers.Count; index++)
         {
-            if (zoneWeathers[index].Id == id)
+            if (weathers[index].Id == id)
             {
                 return true;
             }
@@ -173,17 +330,29 @@ internal sealed class WeatherService
         return false;
     }
 
-    private byte Resolve(uint target)
+    private static int CompareByTerritoryId(WeatherZoneEntry left, WeatherZoneEntry right) =>
+        left.TerritoryId.CompareTo(right.TerritoryId);
+
+    private static byte Resolve(ZoneWeatherTable table, uint target)
     {
+        var index = ResolveChanceIndex(table.Chances, target);
+        return index >= 0 ? table.Chances[index].Id : (byte)0;
+    }
+
+    public static int ResolveChanceIndex<TChance>(IReadOnlyList<TChance> chances, uint target)
+        where TChance : IWeatherChance
+    {
+        var cumulative = 0;
         for (var index = 0; index < chances.Count; index++)
         {
-            if (target < chances[index].Cumulative)
+            cumulative += chances[index].Chance;
+            if (target < cumulative)
             {
-                return chances[index].Id;
+                return index;
             }
         }
 
-        return chances.Count > 0 ? chances[^1].Id : (byte)0;
+        return chances.Count > 0 ? chances.Count - 1 : -1;
     }
 
     internal static uint ForecastTarget(long unixSeconds)

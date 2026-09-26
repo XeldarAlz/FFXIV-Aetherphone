@@ -102,7 +102,7 @@ internal static class AppRegistry
         apps.Add(new AnnouncementsApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "announcements").Announcements, services.Notifications, services.Configuration, services.AnnouncementsLauncher, services.RealtimeSignals));
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary, services.Configuration, services.GameUiVisibility));
         apps.Add(new PhotosApp(photoLibrary, services.Confirm, services.Share, services.Configuration));
-        apps.Add(new SkywatcherApp(services.Weather, services.WeatherControl));
+        apps.Add(new SkywatcherApp(services.Weather, services.WeatherControl, services.Configuration));
         apps.Add(new VenuesApp(services.Venues, services.Media, services.Http, services.Artwork, services.GameData, services.Configuration, services.Confirm, services.Translation));
         apps.Add(new StratsApp(services.StratsManifest, services.StratsGuides, services.RemoteImages, services.Configuration));
         apps.Add(new MusterApp(services.Musters, services.MusterLauncher, services.Aethernet, services.GameData, services.RemoteImages, services.Lodestone, services.Configuration, services.Confirm, services.Translation, services.Report, services.Conduct));

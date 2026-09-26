@@ -26,38 +26,6 @@ internal static class MapGlyphs
         drawList.AddCircleFilled(headCenter, radius * 0.28f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.95f)), 16);
     }
 
-    public static void Star(ImDrawListPtr drawList, Vector2 center, float radius, bool filled, Vector4 fill,
-        Vector4 outline, float scale)
-    {
-        Span<Vector2> points = stackalloc Vector2[10];
-        var innerRadius = radius * 0.44f;
-        for (var index = 0; index < 10; index++)
-        {
-            var pointRadius = (index & 1) == 0 ? radius : innerRadius;
-            var angle = -MathF.PI / 2f + index * (MathF.PI / 5f);
-            points[index] = new Vector2(center.X + MathF.Cos(angle) * pointRadius,
-                center.Y + MathF.Sin(angle) * pointRadius);
-        }
-
-        if (filled)
-        {
-            var packed = ImGui.GetColorU32(fill);
-            for (var index = 0; index < 10; index++)
-            {
-                drawList.AddTriangleFilled(center, points[index], points[(index + 1) % 10], packed);
-            }
-
-            return;
-        }
-
-        var line = ImGui.GetColorU32(outline);
-        var thickness = Metrics.Stroke.Thin * scale;
-        for (var index = 0; index < 10; index++)
-        {
-            drawList.AddLine(points[index], points[(index + 1) % 10], line, thickness);
-        }
-    }
-
     public static void Disclosure(ImDrawListPtr drawList, Vector2 center, float size, float thickness, bool expanded,
         Vector4 color)
     {
