@@ -3,6 +3,7 @@ using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -27,6 +28,7 @@ internal sealed class BubbleShooterApp : IMiniGame
     private int displayBest;
     private float resultAppear;
     private float lastFieldHeight = 1.7f;
+    private GameStatsStore? statsRef;
     public string Id => GameId;
     public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Bubbles);
@@ -40,14 +42,31 @@ internal sealed class BubbleShooterApp : IMiniGame
 
     public void Close()
     {
+        PersistBest();
     }
 
     public void Dispose()
     {
+        PersistBest();
+    }
+
+    private void PersistBest()
+    {
+        if (statsRef is null || !started || finished || board.Score <= 0)
+        {
+            return;
+        }
+
+        statsRef.SubmitScore(GameId, board.Score);
+        if (board.Score > loadedBest)
+        {
+            loadedBest = board.Score;
+        }
     }
 
     private void StartNewGame(float fieldHeight)
     {
+        PersistBest();
         board.Reset(fieldHeight);
         particles.Clear();
         fx.Clear();
@@ -66,6 +85,7 @@ internal sealed class BubbleShooterApp : IMiniGame
         var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
+        statsRef = context.Stats;
         if (loadedBest == 0)
         {
             loadedBest = context.Stats.Get(GameId).BestScore;
