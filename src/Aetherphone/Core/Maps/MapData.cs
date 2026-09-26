@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
 
@@ -204,7 +205,7 @@ internal sealed class MapData
 
     private string PlaceName(uint placeNameRowId)
     {
-        if (placeNameRowId != 0 && data.GetExcelSheet<PlaceName>().TryGetRow(placeNameRowId, out var placeName))
+        if (placeNameRowId != 0 && data.GetLocalizedSheet<PlaceName>().TryGetRow(placeNameRowId, out var placeName))
         {
             return placeName.Name.ExtractText();
         }
@@ -214,7 +215,7 @@ internal sealed class MapData
 
     private string ExpansionName(uint exVersionRowId)
     {
-        if (data.GetExcelSheet<ExVersion>().TryGetRow(exVersionRowId, out var exVersion))
+        if (data.GetLocalizedSheet<ExVersion>().TryGetRow(exVersionRowId, out var exVersion))
         {
             var name = exVersion.Name.ExtractText();
             if (name.Length > 0)

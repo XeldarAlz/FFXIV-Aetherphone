@@ -1796,6 +1796,9 @@ internal static class L
         public static readonly LocString CommandMarket = new("settings.commandMarket", "Open the market board, optionally searching an item");
         public static readonly LocString CommandReset = new("settings.commandReset", "Move the phone back to the center of the screen");
         public static readonly LocString CommandTest = new("settings.commandTest", "Send a sample notification");
+        public static readonly LocString GameDataSection = new("settings.gameDataSection", "Game Data");
+        public static readonly LocString PreferPhoneLocaleForGameData = new("settings.preferPhoneLocaleForGameData", "Match in-game names to phone language");
+        public static readonly LocString PreferPhoneLocaleForGameDataHint = new("settings.preferPhoneLocaleForGameDataHint", "Zone, item, and other in-game names try this app's language first, then fall back to your game client's language.");
         public static readonly LocString TranslateInto = new("settings.translateInto", "Translate into");
         public static readonly LocString TranslateSameAsPhone = new("settings.translateSameAsPhone", "Same as phone language");
         public static readonly LocString TranslateIntoHint = new("settings.translateIntoHint", "Posts, comments, and messages written in other languages get a one-tap Translate link that renders them in this language.");

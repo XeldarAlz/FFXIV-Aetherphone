@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
@@ -250,13 +251,16 @@ internal static class LocationShare
 
     public static string ZoneName(uint territoryId)
     {
-        if (territoryId != 0
-            && Plugin.DataManager.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
+        if (territoryId == 0 ||
+            !Plugin.DataManager.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory) ||
+            territory.PlaceName.RowId == 0)
         {
-            return territory.PlaceName.Value.Name.ExtractText();
+            return string.Empty;
         }
 
-        return string.Empty;
+        return Plugin.DataManager.GetLocalizedSheet<PlaceName>().TryGetRow(territory.PlaceName.RowId, out var placeName)
+            ? placeName.Name.ExtractText()
+            : string.Empty;
     }
 
     public static string WorldName(uint worldId)
