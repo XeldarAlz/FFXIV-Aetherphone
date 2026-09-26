@@ -105,6 +105,7 @@ jobs:
           echo "Total downloads across all releases: $total"
 
       - name: Announce the release on Discord
+        continue-on-error: true
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -112,6 +113,7 @@ jobs:
           WEBHOOK_URL: ${{ secrets.RELEASE_WEBHOOK_URL }}
           PING_ROLE_ID: ${{ vars.RELEASE_PING_ROLE_ID }}
           TAG: ${{ steps.tag.outputs.target }}
+          VERSION: ${{ steps.tag.outputs.version }}
           DOWNLOADS: ${{ steps.count.outputs.total }}
         run: |
           $ErrorActionPreference = 'Stop'
@@ -127,9 +129,16 @@ jobs:
 
           $title = if ([string]::IsNullOrEmpty($rel.name)) { $rel.tagName } else { $rel.name }
 
-          $desc = if ($null -eq $rel.body) { '' } else { [string]$rel.body }
-          $desc = $desc.Replace("`r", '').Replace([char]0x2014, '-').Replace([char]0x2013, '-')
-          if ($desc.Length -gt 3800) { $desc = $desc.Substring(0, 3800) + "`n`n...full notes on GitHub" }
+          $pages = @(& .github/scripts/Get-ChangelogNotes.ps1 -Version $env:VERSION)
+          if ($pages.Count -eq 0) {
+            Write-Host "::warning::No changelog entry for $($env:VERSION) in ChangelogData.cs; falling back to the GitHub release notes."
+            $body = if ($null -eq $rel.body) { '' } else { [string]$rel.body }
+            if ($body.Length -gt 3800) { $body = $body.Substring(0, 3800) + "`n`n...full notes on GitHub" }
+            $pages = @($body)
+          }
+          for ($pageIndex = 0; $pageIndex -lt $pages.Count; $pageIndex++) {
+            $pages[$pageIndex] = $pages[$pageIndex].Replace("`r", '').Replace([char]0x2014, '-').Replace([char]0x2013, '-')
+          }
 
           $isPre   = [bool]$rel.isPrerelease
           $content = if ($isPre) { '🧪 **New preview build just dropped!**' } else { '🚀 **New version dropped!**' }
@@ -148,6 +157,14 @@ jobs:
             $fields += [ordered]@{ name = 'Total installs'; value = "$($env:DOWNLOADS)"; inline = $true }
           }
 
+          function Send-Payload($payload) {
+            $json = $payload | ConvertTo-Json -Depth 10
+            if ($json.Contains([char]0x2014) -or $json.Contains([char]0x2013)) { throw 'Em/en dash detected in payload' }
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+            $resp  = Invoke-WebRequest -Uri $env:WEBHOOK_URL -Method Post -Body $bytes -ContentType 'application/json; charset=utf-8' -UseBasicParsing
+            Write-Host "Discord responded: $($resp.StatusCode) $($resp.StatusDescription) for $($env:TAG)"
+          }
+
           $payload = [ordered]@{
             username   = 'Aetherphone'
             avatar_url = $icon
@@ -157,7 +174,7 @@ jobs:
                 author      = [ordered]@{ name = 'Aetherphone'; url = $relList; icon_url = $icon }
                 title       = $title
                 url         = $rel.url
-                description = $desc
+                description = $pages[0]
                 color       = $color
                 fields      = $fields
                 thumbnail   = [ordered]@{ url = $icon }
@@ -171,11 +188,24 @@ jobs:
             $payload['allowed_mentions'] = [ordered]@{ roles = @($pingRole) }
           }
 
-          $json = $payload | ConvertTo-Json -Depth 10
-          if ($json.Contains([char]0x2014) -or $json.Contains([char]0x2013)) { throw 'Em/en dash detected in payload' }
-          $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
-          $resp  = Invoke-WebRequest -Uri $env:WEBHOOK_URL -Method Post -Body $bytes -ContentType 'application/json; charset=utf-8' -UseBasicParsing
-          Write-Host "Discord responded: $($resp.StatusCode) $($resp.StatusDescription) for $($env:TAG)"
+          Send-Payload $payload
+
+          for ($pageIndex = 1; $pageIndex -lt $pages.Count; $pageIndex++) {
+            Start-Sleep -Seconds 1
+            Send-Payload ([ordered]@{
+              username   = 'Aetherphone'
+              avatar_url = $icon
+              embeds     = @(
+                [ordered]@{
+                  title       = "$title (continued, $($pageIndex + 1) of $($pages.Count))"
+                  url         = $rel.url
+                  description = $pages[$pageIndex]
+                  color       = $color
+                  footer      = [ordered]@{ text = 'Aetherphone'; icon_url = $icon }
+                }
+              )
+            })
+          }
 
       - name: Update local repo.json
         shell: pwsh
