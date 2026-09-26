@@ -1,4 +1,5 @@
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Theme;
 using Dalamud.Interface;
 
 namespace Aetherphone.Core.YellowPages;
@@ -17,21 +18,83 @@ internal static class AdPriceModes
     public const int From = 2;
 }
 
+internal static class AdDirections
+{
+    public const int Any = 0;
+    public const int Offering = 1;
+    public const int Wanted = 2;
+}
+
+internal static class AdSorts
+{
+    public const int Newest = 0;
+    public const int OpenFirst = 1;
+    public const int EndingSoon = 2;
+    public const int Count = 3;
+}
+
+internal static class AdAccents
+{
+    public static readonly Vector4[] Palette =
+    {
+        AccentRing.Gold,
+        AccentRing.Rose,
+        AccentRing.Red,
+        AccentRing.Orange,
+        AccentRing.Lime,
+        AccentRing.Green,
+        AccentRing.Emerald,
+        AccentRing.Teal,
+        AccentRing.Cyan,
+        AccentRing.Azure,
+        AccentRing.Indigo,
+        AccentRing.Violet,
+    };
+
+    public static int Count => Palette.Length;
+
+    public static Vector4 For(int index) => index >= 0 && index < Palette.Length ? Palette[index] : Palette[0];
+}
+
 internal static class AdIntents
 {
     public const int Go = 0;
     public const int Hire = 1;
     public const int Join = 2;
+    public const int Wanted = 3;
 
-    public static readonly int[] All = { Go, Hire, Join };
+    public static readonly int[] All = { Go, Hire, Join, Wanted };
 
     public static LocString Label(int intent) =>
         intent switch
         {
             Hire => L.YellowPages.IntentHire,
             Join => L.YellowPages.IntentJoin,
+            Wanted => L.YellowPages.IntentWanted,
             _ => L.YellowPages.IntentGo,
         };
+
+    public static LocString Hint(int intent) =>
+        intent switch
+        {
+            Hire => L.YellowPages.IntentHireHint,
+            Join => L.YellowPages.IntentJoinHint,
+            Wanted => L.YellowPages.IntentWantedHint,
+            _ => L.YellowPages.IntentGoHint,
+        };
+
+    public static FontAwesomeIcon Icon(int intent) =>
+        intent switch
+        {
+            Hire => FontAwesomeIcon.Hammer,
+            Join => FontAwesomeIcon.Users,
+            Wanted => FontAwesomeIcon.Search,
+            _ => FontAwesomeIcon.MapMarkedAlt,
+        };
+
+    public static int DirectionFor(int intent) => intent == Wanted ? AdDirections.Wanted : AdDirections.Any;
+
+    public static bool SupportsDirection(int intent) => intent is Hire or Join;
 }
 
 internal static class AdCategories
@@ -67,11 +130,26 @@ internal static class AdCategories
 
     public static readonly int[] JoinCategories = { FreeCompany, RaidStatic, VenueStaff, Community };
 
+    public static readonly int[] WantedCategories =
+    {
+        Crafting, Gathering, Glamour, Portraits, Performance, Coaching, HousingDesign, Weddings, Writing, OddJobs,
+        FreeCompany, RaidStatic, VenueStaff, Community,
+    };
+
     public static int[] ForIntent(int intent) =>
         intent switch
         {
             AdIntents.Hire => HireCategories,
             AdIntents.Join => JoinCategories,
+            AdIntents.Wanted => WantedCategories,
+            _ => GoCategories,
+        };
+
+    public static int[] ForArchetype(int archetype) =>
+        archetype switch
+        {
+            AdArchetypes.Service => HireCategories,
+            AdArchetypes.Call => JoinCategories,
             _ => GoCategories,
         };
 
@@ -92,6 +170,9 @@ internal static class AdCategories
         };
 
     public static bool IsLinkOnly(int category) => category == Mods;
+
+    public static bool SupportsWanted(int category) =>
+        ArchetypeFor(category) != AdArchetypes.Place && !IsLinkOnly(category);
 
     public static int MaskFor(int[] categories)
     {

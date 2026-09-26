@@ -74,6 +74,9 @@ internal sealed class CallSignalRouter : IDisposable
             case SignalType.GramPing:
                 signals.PublishGram();
                 return;
+            case SignalType.AdPing:
+                signals.PublishAds();
+                return;
             case SignalType.SocialPing:
                 signals.PublishSocial();
                 return;

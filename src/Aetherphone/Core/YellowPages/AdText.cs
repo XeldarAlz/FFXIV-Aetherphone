@@ -27,6 +27,8 @@ internal static class AdText
         return zone.Length > 0 ? zone : world;
     }
 
+    public static string WorldLine(AdDto ad) => ad.WorldId > 0 ? LocationShare.WorldName((uint)ad.WorldId) : string.Empty;
+
     public static string Gil(long value)
     {
         return NumberText.Group(value);
@@ -39,12 +41,37 @@ internal static class AdText
             return string.Empty;
         }
 
+        if (ad.Wanted)
+        {
+            return ad.PriceMode switch
+            {
+                AdPriceModes.Fixed => Loc.T(L.YellowPages.BudgetGil, Gil(ad.PriceGil)),
+                AdPriceModes.From => Loc.T(L.YellowPages.BudgetUpTo, Gil(ad.PriceGil)),
+                _ => Loc.T(L.YellowPages.BudgetOpen),
+            };
+        }
+
         return ad.PriceMode switch
         {
             AdPriceModes.Fixed => Loc.T(L.YellowPages.PriceGil, Gil(ad.PriceGil)),
             AdPriceModes.From => Loc.T(L.YellowPages.PriceFrom, Gil(ad.PriceGil)),
             _ => Loc.T(L.YellowPages.PriceAsk),
         };
+    }
+
+    public static string Headline(AdDto ad, long nowUnix)
+    {
+        if (ad.Archetype == AdArchetypes.Place)
+        {
+            return OpenLine(ad, nowUnix);
+        }
+
+        if (ad.Archetype == AdArchetypes.Service)
+        {
+            return AdCategories.IsLinkOnly(ad.Category) ? Loc.T(L.YellowPages.ModBadge) : PriceLine(ad);
+        }
+
+        return ad.SlotsLine;
     }
 
     public static string Identity(AdDto ad)
@@ -70,6 +97,25 @@ internal static class AdText
         var hours = Math.Max(1, (int)(remaining / 3600));
         return Loc.T(L.YellowPages.ExpiresHours, hours);
     }
+
+    public static string RemainingShort(AdDto ad, long nowUnix)
+    {
+        var remaining = ad.ExpiresAtUnix - nowUnix;
+        if (remaining <= 0)
+        {
+            return Loc.T(L.YellowPages.Expired);
+        }
+
+        var days = (int)(remaining / 86400);
+        if (days >= 1)
+        {
+            return Loc.T(L.YellowPages.DaysLeft, days);
+        }
+
+        return Loc.T(L.YellowPages.HoursLeft, Math.Max(1, (int)(remaining / 3600)));
+    }
+
+    public static bool ExpiresSoon(AdDto ad, long nowUnix) => ad.ExpiresAtUnix - nowUnix < 86400L;
 
     public static AdOpenState OpenState(AdDto ad, long nowUnix)
     {

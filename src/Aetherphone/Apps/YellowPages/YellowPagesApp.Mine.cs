@@ -1,6 +1,5 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Muster;
@@ -8,213 +7,209 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.YellowPages;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.YellowPages;
 
 internal sealed partial class YellowPagesApp
 {
-    private const float MineActionRowHeight = 34f;
-    private const long RenewWindowSeconds = 5L * 86400L;
+    private const float MineRowHeight = 96f;
+    private const float MineThumbSide = 60f;
+    private const float MineStatGap = 8f;
+    private const float MineMoreRadius = 18f;
+    private const int MaxLiveAds = 3;
+    private const long RenewWindowSeconds = 3L * 86400L;
+
+    private static readonly TextStyle MineTitleStyle = TextStyles.Headline;
+    private static readonly TextStyle MineStatusStyle = TextStyles.FootnoteEmphasized;
+    private static readonly TextStyle MineStatStyle = TextStyles.Caption1;
 
     private string? mineBusyAdId;
+    private string mineLiveLabel = string.Empty;
+    private int mineLiveLabelCount = -1;
 
     private void DrawMine(Rect area)
     {
         var scale = UiScale.Current;
-        DrawTabTitle(area, Loc.T(L.YellowPages.YourAds), 0f, scale);
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
+        var drawList = ImGui.GetWindowDrawList();
+        DrawScreenHeader(area, Loc.T(L.YellowPages.YourAds), 0, false, false);
+        DrawLiveCountPill(area, scale);
+        DrawHairline(drawList, area.Min.X, area.Max.X, area.Min.Y + AppHeader.Height * scale);
+        var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var mine = store.Mine;
         var nowUnix = NowUnix();
-        using (AppSurface.Begin(body))
+        using (AppSurface.BeginEdgeToEdge(listRect))
         {
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xs * scale));
             if (mine.Length == 0)
             {
-                EmptyState.Draw(body, ui, FontAwesomeIcon.Bullhorn, Loc.T(L.YellowPages.NoAdsTitle),
-                    Loc.T(L.YellowPages.NoAdsHint));
-            }
-            else
-            {
-                ui.HelpText(Loc.T(L.YellowPages.MineHint));
-                ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
-                for (var index = 0; index < mine.Length; index++)
+                if (store.Syncing && !store.Primed)
                 {
-                    DrawMineRow(mine[index], nowUnix, scale);
+                    DrawEmptyState(listRect, Loc.T(L.Common.Loading), string.Empty);
                 }
+                else
+                {
+                    DrawEmptyState(listRect, Loc.T(L.YellowPages.NoAdsTitle), Loc.T(L.YellowPages.NoAdsHint));
+                    DrawEmptyAction(listRect, Loc.T(L.YellowPages.PostAd), scale, StartCompose);
+                }
+
+                return;
             }
 
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
+            for (var index = 0; index < mine.Length; index++)
+            {
+                DrawMineRow(mine[index], nowUnix, scale);
+            }
+
+            var hintOrigin = ImGui.GetCursorScreenPos();
+            var width = ScrollLayout.StableContentWidth();
+            var pad = CellPadX * scale;
+            var hintHeight = Typography.DrawWrappedLeft(new Vector2(hintOrigin.X + pad, hintOrigin.Y + Metrics.Space.Md * scale),
+                Loc.T(L.YellowPages.MineHint), Ink.MutedInk, TextStyles.Footnote, width - pad * 2f);
+            ImGui.SetCursorScreenPos(hintOrigin);
+            ImGui.Dummy(new Vector2(width, hintHeight + Metrics.Space.Xl * scale));
         }
+    }
+
+    private void DrawEmptyAction(Rect listRect, string label, float scale, Action onTap)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var width = Typography.Measure(label, TextStyles.SubheadlineEmphasized).X + 48f * scale;
+        var top = listRect.Min.Y + 150f * scale;
+        var rect = new Rect(new Vector2(listRect.Center.X - width * 0.5f, top),
+            new Vector2(listRect.Center.X + width * 0.5f, top + 40f * scale));
+        if (SocialPill.Accent(drawList, rect, label, Ink, TextStyles.SubheadlineEmphasized, rect.Height * 0.5f))
+        {
+            onTap();
+        }
+    }
+
+    private void DrawLiveCountPill(Rect area, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var live = store.LiveMineCount;
+        if (mineLiveLabelCount != live)
+        {
+            mineLiveLabelCount = live;
+            mineLiveLabel = Loc.T(L.YellowPages.LiveCount, live, MaxLiveAds);
+        }
+
+        var pillWidth = YellowPagesKit.PillWidth(mineLiveLabel, scale, false, true);
+        var pillMin = new Vector2(area.Max.X - CellPadX * scale - pillWidth,
+            area.Min.Y + AppHeader.Height * scale * 0.5f - YellowPagesKit.PillHeight * scale * 0.5f);
+        var full = live >= MaxLiveAds;
+        YellowPagesKit.Pill(drawList, pillMin, mineLiveLabel, full ? Palette.WithAlpha(Ink.Danger, 0.18f) : Ink.AccentWash,
+            full ? Ink.Danger : Ink.AccentLink, scale, string.Empty, true);
     }
 
     private void DrawMineRow(AdDto ad, long nowUnix, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var headerHeight = 52f * scale;
-        var actionsHeight = MineActionRowHeight * scale + Metrics.Space.Sm * scale;
-        var height = headerHeight + actionsHeight + Metrics.Space.Sm * scale;
-        var card = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
-        var rounding = Metrics.Radius.Lg * scale;
-        ui.Card(drawList, card.Min, card.Max, rounding, elevated: true);
-        var pad = 12f * scale;
-        var tileSide = 32f * scale;
-        var tileCenter = new Vector2(card.Min.X + pad + tileSide * 0.5f, card.Min.Y + pad + tileSide * 0.5f);
-        IconTile.Draw(tileCenter, tileSide, IconTile.Surface(ui.Accent), AdCategories.Icon(ad.Category));
-        var textLeft = tileCenter.X + tileSide * 0.5f + 10f * scale;
-        var titleWidth = card.Max.X - pad - textLeft;
-        Marquee.DrawLeftAuto(drawList, new MarqueeId("yellowpages.mine.title.", ad.Id), ad.Title, textLeft,
-            card.Min.Y + 10f * scale, titleWidth, TextStyles.Headline, AppPalettes.YellowPages.TitleInk);
-        var status = MineStatusText(ad, nowUnix, out var statusColor);
-        Marquee.DrawLeftAuto(drawList, new MarqueeId("yellowpages.mine.status.", ad.Id), status, textLeft,
-            card.Min.Y + 31f * scale, titleWidth, TextStyles.FootnoteEmphasized, statusColor);
-
-        var inquiryCount = inquiries.CountForAd(ad.Id);
-        if (inquiryCount > 0)
+        var height = MineRowHeight * scale;
+        var cell = FeedCell.Begin(drawList, height, Ink.HoverTint);
+        var bounds = cell.Bounds;
+        var pad = CellPadX * scale;
+        var thumbSide = MineThumbSide * scale;
+        var thumbMin = new Vector2(bounds.Min.X + pad, bounds.Center.Y - thumbSide * 0.5f);
+        var thumbMax = thumbMin + new Vector2(thumbSide, thumbSide);
+        var rounding = 14f * scale;
+        var texture = string.IsNullOrEmpty(ad.MediaUrl) ? null : images.Get(ad.MediaUrl);
+        if (texture is not null)
         {
-            var label = Loc.T(L.YellowPages.InquiryCount, inquiryCount);
-            var labelSize = Typography.Measure(label, TextStyles.Caption1);
-            var pillMin = new Vector2(card.Max.X - pad - labelSize.X - 18f * scale, card.Min.Y + 12f * scale);
-            var pillWidth = DrawPill(drawList, pillMin, label, Palette.WithAlpha(ui.Accent, 0.18f), ui.Accent,
-                TextStyles.Caption1, scale);
-            var pillMax = new Vector2(pillMin.X + pillWidth, pillMin.Y + 24f * scale);
-            var unread = inquiries.UnreadForAd(ad.Id);
-            ActivityBadge.Draw(new Vector2(pillMax.X - 2f * scale, pillMin.Y + 2f * scale), unread, theme, scale);
-            var pillHovered = UiInteract.Hover(pillMin, pillMax);
-            if (pillHovered)
+            var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
+            Squircle.FillImage(drawList, thumbMin, thumbMax, rounding, texture.Handle, 0xFFFFFFFFu, uv0, uv1);
+        }
+        else
+        {
+            YellowPagesKit.Tile(drawList, thumbMin, thumbMax, YellowPagesKit.AccentOf(ad), AdCategories.Icon(ad.Category),
+                rounding, 1.15f);
+        }
+
+        var moreRadius = MineMoreRadius * scale;
+        var moreCenter = new Vector2(bounds.Max.X - pad - moreRadius, bounds.Center.Y);
+        var textLeft = thumbMax.X + 12f * scale;
+        var textRight = moreCenter.X - moreRadius - 8f * scale;
+        var textWidth = MathF.Max(1f, textRight - textLeft);
+        var titleTop = bounds.Min.Y + 14f * scale;
+        Marquee.DrawLeftAuto(drawList, new MarqueeId("yellowpages.mine.title.", ad.Id), ad.Title, textLeft, titleTop,
+            textWidth, MineTitleStyle, Ink.TitleInk);
+        var status = MineStatusText(ad, nowUnix, out var statusColor);
+        var statusTop = titleTop + Typography.LineHeight(MineTitleStyle) + 3f * scale;
+        Typography.Draw(drawList, new Vector2(textLeft, statusTop), Typography.FitText(status, textWidth, MineStatusStyle),
+            statusColor, MineStatusStyle);
+        var statsTop = statusTop + Typography.LineHeight(MineStatusStyle) + 6f * scale;
+        DrawMineStats(drawList, ad, textLeft, textRight, statsTop, scale);
+
+        var busy = string.Equals(mineBusyAdId, ad.Id, StringComparison.Ordinal);
+        if (busy)
+        {
+            LoadingPulse.Spinner(moreCenter, 9f * scale, Ink.Accent);
+        }
+        else
+        {
+            var moreExtent = new Vector2(moreRadius, moreRadius);
+            var moreHovered = UiInteract.Hover(moreCenter - moreExtent, moreCenter + moreExtent);
+            if (moreHovered)
             {
+                drawList.AddCircleFilled(moreCenter, moreRadius, ImGui.GetColorU32(Ink.FieldFill), 32);
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            if (UiInteract.Click(pillMin, pillMax, pillHovered))
+            PhoneIcon.Draw(drawList, moreCenter, PhoneIcons.DotsVertical, Ink.MutedInk, 20f * scale);
+            HoverTooltip.Show(new Rect(moreCenter - moreExtent, moreCenter + moreExtent), Loc.T(L.YellowPages.MoreActions),
+                HoverLabelSide.Above);
+            if (UiInteract.Click(moreCenter - moreExtent, moreCenter + moreExtent, moreHovered))
             {
-                OpenInquiriesFor(ad.Id);
+                OpenAdSheet(ad);
+                FeedCell.End(drawList, cell, Ink.Hairline);
                 return;
             }
         }
 
-        var headerRect = new Rect(card.Min, new Vector2(card.Max.X, card.Min.Y + headerHeight));
-        var headerHovered = UiInteract.Hover(headerRect.Min, headerRect.Max);
-        if (headerHovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        if (UiInteract.Click(headerRect.Min, headerRect.Max, headerHovered))
+        if (cell.Tapped)
         {
             OpenDetail(ad.Id);
         }
 
-        DrawMineActions(ad, nowUnix, card, headerHeight, pad, scale);
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Md * scale));
+        FeedCell.End(drawList, cell, Ink.Hairline);
     }
 
-    private void DrawMineActions(AdDto ad, long nowUnix, Rect card, float headerHeight, float pad, float scale)
+    private void DrawMineStats(ImDrawListPtr drawList, AdDto ad, float left, float right, float top, float scale)
     {
-        var busy = string.Equals(mineBusyAdId, ad.Id, StringComparison.Ordinal);
-        var actionTop = card.Min.Y + headerHeight + Metrics.Space.Sm * scale;
-        var actionHeight = MineActionRowHeight * scale;
-        var gap = Metrics.Space.Sm * scale;
-        var cursor = card.Min.X + pad;
-        var right = card.Max.X - pad;
-
-        if (busy)
+        var centerY = top + Typography.LineHeight(MineStatStyle) * 0.5f;
+        var cursorX = left;
+        cursorX = DrawMineStat(drawList, cursorX, right, centerY, PhoneIcons.Eye, ad.Views.ToString(Loc.Culture), false,
+            scale);
+        var inquiryCount = inquiries.CountForAd(ad.Id);
+        if (inquiryCount > 0)
         {
-            LoadingPulse.Spinner(new Vector2(card.Center.X, actionTop + actionHeight * 0.5f), 9f * scale,
-                ui.Accent);
-            return;
+            var unread = inquiries.UnreadForAd(ad.Id);
+            cursorX = DrawMineStat(drawList, cursorX, right, centerY, PhoneIcons.MessageCircle,
+                Loc.T(L.YellowPages.InquiryCount, inquiryCount), unread > 0, scale);
         }
 
-        if (ad.Status == AdStatuses.Hidden)
+        if (ad.Wanted)
         {
-            DrawMineDelete(ad, new Rect(new Vector2(cursor, actionTop),
-                new Vector2(cursor + 110f * scale, actionTop + actionHeight)));
-            return;
+            DrawMineStat(drawList, cursorX, right, centerY, PhoneIcons.Search, Loc.T(L.YellowPages.WantedChip), false,
+                scale);
+        }
+    }
+
+    private static float DrawMineStat(ImDrawListPtr drawList, float left, float right, float centerY, string glyph,
+        string label, bool highlighted, float scale)
+    {
+        var glyphSize = 13f * scale;
+        var available = right - left - glyphSize - 4f * scale;
+        if (available < 24f * scale)
+        {
+            return left;
         }
 
-        var canRenew = ad.ExpiresAtUnix - nowUnix <= RenewWindowSeconds;
-        if (canRenew)
-        {
-            var renewLabel = Loc.T(L.YellowPages.Renew);
-            var renewWidth = Typography.Measure(renewLabel, 0.9f, FontWeight.SemiBold).X + 34f * scale;
-            var renewRect = new Rect(new Vector2(cursor, actionTop),
-                new Vector2(cursor + renewWidth, actionTop + actionHeight));
-            if (ui.PillButton(renewRect, renewLabel, true))
-            {
-                mineBusyAdId = ad.Id;
-                store.Renew(ad.Id, _ => mineBusyAdId = null);
-            }
-
-            cursor = renewRect.Max.X + gap;
-        }
-
-        if (ad.Archetype == AdArchetypes.Place && ad.Status == AdStatuses.Live)
-        {
-            var open = ad.OpenUntilUnix > nowUnix;
-            var openLabel = open ? Loc.T(L.YellowPages.CloseNow) : Loc.T(L.YellowPages.OpenNowAction);
-            var openWidth = Typography.Measure(openLabel, 0.9f, FontWeight.SemiBold).X + 34f * scale;
-            var openRect = new Rect(new Vector2(cursor, actionTop),
-                new Vector2(cursor + openWidth, actionTop + actionHeight));
-            if (ui.PillButton(openRect, openLabel, !open))
-            {
-                mineBusyAdId = ad.Id;
-                store.SetOpen(ad.Id, !open, 0, _ => mineBusyAdId = null);
-            }
-
-            cursor = openRect.Max.X + gap;
-            if (open && musters.Mine is null && (ad.TerritoryId > 0 || ad.AddressNote.Length > 0))
-            {
-                var announceLabel = Loc.T(L.YellowPages.AnnounceMuster);
-                var announceWidth = Typography.Measure(announceLabel, 0.9f, FontWeight.SemiBold).X + 30f * scale;
-                if (cursor + announceWidth < right - 70f * scale)
-                {
-                    var announceRect = new Rect(new Vector2(cursor, actionTop),
-                        new Vector2(cursor + announceWidth, actionTop + actionHeight));
-                    if (ui.GhostButton(announceRect, announceLabel))
-                    {
-                        AnnounceOnMuster(ad, nowUnix);
-                    }
-
-                    cursor = announceRect.Max.X + gap;
-                }
-            }
-        }
-
-        var editLabel = Loc.T(L.YellowPages.EditAd);
-        var editWidth = Typography.Measure(editLabel, 0.9f, FontWeight.SemiBold).X + 30f * scale;
-        if (cursor + editWidth < right - 70f * scale)
-        {
-            var editRect = new Rect(new Vector2(cursor, actionTop),
-                new Vector2(cursor + editWidth, actionTop + actionHeight));
-            if (ui.GhostButton(editRect, editLabel))
-            {
-                StartEdit(ad);
-                router.Push(YellowPagesRoute.Compose);
-            }
-
-            cursor = editRect.Max.X + gap;
-        }
-
-        var shareLabel = JustCopied(ad.Id) ? Loc.T(L.YellowPages.Copied) : Loc.T(L.YellowPages.ShareAd);
-        var shareWidth = Typography.Measure(shareLabel, 0.9f, FontWeight.SemiBold).X + 34f * scale;
-        if (cursor + shareWidth < right - 70f * scale)
-        {
-            var shareRect = new Rect(new Vector2(cursor, actionTop),
-                new Vector2(cursor + shareWidth, actionTop + actionHeight));
-            if (ui.GhostButton(shareRect, shareLabel))
-            {
-                Copy(ad.Id, AdShare.Compose(ad.Id));
-            }
-        }
-
-        var deleteLabel = Loc.T(L.YellowPages.DeleteAd);
-        var deleteWidth = Typography.Measure(deleteLabel, 0.9f, FontWeight.SemiBold).X + 30f * scale;
-        DrawMineDelete(ad, new Rect(new Vector2(right - deleteWidth, actionTop),
-            new Vector2(right, actionTop + actionHeight)));
+        var ink = highlighted ? Ink.AccentLink : Ink.MutedInk;
+        PhoneIcon.Draw(drawList, new Vector2(left + glyphSize * 0.5f, centerY), glyph, ink, glyphSize);
+        var fitted = Typography.FitText(label, available, MineStatStyle);
+        var size = Typography.Measure(fitted, MineStatStyle);
+        Typography.Draw(drawList, new Vector2(left + glyphSize + 4f * scale, centerY - size.Y * 0.5f), fitted, ink,
+            MineStatStyle);
+        return left + glyphSize + 4f * scale + size.X + MineStatGap * scale * 1.5f;
     }
 
     private void AnnounceOnMuster(AdDto ad, long nowUnix)
@@ -243,14 +238,6 @@ internal sealed partial class YellowPagesApp
         musters.Create(request, _ => mineBusyAdId = null);
     }
 
-    private void DrawMineDelete(AdDto ad, Rect rect)
-    {
-        if (ui.DangerGhostButton(rect, Loc.T(L.YellowPages.DeleteAd)))
-        {
-            AskDeleteAd(ad);
-        }
-    }
-
     private void AskDeleteAd(AdDto ad)
     {
         confirm.Ask(new ConfirmRequest
@@ -263,7 +250,15 @@ internal sealed partial class YellowPagesApp
             BusyLabel = Loc.T(L.YellowPages.Deleting),
             FailedMessage = Loc.T(L.YellowPages.DeleteFailed),
             Danger = true,
-            ConfirmAsync = done => store.Delete(ad.Id, done),
+            ConfirmAsync = done => store.Delete(ad.Id, ok =>
+            {
+                if (ok && router.Current.Screen == YellowPagesScreen.Detail && router.Current.Id == ad.Id)
+                {
+                    router.Pop(false);
+                }
+
+                done(ok);
+            }),
         });
     }
 
@@ -271,31 +266,30 @@ internal sealed partial class YellowPagesApp
     {
         if (ad.Status == AdStatuses.Hidden)
         {
-            color = theme.Danger;
+            color = Ink.Danger;
             return Loc.T(L.YellowPages.HiddenStatus);
         }
 
         string status;
         if (ad.Status == AdStatuses.Expired || ad.ExpiresAtUnix <= nowUnix)
         {
-            color = AppPalettes.YellowPages.MutedInk;
+            color = Ink.MutedInk;
             status = Loc.T(L.YellowPages.Expired);
         }
         else if (ad.Archetype == AdArchetypes.Place && ad.OpenUntilUnix > nowUnix)
         {
-            color = AdCard.OpenGreen;
+            color = YellowPagesKit.OpenGreen;
             status = Loc.T(L.YellowPages.OpenClosesAt, TimeText.Clock(ad.OpenUntilUnix));
         }
         else
         {
             var remaining = ad.ExpiresAtUnix - nowUnix;
-            color = remaining <= 86400L ? theme.Danger : ui.Accent;
+            color = remaining <= 86400L ? Ink.Danger : Ink.AccentLink;
             status = AdText.ExpiresLine(ad, nowUnix);
-        }
-
-        if (ad.Views > 0)
-        {
-            status = $"{status} · {Loc.T(L.YellowPages.ViewCount, ad.Views)}";
+            if (remaining <= RenewWindowSeconds)
+            {
+                status = $"{status} · {Loc.T(L.YellowPages.RenewAvailable)}";
+            }
         }
 
         return ad.AllowInquiries ? status : $"{status} · {Loc.T(L.YellowPages.InquiriesClosed)}";
@@ -304,70 +298,48 @@ internal sealed partial class YellowPagesApp
     private void DrawSaved(Rect area)
     {
         var scale = UiScale.Current;
-        DrawTabTitle(area, Loc.T(L.YellowPages.SavedTitle), 0f, scale);
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
+        var drawList = ImGui.GetWindowDrawList();
+        DrawScreenHeader(area, Loc.T(L.YellowPages.SavedTitle), 0, false, false);
+        DrawHairline(drawList, area.Min.X, area.Max.X, area.Min.Y + AppHeader.Height * scale);
+        var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var saved = store.Saved;
         var nowUnix = NowUnix();
-        using (AppSurface.Begin(body))
+        using (AppSurface.BeginEdgeToEdge(listRect))
         {
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xs * scale));
             if (saved.Length == 0)
             {
                 if (store.SavedLoading && !store.SavedLoadedOnce)
                 {
-                    LoadingPulse.Draw(new Vector2(body.Center.X, body.Min.Y + 90f * scale), 13f * scale, ui.Accent,
-                        AppPalettes.YellowPages.MutedInk, Loc.T(L.Common.Loading));
+                    DrawEmptyState(listRect, Loc.T(L.Common.Loading), string.Empty);
                 }
                 else
                 {
-                    EmptyState.Draw(body, ui, FontAwesomeIcon.Heart, Loc.T(L.YellowPages.NoSavedTitle),
-                        Loc.T(L.YellowPages.NoSavedHint));
+                    DrawEmptyState(listRect, Loc.T(L.YellowPages.NoSavedTitle), Loc.T(L.YellowPages.NoSavedHint));
                 }
+
+                return;
             }
-            else
+
+            var context = CardContext(nowUnix);
+            for (var index = 0; index < saved.Length; index++)
             {
-                for (var index = 0; index < saved.Length; index++)
+                if (AdCard.Draw(saved[index], context))
                 {
-                    var ad = saved[index];
-                    var origin = ImGui.GetCursorScreenPos();
-                    var width = ImGui.GetContentRegionAvail().X;
-                    var height = AdCard.Height(ad, width, scale);
-                    var card = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
-                    if (ImGui.IsRectVisible(card.Min, card.Max)
-                        && AdCard.Draw(card, ad, images, lodestone, theme, ui, nowUnix))
-                    {
-                        OpenDetail(ad.Id);
-                    }
-
-                    ImGui.SetCursorScreenPos(origin);
-                    ImGui.Dummy(new Vector2(width, height + AdCard.Gap * scale));
-                }
-
-                if (store.SavedHasMore && !store.SavedLoading)
-                {
-                    if (InfiniteScroll.ReachedBottom())
-                    {
-                        store.LoadMoreSaved();
-                    }
-
-                    var origin = ImGui.GetCursorScreenPos();
-                    var width = ImGui.GetContentRegionAvail().X;
-                    var label = Loc.T(L.YellowPages.LoadMore);
-                    var buttonWidth = Typography.Measure(label, 0.9f, FontWeight.SemiBold).X + 44f * scale;
-                    var rect = new Rect(new Vector2(origin.X + (width - buttonWidth) * 0.5f, origin.Y),
-                        new Vector2(origin.X + (width + buttonWidth) * 0.5f, origin.Y + 36f * scale));
-                    if (ui.GhostButton(rect, label))
-                    {
-                        store.LoadMoreSaved();
-                    }
-
-                    ImGui.SetCursorScreenPos(origin);
-                    ImGui.Dummy(new Vector2(width, 36f * scale + Metrics.Space.Sm * scale));
+                    OpenDetail(saved[index].Id);
                 }
             }
 
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
+            if (store.SavedHasMore && !store.SavedLoading && InfiniteScroll.ReachedBottom())
+            {
+                store.LoadMoreSaved();
+            }
+
+            if (store.SavedLoading)
+            {
+                InfiniteScroll.DrawLoadingRow(listRect.Center.X, Ink.MutedInk);
+            }
+
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
         }
     }
 }

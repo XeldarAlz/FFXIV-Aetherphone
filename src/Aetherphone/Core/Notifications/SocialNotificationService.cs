@@ -122,14 +122,20 @@ internal sealed class SocialNotificationService : IDisposable
         return counts.GetValueOrDefault(app, 0);
     }
 
-    private int UnreadAfter(string app, long watermark)
+    public int UnseenCountExcluding(string app, int excludedType)
+    {
+        var pending = PendingAckWatermark(app);
+        return UnreadAfter(app, pending > 0 ? pending : SeenUnix(app), excludedType);
+    }
+
+    private int UnreadAfter(string app, long watermark, int excludedType = -1)
     {
         var items = latest;
         var count = 0;
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
-            if (item.App == app && !item.Read && item.CreatedAtUnix > watermark)
+            if (item.App == app && !item.Read && item.CreatedAtUnix > watermark && item.Type != excludedType)
             {
                 count++;
             }
@@ -448,6 +454,11 @@ internal sealed class SocialNotificationService : IDisposable
 
     private void Present(NotificationDto item)
     {
+        if (item.Type == SocialActivity.TypeAdInquiry)
+        {
+            return;
+        }
+
         var body = SocialActivity.Body(item);
         if (body.Length == 0)
         {
