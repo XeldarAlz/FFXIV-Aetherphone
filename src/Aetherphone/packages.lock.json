@@ -58,9 +58,9 @@
       },
       "Net.Codecrete.QrCodeGenerator": {
         "type": "Direct",
-        "requested": "[2.0.6, )",
-        "resolved": "2.0.6",
-        "contentHash": "2Go9wbHKqpNkU3E/RGMOLx0icLGjRxZklS/CHM2Zy+iGymK+lBEJnacxouhAGQrhesYa+NG1s0dnYbIIIYGlbQ=="
+        "requested": "[3.2.1, )",
+        "resolved": "3.2.1",
+        "contentHash": "MLseDo4x2T8+7gbXDt5vLjC4b6v4SavtrwoM+adKjlicnTHAqII4zAWy8VL5D94oB3VA8qz7bvMyOxfVLJnARg=="
       },
       "NetStone": {
         "type": "Direct",
