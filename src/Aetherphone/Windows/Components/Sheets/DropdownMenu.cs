@@ -29,6 +29,8 @@ internal sealed class DropdownMenu
     private Rect anchor;
     private double openedAt;
     private int openedFrame;
+    private float scrollOffset;
+    public int? MaxVisibleItems { get; set; }
 
     public bool Open => open;
 
@@ -45,6 +47,7 @@ internal sealed class DropdownMenu
         ownerId = id;
         anchor = anchorRect;
         open = true;
+        scrollOffset = 0f;
         openedAt = ImGui.GetTime();
         openedFrame = ImGui.GetFrameCount();
     }
@@ -53,6 +56,7 @@ internal sealed class DropdownMenu
     {
         open = false;
         ownerId = string.Empty;
+        scrollOffset = 0f;
     }
 
     public void Gate()
@@ -124,7 +128,16 @@ internal sealed class DropdownMenu
             width = MathF.Max(width, Typography.Measure(Header, TextStyles.Footnote).X + padX * 2f);
         }
 
-        var height = items.Length * rowHeight + padY * 2f + headerHeight;
+        var contentHeight = items.Length * rowHeight;
+        var maxAllowedHeight = screen.Height * 0.45f;
+        if (MaxVisibleItems is { } maxItems)
+        {
+            maxAllowedHeight = MathF.Min(maxAllowedHeight, maxItems * rowHeight + padY * 2f + headerHeight);
+        }
+        
+        var totalDesiredHeight = contentHeight + padY * 2f + headerHeight;
+        var isScrollable = totalDesiredHeight > maxAllowedHeight;
+        var height = isScrollable ? maxAllowedHeight : totalDesiredHeight;
         var left = anchor.Min.X;
         if (left + width > screen.Max.X - 8f * scale)
         {
@@ -149,7 +162,6 @@ internal sealed class DropdownMenu
         {
             ImGui.SetNextFrameWantCaptureMouse(true);
         }
-
         var clicked = -1;
         var clickedAction = RowAction.Select;
         var headerOffset = headerHeight * revealScale;
@@ -162,21 +174,41 @@ internal sealed class DropdownMenu
             drawList.AddLine(new Vector2(min.X + padY, ruleY), new Vector2(max.X - padY, ruleY),
                 ImGui.GetColorU32(Palette.WithAlpha(theme.Separator, alpha)), 1f);
         }
-
+        var contentMinY = min.Y + padY * revealScale + headerOffset;
+        var contentMaxY = max.Y - padY * revealScale;
+        var visibleHeight = MathF.Max(0f, contentMaxY - contentMinY);
+        var maxScroll = MathF.Max(0f, contentHeight * revealScale - visibleHeight);
+        if (isScrollable && Hovering(min, max, false))
+        {
+            var wheel = ImGui.GetIO().MouseWheel;
+            if (wheel != 0f)
+            {
+                scrollOffset = Math.Clamp(scrollOffset - wheel * rowHeight * 1.5f, 0f, maxScroll);
+            }
+        }
+        else
+        {
+            scrollOffset = Math.Clamp(scrollOffset, 0f, maxScroll);
+        }
+        drawList.PushClipRect(new Vector2(min.X, contentMinY), new Vector2(max.X, contentMaxY), true);
+        var mousePos = ImGui.GetMousePos();
+        var inViewY = mousePos.Y >= contentMinY && mousePos.Y <= contentMaxY;
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
             var rowMin = new Vector2(min.X + padY,
-                min.Y + padY * revealScale + headerOffset + index * rowHeight * revealScale);
+                contentMinY - scrollOffset + index * rowHeight * revealScale);
             var rowMax = new Vector2(max.X - padY, rowMin.Y + rowHeight * revealScale);
+            if (rowMax.Y < contentMinY || rowMin.Y > contentMaxY)
+            {
+                continue;
+            }
             var centerY = (rowMin.Y + rowMax.Y) * 0.5f;
-
             var cursorRight = rowMax.X - 10f * scale;
             if (anySelected)
             {
                 cursorRight -= checkReserve;
             }
-
             Rect? editRect = null;
             if (anyEdit)
             {
@@ -184,9 +216,8 @@ internal sealed class DropdownMenu
                 editRect = new Rect(center - new Vector2(ActionIconRadius * scale), center + new Vector2(ActionIconRadius * scale));
                 cursorRight -= actionSlot;
             }
-
-            var rowHovered = Hovering(rowMin, rowMax, true);
-            var editHovered = item.CanEdit && editRect is { } er && Hovering(er.Min, er.Max, true);
+            var rowHovered = inViewY && Hovering(rowMin, rowMax, true);
+            var editHovered = inViewY && item.CanEdit && editRect is { } er && Hovering(er.Min, er.Max, true);
             if (rowHovered)
             {
                 Squircle.Fill(drawList, rowMin, rowMax, 9f * scale,
@@ -203,7 +234,6 @@ internal sealed class DropdownMenu
                     clickedAction = editHovered ? RowAction.Edit : RowAction.Select;
                 }
             }
-
             var ink = item.Danger ? theme.Danger : item.Selected ? theme.Accent : theme.TextStrong;
             var textLeft = rowMin.X + padX - padY;
             if (anyGlyph)
@@ -213,10 +243,8 @@ internal sealed class DropdownMenu
                     AppSkin.Icon(drawList, new Vector2(textLeft + 8f * scale, centerY), item.Glyph,
                         Palette.WithAlpha(ink, ink.W * alpha), 0.88f);
                 }
-
                 textLeft += glyphReserve;
             }
-
             var textSize = Typography.Measure(item.Label, 0.9f, FontWeight.Medium);
             Typography.Draw(drawList, new Vector2(textLeft, centerY - textSize.Y * 0.5f), item.Label,
                 Palette.WithAlpha(ink, ink.W * alpha), 0.9f, FontWeight.Medium);
@@ -224,14 +252,23 @@ internal sealed class DropdownMenu
             {
                 DrawCheck(drawList, new Vector2(rowMax.X - 16f * scale, centerY), theme.Accent, alpha, scale);
             }
-
             if (item.CanEdit && editRect is { } editIconRect)
             {
                 var tint = editHovered ? theme.Accent : Palette.WithAlpha(theme.TextMuted, theme.TextMuted.W * alpha);
                 AppSkin.Icon(drawList, editIconRect.Center, IconGlyph.Of(FontAwesomeIcon.Pen), tint, 0.7f);
             }
         }
-
+        drawList.PopClipRect();
+        if (isScrollable && maxScroll > 0f)
+        {
+            var trackHeight = visibleHeight;
+            var thumbHeight = MathF.Max(20f * scale, trackHeight * (visibleHeight / (contentHeight * revealScale)));
+            var thumbProgress = scrollOffset / maxScroll;
+            var thumbY = contentMinY + thumbProgress * (trackHeight - thumbHeight);
+            var thumbMin = new Vector2(max.X - 5f * scale, thumbY);
+            var thumbMax = new Vector2(max.X - 2f * scale, thumbY + thumbHeight);
+            drawList.AddRectFilled(thumbMin, thumbMax, ImGui.GetColorU32(Palette.WithAlpha(theme.TextMuted, 0.4f * alpha)), 2f * scale);
+        }
         if (clicked >= 0)
         {
             action = clickedAction;
@@ -239,16 +276,13 @@ internal sealed class DropdownMenu
             {
                 Close();
             }
-
             return clicked;
         }
-
         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !Hovering(min, max, false) &&
             ImGui.GetFrameCount() != openedFrame)
         {
             Close();
         }
-
         return -1;
     }
 
