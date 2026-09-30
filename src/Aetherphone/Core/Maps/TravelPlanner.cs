@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Venues;
 using Lumina.Excel;
@@ -171,7 +172,7 @@ internal static class TravelPlanner
         var maps = Plugin.DataManager.GetExcelSheet<Map>();
         var markers = Plugin.DataManager.GetSubrowExcelSheet<MapMarker>();
         var aetherytes = Plugin.DataManager.GetExcelSheet<Aetheryte>();
-        var placeNames = Plugin.DataManager.GetExcelSheet<PlaceName>();
+        var placeNames = Plugin.DataManager.GetLocalizedSheet<PlaceName>();
         var byTerritory = new Dictionary<uint, List<AetheryteCandidate>>();
 
         foreach (var map in maps)
@@ -270,6 +271,7 @@ internal static class TravelPlanner
     private static Dictionary<uint, HousingHome> BuildHousingLookup()
     {
         var territories = Plugin.DataManager.GetExcelSheet<TerritoryType>();
+        var placeNames = Plugin.DataManager.GetLocalizedSheet<PlaceName>();
         var districtByCity = new Dictionary<uint, (uint DistrictId, string DistrictName)>();
         foreach (var territory in territories)
         {
@@ -280,7 +282,10 @@ internal static class TravelPlanner
                 continue;
             }
 
-            districtByCity[cityRowId] = (territory.RowId, territory.PlaceName.Value.Name.ExtractText());
+            var districtName = placeNames.TryGetRow(territory.PlaceName.RowId, out var placeName)
+                ? placeName.Name.ExtractText()
+                : string.Empty;
+            districtByCity[cityRowId] = (territory.RowId, districtName);
         }
 
         var byTerritory = new Dictionary<uint, HousingHome>();
@@ -311,7 +316,7 @@ internal static class TravelPlanner
             return string.Empty;
         }
 
-        return Plugin.DataManager.GetExcelSheet<PlaceName>().TryGetRow(aetheryte.PlaceName.RowId, out var placeName)
+        return Plugin.DataManager.GetLocalizedSheet<PlaceName>().TryGetRow(aetheryte.PlaceName.RowId, out var placeName)
             ? placeName.Name.ExtractText()
             : string.Empty;
     }
@@ -319,7 +324,7 @@ internal static class TravelPlanner
     private static Dictionary<uint, TravelDestination> BuildDestinationLookup()
     {
         var aetherytes = Plugin.DataManager.GetExcelSheet<Aetheryte>();
-        var placeNames = Plugin.DataManager.GetExcelSheet<PlaceName>();
+        var placeNames = Plugin.DataManager.GetLocalizedSheet<PlaceName>();
         var mastersByAethernetGroup = BuildMasterLookup(aetherytes, placeNames);
         var byTerritory = new Dictionary<uint, TravelDestination>();
         var chosen = new Dictionary<uint, (int Rank, byte Order)>();

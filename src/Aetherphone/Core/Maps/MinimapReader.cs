@@ -1,4 +1,5 @@
 using System.Globalization;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Dalamud.Interface.Textures.TextureWraps;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
@@ -17,6 +18,7 @@ internal sealed class MinimapReader
     private float mapDue = -1f;
     private float coordinateDue;
     private uint mapRowId;
+    private SheetLanguageGate zoneNameGate;
     private int sizeFactor = 100;
     private int offsetX;
     private int offsetY;
@@ -61,12 +63,14 @@ internal sealed class MinimapReader
 
         mapDue = clock + MapIntervalSeconds;
         var resolved = ResolveMapRowId();
-        if (resolved == mapRowId)
+        var gate = GameSheetLanguage.CurrentGate();
+        if (resolved == mapRowId && zoneNameGate == gate)
         {
             return;
         }
 
         mapRowId = resolved;
+        zoneNameGate = gate;
         coordinateKey = int.MinValue;
         ReadMapMetrics(resolved);
     }
@@ -76,7 +80,7 @@ internal sealed class MinimapReader
         HasMap = false;
         ZoneName = string.Empty;
         Coordinates = string.Empty;
-        if (rowId == 0 || !Plugin.DataManager.GetExcelSheet<Map>().TryGetRow(rowId, out var map))
+        if (rowId == 0 || !Plugin.DataManager.GetLocalizedSheet<Map>().TryGetRow(rowId, out var map))
         {
             return;
         }
@@ -160,7 +164,7 @@ internal sealed class MinimapReader
     }
 
     private static string PlaceName(uint placeNameRowId) =>
-        placeNameRowId != 0 && Plugin.DataManager.GetExcelSheet<PlaceName>().TryGetRow(placeNameRowId, out var name)
+        placeNameRowId != 0 && Plugin.DataManager.GetLocalizedSheet<PlaceName>().TryGetRow(placeNameRowId, out var name)
             ? name.Name.ExtractText()
             : string.Empty;
 }
