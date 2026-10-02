@@ -81,10 +81,9 @@ internal sealed class HousingRestProvider
         }
     }
 
-    public async Task<HousingDistrictSnapshot?> GetDistrictAsync(uint worldId, uint districtId,
-        CancellationToken token)
+    public async Task<IReadOnlyList<HousingDistrictSnapshot>?> GetWorldAsync(uint worldId, CancellationToken token)
     {
-        if (worldId == 0 || districtId == 0)
+        if (worldId == 0)
         {
             return null;
         }
@@ -92,7 +91,7 @@ internal sealed class HousingRestProvider
         if (Kind == HousingProviderKind.China)
         {
             LastProxyCacheAge = null;
-            return await GetChinaDistrictAsync(worldId, districtId, token).ConfigureAwait(false);
+            return await GetChinaWorldAsync(worldId, token).ConfigureAwait(false);
         }
 
         using (await throttle.EnterAsync(token).ConfigureAwait(false))
@@ -107,22 +106,46 @@ internal sealed class HousingRestProvider
                 return null;
             }
 
-            var district = FindDistrict(payload, districtId);
-            LastProxyCacheAge = district?.Proxy?.CacheAgeSeconds ?? payload.Proxy?.CacheAgeSeconds;
-            return district is null ? null : Map(worldId, districtId, district, payload.Proxy);
+            var districts = payload.Districts ?? Array.Empty<PaissaDistrictDetail>();
+            var worldName = payload.Name ?? string.Empty;
+            var mapped = new List<HousingDistrictSnapshot>(HousingDistricts.All.Count);
+            for (var index = 0; index < districts.Length; index++)
+            {
+                var district = districts[index];
+                if (!HousingDistricts.TryGet(district.Id, out _))
+                {
+                    continue;
+                }
+
+                mapped.Add(Map(worldId, worldName, district.Id, district, payload.Proxy));
+            }
+
+            LastProxyCacheAge = ProxyAge(payload, districts);
+            return mapped.Count == 0 ? null : mapped;
         }
     }
 
-    private async Task<HousingDistrictSnapshot?> GetChinaDistrictAsync(uint worldId, uint districtId,
-        CancellationToken token)
+    private static int? ProxyAge(PaissaWorldDetail payload, PaissaDistrictDetail[] districts)
     {
-        var area = AreaOf(districtId);
-        if (area < 0)
+        if (payload.Proxy?.CacheAgeSeconds is { } worldAge)
         {
-            LastStatusCode = 0;
-            return null;
+            return worldAge;
         }
 
+        for (var index = 0; index < districts.Length; index++)
+        {
+            if (districts[index].Proxy?.CacheAgeSeconds is { } districtAge)
+            {
+                return districtAge;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<IReadOnlyList<HousingDistrictSnapshot>?> GetChinaWorldAsync(uint worldId,
+        CancellationToken token)
+    {
         using (await throttle.EnterAsync(token).ConfigureAwait(false))
         {
             var status = 0;
@@ -135,50 +158,50 @@ internal sealed class HousingRestProvider
                 return null;
             }
 
-            var plots = new List<HousingPlot>(payload.Length);
+            var districts = HousingDistricts.All;
+            var buckets = new List<HousingPlot>[districts.Count];
+            for (var index = 0; index < buckets.Length; index++)
+            {
+                buckets[index] = new List<HousingPlot>();
+            }
+
             for (var index = 0; index < payload.Length; index++)
             {
                 var entry = payload[index];
-                if (entry.Area != area)
+                if (entry.Area < 0 || entry.Area >= districts.Count)
                 {
                     continue;
                 }
 
+                var districtId = districts[entry.Area].Id;
                 if (TryMapChinaPlot(worldId, districtId, entry, out var plot))
                 {
-                    plots.Add(plot);
+                    buckets[entry.Area].Add(plot);
                 }
             }
 
-            plots.Sort(HousingPlotOrder.ByWardThenPlot);
-            return new HousingDistrictSnapshot
+            var fetched = DateTime.UtcNow;
+            var mapped = new List<HousingDistrictSnapshot>(districts.Count);
+            for (var index = 0; index < districts.Count; index++)
             {
-                WorldId = worldId,
-                DistrictId = districtId,
-                DistrictName = HousingDistricts.Name(districtId),
-                FetchedUtc = DateTime.UtcNow,
-                Source = Kind,
-                Plots = plots,
-            };
-        }
-    }
-
-    private static PaissaDistrictDetail? FindDistrict(PaissaWorldDetail payload, uint districtId)
-    {
-        var districts = payload.Districts ?? Array.Empty<PaissaDistrictDetail>();
-        for (var index = 0; index < districts.Length; index++)
-        {
-            if (districts[index].Id == districtId)
-            {
-                return districts[index];
+                buckets[index].Sort(HousingPlotOrder.ByDistrictWardThenPlot);
+                mapped.Add(new HousingDistrictSnapshot
+                {
+                    WorldId = worldId,
+                    DistrictId = districts[index].Id,
+                    DistrictName = HousingDistricts.Name(districts[index].Id),
+                    FetchedUtc = fetched,
+                    Source = Kind,
+                    Plots = buckets[index],
+                });
             }
-        }
 
-        return null;
+            return mapped;
+        }
     }
 
-    private HousingDistrictSnapshot Map(uint worldId, uint districtId, PaissaDistrictDetail payload,
-        PaissaProxyInfo? worldProxy)
+    private HousingDistrictSnapshot Map(uint worldId, string worldName, uint districtId,
+        PaissaDistrictDetail payload, PaissaProxyInfo? worldProxy)
     {
         var raw = payload.OpenPlots ?? Array.Empty<PaissaOpenPlot>();
         var plots = new List<HousingPlot>(raw.Length);
@@ -190,7 +213,7 @@ internal sealed class HousingRestProvider
             }
         }
 
-        plots.Sort(HousingPlotOrder.ByWardThenPlot);
+        plots.Sort(HousingPlotOrder.ByDistrictWardThenPlot);
 
         var fetched = DateTime.UtcNow;
         if ((payload.Proxy?.CacheAgeSeconds ?? worldProxy?.CacheAgeSeconds) is { } age && age > 0)
@@ -202,6 +225,7 @@ internal sealed class HousingRestProvider
         {
             WorldId = worldId,
             DistrictId = districtId,
+            WorldName = worldName,
             DistrictName = string.IsNullOrEmpty(payload.Name) ? HousingDistricts.Name(districtId) : payload.Name,
             FetchedUtc = fetched,
             Source = Kind,
@@ -412,24 +436,34 @@ internal sealed class HousingRestProvider
     private static DateTime? FromUnixSeconds(long? seconds) =>
         seconds is null or <= 0L ? null : DateTimeOffset.FromUnixTimeSeconds(seconds.Value).UtcDateTime;
 
-    private static int AreaOf(uint districtId) => districtId switch
-    {
-        HousingDistricts.MistId => 0,
-        HousingDistricts.LavenderBedsId => 1,
-        HousingDistricts.GobletId => 2,
-        HousingDistricts.ShiroganeId => 3,
-        HousingDistricts.EmpyreumId => 4,
-        _ => -1,
-    };
-
     public void Dispose() => throttle.Dispose();
 }
 
 internal static class HousingPlotOrder
 {
-    public static readonly Comparison<HousingPlot> ByWardThenPlot = static (first, second) =>
+    public static readonly Comparison<HousingPlot> ByDistrictWardThenPlot = static (first, second) =>
     {
+        var district = DistrictRank(first.Key.DistrictId).CompareTo(DistrictRank(second.Key.DistrictId));
+        if (district != 0)
+        {
+            return district;
+        }
+
         var ward = first.Key.Ward.CompareTo(second.Key.Ward);
         return ward != 0 ? ward : first.Key.Plot.CompareTo(second.Key.Plot);
     };
+
+    private static int DistrictRank(uint districtId)
+    {
+        var districts = HousingDistricts.All;
+        for (var index = 0; index < districts.Count; index++)
+        {
+            if (districts[index].Id == districtId)
+            {
+                return index;
+            }
+        }
+
+        return districts.Count;
+    }
 }

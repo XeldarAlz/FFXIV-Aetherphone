@@ -5,11 +5,16 @@ namespace Aetherphone.Apps.Housing;
 internal enum HousingRoute : byte
 {
     Map,
-    List,
     Watchlist,
     Details,
     Settings,
     WorldPicker,
+}
+
+internal enum HousingBrowseMode : byte
+{
+    Map,
+    List,
 }
 
 internal sealed class HousingView

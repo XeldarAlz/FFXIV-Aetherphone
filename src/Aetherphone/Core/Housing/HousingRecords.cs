@@ -76,6 +76,7 @@ internal sealed class HousingReminderRecord
 internal static class HousingDefaults
 {
     public const int ReminderMinutes = 30;
+    public const int StaleMultiple = 4;
     public const int RefreshMinutes = 20;
     public const int MinRefreshMinutes = 15;
     public const int MaxRefreshMinutes = 60;

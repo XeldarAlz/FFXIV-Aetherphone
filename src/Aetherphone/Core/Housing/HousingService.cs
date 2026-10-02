@@ -111,14 +111,24 @@ internal sealed class HousingService : IDisposable
 
     public string ProviderName => ActiveProvider.DisplayName;
 
-    public string ApiBaseUrl => ActiveProvider.BaseUrl;
-
     public int? ProxyCacheAgeSeconds => ActiveProvider.LastProxyCacheAge;
 
     public HousingProviderStatus Status => new(ActiveSource, State, LastSuccessUtc, LastError);
 
     public HousingFreshnessThresholds Thresholds =>
         new(configuration.HousingLiveMinutes, configuration.HousingRecentMinutes);
+
+    public HousingDataFreshness Freshness => FreshnessFor(WorldId, DistrictId);
+
+    public HousingDataFreshness FreshnessFor(uint worldId, uint districtId)
+    {
+        if (Lookup(worldId, districtId) is not { } snapshot)
+        {
+            return HousingDataFreshness.Unknown;
+        }
+
+        return Thresholds.Classify(snapshot.FetchedUtc, DateTime.UtcNow, snapshot.Source);
+    }
 
     public uint WorldId => configuration.HousingWorldId;
 
@@ -163,7 +173,7 @@ internal sealed class HousingService : IDisposable
         EnsureWorlds();
         if (Snapshot is null)
         {
-            PrimeFromCache(WorldId, DistrictId);
+            PrimeFromCache(WorldId);
             wardAutoPickPending = 1;
         }
 
@@ -187,7 +197,7 @@ internal sealed class HousingService : IDisposable
         consecutiveFailures = 0;
         retryNotBeforeUtc = default;
         wardAutoPickPending = 1;
-        PrimeFromCache(worldId, DistrictId);
+        PrimeFromCache(worldId);
         Bump();
         Refresh(true);
     }
@@ -203,9 +213,14 @@ internal sealed class HousingService : IDisposable
         configuration.HousingWard = HousingDistricts.ClampWard(districtId, configuration.HousingWard);
         configuration.Save();
         wardAutoPickPending = 1;
-        PrimeFromCache(WorldId, districtId);
+        PrimeFromCache(WorldId);
+        if (Lookup(WorldId, districtId) is { Plots.Count: > 0 } snapshot)
+        {
+            AutoPickWard(snapshot);
+        }
+
         Bump();
-        Refresh(true);
+        Refresh(false);
     }
 
     public void SelectWard(int ward)
@@ -305,7 +320,7 @@ internal sealed class HousingService : IDisposable
         lastRefreshAttemptUtc = now;
         State = HousingLoadState.Loading;
         Bump();
-        _ = RefreshAsync(worldId, districtId);
+        _ = RefreshAsync(worldId);
     }
 
     public void RefreshAfterExpiry()
@@ -492,31 +507,61 @@ internal sealed class HousingService : IDisposable
         Bump();
     }
 
-    private void PrimeFromCache(uint worldId, uint districtId)
+    private void PrimeFromCache(uint worldId)
     {
-        if (worldId == 0 || districtId == 0)
+        if (worldId == 0)
         {
             return;
         }
 
-        if (snapshots.ContainsKey(CacheKey(worldId, districtId)))
+        var districts = HousingDistricts.All;
+        var primed = false;
+        for (var index = 0; index < districts.Count; index++)
+        {
+            var districtId = districts[index].Id;
+            var key = CacheKey(worldId, districtId);
+            if (snapshots.ContainsKey(key))
+            {
+                continue;
+            }
+
+            if (cache.Read(worldId, districtId) is not { } stored)
+            {
+                continue;
+            }
+
+            snapshots[key] = stored;
+            primed = true;
+        }
+
+        if (!primed)
         {
             return;
         }
 
-        var stored = cache.Read(worldId, districtId);
-        if (stored is null)
-        {
-            return;
-        }
-
-        snapshots[CacheKey(worldId, districtId)] = stored;
         ActiveSource = HousingProviderKind.Cache;
-        State = stored.Plots.Count == 0 ? HousingLoadState.Empty : HousingLoadState.Ready;
+        State = Lookup(worldId, DistrictId) is { } current && current.Plots.Count > 0
+            ? HousingLoadState.Ready
+            : HousingLoadState.Empty;
         Bump();
     }
 
-    private async Task RefreshAsync(uint worldId, uint districtId)
+    private List<HousingDistrictSnapshot> ReadWorldFromCache(uint worldId)
+    {
+        var districts = HousingDistricts.All;
+        var stored = new List<HousingDistrictSnapshot>(districts.Count);
+        for (var index = 0; index < districts.Count; index++)
+        {
+            if (cache.Read(worldId, districts[index].Id) is { } snapshot)
+            {
+                stored.Add(snapshot);
+            }
+        }
+
+        return stored;
+    }
+
+    private async Task RefreshAsync(uint worldId)
     {
         var entered = false;
         try
@@ -529,13 +574,17 @@ internal sealed class HousingService : IDisposable
 
             var token = cancellation.Token;
             var active = IsChinaWorld(worldId) ? chinaApi : api;
-            var snapshot = await active.GetDistrictAsync(worldId, districtId, token).ConfigureAwait(false);
-            if (snapshot is not null)
+            var batch = await active.GetWorldAsync(worldId, token).ConfigureAwait(false);
+            if (batch is { Count: > 0 })
             {
                 consecutiveFailures = 0;
                 retryNotBeforeUtc = default;
-                cache.Write(snapshot);
-                Apply(snapshot, active.Kind, null);
+                for (var index = 0; index < batch.Count; index++)
+                {
+                    cache.Write(batch[index]);
+                }
+
+                Apply(batch, active.Kind, null);
                 return;
             }
 
@@ -543,10 +592,10 @@ internal sealed class HousingService : IDisposable
             var backoff = TimeSpan.FromMinutes(Math.Min(MaxBackoffMinutes, 1 << Math.Min(5, consecutiveFailures)));
             retryNotBeforeUtc = DateTime.UtcNow.Add(backoff);
             AepLog.Warning(
-                $"Housing refresh failed for world {worldId} district {districtId} via {active.DisplayName} " +
+                $"Housing refresh failed for world {worldId} via {active.DisplayName} " +
                 $"(status {active.LastStatusCode}); retrying in {backoff.TotalMinutes:F0}m.");
-            var fallback = cache.Read(worldId, districtId);
-            if (fallback is not null)
+            var fallback = ReadWorldFromCache(worldId);
+            if (fallback.Count > 0)
             {
                 Apply(fallback, HousingProviderKind.Cache, LookupErrorText());
                 return;
@@ -583,9 +632,9 @@ internal sealed class HousingService : IDisposable
         }
     }
 
-    private void Apply(HousingDistrictSnapshot? snapshot, HousingProviderKind source, string? error)
+    private void Apply(IReadOnlyList<HousingDistrictSnapshot> batch, HousingProviderKind source, string? error)
     {
-        if (snapshot is null)
+        if (batch.Count == 0)
         {
             State = HousingLoadState.Failed;
             LastError = error;
@@ -593,22 +642,39 @@ internal sealed class HousingService : IDisposable
             return;
         }
 
-        snapshots[CacheKey(snapshot.WorldId, snapshot.DistrictId)] = snapshot;
+        for (var index = 0; index < batch.Count; index++)
+        {
+            var snapshot = batch[index];
+            snapshots[CacheKey(snapshot.WorldId, snapshot.DistrictId)] = snapshot;
+        }
 
         RunOnFrameworkThread(() =>
         {
             ActiveSource = source;
             LastError = error;
-            State = snapshot.Plots.Count == 0 ? HousingLoadState.Empty : HousingLoadState.Ready;
             if (source != HousingProviderKind.Cache)
             {
                 LastSuccessUtc = DateTime.UtcNow;
             }
 
-            Watch.Reconcile(snapshot);
-            AutoPickWard(snapshot);
-            AepLog.Debug($"Housing loaded {snapshot.Plots.Count} open plots for {snapshot.DistrictName} " +
-                         $"from {source}.");
+            var total = 0;
+            for (var index = 0; index < batch.Count; index++)
+            {
+                total += batch[index].Plots.Count;
+                Watch.Reconcile(batch[index]);
+            }
+
+            if (Lookup(WorldId, DistrictId) is { } current)
+            {
+                State = current.Plots.Count == 0 ? HousingLoadState.Empty : HousingLoadState.Ready;
+                AutoPickWard(current);
+            }
+            else
+            {
+                State = HousingLoadState.Empty;
+            }
+
+            AepLog.Debug($"Housing loaded {total} open plots across {batch.Count} districts from {source}.");
             Bump();
         });
     }

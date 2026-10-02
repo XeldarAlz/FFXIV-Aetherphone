@@ -274,19 +274,21 @@ internal sealed partial class HousingApp
         var district = HousingDistricts.Resolve(housing.DistrictId);
         var columns = 5;
         var rows = (district.Wards + columns - 1) / columns;
-        var pad = 16f * scale;
-        var cell = 34f * scale;
+        var pad = 14f * scale;
         var gap = 6f * scale;
+        var available = area.Width - pad * 4f - (columns - 1) * gap;
+        var cell = MathF.Max(30f * scale, MathF.Min(40f * scale, available / columns));
         var width = columns * cell + (columns - 1) * gap + pad * 2f;
-        var headerHeight = 26f * scale;
-        var height = rows * cell + (rows - 1) * gap + pad * 2f + headerHeight;
+        var titleHeight = HousingSelection.TitleHeight(scale);
+        var legendHeight = Typography.LineHeight(HousingSelection.LegendStyle) + gap;
+        var height = rows * cell + (rows - 1) * gap + pad * 2f + titleHeight + legendHeight;
         var center = new Vector2(area.Center.X, viewport.Center.Y);
         var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
         var max = new Vector2(min.X + width, min.Y + height);
+        var panel = new Rect(min, max);
         Material.Veil(drawList, area.Min, area.Max, 0.34f);
         PopoverSurface.Draw(drawList, min, max, Metrics.Radius.Card * scale, frameTheme, scale);
-        Typography.DrawCentered(drawList, new Vector2(center.X, min.Y + pad * 0.9f), Loc.T(L.Housing.ChooseWard),
-            ui.TitleInk, TextStyles.SubheadlineEmphasized);
+        var gridTop = HousingSelection.Title(drawList, panel, Loc.T(L.Housing.ChooseWard), min.Y + pad, ui, scale);
         Span<int> counts = stackalloc int[district.Wards];
         housing.CollectWardOpenings(counts);
         var current = housing.Ward;
@@ -294,27 +296,26 @@ internal sealed partial class HousingApp
         {
             var column = index % columns;
             var row = index / columns;
-            var cellMin = new Vector2(min.X + pad + column * (cell + gap),
-                min.Y + pad + headerHeight + row * (cell + gap));
+            var cellMin = new Vector2(min.X + pad + column * (cell + gap), gridTop + row * (cell + gap));
             var cellMax = cellMin + new Vector2(cell, cell);
+            var bounds = new Rect(cellMin, cellMax);
             var ward = index + 1;
             var selected = ward == current;
             var hovered = HousingChrome.Hover(cellMin, cellMax, true);
-            var rounding = Metrics.Radius.Sm * scale;
-            var fill = selected
-                ? Palette.WithAlpha(ui.Accent, 0.92f)
-                : hovered
-                    ? ui.HoverTint
-                    : ui.FieldSurface;
-            Squircle.Fill(drawList, cellMin, cellMax, rounding, ImGui.GetColorU32(fill));
-            var ink = selected ? new Vector4(0.05f, 0.09f, 0.07f, 1f) : ui.TitleInk;
-            Typography.DrawCentered(drawList, new Vector2((cellMin.X + cellMax.X) * 0.5f, cellMin.Y + cell * 0.42f),
-                ward.ToString(Loc.Culture), ink, TextStyles.SubheadlineEmphasized);
+            HousingSelection.Surface(drawList, bounds, selected, hovered, true, ui, scale);
+            if (!selected && !hovered)
+            {
+                Squircle.Fill(drawList, cellMin, cellMax, HousingSelection.Radius(scale),
+                    ImGui.GetColorU32(ui.FieldSurface));
+            }
+
+            var ink = HousingSelection.Ink(selected, hovered, true, ui);
+            Typography.DrawCentered(drawList, new Vector2(bounds.Center.X, cellMin.Y + cell * 0.42f),
+                ward.ToString(Loc.Culture), ink, HousingSelection.TitleStyle);
             if (counts[index] > 0)
             {
-                var dotColor = selected ? new Vector4(0.05f, 0.09f, 0.07f, 1f) : ui.Accent;
-                drawList.AddCircleFilled(new Vector2((cellMin.X + cellMax.X) * 0.5f, cellMax.Y - 7f * scale),
-                    2.6f * scale, ImGui.GetColorU32(dotColor), 10);
+                HousingSelection.Marker(drawList, new Vector2(bounds.Center.X, cellMax.Y - 7f * scale),
+                    selected ? HousingSelection.StrongInk : ui.Accent, scale);
             }
 
             if (hovered)
@@ -333,6 +334,10 @@ internal sealed partial class HousingApp
             selectedPlot = default;
             InvalidateCache();
         }
+
+        var legendY = gridTop + rows * cell + (rows - 1) * gap + gap;
+        Typography.DrawCentered(drawList, new Vector2(panel.Center.X, legendY), Loc.T(L.Housing.WardLegend),
+            ui.MutedInk, HousingSelection.LegendStyle);
 
         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(min, max, false))
         {

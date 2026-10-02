@@ -1267,6 +1267,12 @@ internal static class L
             new("housing.reminderPrompt", "Notify me before this phase ends:");
         public static readonly LocPlural LeadMinutes = new("housing.leadMinutes", "{0} minute", "{0} minutes");
         public static readonly LocPlural LeadHours = new("housing.leadHours", "{0} hour", "{0} hours");
+        public static readonly LocPlural OpenPlotCount =
+            new("housing.openPlotCount", "{0} open plot", "{0} open plots");
+        public static readonly LocString WardLegend = new("housing.wardLegend", "Wards with open plots");
+        public static readonly LocString SelectDistrictTitle =
+            new("housing.selectDistrictTitle", "Select a district");
+        public static readonly LocString SortByTitle = new("housing.sortByTitle", "Sort by");
         public static readonly LocString ReminderConfirmed = new("housing.reminderConfirmed",
             "Reminder set for {0} before the {1} ends. {2}, plot {3}.");
         public static readonly LocString ReminderUnavailable = new("housing.reminderUnavailable",
@@ -1387,7 +1393,6 @@ internal static class L
         public static readonly LocString ProviderStatus = new("housing.providerStatus", "Provider");
         public static readonly LocString LastRefresh = new("housing.lastRefresh", "Last successful refresh");
         public static readonly LocString OpenPlotsReported = new("housing.openPlotsReported", "Reported openings");
-        public static readonly LocString ApiEndpointLabel = new("housing.apiEndpointLabel", "Endpoint");
         public static readonly LocString ProxyCacheAge = new("housing.proxyCacheAge", "Service cache age");
         public static readonly LocString ServiceUnavailable = new("housing.serviceUnavailable",
             "The Aetherphone housing service could not be reached.");

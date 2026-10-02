@@ -12,17 +12,17 @@ internal sealed partial class HousingApp
 {
     private const float ListRowHeight = 64f;
 
-    private void DrawListRoute(Rect area)
+    private void DrawListBody(Rect body, float scale)
     {
-        var scale = UiScale.Current;
         var sortLabel = Loc.T(SortLabels[Math.Clamp(configuration.HousingListSort, 0, SortLabels.Length - 1)]);
-        var body = DrawSubHeader(area, "housing.header.list", Loc.T(L.Housing.List));
         var barHeight = 32f * scale;
         var pad = 16f * scale;
         var bar = new Rect(new Vector2(body.Min.X, body.Min.Y + 4f * scale),
             new Vector2(body.Max.X, body.Min.Y + 4f * scale + barHeight));
         var drawList = ImGui.GetWindowDrawList();
-        var context = string.Concat(housing.WorldName, " · ", housing.DistrictName);
+        var plots = FilteredWorldPlots();
+        var context = string.Concat(housing.WorldName, " · ",
+            Loc.Plural(L.Housing.OpenPlotCount, plots.Count));
         var sortWidth = HousingChrome.MeasurePill(sortLabel, 24f * scale);
         var sortRect = new Rect(new Vector2(bar.Max.X - pad - sortWidth, bar.Center.Y - 12f * scale),
             new Vector2(bar.Max.X - pad, bar.Center.Y + 12f * scale));
@@ -35,7 +35,6 @@ internal sealed partial class HousingApp
             OpenSortMenu(sortRect);
         }
 
-        var plots = FilteredDistrictPlots();
         var listBody = new Rect(new Vector2(body.Min.X, bar.Max.Y + 2f * scale), body.Max);
         if (plots.Count == 0)
         {
@@ -69,7 +68,7 @@ internal sealed partial class HousingApp
             var card = GroupCard.Begin(frameTheme, plots.Count, ListRowHeight);
             for (var index = 0; index < plots.Count; index++)
             {
-                if (DrawListRow(card.NextRow(), plots[index], now, scale))
+                if (DrawListRow(card.NextRow(), plots[index], now, scale, true))
                 {
                     OpenFromList(plots[index]);
                 }
@@ -82,25 +81,32 @@ internal sealed partial class HousingApp
 
     private void OpenFromList(HousingPlot plot)
     {
-        if (plot.Key.WorldId != housing.WorldId || plot.Key.DistrictId != housing.DistrictId)
+        if (plot.Key.WorldId != housing.WorldId)
         {
             Push(HousingRoute.Details, plot.Key);
             return;
         }
 
+        if (plot.Key.DistrictId != housing.DistrictId)
+        {
+            housing.SelectDistrict(plot.Key.DistrictId);
+        }
+
         if (plot.Key.Ward != housing.Ward)
         {
             housing.SelectWard(plot.Key.Ward);
-            InvalidateCache();
         }
 
+        InvalidateCache();
+        ResetMapView();
+        showSubdivision = HousingDistricts.IsSubdivision(plot.Key.Plot);
+        SetBrowseMode(HousingBrowseMode.Map);
         selectedPlot = plot.Key;
         sheetOpen = true;
-        router.Pop();
         CenterOnSelected();
     }
 
-    private bool DrawListRow(Rect row, HousingPlot plot, DateTime now, float scale)
+    private bool DrawListRow(Rect row, HousingPlot plot, DateTime now, float scale, bool showDistrict)
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = UiInteract.Hover(row.Min, row.Max);
@@ -124,8 +130,11 @@ internal sealed partial class HousingApp
         Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 9f * scale),
             Typography.FitText(title, textRight - textLeft - 60f * scale, titleStyle), frameTheme.TextStrong,
             titleStyle);
-        var placeLine = string.Concat(HousingFormat.WardLabel(plot.Key.Ward), " · ",
-            HousingFormat.PhaseLabel(plot.Phase), " · ", HousingFormat.PhaseCountdown(plot, now));
+        var place = showDistrict
+            ? HousingFormat.Place(HousingDistricts.ShortDisplayName(plot.Key.DistrictId), plot.Key.Ward)
+            : HousingFormat.WardLabel(plot.Key.Ward);
+        var placeLine = string.Concat(place, " · ", HousingFormat.PhaseLabel(plot.Phase), " · ",
+            HousingFormat.PhaseCountdown(plot, now));
         Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 27f * scale),
             Typography.FitText(placeLine, textRight - textLeft, TextStyles.Footnote), frameTheme.TextMuted,
             TextStyles.Footnote);

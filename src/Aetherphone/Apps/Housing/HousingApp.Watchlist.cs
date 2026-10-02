@@ -90,7 +90,7 @@ internal sealed partial class HousingApp
         var lastSeen = FromUnix(record.LastSeenUnix);
         var markerCenter = new Vector2(row.Min.X + 15f * scale, row.Min.Y + 22f * scale);
         var style = new HousingMarkerStyle(size, phase, true, false,
-            housing.Thresholds.Classify(lastSeen, now, HousingProviderKind.Service) == HousingDataFreshness.Stale,
+            housing.Thresholds.ClassifyScan(lastSeen, now, HousingProviderKind.Service) == HousingDataFreshness.Stale,
             false);
         HousingMarkers.Draw(drawList, markerCenter, style, frameTheme.Accent, scale * 0.86f, 0f);
         var textLeft = markerCenter.X + 22f * scale;

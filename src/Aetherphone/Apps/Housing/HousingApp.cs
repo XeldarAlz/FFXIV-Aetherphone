@@ -163,14 +163,31 @@ internal sealed partial class HousingApp : IPhoneApp
         DrawToast(context.Content, scale);
     }
 
+    private HousingBrowseMode BrowseMode =>
+        configuration.HousingBrowseMode == (int)HousingBrowseMode.List
+            ? HousingBrowseMode.List
+            : HousingBrowseMode.Map;
+
+    private void SetBrowseMode(HousingBrowseMode mode)
+    {
+        if (configuration.HousingBrowseMode == (int)mode)
+        {
+            return;
+        }
+
+        configuration.HousingBrowseMode = (int)mode;
+        configuration.Save();
+        sheetOpen = false;
+        selectedPlot = default;
+        wardPickerOpen = false;
+        InvalidateCache();
+    }
+
     private void DrawView(HousingView view, Rect area, int depth)
     {
         ui.Body(area);
         switch (view.Route)
         {
-            case HousingRoute.List:
-                DrawListRoute(area);
-                break;
             case HousingRoute.Watchlist:
                 DrawWatchlistRoute(area);
                 break;
@@ -359,6 +376,7 @@ internal sealed partial class HousingApp : IPhoneApp
         }
 
         menuTarget = MenuTarget.District;
+        menu.Header = Loc.T(L.Housing.SelectDistrictTitle);
         menu.Toggle("housing.district", anchor);
     }
 
@@ -373,6 +391,7 @@ internal sealed partial class HousingApp : IPhoneApp
         }
 
         menuTarget = MenuTarget.Sort;
+        menu.Header = Loc.T(L.Housing.SortByTitle);
         menu.Toggle("housing.sort", anchor);
     }
 
@@ -482,23 +501,33 @@ internal sealed partial class HousingApp : IPhoneApp
         return visible;
     }
 
-    private List<HousingPlot> FilteredDistrictPlots()
+    private List<HousingPlot> FilteredWorldPlots()
     {
         sorted.Clear();
-        if (housing.Snapshot is not { } snapshot)
+        var worldId = housing.WorldId;
+        if (worldId == 0)
         {
             return sorted;
         }
 
         var now = DateTime.UtcNow;
         var thresholds = housing.Thresholds;
-        var plots = snapshot.Plots;
-        for (var index = 0; index < plots.Count; index++)
+        var districts = HousingDistricts.All;
+        for (var districtIndex = 0; districtIndex < districts.Count; districtIndex++)
         {
-            var plot = plots[index];
-            if (housing.Filters.Matches(plot, now, thresholds, housing.Watch.IsWatched(plot.Key)))
+            if (housing.Lookup(worldId, districts[districtIndex].Id) is not { } snapshot)
             {
-                sorted.Add(plot);
+                continue;
+            }
+
+            var plots = snapshot.Plots;
+            for (var index = 0; index < plots.Count; index++)
+            {
+                var plot = plots[index];
+                if (housing.Filters.Matches(plot, now, thresholds, housing.Watch.IsWatched(plot.Key)))
+                {
+                    sorted.Add(plot);
+                }
             }
         }
 
@@ -516,21 +545,21 @@ internal sealed partial class HousingApp : IPhoneApp
                     var left = first.Entries ?? int.MaxValue;
                     var right = second.Entries ?? int.MaxValue;
                     var compare = left.CompareTo(right);
-                    return compare != 0 ? compare : HousingPlotOrder.ByWardThenPlot(first, second);
+                    return compare != 0 ? compare : HousingPlotOrder.ByDistrictWardThenPlot(first, second);
                 });
                 break;
             case 1:
                 plots.Sort(static (first, second) =>
                 {
                     var compare = second.LastSeenUtc.CompareTo(first.LastSeenUtc);
-                    return compare != 0 ? compare : HousingPlotOrder.ByWardThenPlot(first, second);
+                    return compare != 0 ? compare : HousingPlotOrder.ByDistrictWardThenPlot(first, second);
                 });
                 break;
             case 2:
                 plots.Sort(static (first, second) =>
                 {
                     var compare = ((int)second.Size).CompareTo((int)first.Size);
-                    return compare != 0 ? compare : HousingPlotOrder.ByWardThenPlot(first, second);
+                    return compare != 0 ? compare : HousingPlotOrder.ByDistrictWardThenPlot(first, second);
                 });
                 break;
             case 3:
@@ -539,11 +568,11 @@ internal sealed partial class HousingApp : IPhoneApp
                     var left = first.Price <= 0L ? long.MaxValue : first.Price;
                     var right = second.Price <= 0L ? long.MaxValue : second.Price;
                     var compare = left.CompareTo(right);
-                    return compare != 0 ? compare : HousingPlotOrder.ByWardThenPlot(first, second);
+                    return compare != 0 ? compare : HousingPlotOrder.ByDistrictWardThenPlot(first, second);
                 });
                 break;
             default:
-                plots.Sort(HousingPlotOrder.ByWardThenPlot);
+                plots.Sort(HousingPlotOrder.ByDistrictWardThenPlot);
                 break;
         }
     }
@@ -568,7 +597,7 @@ internal sealed partial class HousingApp : IPhoneApp
     }
 
     private HousingDataFreshness FreshnessOf(HousingPlot plot) =>
-        housing.Thresholds.Classify(plot.LastSeenUtc, DateTime.UtcNow,
+        housing.Thresholds.ClassifyScan(plot.LastSeenUtc, DateTime.UtcNow,
             housing.ActiveSource);
 
     private bool IsStale(HousingPlot plot) => FreshnessOf(plot) == HousingDataFreshness.Stale;

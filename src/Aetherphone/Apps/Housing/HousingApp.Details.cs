@@ -47,7 +47,7 @@ internal sealed partial class HousingApp
             y += Typography.LineHeight(TextStyles.Subheadline) + 10f * scale;
 
             var lastSeen = plot?.LastSeenUtc ?? FromUnix(watchRecord?.LastSeenUnix ?? 0L);
-            var freshness = housing.Thresholds.Classify(lastSeen, now, housing.ActiveSource);
+            var freshness = housing.Thresholds.ClassifyScan(lastSeen, now, housing.ActiveSource);
             var chipX = left;
             var freshLabel = HousingFormat.FreshnessLabel(freshness);
             HousingChrome.Chip(drawList, new Vector2(chipX, y), freshLabel,

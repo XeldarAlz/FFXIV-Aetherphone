@@ -162,9 +162,9 @@ internal sealed partial class HousingApp
         var gameMap = housing.GameMap;
         var proxyAge = housing.ProxyCacheAgeSeconds;
 #if DEBUG
-        var rows = proxyAge is null ? 7 : 8;
-#else
         var rows = proxyAge is null ? 6 : 7;
+#else
+        var rows = proxyAge is null ? 5 : 6;
 #endif
         var card = GroupCard.Begin(frameTheme, rows, SettingsRowHeight);
         SettingsRow.Info(card.NextRow(), Loc.T(L.Housing.MapSourceLabel),
@@ -172,7 +172,6 @@ internal sealed partial class HousingApp
                 ? string.Concat(Loc.T(L.Housing.GameMapUnavailable), " · ", housing.GameMapFailure.ToString())
                 : gameMap.Main.MapId, frameTheme);
         SettingsRow.Info(card.NextRow(), Loc.T(L.Housing.ProviderStatus), housing.ProviderName, frameTheme);
-        SettingsRow.Info(card.NextRow(), Loc.T(L.Housing.ApiEndpointLabel), housing.ApiBaseUrl, frameTheme);
         if (proxyAge is { } age)
         {
             SettingsRow.Info(card.NextRow(), Loc.T(L.Housing.ProxyCacheAge),

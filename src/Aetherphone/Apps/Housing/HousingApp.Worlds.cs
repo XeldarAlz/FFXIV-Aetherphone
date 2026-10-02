@@ -15,6 +15,9 @@ internal sealed partial class HousingApp
 
     private readonly List<HousingWorld> worldMatches = new();
 
+    private string stickyDataCenter = string.Empty;
+    private float stickyNextHeaderTop;
+
     private void DrawWorldPickerRoute(Rect area)
     {
         var scale = UiScale.Current;
@@ -86,8 +89,40 @@ internal sealed partial class HousingApp
         ImGui.Dummy(new Vector2(0f, 16f * scale));
     }
 
+    private static float DataCenterHeaderHeight(float scale) =>
+        (Metrics.Space.Sm + Metrics.Space.Xs) * scale + Typography.LineHeight(TextStyles.FootnoteEmphasized);
+
+    private void DrawStickyDataCenter(float stickyLine, float headerHeight, float scale)
+    {
+        if (stickyDataCenter.Length == 0)
+        {
+            return;
+        }
+
+        var top = stickyLine;
+        if (stickyNextHeaderTop - stickyLine < headerHeight)
+        {
+            top = stickyNextHeaderTop - headerHeight;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var left = ImGui.GetWindowPos().X;
+        var right = left + ImGui.GetWindowSize().X;
+        drawList.AddRectFilled(new Vector2(left, top), new Vector2(right, top + headerHeight),
+            ImGui.GetColorU32(ui.Palette.BackdropTop));
+        drawList.AddLine(new Vector2(left, top + headerHeight), new Vector2(right, top + headerHeight),
+            ImGui.GetColorU32(ui.Hairline), Metrics.Stroke.Hairline);
+        Typography.Draw(drawList,
+            new Vector2(left + Metrics.Space.Lg * scale, top + Metrics.Space.Sm * scale),
+            Loc.Culture.TextInfo.ToUpper(stickyDataCenter), frameTheme.TextMuted, TextStyles.FootnoteEmphasized);
+    }
+
     private void DrawWorldGroups(float scale)
     {
+        var stickyLine = ImGui.GetWindowPos().Y;
+        var headerHeight = DataCenterHeaderHeight(scale);
+        stickyDataCenter = string.Empty;
+        stickyNextHeaderTop = float.MaxValue;
         var regions = HousingRegions.Order;
         for (var regionIndex = 0; regionIndex < regions.Count; regionIndex++)
         {
@@ -113,7 +148,9 @@ internal sealed partial class HousingApp
 
                 worldMatches.Sort(static (first, second) =>
                     string.Compare(first.Name, second.Name, StringComparison.OrdinalIgnoreCase));
-                SettingsSection.Header(string.Concat(region, " · ", dataCenter), frameTheme);
+                var label = string.Concat(region, " · ", dataCenter);
+                var headerTop = ImGui.GetCursorScreenPos().Y;
+                SettingsSection.Header(label, frameTheme);
                 var card = GroupCard.Begin(frameTheme, worldMatches.Count, WorldRowHeight);
                 for (var index = 0; index < worldMatches.Count; index++)
                 {
@@ -126,10 +163,20 @@ internal sealed partial class HousingApp
                 }
 
                 card.End();
+                var groupBottom = ImGui.GetCursorScreenPos().Y;
+                if (headerTop <= stickyLine && groupBottom > stickyLine)
+                {
+                    stickyDataCenter = label;
+                }
+                else if (headerTop > stickyLine && stickyNextHeaderTop > headerTop)
+                {
+                    stickyNextHeaderTop = headerTop;
+                }
             }
         }
 
         ImGui.Dummy(new Vector2(0f, 20f * scale));
+        DrawStickyDataCenter(stickyLine, headerHeight, scale);
     }
 
     private readonly List<string> dataCenterBuffer = new();
@@ -175,36 +222,32 @@ internal sealed partial class HousingApp
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = UiInteract.Hover(row.Min, row.Max);
+        var bounds = new Rect(new Vector2(row.Min.X - Metrics.Space.Sm * scale, row.Min.Y + 2f * scale),
+            new Vector2(row.Max.X + Metrics.Space.Sm * scale, row.Max.Y - 2f * scale));
+        HousingSelection.Surface(drawList, bounds, selected, hovered, false, ui, scale);
         if (hovered)
         {
-            Squircle.Fill(drawList, new Vector2(row.Min.X - 8f * scale, row.Min.Y + 2f * scale),
-                new Vector2(row.Max.X + 8f * scale, row.Max.Y - 2f * scale), Metrics.Radius.Sm * scale,
-                ImGui.GetColorU32(Palette.WithAlpha(frameTheme.Accent, 0.14f)));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var checkWidth = 22f * scale;
-        var detailStyle = TextStyles.Footnote;
-        var detailSize = detail.Length > 0 ? Typography.Measure(detail, detailStyle) : Vector2.Zero;
-        var nameMax = MathF.Max(1f, row.Width - checkWidth - detailSize.X - 14f * scale);
-        var nameStyle = TextStyles.Body;
-        Typography.Draw(drawList, new Vector2(row.Min.X, row.Center.Y - Typography.LineHeight(nameStyle) * 0.5f),
-            Typography.FitText(name, nameMax, nameStyle), frameTheme.TextStrong, nameStyle);
-        if (detail.Length > 0)
-        {
-            Typography.Draw(drawList,
-                new Vector2(row.Max.X - checkWidth - detailSize.X, row.Center.Y - detailSize.Y * 0.5f), detail,
-                frameTheme.TextMuted, detailStyle);
-        }
-
+        var markerInset = HousingSelection.MarkerInset * scale;
         if (selected)
         {
-            var center = new Vector2(row.Max.X - 8f * scale, row.Center.Y);
-            var color = ImGui.GetColorU32(frameTheme.Accent);
-            drawList.AddLine(center + new Vector2(-5f * scale, 0f), center + new Vector2(-1.6f * scale, 3.8f * scale),
-                color, 2f * scale);
-            drawList.AddLine(center + new Vector2(-1.6f * scale, 3.8f * scale),
-                center + new Vector2(5f * scale, -4.2f * scale), color, 2f * scale);
+            HousingSelection.Marker(drawList, new Vector2(bounds.Min.X + markerInset, row.Center.Y), ui.Accent, scale);
+        }
+
+        var textLeft = row.Min.X + markerInset + HousingSelection.MarkerRadius * scale;
+        var detailStyle = TextStyles.Footnote;
+        var detailSize = detail.Length > 0 ? Typography.Measure(detail, detailStyle) : Vector2.Zero;
+        var nameMax = MathF.Max(1f, row.Max.X - textLeft - detailSize.X - Metrics.Space.Md * scale);
+        var nameStyle = selected ? TextStyles.BodyEmphasized : TextStyles.Body;
+        Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y - Typography.LineHeight(nameStyle) * 0.5f),
+            Typography.FitText(name, nameMax, nameStyle), HousingSelection.Ink(selected, hovered, false, ui),
+            nameStyle);
+        if (detail.Length > 0)
+        {
+            Typography.Draw(drawList, new Vector2(row.Max.X - detailSize.X, row.Center.Y - detailSize.Y * 0.5f),
+                detail, selected ? ui.TitleInk : ui.MutedInk, detailStyle);
         }
 
         return UiInteract.Click(row.Min, row.Max, hovered);

@@ -75,6 +75,13 @@ internal readonly record struct HousingFreshnessThresholds(int LiveMinutes, int 
 {
     public static readonly HousingFreshnessThresholds Default = new(15, 60);
 
+    public HousingDataFreshness ClassifyScan(DateTime scannedUtc, DateTime nowUtc, HousingProviderKind source)
+    {
+        var scanThresholds = new HousingFreshnessThresholds(LiveMinutes * HousingDefaults.StaleMultiple,
+            RecentMinutes * HousingDefaults.StaleMultiple);
+        return scanThresholds.Classify(scannedUtc, nowUtc, source);
+    }
+
     public HousingDataFreshness Classify(DateTime scannedUtc, DateTime nowUtc, HousingProviderKind source)
     {
         if (scannedUtc == default)

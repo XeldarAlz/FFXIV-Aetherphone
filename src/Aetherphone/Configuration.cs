@@ -298,6 +298,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool HousingFilterLarge { get; set; } = true;
     public bool HousingShowAllPlots { get; set; }
     public int HousingListSort { get; set; }
+
+    public int HousingBrowseMode { get; set; }
     public bool HousingMapHintDismissed { get; set; }
     public List<HousingWatchRecord> HousingWatched { get; set; } = new();
     public List<HousingReminderRecord> HousingReminders { get; set; } = new();

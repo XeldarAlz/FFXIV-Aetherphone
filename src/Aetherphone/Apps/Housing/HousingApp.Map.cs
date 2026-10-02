@@ -7,6 +7,7 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Housing;
 
@@ -43,12 +44,21 @@ internal sealed partial class HousingApp
             return;
         }
 
+        if (BrowseMode == HousingBrowseMode.List)
+        {
+            TourHolds.Release(Id);
+            DrawListBody(viewport, scale);
+            DrawFooter(footer, scale);
+            DrawFilterOverlay(area, scale);
+            return;
+        }
+
         if (housing.GameMap is null)
         {
             TourHolds.Hold(Id);
             DrawEmptyCard(viewport, FontAwesomeIcon.MapSigns, Loc.T(L.Housing.GameMapUnavailable),
                 Loc.T(L.Housing.GameMapUnavailableHint), Loc.T(L.Housing.ViewAsList),
-                () => Push(HousingRoute.List), scale);
+                () => SetBrowseMode(HousingBrowseMode.List), scale);
             DrawFooter(footer, scale);
             return;
         }
@@ -61,37 +71,49 @@ internal sealed partial class HousingApp
         DrawWardPicker(area, viewport, scale);
     }
 
+    private void DrawFilterOverlay(Rect area, float scale)
+    {
+        if (filterSpring.Value <= 0.005f)
+        {
+            return;
+        }
+
+        ImGui.SetCursorScreenPos(area.Min);
+        using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
+        using (ImRaii.Child("##housingFilterOverlay", area.Size, false,
+                   ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar |
+                   ImGuiWindowFlags.NoScrollWithMouse))
+        {
+            DrawFilterDrawer(area, scale);
+        }
+    }
+
     private void DrawTopBar(Rect area, float scale)
     {
         var rowCenterY = area.Min.Y + TopBarHeight * scale * 0.5f;
         var drawList = ImGui.GetWindowDrawList();
-        var hitMin = new Vector2(area.Min.X, area.Min.Y);
-        var hitMax = new Vector2(area.Min.X + 40f * scale, area.Min.Y + TopBarHeight * scale);
-        var backHovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
-        if (BackButton.Draw("housing.root.back", new Vector2(area.Min.X + 15f * scale, rowCenterY), 15f * scale,
-                ui.Accent, backHovered, scale))
-        {
-            Back();
-        }
-
-        var emblemCenter = new Vector2(area.Min.X + 40f * scale, rowCenterY);
+        var emblemCenter = new Vector2(area.Min.X + 22f * scale, rowCenterY);
         DrawAppEmblem(drawList, emblemCenter, 26f * scale);
         var buttonRadius = 15f * scale;
         var gap = 34f * scale;
         var rightmost = area.Max.X - 14f * scale - buttonRadius;
         var settingsCenter = new Vector2(rightmost, rowCenterY);
         var watchCenter = new Vector2(rightmost - gap, rowCenterY);
-        var listCenter = new Vector2(rightmost - gap * 2f, rowCenterY);
-        var titleLeft = emblemCenter.X + 14f * scale;
-        var titleRight = listCenter.X - buttonRadius - 8f * scale;
-        var titleStyle = TextStyles.Title3;
-        var titleWidth = MathF.Max(1f, titleRight - titleLeft);
-        Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - Typography.LineHeight(titleStyle) * 0.5f),
-            Typography.FitText(DisplayName, titleWidth, titleStyle), ui.TitleInk, titleStyle);
-        if (HousingChrome.MapButton(listCenter, buttonRadius, FontAwesomeIcon.ListUl, ui,
-                Loc.T(L.Housing.ViewAsList), false, false))
+        var listMode = BrowseMode == HousingBrowseMode.List;
+        var mapLabel = Loc.T(L.Housing.Map);
+        var listLabel = Loc.T(L.Housing.List);
+        var segmentLeft = emblemCenter.X + 14f * scale;
+        var segmentRight = watchCenter.X - buttonRadius - 10f * scale;
+        var segmentHeight = 26f * scale;
+        var segmentWidth = MathF.Min(segmentRight - segmentLeft,
+            MathF.Max(118f * scale,
+                (MathF.Max(Typography.Measure(mapLabel, TextStyles.SubheadlineEmphasized).X,
+                    Typography.Measure(listLabel, TextStyles.SubheadlineEmphasized).X) + 16f * scale) * 2f));
+        var segmentRect = new Rect(new Vector2(segmentLeft, rowCenterY - segmentHeight * 0.5f),
+            new Vector2(segmentLeft + segmentWidth, rowCenterY + segmentHeight * 0.5f));
+        if (HousingChrome.Segment(segmentRect, mapLabel, listLabel, listMode ? 1 : 0, ui, false) == 1 != listMode)
         {
-            Push(HousingRoute.List);
+            SetBrowseMode(listMode ? HousingBrowseMode.Map : HousingBrowseMode.List);
         }
 
         var watchExtent = new Vector2(buttonRadius, buttonRadius);
@@ -128,6 +150,7 @@ internal sealed partial class HousingApp
 
     private void DrawContextBar(Rect bar, float scale)
     {
+        var listMode = BrowseMode == HousingBrowseMode.List;
         var pad = 14f * scale;
         var gap = 7f * scale;
         var height = HousingChrome.SelectorHeight(scale);
@@ -149,6 +172,11 @@ internal sealed partial class HousingApp
         {
             worldSearch = string.Empty;
             Push(HousingRoute.WorldPicker);
+        }
+
+        if (listMode)
+        {
+            return;
         }
 
         if (HousingChrome.Selector(districtRect, Loc.T(L.Housing.DistrictLabel),
@@ -601,9 +629,33 @@ internal sealed partial class HousingApp
         return true;
     }
 
+    private void DrawPointsOfInterest(ImDrawListPtr drawList, in HousingPlan plan, Vector2 origin, float mapSize,
+        Rect viewport, float scale)
+    {
+        if (plan.Map is not { } gameMap)
+        {
+            return;
+        }
+
+        var points = gameMap.PointsOfInterest;
+        var cull = 24f * scale;
+        for (var index = 0; index < points.Count; index++)
+        {
+            var center = ToScreen(origin, mapSize, points[index].NormalizedPosition);
+            if (center.X < viewport.Min.X - cull || center.X > viewport.Max.X + cull ||
+                center.Y < viewport.Min.Y - cull || center.Y > viewport.Max.Y + cull)
+            {
+                continue;
+            }
+
+            HousingPoiMarkers.Draw(drawList, center, points[index].IconId, scale);
+        }
+    }
+
     private void DrawMarkers(ImDrawListPtr drawList, in HousingPlan plan, List<HousingPlot> plots,
         Vector2 origin, float mapSize, Rect viewport, float scale)
     {
+        DrawPointsOfInterest(drawList, plan, origin, mapSize, viewport, scale);
         if (housing.Filters.ShowAllPlots)
         {
             var tint = AppPalettes.HousingParchment;
@@ -694,8 +746,46 @@ internal sealed partial class HousingApp
             return;
         }
 
+        if (OtherDivisionHasPlots())
+        {
+            DrawEmptyCard(viewport, FontAwesomeIcon.Home, Loc.T(L.Housing.NoOpenings, housing.Ward), null,
+                Loc.T(showSubdivision ? L.Housing.MainDivision : L.Housing.Subdivision), SwitchDivision, scale);
+            return;
+        }
+
         DrawEmptyCard(viewport, FontAwesomeIcon.Home, Loc.T(L.Housing.NoOpenings, housing.Ward), null,
             Loc.T(L.Housing.ChooseWard), () => wardPickerOpen = true, scale);
+    }
+
+    private bool OtherDivisionHasPlots()
+    {
+        if (housing.GameMap is not { HasSubdivision: true } || housing.Snapshot is not { } snapshot)
+        {
+            return false;
+        }
+
+        var ward = housing.Ward;
+        var wanted = !showSubdivision;
+        var plots = snapshot.Plots;
+        for (var index = 0; index < plots.Count; index++)
+        {
+            var plot = plots[index];
+            if (plot.Key.Ward == ward && plot.IsSubdivision == wanted)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void SwitchDivision()
+    {
+        showSubdivision = !showSubdivision;
+        sheetOpen = false;
+        selectedPlot = default;
+        ResetMapView();
+        InvalidateCache();
     }
 
     private void DrawDivisionSwitch(Rect viewport, in HousingPlan plan, float scale)
@@ -721,11 +811,7 @@ internal sealed partial class HousingApp
             return;
         }
 
-        showSubdivision = picked == 1;
-        sheetOpen = false;
-        selectedPlot = default;
-        ResetMapView();
-        InvalidateCache();
+        SwitchDivision();
     }
 
     private bool WardHasReportedPlots()
