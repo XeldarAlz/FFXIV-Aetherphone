@@ -20,6 +20,7 @@ internal sealed partial class HousingApp
     private const float DragSlop = 5f;
 
     private const float LabelZoom = 1.45f;
+    private const float PoiIconSize = 16f;
 
     private void DrawMapRoute(Rect area)
     {
@@ -648,7 +649,10 @@ internal sealed partial class HousingApp
                 continue;
             }
 
-            HousingPoiMarkers.Draw(drawList, center, points[index].IconId, scale);
+            var half = PoiIconSize * scale * 0.5f;
+            GameIconTile.Draw(drawList, Plugin.TextureProvider, points[index].IconId,
+                new Vector2(center.X - half, center.Y - half),
+                new Vector2(center.X + half, center.Y + half), 0f, scale, requireIcon: true);
         }
     }
 
