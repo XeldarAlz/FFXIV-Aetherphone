@@ -131,7 +131,8 @@ internal sealed class OnlineConnectFourTable
         particles.Draw(drawList, scale);
         if (bannerProgress < 1f)
         {
-            GameBanner.Draw(drawList, grid.Bounds.Center, bannerText, bannerAccent, theme, bannerProgress);
+            GameBanner.Draw(drawList, topRow.Center, bannerText, bannerAccent, theme, bannerProgress,
+                TextStyles.Headline);
         }
 
         var statusY = grid.Bounds.Max.Y + 10f * scale;
@@ -312,17 +313,20 @@ internal sealed class OnlineConnectFourTable
         DrawDisc(drawList, Vector2.Lerp(start, end, fallT), radius, SeatColor(fallingSeat), scale);
     }
 
+    // Squircle draws a superellipse (the iOS app-icon shape), not a circle, even at a radius equal
+    // to half the bounding box, so a disc needs the real circle primitives rather than Squircle's
+    // usual rounded-rect technique.
     private static void DrawDisc(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 color, float scale)
     {
-        var min = center - new Vector2(radius, radius);
-        var max = center + new Vector2(radius, radius);
-        Squircle.Fill(drawList, min + new Vector2(0f, 2f * scale), max + new Vector2(0f, 2f * scale), radius,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.28f)));
-        Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(color));
-        Squircle.Fill(drawList, min, new Vector2(max.X, center.Y), radius,
-            ImGui.GetColorU32(GamePalette.Lighten(color, 0.22f) with { W = 0.5f }));
-        Squircle.Stroke(drawList, min, max, radius,
-            ImGui.GetColorU32(GamePalette.Darken(color, 0.3f) with { W = 0.6f }), 1f * scale);
+        drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), radius,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.28f)), 28);
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(color), 28);
+        drawList.PushClipRect(center - new Vector2(radius, radius), new Vector2(center.X + radius, center.Y), true);
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(GamePalette.Lighten(color, 0.22f) with { W = 0.5f }),
+            28);
+        drawList.PopClipRect();
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(GamePalette.Darken(color, 0.3f) with { W = 0.6f }), 28,
+            1f * scale);
     }
 
     private static int HitTestColumn(GameGrid grid)
