@@ -2408,9 +2408,9 @@ internal static class L
                 "The weather widgets on the home screen now show the same living skies"),
             new("changelog.r1042.84",
                 "Added the extra weathers a zone can show beyond its forecast to Control, like snow in Limsa Lominsa, each marked with a star"),
-            new("changelog.r1042.98",
+            new("changelog.r1042.108",
                 "Browse every zone by region in Zones, Field Operations included, each with its weather right now, contributed by Deldee"),
-            new("changelog.r1042.99",
+            new("changelog.r1042.109",
                 "Skywatcher and its widgets now update the moment you change zones or the weather turns, contributed by Deldee"),
         };
 
