@@ -9,7 +9,7 @@ internal static class VDisclosure
     public const float HeaderHeight = 52f;
     public const float PanelPadX = VCard.Pad;
     public const float PanelPadY = 12f;
-    public const float RevealSmoothTime = 0.14f;
+    public const float RevealSmoothTime = Aetherphone.Core.Animation.Motion.Appear;
     private const float TileGap = 10f;
     private const float SummaryGap = 8f;
     private const float TitleSummaryGap = 12f;

@@ -14,7 +14,6 @@ internal sealed class AvatarLightbox
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground;
 
-    private const float RevealSmoothTime = 0.05f;
     private const float BackdropAlpha = 0.92f;
     private const float EdgePadding = 26f;
     private const int CircleSegments = 96;
@@ -67,7 +66,7 @@ internal sealed class AvatarLightbox
     public void Draw(Rect area, PhoneTheme theme)
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        reveal.Step(open ? 1f : 0f, RevealSmoothTime, delta);
+        reveal.Step(open ? 1f : 0f, Motion.Appear, delta);
         var progress = Easing.Clamp01(reveal.Value);
         if (progress <= 0.01f)
         {

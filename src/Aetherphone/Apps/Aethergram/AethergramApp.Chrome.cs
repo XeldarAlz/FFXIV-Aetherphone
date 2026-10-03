@@ -21,8 +21,11 @@ internal sealed partial class AethergramApp
     private const float IconTabHeight = 44f;
     private const float IconTabUnderline = 1.5f;
     private const float IconTabIconSize = 22f;
-    private const float TabSmoothTime = 0.09f;
     private const float GridGap = 1.5f;
+    private const float GridThumbnailOversample = 2f;
+    private const float GridBadgeInset = 12f;
+    private const float GridBadgeSize = 16f;
+    private const float GridBadgeGap = 18f;
     private const float UserRowHeight = 64f;
     private const float UserRowAvatarRadius = 22f;
     private const float FollowPillWidth = 96f;
@@ -60,7 +63,7 @@ internal sealed partial class AethergramApp
     private static int DrawIconTabs(Rect row, ReadOnlySpan<string> glyphs, ReadOnlySpan<string> labels, int active,
         ref Spring slide) =>
         UnderlineTabs.DrawIcons(row, glyphs, labels, active, ref slide, Ink, IconTabIconSize, IconTabUnderline,
-            TabSmoothTime);
+            Motion.Release);
 
     private static bool DrawAccentPill(Rect rect, string label, bool enabled = true) =>
         SocialPill.Accent(ImGui.GetWindowDrawList(), rect, label, Ink, PillStyle, PillRounding * UiScale.Current,
@@ -113,10 +116,13 @@ internal sealed partial class AethergramApp
                 ImGui.Dummy(new Vector2(cellWidth, cellHeight));
                 var min = ImGui.GetItemRectMin();
                 var max = ImGui.GetItemRectMax();
-                DrawGridTile(posts[index], min, max, style);
-                if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
+                if (ImGui.IsRectVisible(min, max))
                 {
-                    OpenPosts(posts[index].Id, source);
+                    DrawGridTile(posts[index], min, max, style, source == PostSource.Profile);
+                    if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
+                    {
+                        OpenPosts(posts[index].Id, source);
+                    }
                 }
 
                 if (index % GridColumns != GridColumns - 1)
@@ -139,18 +145,21 @@ internal sealed partial class AethergramApp
         ImGui.Dummy(new Vector2(0f, 24f * scale));
     }
 
-    private void DrawGridTile(PostDto post, Vector2 min, Vector2 max, in PostGridStyle style)
+    private void DrawGridTile(PostDto post, Vector2 min, Vector2 max, in PostGridStyle style, bool showPin)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
+        var pinned = showPin && post.PinnedAtUnix is not null;
+        var badgeCenter = new Vector2(max.X - GridBadgeInset * scale, min.Y + GridBadgeInset * scale);
         if (SensitiveReveals.ShouldVeil(post.Sensitive, post.Id, configuration.ShowSensitiveContent))
         {
             SensitiveVeil.Draw(drawList, min, max, 0f);
         }
         else
         {
-            var texture = images.Get(photos.Length > 0 ? photos[0] : null);
+            var texture = images.Sized(photos.Length > 0 ? photos[0] : null,
+                MathF.Max(max.X - min.X, max.Y - min.Y) * GridThumbnailOversample);
             if (texture is null)
             {
                 drawList.AddRectFilled(min, max, ImGui.GetColorU32(Ink.ThumbFill));
@@ -161,9 +170,14 @@ internal sealed partial class AethergramApp
             drawList.AddImage(texture.Handle, min, max, uv0, uv1);
             if (photos.Length > 1)
             {
-                PhoneIcon.Draw(drawList, new Vector2(max.X - 12f * scale, min.Y + 12f * scale), PhoneIcons.Copy,
-                    Ink.White, 16f * scale);
+                var carouselCenter = pinned ? badgeCenter - new Vector2(GridBadgeGap * scale, 0f) : badgeCenter;
+                PhoneIcon.Draw(drawList, carouselCenter, PhoneIcons.Copy, Ink.White, GridBadgeSize * scale);
             }
+        }
+
+        if (pinned)
+        {
+            PhoneIcon.Draw(drawList, badgeCenter, PhoneIcons.PinFilled, Ink.White, GridBadgeSize * scale);
         }
 
         if (style.ShowLikes)

@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Aetherphone.Core.Localization;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
+using SharpDX.Mathematics.Interop;
 
 namespace Aetherphone.Core.Video;
 
@@ -23,7 +24,11 @@ internal sealed class VideoEngine : IDisposable
     internal const float MinScreenScale = 0.1f;
     internal const float MaxScreenScale = 8.0f;
 
-    internal const float ScreenPositionSliderRange = 10f;
+    internal const float MaxScreenCurve = 2.0f;
+
+    private const long PlacementSettleMilliseconds = 1500;
+    private const long StandbyBlankMilliseconds = 750;
+    private const string StandbyRenderKey = "mpv-standby";
 
     private static readonly TimeSpan YouTubeLoadSpacing = TimeSpan.FromSeconds(3);
 
@@ -45,6 +50,7 @@ internal sealed class VideoEngine : IDisposable
     private readonly List<ScreenPositionPreset> screenPresets = [];
     private readonly SemaphoreSlim playGate = new(1, 1);
     private readonly Texture2D screenTexture;
+    private readonly Action clearScreenTexture;
 
     private static readonly Texture2DDescription ScreenTextureDescription = new()
     {
@@ -85,6 +91,15 @@ internal sealed class VideoEngine : IDisposable
     private double lastObservedPosition;
     private double lastObservedAudioPosition;
     private bool audioPositionSeen;
+    private volatile bool standby;
+    private bool holdScreen;
+    private bool placementEdited;
+    private long placementEditedAtTicks;
+    private uint placementTerritory;
+    private short placementWard;
+    private long standbyBlankUntilTicks;
+    private float spatialGain = 1f;
+    private int appliedVolume = -1;
 
     internal VideoEngine()
     {
@@ -92,6 +107,7 @@ internal sealed class VideoEngine : IDisposable
         DxHandler.Initialise(Plugin.PluginInterface);
 
         screenTexture = new Texture2D(DxHandler.Device, ScreenTextureDescription);
+        clearScreenTexture = ClearScreenTexture;
         screenPainter = new ScreenPainter();
 
         screenPresets.AddRange(Plugin.Cfg.ScreenPresets);
@@ -106,11 +122,17 @@ internal sealed class VideoEngine : IDisposable
     internal float ScreenScale { get; private set; } = 1.0f;
     internal Vector3 ScreenSpawnAnchor { get; private set; }
 
+    internal ScreenPose ScreenPose => new(ScreenPosition, ScreenYaw, ScreenPitch, ScreenRoll, ScreenScale);
+
     internal bool HardwareDecoding { get; set; }
     internal int MaxQualityHeight { get; set; } = 720;
     internal bool AllowInsecureDirectUrls { get; set; }
+    internal bool SpatialAudio { get; set; }
+    internal float SpatialRange { get; set; } = SpatialVolume.DefaultRange;
+    internal bool MuteInBackground { get; set; }
 
     internal bool IsActive => active;
+    internal bool IsStandby => standby;
     internal bool IsLoading => Volatile.Read(ref activeLoads) > 0;
     internal string? LastError { get; private set; }
     internal string? RecoveryNotice => recoveryNotice;
@@ -277,6 +299,7 @@ internal sealed class VideoEngine : IDisposable
         created.FileEnded += OnFileEnded;
         created.FileLoaded += OnFileLoaded;
         renderer = created;
+        appliedVolume = -1;
         return created;
     }
 
@@ -650,15 +673,25 @@ internal sealed class VideoEngine : IDisposable
     internal void StopVideo()
     {
         Interlocked.Increment(ref loadGeneration);
-        active = false;
         recoveryNotice = null;
         renderer?.Stop();
+        if (holdScreen && active)
+        {
+            standby = true;
+            standbyBlankUntilTicks = Environment.TickCount64 + StandbyBlankMilliseconds;
+            BlankScreen();
+            return;
+        }
+
+        standby = false;
+        active = false;
         screenPainter.SetTarget(null);
     }
 
     internal void Shutdown()
     {
         Interlocked.Increment(ref loadGeneration);
+        standby = false;
         active = false;
         DetachRenderer();
         screenPainter.SetTarget(null);
@@ -673,7 +706,7 @@ internal sealed class VideoEngine : IDisposable
     internal void SetVolume(int volume)
     {
         pendingVolume = Math.Clamp(volume, 0, 100);
-        renderer?.SetVolume(pendingVolume);
+        ApplyVolume();
     }
 
     internal MpvPlaybackInfo ReadPlaybackInfo() => renderer?.ReadPlaybackInfo() ?? default;
@@ -681,6 +714,10 @@ internal sealed class VideoEngine : IDisposable
     internal string? GetMediaTitle() => renderer?.ReadMediaTitle();
 
     internal string? GetCurrentUrl() => renderer?.CurrentUrl;
+
+    internal MediaTrack[] ReadTracks() => renderer?.ReadTracks() ?? [];
+
+    internal void SelectTrack(MediaTrackKind kind, int id) => renderer?.SelectTrack(kind, id);
 
     internal int FrameVersion => renderer?.FrameVersion ?? 0;
 
@@ -741,12 +778,40 @@ internal sealed class VideoEngine : IDisposable
         var position = localPlayer.Position + forward * DefaultScreenSpawnDistance
             + new Vector3(0, DefaultScreenHeightOffset, 0);
         ScreenSpawnAnchor = position;
-        SetScreenTransform(position, yaw + MathF.PI, 0f, 0f, 1.0f);
+        ApplyScreenTransform(position, yaw + MathF.PI, 0f, 0f, 1.0f);
     }
 
-    internal void RecenterScreen() => SpawnScreenInFrontOfLocalPlayer();
+    internal void RecenterScreen()
+    {
+        SpawnScreenInFrontOfLocalPlayer();
+        NotePlacementEdited();
+    }
+
+    internal void FaceLocalPlayer()
+    {
+        if (Plugin.ObjectTable.LocalPlayer is not { } localPlayer)
+        {
+            return;
+        }
+
+        SetScreenTransform(ScreenPosition, ScreenGeometry.YawFacing(ScreenPosition, localPlayer.Position), 0f, 0f,
+            ScreenScale);
+    }
+
+    internal void NudgeScreen(float right, float up, float toward)
+    {
+        var pose = ScreenPose;
+        SetScreenTransform(ScreenGeometry.Nudge(pose, right, up, toward), ScreenYaw, ScreenPitch, ScreenRoll,
+            ScreenScale);
+    }
 
     internal void SetScreenTransform(Vector3 position, float yaw, float pitch, float roll, float scale)
+    {
+        ApplyScreenTransform(position, yaw, pitch, roll, scale);
+        NotePlacementEdited();
+    }
+
+    private void ApplyScreenTransform(Vector3 position, float yaw, float pitch, float roll, float scale)
     {
         ScreenPosition = position;
         ScreenYaw = yaw;
@@ -760,11 +825,19 @@ internal sealed class VideoEngine : IDisposable
         }
     }
 
-    internal bool ScreenCurved
+    private void NotePlacementEdited()
     {
-        get => screenPainter.Curved;
-        set => screenPainter.Curved = value;
+        placementEdited = true;
+        placementEditedAtTicks = Environment.TickCount64;
     }
+
+    internal float ScreenCurve
+    {
+        get => screenPainter.Curve;
+        set => screenPainter.Curve = Math.Clamp(value, 0f, MaxScreenCurve);
+    }
+
+    internal float ScreenCurveDepth => ScreenPainter.CurvedDepth * screenPainter.Curve;
 
     internal List<ScreenPositionPreset> GetScreenPresets() => [.. screenPresets];
 
@@ -779,7 +852,8 @@ internal sealed class VideoEngine : IDisposable
         screenPresets.Add(new ScreenPositionPreset
         {
             Name = name, X = ScreenPosition.X, Y = ScreenPosition.Y, Z = ScreenPosition.Z, Yaw = ScreenYaw,
-            Pitch = ScreenPitch, Roll = ScreenRoll, Scale = ScreenScale, Flat = !ScreenCurved,
+            Pitch = ScreenPitch, Roll = ScreenRoll, Scale = ScreenScale, Flat = ScreenCurve <= 0f,
+            Curve = ScreenCurve,
         });
 
         Plugin.Cfg.ScreenPresets = screenPresets;
@@ -797,24 +871,212 @@ internal sealed class VideoEngine : IDisposable
     {
         var position = new Vector3(preset.X, preset.Y, preset.Z);
         ScreenSpawnAnchor = position;
-        ScreenCurved = !preset.Flat;
+        ScreenCurve = preset.CurveAmount;
         SetScreenTransform(position, preset.Yaw, preset.Pitch, preset.Roll, preset.Scale);
     }
 
-    internal void ApplyRemoteScreenTransform(Vector3 position, float yaw, float scale)
+    internal void ApplyRemoteScreenPose(in ScreenPose pose, float? curve)
     {
-        ScreenSpawnAnchor = position;
-        SetScreenTransform(position, yaw, ScreenPitch, ScreenRoll, scale);
+        ScreenSpawnAnchor = pose.Position;
+        if (curve is { } remoteCurve)
+        {
+            ScreenCurve = remoteCurve;
+        }
+
+        ApplyScreenTransform(pose.Position, pose.Yaw, pose.Pitch, pose.Roll, pose.Scale);
     }
 
     private void PrepareScreenForSession()
     {
         var isNewSession = !active;
+        standby = false;
+        DxHandler.CancelRenderThreadWork(StandbyRenderKey);
         screenPainter.SetTarget(screenTexture);
+        if (!isNewSession)
+        {
+            return;
+        }
 
-        if (isNewSession)
+        placementTerritory = Plugin.ClientState.TerritoryType;
+        placementWard = Maps.LocationShare.CurrentHousing().Ward;
+        if (!TryRestorePlacement())
         {
             SpawnScreenInFrontOfLocalPlayer();
+        }
+    }
+
+    private bool TryRestorePlacement()
+    {
+        if (!Plugin.Cfg.VideoRememberPlacement || Plugin.ObjectTable.LocalPlayer is not { } localPlayer)
+        {
+            return false;
+        }
+
+        var place = CurrentPlaceKey();
+        var records = Plugin.Cfg.VideoScreenPlacements;
+        for (var index = 0; index < records.Count; index++)
+        {
+            var record = records[index];
+            if (!string.Equals(record.Place, place, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var position = new Vector3(record.X, record.Y, record.Z);
+            if (Vector3.Distance(position, localPlayer.Position) > ScreenPlaces.ReuseDistance)
+            {
+                return false;
+            }
+
+            ScreenSpawnAnchor = position;
+            ApplyScreenTransform(position, record.Yaw, record.Pitch, record.Roll, record.Scale);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string CurrentPlaceKey()
+    {
+        var housing = Maps.LocationShare.CurrentHousing();
+        var indoors = Maps.LocationShare.IsIndoors();
+        return ScreenPlaces.Key(Plugin.ClientState.TerritoryType, Maps.LocationShare.CurrentWorldId(), housing.Ward,
+            indoors ? housing.Plot : (short)0, indoors ? housing.Room : (short)0);
+    }
+
+    private void SavePlacementWhenSettled(long now)
+    {
+        if (!placementEdited || now - placementEditedAtTicks < PlacementSettleMilliseconds)
+        {
+            return;
+        }
+
+        placementEdited = false;
+        if (!active || !Plugin.Cfg.VideoRememberPlacement || Plugin.ObjectTable.LocalPlayer is null)
+        {
+            return;
+        }
+
+        var place = CurrentPlaceKey();
+        var records = Plugin.Cfg.VideoScreenPlacements;
+        for (var index = records.Count - 1; index >= 0; index--)
+        {
+            if (string.Equals(records[index].Place, place, StringComparison.Ordinal))
+            {
+                records.RemoveAt(index);
+            }
+        }
+
+        records.Add(new ScreenPlacementRecord
+        {
+            Place = place, X = ScreenPosition.X, Y = ScreenPosition.Y, Z = ScreenPosition.Z, Yaw = ScreenYaw,
+            Pitch = ScreenPitch, Roll = ScreenRoll, Scale = ScreenScale,
+        });
+        while (records.Count > ScreenPlaces.MaxRemembered)
+        {
+            records.RemoveAt(0);
+        }
+
+        Plugin.Cfg.Save();
+    }
+
+    private void FollowZoneChange()
+    {
+        if (!active || Plugin.ObjectTable.LocalPlayer is null)
+        {
+            return;
+        }
+
+        var territory = Plugin.ClientState.TerritoryType;
+        var ward = Maps.LocationShare.CurrentHousing().Ward;
+        if (territory == placementTerritory && ward == placementWard)
+        {
+            return;
+        }
+
+        placementTerritory = territory;
+        placementWard = ward;
+        placementEdited = false;
+        if (standby)
+        {
+            standby = false;
+            active = false;
+            screenPainter.SetTarget(null);
+            return;
+        }
+
+        if (!TryRestorePlacement())
+        {
+            SpawnScreenInFrontOfLocalPlayer();
+        }
+    }
+
+    internal void OnFrameworkUpdate()
+    {
+        var now = Environment.TickCount64;
+        FollowZoneChange();
+        SavePlacementWhenSettled(now);
+        if (standby && now < standbyBlankUntilTicks)
+        {
+            BlankScreen();
+        }
+
+        ApplyVolume();
+    }
+
+    private void ApplyVolume()
+    {
+        if (!SpatialAudio || !active || !screenPainter.Visible)
+        {
+            spatialGain = 1f;
+        }
+        else if (Plugin.ObjectTable.LocalPlayer is { } localPlayer)
+        {
+            spatialGain = SpatialVolume.Gain(Vector3.Distance(localPlayer.Position, ScreenPosition), SpatialRange);
+        }
+
+        var gain = spatialGain;
+
+        if (MuteInBackground && !Platform.GameWindowFocus.IsFocused)
+        {
+            gain = 0f;
+        }
+
+        var target = (int)MathF.Round(pendingVolume * gain);
+        if (target == appliedVolume)
+        {
+            return;
+        }
+
+        appliedVolume = target;
+        renderer?.SetVolume(target);
+    }
+
+    private void BlankScreen() => DxHandler.RunOnRenderThread(StandbyRenderKey, clearScreenTexture);
+
+    private void ClearScreenTexture()
+    {
+        if (DxHandler.Device is not { } device)
+        {
+            return;
+        }
+
+        using var view = new RenderTargetView(device, screenTexture);
+        device.ImmediateContext.ClearRenderTargetView(view, new RawColor4(0f, 0f, 0f, 1f));
+    }
+
+    internal bool HoldScreen
+    {
+        get => holdScreen;
+        set
+        {
+            holdScreen = value;
+            if (!value && standby)
+            {
+                standby = false;
+                active = false;
+                screenPainter.SetTarget(null);
+            }
         }
     }
 
@@ -828,6 +1090,7 @@ internal sealed class VideoEngine : IDisposable
     {
         lifetime.Cancel();
         DetachRenderer();
+        DxHandler.CancelRenderThreadWork(StandbyRenderKey);
         screenPainter.Dispose();
         screenView?.Dispose();
         screenTexture.Dispose();

@@ -13,13 +13,12 @@ namespace Aetherphone.Apps.AetherStream;
 internal sealed partial class AetherStreamApp
 {
     private const float TheaterAspect = (float)VideoEngine.ScreenWidth / VideoEngine.ScreenHeight;
-    private const float TheaterFadeTime = 0.14f;
     private const float TheaterScrimHeight = 78f;
     private const float TheaterHeaderY = 50f;
     private const float TheaterProgressY = 40f;
+    private const float TheaterReactionWidth = 240f;
 
     private static readonly Vector4 TheaterBackdrop = new(0f, 0f, 0f, 1f);
-    private static readonly Vector4 TheaterButtonBacking = new(0f, 0f, 0f, 0.42f);
 
     private Spring theaterFade;
     private bool theaterScrubbing;
@@ -37,7 +36,12 @@ internal sealed partial class AetherStreamApp
     {
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(TheaterBackdrop), theme.ScreenRounding * scale);
-        DrawTheaterFrame(drawList, TheaterFrameRect(area), scale);
+        var frame = TheaterFrameRect(area);
+        DrawTheaterFrame(drawList, frame, scale);
+        drawList.PushClipRect(frame.Min, frame.Max, true);
+        VideoStageOverlay.DrawBubbles(drawList, frame, suite.ChatFeed, scale);
+        VideoStageOverlay.DrawReactions(drawList, frame, watchAlong.Reactions, scale);
+        drawList.PopClipRect();
 
         var delta = ImGui.GetIO().DeltaTime;
         var loading = video.State == VideoPlaybackState.Loading;
@@ -51,10 +55,8 @@ internal sealed partial class AetherStreamApp
             DrawTheaterFailure(drawList, area, scale, failureTitle, failureBody);
         }
 
-        DrawTheaterSuggestionsPill(drawList, area, scale, delta);
-
         var hovered = UiInteract.Hover(area.Min, area.Max);
-        var eased = Math.Clamp(theaterFade.Step(hovered ? 1f : 0f, TheaterFadeTime, delta), 0f, 1f);
+        var eased = Math.Clamp(theaterFade.Step(hovered ? 1f : 0f, Motion.Appear, delta), 0f, 1f);
         if (eased <= 0.01f)
         {
             return;
@@ -62,44 +64,34 @@ internal sealed partial class AetherStreamApp
 
         DrawTheaterScrims(drawList, area, scale, eased);
         DrawTheaterHeader(drawList, area, scale, eased, delta);
-        if (!loading)
+        if (!loading && CanDrive)
         {
             DrawTheaterTransport(drawList, area, scale, eased, delta);
         }
 
         DrawTheaterProgress(drawList, area, scale, eased);
+        if (ReactionsAvailable)
+        {
+            var width = TheaterReactionWidth * scale;
+            var centerY = area.Max.Y - (TheaterProgressY + 44f) * scale;
+            var row = new Rect(new Vector2(area.Center.X - width * 0.5f, centerY - ReactionHitRadius * scale),
+                new Vector2(area.Center.X + width * 0.5f, centerY + ReactionHitRadius * scale));
+            DrawReactionButtons(drawList, row, eased, scale);
+        }
     }
 
-    private void DrawTheaterFailure(ImDrawListPtr drawList, Rect area, float scale, string title, string body)
+    private static void DrawTheaterFailure(ImDrawListPtr drawList, Rect area, float scale, string title, string body)
     {
         var maxWidth = Math.Min(area.Width * 0.7f, 420f * scale);
         var titleStyle = TextStyles.BodyEmphasized;
-        var titleCenter = area.Center - new Vector2(0f, Typography.LineHeight(titleStyle));
-        Typography.DrawCentered(drawList, titleCenter, title, WhiteInk, titleStyle.Scale, titleStyle.Weight);
-        Typography.DrawWrappedCentered(drawList, body, TextStyles.Footnote, Palette.WithAlpha(WhiteInk, 0.8f),
-            area.Center, maxWidth);
-    }
-
-    private void DrawTheaterSuggestionsPill(ImDrawListPtr drawList, Rect area, float scale, float delta)
-    {
-        if (!watchAlong.IsHosting || watchAlong.PendingQueueSuggestions.Count == 0)
-        {
-            return;
-        }
-
-        var radius = 16f * scale;
-        var center = new Vector2(area.Min.X + Metrics.Space.Lg * scale + radius,
-            area.Min.Y + TheaterHeaderY * scale);
-        if (HoverButton.Circle(drawList, "aetherstream.theater.suggestions", center, radius, FontAwesomeIcon.ListUl,
-                TheaterButtonBacking, WhiteInk, delta, 1f, true, Loc.T(L.AetherStream.QueueSuggestionsHeader)))
-        {
-            ExitTheater();
-            upNextSheet.Open();
-            return;
-        }
-
-        AppBadge.Draw(new Vector2(center.X + radius * 0.72f, center.Y - radius * 0.72f),
-            watchAlong.PendingQueueSuggestions.Count, theme, scale);
+        var bodyHeight = Typography.MeasureWrappedBlock(body, TextStyles.Footnote, maxWidth).Y;
+        var titleHeight = Typography.LineHeight(titleStyle);
+        var top = area.Center.Y - (titleHeight + Metrics.Space.Xs * scale + bodyHeight) * 0.5f;
+        Typography.DrawCentered(drawList, new Vector2(area.Center.X, top + titleHeight * 0.5f), title, WhiteInk,
+            titleStyle);
+        Typography.DrawWrappedCentered(drawList,
+            new Vector2(area.Center.X, top + titleHeight + Metrics.Space.Xs * scale + bodyHeight * 0.5f), body,
+            Palette.WithAlpha(WhiteInk, 0.8f), TextStyles.Footnote, maxWidth);
     }
 
     private static Rect TheaterFrameRect(Rect area)
@@ -136,7 +128,7 @@ internal sealed partial class AetherStreamApp
             return;
         }
 
-        AppSkin.Icon(drawList, frame.Center, IconGlyph.Of(FontAwesomeIcon.Tv), ui.MutedInk, 1.8f);
+        AppSkin.Icon(drawList, frame.Center, IconGlyph.Of(FontAwesomeIcon.Tv), Ink.FaintInk, 1.8f);
     }
 
     private static void DrawTheaterScrims(ImDrawListPtr drawList, Rect area, float scale, float eased)
@@ -156,18 +148,10 @@ internal sealed partial class AetherStreamApp
         var centerY = area.Min.Y + TheaterHeaderY * scale;
         var exitCenter = new Vector2(area.Max.X - Metrics.Space.Lg * scale - radius, centerY);
         if (HoverButton.Circle(drawList, "aetherstream.theater.exit", exitCenter, radius, FontAwesomeIcon.Compress,
-                TheaterButtonBacking, WhiteInk, delta, eased, true, Loc.T(L.AetherStream.ExitFullscreen)))
+                StageBacking, WhiteInk, delta, eased, true, Loc.T(L.AetherStream.ExitFullscreen)))
         {
             ExitTheater();
             return;
-        }
-
-        var windowCenter = new Vector2(exitCenter.X - radius * 2f - Metrics.Space.Sm * scale, centerY);
-        if (HoverButton.Circle(drawList, "aetherstream.theater.window", windowCenter, radius,
-                FontAwesomeIcon.WindowRestore, TheaterButtonBacking, WhiteInk, delta, eased, true,
-                Loc.T(L.AetherStream.OpenScreenWindow)))
-        {
-            screenWindow.IsOpen = true;
         }
 
         if (CurrentEntry is not { } current)
@@ -176,68 +160,45 @@ internal sealed partial class AetherStreamApp
         }
 
         var titleLeft = area.Min.X + Metrics.Space.Lg * scale;
-        if (watchAlong.IsHosting && watchAlong.PendingQueueSuggestions.Count > 0)
-        {
-            titleLeft += 32f * scale + Metrics.Space.Md * scale;
-        }
-
-        var titleWidth = windowCenter.X - radius - Metrics.Space.Md * scale - titleLeft;
+        var titleWidth = exitCenter.X - radius - Metrics.Space.Md * scale - titleLeft;
         if (titleWidth <= 0f)
         {
             return;
         }
 
         var titleHeight = Typography.LineHeight(TextStyles.Headline);
-        Marquee.DrawLeftAuto("aetherstream.theater.title", current.Title, titleLeft, centerY - titleHeight * 0.5f,
-            titleWidth, TextStyles.Headline, Palette.WithAlpha(WhiteInk, eased));
+        Marquee.DrawLeftAuto(drawList, "aetherstream.theater.title", current.Title, titleLeft,
+            centerY - titleHeight * 0.5f, titleWidth, TextStyles.Headline, Palette.WithAlpha(WhiteInk, eased));
     }
 
     private void DrawTheaterTransport(ImDrawListPtr drawList, Rect area, float scale, float eased, float delta)
     {
-        var interactive = !watchAlong.IsViewing;
-        var alpha = eased * (interactive ? 1f : 0.45f);
         var progress = video.Progress;
-        var position = progress.Position;
         var center = area.Center;
         var playRadius = 30f * scale;
-        var trackRadius = 20f * scale;
-        var seekRadius = 18f * scale;
-        var trackOffset = 78f * scale;
-        var seekOffset = 142f * scale;
+        var seekRadius = 20f * scale;
+        var seekOffset = 92f * scale;
 
-        if (interactive && HoverButton.Circle(drawList, "aetherstream.theater.seekBack",
+        if (HoverButton.Circle(drawList, "aetherstream.theater.seekBack",
                 new Vector2(center.X - seekOffset, center.Y), seekRadius, FontAwesomeIcon.UndoAlt,
-                AppSkin.Transparent, WhiteInk, delta, alpha, true))
+                AppSkin.Transparent, WhiteInk, delta, eased, true))
         {
-            video.Seek(MathF.Max(0f, position - 10f));
+            SeekTo(progress.Position - SeekStepSeconds);
         }
 
-        if (TransportButton.Draw(new Vector2(center.X - trackOffset, center.Y), trackRadius,
-                TransportAction.Previous, WhiteInk, WhiteInk, alpha, interactive) && interactive)
+        drawList.AddCircleFilled(center, playRadius, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, eased)), 40);
+        var playing = video.HasMedia && !progress.Paused;
+        if (TransportButton.Draw(center, playRadius, playing ? TransportAction.Pause : TransportAction.Play,
+                ui.Accent, WhiteInk, eased, true))
         {
-            queue.Restart();
+            TogglePlayback();
         }
 
-        drawList.AddCircleFilled(center, playRadius, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, alpha)), 40);
-        var playAction = progress.Paused || !video.HasMedia ? TransportAction.Play : TransportAction.Pause;
-        if (TransportButton.Draw(center, playRadius, playAction, ui.Accent, WhiteInk, alpha, interactive) &&
-            interactive)
-        {
-            TogglePlayback(progress.Paused);
-        }
-
-        var canAdvance = interactive && queue.HasNext;
-        if (TransportButton.Draw(new Vector2(center.X + trackOffset, center.Y), trackRadius, TransportAction.Next,
-                WhiteInk, WhiteInk, canAdvance ? alpha : eased * 0.35f, canAdvance) && canAdvance)
-        {
-            queue.Advance();
-        }
-
-        if (interactive && HoverButton.Circle(drawList, "aetherstream.theater.seekForward",
+        if (HoverButton.Circle(drawList, "aetherstream.theater.seekForward",
                 new Vector2(center.X + seekOffset, center.Y), seekRadius, FontAwesomeIcon.RedoAlt,
-                AppSkin.Transparent, WhiteInk, delta, alpha, true))
+                AppSkin.Transparent, WhiteInk, delta, eased, true))
         {
-            video.Seek(position + 10f);
+            SeekTo(progress.Position + SeekStepSeconds);
         }
     }
 
@@ -250,7 +211,7 @@ internal sealed partial class AetherStreamApp
         var pad = Metrics.Space.Lg * scale;
         var ink = Palette.WithAlpha(WhiteInk, eased);
         var elapsedText = TimeText.MinutesSeconds((int)shown);
-        var remainingText = $"-{TimeText.MinutesSeconds((int)MathF.Max(0f, duration - shown))}";
+        var remainingText = TimeText.MinutesSeconds((int)MathF.Max(0f, duration - shown));
         var elapsedSize = Typography.Measure(elapsedText, TextStyles.Caption1);
         var remainingSize = Typography.Measure(remainingText, TextStyles.Caption1);
         Typography.Draw(drawList, new Vector2(area.Min.X + pad, rowCenterY - elapsedSize.Y * 0.5f), elapsedText, ink,
@@ -268,11 +229,13 @@ internal sealed partial class AetherStreamApp
         var track = new Rect(new Vector2(trackLeft, rowCenterY - 2f * scale),
             new Vector2(trackRight, rowCenterY + 2f * scale));
         var normalized = theaterScrubbing ? theaterScrubValue : progress.Fraction;
-        var updated = Scrubber.Draw(track, normalized, ui.Accent, Palette.WithAlpha(WhiteInk, 0.28f), eased);
-        if (watchAlong.IsViewing || duration <= 0f)
+        if (!CanDrive || duration <= 0f)
         {
+            PassiveProgress(drawList, track, normalized, ui.Accent, Palette.WithAlpha(WhiteInk, 0.28f), eased);
             return;
         }
+
+        var updated = Scrubber.Draw(track, normalized, ui.Accent, Palette.WithAlpha(WhiteInk, 0.28f), eased);
 
         if (Scrubber.IsHovered(track) && ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
@@ -287,6 +250,6 @@ internal sealed partial class AetherStreamApp
         }
 
         theaterScrubbing = false;
-        video.Seek(theaterScrubValue * duration);
+        SeekTo(theaterScrubValue * duration);
     }
 }

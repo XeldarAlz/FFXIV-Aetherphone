@@ -40,6 +40,8 @@ internal sealed class ShellTransitionRenderer
         this.painter = painter;
     }
 
+    public float StatusBarAlpha { get; private set; } = 1f;
+
     public void ResetPrepared() => zoomPreparedFor = null;
 
     public void Draw(Rect screen, float screenRadius, PhoneTheme theme)
@@ -52,6 +54,7 @@ internal sealed class ShellTransitionRenderer
             return;
         }
 
+        StatusBarAlpha = 1f;
         DrawSlide(screen, screenRadius, theme, over, under);
     }
 
@@ -100,10 +103,11 @@ internal sealed class ShellTransitionRenderer
         var rest = navigation.MotionOrigin ?? RestRect(over, content, out kind);
         var zoom = 1f + TransitionTiming.HomeZoomDepth * raw;
         var homeTransform = LayerTransform.ScaleAbout(rest.Center, zoom, screen);
+        var homeMotion = HomeMotion.Recede(raw, kind == LaunchOrigin.Icon ? over.Id : null, zoom, rest.Center);
+        StatusBarAlpha = MathF.Max(1f - homeMotion.Recession, Easing.Segment(raw, VeilFadeEnd, 1f));
         using (var homeLayer = ScreenLayer.Begin(ShellScreenPainter.HomeLayerId, screen, true))
         {
-            painter.PaintHome(screen, screenRadius, theme,
-                HomeMotion.Recede(raw, kind == LaunchOrigin.Icon ? over.Id : null));
+            painter.PaintHome(screen, screenRadius, theme, homeMotion);
             homeLayer.Veil(ImGui.GetColorU32(new Vector4(0f, 0f, 0f, TransitionTiming.HomeRecedeDim * raw)));
             homeLayer.Transform(in homeTransform);
         }
@@ -114,7 +118,7 @@ internal sealed class ShellTransitionRenderer
         var iconRadius = MathF.Min(MathF.Min(rest.Width, rest.Height) * IconRadiusFactor, IconRadiusCapUnits * scale);
         var rounding = iconRadius + (screenRadius - iconRadius) * raw;
         var surfaceFade = kind == LaunchOrigin.Surface
-            ? Easing.SmootherStep(Easing.Segment(raw, SurfaceFadeStart, SurfaceFadeEnd))
+            ? Easing.Segment(raw, SurfaceFadeStart, SurfaceFadeEnd)
             : 1f;
         var elevation = Easing.Clamp01(raw * ShadowRise) * surfaceFade;
         using (ScreenLayer.BeginPassive(ShadowLayerId, screen))
@@ -214,26 +218,31 @@ internal sealed class ShellTransitionRenderer
 
     private void DrawIconVeil(ImDrawListPtr drawList, IPhoneApp over, Rect card, float rounding, float raw)
     {
-        var veilAlpha = 1f - Easing.SmootherStep(Easing.Segment(raw, VeilFadeStart, VeilFadeEnd));
+        var veilAlpha = 1f - Easing.Segment(raw, VeilFadeStart, VeilFadeEnd);
         if (veilAlpha > 0.001f)
         {
             var surface = IconTile.Surface(over.Accent);
             var background = themes.ForApp(over.WantsSystemTheme).AppBackground;
-            var settle = Easing.SmootherStep(Easing.Segment(raw, 0f, VeilSettleEnd));
+            var settle = Easing.Segment(raw, 0f, VeilSettleEnd);
             IconTile.FillShaded(drawList, card.Min, card.Max, rounding, surface, veilAlpha * (1f - settle));
             Squircle.Fill(drawList, card.Min, card.Max, rounding,
                 ImGui.GetColorU32(background with { W = background.W * veilAlpha * settle }));
         }
 
-        var glyphAlpha = 1f - Easing.SmootherStep(Easing.Segment(raw, GlyphFadeStart, GlyphFadeEnd));
+        var glyphAlpha = 1f - Easing.Segment(raw, GlyphFadeStart, GlyphFadeEnd);
         if (glyphAlpha > 0.001f)
         {
-            DrawZoomGlyph(drawList, over, card, glyphAlpha);
+            DrawZoomGlyph(drawList, over, card, rounding, glyphAlpha);
         }
     }
 
-    private static void DrawZoomGlyph(ImDrawListPtr drawList, IPhoneApp over, Rect card, float alpha)
+    private static void DrawZoomGlyph(ImDrawListPtr drawList, IPhoneApp over, Rect card, float rounding, float alpha)
     {
+        if (AppIconTile.TryDraw(drawList, over.Id, over.Accent, card.Min, card.Max, rounding, alpha, false))
+        {
+            return;
+        }
+
         var size = card.Width;
         var center = card.Center;
         var surface = IconTile.Surface(over.Accent);

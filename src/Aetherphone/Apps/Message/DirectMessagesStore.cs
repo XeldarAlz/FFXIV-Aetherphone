@@ -23,7 +23,6 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     private readonly ChatClient client;
     private readonly PeerKeyDirectory peers;
-    private readonly RealtimeSignalBus signals;
     private readonly ContactBook contacts;
 
     private volatile ConversationDto? conversation;
@@ -33,26 +32,14 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers,
         DecryptedHistoryStore chatHistory, PhoneVisibility visibility, RealtimeSignalBus signals,
         AppInstaller installer, ContactBook contacts, bool tracksInbox = true)
-        : base("Messages", session, safety, media, notifications, vault, keys, chatHistory, visibility,
+        : base("Messages", session, safety, media, notifications, vault, keys, chatHistory, visibility, signals,
             installer.Gate("message"), tracksInbox)
     {
         this.client = client;
         this.peers = peers;
-        this.signals = signals;
         this.contacts = contacts;
         signals.ChatPinged += OnChatPinged;
-        signals.ConnectedChanged += OnRealtimeConnected;
     }
-
-    private void OnRealtimeConnected(bool active)
-    {
-        if (active)
-        {
-            InboxCadence.RequestAfterReconnect();
-        }
-    }
-
-    public override bool RealtimePushActive => signals.RealtimeActive;
 
     private void OnChatPinged(ChatSignal signal)
     {
@@ -68,7 +55,11 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
             RefreshThreadDetail();
         }
 
-        RequestThreadKeyRefresh();
+        if (signal.ConversationId is null || ConversationId == signal.ConversationId)
+        {
+            RequestThreadKeyRefresh();
+        }
+
         RequestThreadRefresh(signal.ConversationId);
     }
 
@@ -126,6 +117,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     protected override string ImageUploadScope => "chat-dm";
     protected override string VoiceUploadScope => "chat-voice";
     protected override string ReportTargetType => "chat_message";
+    protected override string TypingSignalType => Core.Telephony.Contracts.SignalType.ChatTyping;
 
     protected override string ScopeFor(string threadId) => ConversationKeyStore.ChatScope(threadId);
 
@@ -366,6 +358,12 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
             if (source.Kind != 0)
             {
                 if (source.EncVersion == EnvelopeCodec.VersionEnvelope)
+                {
+                    return false;
+                }
+
+                var targetStatus = await keys.EnsureChatKeysAsync(targetId, token).ConfigureAwait(false);
+                if (DowngradeBlocked(targetId, "forward attachment", false, targetStatus))
                 {
                     return false;
                 }
@@ -669,6 +667,5 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     protected override void DisposeCore()
     {
         signals.ChatPinged -= OnChatPinged;
-        signals.ConnectedChanged -= OnRealtimeConnected;
     }
 }

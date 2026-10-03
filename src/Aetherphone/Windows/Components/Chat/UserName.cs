@@ -42,7 +42,7 @@ internal static class UserName
         BadgeStrip.DrawOne(drawList, center, badge, communityImages, light, size);
     }
 
-    public static float Reserve(int badges, in TextStyle style, int maxBadges = 1)
+    public static float Reserve(int badges, in TextStyle style, int maxBadges = LoadoutStore.BadgeSlots)
     {
         var shown = Math.Min(RoleBadges.Count(badges), maxBadges);
         if (shown == 0)
@@ -54,7 +54,8 @@ internal static class UserName
         return shown * lineHeight * (GlyphFraction + GapFraction);
     }
 
-    public static float Reserve(int badges, string[]? badgeIds, in TextStyle style, int maxBadges = 1)
+    public static float Reserve(int badges, string[]? badgeIds, in TextStyle style,
+        int maxBadges = LoadoutStore.BadgeSlots)
     {
         return CatalogServes(badgeIds)
             ? BadgeStrip.Reserve(badgeIds, style, maxBadges)
@@ -67,31 +68,36 @@ internal static class UserName
     }
 
     public static float Draw(string id, string name, int badges, float boxLeft, float y, float maxWidth,
-        in TextStyle style, Vector4 nameInk, bool hovering, bool light, int maxBadges = 1) =>
+        in TextStyle style, Vector4 nameInk, bool hovering, bool light,
+        int maxBadges = LoadoutStore.BadgeSlots) =>
         Draw(ImGui.GetWindowDrawList(), id, name, badges, boxLeft, y, maxWidth, style, nameInk, hovering, light, maxBadges);
 
     public static float Draw(string id, string name, int badges, float boxLeft, float y, float maxWidth,
-        in TextStyle style, Vector4 nameInk, bool hovering, PhoneTheme theme, int maxBadges = 1) =>
+        in TextStyle style, Vector4 nameInk, bool hovering, PhoneTheme theme,
+        int maxBadges = LoadoutStore.BadgeSlots) =>
         Draw(ImGui.GetWindowDrawList(), id, name, badges, boxLeft, y, maxWidth, style, nameInk, hovering,
             RoleInk.IsLight(theme), maxBadges);
 
     public static float Draw(string id, string name, int badges, string[]? badgeIds, float boxLeft, float y,
-        float maxWidth, in TextStyle style, Vector4 nameInk, bool hovering, bool light, int maxBadges = 1) =>
+        float maxWidth, in TextStyle style, Vector4 nameInk, bool hovering, bool light,
+        int maxBadges = LoadoutStore.BadgeSlots) =>
         Draw(ImGui.GetWindowDrawList(), id, name, badges, badgeIds, boxLeft, y, maxWidth, style, nameInk, hovering,
             light, maxBadges);
 
     public static float Draw(string id, string name, int badges, string[]? badgeIds, float boxLeft, float y,
-        float maxWidth, in TextStyle style, Vector4 nameInk, bool hovering, PhoneTheme theme, int maxBadges = 1) =>
+        float maxWidth, in TextStyle style, Vector4 nameInk, bool hovering, PhoneTheme theme,
+        int maxBadges = LoadoutStore.BadgeSlots) =>
         Draw(ImGui.GetWindowDrawList(), id, name, badges, badgeIds, boxLeft, y, maxWidth, style, nameInk, hovering,
             RoleInk.IsLight(theme), maxBadges);
 
     public static float Draw(ImDrawListPtr drawList, string id, string name, int badges, float boxLeft, float y,
-        float maxWidth, in TextStyle style, Vector4 nameInk, bool hovering, bool light, int maxBadges = 1) =>
+        float maxWidth, in TextStyle style, Vector4 nameInk, bool hovering, bool light,
+        int maxBadges = LoadoutStore.BadgeSlots) =>
         Draw(drawList, id, name, badges, null, boxLeft, y, maxWidth, style, nameInk, hovering, light, maxBadges);
 
     public static float Draw(ImDrawListPtr drawList, string id, string name, int badges, string[]? badgeIds,
         float boxLeft, float y, float maxWidth, in TextStyle style, Vector4 nameInk, bool hovering, bool light,
-        int maxBadges = 1)
+        int maxBadges = LoadoutStore.BadgeSlots)
     {
         var fromCatalog = CatalogServes(badgeIds);
         var shown = fromCatalog ? 0 : Math.Min(RoleBadges.Count(badges), maxBadges);
@@ -152,21 +158,24 @@ internal static class UserName
     }
 
     public static float Draw(ImDrawListPtr drawList, string id, string name, int badges, float boxLeft, float y,
-        float maxWidth, in TextStyle style, Vector4 nameInk, bool hovering, PhoneTheme theme, int maxBadges = 1) =>
+        float maxWidth, in TextStyle style, Vector4 nameInk, bool hovering, PhoneTheme theme,
+        int maxBadges = LoadoutStore.BadgeSlots) =>
         Draw(drawList, id, name, badges, boxLeft, y, maxWidth, style, nameInk, hovering, RoleInk.IsLight(theme), maxBadges);
 
     public static float Draw(ImDrawListPtr drawList, string id, string name, int badges, string[]? badgeIds,
         float boxLeft, float y, float maxWidth, in TextStyle style, Vector4 nameInk, bool hovering, PhoneTheme theme,
-        int maxBadges = 1) =>
+        int maxBadges = LoadoutStore.BadgeSlots) =>
         Draw(drawList, id, name, badges, badgeIds, boxLeft, y, maxWidth, style, nameInk, hovering,
             RoleInk.IsLight(theme), maxBadges);
 
     public static float DrawAuto(ImDrawListPtr drawList, string id, string name, int badges, float boxLeft, float y,
-        float maxWidth, in TextStyle style, Vector4 nameInk, bool light, int maxBadges = 1) =>
+        float maxWidth, in TextStyle style, Vector4 nameInk, bool light,
+        int maxBadges = LoadoutStore.BadgeSlots) =>
         DrawAuto(drawList, id, name, badges, null, boxLeft, y, maxWidth, style, nameInk, light, maxBadges);
 
     public static float DrawAuto(ImDrawListPtr drawList, string id, string name, int badges, string[]? badgeIds,
-        float boxLeft, float y, float maxWidth, in TextStyle style, Vector4 nameInk, bool light, int maxBadges = 1)
+        float boxLeft, float y, float maxWidth, in TextStyle style, Vector4 nameInk, bool light,
+        int maxBadges = LoadoutStore.BadgeSlots)
     {
         var size = Typography.Measure(name, style);
         var hovering = UiInteract.Hover(new Vector2(boxLeft, y),
@@ -176,13 +185,14 @@ internal static class UserName
     }
 
     public static float DrawAuto(ImDrawListPtr drawList, string id, string name, int badges, float boxLeft, float y,
-        float maxWidth, in TextStyle style, Vector4 nameInk, PhoneTheme theme, int maxBadges = 1) =>
+        float maxWidth, in TextStyle style, Vector4 nameInk, PhoneTheme theme,
+        int maxBadges = LoadoutStore.BadgeSlots) =>
         DrawAuto(drawList, id, name, badges, null, boxLeft, y, maxWidth, style, nameInk, RoleInk.IsLight(theme),
             maxBadges);
 
     public static float DrawAuto(ImDrawListPtr drawList, string id, string name, int badges, string[]? badgeIds,
         float boxLeft, float y, float maxWidth, in TextStyle style, Vector4 nameInk, PhoneTheme theme,
-        int maxBadges = 1) =>
+        int maxBadges = LoadoutStore.BadgeSlots) =>
         DrawAuto(drawList, id, name, badges, badgeIds, boxLeft, y, maxWidth, style, nameInk, RoleInk.IsLight(theme),
             maxBadges);
 

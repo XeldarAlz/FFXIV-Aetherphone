@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <em>A smartphone, built for you. Built on Dalamud.</em>
+  <em>An in-game smartphone for FINAL FANTASY XIV, built on Dalamud.</em>
 </p>
 
 <p align="center">
@@ -41,22 +41,23 @@
 
 ## What it is
 
-Aetherphone is the first and only fully working phone plugin for FINAL FANTASY XIV: a docked, always-on device with a home screen, an app switcher, and notifications. Behind the apps runs its own social network, so what you post, send, and save carries across characters, worlds, and sessions instead of living only on your machine.
+Aetherphone is a phone plugin for FINAL FANTASY XIV: a docked device with a home screen, an app switcher, and notifications. Its online apps run on Aethernet, the plugin's own online service, so what you post, send, and save is stored on your Aethernet account instead of only on your machine. Each character signs in with its own account by default, and a setting keeps one chosen account active on every character.
 
 ## Highlights
 
-- **A phone that lives in your HUD.** Drag it anywhere, size it how you like, and minimize it into a mini phone that shows only the widgets you pick and resizes from its corner just like the full phone. It can also fold into a live zone minimap and take the game minimap's place.
-- **Message anyone, on any world.** ChocoChat reaches every Aetherphone user no matter their world or data center, with voice notes, group chats, and voice calls you place straight from a contact. No party, no friend list, no travel.
-- **Social apps of your own.** Chirper for short posts, Aethergram for photos, and Velvet, an optional 18+ companion. One identity carries across all of them and follows you between characters.
+- **A phone that lives in your HUD.** Drag it anywhere, size it how you like, and minimize it into a mini phone that never changes size: a large clock over your wallpaper and one glass card that flips between the widgets you pick and turns into music or call controls while they play. It resizes from its corner like the full phone, and can show a live zone minimap instead, with the clock and the same controls on top.
+- **Built like the phone in your pocket.** Painted app icons with Default, Dark, Tinted and Clear looks that home screen widgets follow too, a searchable widget gallery that previews every widget size at true scale, Smart Stacks you build by dropping one widget onto another and flip with the mouse wheel, widgets you resize from their corner and set up through Edit Widget, a widget for nearly every app (Now Playing, People, Messages, Linkpearl, Notes, Reminders, Shortcuts, Quick Toggles and more), a glass dock, folders that show the wallpaper through them, a floating glass tab bar and large titles inside apps, sheets you drag between heights, a Dynamic Island that expands for calls, playback, timers, ventures and voyages about to finish, watch-alongs and meetups, Control Center tiles that open into detail cards, grouped notification stacks sorted by day that you filter by app and mute for an hour or the rest of the day, an app switcher of live cards, and a Spotlight that drops out of the search pill.
+- **Message players on any world.** ChocoChat works across worlds and data centers once you and the other player have saved each other's numbers, with voice notes, group chats, and voice calls you place from a contact. No party, friend list, or travel needed.
+- **Social apps of your own.** Chirper for short posts, Aethergram for photos, and Velvet, an optional 18+ space that is not available on Lalafell characters. One Aethernet account signs you in to all three, and each app can keep its own display name and username.
 - **Every game chat channel, reorganized.** Linkpearl puts all of game chat in tabs you build yourself, with tells as their own conversations, per-channel colors, and a composer that splits and paces messages the game would cut off. Read each tab as a log or as chat bubbles, pick a chat theme and wallpaper, import the game's channel colors, and mask names for screenshots.
 - **Chat with the phone closed.** Pop any conversation into a floating window that lands beside the phone, let new chats join it as tabs, and let it hide during combat and duties, then come back on its own.
-- **Apps that play the game with you.** Strats for raid cheatsheets with your spot marked on each mechanic, Hunts for marks and trains, Fishing for ocean voyages, plus Market, Housing, Maps, Venues, Dailies, Collections, and Inventory.
-- **The everyday utilities too.** Notes, Calendar, Timers for resets and retainers, Calculator, Wallet, Camera and Photos with your own albums and a built-in photo editor, Clock, Skywatcher for weather, and Shortcuts you can fire from a hotbar macro.
-- **Watch and listen together.** MogCast casts video onto an in-world screen with playback synced for everyone present, and Music brings live community radio and Rolladeck DJ sets in game.
-- **Speaks your language.** One-tap translation on posts, profiles, and private messages, with feeds and chats able to translate everything as it arrives.
-- **Downtime built in.** Gamba is a play-money casino with blackjack, slots, scratch cards, bingo, and a communal wheel, and nothing there has cash value. Games is an arcade of thirty-plus titles with Doom among them, plus Uno, Chess, and Pool against friends online.
-- **Make it yours.** Custom wallpapers, your own ringtone and notification sounds, any accent color, Lodestone character portraits, subtle interface sounds, and a text-size zoom.
-- **Private by design.** Messages, attachments, and voice notes are end-to-end encrypted, calls are encrypted in transit, and a human moderation team reviews public posts and images.
+- **Apps that play the game with you.** Strats for raid cheatsheets with your spot marked on each mechanic, a contents sheet to jump between mechanics, and the fight you are in (or last read) one tap away, Hunts for live marks, spawn windows on every world of your data center, A-rank train routes and per-mark alerts, Fishing for ocean voyages and big fish windows with alerts before they open, Market for a watchlist with 7 day trends, sale charts up to 30 days, prices world by world and price alerts, plus Housing (your world's lottery countdown, open plots in every district at a glance, a ward map marking aethernet shards and market boards, and a watchlist with reminders), Maps, Venues, Dailies (game-tracked progress, your own tasks, a separate checklist for each character, and a reminder before reset), Collections (unlock alerts, a wishlist, and what to chase next), and Inventory, which finds any item across your bags, saddlebag and retainers, adds up your gil and what your stash would sell for, and points out split stacks worth merging. Jobs lays out every job's level and EXP by role, with your rested bonus, your own gearset shelves, and one tap gear switching. Activity closes three daily rings for experience, duties and gil, with a day by day view, streaks, weekly trends and awards for your best days. Their home screen widgets tick off dailies, count down to the next voyage and the housing lottery, show live S ranks and your tomestone cap, switch gear sets, and teleport to your favorite aetherytes.
+- **The everyday utilities too.** Notes, Calendar with your own event groups and reminders, Timers that keeps every character's retainer ventures and company voyages after you log out and notifies you when they finish, Calculator, Wallet with a gil card, weekly tomestone ring, near-cap warnings and a per-character history of every gain and spend with 30 day balance charts, Camera and Photos with your own albums and a built-in photo editor, Clock with alarms that ring until you stop or snooze them, Skywatcher for weather with living animated skies, weather odds, saved zones and a Weather Watch widget for three zones you pick, and Shortcuts you can fire from a hotbar macro or a home screen widget.
+- **Watch and listen together.** MogCast plays video on your phone or on a screen you place in the world, and keeps playback in sync for everyone in your watch party: nearby players join with a tap, and friends on any world or data center join with an invite code. Queue whole YouTube playlists, let guests add videos or control playback, hand the party to another host, and react together on the screen. Music has Home picks and daily mixes, new releases and genres, radio, your library and search. Build and reorder playlists, import whole YouTube playlists, love songs, download them for offline play, follow along with synced lyrics, manage Up Next with autoplay, crossfade and a sleep timer, keep every song at the same volume with Sound Check, and see your minutes, top songs and top artists for the week, month or year in Replay. Start a Jam to listen to the same song in sync with friends who join by code or find it nearby, and chat while you listen. Tune in to thousands more world stations (AAC, HLS and Opus now play too), chat and send song requests on Community Radio, see and control what Spotify, foobar2000 or your browser is playing on your PC, see what your friends are listening to, and keep playback controls on your home screen with the Now Playing widget.
+- **Speaks your language.** One-tap translation on posts, profiles, and private messages, with feeds and chats able to translate new posts and messages as they arrive. Aethernet does the translating, and translations of private messages are never stored.
+- **Downtime built in.** Gamba is a play-money casino with blackjack, slots, scratch cards, bingo, and a communal wheel, and nothing there has cash value. Games is an arcade of thirty-three titles, Doom among them, plus Uno, Chess, and 8-Ball Pool to play online with friends.
+- **Make it yours.** Custom wallpapers plus a bundled set of abstract ones, your own ringtone and notification sounds, any accent color, an icon look per Look, Lodestone character portraits, subtle interface sounds, and a text-size zoom. Save the whole setup as a Look and each character keeps its own: the home screen switches with the character you log in as.
+- **Encryption and moderation.** Messages, photos, and voice notes are end-to-end encrypted, with keys the phone creates automatically. Reporting or translating a message sends its text to Aethernet in readable form. Calls are encrypted in transit and relayed through the Aethernet server, without end-to-end encryption. A human moderation team reviews reported posts, images, and messages.
 
 Forty-two apps in all. Full feature tour, screenshots, and details live on the website:
 
@@ -87,7 +88,7 @@ Playing the Chinese game version? The phone detects it, signs you in through you
 
 ## Community
 
-Questions, ideas, or just want to hang out with other players? Come say hi on Discord.
+Support, bug reports, and suggestions are handled on the Aetherphone Discord server.
 
 → [Join our Discord](https://discord.gg/3HbJCscMyS)
 
@@ -97,15 +98,9 @@ Aetherphone is open source and contributions are welcome. Start with the develop
 
 → [Developer documentation](docs/README.md) · [Contributing guide](CONTRIBUTING.md) · [Translator guide](docs/translating.md)
 
-## More from me
-
-If you liked this plugin, take a look at my other Dalamud work. You might find something else there for you.
-
-→ [XeldarAlz Dalamud Plugins](https://github.com/XeldarAlz/DalamudPlugins)
-
 ## Legal
 
-Using the online features means accepting the terms of service. The privacy policy covers what the Aethernet service does with your data; offline features stay on your machine, though some apps fetch public game data directly from third-party services, which the policy also covers.
+Using the online features means accepting the terms of service. The privacy policy covers what the Aethernet service does with your data. Offline features stay on your machine, and some apps contact third-party services directly from your machine, which the policy also covers.
 
 → [Terms of Service](TERMS.md) · [Privacy Policy](PRIVACY.md) · [Trademark and naming policy](TRADEMARK.md)
 

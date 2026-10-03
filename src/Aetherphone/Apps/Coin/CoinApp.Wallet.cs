@@ -60,7 +60,7 @@ internal sealed partial class CoinApp
         ImGui.Dummy(new Vector2(0f, 12f * scale));
         DrawCheckIn(wallet, frozen, scale);
         ImGui.Dummy(new Vector2(0f, 12f * scale));
-        DrawHowToEarn(wallet);
+        DrawHowToEarn(wallet, body.Max.Y);
         ImGui.Dummy(new Vector2(0f, 16f * scale));
     }
 
@@ -112,7 +112,7 @@ internal sealed partial class CoinApp
         }
     }
 
-    private void DrawHowToEarn(CoinWalletDto wallet)
+    private void DrawHowToEarn(CoinWalletDto wallet, float visibleBottom)
     {
         if (wallet.Rules.Length == 0)
         {
@@ -122,12 +122,12 @@ internal sealed partial class CoinApp
         var sectionOrigin = ImGui.GetCursorScreenPos();
         var sectionWidth = ScrollLayout.StableContentWidth();
         ui.SectionHeading(Loc.T(L.Coin.EarnHeader), 4f);
-        var reported = DrawRules(wallet, false, sectionOrigin, sectionWidth, false);
-        DrawRules(wallet, true, sectionOrigin, sectionWidth, reported);
+        var reported = DrawRules(wallet, false, sectionOrigin, sectionWidth, visibleBottom, false);
+        DrawRules(wallet, true, sectionOrigin, sectionWidth, visibleBottom, reported);
     }
 
     private bool DrawRules(CoinWalletDto wallet, bool complete, Vector2 sectionOrigin, float sectionWidth,
-        bool reported)
+        float visibleBottom, bool reported)
     {
         for (var index = 0; index < wallet.Rules.Length; index++)
         {
@@ -143,9 +143,13 @@ internal sealed partial class CoinApp
                 continue;
             }
 
-            UiAnchors.Report("coin.earn", new Rect(sectionOrigin,
-                new Vector2(sectionOrigin.X + sectionWidth, ImGui.GetCursorScreenPos().Y)));
             reported = true;
+            var bottom = MathF.Min(ImGui.GetCursorScreenPos().Y, visibleBottom);
+            if (bottom > sectionOrigin.Y)
+            {
+                UiAnchors.Report("coin.earn", new Rect(sectionOrigin,
+                    new Vector2(sectionOrigin.X + sectionWidth, bottom)));
+            }
         }
 
         return reported;

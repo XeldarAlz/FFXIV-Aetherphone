@@ -148,6 +148,25 @@ internal static class LocationShare
 
     public static (short Ward, short Plot, short Room) CurrentHousing() => ReadHousing();
 
+    public static uint CurrentHouseDistrict() => ReadIndoorHouseDistrict();
+
+    public static bool IsIndoors()
+    {
+        try
+        {
+            unsafe
+            {
+                var housing = FFXIVClientStructs.FFXIV.Client.Game.HousingManager.Instance();
+                return housing != null && housing->IndoorTerritory != null;
+            }
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, "[LocationShare] indoor check failed");
+            return false;
+        }
+    }
+
     public static string Compose(in SharedLocation location)
     {
         return string.Create(CultureInfo.InvariantCulture,
@@ -308,14 +327,25 @@ internal static class LocationShare
         return line;
     }
 
-    public static string Summary(in SharedLocation location)
+    public static string Headline(in SharedLocation location)
     {
         var zone = ZoneName(location.TerritoryId);
         var worldLine = WorldLine(location);
-        var headline = zone.Length > 0 && worldLine.Length > 0
-            ? $"{zone} · {worldLine}"
-            : zone.Length > 0 ? zone : worldLine;
-        var detail = location.Ward > 0 ? HousingLine(location) : CoordinateText(location);
+        if (zone.Length > 0 && worldLine.Length > 0)
+        {
+            return $"{zone} · {worldLine}";
+        }
+
+        return zone.Length > 0 ? zone : worldLine;
+    }
+
+    public static string DetailLine(in SharedLocation location) =>
+        location.Ward > 0 ? HousingLine(location) : CoordinateText(location);
+
+    public static string Summary(in SharedLocation location)
+    {
+        var headline = Headline(location);
+        var detail = DetailLine(location);
         if (headline.Length > 0 && detail.Length > 0)
         {
             return $"{headline}\n{detail}";

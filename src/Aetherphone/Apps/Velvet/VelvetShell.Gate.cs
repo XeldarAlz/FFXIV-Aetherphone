@@ -17,6 +17,15 @@ internal sealed partial class VelvetShell
         threadView.GateMenus();
     }
 
+    private void DrawUnverified(Rect area)
+    {
+        if (EmptyState.Draw(area, ui, PhoneIcons.ShieldCheck, Loc.T(L.Velvet.UnverifiedTitle),
+                Loc.T(L.Velvet.UnverifiedBody), Loc.T(L.Velvet.UnverifiedRetry)))
+        {
+            store.RetryAccess();
+        }
+    }
+
     private void DrawGate(Rect area)
     {
         var scale = UiScale.Current;

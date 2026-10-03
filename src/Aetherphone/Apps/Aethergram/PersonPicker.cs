@@ -16,13 +16,12 @@ internal sealed class PersonPicker
 {
     private const float RowHeight = 46f;
     private const float DebounceSeconds = 0.20f;
-    private const double RevealSeconds = 0.16;
 
     private readonly MentionSuggestions suggestions;
     private string query = string.Empty;
     private string applied = string.Empty;
     private float debounce;
-    private double openedAt = -1d;
+    private Spring revealSpring;
     private int openedFrame = -1;
 
     public PersonPicker(MentionSuggestions suggestions)
@@ -38,7 +37,7 @@ internal sealed class PersonPicker
         query = string.Empty;
         applied = string.Empty;
         debounce = 0f;
-        openedAt = ImGui.GetTime();
+        revealSpring.SnapTo(0f);
         openedFrame = ImGui.GetFrameCount();
         suggestions.Clear();
     }
@@ -46,7 +45,6 @@ internal sealed class PersonPicker
     public void Close()
     {
         IsOpen = false;
-        openedAt = -1d;
         query = string.Empty;
         applied = string.Empty;
         suggestions.Clear();
@@ -68,8 +66,9 @@ internal sealed class PersonPicker
         }
 
         var scale = UiScale.Current;
-        var reveal = Easing.EaseOutQuint(Math.Clamp((float)((ImGui.GetTime() - openedAt) / RevealSeconds), 0f, 1f));
-        var alpha = Easing.SmoothStep(Math.Clamp(reveal / 0.7f, 0f, 1f));
+        var revealDelta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var reveal = Math.Clamp(revealSpring.Step(1f, Motion.Sheet, revealDelta), 0f, 1f);
+        var alpha = Math.Clamp(reveal / 0.7f, 0f, 1f);
 
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddRectFilled(screen.Min, screen.Max,

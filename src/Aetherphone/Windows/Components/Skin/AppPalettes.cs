@@ -73,8 +73,7 @@ internal static class AppPalettes
     public static readonly AppPalette YellowPages = For("yellowpages");
     public static readonly AppPalette Feedback = For("feedback");
     public static readonly AppPalette Polls = For("polls");
-    public static readonly AppPalette Announcements = For("announcements");
-    public static readonly AppPalette Activity = For("character");
+    public static readonly AppPalette Activity = Neutral(AppAccents.For("character"));
     public static readonly AppPalette Dailies = For("dailies");
     public static readonly AppPalette Collections = For("collections");
     public static readonly AppPalette Coin = For("coin");
@@ -87,6 +86,7 @@ internal static class AppPalettes
     public static readonly AppPalette Fishing = For("fishing");
     public static readonly AppPalette AetherStream = For("aetherstream");
     public static readonly AppPalette Hunts = For("hunts");
+    public static readonly AppPalette Notifications = For("notifications");
 
     private static AppPalette MessageChrome(Vector4 accent) => new()
     {
@@ -201,6 +201,26 @@ internal static class AppPalettes
         FieldSurface = GlassField,
         HoverTint = Palette.WithAlpha(theme.TextStrong, 0.06f),
         Hairline = theme.Hairline,
+        HoverWash = theme.HoverWash,
+    };
+
+    public static AppPalette Announcements(PhoneTheme theme) => new()
+    {
+        Accent = AppAccents.For("announcements"),
+        TitleInk = theme.TextStrong,
+        BodyInk = theme.TextStrong,
+        MutedInk = theme.TextMuted,
+        HeaderInk = theme.TextMuted,
+        HeadingInk = theme.TextStrong,
+        BackdropTop = theme.AppBackground,
+        BackdropBottom = theme.AppBackground,
+        BloomTop = default,
+        BloomBottom = default,
+        CardFill = theme.GroupedCard,
+        CardStroke = theme.Separator,
+        FieldSurface = GlassField,
+        HoverTint = Palette.WithAlpha(theme.TextStrong, 0.06f),
+        Hairline = theme.Separator,
         HoverWash = theme.HoverWash,
     };
 }

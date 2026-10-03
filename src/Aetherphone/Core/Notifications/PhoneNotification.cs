@@ -26,6 +26,8 @@ internal sealed record PhoneNotification(
 
     public bool Read { get; set; }
 
+    public bool Muted { get; init; }
+
     public string StackKey => string.IsNullOrEmpty(GroupKey) ? AppId : GroupKey;
 
     public string SettingsKey => string.IsNullOrEmpty(ChannelId) ? AppId : ChannelId;

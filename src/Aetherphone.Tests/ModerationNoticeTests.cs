@@ -154,11 +154,11 @@ public sealed class ModerationNoticeTests
     }
 
     [Fact]
-    public void TheReporterThankYouCreditsTheModerationTeam()
+    public void TheReporterThankYouCreditsAModeratorWithoutClaimingAction()
     {
         var body = ModerationNoticeText.Body(Notice(kind: ModerationNoticeKinds.ReportOutcome));
-        Assert.Contains("reviewed by our moderation team", body);
-        Assert.Contains("keep Aethernet safe", body);
+        Assert.Contains("A moderator reviewed your report", body);
+        Assert.DoesNotContain("action", body);
     }
 
     [Fact]

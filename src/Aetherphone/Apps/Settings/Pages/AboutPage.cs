@@ -34,7 +34,16 @@ internal sealed class AboutPage : ISettingsPage
     public string Summary => string.Empty;
     public FontAwesomeIcon Icon => FontAwesomeIcon.InfoCircle;
     public Vector4 Tint => new(0.40f, 0.62f, 0.92f, 1f);
+    public ReadOnlySpan<SettingsEntry> Entries => Searchable;
     private static readonly TimeSpan CopiedFlashWindow = TimeSpan.FromSeconds(3);
+
+    private static readonly SettingsEntry[] Searchable =
+    {
+        new(L.Settings.Plugin),
+        new(L.Settings.Version),
+        new(L.Settings.Command),
+        new(L.Settings.CopySupportInfo),
+    };
 
     public void Draw(in PhoneContext context, Rect body)
     {

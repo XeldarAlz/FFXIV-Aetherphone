@@ -1,13 +1,26 @@
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Geography;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Muster;
 using Aetherphone.Core.Runtime;
+using Aetherphone.Core.Wallpapers;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.YellowPages;
+
+internal readonly record struct AdPhotoBatch(string[] Paths, WallpaperCrop[] Crops, PostAspect[] Aspects,
+    PhotoEdit[] Edits)
+{
+    public static readonly AdPhotoBatch Empty = new(Array.Empty<string>(), Array.Empty<WallpaperCrop>(),
+        Array.Empty<PostAspect>(), Array.Empty<PhotoEdit>());
+
+    public int Count => Paths.Length;
+}
+
+internal readonly record struct AdUploadResult(string[] Keys, int FirstWidth, int FirstHeight);
 
 internal sealed class YellowPagesStore : IDisposable
 {
@@ -42,6 +55,7 @@ internal sealed class YellowPagesStore : IDisposable
 
     private volatile AdDto[] directory = Array.Empty<AdDto>();
     private int directoryCategories;
+    private int directoryDirection;
     private bool directoryOpenNow;
     private string? directorySearch;
     private int directoryDataCenterId;
@@ -77,9 +91,15 @@ internal sealed class YellowPagesStore : IDisposable
 
     public bool IsSignedIn => session.IsSignedIn;
 
+    public string MyDisplayName => session.CurrentUser?.DisplayName ?? string.Empty;
+
+    public string MyHandle => session.CurrentUser?.Handle ?? string.Empty;
+
     public bool Syncing => syncing;
 
     public bool Primed => primed;
+
+    public void NoteWatched() => cadence.NoteWatched();
 
     public AdDto[] Mine => mine;
 
@@ -88,6 +108,8 @@ internal sealed class YellowPagesStore : IDisposable
     public bool DirectoryLoading => directoryLoading;
 
     public int DirectoryCategories => directoryCategories;
+
+    public int DirectoryDirection => directoryDirection;
 
     public bool DirectoryLoadingMore => directoryLoadingMore;
 
@@ -143,25 +165,35 @@ internal sealed class YellowPagesStore : IDisposable
 
     private void CaptureScopeFilters()
     {
-        var worldId = MusterWorlds.CurrentWorldId();
-        switch (configuration.YellowPagesScope)
+        directoryDataCenterId = 0;
+        directoryRegions = 0;
+        var value = configuration.YellowPagesScopeValue;
+        switch (configuration.YellowPagesScopeKind)
         {
-            case AdScopes.Everywhere:
-                directoryDataCenterId = 0;
-                directoryRegions = 0;
-                break;
-            case AdScopes.DataCenter:
-                directoryDataCenterId = MusterWorlds.DataCenterIdForWorld(worldId);
-                directoryRegions = 0;
-                break;
+            case GeoScopeKind.Everywhere:
+                return;
+            case GeoScopeKind.Region:
+                directoryRegions = int.TryParse(value, out var regionId)
+                    ? MusterCategories.RegionBitForRegionId((uint)regionId)
+                    : 0;
+                return;
+            case GeoScopeKind.DataCenter:
+                directoryDataCenterId = WorldGeography.DataCenter(value)?.Id ?? 0;
+                return;
+            case GeoScopeKind.World:
+                directoryDataCenterId = WorldGeography.DataCenterOfWorld(value)?.Id ?? 0;
+                return;
+            case GeoScopeKind.MyDataCenter:
+            case GeoScopeKind.MyWorld:
+                directoryDataCenterId = MusterWorlds.DataCenterIdForWorld(MusterWorlds.CurrentWorldId());
+                return;
             default:
-                directoryDataCenterId = 0;
-                directoryRegions = MusterCategories.RegionBitForWorld(worldId);
-                break;
+                directoryRegions = MusterCategories.RegionBitForWorld(MusterWorlds.CurrentWorldId());
+                return;
         }
     }
 
-    public void RefreshDirectory(int categories, bool openNow, string? search)
+    public void RefreshDirectory(int categories, bool openNow, string? search, int direction)
     {
         if (!session.IsSignedIn || directoryLoading)
         {
@@ -172,6 +204,7 @@ internal sealed class YellowPagesStore : IDisposable
         directoryFailed = false;
         CaptureScopeFilters();
         directoryCategories = categories;
+        directoryDirection = direction;
         directoryOpenNow = openNow;
         directorySearch = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
         var dataCenterId = directoryDataCenterId;
@@ -181,7 +214,7 @@ internal sealed class YellowPagesStore : IDisposable
         var generation = Interlocked.Increment(ref directoryGeneration);
         work.Run("ads directory", async token =>
         {
-            var page = await client.DirectoryAsync(categories, regions, dataCenterId, openNow, afterDark,
+            var page = await client.DirectoryAsync(categories, regions, dataCenterId, openNow, afterDark, direction,
                 capturedSearch, null, token).ConfigureAwait(false);
             if (generation != Volatile.Read(ref directoryGeneration))
             {
@@ -213,6 +246,7 @@ internal sealed class YellowPagesStore : IDisposable
         var generation = Volatile.Read(ref directoryGeneration);
         var cursor = directoryCursor;
         var categories = directoryCategories;
+        var direction = directoryDirection;
         var openNow = directoryOpenNow;
         var search = directorySearch;
         var dataCenterId = directoryDataCenterId;
@@ -220,7 +254,7 @@ internal sealed class YellowPagesStore : IDisposable
         var afterDark = configuration.YellowPagesAfterDark;
         work.Run("ads directory more", async token =>
         {
-            var page = await client.DirectoryAsync(categories, regions, dataCenterId, openNow, afterDark,
+            var page = await client.DirectoryAsync(categories, regions, dataCenterId, openNow, afterDark, direction,
                 search, cursor, token).ConfigureAwait(false);
             if (page is not null && generation == Volatile.Read(ref directoryGeneration))
             {
@@ -344,7 +378,7 @@ internal sealed class YellowPagesStore : IDisposable
         });
     }
 
-    public void Create(CreateAdRequest request, IReadOnlyList<string> photoPaths, Action<AdCreateOutcome> done)
+    public void Create(CreateAdRequest request, AdPhotoBatch photos, Action<AdCreateOutcome> done)
     {
         if (!session.IsSignedIn)
         {
@@ -355,14 +389,18 @@ internal sealed class YellowPagesStore : IDisposable
         var status = 0;
         work.Run("ads create", async token =>
         {
-            var keys = await UploadPhotosAsync(photoPaths, token).ConfigureAwait(false);
-            if (keys is null)
+            var upload = await UploadPhotosAsync(photos, token).ConfigureAwait(false);
+            if (upload is not { } uploaded)
             {
                 return false;
             }
 
-            var created = await client.CreateAsync(request with { MediaKeys = keys }, token, code => status = code)
-                .ConfigureAwait(false);
+            var created = await client.CreateAsync(request with
+            {
+                MediaKeys = uploaded.Keys,
+                MediaWidth = uploaded.FirstWidth,
+                MediaHeight = uploaded.FirstHeight,
+            }, token, code => status = code).ConfigureAwait(false);
             if (created is null)
             {
                 return false;
@@ -374,8 +412,8 @@ internal sealed class YellowPagesStore : IDisposable
         }, ok => done(ok ? AdCreateOutcome.Created : OutcomeFor(status)));
     }
 
-    public void Update(string adId, CreateAdRequest request, IReadOnlyList<string> keptUrls,
-        IReadOnlyList<string> photoPaths, Action<AdCreateOutcome> done)
+    public void Update(string adId, CreateAdRequest request, IReadOnlyList<string> keptUrls, AdPhotoBatch photos,
+        Action<AdCreateOutcome> done)
     {
         if (!session.IsSignedIn)
         {
@@ -386,21 +424,26 @@ internal sealed class YellowPagesStore : IDisposable
         var status = 0;
         work.Run("ads update", async token =>
         {
-            var uploaded = await UploadPhotosAsync(photoPaths, token).ConfigureAwait(false);
-            if (uploaded is null)
+            var upload = await UploadPhotosAsync(photos, token).ConfigureAwait(false);
+            if (upload is not { } uploaded)
             {
                 return false;
             }
 
-            var mediaKeys = new string[keptUrls.Count + uploaded.Length];
+            var mediaKeys = new string[keptUrls.Count + uploaded.Keys.Length];
             for (var index = 0; index < keptUrls.Count; index++)
             {
                 mediaKeys[index] = keptUrls[index];
             }
 
-            Array.Copy(uploaded, 0, mediaKeys, keptUrls.Count, uploaded.Length);
-            var updated = await client.UpdateAsync(adId, request with { MediaKeys = mediaKeys }, token,
-                code => status = code).ConfigureAwait(false);
+            Array.Copy(uploaded.Keys, 0, mediaKeys, keptUrls.Count, uploaded.Keys.Length);
+            var coverIsNew = keptUrls.Count == 0 && uploaded.Keys.Length > 0;
+            var updated = await client.UpdateAsync(adId, request with
+            {
+                MediaKeys = mediaKeys,
+                MediaWidth = coverIsNew ? uploaded.FirstWidth : request.MediaWidth,
+                MediaHeight = coverIsNew ? uploaded.FirstHeight : request.MediaHeight,
+            }, token, code => status = code).ConfigureAwait(false);
             if (updated is null)
             {
                 return false;
@@ -413,17 +456,33 @@ internal sealed class YellowPagesStore : IDisposable
         }, ok => done(ok ? AdCreateOutcome.Created : OutcomeFor(status)));
     }
 
-    private async Task<string[]?> UploadPhotosAsync(IReadOnlyList<string> photoPaths, CancellationToken token)
+    public static (int Width, int Height) BakedSize(PostAspect aspect) => PostAspects.Size(aspect, MaxImageDimension);
+
+    private async Task<AdUploadResult?> UploadPhotosAsync(AdPhotoBatch photos, CancellationToken token)
     {
-        if (photoPaths.Count == 0)
+        if (photos.Count == 0)
         {
-            return Array.Empty<string>();
+            return new AdUploadResult(Array.Empty<string>(), 0, 0);
         }
 
-        var keys = new string[photoPaths.Count];
-        for (var index = 0; index < photoPaths.Count; index++)
+        var keys = new string[photos.Count];
+        var firstWidth = 0;
+        var firstHeight = 0;
+        for (var index = 0; index < photos.Count; index++)
         {
-            var baked = ImageProcessor.BakeJpeg(photoPaths[index], MaxImageDimension);
+            var aspect = index < photos.Aspects.Length ? photos.Aspects[index] : PostAspect.Landscape;
+            var (bakedWidth, bakedHeight) = BakedSize(aspect);
+            var baked = index < photos.Crops.Length
+                ? ImageProcessor.BakeCroppedJpeg(photos.Paths[index], photos.Crops[index], bakedWidth, bakedHeight,
+                    PostAspects.RevealsWholeImage(aspect),
+                    index < photos.Edits.Length ? photos.Edits[index] : PhotoEdit.None)
+                : ImageProcessor.BakeJpeg(photos.Paths[index], MaxImageDimension);
+            if (index == 0)
+            {
+                firstWidth = baked.Width;
+                firstHeight = baked.Height;
+            }
+
             var upload = await media.UploadUrlAsync("image/jpeg", "ad", token).ConfigureAwait(false);
             if (upload is null)
             {
@@ -440,7 +499,7 @@ internal sealed class YellowPagesStore : IDisposable
             keys[index] = upload.Key;
         }
 
-        return keys;
+        return new AdUploadResult(keys, firstWidth, firstHeight);
     }
 
     public void Delete(string adId, Action<bool> done)
@@ -557,7 +616,7 @@ internal sealed class YellowPagesStore : IDisposable
             return;
         }
 
-        if (!cadence.Due(DateTime.UtcNow))
+        if (!cadence.IsWatched || !cadence.Due(DateTime.UtcNow))
         {
             return;
         }

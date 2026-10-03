@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <em>Un smartphone, hecho para ti. Construido sobre Dalamud.</em>
+  <em>Un smartphone dentro del juego para FINAL FANTASY XIV, construido sobre Dalamud.</em>
 </p>
 
 <p align="center">
@@ -41,24 +41,24 @@
 
 ## Qué es
 
-Aetherphone es el primer y único plugin de teléfono completamente funcional para FINAL FANTASY XIV: un dispositivo acoplado y siempre a la vista, con pantalla de inicio, selector de apps y notificaciones. Detrás de las apps funciona su propia red social, así que lo que publicas, envías y guardas te acompaña entre personajes, mundos y sesiones en lugar de quedarse solo en tu equipo.
+Aetherphone es un plugin de teléfono para FINAL FANTASY XIV: un dispositivo acoplado con pantalla de inicio, selector de apps y notificaciones. Sus apps en línea funcionan sobre Aethernet, el servicio en línea propio del plugin, así que lo que publicas, envías y guardas se almacena en tu cuenta de Aethernet en lugar de quedarse solo en tu equipo. Por defecto, cada personaje inicia sesión con su propia cuenta, y un ajuste mantiene una cuenta elegida activa en todos los personajes.
 
 ## Lo más destacado
 
-- **Un teléfono dentro de tu HUD.** Arrástralo a donde quieras, dale el tamaño que prefieras y minimízalo en una franja que muestre solo los widgets que elijas. También puede plegarse en un minimapa de zona en vivo y ocupar el lugar del minimapa del juego.
-- **Escribe a quien sea, en cualquier mundo.** ChocoChat llega a cualquier usuario de Aetherphone sin importar su mundo ni su centro de datos, con notas de voz, chats de grupo y llamadas de voz que inicias desde el propio contacto. Sin grupo, sin lista de amigos y sin viajar.
-- **Tus propias apps sociales.** Chirper para publicaciones breves, Aethergram para fotos y Velvet, una app complementaria opcional para mayores de 18. Una sola identidad vale para todas y te sigue entre personajes.
-- **Todos los canales de chat del juego, reordenados.** Linkpearl lleva el chat del juego a pestañas que tú mismo montas, con los susurros como conversaciones aparte, colores por canal y un cuadro de texto que parte y dosifica los mensajes que el juego cortaría.
-- **Chatea con el teléfono cerrado.** Saca cualquier conversación a una ventana flotante, junta varias ventanas en pestañas y deja que se oculten en combate y en misiones y vuelvan solas después.
+- **Un teléfono dentro de tu HUD.** Arrástralo a donde quieras, dale el tamaño que prefieras y minimízalo en un teléfono pequeño que muestra solo los widgets que elijas y se redimensiona desde su esquina como el teléfono completo. También puede plegarse en un minimapa de zona en vivo que puedes colocar donde está el minimapa del juego.
+- **Escribe a jugadores de cualquier mundo.** ChocoChat funciona entre mundos y centros de datos una vez que tú y el otro jugador habéis guardado el número del otro, con notas de voz, chats de grupo y llamadas de voz que inicias desde un contacto. No hace falta grupo, lista de amigos ni viajar.
+- **Tus propias apps sociales.** Chirper para publicaciones breves, Aethergram para fotos y Velvet, un espacio opcional para mayores de 18 que no está disponible en personajes Lalafell. Una sola cuenta de Aethernet te da acceso a las tres, y cada app puede tener su propio nombre para mostrar y nombre de usuario.
+- **Todos los canales de chat del juego, reordenados.** Linkpearl lleva todo el chat del juego a pestañas que tú mismo montas, con los susurros como conversaciones aparte, colores por canal y un cuadro de texto que parte y dosifica los mensajes que el juego cortaría. Lee cada pestaña como registro o como burbujas de chat, elige un tema y un fondo para el chat, importa los colores de canal del juego y oculta los nombres para las capturas de pantalla.
+- **Chatea con el teléfono cerrado.** Saca cualquier conversación a una ventana flotante que aparece junto al teléfono, deja que los chats nuevos se unan a ella como pestañas y que se oculte en combate y en misiones, y vuelva sola después.
 - **Apps que juegan contigo.** Strats para chuletas de raid con tu posición marcada en cada mecánica, Cacerías para marcas y trenes, Pesca para travesías oceánicas, además de Mercado, Housing, Mapas, Locales, Diarias, Colecciones e Inventario.
-- **También lo del día a día.** Notas, Calendario, Temporizadores para reinicios y sirvientes, Calculadora, Cartera, Cámara y Fotos, Reloj, Vigía del cielo para el tiempo y Atajos que puedes lanzar desde una macro de la barra.
-- **Ver y escuchar juntos.** MogCast proyecta vídeo en una pantalla dentro del mundo con la reproducción sincronizada para todos los presentes, y Música trae emisoras de radio de la comunidad y sesiones de DJ de Rolladeck al juego.
-- **Habla tu idioma.** Traducción con un toque en publicaciones, perfiles y mensajes privados, y los feeds y los chats pueden traducirlo todo según llega.
-- **Ocio incluido.** Gamba es un casino con dinero ficticio: blackjack, tragaperras, rascas, bingo y una ruleta común, y nada de eso tiene valor real. Juegos es un salón recreativo con más de treinta títulos, Doom entre ellos, además de Uno, Ajedrez y Billar en línea contra tus amigos.
-- **Hazlo tuyo.** Fondos de pantalla propios, tus propios tonos de llamada y de notificación, cualquier color de acento, retratos de personaje de Lodestone, sonidos de interfaz discretos y un zoom para el tamaño del texto.
-- **Privado desde el diseño.** Los mensajes, los adjuntos y las notas de voz están cifrados de extremo a extremo, las llamadas se cifran en tránsito y un equipo humano de moderación revisa las publicaciones e imágenes públicas.
+- **También lo del día a día.** Notas, Calendario con tus propios grupos de eventos y recordatorios, Temporizadores para reinicios y retainers, Calculadora, Cartera, Cámara y Fotos con tus propios álbumes y un editor de fotos integrado, Reloj, Skywatcher para el tiempo y Atajos que puedes lanzar desde una macro de la barra.
+- **Ver y escuchar juntos.** MogCast reproduce vídeo en tu teléfono o en una pantalla que colocas en el mundo, y mantiene la reproducción sincronizada para los usuarios de Aetherphone cercanos que se unen a tu fiesta de visionado. Música reproduce emisoras de radio comunitarias y de internet y las canciones que buscas, y muestra qué DJ de Rolladeck están en directo.
+- **Habla tu idioma.** Traducción con un toque en publicaciones, perfiles y mensajes privados, y los feeds y los chats pueden traducir las publicaciones y los mensajes nuevos según llegan. Aethernet se encarga de la traducción, y las traducciones de los mensajes privados nunca se guardan.
+- **Ocio incluido.** Gamba es un casino con dinero ficticio: blackjack, tragamonedas, rasca y gana, bingo y una rueda comunitaria, y nada de eso tiene valor monetario. Juegos es un salón recreativo de treinta títulos, Doom entre ellos, además de Uno, Ajedrez y Billar bola 8 para jugar en línea con amigos.
+- **Hazlo tuyo.** Fondos de pantalla propios, tus propios tonos de llamada y de notificación, cualquier color de acento, retratos de personaje de Lodestone, sonidos de interfaz discretos y un zoom para el tamaño del texto. Guarda toda la configuración como un estilo y cada personaje conserva el suyo: la pantalla de inicio cambia según el personaje con el que entras.
+- **Cifrado y moderación.** Los mensajes, las fotos y las notas de voz están cifrados de extremo a extremo, con claves que el teléfono crea automáticamente. Denunciar o traducir un mensaje envía su texto a Aethernet de forma legible. Las llamadas se cifran en tránsito y pasan por el servidor de Aethernet, sin cifrado de extremo a extremo. Un equipo humano de moderación revisa las publicaciones, las imágenes y los mensajes denunciados.
 
-42 apps en total. El recorrido completo por las funciones, capturas de pantalla y detalles están en el sitio web:
+Cuarenta y dos apps en total. El recorrido completo por las funciones, las capturas de pantalla y los detalles están en el sitio web:
 
 → **[www.aetherphone.net](https://www.aetherphone.net/)**
 
@@ -87,25 +87,19 @@ Marca **Enabled**, haz clic en **+** y luego en **Save and Close**. Abre `/xlplu
 
 ## Comunidad
 
-¿Preguntas, ideas o simplemente ganas de pasar el rato con otros jugadores? Pásate por el Discord.
+El soporte, los informes de errores y las sugerencias se gestionan en el servidor de Discord de Aetherphone.
 
 → [Únete a nuestro Discord](https://discord.gg/3HbJCscMyS)
 
 ## Contribuir
 
-Aetherphone es de código abierto y las contribuciones son bienvenidas. Empieza por la documentación para desarrolladores (en inglés) y luego lee la guía de contribución. ¿Prefieres mejorar una de las ocho traducciones? Para eso no hace falta código, ni compilar, ni git: la guía del traductor te acompaña paso a paso desde el navegador.
+Aetherphone es de código abierto y las contribuciones son bienvenidas. Empieza por la documentación para desarrolladores y luego lee la guía de contribución. ¿Prefieres mejorar una de las ocho traducciones? Para eso no hace falta código, ni compilar, ni git: la guía del traductor te acompaña paso a paso desde el navegador.
 
 → [Documentación para desarrolladores](../README.md) · [Guía de contribución](../../CONTRIBUTING.md) · [Guía del traductor](../translating.md)
 
-## Más cosas mías
-
-Si te ha gustado este plugin, echa un vistazo a mis otros trabajos para Dalamud. Puede que encuentres algo más para ti.
-
-→ [XeldarAlz Dalamud Plugins](https://github.com/XeldarAlz/DalamudPlugins)
-
 ## Aviso legal
 
-Usar las funciones en línea implica aceptar los términos del servicio. La política de privacidad cubre lo que el servicio Aethernet hace con tus datos; las funciones sin conexión se quedan en tu equipo, aunque algunas aplicaciones obtienen datos públicos del juego directamente de servicios de terceros, algo que la política también cubre.
+Usar las funciones en línea implica aceptar los términos del servicio. La política de privacidad cubre lo que el servicio Aethernet hace con tus datos. Las funciones sin conexión se quedan en tu equipo, y algunas apps contactan con servicios de terceros directamente desde tu equipo, algo que la política también cubre.
 
 → [Términos del servicio](../../TERMS.md) · [Política de privacidad](../../PRIVACY.md) · [Política de marca y nombre](../../TRADEMARK.md)
 

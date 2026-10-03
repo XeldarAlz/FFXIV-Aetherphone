@@ -27,6 +27,6 @@ internal readonly struct CollectionView
     public static CollectionView ForCategory(CollectionCategory category) =>
         new(CollectionViewKind.Category, category, null);
 
-    public static CollectionView ForItem(CollectionCategory category, CollectionItem item) =>
-        new(CollectionViewKind.Detail, category, item);
+    public static CollectionView ForItem(CollectionItem item) =>
+        new(CollectionViewKind.Detail, item.Category, item);
 }

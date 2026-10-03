@@ -67,6 +67,9 @@ public sealed class IcyMetadataStreamTests
     [InlineData("StreamTitle='Artist - Track';StreamUrl='http://x';", "Artist - Track")]
     [InlineData("StreamTitle='Quoted ' inside';", "Quoted ' inside")]
     [InlineData("StreamUrl='http://x';", "")]
+    [InlineData("StreamTitle='Olivia Dean - text=\"Man I Need\" song_spot=\"M\" MediaBaseId=\"0\" length=\"00:03:02\"';",
+        "Olivia Dean - Man I Need")]
+    [InlineData("StreamTitle='text=\"Spot Block\" song_spot=\"T\"';", "Spot Block")]
     public void TitlesAreLiftedOutOfTheBlock(string block, string expected)
     {
         var parsed = IcyMetadataStream.TryParseTitle(Encoding.UTF8.GetBytes(block), out var title);

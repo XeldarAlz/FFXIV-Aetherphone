@@ -29,7 +29,10 @@ internal static class GameSchedule
     private const int GrandCompanyResetHour = 20;
     private const int WeeklyResetHour = 8;
     private const int FashionReportOpenHour = 8;
-    private const int JumboCactpotHour = 8;
+    private const int JumboCactpotJapanHour = 12;
+    private const int JumboCactpotEuropeHour = 19;
+    private const int JumboCactpotOceaniaHour = 9;
+    private const int JumboCactpotNorthAmericaHour = 2;
     private const int OceanVoyageEpochIndex = 88;
     private const int OceanVoyagePatternLength = 144;
     private const long OceanVoyageWindowSeconds = 7200;
@@ -63,8 +66,17 @@ internal static class GameSchedule
     public static DateTime NextGrandCompanyReset(DateTime utcNow) => NextDailyAt(utcNow, GrandCompanyResetHour);
     public static DateTime NextWeeklyReset(DateTime utcNow) => NextWeeklyAt(utcNow, DayOfWeek.Tuesday, WeeklyResetHour);
 
-    public static DateTime NextJumboCactpot(DateTime utcNow) =>
-        NextWeeklyAt(utcNow, DayOfWeek.Saturday, JumboCactpotHour);
+    public static DateTime NextJumboCactpot(DateTime utcNow, string regionCode) =>
+        regionCode switch
+        {
+            "JP" or "CN" => NextWeeklyAt(utcNow, DayOfWeek.Saturday, JumboCactpotJapanHour),
+            "EU" => NextWeeklyAt(utcNow, DayOfWeek.Saturday, JumboCactpotEuropeHour),
+            "OCE" => NextWeeklyAt(utcNow, DayOfWeek.Saturday, JumboCactpotOceaniaHour),
+            _ => NextWeeklyAt(utcNow, DayOfWeek.Sunday, JumboCactpotNorthAmericaHour),
+        };
+
+    public static DateTime NextFashionReportOpen(DateTime utcNow) =>
+        NextWeeklyAt(utcNow, DayOfWeek.Friday, FashionReportOpenHour);
 
     public static TimerWindow FashionReport(DateTime utcNow)
     {

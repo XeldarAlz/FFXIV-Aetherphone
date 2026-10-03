@@ -47,6 +47,7 @@ internal sealed partial class AethergramApp
         activityFeed.EnsureFresh(social.Latest);
         store.EnsureMe();
         store.EnsureFollowRequests();
+        store.EnsurePendingTags();
         var items = activityFeed.Items;
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var shown = 0;
@@ -54,9 +55,16 @@ internal sealed partial class AethergramApp
         using (AppSurface.BeginEdgeToEdge(body))
         {
             var requestCount = store.PendingFollowRequestCount;
-            if (requestCount > 0)
+            if (requestCount > 0 && DrawRequestRow(requestCount, PhoneIcons.UserPlus, Loc.T(L.Social.FollowRequests)))
             {
-                DrawFollowRequestsRow(requestCount);
+                OpenFollowRequests();
+            }
+
+            var pendingTagCount = store.PendingTagCount;
+            if (pendingTagCount > 0
+                && DrawRequestRow(pendingTagCount, PhoneIcons.UserSquareRounded, Loc.T(L.PhotoTag.PendingTags)))
+            {
+                OpenPendingTags();
             }
 
             for (var index = 0; index < items.Length; index++)
@@ -125,10 +133,17 @@ internal sealed partial class AethergramApp
         social.RefreshNow();
         activityFeed.Invalidate();
         store.RefreshFollowRequests();
+        store.RefreshPendingTags();
         router.Push(AethergramRoute.Activity);
     }
 
-    private void DrawFollowRequestsRow(int count)
+    private void OpenPendingTags()
+    {
+        store.RefreshPendingTags();
+        OpenPosts(string.Empty, PostSource.PendingTags);
+    }
+
+    private bool DrawRequestRow(int count, string glyph, string label)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -137,7 +152,7 @@ internal sealed partial class AethergramApp
         var chipCenter = new Vector2(cell.Bounds.Min.X + CellPadX * scale + chipHalf, cell.Bounds.Center.Y);
         Squircle.Fill(drawList, chipCenter - new Vector2(chipHalf, chipHalf), chipCenter + new Vector2(chipHalf, chipHalf),
             chipHalf * 0.5f, ImGui.GetColorU32(Ink.Accent));
-        PhoneIcon.Draw(drawList, chipCenter, PhoneIcons.UserPlus, Ink.White, 22f * scale);
+        PhoneIcon.Draw(drawList, chipCenter, glyph, Ink.White, 22f * scale);
         var chevronCenter = new Vector2(cell.Bounds.Max.X - CellPadX * scale - 8f * scale, cell.Bounds.Center.Y);
         PhoneIcon.Draw(drawList, chevronCenter, PhoneIcons.ChevronRight, Ink.MutedInk, 18f * scale);
         var countText = count.ToString(Loc.Culture);
@@ -146,17 +161,12 @@ internal sealed partial class AethergramApp
         Typography.Draw(drawList, new Vector2(countLeft, cell.Bounds.Center.Y - countSize.Y * 0.5f), countText,
             Ink.MutedInk, TextStyles.Subheadline);
         var labelLeft = chipCenter.X + chipHalf + 12f * scale;
-        var label = Typography.FitText(Loc.T(L.Social.FollowRequests), MathF.Max(1f, countLeft - 10f * scale - labelLeft),
-            ActivityActorStyle);
-        var labelSize = Typography.Measure(label, ActivityActorStyle);
-        Typography.Draw(drawList, new Vector2(labelLeft, cell.Bounds.Center.Y - labelSize.Y * 0.5f), label,
+        var fitted = Typography.FitText(label, MathF.Max(1f, countLeft - 10f * scale - labelLeft), ActivityActorStyle);
+        var labelSize = Typography.Measure(fitted, ActivityActorStyle);
+        Typography.Draw(drawList, new Vector2(labelLeft, cell.Bounds.Center.Y - labelSize.Y * 0.5f), fitted,
             Ink.TitleInk, ActivityActorStyle);
-        if (cell.Tapped)
-        {
-            OpenFollowRequests();
-        }
-
         FeedCell.End(drawList, cell, Ink.Hairline);
+        return cell.Tapped;
     }
 
     private void DrawActivityRow(NotificationDto item)

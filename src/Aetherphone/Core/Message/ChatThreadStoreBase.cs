@@ -25,7 +25,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private const string ReportEvidenceUploadScope = "report-evidence";
     private static readonly TimeSpan ForegroundInboxPollInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan BackgroundInboxPollInterval = TimeSpan.FromSeconds(120);
-    private static readonly TimeSpan VaultRetryInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan PushedTypingWindow = TimeSpan.FromSeconds(6);
     private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan ThreadReopenCooldown = TimeSpan.FromSeconds(3);
 
@@ -36,6 +36,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected readonly ConversationKeyStore keys;
     protected readonly StoreWork work;
     protected readonly MessageCipher cipher;
+    protected readonly RealtimeSignalBus signals;
     private readonly string logTag;
     private readonly bool tracksInbox;
     private readonly NotificationService notifications;
@@ -73,6 +74,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private AepFailure lastSendFailure;
     private readonly Action<AepFailure> noteSendFailure;
     private volatile bool otherTyping;
+    private long otherTypingUntilTicks;
 
     private volatile bool inboxPolling;
     private volatile bool threadRefreshPending;
@@ -89,7 +91,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     protected ChatThreadStoreBase(string logTag, AethernetSession session, SafetyClient safety, MediaClient media,
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, DecryptedHistoryStore chatHistory,
-        PhoneVisibility visibility,
+        PhoneVisibility visibility, RealtimeSignalBus signals,
         AppGate gate, bool tracksInbox = true)
     {
         this.tracksInbox = tracksInbox;
@@ -101,11 +103,14 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         this.keys = keys;
         this.logTag = logTag;
         this.gate = gate;
+        this.signals = signals;
         work = new StoreWork(logTag);
         cipher = new MessageCipher(vault, keys, chatHistory);
         messageOrder = CompareByCreatedAt;
         noteSendFailure = NoteSendFailure;
-        inboxCadence = new PollCadence(visibility, ForegroundInboxPollInterval, BackgroundInboxPollInterval);
+        inboxCadence = new PollCadence(visibility, ForegroundInboxPollInterval, BackgroundInboxPollInterval, signals);
+        signals.ConnectedChanged += OnRealtimeConnected;
+        signals.TypingPinged += OnTypingPinged;
         vault.Changed += OnVaultChanged;
         session.Changed += OnSessionAccountChanged;
         Plugin.Framework.Update += OnFrameworkTick;
@@ -141,7 +146,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         messages = Array.Empty<TMessage>();
         olderCursor = null;
         hasMoreOlder = false;
-        otherTyping = false;
+        ClearOtherTyping();
         inboxPrimed = false;
         threadRefreshPending = false;
         currentKeyStatus = ChatKeyStatus.None;
@@ -162,6 +167,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected abstract string VoiceUploadScope { get; }
 
     protected abstract string ReportTargetType { get; }
+
+    protected abstract string TypingSignalType { get; }
 
     protected abstract string ScopeFor(string threadId);
 
@@ -237,7 +244,9 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     protected virtual bool TickActive => session.IsSignedIn && gate.Open;
 
-    public virtual bool RealtimePushActive => false;
+    public bool RealtimePushActive => signals.RealtimeActive;
+
+    public void NoteInboxWatched() => inboxCadence.NoteWatched();
 
     protected virtual bool IsThreadMuted(TThread thread) => false;
 
@@ -297,19 +306,33 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     public ChatKeyStatus CurrentKeyStatus => currentKeyStatus;
     public bool EncryptingCurrent => cipher.IsUnlocked && currentKeyStatus.CanEncrypt;
 
-    public bool SendWouldDowngrade => !EncryptingCurrent && IsEncryptedThread(currentKeyStatus);
+    public virtual bool SendWouldDowngrade =>
+        !EncryptingCurrent && currentKeyStatus.Known && EncryptedSendPolicy.IsEncryptedThread(currentKeyStatus);
+
+    public virtual bool KeyStatusPending => currentThreadId is not null && !currentKeyStatus.Known;
 
     private bool RefuseDowngrade(string threadId, string what)
     {
-        var status = currentThreadId == threadId ? currentKeyStatus : ChatKeyStatus.None;
-        return DowngradeBlocked(threadId, what, EncryptingCurrent && currentThreadId == threadId, status);
+        if (currentThreadId != threadId)
+        {
+            return false;
+        }
+
+        return DowngradeBlocked(threadId, what, EncryptingCurrent, currentKeyStatus);
     }
 
     protected bool DowngradeBlocked(string threadId, string what, bool encrypted, ChatKeyStatus status)
     {
-        if (encrypted || !IsEncryptedThread(status))
+        if (!EncryptedSendPolicy.MustHoldPlaintext(encrypted, status))
         {
             return false;
+        }
+
+        if (!status.Known)
+        {
+            AepLog.Warning(
+                $"[{logTag}] {what} held back in {threadId}: the encryption status of the thread is not known yet, and sending in the clear could be a silent downgrade.");
+            return true;
         }
 
         AepLog.Warning(
@@ -317,9 +340,17 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         return true;
     }
 
-    private static bool IsEncryptedThread(ChatKeyStatus status)
+    private async Task<ChatKeyStatus> ResolveSendStatusAsync(string threadId, CancellationToken token)
     {
-        return status.CurrentGeneration > 0 && status.MembersWithoutKeys.Length == 0;
+        var current = currentKeyStatus;
+        if (currentThreadId == threadId && current.Known)
+        {
+            return current;
+        }
+
+        var status = await EnsureThreadKeysAsync(threadId, token).ConfigureAwait(false);
+        SetKeyStatusIfCurrent(threadId, status);
+        return status;
     }
 
     public DmDecryptedBody DecryptionState(string messageId) => cipher.DecryptionState(messageId);
@@ -467,6 +498,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         }
 
         var now = DateTime.UtcNow;
+        ExpirePushedTyping(now);
         EnsureCurrentThreadKeysFresh(now);
         ResumePendingThreadOpen(now);
         ConsumePendingThreadRefresh(now);
@@ -494,16 +526,17 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
         vaultRefreshRequested = true;
         vaultRefreshInFlight = true;
+        var wasUnlocked = vault.State == KeyVaultState.Unlocked;
         work.Run("vault refresh", async token =>
         {
             await vault.RefreshAsync(token).ConfigureAwait(false);
-            if (vault.State == KeyVaultState.Unlocked)
+            if (wasUnlocked && vault.State == KeyVaultState.Unlocked)
             {
                 await HydrateKeysAsync(token).ConfigureAwait(false);
             }
         }, () =>
         {
-            nextVaultRetryUtc = DateTime.UtcNow + VaultRetryInterval;
+            nextVaultRetryUtc = DateTime.UtcNow + vault.BackgroundRetryDelay;
             vaultRefreshInFlight = false;
         });
     }
@@ -511,8 +544,10 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private void EnsureCurrentThreadKeysFresh(DateTime now)
     {
         var id = currentThreadId;
-        if (id is null || keyStatusRefreshing || vault.State != KeyVaultState.Unlocked
-            || (currentKeyStatus.CanEncrypt && !keyStatusRefreshForced)
+        var status = currentKeyStatus;
+        if (id is null || keyStatusRefreshing
+            || (status.Known && vault.State != KeyVaultState.Unlocked)
+            || (status.CanEncrypt && !keyStatusRefreshForced)
             || now - lastKeyStatusUtc < KeyStatusRetryInterval)
         {
             return;
@@ -538,6 +573,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         if (vault.State != KeyVaultState.Unlocked)
         {
             currentKeyStatus = ChatKeyStatus.None;
+            RefreshServerKeyStatus();
             return;
         }
 
@@ -558,6 +594,21 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         });
     }
 
+    private void RefreshServerKeyStatus()
+    {
+        var current = currentThreadId;
+        if (current is null)
+        {
+            return;
+        }
+
+        work.Run("server key status", async token =>
+        {
+            var status = await EnsureThreadKeysAsync(current, token).ConfigureAwait(false);
+            SetKeyStatusIfCurrent(current, status);
+        });
+    }
+
     private void PollInbox()
     {
         if (inboxPolling)
@@ -571,9 +622,10 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             var page = await FetchThreadListAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
-                var decorated = DecorateThreadList(page.Value.Items);
+                var sealedItems = page.Value.Items;
+                var decorated = DecorateThreadList(sealedItems);
                 AcceptThreadListHead(decorated, page.Value.NextCursor);
-                RaiseInboxNotifications(decorated);
+                RaiseInboxNotifications(sealedItems, decorated);
             }
         }, () => inboxPolling = false);
     }
@@ -631,7 +683,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         return true;
     }
 
-    private void RaiseInboxNotifications(TThread[] items)
+    private void RaiseInboxNotifications(TThread[] sealedItems, TThread[] items)
     {
         var primed = inboxPrimed;
         for (var index = 0; index < items.Length; index++)
@@ -661,7 +713,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 continue;
             }
 
-            if (!IsInboxPreviewReady(item))
+            if (!IsInboxPreviewReady(sealedItems[index]))
             {
                 var now = DateTime.UtcNow;
                 if (!inboxNotifyDeferrals.TryGetValue(key, out var deferredSince))
@@ -756,7 +808,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         olderCursor = null;
         hasMoreOlder = false;
         loadingOlder = false;
-        otherTyping = false;
+        ClearOtherTyping();
         currentKeyStatus = ChatKeyStatus.None;
         lastKeyStatusUtc = DateTime.UtcNow;
         BeginThreadOpen(id);
@@ -906,12 +958,54 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             if (currentThreadId == current && page is not null)
             {
                 var decorated = DecorateMessages(current, page.Value.Items);
+                bool arrived;
                 lock (messagesLock)
                 {
+                    arrived = HasNewIncoming(messages, decorated);
                     messages = IdentifiedMerge.MergeById(messages, decorated, messageOrder);
+                }
+
+                if (arrived && IsBeingViewed(current))
+                {
+                    UiFeedback.Play(UiSound.MessageReceived);
                 }
             }
         }, () => refreshingThread = false);
+    }
+
+    private bool HasNewIncoming(TMessage[] existing, TMessage[] incoming)
+    {
+        if (existing.Length == 0)
+        {
+            return false;
+        }
+
+        var self = MyUserId;
+        for (var incomingIndex = 0; incomingIndex < incoming.Length; incomingIndex++)
+        {
+            var candidate = incoming[incomingIndex];
+            if (MessageSenderIdOf(candidate) == self || ContainsId(existing, candidate.Id))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsId(TMessage[] existing, string id)
+    {
+        for (var index = existing.Length - 1; index >= 0; index--)
+        {
+            if (existing[index].Id == id)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void NotePollResult(bool succeeded)
@@ -974,7 +1068,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     public void RefreshTyping(string id)
     {
-        if (refreshingTyping || DateTime.UtcNow < pollBackoffUntilUtc)
+        if (RealtimePushActive || refreshingTyping || DateTime.UtcNow < pollBackoffUntilUtc)
         {
             return;
         }
@@ -986,9 +1080,47 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             NotePollResult(result is not null);
             if (currentThreadId == id && result is not null)
             {
+                Volatile.Write(ref otherTypingUntilTicks, 0L);
                 otherTyping = result.Value;
             }
         }, () => refreshingTyping = false);
+    }
+
+    private void OnRealtimeConnected(bool active)
+    {
+        if (active)
+        {
+            inboxCadence.RequestAfterReconnect();
+        }
+    }
+
+    private void OnTypingPinged(TypingSignal signal)
+    {
+        if (!string.Equals(signal.Type, TypingSignalType, StringComparison.Ordinal)
+            || !string.Equals(signal.ThreadId, currentThreadId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Volatile.Write(ref otherTypingUntilTicks, (DateTime.UtcNow + PushedTypingWindow).Ticks);
+        otherTyping = true;
+    }
+
+    private void ExpirePushedTyping(DateTime now)
+    {
+        var until = Volatile.Read(ref otherTypingUntilTicks);
+        if (until == 0L || now.Ticks < until)
+        {
+            return;
+        }
+
+        ClearOtherTyping();
+    }
+
+    private void ClearOtherTyping()
+    {
+        Volatile.Write(ref otherTypingUntilTicks, 0L);
+        otherTyping = false;
     }
 
     private void NoteSendFailure(AepFailure failure) => lastSendFailure = failure;
@@ -1006,10 +1138,18 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         work.Run("send", async token =>
         {
             TMessage? sent;
+            var status = await ResolveSendStatusAsync(id, token).ConfigureAwait(false);
             var scope = ScopeFor(id);
             var generation = keys.CurrentGeneration(scope);
-            if (EncryptingCurrent && currentThreadId == id
-                && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
+            var encoded = default(EncryptedOutbound);
+            var encrypted = cipher.IsUnlocked && status.CanEncrypt
+                && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out encoded);
+            if (DowngradeBlocked(id, "send", encrypted, status))
+            {
+                return false;
+            }
+
+            if (encrypted)
             {
                 sent = await SendMessageRequestAsync(id, encoded.Envelope, 0, token,
                     encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
@@ -1079,7 +1219,13 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 contentType = "image/jpeg";
             }
 
-            var outbound = PrepareMedia(id, plainBytes, caption.Trim(), ImageMediaKind);
+            var status = await ResolveSendStatusAsync(id, token).ConfigureAwait(false);
+            var outbound = PrepareMedia(id, status, plainBytes, caption.Trim(), ImageMediaKind);
+            if (DowngradeBlocked(id, "send image", outbound.EncVersion == EnvelopeCodec.VersionEnvelope, status))
+            {
+                return false;
+            }
+
             var upload = await media.UploadUrlAsync(contentType, ImageUploadScope, token).ConfigureAwait(false);
             if (upload is null)
             {
@@ -1125,7 +1271,13 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         sending = true;
         work.Run("send voice", async token =>
         {
-            var outbound = PrepareMedia(id, wavBytes, string.Empty, VoiceMediaKind);
+            var status = await ResolveSendStatusAsync(id, token).ConfigureAwait(false);
+            var outbound = PrepareMedia(id, status, wavBytes, string.Empty, VoiceMediaKind);
+            if (DowngradeBlocked(id, "send voice", outbound.EncVersion == EnvelopeCodec.VersionEnvelope, status))
+            {
+                return false;
+            }
+
             var upload = await media.UploadUrlAsync("audio/wav", VoiceUploadScope, token).ConfigureAwait(false);
             if (upload is null)
             {
@@ -1161,11 +1313,12 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         }, onComplete, () => sending = false);
     }
 
-    private OutboundMedia PrepareMedia(string id, byte[] plaintextBytes, string caption, int mediaKind)
+    private OutboundMedia PrepareMedia(string id, ChatKeyStatus status, byte[] plaintextBytes, string caption,
+        int mediaKind)
     {
         var scope = ScopeFor(id);
         return cipher.PrepareOutboundMedia(scope, keys.CurrentGeneration(scope), MyUserId, plaintextBytes, caption,
-            mediaKind, EncryptingCurrent && currentThreadId == id);
+            mediaKind, cipher.IsUnlocked && status.CanEncrypt);
     }
 
     private TMessage RecordMediaCaption(TMessage sent, OutboundMedia outbound, string caption)
@@ -1296,10 +1449,18 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         work.Run("edit message", async token =>
         {
             TMessage? edited;
+            var status = await ResolveSendStatusAsync(id, token).ConfigureAwait(false);
             var scope = ScopeFor(id);
             var generation = keys.CurrentGeneration(scope);
-            if (EncryptingCurrent && currentThreadId == id
-                && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
+            var encoded = default(EncryptedOutbound);
+            var encrypted = cipher.IsUnlocked && status.CanEncrypt
+                && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out encoded);
+            if (DowngradeBlocked(id, "edit", encrypted, status))
+            {
+                return false;
+            }
+
+            if (encrypted)
             {
                 edited = await EditMessageRequestAsync(messageId, encoded.Envelope, token,
                     EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag).ConfigureAwait(false);
@@ -1559,6 +1720,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     public void Dispose()
     {
         DisposeCore();
+        signals.ConnectedChanged -= OnRealtimeConnected;
+        signals.TypingPinged -= OnTypingPinged;
         vault.Changed -= OnVaultChanged;
         session.Changed -= OnSessionAccountChanged;
         Plugin.Framework.Update -= OnFrameworkTick;

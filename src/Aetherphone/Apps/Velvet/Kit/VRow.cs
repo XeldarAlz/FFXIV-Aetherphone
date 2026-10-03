@@ -48,6 +48,7 @@ internal struct VRowModel
     public string? UserId;
     public string Time;
     public bool Chevron;
+    public bool Pinned;
 }
 
 internal static class VRow
@@ -55,6 +56,8 @@ internal static class VRow
     private const float DefaultHeight = 64f;
     private const float PillHeight = 30f;
     private const float PillLabelInset = 36f;
+    private const float PinGlyph = 12f;
+    private const float PinGap = 4f;
 
     private static readonly TextStyle PillLabel = new(0.90f, FontWeight.SemiBold);
 
@@ -201,11 +204,23 @@ internal static class VRow
             rightEdge -= pillWidth + Metrics.Space.Sm * scale;
         }
 
+        var timeTop = min.Y + 12f * scale;
+        var timeLeft = rightEdge;
         if (timeText.Length > 0)
         {
             var timeSize = Typography.Measure(timeText, TextStyles.Caption1);
-            Typography.Draw(drawList, new Vector2(rightEdge - timeSize.X, min.Y + 12f * scale), timeText,
-                VelvetTheme.MutedInk, TextStyles.Caption1);
+            timeLeft = rightEdge - timeSize.X;
+            Typography.Draw(drawList, new Vector2(timeLeft, timeTop), timeText, VelvetTheme.MutedInk,
+                TextStyles.Caption1);
+        }
+
+        if (model.Pinned)
+        {
+            var glyph = PinGlyph * scale;
+            var glyphRight = timeText.Length > 0 ? timeLeft - PinGap * scale : rightEdge;
+            PhoneIcon.Draw(drawList,
+                new Vector2(glyphRight - glyph * 0.5f, timeTop + Typography.LineHeight(TextStyles.Caption1) * 0.5f),
+                PhoneIcons.PinFilled, VelvetTheme.MutedInk, glyph);
         }
 
         if (model.Badge > 0)

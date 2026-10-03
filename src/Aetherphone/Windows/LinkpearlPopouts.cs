@@ -154,7 +154,7 @@ internal sealed class LinkpearlPopouts : IDisposable
         return OpenInNewWindow(key);
     }
 
-    public bool OpenInNewWindow(string key)
+    public bool OpenInNewWindow(string key, bool focus = true)
     {
         if (!installed.Open || key.Length == 0)
         {
@@ -173,7 +173,7 @@ internal sealed class LinkpearlPopouts : IDisposable
             return false;
         }
 
-        window.Bind(key, null);
+        window.Bind(key, null, focus);
         Persist();
         return true;
     }
@@ -499,7 +499,13 @@ internal sealed class LinkpearlPopouts : IDisposable
             return;
         }
 
-        if (!installed.Open || gate.Paused || configuration.DoNotDisturb || visibility.IsVisible)
+        if (!installed.Open || gate.Paused || configuration.DoNotDisturb)
+        {
+            return;
+        }
+
+        if (visibility.IsVisible &&
+            (!configuration.LinkpearlPopoutTellsWhilePhoneOpen || inbox.IsViewing(entry.StreamKey)))
         {
             return;
         }
@@ -510,6 +516,25 @@ internal sealed class LinkpearlPopouts : IDisposable
         }
 
         inbox.Sync();
+        if (configuration.LinkpearlPopoutTellsInBackground)
+        {
+            OpenInBackground(entry.StreamKey);
+            return;
+        }
+
         Open(entry.StreamKey);
+    }
+
+    private void OpenInBackground(string key)
+    {
+        var host = Host();
+        if (host is null)
+        {
+            OpenInNewWindow(key, false);
+            return;
+        }
+
+        host.AddTab(key, false);
+        Persist();
     }
 }

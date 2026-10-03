@@ -156,6 +156,9 @@ internal static class HuntWindowMath
 
     private readonly record struct PercentageCore(double Min, double Cap, double OpenPercentage, double? HoursSinceCap);
 
+    public static HuntMobTimingWindow? TimingFor(HuntWindowDto window, HuntMobDefinition? mob) =>
+        ResolveTiming(window, mob);
+
     private static HuntMobTimingWindow? ResolveTiming(HuntWindowDto window, HuntMobDefinition? mob)
     {
         if (mob is null || mob.Windows.Length == 0)

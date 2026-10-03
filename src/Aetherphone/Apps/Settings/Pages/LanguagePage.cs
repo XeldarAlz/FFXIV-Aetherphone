@@ -10,10 +10,16 @@ namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class LanguagePage : ISettingsPage
 {
+    private static readonly SettingsEntry[] Searchable =
+    {
+        new(L.Settings.TranslateInto),
+    };
+
     public string Title => Loc.T(L.Settings.Language);
     public string Summary => Loc.Current.NativeName;
     public FontAwesomeIcon Icon => FontAwesomeIcon.Globe;
     public Vector4 Tint => new(0.30f, 0.62f, 0.95f, 1f);
+    public ReadOnlySpan<SettingsEntry> Entries => Searchable;
     private readonly Configuration configuration;
     private readonly TranslationService translation;
 

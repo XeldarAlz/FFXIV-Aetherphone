@@ -3,13 +3,13 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Coins;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Timers;
 using Aetherphone.Core.Wallet;
 
 namespace Aetherphone.Core.Shell;
 
 internal sealed class MinimizedFeed
 {
-    private const float WeatherIntervalSeconds = 5f;
     private const float GilIntervalSeconds = 1f;
     private const float VentureIntervalSeconds = 5f;
     private const int ForecastWindows = 1;
@@ -21,9 +21,9 @@ internal sealed class MinimizedFeed
     private readonly ActivityTracker activity;
     private readonly GameData gameData;
     private readonly List<WeatherWindow> forecast = new();
-    private readonly List<RetainerVenture> retainers = new();
+    private readonly GameTimers timers;
     private float clock;
-    private float weatherDue;
+    private WeatherPulse weatherPulse;
     private float gilDue;
     private float ventureDue;
     private long gilValue = -1;
@@ -34,8 +34,9 @@ internal sealed class MinimizedFeed
     private bool gilIconResolved;
 
     public MinimizedFeed(WeatherService weather, CoinStore coins, AethernetSession session, ActivityTracker activity,
-        GameData gameData)
+        GameData gameData, GameTimers timers)
     {
+        this.timers = timers;
         this.weather = weather;
         this.coins = coins;
         this.session = session;
@@ -68,12 +69,11 @@ internal sealed class MinimizedFeed
 
     public void EnsureWeather()
     {
-        if (clock < weatherDue)
+        if (!weatherPulse.Due(weather.CurrentTerritory, weather.LiveWeatherId()))
         {
             return;
         }
 
-        weatherDue = clock + WeatherIntervalSeconds;
         Zone = weather.CurrentZone();
         weather.Forecast(forecast, ForecastWindows);
         if (forecast.Count == 0)
@@ -137,35 +137,40 @@ internal sealed class MinimizedFeed
         }
 
         ventureDue = clock + VentureIntervalSeconds;
-        RetainersKnown = RetainerReader.TryRead(retainers) && retainers.Count > 0;
+        var character = TimerLedger.Find(timers.Characters, timers.CurrentContentId);
+        RetainersKnown = character is { Retainers.Count: > 0 };
         VenturesReady = 0;
         HasRunningVenture = false;
         NextVentureUtc = DateTime.MaxValue;
-        if (!RetainersKnown)
+        if (character is null || !RetainersKnown)
         {
             return;
         }
 
-        var utcNow = DateTime.UtcNow;
+        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var nextUnix = long.MaxValue;
+        var retainers = character.Retainers;
         for (var index = 0; index < retainers.Count; index++)
         {
-            var venture = retainers[index];
-            if (!venture.HasVenture)
+            var completeUnix = retainers[index].CompleteUnix;
+            if (completeUnix <= 0)
             {
                 continue;
             }
 
-            if (venture.CompleteUtc <= utcNow)
+            if (completeUnix <= nowUnix)
             {
                 VenturesReady++;
                 continue;
             }
 
             HasRunningVenture = true;
-            if (venture.CompleteUtc < NextVentureUtc)
-            {
-                NextVentureUtc = venture.CompleteUtc;
-            }
+            nextUnix = Math.Min(nextUnix, completeUnix);
+        }
+
+        if (HasRunningVenture)
+        {
+            NextVentureUtc = DateTimeOffset.FromUnixTimeSeconds(nextUnix).UtcDateTime;
         }
     }
 }

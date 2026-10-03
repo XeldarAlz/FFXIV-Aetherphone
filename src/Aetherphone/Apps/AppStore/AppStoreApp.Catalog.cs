@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -46,6 +47,11 @@ internal sealed partial class AppStoreApp
                 var row = index / 2;
                 var min = new Vector2(origin.X + column * (cardWidth + gap), top + row * (cardHeight + gap));
                 var card = new Rect(min, new Vector2(min.X + cardWidth, min.Y + cardHeight));
+                if (index == 0)
+                {
+                    UiAnchors.Report("appstore.category", card);
+                }
+
                 if (DrawCategoryCard(card, index, scale))
                 {
                     router.Push(StoreView.ForCategory(AppStoreCatalog.Order[index]));

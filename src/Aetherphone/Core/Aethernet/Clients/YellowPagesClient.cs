@@ -1,5 +1,4 @@
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Aethernet.Clients;
@@ -56,10 +55,12 @@ internal sealed class YellowPagesClient
     }
 
     public Task<AdPage?> DirectoryAsync(int categories, int regions, int dataCenterId, bool openNow, bool afterDark,
-        string? search, string? cursor, CancellationToken token, Action<AepFailure>? onFailure = null)
+        int direction, string? search, string? cursor, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
     {
         var path = $"/ads/?categories={categories}&regions={regions}&dc={dataCenterId}"
-            + $"&openNow={(openNow ? "true" : "false")}&afterDark={(afterDark ? "true" : "false")}";
+            + $"&openNow={(openNow ? "true" : "false")}&afterDark={(afterDark ? "true" : "false")}"
+            + $"&direction={direction}";
         if (!string.IsNullOrEmpty(search))
         {
             path += $"&search={Uri.EscapeDataString(search)}";
@@ -95,11 +96,10 @@ internal sealed class YellowPagesClient
             onFailure);
     }
 
-    public Task<AdInquiryDto?> OpenInquiryAsync(string adId, string envelope, string commitmentTag,
-        CancellationToken token, Action<int>? statusSink = null, Action<AepFailure>? onFailure = null)
+    public Task<AdInquiryDto?> OpenInquiryAsync(string adId, SendAdInquiryRequest request, CancellationToken token,
+        Action<int>? statusSink = null, Action<AepFailure>? onFailure = null)
     {
-        return net.PostAsync($"/ads/{Uri.EscapeDataString(adId)}/inquiries",
-            new SendAdInquiryRequest(envelope, EnvelopeCodec.VersionEnvelope, commitmentTag),
+        return net.PostAsync($"/ads/{Uri.EscapeDataString(adId)}/inquiries", request,
             AethernetJsonContext.Default.SendAdInquiryRequest, AethernetJsonContext.Default.AdInquiryDto, token,
             statusSink, onFailure);
     }
@@ -128,21 +128,72 @@ internal sealed class YellowPagesClient
         return net.GetAsync(path, AethernetJsonContext.Default.AdInquiryMessagePage, token, null, onFailure);
     }
 
-    public Task<AdInquiryMessageDto?> SendInquiryAsync(string inquiryId, string envelope, string commitmentTag,
+    public Task<AdInquiryMessageDto?> SendInquiryAsync(string inquiryId, SendAdInquiryRequest request,
         CancellationToken token, Action<AepFailure>? onFailure = null)
     {
-        return net.PostAsync($"/ads/inquiries/{Uri.EscapeDataString(inquiryId)}/messages",
-            new SendAdInquiryRequest(envelope, EnvelopeCodec.VersionEnvelope, commitmentTag),
+        return net.PostAsync($"/ads/inquiries/{Uri.EscapeDataString(inquiryId)}/messages", request,
             AethernetJsonContext.Default.SendAdInquiryRequest,
             AethernetJsonContext.Default.AdInquiryMessageDto, token, null, onFailure);
     }
 
-    public Task<bool> DeleteInquiryMessageAsync(string inquiryId, string messageId, CancellationToken token,
+    public Task<AdInquiryMessageDto?> EditInquiryMessageAsync(string messageId, string body, int encVersion,
+        string? commitmentTag, CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.SendJsonAsync(HttpMethod.Patch, $"/ads/inquiries/messages/{Uri.EscapeDataString(messageId)}",
+            new EditChatMessageRequest(body, encVersion, commitmentTag),
+            AethernetJsonContext.Default.EditChatMessageRequest, AethernetJsonContext.Default.AdInquiryMessageDto,
+            token, null, onFailure);
+    }
+
+    public Task<bool> DeleteInquiryMessageAsync(string messageId, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
-        return net.SendAsync(HttpMethod.Delete,
-            $"/ads/inquiries/{Uri.EscapeDataString(inquiryId)}/messages/{Uri.EscapeDataString(messageId)}", token,
+        return net.SendAsync(HttpMethod.Delete, $"/ads/inquiries/messages/{Uri.EscapeDataString(messageId)}", token,
             null, onFailure);
+    }
+
+    public Task<bool> ClearInquiryAsync(string inquiryId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.SendAsync(HttpMethod.Delete, $"/ads/inquiries/{Uri.EscapeDataString(inquiryId)}", token, null,
+            onFailure);
+    }
+
+    public Task<bool> SetInquiryReactionAsync(string messageId, string reactionToken, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.SendJsonForStatusAsync(HttpMethod.Post,
+            $"/ads/inquiries/messages/{Uri.EscapeDataString(messageId)}/reactions",
+            new SetReactionRequest(reactionToken), AethernetJsonContext.Default.SetReactionRequest, token, null,
+            onFailure);
+    }
+
+    public Task<ReactionListDto?> InquiryReactionsAsync(string messageId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.GetAsync($"/ads/inquiries/messages/{Uri.EscapeDataString(messageId)}/reactions",
+            AethernetJsonContext.Default.ReactionListDto, token, null, onFailure);
+    }
+
+    public Task<bool> SendInquiryTypingAsync(string inquiryId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.SendAsync(HttpMethod.Post, $"/ads/inquiries/{Uri.EscapeDataString(inquiryId)}/typing", token,
+            null, onFailure);
+    }
+
+    public Task<AdInquiryTypingDto?> InquiryTypingAsync(string inquiryId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.GetAsync($"/ads/inquiries/{Uri.EscapeDataString(inquiryId)}/typing",
+            AethernetJsonContext.Default.AdInquiryTypingDto, token, null, onFailure);
+    }
+
+    public Task<AdInquiryMediaUrlDto?> InquiryMediaUrlAsync(string messageId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.GetAsync($"/ads/inquiries/media/{Uri.EscapeDataString(messageId)}/url",
+            AethernetJsonContext.Default.AdInquiryMediaUrlDto, token, null, onFailure);
     }
 
     public Task<bool> MarkInquiryReadAsync(string inquiryId, CancellationToken token,

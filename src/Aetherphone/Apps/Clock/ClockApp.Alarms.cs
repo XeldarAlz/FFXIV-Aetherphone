@@ -3,6 +3,7 @@ using Aetherphone.Core.Clock;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -128,6 +129,7 @@ internal sealed partial class ClockApp
         var half = timeRow.Width * 0.5f - 12f * scale;
         var hourRect = new Rect(timeRow.Min, new Vector2(timeRow.Min.X + half, timeRow.Max.Y));
         var minuteRect = new Rect(new Vector2(timeRow.Max.X - half, timeRow.Min.Y), timeRow.Max);
+        UiAnchors.Report("clock.alarm.time", timeRow);
         StepperField.Draw(ui, hourRect, editHour.ToString("D2"), scale, () => editHour = (editHour + 23) % 24,
             () => editHour = (editHour + 1) % 24);
         StepperField.Draw(ui, minuteRect, editMinute.ToString("D2"), scale, () => editMinute = (editMinute + 59) % 60,
@@ -141,6 +143,8 @@ internal sealed partial class ClockApp
         var chipHeight = 34f * scale;
         var chipGap = 6f * scale;
         var chipWidth = (timeRow.Width - chipGap * (WeekOrder.Length - 1)) / WeekOrder.Length;
+        UiAnchors.Report("clock.alarm.repeat",
+            new Rect(new Vector2(left, chipTop), new Vector2(right, chipTop + chipHeight)));
         var abbreviations = Loc.Culture.DateTimeFormat.AbbreviatedDayNames;
         for (var index = 0; index < WeekOrder.Length; index++)
         {
@@ -173,6 +177,7 @@ internal sealed partial class ClockApp
         }
 
         var saveRect = new Rect(new Vector2(left, saveTop), new Vector2(right, saveTop + buttonHeight));
+        UiAnchors.Report("clock.alarm.save", saveRect);
         if (DrawPillButton(saveRect, Loc.T(L.Clock.Save), ui.Accent, new Vector4(1f, 1f, 1f, 1f)))
         {
             CommitAlarm();

@@ -18,6 +18,11 @@ internal sealed partial class CoinApp
     private const float BadgeRowHeight = 52f;
     private const float SectionGap = 18f;
     private const float SectionHeaderHeight = 30f;
+    private const float SectionHintGap = 10f;
+    private const float NameColorMarkerRadius = 15f;
+    private const float NameColorMarkerGap = 8f;
+    private const float NameColorGlyphScale = 0.55f;
+    private const int NameColorSlot = 1;
 
     private void DrawInventory(Rect body)
     {
@@ -158,6 +163,8 @@ internal sealed partial class CoinApp
             return;
         }
 
+        DrawSectionHint(Loc.T(L.Loadout.BadgesHint), width, scale);
+
         var rowHeight = BadgeRowHeight * scale;
         var drawList = ImGui.GetWindowDrawList();
         for (var index = 0; index < items.Length; index++)
@@ -168,6 +175,14 @@ internal sealed partial class CoinApp
             ImGui.SetCursorScreenPos(origin);
             ImGui.Dummy(new Vector2(width, rowHeight));
         }
+    }
+
+    private void DrawSectionHint(string hint, float width, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var height = Typography.DrawWrappedLeft(origin, hint, ui.MutedInk, TextStyles.Footnote, width);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height + SectionHintGap * scale));
     }
 
     private void DrawBadgeRow(ImDrawListPtr drawList, InventoryItemDto item, Rect row, int index, float scale)
@@ -187,8 +202,9 @@ internal sealed partial class CoinApp
             new Vector2(row.Max.X - inset - pillWidth, row.Center.Y - pillHeight * 0.5f),
             new Vector2(row.Max.X - inset, row.Center.Y + pillHeight * 0.5f));
 
+        var labelRight = worn ? DrawNameColorMarker(item, pill, index, scale) : pill.Min.X;
         var labelLeft = center.X + glyph * 0.5f + 12f * scale;
-        var labelWidth = MathF.Max(1f, pill.Min.X - 10f * scale - labelLeft);
+        var labelWidth = MathF.Max(1f, labelRight - 10f * scale - labelLeft);
         var name = style?.Name ?? string.Empty;
         var labelSize = Typography.Measure(name, TextStyles.BodyEmphasized);
         Marquee.DrawLeftAuto(new MarqueeId("inventory.badge.", index), name, labelLeft, row.Center.Y - labelSize.Y * 0.5f,
@@ -199,6 +215,29 @@ internal sealed partial class CoinApp
         {
             inventory.Equip(LoadoutStore.BadgeKind, item.Id, worn ? 0 : null);
         }
+    }
+
+    private float DrawNameColorMarker(InventoryItemDto item, Rect pill, int index, float scale)
+    {
+        var radius = NameColorMarkerRadius * scale;
+        var center = new Vector2(pill.Min.X - NameColorMarkerGap * scale - radius, pill.Center.Y);
+        var glyph = IconGlyph.Of(FontAwesomeIcon.Palette);
+        if (item.Slot == NameColorSlot)
+        {
+            AppSkin.Icon(center, glyph, ui.Palette.Accent, NameColorGlyphScale);
+            HoverTooltip.Show("inventory.badge.colors." + index,
+                new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
+                Loc.T(L.Loadout.ColorsName));
+            return center.X - radius;
+        }
+
+        if (ui.IconButton(center, radius, glyph, ui.MutedInk, ui.Palette.FieldSurface, NameColorGlyphScale,
+                Loc.T(L.Loadout.UseForNameColor)))
+        {
+            inventory.Equip(LoadoutStore.BadgeKind, item.Id, NameColorSlot);
+        }
+
+        return center.X - radius;
     }
 
     private void DrawSectionHeader(string title, int worn, int slots, float width, float scale)

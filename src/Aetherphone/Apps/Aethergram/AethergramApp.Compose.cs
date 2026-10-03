@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
@@ -249,6 +250,7 @@ internal sealed partial class AethergramApp
         }
 
         var gridRect = new Rect(new Vector2(area.Min.X, gridTop), area.Max);
+        UiAnchors.Report("aethergram.compose.grid", gridRect);
         using (AppSurface.BeginEdgeToEdge(gridRect))
         {
             composeSession.DrawPickGrid(gridRect, scale, ComposeStyle, true, Loc.T(L.Aethergram.ImportFromPc),

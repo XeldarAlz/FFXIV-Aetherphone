@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -44,6 +45,7 @@ internal sealed class ScratchCabinet
 
     private RollingValue prizeRoll;
     private int tierIndex;
+    private ScratchPhase soundedPhase;
     private long celebrationPrize;
     private string inlineReason = string.Empty;
     private Rect cardArea;
@@ -179,12 +181,20 @@ internal sealed class ScratchCabinet
             prizeRoll.Snap(0);
             Celebrate(prize, scale);
         }
+
+        var settledNow = soundedPhase == ScratchPhase.Scratching && playback.Phase == ScratchPhase.Settled;
+        soundedPhase = playback.Phase;
+        if (settledNow && playback.PrizeOnceRevealed <= 0)
+        {
+            UiFeedback.Play(UiSound.GameWrong);
+        }
     }
 
     private void Celebrate(long prize, float scale)
     {
         var origin = new Vector2(cardArea.Center.X, cardArea.Min.Y + cardArea.Height * 0.35f);
         var price = ScratchRules.Prices[playback.Tier];
+        UiFeedback.Play(prize >= price * BigWinMultiple ? UiSound.GamePowerUp : UiSound.GameWin);
         if (prize >= price * BigWinMultiple)
         {
             particles.Confetti(origin, 80, ConfettiPalette, 320f * scale, 5f, 1.5f);
@@ -303,6 +313,11 @@ internal sealed class ScratchCabinet
 
             var rub = delta * RubHoldPerSecond + mouseDrag / MathF.Max(cellSize, 1f) * RubDragFactor;
             playback.Rub(cellIndex, rub);
+            if (playback.IsRevealed(cellIndex))
+            {
+                UiFeedback.Play(UiSound.GameCollect);
+            }
+
             particles.Sparkle(ImGui.GetMousePos(), 1, Palette.WithAlpha(FoilTop, 0.8f), 60f * scale, 2f, 0.35f);
         }
     }
@@ -379,6 +394,7 @@ internal sealed class ScratchCabinet
         if (UiInteract.Click(chipMin, chipMax, hovered))
         {
             playback.RevealAll();
+            UiFeedback.Play(UiSound.GameCollect);
         }
 
         return chipMax.Y;
@@ -444,6 +460,7 @@ internal sealed class ScratchCabinet
             celebrationPrize = 0;
             prizeRoll.Snap(0);
             play.BuyScratch(tierIndex);
+            UiFeedback.Play(UiSound.CasinoChips);
         }
 
         y = pillRect.Max.Y + Metrics.Space.Sm * scale;

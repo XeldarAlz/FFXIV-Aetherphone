@@ -13,18 +13,38 @@ internal sealed class AccountStateService : IDisposable
     private readonly AethernetSession session;
     private readonly AccountClient client;
     private readonly IFramework framework;
+    private readonly RealtimeSignalBus signals;
     private readonly PollCadence cadence;
     private readonly CancellationTokenSource cancellation = new();
     private volatile bool polling;
 
     public AccountStateService(AethernetSession session, AccountClient client, IFramework framework,
-        PhoneVisibility visibility)
+        PhoneVisibility visibility, RealtimeSignalBus signals)
     {
         this.session = session;
         this.client = client;
         this.framework = framework;
-        cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
+        this.signals = signals;
+        cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval, signals);
+        signals.SocialPinged += OnSocialPinged;
+        signals.ConnectedChanged += OnRealtimeConnected;
         framework.Update += OnFrameworkTick;
+    }
+
+    private void OnSocialPinged(SocialSignal signal)
+    {
+        if (signal.CoversNotices)
+        {
+            cadence.RequestImmediate();
+        }
+    }
+
+    private void OnRealtimeConnected(bool active)
+    {
+        if (active)
+        {
+            cadence.RequestAfterReconnect();
+        }
     }
 
     public void RefreshNow()
@@ -120,6 +140,8 @@ internal sealed class AccountStateService : IDisposable
 
     public void Dispose()
     {
+        signals.SocialPinged -= OnSocialPinged;
+        signals.ConnectedChanged -= OnRealtimeConnected;
         framework.Update -= OnFrameworkTick;
         cancellation.Cancel();
         cancellation.Dispose();

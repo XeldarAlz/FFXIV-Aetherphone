@@ -27,7 +27,6 @@ internal static class InboxRowView
     private const float QuickRadius = 17f;
     private const float QuickPitch = 38f;
     private const float QuickGlyph = 18f;
-    private const float RevealSmoothTime = 0.10f;
     private const float MaxFrameSeconds = 0.1f;
     private const float StatusGlyph = 16f;
     private const float StatusPitch = 20f;
@@ -122,7 +121,7 @@ internal static class InboxRowView
             spring = default;
         }
 
-        spring.Step(target ? 1f : 0f, RevealSmoothTime, MathF.Min(ImGui.GetIO().DeltaTime, MaxFrameSeconds));
+        spring.Step(target ? 1f : 0f, Motion.Appear, MathF.Min(ImGui.GetIO().DeltaTime, MaxFrameSeconds));
         Reveals[key] = spring;
         return Math.Clamp(spring.Value, 0f, 1f);
     }

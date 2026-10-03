@@ -62,8 +62,8 @@ internal sealed partial class LinkpearlApp : IResumableApp
     private readonly AppSkin ui = new(ChatThemes.PaletteFor(DefaultThemeId));
     private readonly ChatListChrome chrome;
     private readonly ChatAppearancePickers pickers;
-    private readonly BottomTabBar tabBar = new();
-    private readonly NavTab[] navTabs = new NavTab[3];
+    private readonly TabBar tabBar = new();
+    private readonly TabItem[] navTabs = new TabItem[3];
     private SocialInk ink = ChatThemes.InkFor(DefaultThemeId);
     private ChatTheme activeTheme = ChatThemes.Resolve(DefaultThemeId);
     private Rect screenRect;
@@ -284,32 +284,29 @@ internal sealed partial class LinkpearlApp : IResumableApp
 
     private void DrawRoot(Rect area)
     {
-        if (GuideIntents.Consume("messages.tab.people"))
-        {
-            SelectTab(MessagesTab.People);
-        }
-
         var scale = UiScale.Current;
         var header = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + AppHeader.Height * scale));
-        var navRect = new Rect(new Vector2(area.Min.X, area.Max.Y - BottomTabBar.Height * scale), area.Max);
-        var content = new Rect(new Vector2(area.Min.X, header.Max.Y), new Vector2(area.Max.X, navRect.Min.Y));
+        var content = new Rect(new Vector2(area.Min.X, header.Max.Y), area.Max);
         using (InputShield.Engage(newChatSheet.CapturesPointer))
         {
             DrawRootHeader(header);
-            switch (activeTab)
+            using (TabBar.ReserveContent(scale))
             {
-                case MessagesTab.People:
-                    DrawPeopleTab(content);
-                    break;
-                case MessagesTab.Settings:
-                    DrawSettingsTab(content);
-                    break;
-                default:
-                    DrawChatsTab(content);
-                    break;
+                switch (activeTab)
+                {
+                    case MessagesTab.People:
+                        DrawPeopleTab(content);
+                        break;
+                    case MessagesTab.Settings:
+                        DrawSettingsTab(content);
+                        break;
+                    default:
+                        DrawChatsTab(content);
+                        break;
+                }
             }
 
-            DrawBottomNav(navRect);
+            DrawBottomNav(area);
         }
 
         newChatSheet.Draw(area, NewChatSkin(), Loc.T(L.Linkpearl.NewChat), NewChatSheetFraction(area),
@@ -323,9 +320,8 @@ internal sealed partial class LinkpearlApp : IResumableApp
         {
             case MessagesTab.People:
                 chrome.DrawTabHeader(header, Loc.T(L.Linkpearl.People), backToList, 2);
-                var refreshCenter = SocialChrome.HeaderSlot(header, 0);
-                UiAnchors.Report("contacts.refresh", HeaderHit(refreshCenter));
-                if (chrome.DrawHeaderIcon(drawList, refreshCenter, PhoneIcons.Refresh, Loc.T(L.Common.Refresh)))
+                if (chrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(header, 0), PhoneIcons.Refresh,
+                        Loc.T(L.Common.Refresh)))
                 {
                     RequestRefresh();
                 }
@@ -351,7 +347,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
         var unread = inbox.TotalUnread > 0;
         chrome.DrawTabHeader(header, DisplayName, backToList, unread ? 3 : 2);
         var newChatCenter = SocialChrome.HeaderSlot(header, 0);
-        UiAnchors.Report("messages.new", HeaderHit(newChatCenter));
+        UiAnchors.Report("messages.new", ChatListChrome.HeaderHit(newChatCenter));
         if (chrome.DrawHeaderIcon(drawList, newChatCenter, PhoneIcons.MessagePlus, Loc.T(L.Linkpearl.NewChat)))
         {
             OpenNewChat();
@@ -370,13 +366,6 @@ internal sealed partial class LinkpearlApp : IResumableApp
         }
     }
 
-    private static Rect HeaderHit(Vector2 center)
-    {
-        var radius = SocialChrome.HeaderIconRadius * UiScale.Current;
-        var half = new Vector2(radius, radius);
-        return new Rect(center - half, center + half);
-    }
-
     private void MarkAllRead()
     {
         inbox.MarkAllRead();
@@ -384,20 +373,19 @@ internal sealed partial class LinkpearlApp : IResumableApp
         notifications.RemoveApp(Id);
     }
 
-    private void DrawBottomNav(Rect nav)
+    private void DrawBottomNav(Rect area)
     {
-        navTabs[0] = new NavTab(FontAwesomeIcon.Comments, Loc.T(L.Messages.TabChats), BadgeCount,
-            AnchorKey: "messages.tab.chats", Glyph: PhoneIcons.MessageCircle,
-            ActiveGlyph: PhoneIcons.MessageCircleFilled);
-        navTabs[1] = new NavTab(FontAwesomeIcon.UserFriends, Loc.T(L.Linkpearl.People),
-            AnchorKey: "messages.tab.people", Glyph: PhoneIcons.Users);
-        navTabs[2] = new NavTab(FontAwesomeIcon.Cog, Loc.T(L.Settings.Title),
-            AnchorKey: "messages.tab.settings", Glyph: PhoneIcons.Settings);
-        var tapped = tabBar.Draw(nav, ui, frameTheme, navTabs, (int)activeTab, activeInk: ink.AccentLink);
-        if (tapped >= 0)
+        navTabs[0] = new TabItem(Loc.T(L.Messages.TabChats), PhoneIcons.MessageCircle, PhoneIcons.MessageCircleFilled,
+            BadgeCount, "messages.tab.chats");
+        navTabs[1] = new TabItem(Loc.T(L.Linkpearl.People), PhoneIcons.Users, AnchorKey: "messages.tab.people");
+        navTabs[2] = new TabItem(Loc.T(L.Settings.Title), PhoneIcons.Settings, AnchorKey: "messages.tab.settings");
+        var result = tabBar.Draw(area, ui, navTabs, (int)activeTab);
+        if (result.Tapped < 0)
         {
-            SelectTab((MessagesTab)tapped);
+            return;
         }
+
+        SelectTab((MessagesTab)result.Tapped);
     }
 
     private void SelectTab(MessagesTab tab)

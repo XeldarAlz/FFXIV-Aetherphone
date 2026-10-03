@@ -19,7 +19,6 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
 {
     private readonly GramDmClient client;
     private readonly SocialClient social;
-    private readonly RealtimeSignalBus signals;
     private readonly ConcurrentDictionary<string, PostDto?> sharedPosts = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, byte> sharedPostFetches = new(StringComparer.Ordinal);
     private volatile bool gramKeysHydrated;
@@ -28,25 +27,13 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         MediaClient media, NotificationService notifications, KeyVault vault, ConversationKeyStore keys,
         DecryptedHistoryStore chatHistory, PhoneVisibility visibility, RealtimeSignalBus signals,
         AppInstaller installer)
-        : base("AethergramDm", session, safety, media, notifications, vault, keys, chatHistory, visibility,
+        : base("AethergramDm", session, safety, media, notifications, vault, keys, chatHistory, visibility, signals,
             installer.Gate("aethergram"))
     {
         this.client = client;
         this.social = social;
-        this.signals = signals;
         signals.GramPinged += OnGramPinged;
-        signals.ConnectedChanged += OnRealtimeConnected;
     }
-
-    private void OnRealtimeConnected(bool active)
-    {
-        if (active)
-        {
-            InboxCadence.RequestAfterReconnect();
-        }
-    }
-
-    public override bool RealtimePushActive => signals.RealtimeActive;
 
     private void OnGramPinged()
     {
@@ -130,6 +117,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
     protected override string ImageUploadScope => "gram-dm";
     protected override string VoiceUploadScope => "gram-voice";
     protected override string ReportTargetType => "gram_message";
+    protected override string TypingSignalType => Core.Telephony.Contracts.SignalType.GramTyping;
 
     protected override string ScopeFor(string threadId) =>
         ConversationKeyStore.GramScope(ConversationKeyStore.Pair(MyUserId, threadId));
@@ -501,6 +489,5 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
     protected override void DisposeCore()
     {
         signals.GramPinged -= OnGramPinged;
-        signals.ConnectedChanged -= OnRealtimeConnected;
     }
 }

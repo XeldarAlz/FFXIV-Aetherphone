@@ -14,15 +14,17 @@ internal readonly struct ControlDefault
 
 internal static class ControlDefaults
 {
+    public const string ClusterId = "toggles";
+
+    public static readonly string[] ClusterMembers = { "dnd", "silent", "calls", "idle" };
+
     public static readonly ControlDefault[] Layout =
     {
-        new("dnd", ControlSpan.Small),
-        new("silent", ControlSpan.Small),
-        new("calls", ControlSpan.Small),
-        new("idle", ControlSpan.Small),
+        new(ClusterId, ControlSpan.Large),
         new("media", ControlSpan.Large),
         new("brightness", ControlSpan.Tall),
         new("volume", ControlSpan.Tall),
+        new("lock", ControlSpan.Small),
         new("settings", ControlSpan.Small),
         new("accent", ControlSpan.Wide),
     };

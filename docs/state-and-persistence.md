@@ -98,6 +98,7 @@ Per-character state comes in two shapes:
 **Dictionaries inside `Configuration`, keyed by `ulong` ContentId.** Used when the per-character payload is small:
 
 - `JobsCategoriesByCharacter` (custom gearset categories)
+- `LookByCharacter` (which saved Look, a bundle of home layout, theme, accent, case and wallpapers, each character uses; `HomeLookService` in src/Aetherphone/Core/Home/ swaps the flat appearance fields when the character changes, the same mirror pattern `AethernetSession` uses for account slots)
 - `MutedLinkshellsByCharacter` (legacy per-character linkshell mutes; nothing writes it anymore, and its only reader is `TabStore.ReadLegacyMutes`, which seeds mute state for newly created Linkpearl tabs)
 - `CharacterSessions` (account session snapshots, see below)
 
@@ -111,7 +112,7 @@ Per-character state comes in two shapes:
 | `<config>/Health/<CONTENTID>.json` (uppercase hex) | Health tracker samples | `HealthStore` (src/Aetherphone/Core/Health/HealthStore.cs) |
 | `<config>/cache/inventory/<contentid>.json` (lowercase hex) | Inventory snapshots | `InventoryStore` (src/Aetherphone/Core/Inventory/InventoryStore.cs) |
 
-Exactly two stores subscribe to `CharacterWatch.Changed` today: `ChatArchive` and `TabStore` (both in src/Aetherphone/Core/GameChat/). The others reach per-character state differently: `HealthTracker` polls `watch.CurrentContentId` on its own sample tick and swaps profiles when it changes, while `ActivityTracker` and the inventory capture path read the current ContentId straight from game state on their own ticks and receive no `CharacterWatch` at all. `ChatArchive.OnCharacterChanged` shows the reload pattern, verbatim from src/Aetherphone/Core/GameChat/ChatArchive.cs:
+Three services subscribe to `CharacterWatch.Changed` today: `ChatArchive` and `TabStore` (both in src/Aetherphone/Core/GameChat/) and `HomeLookService` (src/Aetherphone/Core/Home/). The others reach per-character state differently: `HealthTracker` polls `watch.CurrentContentId` on its own sample tick and swaps profiles when it changes, while `ActivityTracker` and the inventory capture path read the current ContentId straight from game state on their own ticks and receive no `CharacterWatch` at all. `ChatArchive.OnCharacterChanged` shows the reload pattern, verbatim from src/Aetherphone/Core/GameChat/ChatArchive.cs:
 
 ```csharp
 private void OnCharacterChanged(ulong contentId)

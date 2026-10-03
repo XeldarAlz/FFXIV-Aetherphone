@@ -14,7 +14,8 @@ internal sealed class ControlRegistry : IControlRegistry
     private readonly Dictionary<string, IControlModule> byId = new();
 
     public ControlRegistry(Configuration configuration, ThemeProvider themes, PlaybackHub playback, CallHub calls,
-        INavigator navigation, Action dismiss, Coins.CoinStore coins, Aethernet.AethernetSession session)
+        INavigator navigation, Action dismiss, Coins.CoinStore coins, Aethernet.AethernetSession session,
+        SystemMedia.PcMediaSource pcMedia)
     {
         Add(new ToggleModule("dnd", FontAwesomeIcon.Moon, L.Settings.DoNotDisturb,
             () => configuration.DoNotDisturb, () =>
@@ -42,12 +43,13 @@ internal sealed class ControlRegistry : IControlRegistry
                 configuration.ScrollWhileIdle = !configuration.ScrollWhileIdle;
                 configuration.Save();
             }));
-        Add(new MediaModule(playback));
+        Add(new ClusterModule(ControlDefaults.ClusterId, ClusterMembers()));
+        Add(new MediaModule(playback, pcMedia));
         Add(new SliderModule("brightness", L.ControlCenter.Brightness, () => FontAwesomeIcon.Sun,
             () => configuration.ScreenBrightness, value => configuration.ScreenBrightness = value,
             configuration.Save));
         Add(new SliderModule("volume", L.ControlCenter.Volume, VolumeIcon(playback),
-            () => playback.Volume, value => playback.Volume = value, () => { }));
+            () => playback.Volume, value => playback.Volume = value, playback.CommitVolume));
         Add(new ToggleModule("camera", FontAwesomeIcon.Camera, L.Apps.Camera, () => false, () =>
         {
             navigation.Open("camera");
@@ -69,6 +71,21 @@ internal sealed class ControlRegistry : IControlRegistry
     private static Func<FontAwesomeIcon> VolumeIcon(PlaybackHub playback) => () =>
         playback.Volume <= 0.001f ? FontAwesomeIcon.VolumeMute
         : playback.Volume < 0.5f ? FontAwesomeIcon.VolumeDown : FontAwesomeIcon.VolumeUp;
+
+    private ToggleModule[] ClusterMembers()
+    {
+        var ids = ControlDefaults.ClusterMembers;
+        var members = new List<ToggleModule>(ids.Length);
+        for (var index = 0; index < ids.Length; index++)
+        {
+            if (byId.TryGetValue(ids[index], out var module) && module is ToggleModule toggle)
+            {
+                members.Add(toggle);
+            }
+        }
+
+        return members.ToArray();
+    }
 
     private void Add(IControlModule module)
     {

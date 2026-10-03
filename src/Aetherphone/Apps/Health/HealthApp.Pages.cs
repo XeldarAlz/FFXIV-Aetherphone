@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Health;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -388,7 +389,10 @@ internal sealed partial class HealthApp
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, 34f * scale));
 
-        if (WideButton(Loc.T(L.Health.DrinkWater), true, scale, 46f))
+        var drinkClicked = WideButton(Loc.T(L.Health.DrinkWater), true, scale, 46f);
+        var drinkMin = ImGui.GetItemRectMin();
+        var drinkMax = ImGui.GetItemRectMax();
+        if (drinkClicked)
         {
             tracker.LogDrink(DrinkKeys.Water, string.Empty, 250);
         }
@@ -405,6 +409,8 @@ internal sealed partial class HealthApp
             }
         }
 
+        UiAnchors.Report("health.water.drinks",
+            new Rect(drinkMin, new Vector2(drinkMax.X, chipOrigin.Y + 32f * scale)));
         ImGui.SetCursorScreenPos(chipOrigin);
         ImGui.Dummy(new Vector2(width, 40f * scale));
 
@@ -507,6 +513,7 @@ internal sealed partial class HealthApp
         for (var index = 0; index < Profile.Goals.Count; index++)
         {
             var goal = Profile.Goals[index];
+            var goalTop = ImGui.GetCursorScreenPos();
             GoalBar(goal, scale);
             if (editingGoalId == goal.Id)
             {
@@ -516,6 +523,13 @@ internal sealed partial class HealthApp
             {
                 editingGoalId = goal.Id;
                 goalNameBuffer = HealthFormat.GoalName(goal);
+            }
+
+            if (index == 0)
+            {
+                var goalBottom = ImGui.GetCursorScreenPos().Y;
+                var goalRight = goalTop.X + ImGui.GetContentRegionAvail().X;
+                UiAnchors.Report("health.goal", new Rect(goalTop, new Vector2(goalRight, goalBottom)));
             }
 
             ImGui.Dummy(new Vector2(0f, 6f * scale));

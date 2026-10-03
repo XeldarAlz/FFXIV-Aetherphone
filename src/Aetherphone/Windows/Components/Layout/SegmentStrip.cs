@@ -8,21 +8,32 @@ namespace Aetherphone.Windows.Components;
 internal static class SegmentStrip
 {
     private const float TrackHeight = 30f;
-    private const float ThumbSmoothTime = 0.13f;
     private static readonly Vector4 FrostTrack = new(1f, 1f, 1f, 0.08f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Dictionary<string, Spring> Thumbs = new(StringComparer.Ordinal);
 
     public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, PhoneTheme theme) =>
-        Draw(id, row, options, selected, theme.ToggleOff, theme.Accent, theme.TextMuted, theme.TextStrong);
+        Draw(id, row, options, selected, theme, out _);
+
+    public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, PhoneTheme theme,
+        out bool pressed) =>
+        Draw(id, row, options, selected, theme.ToggleOff, theme.Accent, theme.TextMuted, theme.TextStrong,
+            out pressed);
 
     public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, in AppPalette palette,
         float trackHeight = TrackHeight, float textScale = 0.82f) =>
-        Draw(id, row, options, selected, FrostTrack, palette.Accent, palette.MutedInk, White, trackHeight, textScale);
+        Draw(id, row, options, selected, FrostTrack, palette.Accent, palette.MutedInk, White, out _, trackHeight,
+            textScale);
 
     public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, Vector4 track,
-        Vector4 accent, Vector4 mutedInk, Vector4 activeInk, float trackHeight = TrackHeight, float textScale = 0.82f)
+        Vector4 accent, Vector4 mutedInk, Vector4 activeInk, float trackHeight = TrackHeight, float textScale = 0.82f) =>
+        Draw(id, row, options, selected, track, accent, mutedInk, activeInk, out _, trackHeight, textScale);
+
+    public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, Vector4 track,
+        Vector4 accent, Vector4 mutedInk, Vector4 activeInk, out bool pressed, float trackHeight = TrackHeight,
+        float textScale = 0.82f)
     {
+        pressed = false;
         if (options.Count == 0)
         {
             return selected;
@@ -50,6 +61,7 @@ internal static class SegmentStrip
             if (UiInteract.Click(segmentMin, segmentMax, segmentHovered))
             {
                 result = index;
+                pressed = true;
             }
         }
 
@@ -84,6 +96,15 @@ internal static class SegmentStrip
         return result;
     }
 
+    public static Rect SegmentRect(Rect row, int index, int count, float trackHeight = TrackHeight)
+    {
+        var height = trackHeight * UiScale.Current;
+        var segmentWidth = row.Width / Math.Max(1, count);
+        var left = row.Min.X + index * segmentWidth;
+        return new Rect(new Vector2(left, row.Center.Y - height * 0.5f),
+            new Vector2(left + segmentWidth, row.Center.Y + height * 0.5f));
+    }
+
     private static float AnimateThumb(string id, int selected)
     {
         if (!Thumbs.TryGetValue(id, out var spring))
@@ -92,7 +113,7 @@ internal static class SegmentStrip
         }
 
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
-        var position = spring.Step(selected, ThumbSmoothTime, deltaSeconds);
+        var position = spring.Step(selected, Motion.Release, deltaSeconds);
         Thumbs[id] = spring;
         return position;
     }

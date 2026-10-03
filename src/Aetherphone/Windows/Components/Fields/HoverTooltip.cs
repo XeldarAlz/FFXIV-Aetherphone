@@ -6,7 +6,6 @@ namespace Aetherphone.Windows.Components;
 
 internal static class HoverTooltip
 {
-    private const float SmoothTime = 0.11f;
     private const float MaxFrameSeconds = 0.1f;
     private static readonly Dictionary<string, Spring> springs = new();
     private static readonly List<PendingLabel> pending = new();
@@ -152,7 +151,7 @@ internal static class HoverTooltip
             spring = default;
         }
 
-        spring.Step(hovered ? 1f : 0f, SmoothTime, delta);
+        spring.Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
         var value = Math.Clamp(spring.Value, 0f, 1f);
         if (!hovered && value <= 0.001f)
         {

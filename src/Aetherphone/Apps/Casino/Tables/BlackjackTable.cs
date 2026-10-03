@@ -6,6 +6,7 @@ using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -995,14 +996,21 @@ internal sealed class BlackjackTable
         }
 
         winRoll.Snap(0);
+        var witnessed = motions[mySeat].SettleClock < SnappedClock;
+        var stake = TotalBet(hands);
+        var bigWin = stake > 0 && settledDelta >= stake * 10;
+        if (witnessed)
+        {
+            SoundSettledHand(settledDelta, bigWin);
+        }
+
         if (settledDelta <= 0)
         {
             return;
         }
 
         var origin = new Vector2(felt.Center.X, BlackjackTableLayout.HeroFanY(felt));
-        var stake = TotalBet(hands);
-        if (stake > 0 && settledDelta >= stake * 10)
+        if (bigWin)
         {
             particles.Confetti(origin, 90, ConfettiPalette, 330f * scale, 5f, 1.6f);
             particles.Sparkle(origin, 24, Gold, 190f * scale, 4f, 1.0f);
@@ -1010,6 +1018,26 @@ internal sealed class BlackjackTable
         }
 
         particles.Confetti(origin, 40, ConfettiPalette, 250f * scale, 4f, 1.2f);
+    }
+
+    private static void SoundSettledHand(long delta, bool bigWin)
+    {
+        if (bigWin)
+        {
+            UiFeedback.Play(UiSound.GamePowerUp);
+            return;
+        }
+
+        if (delta > 0)
+        {
+            UiFeedback.Play(UiSound.GameWin);
+            return;
+        }
+
+        if (delta < 0)
+        {
+            UiFeedback.Play(UiSound.GameWrong);
+        }
     }
 
     private static bool Settled(CasinoBlackjackHandDto[] hands)
@@ -1165,6 +1193,7 @@ internal sealed class BlackjackTable
         {
             inlineReason = string.Empty;
             rooms.PlaceBlackjackBet(composer.Amount);
+            UiFeedback.Play(UiSound.CasinoChips);
         }
     }
 
@@ -1211,6 +1240,10 @@ internal sealed class BlackjackTable
             {
                 inlineReason = string.Empty;
                 rooms.SendBlackjackAction(bit);
+                if (wagered)
+                {
+                    UiFeedback.Play(UiSound.CasinoChips);
+                }
             }
         }
     }

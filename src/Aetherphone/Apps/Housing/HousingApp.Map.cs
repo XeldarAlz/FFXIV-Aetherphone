@@ -2,9 +2,11 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -17,331 +19,406 @@ internal sealed partial class HousingApp
     private const float WheelStep = 0.14f;
     private const float ZoomButtonStep = 1.35f;
     private const float DragSlop = 5f;
-
+    private const float MapSmoothTime = 0.11f;
+    private const float MapFill = 0.94f;
     private const float LabelZoom = 1.45f;
+    private const float ControlInset = 10f;
+    private const float PlaceHeight = 48f;
+    private const float PlaceTile = 30f;
+    private const float PlaceChevron = 14f;
+    private const float PlaceMaxWidth = 260f;
+    private const float DivisionHeight = 32f;
+    private const float DivisionMaxWidth = 220f;
+    private const float StatusHeight = 34f;
+    private const float StatusDot = 3.5f;
+    private const float LegendWidth = 184f;
+    private const float LegendRow = 22f;
+    private const float PointOfInterestSize = 16f;
+    private const float LegendIconSize = 14f;
+    private const int ControlCount = 5;
 
-    private void DrawMapRoute(Rect area)
+    private readonly string[] controlGlyphs = new string[ControlCount];
+    private readonly string[] controlTips = new string[ControlCount];
+    private Spring zoomSpring = new(1f);
+    private Spring panXSpring;
+    private Spring panYSpring;
+    private Spring divisionThumb;
+    private float zoomTarget = 1f;
+    private Vector2 panTarget;
+    private Vector2 lastViewportCenter;
+    private Vector2 lastViewportSize;
+    private bool centerPending;
+    private Vector2 lastMapSpan;
+    private bool dragging;
+    private float dragTravel;
+    private bool showSubdivision;
+    private bool legendOpen;
+    private CachedText placeLine;
+    private CachedText statusText;
+    private CachedText noOpeningsText;
+    private Rect statusRect;
+
+    private void StepMap(float delta)
+    {
+        zoomSpring.Step(zoomTarget, MapSmoothTime, delta);
+        panXSpring.Step(panTarget.X, MapSmoothTime, delta);
+        panYSpring.Step(panTarget.Y, MapSmoothTime, delta);
+        divisionThumb.Step(showSubdivision ? 1f : 0f, Motion.PageSettle, delta);
+        StepPlotCard(delta);
+    }
+
+    private void DrawMapTab(Rect area)
     {
         var scale = UiScale.Current;
-        DrawTopBar(area, scale);
-        var top = area.Min.Y + TopBarHeight * scale;
-        var contextHeight = HousingChrome.SelectorHeight(scale) + 10f * scale;
-        var contextBar = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + contextHeight));
-        DrawContextBar(contextBar, scale);
-        var phaseBar = new Rect(new Vector2(area.Min.X, contextBar.Max.Y),
-            new Vector2(area.Max.X, contextBar.Max.Y + PhaseBarHeight * scale));
-        DrawPhaseBar(phaseBar, scale);
-        var bannerBottom = DrawDataBanner(area, phaseBar.Max.Y, scale);
-        var footer = new Rect(new Vector2(area.Min.X, area.Max.Y - FooterHeight * scale), area.Max);
-        var viewport = new Rect(new Vector2(area.Min.X, bannerBottom), new Vector2(area.Max.X, footer.Min.Y));
-        UiAnchors.Report("housing.map", viewport);
+        UiAnchors.Report("housing.map", area);
+        var tabZone = TabBar.Zone(area, scale);
+        var bottom = MathF.Min(area.Max.Y, tabZone.Min.Y) - ControlInset * scale;
         if (!housing.HasWorldSelected)
         {
-            TourHolds.Hold(Id);
-            DrawNoWorldState(viewport, scale);
-            DrawFooter(footer, scale);
-            return;
-        }
-
-        if (housing.GameMap is null)
-        {
-            TourHolds.Hold(Id);
-            DrawEmptyCard(viewport, FontAwesomeIcon.MapSigns, Loc.T(L.Housing.GameMapUnavailable),
-                Loc.T(L.Housing.GameMapUnavailableHint), Loc.T(L.Housing.ViewAsList),
-                () => Push(HousingRoute.List), scale);
-            DrawFooter(footer, scale);
-            return;
-        }
-
-        TourHolds.Release(Id);
-        DrawMapViewport(viewport, scale);
-        DrawFooter(footer, scale);
-        DrawSheet(area, viewport, scale);
-        DrawFilterDrawer(area, scale);
-        DrawWardPicker(area, viewport, scale);
-    }
-
-    private void DrawTopBar(Rect area, float scale)
-    {
-        var rowCenterY = area.Min.Y + TopBarHeight * scale * 0.5f;
-        var drawList = ImGui.GetWindowDrawList();
-        var hitMin = new Vector2(area.Min.X, area.Min.Y);
-        var hitMax = new Vector2(area.Min.X + 40f * scale, area.Min.Y + TopBarHeight * scale);
-        var backHovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
-        if (BackButton.Draw("housing.root.back", new Vector2(area.Min.X + 15f * scale, rowCenterY), 15f * scale,
-                ui.Accent, backHovered, scale))
-        {
-            Back();
-        }
-
-        var emblemCenter = new Vector2(area.Min.X + 40f * scale, rowCenterY);
-        DrawAppEmblem(drawList, emblemCenter, 26f * scale);
-        var buttonRadius = 15f * scale;
-        var gap = 34f * scale;
-        var rightmost = area.Max.X - 14f * scale - buttonRadius;
-        var settingsCenter = new Vector2(rightmost, rowCenterY);
-        var watchCenter = new Vector2(rightmost - gap, rowCenterY);
-        var listCenter = new Vector2(rightmost - gap * 2f, rowCenterY);
-        var titleLeft = emblemCenter.X + 14f * scale;
-        var titleRight = listCenter.X - buttonRadius - 8f * scale;
-        var titleStyle = TextStyles.Title3;
-        var titleWidth = MathF.Max(1f, titleRight - titleLeft);
-        Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - Typography.LineHeight(titleStyle) * 0.5f),
-            Typography.FitText(DisplayName, titleWidth, titleStyle), ui.TitleInk, titleStyle);
-        if (HousingChrome.MapButton(listCenter, buttonRadius, FontAwesomeIcon.ListUl, ui,
-                Loc.T(L.Housing.ViewAsList), false, false))
-        {
-            Push(HousingRoute.List);
-        }
-
-        var watchExtent = new Vector2(buttonRadius, buttonRadius);
-        UiAnchors.Report("housing.watchlist", new Rect(watchCenter - watchExtent, watchCenter + watchExtent));
-        if (HousingChrome.MapButton(watchCenter, buttonRadius, FontAwesomeIcon.Bookmark, ui,
-                Loc.T(L.Housing.Watchlist), false, false))
-        {
-            Push(HousingRoute.Watchlist);
-        }
-
-        if (HousingChrome.MapButton(settingsCenter, buttonRadius, FontAwesomeIcon.Cog, ui,
-                Loc.T(L.Housing.Settings), false, false))
-        {
-            Push(HousingRoute.Settings);
-        }
-
-        var watchCount = housing.Watch.Watched.Count;
-        if (watchCount > 0)
-        {
-            var badgeCenter = new Vector2(watchCenter.X + buttonRadius * 0.72f, watchCenter.Y - buttonRadius * 0.72f);
-            drawList.AddCircleFilled(badgeCenter, 5.5f * scale, ImGui.GetColorU32(AppPalettes.HousingBrass), 16);
-        }
-    }
-
-    private void DrawAppEmblem(ImDrawListPtr drawList, Vector2 center, float size)
-    {
-        if (AppIconTextures.TryDraw(drawList, Id, center, size, ui.Accent))
-        {
-            return;
-        }
-
-        HousingGlyphs.Estate(drawList, center, size * 0.31f, ui.Accent, ui.Palette.BackdropTop);
-    }
-
-    private void DrawContextBar(Rect bar, float scale)
-    {
-        var pad = 14f * scale;
-        var gap = 7f * scale;
-        var height = HousingChrome.SelectorHeight(scale);
-        var top = bar.Center.Y - height * 0.5f;
-        var available = bar.Width - pad * 2f - gap * 2f;
-        var worldWidth = available * 0.42f;
-        var districtWidth = available * 0.35f;
-        var wardWidth = available - worldWidth - districtWidth;
-        var x = bar.Min.X + pad;
-        var worldRect = new Rect(new Vector2(x, top), new Vector2(x + worldWidth, top + height));
-        x = worldRect.Max.X + gap;
-        var districtRect = new Rect(new Vector2(x, top), new Vector2(x + districtWidth, top + height));
-        x = districtRect.Max.X + gap;
-        var wardRect = new Rect(new Vector2(x, top), new Vector2(x + wardWidth, top + height));
-        UiAnchors.Report("housing.context", new Rect(worldRect.Min, wardRect.Max));
-        var worldName = housing.WorldName;
-        if (HousingChrome.Selector(worldRect, Loc.T(L.Housing.WorldLabel),
-                worldName.Length > 0 ? worldName : Loc.T(L.Housing.ChooseWorld), ui, false))
-        {
-            worldSearch = string.Empty;
-            Push(HousingRoute.WorldPicker);
-        }
-
-        if (HousingChrome.Selector(districtRect, Loc.T(L.Housing.DistrictLabel),
-                HousingDistricts.ShortDisplayName(housing.DistrictId), ui, false))
-        {
-            OpenDistrictMenu(districtRect);
-        }
-
-        if (HousingChrome.Selector(wardRect, Loc.T(L.Housing.WardLabel), housing.Ward.ToString(Loc.Culture), ui,
-                false))
-        {
-            ShowOverlay(wardPickerOpen ? HousingOverlay.None : HousingOverlay.WardPicker);
-        }
-    }
-
-    private void DrawPhaseBar(Rect bar, float scale)
-    {
-        UiAnchors.Report("housing.phase", bar);
-        var drawList = ImGui.GetWindowDrawList();
-        var pad = 14f * scale;
-        var plots = VisiblePlots();
-        var now = DateTime.UtcNow;
-        var phase = HousingLotteryPhase.Unknown;
-        DateTime? soonest = null;
-        for (var index = 0; index < plots.Count; index++)
-        {
-            var plot = plots[index];
-            if (plot.PhaseEndsUtc is not { } ends || plot.Phase == HousingLotteryPhase.Unknown)
+            if (HousingArt.StateScreen(ImGui.GetWindowDrawList(), ui, area, FontAwesomeIcon.Globe,
+                    Loc.T(L.Housing.NoWorldTitle), Loc.T(L.Housing.NoWorldHint), Loc.T(L.Housing.ChooseWorld),
+                    scale))
             {
-                continue;
+                OpenWorldPicker();
             }
 
-            if (soonest is null || ends < soonest)
-            {
-                soonest = ends;
-                phase = plot.Phase;
-            }
+            return;
         }
 
-        if (soonest is not null && HousingFormat.HasExpired(soonest, now))
-        {
-            phase = HousingLotteryPhase.Expired;
-            housing.RefreshAfterExpiry();
-        }
-
-        var label = Loc.Culture.TextInfo.ToUpper(HousingFormat.PhaseLabel(phase));
-        var labelStyle = TextStyles.Caption1;
-        Typography.Draw(drawList, new Vector2(bar.Min.X + pad, bar.Center.Y - Typography.LineHeight(labelStyle) * 0.5f),
-            label, ui.HeaderInk, labelStyle);
-        var timerText = phase switch
-        {
-            HousingLotteryPhase.Expired => Loc.T(L.Housing.PhaseExpired),
-            _ when soonest is null => Loc.T(L.Housing.TimeUnknown),
-            _ => Loc.T(L.Housing.Remaining, HousingFormat.Countdown(HousingFormat.Remaining(soonest, now)
-                ?? TimeSpan.Zero)),
-        };
-        var timerStyle = TextStyles.SubheadlineEmphasized;
-        var timerSize = Typography.Measure(timerText, timerStyle);
-        Typography.Draw(drawList, new Vector2(bar.Max.X - pad - timerSize.X, bar.Center.Y - timerSize.Y * 0.5f),
-            timerText, phase == HousingLotteryPhase.Entry ? ui.TitleInk : ui.BodyInk, timerStyle);
-    }
-
-    private float DrawDataBanner(Rect area, float top, float scale)
-    {
-        if (housing.ActiveSource != HousingProviderKind.Cache)
-        {
-            return top;
-        }
-
-        var drawList = ImGui.GetWindowDrawList();
-        var pad = 14f * scale;
-        var text = Loc.T(L.Housing.CachedBanner,
-            HousingFormat.AgeRelative(housing.Snapshot?.FetchedUtc ?? default, DateTime.UtcNow));
-        var style = TextStyles.Caption1;
-        var textWidth = area.Width - pad * 2f - 20f * scale;
-        var textHeight = Typography.MeasureWrappedBlock(text, style, textWidth).Y;
-        var height = textHeight + 12f * scale;
-        var min = new Vector2(area.Min.X + pad, top + 2f * scale);
-        var max = new Vector2(area.Max.X - pad, min.Y + height);
-        var hue = AppPalettes.HousingParchment;
-        var rounding = Metrics.Radius.Sm * scale;
-        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(Palette.WithAlpha(hue, 0.16f)));
-        Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(Palette.WithAlpha(hue, 0.42f)),
-            Metrics.Stroke.Hairline);
-        var ink = Palette.Mix(hue, new Vector4(1f, 1f, 1f, 1f), 0.45f);
-        Typography.DrawWrappedCentered(drawList, new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f), text,
-            ink, style, textWidth);
-        return max.Y + 2f * scale;
-    }
-
-    private void DrawMapViewport(Rect viewport, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
         var plan = CurrentPlan();
         var plots = VisiblePlots();
-        var controlsBlocked = ReserveControls(viewport, scale, out var zoomIn, out var zoomOut, out var recenter,
-            out var legendButton, out var buttonRadius);
-        var sheetRect = SheetRect(viewport, scale);
-        var pointerOverSheet = sheetSpring.Value > 0.02f &&
-                               ImGui.IsMouseHoveringRect(sheetRect.Min, sheetRect.Max);
-        var gestureBlocked = controlsBlocked || pointerOverSheet || filtersOpen || wardPickerOpen ||
-                             reminderPickerOpen || menu.Open;
-        var mapSize = MapSize(viewport);
-        HandleGesture(viewport, mapSize, gestureBlocked, plan, plots, scale);
-        var origin = MapOrigin(viewport, mapSize);
-        drawList.PushClipRect(viewport.Min, viewport.Max, true);
-        DrawPlan(drawList, plan, origin, mapSize, scale);
-        DrawMarkers(drawList, plan, plots, origin, mapSize, viewport, scale);
-        drawList.PopClipRect();
-        DrawViewportEdges(drawList, viewport, scale);
-        DrawStateOverlay(viewport, plots, scale);
-        DrawMapControls(zoomIn, zoomOut, recenter, legendButton, buttonRadius);
-        DrawDivisionSwitch(viewport, plan, scale);
+        if (housing.GameMap is null)
+        {
+            if (HousingArt.StateScreen(ImGui.GetWindowDrawList(), ui, area, FontAwesomeIcon.MapSigns,
+                    Loc.T(L.Housing.GameMapUnavailable), Loc.T(L.Housing.GameMapUnavailableHint),
+                    Loc.T(L.Housing.ViewAsList), scale))
+            {
+                SwitchTab(HousingTab.Plots);
+            }
+
+            DrawPlaceCapsule(area, scale);
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var stackRadius = HousingArt.GlassButtonRadius * scale;
+        var stackTop = new Vector2(area.Max.X - ControlInset * scale - stackRadius, area.Min.Y + ControlInset * scale);
+        var stackRect = new Rect(new Vector2(stackTop.X - stackRadius, stackTop.Y),
+            new Vector2(stackTop.X + stackRadius, stackTop.Y + stackRadius * 2f * ControlCount));
+        var cardRect = PlotCardRect(area, bottom, scale);
+        var place = PlaceRect(area, scale);
+        var legend = LegendRect(stackRect, scale);
         if (legendOpen)
         {
-            DrawLegend(viewport, scale);
+            UiInteract.HoverOverlay(legend);
         }
 
-        DrawFirstUseHint(viewport, plots, scale);
-    }
-
-    private Rect SheetRect(Rect viewport, float scale)
-    {
-        var height = MathF.Min(SheetHeightFor(reminderPickerOpen, scale), viewport.Height * 0.94f);
-        return new Rect(new Vector2(viewport.Min.X, viewport.Max.Y - height), viewport.Max);
-    }
-
-    private bool ReserveControls(Rect viewport, float scale, out Vector2 zoomIn, out Vector2 zoomOut,
-        out Vector2 recenter, out Vector2 legendButton, out float radius)
-    {
-        radius = 15f * scale;
-        var right = viewport.Max.X - 14f * scale - radius;
-        var spacing = radius * 2.35f;
-        var firstY = viewport.Min.Y + 16f * scale + radius;
-        zoomIn = new Vector2(right, firstY);
-        zoomOut = new Vector2(right, firstY + spacing);
-        recenter = new Vector2(right, firstY + spacing * 2f);
-        legendButton = new Vector2(viewport.Min.X + 14f * scale + radius, viewport.Min.Y + 16f * scale + radius);
-        var mouse = ImGui.GetMousePos();
-        return Near(mouse, zoomIn, radius) || Near(mouse, zoomOut, radius) || Near(mouse, recenter, radius) ||
-               Near(mouse, legendButton, radius);
-    }
-
-    private static bool Near(Vector2 point, Vector2 center, float radius)
-    {
-        var offset = point - center;
-        return offset.LengthSquared() <= radius * radius * 1.44f;
-    }
-
-    private void DrawMapControls(Vector2 zoomIn, Vector2 zoomOut, Vector2 recenter, Vector2 legendButton,
-        float radius)
-    {
-        if (HousingChrome.MapButton(zoomIn, radius, FontAwesomeIcon.Plus, ui, Loc.T(L.Housing.ZoomIn), false,
-                false))
+        var overControls = UiInteract.Hover(stackRect.Min, stackRect.Max) || UiInteract.Hover(place.Min, place.Max) ||
+                           DivisionRect(area, scale) is { } division && UiInteract.Hover(division.Min, division.Max) ||
+                           plotCardShown.Value > 0.02f && UiInteract.Hover(cardRect.Min, cardRect.Max) ||
+                           legendOpen && UiInteract.HoverWindowOnly(legend.Min, legend.Max) ||
+                           statusRect.Width > 0f && UiInteract.Hover(statusRect.Min, statusRect.Max);
+        var blocked = overControls || ModalOpen || menu.Open;
+        var mapSize = MapSize(area);
+        HandleGesture(area, mapSize, blocked, plan, plots, scale);
+        var origin = MapOrigin(area, mapSize);
+        drawList.PushClipRect(area.Min, area.Max, true);
+        DrawPlan(drawList, plan, origin, mapSize, scale);
+        DrawMarkers(drawList, plan, plots, origin, mapSize, area, scale);
+        drawList.PopClipRect();
+        DrawStateOverlay(area, plots, scale);
+        DrawPlaceCapsule(area, scale);
+        DrawDivisionSwitch(area, plan, scale);
+        DrawMapControls(drawList, stackTop, stackRadius);
+        if (legendOpen)
         {
-            ZoomAround(zoomIn, zoomTarget * ZoomButtonStep);
+            DrawLegend(drawList, legend, stackRect, scale);
         }
 
-        if (HousingChrome.MapButton(zoomOut, radius, FontAwesomeIcon.Minus, ui, Loc.T(L.Housing.ZoomOut), false,
-                false))
+        statusRect = default;
+        if (plotCardShown.Value < 0.5f)
         {
-            ZoomAround(zoomOut, zoomTarget / ZoomButtonStep);
+            DrawStatusPill(area, bottom, scale);
         }
 
+        DrawPlotCard(area, bottom, scale);
+    }
+
+    private Rect PlaceRect(Rect area, float scale)
+    {
+        var height = PlaceHeight * scale;
+        var reserve = (HousingArt.GlassButtonRadius * 2f + ControlInset * 2f) * scale;
+        var width = MathF.Min(PlaceMaxWidth * scale, area.Width - reserve - ControlInset * scale);
+        var min = new Vector2(area.Min.X + ControlInset * scale, area.Min.Y + ControlInset * scale);
+        return new Rect(min, min + new Vector2(width, height));
+    }
+
+    private void DrawPlaceCapsule(Rect area, float scale)
+    {
+        var rect = PlaceRect(area, scale);
+        UiAnchors.Report("housing.context", rect);
+        var drawList = ImGui.GetWindowDrawList();
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
+        var down = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+        var press = PressFx.Scale("housing.place", down, Motion.PressScaleCard);
+        var half = rect.Size * 0.5f * press;
+        var min = rect.Center - half;
+        var max = rect.Center + half;
+        var radius = (max.Y - min.Y) * 0.5f;
+        Elevation.Icon(drawList, min, max, radius, radius, 0.6f);
+        Material.ThemedGlass(drawList, min, max, radius, scale, ui.Palette.BackdropTop);
+        var tileSize = PlaceTile * scale;
+        var tileCenter = new Vector2(min.X + (max.Y - min.Y) * 0.5f, rect.Center.Y);
+        HousingArt.DistrictTile(drawList, tileCenter, tileSize, housing.DistrictId);
+        var textLeft = tileCenter.X + tileSize * 0.5f + HousingArt.TextGap * scale * 0.75f;
+        var chevronX = max.X - radius * 0.9f;
+        var textRight = chevronX - PlaceChevron * scale * 0.5f - HousingArt.TextGap * scale * 0.5f;
+        var opened = VisiblePlots().Count;
+        var key = ((long)housing.DistrictId << 32) | ((long)housing.Ward << 16) | (uint)opened;
+        var line = placeLine.IsCurrent(key)
+            ? placeLine.Value
+            : placeLine.Store(key, Loc.T(L.Housing.WardOpenLine, housing.Ward, opened));
+        HousingArt.Labels(drawList, textLeft, textRight, rect.Center.Y, HousingDistricts.DisplayName(housing.DistrictId),
+            line, ui.TitleInk, ui.MutedInk, scale);
+        PhoneIcon.Draw(drawList, new Vector2(chevronX, rect.Center.Y), PhoneIcons.ChevronDown, ui.MutedInk,
+            PlaceChevron * scale);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(rect.Min, rect.Max, hovered))
+        {
+            OpenLocationSheet();
+        }
+    }
+
+    private Rect? DivisionRect(Rect area, float scale)
+    {
+        if (housing.GameMap is not { HasSubdivision: true })
+        {
+            return null;
+        }
+
+        var place = PlaceRect(area, scale);
+        var width = MathF.Min(DivisionMaxWidth * scale, place.Width);
+        var top = place.Max.Y + Metrics.Space.Sm * scale;
+        return new Rect(new Vector2(place.Min.X, top), new Vector2(place.Min.X + width, top + DivisionHeight * scale));
+    }
+
+    private void DrawDivisionSwitch(Rect area, in HousingPlan plan, float scale)
+    {
+        if (!plan.HasDivisions || DivisionRect(area, scale) is not { } rect)
+        {
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var radius = rect.Height * 0.5f;
+        Elevation.Icon(drawList, rect.Min, rect.Max, radius, radius, 0.6f);
+        Material.ThemedGlass(drawList, rect.Min, rect.Max, radius, scale, ui.Palette.BackdropTop);
+        var picked = HousingChrome.Segment(rect, Loc.T(L.Housing.MainDivision), Loc.T(L.Housing.Subdivision),
+            showSubdivision ? 1 : 0, ui, false, divisionThumb.Value, false);
+        if (picked == 1 == showSubdivision)
+        {
+            return;
+        }
+
+        SwitchDivision(picked == 1);
+    }
+
+    private void SwitchDivision(bool subdivision)
+    {
+        showSubdivision = subdivision;
+        ClosePlotCard();
+        ResetMapView();
+        InvalidateCache();
+    }
+
+    private void DrawMapControls(ImDrawListPtr drawList, Vector2 stackTop, float radius)
+    {
+        var filters = housing.Filters.ActiveCount;
+        controlGlyphs[0] = PhoneIcons.AdjustmentsHorizontal;
+        controlTips[0] = FiltersLabel();
+        controlGlyphs[1] = PhoneIcons.Plus;
+        controlTips[1] = Loc.T(L.Housing.ZoomIn);
+        controlGlyphs[2] = IconGlyph.Of(FontAwesomeIcon.Minus);
+        controlTips[2] = Loc.T(L.Housing.ZoomOut);
         var canRecenter = selectedPlot.IsValid;
-        if (HousingChrome.MapButton(recenter, radius,
-                canRecenter ? FontAwesomeIcon.Crosshairs : FontAwesomeIcon.Expand, ui,
-                canRecenter ? Loc.T(L.Housing.Recenter) : Loc.T(L.Housing.ResetMap), false, false))
+        controlGlyphs[3] = IconGlyph.Of(canRecenter ? FontAwesomeIcon.Crosshairs : FontAwesomeIcon.Expand);
+        controlTips[3] = canRecenter ? Loc.T(L.Housing.Recenter) : Loc.T(L.Housing.ResetMap);
+        controlGlyphs[4] = PhoneIcons.InfoCircle;
+        controlTips[4] = Loc.T(L.Housing.Legend);
+        UiAnchors.Report("housing.filters", new Rect(new Vector2(stackTop.X - radius, stackTop.Y),
+            new Vector2(stackTop.X + radius, stackTop.Y + radius * 2f)));
+        var pressed = HousingArt.GlassStack(drawList, "housing.controls", stackTop, radius, controlGlyphs,
+            controlTips, ui.Palette.BackdropTop, ui.TitleInk, ui.Hairline, filters > 0 ? 0 : legendOpen ? 4 : -1,
+            ui.Accent);
+        switch (pressed)
         {
-            if (canRecenter)
-            {
-                CenterOnSelected();
-            }
-            else
-            {
-                ResetMapView();
-            }
+            case 0:
+                OpenFilterSheet();
+                break;
+            case 1:
+                UiFeedback.Play(UiSound.Tap);
+                ZoomAround(lastViewportCenter, zoomTarget * ZoomButtonStep);
+                break;
+            case 2:
+                UiFeedback.Play(UiSound.Tap);
+                ZoomAround(lastViewportCenter, zoomTarget / ZoomButtonStep);
+                break;
+            case 3:
+                UiFeedback.Play(UiSound.Tap);
+                if (canRecenter)
+                {
+                    CenterOnSelected();
+                }
+                else
+                {
+                    ResetMapView();
+                }
+
+                break;
+            case 4:
+                legendOpen = !legendOpen;
+                UiFeedback.Play(UiSound.Tap);
+                break;
+        }
+    }
+
+    private Rect LegendRect(Rect stack, float scale)
+    {
+        var height = LegendEntries.Length * LegendRow * scale + Metrics.Space.Lg * scale;
+        var max = new Vector2(stack.Min.X - Metrics.Space.Sm * scale, stack.Min.Y + height);
+        return new Rect(new Vector2(max.X - LegendWidth * scale, stack.Min.Y), max);
+    }
+
+    private void DrawLegend(ImDrawListPtr drawList, Rect rect, Rect stack, float scale)
+    {
+        var radius = Metrics.Radius.Card * scale;
+        Elevation.Floating(drawList, rect.Min, rect.Max, radius, scale, 1f);
+        Material.ThemedGlass(drawList, rect.Min, rect.Max, radius, scale, ui.Palette.BackdropTop);
+        var entries = LegendEntries;
+        var rowHeight = LegendRow * scale;
+        var lineHeight = Typography.LineHeight(TextStyles.Footnote);
+        for (var index = 0; index < entries.Length; index++)
+        {
+            var rowCenterY = rect.Min.Y + Metrics.Space.Sm * scale + rowHeight * (index + 0.5f);
+            DrawLegendSwatch(drawList, new Vector2(rect.Min.X + 20f * scale, rowCenterY), index, scale);
+            Typography.Draw(drawList, new Vector2(rect.Min.X + 38f * scale, rowCenterY - lineHeight * 0.5f),
+                Typography.FitText(Loc.T(entries[index]), rect.Width - 46f * scale, TextStyles.Footnote), ui.BodyInk,
+                TextStyles.Footnote);
         }
 
-        if (HousingChrome.MapButton(legendButton, radius, FontAwesomeIcon.Question, ui, Loc.T(L.Housing.Legend),
-                legendOpen, false))
+        var overChild = UiInteract.HoverWindowOnly(rect.Min, rect.Max) ||
+                        UiInteract.HoverWindowOnly(stack.Min, stack.Max);
+        if (UiInteract.ClickedOutside(overChild))
         {
-            legendOpen = !legendOpen;
+            legendOpen = false;
+        }
+    }
+
+    private void DrawLegendSwatch(ImDrawListPtr drawList, Vector2 center, int index, float scale)
+    {
+        switch (index)
+        {
+            case 0:
+                HousingMarkers.DrawSwatch(drawList, center, HousingPlotSize.Small, ui.Accent, scale);
+                break;
+            case 1:
+                HousingMarkers.DrawSwatch(drawList, center, HousingPlotSize.Medium, ui.Accent, scale);
+                break;
+            case 2:
+                HousingMarkers.DrawSwatch(drawList, center, HousingPlotSize.Large, ui.Accent, scale);
+                break;
+            case 3:
+                HousingMarkers.DrawSwatch(drawList, center, HousingPlotSize.Small, AppPalettes.HousingResults, scale);
+                break;
+            case 4:
+                HousingMarkers.DrawSwatch(drawList, center, HousingPlotSize.Small, ui.MutedInk, scale);
+                HousingGlyphs.WatchNotch(drawList, center, 5f * scale, ImGui.GetColorU32(AppPalettes.HousingBrass));
+                break;
+            case 6:
+                DrawLegendIcon(drawList, center, HousingGameMaps.AethernetShardIcon, scale);
+                break;
+            case 7:
+                DrawLegendIcon(drawList, center, HousingGameMaps.MarketBoardIcon, scale);
+                break;
+            default:
+                HousingGlyphs.DashedRing(drawList, center, 7f * scale,
+                    ImGui.GetColorU32(AppPalettes.HousingParchment), 1.4f * scale);
+                break;
+        }
+    }
+
+    private static void DrawLegendIcon(ImDrawListPtr drawList, Vector2 center, uint iconId, float scale)
+    {
+        var half = LegendIconSize * scale * 0.5f;
+        GameIconTile.Draw(drawList, Plugin.TextureProvider, iconId, new Vector2(center.X - half, center.Y - half),
+            new Vector2(center.X + half, center.Y + half), 0f, scale, requireIcon: true);
+    }
+
+    private static readonly LocString[] LegendEntries =
+    {
+        L.Housing.LegendSmall, L.Housing.LegendMedium, L.Housing.LegendLarge, L.Housing.LegendResults,
+        L.Housing.LegendWatched, L.Housing.LegendStale, L.Housing.LegendAethernetShard, L.Housing.LegendMarketBoard,
+    };
+
+    private void DrawStatusPill(Rect area, float bottom, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var now = DateTime.UtcNow;
+        var text = Refreshing
+            ? Loc.T(L.Housing.Updating)
+            : housing.Snapshot is { } snapshot
+                ? HousingText.Updated(ref statusText, snapshot.FetchedUtc, now)
+                : Loc.T(L.Housing.Offline);
+        var height = StatusHeight * scale;
+        var textSize = Typography.Measure(text, TextStyles.Footnote);
+        var dot = StatusDot * scale;
+        var pad = Metrics.Space.Md * scale;
+        var glyphSize = Metrics.Space.Lg * scale;
+        var width = MathF.Min(area.Width - ControlInset * 2f * scale,
+            pad * 2f + dot * 2f + Metrics.Space.Sm * scale * 2f + textSize.X + glyphSize);
+        var min = new Vector2(area.Min.X + ControlInset * scale, bottom - height);
+        var max = new Vector2(min.X + width, bottom);
+        statusRect = new Rect(min, max);
+        var hovered = !Refreshing && UiInteract.Hover(min, max);
+        var down = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+        var press = PressFx.Scale("housing.status", down, Motion.PressScaleControl);
+        var center = (min + max) * 0.5f;
+        var half = (max - min) * 0.5f * press;
+        Elevation.Icon(drawList, center - half, center + half, half.Y, half.Y, 0.6f);
+        Material.ThemedGlass(drawList, center - half, center + half, half.Y, scale, ui.Palette.BackdropTop);
+        var x = min.X + pad;
+        drawList.AddCircleFilled(new Vector2(x + dot, center.Y), dot,
+            ImGui.GetColorU32(HousingChrome.FreshnessHue(SnapshotFreshness(), ui.Accent)), 12);
+        x += dot * 2f + Metrics.Space.Sm * scale;
+        var textMax = MathF.Max(1f, max.X - pad - glyphSize - Metrics.Space.Sm * scale - x);
+        Typography.Draw(drawList, new Vector2(x, center.Y - textSize.Y * 0.5f),
+            Typography.FitText(text, textMax, TextStyles.Footnote), ui.BodyInk, TextStyles.Footnote);
+        var rotation = Refreshing ? Pulse.Phase(900.0) * MathF.Tau : 0f;
+        HousingGlyphs.RefreshArrow(drawList, new Vector2(max.X - pad - glyphSize * 0.5f, center.Y), glyphSize * 0.36f,
+            Refreshing ? ui.Accent : ui.MutedInk, 1.6f * scale, rotation);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        HoverTooltip.Show(new Rect(min, max), Loc.T(L.Housing.Refresh), HoverLabelSide.Above);
+        if (UiInteract.Click(min, max, hovered))
+        {
+            RequestRefresh();
         }
     }
 
     private float MapSize(Rect viewport) =>
-        MathF.Min(viewport.Width, viewport.Height) * 0.94f * zoomSpring.Value;
+        MathF.Min(viewport.Width, viewport.Height) * MapFill * zoomSpring.Value;
 
     private Vector2 MapOrigin(Rect viewport, float mapSize) =>
         viewport.Center - new Vector2(mapSize, mapSize) * 0.5f + new Vector2(panXSpring.Value, panYSpring.Value);
 
-    private Vector2 ToScreen(Vector2 origin, float mapSize, Vector2 normalized) =>
+    private static Vector2 ToScreen(Vector2 origin, float mapSize, Vector2 normalized) =>
         origin + normalized * mapSize;
 
     private void ResetMapView()
@@ -362,21 +439,23 @@ internal sealed partial class HousingApp
         }
 
         var ratio = clamped / zoomTarget;
-        var offset = anchor - LastViewportCenter;
+        var offset = anchor - lastViewportCenter;
         panTarget = (panTarget - offset) * ratio + offset;
         zoomTarget = clamped;
+        lastMapSpan = new Vector2(MathF.Min(lastViewportSize.X, lastViewportSize.Y) * MapFill * zoomTarget * 0.5f);
         ClampPan();
     }
 
-    private Vector2 LastViewportCenter { get; set; }
-
     private void ClampPan()
     {
-        var span = LastMapSpan;
+        var span = lastMapSpan;
         panTarget = new Vector2(Math.Clamp(panTarget.X, -span.X, span.X), Math.Clamp(panTarget.Y, -span.Y, span.Y));
     }
 
-    private Vector2 LastMapSpan { get; set; }
+    private string NoOpeningsText() =>
+        noOpeningsText.IsCurrent(housing.Ward)
+            ? noOpeningsText.Value
+            : noOpeningsText.Store(housing.Ward, Loc.T(L.Housing.NoOpenings, housing.Ward));
 
     private void CenterOnSelected()
     {
@@ -391,25 +470,36 @@ internal sealed partial class HousingApp
             zoomTarget = LabelZoom;
         }
 
-        var mapSize = MathF.Min(LastViewportSize.X, LastViewportSize.Y) * 0.94f * zoomTarget;
+        if (lastViewportSize.X <= 0f || lastViewportSize.Y <= 0f)
+        {
+            centerPending = true;
+            return;
+        }
+
+        var mapSize = MathF.Min(lastViewportSize.X, lastViewportSize.Y) * MapFill * zoomTarget;
+        lastMapSpan = new Vector2(mapSize * 0.5f);
         var offsetFromCenter = (normalized - new Vector2(0.5f, 0.5f)) * mapSize;
         panTarget = -offsetFromCenter;
         ClampPan();
     }
 
-    private Vector2 LastViewportSize { get; set; }
-
     private void HandleGesture(Rect viewport, float mapSize, bool blocked, in HousingPlan plan,
         List<HousingPlot> plots, float scale)
     {
-        LastViewportCenter = viewport.Center;
-        LastViewportSize = viewport.Size;
-        LastMapSpan = new Vector2(MathF.Max(0f, mapSize * 0.5f), MathF.Max(0f, mapSize * 0.5f));
+        lastViewportCenter = viewport.Center;
+        lastViewportSize = viewport.Size;
+        lastMapSpan = new Vector2(MathF.Max(0f, mapSize * 0.5f), MathF.Max(0f, mapSize * 0.5f));
+        if (centerPending)
+        {
+            centerPending = false;
+            CenterOnSelected();
+        }
+
         var cursor = ImGui.GetCursorScreenPos();
         ImGui.SetCursorScreenPos(viewport.Min);
         ImGui.InvisibleButton("##housingMap", viewport.Size, ImGuiButtonFlags.MouseButtonLeft);
         var active = ImGui.IsItemActive();
-        var hovered = ImGui.IsItemHovered();
+        var hovered = ImGui.IsItemHovered() && UiInteract.Hover(viewport.Min, viewport.Max);
         ImGui.SetCursorScreenPos(cursor);
         if (blocked)
         {
@@ -426,7 +516,7 @@ internal sealed partial class HousingApp
             }
         }
 
-        if (active && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (active && hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             dragging = true;
             dragTravel = 0f;
@@ -438,11 +528,11 @@ internal sealed partial class HousingApp
             dragTravel += delta.Length();
             if (dragTravel > DragSlop * scale)
             {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeAll);
                 panTarget += delta;
+                ClampPan();
                 panXSpring.SnapTo(panTarget.X);
                 panYSpring.SnapTo(panTarget.Y);
-                ClampPan();
             }
 
             return;
@@ -459,86 +549,25 @@ internal sealed partial class HousingApp
             return;
         }
 
-        var origin = MapOrigin(viewport, mapSize);
-        HandleTap(ImGui.GetMousePos(), origin, mapSize, plan, plots, scale);
+        HandleTap(ImGui.GetMousePos(), MapOrigin(viewport, mapSize), mapSize, plan, plots, scale);
     }
 
     private void HandleTap(Vector2 point, Vector2 origin, float mapSize, in HousingPlan plan,
         List<HousingPlot> plots, float scale)
     {
-        var hit = HousingMarkers.HitRadius * scale;
-        var bestDistance = hit * hit;
-        var found = false;
-        var best = default(HousingPlotKey);
-        for (var index = 0; index < plots.Count; index++)
+        if (NearestMarker(point, origin, mapSize, plan, plots, scale) is { } key)
         {
-            var plot = plots[index];
-            if (!plan.TryGetPoint(plot.Key.Plot, out var mapPoint))
-            {
-                continue;
-            }
-
-            var center = ToScreen(origin, mapSize, mapPoint);
-            var distance = (center - point).LengthSquared();
-            if (distance > bestDistance)
-            {
-                continue;
-            }
-
-            bestDistance = distance;
-            best = plot.Key;
-            found = true;
-        }
-
-        if (!found)
-        {
-            if (sheetOpen)
-            {
-                sheetOpen = false;
-            }
-
+            SelectPlot(key);
             return;
         }
 
-        SelectPlot(best);
+        legendOpen = false;
+        ClosePlotCard();
     }
 
-    private void SelectPlot(HousingPlotKey key)
+    private HousingPlotKey? NearestMarker(Vector2 point, Vector2 origin, float mapSize, in HousingPlan plan,
+        List<HousingPlot> plots, float scale)
     {
-        if (selectedPlot == key && sheetOpen)
-        {
-            return;
-        }
-
-        selectedPlot = key;
-        sheetOpen = true;
-        reminderPickerOpen = false;
-        reminderChoice = IndexOfLeadTime(configuration.HousingReminderMinutes);
-    }
-
-    private static int IndexOfLeadTime(int minutes)
-    {
-        var choices = HousingDefaults.ReminderChoices;
-        for (var index = 0; index < choices.Length; index++)
-        {
-            if (choices[index] == minutes)
-            {
-                return index;
-            }
-        }
-
-        return 2;
-    }
-
-    private HousingPlotKey? HoveredMarker(Vector2 origin, float mapSize, in HousingPlan plan,
-        List<HousingPlot> plots, float scale, Rect viewport)
-    {
-        var mouse = ImGui.GetMousePos();
-        if (!viewport.Contains(mouse))
-        {
-            return null;
-        }
-
         var hit = HousingMarkers.HitRadius * scale;
         var bestDistance = hit * hit;
         HousingPlotKey? best = null;
@@ -549,8 +578,7 @@ internal sealed partial class HousingApp
                 continue;
             }
 
-            var center = ToScreen(origin, mapSize, mapPoint);
-            var distance = (center - mouse).LengthSquared();
+            var distance = (ToScreen(origin, mapSize, mapPoint) - point).LengthSquared();
             if (distance > bestDistance)
             {
                 continue;
@@ -567,38 +595,19 @@ internal sealed partial class HousingApp
 
     private void DrawPlan(ImDrawListPtr drawList, in HousingPlan plan, Vector2 origin, float mapSize, float scale)
     {
-        if (plan.Map is { } gameMap && DrawGameMapTexture(drawList, gameMap, origin, mapSize, scale))
+        var min = origin;
+        var max = origin + new Vector2(mapSize, mapSize);
+        var rounding = Metrics.Radius.Widget * scale;
+        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(ui.Palette.BackdropBottom));
+        if (plan.Map is not { } gameMap || housing.GameMaps.Texture(gameMap) is not { } texture)
         {
             return;
         }
 
-        var min = origin;
-        var max = origin + new Vector2(mapSize, mapSize);
-        var rounding = 10f * scale;
-        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(0.08f, 0.10f, 0.09f, 1f)));
-        Squircle.Stroke(drawList, min, max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(AppPalettes.HousingBrass, 0.24f)), 1.2f * scale);
-    }
-
-    private bool DrawGameMapTexture(ImDrawListPtr drawList, HousingGameMap gameMap, Vector2 origin, float mapSize,
-        float scale)
-    {
-        var texture = housing.GameMaps.Texture(gameMap);
-        if (texture is null)
-        {
-            return false;
-        }
-
-        var min = origin;
-        var max = origin + new Vector2(mapSize, mapSize);
-        var rounding = 10f * scale;
-        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(0.06f, 0.07f, 0.07f, 1f)));
         drawList.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.94f)), rounding, ImDrawFlags.RoundCornersAll);
-        drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(0.03f, 0.05f, 0.04f, 0.22f)), rounding);
-        Squircle.Stroke(drawList, min, max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(AppPalettes.HousingBrass, 0.34f)), 1.4f * scale);
-        return true;
+        drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(ui.Palette.BackdropBottom, 0.22f)),
+            rounding);
     }
 
     private void DrawMarkers(ImDrawListPtr drawList, in HousingPlan plan, List<HousingPlot> plots,
@@ -613,7 +622,16 @@ internal sealed partial class HousingApp
             }
         }
 
-        var hovered = HoveredMarker(origin, mapSize, plan, plots, scale, viewport);
+        DrawPointsOfInterest(drawList, plan, origin, mapSize, viewport, scale);
+        var mouse = ImGui.GetMousePos();
+        var hovered = viewport.Contains(mouse) && UiInteract.Hover(viewport.Min, viewport.Max)
+            ? NearestMarker(mouse, origin, mapSize, plan, plots, scale)
+            : default(HousingPlotKey?);
+        if (hovered is not null)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
         var emphasis = Pulse.Wave(Pulse.Calm);
         var showLabels = zoomSpring.Value >= LabelZoom;
         var cull = HousingMarkers.HitRadius * 2f * scale;
@@ -632,28 +650,43 @@ internal sealed partial class HousingApp
                 continue;
             }
 
-            var isSelected = selectedPlot == plot.Key;
+            var isSelected = selectedPlot == plot.Key && plotCardOpen;
             var style = new HousingMarkerStyle(plot.Size, plot.Phase, housing.Watch.IsWatched(plot.Key), isSelected,
-                IsStale(plot), hovered == plot.Key);
+                FreshnessOf(plot) == HousingDataFreshness.Stale, hovered == plot.Key);
             HousingMarkers.Draw(drawList, center, style, ui.Accent, scale, isSelected ? emphasis : 0f);
-            var wantsLabel = showLabels || isSelected || style.Watched;
-            if (!wantsLabel)
+            if (!showLabels && !isSelected && !style.Watched)
             {
                 continue;
             }
 
             var radius = HousingMarkers.Radius * scale * HousingMarkers.SizeScale(plot.Size);
-            HousingMarkers.DrawLabel(drawList, center, radius, plot.Key.Plot.ToString(Loc.Culture), scale);
+            HousingMarkers.DrawLabel(drawList, center, radius, HousingText.Count(plot.Key.Plot), scale);
         }
     }
 
-    private void DrawViewportEdges(ImDrawListPtr drawList, Rect viewport, float scale)
+    private static void DrawPointsOfInterest(ImDrawListPtr drawList, in HousingPlan plan, Vector2 origin,
+        float mapSize, Rect viewport, float scale)
     {
-        var fade = 18f * scale;
-        var top = ImGui.GetColorU32(Palette.WithAlpha(ui.Palette.BackdropTop, 0.85f));
-        var clear = ImGui.GetColorU32(Palette.WithAlpha(ui.Palette.BackdropTop, 0f));
-        drawList.AddRectFilledMultiColor(viewport.Min, new Vector2(viewport.Max.X, viewport.Min.Y + fade), top, top,
-            clear, clear);
+        if (plan.Map is not { } gameMap)
+        {
+            return;
+        }
+
+        var points = gameMap.PointsOfInterest;
+        var half = PointOfInterestSize * scale * 0.5f;
+        for (var index = 0; index < points.Count; index++)
+        {
+            var center = ToScreen(origin, mapSize, points[index].NormalizedPosition);
+            if (center.X < viewport.Min.X - half || center.X > viewport.Max.X + half ||
+                center.Y < viewport.Min.Y - half || center.Y > viewport.Max.Y + half)
+            {
+                continue;
+            }
+
+            GameIconTile.Draw(drawList, Plugin.TextureProvider, points[index].IconId,
+                new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half), 0f,
+                scale, requireIcon: true);
+        }
     }
 
     private void DrawStateOverlay(Rect viewport, List<HousingPlot> plots, float scale)
@@ -663,69 +696,53 @@ internal sealed partial class HousingApp
             return;
         }
 
+        var drawList = ImGui.GetWindowDrawList();
         if (housing.Snapshot is null)
         {
-            if (housing.IsRefreshing)
+            if (housing.IsRefreshing || housing.State is HousingLoadState.Idle or HousingLoadState.Loading)
             {
-                DrawLoading(viewport, Loc.T(L.Housing.LoadingFirst), scale);
+                LoadingPulse.Draw(viewport.Center, 18f * scale, ui.Accent, ui.MutedInk, Loc.T(L.Housing.LoadingFirst));
                 return;
             }
 
-            DrawOfflineState(viewport, scale);
+            if (HousingArt.StateScreen(drawList, ui, viewport, FontAwesomeIcon.Wifi, Loc.T(L.Housing.Offline),
+                    Loc.T(L.Housing.OfflineHint), Loc.T(L.Housing.Retry), scale))
+            {
+                RequestRefresh();
+            }
+
             return;
         }
 
         if (housing.Filters.HasNarrowingFilters && WardHasReportedPlots())
         {
-            DrawEmptyCard(viewport, FontAwesomeIcon.Filter, Loc.T(L.Housing.NoFilterMatches), null,
-                Loc.T(L.Housing.ClearFilters), () =>
-                {
-                    housing.Filters.Reset();
-                    housing.PersistFilterDefaults();
-                    InvalidateCache();
-                }, scale);
+            if (HousingArt.StateScreen(drawList, ui, viewport, FontAwesomeIcon.Filter,
+                    Loc.T(L.Housing.NoFilterMatches), string.Empty, Loc.T(L.Housing.ClearFilters), scale))
+            {
+                ClearFilters();
+            }
+
             return;
         }
 
-        if (housing.Snapshot is { Plots.Count: 0 })
+        if (OtherDivisionHasPlots())
         {
-            DrawEmptyCard(viewport, FontAwesomeIcon.MapSigns, Loc.T(L.Housing.NoScans),
-                Loc.T(L.Housing.NoScansHint), Loc.T(L.Housing.ChooseWard), () => wardPickerOpen = true, scale);
+            if (HousingArt.StateScreen(drawList, ui, viewport, FontAwesomeIcon.Home, NoOpeningsText(), string.Empty,
+                    Loc.T(showSubdivision ? L.Housing.MainDivision : L.Housing.Subdivision), scale))
+            {
+                UiFeedback.Play(UiSound.Tap);
+                SwitchDivision(!showSubdivision);
+            }
+
             return;
         }
 
-        DrawEmptyCard(viewport, FontAwesomeIcon.Home, Loc.T(L.Housing.NoOpenings, housing.Ward), null,
-            Loc.T(L.Housing.ChooseWard), () => wardPickerOpen = true, scale);
-    }
-
-    private void DrawDivisionSwitch(Rect viewport, in HousingPlan plan, float scale)
-    {
-        if (!plan.HasDivisions)
+        var hint = housing.Snapshot.Plots.Count == 0 ? Loc.T(L.Housing.NoScansHint) : string.Empty;
+        if (HousingArt.StateScreen(drawList, ui, viewport, FontAwesomeIcon.Home,
+                NoOpeningsText(), hint, Loc.T(L.Housing.ChooseWard), scale))
         {
-            return;
+            OpenLocationSheet();
         }
-
-        var mainLabel = Loc.T(L.Housing.MainDivision);
-        var subLabel = Loc.T(L.Housing.Subdivision);
-        var height = 26f * scale;
-        var width = MathF.Min(viewport.Width - 100f * scale,
-            Typography.Measure(mainLabel, TextStyles.SubheadlineEmphasized).X +
-            Typography.Measure(subLabel, TextStyles.SubheadlineEmphasized).X + 46f * scale);
-        var center = new Vector2(viewport.Center.X, viewport.Min.Y + 16f * scale + height * 0.5f);
-        var rect = new Rect(new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f),
-            new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f));
-        Elevation.Floating(ImGui.GetWindowDrawList(), rect.Min, rect.Max, height * 0.5f, scale, 0.7f);
-        var picked = HousingChrome.Segment(rect, mainLabel, subLabel, showSubdivision ? 1 : 0, ui, false);
-        if (picked == 1 == showSubdivision)
-        {
-            return;
-        }
-
-        showSubdivision = picked == 1;
-        sheetOpen = false;
-        selectedPlot = default;
-        ResetMapView();
-        InvalidateCache();
     }
 
     private bool WardHasReportedPlots()
@@ -748,252 +765,32 @@ internal sealed partial class HousingApp
         return false;
     }
 
-    private void DrawLoading(Rect viewport, string label, float scale)
+    private bool OtherDivisionHasPlots()
     {
-        LoadingPulse.Draw(new Vector2(viewport.Center.X, viewport.Center.Y - 12f * scale), 18f * scale, ui.Accent,
-            ui.MutedInk, label);
+        if (housing.GameMap is not { HasSubdivision: true } || housing.Snapshot is not { } snapshot)
+        {
+            return false;
+        }
+
+        var ward = housing.Ward;
+        var wanted = !showSubdivision;
+        var plots = snapshot.Plots;
+        for (var index = 0; index < plots.Count; index++)
+        {
+            if (plots[index].Key.Ward == ward && plots[index].IsSubdivision == wanted)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    private void DrawOfflineState(Rect viewport, float scale)
+    private void ClearFilters()
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var width = MathF.Min(viewport.Width - 48f * scale, 300f * scale);
-        var height = 176f * scale;
-        var center = viewport.Center;
-        var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
-        var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
-        ui.Card(drawList, min, max, Metrics.Radius.Card * scale, true);
-        HousingGlyphs.Estate(drawList, new Vector2(center.X, min.Y + 36f * scale), 16f * scale, ui.MutedInk,
-            ui.Palette.BackdropTop);
-        Typography.DrawCentered(drawList, new Vector2(center.X, min.Y + 76f * scale), Loc.T(L.Housing.Offline),
-            ui.TitleInk, TextStyles.Headline);
-        Typography.DrawWrappedCentered(drawList, new Vector2(center.X, min.Y + 108f * scale),
-            Loc.T(L.Housing.OfflineHint), ui.MutedInk, TextStyles.Footnote, width - 32f * scale);
-        var buttonHeight = 30f * scale;
-        var buttonY = max.Y - 18f * scale - buttonHeight;
-        var retry = new Rect(new Vector2(min.X + 24f * scale, buttonY),
-            new Vector2(max.X - 24f * scale, buttonY + buttonHeight));
-        if (HousingChrome.PillButton(retry, Loc.T(L.Housing.Retry), true, ui, false))
-        {
-            RequestRefresh();
-        }
-    }
-
-    private void DrawNoWorldState(Rect viewport, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var width = MathF.Min(viewport.Width - 48f * scale, 300f * scale);
-        var height = 190f * scale;
-        var center = viewport.Center;
-        var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
-        var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
-        ui.Card(drawList, min, max, Metrics.Radius.Card * scale, true);
-        HousingGlyphs.Estate(drawList, new Vector2(center.X, min.Y + 38f * scale), 18f * scale, ui.Accent,
-            ui.Palette.BackdropTop);
-        Typography.DrawCentered(drawList, new Vector2(center.X, min.Y + 84f * scale), Loc.T(L.Housing.NoWorldTitle),
-            ui.TitleInk, TextStyles.Headline);
-        Typography.DrawWrappedCentered(drawList, new Vector2(center.X, min.Y + 116f * scale),
-            Loc.T(L.Housing.NoWorldHint), ui.MutedInk, TextStyles.Footnote, width - 32f * scale);
-        var buttonHeight = 32f * scale;
-        var chooseY = max.Y - 18f * scale - buttonHeight;
-        var choose = new Rect(new Vector2(min.X + 20f * scale, chooseY),
-            new Vector2(max.X - 20f * scale, chooseY + buttonHeight));
-        if (HousingChrome.PillButton(choose, Loc.T(L.Housing.ChooseWorld), true, ui, false))
-        {
-            worldSearch = string.Empty;
-            Push(HousingRoute.WorldPicker);
-        }
-    }
-
-    private void DrawEmptyCard(Rect viewport, FontAwesomeIcon icon, string title, string? hint, string actionLabel,
-        Action onAction, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var width = MathF.Min(viewport.Width - 48f * scale, 300f * scale);
-        var hintHeight = hint is null
-            ? 0f
-            : Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, width - 32f * scale).Y + 10f * scale;
-        var height = 148f * scale + hintHeight;
-        var center = new Vector2(viewport.Center.X, viewport.Center.Y - 10f * scale);
-        var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
-        var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
-        ui.Card(drawList, min, max, Metrics.Radius.Card * scale, true);
-        var iconCenter = new Vector2(center.X, min.Y + 34f * scale);
-        drawList.AddCircleFilled(iconCenter, 20f * scale, ImGui.GetColorU32(ui.FieldSurface), 28);
-        AppSkin.Icon(drawList, iconCenter, IconGlyph.Of(icon), ui.MutedInk, 1f);
-        var titleY = min.Y + 70f * scale;
-        Typography.DrawWrappedCentered(drawList, new Vector2(center.X, titleY + 8f * scale), title, ui.TitleInk,
-            TextStyles.SubheadlineEmphasized, width - 28f * scale);
-        if (hint is not null)
-        {
-            Typography.DrawWrappedCentered(drawList, new Vector2(center.X, titleY + 34f * scale + hintHeight * 0.2f),
-                hint, ui.MutedInk, TextStyles.Footnote, width - 32f * scale);
-        }
-
-        var buttonHeight = 30f * scale;
-        var buttonY = max.Y - 16f * scale - buttonHeight;
-        var button = new Rect(new Vector2(min.X + 24f * scale, buttonY),
-            new Vector2(max.X - 24f * scale, buttonY + buttonHeight));
-        if (HousingChrome.PillButton(button, actionLabel, true, ui, false))
-        {
-            onAction();
-        }
-    }
-
-    private void DrawFirstUseHint(Rect viewport, List<HousingPlot> plots, float scale)
-    {
-        if (configuration.HousingMapHintDismissed || plots.Count == 0 || sheetOpen)
-        {
-            return;
-        }
-
-        var drawList = ImGui.GetWindowDrawList();
-        var width = MathF.Min(viewport.Width - 60f * scale, 280f * scale);
-        var text = Loc.T(L.Housing.MapHint);
-        var textSize = Typography.MeasureWrappedBlock(text, TextStyles.Footnote, width - 26f * scale);
-        var dismissHeight = 24f * scale;
-        var height = textSize.Y + 24f * scale + dismissHeight;
-        var min = new Vector2(viewport.Center.X - width * 0.5f, viewport.Max.Y - height - 14f * scale);
-        var max = new Vector2(min.X + width, min.Y + height);
-        var rounding = Metrics.Radius.Md * scale;
-        Elevation.Card(drawList, min, max, rounding, scale);
-        Squircle.Fill(drawList, min, max, rounding,
-            ImGui.GetColorU32(new Vector4(0.10f, 0.13f, 0.12f, 0.96f)));
-        Squircle.Stroke(drawList, min, max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(AppPalettes.HousingBrass, 0.34f)), Metrics.Stroke.Hairline);
-        Typography.DrawWrappedLeft(new Vector2(min.X + 13f * scale, min.Y + 11f * scale), text, ui.BodyInk,
-            TextStyles.Footnote, width - 26f * scale);
-        var dismissWidth = HousingChrome.MeasurePill(Loc.T(L.Housing.GotIt), dismissHeight);
-        var dismiss = new Rect(new Vector2(max.X - 13f * scale - dismissWidth, max.Y - 11f * scale - dismissHeight),
-            new Vector2(max.X - 13f * scale, max.Y - 11f * scale));
-        if (HousingChrome.PillButton(dismiss, Loc.T(L.Housing.GotIt), false, ui, false))
-        {
-            configuration.HousingMapHintDismissed = true;
-            configuration.Save();
-        }
-    }
-
-    private void DrawLegend(Rect viewport, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var entries = LegendEntries;
-        var rowHeight = 20f * scale;
-        var width = 178f * scale;
-        var height = entries.Length * rowHeight + 18f * scale;
-        var min = new Vector2(viewport.Min.X + 14f * scale, viewport.Min.Y + 50f * scale);
-        var max = new Vector2(min.X + width, min.Y + height);
-        var rounding = Metrics.Radius.Md * scale;
-        PopoverSurface.Draw(drawList, min, max, rounding, frameTheme, scale);
-        for (var index = 0; index < entries.Length; index++)
-        {
-            var rowCenterY = min.Y + 9f * scale + rowHeight * (index + 0.5f);
-            var swatchCenter = new Vector2(min.X + 20f * scale, rowCenterY);
-            DrawLegendSwatch(drawList, swatchCenter, index, scale);
-            Typography.Draw(drawList,
-                new Vector2(min.X + 38f * scale, rowCenterY - Typography.LineHeight(TextStyles.Caption1) * 0.5f),
-                Loc.T(entries[index]), ui.BodyInk, TextStyles.Caption1);
-        }
-    }
-
-    private void DrawLegendSwatch(ImDrawListPtr drawList, Vector2 center, int index, float scale)
-    {
-        switch (index)
-        {
-            case 0:
-                HousingMarkers.DrawSwatch(drawList, center, HousingPlotSize.Small, ui.Accent, scale);
-                break;
-            case 1:
-                HousingMarkers.DrawSwatch(drawList, center, HousingPlotSize.Medium, ui.Accent, scale);
-                break;
-            case 2:
-                HousingMarkers.DrawSwatch(drawList, center, HousingPlotSize.Large, ui.Accent, scale);
-                break;
-            case 3:
-                HousingMarkers.DrawSwatch(drawList, center, HousingPlotSize.Small, ui.MutedInk, scale);
-                HousingGlyphs.WatchNotch(drawList, center, 5f * scale, ImGui.GetColorU32(AppPalettes.HousingBrass));
-                break;
-            case 4:
-                HousingGlyphs.DashedRing(drawList, center, 7f * scale,
-                    ImGui.GetColorU32(AppPalettes.HousingParchment), 1.4f * scale);
-                break;
-            default:
-                drawList.AddCircle(center, 7.5f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), 24,
-                    1.8f * scale);
-                break;
-        }
-    }
-
-    private static readonly LocString[] LegendEntries =
-    {
-        L.Housing.LegendSmall, L.Housing.LegendMedium, L.Housing.LegendLarge, L.Housing.LegendWatched,
-        L.Housing.LegendStale, L.Housing.LegendSelected,
-    };
-
-    private void DrawFooter(Rect footer, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var pad = 14f * scale;
-        drawList.AddLine(new Vector2(footer.Min.X + pad, footer.Min.Y), new Vector2(footer.Max.X - pad, footer.Min.Y),
-            ImGui.GetColorU32(Palette.WithAlpha(AppPalettes.HousingBrass, 0.18f)), 1f * scale);
-        var refreshRadius = 13f * scale;
-        var refreshCenter = new Vector2(footer.Max.X - pad - refreshRadius, footer.Center.Y);
-        var filterLabel = housing.Filters.ActiveCount > 0
-            ? Loc.T(L.Housing.FiltersCount, housing.Filters.ActiveCount)
-            : Loc.T(L.Housing.Filters);
-        var filterHeight = 25f * scale;
-        var filterWidth = HousingChrome.MeasurePill(filterLabel, filterHeight);
-        var filterRect = new Rect(
-            new Vector2(refreshCenter.X - refreshRadius - 8f * scale - filterWidth,
-                footer.Center.Y - filterHeight * 0.5f),
-            new Vector2(refreshCenter.X - refreshRadius - 8f * scale, footer.Center.Y + filterHeight * 0.5f));
-        UiAnchors.Report("housing.filters", filterRect);
-        var statusText = FooterStatusText();
-        var freshness = FooterFreshness();
-        var chipLabel = HousingFormat.FreshnessLabel(freshness);
-        var chipWidth = HousingChrome.MeasureChip(chipLabel);
-        var chipTop = footer.Center.Y - HousingChrome.ChipHeight * scale * 0.5f;
-        HousingChrome.Chip(drawList, new Vector2(footer.Min.X + pad, chipTop), chipLabel,
-            HousingChrome.FreshnessHue(freshness, ui.Accent), false);
-        var textLeft = footer.Min.X + pad + chipWidth + 7f * scale;
-        var textMax = MathF.Max(1f, filterRect.Min.X - 8f * scale - textLeft);
-        Typography.Draw(drawList,
-            new Vector2(textLeft, footer.Center.Y - Typography.LineHeight(TextStyles.Footnote) * 0.5f),
-            Typography.FitText(statusText, textMax, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
-        if (HousingChrome.PillButton(filterRect, filterLabel, housing.Filters.ActiveCount > 0, ui, false))
-        {
-            ShowOverlay(filtersOpen ? HousingOverlay.None : HousingOverlay.Filters);
-        }
-
-        var busy = housing.IsRefreshing || refreshFeedback;
-        if (HousingChrome.RefreshButton(refreshCenter, refreshRadius, ui, busy, Loc.T(L.Housing.Refresh),
-                false))
-        {
-            RequestRefresh();
-        }
-    }
-
-    private string FooterStatusText()
-    {
-        if (housing.IsRefreshing || refreshFeedback)
-        {
-            return Loc.T(L.Housing.Updating);
-        }
-
-        if (housing.Snapshot is not { } snapshot)
-        {
-            return Loc.T(L.Housing.Offline);
-        }
-
-        return Loc.T(L.Housing.UpdatedAgo, HousingFormat.ScanAgeShort(snapshot.FetchedUtc, DateTime.UtcNow));
-    }
-
-    private HousingDataFreshness FooterFreshness()
-    {
-        if (housing.Snapshot is not { } snapshot)
-        {
-            return HousingDataFreshness.Unknown;
-        }
-
-        return housing.Thresholds.Classify(snapshot.FetchedUtc, DateTime.UtcNow, snapshot.Source);
+        housing.Filters.Reset();
+        housing.PersistFilterDefaults();
+        InvalidateCache();
+        UiFeedback.Play(UiSound.Tap);
     }
 }

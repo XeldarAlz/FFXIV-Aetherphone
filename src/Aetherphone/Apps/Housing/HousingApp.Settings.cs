@@ -1,8 +1,11 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Housing;
@@ -11,19 +14,22 @@ internal sealed partial class HousingApp
 {
     private const float SettingsRowHeight = Metrics.Size.Row;
 
-    private void DrawSettingsRoute(Rect area)
+    private void DrawSettingsRoute(in PhoneContext context, HousingView view)
     {
         var scale = UiScale.Current;
-        var body = DrawSubHeader(area, "housing.header.settings", Loc.T(L.Housing.Settings));
-        using (AppSurface.Begin(body))
+        var navBar = AppHeader.BeginLargeTitle(context);
+        using (AppSurface.Begin(navBar.Body))
         {
             DrawWorldSettings(scale);
             DrawDataSettings(scale);
             DrawReminderSettings(scale);
             DrawMapSettings(scale);
             DrawDiagnostics(scale);
-            ImGui.Dummy(new Vector2(0f, 30f * scale));
+            ImGui.Dummy(new Vector2(0f, BottomPad * scale));
         }
+
+        AppHeader.EndLargeTitle(in navBar, context, "housing.nav.settings", Loc.T(L.Housing.Settings),
+            NavBarStyle.From(ui), ReadOnlySpan<NavBarButton>.Empty, view.BackTitle, back);
     }
 
     private void DrawWorldSettings(float scale)
@@ -35,7 +41,7 @@ internal sealed partial class HousingApp
                 worldName.Length > 0 ? worldName : Loc.T(L.Housing.ChooseWorld), frameTheme))
         {
             worldSearch = string.Empty;
-            Push(HousingRoute.WorldPicker);
+            PushRoute(HousingRoute.WorldPicker, Loc.T(L.Housing.Settings));
         }
 
         var follow = SettingsRow.Bool(card.NextRow(), Loc.T(L.Housing.FollowCurrentWorld),
@@ -144,8 +150,7 @@ internal sealed partial class HousingApp
         if (SettingsRow.Action(card.NextRow(), Loc.T(L.Housing.ResetMap), ui.Accent, frameTheme))
         {
             ResetMapView();
-            configuration.HousingMapHintDismissed = false;
-            configuration.Save();
+            UiFeedback.Play(UiSound.Tap);
         }
 
         card.End();
@@ -187,12 +192,12 @@ internal sealed partial class HousingApp
             snapshot is null ? Loc.T(L.Housing.NotReported) : snapshot.OpenPlotCount.ToString(Loc.Culture),
             frameTheme);
         SettingsRow.Info(card.NextRow(), Loc.T(L.Housing.StatusLabel),
-            housing.LastError ?? HousingFormat.FreshnessLabel(FooterFreshness()), frameTheme);
+            housing.LastError ?? HousingFormat.FreshnessLabel(SnapshotFreshness()), frameTheme);
 #if DEBUG
         if (SettingsRow.Action(card.NextRow(), Loc.T(L.Housing.CopyMapDiagnostics), ui.Accent, frameTheme))
         {
             ImGui.SetClipboardText(housing.DescribeGameMap());
-            ShowToast(Loc.T(L.Housing.CopiedMapDiagnostics));
+            ShellToast.Show(Loc.T(L.Housing.CopiedMapDiagnostics));
         }
 #endif
 

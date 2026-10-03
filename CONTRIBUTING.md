@@ -10,7 +10,7 @@ cd FFXIV-Aetherphone
 dotnet build Aetherphone.sln -c Release
 ```
 
-You need the .NET 10 SDK. The plugin requires Dalamud at runtime; CI pulls a Dalamud dev build automatically and that's enough to compile. See `.github/workflows/ci.yml` if you want to reproduce what a PR runs locally; [docs/getting-started.md](docs/getting-started.md) walks through it.
+You need the .NET 10 SDK. The plugin requires Dalamud at runtime; CI downloads the current Dalamud release automatically, and that is enough to compile. See `.github/workflows/ci.yml` if you want to reproduce what a PR runs locally; [docs/getting-started.md](docs/getting-started.md) walks through it.
 
 Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Locations**, pointing at `src/Aetherphone/bin/Release/Aetherphone.dll`.
 
@@ -44,7 +44,7 @@ Improving one of the nine language files needs no C#, no build, and no git. You 
 
 ## Good first issues
 
-Check the tracker for anything labeled `good first issue`. Self-contained UI work is usually the lowest-friction way to help: a new `Components/` widget, a Settings page, or polishing an existing app's layout. Attach a screenshot of before/after and the change is easy to land.
+Starter tasks carry the `good first issue` label when there are any. Self-contained UI work is usually the lowest-friction way to help: a new `Components/` widget, a Settings page, or polishing an existing app's layout. Attach a screenshot of before/after and the change is easy to land.
 
 ## Security
 
@@ -52,7 +52,7 @@ Please don't file public issues for security problems; see [SECURITY.md](.github
 
 ## Code of conduct
 
-See [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md). Be decent.
+See [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md).
 
 ## License
 

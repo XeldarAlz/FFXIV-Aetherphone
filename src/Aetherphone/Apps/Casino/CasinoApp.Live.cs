@@ -1,6 +1,5 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -22,14 +21,10 @@ internal sealed partial class CasinoApp
 
         DrawStakeNotice(scale);
 
-        var roomsOrigin = ImGui.GetCursorScreenPos();
-        var roomsWidth = ScrollLayout.StableContentWidth();
         ui.SectionHeading(Loc.T(L.Casino.LiveRoomsHeading), 4f);
         DrawLiveRoomRow(CasinoGames.Wheel, Core.Casino.CasinoRoomIds.WheelFloor, L.Casino.GameWheel, scale);
         ImGui.Dummy(new Vector2(0f, LiveRowGap * scale));
         DrawLiveRoomRow(CasinoGames.Bingo, Core.Casino.CasinoRoomIds.BingoHall, L.Casino.GameBingo, scale);
-        UiAnchors.Report("casino.live.rooms", new Rect(roomsOrigin,
-            new Vector2(roomsOrigin.X + roomsWidth, ImGui.GetCursorScreenPos().Y)));
 
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
         ui.SectionHeading(Loc.T(L.Casino.LiveTablesHeading), 4f);

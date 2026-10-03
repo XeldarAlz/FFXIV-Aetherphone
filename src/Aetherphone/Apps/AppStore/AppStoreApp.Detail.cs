@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -65,6 +66,7 @@ internal sealed partial class AppStoreApp
         var pill = new Rect(new Vector2(textLeft, pillTop), new Vector2(textLeft + pillWidth, pillTop + pillHeight));
         if (app.IsAvailable)
         {
+            UiAnchors.Report("appstore.detail.get", pill);
             DrawStatePill(pill, app, UiInteract.Hover(pill.Min, pill.Max), scale);
         }
         else

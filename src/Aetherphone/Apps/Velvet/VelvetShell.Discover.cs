@@ -10,7 +10,6 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetShell
 {
-    private const float CardPressShrink = 0.94f;
     private const float CardHoverGrow = 0.06f;
     private const float CardHoverTopLift = 0.18f;
     private const float CardHoverBottomLift = 0.10f;

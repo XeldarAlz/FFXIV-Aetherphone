@@ -15,6 +15,7 @@ internal sealed class SocialNotificationService : IDisposable
     private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(120);
     private static readonly TimeSpan AckRetryInterval = TimeSpan.FromSeconds(15);
+    public const int NoExcludedType = -1;
 
     private static readonly string[] ServedApps =
     {
@@ -38,7 +39,7 @@ internal sealed class SocialNotificationService : IDisposable
     private readonly CancellationTokenSource cancellation = new();
     private readonly HashSet<string> seenIds = new();
     private volatile NotificationDto[] latest = Array.Empty<NotificationDto>();
-    private volatile Dictionary<string, int>? serverUnread;
+    private volatile UnreadCounts? serverUnread;
     private volatile bool polling;
     private volatile bool primed;
     private volatile bool flushingAcks;
@@ -57,8 +58,8 @@ internal sealed class SocialNotificationService : IDisposable
         this.framework = framework;
         this.signals = signals;
         acks = new NotificationAckQueue(configuration.PendingNotificationAcks, configuration.Save);
-        cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
-        signals.SocialPinged += cadence.RequestImmediate;
+        cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval, signals);
+        signals.SocialPinged += OnSocialPinged;
         signals.ConnectedChanged += OnRealtimeConnected;
         session.Changed += OnSessionChanged;
         framework.Update += OnFrameworkTick;
@@ -69,6 +70,14 @@ internal sealed class SocialNotificationService : IDisposable
         if (active)
         {
             cadence.RequestAfterReconnect();
+        }
+    }
+
+    private void OnSocialPinged(SocialSignal signal)
+    {
+        if (signal.CoversNotifications)
+        {
+            cadence.RequestImmediate();
         }
     }
 
@@ -105,31 +114,38 @@ internal sealed class SocialNotificationService : IDisposable
         return count;
     }
 
-    public int UnseenCount(string app)
+    public int UnseenCount(string app, int excludedType = NoExcludedType)
     {
         var counts = serverUnread;
         if (counts is null)
         {
-            return UnreadAfter(app, SeenUnix(app));
+            return UnreadAfter(app, SeenUnix(app), excludedType);
         }
 
         var pending = PendingAckWatermark(app);
         if (pending > 0)
         {
-            return UnreadAfter(app, pending);
+            return UnreadAfter(app, pending, excludedType);
         }
 
-        return counts.GetValueOrDefault(app, 0);
+        if (excludedType == NoExcludedType)
+        {
+            return counts.Of(app);
+        }
+
+        return counts.HasBreakdown
+            ? counts.Excluding(app, excludedType)
+            : UnreadAfter(app, SeenUnix(app), excludedType);
     }
 
-    private int UnreadAfter(string app, long watermark)
+    private int UnreadAfter(string app, long watermark, int excludedType = NoExcludedType)
     {
         var items = latest;
         var count = 0;
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
-            if (item.App == app && !item.Read && item.CreatedAtUnix > watermark)
+            if (item.App == app && !item.Read && item.CreatedAtUnix > watermark && item.Type != excludedType)
             {
                 count++;
             }
@@ -170,27 +186,15 @@ internal sealed class SocialNotificationService : IDisposable
     public void AcknowledgeAll()
     {
         var counts = serverUnread;
-        var outstanding = false;
-        if (counts is not null)
-        {
-            foreach (var count in counts.Values)
-            {
-                if (count > 0)
-                {
-                    outstanding = true;
-                    break;
-                }
-            }
-        }
-
+        var outstanding = counts is not null && counts.AnyOutstanding;
         if (!outstanding && notifications.UnreadCount == 0)
         {
             return;
         }
 
-        if (counts is not null && counts.Count > 0)
+        if (counts is not null)
         {
-            serverUnread = new Dictionary<string, int>();
+            serverUnread = UnreadCounts.Empty;
         }
 
         EnqueueAck(null, NowUnix());
@@ -199,14 +203,12 @@ internal sealed class SocialNotificationService : IDisposable
     private bool ClearServerUnread(string app)
     {
         var counts = serverUnread;
-        if (counts is null || counts.GetValueOrDefault(app, 0) <= 0)
+        if (counts is null || counts.Of(app) <= 0)
         {
             return false;
         }
 
-        var updated = new Dictionary<string, int>(counts);
-        updated[app] = 0;
-        serverUnread = updated;
+        serverUnread = counts.WithoutApp(app);
         return true;
     }
 
@@ -228,9 +230,7 @@ internal sealed class SocialNotificationService : IDisposable
         var counts = serverUnread;
         if (counts is not null)
         {
-            var updated = new Dictionary<string, int>(counts);
-            updated[app] = UnreadAfter(app, upToUnix);
-            serverUnread = updated;
+            serverUnread = counts.WithAppRecounted(app, latest, upToUnix);
         }
 
         EnqueueAck(app, upToUnix);
@@ -372,7 +372,9 @@ internal sealed class SocialNotificationService : IDisposable
                 var page = await client.NotificationsAsync(token).ConfigureAwait(false);
                 if (page is not null)
                 {
-                    serverUnread = page.UnreadByApp;
+                    serverUnread = page.UnreadByApp is null
+                        ? null
+                        : new UnreadCounts(page.UnreadByApp, page.UnreadByType);
                     Ingest(page.Items);
                 }
             }
@@ -448,6 +450,11 @@ internal sealed class SocialNotificationService : IDisposable
 
     private void Present(NotificationDto item)
     {
+        if (item.Type == SocialActivity.TypeAdInquiry)
+        {
+            return;
+        }
+
         var body = SocialActivity.Body(item);
         if (body.Length == 0)
         {
@@ -514,7 +521,7 @@ internal sealed class SocialNotificationService : IDisposable
     public void Dispose()
     {
         session.Changed -= OnSessionChanged;
-        signals.SocialPinged -= cadence.RequestImmediate;
+        signals.SocialPinged -= OnSocialPinged;
         signals.ConnectedChanged -= OnRealtimeConnected;
         framework.Update -= OnFrameworkTick;
         cancellation.Cancel();

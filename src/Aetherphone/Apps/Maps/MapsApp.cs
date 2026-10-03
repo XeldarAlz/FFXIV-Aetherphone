@@ -3,6 +3,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Maps;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
@@ -11,46 +12,390 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Maps;
 
-internal sealed class MapsApp : IPhoneApp
+internal sealed partial class MapsApp : IPhoneApp
 {
-    private const float SearchHeight = 46f;
-    private const float LocationCardHeight = 64f;
-    private const float DestinationRowHeight = 50f;
-    private const float ExpansionHeaderHeight = 40f;
-    private static readonly Vector4 MapAccent = AppAccents.For("maps");
-    private static readonly Vector4 FavoriteStar = new(1f, 0.78f, 0.25f, 1f);
+    private enum MapsPage : byte
+    {
+        Home,
+        Expansion,
+        Place,
+    }
+
+    private enum StageMode : byte
+    {
+        Hero,
+        Live,
+        Plot,
+    }
+
+    private const int PageCapacity = 4;
+    private const int RecentsCapacity = 8;
+    private const float CanvasUnits = MapPixelMath.FullCanvasSize;
+    private const float DefaultZoom = 0.7f;
+    private const float MaximumZoom = 2.5f;
+    private const float FocusZoom = 0.9f;
+    private const float ControlsTopInset = 8f;
+    private const float ChipClearance = 140f;
+    private const float PinLabelWidth = 150f;
+
     public string Id => "maps";
     public string DisplayName => Loc.T(L.Apps.Maps);
     public string Glyph => "Ma";
     public int BadgeCount => 0;
     public bool WantsSystemTheme => true;
+
     private readonly MapData maps;
     private readonly Configuration configuration;
-    private readonly List<MapAetheryte> favoriteDestinations = new();
-    private readonly List<MapAetheryte> searchResults = new();
+    private readonly ZoneMapTextures zoneMapTextures;
+    private readonly MinimapReader reader;
+    private readonly ZoneMapLadder ladder;
+    private readonly MapCamera camera = new();
+    private readonly MapDrawer drawer = new();
+    private readonly MapsPage[] pages = new MapsPage[PageCapacity];
     private readonly HashSet<uint> favorites = new();
-    private readonly HashSet<byte> expandedExpansions = new();
-    private string search = string.Empty;
+    private readonly Vector4 accent = AppAccents.For("maps");
+    private int pageDepth;
+    private byte openExpansion;
+    private MapAetheryte? openPlace;
     private bool lifestreamAvailable;
-    private PhoneTheme frameTheme = PhoneTheme.Default;
-    private INavigator frameNavigation = null!;
+    private PhoneTheme theme = PhoneTheme.Default;
+    private MapLocation location;
+    private StageMode mode;
+    private uint stageMapId;
+    private IReadOnlyList<MapAetheryte> stagePins = Array.Empty<MapAetheryte>();
+    private MapLocation plotSource;
+    private bool hasPlot;
+    private uint plotMapId;
+    private float plotU;
+    private float plotV;
+    private string plotLabel = string.Empty;
+    private Rect lastHeader;
+    private Rect lastField;
+    private Rect contentClip;
 
-    public MapsApp(MapData maps, Configuration configuration)
+    public MapsApp(MapData maps, Configuration configuration, ZoneMapTextures zoneMapTextures)
     {
         this.maps = maps;
         this.configuration = configuration;
+        this.zoneMapTextures = zoneMapTextures;
+        reader = new MinimapReader(zoneMapTextures);
+        ladder = new ZoneMapLadder(zoneMapTextures, Plugin.DataManager, Plugin.TextureProvider);
     }
+
+    private MapsPage Page => pageDepth == 0 ? MapsPage.Home : pages[pageDepth - 1];
 
     public void OnOpened()
     {
         search = string.Empty;
+        searchQuery = string.Empty;
+        pageDepth = 0;
+        openPlace = null;
         lifestreamAvailable = LifestreamBridge.IsAvailable();
+        drawer.Reset(MapDrawerDetent.Medium);
+        camera.Reset();
+        stageMapId = 0;
+        plotSource = default;
         SyncFavorites();
+        favoritesRail.Reset();
+        browseRail.Reset();
     }
 
     public void OnClosed()
     {
         search = string.Empty;
+        searchQuery = string.Empty;
+        openPlace = null;
+        pageDepth = 0;
+    }
+
+    public void Draw(in PhoneContext context)
+    {
+        theme = context.Theme;
+        var scale = UiScale.Current;
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var screen = SceneChrome.ScreenFrom(context.Content, theme, scale);
+        var drawList = ImGui.GetWindowDrawList();
+        ladder.BeginFrame();
+        reader.Update(delta);
+        location = maps.CurrentLocation();
+        var headerHeight = HeaderHeight(scale);
+        var peek = headerHeight + theme.BottomZoneHeight * scale;
+        var panel = drawer.Update(screen, peek, lastHeader, lastField, delta);
+        var visibleBottom = MathF.Max(panel.Min.Y, screen.Max.Y - drawer.MediumHeight);
+        var visible = new Rect(new Vector2(screen.Min.X, context.Content.Min.Y),
+            new Vector2(screen.Max.X, MathF.Max(context.Content.Min.Y + 1f, visibleBottom)));
+        var stage = new Rect(screen.Min, new Vector2(screen.Max.X, MathF.Max(screen.Min.Y + 1f, panel.Min.Y)));
+        UiAnchors.Report("maps.map", visible);
+        drawList.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(theme.AppBackground with { W = 1f }),
+            theme.ScreenRounding * scale);
+        ResolveStage();
+        DrawStage(drawList, screen, stage, visible, context.Content, scale, delta);
+        DrawDrawer(drawList, screen, panel, headerHeight, scale);
+    }
+
+    private void ResolveStage()
+    {
+        if (location.Kind == MapLocationKind.House)
+        {
+            RefreshPlot();
+            SetStage(hasPlot ? StageMode.Plot : StageMode.Hero, hasPlot ? plotMapId : 0u);
+            return;
+        }
+
+        var live = reader.HasMap && reader.HasPlayer && reader.MapRowId != 0 && !LocationShare.IsIndoors() &&
+                   zoneMapTextures.ForMap(reader.MapRowId) is not null;
+        SetStage(live ? StageMode.Live : StageMode.Hero, live ? reader.MapRowId : 0u);
+    }
+
+    private void SetStage(StageMode nextMode, uint mapId)
+    {
+        mode = nextMode;
+        if (mapId == stageMapId)
+        {
+            return;
+        }
+
+        stageMapId = mapId;
+        stagePins = maps.AetherytesOnMap(mapId);
+        camera.Reset();
+    }
+
+    private void RefreshPlot()
+    {
+        if (plotSource == location)
+        {
+            return;
+        }
+
+        plotSource = location;
+        hasPlot = false;
+        if (LocationShare.Capture() is not { MapId: not 0 } captured ||
+            !maps.TryMapMetrics(captured.MapId, out var sizeFactor))
+        {
+            return;
+        }
+
+        hasPlot = true;
+        plotMapId = captured.MapId;
+        plotU = (captured.MapX - 1f) * (sizeFactor / 100f) / 41f;
+        plotV = (captured.MapY - 1f) * (sizeFactor / 100f) / 41f;
+        plotLabel = captured.Plot > 0 ? Loc.T(L.Maps.PlotLine, captured.Plot) : string.Empty;
+    }
+
+    private void DrawStage(ImDrawListPtr drawList, Rect screen, Rect stage, Rect visible, Rect content, float scale,
+        float delta)
+    {
+        var controls = MapChrome.ControlsRect(screen, content.Min.Y + ControlsTopInset * scale, scale);
+        var controlsShown = mode != StageMode.Hero && controls.Max.Y + ControlsTopInset * scale < stage.Max.Y;
+        var overControls = controlsShown && UiInteract.Hover(controls.Min, controls.Max);
+        var input = StageInput(stage, overControls);
+        if (mode == StageMode.Hero)
+        {
+            var note = location.IsKnown ? Loc.T(L.Maps.NoMapHere) : string.Empty;
+            LocationHero.Draw(drawList, screen, visible, theme, accent, in location, note, scale);
+            return;
+        }
+
+        var cover = MathF.Max(screen.Width, screen.Height);
+        var unit = CanvasUnits * scale;
+        var minimum = cover;
+        var maximum = MathF.Max(cover, unit * MaximumZoom);
+        var preferred = Math.Clamp(unit * DefaultZoom, minimum, maximum);
+        var followU = mode == StageMode.Live ? reader.PlayerU : plotU;
+        var followV = mode == StageMode.Live ? reader.PlayerV : plotV;
+        var tapped = camera.Update(screen, visible, in input, minimum, maximum, preferred, true, followU, followV,
+            delta);
+        if (ladder.Get(stageMapId, camera.Size) is not { } texture)
+        {
+            return;
+        }
+
+        MapCanvas.Map(drawList, screen, texture, camera, theme.ScreenRounding * scale);
+        var hoveredPin = DrawPins(drawList, stage, input.Hovered && !camera.Dragging, scale);
+        if (mode == StageMode.Live)
+        {
+            MapCanvas.Player(drawList, camera.ToScreen(reader.PlayerU, reader.PlayerV), reader.Facing, accent, scale);
+        }
+        else
+        {
+            DrawPlotPin(drawList, scale);
+        }
+
+        if (tapped && hoveredPin is not null)
+        {
+            UiFeedback.Play(UiSound.Tap);
+            OpenPlace(hoveredPin);
+        }
+
+        if (!controlsShown)
+        {
+            return;
+        }
+
+        DrawControls(drawList, controls, minimum, scale);
+        DrawCoordinateChip(drawList, stage, controls, scale);
+    }
+
+    private MapCameraInput StageInput(Rect stage, bool overControls)
+    {
+        var cursor = ImGui.GetCursorScreenPos();
+        ImGui.SetCursorScreenPos(stage.Min);
+        ImGui.InvisibleButton("##mapsStage", stage.Size, ImGuiButtonFlags.MouseButtonLeft);
+        var hovered = ImGui.IsItemHovered() && UiInteract.Hover(stage.Min, stage.Max) && !overControls;
+        var activated = hovered && ImGui.IsItemActivated();
+        var active = ImGui.IsItemActive();
+        ImGui.SetCursorScreenPos(cursor);
+        var doubleClicked = hovered && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left);
+        return new MapCameraInput(hovered, activated, active, doubleClicked);
+    }
+
+    private MapAetheryte? DrawPins(ImDrawListPtr drawList, Rect stage, bool pointerFree, float scale)
+    {
+        var mouse = ImGui.GetMousePos();
+        var hitRadius = MapCanvas.PinHitRadius * scale;
+        var bestDistance = hitRadius * hitRadius;
+        MapAetheryte? hovered = null;
+        var selectedId = Page == MapsPage.Place && openPlace is not null ? openPlace.RowId : 0u;
+        for (var index = 0; index < stagePins.Count; index++)
+        {
+            var pin = stagePins[index];
+            var center = camera.ToScreen(pin.U, pin.V);
+            if (!stage.Contains(center))
+            {
+                continue;
+            }
+
+            var distance = Vector2.DistanceSquared(center, mouse);
+            if (pointerFree && distance <= bestDistance)
+            {
+                bestDistance = distance;
+                hovered = pin;
+            }
+        }
+
+        var baseKey = ImGui.GetID("maps.pin");
+        for (var index = 0; index < stagePins.Count; index++)
+        {
+            var pin = stagePins[index];
+            var center = camera.ToScreen(pin.U, pin.V);
+            if (!stage.Contains(center))
+            {
+                continue;
+            }
+
+            var grow = PressFx.Toward(unchecked(baseKey + pin.RowId), ReferenceEquals(pin, hovered) ? 1.12f : 1f);
+            MapCanvas.Pin(drawList, center, scale, grow, pin.RowId == selectedId, accent);
+            MapCanvas.PinLabel(center, pin.Name, scale, PinLabelWidth * scale);
+        }
+
+        if (hovered is not null)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered;
+    }
+
+    private void DrawPlotPin(ImDrawListPtr drawList, float scale)
+    {
+        var center = camera.ToScreen(plotU, plotV);
+        MapCanvas.PlotPin(drawList, center, accent, scale);
+        if (plotLabel.Length > 0)
+        {
+            MapCanvas.PinLabel(center + new Vector2(0f, 4f * scale), plotLabel, scale, PinLabelWidth * scale);
+        }
+    }
+
+    private void DrawControls(ImDrawListPtr drawList, Rect controls, float overviewSize, float scale)
+    {
+        var pressed = MapChrome.Controls(drawList, controls, camera.Following, theme, scale,
+            Loc.T(L.Maps.CurrentLocation), Loc.T(L.Maps.WholeZone));
+        switch (pressed)
+        {
+            case MapControl.Recenter:
+                UiFeedback.Play(UiSound.Tap);
+                camera.Recenter();
+                break;
+            case MapControl.Overview:
+                UiFeedback.Play(UiSound.Tap);
+                camera.Overview(overviewSize);
+                break;
+        }
+    }
+
+    private void DrawCoordinateChip(ImDrawListPtr drawList, Rect stage, Rect controls, float scale)
+    {
+        if (mode != StageMode.Live || reader.Coordinates.Length == 0 ||
+            stage.Max.Y - controls.Max.Y < ChipClearance * scale)
+        {
+            return;
+        }
+
+        var bottomLeft = new Vector2(stage.Min.X + Metrics.Space.GlassInset * scale,
+            stage.Max.Y - Metrics.Space.GlassInset * scale);
+        MapChrome.Chip(drawList, bottomLeft, reader.Coordinates, theme, scale);
+    }
+
+    private void PushPage(MapsPage page)
+    {
+        if (pageDepth >= PageCapacity)
+        {
+            pageDepth = PageCapacity - 1;
+        }
+
+        pages[pageDepth] = page;
+        pageDepth++;
+    }
+
+    private void PopPage()
+    {
+        if (pageDepth > 0)
+        {
+            pageDepth--;
+        }
+
+        UiFeedback.Play(UiSound.Tap);
+        if (Page != MapsPage.Place)
+        {
+            openPlace = null;
+        }
+    }
+
+    private void OpenExpansion(MapExpansion expansion)
+    {
+        UiFeedback.Play(UiSound.Tap);
+        openExpansion = expansion.Order;
+        PushPage(MapsPage.Expansion);
+        if (drawer.Detent == MapDrawerDetent.Peek)
+        {
+            drawer.SetDetent(MapDrawerDetent.Medium);
+        }
+    }
+
+    private void OpenPlace(MapAetheryte aetheryte)
+    {
+        openPlace = aetheryte;
+        ReadTeleportInfo(aetheryte);
+        if (Page == MapsPage.Place)
+        {
+            pageDepth--;
+        }
+
+        PushPage(MapsPage.Place);
+        if (drawer.Detent != MapDrawerDetent.Medium)
+        {
+            drawer.SetDetent(MapDrawerDetent.Medium);
+        }
+    }
+
+    private bool IsOnStage(MapAetheryte aetheryte) =>
+        mode != StageMode.Hero && aetheryte.HasPosition && aetheryte.MapId == stageMapId;
+
+    private void ShowOnMap(MapAetheryte aetheryte)
+    {
+        var scale = UiScale.Current;
+        camera.FocusOn(aetheryte.U, aetheryte.V, CanvasUnits * scale * FocusZoom);
+        drawer.SetDetent(MapDrawerDetent.Peek);
     }
 
     private void SyncFavorites()
@@ -61,300 +406,8 @@ internal sealed class MapsApp : IPhoneApp
         {
             favorites.Add(stored[index]);
         }
-    }
 
-    public void Draw(in PhoneContext context)
-    {
-        frameTheme = context.Theme;
-        frameNavigation = context.Navigation;
-        SceneCompositor.DrawLayer(context.Content,
-            new SceneCompositor.Layer("maps", Vector2.Zero, 0f, DrawRoot, context.Theme.AppBackground));
-    }
-
-    private void DrawRoot(Rect area)
-    {
-        var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, DisplayName);
-        var scale = UiScale.Current;
-        var pad = 16f * scale;
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var searchBar = new Rect(new Vector2(area.Min.X + pad, top),
-            new Vector2(area.Max.X - pad, top + SearchHeight * scale));
-        UiAnchors.Report("maps.search", searchBar);
-        SearchField.Draw(searchBar, "##mapsSearch", Loc.T(L.Maps.Search), ref search, frameTheme, 60);
-        var body = new Rect(new Vector2(area.Min.X, searchBar.Max.Y), area.Max);
-        using (AppSurface.Begin(body))
-        {
-            if (search.Length > 0)
-            {
-                DrawSearchResults();
-            }
-            else
-            {
-                DrawLocationCard();
-                DrawFavorites();
-                DrawExpansions();
-            }
-
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-        }
-    }
-
-    private void DrawLocationCard()
-    {
-        var scale = UiScale.Current;
-        var location = maps.CurrentLocation();
-        var zoneName = location.Zone.Length > 0 ? location.Zone : Loc.T(L.Maps.Unknown);
-        var regionName = location.Region.Length > 0 ? location.Region : Loc.T(L.Maps.Unknown);
-        SettingsSection.Header(Loc.T(L.Maps.CurrentLocation), frameTheme);
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        UiAnchors.Report("maps.location", new Rect(origin, origin + new Vector2(width, LocationCardHeight * scale)));
-        var card = GroupCard.Begin(frameTheme, 1, LocationCardHeight);
-        var row = card.NextRow();
-        var drawList = ImGui.GetWindowDrawList();
-        var pinCenter = new Vector2(row.Min.X + 12f * scale, row.Center.Y);
-        MapGlyphs.Pin(drawList, pinCenter, 12f * scale, frameTheme.Accent);
-        var textLeft = pinCenter.X + 24f * scale;
-        var textMaxWidth = MathF.Max(1f, row.Max.X - textLeft);
-        var zoneY = row.Min.Y + 14f * scale;
-        var zoneSize = Typography.Measure(zoneName, TextStyles.Headline);
-        var zoneHovering = UiInteract.Hover(new Vector2(textLeft, zoneY),
-            new Vector2(textLeft + textMaxWidth, zoneY + zoneSize.Y));
-        Marquee.DrawLeft("maps.location.zone", zoneName, textLeft, zoneY, textMaxWidth,
-            TextStyles.Headline, frameTheme.TextStrong, zoneHovering);
-        var regionY = row.Min.Y + 36f * scale;
-        var regionSize = Typography.Measure(regionName, TextStyles.Footnote);
-        var regionHovering = UiInteract.Hover(new Vector2(textLeft, regionY),
-            new Vector2(textLeft + textMaxWidth, regionY + regionSize.Y));
-        Marquee.DrawLeft("maps.location.region", regionName, textLeft, regionY, textMaxWidth,
-            TextStyles.Footnote, frameTheme.TextMuted, regionHovering);
-        card.End();
-        ImGui.Dummy(new Vector2(0f, 4f * scale));
-    }
-
-    private void DrawFavorites()
-    {
-        favoriteDestinations.Clear();
-        var stored = configuration.MapFavorites;
-        for (var index = 0; index < stored.Count; index++)
-        {
-            if (maps.TryGetAetheryte(stored[index], out var aetheryte))
-            {
-                favoriteDestinations.Add(aetheryte);
-            }
-        }
-
-        if (favoriteDestinations.Count == 0)
-        {
-            return;
-        }
-
-        SettingsSection.Header(Loc.T(L.Maps.Favorites), frameTheme);
-        var card = GroupCard.Begin(frameTheme, favoriteDestinations.Count, DestinationRowHeight);
-        for (var index = 0; index < favoriteDestinations.Count; index++)
-        {
-            DrawDestinationRow(card.NextRow(), favoriteDestinations[index]);
-        }
-
-        card.End();
-    }
-
-    private void DrawExpansions()
-    {
-        var expansions = maps.Expansions;
-        if (expansions.Count == 0)
-        {
-            DrawEmptyState(Loc.T(L.Maps.NoZones));
-            return;
-        }
-
-        for (var expansionIndex = 0; expansionIndex < expansions.Count; expansionIndex++)
-        {
-            var expansion = expansions[expansionIndex];
-            var expanded = expandedExpansions.Contains(expansion.Order);
-            if (DrawExpansionHeader(expansion, expanded))
-            {
-                if (expanded)
-                {
-                    expandedExpansions.Remove(expansion.Order);
-                }
-                else
-                {
-                    expandedExpansions.Add(expansion.Order);
-                }
-
-                expanded = !expanded;
-            }
-
-            if (!expanded)
-            {
-                continue;
-            }
-
-            var expansionRegions = expansion.Regions;
-            for (var regionIndex = 0; regionIndex < expansionRegions.Count; regionIndex++)
-            {
-                DrawRegion(expansionRegions[regionIndex]);
-            }
-        }
-    }
-
-    private void DrawRegion(MapRegion region)
-    {
-        var destinations = region.Aetherytes;
-        if (destinations.Count == 0)
-        {
-            return;
-        }
-
-        SettingsSection.Header(region.Name, frameTheme);
-        var card = GroupCard.Begin(frameTheme, destinations.Count, DestinationRowHeight);
-        for (var index = 0; index < destinations.Count; index++)
-        {
-            DrawDestinationRow(card.NextRow(), destinations[index]);
-        }
-
-        card.End();
-    }
-
-    private void DrawSearchResults()
-    {
-        CollectSearchResults();
-        if (searchResults.Count == 0)
-        {
-            DrawEmptyState(Loc.T(L.Maps.NoZones));
-            return;
-        }
-
-        var card = GroupCard.Begin(frameTheme, searchResults.Count, DestinationRowHeight);
-        for (var index = 0; index < searchResults.Count; index++)
-        {
-            DrawDestinationRow(card.NextRow(), searchResults[index]);
-        }
-
-        card.End();
-    }
-
-    private void CollectSearchResults()
-    {
-        searchResults.Clear();
-        var regions = maps.Regions;
-        for (var regionIndex = 0; regionIndex < regions.Count; regionIndex++)
-        {
-            var destinations = regions[regionIndex].Aetherytes;
-            for (var index = 0; index < destinations.Count; index++)
-            {
-                var aetheryte = destinations[index];
-                if (aetheryte.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
-                {
-                    searchResults.Add(aetheryte);
-                }
-            }
-        }
-    }
-
-    private bool DrawExpansionHeader(MapExpansion expansion, bool expanded)
-    {
-        var scale = UiScale.Current;
-        ImGui.Dummy(new Vector2(0f, 12f * scale));
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var height = ExpansionHeaderHeight * scale;
-        var min = origin;
-        var max = new Vector2(origin.X + width, origin.Y + height);
-        var hovered = UiInteract.Hover(min, max);
-        var drawList = ImGui.GetWindowDrawList();
-        if (hovered)
-        {
-            MapGlyphs.Highlight(new Rect(min, max), Palette.WithAlpha(frameTheme.TextStrong, 0.06f), 0f, scale);
-        }
-
-        var disclosureCenter = new Vector2(min.X + 19f * scale, min.Y + height * 0.5f);
-        var ink = hovered ? frameTheme.TextStrong : frameTheme.TextMuted;
-        MapGlyphs.Disclosure(drawList, disclosureCenter, 5f * scale, 2.2f * scale, expanded, ink);
-        var titleLeft = disclosureCenter.X + 16f * scale;
-        var titleMaxWidth = MathF.Max(1f, max.X - 16f * scale - titleLeft);
-        var titleText = Typography.FitText(expansion.Name, titleMaxWidth, TextStyles.Headline);
-        var titleSize = Typography.Measure(titleText, TextStyles.Headline);
-        Typography.Draw(new Vector2(titleLeft, min.Y + height * 0.5f - titleSize.Y * 0.5f),
-            titleText, frameTheme.TextStrong, TextStyles.Headline);
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height));
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return UiInteract.Click(min, max, hovered);
-    }
-
-    private void DrawDestinationRow(Rect row, MapAetheryte aetheryte)
-    {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        var starRadius = 9f * scale;
-        var starCenter = new Vector2(row.Min.X + starRadius, row.Center.Y);
-        var starMin = new Vector2(row.Min.X, row.Min.Y);
-        var starMax = new Vector2(starCenter.X + starRadius + 6f * scale, row.Max.Y);
-        var starHovered = UiInteract.Hover(starMin, starMax);
-        var rowHovered = UiInteract.Hover(row.Min, row.Max);
-        var actionHovered = rowHovered && !starHovered;
-        if (actionHovered)
-        {
-            MapGlyphs.Highlight(row, Palette.WithAlpha(frameTheme.Accent, 0.16f), 3f, scale);
-        }
-
-        var isFavorite = favorites.Contains(aetheryte.RowId);
-        MapGlyphs.Star(drawList, starCenter, starRadius, isFavorite, FavoriteStar,
-            Palette.WithAlpha(frameTheme.TextMuted, 0.6f), scale);
-        var textLeft = starCenter.X + starRadius + 12f * scale;
-        var textRight = row.Max.X - 14f * scale;
-        var textMaxWidth = MathF.Max(1f, textRight - textLeft);
-        var labelSize = Typography.Measure(aetheryte.Name, TextStyles.Body);
-        var textHovering = UiInteract.Hover(new Vector2(textLeft, row.Min.Y), new Vector2(textRight, row.Max.Y));
-        Marquee.DrawLeft(new MarqueeId("maps.destination.", aetheryte.RowId), aetheryte.Name, textLeft,
-            row.Center.Y - labelSize.Y * 0.5f, textMaxWidth, TextStyles.Body, frameTheme.TextStrong, textHovering);
-        var arrowTip = new Vector2(row.Max.X, row.Center.Y);
-        MapGlyphs.ChevronRight(arrowTip, 6f * scale, 2.2f * scale,
-            actionHovered ? frameTheme.Accent : frameTheme.TextMuted);
-        var starClicked = UiInteract.Click(starMin, starMax, starHovered);
-        var rowClicked = !starHovered && UiInteract.Click(row.Min, row.Max, rowHovered);
-        if (starHovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-        else if (rowHovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (!lifestreamAvailable)
-            {
-                HoverTooltip.Show(row, Loc.T(L.Maps.NeedsLifestream), HoverLabelSide.Above);
-            }
-        }
-
-        if (starClicked)
-        {
-            ToggleFavorite(aetheryte.RowId);
-            return;
-        }
-
-        if (rowClicked)
-        {
-            Teleport(aetheryte);
-        }
-    }
-
-    private void Teleport(MapAetheryte aetheryte)
-    {
-        lifestreamAvailable = LifestreamBridge.TeleportToAetheryte(aetheryte.RowId) != LifestreamOutcome.NotInstalled;
-        if (lifestreamAvailable)
-        {
-            return;
-        }
-
-        ImGui.SetClipboardText(LifestreamBridge.AetheryteCommand(aetheryte.Name));
-        ShellToast.Show();
+        favoritesDirty = true;
     }
 
     private void ToggleFavorite(uint rowId)
@@ -362,27 +415,96 @@ internal sealed class MapsApp : IPhoneApp
         if (favorites.Remove(rowId))
         {
             configuration.MapFavorites.Remove(rowId);
+            UiFeedback.Play(UiSound.ToggleOff);
         }
         else
         {
             favorites.Add(rowId);
             configuration.MapFavorites.Add(rowId);
+            UiFeedback.Play(UiSound.ToggleOn);
         }
 
+        favoritesDirty = true;
         configuration.Save();
     }
 
-    private void DrawEmptyState(string message)
+    private void RecordRecent(uint rowId)
     {
-        var scale = UiScale.Current;
-        var maxWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X - 8f * scale);
-        var clipped = Typography.FitText(message, maxWidth, TextStyles.Footnote);
-        Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(4f * scale, 16f * scale), clipped,
-            frameTheme.TextMuted, TextStyles.Footnote);
-        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, 40f * scale));
+        var recents = configuration.MapRecents;
+        recents.Remove(rowId);
+        recents.Insert(0, rowId);
+        if (recents.Count > RecentsCapacity)
+        {
+            recents.RemoveRange(RecentsCapacity, recents.Count - RecentsCapacity);
+        }
+
+        recentsDirty = true;
+        configuration.Save();
+    }
+
+    private void Teleport(MapAetheryte aetheryte)
+    {
+        var outcome = LifestreamBridge.TeleportToAetheryte(aetheryte.RowId);
+        var available = outcome != LifestreamOutcome.NotInstalled;
+        if (available != lifestreamAvailable)
+        {
+            lifestreamAvailable = available;
+            ReadTeleportInfo(aetheryte);
+        }
+
+        switch (outcome)
+        {
+            case LifestreamOutcome.Started:
+                RecordRecent(aetheryte.RowId);
+                UiFeedback.Play(UiSound.Success);
+                ShellToast.Show(Loc.T(L.Maps.Teleporting, aetheryte.Name));
+                drawer.SetDetent(MapDrawerDetent.Peek);
+                return;
+            case LifestreamOutcome.NotInstalled:
+                RecordRecent(aetheryte.RowId);
+                ImGui.SetClipboardText(LifestreamBridge.AetheryteCommand(aetheryte.Name));
+                UiFeedback.Play(UiSound.Tap);
+                ShellToast.Show();
+                return;
+            case LifestreamOutcome.Busy:
+                UiFeedback.Play(UiSound.Caution);
+                ShellToast.Show(Loc.T(L.Travel.Busy));
+                return;
+            case LifestreamOutcome.NotAttuned:
+                UiFeedback.Play(UiSound.Caution);
+                ShellToast.Show(Loc.T(L.Travel.NotAttuned, aetheryte.Name));
+                return;
+            default:
+                UiFeedback.Play(UiSound.Caution);
+                ShellToast.Show(Loc.T(L.Travel.Blocked));
+                return;
+        }
+    }
+
+    private static void OpenGameMap(uint territoryId, uint mapId, float gameX, float gameY)
+    {
+        if (territoryId == 0 || mapId == 0)
+        {
+            return;
+        }
+
+        UiFeedback.Play(UiSound.Tap);
+        LocationShare.OpenMap(new SharedLocation(territoryId, mapId, gameX, gameY, 0, 0, 0, 0));
+    }
+
+    private void ReportVisible(string key, Rect rect)
+    {
+        if (rect.Max.Y <= contentClip.Min.Y || rect.Min.Y >= contentClip.Max.Y)
+        {
+            return;
+        }
+
+        UiAnchors.Report(key, new Rect(new Vector2(rect.Min.X, MathF.Max(rect.Min.Y, contentClip.Min.Y)),
+            new Vector2(rect.Max.X, MathF.Min(rect.Max.Y, contentClip.Max.Y))));
     }
 
     public void Dispose()
     {
+        ladder.Dispose();
     }
 }

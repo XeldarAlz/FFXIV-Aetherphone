@@ -1,21 +1,31 @@
+using Aetherphone.Core.Clock;
 using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Core.Notifications;
 
 internal sealed class SoundService : IDisposable
 {
+    private const string RingbackFile = "ringback.wav";
+    private const string AlarmFile = "alarm.wav";
+    private const string TimerFile = "timer.wav";
+    private const float RingbackVolume = 0.5f;
+
     private readonly Configuration configuration;
     private readonly SoundLibrary ringtones;
     private readonly SoundLibrary notifications;
     private readonly SoundEffectPlayer player;
+    private readonly SoundEffectPlayer alarmPlayer;
+    private readonly string uiDirectory;
 
     public SoundService(Configuration configuration, SoundLibrary ringtones, SoundLibrary notifications,
-        SoundEffectPlayer player)
+        SoundEffectPlayer player, SoundEffectPlayer alarmPlayer, string uiDirectory)
     {
         this.configuration = configuration;
         this.ringtones = ringtones;
         this.notifications = notifications;
         this.player = player;
+        this.alarmPlayer = alarmPlayer;
+        this.uiDirectory = uiDirectory;
     }
 
     public IReadOnlyList<string> Options(SoundKind kind) => For(kind).Options;
@@ -63,6 +73,30 @@ internal sealed class SoundService : IDisposable
         }
     }
 
+    public void StartRingback()
+    {
+        var path = Path.Combine(uiDirectory, RingbackFile);
+        if (configuration.SilentMode || !File.Exists(path))
+        {
+            return;
+        }
+
+        player.PlayLoop(path, RingbackVolume);
+    }
+
+    public void StartAlarmTone(AlarmRingKind kind)
+    {
+        var path = Path.Combine(uiDirectory, kind == AlarmRingKind.Timer ? TimerFile : AlarmFile);
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        alarmPlayer.PlayLoop(path, configuration.RingtoneVolume);
+    }
+
+    public void StopAlarmTone() => alarmPlayer.StopLoop();
+
     public void StopCallRing() => player.StopLoop();
 
     private SoundLibrary For(SoundKind kind) => kind == SoundKind.Ringtone ? ringtones : notifications;
@@ -88,5 +122,9 @@ internal sealed class SoundService : IDisposable
         return false;
     }
 
-    public void Dispose() => player.Dispose();
+    public void Dispose()
+    {
+        player.Dispose();
+        alarmPlayer.Dispose();
+    }
 }

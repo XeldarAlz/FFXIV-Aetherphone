@@ -127,6 +127,17 @@ OUTLINE = [
     ("Eye", "eye"),
     ("DeviceMobile", "device-mobile"),
     ("ChevronUp", "chevron-up"),
+    ("Calendar", "calendar-event"),
+    ("GlassCocktail", "glass-cocktail"),
+    ("Coffee", "coffee"),
+    ("Bath", "bath"),
+    ("Dice", "dice-5"),
+    ("Masks", "masks-theater"),
+    ("Music", "music"),
+    ("Beer", "beer"),
+    ("ToolsKitchen", "tools-kitchen-2"),
+    ("Navigation", "navigation"),
+    ("Sofa", "sofa"),
 ]
 
 FILLED = [
@@ -142,6 +153,10 @@ FILLED = [
     ("CircleCheckFilled", "circle-check"),
     ("PhoneFilled", "phone"),
     ("PhotoFilled", "photo"),
+    ("CompassFilled", "compass"),
+    ("FlameFilled", "flame"),
+    ("CalendarFilled", "calendar-event"),
+    ("NavigationFilled", "navigation"),
 ]
 
 

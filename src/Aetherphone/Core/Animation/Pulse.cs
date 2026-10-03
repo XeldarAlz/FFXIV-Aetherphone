@@ -16,6 +16,23 @@ internal static class Pulse
 
     public static float Phase(double periodMs) => (float)((Environment.TickCount % periodMs) / periodMs);
 
+    public static float Heartbeat(double periodMs)
+    {
+        var phase = Phase(periodMs);
+        return MathF.Max(Bump(phase, 0.06f, 0.06f), Bump(phase, 0.20f, 0.06f) * 0.6f);
+    }
+
+    private static float Bump(float phase, float center, float width)
+    {
+        var distance = (phase - center) / width;
+        if (distance < -1f || distance > 1f)
+        {
+            return 0f;
+        }
+
+        return 0.5f * (1f + MathF.Cos(distance * MathF.PI));
+    }
+
     public static Vector4 Blend(Vector4 a, Vector4 b, double periodMs = Medium) =>
         Vector4.Lerp(a, b, Wave(periodMs));
 }

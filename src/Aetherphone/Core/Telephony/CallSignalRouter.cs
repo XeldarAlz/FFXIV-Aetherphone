@@ -57,6 +57,12 @@ internal sealed class CallSignalRouter : IDisposable
             return;
         }
 
+        if (message.Type.StartsWith(SignalType.RadioPrefix, StringComparison.Ordinal))
+        {
+            signals.PublishRadio(message);
+            return;
+        }
+
         switch (message.Type)
         {
             case SignalType.ChatPing:
@@ -74,8 +80,21 @@ internal sealed class CallSignalRouter : IDisposable
             case SignalType.GramPing:
                 signals.PublishGram();
                 return;
+            case SignalType.AdPing:
+                signals.PublishAds();
+                return;
             case SignalType.SocialPing:
-                signals.PublishSocial();
+                signals.PublishSocial(new SocialSignal(message.App, message.ContentKind));
+                return;
+            case SignalType.ChatTyping:
+            case SignalType.VelvetTyping:
+            case SignalType.GramTyping:
+            case SignalType.AdTyping:
+                if (message.ContentId is { Length: > 0 } typingThreadId)
+                {
+                    signals.PublishTyping(new TypingSignal(message.Type, typingThreadId));
+                }
+
                 return;
             case SignalType.MusterPing:
                 signals.PublishMuster();
@@ -85,6 +104,9 @@ internal sealed class CallSignalRouter : IDisposable
                 return;
             case SignalType.PollPing:
                 signals.PublishPolls();
+                return;
+            case SignalType.FeedbackPing:
+                signals.PublishFeedback();
                 return;
             case SignalType.ContentRemoved:
                 if (message.ContentId is { Length: > 0 } removedContentId)
@@ -109,7 +131,8 @@ internal sealed class CallSignalRouter : IDisposable
 
         if (target is null)
         {
-            if (!message.Type.StartsWith(SignalType.StreamPrefix, StringComparison.Ordinal))
+            if (!message.Type.StartsWith(SignalType.StreamPrefix, StringComparison.Ordinal)
+                && !message.Type.StartsWith(SignalType.JamPrefix, StringComparison.Ordinal))
             {
                 AepLog.Warning($"[calls] unhandled-signal type={message.Type} call={message.CallId} reason={message.Reason}");
             }

@@ -11,6 +11,23 @@ internal readonly record struct CasinoSignal(string Type, string? Reason, Casino
 
 internal readonly record struct GameSignal(string Type, string? Reason, GamePayload? Payload);
 
+internal readonly record struct SocialSignal(string? App, string? Kind)
+{
+    public bool CoversNotifications => Kind is null or SocialSignalKinds.Notification;
+
+    public bool CoversNotices => Kind is null or SocialSignalKinds.Notice;
+
+    public bool CoversApp(string app) => CoversNotifications && (App is null || App == app);
+}
+
+internal readonly record struct TypingSignal(string Type, string ThreadId);
+
+internal static class SocialSignalKinds
+{
+    public const string Notification = "notification";
+    public const string Notice = "notice";
+}
+
 internal static class ContentRemovalKinds
 {
     public const string Post = "post";
@@ -28,13 +45,17 @@ internal sealed class RealtimeSignalBus
     public event Action? DeviceLinkRequested;
     public event Action? VelvetPinged;
     public event Action? GramPinged;
-    public event Action? SocialPinged;
+    public event Action? AdsPinged;
+    public event Action<SocialSignal>? SocialPinged;
+    public event Action<TypingSignal>? TypingPinged;
     public event Action? MusterPinged;
     public event Action? AnnouncementsPinged;
     public event Action? PollsPinged;
+    public event Action? FeedbackPinged;
     public event Action<ContentRemovalSignal>? ContentRemoved;
     public event Action<CasinoSignal>? CasinoReceived;
     public event Action<GameSignal>? GameReceived;
+    public event Action<CallControl>? RadioReceived;
     public event Action<bool>? ConnectedChanged;
 
     public bool RealtimeActive => realtimeActive;
@@ -75,9 +96,19 @@ internal sealed class RealtimeSignalBus
         GramPinged?.Invoke();
     }
 
-    public void PublishSocial()
+    public void PublishAds()
     {
-        SocialPinged?.Invoke();
+        AdsPinged?.Invoke();
+    }
+
+    public void PublishSocial(SocialSignal signal)
+    {
+        SocialPinged?.Invoke(signal);
+    }
+
+    public void PublishTyping(TypingSignal signal)
+    {
+        TypingPinged?.Invoke(signal);
     }
 
     public void PublishMuster()
@@ -95,6 +126,11 @@ internal sealed class RealtimeSignalBus
         PollsPinged?.Invoke();
     }
 
+    public void PublishFeedback()
+    {
+        FeedbackPinged?.Invoke();
+    }
+
     public void PublishContentRemoved(ContentRemovalSignal removal)
     {
         ContentRemoved?.Invoke(removal);
@@ -108,6 +144,11 @@ internal sealed class RealtimeSignalBus
     public void PublishGame(GameSignal signal)
     {
         GameReceived?.Invoke(signal);
+    }
+
+    public void PublishRadio(CallControl signal)
+    {
+        RadioReceived?.Invoke(signal);
     }
 
     public void BindSender(Action<CallControl>? sender)

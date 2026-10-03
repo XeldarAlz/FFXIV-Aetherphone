@@ -7,4 +7,6 @@ internal sealed class CalendarCustomEvent
     public string Title { get; set; } = string.Empty;
     public DateTime When { get; set; }
     public bool Notified { get; set; }
+    public Guid GroupId { get; set; }
+    public int ReminderMinutesBefore { get; set; }
 }

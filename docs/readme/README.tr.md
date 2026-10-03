@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <em>Senin için tasarlanmış bir akıllı telefon. Dalamud üzerine kuruldu.</em>
+  <em>FINAL FANTASY XIV için Dalamud üzerine kurulu, oyun içi bir akıllı telefon.</em>
 </p>
 
 <p align="center">
@@ -41,22 +41,22 @@
 
 ## Nedir
 
-Aetherphone, FINAL FANTASY XIV için tam anlamıyla çalışan ilk ve tek telefon eklentisidir: ana ekranı, uygulama değiştiricisi ve bildirimleri olan, sabitlenmiş ve her zaman açık bir cihaz. Uygulamaların arkasında kendi sosyal ağı çalışır; paylaştıkların, gönderdiklerin ve kaydettiklerin yalnızca kendi bilgisayarında kalmaz, karakterler, dünyalar ve oturumlar arasında seninle gelir.
+Aetherphone, FINAL FANTASY XIV için bir telefon eklentisidir: ana ekranı, uygulama değiştiricisi ve bildirimleri olan, ekrana sabitlenmiş bir cihaz. Çevrimiçi uygulamaları eklentinin kendi çevrimiçi hizmeti olan Aethernet üzerinde çalışır; bu yüzden paylaştıkların, gönderdiklerin ve kaydettiklerin yalnızca kendi bilgisayarında değil, Aethernet hesabında saklanır. Varsayılan olarak her karakter kendi hesabıyla giriş yapar ve bir ayar, seçtiğin tek bir hesabı her karakterde etkin tutar.
 
 ## Öne çıkanlar
 
-- **Arayüzünün içinde yaşayan bir telefon.** İstediğin yere sürükle, istediğin boyuta getir, yalnızca seçtiğin widget'ları gösteren bir şeride küçült. Canlı bir bölge mini haritasına katlanıp oyunun mini haritasının yerini de alabilir.
-- **Hangi dünyada olursa olsun herkese yaz.** ChocoChat, dünya ya da veri merkezi fark etmeksizin her Aetherphone kullanıcısına ulaşır; sesli notlar, grup sohbetleri ve doğrudan kişi kartından başlattığın sesli aramalar var. Parti yok, arkadaş listesi yok, seyahat yok.
-- **Kendi sosyal uygulamaların.** Kısa gönderiler için Chirper, fotoğraflar için Aethergram ve isteğe bağlı 18+ yardımcı uygulama Velvet. Tek bir kimlik hepsinde geçerli ve karakter değiştirsen de seninle gelir.
-- **Oyundaki her sohbet kanalı, yeniden düzenlenmiş.** Linkpearl oyun sohbetinin tamamını kendi kurduğun sekmelere taşır; tell'ler ayrı birer konuşma olur, her kanalın kendi renkleri olur ve yazma alanı oyunun kesip atacağı uzun mesajları bölüp aralıklarla gönderir.
-- **Telefon kapalıyken sohbet.** Herhangi bir konuşmayı yüzen bir pencereye çıkar, pencereleri sekme olarak birleştir, savaşta ve görevlerde kendiliğinden gizlenip sonra geri gelmelerini sağla.
-- **Oyunu seninle oynayan uygulamalar.** Her mekanikte senin yerinin işaretlendiği baskın kopya kağıtlarıyla Strats, işaretler ve trenler için Avlar, okyanus seferleri için Balıkçılık, ayrıca Pazar, Housing, Haritalar, Mekanlar, Günlükler, Koleksiyonlar ve Envanter.
-- **Günlük işler de burada.** Notlar, Takvim, sıfırlamalar ve hizmetkarlar için Zamanlayıcılar, Hesap Makinesi, Cüzdan, Kamera ve Fotoğraflar, Saat, hava için Gökgözcü ve hotbar makrosundan tetikleyebileceğin Kısayollar.
-- **Birlikte izle, birlikte dinle.** MogCast videoyu oyun dünyasındaki bir ekrana yansıtır ve oynatmayı oradaki herkes için eşitler; Müzik ise canlı topluluk radyolarını ve Rolladeck DJ setlerini oyunun içine getirir.
-- **Senin dilini konuşur.** Gönderilerde, profillerde ve özel mesajlarda tek dokunuşla çeviri; akışlar ve sohbetler geleni anında çevirebilir.
-- **Mola da dahil.** Gamba oyun parasıyla oynanan bir kumarhane: blackjack, slotlar, kazı kazan, tombala ve ortak bir çark, ve hiçbirinin nakit değeri yok. Oyunlar ise Doom'un da içinde olduğu otuzu aşkın oyunluk bir atari salonu; Uno, Satranç ve Bilardo'yu arkadaşlarınla çevrimiçi oynayabilirsin.
-- **Kendine göre ayarla.** Kendi duvar kağıtların, kendi zil ve bildirim seslerin, istediğin vurgu rengi, Lodestone karakter portreleri, göze batmayan arayüz sesleri ve yazı boyutu yakınlaştırması.
-- **Tasarımı gereği özel.** Mesajlar, ekler ve sesli notlar uçtan uca şifreli, aramalar aktarım sırasında şifreli, herkese açık gönderi ve görselleri ise insanlardan oluşan bir moderasyon ekibi inceliyor.
+- **Arayüzünün içinde yaşayan bir telefon.** İstediğin yere sürükle, istediğin boyuta getir ve yalnızca seçtiğin widget'ları gösteren, tam telefon gibi köşesinden yeniden boyutlandırılan bir mini telefona küçült. Ayrıca oyunun mini haritasının durduğu yere yerleştirebileceğin canlı bir bölge mini haritasına da dönüşebilir.
+- **Her dünyadaki oyunculara yaz.** Sen ve diğer oyuncu birbirinizin numarasını kaydettiğinizde ChocoChat dünyalar ve veri merkezleri arasında çalışır; sesli notlar, grup sohbetleri ve bir kişi kartından başlattığın sesli aramalar var. Parti, arkadaş listesi ya da seyahat gerekmez.
+- **Kendi sosyal uygulamaların.** Kısa gönderiler için Chirper, fotoğraflar için Aethergram ve Lalafell karakterlerde kullanılamayan, isteğe bağlı 18+ alan Velvet. Tek bir Aethernet hesabı üçüne de giriş yapmanı sağlar ve her uygulama kendi görünen adını ve kullanıcı adını tutabilir.
+- **Oyundaki her sohbet kanalı, yeniden düzenlenmiş.** Linkpearl oyun sohbetinin tamamını kendi kurduğun sekmelere taşır; tell'ler ayrı birer konuşma olur, her kanalın kendi renkleri olur ve yazma alanı oyunun kesip atacağı mesajları bölüp aralıklarla gönderir. Her sekmeyi bir kayıt ya da sohbet balonları olarak oku, bir sohbet teması ve duvar kâğıdı seç, oyunun kanal renklerini içe aktar ve ekran görüntüleri için isimleri gizle.
+- **Telefon kapalıyken sohbet.** Herhangi bir konuşmayı telefonun yanına yerleşen yüzen bir pencereye çıkar, yeni sohbetlerin ona sekme olarak katılmasını sağla ve pencerenin savaşta ve görevlerde gizlenip sonra kendiliğinden geri gelmesine izin ver.
+- **Oyunu seninle oynayan uygulamalar.** Her mekanikte senin yerinin işaretlendiği raid kopya kağıtlarıyla Strats, işaretler ve trenler için Avlar, okyanus seferleri için Balıkçılık, ayrıca Pazar, Housing, Haritalar, Mekanlar, Günlükler, Koleksiyonlar ve Envanter.
+- **Günlük işler de burada.** Notlar, kendi etkinlik grupların ve hatırlatmalarınla Takvim, sıfırlamalar ve hizmetkârlar için Zamanlayıcılar, Hesap Makinesi, Cüzdan, kendi albümlerin ve yerleşik bir fotoğraf düzenleyiciyle Kamera ve Fotoğraflar, Saat, hava için Skywatcher ve hotbar makrosundan tetikleyebileceğin Kısayollar.
+- **Birlikte izle, birlikte dinle.** MogCast videoyu telefonunda ya da dünyaya yerleştirdiğin bir ekranda oynatır ve izleme partine katılan yakındaki Aetherphone kullanıcıları için oynatmayı senkron tutar. Müzik topluluk ve internet radyo istasyonlarını ve aradığın şarkıları çalar, şu anda canlı olan Rolladeck DJ'lerini listeler.
+- **Senin dilini konuşur.** Gönderilerde, profillerde ve özel mesajlarda tek dokunuşla çeviri; akışlar ve sohbetler yeni gönderileri ve mesajları geldikçe çevirebilir. Çeviriyi Aethernet yapar ve özel mesajların çevirileri asla saklanmaz.
+- **Mola da dahil.** Gamba oyun parasıyla çalışan bir kumarhane: blackjack, slotlar, kazı kazan, tombala ve ortak bir çark, ve hiçbirinin nakit değeri yok. Oyunlar ise Doom'un da içinde olduğu otuz oyunluk bir atari salonu; ayrıca Uno, Satranç ve 8 Top Bilardo'yu arkadaşlarınla çevrimiçi oynayabilirsin.
+- **Kendine göre ayarla.** Kendi duvar kâğıtların, kendi zil ve bildirim seslerin, istediğin vurgu rengi, Lodestone karakter portreleri, göze batmayan arayüz sesleri ve yazı boyutu yakınlaştırması. Tüm düzeni bir Stil olarak kaydet, her karakter kendininkini tutsun: ana ekran giriş yaptığın karaktere göre değişir.
+- **Şifreleme ve moderasyon.** Mesajlar, fotoğraflar ve sesli notlar, telefonun otomatik olarak oluşturduğu anahtarlarla uçtan uca şifrelenir. Bir mesajı bildirmek ya da çevirmek, metnini Aethernet'e okunabilir halde gönderir. Aramalar iletim sırasında şifrelenir ve uçtan uca şifreleme olmadan Aethernet sunucusu üzerinden aktarılır. İnsanlardan oluşan bir moderasyon ekibi şikayet edilen gönderileri, görselleri ve mesajları inceler.
 
 Toplam 42 uygulama. Tüm özellik turu, ekran görüntüleri ve ayrıntılar web sitesinde:
 
@@ -87,7 +87,7 @@ Oyunun Çin sürümünde mi oynuyorsunuz? Telefon bunu algılar, Lodestone yerin
 
 ## Topluluk
 
-Sorular, fikirler ya da sadece diğer oyuncularla takılmak mı istiyorsun? Discord'a uğra.
+Destek, hata bildirimleri ve öneriler Aetherphone Discord sunucusunda ele alınır.
 
 → [Discord'umuza katıl](https://discord.gg/3HbJCscMyS)
 
@@ -97,15 +97,9 @@ Aetherphone açık kaynaklıdır ve katkılara açıktır. Önce geliştirici be
 
 → [Geliştirici belgeleri](../README.md) · [Katkı rehberi](../../CONTRIBUTING.md) · [Çevirmen rehberi](../translating.md)
 
-## Benden dahası
-
-Bu eklentiyi beğendiyseniz, diğer Dalamud çalışmalarıma bir göz atın. Orada size uygun başka bir şey bulabilirsiniz.
-
-→ [XeldarAlz Dalamud Plugins](https://github.com/XeldarAlz/DalamudPlugins)
-
 ## Yasal
 
-Çevrimiçi özellikleri kullanmak, hizmet şartlarını kabul etmek anlamına gelir. Gizlilik politikası, Aethernet hizmetinin verilerinizle ne yaptığını kapsar; çevrimdışı özellikler makinenizde kalır, ancak bazı uygulamalar herkese açık oyun verilerini doğrudan üçüncü taraf hizmetlerden alır ve politika bunu da kapsar.
+Çevrimiçi özellikleri kullanmak, hizmet şartlarını kabul etmek anlamına gelir. Gizlilik politikası, Aethernet hizmetinin verilerinizle ne yaptığını kapsar. Çevrimdışı özellikler makinenizde kalır ve bazı uygulamalar üçüncü taraf hizmetlere doğrudan makinenizden bağlanır; politika bunu da kapsar.
 
 → [Hizmet Şartları](../../TERMS.md) · [Gizlilik Politikası](../../PRIVACY.md) · [Marka ve İsim Politikası](../../TRADEMARK.md)
 

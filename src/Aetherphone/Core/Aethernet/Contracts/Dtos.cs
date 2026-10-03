@@ -88,7 +88,8 @@ internal sealed record UserDto(
     long CoinsDailyCap = 0,
     string FrameId = "",
     string? BioLang = null,
-    string? BannerUrl = null) : IIdentified;
+    string? BannerUrl = null,
+    int PendingPhotoTags = 0) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null,
     string? BannerUrl = null);
@@ -208,8 +209,6 @@ internal sealed record PhotoTagDto(
     float Y,
     int State);
 
-internal sealed record PhotoTagPage(PhotoTagDto[] Items);
-
 internal sealed record PostDto(
     string Id,
     string AuthorId,
@@ -245,7 +244,9 @@ internal sealed record PostDto(
     bool Sensitive = false,
     bool SensitiveLocked = false,
     string? Lang = null,
-    long? EditedAtUnix = null) : IIdentified;
+    long? EditedAtUnix = null,
+    long? PinnedAtUnix = null,
+    long? ArchivedAtUnix = null) : IIdentified;
 
 internal sealed record FeedPage(
     PostDto[] Items,
@@ -253,6 +254,8 @@ internal sealed record FeedPage(
     bool Ranked = false,
     int? CaughtUpAfter = null,
     FeedItemNote[]? Notes = null);
+
+internal sealed record PinPostResponse(PostDto Post, string? ReplacedPostId);
 
 internal readonly record struct FeedItemNote(string Source, double Score, string? Breakdown);
 
@@ -459,9 +462,13 @@ internal sealed record VelvetPostDto(
     string OwnerFrameId = "",
     bool Sensitive = false,
     string? Lang = null,
-    long? EditedAtUnix = null) : IIdentified;
+    long? EditedAtUnix = null,
+    long? PinnedAtUnix = null,
+    long? ArchivedAtUnix = null) : IIdentified;
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
+
+internal sealed record VelvetPinPostResponse(VelvetPostDto Post, string? ReplacedPostId);
 
 internal sealed record VelvetUserPostsPage(VelvetPostDto[] Items, int TotalCount, string? NextCursor);
 
@@ -594,7 +601,10 @@ internal sealed record NotificationPage(
     NotificationDto[] Items,
     string? NextCursor = null,
     int UnreadCount = 0,
-    Dictionary<string, int>? UnreadByApp = null);
+    Dictionary<string, int>? UnreadByApp = null,
+    NotificationUnreadCountDto[]? UnreadByType = null);
+
+internal sealed record NotificationUnreadCountDto(string App, int Type, int Count);
 
 internal sealed record NotificationReadRequest(long UpToUnix, string? App = null);
 
@@ -625,7 +635,26 @@ internal sealed record ModerationNoticePage(
     int PendingCount,
     string? NextCursor = null);
 
-internal sealed record CreateFeedbackRequest(string Text, string[] ImageKeys);
+internal sealed record CreateFeedbackRequest(
+    string Text,
+    string[] ImageKeys,
+    string Category = "other",
+    string Context = "");
+
+internal sealed record MyFeedbackDto(
+    string Id,
+    string Text,
+    string Category,
+    string Status,
+    string[] ImageUrls,
+    long CreatedAtUnix,
+    long ResolvedAtUnix,
+    string Reason = "",
+    string Reply = "",
+    long RepliedAtUnix = 0,
+    long UpdatedAtUnix = 0) : IIdentified;
+
+internal sealed record MyFeedbackPage(MyFeedbackDto[] Items, string? NextCursor = null);
 
 internal sealed record PollTranslationDto(string Lang, string Question, string[] Options);
 
@@ -638,7 +667,9 @@ internal sealed record PollDto(
     int TotalVotes,
     int MyVote,
     long CreatedAtUnix,
-    bool Closed) : IIdentified;
+    bool Closed,
+    long ClosesAtUnix = 0,
+    long ClosedAtUnix = 0) : IIdentified;
 
 internal sealed record PollPage(PollDto[] Items, string? NextCursor = null);
 

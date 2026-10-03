@@ -31,7 +31,7 @@ internal struct ChatComposerModel
     public bool CanHandleEscape;
     public bool Blocked;
     public string BlockedNotice;
-    public Action OnBlockedTap;
+    public Action? OnBlockedTap;
     public Func<int> ResolveVoiceInput;
     public Action<string> OnPickImage;
     public Action<string> OnShareLocation;
@@ -470,6 +470,11 @@ internal sealed class ChatComposer : IDisposable
         Typography.Draw(drawList, new Vector2(textLeft, area.Center.Y - labelSize.Y * 0.5f), label, ui.MutedInk,
             TextStyles.Footnote);
 
+        if (model.OnBlockedTap is not { } onBlockedTap)
+        {
+            return;
+        }
+
         if (UiInteract.Hover(area.Min, area.Max))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -477,7 +482,7 @@ internal sealed class ChatComposer : IDisposable
 
         if (UiInteract.HoverClick(area.Min, area.Max))
         {
-            model.OnBlockedTap?.Invoke();
+            onBlockedTap();
         }
     }
 

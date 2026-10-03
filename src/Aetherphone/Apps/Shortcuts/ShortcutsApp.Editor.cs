@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Shortcuts;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -67,8 +68,10 @@ internal sealed partial class ShortcutsApp
         var context = new PhoneContext(content, theme, navigation);
         var title = draftId == Guid.Empty ? Loc.T(L.Shortcuts.NewShortcut) : Loc.T(L.Shortcuts.EditShortcut);
         AppHeader.Draw(context, title, back);
+        var saveLabel = Loc.T(L.Shortcuts.Save);
+        ReportEditorHeaderAnchors(content, saveLabel, scale);
         var canSave = draft.Name.Trim().Length > 0 && HasRunnableStep(draft);
-        if (ui.HeaderAction(content, Loc.T(L.Shortcuts.Save), canSave))
+        if (ui.HeaderAction(content, saveLabel, canSave))
         {
             CommitDraft();
             return;
@@ -82,6 +85,22 @@ internal sealed partial class ShortcutsApp
             DrawEditorOptions(scale);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Xxl * scale));
         }
+    }
+
+    private static void ReportEditorHeaderAnchors(Rect content, string saveLabel, float scale)
+    {
+        if (!UiAnchors.Recording)
+        {
+            return;
+        }
+
+        var headerHeight = AppHeader.Height * scale;
+        UiAnchors.Report("shortcuts.editor.back",
+            new Rect(content.Min, new Vector2(content.Min.X + 44f * scale, content.Min.Y + headerHeight)));
+        var saveHeight = 28f * scale;
+        var saveMax = new Vector2(content.Max.X - 12f * scale, content.Min.Y + (headerHeight + saveHeight) * 0.5f);
+        var saveMin = new Vector2(saveMax.X - AppSkin.HeaderActionWidth(saveLabel), saveMax.Y - saveHeight);
+        UiAnchors.Report("shortcuts.editor.save", new Rect(saveMin, saveMax));
     }
 
     private static bool HasRunnableStep(ShortcutEntry entry)
@@ -133,6 +152,8 @@ internal sealed partial class ShortcutsApp
         var fieldLeft = origin.X + tile + Metrics.Space.Md * scale;
         var fieldWidth = origin.X + width - fieldLeft;
         var fieldMin = new Vector2(fieldLeft, origin.Y);
+        UiAnchors.Report("shortcuts.editor.name",
+            new Rect(fieldMin, new Vector2(fieldLeft + fieldWidth, fieldMin.Y + fieldHeight)));
         Squircle.Fill(ImGui.GetWindowDrawList(), fieldMin, new Vector2(fieldLeft + fieldWidth, fieldMin.Y + fieldHeight),
             Metrics.Radius.Field * scale, ImGui.GetColorU32(ui.FieldSurface));
         ImGui.SetCursorScreenPos(new Vector2(fieldMin.X + Metrics.Space.Md * scale,
@@ -328,6 +349,7 @@ internal sealed partial class ShortcutsApp
             PasteMacro();
         }
 
+        UiAnchors.Report("shortcuts.editor.add", new Rect(origin, pasteRect.Max));
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height * 3f + gap * 2f + Metrics.Space.Lg * scale));
         ui.HelpText(Loc.T(L.Shortcuts.StepsHint));

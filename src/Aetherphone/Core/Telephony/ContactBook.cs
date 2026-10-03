@@ -16,7 +16,7 @@ internal enum AddContactOutcome
 
 internal sealed class ContactBook : IDisposable
 {
-    private const long RefreshIntervalMs = 15_000;
+    private const long RefreshIntervalMs = 60_000;
 
     private static readonly Dictionary<string, string> NoAliases = new(StringComparer.Ordinal);
 

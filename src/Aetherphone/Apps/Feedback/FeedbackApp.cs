@@ -3,10 +3,14 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Feedback;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
+using Aetherphone.Core.Net;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
-using Aetherphone.Core.Platform;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
@@ -16,57 +20,95 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Feedback;
 
-internal sealed class FeedbackApp : IPhoneApp
+internal sealed partial class FeedbackApp : IPhoneApp
 {
-    private const int MaxFeedbackLength = 1000;
-    private const int MaxAttachments = 5;
-    private const int PickerColumns = 3;
     private const long CooldownSeconds = 60;
+    private const int SendIdle = 0;
+    private const int SendSucceeded = 1;
+    private const int SendFailed = 2;
+    private const float SectionGap = 22f;
+    private const float HeaderGap = 10f;
+    private const float CardPad = 14f;
+    private const float BottomBreathing = 24f;
 
-    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
-    private static readonly Vector4 AddTileStroke = new(1f, 1f, 1f, 0.18f);
-
-    public string Id => "feedback";
+    public string Id => FeedbackStore.AppId;
     public string DisplayName => Loc.T(L.Apps.Feedback);
     public string Glyph => "Fb";
-    public int BadgeCount => 0;
+    public Vector4 Accent => AppAccents.For(Id);
+    public int BadgeCount => store.UnseenCount;
+    public bool HasBadge => true;
 
     private readonly FeedbackStore store;
+    private readonly FeedbackDraft draft = new();
+    private readonly FeedbackDeviceInfo deviceInfo = new();
     private readonly PhotoLibrary library;
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
     private readonly WallpaperImageCache wallpaperImages;
+    private readonly RemoteImageCache remoteImages;
+    private readonly GameData gameData;
+    private readonly FeedbackLauncher launcher;
     private readonly AppSkin ui = new(AppPalettes.Feedback);
-    private readonly List<string> attachments = new();
+    private readonly ViewRouter<FeedbackRoute> router;
+    private readonly RouterDraw<FeedbackRoute> drawView;
+    private readonly Action back;
+    private readonly Action refreshHistory;
+    private readonly PhotoViewerOverlay photoViewer = new();
+    private readonly FailureSlot sendFailure = new();
+    private readonly NavBarButton[] composeButtons = new NavBarButton[1];
+    private readonly NavBarButton[] photosButtons = new NavBarButton[1];
 
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
-    private string draft = string.Empty;
-    private volatile int composeOutcome;
-    private bool sent;
-    private bool picking;
-    private string[] pickerPaths = Array.Empty<string>();
-    private string? pendingPickedPath;
+    private int sendOutcome;
+    private volatile AepFailureBox? sendOutcomeFailure;
+    private bool resumeCompose;
 
     public FeedbackApp(AethernetSession session, FeedbackClient client, MediaClient media, PhotoLibrary library,
-        Configuration configuration, ConfirmService confirm, WallpaperImageCache wallpaperImages)
+        Configuration configuration, ConfirmService confirm, WallpaperImageCache wallpaperImages,
+        RemoteImageCache remoteImages, GameData gameData, NotificationService notifications,
+        RealtimeSignalBus signals, FeedbackLauncher launcher)
     {
-        store = new FeedbackStore(session, client, media);
+        store = new FeedbackStore(session, client, media, notifications, configuration, signals);
+        this.launcher = launcher;
         this.library = library;
         this.configuration = configuration;
         this.confirm = confirm;
         this.wallpaperImages = wallpaperImages;
+        this.remoteImages = remoteImages;
+        this.gameData = gameData;
+        router = new ViewRouter<FeedbackRoute>(FeedbackRoute.Hub);
+        drawView = DrawView;
+        back = () => router.Pop();
+        refreshHistory = store.RefreshHistory;
     }
 
     public void OnOpened()
     {
-        composeOutcome = 0;
-        sent = false;
-        picking = false;
+        router.Reset();
+        photoViewer.Close();
+        deviceInfo.Capture(gameData, configuration);
+        if (store.IsSignedIn && launcher.TryConsumeDetail(out var feedbackId))
+        {
+            router.Push(FindHistoryItem(feedbackId) is null ? FeedbackRoute.History : FeedbackRoute.Detail(feedbackId),
+                false);
+        }
+        else if (resumeCompose && !draft.IsEmpty)
+        {
+            router.Push(FeedbackRoute.Compose, false);
+        }
+
+        resumeCompose = false;
+        store.ResetHistorySupport();
+        store.RefreshHistory();
     }
 
     public void OnClosed()
     {
+        var current = router.Current.Screen;
+        resumeCompose = current is FeedbackScreen.Compose or FeedbackScreen.Photos;
+        router.Reset();
+        photoViewer.Close();
     }
 
     public void Draw(in PhoneContext context)
@@ -75,427 +117,128 @@ internal sealed class FeedbackApp : IPhoneApp
         navigation = context.Navigation;
         ui.Theme = theme;
 
-        var content = context.Content;
-        var screen = SceneChrome.ScreenFrom(content, theme, UiScale.Current);
+        var scale = UiScale.Current;
+        var screen = SceneChrome.ScreenFrom(context.Content, theme, scale);
         ui.Backdrop(screen);
-        ui.Body(content);
+        ConsumeSendOutcome();
+        ConsumePickedFile();
 
-        var picked = Interlocked.Exchange(ref pendingPickedPath, null);
-        if (picked is not null)
+        if (photoViewer.Active)
         {
-            AddAttachment(picked);
-        }
-
-        if (picking)
-        {
-            DrawPicker(content);
+            photoViewer.Draw(screen, theme);
             return;
         }
 
-        DrawScreen(content);
+        if (!store.IsSignedIn)
+        {
+            TourHolds.Hold(Id);
+            ui.Body(context.Content);
+            DrawSignedOut(context.Content);
+            return;
+        }
+
+        TourHolds.Release(Id);
+        if (store.HistoryState == FeedbackHistoryState.Unknown)
+        {
+            store.RefreshHistory();
+        }
+
+        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
     }
 
-    private void DrawFeedbackHeaderTitle(Rect area, string title, float rightReserve, float scale) =>
-        AppHeader.DrawTitleWithReserve(area, "feedback.header." + title, title, rightReserve, theme.TextStrong,
-            scale);
-
-    private void DrawScreen(Rect area)
+    private void DrawView(FeedbackRoute route, Rect area, int depth)
     {
-        if (composeOutcome == 1)
+        ui.Body(area);
+        switch (route.Screen)
         {
-            composeOutcome = 0;
-            draft = string.Empty;
-            attachments.Clear();
-            sent = true;
-            configuration.LastFeedbackSentUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            configuration.Save();
+            case FeedbackScreen.Compose:
+                DrawCompose(area);
+                return;
+            case FeedbackScreen.Photos:
+                DrawPhotos(area);
+                return;
+            case FeedbackScreen.Sent:
+                DrawSent(area);
+                return;
+            case FeedbackScreen.History:
+                DrawHistory(area);
+                return;
+            case FeedbackScreen.Detail:
+                DrawDetail(area, route.Id ?? string.Empty);
+                return;
+            default:
+                DrawHub(area);
+                return;
         }
+    }
 
-        var scale = UiScale.Current;
-        var headerContext = new PhoneContext(area, theme, navigation);
-        var sendLabel = store.Posting ? Loc.T(L.Feedback.Sending) : Loc.T(L.Feedback.Send);
-        var buttonReserve = sent
-            ? 0f
-            : Typography.Measure(sendLabel, 0.9f, FontWeight.SemiBold).X + 26f * scale + 20f * scale;
-        AppHeader.Draw(headerContext, string.Empty, navigation.Back);
-        DrawFeedbackHeaderTitle(area, Loc.T(L.Feedback.SendFeedback), buttonReserve, scale);
-
-        if (!sent)
-        {
-            var canSend = !string.IsNullOrWhiteSpace(draft) && !store.Posting && CooldownRemaining() == 0;
-            ReportSendAnchor(area, sendLabel, scale);
-            if (ui.HeaderAction(area, sendLabel, canSend))
-            {
-                AskSend();
-            }
-        }
-
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
+    private void DrawSignedOut(Rect content)
+    {
+        var context = new PhoneContext(content, theme, navigation);
+        var navBar = AppHeader.BeginLargeTitle(context, false);
+        var body = navBar.Body;
         using (AppSurface.Begin(body))
         {
-            if (sent)
-            {
-                DrawThankYou(area);
-            }
-            else
-            {
-                DrawFeedbackCard(area);
-            }
-        }
-    }
-
-    private void DrawFeedbackCard(Rect area)
-    {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var footerHeight = 40f * scale;
-
-        var pad = 14f * scale;
-        var cardMin = new Vector2(origin.X + 4f * scale, origin.Y + 4f * scale);
-        var cardMax = new Vector2(origin.X + width - 4f * scale, area.Max.Y - footerHeight);
-        ui.Card(drawList, cardMin, cardMax, 18f * scale);
-
-        var inputX = cardMin.X + pad;
-        var inputTop = cardMin.Y + pad;
-        var inputWidth = width - pad * 2f;
-
-        var gap = 6f * scale;
-        var tile = (inputWidth - gap * MaxAttachments) / (MaxAttachments + 1);
-        var stripHeight = tile + 10f * scale;
-        var inputHeight = cardMax.Y - inputTop - pad - stripHeight;
-        UiAnchors.Report("feedback.input",
-            new Rect(new Vector2(inputX, inputTop), new Vector2(inputX + inputWidth, inputTop + inputHeight)));
-
-        ImGui.SetCursorScreenPos(new Vector2(inputX, inputTop));
-        ImGui.SetNextItemWidth(inputWidth);
-
-        var wrapWidth = inputWidth - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Feedback.TitleInk))
-        using (Plugin.Fonts.Push(1.15f))
-        {
-            SoftWrapField.Multiline("##feedbackBody", ref draft, MaxFeedbackLength,
-                new Vector2(inputWidth, inputHeight), wrapWidth);
-        }
-
-        if (draft.Length == 0)
-        {
-            var placeholderPos = new Vector2(inputX + 4f * scale, inputTop + 2f * scale);
-            using (Typography.WrapAt(inputX + inputWidth - 4f * scale))
-            using (Plugin.Fonts.Push(1.15f))
-            using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Feedback.MutedInk))
-            {
-                ImGui.SetCursorScreenPos(placeholderPos);
-                Typography.Plain(Loc.T(L.Feedback.Placeholder));
-            }
-        }
-
-        DrawAttachmentStrip(drawList, inputX, cardMax.Y - pad - tile, tile, gap, scale);
-
-        var remaining = MaxFeedbackLength - draft.Length;
-        var counterColor = remaining < 40
-            ? (remaining < 0 ? theme.Danger : new Vector4(0.95f, 0.65f, 0.20f, 1f))
-            : AppPalettes.Feedback.MutedInk;
-        var counter = remaining.ToString(Loc.Culture);
-        var counterSize = Typography.Measure(counter, 0.9f, FontWeight.Medium);
-        Typography.Draw(new Vector2(area.Max.X - 4f * scale - counterSize.X,
-            area.Max.Y - footerHeight * 0.5f - counterSize.Y * 0.5f), counter, counterColor, 0.9f, FontWeight.Medium);
-
-        var cooldown = CooldownRemaining();
-        if (cooldown > 0)
-        {
-            var notice = Loc.T(L.Feedback.Cooldown, FormatCooldown(cooldown));
-            var noticeLeft = origin.X + 2f * scale;
-            var noticeMaxWidth = MathF.Max(1f, area.Max.X - 8f * scale - counterSize.X - noticeLeft);
-            var clippedNotice = Typography.FitText(notice, noticeMaxWidth, 0.85f, FontWeight.Regular);
-            Typography.Draw(new Vector2(noticeLeft,
-                area.Max.Y - footerHeight * 0.5f - Typography.Measure(clippedNotice, 0.85f).Y * 0.5f), clippedNotice,
-                AppPalettes.Feedback.MutedInk, 0.85f);
-        }
-    }
-
-    private void DrawAttachmentStrip(ImDrawListPtr drawList, float x, float y, float tile, float gap, float scale)
-    {
-        var rounding = 10f * scale;
-        var removeIndex = -1;
-        for (var index = 0; index < attachments.Count; index++)
-        {
-            var min = new Vector2(x + (tile + gap) * index, y);
-            var max = min + new Vector2(tile, tile);
-            if (DrawAttachmentThumb(drawList, attachments[index], min, max, rounding, scale))
-            {
-                removeIndex = index;
-            }
-        }
-
-        if (attachments.Count < MaxAttachments)
-        {
-            var min = new Vector2(x + (tile + gap) * attachments.Count, y);
-            var max = min + new Vector2(tile, tile);
-            if (DrawAddTile(drawList, min, max, rounding, scale))
-            {
-                OpenPicker();
-            }
-        }
-
-        if (removeIndex >= 0)
-        {
-            attachments.RemoveAt(removeIndex);
-        }
-    }
-
-    private bool DrawAttachmentThumb(ImDrawListPtr drawList, string path, Vector2 min, Vector2 max, float rounding,
-        float scale)
-    {
-        var texture = wallpaperImages.Get(path);
-        if (texture is null)
-        {
-            Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
-        }
-        else
-        {
-            var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
-            drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
-                ImDrawFlags.RoundCornersAll);
-        }
-
-        var badgeRadius = 8.5f * scale;
-        var badgeCenter = new Vector2(max.X - badgeRadius - 2f * scale, min.Y + badgeRadius + 2f * scale);
-        var badgeHovered = UiInteract.Hover(badgeCenter - new Vector2(badgeRadius, badgeRadius),
-            badgeCenter + new Vector2(badgeRadius, badgeRadius));
-        drawList.AddCircleFilled(badgeCenter, badgeRadius,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, badgeHovered ? 0.9f : 0.62f)), 20);
-        AppSkin.Icon(badgeCenter, IconGlyph.Of(FontAwesomeIcon.Times), White, 0.6f);
-        if (badgeHovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return UiInteract.Click(badgeCenter - new Vector2(badgeRadius, badgeRadius),
-            badgeCenter + new Vector2(badgeRadius, badgeRadius), badgeHovered);
-    }
-
-    private bool DrawAddTile(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, float scale)
-    {
-        var hovered = UiInteract.Hover(min, max);
-        Squircle.Fill(drawList, min, max, rounding,
-            ImGui.GetColorU32(hovered ? ui.HoverTint : AppPalettes.Feedback.FieldSurface));
-        Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(AddTileStroke), 1f);
-        AppSkin.Icon((min + max) * 0.5f, IconGlyph.Of(FontAwesomeIcon.Plus), AppPalettes.Feedback.BodyInk, 0.9f);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return UiInteract.Click(min, max, hovered);
-    }
-
-    private void DrawPicker(Rect area)
-    {
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Feedback.AddPhotos), () => picking = false);
-        var scale = UiScale.Current;
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var importHeight = 46f * scale;
-        var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
-            new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
-        if (ui.PillButton(importRect, Loc.T(L.Feedback.ImportFromPc), true))
-        {
-            LaunchFileDialog();
-        }
-
-        var gridTop = importRect.Max.Y + 12f * scale;
-        var gridRect = new Rect(new Vector2(area.Min.X, gridTop), area.Max);
-        using (AppSurface.Begin(gridRect))
-        {
-            if (pickerPaths.Length == 0)
-            {
-                Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale),
-                    Loc.T(L.Feedback.NoGallery), AppPalettes.Feedback.MutedInk);
-                return;
-            }
-
-            var gap = 6f * scale;
-            var avail = ScrollLayout.StableContentWidth();
-            var cell = (avail - gap * (PickerColumns - 1)) / PickerColumns;
+            var scale = UiScale.Current;
+            var width = ImGui.GetContentRegionAvail().X;
             var origin = ImGui.GetCursorScreenPos();
-            var scrollY = ImGui.GetScrollY();
-            var viewHeight = ImGui.GetWindowSize().Y;
-            var margin = cell + 60f * scale;
-            for (var index = 0; index < pickerPaths.Length; index++)
+            var title = Loc.T(L.Feedback.SignInTitle);
+            var hint = Loc.T(L.Feedback.SignInHint);
+            var height = FeedbackArt.StatePanelHeight(title, hint, true, width, scale);
+            var top = MathF.Max(origin.Y + Metrics.Space.Xxl * scale, body.Center.Y - height * 0.6f);
+            if (FeedbackArt.StatePanel(ui, top, origin.X + width * 0.5f, width, FontAwesomeIcon.UserLock, ui.Accent,
+                    title, hint, Loc.T(L.Feedback.OpenSettings), "feedback.signin"))
             {
-                var column = index % PickerColumns;
-                var rowIndex = index / PickerColumns;
-                var rowTop = rowIndex * (cell + gap);
-                if (rowTop + cell < scrollY - margin || rowTop > scrollY + viewHeight + margin)
-                {
-                    continue;
-                }
-
-                var min = new Vector2(origin.X + column * (cell + gap), origin.Y + rowTop);
-                var max = new Vector2(min.X + cell, min.Y + cell);
-                var hovered = UiInteract.Hover(min, max);
-                DrawLocalThumbnail(pickerPaths[index], min, max, scale, hovered);
-                if (UiInteract.Click(min, max, hovered))
-                {
-                    AddAttachment(pickerPaths[index]);
-                }
+                navigation.Open("settings");
             }
 
-            var rows = (pickerPaths.Length + PickerColumns - 1) / PickerColumns;
-            var totalHeight = rows * (cell + gap);
-            ImGui.SetCursorScreenPos(origin);
-            ImGui.Dummy(new Vector2(avail, totalHeight));
-        }
-    }
-
-    private void DrawLocalThumbnail(string path, Vector2 min, Vector2 max, float scale, bool hovered)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var rounding = 10f * scale;
-        var texture = wallpaperImages.Get(path);
-        if (texture is null)
-        {
-            Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
-            return;
+            ReserveTo(origin, width, top + height);
         }
 
-        var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
-        drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
-            ImDrawFlags.RoundCornersAll);
-        if (hovered)
-        {
-            drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.1f)), rounding);
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
+        AppHeader.EndLargeTitle(in navBar, context, "feedback.nav", DisplayName, NavBarStyle.From(ui),
+            ReadOnlySpan<NavBarButton>.Empty);
     }
 
-    private void OpenPicker()
+    private void ConsumeSendOutcome()
     {
-        pickerPaths = library.List();
-        picking = true;
-    }
-
-    private void AddAttachment(string path)
-    {
-        picking = false;
-        if (string.IsNullOrEmpty(path) || attachments.Count >= MaxAttachments)
+        var outcome = Interlocked.Exchange(ref sendOutcome, SendIdle);
+        if (outcome == SendIdle)
         {
             return;
         }
 
-        for (var index = 0; index < attachments.Count; index++)
+        if (outcome == SendFailed)
         {
-            if (string.Equals(attachments[index], path, StringComparison.OrdinalIgnoreCase))
+            sendFailure.Set(sendOutcomeFailure?.Failure ?? AepFailure.Transport(AepFailureKind.Offline));
+            UiFeedback.Play(UiSound.Caution);
+            if (router.Current.Screen != FeedbackScreen.Compose)
             {
-                return;
+                ShellToast.Show(Loc.T(L.Feedback.SendFailed));
             }
-        }
 
-        attachments.Add(path);
-    }
-
-    private void LaunchFileDialog()
-    {
-        FilePicker.PickImage(Loc.T(L.Feedback.AddPhotos), path => Interlocked.Exchange(ref pendingPickedPath, path));
-    }
-
-    private void DrawThankYou(Rect area)
-    {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var cardMin = new Vector2(origin.X + 4f * scale, origin.Y + 4f * scale);
-        var cardMax = new Vector2(origin.X + width - 4f * scale, area.Max.Y - 8f * scale);
-        ui.Card(drawList, cardMin, cardMax, 18f * scale);
-
-        var centerX = (cardMin.X + cardMax.X) * 0.5f;
-        var badgeCenter = new Vector2(centerX, cardMin.Y + 78f * scale);
-        var badgeRadius = 34f * scale;
-        drawList.AddCircleFilled(badgeCenter, badgeRadius, ImGui.GetColorU32(AppPalettes.Feedback.Accent), 48);
-        var check = badgeRadius;
-        var checkColor = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f));
-        drawList.AddLine(badgeCenter + new Vector2(-0.42f * check, 0.02f * check),
-            badgeCenter + new Vector2(-0.10f * check, 0.34f * check), checkColor, 4f * scale);
-        drawList.AddLine(badgeCenter + new Vector2(-0.10f * check, 0.34f * check),
-            badgeCenter + new Vector2(0.44f * check, -0.30f * check), checkColor, 4f * scale);
-
-        var titleY = badgeCenter.Y + badgeRadius + 26f * scale;
-        Typography.DrawCentered(new Vector2(centerX, titleY), Loc.T(L.Feedback.Sent), theme.TextStrong, 1.35f,
-            FontWeight.SemiBold);
-        Typography.DrawCentered(new Vector2(centerX, titleY + 34f * scale), Loc.T(L.Feedback.ThankYou),
-            AppPalettes.Feedback.BodyInk, 1.05f, FontWeight.Medium);
-        Typography.DrawCentered(new Vector2(centerX, titleY + 60f * scale), Loc.T(L.Feedback.SentMessage),
-            AppPalettes.Feedback.MutedInk, 0.9f);
-
-        var cooldown = CooldownRemaining();
-        var actionY = cardMax.Y - 36f * scale;
-        if (cooldown > 0)
-        {
-            var notice = Loc.T(L.Feedback.Cooldown, FormatCooldown(cooldown));
-            Typography.DrawCentered(new Vector2(centerX, actionY), notice, AppPalettes.Feedback.MutedInk, 0.95f,
-                FontWeight.Medium);
             return;
         }
 
-        var label = Loc.T(L.Feedback.SendMore);
-        var buttonWidth = Typography.Measure(label, 0.9f, FontWeight.SemiBold).X + 44f * scale;
-        var buttonHeight = 34f * scale;
-        var rect = new Rect(new Vector2(centerX - buttonWidth * 0.5f, actionY - buttonHeight * 0.5f),
-            new Vector2(centerX + buttonWidth * 0.5f, actionY + buttonHeight * 0.5f));
-        if (ui.PillButton(rect, label, true))
+        sendFailure.Clear();
+        if (string.Equals(draft.Text, sentText, StringComparison.Ordinal))
         {
-            sent = false;
+            draft.Clear();
         }
-    }
 
-    private static void ReportSendAnchor(Rect area, string label, float scale)
-    {
-        if (!UiAnchors.Recording)
+        configuration.LastFeedbackSentUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        configuration.Save();
+        store.NoteSent();
+        UiFeedback.Play(UiSound.MessageSent);
+        store.RefreshHistory();
+        if (router.Current.Screen == FeedbackScreen.Compose)
         {
+            BeginThanks();
+            router.Replace(FeedbackRoute.Sent);
             return;
         }
 
-        var height = 28f * scale;
-        var width = Typography.Measure(label, 0.9f, FontWeight.SemiBold).X + 26f * scale;
-        var max = new Vector2(area.Max.X - 12f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f + height * 0.5f);
-        var min = new Vector2(max.X - width, max.Y - height);
-        UiAnchors.Report("feedback.send", new Rect(min, max));
+        ShellToast.Show(Loc.T(L.Feedback.SentToast));
     }
-
-    private void AskSend()
-    {
-        if (string.IsNullOrWhiteSpace(draft) || store.Posting || CooldownRemaining() > 0)
-        {
-            return;
-        }
-
-        var pending = draft;
-        var pendingImages = attachments.ToArray();
-        confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Feedback.ConfirmMessage),
-            ConfirmLabel = Loc.T(L.Feedback.Send),
-            CancelLabel = Loc.T(L.Common.Cancel),
-            BusyLabel = Loc.T(L.Feedback.Sending),
-            FailedMessage = Loc.T(L.Feedback.ErrorMessage),
-            Danger = false,
-            ConfirmAsync = done => store.Compose(pending, pendingImages, ok =>
-            {
-                if (ok)
-                {
-                    composeOutcome = 1;
-                }
-
-                done(ok);
-            }),
-        });
-    }
-
 
     private int CooldownRemaining()
     {
@@ -504,15 +247,21 @@ internal sealed class FeedbackApp : IPhoneApp
         return remaining > 0 ? (int)remaining : 0;
     }
 
-    private static string FormatCooldown(int seconds)
+    private static float DrawSectionHeader(ImDrawListPtr drawList, Vector2 origin, float width, string title,
+        Vector4 ink)
     {
-        if (seconds >= 60)
-        {
-            return TimeText.MinutesSeconds(seconds);
-        }
-
-        return string.Format(Loc.Culture, "{0}s", seconds);
+        var fitted = Typography.FitText(title, width, TextStyles.Title3);
+        Typography.Draw(drawList, origin, fitted, ink, TextStyles.Title3);
+        return Typography.Measure(fitted, TextStyles.Title3).Y;
     }
+
+    private static void ReserveTo(Vector2 origin, float width, float bottom)
+    {
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, MathF.Max(0f, bottom - origin.Y)));
+    }
+
+    private static ImRaii.StyleDisposable ZeroItemSpacing() => ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero);
 
     public void Dispose()
     {

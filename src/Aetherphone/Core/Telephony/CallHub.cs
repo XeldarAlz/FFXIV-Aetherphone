@@ -214,6 +214,7 @@ internal sealed class CallHub : IDisposable
         {
             Type = SignalType.Start, CallId = id.ToString("D"), InviteeIds = new[] { target.UserId },
         });
+        sound.StartRingback();
     }
 
     private bool InvolvesLocked(string userId)
@@ -475,6 +476,7 @@ internal sealed class CallHub : IDisposable
         sessionToDispose?.Dispose();
         if (becameActive)
         {
+            sound.StopCallRing();
             UiFeedback.Play(UiSound.CallConnect);
         }
     }

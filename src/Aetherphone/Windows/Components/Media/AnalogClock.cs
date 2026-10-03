@@ -3,6 +3,22 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
 
+internal readonly struct ClockFacePaint
+{
+    public readonly Vector4 Face;
+    public readonly Vector4 Ink;
+    public readonly Vector4 Seconds;
+    public readonly float Sheen;
+
+    public ClockFacePaint(Vector4 face, Vector4 ink, Vector4 seconds, float sheen)
+    {
+        Face = face;
+        Ink = ink;
+        Seconds = seconds;
+        Sheen = sheen;
+    }
+}
+
 internal static class AnalogClock
 {
     private static readonly Vector4 DayFace = new(0.90f, 0.93f, 0.98f, 1f);
@@ -15,16 +31,25 @@ internal static class AnalogClock
         Draw(center, radius, hours, minutes, seconds, DayFraction(hours), theme);
 
     public static void Draw(Vector2 center, float radius, float hours, float minutes, float seconds, float dayFraction,
-        PhoneTheme theme)
+        PhoneTheme theme) =>
+        Draw(ImGui.GetWindowDrawList(), center, radius, hours, minutes, seconds, Paint(dayFraction, theme.Accent),
+            UiScale.Current);
+
+    public static ClockFacePaint DayNight(float hours, Vector4 secondsColor) =>
+        Paint(DayFraction(hours), secondsColor);
+
+    public static void Draw(ImDrawListPtr drawList, Vector2 center, float radius, float hours, float minutes,
+        float seconds, in ClockFacePaint paint, float scale)
     {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        var face = Vector4.Lerp(NightFace, DayFace, dayFraction);
-        var ink = Palette.Luminance(face) > 0.5f ? DayInk : NightInk;
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(face), 64);
-        drawList.AddCircleFilled(center - new Vector2(0f, radius * 0.4f), radius * 0.62f,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f + 0.05f * dayFraction)), 48);
-        drawList.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(ink, 0.28f)), 64, 1.4f * scale);
+        var ink = paint.Ink;
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(paint.Face), 64);
+        if (paint.Sheen > 0f)
+        {
+            drawList.AddCircleFilled(center - new Vector2(0f, radius * 0.4f), radius * 0.62f,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, paint.Sheen * paint.Face.W)), 48);
+        }
+
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(Faded(ink, 0.28f)), 64, 1.4f * scale);
         for (var tick = 0; tick < 12; tick++)
         {
             var angle = tick * (MathF.PI / 6f) - MathF.PI / 2f;
@@ -32,7 +57,7 @@ internal static class AnalogClock
             var major = tick % 3 == 0;
             var inner = center + direction * radius * (major ? 0.74f : 0.82f);
             var outer = center + direction * radius * 0.91f;
-            drawList.AddLine(inner, outer, ImGui.GetColorU32(Palette.WithAlpha(ink, major ? 0.9f : 0.5f)),
+            drawList.AddLine(inner, outer, ImGui.GetColorU32(Faded(ink, major ? 0.9f : 0.5f)),
                 (major ? 2.0f : 1.1f) * scale);
         }
 
@@ -41,10 +66,19 @@ internal static class AnalogClock
         var secondAngle = seconds * (MathF.PI / 30f) - MathF.PI / 2f;
         Hand(drawList, center, hourAngle, radius * 0.50f, radius * 0.16f, 3.4f * scale, ink);
         Hand(drawList, center, minuteAngle, radius * 0.76f, radius * 0.18f, 2.6f * scale, ink);
-        Hand(drawList, center, secondAngle, radius * 0.84f, radius * 0.22f, 1.3f * scale, theme.Accent);
-        drawList.AddCircleFilled(center, 3.0f * scale, ImGui.GetColorU32(theme.Accent), 16);
-        drawList.AddCircleFilled(center, 1.4f * scale, ImGui.GetColorU32(face), 12);
+        Hand(drawList, center, secondAngle, radius * 0.84f, radius * 0.22f, 1.3f * scale, paint.Seconds);
+        drawList.AddCircleFilled(center, 3.0f * scale, ImGui.GetColorU32(paint.Seconds), 16);
+        drawList.AddCircleFilled(center, 1.4f * scale, ImGui.GetColorU32(paint.Face), 12);
     }
+
+    private static ClockFacePaint Paint(float dayFraction, Vector4 secondsColor)
+    {
+        var face = Vector4.Lerp(NightFace, DayFace, dayFraction);
+        var ink = Palette.Luminance(face) > 0.5f ? DayInk : NightInk;
+        return new ClockFacePaint(face, ink, secondsColor, 0.05f + 0.05f * dayFraction);
+    }
+
+    private static Vector4 Faded(Vector4 color, float alpha) => color with { W = color.W * alpha };
 
     private static void Hand(ImDrawListPtr drawList, Vector2 center, float angle, float length, float tail,
         float thickness, Vector4 color)
@@ -57,7 +91,6 @@ internal static class AnalogClock
         drawList.AddCircleFilled(tip, thickness * 0.5f, packed, 12);
         drawList.AddCircleFilled(back, thickness * 0.5f, packed, 8);
     }
-
 
     private static float DayFraction(float hours)
     {

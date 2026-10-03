@@ -5,17 +5,28 @@ namespace Aetherphone.Core.Net;
 
 internal sealed class DiskCache
 {
+    public const string ProtectedMarkerName = ".protected";
+    private const int MagicLength = 4;
+    private static readonly byte[] ProtectedMagic = "AEC1"u8.ToArray();
+    private static readonly byte[] ProtectionEntropy = "Aetherphone.DiskCache.v1"u8.ToArray();
     private readonly DirectoryInfo root;
     private readonly long maxBytes;
+    private readonly bool protect;
     private readonly object sync = new();
 
-    public DiskCache(DirectoryInfo root, long maxBytes)
+    public DiskCache(DirectoryInfo root, long maxBytes, bool protect = false)
     {
         this.root = root;
         this.maxBytes = maxBytes;
+        this.protect = protect;
         if (!root.Exists)
         {
             root.Create();
+        }
+
+        if (protect)
+        {
+            PurgeLegacyPlaintext();
         }
     }
 
@@ -29,7 +40,18 @@ internal sealed class DiskCache
                 return null;
             }
 
-            return File.ReadAllBytes(info.FullName);
+            if (!protect)
+            {
+                return File.ReadAllBytes(info.FullName);
+            }
+
+            var opened = ReadProtected(info.FullName);
+            if (opened is null)
+            {
+                Discard(info);
+            }
+
+            return opened;
         }
         catch (Exception exception)
         {
@@ -42,15 +64,162 @@ internal sealed class DiskCache
     {
         try
         {
+            var sealedBytes = protect ? Seal(bytes) : null;
             lock (sync)
             {
-                File.WriteAllBytes(PathFor(key), bytes);
+                if (sealedBytes is null)
+                {
+                    File.WriteAllBytes(PathFor(key), bytes);
+                }
+                else
+                {
+                    WriteProtected(PathFor(key), sealedBytes);
+                }
+
                 EnforceBudget();
             }
         }
         catch (Exception exception)
         {
             AepLog.Warning(exception, $"DiskCache write failed for {key}");
+        }
+    }
+
+    public void Clear()
+    {
+        lock (sync)
+        {
+            var files = root.GetFiles();
+            for (var index = 0; index < files.Length; index++)
+            {
+                if (IsMarker(files[index]))
+                {
+                    continue;
+                }
+
+                Discard(files[index]);
+            }
+        }
+    }
+
+    public long SizeBytes()
+    {
+        try
+        {
+            root.Refresh();
+            if (!root.Exists)
+            {
+                return 0;
+            }
+
+            var files = root.GetFiles();
+            long total = 0;
+            for (var index = 0; index < files.Length; index++)
+            {
+                if (IsMarker(files[index]))
+                {
+                    continue;
+                }
+
+                total += files[index].Length;
+            }
+
+            return total;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, $"DiskCache size check failed for {root.Name}");
+            return 0;
+        }
+    }
+
+    private static byte[] Seal(byte[] bytes)
+    {
+        return ProtectedData.Protect(bytes, ProtectionEntropy, DataProtectionScope.CurrentUser);
+    }
+
+    private static void WriteProtected(string path, byte[] sealedBytes)
+    {
+        using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        stream.Write(ProtectedMagic);
+        stream.Write(sealedBytes);
+    }
+
+    private static byte[]? ReadProtected(string path)
+    {
+        byte[] sealedBytes;
+        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            var length = stream.Length;
+            if (length <= MagicLength)
+            {
+                return null;
+            }
+
+            Span<byte> magic = stackalloc byte[MagicLength];
+            stream.ReadExactly(magic);
+            if (!magic.SequenceEqual(ProtectedMagic))
+            {
+                return null;
+            }
+
+            sealedBytes = new byte[length - MagicLength];
+            stream.ReadExactly(sealedBytes);
+        }
+
+        try
+        {
+            return ProtectedData.Unprotect(sealedBytes, ProtectionEntropy, DataProtectionScope.CurrentUser);
+        }
+        catch (CryptographicException)
+        {
+            return null;
+        }
+    }
+
+    private void PurgeLegacyPlaintext()
+    {
+        try
+        {
+            var marker = new FileInfo(Path.Combine(root.FullName, ProtectedMarkerName));
+            if (marker.Exists)
+            {
+                return;
+            }
+
+            lock (sync)
+            {
+                var files = root.GetFiles();
+                for (var index = 0; index < files.Length; index++)
+                {
+                    Discard(files[index]);
+                }
+
+                File.WriteAllBytes(marker.FullName, Array.Empty<byte>());
+            }
+
+            AepLog.Info($"[Media] purged {root.Name} cache files written before encryption at rest");
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, $"DiskCache legacy purge failed for {root.Name}");
+        }
+    }
+
+    private static bool IsMarker(FileInfo file)
+    {
+        return string.Equals(file.Name, ProtectedMarkerName, StringComparison.Ordinal);
+    }
+
+    private static void Discard(FileInfo file)
+    {
+        try
+        {
+            file.Delete();
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, $"DiskCache could not delete {file.Name}");
         }
     }
 
@@ -71,6 +240,11 @@ internal sealed class DiskCache
         Array.Sort(files, static (left, right) => left.LastWriteTimeUtc.CompareTo(right.LastWriteTimeUtc));
         for (var index = 0; index < files.Length && total > maxBytes; index++)
         {
+            if (IsMarker(files[index]))
+            {
+                continue;
+            }
+
             total -= files[index].Length;
             try
             {

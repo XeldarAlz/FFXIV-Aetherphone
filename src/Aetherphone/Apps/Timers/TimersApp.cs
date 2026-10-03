@@ -1,24 +1,17 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
-using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Timers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Timers;
 
-internal sealed class TimersApp : IPhoneApp
+internal sealed partial class TimersApp : IPhoneApp
 {
-    private const float RowHeight = 62f;
-    private const float TileSize = 30f;
-    private const float CardGap = 10f;
-    private const float RefreshIntervalSeconds = 2f;
-    private const double DailyPeriodSeconds = 86400;
-    private const double WeeklyPeriodSeconds = 604800;
-    private const double OceanPeriodSeconds = 7200;
+    private const float BottomPad = 28f;
 
     public string Id => "timers";
 
@@ -26,323 +19,120 @@ internal sealed class TimersApp : IPhoneApp
 
     public string Glyph => "T";
 
-    public int BadgeCount => 0;
+    public int BadgeCount => TimerBoard.Tally(timers.Characters, timers.Workshops,
+        DateTimeOffset.UtcNow.ToUnixTimeSeconds()).Ready;
+
+    public bool HasBadge => true;
 
     private readonly Configuration configuration;
+    private readonly GameTimers timers;
     private readonly AppSkin ui = new(AppPalettes.Timers);
-    private readonly List<RetainerVenture> retainers = new();
-    private bool retainersAvailable;
-    private RefreshCadence refreshCadence;
+    private readonly List<TimerCharacterRecord> orderedCharacters = new();
+    private readonly List<TimerText> textPool = new();
+    private INavigator navigation = null!;
+    private int textCursor;
 
-    public TimersApp(Configuration configuration)
+    public TimersApp(Configuration configuration, GameTimers timers)
     {
         this.configuration = configuration;
+        this.timers = timers;
     }
 
-    public void OnOpened() => Refresh();
+    public void OnOpened()
+    {
+        heroPrimed = false;
+    }
 
     public void OnClosed()
     {
     }
 
-    private void Refresh()
-    {
-        retainersAvailable = RetainerReader.TryRead(retainers);
-        refreshCadence.Reset();
-    }
-
     public void Draw(in PhoneContext context)
     {
-        if (refreshCadence.Advance(ImGui.GetIO().DeltaTime, RefreshIntervalSeconds))
-        {
-            Refresh();
-        }
-
-        var scale = UiScale.Current;
-        var content = context.Content;
-        var utcNow = DateTime.UtcNow;
-
+        navigation = context.Navigation;
         ui.Theme = context.Theme;
-        var screen = SceneChrome.ScreenFrom(content, context.Theme, scale);
-        ui.Backdrop(screen);
-        AppHeader.Draw(context, DisplayName);
-
-        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
-        using (AppSurface.Begin(body))
-        {
-            DrawHero(utcNow, scale);
-            DrawResets(utcNow, scale);
-            DrawActivities(utcNow, scale);
-            DrawRetainers(utcNow, scale);
-            DrawReminders(scale);
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-        }
-    }
-
-    private void DrawHero(DateTime utcNow, float scale)
-    {
-        var daily = GameSchedule.NextDailyReset(utcNow);
-        var remaining = daily - utcNow;
-        var fraction = Math.Clamp(1f - (float)(remaining.TotalSeconds / DailyPeriodSeconds), 0f, 1f);
-        var big = remaining <= TimeSpan.Zero ? Loc.T(L.Time.Now) : HeroClock(remaining);
-        var relative = remaining <= TimeSpan.Zero ? Loc.T(L.Time.Now) : TimeFormat.Relative(remaining);
-        HeroRing.Draw(fraction, AppPalettes.Timers.Accent, AppPalettes.Timers.TitleInk, AppPalettes.Timers.MutedInk,
-            big, null, Loc.T(L.Timers.DailyReset), $"{relative} · {LocalTime(daily)}");
-    }
-
-    private void DrawResets(DateTime utcNow, float scale)
-    {
-        ui.SectionLabel(Loc.T(L.Timers.ServerResets), TextStyles.FootnoteEmphasized, 6f);
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        UiAnchors.Report("timers.resets", new Rect(origin, origin + new Vector2(width, 3 * RowHeight * scale)));
-        var card = GroupCard.Begin(ui, 3, RowHeight);
-
-        var daily = GameSchedule.NextDailyReset(utcNow);
-        DrawTimerRow(card.NextRow(), Accent.Amber, FontAwesomeIcon.Sun, Loc.T(L.Timers.DailyReset),
-            LocalTime(daily), TimeFormat.Relative(daily - utcNow), AppPalettes.Timers.TitleInk);
-
-        var grandCompany = GameSchedule.NextGrandCompanyReset(utcNow);
-        DrawTimerRow(card.NextRow(), Accent.Rose, FontAwesomeIcon.ShieldAlt,
-            Loc.T(L.Timers.GrandCompanyReset), LocalTime(grandCompany), TimeFormat.Relative(grandCompany - utcNow),
-            AppPalettes.Timers.TitleInk);
-
-        var weekly = GameSchedule.NextWeeklyReset(utcNow);
-        DrawTimerRow(card.NextRow(), Accent.Blue, FontAwesomeIcon.CalendarAlt,
-            Loc.T(L.Timers.WeeklyReset), LocalTime(weekly), TimeFormat.Relative(weekly - utcNow), AppPalettes.Timers.TitleInk);
-
-        card.End();
-        ImGui.Dummy(new Vector2(0f, CardGap * scale));
-    }
-
-    private void DrawActivities(DateTime utcNow, float scale)
-    {
-        ui.SectionLabel(Loc.T(L.Timers.Activities), TextStyles.FootnoteEmphasized, 6f);
-        var card = GroupCard.Begin(ui, 3, RowHeight);
-
-        var fashion = GameSchedule.FashionReport(utcNow);
-        var fashionState = fashion.Active ? Loc.T(L.Timers.Open) : Loc.T(L.Timers.Closed);
-        DrawTimerRow(card.NextRow(), Accent.Pink, FontAwesomeIcon.Tshirt,
-            Loc.T(L.Timers.FashionReport), fashionState, TimeFormat.Relative(fashion.NextChangeUtc - utcNow),
-            AppPalettes.Timers.TitleInk);
-
-        var cactpot = GameSchedule.NextJumboCactpot(utcNow);
-        DrawTimerRow(card.NextRow(), Accent.AmberSoft, FontAwesomeIcon.Dice,
-            Loc.T(L.Timers.JumboCactpot), LocalDay(cactpot), TimeFormat.Relative(cactpot - utcNow), AppPalettes.Timers.TitleInk);
-
-        var indigo = GameSchedule.OceanFishing(utcNow, OceanRoute.Indigo);
-        var ruby = GameSchedule.OceanFishing(utcNow, OceanRoute.Ruby);
-        var route =
-            $"{indigo.Route} · {TimeOfDayLabel(indigo.TimeOfDay)} / {ruby.Route} · {TimeOfDayLabel(ruby.TimeOfDay)}";
-        var oceanValue = indigo.BoardingNow
-            ? Loc.T(L.Timers.BoardingNow)
-            : TimeFormat.Relative(indigo.NextBoardingUtc - utcNow);
-        var oceanColor = indigo.BoardingNow ? AppPalettes.Timers.Accent : AppPalettes.Timers.TitleInk;
-        DrawTimerRow(card.NextRow(), Accent.Mint, FontAwesomeIcon.Fish, Loc.T(L.Timers.OceanFishing),
-            route, oceanValue, oceanColor);
-
-        card.End();
-        ImGui.Dummy(new Vector2(0f, CardGap * scale));
-    }
-
-    private void DrawRetainers(DateTime utcNow, float scale)
-    {
-        ui.SectionLabel(Loc.T(L.Timers.Retainers), TextStyles.FootnoteEmphasized, 6f);
-        if (!retainersAvailable || retainers.Count == 0)
-        {
-            DrawHint(Loc.T(L.Timers.OpenBellOnce), scale);
-            return;
-        }
-
-        var card = GroupCard.Begin(ui, retainers.Count, RowHeight);
-        for (var index = 0; index < retainers.Count; index++)
-        {
-            DrawRetainerRow(card.NextRow(), retainers[index], index, utcNow);
-        }
-
-        card.End();
-        ImGui.Dummy(new Vector2(0f, CardGap * scale));
-    }
-
-    private void DrawReminders(float scale)
-    {
-        ui.SectionLabel(Loc.T(L.Timers.Reminders), TextStyles.FootnoteEmphasized, 6f);
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        UiAnchors.Report("timers.reminders", new Rect(origin, origin + new Vector2(width, 4 * RowHeight * scale)));
-        var card = GroupCard.Begin(ui, 4, RowHeight);
-
-        ApplyDaily(DrawNotifyRow(card.NextRow(), Loc.T(L.Timers.DailyReset), configuration.NotifyDailyReset,
-            scale));
-        ApplyGrandCompany(DrawNotifyRow(card.NextRow(), Loc.T(L.Timers.GrandCompanyReset),
-            configuration.NotifyGrandCompanyReset, scale));
-        ApplyWeekly(DrawNotifyRow(card.NextRow(), Loc.T(L.Timers.WeeklyReset), configuration.NotifyWeeklyReset,
-            scale));
-        ApplyVentures(DrawNotifyRow(card.NextRow(), Loc.T(L.Timers.NotifyVentures),
-            configuration.NotifyRetainerVentures, scale));
-
-        card.End();
-        ImGui.Dummy(new Vector2(0f, CardGap * scale));
-    }
-
-    private static void DrawRetainerRow(Rect row, RetainerVenture venture, int index, DateTime utcNow)
-    {
-        var rowId = "timers.retainer." + index;
-        if (!venture.HasVenture)
-        {
-            DrawTimerRow(row, AppPalettes.Timers.MutedInk, FontAwesomeIcon.Briefcase, venture.Name, string.Empty,
-                Loc.T(L.Timers.NoVenture), AppPalettes.Timers.MutedInk, rowId);
-            return;
-        }
-
-        var remaining = venture.CompleteUtc - utcNow;
-        if (remaining <= TimeSpan.Zero)
-        {
-            DrawTimerRow(row, PhoneTheme.Default.ToggleOn, FontAwesomeIcon.Briefcase, venture.Name, string.Empty,
-                Loc.T(L.Timers.Ready), PhoneTheme.Default.ToggleOn, rowId);
-            return;
-        }
-
-        DrawTimerRow(row, Accent.Mint, FontAwesomeIcon.Briefcase, venture.Name, LocalTime(venture.CompleteUtc),
-            TimeFormat.Relative(remaining), AppPalettes.Timers.TitleInk, rowId);
-    }
-
-    private static void DrawTimerRow(Rect row, Vector4 tint, FontAwesomeIcon icon, string name, string sublabel,
-        string value, Vector4 valueColor, string? idOverride = null)
-    {
-        var id = "timers.row." + (idOverride ?? name);
+        var area = context.Content;
         var scale = UiScale.Current;
-        var tile = TileSize * scale;
-        var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
-        IconTile.Draw(tileCenter, tile, tint, icon);
+        ui.Backdrop(SceneChrome.ScreenFrom(area, context.Theme, scale));
+        ui.Body(area);
 
-        var valueSize = Typography.Measure(value, TextStyles.SubheadlineEmphasized);
-        var valueRight = row.Max.X;
-        Typography.Draw(new Vector2(valueRight - valueSize.X, row.Center.Y - valueSize.Y * 0.5f), value, valueColor,
-            TextStyles.SubheadlineEmphasized);
+        var navBar = AppHeader.BeginLargeTitle(context, false);
+        using (AppSurface.Begin(navBar.Body))
+        {
+            textCursor = 0;
+            var utcNow = DateTime.UtcNow;
+            var nowUnix = new DateTimeOffset(utcNow).ToUnixTimeSeconds();
+            var tally = TimerBoard.Tally(timers.Characters, timers.Workshops, nowUnix);
+            var width = ImGui.GetContentRegionAvail().X;
+            DrawHero(tally, utcNow, nowUnix, width, scale);
+            DrawRetainers(nowUnix, width, scale);
+            DrawVoyages(nowUnix, width, scale);
+            DrawResets(utcNow, nowUnix, width, scale);
+            DrawActivities(utcNow, nowUnix, width, scale);
+            ImGui.Dummy(new Vector2(0f, BottomPad * scale));
+        }
 
-        var textLeft = row.Min.X + tile + 12f * scale;
-        var textRight = valueRight - valueSize.X - 12f * scale;
-        var textMaxWidth = MathF.Max(1f, textRight - textLeft);
-        if (sublabel.Length > 0)
-        {
-            Marquee.DrawLeftAuto(id, name, textLeft, row.Center.Y - 16f * scale, textMaxWidth,
-                TextStyles.Headline, AppPalettes.Timers.TitleInk);
-            Marquee.DrawLeftAuto(new MarqueeId(id, ".sub"), sublabel, textLeft, row.Center.Y + 5f * scale, textMaxWidth,
-                TextStyles.Footnote, AppPalettes.Timers.MutedInk);
-        }
-        else
-        {
-            var nameSize = Typography.Measure(name, TextStyles.Headline);
-            Marquee.DrawLeftAuto(id, name, textLeft, row.Center.Y - nameSize.Y * 0.5f, textMaxWidth,
-                TextStyles.Headline, AppPalettes.Timers.TitleInk);
-        }
+        AppHeader.EndLargeTitle(in navBar, context, "timers.nav", DisplayName, NavBarStyle.From(ui),
+            ReadOnlySpan<NavBarButton>.Empty);
     }
 
-    private static bool DrawNotifyRow(Rect row, string label, bool value, float scale)
+    private TimerText NextText()
     {
-        var width = 46f * scale;
-        var height = 28f * scale;
-        var min = new Vector2(row.Max.X - width, row.Center.Y - height * 0.5f);
-        var labelMaxWidth = MathF.Max(1f, min.X - 8f * scale - row.Min.X);
-        var labelSize = Typography.Measure(label, TextStyles.Body);
-        var labelHovering = UiInteract.Hover(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f),
-            new Vector2(row.Min.X + labelMaxWidth, row.Center.Y + labelSize.Y * 0.5f));
-        Marquee.DrawLeft(label, label, row.Min.X, row.Center.Y - labelSize.Y * 0.5f, labelMaxWidth, TextStyles.Body,
-            AppPalettes.Timers.BodyInk, labelHovering);
-        return Toggle.Draw(label, new Rect(min, min + new Vector2(width, height)), value, PhoneTheme.Default);
-    }
-
-    private static void DrawHint(string text, float scale)
-    {
-        ImGui.Dummy(new Vector2(0f, 4f * scale));
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 4f * scale);
-        using (Plugin.Fonts.Push(TextStyles.Footnote.Scale))
-        using (Dalamud.Interface.Utility.Raii.ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Timers.MutedInk))
+        if (textCursor == textPool.Count)
         {
-            Typography.Wrapped(text);
+            textPool.Add(new TimerText());
         }
 
-        ImGui.Dummy(new Vector2(0f, CardGap * scale));
+        return textPool[textCursor++];
     }
 
-    private void ApplyDaily(bool value)
+    private static void Advance(Vector2 origin, float width, float height, float gap, float scale)
     {
-        if (value == configuration.NotifyDailyReset)
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height + gap * scale - ImGui.GetStyle().ItemSpacing.Y));
+    }
+
+    private bool SectionHeader(string title, float width, float scale, string? bellId, bool bellOn,
+        out Rect headerRect, out Rect bellRect)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var height = TimersArt.SectionHeaderHeight * scale;
+        headerRect = new Rect(origin, origin + new Vector2(width, height));
+        bellRect = default;
+        var drawList = ImGui.GetWindowDrawList();
+        var centerY = origin.Y + height * 0.5f;
+        var bellSpan = bellId is null ? 0f : TimersArt.BellHitRadius * 2f * scale;
+        var fitted = Typography.FitText(title, MathF.Max(1f, width - bellSpan), TextStyles.Title3);
+        var titleHeight = Typography.Measure(fitted, TextStyles.Title3).Y;
+        Typography.Draw(drawList, new Vector2(origin.X, centerY - titleHeight * 0.5f), fitted, ui.TitleInk,
+            TextStyles.Title3);
+        var clicked = false;
+        if (bellId is not null)
         {
-            return;
+            var center = new Vector2(origin.X + width - TimersArt.BellHitRadius * scale, centerY);
+            var hit = new Vector2(TimersArt.BellHitRadius, TimersArt.BellHitRadius) * scale;
+            bellRect = new Rect(center - hit, center + hit);
+            clicked = TimersArt.Bell(drawList, bellId, center, bellOn, ui, BellTooltip(bellOn), scale);
         }
 
-        configuration.NotifyDailyReset = value;
+        Advance(origin, width, height, 0f, scale);
+        return clicked;
+    }
+
+    private static string BellTooltip(bool on) => Loc.T(on ? L.Timers.NotifyOn : L.Timers.NotifyOff);
+
+    private void SaveToggle()
+    {
         configuration.Save();
     }
 
-    private void ApplyGrandCompany(bool value)
+    private void ReportAnchor(string key, Rect rect)
     {
-        if (value == configuration.NotifyGrandCompanyReset)
+        if (UiAnchors.Recording)
         {
-            return;
+            UiAnchors.Report(key, rect);
         }
-
-        configuration.NotifyGrandCompanyReset = value;
-        configuration.Save();
     }
-
-    private void ApplyWeekly(bool value)
-    {
-        if (value == configuration.NotifyWeeklyReset)
-        {
-            return;
-        }
-
-        configuration.NotifyWeeklyReset = value;
-        configuration.Save();
-    }
-
-    private void ApplyVentures(bool value)
-    {
-        if (value == configuration.NotifyRetainerVentures)
-        {
-            return;
-        }
-
-        configuration.NotifyRetainerVentures = value;
-        configuration.Save();
-    }
-
-    private static string LocalTime(DateTime utc) => TimeText.Clock(utc.ToLocalTime());
-
-    private static string LocalDay(DateTime utc)
-    {
-        var local = utc.ToLocalTime();
-        return string.Concat(local.ToString("ddd", Loc.Culture), " ", TimeText.Clock(local));
-    }
-
-    private static string TimeOfDayLabel(OceanTimeOfDay timeOfDay) =>
-        timeOfDay switch
-        {
-            OceanTimeOfDay.Sunset => Loc.T(L.Timers.OceanSunset),
-            OceanTimeOfDay.Night => Loc.T(L.Timers.OceanNight),
-            _ => Loc.T(L.Timers.OceanDay),
-        };
-
-    private static string HeroClock(TimeSpan remaining)
-    {
-        var totalMinutes = (int)remaining.TotalMinutes;
-        if (totalMinutes < 60)
-        {
-            return $"{Math.Max(1, totalMinutes)}m";
-        }
-
-        var totalHours = totalMinutes / 60;
-        if (totalHours < 24)
-        {
-            return $"{totalHours}:{totalMinutes % 60:00}";
-        }
-
-        return $"{totalHours / 24}d";
-    }
-
 
     public void Dispose()
     {

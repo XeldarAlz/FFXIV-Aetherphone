@@ -105,6 +105,7 @@ jobs:
           echo "Total downloads across all releases: $total"
 
       - name: Announce the release on Discord
+        continue-on-error: true
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -112,6 +113,7 @@ jobs:
           WEBHOOK_URL: ${{ secrets.RELEASE_WEBHOOK_URL }}
           PING_ROLE_ID: ${{ vars.RELEASE_PING_ROLE_ID }}
           TAG: ${{ steps.tag.outputs.target }}
+          VERSION: ${{ steps.tag.outputs.version }}
           DOWNLOADS: ${{ steps.count.outputs.total }}
         run: |
           $ErrorActionPreference = 'Stop'
@@ -120,32 +122,76 @@ jobs:
             exit 0
           }
 
-          $icon    = 'https://raw.githubusercontent.com/XeldarAlz/FFXIV-Aetherphone/master/src/Aetherphone/Images/Icon.png'
-          $relList = "https://github.com/$($env:GH_REPO)/releases"
+          # Pinned to the released commit: Discord's image proxy caches by URL, so
+          # a branch URL keeps serving the old icon long after Emblem.png changes.
+          $icon        = "https://raw.githubusercontent.com/$($env:GH_REPO)/$($env:GITHUB_SHA)/src/Aetherphone/Images/Emblem.png"
+          $repoUrl     = "https://github.com/$($env:GH_REPO)"
+          $relList     = "$repoUrl/releases"
+          $manifestUrl = 'https://aetherphone.net/repo.json'
 
-          $rel = gh release view $env:TAG --json name,tagName,body,url,isPrerelease,publishedAt | ConvertFrom-Json
+          $rel = gh release view $env:TAG --json name,tagName,url,isPrerelease,publishedAt | ConvertFrom-Json
 
           $title = if ([string]::IsNullOrEmpty($rel.name)) { $rel.tagName } else { $rel.name }
 
-          $desc = if ($null -eq $rel.body) { '' } else { [string]$rel.body }
-          $desc = $desc.Replace("`r", '').Replace([char]0x2014, '-').Replace([char]0x2013, '-')
-          if ($desc.Length -gt 3800) { $desc = $desc.Substring(0, 3800) + "`n`n...full notes on GitHub" }
+          # The English changelog of the released version is the whole story, laid
+          # out the way the beta post carries it. A version without an entry warns
+          # and goes out without one; the commit list stays on the GitHub release.
+          $pages = @(& .github/scripts/Get-ChangelogNotes.ps1 -Version $env:VERSION -ChunkLimit 3500)
+          if ($pages.Count -eq 0) {
+            Write-Host "::warning::No changelog entry for $($env:VERSION) in ChangelogData.cs; announcing without one."
+          }
+          for ($pageIndex = 0; $pageIndex -lt $pages.Count; $pageIndex++) {
+            $pages[$pageIndex] = $pages[$pageIndex].Replace("`r", '').Replace([char]0x2014, '-').Replace([char]0x2013, '-')
+          }
 
           $isPre   = [bool]$rel.isPrerelease
-          $content = if ($isPre) { '🧪 **New preview build just dropped!**' } else { '🚀 **New version dropped!**' }
+          $content = if ($isPre) { "🧪 **Aetherphone $($env:VERSION) preview is out!**" } else { "🚀 **Aetherphone $($env:VERSION) is out!**" }
           $pingRole = $env:PING_ROLE_ID
           if (-not [string]::IsNullOrWhiteSpace($pingRole)) {
             $content = "<@&$pingRole> $content"
           }
-          $color   = if ($isPre) { 10197915 } else { 9132790 }
-          $channel = if ($isPre) { 'Preview' } else { 'Stable' }
+          $color   = if ($isPre) { 4173386 } else { 9262307 }
+          $channel = if ($isPre) { '🧪 Preview' } else { '💎 Stable' }
+          $released = [DateTimeOffset]::Parse($rel.publishedAt, [Globalization.CultureInfo]::InvariantCulture).ToUnixTimeSeconds()
 
+          # One row of three, then the wide install field. Discord caps a field
+          # value at 1024 characters and the whole embed at 6000.
           $fields = @(
             [ordered]@{ name = 'Version'; value = '`' + $rel.tagName + '`'; inline = $true }
             [ordered]@{ name = 'Channel'; value = $channel; inline = $true }
           )
           if (-not [string]::IsNullOrWhiteSpace($env:DOWNLOADS)) {
-            $fields += [ordered]@{ name = 'Total installs'; value = "$($env:DOWNLOADS)"; inline = $true }
+            $installs = ([long]$env:DOWNLOADS).ToString('N0', [Globalization.CultureInfo]::InvariantCulture)
+            $fields += [ordered]@{ name = 'Installs'; value = "📥 $installs"; inline = $true }
+          }
+
+          $install = @(
+            'Already on Aetherphone? Dalamud offers the update on its own.'
+            'New here? Add this repository under Dalamud Settings, Experimental, then install **Aetherphone**:'
+            '```'
+            $manifestUrl
+            '```'
+          ) -join "`n"
+          $fields += [ordered]@{ name = '📲 Get it'; value = $install; inline = $false }
+
+          $links = @(
+            "[Release notes]($($rel.url))"
+            "[Report a bug]($repoUrl/issues/new/choose)"
+            "[Suggest a feature]($repoUrl/discussions)"
+          ) -join ' · '
+          $fields += [ordered]@{ name = '🔗 Links'; value = $links; inline = $false }
+
+          $description = "Fresh off the press and on its way to your phone, released <t:$($released):R>."
+          if ($pages.Count -gt 0) {
+            $description += "`n`n## 📋 What's new`n" + $pages[0]
+          }
+
+          function Send-Payload($payload) {
+            $json = $payload | ConvertTo-Json -Depth 10
+            if ($json.Contains([char]0x2014) -or $json.Contains([char]0x2013)) { throw 'Em/en dash detected in payload' }
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+            $resp  = Invoke-WebRequest -Uri $env:WEBHOOK_URL -Method Post -Body $bytes -ContentType 'application/json; charset=utf-8' -UseBasicParsing
+            Write-Host "Discord responded: $($resp.StatusCode) $($resp.StatusDescription) for $($env:TAG)"
           }
 
           $payload = [ordered]@{
@@ -157,7 +203,7 @@ jobs:
                 author      = [ordered]@{ name = 'Aetherphone'; url = $relList; icon_url = $icon }
                 title       = $title
                 url         = $rel.url
-                description = $desc
+                description = $description
                 color       = $color
                 fields      = $fields
                 thumbnail   = [ordered]@{ url = $icon }
@@ -171,11 +217,24 @@ jobs:
             $payload['allowed_mentions'] = [ordered]@{ roles = @($pingRole) }
           }
 
-          $json = $payload | ConvertTo-Json -Depth 10
-          if ($json.Contains([char]0x2014) -or $json.Contains([char]0x2013)) { throw 'Em/en dash detected in payload' }
-          $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
-          $resp  = Invoke-WebRequest -Uri $env:WEBHOOK_URL -Method Post -Body $bytes -ContentType 'application/json; charset=utf-8' -UseBasicParsing
-          Write-Host "Discord responded: $($resp.StatusCode) $($resp.StatusDescription) for $($env:TAG)"
+          Send-Payload $payload
+
+          for ($pageIndex = 1; $pageIndex -lt $pages.Count; $pageIndex++) {
+            Start-Sleep -Seconds 1
+            Send-Payload ([ordered]@{
+              username   = 'Aetherphone'
+              avatar_url = $icon
+              embeds     = @(
+                [ordered]@{
+                  title       = "$title (changelog continued, $($pageIndex + 1) of $($pages.Count))"
+                  url         = $rel.url
+                  description = $pages[$pageIndex]
+                  color       = $color
+                  footer      = [ordered]@{ text = 'Aetherphone'; icon_url = $icon }
+                }
+              )
+            })
+          }
 
       - name: Update local repo.json
         shell: pwsh

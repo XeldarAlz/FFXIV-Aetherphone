@@ -29,7 +29,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Chirper;
 
-internal sealed partial class ChirperApp : IResumableApp
+internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer
 {
     private enum SheetKind
     {
@@ -79,11 +79,6 @@ internal sealed partial class ChirperApp : IResumableApp
     private const float LatestScopePillPadX = 14f;
     private const float LatestScopePillGap = 8f;
     private const float FeedTabUnderline = 4f;
-    private const float TabBarHeight = 58f;
-    private const float TabBarIconSize = 24f;
-    private const float TabBarHoverRadius = 20f;
-    private const float TabBarAvatarRadius = 13f;
-    private const float TabBarAvatarRingGap = 2.5f;
     private const int TabCount = 4;
     private const int FilterToggleCount = 3;
     private const int TabRevalidateCooldownSeconds = 15;
@@ -111,7 +106,6 @@ internal sealed partial class ChirperApp : IResumableApp
     private const float SummaryEmojiSize = 13f;
     private const float SummaryEmojiStep = 10f;
     private const int SummaryEmojiCount = 3;
-    private const float ReactionsExpandSmoothTime = 0.12f;
     private const float MoreButtonRadius = 14f;
     private const float FeedBottomSpacer = 110f;
     private const float ControlRowHeight = 36f;
@@ -124,8 +118,6 @@ internal sealed partial class ChirperApp : IResumableApp
     private const float QuoteAvatarRadius = 9f;
     private const float QuoteThumbSize = 44f;
     private const int QuoteBodyMaxLines = 3;
-    private const float SegmentSmoothTime = 0.09f;
-    private const float SendRevealSmoothTime = 0.07f;
     private const float RowHeight = 44f;
 
     private static readonly TextStyle NameStyle = new(1f, FontWeight.SemiBold);
@@ -150,7 +142,7 @@ internal sealed partial class ChirperApp : IResumableApp
     private static readonly TextStyle FeedTabIdleStyle = new(1.07f, FontWeight.Medium);
     private static readonly UnderlineTabStyle FeedTabsStyle = new(FeedTabStyle, FeedTabIdleStyle,
         ChirperInk.AccentLink, ChirperInk.SegmentIdleInk, ChirperInk.Accent, FeedTabUnderline, CellPadX,
-        SegmentSmoothTime);
+        Motion.Release);
     private static readonly TextStyle WordmarkStyle = new(1.4f, FontWeight.Bold);
     private static readonly TextStyle BadgeStyle = new(0.67f, FontWeight.Bold);
     private static readonly TextStyle PopoverRowStyle = new(0.97f, FontWeight.SemiBold);
@@ -180,6 +172,8 @@ internal sealed partial class ChirperApp : IResumableApp
     private readonly AvatarComposer banner;
     private readonly SocialProfilePages profile;
     private readonly AppSkin ui = new(AppPalettes.Chirper);
+    private readonly TabBar tabBar = new();
+    private readonly TabItem[] tabItems = new TabItem[TabCount];
     private readonly ConfirmService confirm;
     private readonly TranslationService translation;
     private readonly RichTextCache bodyLayouts = new(scanHashtags: true);
@@ -229,6 +223,7 @@ internal sealed partial class ChirperApp : IResumableApp
     private string draft = string.Empty;
     private bool composeFocus;
     private bool feedScrollTopPending;
+    private bool feedActionsAnchorPending;
     private readonly FailureSlot composeFailure = new();
     private readonly FailureSlot feedFailure = new();
     private readonly FailureSlot commentFailure = new();
@@ -402,6 +397,7 @@ internal sealed partial class ChirperApp : IResumableApp
             router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         }
 
+        UpdateTourHold();
         if (avatarLightbox.Active)
         {
             avatarLightbox.Draw(screen, theme);
@@ -463,35 +459,43 @@ internal sealed partial class ChirperApp : IResumableApp
         if (!store.IsSignedIn)
         {
             DrawHomeTopBar(area);
-            TourHolds.Hold(Id);
             var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
             Typography.DrawCentered(body.Center, Loc.T(L.Chirper.SetUpAccount), ChirperInk.MutedInk);
             return;
         }
 
-        TourHolds.Release(Id);
-        var barRect = new Rect(new Vector2(area.Min.X, area.Max.Y - TabBarHeight * scale), area.Max);
-        var content = new Rect(area.Min, new Vector2(area.Max.X, barRect.Min.Y));
+        using (TabBar.ReserveContent(scale))
         using (ImRaii.PushId((int)homeTab))
         {
             switch (homeTab)
             {
                 case HomeTab.Explore:
-                    DrawDiscover(content, true);
+                    DrawDiscover(area, true);
                     break;
                 case HomeTab.Alerts:
-                    DrawActivity(content, true);
+                    DrawActivity(area, true);
                     break;
                 case HomeTab.Profile:
-                    DrawOwnProfileTab(content);
+                    DrawOwnProfileTab(area);
                     break;
                 default:
-                    DrawFeedTab(content);
+                    DrawFeedTab(area);
                     break;
             }
         }
 
-        DrawTabBar(barRect);
+        DrawTabBar(area);
+    }
+
+    private void UpdateTourHold()
+    {
+        if (store.IsSignedIn && router.Depth == 1 && homeTab == HomeTab.Feed)
+        {
+            TourHolds.Release(Id);
+            return;
+        }
+
+        TourHolds.Hold(Id);
     }
 
     private void DrawOwnProfileTab(Rect area)
@@ -516,7 +520,7 @@ internal sealed partial class ChirperApp : IResumableApp
         var listTop = activeScope == SocialFeedScope.ForYou ? rowRect.Max.Y : DrawLatestScopeRow(area, rowRect.Max.Y);
         var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
-        if (ComposeFab.Draw(listRect, "##chirperComposeFab", ChirperInk.Accent,
+        if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##chirperComposeFab", ChirperInk.Accent,
                 PhoneIcons.Feather, Loc.T(L.Chirper.NewChirp), "chirper.compose",
                 ChirperInk.AccentDeep, FabRadius, true))
         {
@@ -637,81 +641,47 @@ internal sealed partial class ChirperApp : IResumableApp
         }
     }
 
-    private void DrawTabBar(Rect bar)
+    private void DrawTabBar(Rect area)
     {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        PaintBarBackdrop(drawList, bar);
-        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(ChirperInk.Hairline), 1f);
-        var slot = bar.Width / TabCount;
-        for (var index = 0; index < TabCount; index++)
+        var hasAvatar = store.Me is not null;
+        if (!hasAvatar)
         {
-            var tab = (HomeTab)index;
-            var cellMin = new Vector2(bar.Min.X + slot * index, bar.Min.Y);
-            var cellMax = new Vector2(cellMin.X + slot, bar.Max.Y);
-            var active = homeTab == tab;
-            var hovered = UiInteract.Hover(cellMin, cellMax);
-            var iconCenter = new Vector2((cellMin.X + cellMax.X) * 0.5f, bar.Center.Y);
-            var iconInk = active ? ChirperInk.AccentLink : hovered ? ChirperInk.TitleInk : GlassPillInk;
-            var iconSize = TabBarIconSize * scale;
-            if (hovered)
-            {
-                drawList.AddCircleFilled(iconCenter, TabBarHoverRadius * scale,
-                    ImGui.GetColorU32(ChirperInk.FieldFill), 32);
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
-
-            string label;
-            switch (tab)
-            {
-                case HomeTab.Explore:
-                    PhoneIcon.Draw(drawList, iconCenter, PhoneIcons.Search, iconInk, iconSize);
-                    label = Loc.T(L.Chirper.TabExplore);
-                    break;
-                case HomeTab.Alerts:
-                    PhoneIcon.Draw(drawList, iconCenter, active ? PhoneIcons.BellFilled : PhoneIcons.Bell,
-                        iconInk, iconSize);
-                    DrawBellBadge(iconCenter, social.UnseenCount(Id));
-                    label = Loc.T(L.Social.ActivityTitle);
-                    break;
-                case HomeTab.Profile:
-                    DrawProfileTabIcon(drawList, iconCenter, active, iconInk, iconSize);
-                    label = Loc.T(L.Chirper.TabProfile);
-                    break;
-                default:
-                    PhoneIcon.Draw(drawList, iconCenter, active ? PhoneIcons.HomeFilled : PhoneIcons.Home,
-                        iconInk, iconSize);
-                    label = Loc.T(L.Chirper.TabHome);
-                    break;
-            }
-
-            HoverTooltip.Show(new Rect(cellMin, cellMax), label, HoverLabelSide.Above);
-            if (UiInteract.Click(cellMin, cellMax, hovered))
-            {
-                SelectHomeTab(tab);
-            }
+            store.EnsureMe();
         }
+
+        tabItems[(int)HomeTab.Feed] = new TabItem(Loc.T(L.Chirper.TabHome), PhoneIcons.Home, PhoneIcons.HomeFilled);
+        tabItems[(int)HomeTab.Explore] = new TabItem(Loc.T(L.Chirper.TabExplore), PhoneIcons.Search);
+        tabItems[(int)HomeTab.Alerts] = new TabItem(Loc.T(L.Social.ActivityTitle), PhoneIcons.Bell,
+            PhoneIcons.BellFilled, social.UnseenCount(Id));
+        tabItems[(int)HomeTab.Profile] = new TabItem(Loc.T(L.Chirper.TabProfile), PhoneIcons.User,
+            PhoneIcons.UserFilled, CustomIcon: hasAvatar);
+        var result = tabBar.Draw(area, ui, tabItems, (int)homeTab, icons: this);
+        UiAnchors.Report("chirper.tabbar", tabBar.Bounds);
+        if (result.Tapped < 0)
+        {
+            return;
+        }
+
+        SelectHomeTab((HomeTab)result.Tapped);
     }
 
-    private void DrawProfileTabIcon(ImDrawListPtr drawList, Vector2 center, bool active, Vector4 ink, float iconSize)
+    void ITabIconDrawer.DrawTabIcon(ImDrawListPtr drawList, int index, TabItemPose pose, bool active)
     {
         if (store.Me is not { } me)
         {
-            store.EnsureMe();
-            PhoneIcon.Draw(drawList, center, active ? PhoneIcons.UserFilled : PhoneIcons.User, ink, iconSize);
             return;
         }
 
         var scale = UiScale.Current;
-        var radius = TabBarAvatarRadius * scale;
-        DrawAvatar(drawList, center, radius, me.Name, me.World, me.AvatarUrl, 0.85f, 28, Frames.Of(me.FrameId));
+        DrawAvatar(drawList, pose.IconCenter, pose.AvatarRadius(scale), me.Name, me.World, me.AvatarUrl, 0.85f, 28,
+            Frames.Of(me.FrameId));
         if (!active)
         {
             return;
         }
 
-        drawList.AddCircle(center, radius + TabBarAvatarRingGap * scale, ImGui.GetColorU32(ChirperInk.AccentLink), 32,
-            1.6f * scale);
+        drawList.AddCircle(pose.IconCenter, pose.AvatarRingRadius(scale),
+            ImGui.GetColorU32(ChirperInk.AccentLink), 32, 1.6f * scale);
     }
 
     private static RetryGate[] BuildTabRevalidateGates()
@@ -1029,6 +999,7 @@ internal sealed partial class ChirperApp : IResumableApp
                 }
 
                 var caughtUpAfterId = ranked ? store.CaughtUpAfterId : null;
+                feedActionsAnchorPending = UiAnchors.Recording;
                 for (var index = 0; index < snapshot.Length; index++)
                 {
                     var post = snapshot[index];
@@ -1067,6 +1038,7 @@ internal sealed partial class ChirperApp : IResumableApp
                     }
                 }
 
+                feedActionsAnchorPending = false;
                 if (store.LoadingMore(scope))
                 {
                     InfiniteScroll.DrawLoadingRow(listRect.Center.X, ChirperInk.MutedInk);
@@ -1347,6 +1319,11 @@ internal sealed partial class ChirperApp : IResumableApp
         var free = MathF.Max(0f, rowWidth - (replyWidth + repostWidth + plainWidth * 2f));
         var gap = free / 3f;
         var cursorX = rowLeft;
+        if (feedActionsAnchorPending)
+        {
+            ReportFeedActions(rowLeft, rowLeft + rowWidth, centerY, ActionHitHeight * scale * 0.5f);
+        }
+
         if (DrawActionTarget(cursorX, centerY, replyWidth, ActionGlyph.Reply, replyCount,
                 ChirperInk.MutedInk, ChirperInk.Accent, Loc.T(L.Chirper.Reply)))
         {
@@ -1390,6 +1367,20 @@ internal sealed partial class ChirperApp : IResumableApp
         {
             DrawRepostMenu(post, rowLeft, popoverBottom);
         }
+    }
+
+    private void ReportFeedActions(float left, float right, float centerY, float halfHeight)
+    {
+        var visibleTop = ImGui.GetWindowPos().Y;
+        var visibleBottom = visibleTop + ImGui.GetWindowSize().Y - TabBar.ContentInset(UiScale.Current);
+        if (centerY - halfHeight < visibleTop || centerY + halfHeight > visibleBottom)
+        {
+            return;
+        }
+
+        feedActionsAnchorPending = false;
+        UiAnchors.Report("chirper.post.actions",
+            new Rect(new Vector2(left, centerY - halfHeight), new Vector2(right, centerY + halfHeight)));
     }
 
     private static float ActionTargetWidth(string count)
@@ -1674,7 +1665,7 @@ internal sealed partial class ChirperApp : IResumableApp
         }
 
         var target = reactionsExpanded ? 1f : 0f;
-        reactionsExpand.Step(target, ReactionsExpandSmoothTime,
+        reactionsExpand.Step(target, Motion.Appear,
             MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         if (!reactionsExpanded && reactionsExpand.IsResting(0f, 0.002f, 0.01f))
         {
@@ -1813,7 +1804,7 @@ internal sealed partial class ChirperApp : IResumableApp
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetForegroundDrawList();
-        var progress = Easing.EaseOutQuint(Math.Clamp(actions.Progress, 0f, 1f));
+        var progress = actions.Progress;
         var padX = 10f * scale;
         var padY = 6f * scale;
         var innerWidth = MathF.Max(1f, right - left - padX * 2f);
@@ -1883,7 +1874,7 @@ internal sealed partial class ChirperApp : IResumableApp
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetForegroundDrawList();
-        var progress = Easing.EaseOutQuint(Math.Clamp(actions.Progress, 0f, 1f));
+        var progress = actions.Progress;
         var width = RepostMenuWidth * scale;
         var rowHeight = RepostMenuRowHeight * scale;
         var pad = 5f * scale;

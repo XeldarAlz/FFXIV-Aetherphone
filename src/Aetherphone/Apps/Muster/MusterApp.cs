@@ -100,6 +100,7 @@ internal sealed partial class MusterApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
+        store.NoteWatched();
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;

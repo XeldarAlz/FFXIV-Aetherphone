@@ -100,6 +100,37 @@ internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentif
         }
     }
 
+    public void Restore(TPost post)
+    {
+        if (order is null)
+        {
+            return;
+        }
+
+        lock (gate)
+        {
+            var snapshot = items;
+            if (snapshot.Length == 0)
+            {
+                return;
+            }
+
+            if (cursor is not null && order(post, snapshot[snapshot.Length - 1]) > 0)
+            {
+                return;
+            }
+
+            var restored = CopyOnWrite.Prepend(snapshot, post);
+            if (ReferenceEquals(restored, snapshot))
+            {
+                return;
+            }
+
+            Array.Sort(restored, order);
+            items = restored;
+        }
+    }
+
     public void Trim(int max)
     {
         if (max <= 0 || order is null)

@@ -29,6 +29,8 @@ internal sealed class MinimapReader
 
     public bool HasMap { get; private set; }
 
+    public uint MapRowId => HasMap ? mapRowId : 0u;
+
     public bool HasPlayer { get; private set; }
 
     public float PlayerU { get; private set; }

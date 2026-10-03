@@ -33,6 +33,8 @@ internal sealed class CalculatorEngine
 
     public IReadOnlyList<CalcHistoryEntry> History => history;
 
+    public int SolvedCount { get; private set; }
+
     public CalcOp ActiveOperator => pending != CalcOp.None && freshEntry && !justEvaluated ? pending : CalcOp.None;
 
     public bool ShowAllClear => Display == "0" && !error;
@@ -258,6 +260,7 @@ internal sealed class CalculatorEngine
     private void PushHistory(string expression, string result)
     {
         history.Insert(0, new CalcHistoryEntry(expression, result));
+        SolvedCount++;
         if (history.Count > MaxHistory)
         {
             history.RemoveAt(history.Count - 1);

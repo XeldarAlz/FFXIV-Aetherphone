@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Shortcuts;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -80,6 +81,7 @@ internal sealed partial class ShortcutsApp
         }
 
         var card = GroupCard.Begin(theme, matches, PluginRowHeight);
+        var anchorReported = false;
         for (var index = 0; index < entries.Count; index++)
         {
             var entry = entries[index];
@@ -88,7 +90,14 @@ internal sealed partial class ShortcutsApp
                 continue;
             }
 
-            DrawPluginRow(card.NextRow(), entry, scale, onPick);
+            var row = card.NextRow();
+            if (!anchorReported)
+            {
+                anchorReported = true;
+                UiAnchors.Report("shortcuts.plugin.row", row);
+            }
+
+            DrawPluginRow(row, entry, scale, onPick);
         }
 
         card.End();

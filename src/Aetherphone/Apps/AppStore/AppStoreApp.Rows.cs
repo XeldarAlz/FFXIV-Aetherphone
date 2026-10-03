@@ -11,6 +11,8 @@ namespace Aetherphone.Apps.AppStore;
 
 internal sealed partial class AppStoreApp
 {
+    private const float StatePillWidth = 68f;
+
     private void DrawIcon(ImDrawListPtr drawList, Vector2 center, float size, IPhoneApp app)
     {
         var scale = UiScale.Current;
@@ -18,6 +20,11 @@ internal sealed partial class AppStoreApp
         var min = new Vector2(center.X - half, center.Y - half);
         var max = new Vector2(center.X + half, center.Y + half);
         var radius = size * Metrics.Radius.TileFactor;
+        if (AppIconTile.TryDraw(drawList, app.Id, app.Accent, min, max, radius, 1f, true, scale))
+        {
+            return;
+        }
+
         var surface = IconTile.Surface(app.Accent);
         Elevation.IconRest(drawList, min, max, radius, scale);
         IconTile.FillShaded(drawList, min, max, radius, surface);
@@ -32,7 +39,7 @@ internal sealed partial class AppStoreApp
     private bool DrawAppRow(Rect row, IPhoneApp app, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var pillWidth = 68f * scale;
+        var pillWidth = StatePillWidth * scale;
         var pillHeight = 28f * scale;
         var pill = new Rect(
             new Vector2(row.Max.X - pillWidth, row.Center.Y - pillHeight * 0.5f),
@@ -147,7 +154,8 @@ internal sealed partial class AppStoreApp
             if (!rowAnchorTaken)
             {
                 rowAnchorTaken = true;
-                UiAnchors.Report("appstore.row", row);
+                UiAnchors.Report("appstore.row",
+                    new Rect(row.Min, new Vector2(row.Max.X - (StatePillWidth + 10f) * scale, row.Max.Y)));
             }
 
             if (DrawAppRow(row, entries[index], scale))

@@ -8,9 +8,10 @@ internal sealed record ChatKeyStatus(
     bool VaultUnlocked,
     bool CanEncrypt,
     int CurrentGeneration,
-    string[] MembersWithoutKeys)
+    string[] MembersWithoutKeys,
+    bool Known = true)
 {
-    public static readonly ChatKeyStatus None = new(false, false, 0, Array.Empty<string>());
+    public static readonly ChatKeyStatus None = new(false, false, 0, Array.Empty<string>(), false);
 }
 
 internal sealed class ConversationKeyStore
@@ -185,7 +186,7 @@ internal sealed class ConversationKeyStore
     {
         if (vault.State != KeyVaultState.Unlocked)
         {
-            return new ChatKeyStatus(false, false, CurrentGeneration(scope), Array.Empty<string>());
+            return await ServerStatusAsync(surface, remoteId, token).ConfigureAwait(false);
         }
 
         ConversationKeysDto? keys = null;
@@ -236,11 +237,23 @@ internal sealed class ConversationKeyStore
 
         if (keys is null)
         {
-            return new ChatKeyStatus(true, false, CurrentGeneration(scope), Array.Empty<string>());
+            return new ChatKeyStatus(true, false, CurrentGeneration(scope), Array.Empty<string>(), false);
         }
 
         var canEncrypt = keys.MembersWithoutKeys.Length == 0 && TryGetCek(scope, keys.CurrentGeneration, out _);
         return new ChatKeyStatus(true, canEncrypt, keys.CurrentGeneration, keys.MembersWithoutKeys);
+    }
+
+    private static async Task<ChatKeyStatus> ServerStatusAsync(KeySurface surface, string remoteId,
+        CancellationToken token)
+    {
+        var keys = await surface.ThreadKeys(remoteId, token).ConfigureAwait(false);
+        if (keys is null)
+        {
+            return ChatKeyStatus.None;
+        }
+
+        return new ChatKeyStatus(false, false, keys.CurrentGeneration, keys.MembersWithoutKeys);
     }
 
     private bool ShouldRekeyUnreadable(string scope, int generation)

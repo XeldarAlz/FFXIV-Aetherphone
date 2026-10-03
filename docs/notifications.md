@@ -17,9 +17,10 @@ This doc walks the full notification pipeline on the client: how a notification 
 | src/Aetherphone/Core/Notifications/SoundTokens.cs | `file:` and `silent` token format |
 | src/Aetherphone/Core/Notifications/SoundEffectPlayer.cs | NAudio playback, one-shots and the ringtone loop |
 | src/Aetherphone/Core/Social/SocialActivity.cs | Numbered social type catalog and body text |
-| src/Aetherphone/Windows/Components/NotificationCenter.cs | Stacked list, expand, swipe to delete |
-| src/Aetherphone/Windows/Components/NotificationCard.cs | Single card rendering |
-| src/Aetherphone/Windows/Components/NotificationBanner.cs | Drop-down banner over the screen |
+| src/Aetherphone/Core/Notifications/NotificationGroups.cs | Pure per-app grouping, stack math, summary counts |
+| src/Aetherphone/Windows/Components/Notify/NotificationCenter.cs | Stacked list, expand, swipe to clear, summary pill |
+| src/Aetherphone/Windows/Components/Notify/NotificationCard.cs | Glass card rendering and the one app icon method |
+| src/Aetherphone/Windows/Components/Notify/NotificationBanner.cs | Drop-down glass banner over the screen |
 | src/Aetherphone/Apps/Notifications/NotificationsApp.cs | The Notifications app that hosts the center |
 | src/Aetherphone/Apps/Settings/Pages/NotificationsPage.cs | Settings: quiet while busy, global banner switch, per-app list |
 | src/Aetherphone/Apps/Settings/Pages/AppNotificationPage.cs | Settings: one channel's enable, banner, and sound |
@@ -35,6 +36,8 @@ Every notification travels the same path, no matter who produced it:
 4. Survivors get a sequence `Id`, land in the `Recent` list (capped at `MaxRetained` = 50, oldest dropped), and bump `UnreadCount`. The `Added` event fires.
 5. Alerts (banner, shake, sound) then pass three shared gates: the player must be logged in, `Configuration.DoNotDisturb` must be off, and when `Configuration.QuietWhileBusy` is on (it defaults to true) `PlayerBusy.Now` must be false. `PlayerBusy.Now` (src/Aetherphone/Core/Game/PlayerBusy.cs) is true in combat, inside a duty, during a cutscene, and while zoning, so a fresh install is silent in all of those states by design. Behind the shared gates, three things happen independently: the `Presented` event fires only when the global `Configuration.ShowNotificationBanner` and the channel's `ShowNotificationBanner` setting are both on (`NotificationBanner` listens to it and shows the drop-down card); the `Vibration` event fires when `Configuration.Vibration` is on (`MinimizedPhone` and `PhoneShell` listen to it and shake the minimized puck or the open phone, even when banners are off); and a sound may play.
 6. The notification now sits in the notification center until the user taps it (routed by `NotificationRouter`), swipes it away, clears all, or it ages out.
+
+Clock alarms and the Clock timer also ring: `ClockAlarmService` posts a muted notification (`PhoneNotification.Muted` skips the notification sound) and calls `AlarmRinger` (src/Aetherphone/Core/Clock/AlarmRinger.cs), which loops `Sounds/Ui/alarm.wav` or `timer.wav` at the ringtone volume, even in Silent mode, raises `Presented` so the phone opens like an incoming call, and shows `AlarmOverlay` with Stop and, for alarms, a nine-minute Snooze. Ringing stops by itself after five minutes.
 
 Producers are spread across the codebase. Local ones include `TimerNotifier`, `ClockAlarmService`, `ReminderService`, and `CalendarReminderService` in src/Aetherphone/Core/Notifications/, plus `ChatNotifier` in src/Aetherphone/Core/GameChat/ for in-game chat. Networked ones include `SocialNotificationService` (social activity, which also carries missed calls as type 20), `CallHub` (incoming calls), and the chat stores built on `ChatThreadStoreBase`.
 
@@ -103,11 +106,13 @@ Both call `NotificationService.MarkAllRead()` on open (`NotificationsApp.OnOpene
 
 Behavior, all in `NotificationCenter`:
 
-- **Stacking**: `BuildGroups` walks `Recent` newest-first and buckets by `StackKey`. A collapsed group shows the newest card on top with up to `MaxPeek` = 2 peeked card edges behind it and a count badge (`NotificationCard.DrawCountBadge`).
-- **Expanding**: tapping a collapsed multi-item group expands it under a header with a "Show less" action. Groups with fewer than two items are forced collapsed by `SyncStates`.
-- **Swipe to delete**: dragging a card left reveals a delete affordance; releasing past `SwipeCommitFraction` (42% of the card width) commits the removal. Swiping a collapsed group card removes the whole group (`NotificationService.RemoveGroup`); swiping an expanded row removes one item (`NotificationService.Remove`). Vertical drags scroll instead; the axis lock decides after 6 logical pixels of movement.
-- **Tap**: a tap (small total movement) on a single card calls `NotificationRouter.Open`. A tap on a collapsed group expands it first.
-- **Clear all**: the pill above the list calls `NotificationService.Clear()`.
+- **Grouping**: `NotificationGroups.Rebuild` (src/Aetherphone/Core/Notifications/NotificationGroups.cs) walks `Recent` newest-first and buckets by `StackKey`; groups run newest arrival first and items inside a group run newest first. The center rebuilds only when `NotificationService.Version` or the UI language changes, so no grouping work happens per frame.
+- **Stacking**: a collapsed group shows the newest card as a full glass card with up to two more layers stacked behind it (`NotificationGroups.MaxVisibleLayers` = 3), each layer 6 units lower and scaled by 0.94 per step, and an "n more" caption under the stack (`NotificationGroups.HiddenCount` = count minus one).
+- **Expanding**: tapping a collapsed multi-item stack expands it under a header that carries the sender title, a glass "Clear All" pill for that group, and a "Show Less" action; tapping the header collapses it again. Groups with fewer than two items are forced collapsed by `SyncStates`.
+- **Swipe to clear**: dragging a card left reveals a "Clear" action (`RevealWidth` = 84 units); releasing past half of it parks the card open, and a tap on the action clears that one card. Releasing past `SwipeCommitFraction` (42% of the card width) clears it straight away. Swiping a collapsed stack acts on the whole group (`NotificationService.RemoveGroup`); swiping an expanded row acts on one item (`NotificationService.Remove`). Tapping anywhere else closes the revealed action. Vertical drags scroll instead; the axis lock decides after 6 logical pixels of movement.
+- **Tap**: a tap (small total movement) on a single card calls `NotificationRouter.Open`. A tap on a collapsed stack expands it first.
+- **Summary pill**: a glass capsule above the list shows how many notifications are waiting and how old the oldest one is, with a "Clear All" action that calls `NotificationService.Clear()`.
+- **Surfaces**: every card, pill and the banner draw through `Material.LiquidGlass` in `GlassTone.Dark` (the banner picks `GlassTone.Light` over a bright app background). The app icon is drawn in exactly one place, `NotificationCard.DrawAppIcon`.
 
 ## Banners
 
@@ -120,6 +125,7 @@ Rules, all in `OnPresented` and the stage machine:
 - At most `MaxQueued` = 4 banners wait in line; extras are dropped.
 - A banner holds for `HoldSeconds` = 4 (paused while hovered or dragged), then animates out.
 - Tap opens the notification through `NotificationRouter`; dragging up past a distance or velocity threshold dismisses it.
+- The banner is a 68 unit glass card with a 24 unit radius that springs in from above the status bar and back out over 0.14 seconds; it shows the 36 unit app icon, the title, one line of body and the clock time through `TimeText.Clock`.
 
 ## Channels and per-app settings
 
@@ -141,7 +147,7 @@ There are two sound kinds (`SoundKind`): `Ringtone` for calls and `Notification`
 - User files live under the plugin config directory in `Sounds/Ringtones` and `Sounds/Notifications`. `SoundService.AddUserFile` copies a picked file there; a user file with the same name as a bundled one wins (`SoundLibrary.TryResolvePath` checks the user directory first).
 - Only `*.mp3` and `*.wav` are scanned.
 
-Sounds are identified by tokens (`SoundTokens`): `file:<name>` for a file, `silent` for none, and empty string for the library default. Legacy `game:` tokens from old versions are migrated by `Configuration.MigrateSoundSettings`. Defaults are `SoundLibrary.BundledRingtoneToken` (`file:Ringtone_1.mp3`) and `SoundLibrary.BundledNotificationToken` (`file:Notification_1.mp3`).
+Sounds are identified by tokens (`SoundTokens`): `file:<name>` for a file, `silent` for none, and empty string for the library default. Legacy `game:` tokens from old versions are migrated by `Configuration.MigrateSoundSettings`. Defaults are `SoundLibrary.BundledRingtoneToken` (`file:Signal.mp3`) and `SoundLibrary.BundledNotificationToken` (`file:Chime.mp3`). Choices that point at a removed bundled file are rewritten to its replacement by `Configuration.MigrateRetiredSounds`.
 
 Playback goes through `SoundService` on top of `SoundEffectPlayer`, which dispatches NAudio readers by file extension (`SoundEffectPlayer.OpenReader`): `.mp3` plays through the managed `Mp3FileReaderBase` with an `Mp3FrameDecompressor`, `.wav` through `WaveFileReader`, and `MediaFoundationReader` (Windows Media Foundation) is only the fallback, for other extensions and for files the managed readers reject. The managed-first order is what keeps sounds Wine-safe; src/Aetherphone/Sounds/README.md documents the dispatch. `PlayNotification(settingsKey)` plays a one-shot at `Configuration.NotificationVolume`, and `StartCallRing`/`StopCallRing` loop the ringtone at `Configuration.RingtoneVolume`. Both volumes are set with the continuous slider in the sound pages under Settings > Sounds, which links to Ringtone and Notification Sound (`VolumeSlider` in src/Aetherphone/Windows/Components/VolumeSlider.cs); it commits and previews on release so a drag does not save the config every frame. `NotificationService.ShouldPlaySound` throttles to one sound per `StackKey` per 3 seconds (`SoundRepeatSeconds`), so a burst in one conversation dings once.
 
@@ -202,7 +208,7 @@ Whether the count actually reaches the tile is a separate, generic on/off switch
 
 The toggle is not a separate screen: Settings > Notifications and Badges (`NotificationsPage`) builds one row per app from the live app list (`AppBundle.Apps`, threaded into `SettingsApp`/`NotificationsPage` the same way it already reaches `AppStoreApp`), showing any app that either has a notification channel (`NotificationChannels.Contains`) or `HasBadge`. `AppNotificationPage` then draws whichever sections apply to that app, top to bottom: Alerts (only when it has a channel), a "Show badge" row under Home Screen (only when `HasBadge` is true), then Sound (only when it has a channel and notifications are enabled). An app can have either, both, or (for most apps, which set neither) no row at all.
 
-The minimized phone also shows `NotificationService.UnreadCount` as a badge (`MinimizedPhone.DrawBadge` in src/Aetherphone/Windows/Components/Chrome/MinimizedPhone.cs), and the DTR bar entry appends the same count (`Plugin.UpdateDtrBadge`). Both read `NotificationsApp`'s badge preference, so turning that app's badge off clears all three surfaces. Neither recomputes per frame: they refresh on `NotificationService.Changed` and on `Configuration.BadgeSettingsChanged`, which `SetAppBadgeEnabled` raises.
+The minimized phone also shows `NotificationService.UnreadCount` as a badge (`MinimizedPhone.DrawBadge` in src/Aetherphone/Windows/Components/Chrome/MinimizedPhone.cs), and the server info bar entry draws the same count as plain digits after the phone icon (`ServerBarEntry` in src/Aetherphone/Core/Platform/ServerBarEntry.cs). The bar is a native text node, so the icon is not part of the text: the text is only a blank slot (`MinimumWidth` guarantees it), a Dev or Beta tag on prerelease builds and the plain count, the plugin name lives in the tooltip, and `ServerBarEntry.Draw` paints the FontAwesome phone glyph (`FontAwesomeIcon.Mobile`, or `MobileVibrate` while the count is above zero, both declared in IconPlan) with Dalamud's icon font into the entry's `ScreenBounds` on the ImGui background draw list, skipped whenever the game UI or the `_DTR` addon is hidden. `Refresh` also writes the native tooltip and re-runs on `Plugin.OnLanguageChanged`. Both read `NotificationsApp`'s badge preference, so turning that app's badge off clears all three surfaces. Neither recomputes per frame: they refresh on `NotificationService.Changed` and on `Configuration.BadgeSettingsChanged`, which `SetAppBadgeEnabled` raises.
 
 ## Social notification types
 

@@ -2,8 +2,8 @@ namespace Aetherphone.Core.Notifications;
 
 internal sealed class SoundLibrary
 {
-    public const string BundledRingtoneToken = SoundTokens.FilePrefix + "Ringtone_1.mp3";
-    public const string BundledNotificationToken = SoundTokens.FilePrefix + "Notification_1.mp3";
+    public const string BundledRingtoneToken = SoundTokens.FilePrefix + "Signal.mp3";
+    public const string BundledNotificationToken = SoundTokens.FilePrefix + "Chime.mp3";
 
     private static readonly string[] FilePatterns = { "*.mp3", "*.wav" };
     private readonly DirectoryInfo bundledDirectory;

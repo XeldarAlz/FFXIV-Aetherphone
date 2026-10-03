@@ -18,6 +18,7 @@ internal enum LifestreamOutcome
 
 internal static class LifestreamBridge
 {
+    public const string ProjectUrl = "https://github.com/NightmareXIV/Lifestream";
     private const string InternalName = "Lifestream";
     private const int HouseProperty = 0;
 

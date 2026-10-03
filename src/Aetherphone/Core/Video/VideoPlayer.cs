@@ -64,6 +64,38 @@ internal sealed class VideoPlayer : IDisposable
         set => engine.MaxQualityHeight = value;
     }
 
+    internal bool SpatialAudio
+    {
+        get => engine.SpatialAudio;
+        set => engine.SpatialAudio = value;
+    }
+
+    internal float SpatialRange
+    {
+        get => engine.SpatialRange;
+        set => engine.SpatialRange = value;
+    }
+
+    internal bool MuteInBackground
+    {
+        get => engine.MuteInBackground;
+        set => engine.MuteInBackground = value;
+    }
+
+    internal bool HoldScreen
+    {
+        get => engine.HoldScreen;
+        set => engine.HoldScreen = value;
+    }
+
+    internal bool ScreenOnStandby => engine.IsStandby;
+
+    internal int LoadCount { get; private set; }
+
+    internal MediaTrack[] ReadTracks() => HasMedia ? engine.ReadTracks() : [];
+
+    internal void SelectTrack(MediaTrackKind kind, int id) => engine.SelectTrack(kind, id);
+
     internal void SetVolume(int volumePercent) => engine.SetVolume(volumePercent);
 
     internal void Play(string url, double startSeconds = 0d, bool playing = true)
@@ -126,12 +158,14 @@ internal sealed class VideoPlayer : IDisposable
         if (pendingLoaded)
         {
             pendingLoaded = false;
+            LoadCount++;
             if (State == VideoPlaybackState.Loading)
             {
                 State = VideoPlaybackState.Playing;
             }
         }
 
+        engine.OnFrameworkUpdate();
         if (!HasMedia)
         {
             Progress = default;

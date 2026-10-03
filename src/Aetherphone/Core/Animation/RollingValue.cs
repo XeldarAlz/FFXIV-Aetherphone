@@ -7,12 +7,12 @@ internal struct RollingValue
     private const float PopLimit = 1.30f;
     private const float PopSettleSpeed = 5.5f;
 
-    private float shown;
+    private double shown;
     private float pop;
     private int target;
     private bool initialized;
 
-    public readonly int Display => (int)MathF.Round(shown);
+    public readonly int Display => (int)Math.Round(shown);
     public readonly float PopScale => 1f + pop;
 
     public void Snap(int value)
@@ -44,13 +44,13 @@ internal struct RollingValue
         }
 
         var difference = target - shown;
-        if (MathF.Abs(difference) < 0.5f)
+        if (Math.Abs(difference) < 0.5)
         {
             shown = target;
         }
         else
         {
-            shown += difference * MathF.Min(1f, deltaSeconds * followSpeed);
+            shown += difference * Math.Min(1.0, deltaSeconds * followSpeed);
         }
 
         pop = MathF.Max(0f, pop - deltaSeconds * PopSettleSpeed * (pop + 0.12f));

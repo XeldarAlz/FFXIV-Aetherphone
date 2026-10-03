@@ -15,7 +15,6 @@ internal sealed class ConductGateOverlay
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground;
 
-    private const float RevealSmoothTime = 0.18f;
     private const float MaxDim = 0.74f;
     private const float MinPanelScale = 0.96f;
     private const float PanelRounding = 28f;
@@ -67,7 +66,7 @@ internal sealed class ConductGateOverlay
         wasActive = active is not null;
 
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        reveal.Step(active is not null ? 1f : 0f, RevealSmoothTime, delta);
+        reveal.Step(active is not null ? 1f : 0f, Motion.Appear, delta);
         if (shown is null)
         {
             return;

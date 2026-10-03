@@ -265,6 +265,50 @@ internal sealed class VelvetClient
             AethernetJsonContext.Default.VelvetPostDto, token, null, onFailure);
     }
 
+    public Task<VelvetPinPostResponse?> PinPostAsync(string postId, bool replace, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        var path = $"/velvet/posts/{Uri.EscapeDataString(postId)}/pin";
+        if (replace)
+        {
+            path += "?replace=true";
+        }
+
+        return net.RequestAsync(HttpMethod.Put, path, AethernetJsonContext.Default.VelvetPinPostResponse, token, null,
+            onFailure);
+    }
+
+    public Task<VelvetPostDto?> UnpinPostAsync(string postId, CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.RequestAsync(HttpMethod.Delete, $"/velvet/posts/{Uri.EscapeDataString(postId)}/pin",
+            AethernetJsonContext.Default.VelvetPostDto, token, null, onFailure);
+    }
+
+    public Task<VelvetPostDto?> ArchivePostAsync(string postId, CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.RequestAsync(HttpMethod.Put, $"/velvet/posts/{Uri.EscapeDataString(postId)}/archive",
+            AethernetJsonContext.Default.VelvetPostDto, token, null, onFailure);
+    }
+
+    public Task<VelvetPostDto?> UnarchivePostAsync(string postId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.RequestAsync(HttpMethod.Delete, $"/velvet/posts/{Uri.EscapeDataString(postId)}/archive",
+            AethernetJsonContext.Default.VelvetPostDto, token, null, onFailure);
+    }
+
+    public Task<VelvetFeedPage?> ArchivedPostsAsync(string? cursor, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        var path = "/velvet/me/archived";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.VelvetFeedPage, token, null, onFailure);
+    }
+
     public Task<VelvetPostDto?> ReactAsync(string postId, int kind, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {

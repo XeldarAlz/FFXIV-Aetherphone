@@ -5,6 +5,7 @@ namespace Aetherphone.Core.ControlCenter;
 internal sealed class ControlLayoutService
 {
     public const int Columns = 4;
+    public const int LayoutVersion = 1;
     private const int SolverRows = 16;
 
     private readonly IControlRegistry registry;
@@ -167,6 +168,7 @@ internal sealed class ControlLayoutService
             return;
         }
 
+        var migrated = Migrate(saved);
         var placed = new HashSet<string>();
         for (var index = 0; index < saved.Items.Count; index++)
         {
@@ -181,6 +183,74 @@ internal sealed class ControlLayoutService
 
         LoadEnabled(saved, placed);
         placementsDirty = true;
+        if (migrated)
+        {
+            Save();
+        }
+    }
+
+    private static bool Migrate(ControlLayout saved)
+    {
+        if (saved.Version >= LayoutVersion)
+        {
+            return false;
+        }
+
+        FoldClusterMembers(saved);
+        saved.Version = LayoutVersion;
+        return true;
+    }
+
+    private static void FoldClusterMembers(ControlLayout saved)
+    {
+        var insertAt = -1;
+        for (var index = saved.Items.Count - 1; index >= 0; index--)
+        {
+            if (!IsClusterMember(saved.Items[index].ModuleId))
+            {
+                continue;
+            }
+
+            saved.Items.RemoveAt(index);
+            insertAt = index;
+        }
+
+        if (insertAt < 0)
+        {
+            return;
+        }
+
+        saved.Items.Insert(insertAt, new ControlItem
+        {
+            ModuleId = ControlDefaults.ClusterId,
+            Span = ControlSpans.Serialize(ControlSpan.Large),
+        });
+        for (var index = saved.Enabled.Count - 1; index >= 0; index--)
+        {
+            if (IsClusterMember(saved.Enabled[index]))
+            {
+                saved.Enabled.RemoveAt(index);
+            }
+        }
+
+        if (!saved.Enabled.Contains(ControlDefaults.ClusterId))
+        {
+            saved.Enabled.Add(ControlDefaults.ClusterId);
+        }
+    }
+
+    private static bool IsClusterMember(string moduleId)
+    {
+        var members = ControlDefaults.ClusterMembers;
+        for (var index = 0; index < members.Length; index++)
+        {
+            if (string.Equals(members[index], moduleId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void LoadDefaults()
@@ -258,7 +328,7 @@ internal sealed class ControlLayoutService
 
     private void Save()
     {
-        var layout = new ControlLayout();
+        var layout = new ControlLayout { Version = LayoutVersion };
         for (var index = 0; index < slots.Count; index++)
         {
             layout.Items.Add(new ControlItem

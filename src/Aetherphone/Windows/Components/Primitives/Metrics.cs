@@ -7,10 +7,12 @@ internal static class Metrics
         public const float Xxs = 4f;
         public const float Xs = 6f;
         public const float Sm = 8f;
+        public const float Glass = 10f;
         public const float Md = 12f;
         public const float Lg = 16f;
         public const float Xl = 22f;
         public const float Xxl = 32f;
+        public const float GlassInset = 10f;
     }
 
     internal static class Radius
@@ -20,7 +22,10 @@ internal static class Metrics
         public const float Md = 12f;
         public const float Card = 16f;
         public const float Lg = 18f;
+        public const float Widget = 22f;
+        public const float Grouped = 22f;
         public const float TileFactor = 0.28f;
+        public const float HomeTileFactor = 0.26f;
     }
 
     internal static class Size
@@ -36,6 +41,11 @@ internal static class Metrics
         public const float IconTile = 28f;
         public const float HeroRing = 56f;
         public const float HomeIndicatorInset = 34f;
+        public const float GrabberWidth = 36f;
+        public const float GrabberHeight = 5f;
+        public const float Pill = 44f;
+        public const float TapTarget = 44f;
+        public const float GlassButton = 36f;
     }
 
     internal static class Stroke

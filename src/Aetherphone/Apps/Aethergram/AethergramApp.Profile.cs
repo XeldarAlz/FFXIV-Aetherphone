@@ -17,6 +17,7 @@ internal sealed partial class AethergramApp
     {
         Settings,
         Saved,
+        Archive,
         FollowRequests,
         Encryption,
         Rules,
@@ -42,7 +43,7 @@ internal sealed partial class AethergramApp
     private const float ProfileEmptyHeight = 250f;
     private const float ProfileCreateWidth = 132f;
     private const float PrivateLockRadius = 26f;
-    private const int ProfileMenuMaxItems = 6;
+    private const int ProfileMenuMaxItems = 7;
     private const int ProfileTabCount = 2;
 
     private static readonly TextStyle OwnProfileTitleStyle = new(1.15f, FontWeight.SemiBold);
@@ -185,6 +186,17 @@ internal sealed partial class AethergramApp
             }
 
             store.EnsureTaggedPosts(userId);
+            if (user.IsMe)
+            {
+                store.EnsurePendingTags();
+                var pendingTagCount = store.PendingTagCount;
+                if (pendingTagCount > 0
+                    && DrawRequestRow(pendingTagCount, PhoneIcons.UserSquareRounded, Loc.T(L.PhotoTag.PendingTags)))
+                {
+                    OpenPendingTags();
+                }
+            }
+
             DrawPostGrid(store.TaggedPosts, L.PhotoTag.NoTagged, store.HasMoreTagged, store.TaggedLoadingMore,
                 store.LoadMoreTaggedPosts, SquareGrid, PostSource.Tagged);
         }
@@ -239,7 +251,7 @@ internal sealed partial class AethergramApp
             DrawProfileStats(drawList, user, innerLeft, innerRight, statsRowTop + statsHeight * 0.5f);
         }
         UserName.DrawAuto(drawList, "aethergram.profile.name." + user.Id, displayName, user.Badges, user.ProfileBadges,
-            innerLeft, nameTop, innerWidth, ProfileNameStyle, Ink.TitleInk, theme, 2);
+            innerLeft, nameTop, innerWidth, ProfileNameStyle, Ink.TitleInk, theme);
         if (bioHeight > 0f)
         {
             Typography.DrawWrappedLeft(new Vector2(innerLeft, bioTop), bioText, Ink.BodyInk, TextStyles.Body, innerWidth);
@@ -486,7 +498,7 @@ internal sealed partial class AethergramApp
         }
 
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        profileTabSlide.Step(profileTab, TabSmoothTime, delta);
+        profileTabSlide.Step(profileTab, Motion.Release, delta);
         var underlineLeft = row.Min.X + profileTabSlide.Value * slot;
         drawList.AddRectFilled(new Vector2(underlineLeft, row.Max.Y - IconTabUnderline * scale),
             new Vector2(underlineLeft + slot, row.Max.Y), ImGui.GetColorU32(Ink.TitleInk));
@@ -582,11 +594,44 @@ internal sealed partial class AethergramApp
         }
     }
 
+    private void OpenArchive()
+    {
+        store.RefreshArchived();
+        router.Push(AethergramRoute.Archive);
+    }
+
+    private void DrawArchive(Rect area)
+    {
+        var scale = UiScale.Current;
+        DrawScreenHeader(area, Loc.T(L.Social.ArchiveTitle));
+        var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
+        var posts = store.ArchivedPosts;
+        using (AppSurface.BeginEdgeToEdge(listRect))
+        {
+            if (posts.Length > 0)
+            {
+                ImGui.Dummy(new Vector2(0f, 2f * scale));
+                DrawPostGrid(posts, L.Social.ArchiveEmpty, store.HasMoreArchived, store.ArchivedLoadingMore,
+                    store.LoadMoreArchived, SquareGrid, PostSource.Archive);
+                return;
+            }
+
+            if (store.ArchivedLoading)
+            {
+                DrawEmptyState(listRect, Loc.T(L.Common.Loading), string.Empty);
+                return;
+            }
+
+            DrawEmptyState(listRect, Loc.T(L.Social.ArchiveEmpty), Loc.T(L.Social.ArchiveEmptyHint));
+        }
+    }
+
     private void OpenProfileMenu()
     {
         profileMenuCount = 0;
         AddProfileMenuItem(Loc.T(L.Aethergram.Settings), ProfileMenuAction.Settings);
         AddProfileMenuItem(Loc.T(L.Aethergram.SavedTitle), ProfileMenuAction.Saved);
+        AddProfileMenuItem(Loc.T(L.Social.ArchiveTitle), ProfileMenuAction.Archive);
         AddProfileMenuItem(Loc.T(L.Social.BadgeProgress), ProfileMenuAction.BadgeProgress);
         var pending = store.PendingFollowRequestCount;
         AddProfileMenuItem(pending > 0 ? Loc.T(L.Social.FollowRequestsCount, pending) : Loc.T(L.Social.FollowRequests),
@@ -624,6 +669,9 @@ internal sealed partial class AethergramApp
                 break;
             case ProfileMenuAction.Saved:
                 OpenSaved();
+                break;
+            case ProfileMenuAction.Archive:
+                OpenArchive();
                 break;
             case ProfileMenuAction.BadgeProgress:
                 router.Push(AethergramRoute.BadgeProgress);

@@ -6,53 +6,73 @@ internal static partial class TourRegistry
 {
     private static void AddMediaTours(Dictionary<string, GuideSequence> tours)
     {
-        Add(tours, "music", 2,
+        Add(tours, "music", 4,
             new[]
             {
-                GuideStep.Note(L.Onboarding.MusicTitle, L.Onboarding.MusicBody),
-                GuideStep.Point(L.Onboarding.MusicSearchTitle, L.Onboarding.MusicSearchBody, "music.search"),
-                GuideStep.Point(L.Onboarding.MusicRadioTitle, L.Onboarding.MusicRadioBody, "music.categories"),
-                GuideStep.Note(L.Onboarding.MusicNowPlayingTitle, L.Onboarding.MusicNowPlayingBody),
+                GuideStep.Intro(L.Apps.Music, L.Onboarding.MusicIntroBody),
+                GuideStep.TryTap(L.Onboarding.MusicFindTitle, L.Onboarding.MusicFindBody, "music.tab.search"),
+                GuideStep.Point(L.Onboarding.MusicScopesTitle, L.Onboarding.MusicScopesBody, "music.search.scopes",
+                    GuideGesture.None),
+                GuideStep.TryTap(L.Onboarding.MusicRadioTabTitle, L.Onboarding.MusicRadioTabBody, "music.tab.radio"),
+                GuideStep.TryTap(L.Onboarding.MusicLibraryTitle, L.Onboarding.MusicLibraryBody, "music.tab.library"),
+                GuideStep.Point(L.Onboarding.MusicPlaylistTitle, L.Onboarding.MusicPlaylistBody,
+                    "music.library.playlists", GuideGesture.Tap),
+                GuideStep.TryTap(L.Onboarding.MusicJamTitle, L.Onboarding.MusicJamBody, "music.tab.home"),
             });
-        Add(tours, "photos", 2,
+        Add(tours, "photos", 3,
             new[]
             {
-                GuideStep.Point(L.Onboarding.PhotosTitle, L.Onboarding.PhotosBody, "photos.grid"),
-                GuideStep.Note(L.Onboarding.PhotosEmptyTitle, L.Onboarding.PhotosEmptyBody),
+                GuideStep.TryTap(L.Onboarding.PhotosLibraryTitle, L.Onboarding.PhotosLibraryBody,
+                    "photos.tab.library"),
+                GuideStep.Point(L.Onboarding.PhotosOpenTitle, L.Onboarding.PhotosOpenBody, "photos.grid",
+                    GuideGesture.None),
+                GuideStep.TryTap(L.Onboarding.PhotosAlbumsTitle, L.Onboarding.PhotosAlbumsBody, "photos.tab.albums"),
+                GuideStep.Point(L.Onboarding.PhotosNewAlbumTitle, L.Onboarding.PhotosNewAlbumBody, "photos.albums.new",
+                    GuideGesture.Tap),
+                GuideStep.Point(L.Onboarding.PhotosTrashTitle, L.Onboarding.PhotosTrashBody, "photos.albums.trash",
+                    GuideGesture.None),
             });
-        Add(tours, "camera", 3,
+        Add(tours, "camera", 4,
             new[]
             {
-                GuideStep.Note(L.Onboarding.CameraTitle, L.Onboarding.CameraBody),
-                GuideStep.Point(L.Onboarding.CameraModesTitle, L.Onboarding.CameraModesBody, "camera.modes"),
-                GuideStep.Point(L.Onboarding.CameraFlashTitle, L.Onboarding.CameraFlashBody, "camera.flash"),
-                GuideStep.Point(L.Onboarding.CameraShowUiTitle, L.Onboarding.CameraShowUiBody, "camera.showUi"),
-                GuideStep.Point(L.Onboarding.CameraShutterTitle, L.Onboarding.CameraShutterBody, "camera.shutter"),
+                GuideStep.Point(L.Onboarding.CameraFrameTitle, L.Onboarding.CameraFrameBody, "camera.viewfinder",
+                    GuideGesture.None),
+                GuideStep.TryTap(L.Onboarding.CameraSquareTitle, L.Onboarding.CameraSquareBody, "camera.mode.square"),
+                GuideStep.Point(L.Onboarding.CameraShootTitle, L.Onboarding.CameraShootBody, "camera.shutter",
+                    GuideGesture.Tap),
+                GuideStep.Point(L.Onboarding.CameraShowUiTitle, L.Onboarding.CameraHudBody, "camera.showUi",
+                    GuideGesture.Tap),
+                GuideStep.Point(L.Onboarding.CameraRotateTitle, L.Onboarding.CameraRotateBody, "camera.rotate",
+                    GuideGesture.Tap),
+                GuideStep.Point(L.Onboarding.CameraLastShotTitle, L.Onboarding.CameraLastShotBody, "camera.lastShot",
+                    GuideGesture.Tap),
             });
-        Add(tours, "aetherstream", 1,
+        Add(tours, "aetherstream", 3,
             new[]
             {
-                GuideStep.Note(L.Apps.AetherStream, L.Onboarding.AetherStreamBody),
-                GuideStep.Point(L.Onboarding.AetherStreamPlayerTitle, L.Onboarding.AetherStreamPlayerBody,
-                    "aetherstream.hero"),
-                GuideStep.Point(L.Onboarding.AetherStreamAddTitle, L.Onboarding.AetherStreamAddBody,
-                    "aetherstream.composer"),
-                GuideStep.Point(L.Onboarding.AetherStreamTransportTitle, L.Onboarding.AetherStreamTransportBody,
-                    "aetherstream.transport"),
-                GuideStep.Point(L.Onboarding.AetherStreamActionsTitle, L.Onboarding.AetherStreamActionsBody,
-                    "aetherstream.actions"),
-                GuideStep.Note(L.Onboarding.AetherStreamPartyTitle, L.Onboarding.AetherStreamPartyBody),
-                GuideStep.Point(L.Onboarding.AetherStreamSettingsTitle, L.Onboarding.AetherStreamSettingsBody,
-                    "aetherstream.settings"),
+                GuideStep.Intro(L.Apps.AetherStream, L.Onboarding.AetherStreamIntroBody),
+                GuideStep.Point(L.Onboarding.AetherStreamPasteTitle, L.Onboarding.AetherStreamPasteBody,
+                    "aetherstream.composer", GuideGesture.None),
+                GuideStep.Point(L.Onboarding.AetherStreamScreenTitle, L.Onboarding.AetherStreamScreenBody,
+                    "aetherstream.screen", GuideGesture.Tap),
+                GuideStep.TryTap(L.Onboarding.AetherStreamPartyTitle, L.Onboarding.AetherStreamPartyTabBody,
+                    "aetherstream.tab.party"),
+                GuideStep.Point(L.Onboarding.AetherStreamStartTitle, L.Onboarding.AetherStreamStartBody,
+                    "aetherstream.party.start", GuideGesture.None),
+                GuideStep.TryTap(L.Onboarding.AetherStreamLibraryTitle, L.Onboarding.AetherStreamLibraryBody,
+                    "aetherstream.tab.library"),
             });
-        Add(tours, "notes", 2,
+        Add(tours, "notes", 3,
             new[]
             {
-                GuideStep.Note(L.Apps.Notes, L.Onboarding.NotesBody),
-                GuideStep.Point(L.Onboarding.NotesNewTitle, L.Onboarding.NotesNewBody, "notes.new"),
-                GuideStep.Tap(L.Notes.TabReminders, L.Onboarding.NotesRemindersBody, "notes.tab.reminders",
-                    "notes.tab.reminders"),
-                GuideStep.Point(L.Onboarding.NotesReminderTitle, L.Onboarding.NotesReminderBody, "notes.new"),
+                GuideStep.TryTap(L.Onboarding.NotesNewTitle, L.Onboarding.NotesStartBody, "notes.new"),
+                GuideStep.Point(L.Onboarding.NotesWriteTitle, L.Onboarding.NotesWriteBody, "notes.editor",
+                    GuideGesture.None),
+                GuideStep.TryTap(L.Onboarding.NotesSaveTitle, L.Onboarding.NotesSaveBody, "notes.editor.back"),
+                GuideStep.TryTap(L.Onboarding.NotesTodoTitle, L.Onboarding.NotesTodoBody, "notes.tab.reminders"),
+                GuideStep.TryTap(L.Onboarding.NotesReminderTitle, L.Onboarding.NotesAddReminderBody, "notes.new"),
+                GuideStep.TryTap(L.Onboarding.NotesNudgeTitle, L.Onboarding.NotesNudgeBody,
+                    "notes.reminder.remind"),
             });
     }
 }

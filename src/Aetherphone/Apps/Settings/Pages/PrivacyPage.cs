@@ -5,6 +5,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Net;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -15,10 +16,21 @@ namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class PrivacyPage : ISettingsPage, IDisposable
 {
+    private static readonly SettingsEntry[] Searchable =
+    {
+        new(L.Settings.TellArchive),
+        new(L.Settings.ReadReceipts),
+        new(L.Settings.LastSeenOnline),
+        new(L.PhotoTag.SettingsTitle),
+        new(L.Social.BlockedUsers),
+        new(L.Settings.ClearCache, L.Settings.Storage),
+    };
+
     public string Title => Loc.T(L.Settings.Privacy);
     public string Summary => string.Empty;
     public FontAwesomeIcon Icon => FontAwesomeIcon.UserShield;
     public Vector4 Tint => new(0.42f, 0.56f, 0.86f, 1f);
+    public ReadOnlySpan<SettingsEntry> Entries => Searchable;
     private readonly Configuration configuration;
     private readonly AethernetSession session;
     private readonly AccountClient client;
@@ -26,8 +38,10 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private readonly ConfirmService confirm;
     private readonly ISettingsNavigator navigator;
     private readonly ISettingsPage tagsMentionsPage;
+    private readonly CacheStorage cacheStorage;
     private readonly CancellationTokenSource cancellation = new();
     private static readonly TimeSpan BlockedListMaxAge = TimeSpan.FromSeconds(30);
+    private const long BytesPerMegabyte = 1024L * 1024;
     private volatile bool chatPrivacyLoaded;
     private volatile bool chatPrivacyLoading;
     private volatile bool shareReadReceipts = true;
@@ -36,9 +50,13 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private volatile bool blockedLoaded;
     private volatile bool blockedLoading;
     private DateTime blockedLoadedAtUtc = DateTime.MinValue;
+    private string clearCacheLabel = string.Empty;
+    private string clearCacheLabelFormat = string.Empty;
+    private long clearCacheLabelMegabytes = -1;
 
     public PrivacyPage(Configuration configuration, AethernetSession session, AccountClient client, SafetyClient safety,
-        ConfirmService confirm, ISettingsNavigator navigator, ISettingsPage tagsMentionsPage)
+        ConfirmService confirm, ISettingsNavigator navigator, ISettingsPage tagsMentionsPage,
+        CacheStorage cacheStorage)
     {
         this.configuration = configuration;
         this.session = session;
@@ -47,6 +65,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
         this.confirm = confirm;
         this.navigator = navigator;
         this.tagsMentionsPage = tagsMentionsPage;
+        this.cacheStorage = cacheStorage;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -57,7 +76,58 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
         {
             DrawChatPrivacy(theme, scale);
             DrawBlockedUsers(theme, scale);
+            DrawStorage(theme, scale);
         }
+    }
+
+    private void DrawStorage(PhoneTheme theme, float scale)
+    {
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
+        SettingsSection.Header(Loc.T(L.Settings.Storage), theme, Loc.T(L.Settings.StorageHint));
+        var card = GroupCard.Begin(theme, 1);
+        var clearClicked = SettingsRow.Action(card.NextRow(), ClearCacheLabel(), theme.Danger, theme);
+        card.End();
+        if (clearClicked)
+        {
+            AskClearCache();
+        }
+    }
+
+    private string ClearCacheLabel()
+    {
+        var sizeBytes = cacheStorage.SizeBytes();
+        if (sizeBytes == CacheStorage.UnknownSize)
+        {
+            return Loc.T(L.Settings.ClearCache);
+        }
+
+        var megabytes = (sizeBytes + BytesPerMegabyte - 1) / BytesPerMegabyte;
+        var format = Loc.T(L.Settings.ClearCacheSize);
+        if (megabytes == clearCacheLabelMegabytes && ReferenceEquals(format, clearCacheLabelFormat))
+        {
+            return clearCacheLabel;
+        }
+
+        clearCacheLabelMegabytes = megabytes;
+        clearCacheLabelFormat = format;
+        clearCacheLabel = Loc.T(L.Settings.ClearCacheSize, megabytes);
+        return clearCacheLabel;
+    }
+
+    private void AskClearCache()
+    {
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Settings.ClearCache),
+            Message = Loc.T(L.Settings.ClearCacheBody),
+            ConfirmLabel = Loc.T(L.Settings.ClearCacheAction),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Sheet = true,
+            Confirm = () =>
+            {
+                _ = Task.Run(cacheStorage.Clear);
+            },
+        });
     }
 
     private void DrawBlockedUsers(PhoneTheme theme, float scale)

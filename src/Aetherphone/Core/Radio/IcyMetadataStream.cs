@@ -11,6 +11,7 @@ internal sealed class IcyMetadataStream : Stream
     public const string IntervalHeader = "icy-metaint";
 
     private const string TitleKey = "StreamTitle='";
+    private const string TextKey = "text=\"";
     private const int LengthUnit = 16;
     private const int MaxMetadataBytes = 255 * LengthUnit;
 
@@ -117,8 +118,35 @@ internal sealed class IcyMetadataStream : Stream
             }
         }
 
-        title = text[start..end].Trim();
+        title = TidyTitle(text[start..end].Trim());
         return title.Length > 0;
+    }
+
+    // iHeart's mounts pack the song title into a key="value" list after the artist, followed by
+    // a tail of catalogue ids, so only the artist and the text value are worth showing.
+    private static string TidyTitle(string title)
+    {
+        var textStart = title.IndexOf(TextKey, StringComparison.Ordinal);
+        if (textStart < 0)
+        {
+            return title;
+        }
+
+        var valueStart = textStart + TextKey.Length;
+        var valueEnd = title.IndexOf('"', valueStart);
+        if (valueEnd < 0)
+        {
+            return title;
+        }
+
+        var song = title[valueStart..valueEnd].Trim();
+        var artist = title[..textStart].Trim().TrimEnd('-').Trim();
+        if (song.Length == 0)
+        {
+            return artist;
+        }
+
+        return artist.Length > 0 ? $"{artist} - {song}" : song;
     }
 
     public static int ParseInterval(string? header)

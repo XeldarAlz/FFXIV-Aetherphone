@@ -36,16 +36,74 @@ public sealed class ControlLayoutServiceInstallTests
         var service = BuildService(DefaultModulesPlus("spare"), new FakeControlConfiguration());
         var placements = service.Placements;
 
-        Assert.Equal(new GridCell(0, 0), placements[SlotIndexOf(service, "dnd")]);
-        Assert.Equal(new GridCell(1, 0), placements[SlotIndexOf(service, "silent")]);
-        Assert.Equal(new GridCell(2, 0), placements[SlotIndexOf(service, "calls")]);
-        Assert.Equal(new GridCell(3, 0), placements[SlotIndexOf(service, "idle")]);
-        Assert.Equal(new GridCell(0, 1), placements[SlotIndexOf(service, "media")]);
-        Assert.Equal(new GridCell(2, 1), placements[SlotIndexOf(service, "brightness")]);
-        Assert.Equal(new GridCell(3, 1), placements[SlotIndexOf(service, "volume")]);
-        Assert.Equal(new GridCell(0, 3), placements[SlotIndexOf(service, "settings")]);
-        Assert.Equal(new GridCell(1, 3), placements[SlotIndexOf(service, "accent")]);
+        Assert.Equal(new GridCell(0, 0), placements[SlotIndexOf(service, ControlDefaults.ClusterId)]);
+        Assert.Equal(new GridCell(2, 0), placements[SlotIndexOf(service, "media")]);
+        Assert.Equal(new GridCell(0, 2), placements[SlotIndexOf(service, "brightness")]);
+        Assert.Equal(new GridCell(1, 2), placements[SlotIndexOf(service, "volume")]);
+        Assert.Equal(new GridCell(2, 2), placements[SlotIndexOf(service, "lock")]);
+        Assert.Equal(new GridCell(3, 2), placements[SlotIndexOf(service, "settings")]);
+        Assert.Equal(new GridCell(2, 3), placements[SlotIndexOf(service, "accent")]);
         Assert.Equal(4, service.RowsUsed);
+    }
+
+    [Fact]
+    public void FreshInstall_StampsTheCurrentLayoutVersion()
+    {
+        var configuration = new FakeControlConfiguration();
+
+        BuildService(DefaultModulesPlus(), configuration);
+
+        Assert.Equal(ControlLayoutService.LayoutVersion, configuration.ControlPanel!.Version);
+    }
+
+    [Fact]
+    public void LegacySave_FoldsTheClusterMembersIntoOneTileWhereTheFirstMemberSat()
+    {
+        var configuration = SavedWith("media", "dnd", "brightness", "silent", "calls", "idle", "settings");
+
+        var service = BuildService(ClusterModulesPlus("media", "brightness", "settings"), configuration);
+
+        Assert.Equal(new[] { "media", ControlDefaults.ClusterId, "brightness", "settings" }, SlotIds(service));
+        Assert.Equal(ControlSpan.Large, service.Slots[1].Span);
+        Assert.Equal(ControlLayoutService.LayoutVersion, configuration.ControlPanel!.Version);
+        Assert.DoesNotContain("dnd", configuration.ControlPanel.Enabled);
+        Assert.Contains(ControlDefaults.ClusterId, configuration.ControlPanel.Enabled);
+    }
+
+    [Fact]
+    public void LegacySave_WithoutAnyClusterMember_LeavesTheClusterInTheGallery()
+    {
+        var configuration = SavedWith("media", "settings");
+
+        var service = BuildService(ClusterModulesPlus("media", "settings"), configuration);
+
+        Assert.Equal(new[] { "media", "settings" }, SlotIds(service));
+        Assert.Contains(service.Hidden(), module => module.Id == ControlDefaults.ClusterId);
+        Assert.Equal(ControlLayoutService.LayoutVersion, configuration.ControlPanel!.Version);
+    }
+
+    [Fact]
+    public void VersionedSave_DoesNotReinsertAClusterTheUserRemoved()
+    {
+        var configuration = SavedWith("media", "dnd");
+        configuration.ControlPanel!.Version = ControlLayoutService.LayoutVersion;
+
+        var service = BuildService(ClusterModulesPlus("media"), configuration);
+
+        Assert.Equal(new[] { "media", "dnd" }, SlotIds(service));
+        Assert.Contains(service.Hidden(), module => module.Id == ControlDefaults.ClusterId);
+    }
+
+    [Fact]
+    public void LegacySave_SurvivesAReloadAfterTheFold()
+    {
+        var modules = ClusterModulesPlus("media");
+        var configuration = SavedWith("dnd", "media", "silent");
+
+        BuildService(modules, configuration);
+        var reloaded = BuildService(modules, configuration);
+
+        Assert.Equal(new[] { ControlDefaults.ClusterId, "media" }, SlotIds(reloaded));
     }
 
     [Fact]
@@ -130,6 +188,17 @@ public sealed class ControlLayoutServiceInstallTests
         return new FakeControlConfiguration { ControlPanel = layout };
     }
 
+    private static string[] SlotIds(ControlLayoutService service)
+    {
+        var ids = new string[service.Slots.Count];
+        for (var index = 0; index < ids.Length; index++)
+        {
+            ids[index] = service.Slots[index].Id;
+        }
+
+        return ids;
+    }
+
     private static List<IControlModule> MakeModules() =>
         new()
         {
@@ -137,6 +206,24 @@ public sealed class ControlLayoutServiceInstallTests
             new FakeControlModule("b"),
             new FakeControlModule("c"),
         };
+
+    private static List<IControlModule> ClusterModulesPlus(params string[] extraIds)
+    {
+        var members = ControlDefaults.ClusterMembers;
+        var modules = new List<IControlModule>(members.Length + extraIds.Length + 1);
+        for (var index = 0; index < members.Length; index++)
+        {
+            modules.Add(new FakeControlModule(members[index]));
+        }
+
+        modules.Add(new FakeControlModule(ControlDefaults.ClusterId, ControlSpan.Large));
+        for (var index = 0; index < extraIds.Length; index++)
+        {
+            modules.Add(new FakeControlModule(extraIds[index]));
+        }
+
+        return modules;
+    }
 
     private static List<IControlModule> DefaultModulesPlus(params string[] extraIds)
     {

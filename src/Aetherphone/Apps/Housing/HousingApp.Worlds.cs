@@ -1,8 +1,11 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -14,38 +17,62 @@ internal sealed partial class HousingApp
     private const float WorldSearchHeight = 44f;
 
     private readonly List<HousingWorld> worldMatches = new();
+    private string worldSearch = string.Empty;
+    private string pinnedDataCenter = string.Empty;
+    private float pinnedLabelLeft;
+    private float nextHeaderTop;
 
-    private void DrawWorldPickerRoute(Rect area)
+    private void DrawWorldPickerRoute(in PhoneContext context, HousingView view)
     {
         var scale = UiScale.Current;
-        var body = DrawSubHeader(area, "housing.header.worlds", Loc.T(L.Housing.SelectWorldTitle));
-        var pad = 16f * scale;
-        var searchBar = new Rect(new Vector2(body.Min.X + pad, body.Min.Y + 4f * scale),
-            new Vector2(body.Max.X - pad, body.Min.Y + 4f * scale + WorldSearchHeight * scale));
-        SearchField.Draw(searchBar, "##housingWorldSearch", Loc.T(L.Housing.SearchWorlds), ref worldSearch,
-            ui.Palette, 40);
-        var listBody = new Rect(new Vector2(body.Min.X, searchBar.Max.Y), body.Max);
-        using (AppSurface.Begin(listBody))
+        if (!ReferenceEquals(worldTextCulture, Loc.Culture))
         {
-            var worlds = housing.Worlds;
-            if (worlds.Count == 0)
-            {
-                var label = housing.WorldsLoading ? LoadingPulse.SafeLabel() : Loc.T(L.Housing.Offline);
-                Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(2f * scale, 20f * scale), label, ui.MutedInk,
-                    TextStyles.Subheadline);
-                ImGui.Dummy(new Vector2(ScrollLayout.StableContentWidth(), 60f * scale));
-                return;
-            }
-
-            var query = worldSearch.Trim();
-            if (query.Length > 0)
-            {
-                DrawWorldSearchResults(query, scale);
-                return;
-            }
-
-            DrawWorldGroups(scale);
+            worldTextCulture = Loc.Culture;
+            dataCenterHeaders.Clear();
+            pinnedHeaderLabels.Clear();
+            worldDetails.Clear();
         }
+
+        var navBar = AppHeader.BeginLargeTitle(context);
+        var body = navBar.Body;
+        var searchBar = new Rect(new Vector2(body.Min.X, body.Min.Y),
+            new Vector2(body.Max.X, body.Min.Y + GlassField.HeightUnits * scale));
+        var drawList = ImGui.GetWindowDrawList();
+        GlassField.Surface(drawList, searchBar, GlassField.Radius(searchBar), scale, 0f, 1f);
+        GlassField.Search(drawList, searchBar, "##housingWorldSearch", Loc.T(L.Housing.SearchWorlds), ref worldSearch,
+            frameTheme, scale, 40, false);
+        var listBody = new Rect(new Vector2(body.Min.X, searchBar.Max.Y + Metrics.Space.Sm * scale), body.Max);
+        var worlds = housing.Worlds;
+        if (worlds.Count == 0)
+        {
+            if (housing.WorldsLoading)
+            {
+                LoadingPulse.Draw(listBody.Center, 18f * scale, ui.Accent, ui.MutedInk, LoadingPulse.SafeLabel());
+            }
+            else
+            {
+                HousingArt.StateScreen(drawList, ui, listBody, FontAwesomeIcon.Globe, Loc.T(L.Housing.Offline),
+                    Loc.T(L.Housing.OfflineHint), string.Empty, scale);
+            }
+        }
+        else
+        {
+            using (AppSurface.Begin(listBody))
+            {
+                var query = worldSearch.Trim();
+                if (query.Length > 0)
+                {
+                    DrawWorldSearchResults(query, scale);
+                }
+                else
+                {
+                    DrawWorldGroups(scale);
+                }
+            }
+        }
+
+        AppHeader.EndLargeTitle(in navBar, context, "housing.nav.worlds", Loc.T(L.Housing.SelectWorldTitle),
+            NavBarStyle.From(ui), ReadOnlySpan<NavBarButton>.Empty, view.BackTitle, back);
     }
 
     private void DrawWorldSearchResults(string query, float scale)
@@ -88,6 +115,9 @@ internal sealed partial class HousingApp
 
     private void DrawWorldGroups(float scale)
     {
+        var pinLine = ImGui.GetWindowPos().Y;
+        pinnedDataCenter = string.Empty;
+        nextHeaderTop = float.MaxValue;
         var regions = HousingRegions.Order;
         for (var regionIndex = 0; regionIndex < regions.Count; regionIndex++)
         {
@@ -113,7 +143,9 @@ internal sealed partial class HousingApp
 
                 worldMatches.Sort(static (first, second) =>
                     string.Compare(first.Name, second.Name, StringComparison.OrdinalIgnoreCase));
-                SettingsSection.Header(string.Concat(region, " · ", dataCenter), frameTheme);
+                var header = DataCenterHeader(region, dataCenter);
+                var headerOrigin = ImGui.GetCursorScreenPos();
+                SettingsSection.Header(header, frameTheme);
                 var card = GroupCard.Begin(frameTheme, worldMatches.Count, WorldRowHeight);
                 for (var index = 0; index < worldMatches.Count; index++)
                 {
@@ -126,10 +158,64 @@ internal sealed partial class HousingApp
                 }
 
                 card.End();
+                TrackPinnedHeader(header, headerOrigin, ImGui.GetCursorScreenPos().Y, pinLine, scale);
             }
         }
 
         ImGui.Dummy(new Vector2(0f, 20f * scale));
+        DrawPinnedHeader(pinLine, scale);
+    }
+
+    private static float PinnedHeaderHeight(float scale) =>
+        (Metrics.Space.Sm + Metrics.Space.Xs) * scale + Typography.LineHeight(TextStyles.FootnoteEmphasized);
+
+    private void TrackPinnedHeader(string header, Vector2 headerOrigin, float groupBottom, float pinLine, float scale)
+    {
+        if (headerOrigin.Y < pinLine)
+        {
+            if (groupBottom > pinLine)
+            {
+                pinnedDataCenter = header;
+                pinnedLabelLeft = headerOrigin.X + Metrics.Space.Lg * scale;
+            }
+
+            return;
+        }
+
+        if (headerOrigin.Y < nextHeaderTop)
+        {
+            nextHeaderTop = headerOrigin.Y;
+        }
+    }
+
+    private void DrawPinnedHeader(float pinLine, float scale)
+    {
+        if (pinnedDataCenter.Length == 0)
+        {
+            return;
+        }
+
+        var height = PinnedHeaderHeight(scale);
+        var top = MathF.Min(pinLine, nextHeaderTop - height);
+        var left = ImGui.GetWindowPos().X;
+        var strip = new Rect(new Vector2(left, top), new Vector2(left + ImGui.GetWindowSize().X, top + height));
+        UiInteract.HoverOverlay(strip);
+        var drawList = ImGui.GetWindowDrawList();
+        Material.ThemedGlass(drawList, strip.Min, strip.Max, 0f, scale, ui.Palette.BackdropTop);
+        Typography.Draw(drawList, new Vector2(pinnedLabelLeft, top + Metrics.Space.Sm * scale),
+            PinnedHeaderLabel(pinnedDataCenter), frameTheme.TextMuted, TextStyles.FootnoteEmphasized);
+    }
+
+    private string PinnedHeaderLabel(string header)
+    {
+        if (pinnedHeaderLabels.TryGetValue(header, out var label))
+        {
+            return label;
+        }
+
+        label = Loc.Culture.TextInfo.ToUpper(header);
+        pinnedHeaderLabels[header] = label;
+        return label;
     }
 
     private readonly List<string> dataCenterBuffer = new();
@@ -154,20 +240,49 @@ internal sealed partial class HousingApp
         return dataCenterBuffer;
     }
 
+    private readonly Dictionary<string, string> dataCenterHeaders = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> pinnedHeaderLabels = new(StringComparer.Ordinal);
+    private readonly Dictionary<uint, string> worldDetails = new();
+    private object? worldTextCulture;
+
+    private string DataCenterHeader(string region, string dataCenter)
+    {
+        if (dataCenterHeaders.TryGetValue(dataCenter, out var header))
+        {
+            return header;
+        }
+
+        header = string.Concat(region, " · ", dataCenter);
+        dataCenterHeaders[dataCenter] = header;
+        return header;
+    }
+
     private bool IsCurrentWorld(uint worldId) => housing.WorldId == worldId;
 
-    private string DetailFor(HousingWorld world) =>
-        world.Id == housing.HomeWorldId
-            ? string.Concat(world.DataCenterName, " · ", Loc.T(L.Housing.HomeWorld))
-            : world.DataCenterName;
+    private string DetailFor(HousingWorld world)
+    {
+        if (world.Id != housing.HomeWorldId)
+        {
+            return world.DataCenterName;
+        }
+
+        if (worldDetails.TryGetValue(world.Id, out var detail))
+        {
+            return detail;
+        }
+
+        detail = string.Concat(world.DataCenterName, " · ", Loc.T(L.Housing.HomeWorld));
+        worldDetails[world.Id] = detail;
+        return detail;
+    }
 
     private void PickWorld(uint worldId)
     {
         housing.SelectWorld(worldId);
         ResetMapView();
-        sheetOpen = false;
-        selectedPlot = default;
+        ClosePlotCard(true);
         InvalidateCache();
+        UiFeedback.Play(UiSound.Tap);
         router.Pop();
     }
 

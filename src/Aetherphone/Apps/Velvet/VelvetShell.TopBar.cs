@@ -23,14 +23,13 @@ internal sealed partial class VelvetShell
     private const float HeaderAnchorHalf = 18f;
     private const float FeedTabRowHeight = 44f;
     private const float FeedTabUnderline = 2f;
-    private const float FeedTabSmoothTime = 0.09f;
 
     private static readonly TextStyle WordmarkStyle = new(1.4f, FontWeight.Bold);
     private static readonly TextStyle FeedTabStyle = new(1.07f, FontWeight.SemiBold);
     private static readonly TextStyle FeedTabIdleStyle = new(1.07f, FontWeight.Medium);
     private static readonly UnderlineTabStyle FeedTabsStyle = new(FeedTabStyle, FeedTabIdleStyle,
         VelvetTheme.TitleInk, VelvetTheme.MutedInk, VelvetTheme.Rose, FeedTabUnderline, SocialChrome.CellPadX,
-        FeedTabSmoothTime);
+        Motion.Release);
 
     private Spring feedTabSlide;
 
@@ -41,7 +40,7 @@ internal sealed partial class VelvetShell
         var rowCenterY = area.Min.Y + VHeader.Height * scale * 0.5f;
         var logoSize = LogoSize * scale;
         var logoCenter = new Vector2(area.Min.X + SocialChrome.CellPadX * scale + logoSize * 0.5f, rowCenterY);
-        if (!AppIconTextures.TryDrawArtwork(drawList, Id, logoCenter, logoSize, VelvetTheme.RoseInk))
+        if (!AppIconTile.TryDrawGlyph(drawList, Id, logoCenter, logoSize, VelvetTheme.RoseInk))
         {
             PhoneIcon.Draw(drawList, logoCenter, PhoneIcons.Moon, VelvetTheme.RoseInk, logoSize);
         }

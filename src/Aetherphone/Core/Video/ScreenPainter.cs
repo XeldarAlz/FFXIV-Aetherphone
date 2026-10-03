@@ -25,7 +25,7 @@ internal sealed unsafe class ScreenPainter : IDisposable
 	internal float WorldRoll;
 	internal float Scale = 1.0f;
 	internal bool Visible { get; set; } = true;
-	internal bool Curved { get; set; } = true;
+	internal float Curve { get; set; } = 1.0f;
 
 	private readonly VertexShader vertexShader;
 	private readonly PixelShader pixelShader;
@@ -47,7 +47,7 @@ internal sealed unsafe class ScreenPainter : IDisposable
 	private const int MaxUiRects = 64;
 
 	private const int CurveSegments = 24;
-	private const float CurvedDepth = 0.12f;
+	internal const float CurvedDepth = 0.12f;
 	private const int VertexCount = (CurveSegments + 1) * 2;
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -277,7 +277,7 @@ internal sealed unsafe class ScreenPainter : IDisposable
 			var p = new ScreenParams
 			{
 				WorldViewProj = worldViewProj.Value,
-				Curvature = Curved ? CurvedDepth : 0f,
+				Curvature = CurvedDepth * Curve,
 			};
 			if (cachedDepthView != null)
 			{

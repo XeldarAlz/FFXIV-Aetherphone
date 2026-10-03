@@ -23,15 +23,14 @@ internal sealed partial class AethergramApp
     private void DrawPosts(Rect area, string startPostId, PostSource source)
     {
         var scale = UiScale.Current;
-        var title = Loc.T(source == PostSource.Tagged ? L.PhotoTag.TaggedTab : L.PhotoTag.PostsTab);
-        DrawScreenHeader(area, title, 0, true, false, PostsSubtitle(source));
+        DrawScreenHeader(area, Loc.T(PostsTitle(source)), 0, true, false, PostsSubtitle(source));
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var posts = PostsOf(source);
         using (var surface = AppSurface.BeginEdgeToEdge(body))
         {
             if (posts.Length == 0)
             {
-                var message = PostsLoading(source) ? Loc.T(L.Common.Loading) : Loc.T(L.Aethergram.Empty);
+                var message = PostsLoading(source) ? Loc.T(L.Common.Loading) : Loc.T(PostsEmptyMessage(source));
                 Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + PostsEmptyOffset * scale), message,
                     Ink.MutedInk);
                 return;
@@ -59,7 +58,7 @@ internal sealed partial class AethergramApp
                     continue;
                 }
 
-                DrawGramCard(post);
+                DrawGramCard(post, showPinned: source == PostSource.Profile);
                 postsVirtualizer.Record(post.Id, revision);
             }
 
@@ -87,6 +86,16 @@ internal sealed partial class AethergramApp
         }
     }
 
+    private static LocString PostsTitle(PostSource source) => source switch
+    {
+        PostSource.Tagged => L.PhotoTag.TaggedTab,
+        PostSource.PendingTags => L.PhotoTag.PendingTags,
+        _ => L.PhotoTag.PostsTab,
+    };
+
+    private static LocString PostsEmptyMessage(PostSource source) =>
+        source == PostSource.PendingTags ? L.PhotoTag.NoPending : L.Aethergram.Empty;
+
     private string PostsSubtitle(PostSource source)
     {
         switch (source)
@@ -101,6 +110,8 @@ internal sealed partial class AethergramApp
                 return user.Handle.Length > 0 ? user.Handle : user.DisplayName;
             case PostSource.Saved:
                 return Loc.T(L.Aethergram.SavedTitle);
+            case PostSource.Archive:
+                return Loc.T(L.Social.ArchiveTitle);
             case PostSource.Hashtag:
                 return store.HashtagTag is { } tag ? HashtagTitle(tag) : string.Empty;
             default:
@@ -112,6 +123,8 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.TaggedPosts,
         PostSource.Saved => store.SavedPosts,
+        PostSource.Archive => store.ArchivedPosts,
+        PostSource.PendingTags => store.PendingTagPosts,
         PostSource.Hashtag => store.HashtagPosts,
         PostSource.Explore => store.Feed(SocialFeedScope.Latest),
         _ => store.ProfilePosts,
@@ -121,6 +134,8 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.TaggedLoading,
         PostSource.Saved => store.SavedLoading,
+        PostSource.Archive => store.ArchivedLoading,
+        PostSource.PendingTags => store.PendingTagsLoading,
         PostSource.Hashtag => store.HashtagLoading,
         PostSource.Explore => store.IsLoading(SocialFeedScope.Latest),
         _ => store.ProfileLoading,
@@ -130,6 +145,8 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.TaggedLoadingMore,
         PostSource.Saved => store.SavedLoadingMore,
+        PostSource.Archive => store.ArchivedLoadingMore,
+        PostSource.PendingTags => store.PendingTagsLoadingMore,
         PostSource.Hashtag => store.HashtagLoadingMore,
         PostSource.Explore => store.LoadingMore(SocialFeedScope.Latest),
         _ => store.ProfileLoadingMore,
@@ -139,6 +156,8 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.HasMoreTagged,
         PostSource.Saved => store.HasMoreSaved,
+        PostSource.Archive => store.HasMoreArchived,
+        PostSource.PendingTags => store.HasMorePendingTags,
         PostSource.Hashtag => store.HasMoreHashtagPosts,
         PostSource.Explore => store.HasMoreFeed(SocialFeedScope.Latest),
         _ => store.HasMoreProfilePosts,
@@ -153,6 +172,12 @@ internal sealed partial class AethergramApp
                 break;
             case PostSource.Saved:
                 store.LoadMoreSaved();
+                break;
+            case PostSource.Archive:
+                store.LoadMoreArchived();
+                break;
+            case PostSource.PendingTags:
+                store.LoadMorePendingTags();
                 break;
             case PostSource.Hashtag:
                 store.LoadMoreHashtagPosts();

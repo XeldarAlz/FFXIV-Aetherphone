@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -16,9 +17,6 @@ internal sealed partial class JobsApp
     private const float EditorTitleHeight = 18f;
     private const float EditorFieldHeight = 30f;
     private const int CategoryNameMaxLength = 24;
-    private const float CategoryReorderRadius = 9f;
-    private const float RowReorderRadius = 10f;
-    private const float RowReorderOffset = 11f;
 
     private static readonly List<JobsCategory> NoCategories = new();
 
@@ -66,6 +64,7 @@ internal sealed partial class JobsApp
             return;
         }
 
+        UiAnchors.Report("jobs.categories.menu", categoriesButtonRect);
         var categories = CurrentCategories();
         var items = new DropdownMenu.Item[categories.Count + 1];
         for (var index = 0; index < categories.Count; index++)
@@ -97,70 +96,8 @@ internal sealed partial class JobsApp
         OpenCategoryEditor(picked, -1);
     }
 
-    private void DrawCategoryReorder(Rect headerRect, int categoryIndex, int categoryCount, float scale)
-    {
-        if (categoryCount < 2)
-        {
-            return;
-        }
-
-        var radius = CategoryReorderRadius * scale;
-        var down = new Vector2(headerRect.Max.X - radius, headerRect.Center.Y);
-        var up = new Vector2(down.X - radius * 2f - 2f * scale, headerRect.Center.Y);
-        if (DrawReorderButton(up, radius, IconGlyph.Of(FontAwesomeIcon.ChevronUp), 0.5f, categoryIndex > 0,
-                Loc.T(L.Jobs.MoveUp)))
-        {
-            categoryMoveIndex = categoryIndex;
-            categoryMoveDelta = -1;
-        }
-
-        if (DrawReorderButton(down, radius, IconGlyph.Of(FontAwesomeIcon.ChevronDown), 0.5f,
-                categoryIndex < categoryCount - 1, Loc.T(L.Jobs.MoveDown)))
-        {
-            categoryMoveIndex = categoryIndex;
-            categoryMoveDelta = 1;
-        }
-    }
-
-    private void DrawJobReorder(Vector2 center, float radius, JobSection section, int rowIndex, float scale)
-    {
-        var offset = RowReorderOffset * scale;
-        var up = new Vector2(center.X, center.Y - offset);
-        var down = new Vector2(center.X, center.Y + offset);
-        if (DrawReorderButton(up, radius, IconGlyph.Of(FontAwesomeIcon.ChevronUp), 0.45f, rowIndex > 0, string.Empty))
-        {
-            QueueGearsetMove(section, rowIndex, rowIndex - 1);
-        }
-
-        if (DrawReorderButton(down, radius, IconGlyph.Of(FontAwesomeIcon.ChevronDown), 0.45f,
-                rowIndex < section.Entries.Length - 1, string.Empty))
-        {
-            QueueGearsetMove(section, rowIndex, rowIndex + 1);
-        }
-    }
-
-    private void QueueGearsetMove(JobSection section, int rowIndex, int neighbourRowIndex)
-    {
-        gearsetMoveCategoryIndex = section.CategoryIndex;
-        gearsetMoveId = section.Entries[rowIndex].GearsetId;
-        gearsetMoveNeighbourId = section.Entries[neighbourRowIndex].GearsetId;
-    }
-
-    private bool DrawReorderButton(Vector2 center, float radius, string glyph, float glyphScale, bool enabled,
-        string tooltip)
-    {
-        if (!enabled)
-        {
-            AppSkin.Icon(ImGui.GetWindowDrawList(), center, glyph,
-                Palette.WithAlpha(ui.MutedInk, ui.MutedInk.W * 0.25f), glyphScale);
-            return false;
-        }
-
-        return ui.IconButton(center, radius, glyph, ui.MutedInk, default, glyphScale, tooltip);
-    }
-
-    // Queued rather than applied at the click: both moves call Rebuild, which swaps the sections
-    // array the draw loop is still walking.
+    // Queued rather than applied at the click: both moves call Rebuild, which swaps the snapshot
+    // the draw loop is still walking.
     private void ApplyPendingReorder()
     {
         if (categoryMoveIndex >= 0)
@@ -253,12 +190,34 @@ internal sealed partial class JobsApp
             }
         }
 
-        var removeIndex = assignedIndex >= 0 ? categories.Count : -1;
-        var newIndex = categories.Count + (assignedIndex >= 0 ? 1 : 0);
+        var earlierId = -1;
+        var laterId = -1;
+        if (assignedIndex >= 0 && assignedIndex < snapshot.Shelves.Length)
+        {
+            ShelfNeighbours(snapshot.Shelves[assignedIndex], menuGearsetId, out earlierId, out laterId);
+        }
+
+        var next = categories.Count;
+        var earlierIndex = earlierId >= 0 ? next++ : -1;
+        var laterIndex = laterId >= 0 ? next++ : -1;
+        var removeIndex = assignedIndex >= 0 ? next++ : -1;
+        var newIndex = next;
         var items = new DropdownMenu.Item[newIndex + 1];
         for (var index = 0; index < categories.Count; index++)
         {
             items[index] = new DropdownMenu.Item(categories[index].Name, Selected: index == assignedIndex);
+        }
+
+        if (earlierIndex >= 0)
+        {
+            items[earlierIndex] = new DropdownMenu.Item(Loc.T(L.Jobs.MoveEarlier),
+                Glyph: IconGlyph.Of(FontAwesomeIcon.ArrowLeft));
+        }
+
+        if (laterIndex >= 0)
+        {
+            items[laterIndex] = new DropdownMenu.Item(Loc.T(L.Jobs.MoveLater),
+                Glyph: IconGlyph.Of(FontAwesomeIcon.ArrowRight));
         }
 
         if (removeIndex >= 0)
@@ -282,6 +241,14 @@ internal sealed partial class JobsApp
             return;
         }
 
+        if (picked == earlierIndex || picked == laterIndex)
+        {
+            gearsetMoveCategoryIndex = assignedIndex;
+            gearsetMoveId = menuGearsetId;
+            gearsetMoveNeighbourId = picked == earlierIndex ? earlierId : laterId;
+            return;
+        }
+
         if (picked == removeIndex)
         {
             RemoveGearsetFromCategory(menuGearsetId);
@@ -289,6 +256,32 @@ internal sealed partial class JobsApp
         }
 
         AssignGearsetToCategory(menuGearsetId, picked);
+    }
+
+    private void ShelfNeighbours(JobShelf shelf, int gearsetId, out int earlierId, out int laterId)
+    {
+        earlierId = -1;
+        laterId = -1;
+        var indices = shelf.GearsetIndices;
+        for (var position = 0; position < indices.Length; position++)
+        {
+            if (snapshot.Gearsets[indices[position]].Id != gearsetId)
+            {
+                continue;
+            }
+
+            if (position > 0)
+            {
+                earlierId = snapshot.Gearsets[indices[position - 1]].Id;
+            }
+
+            if (position < indices.Length - 1)
+            {
+                laterId = snapshot.Gearsets[indices[position + 1]].Id;
+            }
+
+            return;
+        }
     }
 
     private void AssignGearsetToCategory(int gearsetId, int categoryIndex)

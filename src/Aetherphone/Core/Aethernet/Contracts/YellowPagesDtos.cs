@@ -7,7 +7,8 @@ internal static class AdStatuses
     public const string Hidden = "hidden";
 }
 
-internal sealed record AdScheduleSlot(int Day, int StartMinute, int DurationMinutes);
+internal sealed record AdScheduleSlot(int Day, int StartMinute, int DurationMinutes, int EveryWeeks = 1,
+    long FirstUnix = 0);
 
 internal sealed record CreateAdRequest(
     int Category,
@@ -33,7 +34,11 @@ internal sealed record CreateAdRequest(
     bool AfterDark,
     string[]? MediaKeys,
     string? LinkUrl = null,
-    bool AllowInquiries = true);
+    bool AllowInquiries = true,
+    bool Wanted = false,
+    int Accent = 0,
+    int MediaWidth = 0,
+    int MediaHeight = 0);
 
 internal sealed record AdDto(
     string Id,
@@ -77,7 +82,11 @@ internal sealed record AdDto(
     int OwnerBadges = 0,
     string[]? OwnerBadgeIds = null,
     string OwnerFrameId = "",
-    string? Lang = null) : IIdentified;
+    string? Lang = null,
+    bool Wanted = false,
+    int Accent = 0,
+    int MediaWidth = 0,
+    int MediaHeight = 0) : IIdentified;
 
 internal sealed record AdPage(AdDto[] Items, string? NextCursor);
 
@@ -98,7 +107,9 @@ internal sealed record AdInquiryDto(
     int UnreadCount,
     int LastEncVersion = 0,
     string? LastCommitmentTag = null,
-    string? LastMessageId = null) : IIdentified;
+    string? LastMessageId = null,
+    int LastKind = 0,
+    int Presence = 0) : IIdentified;
 
 internal sealed record AdInquiryPage(AdInquiryDto[] Items, string? NextCursor);
 
@@ -111,11 +122,35 @@ internal sealed record AdInquiryMessageDto(
     long ReadAtUnix,
     int EncVersion = 0,
     string? CommitmentTag = null,
-    bool Deleted = false) : IIdentified;
+    bool Deleted = false,
+    int Kind = 0,
+    int MediaWidth = 0,
+    int MediaHeight = 0,
+    string? ReplyToId = null,
+    string? ReplySenderId = null,
+    string? ReplyBody = null,
+    int ReplyKind = 0,
+    int ReplyEncVersion = 0,
+    int DurationSecs = 0,
+    ReactionSummaryDto[]? Reactions = null,
+    long? EditedAtUnix = null) : IIdentified;
 
 internal sealed record AdInquiryMessagePage(AdInquiryMessageDto[] Items, string? NextCursor);
 
-internal sealed record SendAdInquiryRequest(string Body, int EncVersion = 0, string? CommitmentTag = null);
+internal sealed record SendAdInquiryRequest(
+    string Body,
+    int EncVersion = 0,
+    string? CommitmentTag = null,
+    int Kind = 0,
+    string? MediaKey = null,
+    int MediaWidth = 0,
+    int MediaHeight = 0,
+    string? ReplyToId = null,
+    int DurationSecs = 0);
+
+internal sealed record AdInquiryTypingDto(bool OtherTyping);
+
+internal sealed record AdInquiryMediaUrlDto(string Url, long ExpiresAtUnix);
 
 internal sealed record SetAdSavedRequest(bool Saved);
 

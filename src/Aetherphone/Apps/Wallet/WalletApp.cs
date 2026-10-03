@@ -1,9 +1,11 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
-using Aetherphone.Core.Runtime;
+using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallet;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -12,162 +14,275 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Wallet;
 
-internal sealed class WalletApp : IPhoneApp
+internal sealed partial class WalletApp : IPhoneApp
 {
-    private const long RefreshIntervalMilliseconds = 1500;
-    private const float SectionGap = 12f;
-    private const float BadgeRefreshMillis = 1500f;
+    private const float BottomPad = 28f;
 
-    public string Id => "wallet";
+    public string Id => WalletService.AppId;
     public string DisplayName => Loc.T(L.Apps.Wallet);
     public string Glyph => "G";
-
-    public int BadgeCount
-    {
-        get
-        {
-            var now = Environment.TickCount64;
-            if (now >= nextBadgeTick)
-            {
-                nextBadgeTick = now + (long)BadgeRefreshMillis;
-                cappedBadge = gameData.LocalPlayer is null ? 0 : WalletReader.CountCapped(gameData);
-            }
-
-            return cappedBadge;
-        }
-    }
-
+    public int BadgeCount => wallet.FullCount;
     public bool HasBadge => true;
 
-    private readonly GameData gameData;
+    private readonly WalletService wallet;
     private readonly ITextureProvider textures;
-    private readonly IFramework framework;
+    private readonly WalletText text;
     private readonly AppSkin ui = new(AppPalettes.Wallet);
-    private WalletEntry? gil;
-    private WalletSection[] sections = Array.Empty<WalletSection>();
-    private FrameworkTicker? ticker;
-    private int cappedBadge;
-    private long nextBadgeTick;
+    private readonly ViewRouter<WalletView> router;
+    private readonly RouterDraw<WalletView> drawView;
+    private readonly Action back;
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
 
-    public WalletApp(GameData gameData, ITextureProvider textures, IFramework framework)
+    public WalletApp(WalletService wallet, GameData gameData, ITextureProvider textures)
     {
-        this.gameData = gameData;
+        this.wallet = wallet;
         this.textures = textures;
-        this.framework = framework;
+        text = new WalletText(gameData);
+        router = new ViewRouter<WalletView>(WalletView.Root());
+        drawView = DrawView;
+        back = () => router.Pop();
     }
 
     public void OnOpened()
     {
-        OnTick();
-        ticker ??= new FrameworkTicker(framework, RefreshIntervalMilliseconds, OnTick);
+        router.Reset();
+        PrimeMotion();
     }
 
     public void OnClosed()
     {
-        ticker?.Dispose();
-        ticker = null;
-        gil = null;
-        sections = Array.Empty<WalletSection>();
-    }
-
-    private void OnTick()
-    {
-        if (gameData.LocalPlayer is null)
-        {
-            gil = null;
-            sections = Array.Empty<WalletSection>();
-            return;
-        }
-
-        if (gil is null)
-        {
-            gil = WalletReader.BuildGil(gameData);
-            sections = WalletReader.BuildSections(gameData);
-        }
-
-        WalletReader.RefreshAmounts(gil, sections);
+        router.Reset();
     }
 
     public void Draw(in PhoneContext context)
     {
-        var scale = UiScale.Current;
-        var theme = context.Theme;
-        var content = context.Content;
+        theme = context.Theme;
+        navigation = context.Navigation;
         ui.Theme = theme;
-        ui.Backdrop(SceneChrome.ScreenFrom(content, theme, scale));
-        DrawHeader(content, scale);
-
-        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
-        if (gil is null)
+        if (wallet.Ready)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Wallet.LogInToView), AppPalettes.Wallet.MutedInk);
-            return;
+            TourHolds.Release(Id);
+            text.Sync(wallet);
+        }
+        else
+        {
+            TourHolds.Hold(Id);
+            if (router.Depth > 1)
+            {
+                router.Reset();
+            }
         }
 
-        using (AppSurface.Begin(body))
+        var scale = UiScale.Current;
+        ui.Backdrop(SceneChrome.ScreenFrom(context.Content, theme, scale));
+        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+    }
+
+    private void DrawView(WalletView view, Rect area, int depth)
+    {
+        ui.Body(area);
+        switch (view.Kind)
         {
-            UiAnchors.Report("wallet.gil", CurrencyRow.Hero(gil, textures, AppPalettes.Wallet));
-            ImGui.Dummy(new Vector2(0f, 6f * scale));
+            case WalletViewKind.Currency:
+                DrawDetail(area, view.ItemId, depth);
+                break;
+            case WalletViewKind.Activity:
+                DrawActivity(area);
+                break;
+            default:
+                DrawRoot(area);
+                break;
+        }
+    }
 
-            var currenciesAnchored = false;
-            for (var sectionIndex = 0; sectionIndex < sections.Length; sectionIndex++)
+    private void Open(uint itemId)
+    {
+        UiFeedback.Play(UiSound.Tap);
+        PrimeDetail(itemId);
+        router.Push(WalletView.ForCurrency(itemId));
+    }
+
+    private void OpenActivity()
+    {
+        UiFeedback.Play(UiSound.Tap);
+        router.Push(WalletView.ForActivity());
+    }
+
+    private static float Step(ref Spring spring, float target)
+    {
+        var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        return spring.Step(target, Motion.Sheet, deltaSeconds);
+    }
+
+    private static void ReserveTo(Vector2 origin, float width, float bottom)
+    {
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, MathF.Max(0f, bottom - origin.Y)));
+    }
+
+    private float DrawRowsCard(ImDrawListPtr drawList, Vector2 origin, float width, ReadOnlySpan<WalletEntry> entries,
+        string? anchor, float scale)
+    {
+        var rowHeight = WalletArt.RowHeight * scale;
+        var max = new Vector2(origin.X + width, origin.Y + entries.Length * rowHeight);
+        if (!ImGui.IsRectVisible(origin, max))
+        {
+            return max.Y;
+        }
+
+        WalletArt.Card(drawList, ui, origin, max, scale);
+        var pad = Metrics.Space.Lg * scale;
+        for (var index = 0; index < entries.Length; index++)
+        {
+            var top = origin.Y + index * rowHeight;
+            var row = new Rect(new Vector2(origin.X, top), new Vector2(max.X, top + rowHeight));
+            if (index > 0)
             {
-                var section = sections[sectionIndex];
-                if (section.Entries.Length == 0)
-                {
-                    continue;
-                }
-
-                ui.SectionHeading(Loc.T(section.Title), currenciesAnchored ? 4f : 8f);
-                var cardRect = DrawSectionCard(section, scale);
-                if (!currenciesAnchored)
-                {
-                    UiAnchors.Report("wallet.currencies", cardRect);
-                    currenciesAnchored = true;
-                }
-
-                ImGui.Dummy(new Vector2(0f, SectionGap * scale));
+                WalletArt.Hairline(drawList, ui, origin.X + pad + (WalletArt.DialSize + WalletArt.TextGap) * scale,
+                    max.X - pad, top);
             }
 
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
+            if (index == 0 && anchor is not null)
+            {
+                UiAnchors.Report(anchor, row);
+            }
+
+            if (DrawEntryRow(drawList, row, entries[index], true, scale))
+            {
+                Open(entries[index].ItemId);
+            }
         }
+
+        return max.Y;
     }
 
-    private void DrawHeader(Rect content, float scale)
+    private bool DrawEntryRow(ImDrawListPtr drawList, Rect row, WalletEntry entry, bool interactive, float scale)
     {
-        var rowCenterY = content.Min.Y + AppHeader.Height * scale * 0.5f;
-        Typography.DrawCentered(new Vector2(content.Center.X, rowCenterY), DisplayName, AppPalettes.Wallet.TitleInk,
-            1.15f, FontWeight.SemiBold);
+        var hovered = interactive && WalletArt.RowInteraction(drawList, ui, row, scale);
+        var pad = Metrics.Space.Lg * scale;
+        var dialSize = WalletArt.DialSize * scale;
+        var center = new Vector2(row.Min.X + pad + dialSize * 0.5f, row.Center.Y);
+        var level = entry.HasWeeklyCap ? WalletMath.Level(entry.WeeklyAmount, entry.WeeklyCap) : entry.Level;
+        var fraction = entry.HasWeeklyCap ? WalletMath.Fraction(entry.WeeklyAmount, entry.WeeklyCap) : entry.Fraction;
+        var tint = WalletArt.LevelInk(level, ui.Accent);
+        WalletArt.Dial(drawList, textures, entry.IconId, center, dialSize, fraction, tint, level != CapLevel.None,
+            WalletArt.Backing(ui.TitleInk), scale);
+        var valueWidth = WalletArt.Value(drawList, row.Max.X - pad, row.Center.Y, NumberText.Group(entry.Amount),
+            ui.TitleInk);
+        var textLeft = center.X + dialSize * 0.5f + WalletArt.TextGap * scale;
+        var textRight = row.Max.X - pad - valueWidth - WalletArt.ValueGap * scale;
+        var subtitleInk = !entry.HasWeeklyCap && WalletMath.NeedsAttention(level) ? WalletArt.GoldInk : ui.MutedInk;
+        WalletArt.Labels(drawList, textLeft, textRight, row.Center.Y, entry.Name, text.Subtitle(entry), ui.TitleInk,
+            subtitleInk, scale);
+        return hovered && UiInteract.Click(row.Min, row.Max, hovered);
     }
 
-    private Rect DrawSectionCard(WalletSection section, float scale)
+    private float DrawLinesCard(ImDrawListPtr drawList, Vector2 origin, float width, int first, int count,
+        uint onlyItem, bool stampSubtitle, bool interactive, float scale)
     {
-        var width = ImGui.GetContentRegionAvail().X;
-        var rowCount = section.Entries.Length;
-        var origin = ImGui.GetCursorScreenPos();
-        var totalHeight = 0f;
-        for (var entryIndex = 0; entryIndex < rowCount; entryIndex++)
+        var rowHeight = WalletArt.RowHeight * scale;
+        var max = new Vector2(origin.X + width, origin.Y + count * rowHeight);
+        if (!ImGui.IsRectVisible(origin, max))
         {
-            totalHeight += CurrencyRow.HeightFor(section.Entries[entryIndex]);
+            return max.Y;
         }
 
-        var card = GroupCard.Begin(ui, totalHeight);
-        for (var entryIndex = 0; entryIndex < rowCount; entryIndex++)
+        WalletArt.Card(drawList, ui, origin, max, scale);
+        var pad = Metrics.Space.Lg * scale;
+        var drawn = 0;
+        for (var index = first; index < text.LineCount && drawn < count; index++)
         {
-            var entry = section.Entries[entryIndex];
-            var contentRect = card.NextRow(CurrencyRow.HeightFor(entry));
-            var band = new Rect(new Vector2(origin.X, contentRect.Min.Y),
-                new Vector2(origin.X + width, contentRect.Max.Y));
-            CurrencyRow.Draw(band, contentRect, entry, textures, ui.Palette,
-                Metrics.Radius.Md * scale, entryIndex == 0, entryIndex == rowCount - 1);
+            var line = text.Line(index);
+            if (onlyItem != 0 && line.ItemId != onlyItem)
+            {
+                continue;
+            }
+
+            var top = origin.Y + drawn * rowHeight;
+            var row = new Rect(new Vector2(origin.X, top), new Vector2(max.X, top + rowHeight));
+            if (drawn > 0)
+            {
+                WalletArt.Hairline(drawList, ui, origin.X + pad + (WalletArt.DialSize + WalletArt.TextGap) * scale,
+                    max.X - pad, top);
+            }
+
+            drawn++;
+            if (!ImGui.IsRectVisible(row.Min, row.Max))
+            {
+                continue;
+            }
+
+            if (DrawLineRow(drawList, row, line, stampSubtitle, interactive, scale))
+            {
+                Open(line.ItemId);
+            }
         }
 
-        card.End();
-        return new Rect(origin, origin + new Vector2(width, totalHeight * scale));
+        return max.Y;
+    }
+
+    private bool DrawLineRow(ImDrawListPtr drawList, Rect row, WalletLine line, bool stampSubtitle, bool interactive,
+        float scale)
+    {
+        if (!wallet.TryGetEntry(line.ItemId, out var entry))
+        {
+            return false;
+        }
+
+        var hovered = interactive && WalletArt.RowInteraction(drawList, ui, row, scale);
+        var pad = Metrics.Space.Lg * scale;
+        var dialSize = WalletArt.DialSize * scale;
+        var center = new Vector2(row.Min.X + pad + dialSize * 0.5f, row.Center.Y);
+        WalletArt.Dial(drawList, textures, entry.IconId, center, dialSize, 0f, ui.Accent, false,
+            WalletArt.Backing(ui.TitleInk), scale);
+        var valueInk = line.Delta > 0 ? WalletArt.GainInk : ui.TitleInk;
+        var valueWidth = WalletArt.Value(drawList, row.Max.X - pad, row.Center.Y, line.DeltaText, valueInk);
+        var textLeft = center.X + dialSize * 0.5f + WalletArt.TextGap * scale;
+        var textRight = row.Max.X - pad - valueWidth - WalletArt.ValueGap * scale;
+        WalletArt.Labels(drawList, textLeft, textRight, row.Center.Y, entry.Name,
+            stampSubtitle ? line.StampSubtitle : line.ClockSubtitle, ui.TitleInk, ui.MutedInk, scale);
+        return hovered && UiInteract.Click(row.Min, row.Max, hovered);
+    }
+
+    private float DrawSectionTitle(ImDrawListPtr drawList, Vector2 origin, float width, string title,
+        string trailing, out bool trailingClicked, float scale)
+    {
+        trailingClicked = false;
+        var reserve = trailing.Length > 0
+            ? Typography.Measure(trailing, TextStyles.Body).X + WalletArt.ValueGap * scale
+            : 0f;
+        var height = WalletArt.SectionHeader(drawList, origin, width, title, ui.TitleInk, reserve, scale);
+        if (trailing.Length == 0)
+        {
+            return height;
+        }
+
+        var size = Typography.Measure(trailing, TextStyles.Body);
+        var tapHeight = MathF.Max(height, Metrics.Size.TapTarget * scale);
+        var hitMin = new Vector2(origin.X + width - size.X - WalletArt.ValueGap * scale,
+            origin.Y + (height - tapHeight) * 0.5f);
+        var hitMax = new Vector2(origin.X + width, hitMin.Y + tapHeight);
+        var hovered = UiInteract.Hover(hitMin, hitMax);
+        var ink = hovered ? Palette.Lighten(ui.Accent, 0.15f) : ui.Accent;
+        Typography.Draw(drawList, new Vector2(origin.X + width - size.X, origin.Y + (height - size.Y) * 0.5f),
+            trailing, ink, TextStyles.Body);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        trailingClicked = UiInteract.Click(hitMin, hitMax, hovered);
+        return height;
+    }
+
+    private void DrawSignedOut(Rect body)
+    {
+        WalletArt.StateScreen(ImGui.GetWindowDrawList(), ui, body, FontAwesomeIcon.Coins,
+            Loc.T(L.Wallet.SignedOutTitle), Loc.T(L.Wallet.SignedOutBody), UiScale.Current);
     }
 
     public void Dispose()
     {
-        ticker?.Dispose();
     }
 }

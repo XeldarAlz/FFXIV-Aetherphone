@@ -1,11 +1,13 @@
 {
   "name": "aetherphone-icon-generator",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Regenerates src/Aetherphone/Icons app icons from Tabler Icons (MIT).",
+  "description": "Regenerates src/Aetherphone/Icons painted app icons from Phosphor Icons (MIT).",
   "scripts": {
-    "build": "node generate-app-icons.mjs"
+    "build": "node generate-painted-icons.mjs",
+    "sheet": "node contact-sheet.mjs",
+    "stencils": "node generate-app-icons.mjs"
   },
   "dependencies": {
     "sharp": "^0.33.0"

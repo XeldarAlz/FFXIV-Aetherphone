@@ -1,138 +1,139 @@
 # Aetherphone Terms of Service
 
-**Last updated:** 28 August 2026
+**Last updated:** 2 October 2026
 
-These terms govern your use of the Aetherphone plugin and of Aethernet, the online service behind its social features. By creating an Aethernet account you accept these terms. If you do not accept them, do not create an account; the plugin's offline features work without one.
+## 1. About Aetherphone and these terms
 
-## 1. What Aetherphone is
+Aetherphone is a free plugin for FINAL FANTASY XIV, running on the Dalamud plugin framework, that adds a smartphone to the game. Some of its apps work only on your computer. Others use Aethernet, our online service for accounts, profiles, feeds, messaging and calls. The Aetherphone companion app for mobile devices uses the same accounts.
 
-Aetherphone is a free, open-source plugin for Dalamud, a community plugin framework for FINAL FANTASY XIV. It draws a smartphone inside the game. Some of its apps work entirely on your computer. Others connect to Aethernet, a hosted service that provides accounts, profiles, feeds, messaging, and calls between Aetherphone users.
+"We", "us" and "our" mean the maintainer of the Aetherphone project, publicly known as XeldarAlz, who operates Aethernet. "The service" means the plugin, the companion app and Aethernet.
 
-Aetherphone is provided free of charge. There is no paid tier, no paid feature, and nothing in the plugin is sold.
+By creating an Aethernet account you accept these terms. If you do not agree, do not create one. The offline features work without an account. Our [Privacy Policy](PRIVACY.md) explains how we handle your personal data.
 
 ## 2. Not affiliated with Square Enix
 
-Aetherphone is an independent community project. It is not made, endorsed, sponsored, or supported by Square Enix. FINAL FANTASY and FINAL FANTASY XIV are trademarks of Square Enix Holdings Co., Ltd.
+Aetherphone is an independent community project. It is not made, endorsed, sponsored or supported by Square Enix. FINAL FANTASY and FINAL FANTASY XIV are trademarks of Square Enix Holdings Co., Ltd.
 
-**Use of third-party tools with FINAL FANTASY XIV is against Square Enix's User Agreement, and against the terms of regional operators including Shanghai Shengqu Information Technology Co., Ltd.** Using Aetherphone may result in action against your game account, up to and including permanent suspension. You accept that risk yourself. We cannot appeal, reverse, or compensate for any action taken against your game account.
+**Square Enix's User Agreement prohibits the use of third-party tools with FINAL FANTASY XIV, and the terms of the game's regional operators may do the same.** Using Aetherphone may lead to action against your game account, up to and including permanent suspension. You accept that risk. We cannot appeal, reverse or compensate for any action taken against your game account.
 
 ## 3. Eligibility
 
-You must be old enough to form a binding contract where you live, and at least 13 years old, to create an Aethernet account.
+You must be at least 13 years old, and old enough to form a binding contract where you live, to create an account. We do not ask for or check your age. Creating an account confirms that you meet this requirement.
 
-Some features carry a higher minimum age. Velvet is restricted to users aged 18 and over. By opening Velvet and accepting its conduct gate you confirm you are 18 or older.
+Velvet, the adult app, is only for users aged 18 or over, which you confirm before entering. We do not verify this. Velvet may not be used with a Lalafell character, and the plugin does not open it while you play one.
 
-## 4. Regional availability
+We may suspend or remove an account whose holder we believe does not meet these requirements.
 
-Aetherphone is offered worldwide. On the Chinese game client, you sign in through Rising Stones (石之家) rather than the Lodestone.
+## 4. Your account
 
-Every app is currently open in every region. An app that depends on a service unreachable from a region can be closed there, and we may restrict any app in any region at any time and without notice, including where local law makes it necessary. An app that is unavailable to you does not appear on your phone.
+Each character you verify is a separate Aethernet account, with its own profile, contacts, messages and Aether Coin. You verify a character through the Lodestone, XIVAuth or, on the Chinese game client, Rising Stones (石之家). We never ask for your Square Enix or Shengqu password. The service is available worldwide.
 
-## 5. Your account
+You are responsible for activity on your accounts. Verify only characters you control, and keep your computer and linked devices secure. You may not sell, buy, share, lend or otherwise transfer an account.
 
-You are responsible for what happens under your account. Verification links your Aethernet account to a FINAL FANTASY XIV character through the Lodestone, XIVAuth, or an equivalent regional service. Do not verify a character you do not control, and do not share your account.
+You can delete your current character's account at any time in the plugin, under **Settings**, **Account**, **Delete account**, unless it is suspended. Deletion is immediate. The [Privacy Policy](PRIVACY.md) explains what is deleted and what is kept.
 
-You may delete your account at any time from Settings. Deleting removes your profile and content from the service as described in the [Privacy Policy](PRIVACY.md).
+## 5. Your content
 
-## 6. Your content
+You keep ownership of the content you post.
 
-You keep ownership of everything you post: messages, images, posts, comments, voice notes, and profile text.
+You grant us a non-exclusive, worldwide, royalty-free licence to store, copy, transmit, translate and display your content, only to operate and moderate the service. The licence ends when you delete the content or your account, except for the copies described in the [Privacy Policy](PRIVACY.md), such as backups, moderation records and copies other users already have.
 
-To run the service we need permission to handle it. You grant us a non-exclusive, worldwide, royalty-free licence to store, reproduce, transmit, and display your content, solely to operate and moderate Aethernet and only for as long as you keep it posted. This licence ends when you delete the content or your account, except for copies retained in backups or moderation records as described in the Privacy Policy.
+You are responsible for your content and confirm that you have the right to post it and that it infringes no one's rights.
 
-You are responsible for what you post. You confirm you have the rights to post it, and that it does not infringe anyone else's rights.
+## 6. Rules of conduct
 
-## 7. Acceptable use
+You must not:
 
-Each social app shows its own conduct rules before you can use it, and those rules form part of these terms. Across the whole service, you must not:
+- Post illegal content or promote serious crime
+- Post, request or share any sexual content involving minors, or sexualise a child-like character, whatever its stated age or lore
+- Share intimate images without consent, blackmail or sextort anyone, or post bestiality
+- Harass, threaten or bully anyone, use hate speech or slurs, or encourage or glorify real-world violence
+- Encourage or glorify self-harm, suicide or eating disorders, or post graphic violence or gore
+- Share private conversations without everyone's consent, or share anyone's real-world personal information, your own included, such as a name, face or address
+- Impersonate a player, moderator, developer, venue or community to deceive others
+- Send spam, run scams or phishing, or share harmful links
+- Trade gil, accounts, boosting or other in-game goods or services for real money
+- Post real-world political content on Chirper or Aethergram
+- Post nudity or sexual content in public spaces outside Velvet, such as Chirper, Aethergram, Muster and Yellow Pages
+- Repost others' art, screenshots or commissions without permission, claim others' work as your own, or share leaked paid or private mods
+- Post AI-generated or AI-altered images, including explicit AI images of real people
+- Evade a suspension or a block, harass or threaten our moderators, or organise mass reports or appeals
+- Automate the service with bots or scripts, get around its security or usage limits, or interfere with or overload it
+- Access Aethernet through anything other than the official apps, or scrape, copy or reverse-engineer the service
+- Connect to Aethernet with an unofficial version of Aetherphone, or disguise one as official (see section 11)
 
-- Post sexual content involving minors, or anything that sexualises a character presented as a minor
-- Post content that is illegal where you are, or that depicts, promotes, or facilitates a serious crime
-- Harass, threaten, stalk, or impersonate anyone
-- Post another person's private information without their consent
-- Share intimate images of anyone without their consent
-- Post someone else's copyrighted work as your own
-- Spam, advertise commercially, or run scams
-- Attack, overload, reverse engineer, or circumvent access controls on the service
-- Connect to Aethernet with anything other than an official, unmodified build of the plugin, installed from the official repository (see section 18)
-- Alter or forge the install source and build information the plugin sends, or otherwise present a modified client as an official one
-- Automate the service, script it, or drive it with a bot or a client you wrote yourself
-- Evade a suspension or ban
+Some apps show additional rules before you first use them, and those rules also apply.
 
-## 8. Adult content
+## 7. Moderation and enforcement
 
-Velvet is an adult social app for users 18 and over. Its own conduct rules apply in full, and they are stricter than this section.
+Moderation decisions are made by people. We act on user reports and may also review content ourselves. We do not review all content. You can report posts, profiles, messages, events and listings in the app.
 
-Velvet is free. Access to it is not sold, is not bundled with any payment, and is not a benefit of supporting the project financially. Nothing in Velvet is behind a paywall.
+If you break these terms or an app's rules, we may:
 
-## 9. Aether Coin
+- Veil content, so it is blurred until a viewer chooses to see it
+- Remove content and warn you
+- Reset a display name or handle, or remove profile images
+- Freeze, adjust or remove your Aether Coin and cosmetic items
+- Suspend your account for a set period or permanently
 
-Aether Coin is a cosmetic in-plugin token. It has no monetary value. It cannot be bought, sold, transferred between accounts, exchanged for money or anything of value outside the plugin, or redeemed. It is not a currency, not a security, and not a stored-value instrument. We may adjust, reset, or discontinue it at any time, and doing so gives rise to no refund or claim, because nothing was ever paid for it.
+Serious violations, including child safety violations, can lead to suspension on a first offence. We may act without notice where needed to enforce these terms or protect users.
 
-Aether Coin can be spent inside the plugin, in the coin shop, on cosmetic items such as avatar frames and badges. Those items are cosmetic only, have no monetary value, and follow the same rules as the coin itself. Cosmetic items can also be granted by us directly, and a granted item can lapse or be removed; the phone tells you when one arrives or leaves your account.
+A suspension signs you out and locks the social apps without deleting your content. While it lasts, the character cannot sign in or create a new account. A permanent suspension ends the account's access to Aethernet.
 
-Casino is a set of chance-based mini-games played with Aether Coin. Because Aether Coin cannot be bought or cashed out, no money is ever wagered, won, or lost. Casino is not gambling and must not be used as though it were. Trading Aether Coin, or Casino outcomes, for real money, gil, or anything else of value is prohibited and will result in a ban.
+When we remove or veil your content or suspend your account, the phone shows a notice explaining the action and naming the rule. To appeal, open a support ticket on our [Discord server](https://discord.gg/3HbJCscMyS) or write to **contact@aetherphone.net**.
 
-## 10. Supporting the project
+## 8. Aether Coin and Gamba
 
-You can support Aetherphone voluntarily through Patreon. Support is a donation to the project, not a purchase.
+Aether Coin is play money. You earn it by using the phone, and we may grant it for events. You can spend it on cosmetic items, such as badges and avatar frames, and on Gamba chips.
 
-**Financial support unlocks no features.** It grants cosmetic recognition only: a badge, an avatar frame, and a name effect. Cosmetics tied to an active membership lapse when the membership ends. Support does not grant access to any app, any capability, any content, or any part of Velvet, and it never will. Everything in Aetherphone is available to every user at no cost.
+Aether Coin and cosmetic items have no monetary value and are not money or a currency. They cannot be bought, sold, cashed out, redeemed, transferred or gifted. Trading them, or Gamba results, for real money, gil or anything of value is prohibited.
 
-## 11. Moderation, suspension, and termination
+We may adjust, freeze, reset or remove them at any time, including where they were obtained through abuse or a breach of these terms, and we may discontinue Aether Coin. As nothing was paid for them, no refund or claim arises. A suspension freezes your Aether Coin until 7 days after it ends.
 
-We moderate content on Aethernet. Posts and images are reviewed by our human moderation team, users can report content and accounts, and we act on reports. We may remove content, restrict features, suspend an account, or terminate it, with or without notice, where we consider it necessary to enforce these terms or to protect users.
+Gamba offers games of chance played only with Aether Coin. Nothing of monetary value is staked, won or lost, and Gamba is not gambling.
 
-If your account is suspended you will be told, and where we can, why. You can appeal through the contact route in section 15.
+## 9. Supporting the project
 
-We keep records of moderation actions and reports for as long as needed to run the service safely, as set out in the Privacy Policy.
+Aetherphone is free. We sell nothing, and nothing in the service requires payment.
 
-## 12. Availability
+You can donate through Patreon or Buy Me a Coffee. Donations unlock no apps, features or content, including Velvet. An active Patreon membership linked to your account adds cosmetic recognition, such as a badge or an avatar frame, which ends when the membership ends or you unlink it. Buy Me a Coffee donations are not linked to your account and grant nothing.
 
-Aethernet is provided as a best effort by volunteers. There is no uptime commitment. Features may change, break, or be withdrawn. Individual apps can be disabled remotely, and are, when something goes wrong.
+## 10. Translation and third-party services
 
-We may discontinue Aethernet entirely. If we plan to, we will give as much notice as we reasonably can so you can export what matters to you.
+Aethernet translates text in the social apps when you ask it to. Only the text you choose is translated. Automatic translations can be wrong. **Show original** shows the text as written.
 
-## 13. No warranty
+Some apps and features rely on services we do not operate, for example the Lodestone, Universalis, YouTube, XIVAuth and Patreon. They operate under their own terms, and we are not responsible for their content or availability.
 
-Aetherphone and Aethernet are provided "as is" and "as available", without warranty of any kind, express or implied, including any warranty of merchantability, fitness for a particular purpose, or non-infringement, to the fullest extent the law allows.
+## 11. Official versions, source code and trademarks
 
-## 14. Limitation of liability
+Only official versions may connect to Aethernet: the Aetherphone plugin installed unchanged from the official Aetherphone repository, and the companion app as we publish it. Changed, copied or imitation versions may not connect without our permission. We may block them and suspend the accounts that use them.
 
-To the fullest extent the law allows, we are not liable for any indirect, incidental, special, consequential, or exemplary loss, or for loss of data, loss of profits, or action taken against your FINAL FANTASY XIV account, arising out of your use of Aetherphone or Aethernet.
+The plugin's source code is open source under the [GNU Affero General Public License, version 3 or later](LICENSE.md). That licence covers the code only and gives no right to use Aethernet. The Aetherphone and Aethernet names, logos and icons are covered by the [Trademark and Naming Policy](TRADEMARK.md).
 
-Nothing here limits liability that cannot lawfully be limited, including liability for death or personal injury caused by negligence, or for fraud.
+## 12. Availability and changes to the service
 
-## 15. Contact
+The service is run by volunteers on a best-effort basis. We do not promise that it will always be available or free of errors. We may change or remove any app or feature at any time, and we may discontinue Aethernet entirely. If we do, we will give as much notice as we reasonably can.
 
-Questions, appeals, reports, and legal notices: **contact@aetherphone.net**
+## 13. Disclaimers and limitation of liability
 
-Privacy requests: **privacy@aetherphone.net**
+The service is provided "as is" and "as available", without warranty of any kind, express or implied, including any warranty of merchantability, fitness for a particular purpose or non-infringement, to the fullest extent the law allows.
 
-You can also reach us on [Discord](https://discord.gg/3HbJCscMyS) or through [GitHub issues](https://github.com/XeldarAlz/FFXIV-Aetherphone/issues), though those are not private channels and should not be used for anything sensitive.
+To the fullest extent the law allows, we are not liable for any indirect, incidental, special, consequential or exemplary loss, or for loss of data, loss of profits, or action taken against your FINAL FANTASY XIV account, arising out of your use of the service.
 
-## 16. Governing law
+Nothing in these terms limits liability that cannot lawfully be limited, including liability for death or personal injury caused by negligence, or for fraud.
 
-Aetherphone is a non-commercial project offered worldwide, and we do not designate a governing law. Where a dispute arises, the applicable law and forum are determined by the ordinary conflict-of-law rules of your country of residence. Nothing in these terms removes any right you have under the mandatory consumer protection law where you live.
+## 14. Governing law
 
-## 17. Changes
+Aetherphone is a non-commercial project offered worldwide, and we do not designate a governing law. If a dispute arises, the applicable law and forum are determined by the ordinary conflict-of-law rules of your country of residence. Nothing in these terms removes any right you have under the mandatory consumer protection law where you live.
 
-We may update these terms. When we make a material change we will announce it in the plugin and update the date at the top. Continuing to use Aethernet after a change means you accept the updated terms.
+## 15. Changes to these terms
 
-## 18. The plugin's source code, and forks
+We may update these terms. When we make a material change, we will announce it in the plugin and update the date at the top. If you continue to use Aethernet after a change, you accept the updated terms.
 
-The Aetherphone client is free software, licensed under the GNU Affero General Public License v3.0 ([LICENSE.md](LICENSE.md)). That licence governs the code. These terms govern Aethernet, the service we host. The two are separate: nothing here adds a condition to the licence or removes a freedom it grants, and nothing in the licence grants access to our servers.
+## 16. Contact
 
-You are free to fork Aetherphone, change it, and distribute your version on the terms the AGPL sets out. What no licence can give you is a right to use infrastructure we pay for, run, and moderate.
+- Questions, appeals, reports and legal notices: **contact@aetherphone.net**
+- Privacy requests: **privacy@aetherphone.net**
+- Child safety concerns: **childsafety@aetherphone.net**. See our [Child Safety Standards](https://aetherphone.net/child-safety/).
 
-**Aethernet serves the official client only.** An official build is one we published, unmodified, installed from the official repository at `https://aetherphone.net/repo.json` or from another repository we publish it through. Connecting to Aethernet from a fork, from a patched or recompiled build, from a rehosted or repackaged copy, or from a client written independently against our endpoints is a breach of these terms, whatever the change was made for and however small it is. We may allow particular builds at our discretion, such as our own development builds and those of contributors we are working with.
-
-The plugin tells the server which repository it was installed from and which build it is running. The server answers a source it does not recognise with a warning, and then by refusing it. Removing, altering, or forging that signal, or otherwise disguising a modified client as an official one, is a separate breach, and a more serious one than the modification itself.
-
-Aethernet's API is private. It is undocumented, it is offered to the official client and to nothing else, it carries no stability promise, and it can change or close without notice. Do not build against it, script it, or put it behind anything of your own.
-
-The licence covers the code, not the name. "Aetherphone" and "Aethernet", the plugin icon and the app icons are not licensed with the source, and a fork must carry its own name and its own identity: the [trademark and naming policy](TRADEMARK.md) sets out what that means and what you can do without asking.
-
-If you want to run a modified Aetherphone, run a back end for it. That is precisely what the AGPL leaves you free to do, and running your own service is the supported way to take the client somewhere we will not. We will not serve a fork, we will not support one, and we owe it no access, no capacity, and no continuity.
-
-Accounts and builds that ignore this are warned, then blocked, and then terminated under section 11.
+You can also reach us on our [Discord server](https://discord.gg/3HbJCscMyS) or through [GitHub issues](https://github.com/XeldarAlz/FFXIV-Aetherphone/issues). GitHub issues are public, so do not use them for anything sensitive.

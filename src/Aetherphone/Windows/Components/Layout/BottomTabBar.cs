@@ -31,7 +31,6 @@ internal sealed class BottomTabBar
     private const float PillWidth = 40f;
     private const float PillHeight = 34f;
     private const float PillAlpha = 0.10f;
-    private const float HoverSmoothTime = 0.12f;
     private const float MaxFrameSeconds = 0.1f;
     private const float IconScale = 1.2f;
     private const float ActiveIconScale = 1.3f;
@@ -103,12 +102,12 @@ internal sealed class BottomTabBar
 
         var hovered = UiInteract.Hover(cellMin, cellMax);
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, MaxFrameSeconds);
-        hover[index].Step(hovered ? 1f : 0f, HoverSmoothTime, delta);
+        hover[index].Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
         var iconCenter = new Vector2((cellMin.X + cellMax.X) * 0.5f, cellMin.Y + LabelIconOffset * scale);
         DrawLabelPill(drawList, ui, iconCenter, Math.Clamp(hover[index].Value, 0f, 1f), scale);
 
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var press = PressFx.Scale(tab.Label, pressed, 0.90f);
+        var press = PressFx.Scale(tab.Label, pressed, PressFx.ControlPressedScale);
         var ink = active ? ui.Accent : hovered ? ui.TitleInk : ui.MutedInk;
         if (tab.UsesPhoneGlyph)
         {
@@ -206,7 +205,7 @@ internal sealed class BottomTabBar
         var half = new Vector2(radius, radius);
         var hovered = UiInteract.Hover(center - half, center + half);
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, MaxFrameSeconds);
-        hover[slot].Step(hovered ? 1f : 0f, HoverSmoothTime, delta);
+        hover[slot].Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
         return Math.Clamp(hover[slot].Value, 0f, 1f);
     }
 

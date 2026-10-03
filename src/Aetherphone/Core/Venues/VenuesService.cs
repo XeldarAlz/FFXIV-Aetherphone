@@ -1,6 +1,7 @@
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Rolladeck;
 
 namespace Aetherphone.Core.Venues;
 
@@ -17,30 +18,48 @@ internal sealed class VenuesService : IDisposable
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
     private readonly GameData gameData;
+    private readonly RolladeckService rolladeck;
     private readonly CancellationTokenSource cancellation = new();
     private readonly HashSet<string> knownIds = new(StringComparer.Ordinal);
     private bool seeded;
     private int refreshing;
+    private int merging;
+    private volatile VenueEvent[] listings = Array.Empty<VenueEvent>();
     private volatile VenueEvent[] events = Array.Empty<VenueEvent>();
+    private volatile VenueDj[] djs = Array.Empty<VenueDj>();
+    private int listingsVersion;
+    private int mergedListingsVersion = -1;
+    private int mergedRolladeckVersion = -1;
     private volatile int version;
     private DateTime lastRefreshUtc;
     private volatile VenueState state = VenueState.Idle;
 
     public VenuesService(HttpService http, NotificationService notifications, Configuration configuration,
-        GameData gameData)
+        GameData gameData, RolladeckService rolladeck)
     {
         this.http = http;
         this.notifications = notifications;
         this.configuration = configuration;
         this.gameData = gameData;
+        this.rolladeck = rolladeck;
     }
 
     public VenueState State => state;
     public int Version => version;
     public IReadOnlyList<VenueEvent> Events => events;
+    public IReadOnlyList<VenueDj> Djs => djs;
     public DateTime LastRefreshUtc => lastRefreshUtc;
+    public bool Busy => Volatile.Read(ref refreshing) == 1 || rolladeck.Loading;
 
     public void EnsureFresh(bool force)
+    {
+        rolladeck.EnsureFresh(force);
+        rolladeck.EnsureDirectoryFresh(force);
+        RefreshListings(force);
+        RemergeIfStale();
+    }
+
+    private void RefreshListings(bool force)
     {
         if (Volatile.Read(ref refreshing) == 1)
         {
@@ -67,21 +86,74 @@ internal sealed class VenuesService : IDisposable
         _ = RefreshAsync(homeDataCenter);
     }
 
+    private void RemergeIfStale()
+    {
+        var wantedListings = Volatile.Read(ref listingsVersion);
+        var wantedRolladeck = rolladeck.Version;
+        if (wantedListings == mergedListingsVersion && wantedRolladeck == mergedRolladeckVersion)
+        {
+            return;
+        }
+
+        if (wantedListings == 0 && !rolladeck.HasData)
+        {
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref merging, 1, 0) != 0)
+        {
+            return;
+        }
+
+        mergedListingsVersion = wantedListings;
+        mergedRolladeckVersion = wantedRolladeck;
+        _ = Task.Run(Merge);
+    }
+
+    private void Merge()
+    {
+        try
+        {
+            var nowUtc = DateTime.UtcNow;
+            var snapshot = VenueMerger.Merge(listings, rolladeck.Directory, rolladeck.OpenVenues, rolladeck.LiveDJs,
+                rolladeck.LiveFetchedUtc, nowUtc);
+            djs = snapshot.Djs;
+            events = snapshot.Events;
+            version++;
+            if (state != VenueState.Ready && events.Length > 0)
+            {
+                state = VenueState.Ready;
+            }
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, "Venues merge failed");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref merging, 0);
+        }
+    }
+
     private async Task RefreshAsync(string homeDataCenter)
     {
         try
         {
             var token = cancellation.Token;
-            var collected = new List<VenueEvent>(256);
+            var collected = new List<VenueEvent>(1600);
             var ffxivOk = await FetchFfxivAsync(collected, token).ConfigureAwait(false);
             var partakeOk = await FetchPartakeAsync(collected, token).ConfigureAwait(false);
-            collected.Sort(static (left, right) => left.StartUtc.CompareTo(right.StartUtc));
             var snapshot = collected.ToArray();
             NotifyNew(snapshot, homeDataCenter);
-            events = snapshot;
+            listings = snapshot;
             lastRefreshUtc = DateTime.UtcNow;
-            version++;
-            state = ffxivOk || partakeOk ? VenueState.Ready : VenueState.Failed;
+            Interlocked.Increment(ref listingsVersion);
+            if (!ffxivOk && !partakeOk && events.Length == 0)
+            {
+                state = VenueState.Failed;
+            }
+
+            RemergeIfStale();
         }
         catch (OperationCanceledException)
         {
@@ -167,7 +239,7 @@ internal sealed class VenuesService : IDisposable
 
     private void NotifyNew(VenueEvent[] snapshot, string homeDataCenter)
     {
-        if (!seeded)
+        if (!seeded || !configuration.VenueNotifyNewEvents)
         {
             for (var index = 0; index < snapshot.Length; index++)
             {
@@ -178,27 +250,12 @@ internal sealed class VenuesService : IDisposable
             return;
         }
 
-        if (!configuration.VenueNotifyNewEvents)
-        {
-            for (var index = 0; index < snapshot.Length; index++)
-            {
-                knownIds.Add(snapshot[index].Id);
-            }
-
-            return;
-        }
-
         var nowUtc = DateTime.UtcNow;
         var presented = 0;
         for (var index = 0; index < snapshot.Length; index++)
         {
             var venue = snapshot[index];
-            if (!knownIds.Add(venue.Id))
-            {
-                continue;
-            }
-
-            if (presented >= MaxNotificationsPerRefresh)
+            if (!knownIds.Add(venue.Id) || presented >= MaxNotificationsPerRefresh)
             {
                 continue;
             }
@@ -209,12 +266,12 @@ internal sealed class VenuesService : IDisposable
                 continue;
             }
 
-            if (venue.StartUtc > nowUtc.AddHours(24))
+            if (venue.StartUtc is not { } start || start > nowUtc.AddHours(24))
             {
                 continue;
             }
 
-            notifications.Notify(new PhoneNotification("venues", venue.Title, venue.LocationLine, DateTime.Now,
+            notifications.Notify(new PhoneNotification("venues", venue.Title, venue.PlaceLine, DateTime.Now,
                 NotificationAccent));
             presented++;
         }

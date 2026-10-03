@@ -1,4 +1,7 @@
+using Aetherphone.Core;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Video;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 
@@ -8,14 +11,12 @@ internal sealed class AetherStreamScreenWindow : Window
 {
     private const float SourceAspect = (float)VideoEngine.ScreenWidth / VideoEngine.ScreenHeight;
 
-    private readonly ScreenController screen;
-    private readonly VideoPlayer video;
+    private readonly VideoSuite suite;
 
-    internal AetherStreamScreenWindow(ScreenController screen, VideoPlayer video)
+    internal AetherStreamScreenWindow(VideoSuite suite)
         : base("MogCast Screen###AetherStreamScreenWindow")
     {
-        this.screen = screen;
-        this.video = video;
+        this.suite = suite;
         Size = new Vector2(640f, 360f);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints
@@ -27,10 +28,10 @@ internal sealed class AetherStreamScreenWindow : Window
 
     public override void Draw()
     {
-        var handle = screen.Engine.ScreenViewHandle;
-        if (handle == nint.Zero || !video.HasMedia)
+        var handle = suite.Screen.Engine.ScreenViewHandle;
+        if (handle == nint.Zero || !suite.Player.HasMedia)
         {
-            ImGui.TextDisabled("Nothing playing.");
+            ImGui.TextDisabled(Loc.T(L.AetherStream.NothingPlaying));
             return;
         }
 
@@ -49,6 +50,13 @@ internal sealed class AetherStreamScreenWindow : Window
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + offsetX);
         }
 
+        var origin = ImGui.GetCursorScreenPos();
         ImGui.Image(new ImTextureID(handle), new Vector2(drawWidth, drawHeight));
+
+        var stage = new Rect(origin, origin + new Vector2(drawWidth, drawHeight));
+        var drawList = ImGui.GetWindowDrawList();
+        var scale = UiScale.Global;
+        VideoStageOverlay.DrawBubbles(drawList, stage, suite.ChatFeed, scale);
+        VideoStageOverlay.DrawReactions(drawList, stage, suite.WatchAlong.Reactions, scale);
     }
 }

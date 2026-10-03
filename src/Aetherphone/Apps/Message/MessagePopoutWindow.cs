@@ -350,7 +350,7 @@ internal sealed class MessagePopoutWindow : Window
                 view.DrawEncryptionScreen(body);
                 return;
             default:
-                view.Draw(body, conversationId);
+                view.Draw(body, conversationId, true);
                 return;
         }
     }

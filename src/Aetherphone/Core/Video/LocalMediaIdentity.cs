@@ -134,3 +134,63 @@ internal static class LocalMediaToken
         return true;
     }
 }
+
+internal static class LocalMediaFiles
+{
+    private const int MaxMappedFiles = 64;
+
+    internal static bool TryResolve(Configuration configuration, LocalMediaIdentity identity, out string path)
+    {
+        path = string.Empty;
+        var records = configuration.VideoLocalFileMap;
+        for (var index = 0; index < records.Count; index++)
+        {
+            var record = records[index];
+            if (record.Key != identity.MapKey)
+            {
+                continue;
+            }
+
+            try
+            {
+                var file = new FileInfo(record.Path);
+                if (file.Exists && file.Length == record.SizeBytes)
+                {
+                    path = record.Path;
+                    return true;
+                }
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[WatchAlong] could not stat a mapped local file: {exception.Message}");
+            }
+
+            records.RemoveAt(index);
+            configuration.Save();
+            return false;
+        }
+
+        return false;
+    }
+
+    internal static void Remember(Configuration configuration, LocalMediaIdentity identity, string path,
+        long sizeBytes)
+    {
+        var records = configuration.VideoLocalFileMap;
+        for (var index = records.Count - 1; index >= 0; index--)
+        {
+            if (records[index].Key == identity.MapKey)
+            {
+                records.RemoveAt(index);
+            }
+        }
+
+        records.Add(new VideoLocalFileMapRecord { Key = identity.MapKey, Path = path, SizeBytes = sizeBytes });
+        while (records.Count > MaxMappedFiles)
+        {
+            records.RemoveAt(0);
+        }
+
+        configuration.Save();
+    }
+}

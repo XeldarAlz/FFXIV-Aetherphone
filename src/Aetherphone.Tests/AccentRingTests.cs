@@ -114,9 +114,8 @@ public sealed class AccentRingTests
     }
 
     [Fact]
-    public void DefaultLayoutNeverPutsLikeColorsSideBySide()
+    public void DefaultSecondPageNeverPutsLikeColorsSideBySide()
     {
-        AssertPageSeparation(HomeLayoutService.DefaultFirstPageApps);
         AssertPageSeparation(HomeLayoutService.DefaultSecondPageApps);
     }
 

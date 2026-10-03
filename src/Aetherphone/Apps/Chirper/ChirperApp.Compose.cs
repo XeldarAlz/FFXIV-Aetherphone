@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Platform;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
@@ -220,6 +221,7 @@ internal sealed partial class ChirperApp
         var pillWidth = actionSize.X + 30f * scale;
         var pillMax = new Vector2(area.Max.X - 12f * scale, rowCenterY + pillHeight * 0.5f);
         var pillMin = new Vector2(pillMax.X - pillWidth, rowCenterY - pillHeight * 0.5f);
+        UiAnchors.Report("chirper.compose.post", new Rect(pillMin, pillMax));
         var canPost = (!string.IsNullOrWhiteSpace(draft) || composeAttachments.Count > 0)
             && draft.Length <= MaxPostLength && !store.Posting;
         var pillHovered = canPost && UiInteract.Hover(pillMin, pillMax);
@@ -256,6 +258,7 @@ internal sealed partial class ChirperApp
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var barMin = new Vector2(area.Min.X, area.Max.Y - height);
+        UiAnchors.Report("chirper.compose.toolbar", new Rect(barMin, area.Max));
         PaintBarBackdrop(drawList, new Rect(barMin, area.Max));
         drawList.AddLine(barMin, new Vector2(area.Max.X, barMin.Y), ImGui.GetColorU32(ChirperInk.Hairline), 1f);
         var centerY = barMin.Y + height * 0.5f;

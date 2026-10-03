@@ -1,5 +1,6 @@
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Input;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Shell.Home;
@@ -12,33 +13,27 @@ namespace Aetherphone.Core.Shell;
 
 internal sealed class AppSwitcher
 {
+    private const string BackdropLayerId = "switcherbackdrop";
     private const string ShadowLayerId = "switchershadow";
     private const string TopLayerId = "switchertop";
-    private const float RevealSmoothTime = 0.19f;
-    private const float CommitSmoothTime = 0.16f;
     private const float CommitDoneProgress = 0.992f;
-    private const float MaxVeil = 0.58f;
-    private const float CardHeightFraction = 0.52f;
-    private const float CardCenterFraction = 0.46f;
-    private const float CardGapUnits = 16f;
+    private const float BackdropVeil = 0.25f;
+    private const float LabelHeightUnits = 28f;
     private const float LabelTileUnits = 18f;
     private const float LabelGapUnits = 6f;
-    private const float LabelLiftUnits = 14f;
+    private const float LabelTrailingUnits = 12f;
+    private const float LabelLiftUnits = 10f;
+    private const float LabelHitHeightUnits = 44f;
     private const float SlideInFactor = 0.5f;
     private const float TapSlopUnits = 6f;
-    private const float CloseCommitFraction = 0.28f;
     private const float CloseFlingUnitsPerSecond = 900f;
-    private const float ScrollSmoothTime = 0.18f;
-    private const float ReturnSmoothTime = 0.14f;
-    private const float ReflowSmoothTime = 0.16f;
+    private const float PressDepth = 1f - Motion.PressScaleCard;
     private const float FlyOffSmoothTime = 0.10f;
     private const float FlyOffClearanceFactor = 1.25f;
     private const float FlyOffTargetFactor = 1.75f;
-    private const float VelocityBlend = 0.5f;
-    private const float FlingProjectSeconds = 0.12f;
-    private const float OverscrollResistance = 0.35f;
     private const float OthersCommitFade = 2f;
     private const float InteractiveReveal = 0.92f;
+    private const float InvisibleAlpha = 0.004f;
     private const float ArrowRadiusUnits = 15f;
     private const float ArrowInsetUnits = 26f;
     private const float CloseAllHeightUnits = 38f;
@@ -49,64 +44,52 @@ internal sealed class AppSwitcher
 
     private sealed class Card
     {
-        public readonly IPhoneApp App;
+        public readonly IPhoneApp? App;
+        public readonly string LayerId;
         public Spring Slot;
         public Spring Lift;
+        public Spring Hover;
+        public Spring Press;
         public Rect HitRect;
         public Rect DrawRect;
+        public Rect LabelRect;
+        public Rect LabelHitRect;
+        public Vector2 LabelTextSize;
+        public string LabelText = string.Empty;
         public float Alpha;
         public bool FlyingOff;
+        public bool Hovered;
 
-        public Card(IPhoneApp app, int slotIndex)
+        public Card(IPhoneApp? app, int slotIndex)
         {
             App = app;
+            LayerId = app?.Id ?? ShellScreenPainter.HomeLayerId;
             Slot.SnapTo(slotIndex);
         }
-    }
 
-    private readonly struct SwitcherLayout
-    {
-        public readonly Rect Screen;
-        public readonly float CardWidth;
-        public readonly float CardHeight;
-        public readonly float Pitch;
-        public readonly float CenterY;
-        public readonly float MaxScroll;
-
-        public SwitcherLayout(Rect screen, float cardWidth, float cardHeight, float pitch, float centerY,
-            float maxScroll)
-        {
-            Screen = screen;
-            CardWidth = cardWidth;
-            CardHeight = cardHeight;
-            Pitch = pitch;
-            CenterY = centerY;
-            MaxScroll = maxScroll;
-        }
+        public bool IsHome => App is null;
     }
 
     private readonly NavigationStack navigation;
     private readonly ShellScreenPainter painter;
     private readonly List<IPhoneApp> snapshot = new();
     private readonly List<Card> cards = new();
+    private readonly DragTracker drag = new();
     private SwitcherLayout layout;
     private Spring reveal;
     private Spring commit;
     private Spring scroll;
     private Card? committing;
+    private Card? pressCard;
     private float scrollTarget;
+    private float panStartScroll;
+    private float parallaxReachSlots;
     private bool open;
     private bool closingAll;
-    private int openedFrame;
-    private bool pressed;
     private bool panning;
     private bool lifting;
-    private Card? pressCard;
-    private Vector2 pressOrigin;
-    private Vector2 lastMouse;
-    private float panStartScroll;
-    private float velocityX;
-    private float velocityY;
+    private int openedFrame;
+    private int tapSuppressedFrame = -1;
 
     public AppSwitcher(NavigationStack navigation, ShellScreenPainter painter)
     {
@@ -117,6 +100,8 @@ internal sealed class AppSwitcher
     public bool IsActive => open || committing is not null || reveal.Value > 0.01f;
     public bool Overtakes => IsActive;
     public bool CapturesPointer => IsActive;
+
+    private bool TapAllowed => !panning && !lifting && tapSuppressedFrame != ImGui.GetFrameCount();
 
     public void Open()
     {
@@ -130,14 +115,17 @@ internal sealed class AppSwitcher
         openedFrame = ImGui.GetFrameCount();
         navigation.CollectOpen(snapshot);
         cards.Clear();
+        cards.Add(new Card(null, 0));
         for (var index = 0; index < snapshot.Count; index++)
         {
-            cards.Add(new Card(snapshot[index], index));
+            cards.Add(new Card(snapshot[index], index + 1));
         }
 
-        scrollTarget = 0f;
-        scroll.SnapTo(0f);
+        var focusSlot = navigation.AtHome ? 0f : 1f;
+        scrollTarget = focusSlot;
+        scroll.SnapTo(focusSlot);
         commit.SnapTo(0f);
+        parallaxReachSlots = SwitcherGeometry.ParallaxReachSlots(cards.Count);
         ResetPress();
     }
 
@@ -166,7 +154,7 @@ internal sealed class AppSwitcher
 
     public void Advance(Rect screen, float delta)
     {
-        reveal.Step(open ? 1f : 0f, RevealSmoothTime, delta);
+        reveal.Step(open ? 1f : 0f, Motion.SwitcherReveal, delta);
         if (!IsActive)
         {
             return;
@@ -180,10 +168,10 @@ internal sealed class AppSwitcher
             return;
         }
 
-        layout = ComputeLayout(screen, UiScale.Current);
+        layout = SwitcherGeometry.Layout(screen, UiScale.Current, cards.Count);
         if (committing is not null)
         {
-            commit.Step(1f, CommitSmoothTime, delta);
+            commit.Step(1f, Motion.Release, delta);
             if (commit.Value >= CommitDoneProgress)
             {
                 FinishCommit();
@@ -195,11 +183,11 @@ internal sealed class AppSwitcher
         if (!panning)
         {
             scrollTarget = Math.Clamp(scrollTarget, 0f, layout.MaxScroll);
-            scroll.Step(scrollTarget, ScrollSmoothTime, delta);
+            scroll.Step(scrollTarget, Motion.PageSettle, delta);
         }
 
         ComputeCardRects();
-        if (closingAll && cards.Count == 0)
+        if (closingAll && !HasAppCards())
         {
             closingAll = false;
             Dismiss();
@@ -208,32 +196,32 @@ internal sealed class AppSwitcher
 
     private void FinishCommit()
     {
-        var chosen = committing!.App;
+        var chosen = committing!;
         committing = null;
         open = false;
         reveal.SnapTo(0f);
         commit.SnapTo(0f);
         cards.Clear();
         ResetPress();
-        navigation.OpenSettled(chosen.Id);
-    }
+        if (chosen.App is { } app)
+        {
+            navigation.OpenSettled(app.Id);
+            return;
+        }
 
-    private SwitcherLayout ComputeLayout(Rect screen, float scale)
-    {
-        var cardHeight = screen.Height * CardHeightFraction;
-        var cardWidth = cardHeight * (screen.Width / MathF.Max(1f, screen.Height));
-        var pitch = cardWidth + CardGapUnits * scale;
-        var centerY = screen.Min.Y + screen.Height * CardCenterFraction;
-        var maxScroll = MathF.Max(0f, (cards.Count - 1) * pitch);
-        return new SwitcherLayout(screen, cardWidth, cardHeight, pitch, centerY, maxScroll);
+        navigation.GoHomeSettled();
     }
 
     private void StepCards(float delta)
     {
+        var pressing = drag.Active && !panning && !lifting;
         for (var index = cards.Count - 1; index >= 0; index--)
         {
             var card = cards[index];
-            card.Slot.Step(index, ReflowSmoothTime, delta);
+            card.Slot.Step(index, Motion.Release, delta);
+            var pressed = pressing && ReferenceEquals(card, pressCard);
+            card.Press.Step(pressed ? 1f : 0f, pressed ? Motion.PressIn : Motion.Release, delta);
+            card.Hover.Step(card.Hovered && !drag.Active ? 1f : 0f, Motion.HoverLift, delta);
             if (card.FlyingOff)
             {
                 card.Lift.Step(layout.CardHeight * FlyOffTargetFactor, FlyOffSmoothTime, delta);
@@ -250,7 +238,7 @@ internal sealed class AppSwitcher
                 continue;
             }
 
-            card.Lift.Step(0f, ReturnSmoothTime, delta);
+            card.Lift.Step(0f, Motion.Appear, delta);
         }
     }
 
@@ -258,31 +246,29 @@ internal sealed class AppSwitcher
     {
         var revealValue = Easing.Clamp01(reveal.Value);
         var commitValue = committing is null ? 0f : Easing.Clamp01(commit.Value);
-        var half = new Vector2(layout.CardWidth, layout.CardHeight) * 0.5f;
-        var slideIn = (1f - revealValue) * layout.Pitch * SlideInFactor;
+        var slideIn = new Vector2((1f - revealValue) * layout.Pitch * SlideInFactor, 0f);
         for (var index = 0; index < cards.Count; index++)
         {
             var card = cards[index];
-            var isCurrent = !card.FlyingOff && ReferenceEquals(card.App, navigation.Current);
-            var centerX = layout.Screen.Center.X + card.Slot.Value * layout.Pitch - scroll.Value;
+            var isCurrent = IsCurrent(card);
+            var rest = SwitcherGeometry.CardRest(in layout, card.Slot.Value, scroll.Value);
             if (!isCurrent)
             {
-                centerX += slideIn;
+                rest = rest.Translate(slideIn);
             }
 
-            var center = new Vector2(centerX, layout.CenterY);
-            var rest = new Rect(center - half, center + half);
             card.HitRect = rest;
-            var rect = rest;
+            var pointerScale = (1f + Motion.HoverLiftCard * card.Hover.Value) * (1f - PressDepth * card.Press.Value);
+            var rect = SwitcherGeometry.Scaled(rest, pointerScale);
             var alpha = isCurrent ? 1f : revealValue;
             if (isCurrent && committing is null)
             {
-                rect = LerpRect(layout.Screen, rest, revealValue);
+                rect = LerpRect(layout.Screen, rect, revealValue);
             }
 
             if (ReferenceEquals(card, committing))
             {
-                rect = LerpRect(rest, layout.Screen, commitValue);
+                rect = LerpRect(rect, layout.Screen, commitValue);
                 alpha = 1f;
             }
             else if (committing is not null)
@@ -298,6 +284,42 @@ internal sealed class AppSwitcher
             card.DrawRect = rect.Translate(new Vector2(0f, -card.Lift.Value));
             card.Alpha = alpha;
         }
+    }
+
+    private bool IsCurrent(Card card)
+    {
+        if (card.FlyingOff)
+        {
+            return false;
+        }
+
+        return card.App is { } app ? ReferenceEquals(app, navigation.Current) : navigation.AtHome;
+    }
+
+    private bool HasAppCards()
+    {
+        for (var index = 0; index < cards.Count; index++)
+        {
+            if (!cards[index].IsHome)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasOpenApps()
+    {
+        for (var index = 0; index < cards.Count; index++)
+        {
+            if (!cards[index].IsHome && !cards[index].FlyingOff)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static Rect LerpRect(Rect from, Rect to, float progress)
@@ -324,10 +346,8 @@ internal sealed class AppSwitcher
         return true;
     }
 
-    private static float CardRounding(Rect rect, Rect screen, float screenRadius)
-    {
-        return screenRadius * (rect.Width / MathF.Max(1f, screen.Width));
-    }
+    private Rect BackdropQuad(Rect screen) =>
+        SwitcherGeometry.ParallaxQuad(screen, scroll.Value, layout.Pitch, parallaxReachSlots);
 
     public void DrawStage(Rect screen, float screenRadius, PhoneTheme theme)
     {
@@ -335,13 +355,12 @@ internal sealed class AppSwitcher
         var revealValue = Easing.Clamp01(reveal.Value);
         var commitValue = committing is null ? 0f : Easing.Clamp01(commit.Value);
         var backdrop = revealValue * (1f - commitValue);
-        var zoom = 1f + TransitionTiming.HomeZoomDepth * backdrop;
-        var homeTransform = LayerTransform.ScaleAbout(screen.Center, zoom, screen);
-        using (var homeLayer = ScreenLayer.Begin(ShellScreenPainter.HomeLayerId, screen, true))
+        using (ScreenLayer.BeginPassive(BackdropLayerId, screen))
         {
-            painter.PaintHome(screen, screenRadius, theme, HomeMotion.Recede(backdrop, null));
-            homeLayer.Veil(ImGui.GetColorU32(new Vector4(0f, 0f, 0f, MaxVeil * backdrop)));
-            homeLayer.Transform(in homeTransform);
+            var backdropList = ImGui.GetWindowDrawList();
+            DeviceChrome.DrawWallpaper(backdropList, screen, screen, BackdropQuad(screen), screenRadius, theme,
+                HomeMotion.Recede(backdrop, null).Recession);
+            Material.Veil(backdropList, screen.Min, screen.Max, BackdropVeil * backdrop, screenRadius);
         }
 
         using (ScreenLayer.BeginPassive(ShadowLayerId, screen))
@@ -350,27 +369,27 @@ internal sealed class AppSwitcher
             for (var index = 0; index < cards.Count; index++)
             {
                 var card = cards[index];
-                if (card.Alpha <= 0.004f || !VisibleOn(card.DrawRect, screen))
+                if (card.Alpha <= InvisibleAlpha || !VisibleOn(card.DrawRect, screen))
                 {
                     continue;
                 }
 
-                Elevation.Squircle(shadowList, card.DrawRect.Min, card.DrawRect.Max,
-                    CardRounding(card.DrawRect, screen, screenRadius), scale, card.Alpha);
+                Elevation.Floating(shadowList, card.DrawRect.Min, card.DrawRect.Max,
+                    SwitcherGeometry.CardRounding(card.DrawRect.Width, screen.Width, screenRadius), scale, card.Alpha);
             }
         }
 
         for (var index = 0; index < cards.Count; index++)
         {
             var card = cards[index];
-            if (card.Alpha <= 0.004f || !TryClipToScreen(card.DrawRect, screen, out var clip))
+            if (card.Alpha <= InvisibleAlpha || !TryClipToScreen(card.DrawRect, screen, out var clip))
             {
                 continue;
             }
 
             var transform = LayerTransform.Fit(screen, card.DrawRect, clip, card.Alpha);
-            using var layer = ScreenLayer.Begin(card.App.Id, screen, true);
-            painter.PaintApp(screen, screenRadius, theme, card.App);
+            using var layer = ScreenLayer.Begin(card.LayerId, screen, true);
+            PaintCard(screen, screenRadius, theme, card);
             layer.Transform(in transform);
         }
 
@@ -380,15 +399,26 @@ internal sealed class AppSwitcher
             for (var index = 0; index < cards.Count; index++)
             {
                 var card = cards[index];
-                if (card.Alpha <= 0.004f || !VisibleOn(card.DrawRect, screen))
+                if (card.Alpha <= InvisibleAlpha || !VisibleOn(card.DrawRect, screen))
                 {
                     continue;
                 }
 
                 Material.EdgeSquircle(topList, card.DrawRect.Min, card.DrawRect.Max,
-                    CardRounding(card.DrawRect, screen, screenRadius), scale, card.Alpha);
+                    SwitcherGeometry.CardRounding(card.DrawRect.Width, screen.Width, screenRadius), scale, card.Alpha);
             }
         }
+    }
+
+    private void PaintCard(Rect screen, float screenRadius, PhoneTheme theme, Card card)
+    {
+        if (card.App is { } app)
+        {
+            painter.PaintApp(screen, screenRadius, theme, app);
+            return;
+        }
+
+        painter.PaintHome(screen, screenRadius, theme, HomeMotion.Still);
     }
 
     public void DrawOverlay(Rect screen, PhoneTheme theme, float delta, bool inputEnabled)
@@ -410,77 +440,138 @@ internal sealed class AppSwitcher
         var interactive = open && committing is null && inputEnabled && revealValue > InteractiveReveal;
         var drawList = ImGui.GetForegroundDrawList();
         drawList.PushClipRect(screen.Min, screen.Max, true);
+        LayoutLabels(scale);
         if (interactive)
         {
-            UpdateInput(screen, scale);
-        }
-
-        if (cards.Count == 0)
-        {
-            DrawEmptyState(drawList, screen, opacity);
+            UpdateInput(screen, scale, delta);
         }
         else
         {
-            for (var index = 0; index < cards.Count; index++)
-            {
-                var card = cards[index];
-                if (card.Alpha <= 0.004f || ReferenceEquals(card, committing) ||
-                    (committing is null && ReferenceEquals(card.App, navigation.Current) && revealValue < InteractiveReveal))
-                {
-                    continue;
-                }
-
-                DrawCardLabel(drawList, card.App, card.DrawRect, scale, card.Alpha * opacity);
-            }
-
-            DrawArrows(drawList, screen, scale, delta, opacity, interactive);
-            DrawFooter(drawList, screen, scale, opacity, interactive);
+            ClearPointer();
         }
 
+        DeviceChrome.RecordWallpaperBackdrop(screen, BackdropQuad(screen), theme);
+        for (var index = 0; index < cards.Count; index++)
+        {
+            var card = cards[index];
+            if (card.Alpha <= InvisibleAlpha || ReferenceEquals(card, committing) ||
+                (committing is null && IsCurrent(card) && revealValue < InteractiveReveal))
+            {
+                continue;
+            }
+
+            HandleCardTap(card, interactive);
+            DrawCardLabel(drawList, card, theme, scale, card.Alpha * opacity, interactive);
+        }
+
+        DrawArrows(drawList, screen, scale, delta, opacity, interactive);
+        DrawFooter(drawList, screen, theme, scale, opacity, interactive);
         drawList.PopClipRect();
     }
 
-    private void UpdateInput(Rect screen, float scale)
+    private void LayoutLabels(float scale)
     {
-        var mouse = ImGui.GetMousePos();
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && ImGui.GetFrameCount() != openedFrame &&
-            UiInteract.Hover(screen.Min, screen.Max) && !OverChrome(screen, scale, mouse))
+        var height = LabelHeightUnits * scale;
+        var tile = LabelTileUnits * scale;
+        var inset = (height - tile) * 0.5f;
+        var gap = LabelGapUnits * scale;
+        var trailing = LabelTrailingUnits * scale;
+        var hitPad = new Vector2(0f, MathF.Max(0f, (LabelHitHeightUnits * scale - height) * 0.5f));
+        for (var index = 0; index < cards.Count; index++)
         {
-            pressed = true;
-            panning = false;
-            lifting = false;
-            pressCard = CardAt(mouse);
-            pressOrigin = mouse;
-            lastMouse = mouse;
-            panStartScroll = scrollTarget;
-            velocityX = 0f;
-            velocityY = 0f;
-        }
+            var card = cards[index];
+            if (card.Alpha <= InvisibleAlpha)
+            {
+                continue;
+            }
 
-        if (!pressed)
-        {
-            return;
+            var bounds = card.DrawRect;
+            var maxTextWidth = MathF.Max(0f, bounds.Width - (inset + tile + gap + trailing));
+            card.LabelText = Typography.FitText(LabelName(card), maxTextWidth, TextStyles.FootnoteEmphasized);
+            card.LabelTextSize = Typography.Measure(card.LabelText, TextStyles.FootnoteEmphasized);
+            var halfWidth = (inset + tile + gap + card.LabelTextSize.X + trailing) * 0.5f;
+            var bottom = bounds.Min.Y - LabelLiftUnits * scale;
+            card.LabelRect = new Rect(new Vector2(bounds.Center.X - halfWidth, bottom - height),
+                new Vector2(bounds.Center.X + halfWidth, bottom));
+            card.LabelHitRect = new Rect(card.LabelRect.Min - hitPad, card.LabelRect.Max + hitPad);
         }
-
-        if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
-        {
-            TrackPress(mouse, scale);
-            return;
-        }
-
-        ReleasePress(mouse, scale);
     }
 
-    private bool OverChrome(Rect screen, float scale, Vector2 mouse)
+    private static string LabelName(Card card) => card.App is { } app ? app.DisplayName : Loc.T(L.Home.HomeScreen);
+
+    private void UpdateInput(Rect screen, float scale, float delta)
     {
-        if (cards.Count == 0)
+        var hoveredCard = HoveredCard();
+        var overChrome = OverChrome(screen, scale);
+        if (hoveredCard is not null && !overChrome)
         {
-            return false;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        if (CloseAllRect(screen, scale).Contains(mouse))
+        drag.Track(delta);
+        if (!drag.Active && !overChrome && ImGui.GetFrameCount() != openedFrame && drag.Begin(screen))
         {
-            return true;
+            pressCard = hoveredCard;
+            panning = false;
+            lifting = false;
+            panStartScroll = scroll.Value;
+        }
+
+        if (drag.Active)
+        {
+            TrackPress(scale);
+        }
+
+        if (drag.Released(out var travel, out var velocityY))
+        {
+            ReleasePress(travel, velocityY, scale);
+        }
+    }
+
+    private Card? HoveredCard()
+    {
+        Card? hovered = null;
+        for (var index = 0; index < cards.Count; index++)
+        {
+            var card = cards[index];
+            card.Hovered = false;
+            if (card.FlyingOff || card.Alpha <= InvisibleAlpha)
+            {
+                continue;
+            }
+
+            if (UiInteract.Hover(card.HitRect.Min, card.HitRect.Max) ||
+                UiInteract.Hover(card.LabelHitRect.Min, card.LabelHitRect.Max))
+            {
+                hovered = card;
+            }
+        }
+
+        if (hovered is not null)
+        {
+            hovered.Hovered = true;
+        }
+
+        return hovered;
+    }
+
+    private void ClearPointer()
+    {
+        for (var index = 0; index < cards.Count; index++)
+        {
+            cards[index].Hovered = false;
+        }
+    }
+
+    private bool OverChrome(Rect screen, float scale)
+    {
+        if (HasOpenApps())
+        {
+            var closeAll = CloseAllRect(screen, scale);
+            if (UiInteract.Hover(closeAll.Min, closeAll.Max))
+            {
+                return true;
+            }
         }
 
         if (cards.Count < 2)
@@ -488,24 +579,17 @@ internal sealed class AppSwitcher
             return false;
         }
 
-        var arrowReach = (ArrowRadiusUnits + 6f) * scale;
-        return (ArrowCenter(screen, scale, true) - mouse).Length() <= arrowReach ||
-               (ArrowCenter(screen, scale, false) - mouse).Length() <= arrowReach;
+        var focusIndex = SwitcherGeometry.SnapSlot(scrollTarget, cards.Count);
+        var reach = new Vector2(ArrowRadiusUnits * scale, ArrowRadiusUnits * scale);
+        var left = ArrowCenter(screen, scale, true);
+        var right = ArrowCenter(screen, scale, false);
+        return (focusIndex > 0 && UiInteract.Hover(left - reach, left + reach)) ||
+               (focusIndex < cards.Count - 1 && UiInteract.Hover(right - reach, right + reach));
     }
 
-    private void TrackPress(Vector2 mouse, float scale)
+    private void TrackPress(float scale)
     {
-        var delta = FrameClock.Delta;
-        if (delta > 0f)
-        {
-            var instantaneousX = (mouse.X - lastMouse.X) / delta;
-            var instantaneousY = (mouse.Y - lastMouse.Y) / delta;
-            velocityX += (instantaneousX - velocityX) * VelocityBlend;
-            velocityY += (instantaneousY - velocityY) * VelocityBlend;
-        }
-
-        lastMouse = mouse;
-        var travel = mouse - pressOrigin;
+        var travel = drag.Delta;
         if (!panning && !lifting)
         {
             var slop = TapSlopUnits * scale;
@@ -515,7 +599,7 @@ internal sealed class AppSwitcher
             }
             else if (MathF.Abs(travel.Y) > slop)
             {
-                if (pressCard is { FlyingOff: false } && travel.Y < 0f)
+                if (pressCard is { FlyingOff: false, IsHome: false } && travel.Y < 0f)
                 {
                     lifting = true;
                 }
@@ -528,7 +612,8 @@ internal sealed class AppSwitcher
 
         if (panning)
         {
-            scroll.SnapTo(RubberBand(panStartScroll - travel.X));
+            var raw = panStartScroll - travel.X / MathF.Max(1f, layout.Pitch);
+            scroll.SnapTo(SwitcherGeometry.RubberBand(raw, layout.MaxScroll));
             return;
         }
 
@@ -538,90 +623,64 @@ internal sealed class AppSwitcher
         }
     }
 
-    private float RubberBand(float raw)
+    private void ReleasePress(Vector2 travel, float velocityY, float scale)
     {
-        if (raw < 0f)
+        if (lifting && pressCard is { FlyingOff: false, IsHome: false } card)
         {
-            return raw * OverscrollResistance;
-        }
-
-        if (raw > layout.MaxScroll)
-        {
-            return layout.MaxScroll + (raw - layout.MaxScroll) * OverscrollResistance;
-        }
-
-        return raw;
-    }
-
-    private void ReleasePress(Vector2 mouse, float scale)
-    {
-        var travel = mouse - pressOrigin;
-        var slop = TapSlopUnits * scale;
-        var tapped = MathF.Abs(travel.X) < slop && MathF.Abs(travel.Y) < slop;
-        if (lifting && pressCard is { FlyingOff: false } card)
-        {
-            var commitClose = card.Lift.Value > layout.CardHeight * CloseCommitFraction ||
-                              -velocityY > CloseFlingUnitsPerSecond * scale;
-            if (commitClose)
+            if (SwitcherGeometry.ClosesOnRelease(card.Lift.Value, layout.CardHeight, velocityY,
+                    CloseFlingUnitsPerSecond * scale))
             {
                 CloseCard(card);
             }
         }
         else if (panning)
         {
-            var projected = panStartScroll - travel.X - velocityX * FlingProjectSeconds;
-            SnapToNearest(projected);
+            var projected = SwitcherGeometry.ProjectedScroll(panStartScroll, travel.X, drag.VelocityX, layout.Pitch);
+            scrollTarget = SwitcherGeometry.SnapSlot(projected, cards.Count);
         }
-        else if (tapped)
+        else if (pressCard is null && IsTap(travel, scale))
         {
-            if (pressCard is { FlyingOff: false } target)
-            {
-                OpenCard(target);
-            }
-            else if (pressCard is null)
-            {
-                Dismiss();
-            }
+            Dismiss();
+        }
+
+        if (panning || lifting)
+        {
+            tapSuppressedFrame = ImGui.GetFrameCount();
         }
 
         ResetPress();
     }
 
-    private void SnapToNearest(float projected)
+    private static bool IsTap(Vector2 travel, float scale)
     {
-        if (cards.Count == 0 || layout.Pitch <= 0f)
-        {
-            scrollTarget = 0f;
-            return;
-        }
-
-        var snapIndex = (int)Math.Clamp(MathF.Round(projected / layout.Pitch), 0f, cards.Count - 1);
-        scrollTarget = snapIndex * layout.Pitch;
+        var slop = TapSlopUnits * scale;
+        return MathF.Abs(travel.X) < slop && MathF.Abs(travel.Y) < slop;
     }
 
-    private Card? CardAt(Vector2 mouse)
-    {
-        for (var index = 0; index < cards.Count; index++)
-        {
-            if (!cards[index].FlyingOff && cards[index].HitRect.Contains(mouse))
-            {
-                return cards[index];
-            }
-        }
-
-        return null;
-    }
-
-    private void CloseCard(Card card)
+    private void HandleCardTap(Card card, bool interactive)
     {
         if (card.FlyingOff)
         {
             return;
         }
 
+        var hovered = interactive && UiInteract.Hover(card.HitRect.Min, card.HitRect.Max);
+        if (UiInteract.Click(card.HitRect.Min, card.HitRect.Max, hovered && TapAllowed))
+        {
+            OpenCard(card);
+        }
+    }
+
+    private void CloseCard(Card card)
+    {
+        if (card.FlyingOff || card.App is not { } app)
+        {
+            return;
+        }
+
         card.FlyingOff = true;
-        var wasCurrent = ReferenceEquals(navigation.Current, card.App);
-        navigation.Forget(card.App.Id);
+        var wasCurrent = ReferenceEquals(navigation.Current, app);
+        navigation.Forget(app.Id);
         if (!wasCurrent)
         {
             UiFeedback.Play(UiSound.AppClose);
@@ -630,7 +689,12 @@ internal sealed class AppSwitcher
 
     private void OpenCard(Card card)
     {
-        if (ReferenceEquals(navigation.Current, card.App))
+        if (card.FlyingOff || committing is not null)
+        {
+            return;
+        }
+
+        if (IsCurrent(card))
         {
             Dismiss();
             return;
@@ -652,7 +716,10 @@ internal sealed class AppSwitcher
         var closesCurrent = navigation.Current is not null;
         for (var index = 0; index < cards.Count; index++)
         {
-            cards[index].FlyingOff = true;
+            if (!cards[index].IsHome)
+            {
+                cards[index].FlyingOff = true;
+            }
         }
 
         navigation.ForgetAll();
@@ -666,40 +733,67 @@ internal sealed class AppSwitcher
 
     private void ResetPress()
     {
-        pressed = false;
+        drag.Cancel();
         panning = false;
         lifting = false;
         pressCard = null;
     }
 
-    private static void DrawCardLabel(ImDrawListPtr drawList, IPhoneApp app, Rect bounds, float scale, float alpha)
+    private void DrawCardLabel(ImDrawListPtr drawList, Card card, PhoneTheme theme, float scale, float alpha,
+        bool interactive)
     {
-        if (alpha <= 0.004f)
+        if (alpha <= InvisibleAlpha)
         {
             return;
         }
 
-        var tileSize = LabelTileUnits * scale;
-        var gap = LabelGapUnits * scale;
-        var name = Typography.FitText(app.DisplayName, bounds.Width - tileSize - gap, TextStyles.Caption1);
-        var nameSize = Typography.Measure(name, TextStyles.Caption1);
-        var groupLeft = bounds.Center.X - (tileSize + gap + nameSize.X) * 0.5f;
-        var centerY = bounds.Min.Y - LabelLiftUnits * scale;
-        var tileCenter = new Vector2(groupLeft + tileSize * 0.5f, centerY);
-        var tileHalf = new Vector2(tileSize, tileSize) * 0.5f;
-        var surface = IconTile.Surface(app.Accent);
-        Squircle.Fill(drawList, tileCenter - tileHalf, tileCenter + tileHalf, tileSize * Metrics.Radius.TileFactor,
-            ImGui.GetColorU32(Palette.WithAlpha(surface, alpha)));
-        var ink = AppAccents.InkFor(app.Id);
-        if (!AppIconArt.TryDraw(drawList, app.Id, tileCenter, tileSize * 0.9f, Palette.WithAlpha(ink, alpha),
-                Palette.WithAlpha(Palette.Mix(surface, ink, 0.28f), alpha)))
+        var rect = card.LabelRect;
+        var tile = LabelTileUnits * scale;
+        var inset = (rect.Height - tile) * 0.5f;
+        Material.LiquidGlass(drawList, rect.Min, rect.Max, rect.Height * 0.5f, scale, GlassTone.Light, 0f, alpha);
+        var tileCenter = new Vector2(rect.Min.X + inset + tile * 0.5f, rect.Center.Y);
+        DrawLabelIcon(drawList, card, theme, tileCenter, tile, alpha);
+        var textPosition = new Vector2(tileCenter.X + tile * 0.5f + LabelGapUnits * scale,
+            rect.Center.Y - card.LabelTextSize.Y * 0.5f);
+        Typography.Draw(drawList, textPosition, card.LabelText, Palette.WithAlpha(theme.TextStrong, alpha),
+            TextStyles.FootnoteEmphasized);
+        var hovered = interactive && !card.FlyingOff &&
+                      UiInteract.Hover(card.LabelHitRect.Min, card.LabelHitRect.Max);
+        if (UiInteract.Click(card.LabelHitRect.Min, card.LabelHitRect.Max, hovered && TapAllowed))
         {
-            drawList.AddCircleFilled(tileCenter, tileSize * 0.16f, ImGui.GetColorU32(Palette.WithAlpha(ink, alpha)),
-                12);
+            OpenCard(card);
+        }
+    }
+
+    private static void DrawLabelIcon(ImDrawListPtr drawList, Card card, PhoneTheme theme, Vector2 center, float size,
+        float alpha)
+    {
+        var half = new Vector2(size, size) * 0.5f;
+        var accent = card.App is { } app ? app.Accent : theme.Accent;
+        if (card.App is not null && AppIconTile.TryDraw(drawList, card.App.Id, accent, center - half, center + half,
+                size * Metrics.Radius.TileFactor, alpha, false))
+        {
+            return;
         }
 
-        Typography.Draw(drawList, new Vector2(groupLeft + tileSize + gap, centerY - nameSize.Y * 0.5f), name,
-            new Vector4(1f, 1f, 1f, 0.92f * alpha), TextStyles.Caption1);
+        var surface = IconTile.Surface(accent);
+        Squircle.Fill(drawList, center - half, center + half, size * Metrics.Radius.TileFactor,
+            ImGui.GetColorU32(Palette.WithAlpha(surface, alpha)));
+        if (card.App is null)
+        {
+            ProgressRing.CenterIcon(drawList, center, FontAwesomeIcon.Home, Palette.WithAlpha(AccentRing.Ink, alpha),
+                size * 0.5f);
+            return;
+        }
+
+        var ink = AppAccents.InkFor(card.App.Id);
+        if (AppIconArt.TryDraw(drawList, card.App.Id, center, size * 0.9f, Palette.WithAlpha(ink, alpha),
+                Palette.WithAlpha(Palette.Mix(surface, ink, 0.28f), alpha)))
+        {
+            return;
+        }
+
+        drawList.AddCircleFilled(center, size * 0.16f, ImGui.GetColorU32(Palette.WithAlpha(ink, alpha)), 12);
     }
 
     private Vector2 ArrowCenter(Rect screen, float scale, bool left)
@@ -711,54 +805,47 @@ internal sealed class AppSwitcher
     private void DrawArrows(ImDrawListPtr drawList, Rect screen, float scale, float delta, float opacity,
         bool interactive)
     {
-        if (cards.Count < 2 || layout.Pitch <= 0f)
+        if (cards.Count < 2)
         {
             return;
         }
 
-        var focusIndex = (int)Math.Clamp(MathF.Round(scrollTarget / layout.Pitch), 0f, cards.Count - 1);
+        var focusIndex = SwitcherGeometry.SnapSlot(scrollTarget, cards.Count);
         var radius = ArrowRadiusUnits * scale;
         if (focusIndex > 0 &&
             HoverButton.Circle(drawList, "switcher.left", ArrowCenter(screen, scale, true), radius,
                 FontAwesomeIcon.ChevronLeft, ArrowTint, ArrowInk, delta, opacity, interactive))
         {
-            scrollTarget = (focusIndex - 1) * layout.Pitch;
+            scrollTarget = focusIndex - 1;
         }
 
         if (focusIndex < cards.Count - 1 &&
             HoverButton.Circle(drawList, "switcher.right", ArrowCenter(screen, scale, false), radius,
                 FontAwesomeIcon.ChevronRight, ArrowTint, ArrowInk, delta, opacity, interactive))
         {
-            scrollTarget = (focusIndex + 1) * layout.Pitch;
+            scrollTarget = focusIndex + 1;
         }
     }
 
-    private void DrawEmptyState(ImDrawListPtr drawList, Rect screen, float opacity)
+    private void DrawFooter(ImDrawListPtr drawList, Rect screen, PhoneTheme theme, float scale, float opacity,
+        bool interactive)
     {
-        if (!open || closingAll)
+        if (!HasOpenApps())
         {
             return;
         }
 
-        Typography.DrawCentered(drawList, new Vector2(screen.Center.X, layout.CenterY), Loc.T(L.AppSwitcher.Empty),
-            new Vector4(1f, 1f, 1f, 0.75f * opacity), TextStyles.Subheadline);
-    }
-
-    private void DrawFooter(ImDrawListPtr drawList, Rect screen, float scale, float opacity, bool interactive)
-    {
         var rect = CloseAllRect(screen, scale);
         var hovered = interactive && UiInteract.Hover(rect.Min, rect.Max);
-        Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, (hovered ? 0.22f : 0.14f) * opacity)));
+        Material.LiquidGlass(drawList, rect.Min, rect.Max, rect.Height * 0.5f, scale, GlassTone.Light, 0f, opacity);
         Typography.DrawCentered(drawList, rect.Center, Loc.T(L.AppSwitcher.CloseAll),
-            new Vector4(1f, 1f, 1f, opacity), TextStyles.SubheadlineEmphasized);
-        if (!hovered)
+            Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.SubheadlineEmphasized);
+        if (hovered)
         {
-            return;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && ImGui.GetFrameCount() != openedFrame)
+        if (UiInteract.Click(rect.Min, rect.Max, hovered && ImGui.GetFrameCount() != openedFrame))
         {
             CloseAll();
         }

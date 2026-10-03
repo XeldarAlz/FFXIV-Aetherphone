@@ -18,7 +18,6 @@ internal sealed class CasinoTablesStore : IDisposable
     private readonly AethernetSession session;
     private readonly CasinoClient casino;
     private readonly CasinoStore chips;
-    private readonly RealtimeSignalBus signals;
     private readonly PollCadence cadence;
     private readonly StoreWork work = new("CasinoTables");
     private readonly object intentGate = new();
@@ -50,16 +49,14 @@ internal sealed class CasinoTablesStore : IDisposable
     private string? lastAccountId;
 
     public CasinoTablesStore(AethernetSession session, CasinoClient casino, CasinoStore chips,
-        PhoneVisibility visibility, RealtimeSignalBus signals)
+        PhoneVisibility visibility)
     {
         this.session = session;
         this.casino = casino;
         this.chips = chips;
-        this.signals = signals;
         cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
         tableStatusSink = OnTableStatus;
         session.Changed += OnSessionChanged;
-        signals.CasinoReceived += OnCasinoSignal;
     }
 
     public CasinoTableRowDto[] Tables => tables;
@@ -469,21 +466,6 @@ internal sealed class CasinoTablesStore : IDisposable
         }
     }
 
-    private void OnCasinoSignal(CasinoSignal signal)
-    {
-        if (!string.Equals(signal.Type, SignalType.CasinoPing, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        cadence.RequestImmediate();
-        var open = doorRoomId;
-        if (open.Length > 0)
-        {
-            RefreshDoorNow(open);
-        }
-    }
-
     private void OnSessionChanged()
     {
         var accountId = session.CurrentUser?.Id;
@@ -604,7 +586,6 @@ internal sealed class CasinoTablesStore : IDisposable
     public void Dispose()
     {
         session.Changed -= OnSessionChanged;
-        signals.CasinoReceived -= OnCasinoSignal;
         work.Dispose();
     }
 }

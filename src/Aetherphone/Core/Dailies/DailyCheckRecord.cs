@@ -5,4 +5,5 @@ internal sealed class DailyCheckRecord
 {
     public string ItemId { get; set; } = string.Empty;
     public long PeriodResetUnix { get; set; }
+    public ulong ContentId { get; set; }
 }

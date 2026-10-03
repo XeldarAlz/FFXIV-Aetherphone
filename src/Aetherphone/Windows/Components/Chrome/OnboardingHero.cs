@@ -21,6 +21,7 @@ internal static class OnboardingHero
     private const float StaggerSpan = 0.34f;
     private const double DriftPeriodMs = 30000.0;
     private const double RipplePeriodMs = 2800.0;
+    private const float BrandCoreUnits = 36f;
 
     public static void Draw(ImDrawListPtr drawList, Vector2 center, HeroMotif motif, Vector4 accent, float scale,
         float reveal, float alpha)
@@ -31,7 +32,7 @@ internal static class OnboardingHero
         }
 
         var clampedReveal = Easing.Clamp01(reveal);
-        var settle = Easing.EaseOutQuint(clampedReveal);
+        var settle = clampedReveal;
         Halo(drawList, center, accent, scale, settle, alpha);
         if (motif == HeroMotif.Care)
         {
@@ -54,7 +55,7 @@ internal static class OnboardingHero
         for (var index = 0; index < count; index++)
         {
             var stagger = index / (float)(count - 1) * StaggerSpan;
-            var appear = Easing.EaseOutQuint(Easing.Clamp01((reveal - stagger) / denominator));
+            var appear = Easing.Clamp01((reveal - stagger) / denominator);
             if (appear <= 0.002f)
             {
                 continue;
@@ -77,7 +78,7 @@ internal static class OnboardingHero
         Ripples(drawList, center, accent, scale, settle * alpha);
         for (var index = 0; index < TwinkleOffsets.Length; index++)
         {
-            var appear = Easing.EaseOutQuint(Easing.Clamp01((reveal - 0.35f - index * 0.08f) / 0.5f));
+            var appear = Easing.Clamp01((reveal - 0.35f - index * 0.08f) / 0.5f);
             if (appear <= 0.002f)
             {
                 continue;
@@ -99,6 +100,11 @@ internal static class OnboardingHero
         var min = new Vector2(center.X - half, center.Y - half);
         var max = new Vector2(center.X + half, center.Y + half);
         var radius = size * 0.26f;
+        if (AppIconTile.TryDraw(drawList, id, AppAccents.For(id), min, max, radius, alpha, true, scale))
+        {
+            return;
+        }
+
         var surface = IconTile.Surface(AppAccents.For(id));
         Elevation.IconRest(drawList, min, max, radius, scale, alpha);
         IconTile.FillShaded(drawList, min, max, radius, surface, alpha);
@@ -181,6 +187,11 @@ internal static class OnboardingHero
     private static void Core(ImDrawListPtr drawList, Vector2 center, Vector4 accent, float scale, float settle,
         float alpha)
     {
+        if (BrandMark.TryDraw(drawList, center, BrandCoreUnits * scale * settle, alpha * settle, scale))
+        {
+            return;
+        }
+
         var pulse = Pulse.Wave(Pulse.Calm);
         var radius = (10f + 1.4f * pulse) * scale * settle;
         if (radius <= 0.2f)

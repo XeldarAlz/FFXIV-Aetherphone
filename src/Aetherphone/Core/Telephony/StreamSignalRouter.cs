@@ -2,6 +2,23 @@ using Aetherphone.Core.Telephony.Contracts;
 
 namespace Aetherphone.Core.Telephony;
 
+internal readonly record struct StreamScreenPose(Vector3 Position, float Yaw, float Pitch, float Roll, float Scale,
+    float Curve);
+
+internal readonly record struct StreamPublication(
+    string Url,
+    double PositionSeconds,
+    bool Paused,
+    uint TerritoryId,
+    uint WorldId,
+    bool ApprovalRequired,
+    bool Discoverable,
+    bool CodeEnabled,
+    int GuestPermissions,
+    StreamMember[]? Members,
+    StreamQueueEntry[]? UpcomingQueue,
+    StreamScreenPose? Screen);
+
 internal sealed class StreamSignalRouter : IDisposable
 {
     private readonly CallSignalRouter calls;
@@ -31,6 +48,10 @@ internal sealed class StreamSignalRouter : IDisposable
 
     public event Action<CallControl>? ViewerFailed;
 
+    public event Action<CallControl>? HostChanged;
+    public event Action<CallControl>? ControlRequested;
+    public event Action<CallControl>? Reacted;
+
     public bool Connected => calls.Connected;
 
     public void ReportPlaybackFailure(string url, string? reason)
@@ -38,18 +59,32 @@ internal sealed class StreamSignalRouter : IDisposable
         calls.Send(new CallControl { Type = SignalType.StreamPlaybackFailed, Url = url, Reason = reason });
     }
 
-    public void PublishState(string url, double positionSeconds, bool paused, uint territoryId, uint worldId,
-        bool approvalRequired, bool discoverable, StreamQueueEntry[]? upcomingQueue = null,
-        Vector3? screenPosition = null, float? screenYaw = null, float? screenScale = null)
+    public void PublishState(in StreamPublication publication)
     {
+        var screen = publication.Screen;
         calls.Send(new CallControl
         {
-            Type = SignalType.StreamState, Url = url, PositionSeconds = positionSeconds, Paused = paused,
-            TerritoryId = territoryId, WorldId = worldId, ApprovalRequired = approvalRequired,
-            Discoverable = discoverable,
-            UpcomingQueue = upcomingQueue,
-            ScreenX = screenPosition?.X, ScreenY = screenPosition?.Y, ScreenZ = screenPosition?.Z,
-            ScreenYaw = screenYaw, ScreenScale = screenScale,
+            Type = SignalType.StreamState,
+            Url = publication.Url,
+            PositionSeconds = publication.PositionSeconds,
+            Paused = publication.Paused,
+            TerritoryId = publication.TerritoryId,
+            WorldId = publication.WorldId,
+            ApprovalRequired = publication.ApprovalRequired,
+            Discoverable = publication.Discoverable,
+            CodeEnabled = publication.CodeEnabled,
+            GuestPermissions = publication.GuestPermissions,
+            Members = publication.Members,
+            Features = StreamFeature.Party,
+            UpcomingQueue = publication.UpcomingQueue,
+            ScreenX = screen?.Position.X,
+            ScreenY = screen?.Position.Y,
+            ScreenZ = screen?.Position.Z,
+            ScreenYaw = screen?.Yaw,
+            ScreenScale = screen?.Scale,
+            ScreenPitch = screen?.Pitch,
+            ScreenRoll = screen?.Roll,
+            ScreenCurve = screen?.Curve,
         });
     }
 
@@ -85,7 +120,30 @@ internal sealed class StreamSignalRouter : IDisposable
 
     public void Join(string hostId)
     {
-        calls.Send(new CallControl { Type = SignalType.StreamJoin, HostId = hostId });
+        calls.Send(new CallControl { Type = SignalType.StreamJoin, HostId = hostId, Features = StreamFeature.Party });
+    }
+
+    public void JoinByCode(string code)
+    {
+        calls.Send(new CallControl { Type = SignalType.StreamJoin, Code = code, Features = StreamFeature.Party });
+    }
+
+    public void Transfer(string userId)
+    {
+        calls.Send(new CallControl { Type = SignalType.StreamTransfer, UserId = userId });
+    }
+
+    public void Control(string action, double? positionSeconds = null)
+    {
+        calls.Send(new CallControl
+        {
+            Type = SignalType.StreamControl, Action = action, PositionSeconds = positionSeconds,
+        });
+    }
+
+    public void React(int reaction)
+    {
+        calls.Send(new CallControl { Type = SignalType.StreamReact, Reaction = reaction });
     }
 
     public void RequestNearby(uint territoryId, uint worldId)
@@ -93,9 +151,9 @@ internal sealed class StreamSignalRouter : IDisposable
         calls.Send(new CallControl { Type = SignalType.StreamNearby, TerritoryId = territoryId, WorldId = worldId });
     }
 
-    public void Leave()
+    public void Leave(string? hostId)
     {
-        calls.Send(new CallControl { Type = SignalType.StreamLeave });
+        calls.Send(new CallControl { Type = SignalType.StreamLeave, HostId = hostId });
     }
 
     private void OnControl(CallControl message)
@@ -140,6 +198,15 @@ internal sealed class StreamSignalRouter : IDisposable
                 return;
             case SignalType.StreamViewerFailed:
                 ViewerFailed?.Invoke(message);
+                return;
+            case SignalType.StreamHostChanged:
+                HostChanged?.Invoke(message);
+                return;
+            case SignalType.StreamControlRequest:
+                ControlRequested?.Invoke(message);
+                return;
+            case SignalType.StreamReaction:
+                Reacted?.Invoke(message);
                 return;
         }
     }

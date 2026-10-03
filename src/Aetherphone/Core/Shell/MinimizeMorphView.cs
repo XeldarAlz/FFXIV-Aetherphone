@@ -13,20 +13,26 @@ internal sealed class MinimizeMorphView
     private const float RailFadeEnd = 0.55f;
     private const string VeilLayerId = "morphveil";
 
+    private static readonly HardwareKey[] HardwareKeys =
+    {
+        HardwareKey.Action,
+        HardwareKey.LockPosition,
+        HardwareKey.Side,
+        HardwareKey.CameraControl,
+    };
+
     private readonly ThemeProvider themes;
     private readonly MinimizeTransition minimize;
     private readonly MinimizedPhone minimizedPhone;
     private readonly ShellScreenPainter painter;
-    private readonly Configuration configuration;
 
     public MinimizeMorphView(ThemeProvider themes, MinimizeTransition minimize, MinimizedPhone minimizedPhone,
-        ShellScreenPainter painter, Configuration configuration)
+        ShellScreenPainter painter)
     {
         this.themes = themes;
         this.minimize = minimize;
         this.minimizedPhone = minimizedPhone;
         this.painter = painter;
-        this.configuration = configuration;
     }
 
     public void Draw(Rect device, float delta)
@@ -59,11 +65,11 @@ internal sealed class MinimizeMorphView
         DrawRailButtons(shell, geometry, theme, scale, eased);
         RevealMorphContent(DeviceChrome.Chassis(device, theme), theme, geometry, eased, device.IsLandscape());
 
-        var faceAlpha = Easing.SmoothStep(Easing.Segment(eased, FaceFadeStart, FaceFadeEnd));
+        var faceAlpha = Easing.Segment(eased, FaceFadeStart, FaceFadeEnd);
         minimizedPhone.DrawFace(ImGui.GetForegroundDrawList(), geometry, theme, delta, false, faceAlpha);
     }
 
-    private void DrawRailButtons(ImDrawListPtr dl, in ChassisGeometry geometry, PhoneTheme theme, float scale,
+    private static void DrawRailButtons(ImDrawListPtr dl, in ChassisGeometry geometry, PhoneTheme theme, float scale,
         float eased)
     {
         var rail = theme.RailWidth * scale * (1f - Easing.Segment(eased, 0f, RailFadeEnd));
@@ -74,12 +80,12 @@ internal sealed class MinimizeMorphView
 
         var body = geometry.Body;
         var window = new Rect(new Vector2(body.Min.X - rail, body.Min.Y), new Vector2(body.Max.X + rail, body.Max.Y));
-        var sideButton = DeviceChrome.SideButtonRect(window, geometry, out var sideButtonSide);
-        HardwareButton.Draw(dl, sideButton, theme, sideButtonSide, false, 0f, 0f);
-        var muteButton = DeviceChrome.MuteButtonRect(window, geometry, out var muteSide);
-        HardwareButton.Draw(dl, muteButton, theme, muteSide, false, 0f, configuration.DoNotDisturb ? 1f : 0f);
-        var lockButton = DeviceChrome.LockButtonRect(window, geometry, out var lockSide);
-        HardwareButton.Draw(dl, lockButton, theme, lockSide, false, 0f, configuration.LockPosition ? 1f : 0f);
+        for (var keyIndex = 0; keyIndex < HardwareKeys.Length; keyIndex++)
+        {
+            var key = HardwareKeys[keyIndex];
+            var slot = DeviceChrome.KeyRect(window, geometry, key, out var side);
+            HardwareButton.Draw(dl, slot, theme, side, key, false, 0f);
+        }
     }
 
     private void RevealMorphContent(in ChassisGeometry device, PhoneTheme theme, in ChassisGeometry geometry,

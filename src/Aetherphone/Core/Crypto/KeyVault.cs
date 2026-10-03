@@ -68,6 +68,17 @@ internal sealed class KeyVault : IDisposable
 
     private const int MaxRetiredKeys = 8;
 
+    private const int MaxLockedRetryDoublings = 5;
+
+    private static readonly TimeSpan TransientRetryDelay = TimeSpan.FromSeconds(30);
+
+    private static readonly TimeSpan LockedRetryCeiling = TimeSpan.FromMinutes(15);
+
+    private readonly object refreshSync = new();
+    private Task? refreshInFlight;
+    private string? refreshInFlightAccountId;
+    private int lockedRefreshStreak;
+
     public KeyVault(Configuration configuration, AethernetSession session, KeysClient client)
     {
         this.configuration = configuration;
@@ -83,6 +94,7 @@ internal sealed class KeyVault : IDisposable
         {
             lastAccountId = accountId;
             missingServerKeyStreak = 0;
+            lockedRefreshStreak = 0;
             LocalKeyUnreadable = false;
             ClearKey();
             serverBundle = null;
@@ -119,7 +131,44 @@ internal sealed class KeyVault : IDisposable
 
     public event Action? PreviousKeysRestored;
 
-    public async Task RefreshAsync(CancellationToken token)
+    public TimeSpan BackgroundRetryDelay
+    {
+        get
+        {
+            if (State != KeyVaultState.Locked || lockedRefreshStreak <= 1)
+            {
+                return TransientRetryDelay;
+            }
+
+            var doublings = Math.Min(lockedRefreshStreak - 1, MaxLockedRetryDoublings);
+            var delay = TransientRetryDelay * (1 << doublings);
+            return delay < LockedRetryCeiling ? delay : LockedRetryCeiling;
+        }
+    }
+
+    public Task RefreshAsync(CancellationToken token)
+    {
+        if (!session.IsSignedIn)
+        {
+            return RefreshCoreAsync(token);
+        }
+
+        var accountId = MyUserId;
+        lock (refreshSync)
+        {
+            if (refreshInFlight is { IsCompleted: false } running
+                && string.Equals(refreshInFlightAccountId, accountId, StringComparison.Ordinal))
+            {
+                return running;
+            }
+
+            refreshInFlightAccountId = accountId;
+            refreshInFlight = Task.Run(() => RefreshCoreAsync(token), token);
+            return refreshInFlight;
+        }
+    }
+
+    private async Task RefreshCoreAsync(CancellationToken token)
     {
         if (!session.IsSignedIn)
         {
@@ -204,6 +253,7 @@ internal sealed class KeyVault : IDisposable
             ImportStoredKey(accountId, out var localStatus);
             LocalKeyUnreadable = localStatus == LocalKeyStatus.Unreadable;
             LoadRetiredKeys();
+            lockedRefreshStreak++;
             AepLog.Warning(
                 $"[Encryption] no usable local key for this account; locking this device instead of creating a new key (stored key: {localStatus}, recovery available: {bundle.PrivateKey is not null}).");
             SetState(KeyVaultState.Locked);
@@ -865,6 +915,7 @@ internal sealed class KeyVault : IDisposable
             if (localStatus == LocalKeyStatus.Unreadable)
             {
                 LocalKeyUnreadable = true;
+                lockedRefreshStreak++;
                 AepLog.Warning(
                     "[Encryption] this device holds a key for the account that could not be opened; it is left in place instead of being replaced by a new one.");
                 SetState(KeyVaultState.Locked);
@@ -1298,6 +1349,11 @@ internal sealed class KeyVault : IDisposable
         }
 
         AepLog.Info($"[Encryption] vault state {State} to {next}.");
+        if (next != KeyVaultState.Locked)
+        {
+            lockedRefreshStreak = 0;
+        }
+
         State = next;
         Changed?.Invoke();
     }

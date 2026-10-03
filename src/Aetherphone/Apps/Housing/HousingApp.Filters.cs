@@ -1,16 +1,20 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Housing;
 
 internal sealed partial class HousingApp
 {
     private const int FilterSectionCount = 6;
+    private const float FilterSegmentHeight = 34f;
+
+    private static readonly int[] EntryCaps = [0, 3, 10, 25];
 
     private readonly ChipRail sizeRail = new();
     private readonly ChipRail phaseRail = new();
@@ -18,108 +22,149 @@ internal sealed partial class HousingApp
     private readonly ChipRail divisionRail = new();
     private readonly ChipRail dataRail = new();
     private readonly ChipRail entriesRail = new();
-
-    private static readonly int[] EntryCaps = [0, 3, 10, 25];
-
     private readonly string[] chipLabels = new string[EntryCaps.Length];
     private readonly bool[] chipActive = new bool[EntryCaps.Length];
-    private readonly string[] reminderLabels = new string[HousingDefaults.ReminderChoices.Length];
-    private readonly bool[] reminderActive = new bool[HousingDefaults.ReminderChoices.Length];
+    private CachedText matchingText;
 
-    private static float FilterSectionHeight(float scale) =>
-        Typography.LineHeight(TextStyles.Caption1) + (ChipRail.RowHeight + Metrics.Space.Sm * 2f) * scale;
-
-    private static float FilterDrawerHeightFor(float scale)
+    private void OpenFilterSheet()
     {
-        var height = 18f * scale;
-        height += Typography.LineHeight(TextStyles.Title3) + 10f * scale;
-        height += 30f * scale + 12f * scale;
-        height += FilterSectionCount * FilterSectionHeight(scale);
-        return height + 36f * scale + 16f * scale;
+        legendOpen = false;
+        menu.Close();
+        sizeRail.Reset();
+        phaseRail.Reset();
+        eligibilityRail.Reset();
+        divisionRail.Reset();
+        dataRail.Reset();
+        entriesRail.Reset();
+        UiFeedback.Play(UiSound.Tap);
+        filterSheet.Open();
     }
 
-    private void DrawFilterDrawer(Rect area, float scale)
+    private static float FilterSectionHeight(float scale) =>
+        Typography.LineHeight(TextStyles.FootnoteEmphasized) + (ChipRail.RowHeight + Metrics.Space.Sm * 2f) * scale;
+
+    private static float FilterSheetHeight(float scale) =>
+        SheetMetrics.GrabberZone * scale + HousingArt.SheetHeaderHeight * scale +
+        Typography.LineHeight(TextStyles.Subheadline) + Metrics.Space.Md * scale + FilterSegmentHeight * scale +
+        Metrics.Space.Lg * scale + FilterSectionCount * FilterSectionHeight(scale) + SheetBottomPad * scale;
+
+    private void DrawFilterSheet(ImDrawListPtr drawList, Rect screen, PhoneTheme theme, float scale)
     {
-        var progress = filterSpring.Value;
-        if (progress <= 0.005f)
+        var detents = SheetDetents.Fitted(MathF.Min(FilterSheetHeight(scale),
+            screen.Height * SheetMetrics.LargeFraction));
+        var frame = filterSheet.Begin(drawList, screen, theme, detents, SheetMetrics.AppVeil);
+        if (!frame.Visible)
         {
             return;
         }
 
-        var drawList = ImGui.GetWindowDrawList();
-        var height = MathF.Min(FilterDrawerHeightFor(scale), area.Height * 0.90f);
-        var travel = height * (1f - progress);
-        var sheet = new Rect(new Vector2(area.Min.X, area.Max.Y - height + travel),
-            new Vector2(area.Max.X, area.Max.Y + travel));
-        drawList.PushClipRect(area.Min, area.Max, true);
-        HousingChrome.SheetChrome(drawList, sheet, area, progress, ui);
-        drawList.PopClipRect();
-        if (progress < 0.35f)
+        var content = frame.Content;
+        if (HousingArt.SheetHeader(drawList, content, Loc.T(L.Housing.Filters), Loc.T(L.Housing.Done), ui.TitleInk,
+                ui.Accent, scale) && frame.Interactive)
         {
-            return;
+            filterSheet.Close();
         }
 
-        var pad = 16f * scale;
-        var left = sheet.Min.X + pad;
-        var right = sheet.Max.X - pad;
-        var y = sheet.Min.Y + 18f * scale;
         var filters = housing.Filters;
-        var matchCount = VisiblePlots().Count;
-        Typography.Draw(drawList, new Vector2(left, y), Loc.T(L.Housing.Filters), ui.TitleInk, TextStyles.Title3);
-        var countText = Loc.T(L.Housing.MatchingPlots, matchCount);
-        var countSize = Typography.Measure(countText, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(right - countSize.X, y + 8f * scale), countText, ui.MutedInk,
-            TextStyles.Footnote);
-        y += Typography.LineHeight(TextStyles.Title3) + 10f * scale;
-        var segmentHeight = 30f * scale;
-        var segmentRow = new Rect(new Vector2(left, y), new Vector2(right, y + segmentHeight));
-        var picked = HousingChrome.Segment(segmentRow, Loc.T(L.Housing.ShowAvailableOnly),
-            Loc.T(L.Housing.ShowAllPlots), filters.ShowAllPlots ? 1 : 0, ui, true);
-        if (picked == 1 != filters.ShowAllPlots)
+        var pad = SheetPad * scale;
+        var left = content.Min.X + pad;
+        var right = content.Max.X - pad;
+        var y = content.Min.Y + HousingArt.SheetHeaderHeight * scale;
+        DrawFilterSummary(drawList, left, right, y, frame.Interactive, scale);
+        y += Typography.LineHeight(TextStyles.Subheadline) + Metrics.Space.Md * scale;
+        var segment = new Rect(new Vector2(left, y), new Vector2(right, y + FilterSegmentHeight * scale));
+        var picked = HousingChrome.Segment(segment, Loc.T(L.Housing.ShowAvailableOnly), Loc.T(L.Housing.ShowAllPlots),
+            filters.ShowAllPlots ? 1 : 0, ui, true);
+        if (frame.Interactive && picked == 1 != filters.ShowAllPlots)
         {
             filters.ShowAllPlots = picked == 1;
             housing.PersistFilterDefaults();
             InvalidateCache();
         }
 
-        y += segmentHeight + 12f * scale;
+        y = segment.Max.Y + Metrics.Space.Lg * scale;
+        y = DrawSizeFilters(drawList, filters, left, right, y, scale);
+        y = DrawPhaseFilters(drawList, filters, left, right, y, scale);
+        y = DrawEligibilityFilters(drawList, filters, left, right, y, scale);
+        y = DrawDivisionFilters(drawList, filters, left, right, y, scale);
+        y = DrawDataFilters(drawList, filters, left, right, y, scale);
+        DrawEntryFilters(drawList, filters, left, right, y, scale);
+        filterSheet.End(in frame);
+    }
+
+    private void DrawFilterSummary(ImDrawListPtr drawList, float left, float right, float top, bool interactive,
+        float scale)
+    {
+        var count = activeTab == HousingTab.Map ? VisiblePlots().Count : PlotRows().Count;
+        var text = matchingText.IsCurrent(count)
+            ? matchingText.Value
+            : matchingText.Store(count, Loc.T(L.Housing.MatchingPlots, count));
+        var lineHeight = Typography.LineHeight(TextStyles.Subheadline);
+        var resetLabel = Loc.T(L.Housing.ClearFilters);
+        var resetSize = Typography.Measure(resetLabel, TextStyles.Subheadline);
+        Typography.Draw(drawList, new Vector2(left, top),
+            Typography.FitText(text, MathF.Max(1f, right - left - resetSize.X - HousingArt.TextGap * scale),
+                TextStyles.Subheadline), ui.MutedInk, TextStyles.Subheadline);
+        var enabled = interactive && housing.Filters.HasNarrowingFilters;
+        var hitMin = new Vector2(right - resetSize.X - HousingArt.TextGap * scale,
+            top + lineHeight * 0.5f - Metrics.Size.TapTarget * scale * 0.5f);
+        var hitMax = new Vector2(right, hitMin.Y + Metrics.Size.TapTarget * scale);
+        var hovered = enabled && UiInteract.HoverWindowOnly(hitMin, hitMax);
+        Typography.Draw(drawList, new Vector2(right - resetSize.X, top), resetLabel,
+            enabled ? hovered ? Palette.Lighten(ui.Accent, 0.15f) : ui.Accent : ui.MutedInk, TextStyles.Subheadline);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (enabled && UiInteract.Click(hitMin, hitMax, hovered))
+        {
+            ClearFilters();
+        }
+    }
+
+    private float DrawSizeFilters(ImDrawListPtr drawList, HousingFilterState filters, float left, float right,
+        float y, float scale)
+    {
         chipLabels[0] = Loc.T(L.Housing.SizeSmall);
         chipActive[0] = filters.Small;
         chipLabels[1] = Loc.T(L.Housing.SizeMedium);
         chipActive[1] = filters.Medium;
         chipLabels[2] = Loc.T(L.Housing.SizeLarge);
         chipActive[2] = filters.Large;
-        var labelSpan = new ReadOnlySpan<string>(chipLabels, 0, 3);
-        var activeSpan = new ReadOnlySpan<bool>(chipActive, 0, 3);
-        y = DrawChipSection(drawList, sizeRail, left, right, y, Loc.T(L.Housing.FilterSizes), scale, labelSpan,
-            activeSpan, out var sizeTapped);
-        switch (sizeTapped)
+        y = DrawChipSection(drawList, sizeRail, left, right, y, L.Housing.FilterSizes, 3, scale, out var tapped);
+        switch (tapped)
         {
             case 0:
                 filters.Small = !filters.Small;
-                housing.PersistFilterDefaults();
                 break;
             case 1:
                 filters.Medium = !filters.Medium;
-                housing.PersistFilterDefaults();
                 break;
             case 2:
                 filters.Large = !filters.Large;
-                housing.PersistFilterDefaults();
                 break;
         }
 
+        if (tapped >= 0)
+        {
+            housing.PersistFilterDefaults();
+        }
+
+        return y;
+    }
+
+    private float DrawPhaseFilters(ImDrawListPtr drawList, HousingFilterState filters, float left, float right,
+        float y, float scale)
+    {
         chipLabels[0] = Loc.T(L.Housing.PhaseEntry);
         chipActive[0] = filters.PhaseEntry;
         chipLabels[1] = Loc.T(L.Housing.PhaseResults);
         chipActive[1] = filters.PhaseResults;
         chipLabels[2] = Loc.T(L.Housing.FilterOtherPhases);
         chipActive[2] = filters.PhaseOther;
-        labelSpan = new ReadOnlySpan<string>(chipLabels, 0, 3);
-        activeSpan = new ReadOnlySpan<bool>(chipActive, 0, 3);
-        y = DrawChipSection(drawList, phaseRail, left, right, y, Loc.T(L.Housing.FilterPhase), scale, labelSpan,
-            activeSpan, out var phaseTapped);
-        switch (phaseTapped)
+        y = DrawChipSection(drawList, phaseRail, left, right, y, L.Housing.FilterPhase, 3, scale, out var tapped);
+        switch (tapped)
         {
             case 0:
                 filters.PhaseEntry = !filters.PhaseEntry;
@@ -132,15 +177,19 @@ internal sealed partial class HousingApp
                 break;
         }
 
+        return y;
+    }
+
+    private float DrawEligibilityFilters(ImDrawListPtr drawList, HousingFilterState filters, float left,
+        float right, float y, float scale)
+    {
         chipLabels[0] = Loc.T(L.Housing.EligibilityPrivate);
         chipActive[0] = filters.PrivateBuyers;
         chipLabels[1] = Loc.T(L.Housing.EligibilityFreeCompany);
         chipActive[1] = filters.FreeCompany;
-        labelSpan = new ReadOnlySpan<string>(chipLabels, 0, 2);
-        activeSpan = new ReadOnlySpan<bool>(chipActive, 0, 2);
-        y = DrawChipSection(drawList, eligibilityRail, left, right, y, Loc.T(L.Housing.FilterEligibility), scale,
-            labelSpan, activeSpan, out var eligibilityTapped);
-        switch (eligibilityTapped)
+        y = DrawChipSection(drawList, eligibilityRail, left, right, y, L.Housing.FilterEligibility, 2, scale,
+            out var tapped);
+        switch (tapped)
         {
             case 0:
                 filters.PrivateBuyers = !filters.PrivateBuyers;
@@ -150,15 +199,19 @@ internal sealed partial class HousingApp
                 break;
         }
 
+        return y;
+    }
+
+    private float DrawDivisionFilters(ImDrawListPtr drawList, HousingFilterState filters, float left, float right,
+        float y, float scale)
+    {
         chipLabels[0] = Loc.T(L.Housing.MainDivision);
         chipActive[0] = filters.MainDivision;
         chipLabels[1] = Loc.T(L.Housing.Subdivision);
         chipActive[1] = filters.Subdivision;
-        labelSpan = new ReadOnlySpan<string>(chipLabels, 0, 2);
-        activeSpan = new ReadOnlySpan<bool>(chipActive, 0, 2);
-        y = DrawChipSection(drawList, divisionRail, left, right, y, Loc.T(L.Housing.FilterDivision), scale,
-            labelSpan, activeSpan, out var divisionTapped);
-        switch (divisionTapped)
+        y = DrawChipSection(drawList, divisionRail, left, right, y, L.Housing.FilterDivision, 2, scale,
+            out var tapped);
+        switch (tapped)
         {
             case 0:
                 filters.MainDivision = !filters.MainDivision;
@@ -168,15 +221,18 @@ internal sealed partial class HousingApp
                 break;
         }
 
+        return y;
+    }
+
+    private float DrawDataFilters(ImDrawListPtr drawList, HousingFilterState filters, float left, float right,
+        float y, float scale)
+    {
         chipLabels[0] = Loc.T(L.Housing.FilterFreshOnly);
         chipActive[0] = filters.FreshOnly;
         chipLabels[1] = Loc.T(L.Housing.FilterWatchedOnly);
         chipActive[1] = filters.WatchedOnly;
-        labelSpan = new ReadOnlySpan<string>(chipLabels, 0, 2);
-        activeSpan = new ReadOnlySpan<bool>(chipActive, 0, 2);
-        y = DrawChipSection(drawList, dataRail, left, right, y, Loc.T(L.Housing.FilterData), scale, labelSpan,
-            activeSpan, out var dataTapped);
-        switch (dataTapped)
+        y = DrawChipSection(drawList, dataRail, left, right, y, L.Housing.FilterData, 2, scale, out var tapped);
+        switch (tapped)
         {
             case 0:
                 filters.FreshOnly = !filters.FreshOnly;
@@ -186,70 +242,44 @@ internal sealed partial class HousingApp
                 break;
         }
 
+        return y;
+    }
+
+    private void DrawEntryFilters(ImDrawListPtr drawList, HousingFilterState filters, float left, float right,
+        float y, float scale)
+    {
         for (var index = 0; index < EntryCaps.Length; index++)
         {
             chipLabels[index] = EntryCaps[index] == 0
                 ? Loc.T(L.Housing.FilterAnyEntries)
-                : EntryCaps[index].ToString(Loc.Culture);
+                : HousingText.Count(EntryCaps[index]);
             chipActive[index] = filters.MaxEntries == EntryCaps[index];
         }
 
-        y = DrawChipSection(drawList, entriesRail, left, right, y, Loc.T(L.Housing.FilterMaxEntries), scale,
-            chipLabels, chipActive, out var entriesTapped);
-        if (entriesTapped >= 0)
+        DrawChipSection(drawList, entriesRail, left, right, y, L.Housing.FilterMaxEntries, EntryCaps.Length, scale,
+            out var tapped);
+        if (tapped >= 0)
         {
-            filters.MaxEntries = EntryCaps[entriesTapped];
-        }
-
-        var buttonHeight = 32f * scale;
-        var buttonTop = MathF.Min(y + 4f * scale, sheet.Max.Y - 16f * scale - buttonHeight);
-        var gap = 8f * scale;
-        var resetLabel = Loc.T(L.Housing.ClearFilters);
-        var doneLabel = Loc.T(L.Common.Close);
-        Span<string> buttonLabels = [resetLabel, doneLabel];
-        Span<Rect> buttonRects = stackalloc Rect[2];
-        HousingChrome.LayoutPills(
-            new Rect(new Vector2(left, buttonTop), new Vector2(right, buttonTop + buttonHeight)), buttonLabels, gap,
-            buttonRects);
-        var resetRect = buttonRects[0];
-        var doneRect = buttonRects[1];
-        if (HousingChrome.PillButton(resetRect, resetLabel, false, ui, true, filters.HasNarrowingFilters))
-        {
-            filters.Reset();
-            housing.PersistFilterDefaults();
-            InvalidateCache();
-        }
-
-        if (HousingChrome.PillButton(doneRect, doneLabel, true, ui, true))
-        {
-            filtersOpen = false;
-        }
-
-        if (progress > 0.9f && ImGui.IsMouseClicked(ImGuiMouseButton.Left) &&
-            !ImGui.IsMouseHoveringRect(sheet.Min, sheet.Max, false))
-        {
-            filtersOpen = false;
+            filters.MaxEntries = EntryCaps[tapped];
         }
     }
 
     private float DrawChipSection(ImDrawListPtr drawList, ChipRail rail, float left, float right, float y,
-        string label, float scale, ReadOnlySpan<string> labels, ReadOnlySpan<bool> active, out int tapped)
+        LocString label, int count, float scale, out int tapped)
     {
-        HousingChrome.SectionLabel(drawList, new Vector2(left, y), right - left, label, ui);
-        var top = y + Typography.LineHeight(TextStyles.Caption1) + Metrics.Space.Sm * scale;
+        var text = Loc.T(label);
+        Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(text, right - left,
+            TextStyles.FootnoteEmphasized), ui.MutedInk, TextStyles.FootnoteEmphasized);
+        var top = y + Typography.LineHeight(TextStyles.FootnoteEmphasized) + Metrics.Space.Sm * scale;
         var row = new Rect(new Vector2(left, top), new Vector2(right, top + ChipRail.RowHeight * scale));
-        tapped = rail.Draw(row, ui, labels, active, true);
-        return row.Max.Y + Metrics.Space.Sm * scale;
-    }
+        tapped = rail.Draw(row, ui, new ReadOnlySpan<string>(chipLabels, 0, count),
+            new ReadOnlySpan<bool>(chipActive, 0, count), true);
+        if (tapped >= 0)
+        {
+            UiFeedback.Play(UiSound.Tap);
+            InvalidateCache();
+        }
 
-    private void ResetFilterRails()
-    {
-        sizeRail.Reset();
-        phaseRail.Reset();
-        eligibilityRail.Reset();
-        divisionRail.Reset();
-        dataRail.Reset();
-        entriesRail.Reset();
-        reminderRail.Reset();
+        return row.Max.Y + Metrics.Space.Sm * scale;
     }
 }

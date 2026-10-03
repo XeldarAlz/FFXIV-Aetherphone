@@ -188,7 +188,7 @@ internal sealed partial class LinkpearlApp
     private void DrawPopoutSettings(float scale)
     {
         SettingsSection.Header(Loc.T(L.Linkpearl.PopoutSection), frameTheme);
-        var behaviour = GroupCard.Begin(frameTheme, 6);
+        var behaviour = GroupCard.Begin(frameTheme, 8);
         var grouped = SettingsRow.Bool(behaviour.NextRow(), Loc.T(L.Linkpearl.PopoutTabs),
             configuration.LinkpearlPopoutTabs, frameTheme, "linkpearl.settings.popoutTabs");
         if (grouped != configuration.LinkpearlPopoutTabs)
@@ -213,12 +213,30 @@ internal sealed partial class LinkpearlApp
             configuration.Save();
         }
 
+        var whilePhoneOpen = SettingsRow.Bool(behaviour.NextRow(), Loc.T(L.Linkpearl.PopoutTellsWhilePhoneOpen),
+            configuration.LinkpearlPopoutTellsWhilePhoneOpen, frameTheme, "linkpearl.settings.tellsWhilePhoneOpen",
+            null, !popTells);
+        if (whilePhoneOpen != configuration.LinkpearlPopoutTellsWhilePhoneOpen)
+        {
+            configuration.LinkpearlPopoutTellsWhilePhoneOpen = whilePhoneOpen;
+            configuration.Save();
+        }
+
         var outgoing = SettingsRow.Bool(behaviour.NextRow(), Loc.T(L.Linkpearl.PopoutOutgoingTells),
             configuration.LinkpearlPopoutOutgoingTells, frameTheme, "linkpearl.settings.outgoingTells", null,
             !popTells);
         if (outgoing != configuration.LinkpearlPopoutOutgoingTells)
         {
             configuration.LinkpearlPopoutOutgoingTells = outgoing;
+            configuration.Save();
+        }
+
+        var inBackground = SettingsRow.Bool(behaviour.NextRow(), Loc.T(L.Linkpearl.PopoutTellsInBackground),
+            configuration.LinkpearlPopoutTellsInBackground, frameTheme, "linkpearl.settings.tellsInBackground",
+            null, !popTells);
+        if (inBackground != configuration.LinkpearlPopoutTellsInBackground)
+        {
+            configuration.LinkpearlPopoutTellsInBackground = inBackground;
             configuration.Save();
         }
 

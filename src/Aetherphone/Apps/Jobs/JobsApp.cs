@@ -1,9 +1,11 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -18,8 +20,7 @@ internal sealed partial class JobsApp : IPhoneApp
     private const float RefreshIntervalSeconds = 2f;
     private const float PendingEquipIntervalSeconds = 0.1f;
     private const float PendingEquipTimeoutSeconds = 5f;
-    private const float RowHeight = 64f;
-    private const float SectionGap = 12f;
+    private const float BottomBreathing = 28f;
     private const string ColorMenuId = "jobs.color";
     private const string CategoryMenuId = "jobs.categories";
     private const string RowMenuId = "jobs.gearsetMenu";
@@ -40,15 +41,25 @@ internal sealed partial class JobsApp : IPhoneApp
     private readonly CharacterWatch characterWatch;
     private readonly AppSkin ui = new(AppPalettes.JobsFor(AppAccents.For("jobs")));
     private readonly DropdownMenu menu = new();
-    private JobSection[] sections = Array.Empty<JobSection>();
+    private readonly ViewRouter<JobsView> router;
+    private readonly RouterDraw<JobsView> drawView;
+    private readonly Action back;
+    private JobsSnapshot snapshot = JobsSnapshot.Empty;
+    private Spring[] tileFills = Array.Empty<Spring>();
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
+    private Rect content;
+    private Vector4 paletteAccent;
     private bool loaded;
     private float sinceRefresh;
-    private JobEntry? pendingEquip;
+    private string snapshotLanguage = string.Empty;
+    private ulong snapshotContentId;
+    private int pendingGearsetId = -1;
     private float sincePendingEquip;
     private int menuGearsetId = -1;
-    private bool rowAnchorTaken;
     private bool categoryEditorOpen;
     private Rect colorButtonRect;
+    private Rect categoriesButtonRect;
     private bool pickerOpen;
 
     public JobsApp(GameData gameData, ITextureProvider textures, Configuration configuration, ConfirmService confirm,
@@ -59,15 +70,24 @@ internal sealed partial class JobsApp : IPhoneApp
         this.configuration = configuration;
         this.confirm = confirm;
         this.characterWatch = characterWatch;
+        router = new ViewRouter<JobsView>(JobsView.Root());
+        drawView = DrawView;
+        back = () => router.Pop();
     }
 
-    public void OnOpened() => Rebuild();
+    public void OnOpened()
+    {
+        router.Reset();
+        loaded = false;
+        ResetFills();
+    }
 
     public void OnClosed()
     {
-        sections = Array.Empty<JobSection>();
+        router.Reset();
+        snapshot = JobsSnapshot.Empty;
         loaded = false;
-        pendingEquip = null;
+        pendingGearsetId = -1;
         sincePendingEquip = 0f;
         menuGearsetId = -1;
         ResetPendingReorder();
@@ -76,133 +96,32 @@ internal sealed partial class JobsApp : IPhoneApp
         CloseCategoryEditor();
     }
 
-    private void Rebuild()
-    {
-        sections = gameData.LocalPlayer is null
-            ? Array.Empty<JobSection>()
-            : JobsReader.Build(gameData, CurrentCategories());
-        loaded = true;
-        sinceRefresh = 0f;
-        ResolvePendingEquip();
-    }
-
-    private void ResolvePendingEquip()
-    {
-        if (pendingEquip is null)
-        {
-            return;
-        }
-
-        if (sincePendingEquip >= PendingEquipTimeoutSeconds || IsEquipped(pendingEquip))
-        {
-            pendingEquip = null;
-            sincePendingEquip = 0f;
-        }
-    }
-
-    private bool IsEquipped(JobEntry target)
-    {
-        for (var sectionIndex = 0; sectionIndex < sections.Length; sectionIndex++)
-        {
-            var entries = sections[sectionIndex].Entries;
-            for (var entryIndex = 0; entryIndex < entries.Length; entryIndex++)
-            {
-                var entry = entries[entryIndex];
-                if (entry.Kind != target.Kind)
-                {
-                    continue;
-                }
-
-                var matches = target.Kind == JobEntryKind.Gearset
-                    ? entry.GearsetId == target.GearsetId
-                    : entry.ClassJobId == target.ClassJobId;
-                if (matches)
-                {
-                    return entry.IsActive;
-                }
-            }
-        }
-
-        return false;
-    }
-
     public void Draw(in PhoneContext context)
     {
-        var scale = UiScale.Current;
-        var theme = context.Theme;
-        var content = context.Content;
+        theme = context.Theme;
+        navigation = context.Navigation;
+        content = context.Content;
         ui.Theme = theme;
-        ui.Palette = AppPalettes.JobsFor(Accent);
-        ui.Backdrop(SceneChrome.ScreenFrom(content, theme, scale));
-        rowAnchorTaken = false;
+        SyncPalette();
         menu.Gate();
         if (pickerOpen || categoryEditorOpen)
         {
             UiInteract.BlockThisFrame();
         }
 
-        DrawHeader(content, scale);
-
-        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
-        if (!loaded)
+        Refresh(ImGui.GetIO().DeltaTime);
+        if (snapshot.HasJobs)
         {
-            Rebuild();
-        }
-
-        if (gameData.LocalPlayer is null)
-        {
-            TourHolds.Hold(Id);
-            Typography.DrawCentered(body.Center, Loc.T(L.Jobs.LogInToView), ui.MutedInk, TextStyles.Subheadline);
+            TourHolds.Release(Id);
         }
         else
         {
-            TourHolds.Release(Id);
-            var deltaTime = ImGui.GetIO().DeltaTime;
-            sinceRefresh += deltaTime;
-            var interval = RefreshIntervalSeconds;
-            if (pendingEquip is not null)
-            {
-                sincePendingEquip += deltaTime;
-                interval = PendingEquipIntervalSeconds;
-            }
-
-            if (sinceRefresh >= interval)
-            {
-                Rebuild();
-            }
-
-            using (AppSurface.Begin(body))
-            {
-                if (sections.Length == 0)
-                {
-                    DrawHint();
-                }
-                else
-                {
-                    var categoryCount = CurrentCategories().Count;
-                    for (var index = 0; index < sections.Length; index++)
-                    {
-                        var section = sections[index];
-                        var title = section.IsCustom ? section.CustomTitle : Loc.T(section.RoleTitle);
-                        var headerTop = ImGui.GetCursorScreenPos();
-                        var headerWidth = ImGui.GetContentRegionAvail().X;
-                        ui.SectionHeading(title, index == 0 ? 8f : 4f);
-                        if (section.IsCustom)
-                        {
-                            var headerRect = new Rect(headerTop,
-                                new Vector2(headerTop.X + headerWidth, ImGui.GetCursorScreenPos().Y));
-                            DrawCategoryReorder(headerRect, section.CategoryIndex, categoryCount, scale);
-                        }
-
-                        DrawSectionCard(section, scale);
-                        ImGui.Dummy(new Vector2(0f, SectionGap * scale));
-                    }
-
-                    ImGui.Dummy(new Vector2(0f, 8f * scale));
-                }
-            }
+            TourHolds.Hold(Id);
         }
 
+        var scale = UiScale.Current;
+        ui.Backdrop(SceneChrome.ScreenFrom(content, theme, scale));
+        router.Draw(content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         ApplyPendingReorder();
 
         DrawColorMenu(content, theme);
@@ -219,41 +138,163 @@ internal sealed partial class JobsApp : IPhoneApp
         }
     }
 
-    private void DrawHeader(Rect content, float scale)
+    private void SyncPalette()
     {
-        var rowCenterY = content.Min.Y + AppHeader.Height * scale * 0.5f;
-        var radius = 15f * scale;
-        var buttonCenter = new Vector2(content.Max.X - Metrics.Space.Lg * scale - radius, rowCenterY);
-        var hasCategories = gameData.LocalPlayer is not null;
-        var categoriesCenter = new Vector2(buttonCenter.X - radius * 2f - 10f * scale, rowCenterY);
-        var rightReserve = content.Max.X - (categoriesCenter.X - radius) + 8f * scale;
-        AppHeader.DrawTitleWithReserve(content, "jobs.header.title", DisplayName, rightReserve, ui.TitleInk, scale,
-            leftReserve: 0f);
-
-        colorButtonRect = new Rect(buttonCenter - new Vector2(radius, radius), buttonCenter + new Vector2(radius, radius));
-        UiAnchors.Report("jobs.color", colorButtonRect);
-        if (ui.IconButton(buttonCenter, radius, IconGlyph.Of(FontAwesomeIcon.Palette), ui.TitleInk,
-                Palette.WithAlpha(ui.TitleInk, 0.12f), 0.55f, Loc.T(L.Jobs.BackgroundColor)))
-        {
-            menu.Toggle(ColorMenuId, colorButtonRect);
-        }
-
-        if (!hasCategories)
+        var accent = Accent;
+        if (accent == paletteAccent)
         {
             return;
         }
 
-        var categoriesRect = new Rect(categoriesCenter - new Vector2(radius, radius),
-            categoriesCenter + new Vector2(radius, radius));
-        UiAnchors.Report("jobs.categories", categoriesRect);
-        if (ui.IconButton(categoriesCenter, radius, IconGlyph.Of(FontAwesomeIcon.FolderPlus), ui.TitleInk,
-                Palette.WithAlpha(ui.TitleInk, 0.12f), 0.55f, Loc.T(L.Jobs.Categories)))
+        paletteAccent = accent;
+        ui.Palette = AppPalettes.JobsFor(accent);
+    }
+
+    private void DrawView(JobsView view, Rect area, int depth)
+    {
+        ui.Body(area);
+        if (view.Kind == JobsViewKind.Detail)
         {
-            menu.Toggle(CategoryMenuId, categoriesRect);
+            DrawDetail(area, view.ClassJobId);
+            return;
+        }
+
+        DrawRoot(area);
+    }
+
+    private void Refresh(float deltaTime)
+    {
+        sinceRefresh += deltaTime;
+        var interval = RefreshIntervalSeconds;
+        if (pendingGearsetId >= 0)
+        {
+            sincePendingEquip += deltaTime;
+            interval = PendingEquipIntervalSeconds;
+        }
+
+        var stale = !loaded || sinceRefresh >= interval ||
+                    !string.Equals(snapshotLanguage, Loc.Current.Code, StringComparison.Ordinal) ||
+                    snapshotContentId != characterWatch.CurrentContentId;
+        if (stale)
+        {
+            Rebuild();
         }
     }
 
-    private void DrawColorMenu(Rect content, PhoneTheme theme)
+    private void Rebuild()
+    {
+        snapshot = JobsReader.Build(gameData, CurrentCategories());
+        snapshotLanguage = Loc.Current.Code;
+        snapshotContentId = characterWatch.CurrentContentId;
+        loaded = true;
+        sinceRefresh = 0f;
+        if (tileFills.Length != snapshot.Jobs.Length)
+        {
+            tileFills = new Spring[snapshot.Jobs.Length];
+        }
+
+        ResolvePendingEquip();
+    }
+
+    private void ResetFills()
+    {
+        for (var index = 0; index < tileFills.Length; index++)
+        {
+            tileFills[index].SnapTo(0f);
+        }
+
+        heroFill.SnapTo(0f);
+        detailRingFill.SnapTo(0f);
+        detailBarFill.SnapTo(0f);
+    }
+
+    private void RequestEquip(GearsetRow gearset)
+    {
+        if (gearset.IsActive || pendingGearsetId >= 0)
+        {
+            return;
+        }
+
+        switch (GearsetActions.Equip(gearset.Id))
+        {
+            case GearsetEquipResult.Sent:
+                UiFeedback.Play(UiSound.Tap);
+                pendingGearsetId = gearset.Id;
+                sincePendingEquip = 0f;
+                sinceRefresh = 0f;
+                return;
+            case GearsetEquipResult.Busy:
+                UiFeedback.Play(UiSound.Blocked);
+                ShellToast.Show(Loc.T(L.Jobs.EquipBusy));
+                return;
+            default:
+                UiFeedback.Play(UiSound.Caution);
+                ShellToast.Show(Loc.T(L.Jobs.EquipFailed));
+                return;
+        }
+    }
+
+    private void ResolvePendingEquip()
+    {
+        if (pendingGearsetId < 0)
+        {
+            return;
+        }
+
+        var index = snapshot.IndexOfGearset(pendingGearsetId);
+        if (index >= 0 && snapshot.Gearsets[index].IsActive)
+        {
+            UiFeedback.Play(UiSound.Success);
+            ClearPendingEquip();
+            return;
+        }
+
+        if (index >= 0 && sincePendingEquip < PendingEquipTimeoutSeconds)
+        {
+            return;
+        }
+
+        UiFeedback.Play(UiSound.Caution);
+        ShellToast.Show(Loc.T(L.Jobs.EquipFailed));
+        ClearPendingEquip();
+    }
+
+    private void ClearPendingEquip()
+    {
+        pendingGearsetId = -1;
+        sincePendingEquip = 0f;
+    }
+
+    private bool IsPending(GearsetRow gearset) => gearset.Id == pendingGearsetId;
+
+    private bool IsPending(JobRow job)
+    {
+        if (pendingGearsetId < 0)
+        {
+            return false;
+        }
+
+        var indices = job.GearsetIndices;
+        for (var index = 0; index < indices.Length; index++)
+        {
+            if (snapshot.Gearsets[indices[index]].Id == pendingGearsetId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void OpenDetail(JobRow job)
+    {
+        UiFeedback.Play(UiSound.Tap);
+        detailRingFill.SnapTo(0f);
+        detailBarFill.SnapTo(0f);
+        router.Push(JobsView.Detail(job.ClassJobId));
+    }
+
+    private void DrawColorMenu(Rect area, PhoneTheme menuTheme)
     {
         if (!menu.IsOpenFor(ColorMenuId))
         {
@@ -280,7 +321,7 @@ internal sealed partial class JobsApp : IPhoneApp
         items[customIndex] = new DropdownMenu.Item(Loc.T(L.Jobs.CustomColor),
             Glyph: IconGlyph.Of(FontAwesomeIcon.EyeDropper));
 
-        var picked = menu.Draw(content, theme, items, out var rowAction);
+        var picked = menu.Draw(area, menuTheme, items, out var rowAction);
         if (picked < 0)
         {
             return;
@@ -310,148 +351,10 @@ internal sealed partial class JobsApp : IPhoneApp
         configuration.Save();
     }
 
-    private void DrawHint()
+    private static void ReserveTo(Vector2 origin, float width, float bottom)
     {
-        var scale = UiScale.Current;
-        ImGui.Dummy(new Vector2(0f, 24f * scale));
-        var width = ImGui.GetContentRegionAvail().X;
-        var origin = ImGui.GetCursorScreenPos();
-        Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, origin.Y + 4f * scale),
-            Loc.T(L.Jobs.NoGearsets), ui.MutedInk, TextStyles.Subheadline, width - 40f * scale);
-    }
-
-    private void DrawSectionCard(JobSection section, float scale)
-    {
-        var rowCount = Math.Max(1, section.Entries.Length);
-        var card = GroupCard.Begin(ui, rowCount, RowHeight);
-        if (section.Entries.Length == 0)
-        {
-            var row = card.NextRow();
-            Typography.DrawWrappedCentered(new Vector2(row.Center.X, row.Center.Y - 8f * scale),
-                Loc.T(L.Jobs.EmptyCategory), ui.MutedInk, TextStyles.Footnote, row.Width);
-        }
-
-        var drawList = ImGui.GetWindowDrawList();
-        for (var index = 0; index < section.Entries.Length; index++)
-        {
-            DrawSectionRow(drawList, section, card.NextRow(), index, scale);
-        }
-
-        card.End();
-    }
-
-    private void DrawSectionRow(ImDrawListPtr drawList, JobSection section, Rect contentRect, int index, float scale)
-    {
-        var rowRect = new Rect(new Vector2(contentRect.Min.X - Metrics.Space.Lg * scale, contentRect.Min.Y),
-            new Vector2(contentRect.Max.X + Metrics.Space.Lg * scale, contentRect.Max.Y));
-        if (!rowAnchorTaken)
-        {
-            rowAnchorTaken = true;
-            UiAnchors.Report("jobs.row", rowRect);
-        }
-
-        DrawJobRow(drawList, rowRect, contentRect, section, index, scale);
-    }
-
-    private void DrawJobRow(ImDrawListPtr drawList, Rect rowRect, Rect contentRect, JobSection section, int rowIndex,
-        float scale)
-    {
-        var job = section.Entries[rowIndex];
-        var hasMenu = job.Kind == JobEntryKind.Gearset;
-        var menuRadius = 13f * scale;
-        var menuCenter = new Vector2(contentRect.Max.X - menuRadius, contentRect.Center.Y);
-        var menuHalf = new Vector2(menuRadius, menuRadius);
-        var overMenu = hasMenu && UiInteract.Hover(menuCenter - menuHalf, menuCenter + menuHalf);
-
-        var reorderable = section.IsCustom && section.Entries.Length > 1;
-        var reorderRadius = RowReorderRadius * scale;
-        var reorderCenter = new Vector2(menuCenter.X - menuRadius - 20f * scale, contentRect.Center.Y);
-        var reorderHalf = new Vector2(reorderRadius, reorderRadius + RowReorderOffset * scale);
-        var overReorder = reorderable && UiInteract.Hover(reorderCenter - reorderHalf, reorderCenter + reorderHalf);
-
-        var equippable = job.Kind == JobEntryKind.Gearset && !job.IsActive;
-        var hovered = equippable && !overMenu && !overReorder && UiInteract.Hover(rowRect.Min, rowRect.Max);
-        if (hovered)
-        {
-            var alpha = ImGui.IsMouseDown(ImGuiMouseButton.Left) ? 0.14f : 0.07f;
-            drawList.AddRectFilled(rowRect.Min, rowRect.Max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)));
-        }
-
-        if (reorderable)
-        {
-            DrawJobReorder(reorderCenter, reorderRadius, section, rowIndex, scale);
-        }
-
-        var iconSize = 42f * scale;
-        var iconMin = new Vector2(contentRect.Min.X, contentRect.Center.Y - iconSize * 0.5f);
-        var iconMax = iconMin + new Vector2(iconSize, iconSize);
-        GameIconTile.Draw(drawList, textures, job.IconId, iconMin, iconMax, 10f * scale, scale,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.06f)), edgeStroke: true);
-
-        var note = job.IsActive ? Loc.T(L.Jobs.Active)
-            : job.Kind == JobEntryKind.NoGearset ? Loc.T(L.Jobs.NoGearset)
-            : string.Empty;
-        var textLeft = iconMax.X + 14f * scale;
-        var noteRight = hasMenu ? menuCenter.X - menuRadius - 8f * scale : contentRect.Max.X;
-        if (reorderable)
-        {
-            noteRight -= reorderRadius * 2f + 8f * scale;
-        }
-        var textRight = noteRight -
-                        (note.Length == 0 ? 0f : Typography.Measure(note, TextStyles.Caption2).X + 28f * scale);
-        var maxTextWidth = MathF.Max(1f, textRight - textLeft);
-        Marquee.DrawLeftAuto(drawList, job.NameRowId, job.Name, textLeft, contentRect.Min.Y + 12f * scale,
-            maxTextWidth, TextStyles.Headline, ui.TitleInk);
-        var subtitle = job.ItemLevel >= 0
-            ? Loc.T(L.Jobs.LevelItemLevel, job.Abbreviation, job.Level, job.ItemLevel)
-            : Loc.T(L.Jobs.LevelOnly, job.Abbreviation, job.Level);
-        Marquee.DrawLeftAuto(drawList, job.SubRowId, subtitle, textLeft, contentRect.Min.Y + 36f * scale,
-            maxTextWidth, TextStyles.Footnote, ui.MutedInk);
-
-        var noteCenter = new Vector2(noteRight, contentRect.Center.Y);
-        if (job.IsActive)
-        {
-            DrawActiveBadge(drawList, noteCenter, note, scale);
-        }
-        else if (note.Length > 0)
-        {
-            var noteSize = Typography.Measure(note, TextStyles.Caption2);
-            Typography.Draw(drawList, new Vector2(noteCenter.X - noteSize.X, noteCenter.Y - noteSize.Y * 0.5f), note,
-                ui.MutedInk, TextStyles.Caption2);
-        }
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        if (hasMenu && ui.IconButton(menuCenter, menuRadius, IconGlyph.Of(FontAwesomeIcon.EllipsisH), ui.MutedInk,
-                default, 0.5f))
-        {
-            menuGearsetId = job.GearsetId;
-            menu.Toggle(RowMenuId, new Rect(menuCenter - menuHalf, menuCenter + menuHalf));
-        }
-
-        if (UiInteract.Click(rowRect.Min, rowRect.Max, hovered) && GearsetActions.Equip(job.GearsetId))
-        {
-            pendingEquip = job;
-            sincePendingEquip = 0f;
-            sinceRefresh = 0f;
-        }
-    }
-
-    private void DrawActiveBadge(ImDrawListPtr drawList, Vector2 rightCenter, string text, float scale)
-    {
-        var textSize = Typography.Measure(text, TextStyles.Caption2);
-        var padX = 8f * scale;
-        var padY = 4f * scale;
-        var width = textSize.X + padX * 2f;
-        var height = textSize.Y + padY * 2f;
-        var max = new Vector2(rightCenter.X, rightCenter.Y + height * 0.5f);
-        var min = new Vector2(max.X - width, rightCenter.Y - height * 0.5f);
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.2f)));
-        Typography.Draw(drawList, new Vector2(min.X + padX, rightCenter.Y - textSize.Y * 0.5f), text, ui.Accent,
-            TextStyles.Caption2);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, MathF.Max(0f, bottom - origin.Y)));
     }
 
     public void Dispose()

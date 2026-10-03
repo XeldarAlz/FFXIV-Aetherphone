@@ -115,6 +115,7 @@ internal sealed partial class LinkpearlPopoutWindow : Window
     private string threadKey = string.Empty;
     private bool attended;
     private bool placePending;
+    private bool raisePending;
     private bool collapsed;
     private bool suppressed;
     private bool positionForced;
@@ -191,7 +192,7 @@ internal sealed partial class LinkpearlPopoutWindow : Window
 
     public bool Holds(string conversationKey) => IndexOfTab(conversationKey) >= 0;
 
-    public void Bind(string conversationKey, LinkpearlPopoutState? saved)
+    public void Bind(string conversationKey, LinkpearlPopoutState? saved, bool focus = true)
     {
         keys.Clear();
         active = 0;
@@ -219,7 +220,11 @@ internal sealed partial class LinkpearlPopoutWindow : Window
         InvalidateTitles();
         Touch();
         IsOpen = !suppressed && Bound;
-        BringToFront();
+        raisePending = !focus;
+        if (focus)
+        {
+            BringToFront();
+        }
     }
 
     public bool AddTab(string conversationKey, bool activate)
@@ -557,6 +562,12 @@ internal sealed partial class LinkpearlPopoutWindow : Window
         {
             IsOpen = false;
             return;
+        }
+
+        if (raisePending)
+        {
+            raisePending = false;
+            ImGuiP.BringWindowToDisplayFront(ImGuiP.GetCurrentWindowRead());
         }
 
         var position = ImGui.GetWindowPos();

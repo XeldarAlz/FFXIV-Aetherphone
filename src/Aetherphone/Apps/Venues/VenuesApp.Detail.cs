@@ -1,446 +1,621 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Translation;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Translation;
 using Aetherphone.Core.Venues;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Venues;
 
 internal sealed partial class VenuesApp
 {
-    private const float HeroAspect = 0.72f;
-    private const float HeroMaxHeight = 280f;
-    private const float ActionHeight = 50f;
+    private const float HeroAspect = 0.56f;
+    private const float HeroMaxHeight = 260f;
+    private const float HeroScrimShare = 0.40f;
+    private const float HeroInset = 14f;
+    private const float DetailLogoSide = 68f;
+    private const float DetailLogoGap = 12f;
+    private const float ActionBarHeight = 74f;
+    private const float CtaHeight = 48f;
     private const float InfoRowHeight = 50f;
-    private static readonly Vector4 HeroInk = new(1f, 1f, 1f, 0.99f);
-    private static readonly Vector4 HeroMutedInk = new(1f, 1f, 1f, 0.82f);
-    private static readonly Vector4 HeroPillFill = new(0.04f, 0.04f, 0.06f, 0.62f);
+    private const float InfoTileSide = 28f;
+    private const float NowPlayingIconRadius = 20f;
+    private const float TwitchButtonHeight = 38f;
+    private const float TitleFadeDistance = 44f;
+    private const int MaxLinkRows = 6;
+
+    private static readonly TextStyle DetailTitleStyle = TextStyles.Title2;
+    private static readonly TextStyle DetailMetaStyle = TextStyles.Subheadline;
+    private static readonly TextStyle DetailStatusStyle = TextStyles.SubheadlineEmphasized;
+    private static readonly TextStyle FadedTitleStyle = new(1.13f, FontWeight.SemiBold);
+    private static readonly TextStyle InfoLabelStyle = TextStyles.Subheadline;
+    private static readonly TextStyle InfoValueStyle = TextStyles.BodyEmphasized;
+    private static readonly TextStyle CaptionStyle = TextStyles.Caption1;
+    private static readonly TextStyle HintStyle = TextStyles.Footnote;
+    private static readonly TextStyle StreamTitleStyle = TextStyles.Subheadline;
     private static readonly Vector4 WhenTint = new(0.95f, 0.58f, 0.20f, 1f);
     private static readonly Vector4 WorldTint = new(0.35f, 0.55f, 0.95f, 1f);
     private static readonly Vector4 LocationTint = new(0.30f, 0.75f, 0.45f, 1f);
     private static readonly Vector4 HostTint = new(0.62f, 0.45f, 0.92f, 1f);
 
-    private void DrawDetail(Rect area, VenueEvent venue)
+    private readonly LinkRow[] linkRows = new LinkRow[MaxLinkRows];
+    private VenueEvent? detailVenue;
+    private int detailVersion = -1;
+    private long detailMinute = -1;
+    private DetailText detailText;
+    private float detailScrollY;
+
+    private readonly record struct LinkRow(string Label, string Glyph, string Url);
+
+    private readonly record struct DetailText(VenueStatus Status, string Meta, string Window, string Viewers,
+        string Initial, string HostLine);
+
+    private VenueEvent ResolveDetail(VenueEvent routed)
     {
+        var nowUtc = DateTime.UtcNow;
+        var minute = nowUtc.Ticks / TimeSpan.TicksPerMinute;
+        CheckLanguage();
+        if (detailVenue is not null && string.Equals(detailVenue.Id, routed.Id, StringComparison.Ordinal) &&
+            detailVersion == venues.Version && detailMinute == minute)
+        {
+            return detailVenue;
+        }
+
+        var resolved = routed;
+        var events = venues.Events;
+        for (var index = 0; index < events.Count; index++)
+        {
+            if (string.Equals(events[index].Id, routed.Id, StringComparison.Ordinal))
+            {
+                resolved = events[index];
+                break;
+            }
+        }
+
+        detailVenue = resolved;
+        CollectDetailDjs(resolved.Id);
+        detailVersion = venues.Version;
+        detailMinute = minute;
+        detailText = new DetailText(VenueFormat.Status(resolved, nowUtc), VenueFormat.Meta(resolved),
+            VenueFormat.Window(resolved),
+            resolved.LiveViewers > 0 ? VenueFormat.Viewers(resolved.LiveViewers) : string.Empty,
+            VenueLabelCache.InitialOf(resolved.Title),
+            resolved.Host.Length > 0 ? Loc.T(L.Venues.HostedBy, resolved.Host) : string.Empty);
+        return resolved;
+    }
+
+    private void DrawDetail(Rect area, VenueEvent routed)
+    {
+        var venue = ResolveDetail(routed);
         var scale = UiScale.Current;
+        var hasBar = venue.CanTeleport;
         var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-        using (AppSurface.Begin(body))
+        var bottom = hasBar ? area.Max.Y - ActionBarHeight * scale : area.Max.Y;
+        var listRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, bottom));
+        using (AppSurface.BeginEdgeToEdge(listRect))
         {
             detailScrollY = ImGui.GetScrollY();
-            DrawHero(body, venue);
-            DrawActions(venue);
-            DrawInfo(venue);
-            DrawTagsSection(venue);
-            DrawAbout(venue);
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
+            DrawDetailHero(venue, scale);
+            DrawDetailTitle(venue, scale);
+            DrawNowPlaying(venue, scale);
+            DrawAbout(venue, scale);
+            DrawInfoCard(venue, scale);
+            DrawLinks(venue, scale);
+            DrawDetailTags(venue, scale);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
         }
 
         DrawDetailHeader(area, venue, scale);
+        if (hasBar)
+        {
+            DrawActionBar(new Rect(new Vector2(area.Min.X, bottom), area.Max), venue, scale);
+        }
     }
 
     private void DrawDetailHeader(Rect area, VenueEvent venue, float scale)
     {
-        var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        var fadeStart = HeroHeight(area, scale) - 64f * scale;
-        var titleAlpha = Math.Clamp((detailScrollY - fadeStart) / (44f * scale), 0f, 1f);
+        var drawList = ImGui.GetWindowDrawList();
+        SocialChrome.DrawScreenHeader(area, string.Empty, Ink, back, ScreenTitleStyle,
+            SocialChrome.HeaderReserve(1), string.Empty, true, true);
+        var fadeStart = DetailHeroHeight(area.Width, scale) - 24f * scale;
+        var titleAlpha = Math.Clamp((detailScrollY - fadeStart) / (TitleFadeDistance * scale), 0f, 1f);
         if (titleAlpha > 0f)
         {
-            var title = Typography.FitText(venue.Title, area.Width * 0.6f, 1.15f, FontWeight.SemiBold);
-            Typography.DrawCentered(new Vector2(area.Center.X, rowCenterY), title,
-                Palette.WithAlpha(AppPalettes.Venues.TitleInk, titleAlpha), 1.15f, FontWeight.SemiBold);
-        }
-
-        var hitMin = area.Min;
-        var hitMax = new Vector2(area.Min.X + 44f * scale, area.Min.Y + AppHeader.Height * scale);
-        var backHovered = UiInteract.Hover(hitMin, hitMax);
-        var backCenter = new Vector2(area.Min.X + 13f * scale, rowCenterY);
-        if (BackButton.Draw("venues.back", backCenter, 15f * scale, ui.Accent, backHovered, scale))
-        {
-            router.Pop();
+            var reserve = (CellPadX + SocialChrome.HeaderIconPitch + SocialChrome.BackChipRadius) * scale;
+            var title = Typography.FitText(venue.Title, MathF.Max(1f, area.Width - reserve * 2f), FadedTitleStyle);
+            Typography.DrawCentered(drawList,
+                new Vector2(area.Center.X, area.Min.Y + AppHeader.Height * scale * 0.5f), title,
+                Palette.WithAlpha(Ink.TitleInk, titleAlpha), FadedTitleStyle);
+            FeedCell.Hairline(drawList, area.Min.X, area.Max.X, area.Min.Y + AppHeader.Height * scale,
+                Palette.WithAlpha(Ink.Hairline, Ink.Hairline.W * titleAlpha));
         }
 
         var favorite = IsFavorite(venue.Id);
-        var starCenter = new Vector2(area.Max.X - 22f * scale, rowCenterY);
-        if (ui.IconButton(starCenter, 14f * scale, IconGlyph.Of(FontAwesomeIcon.Star),
-                favorite ? ui.Accent : AppPalettes.Venues.BodyInk, AppSkin.Transparent, 0.9f))
+        var favoriteCenter = SocialChrome.HeaderSlot(area, 0);
+        var favoriteReach = new Vector2(SocialChrome.HeaderIconRadius * scale, SocialChrome.HeaderIconRadius * scale);
+        UiAnchors.Report("venues.detail.favorite",
+            new Rect(favoriteCenter - favoriteReach, favoriteCenter + favoriteReach));
+        if (DrawHeaderIcon(drawList, favoriteCenter,
+                favorite ? PhoneIcons.StarFilled : PhoneIcons.Star, Loc.T(L.Venues.Favorites), favorite))
         {
             ToggleFavorite(venue.Id);
         }
     }
 
-    private static float HeroHeight(Rect area, float scale) =>
-        MathF.Min(area.Width * HeroAspect, HeroMaxHeight * scale);
+    private static float DetailHeroHeight(float width, float scale) =>
+        MathF.Min(width * HeroAspect, HeroMaxHeight * scale);
 
-    private void DrawHero(Rect body, VenueEvent venue)
+    private void DrawDetailHero(VenueEvent venue, float scale)
     {
-        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var cursor = ImGui.GetCursorScreenPos();
-        var topPad = Metrics.Space.Sm * scale;
-        var height = HeroHeight(body, scale);
-        var rect = new Rect(new Vector2(body.Min.X, cursor.Y - topPad),
-            new Vector2(body.Max.X, cursor.Y - topPad + height));
-        VenueImage.Draw(drawList, rect, venue, media, http, artwork, 0f);
-        var scrimTop = new Vector2(rect.Min.X, rect.Max.Y - height * 0.72f);
-        drawList.AddRectFilledMultiColor(scrimTop, rect.Max, 0u, 0u,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.88f)), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.88f)));
-        var pad = Metrics.Space.Lg * scale;
-        if (venue.IsLive(DateTime.UtcNow))
-        {
-            DrawLivePill(drawList, new Vector2(rect.Min.X + pad, rect.Min.Y + 12f * scale), venue, scale);
-        }
-
-        DrawSourcePill(drawList, rect, SourceLabel(venue.Source), pad, scale);
-        var textLeft = rect.Min.X + pad;
-        var textWidth = rect.Width - pad * 2f;
-        var baseY = rect.Max.Y - 16f * scale;
-        var meta = BuildHeroMeta(venue);
-        if (meta.Length > 0)
-        {
-            var metaSize = Typography.Measure(meta, TextStyles.Subheadline);
-            var metaY = baseY - metaSize.Y;
-            Marquee.DrawLeftAuto(new MarqueeId("venue.detail.meta.", venue.Id), meta, textLeft, metaY, textWidth,
-                TextStyles.Subheadline, HeroMutedInk);
-            baseY -= metaSize.Y + 6f * scale;
-        }
-
-        var titleFull = venue.Title;
-        var titleSize = Typography.Measure(titleFull, TextStyles.Title1);
-        var titleY = baseY - titleSize.Y;
-        Marquee.DrawLeftAuto(new MarqueeId("venue.detail.title.", venue.Id), titleFull, textLeft, titleY, textWidth,
-            TextStyles.Title1, HeroInk);
-        ImGui.SetCursorScreenPos(cursor);
-        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, height - topPad + Metrics.Space.Lg * scale));
-    }
-
-    private static string BuildHeroMeta(VenueEvent venue)
-    {
-        var place = venue.World;
-        if (venue.DataCenter.Length > 0)
-        {
-            place = place.Length > 0 ? $"{place} · {venue.DataCenter}" : venue.DataCenter;
-        }
-
-        if (venue.LocationLine.Length > 0 && !string.Equals(venue.LocationLine, venue.World, StringComparison.Ordinal))
-        {
-            place = place.Length > 0 ? $"{place} · {venue.LocationLine}" : venue.LocationLine;
-        }
-
-        if (place.Length > 0)
-        {
-            return place;
-        }
-
-        return venue.Host.Length > 0 ? Loc.T(L.Venues.HostedBy, venue.Host) : string.Empty;
-    }
-
-    private static void DrawLivePill(ImDrawListPtr drawList, Vector2 min, VenueEvent venue, float scale)
-    {
-        var label = Loc.T(L.Common.Live);
-        var ends = VenueFormat.EndsAt(venue);
-        var until = ends.Length > 0 ? Loc.T(L.Venues.UntilTime, ends) : string.Empty;
-        var labelSize = Typography.Measure(label, TextStyles.FootnoteEmphasized);
-        var untilSize = until.Length > 0 ? Typography.Measure(until, TextStyles.Footnote) : Vector2.Zero;
-        var untilAdvance = until.Length > 0 ? untilSize.X + 6f * scale : 0f;
-        var height = 24f * scale;
-        var dotAdvance = 14f * scale;
-        var width = dotAdvance + labelSize.X + untilAdvance + 20f * scale;
-        var max = new Vector2(min.X + width, min.Y + height);
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(HeroPillFill));
-        var pulse = 0.55f + 0.45f * Pulse.Wave(Pulse.Calm);
-        drawList.AddCircleFilled(new Vector2(min.X + 12f * scale, min.Y + height * 0.5f), 3.4f * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(VenueCard.LiveGreen, 0.6f + 0.4f * pulse)), 16);
-        var textLeft = min.X + dotAdvance + 6f * scale;
-        Typography.Draw(drawList, new Vector2(textLeft, min.Y + (height - labelSize.Y) * 0.5f), label, HeroInk,
-            TextStyles.FootnoteEmphasized);
-        if (until.Length > 0)
-        {
-            Typography.Draw(drawList, new Vector2(textLeft + labelSize.X + 6f * scale,
-                min.Y + (height - untilSize.Y) * 0.5f), until, HeroMutedInk, TextStyles.Footnote);
-        }
-    }
-
-    private static void DrawSourcePill(ImDrawListPtr drawList, Rect hero, string label, float pad, float scale)
-    {
-        var textSize = Typography.Measure(label, TextStyles.Caption1);
-        var height = 24f * scale;
-        var width = textSize.X + 18f * scale;
-        var min = new Vector2(hero.Max.X - pad - width, hero.Min.Y + 12f * scale);
-        var max = new Vector2(min.X + width, min.Y + height);
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(HeroPillFill));
-        Typography.Draw(drawList, new Vector2(min.X + (width - textSize.X) * 0.5f, min.Y + (height - textSize.Y) * 0.5f),
-            label, HeroMutedInk, TextStyles.Caption1);
-    }
-
-    private void DrawActions(VenueEvent venue)
-    {
-        var scale = UiScale.Current;
-        var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
-        var height = ActionHeight * scale;
-        var gap = Metrics.Space.Sm * scale;
-        var hasTeleport = venue.CanTeleport;
-        var hasDiscord = !string.IsNullOrEmpty(venue.DiscordUrl);
-        var slots = 1 + (hasTeleport ? 1 : 0) + (hasDiscord ? 1 : 0);
-        var slotWidth = (width - gap * (slots - 1)) / slots;
-        var cursor = origin.X;
-        if (hasTeleport)
+        var width = ScrollLayout.StableContentWidth();
+        var height = DetailHeroHeight(width, scale);
+        var hero = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
+        VenueImage.Cover(drawList, hero, 0f, venue, detailText.Initial, Art);
+        MediaOverlay.BottomScrim(drawList, hero.Min, hero.Max, HeroScrimShare);
+        var inset = HeroInset * scale;
+        VenueCard.DrawStatusPill(drawList, new Vector2(hero.Min.X + inset, hero.Min.Y + inset),
+            detailText.Status.Kind, venue, hero.Max.X - inset, scale);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+    }
+
+    private void DrawDetailTitle(VenueEvent venue, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var pad = CellPadX * scale;
+        var left = origin.X + pad;
+        var textLeft = left;
+        var hasLogo = venue.LogoUrl is not null && venue.BannerUrl is not null;
+        var logoBottom = origin.Y;
+        if (hasLogo)
         {
-            var rect = new Rect(new Vector2(cursor, origin.Y), new Vector2(cursor + slotWidth, origin.Y + height));
-            if (ActionPill(rect, FontAwesomeIcon.LocationArrow, Loc.T(L.Venues.Teleport), true))
-            {
-                if (lifestreamAvailable)
-                {
-                    LifestreamBridge.Travel(venue.TeleportCode!);
-                }
-                else
-                {
-                    ImGui.SetClipboardText(LifestreamBridge.TravelCommand(venue.TeleportCode!));
-                    ShellToast.Show();
-                }
-            }
-
-            if (!lifestreamAvailable)
-            {
-                HoverTooltip.Show(rect, Loc.T(L.Venues.NeedsLifestream), HoverLabelSide.Above);
-            }
-
-            cursor += slotWidth + gap;
+            var side = DetailLogoSide * scale;
+            var logoTop = origin.Y - side * 0.5f;
+            var logo = new Rect(new Vector2(left, logoTop), new Vector2(left + side, logoTop + side));
+            var rim = 3f * scale;
+            Squircle.Fill(drawList, logo.Min - new Vector2(rim, rim), logo.Max + new Vector2(rim, rim),
+                side * 0.26f + rim, ImGui.GetColorU32(Ink.BackdropTop));
+            VenueImage.Logo(drawList, logo, side * 0.26f, venue, detailText.Initial, Art);
+            textLeft = logo.Max.X + DetailLogoGap * scale;
+            logoBottom = logo.Max.Y;
         }
 
-        var openRect = new Rect(new Vector2(cursor, origin.Y), new Vector2(cursor + slotWidth, origin.Y + height));
-        if (ActionPill(openRect, FontAwesomeIcon.Globe, Loc.T(L.Venues.Open), !hasTeleport))
+        var cursorY = origin.Y + Metrics.Space.Md * scale;
+        var textWidth = MathF.Max(1f, origin.X + width - pad - textLeft);
+        cursorY += Typography.DrawWrappedLeft(new Vector2(textLeft, cursorY), venue.Title, Ink.TitleInk,
+            DetailTitleStyle, textWidth);
+        ImGui.SetCursorScreenPos(origin);
+        if (detailText.Meta.Length > 0)
         {
-            UrlActions.AskThenOpen(venue.Url);
+            cursorY += 2f * scale;
+            cursorY += Typography.DrawWrappedLeft(new Vector2(textLeft, cursorY), detailText.Meta, Ink.MutedInk,
+                DetailMetaStyle, textWidth);
+            ImGui.SetCursorScreenPos(origin);
         }
 
-        cursor += slotWidth + gap;
-        if (hasDiscord)
+        cursorY = MathF.Max(cursorY, logoBottom);
+        if (detailText.Status.Label.Length > 0)
         {
-            var discordRect = new Rect(new Vector2(cursor, origin.Y),
-                new Vector2(cursor + slotWidth, origin.Y + height));
-            if (ActionPill(discordRect, FontAwesomeIcon.Headset, Loc.T(L.Venues.Discord), false))
+            cursorY += Metrics.Space.Sm * scale;
+            var statusLeft = left;
+            var tint = VenueCard.StatusTint(detailText.Status.Kind, Ink);
+            var statusHeight = Typography.LineHeight(DetailStatusStyle);
+            if (detailText.Status.Kind == VenueStatusKind.Live)
             {
-                UrlActions.AskThenOpen(venue.DiscordUrl!);
+                MediaOverlay.LiveDot(drawList, new Vector2(statusLeft + 5f * scale, cursorY + statusHeight * 0.5f),
+                    tint, scale);
+                statusLeft += 16f * scale;
             }
+
+            Typography.Draw(drawList, new Vector2(statusLeft, cursorY),
+                Typography.FitText(detailText.Status.Label, MathF.Max(1f, origin.X + width - pad - statusLeft),
+                    DetailStatusStyle), tint, DetailStatusStyle);
+            cursorY += statusHeight;
+        }
+
+        if (detailText.Status.Kind == VenueStatusKind.Open)
+        {
+            cursorY += 2f * scale;
+            cursorY += Typography.DrawWrappedLeft(new Vector2(left, cursorY), Loc.T(L.Venues.ScheduledOpen),
+                Ink.FaintInk, HintStyle, width - pad * 2f);
+            ImGui.SetCursorScreenPos(origin);
+        }
+
+        if (detailText.HostLine.Length > 0)
+        {
+            cursorY += 3f * scale;
+            Typography.Draw(drawList, new Vector2(left, cursorY),
+                Typography.FitText(detailText.HostLine, width - pad * 2f, HintStyle), Ink.MutedInk, HintStyle);
+            cursorY += Typography.LineHeight(HintStyle);
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Lg * scale));
+        ImGui.Dummy(new Vector2(width, cursorY - origin.Y + Metrics.Space.Md * scale));
     }
 
-    private bool ActionPill(Rect rect, FontAwesomeIcon icon, string label, bool filled)
+    private void DrawNowPlaying(VenueEvent venue, float scale)
     {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered = UiInteract.Hover(rect.Min, rect.Max);
-        var radius = rect.Height * 0.5f;
-        var fill = filled
-            ? (hovered ? Palette.Mix(ui.Accent, new Vector4(1f, 1f, 1f, 1f), 0.12f) : ui.Accent)
-            : (hovered ? new Vector4(1f, 1f, 1f, 0.16f) : ui.FieldSurface);
-        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
-        var ink = filled ? new Vector4(1f, 1f, 1f, 1f) : ui.TitleInk;
-        var iconAdvance = 22f * scale;
-        var textMaxWidth = MathF.Max(1f, rect.Width - iconAdvance - 12f * scale);
-        var fullTextSize = Typography.Measure(label, 0.95f, FontWeight.SemiBold);
-        var displayWidth = MathF.Min(fullTextSize.X, textMaxWidth);
-        var left = rect.Center.X - (iconAdvance + displayWidth) * 0.5f;
-        AppSkin.Icon(drawList, new Vector2(left + 8f * scale, rect.Center.Y), IconGlyph.Of(icon), ink, 0.85f);
-        Marquee.DrawLeft(new MarqueeId("venue.detail.action.", label), label, left + iconAdvance,
-            rect.Center.Y - fullTextSize.Y * 0.5f, textMaxWidth, new TextStyle(0.95f, FontWeight.SemiBold), ink,
-            hovered);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return UiInteract.Click(rect.Min, rect.Max, hovered);
-    }
-
-    private void DrawInfo(VenueEvent venue)
-    {
-        var scale = UiScale.Current;
-        ui.SectionHeading(Loc.T(L.Venues.Details));
-        var rows = 1;
-        if (venue.World.Length > 0 || venue.DataCenter.Length > 0)
-        {
-            rows++;
-        }
-
-        if (venue.LocationLine.Length > 0)
-        {
-            rows++;
-        }
-
-        if (venue.Host.Length > 0)
-        {
-            rows++;
-        }
-
-        if (venue.AttendeeCount > 0)
-        {
-            rows++;
-        }
-
-        var width = ImGui.GetContentRegionAvail().X;
-        var origin = ImGui.GetCursorScreenPos();
-        var height = rows * InfoRowHeight * scale;
-        var drawList = ImGui.GetWindowDrawList();
-        ui.Card(drawList, origin, origin + new Vector2(width, height), Metrics.Radius.Card * scale, elevated: true);
-        var rowIndex = 0;
-        InfoRow(drawList, origin, width, rowIndex++, rows, FontAwesomeIcon.Clock, WhenTint, Loc.T(L.Venues.When),
-            VenueFormat.Range(venue));
-        if (venue.World.Length > 0 || venue.DataCenter.Length > 0)
-        {
-            var place = venue.World.Length > 0
-                ? venue.DataCenter.Length > 0 ? $"{venue.World} · {venue.DataCenter}" : venue.World
-                : venue.DataCenter;
-            var label = venue.World.Length > 0 ? Loc.T(L.Venues.World) : Loc.T(L.Venues.DataCenter);
-            InfoRow(drawList, origin, width, rowIndex++, rows, FontAwesomeIcon.Globe, WorldTint, label, place);
-        }
-
-        if (venue.LocationLine.Length > 0)
-        {
-            InfoRow(drawList, origin, width, rowIndex++, rows, FontAwesomeIcon.MapMarkerAlt, LocationTint,
-                Loc.T(L.Venues.Location), venue.LocationLine);
-        }
-
-        if (venue.Host.Length > 0)
-        {
-            InfoRow(drawList, origin, width, rowIndex++, rows, FontAwesomeIcon.User, HostTint, Loc.T(L.Venues.Host),
-                venue.Host);
-        }
-
-        if (venue.AttendeeCount > 0)
-        {
-            InfoRow(drawList, origin, width, rowIndex, rows, FontAwesomeIcon.Users, ui.Accent,
-                Loc.T(L.Venues.Attendees), venue.AttendeeCount.ToString(Loc.Culture));
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Lg * scale));
-    }
-
-    private void InfoRow(ImDrawListPtr drawList, Vector2 cardOrigin, float cardWidth, int rowIndex, int rowCount,
-        FontAwesomeIcon icon, Vector4 tint, string label, string value)
-    {
-        var scale = UiScale.Current;
-        var rowHeight = InfoRowHeight * scale;
-        var rowTop = cardOrigin.Y + rowIndex * rowHeight;
-        var centerY = rowTop + rowHeight * 0.5f;
-        var inset = 14f * scale;
-        var tileSide = 28f * scale;
-        var tileCenter = new Vector2(cardOrigin.X + inset + tileSide * 0.5f, centerY);
-        IconTile.Draw(tileCenter, tileSide, IconTile.Surface(tint), icon);
-        var labelLeft = tileCenter.X + tileSide * 0.5f + 12f * scale;
-        var labelSize = Typography.Measure(label, TextStyles.Subheadline);
-        Typography.Draw(drawList, new Vector2(labelLeft, centerY - labelSize.Y * 0.5f), label,
-            AppPalettes.Venues.MutedInk, TextStyles.Subheadline);
-        var valueRight = cardOrigin.X + cardWidth - inset;
-        var valueWidth = MathF.Max(1f, valueRight - labelLeft - labelSize.X - 12f * scale);
-        var valueFullSize = Typography.Measure(value, TextStyles.BodyEmphasized);
-        var valueY = centerY - valueFullSize.Y * 0.5f;
-        Marquee.DrawRightAuto(new MarqueeId("venue.detail.row.", label), value, valueRight, valueY, valueWidth,
-            TextStyles.BodyEmphasized, AppPalettes.Venues.TitleInk);
-        if (rowIndex >= rowCount - 1)
+        if (!venue.IsConfirmedLive(DateTime.UtcNow))
         {
             return;
         }
 
-        drawList.AddLine(new Vector2(labelLeft, rowTop + rowHeight), new Vector2(valueRight, rowTop + rowHeight),
-            ImGui.GetColorU32(ui.Palette.CardStroke), Metrics.Stroke.Hairline * scale);
+        DrawSectionHeading(Loc.Upper(Loc.T(L.Venues.NowPlaying)), scale);
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var pad = CellPadX * scale;
+        var inner = CardInset * scale;
+        var cardLeft = origin.X + pad;
+        var cardRight = origin.X + width - pad;
+        var radius = NowPlayingIconRadius * scale;
+        var headlineHeight = Typography.LineHeight(InfoValueStyle);
+        var captionHeight = Typography.LineHeight(CaptionStyle);
+        var rowHeight = MathF.Max(radius * 2f, headlineHeight + 2f * scale + captionHeight);
+        var djCount = detailDjs.Count;
+        var djRowHeight = DjRowHeight * scale;
+        var topBlock = djCount > 0 ? inner * 0.5f + djCount * djRowHeight : inner + rowHeight;
+        var hasTwitch = !string.IsNullOrEmpty(venue.TwitchUrl);
+        var fullWidth = MathF.Max(1f, cardRight - cardLeft - inner * 2f);
+        var titleHeight = venue.LiveTitle.Length > 0
+            ? Typography.CountWrappedLines(venue.LiveTitle, StreamTitleStyle, fullWidth) *
+              Typography.LineHeight(StreamTitleStyle)
+            : 0f;
+        var genresHeight = venue.LiveGenres.Count > 0 ? VenueChips.Height(scale) : 0f;
+        var cardHeight = topBlock + inner +
+                         (titleHeight > 0f ? Metrics.Space.Sm * scale + titleHeight : 0f) +
+                         (genresHeight > 0f ? Metrics.Space.Sm * scale + genresHeight : 0f) +
+                         (hasTwitch ? Metrics.Space.Md * scale + TwitchButtonHeight * scale : 0f);
+        ui.Card(drawList, new Vector2(cardLeft, origin.Y), new Vector2(cardRight, origin.Y + cardHeight),
+            Metrics.Radius.Card * scale, elevated: true);
+        if (djCount > 0)
+        {
+            var linkable = djCount > 1;
+            for (var index = 0; index < djCount; index++)
+            {
+                var rowTop = origin.Y + inner * 0.5f + index * djRowHeight;
+                DrawDetailDjRow(drawList, new Vector2(cardLeft, rowTop), new Vector2(cardRight, rowTop + djRowHeight),
+                    index, linkable, inner, scale);
+            }
+        }
+        else
+        {
+            DrawNowPlayingHeadline(drawList, venue, cardLeft, cardRight, origin.Y, rowHeight, scale);
+        }
+
+        var cursorY = origin.Y + topBlock;
+        if (titleHeight > 0f)
+        {
+            cursorY += Metrics.Space.Sm * scale;
+            Typography.DrawWrappedLeft(new Vector2(cardLeft + inner, cursorY), venue.LiveTitle, Ink.BodyInk,
+                StreamTitleStyle, fullWidth);
+            ImGui.SetCursorScreenPos(origin);
+            cursorY += titleHeight;
+        }
+
+        if (genresHeight > 0f)
+        {
+            cursorY += Metrics.Space.Sm * scale;
+            VenueCard.DrawChipRow(drawList, venue.LiveGenres, cardLeft + inner, cardRight - inner, cursorY, scale);
+            cursorY += genresHeight;
+        }
+
+        if (hasTwitch)
+        {
+            var buttonTop = cursorY + Metrics.Space.Md * scale;
+            var button = new Rect(new Vector2(cardLeft + inner, buttonTop),
+                new Vector2(cardRight - inner, buttonTop + TwitchButtonHeight * scale));
+            if (SocialPill.Accent(drawList, button, Loc.T(L.Venues.WatchOnTwitch), Ink,
+                    TextStyles.SubheadlineEmphasized, button.Height * 0.5f))
+            {
+                UrlActions.AskThenOpen(venue.TwitchUrl!);
+            }
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, cardHeight + Metrics.Space.Xs * scale));
+        DrawHint(Loc.T(L.Venues.ConfirmedLive), scale);
     }
 
-    private void DrawTagsSection(VenueEvent venue)
+    private void DrawNowPlayingHeadline(ImDrawListPtr drawList, VenueEvent venue, float cardLeft, float cardRight,
+        float top, float rowHeight, float scale)
+    {
+        var inner = CardInset * scale;
+        var radius = NowPlayingIconRadius * scale;
+        var headlineHeight = Typography.LineHeight(InfoValueStyle);
+        var captionHeight = Typography.LineHeight(CaptionStyle);
+        var iconCenter = new Vector2(cardLeft + inner + radius, top + inner + rowHeight * 0.5f);
+        drawList.AddCircleFilled(iconCenter, radius, ImGui.GetColorU32(Palette.WithAlpha(MediaOverlay.LiveGreen, 0.18f)),
+            32);
+        PhoneIcon.Draw(drawList, iconCenter, PhoneIcons.Microphone, MediaOverlay.LiveGreen, 20f * scale);
+        var textLeft = iconCenter.X + radius + 12f * scale;
+        var textWidth = MathF.Max(1f, cardRight - inner - textLeft);
+        var textTop = top + inner + (rowHeight - headlineHeight - 2f * scale - captionHeight) * 0.5f;
+        var headline = venue.LiveHeadline.Length > 0 ? venue.LiveHeadline : Loc.T(L.Venues.LiveNowLabel);
+        Marquee.DrawLeftAuto(drawList, new MarqueeId("venues.detail.playing.", venue.Id), headline, textLeft, textTop,
+            textWidth, InfoValueStyle, Ink.TitleInk);
+        var caption = detailText.Viewers.Length > 0 ? detailText.Viewers : Loc.T(L.Venues.SourceRolladeck);
+        Typography.Draw(drawList, new Vector2(textLeft, textTop + headlineHeight + 2f * scale),
+            Typography.FitText(caption, textWidth, CaptionStyle), Ink.MutedInk, CaptionStyle);
+    }
+
+    private void DrawHint(string text, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var pad = CellPadX * scale;
+        var height = Typography.DrawWrappedLeft(new Vector2(origin.X + pad, origin.Y), text, Ink.FaintInk, HintStyle,
+            width - pad * 2f);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Sm * scale));
+    }
+
+    private void DrawDetailTags(VenueEvent venue, float scale)
     {
         if (venue.Tags.Count == 0)
         {
             return;
         }
 
-        ui.SectionHeading(Loc.T(L.Venues.Tags));
-        var scale = UiScale.Current;
+        DrawSectionHeading(Loc.Upper(Loc.T(L.Venues.Tags)), scale);
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var right = origin.X + width;
-        var gap = Metrics.Space.Sm * scale;
-        var lineHeight = VenueChips.LargeHeight(scale) + gap;
-        var cursorX = origin.X;
+        var width = ScrollLayout.StableContentWidth();
+        var left = origin.X + CellPadX * scale;
+        var right = origin.X + width - CellPadX * scale;
+        var gap = Metrics.Space.Xs * scale;
+        var lineHeight = VenueChips.Height(scale) + gap;
+        var cursorX = left;
         var cursorY = origin.Y;
         for (var index = 0; index < venue.Tags.Count; index++)
         {
             var tag = venue.Tags[index];
-            var chipWidth = VenueChips.MeasureLarge(tag, scale);
-            if (cursorX + chipWidth > right && cursorX > origin.X)
+            var chipWidth = VenueChips.Measure(tag, scale);
+            if (cursorX + chipWidth > right && cursorX > left)
             {
-                cursorX = origin.X;
+                cursorX = left;
                 cursorY += lineHeight;
             }
 
-            VenueChips.DrawLarge(drawList, new Vector2(cursorX, cursorY), tag, false, false, scale);
+            VenueChips.Draw(drawList, new Vector2(cursorX, cursorY), tag, scale);
             cursorX += chipWidth + gap;
         }
 
-        var totalHeight = cursorY - origin.Y + lineHeight;
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, totalHeight + Metrics.Space.Sm * scale));
+        ImGui.Dummy(new Vector2(width, cursorY - origin.Y + lineHeight));
     }
 
     private string VenueLanguage(VenueEvent venue)
     {
-        if (!venueLanguages.TryGetValue(venue.Id, out var lang))
+        if (!venueLanguages.TryGetValue(venue.Id, out var language))
         {
-            lang = LanguageGuess.Detect(venue.Description);
-            venueLanguages[venue.Id] = lang;
+            language = LanguageGuess.Detect(venue.Description);
+            venueLanguages[venue.Id] = language;
         }
 
-        return lang;
+        return language;
     }
 
-    private void DrawAbout(VenueEvent venue)
+    private void DrawAbout(VenueEvent venue, float scale)
     {
         if (venue.Description.Length == 0)
         {
             return;
         }
 
-        ui.SectionHeading(Loc.T(L.Venues.About));
-        var scale = UiScale.Current;
+        DrawSectionHeading(Loc.Upper(Loc.T(L.Venues.About)), scale);
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var pad = CellPadX * scale;
         var venueKey = new TranslationKey(TranslationSurface.Venue, venue.Id);
         var aboutText = translation.View(venueKey, venue.Description).Text;
+        ImGui.SetCursorScreenPos(new Vector2(origin.X + pad, origin.Y));
         using (Plugin.Fonts.Push(1f))
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Venues.BodyInk))
+        using (ImRaii.PushColor(ImGuiCol.Text, Ink.BodyInk))
         {
-            ImGui.PushTextWrapPos(0f);
+            ImGui.PushTextWrapPos(origin.X + width - pad - ImGui.GetWindowPos().X);
             Typography.Plain(aboutText);
             ImGui.PopTextWrapPos();
         }
 
-        var venueLang = VenueLanguage(venue);
-        var linkHeight = TranslateLink.Height(translation, venueKey, venueLang, scale);
+        var language = VenueLanguage(venue);
+        var linkHeight = TranslateLink.Height(translation, venueKey, language, scale);
         if (linkHeight > 0f)
         {
-            var linkTop = ImGui.GetCursorScreenPos();
-            TranslateLink.Draw(translation, confirm, venueKey, venueLang, venue.Description, linkTop,
-                ImGui.GetContentRegionAvail().X, AppPalettes.Venues.MutedInk, AppPalettes.Venues.Accent, scale);
-            ImGui.SetCursorScreenPos(new Vector2(linkTop.X, linkTop.Y + linkHeight));
+            var linkTop = new Vector2(origin.X + pad, ImGui.GetCursorScreenPos().Y);
+            TranslateLink.Draw(translation, confirm, venueKey, language, venue.Description, linkTop,
+                width - pad * 2f, Ink.MutedInk, Ink.Accent, scale);
+            ImGui.SetCursorScreenPos(new Vector2(origin.X, linkTop.Y + linkHeight));
+        }
+        else
+        {
+            ImGui.SetCursorScreenPos(new Vector2(origin.X, ImGui.GetCursorScreenPos().Y));
         }
 
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+        ImGui.Dummy(new Vector2(width, Metrics.Space.Sm * scale));
     }
 
-    private static string SourceLabel(VenueSource source) =>
-        source switch
+    private void DrawInfoCard(VenueEvent venue, float scale)
+    {
+        var rows = 0;
+        rows += detailText.Window.Length > 0 ? 1 : 0;
+        rows += venue.World.Length > 0 || venue.DataCenter.Length > 0 ? 1 : 0;
+        rows += venue.LocationLine.Length > 0 && !string.Equals(venue.LocationLine, venue.World, StringComparison.Ordinal) ? 1 : 0;
+        rows += venue.AttendeeCount > 0 ? 1 : 0;
+        if (rows == 0)
         {
-            VenueSource.Partake => Loc.T(L.Venues.SourcePartake),
-            _ => Loc.T(L.Venues.SourceFfxiv),
-        };
+            return;
+        }
+
+        DrawSectionHeading(Loc.Upper(Loc.T(L.Venues.Details)), scale);
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var pad = CellPadX * scale;
+        var card = new Rect(new Vector2(origin.X + pad, origin.Y),
+            new Vector2(origin.X + width - pad, origin.Y + rows * InfoRowHeight * scale));
+        ui.Card(drawList, card.Min, card.Max, Metrics.Radius.Card * scale, elevated: true);
+        var rowIndex = 0;
+        if (detailText.Window.Length > 0)
+        {
+            InfoRow(drawList, card, rowIndex++, rows, PhoneIcons.Clock, WhenTint, Loc.T(L.Venues.NextOpening),
+                detailText.Window, scale);
+        }
+
+        if (venue.World.Length > 0 || venue.DataCenter.Length > 0)
+        {
+            var label = venue.World.Length > 0 ? Loc.T(L.Venues.World) : Loc.T(L.Venues.DataCenter);
+            InfoRow(drawList, card, rowIndex++, rows, PhoneIcons.World, WorldTint, label,
+                venue.World.Length > 0 ? venue.World : venue.DataCenter, scale);
+        }
+
+        if (venue.LocationLine.Length > 0 && !string.Equals(venue.LocationLine, venue.World, StringComparison.Ordinal))
+        {
+            InfoRow(drawList, card, rowIndex++, rows, PhoneIcons.MapPin, LocationTint, Loc.T(L.Venues.Location),
+                venue.LocationLine, scale);
+        }
+
+        if (venue.AttendeeCount > 0)
+        {
+            InfoRow(drawList, card, rowIndex, rows, PhoneIcons.Users, HostTint, Loc.T(L.Venues.Attendees),
+                venue.AttendeeCount.ToString(Loc.Culture), scale);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, card.Height + Metrics.Space.Sm * scale));
+    }
+
+    private void InfoRow(ImDrawListPtr drawList, Rect card, int rowIndex, int rowCount, string glyph, Vector4 tint,
+        string label, string value, float scale)
+    {
+        var rowHeight = InfoRowHeight * scale;
+        var rowTop = card.Min.Y + rowIndex * rowHeight;
+        var centerY = rowTop + rowHeight * 0.5f;
+        var inset = 14f * scale;
+        var tileSide = InfoTileSide * scale;
+        var tileMin = new Vector2(card.Min.X + inset, centerY - tileSide * 0.5f);
+        Squircle.Fill(drawList, tileMin, tileMin + new Vector2(tileSide, tileSide), 8f * scale,
+            ImGui.GetColorU32(Palette.WithAlpha(tint, 0.22f)));
+        PhoneIcon.Draw(drawList, tileMin + new Vector2(tileSide * 0.5f, tileSide * 0.5f), glyph,
+            Palette.Lighten(tint, 0.25f), 16f * scale);
+        var labelLeft = tileMin.X + tileSide + 12f * scale;
+        var labelSize = Typography.Measure(label, InfoLabelStyle);
+        Typography.Draw(drawList, new Vector2(labelLeft, centerY - labelSize.Y * 0.5f), label, Ink.MutedInk,
+            InfoLabelStyle);
+        var valueRight = card.Max.X - inset;
+        var valueWidth = MathF.Max(1f, valueRight - labelLeft - labelSize.X - 12f * scale);
+        var valueHeight = Typography.LineHeight(InfoValueStyle);
+        Marquee.DrawRightAuto(new MarqueeId("venues.detail.row.", label), value, valueRight,
+            centerY - valueHeight * 0.5f, valueWidth, InfoValueStyle, Ink.TitleInk);
+        if (rowIndex < rowCount - 1)
+        {
+            FeedCell.Hairline(drawList, labelLeft, valueRight, rowTop + rowHeight, Ink.Hairline);
+        }
+    }
+
+    private int CollectLinks(VenueEvent venue)
+    {
+        var count = 0;
+        AddLink(ref count, Loc.T(L.Venues.Website), PhoneIcons.Link, venue.WebsiteUrl);
+        AddLink(ref count, Loc.T(L.Venues.Discord), PhoneIcons.MessageCircle, venue.DiscordUrl);
+        var listing = (venue.Sources & VenueSources.Partake) != 0
+            ? Loc.T(L.Venues.SourcePartake)
+            : Loc.T(L.Venues.SourceFfxiv);
+        AddLink(ref count, listing, PhoneIcons.ExternalLink, venue.ListingUrl);
+        AddLink(ref count, Loc.T(L.Venues.SourceRolladeck), PhoneIcons.ExternalLink, venue.RolladeckUrl);
+        return count;
+    }
+
+    private void AddLink(ref int count, string label, string glyph, string? url)
+    {
+        if (string.IsNullOrEmpty(url) || count >= linkRows.Length)
+        {
+            return;
+        }
+
+        linkRows[count++] = new LinkRow(label, glyph, url);
+    }
+
+    private void DrawLinks(VenueEvent venue, float scale)
+    {
+        var count = CollectLinks(venue);
+        if (count == 0)
+        {
+            return;
+        }
+
+        DrawSectionHeading(Loc.Upper(Loc.T(L.Venues.ListedOn)), scale);
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var pad = CellPadX * scale;
+        var rowHeight = InfoRowHeight * scale;
+        var card = new Rect(new Vector2(origin.X + pad, origin.Y),
+            new Vector2(origin.X + width - pad, origin.Y + count * rowHeight));
+        var rounding = Metrics.Radius.Card * scale;
+        ui.Card(drawList, card.Min, card.Max, rounding, elevated: true);
+        var inset = 14f * scale;
+        for (var index = 0; index < count; index++)
+        {
+            var link = linkRows[index];
+            var rowMin = new Vector2(card.Min.X, card.Min.Y + index * rowHeight);
+            var rowMax = new Vector2(card.Max.X, rowMin.Y + rowHeight);
+            var hovered = UiInteract.Hover(rowMin, rowMax);
+            if (hovered)
+            {
+                var hoverRounding = index == 0 || index == count - 1 ? rounding : 0f;
+                drawList.AddRectFilled(rowMin, rowMax, ImGui.GetColorU32(Ink.HoverTint), hoverRounding,
+                    index == 0 ? ImDrawFlags.RoundCornersTop :
+                    index == count - 1 ? ImDrawFlags.RoundCornersBottom : ImDrawFlags.RoundCornersNone);
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            var centerY = rowMin.Y + rowHeight * 0.5f;
+            PhoneIcon.Draw(drawList, new Vector2(rowMin.X + inset + 9f * scale, centerY), link.Glyph, Ink.AccentLink,
+                18f * scale);
+            var labelLeft = rowMin.X + inset + 30f * scale;
+            var labelHeight = Typography.LineHeight(InfoValueStyle);
+            Typography.Draw(drawList, new Vector2(labelLeft, centerY - labelHeight * 0.5f),
+                Typography.FitText(link.Label, MathF.Max(1f, rowMax.X - inset - 20f * scale - labelLeft),
+                    InfoValueStyle), Ink.TitleInk, InfoValueStyle);
+            PhoneIcon.Draw(drawList, new Vector2(rowMax.X - inset - 6f * scale, centerY), PhoneIcons.ChevronRight,
+                Ink.FaintInk, 14f * scale);
+            if (index < count - 1)
+            {
+                FeedCell.Hairline(drawList, labelLeft, rowMax.X - inset, rowMax.Y, Ink.Hairline);
+            }
+
+            if (UiInteract.Click(rowMin, rowMax, hovered))
+            {
+                UrlActions.AskThenOpen(link.Url);
+            }
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, card.Height + Metrics.Space.Sm * scale));
+    }
+
+    private void DrawActionBar(Rect bar, VenueEvent venue, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        SocialChrome.PaintBarBackdrop(ui, drawList, bar, screenRect);
+        FeedCell.Hairline(drawList, bar.Min.X, bar.Max.X, bar.Min.Y + 0.5f, Ink.Hairline);
+        var pad = CellPadX * scale;
+        var top = bar.Min.Y + (bar.Height - CtaHeight * scale) * 0.5f;
+        var button = new Rect(new Vector2(bar.Min.X + pad, top), new Vector2(bar.Max.X - pad, top + CtaHeight * scale));
+        UiAnchors.Report("venues.detail.go", button);
+        if (SocialPill.Accent(drawList, button, Loc.T(L.Travel.GoThere), Ink, TextStyles.Headline,
+                button.Height * 0.5f))
+        {
+            Teleport(venue);
+        }
+    }
 }

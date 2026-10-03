@@ -52,8 +52,8 @@ The constructor runs, in order:
 3. `Device = new DeviceStatus(...)` starts the battery/latency/signal sampler used by the status bar.
 4. `PhoneServices.Build(...)` constructs every shared service (next section).
 5. `Fonts = new FontService(...)` builds the Inter font atlas at every weight and size bucket.
-6. `EmojiCatalog.Load()` runs, then the video subsystem comes up: `ScreenController`, `VideoPlayer`, `AetherStreamQueue`, `WatchAlongSession`, and `StreamSuggestionNotifier` are constructed, `OnVideoFrameworkUpdate` subscribes to `Framework.Update`, and `VideoDebugWindow` and `AetherStreamScreenWindow` are built.
-7. `AppRegistry.BuildDefault(services, video, screenController, videoQueue, watchAlong, streamSuggestions, screenWindow)` constructs every app into an `AppBundle` (apps, home widgets, photo library).
+6. `EmojiCatalog.Load()` runs, then the video subsystem comes up: one `VideoSuite` (src/Aetherphone/Core/Video/VideoSuite.cs) constructs and owns `ScreenController`, `VideoPlayer`, `VideoLibrary`, `AetherStreamQueue`, `WatchAlongSession`, `StreamSuggestionNotifier`, and `ScreenChatFeed`; `OnVideoFrameworkUpdate` subscribes to `Framework.Update`, and `VideoDebugWindow`, `AetherStreamScreenWindow`, and `VideoWorldOverlay` are built.
+7. `AppRegistry.BuildDefault(services, videoSuite, screenWindow, linkpearlPopouts)` constructs every app into an `AppBundle` (apps, home widgets, photo library).
 8. `new PhoneShell(services, bundle)` and `new PhoneWindow(shell, Cfg)` build the UI, and the five windows (`PhoneWindow`, `UpdateChipWindow`, `PhotoWindow`, `VideoDebugWindow`, `AetherStreamScreenWindow`) are added to a Dalamud `WindowSystem`, the helper that tracks window open state and calls each window's draw methods.
 9. Background services start: `PhoneEmoteController`, `TimerNotifier`, `CalendarReminderService`, `ClockAlarmService`, `ReminderService`, `ScreenshotImportService`, character session watchers, and `CallHub`.
 10. Chat commands `/phone` and `/aetherphone` (see `AepConstants`), a server info bar entry (`IDtrBar`), and a context menu hook are registered.
@@ -137,11 +137,11 @@ Other things `PhoneWindow` handles:
 
 `PhotoWindow` (src/Aetherphone/Windows/PhotoWindow.cs) is the photo pop-out: an ordinary resizable Dalamud window that shows one image fitted to its content region. `PhotoZoomView` draws the button that opens it (leftmost in the control row), every fullscreen photo viewer returns that click to its caller, and the caller hands `Plugin.PhotoWindow.Open` a `Func<IDalamudTextureWrap?>` plus the `IPhoneApp` it came from. The texture source means the window re-resolves from the cache every frame instead of holding a wrap that eviction could free; the app supplies the window title, read as `DisplayName` every frame so it follows a language switch. It sizes itself to the image aspect the first frame the texture resolves, then leaves the size alone.
 
-`VideoDebugWindow` (src/Aetherphone/Windows/VideoDebugWindow.cs) is the video subsystem's decode debug panel, and `AetherStreamScreenWindow` (src/Aetherphone/Windows/AetherStreamScreenWindow.cs) is a resizable pop-out that mirrors the in-world AetherStream screen while media is playing.
+`VideoDebugWindow` (src/Aetherphone/Windows/VideoDebugWindow.cs) is the video subsystem's decode debug panel, and `AetherStreamScreenWindow` (src/Aetherphone/Windows/AetherStreamScreenWindow.cs) is a resizable pop-out that mirrors the in-world AetherStream screen while media is playing. `VideoWorldOverlay` (src/Aetherphone/Windows/VideoWorldOverlay.cs) is not a window: it hooks `UiBuilder.Draw` directly, projects the in-world screen onto the viewport, and draws the chat bubbles, the reactions, and the drag handles shown while the screen is being placed.
 
 ## The shell layer (Core/Shell)
 
-`PhoneShell.Draw(Rect device)` is the per-frame orchestrator. In order it: advances the minimize morph (and short-circuits into `MinimizeMorphView` when the phone is minimized), applies the notification shake offset, steps day/night wallpaper blending, computes the chassis, draws the phone body, advances `LoadingScreen`/`NavigationStack`/banner/calls, handles the three physical side buttons (minimize/close, do-not-disturb, position lock), asks `ShellOverlayCoordinator.Assess` who owns the pointer, draws the screen content, then the chrome, then the overlays.
+`PhoneShell.Draw(Rect device)` is the per-frame orchestrator. In order it: advances the minimize morph (and short-circuits into `MinimizeMorphView` when the phone is minimized), applies the notification shake offset, steps day/night wallpaper blending, computes the chassis, draws the phone body, advances `LoadingScreen`/`NavigationStack`/banner/calls, handles the four hardware keys laid out like an iPhone 17 Pro (Side button for minimize/close, Action button for do-not-disturb and a Lock Position key where the volume rocker sits, both confirmed by a Dynamic Island notice, Camera Control to open Camera), asks `ShellOverlayCoordinator.Assess` who owns the pointer, draws the screen content, then the chrome, then the overlays.
 
 The shell's cast, all in `src/Aetherphone/Core/Shell/`:
 
@@ -218,7 +218,7 @@ Apps are opened through `NavigationStack.Open(appId)` (string id, checks `AppIns
 
 All layout is done in absolute screen coordinates using `Rect` (src/Aetherphone/Core/Rect.cs), a `readonly record struct` of `Min`/`Max` vectors with `Width`, `Height`, `Size`, `Center`, `Inset`, `Translate`, and `Contains`. There is no layout engine: parents compute child rects and pass them down.
 
-`ChassisGeometry.Device(window, theme, scale)` turns the window rect into three nested, pixel-snapped rects with matching corner radii: `Body` (the metal frame), `Glass` (the bezel), and `Screen` (where content lives). `DeviceChrome` (src/Aetherphone/Windows/Components/DeviceChrome.cs) renders them as squircles, plus the side button hit rects (`SideButtonRect`, `MuteButtonRect`, `LockButtonRect`), the wallpaper, and `SealScreen`.
+`ChassisGeometry.Device(window, theme, scale)` turns the window rect into three nested, pixel-snapped rects with matching corner radii: `Body` (the metal frame), `Glass` (the bezel), and `Screen` (where content lives). `DeviceChrome` (src/Aetherphone/Windows/Components/DeviceChrome.cs) renders them as squircles, plus the hardware key slots (`KeyRect`, one fractional placement per `HardwareKey`), the antenna lines on the metal band, the wallpaper, and `SealScreen`. Each slot spans the full rail gutter so the hit target stays large, while `HardwareButton` paints only the proud part (under half the gutter) as a frame-coloured pill.
 
 Two scale factors are in play and they multiply, which is what `UiScale.Current` returns:
 
@@ -307,7 +307,7 @@ One line per subfolder of `src/Aetherphone/Core/`. Root-level files not listed h
 | Theme | `PhoneTheme`, accents, chassis metrics and geometry |
 | Updates | Plugin update check against the manifest |
 | Venues | Venue listing service and Lifestream bridge |
-| Video | mpv video engine, in-world screen, AetherStream queue, watch-along session |
+| Video | mpv video engine, in-world screen and its placement, AetherStream queue and library, watch-along session, chat bubble feed |
 | Wallet | Currency reading |
 | Wallpapers | Wallpaper library, crops, image cache |
 | YellowPages | Ads app stores, categories, chat bridge |

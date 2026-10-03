@@ -11,10 +11,24 @@ namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class SoundsPage : ISettingsPage
 {
+    private static readonly SettingsEntry[] Searchable =
+    {
+        new(L.Settings.Ringtone),
+        new(L.Settings.NotificationSound),
+        new(L.Settings.Vibration),
+        new(L.Settings.UiSounds),
+        new(L.Settings.UiSoundTaps, L.Settings.UiSounds),
+        new(L.Settings.UiSoundTransitions, L.Settings.UiSounds),
+        new(L.Settings.UiSoundToggles, L.Settings.UiSounds),
+        new(L.Settings.UiSoundKeyboard, L.Settings.UiSounds),
+        new(L.Settings.GameSounds),
+    };
+
     public string Title => Loc.T(L.Settings.Sounds);
     public string Summary => string.Empty;
     public FontAwesomeIcon Icon => FontAwesomeIcon.VolumeUp;
     public Vector4 Tint => new(0.95f, 0.40f, 0.65f, 1f);
+    public ReadOnlySpan<SettingsEntry> Entries => Searchable;
     private readonly Configuration configuration;
     private readonly SoundService sound;
     private readonly ISettingsNavigator navigator;

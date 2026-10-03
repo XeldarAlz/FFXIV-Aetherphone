@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -43,6 +44,11 @@ internal sealed partial class LinkpearlApp
         chatThread.Lodestone = lodestone;
         chatThread.Backdrop = paintThreadBackdrop;
         chatThread.Draw(new Rect(new Vector2(area.Min.X, header.Max.Y), area.Max), frameTheme);
+        if (chatThread.IsOpenFor(row.Key))
+        {
+            UiAnchors.Report("messages.composer", chatThread.ComposerBounds);
+        }
+
         DrawThreadHeader(header, row, scale);
         chatMenu.Draw(area, frameTheme);
     }
@@ -71,13 +77,16 @@ internal sealed partial class LinkpearlApp
         }
 
         var moreCenter = SocialChrome.HeaderSlot(header, 0);
+        UiAnchors.Report("messages.thread.more", ChatListChrome.HeaderHit(moreCenter));
         if (chrome.DrawHeaderIcon(drawList, moreCenter, PhoneIcons.DotsVertical, Loc.T(L.Linkpearl.More)))
         {
             OpenConversationSheet(row, true);
         }
 
         var bubbles = row.Density == ChatDensity.Bubbles;
-        if (chrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(header, 1),
+        var layoutCenter = SocialChrome.HeaderSlot(header, 1);
+        UiAnchors.Report("messages.thread.layout", ChatListChrome.HeaderHit(layoutCenter));
+        if (chrome.DrawHeaderIcon(drawList, layoutCenter,
                 bubbles ? PhoneIcons.LayoutList : PhoneIcons.MessageCircle,
                 Loc.T(bubbles ? L.Linkpearl.ShowAsLog : L.Linkpearl.ShowAsBubbles)))
         {

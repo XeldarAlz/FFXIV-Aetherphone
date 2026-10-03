@@ -27,6 +27,7 @@ internal sealed class UniversalisListing
     [JsonPropertyName("total")] public long Total { get; set; }
     [JsonPropertyName("hq")] public bool Hq { get; set; }
     [JsonPropertyName("worldName")] public string? WorldName { get; set; }
+    [JsonPropertyName("worldID")] public uint WorldId { get; set; }
     [JsonPropertyName("retainerName")] public string? RetainerName { get; set; }
     [JsonPropertyName("listingID")] public string? ListingId { get; set; }
     [JsonPropertyName("lastReviewTime")] public long LastReviewTime { get; set; }
@@ -41,6 +42,27 @@ internal sealed class UniversalisSale
     [JsonPropertyName("timestamp")] public long Timestamp { get; set; }
     [JsonPropertyName("worldName")] public string? WorldName { get; set; }
     [JsonPropertyName("buyerName")] public string? BuyerName { get; set; }
+}
+
+internal sealed class UniversalisHistory
+{
+    [JsonPropertyName("itemID")] public uint ItemId { get; set; }
+    [JsonPropertyName("entries")] public UniversalisHistoryEntry[]? Entries { get; set; }
+    [JsonPropertyName("nqSaleVelocity")] public double NqSaleVelocity { get; set; }
+    [JsonPropertyName("hqSaleVelocity")] public double HqSaleVelocity { get; set; }
+}
+
+internal sealed class UniversalisHistoryEntry
+{
+    [JsonPropertyName("hq")] public bool Hq { get; set; }
+    [JsonPropertyName("pricePerUnit")] public long PricePerUnit { get; set; }
+    [JsonPropertyName("quantity")] public int Quantity { get; set; }
+    [JsonPropertyName("timestamp")] public long Timestamp { get; set; }
+}
+
+internal sealed class UniversalisHistoryBatch
+{
+    [JsonPropertyName("items")] public Dictionary<string, UniversalisHistory>? Items { get; set; }
 }
 
 internal sealed class UniversalisAggregatedResponse
@@ -76,6 +98,8 @@ internal sealed class UniversalisAggregatedValue
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(UniversalisCurrentData))]
 [JsonSerializable(typeof(UniversalisAggregatedResponse))]
+[JsonSerializable(typeof(UniversalisHistory))]
+[JsonSerializable(typeof(UniversalisHistoryBatch))]
 [JsonSerializable(typeof(Dictionary<string, int>))]
 internal sealed partial class UniversalisJsonContext : JsonSerializerContext
 {

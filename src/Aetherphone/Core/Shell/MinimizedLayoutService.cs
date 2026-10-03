@@ -63,6 +63,27 @@ internal sealed class MinimizedLayoutService
         Commit();
     }
 
+    public void MovePage(int index, int direction)
+    {
+        if (index < 0 || index >= slots.Length || direction == 0)
+        {
+            return;
+        }
+
+        var step = Math.Sign(direction);
+        for (var target = index + step; target >= 0 && target < slots.Length; target += step)
+        {
+            if (!MinimizedParts.IsPage(slots[target].Part))
+            {
+                continue;
+            }
+
+            (slots[index], slots[target]) = (slots[target], slots[index]);
+            Commit();
+            return;
+        }
+    }
+
     public void Reset()
     {
         LoadDefaults();

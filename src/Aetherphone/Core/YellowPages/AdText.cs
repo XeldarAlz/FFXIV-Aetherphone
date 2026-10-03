@@ -9,7 +9,10 @@ internal readonly record struct AdOpenState(bool IsOpen, long ClosesAtUnix, long
 
 internal static class AdText
 {
+    public const int MaxEveryWeeks = 8;
+
     private const int MinutesPerWeek = 7 * 1440;
+    private const long SecondsPerWeek = 7L * 86400L;
 
     public static SharedLocation Location(AdDto ad) =>
         new((uint)ad.TerritoryId, (uint)ad.MapId, ad.MapX, ad.MapY, (uint)ad.WorldId,
@@ -27,6 +30,8 @@ internal static class AdText
         return zone.Length > 0 ? zone : world;
     }
 
+    public static string WorldLine(AdDto ad) => ad.WorldId > 0 ? LocationShare.WorldName((uint)ad.WorldId) : string.Empty;
+
     public static string Gil(long value)
     {
         return NumberText.Group(value);
@@ -39,12 +44,37 @@ internal static class AdText
             return string.Empty;
         }
 
+        if (ad.Wanted)
+        {
+            return ad.PriceMode switch
+            {
+                AdPriceModes.Fixed => Loc.T(L.YellowPages.BudgetGil, Gil(ad.PriceGil)),
+                AdPriceModes.From => Loc.T(L.YellowPages.BudgetUpTo, Gil(ad.PriceGil)),
+                _ => Loc.T(L.YellowPages.BudgetOpen),
+            };
+        }
+
         return ad.PriceMode switch
         {
             AdPriceModes.Fixed => Loc.T(L.YellowPages.PriceGil, Gil(ad.PriceGil)),
             AdPriceModes.From => Loc.T(L.YellowPages.PriceFrom, Gil(ad.PriceGil)),
             _ => Loc.T(L.YellowPages.PriceAsk),
         };
+    }
+
+    public static string Headline(AdDto ad, long nowUnix)
+    {
+        if (ad.Archetype == AdArchetypes.Place)
+        {
+            return OpenLine(ad, nowUnix);
+        }
+
+        if (ad.Archetype == AdArchetypes.Service)
+        {
+            return AdCategories.IsLinkOnly(ad.Category) ? Loc.T(L.YellowPages.ModBadge) : PriceLine(ad);
+        }
+
+        return ad.SlotsLine;
     }
 
     public static string Identity(AdDto ad)
@@ -71,6 +101,25 @@ internal static class AdText
         return Loc.T(L.YellowPages.ExpiresHours, hours);
     }
 
+    public static string RemainingShort(AdDto ad, long nowUnix)
+    {
+        var remaining = ad.ExpiresAtUnix - nowUnix;
+        if (remaining <= 0)
+        {
+            return Loc.T(L.YellowPages.Expired);
+        }
+
+        var days = (int)(remaining / 86400);
+        if (days >= 1)
+        {
+            return Loc.T(L.YellowPages.DaysLeft, days);
+        }
+
+        return Loc.T(L.YellowPages.HoursLeft, Math.Max(1, (int)(remaining / 3600)));
+    }
+
+    public static bool ExpiresSoon(AdDto ad, long nowUnix) => ad.ExpiresAtUnix - nowUnix < 86400L;
+
     public static AdOpenState OpenState(AdDto ad, long nowUnix)
     {
         if (ad.OpenUntilUnix > nowUnix)
@@ -83,29 +132,29 @@ internal static class AdText
             return new AdOpenState(false, 0L, 0L);
         }
 
-        var nowMinuteOfWeek = MinuteOfWeek(nowUnix);
-        var bestDelta = int.MaxValue;
+        var nextOpening = long.MaxValue;
         for (var index = 0; index < ad.Schedule.Length; index++)
         {
             var slot = ad.Schedule[index];
-            var start = slot.Day * 1440 + slot.StartMinute;
-            var sinceStart = Modulo(nowMinuteOfWeek - start, MinutesPerWeek);
-            if (sinceStart < slot.DurationMinutes)
+            var start = UpcomingStartUnix(slot, nowUnix);
+            if (start <= nowUnix)
             {
-                var closesAt = nowUnix + (slot.DurationMinutes - sinceStart) * 60L;
-                return new AdOpenState(true, closesAt, 0L);
+                return new AdOpenState(true, start + slot.DurationMinutes * 60L, 0L);
             }
 
-            var untilStart = Modulo(start - nowMinuteOfWeek, MinutesPerWeek);
-            if (untilStart < bestDelta)
+            if (start < nextOpening)
             {
-                bestDelta = untilStart;
+                nextOpening = start;
             }
         }
 
-        var nextOpening = bestDelta == int.MaxValue ? 0L : nowUnix + bestDelta * 60L;
         return new AdOpenState(false, 0L, nextOpening);
     }
+
+    public static bool Repeats(AdScheduleSlot slot) => slot.EveryWeeks > 1 && slot.FirstUnix > 0;
+
+    public static int EveryWeeks(AdDto ad) =>
+        ad.Schedule.Length > 0 && Repeats(ad.Schedule[0]) ? ad.Schedule[0].EveryWeeks : 1;
 
     public static string OpenLine(AdDto ad, long nowUnix)
     {
@@ -123,22 +172,48 @@ internal static class AdText
         }
 
         return Loc.T(L.YellowPages.OpensAt,
-            $"{TimeText.DayLabel(state.NextOpeningUnix)} {TimeText.Clock(state.NextOpeningUnix)}");
+            $"{TimeText.FutureDayLabel(state.NextOpeningUnix)} {TimeText.Clock(state.NextOpeningUnix)}");
     }
 
     public static string ScheduleSlotLine(AdScheduleSlot slot, long nowUnix)
     {
-        var startUnix = NextOccurrenceUnix(slot, nowUnix);
+        var startUnix = UpcomingStartUnix(slot, nowUnix);
         var endUnix = startUnix + slot.DurationMinutes * 60L;
-        return $"{TimeText.DayLabel(startUnix)} {TimeText.Clock(startUnix)} - {TimeText.Clock(endUnix)}";
+        return $"{TimeText.FutureDayLabel(startUnix)} {TimeText.Clock(startUnix)} - {TimeText.Clock(endUnix)}";
     }
 
-    public static long NextOccurrenceUnix(AdScheduleSlot slot, long nowUnix)
+    public static long UpcomingStartUnix(AdScheduleSlot slot, long nowUnix)
     {
-        var nowMinuteOfWeek = MinuteOfWeek(nowUnix);
+        if (Repeats(slot))
+        {
+            if (nowUnix < slot.FirstUnix)
+            {
+                return slot.FirstUnix;
+            }
+
+            var periodSeconds = slot.EveryWeeks * SecondsPerWeek;
+            var sinceStart = (nowUnix - slot.FirstUnix) % periodSeconds;
+            var latestStart = nowUnix - sinceStart;
+            return sinceStart < slot.DurationMinutes * 60L ? latestStart : latestStart + periodSeconds;
+        }
+
         var start = slot.Day * 1440 + slot.StartMinute;
-        var untilStart = Modulo(start - nowMinuteOfWeek, MinutesPerWeek);
-        return nowUnix - nowUnix % 60 + untilStart * 60L;
+        var sinceStartMinutes = Modulo(MinuteOfWeek(nowUnix) - start, MinutesPerWeek);
+        var latestWeeklyStart = nowUnix - nowUnix % 60 - sinceStartMinutes * 60L;
+        return sinceStartMinutes < slot.DurationMinutes ? latestWeeklyStart : latestWeeklyStart + SecondsPerWeek;
+    }
+
+    public static int FirstWeekOffset(AdScheduleSlot slot, long nowUnix)
+    {
+        if (!Repeats(slot))
+        {
+            return 0;
+        }
+
+        var weekly = new AdScheduleSlot(slot.Day, slot.StartMinute, slot.DurationMinutes);
+        var weeksApart = (UpcomingStartUnix(slot, nowUnix) - UpcomingStartUnix(weekly, nowUnix) + SecondsPerWeek / 2)
+            / SecondsPerWeek;
+        return Modulo((int)weeksApart, slot.EveryWeeks);
     }
 
     public static AdScheduleSlot ToUtcSlot(int localDay, int localStartMinute, int durationMinutes)
@@ -148,6 +223,24 @@ internal static class AdText
         var localStart = nowLocal.Date.AddDays(daysAhead).AddMinutes(localStartMinute);
         var utc = localStart.ToUniversalTime();
         return new AdScheduleSlot((int)utc.DayOfWeek, utc.Hour * 60 + utc.Minute, durationMinutes);
+    }
+
+    public static AdScheduleSlot ToRepeatingSlot(int localDay, int localStartMinute, int durationMinutes,
+        int everyWeeks, int firstWeekOffset, DateTime nowLocal)
+    {
+        var firstLocal = FirstLocalStart(localDay, localStartMinute, durationMinutes, nowLocal)
+            .AddDays(7 * firstWeekOffset);
+        var utc = firstLocal.ToUniversalTime();
+        var firstUnix = new DateTimeOffset(utc).ToUnixTimeSeconds();
+        return new AdScheduleSlot((int)utc.DayOfWeek, utc.Hour * 60 + utc.Minute, durationMinutes, everyWeeks,
+            firstUnix);
+    }
+
+    public static DateTime FirstLocalStart(int localDay, int localStartMinute, int durationMinutes, DateTime nowLocal)
+    {
+        var daysAhead = Modulo(localDay - (int)nowLocal.DayOfWeek, 7);
+        var start = nowLocal.Date.AddDays(daysAhead).AddMinutes(localStartMinute);
+        return start.AddMinutes(durationMinutes) > nowLocal ? start : start.AddDays(7);
     }
 
     public static void ToLocalSlot(AdScheduleSlot slot, out int localDay, out int localStartMinute)

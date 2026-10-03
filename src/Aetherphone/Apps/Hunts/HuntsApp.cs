@@ -5,31 +5,41 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Hunts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Maps;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Runtime;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Hunts;
 
-internal sealed partial class HuntsApp : IPhoneApp
+internal sealed partial class HuntsApp : IPhoneApp, ITabRouteTarget
 {
+    private const string SetupIntent = "hunts.tab.settings";
+    private const string AlertsIntent = "hunts.tab.alerts";
+    private const float BottomPad = 24f;
+    private const int TabCount = 5;
+
     private enum HuntsRoute : byte
     {
-        List,
+        Root,
         Filters,
         Detail,
-        Signup,
+        Account,
+    }
+
+    private enum HuntsTab : byte
+    {
+        Now,
+        Trains,
         History,
-        MarkNotifications,
+        Alerts,
         Guide,
-        Settings,
     }
 
     private readonly record struct HuntsView(HuntsRoute Route, string MobId = "", string WorldId = "",
-        int ZoneInstance = 0);
+        int ZoneInstance = 0, string BackTitle = "");
 
     public string Id => "hunts";
     public Vector4 Accent => AppAccents.For(Id);
@@ -48,25 +58,23 @@ internal sealed partial class HuntsApp : IPhoneApp
     private readonly ConfirmService confirm;
     private readonly HuntsLauncher launcher;
     private readonly HuntsMapMarkers huntsMapMarkers;
-    private const float ToolbarHeight = 44f;
-    private const float ToolbarButtonSize = 34f;
-
     private readonly HuntsFilterState filter = new();
     private readonly SettingsSnapshotStore<HuntsFilterSnapshot> filterStore;
     private readonly AppSkin ui = new(AppPalettes.Hunts);
     private readonly ViewRouter<HuntsView> router;
     private readonly RouterDraw<HuntsView> drawView;
-    private readonly BottomTabBar footer = new();
-    private readonly NavTab[] footerTabs = new NavTab[4];
-    private PhoneTheme frameTheme = PhoneTheme.Default;
-    private Rect frameScreen;
-    private string searchQuery = string.Empty;
-    private INavigator navigation = null!;
+    private readonly Action back;
+    private readonly Action alertOverridesChanged;
+    private readonly TabBar tabBar = new();
+    private readonly TabItem[] tabItems = new TabItem[TabCount];
+    private readonly NavBarButton[] navButtons = new NavBarButton[2];
     private readonly PendingFrameworkAction pendingFlagAction;
     private readonly PendingFrameworkAction pendingWorldHopAction;
     private readonly PendingFrameworkAction pendingInstanceAction;
-    private readonly DropdownMenu menu = new();
-    private readonly Comparison<HuntWindowDto> compareByPercentageDescending;
+    private PendingTab pendingTab;
+    private PhoneTheme frameTheme = PhoneTheme.Default;
+    private INavigator navigation = null!;
+    private HuntsTab activeTab;
 
     public HuntsApp(HuntsService hunts, HuntMobCatalog mobCatalog, HuntZoneCatalog zoneCatalog,
         ZoneMapTextures zoneMapTextures, HuntMobRewardCatalog rewardCatalog, HuntCandidateCache candidateCache,
@@ -82,9 +90,11 @@ internal sealed partial class HuntsApp : IPhoneApp
         this.confirm = confirm;
         this.launcher = launcher;
         this.huntsMapMarkers = huntsMapMarkers;
-        compareByPercentageDescending = CompareByPercentageDescending;
-        router = new ViewRouter<HuntsView>(new HuntsView(HuntsRoute.List));
+        router = new ViewRouter<HuntsView>(new HuntsView(HuntsRoute.Root));
         drawView = DrawView;
+        back = PopView;
+        alertOverridesChanged = MarkAlertOverridesDirty;
+        hunts.NotificationSettings.Changed += alertOverridesChanged;
 
         filterStore = new SettingsSnapshotStore<HuntsFilterSnapshot>(configuration,
             static config => config.HuntsFilterSettings,
@@ -102,243 +112,175 @@ internal sealed partial class HuntsApp : IPhoneApp
             IsPendingInstanceSyncReady, TryAdvancePendingInstanceSync);
     }
 
+    public void OpenTab(string tab) => pendingTab.Request(tab);
+
     public void OnOpened()
     {
         hunts.EnsureActive();
+        boardDirty = true;
+        activeTab = HuntsTab.Now;
         if (launcher.TryConsumeDetail(out var mobId, out var worldId, out var zoneInstance))
         {
             router.Reset();
-            OpenDetailFor(mobId, worldId, zoneInstance);
+            OpenDetailFor(mobId, worldId, zoneInstance, DisplayName);
         }
     }
 
     public void OnClosed()
     {
-        SaveNotificationSettingsIfDirty();
-        SaveMarkNotificationsIfDirty();
+        SaveAlertsIfDirty();
+        SaveFiltersIfDirty();
         router.Reset();
-        router.Replace(new HuntsView(HuntsRoute.List));
-        menu.Close();
     }
 
     public void Draw(in PhoneContext context)
     {
-        if (GuideIntents.Consume("hunts.tab.settings"))
+        if (pendingTab.Take(SetupIntent))
         {
-            router.Replace(new HuntsView(HuntsRoute.Settings));
+            router.Reset();
+            activeTab = HuntsTab.Now;
+            if (hunts.CurrentDataCenter is null)
+            {
+                OpenFilters();
+            }
         }
 
+        if (pendingTab.Take(AlertsIntent))
+        {
+            router.Reset();
+            activeTab = HuntsTab.Alerts;
+        }
+
+        SyncFilterDataCenter();
+        ConsumeLoginResult();
         frameTheme = context.Theme;
         ui.Theme = context.Theme;
         navigation = context.Navigation;
         var scale = UiScale.Current;
-        var content = context.Content;
-        frameScreen = SceneChrome.ScreenFrom(content, context.Theme, scale);
-        ui.Backdrop(frameScreen);
-        menu.Gate();
-        router.Draw(content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
-        DrawMenu();
+        ui.Backdrop(SceneChrome.ScreenFrom(context.Content, context.Theme, scale));
+        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        UpdateTourHold();
     }
 
     private void DrawView(HuntsView view, Rect area, int depth)
     {
-        var scale = UiScale.Current;
         ui.Body(area);
+        var context = new PhoneContext(area, frameTheme, navigation);
         switch (view.Route)
         {
             case HuntsRoute.Filters:
-                DrawFiltersHeader(area, scale);
-                var filtersBody = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-                DrawFiltersBody(filtersBody, scale);
+                DrawFilters(context, view);
                 return;
             case HuntsRoute.Detail:
-                DrawDetailHeader(area, scale, view.MobId, view.WorldId);
-                var detailBody = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-                DrawDetailBody(detailBody, scale, view);
+                DrawDetail(context, view);
                 return;
-            case HuntsRoute.Signup:
-                DrawSignupHeader(area, scale);
-                var signupBody = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-                DrawSignupBody(signupBody, scale);
-                return;
-            case HuntsRoute.MarkNotifications:
-                DrawMarkNotificationsHeader(area, scale);
-                var markNotificationsBody =
-                    new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-                DrawMarkNotificationsBody(markNotificationsBody, scale);
+            case HuntsRoute.Account:
+                DrawAccount(context, view);
                 return;
             default:
-                DrawRoot(view.Route, area, scale);
+                DrawRoot(context, area);
                 return;
         }
     }
 
-    private void DrawRoot(HuntsRoute route, Rect area, float scale)
+    private void DrawRoot(in PhoneContext context, Rect area)
     {
-        DrawHeader(area, scale);
-
-        var footerTop = area.Max.Y - BottomTabBar.Height * scale;
-        var footerRect = new Rect(new Vector2(area.Min.X, footerTop), area.Max);
-        var contentTop = area.Min.Y + AppHeader.Height * scale;
-        var content = new Rect(new Vector2(area.Min.X, contentTop), new Vector2(area.Max.X, footerRect.Min.Y));
-
-        switch (route)
+        var scale = UiScale.Current;
+        using (TabBar.ReserveContent(scale))
         {
-            case HuntsRoute.History:
-                var historyHeaderTop = content.Min.Y;
-                var historyHeader = new Rect(new Vector2(content.Min.X, historyHeaderTop),
-                    new Vector2(content.Max.X, historyHeaderTop + ToolbarHeight * scale));
-                DrawHistoryHeader(historyHeader, scale);
-                var historyBody = new Rect(new Vector2(content.Min.X, historyHeader.Max.Y), content.Max);
-                DrawHistory(historyBody, scale);
-                break;
-            case HuntsRoute.Guide:
-                var guideHeaderTop = content.Min.Y;
-                var guideHeader = new Rect(new Vector2(content.Min.X, guideHeaderTop),
-                    new Vector2(content.Max.X, guideHeaderTop + ToolbarHeight * scale));
-                DrawGuideHeader(guideHeader, scale);
-                var guideBody = new Rect(new Vector2(content.Min.X, guideHeader.Max.Y), content.Max);
-                DrawGuideBody(guideBody, scale);
-                break;
-            case HuntsRoute.Settings:
-                var settingsHeaderTop = content.Min.Y;
-                var settingsHeader = new Rect(new Vector2(content.Min.X, settingsHeaderTop),
-                    new Vector2(content.Max.X, settingsHeaderTop + ToolbarHeight * scale));
-                DrawSettingsHeader(settingsHeader, scale);
-                var settingsBody = new Rect(new Vector2(content.Min.X, settingsHeader.Max.Y), content.Max);
-                DrawSettings(settingsBody, scale);
-                break;
-            default:
-                var toolbarTop = content.Min.Y;
-                var toolbar = new Rect(new Vector2(content.Min.X, toolbarTop),
-                    new Vector2(content.Max.X, toolbarTop + ToolbarHeight * scale));
-                DrawToolbar(toolbar, scale);
-                var listBody = new Rect(new Vector2(content.Min.X, toolbar.Max.Y), content.Max);
-                DrawList(listBody, scale);
-                break;
+            switch (activeTab)
+            {
+                case HuntsTab.Trains:
+                    DrawTrains(context);
+                    break;
+                case HuntsTab.History:
+                    DrawHistory(context);
+                    break;
+                case HuntsTab.Alerts:
+                    DrawAlerts(context);
+                    break;
+                case HuntsTab.Guide:
+                    DrawGuide(context);
+                    break;
+                default:
+                    DrawNow(context);
+                    break;
+            }
         }
 
-        DrawFooter(footerRect, route, scale);
+        DrawTabBar(area);
     }
 
-    private void DrawFooter(Rect bar, HuntsRoute route, float scale)
+    private void DrawTabBar(Rect area)
     {
-        var authLocked = !hunts.IsAuthenticated;
-        footerTabs[0] = new NavTab(FontAwesomeIcon.Clock,
-            authLocked ? Loc.T(L.Hunts.HistoryRequiresLoginTooltip) : Loc.T(L.Hunts.HistoryTab),
-            Disabled: authLocked);
-        footerTabs[1] = new NavTab(FontAwesomeIcon.Book, Loc.T(L.Hunts.ListTab));
-        footerTabs[2] = new NavTab(FontAwesomeIcon.Question, Loc.T(L.Hunts.GuideTab), AnchorKey: "hunts.guide");
-        footerTabs[3] = new NavTab(FontAwesomeIcon.Cog, Loc.T(L.Hunts.SettingsTab), AnchorKey: "hunts.settings");
-
-        var active = route switch
-        {
-            HuntsRoute.History => 0,
-            HuntsRoute.Guide => 2,
-            HuntsRoute.Settings => 3,
-            _ => 1,
-        };
-
-        var tappedTab = footer.Draw(bar, ui, frameTheme, footerTabs, active);
-        if (tappedTab < 0)
+        tabItems[(int)HuntsTab.Now] = new TabItem(Loc.T(L.Hunts.NowTab), PhoneIcons.Compass,
+            PhoneIcons.CompassFilled, AnchorKey: "hunts.tab.now");
+        tabItems[(int)HuntsTab.Trains] = new TabItem(Loc.T(L.Hunts.TrainsTab), PhoneIcons.Navigation,
+            PhoneIcons.NavigationFilled, AnchorKey: "hunts.tab.trains");
+        tabItems[(int)HuntsTab.History] = new TabItem(Loc.T(L.Hunts.HistoryTab), PhoneIcons.Clock,
+            AnchorKey: "hunts.tab.history");
+        tabItems[(int)HuntsTab.Alerts] = new TabItem(Loc.T(L.Hunts.AlertsTab), PhoneIcons.Bell, PhoneIcons.BellFilled,
+            AnchorKey: "hunts.tab.alerts");
+        tabItems[(int)HuntsTab.Guide] = new TabItem(Loc.T(L.Hunts.GuideTab), PhoneIcons.HelpCircle,
+            AnchorKey: "hunts.guide");
+        var result = tabBar.Draw(area, ui, tabItems, (int)activeTab);
+        if (result.Tapped < 0 || result.Tapped == (int)activeTab)
         {
             return;
         }
 
-        SaveNotificationSettingsIfDirty();
-        switch (tappedTab)
+        SaveAlertsIfDirty();
+        activeTab = (HuntsTab)result.Tapped;
+        UiFeedback.Play(UiSound.Tap);
+        if (activeTab == HuntsTab.History)
         {
-            case 0:
-                router.Replace(new HuntsView(HuntsRoute.History));
-                break;
-            case 1:
-                router.Replace(new HuntsView(HuntsRoute.List));
-                break;
-            case 2:
-                router.Replace(new HuntsView(HuntsRoute.Guide));
-                break;
-            case 3:
-                router.Replace(new HuntsView(HuntsRoute.Settings));
-                break;
+            hunts.EnsureHistoryLoaded();
         }
     }
 
-    private void DrawHeader(Rect content, float scale)
+    private void PopView()
     {
-        var rowCenterY = content.Min.Y + AppHeader.Height * scale * 0.5f;
-        Typography.DrawCentered(new Vector2(content.Center.X, rowCenterY), DisplayName, ui.TitleInk, 1.15f,
-            FontWeight.SemiBold);
-        DrawAuthStatusIcon(content, scale, rowCenterY);
-    }
-
-    private void DrawAuthStatusIcon(Rect content, float scale, float rowCenterY)
-    {
-        var authenticated = hunts.IsAuthenticated;
-        var radius = 15f * scale;
-        var center = new Vector2(content.Min.X + radius, rowCenterY);
-        var hitMin = center - new Vector2(radius, radius);
-        var hitMax = center + new Vector2(radius, radius);
-        UiAnchors.Report("hunts.auth", new Rect(hitMin, hitMax));
-        var hovered = UiInteract.Hover(hitMin, hitMax);
-        if (hovered)
+        if (router.Current.Route == HuntsRoute.Filters)
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            SaveFiltersIfDirty();
         }
 
-        var ink = authenticated ? OpenBarColor : frameTheme.Danger;
-        AppSkin.Icon(center, IconGlyph.Of(FontAwesomeIcon.Wifi), ink, 1.24f);
-        var tooltip = authenticated ? Loc.T(L.Hunts.AuthenticatedTooltip) : Loc.T(L.Hunts.NotAuthenticatedTooltip);
-        HoverTooltip.Show(new Rect(hitMin, hitMax), tooltip);
-        if (UiInteract.Click(hitMin, hitMax, hovered))
-        {
-            OpenSignup();
-        }
-
-        DrawRealtimeFailureBadge(center, radius, scale, authenticated);
+        router.Pop();
     }
 
-    private void DrawRealtimeFailureBadge(Vector2 iconCenter, float iconRadius, float scale, bool authenticated)
+    private void Push(in HuntsView view)
     {
-        if (hunts.RealtimeConnected)
+        UiFeedback.Play(UiSound.Tap);
+        router.Push(view);
+    }
+
+    private void UpdateTourHold()
+    {
+        if (listReadyForTour && router.Depth == 1 && activeTab == HuntsTab.Now)
         {
+            TourHolds.Release(Id);
             return;
         }
 
-        var badgeRadius = 6f * scale;
-        var badgeCenter = iconCenter + new Vector2(iconRadius, iconRadius) * 0.62f;
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddCircleFilled(badgeCenter, badgeRadius + 1.5f * scale, ImGui.GetColorU32(frameTheme.AppBackground),
-            16);
-        drawList.AddCircleFilled(badgeCenter, badgeRadius, ImGui.GetColorU32(frameTheme.Danger), 16);
-        AppSkin.Icon(badgeCenter, IconGlyph.Of(FontAwesomeIcon.Times), new Vector4(1f, 1f, 1f, 1f), 0.46f);
-
-        var badgeHitMin = badgeCenter - new Vector2(badgeRadius, badgeRadius) * 1.5f;
-        var badgeHitMax = badgeCenter + new Vector2(badgeRadius, badgeRadius) * 1.5f;
-        var badgeTooltip = authenticated
-            ? Loc.T(L.Hunts.RealtimeReconnectingTooltip)
-            : Loc.T(L.Hunts.NotAuthenticatedTooltip);
-        HoverTooltip.Show("hunts.realtimeBadge", new Rect(badgeHitMin, badgeHitMax), badgeTooltip);
+        TourHolds.Hold(Id);
     }
 
-    private void DrawToolbar(Rect content, float scale)
+    private string RootTitle() => activeTab switch
     {
-        var margin = Metrics.Space.Lg * scale;
-        var buttonRadius = ToolbarButtonSize * 0.5f * scale;
-        var searchBar = new Rect(new Vector2(content.Min.X + margin, content.Min.Y),
-            new Vector2(content.Max.X - margin - ToolbarButtonSize * scale - Metrics.Space.Sm * scale, content.Max.Y));
-        SearchField.Draw(searchBar, "##hunts.search", Loc.T(L.Hunts.SearchHint), ref searchQuery, ui.Palette);
+        HuntsTab.Trains => Loc.T(L.Hunts.TrainsTab),
+        HuntsTab.History => Loc.T(L.Hunts.HistoryTab),
+        HuntsTab.Alerts => Loc.T(L.Hunts.AlertsTab),
+        HuntsTab.Guide => Loc.T(L.Hunts.GuideTab),
+        _ => DisplayName,
+    };
 
-        var buttonCenter = new Vector2(content.Max.X - margin - buttonRadius, searchBar.Center.Y);
-        if (ui.IconButton(buttonCenter, buttonRadius, IconGlyph.Of(FontAwesomeIcon.Bars),
-                filter.HasNarrowingFilters ? ui.Accent : ui.MutedInk, AppSkin.Transparent, 1.24f,
-                Loc.T(L.Hunts.FiltersTitle)))
-        {
-            OpenFilters();
-        }
-    }
+    private static void BottomSpacer(float scale) => ImGui.Dummy(new Vector2(0f, BottomPad * scale));
+
+    private static void Gap(float units) => ImGui.Dummy(new Vector2(0f, units * UiScale.Current));
 
     public void Dispose()
     {
+        hunts.NotificationSettings.Changed -= alertOverridesChanged;
         pendingFlagAction.Disarm();
         pendingWorldHopAction.Disarm();
         pendingInstanceAction.Disarm();

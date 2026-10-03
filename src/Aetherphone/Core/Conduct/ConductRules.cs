@@ -29,7 +29,7 @@ internal static class ConductRules
     public static readonly ConductGate Chirper = new()
     {
         AppId = "chirper",
-        Version = 6,
+        Version = 7,
         Icon = FontAwesomeIcon.Comments,
         Title = L.Conduct.ChirperTitle,
         Intro = L.Conduct.ChirperIntro,
@@ -43,6 +43,8 @@ internal static class ConductRules
                 null, L.Conduct.ChirperNotAllowedItems, Note: L.Conduct.ChirperRemovalAppeal),
             new ConductSection(ConductTone.Prohibited, L.Conduct.ChirperAiTitle, L.Conduct.ChirperAiBody,
                 Array.Empty<LocString>(), FontAwesomeIcon.Robot, L.Conduct.ChirperRemovalAppeal),
+            new ConductSection(ConductTone.Restricted, L.Conduct.ChirperPoliticsTitle,
+                L.Conduct.ChirperPoliticsBody, Array.Empty<LocString>(), FontAwesomeIcon.Landmark),
             new ConductSection(ConductTone.Restricted, L.Conduct.ChirperRespectTitle,
                 L.Conduct.ChirperRespectLead, L.Conduct.ChirperRespectItems, FontAwesomeIcon.Handshake),
             new ConductSection(ConductTone.Restricted, L.Conduct.ChirperSpamTitle,
@@ -61,7 +63,7 @@ internal static class ConductRules
     public static readonly ConductGate Aethergram = new()
     {
         AppId = "aethergram",
-        Version = 6,
+        Version = 7,
         Icon = FontAwesomeIcon.Camera,
         Title = L.Conduct.AethergramTitle,
         Intro = L.Conduct.AethergramIntro,
@@ -77,6 +79,8 @@ internal static class ConductRules
                 Array.Empty<LocString>(), FontAwesomeIcon.Robot, L.Conduct.AethergramRemovalAppeal),
             new ConductSection(ConductTone.Restricted, L.Conduct.AethergramIrlTitle,
                 L.Conduct.AethergramIrlBody, Array.Empty<LocString>(), FontAwesomeIcon.Gamepad),
+            new ConductSection(ConductTone.Restricted, L.Conduct.AethergramPoliticsTitle,
+                L.Conduct.AethergramPoliticsBody, Array.Empty<LocString>(), FontAwesomeIcon.Landmark),
             new ConductSection(ConductTone.Restricted, L.Conduct.AethergramRespectTitle,
                 L.Conduct.AethergramRespectLead, L.Conduct.AethergramRespectItems, FontAwesomeIcon.Handshake),
             new ConductSection(ConductTone.Restricted, L.Conduct.AethergramSpamTitle,

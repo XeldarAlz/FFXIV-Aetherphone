@@ -5,6 +5,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -428,6 +429,11 @@ internal sealed class BarkeepCabinet
         tapFlashLeft = TapFlashSecondsTotal;
         tapFlashCenter = Vector2.Clamp(ImGui.GetIO().MousePos, stage.Min, stage.Max);
         var tint = BarkeepArt.GradeTint(grade, ui.Accent);
+        if (grade != BarkeepGrading.MissGrade)
+        {
+            UiFeedback.Play(UiSound.GameTick);
+        }
+
         switch (grade)
         {
             case BarkeepGrading.PerfectGrade:
@@ -450,15 +456,18 @@ internal sealed class BarkeepCabinet
         switch (grade)
         {
             case BarkeepGrading.PerfectGrade:
+                UiFeedback.Play(UiSound.GameMatch);
                 particles.Sparkle(origin, 16, Gold, 150f * scale, 3f, 0.75f);
                 break;
             case BarkeepGrading.GoodGrade:
+                UiFeedback.Play(UiSound.GameCollect);
                 particles.Burst(origin, 12, ui.Accent, 130f * scale, 2.6f, 0.6f);
                 break;
             case BarkeepGrading.RoughGrade:
                 particles.Burst(origin, 6, BarkeepArt.RoughAmber, 90f * scale, 2.2f, 0.5f);
                 break;
             default:
+                UiFeedback.Play(UiSound.GameWrong);
                 particles.Streaks(origin, 10, BarkeepArt.MissRed, 150f * scale, 2.6f, 0.55f, 1.1f,
                     MathF.PI * 0.5f);
                 break;
@@ -572,6 +581,7 @@ internal sealed class BarkeepCabinet
             if (!settleCelebrated)
             {
                 settleCelebrated = true;
+                UiFeedback.Play(UiSound.GameWin);
                 particles.Confetti(new Vector2(left + width * 0.5f, y), 60, ConfettiPalette, 300f * scale, 5f, 1.4f);
             }
 
@@ -728,6 +738,7 @@ internal sealed class BarkeepCabinet
             {
                 inlineReason = string.Empty;
                 StartWager();
+                UiFeedback.Play(UiSound.CasinoChips);
             }
 
             if (blocked)

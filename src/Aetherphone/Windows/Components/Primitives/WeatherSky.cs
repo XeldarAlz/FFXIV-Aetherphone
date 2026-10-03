@@ -39,21 +39,11 @@ internal readonly record struct SkyPalette(Vector4 Top, Vector4 Bottom, Vector4 
 
 internal static class WeatherSky
 {
-    private const float InkLuminanceSplit = 0.52f;
+    private const float InkLuminanceSplit = 0.64f;
     private static readonly Vector4 InkLight = new(0.98f, 0.99f, 1.00f, 1f);
     private static readonly Vector4 InkDark = new(0.12f, 0.15f, 0.21f, 1f);
     private static readonly Vector4 TwilightHorizon = new(1.00f, 0.56f, 0.32f, 1f);
     private static readonly Vector4 TwilightGlow = new(1.00f, 0.74f, 0.46f, 1f);
-
-    private static readonly float[] StarX =
-    {
-        0.12f, 0.26f, 0.38f, 0.07f, 0.55f, 0.71f, 0.83f, 0.94f, 0.18f, 0.46f, 0.63f, 0.88f, 0.33f, 0.78f,
-    };
-
-    private static readonly float[] StarY =
-    {
-        0.10f, 0.22f, 0.07f, 0.31f, 0.14f, 0.06f, 0.19f, 0.11f, 0.40f, 0.35f, 0.27f, 0.33f, 0.44f, 0.42f,
-    };
 
     public static WeatherKind Classify(string weather)
     {
@@ -118,6 +108,12 @@ internal static class WeatherSky
 
     public static SkyPalette Resolve(WeatherKind kind, bool isDay)
     {
+        var raw = Raw(kind, isDay);
+        return raw with { Ink = ReadableInk(raw.Top, raw.Bottom) };
+    }
+
+    private static SkyPalette Raw(WeatherKind kind, bool isDay)
+    {
         switch (kind)
         {
             case WeatherKind.Clear:
@@ -128,13 +124,13 @@ internal static class WeatherSky
                         new(0.78f, 0.84f, 1.00f, 1f), InkLight);
             case WeatherKind.Clouds:
                 return isDay
-                    ? new SkyPalette(new(0.37f, 0.46f, 0.56f, 1f), new(0.60f, 0.66f, 0.73f, 1f),
+                    ? new SkyPalette(new(0.30f, 0.38f, 0.48f, 1f), new(0.52f, 0.58f, 0.66f, 1f),
                         new(0.96f, 0.97f, 1.00f, 1f), InkDark)
                     : new SkyPalette(new(0.09f, 0.11f, 0.16f, 1f), new(0.18f, 0.21f, 0.28f, 1f),
                         new(0.52f, 0.57f, 0.66f, 1f), InkLight);
             case WeatherKind.Fog:
                 return isDay
-                    ? new SkyPalette(new(0.47f, 0.50f, 0.54f, 1f), new(0.66f, 0.68f, 0.71f, 1f),
+                    ? new SkyPalette(new(0.38f, 0.41f, 0.45f, 1f), new(0.55f, 0.57f, 0.60f, 1f),
                         new(0.93f, 0.94f, 0.96f, 1f), InkDark)
                     : new SkyPalette(new(0.11f, 0.12f, 0.15f, 1f), new(0.23f, 0.25f, 0.29f, 1f),
                         new(0.46f, 0.49f, 0.55f, 1f), InkLight);
@@ -152,13 +148,13 @@ internal static class WeatherSky
                         new(1.00f, 0.88f, 0.50f, 1f), InkLight);
             case WeatherKind.Wind:
                 return isDay
-                    ? new SkyPalette(new(0.26f, 0.46f, 0.48f, 1f), new(0.51f, 0.69f, 0.69f, 1f),
+                    ? new SkyPalette(new(0.22f, 0.42f, 0.46f, 1f), new(0.44f, 0.62f, 0.64f, 1f),
                         new(0.88f, 0.98f, 0.96f, 1f), InkDark)
                     : new SkyPalette(new(0.06f, 0.12f, 0.15f, 1f), new(0.15f, 0.25f, 0.28f, 1f),
                         new(0.56f, 0.76f, 0.74f, 1f), InkLight);
             case WeatherKind.Sand:
                 return isDay
-                    ? new SkyPalette(new(0.52f, 0.40f, 0.22f, 1f), new(0.81f, 0.65f, 0.41f, 1f),
+                    ? new SkyPalette(new(0.48f, 0.36f, 0.20f, 1f), new(0.74f, 0.58f, 0.36f, 1f),
                         new(1.00f, 0.85f, 0.53f, 1f), InkDark)
                     : new SkyPalette(new(0.16f, 0.12f, 0.08f, 1f), new(0.31f, 0.23f, 0.15f, 1f),
                         new(0.80f, 0.64f, 0.42f, 1f), InkLight);
@@ -170,7 +166,7 @@ internal static class WeatherSky
                         new(1.00f, 0.62f, 0.36f, 1f), InkLight);
             case WeatherKind.Snow:
                 return isDay
-                    ? new SkyPalette(new(0.55f, 0.65f, 0.78f, 1f), new(0.83f, 0.88f, 0.94f, 1f),
+                    ? new SkyPalette(new(0.40f, 0.50f, 0.64f, 1f), new(0.64f, 0.71f, 0.80f, 1f),
                         new(1.00f, 1.00f, 1.00f, 1f), InkDark)
                     : new SkyPalette(new(0.13f, 0.17f, 0.26f, 1f), new(0.27f, 0.33f, 0.44f, 1f),
                         new(0.82f, 0.88f, 0.97f, 1f), InkLight);
@@ -208,6 +204,18 @@ internal static class WeatherSky
         return new SkyPalette(top, bottom, glow, ReadableInk(top, bottom));
     }
 
+    public static SkyPalette Mix(in SkyPalette from, in SkyPalette to, float amount)
+    {
+        if (amount >= 1f)
+        {
+            return to;
+        }
+
+        var top = Vector4.Lerp(from.Top, to.Top, amount);
+        var bottom = Vector4.Lerp(from.Bottom, to.Bottom, amount);
+        return new SkyPalette(top, bottom, Vector4.Lerp(from.Glow, to.Glow, amount), ReadableInk(top, bottom));
+    }
+
     private static Vector4 ReadableInk(Vector4 top, Vector4 bottom)
     {
         var background = Vector4.Lerp(top, bottom, 0.5f);
@@ -228,42 +236,7 @@ internal static class WeatherSky
         return fraction * fraction * (3f - 2f * fraction);
     }
 
-    public static void Paint(Rect screen, float rounding, in SkyPalette palette, WeatherKind kind, bool isDay)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var topColor = ImGui.GetColorU32(palette.Top);
-        var bottomColor = ImGui.GetColorU32(palette.Bottom);
-        drawList.AddRectFilled(screen.Min, screen.Max, topColor, rounding, ImDrawFlags.RoundCornersAll);
-        drawList.AddRectFilled(new Vector2(screen.Min.X, screen.Max.Y - rounding * 2f), screen.Max, bottomColor,
-            rounding, ImDrawFlags.RoundCornersBottom);
-        var height = screen.Height;
-        var bandTop = screen.Min.Y + rounding;
-        var bandBottom = screen.Max.Y - rounding;
-        var step = MathF.Max(2f, 3f * UiScale.Current);
-        for (var y = bandTop; y < bandBottom; y += step)
-        {
-            var fraction = (y - screen.Min.Y) / height;
-            var color = ImGui.GetColorU32(Vector4.Lerp(palette.Top, palette.Bottom, fraction));
-            drawList.AddRectFilled(new Vector2(screen.Min.X, y),
-                new Vector2(screen.Max.X, MathF.Min(y + step + 1f, bandBottom)), color);
-        }
-
-        if (!isDay && (kind == WeatherKind.Clear || kind == WeatherKind.Gloom))
-        {
-            DrawStars(drawList, screen, palette.Glow);
-        }
-    }
-
-    private static void DrawStars(ImDrawListPtr drawList, Rect screen, Vector4 glow)
-    {
-        var scale = UiScale.Current;
-        for (var index = 0; index < StarX.Length; index++)
-        {
-            var position = new Vector2(screen.Min.X + StarX[index] * screen.Width,
-                screen.Min.Y + StarY[index] * screen.Height);
-            var twinkle = 0.35f + 0.45f * Pulse.Wave(2200.0 + index * 240.0);
-            var radius = (0.7f + (index % 3) * 0.35f) * scale;
-            drawList.AddCircleFilled(position, radius, ImGui.GetColorU32(glow with { W = twinkle }), 8);
-        }
-    }
+    public static void Paint(ImDrawListPtr drawList, Rect screen, float rounding, in SkyPalette palette) =>
+        Squircle.FillVerticalGradient(drawList, screen.Min, screen.Max, rounding, ImGui.GetColorU32(palette.Top),
+            ImGui.GetColorU32(palette.Bottom));
 }

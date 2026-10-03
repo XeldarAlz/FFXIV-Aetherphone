@@ -5,4 +5,7 @@ namespace Aetherphone.Core.Activity;
 internal sealed class ActivityLedger
 {
     [JsonProperty("days")] public List<ActivityDay> Days { get; set; } = new();
+
+    [JsonProperty("records")]
+    public ActivityRecords Records { get; set; } = new();
 }

@@ -10,10 +10,13 @@ internal enum VenueState : byte
     Failed,
 }
 
-internal enum VenueSource : byte
+[Flags]
+internal enum VenueSources : byte
 {
-    FfxivVenues,
-    Partake,
+    None = 0,
+    FfxivVenues = 1,
+    Partake = 2,
+    Rolladeck = 4,
 }
 
 internal enum VenueTimeFilter : byte
@@ -24,28 +27,89 @@ internal enum VenueTimeFilter : byte
     All,
 }
 
-internal sealed class VenueEvent
+internal enum VenueLiveState : byte
 {
+    None,
+    Scheduled,
+    Confirmed,
+}
+
+internal sealed record VenueDj(string Name, string? AvatarUrl, int Viewers, string? TwitchUrl, string VenueId)
+{
+    public IReadOnlyList<string> Genres { get; init; } = Array.Empty<string>();
+}
+
+internal readonly record struct VenueSnapshot(VenueEvent[] Events, VenueDj[] Djs);
+
+internal sealed record VenueEvent
+{
+    private static readonly TimeSpan OpenEndedWindow = TimeSpan.FromHours(4);
+
     public required string Id { get; init; }
-    public required VenueSource Source { get; init; }
+    public required VenueSources Sources { get; init; }
     public required string Title { get; init; }
     public required string Host { get; init; }
     public required string Description { get; init; }
     public required string DataCenter { get; init; }
     public required string World { get; init; }
     public required string LocationLine { get; init; }
+    public required string PlaceLine { get; init; }
     public required string? TeleportCode { get; init; }
     public required string? BannerUrl { get; init; }
-    public required string? IconUrl { get; init; }
-    public required DateTime StartUtc { get; init; }
+    public required string? LogoUrl { get; init; }
+    public required DateTime? StartUtc { get; init; }
     public required DateTime? EndUtc { get; init; }
-    public required bool Recurring { get; init; }
     public required IReadOnlyList<string> Tags { get; init; }
-    public required string Url { get; init; }
+    public required string? WebsiteUrl { get; init; }
     public required string? DiscordUrl { get; init; }
+    public required string? ListingUrl { get; init; }
     public required int AttendeeCount { get; init; }
-    public bool IsLive(DateTime nowUtc) => StartUtc <= nowUtc && (EndUtc is null || EndUtc > nowUtc);
+    public VenueAddress Address { get; init; }
+    public DateTime? EventStartUtc { get; init; }
+    public DateTime? EventEndUtc { get; init; }
+    public string EventName { get; init; } = string.Empty;
+    public string? RolladeckUrl { get; init; }
+    public string? TwitchUrl { get; init; }
+    public string LiveHeadline { get; init; } = string.Empty;
+    public string LiveTitle { get; init; } = string.Empty;
+    public IReadOnlyList<string> LiveGenres { get; init; } = Array.Empty<string>();
+    public int LiveViewers { get; init; }
+    public DateTime LiveConfirmedUntilUtc { get; init; }
+    public DateTime DjLiveUntilUtc { get; init; }
+
     public bool CanTeleport => !string.IsNullOrEmpty(TeleportCode);
+    public bool HasOpening => StartUtc.HasValue;
+    public bool IsEvent => EventStartUtc.HasValue;
+
+    public bool IsConfirmedLive(DateTime nowUtc) => nowUtc < LiveConfirmedUntilUtc;
+
+    public bool HasLiveDj(DateTime nowUtc) => nowUtc < DjLiveUntilUtc;
+
+    public bool IsScheduledOpen(DateTime nowUtc) => StartUtc is { } start && IsOpen(start, EndUtc, nowUtc);
+
+    public bool IsEventOn(DateTime nowUtc) => EventStartUtc is { } start && IsOpen(start, EventEndUtc, nowUtc);
+
+    private static bool IsOpen(DateTime start, DateTime? end, DateTime nowUtc)
+    {
+        if (start > nowUtc)
+        {
+            return false;
+        }
+
+        return end is { } endUtc ? endUtc > nowUtc : nowUtc - start < OpenEndedWindow;
+    }
+
+    public bool IsLive(DateTime nowUtc) => IsConfirmedLive(nowUtc) || IsScheduledOpen(nowUtc);
+
+    public VenueLiveState LiveState(DateTime nowUtc)
+    {
+        if (IsConfirmedLive(nowUtc))
+        {
+            return VenueLiveState.Confirmed;
+        }
+
+        return IsScheduledOpen(nowUtc) ? VenueLiveState.Scheduled : VenueLiveState.None;
+    }
 }
 
 internal sealed class GraphQlRequest

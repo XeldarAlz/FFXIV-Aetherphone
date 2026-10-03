@@ -14,7 +14,6 @@ internal sealed class IncomingCallOverlay
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs;
 
-    private const float PresenceSmoothTime = 0.14f;
     private static readonly Vector4 Green = new(0.20f, 0.78f, 0.35f, 1f);
     private static readonly Vector4 Ink = new(0.98f, 0.98f, 0.99f, 1f);
     private readonly CallHub calls;
@@ -33,7 +32,7 @@ internal sealed class IncomingCallOverlay
         var view = calls.Snapshot();
         var ringing = view.State == CallState.Ringing;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        presence.Step(ringing ? 1f : 0f, PresenceSmoothTime, delta);
+        presence.Step(ringing ? 1f : 0f, Motion.Appear, delta);
         if (presence.Value <= 0.01f)
         {
             if (!ringing)

@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -36,19 +35,20 @@ internal readonly record struct StoreView(StoreViewKind Kind, string AppId, Stor
 
 internal sealed partial class AppStoreApp : IPhoneApp, ISpotlightStoreApps
 {
-    private const float TabBarHeight = 62f;
     private const float HeaderHeight = 82f;
     private const float RowHeight = 68f;
     private const float RowIconSize = 50f;
     private const float SearchHeight = 50f;
     private const float InstallSeconds = 0.9f;
     private const int CategoryArtCount = 3;
-    private static readonly Vector4 TabBarFill = new(0.02f, 0.03f, 0.06f, 0.72f);
+    private static readonly StoreTab[] TabOrder = { StoreTab.Today, StoreTab.Apps, StoreTab.Search };
 
     private readonly AppInstaller installer;
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly IPhoneApp?[] categoryArt = new IPhoneApp?[AppStoreCatalog.Order.Length * CategoryArtCount];
     private readonly AppSkin ui = new(AppPalettes.AppStore);
+    private readonly TabBar tabBar = new();
+    private readonly TabItem[] tabItems = new TabItem[TabOrder.Length];
     private readonly ViewRouter<StoreView> router;
     private readonly RouterDraw<StoreView> drawView;
     private readonly Dictionary<string, float> installing = new(StringComparer.Ordinal);
@@ -105,13 +105,6 @@ internal sealed partial class AppStoreApp : IPhoneApp, ISpotlightStoreApps
         frameNavigation = context.Navigation;
         ui.Theme = context.Theme;
         rowAnchorTaken = false;
-        if (GuideIntents.Consume("appstore.tab.apps"))
-        {
-            tab = StoreTab.Apps;
-            resetScroll = true;
-            router.Reset();
-        }
-
         if (pendingAppId.Length > 0)
         {
             tab = StoreTab.Apps;
@@ -127,9 +120,12 @@ internal sealed partial class AppStoreApp : IPhoneApp, ISpotlightStoreApps
         var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
         ui.Backdrop(screen);
         var content = context.Content;
-        var stage = new Rect(content.Min, new Vector2(content.Max.X, content.Max.Y - TabBarHeight * scale));
-        router.Draw(stage, AppSkin.Transparent, delta, drawView);
-        DrawTabBar(new Rect(new Vector2(content.Min.X, stage.Max.Y), content.Max), scale);
+        using (TabBar.ReserveContent(scale))
+        {
+            router.Draw(content, AppSkin.Transparent, delta, drawView);
+        }
+
+        DrawTabBar(content);
     }
 
     private void DrawView(StoreView view, Rect body, int depth)
@@ -159,40 +155,37 @@ internal sealed partial class AppStoreApp : IPhoneApp, ISpotlightStoreApps
         }
     }
 
-    private void DrawTabBar(Rect area, float scale)
+    private void DrawTabBar(Rect area)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(TabBarFill));
-        drawList.AddLine(area.Min, new Vector2(area.Max.X, area.Min.Y),
-            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.10f)), 1f);
-        Span<StoreTab> order = stackalloc StoreTab[] { StoreTab.Today, StoreTab.Apps, StoreTab.Search };
-        var cellWidth = area.Width / order.Length;
-        for (var index = 0; index < order.Length; index++)
+        for (var index = 0; index < TabOrder.Length; index++)
         {
-            var cellMin = new Vector2(area.Min.X + index * cellWidth, area.Min.Y);
-            var cellMax = new Vector2(cellMin.X + cellWidth, area.Max.Y);
-            UiAnchors.Report(TabAnchor(order[index]), new Rect(cellMin, cellMax));
-            var active = order[index] == tab;
-            var hovered = UiInteract.Hover(cellMin, cellMax);
-            var ink = active ? ui.Accent : hovered ? ui.TitleInk : ui.MutedInk;
-            var center = new Vector2((cellMin.X + cellMax.X) * 0.5f, cellMin.Y + 22f * scale);
-            AppSkin.Icon(center, IconGlyph.Of(TabIcon(order[index])), ink, active ? 1.02f : 0.94f);
-            Typography.DrawCentered(new Vector2(center.X, center.Y + 20f * scale), Loc.T(TabLabel(order[index])), ink,
-                TextStyles.Caption1);
-            if (hovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
-
-            if (!UiInteract.Click(cellMin, cellMax, hovered))
-            {
-                continue;
-            }
-
-            tab = order[index];
-            resetScroll = true;
-            router.Reset();
+            var value = TabOrder[index];
+            tabItems[index] = new TabItem(Loc.T(TabLabel(value)), IconGlyph.Of(TabIcon(value)),
+                AnchorKey: TabAnchor(value));
         }
+
+        var result = tabBar.Draw(area, ui, tabItems, TabIndex(tab));
+        if (result.Tapped < 0)
+        {
+            return;
+        }
+
+        tab = TabOrder[result.Tapped];
+        resetScroll = true;
+        router.Reset();
+    }
+
+    private static int TabIndex(StoreTab value)
+    {
+        for (var index = 0; index < TabOrder.Length; index++)
+        {
+            if (TabOrder[index] == value)
+            {
+                return index;
+            }
+        }
+
+        return 0;
     }
 
     private static string TabAnchor(StoreTab value) => value switch

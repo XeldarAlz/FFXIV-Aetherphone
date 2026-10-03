@@ -11,7 +11,6 @@ internal static class VToggle
 
     private const float KnobInset = 3f;
     private const float OffFill = 0.16f;
-    private const float SmoothTime = 0.12f;
     private const int KnobSegments = 24;
 
     public static bool Draw(ImDrawListPtr drawList, string id, Rect row, bool value, float scale)
@@ -20,7 +19,7 @@ internal static class VToggle
         var trackHeight = TrackHeight * scale;
         var trackMin = new Vector2(row.Max.X - trackWidth, row.Center.Y - trackHeight * 0.5f);
         var trackMax = new Vector2(row.Max.X, row.Center.Y + trackHeight * 0.5f);
-        var travel = VAnim.Toggle(id, value, ImGui.GetIO().DeltaTime, SmoothTime);
+        var travel = VAnim.Toggle(id, value, ImGui.GetIO().DeltaTime, Aetherphone.Core.Animation.Motion.Release);
         var track = VelvetTheme.Lerp(VelvetTheme.Alpha(VelvetTheme.OnAccent, OffFill), VelvetTheme.Rose, travel);
         Squircle.Fill(drawList, trackMin, trackMax, trackHeight * 0.5f, track.Packed());
         var knobLeft = trackMin.X + trackHeight * 0.5f;

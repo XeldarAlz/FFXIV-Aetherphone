@@ -5,6 +5,7 @@ using Aetherphone.Core.Casino;
 using Aetherphone.Core.Coins;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -128,12 +129,22 @@ internal sealed class CashierDrawer
         var sitting = store.TakeSittingResult();
         if (sitting is not null)
         {
+            if (sitting.Granted)
+            {
+                UiFeedback.Play(UiSound.CasinoChips);
+            }
+
             HandleOutcome(sitting.Reason, openLimits, true);
         }
 
         var closed = store.TakeCloseResult();
         if (closed is not null)
         {
+            if (closed.Granted)
+            {
+                UiFeedback.Play(UiSound.Payout);
+            }
+
             HandleOutcome(closed.Reason, openLimits, false);
         }
 

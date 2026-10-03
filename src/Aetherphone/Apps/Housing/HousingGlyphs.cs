@@ -4,25 +4,6 @@ namespace Aetherphone.Apps.Housing;
 
 internal static class HousingGlyphs
 {
-    public static void Estate(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 ink, Vector4 hole)
-    {
-        var packedInk = ImGui.GetColorU32(ink);
-        var packedHole = ImGui.GetColorU32(hole);
-        Span<Vector2> roof = stackalloc Vector2[3]
-        {
-            new(center.X, center.Y - radius),
-            new(center.X + radius, center.Y - radius * 0.08f),
-            new(center.X - radius, center.Y - radius * 0.08f),
-        };
-        Fill(drawList, packedInk, roof);
-        var bodyMin = new Vector2(center.X - radius * 0.70f, center.Y - radius * 0.12f);
-        var bodyMax = new Vector2(center.X + radius * 0.70f, center.Y + radius * 0.86f);
-        drawList.AddRectFilled(bodyMin, bodyMax, packedInk, radius * 0.16f);
-        var doorMin = new Vector2(center.X - radius * 0.22f, center.Y + radius * 0.24f);
-        var doorMax = new Vector2(center.X + radius * 0.22f, center.Y + radius * 0.86f);
-        drawList.AddRectFilled(doorMin, doorMax, packedHole, radius * 0.10f);
-    }
-
     public static void Circle(ImDrawListPtr drawList, Vector2 center, float radius, uint fill) =>
         drawList.AddCircleFilled(center, radius, fill, 28);
 

@@ -65,7 +65,7 @@ internal sealed class ControlGallery
         var dl = ImGui.GetForegroundDrawList();
         var rounding = 26f * scale;
         Elevation.Floating(dl, panel.Min, panel.Max, rounding, scale, eased * opacity);
-        Material.Frosted(dl, panel.Min, panel.Max, rounding, scale, eased * opacity);
+        Material.FrostedGlass(dl, panel.Min, panel.Max, rounding, scale, eased * opacity);
         var interactive = !closing && eased > 0.9f;
         var alpha = eased * opacity;
         var closeRect = new Rect(new Vector2(panel.Max.X - 42f * scale, panel.Min.Y + 8f * scale),

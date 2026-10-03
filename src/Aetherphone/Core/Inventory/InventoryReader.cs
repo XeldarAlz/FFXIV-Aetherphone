@@ -4,18 +4,43 @@ using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace Aetherphone.Core.Inventory;
 
+internal sealed class InventoryReadBuffer
+{
+    public readonly List<InventoryStack> Stacks = new();
+    public int Capacity;
+    public ushort LoadedPages;
+
+    public void Clear()
+    {
+        Stacks.Clear();
+        Capacity = 0;
+        LoadedPages = 0;
+    }
+}
+
+internal sealed class InventoryLocalRead
+{
+    public readonly InventoryReadBuffer Bags = new();
+    public readonly InventoryReadBuffer Armoury = new();
+    public readonly InventoryReadBuffer Crystals = new();
+    public readonly InventoryReadBuffer Saddlebag = new();
+    public readonly InventoryReadBuffer Equipped = new();
+    public long Gil;
+
+    public void Clear()
+    {
+        Bags.Clear();
+        Armoury.Clear();
+        Crystals.Clear();
+        Saddlebag.Clear();
+        Equipped.Clear();
+        Gil = 0;
+    }
+}
+
 internal static unsafe class InventoryReader
 {
-    public static ulong ReadLocalContentId()
-    {
-        var playerState = PlayerState.Instance();
-        if (playerState is null)
-        {
-            return 0;
-        }
-
-        return playerState->ContentId;
-    }
+    private const int NoCrystalPage = -1;
 
     private static readonly InventoryType[] BagTypes =
     {
@@ -36,6 +61,10 @@ internal static unsafe class InventoryReader
         InventoryType.PremiumSaddleBag2,
     };
 
+    private static readonly InventoryType[] CrystalTypes = { InventoryType.Crystals };
+
+    private static readonly InventoryType[] EquippedTypes = { InventoryType.EquippedItems };
+
     private static readonly InventoryType[] RetainerBagTypes =
     {
         InventoryType.RetainerPage1, InventoryType.RetainerPage2, InventoryType.RetainerPage3,
@@ -49,29 +78,36 @@ internal static unsafe class InventoryReader
         InventoryType.FreeCompanyPage4, InventoryType.FreeCompanyPage5, InventoryType.FreeCompanyCrystals,
     };
 
-    public static bool ReadLocal(List<InventoryStack> bags, List<InventoryStack> armoury, List<InventoryStack> crystals,
-        List<InventoryStack> saddlebag, List<InventoryStack> equipped)
+    public static ulong ReadLocalContentId()
     {
-        bags.Clear();
-        armoury.Clear();
-        crystals.Clear();
-        saddlebag.Clear();
-        equipped.Clear();
+        var playerState = PlayerState.Instance();
+        if (playerState is null)
+        {
+            return 0;
+        }
+
+        return playerState->ContentId;
+    }
+
+    public static bool ReadLocal(InventoryLocalRead into)
+    {
+        into.Clear();
         var manager = InventoryManager.Instance();
         if (manager is null)
         {
             return false;
         }
 
-        ReadInto(manager, BagTypes, bags);
-        ReadInto(manager, ArmouryTypes, armoury);
-        ReadOne(manager, InventoryType.Crystals, crystals);
-        ReadInto(manager, SaddlebagTypes, saddlebag);
-        ReadOne(manager, InventoryType.EquippedItems, equipped);
-        return true;
+        ReadInto(manager, BagTypes, NoCrystalPage, into.Bags);
+        ReadInto(manager, ArmouryTypes, NoCrystalPage, into.Armoury);
+        ReadInto(manager, CrystalTypes, NoCrystalPage, into.Crystals);
+        ReadInto(manager, SaddlebagTypes, NoCrystalPage, into.Saddlebag);
+        ReadInto(manager, EquippedTypes, NoCrystalPage, into.Equipped);
+        into.Gil = manager->GetGil();
+        return into.Bags.LoadedPages != 0;
     }
 
-    public static bool ReadActiveRetainer(List<InventoryStack> into, out ulong retainerId, out string retainerName)
+    public static bool ReadActiveRetainer(InventoryReadBuffer into, out ulong retainerId, out string retainerName)
     {
         into.Clear();
         retainerId = 0;
@@ -94,18 +130,43 @@ internal static unsafe class InventoryReader
             return false;
         }
 
-        if (!AnyLoaded(manager, RetainerBagTypes))
+        ReadInto(manager, RetainerBagTypes, InventoryPages.RetainerCrystalPage, into);
+        if (into.LoadedPages == 0)
         {
             return false;
         }
 
         retainerId = active->RetainerId;
         retainerName = active->NameString;
-        ReadInto(manager, RetainerBagTypes, into);
         return true;
     }
 
-    public static bool ReadFreeCompany(List<InventoryStack> into, out ulong freeCompanyId, out string freeCompanyName)
+    public static bool ReadRetainerRoster(List<RetainerSummary> into)
+    {
+        into.Clear();
+        var manager = RetainerManager.Instance();
+        if (manager is null)
+        {
+            return false;
+        }
+
+        var count = manager->GetRetainerCount();
+        for (var index = 0u; index < count; index++)
+        {
+            var retainer = manager->GetRetainerBySortedIndex(index);
+            if (retainer is null || retainer->RetainerId == 0)
+            {
+                continue;
+            }
+
+            into.Add(new RetainerSummary(retainer->RetainerId, retainer->NameString, retainer->Gil,
+                retainer->ItemCount, retainer->MarketItemCount));
+        }
+
+        return into.Count > 0;
+    }
+
+    public static bool ReadFreeCompany(InventoryReadBuffer into, out ulong freeCompanyId, out string freeCompanyName)
     {
         into.Clear();
         freeCompanyId = 0;
@@ -116,64 +177,53 @@ internal static unsafe class InventoryReader
             return false;
         }
 
-        if (!AnyLoaded(manager, FreeCompanyBagTypes))
-        {
-            return false;
-        }
-
         var infoProxy = InfoProxyFreeCompany.Instance();
         if (infoProxy is null || infoProxy->Id == 0)
         {
             return false;
         }
 
+        ReadInto(manager, FreeCompanyBagTypes, InventoryPages.FreeCompanyCrystalPage, into);
+        if (into.LoadedPages == 0 || into.Stacks.Count == 0)
+        {
+            into.Clear();
+            return false;
+        }
+
         freeCompanyId = infoProxy->Id;
         freeCompanyName = infoProxy->NameString;
-        ReadInto(manager, FreeCompanyBagTypes, into);
-        return into.Count > 0;
+        return true;
     }
 
-    private static bool AnyLoaded(InventoryManager* manager, InventoryType[] types)
+    private static void ReadInto(InventoryManager* manager, InventoryType[] types, int crystalPage,
+        InventoryReadBuffer into)
     {
-        for (var typeIndex = 0; typeIndex < types.Length; typeIndex++)
+        for (var page = 0; page < types.Length; page++)
         {
-            var container = manager->GetInventoryContainer(types[typeIndex]);
-            if (container is not null && container->IsLoaded)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static void ReadInto(InventoryManager* manager, InventoryType[] types, List<InventoryStack> into)
-    {
-        for (var typeIndex = 0; typeIndex < types.Length; typeIndex++)
-        {
-            ReadOne(manager, types[typeIndex], into);
-        }
-    }
-
-    private static void ReadOne(InventoryManager* manager, InventoryType type, List<InventoryStack> into)
-    {
-        var container = manager->GetInventoryContainer(type);
-        if (container is null || !container->IsLoaded)
-        {
-            return;
-        }
-
-        var size = container->Size;
-        for (var slot = 0; slot < size; slot++)
-        {
-            var item = container->GetInventorySlot(slot);
-            if (item is null || item->ItemId == 0 || item->Quantity <= 0)
+            var container = manager->GetInventoryContainer(types[page]);
+            if (container is null || !container->IsLoaded)
             {
                 continue;
             }
 
-            var highQuality = (item->Flags & InventoryItem.ItemFlags.HighQuality) != 0;
-            into.Add(new InventoryStack(item->ItemId, item->Quantity, highQuality, slot));
+            var size = container->Size;
+            into.LoadedPages |= (ushort)(1 << page);
+            if (page != crystalPage)
+            {
+                into.Capacity += size;
+            }
+
+            for (var slot = 0; slot < size; slot++)
+            {
+                var item = container->GetInventorySlot(slot);
+                if (item is null || item->ItemId == 0 || item->Quantity <= 0)
+                {
+                    continue;
+                }
+
+                var highQuality = (item->Flags & InventoryItem.ItemFlags.HighQuality) != 0;
+                into.Stacks.Add(new InventoryStack(item->ItemId, item->Quantity, highQuality, slot, page));
+            }
         }
     }
 }

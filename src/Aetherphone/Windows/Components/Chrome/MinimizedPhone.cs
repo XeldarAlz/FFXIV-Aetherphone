@@ -1,3 +1,4 @@
+using Aetherphone.Core.Onboarding;
 using System.Globalization;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
@@ -9,6 +10,7 @@ using Aetherphone.Core.Playback;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -25,42 +27,41 @@ internal readonly struct MinimizedDrag
     }
 }
 
-internal sealed class MinimizedPhone : IDisposable
+internal sealed partial class MinimizedPhone : IDisposable
 {
-    public const float BodyWidth = 82f;
-    private const float MinBodyHeight = 156f;
-    private const float TopPadding = 10f;
-    private const float BottomPadding = 11f;
-    private const float SidePadding = 4f;
-    private const float SectionGap = 9f;
-    private const float DateGap = 2f;
-    private const float MusicHeight = 66f;
-    private const float MusicExpandedHeight = 30f;
-    private const float CallHeight = 32f;
-    private const float CallExpandedHeight = 34f;
-    private const float CardHeight = 60f;
-    private const float BadgeHeight = 22f;
-    private const float ClockMaxScale = 1.45f;
-    private const float ClockMinScale = 0.95f;
-    private const float DateScale = 0.72f;
+    private enum SlotMode : byte
+    {
+        None,
+        Pages,
+        Music,
+        PcMusic,
+        Call,
+    }
+
+    private enum FaceSurface : byte
+    {
+        Plain,
+        Wallpaper,
+        Map,
+    }
+
     private const float DragSlop = 5f;
     private const float CardHoldSeconds = 4.5f;
     private const float PulseSeconds = 0.8f;
     private const float TooltipClearance = 44f;
     private const int MaxQueuedCards = 3;
-    private const float PresenceSmoothTime = 0.16f;
-    private const float HoverSmoothTime = 0.12f;
-    private const float ExpandSmoothTime = 0.17f;
-    private const float CardSmoothTime = 0.20f;
-    private const float ZoomSmoothTime = 0.18f;
     private const float ZoomSaveDelay = 0.9f;
     private const float ControlThreshold = 0.6f;
+    private const float SwapThreshold = 0.03f;
     private const float GripSizeFactor = 0.7f;
     private const float CalmWallpaperScrim = 0.30f;
     private const float HarshWallpaperScrim = 0.58f;
+    private const float MutedInk = 0.72f;
     private const string MusicAppId = "music";
     private const string CallAppId = "message";
     private static readonly TimeSpan ShowingGrace = TimeSpan.FromSeconds(0.5);
+    private static readonly FaceInk LightInk = new(new Vector4(1f, 1f, 1f, 1f), new Vector4(1f, 1f, 1f, MutedInk));
+    private static readonly Vector4 MusicAccent = AppAccents.For("music");
 
     private readonly PlaybackHub playback;
     private readonly CallHub calls;
@@ -72,16 +73,25 @@ internal sealed class MinimizedPhone : IDisposable
     private readonly ThemeProvider themes;
     private readonly MinimizedFeed feed;
     private readonly MinimapReader minimap;
+    private readonly LiveBackdrop liveBackdrop;
     private readonly ResizeGrip resizeGrip = new();
     private readonly Queue<PhoneNotification> queuedCards = new();
+    private readonly MinimizedPart[] pageParts = new MinimizedPart[MinimizedParts.Count];
     private Spring hover;
-    private Spring expand;
-    private Spring musicPresence;
-    private Spring callPresence;
     private Spring badge;
     private Spring dnd;
     private Spring card;
     private Spring mapSpan;
+    private Spring slotPresence;
+    private Spring contentFade;
+    private Spring island;
+    private Spring pagePosition;
+    private SlotMode displayedMode;
+    private bool liveCall;
+    private bool liveMusic;
+    private int pageCount;
+    private int pageIndex;
+    private int pagesRevision = -1;
     private float zoomSaveDue;
     private bool zoomDirty;
     private float resizeStartScale;
@@ -97,36 +107,33 @@ internal sealed class MinimizedPhone : IDisposable
     private Vector2 pressOrigin;
     private Vector2 dragDelta;
     private bool dragReleased;
-    private bool musicHovered;
-    private bool callHovered;
-    private bool cardHovered;
+    private bool slotHovered;
+    private bool bannerHovered;
     private bool controlHovered;
-    private float drawnCardPresence;
     private string? badgeAppId;
-    private Vector4 badgeAccent;
     private string countLabel = string.Empty;
     private int countValue = -1;
     private string durationLabel = string.Empty;
     private int durationSeconds = -1;
     private string timeLabel = string.Empty;
-    private string meridiemLabel = string.Empty;
     private string dateLabel = string.Empty;
     private int timeKey = -1;
     private int timeFormat = -1;
     private int dateKey = -1;
-    private int layoutRevision = -1;
-    private bool meridiemInline;
+    private float measuredWidth = -1f;
     private CultureInfo? textCulture;
     private float clockScale;
-    private Vector2 clockSize;
+    private float mapClockScale;
     private Vector2 dateSize;
     private int textFrame = -1;
     private DateTime lastInteractiveDrawUtc = DateTime.MinValue;
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private CallView frameView;
+    private FaceInk frameInk = LightInk;
+    private FaceSurface frameSurface;
+    private Rect frameScreen;
     private float frameScale = 1f;
     private float frameAlpha = 1f;
-    private float frameExpandEased;
     private bool frameInteractive;
     private bool frameBodyHovered;
 
@@ -134,6 +141,7 @@ internal sealed class MinimizedPhone : IDisposable
         MinimizedLayoutService layout)
     {
         playback = services.Playback;
+        pcMedia = services.PcMedia;
         calls = services.Calls;
         notifications = services.Notifications;
         configuration = services.Configuration;
@@ -142,8 +150,9 @@ internal sealed class MinimizedPhone : IDisposable
         this.layout = layout;
         themes = services.Themes;
         feed = new MinimizedFeed(services.Weather, services.Coins, services.AethernetSession, services.Activity,
-            services.GameData);
+            services.GameData, services.GameTimers);
         minimap = new MinimapReader(services.ZoneMapTextures);
+        liveBackdrop = services.LiveBackdrop;
         mapSpan = new Spring(MinimizedShapes.MapSpan(configuration.MinimizedMapZoom));
         notifications.Changed += RefreshBadge;
         notifications.Presented += OnPresented;
@@ -156,18 +165,7 @@ internal sealed class MinimizedPhone : IDisposable
 
     public float Zoom => PhoneBounds.ClampMinimizedScale(configuration.MinimizedScale, IdleUnits);
 
-    public Vector2 Measure()
-    {
-        if (ShowsMinimap)
-        {
-            return IdleSize();
-        }
-
-        var scale = Scale;
-        var band = ChassisGeometry.PuckBand(BodyWidth * scale, CaseKind);
-        var height = MathF.Max(MinBodyHeight * scale - band, ContentHeight(scale)) + band;
-        return new Vector2(MathF.Round(BodyWidth * scale), MathF.Round(height));
-    }
+    public Vector2 Measure() => IdleSize();
 
     public Vector2 IdleSize()
     {
@@ -177,13 +175,11 @@ internal sealed class MinimizedPhone : IDisposable
 
     private static float Scale => UiScale.Global * UiScale.Minimized;
 
+    private static Vector2 IdleUnits => new(MinimizedShapes.BodyWidth, MinimizedShapes.BodyHeight);
+
     private bool ShowsMinimap => configuration.MinimizedShape == MinimizedShape.Minimap;
 
     private PhoneCaseKind CaseKind => themes.Chrome.CaseKind;
-
-    private Vector2 IdleUnits => ShowsMinimap
-        ? new Vector2(MinimizedShapes.MapSide, MinimizedShapes.MapSide)
-        : new Vector2(BodyWidth, MinBodyHeight);
 
     public MinimizedDrag ConsumeDrag()
     {
@@ -197,17 +193,34 @@ internal sealed class MinimizedPhone : IDisposable
     {
         var scale = Scale;
         var geometry = ChassisGeometry.Puck(body, theme.CaseKind);
-        var dl = ImGui.GetForegroundDrawList();
-        DeviceChrome.DrawShell(dl, geometry, scale, theme, 1f);
-        return DrawFace(dl, geometry, theme, delta, true, 1f);
+        var drawList = ImGui.GetForegroundDrawList();
+        var glassBody = !ShowsMinimap && liveBackdrop.TryRecordFor(body);
+        if (glassBody)
+        {
+            Material.LiquidGlass(drawList, body.Min, body.Max, geometry.BodyRadius, scale, Material.ToneFor(theme),
+                0f);
+        }
+        else
+        {
+            DeviceChrome.DrawShell(drawList, geometry, scale, theme, 1f);
+        }
+
+        var clicked = DrawFace(drawList, geometry, theme, delta, true, 1f, glassBody);
+        if (TourCue.MiniPhone)
+        {
+            CoachmarkOverlay.DrawMiniCue(drawList, body, geometry.BodyRadius, scale);
+        }
+
+        return clicked;
     }
 
-    public bool DrawFace(ImDrawListPtr dl, in ChassisGeometry geometry, PhoneTheme theme, float delta,
-        bool interactive, float alpha)
+    public bool DrawFace(ImDrawListPtr drawList, in ChassisGeometry geometry, PhoneTheme theme, float delta,
+        bool interactive, float alpha, bool glassBody = false)
     {
         clock += delta;
         feed.Update(delta);
-        if (ShowsMinimap)
+        var mapFace = ShowsMinimap;
+        if (mapFace)
         {
             minimap.Update(delta);
         }
@@ -227,57 +240,47 @@ internal sealed class MinimizedPhone : IDisposable
             return false;
         }
 
-        var minimapShape = ShowsMinimap;
-        if (!minimapShape)
-        {
-            RefreshText(scale);
-        }
-
+        RefreshText(scale);
+        var wallpaper = !mapFace && configuration.MinimizedWallpaper;
         frameTheme = theme;
         frameView = view;
         frameScale = scale;
         frameAlpha = alpha;
-        frameExpandEased = Easing.SmoothStep(Math.Clamp(expand.Value, 0f, 1f));
         frameInteractive = interactive;
         frameBodyHovered = bodyHovered;
-        musicHovered = false;
-        callHovered = false;
-        cardHovered = false;
+        frameScreen = geometry.Screen;
+        frameSurface = mapFace ? FaceSurface.Map : wallpaper ? FaceSurface.Wallpaper : FaceSurface.Plain;
+        frameInk = frameSurface == FaceSurface.Plain ? new FaceInk(theme.TextStrong, theme.TextMuted) : LightInk;
+        slotHovered = false;
+        bannerHovered = false;
         controlHovered = false;
-        drawnCardPresence = 0f;
         var screen = geometry.Screen;
-        var fullBleed = minimapShape || configuration.MinimizedWallpaper;
-        dl.PushClipRect(screen.Min, screen.Max, true);
-        if (minimapShape)
+        drawList.PushClipRect(screen.Min, screen.Max, true);
+        if (mapFace)
         {
-            DrawMinimap(dl, screen, theme, alpha, scale, bodyHovered);
+            DrawMapFace(drawList, screen);
         }
         else
         {
-            if (fullBleed)
+            if (wallpaper)
             {
-                DrawWallpaperBackdrop(dl, geometry, theme, alpha);
+                DrawWallpaperBackdrop(drawList, geometry, theme, alpha, glassBody);
             }
 
-            DrawParts(dl, screen, scale);
+            DrawClockFace(drawList, screen);
         }
 
-        dl.PopClipRect();
-        if (fullBleed)
+        DrawBanner(drawList, screen);
+        drawList.PopClipRect();
+        if ((mapFace || wallpaper) && !glassBody)
         {
-            DeviceChrome.MaskScreenCorners(dl, geometry, theme, scale);
-        }
-
-        if (cardNotification is { } stroked && drawnCardPresence > 0.01f)
-        {
-            MinimizedPhoneRenderer.DrawCardStroke(dl, geometry, stroked.Accent, alpha * drawnCardPresence, cardHovered,
-                scale);
+            DeviceChrome.MaskScreenCorners(drawList, geometry, theme, scale);
         }
 
         if (pulseRemaining > 0f)
         {
             var strength = pulseRemaining / PulseSeconds;
-            MinimizedPhoneRenderer.DrawPulse(dl, geometry, pulseAccent, strength * strength * alpha, scale);
+            MinimizedPhoneRenderer.DrawPulse(drawList, geometry, pulseAccent, strength * strength * alpha, scale);
         }
 
         if (!interactive)
@@ -285,13 +288,14 @@ internal sealed class MinimizedPhone : IDisposable
             return false;
         }
 
-        UpdateResize(dl, body, scale, delta);
+        UpdateResize(drawList, body, scale, delta);
+        HandleWheel(mapFace);
         return HandleGesture(body, scale, bodyHovered, controlHovered);
     }
 
-    private void UpdateResize(ImDrawListPtr dl, Rect body, float scale, float delta)
+    private void UpdateResize(ImDrawListPtr drawList, Rect body, float scale, float delta)
     {
-        var grab = resizeGrip.Track(dl, body.Max, scale * GripSizeFactor, delta);
+        var grab = resizeGrip.Track(drawList, body.Max, scale * GripSizeFactor, delta);
         controlHovered |= grab.Engaged;
         if (grab.Started)
         {
@@ -316,25 +320,31 @@ internal sealed class MinimizedPhone : IDisposable
         }
     }
 
-    private void DrawMinimap(ImDrawListPtr dl, Rect screen, PhoneTheme theme, float alpha, float scale,
-        bool bodyHovered)
+    private void HandleWheel(bool mapFace)
     {
-        if (!MinimapFace.Draw(dl, screen, minimap, theme, alpha, scale, mapSpan.Value))
+        if (!frameBodyHovered || pressed || controlHovered && !mapFace)
         {
             return;
         }
 
-        var reveal = Math.Clamp(hover.Value, 0f, 1f);
-        var zoom = MinimapFace.DrawZoom(dl, screen, theme, alpha * reveal, scale, configuration.MinimizedMapZoom,
-            frameInteractive && !dragging);
-        controlHovered |= zoom.Hovered;
-        StepZoom(zoom.Step);
-        if (!frameInteractive || !bodyHovered || pressed)
+        var step = Math.Sign(ImGui.GetIO().MouseWheel);
+        if (step == 0)
         {
             return;
         }
 
-        StepZoom(Math.Sign(ImGui.GetIO().MouseWheel));
+        if (mapFace)
+        {
+            StepZoom(step);
+            return;
+        }
+
+        if (displayedMode != SlotMode.Pages || pageCount < 2)
+        {
+            return;
+        }
+
+        pageIndex = Math.Clamp(pageIndex - step, 0, pageCount - 1);
     }
 
     private void StepZoom(int step)
@@ -355,219 +365,71 @@ internal sealed class MinimizedPhone : IDisposable
         zoomDirty = true;
     }
 
-    private void DrawParts(ImDrawListPtr dl, Rect screen, float scale)
-    {
-        MeasureFlow(scale, frameExpandEased, out var flowHeight, out var lastIndex);
-        var slack = MathF.Max(0f, screen.Height - (TopPadding + BottomPadding) * scale - flowHeight);
-        var y = screen.Min.Y + TopPadding * scale;
-        var slots = layout.Slots;
-        var previous = MinimizedPart.Clock;
-        var hasPrevious = false;
-        for (var index = 0; index < slots.Length; index++)
-        {
-            var slot = slots[index];
-            if (!slot.Enabled)
-            {
-                continue;
-            }
-
-            var presence = Presence(slot.Part);
-            if (presence <= 0.01f)
-            {
-                continue;
-            }
-
-            if (hasPrevious)
-            {
-                y += Gap(previous, slot.Part) * scale * presence;
-            }
-
-            if (index == lastIndex && hasPrevious)
-            {
-                y += slack;
-            }
-
-            y = DrawPart(dl, screen, y, slot.Part, presence);
-            previous = slot.Part;
-            hasPrevious = true;
-        }
-    }
-
-    private void MeasureFlow(float scale, float expandEased, out float flowHeight, out int lastIndex)
-    {
-        flowHeight = 0f;
-        lastIndex = -1;
-        var slots = layout.Slots;
-        var previous = MinimizedPart.Clock;
-        var hasPrevious = false;
-        for (var index = 0; index < slots.Length; index++)
-        {
-            var slot = slots[index];
-            if (!slot.Enabled)
-            {
-                continue;
-            }
-
-            var presence = Presence(slot.Part);
-            if (presence <= 0.01f)
-            {
-                continue;
-            }
-
-            if (hasPrevious)
-            {
-                flowHeight += Gap(previous, slot.Part) * scale * presence;
-            }
-
-            flowHeight += PartHeight(slot.Part, scale, expandEased) * presence;
-            previous = slot.Part;
-            hasPrevious = true;
-            lastIndex = index;
-        }
-    }
-
-    private float DrawPart(ImDrawListPtr dl, Rect screen, float y, MinimizedPart part, float presence)
-    {
-        switch (part)
-        {
-            case MinimizedPart.Clock:
-                MinimizedPhoneRenderer.DrawTime(dl, screen, y, timeLabel, meridiemInline ? meridiemLabel : string.Empty,
-                    clockScale, clockSize, frameTheme, frameAlpha, frameScale);
-                return y + clockSize.Y;
-            case MinimizedPart.Date:
-                MinimizedPhoneRenderer.DrawDateRow(dl, screen, y, meridiemInline ? string.Empty : meridiemLabel,
-                    dateLabel, dateSize, frameTheme, frameAlpha, Math.Clamp(dnd.Value, 0f, 1f), frameScale);
-                return y + dateSize.Y;
-            case MinimizedPart.NowPlaying:
-                return DrawMusic(dl, screen, y, presence);
-            case MinimizedPart.Calls:
-                return DrawCall(dl, screen, y, presence);
-            case MinimizedPart.Alerts:
-                return DrawCard(dl, screen, y, presence);
-            case MinimizedPart.Badge:
-                return DrawBadge(dl, screen, y, presence);
-            default:
-                return DrawWidget(dl, screen, y, part);
-        }
-    }
-
-    private float DrawMusic(ImDrawListPtr dl, Rect screen, float y, float presence)
-    {
-        var scale = frameScale;
-        var compactHeight = MusicHeight * scale;
-        var expandedHeight = MusicExpandedHeight * scale * frameExpandEased;
-        var section = SectionRect(screen, y, (compactHeight + expandedHeight) * presence);
-        musicHovered = frameBodyHovered && presence > 0.9f && UiInteract.Hover(section.Min, section.Max);
-        dl.PushClipRect(section.Min, section.Max, true);
-        var compact = new Rect(section.Min, new Vector2(section.Max.X, y + compactHeight));
-        var sectionAlpha = frameAlpha * presence;
-        MinimizedPhoneRenderer.DrawMusicSection(dl, compact, playback, clock, sectionAlpha, scale, frameTheme);
-        if (expandedHeight > 0.5f)
-        {
-            var row = new Rect(new Vector2(section.Min.X, compact.Max.Y),
-                new Vector2(section.Max.X, compact.Max.Y + expandedHeight));
-            var active = frameInteractive && frameExpandEased > ControlThreshold;
-            var result = MinimizedPhoneRenderer.DrawMusicTransport(dl, row, playback, frameTheme,
-                sectionAlpha * frameExpandEased, active, scale);
-            ApplyMusicControl(result.Action);
-            controlHovered |= result.Hovered;
-        }
-
-        dl.PopClipRect();
-        return section.Max.Y;
-    }
-
-    private float DrawCall(ImDrawListPtr dl, Rect screen, float y, float presence)
-    {
-        var scale = frameScale;
-        var compactHeight = CallHeight * scale;
-        var expandedHeight = CallExpandedHeight * scale * frameExpandEased;
-        var section = SectionRect(screen, y, (compactHeight + expandedHeight) * presence);
-        callHovered = frameBodyHovered && presence > 0.9f && UiInteract.Hover(section.Min, section.Max);
-        dl.PushClipRect(section.Min, section.Max, true);
-        var compact = new Rect(section.Min, new Vector2(section.Max.X, y + compactHeight));
-        var sectionAlpha = frameAlpha * presence;
-        MinimizedPhoneRenderer.DrawCallSection(dl, compact, frameView, DurationLabel(frameView), clock, sectionAlpha,
-            scale, frameTheme);
-        if (expandedHeight > 0.5f)
-        {
-            var row = new Rect(new Vector2(section.Min.X, compact.Max.Y),
-                new Vector2(section.Max.X, compact.Max.Y + expandedHeight));
-            var active = frameInteractive && frameExpandEased > ControlThreshold;
-            var result = MinimizedPhoneRenderer.DrawCallControls(dl, row, frameView, frameTheme,
-                sectionAlpha * frameExpandEased, active, scale);
-            ApplyCallControl(result.Action);
-            controlHovered |= result.Hovered;
-        }
-
-        dl.PopClipRect();
-        return section.Max.Y;
-    }
-
-    private float DrawCard(ImDrawListPtr dl, Rect screen, float y, float presence)
-    {
-        if (cardNotification is not { } notification)
-        {
-            return y;
-        }
-
-        var scale = frameScale;
-        var section = SectionRect(screen, y, CardHeight * scale * presence);
-        drawnCardPresence = presence;
-        cardHovered = frameBodyHovered && presence > 0.9f && UiInteract.Hover(section.Min, section.Max);
-        dl.PushClipRect(section.Min, section.Max, true);
-        var full = new Rect(section.Min, new Vector2(section.Max.X, y + CardHeight * scale));
-        MinimizedPhoneRenderer.DrawCardSection(dl, full, notification, frameTheme, frameAlpha * presence, scale);
-        dl.PopClipRect();
-        return section.Max.Y;
-    }
-
-    private float DrawBadge(ImDrawListPtr dl, Rect screen, float y, float presence)
-    {
-        if (badgeAppId is not { } appId)
-        {
-            return y;
-        }
-
-        var height = BadgeHeight * frameScale * presence;
-        var center = new Vector2(screen.Center.X, y + height * 0.5f);
-        MinimizedPhoneRenderer.DrawBadge(dl, center, appId, badgeAccent, countLabel, frameTheme,
-            frameAlpha * presence, frameScale);
-        return y + height;
-    }
-
-    private float DrawWidget(ImDrawListPtr dl, Rect screen, float y, MinimizedPart part)
-    {
-        var height = MinimizedWidgetRenderer.Height(part, frameScale);
-        var section = SectionRect(screen, y, height);
-        MinimizedWidgetRenderer.Draw(dl, section, part, feed, configuration, frameTheme, frameAlpha, frameScale);
-        return section.Max.Y;
-    }
-
-    private static void DrawWallpaperBackdrop(ImDrawListPtr dl, in ChassisGeometry geometry, PhoneTheme theme,
-        float alpha)
+    private static void DrawWallpaperBackdrop(ImDrawListPtr drawList, in ChassisGeometry geometry, PhoneTheme theme,
+        float alpha, bool rounded)
     {
         var screen = geometry.Screen;
         var library = Plugin.Wallpapers;
         var aspect = screen.Height > 0f ? screen.Width / screen.Height : 0.5f;
-        WallpaperRenderer.DrawSingle(dl, screen, geometry.ScreenRadius, library.Resolve(theme.LightWallpaperId),
-            aspect, alpha, theme.ScreenBase);
+        DrawWallpaperLayer(drawList, screen, geometry.ScreenRadius, library.Resolve(theme.LightWallpaperId), aspect,
+            alpha, theme.ScreenBase, rounded);
         var darkness = library.ThemeDarkness;
         if (darkness > 0.001f)
         {
-            WallpaperRenderer.DrawSingle(dl, screen, geometry.ScreenRadius, library.Resolve(theme.DarkWallpaperId),
-                aspect, alpha * darkness, null);
+            DrawWallpaperLayer(drawList, screen, geometry.ScreenRadius, library.Resolve(theme.DarkWallpaperId), aspect,
+                alpha * darkness, null, rounded);
         }
 
         var scrim = CalmWallpaperScrim +
                     (HarshWallpaperScrim - CalmWallpaperScrim) * WallpaperLegibility.Strength(theme);
-        Squircle.Fill(dl, screen.Min, screen.Max, geometry.ScreenRadius,
+        Squircle.Fill(drawList, screen.Min, screen.Max, geometry.ScreenRadius,
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, scrim * alpha)));
     }
 
-    private Rect SectionRect(Rect screen, float top, float height) =>
-        new(new Vector2(screen.Min.X + SidePadding * frameScale, top),
-            new Vector2(screen.Max.X - SidePadding * frameScale, top + height));
+    private static void DrawWallpaperLayer(ImDrawListPtr drawList, Rect screen, float radius, WallpaperEntry entry,
+        float aspect, float alpha, Vector4? fallback, bool rounded)
+    {
+        if (rounded)
+        {
+            WallpaperRenderer.DrawSingleRounded(drawList, screen, radius, entry, aspect, alpha, fallback);
+            return;
+        }
+
+        WallpaperRenderer.DrawSingle(drawList, screen, radius, entry, aspect, alpha, fallback);
+    }
+
+    private void DrawGlass(ImDrawListPtr drawList, Rect rect, float radius, float opacity)
+    {
+        if (opacity <= 0.001f)
+        {
+            return;
+        }
+
+        var scale = frameScale;
+        switch (frameSurface)
+        {
+            case FaceSurface.Wallpaper:
+                var snapshot = WallpaperBackdrop.Snapshot();
+                var library = Plugin.Wallpapers;
+                var aspect = frameScreen.Height > 0f ? frameScreen.Width / frameScreen.Height : 0.5f;
+                WallpaperRenderer.RecordBackdrop(frameScreen, library.Resolve(frameTheme.LightWallpaperId),
+                    library.Resolve(frameTheme.DarkWallpaperId), aspect, library.ThemeDarkness);
+                Material.LiquidGlass(drawList, rect.Min, rect.Max, radius, scale, GlassTone.Dark, 0f, opacity);
+                WallpaperBackdrop.Restore(snapshot);
+                return;
+            case FaceSurface.Map:
+                Squircle.Fill(drawList, rect.Min, rect.Max, radius,
+                    ImGui.GetColorU32(new Vector4(0.06f, 0.07f, 0.09f, 0.72f * opacity)));
+                Material.GlassRim(drawList, rect.Min, rect.Max, radius, scale, GlassTone.Dark, opacity);
+                return;
+            default:
+                var tone = Palette.Luminance(frameTheme.ScreenBase) >= 0.5f ? GlassTone.Light : GlassTone.Dark;
+                Squircle.Fill(drawList, rect.Min, rect.Max, radius,
+                    ImGui.GetColorU32(Palette.WithAlpha(frameInk.Strong, 0.08f * opacity)));
+                Material.GlassRim(drawList, rect.Min, rect.Max, radius, scale, tone, opacity);
+                return;
+        }
+    }
 
     private void StepState(float delta, bool interactive, bool bodyHovered, in CallView view)
     {
@@ -577,22 +439,80 @@ internal sealed class MinimizedPhone : IDisposable
         }
 
         var callActive = view.State is CallState.Dialing or CallState.Connecting or CallState.Active;
-        var callShown = callActive && layout.IsEnabled(MinimizedPart.Calls);
-        var musicShown = playback.IsActive && layout.IsEnabled(MinimizedPart.NowPlaying);
-        musicPresence.Step(musicShown ? 1f : 0f, PresenceSmoothTime, delta);
-        callPresence.Step(callShown ? 1f : 0f, PresenceSmoothTime, delta);
-        badge.Step(badgeAppId is null ? 0f : 1f, PresenceSmoothTime, delta);
-        dnd.Step(configuration.DoNotDisturb ? 1f : 0f, PresenceSmoothTime, delta);
+        liveCall = callActive && layout.IsEnabled(MinimizedPart.Calls);
+        liveMusic = layout.IsEnabled(MinimizedPart.NowPlaying) && (playback.IsActive || ReadPcMusic());
+        RefreshPages();
+        StepSlot(delta);
+        island.Step(liveCall && liveMusic ? 1f : 0f, Motion.Island, delta);
+        badge.Step(badgeAppId is null ? 0f : 1f, Motion.Appear, delta);
+        dnd.Step(configuration.DoNotDisturb ? 1f : 0f, Motion.Appear, delta);
         AdvanceCard(delta, bodyHovered);
-        hover.Step(interactive && bodyHovered ? 1f : 0f, HoverSmoothTime, delta);
-        var wantsExpand = interactive && bodyHovered && (musicShown || callShown) && !dragging;
-        expand.Step(wantsExpand ? 1f : 0f, ExpandSmoothTime, delta);
-        mapSpan.Step(MinimizedShapes.MapSpan(configuration.MinimizedMapZoom), ZoomSmoothTime, delta);
+        hover.Step(interactive && bodyHovered ? 1f : 0f, Motion.HoverLift, delta);
+        pagePosition.Step(pageIndex, Motion.PageSettle, delta);
+        mapSpan.Step(MinimizedShapes.MapSpan(configuration.MinimizedMapZoom), Motion.PageSettle, delta);
         if (zoomDirty && clock >= zoomSaveDue)
         {
             zoomDirty = false;
             configuration.Save();
         }
+    }
+
+    private void StepSlot(float delta)
+    {
+        var target = TargetMode();
+        slotPresence.Step(target == SlotMode.None ? 0f : 1f, Motion.Appear, delta);
+        if (target == displayedMode)
+        {
+            contentFade.Step(1f, Motion.Appear, delta);
+            return;
+        }
+
+        contentFade.Step(0f, Motion.Appear, delta);
+        if (contentFade.Value > SwapThreshold && slotPresence.Value > SwapThreshold)
+        {
+            return;
+        }
+
+        displayedMode = target;
+        contentFade.SnapTo(0f);
+    }
+
+    private SlotMode TargetMode()
+    {
+        if (liveCall)
+        {
+            return SlotMode.Call;
+        }
+
+        if (liveMusic)
+        {
+            return ShowsPcMusic() ? SlotMode.PcMusic : SlotMode.Music;
+        }
+
+        return pageCount > 0 ? SlotMode.Pages : SlotMode.None;
+    }
+
+    private void RefreshPages()
+    {
+        if (pagesRevision == layout.Revision)
+        {
+            return;
+        }
+
+        pagesRevision = layout.Revision;
+        pageCount = 0;
+        var slots = layout.Slots;
+        for (var index = 0; index < slots.Length; index++)
+        {
+            var slot = slots[index];
+            if (slot.Enabled && MinimizedParts.IsPage(slot.Part))
+            {
+                pageParts[pageCount++] = slot.Part;
+            }
+        }
+
+        pageIndex = Math.Clamp(pageIndex, 0, Math.Max(0, pageCount - 1));
+        pagePosition.SnapTo(pageIndex);
     }
 
     private void AdvanceCard(float delta, bool bodyHovered)
@@ -610,7 +530,7 @@ internal sealed class MinimizedPhone : IDisposable
 
         if (!cardDismissed)
         {
-            card.Step(1f, CardSmoothTime, delta);
+            card.Step(1f, Motion.Island, delta);
             if (!bodyHovered)
             {
                 cardElapsed += delta;
@@ -624,7 +544,7 @@ internal sealed class MinimizedPhone : IDisposable
             return;
         }
 
-        card.Step(0f, CardSmoothTime, delta);
+        card.Step(0f, Motion.Island, delta);
         if (card.Value > 0.02f)
         {
             return;
@@ -710,8 +630,7 @@ internal sealed class MinimizedPhone : IDisposable
             }
         }
 
-        if (!pressed && bodyHovered && !hoveredControl && !musicHovered && !callHovered && !cardHovered &&
-            expand.Value < 0.5f)
+        if (!pressed && bodyHovered && !hoveredControl && !bannerHovered && !LiveSlotHovered)
         {
             var viewport = ImGui.GetMainViewport();
             var side = body.Max.Y + TooltipClearance * scale > viewport.Pos.Y + viewport.Size.Y
@@ -723,9 +642,11 @@ internal sealed class MinimizedPhone : IDisposable
         return expandRequested;
     }
 
+    private bool LiveSlotHovered => slotHovered && displayedMode is SlotMode.Music or SlotMode.PcMusic or SlotMode.Call;
+
     private void Tap()
     {
-        if (cardHovered && cardNotification is { } notification && !cardDismissed)
+        if (bannerHovered && cardNotification is { } notification && !cardDismissed)
         {
             router.Open(notification);
             cardDismissed = true;
@@ -733,45 +654,22 @@ internal sealed class MinimizedPhone : IDisposable
             return;
         }
 
-        if (musicHovered)
+        if (!slotHovered)
         {
-            navigation.Open(MusicAppId);
+            return;
         }
-        else if (callHovered)
+
+        switch (displayedMode)
         {
-            calls.RequestCallScreen();
-            navigation.Open(CallAppId);
+            case SlotMode.Music:
+            case SlotMode.PcMusic:
+                navigation.Open(MusicAppId);
+                break;
+            case SlotMode.Call:
+                calls.RequestCallScreen();
+                navigation.Open(CallAppId);
+                break;
         }
-    }
-
-    private float Presence(MinimizedPart part) => part switch
-    {
-        MinimizedPart.NowPlaying => Math.Clamp(musicPresence.Value, 0f, 1f),
-        MinimizedPart.Calls => Math.Clamp(callPresence.Value, 0f, 1f),
-        MinimizedPart.Alerts => Easing.SmoothStep(Math.Clamp(card.Value, 0f, 1f)),
-        MinimizedPart.Badge => Math.Clamp(badge.Value, 0f, 1f),
-        _ => 1f,
-    };
-
-    private float PartHeight(MinimizedPart part, float scale, float expandEased) => part switch
-    {
-        MinimizedPart.Clock => clockSize.Y,
-        MinimizedPart.Date => dateSize.Y,
-        MinimizedPart.NowPlaying => (MusicHeight + MusicExpandedHeight * expandEased) * scale,
-        MinimizedPart.Calls => (CallHeight + CallExpandedHeight * expandEased) * scale,
-        MinimizedPart.Alerts => CardHeight * scale,
-        MinimizedPart.Badge => BadgeHeight * scale,
-        _ => MinimizedWidgetRenderer.Height(part, scale),
-    };
-
-    private static float Gap(MinimizedPart previous, MinimizedPart part) =>
-        previous == MinimizedPart.Clock && part == MinimizedPart.Date ? DateGap : SectionGap;
-
-    private float ContentHeight(float scale)
-    {
-        RefreshText(scale);
-        MeasureFlow(scale, Easing.SmoothStep(Math.Clamp(expand.Value, 0f, 1f)), out var flowHeight, out _);
-        return (TopPadding + BottomPadding) * scale + flowHeight;
     }
 
     private void RefreshText(float scale)
@@ -785,40 +683,43 @@ internal sealed class MinimizedPhone : IDisposable
         textFrame = frame;
         var now = DateTime.Now;
         var minuteKey = now.Hour * 60 + now.Minute;
-        if (minuteKey != timeKey || timeFormat != TimeText.FormatVersion || !ReferenceEquals(textCulture, Loc.Culture))
+        var cultureChanged = !ReferenceEquals(textCulture, Loc.Culture);
+        var timeChanged = minuteKey != timeKey || timeFormat != TimeText.FormatVersion || cultureChanged;
+        if (timeChanged)
         {
             timeKey = minuteKey;
             timeFormat = TimeText.FormatVersion;
             timeLabel = TimeText.HourLabel(now.Hour) + ":" + TimeText.MinuteLabel(now.Minute);
-            meridiemLabel = TimeText.Use24Hour ? string.Empty : TimeText.MeridiemLabel(now.Hour >= 12);
         }
 
+        var textWidth = MinimizedShapes.BodyWidth * scale -
+                        ChassisGeometry.PuckBand(MinimizedShapes.BodyWidth * scale, CaseKind) -
+                        HeroInset * 2f * scale;
         var dayKey = now.Year * 400 + now.DayOfYear;
-        if (dayKey != dateKey || !ReferenceEquals(textCulture, Loc.Culture))
+        var widthChanged = MathF.Abs(textWidth - measuredWidth) > 0.5f;
+        if (dayKey != dateKey || cultureChanged || widthChanged)
         {
             dateKey = dayKey;
-            dateLabel = now.ToString("ddd d", Loc.Culture);
-        }
+            dateLabel = now.ToString("dddd d", Loc.Culture);
+            if (Typography.Measure(dateLabel, MinimizedPhoneRenderer.DateStyle()).X > textWidth)
+            {
+                dateLabel = now.ToString("ddd d", Loc.Culture);
+            }
 
-        if (layoutRevision != layout.Revision)
-        {
-            layoutRevision = layout.Revision;
-            meridiemInline = !layout.IsEnabled(MinimizedPart.Date);
+            dateSize = Typography.Measure(dateLabel, MinimizedPhoneRenderer.DateStyle());
         }
 
         textCulture = Loc.Culture;
-        var textWidth = BodyWidth * scale - ChassisGeometry.PuckBand(BodyWidth * scale, CaseKind) -
-                        SidePadding * 2f * scale;
-        var timeWidth = textWidth;
-        if (meridiemInline && meridiemLabel.Length > 0)
+        if (!timeChanged && !widthChanged)
         {
-            timeWidth -= MinimizedPhoneRenderer.InlineMeridiemWidth(meridiemLabel, scale);
+            return;
         }
 
-        clockScale = Typography.FitScale(timeLabel, timeWidth, TextScale(ClockMaxScale), TextScale(ClockMinScale),
+        measuredWidth = textWidth;
+        clockScale = Typography.FitScale(timeLabel, textWidth, TextScale(ClockMaxScale), TextScale(ClockMinScale),
             FontWeight.Bold);
-        clockSize = Typography.Measure(timeLabel, clockScale, FontWeight.Bold);
-        dateSize = Typography.Measure(dateLabel, TextScale(DateScale), FontWeight.Regular);
+        mapClockScale = Typography.FitScale(timeLabel, textWidth, TextScale(MapClockMaxScale),
+            TextScale(MapClockMinScale), FontWeight.Bold);
     }
 
     private string DurationLabel(in CallView view)
@@ -867,7 +768,6 @@ internal sealed class MinimizedPhone : IDisposable
             }
 
             badgeAppId = notification.AppId;
-            badgeAccent = notification.Accent;
             return;
         }
 

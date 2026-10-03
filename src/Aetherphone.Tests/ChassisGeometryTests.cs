@@ -213,7 +213,7 @@ public sealed class ChassisGeometryTests
             ? PhoneCase.Art("Silkie", PhoneCaseCategory.ArtistSeries, tint, "Silkie")
             : PhoneCase.Color("Titanium", tint);
         return PhoneTheme.Dark(new Vector4(0.55f, 0.45f, 0.95f, 1f), phoneCase,
-            ChassisMetrics.For(kind, deviceWidth), "DuskLight", "DuskDark");
+            ChassisMetrics.For(kind, deviceWidth), "BloomLight", "BloomDark");
     }
 
     private static ChassisGeometry Device(float width, float height, float scale)

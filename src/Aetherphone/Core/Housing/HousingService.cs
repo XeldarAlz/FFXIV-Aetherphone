@@ -32,6 +32,7 @@ internal sealed class HousingService : IDisposable
     private readonly FrameworkTicker ticker;
     private IReadOnlyList<HousingWorld> worlds = Array.Empty<HousingWorld>();
     private volatile bool refreshing;
+    private volatile bool refreshQueued;
     private volatile bool worldsLoading;
     private DateTime lastRefreshAttemptUtc;
     private DateTime retryNotBeforeUtc;
@@ -204,8 +205,13 @@ internal sealed class HousingService : IDisposable
         configuration.Save();
         wardAutoPickPending = 1;
         PrimeFromCache(WorldId, districtId);
+        if (Lookup(WorldId, districtId) is { } known)
+        {
+            AutoPickWard(known);
+        }
+
         Bump();
-        Refresh(true);
+        Refresh(false);
     }
 
     public void SelectWard(int ward)
@@ -280,6 +286,7 @@ internal sealed class HousingService : IDisposable
 
         if (refreshing)
         {
+            refreshQueued |= force;
             return;
         }
 
@@ -499,20 +506,27 @@ internal sealed class HousingService : IDisposable
             return;
         }
 
-        if (snapshots.ContainsKey(CacheKey(worldId, districtId)))
+        var all = HousingDistricts.All;
+        var primed = false;
+        for (var index = 0; index < all.Count; index++)
+        {
+            var key = CacheKey(worldId, all[index].Id);
+            if (snapshots.ContainsKey(key) || cache.Read(worldId, all[index].Id) is not { } stored)
+            {
+                continue;
+            }
+
+            snapshots[key] = stored;
+            primed = true;
+        }
+
+        if (!primed || Lookup(worldId, districtId) is not { } current || current.Source != HousingProviderKind.Cache)
         {
             return;
         }
 
-        var stored = cache.Read(worldId, districtId);
-        if (stored is null)
-        {
-            return;
-        }
-
-        snapshots[CacheKey(worldId, districtId)] = stored;
         ActiveSource = HousingProviderKind.Cache;
-        State = stored.Plots.Count == 0 ? HousingLoadState.Empty : HousingLoadState.Ready;
+        State = current.Plots.Count == 0 ? HousingLoadState.Empty : HousingLoadState.Ready;
         Bump();
     }
 
@@ -529,13 +543,17 @@ internal sealed class HousingService : IDisposable
 
             var token = cancellation.Token;
             var active = IsChinaWorld(worldId) ? chinaApi : api;
-            var snapshot = await active.GetDistrictAsync(worldId, districtId, token).ConfigureAwait(false);
-            if (snapshot is not null)
+            var world = await active.GetWorldAsync(worldId, token).ConfigureAwait(false);
+            if (world is not null && FindDistrict(world, districtId) is not null)
             {
                 consecutiveFailures = 0;
                 retryNotBeforeUtc = default;
-                cache.Write(snapshot);
-                Apply(snapshot, active.Kind, null);
+                for (var index = 0; index < world.Count; index++)
+                {
+                    cache.Write(world[index]);
+                }
+
+                Apply(world, districtId, active.Kind, null);
                 return;
             }
 
@@ -543,12 +561,12 @@ internal sealed class HousingService : IDisposable
             var backoff = TimeSpan.FromMinutes(Math.Min(MaxBackoffMinutes, 1 << Math.Min(5, consecutiveFailures)));
             retryNotBeforeUtc = DateTime.UtcNow.Add(backoff);
             AepLog.Warning(
-                $"Housing refresh failed for world {worldId} district {districtId} via {active.DisplayName} " +
+                $"Housing refresh failed for world {worldId} via {active.DisplayName} " +
                 $"(status {active.LastStatusCode}); retrying in {backoff.TotalMinutes:F0}m.");
-            var fallback = cache.Read(worldId, districtId);
-            if (fallback is not null)
+            var fallback = ReadWorldFromCache(worldId);
+            if (FindDistrict(fallback, districtId) is not null)
             {
-                Apply(fallback, HousingProviderKind.Cache, LookupErrorText());
+                Apply(fallback, districtId, HousingProviderKind.Cache, LookupErrorText());
                 return;
             }
 
@@ -570,6 +588,12 @@ internal sealed class HousingService : IDisposable
         finally
         {
             refreshing = false;
+            if (refreshQueued && !cancellation.IsCancellationRequested)
+            {
+                refreshQueued = false;
+                RunOnFrameworkThread(() => Refresh(true));
+            }
+
             if (entered)
             {
                 try
@@ -583,34 +607,63 @@ internal sealed class HousingService : IDisposable
         }
     }
 
-    private void Apply(HousingDistrictSnapshot? snapshot, HousingProviderKind source, string? error)
+    private void Apply(IReadOnlyList<HousingDistrictSnapshot> world, uint districtId, HousingProviderKind source,
+        string? error)
     {
-        if (snapshot is null)
+        for (var index = 0; index < world.Count; index++)
         {
-            State = HousingLoadState.Failed;
-            LastError = error;
-            Bump();
-            return;
+            snapshots[CacheKey(world[index].WorldId, world[index].DistrictId)] = world[index];
         }
 
-        snapshots[CacheKey(snapshot.WorldId, snapshot.DistrictId)] = snapshot;
-
+        var current = FindDistrict(world, districtId)!;
         RunOnFrameworkThread(() =>
         {
             ActiveSource = source;
             LastError = error;
-            State = snapshot.Plots.Count == 0 ? HousingLoadState.Empty : HousingLoadState.Ready;
+            State = current.Plots.Count == 0 ? HousingLoadState.Empty : HousingLoadState.Ready;
             if (source != HousingProviderKind.Cache)
             {
                 LastSuccessUtc = DateTime.UtcNow;
             }
 
-            Watch.Reconcile(snapshot);
-            AutoPickWard(snapshot);
-            AepLog.Debug($"Housing loaded {snapshot.Plots.Count} open plots for {snapshot.DistrictName} " +
-                         $"from {source}.");
+            for (var index = 0; index < world.Count; index++)
+            {
+                Watch.Reconcile(world[index]);
+            }
+
+            AutoPickWard(current);
+            AepLog.Debug($"Housing loaded {world.Count} districts for world {current.WorldId} from {source}.");
             Bump();
         });
+    }
+
+    private static HousingDistrictSnapshot? FindDistrict(IReadOnlyList<HousingDistrictSnapshot> world,
+        uint districtId)
+    {
+        for (var index = 0; index < world.Count; index++)
+        {
+            if (world[index].DistrictId == districtId)
+            {
+                return world[index];
+            }
+        }
+
+        return null;
+    }
+
+    private List<HousingDistrictSnapshot> ReadWorldFromCache(uint worldId)
+    {
+        var all = HousingDistricts.All;
+        var world = new List<HousingDistrictSnapshot>(all.Count);
+        for (var index = 0; index < all.Count; index++)
+        {
+            if (cache.Read(worldId, all[index].Id) is { } stored)
+            {
+                world.Add(stored);
+            }
+        }
+
+        return world;
     }
 
     private void RunOnFrameworkThread(Action action)

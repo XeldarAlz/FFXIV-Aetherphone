@@ -266,34 +266,14 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         composer.Clear();
     }
 
-    public void Draw(Rect area, string threadId)
+    public void Draw(Rect area, string threadId, bool activeLayer)
     {
         var frame = ImGui.GetFrameCount();
         var resumed = frame - lastThreadDrawFrame > ResumeFrameGap;
         lastThreadDrawFrame = frame;
-        if (store.CurrentThreadId != threadId)
+        if (activeLayer)
         {
-            if (store.CurrentThreadId is { } previousThreadId)
-            {
-                OnThreadSwitchingFrom(previousThreadId);
-            }
-
-            store.OpenThread(threadId);
-            sinceThreadPoll = 0f;
-            sinceTypingPoll = threadPollSeconds;
-            lastTypingDraft = string.Empty;
-            composer.ClearTargets();
-            searchController.Close();
-            composer.CancelVoice();
-            voicePlayer.Stop();
-            OnThreadOpened(threadId);
-            transcript.RequestSnapToBottom();
-        }
-        else if (resumed)
-        {
-            store.RequestThreadRefresh(threadId);
-            store.RefreshThreadDetail();
-            sinceThreadPoll = 0f;
+            SyncOpenThread(threadId, resumed);
         }
 
         if (pendingPrefill is { } prefill)
@@ -307,8 +287,12 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
         RestoreFailedSend(threadId);
 
-        store.NoteThreadViewed(threadId);
-        TickThread(threadId);
+        if (activeLayer)
+        {
+            store.NoteThreadViewed(threadId);
+            TickThread(threadId);
+        }
+
         DrawHeader(area, threadId);
         var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
@@ -361,6 +345,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         var composerBleed = composerStyle == ChatComposerStyle.Pill ? Theme.SidePadding * scale : 0f;
         var composerRect = new Rect(new Vector2(area.Min.X - composerBleed, area.Max.Y - composerHeight),
             new Vector2(area.Max.X + composerBleed, area.Max.Y));
+        var keyStatusPending = store.KeyStatusPending;
         composer.Draw(composerRect, new ChatComposerModel
         {
             Ui = ui,
@@ -374,9 +359,9 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             CanVoice = true,
             CanLocation = true,
             CanHandleEscape = !searchController.Open,
-            Blocked = store.SendWouldDowngrade,
-            BlockedNotice = Loc.T(L.Encryption.ComposerBlocked),
-            OnBlockedTap = () => OpenEncryptionInfo(threadId),
+            Blocked = keyStatusPending || store.SendWouldDowngrade,
+            BlockedNotice = keyStatusPending ? Loc.T(L.Encryption.ComposerChecking) : Loc.T(L.Encryption.ComposerBlocked),
+            OnBlockedTap = keyStatusPending ? null : () => OpenEncryptionInfo(threadId),
             ResolveVoiceInput = resolveVoiceInput,
             OnPickImage = pickImage,
             OnShareLocation = shareLocation,
@@ -473,6 +458,37 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         transcriptVersion = version;
         transcriptCache = MapTranscript(source);
         return transcriptCache;
+    }
+
+    private void SyncOpenThread(string threadId, bool resumed)
+    {
+        if (store.CurrentThreadId == threadId)
+        {
+            if (resumed)
+            {
+                store.RequestThreadRefresh(threadId);
+                store.RefreshThreadDetail();
+                sinceThreadPoll = 0f;
+            }
+
+            return;
+        }
+
+        if (store.CurrentThreadId is { } previousThreadId)
+        {
+            OnThreadSwitchingFrom(previousThreadId);
+        }
+
+        store.OpenThread(threadId);
+        sinceThreadPoll = 0f;
+        sinceTypingPoll = threadPollSeconds;
+        lastTypingDraft = string.Empty;
+        composer.ClearTargets();
+        searchController.Close();
+        composer.CancelVoice();
+        voicePlayer.Stop();
+        OnThreadOpened(threadId);
+        transcript.RequestSnapToBottom();
     }
 
     private void TickThread(string threadId)

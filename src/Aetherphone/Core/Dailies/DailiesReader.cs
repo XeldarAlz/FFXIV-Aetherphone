@@ -1,4 +1,3 @@
-using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel;
@@ -103,6 +102,11 @@ internal static unsafe class DailiesReader
     private static DailyAutoStatus ReadDomanEnclave()
     {
         var manager = DomanEnclaveManager.Instance();
+        if (manager is null)
+        {
+            return DailyAutoStatus.Unavailable;
+        }
+
         var state = manager->State;
         var donated = (int)state.Donated;
         var allowance = (int)state.Allowance;
@@ -210,8 +214,4 @@ internal static unsafe class DailiesReader
 
         return hunt->CurrentKills[billIndex][0] == eliteTarget.NeededKills;
     }
-
-    public static TimerWindow ReadFashionReportWindow(DateTime utcNow) => GameSchedule.FashionReport(utcNow);
-
-    public static DateTime ReadNextJumboCactpot(DateTime utcNow) => GameSchedule.NextJumboCactpot(utcNow);
 }

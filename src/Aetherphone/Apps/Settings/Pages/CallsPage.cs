@@ -11,10 +11,18 @@ namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class CallsPage : ISettingsPage
 {
+    private static readonly SettingsEntry[] Searchable =
+    {
+        new(L.Phone.EnablePhoneCalls),
+        new(L.Phone.Microphone),
+        new(L.Phone.Speaker),
+    };
+
     public string Title => Loc.T(L.Phone.SettingsTitle);
     public string Summary => calls.Enabled ? string.Empty : Loc.T(L.Phone.SummaryOff);
     public FontAwesomeIcon Icon => FontAwesomeIcon.Phone;
     public Vector4 Tint => new(0.20f, 0.78f, 0.35f, 1f);
+    public ReadOnlySpan<SettingsEntry> Entries => Searchable;
     private readonly CallHub calls;
     private readonly Configuration configuration;
 

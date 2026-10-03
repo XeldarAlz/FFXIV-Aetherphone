@@ -8,12 +8,17 @@ internal sealed class RemoteImageCache : IDisposable
 {
     private const long TextureBudgetBytes = 160L * 1024 * 1024;
     private static readonly TimeSpan FailureRetryFor = TimeSpan.FromMinutes(2);
+    private const int MaxConcurrentDownloads = 6;
+    private const long WantedWithinMilliseconds = 1_000;
     private static readonly TimeSpan DiskMaxAge = TimeSpan.FromDays(30);
+    private static readonly byte[] Dropped = new byte[1];
     private readonly HttpService http;
     private readonly DiskCache disk;
     private readonly TextureLedger ready = new(TextureBudgetBytes);
     private readonly ConcurrentDictionary<LedgerKey, byte> loading = new();
+    private readonly ConcurrentDictionary<LedgerKey, long> lastWanted = new();
     private readonly ConcurrentDictionary<string, DateTime> failed = new(StringComparer.Ordinal);
+    private readonly RequestThrottle downloads = new(MaxConcurrentDownloads, TimeSpan.Zero);
     private readonly CancellationTokenSource cancellation = new();
     private volatile bool disposed;
 
@@ -92,37 +97,75 @@ internal sealed class RemoteImageCache : IDisposable
         return null;
     }
 
-    private void Request(string resolved, int level)
+    public async Task<byte[]?> FetchBytesAsync(string? url, CancellationToken token)
     {
-        Request(new LedgerKey(resolved, level), token => FetchThroughDiskAsync(resolved, token));
+        if (!Fetchable(url) || disposed)
+        {
+            return null;
+        }
+
+        var resolved = LegacyMediaHosts.Normalize(url!);
+        var cached = disk.Get(resolved, DiskMaxAge);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        using var slot = await downloads.EnterAsync(token).ConfigureAwait(false);
+        var bytes = await http.GetBytesAsync(new Uri(resolved), token).ConfigureAwait(false);
+        if (bytes is not null)
+        {
+            disk.Set(resolved, bytes);
+        }
+
+        return bytes;
     }
 
-    private void Request(LedgerKey key, Func<CancellationToken, Task<byte[]?>> fetch)
+    private void Request(string resolved, int level)
+    {
+        var key = new LedgerKey(resolved, level);
+        if (!TryClaim(key))
+        {
+            return;
+        }
+
+        Start(key, token => FetchThroughDiskAsync(key, resolved, token));
+    }
+
+    private bool TryClaim(LedgerKey key)
     {
         if (failed.TryGetValue(key.Name, out var failedAtUtc))
         {
             if (DateTime.UtcNow - failedAtUtc < FailureRetryFor)
             {
-                return;
+                return false;
             }
 
             failed.TryRemove(key.Name, out _);
         }
 
-        if (!loading.TryAdd(key, 0))
-        {
-            return;
-        }
-
-        _ = LoadAsync(key, fetch);
+        lastWanted[key] = Environment.TickCount64;
+        return loading.TryAdd(key, 0);
     }
 
-    private async Task<byte[]?> FetchThroughDiskAsync(string url, CancellationToken token)
+    private void Start(LedgerKey key, Func<CancellationToken, Task<byte[]?>> fetch)
+    {
+        _ = Task.Run(() => LoadAsync(key, fetch));
+    }
+
+    private async Task<byte[]?> FetchThroughDiskAsync(LedgerKey key, string url, CancellationToken token)
     {
         var cached = disk.Get(url, DiskMaxAge);
         if (cached is not null)
         {
             return cached;
+        }
+
+        using var slot = await downloads.EnterAsync(token).ConfigureAwait(false);
+        if (!StillWanted(key))
+        {
+            AepLog.Verbose($"[Media] dropped {key.Name}, it scrolled away before a download slot opened");
+            return Dropped;
         }
 
         var bytes = await http.GetBytesAsync(new Uri(url), token).ConfigureAwait(false);
@@ -132,6 +175,12 @@ internal sealed class RemoteImageCache : IDisposable
         }
 
         return bytes;
+    }
+
+    private bool StillWanted(LedgerKey key)
+    {
+        return lastWanted.TryGetValue(key, out var wantedAt)
+               && Environment.TickCount64 - wantedAt <= WantedWithinMilliseconds;
     }
 
     public IDalamudTextureWrap? Resident(string key) => ready.Get(key);
@@ -149,10 +198,21 @@ internal sealed class RemoteImageCache : IDisposable
 
         // The disk cache holds the sealed bytes, never the opened ones: a thread photo survives a
         // restart without a second download and without leaving readable pixels on disk.
-        Request(new LedgerKey(key, TextureSizes.Native), async token =>
+        var ledgerKey = new LedgerKey(key, TextureSizes.Native);
+        if (!TryClaim(ledgerKey))
         {
-            var opaque = await FetchThroughDiskAsync(url, token).ConfigureAwait(false);
-            return opaque is null ? null : unseal(opaque);
+            return null;
+        }
+
+        Start(ledgerKey, async token =>
+        {
+            var opaque = await FetchThroughDiskAsync(ledgerKey, url, token).ConfigureAwait(false);
+            if (opaque is null || ReferenceEquals(opaque, Dropped))
+            {
+                return opaque;
+            }
+
+            return unseal(opaque);
         });
         return null;
     }
@@ -164,7 +224,12 @@ internal sealed class RemoteImageCache : IDisposable
             return wrap;
         }
 
-        Request(new LedgerKey(key, TextureSizes.Native), fetch);
+        var ledgerKey = new LedgerKey(key, TextureSizes.Native);
+        if (TryClaim(ledgerKey))
+        {
+            Start(ledgerKey, fetch);
+        }
+
         return null;
     }
 
@@ -202,6 +267,11 @@ internal sealed class RemoteImageCache : IDisposable
         {
             var token = cancellation.Token;
             var bytes = await fetch(token).ConfigureAwait(false);
+            if (ReferenceEquals(bytes, Dropped))
+            {
+                return;
+            }
+
             if (bytes is null)
             {
                 failed[key.Name] = DateTime.UtcNow;
@@ -240,6 +310,9 @@ internal sealed class RemoteImageCache : IDisposable
         catch (OperationCanceledException)
         {
         }
+        catch (ObjectDisposedException) when (disposed)
+        {
+        }
         catch (Exception exception)
         {
             failed[key.Name] = DateTime.UtcNow;
@@ -247,6 +320,7 @@ internal sealed class RemoteImageCache : IDisposable
         }
         finally
         {
+            lastWanted.TryRemove(key, out _);
             loading.TryRemove(key, out _);
         }
     }
@@ -256,6 +330,7 @@ internal sealed class RemoteImageCache : IDisposable
         disposed = true;
         cancellation.Cancel();
         ready.DisposeAll();
+        downloads.Dispose();
         cancellation.Dispose();
     }
 }

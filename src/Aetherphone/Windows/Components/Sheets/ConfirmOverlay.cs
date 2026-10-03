@@ -12,7 +12,6 @@ internal sealed class ConfirmOverlay
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs;
 
-    private const float RevealSmoothTime = 0.16f;
     private const float MaxDim = 0.55f;
     private const float MinCardScale = 0.92f;
     private readonly ConfirmService service;
@@ -61,7 +60,7 @@ internal sealed class ConfirmOverlay
 
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var target = active is not null ? 1f : 0f;
-        reveal.Step(target, RevealSmoothTime, delta);
+        reveal.Step(target, Motion.Sheet, delta);
         if (shown is null)
         {
             return;
@@ -75,7 +74,7 @@ internal sealed class ConfirmOverlay
         }
 
         var opacity = Math.Clamp(reveal.Value, 0f, 1f);
-        var cardScale = MinCardScale + (1f - MinCardScale) * Easing.EaseOutQuint(opacity);
+        var cardScale = MinCardScale + (1f - MinCardScale) * opacity;
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##confirmOverlay", screen.Size, false, OverlayFlags))
         {

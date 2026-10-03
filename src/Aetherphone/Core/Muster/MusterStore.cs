@@ -65,7 +65,7 @@ internal sealed class MusterStore : IDisposable
         this.configuration = configuration;
         this.signals = signals;
         this.gate = gate;
-        cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
+        cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval, signals);
         session.Changed += OnSessionChanged;
         signals.MusterPinged += OnMusterPinged;
         signals.ConnectedChanged += OnRealtimeConnected;
@@ -77,6 +77,8 @@ internal sealed class MusterStore : IDisposable
     public bool Syncing => syncing;
 
     public bool Primed => primed;
+
+    public void NoteWatched() => cadence.NoteWatched();
 
     public MusterDto? Mine => mine;
 

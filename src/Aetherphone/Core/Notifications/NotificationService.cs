@@ -19,6 +19,7 @@ internal sealed class NotificationService : IDisposable
     private readonly Dictionary<string, DateTime> lastSoundAt = new();
     private long sequence;
     public int UnreadCount { get; private set; }
+    public int Version { get; private set; }
     public IReadOnlyList<PhoneNotification> Recent => recent;
     public Func<string, bool>? AppAvailability { get; set; }
     public event Action? Changed;
@@ -72,7 +73,7 @@ internal sealed class NotificationService : IDisposable
         }
 
         ClampUnread();
-        Changed?.Invoke();
+        RaiseChanged();
     }
 
     public void RemoveApp(string appId)
@@ -100,7 +101,7 @@ internal sealed class NotificationService : IDisposable
         }
 
         ClampUnread();
-        Changed?.Invoke();
+        RaiseChanged();
     }
 
     public void Notify(PhoneNotification notification)
@@ -150,7 +151,7 @@ internal sealed class NotificationService : IDisposable
 
         UnreadCount++;
         Added?.Invoke(stamped);
-        if (Plugin.ClientState.IsLoggedIn && !configuration.DoNotDisturb &&
+        if (Plugin.ClientState.IsLoggedIn && !configuration.DoNotDisturb && !IsMuted(notification.AppId) &&
             !(configuration.QuietWhileBusy && PlayerBusy.Now))
         {
             if (configuration.ShowNotificationBanner &&
@@ -164,13 +165,14 @@ internal sealed class NotificationService : IDisposable
                 Vibration?.Invoke(stamped);
             }
 
-            if (ShouldPlaySound(stamped.StackKey))
+            if (!notification.Muted && configuration.ShouldPlayNotificationSound(notification.SettingsKey) &&
+                ShouldPlaySound(stamped.StackKey))
             {
                 sound.PlayNotification(notification.SettingsKey);
             }
         }
 
-        Changed?.Invoke();
+        RaiseChanged();
     }
 
     private bool ShouldPlaySound(string stackKey)
@@ -207,6 +209,9 @@ internal sealed class NotificationService : IDisposable
         }
     }
 
+    public bool IsMuted(string appId) =>
+        NotificationMutes.IsMuted(configuration.NotificationSettings, appId, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
     public void MarkAllRead()
     {
         if (UnreadCount == 0)
@@ -220,7 +225,7 @@ internal sealed class NotificationService : IDisposable
         }
 
         UnreadCount = 0;
-        Changed?.Invoke();
+        RaiseChanged();
     }
 
     public void Remove(long id)
@@ -239,7 +244,7 @@ internal sealed class NotificationService : IDisposable
 
             recent.RemoveAt(index);
             ClampUnread();
-            Changed?.Invoke();
+            RaiseChanged();
             return;
         }
     }
@@ -269,7 +274,7 @@ internal sealed class NotificationService : IDisposable
         }
 
         ClampUnread();
-        Changed?.Invoke();
+        RaiseChanged();
     }
 
     public void Clear()
@@ -281,6 +286,12 @@ internal sealed class NotificationService : IDisposable
 
         recent.Clear();
         UnreadCount = 0;
+        RaiseChanged();
+    }
+
+    private void RaiseChanged()
+    {
+        Version++;
         Changed?.Invoke();
     }
 

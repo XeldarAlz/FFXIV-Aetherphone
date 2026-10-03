@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Aetherphone.Core.Localization;
-using KernelDevice = FFXIVClientStructs.FFXIV.Client.Graphics.Kernel.Device;
 
 namespace Aetherphone.Core.Platform;
 
@@ -58,7 +57,7 @@ internal static class NativeFileDialog
 
     private static Task<string?> OpenAsync(string title, string filter, string logTag)
     {
-        var owner = GameWindow();
+        var owner = GameWindowHandle.Current;
         var completion = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() =>
         {
@@ -75,12 +74,6 @@ internal static class NativeFileDialog
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         return completion.Task;
-    }
-
-    private static unsafe IntPtr GameWindow()
-    {
-        var device = KernelDevice.Instance();
-        return device == null ? IntPtr.Zero : (IntPtr)device->hWnd;
     }
 
     private static string? ShowDialog(string title, string filter, IntPtr owner)

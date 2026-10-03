@@ -53,6 +53,11 @@ internal readonly struct RadioStation : IEquatable<RadioStation>
     public readonly string Uuid;
     public readonly string CommunityId;
     public readonly string ArtworkUrl;
+    public readonly string Tags;
+    public readonly string CountryCode;
+    public readonly string Language;
+    public readonly int Votes;
+    public readonly int ClickCount;
 
     public RadioStation(string name, string streamUrl, string codec, int bitrate, string country, string uuid)
         : this(name, streamUrl, codec, bitrate, country, uuid, string.Empty, string.Empty)
@@ -61,6 +66,14 @@ internal readonly struct RadioStation : IEquatable<RadioStation>
 
     public RadioStation(string name, string streamUrl, string codec, int bitrate, string country, string uuid,
         string communityId, string artworkUrl)
+        : this(name, streamUrl, codec, bitrate, country, uuid, communityId, artworkUrl, string.Empty, string.Empty,
+            string.Empty, 0, 0)
+    {
+    }
+
+    public RadioStation(string name, string streamUrl, string codec, int bitrate, string country, string uuid,
+        string communityId, string artworkUrl, string tags, string countryCode, string language, int votes,
+        int clickCount)
     {
         Name = name;
         StreamUrl = streamUrl;
@@ -70,6 +83,11 @@ internal readonly struct RadioStation : IEquatable<RadioStation>
         Uuid = uuid;
         CommunityId = communityId;
         ArtworkUrl = artworkUrl;
+        Tags = tags;
+        CountryCode = countryCode;
+        Language = language;
+        Votes = votes;
+        ClickCount = clickCount;
     }
 
     public bool IsCommunity => !string.IsNullOrEmpty(CommunityId);
@@ -115,6 +133,13 @@ internal sealed class RadioStationDto
     [JsonPropertyName("codec")] public string? Codec { get; set; }
     [JsonPropertyName("bitrate")] public int Bitrate { get; set; }
     [JsonPropertyName("country")] public string? Country { get; set; }
+    [JsonPropertyName("countrycode")] public string? CountryCode { get; set; }
+    [JsonPropertyName("language")] public string? Language { get; set; }
+    [JsonPropertyName("tags")] public string? Tags { get; set; }
+    [JsonPropertyName("favicon")] public string? Favicon { get; set; }
+    [JsonPropertyName("votes")] public int Votes { get; set; }
+    [JsonPropertyName("clickcount")] public int ClickCount { get; set; }
+    [JsonPropertyName("hls")] public int Hls { get; set; }
 }
 
 internal sealed class RadioCountryDto
@@ -124,7 +149,7 @@ internal sealed class RadioCountryDto
     [JsonPropertyName("stationcount")] public int StationCount { get; set; }
 }
 
-internal sealed class RadioLanguageDto
+internal sealed class RadioNamedCountDto
 {
     [JsonPropertyName("name")] public string? Name { get; set; }
     [JsonPropertyName("stationcount")] public int StationCount { get; set; }
@@ -133,7 +158,7 @@ internal sealed class RadioLanguageDto
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(RadioStationDto[]))]
 [JsonSerializable(typeof(RadioCountryDto[]))]
-[JsonSerializable(typeof(RadioLanguageDto[]))]
+[JsonSerializable(typeof(RadioNamedCountDto[]))]
 internal sealed partial class RadioJsonContext : JsonSerializerContext
 {
 }

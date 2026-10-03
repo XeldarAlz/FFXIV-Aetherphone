@@ -42,21 +42,21 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile UserDto? me;
     private volatile AvatarUploadOutcome avatarFailure = AvatarUploadOutcome.Unreachable;
     protected readonly FeedLane<PostDto> forYouLane = FeedLane<PostDto>.ServerOrdered();
-    protected readonly FeedLane<PostDto> latestLane = new(ByNewestFirst, ByCreatedAtUnix);
-    protected readonly FeedLane<PostDto> followingLane = new(ByNewestFirst, ByCreatedAtUnix);
+    protected readonly FeedLane<PostDto> latestLane = new(PostOrder.NewestFirst, PostOrder.CreatedAtUnix);
+    protected readonly FeedLane<PostDto> followingLane = new(PostOrder.NewestFirst, PostOrder.CreatedAtUnix);
     private static readonly Dictionary<string, FeedItemNote> NoNotes = new(StringComparer.Ordinal);
     private volatile Dictionary<string, FeedItemNote> forYouNotes = NoNotes;
     private volatile string? caughtUpAfterId;
     private volatile bool caughtUpAtTop;
     private volatile bool forYouRanked;
-    private readonly FeedLane<PostDto> savedLane = new(ByNewestFirst);
-    private readonly FeedLane<PostDto> likedLane = new(ByNewestFirst);
+    private readonly FeedLane<PostDto> savedLane = new(PostOrder.NewestFirst);
+    private readonly FeedLane<PostDto> likedLane = new(PostOrder.NewestFirst);
     private volatile UserDto[] followRequests = Array.Empty<UserDto>();
     private volatile string? followRequestsCursor;
     private volatile bool followRequestsLoadingMore;
     private volatile bool followRequestsLoading;
     private volatile bool followRequestsLoaded;
-    protected readonly FeedLane<PostDto> profileLane = new(ByNewestFirst);
+    protected readonly FeedLane<PostDto> profileLane = new(PostOrder.PinnedThenNewest);
     protected volatile PostDto? detailPost;
     protected volatile bool posting;
     private volatile string? profileUserId;
@@ -88,9 +88,9 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile int userListReactionFilter = -1;
     private volatile int userListTotal = -1;
     private int userListGeneration;
-    private readonly FeedLane<PostDto> taggedLane = new(ByNewestFirst);
+    private readonly FeedLane<PostDto> taggedLane = new(PostOrder.NewestFirst);
     private volatile string? taggedUserId;
-    private readonly FeedLane<PostDto> hashtagLane = new(ByNewestFirst);
+    private readonly FeedLane<PostDto> hashtagLane = new(PostOrder.NewestFirst);
     private volatile string? hashtagTag;
     private volatile string? feedRegions;
     private volatile bool feedIncludesSensitive = true;
@@ -190,6 +190,11 @@ internal abstract class SocialFeedStore : IDisposable
         feedSignals.Reset();
         ClearTagged();
         ClearHashtag();
+        OnAccountReset();
+    }
+
+    protected virtual void OnAccountReset()
+    {
     }
 
     public void BeginImpressions(float windowTop, float windowBottom, float deltaSeconds)
@@ -668,14 +673,6 @@ internal abstract class SocialFeedStore : IDisposable
         }, () => lane.LoadingMore = false);
     }
 
-    private static int ByNewestFirst(PostDto left, PostDto right)
-    {
-        var byTime = right.CreatedAtUnix.CompareTo(left.CreatedAtUnix);
-        return byTime != 0 ? byTime : string.CompareOrdinal(right.Id, left.Id);
-    }
-
-    private static long ByCreatedAtUnix(PostDto post) => post.CreatedAtUnix;
-
     public void OpenDetail(PostDto post) => LoadDetail(post.Id, post);
 
     public void OpenDetailById(string postId) => LoadDetail(postId, null);
@@ -1073,6 +1070,22 @@ internal abstract class SocialFeedStore : IDisposable
         }
     }
 
+    protected void SyncPendingPhotoTags(int count)
+    {
+        if (me is { } current && current.PendingPhotoTags != count)
+        {
+            me = current with { PendingPhotoTags = count };
+        }
+    }
+
+    protected void AdjustPendingPhotoTags(int delta)
+    {
+        if (me is { } current)
+        {
+            me = current with { PendingPhotoTags = Math.Max(0, current.PendingPhotoTags + delta) };
+        }
+    }
+
     public void RefreshSaved()
     {
         if (!session.IsSignedIn || savedLane.Loading)
@@ -1195,6 +1208,38 @@ internal abstract class SocialFeedStore : IDisposable
         CopyOnWrite.Map(source,
             post => post.Id == postId && post.Sensitive != sensitive,
             post => post with { Sensitive = sensitive });
+
+    protected void ApplyPinnedEverywhere(string postId, long? pinnedAtUnix)
+    {
+        forYouLane.Items = MapPinned(forYouLane.Items, postId, pinnedAtUnix);
+        latestLane.Items = MapPinned(latestLane.Items, postId, pinnedAtUnix);
+        followingLane.Items = MapPinned(followingLane.Items, postId, pinnedAtUnix);
+        profileLane.Items = ReorderPinned(profileLane.Items, postId, pinnedAtUnix);
+        taggedLane.Items = MapPinned(taggedLane.Items, postId, pinnedAtUnix);
+        hashtagLane.Items = MapPinned(hashtagLane.Items, postId, pinnedAtUnix);
+        savedLane.Items = MapPinned(savedLane.Items, postId, pinnedAtUnix);
+        likedLane.Items = MapPinned(likedLane.Items, postId, pinnedAtUnix);
+        if (detailPost is { } current && current.Id == postId)
+        {
+            detailPost = current with { PinnedAtUnix = pinnedAtUnix };
+        }
+    }
+
+    private static PostDto[] ReorderPinned(PostDto[] source, string postId, long? pinnedAtUnix)
+    {
+        var mapped = MapPinned(source, postId, pinnedAtUnix);
+        if (!ReferenceEquals(mapped, source))
+        {
+            Array.Sort(mapped, PostOrder.PinnedThenNewest);
+        }
+
+        return mapped;
+    }
+
+    private static PostDto[] MapPinned(PostDto[] source, string postId, long? pinnedAtUnix) =>
+        CopyOnWrite.Map(source,
+            post => post.Id == postId && post.PinnedAtUnix != pinnedAtUnix,
+            post => post with { PinnedAtUnix = pinnedAtUnix });
 
     private void ApplySavedEverywhere(string postId, bool saved)
     {
@@ -1670,9 +1715,47 @@ internal abstract class SocialFeedStore : IDisposable
         forYouLane.Items = CopyOnWrite.Prepend(forYouLane.Items, created);
         latestLane.Items = CopyOnWrite.Prepend(latestLane.Items, created);
         followingLane.Items = CopyOnWrite.Prepend(followingLane.Items, created);
-        if (profileUserId is not null && profileUserId == created.AuthorId)
+        AcceptProfilePost(created);
+    }
+
+    protected void AcceptRestoredPost(PostDto restored)
+    {
+        latestLane.Restore(restored);
+        followingLane.Restore(restored);
+        AcceptProfilePost(restored);
+        ReplacePost(restored);
+    }
+
+    protected void AcceptProfilePost(PostDto post)
+    {
+        if (profileUserId is null || profileUserId != post.AuthorId)
         {
-            profileLane.Items = CopyOnWrite.Prepend(profileLane.Items, created);
+            return;
+        }
+
+        var current = profileLane.Items;
+        var items = CopyOnWrite.Prepend(current, post);
+        if (!ReferenceEquals(items, current))
+        {
+            Array.Sort(items, PostOrder.PinnedThenNewest);
+        }
+
+        profileLane.Items = items;
+    }
+
+    protected void MapPostEverywhere(string postId, Func<PostDto, PostDto> transform)
+    {
+        forYouLane.Items = CopyOnWrite.MapById(forYouLane.Items, postId, transform);
+        latestLane.Items = CopyOnWrite.MapById(latestLane.Items, postId, transform);
+        followingLane.Items = CopyOnWrite.MapById(followingLane.Items, postId, transform);
+        profileLane.Items = CopyOnWrite.MapById(profileLane.Items, postId, transform);
+        savedLane.Items = CopyOnWrite.MapById(savedLane.Items, postId, transform);
+        taggedLane.Items = CopyOnWrite.MapById(taggedLane.Items, postId, transform);
+        hashtagLane.Items = CopyOnWrite.MapById(hashtagLane.Items, postId, transform);
+        likedLane.Items = CopyOnWrite.MapById(likedLane.Items, postId, transform);
+        if (detailPost is { } current && current.Id == postId)
+        {
+            detailPost = transform(current);
         }
     }
 

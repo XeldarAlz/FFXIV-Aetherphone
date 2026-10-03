@@ -30,13 +30,30 @@ internal sealed class ModerationNoticeService : IDisposable
         this.client = client;
         this.framework = framework;
         this.signals = signals;
-        cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
-        signals.SocialPinged += cadence.RequestImmediate;
+        cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval, signals);
+        signals.SocialPinged += OnSocialPinged;
+        signals.ConnectedChanged += OnRealtimeConnected;
         session.Changed += OnSessionChanged;
         framework.Update += OnFrameworkTick;
     }
 
     public ModerationNoticeDto[] Pending => pending;
+
+    private void OnSocialPinged(SocialSignal signal)
+    {
+        if (signal.CoversNotices)
+        {
+            cadence.RequestImmediate();
+        }
+    }
+
+    private void OnRealtimeConnected(bool active)
+    {
+        if (active)
+        {
+            cadence.RequestAfterReconnect();
+        }
+    }
 
     public event Action? Changed;
 
@@ -253,7 +270,8 @@ internal sealed class ModerationNoticeService : IDisposable
     public void Dispose()
     {
         session.Changed -= OnSessionChanged;
-        signals.SocialPinged -= cadence.RequestImmediate;
+        signals.SocialPinged -= OnSocialPinged;
+        signals.ConnectedChanged -= OnRealtimeConnected;
         framework.Update -= OnFrameworkTick;
         cancellation.Cancel();
         cancellation.Dispose();

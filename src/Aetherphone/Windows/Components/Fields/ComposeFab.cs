@@ -11,11 +11,9 @@ internal static class ComposeFab
 {
     private const float DefaultRadius = 26f;
     private const float HoverGrow = 0.12f;
-    private const float HoverSmoothTime = 0.11f;
     private const float HoverTopLift = 0.18f;
     private const float HoverBottomLift = 0.10f;
     private const float HoverRimAlpha = 0.30f;
-    private const float PressShrink = 0.94f;
 
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Dictionary<uint, Spring> HoverSprings = new();
@@ -44,7 +42,7 @@ internal static class ComposeFab
         var hovered = !InputShield.Active && UiInteract.HoverOverlay(fabRect);
         var eased = HoverEase(childId, hovered);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var press = PressFx.Scale(childId, pressed, PressShrink);
+        var press = PressFx.Scale(childId, pressed, PressFx.ControlPressedScale);
         var drawRadius = radius * (1f + HoverGrow * eased) * press;
         if (gradientBottom is { } deep)
         {
@@ -101,7 +99,7 @@ internal static class ComposeFab
             spring = default;
         }
 
-        spring.Step(hovered ? 1f : 0f, HoverSmoothTime,
+        spring.Step(hovered ? 1f : 0f, Motion.HoverLift,
             MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         HoverSprings[key] = spring;
         return Math.Clamp(spring.Value, 0f, 1f);

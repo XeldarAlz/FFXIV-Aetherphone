@@ -6,6 +6,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Runtime;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Announcements;
@@ -28,29 +29,38 @@ internal sealed class AnnouncementsStore : IDisposable
     private volatile bool pagedDeeper;
     private volatile bool loading;
     private volatile bool loadedOnce;
-    private volatile bool pingRefreshRequested;
     private volatile AepFailureBox? failureBox;
-    private DateTime lastBackgroundRefreshUtc = DateTime.MinValue;
     private readonly RealtimeSignalBus signals;
+    private readonly PollCadence cadence;
+    private readonly HashSet<string> readThisVisit = new(StringComparer.Ordinal);
+    private long visitSeenUnix = long.MaxValue;
 
     public AnnouncementsStore(AethernetSession session, AnnouncementsClient client,
-        NotificationService notifications, Configuration configuration, RealtimeSignalBus signals)
+        NotificationService notifications, Configuration configuration, PhoneVisibility visibility,
+        RealtimeSignalBus signals)
     {
         this.session = session;
         this.client = client;
         this.notifications = notifications;
         this.configuration = configuration;
         this.signals = signals;
-        signals.AnnouncementsPinged += OnAnnouncementsPinged;
+        cadence = new PollCadence(visibility, BackgroundRefreshInterval, BackgroundRefreshInterval, signals);
+        signals.AnnouncementsPinged += cadence.RequestImmediate;
+        signals.ConnectedChanged += OnRealtimeConnected;
         Plugin.Framework.Update += OnFrameworkUpdate;
     }
 
-    private void OnAnnouncementsPinged()
+    private void OnRealtimeConnected(bool active)
     {
-        pingRefreshRequested = true;
+        if (active)
+        {
+            cadence.RequestAfterReconnect();
+        }
     }
 
     public bool IsSignedIn => session.IsSignedIn;
+
+    public bool PushCovered => signals.RealtimeActive;
 
     public AnnouncementDto[] Announcements => announcements;
 
@@ -91,7 +101,28 @@ internal sealed class AnnouncementsStore : IDisposable
     }
 
     public bool IsUnread(AnnouncementDto announcement) =>
-        announcement.CreatedAtUnix > configuration.AnnouncementsSeenUnix;
+        announcement.CreatedAtUnix > Volatile.Read(ref visitSeenUnix) && !readThisVisit.Contains(announcement.Id);
+
+    public void BeginVisit()
+    {
+        readThisVisit.Clear();
+        Volatile.Write(ref visitSeenUnix,
+            configuration.AnnouncementsInitialized ? configuration.AnnouncementsSeenUnix : long.MaxValue);
+    }
+
+    public void MarkRead(string announcementId) => readThisVisit.Add(announcementId);
+
+    public void MarkAllRead()
+    {
+        var newest = NewestUnix(announcements);
+        if (newest > Volatile.Read(ref visitSeenUnix))
+        {
+            Volatile.Write(ref visitSeenUnix, newest);
+        }
+
+        readThisVisit.Clear();
+        MarkAllSeen();
+    }
 
     public void Refresh()
     {
@@ -181,6 +212,7 @@ internal sealed class AnnouncementsStore : IDisposable
             configuration.AnnouncementsNotifiedUnix = newest;
             configuration.AnnouncementsSeenUnix = newest;
             configuration.Save();
+            Volatile.Write(ref visitSeenUnix, newest);
             return;
         }
 
@@ -215,14 +247,11 @@ internal sealed class AnnouncementsStore : IDisposable
             return;
         }
 
-        var now = DateTime.UtcNow;
-        if (!pingRefreshRequested && now - lastBackgroundRefreshUtc < BackgroundRefreshInterval)
+        if (!cadence.Due(DateTime.UtcNow))
         {
             return;
         }
 
-        pingRefreshRequested = false;
-        lastBackgroundRefreshUtc = now;
         Refresh();
     }
 
@@ -242,7 +271,8 @@ internal sealed class AnnouncementsStore : IDisposable
 
     public void Dispose()
     {
-        signals.AnnouncementsPinged -= OnAnnouncementsPinged;
+        signals.AnnouncementsPinged -= cadence.RequestImmediate;
+        signals.ConnectedChanged -= OnRealtimeConnected;
         Plugin.Framework.Update -= OnFrameworkUpdate;
         work.Dispose();
     }

@@ -2038,7 +2038,7 @@ internal sealed class ChatTranscript
             typingPhase -= 1000f;
         }
 
-        var eased = Easing.EaseOutCubic(Math.Clamp(reveal, 0f, 1f));
+        var eased = Math.Clamp(reveal, 0f, 1f);
         var drawList = ImGui.GetWindowDrawList();
         var paddingX = 14f * scale;
         var dotRadius = 3.2f * scale;

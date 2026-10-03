@@ -173,7 +173,9 @@ internal interface INavigator
 
 ### The back button
 
-`AppHeader.Draw(in PhoneContext context, string title, Action? onBack = null)` (src/Aetherphone/Windows/Components/AppHeader.cs) draws the title and the back chevron. When clicked it invokes `onBack` if you passed one, otherwise `context.Navigation.Back()`, which leaves the app. The standard wiring is a cached delegate that pops the router while it has depth, so the chevron walks your screen stack first and exits the app only from the root:
+`AppHeader.Draw(in PhoneContext context, string title, Action? onBack = null)` (src/Aetherphone/Windows/Components/Layout/AppHeader.cs) draws the inline title and the back chevron. When clicked it invokes `onBack` if you passed one, otherwise `context.Navigation.Back()`, which leaves the app. The standard wiring is a cached delegate that pops the router while it has depth, so the chevron walks your screen stack first and exits the app only from the root:
+
+Top-level screens can opt into the collapsing large title instead: `var navBar = AppHeader.BeginLargeTitle(context);` before the body, pass `navBar.Body` to `AppSurface.Begin` (the surface extends under the bar and reserves the title band, so content scrolls beneath it), and after the body call `AppHeader.EndLargeTitle(in navBar, context, id, title, NavBarStyle.From(ui), buttons, backTitle, onBack)`. The collapse follows the surface's scroll offset directly, the back control shows the previous screen's title (take it from the router, `router.TryGetView(depth - 2, out var previous)`), and `buttons` is a preallocated `NavBarButton[]` of at most two glass circles; the return value is the pressed button index or -1. Notes, Calendar and Settings are the reference adopters.
 
 ```csharp
 internal sealed class RecipeApp : IPhoneApp
@@ -370,7 +372,7 @@ internal struct RefreshCadence
 }
 ```
 
-`Advance` accumulates frame time and returns true once the interval has elapsed; you then do the work and call `Reset`. `FishingApp` refreshes its voyage table every 5 seconds this way, and `TimersApp` and `ActivityApp` use the same pattern. Keep it for cheap local recomputation; network polling belongs in stores with their own cadence (see [Networking](networking.md)).
+`Advance` accumulates frame time and returns true once the interval has elapsed; you then do the work and call `Reset`. `FishingApp` refreshes its voyage table every 5 seconds this way, and `TimersApp` uses the same pattern. Keep it for cheap local recomputation; network polling belongs in stores with their own cadence (see [Networking](networking.md)).
 
 ## Gotchas
 

@@ -6,16 +6,18 @@ namespace Aetherphone.Apps.Calendar;
 internal static class CalendarEventMerger
 {
     public static FrozenDictionary<long, ParsedEvent[]> Merge(FrozenDictionary<long, ParsedEvent[]> remote,
-        IReadOnlyList<CalendarCustomEvent> custom, Vector4 customColor)
+        IReadOnlyList<CalendarCustomEvent> custom, IReadOnlyList<CalendarEventGroup> groups, bool showGameEvents,
+        CalendarSurface surface, Vector4 customColor)
     {
+        var visibleRemote = showGameEvents ? remote : FrozenDictionary<long, ParsedEvent[]>.Empty;
         if (custom.Count == 0)
         {
-            return remote;
+            return visibleRemote;
         }
 
         var dimColor = customColor with { W = 0.42f };
-        var builder = new Dictionary<long, List<ParsedEvent>>(remote.Count + custom.Count);
-        foreach (var pair in remote)
+        var builder = new Dictionary<long, List<ParsedEvent>>(visibleRemote.Count + custom.Count);
+        foreach (var pair in visibleRemote)
         {
             builder[pair.Key] = new List<ParsedEvent>(pair.Value);
         }
@@ -23,6 +25,12 @@ internal static class CalendarEventMerger
         for (var index = 0; index < custom.Count; index++)
         {
             var item = custom[index];
+            var group = FindGroup(groups, item.GroupId);
+            if (group is not null && !group.ShowsOn(surface))
+            {
+                continue;
+            }
+
             var key = item.When.Date.Ticks;
             if (!builder.TryGetValue(key, out var dayEvents))
             {
@@ -40,6 +48,7 @@ internal static class CalendarEventMerger
                 DimColor = dimColor,
                 IsCustom = true,
                 CustomId = item.Id,
+                GroupName = group?.Name ?? string.Empty,
             });
         }
 
@@ -50,5 +59,23 @@ internal static class CalendarEventMerger
         }
 
         return result.ToFrozenDictionary();
+    }
+
+    private static CalendarEventGroup? FindGroup(IReadOnlyList<CalendarEventGroup> groups, Guid groupId)
+    {
+        if (groupId == Guid.Empty)
+        {
+            return null;
+        }
+
+        for (var index = 0; index < groups.Count; index++)
+        {
+            if (groups[index].Id == groupId)
+            {
+                return groups[index];
+            }
+        }
+
+        return null;
     }
 }

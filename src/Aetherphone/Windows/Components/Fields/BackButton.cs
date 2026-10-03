@@ -8,7 +8,7 @@ internal static class BackButton
         bool shadow = false)
     {
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var grow = PressFx.Scale(id, pressed, 0.82f);
+        var grow = PressFx.Scale(id, pressed, PressFx.ControlPressedScale);
         var drawList = ImGui.GetWindowDrawList();
         var reach = radius * 0.5f * grow;
         var thickness = 2.4f * scale;

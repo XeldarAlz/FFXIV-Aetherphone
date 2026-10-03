@@ -31,7 +31,6 @@ public sealed class CasinoRoomWireContractTests
         Assert.Equal("casino.snapshot", SignalType.CasinoSnapshot);
         Assert.Equal("casino.event", SignalType.CasinoEvent);
         Assert.Equal("casino.ended", SignalType.CasinoEnded);
-        Assert.Equal("casino.ping", SignalType.CasinoPing);
     }
 
     [Fact]
@@ -47,7 +46,6 @@ public sealed class CasinoRoomWireContractTests
             SignalType.CasinoSnapshot,
             SignalType.CasinoEvent,
             SignalType.CasinoEnded,
-            SignalType.CasinoPing,
         };
 
         for (var index = 0; index < kinds.Length; index++)

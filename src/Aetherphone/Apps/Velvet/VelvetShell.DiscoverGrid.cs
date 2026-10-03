@@ -24,8 +24,6 @@ internal sealed partial class VelvetShell
     private const float GridRequestedHeight = 28f;
     private const float GridRequestedGlyphGap = 6f;
     private const float GridHoverLift = 4f;
-    private const float GridHoverSmoothTime = 0.11f;
-    private const float GridPressShrink = 0.97f;
     private const float GridShadowOpacity = 0.35f;
     private const float GridBottomPad = 28f;
 
@@ -69,15 +67,17 @@ internal sealed partial class VelvetShell
             {
                 var min = new Vector2(origin.X + inset, origin.Y + inset + index * (cardHeight + gap));
                 var card = new Rect(min, new Vector2(min.X + cardWidth, min.Y + cardHeight));
+                if (!ImGui.IsRectVisible(card.Min, card.Max))
+                {
+                    continue;
+                }
+
                 if (index == 0)
                 {
                     UiAnchors.Report("velvet.discover.card", card);
                 }
 
-                if (ImGui.IsRectVisible(card.Min, card.Max))
-                {
-                    DrawGridCard(drawList, index, card, scale);
-                }
+                DrawGridCard(drawList, index, card, scale);
             }
 
             ImGui.SetCursorScreenPos(origin);
@@ -102,9 +102,9 @@ internal sealed partial class VelvetShell
         var overActions = hovered && UiInteract.Hover(actionStrip.Min, actionStrip.Max);
         var pressed = hovered && !overActions && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        var eased = VAnim.Toggle(label.NameId, hovered, delta, GridHoverSmoothTime);
+        var eased = VAnim.Toggle(label.NameId, hovered, delta, Motion.HoverLift);
         var grow = GridHoverLift * scale * eased
-            - card.Width * 0.5f * (1f - PressFx.Scale(label.NameId, pressed, GridPressShrink));
+            - card.Width * 0.5f * (1f - PressFx.Scale(label.NameId, pressed, PressFx.CardPressedScale));
         var body = new Rect(card.Min - new Vector2(grow, grow), card.Max + new Vector2(grow, grow));
         var radius = CardCoverRadius * scale;
         Elevation.Card(drawList, body.Min, body.Max, radius, scale, GridShadowOpacity * (1f + eased));
@@ -205,8 +205,8 @@ internal sealed partial class VelvetShell
         hovered = UiInteract.Hover(center - extent, center + extent);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        var eased = Math.Clamp(VAnim.Toggle(id, hovered, delta, GridHoverSmoothTime), 0f, 1f);
-        var drawRadius = radius * (1f + CardHoverGrow * eased) * PressFx.Scale(id, pressed, CardPressShrink);
+        var eased = Math.Clamp(VAnim.Toggle(id, hovered, delta, Motion.HoverLift), 0f, 1f);
+        var drawRadius = radius * (1f + CardHoverGrow * eased) * PressFx.Scale(id, pressed, PressFx.CardPressedScale);
         drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), drawRadius, CardShadow.Packed(), 32);
         AccentGloss.Circle(drawList, center, drawRadius, CardBodyTone(fill, CardHoverTopLift * eased, 1f),
             CardBodyTone(deep, CardHoverBottomLift * eased, 1f), scale, eased, glowReach);

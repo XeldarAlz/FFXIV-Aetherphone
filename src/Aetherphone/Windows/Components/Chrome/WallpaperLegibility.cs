@@ -20,9 +20,14 @@ internal static class WallpaperLegibility
         }
 
         var brightness = Plugin.Wallpapers.HomeBrightness(theme.LightWallpaperId, theme.DarkWallpaperId);
-        var normalized = Math.Clamp((brightness - CalmBrightness) / (HarshBrightness - CalmBrightness), 0f, 1f);
         cachedFrame = frame;
-        cachedStrength = normalized * normalized * (3f - 2f * normalized);
+        cachedStrength = Normalize(brightness);
         return cachedStrength;
+    }
+
+    public static float Normalize(float brightness)
+    {
+        var normalized = Math.Clamp((brightness - CalmBrightness) / (HarshBrightness - CalmBrightness), 0f, 1f);
+        return normalized * normalized * (3f - 2f * normalized);
     }
 }

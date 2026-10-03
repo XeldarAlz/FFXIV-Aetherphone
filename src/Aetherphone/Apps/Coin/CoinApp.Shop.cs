@@ -4,6 +4,7 @@ using Aetherphone.Core.Coins;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -62,7 +63,15 @@ internal sealed partial class CoinApp
         }
 
         var width = ScrollLayout.StableContentWidth();
+        var tilesOrigin = ImGui.GetCursorScreenPos();
         DrawCategoryTiles(string.Empty, width, scale);
+        var tilesBottom = MathF.Min(ImGui.GetCursorScreenPos().Y, body.Max.Y);
+        if (tilesBottom > tilesOrigin.Y)
+        {
+            UiAnchors.Report("coin.shop",
+                new Rect(tilesOrigin, new Vector2(tilesOrigin.X + width, tilesBottom)));
+        }
+
         ImGui.Dummy(new Vector2(0f, 16f * scale));
     }
 

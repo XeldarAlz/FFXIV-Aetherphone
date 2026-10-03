@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <em>Un smartphone, conçu pour vous. Bâti sur Dalamud.</em>
+  <em>Un smartphone en jeu pour FINAL FANTASY XIV, bâti sur Dalamud.</em>
 </p>
 
 <p align="center">
@@ -41,22 +41,22 @@
 
 ## Ce que c'est
 
-Aetherphone est le premier et le seul plugin de téléphone pleinement fonctionnel pour FINAL FANTASY XIV : un appareil ancré, toujours affiché, avec écran d'accueil, sélecteur d'applications et notifications. Derrière les applications tourne son propre réseau social, si bien que ce que vous publiez, envoyez et enregistrez vous suit d'un personnage, d'un monde et d'une session à l'autre au lieu de rester sur votre machine.
+Aetherphone est un plugin de téléphone pour FINAL FANTASY XIV : un appareil ancré avec écran d'accueil, sélecteur d'applications et notifications. Ses applications en ligne fonctionnent sur Aethernet, le service en ligne propre au plugin, si bien que ce que vous publiez, envoyez et enregistrez est stocké sur votre compte Aethernet au lieu de rester uniquement sur votre machine. Par défaut, chaque personnage se connecte avec son propre compte, et un réglage garde un compte choisi actif sur chaque personnage.
 
 ## Points forts
 
-- **Un téléphone intégré à votre HUD.** Déplacez-le où vous voulez, donnez-lui la taille qui vous convient et réduisez-le en un bandeau qui n'affiche que les widgets de votre choix. Il peut aussi se replier en minicarte de zone en direct et prendre la place de celle du jeu.
-- **Écrivez à n'importe qui, sur n'importe quel monde.** ChocoChat atteint tout utilisateur d'Aetherphone quels que soient son monde et son centre de données, avec messages vocaux, discussions de groupe et appels vocaux lancés directement depuis un contact. Sans équipe, sans liste d'amis et sans voyage.
-- **Vos propres applications sociales.** Chirper pour les messages courts, Aethergram pour les photos et Velvet, une application compagnon 18+ facultative. Une seule identité vaut pour toutes et vous suit d'un personnage à l'autre.
-- **Tous les canaux de discussion du jeu, réorganisés.** Linkpearl place l'ensemble du tchat du jeu dans des onglets que vous composez vous-même, avec les messages privés en conversations distinctes, des couleurs par canal et une zone de saisie qui découpe et cadence les messages que le jeu tronquerait.
-- **Discutez téléphone fermé.** Détachez n'importe quelle conversation dans une fenêtre flottante, fusionnez les fenêtres en onglets, et laissez-les disparaître en combat et en donjon puis revenir d'elles-mêmes.
+- **Un téléphone intégré à votre HUD.** Déplacez-le où vous voulez, donnez-lui la taille qui vous convient et réduisez-le en un mini-téléphone qui n'affiche que les widgets de votre choix et se redimensionne depuis son coin comme le téléphone complet. Il peut aussi se replier en minicarte de zone en direct, que vous pouvez placer à l'emplacement de la minicarte du jeu.
+- **Écrivez aux joueurs de n'importe quel monde.** ChocoChat fonctionne entre mondes et centres de données dès que vous et l'autre joueur avez enregistré le numéro l'un de l'autre, avec messages vocaux, discussions de groupe et appels vocaux lancés depuis un contact. Sans équipe, liste d'amis ni voyage.
+- **Vos propres applications sociales.** Chirper pour les messages courts, Aethergram pour les photos et Velvet, un espace 18+ facultatif qui n'est pas disponible sur les personnages Lalafell. Un seul compte Aethernet vous connecte aux trois, et chaque application peut garder son propre nom affiché et son propre nom d'utilisateur.
+- **Tous les canaux de discussion du jeu, réorganisés.** Linkpearl place l'ensemble du tchat du jeu dans des onglets que vous composez vous-même, avec les messages privés en conversations distinctes, des couleurs par canal et une zone de saisie qui découpe et cadence les messages que le jeu tronquerait. Lisez chaque onglet comme un journal ou en bulles de discussion, choisissez un thème et un fond de discussion, importez les couleurs de canaux du jeu et masquez les noms pour les captures d'écran.
+- **Discutez téléphone fermé.** Détachez n'importe quelle conversation dans une fenêtre flottante qui se place à côté du téléphone, laissez les nouvelles discussions s'y ajouter en onglets, et laissez-la disparaître en combat et en donjon puis revenir d'elle-même.
 - **Des applications qui jouent avec vous.** Strats pour les antisèches de raid avec votre place indiquée à chaque mécanique, Chasses pour les marques et les trains, Pêche pour les sorties en mer, plus Marché, Housing, Cartes, Lieux, Quotidiens, Collections et Inventaire.
-- **Et le quotidien aussi.** Notes, Calendrier, Minuteurs pour les resets et les servants, Calculatrice, Portefeuille, Appareil photo et Photos, Horloge, Météorologue pour la météo, et Raccourcis déclenchables depuis une macro de barre d'action.
-- **Regarder et écouter ensemble.** MogCast projette de la vidéo sur un écran dans le monde du jeu, avec une lecture synchronisée pour toutes les personnes présentes, et Musique fait entrer les radios communautaires et les sets DJ Rolladeck dans le jeu.
-- **Parle votre langue.** Traduction en un geste sur les publications, les profils et les messages privés, et les fils comme les discussions peuvent tout traduire à l'arrivée.
-- **De quoi souffler.** Gamba est un casino en argent fictif : blackjack, machines à sous, tickets à gratter, bingo et une roue commune, et rien n'y a de valeur marchande. Jeux est une salle d'arcade de plus de trente titres, dont Doom, avec Uno, les Échecs et le Billard en ligne entre amis.
-- **À votre image.** Vos propres fonds d'écran, vos sonneries et vos sons de notification, la couleur d'accentuation de votre choix, les portraits de personnage du Lodestone, des sons d'interface discrets et un zoom sur la taille du texte.
-- **Privé par conception.** Les messages, les pièces jointes et les messages vocaux sont chiffrés de bout en bout, les appels sont chiffrés en transit, et une équipe humaine de modération examine les publications et images publiques.
+- **Et le quotidien aussi.** Notes, Calendrier avec vos propres groupes d'événements et rappels, Minuteurs pour les resets et les servants, Calculatrice, Portefeuille, Appareil photo et Photos avec vos propres albums et un éditeur de photos intégré, Horloge, Skywatcher pour la météo, et Raccourcis déclenchables depuis une macro de barre d'action.
+- **Regarder et écouter ensemble.** MogCast lit de la vidéo sur votre téléphone ou sur un écran que vous placez dans le monde, et synchronise la lecture pour les utilisateurs d'Aetherphone à proximité qui rejoignent votre soirée vidéo. Musique diffuse des stations de radio communautaires et internet ainsi que les titres que vous recherchez, et liste les DJ Rolladeck en direct.
+- **Parle votre langue.** Traduction en un geste sur les publications, les profils et les messages privés, et les fils comme les discussions peuvent traduire les nouvelles publications et les nouveaux messages à leur arrivée. Aethernet se charge de la traduction, et les traductions des messages privés ne sont jamais conservées.
+- **De quoi souffler.** Gamba est un casino en argent fictif : blackjack, machines à sous, tickets à gratter, bingo et une roue commune, et rien n'y a de valeur marchande. Jeux est une salle d'arcade de trente titres, dont Doom, avec Uno, les Échecs et le Billard 8-ball à jouer en ligne entre amis.
+- **À votre image.** Vos propres fonds d'écran, vos sonneries et vos sons de notification, la couleur d'accentuation de votre choix, les portraits de personnage du Lodestone, des sons d'interface discrets et un zoom sur la taille du texte. Enregistrez toute la configuration comme un style et chaque personnage garde le sien : l'écran d'accueil change avec le personnage avec lequel vous vous connectez.
+- **Chiffrement et modération.** Les messages, les photos et les messages vocaux sont chiffrés de bout en bout, avec des clés que le téléphone crée automatiquement. Signaler ou traduire un message envoie son texte à Aethernet en clair. Les appels sont chiffrés en transit et relayés par le serveur Aethernet, sans chiffrement de bout en bout. Une équipe humaine de modération examine les publications, images et messages signalés.
 
 42 applications au total. La présentation complète des fonctionnalités, les captures d'écran et les détails se trouvent sur le site :
 
@@ -87,7 +87,7 @@ Vous jouez à la version chinoise du jeu ? Le téléphone la détecte, vous conn
 
 ## Communauté
 
-Des questions, des idées, ou juste envie de discuter avec d'autres joueurs ? Passez nous dire bonjour sur Discord.
+L'assistance, les rapports de bugs et les suggestions sont traités sur le serveur Discord d'Aetherphone.
 
 → [Rejoignez notre Discord](https://discord.gg/3HbJCscMyS)
 
@@ -97,15 +97,9 @@ Aetherphone est open source et les contributions sont les bienvenues. Commencez 
 
 → [Documentation développeur](../README.md) · [Guide de contribution](../../CONTRIBUTING.md) · [Guide du traducteur](../translating.md)
 
-## Plus de ma part
-
-Si ce plugin vous a plu, jetez un œil à mes autres travaux Dalamud. Vous y trouverez peut-être autre chose pour vous.
-
-→ [XeldarAlz Dalamud Plugins](https://github.com/XeldarAlz/DalamudPlugins)
-
 ## Mentions légales
 
-Utiliser les fonctionnalités en ligne vaut acceptation des conditions d'utilisation. La politique de confidentialité couvre ce que le service Aethernet fait de vos données ; les fonctionnalités hors ligne restent sur votre machine, même si certaines applications récupèrent des données de jeu publiques directement auprès de services tiers, ce que la politique couvre également.
+Utiliser les fonctionnalités en ligne vaut acceptation des conditions d'utilisation. La politique de confidentialité couvre ce que le service Aethernet fait de vos données. Les fonctionnalités hors ligne restent sur votre machine, et certaines applications contactent des services tiers directement depuis votre machine, ce que la politique couvre également.
 
 → [Conditions d'utilisation](../../TERMS.md) · [Politique de confidentialité](../../PRIVACY.md) · [Politique de marque et de nom](../../TRADEMARK.md)
 

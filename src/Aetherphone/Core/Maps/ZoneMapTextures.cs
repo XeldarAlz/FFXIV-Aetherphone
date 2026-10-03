@@ -41,6 +41,8 @@ internal sealed class ZoneMapTextures
         }
     }
 
+    public string? TexturePath(uint mapRowId) => ResolveTexturePath(mapRowId);
+
     public uint MapIdForTerritory(uint territoryId)
     {
         if (territoryId == 0)

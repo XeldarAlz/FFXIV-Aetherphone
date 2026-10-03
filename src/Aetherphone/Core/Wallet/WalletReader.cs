@@ -1,5 +1,4 @@
 using Aetherphone.Core.Game;
-using Aetherphone.Core.Localization;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 
@@ -7,43 +6,50 @@ namespace Aetherphone.Core.Wallet;
 
 internal static unsafe class WalletReader
 {
-    private const long SealCap = 4000;
     private const long ScripCap = 4000;
+    private const long SkybuildersCap = 10000;
+    private const long HuntCap = 4000;
     private const long TomestoneCap = 2000;
     private const long PvpCap = 20000;
-    private const long SkybuildersCap = 10000;
     private const long BicolorCap = 1500;
+    private const long VentureCap = 65000;
+    private const long GoldSaucerCap = 9_999_999;
     private const uint GilItemId = 1;
-    private const uint MgpItemId = 29;
-    private const uint VentureItemId = 21072;
     private const uint StormSealItemId = 20;
     private const uint SerpentSealItemId = 21;
     private const uint FlameSealItemId = 22;
+    private const int GroupCount = 6;
 
-    private readonly struct Def
+    private readonly struct Definition
     {
         public readonly uint ItemId;
         public readonly long Cap;
+        public readonly WalletGroup Group;
 
-        public Def(uint itemId, long cap)
+        public Definition(uint itemId, long cap, WalletGroup group)
         {
             ItemId = itemId;
             Cap = cap;
+            Group = group;
         }
     }
 
-    private static readonly Def[] HuntDefs = { new(27, SealCap), new(10307, SealCap), new(26533, SealCap), };
-    private static readonly Def[] PvpDefs = { new(25, PvpCap), new(36656, PvpCap), };
-
-    private static readonly Def[] ScripDefs =
+    private static readonly Definition[] Definitions =
     {
-        new(33913, ScripCap), new(33914, ScripCap), new(41784, ScripCap), new(41785, ScripCap),
-        new(28063, SkybuildersCap),
+        new(33913, ScripCap, WalletGroup.Scrips),
+        new(33914, ScripCap, WalletGroup.Scrips),
+        new(41784, ScripCap, WalletGroup.Scrips),
+        new(41785, ScripCap, WalletGroup.Scrips),
+        new(28063, SkybuildersCap, WalletGroup.Scrips),
+        new(27, HuntCap, WalletGroup.Hunt),
+        new(10307, HuntCap, WalletGroup.Hunt),
+        new(26533, HuntCap, WalletGroup.Hunt),
+        new(25, PvpCap, WalletGroup.Pvp),
+        new(36656, PvpCap, WalletGroup.Pvp),
+        new(29, GoldSaucerCap, WalletGroup.Other),
+        new(21072, VentureCap, WalletGroup.Other),
+        new(26807, BicolorCap, WalletGroup.Other),
     };
-
-    private static readonly Def[] OtherDefs = { new(26807, BicolorCap), };
-
-    private static readonly List<uint> TomestoneScratch = new(4);
 
     public static WalletEntry BuildGil(GameData gameData)
     {
@@ -53,147 +59,123 @@ internal static unsafe class WalletReader
             name = "Gil";
         }
 
-        return new WalletEntry(GilItemId, iconId, name, 0, CurrencyKind.Gil);
+        return new WalletEntry(GilItemId, iconId, name, 0, CurrencyKind.Gil, WalletGroup.Other);
     }
 
     public static long CurrentGil()
     {
         var manager = InventoryManager.Instance();
-        return manager is null ? 0 : (long)manager->GetGil();
+        return manager is null ? 0 : manager->GetGil();
     }
 
-    public static WalletSection[] BuildSections(GameData gameData)
+    public static WalletSection[] BuildSections(GameData gameData, uint sealItemId)
     {
-        var sections = new List<WalletSection>(6) { new(L.Wallet.SectionCurrency, BuildCurrency(gameData)), };
-        AddDefSection(sections, gameData, L.Wallet.SectionHunt, HuntDefs);
-        AddTomestones(sections, gameData);
-        AddDefSection(sections, gameData, L.Wallet.SectionPvp, PvpDefs);
-        AddDefSection(sections, gameData, L.Wallet.SectionCrafting, ScripDefs);
-        AddDefSection(sections, gameData, L.Wallet.SectionOther, OtherDefs);
+        var buckets = new List<WalletEntry>[GroupCount];
+        for (var index = 0; index < GroupCount; index++)
+        {
+            buckets[index] = new List<WalletEntry>(5);
+        }
+
+        AddTomestones(buckets[(int)WalletGroup.Tomestones], gameData);
+        if (sealItemId != 0)
+        {
+            AddEntry(buckets[(int)WalletGroup.GrandCompany], gameData, sealItemId, 0, CurrencyKind.GrandCompanySeal,
+                WalletGroup.GrandCompany);
+        }
+
+        for (var index = 0; index < Definitions.Length; index++)
+        {
+            var definition = Definitions[index];
+            AddEntry(buckets[(int)definition.Group], gameData, definition.ItemId, definition.Cap, CurrencyKind.Generic,
+                definition.Group);
+        }
+
+        var sections = new List<WalletSection>(GroupCount);
+        for (var index = 0; index < GroupCount; index++)
+        {
+            if (buckets[index].Count > 0)
+            {
+                sections.Add(new WalletSection((WalletGroup)index, buckets[index].ToArray()));
+            }
+        }
+
         return sections.ToArray();
     }
 
-    public static void RefreshAmounts(WalletEntry gil, WalletSection[] sections)
+    public static bool IsCurrencyLoaded()
+    {
+        var manager = InventoryManager.Instance();
+        if (manager is null)
+        {
+            return false;
+        }
+
+        var container = manager->GetInventoryContainer(InventoryType.Currency);
+        return container is not null && container->IsLoaded;
+    }
+
+    public static void RefreshAmounts(WalletEntry gil, WalletEntry[] entries)
     {
         var manager = InventoryManager.Instance();
         if (manager is null)
         {
             gil.Amount = 0;
-            ClearAmounts(sections);
+            for (var index = 0; index < entries.Length; index++)
+            {
+                entries[index].Amount = 0;
+                entries[index].WeeklyAmount = 0;
+            }
+
             return;
         }
 
-        gil.Amount = (long)manager->GetGil();
-        for (var sectionIndex = 0; sectionIndex < sections.Length; sectionIndex++)
+        gil.Amount = manager->GetGil();
+        for (var index = 0; index < entries.Length; index++)
         {
-            var entries = sections[sectionIndex].Entries;
-            for (var entryIndex = 0; entryIndex < entries.Length; entryIndex++)
+            var entry = entries[index];
+            entry.Amount = ReadAmount(manager, entry);
+            if (entry.Kind == CurrencyKind.GrandCompanySeal)
             {
-                var entry = entries[entryIndex];
-                entry.Amount = ReadAmount(manager, entry);
-                if (entry.Kind == CurrencyKind.LimitedTomestone)
-                {
-                    entry.WeeklyAmount = manager->GetWeeklyAcquiredTomestoneCount();
-                    entry.WeeklyCap = InventoryManager.GetLimitedTomestoneWeeklyLimit();
-                }
+                entry.Cap = manager->GetMaxCompanySeals(CompanyFor(entry.ItemId));
+            }
+            else if (entry.Kind == CurrencyKind.LimitedTomestone)
+            {
+                entry.WeeklyAmount = manager->GetWeeklyAcquiredTomestoneCount();
+                entry.WeeklyCap = InventoryManager.GetLimitedTomestoneWeeklyLimit();
             }
         }
     }
 
-    public static int CountCapped(GameData gameData)
+    public static uint GrandCompanySealItemId()
     {
-        var manager = InventoryManager.Instance();
-        if (manager is null)
+        var playerState = PlayerState.Instance();
+        if (playerState is null)
         {
             return 0;
         }
 
-        var count = CountCappedDefs(manager, HuntDefs) + CountCappedDefs(manager, PvpDefs) +
-                    CountCappedDefs(manager, ScripDefs) + CountCappedDefs(manager, OtherDefs);
-        TomestoneScratch.Clear();
-        gameData.CollectTomestoneItemIds(TomestoneScratch, out _);
-        for (var index = 0; index < TomestoneScratch.Count; index++)
+        return playerState->GrandCompany switch
         {
-            if ((long)manager->GetTomestoneCount(TomestoneScratch[index]) >= TomestoneCap)
-            {
-                count++;
-            }
-        }
-
-        return count;
+            1 => StormSealItemId,
+            2 => SerpentSealItemId,
+            3 => FlameSealItemId,
+            _ => 0,
+        };
     }
 
-    private static int CountCappedDefs(InventoryManager* manager, Def[] defs)
-    {
-        var count = 0;
-        for (var index = 0; index < defs.Length; index++)
-        {
-            if (defs[index].Cap <= 0)
-            {
-                continue;
-            }
-
-            if ((long)manager->GetInventoryItemCount(defs[index].ItemId, false, true, true, 0) >= defs[index].Cap)
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static WalletEntry[] BuildCurrency(GameData gameData)
-    {
-        var entries = new List<WalletEntry>(4);
-        AddEntry(entries, gameData, MgpItemId, 0);
-        AddEntry(entries, gameData, VentureItemId, 0);
-        var sealItemId = GrandCompanySealItemId();
-        if (sealItemId != 0)
-        {
-            AddEntry(entries, gameData, sealItemId, 0);
-        }
-
-        return entries.ToArray();
-    }
-
-    private static void AddDefSection(List<WalletSection> sections, GameData gameData, LocString title, Def[] defs)
-    {
-        var entries = new List<WalletEntry>(defs.Length);
-        for (var index = 0; index < defs.Length; index++)
-        {
-            AddEntry(entries, gameData, defs[index].ItemId, defs[index].Cap);
-        }
-
-        if (entries.Count > 0)
-        {
-            sections.Add(new WalletSection(title, entries.ToArray()));
-        }
-    }
-
-    private static void AddTomestones(List<WalletSection> sections, GameData gameData)
+    private static void AddTomestones(List<WalletEntry> into, GameData gameData)
     {
         var ids = new List<uint>(4);
         gameData.CollectTomestoneItemIds(ids, out var limitedItemId);
-        var entries = new List<WalletEntry>(ids.Count);
         for (var index = 0; index < ids.Count; index++)
         {
-            ResolveItem(gameData, ids[index], out var iconId, out var name);
-            if (name.Length == 0)
-            {
-                continue;
-            }
-
             var kind = ids[index] == limitedItemId ? CurrencyKind.LimitedTomestone : CurrencyKind.Tomestone;
-            entries.Add(new WalletEntry(ids[index], iconId, name, TomestoneCap, kind));
-        }
-
-        if (entries.Count > 0)
-        {
-            sections.Add(new WalletSection(L.Wallet.SectionTomestones, entries.ToArray()));
+            AddEntry(into, gameData, ids[index], TomestoneCap, kind, WalletGroup.Tomestones);
         }
     }
 
-    private static void AddEntry(List<WalletEntry> entries, GameData gameData, uint itemId, long cap)
+    private static void AddEntry(List<WalletEntry> into, GameData gameData, uint itemId, long cap, CurrencyKind kind,
+        WalletGroup group)
     {
         ResolveItem(gameData, itemId, out var iconId, out var name);
         if (name.Length == 0)
@@ -201,7 +183,7 @@ internal static unsafe class WalletReader
             return;
         }
 
-        entries.Add(new WalletEntry(itemId, iconId, name, cap, CurrencyKind.Generic));
+        into.Add(new WalletEntry(itemId, iconId, name, cap, kind, group));
     }
 
     private static void ResolveItem(GameData gameData, uint itemId, out uint iconId, out string name)
@@ -221,39 +203,18 @@ internal static unsafe class WalletReader
     {
         return entry.Kind switch
         {
-            CurrencyKind.Gil => (long)manager->GetGil(),
-            CurrencyKind.Tomestone or CurrencyKind.LimitedTomestone => (long)manager->GetTomestoneCount(entry.ItemId),
-            _ => (long)manager->GetInventoryItemCount(entry.ItemId, false, true, true, 0),
+            CurrencyKind.Gil => manager->GetGil(),
+            CurrencyKind.Tomestone or CurrencyKind.LimitedTomestone => manager->GetTomestoneCount(entry.ItemId),
+            CurrencyKind.GrandCompanySeal => manager->GetCompanySeals(CompanyFor(entry.ItemId)),
+            _ => manager->GetInventoryItemCount(entry.ItemId, false, true, true, 0),
         };
     }
 
-    private static void ClearAmounts(WalletSection[] sections)
+    private static byte CompanyFor(uint sealItemId) => sealItemId switch
     {
-        for (var sectionIndex = 0; sectionIndex < sections.Length; sectionIndex++)
-        {
-            var entries = sections[sectionIndex].Entries;
-            for (var entryIndex = 0; entryIndex < entries.Length; entryIndex++)
-            {
-                entries[entryIndex].Amount = 0;
-                entries[entryIndex].WeeklyAmount = 0;
-            }
-        }
-    }
-
-    private static uint GrandCompanySealItemId()
-    {
-        var playerState = PlayerState.Instance();
-        if (playerState is null)
-        {
-            return 0;
-        }
-
-        return playerState->GrandCompany switch
-        {
-            1 => StormSealItemId,
-            2 => SerpentSealItemId,
-            3 => FlameSealItemId,
-            _ => 0,
-        };
-    }
+        StormSealItemId => 1,
+        SerpentSealItemId => 2,
+        FlameSealItemId => 3,
+        _ => 0,
+    };
 }

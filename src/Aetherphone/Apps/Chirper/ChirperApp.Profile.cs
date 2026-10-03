@@ -27,7 +27,6 @@ internal sealed partial class ChirperApp
     private const float ProfileTabHeight = 44f;
     private const float ProfileTabUnderline = 3f;
     private const float ProfileActionHeight = 36f;
-    private const float ProfileTabSmoothTime = 0.08f;
     private const int MediaGridColumns = 3;
     private const float MediaGridCellGap = 2f;
 
@@ -222,7 +221,7 @@ internal sealed partial class ChirperApp
         var cursorY = MathF.Max(avatarCenter.Y + avatarRadius, actionTop + ProfileActionHeight * scale) + 10f * scale;
         var nameHeight = Typography.LineHeight(ProfileNameStyle);
         UserName.DrawAuto(drawList, "chirper.profile.name." + user.Id, displayName, user.Badges, user.ProfileBadges,
-            innerLeft, cursorY, innerWidth, ProfileNameStyle, ChirperInk.TitleInk, theme, 2);
+            innerLeft, cursorY, innerWidth, ProfileNameStyle, ChirperInk.TitleInk, theme);
         cursorY += nameHeight + 2f * scale;
         if (user.Handle.Length > 0)
         {
@@ -408,7 +407,7 @@ internal sealed partial class ChirperApp
         }
 
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        profileTabSlide.Step((int)profileTab, ProfileTabSmoothTime, delta);
+        profileTabSlide.Step((int)profileTab, Motion.Release, delta);
         var centerY = origin.Y + height * 0.5f;
         var activeLabel = profileTab switch
         {
@@ -860,11 +859,4 @@ internal sealed partial class ChirperApp
         SocialChrome.DrawHeaderIcon(drawList, center, radius,
             filter ? PhoneIcons.AdjustmentsHorizontal : PhoneIcons.Refresh, 18f, tooltip, ChirperInk.Shared,
             GlassPillInk, highlighted);
-
-    private static void DrawBellBadge(Vector2 bellCenter, int count)
-    {
-        var scale = UiScale.Current;
-        SocialChrome.DrawCountBadge(ImGui.GetWindowDrawList(), bellCenter + new Vector2(10f * scale, -10f * scale),
-            count, ChirperInk.Shared);
-    }
 }

@@ -15,7 +15,6 @@ internal sealed class ReportOverlay
                                                   ImGuiWindowFlags.NoBackground;
 
     private const string CategoryMenuId = "reportCategory";
-    private const float RevealSmoothTime = 0.16f;
     private const float MaxDim = 0.55f;
     private const float MinCardScale = 0.92f;
     private const float CardRounding = 24f;
@@ -72,7 +71,7 @@ internal sealed class ReportOverlay
         }
 
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        reveal.Step(active is not null ? 1f : 0f, RevealSmoothTime, delta);
+        reveal.Step(active is not null ? 1f : 0f, Motion.Sheet, delta);
         if (shown is null)
         {
             return;
@@ -86,7 +85,7 @@ internal sealed class ReportOverlay
         }
 
         var opacity = Math.Clamp(reveal.Value, 0f, 1f);
-        var cardScale = MinCardScale + (1f - MinCardScale) * Easing.EaseOutQuint(opacity);
+        var cardScale = MinCardScale + (1f - MinCardScale) * opacity;
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##reportOverlay", screen.Size, false, OverlayFlags))
         {

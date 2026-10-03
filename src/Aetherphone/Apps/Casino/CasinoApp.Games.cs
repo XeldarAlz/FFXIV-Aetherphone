@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -23,7 +24,7 @@ internal sealed partial class CasinoApp
 
         for (var index = 0; index < FloorTiles.Length; index++)
         {
-            DrawGameRow(FloorTiles[index], scale);
+            DrawGameRow(FloorTiles[index], index == 0, scale);
             if (index + 1 < FloorTiles.Length)
             {
                 ImGui.Dummy(new Vector2(0f, GameRowGap * scale));
@@ -39,7 +40,7 @@ internal sealed partial class CasinoApp
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
     }
 
-    private void DrawGameRow(in FloorTileDefinition definition, float scale)
+    private void DrawGameRow(in FloorTileDefinition definition, bool reportsRules, float scale)
     {
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
@@ -51,6 +52,11 @@ internal sealed partial class CasinoApp
         var infoMax = new Vector2(row.Max.X - 12f * scale, row.Min.Y + 12f * scale + InfoButtonSize * scale);
         var infoMin = new Vector2(infoMax.X - InfoButtonSize * scale, row.Min.Y + 12f * scale);
         var infoRect = new Rect(infoMin, infoMax);
+        if (reportsRules)
+        {
+            UiAnchors.Report("casino.rules", infoRect);
+        }
+
         var infoHovered = UiInteract.Hover(infoRect.Min, infoRect.Max);
         var hovered = definition.Playable && !infoHovered && UiInteract.Hover(row.Min, row.Max);
 

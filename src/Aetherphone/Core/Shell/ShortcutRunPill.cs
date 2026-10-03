@@ -9,7 +9,6 @@ namespace Aetherphone.Core.Shell;
 
 internal sealed class ShortcutRunPill : IDisposable
 {
-    private const float PresenceSmoothTime = 0.16f;
     private const float TopGap = 12f;
     private const float SideMargin = 14f;
     private const float PadX = 13f;
@@ -55,7 +54,7 @@ internal sealed class ShortcutRunPill : IDisposable
         }
         else
         {
-            presence.Step(wanted ? 1f : 0f, PresenceSmoothTime, delta);
+            presence.Step(wanted ? 1f : 0f, Motion.Appear, delta);
         }
 
         var alpha = Math.Clamp(presence.Value, 0f, 1f);

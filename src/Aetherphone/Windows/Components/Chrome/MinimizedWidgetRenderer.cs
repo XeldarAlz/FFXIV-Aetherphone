@@ -11,8 +11,8 @@ namespace Aetherphone.Windows.Components;
 
 internal static class MinimizedWidgetRenderer
 {
-    private const float CaptionScale = 0.58f;
-    private const float ValueScale = 0.82f;
+    private const float CaptionScale = 0.56f;
+    private const float ValueScale = 0.95f;
     private const float CaptionGap = 1f;
     private const float WeatherGlyphRadius = 11f;
     private const float WeatherGap = 3f;
@@ -45,43 +45,44 @@ internal static class MinimizedWidgetRenderer
     }
 
     public static void Draw(ImDrawListPtr drawList, Rect rect, MinimizedPart part, MinimizedFeed feed,
-        Configuration configuration, PhoneTheme theme, float alpha, float scale)
+        Configuration configuration, PhoneTheme theme, in FaceInk ink, float alpha, float scale)
     {
         switch (part)
         {
             case MinimizedPart.EorzeaClock:
-                DrawEorzeaClock(drawList, rect, theme, alpha, scale);
+                DrawEorzeaClock(drawList, rect, theme, ink, alpha, scale);
                 break;
             case MinimizedPart.Weather:
-                DrawWeather(drawList, rect, feed, theme, alpha, scale);
+                DrawWeather(drawList, rect, feed, theme, ink, alpha, scale);
                 break;
             case MinimizedPart.Resets:
-                DrawResets(drawList, rect, theme, alpha, scale);
+                DrawResets(drawList, rect, ink, alpha, scale);
                 break;
             case MinimizedPart.Gil:
-                DrawGil(drawList, rect, feed, theme, alpha, scale);
+                DrawGil(drawList, rect, feed, ink, alpha, scale);
                 break;
             case MinimizedPart.Coin:
-                DrawCoin(drawList, rect, feed, theme, alpha);
+                DrawCoin(drawList, rect, feed, ink, alpha);
                 break;
             case MinimizedPart.Ventures:
-                DrawVentures(drawList, rect, feed, theme, alpha, scale);
+                DrawVentures(drawList, rect, feed, theme, ink, alpha, scale);
                 break;
             case MinimizedPart.Rings:
-                DrawRings(drawList, rect, feed, configuration, theme, alpha, scale);
+                DrawRings(drawList, rect, feed, configuration, ink, alpha, scale);
                 break;
         }
     }
 
-    private static void DrawEorzeaClock(ImDrawListPtr drawList, Rect rect, PhoneTheme theme, float alpha, float scale)
+    private static void DrawEorzeaClock(ImDrawListPtr drawList, Rect rect, PhoneTheme theme, in FaceInk ink,
+        float alpha, float scale)
     {
         var bell = EorzeaTime.Now();
         DrawCaptionAndValue(drawList, rect, "minimized.eorzea", Loc.T(L.Home.Eorzea), bell.Formatted, theme.Accent,
-            theme, alpha, scale);
+            ink, alpha, scale);
     }
 
     private static void DrawWeather(ImDrawListPtr drawList, Rect rect, MinimizedFeed feed, PhoneTheme theme,
-        float alpha, float scale)
+        in FaceInk ink, float alpha, float scale)
     {
         feed.EnsureWeather();
         var bell = EorzeaTime.Now();
@@ -95,10 +96,10 @@ internal static class MinimizedWidgetRenderer
         var name = feed.HasWeather ? feed.WeatherName : Loc.T(L.Skywatcher.NoData);
         Marquee.DrawCenteredAuto(drawList, "minimized.weather.name", name, rect.Center.X,
             glyphCenter.Y + radius + WeatherGap * scale, rect.Width, CaptionStyle(),
-            Palette.WithAlpha(theme.TextMuted, alpha));
+            Palette.WithAlpha(ink.Muted, ink.Muted.W * alpha));
     }
 
-    private static void DrawResets(ImDrawListPtr drawList, Rect rect, PhoneTheme theme, float alpha, float scale)
+    private static void DrawResets(ImDrawListPtr drawList, Rect rect, in FaceInk ink, float alpha, float scale)
     {
         var utcNow = DateTime.UtcNow;
         var next = GameSchedule.NextDailyReset(utcNow);
@@ -118,10 +119,10 @@ internal static class MinimizedWidgetRenderer
         }
 
         DrawCaptionAndValue(drawList, rect, "minimized.resets", Loc.T(label), Countdown(next - utcNow),
-            theme.TextStrong, theme, alpha, scale);
+            ink.Strong, ink, alpha, scale);
     }
 
-    private static void DrawGil(ImDrawListPtr drawList, Rect rect, MinimizedFeed feed, PhoneTheme theme, float alpha,
+    private static void DrawGil(ImDrawListPtr drawList, Rect rect, MinimizedFeed feed, in FaceInk ink, float alpha,
         float scale)
     {
         var style = ValueStyle();
@@ -140,24 +141,24 @@ internal static class MinimizedWidgetRenderer
         }
 
         Typography.Draw(drawList, new Vector2(left + iconSize + gap, rect.Center.Y - textSize.Y * 0.5f), text,
-            Palette.WithAlpha(theme.TextStrong, alpha), style);
+            Palette.WithAlpha(ink.Strong, alpha), style);
     }
 
-    private static void DrawCoin(ImDrawListPtr drawList, Rect rect, MinimizedFeed feed, PhoneTheme theme, float alpha)
+    private static void DrawCoin(ImDrawListPtr drawList, Rect rect, MinimizedFeed feed, in FaceInk ink, float alpha)
     {
         var style = ValueStyle();
         var text = feed.CoinText();
         var size = CurrencyGlyph.MeasureAmount(text, style);
         CurrencyGlyph.DrawAmount(drawList, new Vector2(rect.Center.X - size.X * 0.5f, rect.Center.Y - size.Y * 0.5f),
-            text, CurrencyKind.Coins, Palette.WithAlpha(theme.TextStrong, alpha), style, alpha);
+            text, CurrencyKind.Coins, Palette.WithAlpha(ink.Strong, alpha), style, alpha);
     }
 
     private static void DrawVentures(ImDrawListPtr drawList, Rect rect, MinimizedFeed feed, PhoneTheme theme,
-        float alpha, float scale)
+        in FaceInk ink, float alpha, float scale)
     {
         feed.EnsureVentures();
         var value = Placeholder;
-        var tint = theme.TextStrong;
+        var tint = ink.Strong;
         if (feed.VenturesReady > 0)
         {
             value = Loc.T(L.Timers.Ready);
@@ -172,12 +173,12 @@ internal static class MinimizedWidgetRenderer
             value = Loc.T(L.Timers.NoVenture);
         }
 
-        DrawCaptionAndValue(drawList, rect, "minimized.ventures", Loc.T(L.Timers.Retainers), value, tint, theme,
+        DrawCaptionAndValue(drawList, rect, "minimized.ventures", Loc.T(L.Timers.Retainers), value, tint, ink,
             alpha, scale);
     }
 
     private static void DrawRings(ImDrawListPtr drawList, Rect rect, MinimizedFeed feed, Configuration configuration,
-        PhoneTheme theme, float alpha, float scale)
+        in FaceInk ink, float alpha, float scale)
     {
         var day = feed.Today;
         var radius = RingRadius * scale;
@@ -186,7 +187,7 @@ internal static class MinimizedWidgetRenderer
         var gap = radius * RingGapFactor;
         var middle = radius - thickness - gap;
         var inner = middle - thickness - gap;
-        var track = Palette.WithAlpha(theme.TextStrong, 0.12f * alpha);
+        var track = Palette.WithAlpha(ink.Strong, 0.14f * alpha);
         DrawRing(drawList, center, radius, thickness,
             day is null ? 0f : ActivityGoals.ProgressFraction(configuration, day), ActivityRings.RingOneTint, track,
             alpha);
@@ -206,10 +207,10 @@ internal static class MinimizedWidgetRenderer
     }
 
     private static void DrawCaptionAndValue(ImDrawListPtr drawList, Rect rect, string id, string caption, string value,
-        Vector4 valueTint, PhoneTheme theme, float alpha, float scale)
+        Vector4 valueTint, in FaceInk ink, float alpha, float scale)
     {
         Marquee.DrawCenteredAuto(drawList, id, caption, rect.Center.X, rect.Min.Y, rect.Width, CaptionStyle(),
-            Palette.WithAlpha(theme.TextMuted, alpha));
+            Palette.WithAlpha(ink.Muted, ink.Muted.W * alpha));
         Marquee.DrawCenteredAuto(drawList, new MarqueeId(id, ".value"), value, rect.Center.X,
             rect.Min.Y + CaptionHeight() + CaptionGap * scale, rect.Width, ValueStyle(),
             Palette.WithAlpha(valueTint, alpha));

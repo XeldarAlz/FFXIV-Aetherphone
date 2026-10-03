@@ -27,6 +27,7 @@ internal static class FailureCodes
     public const string ValidationFailed = "validation_failed";
     public const string Conflict = "conflict";
     public const string PostNotChirp = "post_not_chirp";
+    public const string PostPinLimit = "post_pin_limit";
     public const string GramCaptionTooLong = "gram_caption_too_long";
     public const string GramImageCount = "gram_image_count";
     public const string GramTooManyTags = "gram_too_many_tags";
@@ -58,6 +59,7 @@ internal static class FailureCodes
     public const string MessageEmpty = "message_empty";
     public const string MessageUnavailable = "message_unavailable";
     public const string KeyVersionConflict = "key_version_conflict";
+    public const string ThreadEncrypted = "thread_encrypted";
     public const string MusterDescriptionRequired = "muster_description_required";
     public const string MusterDescriptionTooLong = "muster_description_too_long";
     public const string MusterSpotRequired = "muster_spot_required";
@@ -86,7 +88,6 @@ internal static class FailureCodes
     public const string PhotoTagRejected = "photo_tag_rejected";
     public const string VelvetRequestsClosed = "velvet_requests_closed";
     public const string VelvetRequestsMutualsOnly = "velvet_requests_mutuals_only";
-    public const string VelvetRegionBlocked = "velvet_region_blocked";
     public const string PatreonLinkExpired = "patreon_link_expired";
     public const string PatreonUnavailable = "patreon_unavailable";
     public const string PatreonAlreadyLinked = "patreon_already_linked";
@@ -269,6 +270,8 @@ internal static class FailureText
                 return Loc.T(L.Failure.MessageUnavailable);
             case FailureCodes.KeyVersionConflict:
                 return Loc.T(L.Failure.KeyVersionConflict);
+            case FailureCodes.ThreadEncrypted:
+                return Loc.T(L.Failure.ThreadEncrypted);
             case FailureCodes.MusterDescriptionRequired:
                 return Loc.T(L.Failure.MusterDescriptionRequired);
             case FailureCodes.MusterDescriptionTooLong:

@@ -1,4 +1,4 @@
-using Aetherphone.Apps.Music.Rolladeck;
+using Aetherphone.Core.Rolladeck;
 using Xunit;
 
 namespace Aetherphone.Tests;

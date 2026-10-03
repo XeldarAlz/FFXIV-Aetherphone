@@ -30,11 +30,13 @@ internal sealed class OnlineRoomView
     private readonly OnlineUnoTable unoTable;
     private readonly OnlineChessTable chessTable;
     private readonly OnlinePoolTable poolTable;
+    private readonly OnlineFinishHold finishHold = new();
 
     private string inlineReason = string.Empty;
     private int selectedRuleSet;
     private long noticeAtTick;
     private long copiedAtTick;
+    private int lastSeenPhase = -1;
 
     public OnlineRoomView(GameRoomsStore store)
     {
@@ -53,13 +55,16 @@ internal sealed class OnlineRoomView
         unoTable.Reset();
         chessTable.Reset();
         poolTable.Reset();
+        finishHold.Clear();
+        lastSeenPhase = -1;
     }
 
-    public bool WantsLandscape => LivePool(store.Room.State) && store.Room.RoomId.Length > 0;
+    public bool WantsLandscape => ShowsPool(store.Room.State) && store.Room.RoomId.Length > 0;
 
     public void Draw(in PhoneContext context, Action back, AppSkin ui, bool landscape)
     {
         var held = store.Room.State;
+        TrackPhase(held);
         var scale = UiScale.Current;
         var content = context.Content;
         var theme = context.Theme;
@@ -90,24 +95,24 @@ internal sealed class OnlineRoomView
             return;
         }
 
-        if (held.Snapshot.Phase == GameRoomWire.PhasePlaying)
+        if (ShowsTable(held))
         {
             if (held.Uno is not null)
             {
-                unoTable.Draw(body, theme, scale, held.Snapshot, held.Uno, FreshNotice());
+                unoTable.Draw(body, theme, scale, held.Snapshot, held.Uno, FreshNotice(), finishHold);
                 return;
             }
 
             if (held.Chess is not null)
             {
-                chessTable.Draw(body, theme, scale, held.Snapshot, held.Chess, FreshNotice());
+                chessTable.Draw(body, theme, scale, held.Snapshot, held.Chess, FreshNotice(), finishHold);
                 return;
             }
 
             if (held.Pool is not null)
             {
                 poolTable.Draw(body, theme, scale, held.Snapshot, held.Pool, FreshNotice(),
-                    fullScreenTable ? back : null);
+                    fullScreenTable ? back : null, finishHold);
                 return;
             }
         }
@@ -118,7 +123,7 @@ internal sealed class OnlineRoomView
     private void DrawHeader(in PhoneContext context, Action back, AppSkin ui, GameRoomState? held, float scale)
     {
         var title = Loc.T(GamesOnlineText.GameName(held?.Snapshot.GameKind));
-        if (!LiveTable(held) || store.Room.RoomId.Length == 0)
+        if (!ShowsTable(held) || store.Room.RoomId.Length == 0)
         {
             AppHeader.Draw(context, title, back);
             return;
@@ -134,12 +139,45 @@ internal sealed class OnlineRoomView
         }
     }
 
-    private static bool LivePool(GameRoomState? held) =>
-        held is { Pool: not null, Roster: not null } && held.Snapshot.Phase == GameRoomWire.PhasePlaying;
+    private bool ShowsPool(GameRoomState? held) => held is { Pool: not null } && ShowsTable(held);
 
-    private static bool LiveTable(GameRoomState? held) =>
-        held is { Roster: not null } && held.Snapshot.Phase == GameRoomWire.PhasePlaying
-        && (held.Uno is not null || held.Chess is not null || held.Pool is not null);
+    private bool ShowsTable(GameRoomState? held)
+    {
+        if (held is null || held.Roster is null || (held.Uno is null && held.Chess is null && held.Pool is null))
+        {
+            return false;
+        }
+
+        var phase = held.Snapshot.Phase;
+        return phase == GameRoomWire.PhasePlaying || (phase == GameRoomWire.PhaseFinished && finishHold.Holding);
+    }
+
+    private void TrackPhase(GameRoomState? held)
+    {
+        if (held is null || held.Roster is null)
+        {
+            finishHold.Clear();
+            lastSeenPhase = -1;
+            return;
+        }
+
+        var phase = held.Snapshot.Phase;
+        if (phase == lastSeenPhase)
+        {
+            return;
+        }
+
+        if (phase == GameRoomWire.PhaseFinished && lastSeenPhase == GameRoomWire.PhasePlaying)
+        {
+            finishHold.Begin(FinishedText(held));
+        }
+        else
+        {
+            finishHold.Clear();
+        }
+
+        lastSeenPhase = phase;
+    }
 
     private bool IsHost(GameRoomRoster roster) =>
         string.Equals(roster.HostUserId, store.AccountId, StringComparison.Ordinal);

@@ -781,7 +781,7 @@ internal sealed partial class ChirperApp
         replyFocusPending = false;
         var canSend = !string.IsNullOrWhiteSpace(commentDraft) || commentAttachment.Path is not null;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        replySendReveal.Step(canSend ? 1f : 0f, SendRevealSmoothTime, delta);
+        replySendReveal.Step(canSend ? 1f : 0f, Motion.Appear, delta);
         var fieldBar = new Rect(new Vector2(fieldLeft, bar.Min.Y), bar.Max);
         if (CommentComposerBar.Draw(fieldBar, screen, ui, theme, style, "##chirperComment", Loc.T(L.Chirper.AddComment),
                 ref commentDraft, MaxCommentLength, commentMentions, mentionPopup, images, lodestone, store.Commenting,

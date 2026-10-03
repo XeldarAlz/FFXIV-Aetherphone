@@ -13,7 +13,7 @@ internal sealed class CommandsPage : ISettingsPage
 
     private readonly record struct CommandEntry(string Syntax, LocString Description);
 
-    private static readonly CommandEntry[] Entries =
+    private static readonly CommandEntry[] Commands =
     {
         new(AepConstants.PrimaryCommand, L.Settings.CommandToggle),
         new(AepConstants.AliasCommand, L.Settings.CommandAlias),
@@ -22,10 +22,20 @@ internal sealed class CommandsPage : ISettingsPage
         new($"{AepConstants.PrimaryCommand} test", L.Settings.CommandTest),
     };
 
+    private static readonly SettingsEntry[] Searchable =
+    {
+        new(L.Settings.CommandToggle),
+        new(L.Settings.CommandAlias),
+        new(L.Settings.CommandMarket),
+        new(L.Settings.CommandReset),
+        new(L.Settings.CommandTest),
+    };
+
     public string Title => Loc.T(L.Settings.Commands);
     public string Summary => string.Empty;
     public FontAwesomeIcon Icon => FontAwesomeIcon.Terminal;
     public Vector4 Tint => new(0.46f, 0.62f, 0.92f, 1f);
+    public ReadOnlySpan<SettingsEntry> Entries => Searchable;
 
     public void Draw(in PhoneContext context, Rect body)
     {
@@ -34,10 +44,10 @@ internal sealed class CommandsPage : ISettingsPage
         using (AppSurface.Begin(body))
         {
             SettingsSection.Header(Loc.T(L.Settings.Commands), theme, Loc.T(L.Settings.CommandsHint));
-            var card = GroupCard.Begin(theme, Entries.Length, RowHeight);
-            for (var index = 0; index < Entries.Length; index++)
+            var card = GroupCard.Begin(theme, Commands.Length, RowHeight);
+            for (var index = 0; index < Commands.Length; index++)
             {
-                DrawRow(card.NextRow(), Entries[index], theme, scale);
+                DrawRow(card.NextRow(), Commands[index], theme, scale);
             }
 
             card.End();

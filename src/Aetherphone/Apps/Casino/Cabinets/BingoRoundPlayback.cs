@@ -1,5 +1,6 @@
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
+using Aetherphone.Core.Notifications;
 
 namespace Aetherphone.Apps.Casino.Cabinets;
 
@@ -32,6 +33,7 @@ internal sealed class BingoRoundPlayback
     private int latestBall;
     private float sinceBall = BallEntrySeconds;
     private bool primed;
+    private bool calledLive;
 
     public BingoRoundPlayback()
     {
@@ -47,6 +49,8 @@ internal sealed class BingoRoundPlayback
     public int LatestBall => latestBall;
 
     public float SinceBall => sinceBall;
+
+    public bool CalledLive => calledLive;
 
     public bool Rolling => latestBall > 0 && sinceBall < BallRollSeconds;
 
@@ -145,9 +149,9 @@ internal sealed class BingoRoundPlayback
             return;
         }
 
-        if (sinceBall >= StampDelaySeconds)
+        if (sinceBall >= StampDelaySeconds && StampEverything())
         {
-            StampEverything();
+            UiFeedback.Play(UiSound.GameCollect);
         }
     }
 
@@ -166,6 +170,7 @@ internal sealed class BingoRoundPlayback
 
         stampedMasks[cardIndex] |= bit;
         PopCell(cardIndex, cell);
+        UiFeedback.Play(UiSound.GameCollect);
         return true;
     }
 
@@ -182,6 +187,7 @@ internal sealed class BingoRoundPlayback
         latestBall = 0;
         sinceBall = BallEntrySeconds;
         primed = false;
+        calledLive = false;
         Array.Clear(called);
         Array.Clear(popSeconds);
         Array.Fill(autoMasks, BingoRules.FreeMask);
@@ -194,6 +200,11 @@ internal sealed class BingoRoundPlayback
         {
             latestBall = balls[drawn - 1];
             sinceBall = 0f;
+            if (primed)
+            {
+                calledLive = true;
+                UiFeedback.Play(UiSound.GameTick);
+            }
         }
 
         if (held != cardCount)
@@ -212,8 +223,9 @@ internal sealed class BingoRoundPlayback
         }
     }
 
-    private void StampEverything()
+    private bool StampEverything()
     {
+        var stampedAny = false;
         for (var cardIndex = 0; cardIndex < cardCount; cardIndex++)
         {
             var pending = autoMasks[cardIndex] & ~stampedMasks[cardIndex];
@@ -222,6 +234,7 @@ internal sealed class BingoRoundPlayback
                 continue;
             }
 
+            stampedAny = true;
             stampedMasks[cardIndex] |= pending;
             for (var cell = 0; cell < BingoRules.Cells; cell++)
             {
@@ -231,6 +244,8 @@ internal sealed class BingoRoundPlayback
                 }
             }
         }
+
+        return stampedAny;
     }
 
     private void PopCell(int cardIndex, int cell)

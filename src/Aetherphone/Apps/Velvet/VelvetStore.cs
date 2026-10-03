@@ -19,12 +19,13 @@ namespace Aetherphone.Apps.Velvet;
 internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, VelvetThreadDto>
 {
     private const int PostSize = 1080;
+    private const int StatusForbidden = 403;
+    private const string RaceUnverifiedReason = "race_unverified";
     private const int CardPhotoWidth = 1200;
     private const int CardPhotoHeight = 984;
     private readonly VelvetClient client;
     private readonly AccountClient account;
     private readonly Configuration configuration;
-    private readonly RealtimeSignalBus signals;
     private readonly RetryGate meGate = new RetryGate(TimeSpan.FromSeconds(30));
     private readonly FeedLane<VelvetPostDto>[] feedLanes =
     {
@@ -36,7 +37,7 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
     private volatile VelvetProfileDto? me;
     private volatile bool loadingMe;
     private volatile bool accessBlocked;
-    private volatile bool regionBlocked;
+    private volatile bool raceUnverified;
     private volatile bool avatarBusy;
     private volatile bool cardPhotoBusy;
     private volatile AvatarUploadOutcome cardPhotoFailure = AvatarUploadOutcome.Unreachable;
@@ -113,18 +114,16 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         ConversationKeyStore keys, DecryptedHistoryStore chatHistory, PhoneVisibility visibility,
         RealtimeSignalBus signals, AppInstaller installer,
         VelvetNotInterestedArchive notInterestedArchive)
-        : base("Velvet", session, safety, media, notifications, vault, keys, chatHistory, visibility,
+        : base("Velvet", session, safety, media, notifications, vault, keys, chatHistory, visibility, signals,
             installer.Gate("velvet"))
     {
         this.client = client;
         this.account = account;
         this.configuration = configuration;
-        this.signals = signals;
         this.notInterestedArchive = notInterestedArchive;
         feedSignals = new FeedSignalQueue(client.ReportSeenAsync, client.ReportSignalAsync, work);
         signals.VelvetPinged += OnVelvetPinged;
         signals.SocialPinged += OnSocialPinged;
-        signals.ConnectedChanged += OnRealtimeConnected;
         signals.ContentRemoved += OnContentRemoved;
     }
 
@@ -142,9 +141,9 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         }
     }
 
-    private void OnSocialPinged()
+    private void OnSocialPinged(SocialSignal signal)
     {
-        if (!TickActive)
+        if (!TickActive || !signal.CoversApp(SocialActivity.VelvetApp))
         {
             return;
         }
@@ -152,16 +151,6 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         RefreshRequests();
         connectionsLoaded = false;
     }
-
-    private void OnRealtimeConnected(bool active)
-    {
-        if (active)
-        {
-            InboxCadence.RequestAfterReconnect();
-        }
-    }
-
-    public override bool RealtimePushActive => signals.RealtimeActive;
 
     private void OnVelvetPinged()
     {
@@ -197,7 +186,7 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
 
     public VelvetProfileDto? Me => me;
     public bool AccessBlocked => accessBlocked;
-    public bool RegionBlocked => regionBlocked;
+    public bool RaceUnverified => raceUnverified;
     public bool HasProfile => me is not null;
     public bool AvatarBusy => avatarBusy;
 
@@ -265,8 +254,9 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
     protected override string ImageUploadScope => "velvet-dm";
     protected override string VoiceUploadScope => "velvet-voice";
     protected override string ReportTargetType => "velvet_message";
+    protected override string TypingSignalType => Core.Telephony.Contracts.SignalType.VelvetTyping;
 
-    protected override bool TickActive => base.TickActive && configuration.IsVelvetOnboarded();
+    protected override bool TickActive => base.TickActive && configuration.IsVelvetOnboarded() && !accessBlocked;
 
     protected override string ScopeFor(string threadId) =>
         ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, threadId));
@@ -297,11 +287,12 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         discoverEpoch++;
         me = null;
         accessBlocked = false;
-        regionBlocked = false;
+        raceUnverified = false;
         meGate.Reset();
         discoverResults = Array.Empty<VelvetProfileDto>();
         ResetUserPosts();
         ResetTagPosts();
+        ResetArchived();
 
         notInterestedIds = EmptyIds;
         notInterestedLoaded = false;
@@ -363,8 +354,28 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         Action<AepFailure>? onFailure = null)
     {
         await EnsureVelvetHydratedAsync(token).ConfigureAwait(false);
-        var page = await client.ThreadsAsync(cursor, token, onFailure).ConfigureAwait(false);
+        var page = await client.ThreadsAsync(cursor, token, failure =>
+        {
+            NoteRefusal(failure);
+            onFailure?.Invoke(failure);
+        }).ConfigureAwait(false);
         return page is null ? null : new ThreadListPage(page.Items, page.NextCursor);
+    }
+
+    private void NoteRefusal(AepFailure failure)
+    {
+        if (failure.StatusCode != StatusForbidden)
+        {
+            return;
+        }
+
+        accessBlocked = true;
+        raceUnverified = IsRaceUnverified(failure);
+    }
+
+    private static bool IsRaceUnverified(AepFailure failure)
+    {
+        return string.Equals(failure.ServerMessage, RaceUnverifiedReason, StringComparison.Ordinal);
     }
 
     protected override async Task<MessagePage?> FetchMessagesPageAsync(string threadId, string? cursor,
@@ -743,7 +754,6 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
     {
         signals.VelvetPinged -= OnVelvetPinged;
         signals.SocialPinged -= OnSocialPinged;
-        signals.ConnectedChanged -= OnRealtimeConnected;
         signals.ContentRemoved -= OnContentRemoved;
     }
 }
