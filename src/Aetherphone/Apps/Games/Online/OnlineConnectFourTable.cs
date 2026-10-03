@@ -20,6 +20,7 @@ internal sealed class OnlineConnectFourTable
 {
     private const float DropDuration = 0.28f;
     private const float BannerSeconds = 1.4f;
+    private const float BannerStripHeight = 32f;
 
     private static readonly Vector4 GridFrame = new(0.20f, 0.38f, 0.72f, 1f);
     private static readonly Vector4 SeatZeroDisc = new(0.86f, 0.28f, 0.26f, 1f);
@@ -88,7 +89,10 @@ internal sealed class OnlineConnectFourTable
         var remaining = store.Room.RemainingMilliseconds(snapshot.PhaseEndsAtUnixMs, nowMs);
         DrawSeatRow(drawList, theme, scale, topRow, board, players, remaining);
 
-        var area = new Rect(new Vector2(body.Min.X + 6f * scale, topRow.Max.Y + 12f * scale),
+        var bannerStripTop = topRow.Max.Y + 4f * scale;
+        var bannerCenter = new Vector2(body.Center.X, bannerStripTop + BannerStripHeight * scale * 0.5f);
+        var area = new Rect(
+            new Vector2(body.Min.X + 6f * scale, bannerStripTop + BannerStripHeight * scale + 8f * scale),
             new Vector2(body.Max.X - 6f * scale, body.Max.Y - 46f * scale));
         var grid = GameGrid.Centered(area, GameRoomWire.ConnectFourColumns, GameRoomWire.ConnectFourRows, 0f);
 
@@ -131,8 +135,8 @@ internal sealed class OnlineConnectFourTable
         particles.Draw(drawList, scale);
         if (bannerProgress < 1f)
         {
-            GameBanner.Draw(drawList, topRow.Center, bannerText, bannerAccent, theme, bannerProgress,
-                TextStyles.Headline);
+            GameBanner.Draw(drawList, bannerCenter, bannerText, bannerAccent, theme, bannerProgress,
+                TextStyles.SubheadlineEmphasized);
         }
 
         var statusY = grid.Bounds.Max.Y + 10f * scale;
