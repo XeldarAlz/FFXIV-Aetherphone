@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Calendar;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Calendar;
@@ -106,6 +107,7 @@ internal sealed partial class CalendarApp
         StepperField.Draw(ui, minuteRect, editMinute.ToString("D2"), scale, stepMinuteBack, stepMinuteForward);
 
         var alertRect = DrawFieldLabel(left, right, timeRect.Max.Y + gap, labelHeight, fieldHeight, L.Calendar.Alert);
+        UiAnchors.Report("calendar.editor.alert", alertRect);
         StepperField.Draw(ui, alertRect, Loc.T(CalendarReminder.LeadLabelAt(editLeadIndex)), scale, stepLeadBack,
             stepLeadForward);
 

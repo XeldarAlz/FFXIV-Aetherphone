@@ -4,53 +4,109 @@ namespace Aetherphone.Core.Video;
 
 internal sealed class VideoQueueEntry
 {
+    private string source;
+    private TimeSpan? duration;
+    private string? subtitle;
+
     internal VideoQueueEntry(string url, string title, string source, TimeSpan? duration, string? thumbnailUrl)
     {
         Url = url;
         Title = title;
-        Source = source;
-        Duration = duration;
+        this.source = source;
+        this.duration = duration;
         ThumbnailUrl = thumbnailUrl;
     }
 
     internal Guid Id { get; } = Guid.NewGuid();
     internal string Url { get; }
     internal string Title { get; set; }
-    internal string Source { get; set; }
-    internal TimeSpan? Duration { get; set; }
+
+    internal string Source
+    {
+        get => source;
+        set
+        {
+            source = value;
+            subtitle = null;
+        }
+    }
+
+    internal TimeSpan? Duration
+    {
+        get => duration;
+        set
+        {
+            duration = value;
+            subtitle = null;
+        }
+    }
+
+    internal string Subtitle => subtitle ??= MediaInput.Subtitle(source, duration?.TotalSeconds);
+
     internal string? ThumbnailUrl { get; set; }
     internal bool EnrichRequested { get; set; }
     internal LocalMediaIdentity? LocalMedia { get; set; }
     internal bool FingerprintRequested { get; set; }
+
+    internal VideoQueueRecord ToRecord() => new()
+    {
+        Url = Url,
+        Title = Title,
+        Source = Source,
+        DurationSeconds = Duration?.TotalSeconds,
+        ThumbnailUrl = ThumbnailUrl,
+    };
 }
+
+internal enum QueueAddMode : byte
+{
+    PlayNow,
+    PlayNext,
+    AddToQueue,
+}
+
+internal enum PlaylistImportState : byte
+{
+    Idle,
+    Loading,
+    Failed,
+}
+
+internal readonly record struct PlaylistImportResult(int Stamp, string Title, int Added, bool Truncated, bool Failed);
 
 internal sealed class AetherStreamQueue : IDisposable
 {
     private const int MaxConsecutiveFailures = 3;
+    private const long PositionNoteMilliseconds = 5000;
+    private const long PositionSaveMilliseconds = 30000;
 
     private readonly VideoPlayer video;
     private readonly VideoUrlResolver metadata;
+    private readonly VideoLibrary library;
+    private readonly Configuration configuration;
     private readonly List<VideoQueueEntry> entries = [];
+    private readonly CancellationTokenSource lifetime = new();
 
     private int consecutiveFailures;
     private bool suspended;
+    private long positionNotedAtTicks;
+    private long positionSavedAtTicks;
+    private int importStamp;
 
-    internal AetherStreamQueue(VideoPlayer video, VideoUrlResolver metadata)
+    internal AetherStreamQueue(VideoPlayer video, VideoUrlResolver metadata, VideoLibrary library,
+        Configuration configuration)
     {
         this.video = video;
         this.metadata = metadata;
+        this.library = library;
+        this.configuration = configuration;
         video.Finished += OnPlaybackFinished;
         video.Failed += OnPlaybackFailed;
 
-        var persisted = Plugin.Cfg.VideoQueue;
+        var persisted = configuration.VideoQueue;
         for (var recordIndex = 0; recordIndex < persisted.Count; recordIndex++)
         {
-            var record = persisted[recordIndex];
-            var entry = new VideoQueueEntry(record.Url, record.Title, record.Source,
-                record.DurationSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null, record.ThumbnailUrl)
-            {
-                EnrichRequested = record.DurationSeconds is not null,
-            };
+            var entry = FromRecord(persisted[recordIndex]);
             entries.Add(entry);
             FingerprintIfLocalFile(entry);
         }
@@ -59,8 +115,18 @@ internal sealed class AetherStreamQueue : IDisposable
     internal IReadOnlyList<VideoQueueEntry> Entries => entries;
     internal VideoQueueEntry? Current { get; private set; }
     internal bool IsSuspended => suspended;
+    internal PlaylistImportState ImportState { get; private set; }
+    internal PlaylistImportResult LastImport { get; private set; }
+    internal VideoPlaylist? LastImportedPlaylist { get; private set; }
 
     internal event Action? Changed;
+
+    internal static VideoQueueEntry FromRecord(VideoQueueRecord record) =>
+        new(record.Url, record.Title, record.Source,
+            record.DurationSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null, record.ThumbnailUrl)
+        {
+            EnrichRequested = record.DurationSeconds is not null,
+        };
 
     internal VideoQueueEntry CreateDisplayEntry(string url)
     {
@@ -72,6 +138,12 @@ internal sealed class AetherStreamQueue : IDisposable
                 LocalMedia = identity,
                 FingerprintRequested = true,
             };
+        }
+
+        if (MediaInput.LooksLikeLocalPath(url))
+        {
+            return new VideoQueueEntry(url, Path.GetFileNameWithoutExtension(url),
+                Loc.T(L.AetherStream.LocalFileSource), null, null);
         }
 
         var entry = new VideoQueueEntry(url, TitleFromUrl(url), string.Empty, null, null);
@@ -100,6 +172,7 @@ internal sealed class AetherStreamQueue : IDisposable
         suspended = true;
         if (Current is not null)
         {
+            NoteCurrentPosition();
             entries.Insert(0, Current);
             Current = null;
             Persist();
@@ -110,21 +183,143 @@ internal sealed class AetherStreamQueue : IDisposable
 
     internal void Resume() => suspended = false;
 
-    internal void Add(VideoQueueEntry entry)
+    internal void Add(VideoQueueEntry entry) => Insert(entry, QueueAddMode.AddToQueue);
+
+    internal void PlayNow(VideoQueueEntry entry, double startSeconds = 0d)
     {
-        entries.Add(entry);
-        EnrichIfYouTube(entry);
-        FingerprintIfLocalFile(entry);
+        entries.Remove(entry);
+        if (entries.Count > 0 && string.Equals(entries[0].Url, entry.Url, StringComparison.Ordinal))
+        {
+            entries.RemoveAt(0);
+        }
+
+        entries.Insert(0, entry);
+        Prepare(entry);
+        Advance(startSeconds);
+    }
+
+    internal void Insert(VideoQueueEntry entry, QueueAddMode mode)
+    {
+        if (mode == QueueAddMode.PlayNow)
+        {
+            PlayNow(entry);
+            return;
+        }
+
+        entries.Remove(entry);
+        if (mode == QueueAddMode.PlayNext)
+        {
+            entries.Insert(0, entry);
+        }
+        else
+        {
+            entries.Add(entry);
+        }
+
+        Prepare(entry);
         Persist();
     }
 
-    internal void PlayNow(VideoQueueEntry entry)
+    internal void InsertMany(IReadOnlyList<VideoQueueEntry> batch, QueueAddMode mode)
     {
-        entries.Remove(entry);
-        entries.Insert(0, entry);
-        EnrichIfYouTube(entry);
-        FingerprintIfLocalFile(entry);
-        Advance();
+        if (batch.Count == 0)
+        {
+            return;
+        }
+
+        if (mode == QueueAddMode.AddToQueue)
+        {
+            for (var index = 0; index < batch.Count; index++)
+            {
+                entries.Add(batch[index]);
+                Prepare(batch[index]);
+            }
+
+            Persist();
+            return;
+        }
+
+        for (var index = batch.Count - 1; index >= 0; index--)
+        {
+            entries.Insert(0, batch[index]);
+            Prepare(batch[index]);
+        }
+
+        if (mode == QueueAddMode.PlayNow)
+        {
+            Advance();
+            return;
+        }
+
+        Persist();
+    }
+
+    internal void InsertRecords(IReadOnlyList<VideoQueueRecord> records, QueueAddMode mode)
+    {
+        var batch = new VideoQueueEntry[records.Count];
+        for (var index = 0; index < records.Count; index++)
+        {
+            batch[index] = FromRecord(records[index]);
+        }
+
+        InsertMany(batch, mode);
+    }
+
+    internal bool ImportPlaylist(string url, QueueAddMode mode, bool remember)
+    {
+        if (ImportState == PlaylistImportState.Loading)
+        {
+            return false;
+        }
+
+        ImportState = PlaylistImportState.Loading;
+        _ = ImportPlaylistAsync(url, mode, remember);
+        return true;
+    }
+
+    private async Task ImportPlaylistAsync(string url, QueueAddMode mode, bool remember)
+    {
+        var playlist = await metadata.ResolvePlaylistAsync(url, lifetime.Token).ConfigureAwait(false);
+        if (lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+
+        await Plugin.Framework.RunOnFrameworkThread(() =>
+        {
+            importStamp++;
+            if (playlist is null)
+            {
+                ImportState = PlaylistImportState.Failed;
+                LastImport = new PlaylistImportResult(importStamp, string.Empty, 0, false, true);
+                Changed?.Invoke();
+                return;
+            }
+
+            var batch = new VideoQueueEntry[playlist.Videos.Length];
+            var records = new List<VideoQueueRecord>(batch.Length);
+            for (var index = 0; index < batch.Length; index++)
+            {
+                var item = playlist.Videos[index];
+                batch[index] = new VideoQueueEntry(item.Url, item.Metadata.Title, item.Metadata.Source,
+                    item.Metadata.Duration, item.Metadata.ThumbnailUrl)
+                {
+                    EnrichRequested = true,
+                };
+                records.Add(batch[index].ToRecord());
+            }
+
+            if (remember)
+            {
+                library.SavePlaylist(playlist.Title, playlist.SourceUrl, records);
+            }
+
+            ImportState = PlaylistImportState.Idle;
+            LastImportedPlaylist = playlist;
+            LastImport = new PlaylistImportResult(importStamp, playlist.Title, batch.Length, playlist.Truncated,
+                false);
+            InsertMany(batch, mode);
+        }).ConfigureAwait(false);
     }
 
     internal void Remove(VideoQueueEntry entry)
@@ -135,9 +330,16 @@ internal sealed class AetherStreamQueue : IDisposable
 
     internal void Clear()
     {
+        NoteCurrentPosition();
         entries.Clear();
         Current = null;
         video.Stop();
+        Persist();
+    }
+
+    internal void ClearUpcoming()
+    {
+        entries.Clear();
         Persist();
     }
 
@@ -145,6 +347,7 @@ internal sealed class AetherStreamQueue : IDisposable
     {
         if (Current is { } stopped)
         {
+            NoteCurrentPosition();
             entries.Insert(0, stopped);
             Current = null;
             Persist();
@@ -168,27 +371,50 @@ internal sealed class AetherStreamQueue : IDisposable
         Persist();
     }
 
+    internal void Shuffle()
+    {
+        for (var index = entries.Count - 1; index > 0; index--)
+        {
+            var swapIndex = Random.Shared.Next(index + 1);
+            (entries[index], entries[swapIndex]) = (entries[swapIndex], entries[index]);
+        }
+
+        Persist();
+    }
+
     internal bool HasNext => entries.Count > 0;
 
-    internal void Advance()
+    internal void Advance() => Advance(0d);
+
+    internal void AdvanceFrom(double startSeconds) => Advance(startSeconds);
+
+    private void Advance(double startSeconds)
     {
         if (suspended)
         {
             return;
         }
 
-        if (entries.Count == 0)
+        NoteCurrentPosition();
+        while (entries.Count > 0)
         {
-            Current = null;
-            video.Stop();
+            var next = entries[0];
+            entries.RemoveAt(0);
+            if (PlayableUrl(next) is not { } playable)
+            {
+                continue;
+            }
+
+            Current = next;
+            EnrichIfYouTube(next);
+            library.NotePlayed(next);
+            video.Play(playable, startSeconds);
             Persist();
             return;
         }
 
-        Current = entries[0];
-        entries.RemoveAt(0);
-        EnrichIfYouTube(Current);
-        video.Play(Current.Url);
+        Current = null;
+        video.Stop();
         Persist();
     }
 
@@ -202,12 +428,91 @@ internal sealed class AetherStreamQueue : IDisposable
         video.Seek(0d);
     }
 
+    internal void AdoptParty(VideoQueueEntry? playing, IReadOnlyList<VideoQueueEntry> upcoming)
+    {
+        suspended = false;
+        consecutiveFailures = 0;
+        Current = playing;
+        for (var index = upcoming.Count - 1; index >= 0; index--)
+        {
+            entries.Insert(0, upcoming[index]);
+            Prepare(upcoming[index]);
+        }
+
+        Persist();
+    }
+
+    internal VideoQueueEntry? HandOver(int sharedCount)
+    {
+        var playing = Current;
+        Current = null;
+        entries.RemoveRange(0, Math.Min(Math.Max(sharedCount, 0), entries.Count));
+        suspended = true;
+        Persist();
+        return playing;
+    }
+
+    internal void OnFrameworkUpdate()
+    {
+        var now = Environment.TickCount64;
+        if (now - positionNotedAtTicks < PositionNoteMilliseconds)
+        {
+            return;
+        }
+
+        positionNotedAtTicks = now;
+        if (video.State != VideoPlaybackState.Playing || !NoteCurrentPosition())
+        {
+            return;
+        }
+
+        if (now - positionSavedAtTicks >= PositionSaveMilliseconds)
+        {
+            positionSavedAtTicks = now;
+            configuration.Save();
+        }
+    }
+
+    private bool NoteCurrentPosition()
+    {
+        if (Current is not { } current
+            || video.State is not (VideoPlaybackState.Playing or VideoPlaybackState.Paused))
+        {
+            return false;
+        }
+
+        var progress = video.Progress;
+        library.NotePosition(current.Url, progress.Position, progress.Duration);
+        return true;
+    }
+
+    private string? PlayableUrl(VideoQueueEntry entry)
+    {
+        if (!LocalMediaToken.TryParse(entry.Url, out var identity))
+        {
+            return entry.Url;
+        }
+
+        return LocalMediaFiles.TryResolve(configuration, identity, out var path) ? path : null;
+    }
+
+    private void Prepare(VideoQueueEntry entry)
+    {
+        EnrichIfYouTube(entry);
+        FingerprintIfLocalFile(entry);
+    }
+
     private void OnPlaybackFinished()
     {
         consecutiveFailures = 0;
         if (suspended)
         {
             return;
+        }
+
+        if (Current is { } finished)
+        {
+            library.NoteFinished(finished.Url);
         }
 
         Advance();
@@ -232,13 +537,13 @@ internal sealed class AetherStreamQueue : IDisposable
 
     internal void Replay(double positionSeconds)
     {
-        if (suspended || Current is not { } current)
+        if (suspended || Current is not { } current || PlayableUrl(current) is not { } playable)
         {
             return;
         }
 
         consecutiveFailures = 0;
-        video.Play(current.Url, positionSeconds);
+        video.Play(playable, positionSeconds);
         Changed?.Invoke();
     }
 
@@ -247,25 +552,17 @@ internal sealed class AetherStreamQueue : IDisposable
         var records = new List<VideoQueueRecord>(entries.Count);
         for (var entryIndex = 0; entryIndex < entries.Count; entryIndex++)
         {
-            var entry = entries[entryIndex];
-            records.Add(new VideoQueueRecord
-            {
-                Url = entry.Url,
-                Title = entry.Title,
-                Source = entry.Source,
-                DurationSeconds = entry.Duration?.TotalSeconds,
-                ThumbnailUrl = entry.ThumbnailUrl,
-            });
+            records.Add(entries[entryIndex].ToRecord());
         }
 
-        Plugin.Cfg.VideoQueue = records;
-        Plugin.Cfg.Save();
+        configuration.VideoQueue = records;
+        configuration.Save();
         Changed?.Invoke();
     }
 
     private void FingerprintIfLocalFile(VideoQueueEntry entry)
     {
-        if (entry.LocalMedia is not null || entry.FingerprintRequested || !IsLocalFilePath(entry.Url))
+        if (entry.LocalMedia is not null || entry.FingerprintRequested || !MediaInput.LooksLikeLocalPath(entry.Url))
         {
             return;
         }
@@ -273,9 +570,6 @@ internal sealed class AetherStreamQueue : IDisposable
         entry.FingerprintRequested = true;
         _ = FingerprintAsync(entry);
     }
-
-    private static bool IsLocalFilePath(string url) =>
-        !LocalMediaToken.IsToken(url) && !VideoEngine.ValidateURL(url, out _) && Path.IsPathRooted(url);
 
     private async Task FingerprintAsync(VideoQueueEntry entry)
     {
@@ -294,7 +588,7 @@ internal sealed class AetherStreamQueue : IDisposable
 
     private void EnrichIfYouTube(VideoQueueEntry entry)
     {
-        if (!VideoUrlResolver.IsYouTubeUrl(entry.Url) || entry.EnrichRequested)
+        if (entry.EnrichRequested || MediaInput.LooksLikeLocalPath(entry.Url) || !VideoUrlResolver.IsYouTubeUrl(entry.Url))
         {
             return;
         }
@@ -305,7 +599,7 @@ internal sealed class AetherStreamQueue : IDisposable
 
     private async Task EnrichAsync(VideoQueueEntry entry)
     {
-        var resolved = await metadata.ResolveMetadataAsync(entry.Url, CancellationToken.None).ConfigureAwait(false);
+        var resolved = await metadata.ResolveMetadataAsync(entry.Url, lifetime.Token).ConfigureAwait(false);
         if (resolved is null)
         {
             entry.EnrichRequested = false;
@@ -318,13 +612,21 @@ internal sealed class AetherStreamQueue : IDisposable
             entry.Source = resolved.Source;
             entry.Duration = resolved.Duration;
             entry.ThumbnailUrl = resolved.ThumbnailUrl;
+            library.NoteDetails(entry);
             Persist();
         }).ConfigureAwait(false);
     }
 
     public void Dispose()
     {
+        if (NoteCurrentPosition())
+        {
+            configuration.Save();
+        }
+
+        lifetime.Cancel();
         video.Finished -= OnPlaybackFinished;
         video.Failed -= OnPlaybackFailed;
+        lifetime.Dispose();
     }
 }

@@ -63,8 +63,8 @@ internal sealed class CoinFloat
             }
 
             var progress = age / LifeSeconds;
-            var rise = Easing.SmoothStep(progress) * RiseDistance * scale;
-            var alpha = 1f - Easing.SmoothStep(progress);
+            var rise = progress * RiseDistance * scale;
+            var alpha = 1f - progress;
             var position = slots[index].Origin - new Vector2(0f, rise);
             var ink = slots[index].Muted ? mutedInk : accent;
 
@@ -77,7 +77,7 @@ internal sealed class CoinFloat
                 continue;
             }
 
-            var spread = Easing.SmoothStep(MathF.Min(1f, progress * 1.6f)) * DotDrift * scale;
+            var spread = MathF.Min(1f, progress * 1.6f) * DotDrift * scale;
             for (var dot = 0; dot < (int)DotCount; dot++)
             {
                 var angle = dot * (MathF.Tau / DotCount) - MathF.PI * 0.5f;

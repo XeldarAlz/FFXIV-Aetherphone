@@ -57,6 +57,12 @@ internal sealed class CallSignalRouter : IDisposable
             return;
         }
 
+        if (message.Type.StartsWith(SignalType.RadioPrefix, StringComparison.Ordinal))
+        {
+            signals.PublishRadio(message);
+            return;
+        }
+
         switch (message.Type)
         {
             case SignalType.ChatPing:
@@ -99,6 +105,9 @@ internal sealed class CallSignalRouter : IDisposable
             case SignalType.PollPing:
                 signals.PublishPolls();
                 return;
+            case SignalType.FeedbackPing:
+                signals.PublishFeedback();
+                return;
             case SignalType.ContentRemoved:
                 if (message.ContentId is { Length: > 0 } removedContentId)
                 {
@@ -122,7 +131,8 @@ internal sealed class CallSignalRouter : IDisposable
 
         if (target is null)
         {
-            if (!message.Type.StartsWith(SignalType.StreamPrefix, StringComparison.Ordinal))
+            if (!message.Type.StartsWith(SignalType.StreamPrefix, StringComparison.Ordinal)
+                && !message.Type.StartsWith(SignalType.JamPrefix, StringComparison.Ordinal))
             {
                 AepLog.Warning($"[calls] unhandled-signal type={message.Type} call={message.CallId} reason={message.Reason}");
             }

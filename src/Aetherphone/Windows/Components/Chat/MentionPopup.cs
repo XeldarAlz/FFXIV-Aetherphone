@@ -13,9 +13,7 @@ internal sealed class MentionPopup
 {
     private const float RowHeight = 44f;
     private const float MinWidth = 200f;
-    private const double RevealSeconds = 0.14;
-
-    private double openedAt = -1d;
+    private Spring revealSpring;
 
     public void Gate(MentionAutocomplete autocomplete)
     {
@@ -30,21 +28,17 @@ internal sealed class MentionPopup
     {
         if (!autocomplete.IsOpen)
         {
-            openedAt = -1d;
+            revealSpring.SnapTo(0f);
             autocomplete.PopupArea = default;
             return -1;
-        }
-
-        if (openedAt < 0d)
-        {
-            openedAt = ImGui.GetTime();
         }
 
         var rows = autocomplete.Rows;
         var scale = UiScale.Current;
         var drawList = ImGui.GetForegroundDrawList();
-        var reveal = Easing.EaseOutQuint(Math.Clamp((float)((ImGui.GetTime() - openedAt) / RevealSeconds), 0f, 1f));
-        var alpha = Easing.SmoothStep(Math.Clamp(reveal / 0.7f, 0f, 1f));
+        var revealDelta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var reveal = Math.Clamp(revealSpring.Step(1f, Motion.Appear, revealDelta), 0f, 1f);
+        var alpha = Math.Clamp(reveal / 0.7f, 0f, 1f);
         var anchor = autocomplete.Anchor;
         var padY = 6f * scale;
         var rowHeight = RowHeight * scale;

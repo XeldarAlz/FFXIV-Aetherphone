@@ -111,6 +111,13 @@ internal sealed class ChatListChrome
         SocialChrome.DrawHeaderIcon(drawList, center, SocialChrome.HeaderIconRadius * UiScale.Current, glyph,
             HeaderIconSize, tooltip, Ink, Ink.TitleInk, highlighted, badge);
 
+    public static Rect HeaderHit(Vector2 center)
+    {
+        var radius = SocialChrome.HeaderIconRadius * UiScale.Current;
+        var half = new Vector2(radius, radius);
+        return new Rect(center - half, center + half);
+    }
+
     public void DrawSectionLabel(string label) => SocialChrome.DrawSectionLabel(label, Ink, SectionStyle);
 
     public void DrawRowHairline(ImDrawListPtr drawList, in FeedCellScope cell, float textLeft)

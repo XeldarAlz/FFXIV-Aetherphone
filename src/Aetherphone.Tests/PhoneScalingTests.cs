@@ -118,7 +118,7 @@ public sealed class PhoneScalingTests
     {
         var theme = PhoneTheme.Dark(new Vector4(0.55f, 0.45f, 0.95f, 1f),
             PhoneCase.Color("Titanium", new Vector4(0.145f, 0.145f, 0.170f, 1f)),
-            ChassisMetrics.For(PhoneCaseKind.Color, PhoneSizeCatalog.DesignWidth), "DuskLight", "DuskDark");
+            ChassisMetrics.For(PhoneCaseKind.Color, PhoneSizeCatalog.DesignWidth), "BloomLight", "BloomDark");
         var size = PhoneSizeCatalog.SizeFor(width) * globalScale;
         var window = new Rect(Vector2.Zero, size);
         return ChassisGeometry.Device(window, theme, globalScale * PhoneSizeCatalog.ZoomFor(width));
@@ -128,6 +128,6 @@ public sealed class PhoneScalingTests
     {
         var chassis = ChassisFor(width, globalScale);
         return HomeMetrics.Compute(chassis.Screen, Columns, Rows, globalScale * PhoneSizeCatalog.ZoomFor(width),
-            HomeMotion.Rest);
+            HomeMotion.Rest, 0f);
     }
 }

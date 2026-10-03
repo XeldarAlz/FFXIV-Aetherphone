@@ -958,12 +958,54 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             if (currentThreadId == current && page is not null)
             {
                 var decorated = DecorateMessages(current, page.Value.Items);
+                bool arrived;
                 lock (messagesLock)
                 {
+                    arrived = HasNewIncoming(messages, decorated);
                     messages = IdentifiedMerge.MergeById(messages, decorated, messageOrder);
+                }
+
+                if (arrived && IsBeingViewed(current))
+                {
+                    UiFeedback.Play(UiSound.MessageReceived);
                 }
             }
         }, () => refreshingThread = false);
+    }
+
+    private bool HasNewIncoming(TMessage[] existing, TMessage[] incoming)
+    {
+        if (existing.Length == 0)
+        {
+            return false;
+        }
+
+        var self = MyUserId;
+        for (var incomingIndex = 0; incomingIndex < incoming.Length; incomingIndex++)
+        {
+            var candidate = incoming[incomingIndex];
+            if (MessageSenderIdOf(candidate) == self || ContainsId(existing, candidate.Id))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsId(TMessage[] existing, string id)
+    {
+        for (var index = existing.Length - 1; index >= 0; index--)
+        {
+            if (existing[index].Id == id)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void NotePollResult(bool succeeded)

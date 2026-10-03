@@ -1,4 +1,5 @@
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Core.Animation;
@@ -75,6 +76,7 @@ internal sealed class GamesLibrary
         new("invaders", 2026, 8, 24), new("skyfall", 2026, 8, 24), new("squadron", 2026, 8, 24),
         new("wordrun", 2026, 8, 24),
         new("online.uno", 2026, 8, 25), new("online.chess", 2026, 8, 25), new("online.pool", 2026, 8, 25),
+        new("coil", 2026, 10, 3), new("updraft", 2026, 10, 3), new("swoop", 2026, 10, 3),
     };
 
     private readonly IMiniGame[] games;
@@ -346,7 +348,6 @@ internal sealed class GamesLibrary
         switch (gameId)
         {
             case "2048":
-            case "match3":
             case "breakout":
             case "bubbles":
             case "simon":
@@ -364,8 +365,16 @@ internal sealed class GamesLibrary
             case "hop":
             case "squadron":
             case "wordrun":
+            case "coil":
+            case "updraft":
+            case "swoop":
             {
                 var best = stats.Get(gameId).BestScore;
+                return best > 0 ? BestPrefix(GameNumber.Label(best)) : string.Empty;
+            }
+            case "match3":
+            {
+                var best = Math.Max(stats.Get(gameId).BestScore, stats.Get(GemSwapApp.BlitzStatId).BestScore);
                 return best > 0 ? BestPrefix(GameNumber.Label(best)) : string.Empty;
             }
             case "tetris":

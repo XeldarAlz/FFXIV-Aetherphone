@@ -8,11 +8,36 @@ namespace Aetherphone.Windows.Components;
 internal static class SettingsRow
 {
     public const float CheckWidth = 21f;
+    public const float TileTextInset = Metrics.Size.IconTile + Metrics.Space.Md;
+    public const float AppTileTextInset = AppTileSize + Metrics.Space.Md;
+    private const float AppTileSize = 30f;
+    private const float ChevronWidthFactor = 0.55f;
+    private const float ChevronThickness = 2.2f;
+    private const float ChevronGap = 12f;
+    private const float RowWashOutset = 10f;
+    private const float RowWashInset = 3f;
+    private const float RowWashRadius = 8f;
+    private const float HighlightScrollRatio = 0.5f;
+    private const float MinimumWashAlpha = 0.002f;
+
+    public static float ChevronReserve(float scale) =>
+        (NavBarMetrics.ChevronSize * ChevronWidthFactor + ChevronGap) * scale;
+
+    public static void DrawChevron(ImDrawListPtr drawList, Vector2 tip, float scale, Vector4 color)
+    {
+        var half = NavBarMetrics.ChevronSize * scale * 0.5f;
+        var armX = tip.X - NavBarMetrics.ChevronSize * ChevronWidthFactor * scale;
+        var packed = ImGui.GetColorU32(color);
+        var thickness = ChevronThickness * scale;
+        drawList.AddLine(new Vector2(armX, tip.Y - half), tip, packed, thickness);
+        drawList.AddLine(tip, new Vector2(armX, tip.Y + half), packed, thickness);
+    }
 
     public static bool Bool(Rect row, string label, bool value, PhoneTheme theme, string? id = null,
         string? hint = null, bool dimmed = false)
     {
         var scale = UiScale.Current;
+        DrawSearchHighlight(row, label, theme);
         var width = Metrics.Size.ToggleWidth * scale;
         var height = Metrics.Size.ToggleHeight * scale;
         var toggleMin = new Vector2(row.Max.X - width, row.Center.Y - height * 0.5f);
@@ -39,6 +64,7 @@ internal static class SettingsRow
     public static void Info(Rect row, string label, string value, PhoneTheme theme, string? id = null)
     {
         var scale = UiScale.Current;
+        DrawSearchHighlight(row, label, theme);
         var gap = 12f * scale;
         var available = row.Width - gap;
         var valueFullSize = Typography.Measure(value, TextStyles.Body);
@@ -63,6 +89,7 @@ internal static class SettingsRow
         string? hint = null, string? id = null)
     {
         var scale = UiScale.Current;
+        DrawSearchHighlight(row, label, theme);
         var tileMax = DrawIconTile(row, icon, tint, theme, false, false, scale);
         var toggleWidth = Metrics.Size.ToggleWidth * scale;
         var toggleHeight = Metrics.Size.ToggleHeight * scale;
@@ -98,16 +125,14 @@ internal static class SettingsRow
             DrawRowHighlight(row, theme);
         }
 
+        DrawSearchHighlight(row, label, theme);
         var tileMax = DrawIconTile(row, icon, tint, theme, hovered, badge, scale);
         var labelStartX = tileMax.X + Metrics.Space.Md * scale;
-        var chevronWidth = Metrics.Space.Xs * scale;
         var chevronTip = new Vector2(row.Max.X, row.Center.Y);
-        var chevronGap = 12f * scale;
+        var textRight = chevronTip.X - ChevronReserve(scale);
         var midGap = 8f * scale;
-        var available = chevronTip.X - chevronWidth - chevronGap - labelStartX;
-        DrawTwoColumnText(row, label, value, theme, labelStartX, chevronTip.X - chevronWidth - chevronGap, available,
-            midGap, id);
-        DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
+        DrawTwoColumnText(row, label, value, theme, labelStartX, textRight, textRight - labelStartX, midGap, id);
+        DrawChevron(ImGui.GetWindowDrawList(), chevronTip, scale, theme.TextMuted);
 
         if (hovered)
         {
@@ -128,7 +153,8 @@ internal static class SettingsRow
             DrawRowHighlight(row, theme);
         }
 
-        var tileSize = 30f * scale;
+        DrawSearchHighlight(row, label, theme);
+        var tileSize = AppTileSize * scale;
         var tileMin = new Vector2(row.Min.X, row.Center.Y - tileSize * 0.5f);
         var tileMax = tileMin + new Vector2(tileSize, tileSize);
         var normalized = IconTile.Surface(tint);
@@ -136,14 +162,12 @@ internal static class SettingsRow
         IconTile.DrawApp(dl, appId, (tileMin + tileMax) * 0.5f, tileSize, tileFill);
 
         var labelStartX = tileMax.X + Metrics.Space.Md * scale;
-        var chevronWidth = Metrics.Space.Xs * scale;
         var chevronTip = new Vector2(row.Max.X, row.Center.Y);
-        var chevronGap = 12f * scale;
+        var textRight = chevronTip.X - ChevronReserve(scale);
         var midGap = 8f * scale;
-        var available = chevronTip.X - chevronWidth - chevronGap - labelStartX;
-        DrawTwoColumnText(row, label, value, theme, labelStartX, chevronTip.X - chevronWidth - chevronGap, available,
-            midGap, id ?? appId);
-        DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
+        DrawTwoColumnText(row, label, value, theme, labelStartX, textRight, textRight - labelStartX, midGap,
+            id ?? appId);
+        DrawChevron(dl, chevronTip, scale, theme.TextMuted);
 
         if (hovered)
         {
@@ -163,14 +187,12 @@ internal static class SettingsRow
             DrawRowHighlight(row, theme);
         }
 
-        var chevronWidth = 6f * scale;
+        DrawSearchHighlight(row, label, theme);
         var chevronTip = new Vector2(row.Max.X, row.Center.Y);
-        var chevronGap = 12f * scale;
+        var textRight = chevronTip.X - ChevronReserve(scale);
         var midGap = 8f * scale;
-        var available = chevronTip.X - chevronWidth - chevronGap - row.Min.X;
-        DrawTwoColumnText(row, label, value, theme, row.Min.X, chevronTip.X - chevronWidth - chevronGap, available,
-            midGap, id, dimmed);
-        DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
+        DrawTwoColumnText(row, label, value, theme, row.Min.X, textRight, textRight - row.Min.X, midGap, id, dimmed);
+        DrawChevron(ImGui.GetWindowDrawList(), chevronTip, scale, theme.TextMuted);
 
         if (hovered)
         {
@@ -229,6 +251,7 @@ internal static class SettingsRow
             DrawRowHighlight(row, theme);
         }
 
+        DrawSearchHighlight(row, label, theme);
         var checkWidth = CheckWidth * scale;
         var labelMaxWidth = MathF.Max(1f, row.Width - checkWidth - trailingReserve);
         var labelSize = Typography.Measure(label, TextStyles.BodyEmphasized);
@@ -260,6 +283,7 @@ internal static class SettingsRow
             DrawRowHighlight(row, theme);
         }
 
+        DrawSearchHighlight(row, label, theme);
         var labelSize = Typography.Measure(label, TextStyles.BodyEmphasized);
         Typography.Draw(new Vector2(row.Center.X - labelSize.X * 0.5f, row.Center.Y - labelSize.Y * 0.5f), label,
             color, TextStyles.BodyEmphasized);
@@ -293,20 +317,36 @@ internal static class SettingsRow
 
     public static void DrawRowHighlight(Rect row, PhoneTheme theme)
     {
-        var scale = UiScale.Current;
         var pressed = ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var min = new Vector2(row.Min.X - 10f * scale, row.Min.Y + 3f * scale);
-        var max = new Vector2(row.Max.X + 10f * scale, row.Max.Y - 3f * scale);
         var alpha = pressed ? 0.10f : 0.05f;
-        Squircle.Fill(ImGui.GetWindowDrawList(), min, max, 8f * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, alpha)));
+        FillRowWash(row, Palette.WithAlpha(theme.TextStrong, alpha));
     }
 
-    private static void DrawChevronRight(Vector2 tip, float size, float thickness, Vector4 color)
+    private static void DrawSearchHighlight(Rect row, string label, PhoneTheme theme)
     {
-        var dl = ImGui.GetWindowDrawList();
-        var packed = ImGui.GetColorU32(color);
-        dl.AddLine(new Vector2(tip.X - size, tip.Y - size), tip, packed, thickness);
-        dl.AddLine(tip, new Vector2(tip.X - size, tip.Y + size), packed, thickness);
+        if (!SettingsHighlight.IsLive || !SettingsHighlight.TryClaim(label, out var alpha, out var scrollTo))
+        {
+            return;
+        }
+
+        if (scrollTo)
+        {
+            ImGui.SetScrollFromPosY(row.Center.Y - ImGui.GetWindowPos().Y, HighlightScrollRatio);
+        }
+
+        if (alpha <= MinimumWashAlpha)
+        {
+            return;
+        }
+
+        FillRowWash(row, Palette.WithAlpha(theme.Accent, alpha));
+    }
+
+    private static void FillRowWash(Rect row, Vector4 color)
+    {
+        var scale = UiScale.Current;
+        var min = new Vector2(row.Min.X - RowWashOutset * scale, row.Min.Y + RowWashInset * scale);
+        var max = new Vector2(row.Max.X + RowWashOutset * scale, row.Max.Y - RowWashInset * scale);
+        Squircle.Fill(ImGui.GetWindowDrawList(), min, max, RowWashRadius * scale, ImGui.GetColorU32(color));
     }
 }

@@ -24,12 +24,6 @@ internal static class VAnim
         return current;
     }
 
-    public static float Toggle(string id, bool on, float deltaSeconds, float smoothTime = 0.16f) =>
+    public static float Toggle(string id, bool on, float deltaSeconds, float smoothTime = Motion.Release) =>
         To(id, on ? 1f : 0f, smoothTime, deltaSeconds);
-
-    public static float Reveal(string id, bool on, float deltaSeconds, float duration = 0.24f)
-    {
-        var raw = To(id, on ? 1f : 0f, duration, deltaSeconds);
-        return Easing.EaseOutQuint(Math.Clamp(raw, 0f, 1f));
-    }
 }

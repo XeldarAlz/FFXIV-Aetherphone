@@ -90,7 +90,7 @@ internal sealed partial class PhotosApp
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var logoSize = LogoSize * scale;
         var logoCenter = new Vector2(area.Min.X + CellPadX * scale + logoSize * 0.5f, rowCenterY);
-        if (!AppIconTextures.TryDrawArtwork(drawList, Id, logoCenter, logoSize, Ink.AccentLink))
+        if (!AppIconTile.TryDrawGlyph(drawList, Id, logoCenter, logoSize, Ink.AccentLink))
         {
             PhoneIcon.Draw(drawList, logoCenter, PhoneIcons.Photo, Ink.AccentLink, logoSize);
         }
@@ -118,7 +118,11 @@ internal sealed partial class PhotosApp
 
         if (withNewAlbum)
         {
-            if (SocialChrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(area, 0), radius, PhoneIcons.Plus,
+            var newAlbumSlot = SocialChrome.HeaderSlot(area, 0);
+            var newAlbumExtent = new Vector2(radius, radius);
+            UiAnchors.Report("photos.albums.new",
+                new Rect(newAlbumSlot - newAlbumExtent, newAlbumSlot + newAlbumExtent));
+            if (SocialChrome.DrawHeaderIcon(drawList, newAlbumSlot, radius, PhoneIcons.Plus,
                     HeaderIconSize, Loc.T(L.Photos.CreateAlbum), Ink, Ink.TitleInk))
             {
                 OpenCreateAlbumSheet(null);
@@ -359,10 +363,10 @@ internal sealed partial class PhotosApp
     private void DrawTabBar(Rect bar)
     {
         SocialChrome.PaintBarBackdrop(ui, ImGui.GetWindowDrawList(), bar, frameScreen);
-        navTabs[LibraryTab] = new NavTab(FontAwesomeIcon.Image, Loc.T(L.Photos.Library), Glyph: PhoneIcons.Photo,
-            ActiveGlyph: PhoneIcons.PhotoFilled);
+        navTabs[LibraryTab] = new NavTab(FontAwesomeIcon.Image, Loc.T(L.Photos.Library),
+            AnchorKey: "photos.tab.library", Glyph: PhoneIcons.Photo, ActiveGlyph: PhoneIcons.PhotoFilled);
         navTabs[AlbumsTab] = new NavTab(FontAwesomeIcon.Images, Loc.T(L.Photos.Albums),
-            Glyph: PhoneIcons.LibraryPhoto);
+            AnchorKey: "photos.tab.albums", Glyph: PhoneIcons.LibraryPhoto);
         var picked = tabs.Draw(bar, ui, frameTheme, navTabs, segment);
         if (picked < 0 || picked == segment)
         {

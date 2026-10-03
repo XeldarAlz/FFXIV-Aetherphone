@@ -16,10 +16,21 @@ namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class PrivacyPage : ISettingsPage, IDisposable
 {
+    private static readonly SettingsEntry[] Searchable =
+    {
+        new(L.Settings.TellArchive),
+        new(L.Settings.ReadReceipts),
+        new(L.Settings.LastSeenOnline),
+        new(L.PhotoTag.SettingsTitle),
+        new(L.Social.BlockedUsers),
+        new(L.Settings.ClearCache, L.Settings.Storage),
+    };
+
     public string Title => Loc.T(L.Settings.Privacy);
     public string Summary => string.Empty;
     public FontAwesomeIcon Icon => FontAwesomeIcon.UserShield;
     public Vector4 Tint => new(0.42f, 0.56f, 0.86f, 1f);
+    public ReadOnlySpan<SettingsEntry> Entries => Searchable;
     private readonly Configuration configuration;
     private readonly AethernetSession session;
     private readonly AccountClient client;

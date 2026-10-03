@@ -39,7 +39,7 @@ Dalamud is the plugin framework that loads Aetherphone inside FFXIV. It provides
 | --- | --- |
 | `IDalamudPluginInterface` | Config file, UI builder, assembly location, IPC to other plugins |
 | `ICommandManager` | The `/phone` and `/aetherphone` chat commands, forwarding `/li` commands to Lifestream |
-| `IDtrBar` | The server info bar entry with the unread badge |
+| `IDtrBar` | The server info bar entry (`ServerBarEntry`): phone icon painted over the entry's `ScreenBounds`, plain unread count and native tooltip |
 | `IChatGui` | Reading game chat for the Linkpearl app |
 | `IDataManager` | Lumina Excel sheet access (static game data) |
 | `IObjectTable` | `LocalPlayer`: name, world, position, current class |
@@ -121,7 +121,7 @@ That is the house pattern, from `GameData.WorldName`: guard against row 0, use `
 
 ### Worked example: ClassJob roles
 
-The Jobs app sorts jobs into tank, healer, and DPS buckets using the `ClassJob` sheet. `GameData.TryGetClassJobDivision` reads four columns: `JobType`, `Role`, `UIPriority`, and `ClassJobCategory.RowId`. Base classes (gladiator, thaumaturge, and friends) have `JobType` 0, so `JobsReader.BucketFor` (src/Aetherphone/Core/Jobs/JobsReader.cs) matches on `JobType` first and falls back to the `Role` column when it gets 0:
+The Jobs app sorts jobs into tank, healer, and DPS buckets using the `ClassJob` sheet. `GameData.TryGetClassJobDivision` reads four columns: `JobType`, `Role`, `UIPriority`, and `ClassJobCategory.RowId`. Base classes (gladiator, thaumaturge, and friends) have `JobType` 0, so `JobsRoster.BucketFor` (src/Aetherphone/Core/Jobs/JobsRoster.cs) matches on `JobType` first and falls back to the `Role` column when it gets 0:
 
 ```csharp
 return jobType switch
@@ -149,9 +149,9 @@ Crafters and gatherers are bucketed by `ClassJobCategory` instead (`HandCategory
 The most expensive recurring bug in this codebase is mixing up a sheet RowId with an array-index column. Both are small integers, so the wrong one compiles, runs, and returns plausible values for the wrong thing. The rules, each backed by shipped code:
 
 - **ClientStructs accessors take the RowId.** `DailiesReader.ReadDutyRoulettes` passes `ContentRoulette` RowIds to `InstanceContent.IsRouletteComplete`; the native function does its own RowId-to-slot mapping. `GameData.DailyBonusRouletteRowIds` stores `(byte)row.RowId` and uses `CompletionArrayIndex < 0` only as a "this row is tracked at all" filter, never as the value it passes.
-- **Raw game arrays take the array-index column.** `JobsReader.LevelFor` indexes `PlayerState.Instance()->ClassJobLevels` with `ClassJob.ExpArrayIndex` (via `GameData.JobExpArrayIndex`), because that array is laid out by experience slot, not by RowId.
+- **Raw game arrays take the array-index column.** `JobsReader.LevelAt` indexes `PlayerState.Instance()->ClassJobLevels` and `ClassJobExperience` with `ClassJob.ExpArrayIndex` (cached in `JobsCatalog`), because that array is laid out by experience slot, not by RowId.
 
-Name your variables `...RowIds` or `...ArrayIndex` so the next reader cannot confuse them, and bounds-check array-index reads the way `LevelFor` does.
+Name your variables `...RowIds` or `...ArrayIndex` so the next reader cannot confuse them, and bounds-check array-index reads the way `LevelAt` does.
 
 Sheets are read-only static data, so reading them is far less dangerous than game memory, but keep sheet access on the framework thread paths like the rest of the codebase does unless you have measured a reason not to.
 
@@ -182,20 +182,19 @@ Dalamud's `IUnlockState` service answers "does this character own this mount/min
 
 Reading is mostly harmless; writing is where you can grief the player. Every write path in the plugin gates itself on game state first.
 
-**Class switching** goes through gearsets only, never through raw job changes. src/Aetherphone/Core/Jobs/GearsetActions.cs is the whole story:
+**Class switching** goes through gearsets only, never through raw job changes. src/Aetherphone/Core/Jobs/GearsetActions.cs is the whole story: `Equip` refuses while the player is in combat, casting, between areas or in a cutscene (`GearsetEquipResult.Busy`), runs on the framework thread (scheduling itself there when called from anywhere else), and wraps the native call so a failure becomes `GearsetEquipResult.Failed` instead of an exception in Draw:
 
 ```csharp
-public static bool Equip(int gearsetId)
+var module = RaptureGearsetModule.Instance();
+if (module is null || !module->IsValidGearset(gearsetId))
 {
-    var module = RaptureGearsetModule.Instance();
-    if (module is null || !module->IsValidGearset(gearsetId))
-    {
-        return false;
-    }
-
-    return module->EquipGearset(gearsetId) == 0;
+    return GearsetEquipResult.Missing;
 }
+
+return module->EquipGearset(gearsetId) == 0 ? GearsetEquipResult.Sent : GearsetEquipResult.Failed;
 ```
+
+The Jobs app treats `Sent` as pending, polls the gearset module every 0.1 s, and reports success only when the gearset reads as active (or a failure toast after 5 s).
 
 Note the return contract: `EquipGearset` returns 0 on success, so the comparison is `== 0`, not a truthiness check.
 
@@ -272,9 +271,9 @@ Game-state awareness beyond window hiding is condition-driven per feature, alway
 ## Gotchas
 
 - The plugin constructor can run on a Dalamud loader thread. Reading `ObjectTable.LocalPlayer` or ClientStructs there is a real crash, not a theoretical one. Follow the `QueueAutoOpen`/`OnAutoOpenTick` deferral in src/Aetherphone/Plugin.cs.
-- RowId and array-index columns are both small integers, so passing the wrong one compiles and returns plausible wrong data. ClientStructs accessors like `InstanceContent.IsRouletteComplete` take the sheet RowId; raw arrays like `PlayerState->ClassJobLevels` take the `ExpArrayIndex` column. See `DailiesReader.ReadDutyRoulettes` and `JobsReader.LevelFor` for the correct pairing.
-- `RaptureGearsetModule.EquipGearset` returns 0 on success. `GearsetActions.Equip` compares `== 0`; a truthiness check inverts the result.
-- Base classes have `JobType` 0 in the `ClassJob` sheet. Bucketing by `JobType` alone drops every base class; `JobsReader.BucketFor` falls back to the `Role` column, where role 3 covers both physical and magical ranged base classes and the `WarCategoryId` check splits them.
+- RowId and array-index columns are both small integers, so passing the wrong one compiles and returns plausible wrong data. ClientStructs accessors like `InstanceContent.IsRouletteComplete` take the sheet RowId; raw arrays like `PlayerState->ClassJobLevels` take the `ExpArrayIndex` column. See `DailiesReader.ReadDutyRoulettes` and `JobsReader.LevelAt` for the correct pairing.
+- `RaptureGearsetModule.EquipGearset` returns 0 on success. `GearsetActions.EquipNow` compares `== 0`; a truthiness check inverts the result.
+- Base classes have `JobType` 0 in the `ClassJob` sheet. Bucketing by `JobType` alone drops every base class; `JobsRoster.BucketFor` falls back to the `Role` column, where role 3 covers both physical and magical ranged base classes and the `WarCategoryId` check splits them.
 - `CollectionsCatalogService.EnsureLocalUnlocks` returns `null` off the framework thread by design. Callers must treat null as "try again next frame", not as "no unlocks".
 - `FriendListReader.RequestServerData` returns false inside duties and when proxies are null. The friend list you read afterward is only as fresh as the last successful request; the Linkpearl app polls, it never assumes.
 - Aetheryte teleports must pass the `Aetheryte` sheet RowId to the Lifestream IPC. Do not build `/li tp <name>` commands to teleport; in this codebase that string exists only as a clipboard fallback for users without the IPC available (`MapsApp.Teleport`, the Muster app's copy fallback, and `ChatTranscript.StartTravel`).

@@ -15,6 +15,7 @@ internal sealed partial class StratsApp
     private const float ViewerBackRadius = 15f;
     private const float ViewerBackHit = 20f;
     private const float PopOutMinimumPixels = 1920f;
+    private const float ViewerSpinnerRadius = 13f;
 
     private static readonly Vector4 ViewerBackdrop = new(0.03f, 0.02f, 0.03f, 1f);
     private static readonly Vector4 ViewerInk = new(1f, 1f, 1f, 1f);
@@ -46,18 +47,11 @@ internal sealed partial class StratsApp
         }
         else
         {
-            LoadingPulse.Draw(stage.Center, 13f * scale, ui.Accent, AppPalettes.Strats.MutedInk,
+            LoadingPulse.Draw(stage.Center, ViewerSpinnerRadius * scale, ui.Accent, AppPalettes.Strats.MutedInk,
                 Loc.T(L.Strats.GuideLoading));
         }
 
-        if (landscape)
-        {
-            DrawViewerChrome(drawList, area, title, scale);
-            return;
-        }
-
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, title, closeViewer);
+        DrawViewerChrome(drawList, area, title, scale);
     }
 
     private bool TryResolveViewerImage(StratsView view, out ImageRef image, out SpotlightMask? mask, out string title)
@@ -102,7 +96,7 @@ internal sealed partial class StratsApp
 
     private static Rect PortraitStage(Rect area, float scale)
     {
-        var top = area.Min.Y + AppHeader.Height * scale;
+        var top = area.Min.Y + ViewerScrimHeight * scale;
         var pad = Metrics.Space.Sm * scale;
         return new Rect(new Vector2(area.Min.X + pad, top + pad), new Vector2(area.Max.X - pad, area.Max.Y - pad));
     }

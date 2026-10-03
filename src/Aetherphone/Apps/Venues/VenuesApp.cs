@@ -22,10 +22,6 @@ internal sealed partial class VenuesApp : IPhoneApp, ISpotlightVenues
     private const float ScopePillHeight = 28f;
     private const float SectionRowHeight = 36f;
     private const float EmptyStateTop = 70f;
-    private const float TabBarHeight = 58f;
-    private const float TabIconSize = 25f;
-    private const float TabHoverRadius = 20f;
-    private const float TabAnchorHalf = 20f;
     private const int PageSize = 30;
     private const int TabCount = 4;
 
@@ -51,6 +47,8 @@ internal sealed partial class VenuesApp : IPhoneApp, ISpotlightVenues
     private readonly ConfirmService confirm;
     private readonly TranslationService translation;
     private readonly AppSkin ui = new(AppPalettes.Venues);
+    private readonly TabBar tabBar = new();
+    private readonly TabItem[] tabItems = new TabItem[TabCount];
     private readonly ViewRouter<VenueRoute> router;
     private readonly RouterDraw<VenueRoute> drawView;
     private readonly Action back;
@@ -127,6 +125,14 @@ internal sealed partial class VenuesApp : IPhoneApp, ISpotlightVenues
         ui.Backdrop(screen);
         router.Draw(SceneChrome.AppAreaFrom(context.Content, theme, scale), AppSkin.Transparent,
             ImGui.GetIO().DeltaTime, drawView);
+        if (router.Depth == 1 && venues.Events.Count > 0)
+        {
+            TourHolds.Release(Id);
+        }
+        else
+        {
+            TourHolds.Hold(Id);
+        }
     }
 
     private void ConsumePendingVenue()
@@ -176,27 +182,28 @@ internal sealed partial class VenuesApp : IPhoneApp, ISpotlightVenues
     {
         var scale = UiScale.Current;
         RefreshSections();
-        var barRect = new Rect(new Vector2(area.Min.X, area.Max.Y - TabBarHeight * scale), area.Max);
-        var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale),
-            new Vector2(area.Max.X, barRect.Min.Y));
-        switch (activeTab)
+        var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
+        using (TabBar.ReserveContent(scale))
         {
-            case VenueTab.Live:
-                DrawLiveTab(body);
-                break;
-            case VenueTab.Events:
-                DrawEventsTab(body);
-                break;
-            case VenueTab.Saved:
-                DrawSavedTab(body);
-                break;
-            default:
-                DrawDiscoverTab(body);
-                break;
+            switch (activeTab)
+            {
+                case VenueTab.Live:
+                    DrawLiveTab(body);
+                    break;
+                case VenueTab.Events:
+                    DrawEventsTab(body);
+                    break;
+                case VenueTab.Saved:
+                    DrawSavedTab(body);
+                    break;
+                default:
+                    DrawDiscoverTab(body);
+                    break;
+            }
         }
 
         DrawTopBar(area, scale);
-        DrawTabBar(barRect);
+        DrawTabBar(area);
     }
 
     private string TabTitle() =>
@@ -208,72 +215,22 @@ internal sealed partial class VenuesApp : IPhoneApp, ISpotlightVenues
             _ => DisplayName,
         };
 
-    private void DrawTabBar(Rect bar)
+    private void DrawTabBar(Rect area)
     {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        SocialChrome.PaintBarBackdrop(ui, drawList, bar, screenRect);
-        FeedCell.Hairline(drawList, bar.Min.X, bar.Max.X, bar.Min.Y + 1f, Ink.Hairline);
-        var slot = bar.Width / TabCount;
-        var anchorHalf = new Vector2(TabAnchorHalf * scale, TabAnchorHalf * scale);
-        for (var index = 0; index < TabCount; index++)
+        tabItems[(int)VenueTab.Discover] = new TabItem(Loc.T(L.Venues.Discover), PhoneIcons.Compass,
+            PhoneIcons.CompassFilled);
+        tabItems[(int)VenueTab.Live] = new TabItem(Loc.T(L.Venues.LiveNow), PhoneIcons.Flame, PhoneIcons.FlameFilled,
+            sections.Live.Count, "venues.live");
+        tabItems[(int)VenueTab.Events] = new TabItem(Loc.T(L.Venues.Events), PhoneIcons.Calendar,
+            PhoneIcons.CalendarFilled);
+        tabItems[(int)VenueTab.Saved] = new TabItem(Loc.T(L.Venues.Favorites), PhoneIcons.Star, PhoneIcons.StarFilled);
+        var result = tabBar.Draw(area, ui, tabItems, (int)activeTab);
+        if (result.Tapped < 0)
         {
-            var tab = (VenueTab)index;
-            var cell = new Rect(new Vector2(bar.Min.X + slot * index, bar.Min.Y),
-                new Vector2(bar.Min.X + slot * (index + 1), bar.Max.Y));
-            var center = new Vector2(cell.Center.X, bar.Center.Y);
-            if (tab == VenueTab.Live)
-            {
-                UiAnchors.Report("venues.live", new Rect(center - anchorHalf, center + anchorHalf));
-            }
-
-            if (DrawTabSlot(drawList, cell, center, tab))
-            {
-                SelectTab(tab);
-            }
-        }
-    }
-
-    private bool DrawTabSlot(ImDrawListPtr drawList, Rect cell, Vector2 center, VenueTab tab)
-    {
-        var scale = UiScale.Current;
-        var active = activeTab == tab;
-        var hovered = UiInteract.Hover(cell.Min, cell.Max);
-        if (hovered)
-        {
-            drawList.AddCircleFilled(center, TabHoverRadius * scale, ImGui.GetColorU32(Ink.FieldFill), 32);
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            return;
         }
 
-        var ink = active ? Ink.AccentLink : hovered ? Ink.TitleInk : Ink.MutedInk;
-        var iconSize = TabIconSize * scale;
-        string label;
-        switch (tab)
-        {
-            case VenueTab.Live:
-                PhoneIcon.Draw(drawList, center, active ? PhoneIcons.FlameFilled : PhoneIcons.Flame, ink, iconSize);
-                SocialChrome.DrawCountBadge(drawList, center + new Vector2(11f * scale, -10f * scale),
-                    sections.Live.Count, Ink);
-                label = Loc.T(L.Venues.LiveNow);
-                break;
-            case VenueTab.Events:
-                PhoneIcon.Draw(drawList, center, active ? PhoneIcons.CalendarFilled : PhoneIcons.Calendar, ink,
-                    iconSize);
-                label = Loc.T(L.Venues.Events);
-                break;
-            case VenueTab.Saved:
-                PhoneIcon.Draw(drawList, center, active ? PhoneIcons.StarFilled : PhoneIcons.Star, ink, iconSize);
-                label = Loc.T(L.Venues.Favorites);
-                break;
-            default:
-                PhoneIcon.Draw(drawList, center, active ? PhoneIcons.CompassFilled : PhoneIcons.Compass, ink,
-                    iconSize);
-                label = Loc.T(L.Venues.Discover);
-                break;
-        }
-
-        HoverTooltip.Show(cell, label, HoverLabelSide.Above);
-        return UiInteract.Click(cell.Min, cell.Max, hovered);
+        SelectTab((VenueTab)result.Tapped);
     }
 
     private void SelectTab(VenueTab tab)
@@ -319,7 +276,6 @@ internal sealed partial class VenuesApp : IPhoneApp, ISpotlightVenues
             router.Push(VenueRoute.Filters);
         }
 
-        UiAnchors.Report("venues.chips", new Rect(pill.Min, filtersCenter + new Vector2(radius, radius)));
     }
 
     private Rect DrawScopePill(Vector2 rightCenter, float scale)
@@ -338,6 +294,7 @@ internal sealed partial class VenuesApp : IPhoneApp, ISpotlightVenues
             Ink.AccentLink, ScopePillStyle);
         PhoneIcon.Draw(drawList, new Vector2(rect.Max.X - 11f * scale, rect.Center.Y), PhoneIcons.ChevronDown,
             Palette.WithAlpha(Ink.AccentLink, 0.85f), 12f * scale);
+        UiAnchors.Report("venues.scope", rect);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -685,7 +642,15 @@ internal sealed partial class VenuesApp : IPhoneApp, ISpotlightVenues
         for (var index = 0; index < count; index++)
         {
             var venue = feed[index];
-            HandleCardAction(VenueCard.DrawFeed(venue, text[index], IsFavorite(venue.Id), art, Ink, actions), venue);
+            var cardTop = ImGui.GetCursorScreenPos();
+            var action = VenueCard.DrawFeed(venue, text[index], IsFavorite(venue.Id), art, Ink, actions);
+            if (index == 0 && UiAnchors.Recording)
+            {
+                UiAnchors.Report("venues.card.first", new Rect(cardTop,
+                    new Vector2(cardTop.X + ScrollLayout.StableContentWidth(), ImGui.GetCursorScreenPos().Y)));
+            }
+
+            HandleCardAction(action, venue);
         }
 
         if (feed.Count <= count)

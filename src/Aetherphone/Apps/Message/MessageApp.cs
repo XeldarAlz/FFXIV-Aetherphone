@@ -34,11 +34,6 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
         Settings,
     }
 
-    private const float TabBarHeight = 58f;
-    private const float TabIconSize = 24f;
-    private const float TabHoverRadius = 20f;
-    private const float TabBadgeOffsetX = 12f;
-    private const float TabBadgeOffsetY = 9f;
     private const int TabCount = 4;
 
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
@@ -77,6 +72,8 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
     private readonly SettingsLauncher settingsLauncher;
     private readonly MessagePopouts popouts;
     private readonly AppSkin ui = new(AppPalettes.Message);
+    private readonly TabBar tabBar = new();
+    private readonly TabItem[] tabItems = new TabItem[TabCount];
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly ViewRouter<MessageRoute> router;
     private readonly RouterDraw<MessageRoute> drawView;
@@ -429,20 +426,17 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
 
     private void DrawRoot(Rect area)
     {
-        if (GuideIntents.Consume("message.tab.calls"))
+        if (session.IsSignedIn)
         {
-            SelectTab(MessageTab.Calls);
+            TourHolds.Release(Id);
         }
-
-        if (GuideIntents.Consume("message.tab.contacts"))
+        else
         {
-            SelectTab(MessageTab.Contacts);
+            TourHolds.Hold(Id);
         }
 
         var scale = UiScale.Current;
         var headerRect = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + AppHeader.Height * scale));
-        var navHeight = TabBarHeight * scale;
-        var navRect = new Rect(new Vector2(area.Min.X, area.Max.Y - navHeight), area.Max);
         var contentTop = headerRect.Max.Y;
         DrawRootHeader(headerRect);
         if (currentCall.State is CallState.Dialing or CallState.Connecting or CallState.Active)
@@ -451,24 +445,27 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
                 new Vector2(area.Max.X, contentTop + ReturnBannerHeight * scale)));
         }
 
-        var content = new Rect(new Vector2(area.Min.X, contentTop), new Vector2(area.Max.X, navRect.Min.Y));
-        switch (activeTab)
+        var content = new Rect(new Vector2(area.Min.X, contentTop), area.Max);
+        using (TabBar.ReserveContent(scale))
         {
-            case MessageTab.Calls:
-                DrawCallsTab(content);
-                break;
-            case MessageTab.Contacts:
-                DrawContactsTab(content);
-                break;
-            case MessageTab.Settings:
-                DrawSettingsTab(content);
-                break;
-            default:
-                DrawChatsTab(content);
-                break;
+            switch (activeTab)
+            {
+                case MessageTab.Calls:
+                    DrawCallsTab(content);
+                    break;
+                case MessageTab.Contacts:
+                    DrawContactsTab(content);
+                    break;
+                case MessageTab.Settings:
+                    DrawSettingsTab(content);
+                    break;
+                default:
+                    DrawChatsTab(content);
+                    break;
+            }
         }
 
-        DrawTabBar(navRect);
+        DrawTabBar(area);
     }
 
     private void DrawRootHeader(Rect area)
@@ -508,8 +505,9 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
                     break;
                 }
 
-                if (DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(area, 0), PhoneIcons.MessagePlus,
-                        Loc.T(L.Message.NewChat)))
+                var newChatCenter = SocialChrome.HeaderSlot(area, 0);
+                UiAnchors.Report("message.newchat", ChatListChrome.HeaderHit(newChatCenter));
+                if (DrawHeaderIcon(drawList, newChatCenter, PhoneIcons.MessagePlus, Loc.T(L.Message.NewChat)))
                 {
                     OpenNewChat();
                 }
@@ -532,68 +530,23 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
         router.Push(MessageRoute.NewChat);
     }
 
-    private void DrawTabBar(Rect bar)
+    private void DrawTabBar(Rect area)
     {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        SocialChrome.PaintBarBackdrop(ui, drawList, bar, screenRect);
-        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(ui.Hairline), 1f);
-        var slot = bar.Width / TabCount;
-        for (var index = 0; index < TabCount; index++)
+        tabItems[(int)MessageTab.Chats] = new TabItem(Loc.T(L.Message.TabChats), PhoneIcons.MessageCircle,
+            PhoneIcons.MessageCircleFilled, store.UnreadTotal, "message.tab.chats");
+        tabItems[(int)MessageTab.Calls] = new TabItem(Loc.T(L.Phone.Calls), PhoneIcons.Phone, PhoneIcons.PhoneFilled,
+            calls.UnseenMissed, "message.tab.calls");
+        tabItems[(int)MessageTab.Contacts] = new TabItem(Loc.T(L.Apps.Contacts), PhoneIcons.Users,
+            AnchorKey: "message.tab.contacts");
+        tabItems[(int)MessageTab.Settings] = new TabItem(Loc.T(L.Settings.Title), PhoneIcons.Settings,
+            AnchorKey: "message.tab.settings");
+        var result = tabBar.Draw(area, ui, tabItems, (int)activeTab);
+        if (result.Tapped < 0)
         {
-            var tab = (MessageTab)index;
-            var cell = new Rect(new Vector2(bar.Min.X + slot * index, bar.Min.Y),
-                new Vector2(bar.Min.X + slot * (index + 1), bar.Max.Y));
-            var active = activeTab == tab;
-            var hovered = UiInteract.Hover(cell.Min, cell.Max);
-            var iconCenter = new Vector2(cell.Center.X, bar.Center.Y);
-            if (hovered)
-            {
-                drawList.AddCircleFilled(iconCenter, TabHoverRadius * scale, ImGui.GetColorU32(ink.FieldFill), 32);
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
-
-            var tint = active ? ink.AccentLink : hovered ? ink.TitleInk : ink.MutedInk;
-            string label;
-            var badge = 0;
-            string glyph;
-            string anchor;
-            switch (tab)
-            {
-                case MessageTab.Calls:
-                    glyph = active ? PhoneIcons.PhoneFilled : PhoneIcons.Phone;
-                    label = Loc.T(L.Phone.Calls);
-                    badge = calls.UnseenMissed;
-                    anchor = "message.tab.calls";
-                    break;
-                case MessageTab.Contacts:
-                    glyph = PhoneIcons.Users;
-                    label = Loc.T(L.Apps.Contacts);
-                    anchor = "message.tab.contacts";
-                    break;
-                case MessageTab.Settings:
-                    glyph = PhoneIcons.Settings;
-                    label = Loc.T(L.Settings.Title);
-                    anchor = "message.tab.settings";
-                    break;
-                default:
-                    glyph = active ? PhoneIcons.MessageCircleFilled : PhoneIcons.MessageCircle;
-                    label = Loc.T(L.Message.TabChats);
-                    badge = store.UnreadTotal;
-                    anchor = "message.tab.chats";
-                    break;
-            }
-
-            UiAnchors.Report(anchor, cell);
-            PhoneIcon.Draw(drawList, iconCenter, glyph, tint, TabIconSize * scale);
-            SocialChrome.DrawCountBadge(drawList,
-                iconCenter + new Vector2(TabBadgeOffsetX * scale, -TabBadgeOffsetY * scale), badge, ink);
-            HoverTooltip.Show(cell, label, HoverLabelSide.Above);
-            if (UiInteract.Click(cell.Min, cell.Max, hovered))
-            {
-                SelectTab(tab);
-            }
+            return;
         }
+
+        SelectTab((MessageTab)result.Tapped);
     }
 
     private void SelectTab(MessageTab tab)

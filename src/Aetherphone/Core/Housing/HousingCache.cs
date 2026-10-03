@@ -100,7 +100,7 @@ internal sealed class HousingCache
             });
         }
 
-        plots.Sort(HousingPlotOrder.ByDistrictWardThenPlot);
+        plots.Sort(HousingPlotOrder.ByWardThenPlot);
         return new HousingDistrictSnapshot
         {
             WorldId = worldId,

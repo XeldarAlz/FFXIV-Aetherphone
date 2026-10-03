@@ -1,101 +1,113 @@
 using System.Globalization;
 using Aetherphone.Core;
-using Aetherphone.Core.Game;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Hunts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Maps;
-using Aetherphone.Core.Runtime;
+using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
-using Aetherphone.Core.Venues;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility.Raii;
-using Lumina.Excel.Sheets;
 
 namespace Aetherphone.Apps.Hunts;
 
 internal sealed partial class HuntsApp
 {
-    private const float MapMaxSize = 260f;
+    private const float MapMaxSize = 320f;
     private const float MapDotRadius = 3.6f;
     private const float MapDotRingRadius = 5.6f;
-    private const float WindowCardAlpha = 0.82f;
-    private const float WindowCardTextInset = 12f;
-    private const float LoreHeaderAlpha = WindowCardAlpha;
-    private const float LoreHeaderHoverMix = 0.08f;
-    private const float LoreBodyAlpha = 0.35f;
-    private const float LoreBodyPadding = 6f;
+    private const float MapAetheryteIconSize = 20f;
+    private const float MapLegendHeight = 22f;
     private const string AetherytePoiType = "aetheryte";
     private const uint AetheryteMapIconId = 60453;
+    private const float DetailBarHeight = 8f;
+    private const float DetailActionHeight = 40f;
+    private const float WorldRowHeight = 52f;
+    private const float WorldRingSize = 30f;
+    private const float WorldRingThickness = 3.5f;
+    private const float RewardIconSize = 40f;
+    private const float RewardGap = 14f;
+    private const float AlertStripHeight = 32f;
+    private const float TimingColumnGap = 8f;
+    private const int AlertModeCount = 4;
+    private const int LoreCollapsedLines = 4;
 
-    private const float MapAetheryteIconSize = 20f;
-
-    private static readonly TimeSpan PendingFlagTimeout = TimeSpan.FromSeconds(90d);
-    private static readonly TimeSpan WorldHopRetryDelay = TimeSpan.FromSeconds(1d);
-    private static readonly TimeSpan FlagRetryDelay = TimeSpan.FromSeconds(1d);
-    private const int FlagRetryAttempts = 3;
-
-    private bool detailSpawnExpanded = true;
-    private bool detailDescExpanded = true;
-    private bool detailTipsExpanded = true;
-    private bool detailRewardsExpanded = true;
-    private bool detailTimingExpanded = true;
+    private readonly HuntRow detailRow = new();
+    private readonly List<HuntRow> otherWorldRows = new();
+    private readonly List<HuntRow> otherWorldPool = new();
+    private readonly List<HuntPoiEntry> detailMapAetherytePoints = new();
+    private readonly PhotoZoomView detailMapZoom = new();
+    private readonly string[] alertOptions = new string[AlertModeCount];
+    private readonly Dictionary<int, string> rewardCaptions = new();
+    private readonly Dictionary<double, string> hoursLabels = new();
+    private object? hoursLabelCulture;
+    private readonly Dictionary<int, string> coordinateLabels = new();
+    private float timelineLabelRight;
+    private string detailKey = string.Empty;
+    private string detailKeyWorld = string.Empty;
+    private int detailKeyInstance;
+    private object? detailCulture;
+    private string detailStatusLine = string.Empty;
+    private HuntMobNotificationMode alertHintMode;
+    private string alertHintWorld = string.Empty;
+    private bool alertHintSignedIn;
+    private object? alertHintCulture;
+    private string alertHint = string.Empty;
+    private object? rewardCaptionCulture;
     private string detailMobId = string.Empty;
     private string detailMapZoneId = string.Empty;
-    private readonly List<HuntPoiEntry> detailMapAetherytePoints = new();
-    private readonly Dictionary<(uint TerritoryId, string ZoneId, string Language), string> zoneLabelCache = new();
-    private readonly PhotoZoomView detailMapZoom = new();
+    private string detailOpensLabel = string.Empty;
+    private string detailCapLabel = string.Empty;
+    private string detailCopyText = string.Empty;
+    private int detailSpawnVersion = -1;
+    private DateTimeOffset detailRefreshAt;
+    private bool detailHasWindow;
     private bool detailMapHovered;
     private bool detailMapPendingFocus;
-
+    private bool detailLoreExpanded;
     private (int WindowNum, int PhaseNum)? detailMapActivePhase;
     private string? detailMapConfirmedZoneId;
 
-    private uint pendingFlagWorldId;
-    private uint pendingFlagTerritoryId;
-    private uint pendingFlagMapId;
-    private float pendingFlagMapX;
-    private float pendingFlagMapY;
+    private void OpenDetail(HuntWindowDto window, string backTitle) =>
+        OpenDetailFor(window.MobId, window.WorldId, window.ZoneInstance, backTitle);
 
-    private uint pendingWorldHopWorldId;
-    private uint pendingWorldHopTerritoryId;
-    private uint pendingWorldHopMapId;
-    private (float X, float Y)? pendingWorldHopFlagCoordinate;
-
-    private uint pendingInstanceWorldId;
-    private uint pendingInstanceTerritoryId;
-    private int pendingInstanceTarget;
-
-    private void OpenDetail(HuntWindowDto window) =>
-        OpenDetailFor(window.MobId, window.WorldId, window.ZoneInstance);
-
-    private void OpenDetailFor(string mobId, string worldId, int zoneInstance)
+    private void OpenDetailFor(string mobId, string worldId, int zoneInstance, string backTitle)
     {
+        PrepareDetail(mobId, worldId, zoneInstance);
+        Push(new HuntsView(HuntsRoute.Detail, mobId, worldId, zoneInstance, backTitle));
+    }
+
+    private void SwitchDetailWorld(HuntRow row, string backTitle)
+    {
+        UiFeedback.Play(UiSound.Tap);
+        PrepareDetail(row.Window.MobId, row.Window.WorldId, row.Window.ZoneInstance);
+        router.Replace(new HuntsView(HuntsRoute.Detail, row.Window.MobId, row.Window.WorldId,
+            row.Window.ZoneInstance, backTitle));
+    }
+
+    private void PrepareDetail(string mobId, string worldId, int zoneInstance)
+    {
+        detailKey = string.Empty;
         if (!string.Equals(detailMobId, mobId, StringComparison.Ordinal))
         {
-            detailSpawnExpanded = true;
-            detailDescExpanded = true;
-            detailTipsExpanded = true;
-            detailRewardsExpanded = true;
-            detailTimingExpanded = true;
-            detailMapActivePhase = hunts.PhaseFor(mobId, worldId, zoneInstance);
-            detailMapConfirmedZoneId = hunts.ZoneIdFor(mobId, worldId, zoneInstance);
-            ResolveDetailMap(mobCatalog.Find(mobId), worldId, zoneInstance);
-            detailMapPendingFocus = true;
-            detailMapHovered = false;
+            detailLoreExpanded = false;
         }
 
         detailMobId = mobId;
-        router.Push(new HuntsView(HuntsRoute.Detail, mobId, worldId, zoneInstance));
+        detailMapActivePhase = hunts.PhaseFor(mobId, worldId, zoneInstance);
+        detailMapConfirmedZoneId = hunts.ZoneIdFor(mobId, worldId, zoneInstance);
+        ResolveDetailMap(mobCatalog.Find(mobId), worldId, zoneInstance);
+        detailMapPendingFocus = true;
+        detailMapHovered = false;
     }
 
     private void ResolveDetailMap(HuntMobDefinition? mob, string worldId, int zoneInstance)
     {
         detailMapZoneId = string.Empty;
         detailMapAetherytePoints.Clear();
-
         if (mob is null || mob.ZoneIds.Length == 0)
         {
             return;
@@ -103,18 +115,7 @@ internal sealed partial class HuntsApp
 
         detailMapZoneId = HuntCandidateResolver.ResolveBestZoneId(mob, worldId, zoneInstance, zoneCatalog, hunts,
             out _);
-        PopulateAetherytePoints(detailMapZoneId);
-    }
-
-    private void PopulateAetherytePoints(string zoneId)
-    {
-        if (zoneId.Length == 0)
-        {
-            return;
-        }
-
-        var zone = zoneCatalog.FindZone(zoneId);
-        if (zone is null)
+        if (zoneCatalog.FindZone(detailMapZoneId) is not { } zone)
         {
             return;
         }
@@ -129,131 +130,116 @@ internal sealed partial class HuntsApp
         }
     }
 
-    private void CloseDetail()
+    private void DrawDetail(in PhoneContext context, HuntsView view)
     {
-        router.Pop();
-        menu.Close();
-    }
-
-    private void DrawDetailHeader(Rect content, float scale, string mobId, string worldId)
-    {
-        var def = mobCatalog.Find(mobId);
-        var title = ResolveMobLabel(def, mobId);
-        var rowCenterY = content.Min.Y + AppHeader.Height * scale * 0.5f;
-
-        var sideReserve = 44f * scale;
-        var titleStyle = new TextStyle(1.15f, FontWeight.SemiBold);
-        var titleTop = rowCenterY - Typography.Measure(title, titleStyle).Y * 0.5f;
-        var availableWidth = content.Width - sideReserve * 2f;
-
-        var rankLabel = def?.Rank ?? string.Empty;
-        var rankReserve = rankLabel.Length > 0 ? InlineBadge.Width(rankLabel, scale) + 6f * scale : 0f;
-        var nameMaxWidth = availableWidth - rankReserve;
-        var titleWidth = MathF.Min(Typography.Measure(title, titleStyle).X, nameMaxWidth);
-        var groupLeft = content.Center.X - (rankReserve + titleWidth) * 0.5f;
-
-        if (rankLabel.Length > 0)
+        var scale = UiScale.Current;
+        var navBar = AppHeader.BeginLargeTitle(context);
+        var mob = mobCatalog.Find(view.MobId);
+        var now = DateTimeOffset.UtcNow;
+        EnsureDetailModel(view, mob, now);
+        SyncDetailMap(view, mob);
+        using (ImRaii.PushId("hunts.detail"))
+        using (AppSurface.Begin(navBar.Body, disableMouseWheelScroll: detailMapHovered))
         {
-            InlineBadge.Draw(ImGui.GetWindowDrawList(), groupLeft, rowCenterY, rankLabel, RankBadgeColor(rankLabel),
-                scale);
+            DrawDetailHero(mob, now, scale);
+            DrawDetailActions(view, scale);
+            DrawDetailMapSection(view, mob, scale);
+            DrawOtherWorlds(view, scale);
+            DrawAlertCard(view, scale);
+            DrawDetailText(view, scale);
+            DrawRewardsCard(view.MobId, scale);
+            DrawTimingCard(mob, scale);
+            DrawLoreCard(view.MobId, scale);
+            BottomSpacer(scale);
         }
 
-        Marquee.DrawLeftAuto("hunts.detail.header", title, groupLeft + rankReserve, titleTop, nameMaxWidth,
-            titleStyle, ui.TitleInk);
-
-        if (AppHeader.DrawBack(content, scale, "hunts.detail.back", ui.Accent))
-        {
-            CloseDetail();
-        }
-
-        DrawDetailNotificationButton(content, scale, mobId, worldId, rowCenterY);
+        AppHeader.EndLargeTitle(in navBar, context, "hunts.detail.nav", detailRow.Name, NavBarStyle.From(ui),
+            ReadOnlySpan<NavBarButton>.Empty, view.BackTitle, back);
     }
 
-    private void DrawDetailBody(Rect body, float scale, HuntsView view)
+    private void EnsureDetailModel(HuntsView view, HuntMobDefinition? mob, DateTimeOffset now)
     {
-        using (AppSurface.Begin(body, disableMouseWheelScroll: detailMapHovered))
+        var current = string.Equals(view.MobId, detailKey, StringComparison.Ordinal) &&
+                      string.Equals(view.WorldId, detailKeyWorld, StringComparison.Ordinal) &&
+                      view.ZoneInstance == detailKeyInstance && hunts.ActiveSpawnVersion == detailSpawnVersion &&
+                      ReferenceEquals(Loc.Culture, detailCulture) && now < detailRefreshAt;
+        if (current)
         {
-            Gap(8f);
-
-            var def = mobCatalog.Find(view.MobId);
-            if (FindWindow(view) is { } window)
-            {
-                DrawDetailWindowBar(window, def, DateTimeOffset.UtcNow, scale);
-                Gap(20f);
-            }
-
-            var livePhase = hunts.PhaseFor(view.MobId, view.WorldId, view.ZoneInstance);
-            var liveZoneId = hunts.ZoneIdFor(view.MobId, view.WorldId, view.ZoneInstance);
-            if (livePhase is not null &&
-                (livePhase != detailMapActivePhase || liveZoneId != detailMapConfirmedZoneId))
-            {
-                detailMapActivePhase = livePhase;
-                detailMapConfirmedZoneId = liveZoneId;
-                ResolveDetailMap(def, view.WorldId, view.ZoneInstance);
-            }
-
-            var (states, confirmedPoiId) = def is not null
-                ? candidateCache.ResolveFor(def, view.WorldId, view.ZoneInstance, detailMapZoneId,
-                    includeLandmineOnlySpots: false)
-                : (Array.Empty<HuntPoiState>(), null);
-            if (DrawDetailZoneMap(scale, states, view))
-            {
-                Gap(20f);
-            }
-
-            var spawned = hunts.IsSpawned(view.MobId, view.WorldId, view.ZoneInstance);
-            if (spawned && DrawNavigateButton(view, scale, confirmedPoiId))
-            {
-                Gap(20f);
-            }
-
-            var spawnLore = HuntMobLore.SpawnFor(view.MobId);
-            var spawnText = spawnLore is { } spawn ? Loc.T(spawn) : Loc.T(L.Hunts.NoSpecialSpawnCondition);
-
-            DrawLoreSection(Loc.T(L.Hunts.SpawnConditionSection), spawnText, null, ref detailSpawnExpanded, scale);
-            Gap(12f);
-
-            var rawTipText = HuntMobLore.TipFor(view.MobId);
-            if (rawTipText is not null)
-            {
-                var tipNote = HuntMobLore.TipIsFallback(view.MobId) ? Loc.T(L.Hunts.LoreNotAvailableInLanguage) : null;
-                DrawLoreSection(Loc.T(L.Hunts.TipsSection), rawTipText, tipNote, ref detailTipsExpanded, scale);
-                Gap(12f);
-            }
-
-            var rewards = rewardCatalog.RewardsFor(view.MobId);
-            if (rewards.Count > 0)
-            {
-                DrawRewardsSection(rewards, ref detailRewardsExpanded, scale);
-                Gap(12f);
-            }
-
-            if (DrawSpawnInfoSection(FindWindow(view), def, ref detailTimingExpanded, scale))
-            {
-                Gap(12f);
-            }
-
-            var rawDescText = HuntMobLore.DescriptionFor(view.MobId);
-            var descText = rawDescText ?? Loc.T(L.Hunts.NoLoreAvailable);
-
-            var descNote = rawDescText is not null && HuntMobLore.DescriptionIsFallback(view.MobId)
-                ? Loc.T(L.Hunts.LoreNotAvailableInLanguage)
-                : null;
-
-            DrawLoreSection(Loc.T(L.Hunts.DescriptionSection), descText, descNote, ref detailDescExpanded, scale);
-            Gap(24f);
+            return;
         }
+
+        detailKey = view.MobId;
+        detailKeyWorld = view.WorldId;
+        detailKeyInstance = view.ZoneInstance;
+        detailCulture = Loc.Culture;
+        detailSpawnVersion = hunts.ActiveSpawnVersion;
+        detailRefreshAt = now + BoardRefreshInterval;
+        var window = FindWindow(view.MobId, view.WorldId, view.ZoneInstance);
+        detailHasWindow = window is not null;
+        var placeholder = window ?? new HuntWindowDto
+        {
+            MobId = view.MobId,
+            WorldId = view.WorldId,
+            ZoneInstance = view.ZoneInstance,
+        };
+        var status = window is null ? HuntWindowStatus.Unknown : ResolveDisplayStatus(window, mob, now);
+        FillRow(detailRow, placeholder, mob, status, ResolveMobLabel(mob, view.MobId), now);
+        detailOpensLabel = window is not null && HuntWindowMath.MinimumReachedAt(window, mob) is { } opensAt
+            ? HuntsText.Moment(opensAt)
+            : string.Empty;
+        detailCapLabel = window is not null && HuntWindowMath.TimingFor(window, mob) is { Cap: { } cap } &&
+                         window.StartedAt != default
+            ? HuntsText.Moment(window.StartedAt + TimeSpan.FromHours(cap))
+            : string.Empty;
+        detailCopyText = detailRow.Coordinate is { } coordinate
+            ? Loc.T(L.Hunts.CopyLine, detailRow.Name, detailRow.Subtitle,
+                CoordinateText(coordinate.X, coordinate.Y))
+            : Loc.T(L.Hunts.CopyLineNoSpot, detailRow.Name, detailRow.Subtitle);
+        detailStatusLine = detailHasWindow ? DetailStatusLine() : Loc.T(L.Hunts.NoWindowDataHint);
+        BuildOtherWorlds(view, mob, now);
     }
 
-    private HuntWindowDto? FindWindow(HuntsView view)
+    private void BuildOtherWorlds(HuntsView view, HuntMobDefinition? mob, DateTimeOffset now)
+    {
+        otherWorldRows.Clear();
+        var windows = hunts.Windows;
+        for (var index = 0; index < windows.Length; index++)
+        {
+            var window = windows[index];
+            if (!string.Equals(window.MobId, view.MobId, StringComparison.Ordinal) ||
+                (string.Equals(window.WorldId, view.WorldId, StringComparison.OrdinalIgnoreCase) &&
+                 window.ZoneInstance == view.ZoneInstance))
+            {
+                continue;
+            }
+
+            while (otherWorldPool.Count <= otherWorldRows.Count)
+            {
+                otherWorldPool.Add(new HuntRow());
+            }
+
+            var row = otherWorldPool[otherWorldRows.Count];
+            FillRow(row, window, mob, ResolveDisplayStatus(window, mob, now), detailRow.Name, now);
+            row.Subtitle = ResolvePlace(window.WorldId, window.ZoneInstance, mob);
+            otherWorldRows.Add(row);
+        }
+
+        otherWorldRows.Sort(static (left, right) =>
+        {
+            var bySection = ((int)left.Section).CompareTo((int)right.Section);
+            return bySection != 0 ? bySection : left.SortKey.CompareTo(right.SortKey);
+        });
+    }
+
+    private HuntWindowDto? FindWindow(string mobId, string worldId, int zoneInstance)
     {
         var windows = hunts.Windows;
         for (var index = 0; index < windows.Length; index++)
         {
             var candidate = windows[index];
-            if (string.Equals(candidate.MobId, view.MobId, StringComparison.Ordinal) &&
-                string.Equals(candidate.WorldId, view.WorldId, StringComparison.OrdinalIgnoreCase) &&
-                candidate.ZoneInstance == view.ZoneInstance)
+            if (string.Equals(candidate.MobId, mobId, StringComparison.Ordinal) &&
+                string.Equals(candidate.WorldId, worldId, StringComparison.OrdinalIgnoreCase) &&
+                candidate.ZoneInstance == zoneInstance)
             {
                 return candidate;
             }
@@ -262,117 +248,179 @@ internal sealed partial class HuntsApp
         return null;
     }
 
-    private void DrawDetailWindowBar(HuntWindowDto window, HuntMobDefinition? def, DateTimeOffset now, float scale)
+    private void SyncDetailMap(HuntsView view, HuntMobDefinition? mob)
     {
+        var livePhase = hunts.PhaseFor(view.MobId, view.WorldId, view.ZoneInstance);
+        var liveZoneId = hunts.ZoneIdFor(view.MobId, view.WorldId, view.ZoneInstance);
+        if (livePhase is null || (livePhase == detailMapActivePhase && liveZoneId == detailMapConfirmedZoneId))
+        {
+            return;
+        }
+
+        detailMapActivePhase = livePhase;
+        detailMapConfirmedZoneId = liveZoneId;
+        ResolveDetailMap(mob, view.WorldId, view.ZoneInstance);
+    }
+
+    private void DrawDetailHero(HuntMobDefinition? mob, DateTimeOffset now, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var drawList = ImGui.GetWindowDrawList();
-
-        var panelWidth = MathF.Min(width, MapMaxSize * scale);
-        var panelMargin = (width - panelWidth) * 0.5f;
-        var panelLeft = origin.X + panelMargin;
-        var panelRight = origin.X + width - panelMargin;
-
-        var inset = WindowCardTextInset * scale;
-        var contentLeft = panelLeft + inset;
-        var contentRight = panelRight - inset;
-
-        var worldLabel = Prettify(window.WorldId);
-        var showsInstanceBadge = def is not null && window.ZoneInstance > 0 && hunts.ZoneInstanceCountFor(def) > 1;
-        var status = ResolveDisplayStatus(window, def, now);
-        var statusLabel = ComposeStatusLabel(status, window.MobId, window.WorldId, window.ZoneInstance, def);
-        var statusInk = StatusColor(status);
-
-        var headerHeight = MathF.Max(Typography.LineHeight(TextStyles.Subheadline),
-            Typography.LineHeight(TextStyles.Title3));
-        var barTop = origin.Y + headerHeight + 10f * scale;
-        var barHeight = 8f * scale;
-        var percentage = HuntWindowMath.Percentage(window, def, now);
-        var fillPercentage = HuntWindowMath.RawPercentage(window, def, now);
-
-        var detailLabel = ResolveDetailLabel(status, window, def, now);
-        var reporterLabel = ResolveReporterLabel(window);
-
-        var bottom = barTop + barHeight;
-        if (detailLabel.Length > 0)
+        var pad = HuntsArt.CardPadding * scale;
+        var inner = width - pad * 2f;
+        var window = detailHasWindow ? detailRow.Window : null;
+        var timeline = window is not null && detailRow.Section != HuntBoardSection.Live
+            ? HuntBoard.TimelineFor(window, mob, now)
+            : null;
+        var capsuleHeight = HuntsArt.CapsuleHeight(scale);
+        var bigStyle = TextStyles.Title2;
+        var bigHeight = Typography.LineHeight(bigStyle);
+        var lineHeight = Typography.LineHeight(TextStyles.Subheadline);
+        var footHeight = Typography.LineHeight(TextStyles.Footnote);
+        var gap = HuntsArt.LineGap * scale * 2f;
+        var height = pad + capsuleHeight + gap + bigHeight + gap + lineHeight + pad;
+        if (timeline is not null)
         {
-            bottom = bottom + 6f * scale + Typography.LineHeight(TextStyles.Footnote);
+            height += HuntsArt.RowGap * scale + DetailBarHeight * scale + gap + footHeight;
         }
 
-        if (reporterLabel.Length > 0)
+        if (detailRow.Reporters.Length > 0)
         {
-            bottom = bottom + 6f * scale + Typography.LineHeight(TextStyles.Footnote);
+            height += gap + footHeight;
         }
 
-        var plateMin = new Vector2(panelLeft, origin.Y - 8f * scale);
-        var plateMax = new Vector2(panelRight, bottom + 8f * scale);
-        var radius = Metrics.Radius.Card * scale;
-        var shadowOffset = new Vector2(0f, 2f * scale);
-        drawList.AddRectFilled(plateMin + shadowOffset, plateMax + shadowOffset,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.24f)), radius);
-        Squircle.Fill(drawList, plateMin, plateMax, radius,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.Palette.BackdropBottom, WindowCardAlpha)));
-        Squircle.Stroke(drawList, plateMin, plateMax, radius, ImGui.GetColorU32(ui.Palette.CardStroke), 1f);
-
-        Typography.Draw(drawList, new Vector2(contentLeft, origin.Y), worldLabel, ui.MutedInk, TextStyles.Subheadline);
-
-        if (showsInstanceBadge)
+        var card = new Rect(origin, origin + new Vector2(width, height));
+        UiAnchors.Report("hunts.detail.hero", card);
+        ui.Card(drawList, card.Min, card.Max, HuntsArt.CardRadius * scale, elevated: true);
+        var left = card.Min.X + pad;
+        var top = card.Min.Y + pad;
+        var capsuleRight = left;
+        if (detailRow.Rank.Length > 0)
         {
-            var worldLabelWidth = Typography.Measure(worldLabel, TextStyles.Subheadline).X;
-            var worldLabelCenterY = origin.Y + Typography.LineHeight(TextStyles.Subheadline) * 0.5f;
-            var badgeLeft = contentLeft + worldLabelWidth + 6f * scale;
-            InlineBadge.Draw(drawList, badgeLeft, worldLabelCenterY, window.ZoneInstance.ToString(Loc.Culture),
-                ui.MutedInk, scale, InstanceBadgeSize * scale);
+            var rankColor = HuntsArt.RankColor(detailRow.Rank, ui.Accent);
+            capsuleRight += HuntsArt.Capsule(drawList, new Vector2(left, top), detailRow.Rank,
+                IconTile.Surface(rankColor), AccentRing.Ink, scale) + HuntsArt.RowGap * scale * 0.5f;
         }
 
-        var statusSize = Typography.Measure(statusLabel, TextStyles.Title3);
-        Typography.Draw(drawList, new Vector2(contentRight - statusSize.X, origin.Y), statusLabel, statusInk,
-            TextStyles.Title3);
-
-        DrawBigProgressBar(drawList, contentLeft, contentRight, barTop, barHeight, status, percentage, fillPercentage,
-            scale);
-
-        var lineTop = barTop + barHeight;
-        if (detailLabel.Length > 0)
+        var placeHeight = Typography.LineHeight(TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(capsuleRight, top + (capsuleHeight - placeHeight) * 0.5f),
+            Typography.FitText(detailRow.Subtitle, MathF.Max(1f, card.Max.X - pad - capsuleRight), TextStyles.Footnote),
+            ui.MutedInk, TextStyles.Footnote);
+        top += capsuleHeight + gap;
+        var statusInk = HuntsArt.StatusColor(detailRow.Status, ui.TitleInk);
+        var big = detailHasWindow ? detailRow.Primary : Loc.T(L.Hunts.NoWindowData);
+        Typography.Draw(drawList, new Vector2(left, top), Typography.FitText(big, inner, bigStyle),
+            detailHasWindow ? statusInk : ui.TitleInk, bigStyle);
+        top += bigHeight + gap;
+        Typography.Draw(drawList, new Vector2(left, top),
+            Typography.FitText(detailStatusLine, inner, TextStyles.Subheadline),
+            ui.MutedInk, TextStyles.Subheadline);
+        top += lineHeight;
+        if (timeline is { } line)
         {
-            lineTop = lineTop + 6f * scale;
-            Typography.Draw(drawList, new Vector2(contentLeft, lineTop), detailLabel, ui.MutedInk,
-                TextStyles.Footnote);
-            lineTop = lineTop + Typography.LineHeight(TextStyles.Footnote);
+            top += HuntsArt.RowGap * scale;
+            var bar = new Rect(new Vector2(left, top), new Vector2(card.Max.X - pad, top + DetailBarHeight * scale));
+            HuntsArt.Timeline(drawList, bar, in line, statusInk == ui.TitleInk ? ui.Accent : statusInk, statusInk,
+                ui.TitleInk, scale);
+            top += DetailBarHeight * scale + gap;
+            timelineLabelRight = float.MinValue;
+            DrawTimelineLabel(drawList, bar, line.Minimum, detailOpensLabel, top);
+            DrawTimelineLabel(drawList, bar, line.Cap, detailCapLabel, top);
+            top += footHeight;
         }
 
-        if (reporterLabel.Length > 0)
+        if (detailRow.Reporters.Length > 0)
         {
-            lineTop = lineTop + 6f * scale;
-            Typography.Draw(drawList, new Vector2(contentLeft, lineTop), reporterLabel, ui.MutedInk,
-                TextStyles.Footnote);
+            top += gap;
+            Typography.Draw(drawList, new Vector2(left, top),
+                Typography.FitText(detailRow.Reporters, inner, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
         }
 
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, plateMax.Y - origin.Y));
+        ImGui.Dummy(new Vector2(width, height + HuntsArt.CardGap * scale));
     }
 
-    private string ResolveReporterLabel(HuntWindowDto window)
+    private string DetailStatusLine()
     {
-        var reporterNames = hunts.ReporterNamesFor(window.MobId, window.WorldId, window.ZoneInstance);
-        return reporterNames is { Length: > 0 }
-            ? Loc.T(L.Hunts.SpawnInfoLineFormat, Loc.T(L.Hunts.ReportedByLabel), string.Join(", ", reporterNames))
-            : string.Empty;
+        var status = StatusLabel(detailRow.Status);
+        if (detailRow.Section == HuntBoardSection.Live || detailRow.Secondary.Length == 0)
+        {
+            return detailRow.Section == HuntBoardSection.Live ? Loc.T(L.Hunts.LiveHint) : status;
+        }
+
+        return Loc.T(L.Hunts.StatusDetail, status, detailRow.Secondary);
     }
 
-    private void DrawBigProgressBar(ImDrawListPtr drawList, float left, float right, float top, float height,
-        HuntWindowStatus status, double? percentage, double? fillPercentage, float scale)
+    private void DrawTimelineLabel(ImDrawListPtr drawList, Rect bar, float fraction, string text, float top)
     {
-        ProgressBar.Draw(drawList, left, right, top, height, percentage, fillPercentage, StatusColor(status),
-            TextStyles.Headline, 8f * scale);
+        if (text.Length == 0)
+        {
+            return;
+        }
+
+        var width = Typography.Measure(text, TextStyles.Footnote).X;
+        var x = MathF.Max(bar.Min.X, MathF.Min(bar.Min.X + bar.Width * fraction - width * 0.5f, bar.Max.X - width));
+        if (x < timelineLabelRight)
+        {
+            return;
+        }
+
+        Typography.Draw(drawList, new Vector2(x, top), Typography.FitText(text, bar.Width, TextStyles.Footnote),
+            ui.MutedInk, TextStyles.Footnote);
+        timelineLabelRight = x + width + HuntsArt.TileGap * UiScale.Current;
     }
 
-    private bool DrawDetailZoneMap(float scale, IReadOnlyList<HuntPoiState> states, HuntsView view)
+    private void DrawDetailActions(HuntsView view, float scale)
     {
+        if (detailRow.Section != HuntBoardSection.Live)
+        {
+            return;
+        }
+
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var height = DetailActionHeight * scale;
+        var gap = HuntsArt.TileGap * scale;
+        var worldId = HuntDataCenterWorlds.WorldRowId(view.WorldId);
+        var canTravel = detailRow.TerritoryId != 0 && worldId != 0;
+        var copyWidth = canTravel ? (width - gap) * 0.38f : width;
+        var copyRect = new Rect(new Vector2(origin.X + width - copyWidth, origin.Y),
+            new Vector2(origin.X + width, origin.Y + height));
+        if (canTravel)
+        {
+            var goRect = new Rect(origin, new Vector2(copyRect.Min.X - gap, origin.Y + height));
+            UiAnchors.Report("hunts.detail.go", goRect);
+            var alreadyHere = Plugin.ClientState.TerritoryType == detailRow.TerritoryId &&
+                              LocationShare.CurrentWorldId() == worldId;
+            var label = alreadyHere ? Loc.T(L.Hunts.PlaceFlagOnMap) : Loc.T(L.Hunts.NavigateToLocation);
+            if (ui.PillButton(goRect, label, true, "hunts.detail.navigate"))
+            {
+                UiFeedback.Play(UiSound.Tap);
+                NavigateToCoordinate(detailRow.TerritoryId, worldId, ResolveMapId(detailRow.TerritoryId),
+                    detailRow.Coordinate, detailRow.Coordinate, view.ZoneInstance);
+            }
+        }
+
+        if (ui.PillButton(copyRect, Loc.T(L.Hunts.CopyForChat), false, "hunts.detail.copy"))
+        {
+            ImGui.SetClipboardText(detailCopyText);
+            UiFeedback.Play(UiSound.Success);
+            ShellToast.Show();
+        }
+
+        ImGui.Dummy(new Vector2(width, height + HuntsArt.CardGap * scale));
+    }
+
+    private void DrawDetailMapSection(HuntsView view, HuntMobDefinition? mob, float scale)
+    {
+        var (states, _) = mob is not null
+            ? candidateCache.ResolveFor(mob, view.WorldId, view.ZoneInstance, detailMapZoneId,
+                includeLandmineOnlySpots: false)
+            : (Array.Empty<HuntPoiState>(), null);
         if (states.Count == 0 && detailMapAetherytePoints.Count == 0)
         {
             detailMapHovered = false;
-            return false;
+            return;
         }
 
         var zone = zoneCatalog.FindZone(detailMapZoneId);
@@ -381,25 +429,17 @@ internal sealed partial class HuntsApp
         if (zone is null || texture is null)
         {
             detailMapHovered = false;
-            return false;
+            return;
         }
 
+        ui.SectionLabel(ResolveZoneLabel(zone.Id), TextStyles.FootnoteEmphasized, 6f);
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var size = MathF.Min(width, MapMaxSize * scale);
         var mapLeft = origin.X + (width - size) * 0.5f;
-
-        var drawList = ImGui.GetWindowDrawList();
-        var zoneLabel = ResolveZoneLabel(zone.Id, territoryId);
-        var labelSize = Typography.Measure(zoneLabel, TextStyles.Footnote);
-        var labelGap = 6f * scale;
-        Typography.Draw(drawList, new Vector2(mapLeft + (size - labelSize.X) * 0.5f, origin.Y), zoneLabel,
-            ui.MutedInk, TextStyles.Footnote);
-
-        var mapTop = origin.Y + labelSize.Y + labelGap;
-        var stage = new Rect(new Vector2(mapLeft, mapTop), new Vector2(mapLeft + size, mapTop + size));
-
-        detailMapHovered = ImGui.IsMouseHoveringRect(stage.Min, stage.Max);
+        var stage = new Rect(new Vector2(mapLeft, origin.Y), new Vector2(mapLeft + size, origin.Y + size));
+        UiAnchors.Report("hunts.detail.map", stage);
+        detailMapHovered = UiInteract.Hover(stage.Min, stage.Max);
         ImGui.SetCursorScreenPos(stage.Min);
         using (var mapChild = ImRaii.Child("##huntsDetailMap", stage.Size, false,
                    ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
@@ -411,29 +451,62 @@ internal sealed partial class HuntsApp
             }
         }
 
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, stage.Max.Y));
+        DrawMapLegend(states, origin.X, width, scale);
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, labelSize.Y + labelGap + size));
-        return true;
+        ImGui.Dummy(new Vector2(width, size + MapLegendHeight * scale + HuntsArt.CardGap * scale));
     }
 
-    private string ResolveZoneLabel(string zoneId, uint territoryId)
+    private void DrawMapLegend(IReadOnlyList<HuntPoiState> states, float left, float width, float scale)
     {
-        var key = (territoryId, zoneId, HuntUiLanguage.Key());
-        if (zoneLabelCache.TryGetValue(key, out var cached))
+        var hasCandidate = false;
+        var hasSighted = false;
+        var hasConfirmed = false;
+        for (var index = 0; index < states.Count; index++)
         {
-            return cached;
+            switch (states[index].State)
+            {
+                case HuntsMapMarkerState.Confirmed:
+                    hasConfirmed = true;
+                    break;
+                case HuntsMapMarkerState.Sighted:
+                    hasSighted = true;
+                    break;
+                case HuntsMapMarkerState.Candidate:
+                    hasCandidate = true;
+                    break;
+            }
         }
 
-        var label = ResolveLiveZoneName(territoryId) is { Length: > 0 } name ? name : Prettify(zoneId);
-        zoneLabelCache[key] = label;
-        return label;
+        var drawList = ImGui.GetWindowDrawList();
+        var top = ImGui.GetCursorScreenPos().Y + 6f * scale;
+        var centerY = top + Typography.LineHeight(TextStyles.Footnote) * 0.5f;
+        var x = left;
+        if (hasCandidate)
+        {
+            x = DrawLegendItem(drawList, x, centerY, ui.Accent, Loc.T(L.Hunts.NativeMapLegendCandidate), scale);
+        }
+
+        if (hasSighted)
+        {
+            x = DrawLegendItem(drawList, x, centerY, ui.MutedInk, Loc.T(L.Hunts.NativeMapLegendSighted), scale);
+        }
+
+        if (hasConfirmed && x < left + width)
+        {
+            DrawLegendItem(drawList, x, centerY, HuntsArt.OpenColor, Loc.T(L.Hunts.NativeMapLegendConfirmed), scale);
+        }
     }
 
-    private static string? ResolveLiveZoneName(uint territoryId) =>
-        territoryId != 0 && Plugin.DataManager.GetExcelSheet<TerritoryType>(HuntUiLanguage.SheetLanguage())
-            .TryGetRow(territoryId, out var territory) && territory.PlaceName.RowId != 0
-            ? territory.PlaceName.Value.Name.ExtractText()
-            : null;
+    private float DrawLegendItem(ImDrawListPtr drawList, float x, float centerY, Vector4 ink, string label, float scale)
+    {
+        HuntsArt.Dot(drawList, new Vector2(x + 4f * scale, centerY), ink, scale);
+        var textLeft = x + 12f * scale;
+        var size = Typography.Measure(label, TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(textLeft, centerY - size.Y * 0.5f), label, ui.MutedInk,
+            TextStyles.Footnote);
+        return textLeft + size.X + HuntsArt.RowGap * scale;
+    }
 
     private void DrawDetailZoneMapContent(Rect stage, IDalamudTextureWrap texture, float scale,
         IReadOnlyList<HuntPoiState> states, HuntsView view, uint territoryId)
@@ -445,22 +518,19 @@ internal sealed partial class HuntsApp
         }
 
         var drawList = ImGui.GetWindowDrawList();
-        detailMapZoom.Draw(stage, texture, frameTheme, Metrics.Radius.Card * scale, showButtons: false);
-
+        detailMapZoom.Draw(stage, texture, frameTheme, HuntsArt.CardRadius * scale, showButtons: false);
         var fit = PhotoZoomView.FitScale(stage, texture.Size);
         var drawnSize = texture.Size * fit * detailMapZoom.Zoom;
         var center = stage.Center + detailMapZoom.Pan;
         var min = center - drawnSize * 0.5f;
         var max = center + drawnSize * 0.5f;
-
         drawList.PushClipRect(stage.Min, stage.Max, true);
         for (var index = 0; index < states.Count; index++)
         {
             var (poi, state) = states[index];
             var (rawX, rawY) = poi.ParsedLocation();
             var (normalizedX, normalizedY) = MapPixelMath.NormalizeToFullCanvas(rawX, rawY);
-            var dotPosition = new Vector2(min.X + normalizedX * (max.X - min.X),
-                min.Y + normalizedY * (max.Y - min.Y));
+            var dotPosition = new Vector2(min.X + normalizedX * (max.X - min.X), min.Y + normalizedY * (max.Y - min.Y));
             DrawSpawnDot(drawList, dotPosition, scale, poi.Id, state);
         }
 
@@ -471,12 +541,12 @@ internal sealed partial class HuntsApp
             var poi = detailMapAetherytePoints[index];
             var (rawX, rawY) = poi.ParsedLocation();
             var (normalizedX, normalizedY) = MapPixelMath.NormalizeToFullCanvas(rawX, rawY);
-            var dotPosition = new Vector2(min.X + normalizedX * (max.X - min.X),
-                min.Y + normalizedY * (max.Y - min.Y));
+            var dotPosition = new Vector2(min.X + normalizedX * (max.X - min.X), min.Y + normalizedY * (max.Y - min.Y));
             DrawAetheryteDot(drawList, dotPosition, scale, poi, territoryId, worldId, mapId, view.ZoneInstance);
         }
 
         drawList.PopClipRect();
+        Material.EdgeSquircle(drawList, stage.Min, stage.Max, HuntsArt.CardRadius * scale, scale);
     }
 
     private void FocusDetailMap(Rect stage, Vector2 textureSize, IReadOnlyList<HuntPoiState> states)
@@ -505,9 +575,9 @@ internal sealed partial class HuntsApp
     {
         var ink = state switch
         {
-            HuntsMapMarkerState.Confirmed => OpenBarColor,
+            HuntsMapMarkerState.Confirmed => HuntsArt.OpenColor,
             HuntsMapMarkerState.Sighted => ui.MutedInk,
-            HuntsMapMarkerState.ActiveMinion => SpawnedBarColor,
+            HuntsMapMarkerState.ActiveMinion => HuntsArt.LiveColor,
             HuntsMapMarkerState.SsSpawn => ui.Theme.Danger,
             _ => ui.Accent,
         };
@@ -515,22 +585,21 @@ internal sealed partial class HuntsApp
             20);
         drawList.AddCircle(center, MapDotRingRadius * scale, ImGui.GetColorU32(Vector4.One), 20, 1.4f * scale);
         drawList.AddCircleFilled(center, MapDotRadius * scale, ImGui.GetColorU32(ink), 20);
-
         var hitRadius = MapDotRingRadius * scale + 3f * scale;
         var hitMin = new Vector2(center.X - hitRadius, center.Y - hitRadius);
         var hitMax = new Vector2(center.X + hitRadius, center.Y + hitRadius);
-        if (!ImGui.IsMouseHoveringRect(hitMin, hitMax))
+        if (!UiInteract.Hover(hitMin, hitMax) || zoneCatalog.ResolveCoordinate(poiId) is not { } coordinate)
         {
             return;
         }
 
-        if (zoneCatalog.ResolveCoordinate(poiId) is not { } coordinate)
+        if (!coordinateLabels.TryGetValue(poiId, out var label))
         {
-            return;
+            label = CoordinateText(coordinate.X, coordinate.Y);
+            coordinateLabels[poiId] = label;
         }
 
-        HoverTooltip.Show(new Rect(hitMin, hitMax), CoordinateText(coordinate.X, coordinate.Y),
-            HoverLabelSide.Above);
+        HoverTooltip.Show(new Rect(hitMin, hitMax), label, HoverLabelSide.Above);
     }
 
     private void DrawAetheryteDot(ImDrawListPtr drawList, Vector2 center, float scale, HuntPoiEntry poi,
@@ -540,7 +609,6 @@ internal sealed partial class HuntsApp
         var iconMin = new Vector2(center.X - iconRadius, center.Y - iconRadius);
         var iconMax = new Vector2(center.X + iconRadius, center.Y + iconRadius);
         GameIconTile.Draw(drawList, Plugin.TextureProvider, AetheryteMapIconId, iconMin, iconMax, 6f * scale, scale);
-
         var hitRadius = iconRadius + 3f * scale;
         var hitMin = new Vector2(center.X - hitRadius, center.Y - hitRadius);
         var hitMax = new Vector2(center.X + hitRadius, center.Y + hitRadius);
@@ -553,495 +621,410 @@ internal sealed partial class HuntsApp
 
         if (UiInteract.Click(hitMin, hitMax, hovered) && territoryId != 0 && worldId != 0)
         {
-            var poiCoordinate = zoneCatalog.ResolveCoordinate(poi.Id);
-            NavigateToAetheryte(territoryId, worldId, mapId, poiCoordinate, zoneInstance);
+            UiFeedback.Play(UiSound.Tap);
+            NavigateToAetheryte(territoryId, worldId, mapId, zoneCatalog.ResolveCoordinate(poi.Id), zoneInstance);
         }
     }
 
     private string ResolvePoiLabel(HuntPoiEntry poi) =>
         poi.Name?.GetValueOrDefault(configuration.Language) ?? poi.Name?.GetValueOrDefault("en") ?? string.Empty;
 
-    private bool DrawNavigateButton(HuntsView view, float scale, int? confirmedPoiId)
+    private void DrawOtherWorlds(HuntsView view, float scale)
     {
-        var territoryId = zoneCatalog.ResolveTerritoryId(detailMapZoneId);
-        if (territoryId == 0)
+        if (otherWorldRows.Count == 0)
         {
-            return false;
+            return;
         }
 
-        var worldId = HuntDataCenterWorlds.WorldRowId(view.WorldId);
-        if (worldId == 0)
+        ui.SectionLabel(Loc.T(L.Hunts.OtherWorldsSection), TextStyles.FootnoteEmphasized, 6f);
+        var card = GroupCard.Begin(ui, otherWorldRows.Count, WorldRowHeight);
+        card.SeparatorInset = WorldRingSize + HuntsArt.RowGap;
+        var drawList = ImGui.GetWindowDrawList();
+        for (var index = 0; index < otherWorldRows.Count; index++)
         {
-            return false;
+            var row = card.NextRow();
+            var bounds = new Rect(new Vector2(card.Bounds.Min.X, row.Min.Y), new Vector2(card.Bounds.Max.X, row.Max.Y));
+            if (!ImGui.IsRectVisible(bounds.Min, bounds.Max))
+            {
+                continue;
+            }
+
+            var model = otherWorldRows[index];
+            var hovered = UiInteract.Hover(bounds.Min, bounds.Max);
+            if (hovered)
+            {
+                drawList.AddRectFilled(bounds.Min, bounds.Max, ImGui.GetColorU32(ui.HoverWash));
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            var ink = HuntsArt.StatusColor(model.Status, ui.MutedInk);
+            var ring = WorldRingSize * scale;
+            HuntsArt.StatusRing(drawList, new Vector2(row.Min.X + ring * 0.5f, row.Center.Y), ring * 0.5f,
+                WorldRingThickness * scale, model.Ring, ink, string.Empty, ink);
+            var primaryWidth = Typography.Measure(model.Primary, TextStyles.SubheadlineEmphasized).X;
+            var primaryInk = model.Status is HuntWindowStatus.Closed or HuntWindowStatus.Unknown ? ui.TitleInk : ink;
+            Typography.Draw(drawList, new Vector2(row.Max.X - primaryWidth,
+                    row.Center.Y - Typography.LineHeight(TextStyles.SubheadlineEmphasized) * 0.5f), model.Primary,
+                primaryInk, TextStyles.SubheadlineEmphasized);
+            var left = row.Min.X + ring + HuntsArt.RowGap * scale;
+            Typography.Draw(drawList, new Vector2(left, row.Center.Y - Typography.LineHeight(TextStyles.Body) * 0.5f),
+                Typography.FitText(model.Subtitle, MathF.Max(1f, row.Max.X - primaryWidth - HuntsArt.RowGap * scale - left),
+                    TextStyles.Body), ui.TitleInk, TextStyles.Body);
+            if (UiInteract.Click(bounds.Min, bounds.Max, hovered))
+            {
+                SwitchDetailWorld(model, view.BackTitle);
+            }
         }
 
-        var coordinate = confirmedPoiId is { } poiId ? zoneCatalog.ResolveCoordinate(poiId) : null;
-        var destination = TravelPlanner.ResolveNearestAetheryteTo(territoryId, worldId, LocationShare.CurrentWorldId(),
-            Plugin.ClientState.TerritoryType, coordinate);
-        var alreadyThere = destination.Kind == TravelKind.AlreadyThere;
-        var noSpawnLocationYet = alreadyThere && coordinate is null;
+        card.End();
+        Gap(HuntsArt.CardGap);
+    }
 
-        var mapId = ResolveMapId(territoryId);
+    private void DrawAlertCard(HuntsView view, float scale)
+    {
+        var settings = hunts.NotificationSettings;
+        var mode = settings.MobOverrideModeFor(view.MobId);
+        var overrideWorld = settings.MobOverrideWorldFor(view.MobId);
+        var hintWorld = mode == HuntMobNotificationMode.EnabledOnWorld && overrideWorld is { Length: > 0 }
+            ? overrideWorld
+            : view.WorldId;
+        alertOptions[0] = Loc.T(L.Hunts.AlertModeDefault);
+        alertOptions[1] = Loc.T(L.Hunts.AlertModeOn);
+        alertOptions[2] = ResolveWorldLabel(view.WorldId);
+        alertOptions[3] = Loc.T(L.Hunts.AlertModeOff);
+        var signedIn = hunts.IsAuthenticated;
+        var selected = mode switch
+        {
+            HuntMobNotificationMode.Enabled => 1,
+            HuntMobNotificationMode.EnabledOnWorld => 2,
+            HuntMobNotificationMode.Disabled => 3,
+            _ => 0,
+        };
+        var hint = AlertHint(mode, ResolveWorldLabel(hintWorld));
+        ui.SectionLabel(Loc.T(L.Hunts.MarkAlertsSection), TextStyles.FootnoteEmphasized, 6f);
+        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var panelWidth = MathF.Min(width, MapMaxSize * scale);
-        var margin = (width - panelWidth) * 0.5f;
-        var height = 38f * scale;
-        var rect = new Rect(new Vector2(origin.X + margin, origin.Y),
-            new Vector2(origin.X + width - margin, origin.Y + height));
-
-        if (noSpawnLocationYet)
+        var pad = HuntsArt.CardPadding * scale;
+        var hintHeight = Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, width - pad * 2f).Y;
+        var height = pad + AlertStripHeight * scale + HuntsArt.RowGap * scale * 0.75f + hintHeight + pad;
+        var card = new Rect(origin, origin + new Vector2(width, height));
+        UiAnchors.Report("hunts.detail.alerts", card);
+        ui.Card(drawList, card.Min, card.Max, HuntsArt.CardRadius * scale);
+        var strip = new Rect(new Vector2(card.Min.X + pad, card.Min.Y + pad),
+            new Vector2(card.Max.X - pad, card.Min.Y + pad + AlertStripHeight * scale));
+        int picked;
+        bool pressed;
+        using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (signedIn ? 1f : AlertsDisabledAlpha)))
         {
-            AppSkin.PillButton(rect, Loc.T(L.Hunts.NoSpawnLocationDetected), true, false, frameTheme);
-            ImGui.SetCursorScreenPos(origin);
-            ImGui.Dummy(new Vector2(width, height));
-            return true;
+            picked = SegmentStrip.Draw("hunts.detail.alertMode", strip, alertOptions, selected,
+                Palette.Mix(ui.FieldSurface, ui.TitleInk, 0.06f), ui.Accent, ui.MutedInk, AccentRing.Ink, out pressed,
+                AlertStripHeight);
         }
 
-        var label = alreadyThere ? Loc.T(L.Hunts.PlaceFlagOnMap) : Loc.T(L.Hunts.NavigateToLocation);
-        if (ui.PillButton(rect, label, true, "hunts.detail.navigate"))
+        Typography.DrawWrappedLeft(new Vector2(card.Min.X + pad, strip.Max.Y + HuntsArt.RowGap * scale * 0.75f), hint,
+            ui.MutedInk, TextStyles.Footnote, width - pad * 2f);
+        var next = picked switch
         {
-            NavigateToCoordinate(territoryId, worldId, mapId, coordinate, coordinate, view.ZoneInstance);
+            1 => HuntMobNotificationMode.Enabled,
+            2 => HuntMobNotificationMode.EnabledOnWorld,
+            3 => HuntMobNotificationMode.Disabled,
+            _ => HuntMobNotificationMode.Default,
+        };
+        var retarget = next == HuntMobNotificationMode.EnabledOnWorld &&
+                       !string.Equals(overrideWorld, view.WorldId, StringComparison.OrdinalIgnoreCase);
+        if (signedIn && pressed && (next != mode || retarget))
+        {
+            settings.SetMobOverride(view.MobId, next,
+                next == HuntMobNotificationMode.EnabledOnWorld ? view.WorldId : null);
+            hunts.SaveNotificationSettings();
+            UiFeedback.Play(next == HuntMobNotificationMode.Disabled ? UiSound.ToggleOff : UiSound.ToggleOn);
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height));
-        return true;
+        ImGui.Dummy(new Vector2(width, height + HuntsArt.CardGap * scale));
     }
 
-    private void NavigateToCoordinate(uint territoryId, uint worldId, uint mapId, (float X, float Y)? targetCoordinate,
-        (float X, float Y)? flagCoordinate, int zoneInstance)
+    private string AlertHint(HuntMobNotificationMode mode, string world)
     {
-        ArmPendingInstanceSync(worldId, territoryId, zoneInstance);
-
-        var destination = TravelPlanner.ResolveNearestAetheryteTo(territoryId, worldId, LocationShare.CurrentWorldId(),
-            Plugin.ClientState.TerritoryType, targetCoordinate);
-        if (destination.Kind == TravelKind.AlreadyThere)
+        var signedIn = hunts.IsAuthenticated;
+        if (mode == alertHintMode && signedIn == alertHintSignedIn &&
+            string.Equals(world, alertHintWorld, StringComparison.Ordinal) &&
+            ReferenceEquals(Loc.Culture, alertHintCulture) && alertHint.Length > 0)
         {
-            if (flagCoordinate is { } here)
+            return alertHint;
+        }
+
+        alertHintMode = mode;
+        alertHintSignedIn = signedIn;
+        alertHintWorld = world;
+        alertHintCulture = Loc.Culture;
+        alertHint = !signedIn
+            ? Loc.T(L.Hunts.NotificationsSignInHint)
+            : mode switch
             {
-                DropFlag(territoryId, mapId, here.X, here.Y);
-            }
-
-            return;
-        }
-
-        TravelToHuntZone(in destination, worldId, territoryId, mapId, flagCoordinate);
+                HuntMobNotificationMode.Enabled => Loc.T(L.Hunts.AlertHintOn),
+                HuntMobNotificationMode.EnabledOnWorld => Loc.T(L.Hunts.AlertHintWorld, world),
+                HuntMobNotificationMode.Disabled => Loc.T(L.Hunts.AlertHintOff),
+                _ => Loc.T(L.Hunts.AlertHintDefault),
+            };
+        return alertHint;
     }
 
-    private void NavigateToAetheryte(uint territoryId, uint worldId, uint mapId, (float X, float Y)? targetCoordinate,
-        int zoneInstance)
+    private string RewardCaption(int amount)
     {
-        if (targetCoordinate is not { } coordinate)
+        if (!ReferenceEquals(Loc.Culture, rewardCaptionCulture))
         {
-            return;
+            rewardCaptionCulture = Loc.Culture;
+            rewardCaptions.Clear();
         }
 
-        ArmPendingInstanceSync(worldId, territoryId, zoneInstance);
-
-        var destination = TravelPlanner.ResolveAetheryteAt(territoryId, worldId, LocationShare.CurrentWorldId(),
-            coordinate);
-        TravelToHuntZone(in destination, worldId, territoryId, mapId, null);
-    }
-
-    private void TravelToHuntZone(in TravelDestination destination, uint worldId, uint territoryId, uint mapId,
-        (float X, float Y)? flagCoordinate)
-    {
-        var outcome = TravelPlanner.Go(in destination);
-        if (outcome == LifestreamOutcome.Started)
+        if (rewardCaptions.TryGetValue(amount, out var cached))
         {
-            if (destination.Kind == TravelKind.World)
-            {
-                ArmPendingWorldHop(worldId, territoryId, mapId, flagCoordinate);
-            }
-            else if (flagCoordinate is { } coordinate)
-            {
-                ArmPendingFlag(worldId, territoryId, mapId, coordinate.X, coordinate.Y);
-            }
-
-            return;
+            return cached;
         }
 
-        HandleTravelFailure(outcome, in destination);
+        var caption = Loc.T(L.Hunts.RewardAmount, amount);
+        rewardCaptions[amount] = caption;
+        return caption;
     }
 
-    private void HandleTravelFailure(LifestreamOutcome outcome, in TravelDestination destination)
+    private void DrawDetailText(HuntsView view, float scale)
     {
-        if (outcome == LifestreamOutcome.NotInstalled)
-        {
-            ImGui.SetClipboardText(TravelPlanner.Command(in destination));
-            ShellToast.Show();
-            return;
-        }
-
-        confirm.Alert(null, TravelPlanner.Notice(outcome, in destination), Loc.T(L.Common.Close));
-    }
-
-    private static void DropFlag(uint territoryId, uint mapId, float mapX, float mapY) =>
-        LocationShare.OpenMap(new SharedLocation(territoryId, mapId, mapX, mapY, 0, 0, 0, 0));
-
-    private static uint ResolveMapId(uint territoryId) =>
-        territoryId != 0 && Plugin.DataManager.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory)
-            ? territory.Map.RowId
-            : 0u;
-
-    private void ArmPendingFlag(uint worldId, uint territoryId, uint mapId, float mapX, float mapY)
-    {
-        pendingFlagWorldId = worldId;
-        pendingFlagTerritoryId = territoryId;
-        pendingFlagMapId = mapId;
-        pendingFlagMapX = mapX;
-        pendingFlagMapY = mapY;
-        pendingFlagAction.Arm();
-    }
-
-    private bool IsPendingFlagReady() =>
-        Plugin.ClientState.TerritoryType == pendingFlagTerritoryId &&
-        LocationShare.CurrentWorldId() == pendingFlagWorldId && !PlayerBusy.Now;
-
-    private bool TryDropPendingFlag()
-    {
-        DropFlag(pendingFlagTerritoryId, pendingFlagMapId, pendingFlagMapX, pendingFlagMapY);
-        return false;
-    }
-
-    private void ArmPendingWorldHop(uint worldId, uint territoryId, uint mapId, (float X, float Y)? flagCoordinate)
-    {
-        pendingWorldHopWorldId = worldId;
-        pendingWorldHopTerritoryId = territoryId;
-        pendingWorldHopMapId = mapId;
-        pendingWorldHopFlagCoordinate = flagCoordinate;
-        pendingWorldHopAction.Arm();
-    }
-
-    private bool IsPendingWorldHopReady() =>
-        LocationShare.CurrentWorldId() == pendingWorldHopWorldId && !LifestreamBridge.IsBusy() && !PlayerBusy.Now;
-
-    private bool TryContinuePendingWorldHop() =>
-        TryContinueAfterWorldHop(pendingWorldHopTerritoryId, pendingWorldHopWorldId, pendingWorldHopMapId,
-            pendingWorldHopFlagCoordinate);
-
-    private bool TryContinueAfterWorldHop(uint territoryId, uint worldId, uint mapId,
-        (float X, float Y)? flagCoordinate)
-    {
-        var destination = TravelPlanner.ResolveNearestAetheryteTo(territoryId, worldId, LocationShare.CurrentWorldId(),
-            Plugin.ClientState.TerritoryType, flagCoordinate);
-        if (destination.Kind == TravelKind.AlreadyThere)
-        {
-            if (flagCoordinate is { } coordinate)
-            {
-                DropFlag(territoryId, mapId, coordinate.X, coordinate.Y);
-            }
-
-            return true;
-        }
-
-        var outcome = TravelPlanner.Go(in destination);
-        if (outcome == LifestreamOutcome.Started)
-        {
-            if (flagCoordinate is { } coordinate)
-            {
-                ArmPendingFlag(worldId, territoryId, mapId, coordinate.X, coordinate.Y);
-            }
-
-            return true;
-        }
-
-        if (outcome is LifestreamOutcome.Busy or LifestreamOutcome.CannotTeleportNow)
-        {
-            return false;
-        }
-
-        HandleTravelFailure(outcome, in destination);
-        return true;
-    }
-
-    private void ArmPendingInstanceSync(uint worldId, uint territoryId, int zoneInstance)
-    {
-        if (zoneInstance <= 0)
+        var spawn = HuntMobLore.SpawnFor(view.MobId) is { } spawnLore
+            ? Loc.T(spawnLore)
+            : Loc.T(L.Hunts.NoSpecialSpawnCondition);
+        DrawTextCard(Loc.T(L.Hunts.SpawnConditionSection), spawn, null, int.MaxValue, scale, out _);
+        if (HuntMobLore.TipFor(view.MobId) is not { } tip)
         {
             return;
         }
 
-        pendingInstanceWorldId = worldId;
-        pendingInstanceTerritoryId = territoryId;
-        pendingInstanceTarget = zoneInstance;
-        pendingInstanceAction.Arm();
+        var note = HuntMobLore.TipIsFallback(view.MobId) ? Loc.T(L.Hunts.LoreNotAvailableInLanguage) : null;
+        DrawTextCard(Loc.T(L.Hunts.TipsSection), tip, note, int.MaxValue, scale, out _);
     }
 
-    private bool IsPendingInstanceSyncReady() =>
-        Plugin.ClientState.TerritoryType == pendingInstanceTerritoryId &&
-        LocationShare.CurrentWorldId() == pendingInstanceWorldId && !PlayerBusy.Now && !LifestreamBridge.IsBusy();
-
-    private bool TryAdvancePendingInstanceSync()
+    private void DrawLoreCard(string mobId, float scale)
     {
-        var currentInstance = LifestreamBridge.GetCurrentInstance();
-        if (currentInstance <= 0 || currentInstance == pendingInstanceTarget)
+        var raw = HuntMobLore.DescriptionFor(mobId);
+        if (raw is null)
         {
-            return true;
+            return;
         }
 
-        if (!LifestreamBridge.CanChangeInstance())
+        var note = HuntMobLore.DescriptionIsFallback(mobId) ? Loc.T(L.Hunts.LoreNotAvailableInLanguage) : null;
+        var lines = detailLoreExpanded ? int.MaxValue : LoreCollapsedLines;
+        var card = DrawTextCard(Loc.T(L.Hunts.DescriptionSection), raw, note, lines, scale, out var truncated);
+        if (!truncated && !detailLoreExpanded)
         {
-            return false;
+            return;
         }
 
-        LifestreamBridge.ChangeInstance(pendingInstanceTarget);
-        return true;
-    }
-
-    private static string CoordinateText(float x, float y) =>
-        string.Create(CultureInfo.InvariantCulture, $"X: {x:0.0}  Y: {y:0.0}");
-
-    private bool DrawSectionHeader(string title, ref bool expanded, float scale, out Vector2 origin, out float width,
-        out float headerHeight)
-    {
-        origin = ImGui.GetCursorScreenPos();
-        width = ImGui.GetContentRegionAvail().X;
-        headerHeight = 32f * scale;
-        var headerMax = new Vector2(origin.X + width, origin.Y + headerHeight);
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered = UiInteract.Hover(origin, headerMax);
-
-        var headerBase = hovered ? Palette.Mix(ui.Palette.BackdropBottom, ui.TitleInk, LoreHeaderHoverMix) : ui.Palette.BackdropBottom;
-        Squircle.Fill(drawList, origin, headerMax, Metrics.Radius.Sm * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(headerBase, LoreHeaderAlpha)));
+        var hovered = UiInteract.Hover(card.Min, card.Max);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var titleY = origin.Y + headerHeight * 0.5f - Typography.LineHeight(TextStyles.BodyEmphasized) * 0.5f;
-        Typography.Draw(drawList, new Vector2(origin.X + 8f * scale, titleY), title, ui.TitleInk,
-            TextStyles.BodyEmphasized);
-        var chevron = expanded ? FontAwesomeIcon.ChevronUp : FontAwesomeIcon.ChevronDown;
-        AppSkin.Icon(drawList, new Vector2(headerMax.X - 14f * scale, origin.Y + headerHeight * 0.5f),
-            IconGlyph.Of(chevron), ui.MutedInk, 0.55f);
-
-        if (UiInteract.Click(origin, headerMax, hovered))
+        if (UiInteract.Click(card.Min, card.Max, hovered))
         {
-            expanded = !expanded;
+            detailLoreExpanded = !detailLoreExpanded;
+            UiFeedback.Play(UiSound.Tap);
         }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, headerHeight));
-        return expanded;
     }
 
-    private void DrawLoreSection(string title, string text, string? note, ref bool expanded, float scale)
+    private Rect DrawTextCard(string title, string text, string? note, int maxLines, float scale, out bool truncated)
     {
-        if (!DrawSectionHeader(title, ref expanded, scale, out var origin, out var width, out var headerHeight))
-        {
-            return;
-        }
-
-        DrawLoreSectionBody(origin, width, headerHeight, text, note, scale);
-    }
-
-    private void DrawLoreSectionBody(Vector2 origin, float width, float headerHeight, string text, string? note,
-        float scale)
-    {
-        var bodyLeft = origin.X + 8f * scale;
-        var bodyWidth = width - 16f * scale;
-        var panelTop = origin.Y + headerHeight + 4f * scale;
-        var textTop = panelTop + LoreBodyPadding * scale;
-
-        var noteHeight = 0f;
-        if (note is not null)
-        {
-            noteHeight = Typography.MeasureWrappedBlock(note, TextStyles.FootnoteEmphasized, bodyWidth).Y +
-                6f * scale;
-        }
-
-        var textHeight = Typography.MeasureWrappedBlock(text, TextStyles.Body, bodyWidth).Y;
-        var panelBottom = textTop + noteHeight + textHeight + LoreBodyPadding * scale;
-
+        ui.SectionLabel(title, TextStyles.FootnoteEmphasized, 6f);
         var drawList = ImGui.GetWindowDrawList();
-        Squircle.Fill(drawList, new Vector2(origin.X, panelTop), new Vector2(origin.X + width, panelBottom),
-            Metrics.Radius.Sm * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.Palette.BackdropBottom, LoreBodyAlpha)));
-
-        var lineTop = textTop;
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var pad = HuntsArt.CardPadding * scale;
+        var inner = width - pad * 2f;
+        var lines = Typography.WrapText(text, TextStyles.Body, inner);
+        truncated = lines.Length > maxLines;
+        var shown = Math.Min(lines.Length, maxLines);
+        var lineHeight = Typography.LineHeight(TextStyles.Body) + HuntsArt.LineGap * scale;
+        var noteHeight = note is null ? 0f : Typography.MeasureWrappedBlock(note, TextStyles.Footnote, inner).Y +
+                                             HuntsArt.TileGap * scale;
+        var moreHeight = truncated ? Typography.LineHeight(TextStyles.SubheadlineEmphasized) : 0f;
+        var height = pad + noteHeight + shown * lineHeight + moreHeight + pad * 0.75f;
+        var card = new Rect(origin, origin + new Vector2(width, height));
+        ui.Card(drawList, card.Min, card.Max, HuntsArt.CardRadius * scale);
+        var left = card.Min.X + pad;
+        var top = card.Min.Y + pad;
         if (note is not null)
         {
-            var drawnNoteHeight = Typography.DrawWrappedLeft(new Vector2(bodyLeft, lineTop), note, ui.MutedInk,
-                TextStyles.FootnoteEmphasized, bodyWidth);
-            lineTop += drawnNoteHeight + 6f * scale;
+            top += Typography.DrawWrappedLeft(new Vector2(left, top), note, ui.MutedInk, TextStyles.Footnote, inner) +
+                   HuntsArt.TileGap * scale;
         }
 
-        Typography.DrawWrappedLeft(new Vector2(bodyLeft, lineTop), text, ui.BodyInk, TextStyles.Body, bodyWidth);
+        for (var index = 0; index < shown; index++)
+        {
+            Typography.Draw(drawList, new Vector2(left, top), lines[index], ui.BodyInk, TextStyles.Body);
+            top += lineHeight;
+        }
 
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, panelBottom - origin.Y));
+        if (truncated)
+        {
+            Typography.Draw(drawList, new Vector2(left, top), Loc.T(L.Hunts.ShowMore), ui.Accent,
+                TextStyles.SubheadlineEmphasized);
+        }
+
+        ImGui.Dummy(new Vector2(width, height + HuntsArt.CardGap * scale));
+        return card;
     }
 
-    private void DrawRewardsSection(IReadOnlyList<HuntMobRewardEntry> rewards, ref bool expanded, float scale)
+    private void DrawRewardsCard(string mobId, float scale)
     {
-        if (!DrawSectionHeader(Loc.T(L.Hunts.RewardsSection), ref expanded, scale, out var origin, out var width,
-                out var headerHeight))
+        var rewards = rewardCatalog.RewardsFor(mobId);
+        if (rewards.Count == 0)
         {
             return;
         }
 
-        var bodyLeft = origin.X + 8f * scale;
-        var bodyWidth = width - 16f * scale;
-        var panelTop = origin.Y + headerHeight + 4f * scale;
-
-        var iconSize = 40f * scale;
-        var tileGap = 16f * scale;
+        ui.SectionLabel(Loc.T(L.Hunts.RewardsSection), TextStyles.FootnoteEmphasized, 6f);
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var pad = HuntsArt.CardPadding * scale;
+        var inner = width - pad * 2f;
+        var iconSize = RewardIconSize * scale;
+        var tileGap = RewardGap * scale;
         var captionHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
         var tileHeight = iconSize + 4f * scale + captionHeight;
-        var columns = Math.Max(1, (int)((bodyWidth + tileGap) / (iconSize + tileGap)));
+        var columns = Math.Max(1, (int)((inner + tileGap) / (iconSize + tileGap)));
         var rows = (rewards.Count + columns - 1) / columns;
-        var tileTop = panelTop + LoreBodyPadding * scale;
-        var panelBottom = tileTop + rows * tileHeight + (rows - 1) * tileGap + LoreBodyPadding * scale;
-
-        var drawList = ImGui.GetWindowDrawList();
-        Squircle.Fill(drawList, new Vector2(origin.X, panelTop), new Vector2(origin.X + width, panelBottom),
-            Metrics.Radius.Sm * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.Palette.BackdropBottom, LoreBodyAlpha)));
-
+        var height = pad * 2f + rows * tileHeight + (rows - 1) * tileGap;
+        var card = new Rect(origin, origin + new Vector2(width, height));
+        ui.Card(drawList, card.Min, card.Max, HuntsArt.CardRadius * scale);
         var displayLocale = HuntUiLanguage.Key();
         var searchLocale = HuntClientLanguage.Key();
         for (var index = 0; index < rewards.Count; index++)
         {
             var column = index % columns;
             var row = index / columns;
-            var tileMin = new Vector2(bodyLeft + column * (iconSize + tileGap), tileTop + row * (tileHeight + tileGap));
+            var tileMin = new Vector2(card.Min.X + pad + column * (iconSize + tileGap),
+                card.Min.Y + pad + row * (tileHeight + tileGap));
             DrawRewardTile(drawList, tileMin, iconSize, captionHeight, rewards[index], displayLocale, searchLocale,
                 scale);
         }
 
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, panelBottom - origin.Y));
-    }
-
-    private bool DrawSpawnInfoSection(HuntWindowDto? window, HuntMobDefinition? def, ref bool expanded, float scale)
-    {
-        if (def is not { Windows.Length: > 0 })
-        {
-            return false;
-        }
-
-        var windowIndex = window is { } activeWindow ? Math.Clamp(activeWindow.Num - 1, 0, def.Windows.Length - 1) : 0;
-        var timing = def.Windows[windowIndex].Timing;
-        if (timing?.Normal is not { } normal)
-        {
-            return false;
-        }
-
-        if (!DrawSectionHeader(Loc.T(L.Hunts.SpawnInfoSection), ref expanded, scale, out var origin, out var width,
-                out var headerHeight))
-        {
-            return true;
-        }
-
-        var text = BuildSpawnInfoText(normal, timing.Maintenance);
-        DrawLoreSectionBody(origin, width, headerHeight, text, null, scale);
-        return true;
-    }
-
-    private static string BuildSpawnInfoText(HuntMobTimingWindow normal, HuntMobTimingWindow? maintenance)
-    {
-        var lines = new List<string> { SpawnInfoLine(L.Hunts.SpawnInfoMinimum, normal.Min) };
-        if (normal.Avg is { } avg)
-        {
-            lines.Add(SpawnInfoLine(L.Hunts.SpawnInfoAverage, avg));
-        }
-
-        if (normal.Cap is { } cap)
-        {
-            lines.Add(SpawnInfoLine(L.Hunts.SpawnInfoMaximum, cap));
-        }
-
-        if (maintenance is { } maint)
-        {
-            lines.Add(string.Empty);
-            lines.Add(Loc.T(L.Hunts.SpawnInfoMaintenance));
-            lines.Add(SpawnInfoLine(L.Hunts.SpawnInfoMinimum, maint.Min));
-            if (maint.Avg is { } maintAvg)
-            {
-                lines.Add(SpawnInfoLine(L.Hunts.SpawnInfoAverage, maintAvg));
-            }
-
-            if (maint.Cap is { } maintCap)
-            {
-                lines.Add(SpawnInfoLine(L.Hunts.SpawnInfoMaximum, maintCap));
-            }
-        }
-
-        return string.Join('\n', lines);
-    }
-
-    private static string SpawnInfoLine(LocString label, double hours)
-    {
-        var formattedHours = Loc.T(L.Time.HoursShort, hours.ToString("0.#", Loc.Culture));
-        return Loc.T(L.Hunts.SpawnInfoLineFormat, Loc.T(label), formattedHours);
+        ImGui.Dummy(new Vector2(width, height + HuntsArt.CardGap * scale));
     }
 
     private void DrawRewardTile(ImDrawListPtr drawList, Vector2 iconMin, float iconSize, float captionHeight,
         HuntMobRewardEntry entry, string displayLocale, string searchLocale, float scale)
     {
         var iconMax = iconMin + new Vector2(iconSize, iconSize);
-        var radius = 9f * scale;
         var searchName = rewardCatalog.ItemNameFor(entry.ItemId, searchLocale);
         var iconId = HuntRewardIcons.ResolveIconId(entry.ItemId, searchName);
-        GameIconTile.Draw(drawList, Plugin.TextureProvider, iconId, iconMin, iconMax, radius, scale,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.06f)), edgeStroke: true);
-
+        GameIconTile.Draw(drawList, Plugin.TextureProvider, iconId, iconMin, iconMax, iconSize * Metrics.Radius.TileFactor,
+            scale, ImGui.GetColorU32(ui.FieldSurface), edgeStroke: true);
         if (entry.Amount is { } amount)
         {
-            var captionText = "x" + amount.ToString(Loc.Culture);
-            var captionSize = Typography.Measure(captionText, TextStyles.FootnoteEmphasized);
-            var captionPosition = new Vector2(iconMin.X + (iconSize - captionSize.X) * 0.5f, iconMax.Y + 4f * scale);
-            Typography.Draw(drawList, captionPosition, captionText, ui.TitleInk, TextStyles.FootnoteEmphasized);
+            var caption = RewardCaption(amount);
+            var captionSize = Typography.Measure(caption, TextStyles.FootnoteEmphasized);
+            Typography.Draw(drawList, new Vector2(iconMin.X + (iconSize - captionSize.X) * 0.5f, iconMax.Y + 4f * scale),
+                caption, ui.TitleInk, TextStyles.FootnoteEmphasized);
         }
 
-        var displayName = rewardCatalog.ItemNameFor(entry.ItemId, displayLocale);
-        if (displayName is not null)
+        if (rewardCatalog.ItemNameFor(entry.ItemId, displayLocale) is { } displayName)
         {
-            var tileMax = new Vector2(iconMax.X, iconMax.Y + 4f * scale + captionHeight);
-            HoverTooltip.Show(new Rect(iconMin, tileMax), displayName);
+            HoverTooltip.Show(new Rect(iconMin, new Vector2(iconMax.X, iconMax.Y + 4f * scale + captionHeight)),
+                displayName);
         }
     }
 
-    private void DrawDetailNotificationButton(Rect content, float scale, string mobId, string worldId,
-        float rowCenterY)
+    private void DrawTimingCard(HuntMobDefinition? mob, float scale)
     {
-        var settings = hunts.NotificationSettings;
-        var mode = settings.MobOverrideModeFor(mobId);
-        var center = new Vector2(content.Max.X - 22f * scale, rowCenterY);
-        if (ui.IconButton(center, 16f * scale, IconGlyph.Of(NotificationIcon(mode)), NotificationTint(mode),
-                new Vector4(0f, 0f, 0f, 0f), 1.2f, MarkNotificationValueText(mobId, worldId, mode),
-                HoverLabelSide.Below))
+        if (mob is not { Windows.Length: > 0 })
         {
-            settings.SetMobOverride(mobId, NextNotificationMode(mode), worldId);
-            hunts.SaveNotificationSettings();
+            return;
         }
+
+        var windowIndex = detailHasWindow ? Math.Clamp(detailRow.Window.Num - 1, 0, mob.Windows.Length - 1) : 0;
+        var timing = mob.Windows[windowIndex].Timing;
+        if (timing?.Normal is not { } normal)
+        {
+            return;
+        }
+
+        ui.SectionLabel(Loc.T(L.Hunts.SpawnInfoSection), TextStyles.FootnoteEmphasized, 6f);
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var pad = HuntsArt.CardPadding * scale;
+        var labelHeight = Typography.LineHeight(TextStyles.Footnote);
+        var valueHeight = Typography.LineHeight(TextStyles.Headline);
+        var rowHeight = labelHeight + HuntsArt.LineGap * scale + valueHeight;
+        var rows = timing.Maintenance is null ? 1 : 2;
+        var height = pad * 2f + rows * rowHeight + (rows - 1) * HuntsArt.RowGap * scale;
+        var card = new Rect(origin, origin + new Vector2(width, height));
+        ui.Card(drawList, card.Min, card.Max, HuntsArt.CardRadius * scale);
+        var top = card.Min.Y + pad;
+        DrawTimingRow(drawList, card, pad, top, normal, Loc.T(L.Hunts.TimingNormal), scale);
+        if (timing.Maintenance is { } maintenance)
+        {
+            top += rowHeight + HuntsArt.RowGap * scale;
+            drawList.AddLine(new Vector2(card.Min.X + pad, top - HuntsArt.RowGap * scale * 0.5f),
+                new Vector2(card.Max.X - pad, top - HuntsArt.RowGap * scale * 0.5f), ImGui.GetColorU32(ui.Hairline),
+                Metrics.Stroke.Hairline);
+            DrawTimingRow(drawList, card, pad, top, maintenance, Loc.T(L.Hunts.SpawnInfoMaintenance), scale);
+        }
+
+        ImGui.Dummy(new Vector2(width, height + HuntsArt.CardGap * scale));
     }
 
-    private static HuntMobNotificationMode NextNotificationMode(HuntMobNotificationMode mode) => mode switch
+    private void DrawTimingRow(ImDrawListPtr drawList, Rect card, float pad, float top, HuntMobTimingWindow window,
+        string title, float scale)
     {
-        HuntMobNotificationMode.Default => HuntMobNotificationMode.Enabled,
-        HuntMobNotificationMode.Enabled => HuntMobNotificationMode.EnabledOnWorld,
-        HuntMobNotificationMode.EnabledOnWorld => HuntMobNotificationMode.Disabled,
-        _ => HuntMobNotificationMode.Default,
-    };
+        var inner = card.Width - pad * 2f;
+        var titleWidth = inner * 0.34f;
+        var columnWidth = (inner - titleWidth - TimingColumnGap * scale * 2f) / 3f;
+        var left = card.Min.X + pad;
+        var labelHeight = Typography.LineHeight(TextStyles.Footnote);
+        var valueTop = top + labelHeight + HuntsArt.LineGap * scale;
+        Typography.Draw(drawList, new Vector2(left, valueTop), Typography.FitText(title, titleWidth, TextStyles.Body),
+            ui.TitleInk, TextStyles.Body);
+        var x = left + titleWidth;
+        DrawTimingCell(drawList, x, top, valueTop, columnWidth, Loc.T(L.Hunts.SpawnInfoMinimum),
+            HoursLabel(window.Min));
+        x += columnWidth + TimingColumnGap * scale;
+        DrawTimingCell(drawList, x, top, valueTop, columnWidth, Loc.T(L.Hunts.SpawnInfoAverage),
+            window.Avg is { } average ? HoursLabel(average) : Loc.T(L.Hunts.NoValue));
+        x += columnWidth + TimingColumnGap * scale;
+        DrawTimingCell(drawList, x, top, valueTop, columnWidth, Loc.T(L.Hunts.SpawnInfoMaximum),
+            window.Cap is { } cap ? HoursLabel(cap) : Loc.T(L.Hunts.NoValue));
+    }
 
-    private static FontAwesomeIcon NotificationIcon(HuntMobNotificationMode mode) =>
-        mode == HuntMobNotificationMode.Disabled ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell;
-
-    private Vector4 NotificationTint(HuntMobNotificationMode mode) => mode switch
+    private string HoursLabel(double hours)
     {
-        HuntMobNotificationMode.Disabled => frameTheme.Danger,
-        HuntMobNotificationMode.Default => ui.MutedInk,
-        _ => ui.Accent,
-    };
+        if (!ReferenceEquals(Loc.Culture, hoursLabelCulture))
+        {
+            hoursLabelCulture = Loc.Culture;
+            hoursLabels.Clear();
+        }
 
-    private string MarkNotificationValueText(string mobId, string worldId, HuntMobNotificationMode mode) => mode switch
+        if (hoursLabels.TryGetValue(hours, out var cached))
+        {
+            return cached;
+        }
+
+        var label = HuntsText.Hours(hours);
+        hoursLabels[hours] = label;
+        return label;
+    }
+
+    private void DrawTimingCell(ImDrawListPtr drawList, float left, float labelTop, float valueTop, float width,
+        string label, string value)
     {
-        HuntMobNotificationMode.Enabled => Loc.T(L.Hunts.NotifyModeEnabled),
-        HuntMobNotificationMode.Disabled => Loc.T(L.Hunts.NotifyModeDisabled),
-        HuntMobNotificationMode.EnabledOnWorld => Loc.T(L.Hunts.NotifyModeEnabledOnWorldValue,
-            Prettify(hunts.NotificationSettings.MobOverrideWorldFor(mobId) ?? worldId)),
-        _ => Loc.T(L.Hunts.NotifyModeDefault),
-    };
+        Typography.Draw(drawList, new Vector2(left, labelTop), Typography.FitText(label, width, TextStyles.Footnote),
+            ui.MutedInk, TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(left, valueTop), Typography.FitText(value, width, TextStyles.Headline),
+            ui.TitleInk, TextStyles.Headline);
+    }
+
+    private static string CoordinateText(float x, float y) =>
+        string.Create(CultureInfo.InvariantCulture, $"X: {x:0.0}  Y: {y:0.0}");
 }

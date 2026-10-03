@@ -11,6 +11,9 @@ internal sealed class UiSoundPlayer : IDisposable
     private const int ChannelCount = 2;
     private const int MaxVoices = 8;
     private const long IdleCloseMilliseconds = 20_000;
+    private const int OutputLatencyMilliseconds = 40;
+    private const float MinimumRate = 0.5f;
+    private const float MaximumRate = 2f;
 
     private readonly object gate = new();
     private readonly Dictionary<string, float[]> clips = new(StringComparer.OrdinalIgnoreCase);
@@ -28,7 +31,7 @@ internal sealed class UiSoundPlayer : IDisposable
         this.root = root;
     }
 
-    public void Play(string fileName, float gain)
+    public void Play(string fileName, float gain, float rate)
     {
         lock (gate)
         {
@@ -45,7 +48,8 @@ internal sealed class UiSoundPlayer : IDisposable
             Interlocked.Increment(ref activeVoices);
             try
             {
-                mixer!.AddMixerInput((ISampleProvider)new ClipSampleProvider(clip, Math.Clamp(gain, 0f, 1f)));
+                mixer!.AddMixerInput((ISampleProvider)new ClipSampleProvider(clip, Math.Clamp(gain, 0f, 1f),
+                    Math.Clamp(rate, MinimumRate, MaximumRate)));
             }
             catch
             {
@@ -180,7 +184,7 @@ internal sealed class UiSoundPlayer : IDisposable
             };
             built.MixerInputEnded += OnMixerInputEnded;
             var builtBus = new VolumeSampleProvider(built) { Volume = busVolume };
-            var builtOutput = AudioOutputFactory.Create(80);
+            var builtOutput = AudioOutputFactory.Create(OutputLatencyMilliseconds);
             builtOutput.Init(builtBus, true);
             builtOutput.Play();
             mixer = built;
@@ -237,17 +241,53 @@ internal sealed class UiSoundPlayer : IDisposable
     {
         private readonly float[] clip;
         private readonly float gain;
+        private readonly float rate;
         private int position;
+        private double framePosition;
 
-        public ClipSampleProvider(float[] clip, float gain)
+        public ClipSampleProvider(float[] clip, float gain, float rate)
         {
             this.clip = clip;
             this.gain = gain;
+            this.rate = rate;
         }
 
         public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount);
 
         public int Read(float[] buffer, int offset, int count)
+        {
+            return rate == 1f ? ReadDirect(buffer, offset, count) : ReadResampled(buffer, offset, count);
+        }
+
+        private int ReadResampled(float[] buffer, int offset, int count)
+        {
+            var frameCount = clip.Length / ChannelCount;
+            var written = 0;
+            while (written + ChannelCount <= count)
+            {
+                var frameIndex = (int)framePosition;
+                if (frameIndex + 1 >= frameCount)
+                {
+                    break;
+                }
+
+                var fraction = (float)(framePosition - frameIndex);
+                var sampleIndex = frameIndex * ChannelCount;
+                for (var channel = 0; channel < ChannelCount; channel++)
+                {
+                    var current = clip[sampleIndex + channel];
+                    var next = clip[sampleIndex + ChannelCount + channel];
+                    buffer[offset + written + channel] = (current + (next - current) * fraction) * gain;
+                }
+
+                written += ChannelCount;
+                framePosition += rate;
+            }
+
+            return written;
+        }
+
+        private int ReadDirect(float[] buffer, int offset, int count)
         {
             var available = clip.Length - position;
             if (available <= 0)

@@ -1,8 +1,11 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Inventory;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Market;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -12,43 +15,68 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Inventory;
 
-internal sealed class InventoryApp : IPhoneApp
+internal sealed partial class InventoryApp : IPhoneApp
 {
-    private const float SearchHeight = 50f;
-    private const float ItemRowHeight = 56f;
-    private const float StorageRowHeight = 68f;
-    private const float HeroHeight = 120f;
-    private const float RebuildIntervalSeconds = 1.0f;
-    private static readonly Vector4 GoldTint = new(0.95f, 0.74f, 0.30f, 1f);
-    private static readonly Vector4 White = new(0.99f, 0.99f, 1f, 1f);
+    private const float TextRefreshSeconds = 30f;
+    private const float PricePollSeconds = 1.5f;
+    private const float CompanyCheckSeconds = 2f;
+    private const float RowPad = 14f;
+    private const float RowHoverAlpha = 0.06f;
+    private const float RowPressAlpha = 0.12f;
+    private const float SectionTopGap = 22f;
+    private const float SectionHeaderGap = 8f;
+    private const float SectionHeaderInset = 4f;
+    private const float CardGap = 14f;
+    private const float BottomPad = 28f;
+    private const string MarketAppId = "market";
+
     public string Id => "inventory";
     public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Inventory);
     public string Glyph => "I";
     public int BadgeCount => 0;
+
     private readonly InventoryCaptureService capture;
     private readonly GameData gameData;
     private readonly ITextureProvider textures;
-    private readonly InventorySearch search;
+    private readonly IInventoryItemSource itemSource;
+    private readonly InventoryMarketPrices prices;
+    private readonly MarketLauncher marketLauncher;
     private readonly AppSkin ui = new(AppPalettes.Inventory);
-    private readonly List<InventoryResultGroup> groups = new();
-    private readonly List<InventoryResultGroup> localScratch = new();
-    private readonly List<InventoryResultGroup> cachedScratch = new();
+    private readonly InventorySnapshot snapshot = new();
+    private readonly InventoryCatalog catalog = new();
+    private readonly InventoryText text = new();
+    private readonly InventoryValuation valuation = new();
+    private readonly List<int> results = new();
     private readonly ViewRouter<InventoryView> router;
     private readonly RouterDraw<InventoryView> drawView;
     private readonly Action back;
+    private Spring[] meters = Array.Empty<Spring>();
+    private (InventorySourceKind Kind, ulong OwnerId)[] meterKeys = Array.Empty<(InventorySourceKind, ulong)>();
+    private Spring resultsAppear;
     private string query = string.Empty;
-    private string lastBuiltQuery = " ";
-    private float sinceRebuild;
+    private string appliedQuery = string.Empty;
+    private string lowerNeedle = string.Empty;
+    private int builtRevision = -1;
+    private float sinceTextRefresh;
+    private float sincePricePoll;
+    private float sinceCompanyCheck = CompanyCheckSeconds;
+    private float deltaSeconds;
+    private bool inFreeCompany;
+    private bool resetScroll;
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
 
-    public InventoryApp(InventoryCaptureService capture, GameData gameData, ITextureProvider textures)
+    public InventoryApp(InventoryCaptureService capture, GameData gameData, ITextureProvider textures,
+        IInventoryItemSource itemSource, MarketboardService market, MarketLauncher marketLauncher,
+        Configuration configuration)
     {
         this.capture = capture;
         this.gameData = gameData;
         this.textures = textures;
-        search = new InventorySearch(gameData);
+        this.itemSource = itemSource;
+        this.marketLauncher = marketLauncher;
+        prices = new InventoryMarketPrices(market, gameData, configuration);
         router = new ViewRouter<InventoryView>(InventoryView.Root());
         drawView = DrawView;
         back = () => router.Pop();
@@ -57,16 +85,18 @@ internal sealed class InventoryApp : IPhoneApp
     public void OnOpened()
     {
         query = string.Empty;
-        lastBuiltQuery = " ";
-        sinceRebuild = 0f;
-        groups.Clear();
+        appliedQuery = string.Empty;
+        lowerNeedle = string.Empty;
+        results.Clear();
+        builtRevision = -1;
+        resetScroll = true;
+        sinceCompanyCheck = CompanyCheckSeconds;
         router.Reset();
     }
 
     public void OnClosed()
     {
         query = string.Empty;
-        groups.Clear();
         router.Reset();
     }
 
@@ -75,569 +105,296 @@ internal sealed class InventoryApp : IPhoneApp
         frameTheme = context.Theme;
         frameNavigation = context.Navigation;
         ui.Theme = context.Theme;
+        deltaSeconds = ImGui.GetIO().DeltaTime;
         var scale = UiScale.Current;
-        var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
-        ui.Backdrop(screen);
+        ui.Backdrop(SceneChrome.ScreenFrom(context.Content, context.Theme, scale));
         if (gameData.LocalPlayer is null)
         {
+            TourHolds.Hold(Id);
             router.Reset();
             ui.Body(context.Content);
-            DrawNavBar(context.Content, DisplayName, null);
-            Typography.DrawCentered(context.Content.Center, Loc.T(L.Inventory.LogInToView), ui.MutedInk,
-                TextStyles.Subheadline);
+            DrawLoggedOut(context);
             return;
         }
 
-        MaybeRebuild();
-        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        Sync();
+        if (catalog.HasLocal)
+        {
+            TourHolds.Release(Id);
+        }
+        else
+        {
+            TourHolds.Hold(Id);
+        }
+
+        router.Draw(context.Content, AppSkin.Transparent, deltaSeconds, drawView);
+    }
+
+    private void DrawLoggedOut(in PhoneContext context)
+    {
+        var navBar = AppHeader.BeginLargeTitle(context, false);
+        var body = navBar.Body;
+        using (AppSurface.Begin(body))
+        {
+            InventoryArt.StateScreen(body, ui, FontAwesomeIcon.UserSlash, Loc.T(L.Inventory.LogInToView),
+                Loc.T(L.Inventory.LogInHint), string.Empty);
+        }
+
+        AppHeader.EndLargeTitle(in navBar, context, "inventory.nav", DisplayName, NavBarStyle.From(ui),
+            ReadOnlySpan<NavBarButton>.Empty);
     }
 
     private void DrawView(InventoryView view, Rect area, int depth)
     {
         ui.Body(area);
-        if (view.Kind == InventoryViewKind.Source)
+        var context = new PhoneContext(area, frameTheme, frameNavigation);
+        switch (view.Kind)
         {
-            DrawSource(area, view.Source, view.Title);
-            return;
-        }
-
-        DrawRoot(area);
-    }
-
-    private void DrawNavBar(Rect area, string title, Action? onBack) =>
-        AppHeader.DrawNavBar(area, "inventory.back", title, ui.TitleInk, onBack);
-
-    private void DrawRoot(Rect area)
-    {
-        DrawNavBar(area, DisplayName, null);
-        var scale = UiScale.Current;
-        var pad = 16f * scale;
-        var searchTop = area.Min.Y + AppHeader.Height * scale;
-        var searchBar = new Rect(new Vector2(area.Min.X + pad, searchTop),
-            new Vector2(area.Max.X - pad, searchTop + SearchHeight * scale));
-        UiAnchors.Report("inventory.search", searchBar);
-        SearchField.Draw(searchBar, "##inventorySearch", Loc.T(L.Inventory.Search), ref query, ui.Palette);
-        var body = new Rect(new Vector2(area.Min.X, searchBar.Max.Y), area.Max);
-        using (AppSurface.Begin(body))
-        {
-            ImGui.Dummy(new Vector2(0f, 2f * scale));
-            if (query.Trim().Length == 0)
-            {
-                DrawStorageHub();
-            }
-            else
-            {
-                DrawResults();
-            }
+            case InventoryViewKind.Source:
+                DrawSource(context, view);
+                break;
+            case InventoryViewKind.Item:
+                DrawItem(context, view);
+                break;
+            case InventoryViewKind.Tidy:
+                DrawTidy(context, view);
+                break;
+            case InventoryViewKind.Wealth:
+                DrawWealth(context, view);
+                break;
+            default:
+                DrawRoot(context);
+                break;
         }
     }
 
-    private void DrawSource(Rect area, InventorySourceKind kind, string title)
+    private void Sync()
     {
-        DrawNavBar(area, title, back);
-        var scale = UiScale.Current;
-        var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        var group = FindGroup(kind, title);
-        using (AppSurface.Begin(body))
+        var revision = capture.Revision;
+        var languageChanged = !string.Equals(text.LanguageCode, Loc.Current.Code, StringComparison.Ordinal);
+        if (revision != builtRevision)
         {
-            if (group is null || group.Rows.Count == 0)
-            {
-                DrawHint(Loc.T(L.Inventory.NoMatches));
-                return;
-            }
-
-            DrawSourceSummary(group);
-            DrawItemPanel(group.Rows);
-            ImGui.Dummy(new Vector2(0f, 12f * scale));
+            Rebuild(revision);
         }
-    }
-
-    private void MaybeRebuild()
-    {
-        var trimmed = query.Trim();
-        sinceRebuild += ImGui.GetIO().DeltaTime;
-        if (!string.Equals(trimmed, lastBuiltQuery, StringComparison.Ordinal) || sinceRebuild >= RebuildIntervalSeconds)
+        else if (languageChanged)
         {
-            search.Build(capture, trimmed, groups);
-            lastBuiltQuery = trimmed;
-            sinceRebuild = 0f;
+            text.Build(catalog);
+            text.BuildValue(catalog, valuation, prices.ScopeName, valuation.Pending);
         }
-    }
-
-    private void DrawStorageHub()
-    {
-        DrawSummaryCard();
-        localScratch.Clear();
-        cachedScratch.Clear();
-        for (var index = 0; index < groups.Count; index++)
+        else
         {
-            var group = groups[index];
-            if (group.IsCached)
+            sinceTextRefresh += deltaSeconds;
+            if (sinceTextRefresh >= TextRefreshSeconds)
             {
-                cachedScratch.Add(group);
-            }
-            else
-            {
-                localScratch.Add(group);
+                sinceTextRefresh = 0f;
+                text.Build(catalog);
             }
         }
 
-        if (localScratch.Count > 0)
-        {
-            SectionLabel(Loc.T(L.Inventory.OnHand));
-            DrawLocalPanel();
-        }
-
-        DrawCachedPanel();
-        DrawFooterHint();
+        SyncQuery();
+        PollPrices();
+        CheckCompany();
     }
 
-    private void DrawLocalPanel()
+    private void Rebuild(int revision)
     {
-        var scale = UiScale.Current;
-        var accentHover = Palette.WithAlpha(ui.Accent, 0.10f);
-        var card = GroupCard.Begin(ui, localScratch.Count, StorageRowHeight);
-        for (var index = 0; index < localScratch.Count; index++)
-        {
-            var group = localScratch[index];
-            var row = card.NextRow();
-            var band = RowBand(row, scale);
-            var hovered = DrawRowHover(band, scale, accentHover);
-            if (DrawStorageRow(row, group.Kind, group.Title, string.Empty, group.Rows.Count, true, hovered, band.Min,
-                    band.Max))
-            {
-                Open(group.Kind, group.Title);
-            }
-        }
-
-        card.End();
+        builtRevision = revision;
+        sinceTextRefresh = 0f;
+        capture.Fill(snapshot);
+        catalog.Build(snapshot, itemSource);
+        text.Build(catalog);
+        prices.Refresh();
+        valuation.Reset(catalog.Items);
+        valuation.Poll(catalog.Items, prices);
+        sincePricePoll = 0f;
+        text.BuildValue(catalog, valuation, prices.ScopeName, valuation.Pending);
+        RemapMeters();
+        appliedQuery = "\u0001";
     }
 
-    private void DrawCachedPanel()
+    private void SyncQuery()
     {
-        var showRetainer = !search.HasRetainerCache;
-        var showFreeCompany = !search.HasFreeCompanyCache;
-        var total = cachedScratch.Count + (showRetainer ? 1 : 0) + (showFreeCompany ? 1 : 0);
-        if (total == 0)
+        if (ReferenceEquals(query, appliedQuery) || string.Equals(query, appliedQuery, StringComparison.Ordinal))
         {
             return;
         }
 
-        SectionLabel(Loc.T(L.Inventory.CachedSources));
-        var scale = UiScale.Current;
+        var wasSearching = lowerNeedle.Length > 0;
+        appliedQuery = query;
+        lowerNeedle = query.Trim().ToLowerInvariant();
+        catalog.Filter(lowerNeedle, results);
+        if (!wasSearching && lowerNeedle.Length > 0)
+        {
+            resultsAppear.SnapTo(0f);
+        }
+    }
+
+    private void PollPrices()
+    {
+        if (!valuation.Pending)
+        {
+            return;
+        }
+
+        sincePricePoll += deltaSeconds;
+        if (sincePricePoll < PricePollSeconds)
+        {
+            return;
+        }
+
+        sincePricePoll = 0f;
+        if (!prices.IsValid && prices.Refresh())
+        {
+            valuation.Reset(catalog.Items);
+        }
+
+        var resolved = valuation.Poll(catalog.Items, prices);
+        if (resolved || !valuation.Pending)
+        {
+            text.BuildValue(catalog, valuation, prices.ScopeName, valuation.Pending);
+        }
+    }
+
+    private void CheckCompany()
+    {
+        sinceCompanyCheck += deltaSeconds;
+        if (sinceCompanyCheck < CompanyCheckSeconds)
+        {
+            return;
+        }
+
+        sinceCompanyCheck = 0f;
+        var player = gameData.LocalPlayer;
+        inFreeCompany = player is not null && player.CompanyTag.TextValue.Length > 0;
+    }
+
+    private void RemapMeters()
+    {
+        var sources = catalog.Sources;
+        var next = new Spring[sources.Count];
+        var keys = new (InventorySourceKind, ulong)[sources.Count];
+        for (var index = 0; index < sources.Count; index++)
+        {
+            var source = sources[index];
+            keys[index] = (source.Kind, source.OwnerId);
+            next[index] = new Spring(0f);
+            for (var previous = 0; previous < meterKeys.Length; previous++)
+            {
+                if (meterKeys[previous].Kind == source.Kind && meterKeys[previous].OwnerId == source.OwnerId)
+                {
+                    next[index] = meters[previous];
+                    break;
+                }
+            }
+        }
+
+        meters = next;
+        meterKeys = keys;
+    }
+
+    private float MeterFill(int sourceIndex)
+    {
+        if (sourceIndex < 0 || sourceIndex >= meters.Length)
+        {
+            return 0f;
+        }
+
+        return meters[sourceIndex].Step(catalog.Sources[sourceIndex].Fill, Motion.Sheet, deltaSeconds);
+    }
+
+    private void OpenItem(int itemIndex, string backTitle)
+    {
+        if (itemIndex < 0 || itemIndex >= catalog.Items.Count)
+        {
+            return;
+        }
+
+        UiFeedback.Play(UiSound.Tap);
+        router.Push(InventoryView.ForItem(catalog.Items[itemIndex].ItemId, backTitle));
+    }
+
+    private void OpenSource(int sourceIndex, string backTitle)
+    {
+        var source = catalog.Sources[sourceIndex];
+        if (!source.Browsable)
+        {
+            return;
+        }
+
+        UiFeedback.Play(UiSound.Tap);
+        router.Push(InventoryView.ForSource(source.Kind, source.OwnerId, backTitle));
+    }
+
+    private void SectionHeader(string label, float gapUnits, float scale)
+    {
+        ImGui.Dummy(new Vector2(0f, gapUnits * scale));
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var accentHover = Palette.WithAlpha(ui.Accent, 0.10f);
-        var card = GroupCard.Begin(ui, total, StorageRowHeight);
-        for (var index = 0; index < cachedScratch.Count; index++)
-        {
-            var group = cachedScratch[index];
-            var subtitle = Loc.T(L.Inventory.Updated, TimeText.Ago(group.CapturedUtc));
-            var row = card.NextRow();
-            var band = RowBand(row, scale);
-            var hovered = DrawRowHover(band, scale, accentHover);
-            if (DrawStorageRow(row, group.Kind, group.Title, subtitle, group.Rows.Count, true, hovered, band.Min,
-                    band.Max))
-            {
-                Open(group.Kind, group.Title);
-            }
-        }
-
-        if (showRetainer)
-        {
-            var row = card.NextRow();
-            var band = RowBand(row, scale);
-            DrawStorageRow(row, InventorySourceKind.Retainer, Loc.T(L.Inventory.SourceRetainer),
-                Loc.T(L.Inventory.RetainerEmpty), -1, false, false, band.Min, band.Max);
-        }
-
-        if (showFreeCompany)
-        {
-            var row = card.NextRow();
-            var band = RowBand(row, scale);
-            DrawStorageRow(row, InventorySourceKind.FreeCompany, Loc.T(L.Inventory.SourceFreeCompany),
-                Loc.T(L.Inventory.FreeCompanyEmpty), -1, false, false, band.Min, band.Max);
-        }
-
-        UiAnchors.Report("inventory.sources",
-            new Rect(origin, origin + new Vector2(width, total * StorageRowHeight * scale)));
-        card.End();
+        var width = ScrollLayout.StableContentWidth();
+        var fitted = Typography.FitText(label, MathF.Max(1f, width - SectionHeaderInset * scale), TextStyles.Title3);
+        var size = Typography.Measure(fitted, TextStyles.Title3);
+        Typography.Draw(ImGui.GetWindowDrawList(), new Vector2(origin.X + SectionHeaderInset * scale, origin.Y),
+            fitted, ui.TitleInk, TextStyles.Title3);
+        ImGui.Dummy(new Vector2(width, size.Y + SectionHeaderGap * scale));
     }
 
-    private static Rect RowBand(Rect row, float scale) =>
-        new(new Vector2(row.Min.X - Metrics.Space.Lg * scale, row.Min.Y),
-            new Vector2(row.Max.X + Metrics.Space.Lg * scale, row.Max.Y));
-
-    private static bool DrawRowHover(Rect band, float scale, Vector4 hoverTint)
+    private Rect BeginGroup(float height)
     {
-        if (!UiInteract.Hover(band.Min, band.Max))
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
+        ui.Card(ImGui.GetWindowDrawList(), rect.Min, rect.Max, Metrics.Radius.Grouped * UiScale.Current, true);
+        return rect;
+    }
+
+    private static void EndGroup(Rect group)
+    {
+        ImGui.SetCursorScreenPos(group.Min);
+        ImGui.Dummy(new Vector2(group.Width, group.Height));
+    }
+
+    private bool RowInteract(ImDrawListPtr drawList, Rect row, bool first, bool last, bool interactive)
+    {
+        if (!interactive)
+        {
+            return false;
+        }
+
+        var hovered = UiInteract.Hover(row.Min, row.Max);
+        if (!hovered)
         {
             return false;
         }
 
         var pressed = ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var fill = pressed ? Palette.WithAlpha(hoverTint, MathF.Min(1f, hoverTint.W * 1.8f)) : hoverTint;
-        Squircle.Fill(ImGui.GetWindowDrawList(), new Vector2(band.Min.X + 4f * scale, band.Min.Y + 3f * scale),
-            new Vector2(band.Max.X - 4f * scale, band.Max.Y - 3f * scale), 12f * scale, ImGui.GetColorU32(fill));
-        return true;
+        var corners = (first ? ImDrawFlags.RoundCornersTop : ImDrawFlags.None) |
+                      (last ? ImDrawFlags.RoundCornersBottom : ImDrawFlags.None);
+        if (corners == ImDrawFlags.None)
+        {
+            corners = ImDrawFlags.RoundCornersNone;
+        }
+
+        drawList.AddRectFilled(row.Min, row.Max,
+            ImGui.GetColorU32(ui.TitleInk with { W = pressed ? RowPressAlpha : RowHoverAlpha }),
+            Metrics.Radius.Grouped * UiScale.Current, corners);
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
-    private bool DrawStorageRow(Rect row, InventorySourceKind kind, string title, string subtitle, int count,
-        bool navigable, bool hovered, Vector2 hitMin, Vector2 hitMax)
+    private void Hairline(ImDrawListPtr drawList, float left, float right, float y) =>
+        drawList.AddLine(new Vector2(left, y - 0.5f), new Vector2(right, y - 0.5f), ImGui.GetColorU32(ui.Hairline),
+            Metrics.Stroke.Hairline);
+
+    private static bool RowVisible(Rect row) => ImGui.IsRectVisible(row.Min, row.Max);
+
+    private void DrawFootnote(string message, float scale)
     {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        var tileSize = 44f * scale;
-        var tileCenter = new Vector2(row.Min.X + tileSize * 0.5f, row.Center.Y);
-        DrawSourceTile(drawList, tileCenter, tileSize, AccentFor(kind), IconFor(kind), scale, navigable || count >= 0);
-        var rightEdge = row.Max.X;
-        if (navigable)
-        {
-            DrawChevronRight(new Vector2(rightEdge, row.Center.Y), 6f * scale, 2.2f * scale,
-                hovered ? ui.Accent : ui.MutedInk);
-            rightEdge -= 16f * scale;
-        }
-
-        var textRight = rightEdge;
-        if (count >= 0)
-        {
-            textRight = DrawCountPill(drawList, new Vector2(rightEdge, row.Center.Y), count, AccentFor(kind)) -
-                12f * scale;
-        }
-
-        var textLeft = tileCenter.X + tileSize * 0.5f + 14f * scale;
-        var textMaxWidth = MathF.Max(1f, textRight - textLeft);
-        if (subtitle.Length > 0)
-        {
-            var titleY = row.Min.Y + 15f * scale;
-            var titleSize = Typography.Measure(title, TextStyles.Headline);
-            var titleHovering = UiInteract.Hover(new Vector2(textLeft, titleY),
-                new Vector2(textLeft + textMaxWidth, titleY + titleSize.Y));
-            Marquee.DrawLeft(new MarqueeId("inventory.storage.title.", (int)kind), title, textLeft, titleY,
-                textMaxWidth, TextStyles.Headline, ui.TitleInk, titleHovering);
-            var subtitleY = row.Min.Y + 38f * scale;
-            var subtitleSize = Typography.Measure(subtitle, TextStyles.Footnote);
-            var subtitleHovering = UiInteract.Hover(new Vector2(textLeft, subtitleY),
-                new Vector2(textLeft + textMaxWidth, subtitleY + subtitleSize.Y));
-            Marquee.DrawLeft(new MarqueeId("inventory.storage.subtitle.", (int)kind), subtitle, textLeft, subtitleY,
-                textMaxWidth, TextStyles.Footnote, ui.MutedInk, subtitleHovering);
-        }
-        else
-        {
-            var nameSize = Typography.Measure(title, TextStyles.Headline);
-            Marquee.DrawLeft(new MarqueeId("inventory.storage.title.", (int)kind), title, textLeft, row.Center.Y - nameSize.Y * 0.5f,
-                textMaxWidth, TextStyles.Headline, ui.TitleInk, hovered);
-        }
-
-        if (!navigable)
-        {
-            return false;
-        }
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return UiInteract.Click(hitMin, hitMax, hovered);
-    }
-
-    private void DrawFooterHint()
-    {
-        var scale = UiScale.Current;
-        ImGui.Dummy(new Vector2(0f, 18f * scale));
-        var width = ImGui.GetContentRegionAvail().X;
+        ImGui.Dummy(new Vector2(0f, CardGap * scale));
+        var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
-        var text = Loc.T(L.Inventory.SearchHint);
-        Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, origin.Y + 4f * scale), text, ui.MutedInk,
-            TextStyles.Footnote, width - 40f * scale);
-        ImGui.Dummy(new Vector2(width, 40f * scale));
+        var bottom = Typography.DrawWrappedCentered(ImGui.GetWindowDrawList(), message, TextStyles.Footnote,
+            ui.MutedInk, new Vector2(origin.X + width * 0.5f, origin.Y), width - Metrics.Space.Xxl * scale);
+        ImGui.Dummy(new Vector2(width, bottom - origin.Y + BottomPad * scale));
     }
-
-    private void DrawSummaryCard()
-    {
-        var scale = UiScale.Current;
-        var width = ImGui.GetContentRegionAvail().X;
-        var origin = ImGui.GetCursorScreenPos();
-        var drawList = ImGui.GetWindowDrawList();
-        var height = HeroHeight * scale;
-        var cardMin = origin;
-        var cardMax = new Vector2(origin.X + width, origin.Y + height);
-        UiAnchors.Report("inventory.summary", new Rect(cardMin, cardMax));
-        var rounding = 22f * scale;
-        ui.Card(drawList, cardMin, cardMax, rounding, elevated: true);
-        Material.TopGlow(drawList, cardMin, cardMax, rounding, ui.Accent, 0.78f, 0.10f);
-        var columnWidth = width * 0.5f;
-        var leftCenterX = cardMin.X + columnWidth * 0.5f;
-        var rightCenterX = cardMin.X + columnWidth * 1.5f;
-        DrawHeroStat(drawList, new Vector2(leftCenterX, cardMin.Y), height, scale, GoldTint, FontAwesomeIcon.Coins,
-            FormatGil(), Loc.T(L.Inventory.Gil), columnWidth);
-        DrawHeroStat(drawList, new Vector2(rightCenterX, cardMin.Y), height, scale, ui.Accent,
-            FontAwesomeIcon.Briefcase, FormatCount(search.LocalItemCount), Loc.T(L.Inventory.TotalItems), columnWidth);
-        drawList.AddLine(new Vector2(cardMin.X + columnWidth, cardMin.Y + 26f * scale),
-            new Vector2(cardMin.X + columnWidth, cardMax.Y - 22f * scale),
-            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.08f)), 1f);
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + 6f * scale));
-    }
-
-    private void DrawHeroStat(ImDrawListPtr drawList, Vector2 columnTop, float height, float scale, Vector4 tint,
-        FontAwesomeIcon icon, string value, string label, float columnWidth)
-    {
-        DrawSourceTile(drawList, new Vector2(columnTop.X, columnTop.Y + 32f * scale), 40f * scale, tint, icon, scale,
-            true);
-        var valueMaxWidth = columnWidth - 20f * scale;
-        var valueY = columnTop.Y + 68f * scale;
-        var valueSize = Typography.Measure(value, TextStyles.Title2);
-        var valueHovering = UiInteract.Hover(
-            new Vector2(columnTop.X - valueMaxWidth * 0.5f, valueY - valueSize.Y * 0.5f),
-            new Vector2(columnTop.X + valueMaxWidth * 0.5f, valueY + valueSize.Y * 0.5f));
-        Marquee.DrawCentered(new MarqueeId("inventory.herostat.", label), value, columnTop.X, valueY - valueSize.Y * 0.5f,
-            valueMaxWidth, TextStyles.Title2, ui.TitleInk, valueHovering);
-        Typography.DrawCentered(drawList, new Vector2(columnTop.X, columnTop.Y + 94f * scale),
-            Loc.Culture.TextInfo.ToUpper(label), ui.MutedInk, TextStyles.Caption1);
-    }
-
-    private void DrawSourceSummary(InventoryResultGroup group)
-    {
-        var scale = UiScale.Current;
-        ImGui.Dummy(new Vector2(0f, 10f * scale));
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var tileSize = 24f * scale;
-        var tileCenter = new Vector2(origin.X + tileSize * 0.5f, origin.Y + tileSize * 0.5f);
-        DrawSourceTile(drawList, tileCenter, tileSize, AccentFor(group.Kind), IconFor(group.Kind), scale, true);
-        var textLeft = tileCenter.X + tileSize * 0.5f + 10f * scale;
-        var summary = FormatCount(group.Rows.Count) + " · " + FormatCount(group.TotalQuantity);
-        Typography.Draw(drawList,
-            new Vector2(textLeft, tileCenter.Y - Typography.Measure(summary, TextStyles.Subheadline).Y * 0.5f), summary,
-            ui.BodyInk, TextStyles.Subheadline);
-        if (group.IsCached)
-        {
-            var label = Loc.T(L.Inventory.Updated, TimeText.Ago(group.CapturedUtc));
-            var labelSize = Typography.Measure(label, TextStyles.Caption1);
-            Typography.Draw(drawList, new Vector2(origin.X + width - labelSize.X, tileCenter.Y - labelSize.Y * 0.5f),
-                label, ui.MutedInk, TextStyles.Caption1);
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, tileSize + 12f * scale));
-    }
-
-    private void DrawResults()
-    {
-        if (groups.Count == 0)
-        {
-            DrawHint(Loc.T(L.Inventory.NoMatches));
-            return;
-        }
-
-        for (var groupIndex = 0; groupIndex < groups.Count; groupIndex++)
-        {
-            DrawGroup(groups[groupIndex]);
-        }
-    }
-
-    private void DrawGroup(InventoryResultGroup group)
-    {
-        DrawGroupHeader(group);
-        DrawItemPanel(group.Rows);
-    }
-
-    private void DrawGroupHeader(InventoryResultGroup group)
-    {
-        var scale = UiScale.Current;
-        ImGui.Dummy(new Vector2(0f, 10f * scale));
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var tileSize = 22f * scale;
-        var tileCenter = new Vector2(origin.X + tileSize * 0.5f, origin.Y + tileSize * 0.5f);
-        DrawSourceTile(drawList, tileCenter, tileSize, AccentFor(group.Kind), IconFor(group.Kind), scale, true);
-        var textLeft = tileCenter.X + tileSize * 0.5f + 10f * scale;
-        var textRight = origin.X + width;
-        if (group.IsCached)
-        {
-            var label = Loc.T(L.Inventory.Updated, TimeText.Ago(group.CapturedUtc));
-            var labelSize = Typography.Measure(label, TextStyles.Caption1);
-            Typography.Draw(drawList, new Vector2(origin.X + width - labelSize.X, tileCenter.Y - labelSize.Y * 0.5f),
-                label, ui.MutedInk, TextStyles.Caption1);
-            textRight -= labelSize.X + 10f * scale;
-        }
-
-        var title = Typography.FitText(group.Title, textRight - textLeft, TextStyles.Headline);
-        Typography.Draw(drawList,
-            new Vector2(textLeft, tileCenter.Y - Typography.Measure(title, TextStyles.Headline).Y * 0.5f),
-            title, ui.TitleInk, TextStyles.Headline);
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, tileSize + 8f * scale));
-    }
-
-    private void DrawItemPanel(List<InventoryResultRow> rows)
-    {
-        var scale = UiScale.Current;
-        var card = GroupCard.Begin(ui, rows.Count, ItemRowHeight);
-        for (var index = 0; index < rows.Count; index++)
-        {
-            var row = card.NextRow();
-            var hovered = DrawRowHover(RowBand(row, scale), scale, ui.HoverTint);
-            DrawItemRow(row, rows[index], index, hovered);
-        }
-
-        card.End();
-    }
-
-    private void DrawItemRow(Rect row, InventoryResultRow item, int index, bool hovered)
-    {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        var iconSize = 38f * scale;
-        var iconMin = new Vector2(row.Min.X, row.Center.Y - iconSize * 0.5f);
-        var iconMax = iconMin + new Vector2(iconSize, iconSize);
-        GameIconTile.Draw(drawList, textures, item.IconId, iconMin, iconMax, 9f * scale, scale,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.06f)), edgeStroke: true);
-        var quantityText = "x" + FormatCount(item.Quantity);
-        var quantitySize = Typography.Measure(quantityText, TextStyles.BodyEmphasized);
-        var quantityX = row.Max.X - quantitySize.X;
-        Typography.Draw(drawList, new Vector2(quantityX, row.Center.Y - quantitySize.Y * 0.5f), quantityText, ui.Accent,
-            TextStyles.BodyEmphasized);
-        var textLeft = iconMax.X + 14f * scale;
-        var textRight = quantityX - 12f * scale;
-        if (item.HasHighQuality)
-        {
-            textRight -= 26f * scale;
-            DrawHqBadge(new Vector2(textRight + 8f * scale, row.Center.Y), scale);
-        }
-
-        var nameSize = Typography.Measure(item.Name, TextStyles.Body);
-        Marquee.DrawLeft(new MarqueeId("inventory.item.", index), item.Name, textLeft, row.Center.Y - nameSize.Y * 0.5f,
-            MathF.Max(1f, textRight - textLeft), TextStyles.Body, hovered ? ui.TitleInk : ui.BodyInk, hovered);
-    }
-
-    private void DrawSourceTile(ImDrawListPtr drawList, Vector2 center, float size, Vector4 color,
-        FontAwesomeIcon icon, float scale, bool enabled)
-    {
-        var half = size * 0.5f;
-        var min = center - new Vector2(half, half);
-        var max = center + new Vector2(half, half);
-        var radius = size * Metrics.Radius.TileFactor;
-        if (!enabled)
-        {
-            var muted = new Vector4(0.52f, 0.54f, 0.62f, 1f);
-            Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(Palette.WithAlpha(muted, 0.16f)));
-            Material.EdgeSquircle(drawList, min, max, radius, scale, 0.5f);
-            ProgressRing.CenterIcon(drawList, center, icon, Palette.WithAlpha(muted, 0.95f), size * 0.46f);
-            return;
-        }
-
-        var surface = IconTile.Surface(color);
-        IconTile.FillShaded(drawList, min, max, radius, surface, 1f);
-        Material.EdgeSquircle(drawList, min, max, radius, scale, 0.9f);
-        ProgressRing.CenterIcon(drawList, center, icon, White, size * 0.46f);
-    }
-
-    private float DrawCountPill(ImDrawListPtr drawList, Vector2 rightCenter, int count, Vector4 color)
-    {
-        var text = FormatCount(count);
-        var textSize = Typography.Measure(text, TextStyles.SubheadlineEmphasized);
-        var padX = 9f * UiScale.Current;
-        var padY = 4f * UiScale.Current;
-        var width = textSize.X + padX * 2f;
-        var height = textSize.Y + padY * 2f;
-        var max = new Vector2(rightCenter.X, rightCenter.Y + height * 0.5f);
-        var min = new Vector2(max.X - width, rightCenter.Y - height * 0.5f);
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(Palette.WithAlpha(color, 0.18f)));
-        var ink = Palette.Mix(color, ui.TitleInk, 0.25f);
-        Typography.Draw(drawList, new Vector2(min.X + padX, rightCenter.Y - textSize.Y * 0.5f), text, ink,
-            TextStyles.SubheadlineEmphasized);
-        return min.X;
-    }
-
-    private void DrawHqBadge(Vector2 center, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var halfWidth = 10f * scale;
-        var halfHeight = 8f * scale;
-        var min = new Vector2(center.X - halfWidth, center.Y - halfHeight);
-        var max = new Vector2(center.X + halfWidth, center.Y + halfHeight);
-        Squircle.Fill(drawList, min, max, 4f * scale, ImGui.GetColorU32(ui.Accent));
-        Typography.DrawCentered(drawList, center, Loc.T(L.Common.Hq), White, TextStyles.Caption2);
-    }
-
-    private void DrawHint(string message)
-    {
-        var scale = UiScale.Current;
-        ImGui.Dummy(new Vector2(0f, 24f * scale));
-        var width = ImGui.GetContentRegionAvail().X;
-        var origin = ImGui.GetCursorScreenPos();
-        var centerX = origin.X + width * 0.5f;
-        AppSkin.Icon(new Vector2(centerX, origin.Y + 4f * scale), IconGlyph.Of(FontAwesomeIcon.BoxOpen), ui.MutedInk,
-            1.5f);
-        Typography.DrawCentered(new Vector2(centerX, origin.Y + 42f * scale), message, ui.MutedInk,
-            TextStyles.Subheadline);
-    }
-
-    private void SectionLabel(string label)
-    {
-        var scale = UiScale.Current;
-        ImGui.Dummy(new Vector2(0f, 12f * scale));
-        ui.SectionLabel(label);
-    }
-
-    private void Open(InventorySourceKind kind, string title) => router.Push(InventoryView.ForSource(kind, title));
-
-    private InventoryResultGroup? FindGroup(InventorySourceKind kind, string title)
-    {
-        for (var index = 0; index < groups.Count; index++)
-        {
-            var group = groups[index];
-            if (group.Kind == kind && string.Equals(group.Title, title, StringComparison.Ordinal))
-            {
-                return group;
-            }
-        }
-
-        return null;
-    }
-
-    private static FontAwesomeIcon IconFor(InventorySourceKind kind) =>
-        kind switch
-        {
-            InventorySourceKind.Inventory => FontAwesomeIcon.Briefcase,
-            InventorySourceKind.Armoury => FontAwesomeIcon.ShieldAlt,
-            InventorySourceKind.Crystals => FontAwesomeIcon.Bolt,
-            InventorySourceKind.Saddlebag => FontAwesomeIcon.Paw,
-            InventorySourceKind.Equipped => FontAwesomeIcon.Tshirt,
-            InventorySourceKind.Retainer => FontAwesomeIcon.IdCard,
-            InventorySourceKind.FreeCompany => FontAwesomeIcon.Users,
-            _ => FontAwesomeIcon.Home,
-        };
-
-    private static Vector4 AccentFor(InventorySourceKind kind) =>
-        kind switch
-        {
-            InventorySourceKind.Inventory => new Vector4(0.98f, 0.60f, 0.23f, 1f),
-            InventorySourceKind.Armoury => new Vector4(0.28f, 0.56f, 0.96f, 1f),
-            InventorySourceKind.Crystals => new Vector4(0.62f, 0.44f, 0.96f, 1f),
-            InventorySourceKind.Saddlebag => new Vector4(0.90f, 0.55f, 0.33f, 1f),
-            InventorySourceKind.Equipped => new Vector4(0.28f, 0.78f, 0.52f, 1f),
-            InventorySourceKind.Retainer => new Vector4(0.40f, 0.47f, 0.92f, 1f),
-            InventorySourceKind.FreeCompany => new Vector4(0.93f, 0.72f, 0.30f, 1f),
-            _ => new Vector4(0.55f, 0.55f, 0.60f, 1f),
-        };
-
-    private static void DrawChevronRight(Vector2 tip, float size, float thickness, Vector4 color)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var packed = ImGui.GetColorU32(color);
-        drawList.AddLine(new Vector2(tip.X - size, tip.Y - size), tip, packed, thickness);
-        drawList.AddLine(tip, new Vector2(tip.X - size, tip.Y + size), packed, thickness);
-    }
-
-    private static string FormatCount(int value) => NumberText.Group(value);
-    private static string FormatGil() => NumberText.Group(InventoryGil.Read());
 
     public void Dispose()
     {

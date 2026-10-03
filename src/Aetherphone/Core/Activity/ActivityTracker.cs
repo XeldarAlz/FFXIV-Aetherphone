@@ -58,6 +58,7 @@ internal sealed unsafe class ActivityTracker : IDisposable
     public ActivityDay Today => today;
     public ActivityDay Session => session;
     public IReadOnlyList<ActivityDay> Days => ledger.Days;
+    public ActivityRecords Records => ledger.Records;
     public long SessionStartedUnix { get; private set; }
     public bool IsTracking => contentId != 0;
     public int RetainerCount { get; private set; }
@@ -65,6 +66,14 @@ internal sealed unsafe class ActivityTracker : IDisposable
     public int VenturesActive { get; private set; }
 
     public void MarkDirty() => dirty = true;
+
+    public void FoldToday()
+    {
+        if (contentId != 0)
+        {
+            ActivityStats.Fold(ledger.Records, today);
+        }
+    }
 
     public void Dispose()
     {
@@ -115,6 +124,12 @@ internal sealed unsafe class ActivityTracker : IDisposable
             SaveIfDirty();
             contentId = playerState->ContentId;
             ledger = store.Load(contentId);
+            ledger.Records ??= new ActivityRecords();
+            if (ActivityStats.FoldAll(ledger.Records, ledger.Days))
+            {
+                dirty = true;
+            }
+
             today = DayFor(LocalDateKey());
             ResetSession();
             ResetBaselines();
@@ -402,6 +417,7 @@ internal sealed unsafe class ActivityTracker : IDisposable
             return;
         }
 
+        ActivityStats.Fold(ledger.Records, today);
         store.Save(contentId, ledger);
         dirty = false;
     }

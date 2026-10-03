@@ -1,264 +1,248 @@
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Home;
-using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Core.Shell.Home;
 
-internal sealed class WidgetGallery
+internal readonly struct GalleryPage
 {
-    private const float SlideSmoothTime = 0.24f;
-    private const float HeaderUnits = 56f;
+    public readonly IHomeWidget? Widget;
+    public readonly WidgetSize Size;
+
+    public GalleryPage(IHomeWidget? widget, WidgetSize size)
+    {
+        Widget = widget;
+        Size = size;
+    }
+}
+
+internal sealed partial class WidgetGallery
+{
+    private const float SheetTopUnits = 48f;
+    private const float SidePaddingUnits = 16f;
+    private const float RootParallax = 0.3f;
+    private const float RootDim = 0.45f;
+    private const float PushVisible = 0.001f;
+    private const float PushSettled = 0.999f;
+    private const float EdgeShadowUnits = 14f;
+    private const float EdgeShadowAlpha = 0.14f;
+    private const float SecondaryAlpha = 0.62f;
 
     private readonly HomeLayoutService layout;
-    private readonly WidgetRegistry widgets;
-    private readonly Dictionary<string, WidgetSize> selections = new();
-    private Spring slide;
-    private bool open;
-    private float scrollY;
+    private readonly WidgetHost widgetHost;
+    private readonly WidgetGalleryIndex index;
+    private readonly Sheet sheet = new();
+    private readonly HashSet<HomeTile> knownTiles = new(ReferenceEqualityComparer.Instance);
+    private Spring push;
+    private bool detailOpen;
     private int targetPage;
-    private int openedFrame;
+    private bool refreshPending;
+    private HomeTile? placedTile;
+    private Vector2 placedCenter;
+    private float placedScale = 1f;
 
-    public WidgetGallery(HomeLayoutService layout, WidgetRegistry widgets)
+    public WidgetGallery(HomeLayoutService layout, WidgetRegistry widgets, WidgetHost widgetHost)
     {
         this.layout = layout;
-        this.widgets = widgets;
+        this.widgetHost = widgetHost;
+        index = new WidgetGalleryIndex(widgets, layout.IsInstalled);
+        buttonPress.SnapTo(1f);
     }
 
-    public bool Active => open || slide.Value > 0.01f;
+    public bool Active => sheet.CapturesPointer;
 
     public void Open(int pageIndex)
     {
-        open = true;
-        targetPage = pageIndex;
-        scrollY = 0f;
-        openedFrame = ImGui.GetFrameCount();
-    }
-
-    public void Close() => open = false;
-
-    public void CloseImmediate()
-    {
-        open = false;
-        slide.SnapTo(0f);
-    }
-
-    public void Draw(Rect screen, PhoneTheme theme, float delta, float scale)
-    {
-        slide.Step(open ? 1f : 0f, SlideSmoothTime, delta);
-        var eased = Math.Clamp(slide.Value, 0f, 1f);
-        if (eased <= 0.001f)
+        if (sheet.IsOpen)
         {
             return;
         }
 
+        targetPage = pageIndex;
+        query = string.Empty;
+        scrollY = 0f;
+        railOffset = 0f;
+        detailOpen = false;
+        push.SnapTo(0f);
+        railDrag.Reset();
+        pagerDrag.Reset();
+        placedPage = -1;
+        refreshPending = true;
+        sheet.Open();
+    }
+
+    public void Close() => sheet.Close();
+
+    public void CloseImmediate() => sheet.CloseImmediately();
+
+    public bool TryTakePlacement(out HomeTile tile, out Vector2 center, out float startScale)
+    {
+        center = placedCenter;
+        startScale = placedScale;
+        if (placedTile is not { } placed)
+        {
+            tile = null!;
+            return false;
+        }
+
+        tile = placed;
+        placedTile = null;
+        return true;
+    }
+
+    public void Draw(Rect screen, PhoneTheme theme, float delta, in HomeMetrics metrics)
+    {
+        if (!sheet.CapturesPointer)
+        {
+            return;
+        }
+
+        index.Refresh(query, refreshPending);
+        refreshPending = false;
+        var scale = metrics.Scale;
         var drawList = ImGui.GetWindowDrawList();
-        drawList.PushClipRect(screen.Min, screen.Max, true);
-        Material.Veil(drawList, screen.Min, screen.Max, 0.5f * eased);
-        var sheetTop = screen.Min.Y + 54f * scale;
-        var sheetHeight = screen.Max.Y - sheetTop;
-        var top = screen.Max.Y - sheetHeight * eased;
-        var sheet = new Rect(new Vector2(screen.Min.X, top), new Vector2(screen.Max.X, top + sheetHeight));
-        var rounding = 34f * scale;
-        Material.Frosted(drawList, sheet.Min, sheet.Max, rounding, scale, 1f);
-        var interactive = open && eased > 0.95f;
-        DrawHeader(drawList, sheet, theme, scale, interactive);
-        DrawItems(drawList, sheet, theme, scale, delta, interactive);
-        drawList.PopClipRect();
-        if (interactive && ImGui.GetFrameCount() != openedFrame &&
-            UiInteract.ClickedOutside(sheet.Min, sheet.Max, false))
+        var detents = SheetDetents.Fitted(MathF.Max(1f, screen.Height - SheetTopUnits * scale));
+        var frame = sheet.Begin(drawList, screen, theme, detents, SheetMetrics.HomeVeil);
+        if (!frame.Visible)
         {
+            return;
+        }
+
+        var vertexStart = drawList.VtxBuffer.Size;
+        push.Step(detailOpen ? 1f : 0f, Motion.Sheet, delta);
+        var progress = Math.Clamp(push.Value, 0f, 1f);
+        var width = frame.Panel.Width;
+        var detailLeft = frame.Panel.Min.X + (1f - progress) * width;
+        if (progress < PushSettled)
+        {
+            var rootInteractive = frame.Interactive && !detailOpen && progress < PushVisible;
+            DrawRoot(in frame, theme, in metrics, delta, -RootParallax * width * progress, detailLeft, progress,
+                rootInteractive);
+        }
+
+        if (progress > PushVisible)
+        {
+            DrawEdgeShadow(drawList, frame.Panel, detailLeft, scale);
+            DrawDetail(in frame, theme, in metrics, delta, detailLeft - frame.Panel.Min.X,
+                frame.Interactive && detailOpen && progress > PushSettled);
+        }
+
+        LayerCompositor.Fade(drawList, vertexStart, frame.Opacity);
+        HandleKeyboard(frame.Interactive);
+        sheet.End(in frame);
+    }
+
+    private static Vector4 Secondary(Vector4 ink) => Palette.WithAlpha(ink, ink.W * SecondaryAlpha);
+
+    private static void DrawEdgeShadow(ImDrawListPtr drawList, Rect panel, float edgeX, float scale)
+    {
+        if (edgeX <= panel.Min.X + 0.5f)
+        {
+            return;
+        }
+
+        var shadow = ImGui.GetColorU32(new Vector4(0f, 0f, 0f, EdgeShadowAlpha));
+        var clear = ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0f));
+        drawList.AddRectFilledMultiColor(new Vector2(edgeX - EdgeShadowUnits * scale, panel.Min.Y),
+            new Vector2(edgeX, panel.Max.Y), clear, shadow, shadow, clear);
+    }
+
+    private void HandleKeyboard(bool interactive)
+    {
+        if (!interactive || !sheet.IsOpen)
+        {
+            return;
+        }
+
+        if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+        {
+            if (detailOpen)
+            {
+                Pop();
+                return;
+            }
+
             Close();
+            return;
+        }
+
+        if (!detailOpen || pages.Count == 0)
+        {
+            return;
+        }
+
+        if (ImGui.IsKeyPressed(ImGuiKey.LeftArrow))
+        {
+            pagerPage = Math.Max(0, pagerPage - 1);
+        }
+
+        if (ImGui.IsKeyPressed(ImGuiKey.RightArrow))
+        {
+            pagerPage = Math.Min(pages.Count - 1, pagerPage + 1);
         }
     }
 
-    private void DrawHeader(ImDrawListPtr drawList, Rect sheet, PhoneTheme theme, float scale, bool interactive)
+    private void Place(in GalleryPage page)
     {
-        var grabberHalf = 19f * scale;
-        var grabberY = sheet.Min.Y + 9f * scale;
-        drawList.AddRectFilled(new Vector2(sheet.Center.X - grabberHalf, grabberY),
-            new Vector2(sheet.Center.X + grabberHalf, grabberY + 4.6f * scale),
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.32f)), 2.3f * scale);
-        Typography.DrawCentered(drawList, new Vector2(sheet.Center.X, sheet.Min.Y + 33f * scale),
-            Loc.T(L.Home.Widgets), theme.TextStrong, TextStyles.Title3);
-        var closeCenter = new Vector2(sheet.Max.X - 26f * scale, sheet.Min.Y + 33f * scale);
-        var closeRadius = 12f * scale;
-        var hovered = interactive &&
-                      UiInteract.Hover(closeCenter - new Vector2(closeRadius), closeCenter + new Vector2(closeRadius));
-        drawList.AddCircleFilled(closeCenter, closeRadius,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, hovered ? 0.22f : 0.13f)), 24);
-        var arm = closeRadius * 0.42f;
-        var ink = ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.85f));
-        drawList.AddLine(closeCenter + new Vector2(-arm, -arm), closeCenter + new Vector2(arm, arm), ink, 1.8f * scale);
-        drawList.AddLine(closeCenter + new Vector2(-arm, arm), closeCenter + new Vector2(arm, -arm), ink, 1.8f * scale);
-        if (hovered)
+        SnapshotTiles();
+        if (page.Widget is { } widget)
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            layout.AddWidget(widget, page.Size, targetPage);
+        }
+        else
+        {
+            AddSmartStack(page.Size, targetPage);
+        }
+
+        placedTile = FindNewTile();
+        knownTiles.Clear();
+        placedCenter = previewRect.Center;
+        placedScale = previewFactor;
+        placedPage = pagerPage;
+        sheet.Close();
+    }
+
+    private void AddSmartStack(WidgetSize size, int page)
+    {
+        var suggestions = index.Suggestions(size);
+        if (suggestions.Count == 0)
+        {
+            return;
+        }
+
+        layout.AddStack(suggestions, size, page);
+    }
+
+    private void SnapshotTiles()
+    {
+        knownTiles.Clear();
+        for (var pageIndex = 0; pageIndex < layout.PageCount; pageIndex++)
+        {
+            var tiles = layout.Page(pageIndex);
+            for (var tileIndex = 0; tileIndex < tiles.Count; tileIndex++)
             {
-                Close();
+                knownTiles.Add(tiles[tileIndex]);
             }
         }
     }
 
-    private void DrawItems(ImDrawListPtr drawList, Rect sheet, PhoneTheme theme, float scale, float uiDelta,
-        bool interactive)
+    private HomeTile? FindNewTile()
     {
-        var contentTop = sheet.Min.Y + HeaderUnits * scale;
-        var view = new Rect(new Vector2(sheet.Min.X, contentTop), sheet.Max);
-        drawList.PushClipRect(view.Min, view.Max, true);
-        if (interactive && UiInteract.HoverWindowOnly(view.Min, view.Max, false))
+        for (var pageIndex = 0; pageIndex < layout.PageCount; pageIndex++)
         {
-            scrollY -= ImGui.GetIO().MouseWheel * 46f * scale;
-        }
-
-        var cursorY = view.Min.Y - scrollY + 6f * scale;
-        var all = widgets.All;
-        for (var index = 0; index < all.Count; index++)
-        {
-            var widget = all[index];
-            if (!widgets.IsAvailable(widget))
+            var tiles = layout.Page(pageIndex);
+            for (var tileIndex = 0; tileIndex < tiles.Count; tileIndex++)
             {
-                continue;
-            }
-
-            cursorY = DrawItem(drawList, view, widget, theme, scale, uiDelta, interactive, cursorY);
-        }
-
-        var contentHeight = cursorY + scrollY - view.Min.Y;
-        scrollY = Math.Clamp(scrollY, 0f, MathF.Max(0f, contentHeight - view.Height + 12f * scale));
-        drawList.PopClipRect();
-    }
-
-    private float DrawItem(ImDrawListPtr drawList, Rect view, IHomeWidget widget, PhoneTheme theme, float scale,
-        float uiDelta, bool interactive, float cursorY)
-    {
-        var size = SelectedSize(widget);
-        var pad = 20f * scale;
-        var width = view.Width - pad * 2f;
-        Typography.DrawCentered(drawList, new Vector2(view.Center.X, cursorY + 12f * scale), widget.DisplayName,
-            theme.TextStrong, TextStyles.Headline);
-        cursorY += 30f * scale;
-        var previewWidth = size == WidgetSize.Small ? width * 0.44f : width * 0.94f;
-        var previewHeight = size == WidgetSize.Large ? previewWidth * 0.94f : size == WidgetSize.Small
-            ? previewWidth
-            : previewWidth * 0.46f;
-        var preview = new Rect(new Vector2(view.Center.X - previewWidth * 0.5f, cursorY),
-            new Vector2(view.Center.X + previewWidth * 0.5f, cursorY + previewHeight));
-        widget.Draw(new WidgetContext(drawList, preview, theme, size, scale, uiDelta, 1f));
-        cursorY = preview.Max.Y + 12f * scale;
-        cursorY = DrawSizeChips(drawList, view, widget, size, theme, scale, interactive, cursorY);
-        cursorY = DrawAddButton(drawList, view, widget, size, theme, scale, interactive, cursorY);
-        return cursorY + 22f * scale;
-    }
-
-    private float DrawSizeChips(ImDrawListPtr drawList, Rect view, IHomeWidget widget, WidgetSize selected,
-        PhoneTheme theme, float scale, bool interactive, float cursorY)
-    {
-        Span<WidgetSize> options = stackalloc WidgetSize[3];
-        var count = 0;
-        if (WidgetSizes.Contains(widget.Sizes, WidgetSize.Small))
-        {
-            options[count++] = WidgetSize.Small;
-        }
-
-        if (WidgetSizes.Contains(widget.Sizes, WidgetSize.Medium))
-        {
-            options[count++] = WidgetSize.Medium;
-        }
-
-        if (WidgetSizes.Contains(widget.Sizes, WidgetSize.Large))
-        {
-            options[count++] = WidgetSize.Large;
-        }
-
-        if (count <= 1)
-        {
-            return cursorY;
-        }
-
-        var chipHeight = 26f * scale;
-        var chipGap = 8f * scale;
-        var totalWidth = 0f;
-        Span<float> widths = stackalloc float[3];
-        for (var index = 0; index < count; index++)
-        {
-            widths[index] = Typography.Measure(SizeLabel(options[index]), TextStyles.Footnote).X + 26f * scale;
-            totalWidth += widths[index];
-        }
-
-        totalWidth += chipGap * (count - 1);
-        var left = view.Center.X - totalWidth * 0.5f;
-        for (var index = 0; index < count; index++)
-        {
-            var chip = new Rect(new Vector2(left, cursorY), new Vector2(left + widths[index], cursorY + chipHeight));
-            var isSelected = options[index] == selected;
-            var hovered = interactive && UiInteract.Hover(chip.Min, chip.Max);
-            var fill = isSelected
-                ? theme.Accent
-                : new Vector4(1f, 1f, 1f, hovered ? 0.16f : 0.10f);
-            Squircle.Fill(drawList, chip.Min, chip.Max, chipHeight * 0.5f, ImGui.GetColorU32(fill));
-            Typography.DrawCentered(drawList, chip.Center, SizeLabel(options[index]),
-                isSelected ? new Vector4(1f, 1f, 1f, 1f) : theme.TextStrong, TextStyles.Footnote);
-            if (hovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                var tile = tiles[tileIndex];
+                if (tile.IsWidget && !knownTiles.Contains(tile))
                 {
-                    selections[widget.Id] = options[index];
+                    return tile;
                 }
             }
-
-            left += widths[index] + chipGap;
         }
 
-        return cursorY + chipHeight + 12f * scale;
+        return null;
     }
-
-    private float DrawAddButton(ImDrawListPtr drawList, Rect view, IHomeWidget widget, WidgetSize size,
-        PhoneTheme theme, float scale, bool interactive, float cursorY)
-    {
-        var label = Loc.T(L.Home.AddWidget);
-        var width = Typography.Measure(label, TextStyles.SubheadlineEmphasized).X + 44f * scale;
-        var height = 32f * scale;
-        var button = new Rect(new Vector2(view.Center.X - width * 0.5f, cursorY),
-            new Vector2(view.Center.X + width * 0.5f, cursorY + height));
-        var hovered = interactive && UiInteract.Hover(button.Min, button.Max);
-        Squircle.Fill(drawList, button.Min, button.Max, height * 0.5f,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, hovered ? 1f : 0.9f)));
-        Typography.DrawCentered(drawList, button.Center, label, new Vector4(1f, 1f, 1f, 1f),
-            TextStyles.SubheadlineEmphasized);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                layout.AddWidget(widget, size, targetPage);
-                Close();
-            }
-        }
-
-        return button.Max.Y;
-    }
-
-    private WidgetSize SelectedSize(IHomeWidget widget)
-    {
-        if (selections.TryGetValue(widget.Id, out var size) && WidgetSizes.Contains(widget.Sizes, size))
-        {
-            return size;
-        }
-
-        return WidgetSizes.Contains(widget.Sizes, WidgetSize.Medium)
-            ? WidgetSize.Medium
-            : WidgetSizes.Smallest(widget.Sizes);
-    }
-
-    private static string SizeLabel(WidgetSize size) => size switch
-    {
-        WidgetSize.Small => Loc.T(L.Home.SizeSmall),
-        WidgetSize.Large => Loc.T(L.Home.SizeLarge),
-        _ => Loc.T(L.Home.SizeMedium),
-    };
 }

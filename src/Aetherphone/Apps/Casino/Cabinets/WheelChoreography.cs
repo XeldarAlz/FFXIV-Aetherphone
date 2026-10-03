@@ -20,6 +20,11 @@ internal static class WheelChoreography
         return Tau / segmentCount;
     }
 
+    public static int PegOf(float angle, int segmentCount)
+    {
+        return (int)MathF.Floor(angle / SpanFor(segmentCount) + 0.5f);
+    }
+
     public static float RestAngleOf(int segment, int segmentCount)
     {
         return Normalize(-segment * SpanFor(segmentCount));

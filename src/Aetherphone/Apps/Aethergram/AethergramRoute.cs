@@ -6,6 +6,7 @@ internal enum AethergramTab
 {
     Home,
     Search,
+    Messages,
     Profile,
 }
 

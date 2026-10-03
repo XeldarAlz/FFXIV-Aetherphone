@@ -10,6 +10,7 @@ namespace Aetherphone.Windows.Components;
 internal sealed class AppSkin
 {
     public static readonly Vector4 Transparent = new(0f, 0f, 0f, 0f);
+    public const float PillHeight = Metrics.Size.Pill;
 
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 HoverFill = new(1f, 1f, 1f, 0.16f);
@@ -22,6 +23,7 @@ internal sealed class AppSkin
     private static readonly TextStyle PillSubLabelStyle = new(0.70f, FontWeight.Medium);
     private const float PillLabelMinScale = 0.70f;
     private const float StackedPillInsetFraction = 0.5f;
+    private const float GlassHoverAlpha = 0.06f;
 
     public AppPalette Palette { get; set; }
 
@@ -50,11 +52,22 @@ internal sealed class AppSkin
 
     public Vector4 HoverWash => Palette.HoverWash;
 
+    public Vector4 BackdropColor
+    {
+        get
+        {
+            var body = Palette.BackdropBottom with { W = 1f };
+            var bloom = Palette.BloomBottom;
+            return Vector4.Lerp(body, bloom with { W = 1f }, Math.Clamp(bloom.W, 0f, 1f));
+        }
+    }
+
     public void Backdrop(Rect screen)
     {
         var scale = UiScale.Current;
         AppSurface.ScrollbarInk = Palette.TitleInk;
         PaintGradient(ImGui.GetWindowDrawList(), screen, screen, Theme.ScreenRounding * scale);
+        WallpaperBackdrop.RecordFlat(BackdropColor);
     }
 
     public void Body(Rect area)
@@ -94,18 +107,17 @@ internal sealed class AppSkin
     }
 
     public bool PillButton(Rect rect, string label, bool filled, string? id = null) =>
-        PillButtonCore(rect, label, filled, Palette.Accent, Palette.FieldSurface, Palette.TitleInk, Theme, id);
+        PillButtonCore(rect, label, filled, Palette.Accent, Palette.TitleInk, Theme, id);
 
     public static bool PillButton(Rect rect, string label, bool filled, PhoneTheme theme) =>
-        PillButtonCore(rect, label, filled, theme.Accent, theme.SurfaceMuted, theme.TextStrong, theme);
+        PillButtonCore(rect, label, filled, theme.Accent, theme.TextStrong, theme);
 
     public static bool PillButton(Rect rect, string label, bool filled, bool enabled, PhoneTheme theme,
         bool overlay = false)
     {
         if (enabled)
         {
-            return PillButtonCore(rect, label, filled, theme.Accent, theme.GroupedCard, theme.TextStrong, theme,
-                overlay: overlay);
+            return PillButtonCore(rect, label, filled, theme.Accent, theme.TextStrong, theme, overlay: overlay);
         }
 
         var drawList = ImGui.GetWindowDrawList();
@@ -212,19 +224,35 @@ internal sealed class AppSkin
         return UiInteract.Click(min, max, hovered);
     }
 
-    private static bool PillButtonCore(Rect rect, string label, bool filled, Vector4 accent, Vector4 surface,
-        Vector4 titleInk, PhoneTheme theme, string? id = null, bool overlay = false)
+    private static bool PillButtonCore(Rect rect, string label, bool filled, Vector4 accent, Vector4 titleInk,
+        PhoneTheme theme, string? id = null, bool overlay = false)
     {
         var drawList = ImGui.GetWindowDrawList();
+        var scale = UiScale.Current;
         var hovered = overlay
             ? UiInteract.HoverWindowOnly(rect.Min, rect.Max)
             : UiInteract.Hover(rect.Min, rect.Max);
-        var radius = rect.Height * 0.5f;
-        var fill = filled
-            ? (hovered ? Core.Theme.Palette.Mix(accent, theme.TextStrong, 0.12f) : accent)
-            : (hovered ? HoverFill : surface);
+        var down = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+        var grow = PressFx.Scale(ImGui.GetID(id ?? label), down, PressFx.ControlPressedScale);
+        var pressedRect = ScaleAround(rect, grow);
+        var radius = pressedRect.Height * 0.5f;
+        if (filled)
+        {
+            var fill = hovered ? Core.Theme.Palette.Mix(accent, theme.TextStrong, 0.12f) : accent;
+            Squircle.Fill(drawList, pressedRect.Min, pressedRect.Max, radius, ImGui.GetColorU32(fill));
+        }
+        else
+        {
+            Material.LiquidGlass(drawList, pressedRect.Min, pressedRect.Max, radius, scale, Material.ToneFor(theme),
+                0f);
+            if (hovered)
+            {
+                Squircle.Fill(drawList, pressedRect.Min, pressedRect.Max, radius,
+                    ImGui.GetColorU32(Core.Theme.Palette.WithAlpha(titleInk, GlassHoverAlpha)));
+            }
+        }
+
         var ink = filled ? White : titleInk;
-        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         var maxLabelWidth = MathF.Max(1f, rect.Width - rect.Height);
         if (id is not null)
         {
@@ -245,6 +273,12 @@ internal sealed class AppSkin
         }
 
         return UiInteract.Click(rect.Min, rect.Max, hovered);
+    }
+
+    private static Rect ScaleAround(Rect rect, float factor)
+    {
+        var half = rect.Size * 0.5f * factor;
+        return new Rect(rect.Center - half, rect.Center + half);
     }
 
     public bool ActionPill(Rect rect, string label, bool enabled, in TextStyle style)
@@ -268,8 +302,14 @@ internal sealed class AppSkin
 
     public bool AccentPill(Rect rect, string label, bool enabled, in TextStyle style)
     {
-        var drawList = ImGui.GetWindowDrawList();
         var hovered = enabled && UiInteract.Hover(rect.Min, rect.Max);
+        PaintAccentPill(rect, label, enabled, hovered, style);
+        return enabled && UiInteract.Click(rect.Min, rect.Max, hovered);
+    }
+
+    public void PaintAccentPill(Rect rect, string label, bool enabled, bool hovered, in TextStyle style)
+    {
+        var drawList = ImGui.GetWindowDrawList();
         var fill = !enabled ? Core.Theme.Palette.WithAlpha(Accent, 0.35f) :
             hovered ? Core.Theme.Palette.Mix(Accent, new Vector4(0f, 0f, 0f, 1f), 0.12f) : Accent;
         Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(fill));
@@ -278,8 +318,6 @@ internal sealed class AppSkin
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
-
-        return enabled && UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     public bool DangerPillButton(Rect rect, string label) => DangerPillButton(rect, label, Theme);
@@ -362,14 +400,22 @@ internal sealed class AppSkin
         var drawList = ImGui.GetWindowDrawList();
         var hit = new Vector2(hitRadius, hitRadius);
         var hovered = UiInteract.Hover(center - hit, center + hit);
+        var grow = 1f;
         if (background.W > 0f)
         {
-            drawList.AddCircleFilled(center, hitRadius,
-                ImGui.GetColorU32(hovered ? Core.Theme.Palette.Mix(background, theme.TextStrong, 0.08f) : background),
-                24);
+            var down = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+            grow = PressFx.Scale(ImGui.GetID(tooltip.Length > 0 ? tooltip : glyph), down,
+                PressFx.ControlPressedScale);
+            var radius = hitRadius * grow;
+            var drawn = new Vector2(radius, radius);
+            Material.LiquidGlass(drawList, center - drawn, center + drawn, radius, UiScale.Current,
+                Material.ToneFor(theme), 0f);
+            var tint = hovered ? Core.Theme.Palette.Mix(background, theme.TextStrong, 0.08f) : background;
+            Squircle.Fill(drawList, center - drawn, center + drawn, radius, ImGui.GetColorU32(tint));
         }
 
-        Icon(center, glyph, hovered ? Core.Theme.Palette.Mix(color, theme.TextStrong, 0.2f) : color, glyphScale);
+        Icon(drawList, center, glyph, hovered ? Core.Theme.Palette.Mix(color, theme.TextStrong, 0.2f) : color,
+            glyphScale * grow);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

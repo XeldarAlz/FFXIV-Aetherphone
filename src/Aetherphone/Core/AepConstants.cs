@@ -4,14 +4,17 @@ internal static class AepConstants
 {
     #if DEBUG
     public const string Name = "AetherphoneDev";
+    public const string ServerBarTag = "Dev";
     public const string PrimaryCommand = "/phonedev";
     public const string AliasCommand = "/aetherphonedev";
     #elif BETA
     public const string Name = "AetherphoneBeta";
+    public const string ServerBarTag = "Beta";
     public const string PrimaryCommand = "/phonebeta";
     public const string AliasCommand = "/aetherphonebeta";
     #else
     public const string Name = "Aetherphone";
+    public const string ServerBarTag = "";
     public const string PrimaryCommand = "/phone";
     public const string AliasCommand = "/aetherphone";
     #endif

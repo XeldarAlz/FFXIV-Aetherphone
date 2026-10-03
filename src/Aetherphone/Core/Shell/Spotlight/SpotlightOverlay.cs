@@ -1,6 +1,7 @@
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -11,44 +12,65 @@ namespace Aetherphone.Core.Shell.Spotlight;
 
 internal sealed class SpotlightOverlay
 {
-    private const float SlideSmoothTime = 0.18f;
-    private const float BarTopUnits = 64f;
-    private const float BarHeightUnits = 36f;
-    private const float RowHeightUnits = 46f;
-    private const float SectionGapUnits = 12f;
-    private const float BadgeRadiusUnits = 15f;
-    private const float CallButtonRadiusUnits = 15f;
-    private static readonly Vector4 CallGreen = new(0.20f, 0.78f, 0.35f, 1f);
-    private const float SectionHeaderUnits = 26f;
-    private const float PanelPadUnits = 8f;
-    private const float PanelRadiusUnits = 22f;
+    private const string SearchAnchorKey = "home.search";
+    private const float VeilDim = 0.35f;
+    private const float InteractiveThreshold = 0.6f;
+    private const float RevealStart = 0.45f;
+    private const float FieldFadeEnd = 0.15f;
+    private const float ReopenGuard = 0.2f;
+    private const float FallbackPillWidthUnits = 96f;
+    private const float FallbackPillHeightUnits = 26f;
+    private const float FallbackPillLiftUnits = 103f;
     private const float EmptyPanelHeightUnits = 74f;
+    private const float BottomMarginUnits = 24f;
+    private const float SelectionAlpha = 0.12f;
+    private const float PillHoverAlpha = 0.08f;
+    private const float SeparatorAlpha = 0.07f;
+    private const int MinimumQueryLength = 2;
+    private const int QueryMaxLength = 64;
+    private static readonly Vector4 Ink = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 MutedInk = new(1f, 1f, 1f, 0.62f);
+    private static readonly string[] RecentPressIds =
+    {
+        "spotlight.recent0", "spotlight.recent1", "spotlight.recent2", "spotlight.recent3", "spotlight.recent4",
+        "spotlight.recent5",
+    };
 
     private readonly SpotlightIndex index;
+    private readonly Configuration configuration;
+    private readonly List<IPhoneApp> recents = new(RecentLaunches.Capacity);
     private Spring slide;
     private bool open;
     private bool focusPending;
+    private bool scrollToSelection;
+    private bool hasOrigin;
     private int openedFrame;
+    private int selected;
+    private Rect origin;
     private string query = string.Empty;
 
-    public SpotlightOverlay(SpotlightIndex index)
+    public SpotlightOverlay(SpotlightIndex index, Configuration configuration)
     {
         this.index = index;
+        this.configuration = configuration;
     }
 
     public bool Active => open || slide.Value > 0.01f;
 
     public void Open()
     {
-        if (open)
+        if (open || slide.Value > ReopenGuard)
         {
             return;
         }
 
         open = true;
         focusPending = true;
+        scrollToSelection = false;
+        selected = 0;
         query = string.Empty;
         index.Clear();
+        index.CollectRecents(recents);
         openedFrame = ImGui.GetFrameCount();
     }
 
@@ -60,81 +82,196 @@ internal sealed class SpotlightOverlay
         slide.SnapTo(0f);
     }
 
-    public void Draw(Rect screen, PhoneTheme theme, INavigator navigation, float delta, float scale)
+    public void Draw(Rect screen, Rect content, PhoneTheme theme, INavigator navigation, float delta, float scale)
     {
-        slide.Step(open ? 1f : 0f, SlideSmoothTime, delta);
-        var eased = Math.Clamp(slide.Value, 0f, 1f);
-        if (eased <= 0.001f)
+        slide.Step(open ? 1f : 0f, Motion.SwitcherReveal, delta);
+        var progress = Math.Clamp(slide.Value, 0f, 1f);
+        if (progress <= 0.001f)
         {
             return;
         }
 
+        TrackOrigin(content, scale);
+        var layout = new SpotlightLayout(scale);
         var drawList = ImGui.GetWindowDrawList();
         drawList.PushClipRect(screen.Min, screen.Max, true);
-        Material.Veil(drawList, screen.Min, screen.Max, 0.55f * eased);
-        var drop = (1f - Easing.EaseOutCubic(eased)) * -18f * scale;
-        var barTop = screen.Min.Y + BarTopUnits * scale + drop;
-        var bar = new Rect(new Vector2(screen.Min.X + 22f * scale, barTop),
-            new Vector2(screen.Max.X - 22f * scale, barTop + BarHeightUnits * scale));
-        Material.Frosted(drawList, bar.Min, bar.Max, bar.Height * 0.5f, scale, eased);
-        var interactive = open && eased > 0.9f;
+        Material.Veil(drawList, screen.Min, screen.Max, VeilDim * progress);
+        var rest = SpotlightLayout.RestRect(content, scale);
+        var field = SpotlightLayout.FieldRect(origin, rest, progress);
+        var fieldRadius = SpotlightLayout.FieldRadius(origin, SpotlightLayout.FieldRadiusUnits * scale, progress);
+        GlassField.Surface(drawList, field, fieldRadius, scale, WallpaperLegibility.Strength(theme),
+            Easing.Segment(progress, 0f, FieldFadeEnd));
+        var interactive = open && progress > InteractiveThreshold;
+        var overContent = false;
         if (interactive)
         {
-            var previous = query;
-            SearchField.Draw(bar, "##spotlightQuery", Loc.T(L.Spotlight.Hint), ref query, theme, 64, focusPending);
-            focusPending = false;
-            if (!string.Equals(previous, query, StringComparison.Ordinal))
-            {
-                index.Search(query);
-            }
+            overContent = UiInteract.Hover(field.Min, field.Max);
+            DrawQueryField(drawList, field, theme, scale);
+        }
+        else
+        {
+            GlassField.SearchGlyph(drawList, field, theme, scale, progress);
         }
 
-        var results = index.Results;
-        var listTop = bar.Max.Y + SectionGapUnits * scale;
-        var list = new Rect(new Vector2(bar.Min.X, listTop), new Vector2(bar.Max.X, screen.Max.Y - 24f * scale));
-        var panel = new Rect(list.Min, list.Min);
-        if (results.Count > 0)
+        var reveal = Easing.Segment(progress, RevealStart, 1f);
+        if (reveal > 0.01f)
         {
-            panel = DrawResults(drawList, list, theme, navigation, scale, eased, interactive);
-        }
-        else if (query.Trim().Length >= 2 && interactive)
-        {
-            panel = DrawEmpty(drawList, list, theme, scale, eased);
+            var listTop = rest.Max.Y + SpotlightLayout.ListGapUnits * scale;
+            var list = new Rect(new Vector2(rest.Min.X, listTop),
+                new Vector2(rest.Max.X, screen.Max.Y - BottomMarginUnits * scale));
+            overContent |= DrawBelowField(drawList, list, in layout, theme, navigation, scale, reveal, interactive);
         }
 
         drawList.PopClipRect();
-        if (interactive && ImGui.GetFrameCount() != openedFrame && ImGui.IsMouseClicked(ImGuiMouseButton.Left) &&
-            !UiInteract.Hover(bar.Min, bar.Max) && !UiInteract.Hover(panel.Min, panel.Max))
+        if (!interactive || !open)
         {
-            Close();
+            return;
         }
 
-        if (interactive && ImGui.IsKeyPressed(ImGuiKey.Escape))
+        HandleKeyboard(navigation);
+        if (open && ImGui.GetFrameCount() != openedFrame && UiInteract.ClickedOutside(overContent))
         {
             Close();
         }
     }
 
-    private Rect DrawResults(ImDrawListPtr drawList, Rect list, PhoneTheme theme, INavigator navigation, float scale,
-        float eased, bool interactive)
+    private void TrackOrigin(Rect content, float scale)
+    {
+        if (UiAnchors.TryGet(SearchAnchorKey, out var reported))
+        {
+            origin = reported;
+            hasOrigin = true;
+            return;
+        }
+
+        if (hasOrigin)
+        {
+            return;
+        }
+
+        var half = new Vector2(FallbackPillWidthUnits, FallbackPillHeightUnits) * (0.5f * scale);
+        var center = new Vector2(content.Center.X, content.Max.Y - FallbackPillLiftUnits * scale);
+        origin = new Rect(center - half, center + half);
+    }
+
+    private void DrawQueryField(ImDrawListPtr drawList, Rect field, PhoneTheme theme, float scale)
+    {
+        var previous = query;
+        GlassField.Search(drawList, field, "##spotlightQuery", Loc.T(L.Spotlight.Hint), ref query, theme, scale,
+            QueryMaxLength, focusPending);
+        focusPending = false;
+        if (string.Equals(previous, query, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        index.Search(query);
+        selected = 0;
+        scrollToSelection = true;
+    }
+
+    private bool DrawBelowField(ImDrawListPtr drawList, Rect list, in SpotlightLayout layout, PhoneTheme theme,
+        INavigator navigation, float scale, float reveal, bool interactive)
+    {
+        if (index.Results.Count > 0)
+        {
+            return DrawResults(drawList, list, in layout, theme, navigation, reveal, interactive);
+        }
+
+        if (QueryLength(query) >= MinimumQueryLength)
+        {
+            return DrawEmpty(drawList, list, in layout, reveal, interactive);
+        }
+
+        if (recents.Count > 0)
+        {
+            return DrawRecents(drawList, list, in layout, theme, navigation, scale, reveal, interactive);
+        }
+
+        return false;
+    }
+
+    private static int QueryLength(string text)
+    {
+        var length = 0;
+        for (var index = 0; index < text.Length; index++)
+        {
+            if (!char.IsWhiteSpace(text[index]))
+            {
+                length++;
+            }
+        }
+
+        return length;
+    }
+
+    private static void DrawPanel(ImDrawListPtr drawList, Rect panel, in SpotlightLayout layout, float reveal) =>
+        Material.LiquidGlass(drawList, panel.Min, panel.Max, layout.PanelRadius, layout.Scale, GlassTone.Dark, 0f,
+            reveal);
+
+    private bool DrawRecents(ImDrawListPtr drawList, Rect list, in SpotlightLayout layout, PhoneTheme theme,
+        INavigator navigation, float scale, float reveal, bool interactive)
+    {
+        var innerWidth = list.Width - layout.PanelPad * 2f;
+        var panelHeight = MathF.Min(layout.RecentsPanelHeight(innerWidth), list.Height);
+        var panel = new Rect(list.Min, new Vector2(list.Max.X, list.Min.Y + panelHeight));
+        DrawPanel(drawList, panel, in layout, reveal);
+        var vertexStart = drawList.VtxBuffer.Size;
+        var inner = panel.Inset(layout.PanelPad);
+        Typography.Draw(drawList, new Vector2(inner.Min.X + layout.RowInset, inner.Min.Y + layout.HeaderTextOffset),
+            Loc.T(L.Spotlight.Recents), MutedInk, TextStyles.FootnoteEmphasized);
+        var cellWidth = layout.RecentCellWidth(innerWidth);
+        var tileSize = layout.RecentTileSize(innerWidth);
+        var tileTop = inner.Min.Y + layout.HeaderHeight;
+        var cellBottom = tileTop + tileSize + layout.RecentLabelBand;
+        var tileCenterY = tileTop + tileSize * 0.5f;
+        var zoom = scale / UiScale.Current;
+        var count = Math.Min(recents.Count, RecentPressIds.Length);
+        for (var slot = 0; slot < count; slot++)
+        {
+            var app = recents[slot];
+            var centerX = inner.Min.X + cellWidth * (slot + 0.5f);
+            var cell = new Rect(new Vector2(centerX - cellWidth * 0.5f, tileTop),
+                new Vector2(centerX + cellWidth * 0.5f, cellBottom));
+            var hovered = interactive && UiInteract.Hover(cell.Min, cell.Max);
+            var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+            var press = PressFx.Scale(RecentPressIds[slot], pressed, Motion.PressScaleControl);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            HomeTileView.DrawApp(new Vector2(centerX, tileCenterY), tileSize, app, theme, press, 1f, true,
+                cellWidth, configuration, zoom);
+            if (hovered && UiInteract.Click(cell.Min, cell.Max, true))
+            {
+                navigation.Open(app.Id);
+                Close();
+                break;
+            }
+        }
+
+        LayerCompositor.Fade(drawList, vertexStart, reveal);
+        return interactive && UiInteract.Hover(panel.Min, panel.Max);
+    }
+
+    private bool DrawResults(ImDrawListPtr drawList, Rect list, in SpotlightLayout layout, PhoneTheme theme,
+        INavigator navigation, float reveal, bool interactive)
     {
         var results = index.Results;
-        var rowHeight = RowHeightUnits * scale;
-        var headerHeight = SectionHeaderUnits * scale;
-        var padding = PanelPadUnits * scale;
-        var radius = PanelRadiusUnits * scale;
-        var panelHeight = MathF.Min(Measure(results, rowHeight, headerHeight) + padding * 2f, list.Height);
+        var pad = layout.PanelPad;
+        var panelHeight = MathF.Min(layout.Measure(results) + pad * 2f, list.Height);
         var panel = new Rect(list.Min, new Vector2(list.Max.X, list.Min.Y + panelHeight));
-        DrawPanel(drawList, panel, radius, scale, eased);
-
-        var content = new Rect(new Vector2(panel.Min.X + padding, panel.Min.Y + padding),
-            new Vector2(panel.Max.X - padding, panel.Max.Y - padding));
+        DrawPanel(drawList, panel, in layout, reveal);
+        var content = panel.Inset(pad);
         drawList.PushClipRect(content.Min, content.Max, true);
+        var vertexStart = drawList.VtxBuffer.Size;
         ImGui.SetCursorScreenPos(content.Min);
         using (ImRaii.Child("##spotlightResults", content.Size, false,
                    ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar))
         {
-            var y = content.Min.Y - ImGui.GetScrollY();
+            var scrollY = ImGui.GetScrollY();
+            var y = content.Min.Y - scrollY;
             var lastKind = (SpotlightKind)255;
             for (var resultIndex = 0; resultIndex < results.Count; resultIndex++)
             {
@@ -143,188 +280,273 @@ internal sealed class SpotlightOverlay
                 if (newSection)
                 {
                     lastKind = result.Kind;
-                    if (y + headerHeight > content.Min.Y && y < content.Max.Y)
+                    if (y + layout.HeaderHeight > content.Min.Y && y < content.Max.Y)
                     {
-                        Typography.Draw(drawList, new Vector2(content.Min.X + 12f * scale, y + 7f * scale),
-                            Loc.T(SectionLabel(result.Kind)), Palette.WithAlpha(theme.TextMuted, 0.85f * eased),
-                            TextStyles.FootnoteEmphasized);
+                        Typography.Draw(drawList,
+                            new Vector2(content.Min.X + layout.RowInset, y + layout.HeaderTextOffset),
+                            Loc.T(SectionLabel(result.Kind)), MutedInk, TextStyles.FootnoteEmphasized);
                     }
 
-                    y += headerHeight;
+                    y += layout.HeaderHeight;
                 }
 
-                var row = new Rect(new Vector2(content.Min.X, y), new Vector2(content.Max.X, y + rowHeight));
-                var visible = row.Max.Y > content.Min.Y && row.Min.Y < content.Max.Y;
-                if (visible)
+                var row = new Rect(new Vector2(content.Min.X, y), new Vector2(content.Max.X, y + layout.RowHeight));
+                if (row.Max.Y > content.Min.Y && row.Min.Y < content.Max.Y)
                 {
                     if (!newSection)
                     {
-                        var separatorLeft = row.Min.X + (21f + BadgeRadiusUnits * 2f) * scale;
-                        drawList.AddLine(new Vector2(separatorLeft, row.Min.Y),
-                            new Vector2(row.Max.X - 10f * scale, row.Min.Y),
-                            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f * eased)), 1f * scale);
+                        drawList.AddLine(new Vector2(layout.TextLeft(row), row.Min.Y),
+                            new Vector2(row.Max.X - layout.RowInset, row.Min.Y),
+                            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, SeparatorAlpha)), layout.Scale);
                     }
 
-                    DrawRow(drawList, row, result, theme, scale, eased, interactive, navigation);
+                    DrawRow(drawList, row, in result, resultIndex, in layout, theme, interactive, navigation);
+                    if (!open)
+                    {
+                        break;
+                    }
                 }
 
-                y += rowHeight;
+                y += layout.RowHeight;
             }
 
-            ImGui.Dummy(new Vector2(1f, MathF.Max(1f, y + ImGui.GetScrollY() - content.Min.Y)));
-        }
-
-        drawList.PopClipRect();
-        return panel;
-    }
-
-    private static void DrawPanel(ImDrawListPtr drawList, Rect panel, float radius, float scale, float eased)
-    {
-        Elevation.Card(drawList, panel.Min, panel.Max, radius, scale, eased);
-        Material.Frosted(drawList, panel.Min, panel.Max, radius, scale, eased);
-    }
-
-    private static Rect DrawEmpty(ImDrawListPtr drawList, Rect list, PhoneTheme theme, float scale, float eased)
-    {
-        var height = MathF.Min(EmptyPanelHeightUnits * scale, list.Height);
-        var panel = new Rect(list.Min, new Vector2(list.Max.X, list.Min.Y + height));
-        DrawPanel(drawList, panel, PanelRadiusUnits * scale, scale, eased);
-        Typography.DrawCentered(drawList, panel.Center, Loc.T(L.Spotlight.NoResults),
-            Palette.WithAlpha(theme.TextMuted, eased), 0.9f);
-        return panel;
-    }
-
-    private static float Measure(IReadOnlyList<SpotlightResult> results, float rowHeight, float headerHeight)
-    {
-        var total = 0f;
-        var lastKind = (SpotlightKind)255;
-        for (var resultIndex = 0; resultIndex < results.Count; resultIndex++)
-        {
-            var kind = results[resultIndex].Kind;
-            if (kind != lastKind)
+            ImGui.Dummy(new Vector2(1f, MathF.Max(1f, layout.Measure(results))));
+            if (scrollToSelection)
             {
-                lastKind = kind;
-                total += headerHeight;
+                var rowTop = layout.RowTop(results, selected);
+                ImGui.SetScrollY(SpotlightLayout.ScrollToReveal(rowTop, rowTop + layout.RowHeight, scrollY,
+                    content.Height));
+                scrollToSelection = false;
             }
-
-            total += rowHeight;
         }
 
-        return total;
+        LayerCompositor.Fade(drawList, vertexStart, reveal);
+        drawList.PopClipRect();
+        return interactive && UiInteract.Hover(panel.Min, panel.Max);
     }
 
-    private void DrawRow(ImDrawListPtr drawList, Rect row, in SpotlightResult result, PhoneTheme theme, float scale,
-        float eased, bool interactive, INavigator navigation)
+    private bool DrawEmpty(ImDrawListPtr drawList, Rect list, in SpotlightLayout layout, float reveal,
+        bool interactive)
+    {
+        var height = MathF.Min(EmptyPanelHeightUnits * layout.Scale, list.Height);
+        var panel = new Rect(list.Min, new Vector2(list.Max.X, list.Min.Y + height));
+        DrawPanel(drawList, panel, in layout, reveal);
+        var vertexStart = drawList.VtxBuffer.Size;
+        Typography.DrawCentered(drawList, panel.Center, Loc.T(L.Spotlight.NoResults), MutedInk,
+            TextStyles.Subheadline);
+        LayerCompositor.Fade(drawList, vertexStart, reveal);
+        return interactive && UiInteract.Hover(panel.Min, panel.Max);
+    }
+
+    private void DrawRow(ImDrawListPtr drawList, Rect row, in SpotlightResult result, int resultIndex,
+        in SpotlightLayout layout, PhoneTheme theme, bool interactive, INavigator navigation)
     {
         var hovered = interactive && UiInteract.Hover(row.Min, row.Max);
+        if (hovered && PointerMoved())
+        {
+            selected = resultIndex;
+        }
+
+        var isSelected = resultIndex == selected;
+        if (isSelected)
+        {
+            Squircle.Fill(drawList, row.Min, row.Max, layout.RowRadius,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, SelectionAlpha)));
+        }
+
         if (hovered)
         {
-            Squircle.Fill(drawList, row.Min, row.Max, 12f * scale,
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f * eased)));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var badgeRadius = BadgeRadiusUnits * scale;
-        var badgeCenter = new Vector2(row.Min.X + 10f * scale + badgeRadius, row.Center.Y);
-        DrawBadge(drawList, badgeCenter, badgeRadius, result, theme, scale, eased);
-        var textLeft = badgeCenter.X + badgeRadius + 11f * scale;
-        var rowRight = row.Max.X - 10f * scale;
-        var overCall = false;
+        DrawResultIcon(drawList, layout.TileRect(row), in result);
+        var textLeft = layout.TextLeft(row);
+        var textRight = row.Max.X - layout.RowInset;
+        var overAction = false;
+        if (isSelected && interactive)
+        {
+            textRight = DrawActions(drawList, row, in result, in layout, theme, navigation, textRight, out overAction);
+            if (!open)
+            {
+                return;
+            }
+        }
+
+        var textMax = MathF.Max(textRight - textLeft, 1f);
+        var subtitle = result.Subtitle.Length > 0 ? result.Subtitle : Loc.T(SectionLabel(result.Kind));
+        var titleHeight = Typography.LineHeight(TextStyles.Body);
+        var subtitleHeight = Typography.LineHeight(TextStyles.Footnote);
+        var titleTop = row.Center.Y - (titleHeight + subtitleHeight) * 0.5f;
+        Typography.Draw(drawList, new Vector2(textLeft, titleTop),
+            Typography.FitText(result.Title, textMax, TextStyles.Body), Ink, TextStyles.Body);
+        Typography.Draw(drawList, new Vector2(textLeft, titleTop + titleHeight),
+            Typography.FitText(subtitle, textMax, TextStyles.Footnote), MutedInk, TextStyles.Footnote);
+        if (interactive && !overAction && UiInteract.Click(row.Min, row.Max, hovered))
+        {
+            Activate(in result, navigation);
+        }
+    }
+
+    private float DrawActions(ImDrawListPtr drawList, Rect row, in SpotlightResult result, in SpotlightLayout layout,
+        PhoneTheme theme, INavigator navigation, float right, out bool overAction)
+    {
+        overAction = false;
+        var brightness = WallpaperLegibility.Strength(theme);
         if (result.Kind == SpotlightKind.Contact && index.CallsAvailable)
         {
-            var callRadius = CallButtonRadiusUnits * scale;
-            var callCenter = new Vector2(rowRight - callRadius, row.Center.Y);
-            var callMin = new Vector2(callCenter.X - callRadius, callCenter.Y - callRadius);
-            var callMax = new Vector2(callCenter.X + callRadius, callCenter.Y + callRadius);
-            overCall = interactive && UiInteract.Hover(callMin, callMax);
-            DrawCallButton(drawList, callCenter, callRadius, theme, eased, overCall);
-            if (overCall && UiInteract.Click(callMin, callMax, true))
+            var callLabel = Loc.T(L.Spotlight.Call);
+            var callPill = layout.PillRect(row, right, Typography.Measure(callLabel, TextStyles.FootnoteEmphasized).X);
+            if (DrawPill(drawList, callPill, "spotlight.pill.call", callLabel, theme, layout.Scale, brightness,
+                    out var overCall))
             {
                 index.Call(in result, navigation);
                 Close();
-                return;
+                return right;
             }
 
-            rowRight = callMin.X - 8f * scale;
+            overAction |= overCall;
+            right = callPill.Min.X - layout.PillGap;
         }
 
-        var textMax = rowRight - textLeft;
-        var hasSubtitle = result.Subtitle.Length > 0;
-        var titleY = hasSubtitle ? row.Center.Y - 15f * scale : row.Center.Y - 8f * scale;
-        Typography.Draw(drawList, new Vector2(textLeft, titleY),
-            Typography.FitText(result.Title, textMax, 0.95f, FontWeight.SemiBold),
-            Palette.WithAlpha(theme.TextStrong, eased), 0.95f, FontWeight.SemiBold);
-        if (hasSubtitle)
+        var label = Loc.T(PrimaryActionLabel(result.Kind));
+        var pill = layout.PillRect(row, right, Typography.Measure(label, TextStyles.FootnoteEmphasized).X);
+        if (DrawPill(drawList, pill, "spotlight.pill.primary", label, theme, layout.Scale, brightness,
+                out var overPrimary))
         {
-            Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y + 2f * scale),
-                Typography.FitText(result.Subtitle, textMax, 0.78f, FontWeight.Regular),
-                Palette.WithAlpha(theme.TextMuted, eased), 0.78f);
+            Activate(in result, navigation);
+            return right;
         }
 
-        if (interactive && !overCall && UiInteract.Click(row.Min, row.Max, hovered))
-        {
-            index.Activate(in result, navigation);
-            Close();
-        }
+        overAction |= overPrimary;
+        return pill.Min.X - layout.PillGap;
     }
 
-    private static void DrawCallButton(ImDrawListPtr drawList, Vector2 center, float radius, PhoneTheme theme,
-        float eased, bool hovered)
+    private static bool DrawPill(ImDrawListPtr drawList, Rect pill, string pressId, string label, PhoneTheme theme,
+        float scale, float brightness, out bool hovered)
     {
-        drawList.AddCircleFilled(center, radius,
-            ImGui.GetColorU32(Palette.WithAlpha(CallGreen, (hovered ? 1f : 0.82f) * eased)), 32);
-        ProgressRing.CenterIcon(drawList, center, FontAwesomeIcon.Phone,
-            Palette.WithAlpha(theme.TextStrong, eased), radius * 0.95f);
+        hovered = UiInteract.Hover(pill.Min, pill.Max);
+        var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+        var press = PressFx.Scale(pressId, pressed, Motion.PressScaleControl);
+        var center = pill.Center;
+        var half = pill.Size * (0.5f * press);
+        Material.LiquidGlass(drawList, center - half, center + half, half.Y, scale, GlassTone.Light, brightness);
         if (hovered)
         {
+            Squircle.Fill(drawList, center - half, center + half, half.Y,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, PillHoverAlpha)));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
+
+        Typography.DrawCentered(drawList, center, label, theme.TextStrong, TextStyles.FootnoteEmphasized);
+        return UiInteract.Click(pill.Min, pill.Max, hovered);
     }
 
-    private static void DrawBadge(ImDrawListPtr drawList, Vector2 center, float radius, in SpotlightResult result,
-        PhoneTheme theme, float scale, float eased)
+    private static void DrawResultIcon(ImDrawListPtr drawList, Rect tile, in SpotlightResult result)
     {
-        if (result.Kind == SpotlightKind.App || result.Kind == SpotlightKind.StoreApp)
+        var center = tile.Center;
+        if (result.Kind is SpotlightKind.App or SpotlightKind.StoreApp)
         {
-            IconTile.DrawApp(drawList, result.Payload, center, radius * 2f,
+            IconTile.DrawApp(drawList, result.Payload, center, tile.Width,
                 IconTile.Surface(AppAccents.For(result.Payload)));
             return;
         }
 
-        var tint = result.Kind switch
-        {
-            SpotlightKind.Calculation => new Vector4(0.98f, 0.62f, 0.16f, 1f),
-            SpotlightKind.Action => new Vector4(0.36f, 0.55f, 0.92f, 1f),
-            SpotlightKind.Contact => new Vector4(0.30f, 0.62f, 0.95f, 1f),
-            SpotlightKind.DmThread => new Vector4(0.20f, 0.78f, 0.35f, 1f),
-            SpotlightKind.SettingsPage => new Vector4(0.55f, 0.57f, 0.62f, 1f),
-            SpotlightKind.Shortcut => new Vector4(0.62f, 0.42f, 0.94f, 1f),
-            SpotlightKind.Aetheryte => new Vector4(0.24f, 0.74f, 0.86f, 1f),
-            SpotlightKind.Conversation => new Vector4(0.35f, 0.78f, 0.52f, 1f),
-            SpotlightKind.Note => new Vector4(0.98f, 0.80f, 0.28f, 1f),
-            SpotlightKind.Guide => new Vector4(0.90f, 0.32f, 0.36f, 1f),
-            SpotlightKind.Venue => new Vector4(0.94f, 0.40f, 0.72f, 1f),
-            _ => new Vector4(0.86f, 0.62f, 0.28f, 1f),
-        };
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(tint, 0.9f * eased)), 32);
-        var icon = result.Kind switch
-        {
-            SpotlightKind.Calculation => FontAwesomeIcon.Calculator,
-            SpotlightKind.Action => SpotlightActions.Icon((SpotlightActionKind)result.PageIndex),
-            SpotlightKind.Contact => FontAwesomeIcon.User,
-            SpotlightKind.DmThread => FontAwesomeIcon.Comment,
-            SpotlightKind.SettingsPage => FontAwesomeIcon.Cog,
-            SpotlightKind.Shortcut => FontAwesomeIcon.Bolt,
-            SpotlightKind.Aetheryte => FontAwesomeIcon.MapMarkerAlt,
-            SpotlightKind.Conversation => FontAwesomeIcon.CommentDots,
-            SpotlightKind.Note => FontAwesomeIcon.StickyNote,
-            SpotlightKind.Guide => FontAwesomeIcon.BookOpen,
-            SpotlightKind.Venue => FontAwesomeIcon.GlassCheers,
-            _ => FontAwesomeIcon.Coins,
-        };
-        ProgressRing.CenterIcon(drawList, center, icon, Palette.WithAlpha(new Vector4(1f, 1f, 1f, 1f), eased),
-            radius * 1.05f);
+        var radius = tile.Width * 0.5f;
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(KindTint(result.Kind)), 32);
+        ProgressRing.CenterIcon(drawList, center, KindIcon(in result), Ink, radius * 1.05f);
     }
+
+    private void Activate(in SpotlightResult result, INavigator navigation)
+    {
+        index.Activate(in result, navigation);
+        Close();
+    }
+
+    private void HandleKeyboard(INavigator navigation)
+    {
+        if (!UiInteract.WindowFocused)
+        {
+            return;
+        }
+
+        if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+        {
+            Close();
+            return;
+        }
+
+        var count = index.Results.Count;
+        if (count > 0 && ImGui.IsKeyPressed(ImGuiKey.DownArrow))
+        {
+            selected = Math.Min(selected + 1, count - 1);
+            scrollToSelection = true;
+        }
+        else if (count > 0 && ImGui.IsKeyPressed(ImGuiKey.UpArrow))
+        {
+            selected = Math.Max(selected - 1, 0);
+            scrollToSelection = true;
+        }
+
+        if (!ImGui.IsKeyPressed(ImGuiKey.Enter) && !ImGui.IsKeyPressed(ImGuiKey.KeypadEnter))
+        {
+            return;
+        }
+
+        if (count == 0)
+        {
+            focusPending = true;
+            return;
+        }
+
+        var result = index.Results[Math.Clamp(selected, 0, count - 1)];
+        Activate(in result, navigation);
+    }
+
+    private static bool PointerMoved()
+    {
+        var delta = ImGui.GetIO().MouseDelta;
+        return delta.X != 0f || delta.Y != 0f;
+    }
+
+    private static LocString PrimaryActionLabel(SpotlightKind kind) => kind switch
+    {
+        SpotlightKind.Calculation => L.Spotlight.Copy,
+        SpotlightKind.Shortcut => L.Spotlight.Run,
+        SpotlightKind.Aetheryte => L.Spotlight.Teleport,
+        _ => L.Spotlight.Open,
+    };
+
+    private static Vector4 KindTint(SpotlightKind kind) => kind switch
+    {
+        SpotlightKind.Calculation => new Vector4(0.98f, 0.62f, 0.16f, 1f),
+        SpotlightKind.Action => new Vector4(0.36f, 0.55f, 0.92f, 1f),
+        SpotlightKind.Contact => new Vector4(0.30f, 0.62f, 0.95f, 1f),
+        SpotlightKind.DmThread => new Vector4(0.20f, 0.78f, 0.35f, 1f),
+        SpotlightKind.SettingsPage => new Vector4(0.55f, 0.57f, 0.62f, 1f),
+        SpotlightKind.Shortcut => new Vector4(0.62f, 0.42f, 0.94f, 1f),
+        SpotlightKind.Aetheryte => new Vector4(0.24f, 0.74f, 0.86f, 1f),
+        SpotlightKind.Conversation => new Vector4(0.35f, 0.78f, 0.52f, 1f),
+        SpotlightKind.Note => new Vector4(0.98f, 0.80f, 0.28f, 1f),
+        SpotlightKind.Guide => new Vector4(0.90f, 0.32f, 0.36f, 1f),
+        SpotlightKind.Venue => new Vector4(0.94f, 0.40f, 0.72f, 1f),
+        _ => new Vector4(0.86f, 0.62f, 0.28f, 1f),
+    };
+
+    private static FontAwesomeIcon KindIcon(in SpotlightResult result) => result.Kind switch
+    {
+        SpotlightKind.Calculation => FontAwesomeIcon.Calculator,
+        SpotlightKind.Action => SpotlightActions.Icon((SpotlightActionKind)result.PageIndex),
+        SpotlightKind.Contact => FontAwesomeIcon.User,
+        SpotlightKind.DmThread => FontAwesomeIcon.Comment,
+        SpotlightKind.SettingsPage => FontAwesomeIcon.Cog,
+        SpotlightKind.Shortcut => FontAwesomeIcon.Bolt,
+        SpotlightKind.Aetheryte => FontAwesomeIcon.MapMarkerAlt,
+        SpotlightKind.Conversation => FontAwesomeIcon.CommentDots,
+        SpotlightKind.Note => FontAwesomeIcon.StickyNote,
+        SpotlightKind.Guide => FontAwesomeIcon.BookOpen,
+        SpotlightKind.Venue => FontAwesomeIcon.GlassCheers,
+        _ => FontAwesomeIcon.Coins,
+    };
 
     private static LocString SectionLabel(SpotlightKind kind) => kind switch
     {

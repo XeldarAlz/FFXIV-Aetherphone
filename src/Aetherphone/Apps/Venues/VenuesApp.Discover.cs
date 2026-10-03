@@ -177,7 +177,6 @@ internal sealed partial class VenuesApp
         var top = origin.Y + (SearchRowHeight - SearchPillHeight) * scale * 0.5f;
         var searchRect = new Rect(new Vector2(origin.X + pad, top),
             new Vector2(origin.X + width - pad, top + SearchPillHeight * scale));
-        UiAnchors.Report("venues.search", searchRect);
         var before = search;
         SearchField.Draw(searchRect, "##venueSearch", Loc.T(L.Venues.Search), ref search, AppPalettes.Venues, 80);
         if (!ReferenceEquals(before, search))
@@ -334,14 +333,17 @@ internal sealed partial class VenuesApp
         var tileHeight = (CategoryInset * 2f + CategoryIconRadius * 2f + CategoryLabelGap) * scale +
                          categoryLineCount * Typography.LineHeight(CategoryLabelStyle);
         var rows = (VenueCategories.Count + 1) / 2;
-        UiAnchors.Report("venues.categories", new Rect(new Vector2(origin.X + pad, origin.Y),
-            new Vector2(origin.X + width - pad, origin.Y + rows * tileHeight + (rows - 1) * gap)));
         for (var category = 0; category < VenueCategories.Count; category++)
         {
             var column = category % 2;
             var rowIndex = category / 2;
             var min = new Vector2(origin.X + pad + column * (tileWidth + gap), origin.Y + rowIndex * (tileHeight + gap));
             var tile = new Rect(min, min + new Vector2(tileWidth, tileHeight));
+            if (category == 0)
+            {
+                UiAnchors.Report("venues.category.first", tile);
+            }
+
             if (DrawCategoryTile(drawList, tile, category, scale))
             {
                 OpenList(VenueListKind.Category, category);

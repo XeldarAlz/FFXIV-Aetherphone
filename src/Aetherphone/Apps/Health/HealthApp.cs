@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Health.Widgets;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -11,14 +12,20 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Health;
 
-internal sealed partial class HealthApp : IPhoneApp
+internal sealed partial class HealthApp : IPhoneApp, ITabRouteTarget
 {
+    private PendingTab pendingTab;
+
+    public void OpenTab(string tab) => pendingTab.Request(tab);
+
     private const float RowHeight = 56f;
     private const float CompactRowHeight = 44f;
     private const float CardPadding = 8f;
     private const float CardRounding = 18f;
     private const float CardGap = 12f;
     private const float TileSize = 30f;
+    private const int WaterTabIndex = 2;
+    private const int GoalsTabIndex = 3;
 
     private readonly string[] tabOptions = new string[6];
 
@@ -94,9 +101,14 @@ internal sealed partial class HealthApp : IPhoneApp
         }
 
         TourHolds.Release(Id);
-        if (GuideIntents.Consume("health.tab.goals"))
+        if (pendingTab.Take("health.tab.goals"))
         {
-            screenIndex = 3;
+            screenIndex = GoalsTabIndex;
+        }
+
+        if (pendingTab.Take(HydrationWidget.HydrationIntent))
+        {
+            screenIndex = WaterTabIndex;
         }
 
         DrawTabs(body, scale);
@@ -107,8 +119,8 @@ internal sealed partial class HealthApp : IPhoneApp
             {
                 case 0: DrawOverview(scale); break;
                 case 1: DrawActivity(scale); break;
-                case 2: DrawHydration(scale); break;
-                case 3: DrawGoals(scale); break;
+                case WaterTabIndex: DrawHydration(scale); break;
+                case GoalsTabIndex: DrawGoals(scale); break;
                 case 4: DrawHistory(scale); break;
                 default: DrawProfile(scale); break;
             }
@@ -121,13 +133,14 @@ internal sealed partial class HealthApp : IPhoneApp
     {
         var rect = new Rect(new Vector2(body.Min.X + 10f * scale, body.Min.Y + 4f * scale),
             new Vector2(body.Max.X - 10f * scale, body.Min.Y + 36f * scale));
-        UiAnchors.Report("health.tabs", rect);
         tabOptions[0] = Loc.T(L.Health.TabOverview);
         tabOptions[1] = Loc.T(L.Health.TabActivity);
         tabOptions[2] = Loc.T(L.Health.TabWater);
         tabOptions[3] = Loc.T(L.Health.TabGoals);
         tabOptions[4] = Loc.T(L.Health.TabHistory);
         tabOptions[5] = Loc.T(L.Health.TabProfile);
+        UiAnchors.Report("health.tab.water", SegmentStrip.SegmentRect(rect, WaterTabIndex, tabOptions.Length));
+        UiAnchors.Report("health.tab.goals", SegmentStrip.SegmentRect(rect, GoalsTabIndex, tabOptions.Length));
         screenIndex = SegmentStrip.Draw("health.tabs", rect, tabOptions, screenIndex, Pal);
     }
 

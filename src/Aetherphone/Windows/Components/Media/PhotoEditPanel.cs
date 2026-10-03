@@ -65,7 +65,6 @@ internal static class PhotoEditPanel
     private const float DockLabelIconScale = 0.9f;
     private const float DockPillInset = 4f;
     private const float DockIconScale = 1.05f;
-    private const float DockSmoothTime = 0.16f;
     private const float DockPillAlpha = 0.22f;
     private const float DockPillStrokeAlpha = 0.35f;
 
@@ -583,7 +582,7 @@ internal static class PhotoEditPanel
         Material.Glass(drawList, dock.Min, dock.Max, rounding, style.Ink, scale);
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, MaxDeltaSeconds);
         var activeIndex = Array.IndexOf(tools, controls.Tool);
-        var animated = controls.DockSpring.Step(activeIndex, DockSmoothTime, deltaSeconds);
+        var animated = controls.DockSpring.Step(activeIndex, Aetherphone.Core.Animation.Motion.Release, deltaSeconds);
         var pillInset = DockPillInset * scale;
         var pillMin = new Vector2(dock.Min.X + pillInset + (animated * itemWidth), dock.Min.Y + pillInset);
         var pillMax = new Vector2(pillMin.X + itemWidth - (pillInset * 2f), dock.Max.Y - pillInset);

@@ -37,7 +37,6 @@ internal static class VenueCard
     private const float RailPad = 11f;
     private const float RailScrimShare = 0.66f;
     public const float HoverLift = 4f;
-    private const float PressShrink = 0.97f;
     private const float ShadowOpacity = 0.35f;
     private const float RimAlpha = 0.30f;
     private const float RimWeight = 1.5f;
@@ -273,7 +272,7 @@ internal static class VenueCard
     {
         eased = HoverFx.Amount(id, hovered);
         var pressed = pressable && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var grow = HoverLift * scale * eased - rest.Width * 0.5f * (1f - PressFx.Scale(id, pressed, PressShrink));
+        var grow = HoverLift * scale * eased - rest.Width * 0.5f * (1f - PressFx.Scale(id, pressed, PressFx.CardPressedScale));
         var card = new Rect(rest.Min - new Vector2(grow, grow), rest.Max + new Vector2(grow, grow));
         Elevation.Card(drawList, card.Min, card.Max, rounding, scale, ShadowOpacity * (1f + eased));
         return card;

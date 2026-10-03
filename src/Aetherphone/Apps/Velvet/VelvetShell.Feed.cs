@@ -79,7 +79,7 @@ internal sealed partial class VelvetShell
             }
         }
 
-        if (ComposeFab.Draw(area, "velvetCompose", VelvetTheme.Rose, PhoneIcons.Plus,
+        if (ComposeFab.Draw(TabBar.ContentArea(area, scale), "velvetCompose", VelvetTheme.Rose, PhoneIcons.Plus,
                 Loc.T(L.Velvet.Share), "velvet.compose", VelvetTheme.RoseDeep, FabRadius, true))
         {
             post.Open();

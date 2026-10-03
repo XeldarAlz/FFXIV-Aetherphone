@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -75,6 +76,9 @@ internal sealed partial class LinkpearlApp
         var tileWidth = (content.Width - gap) * 0.5f;
         var tileHeight = QuickTileHeight(scale);
         var tileRows = QuickTabs.Length / 2;
+        var gridHeight = tileRows * tileHeight + (tileRows - 1) * gap;
+        UiAnchors.Report("messages.newchat.tiles",
+            new Rect(new Vector2(content.Min.X, cursorY), new Vector2(content.Max.X, cursorY + gridHeight)));
         for (var index = 0; index < QuickTabs.Length; index++)
         {
             var column = index % 2;
@@ -83,7 +87,7 @@ internal sealed partial class LinkpearlApp
             DrawQuickTile(drawList, index, new Rect(min, min + new Vector2(tileWidth, tileHeight)), scale);
         }
 
-        cursorY += tileRows * tileHeight + (tileRows - 1) * gap + SheetSectionGap * scale;
+        cursorY += gridHeight + SheetSectionGap * scale;
         cursorY = DrawSheetSectionLabel(drawList, Loc.T(L.Linkpearl.OrStartFresh), content.Min.X, cursorY, scale);
         var rowHeight = ChatListChrome.ActionRowHeight * scale;
         var cardMin = new Vector2(content.Min.X, cursorY);

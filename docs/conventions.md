@@ -14,6 +14,7 @@ This page is the rulebook for code, copy, and commits in the Aetherphone client 
 | src/Aetherphone/Windows/Components/Metrics.cs | Spacing, radius, size, and stroke tokens |
 | src/Aetherphone/Windows/Components/ChipRail.cs | The one approved way to show a row of filter chips |
 | src/Aetherphone/Core/Animation/Spring.cs | The motion primitive: critically damped, cannot overshoot |
+| src/Aetherphone/Core/Animation/Motion.cs | The one table of smooth times and press scales that every UI spring reads |
 | src/Aetherphone/Core/Localization/L.cs | Source of truth for every user-visible string |
 | src/Aetherphone/Core/Localization/TimeText.cs | The single seam for clock and time formatting |
 | src/Aetherphone/Core/Localization/LocAudit.cs | Debug-build audit that reports missing translation keys |
@@ -125,7 +126,7 @@ Full detail with examples lives in [UI toolkit](ui-toolkit.md); this is the chec
 - **A top highlight follows the corner curve.** Draw the inner sheen on a card, pill, or tile with Material.Sheen (Material.SheenRounded for a plain rounded rect), never a straight `AddLine` inset by the corner radius. A squircle corner starts curving well before the radius, so a straight hairline stops short of the real edge on both sides and reads as a floating line across the top. Material.Sheen starts and ends exactly where the shape's top edge sits at that depth and fades into both corners.
 - **One pannable chip rail, never a chip wall.** A row of filter chips is a single horizontally draggable ChipRail. Chips never wrap to a second line.
 - **Free input over preset chips.** When the user enters a value, let them enter any value. TimeOfDayField (src/Aetherphone/Windows/Components/TimeOfDayField.cs) steps hours and minutes across the whole day rather than offering a handful of preset times.
-- **Critically damped motion, no bounce.** All UI motion runs through Spring (src/Aetherphone/Core/Animation/Spring.cs), whose Step clamps at the target so it cannot overshoot. Bouncy easing (Easing.EaseOutBack) lives only in games: the mini-games under src/Aetherphone/Apps/Games/ and the casino cabinets under src/Aetherphone/Apps/Casino/Cabinets/.
+- **Critically damped motion, no bounce.** All UI motion runs through Spring (src/Aetherphone/Core/Animation/Spring.cs), whose Step clamps at the target so it cannot overshoot. Every smooth time and press scale comes from Motion (src/Aetherphone/Core/Animation/Motion.cs); never redeclare one in a component. Draw with the raw spring value: no easing curve sits on top of a spring (Easing.Lerp, Clamp01 and Segment are linear helpers and stay). Bouncy easing (Easing.EaseOutBack) lives only in games: the mini-games under src/Aetherphone/Apps/Games/ and the casino cabinets under src/Aetherphone/Apps/Casino/Cabinets/.
 - **All clock text goes through the single clock seam.** TimeText.Clock (src/Aetherphone/Core/Localization/TimeText.cs) formats every clock string and honors the user's 12/24-hour preference via TimeText.Use24Hour. There are dozens of call sites and zero hand-rolled `"HH:mm"` format strings outside TimeText itself. Keep it that way.
 
 ### Grouped lists (settings and any list of rows)

@@ -9,7 +9,6 @@ internal sealed class VenueRail
 {
     private const float ArrowRadius = 14f;
     private const float PageFraction = 0.8f;
-    private const float PageSmoothTime = 0.16f;
 
     private readonly KineticScroller scroller = new();
     private bool pressed;
@@ -89,7 +88,7 @@ internal sealed class VenueRail
             return;
         }
 
-        var offset = pageSpring.Step(pageTarget, PageSmoothTime,
+        var offset = pageSpring.Step(pageTarget, Motion.PageSettle,
             MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         if (pageSpring.IsResting(pageTarget, 0.5f, 1f))
         {

@@ -97,6 +97,30 @@ internal sealed class RemoteImageCache : IDisposable
         return null;
     }
 
+    public async Task<byte[]?> FetchBytesAsync(string? url, CancellationToken token)
+    {
+        if (!Fetchable(url) || disposed)
+        {
+            return null;
+        }
+
+        var resolved = LegacyMediaHosts.Normalize(url!);
+        var cached = disk.Get(resolved, DiskMaxAge);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        using var slot = await downloads.EnterAsync(token).ConfigureAwait(false);
+        var bytes = await http.GetBytesAsync(new Uri(resolved), token).ConfigureAwait(false);
+        if (bytes is not null)
+        {
+            disk.Set(resolved, bytes);
+        }
+
+        return bytes;
+    }
+
     private void Request(string resolved, int level)
     {
         var key = new LedgerKey(resolved, level);

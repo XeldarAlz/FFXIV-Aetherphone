@@ -10,7 +10,7 @@ The Aetherphone client is free software under the AGPL-3.0-or-later ([LICENSE.md
 
 Aethernet is a service we host, and it is no more part of the licence than the name is. A fork, a patched or recompiled build, a rehosted copy, or a client written against our endpoints does not get to connect to it, whatever was changed and whatever the fork is called. Run your own back end for your own version: the AGPL leaves you free to do exactly that.
 
-Section 18 of the [Terms of Service](TERMS.md) is the binding rule, not this page. Accounts and builds that connect from a modified client are warned, then blocked, and then terminated.
+Section 11 of the [Terms of Service](TERMS.md) is the binding rule, not this page. Unofficial versions can be warned or blocked from connecting to Aethernet.
 
 ## If you fork Aetherphone
 

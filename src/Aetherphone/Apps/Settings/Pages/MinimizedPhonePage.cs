@@ -22,6 +22,7 @@ internal sealed class MinimizedPhonePage : ISettingsPage
     private readonly MinimizedLayoutService layout;
     private readonly Configuration configuration;
     private readonly string[] shapeLabels = new string[MinimizedShapes.ShapeCount];
+    private static readonly string[] RowIds = BuildRowIds();
     private int moveIndex = -1;
     private int moveDelta;
 
@@ -80,11 +81,65 @@ internal sealed class MinimizedPhonePage : ISettingsPage
         configuration.Save();
     }
 
-    private static void DrawMinimapSettings(PhoneTheme theme, float scale)
+    private void DrawMinimapSettings(PhoneTheme theme, float scale)
     {
         SettingsSection.Hint(Loc.T(L.Minimized.MinimapHint), theme);
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
         SettingsSection.Hint(Loc.T(L.Minimized.MinimapZoomHint), theme);
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
+        DrawLiveSettings(theme, scale);
+    }
+
+    private void DrawLiveSettings(PhoneTheme theme, float scale)
+    {
+        SettingsSection.Header(Loc.T(L.Minimized.Live), theme);
+        var slots = layout.Slots;
+        var card = GroupCard.Begin(theme, CountParts(slots, false));
+        for (var index = 0; index < slots.Length; index++)
+        {
+            var slot = slots[index];
+            if (!MinimizedParts.IsLive(slot.Part))
+            {
+                continue;
+            }
+
+            var enabled = SettingsRow.Bool(card.NextRow(), Loc.T(MinimizedParts.Label(slot.Part)), slot.Enabled, theme,
+                RowIds[(int)slot.Part]);
+            if (enabled != slot.Enabled)
+            {
+                layout.SetEnabled(index, enabled);
+            }
+        }
+
+        card.End();
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+        SettingsSection.Hint(Loc.T(L.Minimized.LiveHint), theme);
+    }
+
+    private static string[] BuildRowIds()
+    {
+        var ids = new string[MinimizedParts.Count];
+        for (var index = 0; index < ids.Length; index++)
+        {
+            ids[index] = "minimized.part." + MinimizedParts.Id((MinimizedPart)index);
+        }
+
+        return ids;
+    }
+
+    private static int CountParts(ReadOnlySpan<MinimizedSlot> slots, bool pages)
+    {
+        var count = 0;
+        for (var index = 0; index < slots.Length; index++)
+        {
+            var part = slots[index].Part;
+            if (pages ? MinimizedParts.IsPage(part) : MinimizedParts.IsLive(part))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private void DrawPhoneSettings(PhoneTheme theme, float scale)
@@ -102,16 +157,27 @@ internal sealed class MinimizedPhonePage : ISettingsPage
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
         SettingsSection.Hint(Loc.T(L.Minimized.WallpaperHint), theme);
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
-        SettingsSection.Hint(Loc.T(L.Minimized.Hint), theme);
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+        DrawLiveSettings(theme, scale);
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
+        SettingsSection.Header(Loc.T(L.Minimized.Pages), theme);
         var slots = layout.Slots;
-        var card = GroupCard.Begin(theme, slots.Length);
+        var total = CountParts(slots, true);
+        var card = GroupCard.Begin(theme, total);
+        var ordinal = 0;
         for (var index = 0; index < slots.Length; index++)
         {
-            DrawPartRow(card.NextRow(), index, slots[index], slots.Length, theme, scale);
+            if (!MinimizedParts.IsPage(slots[index].Part))
+            {
+                continue;
+            }
+
+            DrawPartRow(card.NextRow(), index, slots[index], ordinal, total, theme, scale);
+            ordinal++;
         }
 
         card.End();
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+        SettingsSection.Hint(Loc.T(L.Minimized.PagesHint), theme);
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
         var resetCard = GroupCard.Begin(theme, 1);
         if (SettingsRow.Action(resetCard.NextRow(), Loc.T(L.Minimized.Reset), theme.Danger, theme))
@@ -122,7 +188,8 @@ internal sealed class MinimizedPhonePage : ISettingsPage
         resetCard.End();
     }
 
-    private void DrawPartRow(Rect row, int index, in MinimizedSlot slot, int count, PhoneTheme theme, float scale)
+    private void DrawPartRow(Rect row, int index, in MinimizedSlot slot, int ordinal, int count, PhoneTheme theme,
+        float scale)
     {
         var toggleWidth = Metrics.Size.ToggleWidth * scale;
         var toggleHeight = Metrics.Size.ToggleHeight * scale;
@@ -131,18 +198,18 @@ internal sealed class MinimizedPhonePage : ISettingsPage
         var downCenter = new Vector2(toggleMin.X - ToggleGap * scale - radius, row.Center.Y);
         var upCenter = new Vector2(downCenter.X - radius * 2f - ReorderGap * scale, row.Center.Y);
         var label = Loc.T(MinimizedParts.Label(slot.Part));
-        var rowId = "minimized.part." + MinimizedParts.Id(slot.Part);
+        var rowId = RowIds[(int)slot.Part];
         var labelMaxWidth = MathF.Max(1f, upCenter.X - radius - 8f * scale - row.Min.X);
         var labelSize = Typography.Measure(label, TextStyles.BodyEmphasized);
         Marquee.DrawLeftAuto(rowId, label, row.Min.X, row.Center.Y - labelSize.Y * 0.5f, labelMaxWidth,
             TextStyles.BodyEmphasized, slot.Enabled ? theme.TextStrong : theme.TextMuted);
-        if (ReorderButton(upCenter, radius, FontAwesomeIcon.ChevronUp, theme, index > 0))
+        if (ReorderButton(upCenter, radius, FontAwesomeIcon.ChevronUp, theme, ordinal > 0))
         {
             moveIndex = index;
             moveDelta = -1;
         }
 
-        if (ReorderButton(downCenter, radius, FontAwesomeIcon.ChevronDown, theme, index < count - 1))
+        if (ReorderButton(downCenter, radius, FontAwesomeIcon.ChevronDown, theme, ordinal < count - 1))
         {
             moveIndex = index;
             moveDelta = 1;
@@ -182,7 +249,7 @@ internal sealed class MinimizedPhonePage : ISettingsPage
             return;
         }
 
-        layout.Move(moveIndex, moveDelta);
+        layout.MovePage(moveIndex, moveDelta);
         moveIndex = -1;
         moveDelta = 0;
     }

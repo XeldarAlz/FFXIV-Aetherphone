@@ -4,83 +4,60 @@ using Aetherphone.Core.Collections;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Market;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Collections;
 
 internal sealed partial class CollectionsApp : IPhoneApp
 {
-    private const float TileGap = 12f;
-    private const float TileHeight = 104f;
-    private const float MaxTileHeight = 118f;
-    private const float SearchHeight = 50f;
-    private const float SegmentHeight = 34f;
-    private const float ChipRowHeight = 38f;
-    private const float RowHeight = 64f;
-    private const float IconSize = 46f;
-    private const float DropdownHeight = 32f;
-    private const float MenuRowHeight = 34f;
-    private const float PagerHeight = 54f;
-    private const int PageSize = 50;
-    public string Id => "collections";
+    private const float IconFadeSeconds = 0.22f;
+    private const float SpinnerRadius = 9f;
+    private const float SpinnerThickness = 2f;
+    private const int SearchMaxLength = 60;
+
+    public string Id => CollectionsJournal.AppId;
     public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Collections);
     public string Glyph => "Co";
     public int BadgeCount => 0;
 
-    private static readonly Vector4[] CategoryTints =
-    {
-        new(0.95f, 0.55f, 0.25f, 1f),
-        new(0.30f, 0.78f, 0.48f, 1f),
-        new(0.98f, 0.76f, 0.30f, 1f),
-        new(0.62f, 0.46f, 0.96f, 1f),
-        new(0.93f, 0.38f, 0.62f, 1f),
-        new(0.26f, 0.74f, 0.86f, 1f),
-        new(0.98f, 0.64f, 0.22f, 1f),
-        new(0.36f, 0.62f, 0.96f, 1f),
-    };
-
     private readonly CollectionsCatalogService catalog;
+    private readonly CollectionsJournal journal;
     private readonly LodestoneService lodestone;
     private readonly MediaCache media;
     private readonly HttpService http;
     private readonly GameData gameData;
+    private readonly MarketLauncher marketLauncher;
     private readonly ViewRouter<CollectionView> router;
     private readonly RouterDraw<CollectionView> drawView;
     private readonly AppSkin ui = new(AppPalettes.Collections);
     private readonly Action back;
-    private readonly List<CollectionItem> filtered = new();
-    private readonly SortedSet<string> sourceSet = new(StringComparer.OrdinalIgnoreCase);
-    private readonly List<string> sourceList = new();
-    private readonly Dictionary<string, float> iconFade = new();
-    private readonly string[] ownershipLabels = new string[3];
-    private string search = string.Empty;
-    private OwnershipFilter ownership = OwnershipFilter.All;
-    private int sourceIndex;
-    private bool resetScroll;
-    private string? lodestoneId;
-    private bool sourceMenuOpen;
-    private int page;
-    private string lastSearch = string.Empty;
-    private Rect sourceMenuAnchor;
-    private float contentBottom;
-    private PhoneTheme frameTheme = PhoneTheme.Default;
-    private INavigator frameNavigation = null!;
+    private readonly Dictionary<string, float> iconFade = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Func<CancellationToken, Task<byte[]?>>> iconSources =
+        new(StringComparer.Ordinal);
 
-    public CollectionsApp(CollectionsCatalogService catalog, LodestoneService lodestone, MediaCache media,
-        HttpService http, GameData gameData)
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
+    private Rect screen;
+    private string? lodestoneId;
+    private bool tracking;
+
+    public CollectionsApp(CollectionsCatalogService catalog, CollectionsJournal journal, LodestoneService lodestone,
+        MediaCache media, HttpService http, GameData gameData, MarketLauncher marketLauncher)
     {
         this.catalog = catalog;
+        this.journal = journal;
         this.lodestone = lodestone;
         this.media = media;
         this.http = http;
         this.gameData = gameData;
+        this.marketLauncher = marketLauncher;
         router = new ViewRouter<CollectionView>(CollectionView.Root());
         drawView = DrawView;
         back = () => router.Pop();
@@ -89,42 +66,60 @@ internal sealed partial class CollectionsApp : IPhoneApp
     public void OnOpened()
     {
         router.Reset();
-        ResetFilters();
-        ownershipLabels[0] = Loc.T(L.Collections.FilterAll);
-        ownershipLabels[1] = Loc.T(L.Collections.FilterOwned);
-        ownershipLabels[2] = Loc.T(L.Collections.FilterMissing);
+        ResetCategoryState();
+        rootQuery = string.Empty;
+        sortSheet.Close();
+        tracking = IsPresent();
         lodestoneId = ResolveLocalId();
         catalog.ResetOwned();
         catalog.ResetSummaries();
-        catalog.RequestSummary(lodestoneId);
+        if (tracking)
+        {
+            catalog.RequestSummary(lodestoneId);
+        }
 
         for (var index = 0; index < CollectionCategories.All.Length; index++)
         {
             catalog.RequestCatalog(CollectionCategories.All[index]);
+        }
+
+        digest.Invalidate();
+        heroFill.SnapTo(0f);
+        for (var index = 0; index < tileFills.Length; index++)
+        {
+            tileFills[index].SnapTo(0f);
         }
     }
 
     public void OnClosed()
     {
         router.Reset();
+        sortSheet.Close();
         iconFade.Clear();
-        ResetFilters();
+        ResetCategoryState();
     }
 
     public void Draw(in PhoneContext context)
     {
-        frameTheme = context.Theme;
-        frameNavigation = context.Navigation;
-        ui.Theme = context.Theme;
-        if (GuideIntents.Consume("collections.category.mounts"))
+        theme = context.Theme;
+        navigation = context.Navigation;
+        ui.Theme = theme;
+        sortSheet.Gate();
+        SyncTracking();
+        if (tracking)
         {
-            OpenCategory(CollectionCategory.Mounts);
+            TourHolds.Release(Id);
+        }
+        else
+        {
+            TourHolds.Hold(Id);
         }
 
         var scale = UiScale.Current;
-        var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
+        screen = SceneChrome.ScreenFrom(context.Content, theme, scale);
         ui.Backdrop(screen);
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        DrawSortSheet();
     }
 
     private void DrawView(CollectionView view, Rect area, int depth)
@@ -136,7 +131,7 @@ internal sealed partial class CollectionsApp : IPhoneApp
                 DrawCategory(area, view.Category);
                 break;
             case CollectionViewKind.Detail when view.Item is { } item:
-                DrawDetail(area, view.Category, item);
+                DrawDetail(area, item);
                 break;
             default:
                 DrawRoot(area);
@@ -144,8 +139,27 @@ internal sealed partial class CollectionsApp : IPhoneApp
         }
     }
 
-    private void DrawNavBar(Rect area, string title, Action? onBack) =>
-        AppHeader.DrawNavBar(area, "collections.back", title, ui.TitleInk, onBack);
+    private void SyncTracking()
+    {
+        var present = IsPresent();
+        if (present == tracking)
+        {
+            return;
+        }
+
+        tracking = present;
+        lodestoneId = present ? ResolveLocalId() : null;
+        catalog.ResetOwned();
+        catalog.ResetSummaries();
+        if (present)
+        {
+            catalog.RequestSummary(lodestoneId);
+        }
+
+        digest.Invalidate();
+    }
+
+    private bool IsPresent() => journal.IsTracking || gameData.LocalPlayer is not null;
 
     private string? ResolveLocalId()
     {
@@ -160,25 +174,51 @@ internal sealed partial class CollectionsApp : IPhoneApp
         return lodestone.TryGetCachedId(name, world);
     }
 
-    private void OpenCategory(CollectionCategory category)
+    private HashSet<int>? OwnedIds(CollectionCategory category)
     {
-        ResetFilters();
-        resetScroll = true;
+        if (!tracking)
+        {
+            return null;
+        }
+
+        var owned = catalog.RequestOwned(lodestoneId, category);
+        return owned.State == OwnedState.Ready ? owned.Ids : null;
+    }
+
+    private CategoryProgress? Progress(CollectionCategory category)
+    {
+        if (!tracking)
+        {
+            return null;
+        }
+
+        var summary = catalog.RequestSummary(lodestoneId);
+        var usable = summary.State == SummaryState.Ready ||
+                     (summary.State == SummaryState.Loading && CollectionsCatalogService.HasLocalUnlocks(category));
+        return usable ? summary.For(category) : null;
+    }
+
+    private void OpenCategory(CollectionCategory category, string query)
+    {
+        ResetCategoryState();
+        categorySearch = query;
         catalog.RequestCatalog(category);
-        catalog.RequestOwned(lodestoneId, category);
         router.Push(CollectionView.ForCategory(category));
     }
 
+    private void OpenItem(CollectionItem item) => router.Push(CollectionView.ForItem(item));
+
     private void DrawIcon(ImDrawListPtr drawList, CollectionItem item, Vector2 min, Vector2 max, float rounding)
     {
-        var scale = UiScale.Current;
         Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(ui.FieldSurface));
         if (item.IconUrl.Length == 0)
         {
+            ProgressRing.CenterIcon(drawList, (min + max) * 0.5f, CollectionsArt.Icon(item.Category), ui.MutedInk,
+                (max.Y - min.Y) * 0.42f);
             return;
         }
 
-        var result = Thumb(item.IconUrl);
+        var result = media.GetOrRequest(item.IconUrl, SourceFor(item.IconUrl));
         if (result.Texture is { } texture)
         {
             var fade = StepFade(item.IconUrl, true);
@@ -191,29 +231,23 @@ internal sealed partial class CollectionsApp : IPhoneApp
         StepFade(item.IconUrl, false);
         if (result.Loading)
         {
-            ProgressRing.Sweep((min + max) * 0.5f, 9f * scale, 2f * scale, ui.MutedInk, 900.0, 1.8f, 0.9f);
+            var scale = UiScale.Current;
+            ProgressRing.Sweep((min + max) * 0.5f, SpinnerRadius * scale, SpinnerThickness * scale, ui.MutedInk,
+                900.0, 1.8f, 0.9f);
         }
     }
 
-    private void OpenItem(CollectionCategory category, CollectionItem item) =>
-        router.Push(CollectionView.ForItem(category, item));
-
-    private string SubtitleOf(CollectionItem item)
+    private Func<CancellationToken, Task<byte[]?>> SourceFor(string url)
     {
-        if (item.SourceType.Length > 0 && item.SourceText.Length > 0)
+        if (!iconSources.TryGetValue(url, out var source))
         {
-            return $"{item.SourceType} · {item.SourceText}";
+            var uri = new Uri(url);
+            source = token => http.GetBytesAsync(uri, token);
+            iconSources[url] = source;
         }
 
-        if (item.SourceText.Length > 0)
-        {
-            return item.SourceText;
-        }
-
-        return item.SourceType;
+        return source;
     }
-
-    private MediaResult Thumb(string url) => media.GetOrRequest(url, token => http.GetBytesAsync(new Uri(url), token));
 
     private float StepFade(string url, bool ready)
     {
@@ -221,50 +255,18 @@ internal sealed partial class CollectionsApp : IPhoneApp
         var target = ready ? 1f : 0f;
         if (fade < target)
         {
-            fade = Math.Min(target, fade + ImGui.GetIO().DeltaTime / 0.22f);
+            fade = Math.Min(target, fade + ImGui.GetIO().DeltaTime / IconFadeSeconds);
         }
 
         iconFade[url] = fade;
         return fade;
     }
 
-    private void ResetFilters()
+    private static void ReserveTo(Vector2 origin, float width, float bottom)
     {
-        search = string.Empty;
-        lastSearch = string.Empty;
-        ownership = OwnershipFilter.All;
-        sourceIndex = 0;
-        sourceMenuOpen = false;
-        page = 0;
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, MathF.Max(0f, bottom - origin.Y)));
     }
-
-    private static string CategoryLabel(CollectionCategory category) =>
-        category switch
-        {
-            CollectionCategory.Mounts => Loc.T(L.Collections.Mounts),
-            CollectionCategory.Minions => Loc.T(L.Collections.Minions),
-            CollectionCategory.Emotes => Loc.T(L.Collections.Emotes),
-            CollectionCategory.Orchestrions => Loc.T(L.Collections.Orchestrions),
-            CollectionCategory.Hairstyles => Loc.T(L.Collections.Hairstyles),
-            CollectionCategory.Facewear => Loc.T(L.Collections.Facewear),
-            CollectionCategory.Achievements => Loc.T(L.Collections.Achievements),
-            _ => Loc.T(L.Collections.TriadCards),
-        };
-
-    private static FontAwesomeIcon CategoryIcon(CollectionCategory category) =>
-        category switch
-        {
-            CollectionCategory.Mounts => FontAwesomeIcon.Horse,
-            CollectionCategory.Minions => FontAwesomeIcon.Paw,
-            CollectionCategory.Emotes => FontAwesomeIcon.Smile,
-            CollectionCategory.Orchestrions => FontAwesomeIcon.Music,
-            CollectionCategory.Hairstyles => FontAwesomeIcon.Cut,
-            CollectionCategory.Facewear => FontAwesomeIcon.Glasses,
-            CollectionCategory.Achievements => FontAwesomeIcon.Trophy,
-            _ => FontAwesomeIcon.Clone,
-        };
-
-    private static Vector4 CategoryTint(CollectionCategory category) => CategoryTints[(int)category];
 
     public void Dispose()
     {

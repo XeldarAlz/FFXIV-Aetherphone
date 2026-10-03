@@ -6,15 +6,18 @@ internal readonly struct MarketListing
     public readonly int Quantity;
     public readonly long Total;
     public readonly bool Hq;
+    public readonly uint WorldId;
     public readonly string World;
     public readonly string Retainer;
 
-    public MarketListing(long pricePerUnit, int quantity, long total, bool hq, string world, string retainer)
+    public MarketListing(long pricePerUnit, int quantity, long total, bool hq, uint worldId, string world,
+        string retainer)
     {
         PricePerUnit = pricePerUnit;
         Quantity = quantity;
         Total = total;
         Hq = hq;
+        WorldId = worldId;
         World = world;
         Retainer = retainer;
     }
@@ -40,6 +43,24 @@ internal readonly struct MarketSale
     }
 }
 
+internal readonly struct MarketWorldOffer
+{
+    public readonly uint WorldId;
+    public readonly string World;
+    public readonly long Cheapest;
+    public readonly int Listings;
+    public readonly int Units;
+
+    public MarketWorldOffer(uint worldId, string world, long cheapest, int listings, int units)
+    {
+        WorldId = worldId;
+        World = world;
+        Cheapest = cheapest;
+        Listings = listings;
+        Units = units;
+    }
+}
+
 internal sealed class MarketSnapshot
 {
     public readonly uint ItemId;
@@ -48,6 +69,8 @@ internal sealed class MarketSnapshot
     public readonly bool HasHq;
     public readonly MarketListing[] Listings;
     public readonly MarketSale[] Sales;
+    public readonly MarketWorldOffer[] WorldsNq;
+    public readonly MarketWorldOffer[] WorldsHq;
     public readonly long MinNq;
     public readonly long MinHq;
     public readonly double AvgNq;
@@ -60,8 +83,9 @@ internal sealed class MarketSnapshot
     public readonly int UnitsSold;
 
     public MarketSnapshot(uint itemId, DateTime lastUpload, bool multiWorld, bool hasHq, MarketListing[] listings,
-        MarketSale[] sales, long minNq, long minHq, double avgNq, double avgHq, long maxNq, long maxHq,
-        double velocityNq, double velocityHq, int unitsForSale, int unitsSold)
+        MarketSale[] sales, MarketWorldOffer[] worldsNq, MarketWorldOffer[] worldsHq, long minNq, long minHq,
+        double avgNq, double avgHq, long maxNq, long maxHq, double velocityNq, double velocityHq, int unitsForSale,
+        int unitsSold)
     {
         ItemId = itemId;
         LastUpload = lastUpload;
@@ -69,6 +93,8 @@ internal sealed class MarketSnapshot
         HasHq = hasHq;
         Listings = listings;
         Sales = sales;
+        WorldsNq = worldsNq;
+        WorldsHq = worldsHq;
         MinNq = minNq;
         MinHq = minHq;
         AvgNq = avgNq;
@@ -85,4 +111,5 @@ internal sealed class MarketSnapshot
     public double Average(bool hq) => hq ? AvgHq : AvgNq;
     public long Max(bool hq) => hq ? MaxHq : MaxNq;
     public double Velocity(bool hq) => hq ? VelocityHq : VelocityNq;
+    public MarketWorldOffer[] Worlds(bool hq) => hq ? WorldsHq : WorldsNq;
 }

@@ -1,67 +1,36 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Video;
 using Aetherphone.Windows.Components;
-using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.AetherStream;
 
 internal sealed partial class AetherStreamApp
 {
-    private static readonly int[] QualityOptions = { 144, 240, 360, 480, 720, 1080 };
+    private static readonly int[] QualityOptions = [144, 240, 360, 480, 720, 1080];
+    private static readonly string[] QualityLabels = ["144p", "240p", "360p", "480p", "720p", "1080p"];
+
     private readonly DropdownMenu qualityMenu = new();
+    private readonly DropdownMenu.Item[] qualityItems = new DropdownMenu.Item[QualityOptions.Length];
     private Rect qualityRowRect;
 
-    private void DrawSettings(PhoneContext context, Rect area, float scale)
+    private void DrawSettings(Rect area, float scale)
     {
-        ui.Body(area);
-        var accentedContext = new PhoneContext(area, accentedTheme, context.Navigation);
-
-        AppHeader.Draw(accentedContext, Loc.T(L.AetherStream.SettingsTitle), () => router.Pop());
-
-        var margin = Metrics.Space.Lg * scale;
-        var top = area.Min.Y + AppHeader.Height * scale + Metrics.Space.Sm * scale;
-        var content = new Rect(new Vector2(area.Min.X + margin, top), new Vector2(area.Max.X - margin, area.Max.Y));
-
+        SocialChrome.DrawScreenHeader(area, Loc.T(L.AetherStream.SettingsTitle), Ink, back, ScreenTitleStyle);
+        var content = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var dependencies = screen.Engine.Dependencies;
-
+        qualityMenu.Gate();
         using (AppSurface.Begin(content))
         {
-            SettingsSection.Header(Loc.T(L.AetherStream.SettingsSectionStatus), accentedTheme);
-            var statusCard = GroupCard.Begin(accentedTheme, 7);
-            SettingsRow.Info(statusCard.NextRow(), Loc.T(L.AetherStream.SettingsDependencyStatus),
-                DependencyStatusText(dependencies, dependencies.VideoLibrary), accentedTheme);
-            DrawDependencyAction(statusCard.NextRow(), dependencies, dependencies.VideoLibrary,
-                L.AetherStream.SettingsDownloadMpv, L.AetherStream.SettingsUpdateMpv);
-
-            SettingsRow.Info(statusCard.NextRow(), Loc.T(L.AetherStream.SettingsDependencyYtdlp),
-                DependencyStatusText(dependencies, dependencies.LinkResolver), accentedTheme);
-            DrawDependencyAction(statusCard.NextRow(), dependencies, dependencies.LinkResolver,
-                L.AetherStream.SettingsDownloadYtdlp, L.AetherStream.SettingsUpdateYtdlp);
-
-            SettingsRow.Info(statusCard.NextRow(), Loc.T(L.AetherStream.SettingsDependencyDeno),
-                DependencyStatusText(dependencies, dependencies.JsRuntime), accentedTheme);
-            DrawDependencyAction(statusCard.NextRow(), dependencies, dependencies.JsRuntime,
-                L.AetherStream.SettingsDownloadDeno, L.AetherStream.SettingsUpdateDeno);
-
-            if (SettingsRow.Disclosure(statusCard.NextRow(), Loc.T(L.AetherStream.SettingsScreen), ScreenStateText(),
-                    accentedTheme))
-            {
-                router.Pop();
-                screenSheet.Open();
-            }
-
-            statusCard.End();
-
-            ImGui.Dummy(new Vector2(0f, 12f * scale));
             SettingsSection.Header(Loc.T(L.AetherStream.SettingsSectionPlayback), accentedTheme);
-            var playbackCard = GroupCard.Begin(accentedTheme, 2);
+            var playbackCard = GroupCard.Begin(accentedTheme, 3);
+            DrawQualityRow(playbackCard.NextRow());
             var hideNameplates = SettingsRow.Bool(playbackCard.NextRow(),
                 Loc.T(L.AetherStream.SettingsHideNameplates), configuration.VideoHideNameplates, accentedTheme);
-            DrawQualityRow(playbackCard.NextRow(), accentedTheme);
+            var muteInBackground = SettingsRow.Bool(playbackCard.NextRow(),
+                Loc.T(L.AetherStream.SettingsMuteInBackground), configuration.VideoMuteInBackground, accentedTheme,
+                hint: Loc.T(L.AetherStream.SettingsMuteInBackgroundHint));
             playbackCard.End();
             if (hideNameplates != configuration.VideoHideNameplates)
             {
@@ -69,68 +38,63 @@ internal sealed partial class AetherStreamApp
                 configuration.Save();
             }
 
-            ImGui.Dummy(new Vector2(0f, 12f * scale));
-            SettingsSection.Header(Loc.T(L.AetherStream.SettingsSectionWatching), accentedTheme);
-            var watchingCard = GroupCard.Begin(accentedTheme, 3);
-            var sharePresence = SettingsRow.Bool(watchingCard.NextRow(),
-                Loc.T(L.AetherStream.SettingsShareWatchPresence), configuration.VideoShareWatchPresence,
-                accentedTheme);
-            var discoverable = SettingsRow.Bool(watchingCard.NextRow(),
-                Loc.T(L.AetherStream.SettingsDiscoverable), configuration.VideoStreamDiscoverable,
-                accentedTheme);
-            var approvalRequired = SettingsRow.Bool(watchingCard.NextRow(),
-                Loc.T(L.AetherStream.SettingsApprovalRequired), configuration.VideoStreamApprovalRequired,
-                accentedTheme);
-            watchingCard.End();
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
-            SettingsSection.Hint(Loc.T(L.AetherStream.SettingsShareWatchPresenceHint), accentedTheme);
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-            SettingsSection.Hint(Loc.T(L.AetherStream.SettingsDiscoverableHint), accentedTheme);
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-            SettingsSection.Hint(Loc.T(L.AetherStream.SettingsApprovalRequiredHint), accentedTheme);
-            if (discoverable != configuration.VideoStreamDiscoverable)
+            if (muteInBackground != configuration.VideoMuteInBackground)
             {
-                configuration.VideoStreamDiscoverable = discoverable;
+                configuration.VideoMuteInBackground = muteInBackground;
                 configuration.Save();
+                video.MuteInBackground = muteInBackground;
             }
 
+            Gap(Metrics.Space.Md);
+            SettingsSection.Header(Loc.T(L.AetherStream.SettingsSectionWatching), accentedTheme);
+            var watchingCard = GroupCard.Begin(accentedTheme, 1);
+            var sharePresence = SettingsRow.Bool(watchingCard.NextRow(),
+                Loc.T(L.AetherStream.SettingsShareWatchPresence), configuration.VideoShareWatchPresence,
+                accentedTheme, hint: Loc.T(L.AetherStream.SettingsShareWatchPresenceHint));
+            watchingCard.End();
             if (sharePresence != configuration.VideoShareWatchPresence)
             {
                 configuration.VideoShareWatchPresence = sharePresence;
                 configuration.Save();
             }
 
-            if (approvalRequired != configuration.VideoStreamApprovalRequired)
+            Gap(Metrics.Space.Md);
+            SettingsSection.Header(Loc.T(L.AetherStream.SettingsSectionStatus), accentedTheme);
+            var statusCard = GroupCard.Begin(accentedTheme, 6);
+            SettingsRow.Info(statusCard.NextRow(), Loc.T(L.AetherStream.SettingsDependencyStatus),
+                DependencyStatusText(dependencies, dependencies.VideoLibrary), accentedTheme);
+            DrawDependencyAction(statusCard.NextRow(), dependencies, dependencies.VideoLibrary,
+                L.AetherStream.SettingsDownloadMpv, L.AetherStream.SettingsUpdateMpv);
+            SettingsRow.Info(statusCard.NextRow(), Loc.T(L.AetherStream.SettingsDependencyYtdlp),
+                DependencyStatusText(dependencies, dependencies.LinkResolver), accentedTheme);
+            DrawDependencyAction(statusCard.NextRow(), dependencies, dependencies.LinkResolver,
+                L.AetherStream.SettingsDownloadYtdlp, L.AetherStream.SettingsUpdateYtdlp);
+            SettingsRow.Info(statusCard.NextRow(), Loc.T(L.AetherStream.SettingsDependencyDeno),
+                DependencyStatusText(dependencies, dependencies.JsRuntime), accentedTheme);
+            DrawDependencyAction(statusCard.NextRow(), dependencies, dependencies.JsRuntime,
+                L.AetherStream.SettingsDownloadDeno, L.AetherStream.SettingsUpdateDeno);
+            statusCard.End();
+
+            Gap(Metrics.Space.Md);
+            SettingsSection.Header(Loc.T(L.AetherStream.SettingsSectionAdvanced), accentedTheme);
+            var wine = WineEnvironment.IsWine;
+            var advancedCard = GroupCard.Begin(accentedTheme, wine ? 2 : 1);
+            var hardwareDecoding = SettingsRow.Bool(advancedCard.NextRow(),
+                Loc.T(L.AetherStream.SettingsHardwareDecoding), configuration.VideoHardwareDecoding, accentedTheme,
+                hint: Loc.T(L.AetherStream.SettingsHardwareDecodingHint));
+            var allowInsecure = configuration.VideoAllowInsecureDirectUrls;
+            if (wine)
             {
-                configuration.VideoStreamApprovalRequired = approvalRequired;
-                configuration.Save();
+                allowInsecure = SettingsRow.Bool(advancedCard.NextRow(), Loc.T(L.AetherStream.SettingsTls),
+                    allowInsecure, accentedTheme, hint: Loc.T(L.AetherStream.SettingsTlsHint));
             }
 
-            ImGui.Dummy(new Vector2(0f, 12f * scale));
-            SettingsSection.Header(Loc.T(L.AetherStream.SettingsSectionAdvanced), accentedTheme);
-            var hardwareCard = GroupCard.Begin(accentedTheme, 1);
-            var hardwareDecoding = SettingsRow.Bool(hardwareCard.NextRow(),
-                Loc.T(L.AetherStream.SettingsHardwareDecoding), configuration.VideoHardwareDecoding, accentedTheme);
-            hardwareCard.End();
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
-            SettingsSection.Hint(Loc.T(L.AetherStream.SettingsHardwareDecodingHint), accentedTheme);
+            advancedCard.End();
             if (hardwareDecoding != configuration.VideoHardwareDecoding)
             {
                 configuration.VideoHardwareDecoding = hardwareDecoding;
                 configuration.Save();
                 video.HardwareDecoding = hardwareDecoding;
-            }
-
-            var allowInsecure = configuration.VideoAllowInsecureDirectUrls;
-            if (WineEnvironment.IsWine)
-            {
-                ImGui.Dummy(new Vector2(0f, 12f * scale));
-                var tlsCard = GroupCard.Begin(accentedTheme, 1);
-                allowInsecure = SettingsRow.Bool(tlsCard.NextRow(), Loc.T(L.AetherStream.SettingsTls), allowInsecure,
-                    accentedTheme);
-                tlsCard.End();
-                ImGui.Dummy(new Vector2(0f, 8f * scale));
-                SettingsSection.Hint(Loc.T(L.AetherStream.SettingsTlsHint), accentedTheme);
             }
 
             if (allowInsecure != configuration.VideoAllowInsecureDirectUrls)
@@ -139,30 +103,68 @@ internal sealed partial class AetherStreamApp
                 configuration.Save();
                 video.AllowInsecureDirectUrls = allowInsecure;
             }
+
+            Gap(Metrics.Space.Md);
+            var helpCard = GroupCard.Begin(accentedTheme, 1);
+            if (SettingsRow.Disclosure(helpCard.NextRow(), Loc.T(L.AetherStream.InfoTitle), string.Empty,
+                    accentedTheme))
+            {
+                router.Push(new StreamRoute(StreamScreen.Info));
+            }
+
+            helpCard.End();
+            Gap(Metrics.Space.Lg);
         }
 
-        qualityMenu.Gate();
-        if (qualityMenu.IsOpenFor("aetherstream.quality"))
-        {
-            var items = new DropdownMenu.Item[QualityOptions.Length];
-            for (var index = 0; index < QualityOptions.Length; index++)
-            {
-                items[index] = new DropdownMenu.Item($"{QualityOptions[index]}p",
-                    Selected: QualityOptions[index] == configuration.VideoMaxQualityHeight);
-            }
+        DrawQualityMenu(area);
+    }
 
-            var picked = qualityMenu.Draw(context.Content, accentedTheme, items);
-            if (picked >= 0)
-            {
-                configuration.VideoMaxQualityHeight = QualityOptions[picked];
-                configuration.Save();
-                video.MaxQualityHeight = QualityOptions[picked];
-            }
+    private void DrawQualityRow(Rect row)
+    {
+        qualityRowRect = row;
+        if (SettingsRow.Disclosure(row, Loc.T(L.AetherStream.SettingsMaxQuality),
+                QualityLabels[QualityIndex(configuration.VideoMaxQualityHeight)], accentedTheme))
+        {
+            qualityMenu.Toggle("aetherstream.quality", qualityRowRect);
         }
     }
 
-    private static PhoneTheme AccentedTheme(PhoneTheme baseTheme) =>
-        PhoneTheme.WithAccent(baseTheme, AppAccents.For("aetherstream"));
+    private static int QualityIndex(int height)
+    {
+        for (var index = 0; index < QualityOptions.Length; index++)
+        {
+            if (QualityOptions[index] == height)
+            {
+                return index;
+            }
+        }
+
+        return QualityOptions.Length - 2;
+    }
+
+    private void DrawQualityMenu(Rect area)
+    {
+        if (!qualityMenu.IsOpenFor("aetherstream.quality"))
+        {
+            return;
+        }
+
+        for (var index = 0; index < QualityOptions.Length; index++)
+        {
+            qualityItems[index] = new DropdownMenu.Item(QualityLabels[index],
+                Selected: QualityOptions[index] == configuration.VideoMaxQualityHeight);
+        }
+
+        var picked = qualityMenu.Draw(area, accentedTheme, qualityItems);
+        if (picked < 0)
+        {
+            return;
+        }
+
+        configuration.VideoMaxQualityHeight = QualityOptions[picked];
+        configuration.Save();
+        video.MaxQualityHeight = QualityOptions[picked];
+    }
 
     private void DrawDependencyAction(Rect row, MediaDependencies dependencies, MediaDependency dependency,
         LocString installLabel, LocString updateLabel)
@@ -226,18 +228,25 @@ internal sealed partial class AetherStreamApp
             DependencySetup.FormatMegabytes(snapshot.TotalBytes));
     }
 
-    private string ScreenStateText() => screen.Engine.IsActive
-        ? Loc.T(L.AetherStream.CastingStateReady)
-        : Loc.T(L.AetherStream.CastingStateNotReady);
-
-    private void DrawQualityRow(Rect row, PhoneTheme theme)
+    private void DrawInfo(Rect area, float scale)
     {
-        qualityRowRect = row;
-        if (SettingsRow.Disclosure(row, Loc.T(L.AetherStream.SettingsMaxQuality),
-                $"{configuration.VideoMaxQualityHeight}p", theme))
+        SocialChrome.DrawScreenHeader(area, Loc.T(L.AetherStream.InfoTitle), Ink, back, ScreenTitleStyle);
+        var content = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
+        using (AppSurface.Begin(content))
         {
-            qualityMenu.Toggle("aetherstream.quality", qualityRowRect);
+            DrawInfoEntry(L.AetherStream.InfoStartupTitle, L.AetherStream.InfoStartupBody);
+            DrawInfoEntry(L.AetherStream.InfoPartiesTitle, L.AetherStream.InfoPartiesBody);
+            DrawInfoEntry(L.AetherStream.InfoCodesTitle, L.AetherStream.InfoCodesBody);
+            DrawInfoEntry(L.AetherStream.InfoFailuresTitle, L.AetherStream.InfoFailuresBody);
+            DrawInfoEntry(L.AetherStream.InfoVpnTitle, L.AetherStream.InfoVpnBody);
+            Gap(Metrics.Space.Lg);
         }
     }
 
+    private void DrawInfoEntry(LocString title, LocString body)
+    {
+        SettingsSection.Header(Loc.T(title), accentedTheme);
+        SettingsSection.Hint(Loc.T(body), accentedTheme);
+        Gap(Metrics.Space.Md);
+    }
 }

@@ -30,7 +30,6 @@ internal sealed partial class VelvetShell
     private const float ProfileBottomPad = 14f;
     private const float ProfileGridGap = 1.5f;
     private const float ProfileTabUnderline = 2f;
-    private const float ProfileTabSmoothTime = 0.1f;
     private const float ProfileAboutLead = 4f;
     private const int ProfileColumns = 3;
     private const int MaxFacts = 4;
@@ -45,7 +44,7 @@ internal sealed partial class VelvetShell
     private static readonly TextStyle ProfileTabIdleStyle = new(1.02f, FontWeight.Medium);
     private static readonly UnderlineTabStyle ProfileTabsStyle = new(ProfileTabStyle, ProfileTabIdleStyle,
         VelvetTheme.TitleInk, VelvetTheme.MutedInk, VelvetTheme.Rose, ProfileTabUnderline, SocialChrome.CellPadX,
-        ProfileTabSmoothTime);
+        Motion.Release);
 
     private readonly VFact[] facts = new VFact[MaxFacts];
     private readonly float[] factHeights = new float[MaxFacts];

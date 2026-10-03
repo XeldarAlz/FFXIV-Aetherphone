@@ -4,29 +4,63 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Inventory;
 
+internal sealed class InventorySnapshot
+{
+    public readonly List<InventorySource> Sources = new();
+    public readonly List<RetainerSummary> Retainers = new();
+    public DateTime RetainersCapturedUtc;
+    public long Gil;
+    public bool HasLocal;
+
+    public void Clear()
+    {
+        Sources.Clear();
+        Retainers.Clear();
+        RetainersCapturedUtc = default;
+        Gil = 0;
+        HasLocal = false;
+    }
+}
+
 internal sealed class InventoryCaptureService : IDisposable
 {
     private const long TickIntervalMilliseconds = 1000;
+    private const int RosterTicks = 10;
+    private static readonly InventorySourceKind[] LocalKinds =
+    {
+        InventorySourceKind.Inventory, InventorySourceKind.Equipped, InventorySourceKind.Armoury,
+        InventorySourceKind.Crystals, InventorySourceKind.Saddlebag,
+    };
+
     private readonly FrameworkTicker ticker;
     private readonly InventoryStore store;
     private readonly object sync = new();
-    private readonly List<InventoryStack> scratchBags = new();
-    private readonly List<InventoryStack> scratchArmoury = new();
-    private readonly List<InventoryStack> scratchCrystals = new();
-    private readonly List<InventoryStack> scratchSaddlebag = new();
-    private readonly List<InventoryStack> scratchEquipped = new();
-    private readonly List<InventoryStack> scratchCached = new();
-    private InventoryStack[] localBags = Array.Empty<InventoryStack>();
-    private InventoryStack[] localArmoury = Array.Empty<InventoryStack>();
-    private InventoryStack[] localCrystals = Array.Empty<InventoryStack>();
-    private InventoryStack[] localSaddlebag = Array.Empty<InventoryStack>();
-    private InventoryStack[] localEquipped = Array.Empty<InventoryStack>();
+    private readonly InventoryLocalRead localRead = new();
+    private readonly InventoryReadBuffer cachedRead = new();
+    private readonly List<RetainerSummary> rosterRead = new();
+    private readonly List<StoredSource> storedScratch = new();
+    private readonly List<StoredRetainer> retainerScratch = new();
+    private readonly InventoryStack[][] localStacks = new InventoryStack[LocalKinds.Length][];
+    private readonly int[] localCapacity = new int[LocalKinds.Length];
+    private readonly CaptureGate saddlebagGate = new();
+    private readonly CaptureGate retainerGate = new();
+    private readonly CaptureGate freeCompanyGate = new();
+    private int rosterCountdown;
     private ulong activeCharacterId;
+    private ulong pendingRetainerId;
+    private long localGil;
     private bool hasLocal;
+    private bool saddlebagLive;
+    private int localRevision;
 
     public InventoryCaptureService(IFramework framework, InventoryStore store, AppGate gate)
     {
         this.store = store;
+        for (var index = 0; index < localStacks.Length; index++)
+        {
+            localStacks[index] = Array.Empty<InventoryStack>();
+        }
+
         ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick, gate);
     }
 
@@ -35,92 +69,189 @@ internal sealed class InventoryCaptureService : IDisposable
         ticker.Dispose();
     }
 
-    public ulong ActiveCharacterId => activeCharacterId;
-    public bool HasLocal => hasLocal;
+    public int Revision => Volatile.Read(ref localRevision) + store.Revision;
 
-    public void SnapshotLocal(List<InventoryStack> bags, List<InventoryStack> armoury, List<InventoryStack> crystals,
-        List<InventoryStack> saddlebag, List<InventoryStack> equipped)
+    public void Fill(InventorySnapshot snapshot)
     {
-        bags.Clear();
-        armoury.Clear();
-        crystals.Clear();
-        saddlebag.Clear();
-        equipped.Clear();
+        snapshot.Clear();
+        var characterId = activeCharacterId;
+        var saddlebagIsLive = false;
         lock (sync)
         {
-            Copy(localBags, bags);
-            Copy(localArmoury, armoury);
-            Copy(localCrystals, crystals);
-            Copy(localSaddlebag, saddlebag);
-            Copy(localEquipped, equipped);
-        }
-    }
+            snapshot.HasLocal = hasLocal;
+            snapshot.Gil = localGil;
+            if (hasLocal)
+            {
+                saddlebagIsLive = saddlebagLive;
+                var nowUtc = DateTime.UtcNow;
+                for (var index = 0; index < LocalKinds.Length; index++)
+                {
+                    var kind = LocalKinds[index];
+                    if (kind == InventorySourceKind.Saddlebag && !saddlebagIsLive)
+                    {
+                        continue;
+                    }
 
-    public void CopyCachedSources(List<StoredSource> into)
-    {
-        store.CopySources(activeCharacterId, into);
+                    snapshot.Sources.Add(new InventorySource(kind, string.Empty, characterId, localStacks[index],
+                        nowUtc, localCapacity[index], false));
+                }
+            }
+        }
+
+        store.CopySources(characterId, storedScratch);
+        for (var index = 0; index < storedScratch.Count; index++)
+        {
+            var stored = storedScratch[index];
+            if (stored.Kind == InventorySourceKind.Saddlebag && saddlebagIsLive)
+            {
+                continue;
+            }
+
+            snapshot.Sources.Add(ToSource(stored));
+        }
+
+        var rosterUnix = store.CopyRetainers(characterId, retainerScratch);
+        snapshot.RetainersCapturedUtc = rosterUnix > 0
+            ? DateTimeOffset.FromUnixTimeSeconds(rosterUnix).UtcDateTime
+            : default;
+        for (var index = 0; index < retainerScratch.Count; index++)
+        {
+            var retainer = retainerScratch[index];
+            snapshot.Retainers.Add(new RetainerSummary(retainer.RetainerId, retainer.Name, retainer.Gil,
+                retainer.ItemCount, retainer.MarketCount));
+        }
+
+        storedScratch.Clear();
+        retainerScratch.Clear();
     }
 
     private void OnTick()
     {
         activeCharacterId = InventoryReader.ReadLocalContentId();
         RefreshLocal();
-        CaptureRetainer();
-        CaptureFreeCompany();
+        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        CaptureSaddlebag(nowUnix);
+        CaptureRoster(nowUnix);
+        CaptureRetainer(nowUnix);
+        CaptureFreeCompany(nowUnix);
     }
 
     private void RefreshLocal()
     {
-        if (!InventoryReader.ReadLocal(scratchBags, scratchArmoury, scratchCrystals, scratchSaddlebag, scratchEquipped))
+        if (!InventoryReader.ReadLocal(localRead))
         {
-            hasLocal = false;
+            if (hasLocal)
+            {
+                hasLocal = false;
+                Interlocked.Increment(ref localRevision);
+            }
+
             return;
         }
 
-        var bags = scratchBags.ToArray();
-        var armoury = scratchArmoury.ToArray();
-        var crystals = scratchCrystals.ToArray();
-        var saddlebag = scratchSaddlebag.ToArray();
-        var equipped = scratchEquipped.ToArray();
+        var changed = !hasLocal || localRead.Gil != localGil ||
+                      saddlebagLive != (localRead.Saddlebag.LoadedPages != 0);
         lock (sync)
         {
-            localBags = bags;
-            localArmoury = armoury;
-            localCrystals = crystals;
-            localSaddlebag = saddlebag;
-            localEquipped = equipped;
+            changed |= Assign(0, localRead.Bags);
+            changed |= Assign(1, localRead.Equipped);
+            changed |= Assign(2, localRead.Armoury);
+            changed |= Assign(3, localRead.Crystals);
+            changed |= Assign(4, localRead.Saddlebag);
+            localGil = localRead.Gil;
+            saddlebagLive = localRead.Saddlebag.LoadedPages != 0;
+            hasLocal = true;
         }
 
-        hasLocal = true;
+        if (changed)
+        {
+            Interlocked.Increment(ref localRevision);
+        }
     }
 
-    private void CaptureRetainer()
+    private bool Assign(int index, InventoryReadBuffer read)
+    {
+        var capacityChanged = localCapacity[index] != read.Capacity;
+        localCapacity[index] = read.Capacity;
+        if (!capacityChanged && SameStacks(localStacks[index], read.Stacks))
+        {
+            return false;
+        }
+
+        localStacks[index] = read.Stacks.ToArray();
+        return true;
+    }
+
+    private void CaptureSaddlebag(long nowUnix)
+    {
+        if (activeCharacterId == 0 || !hasLocal || localRead.Saddlebag.LoadedPages == 0 ||
+            !saddlebagGate.ShouldCapture(activeCharacterId, localRead.Saddlebag, nowUnix))
+        {
+            return;
+        }
+
+        store.CaptureSource(activeCharacterId, BuildSource(InventorySourceKind.Saddlebag, string.Empty,
+            activeCharacterId, localRead.Saddlebag, nowUnix));
+    }
+
+    private void CaptureRoster(long nowUnix)
+    {
+        if (rosterCountdown > 0 && pendingRetainerId == 0)
+        {
+            rosterCountdown--;
+            return;
+        }
+
+        rosterCountdown = RosterTicks;
+        if (activeCharacterId == 0 || !InventoryReader.ReadRetainerRoster(rosterRead))
+        {
+            return;
+        }
+
+        store.CaptureRetainers(activeCharacterId, rosterRead, nowUnix);
+    }
+
+    private void CaptureRetainer(long nowUnix)
     {
         if (activeCharacterId == 0 ||
-            !InventoryReader.ReadActiveRetainer(scratchCached, out var retainerId, out var retainerName))
+            !InventoryReader.ReadActiveRetainer(cachedRead, out var retainerId, out var retainerName))
+        {
+            pendingRetainerId = 0;
+            return;
+        }
+
+        if (pendingRetainerId != retainerId)
+        {
+            pendingRetainerId = retainerId;
+            return;
+        }
+
+        if (!retainerGate.ShouldCapture(retainerId, cachedRead, nowUnix))
         {
             return;
         }
 
         store.CaptureSource(activeCharacterId,
-            BuildSource(InventorySourceKind.Retainer, retainerName, retainerId, scratchCached));
+            BuildSource(InventorySourceKind.Retainer, retainerName, retainerId, cachedRead, nowUnix));
     }
 
-    private void CaptureFreeCompany()
+    private void CaptureFreeCompany(long nowUnix)
     {
         if (activeCharacterId == 0 ||
-            !InventoryReader.ReadFreeCompany(scratchCached, out var freeCompanyId, out var freeCompanyName))
+            !InventoryReader.ReadFreeCompany(cachedRead, out var freeCompanyId, out var freeCompanyName) ||
+            !freeCompanyGate.ShouldCapture(freeCompanyId, cachedRead, nowUnix))
         {
             return;
         }
 
         store.CaptureSource(activeCharacterId,
-            BuildSource(InventorySourceKind.FreeCompany, freeCompanyName, freeCompanyId, scratchCached));
+            BuildSource(InventorySourceKind.FreeCompany, freeCompanyName, freeCompanyId, cachedRead, nowUnix));
     }
 
     private static StoredSource BuildSource(InventorySourceKind kind, string ownerName, ulong ownerId,
-        List<InventoryStack> stacks)
+        InventoryReadBuffer read, long nowUnix)
     {
+        var stacks = read.Stacks;
         var stored = new StoredStack[stacks.Count];
         for (var index = 0; index < stacks.Count; index++)
         {
@@ -131,6 +262,7 @@ internal sealed class InventoryCaptureService : IDisposable
                 Quantity = stack.Quantity,
                 HighQuality = stack.HighQuality,
                 Slot = stack.Slot,
+                Page = stack.Page,
             };
         }
 
@@ -139,16 +271,88 @@ internal sealed class InventoryCaptureService : IDisposable
             Kind = kind,
             OwnerName = ownerName,
             OwnerId = ownerId,
-            CapturedUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            CapturedUnix = nowUnix,
+            Capacity = read.Capacity,
+            LoadedPages = read.LoadedPages,
             Stacks = stored,
         };
     }
 
-    private static void Copy(InventoryStack[] from, List<InventoryStack> into)
+    private static InventorySource ToSource(StoredSource stored)
     {
-        for (var index = 0; index < from.Length; index++)
+        var stacks = new InventoryStack[stored.Stacks.Length];
+        for (var index = 0; index < stacks.Length; index++)
         {
-            into.Add(from[index]);
+            var stack = stored.Stacks[index];
+            stacks[index] = new InventoryStack(stack.ItemId, stack.Quantity, stack.HighQuality, stack.Slot,
+                stack.Page);
+        }
+
+        var captured = DateTimeOffset.FromUnixTimeSeconds(stored.CapturedUnix).UtcDateTime;
+        return new InventorySource(stored.Kind, stored.OwnerName, stored.OwnerId, stacks, captured, stored.Capacity,
+            true);
+    }
+
+    private static bool SameStacks(InventoryStack[] current, List<InventoryStack> read)
+    {
+        if (current.Length != read.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < current.Length; index++)
+        {
+            if (!current[index].Equals(read[index]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private sealed class CaptureGate
+    {
+        private const long RefreshSeconds = 60;
+        private readonly List<InventoryStack> last = new();
+        private ulong ownerId;
+        private int capacity;
+        private ushort pages;
+        private long capturedUnix;
+
+        public bool ShouldCapture(ulong owner, InventoryReadBuffer read, long nowUnix)
+        {
+            if (owner == ownerId && capacity == read.Capacity && pages == read.LoadedPages &&
+                nowUnix - capturedUnix < RefreshSeconds && SameStacks(last, read.Stacks))
+            {
+                return false;
+            }
+
+            ownerId = owner;
+            capacity = read.Capacity;
+            pages = read.LoadedPages;
+            capturedUnix = nowUnix;
+            last.Clear();
+            last.AddRange(read.Stacks);
+            return true;
+        }
+
+        private static bool SameStacks(List<InventoryStack> left, List<InventoryStack> right)
+        {
+            if (left.Count != right.Count)
+            {
+                return false;
+            }
+
+            for (var index = 0; index < left.Count; index++)
+            {
+                if (!left[index].Equals(right[index]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

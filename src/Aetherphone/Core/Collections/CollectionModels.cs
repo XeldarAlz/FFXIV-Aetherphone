@@ -49,6 +49,8 @@ internal sealed class CollectionSource
 {
     [JsonPropertyName("type")] public string? Type { get; set; }
     [JsonPropertyName("text")] public string? Text { get; set; }
+    [JsonPropertyName("related_type")] public string? RelatedType { get; set; }
+    [JsonPropertyName("related_id")] public int? RelatedId { get; set; }
 }
 
 internal sealed class CollectionGroupRef
@@ -77,6 +79,7 @@ internal sealed class CollectionItemDto
     [JsonPropertyName("description")] public string? Description { get; set; }
     [JsonPropertyName("command")] public string? Command { get; set; }
     [JsonPropertyName("patch")] public string? Patch { get; set; }
+    [JsonPropertyName("item_id")] public int? ItemId { get; set; }
     [JsonPropertyName("tradeable")] public bool? Tradeable { get; set; }
     [JsonPropertyName("owned")] public string? Owned { get; set; }
     [JsonPropertyName("points")] public int? Points { get; set; }

@@ -64,7 +64,7 @@ internal static class CoinHero
             min.Y + height * WatermarkCenterFraction);
         var watermarkTint = Palette.WithAlpha(Ink, WatermarkAlpha);
         drawList.PushClipRect(min, max, true);
-        if (!AppIconTextures.TryDrawArtwork(drawList, CoinIconId, watermarkCenter, watermark, watermarkTint))
+        if (!AppIconTile.TryDrawGlyph(drawList, CoinIconId, watermarkCenter, watermark, watermarkTint))
         {
             ProgressRing.CenterIcon(drawList, watermarkCenter, FontAwesomeIcon.Coins, watermarkTint, watermark);
         }

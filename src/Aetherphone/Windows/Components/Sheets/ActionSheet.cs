@@ -1,6 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Animation;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
@@ -12,7 +10,8 @@ internal readonly record struct ActionSheetStyle(
     Vector4 Ink,
     Vector4 Danger,
     Vector4 Accent,
-    Vector4 Hairline)
+    Vector4 Hairline,
+    PhoneTheme? Theme = null)
 {
     public static ActionSheetStyle From(PhoneTheme theme) => new(
         Palette.WithAlpha(Palette.Lighten(theme.AppBackground, 0.10f), 0.92f),
@@ -20,7 +19,8 @@ internal readonly record struct ActionSheetStyle(
         theme.TextStrong,
         theme.Danger,
         theme.Accent,
-        theme.Hairline);
+        theme.Hairline,
+        theme);
 
     public static ActionSheetStyle From(AppSkin ui) => new(
         Palette.WithAlpha(Palette.Lighten(ui.Palette.BackdropTop, 0.10f), 0.92f),
@@ -28,7 +28,8 @@ internal readonly record struct ActionSheetStyle(
         ui.TitleInk,
         ui.Theme.Danger,
         ui.Accent,
-        ui.Hairline);
+        ui.Hairline,
+        ui.Theme);
 }
 
 internal sealed class ActionSheet
@@ -36,49 +37,35 @@ internal sealed class ActionSheet
     public readonly record struct Item(string Label, string Glyph = "", bool Danger = false, bool Selected = false,
         bool Checkable = false);
 
-    private const float RevealSmoothTime = 0.11f;
-    private const float MaxDim = 0.45f;
-    private const float Margin = 10f;
-    private const float Rounding = 20f;
     private const float RowHeight = 50f;
     private const float CancelHeight = 52f;
-    private const float CardGap = 8f;
-    private const float BottomInset = 12f;
+    private const float CancelGap = 8f;
+    private const float BottomInset = Metrics.Size.HomeIndicatorInset;
+    private const float RowInset = 10f;
     private const float PadX = 18f;
     private const float GlyphReserve = 30f;
     private const float CheckReserve = 26f;
     private const float HeaderPadY = 13f;
     private const float HeaderInkAlpha = 0.78f;
+    private const float RowHoverAlpha = 0.07f;
 
     private static readonly TextStyle RowStyle = new(1.07f, FontWeight.SemiBold);
     private static readonly TextStyle CancelStyle = new(1.07f, FontWeight.Bold);
     private static readonly TextStyle HeaderStyle = new(1.02f, FontWeight.SemiBold);
-    private static readonly Vector4 RowHover = new(1f, 1f, 1f, 0.06f);
 
-    private Spring reveal;
-    private bool open;
-    private int openedFrame;
+    private readonly Sheet sheet = new();
 
-    public bool IsOpen => open;
+    public bool IsOpen => sheet.IsOpen;
 
-    public bool CapturesPointer => open || !reveal.IsResting(0f, 0.001f, 0.005f);
+    public bool CapturesPointer => sheet.CapturesPointer;
 
-    public void Open()
-    {
-        if (open)
-        {
-            return;
-        }
+    public void Open() => sheet.Open();
 
-        open = true;
-        openedFrame = ImGui.GetFrameCount();
-    }
-
-    public void Close() => open = false;
+    public void Close() => sheet.Close();
 
     public void Gate()
     {
-        if (open)
+        if (sheet.IsOpen)
         {
             UiInteract.BlockThisFrame();
         }
@@ -87,51 +74,40 @@ internal sealed class ActionSheet
     public int Draw(Rect screen, in ActionSheetStyle style, ReadOnlySpan<Item> items, string cancelLabel,
         bool keepOpen, string title = "")
     {
-        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        reveal.Step(open ? 1f : 0f, RevealSmoothTime, delta);
-        if (!open && reveal.IsResting(0f, 0.001f, 0.005f))
-        {
-            reveal.SnapTo(0f);
-            return -1;
-        }
-
         if (items.Length == 0)
         {
+            sheet.CloseImmediately();
             return -1;
         }
 
+        var theme = style.Theme ?? PhoneTheme.Default;
         var scale = UiScale.Current;
-        var opacity = Math.Clamp(reveal.Value, 0f, 1f);
-        var slide = Easing.EaseOutQuint(opacity);
-        var drawList = ImGui.GetForegroundDrawList();
-        drawList.PushClipRect(screen.Min, screen.Max, false);
-        drawList.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, MaxDim * opacity)));
-        var margin = Margin * scale;
         var rowHeight = RowHeight * scale;
         var cancelHeight = CancelHeight * scale;
-        var gap = CardGap * scale;
         var padX = PadX * scale;
-        var headerWidth = screen.Width - margin * 2f - padX * 2f;
+        var headerWidth = MathF.Max(1f, screen.Width - (RowInset + PadX) * 2f * scale);
         var titleHeight = title.Length > 0 ? Typography.MeasureWrappedBlock(title, HeaderStyle, headerWidth).Y : 0f;
         var headerHeight = titleHeight > 0f ? titleHeight + HeaderPadY * 2f * scale : 0f;
-        var cardHeight = headerHeight + items.Length * rowHeight;
-        var total = cardHeight + gap + cancelHeight;
-        var bottom = screen.Max.Y - BottomInset * scale + total * (1f - slide);
-        var left = screen.Min.X + margin;
-        var right = screen.Max.X - margin;
-        var cancelMin = new Vector2(left, bottom - cancelHeight);
-        var cancelMax = new Vector2(right, bottom);
-        var cardMax = new Vector2(right, cancelMin.Y - gap);
-        var cardMin = new Vector2(left, cardMax.Y - cardHeight);
-        var rounding = Rounding * scale;
-        var interactive = open && opacity > 0.5f;
-        DrawPanel(drawList, cardMin, cardMax, rounding, style, opacity, scale);
+        var fittedHeight = SheetMetrics.GrabberZone * scale + headerHeight + items.Length * rowHeight +
+                           CancelGap * scale + cancelHeight + BottomInset * scale;
+        var frame = sheet.Begin(ImGui.GetForegroundDrawList(), screen, theme, SheetDetents.Fitted(fittedHeight),
+            SheetMetrics.AppVeil);
+        if (!frame.Visible)
+        {
+            return -1;
+        }
+
+        var drawList = frame.DrawList;
+        var opacity = frame.Opacity;
+        var content = frame.Content;
+        var left = content.Min.X + RowInset * scale;
+        var right = content.Max.X - RowInset * scale;
         if (headerHeight > 0f)
         {
             var headerInk = Palette.WithAlpha(style.Ink, style.Ink.W * HeaderInkAlpha * opacity);
             Typography.DrawWrappedCentered(drawList,
-                new Vector2((cardMin.X + cardMax.X) * 0.5f, cardMin.Y + HeaderPadY * scale + titleHeight * 0.5f),
-                title, headerInk, HeaderStyle, headerWidth);
+                new Vector2(content.Center.X, content.Min.Y + HeaderPadY * scale + titleHeight * 0.5f), title,
+                headerInk, HeaderStyle, headerWidth);
         }
 
         var anyGlyph = false;
@@ -142,35 +118,26 @@ internal sealed class ActionSheet
             anyCheck |= items[index].Checkable;
         }
 
+        var hairline = ImGui.GetColorU32(Palette.WithAlpha(style.Hairline, style.Hairline.W * opacity));
+        var hoverFill = ImGui.GetColorU32(Palette.WithAlpha(style.Ink, RowHoverAlpha * opacity));
+        var rowsTop = content.Min.Y + headerHeight;
         var picked = -1;
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
-            var rowMin = new Vector2(cardMin.X, cardMin.Y + headerHeight + index * rowHeight);
-            var rowMax = new Vector2(cardMax.X, rowMin.Y + rowHeight);
-            var hovered = interactive && UiInteract.HoverWindowOnly(rowMin, rowMax);
+            var rowMin = new Vector2(left, rowsTop + index * rowHeight);
+            var rowMax = new Vector2(right, rowMin.Y + rowHeight);
+            var hovered = frame.Interactive && UiInteract.HoverWindowOnly(rowMin, rowMax);
             if (hovered)
             {
-                var first = index == 0 && headerHeight <= 0f;
-                var last = index == items.Length - 1;
-                var flags = first && last ? ImDrawFlags.RoundCornersAll
-                    : first ? ImDrawFlags.RoundCornersTop
-                    : last ? ImDrawFlags.RoundCornersBottom
-                    : ImDrawFlags.RoundCornersNone;
-                drawList.AddRectFilled(rowMin, rowMax,
-                    ImGui.GetColorU32(Palette.WithAlpha(RowHover, RowHover.W * opacity)), rounding, flags);
+                Squircle.Fill(drawList, rowMin, rowMax, Metrics.Radius.Md * scale, hoverFill);
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    picked = index;
-                    UiFeedback.Play(UiSound.Tap);
-                }
             }
 
             if (index > 0 || headerHeight > 0f)
             {
                 drawList.AddLine(new Vector2(rowMin.X + padX, rowMin.Y), new Vector2(rowMax.X - padX, rowMin.Y),
-                    ImGui.GetColorU32(Palette.WithAlpha(style.Hairline, style.Hairline.W * opacity)), 1f);
+                    hairline, Metrics.Stroke.Hairline);
             }
 
             var ink = item.Danger ? style.Danger : item.Checkable && item.Selected ? style.Accent : style.Ink;
@@ -196,21 +163,29 @@ internal sealed class ActionSheet
             {
                 DrawCheck(drawList, new Vector2(rowMax.X - padX - 6f * scale, centerY), style.Accent, opacity, scale);
             }
+
+            if (UiInteract.Click(rowMin, rowMax, hovered))
+            {
+                picked = index;
+            }
         }
 
-        DrawPanel(drawList, cancelMin, cancelMax, rounding, style, opacity, scale);
-        var cancelHovered = interactive && UiInteract.HoverWindowOnly(cancelMin, cancelMax);
+        var cancelMin = new Vector2(left, rowsTop + items.Length * rowHeight + CancelGap * scale);
+        var cancelMax = new Vector2(right, cancelMin.Y + cancelHeight);
+        drawList.AddLine(new Vector2(left + padX, cancelMin.Y - CancelGap * scale * 0.5f),
+            new Vector2(right - padX, cancelMin.Y - CancelGap * scale * 0.5f), hairline, Metrics.Stroke.Hairline);
+        var cancelHovered = frame.Interactive && UiInteract.HoverWindowOnly(cancelMin, cancelMax);
         if (cancelHovered)
         {
-            drawList.AddRectFilled(cancelMin, cancelMax,
-                ImGui.GetColorU32(Palette.WithAlpha(RowHover, RowHover.W * opacity)), rounding);
+            Squircle.Fill(drawList, cancelMin, cancelMax, Metrics.Radius.Md * scale, hoverFill);
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
         Typography.DrawCentered(drawList, new Vector2((cancelMin.X + cancelMax.X) * 0.5f,
                 (cancelMin.Y + cancelMax.Y) * 0.5f), cancelLabel, Palette.WithAlpha(style.Ink, style.Ink.W * opacity),
             CancelStyle);
-        drawList.PopClipRect();
+        var cancelClicked = UiInteract.Click(cancelMin, cancelMax, cancelHovered);
+        sheet.End(in frame);
 
         if (picked >= 0)
         {
@@ -222,30 +197,12 @@ internal sealed class ActionSheet
             return picked;
         }
 
-        if (cancelHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-        {
-            UiFeedback.Play(UiSound.Tap);
-            Close();
-            return -1;
-        }
-
-        if (interactive && ImGui.GetFrameCount() != openedFrame && ImGui.IsMouseClicked(ImGuiMouseButton.Left)
-            && !UiInteract.HoverWindowOnly(cardMin, cancelMax, false))
+        if (cancelClicked)
         {
             Close();
         }
 
         return -1;
-    }
-
-    private static void DrawPanel(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding,
-        in ActionSheetStyle style, float opacity, float scale)
-    {
-        Elevation.Floating(drawList, min, max, rounding, scale, opacity);
-        Squircle.Fill(drawList, min, max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(style.Panel, style.Panel.W * opacity)));
-        Squircle.Stroke(drawList, min, max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(style.Stroke, style.Stroke.W * opacity)), Metrics.Stroke.Hairline);
     }
 
     private static void DrawCheck(ImDrawListPtr drawList, Vector2 center, Vector4 accent, float alpha, float scale)

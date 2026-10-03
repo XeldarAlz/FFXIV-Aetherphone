@@ -39,12 +39,14 @@ internal static class SubmitField
         ImGui.SetCursorScreenPos(new Vector2(inputLeft, bar.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(inputRight - inputLeft);
         var submitted = false;
-        Plugin.Fonts.NoticeText(hint);
+        var shownHint = Typography.FitText(hint, inputRight - inputLeft - ImGui.GetStyle().FramePadding.X * 2f,
+            TextStyles.Body);
+        Plugin.Fonts.NoticeText(shownHint);
         Plugin.Fonts.NoticeText(text);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            submitted = ImGui.InputTextWithHint(imguiId, hint, ref text, maxLength,
+            submitted = ImGui.InputTextWithHint(imguiId, shownHint, ref text, maxLength,
                 ImGuiInputTextFlags.EnterReturnsTrue);
         }
 

@@ -498,7 +498,7 @@ internal sealed partial class AethergramApp
         }
 
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        profileTabSlide.Step(profileTab, TabSmoothTime, delta);
+        profileTabSlide.Step(profileTab, Motion.Release, delta);
         var underlineLeft = row.Min.X + profileTabSlide.Value * slot;
         drawList.AddRectFilled(new Vector2(underlineLeft, row.Max.Y - IconTabUnderline * scale),
             new Vector2(underlineLeft + slot, row.Max.Y), ImGui.GetColorU32(Ink.TitleInk));

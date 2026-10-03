@@ -112,6 +112,8 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
 
     public ChatDensity Density => target.Density;
 
+    public Rect ComposerBounds { get; private set; }
+
     public void Gate() => composer.Gate();
 
     public void CloseMenus() => composer.CloseMenus();
@@ -201,6 +203,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         };
         var composerBar = new Rect(new Vector2(area.Min.X, area.Max.Y - composer.Measure(area.Width, model)),
             area.Max);
+        ComposerBounds = composerBar;
         var failure = FirstFailure();
         var failureBlock = failure is null ? 0f : FailureHeight * scale;
         var searchHeight = searchOpen ? SearchBarHeight * scale : 0f;

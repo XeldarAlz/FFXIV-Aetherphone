@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
-using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -62,7 +61,6 @@ internal sealed partial class LinkpearlApp
         var railTop = top + (PeopleChipsHeight - ChipRail.RowHeight) * 0.5f * scale;
         var rail = new Rect(new Vector2(content.Min.X + CellPadX * scale, railTop),
             new Vector2(content.Max.X - CellPadX * scale, railTop + ChipRail.RowHeight * scale));
-        UiAnchors.Report("people.scope", rail);
         peopleScopeLabels[0] = Loc.T(L.Linkpearl.ScopeFriends);
         peopleScopeLabels[1] = Loc.T(L.Contacts.Online);
         peopleScopeLabels[2] = Loc.T(L.Linkpearl.ScopeLodestone);
@@ -119,7 +117,6 @@ internal sealed partial class LinkpearlApp
         drawList.PushClipRect(area.Min, new Vector2(area.Max.X, bottom), true);
         var bar = new Rect(new Vector2(area.Min.X + CellPadX * scale, bottom - PeopleSearchHeight * scale),
             new Vector2(area.Max.X - CellPadX * scale, bottom));
-        UiAnchors.Report("people.search", bar);
         if (forced)
         {
             if (peopleSearchFocus)
@@ -146,7 +143,6 @@ internal sealed partial class LinkpearlApp
 
     private void DrawFriendsScope(Rect body, bool onlineOnly, float scale)
     {
-        UiAnchors.Report("people.list", body);
         if (friends.Count == 0)
         {
             Typography.DrawCentered(body.Center, Loc.T(L.Contacts.Empty), ink.MutedInk);
@@ -176,7 +172,6 @@ internal sealed partial class LinkpearlApp
         var kindTop = body.Min.Y + Metrics.Space.Xs * scale;
         var kindRow = new Rect(new Vector2(body.Min.X + CellPadX * scale, kindTop),
             new Vector2(body.Max.X - CellPadX * scale, kindTop + ChipRail.RowHeight * scale));
-        UiAnchors.Report("findpeople.kind", kindRow);
         findSegmentLabels[0] = Loc.T(L.FindPeople.Character);
         findSegmentLabels[1] = Loc.T(L.FindPeople.FreeCompany);
         findSegmentActive[0] = findKind == LookupKind.Character;
@@ -195,7 +190,6 @@ internal sealed partial class LinkpearlApp
         var worldTop = kindRow.Max.Y + Metrics.Space.Sm * scale;
         var worldBar = new Rect(new Vector2(body.Min.X + CellPadX * scale, worldTop),
             new Vector2(body.Max.X - CellPadX * scale, worldTop + FindFieldRowHeight * scale));
-        UiAnchors.Report("findpeople.name", worldBar);
         if (SubmitField.Draw(worldBar, "##peopleWorldField", Loc.T(L.FindPeople.WorldHint), ref findWorldInput,
                 frameTheme))
         {

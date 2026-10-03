@@ -11,6 +11,7 @@ internal sealed class HomeLook
     public List<string>? Dock { get; set; }
     public int GridRows { get; set; } = HomeLayoutService.DefaultRows;
     public bool ShowAppNames { get; set; } = true;
+    public IconAppearance IconAppearance { get; set; } = IconAppearance.Default;
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public string AccentName { get; set; } = string.Empty;
     public string AccentCustomHex { get; set; } = string.Empty;

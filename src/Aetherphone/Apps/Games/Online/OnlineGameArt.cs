@@ -41,7 +41,11 @@ internal static class OnlineGameArt
     {
         if (string.Equals(kind, GameRoomWire.ChessKind, StringComparison.Ordinal))
         {
-            AppIconArt.TryDraw(drawList, "chess", center, size, White, Palette.Darken(Accent(kind), 0.16f));
+            if (!AppIconTile.TryDrawGlyph(drawList, "chess", center, size * AppIconTextures.GlyphFraction, White))
+            {
+                AppIconArt.TryDraw(drawList, "chess", center, size, White, Palette.Darken(Accent(kind), 0.16f));
+            }
+
             return;
         }
 

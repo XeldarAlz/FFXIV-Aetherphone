@@ -1,3 +1,4 @@
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -38,7 +39,7 @@ internal static class StatusBar
         return cachedTime;
     }
 
-    public static void Draw(Rect screen, PhoneTheme theme, bool landscape)
+    public static void Draw(Rect screen, PhoneTheme theme, bool landscape, float alpha = 1f)
     {
         var scale = UiScale.Current;
         var rowCenterY = screen.Min.Y + 22f * scale;
@@ -50,6 +51,9 @@ internal static class StatusBar
         {
             DeviceChrome.DrawIsland(island, theme);
         }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var vertexStart = drawList.VtxBuffer.Size;
         var earGap = EarGap * scale;
         var timeLeft = MathF.Min(screen.Min.X + TimePadding * scale,
             island.Min.X - earGap - timeSize.X - DndWidth(scale));
@@ -57,6 +61,7 @@ internal static class StatusBar
             TimeWeight);
         DrawDndIndicator(timeLeft + timeSize.X, rowCenterY, scale);
         StatusIcons.Draw(screen, theme, rowCenterY, island.Max.X + earGap);
+        LayerCompositor.Fade(drawList, vertexStart, Math.Clamp(alpha, 0f, 1f));
     }
 
     private static float DndWidth(float scale) =>

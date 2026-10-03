@@ -25,7 +25,7 @@ internal readonly record struct PlaybackEnding(MpvEndReason Reason, string? Deta
 internal sealed class MpvRenderer : IDisposable
 {
     private const string Library = "libmpv-2";
-    private const string RenderKey = "mpv";
+    internal const string RenderKey = "mpv";
 
     private const int FormatFlag = 3;
     private const int FormatInt64 = 4;
@@ -506,27 +506,65 @@ internal sealed class MpvRenderer : IDisposable
 
         lock (commandLock)
         {
-            if (mpvContext == IntPtr.Zero)
-            {
-                return null;
-            }
-
-            var pointer = mpv_get_property_string(mpvContext, name);
-            if (pointer == IntPtr.Zero)
-            {
-                return null;
-            }
-
-            try
-            {
-                return Marshal.PtrToStringUTF8(pointer);
-            }
-            finally
-            {
-                mpv_free(pointer);
-            }
+            return mpvContext == IntPtr.Zero ? null : ReadStringLocked(name);
         }
     }
+
+    private string? ReadStringLocked(string name)
+    {
+        var pointer = mpv_get_property_string(mpvContext, name);
+        if (pointer == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        try
+        {
+            return Marshal.PtrToStringUTF8(pointer);
+        }
+        finally
+        {
+            mpv_free(pointer);
+        }
+    }
+
+    internal MediaTrack[] ReadTracks()
+    {
+        if (!IsRunning)
+        {
+            return [];
+        }
+
+        lock (commandLock)
+        {
+            if (mpvContext == IntPtr.Zero
+                || mpv_get_property(mpvContext, "track-list/count", FormatInt64, out long count) < 0 || count <= 0)
+            {
+                return [];
+            }
+
+            var tracks = new List<MediaTrack>((int)count);
+            for (var trackIndex = 0; trackIndex < count; trackIndex++)
+            {
+                var prefix = "track-list/" + trackIndex.ToString(CultureInfo.InvariantCulture) + "/";
+                if (MediaTracks.KindOf(ReadStringLocked(prefix + "type")) is not { } kind
+                    || mpv_get_property(mpvContext, prefix + "id", FormatInt64, out long id) < 0)
+                {
+                    continue;
+                }
+
+                _ = mpv_get_property(mpvContext, prefix + "selected", FormatFlag, out int selected);
+                tracks.Add(new MediaTrack((int)id, kind, ReadStringLocked(prefix + "title") ?? string.Empty,
+                    ReadStringLocked(prefix + "lang") ?? string.Empty,
+                    ReadStringLocked(prefix + "codec") ?? string.Empty, selected == 1));
+            }
+
+            return tracks.ToArray();
+        }
+    }
+
+    internal void SelectTrack(MediaTrackKind kind, int id) =>
+        SetProperty(MediaTracks.Property(kind), id > 0 ? id.ToString(CultureInfo.InvariantCulture) : "no");
 
     internal byte[]? CopyLatestFrame(out int frameWidth, out int frameHeight)
     {

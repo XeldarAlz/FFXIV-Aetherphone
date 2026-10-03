@@ -43,8 +43,8 @@ internal sealed partial class CasinoApp : IPhoneApp
     private readonly Tables.TableDoor tableDoor;
     private readonly JackpotRail jackpotRail = new();
     private readonly GameRulesSheet rulesSheet = new();
-    private readonly BottomTabBar bottomNav = new();
-    private readonly NavTab[] navTabs = new NavTab[4];
+    private readonly TabBar bottomNav = new();
+    private readonly TabItem[] navTabs = new TabItem[4];
     private readonly AppSkin ui = new(AppPalettes.Casino);
     private readonly ViewRouter<CasinoRoute> router;
     private readonly RouterDraw<CasinoRoute> drawView;

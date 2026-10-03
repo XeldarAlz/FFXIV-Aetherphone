@@ -166,6 +166,7 @@ internal sealed partial class GamesApp
 
         var tapped = filterRail.Draw(row, ui, filterLabels, filterActive, false, "games.filters",
             ChipRail.CompactLabelPadding + 6f);
+        UiAnchors.Report("games.filters", row);
         if (tapped >= 0 && tapped != (int)filter)
         {
             filter = (LibraryFilter)tapped;
@@ -207,9 +208,7 @@ internal sealed partial class GamesApp
         var all = library.Ordered;
         DrawShelfHeading(Loc.T(L.Games.LibraryHeading), CountLabel(all.Length), left, y, width, scale);
         y += ShelfHeadingHeight * scale;
-        var gridTop = y;
         y = DrawGrid(all, left, y, width, scale);
-        UiAnchors.Report("games.library", new Rect(new Vector2(left, gridTop), new Vector2(left + width, y)));
         FinishPage(origin, width, y, scale);
     }
 
@@ -227,7 +226,9 @@ internal sealed partial class GamesApp
 
         DrawShelfHeading(Loc.T(GamesLibrary.FilterLabel(filter)), CountLabel(entries.Length), left, y, width, scale);
         y += ShelfHeadingHeight * scale;
+        var gridTop = y;
         y = DrawGrid(entries, left, y, width, scale);
+        ReportVisible("games.filtered", new Rect(new Vector2(left, gridTop), new Vector2(left + width, y)));
         FinishPage(origin, width, y, scale);
     }
 
@@ -255,6 +256,7 @@ internal sealed partial class GamesApp
     {
         var layout = MeasureFriendsCard(width, scale);
         var rect = new Rect(new Vector2(left, y), new Vector2(left + width, y + layout.Height));
+        ReportVisible("games.friends", rect);
         if (DrawFriendsCard(rect, layout, scale))
         {
             OpenOnlineHub(GameRoomWire.UnoKind);
@@ -340,6 +342,19 @@ internal sealed partial class GamesApp
 
         var rows = (entries.Length + columns - 1) / columns;
         return y + rows * (tileHeight + gap) - gap;
+    }
+
+    private static void ReportVisible(string anchorKey, Rect rect)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var top = MathF.Max(rect.Min.Y, drawList.GetClipRectMin().Y);
+        var bottom = MathF.Min(rect.Max.Y, drawList.GetClipRectMax().Y);
+        if (bottom <= top)
+        {
+            return;
+        }
+
+        UiAnchors.Report(anchorKey, new Rect(new Vector2(rect.Min.X, top), new Vector2(rect.Max.X, bottom)));
     }
 
     private static void FinishPage(Vector2 origin, float width, float bottom, float scale)

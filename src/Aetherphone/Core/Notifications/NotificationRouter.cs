@@ -2,8 +2,10 @@ using Aetherphone.Core.Announcements;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Crypto;
+using Aetherphone.Core.Feedback;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Hunts;
+using Aetherphone.Core.Jam;
 using Aetherphone.Core.Moderation;
 using Aetherphone.Core.Muster;
 using Aetherphone.Core.Radio;
@@ -28,6 +30,7 @@ internal sealed class NotificationRouter
     private const string CasinoGroupPrefix = "casino:";
     private const string AetherStreamAppId = "aetherstream";
     private const string HuntsAppId = "hunts";
+    private const string FeedbackAppId = "feedback";
     private const int TypeLike = 0;
     private const int TypeComment = 1;
     private const int TypeFollow = 2;
@@ -62,6 +65,8 @@ internal sealed class NotificationRouter
     private readonly CasinoLauncher casinoLauncher;
     private readonly AetherStreamLauncher aetherStreamLauncher;
     private readonly HuntsLauncher huntsLauncher;
+    private readonly JamLauncher jamLauncher;
+    private readonly FeedbackLauncher feedbackLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications,
         SocialNotificationService socialNotifications, LinkpearlLauncher linkpearlLauncher,
@@ -69,8 +74,11 @@ internal sealed class NotificationRouter
         MusterLauncher musterLauncher, YellowPagesLauncher yellowPagesLauncher,
         AnnouncementsLauncher announcementsLauncher, SafetyLauncher safetyLauncher,
         EncryptionSetupLauncher encryptionSetupLauncher, RadioLauncher radioLauncher,
-        CasinoLauncher casinoLauncher, AetherStreamLauncher aetherStreamLauncher, HuntsLauncher huntsLauncher)
+        CasinoLauncher casinoLauncher, AetherStreamLauncher aetherStreamLauncher, HuntsLauncher huntsLauncher,
+        JamLauncher jamLauncher, FeedbackLauncher feedbackLauncher)
     {
+        this.jamLauncher = jamLauncher;
+        this.feedbackLauncher = feedbackLauncher;
         this.radioLauncher = radioLauncher;
         this.casinoLauncher = casinoLauncher;
         this.aetherStreamLauncher = aetherStreamLauncher;
@@ -158,6 +166,10 @@ internal sealed class NotificationRouter
         {
             announcementsLauncher.RequestDetail(notification.GroupKey);
         }
+        else if (notification.AppId == MusicAppId && JamInviteNotification.TryParseCode(notification.GroupKey, out var jamCode))
+        {
+            jamLauncher.RequestLobby(jamCode);
+        }
         else if (notification.AppId == MusicAppId && notification.SocialType == TypeRadioLive
                  && !string.IsNullOrEmpty(notification.PostId))
         {
@@ -176,6 +188,11 @@ internal sealed class NotificationRouter
                  && HuntsService.TryParseGroupKey(huntsKey, out var mobId, out var worldId, out var zoneInstance))
         {
             huntsLauncher.RequestDetail(mobId, worldId, zoneInstance);
+        }
+        else if (notification.AppId == FeedbackAppId
+                 && FeedbackLauncher.TryParseGroupKey(notification.GroupKey, out var feedbackId))
+        {
+            feedbackLauncher.RequestDetail(feedbackId);
         }
         else if (notification.AppId == SettingsAppId
                  && string.Equals(notification.GroupKey, EncryptionGuide.GroupKey, StringComparison.Ordinal))

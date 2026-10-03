@@ -1,8 +1,11 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Market;
+using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -12,107 +15,106 @@ namespace Aetherphone.Apps.Market;
 
 internal sealed partial class MarketApp : IResumableApp
 {
-    private const float ScopeBarHeight = 38f;
-    private const float SearchHeight = 46f;
-    private const int MaxResults = 50;
     private const int MaxRecents = 12;
-    private const int MaxRowsPerSection = 12;
+    private const float BottomPad = 28f;
+
     public string Id => "market";
     public string DisplayName => Loc.T(L.Apps.Market);
     public string Glyph => "$";
     public int BadgeCount => alerts.TriggeredCount;
     public bool HasBadge => true;
+
     private readonly MarketboardService market;
     private readonly MarketItemIndex index;
     private readonly MarketAlertService alerts;
+    private readonly MarketWatchlist watchlist;
     private readonly MarketLauncher launcher;
     private readonly GameData gameData;
     private readonly ITextureProvider textures;
     private readonly Configuration configuration;
-    private readonly ViewRouter<MarketView?> router;
-    private readonly RouterDraw<MarketView?> drawView;
-    private readonly Action backToList;
-    private readonly List<MarketScope> scopes = new();
-    private readonly List<MarketItemRef> results = new();
-    private readonly List<MarketItemRef> sectionBuffer = new();
-    private readonly List<uint> prefetchBuffer = new();
-    private readonly List<MarketAlert> alertBuffer = new();
-    private readonly List<string> scopeLabels = new();
-    private readonly string[] alertDirLabels = new string[2];
-    private int scopeIndex = -1;
-    private bool showHq;
-    private bool autoHq;
-    private uint autoHqItemId;
-    private string search = string.Empty;
-    private string lastSearch = " ";
-    private bool lastIndexReady;
-    private uint pendingOpenId;
-    private MarketItemRef lastHovered;
-    private bool hasHovered;
-    private bool showAlertEditor;
-    private int alertThreshold = 1;
-    private bool alertBelow = true;
-    private PhoneTheme frameTheme = PhoneTheme.Default;
-    private INavigator frameNavigation = null!;
     private readonly AppSkin ui = new(AppPalettes.Market);
+    private readonly ViewRouter<MarketView> router;
+    private readonly RouterDraw<MarketView> drawView;
+    private readonly Action back;
+    private readonly List<string> scopeLabels = new();
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
+    private uint pendingOpenId;
 
     public MarketApp(MarketboardService market, MarketItemIndex index, MarketAlertService alerts,
-        MarketLauncher launcher, GameData gameData, ITextureProvider textures, Configuration configuration)
+        MarketWatchlist watchlist, MarketLauncher launcher, GameData gameData, ITextureProvider textures,
+        Configuration configuration)
     {
         this.market = market;
         this.index = index;
         this.alerts = alerts;
+        this.watchlist = watchlist;
         this.launcher = launcher;
         this.gameData = gameData;
         this.textures = textures;
         this.configuration = configuration;
-        router = new ViewRouter<MarketView?>(null);
+        router = new ViewRouter<MarketView>(MarketView.Root());
         drawView = DrawView;
-        backToList = () => router.Pop();
+        back = () => router.Pop();
     }
 
     public void OnOpened()
     {
         router.Reset();
         search = string.Empty;
-        lastSearch = " ";
-        showHq = configuration.MarketHqOnly;
-        showAlertEditor = false;
+        alertSheet.CloseImmediately();
         alerts.Acknowledge();
         index.EnsureBuilt();
-        RebuildScopes();
+        watchlist.RefreshScopes();
     }
 
     public void OnResumed()
     {
         alerts.Acknowledge();
         index.EnsureBuilt();
+        watchlist.RefreshScopes();
     }
 
     public void OnClosed()
     {
+        alertSheet.CloseImmediately();
     }
 
-    private void RebuildScopes()
-    {
-        MarketScopes.Build(scopes, gameData);
-        scopeIndex = MarketScopes.IndexOfKind(scopes, configuration.MarketScope);
-    }
-
-    private MarketScope CurrentScope =>
-        scopeIndex >= 0 && scopeIndex < scopes.Count ? scopes[scopeIndex] : MarketScope.None;
+    private MarketScope Scope => watchlist.Scope;
 
     public void Draw(in PhoneContext context)
     {
         index.EnsureBuilt();
-        if (scopes.Count == 0)
+        if (watchlist.Scopes.Count == 0)
         {
-            RebuildScopes();
+            watchlist.RefreshScopes();
         }
 
-        frameTheme = context.Theme;
-        frameNavigation = context.Navigation;
-        ui.Theme = frameTheme;
+        theme = context.Theme;
+        navigation = context.Navigation;
+        ui.Theme = theme;
+        ConsumeLaunch();
+        var scale = UiScale.Current;
+        var screen = SceneChrome.ScreenFrom(context.Content, theme, scale);
+        ui.Backdrop(screen);
+        using (InputShield.Engage(alertSheet.CapturesPointer))
+        {
+            router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        }
+
+        DrawAlertSheet(screen);
+        if (router.Depth > 1)
+        {
+            TourHolds.Hold(Id);
+        }
+        else
+        {
+            TourHolds.Release(Id);
+        }
+    }
+
+    private void ConsumeLaunch()
+    {
         if (launcher.TryConsume(out var requestedItem, out var requestedSearch))
         {
             if (requestedItem != 0)
@@ -122,64 +124,74 @@ internal sealed partial class MarketApp : IResumableApp
             else if (requestedSearch is not null)
             {
                 router.Reset();
+                alertSheet.CloseImmediately();
                 search = requestedSearch;
-                lastSearch = "\x0001";
+                lastSearch = "\u0001";
             }
         }
 
-        if (pendingOpenId != 0 && index.Ready)
-        {
-            if (index.TryGet(pendingOpenId, out var pending))
-            {
-                router.Reset();
-                OpenItem(pending);
-            }
-
-            pendingOpenId = 0;
-        }
-
-        var screen = SceneChrome.ScreenFrom(context.Content, frameTheme, UiScale.Current);
-        ui.Backdrop(screen);
-        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
-    }
-
-    private void DrawView(MarketView? view, Rect area, int depth)
-    {
-        ui.Body(area);
-        if (view is { } item)
-        {
-            DrawDetail(area, item);
-        }
-        else
-        {
-            DrawRoot(area);
-        }
-    }
-
-    private void DrawBrandedScopeBar(Rect bar)
-    {
-        if (scopes.Count == 0)
+        if (pendingOpenId == 0 || !index.Ready)
         {
             return;
         }
 
-        scopeLabels.Clear();
-        for (var scopeIdx = 0; scopeIdx < scopes.Count; scopeIdx++)
+        if (index.TryGet(pendingOpenId, out var pending))
         {
-            scopeLabels.Add(MarketFormat.Clip(scopes[scopeIdx].ApiName, 11));
+            router.Reset();
+            alertSheet.CloseImmediately();
+            OpenItem(pending, false);
         }
 
-        var newIndex = SegmentStrip.Draw("market.scope", bar, scopeLabels, scopeIndex, AppPalettes.Market);
-        if (newIndex != scopeIndex && newIndex >= 0)
+        pendingOpenId = 0;
+    }
+
+    private void DrawView(MarketView view, Rect area, int depth)
+    {
+        ui.Body(area);
+        switch (view.Kind)
         {
-            SetScope(newIndex);
+            case MarketViewKind.Item:
+                DrawDetail(area, view);
+                break;
+            case MarketViewKind.Listings:
+                DrawListingsPage(area, view);
+                break;
+            case MarketViewKind.Sales:
+                DrawSalesPage(area, view);
+                break;
+            case MarketViewKind.Alerts:
+                DrawAlertsPage(area);
+                break;
+            default:
+                DrawRoot(area);
+                break;
         }
     }
 
-    private void OpenItem(MarketItemRef item)
+    private void OpenItem(MarketItemRef item, bool sound = true)
     {
+        if (sound)
+        {
+            UiFeedback.Play(UiSound.Tap);
+        }
+
         PushRecent(item.Id);
-        router.Push(new MarketView(item.Id, item.Name, item.IconId));
+        PrimeDetail();
+        router.Push(MarketView.Item(item.Id, item.Name, item.IconId));
+    }
+
+    private void OpenItem(uint itemId)
+    {
+        if (index.TryGet(itemId, out var item))
+        {
+            OpenItem(item);
+        }
+    }
+
+    private void Push(MarketView view)
+    {
+        UiFeedback.Play(UiSound.Tap);
+        router.Push(view);
     }
 
     private void PushRecent(uint id)
@@ -195,11 +207,72 @@ internal sealed partial class MarketApp : IResumableApp
         configuration.Save();
     }
 
-    private void SetScope(int newIndex)
+    private float DrawScopeStrip(Vector2 origin, float width, string? anchor, float scale)
     {
-        scopeIndex = newIndex;
-        configuration.MarketScope = scopes[newIndex].Kind;
-        configuration.Save();
+        var scopes = watchlist.Scopes;
+        if (scopes.Count == 0)
+        {
+            return origin.Y;
+        }
+
+        scopeLabels.Clear();
+        for (var scopeIndex = 0; scopeIndex < scopes.Count; scopeIndex++)
+        {
+            scopeLabels.Add(scopes[scopeIndex].ApiName);
+        }
+
+        var row = new Rect(origin, new Vector2(origin.X + width, origin.Y + ScopeStripHeight * scale));
+        if (anchor is not null)
+        {
+            UiAnchors.Report(anchor, row);
+        }
+
+        var current = watchlist.ScopeIndex;
+        var selected = SegmentStrip.Draw(anchor ?? "market.scope.root", row, scopeLabels, current, ui.Palette);
+        if (selected != current && selected >= 0)
+        {
+            UiFeedback.Play(UiSound.Tap);
+            watchlist.SetScope(selected);
+        }
+
+        return row.Max.Y;
+    }
+
+    private static void ReserveTo(Vector2 origin, float width, float bottom)
+    {
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, MathF.Max(0f, bottom - origin.Y)));
+    }
+
+    private float DrawSectionTitle(ImDrawListPtr drawList, Vector2 origin, float width, string title,
+        string trailing, out bool trailingClicked, float scale)
+    {
+        trailingClicked = false;
+        var reserve = trailing.Length > 0
+            ? Typography.Measure(trailing, TextStyles.Body).X + MarketArt.ValueGap * scale
+            : 0f;
+        var height = MarketArt.SectionHeader(drawList, origin, width, title, ui.TitleInk, reserve, scale);
+        if (trailing.Length == 0)
+        {
+            return height;
+        }
+
+        var size = Typography.Measure(trailing, TextStyles.Body);
+        var tapHeight = MathF.Max(height, Metrics.Size.TapTarget * scale);
+        var hitMin = new Vector2(origin.X + width - size.X - MarketArt.ValueGap * scale,
+            origin.Y + (height - tapHeight) * 0.5f);
+        var hitMax = new Vector2(origin.X + width, hitMin.Y + tapHeight);
+        var hovered = UiInteract.Hover(hitMin, hitMax);
+        var ink = hovered ? Palette.Lighten(ui.Accent, 0.15f) : ui.Accent;
+        Typography.Draw(drawList, new Vector2(origin.X + width - size.X, origin.Y + (height - size.Y) * 0.5f),
+            trailing, ink, TextStyles.Body);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        trailingClicked = UiInteract.Click(hitMin, hitMax, hovered);
+        return height;
     }
 
     public void Dispose()

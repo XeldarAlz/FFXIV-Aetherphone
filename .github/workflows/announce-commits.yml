@@ -12,7 +12,9 @@ jobs:
       - name: Post commits to Discord
         env:
           WEBHOOK_URL: ${{ secrets.COMMITS_WEBHOOK_URL }}
-          ICON: https://raw.githubusercontent.com/XeldarAlz/FFXIV-Aetherphone/dev/src/Aetherphone/Images/Icon.png
+          # Pinned to the pushed commit: Discord's image proxy caches by URL, so a
+          # branch URL keeps serving the old icon long after Emblem.png changes.
+          ICON: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/src/Aetherphone/Images/Emblem.png
         run: |
           set -euo pipefail
           if [ -z "${WEBHOOK_URL:-}" ]; then
@@ -22,41 +24,72 @@ jobs:
 
           # release.yml and update-issue-template-versions.yml push their bumps
           # with a PAT, and PAT pushes do cascade-trigger this workflow, so drop
-          # the bot's own commits instead of announcing them.
-          count=$(jq '[.commits[] | select(.author.name != "github-actions[bot]")] | length' "$GITHUB_EVENT_PATH")
+          # the bot's own commits instead of announcing them. Merge commits only
+          # repeat what the merged commits already say.
+          human='def human: [.commits[] | select(.author.name != "github-actions[bot]") | select(.message | startswith("Merge ") | not)];'
+
+          count=$(jq "$human human | length" "$GITHUB_EVENT_PATH")
           if [ "$count" -eq 0 ]; then
-            echo 'No human commits in this push (bot bump, branch delete, or force push); skipping.'
+            echo 'No human, non-merge commits in this push (bot bump, merge only, branch delete, or force push); skipping.'
             exit 0
           fi
 
-          jq -n --arg icon "$ICON" --slurpfile e "$GITHUB_EVENT_PATH" '
-            $e[0] as $ev
-            | ($ev.commits | map(select(.author.name != "github-actions[bot]"))) as $human
+          jq --arg icon "$ICON" "$human"'
+            def kinds: {
+              feat:     {rank: 0, emoji: "✨", color: 9262307},
+              fix:      {rank: 1, emoji: "🐛", color: 15105570},
+              perf:     {rank: 2, emoji: "⚡", color: 16766720},
+              refactor: {rank: 3, emoji: "♻️", color: 5793266},
+              style:    {rank: 4, emoji: "🎨", color: 5793266},
+              docs:     {rank: 5, emoji: "📝", color: 5793266},
+              test:     {rank: 6, emoji: "🧪", color: 5793266},
+              ci:       {rank: 7, emoji: "👷", color: 5793266},
+              build:    {rank: 7, emoji: "📦", color: 5793266},
+              chore:    {rank: 8, emoji: "🔧", color: 5793266},
+              revert:   {rank: 8, emoji: "⏪", color: 5793266}
+            };
+            def other: {rank: 9, emoji: "🔹", color: 5793266};
+            def clean: gsub("—"; "-") | gsub("–"; "-");
+            def capitalized: (.[:1] | ascii_upcase) + .[1:];
+            def plural($word): (. | tostring) + " " + $word + (if . == 1 then "" else "s" end);
+
+            . as $ev
+            | human as $commits
             | ($ev.ref | sub("^refs/heads/"; "")) as $branch
-            | ($human | length) as $total
-            | ($human[:10] | map(
-                "[`" + .id[:7] + "`](" + .url + ") "
-                + (.message | split("\n")[0] | gsub("—"; "-") | gsub("–"; "-") | .[:120])
-                + " - " + .author.name
-              )) as $lines
-            | (if $total > 10
-                 then $lines + ["... and " + (($total - 10) | tostring) + " more"]
-                 else $lines
-               end) as $lines
+            | ($commits | length) as $total
+            | ($commits | map(.author.name) | unique | length) as $authorCount
+            | ($commits | map(
+                (.message | split("\n")[0] | clean) as $subject
+                | ([$subject | capture("^(?<type>[a-z]+)([(](?<scope>[^)]*)[)])?!?: (?<summary>.+)$")][0]
+                   // {type: "", scope: null, summary: $subject}) as $parsed
+                | (kinds[$parsed.type] // other) as $kind
+                | {
+                    kind: $kind,
+                    line: ($kind.emoji + " "
+                      + (if ($parsed.scope // "") != "" then "**" + $parsed.scope + "** " else "" end)
+                      + ($parsed.summary | capitalized | .[:110])
+                      + " · [`" + .id[:7] + "`](" + .url + ")"
+                      + (if $authorCount > 1 then " by " + .author.name else "" end))
+                  }
+              ) | sort_by(.kind.rank)) as $entries
+            | ($entries[:12] | map(.line)) as $lines
+            | (if $total > 12 then $lines + ["*... and " + (($total - 12) | tostring) + " more*"] else $lines end) as $lines
+            | ([$commits[] | (.added // []) + (.modified // []) + (.removed // []) | .[]] | unique | length) as $files
             | {
                 username: "Aetherphone",
                 avatar_url: $icon,
                 embeds: [{
-                  author: { name: "Aetherphone", url: $ev.repository.html_url, icon_url: $icon },
-                  title: ((if $total == 1 then "1 new commit" else (($total | tostring) + " new commits") end) + " on " + $branch),
-                  url: (if $total == 1 then ($human[0].url) else $ev.compare end),
+                  author: { name: $ev.sender.login, url: $ev.sender.html_url, icon_url: $ev.sender.avatar_url },
+                  title: (($total | plural("new commit")) + " on " + $branch),
+                  url: (if $total == 1 then $commits[0].url else $ev.compare end),
                   description: ($lines | join("\n")),
-                  color: 5814783,
-                  footer: { text: "Aetherphone", icon_url: $icon },
-                  timestamp: ($human | last | .timestamp)
+                  color: $entries[0].kind.color,
+                  thumbnail: { url: $icon },
+                  footer: { text: ("Aetherphone" + (if $files > 0 then " · " + ($files | plural("file")) + " changed" else "" end)), icon_url: $icon },
+                  timestamp: ($commits | last | .timestamp)
                 }]
               }
-          ' > payload.json
+          ' "$GITHUB_EVENT_PATH" > payload.json
 
           curl -fsS -H 'Content-Type: application/json; charset=utf-8' -d @payload.json "$WEBHOOK_URL" > /dev/null
           echo "Announced $count commit(s) to Discord."

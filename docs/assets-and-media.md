@@ -26,7 +26,8 @@ All bundled assets ship inside the plugin output folder. `src/Aetherphone/Aether
 | src/Aetherphone/Windows/Components/AppIconArt.cs | Procedural fallback art for the mini-games |
 | tools/icon-generator/ | Regenerates icon PNGs from Tabler Icons |
 | src/Aetherphone/Images/ | Plugin installer icon and repo screenshots, not runtime UI art |
-| src/Aetherphone/Sounds/ | Bundled ringtones and notification sounds, with its own README |
+| src/Aetherphone/Sounds/ | Bundled ringtones, notification, interface and game sounds, with its own README |
+| tools/sound-generator/ | Rebuilds every bundled sound: synthesis, pinned downloads, trim and loudness |
 | src/Aetherphone/Core/Notifications/SoundLibrary.cs | Discovers bundled plus user-imported sound files per kind |
 | src/Aetherphone/Wallpapers/ | Built-in wallpapers, shipped as Light/Dark pairs |
 | src/Aetherphone/Core/Wallpapers/WallpaperLibrary.cs | Discovery, custom imports, brightness analysis, theme darkness |
@@ -146,7 +147,7 @@ Nothing in Apps or Windows loads from this folder. UI imagery is either drawn pr
 
 ## Sounds
 
-Bundled audio lives in src/Aetherphone/Sounds/ in two kind-specific folders, and src/Aetherphone/Sounds/README.md is the authoritative checklist for editing them:
+Bundled audio lives in src/Aetherphone/Sounds/, and src/Aetherphone/Sounds/README.md is the authoritative checklist for editing it. Every bundled clip is rebuilt by `tools/sound-generator/generate-sounds.py` (see its README): it synthesizes the original clips, downloads the third-party ones from pinned sources, and trims, fades and loudness-normalizes everything. `Ui/` and `Games/` hold the interface and mini-game clips wired by name in `UiSoundCatalog` (src/Aetherphone/Core/Notifications/UiSound.cs). The two picker folders are kind-specific:
 
 - `Ringtones/` plays on incoming calls, looping until answered or missed.
 - `Notifications/` plays once per notification, including per-app sound overrides.
@@ -156,20 +157,22 @@ Bundled audio lives in src/Aetherphone/Sounds/ in two kind-specific folders, and
 - Bundled: `<plugin output>/Sounds/Ringtones` or `.../Notifications`.
 - User: `<Dalamud config dir>/Sounds/Ringtones` or `.../Notifications`, filled by the Settings "Import from PC" flow. `SoundService.AddUserFile` is a one-line forward to `SoundLibrary.AddUserFile`, which copies the picked file in. Imported files are per-user and never bundled.
 
-`SoundLibrary.Refresh` lists `*.mp3` and `*.wav` from both roots, each root sorted by file name with bundled files first; a user file that reuses a bundled name appears once in the list but shadows the bundled file at playback (`TryResolvePath` checks the user root first). A Silent option is appended. Saved choices are tokens from `SoundTokens`: `file:<name>.mp3` or `silent`. When a saved token no longer resolves, `Resolve` falls back to the first bundled file alphabetically. Fresh installs default to `SoundLibrary.BundledRingtoneToken` (`Ringtone_1.mp3`) and `SoundLibrary.BundledNotificationToken` (`Notification_1.mp3`), so those constants must be renamed together with the files. Display names are derived from file names by `SoundLibrary.PrettyFileName` (`soft_bell.mp3` shows as "soft bell"). Playback goes through `SoundEffectPlayer`, which dispatches by file extension: `.wav` opens with NAudio's `WaveFileReader` and `.mp3` with NLayer's managed decoder, both Wine-safe; any other extension (or a file the managed reader rejects) falls back to `MediaFoundationReader` (Windows Media Foundation). Stick to .mp3 and .wav so playback stays on the managed decoders; src/Aetherphone/Sounds/README.md covers the details.
+`SoundLibrary.Refresh` lists `*.mp3` and `*.wav` from both roots, each root sorted by file name with bundled files first; a user file that reuses a bundled name appears once in the list but shadows the bundled file at playback (`TryResolvePath` checks the user root first). A Silent option is appended. Saved choices are tokens from `SoundTokens`: `file:<name>.mp3` or `silent`. When a saved token no longer resolves, `Resolve` falls back to the first bundled file alphabetically. Fresh installs default to `SoundLibrary.BundledRingtoneToken` (`Signal.mp3`) and `SoundLibrary.BundledNotificationToken` (`Chime.mp3`), so those constants must be renamed together with the files. Removed bundled files stay listed in `RetiredSounds` (src/Aetherphone/Core/Notifications/RetiredSounds.cs) with a replacement, and `Configuration.MigrateRetiredSounds` rewrites saved choices, per-app overrides included, on load. Display names are derived from file names by `SoundLibrary.PrettyFileName` (`soft_bell.mp3` shows as "soft bell"). Playback goes through `SoundEffectPlayer`, which dispatches by file extension: `.wav` opens with NAudio's `WaveFileReader` and `.mp3` with NLayer's managed decoder, both Wine-safe; any other extension (or a file the managed reader rejects) falls back to `MediaFoundationReader` (Windows Media Foundation). Stick to .mp3 and .wav so playback stays on the managed decoders; src/Aetherphone/Sounds/README.md covers the details.
 
 ### To add a bundled sound
 
-1. Drop the file into src/Aetherphone/Sounds/Ringtones/ or src/Aetherphone/Sounds/Notifications/ depending on which picker should list it. Keep ringtones seamless; they loop.
+1. Add the file to `RINGTONES` or `NOTIFICATIONS` in tools/sound-generator/generate-sounds.py and run the generator, which writes it into src/Aetherphone/Sounds/Ringtones/ or src/Aetherphone/Sounds/Notifications/ depending on which picker should list it. Keep ringtones seamless; they loop.
 2. Name it for display: underscores and hyphens become spaces.
 3. Confirm you have distribution rights and add attribution to THIRD-PARTY-NOTICES.md if required.
 4. Rebuild; the csproj glob `Sounds\**\*.mp3;Sounds\**\*.wav` ships it and `SoundLibrary` discovers it with no code change, unless you renamed a default token file.
 
 ## Wallpapers
 
-Built-in wallpapers are the image files in src/Aetherphone/Wallpapers/, shipped as Light/Dark pairs (`DuskLight.jpg` and `DuskDark.jpg`, and so on). `WallpaperLibrary.DiscoverBuiltIns` (src/Aetherphone/Core/Wallpapers/WallpaperLibrary.cs) lists `*.png`, `*.jpg`, `*.jpeg`, and `*.bmp` and uses the file name without extension as the wallpaper id, so the pairing is a naming convention, not code: the user picks one wallpaper for Light appearance and one for Dark in Settings, stored as `Configuration.LightWallpaperId` and `Configuration.DarkWallpaperId` (defaults `DuskLight` and `DuskDark`).
+Built-in wallpapers are the image files in src/Aetherphone/Wallpapers/, shipped as Light/Dark pairs (`BloomLight.jpg` and `BloomDark.jpg`, and so on). `WallpaperLibrary.DiscoverBuiltIns` (src/Aetherphone/Core/Wallpapers/WallpaperLibrary.cs) lists `*.png`, `*.jpg`, `*.jpeg`, and `*.bmp` and uses the file name without extension as the wallpaper id, so the pairing is a naming convention, not code: the user picks one wallpaper for Light appearance and one for Dark in Settings, stored as `Configuration.LightWallpaperId` and `Configuration.DarkWallpaperId` (defaults `BuiltInWallpapers.DefaultLightId` and `DefaultDarkId`, Bloom). Removed pairs stay listed in `BuiltInWallpapers` (src/Aetherphone/Core/Wallpapers/BuiltInWallpapers.cs) with a replacement, and `Configuration.MigrateRetiredWallpapers` rewrites saved ids, Looks included, on load.
 
 Users can also import their own: `WallpaperLibrary.AddCustom` copies the picked image into `<Dalamud config dir>/Wallpapers/` under a generated `custom-` id and stores a `WallpaperCrop` (zoom plus center) in `Configuration.CustomWallpapers`.
+
+Textures are sized to the draw, not the file. `WallpaperLibrary.TryGetTexture(path, drawnExtent, ...)` picks a level from a 640, 1280, 2560 and native ladder by the larger drawn dimension and decodes that level on demand (`ImageProcessor.DecodeToTextureAsync` with a `maxDimension`), serving the nearest resident level while a better one loads, so Dalamud's mip-less sampler never minifies past about 2:1. Each wallpaper also bakes one 320 px wide blurred and saturated copy (`TryGetBlurred`); `WallpaperRenderer.Draw` records that copy's screen mapping in `WallpaperBackdrop` every frame the home screen paints, and `Material.LiquidGlass` samples it through any squircle to draw the dock, widgets, folders and home sheets as glass.
 
 ### Theme darkness and the light/dark crossfade
 
@@ -184,7 +187,7 @@ Wallpaper luminance is a separate coupling, for legibility rather than theme cho
 
 ### To add a built-in wallpaper
 
-1. Add a Light/Dark pair to src/Aetherphone/Wallpapers/, named `<Name>Light.<ext>` and `<Name>Dark.<ext>` to match the existing convention. Ids are the file name stems, so choose them as final.
+1. Add a Light/Dark pair to src/Aetherphone/Wallpapers/, named `<Name>Light.<ext>` and `<Name>Dark.<ext>` to match the existing convention. Ids are the file name stems, so choose them as final; to remove a pair, add its ids to `BuiltInWallpapers` with a replacement. The set (Bloom, Crystal, Current, Ember, Frost, Grove, Prism, Sunset) is rendered by tools/wallpaper-generator/generate-wallpapers.py; add a palette entry there rather than hand-painting a sibling.
 2. Rebuild. The csproj glob ships them and discovery lists them in the Settings wallpaper picker automatically; there are no per-wallpaper localization keys.
 3. Check both appearance cards in Settings > Wallpaper, and check the home screen scrim on the brighter of the pair.
 
@@ -213,7 +216,7 @@ The artwork itself (canvas size, the 38 px metal band, the 250 px overflow margi
 - **App icons are stencils.** `AppIconTextures.TryDraw` multiplies the whole PNG by the caller's ink tint, so only white-on-transparent art tints correctly; painted color survives the multiply and clashes with the themed ink instead of being restyled. Shape must live in the alpha channel; see section 1 of [the art asset spec](ART-ASSET-SPEC.md).
 - **The emoji generator skips existing PNGs.** Re-running with the same pinned versions only rewrites catalog.json. If upstream Twemoji redrew an image, delete the local PNG or the stale art ships forever.
 - **catalog.json and the PNG set must move together.** `EmojiCatalog` resolves `file` names against the folder with no validation pass; a catalog entry without its PNG draws nothing (`EmojiImages.TryDraw` returns false).
-- **Sound default tokens are file names.** `SoundLibrary.BundledRingtoneToken` and `BundledNotificationToken` embed `Ringtone_1.mp3` and `Notification_1.mp3`. Renaming those files without updating the constants silently shifts every fresh install to the alphabetically first file.
+- **Sound default tokens are file names.** `SoundLibrary.BundledRingtoneToken` and `BundledNotificationToken` embed `Signal.mp3` and `Chime.mp3`. Renaming those files without updating the constants silently shifts every fresh install to the alphabetically first file.
 - **Wallpaper and case ids are persisted config values.** A built-in wallpaper's id is its file name stem, and `CaseId` is both the saved setting and the localization key suffix. Renaming either after release resets or breaks every user who selected it (`ThemeCatalog.IndexOf` and `WallpaperLibrary.Resolve` both fall back to the first entry on a miss).
 - **Icon and case texture paths are cached in static dictionaries.** `AppIconTextures` and `PhoneCaseTextures` cache resolved paths for the plugin's lifetime, and `PhoneCaseTextures` caches misses too, so case art that was requested while missing is never re-checked until reload (icon misses are re-checked each draw). Rebuild and reload after adding assets.
 - **Assets load from the build output, not the repo.** Every loader resolves against `AssemblyLocation.DirectoryName`. Editing a file under src/Aetherphone/ does nothing for a running dev plugin until you rebuild so the csproj copies it.

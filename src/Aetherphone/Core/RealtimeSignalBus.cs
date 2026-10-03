@@ -51,9 +51,11 @@ internal sealed class RealtimeSignalBus
     public event Action? MusterPinged;
     public event Action? AnnouncementsPinged;
     public event Action? PollsPinged;
+    public event Action? FeedbackPinged;
     public event Action<ContentRemovalSignal>? ContentRemoved;
     public event Action<CasinoSignal>? CasinoReceived;
     public event Action<GameSignal>? GameReceived;
+    public event Action<CallControl>? RadioReceived;
     public event Action<bool>? ConnectedChanged;
 
     public bool RealtimeActive => realtimeActive;
@@ -124,6 +126,11 @@ internal sealed class RealtimeSignalBus
         PollsPinged?.Invoke();
     }
 
+    public void PublishFeedback()
+    {
+        FeedbackPinged?.Invoke();
+    }
+
     public void PublishContentRemoved(ContentRemovalSignal removal)
     {
         ContentRemoved?.Invoke(removal);
@@ -137,6 +144,11 @@ internal sealed class RealtimeSignalBus
     public void PublishGame(GameSignal signal)
     {
         GameReceived?.Invoke(signal);
+    }
+
+    public void PublishRadio(CallControl signal)
+    {
+        RadioReceived?.Invoke(signal);
     }
 
     public void BindSender(Action<CallControl>? sender)

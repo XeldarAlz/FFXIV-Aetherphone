@@ -23,8 +23,9 @@ internal sealed partial class SetupOverlay : IDisposable
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground;
 
-    private const float SlideSeconds = 0.5f;
-    private const float ExitSeconds = 0.7f;
+    private const float SlideLiveThreshold = 0.9f;
+    private const float SlideSettledEpsilon = 0.002f;
+    private const float ExitSeconds = 0.9f;
     private const int DisplayNameMax = 32;
     private const int HandleMax = 15;
 
@@ -61,10 +62,13 @@ internal sealed partial class SetupOverlay : IDisposable
 
     private SetupPage page = SetupPage.Welcome;
     private SetupPage fromPage = SetupPage.Welcome;
-    private float slideClock = SlideSeconds;
+    private Spring pageSlide = new(1f);
     private int slideDirection = 1;
     private bool exiting;
     private float exitClock;
+    private float exitProgress;
+    private float pageAge;
+    private bool drawingCurrent;
 
     private string displayNameDraft = string.Empty;
     private string handleDraft = string.Empty;
@@ -118,8 +122,13 @@ internal sealed partial class SetupOverlay : IDisposable
         }
 
         ConsumeOutcomes();
-        slideClock = MathF.Min(slideClock + delta, SlideSeconds);
-        var exitProgress = 0f;
+        pageSlide.Step(1f, Motion.PageSettle, delta);
+        if (interactive || exiting)
+        {
+            pageAge += delta;
+        }
+
+        exitProgress = 0f;
         if (exiting)
         {
             exitClock += delta;
@@ -132,20 +141,23 @@ internal sealed partial class SetupOverlay : IDisposable
         }
 
         var theme = themes.Current;
+        var darkness = Plugin.Wallpapers.ThemeDarkness;
+        ResolveInk(darkness);
         var scale = UiScale.Current;
         var rounding = theme.ScreenRounding * scale;
-        var backdropAlpha = 1f - Easing.EaseOutCubic(exitProgress);
-        var contentAlpha = 1f - Easing.Clamp01(exitProgress * 1.8f);
+        var backdropAlpha = 1f - exitProgress;
+        var contentAlpha = 1f - Easing.Clamp01((exitProgress - 0.25f) * 2.2f);
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##setupOverlay", screen.Size, false, OverlayFlags))
         {
             var drawList = ImGui.GetWindowDrawList();
-            DrawBackdrop(drawList, screen, theme, backdropAlpha, rounding);
-            var slide = Easing.EaseOutQuint(Easing.Clamp01(slideClock / SlideSeconds));
-            var live = interactive && !exiting && slide >= 0.99f;
-            if (slide < 1f && fromPage != page)
+            DrawBackdrop(drawList, screen, backdropAlpha, rounding, darkness);
+            var slide = Math.Clamp(pageSlide.Value, 0f, 1f);
+            var live = interactive && !exiting && slide >= SlideLiveThreshold;
+            if (slide < 1f - SlideSettledEpsilon && fromPage != page)
             {
                 var exitOffset = new Vector2(-slideDirection * screen.Width * 0.3f * slide, 0f);
+                drawingCurrent = false;
                 using (Typography.WrapOffset(exitOffset.X))
                 {
                     DrawPage(fromPage, screen, theme, exitOffset, (1f - slide) * contentAlpha, false);
@@ -153,12 +165,13 @@ internal sealed partial class SetupOverlay : IDisposable
             }
 
             var enterOffset = new Vector2(slideDirection * screen.Width * (1f - slide), 0f);
+            drawingCurrent = true;
             using (Typography.WrapOffset(enterOffset.X))
             {
                 DrawPage(page, screen, theme, enterOffset, MathF.Min(slide + 0.35f, 1f) * contentAlpha, live);
             }
 
-            DrawBackButton(drawList, screen, theme, contentAlpha, live);
+            DrawBackButton(drawList, screen, contentAlpha, live);
         }
     }
 
@@ -262,7 +275,8 @@ internal sealed partial class SetupOverlay : IDisposable
         fromPage = page;
         page = target;
         slideDirection = direction;
-        slideClock = 0f;
+        pageSlide.SnapTo(0f);
+        pageAge = 0f;
     }
 
     private void Complete()

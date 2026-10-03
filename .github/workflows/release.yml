@@ -122,8 +122,11 @@ jobs:
             exit 0
           }
 
-          $icon        = 'https://raw.githubusercontent.com/XeldarAlz/FFXIV-Aetherphone/master/src/Aetherphone/Images/Icon.png'
-          $relList     = "https://github.com/$($env:GH_REPO)/releases"
+          # Pinned to the released commit: Discord's image proxy caches by URL, so
+          # a branch URL keeps serving the old icon long after Emblem.png changes.
+          $icon        = "https://raw.githubusercontent.com/$($env:GH_REPO)/$($env:GITHUB_SHA)/src/Aetherphone/Images/Emblem.png"
+          $repoUrl     = "https://github.com/$($env:GH_REPO)"
+          $relList     = "$repoUrl/releases"
           $manifestUrl = 'https://aetherphone.net/repo.json'
 
           $rel = gh release view $env:TAG --json name,tagName,url,isPrerelease,publishedAt | ConvertFrom-Json
@@ -142,13 +145,14 @@ jobs:
           }
 
           $isPre   = [bool]$rel.isPrerelease
-          $content = if ($isPre) { '🧪 **New preview build just dropped!**' } else { '🚀 **New version dropped!**' }
+          $content = if ($isPre) { "🧪 **Aetherphone $($env:VERSION) preview is out!**" } else { "🚀 **Aetherphone $($env:VERSION) is out!**" }
           $pingRole = $env:PING_ROLE_ID
           if (-not [string]::IsNullOrWhiteSpace($pingRole)) {
             $content = "<@&$pingRole> $content"
           }
-          $color   = if ($isPre) { 10197915 } else { 9132790 }
-          $channel = if ($isPre) { 'Preview' } else { 'Stable' }
+          $color   = if ($isPre) { 4173386 } else { 9262307 }
+          $channel = if ($isPre) { '🧪 Preview' } else { '💎 Stable' }
+          $released = [DateTimeOffset]::Parse($rel.publishedAt, [Globalization.CultureInfo]::InvariantCulture).ToUnixTimeSeconds()
 
           # One row of three, then the wide install field. Discord caps a field
           # value at 1024 characters and the whole embed at 6000.
@@ -157,7 +161,8 @@ jobs:
             [ordered]@{ name = 'Channel'; value = $channel; inline = $true }
           )
           if (-not [string]::IsNullOrWhiteSpace($env:DOWNLOADS)) {
-            $fields += [ordered]@{ name = 'Total installs'; value = "$($env:DOWNLOADS)"; inline = $true }
+            $installs = ([long]$env:DOWNLOADS).ToString('N0', [Globalization.CultureInfo]::InvariantCulture)
+            $fields += [ordered]@{ name = 'Installs'; value = "📥 $installs"; inline = $true }
           }
 
           $install = @(
@@ -167,11 +172,18 @@ jobs:
             $manifestUrl
             '```'
           ) -join "`n"
-          $fields += [ordered]@{ name = 'Get it'; value = $install; inline = $false }
+          $fields += [ordered]@{ name = '📲 Get it'; value = $install; inline = $false }
 
-          $description = 'Fresh off the press and on its way to your phone.'
+          $links = @(
+            "[Release notes]($($rel.url))"
+            "[Report a bug]($repoUrl/issues/new/choose)"
+            "[Suggest a feature]($repoUrl/discussions)"
+          ) -join ' · '
+          $fields += [ordered]@{ name = '🔗 Links'; value = $links; inline = $false }
+
+          $description = "Fresh off the press and on its way to your phone, released <t:$($released):R>."
           if ($pages.Count -gt 0) {
-            $description += "`n`n__**Changelog for $($env:VERSION)**__`n`n" + $pages[0]
+            $description += "`n`n## 📋 What's new`n" + $pages[0]
           }
 
           function Send-Payload($payload) {

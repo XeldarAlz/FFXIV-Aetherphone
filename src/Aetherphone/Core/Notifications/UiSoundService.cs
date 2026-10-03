@@ -48,7 +48,17 @@ internal sealed class UiSoundService : IDisposable
         var files = entry.Files;
         var cursor = variantCursor[index];
         variantCursor[index] = (cursor + 1) % files.Length;
-        player.Play(files[cursor], volume);
+        player.Play(files[cursor], volume, PlaybackRate(entry.PitchVariance));
+    }
+
+    private static float PlaybackRate(float variance)
+    {
+        if (variance <= 0f)
+        {
+            return 1f;
+        }
+
+        return 1f + (Random.Shared.NextSingle() * 2f - 1f) * variance;
     }
 
     public void Maintain() => player.CloseIfIdle();

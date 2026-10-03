@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -279,6 +280,12 @@ internal sealed partial class PhotosApp
         }
 
         y += rowHeight;
+        var trashRow = new Rect(new Vector2(left, y), new Vector2(right, y + rowHeight));
+        if (UiAnchors.Recording && ImGui.IsRectVisible(trashRow.Min, trashRow.Max))
+        {
+            UiAnchors.Report("photos.albums.trash", trashRow);
+        }
+
         if (DrawCollectionRow(drawList, left, right, y, rowHeight, PhoneIcons.Trash, Ink.MutedInk,
                 Loc.T(L.Photos.RecentlyDeleted), trashPaths.Length, false, scale))
         {

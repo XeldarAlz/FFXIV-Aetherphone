@@ -8,7 +8,8 @@ namespace Aetherphone.Core.Radio;
 internal interface IStreamDecoder : IDisposable
 {
     /// Valid only once Read has returned a positive count, since the format is discovered from the
-    /// first frame on the wire rather than announced up front.
+    /// first frame on the wire rather than announced up front. A chained Ogg stream or an HE-AAC
+    /// renegotiation can change it later, so the player compares it after every read.
     WaveFormat? WaveFormat { get; }
 
     /// Decodes at most one frame into the buffer. Returns 0 when the stream has ended, which the
@@ -18,26 +19,18 @@ internal interface IStreamDecoder : IDisposable
 
 internal static class StreamDecoders
 {
-    /// What the server says beats what a directory claims, since the codec column describes the
-    /// station and the content type describes the bytes actually arriving.
     public static IStreamDecoder Create(string? contentType, string? declaredCodec, Stream source)
     {
-        return IsAac(contentType, declaredCodec) ? new AacStreamDecoder(source) : new Mp3StreamDecoder(source);
+        return Create(StreamSniffer.Detect(contentType, declaredCodec, ReadOnlySpan<byte>.Empty), source, null);
     }
 
-    private static bool IsAac(string? contentType, string? declaredCodec)
+    public static IStreamDecoder Create(StreamCodec codec, Stream source, Action<string>? onTitle)
     {
-        var type = (contentType ?? string.Empty).ToLowerInvariant();
-        if (type.Contains("mpeg") || type.Contains("mp3"))
+        return codec switch
         {
-            return false;
-        }
-
-        if (type.Contains("aac"))
-        {
-            return true;
-        }
-
-        return (declaredCodec ?? string.Empty).Contains("aac", StringComparison.OrdinalIgnoreCase);
+            StreamCodec.Aac => new AacStreamDecoder(source),
+            StreamCodec.Opus => new OggOpusStreamDecoder(source, onTitle),
+            _ => new Mp3StreamDecoder(source),
+        };
     }
 }

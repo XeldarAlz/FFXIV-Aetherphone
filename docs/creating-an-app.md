@@ -162,7 +162,7 @@ The example borrows `AppPalettes.Calculator` to stay short. A real app adds its 
 
 ## Step 4: register it
 
-Apps are constructed in exactly one place: `AppRegistry.BuildDefault` in src/Aetherphone/Core/Apps/AppRegistry.cs. Its signature takes seven parameters (`PhoneServices` plus six video and streaming services the AetherStream app needs); you never touch those for a new app. Add a using for your namespace and one line next to the other simple apps, before the `AppStoreApp` line:
+Apps are constructed in exactly one place: `AppRegistry.BuildDefault` in src/Aetherphone/Core/Apps/AppRegistry.cs. Its signature takes four parameters (`PhoneServices`, the `VideoSuite` and screen window the AetherStream app needs, and the Linkpearl pop-out manager); you never touch those for a new app. Add a using for your namespace and one line next to the other simple apps, before the `AppStoreApp` line:
 
 ```csharp
 apps.Add(new CalculatorApp());

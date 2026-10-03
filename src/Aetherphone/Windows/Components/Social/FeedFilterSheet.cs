@@ -12,8 +12,6 @@ internal sealed class FeedFilterSheet
 {
     public const int MaxToggles = 4;
 
-    private const float RevealSmoothTime = 0.11f;
-    private const float ToggleSmoothTime = 0.06f;
     private const float MaxDim = 0.45f;
     private const float Rounding = 24f;
     private const float PadX = 18f;
@@ -64,12 +62,22 @@ internal sealed class FeedFilterSheet
         {
             snapPending = true;
             openedFrame = ImGui.GetFrameCount();
+            UiFeedback.Play(UiSound.SheetPresent);
         }
 
         open = true;
     }
 
-    public void Close() => open = false;
+    public void Close()
+    {
+        if (!open)
+        {
+            return;
+        }
+
+        open = false;
+        UiFeedback.Play(UiSound.SheetDismiss);
+    }
 
     public void Gate()
     {
@@ -94,7 +102,7 @@ internal sealed class FeedFilterSheet
         }
 
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        reveal.Step(open ? 1f : 0f, RevealSmoothTime, delta);
+        reveal.Step(open ? 1f : 0f, Motion.Sheet, delta);
         if (!open && reveal.IsResting(0f, 0.001f, 0.005f))
         {
             reveal.SnapTo(0f);
@@ -103,7 +111,6 @@ internal sealed class FeedFilterSheet
 
         var scale = UiScale.Current;
         var opacity = Math.Clamp(reveal.Value, 0f, 1f);
-        var slide = Easing.EaseOutQuint(opacity);
         var drawList = ImGui.GetForegroundDrawList();
         drawList.PushClipRect(screen.Min, screen.Max, false);
         drawList.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, MaxDim * opacity)));
@@ -115,7 +122,7 @@ internal sealed class FeedFilterSheet
         var panelHeight = (8f + GrabberHeight + 12f) * scale + titleHeight + 8f * scale + rowHeight * toggleCount
             + 14f * scale + sectionHeight + 8f * scale + ChipHeight * scale + 18f * scale + DoneHeight * scale
             + BottomPad * scale;
-        var panelTop = screen.Max.Y - panelHeight + panelHeight * (1f - slide);
+        var panelTop = screen.Max.Y - panelHeight + panelHeight * (1f - opacity);
         var panelMin = new Vector2(screen.Min.X, panelTop);
         var panelMax = new Vector2(screen.Max.X, screen.Max.Y + Rounding * scale);
         var rounding = Rounding * scale;
@@ -218,7 +225,7 @@ internal sealed class FeedFilterSheet
         string label, bool value, ref Spring knob, Vector4 ink, Vector4 knobInk, float opacity, bool interactive,
         float delta, float scale)
     {
-        knob.Step(value ? 1f : 0f, ToggleSmoothTime, delta);
+        knob.Step(value ? 1f : 0f, Motion.Release, delta);
         var centerY = top + rowHeight * 0.5f;
         var trackWidth = TrackWidth * scale;
         var trackHeight = TrackHeight * scale;

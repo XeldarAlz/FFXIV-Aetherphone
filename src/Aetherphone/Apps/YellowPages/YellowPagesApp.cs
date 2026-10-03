@@ -29,12 +29,7 @@ namespace Aetherphone.Apps.YellowPages;
 internal sealed partial class YellowPagesApp : IPhoneApp
 {
     private const float CopiedSeconds = 1.6f;
-    private const float TabBarHeight = 58f;
-    private const float TabIconSize = 25f;
-    private const float TabHoverRadius = 20f;
-    private const float TabPostRadius = 19f;
-    private const float TabAnchorHalf = 20f;
-    private const int TabCount = 5;
+    private const int TabCount = 4;
     private const float CellPadX = SocialChrome.CellPadX;
     private const float HeaderIconSize = 24f;
     private const float EmptyStateTop = 72f;
@@ -72,6 +67,8 @@ internal sealed partial class YellowPagesApp : IPhoneApp
     private readonly EncryptionHelpService encryptionHelp;
     private readonly HttpService http;
     private readonly AppSkin ui = new(AppPalettes.YellowPages);
+    private readonly TabBar tabBar = new();
+    private readonly TabItem[] tabItems = new TabItem[TabCount];
     private readonly ViewRouter<YellowPagesRoute> router;
     private readonly GeoScopeScreen scopeScreen;
     private readonly RouterDraw<YellowPagesRoute> drawView;
@@ -265,123 +262,50 @@ internal sealed partial class YellowPagesApp : IPhoneApp
     private void DrawRoot(Rect area)
     {
         var scale = UiScale.Current;
-        var barRect = new Rect(new Vector2(area.Min.X, area.Max.Y - TabBarHeight * scale), area.Max);
-        var tabArea = new Rect(area.Min, new Vector2(area.Max.X, barRect.Min.Y));
-        switch (activeTab)
+        using (TabBar.ReserveContent(scale))
         {
-            case YellowPagesTab.Saved:
-                DrawSaved(tabArea);
-                break;
-            case YellowPagesTab.Inbox:
-                DrawInbox(tabArea);
-                break;
-            case YellowPagesTab.Mine:
-                DrawMine(tabArea);
-                break;
-            default:
-                DrawBrowse(tabArea);
-                break;
-        }
-
-        DrawTabBar(barRect);
-    }
-
-    private void DrawTabBar(Rect bar)
-    {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        PaintBarBackdrop(drawList, bar);
-        DrawHairline(drawList, bar.Min.X, bar.Max.X, bar.Min.Y + 1f);
-        var slot = bar.Width / TabCount;
-        var anchorHalf = new Vector2(TabAnchorHalf * scale, TabAnchorHalf * scale);
-        for (var index = 0; index < TabCount; index++)
-        {
-            var cell = new Rect(new Vector2(bar.Min.X + slot * index, bar.Min.Y),
-                new Vector2(bar.Min.X + slot * (index + 1), bar.Max.Y));
-            var center = new Vector2(cell.Center.X, bar.Center.Y);
-            switch (index)
+            switch (activeTab)
             {
-                case 0:
-                    if (DrawTabSlot(drawList, cell, center, PhoneIcons.Compass, activeTab == YellowPagesTab.Browse,
-                            Loc.T(L.YellowPages.BrowseTab), 0))
-                    {
-                        SelectTab(YellowPagesTab.Browse);
-                    }
-
+                case YellowPagesTab.Saved:
+                    DrawSaved(area);
                     break;
-                case 1:
-                    if (DrawTabSlot(drawList, cell, center,
-                            activeTab == YellowPagesTab.Saved ? PhoneIcons.BookmarkFilled : PhoneIcons.Bookmark,
-                            activeTab == YellowPagesTab.Saved, Loc.T(L.YellowPages.SavedTab), 0))
-                    {
-                        SelectTab(YellowPagesTab.Saved);
-                    }
-
+                case YellowPagesTab.Inbox:
+                    DrawInbox(area);
                     break;
-                case 2:
-                    UiAnchors.Report("yellowpages.tab.post", new Rect(center - anchorHalf, center + anchorHalf));
-                    if (DrawPostSlot(drawList, cell, center))
-                    {
-                        StartCompose();
-                    }
-
-                    break;
-                case 3:
-                    UiAnchors.Report("yellowpages.tab.inquiries", new Rect(center - anchorHalf, center + anchorHalf));
-                    if (DrawTabSlot(drawList, cell, center,
-                            activeTab == YellowPagesTab.Inbox ? PhoneIcons.MessageCircleFilled : PhoneIcons.MessageCircle,
-                            activeTab == YellowPagesTab.Inbox, Loc.T(L.YellowPages.InboxTab), inquiries.UnreadCount))
-                    {
-                        SelectTab(YellowPagesTab.Inbox);
-                    }
-
+                case YellowPagesTab.Mine:
+                    DrawMine(area);
                     break;
                 default:
-                    if (DrawTabSlot(drawList, cell, center, PhoneIcons.LayoutList, activeTab == YellowPagesTab.Mine,
-                            Loc.T(L.YellowPages.MineTab), 0))
-                    {
-                        SelectTab(YellowPagesTab.Mine);
-                    }
-
+                    DrawBrowse(area);
                     break;
             }
         }
+
+        DrawTabBar(area);
     }
 
-    private static bool DrawTabSlot(ImDrawListPtr drawList, Rect cell, Vector2 center, string glyph, bool active,
-        string label, int badge)
+    private void DrawTabBar(Rect area)
     {
-        var scale = UiScale.Current;
-        var hovered = UiInteract.Hover(cell.Min, cell.Max);
-        if (hovered)
+        tabItems[(int)YellowPagesTab.Browse] = new TabItem(Loc.T(L.YellowPages.BrowseTab), PhoneIcons.Compass);
+        tabItems[(int)YellowPagesTab.Saved] = new TabItem(Loc.T(L.YellowPages.SavedTab), PhoneIcons.Bookmark,
+            PhoneIcons.BookmarkFilled);
+        tabItems[(int)YellowPagesTab.Inbox] = new TabItem(Loc.T(L.YellowPages.InboxTab), PhoneIcons.MessageCircle,
+            PhoneIcons.MessageCircleFilled, inquiries.UnreadCount, "yellowpages.tab.inquiries");
+        tabItems[(int)YellowPagesTab.Mine] = new TabItem(Loc.T(L.YellowPages.MineTab), PhoneIcons.LayoutList);
+        var post = new TabBarAction(PhoneIcons.Plus, Loc.T(L.YellowPages.PostAd), AnchorKey: "yellowpages.tab.post");
+        var result = tabBar.Draw(area, ui, tabItems, (int)activeTab, post);
+        if (result.ActionTapped)
         {
-            drawList.AddCircleFilled(center, TabHoverRadius * scale, ImGui.GetColorU32(Ink.FieldFill), 32);
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            StartCompose();
+            return;
         }
 
-        var ink = active ? Ink.AccentLink : hovered ? Ink.TitleInk : Ink.MutedInk;
-        PhoneIcon.Draw(drawList, center, glyph, ink, TabIconSize * scale);
-        SocialChrome.DrawCountBadge(drawList, center + new Vector2(11f * scale, -10f * scale), badge, Ink);
-        HoverTooltip.Show(cell, label, HoverLabelSide.Above);
-        return UiInteract.Click(cell.Min, cell.Max, hovered);
-    }
-
-    private static bool DrawPostSlot(ImDrawListPtr drawList, Rect cell, Vector2 center)
-    {
-        var scale = UiScale.Current;
-        var hovered = UiInteract.Hover(cell.Min, cell.Max);
-        var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var radius = TabPostRadius * scale * PressFx.Scale("yellowpages.tab.post", pressed, 0.94f);
-        AccentGloss.Circle(drawList, center, radius, Palette.Lighten(Ink.Accent, 0.18f), Ink.AccentDeep, scale,
-            hovered ? 1f : 0.55f);
-        PhoneIcon.Draw(drawList, center, PhoneIcons.Plus, Ink.White, 22f * scale);
-        if (hovered)
+        if (result.Tapped < 0)
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            return;
         }
 
-        HoverTooltip.Show(cell, Loc.T(L.YellowPages.PostAd), HoverLabelSide.Above);
-        return UiInteract.Click(cell.Min, cell.Max, hovered);
+        SelectTab((YellowPagesTab)result.Tapped);
     }
 
     private void SelectTab(YellowPagesTab tab)

@@ -11,14 +11,14 @@ internal sealed class HomeLayoutService
     public const int MaxRows = 8;
     public const int DefaultRows = 6;
     private const string DefaultWidgetId = "skywatcher.forecast";
-    private static readonly string[] DefaultDockApps = { "message", "messages", "settings" };
+    private static readonly string[] DefaultDockApps = { "message", "messages", "camera", "settings" };
 
     internal static readonly string[] DefaultFirstPageApps =
     {
-        "chirper", "aethergram", "velvet", "polls",
-        "announcements", "camera", "photos", "feedback", "music",
-        "maps", "venues", "games", "market",
-        "appstore",
+        "chirper", "aethergram", "velvet", "aetherstream",
+        "venues", "feedback", "market", "maps",
+        "music", "games", "polls", "photos",
+        "announcements", "coin", "yellowpages", "appstore",
     };
 
     internal static readonly string[] DefaultSecondPageApps =
@@ -49,9 +49,10 @@ internal sealed class HomeLayoutService
     private readonly HashSet<string> installed = new();
     private readonly HashSet<string> known = new();
     private readonly List<string> revealed = new();
+    private readonly HashSet<string> widgetKeys = new(StringComparer.Ordinal);
     private int rows;
     private int folderCounter;
-    private int widgetCounter;
+    private int stackCounter;
     private bool placementsDirty = true;
 
     public HomeLayoutService(IReadOnlyList<IPhoneApp> apps, WidgetRegistry widgets, IShortcutSource shortcuts,
@@ -150,6 +151,38 @@ internal sealed class HomeLayoutService
         }
 
         return (-1, -1);
+    }
+
+    public HomeTile? FindWidget(string instanceKey)
+    {
+        for (var page = 0; page < pages.Count; page++)
+        {
+            var tiles = pages[page];
+            for (var index = 0; index < tiles.Count; index++)
+            {
+                var tile = tiles[index];
+                if (!tile.IsStack)
+                {
+                    if (tile.IsWidget && string.Equals(tile.InstanceKey, instanceKey, StringComparison.Ordinal))
+                    {
+                        return tile;
+                    }
+
+                    continue;
+                }
+
+                var members = tile.Stack;
+                for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+                {
+                    if (string.Equals(members[memberIndex].InstanceKey, instanceKey, StringComparison.Ordinal))
+                    {
+                        return members[memberIndex];
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     public int DockIndexOf(HomeTile tile) => dock.IndexOf(tile);
@@ -335,12 +368,34 @@ internal sealed class HomeLayoutService
             var tiles = pages[page];
             for (var index = tiles.Count - 1; index >= 0; index--)
             {
-                if (tiles[index].Widget is { } widget && !installed.Contains(widget.AppId))
+                var tile = tiles[index];
+                if (tile.IsStack)
+                {
+                    DropUninstalledStackMembers(tile);
+                    continue;
+                }
+
+                if (tile.Widget is { } widget && !installed.Contains(widget.AppId))
                 {
                     tiles.RemoveAt(index);
                 }
             }
         }
+    }
+
+    private void DropUninstalledStackMembers(HomeTile stack)
+    {
+        var visible = stack.Visible;
+        for (var memberIndex = stack.Stack.Count - 1; memberIndex >= 0; memberIndex--)
+        {
+            if (!installed.Contains(stack.Stack[memberIndex].Widget!.AppId))
+            {
+                stack.Stack.RemoveAt(memberIndex);
+            }
+        }
+
+        var kept = stack.Stack.IndexOf(visible);
+        stack.StackIndex = kept >= 0 ? kept : 0;
     }
 
     private void DetachApp(string appId)
@@ -480,21 +535,228 @@ internal sealed class HomeLayoutService
         }
 
         pageIndex = Math.Clamp(pageIndex, 0, Math.Max(0, pages.Count - 1));
-        pages[pageIndex].Add(HomeTile.ForWidget(NextWidgetKey(widget.Id), widget, size));
+        pages[pageIndex].Add(HomeTile.ForWidget(NewWidgetKey(), widget, size, string.Empty));
         Commit();
         return true;
     }
 
-    public void ResizeWidget(HomeTile tile, WidgetSize size)
+    public void SetWidgetConfig(HomeTile tile, string config)
     {
-        if (!tile.IsWidget || tile.Size == size || !WidgetSizes.Contains(tile.Widget!.Sizes, size))
+        config ??= string.Empty;
+        if (!tile.IsWidget || string.Equals(tile.Config, config, StringComparison.Ordinal))
         {
             return;
         }
 
-        tile.Size = size;
+        tile.Config = config;
+        Save();
+    }
+
+    public void ResizeWidget(HomeTile tile, WidgetSize size)
+    {
+        if (!tile.IsWidget || tile.Size == size || !WidgetSizes.Contains(SizesOf(tile), size))
+        {
+            return;
+        }
+
+        ApplySize(tile, size);
         Commit();
     }
+
+    public bool TryFitSize(HomeTile tile, WidgetSize size, out GridCell cell)
+    {
+        cell = HomeGridSolver.Unassigned;
+        if (!tile.IsWidget || !WidgetSizes.Contains(SizesOf(tile), size) || !HomeGridSolver.IsAssigned(tile.Cell))
+        {
+            return false;
+        }
+
+        var (page, _) = Locate(tile);
+        if (page < 0)
+        {
+            return false;
+        }
+
+        var columnSpan = WidgetSizes.ColumnSpan(size);
+        var rowSpan = WidgetSizes.RowSpan(size);
+        var candidate = new GridCell(Math.Min(tile.Cell.Column, Columns - columnSpan),
+            Math.Min(tile.Cell.Row, rows - rowSpan));
+        Span<bool> occupied = stackalloc bool[HomeGridSolver.MaxCells];
+        occupied.Clear();
+        Occupy(occupied, pages[page], tile);
+        if (!HomeGridSolver.RegionFree(occupied, Columns, rows, candidate, columnSpan, rowSpan))
+        {
+            return false;
+        }
+
+        cell = candidate;
+        return true;
+    }
+
+    public bool TryResizeInPlace(HomeTile tile, WidgetSize size)
+    {
+        if (tile.Size == size || !TryFitSize(tile, size, out var cell))
+        {
+            return false;
+        }
+
+        tile.Cell = cell;
+        ApplySize(tile, size);
+        Commit();
+        return true;
+    }
+
+    public static WidgetSizeSet SizesOf(HomeTile tile)
+    {
+        if (!tile.IsStack)
+        {
+            return tile.Widget?.Sizes ?? WidgetSizeSet.None;
+        }
+
+        var sizes = WidgetSizeSet.Small | WidgetSizeSet.Medium | WidgetSizeSet.Large;
+        for (var index = 0; index < tile.Stack.Count; index++)
+        {
+            sizes &= tile.Stack[index].Widget!.Sizes;
+        }
+
+        return sizes;
+    }
+
+    private static void ApplySize(HomeTile tile, WidgetSize size)
+    {
+        tile.Size = size;
+        for (var index = 0; index < tile.Stack.Count; index++)
+        {
+            tile.Stack[index].Size = size;
+        }
+    }
+
+    public bool CanStack(HomeTile target, HomeTile dragged)
+    {
+        if (ReferenceEquals(target, dragged) || !target.IsWidget || !dragged.IsWidget || target.Size != dragged.Size)
+        {
+            return false;
+        }
+
+        return StackCount(target) + StackCount(dragged) <= HomeTile.StackCapacity && Locate(target).Page >= 0;
+    }
+
+    public HomeTile? MakeStack(HomeTile target, HomeTile dragged)
+    {
+        if (!CanStack(target, dragged) || !Detach(dragged))
+        {
+            return null;
+        }
+
+        var (page, index) = Locate(target);
+        var stack = target;
+        if (!target.IsStack)
+        {
+            stack = HomeTile.ForStack(NextStackKey(), new[] { target }, 0, true);
+            stack.Cell = target.Cell;
+            pages[page][index] = stack;
+        }
+
+        var firstAdded = stack.Stack.Count;
+        if (dragged.IsStack)
+        {
+            stack.Stack.AddRange(dragged.Stack);
+        }
+        else
+        {
+            stack.Stack.Add(dragged);
+        }
+
+        ApplySize(stack, stack.Size);
+        stack.StackIndex = firstAdded;
+        Commit();
+        return stack;
+    }
+
+    public bool AddStack(IReadOnlyList<IHomeWidget> members, WidgetSize size, int pageIndex)
+    {
+        var tiles = new List<HomeTile>(Math.Min(members.Count, HomeTile.StackCapacity));
+        for (var index = 0; index < members.Count && tiles.Count < HomeTile.StackCapacity; index++)
+        {
+            var widget = members[index];
+            if (WidgetSizes.Contains(widget.Sizes, size))
+            {
+                tiles.Add(HomeTile.ForWidget(NewWidgetKey(), widget, size, string.Empty));
+            }
+        }
+
+        if (tiles.Count == 0)
+        {
+            return false;
+        }
+
+        pageIndex = Math.Clamp(pageIndex, 0, Math.Max(0, pages.Count - 1));
+        pages[pageIndex].Add(tiles.Count == 1 ? tiles[0] : HomeTile.ForStack(NextStackKey(), tiles, 0, true));
+        Commit();
+        return true;
+    }
+
+    public void RemoveStackMember(HomeTile stack, HomeTile member)
+    {
+        if (!stack.IsStack)
+        {
+            return;
+        }
+
+        var visible = stack.Visible;
+        var removedIndex = stack.Stack.IndexOf(member);
+        if (removedIndex < 0)
+        {
+            return;
+        }
+
+        stack.Stack.RemoveAt(removedIndex);
+        var kept = stack.Stack.IndexOf(visible);
+        stack.StackIndex = kept >= 0 ? kept : Math.Min(removedIndex, stack.Stack.Count - 1);
+        Commit();
+    }
+
+    public void MoveStackMember(HomeTile stack, int fromIndex, int toIndex)
+    {
+        var count = stack.Stack.Count;
+        if (fromIndex < 0 || fromIndex >= count || toIndex < 0 || toIndex >= count || fromIndex == toIndex)
+        {
+            return;
+        }
+
+        var visible = stack.Visible;
+        var member = stack.Stack[fromIndex];
+        stack.Stack.RemoveAt(fromIndex);
+        stack.Stack.Insert(toIndex, member);
+        stack.StackIndex = stack.Stack.IndexOf(visible);
+        Save();
+    }
+
+    public void SetStackIndex(HomeTile stack, int index)
+    {
+        if (!stack.IsStack || index < 0 || index >= stack.Stack.Count || stack.StackIndex == index)
+        {
+            return;
+        }
+
+        stack.StackIndex = index;
+        Save();
+    }
+
+    public void SetSmartRotate(HomeTile stack, bool enabled)
+    {
+        if (!stack.IsStack || stack.SmartRotate == enabled)
+        {
+            return;
+        }
+
+        stack.SmartRotate = enabled;
+        Save();
+    }
+
+    public void Persist() => Save();
+
+    private static int StackCount(HomeTile tile) => tile.IsStack ? tile.Stack.Count : 1;
 
     public void RemoveTile(HomeTile tile)
     {
@@ -575,6 +837,7 @@ internal sealed class HomeLayoutService
     {
         pages.Clear();
         dock.Clear();
+        widgetKeys.Clear();
         var placed = new HashSet<string>();
         var saved = configuration.Home;
         var dockIds = ResolveDockIds(saved);
@@ -784,18 +1047,12 @@ internal sealed class HomeLayoutService
 
         if (string.Equals(item.Kind, "widget", StringComparison.Ordinal))
         {
-            if (!widgets.TryGet(item.WidgetId, out var widget) || !widgets.IsAvailable(widget))
-            {
-                return null;
-            }
+            return BuildWidget(item, null);
+        }
 
-            var size = WidgetSizes.Parse(item.WidgetSize);
-            if (!WidgetSizes.Contains(widget.Sizes, size))
-            {
-                size = WidgetSizes.Smallest(widget.Sizes);
-            }
-
-            return HomeTile.ForWidget(NextWidgetKey(widget.Id), widget, size);
+        if (string.Equals(item.Kind, "stack", StringComparison.Ordinal))
+        {
+            return BuildStack(item);
         }
 
         return byId.TryGetValue(item.AppId, out var app) && app.IsAvailable && placed.Add(app.Id)
@@ -803,12 +1060,86 @@ internal sealed class HomeLayoutService
             : null;
     }
 
+    private HomeTile? BuildWidget(HomeItem item, WidgetSize? required)
+    {
+        if (!widgets.TryGet(item.WidgetId, out var widget) || !widgets.IsAvailable(widget))
+        {
+            return null;
+        }
+
+        var size = required ?? WidgetSizes.Parse(item.WidgetSize);
+        if (!WidgetSizes.Contains(widget.Sizes, size))
+        {
+            if (required is not null)
+            {
+                return null;
+            }
+
+            size = WidgetSizes.Smallest(widget.Sizes);
+        }
+
+        var key = ClaimWidgetKey(item.WidgetKey, widget.Id, item.Column, item.Row);
+        return HomeTile.ForWidget(key, widget, size, item.WidgetConfig);
+    }
+
+    private HomeTile? BuildStack(HomeItem item)
+    {
+        var size = WidgetSizes.Parse(item.WidgetSize);
+        var shared = SharedSizes(item);
+        if (shared != WidgetSizeSet.None && !WidgetSizes.Contains(shared, size))
+        {
+            size = WidgetSizes.Smallest(shared);
+        }
+
+        var members = new List<HomeTile>(item.Members.Count);
+        var visibleIndex = 0;
+        for (var index = 0; index < item.Members.Count && members.Count < HomeTile.StackCapacity; index++)
+        {
+            if (BuildWidget(item.Members[index], size) is not { } member)
+            {
+                continue;
+            }
+
+            if (index <= item.StackIndex)
+            {
+                visibleIndex = members.Count;
+            }
+
+            members.Add(member);
+        }
+
+        if (members.Count <= 1)
+        {
+            return members.Count == 1 ? members[0] : null;
+        }
+
+        return HomeTile.ForStack(NextStackKey(), members, visibleIndex, item.SmartRotate);
+    }
+
+    private WidgetSizeSet SharedSizes(HomeItem item)
+    {
+        var shared = WidgetSizeSet.Small | WidgetSizeSet.Medium | WidgetSizeSet.Large;
+        var any = false;
+        for (var index = 0; index < item.Members.Count; index++)
+        {
+            if (!widgets.TryGet(item.Members[index].WidgetId, out var widget) || !widgets.IsAvailable(widget))
+            {
+                continue;
+            }
+
+            shared &= widget.Sizes;
+            any = true;
+        }
+
+        return any ? shared : WidgetSizeSet.None;
+    }
+
     private void SeedDefaultLayout(HashSet<string> placed)
     {
         var firstPage = new List<HomeTile>();
         if (widgets.TryGet(DefaultWidgetId, out var widget) && widgets.IsAvailable(widget))
         {
-            firstPage.Add(HomeTile.ForWidget(NextWidgetKey(widget.Id), widget, WidgetSize.Medium));
+            firstPage.Add(HomeTile.ForWidget(NewWidgetKey(), widget, WidgetSize.Medium, string.Empty));
         }
 
         AppendSeedApps(firstPage, DefaultFirstPageApps, placed);
@@ -902,6 +1233,7 @@ internal sealed class HomeLayoutService
     private void Arrange()
     {
         FoldDegenerateFolders();
+        FoldDegenerateStacks();
         for (var page = 0; page < pages.Count; page++)
         {
             PlacePage(pages[page]);
@@ -985,6 +1317,26 @@ internal sealed class HomeLayoutService
                 {
                     pages[page].RemoveAt(index);
                 }
+            }
+        }
+    }
+
+    private void FoldDegenerateStacks()
+    {
+        for (var page = 0; page < pages.Count; page++)
+        {
+            for (var index = pages[page].Count - 1; index >= 0; index--)
+            {
+                var tile = pages[page][index];
+                if (tile.Stack.Count != 1)
+                {
+                    continue;
+                }
+
+                var folded = tile.Stack[0];
+                folded.Cell = tile.Cell;
+                folded.Size = tile.Size;
+                pages[page][index] = folded;
             }
         }
     }
@@ -1097,6 +1449,24 @@ internal sealed class HomeLayoutService
 
     private static HomeItem BuildStoredItem(HomeTile tile)
     {
+        if (tile.IsStack)
+        {
+            var stack = new HomeItem
+            {
+                Kind = "stack",
+                WidgetSize = WidgetSizes.Serialize(tile.Size),
+                StackIndex = tile.StackIndex,
+                SmartRotate = tile.SmartRotate,
+                Members = new List<HomeItem>(tile.Stack.Count),
+            };
+            for (var memberIndex = 0; memberIndex < tile.Stack.Count; memberIndex++)
+            {
+                stack.Members.Add(BuildStoredItem(tile.Stack[memberIndex]));
+            }
+
+            return stack;
+        }
+
         if (tile.IsWidget)
         {
             return new HomeItem
@@ -1104,6 +1474,8 @@ internal sealed class HomeLayoutService
                 Kind = "widget",
                 WidgetId = tile.Widget!.Id,
                 WidgetSize = WidgetSizes.Serialize(tile.Size),
+                WidgetKey = tile.InstanceKey,
+                WidgetConfig = tile.Config,
             };
         }
 
@@ -1142,6 +1514,29 @@ internal sealed class HomeLayoutService
 
     private string NextFolderKey() => string.Concat("folder#", (++folderCounter).ToString());
 
-    private string NextWidgetKey(string widgetId) =>
-        string.Concat("widget#", widgetId, "#", (++widgetCounter).ToString());
+    private string NextStackKey() => string.Concat("stack#", (++stackCounter).ToString());
+
+    private string NewWidgetKey()
+    {
+        var key = Guid.NewGuid().ToString("N");
+        widgetKeys.Add(key);
+        return key;
+    }
+
+    private string ClaimWidgetKey(string stored, string widgetId, int column, int row)
+    {
+        if (!string.IsNullOrEmpty(stored) && widgetKeys.Add(stored))
+        {
+            return stored;
+        }
+
+        var derived = string.Concat(widgetId, "@", column.ToString(), ".", row.ToString());
+        var candidate = derived;
+        for (var suffix = 2; !widgetKeys.Add(candidate); suffix++)
+        {
+            candidate = string.Concat(derived, "#", suffix.ToString());
+        }
+
+        return candidate;
+    }
 }

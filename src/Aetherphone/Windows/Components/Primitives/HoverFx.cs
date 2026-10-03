@@ -5,7 +5,7 @@ namespace Aetherphone.Windows.Components;
 
 internal static class HoverFx
 {
-    public const float DefaultSmoothTime = 0.11f;
+    public const float DefaultSmoothTime = Motion.HoverLift;
     private static readonly Dictionary<uint, Spring> Springs = new();
 
     public static float Amount(string id, bool hovered, float smoothTime = DefaultSmoothTime)

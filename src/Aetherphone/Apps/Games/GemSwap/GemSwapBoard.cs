@@ -6,24 +6,71 @@ internal sealed class GemSwapBoard
     public const int Rows = 7;
     public const int CellCount = Columns * Rows;
     public const int ColorCount = 6;
+    public const int PrismColor = ColorCount;
     public const int NoFall = -999;
+    private const int RunCapacity = 32;
     private readonly int[] colors = new int[CellCount];
     private readonly GemSpecial[] specials = new GemSpecial[CellCount];
     private readonly bool[] matched = new bool[CellCount];
     private readonly int[] fallFrom = new int[CellCount];
     private readonly GemSpecial[] pendingSpecial = new GemSpecial[CellCount];
     private readonly int[] worklist = new int[CellCount];
-    private readonly Random random = new();
+    private readonly bool[] shapeUsed = new bool[CellCount];
+    private readonly int[] runStart = new int[RunCapacity];
+    private readonly int[] runLength = new int[RunCapacity];
+    private readonly bool[] runHorizontal = new bool[RunCapacity];
+    private readonly int[] clearedByColor = new int[ColorCount];
+    private readonly int[] activatedCells = new int[CellCount];
+    private readonly GemSpecial[] activatedKinds = new GemSpecial[CellCount];
+    private readonly Random random;
     private int worklistCount;
+    private int runCount;
+    private int activatedCount;
     private int lastSwapA = -1;
     private int lastSwapB = -1;
+
+    public GemSwapBoard() : this(new Random())
+    {
+    }
+
+    public GemSwapBoard(int seed) : this(new Random(seed))
+    {
+    }
+
+    private GemSwapBoard(Random random)
+    {
+        this.random = random;
+    }
+
     public int Score { get; private set; }
     public int LastClearCount { get; private set; }
     public int LastSpecialsCreated { get; private set; }
+    public GemCombo LastCombo { get; private set; }
+    public int ActivatedCount => activatedCount;
+    public int ActivatedCell(int slot) => activatedCells[slot];
+    public GemSpecial ActivatedKind(int slot) => activatedKinds[slot];
+    public int ClearedOfColor(int color) => clearedByColor[color];
     public int Color(int index) => colors[index];
     public GemSpecial Special(int index) => specials[index];
     public bool Matched(int index) => matched[index];
     public int FallFrom(int index) => fallFrom[index];
+    public int NextRandom(int exclusiveMaximum) => random.Next(exclusiveMaximum);
+
+    public bool HasSpecials
+    {
+        get
+        {
+            for (var index = 0; index < CellCount; index++)
+            {
+                if (specials[index] != GemSpecial.None && colors[index] >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
 
     public void Reset()
     {
@@ -33,6 +80,12 @@ internal sealed class GemSwapBoard
         Score = 0;
         lastSwapA = -1;
         lastSwapB = -1;
+    }
+
+    public void SetCell(int index, int color, GemSpecial special)
+    {
+        colors[index] = special == GemSpecial.Prism ? PrismColor : color;
+        specials[index] = special;
     }
 
     public void ReshuffleIfStuck()
@@ -97,38 +150,45 @@ internal sealed class GemSwapBoard
         return false;
     }
 
-    public int ResolveMatches(int chain)
+    public bool IsComboSwap(int indexA, int indexB)
     {
-        Array.Clear(matched, 0, CellCount);
-        Array.Clear(pendingSpecial, 0, CellCount);
-        LastSpecialsCreated = 0;
-        MarkRuns(1, 0);
-        MarkRuns(0, 1);
-        var anyMatched = false;
-        for (var index = 0; index < CellCount; index++)
+        var kindA = specials[indexA];
+        var kindB = specials[indexB];
+        if (kindA == GemSpecial.Prism || kindB == GemSpecial.Prism)
         {
-            if (matched[index])
-            {
-                anyMatched = true;
-                break;
-            }
+            return true;
         }
 
-        if (!anyMatched)
+        return kindA != GemSpecial.None && kindB != GemSpecial.None;
+    }
+
+    public int ResolveMatches(int chain)
+    {
+        BeginResolve();
+        MarkRuns(1, 0);
+        MarkRuns(0, 1);
+        if (runCount == 0)
         {
             LastClearCount = 0;
             return 0;
         }
 
+        RegisterSpecials();
         for (var index = 0; index < CellCount; index++)
         {
-            if (pendingSpecial[index] != GemSpecial.None)
+            if (pendingSpecial[index] == GemSpecial.None)
             {
-                matched[index] = false;
+                continue;
             }
+
+            if (matched[index] && specials[index] != GemSpecial.None)
+            {
+                worklist[worklistCount++] = index;
+            }
+
+            matched[index] = false;
         }
 
-        worklistCount = 0;
         for (var index = 0; index < CellCount; index++)
         {
             if (matched[index] && specials[index] != GemSpecial.None)
@@ -137,35 +197,90 @@ internal sealed class GemSwapBoard
             }
         }
 
-        while (worklistCount > 0)
+        return FinishResolve(chain);
+    }
+
+    public int ResolveCombo(int origin, int other, int chain)
+    {
+        BeginResolve();
+        var originKind = specials[origin];
+        var otherKind = specials[other];
+        if (originKind == GemSpecial.Prism && otherKind == GemSpecial.Prism)
         {
-            var cell = worklist[--worklistCount];
-            var kind = specials[cell];
-            specials[cell] = GemSpecial.None;
-            ActivateSpecial(cell, kind);
+            LastCombo = GemCombo.PrismBoard;
+            ConsumeSpecial(origin);
+            ConsumeSpecial(other);
+            for (var index = 0; index < CellCount; index++)
+            {
+                MarkActivated(index);
+            }
+
+            return FinishResolve(chain);
         }
 
-        var cleared = 0;
+        if (originKind == GemSpecial.Prism || otherKind == GemSpecial.Prism)
+        {
+            var prismCell = originKind == GemSpecial.Prism ? origin : other;
+            var target = prismCell == origin ? other : origin;
+            LastCombo = GemCombo.PrismColor;
+            ConsumeSpecial(prismCell);
+            MarkColor(colors[target]);
+            MarkActivated(target);
+            return FinishResolve(chain);
+        }
+
+        ConsumeSpecial(origin);
+        ConsumeSpecial(other);
+        var burstCount = (originKind == GemSpecial.Burst ? 1 : 0) + (otherKind == GemSpecial.Burst ? 1 : 0);
+        switch (burstCount)
+        {
+            case 2:
+                LastCombo = GemCombo.BigBurst;
+                MarkSquare(origin, 2);
+                break;
+            case 1:
+                LastCombo = GemCombo.WideCross;
+                MarkCross(origin, 1);
+                break;
+            default:
+                LastCombo = GemCombo.Cross;
+                MarkCross(origin, 0);
+                break;
+        }
+
+        return FinishResolve(chain);
+    }
+
+    public int DetonateSpecials(int chain)
+    {
+        BeginResolve();
         for (var index = 0; index < CellCount; index++)
         {
-            if (matched[index])
+            if (specials[index] == GemSpecial.None || colors[index] < 0)
             {
-                cleared++;
+                continue;
             }
+
+            matched[index] = true;
+            worklist[worklistCount++] = index;
         }
 
-        for (var index = 0; index < CellCount; index++)
-        {
-            if (pendingSpecial[index] != GemSpecial.None)
-            {
-                specials[index] = pendingSpecial[index];
-                LastSpecialsCreated++;
-            }
-        }
+        return FinishResolve(chain);
+    }
 
-        Score += (cleared * 12 + LastSpecialsCreated * 50) * chain;
-        LastClearCount = cleared;
-        return cleared;
+    public void BeginBlast()
+    {
+        BeginResolve();
+    }
+
+    public void MarkBlast(int index)
+    {
+        MarkActivated(index);
+    }
+
+    public int FinishBlast(int chain)
+    {
+        return FinishResolve(chain);
     }
 
     public void RemoveMatched()
@@ -238,26 +353,18 @@ internal sealed class GemSwapBoard
             for (var column = 0; column < Columns; column++)
             {
                 var cell = row * Columns + column;
-                if (column + 1 < Columns)
+                if (column + 1 < Columns && IsPlayableSwap(cell, cell + 1))
                 {
-                    var right = cell + 1;
-                    if (colors[cell] != colors[right] && SwapCreatesMatch(cell, right))
-                    {
-                        indexA = cell;
-                        indexB = right;
-                        return true;
-                    }
+                    indexA = cell;
+                    indexB = cell + 1;
+                    return true;
                 }
 
-                if (row + 1 < Rows)
+                if (row + 1 < Rows && IsPlayableSwap(cell, cell + Columns))
                 {
-                    var down = cell + Columns;
-                    if (colors[cell] != colors[down] && SwapCreatesMatch(cell, down))
-                    {
-                        indexA = cell;
-                        indexB = down;
-                        return true;
-                    }
+                    indexA = cell;
+                    indexB = cell + Columns;
+                    return true;
                 }
             }
         }
@@ -275,49 +382,216 @@ internal sealed class GemSwapBoard
         return result;
     }
 
+    private bool IsPlayableSwap(int indexA, int indexB)
+    {
+        if (IsComboSwap(indexA, indexB))
+        {
+            return true;
+        }
+
+        return colors[indexA] != colors[indexB] && SwapCreatesMatch(indexA, indexB);
+    }
+
+    private void BeginResolve()
+    {
+        Array.Clear(matched, 0, CellCount);
+        Array.Clear(pendingSpecial, 0, CellCount);
+        Array.Clear(clearedByColor, 0, ColorCount);
+        LastSpecialsCreated = 0;
+        LastCombo = GemCombo.None;
+        worklistCount = 0;
+        runCount = 0;
+        activatedCount = 0;
+    }
+
+    private int FinishResolve(int chain)
+    {
+        while (worklistCount > 0)
+        {
+            var cell = worklist[--worklistCount];
+            var kind = specials[cell];
+            specials[cell] = GemSpecial.None;
+            RecordActivation(cell, kind);
+            ActivateSpecial(cell, kind);
+        }
+
+        var cleared = 0;
+        for (var index = 0; index < CellCount; index++)
+        {
+            if (!matched[index])
+            {
+                continue;
+            }
+
+            cleared++;
+            var color = colors[index];
+            if (color >= 0 && color < ColorCount)
+            {
+                clearedByColor[color]++;
+            }
+        }
+
+        for (var index = 0; index < CellCount; index++)
+        {
+            if (pendingSpecial[index] == GemSpecial.None)
+            {
+                continue;
+            }
+
+            specials[index] = pendingSpecial[index];
+            if (pendingSpecial[index] == GemSpecial.Prism)
+            {
+                colors[index] = PrismColor;
+            }
+
+            LastSpecialsCreated++;
+        }
+
+        Score += (cleared * 12 + LastSpecialsCreated * 50) * chain;
+        LastClearCount = cleared;
+        return cleared;
+    }
+
+    private void RecordActivation(int cell, GemSpecial kind)
+    {
+        if (kind == GemSpecial.None || activatedCount >= CellCount)
+        {
+            return;
+        }
+
+        activatedCells[activatedCount] = cell;
+        activatedKinds[activatedCount] = kind;
+        activatedCount++;
+    }
+
+    private void ConsumeSpecial(int cell)
+    {
+        RecordActivation(cell, specials[cell]);
+        specials[cell] = GemSpecial.None;
+        matched[cell] = true;
+    }
+
     private void ActivateSpecial(int cell, GemSpecial kind)
     {
-        var column = cell % Columns;
-        var row = cell / Columns;
         switch (kind)
         {
             case GemSpecial.LineHorizontal:
-                for (var scan = 0; scan < Columns; scan++)
-                {
-                    MarkActivated(row * Columns + scan);
-                }
-
+                MarkRow(cell / Columns);
                 break;
             case GemSpecial.LineVertical:
-                for (var scan = 0; scan < Rows; scan++)
-                {
-                    MarkActivated(scan * Columns + column);
-                }
-
+                MarkColumn(cell % Columns);
                 break;
-            case GemSpecial.Bomb:
-                for (var rowOffset = -1; rowOffset <= 1; rowOffset++)
-                {
-                    for (var columnOffset = -1; columnOffset <= 1; columnOffset++)
-                    {
-                        var targetColumn = column + columnOffset;
-                        var targetRow = row + rowOffset;
-                        if (targetColumn < 0 || targetColumn >= Columns || targetRow < 0 || targetRow >= Rows)
-                        {
-                            continue;
-                        }
-
-                        MarkActivated(targetRow * Columns + targetColumn);
-                    }
-                }
-
+            case GemSpecial.Burst:
+                MarkSquare(cell, 1);
+                break;
+            case GemSpecial.Prism:
+                MarkColor(MostCommonColor());
                 break;
         }
     }
 
+    private void MarkRow(int row)
+    {
+        if (row < 0 || row >= Rows)
+        {
+            return;
+        }
+
+        for (var column = 0; column < Columns; column++)
+        {
+            MarkActivated(row * Columns + column);
+        }
+    }
+
+    private void MarkColumn(int column)
+    {
+        if (column < 0 || column >= Columns)
+        {
+            return;
+        }
+
+        for (var row = 0; row < Rows; row++)
+        {
+            MarkActivated(row * Columns + column);
+        }
+    }
+
+    private void MarkCross(int center, int halfWidth)
+    {
+        var column = center % Columns;
+        var row = center / Columns;
+        for (var offset = -halfWidth; offset <= halfWidth; offset++)
+        {
+            MarkRow(row + offset);
+            MarkColumn(column + offset);
+        }
+    }
+
+    private void MarkSquare(int center, int radius)
+    {
+        var column = center % Columns;
+        var row = center / Columns;
+        for (var rowOffset = -radius; rowOffset <= radius; rowOffset++)
+        {
+            for (var columnOffset = -radius; columnOffset <= radius; columnOffset++)
+            {
+                var targetColumn = column + columnOffset;
+                var targetRow = row + rowOffset;
+                if (targetColumn < 0 || targetColumn >= Columns || targetRow < 0 || targetRow >= Rows)
+                {
+                    continue;
+                }
+
+                MarkActivated(targetRow * Columns + targetColumn);
+            }
+        }
+    }
+
+    private void MarkColor(int color)
+    {
+        if (color < 0)
+        {
+            return;
+        }
+
+        for (var index = 0; index < CellCount; index++)
+        {
+            if (colors[index] == color)
+            {
+                MarkActivated(index);
+            }
+        }
+    }
+
+    private int MostCommonColor()
+    {
+        Span<int> counts = stackalloc int[ColorCount];
+        for (var index = 0; index < CellCount; index++)
+        {
+            var color = colors[index];
+            if (color >= 0 && color < ColorCount && !matched[index])
+            {
+                counts[color]++;
+            }
+        }
+
+        var best = -1;
+        var bestCount = 0;
+        for (var color = 0; color < ColorCount; color++)
+        {
+            if (counts[color] > bestCount)
+            {
+                bestCount = counts[color];
+                best = color;
+            }
+        }
+
+        return best;
+    }
+
     private void MarkActivated(int index)
     {
-        if (pendingSpecial[index] != GemSpecial.None || matched[index])
+        if (pendingSpecial[index] != GemSpecial.None || matched[index] || colors[index] < 0)
         {
             return;
         }
@@ -341,13 +615,6 @@ internal sealed class GemSwapBoard
                 var column = columnStep == 0 ? line : span;
                 var row = columnStep == 0 ? span : line;
                 var startIndex = row * Columns + column;
-                var color = colors[startIndex];
-                if (color < 0)
-                {
-                    span++;
-                    continue;
-                }
-
                 var length = RunLengthAt(column, row, columnStep, rowStep);
                 if (length >= 3)
                 {
@@ -358,7 +625,7 @@ internal sealed class GemSwapBoard
                         matched[cellRow * Columns + cellColumn] = true;
                     }
 
-                    RegisterSpecial(column, row, length, columnStep, rowStep);
+                    RecordRun(startIndex, length, columnStep != 0);
                 }
 
                 span += MathMax(length, 1);
@@ -366,19 +633,105 @@ internal sealed class GemSwapBoard
         }
     }
 
-    private void RegisterSpecial(int column, int row, int length, int columnStep, int rowStep)
+    private void RecordRun(int startIndex, int length, bool horizontal)
     {
-        if (length < 4)
+        if (runCount >= RunCapacity)
         {
             return;
         }
 
-        var kind = length >= 5 ? GemSpecial.Bomb :
-            columnStep != 0 ? GemSpecial.LineHorizontal : GemSpecial.LineVertical;
-        var chosen = -1;
-        for (var offset = 0; offset < length; offset++)
+        runStart[runCount] = startIndex;
+        runLength[runCount] = length;
+        runHorizontal[runCount] = horizontal;
+        runCount++;
+    }
+
+    private void RegisterSpecials()
+    {
+        Array.Clear(shapeUsed, 0, CellCount);
+        for (var run = 0; run < runCount; run++)
         {
-            var cell = (row + rowStep * offset) * Columns + (column + columnStep * offset);
+            if (runLength[run] >= 5 && !RunUsed(run))
+            {
+                PlaceSpecial(run, GemSpecial.Prism);
+            }
+        }
+
+        for (var horizontalRun = 0; horizontalRun < runCount; horizontalRun++)
+        {
+            if (!runHorizontal[horizontalRun])
+            {
+                continue;
+            }
+
+            for (var verticalRun = 0; verticalRun < runCount; verticalRun++)
+            {
+                if (runHorizontal[verticalRun] || RunUsed(horizontalRun) || RunUsed(verticalRun))
+                {
+                    continue;
+                }
+
+                if (!TryIntersection(horizontalRun, verticalRun, out var cell))
+                {
+                    continue;
+                }
+
+                pendingSpecial[cell] = GemSpecial.Burst;
+                MarkRunUsed(horizontalRun);
+                MarkRunUsed(verticalRun);
+            }
+        }
+
+        for (var run = 0; run < runCount; run++)
+        {
+            if (runLength[run] == 4 && !RunUsed(run))
+            {
+                PlaceSpecial(run, runHorizontal[run] ? GemSpecial.LineHorizontal : GemSpecial.LineVertical);
+            }
+        }
+    }
+
+    private bool TryIntersection(int horizontalRun, int verticalRun, out int cell)
+    {
+        var row = runStart[horizontalRun] / Columns;
+        var firstColumn = runStart[horizontalRun] % Columns;
+        var lastColumn = firstColumn + runLength[horizontalRun] - 1;
+        var column = runStart[verticalRun] % Columns;
+        var firstRow = runStart[verticalRun] / Columns;
+        var lastRow = firstRow + runLength[verticalRun] - 1;
+        cell = row * Columns + column;
+        return column >= firstColumn && column <= lastColumn && row >= firstRow && row <= lastRow;
+    }
+
+    private int RunCell(int run, int offset) => runStart[run] + offset * (runHorizontal[run] ? 1 : Columns);
+
+    private bool RunUsed(int run)
+    {
+        for (var offset = 0; offset < runLength[run]; offset++)
+        {
+            if (shapeUsed[RunCell(run, offset)])
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void MarkRunUsed(int run)
+    {
+        for (var offset = 0; offset < runLength[run]; offset++)
+        {
+            shapeUsed[RunCell(run, offset)] = true;
+        }
+    }
+
+    private void PlaceSpecial(int run, GemSpecial kind)
+    {
+        var chosen = -1;
+        for (var offset = 0; offset < runLength[run]; offset++)
+        {
+            var cell = RunCell(run, offset);
             if (cell == lastSwapA || cell == lastSwapB)
             {
                 chosen = cell;
@@ -388,18 +741,18 @@ internal sealed class GemSwapBoard
 
         if (chosen < 0)
         {
-            var midOffset = length / 2;
-            chosen = (row + rowStep * midOffset) * Columns + (column + columnStep * midOffset);
+            chosen = RunCell(run, runLength[run] / 2);
         }
 
         pendingSpecial[chosen] = kind;
+        MarkRunUsed(run);
     }
 
     private int RunLengthAt(int column, int row, int columnStep, int rowStep)
     {
         var startIndex = row * Columns + column;
         var color = colors[startIndex];
-        if (color < 0)
+        if (color < 0 || color == PrismColor)
         {
             return 0;
         }
@@ -433,7 +786,7 @@ internal sealed class GemSwapBoard
         var column = index % Columns;
         var row = index / Columns;
         var color = colors[index];
-        if (color < 0)
+        if (color < 0 || color == PrismColor)
         {
             return false;
         }
@@ -476,5 +829,5 @@ internal sealed class GemSwapBoard
         return vertical >= 3;
     }
 
-    private static int MathMax(int a, int b) => a > b ? a : b;
+    private static int MathMax(int left, int right) => left > right ? left : right;
 }

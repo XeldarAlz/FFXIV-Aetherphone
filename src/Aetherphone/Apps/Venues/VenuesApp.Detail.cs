@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Translation;
 using Aetherphone.Core.Venues;
@@ -134,7 +135,11 @@ internal sealed partial class VenuesApp
         }
 
         var favorite = IsFavorite(venue.Id);
-        if (DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(area, 0),
+        var favoriteCenter = SocialChrome.HeaderSlot(area, 0);
+        var favoriteReach = new Vector2(SocialChrome.HeaderIconRadius * scale, SocialChrome.HeaderIconRadius * scale);
+        UiAnchors.Report("venues.detail.favorite",
+            new Rect(favoriteCenter - favoriteReach, favoriteCenter + favoriteReach));
+        if (DrawHeaderIcon(drawList, favoriteCenter,
                 favorite ? PhoneIcons.StarFilled : PhoneIcons.Star, Loc.T(L.Venues.Favorites), favorite))
         {
             ToggleFavorite(venue.Id);
@@ -606,6 +611,7 @@ internal sealed partial class VenuesApp
         var pad = CellPadX * scale;
         var top = bar.Min.Y + (bar.Height - CtaHeight * scale) * 0.5f;
         var button = new Rect(new Vector2(bar.Min.X + pad, top), new Vector2(bar.Max.X - pad, top + CtaHeight * scale));
+        UiAnchors.Report("venues.detail.go", button);
         if (SocialPill.Accent(drawList, button, Loc.T(L.Travel.GoThere), Ink, TextStyles.Headline,
                 button.Height * 0.5f))
         {

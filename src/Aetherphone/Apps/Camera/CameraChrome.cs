@@ -88,7 +88,6 @@ internal static class CameraChrome
 
     private static bool FlashChip(Vector2 center, bool flashEnabled, float scale)
     {
-        UiAnchors.Report("camera.flash", ChipRect(center, scale));
         var clicked = ChipSurface(center, flashEnabled, scale);
         DrawBolt(ImGui.GetWindowDrawList(), center, ChipGlyphExtent * scale, ChipIconColor(flashEnabled));
         return clicked;
@@ -107,6 +106,7 @@ internal static class CameraChrome
 
     private static bool RotateChip(Vector2 center, bool landscapeEnabled, float scale)
     {
+        UiAnchors.Report("camera.rotate", ChipRect(center, scale));
         var clicked = ChipSurface(center, landscapeEnabled, scale);
         DrawRotateGlyph(ImGui.GetWindowDrawList(), center, scale, ChipIconColor(landscapeEnabled), landscapeEnabled);
         return clicked;
@@ -271,7 +271,8 @@ internal static class CameraChrome
                 ImDrawFlags.RoundCornersRight);
     }
 
-    public static int ModeCarousel(Rect screen, float rowCenterY, LocString[] modes, int modeIndex, float scale)
+    public static int ModeCarousel(Rect screen, float rowCenterY, LocString[] modes, string[] modeAnchors,
+        int modeIndex, float scale)
     {
         var gap = CarouselGap * scale;
         Span<float> widths = stackalloc float[modes.Length];
@@ -288,9 +289,6 @@ internal static class CameraChrome
         }
 
         var cursorX = screen.Center.X - total * 0.5f;
-        UiAnchors.Report("camera.modes",
-            new Rect(new Vector2(cursorX - gap * 0.4f, rowCenterY - 14f * scale),
-                new Vector2(cursorX + total + gap * 0.4f, rowCenterY + 14f * scale)));
         var result = modeIndex;
         for (var index = 0; index < modes.Length; index++)
         {
@@ -301,6 +299,7 @@ internal static class CameraChrome
             Typography.DrawCentered(labelCenter, Loc.T(modes[index]), color, modeScale);
             var hitMin = new Vector2(cursorX - gap * 0.4f, rowCenterY - 14f * scale);
             var hitMax = new Vector2(cursorX + widths[index] + gap * 0.4f, rowCenterY + 14f * scale);
+            UiAnchors.Report(modeAnchors[index], new Rect(hitMin, hitMax));
             if (!selected && UiInteract.Hover(hitMin, hitMax))
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -317,16 +316,13 @@ internal static class CameraChrome
     }
 
     public static int ModeColumn(float columnCenterX, float topLimit, float bottomLimit, LocString[] modes,
-        int modeIndex, float scale)
+        string[] modeAnchors, int modeIndex, float scale)
     {
         var span = MathF.Max(bottomLimit - topLimit, 0f);
         var rowHeight = modes.Length > 0 ? MathF.Min(30f * scale, span / modes.Length) : span;
         var total = rowHeight * modes.Length;
         var halfWidth = 44f * scale;
         var cursorY = (topLimit + bottomLimit - total) * 0.5f + rowHeight * 0.5f;
-        UiAnchors.Report("camera.modes",
-            new Rect(new Vector2(columnCenterX - halfWidth, cursorY - rowHeight * 0.5f),
-                new Vector2(columnCenterX + halfWidth, cursorY - rowHeight * 0.5f + total)));
         var result = modeIndex;
         for (var index = 0; index < modes.Length; index++)
         {
@@ -336,6 +332,7 @@ internal static class CameraChrome
             Typography.DrawCentered(new Vector2(columnCenterX, cursorY), Loc.T(modes[index]), color, modeScale);
             var hitMin = new Vector2(columnCenterX - halfWidth, cursorY - rowHeight * 0.5f);
             var hitMax = new Vector2(columnCenterX + halfWidth, cursorY + rowHeight * 0.5f);
+            UiAnchors.Report(modeAnchors[index], new Rect(hitMin, hitMax));
             if (!selected && UiInteract.Hover(hitMin, hitMax))
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -378,6 +375,7 @@ internal static class CameraChrome
         var half = 22f * scale;
         var min = center - new Vector2(half, half);
         var max = center + new Vector2(half, half);
+        UiAnchors.Report("camera.lastShot", new Rect(min, max));
         var hovered = UiInteract.Hover(min, max);
         var rounding = Metrics.Radius.Sm * scale;
         if (lastShot is { } shot)

@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Sharing;
@@ -14,29 +13,26 @@ internal sealed class ShareSheet
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground;
 
-    private const float RevealSmoothTime = 0.16f;
-    private const float MaxDim = 0.55f;
-    private const float PanelRounding = 26f;
     private const float TileSize = 52f;
     private const float CellWidth = 76f;
     private const float CellLabelGap = 8f;
     private const float RowGap = 12f;
-    private const float CancelHeight = 40f;
+    private const float CancelWidth = 180f;
+    private const float LabelAlpha = 0.86f;
+    private const float CellHoverAlpha = 0.07f;
     private const int MaxColumns = 4;
 
-
     private readonly ShareService service;
-    private Spring reveal;
+    private readonly Sheet sheet = new();
     private ShareKind shownKind;
     private bool wasPending;
-    private int openedFrame;
 
     public ShareSheet(ShareService service)
     {
         this.service = service;
     }
 
-    public bool CapturesPointer => service.Pending is not null || !reveal.IsResting(0f, 0.001f, 0.005f);
+    public bool CapturesPointer => service.Pending is not null || sheet.CapturesPointer;
 
     public void Dismiss() => service.Dismiss();
 
@@ -51,110 +47,95 @@ internal sealed class ShareSheet
 
         if (pending && !wasPending)
         {
-            openedFrame = ImGui.GetFrameCount();
+            sheet.Open();
+        }
+
+        if (!pending && sheet.IsOpen)
+        {
+            sheet.Close();
         }
 
         wasPending = pending;
-
-        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        reveal.Step(pending ? 1f : 0f, RevealSmoothTime, delta);
-        if (!pending && reveal.IsResting(0f, 0.001f, 0.005f))
+        if (!pending && !sheet.CapturesPointer)
         {
-            reveal.SnapTo(0f);
             return;
         }
 
-        var opacity = Math.Clamp(reveal.Value, 0f, 1f);
-        var slide = Easing.EaseOutQuint(opacity);
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##shareSheet", screen.Size, false, OverlayFlags))
         {
-            var drawList = ImGui.GetWindowDrawList();
-            drawList.AddRectFilled(screen.Min, screen.Max,
-                ImGui.GetColorU32(new Vector4(0f, 0f, 0f, MaxDim * opacity)));
-            var panel = DrawPanel(screen, theme, opacity, slide, pending);
-            if (!pending || opacity <= 0.5f)
+            var veil = SheetMetrics.VeilFor(WallpaperBackdrop.FlatAvailable);
+            var frame = sheet.Begin(ImGui.GetWindowDrawList(), screen, theme, SheetDetents.Standard(screen.Height),
+                veil);
+            if (frame.Visible)
             {
-                return;
+                DrawContent(in frame, theme);
+                sheet.End(in frame);
             }
+        }
 
-            if (ImGui.GetFrameCount() != openedFrame && UiInteract.ClickedOutside(panel.Min, panel.Max))
-            {
-                service.Dismiss();
-            }
+        if (pending && !sheet.IsOpen)
+        {
+            service.Dismiss();
         }
     }
 
-    private Rect DrawPanel(Rect screen, PhoneTheme theme, float opacity, float slide, bool interactive)
+    private void DrawContent(in SheetFrame frame, PhoneTheme theme)
     {
         var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
+        var drawList = frame.DrawList;
+        var opacity = frame.Opacity;
+        var ink = frame.Ink;
+        var content = frame.Content;
         var targets = service.Targets;
-        var pad = Metrics.Space.Xl * scale;
+        var title = Loc.T(L.Share.Title);
+        var titleHeight = Typography.Measure(title, TextStyles.Headline).Y;
+        Typography.DrawCentered(drawList, new Vector2(content.Center.X, content.Min.Y + titleHeight * 0.5f), title,
+            Palette.WithAlpha(ink, ink.W * opacity), TextStyles.Headline);
+
         var cellWidth = CellWidth * scale;
         var labelHeight = Typography.Measure(" ", TextStyles.Caption1).Y;
         var cellHeight = TileSize * scale + CellLabelGap * scale + labelHeight;
-        var innerWidth = screen.Width - pad * 2f;
+        var innerWidth = content.Width - Metrics.Space.Xl * 2f * scale;
         var columns = Math.Clamp((int)(innerWidth / cellWidth), 1, MaxColumns);
         if (targets.Count < columns)
         {
             columns = Math.Max(1, targets.Count);
         }
 
-        var rows = (targets.Count + columns - 1) / columns;
-        var titleHeight = Typography.Measure(Loc.T(L.Share.Title), TextStyles.Headline).Y;
-        var gridHeight = rows * cellHeight + Math.Max(0, rows - 1) * RowGap * scale;
-        var panelHeight = pad + titleHeight + Metrics.Space.Lg * scale + gridHeight + Metrics.Space.Xl * scale +
-                          CancelHeight * scale + pad;
-        var panelBottom = screen.Max.Y + panelHeight * (1f - slide);
-        var panelTop = panelBottom - panelHeight;
-        var panelMin = new Vector2(screen.Min.X, panelTop);
-        var panelMax = new Vector2(screen.Max.X, panelBottom);
-        var rounding = PanelRounding * scale;
-        Squircle.Fill(drawList, panelMin, panelMax, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.Surface, opacity)));
-        Squircle.Stroke(drawList, panelMin, panelMax, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f * opacity)), Metrics.Stroke.Hairline);
-
-        var centerX = screen.Center.X;
-        Typography.DrawCentered(drawList, new Vector2(centerX, panelTop + pad + titleHeight * 0.5f),
-            Loc.T(L.Share.Title), Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.Headline);
-
-        var gridTop = panelTop + pad + titleHeight + Metrics.Space.Lg * scale;
-        var gridWidth = columns * cellWidth;
-        var gridLeft = centerX - gridWidth * 0.5f;
+        var gridTop = content.Min.Y + titleHeight + Metrics.Space.Lg * scale;
+        var gridLeft = content.Center.X - columns * cellWidth * 0.5f;
         IPhoneApp? picked = null;
         for (var index = 0; index < targets.Count; index++)
         {
             var column = index % columns;
             var row = index / columns;
             var cellMin = new Vector2(gridLeft + column * cellWidth, gridTop + row * (cellHeight + RowGap * scale));
-            if (DrawTarget(drawList, theme, targets[index], shownKind, cellMin, cellWidth, cellHeight, scale, opacity,
-                    interactive))
+            if (DrawTarget(drawList, targets[index], shownKind, cellMin, cellWidth, cellHeight, scale, opacity, ink,
+                    frame.Interactive))
             {
                 picked = targets[index];
             }
         }
 
-        var cancelWidth = MathF.Min(innerWidth, 180f * scale);
-        var cancelMin = new Vector2(centerX - cancelWidth * 0.5f, panelMax.Y - pad - CancelHeight * scale);
-        var cancelRect = new Rect(cancelMin, cancelMin + new Vector2(cancelWidth, CancelHeight * scale));
-        if (ConfirmDialog.DrawPillButton(cancelRect, Loc.T(L.Common.Cancel), true, theme, 1f, opacity,
-                ConfirmButtonTone.Neutral, "##shareCancel") && interactive)
+        var cancelWidth = MathF.Min(innerWidth, CancelWidth * scale);
+        var cancelHeight = Metrics.Size.Pill * scale;
+        var cancelBottom = frame.Panel.Max.Y - Metrics.Size.HomeIndicatorInset * scale;
+        var cancelRect = new Rect(new Vector2(content.Center.X - cancelWidth * 0.5f, cancelBottom - cancelHeight),
+            new Vector2(content.Center.X + cancelWidth * 0.5f, cancelBottom));
+        if (AppSkin.PillButton(cancelRect, Loc.T(L.Common.Cancel), false, theme) && frame.Interactive)
         {
             service.Dismiss();
         }
 
-        if (picked is { } target && interactive)
+        if (picked is { } target && frame.Interactive)
         {
             service.Pick(target);
         }
-
-        return new Rect(panelMin, panelMax);
     }
 
-    private static bool DrawTarget(ImDrawListPtr drawList, PhoneTheme theme, IPhoneApp app, ShareKind kind,
-        Vector2 cellMin, float cellWidth, float cellHeight, float scale, float opacity, bool interactive)
+    private static bool DrawTarget(ImDrawListPtr drawList, IPhoneApp app, ShareKind kind, Vector2 cellMin,
+        float cellWidth, float cellHeight, float scale, float opacity, Vector4 ink, bool interactive)
     {
         var cellMax = cellMin + new Vector2(cellWidth, cellHeight);
         var hovered = interactive && UiInteract.Hover(cellMin, cellMax);
@@ -167,20 +148,23 @@ internal sealed class ShareSheet
         if (hovered)
         {
             Squircle.Fill(drawList, cellMin, cellMax, Metrics.Radius.Card * scale,
-                ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.07f * opacity)));
+                ImGui.GetColorU32(Palette.WithAlpha(ink, CellHoverAlpha * opacity)));
         }
 
-        Elevation.IconRest(drawList, tileMin, tileMax, radius, scale);
-        IconTile.FillShaded(drawList, tileMin, tileMax, radius, Palette.WithAlpha(surface, opacity));
-        Material.EdgeSquircle(drawList, tileMin, tileMax, radius, scale);
-        var ink = AppAccents.InkFor(app.Id);
-        if (!AppIconArt.TryDraw(drawList, app.Id, tileCenter, tileSize, Palette.WithAlpha(ink, opacity),
-                Palette.Mix(surface, ink, 0.28f)))
+        if (!AppIconTile.TryDraw(drawList, app.Id, app.Accent, tileMin, tileMax, radius, opacity, true, scale))
         {
-            var glyphHeight = Typography.Measure(app.Glyph).Y;
-            var glyphScale = glyphHeight > 0f ? tileSize * 0.5f / glyphHeight : 1f;
-            Typography.DrawCentered(drawList, tileCenter, app.Glyph, Palette.WithAlpha(ink, opacity), glyphScale,
-                FontWeight.Regular);
+            Elevation.IconRest(drawList, tileMin, tileMax, radius, scale);
+            IconTile.FillShaded(drawList, tileMin, tileMax, radius, Palette.WithAlpha(surface, opacity));
+            Material.EdgeSquircle(drawList, tileMin, tileMax, radius, scale);
+            var glyphInk = AppAccents.InkFor(app.Id);
+            if (!AppIconArt.TryDraw(drawList, app.Id, tileCenter, tileSize, Palette.WithAlpha(glyphInk, opacity),
+                    Palette.Mix(surface, glyphInk, 0.28f)))
+            {
+                var glyphHeight = Typography.Measure(app.Glyph).Y;
+                var glyphScale = glyphHeight > 0f ? tileSize * 0.5f / glyphHeight : 1f;
+                Typography.DrawCentered(drawList, tileCenter, app.Glyph, Palette.WithAlpha(glyphInk, opacity),
+                    glyphScale, FontWeight.Regular);
+            }
         }
 
         var label = app.ShareLabel(kind) is { } custom ? Loc.T(custom) : app.DisplayName;
@@ -188,14 +172,13 @@ internal sealed class ShareSheet
         var labelSize = Typography.Measure(fitted, TextStyles.Caption1);
         Typography.DrawCentered(drawList,
             new Vector2(tileCenter.X, tileMax.Y + CellLabelGap * scale + labelSize.Y * 0.5f), fitted,
-            Palette.WithAlpha(theme.TextStrong, 0.86f * opacity), TextStyles.Caption1);
+            Palette.WithAlpha(ink, LabelAlpha * opacity), TextStyles.Caption1);
 
-        if (!hovered)
+        if (hovered)
         {
-            return false;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(cellMin, cellMax, hovered);
     }
 }

@@ -14,7 +14,6 @@ internal enum HoverLabelSide : byte
 
 internal static class HoverButton
 {
-    private const float HoverSmoothTime = 0.11f;
     private const float GrowAmount = 0.14f;
     private const float GhostHoverFillAlpha = 0.12f;
     private static readonly Dictionary<string, Spring> springs = new();
@@ -29,7 +28,7 @@ internal static class HoverButton
         var hovered = interactive && UiInteract.Hover(min, max);
         var eased = Step(id, hovered, delta);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var press = PressFx.Scale(id, pressed, 0.92f);
+        var press = PressFx.Scale(id, pressed, PressFx.ControlPressedScale);
         var grow = (1f + GrowAmount * eased) * press;
         var scaledRadius = radius * grow;
         var ghost = tint.W <= 0f;
@@ -74,7 +73,7 @@ internal static class HoverButton
             spring = default;
         }
 
-        spring.Step(hovered ? 1f : 0f, HoverSmoothTime, delta);
+        spring.Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
         springs[id] = spring;
         return Math.Clamp(spring.Value, 0f, 1f);
     }

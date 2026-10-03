@@ -9,10 +9,12 @@ internal static class UiInteract
 {
     private const int OverlayReservationLifetimeFrames = 1;
     private const float RectMatchEpsilon = 0.5f;
+    private const int OverlayReservationCapacity = 8;
 
     private static int blockedFrame = -1;
-    private static Rect overlayRect;
-    private static int overlayFrame = -1;
+    private static readonly Rect[] OverlayRects = new Rect[OverlayReservationCapacity];
+    private static readonly int[] OverlayFrames = CreateOverlayFrames();
+    private static int overlayCursor;
     private static Vector2 pendingTapMin;
     private static Vector2 pendingTapMax;
     private static Vector2 pendingTapWindowPos;
@@ -57,6 +59,13 @@ internal static class UiInteract
 
     public static bool PointerOverGestureSurface => ImGui.GetFrameCount() - gestureSurfaceFrame <= 1;
 
+    private static int[] CreateOverlayFrames()
+    {
+        var frames = new int[OverlayReservationCapacity];
+        Array.Fill(frames, int.MinValue / 2);
+        return frames;
+    }
+
     public static bool HoverOverlay(Rect rect)
     {
         if (InputShield.Active)
@@ -64,14 +73,34 @@ internal static class UiInteract
             return false;
         }
 
-        overlayRect = rect;
-        overlayFrame = ImGui.GetFrameCount();
+        OverlayRects[overlayCursor] = rect;
+        OverlayFrames[overlayCursor] = ImGui.GetFrameCount();
+        overlayCursor = (overlayCursor + 1) % OverlayReservationCapacity;
         return !InputBlocked && WindowHovered && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
     }
 
-    private static bool MouseOverOverlay =>
-        ImGui.GetFrameCount() - overlayFrame <= OverlayReservationLifetimeFrames &&
-        ImGui.IsMouseHoveringRect(overlayRect.Min, overlayRect.Max, false);
+    private static bool MouseOverOverlay
+    {
+        get
+        {
+            var frame = ImGui.GetFrameCount();
+            for (var slotIndex = 0; slotIndex < OverlayReservationCapacity; slotIndex++)
+            {
+                if (frame - OverlayFrames[slotIndex] > OverlayReservationLifetimeFrames)
+                {
+                    continue;
+                }
+
+                var rect = OverlayRects[slotIndex];
+                if (ImGui.IsMouseHoveringRect(rect.Min, rect.Max, false))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
 
     public static bool Hover(Vector2 min, Vector2 max) =>
         !InputBlocked && !MouseOverOverlay && WindowHovered && ImGui.IsMouseHoveringRect(min, max);

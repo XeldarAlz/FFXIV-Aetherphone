@@ -167,9 +167,14 @@ internal sealed class HttpService : IDisposable
 
     public async Task<T?> GetJsonAsync<T>(string url, JsonTypeInfo<T> typeInfo, string? bearer, CancellationToken token,
         Action<int>? onStatus = null, string? appScope = null, Action<AepFailure>? onFailure = null,
-        bool rawAuthorization = false)
+        bool rawAuthorization = false, string? userAgent = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        if (!string.IsNullOrEmpty(userAgent))
+        {
+            request.Headers.TryAddWithoutValidation("User-Agent", userAgent);
+        }
+
         return await SendForJsonAsync(request, typeInfo, bearer, onStatus, appScope, token, onFailure, rawAuthorization)
             .ConfigureAwait(false);
     }
@@ -363,6 +368,11 @@ internal sealed class HttpService : IDisposable
             {
                 await Task.Delay(EdgeShedRetryDelay(), token).ConfigureAwait(false);
                 using var retry = new HttpRequestMessage(request.Method, request.RequestUri);
+                foreach (var product in request.Headers.UserAgent)
+                {
+                    retry.Headers.UserAgent.Add(product);
+                }
+
                 return await SendForJsonAsync(retry, typeInfo, bearer, onStatus, appScope, token, onFailure,
                     rawAuthorization, retriedAfterEdgeShed: true).ConfigureAwait(false);
             }

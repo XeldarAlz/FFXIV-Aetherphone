@@ -42,7 +42,23 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     public FontAwesomeIcon Icon => FontAwesomeIcon.User;
     public Vector4 Tint => new(0.36f, 0.72f, 0.62f, 1f);
+    public ReadOnlySpan<SettingsEntry> Entries => Searchable;
     private const float AccountRowHeight = 58f;
+
+    private static readonly SettingsEntry[] Searchable =
+    {
+        new(L.Account.SignIn),
+        new(L.Account.SignOut),
+        new(L.Account.DeleteAccount),
+        new(L.Account.AddAccount, L.Account.AccountsSection),
+        new(L.Account.FollowCharacter, L.Account.AccountsSection),
+        new(L.Account.PatreonLink, L.Account.PatreonSection),
+        new(L.Account.BadgesSection),
+        new(L.Account.NameTitle),
+        new(L.Profile.Title),
+        new(L.Coin.SettingsRow),
+        new(L.Encryption.Title),
+    };
     private readonly Configuration configuration;
     private readonly AethernetSession session;
     private readonly AuthClient auth;

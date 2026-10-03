@@ -78,7 +78,7 @@ internal sealed class SupportCard
             1.2f * scale);
         DrawComet(drawList, origin, max, rounding, scale);
 
-        var beat = Heartbeat(HeartbeatMs);
+        var beat = Pulse.Heartbeat(HeartbeatMs);
         var medallionCenter = new Vector2(headerX + radius, origin.Y + padding + topHeight * 0.5f);
         ProgressRing.Glow(medallionCenter, radius, PatreonCoral, 0.45f + 0.7f * beat);
         drawList.AddCircleFilled(medallionCenter, radius,
@@ -293,23 +293,6 @@ internal sealed class SupportCard
             ProgressRing.CenterIcon(drawList, position, style.BurstIcon, Palette.WithAlpha(color, 1f - progress),
                 (10f + 8f * (1f - progress)) * scale);
         }
-    }
-
-    private static float Heartbeat(double periodMs)
-    {
-        var phase = Pulse.Phase(periodMs);
-        return MathF.Max(Bump(phase, 0.06f, 0.06f), Bump(phase, 0.20f, 0.06f) * 0.6f);
-    }
-
-    private static float Bump(float phase, float center, float width)
-    {
-        var distance = (phase - center) / width;
-        if (distance < -1f || distance > 1f)
-        {
-            return 0f;
-        }
-
-        return 0.5f * (1f + MathF.Cos(distance * MathF.PI));
     }
 
     private readonly record struct ButtonStyle(

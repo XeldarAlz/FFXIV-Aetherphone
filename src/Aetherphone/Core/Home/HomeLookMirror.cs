@@ -38,6 +38,7 @@ internal static class HomeLookMirror
         target.Dock = home?.Dock is null ? null : new List<string>(home.Dock);
         target.GridRows = configuration.HomeGridRows;
         target.ShowAppNames = configuration.ShowAppNames;
+        target.IconAppearance = configuration.IconAppearance;
         target.ThemeMode = configuration.ThemeMode;
         target.AccentName = configuration.AccentName;
         target.AccentCustomHex = configuration.AccentCustomHex;
@@ -62,6 +63,7 @@ internal static class HomeLookMirror
 
         configuration.HomeGridRows = source.GridRows;
         configuration.ShowAppNames = source.ShowAppNames;
+        configuration.IconAppearance = source.IconAppearance;
         configuration.ThemeMode = source.ThemeMode;
         configuration.AccentName = source.AccentName;
         configuration.AccentCustomHex = source.AccentCustomHex;
@@ -102,6 +104,10 @@ internal static class HomeLookMirror
             Members = new List<HomeItem>(item.Members.Count),
             WidgetId = item.WidgetId,
             WidgetSize = item.WidgetSize,
+            WidgetKey = item.WidgetKey,
+            WidgetConfig = item.WidgetConfig,
+            StackIndex = item.StackIndex,
+            SmartRotate = item.SmartRotate,
             ShortcutId = item.ShortcutId,
         };
         for (var index = 0; index < item.Members.Count; index++)

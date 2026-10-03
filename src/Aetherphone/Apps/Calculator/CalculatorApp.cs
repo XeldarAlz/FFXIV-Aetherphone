@@ -26,10 +26,12 @@ internal sealed class CalculatorApp : IPhoneApp
     private readonly CalculatorEngine engine = new();
     private readonly AppSkin ui = new(AppPalettes.Calculator);
     private int lastHistoryCount;
+    private int solvedAtOpen;
     private bool scrollHistoryToBottom;
 
     public void OnOpened()
     {
+        solvedAtOpen = engine.SolvedCount;
     }
 
     public void OnClosed()
@@ -59,7 +61,13 @@ internal sealed class CalculatorApp : IPhoneApp
 
         var displayRect = new Rect(new Vector2(gridLeft, top + 6f * scale),
             new Vector2(gridRight, gridTop - gap));
-        UiAnchors.Report("calculator.display", displayRect);
+        UiAnchors.Report("calculator.keypad",
+            new Rect(new Vector2(gridLeft, gridTop), new Vector2(gridRight, gridBottom)));
+        if (engine.SolvedCount > solvedAtOpen)
+        {
+            UiAnchors.Report("calculator.answer", displayRect);
+        }
+
         DrawDisplayArea(displayRect, scale);
         DrawKeypad(gridLeft, gridTop, button, gap, scale);
     }
@@ -83,6 +91,7 @@ internal sealed class CalculatorApp : IPhoneApp
         var liveHeight = Math.Clamp(rect.Height * 0.44f, 92f * scale, maxLive);
         var historyRect = new Rect(rect.Min, new Vector2(rect.Max.X, rect.Max.Y - liveHeight));
         var liveRect = new Rect(new Vector2(rect.Min.X, historyRect.Max.Y), rect.Max);
+        UiAnchors.Report("calculator.tape", historyRect);
         DrawHistoryTape(historyRect, scale);
         ImGui.GetWindowDrawList().AddLine(new Vector2(historyRect.Min.X, historyRect.Max.Y),
             new Vector2(historyRect.Max.X, historyRect.Max.Y), ImGui.GetColorU32(Palette.WithAlpha(ui.MutedInk, 0.22f)),

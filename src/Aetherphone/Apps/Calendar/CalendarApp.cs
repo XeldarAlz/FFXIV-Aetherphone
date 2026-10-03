@@ -23,9 +23,6 @@ internal sealed partial class CalendarApp : IPhoneApp
         EditGroup,
     }
 
-    private const float HeaderButtonRadius = 15f;
-    private const float HeaderButtonInset = 16f;
-    private const float HeaderGlyphScale = 0.62f;
     private const float EditorFieldHeight = 46f;
 
     public string Id => "calendar";
@@ -41,6 +38,7 @@ internal sealed partial class CalendarApp : IPhoneApp
     private readonly ViewRouter<CalendarScreen> router;
     private readonly RouterDraw<CalendarScreen> drawView;
     private readonly Action back;
+    private readonly NavBarButton[] headerButtons = new NavBarButton[2];
     private readonly Action<Guid> deleteCustomEvent;
     private readonly Action<Guid> editCustomEvent;
     private readonly Action stepDateBack;
@@ -135,39 +133,64 @@ internal sealed partial class CalendarApp : IPhoneApp
 
     private void DrawMonth(Rect content, float scale)
     {
-        DrawTopBar(content, scale);
-
-        var bodyMin = new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale);
-        var body = new Rect(bodyMin, content.Max);
-
+        var context = new PhoneContext(content, theme, navigation);
+        var navBar = AppHeader.BeginLargeTitle(context, false);
+        var body = navBar.Body;
         using (AppSurface.Begin(body))
         {
-            if (!events.IsLoaded)
+            if (events.IsLoaded)
             {
-                if (events.IsLoading)
-                {
-                    Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 60f * scale),
-                        Loc.T(L.Common.Loading), ui.MutedInk);
-                }
-                else if (events.HasFailed)
-                {
-                    Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 60f * scale),
-                        Loc.T(L.Calendar.FailedToLoad), ui.MutedInk);
-                }
-
-                return;
+                TourHolds.Release(Id);
+                DrawMonthBody(body, scale);
             }
-
-            var visible = MergedEvents();
-            var detailReserved = Math.Clamp(body.Height * 0.30f, 130f * scale, 220f * scale);
-            var monthTarget = body.Height - detailReserved;
-            var monthBottom = CalendarMonthView.Draw(ui, body, monthTarget, ref monthOffset, ref selectedDate, visible);
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
-
-            var detailArea = new Rect(new Vector2(body.Min.X, monthBottom), new Vector2(body.Max.X, body.Max.Y));
-            UiAnchors.Report("calendar.agenda", detailArea);
-            CalendarDayList.Draw(ui, detailArea, selectedDate, visible, scale, deleteCustomEvent, editCustomEvent);
+            else
+            {
+                TourHolds.Hold(Id);
+                DrawMonthStatus(body, scale);
+            }
         }
+
+        headerButtons[0] = new NavBarButton(IconGlyph.Of(FontAwesomeIcon.LayerGroup), Loc.T(L.Calendar.Groups));
+        headerButtons[1] = new NavBarButton(IconGlyph.Of(FontAwesomeIcon.Plus), Loc.T(L.Calendar.NewEvent));
+        UiAnchors.Report("calendar.groups", AppHeader.LargeTitleButtonRect(in navBar, 0, headerButtons.Length));
+        UiAnchors.Report("calendar.new",AppHeader.LargeTitleButtonRect(in navBar, 1, headerButtons.Length));
+        var pressed = AppHeader.EndLargeTitle(in navBar, context, "calendar.nav", DisplayName, NavBarStyle.From(ui),
+            headerButtons);
+        if (pressed == 0)
+        {
+            router.Push(CalendarScreen.Groups);
+        }
+        else if (pressed == 1)
+        {
+            StartNewEvent();
+        }
+    }
+
+    private void DrawMonthStatus(Rect body, float scale)
+    {
+        if (events.IsLoading)
+        {
+            Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 60f * scale), Loc.T(L.Common.Loading),
+                ui.MutedInk);
+        }
+        else if (events.HasFailed)
+        {
+            Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 60f * scale),
+                Loc.T(L.Calendar.FailedToLoad), ui.MutedInk);
+        }
+    }
+
+    private void DrawMonthBody(Rect body, float scale)
+    {
+        var visible = MergedEvents();
+        var detailReserved = Math.Clamp(body.Height * 0.30f, 130f * scale, 220f * scale);
+        var monthTarget = body.Height - detailReserved;
+        var monthBottom = CalendarMonthView.Draw(ui, body, monthTarget, ref monthOffset, ref selectedDate, visible);
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+
+        var detailArea = new Rect(new Vector2(body.Min.X, monthBottom), new Vector2(body.Max.X, body.Max.Y));
+        UiAnchors.Report("calendar.agenda", detailArea);
+        CalendarDayList.Draw(ui, detailArea, selectedDate, visible, scale, deleteCustomEvent, editCustomEvent);
     }
 
     private FrozenDictionary<long, ParsedEvent[]> MergedEvents()
@@ -185,54 +208,6 @@ internal sealed partial class CalendarApp : IPhoneApp
         mergedAccent = accent;
         mergedRevision = events.CustomRevision;
         return merged;
-    }
-
-    private void DrawTopBar(Rect content, float scale)
-    {
-        var centerY = content.Min.Y + AppHeader.Height * scale * 0.5f;
-        var textSize = Typography.Measure(DisplayName, 1.15f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(content.Center.X - textSize.X * 0.5f, centerY - textSize.Y * 0.5f), DisplayName,
-            ui.TitleInk, 1.15f, FontWeight.SemiBold);
-
-        var radius = HeaderButtonRadius * scale;
-        var addCenter = new Vector2(content.Max.X - HeaderButtonInset * scale - radius, centerY);
-        UiAnchors.Report("calendar.new",
-            new Rect(addCenter - new Vector2(radius, radius), addCenter + new Vector2(radius, radius)));
-        if (DrawHeaderButton(addCenter, radius, FontAwesomeIcon.Plus, Loc.T(L.Calendar.NewEvent)))
-        {
-            StartNewEvent();
-        }
-
-        var groupsCenter = new Vector2(content.Min.X + HeaderButtonInset * scale + radius, centerY);
-        if (DrawHeaderButton(groupsCenter, radius, FontAwesomeIcon.LayerGroup, Loc.T(L.Calendar.Groups)))
-        {
-            router.Push(CalendarScreen.Groups);
-        }
-    }
-
-    private bool DrawHeaderButton(Vector2 center, float radius, FontAwesomeIcon icon, string tooltip)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var iconColor = ui.Theme.TextStrong;
-        var min = center - new Vector2(radius, radius);
-        var max = center + new Vector2(radius, radius);
-        var hovered = UiInteract.Hover(min, max);
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(iconColor, hovered ? 0.20f : 0.12f)), 32);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-        {
-            var glyph = IconGlyph.Of(icon);
-            var fontSize = ImGui.GetFontSize() * HeaderGlyphScale;
-            var size = ImGui.CalcTextSize(glyph) * HeaderGlyphScale;
-            drawList.AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(iconColor), glyph);
-        }
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        HoverTooltip.Show(new Rect(min, max), tooltip);
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private void DrawTextField(Rect rect, float scale, string id, string hint, ref string value, int maxLength)

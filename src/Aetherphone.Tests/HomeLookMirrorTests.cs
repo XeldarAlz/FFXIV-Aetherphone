@@ -62,6 +62,7 @@ public sealed class HomeLookMirrorTests
         };
         configuration.HomeGridRows = 8;
         configuration.ShowAppNames = false;
+        configuration.IconAppearance = IconAppearance.Clear;
         configuration.ThemeMode = ThemeMode.Auto;
         configuration.AccentName = "#ff00ff";
         configuration.AccentCustomHex = "#ff00ff";
@@ -73,12 +74,13 @@ public sealed class HomeLookMirrorTests
 
         Assert.Equal(5, configuration.HomeGridRows);
         Assert.True(configuration.ShowAppNames);
+        Assert.Equal(IconAppearance.Tinted, configuration.IconAppearance);
         Assert.Equal(ThemeMode.Light, configuration.ThemeMode);
         Assert.Equal("Blue", configuration.AccentName);
         Assert.Equal(string.Empty, configuration.AccentCustomHex);
         Assert.Equal("Titanium", configuration.PhoneCaseName);
-        Assert.Equal("DuskLight", configuration.LightWallpaperId);
-        Assert.Equal("DuskDark", configuration.DarkWallpaperId);
+        Assert.Equal("BloomLight", configuration.LightWallpaperId);
+        Assert.Equal("BloomDark", configuration.DarkWallpaperId);
         var home = configuration.Home!;
         Assert.Equal(new[] { "a", "b" }, home.Dock);
         Assert.Equal(2, home.Pages.Count);
@@ -179,12 +181,13 @@ public sealed class HomeLookMirrorTests
             },
             HomeGridRows = 5,
             ShowAppNames = true,
+            IconAppearance = IconAppearance.Tinted,
             ThemeMode = ThemeMode.Light,
             AccentName = "Blue",
             AccentCustomHex = string.Empty,
             PhoneCaseName = "Titanium",
-            LightWallpaperId = "DuskLight",
-            DarkWallpaperId = "DuskDark",
+            LightWallpaperId = "BloomLight",
+            DarkWallpaperId = "BloomDark",
         };
 
     private sealed class FakeLookConfiguration : ILookConfiguration
@@ -192,6 +195,7 @@ public sealed class HomeLookMirrorTests
         public HomeLayout? Home { get; set; }
         public int HomeGridRows { get; set; }
         public bool ShowAppNames { get; set; }
+        public IconAppearance IconAppearance { get; set; }
         public ThemeMode ThemeMode { get; set; }
         public string AccentName { get; set; } = string.Empty;
         public string AccentCustomHex { get; set; } = string.Empty;

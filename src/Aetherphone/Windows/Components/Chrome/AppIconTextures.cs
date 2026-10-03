@@ -4,7 +4,7 @@ namespace Aetherphone.Windows.Components;
 
 internal static class AppIconTextures
 {
-    private const float GlyphFraction = 0.62f;
+    public const float GlyphFraction = 0.62f;
 
     private static readonly string IconDirectory =
         Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Icons");

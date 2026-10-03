@@ -16,6 +16,19 @@ internal static class VideoThumbnailResolver
             : cache.Get(fallbackThumbnailUrl);
     }
 
+    public static Func<CancellationToken, Task<byte[]?>>? Source(HttpService http, string? url, out string key)
+    {
+        var id = url is not null ? VideoId.TryParse(url)?.Value : null;
+        if (id is null)
+        {
+            key = string.Empty;
+            return null;
+        }
+
+        key = $"ytthumb:{id}";
+        return token => FetchAsync(http, id, token);
+    }
+
     private static async Task<byte[]?> FetchAsync(HttpService http, string videoId, CancellationToken token)
     {
         var maxres = await http.GetBytesAsync(new Uri($"https://i.ytimg.com/vi/{videoId}/maxresdefault.jpg"), token)

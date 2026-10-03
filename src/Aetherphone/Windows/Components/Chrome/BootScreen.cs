@@ -14,6 +14,9 @@ internal static class BootScreen
     private const float LetterRevealSpan = 0.4f;
     private const float LetterRisePixels = 16f;
     private const float GreetingDriftPixels = 18f;
+    private const float EmblemMarkSpan = 2.4f;
+    private const float CaptionGapUnits = 34f;
+    private static readonly Vector4 StageInk = new(1f, 1f, 1f, 0.96f);
 
     private static readonly Vector2[] GlowOffsets =
     {
@@ -27,7 +30,7 @@ internal static class BootScreen
         var dl = ImGui.GetForegroundDrawList();
         if (boot.BackdropAlpha > 0f)
         {
-            DrawBackdrop(dl, screen, theme, boot.BackdropAlpha, rounding);
+            DrawBackdrop(dl, screen, boot.BackdropAlpha, rounding);
         }
 
         if (boot.EmblemAlpha > 0f || boot.EmblemRingAlpha > 0f)
@@ -37,41 +40,29 @@ internal static class BootScreen
 
         if (boot.EmblemAlpha > 0.01f)
         {
-            DrawLoadingCaption(dl, screen.Center, theme, boot, scale);
+            DrawLoadingCaption(dl, screen.Center, boot, scale);
         }
 
         if (boot.Greeting is not null && boot.GreetingAlpha > 0f)
         {
-            DrawGreeting(dl, screen.Center, theme, boot, scale);
+            DrawGreeting(dl, screen.Center, boot, scale);
         }
     }
 
-    public static void DrawBackdrop(ImDrawListPtr dl, Rect screen, PhoneTheme theme, float alpha, float rounding)
-    {
-        var baseColor = new Vector4(0.015f, 0.019f, 0.038f, alpha);
-        Squircle.Fill(dl, screen.Min, screen.Max, rounding, ImGui.GetColorU32(baseColor));
-        var breath = 0.8f + 0.2f * Pulse.Wave(5200);
-        dl.PushClipRect(screen.Min, screen.Max, true);
-        for (var ring = 3; ring >= 1; ring--)
-        {
-            var radius = screen.Height * (0.16f + ring * 0.13f);
-            var glow = 0.055f / ring * alpha * breath;
-            dl.AddCircleFilled(screen.Center, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, glow)), 96);
-        }
-
-        dl.PopClipRect();
-    }
+    public static void DrawBackdrop(ImDrawListPtr dl, Rect screen, float alpha, float rounding) =>
+        BrandMark.DrawStage(dl, screen, rounding, alpha, false, 1f);
 
     private static void DrawEmblem(ImDrawListPtr dl, Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
     {
-        var accent = theme.Accent;
         var alpha = boot.EmblemAlpha;
         var baseRadius = EmblemBaseRadius * scale * boot.EmblemScale;
+        var markSize = baseRadius * EmblemMarkSpan;
         if (boot.EmblemRingAlpha > 0f)
         {
-            var ringRadius = baseRadius * (1f + BootTiming.EmblemRingExpansion * boot.EmblemRingProgress);
-            dl.AddCircle(center, ringRadius, ImGui.GetColorU32(Palette.WithAlpha(accent, boot.EmblemRingAlpha * 0.5f)),
-                72, 2.2f * scale);
+            var ringSize = markSize * (1f + BootTiming.EmblemRingExpansion * 0.5f * boot.EmblemRingProgress);
+            var ringHalf = new Vector2(ringSize * 0.5f, ringSize * 0.5f);
+            Squircle.Stroke(dl, center - ringHalf, center + ringHalf, ringSize * BrandMark.CornerFraction,
+                ImGui.GetColorU32(BrandMark.Lilac with { W = boot.EmblemRingAlpha * 0.4f }), 1.6f * scale);
         }
 
         if (alpha <= 0f)
@@ -79,19 +70,20 @@ internal static class BootScreen
             return;
         }
 
-        dl.AddCircleFilled(center, baseRadius * 2.4f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.05f * alpha)), 64);
-        LoadingPulse.Spinner(center, baseRadius, accent, alpha, dl);
-        dl.AddCircleFilled(center, baseRadius * 0.15f, ImGui.GetColorU32(Palette.WithAlpha(Vector4.One, alpha * 0.9f)),
-            32);
+        if (BrandMark.TryDraw(dl, center, markSize, alpha, scale))
+        {
+            return;
+        }
+
+        LoadingPulse.Spinner(center, baseRadius, theme.Accent, alpha, dl);
     }
 
-    private static void DrawLoadingCaption(ImDrawListPtr dl, Vector2 center, PhoneTheme theme, BootSequence boot,
-        float scale)
+    private static void DrawLoadingCaption(ImDrawListPtr dl, Vector2 center, BootSequence boot, float scale)
     {
         var alpha = boot.EmblemAlpha;
         var baseRadius = EmblemBaseRadius * scale * boot.EmblemScale;
-        var caret = center.Y + baseRadius * 2.15f + 14f * scale;
-        LoadingPulse.Caption(new Vector2(center.X, caret), theme.TextStrong, theme.Accent, LoadingPulse.SafeLabel(),
+        var caret = center.Y + baseRadius * EmblemMarkSpan * 0.5f + CaptionGapUnits * scale;
+        LoadingPulse.Caption(new Vector2(center.X, caret), StageInk, BrandMark.Lilac, LoadingPulse.SafeLabel(),
             alpha, CaptionFontScale, drawList: dl);
     }
 
@@ -113,7 +105,7 @@ internal static class BootScreen
         return greetingGlyphs;
     }
 
-    private static void DrawGreeting(ImDrawListPtr dl, Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
+    private static void DrawGreeting(ImDrawListPtr dl, Vector2 center, BootSequence boot, float scale)
     {
         var text = boot.Greeting!;
         var length = text.Length;
@@ -153,7 +145,7 @@ internal static class BootScreen
                 if (letterAlpha > 0.01f)
                 {
                     var rise = (1f - letterProgress) * LetterRisePixels * scale;
-                    DrawGlyph(dl, font, fontSize, glyphs[index], new Vector2(penX, baseY + rise), theme.TextStrong,
+                    DrawGlyph(dl, font, fontSize, glyphs[index], new Vector2(penX, baseY + rise), StageInk,
                         letterAlpha, scale);
                 }
 

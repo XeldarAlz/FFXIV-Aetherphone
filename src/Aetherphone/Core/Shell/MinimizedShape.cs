@@ -13,7 +13,8 @@ internal static class MinimizedShapes
     public const int ShapeCount = 2;
     public const int MapZoomCount = 7;
     public const int DefaultMapZoom = 3;
-    public const float MapSide = 148f;
+    public const float BodyWidth = 92f;
+    public const float BodyHeight = 188f;
     public const float MinScale = 0.75f;
     public const float MaxScale = 2.5f;
     private const float ScaleSnapTolerance = 0.04f;

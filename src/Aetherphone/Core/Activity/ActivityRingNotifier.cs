@@ -45,6 +45,8 @@ internal sealed class ActivityRingNotifier : IDisposable
         }
 
         var day = tracker.Today;
+        var targets = ActivityTargets.From(configuration);
+        SeedRecords(targets);
         NotifyRing(day, ActivityGoals.ProgressFraction(configuration, day), ProgressFlag, L.Character.RingProgress);
         NotifyRing(day, ActivityGoals.AdventureFraction(configuration, day), AdventureFlag, L.Character.RingAdventure);
         NotifyRing(day, ActivityGoals.FortuneFraction(configuration, day), FortuneFlag, L.Character.RingFortune);
@@ -54,8 +56,27 @@ internal sealed class ActivityRingNotifier : IDisposable
         }
 
         day.RingsNotified |= AllClosedFlag;
+        var records = tracker.Records;
+        records.PerfectDays++;
+        records.BestStreak = Math.Max(records.BestStreak,
+            ActivityStats.CurrentStreak(tracker.Days, targets, DateTime.Now));
         tracker.MarkDirty();
         Notify(Loc.T(L.Character.AllRingsTitle), Loc.T(L.Character.AllRingsBody));
+    }
+
+    private void SeedRecords(in ActivityTargets targets)
+    {
+        var records = tracker.Records;
+        if (records.Seeded)
+        {
+            return;
+        }
+
+        var days = tracker.Days;
+        records.PerfectDays = Math.Max(records.PerfectDays, ActivityStats.CountFlagged(days, AllClosedFlag));
+        records.BestStreak = Math.Max(records.BestStreak, ActivityStats.BestStreak(days, targets));
+        records.Seeded = true;
+        tracker.MarkDirty();
     }
 
     private void NotifyRing(ActivityDay day, float fraction, int flag, LocString ringName)

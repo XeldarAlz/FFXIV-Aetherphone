@@ -1,5 +1,4 @@
 using Aetherphone.Core.Audio;
-using System.Linq;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
@@ -20,7 +19,6 @@ internal sealed class RadioPlayer : IDisposable
     private static readonly TimeSpan BufferDuration = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan PrebufferThreshold = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan BackpressureThreshold = TimeSpan.FromSeconds(15);
-    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(20);
     private static readonly int[] ReconnectDelaysMilliseconds = { 1000, 2000, 5000, 10000, 20000, 20000 };
     private const long StableSessionMilliseconds = 30000;
     private const string StreamUserAgent = "Aetherphone";
@@ -226,13 +224,13 @@ internal sealed class RadioPlayer : IDisposable
         var attempt = 0;
         while (!token.IsCancellationRequested)
         {
-            var stable = StreamOnce(station.StreamUrl, station.Codec, token, workerSession);
-            if (token.IsCancellationRequested || !station.IsCommunity)
+            var outcome = StreamOnce(station.StreamUrl, station.Codec, token, workerSession);
+            if (token.IsCancellationRequested || !ShouldReconnect(station.IsCommunity, outcome.Stalled))
             {
                 return;
             }
 
-            if (stable)
+            if (outcome.Stable)
             {
                 attempt = 0;
             }
@@ -253,58 +251,41 @@ internal sealed class RadioPlayer : IDisposable
         }
     }
 
-    private Stream WrapMetadata(Stream network, HttpResponseMessage response, int workerSession)
+    internal static bool ShouldReconnect(bool isCommunity, bool stalled) => isCommunity || stalled;
+
+    private readonly record struct StreamOutcome(bool Stable, bool Stalled);
+
+    private void PublishTitle(int workerSession, string title)
     {
-        if (!response.Headers.TryGetValues(IcyMetadataStream.IntervalHeader, out var values))
+        lock (gate)
         {
-            return network;
-        }
-
-        var interval = IcyMetadataStream.ParseInterval(values.FirstOrDefault());
-        if (interval <= 0)
-        {
-            return network;
-        }
-
-        return new IcyMetadataStream(network, interval, title =>
-        {
-            lock (gate)
+            if (workerSession == session)
             {
-                if (workerSession == session)
-                {
-                    nowPlaying = title;
-                }
+                nowPlaying = title;
             }
-        });
+        }
     }
 
-    private bool StreamOnce(string url, string declaredCodec, CancellationToken token, int workerSession)
+    private StreamOutcome StreamOnce(string url, string declaredCodec, CancellationToken token, int workerSession)
     {
         IWavePlayer? output = null;
         VolumeSampleProvider? volumeProvider = null;
         IStreamDecoder? decoder = null;
         BufferedWaveProvider? buffer = null;
-        HttpResponseMessage? response = null;
+        RadioConnection? connection = null;
         var decoded = new byte[Mp3StreamDecoder.MaxDecodedBytes];
         var playingSinceTick = 0L;
+        Action<string> onTitle = title => PublishTitle(workerSession, title);
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.TryAddWithoutValidation(IcyMetadataStream.RequestHeader, "1");
-            using (var connectTimeout = CancellationTokenSource.CreateLinkedTokenSource(token))
+            connection = RadioStreamOpener.Open(client, url, declaredCodec,
+                response => TryPublishResponse(response, workerSession), onTitle, token);
+            if (connection is null)
             {
-                connectTimeout.CancelAfter(ConnectTimeout);
-                response = client.Send(request, HttpCompletionOption.ResponseHeadersRead, connectTimeout.Token);
-            }
-            if (!TryPublishResponse(response, workerSession))
-            {
-                return false;
+                return default;
             }
 
-            response.EnsureSuccessStatusCode();
-            using var network = response.Content.ReadAsStream(token);
-            var audio = WrapMetadata(network, response, workerSession);
-            decoder = StreamDecoders.Create(response.Content.Headers.ContentType?.MediaType, declaredCodec, audio);
+            decoder = StreamDecoders.Create(connection.Codec, connection.Audio, onTitle);
             while (!token.IsCancellationRequested)
             {
                 if (buffer is not null && buffer.BufferedDuration > BackpressureThreshold)
@@ -324,7 +305,17 @@ internal sealed class RadioPlayer : IDisposable
                     break;
                 }
 
-                buffer ??= new BufferedWaveProvider(decoder.WaveFormat)
+                var format = decoder.WaveFormat!;
+                if (buffer is not null && !buffer.WaveFormat.Equals(format))
+                {
+                    output?.Stop();
+                    output?.Dispose();
+                    output = null;
+                    volumeProvider = null;
+                    buffer = null;
+                }
+
+                buffer ??= new BufferedWaveProvider(format)
                 {
                     BufferDuration = BufferDuration, DiscardOnBufferOverflow = true,
                 };
@@ -335,7 +326,11 @@ internal sealed class RadioPlayer : IDisposable
                     output = AudioOutputFactory.Create();
                     output.Init(volumeProvider, true);
                     output.Play();
-                    playingSinceTick = Environment.TickCount64;
+                    if (playingSinceTick == 0L)
+                    {
+                        playingSinceTick = Environment.TickCount64;
+                    }
+
                     TrySetState(workerSession, RadioPlaybackState.Playing);
                 }
 
@@ -347,11 +342,17 @@ internal sealed class RadioPlayer : IDisposable
 
             if (!token.IsCancellationRequested)
             {
-                TrySetState(workerSession, RadioPlaybackState.Stopped);
+                TrySetState(workerSession,
+                    connection.Stalled ? RadioPlaybackState.Reconnecting : RadioPlaybackState.Stopped);
             }
         }
         catch (Exception) when (token.IsCancellationRequested)
         {
+        }
+        catch (Exception exception) when (exception is RadioStallException || connection?.Stalled == true)
+        {
+            TrySetState(workerSession, RadioPlaybackState.Reconnecting);
+            AepLog.Info(exception, "Radio stream went silent, reconnecting");
         }
         catch (Exception exception)
         {
@@ -365,16 +366,17 @@ internal sealed class RadioPlayer : IDisposable
             decoder?.Dispose();
             lock (gate)
             {
-                if (ReferenceEquals(activeResponse, response))
+                if (workerSession == session)
                 {
                     activeResponse = null;
                 }
             }
 
-            response?.Dispose();
+            connection?.Dispose();
         }
 
-        return playingSinceTick != 0L && Environment.TickCount64 - playingSinceTick >= StableSessionMilliseconds;
+        var stable = playingSinceTick != 0L && Environment.TickCount64 - playingSinceTick >= StableSessionMilliseconds;
+        return new StreamOutcome(stable, connection?.Stalled ?? false);
     }
 
     public void Dispose()

@@ -1,3 +1,5 @@
+using Aetherphone.Core.Wallpapers;
+
 namespace Aetherphone.Core.Theme;
 
 internal sealed class PhoneTheme
@@ -130,7 +132,8 @@ internal sealed class PhoneTheme
         };
 
     public static PhoneTheme Default { get; } = Dark(new Vector4(0.55f, 0.45f, 0.95f, 1f),
-        ThemeCatalog.ResolveCase(ThemeCatalog.DefaultCaseName), ChassisMetrics.Default, "DuskLight", "DuskDark");
+        ThemeCatalog.ResolveCase(ThemeCatalog.DefaultCaseName), ChassisMetrics.Default, BuiltInWallpapers.DefaultLightId,
+        BuiltInWallpapers.DefaultDarkId);
 
     public bool WantsCaseArt => CaseKind == PhoneCaseKind.Art && CaseTextureId.Length > 0;
 }

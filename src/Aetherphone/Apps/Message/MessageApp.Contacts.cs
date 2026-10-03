@@ -97,7 +97,9 @@ internal sealed partial class MessageApp
             if (query.Length == 0)
             {
                 DrawMyProfileRow(drawList);
-                if (DrawActionRow(drawList, PhoneIcons.UserPlus, Loc.T(L.Message.NewContact)))
+                var addTapped = DrawActionRow(drawList, PhoneIcons.UserPlus, Loc.T(L.Message.NewContact));
+                UiAnchors.Report("message.addcontact", new Rect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax()));
+                if (addTapped)
                 {
                     addError = string.Empty;
                     router.Push(MessageRoute.AddContact);

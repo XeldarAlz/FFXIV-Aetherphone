@@ -320,7 +320,7 @@ internal sealed partial class YellowPagesApp
         var restMax = max;
         var hovered = UiInteract.Hover(min, max);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var press = PressFx.Scale("yellowpages.rail." + ad.Id, pressed, 0.97f);
+        var press = PressFx.Scale("yellowpages.rail." + ad.Id, pressed, PressFx.CardPressedScale);
         var center = (min + max) * 0.5f;
         var half = (max - min) * 0.5f * press;
         min = center - half;
@@ -417,6 +417,13 @@ internal sealed partial class YellowPagesApp
         var labelTop = (IntentGlyphTop + IntentGlyphRadius + IntentLabelGap) * scale;
         var tileHeight = labelTop + maxLines * Typography.LineHeight(labelStyle) * IntentLineSpacing
             + IntentTextInset * scale;
+        var rowMin = new Vector2(origin.X + pad, origin.Y);
+        var rowMax = new Vector2(origin.X + width - pad, origin.Y + tileHeight);
+        if (ImGui.IsRectVisible(rowMin, rowMax))
+        {
+            UiAnchors.Report("yellowpages.intents", new Rect(rowMin, rowMax));
+        }
+
         for (var index = 0; index < intents.Length; index++)
         {
             var min = new Vector2(origin.X + pad + (tileWidth + gap) * index, origin.Y);
@@ -439,7 +446,7 @@ internal sealed partial class YellowPagesApp
         var restMax = max;
         var hovered = UiInteract.Hover(min, max);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var press = PressFx.Scale("yellowpages.intent." + intent, pressed, 0.96f);
+        var press = PressFx.Scale("yellowpages.intent." + intent, pressed, PressFx.ControlPressedScale);
         var center = (min + max) * 0.5f;
         var half = (max - min) * 0.5f * press;
         min = center - half;
@@ -531,9 +538,15 @@ internal sealed partial class YellowPagesApp
                 var context = CardContext(nowUnix);
                 for (var index = 0; index < directory.Length; index++)
                 {
+                    var cardTop = ImGui.GetCursorScreenPos();
                     if (AdCard.Draw(directory[index], context))
                     {
                         OpenDetail(directory[index].Id);
+                    }
+
+                    if (index == 0)
+                    {
+                        ReportFirstCard(cardTop);
                     }
                 }
 
@@ -562,7 +575,8 @@ internal sealed partial class YellowPagesApp
         var width = ScrollLayout.StableContentWidth();
         var row = new Rect(new Vector2(origin.X + CellPadX * scale, origin.Y),
             new Vector2(origin.X + width - CellPadX * scale, origin.Y + ChipRail.RowHeight * scale));
-        var tapped = categoryRail.Draw(row, ui, chipLabels.AsSpan(0, count), chipActive.AsSpan(0, count));
+        var tapped = categoryRail.Draw(row, ui, chipLabels.AsSpan(0, count), chipActive.AsSpan(0, count),
+            anchorKey: "yellowpages.category.chips");
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, ChipRail.RowHeight * scale + Metrics.Space.Sm * scale));
         if (tapped < 0)
@@ -575,6 +589,22 @@ internal sealed partial class YellowPagesApp
             : mask ^ (1 << categories[tapped - 1]);
         configuration.Save();
         RefreshIntent(intent);
+    }
+
+    private static void ReportFirstCard(Vector2 cardTop)
+    {
+        if (!UiAnchors.Recording)
+        {
+            return;
+        }
+
+        var cardMax = new Vector2(cardTop.X + ScrollLayout.StableContentWidth(), ImGui.GetCursorScreenPos().Y);
+        if (!ImGui.IsRectVisible(cardTop, cardMax))
+        {
+            return;
+        }
+
+        UiAnchors.Report("yellowpages.card", new Rect(cardTop, cardMax));
     }
 
     private void DrawDirectionRow(int intent, float scale)

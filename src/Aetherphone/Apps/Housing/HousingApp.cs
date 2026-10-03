@@ -4,9 +4,12 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -14,54 +17,30 @@ namespace Aetherphone.Apps.Housing;
 
 internal sealed partial class HousingApp : IPhoneApp
 {
-    private const float TopBarHeight = AppHeader.Height;
-    private const float ContextBarHeight = 40f;
-    private const float PhaseBarHeight = 26f;
-    private const float FooterHeight = 34f;
-    private const float SheetSmoothTime = 0.16f;
-    private const float MapSmoothTime = 0.11f;
-    private const float ToastSeconds = 3.4f;
+    private const int TabCount = 4;
+    private const float BottomPad = 24f;
+    private const float RefreshFeedbackSeconds = 1.6f;
 
     private readonly HousingService housing;
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
     private readonly ViewRouter<HousingView> router;
     private readonly RouterDraw<HousingView> drawView;
+    private readonly Action back;
     private readonly AppSkin ui = new(AppPalettes.Housing);
+    private readonly TabBar tabBar = new();
+    private readonly TabItem[] tabItems = new TabItem[TabCount];
     private readonly DropdownMenu menu = new();
-    private readonly List<HousingPlot> visible = new();
-    private readonly List<HousingPlot> sorted = new();
     private readonly List<DropdownMenu.Item> menuItems = new();
+    private readonly List<HousingPlot> visible = new();
 
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
-    private Rect frameScreen;
+    private HousingTab activeTab;
     private MenuTarget menuTarget = MenuTarget.None;
-
-    private Spring zoomSpring = new(1f);
-    private Spring panXSpring;
-    private Spring panYSpring;
-    private float zoomTarget = 1f;
-    private Vector2 panTarget;
-    private HousingPlotKey selectedPlot;
-    private bool dragging;
-    private float dragTravel;
-
-    private bool showSubdivision;
-
-    private Spring sheetSpring;
-    private Spring filterSpring;
-    private bool sheetOpen;
-    private bool filtersOpen;
-    private bool wardPickerOpen;
-    private bool legendOpen;
-    private bool reminderPickerOpen;
-    private int reminderChoice = 2;
-    private string toast = string.Empty;
-    private float toastRemaining;
-    private string worldSearch = string.Empty;
-    private bool refreshFeedback;
     private float refreshFeedbackRemaining;
+    private float deltaSeconds;
+    private CachedText filtersLabel;
 
     private int cachedRevision = -1;
     private int cachedFilterRevision = -1;
@@ -71,38 +50,11 @@ internal sealed partial class HousingApp : IPhoneApp
     private uint cachedDistrict;
     private bool cachedSubdivision;
     private bool cachedDivisionSplit;
-    private readonly ChipRail reminderRail = new();
 
     private enum MenuTarget : byte
     {
         None,
-        District,
         Sort,
-    }
-
-    private enum HousingOverlay : byte
-    {
-        None,
-        WardPicker,
-        Filters,
-        ReminderPicker,
-    }
-
-    private bool OverlayActive => wardPickerOpen || filtersOpen || reminderPickerOpen;
-
-    private void ShowOverlay(HousingOverlay overlay)
-    {
-        wardPickerOpen = overlay == HousingOverlay.WardPicker;
-        filtersOpen = overlay == HousingOverlay.Filters;
-        reminderPickerOpen = overlay == HousingOverlay.ReminderPicker;
-        if (filtersOpen)
-        {
-            ResetFilterRails();
-        }
-        else if (reminderPickerOpen)
-        {
-            reminderRail.Reset();
-        }
     }
 
     public HousingApp(HousingService housing, Configuration configuration, ConfirmService confirm)
@@ -112,6 +64,7 @@ internal sealed partial class HousingApp : IPhoneApp
         this.confirm = confirm;
         router = new ViewRouter<HousingView>(HousingView.Root);
         drawView = DrawView;
+        back = () => router.Pop();
     }
 
     public string Id => HousingService.AppId;
@@ -121,13 +74,17 @@ internal sealed partial class HousingApp : IPhoneApp
     public string Glyph => "Ho";
 
     public int BadgeCount => housing.Watch.FiredReminderCount;
+
     public bool HasBadge => true;
 
     public bool BadgeAsDot => true;
 
+    private bool Refreshing => housing.IsRefreshing || refreshFeedbackRemaining > 0f;
+
     public void OnOpened()
     {
         router.Reset();
+        activeTab = HousingTab.Overview;
         CloseOverlays();
         worldSearch = string.Empty;
         housing.SetForeground(true);
@@ -148,236 +105,190 @@ internal sealed partial class HousingApp : IPhoneApp
         frameTheme = context.Theme;
         frameNavigation = context.Navigation;
         ui.Theme = frameTheme;
+        deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var scale = UiScale.Current;
-        frameScreen = SceneChrome.ScreenFrom(context.Content, frameTheme, scale);
-        ui.Backdrop(frameScreen);
+        ui.Backdrop(SceneChrome.ScreenFrom(context.Content, frameTheme, scale));
         menu.Gate();
-        if (OverlayActive)
+        if (ModalOpen)
         {
             UiInteract.BlockThisFrame();
         }
 
-        AdvanceAnimations(MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
+        AdvanceAnimations(deltaSeconds);
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
-        DrawMenu();
-        DrawToast(context.Content, scale);
-    }
-
-    private HousingBrowseMode BrowseMode =>
-        configuration.HousingBrowseMode == (int)HousingBrowseMode.List
-            ? HousingBrowseMode.List
-            : HousingBrowseMode.Map;
-
-    private void SetBrowseMode(HousingBrowseMode mode)
-    {
-        if (configuration.HousingBrowseMode == (int)mode)
-        {
-            return;
-        }
-
-        configuration.HousingBrowseMode = (int)mode;
-        configuration.Save();
-        sheetOpen = false;
-        selectedPlot = default;
-        wardPickerOpen = false;
-        InvalidateCache();
+        DrawModalSheets(context.Content);
+        DrawMenu(context.Content);
+        UpdateTourHold();
     }
 
     private void DrawView(HousingView view, Rect area, int depth)
     {
         ui.Body(area);
+        var context = new PhoneContext(area, frameTheme, frameNavigation);
         switch (view.Route)
         {
-            case HousingRoute.Watchlist:
-                DrawWatchlistRoute(area);
-                break;
             case HousingRoute.Details:
-                DrawDetailsRoute(area, view.Plot);
+                DrawDetailsRoute(context, view);
                 break;
             case HousingRoute.Settings:
-                DrawSettingsRoute(area);
+                DrawSettingsRoute(context, view);
                 break;
             case HousingRoute.WorldPicker:
-                DrawWorldPickerRoute(area);
+                DrawWorldPickerRoute(context, view);
                 break;
             default:
-                DrawMapRoute(area);
+                DrawRoot(context);
                 break;
         }
     }
 
-    private void AdvanceAnimations(float deltaSeconds)
+    private void DrawRoot(in PhoneContext context)
     {
-        zoomSpring.Step(zoomTarget, MapSmoothTime, deltaSeconds);
-        panXSpring.Step(panTarget.X, MapSmoothTime, deltaSeconds);
-        panYSpring.Step(panTarget.Y, MapSmoothTime, deltaSeconds);
-        sheetSpring.Step(sheetOpen ? 1f : 0f, SheetSmoothTime, deltaSeconds);
-        filterSpring.Step(filtersOpen ? 1f : 0f, SheetSmoothTime, deltaSeconds);
-        if (toastRemaining > 0f)
+        var scale = UiScale.Current;
+        using (TabBar.ReserveContent(scale))
         {
-            toastRemaining = MathF.Max(0f, toastRemaining - deltaSeconds);
-        }
-
-        if (refreshFeedbackRemaining > 0f)
-        {
-            refreshFeedbackRemaining = MathF.Max(0f, refreshFeedbackRemaining - deltaSeconds);
-            if (refreshFeedbackRemaining <= 0f)
+            switch (activeTab)
             {
-                refreshFeedback = false;
+                case HousingTab.Map:
+                    DrawMapTab(context.Content);
+                    break;
+                case HousingTab.Plots:
+                    DrawPlotsTab(context);
+                    break;
+                case HousingTab.Watchlist:
+                    DrawWatchlistTab(context);
+                    break;
+                default:
+                    DrawOverviewTab(context);
+                    break;
             }
         }
+
+        DrawTabBar(context.Content);
     }
 
-    private void Push(HousingRoute route, HousingPlotKey plot = default)
+    private void DrawTabBar(Rect area)
     {
-        CloseTransientOverlays();
-        router.Push(new HousingView(route, plot));
+        tabItems[(int)HousingTab.Overview] = new TabItem(Loc.T(L.Housing.TabOverview), PhoneIcons.Home,
+            PhoneIcons.HomeFilled, AnchorKey: "housing.tab.overview");
+        tabItems[(int)HousingTab.Map] = new TabItem(Loc.T(L.Housing.Map), PhoneIcons.MapPin, PhoneIcons.PinFilled,
+            AnchorKey: "housing.tab.map");
+        tabItems[(int)HousingTab.Plots] = new TabItem(Loc.T(L.Housing.TabPlots), PhoneIcons.LayoutList,
+            AnchorKey: "housing.tab.plots");
+        tabItems[(int)HousingTab.Watchlist] = new TabItem(Loc.T(L.Housing.Watchlist), PhoneIcons.Bookmark,
+            PhoneIcons.BookmarkFilled, housing.Watch.Watched.Count, "housing.tab.watchlist");
+        var result = tabBar.Draw(area, ui, tabItems, (int)activeTab);
+        if (result.Tapped < 0 || result.Tapped == (int)activeTab)
+        {
+            return;
+        }
+
+        SwitchTab((HousingTab)result.Tapped);
     }
 
-    private void Back()
+    private void SwitchTab(HousingTab tab)
     {
-        if (menu.Open)
+        if (tab == activeTab)
         {
-            menu.Close();
             return;
         }
 
-        if (reminderPickerOpen)
+        activeTab = tab;
+        menu.Close();
+        if (tab != HousingTab.Map)
         {
-            reminderPickerOpen = false;
-            return;
+            ClosePlotCard();
         }
 
-        if (filtersOpen)
-        {
-            filtersOpen = false;
-            return;
-        }
+        UiFeedback.Play(UiSound.Tap);
+    }
 
-        if (wardPickerOpen)
+    private void AdvanceAnimations(float delta)
+    {
+        StepMap(delta);
+        if (refreshFeedbackRemaining > 0f)
         {
-            wardPickerOpen = false;
-            return;
+            refreshFeedbackRemaining = MathF.Max(0f, refreshFeedbackRemaining - delta);
         }
+    }
 
-        if (router.Depth > 1)
-        {
-            router.Pop();
-            return;
-        }
+    private void PushDetails(HousingPlotKey key, string backTitle)
+    {
+        UiFeedback.Play(UiSound.Tap);
+        menu.Close();
+        router.Push(new HousingView(HousingRoute.Details, key, backTitle));
+    }
 
-        if (sheetOpen)
-        {
-            sheetOpen = false;
-            return;
-        }
-
-        frameNavigation.Back();
+    private void PushRoute(HousingRoute route, string backTitle)
+    {
+        UiFeedback.Play(UiSound.Tap);
+        menu.Close();
+        router.Push(new HousingView(route, default, backTitle));
     }
 
     private void CloseOverlays()
     {
-        CloseTransientOverlays();
-        sheetOpen = false;
-        selectedPlot = default;
-        sheetSpring.SnapTo(0f);
-    }
-
-    private void CloseTransientOverlays()
-    {
-        filtersOpen = false;
-        wardPickerOpen = false;
+        filterSheet.CloseImmediately();
+        locationSheet.CloseImmediately();
+        reminderSheet.CloseImmediately();
         legendOpen = false;
-        reminderPickerOpen = false;
-        filterSpring.SnapTo(0f);
+        ClosePlotCard(true);
     }
 
-    private Rect DrawSubHeader(Rect area, string headerId, string title, string? actionLabel = null,
-        Action? onAction = null)
+    private string FiltersLabel()
     {
-        var scale = UiScale.Current;
-        var reserve = 12f * scale;
-        if (actionLabel is not null)
+        var count = housing.Filters.ActiveCount;
+        if (count == 0)
         {
-            reserve += Typography.Measure(actionLabel, TextStyles.SubheadlineEmphasized).X + 30f * scale;
+            return Loc.T(L.Housing.Filters);
         }
 
-        AppHeader.DrawTitleWithReserve(area, headerId, title, reserve, ui.TitleInk, scale);
-        var rowCenterY = area.Min.Y + TopBarHeight * scale * 0.5f;
-        var hitMin = new Vector2(area.Min.X, area.Min.Y);
-        var hitMax = new Vector2(area.Min.X + 44f * scale, area.Min.Y + TopBarHeight * scale);
-        var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
-        if (BackButton.Draw("housing.back", new Vector2(area.Min.X + 15f * scale, rowCenterY), 15f * scale, ui.Accent,
-                hovered, scale))
-        {
-            Back();
-        }
-
-        if (actionLabel is not null && onAction is not null)
-        {
-            var height = 26f * scale;
-            var width = HousingChrome.MeasurePill(actionLabel, height);
-            var max = new Vector2(area.Max.X - 12f * scale, rowCenterY + height * 0.5f);
-            var rect = new Rect(new Vector2(max.X - width, max.Y - height), max);
-            if (HousingChrome.PillButton(rect, actionLabel, false, ui, false))
-            {
-                onAction();
-            }
-        }
-
-        return new Rect(new Vector2(area.Min.X, area.Min.Y + TopBarHeight * scale), area.Max);
+        return filtersLabel.IsCurrent(count)
+            ? filtersLabel.Value
+            : filtersLabel.Store(count, Loc.T(L.Housing.FiltersCount, count));
     }
 
-    private void DrawMenu()
+    private string RootTitle()
+    {
+        return activeTab switch
+        {
+            HousingTab.Map => Loc.T(L.Housing.Map),
+            HousingTab.Plots => Loc.T(L.Housing.TabPlots),
+            HousingTab.Watchlist => Loc.T(L.Housing.Watchlist),
+            _ => WorldTitle(),
+        };
+    }
+
+    private string WorldTitle()
+    {
+        var name = housing.WorldName;
+        return name.Length > 0 ? name : DisplayName;
+    }
+
+    private void DrawMenu(Rect area)
     {
         if (!menu.Open || menuItems.Count == 0)
         {
             return;
         }
 
-        var picked = menu.Draw(frameScreen, frameTheme, System.Runtime.InteropServices.CollectionsMarshal
-            .AsSpan(menuItems));
+        var picked = menu.Draw(SceneChrome.ScreenFrom(area, frameTheme, UiScale.Current), frameTheme,
+            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(menuItems));
         if (picked < 0)
         {
             return;
         }
 
-        switch (menuTarget)
+        if (menuTarget == MenuTarget.Sort)
         {
-            case MenuTarget.District:
-                if (picked < HousingDistricts.All.Count)
-                {
-                    housing.SelectDistrict(HousingDistricts.All[picked].Id);
-                    ResetMapView();
-                    sheetOpen = false;
-                    selectedPlot = default;
-                    InvalidateCache();
-                }
-
-                break;
-            case MenuTarget.Sort:
-                configuration.HousingListSort = picked;
-                configuration.Save();
-                break;
+            configuration.HousingListSort = picked;
+            configuration.Save();
+            plotsDirty = true;
+            UiFeedback.Play(UiSound.Tap);
         }
 
         menuTarget = MenuTarget.None;
         menuItems.Clear();
-    }
-
-    private void OpenDistrictMenu(Rect anchor)
-    {
-        menuItems.Clear();
-        var districts = HousingDistricts.All;
-        for (var index = 0; index < districts.Count; index++)
-        {
-            menuItems.Add(new DropdownMenu.Item(HousingDistricts.DisplayName(districts[index].Id), string.Empty, false,
-                districts[index].Id == housing.DistrictId));
-        }
-
-        menuTarget = MenuTarget.District;
-        menu.Header = Loc.T(L.Housing.SelectDistrictTitle);
-        menu.Toggle("housing.district", anchor);
     }
 
     private void OpenSortMenu(Rect anchor)
@@ -391,60 +302,7 @@ internal sealed partial class HousingApp : IPhoneApp
         }
 
         menuTarget = MenuTarget.Sort;
-        menu.Header = Loc.T(L.Housing.SortByTitle);
         menu.Toggle("housing.sort", anchor);
-    }
-
-    private void ShowToast(string message)
-    {
-        toast = message;
-        toastRemaining = ToastSeconds;
-    }
-
-    private void TravelTo(HousingPlotKey key)
-    {
-        var outcome = HousingTravel.Go(key);
-        if (outcome == LifestreamOutcome.Started)
-        {
-            ShowToast(Loc.T(L.Housing.TravelStarted,
-                HousingFormat.Place(HousingDistricts.DisplayName(key.DistrictId), key.Ward), key.Plot));
-            return;
-        }
-
-        if (outcome == LifestreamOutcome.NotInstalled)
-        {
-            ImGui.SetClipboardText(HousingTravel.Command(key, housing.WorldNameOf(key.WorldId)));
-            ShowToast(Loc.T(L.Housing.TravelNeedsLifestream));
-            return;
-        }
-
-        ShowToast(Loc.T(HousingTravel.Message(outcome)));
-    }
-
-    private void DrawToast(Rect area, float scale)
-    {
-        if (toastRemaining <= 0f || toast.Length == 0)
-        {
-            return;
-        }
-
-        var alpha = MathF.Min(1f, toastRemaining / 0.4f);
-        var drawList = ImGui.GetForegroundDrawList();
-        var maxWidth = area.Width - 40f * scale;
-        var textSize = Typography.MeasureWrappedBlock(toast, TextStyles.Subheadline, maxWidth - 28f * scale);
-        var width = MathF.Min(maxWidth, textSize.X + 28f * scale);
-        var height = textSize.Y + 22f * scale;
-        var center = new Vector2(area.Center.X, area.Max.Y - height * 0.5f - 26f * scale);
-        var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
-        var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
-        var rounding = Metrics.Radius.Md * scale;
-        Elevation.Floating(drawList, min, max, rounding, scale, alpha);
-        Squircle.Fill(drawList, min, max, rounding,
-            ImGui.GetColorU32(new Vector4(0.10f, 0.14f, 0.12f, 0.97f * alpha)));
-        Squircle.Stroke(drawList, min, max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.45f * alpha)), Metrics.Stroke.Hairline);
-        Typography.DrawWrappedCentered(drawList, center, toast, Palette.WithAlpha(ui.TitleInk, alpha),
-            TextStyles.Subheadline, maxWidth - 28f * scale);
     }
 
     private static readonly LocString[] SortLabels =
@@ -452,7 +310,52 @@ internal sealed partial class HousingApp : IPhoneApp
         L.Housing.SortEntries, L.Housing.SortScanned, L.Housing.SortSize, L.Housing.SortPrice, L.Housing.SortWard,
     };
 
-    private void InvalidateCache() => cachedRevision = -1;
+    private void TravelTo(HousingPlotKey key)
+    {
+        var outcome = HousingTravel.Go(key);
+        if (outcome == LifestreamOutcome.Started)
+        {
+            UiFeedback.Play(UiSound.Success);
+            ShellToast.Show(Loc.T(L.Housing.TravelStarted,
+                HousingFormat.Place(HousingDistricts.DisplayName(key.DistrictId), key.Ward), key.Plot));
+            return;
+        }
+
+        if (outcome == LifestreamOutcome.NotInstalled)
+        {
+            ImGui.SetClipboardText(HousingTravel.Command(key, housing.WorldNameOf(key.WorldId)));
+            ShellToast.Show(Loc.T(L.Housing.TravelNeedsLifestream));
+            return;
+        }
+
+        UiFeedback.Play(UiSound.Blocked);
+        ShellToast.Show(Loc.T(HousingTravel.Message(outcome)));
+    }
+
+    private void ToggleWatch(HousingPlot plot)
+    {
+        var nowWatched = housing.Watch.ToggleWatch(plot, housing.WorldNameOf(plot.Key.WorldId));
+        if (!nowWatched)
+        {
+            housing.Watch.CancelReminder(plot.Key);
+        }
+
+        UiFeedback.Play(nowWatched ? UiSound.ToggleOn : UiSound.ToggleOff);
+        InvalidateCache();
+    }
+
+    private void RequestRefresh()
+    {
+        UiFeedback.Play(UiSound.Refresh);
+        refreshFeedbackRemaining = RefreshFeedbackSeconds;
+        housing.Refresh(true);
+    }
+
+    private void InvalidateCache()
+    {
+        cachedRevision = -1;
+        plotsDirty = true;
+    }
 
     private List<HousingPlot> VisiblePlots()
     {
@@ -501,82 +404,6 @@ internal sealed partial class HousingApp : IPhoneApp
         return visible;
     }
 
-    private List<HousingPlot> FilteredWorldPlots()
-    {
-        sorted.Clear();
-        var worldId = housing.WorldId;
-        if (worldId == 0)
-        {
-            return sorted;
-        }
-
-        var now = DateTime.UtcNow;
-        var thresholds = housing.Thresholds;
-        var districts = HousingDistricts.All;
-        for (var districtIndex = 0; districtIndex < districts.Count; districtIndex++)
-        {
-            if (housing.Lookup(worldId, districts[districtIndex].Id) is not { } snapshot)
-            {
-                continue;
-            }
-
-            var plots = snapshot.Plots;
-            for (var index = 0; index < plots.Count; index++)
-            {
-                var plot = plots[index];
-                if (housing.Filters.Matches(plot, now, thresholds, housing.Watch.IsWatched(plot.Key)))
-                {
-                    sorted.Add(plot);
-                }
-            }
-        }
-
-        ApplySort(sorted, configuration.HousingListSort);
-        return sorted;
-    }
-
-    private static void ApplySort(List<HousingPlot> plots, int mode)
-    {
-        switch (mode)
-        {
-            case 0:
-                plots.Sort(static (first, second) =>
-                {
-                    var left = first.Entries ?? int.MaxValue;
-                    var right = second.Entries ?? int.MaxValue;
-                    var compare = left.CompareTo(right);
-                    return compare != 0 ? compare : HousingPlotOrder.ByDistrictWardThenPlot(first, second);
-                });
-                break;
-            case 1:
-                plots.Sort(static (first, second) =>
-                {
-                    var compare = second.LastSeenUtc.CompareTo(first.LastSeenUtc);
-                    return compare != 0 ? compare : HousingPlotOrder.ByDistrictWardThenPlot(first, second);
-                });
-                break;
-            case 2:
-                plots.Sort(static (first, second) =>
-                {
-                    var compare = ((int)second.Size).CompareTo((int)first.Size);
-                    return compare != 0 ? compare : HousingPlotOrder.ByDistrictWardThenPlot(first, second);
-                });
-                break;
-            case 3:
-                plots.Sort(static (first, second) =>
-                {
-                    var left = first.Price <= 0L ? long.MaxValue : first.Price;
-                    var right = second.Price <= 0L ? long.MaxValue : second.Price;
-                    var compare = left.CompareTo(right);
-                    return compare != 0 ? compare : HousingPlotOrder.ByDistrictWardThenPlot(first, second);
-                });
-                break;
-            default:
-                plots.Sort(HousingPlotOrder.ByDistrictWardThenPlot);
-                break;
-        }
-    }
-
     private HousingPlot? FindPlot(HousingPlotKey key)
     {
         if (!key.IsValid || housing.Lookup(key.WorldId, key.DistrictId) is not { } snapshot)
@@ -597,17 +424,78 @@ internal sealed partial class HousingApp : IPhoneApp
     }
 
     private HousingDataFreshness FreshnessOf(HousingPlot plot) =>
-        housing.Thresholds.ClassifyScan(plot.LastSeenUtc, DateTime.UtcNow,
-            housing.ActiveSource);
+        housing.Thresholds.Classify(plot.LastSeenUtc, DateTime.UtcNow, housing.ActiveSource);
 
-    private bool IsStale(HousingPlot plot) => FreshnessOf(plot) == HousingDataFreshness.Stale;
-
-    private void RequestRefresh()
+    private HousingDataFreshness SnapshotFreshness()
     {
-        refreshFeedback = true;
-        refreshFeedbackRemaining = 1.6f;
-        housing.Refresh(true);
+        if (housing.Snapshot is not { } snapshot)
+        {
+            return HousingDataFreshness.Unknown;
+        }
+
+        return housing.Thresholds.Classify(snapshot.FetchedUtc, DateTime.UtcNow, snapshot.Source);
     }
+
+    private void OpenOnMap(HousingPlotKey key)
+    {
+        if (key.WorldId != housing.WorldId)
+        {
+            PushDetails(key, RootTitle());
+            return;
+        }
+
+        if (key.DistrictId != housing.DistrictId)
+        {
+            housing.SelectDistrict(key.DistrictId);
+        }
+
+        housing.SelectWard(key.Ward);
+        showSubdivision = HousingDistricts.IsSubdivision(key.Plot) && housing.GameMap is { HasSubdivision: true };
+        InvalidateCache();
+        activeTab = HousingTab.Map;
+        UiFeedback.Play(UiSound.Tap);
+        SelectPlot(key);
+        CenterOnSelected();
+    }
+
+    private void UpdateTourHold()
+    {
+        if (router.Depth == 1 && activeTab == HousingTab.Overview && housing.Snapshot is not null)
+        {
+            TourHolds.Release(Id);
+            return;
+        }
+
+        if (router.Depth == 1 && activeTab == HousingTab.Map && VisiblePlots().Count > 0)
+        {
+            TourHolds.Release(Id);
+            return;
+        }
+
+        TourHolds.Hold(Id);
+    }
+
+    private static void ReserveTo(Vector2 origin, float width, float bottom)
+    {
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, MathF.Max(0f, bottom - origin.Y)));
+    }
+
+    private static string NoLongerReportedText(ref CachedText cache, HousingWatchRecord record, DateTime now)
+    {
+        var lastSeen = FromUnix(record.LastSeenUnix);
+        var ageMinutes = lastSeen == default ? -1L : (long)Math.Max(0d, (now - lastSeen).TotalMinutes);
+        var key = ((long)record.Key.GetHashCode() << 32) ^ ageMinutes;
+        return cache.IsCurrent(key)
+            ? cache.Value
+            : cache.Store(key, Loc.T(L.Housing.NoLongerReported, HousingFormat.ScanAgeShort(lastSeen, now)));
+    }
+
+    private static DateTime FromUnix(long unixSeconds) =>
+        unixSeconds <= 0L ? default : DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
+
+    private static DateTime? OptionalUnix(long unixSeconds) =>
+        unixSeconds <= 0L ? null : DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
 
     public void Dispose()
     {

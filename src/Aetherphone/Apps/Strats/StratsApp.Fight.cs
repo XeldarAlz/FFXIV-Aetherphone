@@ -8,48 +8,49 @@ using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Strats;
 
 internal sealed partial class StratsApp
 {
-    private const float RoleChipHeight = 34f;
-    private const float RoleChipGap = 6f;
-    private const float RoleCaptionGap = 4f;
-    private const float SetupRowHeight = 42f;
+    private const float ScrollAnchorShare = 0.45f;
+    private const float MechanicSettledShare = 0.55f;
+    private const float DisclosureRowHeight = 44f;
     private const float PagerPillHeight = 38f;
     private const float LinkPillHeight = 30f;
-    private const float PillStrokeBleed = 2f;
     private const float MaxImageHeight = 420f;
-    private const float BadgeGap = 4f;
-    private const float BadgeLabelGap = 10f;
     private const float SpotBarWidth = 3f;
-    private const float SpotFillAlpha = 0.10f;
-    private const string StratRowIdPrefix = "strats.strat:";
+    private const float SpotFillAlpha = 0.12f;
+    private const float CardGap = 12f;
+    private const float CardPad = 16f;
+    private const float BlockGap = 10f;
+    private const float LabelGap = 2f;
+    private const float HeaderGap = 2f;
+    private const float ChapterTopPad = 22f;
+    private const float ChapterBottomGap = 10f;
+    private const float TimelineTimeWidth = 44f;
+    private const float TimelineDotRadius = 4f;
+    private const float TimelineNameGap = 12f;
+    private const float LinkIconWidth = 18f;
+    private const float LinkIconScale = 0.75f;
+    private const float LinkTrailingScale = 0.6f;
+    private const float ChevronScale = 0.62f;
+    private const float BottomBreathing = 28f;
     private const string LinkRowIdPrefix = "strats.link:";
 
-    private static readonly TextStyle RoleCaptionStyle = new(0.72f, FontWeight.Medium);
     private static readonly string VideoGlyph = IconGlyph.Of(FontAwesomeIcon.Video);
     private static readonly string BoardGlyph = IconGlyph.Of(FontAwesomeIcon.Map);
     private static readonly string DocumentGlyph = IconGlyph.Of(FontAwesomeIcon.FileAlt);
     private static readonly string LinkGlyph = IconGlyph.Of(FontAwesomeIcon.ExternalLinkAlt);
+    private static readonly string ChevronDownGlyph = IconGlyph.Of(FontAwesomeIcon.ChevronDown);
+    private static readonly string ChevronUpGlyph = IconGlyph.Of(FontAwesomeIcon.ChevronUp);
 
+    private readonly NavBarButton[] fightButtons = new NavBarButton[1];
     private FightDoc? labelsDoc;
-    private string[] stratLabels = Array.Empty<string>();
-    private string[] stratRowIds = Array.Empty<string>();
-    private string[][] stratBadgeTexts = Array.Empty<string[]>();
-    private Vector4[][] stratBadgeInks = Array.Empty<Vector4[]>();
     private string[] tabLabels = Array.Empty<string>();
     private bool[] tabActive = Array.Empty<bool>();
-    private string[][] toggleLabels = Array.Empty<string[]>();
-    private bool[][] toggleActive = Array.Empty<bool[]>();
-    private string[] alignmentLabels = Array.Empty<string>();
-    private string[] roleLabels = Array.Empty<string>();
-    private bool roleLabelsJapanese;
-    private string[] roleColumnRoles = Array.Empty<string>();
-    private int[][] roleColumnSlots = Array.Empty<int[]>();
-    private Vector4[] roleColumnInks = Array.Empty<Vector4>();
-    private int roleRows;
+    private bool mechanicAnchorTaken;
     private TimelineEntry[] timelineSource = Array.Empty<TimelineEntry>();
     private string[] timelineTimes = Array.Empty<string>();
     private GuideLink[] linksSource = Array.Empty<GuideLink>();
@@ -60,7 +61,6 @@ internal sealed partial class StratsApp
 
     private void DrawFight(Rect area, StratsView view)
     {
-        var scale = UiScale.Current;
         if (!manifestStore.TryFind(view.FightKey, out var fight))
         {
             router.Pop();
@@ -68,45 +68,65 @@ internal sealed partial class StratsApp
         }
 
         var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, fight.Abbrev, back);
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
+        var navBar = AppHeader.BeginLargeTitle(context);
         var entry = guideStore.Request(fight, false);
         var doc = entry.Doc;
-        if (doc is null)
+        var current = doc is null ? null : ResolveCurrent(doc);
+        if (doc is null || current is null)
         {
-            DrawGuideState(body, entry, fight, scale);
-            return;
+            DrawGuideState(navBar.Body, entry, fight);
+        }
+        else
+        {
+            DrawFightBody(navBar.Body, fight, doc, current);
         }
 
-        var current = ResolveCurrent(doc);
-        if (current is null)
+        var buttonCount = 0;
+        if (current is not null && contents.Length > 0)
         {
-            return;
+            fightButtons[0] = new NavBarButton(PhoneIcons.Menu, Loc.T(L.Strats.Contents));
+            buttonCount = 1;
+            UiAnchors.Report("strats.contents", AppHeader.LargeTitleButtonRect(in navBar, 0, buttonCount));
         }
 
-        EnsureLabels(doc, current);
-        using (var surface = AppSurface.Begin(body))
+        var pressed = AppHeader.EndLargeTitle(in navBar, context, "strats.fight.nav", FightTitle(fight),
+            NavBarStyle.From(ui), fightButtons.AsSpan(0, buttonCount), DisplayName, back);
+        if (pressed == 0 && buttonCount > 0)
         {
-            DrawFightTitle(fight, scale);
-            DrawStratPicker(doc, current, scale);
-            DrawRolePicker(scale);
-            DrawTabs(doc, current, scale);
-            DrawToggles(doc, current, scale);
-            DrawAlignment(doc, current, scale);
-            DrawSetupCard(current, scale);
-            DrawStratIntro(current, scale);
-            DrawStratDifferences(current, scale);
-            DrawPhases(current, scale);
-            DrawSectionPager(doc, current, surface, scale);
-            DrawResources(current, scale);
-            DrawBackToTop(surface, scale);
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
+            OpenContents();
         }
     }
 
-    private void DrawGuideState(Rect body, GuideEntry entry, ManifestFight fight, float scale)
+    private static string FightTitle(ManifestFight fight) => fight.Abbrev.Length > 0 ? fight.Abbrev : fight.Title;
+
+    private void DrawFightBody(Rect body, ManifestFight fight, FightDoc doc, ResolvedFight current)
     {
+        var scale = UiScale.Current;
+        EnsureLabels(doc, current);
+        mechanicAnchorTaken = false;
+        UiAnchors.Report("strats.scroll",
+            new Rect(new Vector2(body.Min.X, body.Max.Y - body.Height * ScrollAnchorShare), body.Max));
+        using (ImRaii.PushId(fight.Key))
+        using (var surface = AppSurface.Begin(body))
+        {
+            DrawFightHeader(fight, scale);
+            DrawSetup(doc, current, scale);
+            DrawReferenceCard(current, scale);
+            DrawTabs(doc, current, scale);
+            DrawStratIntro(current, scale);
+            DrawStratDifferences(current, scale);
+            DrawPhases(current, scale);
+            TrackReading(in surface, scale);
+            DrawSectionPager(doc, current, in surface, scale);
+            DrawResources(current, scale);
+            DrawBackToTop(in surface, scale);
+            ImGui.Dummy(new Vector2(0f, BottomBreathing * scale));
+        }
+    }
+
+    private void DrawGuideState(Rect body, GuideEntry entry, ManifestFight fight)
+    {
+        var scale = UiScale.Current;
         if (entry.State == StratsState.Failed)
         {
             if (EmptyState.Draw(body, ui, FontAwesomeIcon.CloudDownloadAlt, Loc.T(L.Strats.GuideFailed),
@@ -118,8 +138,12 @@ internal sealed partial class StratsApp
             return;
         }
 
-        LoadingPulse.Draw(new Vector2(body.Center.X, body.Min.Y + 110f * scale), 13f * scale, ui.Accent,
-            AppPalettes.Strats.MutedInk, Loc.T(L.Strats.GuideLoading));
+        var drawList = ImGui.GetWindowDrawList();
+        var left = body.Min.X;
+        var right = body.Max.X;
+        var top = body.Min.Y + Metrics.Space.Sm * scale;
+        Skeleton.Rows(drawList, new Rect(new Vector2(left, top), new Vector2(right, body.Max.Y - CardGap * scale)),
+            72f, CardGap, scale);
     }
 
     private void EnsureLabels(FightDoc doc, ResolvedFight current)
@@ -127,7 +151,6 @@ internal sealed partial class StratsApp
         if (!ReferenceEquals(labelsDoc, doc))
         {
             labelsDoc = doc;
-            BuildStratLabels(doc);
             tabLabels = new string[doc.Tabs.Length];
             tabActive = new bool[doc.Tabs.Length];
             for (var index = 0; index < doc.Tabs.Length; index++)
@@ -135,39 +158,12 @@ internal sealed partial class StratsApp
                 tabLabels[index] = doc.Tabs[index].Label;
             }
 
-            toggleLabels = new string[doc.Toggles.Length][];
-            toggleActive = new bool[doc.Toggles.Length][];
-            for (var toggleIndex = 0; toggleIndex < doc.Toggles.Length; toggleIndex++)
-            {
-                var options = doc.Toggles[toggleIndex].Options;
-                var labels = new string[options.Length];
-                for (var optionIndex = 0; optionIndex < options.Length; optionIndex++)
-                {
-                    labels[optionIndex] = options[optionIndex].Label;
-                }
-
-                toggleLabels[toggleIndex] = labels;
-                toggleActive[toggleIndex] = new bool[options.Length];
-            }
-
-            alignmentLabels = new string[doc.Alignments.Length];
-            for (var index = 0; index < doc.Alignments.Length; index++)
-            {
-                alignmentLabels[index] = doc.Alignments[index].Label;
-            }
-
-            roleLabels = Array.Empty<string>();
+            BuildSetupLabels(doc);
             tabRail.Reset();
             toggleRails.Clear();
         }
 
-        var japanese = current.Strat.JpRoles;
-        if (roleLabels.Length == 0 || roleLabelsJapanese != japanese)
-        {
-            roleLabelsJapanese = japanese;
-            BuildRoleColumns(doc, japanese);
-        }
-
+        EnsureRoleColumns(doc, current.Strat.JpRoles);
         if (!ReferenceEquals(timelineSource, current.Timeline))
         {
             timelineSource = current.Timeline;
@@ -192,134 +188,6 @@ internal sealed partial class StratsApp
             linksCountLabel = linksSource.Length.ToString();
         }
     }
-
-    private void BuildStratLabels(FightDoc doc)
-    {
-        var count = doc.Strats.Length;
-        stratLabels = new string[count];
-        stratRowIds = new string[count];
-        stratBadgeTexts = new string[count][];
-        stratBadgeInks = new Vector4[count][];
-        for (var index = 0; index < count; index++)
-        {
-            var strat = doc.Strats[index];
-            stratLabels[index] = strat.Label;
-            stratRowIds[index] = string.Concat(StratRowIdPrefix, index.ToString());
-            var badges = strat.Badges;
-            var texts = new string[badges.Length];
-            var inks = new Vector4[badges.Length];
-            for (var badgeIndex = 0; badgeIndex < badges.Length; badgeIndex++)
-            {
-                texts[badgeIndex] = badges[badgeIndex].Text;
-                inks[badgeIndex] = BadgeInk(badges[badgeIndex].Kind);
-            }
-
-            stratBadgeTexts[index] = texts;
-            stratBadgeInks[index] = inks;
-        }
-    }
-
-    private Vector4 BadgeInk(string kind)
-    {
-        if (kind == "na" || kind.Contains("blue", StringComparison.Ordinal))
-        {
-            return StratsInk.Resolve("blue", ui.BodyInk, ui.MutedInk);
-        }
-
-        if (kind == "eu" || kind.Contains("yellow", StringComparison.Ordinal) ||
-            kind.Contains("amber", StringComparison.Ordinal))
-        {
-            return StratsInk.Resolve("yellow", ui.BodyInk, ui.MutedInk);
-        }
-
-        if (kind == "oce" || kind.Contains("green", StringComparison.Ordinal))
-        {
-            return StratsInk.Resolve("green", ui.BodyInk, ui.MutedInk);
-        }
-
-        if (kind == "jp" || kind.Contains("red", StringComparison.Ordinal))
-        {
-            return StratsInk.Resolve("red", ui.BodyInk, ui.MutedInk);
-        }
-
-        return ui.MutedInk;
-    }
-
-    private void BuildRoleColumns(FightDoc doc, bool japanese)
-    {
-        if (doc.RoleOptions.Length > 0)
-        {
-            roleLabels = new string[doc.RoleOptions.Length];
-            var roles = new List<string>();
-            var members = new List<List<int>>();
-            for (var index = 0; index < doc.RoleOptions.Length; index++)
-            {
-                var option = doc.RoleOptions[index];
-                roleLabels[index] = option.Label;
-                var column = roles.IndexOf(option.Role);
-                if (column < 0)
-                {
-                    roles.Add(option.Role);
-                    members.Add(new List<int>());
-                    column = roles.Count - 1;
-                }
-
-                members[column].Add(index);
-            }
-
-            roleColumnRoles = roles.ToArray();
-            roleColumnSlots = new int[roles.Count][];
-            for (var column = 0; column < roles.Count; column++)
-            {
-                roleColumnSlots[column] = members[column].ToArray();
-            }
-        }
-        else
-        {
-            roleLabels = new string[StratsRoles.SlotCount];
-            for (var slot = 0; slot < StratsRoles.SlotCount; slot++)
-            {
-                roleLabels[slot] = StratsRoles.Label(slot, japanese);
-            }
-
-            var columns = StratsRoles.SlotCount / 2;
-            roleColumnRoles = new string[columns];
-            roleColumnSlots = new int[columns][];
-            for (var column = 0; column < columns; column++)
-            {
-                roleColumnRoles[column] = StratsRoles.RoleName(column * 2);
-                roleColumnSlots[column] = new[] { column * 2, column * 2 + 1 };
-            }
-        }
-
-        roleColumnInks = new Vector4[roleColumnRoles.Length];
-        roleRows = 0;
-        for (var column = 0; column < roleColumnRoles.Length; column++)
-        {
-            roleColumnInks[column] = RoleInk(roleColumnRoles[column]);
-            roleRows = Math.Max(roleRows, roleColumnSlots[column].Length);
-        }
-    }
-
-    private Vector4 RoleInk(string role) =>
-        role switch
-        {
-            "Tank" => StratsInk.Resolve("blue", ui.BodyInk, ui.MutedInk),
-            "Healer" => StratsInk.Resolve("green", ui.BodyInk, ui.MutedInk),
-            "Melee" => StratsInk.Resolve("red", ui.BodyInk, ui.MutedInk),
-            "Ranged" => StratsInk.Resolve("red", ui.BodyInk, ui.MutedInk),
-            _ => ui.MutedInk,
-        };
-
-    private static string RoleCaption(string role) =>
-        role switch
-        {
-            "Tank" => Loc.T(L.Strats.RoleTank),
-            "Healer" => Loc.T(L.Strats.RoleHealer),
-            "Melee" => Loc.T(L.Strats.RoleMelee),
-            "Ranged" => Loc.T(L.Strats.RoleRanged),
-            _ => role,
-        };
 
     private static string LinkGlyphFor(string url)
     {
@@ -354,203 +222,27 @@ internal sealed partial class StratsApp
         return string.Concat(minutes.ToString(), ":", seconds.ToString("00"));
     }
 
-    private void DrawFightTitle(ManifestFight fight, float scale)
+    private void DrawFightHeader(ManifestFight fight, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var titleHeight = Typography.DrawWrappedLeft(new Vector2(origin.X, origin.Y + Metrics.Space.Xs * scale),
-            fight.Title, ui.TitleInk, TextStyles.Title3, width);
-        var subtitleY = origin.Y + Metrics.Space.Xs * scale + titleHeight + 2f * scale;
-        Typography.Draw(drawList, new Vector2(origin.X, subtitleY), fight.Subtitle, ui.MutedInk, TextStyles.Footnote);
-        var total = Metrics.Space.Xs * scale + titleHeight + 2f * scale + Typography.LineHeight(TextStyles.Footnote) +
-            Metrics.Space.Md * scale;
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, total));
-    }
-
-    private void DrawStratPicker(FightDoc doc, ResolvedFight current, float scale)
-    {
-        ui.SectionLabel(Loc.T(L.Strats.Strategy));
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var rowCount = doc.Strats.Length;
-        UiAnchors.Report("strats.chips",
-            new Rect(origin, new Vector2(origin.X + width, origin.Y + rowCount * GroupCard.DefaultRowHeight * scale)));
-        var interactive = rowCount > 1;
-        var drawList = ImGui.GetWindowDrawList();
-        var card = GroupCard.Begin(theme, rowCount);
-        for (var index = 0; index < rowCount; index++)
+        var titleHeight = Typography.DrawWrappedLeft(origin, fight.Title, ui.TitleInk, TextStyles.Headline, width);
+        var total = titleHeight;
+        if (fight.Subtitle.Length > 0)
         {
-            var row = card.NextRow();
-            var badgesWidth = StratBadgesWidth(index, scale);
-            var reserve = badgesWidth > 0f ? badgesWidth + BadgeLabelGap * scale : 0f;
-            var tapped = SettingsRow.Selectable(row, stratLabels[index], index == current.StratIndex, theme,
-                stratRowIds[index], reserve, interactive);
-            DrawStratBadges(drawList, row, index, badgesWidth, scale);
-            if (tapped && index != current.StratIndex)
-            {
-                selection.StratId = doc.Strats[index].Id;
-                selection.Toggles.Clear();
-                TouchSelection();
-            }
-        }
-
-        card.End();
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
-    }
-
-    private float StratBadgesWidth(int stratIndex, float scale)
-    {
-        var texts = stratBadgeTexts[stratIndex];
-        var total = 0f;
-        for (var index = 0; index < texts.Length; index++)
-        {
-            total += InlineBadge.Width(texts[index], scale) + (index > 0 ? BadgeGap * scale : 0f);
-        }
-
-        return total;
-    }
-
-    private void DrawStratBadges(ImDrawListPtr drawList, Rect row, int stratIndex, float totalWidth, float scale)
-    {
-        var texts = stratBadgeTexts[stratIndex];
-        if (texts.Length == 0)
-        {
-            return;
-        }
-
-        var inks = stratBadgeInks[stratIndex];
-        var left = row.Max.X - SettingsRow.CheckWidth * scale - totalWidth;
-        for (var index = 0; index < texts.Length; index++)
-        {
-            left += InlineBadge.Draw(drawList, left, row.Center.Y, texts[index], inks[index], scale) + BadgeGap * scale;
-        }
-    }
-
-    private void DrawRolePicker(float scale)
-    {
-        ui.SectionLabel(Loc.T(L.Strats.Role));
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var columnGap = Metrics.Space.Sm * scale;
-        var chipGap = RoleChipGap * scale;
-        var columns = roleColumnSlots.Length;
-        var columnWidth = (width - columnGap * (columns - 1)) / columns;
-        var chipHeight = RoleChipHeight * scale;
-        var captionLineHeight = Typography.LineHeight(RoleCaptionStyle);
-        var captionHeight = captionLineHeight + RoleCaptionGap * scale;
-        var gridHeight = captionHeight + roleRows * chipHeight + (roleRows - 1) * chipGap;
-        UiAnchors.Report("strats.role", new Rect(origin, new Vector2(origin.X + width, origin.Y + gridHeight)));
-        var activeSlot = Math.Clamp(selection.Slot, 0, roleLabels.Length - 1);
-        for (var column = 0; column < columns; column++)
-        {
-            var left = origin.X + column * (columnWidth + columnGap);
-            var caption = Typography.FitText(RoleCaption(roleColumnRoles[column]), columnWidth, RoleCaptionStyle);
-            Typography.DrawCentered(drawList, new Vector2(left + columnWidth * 0.5f, origin.Y + captionLineHeight * 0.5f),
-                caption, roleColumnInks[column], RoleCaptionStyle.Scale, RoleCaptionStyle.Weight);
-            var slots = roleColumnSlots[column];
-            for (var row = 0; row < slots.Length; row++)
-            {
-                var top = origin.Y + captionHeight + row * (chipHeight + chipGap);
-                var rect = new Rect(new Vector2(left, top), new Vector2(left + columnWidth, top + chipHeight));
-                var slot = slots[row];
-                if (ui.Chip(rect, roleLabels[slot], slot == activeSlot) && slot != activeSlot)
-                {
-                    selection.Slot = slot;
-                    TouchSelection();
-                }
-            }
+            var subtitleTop = origin.Y + titleHeight + HeaderGap * scale;
+            Typography.Draw(drawList, new Vector2(origin.X, subtitleTop),
+                Typography.FitText(fight.Subtitle, width, TextStyles.Subheadline), ui.MutedInk,
+                TextStyles.Subheadline);
+            total += HeaderGap * scale + Typography.LineHeight(TextStyles.Subheadline);
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, gridHeight + Metrics.Space.Md * scale));
+        ImGui.Dummy(new Vector2(width, total + CardGap * scale));
     }
 
-    private void DrawTabs(FightDoc doc, ResolvedFight current, float scale)
-    {
-        if (doc.Tabs.Length == 0)
-        {
-            return;
-        }
-
-        sectionsScrollY = ImGui.GetCursorPosY();
-        ui.SectionLabel(Loc.T(L.Strats.Section));
-        for (var index = 0; index < tabActive.Length; index++)
-        {
-            tabActive[index] = index == current.TabIndex;
-        }
-
-        var tapped = tabRail.Draw(ui, tabLabels, tabActive);
-        if (tapped >= 0 && tapped != current.TabIndex)
-        {
-            selection.Tab = tapped;
-            TouchSelection();
-        }
-
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
-    }
-
-    private void DrawToggles(FightDoc doc, ResolvedFight current, float scale)
-    {
-        for (var toggleIndex = 0; toggleIndex < doc.Toggles.Length; toggleIndex++)
-        {
-            if (!current.ToggleVisible[toggleIndex])
-            {
-                continue;
-            }
-
-            var toggle = doc.Toggles[toggleIndex];
-            var active = toggleActive[toggleIndex];
-            var selected = current.ToggleOptionIndices[toggleIndex];
-            for (var index = 0; index < active.Length; index++)
-            {
-                active[index] = index == selected;
-            }
-
-            ui.SectionLabel(toggle.Label);
-            if (!toggleRails.TryGetValue(toggle.Key, out var rail))
-            {
-                rail = new ChipRail();
-                toggleRails[toggle.Key] = rail;
-            }
-
-            var tapped = rail.Draw(ui, toggleLabels[toggleIndex], active);
-            if (tapped >= 0 && tapped != selected)
-            {
-                selection.Toggles[toggle.Key] = toggle.Options[tapped].Value;
-                TouchSelection();
-            }
-
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
-        }
-    }
-
-    private void DrawAlignment(FightDoc doc, ResolvedFight current, float scale)
-    {
-        if (doc.Alignments.Length == 0)
-        {
-            return;
-        }
-
-        ui.SectionLabel(Loc.T(L.Strats.Orientation));
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var row = new Rect(origin, new Vector2(origin.X + width, origin.Y + 38f * scale));
-        var picked = SegmentStrip.Draw("strats.alignment", row, alignmentLabels, current.AlignmentIndex,
-            AppPalettes.Strats, 32f, 0.85f);
-        if (picked != current.AlignmentIndex)
-        {
-            selection.Alignment = doc.Alignments[picked].Id;
-            TouchSelection();
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, 38f * scale + Metrics.Space.Md * scale));
-    }
-
-    private void DrawSetupCard(ResolvedFight current, float scale)
+    private void DrawReferenceCard(ResolvedFight current, float scale)
     {
         var timeline = current.Timeline;
         var links = linksSource;
@@ -571,11 +263,11 @@ internal sealed partial class StratsApp
         }
 
         var drawList = ImGui.GetWindowDrawList();
-        var card = GroupCard.Begin(theme, rowCount, SetupRowHeight);
+        var card = GroupCard.Begin(ui, rowCount, DisclosureRowHeight);
         if (timeline.Length > 0)
         {
             var value = timelineOpen ? Loc.T(L.Strats.HideTimeline) : Loc.T(L.Strats.ShowTimeline);
-            if (SettingsRow.Disclosure(card.NextRow(), Loc.T(L.Strats.Timeline), value, theme, "strats.timeline"))
+            if (DrawDisclosureRow(drawList, card.NextRow(), Loc.T(L.Strats.Timeline), value, timelineOpen))
             {
                 timelineOpen = !timelineOpen;
             }
@@ -592,7 +284,7 @@ internal sealed partial class StratsApp
         if (links.Length > 0)
         {
             var value = linksOpen ? Loc.T(L.Strats.HideTimeline) : linksCountLabel;
-            if (SettingsRow.Disclosure(card.NextRow(), Loc.T(L.Strats.Sources), value, theme, "strats.sources"))
+            if (DrawDisclosureRow(drawList, card.NextRow(), Loc.T(L.Strats.Sources), value, linksOpen))
             {
                 linksOpen = !linksOpen;
             }
@@ -607,20 +299,46 @@ internal sealed partial class StratsApp
         }
 
         card.End();
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+        ImGui.Dummy(new Vector2(0f, CardGap * scale - ImGui.GetStyle().ItemSpacing.Y));
+    }
+
+    private bool DrawDisclosureRow(ImDrawListPtr drawList, Rect row, string title, string value, bool open)
+    {
+        var scale = UiScale.Current;
+        var hovered = UiInteract.Hover(row.Min, row.Max);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            drawList.AddRectFilled(new Vector2(row.Min.X - Metrics.Space.Lg * scale, row.Min.Y),
+                new Vector2(row.Max.X + Metrics.Space.Lg * scale, row.Max.Y), ImGui.GetColorU32(ui.HoverWash));
+        }
+
+        var chevronCenter = new Vector2(row.Max.X - Metrics.Space.Xs * scale, row.Center.Y);
+        AppSkin.Icon(drawList, chevronCenter, open ? ChevronUpGlyph : ChevronDownGlyph, ui.MutedInk, ChevronScale);
+        var valueRight = chevronCenter.X - Metrics.Space.Lg * scale;
+        var valueWidth = Typography.Measure(value, TextStyles.Subheadline).X;
+        var lineHeight = Typography.LineHeight(TextStyles.Body);
+        Typography.Draw(drawList, new Vector2(valueRight - valueWidth,
+            row.Center.Y - Typography.LineHeight(TextStyles.Subheadline) * 0.5f), value, ui.MutedInk,
+            TextStyles.Subheadline);
+        var titleWidth = MathF.Max(1f, valueRight - valueWidth - Metrics.Space.Md * scale - row.Min.X);
+        Typography.Draw(drawList, new Vector2(row.Min.X, row.Center.Y - lineHeight * 0.5f),
+            Typography.FitText(title, titleWidth, TextStyles.Body), ui.TitleInk, TextStyles.Body);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     private void DrawTimelineRow(ImDrawListPtr drawList, Rect row, TimelineEntry item, int index, float scale)
     {
-        var timeX = row.Min.X + Metrics.Space.Md * scale;
-        Typography.Draw(drawList, new Vector2(timeX, row.Center.Y - Typography.LineHeight(TextStyles.FootnoteEmphasized) * 0.5f),
+        Typography.Draw(drawList,
+            new Vector2(row.Min.X, row.Center.Y - Typography.LineHeight(TextStyles.FootnoteEmphasized) * 0.5f),
             timelineTimes[index], ui.MutedInk, TextStyles.FootnoteEmphasized);
-        var dotCenter = new Vector2(timeX + 44f * scale, row.Center.Y);
-        drawList.AddCircleFilled(dotCenter, 4f * scale, ImGui.GetColorU32(TimelineColor(item.Type)), 12);
-        var nameX = dotCenter.X + 12f * scale;
-        var name = Typography.FitText(item.Name, row.Max.X - nameX, TextStyles.Subheadline);
-        Typography.Draw(drawList, new Vector2(nameX, row.Center.Y - Typography.LineHeight(TextStyles.Subheadline) * 0.5f),
-            name, ui.BodyInk, TextStyles.Subheadline);
+        var dotCenter = new Vector2(row.Min.X + TimelineTimeWidth * scale, row.Center.Y);
+        drawList.AddCircleFilled(dotCenter, TimelineDotRadius * scale, ImGui.GetColorU32(TimelineColor(item.Type)), 12);
+        var nameX = dotCenter.X + TimelineNameGap * scale;
+        var name = Typography.FitText(item.Name, MathF.Max(1f, row.Max.X - nameX), TextStyles.Subheadline);
+        Typography.Draw(drawList,
+            new Vector2(nameX, row.Center.Y - Typography.LineHeight(TextStyles.Subheadline) * 0.5f), name, ui.BodyInk,
+            TextStyles.Subheadline);
     }
 
     private void DrawLinkRow(ImDrawListPtr drawList, Rect row, GuideLink link, int index, float scale)
@@ -628,23 +346,20 @@ internal sealed partial class StratsApp
         var hovered = UiInteract.Hover(row.Min, row.Max);
         if (hovered)
         {
-            SettingsRow.DrawRowHighlight(row, theme);
-        }
-
-        var iconCenter = new Vector2(row.Min.X + Metrics.Space.Md * scale + 8f * scale, row.Center.Y);
-        AppSkin.Icon(drawList, iconCenter, linkGlyphs[index], ui.Accent, 0.75f);
-        var labelX = iconCenter.X + 18f * scale;
-        var trailingCenter = new Vector2(row.Max.X - 6f * scale, row.Center.Y);
-        var labelMaxWidth = MathF.Max(1f, trailingCenter.X - 14f * scale - labelX);
-        Marquee.DrawLeft(drawList, linkRowIds[index], link.Label, labelX,
-            row.Center.Y - Typography.LineHeight(TextStyles.Subheadline) * 0.5f, labelMaxWidth, TextStyles.Subheadline,
-            ui.BodyInk, hovered);
-        AppSkin.Icon(drawList, trailingCenter, LinkGlyph, ui.MutedInk, 0.6f);
-        if (hovered)
-        {
+            drawList.AddRectFilled(new Vector2(row.Min.X - Metrics.Space.Lg * scale, row.Min.Y),
+                new Vector2(row.Max.X + Metrics.Space.Lg * scale, row.Max.Y), ImGui.GetColorU32(ui.HoverWash));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
+        var iconCenter = new Vector2(row.Min.X + LinkIconWidth * 0.5f * scale, row.Center.Y);
+        AppSkin.Icon(drawList, iconCenter, linkGlyphs[index], ui.Accent, LinkIconScale);
+        var labelX = row.Min.X + (LinkIconWidth + Metrics.Space.Sm) * scale;
+        var trailingCenter = new Vector2(row.Max.X - Metrics.Space.Xs * scale, row.Center.Y);
+        var labelMaxWidth = MathF.Max(1f, trailingCenter.X - Metrics.Space.Lg * scale - labelX);
+        Marquee.DrawLeft(drawList, linkRowIds[index], link.Label, labelX,
+            row.Center.Y - Typography.LineHeight(TextStyles.Subheadline) * 0.5f, labelMaxWidth, TextStyles.Subheadline,
+            ui.BodyInk, hovered);
+        AppSkin.Icon(drawList, trailingCenter, LinkGlyph, ui.MutedInk, LinkTrailingScale);
         if (UiInteract.Click(row.Min, row.Max, hovered))
         {
             UrlActions.AskThenOpen(link.Url);
@@ -661,6 +376,29 @@ internal sealed partial class StratsApp
             _ => ui.MutedInk,
         };
 
+    private void DrawTabs(FightDoc doc, ResolvedFight current, float scale)
+    {
+        if (doc.Tabs.Length == 0)
+        {
+            return;
+        }
+
+        sectionsScrollY = ImGui.GetCursorPosY();
+        for (var index = 0; index < tabActive.Length; index++)
+        {
+            tabActive[index] = index == current.TabIndex;
+        }
+
+        var tapped = tabRail.Draw(ui, tabLabels, tabActive, "strats.section");
+        if (tapped >= 0 && tapped != current.TabIndex)
+        {
+            selection.Tab = tapped;
+            TouchSelection();
+        }
+
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Xs * scale));
+    }
+
     private void DrawStratIntro(ResolvedFight current, float scale)
     {
         var strat = current.Strat;
@@ -672,22 +410,22 @@ internal sealed partial class StratsApp
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var pad = Metrics.Space.Md * scale;
+        var pad = CardPad * scale;
         var innerWidth = width - pad * 2f;
         var descriptionHeight = strat.Description.IsEmpty
             ? 0f
             : richText.Measure(strat.Description, innerWidth, TextStyles.Subheadline, scale);
         var notesHeight = strat.Notes.IsEmpty ? 0f : richText.Measure(strat.Notes, innerWidth, TextStyles.Footnote, scale);
-        var height = pad + descriptionHeight + (descriptionHeight > 0f && notesHeight > 0f ? Metrics.Space.Sm * scale : 0f) +
-            notesHeight + pad;
+        var between = descriptionHeight > 0f && notesHeight > 0f ? BlockGap * scale : 0f;
+        var height = pad + descriptionHeight + between + notesHeight + pad;
         var max = new Vector2(origin.X + width, origin.Y + height);
-        ui.Card(drawList, origin, max, Metrics.Radius.Card * scale);
+        ui.Card(drawList, origin, max, Metrics.Radius.Grouped * scale);
         var y = origin.Y + pad;
         if (descriptionHeight > 0f)
         {
-            richText.Draw(drawList, new Vector2(origin.X + pad, y), strat.Description, innerWidth, TextStyles.Subheadline,
-                ui.BodyInk, ui.MutedInk, scale, images);
-            y += descriptionHeight + (notesHeight > 0f ? Metrics.Space.Sm * scale : 0f);
+            richText.Draw(drawList, new Vector2(origin.X + pad, y), strat.Description, innerWidth,
+                TextStyles.Subheadline, ui.BodyInk, ui.MutedInk, scale, images);
+            y += descriptionHeight + between;
         }
 
         if (notesHeight > 0f)
@@ -697,36 +435,7 @@ internal sealed partial class StratsApp
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Md * scale));
-    }
-
-    private void DrawLinkPills(ImDrawListPtr drawList, Vector2 origin, float width, GuideLink[] links, float scale)
-    {
-        var cursorX = origin.X;
-        var gap = Metrics.Space.Sm * scale;
-        var pillHeight = LinkPillHeight * scale;
-        var bleed = PillStrokeBleed * scale;
-        drawList.PushClipRect(new Vector2(origin.X - bleed, origin.Y - bleed),
-            new Vector2(origin.X + width + bleed, origin.Y + pillHeight + bleed), true);
-        for (var index = 0; index < links.Length; index++)
-        {
-            var link = links[index];
-            var pillWidth = AppSkin.PillWidthFor(link.Label, pillHeight);
-            var rect = new Rect(new Vector2(cursorX, origin.Y), new Vector2(cursorX + pillWidth, origin.Y + pillHeight));
-            if (rect.Max.X > origin.X + width && index > 0)
-            {
-                break;
-            }
-
-            if (ui.GhostButton(rect, link.Label))
-            {
-                UrlActions.AskThenOpen(link.Url);
-            }
-
-            cursorX += pillWidth + gap;
-        }
-
-        drawList.PopClipRect();
+        ImGui.Dummy(new Vector2(width, height + CardGap * scale));
     }
 
     private void DrawStratDifferences(ResolvedFight current, float scale)
@@ -737,37 +446,48 @@ internal sealed partial class StratsApp
             return;
         }
 
-        ui.SectionLabel(Loc.T(L.Strats.StratDifferences));
+        DrawChapterHeading(Loc.T(L.Strats.StratDifferences), scale);
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var pad = Metrics.Space.Md * scale;
+        var pad = CardPad * scale;
         var innerWidth = width - pad * 2f;
         var labelHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
         var height = pad;
         for (var index = 0; index < differences.Length; index++)
         {
-            height += labelHeight + 2f * scale +
-                richText.Measure(differences[index].Text, innerWidth, TextStyles.Footnote, scale) +
-                (index < differences.Length - 1 ? Metrics.Space.Sm * scale : 0f);
+            height += labelHeight + LabelGap * scale +
+                      richText.Measure(differences[index].Text, innerWidth, TextStyles.Footnote, scale) +
+                      (index < differences.Length - 1 ? BlockGap * scale : 0f);
         }
 
         height += pad;
-        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), Metrics.Radius.Card * scale);
+        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), Metrics.Radius.Grouped * scale);
         var y = origin.Y + pad;
         for (var index = 0; index < differences.Length; index++)
         {
             var difference = differences[index];
-            Typography.Draw(drawList, new Vector2(origin.X + pad, y), difference.Label, ui.TitleInk,
+            Typography.Draw(drawList, new Vector2(origin.X + pad, y),
+                Typography.FitText(difference.Label, innerWidth, TextStyles.SubheadlineEmphasized), ui.TitleInk,
                 TextStyles.SubheadlineEmphasized);
-            y += labelHeight + 2f * scale;
-            y += richText.Draw(drawList, new Vector2(origin.X + pad, y), difference.Text, innerWidth, TextStyles.Footnote,
-                ui.BodyInk, ui.MutedInk, scale, images);
-            y += Metrics.Space.Sm * scale;
+            y += labelHeight + LabelGap * scale;
+            y += richText.Draw(drawList, new Vector2(origin.X + pad, y), difference.Text, innerWidth,
+                TextStyles.Footnote, ui.BodyInk, ui.MutedInk, scale, images);
+            y += BlockGap * scale;
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Md * scale));
+        ImGui.Dummy(new Vector2(width, height + CardGap * scale));
+    }
+
+    private void DrawChapterHeading(string title, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var titleHeight = Typography.DrawWrappedLeft(new Vector2(origin.X, origin.Y + ChapterTopPad * scale), title,
+            ui.TitleInk, TextStyles.Title3, width);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, ChapterTopPad * scale + titleHeight + ChapterBottomGap * scale));
     }
 
     private void DrawPhases(ResolvedFight current, float scale)
@@ -775,16 +495,19 @@ internal sealed partial class StratsApp
         for (var phaseIndex = 0; phaseIndex < current.Phases.Length; phaseIndex++)
         {
             var phase = current.Phases[phaseIndex];
-            ui.SectionHeading(phase.Name, Metrics.Space.Sm);
+            MarkEntry();
+            DrawChapterHeading(phase.Name, scale);
             DrawPhaseIntro(phase, phaseIndex, scale);
             for (var mechIndex = 0; mechIndex < phase.Mechs.Length; mechIndex++)
             {
+                MarkEntry();
                 DrawMechanicCard(current, phase.Mechs[mechIndex], phaseIndex, mechIndex, scale);
             }
         }
     }
 
-    private void DrawSectionPager(FightDoc doc, ResolvedFight current, in AppSurface.SurfaceScope surface, float scale)
+    private void DrawSectionPager(FightDoc doc, ResolvedFight current, in AppSurface.SurfaceScope surface,
+        float scale)
     {
         if (doc.Tabs.Length <= 1)
         {
@@ -793,19 +516,22 @@ internal sealed partial class StratsApp
 
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
+        origin.Y += Metrics.Space.Sm * scale;
         var width = ImGui.GetContentRegionAvail().X;
         var gap = Metrics.Space.Sm * scale;
         var half = (width - gap) * 0.5f;
-        var captionHeight = Typography.LineHeight(TextStyles.Caption2) + 2f * scale;
+        var captionHeight = Typography.LineHeight(TextStyles.Footnote) + LabelGap * scale;
         var pillTop = origin.Y + captionHeight;
         var pillHeight = PagerPillHeight * scale;
         if (current.TabIndex > 0)
         {
-            Typography.Draw(drawList, origin, Loc.T(L.Common.Previous), ui.MutedInk, TextStyles.Caption2);
+            Typography.Draw(drawList, origin, Loc.T(L.Common.Previous), ui.MutedInk, TextStyles.Footnote);
             var rect = new Rect(new Vector2(origin.X, pillTop), new Vector2(origin.X + half, pillTop + pillHeight));
-            if (ui.PillButton(rect, tabLabels[current.TabIndex - 1], false, "strats.pager.previous"))
+            var label = Typography.FitText(tabLabels[current.TabIndex - 1], half - pillHeight * 0.5f,
+                TextStyles.Subheadline);
+            if (ui.PillButton(rect, label, false, "strats.pager.previous"))
             {
-                SwitchSection(current.TabIndex - 1, surface, scale);
+                SwitchSection(current.TabIndex - 1, in surface, scale);
             }
         }
 
@@ -813,25 +539,27 @@ internal sealed partial class StratsApp
         {
             var left = origin.X + half + gap;
             var caption = Loc.T(L.Common.Next);
-            var captionWidth = Typography.Measure(caption, TextStyles.Caption2).X;
+            var captionWidth = Typography.Measure(caption, TextStyles.Footnote).X;
             Typography.Draw(drawList, new Vector2(origin.X + width - captionWidth, origin.Y), caption, ui.MutedInk,
-                TextStyles.Caption2);
+                TextStyles.Footnote);
             var rect = new Rect(new Vector2(left, pillTop), new Vector2(origin.X + width, pillTop + pillHeight));
-            if (ui.PillButton(rect, tabLabels[current.TabIndex + 1], true, "strats.pager.next"))
+            var label = Typography.FitText(tabLabels[current.TabIndex + 1], half - pillHeight * 0.5f,
+                TextStyles.Subheadline);
+            if (ui.PillButton(rect, label, true, "strats.pager.next"))
             {
-                SwitchSection(current.TabIndex + 1, surface, scale);
+                SwitchSection(current.TabIndex + 1, in surface, scale);
             }
         }
 
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, captionHeight + pillHeight + Metrics.Space.Md * scale));
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y - Metrics.Space.Sm * scale));
+        ImGui.Dummy(new Vector2(width, Metrics.Space.Sm * scale + captionHeight + pillHeight + CardGap * scale));
     }
 
     private void SwitchSection(int tabIndex, in AppSurface.SurfaceScope surface, float scale)
     {
         selection.Tab = tabIndex;
         TouchSelection();
-        surface.JumpTo(MathF.Max(0f, sectionsScrollY - Metrics.Space.Sm * scale));
+        surface.JumpTo(MathF.Max(0f, sectionsScrollY - ReadingLineOffset(scale)));
     }
 
     private void DrawBackToTop(in AppSurface.SurfaceScope surface, float scale)
@@ -845,6 +573,7 @@ internal sealed partial class StratsApp
         var rect = new Rect(new Vector2(left, origin.Y), new Vector2(left + pillWidth, origin.Y + pillHeight));
         if (ui.GhostButton(rect, label))
         {
+            gliding = false;
             surface.JumpToTop();
         }
 
@@ -856,7 +585,8 @@ internal sealed partial class StratsApp
     {
         var hasText = phase.Description is not null;
         var hasImage = phase.Image is not null;
-        var hasLinks = phase.Links.Length > 0 || phase.BoardUrl.Length > 0;
+        var boardLabel = phase.BoardUrl.Length > 0 ? Loc.T(L.Strats.Board) : string.Empty;
+        var hasLinks = phase.Links.Length > 0 || boardLabel.Length > 0;
         if (!hasText && !hasImage && !hasLinks)
         {
             return;
@@ -868,9 +598,9 @@ internal sealed partial class StratsApp
         var y = origin.Y;
         if (hasText)
         {
-            y += richText.Draw(drawList, new Vector2(origin.X, y), phase.Description!, width, TextStyles.Subheadline,
+            y += richText.Draw(drawList, new Vector2(origin.X, y), phase.Description!, width, TextStyles.Body,
                 ui.BodyInk, ui.MutedInk, scale, images);
-            y += Metrics.Space.Sm * scale;
+            y += BlockGap * scale;
         }
 
         if (hasImage)
@@ -879,59 +609,70 @@ internal sealed partial class StratsApp
             var frame = new Rect(new Vector2(origin.X, y), new Vector2(origin.X + width, y + frameHeight));
             DrawImageFrame(drawList, frame, phase.Image!, phase.Spotlight, string.Empty, scale,
                 new StratsView(StratsScreen.Viewer, selection.FightKey, phaseIndex));
-            y = frame.Max.Y + Metrics.Space.Sm * scale;
+            y = frame.Max.Y + BlockGap * scale;
         }
 
         if (hasLinks)
         {
-            DrawPhaseLinks(drawList, new Vector2(origin.X, y), width, phase, scale);
-            y += LinkPillHeight * scale + Metrics.Space.Sm * scale;
+            y += DrawLinkFlow(drawList, new Vector2(origin.X, y), width, phase.Links, boardLabel, phase.BoardUrl,
+                scale);
+            y += BlockGap * scale;
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, y - origin.Y + Metrics.Space.Xs * scale));
+        ImGui.Dummy(new Vector2(width, y - origin.Y));
     }
 
-    private void DrawPhaseLinks(ImDrawListPtr drawList, Vector2 origin, float width, ResolvedPhase phase, float scale)
+    private float MeasureLinkFlow(float width, GuideLink[] links, string leadLabel, float scale)
     {
-        var cursorX = origin.X;
-        var gap = Metrics.Space.Sm * scale;
         var pillHeight = LinkPillHeight * scale;
-        if (phase.BoardUrl.Length > 0)
+        var flow = new PillFlow(0f, width, Metrics.Space.Sm * scale);
+        if (leadLabel.Length > 0)
         {
-            var boardLabel = Loc.T(L.Strats.Board);
-            var boardWidth = AppSkin.PillWidthFor(boardLabel, pillHeight);
-            var rect = new Rect(new Vector2(cursorX, origin.Y), new Vector2(cursorX + boardWidth, origin.Y + pillHeight));
-            if (ui.PillButton(rect, boardLabel, false, "strats.board"))
-            {
-                UrlActions.AskThenOpen(phase.BoardUrl);
-            }
-
-            cursorX += boardWidth + gap;
+            flow.Place(MathF.Min(width, AppSkin.PillWidthFor(leadLabel, pillHeight)));
         }
 
-        var bleed = PillStrokeBleed * scale;
-        drawList.PushClipRect(new Vector2(cursorX - bleed, origin.Y - bleed),
-            new Vector2(origin.X + width + bleed, origin.Y + pillHeight + bleed), true);
-        for (var index = 0; index < phase.Links.Length; index++)
+        for (var index = 0; index < links.Length; index++)
         {
-            var link = phase.Links[index];
-            var pillWidth = AppSkin.PillWidthFor(link.Label, pillHeight);
-            if (cursorX + pillWidth > origin.X + width && cursorX > origin.X)
-            {
-                break;
-            }
+            flow.Place(MathF.Min(width, AppSkin.PillWidthFor(links[index].Label, pillHeight)));
+        }
 
-            var rect = new Rect(new Vector2(cursorX, origin.Y), new Vector2(cursorX + pillWidth, origin.Y + pillHeight));
-            if (ui.GhostButton(rect, link.Label))
+        return flow.Height(pillHeight, Metrics.Space.Sm * scale);
+    }
+
+    private float DrawLinkFlow(ImDrawListPtr drawList, Vector2 origin, float width, GuideLink[] links,
+        string leadLabel, string leadUrl, float scale)
+    {
+        var pillHeight = LinkPillHeight * scale;
+        var rowGap = Metrics.Space.Sm * scale;
+        var flow = new PillFlow(origin.X, width, Metrics.Space.Sm * scale);
+        if (leadLabel.Length > 0)
+        {
+            var pillWidth = MathF.Min(width, AppSkin.PillWidthFor(leadLabel, pillHeight));
+            var left = flow.Place(pillWidth);
+            var top = origin.Y + flow.Row * (pillHeight + rowGap);
+            if (ui.PillButton(new Rect(new Vector2(left, top), new Vector2(left + pillWidth, top + pillHeight)),
+                    Typography.FitText(leadLabel, pillWidth - pillHeight * 0.5f, TextStyles.Subheadline), false,
+                    "strats.board"))
+            {
+                UrlActions.AskThenOpen(leadUrl);
+            }
+        }
+
+        for (var index = 0; index < links.Length; index++)
+        {
+            var link = links[index];
+            var pillWidth = MathF.Min(width, AppSkin.PillWidthFor(link.Label, pillHeight));
+            var left = flow.Place(pillWidth);
+            var top = origin.Y + flow.Row * (pillHeight + rowGap);
+            if (ui.GhostButton(new Rect(new Vector2(left, top), new Vector2(left + pillWidth, top + pillHeight)),
+                    Typography.FitText(link.Label, pillWidth - pillHeight * 0.5f, TextStyles.Subheadline)))
             {
                 UrlActions.AskThenOpen(link.Url);
             }
-
-            cursorX += pillWidth + gap;
         }
 
-        drawList.PopClipRect();
+        return flow.Height(pillHeight, rowGap);
     }
 
     private void DrawMechanicCard(ResolvedFight current, ResolvedMechanic mech, int phaseIndex, int mechIndex,
@@ -940,12 +681,12 @@ internal sealed partial class StratsApp
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var pad = Metrics.Space.Md * scale;
+        var pad = CardPad * scale;
         var innerWidth = width - pad * 2f;
-        var gap = Metrics.Space.Sm * scale;
+        var gap = BlockGap * scale;
         var separate = current.Doc.SeparateDescriptionAction;
 
-        var nameHeight = Typography.LineHeight(TextStyles.Headline);
+        var nameHeight = Typography.MeasureWrappedBlock(mech.Name, TextStyles.Headline, innerWidth).Y;
         var descriptionHeight = mech.Description is null
             ? 0f
             : richText.Measure(mech.Description, innerWidth, TextStyles.Subheadline, scale);
@@ -955,40 +696,47 @@ internal sealed partial class StratsApp
             : MathF.Min(MaxImageHeight * scale, SpotlightImage.HeightFor(mech.Image, mech.Transform, innerWidth));
         var arenaHeight = mech.Arena is null ? 0f : innerWidth;
         var notesHeight = mech.Notes is null ? 0f : richText.Measure(mech.Notes, innerWidth, TextStyles.Footnote, scale);
-        var labelHeight = Typography.LineHeight(TextStyles.Caption2);
-        var linksHeight = mech.Links.Length == 0 ? 0f : LinkPillHeight * scale;
+        var labelHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
+        var linksHeight = mech.Links.Length == 0 ? 0f : MeasureLinkFlow(innerWidth, mech.Links, string.Empty, scale);
 
-        var spotPad = Metrics.Space.Sm * scale;
+        var spotPad = Metrics.Space.Md * scale;
         var spotInnerWidth = innerWidth - SpotBarWidth * scale - spotPad * 2f;
         var playerTextHeight = mech.PlayerText is null
             ? 0f
-            : richText.Measure(mech.PlayerText, spotInnerWidth, TextStyles.SubheadlineEmphasized, scale);
+            : richText.Measure(mech.PlayerText, spotInnerWidth, TextStyles.BodyEmphasized, scale);
         var playerImageHeight = mech.PlayerImage is null
             ? 0f
-            : MathF.Min(MaxImageHeight * scale, SpotlightImage.HeightFor(mech.PlayerImage, mech.PlayerTransform, spotInnerWidth));
+            : MathF.Min(MaxImageHeight * scale,
+                SpotlightImage.HeightFor(mech.PlayerImage, mech.PlayerTransform, spotInnerWidth));
         var spotHeight = playerTextHeight > 0f || playerImageHeight > 0f
-            ? spotPad + labelHeight + 2f * scale + playerTextHeight +
+            ? spotPad + labelHeight + LabelGap * scale + playerTextHeight +
               (playerTextHeight > 0f && playerImageHeight > 0f ? gap : 0f) + playerImageHeight + spotPad
             : 0f;
 
+        var sectionLabel = separate ? labelHeight + LabelGap * scale : 0f;
         var height = pad + nameHeight;
-        height += Block(descriptionHeight, separate ? labelHeight + 2f * scale : 0f, gap);
-        height += Block(actionHeight, separate ? labelHeight + 2f * scale : 0f, gap);
+        height += Block(descriptionHeight, sectionLabel, gap);
+        height += Block(actionHeight, sectionLabel, gap);
+        height += Block(spotHeight, 0f, gap);
         height += Block(mechImageHeight, 0f, gap);
         height += Block(arenaHeight, 0f, gap);
-        height += Block(spotHeight, 0f, gap);
         height += Block(notesHeight, 0f, gap);
         height += Block(linksHeight, 0f, gap);
         height += pad;
 
         var max = new Vector2(origin.X + width, origin.Y + height);
+        if (!mechanicAnchorTaken)
+        {
+            mechanicAnchorTaken = true;
+            ReportMechanicAnchor(origin, max);
+        }
+
         if (ImGui.IsRectVisible(origin, max))
         {
-            ui.Card(drawList, origin, max, Metrics.Radius.Card * scale);
+            ui.Card(drawList, origin, max, Metrics.Radius.Grouped * scale);
             var x = origin.X + pad;
             var y = origin.Y + pad;
-            Typography.Draw(drawList, new Vector2(x, y), Typography.FitText(mech.Name, innerWidth, TextStyles.Headline),
-                ui.TitleInk, TextStyles.Headline);
+            Typography.DrawWrappedLeft(new Vector2(x, y), mech.Name, ui.TitleInk, TextStyles.Headline, innerWidth);
             y += nameHeight;
 
             if (descriptionHeight > 0f)
@@ -996,8 +744,9 @@ internal sealed partial class StratsApp
                 y += gap;
                 if (separate)
                 {
-                    Typography.Draw(drawList, new Vector2(x, y), Loc.T(L.Strats.WhatHappens), ui.MutedInk, TextStyles.Caption2);
-                    y += labelHeight + 2f * scale;
+                    Typography.Draw(drawList, new Vector2(x, y), Loc.T(L.Strats.WhatHappens), ui.MutedInk,
+                        TextStyles.FootnoteEmphasized);
+                    y += sectionLabel;
                 }
 
                 richText.Draw(drawList, new Vector2(x, y), mech.Description!, innerWidth, TextStyles.Subheadline,
@@ -1010,13 +759,23 @@ internal sealed partial class StratsApp
                 y += gap;
                 if (separate)
                 {
-                    Typography.Draw(drawList, new Vector2(x, y), Loc.T(L.Strats.WhatToDo), ui.Accent, TextStyles.Caption2);
-                    y += labelHeight + 2f * scale;
+                    Typography.Draw(drawList, new Vector2(x, y), Loc.T(L.Strats.WhatToDo), ui.Accent,
+                        TextStyles.FootnoteEmphasized);
+                    y += sectionLabel;
                 }
 
-                richText.Draw(drawList, new Vector2(x, y), mech.Action!, innerWidth, TextStyles.Subheadline, ui.BodyInk,
-                    ui.MutedInk, scale, images);
+                richText.Draw(drawList, new Vector2(x, y), mech.Action!, innerWidth, TextStyles.Subheadline,
+                    ui.BodyInk, ui.MutedInk, scale, images);
                 y += actionHeight;
+            }
+
+            if (spotHeight > 0f)
+            {
+                y += gap;
+                var panel = new Rect(new Vector2(x, y), new Vector2(x + innerWidth, y + spotHeight));
+                DrawSpotPanel(drawList, panel, mech, spotPad, spotInnerWidth, labelHeight, playerTextHeight,
+                    playerImageHeight, gap, scale, phaseIndex, mechIndex);
+                y += spotHeight;
             }
 
             if (mechImageHeight > 0f)
@@ -1041,15 +800,6 @@ internal sealed partial class StratsApp
                 y += arenaHeight;
             }
 
-            if (spotHeight > 0f)
-            {
-                y += gap;
-                var panel = new Rect(new Vector2(x, y), new Vector2(x + innerWidth, y + spotHeight));
-                DrawSpotPanel(drawList, panel, mech, spotPad, spotInnerWidth, labelHeight, playerTextHeight,
-                    playerImageHeight, gap, scale, phaseIndex, mechIndex);
-                y += spotHeight;
-            }
-
             if (notesHeight > 0f)
             {
                 y += gap;
@@ -1061,30 +811,50 @@ internal sealed partial class StratsApp
             if (linksHeight > 0f)
             {
                 y += gap;
-                DrawLinkPills(drawList, new Vector2(x, y), innerWidth, mech.Links, scale);
+                DrawLinkFlow(drawList, new Vector2(x, y), innerWidth, mech.Links, string.Empty, string.Empty, scale);
             }
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Md * scale));
+        ImGui.Dummy(new Vector2(width, height + CardGap * scale));
+    }
+
+    private static void ReportMechanicAnchor(Vector2 origin, Vector2 max)
+    {
+        if (!UiAnchors.Recording)
+        {
+            return;
+        }
+
+        var windowTop = ImGui.GetWindowPos().Y;
+        var windowBottom = windowTop + ImGui.GetWindowHeight();
+        var settledLine = windowTop + (windowBottom - windowTop) * MechanicSettledShare;
+        if (origin.Y < windowTop || origin.Y > settledLine)
+        {
+            return;
+        }
+
+        UiAnchors.Report("strats.mechanic.first",
+            new Rect(origin, new Vector2(max.X, MathF.Min(max.Y, windowBottom))));
     }
 
     private void DrawSpotPanel(ImDrawListPtr drawList, Rect panel, ResolvedMechanic mech, float spotPad,
         float spotInnerWidth, float labelHeight, float playerTextHeight, float playerImageHeight, float gap, float scale,
         int phaseIndex, int mechIndex)
     {
-        Squircle.Fill(drawList, panel.Min, panel.Max, Metrics.Radius.Md * scale,
+        var scaleRadius = Metrics.Radius.Md * scale;
+        Squircle.Fill(drawList, panel.Min, panel.Max, scaleRadius,
             ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, SpotFillAlpha)));
         var barWidth = SpotBarWidth * scale;
         Squircle.Fill(drawList, new Vector2(panel.Min.X, panel.Min.Y + spotPad),
             new Vector2(panel.Min.X + barWidth, panel.Max.Y - spotPad), barWidth * 0.5f, ImGui.GetColorU32(ui.Accent));
         var x = panel.Min.X + barWidth + spotPad;
         var y = panel.Min.Y + spotPad;
-        Typography.Draw(drawList, new Vector2(x, y), Loc.T(L.Strats.ForYou), ui.Accent, TextStyles.Caption2);
-        y += labelHeight + 2f * scale;
+        Typography.Draw(drawList, new Vector2(x, y), roleSpotLabel, ui.Accent, TextStyles.FootnoteEmphasized);
+        y += labelHeight + LabelGap * scale;
         if (playerTextHeight > 0f)
         {
-            richText.Draw(drawList, new Vector2(x, y), mech.PlayerText!, spotInnerWidth, TextStyles.SubheadlineEmphasized,
+            richText.Draw(drawList, new Vector2(x, y), mech.PlayerText!, spotInnerWidth, TextStyles.BodyEmphasized,
                 ui.TitleInk, ui.MutedInk, scale, images);
             y += playerTextHeight + (playerImageHeight > 0f ? gap : 0f);
         }
@@ -1107,7 +877,7 @@ internal sealed partial class StratsApp
         SpotlightImage.Draw(drawList, frame, texture, mask, transform, Metrics.Radius.Md * scale, scale,
             SpotlightImage.PlaceholderFor(theme), ui.Accent);
         var hovered = UiInteract.Hover(frame.Min, frame.Max);
-        if (hovered)
+        if (hovered && texture is not null)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             UiInteract.HoverHighlight(drawList, frame.Min, frame.Max, Metrics.Radius.Md * scale);
@@ -1121,12 +891,13 @@ internal sealed partial class StratsApp
 
     private void DrawArenaFallback(Rect stage, string url, float scale)
     {
-        var label = Loc.T(L.Strats.OpenOnSite);
+        var label = Loc.T(L.Strats.OpenFullDiagram);
         var pillHeight = LinkPillHeight * scale;
-        var pillWidth = AppSkin.PillWidthFor(label, pillHeight);
-        var rect = new Rect(new Vector2(stage.Max.X - pillWidth - Metrics.Space.Sm * scale, stage.Max.Y - pillHeight - Metrics.Space.Sm * scale),
-            new Vector2(stage.Max.X - Metrics.Space.Sm * scale, stage.Max.Y - Metrics.Space.Sm * scale));
-        if (ui.GhostButton(rect, label))
+        var inset = Metrics.Space.Sm * scale;
+        var pillWidth = MathF.Min(stage.Width - inset * 2f, AppSkin.PillWidthFor(label, pillHeight));
+        var rect = new Rect(new Vector2(stage.Max.X - pillWidth - inset, stage.Max.Y - pillHeight - inset),
+            new Vector2(stage.Max.X - inset, stage.Max.Y - inset));
+        if (ui.GhostButton(rect, Typography.FitText(label, pillWidth - pillHeight * 0.5f, TextStyles.Subheadline)))
         {
             UrlActions.AskThenOpen(url);
         }
@@ -1140,30 +911,34 @@ internal sealed partial class StratsApp
             return;
         }
 
-        ui.SectionHeading(resources.Title.Length > 0 ? resources.Title : Loc.T(L.Strats.Resources), Metrics.Space.Sm);
+        DrawChapterHeading(resources.Title.Length > 0 ? resources.Title : Loc.T(L.Strats.Resources), scale);
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var pad = Metrics.Space.Md * scale;
+        var pad = CardPad * scale;
         var innerWidth = width - pad * 2f;
         var textHeight = resources.Text.IsEmpty ? 0f : richText.Measure(resources.Text, innerWidth, TextStyles.Footnote, scale);
-        var linksHeight = resources.Links.Length == 0 ? 0f : LinkPillHeight * scale;
-        var height = pad + textHeight + (textHeight > 0f && linksHeight > 0f ? Metrics.Space.Sm * scale : 0f) + linksHeight + pad;
-        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), Metrics.Radius.Card * scale);
+        var linksHeight = resources.Links.Length == 0
+            ? 0f
+            : MeasureLinkFlow(innerWidth, resources.Links, string.Empty, scale);
+        var between = textHeight > 0f && linksHeight > 0f ? BlockGap * scale : 0f;
+        var height = pad + textHeight + between + linksHeight + pad;
+        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), Metrics.Radius.Grouped * scale);
         var y = origin.Y + pad;
         if (textHeight > 0f)
         {
             richText.Draw(drawList, new Vector2(origin.X + pad, y), resources.Text, innerWidth, TextStyles.Footnote,
                 ui.BodyInk, ui.MutedInk, scale, images);
-            y += textHeight + (linksHeight > 0f ? Metrics.Space.Sm * scale : 0f);
+            y += textHeight + between;
         }
 
         if (linksHeight > 0f)
         {
-            DrawLinkPills(drawList, new Vector2(origin.X + pad, y), innerWidth, resources.Links, scale);
+            DrawLinkFlow(drawList, new Vector2(origin.X + pad, y), innerWidth, resources.Links, string.Empty,
+                string.Empty, scale);
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Md * scale));
+        ImGui.Dummy(new Vector2(width, height + CardGap * scale));
     }
 }

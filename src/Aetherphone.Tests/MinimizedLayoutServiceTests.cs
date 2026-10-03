@@ -6,7 +6,7 @@ namespace Aetherphone.Tests;
 public sealed class MinimizedLayoutServiceTests
 {
     [Fact]
-    public void FreshInstall_ShipsTheDefaultOrderWithWidgetsOff()
+    public void FreshInstall_ShipsTheDefaultOrderWithEorzeaTimeAndWeatherPages()
     {
         var service = new MinimizedLayoutService(new FakeMinimizedConfiguration());
         var defaults = MinimizedParts.Default;
@@ -19,7 +19,57 @@ public sealed class MinimizedLayoutServiceTests
         }
 
         Assert.True(service.IsEnabled(MinimizedPart.Clock));
-        Assert.False(service.IsEnabled(MinimizedPart.Weather));
+        Assert.True(service.IsEnabled(MinimizedPart.EorzeaClock));
+        Assert.True(service.IsEnabled(MinimizedPart.Weather));
+        Assert.False(service.IsEnabled(MinimizedPart.Resets));
+    }
+
+    [Fact]
+    public void MovePage_SkipsPartsThatAreNotPages()
+    {
+        var configuration = new FakeMinimizedConfiguration();
+        var service = new MinimizedLayoutService(configuration);
+        service.Move(MinimizedParts.Count - 1, -1);
+        var rings = MinimizedParts.Count - 1;
+        var badge = MinimizedParts.Count - 2;
+        Assert.Equal(MinimizedPart.Rings, service.Slots[rings].Part);
+        Assert.Equal(MinimizedPart.Badge, service.Slots[badge].Part);
+
+        service.MovePage(rings, -1);
+
+        Assert.Equal(MinimizedPart.Ventures, service.Slots[rings].Part);
+        Assert.Equal(MinimizedPart.Badge, service.Slots[badge].Part);
+        Assert.Equal(MinimizedPart.Rings, service.Slots[badge - 1].Part);
+    }
+
+    [Fact]
+    public void MovePage_IgnoresTheFirstAndLastPage()
+    {
+        var configuration = new FakeMinimizedConfiguration();
+        var service = new MinimizedLayoutService(configuration);
+        var first = IndexOf(service, MinimizedPart.EorzeaClock);
+        var last = IndexOf(service, MinimizedPart.Rings);
+
+        service.MovePage(first, -1);
+        service.MovePage(last, 1);
+
+        Assert.Equal(MinimizedPart.EorzeaClock, service.Slots[first].Part);
+        Assert.Equal(MinimizedPart.Rings, service.Slots[last].Part);
+        Assert.Equal(0, configuration.Saves);
+    }
+
+    private static int IndexOf(MinimizedLayoutService service, MinimizedPart part)
+    {
+        var slots = service.Slots;
+        for (var index = 0; index < slots.Length; index++)
+        {
+            if (slots[index].Part == part)
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     [Fact]

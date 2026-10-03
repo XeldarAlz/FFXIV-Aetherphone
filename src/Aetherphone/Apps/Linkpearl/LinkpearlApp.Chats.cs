@@ -54,7 +54,6 @@ internal sealed partial class LinkpearlApp
     {
         inbox.Sync();
         var scale = UiScale.Current;
-        UiAnchors.Report("messages.list", content);
         var top = DrawChatSearchRow(content, scale);
         search.Run(chatSearchQuery, inbox, chatLog);
         if (search.Active)
@@ -373,6 +372,7 @@ internal sealed partial class LinkpearlApp
             return;
         }
 
+        UiAnchors.Report("messages.sheet", area);
         var row = inbox.Find(conversationSheetKey);
         if (row is null)
         {

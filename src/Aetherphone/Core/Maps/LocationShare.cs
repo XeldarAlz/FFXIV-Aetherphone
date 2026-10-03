@@ -148,6 +148,25 @@ internal static class LocationShare
 
     public static (short Ward, short Plot, short Room) CurrentHousing() => ReadHousing();
 
+    public static uint CurrentHouseDistrict() => ReadIndoorHouseDistrict();
+
+    public static bool IsIndoors()
+    {
+        try
+        {
+            unsafe
+            {
+                var housing = FFXIVClientStructs.FFXIV.Client.Game.HousingManager.Instance();
+                return housing != null && housing->IndoorTerritory != null;
+            }
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, "[LocationShare] indoor check failed");
+            return false;
+        }
+    }
+
     public static string Compose(in SharedLocation location)
     {
         return string.Create(CultureInfo.InvariantCulture,

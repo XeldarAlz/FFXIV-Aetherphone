@@ -1,7 +1,5 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
-using Aetherphone.Core.Apps;
-using Aetherphone.Core.Input;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
@@ -11,292 +9,177 @@ namespace Aetherphone.Windows.Components;
 
 internal sealed class NotificationCenter
 {
-    private const float CardGap = 12f;
-    private const float GroupGap = 14f;
-    private const float PeekOffsetY = 8f;
-    private const float PeekInsetX = 9f;
-    private const int MaxPeek = 2;
-    private const float HeaderHeight = 28f;
-    private const float ClearBarHeight = 40f;
-    private const float ListTopPad = 8f;
+    private const float SummaryHeight = 36f;
+    private const float SummaryGap = 10f;
+    private const float SummaryPadX = 16f;
     private const float EmptyHeight = 72f;
     private const float WheelStep = 48f;
-    private const float SwipeMaxReveal = 96f;
-    private const float SwipeRightClamp = 10f;
-    private const float SwipeCommitFraction = 0.42f;
-    private const float TapSlop = 10f;
-    private const float FailedSwipeTapFraction = 0.15f;
-    private const float DragAxisThreshold = 6f;
-    private const float ExpandSmoothTime = 0.26f;
-    private const float SwipeSmoothTime = 0.18f;
+    private const float PillPadX = 12f;
+    private const float PillGap = 8f;
+    private const float HoverLift = 0.35f;
+    private const string SummarySeparator = "  ·  ";
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+
     private readonly NotificationService notifications;
-    private readonly NotificationRouter router;
-    private readonly Action? navigated;
-    private readonly DragTracker drag = new();
-    private readonly List<Group> groups = new();
-    private readonly Dictionary<string, Group> groupLookup = new();
-    private readonly Stack<Group> groupPool = new();
-    private readonly Dictionary<string, GroupState> states = new();
-    private readonly List<string> staleKeys = new();
-    private readonly List<Candidate> candidates = new();
+    private readonly NotificationDeck deck;
+    private readonly NotificationGroups groups = new();
     private readonly KineticScroller scroller = new();
-    private Rect interactionBounds;
+    private int builtVersion = -1;
+    private LanguageInfo? builtLanguage;
+    private string summaryLabel = string.Empty;
+    private int summaryCount = -1;
+    private long summaryAgeMinutes = -1;
+    private LanguageInfo? summaryLanguage;
     private float scrollY;
-    private bool scrollGesture;
-    private bool axisLocked;
-    private long dragId;
-    private string dragKey = string.Empty;
-    private bool dragGroup;
-    private float dragWidth;
-    private PhoneNotification? dragNotification;
-    private float swipeOffset;
-    private bool animActive;
-    private bool animRemoving;
-    private long animId;
-    private string animKey = string.Empty;
-    private bool animGroup;
-    private PhoneNotification? animNotification;
-    private Spring animOffset;
-    private float animTarget;
 
     public NotificationCenter(NotificationService notifications, NotificationRouter router, Action? navigated = null)
     {
         this.notifications = notifications;
-        this.router = router;
-        this.navigated = navigated;
+        deck = new NotificationDeck(notifications, router, navigated);
     }
 
     public void Reset()
     {
-        drag.Cancel();
-        dragNotification = null;
-        swipeOffset = 0f;
+        deck.Reset();
         scrollY = 0f;
         scroller.Reset();
-        scrollGesture = false;
-        axisLocked = false;
-        animActive = false;
-        animNotification = null;
-        states.Clear();
-        groups.Clear();
-        groupLookup.Clear();
-        candidates.Clear();
+        builtVersion = -1;
     }
 
-    public void Draw(in PhoneContext context, Rect body)
+    public void DrawOverlay(ImDrawListPtr drawList, Rect area, PhoneTheme theme, float opacity, bool interactive)
     {
-        var scale = UiScale.Current;
-        DrawCore(ImGui.GetWindowDrawList(), body, context.Theme, scale, 16f * scale, 1f, true);
-    }
-
-    public void DrawOverlay(ImDrawListPtr dl, Rect area, PhoneTheme theme, float opacity, bool interactive)
-    {
-        var scale = UiScale.Current;
-        DrawCore(dl, area, theme, scale, 0f, opacity, interactive);
+        DrawCore(drawList, area, theme, UiScale.Current, opacity, interactive);
     }
 
     public float MeasureHeight(float scale)
     {
-        BuildGroups();
+        EnsureBuilt();
         if (groups.Count == 0)
         {
             return EmptyHeight * scale;
         }
 
-        return (ClearBarHeight + ListTopPad) * scale + ContentHeight(scale);
+        return (SummaryHeight + SummaryGap) * scale + ContentHeight(scale);
     }
 
-    private void DrawCore(ImDrawListPtr dl, Rect body, PhoneTheme theme, float scale, float inset, float opacity,
+    private void DrawCore(ImDrawListPtr drawList, Rect body, PhoneTheme theme, float scale, float opacity,
         bool interactive)
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        BuildGroups();
+        EnsureBuilt();
         if (groups.Count == 0)
         {
-            Typography.DrawCentered(dl, body.Center, Loc.T(L.Notifications.Empty),
+            Typography.DrawCentered(drawList, body.Center, Loc.T(L.Notifications.Empty),
                 Palette.WithAlpha(theme.TextMuted, opacity));
         }
         else
         {
-            var clearBar = new Rect(body.Min, new Vector2(body.Max.X, body.Min.Y + ClearBarHeight * scale));
-            DrawClearAll(dl, clearBar, theme, scale, opacity, interactive);
-            var listArea = new Rect(new Vector2(body.Min.X + inset, clearBar.Max.Y + ListTopPad * scale),
-                new Vector2(body.Max.X - inset, body.Max.Y));
-            DrawList(dl, theme, listArea, scale, opacity, interactive);
+            var summary = new Rect(body.Min, new Vector2(body.Max.X, body.Min.Y + SummaryHeight * scale));
+            DrawSummary(drawList, summary, theme, scale, opacity, interactive);
+            var listArea = new Rect(new Vector2(body.Min.X, summary.Max.Y + SummaryGap * scale), body.Max);
+            if (listArea.Height > 1f && listArea.Width > 1f)
+            {
+                DrawList(drawList, theme, listArea, scale, opacity, interactive);
+            }
         }
 
-        AdvanceAnimations(delta);
+        deck.Advance(delta);
     }
 
-    private void BuildGroups()
+    private void EnsureBuilt()
     {
-        for (var index = 0; index < groups.Count; index++)
-        {
-            groupPool.Push(groups[index]);
-        }
-
-        groups.Clear();
-        groupLookup.Clear();
-        var recent = notifications.Recent;
-        for (var index = recent.Count - 1; index >= 0; index--)
-        {
-            var notification = recent[index];
-            if (!groupLookup.TryGetValue(notification.StackKey, out var group))
-            {
-                group = groupPool.Count > 0 ? groupPool.Pop() : new Group();
-                group.Reset(notification);
-                groupLookup[notification.StackKey] = group;
-                groups.Add(group);
-            }
-
-            group.Items.Add(notification);
-        }
-
-        SyncStates();
-    }
-
-    private void SyncStates()
-    {
-        foreach (var state in states.Values)
-        {
-            state.Seen = false;
-        }
-
-        for (var index = 0; index < groups.Count; index++)
-        {
-            var group = groups[index];
-            if (!states.TryGetValue(group.Key, out var state))
-            {
-                state = new GroupState();
-                states[group.Key] = state;
-            }
-
-            if (group.Items.Count < 2)
-            {
-                state.Expanded = false;
-            }
-
-            state.Seen = true;
-        }
-
-        staleKeys.Clear();
-        foreach (var pair in states)
-        {
-            if (!pair.Value.Seen)
-            {
-                staleKeys.Add(pair.Key);
-            }
-        }
-
-        for (var index = 0; index < staleKeys.Count; index++)
-        {
-            states.Remove(staleKeys[index]);
-        }
-    }
-
-    private void AdvanceAnimations(float delta)
-    {
-        foreach (var state in states.Values)
-        {
-            var target = state.Expanded ? 1f : 0f;
-            state.Expand.Step(target, ExpandSmoothTime, delta);
-            if (state.Expand.IsResting(target, TransitionTiming.RestPositionEpsilon,
-                    TransitionTiming.RestVelocityEpsilon))
-            {
-                state.Expand.SnapTo(target);
-            }
-        }
-
-        if (!animActive)
+        var language = Loc.Current;
+        if (builtVersion == notifications.Version && ReferenceEquals(builtLanguage, language))
         {
             return;
         }
 
-        animOffset.Step(animTarget, SwipeSmoothTime, delta);
-        if (animRemoving)
-        {
-            if (animOffset.Value <= animTarget + 2f)
-            {
-                PerformRemoval();
-                animActive = false;
-            }
-
-            return;
-        }
-
-        if (animOffset.IsResting(0f, 0.4f, 2f))
-        {
-            animOffset.SnapTo(0f);
-            animActive = false;
-        }
+        builtVersion = notifications.Version;
+        builtLanguage = language;
+        groups.Rebuild(notifications.Recent);
+        deck.Sync(groups);
+        summaryCount = -1;
     }
 
-    private void PerformRemoval()
-    {
-        if (animNotification is { } dismissed)
-        {
-            router.Acknowledge(dismissed);
-            animNotification = null;
-        }
-
-        if (animGroup)
-        {
-            notifications.RemoveGroup(animKey);
-        }
-        else
-        {
-            notifications.Remove(animId);
-        }
-    }
-
-    private void DrawClearAll(ImDrawListPtr dl, Rect bar, PhoneTheme theme, float scale, float opacity,
+    private void DrawSummary(ImDrawListPtr drawList, Rect rect, PhoneTheme theme, float scale, float opacity,
         bool interactive)
     {
-        var label = Loc.T(L.Notifications.ClearAll);
-        var textSize = Typography.Measure(label, TextStyles.FootnoteEmphasized);
-        var padX = 14f * scale;
-        var pillHeight = 26f * scale;
-        var pillMax = new Vector2(bar.Max.X, bar.Center.Y + pillHeight * 0.5f);
-        var pillMin = new Vector2(pillMax.X - textSize.X - padX * 2f, bar.Center.Y - pillHeight * 0.5f);
-        var hovered = interactive && UiInteract.Hover(pillMin, pillMax);
-        var fill = hovered ? theme.Surface : theme.GroupedCard;
-        Squircle.Fill(dl, pillMin, pillMax, pillHeight * 0.5f,
-            ImGui.GetColorU32(fill with { W = fill.W * opacity }));
-        Material.EdgeSquircle(dl, pillMin, pillMax, pillHeight * 0.5f, scale, opacity);
-        Typography.Draw(dl, new Vector2(pillMin.X + padX, bar.Center.Y - textSize.Y * 0.5f), label,
-            Palette.WithAlpha(theme.Accent, opacity), TextStyles.FootnoteEmphasized.Scale,
-            TextStyles.FootnoteEmphasized.Weight);
-        if (!hovered)
+        Material.LiquidGlass(drawList, rect.Min, rect.Max, rect.Height * 0.5f, scale, GlassTone.Dark, 0f, opacity);
+        var padX = SummaryPadX * scale;
+        var clearLabel = Loc.T(L.Notifications.ClearAll);
+        var clearSize = Typography.Measure(clearLabel, TextStyles.FootnoteEmphasized);
+        var clearMin = new Vector2(rect.Max.X - padX - clearSize.X - PillPadX * scale, rect.Min.Y);
+        var clearMax = rect.Max;
+        var clearHovered = interactive && UiInteract.Hover(clearMin, clearMax);
+        var accent = clearHovered ? Palette.Mix(theme.Accent, White, HoverLift) : theme.Accent;
+        Typography.Draw(drawList, new Vector2(rect.Max.X - padX - clearSize.X, rect.Center.Y - clearSize.Y * 0.5f),
+            clearLabel, Palette.WithAlpha(accent, opacity), TextStyles.FootnoteEmphasized);
+        var textLeft = rect.Min.X + padX;
+        var textMaxWidth = MathF.Max(1f, clearMin.X - PillGap * scale - textLeft);
+        var summary = Typography.FitText(SummaryLabel(), textMaxWidth, TextStyles.Footnote);
+        var summarySize = Typography.Measure(summary, TextStyles.Footnote);
+        var muted = NotificationCard.MutedInk(GlassTone.Dark, theme);
+        Typography.Draw(drawList, new Vector2(textLeft, rect.Center.Y - summarySize.Y * 0.5f), summary,
+            Palette.WithAlpha(muted, muted.W * opacity), TextStyles.Footnote);
+        if (!interactive)
         {
             return;
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (clearHovered)
         {
-            router.AcknowledgeAll();
-            notifications.Clear();
-            Reset();
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
+
+        if (UiInteract.Click(clearMin, clearMax, clearHovered))
+        {
+            ClearAll();
+        }
+    }
+
+    private string SummaryLabel()
+    {
+        var count = groups.TotalCount;
+        var oldest = groups.OldestReceivedAt;
+        var ageMinutes = oldest == default ? -1L : (long)Math.Max(0d, (DateTime.Now - oldest).TotalMinutes);
+        var language = Loc.Current;
+        if (count == summaryCount && ageMinutes == summaryAgeMinutes && ReferenceEquals(language, summaryLanguage))
+        {
+            return summaryLabel;
+        }
+
+        summaryCount = count;
+        summaryAgeMinutes = ageMinutes;
+        summaryLanguage = language;
+        var waiting = Loc.Plural(L.Notifications.Waiting, count);
+        summaryLabel = oldest == default
+            ? waiting
+            : string.Concat(waiting, SummarySeparator,
+                Loc.T(L.Notifications.Oldest, TimeText.Ago(oldest.ToUniversalTime())));
+        return summaryLabel;
+    }
+
+    private void ClearAll()
+    {
+        UiFeedback.Play(UiSound.Tap);
+        deck.Router.AcknowledgeAll();
+        notifications.Clear();
+        Reset();
     }
 
     private float ContentHeight(float scale)
     {
         var total = 0f;
-        for (var index = 0; index < groups.Count; index++)
+        var list = groups.Groups;
+        for (var index = 0; index < list.Count; index++)
         {
-            if (!states.TryGetValue(groups[index].Key, out var state))
-            {
-                continue;
-            }
-
-            total += BlockHeight(groups[index].Items.Count, state.Expand.Value, scale) + GroupGap * scale;
+            total += deck.Height(list[index], scale) + NotificationDeck.GroupGap * scale;
         }
 
         return total;
     }
 
-    private void DrawList(ImDrawListPtr dl, PhoneTheme theme, Rect listArea, float scale, float opacity,
+    private void DrawList(ImDrawListPtr drawList, PhoneTheme theme, Rect listArea, float scale, float opacity,
         bool interactive)
     {
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
@@ -304,27 +187,7 @@ internal sealed class NotificationCenter
         scroller.Scale = scale;
         scroller.SetBounds(maxScroll);
 
-        if (drag.Active)
-        {
-            var delta = drag.Delta;
-            if (!axisLocked && (MathF.Abs(delta.X) >= DragAxisThreshold * scale ||
-                MathF.Abs(delta.Y) >= DragAxisThreshold * scale))
-            {
-                axisLocked = true;
-                scrollGesture = MathF.Abs(delta.Y) > MathF.Abs(delta.X);
-            }
-
-            if (scrollGesture)
-            {
-                scroller.Move(ImGui.GetMousePos().Y, deltaSeconds);
-                swipeOffset = 0f;
-            }
-            else
-            {
-                swipeOffset = Math.Clamp(delta.X, -SwipeMaxReveal * scale, SwipeRightClamp * scale);
-            }
-        }
-        else
+        if (!deck.UpdateDrag(scale, deltaSeconds, scroller))
         {
             scroller.Tick(deltaSeconds);
             if (interactive && UiInteract.HoverWindowOnly(listArea.Min, listArea.Max, false))
@@ -351,356 +214,30 @@ internal sealed class NotificationCenter
         }
 
         scrollY = Math.Clamp(scrollY, 0f, maxScroll);
-        interactionBounds = listArea;
-        if (interactive && (drag.Active || UiInteract.HoverWindowOnly(listArea.Min, listArea.Max, false)))
+        if (interactive && (deck.DragActive || UiInteract.HoverWindowOnly(listArea.Min, listArea.Max, false)))
         {
             UiInteract.ReportGestureSurface();
         }
 
-        candidates.Clear();
-        dl.PushClipRect(listArea.Min, listArea.Max, true);
+        deck.BeginFrame(listArea);
+        var style = NotificationDeckStyle.ForGlass(theme, GlassTone.Dark);
+        drawList.PushClipRect(listArea.Min, listArea.Max, true);
         var y = listArea.Min.Y - scrollY;
-        for (var index = 0; index < groups.Count; index++)
+        var list = groups.Groups;
+        for (var index = 0; index < list.Count; index++)
         {
-            var group = groups[index];
-            if (!states.TryGetValue(group.Key, out var state))
-            {
-                continue;
-            }
-
-            var progress = state.Expand.Value;
-            var blockHeight = BlockHeight(group.Items.Count, progress, scale);
+            var group = list[index];
+            var blockHeight = deck.Height(group, scale);
             if (y + blockHeight >= listArea.Min.Y && y <= listArea.Max.Y)
             {
-                DrawGroup(dl, group, state, new Vector2(listArea.Min.X, y), listArea.Width, progress, theme, scale,
+                deck.DrawGroup(drawList, group, new Vector2(listArea.Min.X, y), listArea.Width, style, scale,
                     opacity, interactive);
             }
 
-            y += blockHeight + GroupGap * scale;
+            y += blockHeight + NotificationDeck.GroupGap * scale;
         }
 
-        dl.PopClipRect();
-        HandleGesture(scale, interactive);
+        drawList.PopClipRect();
+        deck.EndFrame(scale, interactive, scroller);
     }
-
-    private void DrawGroup(ImDrawListPtr dl, Group group, GroupState state, Vector2 blockOrigin, float width,
-        float progress, PhoneTheme theme, float scale, float opacity, bool interactive)
-    {
-        var itemCount = group.Items.Count;
-        var cardHeight = NotificationCard.Height * scale;
-        var groupTargeted = TryGroupSlide(group.Key, out var groupSlide);
-        for (var index = itemCount - 1; index >= 0; index--)
-        {
-            var alpha = LayoutAlpha(index, progress) * opacity;
-            if (alpha <= 0.01f)
-            {
-                continue;
-            }
-
-            var offsetY = float.Lerp(CollapsedY(index, scale), ExpandedY(index, scale), progress);
-            var insetX = float.Lerp(CollapsedInset(index, scale), 0f, progress);
-            var cardTop = blockOrigin.Y + offsetY;
-            var rect = new Rect(new Vector2(blockOrigin.X + insetX, cardTop),
-                new Vector2(blockOrigin.X + width - insetX, cardTop + cardHeight));
-            var isGroupCard = !state.Expanded && itemCount > 1 && index == 0;
-            var hittable = interactive && IsInteractive(state, index);
-            var slide = groupTargeted ? groupSlide : OffsetFor(group.Items[index].Id);
-            if (slide < 0f && hittable)
-            {
-                DrawDeleteAffordance(dl, rect, slide, theme, scale, alpha);
-            }
-
-            var drawRect = new Rect(rect.Min + new Vector2(slide, 0f), rect.Max + new Vector2(slide, 0f));
-            var shadow = index == 0 ? 0.6f : 0.6f * progress;
-            NotificationCard.DrawBase(dl, drawRect, group.Items[index], theme, scale, alpha, shadow);
-            if (isGroupCard)
-            {
-                NotificationCard.DrawCountBadge(dl, NotificationCard.BadgeAnchor(drawRect, scale), itemCount, theme,
-                    scale, alpha * (1f - progress));
-            }
-
-            if (hittable)
-            {
-                candidates.Add(new Candidate(drawRect, isGroupCard, group.Key, group.Items[index].Id, width,
-                    group.Items[index]));
-            }
-        }
-
-        if (itemCount > 1 && progress > 0.01f)
-        {
-            var headerRect = new Rect(blockOrigin,
-                new Vector2(blockOrigin.X + width, blockOrigin.Y + HeaderHeight * scale));
-            DrawHeader(dl, headerRect, group.Items[0].Title, theme, scale, progress * opacity);
-            if (interactive && state.Expanded && progress > 0.5f &&
-                UiInteract.Hover(headerRect.Min, headerRect.Max))
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    state.Expanded = false;
-                }
-            }
-        }
-    }
-
-    private void DrawHeader(ImDrawListPtr dl, Rect rect, string title, PhoneTheme theme, float scale, float opacity)
-    {
-        var label = Loc.T(L.Notifications.ShowLess);
-        var labelSize = Typography.Measure(label, TextStyles.Footnote);
-        var labelPos = new Vector2(rect.Max.X - 6f * scale - labelSize.X, rect.Center.Y - labelSize.Y * 0.5f);
-        var titleMaxWidth = MathF.Max(1f, labelPos.X - 14f * scale - (rect.Min.X + 6f * scale));
-        var clippedTitle = Typography.FitText(title, titleMaxWidth, TextStyles.FootnoteEmphasized);
-        var titleSize = Typography.Measure(clippedTitle, TextStyles.FootnoteEmphasized);
-        Typography.Draw(dl, new Vector2(rect.Min.X + 6f * scale, rect.Center.Y - titleSize.Y * 0.5f), clippedTitle,
-            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.FootnoteEmphasized.Scale,
-            TextStyles.FootnoteEmphasized.Weight);
-        Typography.Draw(dl, labelPos, label, Palette.WithAlpha(theme.Accent, opacity), TextStyles.Footnote.Scale,
-            TextStyles.Footnote.Weight);
-        var chevronTip = new Vector2(labelPos.X - 10f * scale, rect.Center.Y - 1f * scale);
-        var reach = 4f * scale;
-        var color = ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, opacity));
-        dl.AddLine(new Vector2(chevronTip.X - reach, chevronTip.Y + reach), chevronTip, color, 1.6f * scale);
-        dl.AddLine(chevronTip, new Vector2(chevronTip.X + reach, chevronTip.Y + reach), color, 1.6f * scale);
-    }
-
-    private static void DrawDeleteAffordance(ImDrawListPtr dl, Rect rect, float slide, PhoneTheme theme, float scale,
-        float opacity)
-    {
-        var revealLeft = rect.Max.X + slide;
-        if (revealLeft >= rect.Max.X - 1f)
-        {
-            return;
-        }
-
-        var rounding = 16f * scale;
-        Squircle.Fill(dl, new Vector2(revealLeft, rect.Min.Y), rect.Max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.Danger, opacity)));
-        var center = new Vector2((revealLeft + rect.Max.X) * 0.5f, rect.Center.Y);
-        var available = rect.Max.X - revealLeft;
-        var reach = MathF.Min(7f * scale, available * 0.28f);
-        if (reach <= 1f)
-        {
-            return;
-        }
-
-        var color = ImGui.GetColorU32(Palette.WithAlpha(new Vector4(1f, 1f, 1f, 1f), opacity));
-        dl.AddLine(new Vector2(center.X - reach, center.Y - reach), new Vector2(center.X + reach, center.Y + reach),
-            color, 2f * scale);
-        dl.AddLine(new Vector2(center.X - reach, center.Y + reach), new Vector2(center.X + reach, center.Y - reach),
-            color, 2f * scale);
-    }
-
-    private void HandleGesture(float scale, bool interactive)
-    {
-        if (!drag.Active && interactive)
-        {
-            var mouse = ImGui.GetMousePos();
-            if (UiInteract.Hover(interactionBounds.Min, interactionBounds.Max))
-            {
-                for (var index = 0; index < candidates.Count; index++)
-                {
-                    var candidate = candidates[index];
-                    if (!UiInteract.Hover(candidate.Rect.Min, candidate.Rect.Max))
-                    {
-                        continue;
-                    }
-
-                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                    if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
-                    {
-                        SlideOut(candidate, UiScale.Current);
-                        break;
-                    }
-
-                    if (drag.Begin(candidate.Rect))
-                    {
-                        BeginDrag(candidate);
-                    }
-
-                    break;
-                }
-            }
-        }
-
-        if (drag.Released(out var totalDelta, out _))
-        {
-            if (scrollGesture)
-            {
-                scroller.Release();
-                scrollGesture = false;
-                axisLocked = false;
-                dragNotification = null;
-            }
-            else
-            {
-                ResolveGesture(totalDelta, scale);
-            }
-        }
-    }
-
-    private void SlideOut(in Candidate candidate, float scale)
-    {
-        animGroup = candidate.IsGroup;
-        animKey = candidate.Key;
-        animId = candidate.Id;
-        animNotification = candidate.Notification;
-        animRemoving = true;
-        animTarget = -(candidate.Width + 40f * scale);
-        animOffset.SnapTo(0f);
-        animActive = true;
-        swipeOffset = 0f;
-        dragNotification = null;
-    }
-
-    private void BeginDrag(in Candidate candidate)
-    {
-        UiInteract.CancelPendingTap();
-        if (animActive && animGroup == candidate.IsGroup &&
-            (candidate.IsGroup ? animKey == candidate.Key : animId == candidate.Id))
-        {
-            animActive = false;
-        }
-
-        dragGroup = candidate.IsGroup;
-        dragKey = candidate.Key;
-        dragId = candidate.Id;
-        dragWidth = candidate.Width;
-        dragNotification = candidate.Notification;
-        swipeOffset = 0f;
-        scroller.Press(ImGui.GetMousePos().Y);
-        scrollGesture = false;
-        axisLocked = false;
-    }
-
-    private void ResolveGesture(Vector2 totalDelta, float scale)
-    {
-        var slop = TapSlop * scale;
-        var commit = totalDelta.X <= -dragWidth * SwipeCommitFraction;
-        var tapped = !commit && MathF.Abs(totalDelta.Y) < slop &&
-                     MathF.Abs(totalDelta.X) < dragWidth * FailedSwipeTapFraction;
-        if (tapped)
-        {
-            swipeOffset = 0f;
-            HandleTap();
-            dragNotification = null;
-            return;
-        }
-
-        animGroup = dragGroup;
-        animKey = dragKey;
-        animId = dragId;
-        animNotification = commit ? dragNotification : null;
-        animRemoving = commit;
-        animTarget = commit ? -(dragWidth + 40f * scale) : 0f;
-        animOffset.SnapTo(swipeOffset);
-        animActive = true;
-        swipeOffset = 0f;
-        dragNotification = null;
-    }
-
-    private void HandleTap()
-    {
-        if (dragGroup)
-        {
-            if (states.TryGetValue(dragKey, out var state))
-            {
-                state.Expanded = true;
-            }
-
-            return;
-        }
-
-        if (dragNotification is { } notification)
-        {
-            router.Open(notification);
-            navigated?.Invoke();
-        }
-    }
-
-    private bool TryGroupSlide(string key, out float slide)
-    {
-        if (drag.Active && dragGroup && dragKey == key)
-        {
-            slide = swipeOffset;
-            return true;
-        }
-
-        if (animActive && animGroup && animKey == key)
-        {
-            slide = animOffset.Value;
-            return true;
-        }
-
-        slide = 0f;
-        return false;
-    }
-
-    private float OffsetFor(long id)
-    {
-        if (drag.Active && !dragGroup && id == dragId)
-        {
-            return swipeOffset;
-        }
-
-        if (animActive && !animGroup && id == animId)
-        {
-            return animOffset.Value;
-        }
-
-        return 0f;
-    }
-
-    private static bool IsInteractive(GroupState state, int index) => state.Expanded || index == 0;
-
-    private static float LayoutAlpha(int index, float progress)
-    {
-        var collapsed = index switch
-        {
-            0 => 1f,
-            1 => 0.55f,
-            2 => 0.30f,
-            _ => 0f,
-        };
-        return float.Lerp(collapsed, 1f, progress);
-    }
-
-    private static float CollapsedY(int index, float scale) => MathF.Min(index, MaxPeek) * PeekOffsetY * scale;
-    private static float CollapsedInset(int index, float scale) => MathF.Min(index, MaxPeek) * PeekInsetX * scale;
-
-    private static float ExpandedY(int index, float scale) =>
-        HeaderHeight * scale + index * (NotificationCard.Height + CardGap) * scale;
-
-    private static float BlockHeight(int itemCount, float progress, float scale)
-    {
-        var collapsed = (NotificationCard.Height + MathF.Min(itemCount - 1, MaxPeek) * PeekOffsetY) * scale;
-        var expanded = (HeaderHeight + itemCount * NotificationCard.Height + (itemCount - 1) * CardGap) * scale;
-        return float.Lerp(collapsed, expanded, progress);
-    }
-
-    private sealed class Group
-    {
-        public string Key = string.Empty;
-        public readonly List<PhoneNotification> Items = new();
-
-        public void Reset(PhoneNotification first)
-        {
-            Key = first.StackKey;
-            Items.Clear();
-        }
-    }
-
-    private sealed class GroupState
-    {
-        public Spring Expand;
-        public bool Expanded;
-        public bool Seen;
-    }
-
-    private readonly record struct Candidate(
-        Rect Rect,
-        bool IsGroup,
-        string Key,
-        long Id,
-        float Width,
-        PhoneNotification Notification);
 }

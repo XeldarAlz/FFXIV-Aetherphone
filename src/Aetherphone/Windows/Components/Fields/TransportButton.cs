@@ -22,7 +22,7 @@ internal static class TransportButton
         var max = center + new Vector2(radius, radius);
         var hovered = active && Hovered(center, radius);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var press = PressFx.Scale(PressId(action), pressed, 0.90f);
+        var press = PressFx.Scale(PressId(action), pressed, PressFx.ControlPressedScale);
         if (hovered)
         {
             drawList.AddCircleFilled(center, radius * press,

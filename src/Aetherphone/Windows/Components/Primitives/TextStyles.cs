@@ -31,6 +31,7 @@ internal readonly record struct TextEffect(NameEffectKind Kind, Vector4 Crest, f
 
 internal static class TextStyles
 {
+    public static readonly TextStyle Hero = new(2.30f, FontWeight.Bold);
     public static readonly TextStyle LargeTitle = new(1.90f, FontWeight.Bold);
     public static readonly TextStyle Title1 = new(1.65f, FontWeight.Bold);
     public static readonly TextStyle Title2 = new(1.32f, FontWeight.Bold);
@@ -45,5 +46,8 @@ internal static class TextStyles
     public static readonly TextStyle FootnoteEmphasized = new(0.80f, FontWeight.SemiBold);
     public static readonly TextStyle Caption1 = new(0.72f, FontWeight.Regular);
     public static readonly TextStyle Caption2 = new(0.60f, FontWeight.Medium);
+    public static readonly TextStyle StatusDigits = new(0.60f, FontWeight.Bold);
     public static readonly TextStyle IconLabel = new(0.85f, FontWeight.Medium);
+    public static readonly TextStyle WidgetDisplay = new(2.3f, FontWeight.Regular);
+    public static readonly TextStyle WidgetDisplayCompact = new(1.8f, FontWeight.Regular);
 }

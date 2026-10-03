@@ -36,6 +36,7 @@ internal sealed class DeviceStatus : IDisposable
     private int sampleCursor;
     private int sampleCount;
     private volatile IPAddress target = FallbackHost;
+    private volatile string? dataCenterName;
     private uint resolvedWorldId;
     private volatile int batteryPercent = 100;
     private volatile bool batteryPresent;
@@ -60,6 +61,7 @@ internal sealed class DeviceStatus : IDisposable
     public int SignalBars => signalBars;
     public int LatencyMilliseconds => latencyMilliseconds;
     public int PacketLossPercent => packetLossPercent;
+    public string? DataCenterName => dataCenterName;
 
     public void SyncTarget()
     {
@@ -74,10 +76,12 @@ internal sealed class DeviceStatus : IDisposable
             TryDataCenterHost(world.DataCenter.RowId, out var host))
         {
             target = host;
+            dataCenterName = world.DataCenter.Value.Name.ExtractText();
             return;
         }
 
         target = FallbackHost;
+        dataCenterName = null;
     }
 
     private async Task RunAsync(CancellationToken token)

@@ -7,6 +7,7 @@ internal interface ILookConfiguration
     HomeLayout? Home { get; set; }
     int HomeGridRows { get; set; }
     bool ShowAppNames { get; set; }
+    IconAppearance IconAppearance { get; set; }
     ThemeMode ThemeMode { get; set; }
     string AccentName { get; set; }
     string AccentCustomHex { get; set; }

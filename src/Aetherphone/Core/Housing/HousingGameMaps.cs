@@ -10,12 +10,10 @@ internal sealed class HousingGameMap
 {
     private readonly Dictionary<int, Vector2> byPlot;
 
-    public HousingGameMap(string texturePath, IReadOnlyList<HousingGamePlotPoint> plots,
-        IReadOnlyList<HousingGamePoi> pointsOfInterest, string mapId)
+    public HousingGameMap(string texturePath, IReadOnlyList<HousingGamePlotPoint> plots, string mapId)
     {
         TexturePath = texturePath;
         Plots = plots;
-        PointsOfInterest = pointsOfInterest;
         MapId = mapId;
         byPlot = new Dictionary<int, Vector2>(plots.Count);
         for (var index = 0; index < plots.Count; index++)
@@ -26,7 +24,6 @@ internal sealed class HousingGameMap
 
     public string TexturePath { get; }
     public IReadOnlyList<HousingGamePlotPoint> Plots { get; }
-    public IReadOnlyList<HousingGamePoi> PointsOfInterest { get; }
     public string MapId { get; }
     public bool TryGetPoint(int plotNumber, out Vector2 normalized) => byPlot.TryGetValue(plotNumber, out normalized);
 }
@@ -50,19 +47,6 @@ internal sealed class HousingGameDistrictMap
 
 internal readonly record struct HousingGamePlotPoint(int PlotNumber, Vector2 NormalizedPosition);
 
-internal enum HousingMapPoiKind : byte
-{
-    Aetheryte,
-    MarketBoard,
-}
-
-internal readonly record struct HousingGamePoi(
-    HousingMapPoiKind Kind,
-    Vector2 NormalizedPosition,
-    uint IconId,
-    uint DataKey,
-    string Label);
-
 internal enum HousingGameMapFailure : byte
 {
     None,
@@ -78,10 +62,6 @@ internal enum HousingGameMapFailure : byte
 internal sealed class HousingGameMaps
 {
     private const float MapPageSize = 2048f;
-    private const uint AethernetShardIcon = 60430;
-    private const uint MarketBoardIcon = 60570;
-    private const byte AethernetShardDataType = 4;
-    private const byte MarketBoardDataType = 0;
     private const float OutsideTolerance = 0.08f;
     private const float OutsideAllowance = 0.15f;
 
@@ -245,8 +225,7 @@ internal sealed class HousingGameMaps
         var plots = Project(map, markers, firstPlotNumber);
         return plots is null
             ? new Division(null, HousingGameMapFailure.ProjectionFailed, $"markers fell outside map '{mapId}'")
-            : new Division(new HousingGameMap(texturePath, plots, CollectPointsOfInterest(map), mapId),
-                HousingGameMapFailure.None, string.Empty);
+            : new Division(new HousingGameMap(texturePath, plots, mapId), HousingGameMapFailure.None, string.Empty);
     }
 
     private Dictionary<uint, List<Vector3>> CollectMarkerGroups(uint districtId)
@@ -270,57 +249,6 @@ internal sealed class HousingGameMaps
         }
 
         return groups;
-    }
-
-    private IReadOnlyList<HousingGamePoi> CollectPointsOfInterest(Map map)
-    {
-        var result = new List<HousingGamePoi>();
-        if (map.MapMarkerRange == 0)
-        {
-            return result;
-        }
-
-        var sheet = data.GetSubrowExcelSheet<MapMarker>();
-        if (sheet.GetRowOrDefault(map.MapMarkerRange) is not { } markerGroup)
-        {
-            return result;
-        }
-
-        foreach (var marker in markerGroup)
-        {
-            var normalized = new Vector2(marker.X / MapPageSize, marker.Y / MapPageSize);
-            if (normalized.X < 0f || normalized.X > 1f || normalized.Y < 0f || normalized.Y > 1f)
-            {
-                continue;
-            }
-
-            if (TryBuildPoi(marker, normalized, out var poi))
-            {
-                result.Add(poi);
-            }
-        }
-
-        return result;
-    }
-
-    private static bool TryBuildPoi(MapMarker marker, Vector2 normalized, out HousingGamePoi poi)
-    {
-        poi = default;
-        if (marker.DataType == AethernetShardDataType && marker.Icon == AethernetShardIcon)
-        {
-            poi = new HousingGamePoi(HousingMapPoiKind.Aetheryte, normalized, marker.Icon, marker.DataKey.RowId,
-                string.Empty);
-            return true;
-        }
-
-        if (marker.DataType == MarketBoardDataType && marker.Icon == MarketBoardIcon)
-        {
-            poi = new HousingGamePoi(HousingMapPoiKind.MarketBoard, normalized, marker.Icon, marker.DataKey.RowId,
-                string.Empty);
-            return true;
-        }
-
-        return false;
     }
 
     private static IReadOnlyList<HousingGamePlotPoint>? Project(Map map, List<Vector3> markers, int firstPlotNumber)

@@ -146,18 +146,13 @@ internal sealed partial class ShortcutsApp : IPhoneApp
 
     private void DrawHome(Rect content, float scale)
     {
-        if (GuideIntents.Consume("shortcuts.tab.plugins"))
-        {
-            activeTab = 1;
-        }
-
         DrawTopBar(content, scale);
 
         var margin = Metrics.Space.Lg * scale;
         var segTop = content.Min.Y + AppHeader.Height * scale + Metrics.Space.Sm * scale;
         var segRow = new Rect(new Vector2(content.Min.X + margin, segTop),
             new Vector2(content.Max.X - margin, segTop + 30f * scale));
-        UiAnchors.Report("shortcuts.tabs", segRow);
+        UiAnchors.Report("shortcuts.tab.plugins", SegmentStrip.SegmentRect(segRow, 1, tabOptions.Length));
         tabOptions[0] = Loc.T(L.Shortcuts.TabShortcuts);
         tabOptions[1] = Loc.T(L.Shortcuts.TabPlugins);
         activeTab = SegmentStrip.Draw("shortcuts.tabs", segRow, tabOptions, activeTab, theme);
@@ -179,7 +174,6 @@ internal sealed partial class ShortcutsApp : IPhoneApp
             body = new Rect(new Vector2(content.Min.X, searchRow.Max.Y + Metrics.Space.Sm * scale), content.Max);
         }
 
-        UiAnchors.Report("shortcuts.library", body);
         using (AppSurface.Begin(body))
         {
             DrawLibrary(body, scale);
@@ -208,7 +202,6 @@ internal sealed partial class ShortcutsApp : IPhoneApp
         }
 
         var importCenter = new Vector2(buttonCenter.X - radius * 2.6f, centerY);
-        UiAnchors.Report("shortcuts.import", new Rect(importCenter - buttonExtent, importCenter + buttonExtent));
         if (ui.IconButton(importCenter, radius, IconGlyph.Of(FontAwesomeIcon.FileImport), ui.TitleInk,
                 Palette.WithAlpha(ui.TitleInk, 0.12f), 0.6f, Loc.T(L.Shortcuts.ImportShortcut)))
         {

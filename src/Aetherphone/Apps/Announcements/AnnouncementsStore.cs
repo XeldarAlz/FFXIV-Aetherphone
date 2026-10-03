@@ -32,6 +32,8 @@ internal sealed class AnnouncementsStore : IDisposable
     private volatile AepFailureBox? failureBox;
     private readonly RealtimeSignalBus signals;
     private readonly PollCadence cadence;
+    private readonly HashSet<string> readThisVisit = new(StringComparer.Ordinal);
+    private long visitSeenUnix = long.MaxValue;
 
     public AnnouncementsStore(AethernetSession session, AnnouncementsClient client,
         NotificationService notifications, Configuration configuration, PhoneVisibility visibility,
@@ -99,7 +101,28 @@ internal sealed class AnnouncementsStore : IDisposable
     }
 
     public bool IsUnread(AnnouncementDto announcement) =>
-        announcement.CreatedAtUnix > configuration.AnnouncementsSeenUnix;
+        announcement.CreatedAtUnix > Volatile.Read(ref visitSeenUnix) && !readThisVisit.Contains(announcement.Id);
+
+    public void BeginVisit()
+    {
+        readThisVisit.Clear();
+        Volatile.Write(ref visitSeenUnix,
+            configuration.AnnouncementsInitialized ? configuration.AnnouncementsSeenUnix : long.MaxValue);
+    }
+
+    public void MarkRead(string announcementId) => readThisVisit.Add(announcementId);
+
+    public void MarkAllRead()
+    {
+        var newest = NewestUnix(announcements);
+        if (newest > Volatile.Read(ref visitSeenUnix))
+        {
+            Volatile.Write(ref visitSeenUnix, newest);
+        }
+
+        readThisVisit.Clear();
+        MarkAllSeen();
+    }
 
     public void Refresh()
     {
@@ -189,6 +212,7 @@ internal sealed class AnnouncementsStore : IDisposable
             configuration.AnnouncementsNotifiedUnix = newest;
             configuration.AnnouncementsSeenUnix = newest;
             configuration.Save();
+            Volatile.Write(ref visitSeenUnix, newest);
             return;
         }
 

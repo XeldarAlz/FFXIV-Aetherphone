@@ -16,7 +16,6 @@ internal sealed class BanOverlay
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground;
 
-    private const float PresenceSmoothTime = 0.16f;
     private const float DismissBottomMargin = 30f;
     private const float DismissHeight = 50f;
     private const float BodyTopInset = 48f;
@@ -61,7 +60,7 @@ internal sealed class BanOverlay
 
         var active = IsActive;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        presence.Step(active ? 1f : 0f, PresenceSmoothTime, delta);
+        presence.Step(active ? 1f : 0f, Motion.Appear, delta);
         if (presence.Value <= 0.01f)
         {
             if (!active)

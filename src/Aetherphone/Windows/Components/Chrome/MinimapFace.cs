@@ -25,6 +25,8 @@ internal static class MinimapFace
     private const float ScrimHeight = 20f;
     private const float LabelInset = 6f;
     private const float LabelGap = 3f;
+    private const float HeaderTop = 7f;
+    private const float HeaderFade = 14f;
     private const float ZoneScale = 0.62f;
     private const float CoordinateScale = 0.58f;
     private const float DotRadius = 3.2f;
@@ -62,7 +64,6 @@ internal static class MinimapFace
         var player = new Vector2(screen.Min.X + (reader.PlayerU - uv0.X) / (uv1.X - uv0.X) * screen.Width,
             screen.Min.Y + (reader.PlayerV - uv0.Y) / (uv1.Y - uv0.Y) * screen.Height);
         DrawPlayer(drawList, player, reader.Facing, theme, alpha, scale);
-        DrawLabels(drawList, screen, reader.ZoneName, reader.Coordinates, alpha, scale);
         return true;
     }
 
@@ -148,33 +149,45 @@ internal static class MinimapFace
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, alpha)), 20);
     }
 
-    private static void DrawLabels(ImDrawListPtr drawList, Rect screen, string zone, string coordinates, float alpha,
-        float scale)
+    public static void DrawHeader(ImDrawListPtr drawList, Rect screen, string time, float clockScale, string zone,
+        float alpha, float scale)
     {
-        var scrim = ScrimHeight * scale;
+        var clockSize = Typography.Measure(time, clockScale, FontWeight.Bold);
+        var zoneStyle = new TextStyle(Text(ZoneScale), FontWeight.SemiBold);
+        var zoneHeight = zone.Length > 0 ? Typography.Measure(zone, zoneStyle).Y : 0f;
+        var top = screen.Min.Y + HeaderTop * scale;
+        var scrimBottom = top + clockSize.Y + zoneHeight + HeaderFade * scale;
         var clear = ImGui.GetColorU32(Palette.WithAlpha(Ink, 0f));
-        var dark = ImGui.GetColorU32(Palette.WithAlpha(Ink, 0.58f * alpha));
-        var width = screen.Width - LabelInset * 2f * scale;
-        if (zone.Length > 0)
-        {
-            drawList.AddRectFilledMultiColor(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + scrim), dark, dark,
-                clear, clear);
-            var style = new TextStyle(Text(ZoneScale), FontWeight.SemiBold);
-            Marquee.DrawCenteredAuto(drawList, "minimized.map.zone", zone, screen.Center.X,
-                screen.Min.Y + LabelGap * scale, width, style, Palette.WithAlpha(White, alpha));
-        }
-
-        if (coordinates.Length == 0)
+        var dark = ImGui.GetColorU32(Palette.WithAlpha(Ink, 0.62f * alpha));
+        drawList.AddRectFilledMultiColor(screen.Min, new Vector2(screen.Max.X, scrimBottom), dark, dark, clear, clear);
+        Typography.Draw(drawList, new Vector2(screen.Center.X - clockSize.X * 0.5f, top), time,
+            Palette.WithAlpha(White, alpha), clockScale, FontWeight.Bold);
+        if (zone.Length == 0)
         {
             return;
         }
 
+        Marquee.DrawCenteredAuto(drawList, "minimized.map.zone", zone, screen.Center.X, top + clockSize.Y,
+            screen.Width - LabelInset * 2f * scale, zoneStyle, Palette.WithAlpha(White, 0.88f * alpha));
+    }
+
+    public static void DrawCoordinates(ImDrawListPtr drawList, Rect screen, string coordinates, float bottomInset,
+        float alpha, float scale)
+    {
+        if (coordinates.Length == 0 || alpha <= 0.01f)
+        {
+            return;
+        }
+
+        var scrim = ScrimHeight * scale + bottomInset;
+        var clear = ImGui.GetColorU32(Palette.WithAlpha(Ink, 0f));
+        var dark = ImGui.GetColorU32(Palette.WithAlpha(Ink, 0.58f * alpha));
         drawList.AddRectFilledMultiColor(new Vector2(screen.Min.X, screen.Max.Y - scrim), screen.Max, clear, clear,
             dark, dark);
         var coordinateStyle = new TextStyle(Text(CoordinateScale), FontWeight.Medium);
         var size = Typography.Measure(coordinates, coordinateStyle);
         Typography.Draw(drawList, new Vector2(screen.Center.X - size.X * 0.5f,
-                screen.Max.Y - LabelGap * scale - size.Y), coordinates,
+                screen.Max.Y - bottomInset - LabelGap * scale - size.Y), coordinates,
             Palette.WithAlpha(White, 0.88f * alpha), coordinateStyle);
     }
 

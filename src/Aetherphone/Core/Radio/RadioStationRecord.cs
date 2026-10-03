@@ -9,6 +9,8 @@ internal sealed class RadioStationRecord
     public string Codec { get; set; } = string.Empty;
     public int Bitrate { get; set; }
     public string Country { get; set; } = string.Empty;
+    public string ArtworkUrl { get; set; } = string.Empty;
+    public string CountryCode { get; set; } = string.Empty;
 
     public static RadioStationRecord From(RadioStation station)
     {
@@ -20,8 +22,12 @@ internal sealed class RadioStationRecord
             Codec = station.Codec,
             Bitrate = station.Bitrate,
             Country = station.Country,
+            ArtworkUrl = station.ArtworkUrl ?? string.Empty,
+            CountryCode = station.CountryCode ?? string.Empty,
         };
     }
 
-    public RadioStation ToStation() => new(Name, StreamUrl, Codec, Bitrate, Country, Uuid);
+    public RadioStation ToStation() =>
+        new(Name, StreamUrl, Codec, Bitrate, Country, Uuid, string.Empty, ArtworkUrl ?? string.Empty, string.Empty,
+            CountryCode ?? string.Empty, string.Empty, 0, 0);
 }

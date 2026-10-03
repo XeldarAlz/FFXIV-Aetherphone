@@ -116,11 +116,18 @@ internal sealed class MediaDependencies : IDisposable
     private const string ResolverConfigurationName = "yt-dlp.conf";
     private const string ResolverPlayerClient = "default,web_embedded";
     private const string ResolverOutputEncoding = "utf-8";
+    private const string ReleaseApiPrefix = "https://api.github.com/repos/";
+    private const string ReleasePagePrefix = "https://github.com/";
+    private const string LatestReleaseSuffix = "/releases/latest";
+    private const string TagSegment = "/releases/tag/";
+    private const string UserAgent = "Aetherphone-AetherStream";
 
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan RedirectProbeTimeout = TimeSpan.FromSeconds(20);
     private static readonly UTF8Encoding ResolverConfigurationEncoding = new(encoderShouldEmitUTF8Identifier: true);
 
     private readonly HttpClient httpClient;
+    private readonly HttpClient redirectProbe;
     private readonly string installRoot;
     private readonly SemaphoreSlim installGate = new(1, 1);
     private readonly MediaDependency[] songComponents;
@@ -129,7 +136,12 @@ internal sealed class MediaDependencies : IDisposable
     internal MediaDependencies()
     {
         httpClient = new HttpClient { Timeout = DownloadTimeout };
-        httpClient.DefaultRequestHeaders.Add("User-Agent", "Aetherphone-AetherStream");
+        httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgent);
+        redirectProbe = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
+        {
+            Timeout = RedirectProbeTimeout,
+        };
+        redirectProbe.DefaultRequestHeaders.Add("User-Agent", UserAgent);
         installRoot = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, InstallFolder);
 
         VideoLibrary = new MediaDependency("mpv", "https://api.github.com/repos/zhongfly/mpv-winbuild/releases/latest",
@@ -419,12 +431,111 @@ internal sealed class MediaDependencies : IDisposable
             dependency.SetState(DependencyState.Unknown);
             return false;
         }
+        catch (HttpRequestException exception) when (ReleasePageRoot(dependency.ReleaseUrl) is not null)
+        {
+            AepLog.Debug($"[Deps] Release API check for {dependency.Id} failed ({exception.Message}); reading the release page instead");
+            return await CheckReleasePageAsync(dependency, token).ConfigureAwait(false);
+        }
         catch (Exception exception)
         {
             AepLog.Warning($"[Deps] Update check for {dependency.Id} failed: {exception.Message}");
             dependency.Fail(exception.Message);
             return false;
         }
+    }
+
+    private static string? ReleasePageRoot(string releaseUrl)
+    {
+        if (!releaseUrl.StartsWith(ReleaseApiPrefix, StringComparison.Ordinal)
+            || !releaseUrl.EndsWith(LatestReleaseSuffix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var repository = releaseUrl[ReleaseApiPrefix.Length..^LatestReleaseSuffix.Length];
+        return ReleasePagePrefix + repository;
+    }
+
+    private async Task<bool> CheckReleasePageAsync(MediaDependency dependency, CancellationToken token)
+    {
+        try
+        {
+            var repositoryUrl = ReleasePageRoot(dependency.ReleaseUrl)!;
+            if (await ReadLatestTagAsync(repositoryUrl, token).ConfigureAwait(false) is not { } tag)
+            {
+                dependency.Fail("The release page did not name a latest release.");
+                return false;
+            }
+
+            var listing = await httpClient
+                .GetStringAsync($"{repositoryUrl}/releases/expanded_assets/{tag}", token).ConfigureAwait(false);
+            var downloadPath = $"{repositoryUrl[ReleasePagePrefix.Length..]}/releases/download/{tag}/";
+            var hrefMarker = $"href=\"/{downloadPath}";
+            var searchFrom = 0;
+            while (true)
+            {
+                var markerIndex = listing.IndexOf(hrefMarker, searchFrom, StringComparison.Ordinal);
+                if (markerIndex < 0)
+                {
+                    break;
+                }
+
+                var nameStart = markerIndex + hrefMarker.Length;
+                var nameEnd = listing.IndexOf('"', nameStart);
+                if (nameEnd < 0)
+                {
+                    break;
+                }
+
+                searchFrom = nameEnd;
+                var name = listing[nameStart..nameEnd];
+                if (!name.StartsWith(dependency.AssetPrefix, StringComparison.Ordinal)
+                    || !name.EndsWith(dependency.AssetSuffix, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                dependency.DownloadUrl = ReleasePagePrefix + downloadPath + name;
+                dependency.RemoteVersion = Uri.UnescapeDataString(tag);
+                dependency.SetState(VerifiedPayload(dependency) is null
+                    ? DependencyState.Missing
+                    : DependencyState.Ready);
+                return true;
+            }
+
+            dependency.Fail("No matching download in the latest release.");
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            dependency.SetState(DependencyState.Unknown);
+            return false;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Deps] Update check for {dependency.Id} failed: {exception.Message}");
+            dependency.Fail(exception.Message);
+            return false;
+        }
+    }
+
+    private async Task<string?> ReadLatestTagAsync(string repositoryUrl, CancellationToken token)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Head, repositoryUrl + LatestReleaseSuffix);
+        using var response = await redirectProbe.SendAsync(request, token).ConfigureAwait(false);
+        var location = response.Headers.Location?.OriginalString;
+        if (location is null)
+        {
+            return null;
+        }
+
+        var tagIndex = location.LastIndexOf(TagSegment, StringComparison.Ordinal);
+        if (tagIndex < 0 || tagIndex + TagSegment.Length >= location.Length)
+        {
+            return null;
+        }
+
+        return location[(tagIndex + TagSegment.Length)..];
     }
 
     private async Task DownloadAsync(MediaDependency dependency, CancellationToken token)
@@ -726,6 +837,7 @@ internal sealed class MediaDependencies : IDisposable
     public void Dispose()
     {
         httpClient.Dispose();
+        redirectProbe.Dispose();
         installGate.Dispose();
     }
 

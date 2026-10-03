@@ -15,3 +15,6 @@ node_modules/
 tools/icon-font/build/
 tools/icon-font/.venv/
 /docs/plans
+
+# Painted icon masters (tools/icon-generator)
+tools/icon-generator/masters/

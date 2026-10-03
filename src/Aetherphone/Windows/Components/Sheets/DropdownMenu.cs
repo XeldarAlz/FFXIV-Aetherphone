@@ -18,7 +18,6 @@ internal sealed class DropdownMenu
         Delete,
     }
 
-    private const float RevealSeconds = 0.14f;
     private const float RowHeight = 36f;
     private const float HeaderHeight = 26f;
     private const float MinWidth = 168f;
@@ -27,7 +26,7 @@ internal sealed class DropdownMenu
     private string ownerId = string.Empty;
     private bool open;
     private Rect anchor;
-    private double openedAt;
+    private Spring revealSpring;
     private int openedFrame;
 
     public bool Open => open;
@@ -45,7 +44,7 @@ internal sealed class DropdownMenu
         ownerId = id;
         anchor = anchorRect;
         open = true;
-        openedAt = ImGui.GetTime();
+        revealSpring.SnapTo(0f);
         openedFrame = ImGui.GetFrameCount();
     }
 
@@ -81,8 +80,9 @@ internal sealed class DropdownMenu
 
         var scale = UiScale.Current;
         var drawList = ImGui.GetForegroundDrawList();
-        var reveal = Easing.EaseOutQuint(Math.Clamp((float)((ImGui.GetTime() - openedAt) / RevealSeconds), 0f, 1f));
-        var alpha = Easing.SmoothStep(Math.Clamp(reveal / 0.7f, 0f, 1f));
+        var revealDelta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var reveal = Math.Clamp(revealSpring.Step(1f, Motion.Appear, revealDelta), 0f, 1f);
+        var alpha = Math.Clamp(reveal / 0.7f, 0f, 1f);
         var padX = 14f * scale;
         var padY = 6f * scale;
         var rowHeight = RowHeight * scale;

@@ -4,7 +4,6 @@ namespace Aetherphone.Core.Shell.Home;
 
 internal sealed class TilePoseCache
 {
-    private const float ReflowSmoothTime = 0.16f;
     private const int MaxEntries = 256;
 
     private struct TilePose
@@ -41,10 +40,10 @@ internal sealed class TilePoseCache
         }
         else
         {
-            pose.X.Step(center.X, ReflowSmoothTime, delta);
-            pose.Y.Step(center.Y, ReflowSmoothTime, delta);
-            pose.W.Step(size.X, ReflowSmoothTime, delta);
-            pose.H.Step(size.Y, ReflowSmoothTime, delta);
+            pose.X.Step(center.X, Motion.Release, delta);
+            pose.Y.Step(center.Y, Motion.Release, delta);
+            pose.W.Step(size.X, Motion.Release, delta);
+            pose.H.Step(size.Y, Motion.Release, delta);
         }
 
         poses[key] = pose;

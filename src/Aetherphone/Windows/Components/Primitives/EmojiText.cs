@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Emoji;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
@@ -32,6 +33,49 @@ internal static class EmojiText
         }
 
         return layout.Size.Y;
+    }
+
+    public static float DrawBlock(ImDrawListPtr drawList, Vector2 topLeft, string text, Vector4 ink, float alpha,
+        in TextStyle style, float wrapWidth, float maxHeight)
+    {
+        var layout = Layout(BlockLayouts, text, style, wrapWidth);
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            var lineHeight = ImGui.GetTextLineHeight();
+            if (layout is not null && layout.EmojiFiles.Length > 0)
+            {
+                lineHeight = MathF.Max(lineHeight, EmojiRender.LineHeight(layout.FontSize));
+            }
+
+            var lines = (int)MathF.Floor((maxHeight + 0.5f) / MathF.Max(lineHeight, 1f));
+            if (lines <= 0)
+            {
+                return 0f;
+            }
+
+            if (layout is not null)
+            {
+                var height = MathF.Min(layout.Size.Y, lines * lineHeight);
+                drawList.PushClipRect(topLeft, new Vector2(topLeft.X + wrapWidth, topLeft.Y + height), true);
+                RichText.Draw(drawList, layout, topLeft, Ink(ink, alpha), out _);
+                drawList.PopClipRect();
+                return height;
+            }
+
+            Plugin.Fonts.NoticeText(text);
+            var wrapped = Typography.WrapCurrent(text, wrapWidth);
+            var font = ImGui.GetFont();
+            var fontSize = ImGui.GetFontSize();
+            var packed = ImGui.GetColorU32(ink with { W = ink.W * alpha });
+            var drawn = Math.Min(lines, wrapped.Length);
+            for (var index = 0; index < drawn; index++)
+            {
+                drawList.AddText(font, fontSize, new Vector2(topLeft.X, topLeft.Y + index * lineHeight), packed,
+                    wrapped[index]);
+            }
+
+            return drawn * lineHeight;
+        }
     }
 
     public static float DrawLine(ImDrawListPtr drawList, MarqueeId id, string text, Vector2 topLeft, float maxWidth,

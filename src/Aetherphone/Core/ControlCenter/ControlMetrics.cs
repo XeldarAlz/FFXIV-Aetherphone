@@ -1,4 +1,5 @@
 using Aetherphone.Core.Home;
+using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Core.ControlCenter;
 
@@ -23,7 +24,7 @@ internal readonly struct ControlMetrics
 
     public static ControlMetrics Compute(Rect grid, int columns, float scale)
     {
-        var gap = 11f * scale;
+        var gap = Metrics.Space.Glass * scale;
         var cellWidth = (grid.Width - (columns - 1) * gap) / columns;
         return new ControlMetrics(grid, scale, cellWidth, cellWidth, gap, columns);
     }

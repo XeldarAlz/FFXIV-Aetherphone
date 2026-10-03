@@ -26,6 +26,19 @@ internal sealed class ViewRouter<TView>
     public int Depth => stack.Count;
     public bool IsTransitioning => transitioning;
     private string CurrentId => viewIds[viewIds.Count - 1];
+
+    public bool TryGetView(int index, out TView view)
+    {
+        if (index < 0 || index >= stack.Count)
+        {
+            view = default!;
+            return false;
+        }
+
+        view = stack[index];
+        return true;
+    }
+
     public void Push(TView view) => Push(view, true);
 
     public void Push(TView view, bool animate)

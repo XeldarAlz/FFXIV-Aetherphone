@@ -1,321 +1,276 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Housing;
 
 internal sealed partial class HousingApp
 {
-    private static float SheetHeightFor(bool reminderPicker, float scale)
-    {
-        var height = 18f * scale;
-        height += Typography.LineHeight(TextStyles.Title3) + 2f * scale;
-        height += Typography.LineHeight(TextStyles.Footnote) + 9f * scale;
-        height += HousingChrome.ChipHeight * scale + 10f * scale;
-        height += Typography.LineHeight(TextStyles.Caption2) + 2f * scale +
-                  Typography.LineHeight(TextStyles.Title3) + 12f * scale;
-        height += HousingChrome.StatRowHeight * scale * 3f + 10f * scale;
-        height += reminderPicker
-            ? Typography.LineHeight(TextStyles.Caption1) + 12f * scale + 30f * scale + 22f * scale + 32f * scale
-            : 72f * scale;
-        return height + 16f * scale;
-    }
+    private const int WardColumns = 6;
+    private const float SheetPad = 16f;
+    private const float SheetBottomPad = 28f;
+    private const float DistrictTileSize = 44f;
+    private const float WardCellHeight = 44f;
+    private const float WardCellGap = 6f;
+    private const float SectionLabelGap = 8f;
+    private const float LeadTileHeight = 64f;
+    private const float LeadTileGap = 8f;
+    private const float ActionHeight = 44f;
+    private const float SelectedRing = 2f;
 
-    private void DrawSheet(Rect area, Rect viewport, float scale)
-    {
-        var progress = sheetSpring.Value;
-        if (progress <= 0.005f)
-        {
-            return;
-        }
+    private readonly Sheet locationSheet = new();
+    private readonly Sheet reminderSheet = new();
+    private readonly Sheet filterSheet = new();
+    private PhoneTheme? sheetThemeSource;
+    private PhoneTheme sheetTheme = PhoneTheme.Default;
+    private HousingPlotKey reminderPlot;
+    private int reminderChoice = 2;
+    private readonly CachedText[] leadUnits = new CachedText[HousingDefaults.ReminderChoices.Length];
+    private CachedText wardHeadingText;
+    private CachedText reminderSubtitle;
+    private CachedText reminderCountdown;
 
-        var plot = FindPlot(selectedPlot);
+    private string ReminderSubtitle(HousingPlot? plot)
+    {
         if (plot is null)
         {
-            sheetOpen = false;
-            return;
+            return Loc.T(L.Housing.ReminderUnavailable);
         }
 
-        var drawList = ImGui.GetWindowDrawList();
-        var height = MathF.Min(SheetHeightFor(reminderPickerOpen, scale), area.Height * 0.72f);
-        var travel = height * (1f - progress);
-        var sheet = new Rect(new Vector2(area.Min.X, area.Max.Y - height + travel),
-            new Vector2(area.Max.X, area.Max.Y + travel));
-        drawList.PushClipRect(area.Min, area.Max, true);
-        HousingChrome.SheetChrome(drawList, sheet, viewport, progress, ui);
-        drawList.PopClipRect();
-        if (progress < 0.35f)
-        {
-            return;
-        }
-
-        var pad = 16f * scale;
-        var contentLeft = sheet.Min.X + pad;
-        var contentRight = sheet.Max.X - pad;
-        var contentWidth = contentRight - contentLeft;
-        var y = sheet.Min.Y + 18f * scale;
-
-        var titleStyle = TextStyles.Title3;
-        var title = HousingFormat.PlotTitle(plot);
-        var closeRadius = 11f * scale;
-        var closeCenter = new Vector2(contentRight - closeRadius, y + closeRadius);
-        Typography.Draw(drawList, new Vector2(contentLeft, y),
-            Typography.FitText(title, contentWidth - closeRadius * 2.6f, titleStyle), ui.TitleInk, titleStyle);
-        if (HousingChrome.CloseButton(closeCenter, closeRadius, ui, reminderPickerOpen))
-        {
-            sheetOpen = false;
-            reminderPickerOpen = false;
-        }
-
-        y += Typography.LineHeight(titleStyle) + 2f * scale;
-        var place = string.Concat(HousingFormat.Place(housing.DistrictName, plot.Key.Ward), " · ",
-            HousingFormat.DivisionLabel(plot.IsSubdivision));
-        Typography.Draw(drawList, new Vector2(contentLeft, y),
-            Typography.FitText(place, contentWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
-        y += Typography.LineHeight(TextStyles.Footnote) + 9f * scale;
-
-        var freshness = FreshnessOf(plot);
-        var chipX = contentLeft;
-        var chipLabel = HousingFormat.FreshnessLabel(freshness);
-        HousingChrome.Chip(drawList, new Vector2(chipX, y), chipLabel,
-            HousingChrome.FreshnessHue(freshness, ui.Accent), false);
-        chipX += HousingChrome.MeasureChip(chipLabel) + 6f * scale;
-        var phaseLabel = HousingFormat.PhaseLabel(plot.Phase);
-        HousingChrome.Chip(drawList, new Vector2(chipX, y), phaseLabel,
-            HousingMarkers.PhaseColor(plot.Phase, ui.Accent), false);
-        chipX += HousingChrome.MeasureChip(phaseLabel) + 6f * scale;
-        if (housing.Watch.IsWatched(plot.Key))
-        {
-            HousingChrome.Chip(drawList, new Vector2(chipX, y), Loc.T(L.Housing.Watching),
-                AppPalettes.HousingBrass, false);
-        }
-
-        y += HousingChrome.ChipHeight * scale + 10f * scale;
-
-        var now = DateTime.UtcNow;
-        var countdown = HousingFormat.PhaseCountdown(plot, now);
-        Typography.Draw(drawList, new Vector2(contentLeft, y),
-            Loc.Culture.TextInfo.ToUpper(HousingFormat.PhaseLabel(plot.Phase)), ui.HeaderInk, TextStyles.Caption2);
-        var countdownStyle = TextStyles.Title3;
-        Typography.Draw(drawList, new Vector2(contentLeft, y + 11f * scale),
-            Typography.FitText(countdown, contentWidth * 0.62f, countdownStyle), ui.TitleInk, countdownStyle);
-        var scanText = HousingFormat.ScanAge(plot.LastSeenUtc, now);
-        var scanSize = Typography.Measure(scanText, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(contentRight - scanSize.X, y + 15f * scale), scanText,
-            freshness == HousingDataFreshness.Stale ? AppPalettes.HousingResults : ui.MutedInk, TextStyles.Footnote);
-        y += Typography.LineHeight(TextStyles.Caption2) + 2f * scale + Typography.LineHeight(TextStyles.Title3) +
-             12f * scale;
-
-        var rowHeight = HousingChrome.StatRowHeight * scale;
-        HousingChrome.StatRow(drawList, new Rect(new Vector2(contentLeft, y), new Vector2(contentRight, y + rowHeight)),
-            Loc.T(L.Housing.EntriesLabel), HousingFormat.Entries(plot.Entries), ui, true);
-        y += rowHeight;
-        HousingChrome.StatRow(drawList, new Rect(new Vector2(contentLeft, y), new Vector2(contentRight, y + rowHeight)),
-            Loc.T(L.Housing.PriceLabel), HousingFormat.Price(plot.Price), ui);
-        y += rowHeight;
-        HousingChrome.StatRow(drawList, new Rect(new Vector2(contentLeft, y), new Vector2(contentRight, y + rowHeight)),
-            Loc.T(L.Housing.EligibilityLabel), HousingFormat.EligibilityLabel(plot.Eligibility), ui);
-        y += rowHeight + 10f * scale;
-
-        if (reminderPickerOpen)
-        {
-            DrawReminderPicker(drawList, plot, contentLeft, contentRight, y, scale);
-            return;
-        }
-
-        DrawSheetActions(plot, contentLeft, contentRight, y, scale);
+        var countdown = HousingText.Countdown(ref reminderCountdown, plot.PhaseEndsUtc, DateTime.UtcNow);
+        var key = ((long)plot.Key.GetHashCode() << 20) ^ countdown.GetHashCode();
+        return reminderSubtitle.IsCurrent(key)
+            ? reminderSubtitle.Value
+            : reminderSubtitle.Store(key, Loc.T(L.Housing.ReminderSubtitle,
+                Loc.T(L.Housing.PlotAndWard, plot.Key.Plot, plot.Key.Ward), HousingFormat.PhaseLabel(plot.Phase),
+                countdown));
     }
 
-    private void DrawSheetActions(HousingPlot plot, float left, float right, float travelTop, float scale)
+    private bool ModalOpen =>
+        locationSheet.CapturesPointer || reminderSheet.CapturesPointer || filterSheet.CapturesPointer;
+
+    private PhoneTheme SheetTheme()
     {
-        var height = 32f * scale;
-        var gap = 8f * scale;
-        var travelRow = new Rect(new Vector2(left, travelTop), new Vector2(right, travelTop + height));
-        if (HousingChrome.PillButton(travelRow, Loc.T(L.Housing.TravelHere), true, ui, false))
+        if (ReferenceEquals(sheetThemeSource, frameTheme))
         {
-            TravelTo(plot.Key);
+            return sheetTheme;
         }
 
-        var top = travelRow.Max.Y + gap;
-        var watched = housing.Watch.IsWatched(plot.Key);
-        var reminder = housing.Watch.FindReminder(plot.Key);
-        var hasDeadline = plot.PhaseEndsUtc is not null;
-        var watchLabel = Loc.T(watched ? L.Housing.Watching : L.Housing.Watch);
-        var remindLabel = reminder is { Notified: false }
-            ? Loc.T(L.Housing.ReminderSet)
-            : Loc.T(L.Housing.RemindMe);
-        var detailsLabel = Loc.T(L.Housing.DetailsAction);
-        Span<string> labels = [watchLabel, remindLabel, detailsLabel];
-        Span<Rect> rects = stackalloc Rect[3];
-        HousingChrome.LayoutPills(new Rect(new Vector2(left, top), new Vector2(right, top + height)), labels, gap,
-            rects);
-        var watchRect = rects[0];
-        var remindRect = rects[1];
-        var detailsRect = rects[2];
-        if (HousingChrome.PillButton(watchRect, watchLabel, watched, ui, false))
+        var source = frameTheme;
+        sheetThemeSource = source;
+        sheetTheme = new PhoneTheme
         {
-            var nowWatched = housing.Watch.ToggleWatch(plot, housing.WorldNameOf(plot.Key.WorldId));
-            ShowToast(Loc.T(nowWatched ? L.Housing.Watching : L.Housing.Unwatch));
-            InvalidateCache();
+            Case = source.Case,
+            CaseKind = source.CaseKind,
+            CaseTextureId = source.CaseTextureId,
+            ScreenBase = source.ScreenBase,
+            LightWallpaperId = source.LightWallpaperId,
+            DarkWallpaperId = source.DarkWallpaperId,
+            AppBackground = ui.Palette.BackdropTop,
+            GroupedCard = source.GroupedCard,
+            Separator = source.Separator,
+            Hairline = ui.Hairline,
+            HoverWash = source.HoverWash,
+            ToggleOn = ui.Accent,
+            ToggleOff = source.ToggleOff,
+            Surface = source.Surface,
+            SurfaceMuted = source.SurfaceMuted,
+            TextStrong = ui.TitleInk,
+            TextMuted = ui.MutedInk,
+            Accent = ui.Accent,
+            Danger = source.Danger,
+            RailWidth = source.RailWidth,
+            MetalWidth = source.MetalWidth,
+            GlassWidth = source.GlassWidth,
+            DeviceRounding = source.DeviceRounding,
+            TopZoneHeight = source.TopZoneHeight,
+            BottomZoneHeight = source.BottomZoneHeight,
+            SidePadding = source.SidePadding,
+        };
+        return sheetTheme;
+    }
+
+    private void DrawModalSheets(Rect area)
+    {
+        if (!ModalOpen)
+        {
+            return;
         }
 
-        if (HousingChrome.PillButton(remindRect, remindLabel, reminder is { Notified: false }, ui, false,
-                hasDeadline))
+        var scale = UiScale.Current;
+        var screen = SceneChrome.ScreenFrom(area, frameTheme, scale);
+        using var layer = ScreenLayer.Begin("housing.sheets", screen, false);
+        var drawList = ImGui.GetWindowDrawList();
+        var theme = SheetTheme();
+        if (locationSheet.CapturesPointer)
         {
-            ShowOverlay(HousingOverlay.ReminderPicker);
-            reminderChoice = IndexOfLeadTime(reminder?.OffsetMinutes ?? configuration.HousingReminderMinutes);
+            DrawLocationSheet(drawList, screen, theme, scale);
         }
 
-        if (!hasDeadline)
+        if (reminderSheet.CapturesPointer)
         {
-            HoverTooltip.Show("housing.remind.disabled", remindRect, Loc.T(L.Housing.ReminderUnavailable),
-                HoverLabelSide.Above);
+            DrawReminderSheet(drawList, screen, theme, scale);
         }
 
-        if (HousingChrome.PillButton(detailsRect, detailsLabel, false, ui, false))
+        if (filterSheet.CapturesPointer)
         {
-            Push(HousingRoute.Details, plot.Key);
+            DrawFilterSheet(drawList, screen, theme, scale);
         }
     }
 
-    private void DrawReminderPicker(ImDrawListPtr drawList, HousingPlot plot, float left, float right, float top,
+    private void OpenLocationSheet()
+    {
+        legendOpen = false;
+        menu.Close();
+        locationSheet.Open();
+    }
+
+    private float LocationSheetHeight(float scale)
+    {
+        var rows = (HousingDistricts.Resolve(housing.DistrictId).Wards + WardColumns - 1) / WardColumns;
+        return SheetMetrics.GrabberZone * scale + HousingArt.SheetHeaderHeight * scale +
+               DistrictTileSize * scale + Typography.LineHeight(TextStyles.Caption1) * 2f +
+               HousingArt.SectionGap * scale + Typography.LineHeight(TextStyles.FootnoteEmphasized) +
+               SectionLabelGap * scale + rows * WardCellHeight * scale + (rows - 1) * WardCellGap * scale +
+               SheetBottomPad * scale;
+    }
+
+    private void DrawLocationSheet(ImDrawListPtr drawList, Rect screen, PhoneTheme theme, float scale)
+    {
+        var detents = SheetDetents.Fitted(MathF.Min(LocationSheetHeight(scale),
+            screen.Height * SheetMetrics.LargeFraction));
+        var frame = locationSheet.Begin(drawList, screen, theme, detents, SheetMetrics.AppVeil);
+        if (!frame.Visible)
+        {
+            return;
+        }
+
+        var content = frame.Content;
+        if (HousingArt.SheetHeader(drawList, content, Loc.T(L.Housing.LocationTitle), Loc.T(L.Housing.Done),
+                ui.TitleInk, ui.Accent, scale) && frame.Interactive)
+        {
+            locationSheet.Close();
+        }
+
+        var pad = SheetPad * scale;
+        var left = content.Min.X + pad;
+        var right = content.Max.X - pad;
+        var y = content.Min.Y + HousingArt.SheetHeaderHeight * scale;
+        y = DrawDistrictPicker(drawList, left, right, y, frame.Interactive, scale);
+        y += HousingArt.SectionGap * scale;
+        var wardHeading = wardHeadingText.IsCurrent(0L)
+            ? wardHeadingText.Value
+            : wardHeadingText.Store(0L, Loc.Upper(Loc.T(L.Housing.WardLabel)));
+        Typography.Draw(drawList, new Vector2(left, y), wardHeading, ui.MutedInk, TextStyles.FootnoteEmphasized);
+        y += Typography.LineHeight(TextStyles.FootnoteEmphasized) + SectionLabelGap * scale;
+        DrawWardGrid(drawList, left, right, y, frame.Interactive, scale);
+        locationSheet.End(in frame);
+    }
+
+    private float DrawDistrictPicker(ImDrawListPtr drawList, float left, float right, float top, bool interactive,
         float scale)
     {
-        HousingChrome.SectionLabel(drawList, new Vector2(left, top), right - left, Loc.T(L.Housing.ReminderPrompt), ui);
-        var y = top + Typography.LineHeight(TextStyles.Caption1) + 6f * scale;
-        var choices = HousingDefaults.ReminderChoices;
-        for (var index = 0; index < choices.Length; index++)
+        var districts = HousingDistricts.All;
+        var column = (right - left) / districts.Count;
+        var tile = DistrictTileSize * scale;
+        var captionHeight = Typography.LineHeight(TextStyles.Caption1);
+        var height = tile + captionHeight * 2f;
+        for (var index = 0; index < districts.Count; index++)
         {
-            reminderLabels[index] = HousingFormat.LeadTime(choices[index]);
-            reminderActive[index] = index == reminderChoice;
-        }
-
-        var leadRow = new Rect(new Vector2(left, y), new Vector2(right, y + ChipRail.RowHeight * scale));
-        var leadTapped = reminderRail.Draw(leadRow, ui, reminderLabels, reminderActive, true);
-        if (leadTapped >= 0)
-        {
-            reminderChoice = leadTapped;
-        }
-
-        var buttonHeight = 32f * scale;
-        var buttonTop = leadRow.Max.Y + 10f * scale;
-        var gap = 8f * scale;
-        var existing = housing.Watch.FindReminder(plot.Key);
-        var confirmLabel = Loc.T(L.Housing.ReminderSet);
-        var removeLabel = Loc.T(L.Housing.CancelReminder);
-        var dismissLabel = Loc.T(L.Common.Cancel);
-        var buttonRow = new Rect(new Vector2(left, buttonTop), new Vector2(right, buttonTop + buttonHeight));
-        Span<Rect> rects = stackalloc Rect[3];
-        Rect confirmRect;
-        Rect? cancelReminderRect = null;
-        Rect dismissRect;
-        if (existing is null)
-        {
-            Span<string> twoLabels = [confirmLabel, dismissLabel];
-            HousingChrome.LayoutPills(buttonRow, twoLabels, gap, rects);
-            confirmRect = rects[0];
-            dismissRect = rects[1];
-        }
-        else
-        {
-            Span<string> threeLabels = [confirmLabel, removeLabel, dismissLabel];
-            HousingChrome.LayoutPills(buttonRow, threeLabels, gap, rects);
-            confirmRect = rects[0];
-            cancelReminderRect = rects[1];
-            dismissRect = rects[2];
-        }
-
-        if (HousingChrome.PillButton(confirmRect, confirmLabel, true, ui, true))
-        {
-            var minutes = choices[Math.Clamp(reminderChoice, 0, choices.Length - 1)];
-            if (housing.Watch.SetReminder(plot, housing.WorldNameOf(plot.Key.WorldId), minutes))
+            var id = districts[index].Id;
+            var cellMin = new Vector2(left + column * index, top);
+            var cellMax = new Vector2(cellMin.X + column, top + height);
+            var hovered = interactive && UiInteract.HoverWindowOnly(cellMin, cellMax);
+            var down = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+            var press = PressFx.Scale(unchecked(ImGui.GetID("housing.district") + (uint)index), down,
+                Motion.PressScaleControl);
+            var center = new Vector2((cellMin.X + cellMax.X) * 0.5f, top + tile * 0.5f);
+            var selected = id == housing.DistrictId;
+            if (selected)
             {
-                configuration.HousingReminderMinutes = minutes;
-                configuration.Save();
-                reminderPickerOpen = false;
-                ShowToast(Loc.T(L.Housing.ReminderConfirmed, HousingFormat.LeadTime(minutes),
-                    HousingFormat.PhaseLabel(plot.Phase),
-                    HousingFormat.Place(HousingDistricts.DisplayName(plot.Key.DistrictId), plot.Key.Ward),
-                    plot.Key.Plot));
+                var ring = tile * 0.5f + SelectedRing * 2f * scale;
+                Squircle.Stroke(drawList, center - new Vector2(ring, ring), center + new Vector2(ring, ring),
+                    ring * Metrics.Radius.TileFactor * 2f, ImGui.GetColorU32(ui.Accent), SelectedRing * scale);
             }
-            else
+
+            HousingArt.DistrictTile(drawList, center, tile * press, id);
+            var name = HousingDistricts.ShortDisplayName(id);
+            Typography.DrawCentered(drawList, new Vector2(center.X, top + tile + captionHeight * 0.5f + 2f * scale),
+                Typography.FitText(name, column - 4f * scale, TextStyles.Caption1),
+                selected ? ui.TitleInk : ui.BodyInk, TextStyles.Caption1);
+            var open = DistrictOpenCount(id);
+            if (open >= 0)
             {
-                ShowToast(Loc.T(L.Housing.ReminderUnavailable));
+                Typography.DrawCentered(drawList,
+                    new Vector2(center.X, top + tile + captionHeight * 1.5f + 2f * scale), HousingText.Count(open),
+                    open > 0 ? ui.Accent : ui.MutedInk, TextStyles.Caption1);
             }
+
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (!UiInteract.Click(cellMin, cellMax, hovered) || selected)
+            {
+                continue;
+            }
+
+            housing.SelectDistrict(id);
+            showSubdivision = false;
+            ClosePlotCard(true);
+            ResetMapView();
+            InvalidateCache();
+            UiFeedback.Play(UiSound.Tap);
         }
 
-        if (cancelReminderRect is { } cancelRect &&
-            HousingChrome.PillButton(cancelRect, removeLabel, false, ui, true))
-        {
-            housing.Watch.CancelReminder(plot.Key);
-            reminderPickerOpen = false;
-            ShowToast(Loc.T(L.Housing.CancelReminder));
-        }
-
-        if (HousingChrome.PillButton(dismissRect, dismissLabel, false, ui, true))
-        {
-            reminderPickerOpen = false;
-        }
+        return top + height;
     }
 
-    private void DrawWardPicker(Rect area, Rect viewport, float scale)
-    {
-        if (!wardPickerOpen)
-        {
-            return;
-        }
+    private int DistrictOpenCount(uint districtId) =>
+        housing.Lookup(housing.WorldId, districtId) is { } snapshot ? snapshot.Plots.Count : -1;
 
-        var drawList = ImGui.GetWindowDrawList();
+    private void DrawWardGrid(ImDrawListPtr drawList, float left, float right, float top, bool interactive,
+        float scale)
+    {
         var district = HousingDistricts.Resolve(housing.DistrictId);
-        var columns = 5;
-        var rows = (district.Wards + columns - 1) / columns;
-        var pad = 14f * scale;
-        var gap = 6f * scale;
-        var available = area.Width - pad * 4f - (columns - 1) * gap;
-        var cell = MathF.Max(30f * scale, MathF.Min(40f * scale, available / columns));
-        var width = columns * cell + (columns - 1) * gap + pad * 2f;
-        var titleHeight = HousingSelection.TitleHeight(scale);
-        var legendHeight = Typography.LineHeight(HousingSelection.LegendStyle) + gap;
-        var height = rows * cell + (rows - 1) * gap + pad * 2f + titleHeight + legendHeight;
-        var center = new Vector2(area.Center.X, viewport.Center.Y);
-        var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
-        var max = new Vector2(min.X + width, min.Y + height);
-        var panel = new Rect(min, max);
-        Material.Veil(drawList, area.Min, area.Max, 0.34f);
-        PopoverSurface.Draw(drawList, min, max, Metrics.Radius.Card * scale, frameTheme, scale);
-        var gridTop = HousingSelection.Title(drawList, panel, Loc.T(L.Housing.ChooseWard), min.Y + pad, ui, scale);
         Span<int> counts = stackalloc int[district.Wards];
         housing.CollectWardOpenings(counts);
+        var gap = WardCellGap * scale;
+        var cellWidth = (right - left - gap * (WardColumns - 1)) / WardColumns;
+        var cellHeight = WardCellHeight * scale;
         var current = housing.Ward;
+        var rounding = Metrics.Radius.Md * scale;
+        var numberHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
+        var countHeight = Typography.LineHeight(TextStyles.Caption2);
         for (var index = 0; index < district.Wards; index++)
         {
-            var column = index % columns;
-            var row = index / columns;
-            var cellMin = new Vector2(min.X + pad + column * (cell + gap), gridTop + row * (cell + gap));
-            var cellMax = cellMin + new Vector2(cell, cell);
-            var bounds = new Rect(cellMin, cellMax);
+            var column = index % WardColumns;
+            var row = index / WardColumns;
+            var cellMin = new Vector2(left + column * (cellWidth + gap), top + row * (cellHeight + gap));
+            var cellMax = cellMin + new Vector2(cellWidth, cellHeight);
             var ward = index + 1;
             var selected = ward == current;
-            var hovered = HousingChrome.Hover(cellMin, cellMax, true);
-            HousingSelection.Surface(drawList, bounds, selected, hovered, true, ui, scale);
-            if (!selected && !hovered)
+            var hovered = interactive && UiInteract.HoverWindowOnly(cellMin, cellMax);
+            var fill = selected ? ui.Accent : hovered ? Palette.Mix(ui.FieldSurface, ui.TitleInk, 0.06f) : ui.FieldSurface;
+            Squircle.Fill(drawList, cellMin, cellMax, rounding, ImGui.GetColorU32(fill));
+            var centerX = (cellMin.X + cellMax.X) * 0.5f;
+            var hasOpenings = counts[index] > 0;
+            var blockHeight = numberHeight + (hasOpenings ? countHeight : 0f);
+            var blockTop = (cellMin.Y + cellMax.Y - blockHeight) * 0.5f;
+            Typography.DrawCentered(drawList, new Vector2(centerX, blockTop + numberHeight * 0.5f),
+                HousingText.Count(ward), selected ? AccentRing.Ink : hasOpenings ? ui.TitleInk : ui.MutedInk,
+                TextStyles.SubheadlineEmphasized);
+            if (hasOpenings)
             {
-                Squircle.Fill(drawList, cellMin, cellMax, HousingSelection.Radius(scale),
-                    ImGui.GetColorU32(ui.FieldSurface));
-            }
-
-            var ink = HousingSelection.Ink(selected, hovered, true, ui);
-            Typography.DrawCentered(drawList, new Vector2(bounds.Center.X, cellMin.Y + cell * 0.42f),
-                ward.ToString(Loc.Culture), ink, HousingSelection.TitleStyle);
-            if (counts[index] > 0)
-            {
-                HousingSelection.Marker(drawList, new Vector2(bounds.Center.X, cellMax.Y - 7f * scale),
-                    selected ? HousingSelection.StrongInk : ui.Accent, scale);
+                Typography.DrawCentered(drawList, new Vector2(centerX, blockTop + numberHeight + countHeight * 0.5f),
+                    HousingText.Count(counts[index]), selected ? AccentRing.Ink : ui.Accent, TextStyles.Caption2);
             }
 
             if (hovered)
@@ -329,19 +284,176 @@ internal sealed partial class HousingApp
             }
 
             housing.SelectWard(ward);
-            wardPickerOpen = false;
-            sheetOpen = false;
-            selectedPlot = default;
+            ClosePlotCard(true);
             InvalidateCache();
+            UiFeedback.Play(UiSound.Tap);
+            locationSheet.Close();
         }
+    }
 
-        var legendY = gridTop + rows * cell + (rows - 1) * gap + gap;
-        Typography.DrawCentered(drawList, new Vector2(panel.Center.X, legendY), Loc.T(L.Housing.WardLegend),
-            ui.MutedInk, HousingSelection.LegendStyle);
+    private void OpenReminderSheet(HousingPlotKey key)
+    {
+        reminderPlot = key;
+        var existing = housing.Watch.FindReminder(key);
+        reminderChoice = IndexOfLeadTime(existing?.OffsetMinutes ?? configuration.HousingReminderMinutes);
+        menu.Close();
+        reminderSheet.Open();
+    }
 
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(min, max, false))
+    private static int IndexOfLeadTime(int minutes)
+    {
+        var choices = HousingDefaults.ReminderChoices;
+        for (var index = 0; index < choices.Length; index++)
         {
-            wardPickerOpen = false;
+            if (choices[index] == minutes)
+            {
+                return index;
+            }
         }
+
+        return 2;
+    }
+
+    private float ReminderSheetHeight(string subtitle, float width, float scale) =>
+        SheetMetrics.GrabberZone * scale + HousingArt.SheetHeaderHeight * scale +
+        Typography.MeasureWrappedBlock(subtitle, TextStyles.Subheadline, width).Y + HousingArt.SectionGap * scale +
+        LeadTileHeight * scale + HousingArt.SectionGap * scale + ActionHeight * scale +
+        (housing.Watch.FindReminder(reminderPlot) is null ? 0f : ActionHeight * scale) + SheetBottomPad * scale;
+
+    private void DrawReminderSheet(ImDrawListPtr drawList, Rect screen, PhoneTheme theme, float scale)
+    {
+        var plot = FindPlot(reminderPlot);
+        var pad = SheetPad * scale;
+        var width = screen.Width - pad * 2f;
+        var subtitle = ReminderSubtitle(plot);
+        var detents = SheetDetents.Fitted(MathF.Min(ReminderSheetHeight(subtitle, width, scale),
+            screen.Height * SheetMetrics.LargeFraction));
+        var frame = reminderSheet.Begin(drawList, screen, theme, detents, SheetMetrics.AppVeil);
+        if (!frame.Visible)
+        {
+            return;
+        }
+
+        var content = frame.Content;
+        if (HousingArt.SheetHeader(drawList, content, Loc.T(L.Housing.RemindMe), Loc.T(L.Common.Cancel),
+                ui.TitleInk, ui.Accent, scale) && frame.Interactive)
+        {
+            reminderSheet.Close();
+        }
+
+        var left = content.Min.X + pad;
+        var right = content.Max.X - pad;
+        var y = content.Min.Y + HousingArt.SheetHeaderHeight * scale;
+        y += Typography.DrawWrappedLeft(new Vector2(left, y), subtitle, ui.MutedInk, TextStyles.Subheadline,
+            right - left);
+        y += HousingArt.SectionGap * scale;
+        y = DrawLeadTiles(drawList, left, right, y, frame.Interactive, scale);
+        y += HousingArt.SectionGap * scale;
+        var existing = housing.Watch.FindReminder(reminderPlot);
+        var primary = new Rect(new Vector2(left, y), new Vector2(right, y + ActionHeight * scale));
+        if (HousingChrome.PillButton(primary, Loc.T(L.Housing.SetReminder), true, ui, true,
+                plot is not null && frame.Interactive) && plot is not null)
+        {
+            SaveReminder(plot);
+        }
+
+        if (existing is not null)
+        {
+            y = primary.Max.Y;
+            var removeLabel = Loc.T(L.Housing.CancelReminder);
+            var removeSize = Typography.Measure(removeLabel, TextStyles.Body);
+            var hitMin = new Vector2(content.Center.X - removeSize.X * 0.5f - pad, y);
+            var hitMax = new Vector2(content.Center.X + removeSize.X * 0.5f + pad, y + ActionHeight * scale);
+            var hovered = frame.Interactive && UiInteract.HoverWindowOnly(hitMin, hitMax);
+            Typography.DrawCentered(drawList, (hitMin + hitMax) * 0.5f, removeLabel,
+                hovered ? Palette.Lighten(frameTheme.Danger, 0.15f) : frameTheme.Danger, TextStyles.Body);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (UiInteract.Click(hitMin, hitMax, hovered))
+            {
+                housing.Watch.CancelReminder(reminderPlot);
+                UiFeedback.Play(UiSound.ToggleOff);
+                ShellToast.Show(Loc.T(L.Housing.ReminderRemoved));
+                reminderSheet.Close();
+            }
+        }
+
+        reminderSheet.End(in frame);
+    }
+
+    private float DrawLeadTiles(ImDrawListPtr drawList, float left, float right, float top, bool interactive,
+        float scale)
+    {
+        var choices = HousingDefaults.ReminderChoices;
+        var gap = LeadTileGap * scale;
+        var width = (right - left - gap * (choices.Length - 1)) / choices.Length;
+        var height = LeadTileHeight * scale;
+        var rounding = Metrics.Radius.Card * scale;
+        for (var index = 0; index < choices.Length; index++)
+        {
+            var min = new Vector2(left + index * (width + gap), top);
+            var max = new Vector2(min.X + width, top + height);
+            var selected = index == reminderChoice;
+            var hovered = interactive && UiInteract.HoverWindowOnly(min, max);
+            var down = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+            var press = PressFx.Scale(unchecked(ImGui.GetID("housing.lead") + (uint)index), down,
+                Motion.PressScaleControl);
+            var center = (min + max) * 0.5f;
+            var half = (max - min) * 0.5f * press;
+            var fill = selected ? ui.Accent : hovered ? Palette.Mix(ui.FieldSurface, ui.TitleInk, 0.06f) : ui.FieldSurface;
+            Squircle.Fill(drawList, center - half, center + half, rounding, ImGui.GetColorU32(fill));
+            var minutes = choices[index];
+            var hours = minutes >= 60 && minutes % 60 == 0;
+            var value = HousingText.Count(hours ? minutes / 60 : minutes);
+            var unitKey = hours ? -minutes : minutes;
+            var unit = leadUnits[index].IsCurrent(unitKey)
+                ? leadUnits[index].Value
+                : leadUnits[index].Store(unitKey,
+                    hours ? Loc.Plural(L.Housing.UnitHours, minutes / 60) : Loc.Plural(L.Housing.UnitMinutes, minutes));
+            var valueHeight = Typography.LineHeight(TextStyles.Title2);
+            var unitHeight = Typography.LineHeight(TextStyles.Caption1);
+            var blockTop = center.Y - (valueHeight + unitHeight) * 0.5f;
+            var ink = selected ? AccentRing.Ink : ui.TitleInk;
+            Typography.DrawCentered(drawList, new Vector2(center.X, blockTop + valueHeight * 0.5f), value, ink,
+                TextStyles.Title2);
+            Typography.DrawCentered(drawList, new Vector2(center.X, blockTop + valueHeight + unitHeight * 0.5f),
+                Typography.FitText(unit, width - 6f * scale, TextStyles.Caption1),
+                selected ? AccentRing.Ink : ui.MutedInk, TextStyles.Caption1);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (UiInteract.Click(min, max, hovered) && reminderChoice != index)
+            {
+                reminderChoice = index;
+                UiFeedback.Play(UiSound.Tap);
+            }
+        }
+
+        return top + height;
+    }
+
+    private void SaveReminder(HousingPlot plot)
+    {
+        var choices = HousingDefaults.ReminderChoices;
+        var minutes = choices[Math.Clamp(reminderChoice, 0, choices.Length - 1)];
+        if (!housing.Watch.SetReminder(plot, housing.WorldNameOf(plot.Key.WorldId), minutes))
+        {
+            UiFeedback.Play(UiSound.Blocked);
+            ShellToast.Show(Loc.T(L.Housing.ReminderUnavailable));
+            return;
+        }
+
+        configuration.HousingReminderMinutes = minutes;
+        configuration.Save();
+        UiFeedback.Play(UiSound.Success);
+        ShellToast.Show(Loc.T(L.Housing.ReminderConfirmed, HousingFormat.LeadTime(minutes),
+            HousingFormat.PhaseLabel(plot.Phase),
+            HousingFormat.Place(HousingDistricts.DisplayName(plot.Key.DistrictId), plot.Key.Ward), plot.Key.Plot));
+        reminderSheet.Close();
     }
 }

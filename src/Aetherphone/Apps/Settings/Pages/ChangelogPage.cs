@@ -74,8 +74,8 @@ internal sealed class ChangelogPage : ISettingsPage
         var width = ImGui.GetContentRegionAvail().X;
         var heroTop = origin.Y + 6f * scale;
         Typography.Draw(drawList, new Vector2(origin.X, heroTop), Loc.T(L.Settings.ChangelogHero), theme.TextStrong,
-            TextStyles.LargeTitle.Scale, TextStyles.LargeTitle.Weight);
-        var heroHeight = Typography.Measure(Loc.T(L.Settings.ChangelogHero), TextStyles.LargeTitle).Y;
+            TextStyles.Title2.Scale, TextStyles.Title2.Weight);
+        var heroHeight = Typography.Measure(Loc.T(L.Settings.ChangelogHero), TextStyles.Title2).Y;
         var subtitleTop = heroTop + heroHeight + 2f * scale;
         Typography.Draw(drawList, new Vector2(origin.X, subtitleTop), AepConstants.Name, theme.TextMuted,
             TextStyles.Subheadline.Scale, TextStyles.Subheadline.Weight);

@@ -1,5 +1,6 @@
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 
@@ -36,7 +37,7 @@ internal sealed class OnboardingDirector
         this.navigation = navigation;
     }
 
-    public bool CapturesPointer => active.HasValue && !suppressed;
+    public bool CapturesPointer => active is { } sequence && !suppressed && !sequence.Steps[stepIndex].IsAction;
     public bool WantsAnchors => active.HasValue && !suppressed;
     public bool WantsControlCenter => active is { } sequence && sequence.Steps[stepIndex].OverControlCenter;
 
@@ -96,16 +97,18 @@ internal sealed class OnboardingDirector
         suspended = active;
         suspendedIndex = stepIndex;
         active = null;
+        TourCue.MiniPhone = false;
         presence.SnapTo(0f);
     }
 
-    public void Advance(float delta, bool busy, bool atHome, string? currentAppId)
+    public void Advance(float delta, bool busy, bool atHome, string? currentAppId, bool restoredFromMinimize)
     {
         frameDelta = MathF.Min(delta, TransitionTiming.MaxFrameSeconds);
         if (!OnboardingState.Enabled)
         {
             active = null;
             suspended = null;
+            TourCue.MiniPhone = false;
             pendingWelcome = false;
             pendingResume = false;
             pendingAppId = null;
@@ -135,6 +138,14 @@ internal sealed class OnboardingDirector
                 return;
             }
 
+            if (!busy && !exiting && Satisfied(current.Steps[stepIndex], atHome, currentAppId, restoredFromMinimize))
+            {
+                UiFeedback.Play(UiSound.Success);
+                StepForward(current);
+            }
+
+            TourCue.MiniPhone = !exiting && active is { } running &&
+                                running.Steps[stepIndex].Condition == GuideCondition.MinimizeRoundTrip;
             if (!busy)
             {
                 presence.Step(exiting ? 0f : 1f, PresenceSmoothTime, frameDelta);
@@ -210,7 +221,7 @@ internal sealed class OnboardingDirector
         var textProgress = Math.Clamp(textClock / TextSeconds, 0f, 1f);
         var anchor = ResolveAnchor(step);
         var result = coachmark.Draw(screen, theme, step, anchor, presenceValue, textProgress, stepIndex,
-            sequence.Steps.Length, !exiting);
+            sequence.Steps.Length, !exiting, sequence.RequiredAppId);
         if (exiting)
         {
             return;
@@ -220,23 +231,46 @@ internal sealed class OnboardingDirector
         {
             case CoachmarkAction.Advance:
                 step.OnAdvance?.Invoke(navigation);
-                stepIndex++;
-                if (stepIndex >= sequence.Steps.Length)
+                if (step.IsAction)
                 {
-                    stepIndex = sequence.Steps.Length - 1;
-                    BeginExit(true);
-                }
-                else
-                {
-                    ResetForStep();
+                    UiFeedback.Play(UiSound.Success);
                 }
 
+                StepForward(sequence);
                 break;
             case CoachmarkAction.Skip:
+                if (step.OverControlCenter)
+                {
+                    step.OnAdvance?.Invoke(navigation);
+                }
+
                 BeginExit(false);
                 break;
         }
     }
+
+    private void StepForward(in GuideSequence sequence)
+    {
+        stepIndex++;
+        if (stepIndex >= sequence.Steps.Length)
+        {
+            stepIndex = sequence.Steps.Length - 1;
+            BeginExit(true);
+            return;
+        }
+
+        ResetForStep();
+    }
+
+    private static bool Satisfied(in GuideStep step, bool atHome, string? currentAppId, bool restoredFromMinimize) =>
+        step.Condition switch
+        {
+            GuideCondition.AppOpened => !atHome && currentAppId is not null,
+            GuideCondition.AtHome => atHome,
+            GuideCondition.MinimizeRoundTrip => restoredFromMinimize,
+            GuideCondition.AnchorVisible => step.WaitAnchorKey is { } waitKey && UiAnchors.TryGet(waitKey, out _),
+            _ => false,
+        };
 
     private void Start(GuideSequence sequence)
     {
@@ -248,6 +282,7 @@ internal sealed class OnboardingDirector
     private void BeginExit(bool completesCoveredTours)
     {
         exiting = true;
+        TourCue.MiniPhone = false;
         exitCompletes = completesCoveredTours;
         textClock = TextSeconds;
     }
@@ -305,6 +340,11 @@ internal sealed class OnboardingDirector
 
         if (UiAnchors.TryGet(step.AnchorKey, out var rect))
         {
+            if (step.SecondaryAnchorKey is { } secondaryKey && UiAnchors.TryGet(secondaryKey, out var secondary))
+            {
+                rect = new Rect(Vector2.Min(rect.Min, secondary.Min), Vector2.Max(rect.Max, secondary.Max));
+            }
+
             missTimer = 0f;
             if (!anchorInitialized)
             {

@@ -102,7 +102,7 @@ internal static class AvatarView
     {
         var milliseconds = Environment.TickCount64 % (long)(PulsePeriodSeconds * 1000f);
         var phase = milliseconds / (PulsePeriodSeconds * 1000f);
-        var wave = Easing.SmoothStep(0.5f + 0.5f * MathF.Sin(phase * MathF.PI * 2f));
+        var wave = 0.5f + 0.5f * MathF.Sin(phase * MathF.PI * 2f);
         var brightness = PulseFloor + (1f - PulseFloor) * wave;
         return new Vector4(color.X * brightness, color.Y * brightness, color.Z * brightness, color.W);
     }
@@ -116,6 +116,6 @@ internal static class AvatarView
             fadeByKey[key] = progress;
         }
 
-        return Easing.EaseOutCubic(progress);
+        return progress;
     }
 }

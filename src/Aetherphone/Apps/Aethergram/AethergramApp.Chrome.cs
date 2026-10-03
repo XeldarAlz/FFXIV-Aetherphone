@@ -21,7 +21,6 @@ internal sealed partial class AethergramApp
     private const float IconTabHeight = 44f;
     private const float IconTabUnderline = 1.5f;
     private const float IconTabIconSize = 22f;
-    private const float TabSmoothTime = 0.09f;
     private const float GridGap = 1.5f;
     private const float GridThumbnailOversample = 2f;
     private const float GridBadgeInset = 12f;
@@ -64,7 +63,7 @@ internal sealed partial class AethergramApp
     private static int DrawIconTabs(Rect row, ReadOnlySpan<string> glyphs, ReadOnlySpan<string> labels, int active,
         ref Spring slide) =>
         UnderlineTabs.DrawIcons(row, glyphs, labels, active, ref slide, Ink, IconTabIconSize, IconTabUnderline,
-            TabSmoothTime);
+            Motion.Release);
 
     private static bool DrawAccentPill(Rect rect, string label, bool enabled = true) =>
         SocialPill.Accent(ImGui.GetWindowDrawList(), rect, label, Ink, PillStyle, PillRounding * UiScale.Current,

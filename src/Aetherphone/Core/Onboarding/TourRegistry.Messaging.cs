@@ -6,39 +6,45 @@ internal static partial class TourRegistry
 {
     private static void AddMessagingTours(Dictionary<string, GuideSequence> tours)
     {
-        Add(tours, "messages", 3,
+        Add(tours, "messages", 4,
             new[]
             {
-                GuideStep.Note(L.Onboarding.MessagesTitle, L.Onboarding.MessagesBody),
-                GuideStep.Point(L.Onboarding.MessagesListTitle, L.Onboarding.MessagesListBody, "messages.list"),
-                GuideStep.Note(L.Onboarding.MessagesLinkshellsTitle, L.Onboarding.MessagesLinkshellsBody),
-                GuideStep.Tap(L.Linkpearl.People, L.Onboarding.ContactsBody, "messages.tab.people",
-                    "messages.tab.people"),
-                GuideStep.Point(L.Onboarding.ContactsListTitle, L.Onboarding.ContactsListBody, "people.list"),
-                GuideStep.Point(L.Onboarding.ContactsSearchTitle, L.Onboarding.ContactsSearchBody, "people.search"),
-                GuideStep.Point(L.Onboarding.FindPeopleKindTitle, L.Onboarding.FindPeopleBody, "people.scope"),
+                GuideStep.Intro(L.Apps.Linkpearl, L.Onboarding.LinkpearlIntroBody),
+                GuideStep.TryUntil(L.Onboarding.StartChatTitle, L.Onboarding.LinkpearlNewChatBody, "messages.new",
+                    GuideGesture.Tap, "messages.newchat.tiles"),
+                GuideStep.TryUntil(L.Onboarding.LinkpearlChannelTitle, L.Onboarding.LinkpearlChannelBody,
+                    "messages.newchat.tiles", GuideGesture.Tap, "messages.composer"),
+                GuideStep.Point(L.Onboarding.LinkpearlReplyTitle, L.Onboarding.LinkpearlReplyBody,
+                    "messages.composer", GuideGesture.None),
+                GuideStep.TryTap(L.Onboarding.LinkpearlLayoutTitle, L.Onboarding.LinkpearlLayoutBody,
+                    "messages.thread.layout"),
+                GuideStep.TryUntil(L.Onboarding.LinkpearlMoreTitle, L.Onboarding.LinkpearlMoreBody,
+                    "messages.thread.more", GuideGesture.Tap, "messages.sheet"),
             });
-        Add(tours, "message", 2,
+        Add(tours, "message", 3,
             new[]
             {
-                GuideStep.Note(L.Apps.Message, L.Onboarding.MessageBody),
-                GuideStep.Tap(L.Onboarding.MessageCallsTitle, L.Onboarding.PhoneBody, "message.tab.calls",
+                GuideStep.Intro(L.Apps.Message, L.Onboarding.ChocoChatIntroBody),
+                GuideStep.Point(L.Onboarding.StartChatTitle, L.Onboarding.ChocoChatNewChatBody, "message.newchat",
+                    GuideGesture.Tap),
+                GuideStep.TryTap(L.Onboarding.ChocoChatCallsTitle, L.Onboarding.ChocoChatCallsBody,
                     "message.tab.calls"),
-                GuideStep.Note(L.Onboarding.PhoneGroupTitle, L.Onboarding.PhoneGroupBody),
-                GuideStep.Tap(L.Onboarding.MessageContactsTitle, L.Onboarding.MessageContactsBody,
-                    "message.tab.contacts", "message.tab.contacts"),
-                GuideStep.Point(L.Onboarding.MyNumberTourTitle, L.Onboarding.MessageNumberCopyBody,
-                    "message.mynumber"),
-                GuideStep.Point(L.Onboarding.MessageAddFriendTitle, L.Onboarding.MessageAddFriendBody,
-                    "message.addcontact"),
-                GuideStep.Note(L.Onboarding.PhoneVoiceTitle, L.Onboarding.PhoneVoiceBody),
+                GuideStep.TryTap(L.Onboarding.ChocoChatContactsTitle, L.Onboarding.ChocoChatContactsBody,
+                    "message.tab.contacts"),
+                GuideStep.Point(L.Onboarding.ChocoChatNumberTitle, L.Onboarding.ChocoChatNumberBody,
+                    "message.mynumber", GuideGesture.Tap),
+                GuideStep.Point(L.Onboarding.ChocoChatAddContactTitle, L.Onboarding.ChocoChatAddContactBody,
+                    "message.addcontact", GuideGesture.Tap),
             });
-        Add(tours, "notifications", 2,
+        Add(tours, "notifications", 4,
             new[]
             {
-                GuideStep.Note(L.Apps.Notifications, L.Onboarding.NotificationsBody),
-                GuideStep.Point(L.Onboarding.NotificationsHistoryTitle, L.Onboarding.NotificationsHistoryBody,
-                    "notifications.list"),
+                GuideStep.Point(L.Onboarding.NotificationsAlertsTitle, L.Onboarding.NotificationsAlertsBody,
+                    "notifications.list", GuideGesture.None),
+                GuideStep.Point(L.Onboarding.NotificationsFocusTitle, L.Onboarding.NotificationsFocusBody,
+                    "notifications.focus", GuideGesture.Tap),
+                GuideStep.Point(L.Onboarding.NotificationsAnywhereTitle, L.Onboarding.NotificationsAnywhereBody,
+                    "chrome.controlcenter", GuideGesture.SwipeDown),
             });
     }
 }

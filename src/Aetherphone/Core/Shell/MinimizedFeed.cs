@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Coins;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Timers;
 using Aetherphone.Core.Wallet;
 
 namespace Aetherphone.Core.Shell;
@@ -21,7 +22,7 @@ internal sealed class MinimizedFeed
     private readonly ActivityTracker activity;
     private readonly GameData gameData;
     private readonly List<WeatherWindow> forecast = new();
-    private readonly List<RetainerVenture> retainers = new();
+    private readonly GameTimers timers;
     private float clock;
     private float weatherDue;
     private float gilDue;
@@ -34,8 +35,9 @@ internal sealed class MinimizedFeed
     private bool gilIconResolved;
 
     public MinimizedFeed(WeatherService weather, CoinStore coins, AethernetSession session, ActivityTracker activity,
-        GameData gameData)
+        GameData gameData, GameTimers timers)
     {
+        this.timers = timers;
         this.weather = weather;
         this.coins = coins;
         this.session = session;
@@ -137,35 +139,40 @@ internal sealed class MinimizedFeed
         }
 
         ventureDue = clock + VentureIntervalSeconds;
-        RetainersKnown = RetainerReader.TryRead(retainers) && retainers.Count > 0;
+        var character = TimerLedger.Find(timers.Characters, timers.CurrentContentId);
+        RetainersKnown = character is { Retainers.Count: > 0 };
         VenturesReady = 0;
         HasRunningVenture = false;
         NextVentureUtc = DateTime.MaxValue;
-        if (!RetainersKnown)
+        if (character is null || !RetainersKnown)
         {
             return;
         }
 
-        var utcNow = DateTime.UtcNow;
+        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var nextUnix = long.MaxValue;
+        var retainers = character.Retainers;
         for (var index = 0; index < retainers.Count; index++)
         {
-            var venture = retainers[index];
-            if (!venture.HasVenture)
+            var completeUnix = retainers[index].CompleteUnix;
+            if (completeUnix <= 0)
             {
                 continue;
             }
 
-            if (venture.CompleteUtc <= utcNow)
+            if (completeUnix <= nowUnix)
             {
                 VenturesReady++;
                 continue;
             }
 
             HasRunningVenture = true;
-            if (venture.CompleteUtc < NextVentureUtc)
-            {
-                NextVentureUtc = venture.CompleteUtc;
-            }
+            nextUnix = Math.Min(nextUnix, completeUnix);
+        }
+
+        if (HasRunningVenture)
+        {
+            NextVentureUtc = DateTimeOffset.FromUnixTimeSeconds(nextUnix).UtcDateTime;
         }
     }
 }

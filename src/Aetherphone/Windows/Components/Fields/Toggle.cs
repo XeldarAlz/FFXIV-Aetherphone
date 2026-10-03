@@ -8,7 +8,6 @@ namespace Aetherphone.Windows.Components;
 
 internal static class Toggle
 {
-    private const float SmoothTime = 0.13f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 KnobShadow = new(0f, 0f, 0f, 0.18f);
     private static readonly Dictionary<string, Spring> Knobs = new(StringComparer.Ordinal);
@@ -53,7 +52,7 @@ internal static class Toggle
         }
 
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
-        var position = spring.Step(target, SmoothTime, deltaSeconds);
+        var position = spring.Step(target, Motion.Release, deltaSeconds);
         Knobs[id] = spring;
         return Math.Clamp(position, 0f, 1f);
     }

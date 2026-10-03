@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -67,6 +68,7 @@ internal sealed class SlotsCabinet
     private float lineTraceSeconds;
     private float jackpotFlourishSeconds;
     private int celebratedSpinIndex = -1;
+    private int soundedReelStops;
     private int autoRemaining;
     private int autoSettledSpin = -1;
     private bool autoPickerOpen;
@@ -135,6 +137,7 @@ internal sealed class SlotsCabinet
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         ConsumeResults();
         playback.Update(delta);
+        SoundReelStops();
         particles.Update(delta);
         lineTraceSeconds += delta;
         CelebrateSettledSpin();
@@ -201,6 +204,8 @@ internal sealed class SlotsCabinet
                 inlineReason = string.Empty;
                 winRoll.Snap(0);
                 celebratedSpinIndex = -1;
+                soundedReelStops = 0;
+                UiFeedback.Play(UiSound.CasinoChips);
             }
             else
             {
@@ -212,6 +217,35 @@ internal sealed class SlotsCabinet
         {
             inlineReason = CasinoReasons.Unreachable;
         }
+    }
+
+    private void SoundReelStops()
+    {
+        if (playback.Phase != SlotsPlaybackPhase.Spinning)
+        {
+            if (playback.Phase == SlotsPlaybackPhase.Presenting && soundedReelStops > 0
+                && soundedReelStops < SlotsRules.ReelCount)
+            {
+                UiFeedback.Play(UiSound.GameTick);
+            }
+
+            soundedReelStops = playback.Phase == SlotsPlaybackPhase.Presenting ? SlotsRules.ReelCount : 0;
+            return;
+        }
+
+        var choreography = playback.Choreography;
+        var stopped = 0;
+        while (stopped < SlotsRules.ReelCount && choreography.ReelStopped(stopped))
+        {
+            stopped++;
+        }
+
+        if (stopped > soundedReelStops)
+        {
+            UiFeedback.Play(UiSound.GameTick);
+        }
+
+        soundedReelStops = stopped;
     }
 
     private void CelebrateSettledSpin()
@@ -234,6 +268,7 @@ internal sealed class SlotsCabinet
         var origin = new Vector2(reelWindow.Center.X, reelWindow.Min.Y + reelWindow.Height * 0.3f);
         if (playback.JackpotLanded && playback.SpinIndex == 0)
         {
+            UiFeedback.Play(UiSound.GamePowerUp);
             jackpotFlourishSeconds = 0f;
             particles.Confetti(origin, 160, ConfettiPalette, 420f * scale, 6f, 2.4f);
             particles.Sparkle(origin, 48, Gold, 260f * scale, 5f, 1.6f);
@@ -242,15 +277,18 @@ internal sealed class SlotsCabinet
 
         if (spin.Win >= playback.Stake * SlotsRoundPlayback.BigWinMultiple)
         {
+            UiFeedback.Play(UiSound.GamePowerUp);
             particles.Confetti(origin, 90, ConfettiPalette, 330f * scale, 5f, 1.6f);
             particles.Sparkle(origin, 24, Gold, 190f * scale, 4f, 1.0f);
         }
         else if (spin.Win >= playback.Stake * SmallCelebrationMultiple)
         {
+            UiFeedback.Play(UiSound.GameWin);
             particles.Confetti(origin, 36, ConfettiPalette, 250f * scale, 4f, 1.2f);
         }
         else
         {
+            UiFeedback.Play(UiSound.GameMatch);
             particles.Sparkle(origin, 10, Gold, 130f * scale, 3f, 0.8f);
         }
     }

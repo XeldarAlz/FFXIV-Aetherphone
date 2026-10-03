@@ -185,7 +185,6 @@ internal static class ConfirmDialog
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var style = ActionSheetStyle.From(theme);
-        var slide = Easing.EaseOutQuint(opacity);
         var margin = SheetMargin * scale;
         var padX = SheetPadX * scale;
         var left = area.Min.X + margin;
@@ -210,7 +209,7 @@ internal static class ConfirmDialog
         var gap = SheetGap * scale;
         var cardHeight = headerHeight + actionHeight;
         var total = cardHeight + gap + cancelHeight;
-        var bottom = area.Max.Y - SheetBottomInset * scale + total * (1f - slide);
+        var bottom = area.Max.Y - SheetBottomInset * scale + total * (1f - opacity);
         var cancelMin = new Vector2(left, bottom - cancelHeight);
         var cancelMax = new Vector2(right, bottom);
         var cardMax = new Vector2(right, cancelMin.Y - gap);

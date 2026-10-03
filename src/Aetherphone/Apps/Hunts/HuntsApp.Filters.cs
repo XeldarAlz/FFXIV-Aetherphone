@@ -1,290 +1,374 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Hunts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Muster;
+using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Hunts;
 
 internal sealed partial class HuntsApp
 {
-    private enum HuntsMenuTarget : byte
+    private const int StatusColumns = 2;
+
+    private static readonly string[] StatusTileIds =
     {
-        None,
-        DataCenter,
-        World,
-        NotifyWorld,
+        "hunts.filter.status.open", "hunts.filter.status.capped", "hunts.filter.status.closed",
+        "hunts.filter.status.unmet",
+    };
+
+    private static readonly string[] FilterExpansionTileIds =
+    {
+        "hunts.filter.expansion.0", "hunts.filter.expansion.1", "hunts.filter.expansion.2",
+        "hunts.filter.expansion.3", "hunts.filter.expansion.4", "hunts.filter.expansion.5",
+    };
+
+    private readonly ChipRail dataCenterRail = new();
+    private string[] dataCenterLabels = Array.Empty<string>();
+    private bool[] dataCenterActive = Array.Empty<bool>();
+    private readonly List<string> foreignWorlds = new();
+    private string? filterDataCenter;
+    private int savedFilterRevision = -1;
+
+    private void OpenFilters()
+    {
+        savedFilterRevision = filter.Revision;
+        Push(new HuntsView(HuntsRoute.Filters, BackTitle: RootTitle()));
     }
 
-    private static readonly string[] RankChipLabels = { "SS", "S", "A", "B", "F" };
-
-    private readonly List<DropdownMenu.Item> menuItems = new();
-    private readonly List<string> worldOptionsList = new();
-    private readonly SortedSet<string> worldOptionsSet = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ChipRail rankRail = new();
-    private readonly ChipRail statusRail = new();
-    private readonly ChipRail expansionRail = new();
-    private readonly bool[] rankChipActive = new bool[5];
-    private readonly string[] statusChipLabels = new string[4];
-    private readonly bool[] statusChipActive = new bool[4];
-    private readonly bool[] expansionChipActive = new bool[HuntExpansions.Labels.Length];
-    private HuntsMenuTarget menuTarget = HuntsMenuTarget.None;
-
-    private void OpenFilters() => router.Push(new HuntsView(HuntsRoute.Filters));
-
-    private void CloseFilters()
+    private void SyncFilterDataCenter()
     {
+        if (hunts.CurrentDataCenter is not { Length: > 0 } dataCenter ||
+            string.Equals(dataCenter, filterDataCenter, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var worlds = HuntDataCenterWorlds.WorldsFor(dataCenter);
+        if (worlds.Length == 0)
+        {
+            return;
+        }
+
+        filterDataCenter = dataCenter;
+        if (filter.Worlds.Count == 0)
+        {
+            return;
+        }
+
+        foreignWorlds.Clear();
+        foreach (var selected in filter.Worlds)
+        {
+            if (!ContainsWorld(worlds, selected))
+            {
+                foreignWorlds.Add(selected);
+            }
+        }
+
+        if (foreignWorlds.Count == 0)
+        {
+            return;
+        }
+
+        for (var index = 0; index < foreignWorlds.Count; index++)
+        {
+            filter.ToggleWorld(foreignWorlds[index]);
+        }
+
         filterStore.Save(filter.ToSnapshot());
-        router.Pop();
-        menu.Close();
     }
 
-    private void DrawFiltersHeader(Rect content, float scale)
+    private static bool ContainsWorld(string[] worlds, string worldId)
     {
-        var hasNarrowing = filter.HasNarrowingFilters;
-        var resetLabel = Loc.T(L.Hunts.ClearFilters);
-        var reserve = 12f * scale;
-        if (hasNarrowing)
+        for (var index = 0; index < worlds.Length; index++)
         {
-            reserve += AppSkin.HeaderActionWidth(resetLabel);
-        }
-
-        AppHeader.DrawTitleWithReserve(content, "hunts.filters.header", Loc.T(L.Hunts.FiltersTitle), reserve,
-            ui.TitleInk, scale);
-
-        if (AppHeader.DrawBack(content, scale, "hunts.filters.back", ui.Accent))
-        {
-            CloseFilters();
-        }
-
-        if (hasNarrowing && ui.HeaderAction(content, resetLabel, true))
-        {
-            filter.Reset();
-        }
-    }
-
-    private void DrawFiltersBody(Rect body, float scale)
-    {
-        using (AppSurface.Begin(body))
-        {
-            Gap(8f);
-
-            SettingsSection.Header(Loc.T(L.Hunts.DataCenterLabel), frameTheme);
-            var dataCenterCard = GroupCard.Begin(frameTheme, 1);
-            var dataCenterRow = dataCenterCard.NextRow();
-            var dataCenterValue = hunts.CurrentDataCenter is { Length: > 0 } dataCenter
-                ? dataCenter
-                : Loc.T(L.Hunts.ChooseDataCenter);
-            if (SettingsRow.Disclosure(dataCenterRow, Loc.T(L.Hunts.DataCenterLabel), dataCenterValue, frameTheme,
-                    "hunts.filters.datacenter"))
+            if (string.Equals(worlds[index], worldId, StringComparison.OrdinalIgnoreCase))
             {
-                OpenDataCenterMenu(dataCenterRow);
+                return true;
             }
-
-            dataCenterCard.End();
-            Gap(20f);
-
-            SettingsSection.Header(Loc.T(L.Hunts.WorldsLabel), frameTheme);
-            var worldsCard = GroupCard.Begin(frameTheme, 1);
-            var worldsRow = worldsCard.NextRow();
-            if (SettingsRow.Disclosure(worldsRow, Loc.T(L.Hunts.WorldsLabel), WorldsValueText(), frameTheme,
-                    "hunts.filters.worlds"))
-            {
-                OpenWorldMenu(worldsRow);
-            }
-
-            worldsCard.End();
-            Gap(20f);
-
-            SettingsSection.Header(Loc.T(L.Hunts.RanksLabel), frameTheme);
-            DrawRankChips();
-            Gap(20f);
-
-            SettingsSection.Header(Loc.T(L.Hunts.StatusLabel), frameTheme);
-            DrawStatusChips();
-            Gap(20f);
-
-            SettingsSection.Header(Loc.T(L.Hunts.ExpansionsLabel), frameTheme);
-            DrawExpansionChips();
-            Gap(24f);
-
-            if (ui.PillButton(Reserve(40f), Loc.T(L.Hunts.Submit), true))
-            {
-                CloseFilters();
-            }
-
-            Gap(40f);
-        }
-    }
-
-    private void DrawRankChips()
-    {
-        rankChipActive[0] = filter.RankSS;
-        rankChipActive[1] = filter.RankS;
-        rankChipActive[2] = filter.RankA;
-        rankChipActive[3] = filter.RankB;
-        rankChipActive[4] = filter.RankF;
-        var tapped = rankRail.Draw(ui, RankChipLabels, rankChipActive);
-        switch (tapped)
-        {
-            case 0:
-                filter.RankSS = !filter.RankSS;
-                break;
-            case 1:
-                filter.RankS = !filter.RankS;
-                break;
-            case 2:
-                filter.RankA = !filter.RankA;
-                break;
-            case 3:
-                filter.RankB = !filter.RankB;
-                break;
-            case 4:
-                filter.RankF = !filter.RankF;
-                break;
-        }
-    }
-
-    private void DrawStatusChips()
-    {
-        statusChipLabels[0] = Loc.T(L.Hunts.Closed);
-        statusChipActive[0] = filter.StatusClosed;
-        statusChipLabels[1] = Loc.T(L.Hunts.Open);
-        statusChipActive[1] = filter.StatusOpen;
-        statusChipLabels[2] = Loc.T(L.Hunts.Capped);
-        statusChipActive[2] = filter.StatusCapped;
-        statusChipLabels[3] = Loc.T(L.Hunts.Unmet);
-        statusChipActive[3] = filter.StatusUnmet;
-        var tapped = statusRail.Draw(ui, statusChipLabels, statusChipActive);
-        switch (tapped)
-        {
-            case 0:
-                filter.StatusClosed = !filter.StatusClosed;
-                break;
-            case 1:
-                filter.StatusOpen = !filter.StatusOpen;
-                break;
-            case 2:
-                filter.StatusCapped = !filter.StatusCapped;
-                break;
-            case 3:
-                filter.StatusUnmet = !filter.StatusUnmet;
-                break;
-        }
-    }
-
-    private void DrawExpansionChips()
-    {
-        for (var index = 0; index < expansionChipActive.Length; index++)
-        {
-            expansionChipActive[index] = filter.IsExpansionActive(index);
         }
 
-        var tapped = expansionRail.Draw(ui, HuntExpansions.Labels, expansionChipActive,
-            labelPadding: ChipRail.CompactLabelPadding);
-        if (tapped >= 0)
-        {
-            filter.ToggleExpansion(tapped);
-        }
+        return false;
     }
 
-    private string WorldsValueText()
+    private void SaveFiltersIfDirty()
     {
-        var count = filter.Worlds.Count;
-        return count == 0 ? Loc.T(L.Hunts.AllWorlds) : Loc.T(L.Hunts.WorldsSelected, count);
-    }
-
-    private void OpenDataCenterMenu(Rect anchor)
-    {
-        menuItems.Clear();
-        var all = MusterDataCenters.All;
-        for (var index = 0; index < all.Length; index++)
-        {
-            var name = all[index].Name;
-            menuItems.Add(new DropdownMenu.Item(name, string.Empty, false,
-                string.Equals(name, hunts.CurrentDataCenter, StringComparison.OrdinalIgnoreCase)));
-        }
-
-        menuTarget = HuntsMenuTarget.DataCenter;
-        menu.KeepOpen = false;
-        menu.Toggle("hunts.filters.datacenter", anchor);
-    }
-
-    private void OpenWorldMenu(Rect anchor)
-    {
-        menuTarget = HuntsMenuTarget.World;
-        menu.KeepOpen = true;
-        PopulateWorldMenuItems();
-        menu.Toggle("hunts.filters.worlds", anchor);
-    }
-
-    private void PopulateWorldMenuItems()
-    {
-        HuntsFilterState.CollectWorlds(hunts.Windows, worldOptionsSet);
-        worldOptionsList.Clear();
-        menuItems.Clear();
-        foreach (var worldId in worldOptionsSet)
-        {
-            worldOptionsList.Add(worldId);
-            menuItems.Add(new DropdownMenu.Item(Prettify(worldId), string.Empty, false,
-                filter.IsWorldSelected(worldId)));
-        }
-    }
-
-    private void DrawMenu()
-    {
-        if (!menu.Open || menuItems.Count == 0)
+        if (savedFilterRevision < 0 || filter.Revision == savedFilterRevision)
         {
             return;
         }
 
-        var picked = menu.Draw(frameScreen, frameTheme, System.Runtime.InteropServices.CollectionsMarshal
-            .AsSpan(menuItems));
-        if (picked < 0)
-        {
-            return;
-        }
-
-        if (menuTarget == HuntsMenuTarget.DataCenter)
-        {
-            var all = MusterDataCenters.All;
-            if (picked < all.Length)
-            {
-                hunts.SelectDataCenter(all[picked].Name);
-                filter.ClearWorlds();
-            }
-
-            menuTarget = HuntsMenuTarget.None;
-            menuItems.Clear();
-            return;
-        }
-
-        if (menuTarget == HuntsMenuTarget.World && picked < worldOptionsList.Count)
-        {
-            filter.ToggleWorld(worldOptionsList[picked]);
-            PopulateWorldMenuItems();
-            return;
-        }
-
-        if (menuTarget == HuntsMenuTarget.NotifyWorld && picked < notifyWorldOptionsList.Count)
-        {
-            hunts.NotificationSettings.ToggleWorld(notifyWorldOptionsList[picked]);
-            notifySettingsDirty = true;
-            PopulateNotifyWorldMenuItems();
-        }
+        savedFilterRevision = filter.Revision;
+        filterStore.Save(filter.ToSnapshot());
     }
 
-    private static Rect Reserve(float heightUnscaled)
+    private void DrawFilters(in PhoneContext context, HuntsView view)
     {
         var scale = UiScale.Current;
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + heightUnscaled * scale));
-        ImGui.Dummy(new Vector2(width, heightUnscaled * scale));
-        return rect;
+        var navBar = AppHeader.BeginLargeTitle(context);
+        using (ImRaii.PushId("hunts.filters"))
+        using (AppSurface.Begin(navBar.Body))
+        {
+            DrawDataCenterRail();
+            DrawFilterWorlds(scale);
+            DrawFilterRanks(scale);
+            DrawFilterStatuses(scale);
+            DrawFilterExpansions(scale);
+            BottomSpacer(scale);
+        }
+
+        navButtons[0] = new NavBarButton(PhoneIcons.Refresh, Loc.T(L.Hunts.ClearFilters));
+        var pressed = AppHeader.EndLargeTitle(in navBar, context, "hunts.filters.nav", Loc.T(L.Hunts.FiltersTitle),
+            NavBarStyle.From(ui), navButtons.AsSpan(0, 1), view.BackTitle, back);
+        if (pressed == 0)
+        {
+            filter.Reset();
+            UiFeedback.Play(UiSound.Refresh);
+        }
     }
 
-    private static void Gap(float pixels) => ImGui.Dummy(new Vector2(0f, pixels * UiScale.Current));
+    private void DrawDataCenterRail()
+    {
+        var all = MusterDataCenters.All;
+        if (all.Length == 0)
+        {
+            return;
+        }
+
+        if (dataCenterLabels.Length != all.Length)
+        {
+            dataCenterLabels = new string[all.Length];
+            dataCenterActive = new bool[all.Length];
+            for (var index = 0; index < all.Length; index++)
+            {
+                dataCenterLabels[index] = all[index].Name;
+            }
+        }
+
+        var current = hunts.CurrentDataCenter;
+        for (var index = 0; index < all.Length; index++)
+        {
+            dataCenterActive[index] = string.Equals(all[index].Name, current, StringComparison.OrdinalIgnoreCase);
+        }
+
+        ui.SectionLabel(Loc.T(L.Hunts.DataCenterLabel), TextStyles.FootnoteEmphasized, 6f);
+        var tapped = dataCenterRail.Draw(ui, dataCenterLabels, dataCenterActive, "hunts.filters.datacenter");
+        if (tapped >= 0 && !dataCenterActive[tapped])
+        {
+            hunts.SelectDataCenter(all[tapped].Name);
+            filter.ClearWorlds();
+            boardDirty = true;
+            UiFeedback.Play(UiSound.Tap);
+        }
+
+        Gap(HuntsArt.CardGap);
+    }
+
+    private void DrawFilterWorlds(float scale)
+    {
+        if (hunts.CurrentDataCenter is not { Length: > 0 } dataCenter)
+        {
+            return;
+        }
+
+        var worlds = HuntDataCenterWorlds.WorldsFor(dataCenter);
+        if (worlds.Length == 0)
+        {
+            return;
+        }
+
+        ui.SectionLabel(Loc.T(L.Hunts.WorldsLabel), TextStyles.FootnoteEmphasized, 6f);
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var showingAll = filter.Worlds.Count == 0;
+        for (var index = 0; index < worlds.Length; index++)
+        {
+            var active = showingAll || filter.IsWorldSelected(worlds[index]);
+            var rect = HuntsArt.TileRect(origin, width, index, WorldColumns, scale);
+            var label = ResolveWorldLabel(worlds[index]);
+            if (!HuntsArt.ToggleTile(ui, label, rect, label, string.Empty, active, ui.Accent, true, scale))
+            {
+                continue;
+            }
+
+            ToggleFilterWorld(worlds, index, showingAll);
+            UiFeedback.Play(active ? UiSound.ToggleOff : UiSound.ToggleOn);
+        }
+
+        ImGui.Dummy(new Vector2(width, HuntsArt.TileGridHeight(worlds.Length, WorldColumns, scale) +
+                                       HuntsArt.CardGap * scale));
+    }
+
+    private void ToggleFilterWorld(string[] worlds, int tapped, bool showingAll)
+    {
+        if (showingAll)
+        {
+            for (var index = 0; index < worlds.Length; index++)
+            {
+                if (index != tapped)
+                {
+                    filter.ToggleWorld(worlds[index]);
+                }
+            }
+
+            return;
+        }
+
+        filter.ToggleWorld(worlds[tapped]);
+        var selected = 0;
+        for (var index = 0; index < worlds.Length; index++)
+        {
+            if (filter.IsWorldSelected(worlds[index]))
+            {
+                selected++;
+            }
+        }
+
+        if (selected == 0 || selected == worlds.Length)
+        {
+            filter.ClearWorlds();
+        }
+    }
+
+    private void DrawFilterRanks(float scale)
+    {
+        ui.SectionLabel(Loc.T(L.Hunts.RanksLabel), TextStyles.FootnoteEmphasized, 6f);
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        for (var index = 0; index < RankLabels.Length; index++)
+        {
+            var active = FilterRank(index);
+            var rect = HuntsArt.TileRect(origin, width, index, RankColumns, scale);
+            if (!HuntsArt.ToggleTile(ui, FilterRankTileIds[index], rect, RankLabels[index], string.Empty, active,
+                    HuntsArt.RankColor(RankLabels[index], ui.Accent), true, scale))
+            {
+                continue;
+            }
+
+            SetFilterRank(index, !active);
+            UiFeedback.Play(active ? UiSound.ToggleOff : UiSound.ToggleOn);
+        }
+
+        ImGui.Dummy(new Vector2(width, HuntsArt.TileGridHeight(RankLabels.Length, RankColumns, scale) +
+                                       HuntsArt.CardGap * scale));
+    }
+
+    private bool FilterRank(int index) => index switch
+    {
+        0 => filter.RankSS,
+        1 => filter.RankS,
+        2 => filter.RankA,
+        3 => filter.RankB,
+        _ => filter.RankF,
+    };
+
+    private void SetFilterRank(int index, bool value)
+    {
+        switch (index)
+        {
+            case 0:
+                filter.RankSS = value;
+                break;
+            case 1:
+                filter.RankS = value;
+                break;
+            case 2:
+                filter.RankA = value;
+                break;
+            case 3:
+                filter.RankB = value;
+                break;
+            default:
+                filter.RankF = value;
+                break;
+        }
+    }
+
+    private void DrawFilterStatuses(float scale)
+    {
+        ui.SectionLabel(Loc.T(L.Hunts.StatusLabel), TextStyles.FootnoteEmphasized, 6f);
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        for (var index = 0; index < StatusTileIds.Length; index++)
+        {
+            var status = FilterStatusAt(index);
+            var active = FilterStatus(status);
+            var rect = HuntsArt.TileRect(origin, width, index, StatusColumns, scale);
+            if (!HuntsArt.ToggleTile(ui, StatusTileIds[index], rect, StatusLabel(status), string.Empty, active,
+                    HuntsArt.StatusColor(status, ui.Accent), true, scale))
+            {
+                continue;
+            }
+
+            SetFilterStatus(status, !active);
+            UiFeedback.Play(active ? UiSound.ToggleOff : UiSound.ToggleOn);
+        }
+
+        ImGui.Dummy(new Vector2(width, HuntsArt.TileGridHeight(StatusTileIds.Length, StatusColumns, scale) +
+                                       HuntsArt.CardGap * scale));
+    }
+
+    private static HuntWindowStatus FilterStatusAt(int index) => index switch
+    {
+        0 => HuntWindowStatus.Open,
+        1 => HuntWindowStatus.Capped,
+        2 => HuntWindowStatus.Closed,
+        _ => HuntWindowStatus.Unmet,
+    };
+
+    private bool FilterStatus(HuntWindowStatus status) => status switch
+    {
+        HuntWindowStatus.Open => filter.StatusOpen,
+        HuntWindowStatus.Capped => filter.StatusCapped,
+        HuntWindowStatus.Closed => filter.StatusClosed,
+        _ => filter.StatusUnmet,
+    };
+
+    private void SetFilterStatus(HuntWindowStatus status, bool value)
+    {
+        switch (status)
+        {
+            case HuntWindowStatus.Open:
+                filter.StatusOpen = value;
+                break;
+            case HuntWindowStatus.Capped:
+                filter.StatusCapped = value;
+                break;
+            case HuntWindowStatus.Closed:
+                filter.StatusClosed = value;
+                break;
+            default:
+                filter.StatusUnmet = value;
+                break;
+        }
+    }
+
+    private void DrawFilterExpansions(float scale)
+    {
+        ui.SectionLabel(Loc.T(L.Hunts.ExpansionsLabel), TextStyles.FootnoteEmphasized, 6f);
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var count = HuntExpansions.Ids.Length;
+        for (var index = 0; index < count; index++)
+        {
+            var active = filter.IsExpansionActive(index);
+            var rect = HuntsArt.TileRect(origin, width, index, ExpansionColumns, scale);
+            if (!HuntsArt.ToggleTile(ui, FilterExpansionTileIds[index], rect, ExpansionName(index),
+                    HuntExpansions.Labels[index], active, ui.Accent, true, scale))
+            {
+                continue;
+            }
+
+            filter.ToggleExpansion(index);
+            UiFeedback.Play(active ? UiSound.ToggleOff : UiSound.ToggleOn);
+        }
+
+        ImGui.Dummy(new Vector2(width, HuntsArt.TileGridHeight(count, ExpansionColumns, scale) +
+                                       HuntsArt.CardGap * scale));
+    }
 }

@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -255,12 +256,19 @@ internal sealed class BingoCabinet
 
         celebratedRoundId = roundKey;
         winRoll.Snap(0);
+        var fullHouse = settledPayout >= PrizeAt(board, BingoRules.StageFullHouse);
+        if (playback.CalledLive && playback.CardCount > 0)
+        {
+            UiFeedback.Play(settledPayout <= 0 ? UiSound.GameWrong
+                : fullHouse ? UiSound.GamePowerUp : UiSound.GameWin);
+        }
+
         if (settledPayout <= 0)
         {
             return;
         }
 
-        if (settledPayout >= PrizeAt(board, BingoRules.StageFullHouse))
+        if (fullHouse)
         {
             particles.Confetti(celebrationAnchor, 90, ConfettiPalette, 330f * scale, 5f, 1.6f);
             particles.Sparkle(celebrationAnchor, 24, Gold, 190f * scale, 4f, 1.0f);
@@ -788,6 +796,7 @@ internal sealed class BingoCabinet
         {
             inlineReason = string.Empty;
             rooms.BuyBingoCards(requestedCards);
+            UiFeedback.Play(UiSound.CasinoChips);
         }
 
         var noteY = pillRect.Max.Y + 6f * scale;

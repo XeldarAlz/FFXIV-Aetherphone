@@ -14,12 +14,14 @@ internal sealed class ClockAlarmService : IDisposable
     private readonly Configuration configuration;
     private readonly FrameworkTicker ticker;
     private readonly NotificationService notifications;
+    private readonly AlarmRinger ringer;
 
     public ClockAlarmService(Configuration configuration, IFramework framework, NotificationService notifications,
-        AppGate gate)
+        AlarmRinger ringer, AppGate gate)
     {
         this.configuration = configuration;
         this.notifications = notifications;
+        this.ringer = ringer;
         ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick, gate);
     }
 
@@ -30,6 +32,7 @@ internal sealed class ClockAlarmService : IDisposable
 
     private void OnTick()
     {
+        ringer.Tick(DateTime.UtcNow);
         var dirty = CheckAlarms(DateTime.Now);
         dirty |= CheckTimer(DateTime.UtcNow);
         if (dirty)
@@ -64,7 +67,11 @@ internal sealed class ClockAlarmService : IDisposable
 
             dirty = true;
             var title = alarm.Label.Length > 0 ? alarm.Label : Loc.T(L.Clock.Alarm);
-            notifications.Notify(new PhoneNotification("clock", title, TimeText.Clock(due), DateTime.Now, Accent));
+            notifications.Notify(new PhoneNotification("clock", title, TimeText.Clock(due), DateTime.Now, Accent)
+            {
+                Muted = true,
+            });
+            ringer.Ring(AlarmRingKind.Alarm, alarm.Label, DateTime.UtcNow);
         }
 
         return dirty;
@@ -103,7 +110,11 @@ internal sealed class ClockAlarmService : IDisposable
 
         configuration.TimerNotified = true;
         notifications.Notify(new PhoneNotification("clock", Loc.T(L.Clock.TimerTitle), Loc.T(L.Clock.TimerFinished),
-            DateTime.Now, Accent));
+            DateTime.Now, Accent)
+        {
+            Muted = true,
+        });
+        ringer.Ring(AlarmRingKind.Timer, string.Empty, DateTime.UtcNow);
         return true;
     }
 }

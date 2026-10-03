@@ -1,9 +1,9 @@
 # App icon generator
 
-Generates home-screen app icons into `src/Aetherphone/Icons/` from
-[Tabler Icons](https://tabler.io/icons) (MIT). The map no longer covers the
-full shipped icon set; see "Known drift" below before assuming a regen is
-lossless.
+Generates the painted home-screen app icons into `src/Aetherphone/Icons/` from
+[Phosphor Icons](https://phosphoricons.com) (MIT) fill glyphs. The output
+follows the designer spec (1024 px master, two files per app, tile families,
+accent hues) so hand-painted replacements drop in without engineering work.
 
 ## Run
 
@@ -13,42 +13,81 @@ npm install
 npm run build
 ```
 
-This downloads each mapped Tabler outline SVG, recolors it to white, thickens
-the stroke slightly for small-size legibility, and rasterizes it to a 256px
-transparent PNG named after the app's `IPhoneApp.Id`.
+`npm run build` runs `generate-painted-icons.mjs`, which for every id in its
+`map`:
 
-The icons ship **white on transparent** so the client tints them to the active
-theme at runtime (`Windows/Components/AppIconTextures.cs` draws them via
-`AddImage(..., tint)`). Most app icons come from a PNG; the procedural art in
-`AppIconArt` covers the mini-games plus the Gamba casino app, and any id with
-neither falls back to the caller's letter glyph.
+1. downloads the Phosphor `fill` SVG pinned at version 2.1.1 (cached under
+   `masters/phosphor-2.1.1/`, gitignored),
+2. renders the glyph once to measure its real bounding box, then scales it to
+   the keyline: 58 % of the canvas wide, 62 % for symbols flagged `round`, and
+   60 % tall for symbols whose box is taller than wide,
+3. composes a 1024 x 1024 master: a full-bleed vertical gradient for the tile
+   family, then the symbol centred on it,
+4. writes the 1024 px masters to `masters/` (gitignored) and the shipped
+   512 px pair to `src/Aetherphone/Icons/`.
 
-## Known drift
+No corners, masks, shadows or gloss are baked in; the plugin draws those.
 
-The `map` in `generate-app-icons.mjs` (40 entries) is out of sync with the 43
-PNGs shipped in `src/Aetherphone/Icons/`:
+## The two files per id
 
-- Shipped but unmapped: `calculator.png`, `coin.png`, `notes.png`. All three
-  belong to live apps, so a full regen leaves those icons untouched.
-- Mapped but dead: `contacts`, `findpeople`, `phone` (legacy app ids migrated
-  away in `Configuration.cs`) and `kupoai` (no shipped app carries that id).
-  A regen recreates these PNGs anyway.
+| File | Content | Alpha |
+|---|---|---|
+| `<id>.png` | The finished icon: tile plus symbol, full-bleed | None (PNG-24) |
+| `<id>.fg.png` | The symbol alone, identical position and size, transparent tile | Straight (PNG-32) |
 
-Reconcile the map with the app registry before trusting a full regen.
+Both are sRGB with no ICC profile, compressed with sharp at level 9, no
+palette. The loader uses the foreground file to build the Dark, Tinted and
+Clear appearances.
 
-## Changing an icon
+## Tile families
 
-Edit the `map` (app id -> Tabler icon name) in `generate-app-icons.mjs` and
-re-run. Browse icon names at https://tabler.io/icons. Avoid `brand-*` icons;
-those are trademarked logos.
+| Family | Tile | Symbol |
+|---|---|---|
+| `colour` | The app hue as a vertical gradient, top 10 % lighter and bottom 12 % darker in OKLCH, chroma clipped to sRGB | White |
+| `paper` | `#FFFFFF` to `#F2F2F7` | The app hue (Calendar, Notes) |
+| `graphite` | `#3A3A3C` to `#1C1C1E` | `#D8D8DC` for Settings, white for Camera, Clock, Calculator |
+| `photos` | Gold to coral to azure | White |
 
-Pass app ids as arguments to regenerate only those icons:
+Hue anchors are the accent ring values from the icon spec; mini-games take the
+hue listed for their id in `src/Aetherphone/Core/Apps/AppAccents.cs`.
+
+## Regenerating one id
+
+Pass ids as arguments to repaint only those:
 
 ```sh
-node generate-app-icons.mjs messages
+node generate-painted-icons.mjs messages
+node generate-painted-icons.mjs settings camera 2048
 ```
+
+To change a symbol, edit that id's entry in the `map`
+(`icon("<phosphor-name>", "<family>", "<Hue>", { round, ink })`), browse names
+at https://phosphoricons.com, and re-run for that id. Both files are rewritten
+together; never ship one without the other.
+
+## Contact sheet
+
+```sh
+npm run sheet
+node contact-sheet.mjs <outDir>
+```
+
+Writes `painted-icons-sheet.png` (every painted id at 96 px with its label)
+and `painted-icons-sheet-32.png` (the same at 32 px) to `masters/` or the
+given directory, each tile masked with the plugin's 26 % squircle so the sheet
+reads the way the home grid will. An id counts as painted when both
+`<id>.png` and `<id>.fg.png` exist.
+
+## Legacy stencil generator
+
+`generate-app-icons.mjs` (`npm run stencils`) is the previous pipeline: it
+rasterizes Tabler outline icons to 256 px white-on-transparent stencils. It is
+kept for reference only. Running it overwrites painted `<id>.png` files with
+stencils while leaving the `.fg.png` companions in place, so do not run it
+against the shipped folder. `rolladeck.png` is a partner mark outside both
+generators.
 
 ## License
 
-Tabler Icons is MIT licensed; the notice ships with the plugin in
-`THIRD-PARTY-NOTICES.md` at the repo root.
+Phosphor Icons and Tabler Icons are MIT licensed; the notices ship with the
+plugin in `THIRD-PARTY-NOTICES.md` at the repo root.

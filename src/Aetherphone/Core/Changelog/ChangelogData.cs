@@ -6,6 +6,37 @@ internal static class ChangelogData
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new[]
     {
+        new ChangelogEntry("1.0.4.2", "2026-10-03", new ChangelogSection[]
+        {
+            new(L.Changelog.SectionPhone, L.Changelog.Release1042Phone),
+            new(L.Apps.Music, L.Changelog.Release1042Music),
+            new(L.Changelog.SectionWidgets, L.Changelog.Release1042Widgets),
+            new(L.Apps.Settings, L.Changelog.Release1042Settings),
+            new(L.Changelog.SectionTours, L.Changelog.Release1042Tours),
+            new(L.Changelog.SectionSounds, L.Changelog.Release1042Sounds),
+            new(L.Apps.Polls, L.Changelog.Release1042Polls),
+            new(L.Apps.Announcements, L.Changelog.Release1042Announcements),
+            new(L.Apps.Feedback, L.Changelog.Release1042Feedback),
+            new(L.Apps.Maps, L.Changelog.Release1042Maps),
+            new(L.Apps.Wallet, L.Changelog.Release1042Wallet),
+            new(L.Apps.Dailies, L.Changelog.Release1042Dailies),
+            new(L.Character.Activity, L.Changelog.Release1042Activity),
+            new(L.Apps.Notifications, L.Changelog.Release1042Notifications),
+            new(L.Apps.Market, L.Changelog.Release1042Market),
+            new(L.Apps.Hunts, L.Changelog.Release1042Hunts),
+            new(L.Apps.Housing, L.Changelog.Release1042Housing),
+            new(L.Apps.Jobs, L.Changelog.Release1042Jobs),
+            new(L.Apps.Strats, L.Changelog.Release1042Strats),
+            new(L.Apps.Skywatcher, L.Changelog.Release1042Skywatcher),
+            new(L.Apps.Games, L.Changelog.Release1042Games),
+            new(L.Apps.Clock, L.Changelog.Release1042Clock),
+            new(L.Apps.Aethergram, L.Changelog.Release1042Aethergram),
+            new(L.Apps.AetherStream, L.Changelog.Release1042MogCast),
+        }),
+        new ChangelogEntry("1.0.4.1", "2026-10-03", new ChangelogSection[]
+        {
+            new(L.Apps.AetherStream, L.Changelog.Release1041MogCast),
+        }),
         new ChangelogEntry("1.0.4.0", "2026-10-02", new ChangelogSection[]
         {
             new(L.Apps.Velvet, L.Changelog.Release1040Velvet),

@@ -30,7 +30,6 @@ internal sealed partial class AethergramApp
     private const float EmptyCommentsHeight = 180f;
     private const float ComposerAvatarRadius = 16f;
     private const float ComposerFailureLift = 22f;
-    private const float CommentSendRevealSmoothTime = 0.07f;
     private const int CommentSheetItemCount = 1;
 
     private static readonly TextStyle CommentNameStyle = new(0.95f, FontWeight.SemiBold);
@@ -359,7 +358,7 @@ internal sealed partial class AethergramApp
             AppSkin.Transparent, Ink.White, true, 11f, 56f, 1f, 19f);
         var canSend = !string.IsNullOrWhiteSpace(commentDraft) || commentAttachment.Path is not null;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        commentSendReveal.Step(canSend ? 1f : 0f, CommentSendRevealSmoothTime, delta);
+        commentSendReveal.Step(canSend ? 1f : 0f, Motion.Appear, delta);
         var hint = post.AuthorDisplayName.Length > 0 || post.AuthorHandle.Length > 0
             ? Loc.T(L.Aethergram.AddCommentFor, SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle))
             : Loc.T(L.Aethergram.AddComment);

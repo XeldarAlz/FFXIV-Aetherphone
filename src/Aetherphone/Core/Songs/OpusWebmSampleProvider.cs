@@ -7,6 +7,7 @@ namespace Aetherphone.Core.Songs;
 internal sealed class OpusWebmSampleProvider : ISampleProvider, ISongAudioReader
 {
     private const int MaxOpusFrameSamples = 5760;
+    private const double SeekPreRollSeconds = 0.08;
 
     private readonly Func<Stream> openSource;
     private readonly int channels;
@@ -99,6 +100,7 @@ internal sealed class OpusWebmSampleProvider : ISampleProvider, ISongAudioReader
     private void SeekTo(double targetSeconds)
     {
         Reopen();
+        SkipPackets(targetSeconds - SeekPreRollSeconds);
         while (positionSeconds < targetSeconds)
         {
             if (!TryDecodeNextFrame())
@@ -107,6 +109,22 @@ internal sealed class OpusWebmSampleProvider : ISampleProvider, ISongAudioReader
             }
 
             pendingOffset = pendingCount;
+        }
+    }
+
+    private void SkipPackets(double untilSeconds)
+    {
+        while (positionSeconds < untilSeconds)
+        {
+            var packet = demuxer.ReadNextPacket();
+            if (packet is null)
+            {
+                endOfStream = true;
+                return;
+            }
+
+            positionSeconds += (double)OpusPacket.SamplesPerChannel(packet.Value.Span, decoder.SampleRate) /
+                               decoder.SampleRate;
         }
     }
 

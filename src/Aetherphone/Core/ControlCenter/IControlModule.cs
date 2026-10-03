@@ -12,10 +12,11 @@ internal readonly struct ControlModuleContext
     public readonly ControlSpan Span;
     public readonly float Scale;
     public readonly float Opacity;
+    public readonly float Expansion;
     public readonly bool Interactive;
 
     public ControlModuleContext(ImDrawListPtr drawList, Rect rect, PhoneTheme theme, ControlSpan span, float scale,
-        float opacity, bool interactive)
+        float opacity, bool interactive, float expansion = 0f)
     {
         DrawList = drawList;
         Rect = rect;
@@ -24,7 +25,10 @@ internal readonly struct ControlModuleContext
         Scale = scale;
         Opacity = opacity;
         Interactive = interactive;
+        Expansion = expansion;
     }
+
+    public bool Expanded => Expansion > 0.5f;
 }
 
 internal interface IControlModule

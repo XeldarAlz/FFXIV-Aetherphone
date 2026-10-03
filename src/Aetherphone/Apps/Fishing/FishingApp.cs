@@ -1,371 +1,166 @@
-using Aetherphone.Core.Animation;
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
-using Aetherphone.Core.Game;
+using Aetherphone.Core.Fishing;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
+using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Fishing;
 
-internal sealed class FishingApp : IPhoneApp
+internal sealed partial class FishingApp : IPhoneApp
 {
-    private const int VoyageCount = 12;
-    private const float RefreshIntervalSeconds = 5f;
-    private const float RouteSwitchHeight = 34f;
-    private const float CardRounding = 18f;
-    private const float CardPadding = 16f;
-    private const float HeroFishRowHeight = 24f;
-    private const float UpcomingRowHeight = 56f;
-    private const float UpcomingTileSize = 32f;
-    private const double VoyagePeriodSeconds = 7200;
+    private const float BottomPad = 24f;
+    private const int TabCount = 2;
 
-    public string Id => "fishing";
+    public string Id => FishingCatalog.AppId;
     public string DisplayName => Loc.T(L.Apps.Fishing);
     public string Glyph => "F";
     public int BadgeCount => 0;
 
-    private readonly OceanVoyageSlot[] voyages = new OceanVoyageSlot[VoyageCount];
-    private readonly string[] routeLabels = new string[2];
+    private readonly FishingCatalog catalog;
+    private readonly FishingAlerts alerts;
+    private readonly ITextureProvider textures;
+    private readonly OceanVoyageText voyageText;
     private readonly AppSkin ui = new(AppPalettes.Fishing);
-    private OceanRoute route;
-    private RefreshCadence refreshCadence;
+    private readonly ViewRouter<FishingRoute> router;
+    private readonly RouterDraw<FishingRoute> drawView;
+    private readonly Action back;
+    private readonly TabBar tabBar = new();
+    private readonly TabItem[] tabItems = new TabItem[TabCount];
+    private readonly NavBarButton[] navButtons = new NavBarButton[1];
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
+    private FishingTab activeTab;
+    private float deltaSeconds;
 
-    public void OnOpened() => Refresh();
+    public FishingApp(FishingCatalog catalog, FishingAlerts alerts, ITextureProvider textures)
+    {
+        this.catalog = catalog;
+        this.alerts = alerts;
+        this.textures = textures;
+        voyageText = new OceanVoyageText(catalog);
+        router = new ViewRouter<FishingRoute>(FishingRoute.Root);
+        drawView = DrawView;
+        back = () => router.Pop();
+    }
+
+    public void OnOpened()
+    {
+        router.Reset();
+        RefreshVoyages();
+        catalog.EnsureLoaded();
+        fishListDirty = true;
+    }
 
     public void OnClosed()
     {
-    }
-
-    private void Refresh()
-    {
-        GameSchedule.UpcomingOceanVoyages(DateTime.UtcNow, route, voyages);
-        refreshCadence.Reset();
+        router.Reset();
     }
 
     public void Draw(in PhoneContext context)
     {
-        if (refreshCadence.Advance(ImGui.GetIO().DeltaTime, RefreshIntervalSeconds))
-        {
-            Refresh();
-        }
-
+        theme = context.Theme;
+        navigation = context.Navigation;
+        ui.Theme = theme;
+        deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var scale = UiScale.Current;
-        var content = context.Content;
-        var utcNow = DateTime.UtcNow;
+        ui.Backdrop(SceneChrome.ScreenFrom(context.Content, theme, scale));
+        TickVoyages();
+        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        UpdateTourHold();
+    }
 
-        ui.Theme = context.Theme;
-        var screen = SceneChrome.ScreenFrom(content, context.Theme, scale);
-        ui.Backdrop(screen);
-        AppHeader.Draw(context, DisplayName);
-
-        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
-        using (AppSurface.Begin(body))
+    private void DrawView(FishingRoute route, Rect area, int depth)
+    {
+        ui.Body(area);
+        switch (route.Screen)
         {
-            DrawRouteSwitch(scale);
-            DrawHero(utcNow, scale);
-            DrawUpcoming(utcNow, scale);
-            DrawNote(scale);
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
+            case FishingScreen.Voyage:
+                DrawVoyageDetail(area, route);
+                break;
+            case FishingScreen.Fish:
+                DrawFishDetail(area, route.ItemId);
+                break;
+            default:
+                DrawRoot(area);
+                break;
         }
     }
 
-    private void DrawRouteSwitch(float scale)
+    private void DrawRoot(Rect area)
     {
-        routeLabels[0] = Loc.T(L.Fishing.IndigoRoute);
-        routeLabels[1] = Loc.T(L.Fishing.RubyRoute);
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var row = new Rect(origin, origin + new Vector2(width, RouteSwitchHeight * scale));
-        var selected = SegmentStrip.Draw("fishing.route", row, routeLabels, (int)route, ui.Palette);
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, (RouteSwitchHeight + 12f) * scale));
-        if (selected == (int)route)
+        var scale = UiScale.Current;
+        var context = new PhoneContext(area, theme, navigation);
+        using (TabBar.ReserveContent(scale))
         {
-            return;
-        }
-
-        route = (OceanRoute)selected;
-        Refresh();
-    }
-
-    private void DrawHero(DateTime utcNow, float scale)
-    {
-        var current = voyages[0];
-        var plan = OceanRoutes.Resolve(current.Destination, current.Time);
-        var fishLines = Math.Max(1, plan.BlueFish.Length);
-        var width = ImGui.GetContentRegionAvail().X;
-        var height = (92f + fishLines * HeroFishRowHeight + 24f) * scale;
-        var origin = ImGui.GetCursorScreenPos();
-        var min = origin;
-        var max = origin + new Vector2(width, height);
-        var drawList = ImGui.GetWindowDrawList();
-        ui.Card(drawList, min, max, CardRounding * scale, elevated: true);
-        UiAnchors.Report("fishing.hero", new Rect(min, max));
-
-        var pad = CardPadding * scale;
-        var innerLeft = min.X + pad;
-        var innerRight = max.X - pad;
-        var tint = TimeOfDayTint(plan.TimeOfDay);
-
-        DrawHeroStatus(current, new Vector2(innerLeft, min.Y + 14f * scale), innerRight, scale);
-
-        var tile = 44f * scale;
-        var tileCenter = new Vector2(innerRight - tile * 0.5f, min.Y + 50f * scale);
-        ProgressRing.Glow(tileCenter, tile * 0.62f, tint, 0.30f + 0.16f * Pulse.Wave(Pulse.Breath));
-        IconTile.Draw(tileCenter, tile, tint, TimeOfDayIcon(plan.TimeOfDay));
-
-        var titleMaxWidth = innerRight - tile - 10f * scale - innerLeft;
-        var titleHovering = UiInteract.Hover(new Vector2(innerLeft, min.Y + 30f * scale),
-            new Vector2(innerLeft + titleMaxWidth, min.Y + 58f * scale));
-        Marquee.DrawLeft(new MarqueeId("fishing.hero.", plan.RouteName), plan.RouteName, innerLeft, min.Y + 34f * scale,
-            titleMaxWidth, TextStyles.Title2, ui.TitleInk, titleHovering);
-
-        DrawHeroTimeLine(current, plan.TimeOfDay, tint, new Vector2(innerLeft, min.Y + 64f * scale), utcNow);
-
-        var separatorY = min.Y + 88f * scale;
-        drawList.AddLine(new Vector2(innerLeft, separatorY), new Vector2(innerRight, separatorY),
-            ImGui.GetColorU32(ui.Palette.CardStroke), 1f);
-
-        var fishTop = separatorY + 4f * scale;
-        DrawHeroBlueFish(plan, innerLeft, innerRight, fishTop, scale);
-        UiAnchors.Report("fishing.bluefish",
-            new Rect(new Vector2(innerLeft, fishTop), new Vector2(innerRight, fishTop + fishLines * HeroFishRowHeight * scale)));
-
-        DrawHeroProgress(current, utcNow, new Rect(new Vector2(innerLeft, max.Y - 12f * scale),
-            new Vector2(innerRight, max.Y - 8f * scale)));
-
-        ImGui.SetCursorScreenPos(min);
-        ImGui.Dummy(new Vector2(width, height + 14f * scale));
-    }
-
-    private void DrawHeroStatus(in OceanVoyageSlot current, Vector2 position, float innerRight, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var textLeft = position.X;
-        if (current.BoardingNow)
-        {
-            var dotCenter = new Vector2(position.X + 4f * scale, position.Y + 7f * scale);
-            drawList.AddCircleFilled(dotCenter, 3.5f * scale,
-                ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.45f + 0.55f * Pulse.Wave(Pulse.Breath))), 16);
-            textLeft += 14f * scale;
-        }
-
-        var status = current.BoardingNow ? Loc.T(L.Fishing.NowBoarding) : Loc.T(L.Fishing.NextVoyage);
-        Typography.Draw(new Vector2(textLeft, position.Y), Loc.Culture.TextInfo.ToUpper(status),
-            current.BoardingNow ? ui.Accent : ui.Palette.HeaderInk, TextStyles.FootnoteEmphasized);
-
-        var when = LocalTime(current.BoardingUtc);
-        var whenSize = Typography.Measure(when, TextStyles.FootnoteEmphasized);
-        Typography.Draw(new Vector2(innerRight - whenSize.X, position.Y), when, ui.MutedInk,
-            TextStyles.FootnoteEmphasized);
-    }
-
-    private void DrawHeroTimeLine(in OceanVoyageSlot current, OceanTimeOfDay timeOfDay, Vector4 tint, Vector2 position,
-        DateTime utcNow)
-    {
-        var label = TimeOfDayLabel(timeOfDay);
-        Typography.Draw(position, label, tint, TextStyles.SubheadlineEmphasized);
-        var labelWidth = Typography.Measure(label, TextStyles.SubheadlineEmphasized).X;
-        var rest = current.BoardingNow
-            ? $" · {Loc.T(L.Time.Now)}"
-            : $" · {Relative(current.BoardingUtc - utcNow)}";
-        Typography.Draw(new Vector2(position.X + labelWidth, position.Y), rest, ui.MutedInk, TextStyles.Subheadline);
-    }
-
-    private void DrawHeroBlueFish(in OceanRoutePlan plan, float innerLeft, float innerRight, float top, float scale)
-    {
-        if (plan.BlueFish.Length == 0)
-        {
-            var rowCenterY = top + HeroFishRowHeight * 0.5f * scale;
-            Typography.Draw(new Vector2(innerLeft, rowCenterY - 7f * scale), Loc.T(L.Fishing.NoBlueFish), ui.MutedInk,
-                TextStyles.Footnote);
-            return;
-        }
-
-        for (var index = 0; index < plan.BlueFish.Length; index++)
-        {
-            var fish = plan.BlueFish[index];
-            var rowCenterY = top + (index + 0.5f) * HeroFishRowHeight * scale;
-            ProgressRing.CenterIcon(new Vector2(innerLeft + 7f * scale, rowCenterY), FontAwesomeIcon.Fish,
-                Accent.BlueSoft, 12f * scale);
-            var nameLeft = innerLeft + 22f * scale;
-            var rowAvailableWidth = MathF.Max(1f, innerRight - nameLeft);
-            var nameMaxWidth = rowAvailableWidth * 0.55f;
-            var nameWidth = Marquee.DrawLeftAuto(new MarqueeId("fishing.hero.bluefish.", index + ".name"), fish.Name, nameLeft,
-                rowCenterY - 8f * scale, nameMaxWidth, TextStyles.SubheadlineEmphasized, ui.BodyInk);
-            var baitMaxWidth = MathF.Max(1f, innerRight - (nameLeft + nameWidth + 8f * scale));
-            Marquee.DrawLeftAuto(new MarqueeId("fishing.hero.bluefish.", index + ".bait"), fish.Bait, nameLeft + nameWidth + 8f * scale,
-                rowCenterY - 6f * scale, baitMaxWidth, TextStyles.Footnote, ui.MutedInk);
-        }
-    }
-
-    private void DrawHeroProgress(in OceanVoyageSlot current, DateTime utcNow, Rect bar)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var radius = bar.Height * 0.5f;
-        Squircle.Fill(drawList, bar.Min, bar.Max, radius, ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.10f)));
-        var fraction = current.BoardingNow
-            ? 1f
-            : 1f - (float)Math.Clamp((current.BoardingUtc - utcNow).TotalSeconds / VoyagePeriodSeconds, 0f, 1f);
-        if (fraction <= 0f)
-        {
-            return;
-        }
-
-        var fillMax = new Vector2(bar.Min.X + Math.Max(bar.Height, bar.Width * fraction), bar.Max.Y);
-        Squircle.Fill(drawList, bar.Min, fillMax, radius, ImGui.GetColorU32(ui.Accent));
-    }
-
-    private void DrawUpcoming(DateTime utcNow, float scale)
-    {
-        ui.SectionLabel(Loc.T(L.Fishing.Upcoming), TextStyles.FootnoteEmphasized, 6f);
-        var card = GroupCard.Begin(ui, VoyageCount - 1, UpcomingRowHeight);
-        for (var index = 1; index < VoyageCount; index++)
-        {
-            var row = card.NextRow();
-            if (index == 1)
+            var navBar = AppHeader.BeginLargeTitle(context, false);
+            string title;
+            if (activeTab == FishingTab.Fish)
             {
-                UiAnchors.Report("fishing.upcoming", row);
+                title = Loc.T(L.Fishing.FishTab);
+                DrawFishList(navBar.Body, scale);
+            }
+            else
+            {
+                title = Loc.T(L.Fishing.OceanTitle);
+                DrawVoyages(navBar.Body, scale);
             }
 
-            DrawVoyageRow(row, voyages[index], utcNow, scale);
+            AppHeader.EndLargeTitle(in navBar, context, "fishing.nav", title, NavBarStyle.From(ui),
+                ReadOnlySpan<NavBarButton>.Empty);
         }
 
-        card.End();
-        ImGui.Dummy(new Vector2(0f, 4f * scale));
+        DrawTabBar(area);
     }
 
-    private void DrawVoyageRow(Rect row, in OceanVoyageSlot voyage, DateTime utcNow, float scale)
+    private void DrawTabBar(Rect area)
     {
-        var plan = OceanRoutes.Resolve(voyage.Destination, voyage.Time);
-        var tile = UpcomingTileSize * scale;
-        var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
-        IconTile.Draw(tileCenter, tile, TimeOfDayTint(plan.TimeOfDay), TimeOfDayIcon(plan.TimeOfDay));
-
-        var time = LocalTime(voyage.BoardingUtc);
-        var timeSize = Typography.Measure(time, TextStyles.SubheadlineEmphasized);
-        Typography.Draw(new Vector2(row.Max.X - timeSize.X, row.Center.Y - 17f * scale), time, ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        var relative = Relative(voyage.BoardingUtc - utcNow);
-        var relativeSize = Typography.Measure(relative, TextStyles.Caption1);
-        Typography.Draw(new Vector2(row.Max.X - relativeSize.X, row.Center.Y + 4f * scale), relative, ui.MutedInk,
-            TextStyles.Caption1);
-
-        var textLeft = row.Min.X + tile + 12f * scale;
-        var textRight = row.Max.X - timeSize.X - 12f * scale;
-        var rowMaxWidth = textRight - textLeft;
-        var rowId = "fishing.row." + plan.RouteName + "." + voyage.BoardingUtc.Ticks;
-        if (plan.BlueFish.Length == 0)
+        tabItems[(int)FishingTab.Voyages] = new TabItem(Loc.T(L.Fishing.VoyagesTab), IconGlyph.Of(FontAwesomeIcon.Anchor),
+            AnchorKey: "fishing.tab.voyages");
+        tabItems[(int)FishingTab.Fish] = new TabItem(Loc.T(L.Fishing.FishTab), IconGlyph.Of(FontAwesomeIcon.Fish),
+            AnchorKey: "fishing.tab.fish");
+        var result = tabBar.Draw(area, ui, tabItems, (int)activeTab);
+        if (result.Tapped < 0 || result.Tapped == (int)activeTab)
         {
-            var nameSize = Typography.Measure(plan.RouteName, TextStyles.Headline);
-            var nameY = row.Center.Y - nameSize.Y * 0.5f;
-            var nameHovering = UiInteract.Hover(new Vector2(textLeft, nameY),
-                new Vector2(textLeft + rowMaxWidth, nameY + nameSize.Y));
-            Marquee.DrawLeft(rowId, plan.RouteName,
-                textLeft, nameY, rowMaxWidth, TextStyles.Headline, ui.TitleInk, nameHovering);
+            return;
         }
-        else
+
+        activeTab = (FishingTab)result.Tapped;
+        UiFeedback.Play(UiSound.Tap);
+        if (activeTab == FishingTab.Fish)
         {
-            var nameY = row.Center.Y - 18f * scale;
-            var nameSize = Typography.Measure(plan.RouteName, TextStyles.Headline);
-            var nameHovering = UiInteract.Hover(new Vector2(textLeft, nameY),
-                new Vector2(textLeft + rowMaxWidth, nameY + nameSize.Y));
-            Marquee.DrawLeft(rowId, plan.RouteName, textLeft, nameY,
-                rowMaxWidth, TextStyles.Headline, ui.TitleInk, nameHovering);
-            ProgressRing.CenterIcon(new Vector2(textLeft + 5f * scale, row.Center.Y + 9f * scale),
-                FontAwesomeIcon.Fish, Accent.BlueSoft, 10f * scale);
-            var blueFishLeft = textLeft + 14f * scale;
-            var blueFishY = row.Center.Y + 2f * scale;
-            var blueFishMaxWidth = MathF.Max(1f, textRight - blueFishLeft);
-            var blueFishNames = BlueFishNames(plan);
-            var blueFishSize = Typography.Measure(blueFishNames, TextStyles.Footnote);
-            var blueFishHovering = UiInteract.Hover(new Vector2(blueFishLeft, blueFishY),
-                new Vector2(blueFishLeft + blueFishMaxWidth, blueFishY + blueFishSize.Y));
-            Marquee.DrawLeft(new MarqueeId(rowId, ".sub"), blueFishNames, blueFishLeft, blueFishY, blueFishMaxWidth,
-                TextStyles.Footnote, ui.MutedInk, blueFishHovering);
+            catalog.EnsureLoaded();
+            fishListDirty = true;
         }
     }
 
-    private void DrawNote(float scale)
+    private bool BellButton(Rect rect, bool active, string tooltip)
     {
-        ImGui.Dummy(new Vector2(0f, 8f * scale));
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 4f * scale);
-        using (Plugin.Fonts.Push(TextStyles.Footnote.Scale))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.MutedInk))
-        {
-            Typography.Wrapped(Loc.T(L.Fishing.DeparturesNote));
-        }
+        var glyph = active ? PhoneIcons.BellFilled : PhoneIcons.Bell;
+        var ink = active ? ui.Accent : ui.TitleInk;
+        var pressed = ui.IconButton(rect.Center, rect.Width * 0.5f, glyph, ink, ui.Palette.FieldSurface,
+            1f, tooltip);
+        return pressed;
     }
 
-    private static string BlueFishNames(in OceanRoutePlan plan)
+    private void UpdateTourHold()
     {
-        if (plan.BlueFish.Length == 1)
+        if (router.Depth == 1 && activeTab == FishingTab.Voyages)
         {
-            return plan.BlueFish[0].Name;
+            TourHolds.Release(Id);
+            return;
         }
 
-        return string.Concat(plan.BlueFish[0].Name, " · ", plan.BlueFish[1].Name);
+        TourHolds.Hold(Id);
     }
 
-    private static Vector4 TimeOfDayTint(OceanTimeOfDay timeOfDay) =>
-        timeOfDay switch
-        {
-            OceanTimeOfDay.Sunset => Accent.Rose,
-            OceanTimeOfDay.Night => Accent.Violet,
-            _ => Accent.Amber,
-        };
-
-    private static FontAwesomeIcon TimeOfDayIcon(OceanTimeOfDay timeOfDay) =>
-        timeOfDay switch
-        {
-            OceanTimeOfDay.Sunset => FontAwesomeIcon.CloudSun,
-            OceanTimeOfDay.Night => FontAwesomeIcon.Moon,
-            _ => FontAwesomeIcon.Sun,
-        };
-
-    private static string TimeOfDayLabel(OceanTimeOfDay timeOfDay) =>
-        timeOfDay switch
-        {
-            OceanTimeOfDay.Sunset => Loc.T(L.Fishing.Sunset),
-            OceanTimeOfDay.Night => Loc.T(L.Fishing.Night),
-            _ => Loc.T(L.Fishing.Day),
-        };
-
-    private static string LocalTime(DateTime utc)
-    {
-        var local = utc.ToLocalTime();
-        return string.Concat(local.ToString("ddd", Loc.Culture), " ", TimeText.Clock(local));
-    }
-
-    private static string Relative(TimeSpan remaining)
-    {
-        if (remaining <= TimeSpan.Zero)
-        {
-            return Loc.T(L.Time.Now);
-        }
-
-        var totalMinutes = (int)remaining.TotalMinutes;
-        if (totalMinutes < 60)
-        {
-            return Loc.T(L.Time.InMinutes, Math.Max(1, totalMinutes));
-        }
-
-        var totalHours = totalMinutes / 60;
-        if (totalHours < 24)
-        {
-            var minutes = totalMinutes % 60;
-            return minutes == 0 ? Loc.T(L.Time.InHours, totalHours) : Loc.T(L.Time.InHoursMinutes, totalHours, minutes);
-        }
-
-        var days = totalHours / 24;
-        var hours = totalHours % 24;
-        return Loc.T(L.Fishing.InDays, days, hours);
-    }
+    private static void BottomSpacer(float scale) => ImGui.Dummy(new Vector2(0f, BottomPad * scale));
 
     public void Dispose()
     {

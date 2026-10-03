@@ -12,9 +12,18 @@ internal sealed class FeedbackClient
         this.net = net;
     }
 
-    public Task<FeedbackDto?> CreateAsync(string text, string[] imageKeys, CancellationToken token,
+    public Task<FeedbackDto?> CreateAsync(string text, string[] imageKeys, string category, string context,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync("/feedback", new CreateFeedbackRequest(text, imageKeys, category, context),
+            AethernetJsonContext.Default.CreateFeedbackRequest, AethernetJsonContext.Default.FeedbackDto, token, null,
+            onFailure);
+    }
+
+    public Task<MyFeedbackPage?> MineAsync(string? cursor, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
-        return net.PostAsync("/feedback", new CreateFeedbackRequest(text, imageKeys), AethernetJsonContext.Default.CreateFeedbackRequest, AethernetJsonContext.Default.FeedbackDto, token, null, onFailure);
+        var path = cursor is null ? "/feedback/mine" : $"/feedback/mine?cursor={Uri.EscapeDataString(cursor)}";
+        return net.GetAsync(path, AethernetJsonContext.Default.MyFeedbackPage, token, null, onFailure);
     }
 }

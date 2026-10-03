@@ -123,6 +123,7 @@ internal sealed class SpotlightIndex
     private readonly ISpotlightVenues? venueTarget;
     private readonly List<SpotlightResult> results = new();
     private readonly List<MarketItemRef> marketScratch = new();
+    private readonly RecentLaunches recents = new();
     private readonly int[] sectionBest = new int[KindCount];
     private readonly SectionComparer comparer;
     private string lastQuery = string.Empty;
@@ -165,6 +166,36 @@ internal sealed class SpotlightIndex
     public IReadOnlyList<SpotlightResult> Results => results;
 
     public bool CallsAvailable => configuration.CallsEnabled;
+
+    public void NoteLaunched(string appId) => recents.Note(appId);
+
+    public void CollectRecents(List<IPhoneApp> into)
+    {
+        into.Clear();
+        for (var slot = 0; slot < recents.Count; slot++)
+        {
+            var app = FindApp(recents[slot]);
+            if (app is null || !app.IsAvailable || !installer.IsInstalled(app.Id))
+            {
+                continue;
+            }
+
+            into.Add(app);
+        }
+    }
+
+    private IPhoneApp? FindApp(string appId)
+    {
+        for (var index = 0; index < apps.Count; index++)
+        {
+            if (string.Equals(apps[index].Id, appId, StringComparison.Ordinal))
+            {
+                return apps[index];
+            }
+        }
+
+        return null;
+    }
 
     public void Clear()
     {

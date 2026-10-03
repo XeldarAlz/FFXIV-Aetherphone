@@ -38,6 +38,7 @@ internal sealed class ShellOverlayCoordinator
     private readonly CoinEarnPill coinPill;
     private readonly CoinEarnFloats coinFloats;
     private readonly IncomingCallOverlay incomingOverlay;
+    private readonly AlarmOverlay alarmOverlay;
     private readonly BanOverlay banOverlay;
     private readonly ConfirmOverlay confirmOverlay;
     private readonly ReportOverlay reportOverlay;
@@ -46,11 +47,12 @@ internal sealed class ShellOverlayCoordinator
     private readonly EncryptionHelpOverlay encryptionHelpOverlay;
     private readonly OnboardingDirector director;
     private readonly SetupOverlay setup;
+    private bool bannerWasVisible;
 
     public ShellOverlayCoordinator(Configuration configuration, LoadingScreen loading, NavigationStack navigation,
         ControlCenter controlCenter, AppSwitcher appSwitcher, NotificationBanner banner, DynamicIsland island,
         RateLimitPill rateLimitPill, ShortcutRunPill shortcutPill, CoinEarnPill coinPill, CoinEarnFloats coinFloats,
-        IncomingCallOverlay incomingOverlay, BanOverlay banOverlay,
+        IncomingCallOverlay incomingOverlay, AlarmOverlay alarmOverlay, BanOverlay banOverlay,
         ConfirmOverlay confirmOverlay, ReportOverlay reportOverlay, ShareSheet shareSheet,
         ConductGateOverlay conductOverlay, EncryptionHelpOverlay encryptionHelpOverlay,
         OnboardingDirector director, SetupOverlay setup)
@@ -67,6 +69,7 @@ internal sealed class ShellOverlayCoordinator
         this.rateLimitPill = rateLimitPill;
         this.shortcutPill = shortcutPill;
         this.incomingOverlay = incomingOverlay;
+        this.alarmOverlay = alarmOverlay;
         this.banOverlay = banOverlay;
         this.confirmOverlay = confirmOverlay;
         this.reportOverlay = reportOverlay;
@@ -89,7 +92,7 @@ internal sealed class ShellOverlayCoordinator
         var controlCenterCaptures = !loading.IsActive && controlCenter.CapturesPointer;
         var switcherCaptures = !loading.IsActive && appSwitcher.CapturesPointer;
         var overlaysCapture = (controlCenterCaptures && !director.WantsControlCenter) || switcherCaptures;
-        var ringing = !loading.IsActive && incomingOverlay.IsRinging;
+        var ringing = !loading.IsActive && (incomingOverlay.IsRinging || alarmOverlay.IsRinging);
         var islandCaptures = !loading.IsActive && !controlCenterCaptures && !switcherCaptures && !ringing &&
                              !confirming && !setupActive && !conductActive && !helpActive && !banNotice &&
                              !DragScrollHost.AnyDragging &&
@@ -186,6 +189,12 @@ internal sealed class ShellOverlayCoordinator
             return;
         }
 
+        if (banner.IsVisible && !bannerWasVisible)
+        {
+            island.Pulse();
+        }
+
+        bannerWasVisible = banner.IsVisible;
         if (!director.CapturesPointer)
         {
             if (!controlCenter.IsActive && !appSwitcher.IsActive)
@@ -200,6 +209,7 @@ internal sealed class ShellOverlayCoordinator
                 }
             }
 
+            alarmOverlay.Draw(screen, theme);
             incomingOverlay.Draw(screen, theme);
         }
 

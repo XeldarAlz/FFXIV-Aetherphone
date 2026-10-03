@@ -12,20 +12,31 @@ internal readonly record struct SongSearchEntry(
     string Title,
     string Author,
     string ThumbnailUrl,
-    int DurationSeconds);
+    int DurationSeconds,
+    string ChannelId);
+
+internal readonly record struct SongPlaylistResult(string Title, string Author, SongSearchEntry[] Entries);
 
 internal sealed class SongLinkResolver
 {
     private const string FormatSelector = "bestaudio[acodec=opus]/bestaudio[ext=m4a]/bestaudio/best";
     private const string WatchUrlPrefix = "https://www.youtube.com/watch?v=";
     private const string ThumbnailUrlFormat = "https://i.ytimg.com/vi/{0}/hqdefault.jpg";
-    private const string SearchPrintTemplate = "%(id)s\t%(duration)s\t%(channel,uploader)s\t%(title)s";
+    private const string SearchPrintTemplate =
+        "%(id)s\t%(duration)s\t%(channel,uploader)s\t%(channel_id,uploader_id)s\t%(title)s";
+    private const string PlaylistHeaderMarker = "#playlist";
+    private const string PlaylistHeaderTemplate =
+        "playlist:" + PlaylistHeaderMarker + "\t%(title)s\t%(channel,uploader)s";
+    private const string MixUrlFormat = "https://www.youtube.com/watch?v={0}&list=RD{0}";
+    private const int VideoIdLength = 11;
+    public const int PlaylistLimit = 5000;
     private const int ErrorExcerptLength = 300;
     private const int ExitPollMilliseconds = 200;
     private const long UpdateCheckCooldownMilliseconds = 10 * 60 * 1000;
     private static readonly TimeSpan FetchTimeout = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan SearchTimeout = TimeSpan.FromSeconds(45);
+    private static readonly TimeSpan PlaylistTimeout = TimeSpan.FromMinutes(3);
     private static readonly HttpClient StreamingClient = new() { Timeout = Timeout.InfiniteTimeSpan };
 
     private readonly string stagingDirectory;
@@ -50,7 +61,7 @@ internal sealed class SongLinkResolver
 
     public SongResolvedAudio? Fetch(string videoId, CancellationToken token)
     {
-        if (!HasResolver || token.IsCancellationRequested)
+        if (!HasResolver || token.IsCancellationRequested || !PlaylistImporter.IsVideoId(videoId))
         {
             return null;
         }
@@ -104,7 +115,7 @@ internal sealed class SongLinkResolver
 
     public SongResolvedStream? ResolveStreamUrl(string videoId, CancellationToken token)
     {
-        if (!HasResolver || token.IsCancellationRequested)
+        if (!HasResolver || token.IsCancellationRequested || !PlaylistImporter.IsVideoId(videoId))
         {
             return null;
         }
@@ -183,15 +194,93 @@ internal sealed class SongLinkResolver
         }
     }
 
+    public SongPlaylistResult? FetchPlaylist(string url, int maxEntries, CancellationToken token)
+    {
+        if (!HasResolver || token.IsCancellationRequested || string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        var limit = Math.Clamp(maxEntries, 1, PlaylistLimit);
+        try
+        {
+            var output = Run(startInfo =>
+            {
+                startInfo.ArgumentList.Add("--flat-playlist");
+                startInfo.ArgumentList.Add("--yes-playlist");
+                startInfo.ArgumentList.Add("--playlist-end");
+                startInfo.ArgumentList.Add(limit.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                startInfo.ArgumentList.Add("--print");
+                startInfo.ArgumentList.Add(SearchPrintTemplate);
+                startInfo.ArgumentList.Add("--print");
+                startInfo.ArgumentList.Add(PlaylistHeaderTemplate);
+                startInfo.ArgumentList.Add("--");
+                startInfo.ArgumentList.Add(url.Trim());
+            }, PlaylistTimeout, token);
+            return output is null ? null : ParsePlaylistOutput(output);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            AepLog.Warning(exception, "Song link resolver playlist fetch failed");
+            return null;
+        }
+    }
+
+    public SongSearchEntry[]? FetchMix(string videoId, int maxEntries, CancellationToken token)
+    {
+        if (!PlaylistImporter.IsVideoId(videoId))
+        {
+            return null;
+        }
+
+        return FetchPlaylist(string.Format(MixUrlFormat, videoId), maxEntries, token)?.Entries;
+    }
+
+    internal static SongPlaylistResult ParsePlaylistOutput(string output)
+    {
+        var title = string.Empty;
+        var author = string.Empty;
+        var lines = output.Split('\n');
+        var body = new System.Text.StringBuilder(output.Length);
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var line = lines[index].TrimEnd('\r');
+            if (!line.StartsWith(PlaylistHeaderMarker + "\t", StringComparison.Ordinal))
+            {
+                body.Append(line).Append('\n');
+                continue;
+            }
+
+            var fields = line.Split('\t', 3);
+            title = fields.Length > 1 ? CleanField(fields[1]) : string.Empty;
+            author = fields.Length > 2 ? CleanField(fields[2]) : string.Empty;
+        }
+
+        return new SongPlaylistResult(title, author, ParseEntries(body.ToString(), true));
+    }
+
     internal static Stream OpenHttpStream(string url, CancellationToken token)
     {
         var response = StreamingClient
             .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token).GetAwaiter().GetResult();
-        response.EnsureSuccessStatusCode();
-        return response.Content.ReadAsStream(token);
+        try
+        {
+            response.EnsureSuccessStatusCode();
+            return response.Content.ReadAsStream(token);
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
     }
 
     private static SongSearchEntry[] ParseSearchOutput(string output)
+    {
+        return ParseEntries(output, false);
+    }
+
+    internal static SongSearchEntry[] ParseEntries(string output, bool allowUnknownDuration)
     {
         var lines = output.Split('\n');
         var entries = new List<SongSearchEntry>(lines.Length);
@@ -203,25 +292,44 @@ internal sealed class SongLinkResolver
                 continue;
             }
 
-            var fields = line.Split('\t', 4);
-            if (fields.Length < 4 || fields[0].Length == 0)
+            var fields = line.Split('\t', 5);
+            if (fields.Length < 5 || fields[0].Length != VideoIdLength)
             {
                 continue;
             }
 
-            if (!double.TryParse(fields[1], System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var durationSeconds)
-                || durationSeconds <= 0)
+            var hasDuration = double.TryParse(fields[1], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var durationSeconds) && durationSeconds > 0;
+            if (!hasDuration && !allowUnknownDuration)
+            {
+                continue;
+            }
+
+            var title = CleanField(fields[4]);
+            if (IsUnavailableTitle(title))
             {
                 continue;
             }
 
             var videoId = fields[0];
-            entries.Add(new SongSearchEntry(videoId, fields[3], fields[2],
-                string.Format(ThumbnailUrlFormat, videoId), (int)durationSeconds));
+            entries.Add(new SongSearchEntry(videoId, title, CleanField(fields[2]),
+                string.Format(ThumbnailUrlFormat, videoId), hasDuration ? (int)durationSeconds : 0,
+                CleanField(fields[3])));
         }
 
         return entries.ToArray();
+    }
+
+    private static string CleanField(string value)
+    {
+        return string.Equals(value, "NA", StringComparison.Ordinal) ? string.Empty : value.Trim();
+    }
+
+    private static bool IsUnavailableTitle(string title)
+    {
+        return title.Length == 0 ||
+               string.Equals(title, "[Private video]", StringComparison.Ordinal) ||
+               string.Equals(title, "[Deleted video]", StringComparison.Ordinal);
     }
 
     private string? Run(Action<ProcessStartInfo> configure, TimeSpan timeout, CancellationToken token)

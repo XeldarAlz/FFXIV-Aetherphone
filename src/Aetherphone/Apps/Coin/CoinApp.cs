@@ -13,8 +13,12 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Coin;
 
-internal sealed partial class CoinApp : IPhoneApp
+internal sealed partial class CoinApp : IPhoneApp, ITabRouteTarget
 {
+    private PendingTab pendingTab;
+
+    public void OpenTab(string tab) => pendingTab.Request(tab);
+
     private const int TabWallet = 0;
     private const int TabShop = 1;
     private const int TabInventory = 2;
@@ -122,7 +126,7 @@ internal sealed partial class CoinApp : IPhoneApp
             return;
         }
 
-        if (GuideIntents.Consume("coin.tab.shop"))
+        if (pendingTab.Take("coin.tab.shop"))
         {
             EnterTab(TabShop);
         }
@@ -148,7 +152,10 @@ internal sealed partial class CoinApp : IPhoneApp
         var segRow = new Rect(
             new Vector2(area.Min.X + inset, top + 4f * scale),
             new Vector2(area.Max.X - inset, top + 34f * scale));
-        UiAnchors.Report("coin.tabs", segRow);
+        var segmentWidth = segRow.Width / tabOptions.Length;
+        UiAnchors.Report("coin.tab.shop",
+            new Rect(new Vector2(segRow.Min.X + segmentWidth * TabShop, segRow.Min.Y),
+                new Vector2(segRow.Min.X + segmentWidth * (TabShop + 1), segRow.Max.Y)));
         tabOptions[TabWallet] = Loc.T(L.Coin.TabWallet);
         tabOptions[TabShop] = Loc.T(L.Coin.TabShop);
         tabOptions[TabInventory] = Loc.T(L.Coin.TabInventory);

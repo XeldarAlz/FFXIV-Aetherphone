@@ -1,21 +1,21 @@
+using Aetherphone.Core.Animation;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
 
 internal sealed class ActionReveal<TPanel> where TPanel : struct, Enum
 {
-    private const float OpenSeconds = 0.22f;
-    private const float CloseSeconds = 0.14f;
+    private const float ClosedEpsilon = 0.01f;
 
     private string? targetId;
     private TPanel current;
     private bool closing;
-    private float progress;
+    private Spring progress;
     private int openedFrame;
 
     public string? TargetId => targetId;
     public TPanel Current => current;
-    public float Progress => progress;
+    public float Progress => Math.Clamp(progress.Value, 0f, 1f);
     public bool Closing => closing;
     public int OpenedFrame => openedFrame;
     public bool IsOpen => !EqualityComparer<TPanel>.Default.Equals(current, default);
@@ -27,7 +27,7 @@ internal sealed class ActionReveal<TPanel> where TPanel : struct, Enum
     {
         if (targetId != id || !EqualityComparer<TPanel>.Default.Equals(current, panel))
         {
-            progress = 0f;
+            progress.SnapTo(0f);
         }
 
         targetId = id;
@@ -49,7 +49,7 @@ internal sealed class ActionReveal<TPanel> where TPanel : struct, Enum
         targetId = null;
         current = default;
         closing = false;
-        progress = 0f;
+        progress.SnapTo(0f);
     }
 
     public void Tick(float deltaSeconds)
@@ -61,8 +61,8 @@ internal sealed class ActionReveal<TPanel> where TPanel : struct, Enum
 
         if (closing)
         {
-            progress -= deltaSeconds / CloseSeconds;
-            if (progress <= 0f)
+            progress.Step(0f, Motion.Appear, deltaSeconds);
+            if (progress.Value <= ClosedEpsilon)
             {
                 Reset();
             }
@@ -70,10 +70,7 @@ internal sealed class ActionReveal<TPanel> where TPanel : struct, Enum
             return;
         }
 
-        if (progress < 1f)
-        {
-            progress = MathF.Min(1f, progress + deltaSeconds / OpenSeconds);
-        }
+        progress.Step(1f, Motion.Appear, deltaSeconds);
     }
 
     public void DismissOnOutsideClick(Vector2 min, Vector2 max)

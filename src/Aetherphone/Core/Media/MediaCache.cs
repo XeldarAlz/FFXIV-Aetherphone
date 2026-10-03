@@ -58,6 +58,9 @@ internal sealed class MediaCache : IDisposable
         return Request(new LedgerKey(key, level), source, ready.Nearest(key, level));
     }
 
+    public Task<byte[]?> BytesFor(string key, Func<CancellationToken, Task<byte[]?>> source) =>
+        BytesAsync(key, source, cancellation.Token);
+
     private MediaResult Request(LedgerKey key, Func<CancellationToken, Task<byte[]?>> source,
         IDalamudTextureWrap? standIn)
     {

@@ -13,6 +13,7 @@ internal sealed class SliderModule : IControlModule
     private readonly Func<float> read;
     private readonly Action<float> write;
     private readonly Action onReleased;
+    private readonly string detailId;
 
     public SliderModule(string id, LocString label, Func<FontAwesomeIcon> icon, Func<float> read, Action<float> write,
         Action onReleased)
@@ -23,6 +24,7 @@ internal sealed class SliderModule : IControlModule
         this.read = read;
         this.write = write;
         this.onReleased = onReleased;
+        detailId = "cc.detail." + id;
     }
 
     public string Id { get; }
@@ -34,8 +36,8 @@ internal sealed class SliderModule : IControlModule
     public void Draw(in ControlModuleContext context)
     {
         var current = read();
-        var next = ControlTile.VerticalSlider(context.DrawList, context.Rect, current, icon(), Loc.T(label),
-            context.Theme, context.Opacity, context.Interactive, out var released);
+        var next = ControlTile.VerticalSlider(context.DrawList, context.Expanded ? detailId : Id, context.Rect,
+            current, icon(), Loc.T(label), context.Theme, context.Opacity, context.Interactive, out var released);
         if (MathF.Abs(next - current) > 0.0005f)
         {
             write(next);

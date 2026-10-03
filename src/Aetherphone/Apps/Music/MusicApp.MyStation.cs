@@ -47,7 +47,7 @@ internal sealed partial class MusicApp
     private void OpenMyStation()
     {
         LoadStationDrafts();
-        Router.Push(View.MyStation);
+        Push(MusicRoute.Of(MusicScreen.MyStation));
     }
 
     private void OpenStationArtwork()
@@ -55,7 +55,7 @@ internal sealed partial class MusicApp
         artworkPicker ??= new ImagePickCrop(photoLibrary, wallpaperImages);
         artworkPicker.Open();
         artworkOutcome = 0;
-        Router.Push(View.StationArtwork);
+        Push(MusicRoute.Of(MusicScreen.StationArtwork));
     }
 
     private void DrawStationArtwork(in PhoneContext context)
@@ -103,12 +103,12 @@ internal sealed partial class MusicApp
         var pickedCrop = crop;
         _ = Task.Run(async () =>
         {
-            var ok = await StationArtworkUpload
+            var succeeded = await StationArtworkUpload
                 .RunAsync(aethernet.Media, community, request, pickedPath, pickedCrop, CancellationToken.None)
                 .ConfigureAwait(false);
             artworkSaving = false;
-            artworkOutcome = ok ? 1 : 2;
-            if (ok)
+            artworkOutcome = succeeded ? 1 : 2;
+            if (succeeded)
             {
                 LoadStationDrafts();
             }
@@ -214,10 +214,10 @@ internal sealed partial class MusicApp
     private void DrawMyStation(in PhoneContext context)
     {
         var scale = UiScale.Current;
-        var content = context.Content;
-        DrawTopBar(context, Loc.T(L.Music.MyStation), PopStationPage);
+        var frame = BeginPage(context);
         if (community.Mine is not { } mine)
         {
+            EndPage(in frame, context, Loc.T(L.Music.MyStation));
             return;
         }
 
@@ -226,8 +226,7 @@ internal sealed partial class MusicApp
             LoadStationDrafts();
         }
 
-        var body = ScrollBody(content, scale);
-        using (AppSurface.Begin(body))
+        using (AppSurface.Begin(frame.Body))
         {
             ImGui.Dummy(new Vector2(0f, 8f * scale));
             DrawStationStatusLine(scale, mine.Station);
@@ -250,6 +249,8 @@ internal sealed partial class MusicApp
             DrawCredentials(scale, mine.Credentials);
             ImGui.Dummy(new Vector2(0f, 14f * scale));
         }
+
+        EndPage(in frame, context, Loc.T(L.Music.MyStation));
     }
 
     private void DrawStationStatusLine(float scale, CommunityStationDto station)
@@ -450,11 +451,11 @@ internal sealed partial class MusicApp
 
     private async Task SaveStationAsync(UpdateCommunityStationRequest request)
     {
-        var ok = await community.SaveMineAsync(request).ConfigureAwait(false);
-        stationSaveFailed = !ok;
-        stationSaveDone = ok;
+        var succeeded = await community.SaveMineAsync(request).ConfigureAwait(false);
+        stationSaveFailed = !succeeded;
+        stationSaveDone = succeeded;
         stationSaving = false;
-        if (ok)
+        if (succeeded)
         {
             LoadStationDrafts();
         }

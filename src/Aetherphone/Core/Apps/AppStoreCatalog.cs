@@ -81,6 +81,8 @@ internal static class AppStoreCatalog
 
     public static StoreEntry For(string appId) => Entries.TryGetValue(appId, out var entry) ? entry : Fallback;
 
+    public static bool TryFor(string appId, out StoreEntry entry) => Entries.TryGetValue(appId, out entry);
+
     public static Vector4 Tint(StoreCategory category) => category switch
     {
         StoreCategory.Social => new(0.95f, 0.35f, 0.50f, 1f),

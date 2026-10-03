@@ -24,7 +24,6 @@ internal sealed class EncryptionHelpOverlay
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                  ImGuiWindowFlags.NoBackground;
 
-    private const float RevealSmoothTime = 0.18f;
     private const float MaxDim = 0.74f;
     private const float PanelRounding = 28f;
     private const float SideMargin = 14f;
@@ -83,7 +82,7 @@ internal sealed class EncryptionHelpOverlay
 
         wasActive = active;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        reveal.Step(active ? 1f : 0f, RevealSmoothTime, delta);
+        reveal.Step(active ? 1f : 0f, Motion.Appear, delta);
         if (!active && reveal.IsResting(0f, 0.001f, 0.005f))
         {
             reveal.SnapTo(0f);

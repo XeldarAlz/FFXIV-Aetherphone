@@ -1,7 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Animation;
-using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -18,23 +17,22 @@ internal sealed class NotificationBanner : IDisposable
         Exit,
     }
 
-    private const float EnterSmoothTime = 0.16f;
     private const float HoldSeconds = 4.0f;
-    private const float ExitSmoothTime = 0.12f;
-    private const float SideMargin = 8f;
-    private const float BannerHeight = 64f;
-    private const float RestTopOffset = 40f;
+    private const float SideMargin = 10f;
+    private const float BannerHeight = 68f;
+    private const float RestTopOffset = 44f;
     private const float HiddenGap = 8f;
-    private const float CornerRadius = 22f;
-    private const float Padding = 13f;
-    private const float IconSize = 38f;
-    private const float TextGap = 11f;
-    private const float BodyOffset = 20f;
+    private const float CornerRadius = 24f;
     private const float DragSlop = 10f;
     private const float DismissDistance = 16f;
     private const float DismissVelocity = 700f;
     private const float DownwardGive = 26f;
+    private const float DragReturnRate = 18f;
+    private const float EnterFadeBoost = 1.8f;
+    private const float LightBackdrop = 0.5f;
     private const int MaxQueued = 4;
+    private const string TitleMarquee = "notificationbanner.title.";
+    private const string BodyMarquee = "notificationbanner.body.";
 
     private readonly NotificationService notifications;
     private readonly Func<string?> currentAppId;
@@ -93,7 +91,7 @@ internal sealed class NotificationBanner : IDisposable
         {
             if (!dragging)
             {
-                dragOffset += (0f - dragOffset) * MathF.Min(1f, deltaSeconds * 18f);
+                dragOffset += (0f - dragOffset) * MathF.Min(1f, deltaSeconds * DragReturnRate);
             }
 
             if (holdPaused || dragging)
@@ -115,7 +113,7 @@ internal sealed class NotificationBanner : IDisposable
 
         if (stage == Stage.Enter)
         {
-            enter.Step(1f, EnterSmoothTime, deltaSeconds);
+            enter.Step(1f, Motion.Appear, deltaSeconds);
             if (enter.IsResting(1f, 0.004f, 0.05f))
             {
                 enter.SnapTo(1f);
@@ -126,7 +124,7 @@ internal sealed class NotificationBanner : IDisposable
             return;
         }
 
-        exit.Step(1f, ExitSmoothTime, deltaSeconds);
+        exit.Step(1f, Motion.Appear, deltaSeconds);
         if (!exit.IsResting(1f, TransitionTiming.RestPositionEpsilon, TransitionTiming.RestVelocityEpsilon))
         {
             return;
@@ -159,14 +157,33 @@ internal sealed class NotificationBanner : IDisposable
             holdPaused = true;
         }
 
-        var dl = ImGui.GetForegroundDrawList();
-        dl.PushClipRect(screen.Min, screen.Max, true);
-        DrawCard(dl, notification, theme, bounds.Min, bounds.Max, scale, opacity, hovered || dragging);
-        dl.PopClipRect();
-        HandleGesture(notification, bounds, scale, hovered);
+        var drawList = ImGui.GetForegroundDrawList();
+        drawList.PushClipRect(screen.Min, screen.Max, true);
+        var tone = ToneFor(theme, bounds);
+        Material.LiquidGlass(drawList, bounds.Min, bounds.Max, CornerRadius * scale, scale, tone, 0f, opacity);
+        NotificationCard.DrawContent(drawList, bounds, notification, theme, scale, opacity, tone, true, TitleMarquee,
+            BodyMarquee);
+        drawList.PopClipRect();
+        HandleGesture(notification, scale, hovered);
     }
 
-    private void HandleGesture(PhoneNotification notification, Rect bounds, float scale, bool hovered)
+    private GlassTone ToneFor(PhoneTheme theme, Rect bounds)
+    {
+        if (currentAppId() is null)
+        {
+            return GlassTone.Dark;
+        }
+
+        var brightness = WallpaperBackdrop.Brightness(bounds.Min, bounds.Max);
+        if (brightness >= 0f)
+        {
+            return brightness >= LightBackdrop ? GlassTone.Light : GlassTone.Dark;
+        }
+
+        return Material.ToneFor(theme);
+    }
+
+    private void HandleGesture(PhoneNotification notification, float scale, bool hovered)
     {
         if (stage != Stage.Hold)
         {
@@ -181,6 +198,7 @@ internal sealed class NotificationBanner : IDisposable
 
         if (hovered && !dragging && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
+            UiInteract.CancelPendingTap();
             dragging = true;
             dragStartY = mouse.Y;
             dragLastY = mouse.Y;
@@ -235,7 +253,7 @@ internal sealed class NotificationBanner : IDisposable
         if (stage == Stage.Enter)
         {
             top = Easing.Lerp(hiddenTop, restTop, enter.Value);
-            opacity = Math.Clamp(enter.Value * 1.8f, 0f, 1f);
+            opacity = Math.Clamp(enter.Value * EnterFadeBoost, 0f, 1f);
         }
         else if (stage == Stage.Exit)
         {
@@ -251,49 +269,6 @@ internal sealed class NotificationBanner : IDisposable
         var min = new Vector2(screen.Min.X + SideMargin * scale, top);
         var max = new Vector2(screen.Max.X - SideMargin * scale, top + height);
         return new Rect(min, max);
-    }
-
-    private static void DrawCard(ImDrawListPtr dl, PhoneNotification notification, PhoneTheme theme, Vector2 min,
-        Vector2 max, float scale, float opacity, bool hovered)
-    {
-        var rounding = CornerRadius * scale;
-        Elevation.Floating(dl, min, max, rounding, scale, opacity);
-        var cardColor = Palette.Mix(theme.GroupedCard, theme.TextStrong, hovered ? 0.11f : 0.06f);
-        Squircle.Fill(dl, min, max, rounding, Color(Palette.WithAlpha(cardColor, 0.99f), opacity));
-        var strokeColor = hovered
-            ? Palette.WithAlpha(notification.Accent, 0.55f)
-            : Palette.WithAlpha(theme.TextStrong, 0.10f);
-        Squircle.Stroke(dl, min, max, rounding, Color(strokeColor, opacity), (hovered ? 1.5f : 1f) * scale);
-        var iconExtent = IconSize * scale * 0.5f;
-        var iconCenter = new Vector2(min.X + Padding * scale + iconExtent, (min.Y + max.Y) * 0.5f);
-        var iconMin = new Vector2(iconCenter.X - iconExtent, iconCenter.Y - iconExtent);
-        var iconMax = new Vector2(iconCenter.X + iconExtent, iconCenter.Y + iconExtent);
-        var tileFill = IconTile.Surface(notification.Accent);
-        Squircle.Fill(dl, iconMin, iconMax, iconExtent * 0.52f, Color(tileFill, opacity));
-        var ink = Palette.WithAlpha(AccentRing.Ink, opacity);
-        if (!AppIconArt.TryDraw(dl, notification.AppId, iconCenter, IconSize * scale, ink,
-                Palette.WithAlpha(tileFill, opacity)))
-        {
-            var initial = notification.Title.Length > 0 ? notification.Title.Substring(0, 1) : "?";
-            Typography.DrawCentered(dl, iconCenter, initial, ink, 1.1f);
-        }
-
-        var textLeft = iconMax.X + TextGap * scale;
-        var textRight = max.X - Padding * scale;
-        var titleTop = min.Y + Padding * scale;
-        var time = TimeText.Short(notification.ReceivedAt);
-        var timeSize = Typography.Measure(time, 0.78f);
-        Typography.Draw(dl, new Vector2(textRight - timeSize.X, titleTop + 1f * scale), time,
-            Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
-        var titleMaxWidth = textRight - timeSize.X - 6f * scale - textLeft;
-        var titleStyle = new TextStyle(0.94f, FontWeight.SemiBold);
-        Marquee.DrawLeftAuto(dl, new MarqueeId("notificationbanner.title.", notification.Id), notification.Title, textLeft, titleTop,
-            titleMaxWidth, titleStyle, ink);
-        var bodyMaxWidth = textRight - textLeft;
-        var bodyTop = titleTop + BodyOffset * scale;
-        var bodyStyle = new TextStyle(0.88f, FontWeight.Regular);
-        EmojiText.DrawLine(dl, new MarqueeId("notificationbanner.body.", notification.Id), notification.SingleLineBody,
-            new Vector2(textLeft, bodyTop), bodyMaxWidth, theme.TextMuted, opacity, bodyStyle);
     }
 
     private void OnPresented(PhoneNotification notification)
@@ -360,6 +335,5 @@ internal sealed class NotificationBanner : IDisposable
         exit.SnapTo(0f);
     }
 
-    private static uint Color(Vector4 color, float opacity) => ImGui.GetColorU32(color with { W = color.W * opacity });
     public void Dispose() => notifications.Presented -= OnPresented;
 }

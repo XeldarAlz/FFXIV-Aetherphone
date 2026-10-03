@@ -31,7 +31,7 @@ using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Apps.Velvet;
 
-internal sealed partial class VelvetShell : IResumableApp
+internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer
 {
     private const float HeartbeatSeconds = 45f;
     private const byte LalafellRaceId = 3;
@@ -513,29 +513,8 @@ internal sealed partial class VelvetShell : IResumableApp
     {
         var scale = UiScale.Current;
         var headerHeight = VHeader.Height * scale;
-        var tabHeight = TabBarHeight * scale;
         var headerRect = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + headerHeight));
-        var tabRect = new Rect(new Vector2(area.Min.X, area.Max.Y - tabHeight), area.Max);
-        var bodyRect = new Rect(new Vector2(area.Min.X, headerRect.Max.Y),
-            new Vector2(area.Max.X, tabRect.Min.Y));
-
-        if (GuideIntents.Consume("velvet.tab.feed"))
-        {
-            activeTab = VelvetPage.Feed;
-        }
-        else if (GuideIntents.Consume("velvet.tab.messages"))
-        {
-            activeTab = VelvetPage.Messages;
-        }
-        else if (GuideIntents.Consume("velvet.tab.me"))
-        {
-            activeTab = VelvetPage.Me;
-        }
-        else if (GuideIntents.Consume("velvet.tab.discover"))
-        {
-            activeTab = VelvetPage.Discover;
-        }
-
+        var bodyRect = new Rect(new Vector2(area.Min.X, headerRect.Max.Y), area.Max);
         DrawRootTopBar(headerRect);
 
         if (activeTab == VelvetPage.Feed)
@@ -543,23 +522,26 @@ internal sealed partial class VelvetShell : IResumableApp
             bodyRect = DrawFeedScopeTabs(bodyRect);
         }
 
-        switch (activeTab)
+        using (TabBar.ReserveContent(scale))
         {
-            case VelvetPage.Feed:
-                DrawFeed(bodyRect);
-                break;
-            case VelvetPage.Messages:
-                DrawMessages(bodyRect);
-                break;
-            case VelvetPage.Me:
-                DrawMe(bodyRect);
-                break;
-            default:
-                DrawDiscover(bodyRect);
-                break;
+            switch (activeTab)
+            {
+                case VelvetPage.Feed:
+                    DrawFeed(bodyRect);
+                    break;
+                case VelvetPage.Messages:
+                    DrawMessages(bodyRect);
+                    break;
+                case VelvetPage.Me:
+                    DrawMe(bodyRect);
+                    break;
+                default:
+                    DrawDiscover(bodyRect);
+                    break;
+            }
         }
 
-        DrawTabBar(tabRect);
+        DrawTabBar(area);
     }
 
     private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin)

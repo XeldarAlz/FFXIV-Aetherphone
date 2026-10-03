@@ -1,708 +1,237 @@
+using Aetherphone.Apps.Music.Components;
+using Aetherphone.Apps.Music.Library;
 using Aetherphone.Core;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Songs;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Music;
 
 internal sealed partial class MusicApp
 {
-    private enum OverlayMode : byte
+    private const float PlaylistMenuHitRadius = 15f;
+    private const float PlaylistMenuGlyphScale = 0.8f;
+    private const float PlaylistMenuReserve = 34f;
+    private const int PlaylistRowKey = 1000;
+    private const int ShareLimit = 50;
+    private const int ShareCharactersPerSong = 12;
+    private const string ShareVideosPrefix = "https://www.youtube.com/watch_videos?video_ids=";
+
+    private readonly NavBarButton[] playlistsPageButtons = new NavBarButton[1];
+    private PlaylistRecord[] sortedPlaylists = Array.Empty<PlaylistRecord>();
+    private CoverArt[] sortedPlaylistArt = Array.Empty<CoverArt>();
+    private int sortedPlaylistsVersion = -1;
+    private PlaylistSort playlistSort = PlaylistSort.RecentlyUpdated;
+
+    private void DrawLibraryPlaylists(in PhoneContext context)
     {
-        None,
-        Pick,
-        Name,
+        EnsureSortedPlaylists();
+        var scale = UiScale.Current;
+        var frame = BeginPage(context);
+        using (AppSurface.BeginEdgeToEdge(frame.Body))
+        {
+            if (LibraryKit.ActionRow(ui, IconGlyph.Of(FontAwesomeIcon.Plus), Loc.T(L.Music.NewPlaylist)))
+            {
+                CreatePlaylistAndEdit();
+            }
+
+            if (LibraryKit.ActionRow(ui, IconGlyph.Of(FontAwesomeIcon.FileImport),
+                    Loc.T(L.Music.Library.ImportFromYoutube)))
+            {
+                OpenImport(string.Empty);
+            }
+
+            for (var index = 0; index < sortedPlaylists.Length; index++)
+            {
+                DrawPlaylistRow(scale, index);
+            }
+
+            if (sortedPlaylists.Length == 0)
+            {
+                LibraryKit.Gap(Metrics.Space.Xl);
+                var width = ScrollLayout.StableContentWidth() - MusicUi.Inset * 2f * scale;
+                LibraryKit.CenteredText(Loc.T(L.Music.NoPlaylistsYet), TextStyles.Headline, ui.TitleInk, width);
+                LibraryKit.Gap(Metrics.Space.Xs);
+                LibraryKit.CenteredText(Loc.T(L.Music.PlaylistEmptySub), TextStyles.Subheadline, ui.MutedInk, width);
+            }
+
+            LibraryKit.Gap(LibraryBottomGap);
+        }
+
+        playlistsPageButtons[0] = new NavBarButton(IconGlyph.Of(FontAwesomeIcon.SortAmountDown),
+            Loc.T(L.Music.Library.SortBy));
+        if (EndPage(in frame, context, Loc.T(L.Music.LibraryPlaylists), playlistsPageButtons) == 0)
+        {
+            OpenPlaylistSortMenu();
+        }
     }
 
-    private const float PlaylistTileHeight = 74f;
-    private const float PickHeaderHeight = 60f;
-    private const float PickRowHeight = 56f;
-    private const float PickNewRowHeight = 56f;
-    private const float PickPad = 10f;
-    private const float DetailHeaderHeight = 64f;
-    private const float DetailRowHeight = 60f;
-    private const int NameLimit = 60;
-
-    private string selectedPlaylistId = string.Empty;
-    private OverlayMode lastOverlay = OverlayMode.Pick;
-    private int overlayOpenedFrame;
-    private Song pendingSong;
-    private bool nameIsRename;
-    private string nameTargetId = string.Empty;
-    private string nameDraft = string.Empty;
-    private bool focusNameField;
-    private readonly ActionSheet.Item[] playlistSheetItems = new ActionSheet.Item[2];
-    private string playlistSheetId = string.Empty;
-    private string playlistSheetTitle = string.Empty;
-
-    private Song CurrentSong()
+    private void EnsureSortedPlaylists()
     {
-        var songs = playback.Songs;
-        return new Song(songs.CurrentVideoId, songs.CurrentTitle, songs.CurrentAuthor, songs.CurrentThumbnail,
-            (int)songs.Duration);
-    }
-
-    private static string SongCountLabel(int count)
-    {
-        return count == 1 ? Loc.T(L.Music.SongOne) : string.Format(Loc.T(L.Music.SongsMany), count);
-    }
-
-    private void ShowOverlay(OverlayMode mode)
-    {
-        overlay = mode;
-        overlayOpenedFrame = ImGui.GetFrameCount();
-    }
-
-    private void OpenPicker(in Song song)
-    {
-        if (string.IsNullOrEmpty(song.VideoId))
+        if (sortedPlaylistsVersion == library.Version)
         {
             return;
         }
 
-        pendingSong = song;
-        playlistSheet.Close();
-        ShowOverlay(OverlayMode.Pick);
+        sortedPlaylistsVersion = library.Version;
+        sortedPlaylists = LibrarySorting.Playlists(library.Playlists, playlistSort);
+        var art = new CoverArt[sortedPlaylists.Length];
+        for (var index = 0; index < art.Length; index++)
+        {
+            art[index] = CoverArt.Of(sortedPlaylists[index]);
+        }
+
+        sortedPlaylistArt = art;
     }
 
-    private void OpenPlaylist(string id)
+    private void SetPlaylistSort(PlaylistSort order)
     {
-        selectedPlaylistId = id;
-        Router.Push(View.PlaylistDetail);
+        playlistSort = order;
+        sortedPlaylistsVersion = -1;
     }
 
-    private void BeginCreateFromPicker()
+    private void DrawPlaylistRow(float scale, int index)
     {
-        nameIsRename = false;
-        nameTargetId = string.Empty;
-        nameDraft = string.Empty;
-        focusNameField = true;
-        ShowOverlay(OverlayMode.Name);
+        var height = SongRow.Height * scale;
+        var width = ScrollLayout.StableContentWidth();
+        if (!ImGui.IsRectVisible(new Vector2(width, height)))
+        {
+            ImGui.Dummy(new Vector2(width, height));
+            return;
+        }
+
+        var playlist = sortedPlaylists[index];
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var inset = MusicUi.Inset * scale;
+        var menuCenter = new Vector2(origin.X + width - inset - PlaylistMenuHitRadius * scale * 0.5f,
+            origin.Y + height * 0.5f);
+        var menuRadius = PlaylistMenuHitRadius * scale;
+        var overMenu = UiInteract.Hover(menuCenter - new Vector2(menuRadius, menuRadius),
+            menuCenter + new Vector2(menuRadius, menuRadius));
+        var cell = FeedCell.Begin(drawList, height, ui.HoverWash, !overMenu);
+        var side = ArtworkTile.Side(ArtworkTile.RowArt);
+        var artMin = new Vector2(cell.Bounds.Min.X + inset, cell.Bounds.Min.Y + (height - side) * 0.5f);
+        LibraryArt.DrawCover(drawList, images, wallpaperImages, artMin, side, sortedPlaylistArt[index], playlist.Name);
+        var textLeft = artMin.X + side + Metrics.Space.Md * scale;
+        DrawRowText(drawList, cell.Bounds, textLeft, cell.Bounds.Max.X - inset - PlaylistMenuReserve * scale,
+            playlist.Name, MusicUi.SongCount(playlist.Songs.Count));
+        var menuTapped = ui.IconButton(menuCenter, menuRadius, IconGlyph.Of(FontAwesomeIcon.EllipsisH), ui.MutedInk,
+            AppSkin.Transparent, PlaylistMenuGlyphScale, Loc.T(L.Music.MoreOptions));
+        var secondary = LibraryKit.Secondary(PlaylistRowKey + index, cell.Hovered);
+        FeedCell.End(drawList, cell, ui.Hairline, false);
+        FeedCell.Hairline(drawList, textLeft, cell.Bounds.Max.X, cell.Bounds.Max.Y, ui.Hairline);
+        if (menuTapped || secondary)
+        {
+            OpenPlaylistMenu(playlist.Id);
+            return;
+        }
+
+        if (cell.Tapped)
+        {
+            Push(MusicRoute.Playlist(playlist.Id));
+        }
     }
 
-    private void BeginCreateFromHome()
+    private void CreatePlaylistAndEdit()
     {
-        pendingSong = default;
-        nameIsRename = false;
-        nameTargetId = string.Empty;
-        nameDraft = string.Empty;
-        focusNameField = true;
-        ShowOverlay(OverlayMode.Name);
+        var id = library.CreatePlaylist(Loc.T(L.Music.NewPlaylist));
+        Push(MusicRoute.Playlist(id));
+        BeginPlaylistEdit(id, true, false);
     }
 
-    private void BeginRenamePlaylist(string id)
+    private void PlayPlaylist(string playlistId, bool shuffled)
     {
-        if (playlists.Find(id) is not { } record)
+        var songs = library.PlaylistSongs(playlistId);
+        if (songs.Length == 0)
         {
             return;
         }
 
-        pendingSong = default;
-        nameIsRename = true;
-        nameTargetId = id;
-        nameDraft = record.Name;
-        focusNameField = true;
-        ShowOverlay(OverlayMode.Name);
+        var title = PlaylistTitle(playlistId);
+        if (shuffled)
+        {
+            playback.PlaySongsShuffled(songs, playlistId, title);
+            return;
+        }
+
+        playback.PlaySongs(songs, 0, playlistId, title);
     }
 
-    private void CommitName()
+    private void DownloadPlaylist(string playlistId)
     {
-        var name = nameDraft.Trim();
-        if (name.Length == 0)
+        var songs = library.PlaylistSongs(playlistId);
+        for (var index = 0; index < songs.Length; index++)
+        {
+            downloads.Download(songs[index]);
+        }
+    }
+
+    private void SharePlaylist(string playlistId)
+    {
+        if (library.FindPlaylist(playlistId) is not { } playlist)
         {
             return;
         }
 
-        if (nameIsRename)
+        var link = playlist.SourceUrl;
+        if (link.Length == 0)
         {
-            playlists.Rename(nameTargetId, name);
-            overlay = OverlayMode.None;
-            nameDraft = string.Empty;
+            var count = Math.Min(ShareLimit, playlist.Songs.Count);
+            if (count == 0)
+            {
+                return;
+            }
+
+            var builder = new System.Text.StringBuilder(ShareVideosPrefix, ShareVideosPrefix.Length + count * ShareCharactersPerSong);
+            for (var index = 0; index < count; index++)
+            {
+                if (index > 0)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append(playlist.Songs[index].VideoId);
+            }
+
+            link = builder.ToString();
+        }
+
+        ImGui.SetClipboardText(link);
+        ShellToast.Show(Loc.T(L.Music.LinkCopied));
+    }
+
+    private void ConfirmDeletePlaylist(string playlistId)
+    {
+        if (library.FindPlaylist(playlistId) is not { } playlist)
+        {
             return;
         }
 
-        var id = playlists.Create(name);
-        nameDraft = string.Empty;
-        if (!string.IsNullOrEmpty(pendingSong.VideoId))
-        {
-            playlists.Add(id, pendingSong);
-            ShowOverlay(OverlayMode.Pick);
-            return;
-        }
-
-        overlay = OverlayMode.None;
-        OpenPlaylist(id);
-    }
-
-    private void CancelName()
-    {
-        nameDraft = string.Empty;
-        if (!nameIsRename && !string.IsNullOrEmpty(pendingSong.VideoId))
-        {
-            ShowOverlay(OverlayMode.Pick);
-            return;
-        }
-
-        overlay = OverlayMode.None;
-    }
-
-    private void DismissOverlay(bool snap)
-    {
-        overlay = OverlayMode.None;
-        nameDraft = string.Empty;
-        playlistSheet.Close();
-        if (snap)
-        {
-            overlayPresence.SnapTo(0f);
-        }
-    }
-
-    private void AskDeletePlaylist(string id)
-    {
+        var coverPath = playlist.CoverPath;
         confirm.Ask(new ConfirmRequest
         {
+            Title = playlist.Name,
             Message = Loc.T(L.Music.DeletePlaylistConfirm),
             ConfirmLabel = Loc.T(L.Music.DeletePlaylistButton),
             CancelLabel = Loc.T(L.Common.Cancel),
             Sheet = true,
-            Confirm = () =>
-            {
-                playlists.Delete(id);
-                Router.Pop();
-            },
+            Confirm = () => DeletePlaylist(playlistId, coverPath),
         });
     }
 
-    private void DrawPlaylistShelf(float scale, float available)
+    private void DeletePlaylist(string playlistId, string coverPath)
     {
-        var list = playlists.All;
-        var gap = CardGap * scale;
-        var tileWidth = (available - gap) * 0.5f;
-        var tileHeight = PlaylistTileHeight * scale;
-        var origin = ImGui.GetCursorScreenPos();
-        var total = list.Count + 1;
-        var rows = (total + 1) / 2;
-        var drawList = ImGui.GetWindowDrawList();
-        for (var index = 0; index < total; index++)
-        {
-            var column = index % 2;
-            var row = index / 2;
-            var min = new Vector2(origin.X + column * (tileWidth + gap), origin.Y + row * (tileHeight + gap));
-            var max = min + new Vector2(tileWidth, tileHeight);
-            var rounding = 10f * scale;
-            var hovered = UiInteract.Hover(min, max);
-            if (index == list.Count)
-            {
-                DrawNewPlaylistTile(drawList, min, max, rounding, hovered, scale);
-                if (UiInteract.Click(min, max, hovered))
-                {
-                    BeginCreateFromHome();
-                }
-
-                continue;
-            }
-
-            var playlist = list[index];
-            drawList.AddImageRounded(artwork.HandleForName(playlist.Name), min, max, Vector2.Zero, Vector2.One,
-                0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
-            var scrimTop = max.Y - tileHeight * 0.6f;
-            drawList.AddRectFilledMultiColor(new Vector2(min.X, scrimTop), max, 0u, 0u, 0xC8000000u, 0xC8000000u);
-            if (hovered)
-            {
-                drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)), rounding);
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
-
-            var textWidth = tileWidth - 24f * scale;
-            Marquee.DrawLeft(new MarqueeId("music.playlistShelf.name.", playlist.Id), playlist.Name, min.X + 12f * scale,
-                max.Y - 34f * scale, textWidth, TextStyles.SubheadlineEmphasized, White, hovered);
-            var count = Typography.FitText(SongCountLabel(playlist.Songs.Count), textWidth, TextStyles.Caption1);
-            Typography.Draw(new Vector2(min.X + 12f * scale, max.Y - 18f * scale), count,
-                new Vector4(1f, 1f, 1f, 0.82f), TextStyles.Caption1);
-            if (UiInteract.Click(min, max, hovered))
-            {
-                OpenPlaylist(playlist.Id);
-            }
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(available, rows * tileHeight + (rows - 1) * gap));
-    }
-
-    private void DrawNewPlaylistTile(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, bool hovered,
-        float scale)
-    {
-        var fill = Palette.WithAlpha(ui.TitleInk, hovered ? 0.14f : 0.07f);
-        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(fill));
-        Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.55f)), 1.2f);
-        var center = new Vector2(min.X + (max.X - min.X) * 0.5f, min.Y + (max.Y - min.Y) * 0.5f);
-        AppSkin.Icon(new Vector2(center.X, center.Y - 10f * scale), IconGlyph.Of(FontAwesomeIcon.Plus), ui.Accent, 0.95f);
-        var label = Loc.T(L.Music.NewPlaylist);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 14f * scale), label, ui.TitleInk,
-            TextStyles.Caption1);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-    }
-
-    private void DrawPlaylistOverlay(Rect content, float scale, float presence, float delta)
-    {
-        if (presence <= 0.003f && overlay == OverlayMode.None)
-        {
-            return;
-        }
-
-        var screen = SceneChrome.ScreenFrom(content, theme, scale);
-        ImGui.SetCursorScreenPos(screen.Min);
-        using (ImRaii.Child("##musicPlaylistOverlay", screen.Size, false, OverlayFlags))
-        {
-            var drawList = ImGui.GetWindowDrawList();
-            drawList.AddRectFilled(screen.Min, screen.Max,
-                ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.55f * presence)));
-
-            if (overlay != OverlayMode.None)
-            {
-                lastOverlay = overlay;
-            }
-
-            var mode = overlay != OverlayMode.None ? overlay : lastOverlay;
-            var margin = 10f * scale;
-            var cardWidth = content.Width - margin * 2f;
-            var cardLeft = content.Min.X + margin;
-            var maxCardHeight = content.Height * 0.66f;
-            var cardHeight = mode == OverlayMode.Name
-                ? 184f * scale
-                : PickCardHeight(scale, maxCardHeight);
-            var slide = (1f - presence) * (cardHeight + 40f * scale);
-            var cardBottom = content.Max.Y - margin + slide;
-            var cardMin = new Vector2(cardLeft, cardBottom - cardHeight);
-            var cardMax = new Vector2(cardLeft + cardWidth, cardBottom);
-            var rounding = 22f * scale;
-            drawList.AddRectFilled(cardMin + new Vector2(0f, 6f * scale), cardMax + new Vector2(0f, 8f * scale),
-                ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.4f * presence)), rounding);
-            var fill = Palette.Mix(AppPalettes.Music.BackdropTop, White, 0.08f);
-            Squircle.Fill(drawList, cardMin, cardMax, rounding, ImGui.GetColorU32(fill));
-            Squircle.Stroke(drawList, cardMin, cardMax, rounding,
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f)), 1f);
-            var handleWidth = 36f * scale;
-            var handleCenterX = (cardMin.X + cardMax.X) * 0.5f;
-            drawList.AddRectFilled(new Vector2(handleCenterX - handleWidth * 0.5f, cardMin.Y + 8f * scale),
-                new Vector2(handleCenterX + handleWidth * 0.5f, cardMin.Y + 12f * scale),
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.22f)), 2f * scale);
-
-            var interactive = presence > 0.6f && overlay != OverlayMode.None;
-            var cardRect = new Rect(cardMin, cardMax);
-            if (mode == OverlayMode.Name)
-            {
-                DrawNameCard(drawList, cardRect, scale, interactive);
-            }
-            else
-            {
-                DrawPickCard(drawList, cardRect, scale, interactive);
-            }
-
-            if (interactive && ImGui.GetFrameCount() != overlayOpenedFrame &&
-                UiInteract.ClickedOutside(cardMin, cardMax))
-            {
-                if (overlay == OverlayMode.Name)
-                {
-                    CancelName();
-                }
-                else
-                {
-                    DismissOverlay(false);
-                }
-            }
-        }
-    }
-
-    private float PickCardHeight(float scale, float maxCardHeight)
-    {
-        var count = playlists.Count;
-        var rowsHeight = count == 0 ? 96f * scale : count * PickRowHeight * scale;
-        var desired = PickHeaderHeight * scale + rowsHeight + PickNewRowHeight * scale + PickPad * scale * 2f;
-        return MathF.Min(desired, maxCardHeight);
-    }
-
-    private void DrawPickCard(ImDrawListPtr drawList, Rect card, float scale, bool interactive)
-    {
-        var pad = 16f * scale;
-        var title = Loc.T(L.Music.AddToPlaylist);
-        Typography.Draw(new Vector2(card.Min.X + pad, card.Min.Y + 20f * scale), title, ui.TitleInk,
-            TextStyles.Title3);
-        if (!string.IsNullOrEmpty(pendingSong.Title))
-        {
-            var songLine = Typography.FitText(pendingSong.Title, card.Width - pad * 2f, TextStyles.Caption1);
-            Typography.Draw(new Vector2(card.Min.X + pad, card.Min.Y + 42f * scale), songLine, ui.MutedInk,
-                TextStyles.Caption1);
-        }
-
-        var newRowTop = card.Max.Y - PickPad * scale - PickNewRowHeight * scale;
-        var rowsRegion = new Rect(new Vector2(card.Min.X + 6f * scale, card.Min.Y + PickHeaderHeight * scale),
-            new Vector2(card.Max.X - 6f * scale, newRowTop));
-        var rowsKey = ImGui.GetID("##musicPickRows");
-        ImGui.SetCursorScreenPos(rowsRegion.Min);
-        using (ImRaii.Child("##musicPickRows", rowsRegion.Size, false,
-                   DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
-        {
-            DragScrollHost.Begin(rowsKey);
-            var list = playlists.All;
-            if (list.Count == 0)
-            {
-                Typography.DrawWrappedCentered(rowsRegion.Center, Loc.T(L.Music.NoPlaylistsYet), ui.MutedInk,
-                    TextStyles.Subheadline, rowsRegion.Width - 32f * scale);
-            }
-            else
-            {
-                ImGui.Dummy(new Vector2(0f, 2f * scale));
-                for (var index = 0; index < list.Count; index++)
-                {
-                    DrawPickRow(list[index], scale, interactive);
-                }
-            }
-        }
-
-        drawList.AddLine(new Vector2(card.Min.X + pad, newRowTop), new Vector2(card.Max.X - pad, newRowTop),
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f)), 1f);
-        var newMin = new Vector2(card.Min.X + 6f * scale, newRowTop);
-        var newMax = new Vector2(card.Max.X - 6f * scale, card.Max.Y - PickPad * scale);
-        var newHovered = interactive && UiInteract.Hover(newMin, newMax);
-        if (newHovered)
-        {
-            Squircle.Fill(drawList, newMin, newMax, 10f * scale, ImGui.GetColorU32(ui.HoverTint));
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        var newCenterY = (newMin.Y + newMax.Y) * 0.5f;
-        var iconCenter = new Vector2(newMin.X + 26f * scale, newCenterY);
-        drawList.AddCircleFilled(iconCenter, 16f * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.18f)), 24);
-        AppSkin.Icon(iconCenter, IconGlyph.Of(FontAwesomeIcon.Plus), ui.Accent, 0.9f);
-        var newLabelSize = Typography.Measure(Loc.T(L.Music.NewPlaylist), TextStyles.BodyEmphasized);
-        Typography.Draw(new Vector2(iconCenter.X + 26f * scale, newCenterY - newLabelSize.Y * 0.5f),
-            Loc.T(L.Music.NewPlaylist), ui.Accent, TextStyles.BodyEmphasized);
-        if (newHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-        {
-            BeginCreateFromPicker();
-        }
-    }
-
-    private void DrawPickRow(PlaylistRecord playlist, float scale, bool interactive)
-    {
-        var rowHeight = PickRowHeight * scale;
-        var width = ScrollLayout.StableContentWidth();
-        var origin = ImGui.GetCursorScreenPos();
-        var min = origin;
-        var max = new Vector2(origin.X + width, origin.Y + rowHeight);
-        var drawList = ImGui.GetWindowDrawList();
-        var contains = playlists.Contains(playlist.Id, pendingSong.VideoId);
-        var hovered = interactive && UiInteract.Hover(min, max);
-        if (hovered)
-        {
-            Squircle.Fill(drawList, min, max, 10f * scale, ImGui.GetColorU32(ui.HoverTint));
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        var artSize = 40f * scale;
-        var artMin = new Vector2(min.X + 4f * scale, min.Y + (rowHeight - artSize) * 0.5f);
-        var artMax = artMin + new Vector2(artSize, artSize);
-        drawList.AddImageRounded(artwork.HandleForName(playlist.Name), artMin, artMax, Vector2.Zero, Vector2.One,
-            0xFFFFFFFFu, 8f * scale, ImDrawFlags.RoundCornersAll);
-        var textLeft = artMax.X + 12f * scale;
-        var textWidth = max.X - 44f * scale - textLeft;
-        Marquee.DrawLeft(new MarqueeId("music.pickRow.name.", playlist.Id), playlist.Name, textLeft, min.Y + 9f * scale,
-            textWidth, TextStyles.BodyEmphasized, ui.TitleInk, hovered);
-        var count = Typography.FitText(SongCountLabel(playlist.Songs.Count), textWidth, TextStyles.Caption1);
-        Typography.Draw(new Vector2(textLeft, min.Y + 30f * scale), count, ui.MutedInk, TextStyles.Caption1);
-        var indicatorCenter = new Vector2(max.X - 24f * scale, min.Y + rowHeight * 0.5f);
-        if (contains)
-        {
-            drawList.AddCircleFilled(indicatorCenter, 12f * scale, ImGui.GetColorU32(ui.Accent), 24);
-            AppSkin.Icon(indicatorCenter, IconGlyph.Of(FontAwesomeIcon.Check), White, 0.72f);
-        }
-        else
-        {
-            drawList.AddCircle(indicatorCenter, 12f * scale,
-                ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.35f)), 24, 1.4f * scale);
-            AppSkin.Icon(indicatorCenter, IconGlyph.Of(FontAwesomeIcon.Plus), ui.MutedInk, 0.7f);
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rowHeight));
-        if (!hovered || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-        {
-            return;
-        }
-
-        if (contains)
-        {
-            playlists.Remove(playlist.Id, pendingSong.VideoId);
-        }
-        else
-        {
-            playlists.Add(playlist.Id, pendingSong);
-        }
-    }
-
-    private void DrawNameCard(ImDrawListPtr drawList, Rect card, float scale, bool interactive)
-    {
-        var pad = 16f * scale;
-        var title = nameIsRename ? Loc.T(L.Music.RenamePlaylist) : Loc.T(L.Music.NewPlaylist);
-        Typography.Draw(new Vector2(card.Min.X + pad, card.Min.Y + 20f * scale), title, ui.TitleInk,
-            TextStyles.Title3);
-
-        var fieldMin = new Vector2(card.Min.X + pad, card.Min.Y + 58f * scale);
-        var fieldMax = new Vector2(card.Max.X - pad, fieldMin.Y + 42f * scale);
-        var fieldRadius = (fieldMax.Y - fieldMin.Y) * 0.5f;
-        Squircle.Fill(drawList, fieldMin, fieldMax, fieldRadius,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
-        var centerY = (fieldMin.Y + fieldMax.Y) * 0.5f;
-        var hint = Loc.T(L.Music.PlaylistNameHint);
-        if (focusNameField)
-        {
-            focusNameField = false;
-            ImGui.SetKeyboardFocusHere();
-        }
-
-        ImGui.SetCursorScreenPos(new Vector2(fieldMin.X + 14f * scale, centerY - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(fieldMax.X - fieldMin.X - 28f * scale);
-        Plugin.Fonts.NoticeText(hint);
-        Plugin.Fonts.NoticeText(nameDraft);
-        var submitted = false;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
-        {
-            submitted = ImGui.InputTextWithHint("##playlistName", hint, ref nameDraft, NameLimit,
-                ImGuiInputTextFlags.EnterReturnsTrue);
-        }
-
-        var buttonHeight = 44f * scale;
-        var buttonTop = card.Max.Y - pad - buttonHeight;
-        var buttonGap = 10f * scale;
-        var buttonWidth = (card.Width - pad * 2f - buttonGap) * 0.5f;
-        var cancelRect = new Rect(new Vector2(card.Min.X + pad, buttonTop),
-            new Vector2(card.Min.X + pad + buttonWidth, buttonTop + buttonHeight));
-        var createRect = new Rect(new Vector2(cancelRect.Max.X + buttonGap, buttonTop),
-            new Vector2(card.Max.X - pad, buttonTop + buttonHeight));
-        var canCreate = nameDraft.Trim().Length > 0;
-        if (ui.PillButton(cancelRect, Loc.T(L.Common.Cancel), false) && interactive)
-        {
-            CancelName();
-        }
-
-        var createClicked = AppSkin.PillButton(createRect, Loc.T(L.Music.CreatePlaylist), true, canCreate, theme);
-        if ((submitted || (createClicked && interactive)) && canCreate)
-        {
-            CommitName();
-        }
-    }
-
-    private void DrawPlaylistDetail(in PhoneContext context)
-    {
-        var scale = UiScale.Current;
-        var content = context.Content;
-        if (playlists.Find(selectedPlaylistId) is not { } record)
-        {
-            Router.Pop();
-            return;
-        }
-
-        DrawPlaylistDetailTopBar(content, record, scale);
-        var songs = playlists.Songs(record.Id);
-        var headerTop = content.Min.Y + TopBarHeight * scale;
-        var headerBottom = headerTop + DetailHeaderHeight * scale;
-        DrawPlaylistDetailHeader(content, record, songs, headerTop, scale);
-        var body = new Rect(new Vector2(content.Min.X, headerBottom),
-            new Vector2(content.Max.X, BodyBottom(content, scale)));
-        if (songs.Length == 0)
-        {
-            var center = new Vector2(body.Center.X, body.Center.Y - 20f * scale);
-            Typography.DrawCentered(center, Loc.T(L.Music.PlaylistEmptyTitle), ui.TitleInk, TextStyles.Title3);
-            Typography.DrawWrappedCentered(new Vector2(center.X, center.Y + 20f * scale),
-                Loc.T(L.Music.PlaylistEmptySub), ui.MutedInk, TextStyles.Subheadline, body.Width - 48f * scale);
-        }
-        else
-        {
-            using (AppSurface.BeginEdgeToEdge(body))
-            {
-                ImGui.Dummy(new Vector2(0f, 4f * scale));
-                for (var index = 0; index < songs.Length; index++)
-                {
-                    DrawPlaylistSongRow(scale, songs[index], index, songs, record);
-                }
-
-                ImGui.Dummy(new Vector2(0f, 8f * scale));
-            }
-        }
-    }
-
-    private void OpenPlaylistSheet(PlaylistRecord record)
-    {
-        playlistSheetId = record.Id;
-        playlistSheetTitle = record.Name;
-        playlistSheetItems[0] = new ActionSheet.Item(Loc.T(L.Music.RenamePlaylist));
-        playlistSheetItems[1] = new ActionSheet.Item(Loc.T(L.Music.DeletePlaylist), string.Empty, true);
-        playlistSheet.Open();
-    }
-
-    private void DrawPlaylistSheet(Rect screen)
-    {
-        if (!playlistSheet.CapturesPointer)
-        {
-            return;
-        }
-
-        if (playlists.Find(playlistSheetId) is null)
-        {
-            playlistSheet.Close();
-        }
-
-        var picked = playlistSheet.Draw(screen, ActionSheetStyle.From(ui), playlistSheetItems,
-            Loc.T(L.Common.Cancel), false, playlistSheetTitle);
-        if (picked == 0)
-        {
-            BeginRenamePlaylist(playlistSheetId);
-        }
-        else if (picked == 1)
-        {
-            AskDeletePlaylist(playlistSheetId);
-        }
-    }
-
-    private void DrawPlaylistDetailTopBar(Rect content, PlaylistRecord record, float scale)
-    {
-        var rowCenterY = content.Min.Y + TopBarHeight * scale * 0.5f;
-        var backHovered = UiInteract.Hover(content.Min,
-            new Vector2(content.Min.X + 40f * scale, content.Min.Y + TopBarHeight * scale));
-        if (BackButton.Draw("music.playlist.back", new Vector2(content.Min.X + 18f * scale, rowCenterY), 15f * scale,
-                ui.TitleInk, backHovered, scale))
+        library.DeletePlaylist(playlistId);
+        PlaylistCovers.Delete(coverPath);
+        if (Router.Current.Screen == MusicScreen.PlaylistDetail &&
+            string.Equals(Router.Current.Key, playlistId, StringComparison.Ordinal))
         {
             Router.Pop();
         }
-
-        var titleLeft = content.Min.X + 38f * scale;
-        var titleRight = content.Max.X - 46f * scale;
-        var fitted = Typography.FitText(record.Name, titleRight - titleLeft, TextStyles.Title2);
-        var titleSize = Typography.Measure(fitted, TextStyles.Title2);
-        Typography.Draw(new Vector2(titleLeft, rowCenterY - titleSize.Y * 0.5f), fitted, ui.TitleInk,
-            TextStyles.Title2);
-        var menuCenter = new Vector2(content.Max.X - 22f * scale, rowCenterY);
-        if (ui.IconButton(menuCenter, 15f * scale, IconGlyph.Of(FontAwesomeIcon.EllipsisV), ui.TitleInk,
-                AppSkin.Transparent, 0.8f))
-        {
-            OpenPlaylistSheet(record);
-        }
-    }
-
-    private void DrawPlaylistDetailHeader(Rect content, PlaylistRecord record, Song[] songs, float headerTop,
-        float scale)
-    {
-        var centerY = headerTop + DetailHeaderHeight * scale * 0.5f;
-        var playRect = new Rect(new Vector2(content.Min.X + 16f * scale, centerY - 20f * scale),
-            new Vector2(content.Min.X + 146f * scale, centerY + 20f * scale));
-        if (AppSkin.PillButton(playRect, Loc.T(L.Music.PlayAll), true, songs.Length > 0, theme) && songs.Length > 0)
-        {
-            PlaySong(songs, 0, record.Name);
-        }
-
-        var shuffleCenter = new Vector2(playRect.Max.X + 32f * scale, centerY);
-        if (DrawShuffleCircle(shuffleCenter, 20f * scale, songs.Length > 0))
-        {
-            PlayShuffled(songs, record.Name);
-        }
-
-        var countLabel = SongCountLabel(songs.Length);
-        var countSize = Typography.Measure(countLabel, TextStyles.Subheadline);
-        Typography.Draw(new Vector2(content.Max.X - 16f * scale - countSize.X, centerY - countSize.Y * 0.5f),
-            countLabel, ui.MutedInk, TextStyles.Subheadline);
-    }
-
-    private bool DrawShuffleCircle(Vector2 center, float radius, bool enabled)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var hit = new Vector2(radius, radius);
-        var hovered = enabled && UiInteract.Hover(center - hit, center + hit);
-        var fill = Palette.WithAlpha(ui.TitleInk, hovered ? 0.18f : 0.10f);
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(fill), 32);
-        var ink = enabled
-            ? Palette.WithAlpha(ui.TitleInk, hovered ? 1f : 0.85f)
-            : Palette.WithAlpha(ui.TitleInk, 0.35f);
-        MediaGlyph.Shuffle(drawList, center, radius * 0.44f, ImGui.GetColorU32(ink));
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        HoverTooltip.Show(new Rect(center - hit, center + hit), Loc.T(L.Music.Shuffle), HoverLabelSide.Above);
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
-    }
-
-    private void DrawPlaylistSongRow(float scale, Song song, int index, Song[] songs, PlaylistRecord record)
-    {
-        var rowHeight = DetailRowHeight * scale;
-        var drawList = ImGui.GetWindowDrawList();
-        var cell = FeedCell.Begin(drawList, rowHeight, ui.HoverWash);
-        var min = cell.Bounds.Min;
-        var max = cell.Bounds.Max;
-        var pad = FeedCell.PadX * scale;
-        var current = IsCurrentSong(song);
-        var artSize = 44f * scale;
-        var artMin = new Vector2(min.X + pad, min.Y + (rowHeight - artSize) * 0.5f);
-        var artMax = artMin + new Vector2(artSize, artSize);
-        DrawCover(drawList, artMin, artMax, song.ThumbnailUrl, song.Title, 6f * scale);
-        var showRemove = cell.Hovered && !current;
-        var trailing = pad + (current ? 26f : showRemove ? 34f : 4f) * scale;
-        var textLeft = artMax.X + 12f * scale;
-        var textWidth = max.X - trailing - textLeft;
-        var songTitleY = min.Y + 10f * scale;
-        var songTitleSize = Typography.Measure(song.Title, TextStyles.BodyEmphasized);
-        var songTitleHovering = UiInteract.Hover(new Vector2(textLeft, songTitleY),
-            new Vector2(textLeft + textWidth, songTitleY + songTitleSize.Y));
-        Marquee.DrawLeft(new MarqueeId("music.playlistSongRow.title.", song.VideoId + "." + index), song.Title, textLeft,
-            songTitleY, textWidth, TextStyles.BodyEmphasized, current ? ui.Accent : ui.TitleInk, songTitleHovering);
-        var songSub = SongRowSubtitle(song);
-        var songSubY = min.Y + 34f * scale;
-        var songSubSize = Typography.Measure(songSub, TextStyles.Caption1);
-        var songSubHovering = UiInteract.Hover(new Vector2(textLeft, songSubY),
-            new Vector2(textLeft + textWidth, songSubY + songSubSize.Y));
-        Marquee.DrawLeft(new MarqueeId("music.playlistSongRow.subtitle.", song.VideoId + "." + index), songSub,
-            textLeft, songSubY, textWidth, TextStyles.Caption1, ui.MutedInk, songSubHovering);
-        var removeClicked = false;
-        if (current)
-        {
-            Equalizer.Draw(drawList, new Vector2(max.X - pad - 12f * scale, min.Y + rowHeight * 0.5f), scale,
-                17f * scale, clock, ui.Accent, 1f, playback.IsPlaying);
-        }
-        else if (showRemove)
-        {
-            var removeCenter = new Vector2(max.X - pad - 16f * scale, min.Y + rowHeight * 0.5f);
-            removeClicked = ui.IconButton(removeCenter, 15f * scale,
-                IconGlyph.Of(FontAwesomeIcon.Minus), ui.MutedInk, AppSkin.Transparent, 0.82f);
-        }
-
-        if (removeClicked)
-        {
-            playlists.Remove(record.Id, song.VideoId);
-        }
-        else if (cell.Tapped)
-        {
-            if (current)
-            {
-                playback.TogglePlayPause();
-            }
-            else
-            {
-                PlaySong(songs, index, record.Name);
-            }
-        }
-
-        FeedCell.End(drawList, cell, ui.Hairline);
     }
 }

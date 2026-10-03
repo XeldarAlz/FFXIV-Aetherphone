@@ -21,7 +21,6 @@ internal sealed class PhoneCasePage : ISettingsPage
     private const float DragSlop = 5f;
     private const float ArrowRadius = 14f;
     private const float ArrowInset = 4f;
-    private const float GlideSmoothTime = 0.22f;
     private const float EdgeEpsilon = 1f;
 
     private static readonly PhoneCaseCategory[] CategoryOrder =
@@ -149,7 +148,7 @@ internal sealed class PhoneCasePage : ISettingsPage
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         if (draggingRail != railIndex)
         {
-            railSprings[railIndex].Step(railTargets[railIndex], GlideSmoothTime, deltaSeconds);
+            railSprings[railIndex].Step(railTargets[railIndex], Motion.PageSettle, deltaSeconds);
         }
 
         var offset = Math.Clamp(railSprings[railIndex].Value, 0f, maxOffset);

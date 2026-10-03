@@ -6,6 +6,7 @@ internal static class TimeText
 {
     private const string Pattern24Hour = "HH:mm";
     private const string Pattern12Hour = "h:mm tt";
+    private const string PatternHour12Hour = "h tt";
     private const int CacheLimit = 512;
     private const int HoursPerDay = 24;
     private const int MinutesPerHour = 60;
@@ -19,6 +20,7 @@ internal static class TimeText
     private static readonly DateTime MorningProbe = new(2000, 1, 1, 0, 0, 0, DateTimeKind.Unspecified);
     private static readonly DateTime AfternoonProbe = new(2000, 1, 1, 12, 0, 0, DateTimeKind.Unspecified);
     private static string[]? hourLabels;
+    private static string[]? hourClocks;
     private static string[]? minuteLabels;
     private static (string Morning, string Afternoon)? clockProbes;
     private static int cachedFormatVersion = -1;
@@ -61,6 +63,7 @@ internal static class TimeText
         MinutesSecondsCache.Clear();
         DurationCache.Clear();
         hourLabels = null;
+        hourClocks = null;
         minuteLabels = null;
         clockProbes = null;
     }
@@ -88,6 +91,25 @@ internal static class TimeText
             : offset!.Value.ToString(pattern, Loc.Culture);
         ClockCache[minute] = text;
         return text;
+    }
+
+    public static string HourClock(int hourOfDay)
+    {
+        EnsureFresh();
+        var clocks = hourClocks;
+        if (clocks is null)
+        {
+            clocks = new string[HoursPerDay];
+            var pattern = use24Hour ? Pattern24Hour : PatternHour12Hour;
+            for (var hour = 0; hour < HoursPerDay; hour++)
+            {
+                clocks[hour] = new DateTime(2000, 1, 1, hour, 0, 0).ToString(pattern, Loc.Culture);
+            }
+
+            hourClocks = clocks;
+        }
+
+        return clocks[(hourOfDay % HoursPerDay + HoursPerDay) % HoursPerDay];
     }
 
     public static string HourLabel(int hourOfDay)

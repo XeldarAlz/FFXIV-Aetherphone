@@ -35,6 +35,7 @@ internal sealed class NewsApp : IPhoneApp
     private const float RowHeightNotices = 58f;
     private const float RowHeightMaintenance = 72f;
     private const float RowTitleScale = 0.95f;
+    private static readonly int MaintenanceIndex = Array.IndexOf(NewsCategories.All, NewsCategory.Maintenance);
     private static readonly Vector4 StatusUpcoming = new(0.95f, 0.62f, 0.22f, 1f);
     private static readonly Vector4 StatusActive = new(0.30f, 0.78f, 0.46f, 1f);
     public string Id => "news";
@@ -89,8 +90,9 @@ internal sealed class NewsApp : IPhoneApp
         var segmentTop = top + RegionRowHeight * scale;
         var segmentRow = new Rect(new Vector2(area.Min.X + 16f * scale, segmentTop),
             new Vector2(area.Max.X - 16f * scale, segmentTop + SegmentRowHeight * scale));
-        UiAnchors.Report("news.categories", segmentRow);
         FillCategoryLabels();
+        UiAnchors.Report("news.tab.maintenance",
+            SegmentStrip.SegmentRect(segmentRow, MaintenanceIndex, categoryLabels.Length));
         var selected = SegmentStrip.Draw("news.category", segmentRow, categoryLabels, categoryIndex, theme);
         if (selected != categoryIndex)
         {
@@ -106,7 +108,6 @@ internal sealed class NewsApp : IPhoneApp
         DrawRefreshControl(new Vector2(area.Max.X - 20f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f),
             entry.State, scale);
         var body = new Rect(new Vector2(area.Min.X, segmentRow.Max.Y), area.Max);
-        UiAnchors.Report("news.feed", body);
         var hasItems = entry.Items.Length > 0;
         if (!hasItems)
         {
@@ -189,6 +190,11 @@ internal sealed class NewsApp : IPhoneApp
         for (var index = 0; index < count; index++)
         {
             var cell = FeedCell.Begin(drawList, rowHeight, theme.HoverWash);
+            if (index == 0)
+            {
+                UiAnchors.Report("news.row", cell.Bounds);
+            }
+
             var row = new Rect(new Vector2(cell.Bounds.Min.X + inset, cell.Bounds.Min.Y),
                 new Vector2(cell.Bounds.Max.X - inset, cell.Bounds.Max.Y));
             if (category == NewsCategory.Maintenance)

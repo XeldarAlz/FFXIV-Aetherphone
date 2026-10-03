@@ -12,8 +12,6 @@ internal enum MinimizePhase : byte
 
 internal sealed class MinimizeTransition
 {
-    private const float CollapseSmoothTime = 0.19f;
-    private const float ExpandSmoothTime = 0.16f;
     private const float SettleProgress = 0.98f;
 
     private Spring progress;
@@ -22,8 +20,7 @@ internal sealed class MinimizeTransition
     public MinimizePhase Phase => phase;
     public bool MorphActive => phase is MinimizePhase.Collapsing or MinimizePhase.Expanding;
     public bool MinimizedResting => phase == MinimizePhase.Minimized;
-    public float EasedProgress =>
-        Easing.SmoothStep(Easing.Segment(progress.Value, 1f - SettleProgress, SettleProgress));
+    public float EasedProgress => Easing.Segment(progress.Value, 1f - SettleProgress, SettleProgress);
 
     public void BeginCollapse()
     {
@@ -64,7 +61,7 @@ internal sealed class MinimizeTransition
                 progress.SnapTo(1f);
                 break;
             case MinimizePhase.Collapsing:
-                progress.Step(1f, CollapseSmoothTime, delta);
+                progress.Step(1f, Motion.SwitcherReveal, delta);
                 if (progress.Value >= SettleProgress)
                 {
                     progress.SnapTo(1f);
@@ -73,7 +70,7 @@ internal sealed class MinimizeTransition
 
                 break;
             case MinimizePhase.Expanding:
-                progress.Step(0f, ExpandSmoothTime, delta);
+                progress.Step(0f, Motion.Release, delta);
                 if (progress.Value <= 1f - SettleProgress)
                 {
                     progress.SnapTo(0f);

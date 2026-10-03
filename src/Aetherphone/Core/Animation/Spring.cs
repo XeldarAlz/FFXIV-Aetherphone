@@ -33,6 +33,18 @@ internal struct Spring
         return result;
     }
 
+    public static float Settle(float elapsed, float smoothTime)
+    {
+        if (elapsed <= 0f)
+        {
+            return 0f;
+        }
+
+        var omega = 2f / MathF.Max(0.0001f, smoothTime);
+        var x = omega * elapsed;
+        return 1f - (1f + x) * MathF.Exp(-x);
+    }
+
     public readonly bool IsResting(float target, float positionEpsilon, float velocityEpsilon)
     {
         return MathF.Abs(Value - target) <= positionEpsilon && MathF.Abs(Velocity) <= velocityEpsilon;

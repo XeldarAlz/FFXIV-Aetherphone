@@ -89,7 +89,7 @@ Two exceptions keep their own format: [the art asset specification](ART-ASSET-SP
 | --- | --- |
 | [Art asset specification](ART-ASSET-SPEC.md) | The spec artists follow to produce app icons, phone cases, and avatar frames that drop in without engineering work, plus the open art decisions still on the table |
 | [Translator guide](translating.md) | For translators with no code background: editing one language JSON and opening a pull request entirely in the browser |
-| [AI usage](ai-usage.md) | How this plugin is built with AI tooling, the declared involvement level, what contributors must declare, and the provenance of every shipped asset |
+| [AI usage](ai-usage.md) | How Aetherphone is built with AI tools, the declared level, contributor rules, and where the content inside the phone comes from |
 
 ## Find it fast
 

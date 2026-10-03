@@ -68,8 +68,8 @@ internal sealed class PhotoTagOverlay
             return new PhotoTagOverlayResult(consumed, null);
         }
 
-        var eased = Easing.EaseOutQuint(reveal);
-        var alpha = Easing.SmoothStep(Math.Clamp(reveal / 0.7f, 0f, 1f));
+        var eased = reveal;
+        var alpha = Math.Clamp(reveal / 0.7f, 0f, 1f);
         for (var index = 0; index < tags!.Length; index++)
         {
             var tag = tags[index];

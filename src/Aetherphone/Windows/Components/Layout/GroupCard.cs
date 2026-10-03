@@ -15,6 +15,7 @@ internal struct GroupCard
     private readonly float startY;
     private readonly float totalHeight;
     private float rowOffset;
+    public float SeparatorInset;
 
     private GroupCard(Vector4 separator, float scale, float rowHeight, float left, float right, float startY,
         float totalHeight)
@@ -27,6 +28,7 @@ internal struct GroupCard
         this.startY = startY;
         this.totalHeight = totalHeight;
         rowOffset = 0f;
+        SeparatorInset = 0f;
     }
 
     public static GroupCard Begin(PhoneTheme theme, int rowCount, float rowHeight = DefaultRowHeight) =>
@@ -48,8 +50,8 @@ internal struct GroupCard
         var height = totalHeight * scale;
         var cardMax = new Vector2(right, origin.Y + height);
         var dl = ImGui.GetWindowDrawList();
-        Squircle.Fill(dl, origin, cardMax, Metrics.Radius.Md * scale, ImGui.GetColorU32(cardColor));
-        Material.EdgeSquircle(dl, origin, cardMax, Metrics.Radius.Md * scale, scale);
+        Squircle.Fill(dl, origin, cardMax, Metrics.Radius.Grouped * scale, ImGui.GetColorU32(cardColor));
+        Material.EdgeSquircle(dl, origin, cardMax, Metrics.Radius.Grouped * scale, scale);
         return new GroupCard(separator, scale, rowHeight, origin.X, right, origin.Y, totalHeight);
     }
 
@@ -60,9 +62,11 @@ internal struct GroupCard
         var right = origin.X + ImGui.GetContentRegionAvail().X;
         var height = totalHeight * scale;
         var cardMax = new Vector2(right, origin.Y + height);
-        ui.Card(ImGui.GetWindowDrawList(), origin, cardMax, Metrics.Radius.Md * scale);
+        ui.Card(ImGui.GetWindowDrawList(), origin, cardMax, Metrics.Radius.Grouped * scale);
         return new GroupCard(ui.Hairline, scale, rowHeight, origin.X, right, origin.Y, totalHeight);
     }
+
+    public Rect Bounds => new(new Vector2(left, startY), new Vector2(right, startY + totalHeight * scale));
 
     public Rect NextRow(int rowSpan = 1) => NextRow(rowSpan * rowHeight);
 
@@ -71,7 +75,7 @@ internal struct GroupCard
         var rowTop = startY + rowOffset * scale;
         if (rowOffset > 0f)
         {
-            var separatorX = left + Metrics.Space.Lg * scale;
+            var separatorX = left + (Metrics.Space.Lg + SeparatorInset) * scale;
             ImGui.GetWindowDrawList().AddLine(new Vector2(separatorX, rowTop), new Vector2(right, rowTop),
                 ImGui.GetColorU32(separator), Metrics.Stroke.Hairline);
         }

@@ -11,7 +11,7 @@ internal sealed class PhoneEmoteController : IDisposable
     private const ushort TomescrollEmoteId = 295;
     private const ushort TomestoneEmoteId = 191;
     private const long StillnessDelayMilliseconds = 400;
-    private const long RecastCooldownMilliseconds = 2500;
+    private const long EngageWindowMilliseconds = 8000;
     private const float MovementThreshold = 0.0025f;
     private const float RotationThreshold = 0.02f;
 
@@ -44,7 +44,9 @@ internal sealed class PhoneEmoteController : IDisposable
     private float lastRotation;
     private bool hasSample;
     private long stillSinceMilliseconds;
-    private long lastCastMilliseconds;
+    private bool wasVisible;
+    private bool sessionSpent;
+    private long sessionStartedMilliseconds;
 
     public PhoneEmoteController(Configuration configuration, IFramework framework, IObjectTable objectTable,
         ICondition condition, IDataManager dataManager, Func<bool> isPhoneVisible)
@@ -67,22 +69,34 @@ internal sealed class PhoneEmoteController : IDisposable
     {
         if (!configuration.ScrollWhileIdle || !isPhoneVisible())
         {
+            wasVisible = false;
             hasSample = false;
             return;
         }
 
         var now = Environment.TickCount64;
+        if (!wasVisible)
+        {
+            wasVisible = true;
+            sessionSpent = false;
+            sessionStartedMilliseconds = now;
+        }
+
+        if (sessionSpent || now - sessionStartedMilliseconds > EngageWindowMilliseconds)
+        {
+            hasSample = false;
+            return;
+        }
+
         var player = objectTable.LocalPlayer;
         if (player is null || IsBlocked())
         {
             hasSample = false;
-            lastCastMilliseconds = now;
             return;
         }
 
         if (IsBusy(player.Address))
         {
-            lastCastMilliseconds = now;
             return;
         }
 
@@ -96,19 +110,15 @@ internal sealed class PhoneEmoteController : IDisposable
             return;
         }
 
-        if (now - lastCastMilliseconds < RecastCooldownMilliseconds)
-        {
-            return;
-        }
-
         if (!TrySelectCommand(out var command))
         {
+            sessionSpent = true;
             return;
         }
 
         if (ChatSender.TrySend(command))
         {
-            lastCastMilliseconds = now;
+            sessionSpent = true;
         }
     }
 

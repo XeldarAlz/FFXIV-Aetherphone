@@ -23,10 +23,8 @@ internal readonly record struct StoryReplyPrompt(LocString Hint, Action<StoryDto
 internal sealed class StoryViewerOverlay
 {
     private const float SecondsPerStory = 5f;
-    private const float SheetSmoothTime = 0.16f;
     private const float SheetHeightFraction = 0.58f;
     private const float SheetRowHeight = 46f;
-    private const float RevealSmoothTime = 0.15f;
     private const float DismissDragDistance = 140f;
     private const float HoldPauseSeconds = 0.18f;
     private const float TapZoneFraction = 0.32f;
@@ -34,10 +32,8 @@ internal sealed class StoryViewerOverlay
     private const float FooterGap = 10f;
     private const float SeenPillHeight = 30f;
     private const float ScrimFadeHeight = 44f;
-    private const float SeenHoverSmoothTime = 0.12f;
     private const float ReplyBarHeight = 42f;
     private const float ReplyBarInset = 12f;
-    private const float ReplyRevealSmoothTime = 0.15f;
     private const float QuickEmojiSide = 30f;
     private const float QuickEmojiRowGap = 12f;
     private const int ReplyMaxLength = 500;
@@ -192,7 +188,7 @@ internal sealed class StoryViewerOverlay
     public void Draw(Rect area, PhoneTheme theme, bool suspended = false)
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        reveal.Step(open ? 1f : 0f, RevealSmoothTime, delta);
+        reveal.Step(open ? 1f : 0f, Motion.Appear, delta);
         var eased = Math.Clamp(reveal.Value, 0f, 1f);
         if (eased <= 0.01f)
         {
@@ -222,8 +218,8 @@ internal sealed class StoryViewerOverlay
             return;
         }
 
-        sheetReveal.Step(sheetOpen ? 1f : 0f, SheetSmoothTime, delta);
-        replyReveal.Step(replyFocused ? 1f : 0f, ReplyRevealSmoothTime, delta);
+        sheetReveal.Step(sheetOpen ? 1f : 0f, Motion.Sheet, delta);
+        replyReveal.Step(replyFocused ? 1f : 0f, Motion.Appear, delta);
         var contentTop = area.Min.Y + theme.TopZoneHeight * scale;
         var baseStage = new Rect(new Vector2(area.Min.X, contentTop + 44f * scale),
             new Vector2(area.Max.X, area.Max.Y - 16f * scale));
@@ -384,23 +380,22 @@ internal sealed class StoryViewerOverlay
             return;
         }
 
-        var eased = Easing.EaseOutQuint(revealValue);
         var side = QuickEmojiSide * scale;
-        var rise = (1f - eased) * 8f * scale;
+        var rise = (1f - revealValue) * 8f * scale;
         var rowBottom = barMin.Y - QuickEmojiRowGap * scale + rise;
         var rowTop = rowBottom - side;
         var slot = (barMax.X - barMin.X) / QuickEmojiFiles.Length;
         var backdropPad = 8f * scale;
         Squircle.Fill(drawList, new Vector2(barMin.X, rowTop - backdropPad),
             new Vector2(barMax.X, rowBottom + backdropPad), (side + backdropPad * 2f) * 0.5f,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f * eased)));
-        var tint = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, eased));
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f * revealValue)));
+        var tint = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, revealValue));
         var rowCenterY = (rowTop + rowBottom) * 0.5f;
         for (var emojiIndex = 0; emojiIndex < QuickEmojiFiles.Length; emojiIndex++)
         {
             var center = new Vector2(barMin.X + slot * (emojiIndex + 0.5f), rowCenterY);
             var half = side * 0.5f;
-            var hovered = eased > 0.5f
+            var hovered = revealValue > 0.5f
                 && UiInteract.Hover(center - new Vector2(half, half), center + new Vector2(half, half));
             var drawHalf = hovered ? half * 1.15f : half;
             EmojiImages.TryDraw(drawList, QuickEmojiFiles[emojiIndex], center - new Vector2(drawHalf, drawHalf),
@@ -446,7 +441,7 @@ internal sealed class StoryViewerOverlay
         var radius = height * 0.5f;
         var centerY = origin.Y + height * 0.5f;
         var hovered = !sheetOpen && UiInteract.Hover(origin, max);
-        seenHover.Step(hovered ? 1f : 0f, SeenHoverSmoothTime, delta);
+        seenHover.Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
         var hover = Math.Clamp(seenHover.Value, 0f, 1f);
         var press = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left) ? 0.1f : 0f;
         Squircle.Fill(drawList, origin, max, radius,
@@ -484,7 +479,7 @@ internal sealed class StoryViewerOverlay
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.5f * reveal)));
         var height = area.Height * SheetHeightFraction;
-        var top = area.Max.Y - height * Easing.EaseOutQuint(reveal);
+        var top = area.Max.Y - height * reveal;
         var panel = new Rect(new Vector2(area.Min.X, top), area.Max);
         if (UiInteract.ClickedOutside(panel.Min, panel.Max, false))
         {

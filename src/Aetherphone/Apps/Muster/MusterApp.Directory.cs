@@ -33,12 +33,14 @@ internal sealed partial class MusterApp
     private MusterDto[] lastGoing = Array.Empty<MusterDto>();
     private MusterDto? lastMine;
     private long nextSectionRebuildUnix;
+    private bool cardAnchorReported;
 
     private void DrawDirectory(Rect area)
     {
         var scale = UiScale.Current;
         var nowUnix = NowUnix();
         var currentDataCenterId = store.CurrentDataCenterId;
+        cardAnchorReported = false;
         DrawDirectoryHeader(area, scale);
         var controlsTop = area.Min.Y + AppHeader.Height * scale;
         DrawScopeRow(area, controlsTop, scale);
@@ -355,8 +357,14 @@ internal sealed partial class MusterApp
         {
             var muster = items[index];
             var cell = FeedCell.Begin(drawList, MusterCard.Height(muster, width, scale), ui.HoverWash);
-            if (ImGui.IsRectVisible(cell.Bounds.Min, cell.Bounds.Max) && MusterCard.Draw(cell, muster, images,
-                    lodestone, theme, ui, nowUnix, currentDataCenterId))
+            var visible = ImGui.IsRectVisible(cell.Bounds.Min, cell.Bounds.Max);
+            if (visible && !cardAnchorReported)
+            {
+                cardAnchorReported = true;
+                UiAnchors.Report("muster.card", cell.Bounds);
+            }
+
+            if (visible && MusterCard.Draw(cell, muster, images, lodestone, theme, ui, nowUnix, currentDataCenterId))
             {
                 OpenDetail(muster.Id);
             }

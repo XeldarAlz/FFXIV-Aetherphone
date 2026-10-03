@@ -1,5 +1,6 @@
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Casino.Tables;
@@ -22,6 +23,8 @@ internal sealed class BlackjackDealPlayback
     private float holeRevealStart = SnappedBirth;
     private int knownHoleCard = PlayingCards.FaceDown;
     private bool primed;
+    private int pendingDealSounds;
+    private float nextDealSoundAt;
 
     public static int SlotOf(int seatIndex, int handIndex)
     {
@@ -35,6 +38,7 @@ internal sealed class BlackjackDealPlayback
         holeRevealStart = SnappedBirth;
         knownHoleCard = PlayingCards.FaceDown;
         primed = false;
+        pendingDealSounds = 0;
         Array.Clear(knownCounts);
     }
 
@@ -54,6 +58,7 @@ internal sealed class BlackjackDealPlayback
             clock = 0f;
             holeRevealStart = SnappedBirth;
             knownHoleCard = PlayingCards.FaceDown;
+            pendingDealSounds = 0;
             Array.Clear(knownCounts);
         }
 
@@ -62,6 +67,19 @@ internal sealed class BlackjackDealPlayback
         CountCards(board);
         AssignBirths(snap);
         ObserveHole(board, snap);
+        SoundNextDeal();
+    }
+
+    private void SoundNextDeal()
+    {
+        if (pendingDealSounds <= 0 || clock < nextDealSoundAt)
+        {
+            return;
+        }
+
+        pendingDealSounds--;
+        nextDealSoundAt += BlackjackDealChoreography.StaggerSeconds;
+        UiFeedback.Play(UiSound.CasinoDeal);
     }
 
     public float TravelOf(int slot, int cardIndex)
@@ -159,6 +177,17 @@ internal sealed class BlackjackDealPlayback
         }
 
         Array.Copy(currentCounts, knownCounts, HandSlots);
+        if (snap || batchIndex == 0)
+        {
+            return;
+        }
+
+        if (pendingDealSounds <= 0)
+        {
+            nextDealSoundAt = clock;
+        }
+
+        pendingDealSounds += batchIndex;
     }
 
     private void ObserveHole(CasinoBlackjackRoomStateDto board, bool snap)
@@ -174,6 +203,7 @@ internal sealed class BlackjackDealPlayback
             && TravelOf(DealerSlot, 1) >= 1f)
         {
             holeRevealStart = clock;
+            UiFeedback.Play(UiSound.GameCardFlip);
         }
 
         knownHoleCard = hole;

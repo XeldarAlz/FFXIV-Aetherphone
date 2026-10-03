@@ -1,8 +1,11 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -14,41 +17,58 @@ internal sealed partial class HousingApp
     private const float WorldSearchHeight = 44f;
 
     private readonly List<HousingWorld> worldMatches = new();
+    private string worldSearch = string.Empty;
 
-    private string stickyDataCenter = string.Empty;
-    private float stickyNextHeaderTop;
-
-    private void DrawWorldPickerRoute(Rect area)
+    private void DrawWorldPickerRoute(in PhoneContext context, HousingView view)
     {
         var scale = UiScale.Current;
-        var body = DrawSubHeader(area, "housing.header.worlds", Loc.T(L.Housing.SelectWorldTitle));
-        var pad = 16f * scale;
-        var searchBar = new Rect(new Vector2(body.Min.X + pad, body.Min.Y + 4f * scale),
-            new Vector2(body.Max.X - pad, body.Min.Y + 4f * scale + WorldSearchHeight * scale));
-        SearchField.Draw(searchBar, "##housingWorldSearch", Loc.T(L.Housing.SearchWorlds), ref worldSearch,
-            ui.Palette, 40);
-        var listBody = new Rect(new Vector2(body.Min.X, searchBar.Max.Y), body.Max);
-        using (AppSurface.Begin(listBody))
+        if (!ReferenceEquals(worldTextCulture, Loc.Culture))
         {
-            var worlds = housing.Worlds;
-            if (worlds.Count == 0)
-            {
-                var label = housing.WorldsLoading ? LoadingPulse.SafeLabel() : Loc.T(L.Housing.Offline);
-                Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(2f * scale, 20f * scale), label, ui.MutedInk,
-                    TextStyles.Subheadline);
-                ImGui.Dummy(new Vector2(ScrollLayout.StableContentWidth(), 60f * scale));
-                return;
-            }
-
-            var query = worldSearch.Trim();
-            if (query.Length > 0)
-            {
-                DrawWorldSearchResults(query, scale);
-                return;
-            }
-
-            DrawWorldGroups(scale);
+            worldTextCulture = Loc.Culture;
+            dataCenterHeaders.Clear();
+            worldDetails.Clear();
         }
+
+        var navBar = AppHeader.BeginLargeTitle(context);
+        var body = navBar.Body;
+        var searchBar = new Rect(new Vector2(body.Min.X, body.Min.Y),
+            new Vector2(body.Max.X, body.Min.Y + GlassField.HeightUnits * scale));
+        var drawList = ImGui.GetWindowDrawList();
+        GlassField.Surface(drawList, searchBar, GlassField.Radius(searchBar), scale, 0f, 1f);
+        GlassField.Search(drawList, searchBar, "##housingWorldSearch", Loc.T(L.Housing.SearchWorlds), ref worldSearch,
+            frameTheme, scale, 40, false);
+        var listBody = new Rect(new Vector2(body.Min.X, searchBar.Max.Y + Metrics.Space.Sm * scale), body.Max);
+        var worlds = housing.Worlds;
+        if (worlds.Count == 0)
+        {
+            if (housing.WorldsLoading)
+            {
+                LoadingPulse.Draw(listBody.Center, 18f * scale, ui.Accent, ui.MutedInk, LoadingPulse.SafeLabel());
+            }
+            else
+            {
+                HousingArt.StateScreen(drawList, ui, listBody, FontAwesomeIcon.Globe, Loc.T(L.Housing.Offline),
+                    Loc.T(L.Housing.OfflineHint), string.Empty, scale);
+            }
+        }
+        else
+        {
+            using (AppSurface.Begin(listBody))
+            {
+                var query = worldSearch.Trim();
+                if (query.Length > 0)
+                {
+                    DrawWorldSearchResults(query, scale);
+                }
+                else
+                {
+                    DrawWorldGroups(scale);
+                }
+            }
+        }
+
+        AppHeader.EndLargeTitle(in navBar, context, "housing.nav.worlds", Loc.T(L.Housing.SelectWorldTitle),
+            NavBarStyle.From(ui), ReadOnlySpan<NavBarButton>.Empty, view.BackTitle, back);
     }
 
     private void DrawWorldSearchResults(string query, float scale)
@@ -89,40 +109,8 @@ internal sealed partial class HousingApp
         ImGui.Dummy(new Vector2(0f, 16f * scale));
     }
 
-    private static float DataCenterHeaderHeight(float scale) =>
-        (Metrics.Space.Sm + Metrics.Space.Xs) * scale + Typography.LineHeight(TextStyles.FootnoteEmphasized);
-
-    private void DrawStickyDataCenter(float stickyLine, float headerHeight, float scale)
-    {
-        if (stickyDataCenter.Length == 0)
-        {
-            return;
-        }
-
-        var top = stickyLine;
-        if (stickyNextHeaderTop - stickyLine < headerHeight)
-        {
-            top = stickyNextHeaderTop - headerHeight;
-        }
-
-        var drawList = ImGui.GetWindowDrawList();
-        var left = ImGui.GetWindowPos().X;
-        var right = left + ImGui.GetWindowSize().X;
-        drawList.AddRectFilled(new Vector2(left, top), new Vector2(right, top + headerHeight),
-            ImGui.GetColorU32(ui.Palette.BackdropTop));
-        drawList.AddLine(new Vector2(left, top + headerHeight), new Vector2(right, top + headerHeight),
-            ImGui.GetColorU32(ui.Hairline), Metrics.Stroke.Hairline);
-        Typography.Draw(drawList,
-            new Vector2(left + Metrics.Space.Lg * scale, top + Metrics.Space.Sm * scale),
-            Loc.Culture.TextInfo.ToUpper(stickyDataCenter), frameTheme.TextMuted, TextStyles.FootnoteEmphasized);
-    }
-
     private void DrawWorldGroups(float scale)
     {
-        var stickyLine = ImGui.GetWindowPos().Y;
-        var headerHeight = DataCenterHeaderHeight(scale);
-        stickyDataCenter = string.Empty;
-        stickyNextHeaderTop = float.MaxValue;
         var regions = HousingRegions.Order;
         for (var regionIndex = 0; regionIndex < regions.Count; regionIndex++)
         {
@@ -148,9 +136,7 @@ internal sealed partial class HousingApp
 
                 worldMatches.Sort(static (first, second) =>
                     string.Compare(first.Name, second.Name, StringComparison.OrdinalIgnoreCase));
-                var label = string.Concat(region, " · ", dataCenter);
-                var headerTop = ImGui.GetCursorScreenPos().Y;
-                SettingsSection.Header(label, frameTheme);
+                SettingsSection.Header(DataCenterHeader(region, dataCenter), frameTheme);
                 var card = GroupCard.Begin(frameTheme, worldMatches.Count, WorldRowHeight);
                 for (var index = 0; index < worldMatches.Count; index++)
                 {
@@ -163,20 +149,10 @@ internal sealed partial class HousingApp
                 }
 
                 card.End();
-                var groupBottom = ImGui.GetCursorScreenPos().Y;
-                if (headerTop <= stickyLine && groupBottom > stickyLine)
-                {
-                    stickyDataCenter = label;
-                }
-                else if (headerTop > stickyLine && stickyNextHeaderTop > headerTop)
-                {
-                    stickyNextHeaderTop = headerTop;
-                }
             }
         }
 
         ImGui.Dummy(new Vector2(0f, 20f * scale));
-        DrawStickyDataCenter(stickyLine, headerHeight, scale);
     }
 
     private readonly List<string> dataCenterBuffer = new();
@@ -201,20 +177,48 @@ internal sealed partial class HousingApp
         return dataCenterBuffer;
     }
 
+    private readonly Dictionary<string, string> dataCenterHeaders = new(StringComparer.Ordinal);
+    private readonly Dictionary<uint, string> worldDetails = new();
+    private object? worldTextCulture;
+
+    private string DataCenterHeader(string region, string dataCenter)
+    {
+        if (dataCenterHeaders.TryGetValue(dataCenter, out var header))
+        {
+            return header;
+        }
+
+        header = string.Concat(region, " · ", dataCenter);
+        dataCenterHeaders[dataCenter] = header;
+        return header;
+    }
+
     private bool IsCurrentWorld(uint worldId) => housing.WorldId == worldId;
 
-    private string DetailFor(HousingWorld world) =>
-        world.Id == housing.HomeWorldId
-            ? string.Concat(world.DataCenterName, " · ", Loc.T(L.Housing.HomeWorld))
-            : world.DataCenterName;
+    private string DetailFor(HousingWorld world)
+    {
+        if (world.Id != housing.HomeWorldId)
+        {
+            return world.DataCenterName;
+        }
+
+        if (worldDetails.TryGetValue(world.Id, out var detail))
+        {
+            return detail;
+        }
+
+        detail = string.Concat(world.DataCenterName, " · ", Loc.T(L.Housing.HomeWorld));
+        worldDetails[world.Id] = detail;
+        return detail;
+    }
 
     private void PickWorld(uint worldId)
     {
         housing.SelectWorld(worldId);
         ResetMapView();
-        sheetOpen = false;
-        selectedPlot = default;
+        ClosePlotCard(true);
         InvalidateCache();
+        UiFeedback.Play(UiSound.Tap);
         router.Pop();
     }
 
@@ -222,32 +226,36 @@ internal sealed partial class HousingApp
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = UiInteract.Hover(row.Min, row.Max);
-        var bounds = new Rect(new Vector2(row.Min.X - Metrics.Space.Sm * scale, row.Min.Y + 2f * scale),
-            new Vector2(row.Max.X + Metrics.Space.Sm * scale, row.Max.Y - 2f * scale));
-        HousingSelection.Surface(drawList, bounds, selected, hovered, false, ui, scale);
         if (hovered)
         {
+            Squircle.Fill(drawList, new Vector2(row.Min.X - 8f * scale, row.Min.Y + 2f * scale),
+                new Vector2(row.Max.X + 8f * scale, row.Max.Y - 2f * scale), Metrics.Radius.Sm * scale,
+                ImGui.GetColorU32(Palette.WithAlpha(frameTheme.Accent, 0.14f)));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var markerInset = HousingSelection.MarkerInset * scale;
-        if (selected)
-        {
-            HousingSelection.Marker(drawList, new Vector2(bounds.Min.X + markerInset, row.Center.Y), ui.Accent, scale);
-        }
-
-        var textLeft = row.Min.X + markerInset + HousingSelection.MarkerRadius * scale;
+        var checkWidth = 22f * scale;
         var detailStyle = TextStyles.Footnote;
         var detailSize = detail.Length > 0 ? Typography.Measure(detail, detailStyle) : Vector2.Zero;
-        var nameMax = MathF.Max(1f, row.Max.X - textLeft - detailSize.X - Metrics.Space.Md * scale);
-        var nameStyle = selected ? TextStyles.BodyEmphasized : TextStyles.Body;
-        Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y - Typography.LineHeight(nameStyle) * 0.5f),
-            Typography.FitText(name, nameMax, nameStyle), HousingSelection.Ink(selected, hovered, false, ui),
-            nameStyle);
+        var nameMax = MathF.Max(1f, row.Width - checkWidth - detailSize.X - 14f * scale);
+        var nameStyle = TextStyles.Body;
+        Typography.Draw(drawList, new Vector2(row.Min.X, row.Center.Y - Typography.LineHeight(nameStyle) * 0.5f),
+            Typography.FitText(name, nameMax, nameStyle), frameTheme.TextStrong, nameStyle);
         if (detail.Length > 0)
         {
-            Typography.Draw(drawList, new Vector2(row.Max.X - detailSize.X, row.Center.Y - detailSize.Y * 0.5f),
-                detail, selected ? ui.TitleInk : ui.MutedInk, detailStyle);
+            Typography.Draw(drawList,
+                new Vector2(row.Max.X - checkWidth - detailSize.X, row.Center.Y - detailSize.Y * 0.5f), detail,
+                frameTheme.TextMuted, detailStyle);
+        }
+
+        if (selected)
+        {
+            var center = new Vector2(row.Max.X - 8f * scale, row.Center.Y);
+            var color = ImGui.GetColorU32(frameTheme.Accent);
+            drawList.AddLine(center + new Vector2(-5f * scale, 0f), center + new Vector2(-1.6f * scale, 3.8f * scale),
+                color, 2f * scale);
+            drawList.AddLine(center + new Vector2(-1.6f * scale, 3.8f * scale),
+                center + new Vector2(5f * scale, -4.2f * scale), color, 2f * scale);
         }
 
         return UiInteract.Click(row.Min, row.Max, hovered);

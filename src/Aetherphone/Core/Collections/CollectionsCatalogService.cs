@@ -11,7 +11,17 @@ internal sealed class CatalogEntry
 {
     public volatile CollectionState State = CollectionState.Idle;
     public CollectionItem[] Items = Array.Empty<CollectionItem>();
+    public Dictionary<int, CollectionItem> ById = new();
     public int Total;
+
+    public CollectionItem? Find(int id) =>
+        State == CollectionState.Ready && ById.TryGetValue(id, out var item) ? item : null;
+}
+
+internal readonly record struct CollectionQuest(string Name, string PlaceName, uint TerritoryId, uint MapId, int RawX,
+    int RawY, bool Completed)
+{
+    public bool HasLocation => MapId != 0;
 }
 
 internal sealed class OwnedEntry
@@ -84,6 +94,8 @@ internal sealed class CollectionsCatalogService : IDisposable
     private readonly ConcurrentDictionary<string, OwnedEntry> owned = new();
     private readonly ConcurrentDictionary<string, SummaryEntry> summaries = new();
     private readonly ConcurrentDictionary<CollectionCategory, LocalUnlocks> localUnlocks = new();
+    private readonly Dictionary<int, CollectionQuest?> quests = new();
+    private int revision;
 
     public CollectionsCatalogService(HttpService http, DiskCache disk, IDataManager dataManager,
         IUnlockState unlockState, IFramework framework)
@@ -95,6 +107,8 @@ internal sealed class CollectionsCatalogService : IDisposable
         this.framework = framework;
         throttle = new RequestThrottle(2, TimeSpan.FromMilliseconds(600));
     }
+
+    public int Revision => Volatile.Read(ref revision);
 
     public CatalogEntry RequestCatalog(CollectionCategory category)
     {
@@ -162,6 +176,7 @@ internal sealed class CollectionsCatalogService : IDisposable
             Apply(entry, CollectionCategory.Achievements, null);
             entry.FetchedUtc = DateTime.UtcNow;
             entry.State = SummaryState.Ready;
+            Interlocked.Increment(ref revision);
             return entry;
         }
 
@@ -183,6 +198,106 @@ internal sealed class CollectionsCatalogService : IDisposable
     {
         owned.Clear();
         localUnlocks.Clear();
+        quests.Clear();
+        Interlocked.Increment(ref revision);
+    }
+
+    public static bool HasLocalUnlocks(CollectionCategory category) => category != CollectionCategory.Achievements;
+
+    public LocalUnlocks? ScanLocal(CollectionCategory category)
+    {
+        if (!HasLocalUnlocks(category) || !framework.IsInFrameworkUpdateThread)
+        {
+            return null;
+        }
+
+        LocalUnlocks built;
+        try
+        {
+            built = Collect(category);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, $"Collections local scan failed for {category}");
+            return null;
+        }
+
+        localUnlocks[category] = built;
+        var suffix = string.Concat(":", CollectionCategories.OwnedPath(category));
+        foreach (var key in owned.Keys)
+        {
+            if (key.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                owned.TryRemove(key, out _);
+            }
+        }
+
+        foreach (var summary in summaries.Values)
+        {
+            Apply(summary, category, built.OwnedIds.Count, built.Total);
+        }
+
+        Interlocked.Increment(ref revision);
+        return built;
+    }
+
+    public CollectionQuest? Quest(int questId)
+    {
+        if (questId <= 0)
+        {
+            return null;
+        }
+
+        if (quests.TryGetValue(questId, out var cached))
+        {
+            return cached;
+        }
+
+        if (!framework.IsInFrameworkUpdateThread)
+        {
+            return null;
+        }
+
+        CollectionQuest? built = null;
+        try
+        {
+            built = BuildQuest((uint)questId);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, $"Collections quest lookup failed for {questId}");
+        }
+
+        quests[questId] = built;
+        return built;
+    }
+
+    private CollectionQuest? BuildQuest(uint questId)
+    {
+        if (!dataManager.GetExcelSheet<Quest>().TryGetRow(questId, out var quest))
+        {
+            return null;
+        }
+
+        var name = quest.Name.ExtractText();
+        if (name.Length == 0)
+        {
+            return null;
+        }
+
+        var completed = unlockState.IsQuestCompleted(quest);
+        if (!quest.IssuerLocation.IsValid)
+        {
+            return new CollectionQuest(name, string.Empty, 0, 0, 0, 0, completed);
+        }
+
+        var level = quest.IssuerLocation.Value;
+        var territoryId = level.Territory.RowId;
+        var placeName = level.Territory.IsValid
+            ? level.Territory.Value.PlaceName.Value.Name.ExtractText()
+            : string.Empty;
+        return new CollectionQuest(name, placeName, territoryId, level.Map.RowId, (int)(level.X * 1000f),
+            (int)(level.Z * 1000f), completed);
     }
 
     public void ResetSummaries()
@@ -196,7 +311,7 @@ internal sealed class CollectionsCatalogService : IDisposable
         {
             var token = cancellation.Token;
             var path = CollectionCategories.CatalogPath(category);
-            var cacheKey = string.Concat("collect:catalog:", path);
+            var cacheKey = string.Concat("collect:catalog:v2:", path);
             var cached = disk.Get(cacheKey, CatalogFreshFor);
             CollectionResponse? response;
 
@@ -220,9 +335,18 @@ internal sealed class CollectionsCatalogService : IDisposable
                 return;
             }
 
-            entry.Items = Build(response.Results);
+            var items = Build(category, response.Results);
+            var byId = new Dictionary<int, CollectionItem>(items.Length);
+            for (var index = 0; index < items.Length; index++)
+            {
+                byId[items[index].Id] = items[index];
+            }
+
+            entry.Items = items;
+            entry.ById = byId;
             entry.Total = response.Count != 0 ? response.Count : entry.Items.Length;
             entry.State = CollectionState.Ready;
+            Interlocked.Increment(ref revision);
         }
         catch (OperationCanceledException)
         {
@@ -242,8 +366,6 @@ internal sealed class CollectionsCatalogService : IDisposable
                 .ConfigureAwait(false);
         }
     }
-
-    private static bool HasLocalUnlocks(CollectionCategory category) => category != CollectionCategory.Achievements;
 
     private bool ApplyLocalSummary(SummaryEntry entry)
     {
@@ -492,6 +614,7 @@ internal sealed class CollectionsCatalogService : IDisposable
             entry.Ids = ids;
             entry.Count = ids.Count;
             entry.State = OwnedState.Ready;
+            Interlocked.Increment(ref revision);
         }
         catch (OperationCanceledException)
         {
@@ -521,6 +644,7 @@ internal sealed class CollectionsCatalogService : IDisposable
             entry.FetchedUtc = DateTime.UtcNow;
             Apply(entry, CollectionCategory.Achievements, dto?.Achievements);
             entry.State = SummaryState.Ready;
+            Interlocked.Increment(ref revision);
         }
         catch (OperationCanceledException)
         {
@@ -530,6 +654,7 @@ internal sealed class CollectionsCatalogService : IDisposable
             entry.FetchedUtc = DateTime.UtcNow;
             Apply(entry, CollectionCategory.Achievements, null);
             entry.State = SummaryState.Ready;
+            Interlocked.Increment(ref revision);
             AepLog.Warning(exception, "Collections summary fetch failed");
         }
     }
@@ -563,13 +688,13 @@ internal sealed class CollectionsCatalogService : IDisposable
         };
     }
 
-    private static CollectionItem[] Build(CollectionItemDto[] results)
+    private static CollectionItem[] Build(CollectionCategory category, CollectionItemDto[] results)
     {
         var items = new CollectionItem[results.Length];
 
         for (var index = 0; index < results.Length; index++)
         {
-            items[index] = new CollectionItem(results[index]);
+            items[index] = new CollectionItem(category, results[index], index);
         }
 
         return items;

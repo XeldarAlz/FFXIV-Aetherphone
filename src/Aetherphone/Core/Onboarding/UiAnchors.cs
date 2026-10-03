@@ -12,15 +12,7 @@ internal static class UiAnchors
         Anchors.Clear();
     }
 
-    public static void Report(string key, Rect rect)
-    {
-        if (!recording)
-        {
-            return;
-        }
-
-        Anchors[key] = rect;
-    }
+    public static void Report(string key, Rect rect) => Anchors[key] = rect;
 
     public static bool TryGet(string key, out Rect rect) => Anchors.TryGetValue(key, out rect);
 }

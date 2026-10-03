@@ -9,6 +9,7 @@ namespace Aetherphone.Core.ControlCenter.Modules;
 
 internal sealed class CoinModule : IControlModule
 {
+    private const string DetailId = "cc.detail.coin";
     private static readonly ControlSpan[] SpanOptions = { ControlSpan.Small, ControlSpan.Wide };
 
     private readonly CoinStore coins;
@@ -36,9 +37,10 @@ internal sealed class CoinModule : IControlModule
     {
         var balance = coins.Wallet?.Balance ?? session.CurrentUser?.Coins ?? 0;
         var label = NumberText.Group(balance);
-        if (ControlTile.Toggle(context.DrawList, context.Rect, FontAwesomeIcon.Coins, label, false,
-                AppAccents.For("coin"), context.Theme, context.Opacity, context.Interactive,
-                context.Span != ControlSpan.Small))
+        var expanded = context.Expanded;
+        if (ControlTile.Toggle(context.DrawList, expanded ? DetailId : Id, context.Rect, FontAwesomeIcon.Coins, label,
+                false, AppAccents.For("coin"), context.Theme, context.Opacity, context.Interactive,
+                context.Span != ControlSpan.Small || expanded))
         {
             open();
         }

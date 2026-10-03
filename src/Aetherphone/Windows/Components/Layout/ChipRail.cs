@@ -20,7 +20,6 @@ internal sealed class ChipRail
     private const float ArrowInset = 13f;
     private const float ArrowChevron = 3.5f;
     private const float PageFraction = 0.75f;
-    private const float PageSmoothTime = 0.16f;
     private const float OverflowEpsilon = 0.5f;
 
     private static readonly Vector4 ArrowScrim = new(0.05f, 0.03f, 0.04f, 0.72f);
@@ -149,7 +148,7 @@ internal sealed class ChipRail
         }
 
         pageTarget = Math.Clamp(pageTarget, 0f, maxOffset);
-        offset = pageSpring.Step(pageTarget, PageSmoothTime, ImGui.GetIO().DeltaTime);
+        offset = pageSpring.Step(pageTarget, Motion.PageSettle, ImGui.GetIO().DeltaTime);
         if (pageSpring.IsResting(pageTarget, 0.5f, 1f))
         {
             offset = pageTarget;

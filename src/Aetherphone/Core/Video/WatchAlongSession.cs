@@ -5,10 +5,15 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Maps;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Telephony.Contracts;
+using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Core.Video;
 
-internal sealed record WatchAlongParticipant(string UserId, string DisplayName, string? AvatarUrl, bool IsHost);
+internal sealed record WatchAlongParticipant(string UserId, string DisplayName, string? AvatarUrl, bool IsHost,
+    int Flags)
+{
+    internal bool CanHost => (Flags & StreamPermission.CanHost) != 0;
+}
 
 internal sealed record NearbyStream(string HostId, string DisplayName, string Handle, string? AvatarUrl);
 
@@ -21,6 +26,8 @@ internal sealed record HostQueueItem(string Url, string Title);
 internal sealed record ViewerFailure(string UserId, string DisplayName, string? Reason);
 
 internal readonly record struct PendingAlert(LocString Title, LocString Body);
+
+internal readonly record struct PendingToast(LocString Text, string? Argument);
 
 internal enum WatchAlongMode : byte
 {
@@ -39,12 +46,14 @@ internal sealed class WatchAlongSession : IDisposable
     private const long AutoReplayMaxDelayMilliseconds = 60 * 1000;
     private const long AutoReplayBotCheckDelayMilliseconds = 5 * 60 * 1000;
     private const long AutoReplayBotCheckMaxDelayMilliseconds = 15 * 60 * 1000;
-    private const int MaxSharedQueueEntries = 32;
-    private const int MaxLocalFileMapEntries = 64;
+    private const long ReactionCooldownMilliseconds = 250;
+    private const long ControlCooldownMilliseconds = 250;
+    private const int MaxSharedQueueEntries = 64;
 
-    private const float ScreenPositionDriftTolerance = 0.1f;
-    private const float ScreenYawDriftTolerance = 0.02f;
-    private const float ScreenScaleDriftTolerance = 0.02f;
+    private const float ScreenPositionDriftTolerance = 0.01f;
+    private const float ScreenAngleDriftTolerance = 0.005f;
+    private const float ScreenScaleDriftTolerance = 0.005f;
+    private const float HostScreenReach = 120f;
 
     private readonly AethernetSession session;
     private readonly Configuration configuration;
@@ -55,6 +64,7 @@ internal sealed class WatchAlongSession : IDisposable
     private readonly ScreenController screen;
     private readonly ServerClock serverClock = new();
     private readonly PlaybackSyncController sync = new();
+    private readonly ConcurrentDictionary<string, int> grants = new(StringComparer.Ordinal);
 
     private int tickCounter;
     private float heartbeatTimer;
@@ -62,9 +72,7 @@ internal sealed class WatchAlongSession : IDisposable
     private double lastPublishedPosition;
     private DateTime lastPublishedAt = DateTime.UtcNow;
     private bool lastPublishedPaused;
-    private Vector3? lastPublishedScreenPosition;
-    private float lastPublishedScreenYaw;
-    private float lastPublishedScreenScale;
+    private StreamScreenPose? lastPublishedScreen;
     private bool lastPublishedApprovalRequired;
     private int lastPublishedQueueCount = -1;
     private volatile bool publishRequested;
@@ -78,13 +86,36 @@ internal sealed class WatchAlongSession : IDisposable
     private long mismatchCandidateSizeBytes;
     private long autoReplayDelayMilliseconds;
     private long autoReplayNextAtTicks;
+    private long idleSinceTicks;
+    private long reactedAtTicks;
+    private long controlledAtTicks;
     private CallControl? lastStateMessage;
 
     private CallControl? pendingJoinSync;
     private CallControl? pendingStateSync;
+    private CallControl? pendingHostChange;
     private volatile bool pendingViewerStop;
 
+    private volatile int serverFeatures;
+    private volatile int remoteGuestPermissions;
+    private volatile StreamMember[]? remoteMembers;
+    private volatile ParticipantInfo[]? remoteParticipants;
+    private volatile string? roomCode;
+    private StreamMember[]? publishedGrants;
+    private volatile bool grantsChanged;
+    private volatile bool promotionPending;
+    private volatile bool serverSeen;
+    private volatile bool joinRequested;
+    private volatile bool policyAdopted;
+    private volatile int publishedGuestPermissions;
+    private volatile string? roomHostId;
+    private PartyPolicy adoptedPolicy;
+
     private readonly ConcurrentQueue<PendingAlert> pendingAlerts = new();
+    private readonly ConcurrentQueue<PendingToast> pendingToasts = new();
+    private readonly ConcurrentQueue<CallControl> pendingControls = new();
+    private readonly ConcurrentQueue<QueueSuggestion> trustedSuggestions = new();
+    private readonly ConcurrentQueue<int> pendingReactions = new();
 
     private bool awaitingHostAck;
     private bool partyOpen;
@@ -113,12 +144,17 @@ internal sealed class WatchAlongSession : IDisposable
         stream.QueueSuggestionResult += OnQueueSuggestionResult;
         stream.Kicked += OnKicked;
         stream.ViewerFailed += OnViewerFailed;
+        stream.HostChanged += OnHostChanged;
+        stream.ControlRequested += OnControlRequested;
+        stream.Reacted += OnReacted;
     }
 
     internal WatchAlongMode Mode { get; private set; } = WatchAlongMode.None;
     internal bool IsHosting => Mode == WatchAlongMode.Hosting;
     internal bool IsViewing => Mode == WatchAlongMode.Viewing;
     internal bool IsPartyOpen => partyOpen;
+    internal bool HasCompany => Roster.Count > 1;
+    internal bool InParty => IsViewing || partyOpen || (IsHosting && HasCompany);
 
     internal IReadOnlyList<WatchAlongParticipant> Roster { get; private set; } = [];
     internal IReadOnlyList<NearbyStream> Nearby { get; private set; } = [];
@@ -135,6 +171,36 @@ internal sealed class WatchAlongSession : IDisposable
     internal IReadOnlyList<PendingJoinRequest> PendingRequests { get; private set; } = [];
     internal IReadOnlyList<QueueSuggestion> PendingQueueSuggestions { get; private set; } = [];
     internal IReadOnlyList<ViewerFailure> ViewerFailures { get; private set; } = [];
+
+    internal PartyReactions Reactions { get; } = new();
+
+    internal bool ServerSupportsParty => (serverFeatures & StreamFeature.Party) != 0;
+
+    internal bool ServerLacksParty => serverSeen && !ServerSupportsParty;
+
+    internal string RoomCode => roomCode ?? string.Empty;
+
+    internal bool HostScreenOutOfReach { get; private set; }
+
+    internal float IdleGraceSeconds => PartyIdle.RemainingSeconds(idleSinceTicks, Environment.TickCount64);
+
+    internal PartyPolicy Policy => policyAdopted ? adoptedPolicy : PartyPolicy.From(configuration);
+
+    internal int GuestPermissions => Policy.GuestPermissions;
+
+    internal bool IsJoining => joinRequested || IsAwaitingApproval;
+
+    internal int RoomGuestPermissions => IsViewing ? remoteGuestPermissions : GuestPermissions;
+
+    internal int MyPermissions => session.CurrentUser is { } me
+        ? PartyPermissions.Held(remoteGuestPermissions, remoteMembers, me.Id)
+        : 0;
+
+    internal bool CanAddDirectly =>
+        IsViewing && PartyPermissions.Allows(MyPermissions, StreamPermission.AddToQueue);
+
+    internal bool CanControlPlayback => IsViewing && ServerSupportsParty
+        && PartyPermissions.Allows(MyPermissions, StreamPermission.ControlPlayback);
 
     internal float AutoReplayInSeconds => autoReplayUrl is null
         ? 0f
@@ -157,15 +223,49 @@ internal sealed class WatchAlongSession : IDisposable
 
     private void RequestPublish() => publishRequested = true;
 
+    internal void SetPolicy(PartyPolicy policy)
+    {
+        if (policyAdopted)
+        {
+            adoptedPolicy = policy;
+        }
+        else
+        {
+            policy.Store(configuration);
+        }
+
+        RequestPublish();
+    }
+
     internal void Join(string hostId)
     {
-        if (Mode == WatchAlongMode.Hosting)
+        PrepareToJoin();
+        stream.Join(hostId);
+    }
+
+    internal bool JoinByCode(string input)
+    {
+        var code = PartyCode.Normalize(input);
+        if (code.Length == 0)
         {
+            return false;
+        }
+
+        PrepareToJoin();
+        stream.JoinByCode(code);
+        return true;
+    }
+
+    private void PrepareToJoin()
+    {
+        if (Mode == WatchAlongMode.Hosting || awaitingHostAck)
+        {
+            stream.Leave(session.CurrentUser?.Id);
             StopHostingLocal();
         }
 
+        joinRequested = true;
         queue.Suspend();
-        stream.Join(hostId);
     }
 
     internal void OpenParty()
@@ -198,31 +298,64 @@ internal sealed class WatchAlongSession : IDisposable
 
     internal void Leave()
     {
-        if (Mode == WatchAlongMode.None && !awaitingHostAck && !IsAwaitingApproval && !partyOpen)
+        if (Mode == WatchAlongMode.None && !awaitingHostAck && !IsJoining && !partyOpen)
         {
             return;
         }
 
-        stream.Leave();
+        stream.Leave(Mode == WatchAlongMode.Viewing || IsJoining ? roomHostId : session.CurrentUser?.Id);
         if (Mode == WatchAlongMode.Viewing)
         {
             sync.Reset();
-            video.Stop();
             ClearViewingState();
+            video.HoldScreen = false;
+            video.Stop();
         }
 
         queue.Resume();
+        ResetRoom();
+    }
+
+    private void ResetRoom()
+    {
         Mode = WatchAlongMode.None;
         awaitingHostAck = false;
         IsAwaitingApproval = false;
         partyOpen = false;
+        idleSinceTicks = 0;
         Roster = [];
         PendingRequests = [];
         PendingQueueSuggestions = [];
         ViewerFailures = [];
         HostQueue = [];
+        HostScreenOutOfReach = false;
+        remoteParticipants = null;
+        remoteMembers = null;
+        remoteGuestPermissions = 0;
+        roomCode = null;
+        roomHostId = null;
+        joinRequested = false;
+        promotionPending = false;
+        policyAdopted = false;
+        grants.Clear();
+        publishedGrants = null;
+        grantsChanged = false;
+        lastPublishedUrl = null;
+        lastPublishedQueueCount = -1;
+        lastPublishedScreen = null;
+        Reactions.Clear();
+        video.HoldScreen = false;
+        screen.Engine.ScreenCurve = configuration.VideoScreenCurve;
         Interlocked.Exchange(ref pendingJoinSync, null);
         Interlocked.Exchange(ref pendingStateSync, null);
+        Interlocked.Exchange(ref pendingHostChange, null);
+        while (pendingControls.TryDequeue(out _))
+        {
+        }
+
+        while (trustedSuggestions.TryDequeue(out _))
+        {
+        }
     }
 
     private void ClearViewingState()
@@ -242,6 +375,12 @@ internal sealed class WatchAlongSession : IDisposable
         RemovePendingRequest(userId);
     }
 
+    internal void DenyRequest(string userId)
+    {
+        stream.Deny(userId);
+        RemovePendingRequest(userId);
+    }
+
     internal void SuggestQueueItem(string url) => stream.SuggestQueueItem(url, Guid.NewGuid().ToString());
 
     internal void ApproveQueueSuggestion(string suggestionId)
@@ -252,9 +391,26 @@ internal sealed class WatchAlongSession : IDisposable
             return;
         }
 
-        queue.Add(queue.CreateDisplayEntry(suggestion.Url));
-        stream.ApproveQueueSuggestion(suggestionId);
+        AcceptSuggestion(suggestion);
         RemoveQueueSuggestion(suggestionId);
+    }
+
+    private void AcceptSuggestion(QueueSuggestion suggestion)
+    {
+        if (VideoUrlResolver.IsPlaylistUrl(suggestion.Url) && !VideoUrlResolver.NamesOneVideo(suggestion.Url))
+        {
+            if (!queue.ImportPlaylist(suggestion.Url, QueueAddMode.AddToQueue, false))
+            {
+                stream.DenyQueueSuggestion(suggestion.SuggestionId);
+                return;
+            }
+        }
+        else
+        {
+            queue.Add(queue.CreateDisplayEntry(suggestion.Url));
+        }
+
+        stream.ApproveQueueSuggestion(suggestion.SuggestionId);
         RequestPublish();
     }
 
@@ -264,7 +420,75 @@ internal sealed class WatchAlongSession : IDisposable
         RemoveQueueSuggestion(suggestionId);
     }
 
-    internal void KickParticipant(string userId) => stream.Kick(userId);
+    internal void KickParticipant(string userId)
+    {
+        grants.TryRemove(userId, out _);
+        grantsChanged = true;
+        stream.Kick(userId);
+    }
+
+    internal int GrantsFor(string userId) => grants.GetValueOrDefault(userId);
+
+    internal void SetGrant(string userId, int permission, bool granted)
+    {
+        var held = grants.GetValueOrDefault(userId);
+        var updated = granted ? held | permission : held & ~permission;
+        updated &= StreamPermission.GrantMask;
+        if (updated == 0)
+        {
+            grants.TryRemove(userId, out _);
+        }
+        else
+        {
+            grants[userId] = updated;
+        }
+
+        grantsChanged = true;
+        RequestPublish();
+    }
+
+    internal bool CanTransferTo(WatchAlongParticipant participant) =>
+        IsHosting && ServerSupportsParty && !participant.IsHost && participant.CanHost;
+
+    internal void TransferHost(string userId)
+    {
+        if (IsHosting && ServerSupportsParty)
+        {
+            stream.Transfer(userId);
+        }
+    }
+
+    internal void ControlPause(bool paused) =>
+        SendControl(paused ? StreamControlAction.Pause : StreamControlAction.Play, null);
+
+    internal void ControlSeek(double seconds) => SendControl(StreamControlAction.Seek, Math.Max(0d, seconds));
+
+    internal void ControlNext() => SendControl(StreamControlAction.Next, null);
+
+    private void SendControl(string action, double? positionSeconds)
+    {
+        var now = Environment.TickCount64;
+        if (!CanControlPlayback || now - controlledAtTicks < ControlCooldownMilliseconds)
+        {
+            return;
+        }
+
+        controlledAtTicks = now;
+        stream.Control(action, positionSeconds);
+    }
+
+    internal void SendReaction(int kind)
+    {
+        var now = Environment.TickCount64;
+        if (Mode == WatchAlongMode.None || !ServerSupportsParty || now - reactedAtTicks < ReactionCooldownMilliseconds)
+        {
+            return;
+        }
+
+        reactedAtTicks = now;
+        Reactions.Add(kind, now);
+        stream.React(kind);
+    }
 
     private QueueSuggestion? FindQueueSuggestion(string suggestionId)
     {
@@ -317,14 +541,79 @@ internal sealed class WatchAlongSession : IDisposable
         PendingQueueSuggestions = updated;
     }
 
-    internal void DenyRequest(string userId)
-    {
-        stream.Deny(userId);
-        RemovePendingRequest(userId);
-    }
-
     internal void OnFrameworkUpdate(float deltaSeconds)
     {
+        DrainSocketWork();
+        video.HoldScreen = InParty;
+
+        if (Mode == WatchAlongMode.Viewing)
+        {
+            StepViewerSync(deltaSeconds);
+            return;
+        }
+
+        if (IsAwaitingApproval)
+        {
+            return;
+        }
+
+        if (!HoldRoomOpen())
+        {
+            return;
+        }
+
+        heartbeatTimer += deltaSeconds;
+        tickCounter++;
+        if (tickCounter < CheckEveryTicks)
+        {
+            return;
+        }
+
+        tickCounter = 0;
+        PublishHostStateIfNeeded();
+    }
+
+    private bool HoldRoomOpen()
+    {
+        var idle = queue.Current is null && !video.HasMedia;
+        if (!idle || partyOpen)
+        {
+            idleSinceTicks = 0;
+            return true;
+        }
+
+        if (Mode != WatchAlongMode.Hosting || !HasCompany)
+        {
+            if (Mode == WatchAlongMode.Hosting || awaitingHostAck)
+            {
+                Leave();
+            }
+
+            return false;
+        }
+
+        var now = Environment.TickCount64;
+        if (idleSinceTicks == 0)
+        {
+            idleSinceTicks = now;
+        }
+
+        if (PartyIdle.Expired(idleSinceTicks, now))
+        {
+            Leave();
+            return false;
+        }
+
+        return true;
+    }
+
+    private void DrainSocketWork()
+    {
+        if (Interlocked.Exchange(ref pendingHostChange, null) is { } hostChange)
+        {
+            ApplyHostChange(hostChange);
+        }
+
         if (Interlocked.Exchange(ref pendingJoinSync, null) is { } joinMessage)
         {
             ApplyJoinSync(joinMessage);
@@ -339,7 +628,10 @@ internal sealed class WatchAlongSession : IDisposable
         {
             pendingViewerStop = false;
             sync.Reset();
+            video.HoldScreen = false;
             video.Stop();
+            Reactions.Clear();
+            screen.Engine.ScreenCurve = configuration.VideoScreenCurve;
         }
 
         while (pendingAlerts.TryDequeue(out var alert))
@@ -347,36 +639,31 @@ internal sealed class WatchAlongSession : IDisposable
             confirm.Alert(Loc.T(alert.Title), Loc.T(alert.Body), Loc.T(L.Phone.OutcomeDismiss));
         }
 
-        if (Mode == WatchAlongMode.Viewing)
+        while (pendingToasts.TryDequeue(out var toast))
         {
-            StepViewerSync(deltaSeconds);
-            return;
+            ShellToast.Show(toast.Argument is null
+                ? Loc.T(toast.Text)
+                : string.Format(Loc.Culture, Loc.T(toast.Text), toast.Argument));
         }
 
-        if (IsAwaitingApproval)
+        while (pendingControls.TryDequeue(out var control))
         {
-            return;
+            ApplyControlRequest(control);
         }
 
-        if (!partyOpen && queue.Current is null && !video.HasMedia)
+        while (trustedSuggestions.TryDequeue(out var suggestion))
         {
-            if (Mode == WatchAlongMode.Hosting || awaitingHostAck)
+            if (Mode == WatchAlongMode.Hosting)
             {
-                Leave();
+                AcceptSuggestion(suggestion);
             }
-
-            return;
         }
 
-        heartbeatTimer += deltaSeconds;
-        tickCounter++;
-        if (tickCounter < CheckEveryTicks)
+        var now = Environment.TickCount64;
+        while (pendingReactions.TryDequeue(out var reaction))
         {
-            return;
+            Reactions.Add(reaction, now);
         }
-
-        tickCounter = 0;
-        PublishHostStateIfNeeded();
     }
 
     private void StepViewerSync(float deltaSeconds)
@@ -488,6 +775,38 @@ internal sealed class WatchAlongSession : IDisposable
         return Math.Max(0d, (serverNow - stampUnixMs) / 1000d);
     }
 
+    private StreamScreenPose? CurrentScreenPose()
+    {
+        var engine = screen.Engine;
+        if (!engine.IsActive)
+        {
+            return null;
+        }
+
+        return new StreamScreenPose(engine.ScreenPosition, engine.ScreenYaw, engine.ScreenPitch, engine.ScreenRoll,
+            engine.ScreenScale, engine.ScreenCurve);
+    }
+
+    private static bool ScreenMoved(StreamScreenPose? current, StreamScreenPose? published)
+    {
+        if (current is not { } now)
+        {
+            return false;
+        }
+
+        if (published is not { } before)
+        {
+            return true;
+        }
+
+        return Vector3.Distance(now.Position, before.Position) > ScreenPositionDriftTolerance
+            || MathF.Abs(now.Yaw - before.Yaw) > ScreenAngleDriftTolerance
+            || MathF.Abs(now.Pitch - before.Pitch) > ScreenAngleDriftTolerance
+            || MathF.Abs(now.Roll - before.Roll) > ScreenAngleDriftTolerance
+            || MathF.Abs(now.Scale - before.Scale) > ScreenScaleDriftTolerance
+            || MathF.Abs(now.Curve - before.Curve) > ScreenScaleDriftTolerance;
+    }
+
     private void PublishHostStateIfNeeded()
     {
         var progress = video.Progress;
@@ -495,24 +814,19 @@ internal sealed class WatchAlongSession : IDisposable
         var paused = progress.Paused;
         var url = queue.Current is { } current ? ShareableUrl(current) : string.Empty;
 
-        var screenPosition = screen.Engine.IsActive ? screen.Engine.ScreenPosition : (Vector3?)null;
-        var screenYaw = screen.Engine.ScreenYaw;
-        var screenScale = screen.Engine.ScreenScale;
-        var screenChanged = screenPosition is { } currentScreenPosition
-            && (lastPublishedScreenPosition is not { } lastScreenPosition
-                || Vector3.Distance(currentScreenPosition, lastScreenPosition) > ScreenPositionDriftTolerance
-                || MathF.Abs(screenYaw - lastPublishedScreenYaw) > ScreenYawDriftTolerance
-                || MathF.Abs(screenScale - lastPublishedScreenScale) > ScreenScaleDriftTolerance);
+        var screenPose = CurrentScreenPose();
+        var screenChanged = ScreenMoved(screenPose, lastPublishedScreen);
 
-        var approvalRequired = configuration.VideoStreamApprovalRequired;
-        var sharedQueue = BuildSharedQueue();
+        var policy = Policy;
+        var approvalRequired = policy.ApprovalRequired;
+        var sharedCount = Math.Min(queue.Entries.Count, MaxSharedQueueEntries);
         var expected = lastPublishedPaused
             ? lastPublishedPosition
             : lastPublishedPosition + (DateTime.UtcNow - lastPublishedAt).TotalSeconds;
         var jumped = url == lastPublishedUrl && Math.Abs(position - expected) > PositionJumpTolerance;
 
         var changed = url != lastPublishedUrl || paused != lastPublishedPaused || jumped || screenChanged
-            || approvalRequired != lastPublishedApprovalRequired || sharedQueue.Length != lastPublishedQueueCount
+            || approvalRequired != lastPublishedApprovalRequired || sharedCount != lastPublishedQueueCount
             || publishRequested;
         var heartbeatDue = heartbeatTimer >= HeartbeatSeconds;
         if (!changed && !heartbeatDue)
@@ -531,32 +845,53 @@ internal sealed class WatchAlongSession : IDisposable
         lastPublishedPosition = position;
         lastPublishedAt = DateTime.UtcNow;
         lastPublishedPaused = paused;
-        lastPublishedScreenPosition = screenPosition;
-        lastPublishedScreenYaw = screenYaw;
-        lastPublishedScreenScale = screenScale;
+        lastPublishedScreen = screenPose;
         lastPublishedApprovalRequired = approvalRequired;
-        lastPublishedQueueCount = sharedQueue.Length;
+        lastPublishedQueueCount = sharedCount;
 
         if (Mode != WatchAlongMode.Hosting)
         {
             awaitingHostAck = true;
         }
 
-        stream.PublishState(url, position, paused, Plugin.ClientState.TerritoryType, LocationShare.CurrentWorldId(),
-            approvalRequired, configuration.VideoStreamDiscoverable, sharedQueue, screenPosition,
-            screenPosition is not null ? screenYaw : null,
-            screenPosition is not null ? screenScale : null);
+        publishedGuestPermissions = policy.GuestPermissions;
+        stream.PublishState(new StreamPublication(url, position, paused, Plugin.ClientState.TerritoryType,
+            LocationShare.CurrentWorldId(), approvalRequired, policy.Discoverable, policy.CodeEnabled,
+            policy.GuestPermissions, PublishedGrants(), BuildSharedQueue(sharedCount), screenPose));
     }
 
-    private StreamQueueEntry[] BuildSharedQueue()
+    private StreamMember[]? PublishedGrants()
     {
-        var entries = queue.Entries;
-        if (entries.Count == 0)
+        if (!grantsChanged)
+        {
+            return publishedGrants;
+        }
+
+        grantsChanged = false;
+        if (grants.IsEmpty)
+        {
+            publishedGrants = null;
+            return null;
+        }
+
+        var members = new List<StreamMember>(grants.Count);
+        foreach (var pair in grants)
+        {
+            members.Add(new StreamMember(pair.Key, pair.Value));
+        }
+
+        publishedGrants = members.ToArray();
+        return publishedGrants;
+    }
+
+    private StreamQueueEntry[] BuildSharedQueue(int count)
+    {
+        if (count == 0)
         {
             return [];
         }
 
-        var count = Math.Min(entries.Count, MaxSharedQueueEntries);
+        var entries = queue.Entries;
         var shared = new StreamQueueEntry[count];
         for (var index = 0; index < count; index++)
         {
@@ -582,27 +917,84 @@ internal sealed class WatchAlongSession : IDisposable
         Mode = WatchAlongMode.None;
         awaitingHostAck = false;
         partyOpen = false;
+        idleSinceTicks = 0;
         Roster = [];
         PendingRequests = [];
         PendingQueueSuggestions = [];
         ViewerFailures = [];
+        policyAdopted = false;
+        grants.Clear();
+        publishedGrants = null;
         lastPublishedUrl = null;
         lastPublishedQueueCount = -1;
+        lastPublishedScreen = null;
+    }
+
+    private void AbsorbRoom(CallControl message)
+    {
+        serverSeen = true;
+        if (message.Features is { } features)
+        {
+            serverFeatures = features;
+        }
+
+        roomCode = message.Code;
+        remoteGuestPermissions = message.GuestPermissions ?? 0;
+        remoteMembers = message.Members;
+    }
+
+    private void RebuildRoster()
+    {
+        var participants = remoteParticipants;
+        if (participants is null || participants.Length == 0)
+        {
+            Roster = [];
+            return;
+        }
+
+        var members = remoteMembers;
+        var result = new WatchAlongParticipant[participants.Length];
+        for (var index = 0; index < participants.Length; index++)
+        {
+            var participant = participants[index];
+            result[index] = new WatchAlongParticipant(participant.UserId, participant.DisplayName,
+                participant.AvatarUrl, participant.Slot == 0, FlagsOf(members, participant.UserId));
+        }
+
+        Roster = result;
+    }
+
+    private static int FlagsOf(StreamMember[]? members, string userId)
+    {
+        if (members is null)
+        {
+            return 0;
+        }
+
+        for (var index = 0; index < members.Length; index++)
+        {
+            if (string.Equals(members[index].UserId, userId, StringComparison.Ordinal))
+            {
+                return members[index].Flags;
+            }
+        }
+
+        return 0;
     }
 
     private void OnJoined(CallControl message)
     {
         AbsorbServerClock(message);
+        AbsorbRoom(message);
         Mode = WatchAlongMode.Viewing;
         IsAwaitingApproval = false;
-        Roster = ToParticipants(message.Participants);
+        joinRequested = false;
+        roomHostId = message.HostId;
+        remoteParticipants = message.Participants;
+        RebuildRoster();
         HostQueue = ToHostQueue(message.UpcomingQueue);
         lastStateMessage = message;
-
-        if (message.Url is { Length: > 0 })
-        {
-            Interlocked.Exchange(ref pendingJoinSync, message);
-        }
+        Interlocked.Exchange(ref pendingJoinSync, message);
     }
 
     private static bool IsPlayableRemoteUrl(string url) => VideoEngine.ValidateURL(url, out _);
@@ -618,7 +1010,21 @@ internal sealed class WatchAlongSession : IDisposable
         AepLog.Warning($"[WatchAlong] ignoring a stream url that is not a remote http(s) address: {url}");
     }
 
-    private void ApplyJoinSync(CallControl message) => StartViewing(message.Url!, message);
+    private void ApplyJoinSync(CallControl message)
+    {
+        if (Mode != WatchAlongMode.Viewing)
+        {
+            return;
+        }
+
+        if (message.Url is { Length: > 0 } url)
+        {
+            StartViewing(url, message);
+            return;
+        }
+
+        ApplyRemoteScreenTransform(message);
+    }
 
     private void StartViewing(string url, CallControl message)
     {
@@ -628,14 +1034,14 @@ internal sealed class WatchAlongSession : IDisposable
             rejectedRemoteUrl = null;
             viewingUrl = url;
             ViewingEntry = queue.CreateDisplayEntry(url);
-            ApplyRemoteScreenTransform(message);
 
-            if (TryResolveLocalMedia(identity, out var localPath))
+            if (LocalMediaFiles.TryResolve(configuration, identity, out var localPath))
             {
                 ClearLocalMediaPrompt();
                 viewingPlaybackUrl = localPath;
                 var pausedLocal = message.Paused ?? false;
                 video.Play(localPath, ProjectRemotePosition(message), !pausedLocal);
+                ApplyRemoteScreenTransform(message);
                 return;
             }
 
@@ -644,6 +1050,7 @@ internal sealed class WatchAlongSession : IDisposable
             LocalMediaMismatch = false;
             mismatchCandidatePath = null;
             video.Stop();
+            ApplyRemoteScreenTransform(message);
             return;
         }
 
@@ -658,10 +1065,10 @@ internal sealed class WatchAlongSession : IDisposable
         viewingUrl = url;
         viewingPlaybackUrl = url;
         ViewingEntry = queue.CreateDisplayEntry(url);
-        ApplyRemoteScreenTransform(message);
 
         var paused = message.Paused ?? false;
         video.Play(url, ProjectRemotePosition(message), !paused);
+        ApplyRemoteScreenTransform(message);
     }
 
     private void ClearLocalMediaPrompt()
@@ -675,20 +1082,40 @@ internal sealed class WatchAlongSession : IDisposable
     {
         Mode = WatchAlongMode.None;
         IsAwaitingApproval = false;
+        joinRequested = false;
         queue.Resume();
 
-        if (message.Reason == "denied")
+        switch (message.Reason)
         {
-            QueueAlert(L.AetherStream.JoinDeniedTitle, L.AetherStream.JoinDeniedBody);
-            return;
+            case StreamDeclineReason.Denied:
+                QueueAlert(L.AetherStream.JoinDeniedTitle, L.AetherStream.JoinDeniedBody);
+                return;
+            case StreamDeclineReason.BadCode:
+                QueueAlert(L.AetherStream.CodeNotFoundTitle, L.AetherStream.CodeNotFoundBody);
+                return;
+            case StreamDeclineReason.Full:
+                QueueAlert(L.AetherStream.PartyFullTitle, L.AetherStream.PartyFullBody);
+                return;
+            default:
+                QueueAlert(L.AetherStream.StreamUnavailableTitle, L.AetherStream.StreamUnavailableBody);
+                return;
         }
-
-        QueueAlert(L.AetherStream.StreamUnavailableTitle, L.AetherStream.StreamUnavailableBody);
     }
 
     private void OnRoster(CallControl message)
     {
-        Roster = ToParticipants(message.Participants);
+        remoteParticipants = message.Participants;
+        if (Mode == WatchAlongMode.Viewing)
+        {
+            remoteGuestPermissions = message.GuestPermissions ?? remoteGuestPermissions;
+            remoteMembers = message.Members;
+        }
+        else
+        {
+            remoteMembers = message.Members;
+        }
+
+        RebuildRoster();
 
         if (Mode == WatchAlongMode.Hosting)
         {
@@ -709,6 +1136,11 @@ internal sealed class WatchAlongSession : IDisposable
         if (Mode != WatchAlongMode.Hosting || message.UserId is not { } userId)
         {
             return;
+        }
+
+        if (grants.TryRemove(userId, out _))
+        {
+            grantsChanged = true;
         }
 
         RemovePendingRequest(userId);
@@ -758,7 +1190,7 @@ internal sealed class WatchAlongSession : IDisposable
 
     private void OnJoinRequested(CallControl message)
     {
-        if (Mode != WatchAlongMode.Hosting || message.From is not { } from)
+        if ((Mode != WatchAlongMode.Hosting && !promotionPending) || message.From is not { } from)
         {
             return;
         }
@@ -784,6 +1216,7 @@ internal sealed class WatchAlongSession : IDisposable
         }
 
         IsAwaitingApproval = true;
+        joinRequested = false;
     }
 
     private void OnQueueSuggested(CallControl message)
@@ -797,6 +1230,14 @@ internal sealed class WatchAlongSession : IDisposable
         if (!IsPlayableRemoteUrl(url))
         {
             AepLog.Warning($"[WatchAlong] dropping a queue suggestion that is not a remote http(s) address: {url}");
+            return;
+        }
+
+        var suggestion = new QueueSuggestion(suggestionId, from.UserId, from.DisplayName, url);
+        var held = publishedGuestPermissions | grants.GetValueOrDefault(from.UserId);
+        if (PartyPermissions.Allows(held, StreamPermission.AddToQueue))
+        {
+            trustedSuggestions.Enqueue(suggestion);
             return;
         }
 
@@ -814,7 +1255,6 @@ internal sealed class WatchAlongSession : IDisposable
             }
         }
 
-        var suggestion = new QueueSuggestion(suggestionId, from.UserId, from.DisplayName, url);
         updated.Add(suggestion);
         PendingQueueSuggestions = updated;
         if (!replaced)
@@ -825,13 +1265,10 @@ internal sealed class WatchAlongSession : IDisposable
 
     private void OnQueueSuggestionResult(CallControl message)
     {
-        if (message.Reason == "accepted")
-        {
-            QueueAlert(L.AetherStream.QueueSuggestionAcceptedTitle, L.AetherStream.QueueSuggestionAcceptedBody);
-            return;
-        }
-
-        QueueAlert(L.AetherStream.QueueSuggestionDeniedTitle, L.AetherStream.QueueSuggestionDeniedBody);
+        pendingToasts.Enqueue(new PendingToast(
+            message.Reason == "accepted"
+                ? L.AetherStream.QueueSuggestionAcceptedBody
+                : L.AetherStream.QueueSuggestionDeniedBody, null));
     }
 
     private void RemovePendingRequest(string userId)
@@ -859,6 +1296,13 @@ internal sealed class WatchAlongSession : IDisposable
         {
             awaitingHostAck = false;
             Mode = WatchAlongMode.Hosting;
+            AbsorbHostEcho(message);
+            return;
+        }
+
+        if (Mode == WatchAlongMode.Hosting)
+        {
+            AbsorbHostEcho(message);
             return;
         }
 
@@ -868,8 +1312,263 @@ internal sealed class WatchAlongSession : IDisposable
         }
 
         AbsorbServerClock(message);
+        AbsorbRoom(message);
+        RebuildRoster();
         lastStateMessage = message;
         Interlocked.Exchange(ref pendingStateSync, message);
+    }
+
+    private void AbsorbHostEcho(CallControl message)
+    {
+        serverSeen = true;
+        if (message.Features is { } features)
+        {
+            serverFeatures = features;
+        }
+
+        roomCode = message.Code;
+        remoteMembers = message.Members;
+        RebuildRoster();
+    }
+
+    private void OnHostChanged(CallControl message)
+    {
+        if (Mode == WatchAlongMode.None)
+        {
+            return;
+        }
+
+        if (message.HostId is { } hostId)
+        {
+            roomHostId = hostId;
+            if (Mode == WatchAlongMode.Viewing && hostId == session.CurrentUser?.Id)
+            {
+                promotionPending = true;
+            }
+        }
+
+        Interlocked.Exchange(ref pendingHostChange, message);
+    }
+
+    private void ApplyHostChange(CallControl message)
+    {
+        var myId = session.CurrentUser?.Id;
+        var wasHosting = Mode == WatchAlongMode.Hosting;
+        AbsorbServerClock(message);
+        AbsorbRoom(message);
+        remoteParticipants = message.Participants;
+        RebuildRoster();
+
+        if (myId is not null && message.HostId == myId && Mode == WatchAlongMode.Viewing)
+        {
+            BecomeHost(message);
+            promotionPending = false;
+            return;
+        }
+
+        promotionPending = false;
+        if (myId is not null && message.UserId == myId && wasHosting)
+        {
+            BecomeViewer(message);
+            return;
+        }
+
+        if (!wasHosting)
+        {
+            PendingRequests = [];
+        }
+
+        HostQueue = ToHostQueue(message.UpcomingQueue);
+        lastStateMessage = message;
+        if (HostName() is { Length: > 0 } hostName)
+        {
+            pendingToasts.Enqueue(new PendingToast(L.AetherStream.HostChangedToast, hostName));
+        }
+    }
+
+    private void BecomeHost(CallControl message)
+    {
+        ReleaseSync();
+        sync.Reset();
+        Interlocked.Exchange(ref pendingJoinSync, null);
+        Interlocked.Exchange(ref pendingStateSync, null);
+
+        IReadOnlyList<HostQueueItem> inherited = ToHostQueue(message.UpcomingQueue);
+        var upcoming = new List<VideoQueueEntry>(inherited.Count);
+        for (var index = 0; index < inherited.Count; index++)
+        {
+            var item = inherited[index];
+            if (item.Url.Length == 0)
+            {
+                continue;
+            }
+
+            var entry = queue.CreateDisplayEntry(item.Url);
+            if (item.Title.Length > 0 && item.Title != item.Url)
+            {
+                entry.Title = item.Title;
+            }
+
+            upcoming.Add(entry);
+        }
+
+        var roomUrl = message.Url is { Length: > 0 } url ? url : null;
+        var followed = roomUrl is not null && viewingUrl == roomUrl;
+        var inheritedPlaying = roomUrl is null
+            ? null
+            : followed && ViewingEntry is not null ? ViewingEntry : queue.CreateDisplayEntry(roomUrl);
+        var playing = followed && viewingPlaybackUrl is not null && video.HasMedia ? inheritedPlaying : null;
+        var reloadInherited = playing is null && inheritedPlaying is not null;
+        var resumeAt = ProjectRemotePosition(message);
+        if (reloadInherited)
+        {
+            upcoming.Insert(0, inheritedPlaying!);
+        }
+
+        adoptedPolicy = new PartyPolicy(
+            message.ApprovalRequired ?? configuration.VideoStreamApprovalRequired,
+            message.Discoverable ?? configuration.VideoStreamDiscoverable,
+            message.CodeEnabled ?? message.Code is { Length: > 0 },
+            (message.GuestPermissions ?? 0) & PartyPolicy.GuestMask);
+        policyAdopted = true;
+        roomHostId = session.CurrentUser?.Id;
+
+        ClearViewingState();
+        HostQueue = [];
+        HostScreenOutOfReach = false;
+        Mode = WatchAlongMode.Hosting;
+        awaitingHostAck = false;
+        IsAwaitingApproval = false;
+        idleSinceTicks = 0;
+        grants.Clear();
+        publishedGrants = null;
+        grantsChanged = false;
+        lastPublishedUrl = null;
+        lastPublishedQueueCount = -1;
+        lastPublishedScreen = null;
+        heartbeatTimer = HeartbeatSeconds;
+        tickCounter = CheckEveryTicks;
+        queue.AdoptParty(playing, upcoming);
+        if (reloadInherited)
+        {
+            queue.AdvanceFrom(resumeAt);
+        }
+
+        RequestPublish();
+        pendingToasts.Enqueue(new PendingToast(L.AetherStream.YouAreHostToast, null));
+    }
+
+    private void BecomeViewer(CallControl message)
+    {
+        var sharedCount = Math.Max(lastPublishedQueueCount, 0);
+        var playing = queue.HandOver(sharedCount);
+        var playingUrl = video.HasMedia ? screen.Engine.GetCurrentUrl() : null;
+
+        Mode = WatchAlongMode.Viewing;
+        partyOpen = false;
+        policyAdopted = false;
+        awaitingHostAck = false;
+        idleSinceTicks = 0;
+        PendingRequests = [];
+        PendingQueueSuggestions = [];
+        ViewerFailures = [];
+        grants.Clear();
+        publishedGrants = null;
+        grantsChanged = false;
+        lastPublishedUrl = null;
+        lastPublishedQueueCount = -1;
+        lastPublishedScreen = null;
+        sync.Reset();
+
+        ViewingEntry = playingUrl is not null ? playing : null;
+        viewingPlaybackUrl = playingUrl;
+        viewingUrl = playingUrl is not null && message.Url is { Length: > 0 } url ? url : null;
+        lastStateMessage = message;
+        HostQueue = ToHostQueue(message.UpcomingQueue);
+        if (HostName() is { Length: > 0 } hostName)
+        {
+            pendingToasts.Enqueue(new PendingToast(L.AetherStream.HostChangedToast, hostName));
+        }
+    }
+
+    internal string? HostName()
+    {
+        var roster = Roster;
+        for (var index = 0; index < roster.Count; index++)
+        {
+            if (roster[index].IsHost)
+            {
+                return roster[index].DisplayName;
+            }
+        }
+
+        return null;
+    }
+
+    private void OnControlRequested(CallControl message)
+    {
+        if (Mode == WatchAlongMode.Hosting)
+        {
+            pendingControls.Enqueue(message);
+        }
+    }
+
+    private void ApplyControlRequest(CallControl message)
+    {
+        if (Mode != WatchAlongMode.Hosting || message.From is not { } from || message.Action is not { } action)
+        {
+            return;
+        }
+
+        var held = GuestPermissions | grants.GetValueOrDefault(from.UserId);
+        if (!PartyPermissions.Allows(held, StreamPermission.ControlPlayback))
+        {
+            return;
+        }
+
+        switch (action)
+        {
+            case StreamControlAction.Play:
+                if (video.HasMedia)
+                {
+                    video.Pause(false);
+                }
+
+                break;
+            case StreamControlAction.Pause:
+                if (video.HasMedia)
+                {
+                    video.Pause(true);
+                }
+
+                break;
+            case StreamControlAction.Seek:
+                if (video.HasMedia && message.PositionSeconds is { } seconds && double.IsFinite(seconds))
+                {
+                    video.Seek(Math.Max(0d, seconds));
+                }
+
+                break;
+            case StreamControlAction.Next:
+                if (queue.HasNext)
+                {
+                    queue.Advance();
+                }
+
+                break;
+            default:
+                return;
+        }
+
+        RequestPublish();
+    }
+
+    private void OnReacted(CallControl message)
+    {
+        if (Mode != WatchAlongMode.None && message.Reaction is { } reaction)
+        {
+            pendingReactions.Enqueue(reaction);
+        }
     }
 
     private double ProjectRemotePosition(CallControl message)
@@ -889,6 +1588,11 @@ internal sealed class WatchAlongSession : IDisposable
 
     private void ApplyStateSync(CallControl message, bool force)
     {
+        if (Mode != WatchAlongMode.Viewing)
+        {
+            return;
+        }
+
         HostQueue = ToHostQueue(message.UpcomingQueue);
 
         if (message.Url is { Length: > 0 } url)
@@ -955,7 +1659,7 @@ internal sealed class WatchAlongSession : IDisposable
 
             if (picked.Matches(expected))
             {
-                StoreLocalMediaPath(expected, path, picked.SizeBytes);
+                LocalMediaFiles.Remember(configuration, expected, path, picked.SizeBytes);
                 ReapplyAfterLocalResolve();
                 return;
             }
@@ -973,7 +1677,7 @@ internal sealed class WatchAlongSession : IDisposable
             return;
         }
 
-        StoreLocalMediaPath(expected, path, mismatchCandidateSizeBytes);
+        LocalMediaFiles.Remember(configuration, expected, path, mismatchCandidateSizeBytes);
         ReapplyAfterLocalResolve();
     }
 
@@ -986,67 +1690,32 @@ internal sealed class WatchAlongSession : IDisposable
         }
     }
 
-    private void StoreLocalMediaPath(LocalMediaIdentity identity, string path, long sizeBytes)
-    {
-        var records = configuration.VideoLocalFileMap;
-        for (var index = records.Count - 1; index >= 0; index--)
-        {
-            if (records[index].Key == identity.MapKey)
-            {
-                records.RemoveAt(index);
-            }
-        }
-
-        records.Add(new VideoLocalFileMapRecord { Key = identity.MapKey, Path = path, SizeBytes = sizeBytes });
-        while (records.Count > MaxLocalFileMapEntries)
-        {
-            records.RemoveAt(0);
-        }
-
-        configuration.Save();
-    }
-
-    private bool TryResolveLocalMedia(LocalMediaIdentity identity, out string path)
-    {
-        path = string.Empty;
-        var records = configuration.VideoLocalFileMap;
-        for (var index = 0; index < records.Count; index++)
-        {
-            var record = records[index];
-            if (record.Key != identity.MapKey)
-            {
-                continue;
-            }
-
-            try
-            {
-                var file = new FileInfo(record.Path);
-                if (file.Exists && file.Length == record.SizeBytes)
-                {
-                    path = record.Path;
-                    return true;
-                }
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[WatchAlong] could not stat a mapped local file: {exception.Message}");
-            }
-
-            records.RemoveAt(index);
-            configuration.Save();
-            return false;
-        }
-
-        return false;
-    }
-
     private void ApplyRemoteScreenTransform(CallControl message)
     {
-        if (message is { ScreenX: { } x, ScreenY: { } y, ScreenZ: { } z })
+        if (message is not { ScreenX: { } x, ScreenY: { } y, ScreenZ: { } z })
         {
-            screen.Engine.ApplyRemoteScreenTransform(new Vector3(x, y, z), message.ScreenYaw ?? 0f,
-                message.ScreenScale ?? 1f);
+            return;
         }
+
+        if (!configuration.VideoFollowHostScreen)
+        {
+            HostScreenOutOfReach = false;
+            return;
+        }
+
+        var position = new Vector3(x, y, z);
+        if (Plugin.ObjectTable.LocalPlayer is { } localPlayer
+            && Vector3.Distance(localPlayer.Position, position) > HostScreenReach)
+        {
+            HostScreenOutOfReach = true;
+            return;
+        }
+
+        HostScreenOutOfReach = false;
+        var engine = screen.Engine;
+        engine.ApplyRemoteScreenPose(
+            new ScreenPose(position, message.ScreenYaw ?? 0f, message.ScreenPitch ?? engine.ScreenPitch,
+                message.ScreenRoll ?? engine.ScreenRoll, message.ScreenScale ?? 1f), message.ScreenCurve);
     }
 
     private void OnNearby(CallControl message)
@@ -1062,7 +1731,8 @@ internal sealed class WatchAlongSession : IDisposable
         for (var index = 0; index < streams.Length; index++)
         {
             var entry = streams[index];
-            result[index] = new NearbyStream(entry.HostId, entry.DisplayName, entry.Handle, entry.AvatarUrl);
+            result[index] = new NearbyStream(entry.HostId, entry.DisplayName,
+                entry.Handle.Length > 0 ? "@" + entry.Handle : string.Empty, entry.AvatarUrl);
         }
 
         Nearby = result;
@@ -1098,19 +1768,11 @@ internal sealed class WatchAlongSession : IDisposable
         {
             ClearViewingState();
             pendingViewerStop = true;
+            pendingToasts.Enqueue(new PendingToast(L.AetherStream.PartyEndedToast, null));
         }
 
         queue.Resume();
-        Mode = WatchAlongMode.None;
-        IsAwaitingApproval = false;
-        partyOpen = false;
-        Roster = [];
-        PendingRequests = [];
-        PendingQueueSuggestions = [];
-        ViewerFailures = [];
-        HostQueue = [];
-        Interlocked.Exchange(ref pendingJoinSync, null);
-        Interlocked.Exchange(ref pendingStateSync, null);
+        ResetRoomFromSocket();
     }
 
     private void OnKicked(CallControl message)
@@ -1122,35 +1784,36 @@ internal sealed class WatchAlongSession : IDisposable
         }
 
         queue.Resume();
-        Mode = WatchAlongMode.None;
-        IsAwaitingApproval = false;
-        Roster = [];
-        HostQueue = [];
-        Interlocked.Exchange(ref pendingJoinSync, null);
-        Interlocked.Exchange(ref pendingStateSync, null);
-
+        ResetRoomFromSocket();
         QueueAlert(L.AetherStream.KickedTitle, L.AetherStream.KickedBody);
     }
 
-    private void QueueAlert(LocString title, LocString body) => pendingAlerts.Enqueue(new PendingAlert(title, body));
-
-    private static WatchAlongParticipant[] ToParticipants(ParticipantInfo[]? participants)
+    private void ResetRoomFromSocket()
     {
-        if (participants is null || participants.Length == 0)
-        {
-            return [];
-        }
-
-        var result = new WatchAlongParticipant[participants.Length];
-        for (var index = 0; index < participants.Length; index++)
-        {
-            var participant = participants[index];
-            result[index] = new WatchAlongParticipant(participant.UserId, participant.DisplayName,
-                participant.AvatarUrl, IsHost: participant.Slot == 0);
-        }
-
-        return result;
+        Mode = WatchAlongMode.None;
+        IsAwaitingApproval = false;
+        partyOpen = false;
+        idleSinceTicks = 0;
+        Roster = [];
+        PendingRequests = [];
+        PendingQueueSuggestions = [];
+        ViewerFailures = [];
+        HostQueue = [];
+        HostScreenOutOfReach = false;
+        remoteParticipants = null;
+        remoteMembers = null;
+        remoteGuestPermissions = 0;
+        roomCode = null;
+        roomHostId = null;
+        joinRequested = false;
+        promotionPending = false;
+        policyAdopted = false;
+        Interlocked.Exchange(ref pendingJoinSync, null);
+        Interlocked.Exchange(ref pendingStateSync, null);
+        Interlocked.Exchange(ref pendingHostChange, null);
     }
+
+    private void QueueAlert(LocString title, LocString body) => pendingAlerts.Enqueue(new PendingAlert(title, body));
 
     public void Dispose()
     {
@@ -1168,5 +1831,8 @@ internal sealed class WatchAlongSession : IDisposable
         stream.QueueSuggestionResult -= OnQueueSuggestionResult;
         stream.Kicked -= OnKicked;
         stream.ViewerFailed -= OnViewerFailed;
+        stream.HostChanged -= OnHostChanged;
+        stream.ControlRequested -= OnControlRequested;
+        stream.Reacted -= OnReacted;
     }
 }

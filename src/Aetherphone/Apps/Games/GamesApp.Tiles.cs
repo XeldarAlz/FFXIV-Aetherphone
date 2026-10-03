@@ -85,8 +85,7 @@ internal sealed partial class GamesApp
         {
             OnlineGameArt.Draw(drawList, entry.OnlineKind, artCenter, iconSize, scale);
         }
-        else if (!AppIconArt.TryDraw(drawList, entry.Id, artCenter, iconSize, AccentRing.Ink,
-                     GamePalette.Darken(accent, 0.16f)))
+        else if (!DrawGameIcon(drawList, entry.Id, accent, artCenter, iconSize, scale))
         {
             Typography.DrawCentered(drawList, artCenter, library.Title(entryIndex), AccentRing.Ink, TextStyles.Caption2);
         }
@@ -116,6 +115,19 @@ internal sealed partial class GamesApp
         }
 
         return UiInteract.Click(rect.Min, rect.Max, hovered);
+    }
+
+    private static bool DrawGameIcon(ImDrawListPtr drawList, string id, Vector4 accent, Vector2 center, float size,
+        float scale)
+    {
+        var half = new Vector2(size, size) * 0.5f;
+        if (AppIconTile.TryDraw(drawList, id, accent, center - half, center + half, size * Metrics.Radius.TileFactor,
+                1f, false, scale))
+        {
+            return true;
+        }
+
+        return AppIconArt.TryDraw(drawList, id, center, size, AccentRing.Ink, GamePalette.Darken(accent, 0.16f));
     }
 
     private static void DrawNewBadge(ImDrawListPtr drawList, Vector2 topLeft, Vector4 accent, float scale)
@@ -274,7 +286,7 @@ internal sealed partial class GamesApp
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)));
         ProgressRing.Glow(iconCenter, iconSize * 0.5f, GamePalette.Lighten(accent, 0.45f), hovered ? 0.9f : 0.55f);
         var ink = AccentRing.Ink;
-        if (!AppIconArt.TryDraw(drawList, game.Id, iconCenter, iconSize, ink, GamePalette.Darken(accent, 0.16f)))
+        if (!DrawGameIcon(drawList, game.Id, accent, iconCenter, iconSize, scale))
         {
             Typography.DrawCentered(drawList, iconCenter, game.Title, ink, TextStyles.Title1);
         }

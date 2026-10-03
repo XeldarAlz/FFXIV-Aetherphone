@@ -26,7 +26,6 @@ internal static class Slider
     private const float TrackThickness = 4f;
     private const float KnobRadius = 7f;
     private const float KnobGrowth = 0.22f;
-    private const float KnobSmoothTime = 0.12f;
 
     private static readonly Vector4 KnobInk = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 KnobShadow = new(0f, 0f, 0f, 0.28f);
@@ -117,7 +116,7 @@ internal static class Slider
     private static float Engagement(string id, bool engaged)
     {
         var spring = Knobs.TryGetValue(id, out var stored) ? stored : new Spring(0f);
-        var position = spring.Step(engaged ? 1f : 0f, KnobSmoothTime, MathF.Min(ImGui.GetIO().DeltaTime, 0.1f));
+        var position = spring.Step(engaged ? 1f : 0f, Motion.HoverLift, MathF.Min(ImGui.GetIO().DeltaTime, 0.1f));
         Knobs[id] = spring;
         return Math.Clamp(position, 0f, 1f);
     }

@@ -3,6 +3,7 @@ using Aetherphone.Core.Clock;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -30,13 +31,16 @@ internal sealed partial class ClockApp
 
             var eorzea = EorzeaTime.Now();
             var eorzeaSeconds = (float)(EorzeaSeconds() % 60.0);
-            DrawWorldRow(card.NextRow(), "Eorzea", Loc.T(L.Clock.InGame), eorzea.Formatted,
+            var eorzeaRow = card.NextRow();
+            DrawWorldRow(eorzeaRow, "Eorzea", Loc.T(L.Clock.InGame), eorzea.Formatted,
                 eorzea.Hour, eorzea.Minute, eorzeaSeconds);
 
             var utc = DateTime.UtcNow;
             var utcSeconds = utc.Second + utc.Millisecond / 1000f;
-            DrawWorldRow(card.NextRow(), Loc.T(L.Clock.Server), "UTC", TimeText.Clock(utc),
+            var serverRow = card.NextRow();
+            DrawWorldRow(serverRow, Loc.T(L.Clock.Server), "UTC", TimeText.Clock(utc),
                 utc.Hour, utc.Minute, utcSeconds);
+            UiAnchors.Report("clock.world.game", new Rect(eorzeaRow.Min, serverRow.Max));
 
             for (var index = 0; index < cities.Count; index++)
             {

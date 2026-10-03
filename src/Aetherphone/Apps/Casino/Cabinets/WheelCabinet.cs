@@ -5,6 +5,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -221,12 +222,17 @@ internal sealed class WheelCabinet
         celebratedRoundId = roundKey;
         settledReturn = ReturnOn(playback.Segment);
         winRoll.Snap(0);
+        var multiplier = WheelRules.MultiplierOf(WheelRules.SpotAt(playback.Segment));
+        if (playback.SpunLive)
+        {
+            SoundSettledRound(multiplier);
+        }
+
         if (settledReturn <= 0)
         {
             return;
         }
 
-        var multiplier = WheelRules.MultiplierOf(WheelRules.SpotAt(playback.Segment));
         var origin = ringCenter;
         if (multiplier >= 10)
         {
@@ -242,6 +248,20 @@ internal sealed class WheelCabinet
         }
 
         particles.Sparkle(origin, 12, Gold, 140f * scale, 3f, 0.8f);
+    }
+
+    private void SoundSettledRound(int multiplier)
+    {
+        if (settledReturn > 0)
+        {
+            UiFeedback.Play(multiplier >= 10 ? UiSound.GamePowerUp : UiSound.GameWin);
+            return;
+        }
+
+        if (StakedThisRound() > 0)
+        {
+            UiFeedback.Play(UiSound.GameWrong);
+        }
     }
 
     private float DrawStatusRow(ImDrawListPtr drawList, AppSkin ui, CasinoRoomSnapshotDto snapshot, bool attached,
@@ -642,6 +662,7 @@ internal sealed class WheelCabinet
         {
             inlineReason = string.Empty;
             rooms.PlaceWheelBet(selectedSpot, clamped);
+            UiFeedback.Play(UiSound.CasinoChips);
         }
 
         y += MathF.Max(FieldHeight, PillHeight) * scale + Metrics.Space.Xs * scale;

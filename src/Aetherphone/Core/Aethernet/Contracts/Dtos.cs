@@ -635,7 +635,26 @@ internal sealed record ModerationNoticePage(
     int PendingCount,
     string? NextCursor = null);
 
-internal sealed record CreateFeedbackRequest(string Text, string[] ImageKeys);
+internal sealed record CreateFeedbackRequest(
+    string Text,
+    string[] ImageKeys,
+    string Category = "other",
+    string Context = "");
+
+internal sealed record MyFeedbackDto(
+    string Id,
+    string Text,
+    string Category,
+    string Status,
+    string[] ImageUrls,
+    long CreatedAtUnix,
+    long ResolvedAtUnix,
+    string Reason = "",
+    string Reply = "",
+    long RepliedAtUnix = 0,
+    long UpdatedAtUnix = 0) : IIdentified;
+
+internal sealed record MyFeedbackPage(MyFeedbackDto[] Items, string? NextCursor = null);
 
 internal sealed record PollTranslationDto(string Lang, string Question, string[] Options);
 
@@ -648,7 +667,9 @@ internal sealed record PollDto(
     int TotalVotes,
     int MyVote,
     long CreatedAtUnix,
-    bool Closed) : IIdentified;
+    bool Closed,
+    long ClosesAtUnix = 0,
+    long ClosedAtUnix = 0) : IIdentified;
 
 internal sealed record PollPage(PollDto[] Items, string? NextCursor = null);
 

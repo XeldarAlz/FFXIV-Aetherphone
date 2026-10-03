@@ -106,9 +106,9 @@ internal sealed class HousingRestProvider
                 return null;
             }
 
+            LastProxyCacheAge = payload.Proxy?.CacheAgeSeconds;
             var districts = payload.Districts ?? Array.Empty<PaissaDistrictDetail>();
-            var worldName = payload.Name ?? string.Empty;
-            var mapped = new List<HousingDistrictSnapshot>(HousingDistricts.All.Count);
+            var snapshots = new List<HousingDistrictSnapshot>(districts.Length);
             for (var index = 0; index < districts.Length; index++)
             {
                 var district = districts[index];
@@ -117,30 +117,11 @@ internal sealed class HousingRestProvider
                     continue;
                 }
 
-                mapped.Add(Map(worldId, worldName, district.Id, district, payload.Proxy));
+                snapshots.Add(Map(worldId, district.Id, district, payload.Proxy));
             }
 
-            LastProxyCacheAge = ProxyAge(payload, districts);
-            return mapped.Count == 0 ? null : mapped;
+            return snapshots;
         }
-    }
-
-    private static int? ProxyAge(PaissaWorldDetail payload, PaissaDistrictDetail[] districts)
-    {
-        if (payload.Proxy?.CacheAgeSeconds is { } worldAge)
-        {
-            return worldAge;
-        }
-
-        for (var index = 0; index < districts.Length; index++)
-        {
-            if (districts[index].Proxy?.CacheAgeSeconds is { } districtAge)
-            {
-                return districtAge;
-            }
-        }
-
-        return null;
     }
 
     private async Task<IReadOnlyList<HousingDistrictSnapshot>?> GetChinaWorldAsync(uint worldId,
@@ -158,50 +139,41 @@ internal sealed class HousingRestProvider
                 return null;
             }
 
-            var districts = HousingDistricts.All;
-            var buckets = new List<HousingPlot>[districts.Count];
-            for (var index = 0; index < buckets.Length; index++)
+            var now = DateTime.UtcNow;
+            var all = HousingDistricts.All;
+            var snapshots = new List<HousingDistrictSnapshot>(all.Count);
+            for (var districtIndex = 0; districtIndex < all.Count; districtIndex++)
             {
-                buckets[index] = new List<HousingPlot>();
-            }
-
-            for (var index = 0; index < payload.Length; index++)
-            {
-                var entry = payload[index];
-                if (entry.Area < 0 || entry.Area >= districts.Count)
+                var districtId = all[districtIndex].Id;
+                var area = AreaOf(districtId);
+                var plots = new List<HousingPlot>();
+                for (var index = 0; index < payload.Length; index++)
                 {
-                    continue;
+                    var entry = payload[index];
+                    if (entry.Area == area && TryMapChinaPlot(worldId, districtId, entry, out var plot))
+                    {
+                        plots.Add(plot);
+                    }
                 }
 
-                var districtId = districts[entry.Area].Id;
-                if (TryMapChinaPlot(worldId, districtId, entry, out var plot))
-                {
-                    buckets[entry.Area].Add(plot);
-                }
-            }
-
-            var fetched = DateTime.UtcNow;
-            var mapped = new List<HousingDistrictSnapshot>(districts.Count);
-            for (var index = 0; index < districts.Count; index++)
-            {
-                buckets[index].Sort(HousingPlotOrder.ByDistrictWardThenPlot);
-                mapped.Add(new HousingDistrictSnapshot
+                plots.Sort(HousingPlotOrder.ByWardThenPlot);
+                snapshots.Add(new HousingDistrictSnapshot
                 {
                     WorldId = worldId,
-                    DistrictId = districts[index].Id,
-                    DistrictName = HousingDistricts.Name(districts[index].Id),
-                    FetchedUtc = fetched,
+                    DistrictId = districtId,
+                    DistrictName = HousingDistricts.Name(districtId),
+                    FetchedUtc = now,
                     Source = Kind,
-                    Plots = buckets[index],
+                    Plots = plots,
                 });
             }
 
-            return mapped;
+            return snapshots;
         }
     }
 
-    private HousingDistrictSnapshot Map(uint worldId, string worldName, uint districtId,
-        PaissaDistrictDetail payload, PaissaProxyInfo? worldProxy)
+    private HousingDistrictSnapshot Map(uint worldId, uint districtId, PaissaDistrictDetail payload,
+        PaissaProxyInfo? worldProxy)
     {
         var raw = payload.OpenPlots ?? Array.Empty<PaissaOpenPlot>();
         var plots = new List<HousingPlot>(raw.Length);
@@ -213,7 +185,7 @@ internal sealed class HousingRestProvider
             }
         }
 
-        plots.Sort(HousingPlotOrder.ByDistrictWardThenPlot);
+        plots.Sort(HousingPlotOrder.ByWardThenPlot);
 
         var fetched = DateTime.UtcNow;
         if ((payload.Proxy?.CacheAgeSeconds ?? worldProxy?.CacheAgeSeconds) is { } age && age > 0)
@@ -225,7 +197,6 @@ internal sealed class HousingRestProvider
         {
             WorldId = worldId,
             DistrictId = districtId,
-            WorldName = worldName,
             DistrictName = string.IsNullOrEmpty(payload.Name) ? HousingDistricts.Name(districtId) : payload.Name,
             FetchedUtc = fetched,
             Source = Kind,
@@ -436,34 +407,24 @@ internal sealed class HousingRestProvider
     private static DateTime? FromUnixSeconds(long? seconds) =>
         seconds is null or <= 0L ? null : DateTimeOffset.FromUnixTimeSeconds(seconds.Value).UtcDateTime;
 
+    private static int AreaOf(uint districtId) => districtId switch
+    {
+        HousingDistricts.MistId => 0,
+        HousingDistricts.LavenderBedsId => 1,
+        HousingDistricts.GobletId => 2,
+        HousingDistricts.ShiroganeId => 3,
+        HousingDistricts.EmpyreumId => 4,
+        _ => -1,
+    };
+
     public void Dispose() => throttle.Dispose();
 }
 
 internal static class HousingPlotOrder
 {
-    public static readonly Comparison<HousingPlot> ByDistrictWardThenPlot = static (first, second) =>
+    public static readonly Comparison<HousingPlot> ByWardThenPlot = static (first, second) =>
     {
-        var district = DistrictRank(first.Key.DistrictId).CompareTo(DistrictRank(second.Key.DistrictId));
-        if (district != 0)
-        {
-            return district;
-        }
-
         var ward = first.Key.Ward.CompareTo(second.Key.Ward);
         return ward != 0 ? ward : first.Key.Plot.CompareTo(second.Key.Plot);
     };
-
-    private static int DistrictRank(uint districtId)
-    {
-        var districts = HousingDistricts.All;
-        for (var index = 0; index < districts.Count; index++)
-        {
-            if (districts[index].Id == districtId)
-            {
-                return index;
-            }
-        }
-
-        return districts.Count;
-    }
 }

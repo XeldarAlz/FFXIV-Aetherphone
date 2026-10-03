@@ -1,8 +1,9 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Activity;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
-using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -13,18 +14,16 @@ namespace Aetherphone.Apps.Activity;
 
 internal sealed partial class ActivityApp : IPhoneApp
 {
-    private const float RowHeight = 58f;
-    private const float CompactRowHeight = 46f;
-    private const float CardGap = 14f;
-    private const float TileSize = 30f;
-    private const float StepperRadius = 13f;
-    private const float MinLevelsGoal = 0.5f;
-    private const float MaxLevelsGoal = 5f;
-    private const float LevelsGoalStep = 0.5f;
-    private const int MinDutiesGoal = 1;
-    private const int MaxDutiesGoal = 10;
-
-    private static readonly long[] GilGoalSteps = { 10000, 25000, 50000, 100000, 250000, 500000, 1000000 };
+    private const float BottomBreathing = 28f;
+    private const float WeekCardHeight = 92f;
+    private const float WeekRingRadius = 15f;
+    private const float WeekRingThickness = 3.6f;
+    private const float WeekRingGap = 0.8f;
+    private const float WeekLetterTop = 14f;
+    private const float WeekRingTop = 46f;
+    private const float WeekSelectRadius = 13f;
+    private const float WeekHoverAlpha = 0.06f;
+    private const string TimersAppId = "timers";
 
     public string Id => "character";
     public string DisplayName => Loc.T(L.Character.Activity);
@@ -32,431 +31,203 @@ internal sealed partial class ActivityApp : IPhoneApp
     public int BadgeCount => tracker.VenturesReady;
     public bool HasBadge => true;
 
-    private readonly GameData gameData;
     private readonly ActivityTracker tracker;
     private readonly Configuration configuration;
     private readonly AppSkin ui = new(AppPalettes.Activity);
-    private int screenIndex;
+    private readonly ActivityDigest digest = new();
+    private readonly ViewRouter<ActivityView> router;
+    private readonly RouterDraw<ActivityView> drawView;
+    private readonly Action back;
+    private readonly float[] ringScratch = new float[ActivityGoals.RingCount];
+    private readonly Spring[] weekFills = new Spring[ActivityDigest.WeekLength * ActivityGoals.RingCount];
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
+    private ActivityTargets targets;
+    private int selectedSlot = ActivityDigest.TodaySlot;
 
-    public ActivityApp(GameData gameData, ActivityTracker tracker, Configuration configuration)
+    public ActivityApp(ActivityTracker tracker, Configuration configuration)
     {
-        this.gameData = gameData;
         this.tracker = tracker;
         this.configuration = configuration;
+        router = new ViewRouter<ActivityView>(ActivityView.Summary());
+        drawView = DrawView;
+        back = () => router.Pop();
     }
 
     public void OnOpened()
     {
+        router.Reset();
+        selectedSlot = ActivityDigest.TodaySlot;
+        digest.Invalidate();
+        ResetFills();
     }
 
     public void OnClosed()
     {
+        router.Reset();
     }
 
     public void Draw(in PhoneContext context)
     {
-        var scale = UiScale.Current;
-        var theme = context.Theme;
-        var content = context.Content;
+        theme = context.Theme;
+        navigation = context.Navigation;
         ui.Theme = theme;
-        var screen = SceneChrome.ScreenFrom(content, theme, scale);
-        ui.Backdrop(screen);
-        DrawHeader(content, scale);
+        targets = ActivityTargets.From(configuration);
+        if (tracker.IsTracking)
+        {
+            TourHolds.Release(Id);
+            digest.Refresh(tracker, targets);
+        }
+        else
+        {
+            TourHolds.Hold(Id);
+        }
 
-        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
+        var scale = UiScale.Current;
+        ui.Backdrop(SceneChrome.ScreenFrom(context.Content, theme, scale));
+        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+    }
+
+    private void DrawView(ActivityView view, Rect area, int depth)
+    {
+        ui.Body(area);
         if (!tracker.IsTracking)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Character.LogInToView), AppPalettes.Activity.MutedInk);
+            DrawSignedOut(area);
             return;
         }
 
-        using (AppSurface.Begin(body))
+        switch (view.Kind)
         {
-            DrawIdentity(scale);
-            DrawScreenTabs(scale);
-            if (screenIndex == 0)
+            case ActivityViewKind.Day:
+                DrawDay(area);
+                break;
+            case ActivityViewKind.Goals:
+                DrawGoals(area);
+                break;
+            default:
+                DrawSummary(area);
+                break;
+        }
+    }
+
+    private void DrawSignedOut(Rect area)
+    {
+        var context = new PhoneContext(area, theme, navigation);
+        var navBar = AppHeader.BeginLargeTitle(context, false);
+        using (AppSurface.Begin(navBar.Body))
+        {
+            var scale = UiScale.Current;
+            var drawList = ImGui.GetWindowDrawList();
+            var origin = ImGui.GetCursorScreenPos();
+            var width = ScrollLayout.StableContentWidth();
+            ResetFills();
+            var bottom = origin.Y + ActivityArt.State(drawList, ui, origin, width, FontAwesomeIcon.UserClock,
+                ui.Accent, Loc.T(L.Character.SignedOutTitle), Loc.T(L.Character.SignedOutBody), scale);
+            ReserveTo(origin, width, bottom + BottomBreathing * scale);
+        }
+
+        AppHeader.EndLargeTitle(in navBar, context, "character.nav", DisplayName, NavBarStyle.From(ui),
+            ReadOnlySpan<NavBarButton>.Empty);
+    }
+
+    private void ResetFills()
+    {
+        for (var index = 0; index < weekFills.Length; index++)
+        {
+            weekFills[index].SnapTo(0f);
+        }
+
+        for (var ring = 0; ring < ActivityGoals.RingCount; ring++)
+        {
+            heroFills[ring].SnapTo(0f);
+            dayFills[ring].SnapTo(0f);
+            goalFills[ring].SnapTo(0f);
+        }
+    }
+
+    private void OpenDay(int slot)
+    {
+        UiFeedback.Play(UiSound.Tap);
+        selectedSlot = slot;
+        for (var ring = 0; ring < ActivityGoals.RingCount; ring++)
+        {
+            dayFills[ring].SnapTo(0f);
+        }
+
+        router.Push(ActivityView.Day());
+    }
+
+    private float WeekStrip(ImDrawListPtr drawList, Vector2 origin, float width, int highlight, bool pushOnTap,
+        float scale)
+    {
+        var height = WeekCardHeight * scale;
+        var max = new Vector2(origin.X + width, origin.Y + height);
+        var card = new Rect(origin, max);
+        UiAnchors.Report("character.week", card);
+        ui.Card(drawList, origin, max, Metrics.Radius.Widget * scale, true);
+        var pad = ActivityArt.CardPad * scale * 0.5f;
+        var columnWidth = (width - pad * 2f) / ActivityDigest.WeekLength;
+        var delta = ActivityArt.FrameDelta();
+        for (var slot = 0; slot < ActivityDigest.WeekLength; slot++)
+        {
+            var columnMin = new Vector2(origin.X + pad + columnWidth * slot, origin.Y);
+            var column = new Rect(columnMin, new Vector2(columnMin.X + columnWidth, max.Y));
+            var centerX = column.Center.X;
+            var hovered = UiInteract.Hover(column.Min, column.Max);
+            if (hovered)
             {
-                DrawRings(scale);
-                DrawToday(scale);
-                DrawSession(scale);
-                DrawRetainers(scale);
-                DrawGoals(scale);
+                Squircle.Fill(drawList, column.Min + new Vector2(0f, pad), column.Max - new Vector2(0f, pad),
+                    Metrics.Radius.Md * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, WeekHoverAlpha)));
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
-            else
+
+            var letterCenter = new Vector2(centerX, origin.Y + WeekLetterTop * scale +
+                                                    Typography.LineHeight(TextStyles.FootnoteEmphasized) * 0.5f);
+            var isToday = slot == ActivityDigest.TodaySlot;
+            var selected = slot == highlight;
+            if (selected)
             {
-                DrawHistory(scale);
+                drawList.AddCircleFilled(letterCenter, WeekSelectRadius * scale, ImGui.GetColorU32(ui.TitleInk), 24);
             }
 
-            ImGui.Dummy(new Vector2(0f, 12f * scale));
-        }
-    }
+            var letterInk = selected ? ui.Palette.BackdropBottom : isToday ? ui.Accent : ui.MutedInk;
+            Typography.DrawCentered(drawList, letterCenter,
+                Typography.FitText(digest.Letters[slot], columnWidth, TextStyles.FootnoteEmphasized), letterInk,
+                TextStyles.FootnoteEmphasized);
+            var offset = slot * ActivityGoals.RingCount;
+            for (var ring = 0; ring < ActivityGoals.RingCount; ring++)
+            {
+                ringScratch[ring] = weekFills[offset + ring].Step(digest.Fractions[offset + ring], Motion.Sheet, delta);
+            }
 
-    private void DrawScreenTabs(float scale)
-    {
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var rect = new Rect(origin, origin + new Vector2(width, 34f * scale));
-        var labels = new[] { Loc.T(L.Character.Today), Loc.T(L.Character.History) };
-        screenIndex = SegmentStrip.Draw("character.screens", rect, labels, screenIndex, AppPalettes.Activity);
-        ImGui.SetCursorScreenPos(rect.Min);
-        ImGui.Dummy(rect.Size);
-        ImGui.Dummy(new Vector2(0f, 10f * scale));
-    }
+            var ringRadius = MathF.Min(WeekRingRadius * scale, columnWidth * 0.42f);
+            ActivityArt.Rings(drawList, new Vector2(centerX, origin.Y + WeekRingTop * scale + ringRadius), ringRadius,
+                WeekRingThickness * scale * ringRadius / (WeekRingRadius * scale), WeekRingGap * scale, ringScratch,
+                false);
+            if (!UiInteract.Click(column.Min, column.Max, hovered))
+            {
+                continue;
+            }
 
-    private static void DrawHeader(Rect content, float scale)
-    {
-        var rowCenterY = content.Min.Y + AppHeader.Height * scale * 0.5f;
-        Typography.DrawCentered(new Vector2(content.Center.X, rowCenterY), Loc.T(L.Character.Activity),
-            AppPalettes.Activity.TitleInk, 1.15f, FontWeight.SemiBold);
-    }
+            if (pushOnTap)
+            {
+                OpenDay(slot);
+                continue;
+            }
 
-    private void DrawIdentity(float scale)
-    {
-        var player = gameData.LocalPlayer;
-        if (player is null)
-        {
-            return;
+            UiFeedback.Play(UiSound.Tap);
+            selectedSlot = slot;
         }
 
-        var width = ImGui.GetContentRegionAvail().X;
-        var origin = ImGui.GetCursorScreenPos();
-        var centerX = origin.X + width * 0.5f;
-        Typography.DrawCentered(new Vector2(centerX, origin.Y + 12f * scale), player.Name.TextValue,
-            AppPalettes.Activity.TitleInk, TextStyles.Title3);
-        var jobName = gameData.JobName(player.ClassJob.RowId);
-        var world = gameData.WorldName(player.HomeWorld.RowId);
-        var detail = jobName.Length > 0 ? $"{jobName} · Lv {player.Level}" : $"Lv {player.Level}";
-        if (world.Length > 0)
-        {
-            detail = $"{detail} · {world}";
-        }
+        return max.Y;
+    }
 
-        Typography.DrawCentered(new Vector2(centerX, origin.Y + 34f * scale), detail, AppPalettes.Activity.MutedInk,
-            TextStyles.Footnote);
+    private static void ReserveTo(Vector2 origin, float width, float bottom)
+    {
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, 52f * scale));
+        ImGui.Dummy(new Vector2(width, MathF.Max(0f, bottom - origin.Y)));
     }
-
-    private float ProgressFraction => ProgressFractionFor(tracker.Today);
-
-    private float AdventureFraction => AdventureFractionFor(tracker.Today);
-
-    private float FortuneFraction => FortuneFractionFor(tracker.Today);
-
-    private float ProgressFractionFor(ActivityDay day) => ActivityGoals.ProgressFraction(configuration, day);
-
-    private float AdventureFractionFor(ActivityDay day) => ActivityGoals.AdventureFraction(configuration, day);
-
-    private float FortuneFractionFor(ActivityDay day) => ActivityGoals.FortuneFraction(configuration, day);
-
-    private void DrawRings(float scale)
-    {
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        UiAnchors.Report("character.rings",
-            new Rect(origin, origin + new Vector2(width, ActivityRings.Height * scale)));
-        ActivityRings.Draw(AppPalettes.Activity.TitleInk, ProgressFraction, AdventureFraction, FortuneFraction);
-        DrawLegend(scale);
-    }
-
-    private void DrawLegend(float scale)
-    {
-        var width = ImGui.GetContentRegionAvail().X;
-        var origin = ImGui.GetCursorScreenPos();
-        var third = width / 3f;
-        var height = 48f * scale;
-        var today = tracker.Today;
-        DrawLegendItem(new Vector2(origin.X + third * 0.5f, origin.Y), third, ActivityRings.RingOneTint,
-            Loc.T(L.Character.RingProgress), Percent(ProgressFraction));
-        DrawLegendItem(new Vector2(origin.X + third * 1.5f, origin.Y), third, ActivityRings.RingTwoTint,
-            Loc.T(L.Character.RingAdventure), $"{today.DutiesCompleted} / {configuration.ActivityGoalDuties}");
-        DrawLegendItem(new Vector2(origin.X + third * 2.5f, origin.Y), third, ActivityRings.RingThreeTint,
-            Loc.T(L.Character.RingFortune), $"{Compact(today.GilEarned)} / {Compact(configuration.ActivityGoalGil)}");
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height));
-    }
-
-    private static void DrawLegendItem(Vector2 top, float columnWidth, Vector4 tint, string label, string value)
-    {
-        var scale = UiScale.Current;
-        var dot = 6f * scale;
-        var labelMaxWidth = MathF.Max(1f, columnWidth - dot - 10f * scale);
-        var label2 = Typography.FitText(label, labelMaxWidth, TextStyles.Callout);
-        var labelSize = Typography.Measure(label2, TextStyles.Callout);
-        var dotCenter = new Vector2(top.X - labelSize.X * 0.5f - dot - 5f * scale, top.Y + labelSize.Y * 0.5f);
-        ImGui.GetWindowDrawList().AddCircleFilled(dotCenter, dot, ImGui.GetColorU32(tint));
-        Typography.Draw(new Vector2(top.X - labelSize.X * 0.5f, top.Y), label2, AppPalettes.Activity.MutedInk,
-            TextStyles.Callout);
-        var value2 = Typography.FitText(value, columnWidth - 10f * scale, TextStyles.Title3);
-        var valueSize = Typography.Measure(value2, TextStyles.Title3);
-        Typography.Draw(new Vector2(top.X - valueSize.X * 0.5f, top.Y + labelSize.Y + 5f * scale), value2,
-            AppPalettes.Activity.TitleInk, TextStyles.Title3);
-    }
-
-    private void DrawToday(float scale)
-    {
-        var today = tracker.Today;
-        var hasCollectibles = today.MountsGained + today.MinionsGained > 0;
-        var rowCount = hasCollectibles ? 5 : 4;
-        ui.SectionLabel(Loc.T(L.Character.Today), TextStyles.FootnoteEmphasized, 6f);
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        UiAnchors.Report("character.summary",
-            new Rect(origin, origin + new Vector2(width, rowCount * RowHeight * scale)));
-        var card = GroupCard.Begin(ui, rowCount, RowHeight);
-        var expDetail = today.LevelsGained > 0
-            ? Loc.T(L.Character.LevelsGained, today.LevelsGained)
-            : Loc.T(L.Character.PercentOfGoal, PercentValue(ProgressFraction));
-        ProgressRow(card.NextRow(), ActivityRings.RingOneTint, FontAwesomeIcon.Bolt,
-            Loc.T(L.Character.Experience), "+" + Compact(today.ExpGained), ProgressFraction, expDetail, scale);
-        ProgressRow(card.NextRow(), ActivityRings.RingTwoTint, FontAwesomeIcon.Dungeon,
-            Loc.T(L.Character.Duties), $"{today.DutiesCompleted} / {configuration.ActivityGoalDuties}",
-            AdventureFraction, null, scale);
-        ProgressRow(card.NextRow(), ActivityRings.RingThreeTint, FontAwesomeIcon.Coins,
-            Loc.T(L.Character.GilEarned), "+" + Number(today.GilEarned), FortuneFraction, null, scale);
-        StatRow(card.NextRow(), Accent.Blue, FontAwesomeIcon.Clock,
-            Loc.T(L.Character.TimePlayed), Duration(today.PlaySeconds), AppPalettes.Activity.TitleInk, null, scale);
-        if (hasCollectibles)
-        {
-            var detail =
-                $"{Loc.T(L.Character.Mounts)} {Number(today.MountsGained)} · {Loc.T(L.Character.Minions)} {Number(today.MinionsGained)}";
-            StatRow(card.NextRow(), Accent.Violet, FontAwesomeIcon.Dragon,
-                Loc.T(L.Character.NewCollectibles), "+" + Number(today.MountsGained + today.MinionsGained),
-                AppPalettes.Activity.TitleInk, detail, scale);
-        }
-
-        card.End();
-        ImGui.Dummy(new Vector2(0f, CardGap * scale));
-    }
-
-    private void DrawSession(float scale)
-    {
-        var session = tracker.Session;
-        ui.SectionLabel(Loc.T(L.Character.ThisSession), TextStyles.FootnoteEmphasized, 6f);
-        var card = GroupCard.Begin(ui, 4, CompactRowHeight);
-        var titleInk = AppPalettes.Activity.TitleInk;
-        StatRow(card.NextRow(), ActivityRings.RingOneTint, FontAwesomeIcon.Bolt,
-            Loc.T(L.Character.Experience), "+" + Compact(session.ExpGained), titleInk, null, scale);
-        StatRow(card.NextRow(), ActivityRings.RingTwoTint, FontAwesomeIcon.Dungeon,
-            Loc.T(L.Character.Duties), Number(session.DutiesCompleted), titleInk, null, scale);
-        StatRow(card.NextRow(), ActivityRings.RingThreeTint, FontAwesomeIcon.Coins,
-            Loc.T(L.Character.GilEarned), "+" + Number(session.GilEarned), titleInk, null, scale);
-        StatRow(card.NextRow(), Accent.Blue, FontAwesomeIcon.Clock,
-            Loc.T(L.Character.TimePlayed), Duration(session.PlaySeconds), titleInk, null, scale);
-        card.End();
-        ImGui.Dummy(new Vector2(0f, CardGap * scale));
-    }
-
-    private void DrawRetainers(float scale)
-    {
-        if (tracker.RetainerCount <= 0)
-        {
-            return;
-        }
-
-        var card = GroupCard.Begin(ui, 1, RowHeight);
-        string value;
-        Vector4 valueInk;
-        if (tracker.VenturesReady > 0)
-        {
-            value = Loc.T(L.Character.VenturesReady, tracker.VenturesReady);
-            valueInk = AppPalettes.Activity.Accent;
-        }
-        else if (tracker.VenturesActive > 0)
-        {
-            value = Loc.T(L.Character.VenturesActive, tracker.VenturesActive);
-            valueInk = AppPalettes.Activity.MutedInk;
-        }
-        else
-        {
-            value = Number(tracker.RetainerCount);
-            valueInk = AppPalettes.Activity.TitleInk;
-        }
-
-        StatRow(card.NextRow(), Accent.Amber, FontAwesomeIcon.Briefcase,
-            Loc.T(L.Character.Retainers), value, valueInk, null, scale);
-        card.End();
-        ImGui.Dummy(new Vector2(0f, CardGap * scale));
-    }
-
-    private void DrawGoals(float scale)
-    {
-        ui.SectionLabel(Loc.T(L.Character.GoalsSection), TextStyles.FootnoteEmphasized, 6f);
-        var card = GroupCard.Begin(ui, 3, CompactRowHeight);
-        var levelsValue = Loc.T(L.Character.LevelsShort,
-            configuration.ActivityGoalLevels.ToString("0.#", Loc.Culture));
-        var levelsDelta = GoalRow(card.NextRow(), Loc.T(L.Character.GoalLevels),
-            levelsValue, scale);
-        if (levelsDelta != 0)
-        {
-            configuration.ActivityGoalLevels = Math.Clamp(
-                configuration.ActivityGoalLevels + levelsDelta * LevelsGoalStep, MinLevelsGoal, MaxLevelsGoal);
-            configuration.Save();
-        }
-
-        var dutiesDelta = GoalRow(card.NextRow(), Loc.T(L.Character.Duties),
-            Number(configuration.ActivityGoalDuties), scale);
-        if (dutiesDelta != 0)
-        {
-            configuration.ActivityGoalDuties =
-                Math.Clamp(configuration.ActivityGoalDuties + dutiesDelta, MinDutiesGoal, MaxDutiesGoal);
-            configuration.Save();
-        }
-
-        var gilDelta = GoalRow(card.NextRow(), Loc.T(L.Character.GilEarned),
-            Compact(configuration.ActivityGoalGil), scale);
-        if (gilDelta != 0)
-        {
-            configuration.ActivityGoalGil = SteppedGilGoal(configuration.ActivityGoalGil, gilDelta);
-            configuration.Save();
-        }
-
-        card.End();
-        ImGui.Dummy(new Vector2(0f, CardGap * scale));
-        ui.HelpText(Loc.T(L.Character.GoalsHint));
-    }
-
-    private static long SteppedGilGoal(long current, int delta)
-    {
-        var index = 0;
-        for (var stepIndex = 0; stepIndex < GilGoalSteps.Length; stepIndex++)
-        {
-            if (Math.Abs(GilGoalSteps[stepIndex] - current) < Math.Abs(GilGoalSteps[index] - current))
-            {
-                index = stepIndex;
-            }
-        }
-
-        index = Math.Clamp(index + delta, 0, GilGoalSteps.Length - 1);
-        return GilGoalSteps[index];
-    }
-
-    private static void StatRow(Rect row, Vector4 tint, FontAwesomeIcon icon, string label, string value,
-        Vector4 valueInk, string? detail, float scale)
-    {
-        var tile = TileSize * scale;
-        var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
-        IconTile.Draw(tileCenter, tile, tint, icon);
-        var textLeft = row.Min.X + tile + 12f * scale;
-        var valueSize = Typography.Measure(value, 1.02f, FontWeight.SemiBold);
-        var textMaxWidth = MathF.Max(1f, row.Max.X - 10f * scale - valueSize.X - textLeft);
-        var rowId = "activity.statrow." + label;
-        if (detail is { Length: > 0 })
-        {
-            Marquee.DrawLeftAuto(rowId, label, textLeft, row.Center.Y - 16f * scale, textMaxWidth,
-                TextStyles.Headline, AppPalettes.Activity.TitleInk);
-            Marquee.DrawLeftAuto(new MarqueeId(rowId, ".detail"), detail, textLeft, row.Center.Y + 5f * scale, textMaxWidth,
-                TextStyles.Footnote, AppPalettes.Activity.MutedInk);
-        }
-        else
-        {
-            var labelSize = Typography.Measure(label, TextStyles.Headline);
-            Marquee.DrawLeftAuto(rowId, label, textLeft, row.Center.Y - labelSize.Y * 0.5f, textMaxWidth,
-                TextStyles.Headline, AppPalettes.Activity.TitleInk);
-        }
-
-        Typography.Draw(new Vector2(row.Max.X - valueSize.X, row.Center.Y - valueSize.Y * 0.5f), value, valueInk,
-            1.02f, FontWeight.SemiBold);
-    }
-
-    private static void ProgressRow(Rect row, Vector4 tint, FontAwesomeIcon icon, string label, string value,
-        float fraction, string? detail, float scale)
-    {
-        var tile = TileSize * scale;
-        var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
-        IconTile.Draw(tileCenter, tile, tint, icon);
-        var textLeft = row.Min.X + tile + 12f * scale;
-        var topY = row.Min.Y + 8f * scale;
-        var valueSize = Typography.Measure(value, 1.0f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(row.Max.X - valueSize.X, topY), value, tint, 1.0f, FontWeight.SemiBold);
-        var labelMaxWidth = MathF.Max(1f, row.Max.X - 10f * scale - valueSize.X - textLeft);
-        var clippedLabel = Typography.FitText(label, labelMaxWidth, TextStyles.Headline);
-        Typography.Draw(new Vector2(textLeft, topY), clippedLabel, AppPalettes.Activity.TitleInk,
-            TextStyles.Headline);
-        if (detail is { Length: > 0 })
-        {
-            var clippedDetail = Typography.FitText(detail, labelMaxWidth, TextStyles.Caption1);
-            Typography.Draw(new Vector2(textLeft, topY + 19f * scale), clippedDetail, AppPalettes.Activity.MutedInk,
-                TextStyles.Caption1);
-        }
-
-        var barTop = row.Max.Y - 13f * scale;
-        var barMin = new Vector2(textLeft, barTop);
-        var barMax = new Vector2(row.Max.X, barTop + 5f * scale);
-        var rounding = (barMax.Y - barMin.Y) * 0.5f;
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(barMin, barMax, ImGui.GetColorU32(AppPalettes.Activity.FieldSurface), rounding);
-        var clamped = Math.Clamp(fraction, 0f, 1f);
-        if (clamped > 0.001f)
-        {
-            var fillMax = new Vector2(barMin.X + (barMax.X - barMin.X) * clamped, barMax.Y);
-            drawList.AddRectFilled(barMin, fillMax, ImGui.GetColorU32(tint), rounding);
-        }
-    }
-
-    private int GoalRow(Rect row, string label, string value, float scale)
-    {
-        var radius = StepperRadius * scale;
-        var plusCenter = new Vector2(row.Max.X - radius, row.Center.Y);
-        var minusCenter = new Vector2(row.Max.X - radius - 106f * scale, row.Center.Y);
-        var valueCenter = new Vector2((plusCenter.X + minusCenter.X) * 0.5f, row.Center.Y);
-        var labelMaxWidth = MathF.Max(1f, minusCenter.X - radius - 12f * scale - row.Min.X);
-        var labelHovering = UiInteract.Hover(new Vector2(row.Min.X, row.Min.Y),
-            new Vector2(row.Min.X + labelMaxWidth, row.Max.Y));
-        Marquee.DrawLeft(new MarqueeId("activity.goalrow.", label), label, row.Min.X, row.Center.Y - 8f * scale, labelMaxWidth,
-            TextStyles.Subheadline, AppPalettes.Activity.BodyInk, labelHovering);
-        Typography.DrawCentered(valueCenter, value, AppPalettes.Activity.TitleInk, 0.95f, FontWeight.SemiBold);
-        var delta = 0;
-        if (ui.IconButton(minusCenter, radius, IconGlyph.Of(FontAwesomeIcon.Minus), AppPalettes.Activity.TitleInk,
-                AppPalettes.Activity.FieldSurface, 0.5f))
-        {
-            delta--;
-        }
-
-        if (ui.IconButton(plusCenter, radius, IconGlyph.Of(FontAwesomeIcon.Plus), AppPalettes.Activity.TitleInk,
-                AppPalettes.Activity.FieldSurface, 0.5f))
-        {
-            delta++;
-        }
-
-        return delta;
-    }
-
-    private static string Percent(float fraction) => $"{PercentValue(fraction)}%";
-
-    private static int PercentValue(float fraction) =>
-        (int)MathF.Round(Math.Clamp(fraction, 0f, 9.99f) * 100f);
-
-    private static string Duration(long seconds)
-    {
-        var minutes = (int)(seconds / 60);
-        var hours = minutes / 60;
-        if (hours > 0)
-        {
-            return Loc.T(L.Character.DurationHoursMinutes, hours, minutes % 60);
-        }
-
-        return Loc.T(L.Character.DurationMinutes, minutes);
-    }
-
-    private static string Compact(long value)
-    {
-        if (value >= 1_000_000)
-        {
-            var millions = value / 1_000_000f;
-            return millions.ToString(millions >= 10f ? "0" : "0.#", Loc.Culture) + "M";
-        }
-
-        if (value >= 1_000)
-        {
-            var thousands = value / 1_000f;
-            return thousands.ToString(thousands >= 10f ? "0" : "0.#", Loc.Culture) + "K";
-        }
-
-        return value.ToString(Loc.Culture);
-    }
-
-    private static string Number(long value) => NumberText.Group(value);
 
     public void Dispose()
     {

@@ -17,6 +17,8 @@ internal static class StratsRoles
 
 internal sealed class StratsSelection
 {
+    private const float ProgressStep = 0.01f;
+
     public string FightKey = string.Empty;
     public string StratId = string.Empty;
     public int Slot;
@@ -24,19 +26,27 @@ internal sealed class StratsSelection
     public string Alignment = string.Empty;
     public int Tab;
     public int Revision;
+    public bool Fresh;
+    public long OpenedUnix;
+    public int ReadingEntry = -1;
+    public string ReadingLabel = string.Empty;
+    public float ReadingProgress;
 
     public void Touch() => Revision++;
 
-    public void Load(string fightKey, StratsFightSelection? saved, int defaultSlot)
+    public void Load(string fightKey, StratsFightSelection? saved, int defaultSlot, long nowUnix)
     {
         FightKey = fightKey;
         Toggles.Clear();
+        OpenedUnix = nowUnix;
+        Fresh = saved is null;
         if (saved is null)
         {
             StratId = string.Empty;
-            Slot = defaultSlot;
+            Slot = Math.Clamp(defaultSlot, 0, StratsRoles.SlotCount - 1);
             Alignment = string.Empty;
             Tab = 0;
+            ClearReading();
             Touch();
             return;
         }
@@ -50,7 +60,31 @@ internal sealed class StratsSelection
 
         Alignment = saved.Alignment;
         Tab = Math.Max(0, saved.Tab);
+        ReadingEntry = saved.ReadingEntry;
+        ReadingLabel = saved.ReadingLabel;
+        ReadingProgress = Math.Clamp(saved.ReadingProgress, 0f, 1f);
         Touch();
+    }
+
+    public void ClearReading()
+    {
+        ReadingEntry = -1;
+        ReadingLabel = string.Empty;
+        ReadingProgress = 0f;
+    }
+
+    public bool MarkReading(int entry, string label, float progress)
+    {
+        var clamped = Math.Clamp(progress, 0f, 1f);
+        if (entry == ReadingEntry && MathF.Abs(clamped - ReadingProgress) < ProgressStep)
+        {
+            return false;
+        }
+
+        ReadingEntry = entry;
+        ReadingLabel = label;
+        ReadingProgress = clamped;
+        return true;
     }
 
     public StratsFightSelection Capture()
@@ -61,6 +95,10 @@ internal sealed class StratsSelection
             Slot = Slot,
             Alignment = Alignment,
             Tab = Tab,
+            OpenedUnix = OpenedUnix,
+            ReadingEntry = ReadingEntry,
+            ReadingLabel = ReadingLabel,
+            ReadingProgress = ReadingProgress,
         };
         foreach (var pair in Toggles)
         {

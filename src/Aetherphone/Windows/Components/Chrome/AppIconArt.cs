@@ -112,6 +112,15 @@ internal static class AppIconArt
             case "wordrun":
                 DrawWordRun(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "coil":
+                CoilIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "updraft":
+                UpdraftIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "swoop":
+                SwoopIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }

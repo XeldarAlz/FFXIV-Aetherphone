@@ -1,7 +1,9 @@
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Runtime;
+using Aetherphone.Core.Timers;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Notifications;
@@ -9,26 +11,29 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class TimerNotifier : IDisposable
 {
     private const long TickIntervalMilliseconds = 1000;
-    private static readonly Vector4 Accent = new(0.40f, 0.45f, 0.92f, 1f);
+    private const string AppId = "timers";
+    private const string ResetsGroup = "timers:resets";
+    private const string VenturesGroup = "timers:ventures";
+    private const string VoyagesGroup = "timers:voyages";
+    private const string EventsGroup = "timers:events";
+    private const string MapGroup = "timers:map";
+    private static readonly Vector4 Accent = AppAccents.For(AppId);
     private readonly Configuration configuration;
     private readonly FrameworkTicker ticker;
     private readonly NotificationService notifications;
-    private readonly List<RetainerVenture> retainers = new();
-    private readonly Dictionary<ulong, long> seenPendingComplete = new();
-    private readonly Dictionary<ulong, long> notifiedComplete = new();
+    private readonly GameTimers timers;
     private readonly AppGate gate;
-    private DateTime nextDaily;
-    private DateTime nextWeekly;
-    private DateTime nextGrandCompany;
+    private long lastUnix;
     private bool gateWasOpen = true;
 
     public TimerNotifier(Configuration configuration, IFramework framework, NotificationService notifications,
-        AppGate gate)
+        GameTimers timers, AppGate gate)
     {
         this.configuration = configuration;
         this.notifications = notifications;
+        this.timers = timers;
         this.gate = gate;
-        Rebaseline(DateTime.UtcNow);
+        lastUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick);
     }
 
@@ -39,104 +44,130 @@ internal sealed class TimerNotifier : IDisposable
 
     private void OnTick()
     {
+        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         if (!gate.Open)
         {
             gateWasOpen = false;
             return;
         }
 
-        var utcNow = DateTime.UtcNow;
         if (!gateWasOpen)
         {
             gateWasOpen = true;
-            Rebaseline(utcNow);
+            lastUnix = nowUnix;
             return;
         }
 
-        CheckResets(utcNow);
-        CheckRetainers(utcNow);
-    }
-
-    private void Rebaseline(DateTime utcNow)
-    {
-        nextDaily = GameSchedule.NextDailyReset(utcNow);
-        nextWeekly = GameSchedule.NextWeeklyReset(utcNow);
-        nextGrandCompany = GameSchedule.NextGrandCompanyReset(utcNow);
-        seenPendingComplete.Clear();
-        notifiedComplete.Clear();
-    }
-
-    private void CheckResets(DateTime utcNow)
-    {
-        if (utcNow >= nextDaily)
-        {
-            if (configuration.NotifyDailyReset)
-            {
-                Notify(Loc.T(L.Timers.DailyReset), Loc.T(L.Timers.ResetNotice));
-            }
-
-            nextDaily = GameSchedule.NextDailyReset(utcNow);
-        }
-
-        if (utcNow >= nextGrandCompany)
-        {
-            if (configuration.NotifyGrandCompanyReset)
-            {
-                Notify(Loc.T(L.Timers.GrandCompanyReset), Loc.T(L.Timers.ResetNotice));
-            }
-
-            nextGrandCompany = GameSchedule.NextGrandCompanyReset(utcNow);
-        }
-
-        if (utcNow >= nextWeekly)
-        {
-            if (configuration.NotifyWeeklyReset)
-            {
-                Notify(Loc.T(L.Timers.WeeklyReset), Loc.T(L.Timers.ResetNotice));
-            }
-
-            nextWeekly = GameSchedule.NextWeeklyReset(utcNow);
-        }
-    }
-
-    private void CheckRetainers(DateTime utcNow)
-    {
-        if (!configuration.NotifyRetainerVentures || !RetainerReader.TryRead(retainers))
+        var previousUnix = lastUnix;
+        lastUnix = nowUnix;
+        if (nowUnix <= previousUnix)
         {
             return;
         }
 
-        for (var index = 0; index < retainers.Count; index++)
+        var previousUtc = DateTimeOffset.FromUnixTimeSeconds(previousUnix).UtcDateTime;
+        CheckSchedule(previousUtc, nowUnix);
+        CheckRetainers(previousUnix, nowUnix);
+        CheckVoyages(previousUnix, nowUnix);
+        CheckMaps(previousUnix, nowUnix);
+    }
+
+    private void CheckSchedule(DateTime previousUtc, long nowUnix)
+    {
+        if (configuration.NotifyDailyReset && Due(GameSchedule.NextDailyReset(previousUtc), nowUnix))
         {
-            var venture = retainers[index];
-            if (!venture.HasVenture)
-            {
-                continue;
-            }
+            Notify(Loc.T(L.Timers.DailyReset), Loc.T(L.Timers.ResetNotice), ResetsGroup);
+        }
 
-            var completeTicks = venture.CompleteUtc.Ticks;
-            if (venture.CompleteUtc > utcNow)
-            {
-                seenPendingComplete[venture.RetainerId] = completeTicks;
-                continue;
-            }
+        if (configuration.NotifyGrandCompanyReset && Due(GameSchedule.NextGrandCompanyReset(previousUtc), nowUnix))
+        {
+            Notify(Loc.T(L.Timers.GrandCompanyReset), Loc.T(L.Timers.ResetNotice), ResetsGroup);
+        }
 
-            var wasPending = seenPendingComplete.TryGetValue(venture.RetainerId, out var pending) &&
-                             pending == completeTicks;
-            var alreadyNotified = notifiedComplete.TryGetValue(venture.RetainerId, out var notified) &&
-                                  notified == completeTicks;
-            if (!wasPending || alreadyNotified)
-            {
-                continue;
-            }
+        if (configuration.NotifyWeeklyReset && Due(GameSchedule.NextWeeklyReset(previousUtc), nowUnix))
+        {
+            Notify(Loc.T(L.Timers.WeeklyReset), Loc.T(L.Timers.ResetNotice), ResetsGroup);
+        }
 
-            notifiedComplete[venture.RetainerId] = completeTicks;
-            Notify(venture.Name, Loc.T(L.Timers.VentureComplete));
+        if (configuration.NotifyFashionReport && Due(GameSchedule.NextFashionReportOpen(previousUtc), nowUnix))
+        {
+            Notify(Loc.T(L.Timers.FashionReport), Loc.T(L.Timers.FashionNotice), EventsGroup);
+        }
+
+        if (configuration.NotifyJumboCactpot &&
+            Due(GameSchedule.NextJumboCactpot(previousUtc, timers.RegionCode), nowUnix))
+        {
+            Notify(Loc.T(L.Timers.JumboCactpot), Loc.T(L.Timers.CactpotNotice), EventsGroup);
         }
     }
 
-    private void Notify(string title, string body)
+    private void CheckRetainers(long previousUnix, long nowUnix)
     {
-        notifications.Notify(new PhoneNotification("timers", title, body, DateTime.Now, Accent));
+        if (!configuration.NotifyRetainerVentures)
+        {
+            return;
+        }
+
+        var characters = timers.Characters;
+        for (var characterIndex = 0; characterIndex < characters.Count; characterIndex++)
+        {
+            var retainers = characters[characterIndex].Retainers;
+            for (var index = 0; index < retainers.Count; index++)
+            {
+                var retainer = retainers[index];
+                if (TimerLedger.Crossed(previousUnix, nowUnix, retainer.CompleteUnix))
+                {
+                    Notify(retainer.Name, Loc.T(L.Timers.VentureComplete), VenturesGroup);
+                }
+            }
+        }
+    }
+
+    private void CheckVoyages(long previousUnix, long nowUnix)
+    {
+        if (!configuration.NotifyVoyages)
+        {
+            return;
+        }
+
+        var workshops = timers.Workshops;
+        for (var workshopIndex = 0; workshopIndex < workshops.Count; workshopIndex++)
+        {
+            var vessels = workshops[workshopIndex].Vessels;
+            for (var index = 0; index < vessels.Count; index++)
+            {
+                var vessel = vessels[index];
+                if (TimerLedger.Crossed(previousUnix, nowUnix, vessel.ReturnUnix))
+                {
+                    Notify(vessel.Name, Loc.T(L.Timers.VoyageComplete), VoyagesGroup);
+                }
+            }
+        }
+    }
+
+    private void CheckMaps(long previousUnix, long nowUnix)
+    {
+        if (!configuration.NotifyMapAllowance)
+        {
+            return;
+        }
+
+        var characters = timers.Characters;
+        for (var index = 0; index < characters.Count; index++)
+        {
+            var character = characters[index];
+            if (TimerLedger.Crossed(previousUnix, nowUnix, character.MapAllowanceUnix))
+            {
+                Notify(Loc.T(L.Timers.TreasureMap), Loc.T(L.Timers.MapNotice, character.Name), MapGroup);
+            }
+        }
+    }
+
+    private static bool Due(DateTime momentUtc, long nowUnix) =>
+        new DateTimeOffset(momentUtc, TimeSpan.Zero).ToUnixTimeSeconds() <= nowUnix;
+
+    private void Notify(string title, string body, string group)
+    {
+        notifications.Notify(new PhoneNotification(AppId, title, body, DateTime.Now, Accent, group));
     }
 }

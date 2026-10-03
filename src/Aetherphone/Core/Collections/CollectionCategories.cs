@@ -37,16 +37,4 @@ internal static class CollectionCategories
         CollectionCategory.Achievements => "achievements",
         _ => "cards",
     };
-
-    public static string Glyph(CollectionCategory category) => category switch
-    {
-        CollectionCategory.Mounts => "Mo",
-        CollectionCategory.Minions => "Mi",
-        CollectionCategory.Emotes => "Em",
-        CollectionCategory.Orchestrions => "Or",
-        CollectionCategory.Hairstyles => "Ha",
-        CollectionCategory.Facewear => "Fa",
-        CollectionCategory.Achievements => "Ac",
-        _ => "TT",
-    };
 }

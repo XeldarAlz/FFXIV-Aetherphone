@@ -9,7 +9,6 @@ namespace Aetherphone.Windows.Components;
 
 internal sealed class PhotoViewerOverlay
 {
-    private const float RevealSmoothTime = 0.15f;
     private const float BottomInset = 16f;
     private const float PageButtonRadius = 19f;
     private const float PageButtonInset = 10f;
@@ -54,7 +53,7 @@ internal sealed class PhotoViewerOverlay
     public void Draw(Rect area, PhoneTheme theme)
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, Aetherphone.Core.Animation.TransitionTiming.MaxFrameSeconds);
-        reveal.Step(open ? 1f : 0f, RevealSmoothTime, delta);
+        reveal.Step(open ? 1f : 0f, Aetherphone.Core.Animation.Motion.Appear, delta);
         var eased = Math.Clamp(reveal.Value, 0f, 1f);
         if (eased <= 0.01f)
         {
@@ -71,7 +70,7 @@ internal sealed class PhotoViewerOverlay
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.96f * eased)));
-        var grow = 0.94f + 0.06f * Aetherphone.Core.Animation.Easing.EaseOutCubic(eased);
+        var grow = 0.94f + 0.06f * eased;
         var contentTop = area.Min.Y + theme.TopZoneHeight * scale;
         var contentLeft = area.Min.X + theme.SidePadding * scale;
         var headerBottom = contentTop + AppHeader.Height * scale;

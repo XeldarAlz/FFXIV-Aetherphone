@@ -18,12 +18,21 @@ internal sealed class WallpaperLibrary : IDisposable
     private const int NightStartHour = 19;
     private const float DayNightSmoothTime = 0.6f;
     private const float ThemeSwitchSmoothTime = 0.35f;
-    private const int BrightnessSampleSize = 24;
+    public const int BrightnessSampleSize = 24;
     private const float BrightPixelThreshold = 0.65f;
     private const float DefaultBrightness = 0.35f;
-    private const int BlurBakeWidth = 96;
-    private const float BlurSigma = 2.2f;
+    private const int BlurBakeWidth = 320;
+    private const float BlurSigma = 9f;
+    private const float BlurSaturation = 1.3f;
+    private static readonly int[] LevelExtents = { 640, 1280, 2560 };
+    private static readonly int LevelCount = LevelExtents.Length + 1;
     private static readonly string[] BuiltInPatterns = { "*.png", "*.jpg", "*.jpeg", "*.bmp" };
+
+    private sealed class LevelSet
+    {
+        public readonly IDalamudTextureWrap?[] Wraps = new IDalamudTextureWrap?[LevelCount];
+        public readonly int[] Loading = new int[LevelCount];
+    }
 
     private static readonly WallpaperEntry Fallback = new()
     {
@@ -34,11 +43,11 @@ internal sealed class WallpaperLibrary : IDisposable
     private readonly DirectoryInfo customDirectory;
     private readonly Configuration configuration;
     private readonly IReadOnlyList<WallpaperEntry> builtIns;
-    private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
+    private readonly ConcurrentDictionary<string, LevelSet> ready = new();
     private readonly ConcurrentDictionary<string, IDalamudTextureWrap> blurred = new();
     private readonly ConcurrentDictionary<string, byte> blurring = new();
     private readonly ConcurrentDictionary<string, float> brightness = new();
-    private readonly ConcurrentDictionary<string, byte> loading = new();
+    private readonly ConcurrentDictionary<string, float[]> lumaGrids = new();
     private readonly ConcurrentDictionary<string, byte> failed = new();
     private readonly CancellationTokenSource cancellation = new();
     private Spring darknessSpring;
@@ -111,52 +120,95 @@ internal sealed class WallpaperLibrary : IDisposable
         themeDarkness = Math.Clamp(themeDarknessSpring.Step(target, ThemeSwitchSmoothTime, deltaSeconds), 0f, 1f);
     }
 
-    public ImTextureID? HandlePath(string path)
+    public bool TryGetTexture(string path, float drawnExtent, out ImTextureID handle, out Vector2 size)
     {
-        if (string.IsNullOrEmpty(path))
+        handle = default;
+        size = Vector2.Zero;
+        if (string.IsNullOrEmpty(path) || failed.ContainsKey(path))
         {
-            return null;
+            return false;
         }
 
-        if (ready.TryGetValue(path, out var wrap))
+        var level = LevelFor(drawnExtent);
+        var set = ready.GetOrAdd(path, static _ => new LevelSet());
+        if (set.Wraps[level] is { } wrap)
         {
-            return wrap.Handle;
+            handle = wrap.Handle;
+            size = wrap.Size;
+            return true;
         }
 
-        if (failed.ContainsKey(path) || !loading.TryAdd(path, 0))
+        if (Interlocked.CompareExchange(ref set.Loading[level], 1, 0) == 0)
         {
-            return null;
+            _ = LoadAsync(path, level, set);
         }
 
-        _ = LoadAsync(path);
-        return null;
+        return TryNearest(set, level, out handle, out size);
     }
 
-    public Vector2 SizeOfPath(string path) => ready.TryGetValue(path, out var wrap) ? wrap.Size : Vector2.Zero;
-
-    public ImTextureID? BlurredHandlePath(string path)
+    private static int LevelFor(float drawnExtent)
     {
+        for (var index = 0; index < LevelExtents.Length; index++)
+        {
+            if (drawnExtent <= LevelExtents[index])
+            {
+                return index;
+            }
+        }
+
+        return LevelExtents.Length;
+    }
+
+    private static bool TryNearest(LevelSet set, int wanted, out ImTextureID handle, out Vector2 size)
+    {
+        handle = default;
+        size = Vector2.Zero;
+        var bestDistance = int.MaxValue;
+        for (var index = 0; index < LevelCount; index++)
+        {
+            if (set.Wraps[index] is not { } wrap)
+            {
+                continue;
+            }
+
+            var distance = Math.Abs(index - wanted) * 2 - (index > wanted ? 1 : 0);
+            if (distance >= bestDistance)
+            {
+                continue;
+            }
+
+            bestDistance = distance;
+            handle = wrap.Handle;
+            size = wrap.Size;
+        }
+
+        return bestDistance != int.MaxValue;
+    }
+
+    public bool TryGetBlurred(string path, out ImTextureID handle, out Vector2 size)
+    {
+        handle = default;
+        size = Vector2.Zero;
         if (string.IsNullOrEmpty(path))
         {
-            return null;
+            return false;
         }
 
         if (blurred.TryGetValue(path, out var wrap))
         {
-            return wrap.Handle;
+            handle = wrap.Handle;
+            size = wrap.Size;
+            return true;
         }
 
         if (failed.ContainsKey(path) || !blurring.TryAdd(path, 0))
         {
-            return null;
+            return false;
         }
 
         _ = LoadBlurredAsync(path);
-        return null;
+        return false;
     }
-
-    public Vector2 BlurredSizeOfPath(string path) =>
-        blurred.TryGetValue(path, out var wrap) ? wrap.Size : Vector2.Zero;
 
     public float HomeBrightness(string lightId, string darkId)
     {
@@ -173,6 +225,8 @@ internal sealed class WallpaperLibrary : IDisposable
 
     private float BrightnessOfPath(string path) =>
         brightness.TryGetValue(path, out var value) ? value : DefaultBrightness;
+
+    public float[]? LumaGrid(string path) => lumaGrids.TryGetValue(path, out var grid) ? grid : null;
 
     public string AddCustom(string sourcePath, WallpaperCrop crop)
     {
@@ -230,9 +284,9 @@ internal sealed class WallpaperLibrary : IDisposable
             AepLog.Warning(exception, $"[Wallpaper] failed to delete {record.FileName}");
         }
 
-        if (ready.TryRemove(path, out var wrap))
+        if (ready.TryRemove(path, out var set))
         {
-            wrap.Dispose();
+            DisposeLevels(set);
         }
 
         if (blurred.TryRemove(path, out var blurredWrap))
@@ -241,6 +295,7 @@ internal sealed class WallpaperLibrary : IDisposable
         }
 
         brightness.TryRemove(path, out _);
+        lumaGrids.TryRemove(path, out _);
         failed.TryRemove(path, out _);
         Entries = Rebuild();
     }
@@ -248,9 +303,9 @@ internal sealed class WallpaperLibrary : IDisposable
     public void Dispose()
     {
         cancellation.Cancel();
-        foreach (var wrap in ready.Values)
+        foreach (var set in ready.Values)
         {
-            wrap.Dispose();
+            DisposeLevels(set);
         }
 
         ready.Clear();
@@ -352,16 +407,31 @@ internal sealed class WallpaperLibrary : IDisposable
         };
     }
 
-    private async Task LoadAsync(string path)
+    private static void DisposeLevels(LevelSet set)
+    {
+        for (var index = 0; index < LevelCount; index++)
+        {
+            set.Wraps[index]?.Dispose();
+            set.Wraps[index] = null;
+        }
+    }
+
+    private async Task LoadAsync(string path, int level, LevelSet set)
     {
         try
         {
             var token = cancellation.Token;
             var bytes = await File.ReadAllBytesAsync(path, token).ConfigureAwait(false);
-            var wrap = await ImageProcessor.DecodeToTextureAsync(textures, bytes, $"Aetherphone.Wallpaper.{path}",
-                ImageProcessor.MaxLocalDecodePixels, token).ConfigureAwait(false);
-            RecordBrightness(path, bytes);
-            if (!ready.TryAdd(path, wrap))
+            var maxDimension = level < LevelExtents.Length ? LevelExtents[level] : 0;
+            var wrap = await ImageProcessor.DecodeToTextureAsync(textures, bytes,
+                $"Aetherphone.Wallpaper.{level}.{path}", ImageProcessor.MaxLocalDecodePixels, maxDimension,
+                token).ConfigureAwait(false);
+            if (!brightness.ContainsKey(path))
+            {
+                RecordBrightness(path, bytes);
+            }
+
+            if (Interlocked.CompareExchange(ref set.Wraps[level], wrap, null) is not null)
             {
                 wrap.Dispose();
             }
@@ -376,7 +446,7 @@ internal sealed class WallpaperLibrary : IDisposable
         }
         finally
         {
-            loading.TryRemove(path, out _);
+            Interlocked.Exchange(ref set.Loading[level], 0);
         }
     }
 
@@ -412,7 +482,7 @@ internal sealed class WallpaperLibrary : IDisposable
         using var image = Image.Load<Rgba32>(ImageProcessor.SingleFrame, bytes);
         var width = Math.Max(1, Math.Min(BlurBakeWidth, image.Width));
         var height = Math.Max(1, (int)MathF.Round(image.Height * (width / (float)image.Width)));
-        image.Mutate(context => context.Resize(width, height).GaussianBlur(BlurSigma));
+        image.Mutate(context => context.Resize(width, height).GaussianBlur(BlurSigma).Saturate(BlurSaturation));
         var pixels = new byte[width * height * 4];
         image.CopyPixelDataTo(pixels);
         return (pixels, width, height);
@@ -422,7 +492,9 @@ internal sealed class WallpaperLibrary : IDisposable
     {
         try
         {
-            brightness[path] = MeasureBrightness(bytes);
+            var (score, grid) = MeasureBrightness(bytes);
+            brightness[path] = score;
+            lumaGrids[path] = grid;
         }
         catch (Exception exception)
         {
@@ -430,10 +502,11 @@ internal sealed class WallpaperLibrary : IDisposable
         }
     }
 
-    private static float MeasureBrightness(byte[] bytes)
+    private static (float Score, float[] Grid) MeasureBrightness(byte[] bytes)
     {
         using var image = Image.Load<Rgba32>(ImageProcessor.SingleFrame, bytes);
         image.Mutate(context => context.Resize(BrightnessSampleSize, BrightnessSampleSize));
+        var grid = new float[BrightnessSampleSize * BrightnessSampleSize];
         var lumaSum = 0f;
         var brightCount = 0;
         image.ProcessPixelRows(accessor =>
@@ -445,6 +518,7 @@ internal sealed class WallpaperLibrary : IDisposable
                 {
                     var pixel = row[columnIndex];
                     var luma = (0.299f * pixel.R + 0.587f * pixel.G + 0.114f * pixel.B) / 255f;
+                    grid[rowIndex * BrightnessSampleSize + columnIndex] = luma;
                     lumaSum += luma;
                     if (luma >= BrightPixelThreshold)
                     {
@@ -456,6 +530,6 @@ internal sealed class WallpaperLibrary : IDisposable
         const float total = BrightnessSampleSize * BrightnessSampleSize;
         var mean = lumaSum / total;
         var brightFraction = brightCount / total;
-        return Math.Clamp(0.5f * mean + 0.5f * brightFraction, 0f, 1f);
+        return (Math.Clamp(0.5f * mean + 0.5f * brightFraction, 0f, 1f), grid);
     }
 }

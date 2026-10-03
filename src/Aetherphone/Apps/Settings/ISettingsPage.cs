@@ -14,5 +14,6 @@ internal interface ISettingsPage
     bool OwnsChrome => false;
     bool IsHidden => false;
     string? GuideAnchor => null;
+    ReadOnlySpan<SettingsEntry> Entries => ReadOnlySpan<SettingsEntry>.Empty;
     void Draw(in PhoneContext context, Rect body);
 }

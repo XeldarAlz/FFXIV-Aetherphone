@@ -32,6 +32,10 @@ internal sealed class LinkedDevicesPage : ISettingsPage, IDisposable
     private static readonly TimeSpan ExpiryMargin = TimeSpan.FromSeconds(5);
     private static readonly Vector4 QrCardFill = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 QrModuleInk = new(0.043f, 0.039f, 0.086f, 1f);
+    private static readonly SettingsEntry[] Searchable =
+    {
+        new(L.Settings.LinkedDevicesHide),
+    };
 
     private readonly Configuration configuration;
     private readonly AethernetSession session;
@@ -63,6 +67,7 @@ internal sealed class LinkedDevicesPage : ISettingsPage, IDisposable
     public FontAwesomeIcon Icon => FontAwesomeIcon.Qrcode;
     public Vector4 Tint => new(0.545f, 0.486f, 0.973f, 1f);
     public bool IsHidden => !configuration.LinkedDevicesUnlocked;
+    public ReadOnlySpan<SettingsEntry> Entries => Searchable;
 
     public void Dispose()
     {

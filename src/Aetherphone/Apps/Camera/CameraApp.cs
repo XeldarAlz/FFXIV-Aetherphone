@@ -3,6 +3,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -26,6 +27,7 @@ internal sealed class CameraApp : IPhoneApp
     private const int CaptureDelayFrames = 3;
     private const int CaptureWatchdogTicks = 30;
     private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto };
+    private static readonly string[] ModeAnchors = { "camera.mode.square", "camera.mode.photo" };
 
     public string Id => "camera";
     public string DisplayName => Loc.T(L.Apps.Camera);
@@ -109,6 +111,7 @@ internal sealed class CameraApp : IPhoneApp
         var landscape = screen.IsLandscape();
         var viewfinder = ViewfinderRect(screen, scale);
         var captureRect = CaptureRect(viewfinder);
+        UiAnchors.Report("camera.viewfinder", viewfinder);
 
         var barAction = landscape
             ? CameraChrome.SideBar(screen, SideBarWidth, configuration.CameraFlash, configuration.CameraShowUi,
@@ -178,7 +181,8 @@ internal sealed class CameraApp : IPhoneApp
         var trayTop = screen.Max.Y - TrayHeight * scale;
         CameraChrome.TrayBackground(screen, trayTop, rounding);
 
-        var newMode = CameraChrome.ModeCarousel(screen, trayTop + 22f * scale, Modes, modeIndex, scale);
+        var newMode = CameraChrome.ModeCarousel(screen, trayTop + 22f * scale, Modes, ModeAnchors, modeIndex,
+            scale);
         var consumed = newMode != modeIndex;
         modeIndex = newMode;
 
@@ -214,7 +218,7 @@ internal sealed class CameraApp : IPhoneApp
         var shutterCenter = new Vector2(trayCenterX, screen.Center.Y);
         var shutterRadius = CameraChrome.ShutterRadius * scale;
         var newMode = CameraChrome.ModeColumn(trayCenterX, screen.Min.Y + 44f * scale,
-            shutterCenter.Y - shutterRadius - 10f * scale, Modes, modeIndex, scale);
+            shutterCenter.Y - shutterRadius - 10f * scale, Modes, ModeAnchors, modeIndex, scale);
         var consumed = newMode != modeIndex;
         modeIndex = newMode;
 

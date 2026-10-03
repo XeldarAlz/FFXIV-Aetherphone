@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -189,6 +190,7 @@ internal sealed partial class VelvetShell
         var buttonHeight = 44f * scale;
         var rect = new Rect(new Vector2(footer.Min.X + pad, footer.Center.Y - buttonHeight * 0.5f),
             new Vector2(footer.Max.X - pad, footer.Center.Y + buttonHeight * 0.5f));
+        UiAnchors.Report("velvet.filters.done", rect);
         if (SocialPill.Accent(drawList, rect, Loc.T(L.Velvet.FilterShowResults), VelvetInk.Shared,
                 TextStyles.SubheadlineEmphasized, buttonHeight * 0.5f))
         {
@@ -208,6 +210,11 @@ internal sealed partial class VelvetShell
         Gap(VCard.Gap);
         var row = Reserve(VDisclosure.HeaderHeight);
         var header = new Rect(new Vector2(row.Min.X + pad, row.Min.Y), new Vector2(row.Max.X - pad, row.Max.Y));
+        if (slot == 0)
+        {
+            UiAnchors.Report("velvet.filters.facet", header);
+        }
+
         var well = reveal > 0.001f ? FacetContentHeight(facet) * scale : 0f;
         var visible = well * reveal;
         if (VDisclosure.Card(drawList, header, visible, string.Empty, VelvetTheme.Rose, Loc.T(FacetTitle(facet)),
@@ -282,6 +289,12 @@ internal sealed partial class VelvetShell
         var drawList = ImGui.GetWindowDrawList();
         var row = Reserve(FilterOptionRowHeight);
         var centerY = row.Center.Y;
+        if (live && optionIndex == 0 && facet == FilterFacets[0])
+        {
+            UiAnchors.Report("velvet.filters.option", new Rect(new Vector2(panel.Min.X, row.Min.Y),
+                new Vector2(panel.Max.X, row.Max.Y)));
+        }
+
         var state = OptionState(facet, include, optionIndex);
         var radius = FilterMarkRadius * scale;
         var labelLeft = panel.Min.X + inset;
