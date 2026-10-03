@@ -20,7 +20,6 @@ internal sealed class OnlineConnectFourTable
 {
     private const float DropDuration = 0.28f;
     private const float BannerSeconds = 1.4f;
-    private const float BannerStripHeight = 32f;
 
     private static readonly Vector4 GridFrame = new(0.20f, 0.38f, 0.72f, 1f);
     private static readonly Vector4 SeatZeroDisc = new(0.86f, 0.28f, 0.26f, 1f);
@@ -89,12 +88,12 @@ internal sealed class OnlineConnectFourTable
         var remaining = store.Room.RemainingMilliseconds(snapshot.PhaseEndsAtUnixMs, nowMs);
         DrawSeatRow(drawList, theme, scale, topRow, board, players, remaining);
 
-        var bannerStripTop = topRow.Max.Y + 4f * scale;
-        var bannerCenter = new Vector2(body.Center.X, bannerStripTop + BannerStripHeight * scale * 0.5f);
-        var area = new Rect(
-            new Vector2(body.Min.X + 6f * scale, bannerStripTop + BannerStripHeight * scale + 8f * scale),
+        var area = new Rect(new Vector2(body.Min.X + 6f * scale, topRow.Max.Y + 12f * scale),
             new Vector2(body.Max.X - 6f * scale, body.Max.Y - 46f * scale));
         var grid = GameGrid.Centered(area, GameRoomWire.ConnectFourColumns, GameRoomWire.ConnectFourRows, 0f);
+        // The seam between the second and third row (0-indexed rows 1 and 2): early and mid-game
+        // those cells are still empty far more often than the board's dead center is.
+        var bannerCenter = new Vector2(grid.Bounds.Center.X, grid.Origin.Y + 2f * grid.Pitch);
 
         ObserveBoard(board, mySeat, new Vector2(grid.Bounds.Center.X, grid.Bounds.Min.Y), scale);
         if (fallingColumn >= 0)
