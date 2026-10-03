@@ -22,13 +22,13 @@ internal sealed class OnlineConnectFourTable
     private const float BannerSeconds = 1.4f;
 
     private static readonly Vector4 GridFrame = new(0.20f, 0.38f, 0.72f, 1f);
-    private static readonly Vector4 SeatZeroDisc = new(0.86f, 0.28f, 0.26f, 1f);
-    private static readonly Vector4 SeatOneDisc = new(0.26f, 0.52f, 0.86f, 1f);
+    private static readonly Vector4 SeatZeroDisc = new(0.86f, 0.24f, 0.24f, 1f);
+    private static readonly Vector4 SeatOneDisc = new(0.95f, 0.78f, 0.20f, 1f);
     private static readonly Vector4 ResignTint = new(0.85f, 0.35f, 0.32f, 1f);
 
     private static readonly Vector4[] ConfettiPalette =
     {
-        SeatZeroDisc, SeatOneDisc, new(0.98f, 0.82f, 0.35f, 1f), new(1f, 1f, 1f, 1f),
+        SeatZeroDisc, SeatOneDisc, new(1f, 1f, 1f, 1f), new(1f, 0.55f, 0.15f, 1f),
     };
 
     private readonly GameRoomsStore store;
