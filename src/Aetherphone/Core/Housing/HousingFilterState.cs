@@ -233,7 +233,7 @@ internal sealed class HousingFilterState
             return true;
         }
 
-        var freshness = thresholds.Classify(plot.LastSeenUtc, nowUtc, HousingProviderKind.Service);
+        var freshness = thresholds.ClassifyScan(plot.LastSeenUtc, nowUtc, HousingProviderKind.Service);
         return freshness is HousingDataFreshness.Live or HousingDataFreshness.Recent;
     }
 

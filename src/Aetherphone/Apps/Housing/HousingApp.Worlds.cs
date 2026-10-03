@@ -18,6 +18,9 @@ internal sealed partial class HousingApp
 
     private readonly List<HousingWorld> worldMatches = new();
     private string worldSearch = string.Empty;
+    private string pinnedDataCenter = string.Empty;
+    private float pinnedLabelLeft;
+    private float nextHeaderTop;
 
     private void DrawWorldPickerRoute(in PhoneContext context, HousingView view)
     {
@@ -26,6 +29,7 @@ internal sealed partial class HousingApp
         {
             worldTextCulture = Loc.Culture;
             dataCenterHeaders.Clear();
+            pinnedHeaderLabels.Clear();
             worldDetails.Clear();
         }
 
@@ -111,6 +115,9 @@ internal sealed partial class HousingApp
 
     private void DrawWorldGroups(float scale)
     {
+        var pinLine = ImGui.GetWindowPos().Y;
+        pinnedDataCenter = string.Empty;
+        nextHeaderTop = float.MaxValue;
         var regions = HousingRegions.Order;
         for (var regionIndex = 0; regionIndex < regions.Count; regionIndex++)
         {
@@ -136,7 +143,9 @@ internal sealed partial class HousingApp
 
                 worldMatches.Sort(static (first, second) =>
                     string.Compare(first.Name, second.Name, StringComparison.OrdinalIgnoreCase));
-                SettingsSection.Header(DataCenterHeader(region, dataCenter), frameTheme);
+                var header = DataCenterHeader(region, dataCenter);
+                var headerOrigin = ImGui.GetCursorScreenPos();
+                SettingsSection.Header(header, frameTheme);
                 var card = GroupCard.Begin(frameTheme, worldMatches.Count, WorldRowHeight);
                 for (var index = 0; index < worldMatches.Count; index++)
                 {
@@ -149,10 +158,64 @@ internal sealed partial class HousingApp
                 }
 
                 card.End();
+                TrackPinnedHeader(header, headerOrigin, ImGui.GetCursorScreenPos().Y, pinLine, scale);
             }
         }
 
         ImGui.Dummy(new Vector2(0f, 20f * scale));
+        DrawPinnedHeader(pinLine, scale);
+    }
+
+    private static float PinnedHeaderHeight(float scale) =>
+        (Metrics.Space.Sm + Metrics.Space.Xs) * scale + Typography.LineHeight(TextStyles.FootnoteEmphasized);
+
+    private void TrackPinnedHeader(string header, Vector2 headerOrigin, float groupBottom, float pinLine, float scale)
+    {
+        if (headerOrigin.Y < pinLine)
+        {
+            if (groupBottom > pinLine)
+            {
+                pinnedDataCenter = header;
+                pinnedLabelLeft = headerOrigin.X + Metrics.Space.Lg * scale;
+            }
+
+            return;
+        }
+
+        if (headerOrigin.Y < nextHeaderTop)
+        {
+            nextHeaderTop = headerOrigin.Y;
+        }
+    }
+
+    private void DrawPinnedHeader(float pinLine, float scale)
+    {
+        if (pinnedDataCenter.Length == 0)
+        {
+            return;
+        }
+
+        var height = PinnedHeaderHeight(scale);
+        var top = MathF.Min(pinLine, nextHeaderTop - height);
+        var left = ImGui.GetWindowPos().X;
+        var strip = new Rect(new Vector2(left, top), new Vector2(left + ImGui.GetWindowSize().X, top + height));
+        UiInteract.HoverOverlay(strip);
+        var drawList = ImGui.GetWindowDrawList();
+        Material.ThemedGlass(drawList, strip.Min, strip.Max, 0f, scale, ui.Palette.BackdropTop);
+        Typography.Draw(drawList, new Vector2(pinnedLabelLeft, top + Metrics.Space.Sm * scale),
+            PinnedHeaderLabel(pinnedDataCenter), frameTheme.TextMuted, TextStyles.FootnoteEmphasized);
+    }
+
+    private string PinnedHeaderLabel(string header)
+    {
+        if (pinnedHeaderLabels.TryGetValue(header, out var label))
+        {
+            return label;
+        }
+
+        label = Loc.Culture.TextInfo.ToUpper(header);
+        pinnedHeaderLabels[header] = label;
+        return label;
     }
 
     private readonly List<string> dataCenterBuffer = new();
@@ -178,6 +241,7 @@ internal sealed partial class HousingApp
     }
 
     private readonly Dictionary<string, string> dataCenterHeaders = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> pinnedHeaderLabels = new(StringComparer.Ordinal);
     private readonly Dictionary<uint, string> worldDetails = new();
     private object? worldTextCulture;
 

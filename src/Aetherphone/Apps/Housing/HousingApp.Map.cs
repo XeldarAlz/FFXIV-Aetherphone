@@ -33,6 +33,8 @@ internal sealed partial class HousingApp
     private const float StatusDot = 3.5f;
     private const float LegendWidth = 184f;
     private const float LegendRow = 22f;
+    private const float PointOfInterestSize = 16f;
+    private const float LegendIconSize = 14f;
     private const int ControlCount = 5;
 
     private readonly string[] controlGlyphs = new string[ControlCount];
@@ -222,7 +224,12 @@ internal sealed partial class HousingApp
             return;
         }
 
-        showSubdivision = picked == 1;
+        SwitchDivision(picked == 1);
+    }
+
+    private void SwitchDivision(bool subdivision)
+    {
+        showSubdivision = subdivision;
         ClosePlotCard();
         ResetMapView();
         InvalidateCache();
@@ -331,6 +338,12 @@ internal sealed partial class HousingApp
                 HousingMarkers.DrawSwatch(drawList, center, HousingPlotSize.Small, ui.MutedInk, scale);
                 HousingGlyphs.WatchNotch(drawList, center, 5f * scale, ImGui.GetColorU32(AppPalettes.HousingBrass));
                 break;
+            case 6:
+                DrawLegendIcon(drawList, center, HousingGameMaps.AethernetShardIcon, scale);
+                break;
+            case 7:
+                DrawLegendIcon(drawList, center, HousingGameMaps.MarketBoardIcon, scale);
+                break;
             default:
                 HousingGlyphs.DashedRing(drawList, center, 7f * scale,
                     ImGui.GetColorU32(AppPalettes.HousingParchment), 1.4f * scale);
@@ -338,10 +351,17 @@ internal sealed partial class HousingApp
         }
     }
 
+    private static void DrawLegendIcon(ImDrawListPtr drawList, Vector2 center, uint iconId, float scale)
+    {
+        var half = LegendIconSize * scale * 0.5f;
+        GameIconTile.Draw(drawList, Plugin.TextureProvider, iconId, new Vector2(center.X - half, center.Y - half),
+            new Vector2(center.X + half, center.Y + half), 0f, scale, requireIcon: true);
+    }
+
     private static readonly LocString[] LegendEntries =
     {
         L.Housing.LegendSmall, L.Housing.LegendMedium, L.Housing.LegendLarge, L.Housing.LegendResults,
-        L.Housing.LegendWatched, L.Housing.LegendStale,
+        L.Housing.LegendWatched, L.Housing.LegendStale, L.Housing.LegendAethernetShard, L.Housing.LegendMarketBoard,
     };
 
     private void DrawStatusPill(Rect area, float bottom, float scale)
@@ -602,6 +622,7 @@ internal sealed partial class HousingApp
             }
         }
 
+        DrawPointsOfInterest(drawList, plan, origin, mapSize, viewport, scale);
         var mouse = ImGui.GetMousePos();
         var hovered = viewport.Contains(mouse) && UiInteract.Hover(viewport.Min, viewport.Max)
             ? NearestMarker(mouse, origin, mapSize, plan, plots, scale)
@@ -643,6 +664,31 @@ internal sealed partial class HousingApp
         }
     }
 
+    private static void DrawPointsOfInterest(ImDrawListPtr drawList, in HousingPlan plan, Vector2 origin,
+        float mapSize, Rect viewport, float scale)
+    {
+        if (plan.Map is not { } gameMap)
+        {
+            return;
+        }
+
+        var points = gameMap.PointsOfInterest;
+        var half = PointOfInterestSize * scale * 0.5f;
+        for (var index = 0; index < points.Count; index++)
+        {
+            var center = ToScreen(origin, mapSize, points[index].NormalizedPosition);
+            if (center.X < viewport.Min.X - half || center.X > viewport.Max.X + half ||
+                center.Y < viewport.Min.Y - half || center.Y > viewport.Max.Y + half)
+            {
+                continue;
+            }
+
+            GameIconTile.Draw(drawList, Plugin.TextureProvider, points[index].IconId,
+                new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half), 0f,
+                scale, requireIcon: true);
+        }
+    }
+
     private void DrawStateOverlay(Rect viewport, List<HousingPlot> plots, float scale)
     {
         if (plots.Count > 0)
@@ -679,6 +725,18 @@ internal sealed partial class HousingApp
             return;
         }
 
+        if (OtherDivisionHasPlots())
+        {
+            if (HousingArt.StateScreen(drawList, ui, viewport, FontAwesomeIcon.Home, NoOpeningsText(), string.Empty,
+                    Loc.T(showSubdivision ? L.Housing.MainDivision : L.Housing.Subdivision), scale))
+            {
+                UiFeedback.Play(UiSound.Tap);
+                SwitchDivision(!showSubdivision);
+            }
+
+            return;
+        }
+
         var hint = housing.Snapshot.Plots.Count == 0 ? Loc.T(L.Housing.NoScansHint) : string.Empty;
         if (HousingArt.StateScreen(drawList, ui, viewport, FontAwesomeIcon.Home,
                 NoOpeningsText(), hint, Loc.T(L.Housing.ChooseWard), scale))
@@ -699,6 +757,27 @@ internal sealed partial class HousingApp
         for (var index = 0; index < plots.Count; index++)
         {
             if (plots[index].Key.Ward == ward)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool OtherDivisionHasPlots()
+    {
+        if (housing.GameMap is not { HasSubdivision: true } || housing.Snapshot is not { } snapshot)
+        {
+            return false;
+        }
+
+        var ward = housing.Ward;
+        var wanted = !showSubdivision;
+        var plots = snapshot.Plots;
+        for (var index = 0; index < plots.Count; index++)
+        {
+            if (plots[index].Key.Ward == ward && plots[index].IsSubdivision == wanted)
             {
                 return true;
             }

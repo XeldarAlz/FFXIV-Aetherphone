@@ -1413,6 +1413,10 @@ internal static class L
         public static readonly LocString LegendLarge = new("housing.legendLarge", "Hexagon: large");
         public static readonly LocString LegendWatched = new("housing.legendWatched", "Notch: watched");
         public static readonly LocString LegendStale = new("housing.legendStale", "Dashed ring: stale scan");
+        public static readonly LocString LegendAethernetShard =
+            new("housing.legendAethernetShard", "Aethernet shard");
+        public static readonly LocString LegendMarketBoard = new("housing.legendMarketBoard", "Market board");
+        public static readonly LocString WardLegend = new("housing.wardLegend", "Open plots per ward");
 
         public static readonly LocString SettingsData = new("housing.settingsData", "Data");
         public static readonly LocString SettingsWorld = new("housing.settingsWorld", "World");

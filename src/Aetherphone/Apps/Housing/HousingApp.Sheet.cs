@@ -23,6 +23,7 @@ internal sealed partial class HousingApp
     private const float LeadTileGap = 8f;
     private const float ActionHeight = 44f;
     private const float SelectedRing = 2f;
+    private const float WardLegendDot = 3.5f;
 
     private readonly Sheet locationSheet = new();
     private readonly Sheet reminderSheet = new();
@@ -168,9 +169,30 @@ internal sealed partial class HousingApp
             ? wardHeadingText.Value
             : wardHeadingText.Store(0L, Loc.Upper(Loc.T(L.Housing.WardLabel)));
         Typography.Draw(drawList, new Vector2(left, y), wardHeading, ui.MutedInk, TextStyles.FootnoteEmphasized);
+        var headingWidth = Typography.Measure(wardHeading, TextStyles.FootnoteEmphasized).X;
+        DrawWardLegend(drawList, left + headingWidth + HousingArt.TextGap * scale, right,
+            y + Typography.LineHeight(TextStyles.FootnoteEmphasized) * 0.5f, scale);
         y += Typography.LineHeight(TextStyles.FootnoteEmphasized) + SectionLabelGap * scale;
         DrawWardGrid(drawList, left, right, y, frame.Interactive, scale);
         locationSheet.End(in frame);
+    }
+
+    private void DrawWardLegend(ImDrawListPtr drawList, float left, float right, float centerY, float scale)
+    {
+        var dot = WardLegendDot * scale;
+        var gap = Metrics.Space.Sm * scale;
+        var available = right - left - dot * 2f - gap;
+        if (available <= 0f)
+        {
+            return;
+        }
+
+        var label = Typography.FitText(Loc.T(L.Housing.WardLegend), available, TextStyles.Footnote);
+        var labelSize = Typography.Measure(label, TextStyles.Footnote);
+        var labelLeft = right - labelSize.X;
+        drawList.AddCircleFilled(new Vector2(labelLeft - gap - dot, centerY), dot, ImGui.GetColorU32(ui.Accent), 12);
+        Typography.Draw(drawList, new Vector2(labelLeft, centerY - labelSize.Y * 0.5f), label, ui.MutedInk,
+            TextStyles.Footnote);
     }
 
     private float DrawDistrictPicker(ImDrawListPtr drawList, float left, float right, float top, bool interactive,

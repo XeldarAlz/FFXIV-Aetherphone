@@ -302,6 +302,7 @@ internal sealed partial class HousingApp : IPhoneApp
         }
 
         menuTarget = MenuTarget.Sort;
+        menu.Header = Loc.T(L.Housing.SortLabel);
         menu.Toggle("housing.sort", anchor);
     }
 
@@ -424,7 +425,7 @@ internal sealed partial class HousingApp : IPhoneApp
     }
 
     private HousingDataFreshness FreshnessOf(HousingPlot plot) =>
-        housing.Thresholds.Classify(plot.LastSeenUtc, DateTime.UtcNow, housing.ActiveSource);
+        housing.Thresholds.ClassifyScan(plot.LastSeenUtc, DateTime.UtcNow, housing.ActiveSource);
 
     private HousingDataFreshness SnapshotFreshness()
     {
