@@ -1,8 +1,10 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -10,16 +12,38 @@ using Dalamud.Bindings.ImGui;
 namespace Aetherphone.Apps.Games.Online;
 
 // The live Connect Four table. The server is the arbiter; a column tap only ever sends an intent,
-// and the next snapshot repaints the truth, the same static repaint Chess uses for a finished
-// move rather than a flight path for the dropped disc.
+// and the next snapshot repaints the truth. Unlike Chess's static repaint, a landed disc gets a
+// short gravity-drop flight: the server already tells us where it landed and whose it was
+// (LastColumn/LastRow/LastSeat), so the animation is purely a local replay of a fact the server
+// already confirmed, never a guess about what the server will do.
 internal sealed class OnlineConnectFourTable
 {
+    private const float DropDuration = 0.28f;
+    private const float BannerSeconds = 1.4f;
+
     private static readonly Vector4 GridFrame = new(0.20f, 0.38f, 0.72f, 1f);
     private static readonly Vector4 SeatZeroDisc = new(0.86f, 0.28f, 0.26f, 1f);
     private static readonly Vector4 SeatOneDisc = new(0.26f, 0.52f, 0.86f, 1f);
     private static readonly Vector4 ResignTint = new(0.85f, 0.35f, 0.32f, 1f);
 
+    private static readonly Vector4[] ConfettiPalette =
+    {
+        SeatZeroDisc, SeatOneDisc, new(0.98f, 0.82f, 0.35f, 1f), new(1f, 1f, 1f, 1f),
+    };
+
     private readonly GameRoomsStore store;
+    private readonly ParticleSystem particles = new(128);
+
+    private int seenActionCount = -1;
+    private long seenRound = -1;
+    private int lastTurnSeat = -2;
+    private int fallingColumn = -1;
+    private int fallingRow = -1;
+    private int fallingSeat = -1;
+    private float fallingTimer;
+    private string bannerText = string.Empty;
+    private Vector4 bannerAccent;
+    private float bannerProgress = 1f;
 
     public OnlineConnectFourTable(GameRoomsStore store)
     {
@@ -28,6 +52,15 @@ internal sealed class OnlineConnectFourTable
 
     public void Reset()
     {
+        particles.Clear();
+        seenActionCount = -1;
+        seenRound = -1;
+        lastTurnSeat = -2;
+        fallingColumn = -1;
+        fallingRow = -1;
+        fallingSeat = -1;
+        fallingTimer = 0f;
+        bannerProgress = 1f;
     }
 
     public static Vector4 SeatColor(int seat) => seat == 0 ? SeatZeroDisc : SeatOneDisc;
@@ -40,6 +73,7 @@ internal sealed class OnlineConnectFourTable
         var drawList = ImGui.GetWindowDrawList();
         var accent = Core.Apps.AppAccents.For("games");
         GameScene.Ambient(drawList, body, accent);
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
 
         var players = board.Players ?? Array.Empty<ConnectFourPlayerDto>();
         var cells = board.Cells ?? Array.Empty<int>();
@@ -58,6 +92,22 @@ internal sealed class OnlineConnectFourTable
             new Vector2(body.Max.X - 6f * scale, body.Max.Y - 46f * scale));
         var grid = GameGrid.Centered(area, GameRoomWire.ConnectFourColumns, GameRoomWire.ConnectFourRows, 0f);
 
+        ObserveBoard(board, mySeat, new Vector2(grid.Bounds.Center.X, grid.Bounds.Min.Y), scale);
+        if (fallingColumn >= 0)
+        {
+            fallingTimer += delta;
+            if (fallingTimer >= DropDuration)
+            {
+                fallingColumn = -1;
+                fallingRow = -1;
+                fallingSeat = -1;
+                fallingTimer = 0f;
+            }
+        }
+
+        particles.Update(delta);
+        bannerProgress = GameBanner.Advance(bannerProgress, delta, BannerSeconds);
+
         if (cells.Length == GameRoomWire.ConnectFourCellCount)
         {
             var hoveredColumn = myTurn ? HitTestColumn(grid) : -1;
@@ -66,7 +116,8 @@ internal sealed class OnlineConnectFourTable
                 hoveredColumn = -1;
             }
 
-            DrawBoard(drawList, grid, scale, cells, board, mySeat, hoveredColumn);
+            DrawBoard(drawList, grid, scale, cells, board, mySeat, hoveredColumn, fallingColumn, fallingRow,
+                fallingSeat, fallingTimer / DropDuration);
             if (hoveredColumn >= 0)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -75,6 +126,12 @@ internal sealed class OnlineConnectFourTable
                     store.SendDrop(hoveredColumn);
                 }
             }
+        }
+
+        particles.Draw(drawList, scale);
+        if (bannerProgress < 1f)
+        {
+            GameBanner.Draw(drawList, grid.Bounds.Center, bannerText, bannerAccent, theme, bannerProgress);
         }
 
         var statusY = grid.Bounds.Max.Y + 10f * scale;
@@ -95,6 +152,67 @@ internal sealed class OnlineConnectFourTable
         {
             store.SendResign();
         }
+    }
+
+    // Reacts to facts the server already settled: a round boundary clears the board's memory of
+    // itself, a new action count plays the drop that just landed, and a turn that newly points at
+    // us pops a banner. None of this decides anything; it only replays what already happened.
+    private void ObserveBoard(ConnectFourRoomStateDto board, int mySeat, Vector2 confettiOrigin, float scale)
+    {
+        if (board.RoundIndex != seenRound)
+        {
+            seenRound = board.RoundIndex;
+            seenActionCount = -1;
+            lastTurnSeat = -2;
+            fallingColumn = -1;
+            particles.Clear();
+        }
+
+        var first = seenActionCount < 0;
+        if (board.ActionCount != seenActionCount)
+        {
+            seenActionCount = board.ActionCount;
+            if (!first && board.LastSeat >= 0)
+            {
+                ReactToDrop(board, mySeat, confettiOrigin, scale);
+            }
+        }
+
+        var live = board.WinnerSeat < 0 && board.EndKind.Length == 0;
+        if (board.TurnSeat != lastTurnSeat)
+        {
+            var wasObserved = lastTurnSeat != -2;
+            lastTurnSeat = board.TurnSeat;
+            if (live && wasObserved && mySeat >= 0 && board.TurnSeat == mySeat)
+            {
+                ShowBanner(Loc.T(L.Games.OnlineYourTurn), SeatColor(mySeat));
+            }
+        }
+    }
+
+    private void ReactToDrop(ConnectFourRoomStateDto board, int mySeat, Vector2 confettiOrigin, float scale)
+    {
+        fallingColumn = board.LastColumn;
+        fallingRow = board.LastRow;
+        fallingSeat = board.LastSeat;
+        fallingTimer = 0f;
+        UiFeedback.Play(UiSound.GamePiece);
+
+        if (mySeat < 0 || board.WinnerSeat != mySeat
+            || !string.Equals(board.EndKind, GameRoomWire.ConnectFourEndConnect, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        particles.Confetti(confettiOrigin, 70, ConfettiPalette, 260f * scale, 4f, 1.4f);
+        UiFeedback.Play(UiSound.GameWin);
+    }
+
+    private void ShowBanner(string text, Vector4 accent)
+    {
+        bannerText = text;
+        bannerAccent = accent;
+        bannerProgress = 0f;
     }
 
     private static void DrawSeatRow(ImDrawListPtr drawList, PhoneTheme theme, float scale, Rect row,
@@ -138,11 +256,19 @@ internal sealed class OnlineConnectFourTable
     }
 
     private static void DrawBoard(ImDrawListPtr drawList, GameGrid grid, float scale, int[] cells,
-        ConnectFourRoomStateDto board, int mySeat, int hoveredColumn)
+        ConnectFourRoomStateDto board, int mySeat, int hoveredColumn, int fallingColumn, int fallingRow,
+        int fallingSeat, float fallingProgress)
     {
         GameScene.Arena(drawList, grid.Bounds.Inset(-6f * scale), Metrics.Radius.Md * scale, scale, GridFrame);
         var radius = grid.Pitch * 0.40f;
         var landingRow = hoveredColumn >= 0 ? LandingRow(cells, hoveredColumn) : -1;
+        if (hoveredColumn >= 0 && landingRow >= 0)
+        {
+            var laneMin = new Vector2(grid.Origin.X + hoveredColumn * grid.Pitch, grid.Origin.Y);
+            var laneMax = new Vector2(laneMin.X + grid.Pitch, grid.Origin.Y + (landingRow + 1) * grid.Pitch);
+            drawList.AddRectFilled(laneMin, laneMax, ImGui.GetColorU32(SeatColor(mySeat) with { W = 0.14f }));
+        }
+
         var lastIndex = board.LastRow * GameRoomWire.ConnectFourColumns + board.LastColumn;
         for (var row = 0; row < GameRoomWire.ConnectFourRows; row++)
         {
@@ -150,10 +276,11 @@ internal sealed class OnlineConnectFourTable
             {
                 var index = row * GameRoomWire.ConnectFourColumns + column;
                 var center = grid.CellCenter(column, row);
-                var occupant = cells[index];
+                var isFallingTarget = column == fallingColumn && row == fallingRow;
+                var occupant = isFallingTarget ? -1 : cells[index];
                 if (occupant >= 0)
                 {
-                    DrawDisc(drawList, center, radius, SeatColor(occupant));
+                    DrawDisc(drawList, center, radius, SeatColor(occupant), scale);
                 }
                 else
                 {
@@ -163,23 +290,39 @@ internal sealed class OnlineConnectFourTable
 
                 if (column == hoveredColumn && row == landingRow)
                 {
-                    DrawDisc(drawList, center, radius, SeatColor(mySeat) with { W = 0.5f });
+                    DrawDisc(drawList, center, radius, SeatColor(mySeat) with { W = 0.5f }, scale);
                 }
 
-                if (index == lastIndex)
+                if (index == lastIndex && fallingColumn < 0)
                 {
                     drawList.AddCircle(center, radius + 2f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.7f)),
                         28, 1.5f * scale);
                 }
             }
         }
+
+        if (fallingColumn < 0)
+        {
+            return;
+        }
+
+        var fallT = Easing.EaseInCubic(Math.Clamp(fallingProgress, 0f, 1f));
+        var start = grid.CellCenter(fallingColumn, -1);
+        var end = grid.CellCenter(fallingColumn, fallingRow);
+        DrawDisc(drawList, Vector2.Lerp(start, end, fallT), radius, SeatColor(fallingSeat), scale);
     }
 
-    private static void DrawDisc(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 color)
+    private static void DrawDisc(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 color, float scale)
     {
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(color), 28);
-        drawList.AddCircle(center, radius, ImGui.GetColorU32(GamePalette.Darken(color, 0.35f) with { W = 0.6f }), 28,
-            1f);
+        var min = center - new Vector2(radius, radius);
+        var max = center + new Vector2(radius, radius);
+        Squircle.Fill(drawList, min + new Vector2(0f, 2f * scale), max + new Vector2(0f, 2f * scale), radius,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.28f)));
+        Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(color));
+        Squircle.Fill(drawList, min, new Vector2(max.X, center.Y), radius,
+            ImGui.GetColorU32(GamePalette.Lighten(color, 0.22f) with { W = 0.5f }));
+        Squircle.Stroke(drawList, min, max, radius,
+            ImGui.GetColorU32(GamePalette.Darken(color, 0.3f) with { W = 0.6f }), 1f * scale);
     }
 
     private static int HitTestColumn(GameGrid grid)
