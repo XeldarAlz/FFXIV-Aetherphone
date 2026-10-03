@@ -6852,6 +6852,7 @@
   "changelog.r1042.102": "Housing yenilendi: dünyanın çekiliş geri sayımı, her bölgedeki boş arsalar bir bakışta, arsa kartlarıyla tam ekran bölge haritası ve tüm boş arsaların listesi",
   "changelog.r1042.103": "Arsa ayrıntıları artık arsanın çevresindeki bölge haritasının bir kesitiyle açılıyor; izlenen arsalar evre ilerlemesini ve hatırlatmayı gösteriyor",
   "changelog.r1042.110": "Housing haritalarına eterit parçası ve pazar panosu işaretleri eklendi; veriler güncelken arsalar artık eski görünmüyor, katkı: YozoraCho",
+  "changelog.r1042.111": "Baloncuk'ta oyun bitmeden yeniden başlatınca veya çıkınca skorun kaybolması düzeltildi, katkı: jambalong",
   "changelog.r1042.104": "Sınıflar bir ilerleme merkezine dönüştürüldü: deneyim halkası ve dinlenme bonusuyla mevcut işin, role göre gruplanmış tüm işler ve raf olarak ekipman kategorilerin",
   "changelog.r1042.105": "Her iş için bir sonraki seviyeye kalan deneyimi, ekipman setlerini ve Değiştir düğmesini içeren bir sayfa eklendi; değiştirme artık savaştaki gibi neden olamadığını açıklıyor",
   "changelog.r1042.106": "Strats bir okuyucu olarak yenilendi: içinde olduğun ve en son okuduğun savaş en üstte, strateji ve konumun için bir ayar kartı ve mekanikler arasında geçmek için bir içindekiler",

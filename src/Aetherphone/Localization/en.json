@@ -6852,6 +6852,7 @@
   "changelog.r1042.102": "Overhauled Housing: your world's lottery countdown, open plots in every district at a glance, a full screen ward map with plot cards, and a list of every open plot",
   "changelog.r1042.103": "Plot details now open on a crop of the district map around the plot, and watched plots show their phase progress and reminder",
   "changelog.r1042.110": "Added aethernet shard and market board markers to the housing maps, and plots no longer read Stale while the data is current, contributed by YozoraCho",
+  "changelog.r1042.111": "Fixed Bubbles losing your score when you restart or leave before the game ends, contributed by jambalong",
   "changelog.r1042.104": "Overhauled Jobs into a progression hub: your current job with its EXP ring and rested bonus, every job grouped by role, and your gearset categories as shelves",
   "changelog.r1042.105": "Added a page for each job with EXP to the next level, its gearsets and a Switch button; switching now explains why when it cannot happen, like in combat",
   "changelog.r1042.106": "Overhauled Strats as a reader: the fight you are in and the one you last read up top, a setup card for your strat and spot, and a Contents sheet to jump between mechanics",

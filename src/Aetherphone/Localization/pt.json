@@ -6852,6 +6852,7 @@
   "changelog.r1042.102": "Housing reformulado: a contagem regressiva do sorteio do seu mundo, lotes livres em cada distrito num relance, um mapa do distrito em tela cheia com cartões de lote e uma lista de todos os lotes livres",
   "changelog.r1042.103": "Os detalhes do lote agora abrem com um recorte do mapa do distrito em volta do lote, e lotes acompanhados mostram o progresso da fase e o lembrete",
   "changelog.r1042.110": "Adicionados marcadores de fragmentos de etherita e quadros do mercado nos mapas de Housing, e os lotes não aparecem mais como antigos quando os dados estão em dia, contribuição de YozoraCho",
+  "changelog.r1042.111": "Corrigido Bolhas perdendo sua pontuação ao reiniciar ou sair antes do fim da partida, contribuição de jambalong",
   "changelog.r1042.104": "Jobs reformulado como central de progresso: seu trabalho atual com anel de experiência e bônus de descanso, todos os trabalhos agrupados por função e suas categorias de equipamento como prateleiras",
   "changelog.r1042.105": "Adicionada uma página por trabalho com a experiência até o próximo nível, seus conjuntos de equipamento e um botão Trocar; a troca agora explica por que não pode acontecer, como em combate",
   "changelog.r1042.106": "Strats reformulado como leitor: o combate em que você está e o último lido no topo, um cartão de configuração para sua estratégia e posição, e um sumário para pular entre mecânicas",

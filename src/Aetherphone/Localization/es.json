@@ -6852,6 +6852,7 @@
   "changelog.r1042.102": "Renovado Housing: la cuenta atrás de la lotería de tu mundo, parcelas libres en cada distrito de un vistazo, un mapa del distrito a pantalla completa con tarjetas de parcela y una lista de todas las parcelas libres",
   "changelog.r1042.103": "Los detalles de parcela ahora se abren con un recorte del mapa del distrito alrededor de la parcela, y las parcelas seguidas muestran el progreso de la fase y el recordatorio",
   "changelog.r1042.110": "Añadidos marcadores de fragmentos de eterita y tablones del mercado en los mapas de Housing, y las parcelas ya no aparecen como antiguas cuando los datos están al día, contribuido por YozoraCho",
+  "changelog.r1042.111": "Corregido que Burbujas perdiera tu puntuación al reiniciar o salir antes de que acabe la partida, contribuido por jambalong",
   "changelog.r1042.104": "Renovados los Trabajos como centro de progreso: tu trabajo actual con su anillo de experiencia y bonificación de descanso, todos los trabajos agrupados por rol y tus categorías de equipo como estantes",
   "changelog.r1042.105": "Añadida una página por trabajo con la experiencia para el siguiente nivel, sus conjuntos de equipo y un botón Cambiar; el cambio ahora explica por qué no puede hacerse, como en combate",
   "changelog.r1042.106": "Renovado Strats como lector: el combate en el que estás y el último que leíste arriba, una tarjeta de configuración para tu estrategia y posición, y un índice para saltar entre mecánicas",

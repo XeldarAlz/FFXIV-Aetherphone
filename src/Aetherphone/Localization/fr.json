@@ -6852,6 +6852,7 @@
   "changelog.r1042.102": "Refonte de Housing : le compte à rebours de la loterie de votre monde, les terrains libres de chaque quartier en un coup d'œil, une carte du quartier en plein écran avec des fiches de terrain et la liste de tous les terrains libres",
   "changelog.r1042.103": "Les détails d'un terrain s'ouvrent maintenant sur un extrait de la carte du quartier autour du terrain, et les terrains suivis affichent l'avancement de la phase et le rappel",
   "changelog.r1042.110": "Ajout de repères pour les éclats d'éthérite et les tableaux du marché sur les cartes de Housing, et les terrains ne paraissent plus périmés quand les données sont à jour, contribution de YozoraCho",
+  "changelog.r1042.111": "Bulles ne perd plus votre score quand vous recommencez ou quittez avant la fin de la partie, contribution de jambalong",
   "changelog.r1042.104": "Refonte des Jobs en centre de progression : votre job actuel avec son anneau d'expérience et son bonus de repos, tous les jobs groupés par rôle et vos catégories d'équipement en étagères",
   "changelog.r1042.105": "Ajout d'une page par job avec l'expérience jusqu'au niveau suivant, ses ensembles d'équipement et un bouton Changer ; le changement explique maintenant pourquoi il est impossible, par exemple en combat",
   "changelog.r1042.106": "Refonte de Strats en lecteur : le combat en cours et le dernier lu en haut, une carte de réglage pour votre stratégie et votre position, et une table des matières pour passer d'une mécanique à l'autre",

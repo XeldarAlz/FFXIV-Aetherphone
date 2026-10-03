@@ -6852,6 +6852,7 @@
   "changelog.r1042.102": "Housing überarbeitet: der Lotterie-Countdown deiner Welt, freie Grundstücke in jedem Bezirk auf einen Blick, eine Vollbild-Bezirkskarte mit Grundstückskarten und eine Liste aller freien Grundstücke",
   "changelog.r1042.103": "Grundstücksdetails öffnen jetzt mit einem Ausschnitt der Bezirkskarte um das Grundstück, und beobachtete Grundstücke zeigen Phasenfortschritt und Erinnerung",
   "changelog.r1042.110": "Neu: Markierungen für Ätheryten-Splitter und Marktbretter auf den Housing-Karten, und Grundstücke wirken nicht mehr veraltet, solange die Daten aktuell sind, beigetragen von YozoraCho",
+  "changelog.r1042.111": "Behoben: Blasen verliert deine Punkte nicht mehr, wenn du vor dem Spielende neu startest oder das Spiel verlässt, beigetragen von jambalong",
   "changelog.r1042.104": "Jobs zu einer Fortschrittszentrale überarbeitet: dein aktueller Job mit EP-Ring und Erholungsbonus, alle Jobs nach Rolle gruppiert und deine Ausrüstungskategorien als Regale",
   "changelog.r1042.105": "Neu: eine Seite für jeden Job mit EP bis zur nächsten Stufe, seinen Ausrüstungssets und einer Wechseln-Taste; ein Wechsel erklärt jetzt, warum er nicht geht, etwa im Kampf",
   "changelog.r1042.106": "Strats als Leseansicht überarbeitet: der aktuelle und der zuletzt gelesene Kampf oben, eine Einrichtungskarte für Strategie und Position und ein Inhaltsverzeichnis zum Springen zwischen Mechaniken",

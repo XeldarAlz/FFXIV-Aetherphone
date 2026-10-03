@@ -52,11 +52,13 @@ internal sealed class BubbleShooterApp : IMiniGame
 
     private void PersistBest()
     {
-        if (statsRef is null || !started || finished || board.Score <= 0)
+        if (statsRef is null || !started || board.Score <= 0 || (finished && !pendingSubmit))
         {
             return;
         }
 
+        started = false;
+        pendingSubmit = false;
         statsRef.SubmitScore(GameId, board.Score);
         if (board.Score > loadedBest)
         {
