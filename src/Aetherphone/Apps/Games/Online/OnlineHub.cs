@@ -138,8 +138,13 @@ internal sealed class OnlineHub
             return Loc.T(L.Games.OnlineChessHostHint);
         }
 
-        return string.Equals(kind, GameRoomWire.PoolKind, StringComparison.Ordinal)
-            ? Loc.T(L.Games.OnlinePoolHostHint)
+        if (string.Equals(kind, GameRoomWire.PoolKind, StringComparison.Ordinal))
+        {
+            return Loc.T(L.Games.OnlinePoolHostHint);
+        }
+
+        return string.Equals(kind, GameRoomWire.ConnectFourKind, StringComparison.Ordinal)
+            ? Loc.T(L.Games.OnlineConnectFourHostHint)
             : unoHint;
     }
 

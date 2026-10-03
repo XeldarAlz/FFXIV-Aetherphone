@@ -77,6 +77,7 @@ internal sealed class GamesLibrary
         new("wordrun", 2026, 8, 24),
         new("online.uno", 2026, 8, 25), new("online.chess", 2026, 8, 25), new("online.pool", 2026, 8, 25),
         new("coil", 2026, 10, 3), new("updraft", 2026, 10, 3), new("swoop", 2026, 10, 3),
+        new("online.connectfour", 2026, 9, 19),
     };
 
     private readonly IMiniGame[] games;
