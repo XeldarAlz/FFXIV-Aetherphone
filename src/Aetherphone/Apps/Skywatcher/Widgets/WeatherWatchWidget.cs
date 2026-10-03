@@ -12,7 +12,6 @@ namespace Aetherphone.Apps.Skywatcher.Widgets;
 
 internal sealed class WeatherWatchWidget : IHomeWidget
 {
-    private const int RefreshMilliseconds = 5000;
     private const int ForecastWindows = 6;
     private const int SlotCount = 3;
     private const uint CurrentLocation = 0;
@@ -39,7 +38,7 @@ internal sealed class WeatherWatchWidget : IHomeWidget
     private sealed class Watch
     {
         public readonly Slot[] Slots = { new(), new(), new() };
-        public WidgetRefresh Cadence;
+        public WeatherPulse Pulse;
         public string Config = string.Empty;
         public bool Sample;
     }
@@ -106,8 +105,8 @@ internal sealed class WeatherWatchWidget : IHomeWidget
     private void Refresh(Watch watch, string config, bool preview)
     {
         var sample = preview && weather.CurrentTerritory == 0;
-        if (!watch.Cadence.Due(RefreshMilliseconds) && string.Equals(config, watch.Config, StringComparison.Ordinal) &&
-            sample == watch.Sample)
+        var due = watch.Pulse.Due(weather.CurrentTerritory, weather.LiveWeatherId());
+        if (!due && string.Equals(config, watch.Config, StringComparison.Ordinal) && sample == watch.Sample)
         {
             return;
         }

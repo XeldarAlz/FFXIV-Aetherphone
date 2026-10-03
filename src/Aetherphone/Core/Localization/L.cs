@@ -2408,6 +2408,10 @@ internal static class L
                 "The weather widgets on the home screen now show the same living skies"),
             new("changelog.r1042.84",
                 "Added the extra weathers a zone can show beyond its forecast to Control, like snow in Limsa Lominsa, each marked with a star"),
+            new("changelog.r1042.98",
+                "Browse every zone by region in Zones, Field Operations included, each with its weather right now, contributed by Deldee"),
+            new("changelog.r1042.99",
+                "Skywatcher and its widgets now update the moment you change zones or the weather turns, contributed by Deldee"),
         };
 
         public static readonly LocString[] Release1042MogCast =
@@ -7223,6 +7227,8 @@ internal static class L
         public static readonly LocString CurrentZone = new("skywatcher.currentZone", "Current Zone");
         public static readonly LocString SearchZones = new("skywatcher.searchZones", "Search zones");
         public static readonly LocString NoZoneMatch = new("skywatcher.noZoneMatch", "No zones match");
+        public static readonly LocString FieldOperations = new("skywatcher.fieldOperations", "Field Operations");
+        public static readonly LocString OtherZones = new("skywatcher.otherZones", "Other Zones");
 
         public static readonly LocString ZonesEmpty = new("skywatcher.zonesEmpty",
             "Search for a zone to keep an eye on its sky.");

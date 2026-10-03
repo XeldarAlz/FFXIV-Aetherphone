@@ -22,7 +22,6 @@ internal enum SkywatcherTab : byte
 internal sealed partial class SkywatcherApp : IPhoneApp
 {
     private const int WindowCount = 10;
-    private const float RefreshIntervalSeconds = 5f;
     private const float MaxFrameSeconds = 0.1f;
     private const float ChevronUnits = 40f;
     private const float SidePaddingUnits = 14f;
@@ -41,7 +40,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
     private readonly List<WeatherWindow> forecast = new();
     private string zone = string.Empty;
     private uint viewedTerritory;
-    private float sinceRefresh;
+    private WeatherPulse pulse;
     private SkywatcherTab activeTab;
     private bool scrubbing;
     private bool resetScroll;
@@ -89,7 +88,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         RefreshForecastText();
         RefreshDetails();
         RefreshZoneCards();
-        sinceRefresh = 0f;
+        RefreshZoneWeather();
     }
 
     private void View(uint territoryId)
@@ -103,8 +102,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
     public void Draw(in PhoneContext context)
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, MaxFrameSeconds);
-        sinceRefresh += delta;
-        if (sinceRefresh >= RefreshIntervalSeconds)
+        if (pulse.Due(weather.CurrentTerritory, weather.LiveWeatherId()))
         {
             Refresh();
         }
@@ -227,6 +225,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         if (activeTab == SkywatcherTab.Zones)
         {
             RefreshZoneCards();
+            RefreshZoneWeather();
         }
     }
 

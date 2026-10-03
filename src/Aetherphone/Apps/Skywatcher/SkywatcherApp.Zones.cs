@@ -15,10 +15,13 @@ internal sealed partial class SkywatcherApp
     private const int MaxZoneMatches = 30;
     private const int ZoneLookaheadWindows = 8;
     private const float ZoneCardUnits = 108f;
-    private const float ZoneRowUnits = 44f;
+    private const float ZoneRowUnits = 52f;
+    private const float ZoneSaveHitUnits = 16f;
     private static readonly Vector4 RemoveFill = new(0.96f, 0.27f, 0.25f, 1f);
     private readonly List<WeatherZone> allZones = new();
-    private readonly List<WeatherZone> zoneMatches = new();
+    private readonly List<WeatherEntry> allZoneWeather = new();
+    private readonly List<int> allZoneIndices = new();
+    private readonly List<int> zoneMatches = new();
     private readonly List<ZoneCard> zoneCards = new();
     private readonly List<WeatherWindow> zoneScratch = new();
     private string zoneQuery = string.Empty;
@@ -82,7 +85,7 @@ internal sealed partial class SkywatcherApp
         DrawZoneSearch(width, palette, scale);
         if (zoneQuery.Length > 0)
         {
-            DrawZoneMatches(width, palette, scale);
+            DrawZoneMatches(width, palette, daylight, scale);
             return;
         }
 
@@ -94,16 +97,65 @@ internal sealed partial class SkywatcherApp
 
         ApplyPendingRemoval();
 
-        if (configuration.SkywatcherZones.Count > 0)
+        if (configuration.SkywatcherZones.Count == 0)
+        {
+            ImGui.Dummy(new Vector2(0f, 6f * scale));
+            var origin = ImGui.GetCursorScreenPos();
+            var height = Typography.DrawWrappedCentered(origin + new Vector2(width * 0.5f, 0f),
+                Loc.T(L.Skywatcher.ZonesEmpty), palette.InkSoft, TextStyles.Subheadline, width - 24f * scale);
+            ImGui.Dummy(new Vector2(width, height));
+        }
+
+        EnsureZones();
+        DrawZoneGroups(allZoneIndices, width, palette, daylight, scale);
+    }
+
+    private void EnsureZones()
+    {
+        if (allZones.Count > 0 && ReferenceEquals(zonesCulture, Loc.Culture))
         {
             return;
         }
 
-        ImGui.Dummy(new Vector2(0f, 6f * scale));
-        var origin = ImGui.GetCursorScreenPos();
-        var height = Typography.DrawWrappedCentered(origin + new Vector2(width * 0.5f, 0f),
-            Loc.T(L.Skywatcher.ZonesEmpty), palette.InkSoft, TextStyles.Subheadline, width - 24f * scale);
-        ImGui.Dummy(new Vector2(width, height));
+        weather.WeatherZones(allZones);
+        zonesCulture = Loc.Culture;
+        matchedQuery = null;
+        allZoneIndices.Clear();
+        for (var index = 0; index < allZones.Count; index++)
+        {
+            allZoneIndices.Add(index);
+        }
+
+        RefreshZoneWeather();
+    }
+
+    private void RefreshZoneWeather()
+    {
+        if (activeTab != SkywatcherTab.Zones || allZones.Count == 0)
+        {
+            return;
+        }
+
+        allZoneWeather.Clear();
+        for (var index = 0; index < allZones.Count; index++)
+        {
+            weather.Forecast(allZones[index].TerritoryId, zoneScratch, 1);
+            allZoneWeather.Add(zoneScratch.Count > 0 ? zoneScratch[0].Weather : default);
+        }
+    }
+
+    private static bool SameRegion(in WeatherZone left, in WeatherZone right) =>
+        left.FieldOperation == right.FieldOperation &&
+        string.Equals(left.Region, right.Region, StringComparison.Ordinal);
+
+    private static string RegionLabel(in WeatherZone zone)
+    {
+        if (zone.FieldOperation)
+        {
+            return Loc.T(L.Skywatcher.FieldOperations);
+        }
+
+        return zone.Region.Length > 0 ? zone.Region : Loc.T(L.Skywatcher.OtherZones);
     }
 
     private void ApplyPendingRemoval()
@@ -163,71 +215,117 @@ internal sealed partial class SkywatcherApp
         ImGui.Dummy(new Vector2(width, field.Height + 12f * scale));
     }
 
-    private void DrawZoneMatches(float width, in SkyPalette palette, float scale)
+    private void DrawZoneMatches(float width, in SkyPalette palette, float daylight, float scale)
     {
         UpdateZoneMatches();
-        if (zoneMatches.Count == 0)
+        if (zoneMatches.Count > 0)
         {
-            var origin = ImGui.GetCursorScreenPos();
-            var height = Typography.DrawWrappedCentered(origin + new Vector2(width * 0.5f, 8f * scale),
-                Loc.T(L.Skywatcher.NoZoneMatch), palette.InkSoft, TextStyles.Subheadline, width - 24f * scale);
-            ImGui.Dummy(new Vector2(width, height + 8f * scale));
+            DrawZoneGroups(zoneMatches, width, palette, daylight, scale);
             return;
         }
 
+        var origin = ImGui.GetCursorScreenPos();
+        var height = Typography.DrawWrappedCentered(origin + new Vector2(width * 0.5f, 8f * scale),
+            Loc.T(L.Skywatcher.NoZoneMatch), palette.InkSoft, TextStyles.Subheadline, width - 24f * scale);
+        ImGui.Dummy(new Vector2(width, height + 8f * scale));
+    }
+
+    private void DrawZoneGroups(List<int> indices, float width, in SkyPalette palette, float daylight, float scale)
+    {
+        var first = 0;
+        while (first < indices.Count)
+        {
+            var last = first + 1;
+            while (last < indices.Count && SameRegion(allZones[indices[first]], allZones[indices[last]]))
+            {
+                last++;
+            }
+
+            SectionLabel(RegionLabel(allZones[indices[first]]), palette, scale);
+            DrawZoneGroup(indices, first, last, width, palette, daylight, scale);
+            first = last;
+        }
+    }
+
+    private void DrawZoneGroup(List<int> indices, int first, int last, float width, in SkyPalette palette,
+        float daylight, float scale)
+    {
         var drawList = ImGui.GetWindowDrawList();
         var cardOrigin = ImGui.GetCursorScreenPos();
         var padding = WeatherCard.PaddingUnits * scale;
         var rowHeight = ZoneRowUnits * scale;
-        var card = new Rect(cardOrigin, cardOrigin + new Vector2(width, zoneMatches.Count * rowHeight));
+        var card = new Rect(cardOrigin, cardOrigin + new Vector2(width, (last - first) * rowHeight));
         WeatherCard.Panel(drawList, card, palette, sky.Density, scale);
-        var saved = configuration.SkywatcherZones;
-        var bodyHeight = Typography.LineHeight(TextStyles.Body);
-        for (var index = 0; index < zoneMatches.Count; index++)
+        var nameHeight = Typography.LineHeight(TextStyles.Body);
+        var weatherHeight = Typography.LineHeight(TextStyles.Footnote);
+        var isDay = daylight >= 0.5f;
+        for (var row = first; row < last; row++)
         {
-            var match = zoneMatches[index];
-            var row = new Rect(new Vector2(card.Min.X, card.Min.Y + index * rowHeight),
-                new Vector2(card.Max.X, card.Min.Y + (index + 1) * rowHeight));
-            if (index > 0)
-            {
-                WeatherCard.Divider(drawList, card, row.Min.Y, palette, scale);
-            }
-
-            var isSaved = saved.Contains(match.TerritoryId) || match.TerritoryId == weather.CurrentTerritory;
-            Typography.Draw(drawList, new Vector2(row.Min.X + padding, row.Center.Y - bodyHeight * 0.5f),
-                Typography.FitText(match.Name, row.Width - padding * 2f - 28f * scale, TextStyles.Body), palette.Ink,
-                TextStyles.Body);
-            ProgressRing.CenterIcon(drawList, new Vector2(row.Max.X - padding - 8f * scale, row.Center.Y),
-                isSaved ? FontAwesomeIcon.Check : FontAwesomeIcon.Plus, isSaved ? palette.InkSoft : palette.Ink,
-                13f * scale);
-            if (!UiInteract.HoverClick(row.Min, row.Max))
+            var rowTop = card.Min.Y + (row - first) * rowHeight;
+            var rowRect = new Rect(new Vector2(card.Min.X, rowTop), new Vector2(card.Max.X, rowTop + rowHeight));
+            if (!ImGui.IsRectVisible(rowRect.Min, rowRect.Max))
             {
                 continue;
             }
 
-            if (!isSaved)
+            if (row > first)
             {
-                saved.Add(match.TerritoryId);
-                configuration.Save();
+                WeatherCard.Divider(drawList, card, rowTop, palette, scale);
             }
 
-            zoneQuery = string.Empty;
-            View(match.TerritoryId);
+            DrawZoneRow(drawList, rowRect, indices[row], palette, isDay, nameHeight, weatherHeight, padding, scale);
         }
 
         ImGui.SetCursorScreenPos(cardOrigin);
         ImGui.Dummy(new Vector2(width, card.Height));
     }
 
-    private void UpdateZoneMatches()
+    private void DrawZoneRow(ImDrawListPtr drawList, Rect rowRect, int zoneIndex, in SkyPalette palette, bool isDay,
+        float nameHeight, float weatherHeight, float padding, float scale)
     {
-        if (allZones.Count == 0 || !ReferenceEquals(zonesCulture, Loc.Culture))
+        var zone = allZones[zoneIndex];
+        var saved = configuration.SkywatcherZones;
+        var isSaved = saved.Contains(zone.TerritoryId) || zone.TerritoryId == weather.CurrentTerritory;
+        var saveCenter = new Vector2(rowRect.Max.X - padding - 8f * scale, rowRect.Center.Y);
+        var glyphCenter = new Vector2(saveCenter.X - 30f * scale, rowRect.Center.Y);
+        var textLeft = rowRect.Min.X + padding;
+        var textWidth = glyphCenter.X - 16f * scale - textLeft;
+        var textTop = rowRect.Center.Y - (nameHeight + weatherHeight) * 0.5f;
+        Typography.Draw(drawList, new Vector2(textLeft, textTop),
+            Typography.FitText(zone.Name, textWidth, TextStyles.Body), palette.Ink, TextStyles.Body);
+        var zoneWeather = zoneIndex < allZoneWeather.Count ? allZoneWeather[zoneIndex] : default;
+        if (zoneWeather.Name is { Length: > 0 })
         {
-            weather.WeatherZones(allZones);
-            zonesCulture = Loc.Culture;
-            matchedQuery = null;
+            Typography.Draw(drawList, new Vector2(textLeft, textTop + nameHeight),
+                Typography.FitText(zoneWeather.Name, textWidth, TextStyles.Footnote), palette.InkSoft,
+                TextStyles.Footnote);
+            WeatherGlyph.Draw(drawList, WeatherSky.Classify(zoneWeather.EnglishKey), glyphCenter, 11f * scale,
+                palette, isDay, palette.Horizon);
         }
 
+        ProgressRing.CenterIcon(drawList, saveCenter, isSaved ? FontAwesomeIcon.Check : FontAwesomeIcon.Plus,
+            isSaved ? palette.InkSoft : palette.Ink, 13f * scale);
+        var opened = UiInteract.HoverClick(rowRect.Min, rowRect.Max);
+        if (!isSaved && UiInteract.HoverClickCircle(saveCenter, ZoneSaveHitUnits * scale))
+        {
+            saved.Add(zone.TerritoryId);
+            configuration.Save();
+            RefreshZoneCards();
+            return;
+        }
+
+        if (!opened)
+        {
+            return;
+        }
+
+        zoneQuery = string.Empty;
+        View(zone.TerritoryId);
+    }
+
+    private void UpdateZoneMatches()
+    {
+        EnsureZones();
         if (string.Equals(matchedQuery, zoneQuery, StringComparison.Ordinal))
         {
             return;
@@ -238,9 +336,11 @@ internal sealed partial class SkywatcherApp
         var compare = Loc.Culture.CompareInfo;
         for (var index = 0; index < allZones.Count && zoneMatches.Count < MaxZoneMatches; index++)
         {
-            if (compare.IndexOf(allZones[index].Name, zoneQuery, CompareOptions.IgnoreCase) >= 0)
+            var zone = allZones[index];
+            if (compare.IndexOf(zone.Name, zoneQuery, CompareOptions.IgnoreCase) >= 0 ||
+                compare.IndexOf(RegionLabel(zone), zoneQuery, CompareOptions.IgnoreCase) >= 0)
             {
-                zoneMatches.Add(allZones[index]);
+                zoneMatches.Add(index);
             }
         }
     }

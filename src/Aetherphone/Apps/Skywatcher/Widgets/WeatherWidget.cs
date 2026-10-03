@@ -10,7 +10,6 @@ namespace Aetherphone.Apps.Skywatcher.Widgets;
 
 internal sealed class WeatherWidget : IHomeWidget
 {
-    private const int RefreshMilliseconds = 5000;
     private const int ForecastWindows = 11;
     private const int StripColumns = 6;
     private const int ListFirst = StripColumns;
@@ -28,8 +27,8 @@ internal sealed class WeatherWidget : IHomeWidget
     private readonly List<WeatherWindow> sampleForecast = new(ForecastWindows);
     private readonly CachedText[] whenLabels = new CachedText[StripColumns];
     private readonly CachedText[] untilLabels = new CachedText[ListRows];
-    private WidgetRefresh liveCadence;
-    private WidgetRefresh sampleCadence;
+    private WeatherPulse livePulse;
+    private WeatherPulse samplePulse;
     private CachedText changeLine;
     private List<WeatherWindow> forecast;
     private string zone = string.Empty;
@@ -98,7 +97,7 @@ internal sealed class WeatherWidget : IHomeWidget
         sample = preview && !inWorld;
         if (sample)
         {
-            if (sampleCadence.Due(RefreshMilliseconds))
+            if (samplePulse.Due(SampleTerritory, 0))
             {
                 sampleZone = weather.ZoneName(SampleTerritory);
                 weather.Forecast(SampleTerritory, sampleForecast, ForecastWindows);
@@ -109,7 +108,7 @@ internal sealed class WeatherWidget : IHomeWidget
             return;
         }
 
-        if (liveCadence.Due(RefreshMilliseconds))
+        if (livePulse.Due(weather.CurrentTerritory, weather.LiveWeatherId()))
         {
             liveZone = weather.ZoneName(weather.CurrentTerritory);
             weather.Forecast(liveForecast, ForecastWindows);

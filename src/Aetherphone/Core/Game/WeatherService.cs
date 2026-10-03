@@ -9,7 +9,8 @@ internal readonly record struct WeatherEntry(byte Id, string Name, string Englis
 
 internal readonly record struct WeatherWindow(WeatherEntry Weather, int MinutesFromNow, bool IsCurrent, int StartBell);
 
-internal readonly record struct WeatherZone(uint TerritoryId, string Name);
+internal readonly record struct WeatherZone(uint TerritoryId, string Name, string Region, uint RegionOrder,
+    bool FieldOperation);
 
 internal readonly record struct WeatherOdds(WeatherEntry Weather, int Percent);
 
@@ -20,6 +21,9 @@ internal sealed class WeatherService
     private const long RealSecondsPerEorzeaDay = 4200;
     private const uint TownUse = 0;
     private const uint OverworldUse = 1;
+    private const uint FieldOperationOrder = uint.MaxValue - 1;
+    private const uint OtherOrder = uint.MaxValue;
+    private const string UnnamedRegion = "???";
     private readonly IDataManager data;
     private readonly IClientState clientState;
     private readonly Dictionary<byte, WeatherEntry> entries = new();
@@ -62,16 +66,19 @@ internal sealed class WeatherService
         return extraWeathers;
     }
 
-    public unsafe WeatherEntry? LiveRenderedWeather()
+    public unsafe byte LiveWeatherId()
     {
         var environment = EnvManager.Instance();
-        if (environment == null || environment->ActiveWeather == 0)
-        {
-            return null;
-        }
-
-        return Entry(environment->ActiveWeather);
+        return environment == null ? (byte)0 : environment->ActiveWeather;
     }
+
+    public WeatherEntry? LiveRenderedWeather()
+    {
+        var live = LiveWeatherId();
+        return live == 0 ? null : Entry(live);
+    }
+
+    public static long WindowStart(long unixSeconds) => unixSeconds - unixSeconds % RealSecondsPerWindow;
 
     public byte NaturalNow()
     {
@@ -81,7 +88,7 @@ internal sealed class WeatherService
         }
 
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        return Resolve(ForecastTarget(nowUnix - nowUnix % RealSecondsPerWindow));
+        return Resolve(ForecastTarget(WindowStart(nowUnix)));
     }
 
     public void Forecast(List<WeatherWindow> into, int count)
@@ -94,7 +101,7 @@ internal sealed class WeatherService
 
         var live = LiveRenderedWeather();
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var startUnix = nowUnix - nowUnix % RealSecondsPerWindow;
+        var startUnix = WindowStart(nowUnix);
         for (var index = 0; index < count; index++)
         {
             var timestamp = startUnix + index * RealSecondsPerWindow;
@@ -134,7 +141,7 @@ internal sealed class WeatherService
         }
 
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var startUnix = nowUnix - nowUnix % RealSecondsPerWindow;
+        var startUnix = WindowStart(nowUnix);
         for (var index = 0; index < count; index++)
         {
             var timestamp = startUnix + index * RealSecondsPerWindow;
@@ -179,7 +186,7 @@ internal sealed class WeatherService
     {
         var zoneChances = ChancesFor(territoryId);
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var startUnix = nowUnix - nowUnix % RealSecondsPerWindow;
+        var startUnix = WindowStart(nowUnix);
         for (var index = 0; index < maxWindows; index++)
         {
             var timestamp = startUnix + index * RealSecondsPerWindow;
@@ -196,10 +203,12 @@ internal sealed class WeatherService
     {
         into.Clear();
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var regionOrders = new Dictionary<string, uint>(StringComparer.Ordinal);
         foreach (var territory in data.GetExcelSheet<TerritoryType>())
         {
             var use = territory.TerritoryIntendedUse.RowId;
-            if (use != TownUse && use != OverworldUse || territory.WeatherRate.RowId == 0)
+            var fieldOperation = FieldOperations.IsFieldOperation(use);
+            if (use != TownUse && use != OverworldUse && !fieldOperation || territory.WeatherRate.RowId == 0)
             {
                 continue;
             }
@@ -210,10 +219,35 @@ internal sealed class WeatherService
                 continue;
             }
 
-            into.Add(new WeatherZone(territory.RowId, name));
+            var region = fieldOperation ? string.Empty : RegionOf(territory);
+            var order = fieldOperation ? FieldOperationOrder : OtherOrder;
+            if (region.Length > 0 && !regionOrders.TryGetValue(region, out order))
+            {
+                order = territory.RowId;
+                regionOrders[region] = order;
+            }
+
+            into.Add(new WeatherZone(territory.RowId, name, region, order, fieldOperation));
         }
 
-        into.Sort(static (left, right) => string.Compare(left.Name, right.Name, StringComparison.CurrentCulture));
+        into.Sort(CompareZones);
+    }
+
+    private static string RegionOf(in TerritoryType territory)
+    {
+        if (!territory.PlaceNameRegion.IsValid)
+        {
+            return string.Empty;
+        }
+
+        var region = territory.PlaceNameRegion.Value.Name.ExtractText();
+        return region == UnnamedRegion ? string.Empty : region;
+    }
+
+    private static int CompareZones(WeatherZone left, WeatherZone right)
+    {
+        var byRegion = left.RegionOrder.CompareTo(right.RegionOrder);
+        return byRegion != 0 ? byRegion : string.Compare(left.Name, right.Name, StringComparison.CurrentCulture);
     }
 
     public WeatherEntry Entry(byte id)

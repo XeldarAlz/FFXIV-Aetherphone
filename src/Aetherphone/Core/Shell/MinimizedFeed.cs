@@ -10,7 +10,6 @@ namespace Aetherphone.Core.Shell;
 
 internal sealed class MinimizedFeed
 {
-    private const float WeatherIntervalSeconds = 5f;
     private const float GilIntervalSeconds = 1f;
     private const float VentureIntervalSeconds = 5f;
     private const int ForecastWindows = 1;
@@ -24,7 +23,7 @@ internal sealed class MinimizedFeed
     private readonly List<WeatherWindow> forecast = new();
     private readonly GameTimers timers;
     private float clock;
-    private float weatherDue;
+    private WeatherPulse weatherPulse;
     private float gilDue;
     private float ventureDue;
     private long gilValue = -1;
@@ -70,12 +69,11 @@ internal sealed class MinimizedFeed
 
     public void EnsureWeather()
     {
-        if (clock < weatherDue)
+        if (!weatherPulse.Due(weather.CurrentTerritory, weather.LiveWeatherId()))
         {
             return;
         }
 
-        weatherDue = clock + WeatherIntervalSeconds;
         Zone = weather.CurrentZone();
         weather.Forecast(forecast, ForecastWindows);
         if (forecast.Count == 0)
