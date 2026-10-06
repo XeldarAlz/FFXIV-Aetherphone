@@ -4417,6 +4417,8 @@
   "games.pass": "跳过",
   "games.whack": "打地鼠",
   "games.whack.hook": "在地鼠躲起来之前敲中它们。炸弹会扣分。",
+  "games.whack.frenzy": "狂热！",
+  "games.whack.moles": "地鼠",
   "games.snake": "贪吃蛇",
   "games.snake.hook": "操控小蛇吃到水果，千万别碰到自己。",
   "games.play": "开始",

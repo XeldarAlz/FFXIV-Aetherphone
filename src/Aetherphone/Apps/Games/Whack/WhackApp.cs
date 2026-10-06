@@ -1,40 +1,53 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Whack;
 
-internal sealed class WhackApp : ILegacyMiniGame
+internal sealed class WhackApp : IMiniGame
 {
     private const string GameId = "whack";
+    private const float UrgentSeconds = 10f;
+    private const float FrenzyBannerSeconds = 1.4f;
+    private const float HitReach = 0.15f;
+    private const int PunchMultiplier = 3;
+    private const int MaxGain = WhackBoard.MolePoints * ComboMeter.MaxMultiplier * 2;
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Whack, GameGenre.Arcade, L.Whack.Hook,
+        Backdrop.Meadow, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true);
+    private static readonly string?[] GainLabels = new string?[MaxGain + 1];
+    private static readonly string BombLabel = string.Concat("-", GameNumber.Label(WhackBoard.BombPenalty));
+    private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
+    private static readonly Vector4 Gold = new(1f, 0.84f, 0.36f, 1f);
+    private static readonly Vector4 Dirt = new(0.95f, 0.82f, 0.45f, 1f);
+    private static readonly Vector4 Spark = new(1f, 0.95f, 0.65f, 1f);
+    private static readonly Vector4 Ember = new(0.95f, 0.4f, 0.32f, 1f);
+    private static readonly Vector4 Flame = new(1f, 0.7f, 0.4f, 1f);
+    private static readonly Vector4 Ring = new(1f, 0.9f, 0.5f, 0.9f);
     private readonly WhackBoard board = new();
-    private readonly WhackRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private RollingValue scoreRoll;
-    private bool statsLoaded;
-    private int bestScore;
-    private bool wasOver;
-    private bool pendingSubmit;
-    private bool newBest;
-    private int finalScore;
-    private float resultAppear;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Whack);
-    public bool RunsOnAClock => true;
+    private float entrance;
+    private float frenzyBanner = 1f;
+    private bool finished;
 
-    public GameGenre Genre => GameGenre.Arcade;
-    public void Open()
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
     {
-        statsLoaded = false;
-        StartGame();
+        board.Reset(start.Random);
+        particles.Clear();
+        fx.Clear();
+        entrance = 0f;
+        frenzyBanner = 1f;
+        finished = false;
     }
 
     public void Close()
@@ -45,177 +58,188 @@ internal sealed class WhackApp : ILegacyMiniGame
     {
     }
 
-    private void StartGame()
+    public void DrawIdle(in GameContext context)
     {
-        board.Reset();
-        particles.Clear();
-        fx.Clear();
-        scoreRoll.Snap(0);
-        wasOver = false;
-        pendingSubmit = false;
-        newBest = false;
-        resultAppear = 0f;
+        var grid = GameGrid.Centered(context.Safe, WhackBoard.Columns, WhackBoard.Rows, WhackRenderer.GapFraction);
+        WhackRenderer.DrawBoard(ImGui.GetWindowDrawList(), board, grid, 1f, UiScale.Current, Accent,
+            context.Backdrop.Ink);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (!statsLoaded)
-        {
-            bestScore = context.Stats.Get(GameId).BestScore;
-            statsLoaded = true;
-        }
-
-        board.Step(deltaSeconds);
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        if (board.Over && !wasOver)
-        {
-            wasOver = true;
-            finalScore = board.Score;
-            pendingSubmit = true;
-            resultAppear = 0f;
-        }
-
-        if (pendingSubmit)
-        {
-            newBest = context.Stats.SubmitScore(GameId, finalScore);
-            pendingSubmit = false;
-            if (newBest)
-            {
-                fx.Flash(Accent, 0.3f);
-            }
-        }
-
         var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
-        DrawHud(body, theme, scale, deltaSeconds);
-        var shake = fx.ShakeOffset(scale);
-        var area = new Rect(new Vector2(body.Min.X + 8f * scale, body.Min.Y + 60f * scale) + shake,
-            new Vector2(body.Max.X - 8f * scale, body.Max.Y - 10f * scale) + shake);
-        var grid = GameGrid.Centered(area, WhackBoard.Columns, WhackBoard.Rows, 0.12f);
-        if (!board.Over)
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds);
+        frenzyBanner = GameBanner.Advance(frenzyBanner, context.RawDeltaSeconds, FrenzyBannerSeconds);
+        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var grid = GameGrid.Centered(area, WhackBoard.Columns, WhackBoard.Rows, WhackRenderer.GapFraction);
+        if (!finished)
         {
-            HandleInput(grid, scale);
+            Step(grid, scale, context);
         }
 
-        renderer.Draw(board, grid, theme, scale);
-        fx.DrawFlash(drawList, body, 0f);
+        WhackRenderer.DrawBoard(drawList, board, grid, entrance, scale, Accent, context.Backdrop.Ink);
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
         fx.DrawText();
-        if (!board.Over && board.TimeLeft <= 10f)
-        {
-            DrawUrgency(drawList, body, scale);
-        }
+        GameBanner.Draw(drawList, grid.Center, Loc.T(L.Whack.Frenzy), Gold, context.Theme, frenzyBanner);
+        context.Hud.Score(board.Score);
+        context.Hud.Timer(board.TimeLeft, WhackBoard.RoundSeconds, board.TimeLeft <= UrgentSeconds);
+        context.Hud.Combo(board.Combo);
+        context.Hud.Best(context.Session.Best);
+        context.Session.Report(board.Score);
+    }
 
+    private void Step(in GameGrid grid, float scale, in GameContext context)
+    {
+        board.Step(context.DeltaSeconds);
         if (board.Over)
         {
-            DrawResult(theme, body, deltaSeconds);
+            finished = true;
+            context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+                .WithStat(L.Games.Combo, GameNumber.Label(board.BestCombo))
+                .WithStat(L.Whack.Moles, GameNumber.Label(board.MolesWhacked)));
+            return;
         }
-    }
 
-    private static void DrawUrgency(ImDrawListPtr drawList, Rect body, float scale)
-    {
-        var pulse = 0.10f + 0.14f * Pulse.Wave(Pulse.Fast);
-        var color = ImGui.GetColorU32(new Vector4(0.95f, 0.30f, 0.30f, pulse));
-        drawList.AddRect(body.Min + new Vector2(2f * scale, 2f * scale), body.Max - new Vector2(2f * scale, 2f * scale),
-            color, 14f * scale, ImDrawFlags.RoundCornersAll, 5f * scale);
-    }
-
-    private void DrawHud(Rect body, PhoneTheme theme, float scale, float deltaSeconds)
-    {
-        var rowY = body.Min.Y + 30f * scale;
-        var beatingBest = board.Score > 0 && board.Score > bestScore;
-        GameHud.ScorePill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
-            board.Score, Accent, theme, deltaSeconds, beatingBest);
-        var low = board.TimeLeft <= 10f;
-        var timeAccent = low ? theme.Danger : Accent;
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Time),
-            GameNumber.Label((int)MathF.Ceiling(board.TimeLeft)), timeAccent, theme, low);
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
+        if (board.TimeLeft <= UrgentSeconds)
         {
-            StartGame();
+            context.Fx.Vignette(Danger, 0.10f + 0.12f * Pulse.Wave(Pulse.Fast), 0.3f);
         }
-    }
+        else if (board.Frenzy)
+        {
+            context.Fx.Vignette(Gold, 0.16f * board.FrenzyFraction, 0.3f);
+        }
 
-    private void HandleInput(GameGrid grid, float scale)
-    {
-        var hole = HoleHit(grid);
+        if (context.Session.State != StageFlow.Playing || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            return;
+        }
+
+        var hole = HoleAt(grid);
         if (hole < 0)
         {
             return;
         }
 
-        if (board.KindAt(hole) != Occupant.None && board.HeightAt(hole) > 0.3f)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        var multiplierBefore = board.Combo.Multiplier;
+        var result = board.Whack(hole);
+        if (result == WhackResult.None)
         {
             return;
         }
 
-        var moleCenter = grid.CellCenter(hole % WhackBoard.Columns, hole / WhackBoard.Columns) +
-                         new Vector2(0f, -grid.Pitch * 0.12f);
-        var result = board.Whack(hole);
-        if (result == WhackResult.Mole)
+        var center = MoleCenter(grid, hole);
+        if (result == WhackResult.Bomb)
         {
-            UiFeedback.Play(UiSound.GameHitSoft);
-            particles.Burst(moleCenter, 12, new Vector4(0.95f, 0.82f, 0.45f, 1f), 170f * scale, 3f, 0.5f, 320f);
-            particles.Sparkle(moleCenter, 7, new Vector4(1f, 0.95f, 0.65f, 1f), 130f * scale, 2.4f, 0.6f);
-            fx.Shockwave(moleCenter, 44f * scale, new Vector4(1f, 0.9f, 0.5f, 0.9f), 0.38f, 2.6f);
-            fx.AddText($"+{10 * board.Combo}", moleCenter, Accent, 1.1f);
-            fx.AddTrauma(0.08f);
+            OnBomb(center, scale, context);
         }
-        else if (result == WhackResult.Bomb)
+        else
         {
-            UiFeedback.Play(UiSound.GameExplosion);
-            particles.Burst(moleCenter, 24, new Vector4(0.95f, 0.4f, 0.32f, 1f), 280f * scale, 4f, 0.7f, 360f);
-            particles.Streaks(moleCenter, 12, new Vector4(1f, 0.7f, 0.4f, 1f), 420f * scale, 2.6f, 0.5f);
-            fx.Shockwave(moleCenter, 100f * scale, new Vector4(1f, 0.6f, 0.35f, 1f), 0.55f, 3.4f);
-            fx.AddText("-30", moleCenter, new Vector4(0.95f, 0.4f, 0.4f, 1f), 1.2f);
-            fx.AddTrauma(0.6f);
-            fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.4f);
+            OnMole(hole, center, scale, board.Combo.Multiplier > multiplierBefore, context);
+        }
+
+        var chain = board.ChainMask;
+        for (var knocked = 0; knocked < WhackBoard.HoleCount; knocked++)
+        {
+            if ((chain & (1 << knocked)) == 0)
+            {
+                continue;
+            }
+
+            OnKnocked(knocked, MoleCenter(grid, knocked), scale);
+        }
+
+        if (board.FrenzyStarted)
+        {
+            OnFrenzy(grid.Center, scale, context);
         }
     }
 
-    private int HoleHit(GameGrid grid)
+    private static int HoleAt(in GameGrid grid)
     {
-        if (!UiInteract.Hover(grid.Bounds.Min, grid.Bounds.Max))
+        var reach = grid.Pitch * HitReach;
+        for (var hole = WhackBoard.HoleCount - 1; hole >= 0; hole--)
         {
-            return -1;
+            var cell = grid.Cell(hole % WhackBoard.Columns, hole / WhackBoard.Columns);
+            if (UiInteract.Hover(cell.Min - new Vector2(0f, reach), cell.Max))
+            {
+                return hole;
+            }
         }
 
-        var local = ImGui.GetMousePos() - grid.Origin;
-        var column = (int)(local.X / grid.Pitch);
-        var row = (int)(local.Y / grid.Pitch);
-        if (column < 0 || column >= WhackBoard.Columns || row < 0 || row >= WhackBoard.Rows)
-        {
-            return -1;
-        }
-
-        return row * WhackBoard.Columns + column;
+        return -1;
     }
 
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
+    private static Vector2 MoleCenter(in GameGrid grid, int hole) =>
+        grid.CellCenter(hole % WhackBoard.Columns, hole / WhackBoard.Columns) + new Vector2(0f, -grid.Pitch * 0.12f);
+
+    private void OnMole(int hole, Vector2 center, float scale, bool tierUp, in GameContext context)
     {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        string? secondary = null;
-        if (bestScore > 0)
+        UiFeedback.Play(UiSound.GameHitSoft);
+        var tint = board.Frenzy ? Gold : Dirt;
+        particles.Burst(center, 12, tint, 170f * scale, 3f, 0.5f, 320f);
+        particles.Sparkle(center, 7, Spark, 130f * scale, 2.4f, 0.6f);
+        fx.Shockwave(center, 44f * scale, Ring, 0.38f, 2.6f);
+        fx.AddText(GainLabel(board.GainAt(hole)), center, Accent, 1.1f);
+        fx.AddTrauma(0.08f);
+        if (tierUp)
         {
-            secondary = $"{Loc.T(L.Games.Best)} {GameNumber.Label(bestScore)}";
+            GameSfx.ComboTierUp();
         }
 
-        var result = new GameResult(Loc.T(L.Games.GameOver), Accent, Loc.T(L.Games.Score), GameNumber.Label(finalScore),
-            secondary, newBest);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
+        if (board.Combo.Multiplier >= PunchMultiplier)
         {
-            StartGame();
+            context.Fx.Punch(0.04f);
         }
+    }
+
+    private void OnBomb(Vector2 center, float scale, in GameContext context)
+    {
+        UiFeedback.Play(UiSound.GameExplosion);
+        particles.Burst(center, 24, Ember, 280f * scale, 4f, 0.7f, 360f);
+        particles.Streaks(center, 12, Flame, 420f * scale, 2.6f, 0.5f);
+        fx.Shockwave(center, 100f * scale, Flame, 0.55f, 3.4f);
+        fx.AddText(BombLabel, center, Danger, 1.2f);
+        fx.AddTrauma(0.6f);
+        context.Fx.Flash(Danger, 0.35f);
+    }
+
+    private void OnKnocked(int hole, Vector2 center, float scale)
+    {
+        if (board.KindAt(hole) == Occupant.Bomb)
+        {
+            particles.Burst(center, 16, Ember, 240f * scale, 3.4f, 0.6f, 360f);
+            fx.Shockwave(center, 70f * scale, Flame, 0.45f, 3f);
+            fx.AddTrauma(0.2f);
+            return;
+        }
+
+        particles.Burst(center, 8, Dirt, 140f * scale, 2.6f, 0.45f, 320f);
+        fx.AddText(GainLabel(board.GainAt(hole)), center, Accent, 0.95f);
+    }
+
+    private void OnFrenzy(Vector2 center, float scale, in GameContext context)
+    {
+        UiFeedback.Play(UiSound.GamePowerUp);
+        particles.Sparkle(center, 26, Gold, 220f * scale, 3f, 0.9f);
+        context.Fx.Sweep();
+        context.Fx.Flash(Gold, 0.22f);
+        context.Fx.Punch(0.06f);
+        frenzyBanner = 0f;
+    }
+
+    private static string GainLabel(int points)
+    {
+        var index = Math.Clamp(points, 0, MaxGain);
+        return GainLabels[index] ??= string.Concat("+", GameNumber.Label(index));
+    }
+
+    private static Rect Grow(Rect rect, float factor)
+    {
+        var half = rect.Size * 0.5f * factor;
+        return new Rect(rect.Center - half, rect.Center + half);
     }
 }

@@ -8352,6 +8352,8 @@ internal static class L
     internal static class Whack
     {
         public static readonly LocString Hook = new("games.whack.hook", "Tap the moles before they hide. Bombs cost you points.");
+        public static readonly LocString Frenzy = new("games.whack.frenzy", "Frenzy!");
+        public static readonly LocString Moles = new("games.whack.moles", "Moles");
     }
 
     internal static class Snake

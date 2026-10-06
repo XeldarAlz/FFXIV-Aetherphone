@@ -4417,6 +4417,8 @@
   "games.pass": "Pasar",
   "games.whack": "Whack",
   "games.whack.hook": "Golpea a los topos antes de que se escondan. Las bombas te restan puntos.",
+  "games.whack.frenzy": "¡Frenesí!",
+  "games.whack.moles": "Topos",
   "games.snake": "Snake",
   "games.snake.hook": "Guía a la serpiente hasta la fruta sin tocarte a ti misma.",
   "games.play": "Jugar",
