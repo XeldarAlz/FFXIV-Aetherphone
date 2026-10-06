@@ -231,6 +231,20 @@ public sealed class GamesLibraryTests
     }
 
     [Fact]
+    public void SnakeReadsTheHigherOfItsClassicAndWrapRecords()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "snake", BestScore = 12 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "snake.wrap", BestScore = 31 });
+        var library = Build(configuration);
+        var snake = library.IndexOf("snake");
+
+        Assert.Equal(RecordKind.Score, library.BestKind(snake));
+        Assert.Equal("31", library.BestValue(snake));
+        Assert.Equal(string.Empty, library.BestTier(snake));
+    }
+
+    [Fact]
     public void GamesWithoutTiersCarryNoTierLabel()
     {
         var configuration = new Configuration();
