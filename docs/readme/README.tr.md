@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Karakterinin artık bir telefonu var.</strong><br>
-  Bir sosyal ağ, bir mesajlaşma uygulaması, bir müzik çalar ve kırk iki uygulama, hepsi FINAL FANTASY XIV'ün içinde.
+  Bir sosyal ağ, bir mesajlaşma uygulaması, bir müzik çalar ve onlarca uygulama daha, hepsi FINAL FANTASY XIV'ün içinde.
 </p>
 
 <p align="center">
@@ -58,10 +58,10 @@ Aethernet 2 Temmuz 2026'da açıldı. Sezon sonuna kadar 113 dünyadaki oyuncula
       <h3><img src="../media/readme/icons/chirper.png" width="28" align="top" alt="" /> Chirper</h3>
       <em>Eorzea'nın dört bir yanından kısa gönderiler.</em>
       <ul>
-        <li>Senin İçin ve Takip Edilenler akışları</li>
+        <li>Senin İçin ve En Yeni akışları, Takip ediliyor filtresiyle</li>
         <li>Yeniden chirp'ler, alıntılar, yanıtlar ve hashtag'ler</li>
         <li>Fotoğraflar, GIF'ler ve on üç tepki</li>
-        <li>Her chirp tek dokunuşla çevrilir</li>
+        <li>Başka dillerdeki chirp'ler tek dokunuşla çevrilir</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -88,7 +88,7 @@ Aethernet 2 Temmuz 2026'da açıldı. Sezon sonuna kadar 113 dünyadaki oyuncula
         <li>Her dünyadaki ve veri merkezindeki oyunculara yaz</li>
         <li>Sesli notlar, fotoğraflar ve grup sohbetleri</li>
         <li>Birebir ya da grup halinde sesli aramalar</li>
-        <li>Varsayılan olarak uçtan uca şifreli</li>
+        <li>Uçtan uca şifreli</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -120,7 +120,7 @@ Tek bir Aethernet hesabı seni tüm sosyal uygulamalara sokar ve her uygulama ke
         <li>Ekranı tam bulunduğun yerde sürükle, döndür, kavislendir ve boyutlandır</li>
         <li>Partideki herkes için senkron oynatma</li>
         <li>Yakındaki oyuncular tek dokunuşla, uzaktaki arkadaşların bir kodla katılır</li>
-        <li>Koca YouTube oynatma listelerini sıraya ekle ve ekranda birlikte tepki ver</li>
+        <li>YouTube oynatma listelerini sıraya ekle ve ekranda birlikte tepki ver</li>
       </ul>
     </td>
   </tr>
@@ -128,7 +128,7 @@ Tek bir Aethernet hesabı seni tüm sosyal uygulamalara sokar ve her uygulama ke
 
 <table>
   <tr>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="../media/readme/music.webp" width="100%" alt="Müzik'te şu an çalan şarkı, ardından senkron şarkı sözleri" />
       <h3><img src="../media/readme/icons/music.png" width="28" align="top" alt="" /> Müzik</h3>
       <em>Eksiksiz bir müzik uygulaması, üstüne arkadaşların.</em>
@@ -139,25 +139,14 @@ Tek bir Aethernet hesabı seni tüm sosyal uygulamalara sokar ve her uygulama ke
         <li>PC'de Spotify'ı ya da tarayıcını kontrol et</li>
       </ul>
     </td>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="../media/readme/venues.gif" width="100%" alt="Mekanlar kategorileri ve haftanın etkinlik takvimi" />
       <h3><img src="../media/readme/icons/venues.png" width="28" align="top" alt="" /> Mekanlar</h3>
       <em>Gecenin nerede yaşandığı.</em>
       <ul>
         <li>Şu an açık kulüpler, barlar ve kafeler</li>
         <li>Bu haftanın tüm etkinlikleri, senin saatinle</li>
-        <li>Kapıya kadar tek dokunuşla yolculuk</li>
-      </ul>
-    </td>
-    <td width="33%" valign="top">
-      <img src="../media/readme/gamba.webp" width="100%" alt="Gamba kumarhane lobisi" />
-      <h3><img src="../media/readme/icons/casino.png" width="28" align="top" alt="" /> Gamba</h3>
-      <em>1,7 milyar oyun parası fiş masaya kondu.</em>
-      <ul>
-        <li>Blackjack, slotlar, tombala ve daha fazlası</li>
-        <li>Çevrimiçi herkesle canlı odalar</li>
-        <li>İsteğe bağlı günlük kayıp limiti</li>
-        <li>Fişler satın alınamaz ve nakde çevrilemez</li>
+        <li>Lifestream kuruluysa kapıya kadar tek dokunuşla yolculuk</li>
       </ul>
     </td>
   </tr>
@@ -167,7 +156,7 @@ Tek bir Aethernet hesabı seni tüm sosyal uygulamalara sokar ve her uygulama ke
 
 **Oyunu seninle oynar**<br>
 <img src="../media/readme/icons/messages.png" width="36" alt="Linkpearl" title="Linkpearl" /> <img src="../media/readme/icons/strats.png" width="36" alt="Strats" title="Strats" /> <img src="../media/readme/icons/hunts.png" width="36" alt="Avlar" title="Avlar" /> <img src="../media/readme/icons/market.png" width="36" alt="Pazar" title="Pazar" /> <img src="../media/readme/icons/housing.png" width="36" alt="Housing" title="Housing" /> <img src="../media/readme/icons/fishing.png" width="36" alt="Balıkçılık" title="Balıkçılık" /> <img src="../media/readme/icons/jobs.png" width="36" alt="Sınıflar" title="Sınıflar" /> <img src="../media/readme/icons/inventory.png" width="36" alt="Envanter" title="Envanter" /> <img src="../media/readme/icons/dailies.png" width="36" alt="Günlükler" title="Günlükler" /> <img src="../media/readme/icons/timers.png" width="36" alt="Zamanlayıcılar" title="Zamanlayıcılar" /><br>
-<sub>Linkpearl sohbet sekmeleri · raid için Strats · canlı Avlar · Pazar fiyatları ve uyarıları · Housing çekilişi · Balıkçılık pencereleri · Sınıflar ve ekipman setleri · Envanter araması · Günlükler · hizmetkâr Zamanlayıcıları</sub>
+<sub>Linkpearl sohbet sekmeleri · raid için Strats · canlı Avlar · Pazar fiyatları ve uyarıları · Housing çekilişi · Balıkçılık pencereleri · Sınıflar ve ekipman setleri · Envanter araması · Günlükler · hizmetkâr Zamanlayıcıları · Haritalar · binek ve yardımcı Koleksiyonları</sub>
 
 **İnsanları bir araya getirir**<br>
 <img src="../media/readme/icons/muster.png" width="36" alt="Muster" title="Muster" /> <img src="../media/readme/icons/yellowpages.png" width="36" alt="Yellow Pages" title="Yellow Pages" /> <img src="../media/readme/icons/announcements.png" width="36" alt="Duyurular" title="Duyurular" /> <img src="../media/readme/icons/polls.png" width="36" alt="Anketler" title="Anketler" /> <img src="../media/readme/icons/coin.png" width="36" alt="Aether Coin" title="Aether Coin" /><br>
@@ -175,29 +164,27 @@ Tek bir Aethernet hesabı seni tüm sosyal uygulamalara sokar ve her uygulama ke
 
 **Günlük araçlar**<br>
 <img src="../media/readme/icons/camera.png" width="36" alt="Kamera" title="Kamera" /> <img src="../media/readme/icons/photos.png" width="36" alt="Fotoğraflar" title="Fotoğraflar" /> <img src="../media/readme/icons/notes.png" width="36" alt="Notlar" title="Notlar" /> <img src="../media/readme/icons/calendar.png" width="36" alt="Takvim" title="Takvim" /> <img src="../media/readme/icons/clock.png" width="36" alt="Saat" title="Saat" /> <img src="../media/readme/icons/skywatcher.png" width="36" alt="Gökgözcü" title="Gökgözcü" /> <img src="../media/readme/icons/wallet.png" width="36" alt="Cüzdan" title="Cüzdan" /> <img src="../media/readme/icons/health.png" width="36" alt="Sağlık" title="Sağlık" /> <img src="../media/readme/icons/shortcuts.png" width="36" alt="Kısayollar" title="Kısayollar" /> <img src="../media/readme/icons/news.png" width="36" alt="Haberler" title="Haberler" /><br>
-<sub>Kamera · fotoğraf düzenleyicili Fotoğraflar · Notlar · Takvim · Eorzea saatli Saat · Gökgözcü hava durumu · Cüzdan · Sağlık · Kısayollar · Lodestone Haberleri</sub>
+<sub>Kamera · fotoğraf düzenleyicili Fotoğraflar · Notlar · Takvim · Eorzea saatli Saat · Gökgözcü hava durumu · Cüzdan · Sağlık · Kısayollar · Lodestone Haberleri · Hesap Makinesi · Etkinlik halkaları</sub>
 
 **Mola zamanı**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Oyunlar" title="Oyunlar" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Satranç" title="Satranç" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Doom'un da aralarında olduğu otuz üç oyunluk bir atari salonu, üstüne arkadaşlarınla çevrimiçi Uno, Satranç ve 8 Top Bilardo</sub>
+<sub>Doom'un da aralarında olduğu otuz üç oyunluk bir atari salonu, üstüne arkadaşlarınla çevrimiçi Uno, Satranç, 8 Top Bilardo ve Dört Kazan</sub>
 
 ## Cebindeki telefon gibi tasarlandı
 
-<img src="../../src/Aetherphone/Images/screenshots/Home.png" align="right" width="260" alt="Oyun içinde Aetherphone ana ekranı" />
-
 **Arayüzünün içinde yaşar.** İstediğin yere sürükle, boyutunu değiştir ya da saat, widget'lar, müzik ve aramalarla bir mini telefona küçült.
 
-**Widget'lar ve Akıllı Yığınlar.** Neredeyse her uygulama için bir widget; köşesinden boyutlandır, birini diğerinin üstüne bırakarak yığ.
+**Widget'lar ve Akıllı Yığınlar.** Çoğu uygulama için widget'lar; köşesinden boyutlandır, birini diğerinin üstüne bırakarak yığ.
 
 **Bir Dynamic Island**: aramalar, oynatma, zamanlayıcılar, seferler, izleme partileri ve buluşmalar için.
 
-**Kendine göre yap.** Duvar kâğıtları, zil sesleri, vurgu renkleri ve simge görünümleri, her karakterini takip eden bir Stil olarak kaydedilir.
+**Spotlight ve Kontrol Merkezi.** Uygulamaları, kişileri, ayarları, notları ve pazar ürünlerini aramak için Ana Ekran'ı aşağı çek; müzik, ses, parlaklık ve Rahatsız Etme için ekranın üstüne dokun.
+
+**Kendine göre yap.** Duvar kâğıtları, vurgu renkleri, simge görünümleri, telefon kılıfları ve ana ekran düzenin, her karakterini takip eden bir Stil olarak kaydedilir.
 
 **Senin dilini konuşur.** Dokuz arayüz dili ve gönderilerde, profillerde ve mesajlarda tek dokunuşla çeviri.
 
-**Gizlilik temelden.** Mesajlar, fotoğraflar ve sesli notlar uçtan uca şifrelenir. Şikayet edilen içerikleri insanlardan oluşan bir moderasyon ekibi inceler.
-
-<br clear="right" />
+**Gizlilik temelden.** Mesajlar, fotoğraflar ve sesli notlar uçtan uca şifrelenir. Velvet tanışma mesajı düz metin olarak gönderilir. Şikayet edilen içerikleri insanlardan oluşan bir moderasyon ekibi inceler.
 
 <a id="install"></a>
 
@@ -241,7 +228,7 @@ Aetherphone yapay zeka kodlama araçlarıyla geliştirilir ve [Dalamud yapay zek
 
 **Gördüğün ya da duyduğun hiçbir şey yapay zeka ürünü değil.** Her simge, duvar kâğıdı, telefon kılıfı, ses, zil sesi ve yazı tipi ya özgündür, ya adı anılan sanatçılar tarafından çizilmiştir ya da lisanslı bir kaynaktan alınmıştır. İngilizce metinler elle yazılır; diğer sekiz dil, insanların gözden geçirdiği yapay zeka destekli çevirilerdir.
 
-**İçeriğin sana ait kalır.** Çeviri yalnızca seçtiğin metni gönderir. Aethernet'i hiçbir yapay zeka denetlemez ve gönderilerin ile mesajların asla yapay zeka modellerini eğitmek için kullanılmaz.
+**İçeriğin sana ait kalır.** Çeviri yalnızca çevirmesini istediğin metni ya da otomatik çeviriyi açtığın akışları ve sohbetleri gönderir. Aethernet'i hiçbir yapay zeka denetlemez ve gönderilerin ile mesajların asla yapay zeka modellerini eğitmek için kullanılmaz.
 
 → [Yapay zeka kullanımı](../ai-usage.md) · [Üçüncü taraf bildirimleri](../../THIRD-PARTY-NOTICES.md)
 

@@ -28,7 +28,6 @@ const clips = [
   { name: 'chocochat', slot: 'choco', glow: '#d19153', warmupMilliseconds: 0, seconds: 15 },
   { name: 'velvet', slot: 'velvet', glow: '#da3e75', warmupMilliseconds: 1400, seconds: 18.8 },
   { name: 'music', scene: 'readmeMusic', sceneArgument: 'assets/rewind/p02.webp', glow: '#c0607e', warmupMilliseconds: 300, seconds: 13 },
-  { name: 'gamba', panel: '.pscr-gamba', glow: '#37ad8a', warmupMilliseconds: 600, seconds: 8 },
 ];
 
 const stats = {
@@ -49,7 +48,7 @@ const stats = {
 const iconSourceDirectory = resolve(toolDirectory, '../../src/Aetherphone/Icons');
 const iconSize = 96;
 const iconNames = [
-  'chirper', 'aethergram', 'message', 'velvet', 'aetherstream', 'music', 'venues', 'casino',
+  'chirper', 'aethergram', 'message', 'velvet', 'aetherstream', 'music', 'venues',
   'messages', 'strats', 'hunts', 'market', 'housing', 'fishing', 'jobs', 'inventory', 'dailies', 'timers',
   'muster', 'yellowpages', 'announcements', 'polls', 'coin',
   'camera', 'photos', 'notes', 'calendar', 'clock', 'skywatcher', 'wallet', 'health', 'shortcuts', 'news',

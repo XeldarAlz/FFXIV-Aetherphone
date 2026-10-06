@@ -3,7 +3,7 @@
 Renders the images and clips in `docs/media/readme/` that the repository README shows:
 
 - **numbers.png**: the Summer 2026 figures card.
-- **Clips** (`chirper.webp`, `aethergram.webp`, `chocochat.webp`, `velvet.webp`, `music.webp`, `gamba.webp`):
+- **Clips** (`chirper.webp`, `aethergram.webp`, `chocochat.webp`, `velvet.webp`, `music.webp`):
   looping animated WebP of each app.
 - **icons/**: rounded copies of the app icons in `src/Aetherphone/Icons`.
 

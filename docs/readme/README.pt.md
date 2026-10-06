@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Seu personagem acabou de ganhar um celular.</strong><br>
-  Uma rede social, um mensageiro, um player de música e quarenta e dois apps, encaixados dentro de FINAL FANTASY XIV.
+  Uma rede social, um mensageiro, um player de música e dezenas de outros apps, encaixados dentro de FINAL FANTASY XIV.
 </p>
 
 <p align="center">
@@ -58,10 +58,10 @@ O Aethernet abriu em 2 de julho de 2026. Até o fim da temporada, jogadores de 1
       <h3><img src="../media/readme/icons/chirper.png" width="28" align="top" alt="" /> Chirper</h3>
       <em>Posts curtos de toda Eorzea.</em>
       <ul>
-        <li>Linhas do tempo Para você e Seguindo</li>
+        <li>Linhas do tempo Para você e Recentes, com um filtro Seguindo</li>
         <li>Rechirps, citações, respostas e hashtags</li>
         <li>Fotos, GIFs e treze reações</li>
-        <li>Qualquer chirp traduzido com um toque</li>
+        <li>Chirps em outros idiomas traduzidos com um toque</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -88,7 +88,7 @@ O Aethernet abriu em 2 de julho de 2026. Até o fim da temporada, jogadores de 1
         <li>Mande mensagens para jogadores de qualquer mundo ou data center</li>
         <li>Notas de voz, fotos e conversas em grupo</li>
         <li>Chamadas de voz, a dois ou em grupo</li>
-        <li>Criptografia de ponta a ponta por padrão</li>
+        <li>Criptografia de ponta a ponta</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -120,7 +120,7 @@ Uma única conta do Aethernet faz seu login em todos os apps sociais, e cada app
         <li>Arraste, gire, curve e redimensione a tela bem onde você está</li>
         <li>Reprodução sincronizada para todo mundo da sessão</li>
         <li>Jogadores por perto entram com um toque, amigos de qualquer lugar com um código</li>
-        <li>Coloque playlists inteiras do YouTube na fila e reajam juntos na tela</li>
+        <li>Coloque playlists do YouTube na fila e reajam juntos na tela</li>
       </ul>
     </td>
   </tr>
@@ -128,7 +128,7 @@ Uma única conta do Aethernet faz seu login em todos os apps sociais, e cada app
 
 <table>
   <tr>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="../media/readme/music.webp" width="100%" alt="Música tocando agora e, em seguida, a letra sincronizada" />
       <h3><img src="../media/readme/icons/music.png" width="28" align="top" alt="" /> Música</h3>
       <em>Um app de música completo, com seus amigos junto.</em>
@@ -139,25 +139,14 @@ Uma única conta do Aethernet faz seu login em todos os apps sociais, e cada app
         <li>Controle o Spotify ou o seu navegador no PC</li>
       </ul>
     </td>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="../media/readme/venues.gif" width="100%" alt="Categorias de Locais e a agenda de eventos da semana" />
       <h3><img src="../media/readme/icons/venues.png" width="28" align="top" alt="" /> Locais</h3>
       <em>Onde a noite está acontecendo.</em>
       <ul>
         <li>Clubes, bares e cafés abertos agora</li>
         <li>Todos os eventos da semana, no seu horário local</li>
-        <li>Viagem até a porta com um toque</li>
-      </ul>
-    </td>
-    <td width="33%" valign="top">
-      <img src="../media/readme/gamba.webp" width="100%" alt="Saguão do cassino Gamba" />
-      <h3><img src="../media/readme/icons/casino.png" width="28" align="top" alt="" /> Gamba</h3>
-      <em>1,7 bilhão de fichas de mentira apostadas.</em>
-      <ul>
-        <li>Blackjack, caça-níqueis, bingo e muito mais</li>
-        <li>Salas ao vivo com todo mundo que está online</li>
-        <li>Um limite diário de perdas opcional</li>
-        <li>As fichas não podem ser compradas nem trocadas por dinheiro</li>
+        <li>Viagem até a porta com um toque, com o Lifestream instalado</li>
       </ul>
     </td>
   </tr>
@@ -167,7 +156,7 @@ Uma única conta do Aethernet faz seu login em todos os apps sociais, e cada app
 
 **Joga com você**<br>
 <img src="../media/readme/icons/messages.png" width="36" alt="Linkpearl" title="Linkpearl" /> <img src="../media/readme/icons/strats.png" width="36" alt="Strats" title="Strats" /> <img src="../media/readme/icons/hunts.png" width="36" alt="Caçadas" title="Caçadas" /> <img src="../media/readme/icons/market.png" width="36" alt="Mercado" title="Mercado" /> <img src="../media/readme/icons/housing.png" width="36" alt="Housing" title="Housing" /> <img src="../media/readme/icons/fishing.png" width="36" alt="Pesca" title="Pesca" /> <img src="../media/readme/icons/jobs.png" width="36" alt="Jobs" title="Jobs" /> <img src="../media/readme/icons/inventory.png" width="36" alt="Inventário" title="Inventário" /> <img src="../media/readme/icons/dailies.png" width="36" alt="Diárias" title="Diárias" /> <img src="../media/readme/icons/timers.png" width="36" alt="Temporizadores" title="Temporizadores" /><br>
-<sub>Abas de chat do Linkpearl · Strats de raide · Caçadas ao vivo · preços e alertas do Mercado · loteria de Housing · janelas de Pesca · Jobs e gearsets · busca no Inventário · Diárias · Temporizadores de retainers</sub>
+<sub>Abas de chat do Linkpearl · Strats de raide · Caçadas ao vivo · preços e alertas do Mercado · loteria de Housing · janelas de Pesca · Jobs e gearsets · busca no Inventário · Diárias · Temporizadores de retainers · Mapas · Coleções de montarias e mascotes</sub>
 
 **Aproxima as pessoas**<br>
 <img src="../media/readme/icons/muster.png" width="36" alt="Muster" title="Muster" /> <img src="../media/readme/icons/yellowpages.png" width="36" alt="Yellow Pages" title="Yellow Pages" /> <img src="../media/readme/icons/announcements.png" width="36" alt="Avisos" title="Avisos" /> <img src="../media/readme/icons/polls.png" width="36" alt="Enquetes" title="Enquetes" /> <img src="../media/readme/icons/coin.png" width="36" alt="Aether Coin" title="Aether Coin" /><br>
@@ -175,29 +164,27 @@ Uma única conta do Aethernet faz seu login em todos os apps sociais, e cada app
 
 **Utilidades do dia a dia**<br>
 <img src="../media/readme/icons/camera.png" width="36" alt="Câmera" title="Câmera" /> <img src="../media/readme/icons/photos.png" width="36" alt="Fotos" title="Fotos" /> <img src="../media/readme/icons/notes.png" width="36" alt="Notas" title="Notas" /> <img src="../media/readme/icons/calendar.png" width="36" alt="Calendário" title="Calendário" /> <img src="../media/readme/icons/clock.png" width="36" alt="Relógio" title="Relógio" /> <img src="../media/readme/icons/skywatcher.png" width="36" alt="Vigia do Céu" title="Vigia do Céu" /> <img src="../media/readme/icons/wallet.png" width="36" alt="Carteira" title="Carteira" /> <img src="../media/readme/icons/health.png" width="36" alt="Saúde" title="Saúde" /> <img src="../media/readme/icons/shortcuts.png" width="36" alt="Atalhos" title="Atalhos" /> <img src="../media/readme/icons/news.png" width="36" alt="Notícias" title="Notícias" /><br>
-<sub>Câmera · Fotos com editor de fotos · Notas · Calendário · Relógio com o horário de Eorzea · clima no Vigia do Céu · Carteira · Saúde · Atalhos · Notícias do Lodestone</sub>
+<sub>Câmera · Fotos com editor de fotos · Notas · Calendário · Relógio com o horário de Eorzea · clima no Vigia do Céu · Carteira · Saúde · Atalhos · Notícias do Lodestone · Calculadora · anéis de Atividade</sub>
 
 **Pra relaxar**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Jogos" title="Jogos" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Xadrez" title="Xadrez" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Um fliperama com trinta e três jogos, Doom entre eles, além de Uno, Xadrez e Sinuca bola 8 online com amigos</sub>
+<sub>Um fliperama com trinta e três jogos, Doom entre eles, além de Uno, Xadrez, Sinuca bola 8 e Lig 4 online com amigos</sub>
 
 ## Feito como o celular no seu bolso
 
-<img src="../../src/Aetherphone/Images/screenshots/Home.png" align="right" width="260" alt="Tela inicial do Aetherphone no jogo" />
-
 **Mora na sua HUD.** Arraste para onde quiser, redimensione ou reduza a um minicelular com relógio, widgets, música e chamadas.
 
-**Widgets e Pilhas Inteligentes.** Um widget para quase todo app, redimensionado pelo canto e empilhado ao soltar um sobre o outro.
+**Widgets e Pilhas Inteligentes.** Widgets para a maioria dos apps, redimensionados pelo canto e empilhados ao soltar um sobre o outro.
 
 **Uma Ilha Dinâmica** para chamadas, reprodução, temporizadores, viagens, sessões de vídeo em grupo e encontros.
 
-**Deixe do seu jeito.** Papéis de parede, toques, cores de destaque e estilos de ícone, salvos como um Visual que acompanha cada personagem.
+**Spotlight e Central de Controle.** Puxe para baixo na Tela de Início para buscar apps, contatos, ajustes, notas e itens do mercado, ou toque no topo da tela para música, volume, brilho e Não Perturbe.
+
+**Deixe do seu jeito.** Papéis de parede, cores de destaque, estilos de ícone, capas e o layout da Tela de Início, salvos como um Visual que acompanha cada personagem.
 
 **Fala a sua língua.** Nove idiomas de interface e tradução com um toque em posts, perfis e mensagens.
 
-**Privacidade desde a origem.** Mensagens, fotos e notas de voz têm criptografia de ponta a ponta. Uma equipe humana de moderação analisa o conteúdo denunciado.
-
-<br clear="right" />
+**Privacidade desde a origem.** Mensagens, fotos e notas de voz têm criptografia de ponta a ponta. Uma apresentação do Velvet é enviada como texto simples. Uma equipe humana de moderação analisa o conteúdo denunciado.
 
 <a id="install"></a>
 
@@ -241,7 +228,7 @@ O Aetherphone é desenvolvido com ferramentas de programação com IA e declara 
 
 **Nada do que você vê ou ouve é gerado por IA.** Todos os ícones, papéis de parede, capinhas, sons, toques e fontes são originais, desenhados por artistas creditados ou vêm de fontes licenciadas. O texto em inglês é escrito à mão, e os outros oito idiomas são traduções assistidas por IA revisadas por pessoas.
 
-**Seu conteúdo continua sendo seu.** A tradução envia apenas o texto que você escolher. Nenhuma IA modera o Aethernet, e seus posts e mensagens nunca são usados para treinar modelos de IA.
+**Seu conteúdo continua sendo seu.** A tradução envia apenas o texto que você pedir para traduzir, ou os feeds e conversas em que você ativar a tradução automática. Nenhuma IA modera o Aethernet, e seus posts e mensagens nunca são usados para treinar modelos de IA.
 
 → [Uso de IA](../ai-usage.md) · [Avisos de terceiros](../../THIRD-PARTY-NOTICES.md)
 

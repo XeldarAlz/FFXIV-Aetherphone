@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Your character just got a phone.</strong><br>
-  A social network, a messenger, a music player and forty-two apps, docked inside FINAL FANTASY XIV.
+  A social network, a messenger, a music player and dozens more apps, docked inside FINAL FANTASY XIV.
 </p>
 
 <p align="center">
@@ -58,10 +58,10 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
       <h3><img src="docs/media/readme/icons/chirper.png" width="28" align="top" alt="" /> Chirper</h3>
       <em>Short posts from across Eorzea.</em>
       <ul>
-        <li>For You and Following timelines</li>
+        <li>For You and Latest timelines, with a Following filter</li>
         <li>Rechirps, quotes, replies and hashtags</li>
         <li>Photos, GIFs and thirteen reactions</li>
-        <li>Any chirp translated with one tap</li>
+        <li>Chirps in other languages translated with one tap</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -88,7 +88,7 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
         <li>Message players on any world or data center</li>
         <li>Voice notes, photos and group chats</li>
         <li>Voice calls, one-on-one or in groups</li>
-        <li>End-to-end encrypted by default</li>
+        <li>End-to-end encrypted</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -120,7 +120,7 @@ One Aethernet account signs you in to every social app, and each app can keep it
         <li>Drag, turn, curve and resize the screen right where you stand</li>
         <li>Playback in sync for everyone in the party</li>
         <li>Nearby players join with a tap, friends anywhere with a code</li>
-        <li>Queue whole YouTube playlists and react together on the screen</li>
+        <li>Queue YouTube playlists and react together on the screen</li>
       </ul>
     </td>
   </tr>
@@ -128,7 +128,7 @@ One Aethernet account signs you in to every social app, and each app can keep it
 
 <table>
   <tr>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="docs/media/readme/music.webp" width="100%" alt="Music now playing, then synced lyrics" />
       <h3><img src="docs/media/readme/icons/music.png" width="28" align="top" alt="" /> Music</h3>
       <em>A full music app, plus your friends.</em>
@@ -139,25 +139,14 @@ One Aethernet account signs you in to every social app, and each app can keep it
         <li>Control Spotify or your browser on PC</li>
       </ul>
     </td>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="docs/media/readme/venues.gif" width="100%" alt="Venues categories and the week's event schedule" />
       <h3><img src="docs/media/readme/icons/venues.png" width="28" align="top" alt="" /> Venues</h3>
       <em>Where the night is happening.</em>
       <ul>
         <li>Clubs, bars and cafes open right now</li>
         <li>Every event this week, in your local time</li>
-        <li>One-tap travel to the door</li>
-      </ul>
-    </td>
-    <td width="33%" valign="top">
-      <img src="docs/media/readme/gamba.webp" width="100%" alt="Gamba casino lobby" />
-      <h3><img src="docs/media/readme/icons/casino.png" width="28" align="top" alt="" /> Gamba</h3>
-      <em>1.7 billion play-money chips wagered.</em>
-      <ul>
-        <li>Blackjack, slots, bingo and more</li>
-        <li>Live rooms with everyone online</li>
-        <li>An optional daily loss limit</li>
-        <li>Chips cannot be bought or cashed out</li>
+        <li>Travel to the door in a tap, with Lifestream installed</li>
       </ul>
     </td>
   </tr>
@@ -167,7 +156,7 @@ One Aethernet account signs you in to every social app, and each app can keep it
 
 **Plays the game with you**<br>
 <img src="docs/media/readme/icons/messages.png" width="36" alt="Linkpearl" title="Linkpearl" /> <img src="docs/media/readme/icons/strats.png" width="36" alt="Strats" title="Strats" /> <img src="docs/media/readme/icons/hunts.png" width="36" alt="Hunts" title="Hunts" /> <img src="docs/media/readme/icons/market.png" width="36" alt="Market" title="Market" /> <img src="docs/media/readme/icons/housing.png" width="36" alt="Housing" title="Housing" /> <img src="docs/media/readme/icons/fishing.png" width="36" alt="Fishing" title="Fishing" /> <img src="docs/media/readme/icons/jobs.png" width="36" alt="Jobs" title="Jobs" /> <img src="docs/media/readme/icons/inventory.png" width="36" alt="Inventory" title="Inventory" /> <img src="docs/media/readme/icons/dailies.png" width="36" alt="Dailies" title="Dailies" /> <img src="docs/media/readme/icons/timers.png" width="36" alt="Timers" title="Timers" /><br>
-<sub>Linkpearl chat tabs · raid Strats · live Hunts · Market prices and alerts · Housing lottery · Fishing windows · Jobs and gearsets · Inventory search · Dailies · retainer Timers</sub>
+<sub>Linkpearl chat tabs · raid Strats · live Hunts · Market prices and alerts · Housing lottery · Fishing windows · Jobs and gearsets · Inventory search · Dailies · retainer Timers · Maps · mount and minion Collections</sub>
 
 **Brings people together**<br>
 <img src="docs/media/readme/icons/muster.png" width="36" alt="Muster" title="Muster" /> <img src="docs/media/readme/icons/yellowpages.png" width="36" alt="Yellow Pages" title="Yellow Pages" /> <img src="docs/media/readme/icons/announcements.png" width="36" alt="Announcements" title="Announcements" /> <img src="docs/media/readme/icons/polls.png" width="36" alt="Polls" title="Polls" /> <img src="docs/media/readme/icons/coin.png" width="36" alt="Aether Coin" title="Aether Coin" /><br>
@@ -175,29 +164,27 @@ One Aethernet account signs you in to every social app, and each app can keep it
 
 **Everyday utilities**<br>
 <img src="docs/media/readme/icons/camera.png" width="36" alt="Camera" title="Camera" /> <img src="docs/media/readme/icons/photos.png" width="36" alt="Photos" title="Photos" /> <img src="docs/media/readme/icons/notes.png" width="36" alt="Notes" title="Notes" /> <img src="docs/media/readme/icons/calendar.png" width="36" alt="Calendar" title="Calendar" /> <img src="docs/media/readme/icons/clock.png" width="36" alt="Clock" title="Clock" /> <img src="docs/media/readme/icons/skywatcher.png" width="36" alt="Skywatcher" title="Skywatcher" /> <img src="docs/media/readme/icons/wallet.png" width="36" alt="Wallet" title="Wallet" /> <img src="docs/media/readme/icons/health.png" width="36" alt="Health" title="Health" /> <img src="docs/media/readme/icons/shortcuts.png" width="36" alt="Shortcuts" title="Shortcuts" /> <img src="docs/media/readme/icons/news.png" width="36" alt="News" title="News" /><br>
-<sub>Camera · Photos with a photo editor · Notes · Calendar · Clock with Eorzea time · Skywatcher weather · Wallet · Health · Shortcuts · Lodestone News</sub>
+<sub>Camera · Photos with a photo editor · Notes · Calendar · Clock with Eorzea time · Skywatcher weather · Wallet · Health · Shortcuts · Lodestone News · Calculator · Activity rings</sub>
 
 **Downtime**<br>
 <img src="docs/media/readme/icons/games.png" width="36" alt="Games" title="Games" /> <img src="docs/media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="docs/media/readme/icons/chess.png" width="36" alt="Chess" title="Chess" /> <img src="docs/media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="docs/media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="docs/media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="docs/media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>An arcade of thirty-three games, Doom among them, plus Uno, Chess and 8-Ball Pool online with friends</sub>
+<sub>An arcade of thirty-three games, Doom among them, plus Uno, Chess, 8-Ball Pool and Connect Four online with friends</sub>
 
 ## Built like the phone in your pocket
 
-<img src="src/Aetherphone/Images/screenshots/Home.png" align="right" width="260" alt="Aetherphone home screen in game" />
-
 **Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music and calls.
 
-**Widgets and Smart Stacks.** A widget for nearly every app, resized from the corner and stacked by dropping one onto another.
+**Widgets and Smart Stacks.** Widgets for most apps, resized from the corner and stacked by dropping one onto another.
 
 **A Dynamic Island** for calls, playback, timers, voyages, watch parties and meetups.
 
-**Make it yours.** Wallpapers, ringtones, accent colors and icon looks, saved as a Look that follows each character.
+**Spotlight and Control Center.** Pull down on the Home Screen to search apps, contacts, settings, notes and market items, or tap the top of the screen for music, volume, brightness and Do Not Disturb.
+
+**Make it yours.** Wallpapers, accent colors, icon looks, phone cases and your home layout, saved as a Look that follows each character.
 
 **Speaks your language.** Nine interface languages and one-tap translation on posts, profiles and messages.
 
-**Private by design.** Messages, photos and voice notes are end-to-end encrypted. A human moderation team reviews reported content.
-
-<br clear="right" />
+**Private by design.** Messages, photos and voice notes are end-to-end encrypted. A Velvet intro is sent as plain text. A human moderation team reviews reported content.
 
 ## Install
 
@@ -239,7 +226,7 @@ Aetherphone is built with AI coding tools and declares the **Copilot** level of 
 
 **Nothing you see or hear is AI-generated.** Every icon, wallpaper, phone case, sound, ringtone and font is original, drawn by credited artists, or taken from a licensed source. English text is written by hand, and the other eight languages are AI-assisted translations reviewed by people.
 
-**Your content stays yours.** Translate sends only the text you choose. No AI moderates Aethernet, and your posts and messages are never used to train AI models.
+**Your content stays yours.** Translate sends only the text you ask it to translate, or the feeds and chats you turn auto-translate on for. No AI moderates Aethernet, and your posts and messages are never used to train AI models.
 
 → [AI usage](docs/ai-usage.md) · [Third-party notices](THIRD-PARTY-NOTICES.md)
 

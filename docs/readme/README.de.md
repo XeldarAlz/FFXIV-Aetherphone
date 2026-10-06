@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Dein Charakter hat jetzt ein Handy.</strong><br>
-  Ein soziales Netzwerk, ein Messenger, ein Musikplayer und zweiundvierzig Apps, direkt in FINAL FANTASY XIV angedockt.
+  Ein soziales Netzwerk, ein Messenger, ein Musikplayer und Dutzende weitere Apps, direkt in FINAL FANTASY XIV angedockt.
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 <p align="center">
   <a href="#install"><strong>Installation</strong></a> ·
   <a href="https://www.aetherphone.net/"><strong>Website</strong></a> ·
-  <a href="https://www.aetherphone.net/summer-2026/"><strong>Summer Rewind</strong></a> ·
+  <a href="https://www.aetherphone.net/summer-2026/"><strong>Sommer-Rückblick</strong></a> ·
   <a href="https://discord.gg/3HbJCscMyS"><strong>Discord</strong></a>
 </p>
 
@@ -47,7 +47,7 @@ Aethernet ging am 2. Juli 2026 an den Start. Bis zum Ende der Saison haben Spiel
   <a href="https://www.aetherphone.net/summer-2026/"><img src="../media/readme/numbers.png" width="100%" alt="14,4 Millionen erfasste Aktionen, 5,8 Millionen private Nachrichten, 3,2 Millionen Likes, 348.000 Fotos, 343.000 Verbindungen, 113 Welten" /></a>
 </p>
 
-<p align="center"><sub>Stand: 28. September 2026. <a href="https://www.aetherphone.net/summer-2026/">Zum vollständigen Summer 2026 Rewind</a>.</sub></p>
+<p align="center"><sub>Stand: 28. September 2026. <a href="https://www.aetherphone.net/summer-2026/">Zum vollständigen Sommer-Rückblick 2026</a>.</sub></p>
 
 ## Ein Sozialleben mitten im Spiel
 
@@ -58,10 +58,10 @@ Aethernet ging am 2. Juli 2026 an den Start. Bis zum Ende der Saison haben Spiel
       <h3><img src="../media/readme/icons/chirper.png" width="28" align="top" alt="" /> Chirper</h3>
       <em>Kurze Beiträge aus ganz Eorzea.</em>
       <ul>
-        <li>Timelines „Für dich“ und „Folge ich“</li>
+        <li>Timelines „Für dich“ und „Neueste“, mit Filter „Folge ich“</li>
         <li>Rechirps, Zitate, Antworten und Hashtags</li>
         <li>Fotos, GIFs und dreizehn Reaktionen</li>
-        <li>Jeder Chirp mit einem Tipp übersetzt</li>
+        <li>Chirps in anderen Sprachen mit einem Tipp übersetzt</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -88,7 +88,7 @@ Aethernet ging am 2. Juli 2026 an den Start. Bis zum Ende der Saison haben Spiel
         <li>Schreib Spielern auf jeder Welt und in jedem Datenzentrum</li>
         <li>Sprachnachrichten, Fotos und Gruppenchats</li>
         <li>Sprachanrufe, zu zweit oder in der Gruppe</li>
-        <li>Standardmäßig Ende-zu-Ende-verschlüsselt</li>
+        <li>Ende-zu-Ende-verschlüsselt</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -120,7 +120,7 @@ Ein einziges Aethernet-Konto meldet dich bei jeder sozialen App an, und jede App
         <li>Zieh, dreh, wölbe und skaliere den Bildschirm genau dort, wo du stehst</li>
         <li>Synchrone Wiedergabe für alle in der Party</li>
         <li>Spieler in der Nähe steigen mit einem Tipp ein, Freunde überall per Code</li>
-        <li>Ganze YouTube-Playlists einreihen und gemeinsam auf dem Bildschirm reagieren</li>
+        <li>YouTube-Playlists einreihen und gemeinsam auf dem Bildschirm reagieren</li>
       </ul>
     </td>
   </tr>
@@ -128,7 +128,7 @@ Ein einziges Aethernet-Konto meldet dich bei jeder sozialen App an, und jede App
 
 <table>
   <tr>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="../media/readme/music.webp" width="100%" alt="Musik mit dem laufenden Titel, danach synchronisierte Songtexte" />
       <h3><img src="../media/readme/icons/music.png" width="28" align="top" alt="" /> Musik</h3>
       <em>Eine vollwertige Musik-App, plus deine Freunde.</em>
@@ -139,25 +139,14 @@ Ein einziges Aethernet-Konto meldet dich bei jeder sozialen App an, und jede App
         <li>Steuere Spotify oder deinen Browser auf dem PC</li>
       </ul>
     </td>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="../media/readme/venues.gif" width="100%" alt="Kategorien in Locations und der Veranstaltungsplan der Woche" />
       <h3><img src="../media/readme/icons/venues.png" width="28" align="top" alt="" /> Locations</h3>
       <em>Wo heute Nacht was los ist.</em>
       <ul>
         <li>Clubs, Bars und Cafés, die gerade geöffnet haben</li>
         <li>Jedes Event dieser Woche, in deiner Ortszeit</li>
-        <li>Mit einem Tipp bis vor die Tür reisen</li>
-      </ul>
-    </td>
-    <td width="33%" valign="top">
-      <img src="../media/readme/gamba.webp" width="100%" alt="Gamba-Casino-Lobby" />
-      <h3><img src="../media/readme/icons/casino.png" width="28" align="top" alt="" /> Gamba</h3>
-      <em>1,7 Milliarden Spielgeld-Chips gesetzt.</em>
-      <ul>
-        <li>Blackjack, Automaten, Bingo und mehr</li>
-        <li>Live-Räume mit allen, die gerade online sind</li>
-        <li>Ein optionales tägliches Verlustlimit</li>
-        <li>Chips lassen sich weder kaufen noch auszahlen</li>
+        <li>Mit einem Tipp bis vor die Tür reisen, wenn Lifestream installiert ist</li>
       </ul>
     </td>
   </tr>
@@ -167,7 +156,7 @@ Ein einziges Aethernet-Konto meldet dich bei jeder sozialen App an, und jede App
 
 **Spielt mit dir zusammen**<br>
 <img src="../media/readme/icons/messages.png" width="36" alt="Linkpearl" title="Linkpearl" /> <img src="../media/readme/icons/strats.png" width="36" alt="Strats" title="Strats" /> <img src="../media/readme/icons/hunts.png" width="36" alt="Jagden" title="Jagden" /> <img src="../media/readme/icons/market.png" width="36" alt="Markt" title="Markt" /> <img src="../media/readme/icons/housing.png" width="36" alt="Housing" title="Housing" /> <img src="../media/readme/icons/fishing.png" width="36" alt="Angeln" title="Angeln" /> <img src="../media/readme/icons/jobs.png" width="36" alt="Jobs" title="Jobs" /> <img src="../media/readme/icons/inventory.png" width="36" alt="Inventar" title="Inventar" /> <img src="../media/readme/icons/dailies.png" width="36" alt="Täglich" title="Täglich" /> <img src="../media/readme/icons/timers.png" width="36" alt="Timer" title="Timer" /><br>
-<sub>Linkpearl-Chat-Tabs · Raid-Strats · Live-Jagden · Marktpreise und Preisalarme · Housing-Lotterie · Angelfenster · Jobs und Ausrüstungssets · Inventarsuche · Tägliche Aufgaben · Gehilfen-Timer</sub>
+<sub>Linkpearl-Chat-Tabs · Raid-Strats · Live-Jagden · Marktpreise und Preisalarme · Housing-Lotterie · Angelfenster · Jobs und Ausrüstungssets · Inventarsuche · Tägliche Aufgaben · Gehilfen-Timer · Karten · Sammlungen von Reittieren und Begleitern</sub>
 
 **Bringt Leute zusammen**<br>
 <img src="../media/readme/icons/muster.png" width="36" alt="Muster" title="Muster" /> <img src="../media/readme/icons/yellowpages.png" width="36" alt="Yellow Pages" title="Yellow Pages" /> <img src="../media/readme/icons/announcements.png" width="36" alt="Ankündigungen" title="Ankündigungen" /> <img src="../media/readme/icons/polls.png" width="36" alt="Umfragen" title="Umfragen" /> <img src="../media/readme/icons/coin.png" width="36" alt="Aether Coin" title="Aether Coin" /><br>
@@ -175,29 +164,27 @@ Ein einziges Aethernet-Konto meldet dich bei jeder sozialen App an, und jede App
 
 **Praktisch im Alltag**<br>
 <img src="../media/readme/icons/camera.png" width="36" alt="Kamera" title="Kamera" /> <img src="../media/readme/icons/photos.png" width="36" alt="Fotos" title="Fotos" /> <img src="../media/readme/icons/notes.png" width="36" alt="Notizen" title="Notizen" /> <img src="../media/readme/icons/calendar.png" width="36" alt="Kalender" title="Kalender" /> <img src="../media/readme/icons/clock.png" width="36" alt="Uhr" title="Uhr" /> <img src="../media/readme/icons/skywatcher.png" width="36" alt="Wetterwart" title="Wetterwart" /> <img src="../media/readme/icons/wallet.png" width="36" alt="Geldbörse" title="Geldbörse" /> <img src="../media/readme/icons/health.png" width="36" alt="Gesundheit" title="Gesundheit" /> <img src="../media/readme/icons/shortcuts.png" width="36" alt="Kurzbefehle" title="Kurzbefehle" /> <img src="../media/readme/icons/news.png" width="36" alt="News" title="News" /><br>
-<sub>Kamera · Fotos mit Fotoeditor · Notizen · Kalender · Uhr mit Eorzea-Zeit · Wetterwart fürs Wetter · Geldbörse · Gesundheit · Kurzbefehle · Lodestone-News</sub>
+<sub>Kamera · Fotos mit Fotoeditor · Notizen · Kalender · Uhr mit Eorzea-Zeit · Wetterwart fürs Wetter · Geldbörse · Gesundheit · Kurzbefehle · Lodestone-News · Rechner · Aktivitätsringe</sub>
 
 **Für die Pause zwischendurch**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Spiele" title="Spiele" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Schach" title="Schach" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitär" title="Solitär" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Eine Arcade mit dreiunddreißig Spielen, Doom inklusive, dazu Uno, Schach und 8-Ball-Pool online mit Freunden</sub>
+<sub>Eine Arcade mit dreiunddreißig Spielen, Doom inklusive, dazu Uno, Schach, 8-Ball-Pool und Vier gewinnt online mit Freunden</sub>
 
 ## Gebaut wie das Handy in deiner Tasche
 
-<img src="../../src/Aetherphone/Images/screenshots/Home.png" align="right" width="260" alt="Aetherphone-Startbildschirm im Spiel" />
-
 **Wohnt in deinem HUD.** Zieh es überallhin, ändere seine Größe oder verkleinere es zu einem Mini-Handy mit Uhr, Widgets, Musik und Anrufen.
 
-**Widgets und Smart Stacks.** Ein Widget für fast jede App, in der Größe über die Ecke veränderbar und gestapelt, indem du eins auf ein anderes ziehst.
+**Widgets und Smart Stacks.** Widgets für die meisten Apps, in der Größe über die Ecke veränderbar und gestapelt, indem du eins auf ein anderes ziehst.
 
 **Eine Dynamic Island** für Anrufe, Wiedergabe, Timer, Erkundungsfahrten, Watch-Partys und Treffen.
 
-**Mach es zu deinem.** Hintergrundbilder, Klingeltöne, Akzentfarben und Symbol-Looks, gespeichert als Look, der jedem Charakter folgt.
+**Spotlight und Kontrollzentrum.** Zieh auf dem Home-Bildschirm nach unten, um Apps, Kontakte, Einstellungen, Notizen und Marktartikel zu finden, oder tippe oben auf den Bildschirm für Musik, Lautstärke, Helligkeit und Nicht stören.
+
+**Mach es zu deinem.** Hintergrundbilder, Akzentfarben, Symbol-Looks, Handyhüllen und die Anordnung deines Home-Bildschirms, gespeichert als Look, der jedem Charakter folgt.
 
 **Spricht deine Sprache.** Neun Oberflächensprachen und Übersetzung mit einem Tipp bei Beiträgen, Profilen und Nachrichten.
 
-**Privatsphäre von Grund auf.** Nachrichten, Fotos und Sprachnachrichten sind Ende-zu-Ende-verschlüsselt. Ein Moderationsteam aus Menschen prüft gemeldete Inhalte.
-
-<br clear="right" />
+**Privatsphäre von Grund auf.** Nachrichten, Fotos und Sprachnachrichten sind Ende-zu-Ende-verschlüsselt. Eine Velvet-Vorstellung wird als Klartext gesendet. Ein Moderationsteam aus Menschen prüft gemeldete Inhalte.
 
 <a id="install"></a>
 
@@ -241,7 +228,7 @@ Aetherphone wird mit KI-Programmierwerkzeugen entwickelt und erklärt die Stufe 
 
 **Nichts, was du siehst oder hörst, ist KI-generiert.** Jedes Symbol, jedes Hintergrundbild, jede Handyhülle, jeder Sound, jeder Klingelton und jede Schrift ist eigenständig erstellt, stammt von genannten Künstlern oder aus einer lizenzierten Quelle. Englische Texte werden von Hand geschrieben, die anderen acht Sprachen sind KI-gestützte Übersetzungen, die von Menschen geprüft werden.
 
-**Deine Inhalte bleiben deine.** Die Übersetzung sendet nur den Text, den du auswählst. Keine KI moderiert Aethernet, und deine Beiträge und Nachrichten werden nie zum Training von KI-Modellen verwendet.
+**Deine Inhalte bleiben deine.** Die Übersetzung sendet nur den Text, den du übersetzen lässt, oder die Feeds und Chats, für die du die automatische Übersetzung einschaltest. Keine KI moderiert Aethernet, und deine Beiträge und Nachrichten werden nie zum Training von KI-Modellen verwendet.
 
 → [KI-Nutzung](../ai-usage.md) · [Hinweise zu Drittanbietern](../../THIRD-PARTY-NOTICES.md)
 
