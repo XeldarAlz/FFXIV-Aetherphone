@@ -9,11 +9,11 @@ body:
       value: |
         Want your plugin to live as an app on the phone? This is the place.
 
-        The phone can drive another plugin two ways: **Dalamud IPC** (a `CallGateSubscriber` surface your plugin exposes) or an **HTTP API** the app can call. Give us a stable surface to talk to and we can build the app around it.
+        The phone can drive another plugin two ways: **Dalamud IPC** (call gates your plugin provides, which the phone subscribes to) or an **HTTP API** the app can call. Give us a stable surface to talk to and we can build the app around it.
 
         If the idea is still fuzzy, float it in [Discussions](https://github.com/XeldarAlz/FFXIV-Aetherphone/discussions) or on [Discord](https://discord.gg/3HbJCscMyS) first; the shape tends to firm up faster there than in a tracked issue.
 
-        Building the app yourself? The step-by-step tutorial is [docs/creating-an-app.md](https://github.com/XeldarAlz/FFXIV-Aetherphone/blob/master/docs/creating-an-app.md).
+        Building the app yourself? The step-by-step tutorial is [docs/creating-an-app.md](https://github.com/XeldarAlz/FFXIV-Aetherphone/blob/dev/docs/creating-an-app.md).
 
   - type: dropdown
     id: role
@@ -51,7 +51,7 @@ body:
       label: How should the phone talk to it?
       description: If you're not sure yet, pick that and we'll figure it out together.
       options:
-        - Dalamud IPC (CallGateSubscriber)
+        - Dalamud IPC (call gates)
         - HTTP / REST API
         - Both
         - Not sure yet

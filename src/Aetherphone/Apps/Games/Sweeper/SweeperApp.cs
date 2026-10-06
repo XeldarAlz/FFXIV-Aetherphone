@@ -217,7 +217,6 @@ internal sealed class SweeperApp : IMiniGame
             pendingResultSubmit = false;
             BuildResultTime();
             fx.AddTrauma(0.95f);
-            fx.HitStop(0.14f);
             fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.45f);
             if (board.ClickedBomb >= 0)
             {

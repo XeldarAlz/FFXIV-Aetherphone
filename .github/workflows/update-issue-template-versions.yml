@@ -40,8 +40,8 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
-          # PAT so the commit below can land on the protected default branch:
-          # master requires the Guards and Build (Windows) checks, which a
+          # PAT so the commit below can land on the protected default branch,
+          # which requires the Guards and Build (Windows) checks that a
           # freshly pushed commit cannot have yet, and github-actions[bot] gets
           # no bypass. The PAT owner is an admin and enforce_admins is off.
           token: ${{ secrets.HUB_REPO_PAT || secrets.GITHUB_TOKEN }}

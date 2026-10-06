@@ -47,9 +47,9 @@ Notes:
   choices move to the replacement instead of the alphabetical fallback.
 - Playback is dispatched by file extension: `.mp3` and `.wav` play through
   managed decoders (Wine-safe), everything else falls back to Windows Media
-  Foundation. A misnamed file (for example MP3 bytes named `.wav`) plays
-  through the wrong decoder and can fail, where content sniffing used to
-  cover that case.
+  Foundation. A misnamed file (for example MP3 bytes named `.wav`) is
+  rejected by the managed reader and falls back to Media Foundation too, so
+  it plays on Windows but can fail under Wine.
 - A file's display name is its file name with `_`/`-` turned into spaces
   (`soft_bell.mp3` shows as "soft bell").
 - Ringtones loop until the call is answered or missed, so keep them seamless.

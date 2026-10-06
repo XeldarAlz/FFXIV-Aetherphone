@@ -15,11 +15,20 @@ internal sealed class ViewRouter<TView>
     private int outgoingDepth;
     private string outgoingId = string.Empty;
     private SlideDirection direction;
+    private readonly LayerPainter paintIncoming;
+    private readonly LayerPainter paintLeaving;
+    private RouterDraw<TView> activeDraw = null!;
+    private TView paintedIncoming = default!;
+    private int paintedIncomingDepth;
+    private TView paintedLeaving = default!;
+    private int paintedLeavingDepth;
 
     public ViewRouter(TView root)
     {
         stack.Add(root);
         viewIds.Add(NewId());
+        paintIncoming = PaintIncoming;
+        paintLeaving = PaintLeaving;
     }
 
     public TView Current => stack[stack.Count - 1];
@@ -120,24 +129,23 @@ internal sealed class ViewRouter<TView>
             }
         }
 
+        activeDraw = draw;
+        paintedIncoming = Current;
+        paintedIncomingDepth = Depth;
         if (!transitioning)
         {
-            var current = Current;
-            var depth = Depth;
+            paintedLeaving = default!;
             SceneCompositor.DrawLayer(area,
-                new SceneCompositor.Layer(CurrentId, Vector2.Zero, 0f, target => draw(current, target, depth),
-                    background));
+                new SceneCompositor.Layer(CurrentId, Vector2.Zero, 0f, paintIncoming, background));
             return;
         }
 
         var progress = slide.Value;
         var width = area.Width;
-        var incoming = Current;
-        var incomingDepth = Depth;
         var incomingId = CurrentId;
-        var leaving = outgoing;
-        var leavingDepth = outgoingDepth;
         var leavingId = outgoingId;
+        paintedLeaving = outgoing;
+        paintedLeavingDepth = outgoingDepth;
         SceneCompositor.Layer under;
         SceneCompositor.Layer over;
 
@@ -146,22 +154,24 @@ internal sealed class ViewRouter<TView>
             var underOffset = new Vector2(-TransitionTiming.UnderParallax * progress * width, 0f);
             var overOffset = new Vector2((1f - progress) * width, 0f);
             under = new SceneCompositor.Layer(leavingId, underOffset, TransitionTiming.UnderDimMax * progress,
-                target => draw(leaving, target, leavingDepth), background, true);
-            over = new SceneCompositor.Layer(incomingId, overOffset, 0f,
-                target => draw(incoming, target, incomingDepth), background, true);
+                paintLeaving, background, true);
+            over = new SceneCompositor.Layer(incomingId, overOffset, 0f, paintIncoming, background, true);
         }
         else
         {
             var underOffset = new Vector2(-TransitionTiming.UnderParallax * (1f - progress) * width, 0f);
             var overOffset = new Vector2(progress * width, 0f);
             under = new SceneCompositor.Layer(incomingId, underOffset, TransitionTiming.UnderDimMax * (1f - progress),
-                target => draw(incoming, target, incomingDepth), background, true);
-            over = new SceneCompositor.Layer(leavingId, overOffset, 0f, target => draw(leaving, target, leavingDepth),
-                background, true);
+                paintIncoming, background, true);
+            over = new SceneCompositor.Layer(leavingId, overOffset, 0f, paintLeaving, background, true);
         }
 
         SceneCompositor.Composite(area, under, over);
     }
+
+    private void PaintIncoming(Rect target) => activeDraw(paintedIncoming, target, paintedIncomingDepth);
+
+    private void PaintLeaving(Rect target) => activeDraw(paintedLeaving, target, paintedLeavingDepth);
 
     private void StartSlide()
     {

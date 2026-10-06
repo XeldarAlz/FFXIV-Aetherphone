@@ -15,15 +15,16 @@ are original to Aetherphone, and so are most interface and game sounds,
 which are synthesized from code in `tools/sound-generator`.
 
 Phone case art is drawn by community artists and each case credits its artist
-by name in Settings. App icons are derived from Phosphor Icons, in-app glyphs
-from Tabler Icons, emoji from Twemoji, the remaining audio from Google's Material
-sounds, the Android Open Source Project and CC0 sound packs. See
-the sections below for the licenses covering each.
+by name in Settings. App icons are derived from Phosphor Icons (the Rolladeck
+partner mark aside, see below), in-app glyphs from Tabler Icons, emoji from
+Twemoji, the remaining audio from Google's Material sounds, the Android Open
+Source Project and CC0 sound packs. See the sections below for the licenses
+covering each.
 
 The plugin's eight translated language catalogs are AI-assisted with human
 review, and in-game terminology is verified against the game's own data rather
 than translated freely. Corrections from native speakers are always welcome:
-https://github.com/XeldarAlz/FFXIV-Aetherphone/blob/master/docs/translating.md
+https://github.com/XeldarAlz/FFXIV-Aetherphone/blob/dev/docs/translating.md
 
 ## Inter font family
 
@@ -41,7 +42,9 @@ The painted application icons under `src/Aetherphone/Icons/` (`<appid>.png`
 and `<appid>.fg.png`) are derived from
 [Phosphor Icons](https://phosphoricons.com) 2.1.1 fill glyphs (recolored,
 composed on a tile and rasterized to PNG); see `tools/icon-generator/` for
-the generator.
+the generator. The one file in that folder outside this pipeline is
+`rolladeck.png`, the Rolladeck partner mark shown with its live DJ listings
+in the Music app.
 
 - Homepage: https://phosphoricons.com
 - Source: https://github.com/phosphor-icons/core
@@ -50,11 +53,12 @@ the generator.
 
 ## Tabler Icons
 
-`src/Aetherphone/Fonts/TablerIcons.ttf` is a 97 glyph subset of the
-[Tabler Icons](https://tabler.io/icons) webfont, remapped into a private
-codepoint range; see `tools/icon-font/` for the generator. The legacy stencil
-generator in `tools/icon-generator/generate-app-icons.mjs` rasterizes Tabler
-outline icons and is kept for reference.
+`src/Aetherphone/Fonts/TablerIcons.ttf` is a subset of the outline and filled
+[Tabler Icons](https://tabler.io/icons) webfonts, remapped into a private
+codepoint range; `tools/icon-font/generate-icon-font.py` builds it and lists
+every glyph it keeps. The legacy stencil generator in
+`tools/icon-generator/generate-app-icons.mjs` rasterizes Tabler outline icons
+and is kept for reference.
 
 - Homepage: https://tabler.io/icons
 - Source: https://github.com/tabler/tabler-icons
@@ -82,7 +86,8 @@ MIT License; full text reproduced in the MIT section below.
 
 Every bundled clip under `src/Aetherphone/Sounds/` is rebuilt by
 `tools/sound-generator/generate-sounds.py`, which downloads the sources below
-from pinned URLs, trims leading silence, fades the tail, resamples to 48 kHz
+from pinned URLs (the CC0 shutter recording is re-mastered from the committed
+copy instead), trims leading silence, fades the tail, resamples to 48 kHz
 and normalizes loudness. Those edits are the only changes made to third-party
 recordings.
 
@@ -139,8 +144,8 @@ These clips are Creative Commons Zero (CC0):
 
 ## mpv
 
-libmpv provides video decoding and playback for the AetherStream app. No mpv
-binary is redistributed with this plugin:
+libmpv provides video decoding and playback for the MogCast app (AetherStream
+in code). No mpv binary is redistributed with this plugin:
 `src/Aetherphone/Core/Video/MediaDependencies.cs` downloads an LGPL build
 (`mpv-dev-lgpl-x86_64-*`, from the
 [zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild) releases)
@@ -154,20 +159,32 @@ updated from there.
 
 ## yt-dlp
 
-yt-dlp is used by mpv's own `ytdl_hook` to resolve video URLs from sites other
-than YouTube (YouTube itself is resolved separately via YoutubeExplode, already
-a dependency). As with mpv above, no yt-dlp binary is redistributed: it is
-downloaded from the project's own GitHub releases into the plugin's Dalamud
-config directory on first use.
+yt-dlp resolves YouTube and other video links for MogCast, through mpv's own
+`ytdl_hook`, and searches, imports and downloads songs for the Music app. As
+with mpv above, no yt-dlp binary is redistributed: it is downloaded from the
+project's own GitHub releases into the plugin's Dalamud config directory on
+first use, and kept updated from there.
 
 - Homepage: https://github.com/yt-dlp/yt-dlp
 - License: The Unlicense (public domain)
 
+## Deno
+
+Deno is the JavaScript runtime the plugin hands to yt-dlp (`--js-runtimes`),
+for both MogCast and the Music app. No Deno binary is redistributed:
+`MediaDependencies.cs` downloads the Windows build
+(`deno-x86_64-pc-windows-msvc`) from the project's own GitHub releases into
+the plugin's Dalamud config directory on first use.
+
+- Homepage: https://deno.com
+- Source: https://github.com/denoland/deno
+- License: MIT (Copyright 2018-2026 the Deno authors)
+
 ## AlphaChannel (Voudi)
 
-AetherStream's video/screen engine under `src/Aetherphone/Core/Video/`
-(mpv-backed playback and the world-anchored ScreenPainter D3D11 quad
-renderer) is ported from
+The MogCast (AetherStream in code) video/screen engine under
+`src/Aetherphone/Core/Video/` (mpv-backed playback and the world-anchored
+ScreenPainter D3D11 quad renderer) is ported from
 [AlphaChannel](https://github.com/Voudi/AlphaChannel) by Voudi, used with the
 author's permission. Two smaller pieces ported from the same source live
 outside that directory: the screen placement controls and presets in
@@ -178,7 +195,8 @@ screen preset shape in `src/Aetherphone/Configuration.cs` (from its
 
 - Source: https://github.com/Voudi/AlphaChannel
 - License: GNU General Public License v3.0 or later; full text reproduced in
-  `src/Aetherphone/Core/Video/AlphaChannel-LICENSE`.
+  `src/Aetherphone/Core/Video/AlphaChannel-LICENSE`, shipped as
+  `AlphaChannel-LICENSE` in every release archive.
 
 ## Concentus
 
@@ -242,7 +260,7 @@ Bouncy Castle Inc.) is redistributed in binary form.
 - License:
 
 ```
-Copyright (c) 2000-2025 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org).
+Copyright (c) 2000-2026 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org).
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
 including without limitation the rights to use, copy, modify, merge, publish, distribute,
@@ -279,6 +297,8 @@ once at the end of this section:
 | System.Security.Cryptography.ProtectedData | 10.0.11 | Microsoft Corporation (https://github.com/dotnet/runtime) |
 | NEbml | 1.1.0.5 | Oleg Zee (https://github.com/OlegZee/NEbml) |
 | NLayer / NLayer.NAudioSupport | 2.0.1 | Mark Heath, Andrew Ward (https://github.com/naudio/NLayer) |
+| Net.Codecrete.QrCodeGenerator | 2.0.6 | Manuel Bleichenbacher and Project Nayuki (https://github.com/manuelbl/QrCodeGenerator) |
+| MeltySynth | 2.4.1 | 2021 Nobuaki Tanaka; 2017, 2018 Bernhard Schelling (TinySoundFont); 2014 Alex Veltsistas (C# Synth); 2012 Steve Folta (SFZero) (https://github.com/sinshu/meltysynth) |
 | FF14 Fish Tracker App fish data (derived) | 2026-10 | 2019 icykoneko (https://github.com/icykoneko/ff14-fish-tracker-app) |
 
 ```
@@ -319,11 +339,40 @@ hookset and tug) as game row ids. It is derived from the FF14 Fish Tracker App
 data under the MIT License listed above. Names, places, weather rates and map
 positions are read from the game's own data at runtime.
 
-## Calendar event data
+## Hunt data
 
-The Calendar app shows in-game event dates served through the Aetherphone
-backend, which caches a community-maintained public events database. The data
-is fetched server-side; no third-party credentials ship with the plugin.
+The hunt catalogs under `src/Aetherphone/Hunts/` (`HuntMob.json`,
+`HuntMobDescriptions.json`, `HuntMobRewards.json`, `HuntMobTips.json` and
+`HuntPOI.json`: marks, zones and their points of interest, rewards,
+descriptions and tips) were pulled from [Faloop](https://faloop.app) and ship
+in every release archive. The live hunt status in the Hunts app is read from
+Faloop's public service at runtime. Aetherphone is an independent client, not made, run, sponsored or
+endorsed by Faloop.
+
+## Runtime data services
+
+These apps read live data from the services below while the plugin runs.
+Their data is fetched on demand and does not ship with the plugin, and no
+third-party credentials ship with it either.
+
+- Calendar: in-game event dates served through the Aetherphone backend, which
+  caches a community-maintained public events database.
+- Strats: raid cheatsheets converted from the MIT-licensed
+  [WTFDIG](https://github.com/mczub/wtfdig) project and served from
+  Aetherphone's own media host.
+- Market: prices, history and alerts from [Universalis](https://universalis.app).
+- Music: synced lyrics from [LRCLIB](https://lrclib.net), radio stations from
+  [radio-browser](https://www.radio-browser.info), live DJ listings from
+  [Rolladeck](https://xivrolladeck.com), and songs from YouTube.
+- MogCast: videos and playlists from YouTube and other sites yt-dlp supports.
+- Venues: venues and events from [FFXIV Venues](https://ffxivvenues.com),
+  [Partake](https://www.partake.gg) and Rolladeck.
+- Hunts: live hunt status from Faloop, as described above.
+- Collections: collectible data from [FFXIV Collect](https://ffxivcollect.com).
+- News: Lodestone news from [lodestonenews.com](https://lodestonenews.com).
+- Housing: plot listings from the Aetherphone housing service and, on the
+  Chinese client, from 艾欧泽亚售楼中心 (house.ffxiv.cyou).
+- Character profiles: The Lodestone, read with NetStone.
 
 ## Optional plugin integrations
 
@@ -348,19 +397,21 @@ and `DoomMusic.cs` are derived from the upstream `SilkSound.cs` and `SilkMusic.c
 - Copyright (C) 1993-1996 Id Software, Inc.
 - Copyright (C) 2019-2020 Nobuaki Tanaka
 - License: GNU General Public License, version 2 or (at your option) any later version; full text in
-  `src/ManagedDoom/LICENSE_ManagedDoom.txt`, shipped in every release archive.
+  `src/ManagedDoom/LICENSE_ManagedDoom.txt`, shipped as `LICENSE_ManagedDoom.txt` in every release archive.
 
 ## MeltySynth
 
 The Doom soundtrack is synthesized with [MeltySynth](https://github.com/sinshu/meltysynth) 2.4.1
 (NuGet, redistributed as a compiled assembly).
 
-- Copyright (c) 2021 Nobuaki Tanaka
-- License: MIT; full text reproduced in the MIT section below.
+- Copyright (C) 2021 Nobuaki Tanaka
+- Copyright (C) 2017, 2018 Bernhard Schelling (TinySoundFont), based on SFZero, Copyright (C) 2012 Steve Folta
+- Copyright (C) 2014 Alex Veltsistas (C# Synth)
+- License: MIT; full text reproduced in the MIT section above.
 
 ## Doom game data and soundfont (downloaded on demand)
 
-No Doom game data is bundled. When a player sets up the Doom mini-game, the plugin downloads two files
+No Doom game data is bundled. When a player sets up the Doom mini-game, the plugin downloads three packages
 into the player's own Aetherphone data folder, each only when the player asks for it:
 
 - The Doom shareware episode (`doom1.wad`, version 1.9) from Debian's package archive
@@ -372,8 +423,9 @@ into the player's own Aetherphone data folder, each only when the player asks fo
 - The TimGM6mb General MIDI soundfont (`TimGM6mb.sf2`) from Debian's `timgm6mb-soundfont` package.
   Copyright (C) 2004 Tim Brechbill; License: GNU General Public License, version 2.
 
-Both downloads are verified against a known checksum before use. Players may place their own commercial
-IWAD (`DOOM.WAD`, `DOOM2.WAD`, `PLUTONIA.WAD`, `TNT.WAD`) or a Freedoom IWAD in the same folder instead.
+Every file taken from these downloads is checked against a pinned SHA-256 checksum before use. Players may
+place their own commercial IWAD (`DOOM.WAD`, `DOOM2.WAD`, `PLUTONIA.WAD`, `TNT.WAD`) or a Freedoom IWAD in the
+same folder instead.
 
 ## SCOWL word lists
 

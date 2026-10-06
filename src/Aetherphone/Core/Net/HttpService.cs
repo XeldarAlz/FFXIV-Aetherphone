@@ -446,7 +446,8 @@ internal sealed class HttpService : IDisposable
     private void ApplyHeaders(HttpRequestMessage request, string? bearer, string? appScope,
         bool rawAuthorization = false)
     {
-        if (identity is not null && identity.Matches(request.RequestUri))
+        var aethernet = identity is not null && identity.Matches(request.RequestUri);
+        if (aethernet)
         {
             request.Headers.TryAddWithoutValidation(RequestIdHeader, NewRequestId());
         }
@@ -463,7 +464,7 @@ internal sealed class HttpService : IDisposable
             }
         }
 
-        if (!string.IsNullOrEmpty(appScope))
+        if (aethernet && !string.IsNullOrEmpty(appScope))
         {
             request.Headers.TryAddWithoutValidation("X-Aep-App", appScope);
         }

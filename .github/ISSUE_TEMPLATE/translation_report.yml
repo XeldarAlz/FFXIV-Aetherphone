@@ -9,7 +9,7 @@ body:
       value: |
         Thanks for helping the phone read naturally in your language.
 
-        You can also fix it yourself, in the browser, with no code or build: the [translator guide](https://github.com/XeldarAlz/FFXIV-Aetherphone/blob/master/docs/translating.md) walks through editing a single language file and opening a pull request. Filing it here instead is completely fine.
+        You can also fix it yourself, in the browser, with no code or build: the [translator guide](https://github.com/XeldarAlz/FFXIV-Aetherphone/blob/dev/docs/translating.md) walks through editing a single language file and opening a pull request. Filing it here instead is completely fine.
 
   - type: dropdown
     id: language
@@ -21,7 +21,7 @@ body:
         - Español (es)
         - Français (fr)
         - 日本語 (ja)
-        - Português (pt)
+        - Português (Brasil) (pt)
         - Русский (ru)
         - Türkçe (tr)
         - 中文 (zh)

@@ -282,7 +282,6 @@ internal sealed class FlowApp : IMiniGame
 
         pendingSubmit = true;
         fx.AddTrauma(0.3f);
-        fx.HitStop(0.06f);
         fx.Flash(Accent, 0.35f);
         fx.Shockwave(grid.Center, grid.Width * 0.6f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3.2f);
         ReadOnlySpan<Vector4> palette = new[]

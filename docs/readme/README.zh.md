@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>你的角色，终于有手机了。</strong><br>
-  社交网络、即时通讯、音乐播放器，外加四十二款应用，全部装进 FINAL FANTASY XIV。
+  社交网络、即时通讯、音乐播放器，外加数十款应用，全部装进 FINAL FANTASY XIV。
 </p>
 
 <p align="center">
@@ -58,10 +58,10 @@ Aethernet 于 2026 年 7 月 2 日正式开放。到这个季度结束时，来�
       <h3><img src="../media/readme/icons/chirper.png" width="28" align="top" alt="" /> Chirper（叽叽）</h3>
       <em>来自艾欧泽亚各地的短帖。</em>
       <ul>
-        <li>“为你推荐”与“正在关注”两条时间线</li>
+        <li>“为你推荐”与“最新”两条时间线，还能只看“正在关注”</li>
         <li>转发、引用、回复和话题标签</li>
         <li>照片、GIF 和十三种表情回应</li>
-        <li>任何一条叽叽，一点即可翻译</li>
+        <li>其他语言的叽叽，一点即可翻译</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -88,7 +88,7 @@ Aethernet 于 2026 年 7 月 2 日正式开放。到这个季度结束时，来�
         <li>与任意服务器、任意大区的玩家发消息</li>
         <li>语音留言、照片和群聊</li>
         <li>语音通话，一对一或多人都行</li>
-        <li>默认端到端加密</li>
+        <li>端到端加密</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -120,7 +120,7 @@ Aethernet 于 2026 年 7 月 2 日正式开放。到这个季度结束时，来�
         <li>就在你站的地方拖动、旋转、弯曲屏幕并调整大小</li>
         <li>派对里的每个人同步播放</li>
         <li>附近玩家一点即可加入，远方好友凭邀请码加入</li>
-        <li>整张 YouTube 播放列表一键排队，还能在屏幕上一起发表情</li>
+        <li>YouTube 播放列表一键排队，还能在屏幕上一起发表情</li>
       </ul>
     </td>
   </tr>
@@ -128,7 +128,7 @@ Aethernet 于 2026 年 7 月 2 日正式开放。到这个季度结束时，来�
 
 <table>
   <tr>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="../media/readme/music.webp" width="100%" alt="音乐的正在播放界面，然后是同步歌词" />
       <h3><img src="../media/readme/icons/music.png" width="28" align="top" alt="" /> 音乐</h3>
       <em>完整的音乐应用，还有好友相伴。</em>
@@ -139,25 +139,14 @@ Aethernet 于 2026 年 7 月 2 日正式开放。到这个季度结束时，来�
         <li>在 PC 上控制 Spotify 或浏览器</li>
       </ul>
     </td>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="../media/readme/venues.gif" width="100%" alt="场馆分类与本周活动日程" />
       <h3><img src="../media/readme/icons/venues.png" width="28" align="top" alt="" /> 场馆</h3>
       <em>今晚的热闹在哪里。</em>
       <ul>
         <li>此刻正在营业的俱乐部、酒吧和咖啡馆</li>
         <li>本周所有活动，按你的本地时间显示</li>
-        <li>一点即可传送到门口</li>
-      </ul>
-    </td>
-    <td width="33%" valign="top">
-      <img src="../media/readme/gamba.webp" width="100%" alt="Gamba 赌场大厅" />
-      <h3><img src="../media/readme/icons/casino.png" width="28" align="top" alt="" /> Gamba（以太赌场）</h3>
-      <em>累计下注 17 亿枚游戏筹码。</em>
-      <ul>
-        <li>二十一点、老虎机、宾果等等</li>
-        <li>与所有在线玩家同场的实时房间</li>
-        <li>可选的每日亏损上限</li>
-        <li>筹码不能购买，也不能兑现</li>
+        <li>装好 Lifestream 后，一点即可传送到门口</li>
       </ul>
     </td>
   </tr>
@@ -167,37 +156,35 @@ Aethernet 于 2026 年 7 月 2 日正式开放。到这个季度结束时，来�
 
 **陪你一起打游戏**<br>
 <img src="../media/readme/icons/messages.png" width="36" alt="Linkpearl" title="Linkpearl" /> <img src="../media/readme/icons/strats.png" width="36" alt="Strats" title="Strats" /> <img src="../media/readme/icons/hunts.png" width="36" alt="狩猎" title="狩猎" /> <img src="../media/readme/icons/market.png" width="36" alt="市场" title="市场" /> <img src="../media/readme/icons/housing.png" width="36" alt="房屋" title="房屋" /> <img src="../media/readme/icons/fishing.png" width="36" alt="捕鱼" title="捕鱼" /> <img src="../media/readme/icons/jobs.png" width="36" alt="职业" title="职业" /> <img src="../media/readme/icons/inventory.png" width="36" alt="物品栏" title="物品栏" /> <img src="../media/readme/icons/dailies.png" width="36" alt="日常" title="日常" /> <img src="../media/readme/icons/timers.png" width="36" alt="计时器" title="计时器" /><br>
-<sub>Linkpearl 聊天标签页 · 副本攻略 Strats · 实时狩猎 · 市场价格与提醒 · 房屋抽签 · 捕鱼时间窗 · 职业与套装 · 物品栏搜索 · 日常 · 雇员计时器</sub>
+<sub>Linkpearl 聊天标签页 · 副本攻略 Strats · 实时狩猎 · 市场价格与提醒 · 房屋抽签 · 捕鱼时间窗 · 职业与套装 · 物品栏搜索 · 日常 · 雇员计时器 · 地图 · 坐骑与宠物收藏馆</sub>
 
 **把大家聚在一起**<br>
-<img src="../media/readme/icons/muster.png" width="36" alt="Muster" title="Muster" /> <img src="../media/readme/icons/yellowpages.png" width="36" alt="人才市场" title="人才市场" /> <img src="../media/readme/icons/announcements.png" width="36" alt="公告" title="公告" /> <img src="../media/readme/icons/polls.png" width="36" alt="投票" title="投票" /> <img src="../media/readme/icons/coin.png" width="36" alt="Aether Coin" title="Aether Coin" /><br>
+<img src="../media/readme/icons/muster.png" width="36" alt="Muster" title="Muster" /> <img src="../media/readme/icons/yellowpages.png" width="36" alt="人才市场" title="人才市场" /> <img src="../media/readme/icons/announcements.png" width="36" alt="公告" title="公告" /> <img src="../media/readme/icons/polls.png" width="36" alt="投票" title="投票" /> <img src="../media/readme/icons/coin.png" width="36" alt="以太积分" title="以太积分" /><br>
 <sub>Muster 线下聚会 · 人才市场分类广告 · 公告 · 投票 · Aether Coin（以太积分）徽章与头像框</sub>
 
 **日常工具**<br>
 <img src="../media/readme/icons/camera.png" width="36" alt="相机" title="相机" /> <img src="../media/readme/icons/photos.png" width="36" alt="照片" title="照片" /> <img src="../media/readme/icons/notes.png" width="36" alt="备忘录" title="备忘录" /> <img src="../media/readme/icons/calendar.png" width="36" alt="日历" title="日历" /> <img src="../media/readme/icons/clock.png" width="36" alt="时钟" title="时钟" /> <img src="../media/readme/icons/skywatcher.png" width="36" alt="天气预报" title="天气预报" /> <img src="../media/readme/icons/wallet.png" width="36" alt="钱包" title="钱包" /> <img src="../media/readme/icons/health.png" width="36" alt="健康" title="健康" /> <img src="../media/readme/icons/shortcuts.png" width="36" alt="快捷指令" title="快捷指令" /> <img src="../media/readme/icons/news.png" width="36" alt="新闻" title="新闻" /><br>
-<sub>相机 · 带照片编辑器的照片 · 备忘录 · 日历 · 显示艾欧泽亚时间的时钟 · 天气预报· 钱包 · 健康 · 快捷指令 · Lodestone 新闻</sub>
+<sub>相机 · 带照片编辑器的照片 · 备忘录 · 日历 · 显示艾欧泽亚时间的时钟 · 天气预报 · 钱包 · 健康 · 快捷指令 · Lodestone 新闻 · 计算器 · 活跃度圆环</sub>
 
 **闲暇时光**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="游戏" title="游戏" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="国际象棋" title="国际象棋" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="单词接力" title="单词接力" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="纸牌" title="纸牌" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>收录三十三款游戏的街机厅，Doom 也在其中，另有 Uno、国际象棋和八球台球可与好友在线对战</sub>
+<sub>收录三十三款游戏的街机厅，Doom 也在其中，另有 Uno、国际象棋、八球台球和四子棋可与好友在线对战</sub>
 
 ## 用起来，就像你口袋里的手机
 
-<img src="../../src/Aetherphone/Images/screenshots/Home.png" align="right" width="260" alt="游戏中的 Aetherphone 主屏幕" />
-
 **长在你的界面里。** 想放哪就拖到哪，大小随你调，也可以缩成迷你手机，照样显示时钟、小组件、音乐和通话。
 
-**小组件与智能叠放。** 几乎每款应用都有小组件，拖动角落即可调整大小，把一个拖到另一个上面就能叠放。
+**小组件与智能叠放。** 大多数应用都有小组件，拖动角落即可调整大小，把一个拖到另一个上面就能叠放。
 
 **灵动岛**，为通话、播放、计时器、远航探索、观影派对和聚会而生。
 
-**打造成你的样子。** 壁纸、铃声、强调色和图标风格，可以保存成一套外观方案，每个角色各用各的。
+**Spotlight 与控制中心。** 在主屏幕上向下拉即可搜索应用、联系人、设置、备忘录和市场物品，轻点屏幕顶部则可调整音乐、音量、亮度和勿扰模式。
+
+**打造成你的样子。** 壁纸、强调色、图标风格、手机壳和主屏幕布局，可以保存成一套外观方案，每个角色各用各的。
 
 **说你的语言。** 九种界面语言，帖子、个人资料和消息都能一键翻译。
 
-**隐私从设计开始。** 消息、照片和语音留言均采用端到端加密。被举报的内容由人工审核团队处理。
-
-<br clear="right" />
+**隐私从设计开始。** 消息、照片和语音留言均采用端到端加密。Velvet 的开场白以明文发送。被举报的内容由人工审核团队处理。
 
 <a id="install"></a>
 
@@ -241,7 +228,7 @@ Aetherphone 在开发中使用了 AI 编程工具，并声明符合 [Dalamud AI 
 
 **你看到和听到的一切，都不是 AI 生成的。** 每一个图标、壁纸、手机壳、音效、铃声和字体，要么是原创，要么出自署名的画师之手，要么来自获得授权的素材。英文文本由人工撰写，其余八种语言是由人工审校的 AI 辅助翻译。
 
-**你的内容始终属于你。** 翻译功能只会发送你选中的文字。Aethernet 不使用 AI 进行审核，你的帖子和消息也绝不会被用于训练 AI 模型。
+**你的内容始终属于你。** 翻译功能只会发送你要求翻译的文字，以及你开启自动翻译的动态和聊天。Aethernet 不使用 AI 进行审核，你的帖子和消息也绝不会被用于训练 AI 模型。
 
 → [AI 使用说明](../ai-usage.md) · [第三方声明](../../THIRD-PARTY-NOTICES.md)
 

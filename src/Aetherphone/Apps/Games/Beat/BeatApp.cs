@@ -79,7 +79,7 @@ internal sealed class BeatApp : IMiniGame
         var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
-        var deltaSeconds = fx.ScaleDelta(context.DeltaSeconds);
+        var deltaSeconds = context.DeltaSeconds;
         if (!statsLoaded)
         {
             bestScore = context.Stats.Get(GameId).BestScore;

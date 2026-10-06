@@ -56,33 +56,43 @@ internal static class LocAudit
         var nested = typeof(L).GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic);
         for (var groupIndex = 0; groupIndex < nested.Length; groupIndex++)
         {
-            var fields = nested[groupIndex].GetFields(BindingFlags.Public | BindingFlags.NonPublic |
-                                                      BindingFlags.Static);
-            for (var fieldIndex = 0; fieldIndex < fields.Length; fieldIndex++)
+            CollectGroup(nested[groupIndex], keys);
+        }
+
+        return keys;
+    }
+
+    private static void CollectGroup(Type group, List<string> keys)
+    {
+        var fields = group.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        for (var fieldIndex = 0; fieldIndex < fields.Length; fieldIndex++)
+        {
+            var field = fields[fieldIndex];
+            if (field.FieldType == typeof(LocString))
             {
-                var field = fields[fieldIndex];
-                if (field.FieldType == typeof(LocString))
+                keys.Add(((LocString)field.GetValue(null)!).Key);
+            }
+            else if (field.FieldType == typeof(LocPlural))
+            {
+                var keyBase = ((LocPlural)field.GetValue(null)!).KeyBase;
+                keys.Add(string.Concat(keyBase, ".one"));
+                keys.Add(string.Concat(keyBase, ".other"));
+            }
+            else if (field.FieldType == typeof(LocString[]))
+            {
+                var entries = (LocString[])field.GetValue(null)!;
+                for (var entryIndex = 0; entryIndex < entries.Length; entryIndex++)
                 {
-                    keys.Add(((LocString)field.GetValue(null)!).Key);
-                }
-                else if (field.FieldType == typeof(LocPlural))
-                {
-                    var keyBase = ((LocPlural)field.GetValue(null)!).KeyBase;
-                    keys.Add(string.Concat(keyBase, ".one"));
-                    keys.Add(string.Concat(keyBase, ".other"));
-                }
-                else if (field.FieldType == typeof(LocString[]))
-                {
-                    var entries = (LocString[])field.GetValue(null)!;
-                    for (var entryIndex = 0; entryIndex < entries.Length; entryIndex++)
-                    {
-                        keys.Add(entries[entryIndex].Key);
-                    }
+                    keys.Add(entries[entryIndex].Key);
                 }
             }
         }
 
-        return keys;
+        var subgroups = group.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic);
+        for (var subgroupIndex = 0; subgroupIndex < subgroups.Length; subgroupIndex++)
+        {
+            CollectGroup(subgroups[subgroupIndex], keys);
+        }
     }
 }
 #endif

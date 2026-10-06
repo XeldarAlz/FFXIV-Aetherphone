@@ -1,6 +1,6 @@
 # Art assets
 
-Artists work from the spec pages and checkers on [aetherphone.net](https://aetherphone.net/frame-spec/), not from this repository. This page is for engineers: where each delivered file lands, what code change it needs, and which plugin constants the website copies, so a change here does not leave the artist pages stale. Read it before you add art an artist made, or before you change phone geometry, icon rendering, wallpaper legibility or the hardware keys.
+Artists work from the spec pages and checkers on [aetherphone.net](https://aetherphone.net/), not from this repository. This page is for engineers: where each delivered file lands, what code change it needs, and which plugin constants the website copies, so a change here does not leave the artist pages stale. Read it before you add art an artist made, or before you change phone geometry, icon rendering, wallpaper legibility or the hardware keys.
 
 ## Key files
 
@@ -13,8 +13,9 @@ Artists work from the spec pages and checkers on [aetherphone.net](https://aethe
 | src/Aetherphone/Core/Wallpapers/BuiltInWallpapers.cs | Default wallpaper ids and retired-id replacements |
 | tools/icon-generator/ | Generates the painted icon set from Phosphor glyphs |
 | tools/wallpaper-generator/ | Generates the bundled wallpaper pairs |
-| Aethernet `website/assets/art-kit.js` | The website's copy of the plugin constants every checker and template uses |
-| Aethernet `website/build-art-kit.mjs` | Rebuilds the site's guide templates, preview icons and wallpaper previews from art-kit.js |
+| Aethernet `website/assets/art-kit.js` | The website's shared copy of the plugin constants the checkers and templates use |
+| Aethernet `website/build-art-kit.mjs` | Rebuilds the site's guide templates, preview icons and wallpaper previews from art-kit.js and a plugin checkout |
+| Aethernet `website/*-spec/index.html`, `*-checker/index.html` | A few page-local copies in each page's script (shipped icon ids, wallpaper names, case tints, glass finish, island, key shading), with the source file in a comment |
 
 ## Where artists work
 
@@ -26,7 +27,7 @@ Artists work from the spec pages and checkers on [aetherphone.net](https://aethe
 | Wallpaper | [wallpaper-spec](https://aetherphone.net/wallpaper-spec/) | [wallpaper-checker](https://aetherphone.net/wallpaper-checker/) | Plugin release |
 | Theme | [theme-spec](https://aetherphone.net/theme-spec/) | Theme panel in the wallpaper checker | No file: a recipe players build as a Look |
 
-Each spec page offers the guide templates to download, and each checker runs the same limits the page states, calibrated on the set that ships today. Ask for a clean checker run before art reaches review.
+Each asset spec page offers guide templates to download (the theme spec has none), and each checker runs the same limits the page states, calibrated on the set that ships today. Ask for a clean checker run before art reaches review.
 
 ## Adding delivered art
 
@@ -35,6 +36,7 @@ Each spec page offers the guide templates to download, and each checker runs the
 1. Drop `<id>.png` and `<id>.fg.png` into src/Aetherphone/Icons/. The id must match `IPhoneApp.Id`.
 2. Rebuild. There is no registration: `AppIconCache` treats an id as painted when both files exist.
 3. A brand-new id also needs its app in code and an `AppAccents` entry (see [creating an app](creating-an-app.md)).
+4. For the website, add the id's accent to `appAccents` in art-kit.js and the id to `SHIPPED_IDS` in the icon checker. The icon spec previews only the ids in `previewIds` in build-art-kit.mjs.
 
 To generate an icon instead of painting one, add the id to the `map` in tools/icon-generator/generate-painted-icons.mjs and run it for that id. A hand-painted pair simply replaces the generated files.
 
@@ -43,6 +45,7 @@ To generate an icon instead of painting one, add the id to the `map` in tools/ic
 1. Drop `<Name>Light.jpg` and `<Name>Dark.jpg` into src/Aetherphone/Wallpapers/.
 2. Rebuild. Discovery is by file name, and the Settings picker lists the pair with no code change.
 3. To remove or rename a shipped pair, add its ids to `BuiltInWallpapers` with a replacement so saved settings migrate.
+4. The website previews list wallpapers by name: add the name to `wallpaperNames` in build-art-kit.mjs and to `WALLPAPERS` in the icon checker, then rebuild and redeploy the site. Until then the pair never reaches the spec and checker pages.
 
 ### Phone cases
 
@@ -62,17 +65,21 @@ Themes ship no file. Players build Looks in Settings > Appearance; a theme an ar
 
 ## Keeping the website in sync
 
-art-kit.js copies plugin constants by hand and names the source file next to each block. When you change any of these, update art-kit.js, run `node website/build-art-kit.mjs` in the Aethernet repo, and redeploy the site (Aethernet `docs/WEBSITE.md`):
+art-kit.js copies plugin constants by hand and names the source file next to each block; the page-local copies in the spec and checker pages do the same. When you change any of these, update art-kit.js or the page-local block that names the file, run `AETHERPHONE_ROOT=<plugin checkout> node website/build-art-kit.mjs` in the Aethernet repo (the script reads Icons/ and Wallpapers/ from that checkout, and its default path is a Windows one), and redeploy the site (Aethernet `docs/WEBSITE.md`). The pages read art-kit.js at runtime, so a change that touches no template or preview needs only the redeploy:
 
 | Plugin source | What the website uses it for |
 |---|---|
 | Core/Theme/PhoneSizeCatalog.cs, ChassisMetrics.cs, PhoneTheme.cs | Phone sizes, screen and bezel, case geometry, the fixed palette |
 | Core/Shell/Home/HomeMetrics.cs, HomeChrome.cs, HomeGridRenderer.cs, Core/Home/HomeLayoutService.cs | Grid, icon size, dock, Search pill, default dock apps |
 | Windows/Components/Primitives/Squircle.cs, Metrics.cs | The corner exponent and the icon corner box |
-| Core/Media/IconBake.cs, TextureSizes.cs, Windows/Components/Chrome/AppIconTile.cs | The four icon appearances and the icon size ladder |
-| Core/Apps/AppAccents.cs, Core/Theme/AccentRing.cs, BrandAccents.cs, ThemeCatalog.cs | App hues and theme accents |
-| Core/Wallpapers/WallpaperLibrary.cs, Windows/Components/Chrome/WallpaperLegibility.cs | Wallpaper ladder, glass blur, brightness score, scrim |
-| Windows/Components/Chrome/DeviceChrome.cs, HardwareButton.cs | Hardware key placement and footprint |
+| Core/Media/IconBake.cs, TextureSizes.cs, Windows/Components/Chrome/AppIconTile.cs, AppIconCache.cs | The four icon appearances, the icon size ladder, the painted-pair rule |
+| tools/icon-generator/generate-painted-icons.mjs | Icon master size and keylines |
+| Core/Apps/AppAccents.cs, Core/Theme/AccentRing.cs, BrandAccents.cs, ThemeCatalog.cs | App hues, theme accents, the default and sample case tints |
+| Core/Wallpapers/WallpaperLibrary.cs, Windows/Components/Chrome/WallpaperLegibility.cs | Wallpaper ladder, glass blur, brightness score, legibility curve |
+| tools/wallpaper-generator/generate-wallpapers.py | Wallpaper size |
+| Windows/Components/Chrome/CaseArt.cs, Core/Theme/CaseFinish.cs, Core/Shell/StatusBar.cs | Case canvas and nine-slice margins, glass finish, the resting island |
+| Windows/Components/Chrome/DeviceChrome.cs | Hardware key placement, home scrim alphas |
+| Windows/Components/Chrome/HardwareButton.cs | Key footprint and shading |
 | Windows/Components/Primitives/Material.cs | Liquid glass tint |
 
 ## Open art decisions
@@ -84,7 +91,8 @@ art-kit.js copies plugin constants by hand and names the source file next to eac
 
 - **An icon needs both files.** With either `<id>.png` or `<id>.fg.png` missing, the tile falls back to the accent tile and stencil path, which tints the whole image and makes a painted file look broken.
 - **Shipped art predates some rules.** Most bundled cases have rounder corners than the phone's curve and some paint inside the cutout; the bundled Light wallpapers are pale. The checkers warn on these rather than fail, so a new file that matches a shipped one can still be flagged.
-- **Case templates are generated by hand-kept copies.** `Cases/_template/generate-template.ps1` and art-kit.js both hardcode the chassis and key fractions. Nothing enforces agreement with `ChassisMetrics.cs` or `DeviceChrome.cs`; update all three together.
+- **Case templates are generated by hand-kept copies.** `Cases/_template/generate-template.ps1` and art-kit.js both hardcode the chassis fractions, the key placements and the key shares. Nothing enforces agreement with `ChassisMetrics.cs`, `DeviceChrome.cs` or `HardwareButton.cs`; update them together.
+- **The website lists ids and names by hand.** art-kit.js `appAccents`, the icon checker's `SHIPPED_IDS` and `WALLPAPERS`, and build-art-kit.mjs `previewIds` and `wallpaperNames` are copies. An app id missing from `appAccents` previews on the Slate fallback hue.
 - **Ids are permanent.** Icon ids, wallpaper file stems and `CaseId` are saved in every user's config. Renaming one after release resets or breaks everyone who picked it.
 
 ## Related docs

@@ -50,7 +50,7 @@ jobs:
         with:
           ref: ${{ steps.tag.outputs.target }}
           fetch-depth: 0
-          # PAT so the repo.json bump below can land on the protected default
+          # PAT so the repo.json bump below can land on the protected release
           # branch: master requires the Guards and Build (Windows) checks, which
           # a freshly pushed commit cannot have yet, and github-actions[bot] gets
           # no bypass. The PAT owner is an admin and enforce_admins is off.

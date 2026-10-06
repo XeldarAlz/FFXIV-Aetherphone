@@ -65,7 +65,8 @@ internal sealed class CrystalDropApp : IMiniGame
         var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
-        var deltaSeconds = fx.ScaleDelta(context.DeltaSeconds);
+        var deltaSeconds = context.DeltaSeconds;
+        var simDelta = fx.ScaleDelta(deltaSeconds);
         if (!statsLoaded)
         {
             bestScore = context.Stats.Get(GameId).BestScore;
@@ -86,7 +87,7 @@ internal sealed class CrystalDropApp : IMiniGame
         var area = new Rect(new Vector2(body.Min.X + 6f * scale, body.Min.Y + 62f * scale),
             new Vector2(body.Max.X - 6f * scale, body.Max.Y - 4f * scale));
         var jar = CrystalDropRenderer.JarOf(area, scale);
-        board.Step(deltaSeconds);
+        board.Step(simDelta);
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
         ConsumeMerges(jar, scale);

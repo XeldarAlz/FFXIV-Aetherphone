@@ -2,8 +2,8 @@
 
 Builds `src/Aetherphone/Fonts/TablerIcons.ttf` and its
 `src/Aetherphone/Windows/Components/Primitives/PhoneIcons.cs` constants from
-[Tabler Icons](https://tabler.io/icons) (MIT), the same family the app icons in
-`tools/icon-generator/` come from.
+[Tabler Icons](https://tabler.io/icons) (MIT). The painted app icons in
+`tools/icon-generator/` use Phosphor; only its legacy stencil script uses Tabler.
 
 ## Run
 
@@ -21,7 +21,9 @@ into one. Both outputs are generated: edit the lists in the script, never
 
 ## Why a subset
 
-The two source fonts are 2.7 MB and 297 KB. The shipped subset of 100 glyphs is about 37 KB.
+The two source fonts are 2.7 MB and 297 KB. The shipped subset is under 50 KB; each run prints
+the exact size and glyph count. [Assets and media](../../docs/assets-and-media.md#icon-font)
+covers how the plugin loads, draws and tests it.
 
 ## Why the codepoints move
 
@@ -32,7 +34,8 @@ codepoints collide with FontAwesome, most importantly the filled set at
 U+F669..U+FECF, which sits inside FontAwesome's classic U+F000..U+F8FF block.
 Every glyph is therefore remapped to `BASE` onward (U+E600), a gap above
 FontAwesome 6's U+E0xx..U+E5xx additions and below its classic block. If a
-future FontAwesome release reaches U+E600, move `BASE` and regenerate.
+future FontAwesome release reaches U+E600, move `BASE`, regenerate, and move
+`IconPlan.FirstTablerCodepoint` with it.
 
 ## Drawing
 

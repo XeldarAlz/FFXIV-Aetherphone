@@ -73,7 +73,8 @@ internal sealed class StackApp : IMiniGame
         var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
-        var deltaSeconds = fx.ScaleDelta(context.DeltaSeconds);
+        var deltaSeconds = context.DeltaSeconds;
+        var simDelta = fx.ScaleDelta(deltaSeconds);
         if (!statsLoaded)
         {
             bestScore = context.Stats.Get(GameId).BestScore;
@@ -92,7 +93,7 @@ internal sealed class StackApp : IMiniGame
         }
 
         var area = new Rect(new Vector2(body.Min.X, body.Min.Y + 58f * scale), body.Max);
-        board.Step(deltaSeconds);
+        board.Step(simDelta);
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
         camera += (board.Level - camera) * MathF.Min(1f, deltaSeconds * CameraFollowSpeed);

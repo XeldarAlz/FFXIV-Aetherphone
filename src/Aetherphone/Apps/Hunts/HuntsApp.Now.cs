@@ -381,6 +381,7 @@ internal sealed partial class HuntsApp
             row.PressId = "hunts.live." + key;
             row.GoId = "hunts.live.go." + key;
         }
+
         row.ZoneId = ResolveMobZoneId(mob, window.MobId, window.WorldId, window.ZoneInstance);
         row.TerritoryId = zoneCatalog.ResolveTerritoryId(row.ZoneId);
         var place = ResolvePlace(window.WorldId, window.ZoneInstance, mob);

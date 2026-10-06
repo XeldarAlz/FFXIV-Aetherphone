@@ -133,6 +133,7 @@ public sealed class Plugin : IDalamudPlugin
             services.SongResolver.Attach(videoSuite.Screen.Engine.Dependencies);
             Framework.Update += OnVideoFrameworkUpdate;
             Framework.Update += OnDeviceLinkTick;
+            Framework.Update += OnCallsTick;
             videoDebugWindow = new VideoDebugWindow(videoSuite.Player, videoSuite.Screen);
             screenWindow = new AetherStreamScreenWindow(videoSuite);
             videoWorldOverlay = new VideoWorldOverlay(videoSuite, Cfg);
@@ -256,6 +257,7 @@ public sealed class Plugin : IDalamudPlugin
         Framework.Update -= OnAutoOpenTick;
         Framework.Update -= OnVideoFrameworkUpdate;
         Framework.Update -= OnDeviceLinkTick;
+        Framework.Update -= OnCallsTick;
         Framework.Update -= OnLinkpearlPresenceTick;
         ContextMenu.OnMenuOpened -= OnMenuOpened;
         CommandManager.RemoveHandler(AepConstants.PrimaryCommand);
@@ -349,6 +351,9 @@ public sealed class Plugin : IDalamudPlugin
     private void OnLinkpearlPresenceTick(IFramework framework) =>
         linkpearlPresence.Tick((float)framework.UpdateDelta.TotalSeconds);
 
+    private void OnCallsTick(IFramework framework) =>
+        services.Calls.Advance((float)framework.UpdateDelta.TotalSeconds);
+
     private void OnDeviceLinkTick(IFramework framework)
     {
         services.DeviceLinks.Tick((float)framework.UpdateDelta.TotalSeconds);
@@ -400,6 +405,8 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.Login -= OnLogin;
         Framework.Update -= OnAutoOpenTick;
         Framework.Update -= OnVideoFrameworkUpdate;
+        Framework.Update -= OnDeviceLinkTick;
+        Framework.Update -= OnCallsTick;
         Framework.Update -= OnLinkpearlPresenceTick;
         services.Calls.IncomingCallPresented -= BringPhoneForward;
         services.AlarmRinger.Presented -= BringPhoneForward;

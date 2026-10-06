@@ -1,6 +1,6 @@
 # Aetherphone Trademark and Naming Policy
 
-**Last updated:** 28 August 2026
+**Last updated:** 2 October 2026
 
 The Aetherphone client is free software under the AGPL-3.0-or-later ([LICENSE.md](LICENSE.md)), and you are free to fork it, change it, and distribute your version. That licence covers the code. It does not cover the name.
 
