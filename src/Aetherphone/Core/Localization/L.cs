@@ -8078,7 +8078,6 @@ internal static class L
         public static readonly LocString CategoryActions = new("games.categoryActions", "Actions");
         public static readonly LocString CategoryEmotes = new("games.categoryEmotes", "Emotes");
         public static readonly LocString Skyfall = new("games.skyfall", "Skyfall");
-        public static readonly LocString Wave = new("games.wave", "Wave");
         public static readonly LocString Ammo = new("games.ammo", "Ammo");
         public static readonly LocString Invaders = new("games.invaders", "Invaders");
         public static readonly LocString CapMan = new("games.capman", "CapMan");
@@ -8409,6 +8408,12 @@ internal static class L
     internal static class Invaders
     {
         public static readonly LocString Hook = new("games.invaders.hook", "Slide left and right and shoot down the alien waves before they land.");
+        public static readonly LocString WaveNumber = new("games.invaders.waveNumber", "Wave {0}");
+        public static readonly LocString WavesCleared = new("games.invaders.wavesCleared", "Waves cleared");
+        public static readonly LocString Saucers = new("games.invaders.saucers", "Saucers");
+        public static readonly LocString Accuracy = new("games.invaders.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.invaders.percent", "{0}%");
+        public static readonly LocString Bonus = new("games.invaders.bonus", "+{0}");
     }
 
     internal static class CapMan
