@@ -4491,6 +4491,7 @@
   "games.ready": "レディ！",
   "games.hop": "ホップ",
   "games.hop.hook": "道路と川を1レーンずつ跳んで渡ろう。ひかれたり流されたりしないように。",
+  "games.hop.levelNumber": "レベル {0}",
   "games.dens": "巣",
   "games.squadron": "スコードロン",
   "games.squadron.hook": "敵編隊をすり抜けて、ステージごとに撃ち落とそう。",

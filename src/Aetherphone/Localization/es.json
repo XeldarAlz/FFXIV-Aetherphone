@@ -4491,6 +4491,7 @@
   "games.ready": "¡Listo!",
   "games.hop": "Salto",
   "games.hop.hook": "Salta por la carretera y el río, carril a carril, sin que te atropellen ni te arrastre la corriente.",
+  "games.hop.levelNumber": "Nivel {0}",
   "games.dens": "Madrigueras",
   "games.squadron": "Escuadrón",
   "games.squadron.hook": "Esquiva las formaciones enemigas y derríbalas fase tras fase.",

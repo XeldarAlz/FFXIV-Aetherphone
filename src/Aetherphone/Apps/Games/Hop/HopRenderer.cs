@@ -12,6 +12,7 @@ internal sealed class HopRenderer
     public static readonly Vector4 VehicleColor = new(1f, 0.62f, 0.30f, 1f);
     public static readonly Vector4 RiderColor = new(1f, 0.85f, 0.30f, 1f);
     public static readonly Vector4 PadColor = new(0.62f, 0.45f, 0.28f, 1f);
+    public static readonly Vector4 WaterColor = new(0.18f, 0.42f, 0.82f, 1f);
     private static readonly Vector4 Water = new(0.18f, 0.42f, 0.82f, 0.55f);
     private static readonly Vector4 WaterDash = new(0.7f, 0.85f, 1f, 0.25f);
     private static readonly Vector4 Road = new(0.10f, 0.10f, 0.14f, 0.85f);
@@ -21,22 +22,22 @@ internal sealed class HopRenderer
     private static readonly Vector4 DenMouth = new(0.05f, 0.05f, 0.08f, 0.8f);
     private const int WaterDashesPerLane = 4;
 
-    public static Rect BoardRect(Rect area, out float cell)
+    public static Rect BoardRect(in Camera2D camera, out float cell)
     {
-        cell = MathF.Max(3f, MathF.Min(area.Width / HopBoard.Columns, area.Height / HopBoard.Rows));
-        var size = new Vector2(HopBoard.Columns * cell, HopBoard.Rows * cell);
-        var min = area.Center - size * 0.5f;
-        return new Rect(min, min + size);
+        cell = camera.Px(1f);
+        return new Rect(camera.ToScreen(Vector2.Zero), camera.ToScreen(new Vector2(HopBoard.Columns, HopBoard.Rows)));
     }
 
-    public static float RowTop(Rect board, float cell, int row) => board.Min.Y + (HopBoard.Rows - 1 - row) * cell;
+    public static Vector2 CellCenterWorld(float x, int row) => new(x + 0.5f, HopBoard.Rows - 1 - row + 0.5f);
 
-    public static Vector2 CellCenter(Rect board, float cell, float x, int row) =>
+    private static float RowTop(Rect board, float cell, int row) => board.Min.Y + (HopBoard.Rows - 1 - row) * cell;
+
+    private static Vector2 CellCenter(Rect board, float cell, float x, int row) =>
         new(board.Min.X + (x + 0.5f) * cell, RowTop(board, cell, row) + cell * 0.5f);
 
-    public void Draw(HopBoard board, Rect boardRect, float cell, Vector4 accent, float scale)
+    public void Draw(ImDrawListPtr drawList, HopBoard board, in Camera2D camera, Vector4 accent, float scale)
     {
-        var drawList = ImGui.GetWindowDrawList();
+        var boardRect = BoardRect(in camera, out var cell);
         drawList.PushClipRect(boardRect.Min, boardRect.Max, true);
         var time = (float)ImGui.GetTime();
         DrawTerrain(drawList, board, boardRect, cell, time);
@@ -53,16 +54,16 @@ internal sealed class HopRenderer
         var grassTop = RowTop(boardRect, cell, HopBoard.Rows - 1);
         drawList.AddRectFilled(new Vector2(boardRect.Min.X, grassTop), new Vector2(boardRect.Max.X, grassTop + cell * 2f), grass);
         var tuft = ImGui.GetColorU32(new Vector4(0.5f, 0.85f, 0.5f, 0.45f));
-        for (var x = 0; x < HopBoard.Columns; x++)
+        for (var column = 0; column < HopBoard.Columns; column++)
         {
             for (var band = 0; band < 2; band++)
             {
-                if ((x + band) % 3 != 1)
+                if ((column + band) % 3 != 1)
                 {
                     continue;
                 }
 
-                var min = new Vector2(boardRect.Min.X + x * cell + cell * 0.4f, grassTop + band * cell + cell * 0.55f);
+                var min = new Vector2(boardRect.Min.X + column * cell + cell * 0.4f, grassTop + band * cell + cell * 0.55f);
                 drawList.AddRectFilled(min, min + new Vector2(cell * 0.2f, cell * 0.35f), tuft, cell * 0.08f);
             }
         }
@@ -120,12 +121,12 @@ internal sealed class HopRenderer
         var aligned = board.AlignedBay;
         var pulse = 0.65f + MathF.Abs(MathF.Sin(time * 7f)) * 0.35f;
         var bay = 0;
-        for (var x = 0; x < HopBoard.Columns; x++)
+        for (var column = 0; column < HopBoard.Columns; column++)
         {
-            var min = new Vector2(boardRect.Min.X + x * cell, top);
+            var min = new Vector2(boardRect.Min.X + column * cell, top);
             var max = min + new Vector2(cell, cell);
-            var isDen = bay < HopBoard.BayCount && HopBoard.BayColumns[bay] == x;
-            var bumped = board.BumpFlash > 0f && board.BumpColumn == x;
+            var isDen = bay < HopBoard.BayCount && HopBoard.BayColumns[bay] == column;
+            var bumped = board.BumpFlash > 0f && board.BumpColumn == column;
             if (!isDen)
             {
                 drawList.AddRectFilled(min + new Vector2(1f, 1f), max - new Vector2(1f, 1f), wall, cell * 0.15f);
@@ -286,7 +287,7 @@ internal sealed class HopRenderer
         DrawHopperSprite(drawList, center, cell, board.HopFlash > 0f, alpha);
     }
 
-    public static void DrawHopperSprite(ImDrawListPtr drawList, Vector2 center, float size, bool hopFrame, float alpha)
+    private static void DrawHopperSprite(ImDrawListPtr drawList, Vector2 center, float size, bool hopFrame, float alpha)
     {
         var body = ImGui.GetColorU32(HopperColor with { W = alpha });
         var mask = ImGui.GetColorU32(HopperMask with { W = alpha });

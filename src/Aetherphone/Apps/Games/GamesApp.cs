@@ -179,7 +179,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new SkyfallApp(),
             new InvadersApp(),
             new CapManApp(),
-            new LegacyGameAdapter(new HopApp(), L.Games.Hop, L.Hop.Hook),
+            new HopApp(),
             new SquadronApp(),
             new DoomApp(),
             new LegacyGameAdapter(new WordRunApp(gameData), L.Games.WordRun, L.WordRun.Hook),

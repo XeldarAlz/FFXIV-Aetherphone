@@ -8442,6 +8442,7 @@ internal static class L
     internal static class Hop
     {
         public static readonly LocString Hook = new("games.hop.hook", "Hop across the road and the river, one lane at a time, without getting hit or swept away.");
+        public static readonly LocString LevelNumber = new("games.hop.levelNumber", "Level {0}");
     }
 
     internal static class Squadron

@@ -4491,6 +4491,7 @@
   "games.ready": "Prêt !",
   "games.hop": "Saut",
   "games.hop.hook": "Sautez à travers la route et la rivière, une voie à la fois, sans vous faire écraser ni emporter.",
+  "games.hop.levelNumber": "Niveau {0}",
   "games.dens": "Terriers",
   "games.squadron": "Escadron",
   "games.squadron.hook": "Faufilez-vous entre les formations ennemies et abattez-les niveau après niveau.",
