@@ -1,153 +1,304 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Sweeper;
 
-internal sealed class SweeperApp : ILegacyMiniGame
+internal sealed class SweeperApp : IMiniGame
 {
     private const string GameId = "minesweeper";
+    private const string SurfaceId = "sweeper.board";
+    private const float HoldSeconds = 0.35f;
     private const float FlagPopSpeed = 7f;
+    private const float WaveBaseSeconds = 0.10f;
+    private const float WaveRingSeconds = 0.045f;
+    private const int PunchCells = 10;
+    private const ulong IdleSeed = 11;
+    private static readonly LocString[] Modes = { L.Games.Easy, L.Games.Medium, L.Games.Hard };
+    private static readonly string[] ModeStatIds = { "minesweeper.easy", "minesweeper.medium", "minesweeper.hard" };
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Sweeper, GameGenre.Brain, L.Sweeper.Hook,
+        Backdrop.Paper, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds);
+    private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
+    private static readonly Vector4 Ember = new(0.95f, 0.40f, 0.32f, 1f);
+    private static readonly Vector4 Flame = new(1f, 0.70f, 0.40f, 1f);
+    private static readonly Vector4 Spark = new(1f, 0.85f, 0.50f, 1f);
+    private static readonly Vector4 Glow = new(1f, 0.95f, 0.70f, 1f);
     private readonly SweeperBoard board = new();
-    private readonly SweeperRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private readonly float[] flagAnim = new float[SweeperBoard.MaxCells];
-    private readonly string[] difficultyLabels = new string[3];
-    private Difficulty difficulty = Difficulty.Easy;
-    private SweeperState previousState = SweeperState.Playing;
+    private readonly float[] flagPop = new float[SweeperBoard.MaxCells];
+    private float entrance;
     private float elapsed;
-    private float resultAppear;
-    private bool pendingResultSubmit;
-    private bool newBestTime;
-    private int loadedBestTime;
-    private string resultTimeText = "0:00";
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Sweeper);
-    public GameGenre Genre => GameGenre.Brain;
-    public void Open()
+    private float waveProgress = 1f;
+    private float waveSpeed = 1f;
+    private float holdSeconds;
+    private int pressIndex = -1;
+    private bool pressFlagged;
+    private bool finished;
+    private bool idleReady;
+
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
     {
-        StartNewGame(difficulty);
+        board.Reset(ModeDifficulty(start.Mode), start.Random);
+        particles.Clear();
+        fx.Clear();
+        Array.Clear(flagPop, 0, SweeperBoard.MaxCells);
+        entrance = 0f;
+        elapsed = 0f;
+        waveProgress = 1f;
+        holdSeconds = 0f;
+        pressIndex = -1;
+        pressFlagged = false;
+        finished = false;
+        idleReady = false;
     }
 
     public void Close()
     {
+        particles.Clear();
+        fx.Clear();
     }
 
     public void Dispose()
     {
     }
 
-    private void StartNewGame(Difficulty target)
+    public void DrawIdle(in GameContext context)
     {
-        difficulty = target;
-        board.Reset(target);
-        particles.Clear();
-        fx.Clear();
-        Array.Clear(flagAnim, 0, SweeperBoard.MaxCells);
-        previousState = SweeperState.Playing;
-        elapsed = 0f;
-        resultAppear = 0f;
-        pendingResultSubmit = false;
-        newBestTime = false;
-        loadedBestTime = -1;
+        var difficulty = ModeDifficulty(context.Session.Mode);
+        if (!idleReady || board.Difficulty != difficulty)
+        {
+            board.Reset(difficulty, GameRandom.FromSeed(IdleSeed));
+            Array.Clear(flagPop, 0, SweeperBoard.MaxCells);
+            idleReady = true;
+        }
+
+        var grid = GameGrid.Centered(context.Safe, board.Columns, board.Rows, SweeperRenderer.GapFraction);
+        var view = new SweeperView(1f, 1f, -1, -1, 0f, flagPop);
+        SweeperRenderer.DrawBoard(ImGui.GetWindowDrawList(), board, grid, view, UiScale.Current, Accent,
+            context.Backdrop.Ink);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (loadedBestTime < 0)
-        {
-            loadedBestTime = context.Stats.Get(StatId(difficulty)).BestTimeSeconds;
-        }
-
-        if (board.State == SweeperState.Playing)
-        {
-            elapsed += deltaSeconds;
-        }
-
-        UpdateFlagAnim(deltaSeconds);
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        if (pendingResultSubmit)
-        {
-            newBestTime = context.Stats.SubmitTime(StatId(difficulty), (int)elapsed);
-            pendingResultSubmit = false;
-        }
-
         var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
-        DrawDifficultyRow(body, theme, scale);
-        DrawStatsRow(body, theme, scale);
-        var shake = fx.ShakeOffset(scale);
-        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 96f * scale) + shake,
-            new Vector2(body.Max.X, body.Max.Y - 8f * scale) + shake);
-        var grid = GameGrid.Centered(gridArea, board.Columns, board.Rows, 0.10f);
-        var hoveredIndex = ResolveHover(grid);
-        if (board.State == SweeperState.Playing)
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds);
+        waveProgress = GameJuice.Advance(waveProgress, context.RawDeltaSeconds, waveSpeed);
+        UpdateFlagPop(context.RawDeltaSeconds);
+        if (!finished && board.Started)
         {
-            HandleInput(hoveredIndex, grid);
+            elapsed += context.DeltaSeconds;
         }
 
-        DetectStateChange(grid);
-        renderer.Draw(board, grid, hoveredIndex, flagAnim, theme, scale);
-        fx.DrawFlash(drawList, body, 0f);
+        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var grid = GameGrid.Centered(area, board.Columns, board.Rows, SweeperRenderer.GapFraction);
+        var playing = !finished && context.Session.State == StageFlow.Playing;
+        var hovered = playing ? HoveredCell(grid) : -1;
+        if (!finished)
+        {
+            Step(grid, hovered, scale, context);
+        }
+
+        var holdFraction = pressIndex >= 0 && !pressFlagged ? holdSeconds / HoldSeconds : 0f;
+        var view = new SweeperView(entrance, waveProgress, hovered, pressIndex, holdFraction, flagPop);
+        SweeperRenderer.DrawBoard(drawList, board, grid, view, scale, Accent, context.Backdrop.Ink);
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
-        if (board.State != SweeperState.Playing)
+        fx.DrawText();
+        DrawHud(drawList, scale, context);
+        context.Session.Report((int)elapsed);
+    }
+
+    private void Step(in GameGrid grid, int hovered, float scale, in GameContext context)
+    {
+        HandleInput(grid, hovered, scale, context);
+        switch (board.State)
         {
-            DrawResult(context, theme, body);
+            case SweeperState.Won:
+                OnWin(grid, scale, context);
+                return;
+            case SweeperState.Lost:
+                OnLoss(grid, scale, context);
+                return;
+            default:
+                return;
         }
     }
 
-    private void DrawDifficultyRow(Rect body, PhoneTheme theme, float scale)
+    private void HandleInput(in GameGrid grid, int hovered, float scale, in GameContext context)
     {
-        difficultyLabels[0] = Loc.T(L.Games.Easy);
-        difficultyLabels[1] = Loc.T(L.Games.Medium);
-        difficultyLabels[2] = Loc.T(L.Games.Hard);
-        var rowY = body.Min.Y + 22f * scale;
-        var segmentRow = new Rect(new Vector2(body.Min.X + 4f * scale, rowY - 13f * scale),
-            new Vector2(body.Max.X - 44f * scale, rowY + 13f * scale));
-        var selected = SegmentStrip.Draw("sweeper.difficulty", segmentRow, difficultyLabels, (int)difficulty, theme);
-        if (selected != (int)difficulty)
+        if (context.Session.State != StageFlow.Playing)
         {
-            StartNewGame((Difficulty)selected);
+            pressIndex = -1;
+            holdSeconds = 0f;
             return;
         }
 
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 15f * scale, theme))
+        PressSurface.Claim(SurfaceId, grid.Bounds, out var activated);
+        if (hovered >= 0)
         {
-            StartNewGame(difficulty);
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Right) && !board.IsRevealed(hovered))
+            {
+                ToggleFlag(hovered, grid, scale);
+            }
+        }
+
+        if (activated && hovered >= 0)
+        {
+            pressIndex = hovered;
+            holdSeconds = 0f;
+            pressFlagged = false;
+        }
+
+        if (pressIndex < 0)
+        {
+            return;
+        }
+
+        if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
+        {
+            var target = pressIndex;
+            pressIndex = -1;
+            holdSeconds = 0f;
+            if (!pressFlagged && hovered == target)
+            {
+                Act(target, grid, scale, context);
+            }
+
+            return;
+        }
+
+        if (hovered != pressIndex)
+        {
+            pressIndex = -1;
+            holdSeconds = 0f;
+            return;
+        }
+
+        if (pressFlagged || board.IsRevealed(pressIndex))
+        {
+            return;
+        }
+
+        holdSeconds += context.DeltaSeconds;
+        if (holdSeconds < HoldSeconds)
+        {
+            return;
+        }
+
+        pressFlagged = true;
+        ToggleFlag(pressIndex, grid, scale);
+    }
+
+    private void Act(int index, in GameGrid grid, float scale, in GameContext context)
+    {
+        var revealed = board.IsRevealed(index) ? board.Chord(index) : board.Reveal(index);
+        if (!revealed)
+        {
+            return;
+        }
+
+        waveProgress = 0f;
+        waveSpeed = 1f / (WaveBaseSeconds + WaveRingSeconds * board.WaveMaxDistance);
+        if (board.State == SweeperState.Lost)
+        {
+            return;
+        }
+
+        UiFeedback.Play(UiSound.GamePiece);
+        var center = grid.CellCenter(index % board.Columns, index / board.Columns);
+        var reach = grid.Pitch * (1.1f + 0.25f * board.WaveMaxDistance);
+        fx.Shockwave(center, reach, GamePalette.Lighten(Accent, 0.3f) with { W = 0.6f }, 0.4f, 2.2f);
+        if (board.WaveCellCount >= PunchCells)
+        {
+            context.Fx.Punch(0.03f);
+            fx.AddTrauma(0.05f);
         }
     }
 
-    private void DrawStatsRow(Rect body, PhoneTheme theme, float scale)
+    private void ToggleFlag(int index, in GameGrid grid, float scale)
     {
-        var rowY = body.Min.Y + 64f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Mines),
-            GameNumber.Label(board.MinesRemaining), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Time),
-            GameNumber.Label((int)elapsed), Accent, theme);
+        board.ToggleFlag(index);
+        if (!board.IsFlagged(index))
+        {
+            UiFeedback.Play(UiSound.Tap);
+            return;
+        }
+
+        UiFeedback.Play(UiSound.GameTick);
+        flagPop[index] = 1f;
+        particles.Sparkle(grid.CellCenter(index % board.Columns, index / board.Columns), 4, Spark, 90f * scale, 1.8f,
+            0.5f);
     }
 
-    private int ResolveHover(GameGrid grid)
+    private void OnWin(in GameGrid grid, float scale, in GameContext context)
+    {
+        finished = true;
+        UiFeedback.Play(UiSound.GameClear);
+        context.Fx.Sweep();
+        particles.Sparkle(grid.Center, 18, Glow, 200f * scale, 2.6f, 0.9f);
+        fx.Shockwave(grid.Center, grid.Width * 0.55f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3f);
+        var seconds = Math.Max(1, (int)elapsed);
+        context.Session.Finish(new GameOutcome(seconds, ScoreKind.Time, context.Session.StatId)
+            .WithStat(L.Games.Mines, GameNumber.Label(board.MineCount))
+            .WithStat(L.Sweeper.Flags, GameNumber.Label(board.FlagCount)));
+    }
+
+    private void OnLoss(in GameGrid grid, float scale, in GameContext context)
+    {
+        finished = true;
+        UiFeedback.Play(UiSound.GameExplosion);
+        fx.AddTrauma(0.95f);
+        context.Fx.Flash(Danger, 0.35f);
+        context.Fx.Vignette(Danger, 0.45f, 0.8f);
+        if (board.ClickedBomb >= 0)
+        {
+            var center = grid.CellCenter(board.ClickedBomb % board.Columns, board.ClickedBomb / board.Columns);
+            particles.Burst(center, 28, Ember, 320f * scale, 4.5f, 0.8f, 420f, shape: ParticleShape.Shard);
+            particles.Streaks(center, 14, Flame, 460f * scale, 2.8f, 0.5f);
+            fx.Shockwave(center, 130f * scale, Flame, 0.6f, 3.6f);
+        }
+
+        context.Session.Finish(new GameOutcome(0, ScoreKind.Time, context.Session.StatId, won: false)
+            .WithStat(L.Games.Time, TimeText.MinutesSeconds((int)elapsed))
+            .WithStat(L.Games.Mines, GameNumber.Label(board.MineCount))
+            .WithStat(L.Sweeper.Flags, GameNumber.Label(board.FlagCount)));
+    }
+
+    private void DrawHud(ImDrawListPtr drawList, float scale, in GameContext context)
+    {
+        context.Hud.Timer(MathF.Floor(elapsed), 0f, false);
+        var minesLabel = GameNumber.Label(board.MinesRemaining);
+        var best = context.Session.Best;
+        var bestLabel = best > 0 ? TimeText.MinutesSeconds(best) : string.Empty;
+        context.Hud.Custom(StatCapsule.Width(minesLabel, bestLabel, scale));
+        var flagInk = board.MinesRemaining < 0 ? context.Theme.Danger : Accent;
+        StatCapsule.Draw(drawList, context.Hud.CustomRect, FontAwesomeIcon.Flag, minesLabel, flagInk, bestLabel,
+            Accent, scale);
+    }
+
+    private int HoveredCell(in GameGrid grid)
     {
         if (!UiInteract.Hover(grid.Bounds.Min, grid.Bounds.Max))
         {
             return -1;
         }
 
-        var mouse = ImGui.GetMousePos();
-        var local = mouse - grid.Origin;
+        var local = ImGui.GetMousePos() - grid.Origin;
         var column = (int)(local.X / grid.Pitch);
         var row = (int)(local.Y / grid.Pitch);
         if (column < 0 || column >= board.Columns || row < 0 || row >= board.Rows)
@@ -155,142 +306,26 @@ internal sealed class SweeperApp : ILegacyMiniGame
             return -1;
         }
 
-        var index = row * board.Columns + column;
         var cell = grid.Cell(column, row);
-        return UiInteract.Hover(cell.Min, cell.Max) ? index : -1;
+        return UiInteract.Hover(cell.Min, cell.Max) ? row * board.Columns + column : -1;
     }
 
-    private void HandleInput(int hoveredIndex, GameGrid grid)
-    {
-        if (hoveredIndex < 0)
-        {
-            return;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        var cellCenter = grid.CellCenter(hoveredIndex % board.Columns, hoveredIndex / board.Columns);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-        {
-            var wasRevealed = board.IsRevealed(hoveredIndex);
-            if (wasRevealed)
-            {
-                board.Chord(hoveredIndex);
-            }
-            else
-            {
-                board.Reveal(hoveredIndex);
-            }
-
-            if (!wasRevealed && board.IsRevealed(hoveredIndex) && board.State == SweeperState.Playing)
-            {
-                UiFeedback.Play(UiSound.GamePiece);
-                fx.Shockwave(cellCenter, grid.Pitch * 1.1f, GamePalette.Lighten(Accent, 0.3f) with { W = 0.6f }, 0.4f,
-                    2.2f);
-            }
-        }
-
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Right) && !board.IsRevealed(hoveredIndex))
-        {
-            var wasFlagged = board.IsFlagged(hoveredIndex);
-            board.ToggleFlag(hoveredIndex);
-            if (!wasFlagged && board.IsFlagged(hoveredIndex))
-            {
-                UiFeedback.Play(UiSound.GameTick);
-                flagAnim[hoveredIndex] = 1f;
-                particles.Sparkle(cellCenter, 4, new Vector4(1f, 0.85f, 0.5f, 1f), 90f * UiScale.Current, 1.8f,
-                    0.5f);
-            }
-        }
-    }
-
-    private void DetectStateChange(GameGrid grid)
-    {
-        if (board.State == previousState)
-        {
-            return;
-        }
-
-        if (board.State == SweeperState.Lost)
-        {
-            UiFeedback.Play(UiSound.GameExplosion);
-            resultAppear = 0f;
-            pendingResultSubmit = false;
-            BuildResultTime();
-            fx.AddTrauma(0.95f);
-            fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.45f);
-            if (board.ClickedBomb >= 0)
-            {
-                var scale = UiScale.Current;
-                var center = grid.CellCenter(board.ClickedBomb % board.Columns, board.ClickedBomb / board.Columns);
-                particles.Burst(center, 40, new Vector4(0.98f, 0.45f, 0.32f, 1f), 360f * scale, 4.5f, 0.85f, 420f);
-                particles.Streaks(center, 16, new Vector4(1f, 0.7f, 0.4f, 1f), 480f * scale, 2.8f, 0.55f);
-                fx.Shockwave(center, 130f * scale, new Vector4(1f, 0.6f, 0.35f, 1f), 0.6f, 3.6f);
-            }
-        }
-        else if (board.State == SweeperState.Won)
-        {
-            UiFeedback.Play(UiSound.GameClear);
-            resultAppear = 0f;
-            pendingResultSubmit = true;
-            BuildResultTime();
-            ReadOnlySpan<Vector4> palette = new[]
-            {
-                Accent, Core.Theme.Accent.Mint, Core.Theme.Accent.Amber, Core.Theme.Accent.Pink,
-            };
-            particles.Confetti(new Vector2(grid.Center.X, grid.Bounds.Min.Y), 70, palette,
-                260f * UiScale.Current, 4f, 1.3f);
-            particles.Sparkle(grid.Center, 16, new Vector4(1f, 0.95f, 0.7f, 1f), 200f * UiScale.Current, 2.6f,
-                0.9f);
-            fx.Shockwave(grid.Center, grid.Width * 0.55f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3f);
-        }
-
-        previousState = board.State;
-    }
-
-    private void BuildResultTime()
-    {
-        var seconds = (int)elapsed;
-        resultTimeText = TimeText.MinutesSeconds(seconds);
-    }
-
-    private void UpdateFlagAnim(float deltaSeconds)
+    private void UpdateFlagPop(float deltaSeconds)
     {
         for (var index = 0; index < SweeperBoard.MaxCells; index++)
         {
-            if (flagAnim[index] > 0f)
+            if (flagPop[index] > 0f)
             {
-                flagAnim[index] = MathF.Max(0f, flagAnim[index] - deltaSeconds * FlagPopSpeed);
+                flagPop[index] = MathF.Max(0f, flagPop[index] - deltaSeconds * FlagPopSpeed);
             }
         }
     }
 
-    private void DrawResult(in GameContext context, PhoneTheme theme, Rect body)
-    {
-        resultAppear = MathF.Min(1f, resultAppear + context.DeltaSeconds * 3.4f);
-        var won = board.State == SweeperState.Won;
-        var title = won ? Loc.T(L.Games.YouWin) : Loc.T(L.Games.Boom);
-        var titleColor = won ? Accent : theme.Danger;
-        string? secondary = null;
-        if (won && loadedBestTime > 0)
-        {
-            secondary = $"{Loc.T(L.Games.Best)} {TimeText.MinutesSeconds(loadedBestTime)}";
-        }
+    private static Difficulty ModeDifficulty(int mode) => (Difficulty)Math.Clamp(mode, 0, Modes.Length - 1);
 
-        var result = new GameResult(title, titleColor, Loc.T(L.Games.Time), resultTimeText, secondary,
-            won && newBestTime);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
-        {
-            StartNewGame(difficulty);
-        }
-    }
-
-    private static string StatId(Difficulty difficulty)
+    private static Rect Grow(Rect rect, float factor)
     {
-        return difficulty switch
-        {
-            Difficulty.Medium => "minesweeper.medium",
-            Difficulty.Hard => "minesweeper.hard",
-            _ => "minesweeper.easy",
-        };
+        var half = rect.Size * 0.5f * factor;
+        return new Rect(rect.Center - half, rect.Center + half);
     }
 }

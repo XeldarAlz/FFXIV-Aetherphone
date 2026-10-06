@@ -1,20 +1,26 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Nonogram;
 
-internal sealed class NonogramApp : ILegacyMiniGame
+internal sealed class NonogramApp : IMiniGame
 {
     private const string GameId = "nonogram";
-    private const float FillPopSpeed = 6.5f;
+    private const string SurfaceId = "nonogram.board";
+    private const float CellPopSpeed = 6.5f;
+    private const float MistakeFlashSpeed = 2.2f;
+    private const float SolvedSpeed = 0.9f;
+    private const float SolvedHoldSeconds = 0.9f;
+    private const ulong IdleSeed = 23;
 
-    private enum PaintMode
+    private enum PaintMode : byte
     {
         None,
         Fill,
@@ -23,294 +29,370 @@ internal sealed class NonogramApp : ILegacyMiniGame
         Unmark,
     }
 
+    private enum PaintAxis : byte
+    {
+        None,
+        Row,
+        Column,
+    }
+
+    private static readonly LocString[] Modes = { L.Games.Easy, L.Games.Medium, L.Games.Hard };
+    private static readonly string[] ModeStatIds = { "nonogram.easy", "nonogram.medium", "nonogram.hard" };
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Nonogram, GameGenre.Brain, L.Nonogram.Hook,
+        Backdrop.Paper, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds);
+    private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
+    private static readonly Vector4 Glow = new(1f, 0.95f, 0.70f, 1f);
     private readonly NonogramBoard board = new();
-    private readonly NonogramRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private readonly float[] fillAnimation = new float[NonogramBoard.MaxSize * NonogramBoard.MaxSize];
-    private readonly string[] difficultyLabels = new string[3];
-    private int difficulty;
+    private readonly float[] cellPop = new float[NonogramBoard.MaxCells];
     private PaintMode painting;
+    private PaintAxis paintAxis;
+    private int paintOrigin = -1;
+    private int paintLast = -1;
+    private int pressedCell = -1;
+    private int mistakeCell = -1;
+    private float mistakeFlash;
+    private float entrance;
     private float elapsed;
-    private bool wasSolved;
-    private bool pendingSubmit;
-    private bool newBestTime;
-    private int loadedBestTime;
-    private float resultAppear;
-    private string resultTimeText = "0:00";
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Nonogram);
-    public GameGenre Genre => GameGenre.Brain;
-    public void Open()
+    private float solvedProgress;
+    private float finishDelay;
+    private bool finished;
+    private bool reported;
+    private bool idleReady;
+
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
     {
-        StartNewGame(difficulty);
+        board.Reset(NonogramBoard.SizeFor(start.Mode), start.Random);
+        particles.Clear();
+        fx.Clear();
+        Array.Clear(cellPop, 0, NonogramBoard.MaxCells);
+        EndPaint();
+        mistakeCell = -1;
+        mistakeFlash = 0f;
+        entrance = 0f;
+        elapsed = 0f;
+        solvedProgress = 0f;
+        finishDelay = 0f;
+        finished = false;
+        reported = false;
+        idleReady = false;
     }
 
     public void Close()
     {
+        particles.Clear();
+        fx.Clear();
     }
 
     public void Dispose()
     {
     }
 
-    private void StartNewGame(int target)
+    public void DrawIdle(in GameContext context)
     {
-        difficulty = target;
-        board.Reset(SizeFor(target));
-        particles.Clear();
-        fx.Clear();
-        Array.Clear(fillAnimation, 0, fillAnimation.Length);
-        painting = PaintMode.None;
-        elapsed = 0f;
-        wasSolved = false;
-        pendingSubmit = false;
-        newBestTime = false;
-        loadedBestTime = -1;
-        resultAppear = 0f;
+        var size = NonogramBoard.SizeFor(context.Session.Mode);
+        if (!idleReady || board.Size != size)
+        {
+            board.Reset(size, GameRandom.FromSeed(IdleSeed));
+            Array.Clear(cellPop, 0, NonogramBoard.MaxCells);
+            idleReady = true;
+        }
+
+        var layout = NonogramRenderer.Layout(context.Safe, board, UiScale.Current);
+        var view = new NonogramView(1f, -1, -1, -1, 0f, 0f, cellPop);
+        NonogramRenderer.DrawBoard(ImGui.GetWindowDrawList(), board, layout, view, UiScale.Current, Accent,
+            context.Backdrop.Ink);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (loadedBestTime < 0)
-        {
-            loadedBestTime = context.Stats.Get(StatId(difficulty)).BestTimeSeconds;
-        }
-
-        if (!board.Solved)
-        {
-            elapsed += deltaSeconds;
-        }
-
-        UpdateFillAnimation(deltaSeconds);
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        if (pendingSubmit)
-        {
-            newBestTime = context.Stats.SubmitTime(StatId(difficulty), (int)elapsed);
-            pendingSubmit = false;
-        }
-
-        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
-        DrawDifficultyRow(body, theme, scale);
-        DrawStatsRow(body, theme, scale);
-        var area = new Rect(new Vector2(body.Min.X + 6f * scale, body.Min.Y + 96f * scale),
-            new Vector2(body.Max.X - 6f * scale, body.Max.Y - 8f * scale));
-        var layout = NonogramRenderer.Layout(area, board, scale);
-        var hoveredCell = ResolveHover(layout, area);
-        if (!board.Solved)
-        {
-            HandleInput(hoveredCell);
-        }
-
-        renderer.Draw(board, layout, hoveredCell, fillAnimation, theme, Accent, scale);
         var drawList = ImGui.GetWindowDrawList();
-        fx.DrawFlash(drawList, body, 0f);
-        particles.Draw(drawList, scale);
-        fx.DrawRings(drawList, scale);
-        DetectSolved(layout);
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds);
+        mistakeFlash = MathF.Max(0f, mistakeFlash - context.RawDeltaSeconds * MistakeFlashSpeed);
+        UpdateCellPop(context.RawDeltaSeconds);
         if (board.Solved)
         {
-            DrawResult(theme, body, deltaSeconds);
+            solvedProgress = GameJuice.Advance(solvedProgress, context.RawDeltaSeconds, SolvedSpeed);
         }
+
+        if (!finished && board.Started)
+        {
+            elapsed += context.DeltaSeconds;
+        }
+
+        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var layout = NonogramRenderer.Layout(area, board, scale);
+        var playing = !finished && context.Session.State == StageFlow.Playing;
+        var hovered = playing ? HoveredCell(layout) : -1;
+        if (!finished)
+        {
+            Step(layout, hovered, scale, context);
+        }
+        else if (!reported)
+        {
+            CountDownToResult(context);
+        }
+
+        var view = new NonogramView(entrance, hovered, pressedCell, mistakeCell, mistakeFlash, solvedProgress, cellPop);
+        NonogramRenderer.DrawBoard(drawList, board, layout, view, scale, Accent, context.Backdrop.Ink);
+        particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
+        fx.DrawText();
+        DrawHud(drawList, scale, context);
+        context.Session.Report((int)elapsed);
     }
 
-    private void DrawDifficultyRow(Rect body, PhoneTheme theme, float scale)
+    private void Step(in NonogramLayout layout, int hovered, float scale, in GameContext context)
     {
-        difficultyLabels[0] = Loc.T(L.Games.Easy);
-        difficultyLabels[1] = Loc.T(L.Games.Medium);
-        difficultyLabels[2] = Loc.T(L.Games.Hard);
-        var rowY = body.Min.Y + 22f * scale;
-        var segmentRow = new Rect(new Vector2(body.Min.X + 4f * scale, rowY - 13f * scale),
-            new Vector2(body.Max.X - 44f * scale, rowY + 13f * scale));
-        var selected = SegmentStrip.Draw("nonogram.difficulty", segmentRow, difficultyLabels, difficulty, theme);
-        if (selected != difficulty)
+        HandleInput(layout, hovered, context);
+        if (!board.Solved)
         {
-            StartNewGame(selected);
             return;
         }
 
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 15f * scale, theme))
-        {
-            StartNewGame(difficulty);
-        }
+        OnSolved(layout, scale, context);
     }
 
-    private void DrawStatsRow(Rect body, PhoneTheme theme, float scale)
+    private void HandleInput(in NonogramLayout layout, int hovered, in GameContext context)
     {
-        var rowY = body.Min.Y + 64f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Time),
-            GameNumber.Label((int)elapsed), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Left),
-            GameNumber.Label(board.FilledRemaining()), Accent, theme);
-    }
-
-    private int ResolveHover(NonogramLayout layout, Rect area)
-    {
-        if (!UiInteract.Hover(area.Min, area.Max))
+        if (context.Session.State != StageFlow.Playing)
         {
-            return -1;
+            EndPaint();
+            return;
         }
 
-        var index = layout.HitTest(ImGui.GetMousePos(), board.Size);
-        if (index >= 0)
+        PressSurface.Claim(SurfaceId, layout.GridRect, out var activated);
+        if (hovered >= 0)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return index;
-    }
-
-    private void HandleInput(int hoveredCell)
-    {
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && hoveredCell >= 0)
+        if (activated && hovered >= 0)
         {
-            painting = board.MarkAt(hoveredCell) == CellMark.Filled ? PaintMode.Erase : PaintMode.Fill;
-            ApplyPaint(hoveredCell, true);
-            UiFeedback.Play(UiSound.GameTick);
+            BeginPaint(hovered, board.MarkAt(hovered) switch
+            {
+                CellMark.Filled => PaintMode.Erase,
+                CellMark.Empty => PaintMode.Fill,
+                _ => PaintMode.None,
+            });
         }
-        else if (ImGui.IsMouseClicked(ImGuiMouseButton.Right) && hoveredCell >= 0)
+        else if (hovered >= 0 && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
-            painting = board.MarkAt(hoveredCell) switch
+            BeginPaint(hovered, board.MarkAt(hovered) switch
             {
                 CellMark.Marked => PaintMode.Unmark,
                 CellMark.Empty => PaintMode.Mark,
                 _ => PaintMode.None,
-            };
-            ApplyPaint(hoveredCell, true);
+            });
         }
 
-        if ((painting == PaintMode.Fill || painting == PaintMode.Erase) && ImGui.IsMouseDown(ImGuiMouseButton.Left) &&
-            hoveredCell >= 0)
-        {
-            ApplyPaint(hoveredCell, false);
-        }
-        else if ((painting == PaintMode.Mark || painting == PaintMode.Unmark) &&
-                 ImGui.IsMouseDown(ImGuiMouseButton.Right) && hoveredCell >= 0)
-        {
-            ApplyPaint(hoveredCell, false);
-        }
-
-        if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) && !ImGui.IsMouseDown(ImGuiMouseButton.Right))
-        {
-            painting = PaintMode.None;
-        }
-    }
-
-    private void ApplyPaint(int cell, bool initial)
-    {
-        var current = board.MarkAt(cell);
-        switch (painting)
-        {
-            case PaintMode.Fill:
-                if (current == CellMark.Empty || (initial && current == CellMark.Marked))
-                {
-                    if (board.SetMark(cell, CellMark.Filled))
-                    {
-                        fillAnimation[cell] = 1f;
-                    }
-                }
-
-                break;
-            case PaintMode.Erase:
-                if (current == CellMark.Filled)
-                {
-                    board.SetMark(cell, CellMark.Empty);
-                }
-
-                break;
-            case PaintMode.Mark:
-                if (current == CellMark.Empty)
-                {
-                    board.SetMark(cell, CellMark.Marked);
-                }
-
-                break;
-            case PaintMode.Unmark:
-                if (current == CellMark.Marked)
-                {
-                    board.SetMark(cell, CellMark.Empty);
-                }
-
-                break;
-        }
-    }
-
-    private void DetectSolved(NonogramLayout layout)
-    {
-        if (!board.Solved || wasSolved)
+        if (painting == PaintMode.None)
         {
             return;
         }
 
-        UiFeedback.Play(UiSound.GameClear);
-        wasSolved = true;
-        painting = PaintMode.None;
-        resultAppear = 0f;
-        pendingSubmit = true;
-        var seconds = (int)elapsed;
-        resultTimeText = TimeText.MinutesSeconds(seconds);
-        fx.AddTrauma(0.35f);
-        fx.Flash(Accent, 0.4f);
-        ReadOnlySpan<Vector4> palette = new[] { Accent, Core.Theme.Accent.Mint, Core.Theme.Accent.Amber, Core.Theme.Accent.Pink, };
-        var gridTop = layout.GridOrigin;
-        var gridCenterX = gridTop.X + board.Size * layout.CellSize * 0.5f;
-        var gridCenter = new Vector2(gridCenterX, gridTop.Y + board.Size * layout.CellSize * 0.5f);
-        particles.Confetti(new Vector2(gridCenterX, gridTop.Y), 72, palette, 260f * UiScale.Current, 4f, 1.3f);
-        particles.Sparkle(gridCenter, 16, new Vector4(1f, 0.95f, 0.7f, 1f), 200f * UiScale.Current, 2.6f, 0.9f);
-        fx.Shockwave(gridCenter, board.Size * layout.CellSize * 0.6f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3f);
+        var button = painting is PaintMode.Fill or PaintMode.Erase ? ImGuiMouseButton.Left : ImGuiMouseButton.Right;
+        if (!ImGui.IsMouseDown(button))
+        {
+            EndPaint();
+            return;
+        }
+
+        var target = layout.ClampedHit(ImGui.GetMousePos());
+        pressedCell = target;
+        if (target == paintLast)
+        {
+            return;
+        }
+
+        ResolveAxis(target);
+        PaintPath(Project(target));
     }
 
-    private void UpdateFillAnimation(float deltaSeconds)
+    private void BeginPaint(int cell, PaintMode mode)
     {
-        for (var index = 0; index < fillAnimation.Length; index++)
+        painting = mode;
+        paintAxis = PaintAxis.None;
+        paintOrigin = cell;
+        paintLast = cell;
+        pressedCell = cell;
+        if (mode != PaintMode.None)
         {
-            if (fillAnimation[index] > 0f)
+            Paint(cell);
+        }
+    }
+
+    private void EndPaint()
+    {
+        painting = PaintMode.None;
+        paintAxis = PaintAxis.None;
+        paintOrigin = -1;
+        paintLast = -1;
+        pressedCell = -1;
+    }
+
+    private void ResolveAxis(int target)
+    {
+        if (paintAxis != PaintAxis.None || target == paintOrigin)
+        {
+            return;
+        }
+
+        var columnDelta = Math.Abs(target % board.Size - paintOrigin % board.Size);
+        var rowDelta = Math.Abs(target / board.Size - paintOrigin / board.Size);
+        paintAxis = columnDelta >= rowDelta ? PaintAxis.Row : PaintAxis.Column;
+    }
+
+    private int Project(int target)
+    {
+        return paintAxis switch
+        {
+            PaintAxis.Row => paintOrigin / board.Size * board.Size + target % board.Size,
+            PaintAxis.Column => target / board.Size * board.Size + paintOrigin % board.Size,
+            _ => paintOrigin,
+        };
+    }
+
+    private void PaintPath(int target)
+    {
+        var step = paintAxis == PaintAxis.Row ? 1 : board.Size;
+        var current = paintLast;
+        while (current != target && painting != PaintMode.None)
+        {
+            current += target > current ? step : -step;
+            Paint(current);
+        }
+
+        paintLast = target;
+    }
+
+    private void Paint(int cell)
+    {
+        var current = board.MarkAt(cell);
+        var result = painting switch
+        {
+            PaintMode.Fill when current == CellMark.Empty => board.SetMark(cell, CellMark.Filled),
+            PaintMode.Erase when current == CellMark.Filled => board.SetMark(cell, CellMark.Empty),
+            PaintMode.Mark when current == CellMark.Empty => board.SetMark(cell, CellMark.Marked),
+            PaintMode.Unmark when current == CellMark.Marked => board.SetMark(cell, CellMark.Empty),
+            _ => MarkResult.None,
+        };
+        switch (result)
+        {
+            case MarkResult.Mistake:
+                OnMistake(cell);
+                return;
+            case MarkResult.Changed:
+                OnPainted(cell);
+                return;
+            default:
+                return;
+        }
+    }
+
+    private void OnPainted(int cell)
+    {
+        UiFeedback.Play(painting == PaintMode.Fill ? UiSound.GameTick : UiSound.Tap);
+        PopChangedCells();
+        var row = cell / board.Size;
+        var column = cell % board.Size;
+        if (board.ChangedCount > 1 && (board.RowSatisfied(row) || board.ColumnSatisfied(column)))
+        {
+            UiFeedback.Play(UiSound.GamePiece);
+        }
+    }
+
+    private void OnMistake(int cell)
+    {
+        UiFeedback.Play(UiSound.GameWrong);
+        mistakeCell = cell;
+        mistakeFlash = 1f;
+        fx.AddTrauma(0.35f);
+        PopChangedCells();
+        EndPaint();
+    }
+
+    private void PopChangedCells()
+    {
+        for (var index = 0; index < board.ChangedCount; index++)
+        {
+            cellPop[board.ChangedCell(index)] = 1f;
+        }
+    }
+
+    private void OnSolved(in NonogramLayout layout, float scale, in GameContext context)
+    {
+        finished = true;
+        finishDelay = SolvedHoldSeconds;
+        EndPaint();
+        UiFeedback.Play(UiSound.GameClear);
+        context.Fx.Sweep();
+        context.Fx.Punch(0.04f);
+        var gridRect = layout.GridRect;
+        particles.Sparkle(gridRect.Center, 18, Glow, 200f * scale, 2.6f, 0.9f);
+        fx.Shockwave(gridRect.Center, gridRect.Width * 0.6f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3f);
+    }
+
+    private void CountDownToResult(in GameContext context)
+    {
+        finishDelay -= context.RawDeltaSeconds;
+        if (finishDelay > 0f)
+        {
+            return;
+        }
+
+        reported = true;
+        var seconds = Math.Max(1, (int)elapsed);
+        context.Session.Finish(new GameOutcome(seconds, ScoreKind.Time, context.Session.StatId)
+            .WithStat(L.Games.Mistakes, GameNumber.Label(board.Mistakes))
+            .WithStat(L.Games.Filled, GameNumber.Label(board.FilledTarget)));
+    }
+
+    private void DrawHud(ImDrawListPtr drawList, float scale, in GameContext context)
+    {
+        context.Hud.Timer(MathF.Floor(elapsed), 0f, false);
+        var mistakesLabel = GameNumber.Label(board.Mistakes);
+        var best = context.Session.Best;
+        var bestLabel = best > 0 ? TimeText.MinutesSeconds(best) : string.Empty;
+        context.Hud.Custom(StatCapsule.Width(mistakesLabel, bestLabel, scale));
+        var mistakeInk = board.Mistakes > 0 ? Danger : Accent;
+        StatCapsule.Draw(drawList, context.Hud.CustomRect, FontAwesomeIcon.Times, mistakesLabel, mistakeInk, bestLabel,
+            Accent, scale);
+    }
+
+    private int HoveredCell(in NonogramLayout layout)
+    {
+        var gridRect = layout.GridRect;
+        if (!UiInteract.Hover(gridRect.Min, gridRect.Max))
+        {
+            return -1;
+        }
+
+        return layout.HitTest(ImGui.GetMousePos());
+    }
+
+    private void UpdateCellPop(float deltaSeconds)
+    {
+        for (var index = 0; index < NonogramBoard.MaxCells; index++)
+        {
+            if (cellPop[index] > 0f)
             {
-                fillAnimation[index] = MathF.Max(0f, fillAnimation[index] - deltaSeconds * FillPopSpeed);
+                cellPop[index] = MathF.Max(0f, cellPop[index] - deltaSeconds * CellPopSpeed);
             }
         }
     }
 
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
+    private static Rect Grow(Rect rect, float factor)
     {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        string? secondary = null;
-        if (loadedBestTime > 0)
-        {
-            secondary = $"{Loc.T(L.Games.Best)} {TimeText.MinutesSeconds(loadedBestTime)}";
-        }
-
-        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondary,
-            newBestTime);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
-        {
-            StartNewGame(difficulty);
-        }
-    }
-
-    private static int SizeFor(int difficulty)
-    {
-        return difficulty switch
-        {
-            1 => 8,
-            2 => 10,
-            _ => 5,
-        };
-    }
-
-    private static string StatId(int difficulty)
-    {
-        return difficulty switch
-        {
-            1 => "nonogram.medium",
-            2 => "nonogram.hard",
-            _ => "nonogram.easy",
-        };
+        var half = rect.Size * 0.5f * factor;
+        return new Rect(rect.Center - half, rect.Center + half);
     }
 }
