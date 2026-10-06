@@ -320,7 +320,6 @@ internal sealed class PhoneShell : IDisposable
 
         banner.Advance(delta);
         InstallSourceNotice.Poll(session, confirm);
-        calls.Advance(delta);
         if (!loading.IsActive)
         {
             switch (sideButton.Update(sideButtonRect, sideButtonSide, theme, delta))
