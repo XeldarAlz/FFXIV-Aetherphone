@@ -8627,6 +8627,21 @@ internal static class L
         public static readonly LocString FeverTime = new("swoop.feverTime", "Fever time");
     }
 
+    internal static class Drift
+    {
+        public static readonly LocString Title = new("games.drift.title", "Drift");
+        public static readonly LocString Hook = new("games.drift.hook", "Rotate, thrust and blast the drifting rocks to pieces. Every edge wraps around, and saucers hunt you from wave 3.");
+        public static readonly LocString WaveNumber = new("games.drift.waveNumber", "Wave {0}");
+        public static readonly LocString WaveClear = new("games.drift.waveClear", "Wave clear!");
+        public static readonly LocString Saucer = new("games.drift.saucer", "Saucer!");
+        public static readonly LocString ExtraShip = new("games.drift.extraShip", "Extra ship!");
+        public static readonly LocString WavesCleared = new("games.drift.wavesCleared", "Waves cleared");
+        public static readonly LocString Rocks = new("games.drift.rocks", "Rocks blasted");
+        public static readonly LocString Saucers = new("games.drift.saucers", "Saucers downed");
+        public static readonly LocString Accuracy = new("games.drift.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.drift.percent", "{0}%");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

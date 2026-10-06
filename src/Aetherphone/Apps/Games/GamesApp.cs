@@ -7,6 +7,7 @@ using Aetherphone.Apps.Games.Chess;
 using Aetherphone.Apps.Games.Coil;
 using Aetherphone.Apps.Games.CrystalDrop;
 using Aetherphone.Apps.Games.Doom;
+using Aetherphone.Apps.Games.Drift;
 using Aetherphone.Apps.Games.Flap;
 using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
@@ -184,6 +185,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new CoilApp(),
             new UpdraftApp(),
             new SwoopApp(),
+            new DriftApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

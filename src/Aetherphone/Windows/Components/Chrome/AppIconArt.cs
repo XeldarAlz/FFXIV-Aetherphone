@@ -121,6 +121,9 @@ internal static class AppIconArt
             case "swoop":
                 SwoopIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "drift":
+                DrawDrift(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -757,6 +760,40 @@ internal static class AppIconArt
         dl.AddRectFilled(new Vector2(markCenter.X - extent * 0.08f, markCenter.Y + markRadius * 0.55f),
             new Vector2(markCenter.X + extent * 0.08f, markCenter.Y + markRadius * 1.25f), hole, extent * 0.03f);
         dl.AddCircleFilled(new Vector2(markCenter.X, markCenter.Y + markRadius * 1.72f), extent * 0.10f, hole, 12);
+    }
+
+    private static readonly float[] DriftRockReach = { 1f, 0.8f, 0.96f, 0.76f, 1f, 0.84f, 0.98f, 0.78f, 0.93f };
+
+    private static void DrawDrift(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var rock = At(center, extent, 0.36f, -0.36f);
+        var rockRadius = extent * 0.52f;
+        var step = MathF.Tau / DriftRockReach.Length;
+        for (var vertex = 0; vertex < DriftRockReach.Length; vertex++)
+        {
+            var next = (vertex + 1) % DriftRockReach.Length;
+            var first = rock + new Vector2(MathF.Cos(vertex * step), MathF.Sin(vertex * step)) *
+                rockRadius * DriftRockReach[vertex];
+            var second = rock + new Vector2(MathF.Cos(next * step), MathF.Sin(next * step)) *
+                rockRadius * DriftRockReach[next];
+            drawList.AddTriangleFilled(rock, first, second, ink);
+        }
+
+        drawList.AddCircleFilled(rock + new Vector2(-rockRadius * 0.2f, rockRadius * 0.12f), rockRadius * 0.2f, hole, 14);
+        drawList.AddCircleFilled(rock + new Vector2(rockRadius * 0.3f, -rockRadius * 0.28f), rockRadius * 0.12f, hole, 12);
+        var ship = At(center, extent, -0.62f, 0.62f);
+        var forward = Vector2.Normalize(rock - ship);
+        var side = new Vector2(-forward.Y, forward.X);
+        var size = extent * 0.36f;
+        var nose = ship + forward * size * 1.25f;
+        var notch = ship - forward * size * 0.5f;
+        var leftWing = ship - forward * size + side * size * 0.85f;
+        var rightWing = ship - forward * size - side * size * 0.85f;
+        drawList.AddTriangleFilled(nose, leftWing, notch, ink);
+        drawList.AddTriangleFilled(nose, notch, rightWing, ink);
+        var shotRadius = extent * 0.08f;
+        drawList.AddCircleFilled(ship + forward * size * 1.7f, shotRadius, ink, 10);
+        drawList.AddCircleFilled(ship + forward * size * 2.2f, shotRadius, ink, 10);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)
