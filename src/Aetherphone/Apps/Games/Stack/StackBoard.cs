@@ -44,7 +44,6 @@ internal sealed class StackBoard
     public const float RewardWidth = 0.026f;
     public const float MinimumWidth = 0.035f;
     public const float SliceLife = 2.2f;
-    public const float StreakWindowSeconds = 8f;
     private const int RingCapacity = 24;
     private const int SliceCapacity = 12;
     private const float BaseSpeed = 0.60f;
@@ -60,7 +59,7 @@ internal sealed class StackBoard
     private readonly StackBlock[] blocks = new StackBlock[RingCapacity];
     private readonly StackSlice[] slices = new StackSlice[SliceCapacity];
     private GameRandom random;
-    private ComboMeter combo = new(StreakWindowSeconds);
+    private ComboMeter combo = ComboMeter.Untimed();
     private int perfectsSinceReward;
     private float direction = 1f;
 

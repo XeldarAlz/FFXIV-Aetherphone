@@ -152,8 +152,7 @@ internal sealed class BubbleShooterApp : IMiniGame
     private void HandleInput(Vector2 aim, in GameContext context)
     {
         var full = context.Full;
-        var hitMin = new Vector2(full.Min.X, full.Min.Y + StageLayout.ChromeBand * UiScale.Current);
-        if (!UiInteract.Hover(hitMin, full.Max))
+        if (!UiInteract.Hover(full.Min, full.Max) || context.ChromeHit(ImGui.GetMousePos()))
         {
             return;
         }
@@ -220,7 +219,7 @@ internal sealed class BubbleShooterApp : IMiniGame
         camera.Shake(MathF.Min(0.35f, 0.04f * board.PopCount));
         if (board.LastShotScore > 0)
         {
-            fx.AddText(GameNumber.Label(board.LastShotScore), burstScreen, Accent, 1.25f);
+            fx.AddText(GameNumber.Signed(board.LastShotScore), burstScreen, Accent, 1.25f);
         }
 
         if (board.TierUpThisShot)

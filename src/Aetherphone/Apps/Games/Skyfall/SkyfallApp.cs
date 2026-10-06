@@ -26,6 +26,11 @@ internal sealed class SkyfallApp : IMiniGame
     private const float IconGap = 5f;
     private const float LastMeteorSlowFactor = 0.5f;
     private const float LastMeteorSlowSeconds = 0.3f;
+    private const int ConfettiCount = 60;
+    private const float ConfettiSpeed = 67f;
+    private const float ConfettiSize = 1f;
+    private const float ConfettiLife = 1.4f;
+    private const float ConfettiGravity = 138f;
     private const ulong IdleSeed = 0x534B5946414C4CUL;
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Skyfall, GameGenre.Action, L.Skyfall.Hook,
         Backdrop.Neon, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true);
@@ -39,8 +44,6 @@ internal sealed class SkyfallApp : IMiniGame
         new(1f, 0.62f, 0.30f, 1f), new(1f, 0.85f, 0.45f, 1f), new(0.98f, 0.98f, 0.9f, 1f),
         new(0.40f, 0.70f, 0.98f, 1f), new(0.72f, 0.50f, 0.96f, 1f), new(0.46f, 0.86f, 0.62f, 1f),
     };
-
-    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
 
     private readonly SkyfallBoard board = new();
     private readonly SkyfallBoard idleBoard = new();
@@ -110,7 +113,7 @@ internal sealed class SkyfallApp : IMiniGame
             board.Update(simDelta);
             if (context.Session.State == StageFlow.Playing)
             {
-                HandleInput(context.Full, scale);
+                HandleInput(context);
             }
 
             ReactToEvents(context, accent);
@@ -150,20 +153,21 @@ internal sealed class SkyfallApp : IMiniGame
         context.Backdrop.SetCamera(in camera);
     }
 
-    private void HandleInput(Rect full, float scale)
+    private void HandleInput(in GameContext context)
     {
         if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             return;
         }
 
-        var hitMin = new Vector2(full.Min.X, full.Min.Y + StageLayout.ChromeBand * scale);
-        if (!UiInteract.Hover(hitMin, full.Max))
+        var full = context.Full;
+        var mouse = ImGui.GetMousePos();
+        if (!UiInteract.Hover(full.Min, full.Max) || context.ChromeHit(mouse))
         {
             return;
         }
 
-        board.Fire(camera.ToWorld(ImGui.GetMousePos()));
+        board.Fire(camera.ToWorld(mouse));
     }
 
     private void ReactToEvents(in GameContext context, Vector4 accent)
@@ -214,7 +218,7 @@ internal sealed class SkyfallApp : IMiniGame
             }
             else
             {
-                fx.AddText(GameNumber.Label(SkyfallBoard.MeteorPoints), last, SkyfallRenderer.MeteorHead, 0.9f);
+                fx.AddText(GameNumber.Signed(SkyfallBoard.MeteorPoints), last, SkyfallRenderer.MeteorHead, 0.9f);
             }
         }
 
@@ -265,7 +269,8 @@ internal sealed class SkyfallApp : IMiniGame
         {
             GameSfx.LevelClear();
             context.Fx.Sweep();
-            EmitConfetti(new Vector2(SkyfallBoard.Width * 0.5f, SkyfallBoard.Height * 0.2f), 60);
+            particles.Confetti(new Vector2(SkyfallBoard.Width * 0.5f, SkyfallBoard.Height * 0.2f), ConfettiCount,
+                CelebrationPalette, ConfettiSpeed, ConfettiSize, ConfettiLife, ConfettiGravity);
             context.Fx.Flash(GamePalette.Lighten(accent, 0.4f), 0.16f);
             bannerText = clearLabel.Get(L.Skyfall.WaveClearBonus, board.LastWaveBonus);
             bannerLifetime = ClearBannerSeconds;
@@ -282,15 +287,6 @@ internal sealed class SkyfallApp : IMiniGame
         bannerText = waveLabel.Get(L.Skyfall.WaveNumber, board.Wave);
         bannerLifetime = WaveBannerSeconds;
         bannerProgress = 0f;
-    }
-
-    private void EmitConfetti(Vector2 origin, int count)
-    {
-        var perColor = Math.Max(1, count / ConfettiSpecs.Length);
-        for (var index = 0; index < ConfettiSpecs.Length; index++)
-        {
-            particles.Emit(in ConfettiSpecs[index], origin, perColor);
-        }
     }
 
     private void AddLight(float x, float strength, float seconds, Vector4 color)
@@ -380,17 +376,5 @@ internal sealed class SkyfallApp : IMiniGame
         }
 
         context.Session.Finish(outcome);
-    }
-
-    private static ParticleSpec[] BuildConfetti()
-    {
-        var specs = new ParticleSpec[CelebrationPalette.Length];
-        for (var index = 0; index < specs.Length; index++)
-        {
-            specs[index] = new ParticleSpec(CelebrationPalette[index], CelebrationPalette[index], 1f, 67f, 1.4f, 138f,
-                0.7f, 16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
-        }
-
-        return specs;
     }
 }

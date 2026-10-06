@@ -26,9 +26,6 @@ internal sealed class SnakeApp : IMiniGame
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Snake, GameGenre.Arcade, L.Snake.Hook,
         Backdrop.Meadow, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true, countdown: true,
         keyboard: true);
-    private static readonly string AppleLabel = string.Concat("+", GameNumber.Label(SnakeBoard.ApplePoints));
-    private static readonly string GoldLabel = string.Concat("+", GameNumber.Label(SnakeBoard.GoldPoints));
-    private static readonly string BombLabel = string.Concat("-", GameNumber.Label(SnakeBoard.BombShrink));
     private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
     private static readonly Vector4 Spark = new(1f, 0.95f, 0.7f, 1f);
     private static readonly Vector4 Smoke = new(0.3f, 0.3f, 0.34f, 0.8f);
@@ -244,7 +241,7 @@ internal sealed class SnakeApp : IMiniGame
                 UiFeedback.Play(UiSound.GamePowerUp);
                 particles.Emit(GoldSparkle, headWorld, 18);
                 fx.Shockwave(headScreen, camera.Px(2.2f), SnakeRenderer.GoldColor, 0.5f, 3f);
-                fx.AddText(GoldLabel, headScreen, SnakeRenderer.GoldColor, 1.3f);
+                fx.AddText(GameNumber.Signed(SnakeBoard.GoldPoints), headScreen, SnakeRenderer.GoldColor, 1.3f);
                 context.Fx.Punch(0.08f);
                 context.Fx.Sweep();
                 return;
@@ -252,7 +249,7 @@ internal sealed class SnakeApp : IMiniGame
                 UiFeedback.Play(UiSound.GameExplosion);
                 particles.Emit(BombSmoke, headWorld, 14);
                 fx.Shockwave(headScreen, camera.Px(2.6f), Danger, 0.5f, 3.4f);
-                fx.AddText(BombLabel, headScreen, Danger, 1.2f);
+                fx.AddText(GameNumber.Signed(-SnakeBoard.BombShrink), headScreen, Danger, 1.2f);
                 camera.Shake(0.35f);
                 context.Fx.Flash(Danger, 0.25f);
                 context.Fx.Punch(0.05f);
@@ -261,7 +258,7 @@ internal sealed class SnakeApp : IMiniGame
                 UiFeedback.Play(UiSound.GameCollect);
                 particles.Emit(AppleBurst, headWorld, 12);
                 fx.Shockwave(headScreen, camera.Px(1.6f), GamePalette.Lighten(Accent, 0.35f), 0.4f, 2.6f);
-                fx.AddText(AppleLabel, headScreen, Accent, 1.1f);
+                fx.AddText(GameNumber.Signed(SnakeBoard.ApplePoints), headScreen, Accent, 1.1f);
                 fx.HitStop(0.04f);
                 context.Fx.Punch(0.04f);
                 return;

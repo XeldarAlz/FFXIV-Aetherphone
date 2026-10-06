@@ -42,15 +42,15 @@ internal sealed class SwoopApp : IMiniGame
     private const float IslandBarWidth = 44f;
     private const float IslandBarHeight = 4f;
     private const float PipSpacing = 0.55f;
+    private const int ConfettiCount = 50;
+    private const float ConfettiSpeed = 26f;
+    private const float ConfettiSize = 0.36f;
+    private const float ConfettiLife = 1.3f;
+    private const float ConfettiGravity = 54f;
     private const ulong IdleSeed = 0x53574F4FUL;
     private static readonly GameSpec StageSpec = new(GameId, L.Swoop.Title, GameGenre.Action, L.Swoop.Hook,
         Backdrop.Sky, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true, keyboard: true);
     private static readonly TextStyle CapsuleStyle = TextStyles.FootnoteEmphasized;
-    private static readonly string[] PickupLabels =
-    {
-        string.Concat("+", GameNumber.Label(SwoopBoard.CrystalPoints)),
-        string.Concat("+", GameNumber.Label(SwoopBoard.CrystalPoints * 2)),
-    };
 
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 DustColor = new(0.86f, 0.74f, 0.56f, 0.9f);
@@ -85,7 +85,6 @@ internal sealed class SwoopApp : IMiniGame
         shape: ParticleShape.Star);
     private static readonly ParticleSpec Ember = new(FeverColor with { W = 0.7f }, FeverColor with { W = 0f }, 0.32f, 3f,
         0.45f, shape: ParticleShape.GlowCircle);
-    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
 
     private readonly SwoopBoard board = new();
     private readonly SwoopBoard idleBoard = new();
@@ -290,8 +289,8 @@ internal sealed class SwoopApp : IMiniGame
         }
 
         var full = context.Full;
-        var hitMin = new Vector2(full.Min.X, full.Min.Y + StageLayout.ChromeBand * UiScale.Current);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(hitMin, full.Max))
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(full.Min, full.Max) &&
+            !context.ChromeHit(ImGui.GetMousePos()))
         {
             mouseHeld = true;
         }
@@ -357,7 +356,7 @@ internal sealed class SwoopApp : IMiniGame
         {
             UiFeedback.Play(UiSound.GameCollect);
             crystalsCollected += board.PickupsThisTick;
-            var label = PickupLabels[board.Fever ? 1 : 0];
+            var label = GameNumber.Signed(board.Fever ? SwoopBoard.CrystalPoints * 2 : SwoopBoard.CrystalPoints);
             for (var pickup = 0; pickup < board.PickupsThisTick; pickup++)
             {
                 particles.Emit(PickupSparkle, World(board.PickupX(pickup), board.PickupY(pickup)), 7);
@@ -418,10 +417,8 @@ internal sealed class SwoopApp : IMiniGame
 
     private void EmitConfetti(Vector2 origin)
     {
-        for (var index = 0; index < ConfettiSpecs.Length; index++)
-        {
-            particles.Emit(in ConfettiSpecs[index], origin, 10);
-        }
+        particles.Confetti(origin, ConfettiCount, IslandConfetti, ConfettiSpeed, ConfettiSize, ConfettiLife,
+            ConfettiGravity);
     }
 
     private void UpdatePose(SwoopBoard target, float deltaSeconds, bool playing)
@@ -589,17 +586,5 @@ internal sealed class SwoopApp : IMiniGame
         {
             drawList.AddRectFilled(barMin, new Vector2(fillRight, barMax.Y), ImGui.GetColorU32(accent), barHeight * 0.5f);
         }
-    }
-
-    private static ParticleSpec[] BuildConfetti()
-    {
-        var specs = new ParticleSpec[IslandConfetti.Length];
-        for (var index = 0; index < specs.Length; index++)
-        {
-            specs[index] = new ParticleSpec(IslandConfetti[index], IslandConfetti[index], 0.36f, 26f, 1.3f, 54f, 0.7f,
-                16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
-        }
-
-        return specs;
     }
 }

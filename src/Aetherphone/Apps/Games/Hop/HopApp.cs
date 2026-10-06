@@ -22,8 +22,11 @@ internal sealed class HopApp : IMiniGame
     private const float CapsulePadX = 10f;
     private const float IconSize = 11f;
     private const float IconGap = 5f;
-    private const float BarHeight = 3f;
-    private const float BarInset = 6f;
+    private const int ConfettiCount = 70;
+    private const float ConfettiSpeed = 9f;
+    private const float ConfettiSize = 0.14f;
+    private const float ConfettiLife = 1.4f;
+    private const float ConfettiGravity = 18f;
     private const float SkyBase = 0.15f;
     private const float SkyPerLevel = 0.06f;
     private const float SkyDeepest = 0.85f;
@@ -46,7 +49,6 @@ internal sealed class HopApp : IMiniGame
         new(0.40f, 0.70f, 0.98f, 1f), new(0.46f, 0.86f, 0.62f, 1f), new(0.98f, 0.98f, 0.9f, 1f),
     };
 
-    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
     private static readonly ParticleSpec HopDust = new(White with { W = 0.5f }, White with { W = 0f }, 0.08f, 1.2f, 0.3f);
     private static readonly ParticleSpec Splash = new(Droplet, HopRenderer.WaterColor with { W = 0f }, 0.09f, 3f, 0.5f, 9f,
         1.2f, 0f, MathF.PI * 1.2f, -MathF.PI * 0.5f);
@@ -58,7 +60,6 @@ internal sealed class HopApp : IMiniGame
         MathF.PI, ParticleShape.Streak);
     private static readonly ParticleSpec DeathBurst = new(HopRenderer.HopperColor, HopRenderer.HopperColor with { W = 0.2f },
         0.16f, 5f, 0.7f, 9f, 1.2f, 8f);
-    private static readonly string LevelBonusLabel = string.Concat("+", GameNumber.Label(HopBoard.LevelClearBonus));
 
     private readonly HopBoard board = new();
     private readonly HopBoard idleBoard = new();
@@ -237,7 +238,7 @@ internal sealed class HopApp : IMiniGame
             var screen = camera.ToScreen(den);
             particles.Emit(denSparkle, den, 14);
             fx.Shockwave(screen, camera.Px(2.4f), glow with { W = 0.7f }, 0.4f, 2.5f);
-            fx.AddText(GameNumber.Label(board.LastBankPoints), screen, glow, 1.1f);
+            fx.AddText(GameNumber.Signed(board.LastBankPoints), screen, glow, 1.1f);
             camera.Shake(0.12f);
             context.Fx.Punch(BankPunch);
         }
@@ -272,9 +273,10 @@ internal sealed class HopApp : IMiniGame
             GameSfx.LevelClear();
             context.Fx.Sweep();
             var top = new Vector2(HopBoard.Columns * 0.5f, 2f);
-            EmitConfetti(top, 70);
+            particles.Confetti(top, ConfettiCount, CelebrationPalette, ConfettiSpeed, ConfettiSize, ConfettiLife,
+                ConfettiGravity);
             context.Fx.Flash(glow, 0.18f);
-            fx.AddText(LevelBonusLabel, camera.ToScreen(top), glow, 1.3f);
+            fx.AddText(GameNumber.Signed(HopBoard.LevelClearBonus), camera.ToScreen(top), glow, 1.3f);
         }
 
         if (board.LevelStartedThisFrame)
@@ -287,15 +289,6 @@ internal sealed class HopApp : IMiniGame
     {
         bannerText = levelLabel.Get(L.Hop.LevelNumber, board.Level);
         bannerProgress = 0f;
-    }
-
-    private void EmitConfetti(Vector2 origin, int count)
-    {
-        var perColor = Math.Max(1, count / ConfettiSpecs.Length);
-        for (var index = 0; index < ConfettiSpecs.Length; index++)
-        {
-            particles.Emit(in ConfettiSpecs[index], origin, perColor);
-        }
     }
 
     private string TimerLabel() => TimeText.MinutesSeconds((int)MathF.Ceiling(board.TimerRemaining));
@@ -322,21 +315,7 @@ internal sealed class HopApp : IMiniGame
             iconSize);
         var origin = new Vector2(left + iconSize + IconGap * scale, rect.Center.Y - Typography.LineHeight(TimerStyle) * 0.5f);
         Typography.Draw(drawList, origin, TimerLabel(), ink, TimerStyle);
-        var inset = BarInset * scale;
-        var height = BarHeight * scale;
-        var bottom = rect.Max.Y - height * 0.8f;
-        var barLeft = rect.Min.X + inset;
-        var barRight = rect.Max.X - inset;
-        drawList.AddRectFilled(new Vector2(barLeft, bottom - height), new Vector2(barRight, bottom),
-            ImGui.GetColorU32(tint with { W = 0.18f }), height * 0.5f);
-        var fraction = Math.Clamp(board.TimerFraction, 0f, 1f);
-        if (fraction <= 0f)
-        {
-            return;
-        }
-
-        drawList.AddRectFilled(new Vector2(barLeft, bottom - height), new Vector2(barLeft + (barRight - barLeft) * fraction, bottom),
-            ImGui.GetColorU32(tint with { W = 0.9f }), height * 0.5f);
+        StageHud.Bar(drawList, rect, Math.Clamp(board.TimerFraction, 0f, 1f), tint, scale);
     }
 
     private void Finish(in GameContext context)
@@ -344,17 +323,5 @@ internal sealed class HopApp : IMiniGame
         context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
             .WithStat(L.Games.Level, GameNumber.Label(board.Level))
             .WithStat(L.Games.Dens, GameNumber.Label(board.BankedTotal)));
-    }
-
-    private static ParticleSpec[] BuildConfetti()
-    {
-        var specs = new ParticleSpec[CelebrationPalette.Length];
-        for (var index = 0; index < specs.Length; index++)
-        {
-            specs[index] = new ParticleSpec(CelebrationPalette[index], CelebrationPalette[index], 0.14f, 9f, 1.4f, 18f,
-                0.7f, 16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
-        }
-
-        return specs;
     }
 }

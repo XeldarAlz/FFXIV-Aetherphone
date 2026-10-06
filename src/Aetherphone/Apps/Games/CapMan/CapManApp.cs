@@ -21,6 +21,11 @@ internal sealed class CapManApp : IMiniGame
     private const float DeathSlowSeconds = 0.4f;
     private const float GhostEatPunch = 0.03f;
     private const float FruitPunch = 0.04f;
+    private const int ConfettiCount = 60;
+    private const float ConfettiSpeed = 10f;
+    private const float ConfettiSize = 0.16f;
+    private const float ConfettiLife = 1.4f;
+    private const float ConfettiGravity = 20f;
     private const ulong IdleSeed = 0x4341504D414EUL;
     private static readonly Vector2 ReadyBannerTile = new(7f, 11f);
     private static readonly GameSpec StageSpec = new(GameId, L.Games.CapMan, GameGenre.Action, L.CapMan.Hook,
@@ -33,7 +38,6 @@ internal sealed class CapManApp : IMiniGame
         new(0.40f, 0.90f, 0.95f, 1f), new(1f, 0.70f, 0.35f, 1f), new(0.98f, 0.98f, 0.9f, 1f),
     };
 
-    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
     private static readonly ParticleSpec DotPuff = new(CapManRenderer.DotColor with { W = 0.7f },
         CapManRenderer.DotColor with { W = 0f }, 0.08f, 1.5f, 0.25f);
     private static readonly ParticleSpec PelletSparkle = new(CapManRenderer.PlayerColor, White, 0.14f, 4f, 0.6f, 1.5f,
@@ -47,8 +51,6 @@ internal sealed class CapManApp : IMiniGame
         2.4f, 6f, shape: ParticleShape.Star, additive: true);
     private static readonly ParticleSpec FruitArrival = new(CapManRenderer.PlayerColor,
         CapManRenderer.PlayerColor with { W = 0f }, 0.3f, 0f, 0.5f, shape: ParticleShape.Ring, additive: true);
-    private static readonly string FirstFruitLabel = string.Concat("+", GameNumber.Label(CapManBoard.FirstFruitPoints));
-    private static readonly string LaterFruitLabel = string.Concat("+", GameNumber.Label(CapManBoard.LaterFruitPoints));
 
     private readonly CapManBoard board = new();
     private readonly CapManBoard idleBoard = new();
@@ -208,7 +210,7 @@ internal sealed class CapManApp : IMiniGame
             var world = board.GhostEatPosition(index) + CapManRenderer.Half;
             var screen = camera.ToScreen(world);
             particles.Emit(GhostShards, world, 12);
-            fx.AddText(GameNumber.Label(board.GhostEatPoints(index)), screen, CapManRenderer.DotColor, 1.1f);
+            fx.AddText(GameNumber.Signed(board.GhostEatPoints(index)), screen, CapManRenderer.DotColor, 1.1f);
             fx.Shockwave(screen, camera.Px(2.5f), CapManRenderer.DotColor with { W = 0.6f }, 0.35f, 2f);
             fx.HitStop(0.06f);
             camera.Shake(0.18f);
@@ -226,8 +228,7 @@ internal sealed class CapManApp : IMiniGame
             var world = board.FruitPosition + CapManRenderer.Half;
             var screen = camera.ToScreen(world);
             particles.Emit(FruitSparkle, world, 14);
-            fx.AddText(board.LastFruitPoints == CapManBoard.FirstFruitPoints ? FirstFruitLabel : LaterFruitLabel, screen,
-                CapManRenderer.PlayerColor, 1.2f);
+            fx.AddText(GameNumber.Signed(board.LastFruitPoints), screen, CapManRenderer.PlayerColor, 1.2f);
             fx.Shockwave(screen, camera.Px(2f), CapManRenderer.PlayerColor with { W = 0.7f }, 0.4f, 2.5f);
             context.Fx.Punch(FruitPunch);
         }
@@ -249,7 +250,8 @@ internal sealed class CapManApp : IMiniGame
         {
             GameSfx.LevelClear();
             context.Fx.Sweep();
-            EmitConfetti(new Vector2(CapManBoard.Columns * 0.5f, CapManBoard.Rows * 0.2f), 60);
+            particles.Confetti(new Vector2(CapManBoard.Columns * 0.5f, CapManBoard.Rows * 0.2f), ConfettiCount,
+                CelebrationPalette, ConfettiSpeed, ConfettiSize, ConfettiLife, ConfettiGravity);
             context.Fx.Flash(GamePalette.Lighten(Accent, 0.4f), 0.18f);
         }
 
@@ -259,32 +261,11 @@ internal sealed class CapManApp : IMiniGame
         }
     }
 
-    private void EmitConfetti(Vector2 origin, int count)
-    {
-        var perColor = Math.Max(1, count / ConfettiSpecs.Length);
-        for (var index = 0; index < ConfettiSpecs.Length; index++)
-        {
-            particles.Emit(in ConfettiSpecs[index], origin, perColor);
-        }
-    }
-
     private void Finish(in GameContext context)
     {
         context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
             .WithStat(L.Games.Level, GameNumber.Label(board.Level))
             .WithStat(L.CapMan.GhostsEaten, GameNumber.Label(board.GhostsEaten))
             .WithStat(L.CapMan.Fruit, GameNumber.Label(board.FruitEaten)));
-    }
-
-    private static ParticleSpec[] BuildConfetti()
-    {
-        var specs = new ParticleSpec[CelebrationPalette.Length];
-        for (var index = 0; index < specs.Length; index++)
-        {
-            specs[index] = new ParticleSpec(CelebrationPalette[index], CelebrationPalette[index], 0.16f, 10f, 1.4f, 20f,
-                0.7f, 16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
-        }
-
-        return specs;
     }
 }

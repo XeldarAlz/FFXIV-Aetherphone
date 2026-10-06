@@ -23,6 +23,7 @@ internal sealed class BreakoutApp : IMiniGame
     private const float LastBrickSlowSeconds = 0.25f;
     private const float PaddleKeySpeed = 1.6f;
     private const int ConfettiCount = 60;
+    private const float ConfettiGravity = 2f;
     private const ulong IdleSeed = 0x425249434B53UL;
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Breakout, GameGenre.Arcade, L.Breakout.Hook,
         Backdrop.Neon, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true, keyboard: true);
@@ -46,12 +47,10 @@ internal sealed class BreakoutApp : IMiniGame
         2f, shape: ParticleShape.Spark);
     private static readonly ParticleSpec LostShards = new(BreakoutRenderer.BallColor, Danger, 0.012f, 0.7f, 0.6f, 1.6f,
         1.2f, 8f, MathF.PI, -MathF.PI * 0.5f, ParticleShape.Shard);
-    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
     private readonly BreakoutBoard board = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
     private readonly Ribbon[] ribbons = new Ribbon[BreakoutBoard.MaxBalls];
-    private readonly int[] ribbonBallIds = new int[BreakoutBoard.MaxBalls];
     private Camera2D camera = Camera2D.Create();
     private LabelSlot levelLabel;
     private float bannerProgress = 1f;
@@ -62,7 +61,6 @@ internal sealed class BreakoutApp : IMiniGame
         for (var slot = 0; slot < ribbons.Length; slot++)
         {
             ribbons[slot] = new Ribbon();
-            ribbonBallIds[slot] = -1;
         }
 
         board.StartGame(GameRandom.FromSeed(IdleSeed));
@@ -161,13 +159,12 @@ internal sealed class BreakoutApp : IMiniGame
             return;
         }
 
-        var scale = UiScale.Current;
         var full = context.Full;
-        var hitMin = new Vector2(full.Min.X, full.Min.Y + StageLayout.ChromeBand * scale);
-        var hovered = UiInteract.Hover(hitMin, full.Max);
+        var mouse = ImGui.GetMousePos();
+        var hovered = UiInteract.Hover(full.Min, full.Max) && !context.ChromeHit(mouse);
         if (hovered)
         {
-            board.SetPaddle(camera.ToWorld(ImGui.GetMousePos()).X);
+            board.SetPaddle(camera.ToWorld(mouse).X);
         }
 
         if (state != StageFlow.Playing)
@@ -209,12 +206,7 @@ internal sealed class BreakoutApp : IMiniGame
         for (var slot = 0; slot < board.BallCount; slot++)
         {
             var ball = board.GetBall(slot);
-            if (ribbonBallIds[slot] != ball.Id)
-            {
-                ribbons[slot].Clear();
-                ribbonBallIds[slot] = ball.Id;
-            }
-
+            ribbons[slot].Claim(ball.Id);
             if (deltaSeconds > 0f)
             {
                 ribbons[slot].Push(ball.Position);
@@ -226,8 +218,7 @@ internal sealed class BreakoutApp : IMiniGame
     {
         for (var slot = 0; slot < ribbons.Length; slot++)
         {
-            ribbons[slot].Clear();
-            ribbonBallIds[slot] = -1;
+            ribbons[slot].Release();
         }
     }
 
@@ -330,11 +321,7 @@ internal sealed class BreakoutApp : IMiniGame
         context.Fx.Sweep();
         context.Fx.Flash(GamePalette.Lighten(Accent, 0.4f), 0.18f);
         var origin = new Vector2(BreakoutBoard.FieldWidth * 0.5f, BreakoutBoard.FieldHeight * 0.2f);
-        var perColor = Math.Max(1, ConfettiCount / ConfettiSpecs.Length);
-        for (var index = 0; index < ConfettiSpecs.Length; index++)
-        {
-            particles.Emit(in ConfettiSpecs[index], origin, perColor);
-        }
+        particles.Confetti(origin, ConfettiCount, CelebrationPalette, 0.9f, 0.012f, 1.4f, ConfettiGravity);
     }
 
     private void OnLifeLost(in GameContext context)
@@ -370,17 +357,5 @@ internal sealed class BreakoutApp : IMiniGame
         particles.Draw(drawList, in camera);
         fx.DrawRings(drawList, scale);
         fx.DrawText();
-    }
-
-    private static ParticleSpec[] BuildConfetti()
-    {
-        var specs = new ParticleSpec[CelebrationPalette.Length];
-        for (var index = 0; index < specs.Length; index++)
-        {
-            specs[index] = new ParticleSpec(CelebrationPalette[index], CelebrationPalette[index], 0.012f, 0.9f, 1.4f,
-                2f, 0.7f, 16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
-        }
-
-        return specs;
     }
 }
