@@ -1041,16 +1041,26 @@ internal sealed class SlotsCabinet
         return y + block.Y + Metrics.Space.Sm * scale;
     }
 
-    private bool DrawAutoToggle(ImDrawListPtr drawList, AppSkin ui, Rect rect, float scale)
-    {
-        var lit = AutoRunning || autoPickerOpen;
-        return Button.Draw(drawList, rect, Loc.T(L.Casino.SlotsAuto), ui.Ink,
-            lit ? ButtonStyle.Tinted : ButtonStyle.Gray, id: "casino.slots.auto");
-    }
+    private bool DrawAutoToggle(ImDrawListPtr drawList, AppSkin ui, Rect rect, float scale) =>
+        DrawSideToggle(drawList, ui, rect, Loc.T(L.Casino.SlotsAuto), AutoRunning || autoPickerOpen,
+            "casino.slots.auto", scale);
 
     private bool DrawTurboToggle(ImDrawListPtr drawList, AppSkin ui, Rect rect, float scale) =>
-        Button.Draw(drawList, rect, Loc.T(L.Casino.SlotsTurbo), ui.Ink, turbo ? ButtonStyle.Tinted : ButtonStyle.Gray,
-            id: "casino.slots.turbo");
+        DrawSideToggle(drawList, ui, rect, Loc.T(L.Casino.SlotsTurbo), turbo, "casino.slots.turbo", scale);
+
+    private static bool DrawSideToggle(ImDrawListPtr drawList, AppSkin ui, Rect rect, string label, bool lit,
+        string id, float scale)
+    {
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
+        var face = Button.Surface(drawList, rect, ui.Ink, lit ? ButtonStyle.Tinted : ButtonStyle.Gray,
+            ButtonRole.Normal, true, hovered, ImGui.GetID(id));
+        var area = face.Face;
+        var maxLabelWidth = MathF.Max(1f, area.Width - Metrics.Space.Sm * scale * 2f);
+        var labelHeight = Typography.Measure(label, TextStyles.FootnoteEmphasized).Y;
+        Marquee.DrawCenteredAuto(drawList, id, label, area.Center.X, area.Center.Y - labelHeight * 0.5f,
+            maxLabelWidth, TextStyles.FootnoteEmphasized, face.LabelInk);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
+    }
 
     private static float DrawReasonCard(ImDrawListPtr drawList, AppSkin ui, string message, float left, float y,
         float width, float scale)
