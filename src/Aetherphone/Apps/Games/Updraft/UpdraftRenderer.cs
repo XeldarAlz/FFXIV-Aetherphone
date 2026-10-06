@@ -7,6 +7,20 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Updraft;
 
+internal readonly struct UpdraftTone
+{
+    public readonly Vector4 Light;
+    public readonly float Aurora;
+    public readonly float Night;
+
+    public UpdraftTone(Vector4 light, float aurora, float night)
+    {
+        Light = light;
+        Aurora = aurora;
+        Night = night;
+    }
+}
+
 internal sealed class UpdraftRenderer
 {
     public static readonly Vector4 BirdBody = new(1f, 0.80f, 0.34f, 1f);
@@ -19,6 +33,7 @@ internal sealed class UpdraftRenderer
     private static readonly Vector4 ZapTint = new(0.78f, 0.84f, 1f, 1f);
     private static readonly Vector4 FarMountain = new(0.36f, 0.40f, 0.62f, 1f);
     private static readonly Vector4 NearHill = new(0.36f, 0.62f, 0.50f, 1f);
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4[] AuroraColors =
     {
         new(0.36f, 1f, 0.72f, 1f), new(0.32f, 0.84f, 1f, 1f), new(0.76f, 0.48f, 1f, 1f),
@@ -30,8 +45,15 @@ internal sealed class UpdraftRenderer
         new(1.02f, 4.6f, 2.8f),
     };
 
-    private static readonly Vector3[] StarField = BuildStars();
-    private const int StarCount = 72;
+    private static readonly Vector4[] Lights =
+    {
+        new(1f, 0.93f, 0.90f, 1f), new(1f, 1f, 1f, 1f), new(1f, 0.84f, 0.74f, 1f), new(0.60f, 0.66f, 0.88f, 1f),
+        new(0.60f, 0.78f, 0.86f, 1f),
+    };
+
+    private static readonly float[] AuroraAmounts = { 0f, 0f, 0f, 0.12f, 1f };
+    private static readonly float[] NightAmounts = { 0f, 0f, 0.12f, 0.85f, 1f };
+    private const int SkyBands = 5;
     private const int AuroraColumns = 32;
     private const int WindLines = 9;
     private const int HillBumps = 9;
@@ -40,9 +62,9 @@ internal sealed class UpdraftRenderer
     private const float MountainParallax = 0.16f;
     private const float HillParallax = 0.38f;
     private const float BankParallax = 0.55f;
-    private const float StarParallax = 0.08f;
     private const float FlapSeconds = 0.42f;
     private const float ChargeDistance = 4f;
+    private const float PickupSize = 0.24f;
     private Spring tilt = new(0f);
     private Spring facing = new(1f);
     private Spring wing = new(0f);
@@ -60,6 +82,16 @@ internal sealed class UpdraftRenderer
 
     public static float InterpolatedCamera(UpdraftBoard board) =>
         board.PreviousCamera + (board.CameraBottom - board.PreviousCamera) * board.Alpha;
+
+    public static UpdraftTone ToneAt(float progress)
+    {
+        var position = Math.Clamp(progress, 0f, 1f) * (SkyBands - 1);
+        var band = Math.Min(SkyBands - 2, (int)position);
+        var blend = Easing.SmoothStep(position - band);
+        return new UpdraftTone(Vector4.Lerp(Lights[band], Lights[band + 1], blend),
+            Easing.Lerp(AuroraAmounts[band], AuroraAmounts[band + 1], blend),
+            Easing.Lerp(NightAmounts[band], NightAmounts[band + 1], blend));
+    }
 
     public void Reset()
     {
@@ -82,8 +114,13 @@ internal sealed class UpdraftRenderer
         zapTime = 1f;
     }
 
-    public void Animate(UpdraftBoard board, float deltaSeconds)
+    public void Animate(UpdraftBoard board, float deltaSeconds, float time)
     {
+        if (deltaSeconds <= 0f)
+        {
+            return;
+        }
+
         landSquash = MathF.Max(0f, landSquash - deltaSeconds * 5f);
         flapTime = MathF.Min(FlapSeconds, flapTime + deltaSeconds);
         zapTime = MathF.Max(0f, zapTime - deltaSeconds * 1.6f);
@@ -93,14 +130,14 @@ internal sealed class UpdraftRenderer
             facing.Step(MathF.Sign(board.VelocityX), 0.07f, deltaSeconds);
         }
 
-        wing.Step(WingTarget(board), 0.025f, deltaSeconds);
+        wing.Step(WingTarget(board, time), 0.025f, deltaSeconds);
     }
 
-    private float WingTarget(UpdraftBoard board)
+    private float WingTarget(UpdraftBoard board, float time)
     {
         if (board.Gliding)
         {
-            return -0.95f + MathF.Sin((float)ImGui.GetTime() * 18f) * 0.28f;
+            return -0.95f + MathF.Sin(time * 18f) * 0.28f;
         }
 
         if (flapTime < FlapSeconds)
@@ -112,57 +149,54 @@ internal sealed class UpdraftRenderer
         return board.VelocityY < 0f ? -0.55f : 0.28f;
     }
 
-    public void Draw(ImDrawListPtr drawList, UpdraftBoard board, in UpdraftView view, in UpdraftSkyState sky,
-        Vector4 accent, float time, float scale)
+    public void Draw(ImDrawListPtr drawList, UpdraftBoard board, in Camera2D camera, float cameraBottom,
+        in UpdraftTone tone, Vector4 haze, Vector4 accent, float time, float scale)
     {
-        var body = view.Body;
-        drawList.PushClipRect(body.Min, body.Max, true);
-        DrawSky(drawList, body, sky);
-        DrawAurora(drawList, body, sky, time);
-        DrawStars(drawList, view, sky, time, scale);
-        DrawSun(drawList, body, sky);
-        DrawBanks(drawList, view, sky);
-        DrawMountains(drawList, view, sky);
-        DrawHills(drawList, view, sky);
-        DrawWinds(drawList, board, view, time, scale);
-        DrawBestLine(drawList, board, view, accent, time, scale);
+        DrawAurora(drawList, camera.View, tone, time);
+        DrawBanks(drawList, in camera, cameraBottom, tone);
+        DrawMountains(drawList, in camera, cameraBottom, tone, haze);
+        DrawHills(drawList, in camera, cameraBottom, tone, haze);
+        DrawWinds(drawList, board, in camera, time, scale);
+        DrawBestLine(drawList, board, in camera, accent, time, scale);
         var bird = InterpolatedBird(board);
-        DrawClouds(drawList, board, view, sky, bird, time);
-        DrawPickups(drawList, board, view, time);
-        DrawBirds(drawList, board, view, bird, time);
-        drawList.PopClipRect();
+        DrawClouds(drawList, board, in camera, tone, bird, time);
+        DrawPickups(drawList, board, in camera, time);
+        DrawBirds(drawList, board, in camera, bird, time);
     }
 
-    private static void DrawSky(ImDrawListPtr drawList, Rect body, in UpdraftSkyState sky)
-    {
-        var top = UpdraftArt.Color(sky.Top);
-        var middle = UpdraftArt.Color(sky.Middle);
-        var bottom = UpdraftArt.Color(sky.Bottom);
-        var split = body.Min.Y + body.Height * 0.55f;
-        drawList.AddRectFilledMultiColor(body.Min, new Vector2(body.Max.X, split), top, top, middle, middle);
-        drawList.AddRectFilledMultiColor(new Vector2(body.Min.X, split), body.Max, middle, middle, bottom, bottom);
-    }
+    private static float ScreenY(in Camera2D camera, float worldY) => camera.ToScreen(new Vector2(0f, -worldY)).Y;
 
-    private static void DrawAurora(ImDrawListPtr drawList, Rect body, in UpdraftSkyState sky, float time)
+    private static float ScreenX(in Camera2D camera, float worldX) => camera.ToScreen(new Vector2(worldX, 0f)).X;
+
+    private static float LayerScreenY(in Camera2D camera, float cameraBottom, float layerY, float parallax) =>
+        ScreenY(in camera, layerY + (cameraBottom - UpdraftBoard.StartCamera) * (1f - parallax));
+
+    private static int FirstCopy(in Camera2D camera, float x, float marginUnits) =>
+        (int)MathF.Ceiling((camera.VisibleWorld.Min.X - marginUnits - x) / UpdraftBoard.FieldWidth);
+
+    private static int LastCopy(in Camera2D camera, float x, float marginUnits) =>
+        (int)MathF.Floor((camera.VisibleWorld.Max.X + marginUnits - x) / UpdraftBoard.FieldWidth);
+
+    private static void DrawAurora(ImDrawListPtr drawList, Rect view, in UpdraftTone tone, float time)
     {
-        if (sky.Aurora < 0.01f)
+        if (tone.Aurora < 0.01f)
         {
             return;
         }
 
-        var columnWidth = body.Width / AuroraColumns;
+        var columnWidth = view.Width / AuroraColumns;
         for (var ribbon = 0; ribbon < AuroraColors.Length; ribbon++)
         {
             var color = AuroraColors[ribbon];
-            var baseY = body.Min.Y + body.Height * (0.2f + ribbon * 0.1f);
+            var baseY = view.Min.Y + view.Height * (0.2f + ribbon * 0.1f);
             for (var column = 0; column < AuroraColumns; column++)
             {
-                var x = body.Min.X + column * columnWidth;
-                var wave = MathF.Sin(column * 0.35f + time * (0.6f + ribbon * 0.2f) + ribbon * 1.7f) * body.Height * 0.05f +
-                    MathF.Sin(column * 0.13f - time * 0.3f) * body.Height * 0.03f;
+                var x = view.Min.X + column * columnWidth;
+                var wave = MathF.Sin(column * 0.35f + time * (0.6f + ribbon * 0.2f) + ribbon * 1.7f) * view.Height * 0.05f +
+                    MathF.Sin(column * 0.13f - time * 0.3f) * view.Height * 0.03f;
                 var y = baseY + wave;
-                var height = body.Height * (0.12f + 0.05f * MathF.Sin(column * 0.5f + time + ribbon));
-                var alpha = sky.Aurora * 0.26f * (0.7f + 0.3f * MathF.Sin(time * 0.8f + column * 0.2f + ribbon));
+                var height = view.Height * (0.12f + 0.05f * MathF.Sin(column * 0.5f + time + ribbon));
+                var alpha = tone.Aurora * 0.26f * (0.7f + 0.3f * MathF.Sin(time * 0.8f + column * 0.2f + ribbon));
                 var clear = UpdraftArt.Color(color with { W = 0f });
                 var lit = UpdraftArt.Color(color with { W = alpha });
                 drawList.AddRectFilledMultiColor(new Vector2(x, y - height), new Vector2(x + columnWidth + 1f, y), clear,
@@ -173,78 +207,29 @@ internal sealed class UpdraftRenderer
         }
     }
 
-    private static void DrawStars(ImDrawListPtr drawList, in UpdraftView view, in UpdraftSkyState sky, float time,
-        float scale)
+    private static void DrawBanks(ImDrawListPtr drawList, in Camera2D camera, float cameraBottom, in UpdraftTone tone)
     {
-        if (sky.Stars < 0.01f)
-        {
-            return;
-        }
-
-        var body = view.Body;
-        var tile = body.Height;
-        var offset = (view.Camera - UpdraftBoard.StartCamera) * view.Unit * StarParallax % tile;
-        for (var index = 0; index < StarField.Length; index++)
-        {
-            var star = StarField[index];
-            var y = body.Min.Y + (star.Y * tile + offset) % tile;
-            var x = body.Min.X + star.X * body.Width;
-            var twinkle = 0.55f + 0.45f * MathF.Sin(time * (1.5f + star.Z) + star.X * 40f);
-            var alpha = sky.Stars * twinkle;
-            var radius = (0.6f + star.Z * 1.2f) * scale;
-            drawList.AddCircleFilled(new Vector2(x, y), radius, UpdraftArt.Color(new Vector4(1f, 1f, 0.96f, alpha)));
-            if (star.Z > 0.85f)
-            {
-                UpdraftArt.Twinkle(drawList, new Vector2(x, y), radius * 3f, UpdraftArt.Color(new Vector4(1f, 1f, 1f, alpha * 0.5f)));
-            }
-        }
-    }
-
-    private static void DrawSun(ImDrawListPtr drawList, Rect body, in UpdraftSkyState sky)
-    {
-        var center = new Vector2(body.Min.X + body.Width * 0.76f, body.Min.Y + body.Height * sky.SunHeight);
-        var radius = body.Width * 0.075f;
-        ProgressRing.Glow(center, radius * 2.8f, sky.Sun, 0.75f);
-        drawList.AddCircleFilled(center, radius, UpdraftArt.Color(sky.Sun), 36);
-        if (sky.Moon < 0.01f)
-        {
-            return;
-        }
-
-        var shadowSky = Vector4.Lerp(sky.Top, sky.Middle, Math.Clamp(sky.SunHeight / 0.55f, 0f, 1f));
-        drawList.AddCircleFilled(center + new Vector2(radius * 0.42f, -radius * 0.22f), radius * 0.9f,
-            UpdraftArt.Color(shadowSky with { W = sky.Moon }), 36);
-    }
-
-    private static float LayerScreenY(in UpdraftView view, float layerY, float parallax)
-    {
-        var layerCamera = UpdraftBoard.StartCamera + (view.Camera - UpdraftBoard.StartCamera) * parallax;
-        return view.Bottom - (layerY - layerCamera) * view.Unit;
-    }
-
-    private static void DrawBanks(ImDrawListPtr drawList, in UpdraftView view, in UpdraftSkyState sky)
-    {
-        var body = view.Body;
-        var unit = view.Unit;
-        var alpha = 0.24f * (1f - 0.75f * sky.Stars);
+        var alpha = 0.24f * (1f - 0.75f * tone.Night);
         if (alpha < 0.01f)
         {
             return;
         }
 
-        var layerCamera = UpdraftBoard.StartCamera + (view.Camera - UpdraftBoard.StartCamera) * BankParallax;
-        var span = body.Height / unit;
+        var view = camera.View;
+        var unit = camera.Px(1f);
+        var layerCamera = UpdraftBoard.StartCamera + (cameraBottom - UpdraftBoard.StartCamera) * BankParallax;
+        var span = view.Height / unit;
         var first = (int)MathF.Floor((layerCamera - 4f) / BankPeriod);
         var last = (int)MathF.Ceiling((layerCamera + span + 4f) / BankPeriod);
-        var color = UpdraftArt.Color(UpdraftArt.Lit(new Vector4(1f, 1f, 1f, alpha), sky.Light));
-        var soft = UpdraftArt.Color(UpdraftArt.Lit(new Vector4(1f, 1f, 1f, alpha * 0.6f), sky.Light));
+        var color = UpdraftArt.Color(UpdraftArt.Lit(White with { W = alpha }, tone.Light));
+        var soft = UpdraftArt.Color(UpdraftArt.Lit(White with { W = alpha * 0.6f }, tone.Light));
         for (var bank = Math.Max(0, first); bank <= last; bank++)
         {
-            var y = LayerScreenY(view, bank * BankPeriod + 9f, BankParallax);
+            var y = LayerScreenY(in camera, cameraBottom, bank * BankPeriod + 9f, BankParallax);
             for (var puff = 0; puff < BankPuffs; puff++)
             {
                 var seed = bank * 13.1f + puff * 3.7f;
-                var x = body.Min.X + (puff + UpdraftArt.Hash(seed) * 0.6f - 0.3f) / (BankPuffs - 1) * body.Width;
+                var x = view.Min.X + (puff + UpdraftArt.Hash(seed) * 0.6f - 0.3f) / (BankPuffs - 1) * view.Width;
                 var radius = (1.3f + UpdraftArt.Hash(seed + 1f) * 1.1f) * unit;
                 var lift = UpdraftArt.Hash(seed + 2f) * 0.7f * unit;
                 drawList.AddCircleFilled(new Vector2(x, y - lift), radius, color);
@@ -253,23 +238,24 @@ internal sealed class UpdraftRenderer
         }
     }
 
-    private static void DrawMountains(ImDrawListPtr drawList, in UpdraftView view, in UpdraftSkyState sky)
+    private static void DrawMountains(ImDrawListPtr drawList, in Camera2D camera, float cameraBottom,
+        in UpdraftTone tone, Vector4 haze)
     {
-        var body = view.Body;
-        var unit = view.Unit;
-        var baseY = LayerScreenY(view, UpdraftBoard.StartCamera, MountainParallax);
+        var view = camera.View;
+        var unit = camera.Px(1f);
+        var baseY = LayerScreenY(in camera, cameraBottom, UpdraftBoard.StartCamera, MountainParallax);
         var tallest = 6.4f * unit;
-        if (baseY - tallest > body.Max.Y)
+        if (baseY - tallest > view.Max.Y)
         {
             return;
         }
 
-        var fill = UpdraftArt.Color(UpdraftArt.Lit(Vector4.Lerp(sky.Bottom, FarMountain, 0.55f), sky.Light));
-        var snow = UpdraftArt.Color(UpdraftArt.Lit(new Vector4(1f, 1f, 1f, 0.85f), sky.Light));
+        var fill = UpdraftArt.Color(UpdraftArt.Lit(Vector4.Lerp(haze, FarMountain, 0.55f), tone.Light));
+        var snow = UpdraftArt.Color(UpdraftArt.Lit(White with { W = 0.85f }, tone.Light));
         for (var index = 0; index < Mountains.Length; index++)
         {
             var mountain = Mountains[index];
-            var peak = new Vector2(body.Min.X + mountain.X * body.Width, baseY - mountain.Y * unit);
+            var peak = new Vector2(view.Min.X + mountain.X * view.Width, baseY - mountain.Y * unit);
             var left = new Vector2(peak.X - mountain.Z * unit, baseY);
             var right = new Vector2(peak.X + mountain.Z * unit, baseY);
             drawList.AddTriangleFilled(peak, right, left, fill);
@@ -281,42 +267,44 @@ internal sealed class UpdraftRenderer
             drawList.AddTriangleFilled(peak, notch, capLeft, snow);
         }
 
-        if (baseY < body.Max.Y)
+        if (baseY < view.Max.Y)
         {
-            drawList.AddRectFilled(new Vector2(body.Min.X, baseY), body.Max, fill);
+            drawList.AddRectFilled(new Vector2(view.Min.X, baseY), view.Max, fill);
         }
     }
 
-    private static void DrawHills(ImDrawListPtr drawList, in UpdraftView view, in UpdraftSkyState sky)
+    private static void DrawHills(ImDrawListPtr drawList, in Camera2D camera, float cameraBottom, in UpdraftTone tone,
+        Vector4 haze)
     {
-        var body = view.Body;
-        var unit = view.Unit;
-        var baseY = LayerScreenY(view, UpdraftBoard.StartCamera + 0.4f, HillParallax);
-        if (baseY - 2.5f * unit > body.Max.Y)
+        var view = camera.View;
+        var unit = camera.Px(1f);
+        var baseY = LayerScreenY(in camera, cameraBottom, UpdraftBoard.StartCamera + 0.4f, HillParallax);
+        if (baseY - 2.5f * unit > view.Max.Y)
         {
             return;
         }
 
-        var color = UpdraftArt.Lit(Vector4.Lerp(sky.Bottom, NearHill, 0.7f), sky.Light);
+        var color = UpdraftArt.Lit(Vector4.Lerp(haze, NearHill, 0.7f), tone.Light);
         var fill = UpdraftArt.Color(color);
         var crest = UpdraftArt.Color(GamePalette.Lighten(color, 0.12f));
-        var spacing = body.Width / (HillBumps - 1);
+        var spacing = view.Width / (HillBumps - 1);
         for (var bump = 0; bump < HillBumps; bump++)
         {
             var radius = (1.4f + UpdraftArt.Hash(bump * 2.3f) * 1.1f) * unit;
-            var center = new Vector2(body.Min.X + bump * spacing, baseY + radius * 0.45f);
+            var center = new Vector2(view.Min.X + bump * spacing, baseY + radius * 0.45f);
             drawList.AddCircleFilled(center, radius, fill, 32);
             drawList.AddCircleFilled(center + new Vector2(-radius * 0.2f, -radius * 0.08f), radius * 0.82f, crest, 28);
             drawList.AddCircleFilled(center + new Vector2(radius * 0.05f, radius * 0.1f), radius * 0.86f, fill, 28);
         }
 
-        drawList.AddRectFilled(new Vector2(body.Min.X, baseY + 0.4f * unit), body.Max, fill);
+        drawList.AddRectFilled(new Vector2(view.Min.X, baseY + 0.4f * unit), view.Max, fill);
     }
 
-    private static void DrawWinds(ImDrawListPtr drawList, UpdraftBoard board, in UpdraftView view, float time,
+    private static void DrawWinds(ImDrawListPtr drawList, UpdraftBoard board, in Camera2D camera, float time,
         float scale)
     {
-        var body = view.Body;
+        var view = camera.View;
+        var unit = camera.Px(1f);
         var winds = board.Winds;
         for (var index = 0; index < winds.Length; index++)
         {
@@ -326,32 +314,32 @@ internal sealed class UpdraftRenderer
                 continue;
             }
 
-            var topY = view.ScreenY(wind.Top);
-            var bottomY = view.ScreenY(wind.Bottom);
-            if (bottomY < body.Min.Y || topY > body.Max.Y)
+            var topY = ScreenY(in camera, wind.Top);
+            var bottomY = ScreenY(in camera, wind.Bottom);
+            if (bottomY < view.Min.Y || topY > view.Max.Y)
             {
                 continue;
             }
 
-            var band = UpdraftArt.Color(new Vector4(1f, 1f, 1f, 0.05f));
-            var clear = UpdraftArt.Color(new Vector4(1f, 1f, 1f, 0f));
+            var band = UpdraftArt.Color(White with { W = 0.05f });
+            var clear = UpdraftArt.Color(White with { W = 0f });
             var middle = (topY + bottomY) * 0.5f;
-            drawList.AddRectFilledMultiColor(new Vector2(body.Min.X, topY), new Vector2(body.Max.X, middle), clear, clear,
+            drawList.AddRectFilledMultiColor(new Vector2(view.Min.X, topY), new Vector2(view.Max.X, middle), clear, clear,
                 band, band);
-            drawList.AddRectFilledMultiColor(new Vector2(body.Min.X, middle), new Vector2(body.Max.X, bottomY), band, band,
+            drawList.AddRectFilledMultiColor(new Vector2(view.Min.X, middle), new Vector2(view.Max.X, bottomY), band, band,
                 clear, clear);
             var direction = MathF.Sign(wind.Speed);
-            var travel = body.Width + 3f * view.Unit;
+            var travel = view.Width + 3f * unit;
             for (var line = 0; line < WindLines; line++)
             {
                 var fraction = (line + 0.5f) / WindLines;
                 var seed = UpdraftArt.Hash(index * 7.3f + line * 1.9f);
-                var length = (0.8f + seed) * view.Unit;
-                var distance = (time * MathF.Abs(wind.Speed) * 1.6f * view.Unit + seed * travel * 3f) % travel;
-                var head = direction > 0f ? body.Min.X - 1.5f * view.Unit + distance : body.Max.X + 1.5f * view.Unit - distance;
+                var length = (0.8f + seed) * unit;
+                var distance = (time * MathF.Abs(wind.Speed) * 1.6f * unit + seed * travel * 3f) % travel;
+                var head = direction > 0f ? view.Min.X - 1.5f * unit + distance : view.Max.X + 1.5f * unit - distance;
                 var y = bottomY + (topY - bottomY) * fraction + MathF.Sin(time * 2f + line) * 2f * scale;
                 var alpha = 0.42f * MathF.Sin(fraction * MathF.PI);
-                var color = UpdraftArt.Color(new Vector4(1f, 1f, 1f, alpha));
+                var color = UpdraftArt.Color(White with { W = alpha });
                 var tail = new Vector2(head - direction * length, y);
                 drawList.AddLine(tail, new Vector2(head, y), color, MathF.Max(1f, 1.6f * scale));
                 var chevron = 3.5f * scale;
@@ -363,7 +351,7 @@ internal sealed class UpdraftRenderer
         }
     }
 
-    private static void DrawBestLine(ImDrawListPtr drawList, UpdraftBoard board, in UpdraftView view, Vector4 accent,
+    private static void DrawBestLine(ImDrawListPtr drawList, UpdraftBoard board, in Camera2D camera, Vector4 accent,
         float time, float scale)
     {
         if (board.BestHeight <= 0f)
@@ -371,26 +359,26 @@ internal sealed class UpdraftRenderer
             return;
         }
 
-        var body = view.Body;
-        var y = view.ScreenY(board.BestHeight);
-        if (y < body.Min.Y - 30f * scale || y > body.Max.Y + 4f * scale)
+        var view = camera.View;
+        var y = ScreenY(in camera, board.BestHeight);
+        if (y < view.Min.Y - 30f * scale || y > view.Max.Y + 4f * scale)
         {
             return;
         }
 
-        var tone = board.PassedBest ? UpdraftArt.GoldColor : new Vector4(1f, 1f, 1f, 1f);
+        var tone = board.PassedBest ? UpdraftArt.GoldColor : White;
         var line = UpdraftArt.Color(tone with { W = 0.62f });
         var dash = 9f * scale;
         var gap = 6f * scale;
         var thickness = MathF.Max(1f, 1.6f * scale);
-        for (var x = body.Min.X; x < body.Max.X; x += dash + gap)
+        for (var x = view.Min.X; x < view.Max.X; x += dash + gap)
         {
-            drawList.AddLine(new Vector2(x, y), new Vector2(MathF.Min(body.Max.X, x + dash), y), line, thickness);
+            drawList.AddLine(new Vector2(x, y), new Vector2(MathF.Min(view.Max.X, x + dash), y), line, thickness);
         }
 
-        var poleX = body.Max.X - 24f * scale;
+        var poleX = view.Max.X - 24f * scale;
         var poleTop = y - 24f * scale;
-        drawList.AddLine(new Vector2(poleX, y), new Vector2(poleX, poleTop), UpdraftArt.Color(new Vector4(1f, 1f, 1f, 0.9f)),
+        drawList.AddLine(new Vector2(poleX, y), new Vector2(poleX, poleTop), UpdraftArt.Color(White with { W = 0.9f }),
             MathF.Max(1f, 2f * scale));
         var wave = MathF.Sin(time * 6f) * 2.5f * scale;
         var flag = board.PassedBest ? UpdraftArt.GoldColor : accent;
@@ -402,10 +390,10 @@ internal sealed class UpdraftRenderer
             label, tone with { W = 0.9f }, TextStyles.Caption2.Scale, TextStyles.Caption2.Weight);
     }
 
-    private static void DrawClouds(ImDrawListPtr drawList, UpdraftBoard board, in UpdraftView view,
-        in UpdraftSkyState sky, Vector2 bird, float time)
+    private static void DrawClouds(ImDrawListPtr drawList, UpdraftBoard board, in Camera2D camera, in UpdraftTone tone,
+        Vector2 bird, float time)
     {
-        var body = view.Body;
+        var view = camera.View;
         var clouds = board.Clouds;
         for (var index = 0; index < clouds.Length; index++)
         {
@@ -415,9 +403,9 @@ internal sealed class UpdraftRenderer
                 continue;
             }
 
-            var halfWidth = cloud.HalfWidth * view.Unit;
-            var y = view.ScreenY(cloud.Y);
-            if (y < body.Min.Y - halfWidth * 2f || y > body.Max.Y + halfWidth)
+            var halfWidth = camera.Px(cloud.HalfWidth);
+            var y = ScreenY(in camera, cloud.Y);
+            if (y < view.Min.Y - halfWidth * 2f || y > view.Max.Y + halfWidth)
             {
                 continue;
             }
@@ -431,21 +419,21 @@ internal sealed class UpdraftRenderer
                 charge = Math.Clamp(1f - distance / ChargeDistance, 0f, 1f);
             }
 
-            var first = view.FirstCopy(cloud.X, halfWidth * 1.6f);
-            var last = view.LastCopy(cloud.X, halfWidth * 1.6f);
+            var first = FirstCopy(in camera, cloud.X, cloud.HalfWidth * 1.6f);
+            var last = LastCopy(in camera, cloud.X, cloud.HalfWidth * 1.6f);
             for (var copy = first; copy <= last; copy++)
             {
-                var x = view.Left + cloud.X * view.Unit + copy * view.FieldPixels;
-                UpdraftArt.DrawCloud(drawList, new Vector2(x, y), halfWidth, cloud, sky.Light, time, charge);
+                var x = ScreenX(in camera, cloud.X + copy * UpdraftBoard.FieldWidth);
+                UpdraftArt.DrawCloud(drawList, new Vector2(x, y), halfWidth, cloud, tone.Light, time, charge);
             }
         }
     }
 
-    private static void DrawPickups(ImDrawListPtr drawList, UpdraftBoard board, in UpdraftView view, float time)
+    private static void DrawPickups(ImDrawListPtr drawList, UpdraftBoard board, in Camera2D camera, float time)
     {
-        var body = view.Body;
+        var view = camera.View;
         var pickups = board.Pickups;
-        var size = 0.24f * view.Unit;
+        var size = camera.Px(PickupSize);
         for (var index = 0; index < pickups.Length; index++)
         {
             ref readonly var pickup = ref pickups[index];
@@ -454,18 +442,18 @@ internal sealed class UpdraftRenderer
                 continue;
             }
 
-            var bob = MathF.Sin(time * 2.4f + pickup.Phase) * 0.08f * view.Unit;
-            var y = view.ScreenY(pickup.Y) + bob;
-            if (y < body.Min.Y - size * 3f || y > body.Max.Y + size * 3f)
+            var bob = MathF.Sin(time * 2.4f + pickup.Phase) * 0.08f;
+            var y = ScreenY(in camera, pickup.Y - bob);
+            if (y < view.Min.Y - size * 3f || y > view.Max.Y + size * 3f)
             {
                 continue;
             }
 
-            var first = view.FirstCopy(pickup.X, size * 3f);
-            var last = view.LastCopy(pickup.X, size * 3f);
+            var first = FirstCopy(in camera, pickup.X, PickupSize * 3f);
+            var last = LastCopy(in camera, pickup.X, PickupSize * 3f);
             for (var copy = first; copy <= last; copy++)
             {
-                var center = new Vector2(view.Left + pickup.X * view.Unit + copy * view.FieldPixels, y);
+                var center = new Vector2(ScreenX(in camera, pickup.X + copy * UpdraftBoard.FieldWidth), y);
                 switch (pickup.Kind)
                 {
                     case UpdraftPickupKind.Crystal:
@@ -482,7 +470,7 @@ internal sealed class UpdraftRenderer
         }
     }
 
-    private void DrawBirds(ImDrawListPtr drawList, UpdraftBoard board, in UpdraftView view, Vector2 bird, float time)
+    private void DrawBirds(ImDrawListPtr drawList, UpdraftBoard board, in Camera2D camera, Vector2 bird, float time)
     {
         var y = bird.Y;
         if (!board.Launched)
@@ -490,13 +478,13 @@ internal sealed class UpdraftRenderer
             y += 0.18f + MathF.Sin(time * 3f) * 0.1f;
         }
 
-        var radius = UpdraftBoard.BirdRadius * view.Unit * 1.15f;
-        var screenY = view.ScreenY(y);
-        var first = view.FirstCopy(bird.X, radius * 2.5f);
-        var last = view.LastCopy(bird.X, radius * 2.5f);
+        var radius = camera.Px(UpdraftBoard.BirdRadius) * 1.15f;
+        var screenY = ScreenY(in camera, y);
+        var first = FirstCopy(in camera, bird.X, UpdraftBoard.BirdRadius * 2.9f);
+        var last = LastCopy(in camera, bird.X, UpdraftBoard.BirdRadius * 2.9f);
         for (var copy = first; copy <= last; copy++)
         {
-            var center = new Vector2(view.Left + bird.X * view.Unit + copy * view.FieldPixels, screenY);
+            var center = new Vector2(ScreenX(in camera, bird.X + copy * UpdraftBoard.FieldWidth), screenY);
             DrawBird(drawList, board, center, radius, time);
         }
     }
@@ -534,7 +522,7 @@ internal sealed class UpdraftRenderer
         UpdraftArt.FillEllipse(drawList, frame, Vector2.Zero, Vector2.One, 0f, bodyColor);
         UpdraftArt.FillEllipse(drawList, frame, new Vector2(0.2f, 0.34f), new Vector2(0.62f, 0.5f), 0f, UpdraftArt.Color(BirdBelly));
         UpdraftArt.FillEllipse(drawList, frame, new Vector2(-0.22f, -0.55f), new Vector2(0.42f, 0.2f), -0.3f,
-            UpdraftArt.Color(new Vector4(1f, 1f, 1f, 0.35f)));
+            UpdraftArt.Color(White with { W = 0.35f }));
         UpdraftArt.FillEllipse(drawList, frame, new Vector2(-0.02f, -1.0f), new Vector2(0.12f, 0.22f), -0.4f, wingColor);
         UpdraftArt.FillEllipse(drawList, frame, new Vector2(0.16f, -0.98f), new Vector2(0.09f, 0.18f), 0.3f, wingColor);
         DrawFace(drawList, board, frame, side);
@@ -567,11 +555,11 @@ internal sealed class UpdraftRenderer
         UpdraftArt.FillEllipse(drawList, frame, new Vector2(0.55f, 0.16f), new Vector2(0.13f, 0.1f), 0f,
             UpdraftArt.Color(BirdCheek));
         UpdraftArt.FillEllipse(drawList, frame, new Vector2(0.38f, -0.24f), new Vector2(0.27f, 0.3f), 0f,
-            UpdraftArt.Color(new Vector4(1f, 1f, 1f, 1f)));
+            UpdraftArt.Color(White));
         var pupil = new Vector2(0.42f + gaze.X * 0.1f, -0.22f + gaze.Y * 0.12f);
         UpdraftArt.FillEllipse(drawList, frame, pupil, new Vector2(0.14f, 0.16f), 0f, UpdraftArt.Color(BirdEye));
         UpdraftArt.FillEllipse(drawList, frame, pupil + new Vector2(-0.05f, -0.07f), new Vector2(0.05f, 0.05f), 0f,
-            UpdraftArt.Color(new Vector4(1f, 1f, 1f, 1f)));
+            UpdraftArt.Color(White));
         var beak = UpdraftArt.Color(BirdBeak);
         UpdraftArt.FillTriangle(drawList, frame, new Vector2(0.86f, -0.08f), new Vector2(1.3f, 0.06f), new Vector2(0.86f, 0.2f),
             beak);
@@ -582,17 +570,5 @@ internal sealed class UpdraftRenderer
         var cosine = MathF.Cos(angle);
         var sine = MathF.Sin(angle);
         return new Vector2(value.X * cosine - value.Y * sine, value.X * sine + value.Y * cosine);
-    }
-
-    private static Vector3[] BuildStars()
-    {
-        var random = new UpdraftRandom(7331);
-        var stars = new Vector3[StarCount];
-        for (var index = 0; index < StarCount; index++)
-        {
-            stars[index] = new Vector3(random.NextFloat(), random.NextFloat(), random.NextFloat());
-        }
-
-        return stars;
     }
 }

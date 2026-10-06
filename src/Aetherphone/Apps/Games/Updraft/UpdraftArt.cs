@@ -4,6 +4,33 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Updraft;
 
+internal readonly struct ShapeFrame
+{
+    public readonly Vector2 Origin;
+    public readonly Vector2 AxisX;
+    public readonly Vector2 AxisY;
+
+    public ShapeFrame(Vector2 origin, Vector2 axisX, Vector2 axisY)
+    {
+        Origin = origin;
+        AxisX = axisX;
+        AxisY = axisY;
+    }
+
+    public static ShapeFrame Rotated(Vector2 origin, float scaleX, float scaleY, float rotation)
+    {
+        var cosine = MathF.Cos(rotation);
+        var sine = MathF.Sin(rotation);
+        return new ShapeFrame(origin, new Vector2(cosine, sine) * scaleX, new Vector2(-sine, cosine) * scaleY);
+    }
+
+    public bool Mirrored => AxisX.X * AxisY.Y - AxisX.Y * AxisY.X < 0f;
+
+    public Vector2 Point(float x, float y) => Origin + AxisX * x + AxisY * y;
+
+    public Vector2 Point(Vector2 local) => Origin + AxisX * local.X + AxisY * local.Y;
+}
+
 internal static class UpdraftArt
 {
     public static readonly Vector4 CrystalColor = new(0.50f, 0.93f, 1f, 1f);

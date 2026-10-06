@@ -165,7 +165,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new FlowApp(),
             new SolitaireApp(),
             new SimonApp(),
-            new LegacyGameAdapter(new FlapApp(), L.Games.Flap, L.Flap.Hook),
+            new FlapApp(),
             new ReversiApp(),
             new WhackApp(),
             new SnakeApp(),
@@ -184,8 +184,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new DoomApp(),
             new WordRunApp(gameData),
             new CoilApp(),
-            new LegacyGameAdapter(new UpdraftApp(), L.Updraft.Title, L.Updraft.Hook),
-            new LegacyGameAdapter(new SwoopApp(), L.Swoop.Title, L.Swoop.Hook),
+            new UpdraftApp(),
+            new SwoopApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

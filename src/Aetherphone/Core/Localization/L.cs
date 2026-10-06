@@ -8350,6 +8350,12 @@ internal static class L
     internal static class Flap
     {
         public static readonly LocString Hook = new("games.flap.hook", "Tap to flap through the gaps in the pipes and see how far you can fly.");
+        public static readonly LocString Medal = new("games.flap.medal", "Medal");
+        public static readonly LocString Flaps = new("games.flap.flaps", "Flaps");
+        public static readonly LocString Bronze = new("games.flap.bronze", "Bronze");
+        public static readonly LocString Silver = new("games.flap.silver", "Silver");
+        public static readonly LocString Gold = new("games.flap.gold", "Gold");
+        public static readonly LocString MedalEarned = new("games.flap.medalEarned", "{0} medal!");
     }
 
     internal static class Reversi
@@ -8514,11 +8520,9 @@ internal static class L
     {
         public static readonly LocString Hook = new("updraft.hook", "Steer the bird between the thermals and ride the updrafts as high as you can.");
         public static readonly LocString Title = new("updraft.title", "Updraft");
-        public static readonly LocString Hint = new("updraft.hint", "Steer with A and D, the arrow keys or the mouse");
         public static readonly LocString Height = new("updraft.height", "Height");
         public static readonly LocString Crystals = new("updraft.crystals", "Crystals");
         public static readonly LocString Metres = new("updraft.metres", "{0} m");
-        public static readonly LocString ResultLine = new("updraft.resultLine", "{0} m climbed, {1} crystals");
         public static readonly LocString PassedBest = new("updraft.passedBest", "New best height!");
         public static readonly LocString SuperBounce = new("updraft.superBounce", "Super bounce!");
         public static readonly LocString Feather = new("updraft.feather", "Feather!");
@@ -8531,18 +8535,18 @@ internal static class L
     {
         public static readonly LocString Hook = new("swoop.hook", "Hold to dive down the slopes and let go to soar, chasing the islands before nightfall.");
         public static readonly LocString Title = new("swoop.title", "Swoop");
-        public static readonly LocString HowTo = new("swoop.howTo", "Hold to dive down the slopes, let go to soar");
         public static readonly LocString Smooth = new("swoop.smooth", "Smooth!");
         public static readonly LocString Thud = new("swoop.thud", "Thud!");
         public static readonly LocString AirTime = new("swoop.airTime", "Air {0}s");
-        public static readonly LocString Fever = new("swoop.fever", "Fever");
         public static readonly LocString FeverStart = new("swoop.feverStart", "Fever! Double points");
         public static readonly LocString Island = new("swoop.island", "Island {0}!");
         public static readonly LocString TimeBonus = new("swoop.timeBonus", "+{0}s");
         public static readonly LocString Nightfall = new("swoop.nightfall", "Nightfall");
-        public static readonly LocString ResultTitle = new("swoop.resultTitle", "Good night");
-        public static readonly LocString ResultLine = new("swoop.resultLine", "{0} m · Island {1} · Best air {2}s");
         public static readonly LocString Altitude = new("swoop.altitude", "{0} m");
+        public static readonly LocString Distance = new("swoop.distance", "Distance");
+        public static readonly LocString Islands = new("swoop.islands", "Islands");
+        public static readonly LocString Crystals = new("swoop.crystals", "Crystals");
+        public static readonly LocString FeverTime = new("swoop.feverTime", "Fever time");
     }
 
     internal static class Nameplate

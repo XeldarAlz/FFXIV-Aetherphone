@@ -1,23 +1,34 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Updraft;
 
-internal sealed class UpdraftApp : ILegacyMiniGame
+internal sealed class UpdraftApp : IMiniGame
 {
+    internal const string HeightStatId = "updraft.height";
     private const string GameId = "updraft";
-    private const string HeightStatId = "updraft.height";
     private const float BannerSeconds = 1.5f;
-    private const float TrailInterval = 0.03f;
     private const float PowerUpRadius = 15f;
+    private const float SkyMetres = 1500f;
+    private const float CapsulePadX = 10f;
+    private const float IconSize = 11f;
+    private const float IconGap = 5f;
+    private const float BoostStreakRate = 66f;
+    private const float BoostGlowRate = 33f;
+    private const float GlideSparkleRate = 33f;
+    private const float CrystalPulseDecay = 3f;
+    private const ulong IdleSeed = 0x55504452UL;
+    private static readonly GameSpec StageSpec = new(GameId, L.Updraft.Title, GameGenre.Arcade, L.Updraft.Hook,
+        Backdrop.Sky, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true, keyboard: true);
+    private static readonly TextStyle HeightStyle = TextStyles.FootnoteEmphasized;
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 PuffColor = new(1f, 1f, 1f, 0.85f);
     private static readonly Vector4 FragileColor = new(0.86f, 0.82f, 0.96f, 0.9f);
     private static readonly Vector4 ZapFlash = new(0.75f, 0.80f, 1f, 1f);
@@ -27,156 +38,187 @@ internal sealed class UpdraftApp : ILegacyMiniGame
         new(0.80f, 0.62f, 0.98f, 1f), new(1f, 1f, 1f, 1f),
     };
 
+    private static readonly ParticleSpec Puff = new(PuffColor, PuffColor with { W = 0f }, 0.08f, 2.5f, 0.45f, -0.9f,
+        1.6f, 12f, MathF.PI, MathF.PI * 0.5f);
+    private static readonly ParticleSpec FragileShards = new(FragileColor, FragileColor, 0.075f, 2.8f, 0.7f, 8.8f, 1.6f,
+        12f, MathF.PI, MathF.PI * 0.5f);
+    private static readonly ParticleSpec ZapStreaks = new(UpdraftArt.BoltColor, UpdraftArt.BoltColor, 0.055f, 8.8f, 0.4f,
+        5f, 1.6f, 12f, shape: ParticleShape.Streak);
+    private static readonly ParticleSpec ShieldGlow = new(UpdraftArt.BubbleColor with { W = 0.8f },
+        UpdraftArt.BubbleColor with { W = 0f }, 0.06f, 4.6f, 0.6f, 1.4f, 1.6f, 12f, shape: ParticleShape.GlowCircle);
+    private static readonly ParticleSpec GoldSparkle = new(UpdraftArt.GoldColor, UpdraftArt.GoldColor, 0.07f, 5.1f, 0.8f,
+        0.9f, 2.4f, 6f, shape: ParticleShape.Star);
+    private static readonly ParticleSpec FeatherSparkle = new(UpdraftArt.GoldColor, UpdraftArt.GoldColor, 0.06f, 3.7f,
+        0.8f, 0.9f, 2.4f, 6f, shape: ParticleShape.Star);
+    private static readonly ParticleSpec GlideSparkle = new(UpdraftArt.GoldColor, UpdraftArt.GoldColor, 0.045f, 0.9f,
+        0.5f, 0.9f, 2.4f, 6f, shape: ParticleShape.Star);
+    private static readonly ParticleSpec BoostStreak = new(PuffColor with { W = 0.8f }, PuffColor with { W = 0.8f },
+        0.05f, 3.7f, 0.35f, 5f, 1.6f, 12f, 0.5f, MathF.PI * 0.5f, ParticleShape.Streak);
+    private static readonly ParticleSpec GoldBoostStreak = new(UpdraftArt.GoldColor with { W = 0.8f },
+        UpdraftArt.GoldColor with { W = 0.8f }, 0.05f, 3.7f, 0.35f, 5f, 1.6f, 12f, 0.5f, MathF.PI * 0.5f,
+        ParticleShape.Streak);
+    private static readonly ParticleSpec BoostGlow = new(PuffColor with { W = 0.5f }, PuffColor with { W = 0f }, 0.1f,
+        0.45f, 0.35f, shape: ParticleShape.GlowCircle);
+    private static readonly ParticleSpec GoldBoostGlow = new(UpdraftArt.GoldColor with { W = 0.5f },
+        UpdraftArt.GoldColor with { W = 0f }, 0.1f, 0.45f, 0.35f, shape: ParticleShape.GlowCircle);
+    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
+    private static readonly string[] CrystalLabels = BuildCrystalLabels();
+
     private readonly UpdraftBoard board = new();
+    private readonly UpdraftBoard idleBoard = new();
     private readonly UpdraftRenderer renderer = new();
     private readonly ParticleSystem particles = new(640);
     private readonly FeedbackFx fx = new();
-    private RollingValue heightRoll;
-    private bool started;
+    private Camera2D camera = Camera2D.Create();
+    private Emitter boostStreaks = new(BoostStreak, BoostStreakRate);
+    private Emitter boostGlow = new(BoostGlow, BoostGlowRate);
+    private Emitter glideSparkle = new(GlideSparkle, GlideSparkleRate);
+    private LabelSlot heightLabel;
+    private LabelSlot milestoneLabel;
+    private ulong pendingSeed;
+    private bool startPending;
     private bool finished;
-    private bool pendingSubmit;
-    private bool newBest;
-    private bool statsLoaded;
     private bool pointerMode;
-    private int bestMetres;
-    private float resultAppear;
+    private bool idleReady;
     private float bannerProgress = 1f;
-    private float trailTimer;
     private float crystalPulse;
-    private float entrance;
+    private float time;
     private string bannerText = string.Empty;
-    private string resultLine = string.Empty;
     private Vector2 lastMouse;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Updraft.Title);
-    public GameGenre Genre => GameGenre.Arcade;
-    public bool RunsOnAClock => true;
 
-    public void Open()
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
     {
-        started = false;
-        statsLoaded = false;
+        pendingSeed = start.Seed;
+        startPending = true;
+        finished = false;
+        pointerMode = false;
+        particles.Clear();
+        particles.Reseed(start.Seed);
+        fx.Clear();
+        boostStreaks.Reset();
+        boostGlow.Reset();
+        glideSparkle.Reset();
+        bannerProgress = 1f;
+        bannerText = string.Empty;
+        crystalPulse = 0f;
     }
 
     public void Close()
     {
+        particles.Clear();
+        fx.Clear();
     }
 
     public void Dispose()
     {
     }
 
-    private void StartNewGame()
+    public void DrawIdle(in GameContext context)
     {
-        board.StartGame(Environment.TickCount, bestMetres / UpdraftBoard.MetresPerUnit);
-        renderer.Reset();
-        particles.Clear();
-        fx.Clear();
-        heightRoll.Snap(0);
-        finished = false;
-        pendingSubmit = false;
-        newBest = false;
-        resultAppear = 0f;
-        bannerProgress = 1f;
-        trailTimer = 0f;
-        crystalPulse = 0f;
-        entrance = 0f;
-        started = true;
+        if (!idleReady)
+        {
+            idleBoard.StartGame(SeedOf(IdleSeed), 0f);
+            idleReady = true;
+        }
+
+        time += context.RawDeltaSeconds;
+        var cameraBottom = UpdraftBoard.StartCamera;
+        PlaceCamera(context, cameraBottom);
+        var progress = SkyProgress(cameraBottom);
+        context.Backdrop.SetSky(progress);
+        DrawWorld(ImGui.GetWindowDrawList(), context, idleBoard, cameraBottom, UpdraftRenderer.ToneAt(progress), false);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (!statsLoaded)
+        var drawList = ImGui.GetWindowDrawList();
+        var raw = context.RawDeltaSeconds;
+        var simDelta = fx.ScaleDelta(context.DeltaSeconds);
+        if (startPending)
         {
-            bestMetres = context.Stats.Get(HeightStatId).BestScore;
-            statsLoaded = true;
+            BeginRun(context);
         }
 
-        if (!started)
+        time += raw;
+        var input = finished ? UpdraftInput.Keys(0f) : ReadInput(context);
+        if (!finished && !board.Launched && context.Session.State == StageFlow.Playing)
         {
-            StartNewGame();
+            board.Launch();
         }
 
-        if (pendingSubmit)
-        {
-            Submit(context.Stats);
-        }
-
-        var rowY = body.Min.Y + 30f * scale;
-        var restartRadius = 16f * scale;
-        var restartCenter = new Vector2(body.Max.X - 22f * scale, rowY);
-        var input = UpdraftInput.Keys(0f);
-        if (!finished)
-        {
-            var layout = UpdraftView.Fit(body, board.CameraBottom, Vector2.Zero);
-            input = ReadInput(body, layout, restartCenter, restartRadius);
-        }
-
-        board.Tick(fx.ScaleDelta(deltaSeconds), input);
-
-        var steadyView = UpdraftView.Fit(body, UpdraftRenderer.InterpolatedCamera(board), Vector2.Zero);
-        ReactToEvents(steadyView, scale);
-        EmitTrails(steadyView, deltaSeconds, scale);
-        renderer.Animate(board, deltaSeconds);
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        bannerProgress = GameBanner.Advance(bannerProgress, deltaSeconds, BannerSeconds);
-        crystalPulse = MathF.Max(0f, crystalPulse - deltaSeconds * 3f);
-        entrance = GameJuice.Advance(entrance, deltaSeconds);
+        board.Tick(simDelta, input);
+        var cameraBottom = UpdraftRenderer.InterpolatedCamera(board);
+        PlaceCamera(context, cameraBottom);
+        ReactToEvents(context, scale);
+        EmitTrails(simDelta);
+        renderer.Animate(board, context.DeltaSeconds, time);
+        particles.Update(raw);
+        fx.Update(raw);
+        bannerProgress = GameBanner.Advance(bannerProgress, raw, BannerSeconds);
+        crystalPulse = MathF.Max(0f, crystalPulse - raw * CrystalPulseDecay);
         if (board.GameOver && !finished)
         {
             finished = true;
-            pendingSubmit = true;
-            resultAppear = 0f;
-            resultLine = Loc.T(L.Updraft.ResultLine, GameNumber.Label(board.HeightMetres), GameNumber.Label(board.Crystals));
+            Finish(context);
         }
 
-        var drawList = ImGui.GetWindowDrawList();
-        var time = (float)ImGui.GetTime();
-        var view = UpdraftView.Fit(body, steadyView.Camera, fx.ShakeOffset(scale));
-        var sky = UpdraftSky.At(view.Metres);
-        renderer.Draw(drawList, board, view, sky, Accent, time, scale);
-        particles.Draw(drawList, scale);
-        fx.DrawRings(drawList, scale);
-        fx.DrawText();
-        fx.DrawFlash(drawList, body, 0f);
-        GameBanner.Draw(drawList, new Vector2(body.Center.X, body.Min.Y + body.Height * 0.3f), bannerText, Accent, theme,
-            bannerProgress);
-        DrawHud(drawList, body, rowY, restartCenter, restartRadius, theme, deltaSeconds, time, scale);
-        if (!board.Launched)
-        {
-            DrawReadyPrompt(body, GameJuice.PopIn(entrance), scale);
-        }
-
-        if (finished)
-        {
-            DrawResult(theme, body, deltaSeconds);
-        }
+        var progress = SkyProgress(cameraBottom);
+        context.Backdrop.SetSky(progress);
+        DrawWorld(drawList, context, board, cameraBottom, UpdraftRenderer.ToneAt(progress), true);
+        GameBanner.Draw(drawList, new Vector2(context.Full.Center.X, context.Full.Min.Y + context.Full.Height * 0.3f),
+            bannerText, Accent, context.Theme, bannerProgress);
+        DrawHeightCapsule(drawList, context, scale);
+        DrawPowerUps(drawList, context.Safe, scale);
+        context.Hud.Score(board.Score);
+        context.Hud.Custom(HeightCapsuleWidth(scale));
+        context.Hud.Best(context.Session.Best);
+        context.Session.Report(board.Score);
     }
 
-    private void Submit(GameStatsStore stats)
+    private void BeginRun(in GameContext context)
     {
-        newBest = stats.SubmitScore(GameId, board.Score);
-        if (stats.SubmitScore(HeightStatId, board.HeightMetres))
-        {
-            bestMetres = board.HeightMetres;
-        }
-
-        pendingSubmit = false;
+        var bestMetres = context.Session.Stats.Get(HeightStatId).BestScore;
+        board.StartGame(SeedOf(pendingSeed), bestMetres / UpdraftBoard.MetresPerUnit);
+        renderer.Reset();
+        startPending = false;
     }
 
-    private UpdraftInput ReadInput(Rect body, in UpdraftView layout, Vector2 restartCenter, float restartRadius)
+    private static int SeedOf(ulong seed) => unchecked((int)(seed ^ (seed >> 32)));
+
+    private static float SkyProgress(float cameraBottom) =>
+        Math.Clamp((cameraBottom + UpdraftBoard.ViewHeight * 0.5f) * UpdraftBoard.MetresPerUnit / SkyMetres, 0f, 1f);
+
+    private void PlaceCamera(in GameContext context, float cameraBottom)
     {
+        var scale = UiScale.Current;
+        camera.Fit(context.Full, UpdraftBoard.FieldWidth, UpdraftBoard.ViewHeight, FitMode.CoverWidth);
+        var halfHeightUnits = context.Full.Height / (2f * camera.Zoom);
+        camera.Place(new Vector2(UpdraftBoard.FieldWidth * 0.5f, -(cameraBottom + halfHeightUnits)));
+        context.Fx.ApplyTo(ref camera);
+        camera.Update(context.RawDeltaSeconds, scale);
+        context.Backdrop.SetCamera(in camera);
+    }
+
+    private UpdraftInput ReadInput(in GameContext context)
+    {
+        if (context.Session.State != StageFlow.Playing)
+        {
+            pointerMode = false;
+            return UpdraftInput.Keys(0f);
+        }
+
         var left = GameInput.Held(ImGuiKey.A, ImGuiKey.LeftArrow);
         var right = GameInput.Held(ImGuiKey.D, ImGuiKey.RightArrow);
         var axis = (right ? 1f : 0f) - (left ? 1f : 0f);
         var mouse = ImGui.GetMousePos();
-        var hovering = UiInteract.Hover(body.Min, body.Max);
+        var full = context.Full;
+        var hitMin = new Vector2(full.Min.X, full.Min.Y + StageLayout.ChromeBand * UiScale.Current);
+        var hovering = UiInteract.Hover(hitMin, full.Max);
         if (left || right)
         {
             pointerMode = false;
@@ -187,100 +229,95 @@ internal sealed class UpdraftApp : ILegacyMiniGame
         }
 
         lastMouse = mouse;
-        if (!board.Launched)
-        {
-            var overRestart = Vector2.Distance(mouse, restartCenter) <= restartRadius;
-            var tapped = hovering && !overRestart && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
-            if (tapped || left || right || GameInput.Pressed(ImGuiKey.Space))
-            {
-                board.Launch();
-            }
-        }
-
-        return pointerMode && hovering ? UpdraftInput.Pointer(layout.WorldX(mouse.X)) : UpdraftInput.Keys(axis);
+        return pointerMode && hovering
+            ? UpdraftInput.Pointer(UpdraftBoard.Wrap(camera.ToWorld(mouse).X))
+            : UpdraftInput.Keys(axis);
     }
 
-    private void ReactToEvents(in UpdraftView view, float scale)
+    private static Vector2 World(float x, float y) => new(x, -y);
+
+    private void ReactToEvents(in GameContext context, float scale)
     {
         var events = board.Events;
         for (var index = 0; index < events.Length; index++)
         {
             ref readonly var item = ref events[index];
-            var position = view.ToScreen(item.X, item.Y);
+            var world = World(item.X, item.Y);
+            var screen = camera.ToScreen(world);
             switch (item.Kind)
             {
                 case UpdraftEventKind.Bounce:
-                    OnBounce(item.CloudKind, position, scale);
+                    OnBounce(item.CloudKind, world, screen, scale, context);
                     break;
                 case UpdraftEventKind.Break:
                     UiFeedback.Play(UiSound.GameBreak);
-                    particles.Burst(position + new Vector2(0f, 0.4f * view.Unit), 14, FragileColor, 120f * scale, 3.2f, 0.7f,
-                        380f, MathF.PI, MathF.PI * 0.5f);
+                    particles.Emit(FragileShards, world + new Vector2(0f, 0.4f), 14);
                     break;
                 case UpdraftEventKind.Zap:
-                    OnZap(position, scale);
+                    OnZap(world, screen, scale, context);
                     break;
                 case UpdraftEventKind.ShieldBlock:
                     UiFeedback.Play(UiSound.GamePop);
-                    fx.Shockwave(position, 70f * scale, UpdraftArt.BubbleColor, 0.5f, 3f);
-                    particles.Burst(position, 16, UpdraftArt.BubbleColor with { W = 0.8f }, 200f * scale, 2.6f, 0.6f, 60f,
-                        MathF.Tau, 0f, ParticleShape.GlowCircle);
-                    fx.AddText(Loc.T(L.Updraft.Blocked), position - new Vector2(0f, 24f * scale), UpdraftArt.BubbleColor, 1.1f);
-                    fx.AddTrauma(0.2f);
+                    fx.Shockwave(screen, camera.Px(1.6f), UpdraftArt.BubbleColor, 0.5f, 3f);
+                    particles.Emit(ShieldGlow, world, 16);
+                    fx.AddText(Loc.T(L.Updraft.Blocked), screen - new Vector2(0f, 24f * scale), UpdraftArt.BubbleColor, 1.1f);
+                    camera.Shake(0.2f);
                     break;
                 case UpdraftEventKind.Crystal:
-                    OnCrystal(item, position, scale);
+                    OnCrystal(item, world, screen, scale);
                     break;
                 case UpdraftEventKind.Feather:
                     UiFeedback.Play(UiSound.GamePowerUp);
-                    particles.Sparkle(position, 16, UpdraftArt.GoldColor, 160f * scale, 2.6f, 0.8f);
-                    fx.AddText(Loc.T(L.Updraft.Feather), position - new Vector2(0f, 24f * scale), UpdraftArt.GoldColor, 1.1f);
+                    particles.Emit(FeatherSparkle, world, 16);
+                    fx.AddText(Loc.T(L.Updraft.Feather), screen - new Vector2(0f, 24f * scale), UpdraftArt.GoldColor, 1.1f);
                     break;
                 case UpdraftEventKind.Shield:
                     UiFeedback.Play(UiSound.GamePowerUp);
-                    fx.Shockwave(position, 54f * scale, UpdraftArt.BubbleColor, 0.45f, 2.6f);
-                    fx.AddText(Loc.T(L.Updraft.Shield), position - new Vector2(0f, 24f * scale), UpdraftArt.BubbleColor, 1.1f);
+                    fx.Shockwave(screen, camera.Px(1.25f), UpdraftArt.BubbleColor, 0.45f, 2.6f);
+                    fx.AddText(Loc.T(L.Updraft.Shield), screen - new Vector2(0f, 24f * scale), UpdraftArt.BubbleColor, 1.1f);
                     break;
                 case UpdraftEventKind.Milestone:
                     UiFeedback.Play(UiSound.GameClear);
-                    bannerText = Loc.T(L.Updraft.Metres, GameNumber.Label(item.Value));
+                    bannerText = milestoneLabel.Get(L.Updraft.Metres, item.Value);
                     bannerProgress = 0f;
-                    particles.Sparkle(position, 12, GamePalette.Lighten(Accent, 0.4f), 150f * scale, 2.6f, 0.7f);
+                    context.Fx.Sweep();
+                    particles.Emit(new ParticleSpec(GamePalette.Lighten(Accent, 0.4f), White, 0.06f, 3.5f, 0.7f, 0.9f,
+                        2.4f, 6f, shape: ParticleShape.Star), world, 12);
                     break;
                 case UpdraftEventKind.PassedBest:
                     UiFeedback.Play(UiSound.GameClear);
                     bannerText = Loc.T(L.Updraft.PassedBest);
                     bannerProgress = 0f;
-                    particles.Confetti(new Vector2(view.Body.Center.X, view.Body.Min.Y + view.Body.Height * 0.2f), 90,
-                        CelebrationPalette, 300f * scale, 4f, 1.4f);
-                    fx.Flash(GamePalette.Lighten(Accent, 0.3f), 0.16f);
+                    EmitConfetti(camera.ToWorld(new Vector2(context.Full.Center.X, context.Full.Min.Y + context.Full.Height * 0.2f)));
+                    context.Fx.Flash(GamePalette.Lighten(Accent, 0.3f), 0.16f);
                     break;
                 case UpdraftEventKind.Fell:
                     UiFeedback.Play(UiSound.GameWrong);
-                    fx.AddTrauma(0.3f);
+                    camera.Shake(0.3f);
                     break;
             }
         }
     }
 
-    private void OnBounce(UpdraftCloudKind kind, Vector2 position, float scale)
+    private void OnBounce(UpdraftCloudKind kind, Vector2 world, Vector2 screen, float scale, in GameContext context)
     {
         renderer.OnBounce(kind);
-        particles.Burst(position, 9, PuffColor, 110f * scale, 3.4f, 0.45f, -40f, MathF.PI, MathF.PI * 0.5f);
+        particles.Emit(Puff, world, 9);
         switch (kind)
         {
             case UpdraftCloudKind.Golden:
                 UiFeedback.Play(UiSound.GamePowerUp);
-                fx.Flash(UpdraftArt.GoldColor, 0.22f);
-                fx.Shockwave(position, 90f * scale, UpdraftArt.GoldColor, 0.5f, 3.4f);
-                particles.Sparkle(position, 18, UpdraftArt.GoldColor, 220f * scale, 3f, 0.8f);
-                fx.AddText(Loc.T(L.Updraft.SuperBounce), position - new Vector2(0f, 30f * scale), UpdraftArt.GoldColor, 1.2f);
-                fx.AddTrauma(0.12f);
+                context.Fx.Flash(UpdraftArt.GoldColor, 0.22f);
+                context.Fx.Punch(0.05f);
+                fx.Shockwave(screen, camera.Px(2.1f), UpdraftArt.GoldColor, 0.5f, 3.4f);
+                particles.Emit(GoldSparkle, world, 18);
+                fx.AddText(Loc.T(L.Updraft.SuperBounce), screen - new Vector2(0f, 30f * scale), UpdraftArt.GoldColor, 1.2f);
+                camera.Shake(0.12f);
                 return;
             case UpdraftCloudKind.Spring:
                 UiFeedback.Play(UiSound.GamePop);
-                fx.Shockwave(position, 60f * scale, UpdraftArt.CoilColor, 0.4f, 2.6f);
-                fx.AddTrauma(0.08f);
+                fx.Shockwave(screen, camera.Px(1.4f), UpdraftArt.CoilColor, 0.4f, 2.6f);
+                camera.Shake(0.08f);
                 return;
             default:
                 UiFeedback.Play(UiSound.GameJump);
@@ -288,100 +325,125 @@ internal sealed class UpdraftApp : ILegacyMiniGame
         }
     }
 
-    private void OnZap(Vector2 position, float scale)
+    private void OnZap(Vector2 world, Vector2 screen, float scale, in GameContext context)
     {
         renderer.OnZap();
         UiFeedback.Play(UiSound.GameHitSoft);
-        fx.AddTrauma(0.55f);
+        camera.Shake(0.55f);
         fx.HitStop(0.06f);
-        fx.Flash(ZapFlash, 0.35f);
-        particles.Streaks(position, 14, UpdraftArt.BoltColor, 380f * scale, 2.4f, 0.4f);
-        fx.AddText(Loc.T(L.Updraft.Zap), position - new Vector2(0f, 24f * scale), ZapFlash, 1.15f);
+        context.Fx.Flash(ZapFlash, 0.35f);
+        particles.Emit(ZapStreaks, world, 14);
+        fx.AddText(Loc.T(L.Updraft.Zap), screen - new Vector2(0f, 24f * scale), ZapFlash, 1.15f);
     }
 
-    private void OnCrystal(in UpdraftEvent item, Vector2 position, float scale)
+    private void OnCrystal(in UpdraftEvent item, Vector2 world, Vector2 screen, float scale)
     {
         UiFeedback.Play(UiSound.GameCollect);
         crystalPulse = 1f;
-        var climb = Math.Min(item.Detail, UpdraftBoard.MaxChain) / (float)UpdraftBoard.MaxChain;
+        var chain = Math.Min(item.Detail, UpdraftBoard.MaxChain);
+        var climb = chain / (float)UpdraftBoard.MaxChain;
         var color = Vector4.Lerp(UpdraftArt.CrystalColor, UpdraftArt.GoldColor, climb);
-        particles.Sparkle(position, 6 + item.Detail * 2, color, 120f * scale, 2.4f, 0.6f);
-        fx.AddText("+" + GameNumber.Label(item.Value), position - new Vector2(0f, 14f * scale), color, 0.9f + 0.12f * item.Detail,
-            46f + 10f * item.Detail);
+        particles.Emit(new ParticleSpec(color, color, 0.055f, 2.8f, 0.6f, 0.9f, 2.4f, 6f, shape: ParticleShape.Star), world,
+            6 + item.Detail * 2);
+        fx.AddText(CrystalLabels[Math.Max(0, chain - 1)], screen - new Vector2(0f, 14f * scale), color,
+            0.9f + 0.12f * item.Detail, 46f + 10f * item.Detail);
     }
 
-    private void EmitTrails(in UpdraftView view, float deltaSeconds, float scale)
+    private void EmitTrails(float deltaSeconds)
     {
-        if (!board.Launched || board.GameOver)
+        if (!board.Launched || board.GameOver || deltaSeconds <= 0f)
         {
             return;
         }
 
-        trailTimer -= deltaSeconds;
-        if (trailTimer > 0f)
-        {
-            return;
-        }
-
-        trailTimer = TrailInterval;
         var bird = UpdraftRenderer.InterpolatedBird(board);
-        var position = view.ToScreen(bird.X, bird.Y);
-        var radius = UpdraftBoard.BirdRadius * view.Unit;
+        var world = World(bird.X, bird.Y);
         if (board.Boosting)
         {
-            var color = board.LastBounceKind == UpdraftCloudKind.Golden ? UpdraftArt.GoldColor : PuffColor;
-            particles.Streaks(position + new Vector2(0f, radius), 2, color with { W = 0.8f }, 160f * scale, 2.2f, 0.35f, 0.5f,
-                MathF.PI * 0.5f);
-            particles.Burst(position, 1, color with { W = 0.5f }, 20f * scale, radius * 0.3f / scale, 0.35f, 0f, MathF.Tau, 0f,
-                ParticleShape.GlowCircle);
+            var golden = board.LastBounceKind == UpdraftCloudKind.Golden;
+            boostStreaks.Spec = golden ? GoldBoostStreak : BoostStreak;
+            boostGlow.Spec = golden ? GoldBoostGlow : BoostGlow;
+            boostStreaks.Advance(deltaSeconds, world + new Vector2(0f, UpdraftBoard.BirdRadius), particles);
+            boostGlow.Advance(deltaSeconds, world, particles);
             return;
         }
 
         if (board.Gliding)
         {
-            particles.Sparkle(position + new Vector2(0f, radius * 0.6f), 1, UpdraftArt.GoldColor, 40f * scale, 2f, 0.5f);
+            glideSparkle.Advance(deltaSeconds, world + new Vector2(0f, UpdraftBoard.BirdRadius * 0.6f), particles);
         }
     }
 
-    private void DrawHud(ImDrawListPtr drawList, Rect body, float rowY, Vector2 restartCenter, float restartRadius,
-        PhoneTheme theme, float deltaSeconds, float time, float scale)
+    private void EmitConfetti(Vector2 origin)
     {
-        var heightLabel = Loc.T(L.Updraft.Height);
-        var crystalsLabel = Loc.T(L.Updraft.Crystals);
-        var heightText = GameNumber.Label(board.HeightMetres);
-        var crystalsText = GameNumber.Label(board.Crystals);
-        var gap = 10f * scale;
-        var start = body.Min.X + 12f * scale;
-        var available = restartCenter.X - restartRadius - gap - start;
-        var natural = GameHud.PillWidth(heightLabel, heightText) + GameHud.PillWidth(crystalsLabel, crystalsText) + gap;
-        var sizeScale = MathF.Min(1f, available / natural);
-        var heightWidth = GameHud.PillWidth(heightLabel, heightText, sizeScale);
-        var crystalsWidth = GameHud.PillWidth(crystalsLabel, crystalsText, sizeScale);
-        var left = start + (available - heightWidth - crystalsWidth - gap) * 0.5f;
-        var beatingBest = bestMetres > 0 && board.HeightMetres > bestMetres;
-        GameHud.ScorePill(new Vector2(left + heightWidth * 0.5f, rowY), heightLabel, ref heightRoll, board.HeightMetres,
-            Accent, theme, deltaSeconds, beatingBest, sizeScale);
-        left += heightWidth + gap;
-        GameHud.Pill(new Vector2(left + crystalsWidth * 0.5f, rowY), crystalsLabel, crystalsText, Accent, theme,
-            crystalPulse > 0f, sizeScale);
-        if (!finished && GameHud.RestartButton(restartCenter, restartRadius, theme))
+        for (var index = 0; index < ConfettiSpecs.Length; index++)
         {
-            StartNewGame();
+            particles.Emit(in ConfettiSpecs[index], origin, 15);
         }
-
-        DrawPowerUps(drawList, body, rowY + (GameHud.PillHeight * 0.5f + 10f) * scale, time, scale);
     }
 
-    private void DrawPowerUps(ImDrawListPtr drawList, Rect body, float top, float time, float scale)
+    private void Finish(in GameContext context)
+    {
+        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+            .WithSecondary(HeightStatId, board.HeightMetres, ScoreKind.Score)
+            .WithStat(L.Updraft.Height, heightLabel.Get(L.Updraft.Metres, board.HeightMetres))
+            .WithStat(L.Updraft.Crystals, GameNumber.Label(board.Crystals))
+            .WithStat(L.Games.Time, TimeText.MinutesSeconds((int)context.Session.PlaySeconds)));
+    }
+
+    private void DrawWorld(ImDrawListPtr drawList, in GameContext context, UpdraftBoard target, float cameraBottom,
+        in UpdraftTone tone, bool live)
+    {
+        var scale = UiScale.Current;
+        var full = context.Full;
+        drawList.PushClipRect(full.Min, full.Max, true);
+        renderer.Draw(drawList, target, in camera, cameraBottom, in tone, context.Backdrop.Ground, Accent, time, scale);
+        if (live)
+        {
+            particles.Draw(drawList, in camera);
+            fx.DrawRings(drawList, scale);
+            fx.DrawText();
+        }
+
+        drawList.PopClipRect();
+    }
+
+    private float HeightCapsuleWidth(float scale)
+    {
+        var text = Typography.Measure(heightLabel.Get(L.Updraft.Metres, board.HeightMetres), HeightStyle).X / scale;
+        return CapsulePadX * 2f + IconSize + IconGap + text;
+    }
+
+    private void DrawHeightCapsule(ImDrawListPtr drawList, in GameContext context, float scale)
+    {
+        var rect = context.Hud.CustomRect;
+        if (rect.Width <= 0f)
+        {
+            return;
+        }
+
+        StageHud.Capsule(drawList, rect, scale);
+        var iconSize = IconSize * scale;
+        var left = rect.Min.X + CapsulePadX * scale;
+        var ink = board.PassedBest ? UpdraftArt.GoldColor : Accent;
+        ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, rect.Center.Y), FontAwesomeIcon.ArrowUp, ink,
+            iconSize);
+        var origin = new Vector2(left + iconSize + IconGap * scale, rect.Center.Y - Typography.LineHeight(HeightStyle) * 0.5f);
+        var pop = 1f + 0.08f * crystalPulse;
+        Typography.Draw(drawList, origin, heightLabel.Get(L.Updraft.Metres, board.HeightMetres), context.Theme.TextStrong,
+            HeightStyle.Scale * pop, HeightStyle.Weight);
+    }
+
+    private void DrawPowerUps(ImDrawListPtr drawList, Rect safe, float scale)
     {
         var radius = PowerUpRadius * scale;
-        var center = new Vector2(body.Min.X + 12f * scale + radius, top + radius);
+        var center = new Vector2(safe.Min.X + radius, safe.Min.Y + radius);
+        var corner = new Vector2(radius, radius);
         if (board.Gliding)
         {
-            var corner = new Vector2(radius, radius);
             Material.Frosted(drawList, center - corner, center + corner, radius, scale);
             var ringRadius = radius - 2.5f * scale;
-            ProgressRing.Track(drawList, center, ringRadius, 3f * scale, new Vector4(1f, 1f, 1f, 0.15f));
+            ProgressRing.Track(drawList, center, ringRadius, 3f * scale, White with { W = 0.15f });
             ProgressRing.Fill(drawList, center, ringRadius, 3f * scale, board.FeatherFraction, UpdraftArt.GoldColor);
             UpdraftArt.DrawFeather(drawList, center, radius * 0.4f, 0f);
             center.X += radius * 2f + 8f * scale;
@@ -392,45 +454,30 @@ internal sealed class UpdraftApp : ILegacyMiniGame
             return;
         }
 
-        var shieldCorner = new Vector2(radius, radius);
-        Material.Frosted(drawList, center - shieldCorner, center + shieldCorner, radius, scale);
+        Material.Frosted(drawList, center - corner, center + corner, radius, scale);
         UpdraftArt.DrawBubble(drawList, center, radius * 0.62f, time, 1f);
     }
 
-    private static void DrawReadyPrompt(Rect body, float pop, float scale)
+    private static ParticleSpec[] BuildConfetti()
     {
-        if (pop <= 0.01f)
+        var specs = new ParticleSpec[CelebrationPalette.Length];
+        for (var index = 0; index < specs.Length; index++)
         {
-            return;
+            specs[index] = new ParticleSpec(CelebrationPalette[index], CelebrationPalette[index], 0.09f, 7f, 1.4f, 12.6f,
+                0.7f, 16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
         }
 
-        var pulse = pop * (1f + 0.05f * Pulse.Wave(Pulse.Calm));
-        var center = new Vector2(body.Center.X, body.Min.Y + body.Height * 0.36f);
-        var prompt = Loc.T(L.Games.TapToStart);
-        Typography.DrawCentered(center + new Vector2(1.5f * scale, 1.5f * scale), prompt, new Vector4(0f, 0f, 0f, 0.35f),
-            TextStyles.Title2.Scale * pulse, TextStyles.Title2.Weight);
-        Typography.DrawCentered(center, prompt, new Vector4(1f, 1f, 1f, 1f), TextStyles.Title2.Scale * pulse,
-            TextStyles.Title2.Weight);
-        var hint = Loc.T(L.Updraft.Hint);
-        var hintWidth = body.Width * 0.82f;
-        var hintHeight = Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, hintWidth).Y;
-        var hintCenter = center + new Vector2(0f, 24f * scale + hintHeight * 0.5f);
-        var fade = MathF.Min(1f, pop);
-        var drawList = ImGui.GetWindowDrawList();
-        Typography.DrawWrappedCentered(drawList, hintCenter + new Vector2(1f * scale, 1f * scale), hint,
-            new Vector4(0f, 0f, 0f, 0.3f * fade), TextStyles.Footnote, hintWidth);
-        Typography.DrawWrappedCentered(drawList, hintCenter, hint, new Vector4(1f, 1f, 1f, 0.92f * fade), TextStyles.Footnote,
-            hintWidth);
+        return specs;
     }
 
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
+    private static string[] BuildCrystalLabels()
     {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score),
-            GameNumber.Label(board.Score), resultLine, newBest);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
+        var labels = new string[UpdraftBoard.MaxChain];
+        for (var index = 0; index < labels.Length; index++)
         {
-            StartNewGame();
+            labels[index] = string.Concat("+", GameNumber.Label(UpdraftBoard.CrystalPoints * (index + 1)));
         }
+
+        return labels;
     }
 }

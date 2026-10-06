@@ -7,7 +7,8 @@ namespace Aetherphone.Apps.Games.Swoop;
 
 internal sealed class SwoopRenderer
 {
-    public const int TrailCapacity = 28;
+    public static readonly Vector4 TrailOuter = new(0.80f, 1f, 0.38f, 1f);
+    public static readonly Vector4 TrailCore = new(1f, 0.97f, 0.78f, 1f);
     private const int PaletteCount = 6;
     private const int SlotsPerPalette = 8;
     private const int StripeSamples = 4;
@@ -49,8 +50,6 @@ internal sealed class SwoopRenderer
     private static readonly Vector4 Gold = new(1f, 0.84f, 0.32f, 1f);
     private static readonly Vector4 Pole = new(0.96f, 0.93f, 0.86f, 1f);
     private static readonly Vector4 Stone = new(0.58f, 0.58f, 0.64f, 1f);
-    private static readonly Vector4 TrailOuter = new(0.80f, 1f, 0.38f, 1f);
-    private static readonly Vector4 TrailCore = new(1f, 0.97f, 0.78f, 1f);
     private static readonly Vector4 Dusk = new(0.04f, 0.04f, 0.12f, 1f);
     private static readonly Vector4 DuskEdge = new(0.62f, 0.50f, 1f, 1f);
     private static readonly float[] SpeedLineY = new float[SpeedLineCount];
@@ -59,10 +58,6 @@ internal sealed class SwoopRenderer
     private static readonly float[] SpeedLinePhase = new float[SpeedLineCount];
 
     private readonly uint[] colors = new uint[PaletteCount * SlotsPerPalette];
-    private readonly double[] trailX = new double[TrailCapacity];
-    private readonly float[] trailY = new float[TrailCapacity];
-    private int trailHead;
-    private int trailCount;
 
     static SwoopRenderer()
     {
@@ -76,25 +71,9 @@ internal sealed class SwoopRenderer
         }
     }
 
-    public void ClearTrail()
-    {
-        trailHead = 0;
-        trailCount = 0;
-    }
+    public static Vector2 Screen(in Camera2D camera, double x, float y) => camera.ToScreen(new Vector2((float)x, -y));
 
-    public void RecordTrail(double x, float y, bool active)
-    {
-        if (!active)
-        {
-            trailCount = Math.Max(0, trailCount - 1);
-            return;
-        }
-
-        trailX[trailHead] = x;
-        trailY[trailHead] = y;
-        trailHead = (trailHead + 1) % TrailCapacity;
-        trailCount = Math.Min(TrailCapacity, trailCount + 1);
-    }
+    public static double WorldX(in Camera2D camera, float screenX) => camera.ToWorld(new Vector2(screenX, 0f)).X;
 
     public void PrepareColors(in SwoopLighting lighting)
     {
@@ -115,26 +94,26 @@ internal sealed class SwoopRenderer
         }
     }
 
-    public void DrawTerrain(ImDrawListPtr drawList, SwoopBoard board, in SwoopCamera camera, Rect area, float scale)
+    public void DrawTerrain(ImDrawListPtr drawList, SwoopBoard board, in Camera2D camera, Rect area, float scale)
     {
-        var first = Math.Max(board.FirstSample, (int)Math.Floor(camera.WorldX(area.Min.X - 4f) / SwoopBoard.SampleSpacing));
-        var end = Math.Min(board.EndSample - 1, (int)Math.Ceiling(camera.WorldX(area.Max.X + 4f) / SwoopBoard.SampleSpacing));
+        var first = Math.Max(board.FirstSample, (int)Math.Floor(WorldX(in camera, area.Min.X - 4f) / SwoopBoard.SampleSpacing));
+        var end = Math.Min(board.EndSample - 1, (int)Math.Ceiling(WorldX(in camera, area.Max.X + 4f) / SwoopBoard.SampleSpacing));
         if (end <= first)
         {
             return;
         }
 
         var terrain = board.Terrain;
-        var pixels = camera.PixelsPerMeter;
+        var pixels = camera.Px(1f);
         var topDepth = new Vector2(0f, TopBandDepth * pixels);
         var midDepth = new Vector2(0f, MidBandDepth * pixels);
         var bottom = area.Max.Y + 2f;
         var island = terrain.IslandIndexAt(SwoopBoard.SampleX(first));
         var boundary = island < 0 ? terrain.IslandStart(0) : terrain.IslandEnd(island);
-        var previous = camera.ToScreen(SwoopBoard.SampleX(first), board.SampleHeight(first));
+        var previous = Screen(in camera, SwoopBoard.SampleX(first), board.SampleHeight(first));
         for (var sample = first; sample < end; sample++)
         {
-            var current = camera.ToScreen(SwoopBoard.SampleX(sample + 1), board.SampleHeight(sample + 1));
+            var current = Screen(in camera, SwoopBoard.SampleX(sample + 1), board.SampleHeight(sample + 1));
             while (SwoopBoard.SampleX(sample) >= boundary)
             {
                 island++;
@@ -152,17 +131,17 @@ internal sealed class SwoopRenderer
             previous = current;
         }
 
-        DrawRims(drawList, board, camera, first, end, scale);
+        DrawRims(drawList, board, in camera, first, end, scale);
         var shadeTop = ImGui.GetColorU32(new Vector4(0.02f, 0.03f, 0.08f, 0f));
         var shadeBottom = ImGui.GetColorU32(new Vector4(0.02f, 0.03f, 0.08f, 0.38f));
         drawList.AddRectFilledMultiColor(new Vector2(area.Min.X, area.Max.Y - area.Height * 0.22f), area.Max, shadeTop, shadeTop,
             shadeBottom, shadeBottom);
     }
 
-    private void DrawRims(ImDrawListPtr drawList, SwoopBoard board, in SwoopCamera camera, int first, int end, float scale)
+    private void DrawRims(ImDrawListPtr drawList, SwoopBoard board, in Camera2D camera, int first, int end, float scale)
     {
         var terrain = board.Terrain;
-        var thickness = MathF.Max(2f * scale, RimThickness * camera.PixelsPerMeter);
+        var thickness = MathF.Max(2f * scale, RimThickness * camera.Px(1f));
         var runStart = first;
         var island = terrain.IslandIndexAt(SwoopBoard.SampleX(first));
         var boundary = island < 0 ? terrain.IslandStart(0) : terrain.IslandEnd(island);
@@ -174,8 +153,8 @@ internal sealed class SwoopRenderer
             }
 
             var slot = PaletteSlot(island);
-            StrokeRun(drawList, board, camera, runStart, sample, colors[slot + SlotRim], thickness, 0f);
-            StrokeRun(drawList, board, camera, runStart, sample, colors[slot + SlotRimHighlight], thickness * 0.35f, -thickness * 0.3f);
+            StrokeRun(drawList, board, in camera, runStart, sample, colors[slot + SlotRim], thickness, 0f);
+            StrokeRun(drawList, board, in camera, runStart, sample, colors[slot + SlotRimHighlight], thickness * 0.35f, -thickness * 0.3f);
             runStart = sample;
             while (SwoopBoard.SampleX(sample) >= boundary)
             {
@@ -185,7 +164,7 @@ internal sealed class SwoopRenderer
         }
     }
 
-    private static void StrokeRun(ImDrawListPtr drawList, SwoopBoard board, in SwoopCamera camera, int from, int to, uint color,
+    private static void StrokeRun(ImDrawListPtr drawList, SwoopBoard board, in Camera2D camera, int from, int to, uint color,
         float thickness, float lift)
     {
         if (to <= from)
@@ -196,29 +175,30 @@ internal sealed class SwoopRenderer
         drawList.PathClear();
         for (var sample = from; sample <= to; sample++)
         {
-            var point = camera.ToScreen(SwoopBoard.SampleX(sample), board.SampleHeight(sample));
+            var point = Screen(in camera, SwoopBoard.SampleX(sample), board.SampleHeight(sample));
             drawList.PathLineTo(new Vector2(point.X, point.Y + lift));
         }
 
         drawList.PathStroke(color, ImDrawFlags.None, thickness);
     }
 
-    public void DrawMarkers(ImDrawListPtr drawList, SwoopBoard board, in SwoopCamera camera, Rect area, in SwoopLighting lighting,
-        float time, float scale)
+    public void DrawMarkers(ImDrawListPtr drawList, SwoopBoard board, in Camera2D camera, Rect area, in SwoopLighting lighting,
+        float zoomOut, float time, float scale)
     {
         var terrain = board.Terrain;
-        var left = camera.WorldX(area.Min.X) - FlagLength - 2.0;
-        var right = camera.WorldX(area.Max.X) + 2.0;
+        var left = WorldX(in camera, area.Min.X) - FlagLength - 2.0;
+        var right = WorldX(in camera, area.Max.X) + 2.0;
         var island = Math.Max(1, terrain.IslandIndexAt(left) + 1);
-        var pixels = camera.PixelsPerMeter;
+        var pixels = camera.Px(1f);
+        var labelScale = Math.Clamp(1f / MathF.Max(1f, zoomOut), 0.55f, 1f);
         while (island < SwoopTerrain.MaxIslands && terrain.IslandStart(island) <= right)
         {
             var x = terrain.IslandStart(island);
             var ground = (float)terrain.Height(x);
             var reached = island <= board.CurrentIsland;
             var flagTone = SwoopShapes.Multiply(reached ? Gold : StripeLight[island % PaletteCount], lighting.Tint);
-            var foot = camera.ToScreen(x, ground);
-            var top = camera.ToScreen(x, ground + PoleHeight);
+            var foot = Screen(in camera, x, ground);
+            var top = Screen(in camera, x, ground + PoleHeight);
             var stoneHalf = new Vector2(0.7f * pixels, 0.35f * pixels);
             drawList.AddRectFilled(foot - stoneHalf, foot + stoneHalf,
                 ImGui.GetColorU32(SwoopShapes.Multiply(Stone, lighting.Tint)), stoneHalf.Y);
@@ -232,7 +212,6 @@ internal sealed class SwoopRenderer
             drawList.AddLine(flagTop, tipTop, ImGui.GetColorU32(GamePalette.Lighten(flagTone, 0.35f)), MathF.Max(1f, 0.12f * pixels));
             var label = GameNumber.Label(island + 1);
             var labelCenter = (flagTop + tipTop + tipBottom + flagBottom) * 0.25f;
-            var labelScale = Math.Clamp(pixels / camera.BasePixelsPerMeter, 0.55f, 1f);
             Typography.DrawCentered(drawList, labelCenter, label, GamePalette.InkOn(flagTone), TextStyles.Caption1.Scale * labelScale,
                 FontWeight.Bold);
             var pulse = 0.7f + 0.3f * MathF.Sin(time * 3f + island);
@@ -244,12 +223,12 @@ internal sealed class SwoopRenderer
         }
     }
 
-    public void DrawCrystals(ImDrawListPtr drawList, SwoopBoard board, in SwoopCamera camera, Rect area, in SwoopLighting lighting,
+    public void DrawCrystals(ImDrawListPtr drawList, SwoopBoard board, in Camera2D camera, Rect area, in SwoopLighting lighting,
         float time, float scale)
     {
-        var left = camera.WorldX(area.Min.X) - 2.0;
-        var right = camera.WorldX(area.Max.X) + 2.0;
-        var radius = MathF.Max(3f * scale, SwoopBoard.CrystalRadius * camera.PixelsPerMeter);
+        var left = WorldX(in camera, area.Min.X) - 2.0;
+        var right = WorldX(in camera, area.Max.X) + 2.0;
+        var radius = MathF.Max(3f * scale, SwoopBoard.CrystalRadius * camera.Px(1f));
         var light = ImGui.GetColorU32(SwoopShapes.Mix(CrystalLight, SwoopShapes.Multiply(CrystalLight, lighting.Tint), 0.3f));
         var dark = ImGui.GetColorU32(SwoopShapes.Mix(CrystalDark, SwoopShapes.Multiply(CrystalDark, lighting.Tint), 0.3f));
         var glint = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.9f));
@@ -262,7 +241,7 @@ internal sealed class SwoopRenderer
             }
 
             var bob = MathF.Sin(time * 2.4f + crystal.Phase) * 0.25f;
-            var center = camera.ToScreen(crystal.X, crystal.Y + bob);
+            var center = Screen(in camera, crystal.X, crystal.Y + bob);
             var spin = MathF.Abs(MathF.Cos(time * 1.8f + crystal.Phase)) * 0.75f + 0.25f;
             SwoopShapes.Glow(drawList, center, radius * 2.6f, CrystalLight, 0.6f + lighting.Night * 0.6f);
             var top = center + new Vector2(0f, -radius * 1.35f);
@@ -276,27 +255,8 @@ internal sealed class SwoopRenderer
         }
     }
 
-    public void DrawTrail(ImDrawListPtr drawList, in SwoopCamera camera, float radius)
-    {
-        if (trailCount < 2)
-        {
-            return;
-        }
-
-        var oldest = (trailHead - trailCount + TrailCapacity) % TrailCapacity;
-        var previous = camera.ToScreen(trailX[oldest], trailY[oldest]);
-        for (var step = 1; step < trailCount; step++)
-        {
-            var slot = (oldest + step) % TrailCapacity;
-            var current = camera.ToScreen(trailX[slot], trailY[slot]);
-            var weight = step / (float)(trailCount - 1);
-            drawList.AddLine(previous, current, ImGui.GetColorU32(TrailOuter with { W = 0.28f * weight }), MathF.Max(1f, radius * 1.7f * weight));
-            drawList.AddLine(previous, current, ImGui.GetColorU32(TrailCore with { W = 0.85f * weight }), MathF.Max(1f, radius * 0.55f * weight));
-            previous = current;
-        }
-    }
-
-    public static void DrawDarkness(ImDrawListPtr drawList, Rect area, SwoopBoard board, in SwoopLighting lighting, float scale)
+    public static void DrawDarkness(ImDrawListPtr drawList, Rect area, SwoopBoard board, in SwoopLighting lighting, float time,
+        float scale)
     {
         var approach = board.Night ? 1f : SwoopShapes.Smooth(14f, 0f, board.Clock);
         if (approach > 0f)
@@ -315,7 +275,7 @@ internal sealed class SwoopRenderer
             if (solidEdge < area.Max.X)
             {
                 drawList.AddRectFilledMultiColor(new Vector2(solidEdge, area.Min.Y), new Vector2(edge, area.Max.Y), dark, clear, clear, dark);
-                var shimmer = 0.18f + 0.1f * MathF.Sin((float)ImGui.GetTime() * 3f);
+                var shimmer = 0.18f + 0.1f * MathF.Sin(time * 3f);
                 drawList.AddLine(new Vector2(solidEdge, area.Min.Y), new Vector2(solidEdge, area.Max.Y),
                     ImGui.GetColorU32(DuskEdge with { W = shimmer * approach * (1f - sweep) }), 2f * scale);
             }
@@ -349,10 +309,11 @@ internal sealed class SwoopRenderer
         }
     }
 
-    public static void DrawAltitudeArrow(ImDrawListPtr drawList, Vector2 tip, string label, Vector4 accent, float scale)
+    public static void DrawAltitudeArrow(ImDrawListPtr drawList, Vector2 tip, string label, Vector4 accent, float time,
+        float scale)
     {
         var size = 9f * scale;
-        var pulse = 0.75f + 0.25f * MathF.Sin((float)ImGui.GetTime() * 6f);
+        var pulse = 0.75f + 0.25f * MathF.Sin(time * 6f);
         SwoopShapes.Glow(drawList, tip + new Vector2(0f, size), size * 2.4f, accent, pulse);
         drawList.AddTriangleFilled(tip, tip + new Vector2(size, size * 1.3f), tip + new Vector2(-size, size * 1.3f),
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.95f)));

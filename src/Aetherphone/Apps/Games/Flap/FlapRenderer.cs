@@ -1,122 +1,105 @@
 using Aetherphone.Apps.Games.Framework;
-using Aetherphone.Core.Animation;
-using Aetherphone.Core;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Flap;
 
-internal sealed class FlapRenderer
+internal static class FlapRenderer
 {
-    private static readonly Vector4 SkyTop = new(0.36f, 0.62f, 0.92f, 1f);
-    private static readonly Vector4 SkyBottom = new(0.72f, 0.88f, 0.98f, 1f);
-    private static readonly Vector4 SunColor = new(1f, 0.94f, 0.72f, 1f);
+    public static readonly Vector4 BirdBody = new(0.98f, 0.82f, 0.32f, 1f);
+    private const float FarBaseline = FlapBoard.WorldHeight - 1f;
+    private const float FarBump = 1.36f;
+    private const float FarParallax = 0.4f;
+    private const float NearBaseline = FlapBoard.WorldHeight - 0.56f;
+    private const float NearBump = 1.92f;
+    private const float NearParallax = 0.7f;
+    private const float GrassTop = FlapBoard.WorldHeight - 0.29f;
+    private const float BumpSpacing = 1.5f;
+    private const float CapHeight = 0.56f;
+    private const float CapOverhang = 0.12f;
+    private const float PipeRounding = 0.18f;
     private static readonly Vector4 FarHill = new(0.46f, 0.66f, 0.60f, 1f);
     private static readonly Vector4 NearHill = new(0.38f, 0.64f, 0.42f, 1f);
     private static readonly Vector4 PipeBody = new(0.40f, 0.74f, 0.42f, 1f);
-    private static readonly Vector4 BirdBody = new(0.98f, 0.82f, 0.32f, 1f);
+    private static readonly Vector4 BeakColor = new(0.95f, 0.55f, 0.20f, 1f);
+    private static readonly Vector4 Pupil = new(0.1f, 0.1f, 0.12f, 1f);
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
-    public void Draw(FlapBoard board, Rect area, float birdY, float tilt, float scale, Vector2 shake, float flapPulse)
+    public static void DrawGround(ImDrawListPtr drawList, in Camera2D camera)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.PushClipRect(area.Min, area.Max, true);
-        DrawSky(drawList, area);
-        DrawHills(drawList, area, shake);
-        DrawPipes(drawList, board, area, scale, shake);
-        DrawBird(drawList, FlapBoard.BirdXOf(area) + shake.X, birdY + shake.Y,
-            FlapBoard.RadiusOf(area) * (1f + 0.14f * flapPulse), tilt, scale);
-        drawList.PopClipRect();
+        DrawHillLayer(drawList, in camera, FarHill, FarBaseline, FarBump, FarParallax);
+        DrawHillLayer(drawList, in camera, NearHill, NearBaseline, NearBump, NearParallax);
+        var view = camera.View;
+        var grassTop = camera.ToScreen(new Vector2(0f, GrassTop)).Y;
+        drawList.AddRectFilled(new Vector2(view.Min.X, grassTop), new Vector2(view.Max.X, view.Max.Y + 2f),
+            ImGui.GetColorU32(GamePalette.Darken(NearHill, 0.18f)));
     }
 
-    private void DrawSky(ImDrawListPtr drawList, Rect area)
+    private static void DrawHillLayer(ImDrawListPtr drawList, in Camera2D camera, Vector4 color, float baseline,
+        float bumpRadius, float parallax)
     {
-        var top = ImGui.GetColorU32(SkyTop);
-        var bottom = ImGui.GetColorU32(SkyBottom);
-        drawList.AddRectFilledMultiColor(area.Min, area.Max, top, top, bottom, bottom);
-        var sun = new Vector2(area.Min.X + area.Width * 0.82f, area.Min.Y + area.Height * 0.14f);
-        var sunRadius = area.Height * 0.05f;
-        ProgressRing.Glow(sun, sunRadius * 2.6f, SunColor, 0.8f);
-        drawList.AddCircleFilled(sun, sunRadius, ImGui.GetColorU32(SunColor), 28);
-        var drift = Pulse.Phase(26000.0) * area.Width;
-        var cloud = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.5f));
-        for (var index = 0; index < 3; index++)
+        var fill = ImGui.GetColorU32(color);
+        var view = camera.View;
+        var baseY = camera.ToScreen(new Vector2(0f, baseline)).Y;
+        drawList.AddRectFilled(new Vector2(view.Min.X, baseY), new Vector2(view.Max.X, view.Max.Y + 2f), fill);
+        var spacing = bumpRadius * BumpSpacing;
+        var shift = camera.Origin.X * (1f - parallax);
+        var visible = camera.VisibleWorld;
+        var first = (int)MathF.Floor((visible.Min.X - shift) / spacing) - 1;
+        var last = (int)MathF.Ceiling((visible.Max.X - shift) / spacing) + 1;
+        for (var bump = first; bump <= last; bump++)
         {
-            var baseX = area.Min.X + ((index * 0.42f * area.Width + drift) % (area.Width + 0.4f * area.Width)) -
-                        0.2f * area.Width;
-            var y = area.Min.Y + area.Height * (0.18f + index * 0.26f);
-            DrawCloud(drawList, new Vector2(baseX, y), area.Height * 0.05f, cloud);
+            var wobble = MathF.Sin(bump * 0.7f) * bumpRadius * 0.35f;
+            var center = camera.ToScreen(new Vector2(bump * spacing + shift, baseline + wobble * 0.2f));
+            drawList.AddCircleFilled(center, camera.Px(bumpRadius + wobble), fill, 24);
         }
     }
 
-    private static void DrawHills(ImDrawListPtr drawList, Rect area, Vector2 shake)
+    public static void DrawPipes(ImDrawListPtr drawList, in Camera2D camera, FlapBoard board, float scale)
     {
-        var farColor = ImGui.GetColorU32(FarHill);
-        var farDrift = Pulse.Phase(52000.0) * area.Width;
-        DrawHillLayer(drawList, area, farColor, area.Height * 0.085f, farDrift * 0.4f, 0.062f, shake * 0.4f);
-        var nearColor = ImGui.GetColorU32(NearHill);
-        var nearDrift = Pulse.Phase(34000.0) * area.Width;
-        DrawHillLayer(drawList, area, nearColor, area.Height * 0.12f, nearDrift * 0.7f, 0.035f, shake);
-        var grass = ImGui.GetColorU32(GamePalette.Darken(NearHill, 0.18f));
-        drawList.AddRectFilled(new Vector2(area.Min.X, area.Max.Y - area.Height * 0.018f) + shake, area.Max + shake,
-            grass);
-    }
-
-    private static void DrawHillLayer(ImDrawListPtr drawList, Rect area, uint color, float bumpRadius, float drift,
-        float baseFraction, Vector2 shake)
-    {
-        var baseTop = area.Max.Y - area.Height * baseFraction;
-        drawList.AddRectFilled(new Vector2(area.Min.X, baseTop) + shake, area.Max + shake, color);
-        var spacing = bumpRadius * 1.5f;
-        var start = area.Min.X - spacing + (drift % spacing);
-        for (var x = start; x < area.Max.X + spacing; x += spacing)
-        {
-            var wobble = MathF.Sin(x * 0.05f) * bumpRadius * 0.35f;
-            drawList.AddCircleFilled(new Vector2(x, baseTop + wobble * 0.2f) + shake, bumpRadius + wobble, color, 24);
-        }
-    }
-
-    private void DrawCloud(ImDrawListPtr drawList, Vector2 center, float radius, uint color)
-    {
-        drawList.AddCircleFilled(center, radius, color, 20);
-        drawList.AddCircleFilled(center + new Vector2(radius * 0.9f, radius * 0.18f), radius * 0.8f, color, 20);
-        drawList.AddCircleFilled(center - new Vector2(radius * 0.9f, -radius * 0.18f), radius * 0.72f, color, 20);
-    }
-
-    private void DrawPipes(ImDrawListPtr drawList, FlapBoard board, Rect area, float scale, Vector2 shake)
-    {
-        var width = FlapBoard.PipeWidthOf(area);
-        var rounding = width * 0.18f;
-        var capHeight = area.Height * 0.035f;
-        var capOverhang = width * 0.12f;
+        var visible = camera.VisibleWorld;
+        var width = camera.Px(FlapBoard.PipeWidth);
+        var rounding = width * PipeRounding;
+        var capHeight = camera.Px(CapHeight);
+        var capOverhang = width * CapOverhang;
+        var capRounding = capHeight * 0.4f;
         var edge = ImGui.GetColorU32(GamePalette.Darken(PipeBody, 0.28f));
         var body = ImGui.GetColorU32(PipeBody);
         var sheen = ImGui.GetColorU32(GamePalette.Lighten(PipeBody, 0.3f) with { W = 0.6f });
+        var top = camera.View.Min.Y - 2f;
+        var ground = camera.ToScreen(new Vector2(0f, FlapBoard.WorldHeight)).Y;
+        var stroke = 1.4f * scale;
         for (var index = 0; index < board.PipeCount; index++)
         {
-            var pipe = board.PipeAt(index);
-            var left = pipe.X + shake.X;
-            var right = pipe.X + width + shake.X;
-            var gapTop = pipe.GapCenter - pipe.GapHalf + shake.Y;
-            var gapBottom = pipe.GapCenter + pipe.GapHalf + shake.Y;
-            DrawPipeSegment(drawList, new Vector2(left, area.Min.Y), new Vector2(right, gapTop), body, edge, sheen,
-                rounding, scale);
-            DrawPipeSegment(drawList, new Vector2(left, gapBottom), new Vector2(right, area.Max.Y), body, edge, sheen,
-                rounding, scale);
-            var capRounding = capHeight * 0.4f;
-            drawList.AddRectFilled(new Vector2(left - capOverhang, gapTop - capHeight),
-                new Vector2(right + capOverhang, gapTop), body, capRounding);
-            drawList.AddRectFilled(new Vector2(left - capOverhang, gapBottom),
-                new Vector2(right + capOverhang, gapBottom + capHeight), body, capRounding);
-            drawList.AddRect(new Vector2(left - capOverhang, gapTop - capHeight),
-                new Vector2(right + capOverhang, gapTop), edge, capRounding, ImDrawFlags.RoundCornersAll, 1.4f * scale);
-            drawList.AddRect(new Vector2(left - capOverhang, gapBottom),
-                new Vector2(right + capOverhang, gapBottom + capHeight), edge, capRounding, ImDrawFlags.RoundCornersAll,
-                1.4f * scale);
+            ref readonly var pipe = ref board.PipeAt(index);
+            if (pipe.X + FlapBoard.PipeWidth < visible.Min.X - FlapBoard.PipeWidth || pipe.X > visible.Max.X + FlapBoard.PipeWidth)
+            {
+                continue;
+            }
+
+            var left = camera.ToScreen(new Vector2(pipe.X, 0f)).X;
+            var right = left + width;
+            var gapTop = camera.ToScreen(new Vector2(0f, pipe.GapCenter - pipe.GapHalf)).Y;
+            var gapBottom = camera.ToScreen(new Vector2(0f, pipe.GapCenter + pipe.GapHalf)).Y;
+            DrawPipeSegment(drawList, new Vector2(left, top), new Vector2(right, gapTop), body, edge, sheen, rounding,
+                stroke);
+            DrawPipeSegment(drawList, new Vector2(left, gapBottom), new Vector2(right, ground), body, edge, sheen,
+                rounding, stroke);
+            var capLeft = left - capOverhang;
+            var capRight = right + capOverhang;
+            drawList.AddRectFilled(new Vector2(capLeft, gapTop - capHeight), new Vector2(capRight, gapTop), body,
+                capRounding);
+            drawList.AddRectFilled(new Vector2(capLeft, gapBottom), new Vector2(capRight, gapBottom + capHeight), body,
+                capRounding);
+            drawList.AddRect(new Vector2(capLeft, gapTop - capHeight), new Vector2(capRight, gapTop), edge, capRounding,
+                ImDrawFlags.RoundCornersAll, stroke);
+            drawList.AddRect(new Vector2(capLeft, gapBottom), new Vector2(capRight, gapBottom + capHeight), edge,
+                capRounding, ImDrawFlags.RoundCornersAll, stroke);
         }
     }
 
-    private void DrawPipeSegment(ImDrawListPtr drawList, Vector2 min, Vector2 max, uint body, uint edge, uint sheen,
-        float rounding, float scale)
+    private static void DrawPipeSegment(ImDrawListPtr drawList, Vector2 min, Vector2 max, uint body, uint edge,
+        uint sheen, float rounding, float stroke)
     {
         if (max.Y <= min.Y)
         {
@@ -126,37 +109,37 @@ internal sealed class FlapRenderer
         drawList.AddRectFilled(min, max, body, rounding);
         drawList.AddRectFilled(new Vector2(min.X + (max.X - min.X) * 0.16f, min.Y),
             new Vector2(min.X + (max.X - min.X) * 0.34f, max.Y), sheen, rounding);
-        drawList.AddRect(min, max, edge, rounding, ImDrawFlags.RoundCornersAll, 1.4f * scale);
+        drawList.AddRect(min, max, edge, rounding, ImDrawFlags.RoundCornersAll, stroke);
     }
 
-    private void DrawBird(ImDrawListPtr drawList, float x, float y, float radius, float tilt, float scale)
+    public static void DrawBird(ImDrawListPtr drawList, Vector2 center, float radius, float tilt, float wingPhase,
+        float scale)
     {
-        var center = new Vector2(x, y);
         drawList.AddCircleFilled(center + new Vector2(0f, radius * 0.16f), radius * 0.95f,
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.14f)), 24);
         ProgressRing.Glow(center, radius * 1.2f, BirdBody, 0.35f);
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(BirdBody), 28);
         drawList.AddCircleFilled(center - new Vector2(radius * 0.28f, radius * 0.34f), radius * 0.34f,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.35f)), 18);
+            ImGui.GetColorU32(White with { W = 0.35f }), 18);
         drawList.AddCircle(center, radius, ImGui.GetColorU32(GamePalette.Darken(BirdBody, 0.28f)), 28, 1.6f * scale);
-        var wingFlap = MathF.Sin(Pulse.Phase(360.0) * MathF.PI * 2f) * radius * 0.22f;
+        var wingFlap = MathF.Sin(wingPhase) * radius * 0.22f;
         var wing = Rotate(center, new Vector2(-radius * 0.15f, wingFlap), tilt);
         drawList.AddCircleFilled(wing, radius * 0.5f, ImGui.GetColorU32(GamePalette.Lighten(BirdBody, 0.18f)), 20);
         var eye = Rotate(center, new Vector2(radius * 0.4f, -radius * 0.32f), tilt);
-        drawList.AddCircleFilled(eye, radius * 0.26f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), 16);
+        drawList.AddCircleFilled(eye, radius * 0.26f, ImGui.GetColorU32(White), 16);
         drawList.AddCircleFilled(Rotate(center, new Vector2(radius * 0.5f, -radius * 0.32f), tilt), radius * 0.12f,
-            ImGui.GetColorU32(new Vector4(0.1f, 0.1f, 0.12f, 1f)), 12);
-        var beakColor = ImGui.GetColorU32(new Vector4(0.95f, 0.55f, 0.20f, 1f));
-        var beakA = Rotate(center, new Vector2(radius * 0.9f, -radius * 0.05f), tilt);
-        var beakB = Rotate(center, new Vector2(radius * 1.5f, radius * 0.08f), tilt);
-        var beakC = Rotate(center, new Vector2(radius * 0.9f, radius * 0.28f), tilt);
-        drawList.AddTriangleFilled(beakA, beakB, beakC, beakColor);
+            ImGui.GetColorU32(Pupil), 12);
+        var beak = ImGui.GetColorU32(BeakColor);
+        var beakTop = Rotate(center, new Vector2(radius * 0.9f, -radius * 0.05f), tilt);
+        var beakTip = Rotate(center, new Vector2(radius * 1.5f, radius * 0.08f), tilt);
+        var beakBottom = Rotate(center, new Vector2(radius * 0.9f, radius * 0.28f), tilt);
+        drawList.AddTriangleFilled(beakTop, beakTip, beakBottom, beak);
     }
 
     private static Vector2 Rotate(Vector2 center, Vector2 offset, float angle)
     {
-        var cos = MathF.Cos(angle);
-        var sin = MathF.Sin(angle);
-        return new Vector2(center.X + offset.X * cos - offset.Y * sin, center.Y + offset.X * sin + offset.Y * cos);
+        var cosine = MathF.Cos(angle);
+        var sine = MathF.Sin(angle);
+        return new Vector2(center.X + offset.X * cosine - offset.Y * sine, center.Y + offset.X * sine + offset.Y * cosine);
     }
 }

@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text;
 using Aetherphone.Apps.Games.Swoop;
 using Xunit;
 
@@ -8,6 +9,41 @@ public sealed class SwoopBoardTests
 {
     private const uint Seed = 20261003u;
     private const float FrameSeconds = 1f / 60f;
+
+    [Fact]
+    public void SameSeedReplaysIdentically()
+    {
+        var first = Play(Seed, out var firstTrace);
+        var second = Play(Seed, out var secondTrace);
+        Play(Seed + 1u, out var otherTrace);
+
+        Assert.Equal(firstTrace, secondTrace);
+        Assert.Equal(first.X, second.X);
+        Assert.Equal(first.Y, second.Y);
+        Assert.Equal(first.Score, second.Score);
+        Assert.Equal(first.IslandsReached, second.IslandsReached);
+        Assert.NotEqual(firstTrace, otherTrace);
+    }
+
+    private static SwoopBoard Play(uint seed, out string trace)
+    {
+        var board = new SwoopBoard();
+        board.Start(seed);
+        var builder = new StringBuilder();
+        for (var frame = 0; frame < 60 * 45 && !board.GameOver; frame++)
+        {
+            board.Tick(FrameSeconds, board.Terrain.Slope(board.X) < 0.0);
+            if (board.SmoothThisTick || board.ThudThisTick || board.LaunchedThisTick || board.PickupsThisTick > 0)
+            {
+                builder.Append(board.SmoothThisTick ? 'S' : board.ThudThisTick ? 'T' : board.LaunchedThisTick ? 'L' : 'P')
+                    .Append(board.X.ToString("F2")).Append(' ');
+            }
+        }
+
+        builder.Append('|').Append(board.Distance).Append('|').Append(board.CrystalCount);
+        trace = builder.ToString();
+        return board;
+    }
 
     [Fact]
     public void TerrainSlopeIsContinuousAcrossIslandBoundaries()
