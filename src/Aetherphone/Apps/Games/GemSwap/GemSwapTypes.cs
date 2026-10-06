@@ -36,7 +36,6 @@ internal enum GemMode : byte
 
 internal enum GemStage : byte
 {
-    Ready,
     Playing,
     Finale,
     Over,

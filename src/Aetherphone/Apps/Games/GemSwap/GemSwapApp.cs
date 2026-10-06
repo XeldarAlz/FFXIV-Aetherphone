@@ -1,20 +1,20 @@
 using Aetherphone.Apps.Games.Framework;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.GemSwap;
 
-internal sealed class GemSwapApp : ILegacyMiniGame
+internal sealed class GemSwapApp : IMiniGame
 {
-    private const string GameId = "match3";
     internal const string BlitzStatId = "match3.blitz";
+    private const string GameId = "match3";
+    private const int BlitzMode = 1;
     private const float SwapDuration = 0.14f;
     private const float SwapBackDuration = 0.12f;
     private const float ClearDuration = 0.26f;
@@ -24,15 +24,27 @@ internal sealed class GemSwapApp : ILegacyMiniGame
     private const float FinaleDelay = 1.1f;
     private const float FinaleSweepPause = 0.35f;
     private const int MaxFinaleSweeps = 6;
-    private const float FlyInSeconds = 0.6f;
     private const int BeamCapacity = 16;
     private const float BeamSeconds = 0.34f;
     private const float StormSeconds = 0.42f;
-    private const float FeverDecay = 0.35f;
+    private const float UrgentSeconds = 10f;
+    private const int SlowMoChain = 4;
+    private const float SlowMoFactor = 0.6f;
+    private const float SlowMoSeconds = 0.25f;
+    private const int MaxChainLabel = 32;
+    private const float FrostFollow = 5f;
+    private const int DustPerGem = 2;
+    private static readonly LocString[] Modes = { L.Games.Classic, L.Games.Blitz };
+    private static readonly string[] ModeStatIds = { GameId, BlitzStatId };
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.GemSwap, GameGenre.Puzzle, L.GemSwap.Hook,
+        Backdrop.Nebula, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true);
+    private static readonly string?[] ChainLabels = new string?[MaxChainLabel + 1];
+    private static readonly Dictionary<int, string> GainLabels = new();
     private static readonly Vector4 FireTint = new(1f, 0.52f, 0.2f, 1f);
     private static readonly Vector4 HotTint = new(1f, 0.38f, 0.42f, 1f);
     private static readonly Vector4 TimeUpTint = new(0.98f, 0.30f, 0.30f, 1f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 Dust = new(0.85f, 0.85f, 0.92f, 0.7f);
 
     private struct Beam
     {
@@ -43,14 +55,14 @@ internal sealed class GemSwapApp : ILegacyMiniGame
     }
 
     private readonly GemSwapBoard board = new();
-    private readonly GemSwapRenderer renderer = new();
     private readonly GemSwapBlitz blitz = new();
-    private readonly GemSwapBlitzHud blitzHud = new();
+    private readonly GemSwapPowerDock dock = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private readonly string[] modeLabels = new string[2];
     private readonly Beam[] beams = new Beam[BeamCapacity];
-    private RollingValue scoreRoll;
+    private ComboMeter combo = ComboMeter.Create();
+    private LabelSlot bonusLabel;
+    private GameGrid grid;
     private float entrance;
     private int previousScore;
     private GemPhase phase;
@@ -63,358 +75,213 @@ internal sealed class GemSwapApp : ILegacyMiniGame
     private float fallTimer;
     private int selectedIndex = -1;
     private int chain;
+    private int bestChain;
+    private int swaps;
     private float idleTime;
     private int hintA = -1;
     private int hintB = -1;
-    private int loadedBest;
-    private int blitzBest;
-    private bool bestsLoaded;
-    private bool classicRunActive;
-    private GameStatsStore? statsRef;
-    private bool pendingSubmit;
-    private bool newBest;
-    private float resultAppear;
-    private string? resultSecondary;
     private float bannerProgress = 1f;
     private float finaleTimer;
     private int finaleSweeps;
-    private float fever;
-    private int comboShown;
-    private string comboLabel = string.Empty;
-    private float flyProgress = 1f;
-    private Vector2 flyFrom;
-    private Vector2 clockCenter;
-    private string bonusLabel = string.Empty;
+    private float frostShown;
+    private int lastSecond;
     private int beamCount;
     private int stormColumn;
     private float stormTimer;
     private int comboCell = -1;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.GemSwap);
-    public GameGenre Genre => GameGenre.Puzzle;
-    public bool RunsOnAClock => mode == GemMode.Blitz && (stage == GemStage.Playing || stage == GemStage.Finale);
+    private ulong idleSeed;
+    private bool idleSynced;
+    private bool finished;
 
-    public void Open()
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
     {
-        bestsLoaded = false;
-        ResetToReady();
+        mode = start.Mode == BlitzMode ? GemMode.Blitz : GemMode.Classic;
+        board.Reset(start.Random);
+        idleSeed = start.Seed;
+        idleSynced = true;
+        blitz.Reset();
+        dock.Reset();
+        particles.Clear();
+        fx.Clear();
+        combo.Reset();
+        entrance = 0f;
+        previousScore = 0;
+        phase = GemPhase.Idle;
+        stage = GemStage.Playing;
+        swapA = -1;
+        swapB = -1;
+        swapTimer = 0f;
+        clearTimer = 0f;
+        fallTimer = 0f;
+        selectedIndex = -1;
+        chain = 0;
+        bestChain = 0;
+        swaps = 0;
+        idleTime = 0f;
+        hintA = -1;
+        hintB = -1;
+        bannerProgress = 1f;
+        finaleTimer = 0f;
+        finaleSweeps = 0;
+        frostShown = 0f;
+        lastSecond = (int)MathF.Ceiling(GemSwapBlitz.StartSeconds);
+        beamCount = 0;
+        stormTimer = 0f;
+        comboCell = -1;
+        finished = false;
     }
 
     public void Close()
     {
-        PersistClassic();
+        particles.Clear();
+        fx.Clear();
+        idleSynced = false;
     }
 
     public void Dispose()
     {
-        PersistClassic();
     }
 
-    private int ModeBest => mode == GemMode.Blitz ? blitzBest : loadedBest;
-
-    private void PersistClassic()
+    public void DrawIdle(in GameContext context)
     {
-        if (!classicRunActive)
+        SyncIdle(context.Session.Seed);
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var blitzMode = context.Session.Mode == BlitzMode;
+        Layout(context.Safe, blitzMode, scale, out grid, out var plate);
+        GemSwapRenderer.DrawPlate(drawList, plate, scale, Accent, context.Backdrop.Ink);
+        GemSwapRenderer.DrawBoard(drawList, board, grid, GemAnim.Still, context.Theme, scale, 1f, 0f);
+        if (blitzMode)
         {
-            return;
+            dock.DrawPowers(drawList, grid, blitz, scale, false);
         }
-
-        classicRunActive = false;
-        statsRef?.SubmitScore(GameId, board.Score);
-        if (board.Score > loadedBest)
-        {
-            loadedBest = board.Score;
-        }
-    }
-
-    private void ResetToReady()
-    {
-        PersistClassic();
-        board.Reset();
-        blitz.Reset();
-        blitzHud.Reset();
-        particles.Clear();
-        fx.Clear();
-        scoreRoll.Snap(0);
-        entrance = 0f;
-        previousScore = 0;
-        phase = GemPhase.Idle;
-        stage = GemStage.Ready;
-        swapA = -1;
-        swapB = -1;
-        selectedIndex = -1;
-        chain = 0;
-        idleTime = 0f;
-        hintA = -1;
-        hintB = -1;
-        pendingSubmit = false;
-        newBest = false;
-        resultAppear = 0f;
-        resultSecondary = null;
-        bannerProgress = 1f;
-        finaleTimer = 0f;
-        finaleSweeps = 0;
-        fever = 0f;
-        flyProgress = 1f;
-        beamCount = 0;
-        stormTimer = 0f;
-        comboCell = -1;
-    }
-
-    private void BeginRun()
-    {
-        stage = GemStage.Playing;
-        idleTime = 0f;
-        if (mode == GemMode.Classic)
-        {
-            classicRunActive = true;
-            return;
-        }
-
-        blitz.Reset();
-        blitzHud.Reset();
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var session = context.Session;
         var theme = context.Theme;
-        var body = context.Body;
-        statsRef = context.Stats;
-        LoadBests(context.Stats);
-        SubmitBlitzIfPending(context.Stats);
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        entrance = GameJuice.Advance(entrance, deltaSeconds);
-        bannerProgress = GameBanner.Advance(bannerProgress, deltaSeconds, BannerSeconds);
+        var simDelta = fx.ScaleDelta(context.DeltaSeconds);
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        combo.Update(context.DeltaSeconds);
+        entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds);
+        bannerProgress = GameBanner.Advance(bannerProgress, context.RawDeltaSeconds, BannerSeconds);
         var blitzMode = mode == GemMode.Blitz;
-        if (blitzMode && stage == GemStage.Playing && blitz.Tick(deltaSeconds))
+        if (blitzMode)
         {
-            BeginFinale();
+            TickBlitz(context);
         }
 
-        if (blitzHud.Update(blitz, deltaSeconds, blitzMode && stage == GemStage.Playing))
-        {
-            UiFeedback.Play(UiSound.GameTick);
-        }
-
-        UpdateEffects(deltaSeconds);
-        var rowY = body.Min.Y + 30f * scale;
-        var shake = fx.ShakeOffset(scale);
-        var bottomReserve = blitzMode ? GemSwapBlitzHud.DockHeight : 6f;
-        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 64f * scale) + shake,
-            new Vector2(body.Max.X, body.Max.Y - bottomReserve * scale) + shake);
-        var grid = GameGrid.Centered(gridArea, GemSwapBoard.Columns, GemSwapBoard.Rows, 0.06f);
-        AdvanceAnimation(fx.ScaleDelta(deltaSeconds), grid);
+        dock.Update(blitz, context.RawDeltaSeconds);
+        UpdateEffects(context.RawDeltaSeconds);
+        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        Layout(area, blitzMode, scale, out grid, out var plate);
+        AdvanceAnimation(simDelta, scale, context);
         if (stage == GemStage.Finale)
         {
-            AdvanceFinale(deltaSeconds, grid);
+            AdvanceFinale(simDelta, scale, context);
         }
 
-        if (stage == GemStage.Playing && phase == GemPhase.Idle)
+        var interactive = stage == GemStage.Playing && phase == GemPhase.Idle && !finished &&
+                          session.State == StageFlow.Playing;
+        if (interactive)
         {
-            HandleInput(grid);
+            HandleInput();
         }
 
-        RefreshComboLabel();
-        var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
-        DrawFever(drawList, body, grid);
-        if (DrawHud(body, rowY, theme, deltaSeconds, scale))
+        DrawHeat();
+        GemSwapRenderer.DrawPlate(drawList, plate, scale, Accent, context.Backdrop.Ink);
+        if (blitzMode)
         {
-            return;
-        }
-
-        if (chain > 1)
-        {
-            var comboPulse = 1f + 0.08f * Pulse.Wave(Pulse.Fast);
-            Typography.DrawCentered(new Vector2(body.Center.X, rowY + 28f * scale), comboLabel, Accent,
-                TextStyles.Headline.Scale * comboPulse, TextStyles.Headline.Weight);
+            dock.DrawCharge(drawList, GemSwapPowerDock.Band(grid, scale), Accent, scale);
         }
 
         var anim = new GemAnim(phase, swapA, swapB, MathF.Min(1f, swapTimer), MathF.Min(1f, clearTimer),
             MathF.Min(1f, fallTimer), selectedIndex, hintA, hintB, idleTime);
-        renderer.Draw(board, grid, anim, theme, scale, Accent, entrance, blitzMode ? blitzHud.FrostShown : 0f);
+        GemSwapRenderer.DrawBoard(drawList, board, grid, anim, theme, scale, entrance, frostShown);
         DrawBeams(drawList, scale);
-        DrawStorm(drawList, grid, scale);
+        DrawStorm(drawList, scale);
         if (blitzMode)
         {
-            DrawDock(drawList, grid, scale);
+            var clicked = dock.DrawPowers(drawList, grid, blitz, scale, interactive);
+            if (clicked >= 0 && blitz.TryFire(clicked))
+            {
+                FirePower((GemPower)clicked, scale, context);
+            }
         }
 
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
-        fx.DrawFlash(drawList, body, 0f);
         fx.DrawText();
-        DrawFlyIn(drawList, scale);
         GameBanner.Draw(drawList, grid.Center, Loc.T(L.Games.GemSwapTimeUp), TimeUpTint, theme, bannerProgress,
             TextStyles.LargeTitle);
-        if (stage == GemStage.Ready)
+        context.Hud.Score(board.Score);
+        if (blitzMode)
         {
-            DrawStartCard(drawList, grid, theme, scale);
+            var urgent = stage == GemStage.Playing && blitz.TimeLeft < UrgentSeconds && !blitz.Frozen;
+            context.Hud.Timer(blitz.TimeLeft, GemSwapBlitz.StartSeconds, urgent);
+            if (urgent)
+            {
+                context.Fx.Vignette(TimeUpTint, 0.10f + 0.12f * Pulse.Wave(Pulse.Fast), 0.3f);
+            }
         }
-        else if (stage == GemStage.Over)
-        {
-            DrawResult(body, theme, deltaSeconds);
-        }
+
+        context.Hud.Combo(combo);
+        context.Hud.Best(session.Best);
+        session.Report(board.Score);
     }
 
-    private void LoadBests(GameStatsStore stats)
+    private void SyncIdle(ulong seed)
     {
-        if (bestsLoaded)
+        if (idleSynced && idleSeed == seed)
         {
             return;
         }
 
-        bestsLoaded = true;
-        loadedBest = Math.Max(loadedBest, stats.Get(GameId).BestScore);
-        blitzBest = Math.Max(blitzBest, stats.Get(BlitzStatId).BestScore);
+        board.Reset(GameRandom.FromSeed(seed));
+        idleSeed = seed;
+        idleSynced = true;
     }
 
-    private void SubmitBlitzIfPending(GameStatsStore stats)
+    private static void Layout(Rect safe, bool blitzMode, float scale, out GameGrid boardGrid, out Rect plate)
     {
-        if (!pendingSubmit)
-        {
-            return;
-        }
-
-        pendingSubmit = false;
-        var previousBest = blitzBest;
-        newBest = stats.SubmitScore(BlitzStatId, board.Score);
-        if (newBest)
-        {
-            blitzBest = board.Score;
-        }
-
-        resultSecondary = !newBest && previousBest > 0
-            ? $"{Loc.T(L.Games.Best)} {GameNumber.Label(previousBest)}"
-            : null;
+        var band = blitzMode ? GemSwapPowerDock.BandHeight * scale : 0f;
+        var inset = BoardPlate.Padding * scale;
+        var gridArea = new Rect(new Vector2(safe.Min.X + inset, safe.Min.Y + inset),
+            new Vector2(safe.Max.X - inset, safe.Max.Y - inset - band));
+        boardGrid = GameGrid.Centered(gridArea, GemSwapBoard.Columns, GemSwapBoard.Rows,
+            GemSwapRenderer.GapFraction, band * 0.5f);
+        var core = BoardPlate.Around(boardGrid.Bounds, scale);
+        plate = blitzMode ? new Rect(core.Min, new Vector2(core.Max.X, core.Max.Y + band)) : core;
     }
 
-    private void RefreshComboLabel()
+    private void TickBlitz(in GameContext context)
     {
-        if (chain == comboShown)
+        var running = stage == GemStage.Playing;
+        if (running && blitz.Tick(context.DeltaSeconds))
         {
-            return;
+            BeginFinale(context);
         }
 
-        comboShown = chain;
-        comboLabel = chain > 1 ? "x" + GameNumber.Label(chain) : string.Empty;
+        var frostTarget = running && blitz.Frozen ? 1f : 0f;
+        frostShown += (frostTarget - frostShown) * MathF.Min(1f, context.RawDeltaSeconds * FrostFollow);
+        var second = (int)MathF.Ceiling(blitz.TimeLeft);
+        if (running && second < lastSecond && second > 0 && blitz.TimeLeft < UrgentSeconds && !blitz.Frozen)
+        {
+            UiFeedback.Play(UiSound.GameTick);
+        }
+
+        lastSecond = second;
     }
 
-    private bool DrawHud(Rect body, float rowY, PhoneTheme theme, float deltaSeconds, float scale)
-    {
-        var best = ModeBest;
-        var beatingBest = board.Score > 0 && board.Score > best;
-        GameHud.ScorePill(new Vector2(body.Center.X - 68f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
-            board.Score, Accent, theme, deltaSeconds, beatingBest);
-        var rightCenter = new Vector2(body.Center.X + 20f * scale, rowY);
-        if (mode == GemMode.Blitz && stage != GemStage.Ready)
-        {
-            clockCenter = rightCenter;
-            blitzHud.DrawClock(ImGui.GetWindowDrawList(), clockCenter, blitz, theme, Accent, scale);
-        }
-        else
-        {
-            var displayBest = Math.Max(best, board.Score);
-            GameHud.Pill(rightCenter, Loc.T(L.Games.Best), GameNumber.Label(displayBest), Accent, theme,
-                displayBest > best);
-        }
-
-        if (!GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
-        {
-            return false;
-        }
-
-        ResetToReady();
-        return true;
-    }
-
-    private void DrawStartCard(ImDrawListPtr drawList, GameGrid grid, PhoneTheme theme, float scale)
-    {
-        modeLabels[0] = Loc.T(L.Games.Classic);
-        modeLabels[1] = Loc.T(L.Games.Blitz);
-        var hint = Loc.T(mode == GemMode.Blitz ? L.Games.GemSwapBlitzHint : L.Games.GemSwapClassicHint);
-        var tapText = Loc.T(L.Games.TapToStart);
-        var padding = 16f * scale;
-        var halfWidth = MathF.Min(grid.Width * 0.46f, 150f * scale);
-        var contentWidth = halfWidth * 2f - padding * 2f;
-        var tapScale = Typography.FitScale(tapText, contentWidth, TextStyles.Title2.Scale,
-            TextStyles.Title2.Scale * 0.6f, TextStyles.Title2.Weight);
-        var hintHeight = Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, contentWidth).Y;
-        var tapHeight = Typography.Measure(tapText, tapScale, TextStyles.Title2.Weight).Y;
-        var stripHeight = 30f * scale;
-        var gap = 12f * scale;
-        var cardHeight = padding * 2f + stripHeight + gap + hintHeight + gap * 1.5f + tapHeight;
-        var min = new Vector2(grid.Center.X - halfWidth, grid.Center.Y - cardHeight * 0.5f);
-        var max = new Vector2(grid.Center.X + halfWidth, grid.Center.Y + cardHeight * 0.5f);
-        var radius = 22f * scale;
-        Material.Veil(drawList, grid.Bounds.Min, grid.Bounds.Max, 0.32f, 10f * scale);
-        ProgressRing.Glow(grid.Center, halfWidth * 1.1f, Accent, 0.4f);
-        Material.Frosted(drawList, min, max, radius, scale);
-        Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(Accent with { W = 0.35f }), 1f * scale);
-        var stripRow = new Rect(new Vector2(min.X + padding, min.Y + padding),
-            new Vector2(max.X - padding, min.Y + padding + stripHeight));
-        var selection = SegmentStrip.Draw("match3.mode", stripRow, modeLabels, (int)mode, theme);
-        var hintCenter = new Vector2(grid.Center.X, stripRow.Max.Y + gap + hintHeight * 0.5f);
-        Typography.DrawWrappedCentered(drawList, hintCenter, hint, theme.TextMuted, TextStyles.Footnote, contentWidth);
-        var pulse = 1f + 0.05f * Pulse.Wave(Pulse.Calm);
-        var tapCenter = new Vector2(grid.Center.X, hintCenter.Y + hintHeight * 0.5f + gap * 1.5f + tapHeight * 0.5f);
-        Typography.DrawCentered(drawList, tapCenter, tapText, theme.TextStrong, tapScale * pulse,
-            TextStyles.Title2.Weight);
-        if (selection != (int)mode)
-        {
-            mode = (GemMode)selection;
-            entrance = 0f;
-            return;
-        }
-
-        var overStrip = UiInteract.Hover(stripRow.Min, stripRow.Max);
-        var overGrid = UiInteract.Hover(grid.Bounds.Min, grid.Bounds.Max);
-        if (overGrid && !overStrip)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        if (!overGrid || overStrip || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-        {
-            return;
-        }
-
-        UiFeedback.Play(UiSound.GamePop);
-        BeginRun();
-    }
-
-    private void DrawResult(Rect body, PhoneTheme theme, float deltaSeconds)
-    {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        var result = new GameResult(Loc.T(L.Games.GemSwapTimeUp), Accent, Loc.T(L.Games.Score),
-            GameNumber.Label(board.Score), resultSecondary, newBest);
-        if (!GameOverlay.Draw(body, theme, Accent, resultAppear, result))
-        {
-            return;
-        }
-
-        ResetToReady();
-        BeginRun();
-    }
-
-    private void DrawDock(ImDrawListPtr drawList, GameGrid grid, float scale)
-    {
-        blitzHud.DrawBar(drawList, GemSwapBlitzHud.BarRect(grid, scale), Accent, scale);
-        var interactive = stage == GemStage.Playing && phase == GemPhase.Idle;
-        var clicked = blitzHud.DrawPowers(drawList, grid, blitz, scale, interactive);
-        if (clicked < 0 || !blitz.TryFire(clicked))
-        {
-            return;
-        }
-
-        FirePower((GemPower)clicked, grid, scale);
-    }
-
-    private void AdvanceAnimation(float deltaSeconds, GameGrid grid)
+    private void AdvanceAnimation(float deltaSeconds, float scale, in GameContext context)
     {
         switch (phase)
         {
@@ -422,10 +289,10 @@ internal sealed class GemSwapApp : ILegacyMiniGame
                 swapTimer += deltaSeconds / SwapDuration;
                 if (swapTimer >= 1f)
                 {
-                    CompleteSwap(grid);
+                    CompleteSwap(scale, context);
                 }
 
-                break;
+                return;
             case GemPhase.SwapBack:
                 swapTimer += deltaSeconds / SwapBackDuration;
                 if (swapTimer >= 1f)
@@ -437,7 +304,7 @@ internal sealed class GemSwapApp : ILegacyMiniGame
                     idleTime = 0f;
                 }
 
-                break;
+                return;
             case GemPhase.Clearing:
                 clearTimer += deltaSeconds / ClearDuration;
                 if (clearTimer >= 1f)
@@ -448,66 +315,110 @@ internal sealed class GemSwapApp : ILegacyMiniGame
                     fallTimer = 0f;
                 }
 
-                break;
+                return;
             case GemPhase.Falling:
                 fallTimer += deltaSeconds / FallDuration;
                 if (fallTimer >= 1f)
                 {
+                    OnLanded(scale);
                     board.ClearFall();
                     chain++;
                     if (board.ResolveMatches(chain) > 0)
                     {
-                        OnCleared(grid);
+                        OnCleared(scale, context);
                     }
                     else
                     {
-                        chain = 0;
-                        board.ReshuffleIfStuck();
-                        phase = GemPhase.Idle;
-                        idleTime = 0f;
-                        hintA = -1;
-                        hintB = -1;
+                        EndCascade(context);
                     }
                 }
 
-                break;
-            case GemPhase.Idle:
+                return;
+            default:
                 idleTime += deltaSeconds;
                 if (stage == GemStage.Playing && idleTime >= HintDelay && hintA < 0)
                 {
                     board.FindHint(out hintA, out hintB);
                 }
 
-                break;
+                return;
         }
     }
 
-    private void CompleteSwap(GameGrid grid)
+    private void OnLanded(float scale)
+    {
+        var landed = false;
+        var half = (grid.Pitch - grid.Gap) * 0.5f;
+        for (var index = 0; index < GemSwapBoard.CellCount; index++)
+        {
+            if (board.FallFrom(index) == GemSwapBoard.NoFall)
+            {
+                continue;
+            }
+
+            landed = true;
+            var center = grid.CellCenter(index % GemSwapBoard.Columns, index / GemSwapBoard.Columns);
+            particles.Burst(new Vector2(center.X, center.Y + half), DustPerGem, Dust, 55f * scale, 2.4f, 0.32f, 140f,
+                MathF.PI * 0.9f, -MathF.PI * 0.5f);
+        }
+
+        if (!landed)
+        {
+            return;
+        }
+
+        UiFeedback.Play(UiSound.GameHitSoft);
+        fx.AddTrauma(0.03f);
+    }
+
+    private void EndCascade(in GameContext context)
+    {
+        chain = 0;
+        phase = GemPhase.Idle;
+        idleTime = 0f;
+        hintA = -1;
+        hintB = -1;
+        if (stage != GemStage.Playing)
+        {
+            return;
+        }
+
+        if (mode == GemMode.Classic && !board.HasPossibleMoves())
+        {
+            FinishClassic(context);
+            return;
+        }
+
+        board.ReshuffleIfStuck();
+    }
+
+    private void CompleteSwap(float scale, in GameContext context)
     {
         board.Swap(swapA, swapB);
         if (board.IsComboSwap(swapA, swapB))
         {
+            swaps++;
             chain = 1;
             comboCell = swapB;
             board.ResolveCombo(swapB, swapA, chain);
-            OnCleared(grid);
+            OnCleared(scale, context);
             return;
         }
 
-        if (board.HasAnyMatch())
-        {
-            chain = 1;
-            board.ResolveMatches(chain);
-            OnCleared(grid);
-        }
-        else
+        if (!board.HasAnyMatch())
         {
             phase = GemPhase.SwapBack;
             swapTimer = 0f;
+            return;
         }
+
+        swaps++;
+        chain = 1;
+        board.ResolveMatches(chain);
+        OnCleared(scale, context);
     }
 
-    private void BeginFinale()
+    private void BeginFinale(in GameContext context)
     {
         stage = GemStage.Finale;
         selectedIndex = -1;
@@ -517,11 +428,11 @@ internal sealed class GemSwapApp : ILegacyMiniGame
         finaleTimer = 0f;
         finaleSweeps = 0;
         UiFeedback.Play(UiSound.GameClear);
-        fx.Flash(TimeUpTint, 0.22f);
+        context.Fx.Flash(TimeUpTint, 0.22f);
         fx.AddTrauma(0.3f);
     }
 
-    private void AdvanceFinale(float deltaSeconds, GameGrid grid)
+    private void AdvanceFinale(float deltaSeconds, float scale, in GameContext context)
     {
         finaleTimer += deltaSeconds;
         if (finaleTimer < FinaleDelay || phase != GemPhase.Idle)
@@ -535,23 +446,58 @@ internal sealed class GemSwapApp : ILegacyMiniGame
             finaleTimer = FinaleDelay - FinaleSweepPause;
             chain = 1;
             board.DetonateSpecials(chain);
-            OnCleared(grid);
+            OnCleared(scale, context);
             return;
         }
 
         stage = GemStage.Over;
-        pendingSubmit = true;
-        resultAppear = 0f;
+        FinishBlitz(context);
     }
 
-    private void OnCleared(GameGrid grid)
+    private void FinishBlitz(in GameContext context)
+    {
+        if (finished)
+        {
+            return;
+        }
+
+        finished = true;
+        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, BlitzStatId)
+            .WithStat(L.Games.Combo, GameNumber.Label(bestChain))
+            .WithStat(L.GemSwap.Bonuses, GameNumber.Label(blitz.BonusCount)));
+    }
+
+    private void FinishClassic(in GameContext context)
+    {
+        if (finished)
+        {
+            return;
+        }
+
+        finished = true;
+        stage = GemStage.Over;
+        selectedIndex = -1;
+        UiFeedback.Play(UiSound.GameWrong);
+        context.Fx.Flash(TimeUpTint, 0.15f);
+        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+            .WithStat(L.Games.Combo, GameNumber.Label(bestChain))
+            .WithStat(L.Games.Moves, GameNumber.Label(swaps)));
+    }
+
+    private void OnCleared(float scale, in GameContext context)
     {
         UiFeedback.Play(UiSound.GameMatch);
         phase = GemPhase.Clearing;
         clearTimer = 0f;
-        var scale = UiScale.Current;
         var cleared = board.LastClearCount;
         fx.AddTrauma(MathF.Min(0.55f, 0.05f + cleared * 0.03f));
+        var multiplierBefore = combo.Multiplier;
+        combo.Hit();
+        if (chain > bestChain)
+        {
+            bestChain = chain;
+        }
+
         for (var index = 0; index < GemSwapBoard.CellCount; index++)
         {
             if (!board.Matched(index) || board.Color(index) < 0)
@@ -565,20 +511,19 @@ internal sealed class GemSwapApp : ILegacyMiniGame
             particles.Sparkle(center, 3, GamePalette.Lighten(color, 0.4f), 110f * scale, 2f, 0.6f);
         }
 
-        SpawnActivationEffects(grid, scale);
-        SpawnComboEffects(grid, scale);
+        SpawnActivationEffects(scale, context);
+        SpawnComboEffects(scale, context);
         var scoreDelta = board.Score - previousScore;
         if (scoreDelta > 0)
         {
-            fx.AddText($"+{GameNumber.Label(scoreDelta)}",
-                new Vector2(grid.Center.X, grid.Bounds.Min.Y - 14f * scale), Accent, 1.1f);
+            fx.AddText(GainLabel(scoreDelta), new Vector2(grid.Center.X, grid.Bounds.Min.Y - 14f * scale), Accent,
+                1.1f);
         }
 
         previousScore = board.Score;
-        fever = MathF.Max(fever, chain > 1 ? MathF.Min(1f, (chain - 1) * 0.3f) : 0.12f);
         if (chain > 1)
         {
-            fx.AddText($"x{chain}", grid.Center, Accent, 1.5f);
+            fx.AddText(ChainLabel(chain), grid.Center, Accent, 1.5f);
             fx.Shockwave(grid.Center, grid.Pitch * (1.2f + 0.3f * chain), GamePalette.Lighten(Accent, 0.3f), 0.55f, 3f);
             if (mode == GemMode.Classic)
             {
@@ -586,13 +531,23 @@ internal sealed class GemSwapApp : ILegacyMiniGame
             }
         }
 
+        if (chain >= SlowMoChain)
+        {
+            context.Fx.SlowMo(SlowMoFactor, SlowMoSeconds);
+        }
+
+        if (combo.Multiplier > multiplierBefore)
+        {
+            GameSfx.ComboTierUp();
+        }
+
         if (mode == GemMode.Blitz && stage == GemStage.Playing)
         {
-            FeedBlitz(grid, scale);
+            FeedBlitz(scale, context);
         }
     }
 
-    private void SpawnActivationEffects(GameGrid grid, float scale)
+    private void SpawnActivationEffects(float scale, in GameContext context)
     {
         if (board.ActivatedCount > 0)
         {
@@ -610,21 +565,24 @@ internal sealed class GemSwapApp : ILegacyMiniGame
             switch (board.ActivatedKind(slot))
             {
                 case GemSpecial.LineHorizontal:
-                    SweepRow(grid, row, column, bright, scale);
+                    SweepRow(row, column, bright, scale);
                     fx.AddTrauma(0.12f);
                     break;
                 case GemSpecial.LineVertical:
-                    SweepColumn(grid, column, row, bright, scale);
+                    SweepColumn(column, row, bright, scale);
                     fx.AddTrauma(0.12f);
                     break;
                 case GemSpecial.Burst:
                     fx.Shockwave(center, grid.Pitch * 1.9f, bright, 0.5f, 4f);
                     particles.Burst(center, 16, color, 260f * scale, 3.4f, 0.6f, 300f);
                     fx.AddTrauma(0.16f);
+                    context.Fx.Punch(0.03f);
                     break;
                 case GemSpecial.Prism:
                     fx.Shockwave(center, grid.Pitch * 3.5f, White with { W = 0.85f }, 0.65f, 4f);
-                    fx.Flash(White, 0.22f);
+                    context.Fx.Flash(White, 0.22f);
+                    context.Fx.Sweep();
+                    context.Fx.Punch(0.05f);
                     particles.Sparkle(center, 20, White, 220f * scale, 3f, 0.8f);
                     fx.AddTrauma(0.22f);
                     break;
@@ -632,7 +590,7 @@ internal sealed class GemSwapApp : ILegacyMiniGame
         }
     }
 
-    private void SpawnComboEffects(GameGrid grid, float scale)
+    private void SpawnComboEffects(float scale, in GameContext context)
     {
         if (board.LastCombo == GemCombo.None || comboCell < 0)
         {
@@ -641,15 +599,17 @@ internal sealed class GemSwapApp : ILegacyMiniGame
 
         var center = grid.CellCenter(comboCell % GemSwapBoard.Columns, comboCell / GemSwapBoard.Columns);
         var ring = GamePalette.Lighten(Accent, 0.4f);
+        var prismBoard = board.LastCombo == GemCombo.PrismBoard;
         fx.Shockwave(center, grid.Pitch * 4.5f, ring, 0.7f, 5f);
         fx.Shockwave(center, grid.Pitch * 2.6f, White with { W = 0.8f }, 0.45f, 3f);
-        fx.Flash(ring, board.LastCombo == GemCombo.PrismBoard ? 0.45f : 0.25f);
-        fx.AddTrauma(board.LastCombo == GemCombo.PrismBoard ? 0.6f : 0.35f);
+        context.Fx.Flash(ring, prismBoard ? 0.45f : 0.25f);
+        context.Fx.Punch(prismBoard ? 0.08f : 0.05f);
+        fx.AddTrauma(prismBoard ? 0.6f : 0.35f);
         particles.Streaks(center, 18, ring, 460f * scale, 2.8f, 0.5f);
         comboCell = -1;
     }
 
-    private void SweepRow(GameGrid grid, int row, int originColumn, Vector4 color, float scale)
+    private void SweepRow(int row, int originColumn, Vector4 color, float scale)
     {
         var y = grid.CellCenter(0, row).Y;
         AddBeam(new Vector2(grid.Bounds.Min.X, y), new Vector2(grid.Bounds.Max.X, y), color);
@@ -660,7 +620,7 @@ internal sealed class GemSwapApp : ILegacyMiniGame
         }
     }
 
-    private void SweepColumn(GameGrid grid, int column, int originRow, Vector4 color, float scale)
+    private void SweepColumn(int column, int originRow, Vector4 color, float scale)
     {
         var x = grid.CellCenter(column, 0).X;
         AddBeam(new Vector2(x, grid.Bounds.Min.Y), new Vector2(x, grid.Bounds.Max.Y), color);
@@ -671,16 +631,17 @@ internal sealed class GemSwapApp : ILegacyMiniGame
         }
     }
 
-    private void FeedBlitz(GameGrid grid, float scale)
+    private void FeedBlitz(float scale, in GameContext context)
     {
         if (blitz.AddClear(board.LastClearCount, chain))
         {
-            var bar = GemSwapBlitzHud.BarRect(grid, scale);
-            blitzHud.OnBonus();
-            flyFrom = new Vector2(bar.Max.X, bar.Center.Y);
-            flyProgress = 0f;
-            bonusLabel = Loc.T(L.Games.GemSwapBonusTime, (int)GemSwapBlitz.BonusSeconds);
-            particles.Sparkle(bar.Center, 16, GamePalette.Lighten(Accent, 0.45f), 200f * scale, 2.6f, 0.7f);
+            var band = GemSwapPowerDock.Band(grid, scale);
+            dock.OnBonus();
+            fx.AddText(bonusLabel.Get(L.Games.GemSwapBonusTime, (int)GemSwapBlitz.BonusSeconds),
+                new Vector2(grid.Center.X, grid.Bounds.Min.Y + grid.Pitch * 0.5f), GamePalette.Lighten(Accent, 0.3f),
+                1.4f);
+            particles.Sparkle(band.Center, 16, GamePalette.Lighten(Accent, 0.45f), 200f * scale, 2.6f, 0.7f);
+            context.Fx.Flash(Accent, 0.12f);
             UiFeedback.Play(UiSound.GamePowerUp);
         }
 
@@ -692,21 +653,21 @@ internal sealed class GemSwapApp : ILegacyMiniGame
                 continue;
             }
 
-            var center = GemSwapBlitzHud.ButtonCenter(grid, power, scale);
+            var center = GemSwapPowerDock.ButtonCenter(grid, power, scale);
             var color = GemSwapRenderer.ColorOf(GemSwapBlitz.PowerColor(power));
-            blitzHud.OnReady(power);
-            fx.Shockwave(center, GemSwapBlitzHud.ButtonSize(scale) * 2.2f, GamePalette.Lighten(color, 0.4f), 0.5f, 3f);
+            dock.OnReady(power);
+            fx.Shockwave(center, GemSwapPowerDock.ButtonSize(scale) * 2.2f, GamePalette.Lighten(color, 0.4f), 0.5f, 3f);
             particles.Sparkle(center, 12, GamePalette.Lighten(color, 0.4f), 160f * scale, 2.4f, 0.6f);
             UiFeedback.Play(UiSound.GameCollect);
         }
     }
 
-    private void FirePower(GemPower power, GameGrid grid, float scale)
+    private void FirePower(GemPower power, float scale, in GameContext context)
     {
         var color = GemSwapRenderer.ColorOf(GemSwapBlitz.PowerColor((int)power));
         var bright = GamePalette.Lighten(color, 0.35f);
-        var button = GemSwapBlitzHud.ButtonCenter(grid, (int)power, scale);
-        fx.Shockwave(button, GemSwapBlitzHud.ButtonSize(scale) * 2.6f, bright, 0.5f, 3.5f);
+        var button = GemSwapPowerDock.ButtonCenter(grid, (int)power, scale);
+        fx.Shockwave(button, GemSwapPowerDock.ButtonSize(scale) * 2.6f, bright, 0.5f, 3.5f);
         fx.AddText(Loc.T(PowerName(power)), new Vector2(grid.Center.X, grid.Bounds.Min.Y + grid.Pitch), bright, 1.4f);
         UiFeedback.Play(UiSound.GamePowerUp);
         selectedIndex = -1;
@@ -725,7 +686,8 @@ internal sealed class GemSwapApp : ILegacyMiniGame
                 var center = (grid.CellCenter(originColumn, originRow) +
                     grid.CellCenter(originColumn + last, originRow + last)) * 0.5f;
                 fx.Shockwave(center, grid.Pitch * 3.2f, FireTint, 0.6f, 5f);
-                fx.Flash(FireTint, 0.22f);
+                context.Fx.Flash(FireTint, 0.22f);
+                context.Fx.Punch(0.05f);
                 fx.AddTrauma(0.35f);
                 particles.Burst(center, 30, FireTint, 320f * scale, 4f, 0.8f, -160f);
                 break;
@@ -733,8 +695,8 @@ internal sealed class GemSwapApp : ILegacyMiniGame
             case GemPower.Gale:
             {
                 cleared = GemSwapPowers.Gale(board, 1, out var firstRow, out var secondRow);
-                SweepRow(grid, firstRow, -1, bright, scale);
-                SweepRow(grid, secondRow, -1, bright, scale);
+                SweepRow(firstRow, -1, bright, scale);
+                SweepRow(secondRow, -1, bright, scale);
                 fx.AddTrauma(0.25f);
                 break;
             }
@@ -743,15 +705,15 @@ internal sealed class GemSwapApp : ILegacyMiniGame
                 cleared = GemSwapPowers.Storm(board, 1, out var column);
                 stormColumn = column;
                 stormTimer = StormSeconds;
-                SweepColumn(grid, column, -1, bright, scale);
-                fx.Flash(White, 0.3f);
+                SweepColumn(column, -1, bright, scale);
+                context.Fx.Flash(White, 0.3f);
+                context.Fx.Punch(0.05f);
                 fx.AddTrauma(0.4f);
                 break;
             }
             default:
-                fx.Flash(GemSwapRenderer.FrostTint, 0.3f);
-                fx.Shockwave(clockCenter, GemSwapBlitzHud.ClockRadius * scale * 2.6f, GemSwapRenderer.FrostTint, 0.6f,
-                    3.5f);
+                context.Fx.Flash(GemSwapRenderer.FrostTint, 0.3f);
+                fx.Shockwave(grid.Center, grid.Width * 0.6f, GemSwapRenderer.FrostTint, 0.6f, 3.5f);
                 for (var index = 0; index < GemSwapBoard.CellCount; index += 4)
                 {
                     particles.Sparkle(grid.CellCenter(index % GemSwapBoard.Columns, index / GemSwapBoard.Columns), 2,
@@ -767,7 +729,7 @@ internal sealed class GemSwapApp : ILegacyMiniGame
         }
 
         chain = 1;
-        OnCleared(grid);
+        OnCleared(scale, context);
     }
 
     private static LocString PowerName(GemPower power) => power switch
@@ -795,7 +757,6 @@ internal sealed class GemSwapApp : ILegacyMiniGame
 
     private void UpdateEffects(float deltaSeconds)
     {
-        fever = MathF.Max(0f, fever - FeverDecay * deltaSeconds);
         stormTimer = MathF.Max(0f, stormTimer - deltaSeconds);
         for (var index = beamCount - 1; index >= 0; index--)
         {
@@ -809,36 +770,19 @@ internal sealed class GemSwapApp : ILegacyMiniGame
             beams[index] = beams[beamCount - 1];
             beamCount--;
         }
-
-        if (flyProgress >= 1f)
-        {
-            return;
-        }
-
-        flyProgress = MathF.Min(1f, flyProgress + deltaSeconds / FlyInSeconds);
-        if (flyProgress < 1f)
-        {
-            return;
-        }
-
-        var scale = UiScale.Current;
-        blitzHud.OnBonusArrived();
-        fx.Shockwave(clockCenter, GemSwapBlitzHud.ClockRadius * scale * 2.2f, GamePalette.Lighten(Accent, 0.4f),
-            0.5f, 3f);
-        particles.Sparkle(clockCenter, 14, GamePalette.Lighten(Accent, 0.45f), 160f * scale, 2.6f, 0.6f);
     }
 
-    private void DrawFever(ImDrawListPtr drawList, Rect body, GameGrid grid)
+    private void DrawHeat()
     {
-        if (fever <= 0.01f)
+        var heat = combo.Heat;
+        if (heat <= 0.01f)
         {
             return;
         }
 
         var pulse = Pulse.Wave(Pulse.Fast);
-        var hot = Vector4.Lerp(Accent, HotTint, fever);
-        drawList.AddRectFilled(body.Min, body.Max, ImGui.GetColorU32(hot with { W = 0.07f * fever * (0.7f + 0.3f * pulse) }));
-        ProgressRing.Glow(grid.Center, grid.Width * (0.72f + 0.12f * pulse * fever), hot, fever * (1.3f + 0.7f * pulse));
+        var hot = Vector4.Lerp(Accent, HotTint, heat);
+        ProgressRing.Glow(grid.Center, grid.Width * (0.7f + 0.1f * pulse * heat), hot, heat * (1.2f + 0.6f * pulse));
     }
 
     private void DrawBeams(ImDrawListPtr drawList, float scale)
@@ -853,7 +797,7 @@ internal sealed class GemSwapApp : ILegacyMiniGame
         }
     }
 
-    private void DrawStorm(ImDrawListPtr drawList, GameGrid grid, float scale)
+    private void DrawStorm(ImDrawListPtr drawList, float scale)
     {
         if (stormTimer <= 0f)
         {
@@ -882,34 +826,21 @@ internal sealed class GemSwapApp : ILegacyMiniGame
         }
     }
 
-    private void DrawFlyIn(ImDrawListPtr drawList, float scale)
+    private void HandleInput()
     {
-        if (flyProgress >= 1f)
+        var bounds = grid.Bounds;
+        if (!UiInteract.Hover(bounds.Min, bounds.Max))
         {
             return;
         }
 
-        var eased = Easing.EaseInOutCubic(flyProgress);
-        var control = new Vector2(flyFrom.X + 20f * scale, clockCenter.Y + (flyFrom.Y - clockCenter.Y) * 0.35f);
-        var inverse = 1f - eased;
-        var position = inverse * inverse * flyFrom + 2f * inverse * eased * control + eased * eased * clockCenter;
-        var pop = 1f + 0.25f * MathF.Sin(flyProgress * MathF.PI);
-        ProgressRing.Glow(position, 20f * scale * pop, Accent, 1.1f);
-        particles.Sparkle(position, 1, GamePalette.Lighten(Accent, 0.5f), 40f * scale, 2f, 0.4f);
-        Typography.DrawCentered(drawList, position, bonusLabel, White, TextStyles.Headline.Scale * pop,
-            FontWeight.Bold);
-    }
-
-    private void HandleInput(GameGrid grid)
-    {
-        var mouse = ImGui.GetMousePos();
-        if (!UiInteract.Hover(grid.Bounds.Min, grid.Bounds.Max) || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
-            UpdateHoverCursor(grid);
             return;
         }
 
-        var local = mouse - grid.Origin;
+        var local = ImGui.GetMousePos() - grid.Origin;
         var column = (int)(local.X / grid.Pitch);
         var row = (int)(local.Y / grid.Pitch);
         if (column < 0 || column >= GemSwapBoard.Columns || row < 0 || row >= GemSwapBoard.Rows)
@@ -952,11 +883,27 @@ internal sealed class GemSwapApp : ILegacyMiniGame
         swapTimer = 0f;
     }
 
-    private static void UpdateHoverCursor(GameGrid grid)
+    private static string ChainLabel(int value)
     {
-        if (UiInteract.Hover(grid.Bounds.Min, grid.Bounds.Max))
+        var index = Math.Clamp(value, 0, MaxChainLabel);
+        return ChainLabels[index] ??= string.Concat("x", GameNumber.Label(index));
+    }
+
+    private static string GainLabel(int points)
+    {
+        if (GainLabels.TryGetValue(points, out var label))
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            return label;
         }
+
+        label = string.Concat("+", GameNumber.Label(points));
+        GainLabels[points] = label;
+        return label;
+    }
+
+    private static Rect Grow(Rect rect, float factor)
+    {
+        var half = rect.Size * 0.5f * factor;
+        return new Rect(rect.Center - half, rect.Center + half);
     }
 }

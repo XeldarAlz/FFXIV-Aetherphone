@@ -1,3 +1,5 @@
+using System.Text;
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Xunit;
 
@@ -7,6 +9,20 @@ public sealed class GemSwapBoardTests
 {
     private const int FreeColor = 4;
     private const int OtherFreeColor = 5;
+    private const int ScriptedRounds = 12;
+
+    [Fact]
+    public void SameSeedReplaysIdentically()
+    {
+        var first = Play(1234, out var firstTrace);
+        var second = Play(1234, out var secondTrace);
+        Play(99, out var otherTrace);
+
+        Assert.Equal(firstTrace, secondTrace);
+        Assert.Equal(first.Score, second.Score);
+        Assert.True(first.Score > 0);
+        Assert.NotEqual(firstTrace, otherTrace);
+    }
 
     [Fact]
     public void TheSameSeedDealsTheSameBoard()
@@ -241,6 +257,45 @@ public sealed class GemSwapBoardTests
         Assert.False(blitz.Tick(1f));
         Assert.False(blitz.AddClear(30, 3));
         Assert.Equal(0f, blitz.TimeLeft);
+    }
+
+    private static GemSwapBoard Play(ulong seed, out string trace)
+    {
+        var board = new GemSwapBoard();
+        board.Reset(GameRandom.FromSeed(seed));
+        var builder = new StringBuilder();
+        for (var round = 0; round < ScriptedRounds; round++)
+        {
+            if (!board.FindHint(out var indexA, out var indexB))
+            {
+                board.ReshuffleIfStuck();
+                continue;
+            }
+
+            board.Swap(indexA, indexB);
+            var chain = 1;
+            var cleared = board.IsComboSwap(indexA, indexB)
+                ? board.ResolveCombo(indexB, indexA, chain)
+                : board.ResolveMatches(chain);
+            while (cleared > 0)
+            {
+                board.RemoveMatched();
+                board.ApplyGravity();
+                board.ClearFall();
+                chain++;
+                cleared = board.ResolveMatches(chain);
+            }
+
+            for (var index = 0; index < GemSwapBoard.CellCount; index++)
+            {
+                builder.Append(board.Color(index)).Append(',');
+            }
+
+            builder.Append(board.Score).Append('|');
+        }
+
+        trace = builder.ToString();
+        return board;
     }
 
     private static GemSwapBoard PatternBoard()

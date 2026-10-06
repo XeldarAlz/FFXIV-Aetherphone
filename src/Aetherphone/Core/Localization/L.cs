@@ -7967,10 +7967,6 @@ internal static class L
         public static readonly LocString Pairs = new("games.pairs", "Pairs");
         public static readonly LocString GemSwap = new("games.gemSwap", "Gem Swap");
         public static readonly LocString Blitz = new("games.blitz", "Blitz");
-        public static readonly LocString GemSwapClassicHint =
-            new("games.gemSwapClassicHint", "Swap neighboring gems to line up three or more");
-        public static readonly LocString GemSwapBlitzHint =
-            new("games.gemSwapBlitzHint", "60 seconds on the clock. Matches fill the bar for extra time");
         public static readonly LocString GemSwapTimeUp = new("games.gemSwapTimeUp", "Time!");
         public static readonly LocString GemSwapBonusTime = new("games.gemSwapBonusTime", "+{0}s");
         public static readonly LocString GemSwapFire = new("games.gemSwapFire", "Fire");
@@ -8296,6 +8292,7 @@ internal static class L
     internal static class GemSwap
     {
         public static readonly LocString Hook = new("games.match3.hook", "Swap neighboring gems to line up three or more and keep the cascades coming.");
+        public static readonly LocString Bonuses = new("games.match3.bonuses", "Time bonuses");
     }
 
     internal static class Tetris
