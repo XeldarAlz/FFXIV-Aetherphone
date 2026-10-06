@@ -248,7 +248,9 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool MusicAutoplay { get; set; } = true;
     public float MusicCrossfadeSeconds { get; set; }
     public bool MusicSoundCheck { get; set; } = true;
-    public bool ShowWindowsMedia { get; set; } = true;
+    public bool ShowWindowsMedia { get; set; }
+    public bool WindowsMediaOptInApplied { get; set; }
+    public bool MusicWelcomeShown { get; set; }
     public string WindowsMediaSource { get; set; } = string.Empty;
     public bool PublishToWindowsMedia { get; set; } = true;
     public bool ShareListeningActivity { get; set; }
@@ -1090,6 +1092,40 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
         UiSoundKeyboard = true;
         UiSoundDefaultsApplied = true;
         Save();
+    }
+
+    public void SetWindowsMedia(bool show, bool publish)
+    {
+        if (show == ShowWindowsMedia && publish == PublishToWindowsMedia)
+        {
+            return;
+        }
+
+        ShowWindowsMedia = show;
+        PublishToWindowsMedia = publish;
+        Save();
+    }
+
+    public void MigrateWindowsMediaOptIn()
+    {
+        if (!ApplyWindowsMediaOptIn())
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    internal bool ApplyWindowsMediaOptIn()
+    {
+        if (WindowsMediaOptInApplied)
+        {
+            return false;
+        }
+
+        ShowWindowsMedia = false;
+        WindowsMediaOptInApplied = true;
+        return true;
     }
 
     public AppNotificationSetting NotificationSettingFor(string appId)

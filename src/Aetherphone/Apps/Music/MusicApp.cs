@@ -161,6 +161,13 @@ internal sealed partial class MusicApp : IResumableApp
         var content = context.Content;
         var screen = SceneChrome.ScreenFrom(content, theme, scale);
         ui.Backdrop(screen);
+        if (NeedsWelcome)
+        {
+            TourHolds.Hold(Id);
+            DrawWelcome(content, screen, scale);
+            return;
+        }
+
         if (NeedsSetup)
         {
             TourHolds.Hold(Id);

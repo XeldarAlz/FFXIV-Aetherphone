@@ -38,14 +38,7 @@ internal static class MusicMediaSettings
             configuration.PublishToWindowsMedia, theme, "settings.music.publishToWindowsMedia");
         card.End();
         SettingsSection.Hint(Loc.T(L.Music.PcMedia.SettingsHint), theme);
-        if (show == configuration.ShowWindowsMedia && publish == configuration.PublishToWindowsMedia)
-        {
-            return;
-        }
-
-        configuration.ShowWindowsMedia = show;
-        configuration.PublishToWindowsMedia = publish;
-        configuration.Save();
+        configuration.SetWindowsMedia(show, publish);
     }
 
     public static void DrawSource(PcMediaSource pcMedia, PhoneTheme theme)
