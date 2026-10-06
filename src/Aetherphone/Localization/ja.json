@@ -4448,6 +4448,7 @@
   "games.crystaldrop.hook": "結晶を瓶に落として同じもの同士を合体させ、あふれる前に片づけよう。",
   "games.beat": "ビート",
   "games.beat.hook": "ラインに届いた瞬間にノーツを叩いてコンボをつなごう。",
+  "games.beat.perfects": "パーフェクト数",
   "games.combo": "コンボ",
   "games.perfect": "パーフェクト！",
   "games.good": "グッド",

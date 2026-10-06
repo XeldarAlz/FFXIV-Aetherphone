@@ -4448,6 +4448,7 @@
   "games.crystaldrop.hook": "Drop crystals into the jar and merge matching ones before it overflows.",
   "games.beat": "Beat",
   "games.beat.hook": "Hit each note as it reaches the line and keep the combo going.",
+  "games.beat.perfects": "Perfect hits",
   "games.combo": "Combo",
   "games.perfect": "Perfect!",
   "games.good": "Good",

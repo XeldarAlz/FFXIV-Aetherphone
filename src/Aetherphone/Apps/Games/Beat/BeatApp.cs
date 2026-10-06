@@ -1,368 +1,305 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Beat;
 
-internal sealed class BeatApp : ILegacyMiniGame
+internal sealed class BeatApp : IMiniGame
 {
     private const string GameId = "beat";
     private const float FlashDecay = 3.6f;
+    private const float MaxLaneWidth = 0.22f;
+    private const float BeatPunch = 0.02f;
+    private const float PerfectPunch = 0.04f;
+    private const float PerfectShake = 0.10f;
+    private const float WrongShake = 0.12f;
+    private const float MissShake = 0.35f;
+    private const float OverShake = 0.6f;
+    private const float CalloutRise = 30f;
+    private const int PunchMultiplier = 3;
+    private const ulong IdleSeed = 11;
+    private const int IdleFrames = 96;
+    private const float IdleFrameSeconds = 1f / 60f;
     private static readonly ImGuiKey[] LaneKeys = { ImGuiKey.Key1, ImGuiKey.Key2, ImGuiKey.Key3, ImGuiKey.Key4 };
     private static readonly ImGuiKey[] LaneAlternateKeys = { ImGuiKey.A, ImGuiKey.S, ImGuiKey.D, ImGuiKey.F };
     private static readonly string[] LaneKeyLabels = { "1", "2", "3", "4" };
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Beat, GameGenre.Arcade, L.Beat.Hook,
+        Backdrop.Neon, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true, keyboard: true);
+    private static readonly Vector4 Danger = new(0.95f, 0.32f, 0.32f, 1f);
+    private static readonly Vector4 Soft = new(0.92f, 0.94f, 0.98f, 0.9f);
+    private static readonly ParticleSpec[] HitBursts = BuildBursts();
+    private static readonly ParticleSpec[] HitSparkles = BuildSparkles();
+    private static readonly ParticleSpec MissBurst = new(Danger, Danger with { W = 0f }, 0.012f, 1.1f, 0.5f, 2.2f);
     private readonly BeatBoard board = new();
-    private readonly BeatRenderer renderer = new();
     private readonly ParticleSystem particles = new(256);
     private readonly FeedbackFx fx = new();
     private readonly float[] laneFlash = new float[BeatBoard.Lanes];
-    private RollingValue scoreRoll;
-    private string comboLabel = string.Empty;
-    private int comboShown;
-    private float comboPulse;
-    private float resultAppear;
-    private bool statsLoaded;
-    private bool wasOver;
-    private bool pendingSubmit;
-    private bool newBest;
-    private int bestScore;
-    private int finalScore;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Beat);
-    public bool RunsOnAClock => true;
+    private Camera2D camera = Camera2D.Create();
+    private float laneWidth = MaxLaneWidth;
+    private bool finished;
 
-    public GameGenre Genre => GameGenre.Arcade;
-
-    public void Open()
+    public BeatApp()
     {
-        statsLoaded = false;
-        StartGame();
+        board.Reset(GameRandom.FromSeed(IdleSeed));
+        for (var frame = 0; frame < IdleFrames; frame++)
+        {
+            board.Step(IdleFrameSeconds);
+        }
+    }
+
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
+    {
+        board.Reset(start.Random);
+        particles.Clear();
+        fx.Clear();
+        camera = Camera2D.Create();
+        for (var lane = 0; lane < laneFlash.Length; lane++)
+        {
+            laneFlash[lane] = 0f;
+        }
+
+        finished = false;
     }
 
     public void Close()
     {
+        particles.Clear();
+        fx.Clear();
     }
 
     public void Dispose()
     {
     }
 
-    private void StartGame()
+    public void DrawIdle(in GameContext context)
     {
-        board.Reset();
-        particles.Clear();
-        fx.Clear();
-        scoreRoll.Snap(0);
-        for (var lane = 0; lane < laneFlash.Length; lane++)
-        {
-            laneFlash[lane] = 0f;
-        }
-
-        comboShown = 0;
-        comboLabel = string.Empty;
-        comboPulse = 0f;
-        resultAppear = 0f;
-        wasOver = false;
-        pendingSubmit = false;
-        newBest = false;
+        PlaceCamera(context);
+        DrawWorld(ImGui.GetWindowDrawList(), context, UiScale.Current, false);
     }
 
     public void Draw(in GameContext context)
     {
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        var deltaSeconds = context.DeltaSeconds;
-        if (!statsLoaded)
-        {
-            bestScore = context.Stats.Get(GameId).BestScore;
-            statsLoaded = true;
-        }
-
-        if (pendingSubmit)
-        {
-            newBest = context.Stats.SubmitScore(GameId, finalScore);
-            if (newBest)
-            {
-                bestScore = finalScore;
-            }
-
-            pendingSubmit = false;
-        }
-
-        var field = new Rect(new Vector2(body.Min.X + 8f * scale, body.Min.Y + 60f * scale),
-            new Vector2(body.Max.X - 8f * scale, body.Max.Y - 6f * scale));
-        var judgement = board.Step(deltaSeconds);
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
+        var drawList = ImGui.GetWindowDrawList();
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
         for (var lane = 0; lane < laneFlash.Length; lane++)
         {
-            laneFlash[lane] = MathF.Max(0f, laneFlash[lane] - deltaSeconds * FlashDecay);
+            laneFlash[lane] = MathF.Max(0f, laneFlash[lane] - context.RawDeltaSeconds * FlashDecay);
         }
 
-        comboPulse = MathF.Max(0f, comboPulse - deltaSeconds * 2.8f);
+        PlaceCamera(context);
+        if (!finished)
+        {
+            Step(context, scale);
+        }
+
+        DrawWorld(drawList, context, scale, true);
+        if (!finished && board.Lives == 1)
+        {
+            context.Fx.Vignette(Danger, 0.08f + 0.10f * Pulse.Wave(Pulse.Fast), 0.3f);
+        }
+
+        context.Hud.Score(board.Score);
+        context.Hud.Lives(board.Lives, BeatBoard.StartLives);
+        context.Hud.Combo(board.Combo);
+        context.Hud.Best(context.Session.Best);
+        context.Session.Report(board.Score);
+    }
+
+    private void PlaceCamera(in GameContext context)
+    {
+        camera.Fit(context.Full, BeatBoard.Lanes * MaxLaneWidth, BeatBoard.WorldHeight, FitMode.CoverHeight);
+        laneWidth = MathF.Min(MaxLaneWidth, context.Safe.Width / camera.Zoom / BeatBoard.Lanes);
+        camera.Place(new Vector2(BeatBoard.Lanes * laneWidth * 0.5f, BeatBoard.WorldHeight * 0.5f));
+        context.Fx.ApplyTo(ref camera);
+        camera.Update(context.RawDeltaSeconds, UiScale.Current);
+        context.Backdrop.SetCamera(in camera);
+    }
+
+    private void Step(in GameContext context, float scale)
+    {
+        var judgement = board.Step(context.DeltaSeconds);
+        if (board.SpawnedThisStep)
+        {
+            context.Fx.Punch(BeatPunch);
+        }
+
         if (judgement == BeatJudgement.Missed)
         {
-            OnMissed(field, scale);
+            OnMissed(context, scale);
         }
 
-        if (board.State == BeatState.Over && !wasOver)
+        HandleInput(context, scale);
+        if (board.State != BeatState.Over)
         {
-            OnGameOver();
+            return;
         }
 
-        var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
-        HandleInput(body, field, theme, scale);
-        DrawCombo(field, scale);
-        renderer.Draw(board, field, laneFlash, LaneKeyLabels, Accent, scale);
-        particles.Draw(drawList, scale);
-        fx.DrawRings(drawList, scale);
-        fx.DrawText();
-        fx.DrawFlash(drawList, body, 0f);
-        DrawHud(body, theme, scale, deltaSeconds);
-        if (board.State == BeatState.Ready)
-        {
-            DrawStartHint(field);
-        }
-
-        if (board.State == BeatState.Over)
-        {
-            DrawResult(theme, body, deltaSeconds);
-        }
+        finished = true;
+        OnGameOver(context);
+        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+            .WithStat(L.Games.Combo, GameNumber.Label(board.BestCombo))
+            .WithStat(L.Beat.PerfectHits, GameNumber.Label(board.Perfects))
+            .WithStat(L.Games.Notes, GameNumber.Label(board.Hits))
+            .WithStat(L.Games.Level, GameNumber.Label(board.Level)));
     }
 
-    private void HandleInput(Rect body, Rect field, PhoneTheme theme, float scale)
+    private void HandleInput(in GameContext context, float scale)
     {
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 22f * scale, body.Min.Y + 30f * scale), 16f * scale, theme))
-        {
-            StartGame();
-            return;
-        }
-
-        HandleKeyboard(field, scale);
-        if (board.State == BeatState.Over || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (context.Session.State != StageFlow.Playing)
         {
             return;
         }
 
-        if (!UiInteract.Hover(field.Min, field.Max))
-        {
-            return;
-        }
-
-        if (board.State == BeatState.Ready)
-        {
-            board.Begin();
-            return;
-        }
-
-        var laneWidth = BeatRenderer.LaneWidthOf(field);
-        var lane = (int)((ImGui.GetMousePos().X - field.Min.X) / laneWidth);
-        if (lane < 0)
-        {
-            lane = 0;
-        }
-        else if (lane >= BeatBoard.Lanes)
-        {
-            lane = BeatBoard.Lanes - 1;
-        }
-
-        TapLane(field, lane, scale);
-    }
-
-    private void HandleKeyboard(Rect field, float scale)
-    {
-        if (board.State == BeatState.Over || !GameInput.Claim())
-        {
-            return;
-        }
-
-        if (board.State == BeatState.Ready)
-        {
-            if (GameInput.Pressed(ImGuiKey.Space, ImGuiKey.Enter) || AnyLanePressed())
-            {
-                board.Begin();
-            }
-
-            return;
-        }
-
-        for (var lane = 0; lane < BeatBoard.Lanes; lane++)
-        {
-            if (!GameInput.Pressed(LaneKeys[lane], LaneAlternateKeys[lane]))
-            {
-                continue;
-            }
-
-            TapLane(field, lane, scale);
-        }
-    }
-
-    private static bool AnyLanePressed()
-    {
         for (var lane = 0; lane < BeatBoard.Lanes; lane++)
         {
             if (GameInput.Pressed(LaneKeys[lane], LaneAlternateKeys[lane]))
             {
-                return true;
+                TapLane(lane, context, scale);
             }
         }
 
-        return false;
+        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            return;
+        }
+
+        var lanes = BeatRenderer.LanesRect(in camera, laneWidth);
+        var min = new Vector2(lanes.Min.X, MathF.Max(lanes.Min.Y, context.Full.Min.Y + StageLayout.ChromeBand * scale));
+        if (!UiInteract.Hover(min, lanes.Max))
+        {
+            return;
+        }
+
+        var world = camera.ToWorld(ImGui.GetMousePos());
+        TapLane(Math.Clamp((int)(world.X / laneWidth), 0, BeatBoard.Lanes - 1), context, scale);
     }
 
-    private void TapLane(Rect field, int lane, float scale)
+    private void TapLane(int lane, in GameContext context, float scale)
     {
+        var multiplierBefore = board.Multiplier;
         var judgement = board.Tap(lane);
-        if (judgement == BeatJudgement.Wrong)
+        switch (judgement)
         {
-            OnWrong(field, lane, scale);
-            return;
+            case BeatJudgement.Wrong:
+                OnWrong(lane, scale);
+                return;
+            case BeatJudgement.Perfect:
+            case BeatJudgement.Good:
+                OnHit(lane, judgement == BeatJudgement.Perfect, board.Multiplier > multiplierBefore, context, scale);
+                return;
+            default:
+                return;
         }
-
-        if (judgement == BeatJudgement.None)
-        {
-            return;
-        }
-
-        OnHit(field, lane, judgement == BeatJudgement.Perfect, scale);
     }
 
-    private void OnHit(Rect field, int lane, bool perfect, float scale)
+    private void OnHit(int lane, bool perfect, bool tierUp, in GameContext context, float scale)
     {
         UiFeedback.Play(perfect ? UiSound.GameMatch : UiSound.GameTick);
         laneFlash[lane] = 1f;
-        comboShown = board.Combo;
-        comboLabel = "x" + GameNumber.Label(board.Combo);
-        comboPulse = 1f;
         var color = BeatRenderer.LaneColor(lane);
-        var center = new Vector2(field.Min.X + (lane + 0.5f) * BeatRenderer.LaneWidthOf(field),
-            BeatRenderer.HitLineOf(field));
-        particles.Burst(center, perfect ? 14 : 8, color, (perfect ? 190f : 120f) * scale, 2.6f, 0.45f, 260f);
-        fx.Shockwave(center, (perfect ? 62f : 40f) * scale, GamePalette.Lighten(color, 0.4f), 0.4f, 2.6f);
-        fx.AddText(Loc.T(perfect ? L.Games.Perfect : L.Games.Good), new Vector2(center.X, center.Y - 30f * scale),
-            perfect ? GamePalette.Lighten(color, 0.5f) : new Vector4(0.92f, 0.94f, 0.98f, 0.9f), perfect ? 1.1f : 0.95f);
+        var world = new Vector2(BeatBoard.LaneCenter(lane, laneWidth), BeatBoard.HitLine);
+        var screen = camera.ToScreen(world);
+        particles.Emit(HitBursts[lane], world, perfect ? 14 : 8);
+        fx.Shockwave(screen, camera.Px(perfect ? 0.10f : 0.065f), GamePalette.Lighten(color, 0.4f), 0.4f, 2.6f);
+        fx.AddText(Loc.T(perfect ? L.Games.Perfect : L.Games.Good), new Vector2(screen.X, screen.Y - CalloutRise * scale),
+            perfect ? GamePalette.Lighten(color, 0.5f) : Soft, perfect ? 1.1f : 0.95f);
+        if (tierUp)
+        {
+            GameSfx.ComboTierUp();
+        }
+
         if (!perfect)
         {
             return;
         }
 
-        particles.Sparkle(center, 9, GamePalette.Lighten(color, 0.5f), 150f * scale, 2.4f, 0.6f);
-        fx.AddTrauma(0.10f);
+        particles.Emit(HitSparkles[lane], world, 9);
+        camera.Shake(PerfectShake);
+        if (board.Multiplier >= PunchMultiplier)
+        {
+            context.Fx.Punch(PerfectPunch);
+        }
     }
 
-    private void OnWrong(Rect field, int lane, float scale)
+    private void OnWrong(int lane, float scale)
     {
         UiFeedback.Play(UiSound.GameWrong);
-        comboShown = 0;
-        var center = new Vector2(field.Min.X + (lane + 0.5f) * BeatRenderer.LaneWidthOf(field),
-            BeatRenderer.HitLineOf(field));
-        fx.AddText(Loc.T(L.Games.Miss), new Vector2(center.X, center.Y - 26f * scale),
-            new Vector4(0.95f, 0.45f, 0.45f, 1f), 0.95f);
-        fx.AddTrauma(0.12f);
+        var screen = camera.ToScreen(new Vector2(BeatBoard.LaneCenter(lane, laneWidth), BeatBoard.HitLine));
+        fx.AddText(Loc.T(L.Games.Miss), new Vector2(screen.X, screen.Y - CalloutRise * scale), Danger, 0.95f);
+        camera.Shake(WrongShake);
     }
 
-    private void OnMissed(Rect field, float scale)
+    private void OnMissed(in GameContext context, float scale)
     {
         UiFeedback.Play(UiSound.GameHitSoft);
-        comboShown = 0;
         var lane = board.MissedLane;
         if (lane < 0)
         {
             return;
         }
 
-        var center = new Vector2(field.Min.X + (lane + 0.5f) * BeatRenderer.LaneWidthOf(field),
-            BeatRenderer.HitLineOf(field));
-        fx.Flash(new Vector4(0.95f, 0.32f, 0.32f, 1f), 0.32f);
-        fx.AddTrauma(0.38f);
-        fx.AddText(Loc.T(L.Games.Miss), new Vector2(center.X, center.Y - 26f * scale),
-            new Vector4(0.96f, 0.42f, 0.42f, 1f), 1.05f);
-        particles.Burst(center, 12, new Vector4(0.95f, 0.40f, 0.40f, 1f), 180f * scale, 2.6f, 0.5f, 320f);
+        var world = new Vector2(BeatBoard.LaneCenter(lane, laneWidth), BeatBoard.HitLine);
+        var screen = camera.ToScreen(world);
+        context.Fx.Flash(Danger, 0.25f);
+        camera.Shake(MissShake);
+        fx.AddText(Loc.T(L.Games.Miss), new Vector2(screen.X, screen.Y - CalloutRise * scale), Danger, 1.05f);
+        particles.Emit(MissBurst, world with { Y = BeatBoard.MissLine }, 12);
     }
 
-    private void OnGameOver()
+    private void OnGameOver(in GameContext context)
     {
-        wasOver = true;
-        finalScore = board.Score;
-        pendingSubmit = true;
-        resultAppear = 0f;
-        fx.Flash(new Vector4(0.95f, 0.32f, 0.32f, 1f), 0.45f);
-        fx.AddTrauma(0.6f);
+        UiFeedback.Play(UiSound.GameBreak);
+        context.Fx.Flash(Danger, 0.4f);
+        camera.Shake(OverShake);
+        context.Fx.SlowMo(0.5f, 0.3f);
     }
 
-    private void DrawCombo(Rect field, float scale)
+    private void DrawWorld(ImDrawListPtr drawList, in GameContext context, float scale, bool interactive)
     {
-        if (comboShown < 3)
+        BeatRenderer.DrawLanes(drawList, in camera, laneWidth, laneFlash, board.Combo.Heat, Accent, scale);
+        BeatRenderer.DrawTiles(drawList, in camera, board, laneWidth, scale);
+        particles.Draw(drawList, in camera);
+        fx.DrawRings(drawList, scale);
+        fx.DrawText();
+        var band = StageLayout.PadBand(context.Full, StageLayout.ShooterBand, scale);
+        BeatRenderer.DrawPads(drawList, in camera, band, laneWidth, laneFlash, LaneKeyLabels, interactive, Accent,
+            context.Theme, scale);
+    }
+
+    private static ParticleSpec[] BuildBursts()
+    {
+        var specs = new ParticleSpec[BeatBoard.Lanes];
+        for (var lane = 0; lane < specs.Length; lane++)
         {
-            return;
+            var color = BeatRenderer.LaneColor(lane);
+            specs[lane] = new ParticleSpec(GamePalette.Lighten(color, 0.2f), color, 0.012f, 0.9f, 0.45f, 1.8f);
         }
 
-        var center = new Vector2(field.Center.X, field.Min.Y + field.Height * 0.30f);
-        var alpha = 0.11f + 0.09f * Easing.EaseOutCubic(comboPulse);
-        Typography.DrawCentered(center, comboLabel, new Vector4(1f, 1f, 1f, alpha), TextStyles.LargeTitle);
+        return specs;
     }
 
-    private static void DrawStartHint(Rect field)
+    private static ParticleSpec[] BuildSparkles()
     {
-        var pulse = 1f + 0.05f * Pulse.Wave(Pulse.Calm);
-        var center = new Vector2(field.Center.X, field.Min.Y + field.Height * 0.46f);
-        Typography.DrawCentered(center, Loc.T(L.Games.TapToStart), new Vector4(1f, 1f, 1f, 0.95f),
-            TextStyles.Title2.Scale * pulse, TextStyles.Title2.Weight);
-    }
-
-    private void DrawHud(Rect body, PhoneTheme theme, float scale, float deltaSeconds)
-    {
-        var rowY = body.Min.Y + 30f * scale;
-        var beatingBest = board.Score > 0 && board.Score > bestScore;
-        GameHud.ScorePill(new Vector2(body.Center.X - 46f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
-            board.Score, Accent, theme, deltaSeconds, beatingBest);
-        GameHud.Pill(new Vector2(body.Center.X + 46f * scale, rowY), Loc.T(L.Games.Combo),
-            GameNumber.Label(board.Combo), Accent, theme, board.Multiplier > 1);
-        DrawLives(body, scale);
-    }
-
-    private void DrawLives(Rect body, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var radius = 4f * scale;
-        var origin = new Vector2(body.Min.X + 22f * scale, body.Min.Y + 30f * scale);
-        for (var life = 0; life < 3; life++)
+        var specs = new ParticleSpec[BeatBoard.Lanes];
+        for (var lane = 0; lane < specs.Length; lane++)
         {
-            var center = new Vector2(origin.X, origin.Y + (life - 1) * radius * 3.2f);
-            if (life < board.Lives)
-            {
-                drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0.96f, 0.42f, 0.46f, 1f)));
-                continue;
-            }
-
-            drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.25f)), 0,
-                MathF.Max(1f, scale));
-        }
-    }
-
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
-    {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        string? secondary = null;
-        if (bestScore > 0)
-        {
-            secondary = $"{Loc.T(L.Games.Best)} {GameNumber.Label(bestScore)}";
+            var color = GamePalette.Lighten(BeatRenderer.LaneColor(lane), 0.5f);
+            specs[lane] = new ParticleSpec(color, color, 0.010f, 0.7f, 0.6f, 0.3f, 2.4f, 6f,
+                shape: ParticleShape.Star, additive: true);
         }
 
-        var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score),
-            GameNumber.Label(finalScore), secondary, newBest);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
-        {
-            StartGame();
-        }
+        return specs;
     }
 }

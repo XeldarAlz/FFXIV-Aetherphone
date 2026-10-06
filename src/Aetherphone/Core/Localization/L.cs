@@ -8398,6 +8398,7 @@ internal static class L
     internal static class Beat
     {
         public static readonly LocString Hook = new("games.beat.hook", "Hit each note as it reaches the line and keep the combo going.");
+        public static readonly LocString PerfectHits = new("games.beat.perfects", "Perfect hits");
     }
 
     internal static class Blade

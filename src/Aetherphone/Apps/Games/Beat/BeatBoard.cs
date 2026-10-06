@@ -1,8 +1,9 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.Beat;
 
 internal enum BeatState : byte
 {
-    Ready,
     Playing,
     Over,
 }
@@ -27,72 +28,93 @@ internal sealed class BeatBoard
     public const int Lanes = 4;
     public const int Capacity = 24;
     public const float HitLine = 1f;
+    public const float WorldHeight = 1.25f;
     public const float TileHeight = 0.155f;
     public const float PerfectWindow = 0.048f;
     public const float GoodWindow = 0.135f;
-    private const float MissLine = HitLine + 0.16f;
+    public const float MissLine = HitLine + 0.16f;
+    public const float StartSpeed = 0.62f;
+    public const float SpeedStep = 1.055f;
+    public const float MaxSpeed = 2.35f;
+    public const int StartLives = 3;
+    public const int HitsPerLevel = 10;
+    public const int PerfectPoints = 3;
+    public const int GoodPoints = 1;
     private const float SpawnY = -TileHeight;
     private const float Spacing = 0.315f;
-    private const float StartSpeed = 0.62f;
-    private const float SpeedStep = 1.055f;
-    private const float MaxSpeed = 2.35f;
-    private const int TilesPerLevel = 10;
-    private const int StartLives = 3;
-    private const int MaxMultiplier = 5;
     private readonly BeatTile[] tiles = new BeatTile[Capacity];
-    private readonly Random random = new();
+    private GameRandom random;
+    private ComboMeter combo = ComboMeter.Create();
     private float spawnTimer;
     private int hitsThisLevel;
-    private int lastLane = -1;
-    public BeatState State { get; private set; } = BeatState.Ready;
+    private int lastLane;
+
+    public BeatState State { get; private set; }
+
     public int Count { get; private set; }
+
     public int Score { get; private set; }
-    public int Combo { get; private set; }
-    public int Lives { get; private set; } = StartLives;
-    public int Level { get; private set; } = 1;
-    public float Speed { get; private set; } = StartSpeed;
+
+    public int Lives { get; private set; }
+
+    public int Level { get; private set; }
+
+    public float Speed { get; private set; }
+
     public int MissedLane { get; private set; }
-    public int Multiplier => 1 + Math.Min(MaxMultiplier - 1, Combo / 8);
+
+    public int BestCombo { get; private set; }
+
+    public int Hits { get; private set; }
+
+    public int Perfects { get; private set; }
+
+    public bool SpawnedThisStep { get; private set; }
+
+    public ComboMeter Combo => combo;
+
+    public int Multiplier => combo.Multiplier;
+
     public BeatTile Tile(int index) => tiles[index];
 
-    public void Reset()
+    public static float LaneCenter(int lane, float laneWidth) => (lane + 0.5f) * laneWidth;
+
+    public void Reset(GameRandom seededRandom)
     {
-        State = BeatState.Ready;
+        random = seededRandom;
+        State = BeatState.Playing;
         Count = 0;
         Score = 0;
-        Combo = 0;
         Lives = StartLives;
         Level = 1;
         Speed = StartSpeed;
         MissedLane = -1;
+        BestCombo = 0;
+        Hits = 0;
+        Perfects = 0;
+        SpawnedThisStep = false;
         hitsThisLevel = 0;
         lastLane = -1;
         spawnTimer = 0f;
+        combo.Reset();
         Spawn();
-    }
-
-    public void Begin()
-    {
-        if (State != BeatState.Ready)
-        {
-            return;
-        }
-
-        State = BeatState.Playing;
     }
 
     public BeatJudgement Step(float deltaSeconds)
     {
         MissedLane = -1;
-        if (State != BeatState.Playing)
+        SpawnedThisStep = false;
+        if (State != BeatState.Playing || deltaSeconds <= 0f)
         {
             return BeatJudgement.None;
         }
 
+        combo.Update(deltaSeconds);
         spawnTimer -= deltaSeconds;
         if (spawnTimer <= 0f)
         {
             Spawn();
+            SpawnedThisStep = true;
         }
 
         var judgement = BeatJudgement.None;
@@ -143,16 +165,23 @@ internal sealed class BeatBoard
 
         if (bestIndex < 0)
         {
-            Combo = 0;
+            combo.Reset();
             return BeatJudgement.Wrong;
         }
 
         var perfect = bestDistance <= PerfectWindow;
         RemoveAt(bestIndex);
-        Combo++;
-        Score += (perfect ? 3 : 1) * Multiplier;
+        var multiplier = combo.Hit();
+        Score += (perfect ? PerfectPoints : GoodPoints) * multiplier;
+        BestCombo = Math.Max(BestCombo, combo.Count);
+        Hits++;
+        if (perfect)
+        {
+            Perfects++;
+        }
+
         hitsThisLevel++;
-        if (hitsThisLevel >= TilesPerLevel)
+        if (hitsThisLevel >= HitsPerLevel)
         {
             hitsThisLevel = 0;
             Level++;
@@ -162,11 +191,27 @@ internal sealed class BeatBoard
         return perfect ? BeatJudgement.Perfect : BeatJudgement.Good;
     }
 
-    public float LaneCenter(int lane) => (lane + 0.5f) / Lanes;
+    internal void PlaceTile(int lane, float y)
+    {
+        if (Count >= Capacity)
+        {
+            return;
+        }
+
+        ref var tile = ref tiles[Count];
+        tile.Lane = lane;
+        tile.Y = y;
+        Count++;
+    }
+
+    internal void ClearTiles()
+    {
+        Count = 0;
+    }
 
     private void LoseLife()
     {
-        Combo = 0;
+        combo.Reset();
         Lives--;
         if (Lives > 0)
         {

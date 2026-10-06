@@ -4448,6 +4448,7 @@
   "games.crystaldrop.hook": "Lâchez des cristaux dans le bocal et fusionnez les identiques avant qu'il ne déborde.",
   "games.beat": "Rythme",
   "games.beat.hook": "Frappez chaque note quand elle atteint la ligne et gardez le combo.",
+  "games.beat.perfects": "Coups parfaits",
   "games.combo": "Combo",
   "games.perfect": "Parfait !",
   "games.good": "Bien",

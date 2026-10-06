@@ -4448,6 +4448,7 @@
   "games.crystaldrop.hook": "Solte cristais no pote e junte os iguais antes que transborde.",
   "games.beat": "Ritmo",
   "games.beat.hook": "Acerte cada nota quando ela chegar à linha e mantenha o combo.",
+  "games.beat.perfects": "Acertos perfeitos",
   "games.combo": "Combo",
   "games.perfect": "Perfeito!",
   "games.good": "Bom",

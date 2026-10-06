@@ -4448,6 +4448,7 @@
   "games.crystaldrop.hook": "Lass Kristalle in das Glas fallen und verschmelze gleiche, bevor es überläuft.",
   "games.beat": "Beat",
   "games.beat.hook": "Triff jede Note, wenn sie die Linie erreicht, und halte die Combo am Laufen.",
+  "games.beat.perfects": "Perfekte Treffer",
   "games.combo": "Combo",
   "games.perfect": "Perfekt!",
   "games.good": "Gut",

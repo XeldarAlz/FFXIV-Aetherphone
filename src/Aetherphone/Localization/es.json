@@ -4448,6 +4448,7 @@
   "games.crystaldrop.hook": "Deja caer cristales en el frasco y fusiona los iguales antes de que se desborde.",
   "games.beat": "Ritmo",
   "games.beat.hook": "Pulsa cada nota cuando llegue a la línea y mantén el combo.",
+  "games.beat.perfects": "Golpes perfectos",
   "games.combo": "Combo",
   "games.perfect": "¡Perfecto!",
   "games.good": "Bien",
