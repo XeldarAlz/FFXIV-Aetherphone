@@ -8070,7 +8070,6 @@ internal static class L
         public static readonly LocString Trivia = new("games.trivia", "Trivia");
         public static readonly LocString WhatIsThis = new("games.whatIsThis", "What is this?");
         public static readonly LocString PickTheIcon = new("games.pickTheIcon", "Pick the right one");
-        public static readonly LocString ChooseCategory = new("games.chooseCategory", "Choose a category");
         public static readonly LocString CategoryAll = new("games.categoryAll", "Everything");
         public static readonly LocString CategoryMounts = new("games.categoryMounts", "Mounts");
         public static readonly LocString CategoryMinions = new("games.categoryMinions", "Minions");

@@ -1,199 +1,144 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
-using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Games.Trivia;
 
-internal sealed class TriviaRenderer
+internal readonly struct TriviaLayout
 {
-    private const float SubjectTop = 34f;
-    private const float SubjectHeightFactor = 0.30f;
+    public readonly Rect Prompt;
+    public readonly Rect Subject;
+    public readonly Rect Options;
+
+    public TriviaLayout(Rect prompt, Rect subject, Rect options)
+    {
+        Prompt = prompt;
+        Subject = subject;
+        Options = options;
+    }
+}
+
+internal static class TriviaRenderer
+{
+    public const float UrgentFraction = 0.3f;
+    private const float PromptHeight = 22f;
+    private const float PromptGap = 8f;
+    private const float SubjectHeightFraction = 0.30f;
+    private const float SubjectGap = 18f;
     private const float OptionGap = 9f;
+    private const float OptionRadius = 16f;
+    private const float RingThickness = 3.5f;
+    private const float RingGap = 8f;
+    private const float BadgeRadius = 13f;
+    private const float BadgeInset = 16f;
+    private const float IconHeightFraction = 0.56f;
+    private const float PulseGrow = 0.04f;
+    private const int OptionColumns = 2;
     private static readonly Vector4 Right = new(0.34f, 0.82f, 0.50f, 1f);
+    private static readonly Vector4 Wrong = new(0.92f, 0.30f, 0.34f, 1f);
+    private static readonly Vector4 PaperCell = new(0.99f, 0.98f, 0.96f, 1f);
+    private static readonly Vector4 PaperTrack = new(0f, 0f, 0f, 0.08f);
+    private static readonly Vector4 LightTrack = new(1f, 1f, 1f, 0.12f);
 
-    public static Rect SubjectOf(Rect area, float scale)
+    public static TriviaLayout Layout(Rect area, float scale)
     {
-        var top = area.Min.Y + SubjectTop * scale;
-        return new Rect(new Vector2(area.Min.X + 10f * scale, top),
-            new Vector2(area.Max.X - 10f * scale, top + area.Height * SubjectHeightFactor));
+        var promptHeight = PromptHeight * scale;
+        var prompt = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + promptHeight));
+        var subjectTop = prompt.Max.Y + PromptGap * scale;
+        var subject = new Rect(new Vector2(area.Min.X, subjectTop),
+            new Vector2(area.Max.X, subjectTop + area.Height * SubjectHeightFraction));
+        var options = new Rect(new Vector2(area.Min.X, subject.Max.Y + SubjectGap * scale), area.Max);
+        return new TriviaLayout(prompt, subject, options);
     }
 
-    public static Rect OptionsOf(Rect area, float scale)
+    public static Rect OptionRect(Rect options, int index, float scale)
     {
-        var top = SubjectOf(area, scale).Max.Y + 20f * scale;
-        return new Rect(new Vector2(area.Min.X + 8f * scale, top),
-            new Vector2(area.Max.X - 8f * scale, area.Max.Y - 8f * scale));
-    }
-
-    public static Rect OptionRect(Rect area, int index, float scale)
-    {
-        var options = OptionsOf(area, scale);
         var gap = OptionGap * scale;
         var cellWidth = (options.Width - gap) * 0.5f;
         var cellHeight = (options.Height - gap) * 0.5f;
-        var column = index % 2;
-        var row = index / 2;
+        var column = index % OptionColumns;
+        var row = index / OptionColumns;
         var min = new Vector2(options.Min.X + column * (cellWidth + gap), options.Min.Y + row * (cellHeight + gap));
         return new Rect(min, new Vector2(min.X + cellWidth, min.Y + cellHeight));
     }
 
-    public static Rect CategoryRect(Rect area, int index, float scale)
+    public static Vector4 StrongInk(StageInk ink, PhoneTheme theme) =>
+        ink == StageInk.Dark ? GamePalette.InkDark : theme.TextStrong;
+
+    public static Vector4 MutedInk(StageInk ink, PhoneTheme theme) =>
+        ink == StageInk.Dark ? GamePalette.InkDark with { W = 0.62f } : theme.TextMuted;
+
+    public static void DrawPrompt(ImDrawListPtr drawList, Rect prompt, string text, Vector4 ink)
     {
-        var count = TriviaBoard.PickableCount;
-        var rowHeight = 50f * scale;
-        var gap = 10f * scale;
-        var total = count * rowHeight + (count - 1) * gap;
-        var top = area.Center.Y - total * 0.5f + 14f * scale;
-        var width = MathF.Min(area.Width - 44f * scale, 268f * scale);
-        var left = area.Center.X - width * 0.5f;
-        var y = top + index * (rowHeight + gap);
-        return new Rect(new Vector2(left, y), new Vector2(left + width, y + rowHeight));
+        Typography.DrawCentered(drawList, prompt.Center, text, ink, TextStyles.FootnoteEmphasized.Scale,
+            TextStyles.FootnoteEmphasized.Weight);
     }
 
-    public static Vector4 TintOf(TriviaCategory category, Vector4 accent)
+    public static void DrawSubject(ImDrawListPtr drawList, TriviaBoard board, Rect subject, bool showQuestion,
+        ITextureProvider textures, Vector4 accent, StageInk ink, PhoneTheme theme, float scale)
     {
-        switch (category)
-        {
-            case TriviaCategory.Mounts:
-                return new Vector4(0.98f, 0.72f, 0.38f, 1f);
-            case TriviaCategory.Minions:
-                return new Vector4(0.54f, 0.86f, 0.64f, 1f);
-            case TriviaCategory.Actions:
-                return new Vector4(0.96f, 0.46f, 0.58f, 1f);
-            case TriviaCategory.Emotes:
-                return new Vector4(0.74f, 0.54f, 0.96f, 1f);
-            default:
-                return accent;
-        }
-    }
-
-    public void DrawPicker(TriviaBoard board, Rect area, PhoneTheme theme, Vector4 accent, int hovered, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var first = CategoryRect(area, 0, scale);
-        Typography.DrawCentered(new Vector2(area.Center.X, first.Min.Y - 26f * scale),
-            Loc.T(L.Games.ChooseCategory), theme.TextMuted, TextStyles.FootnoteEmphasized);
-        for (var index = 0; index < TriviaBoard.PickableCount; index++)
-        {
-            var category = TriviaBoard.PickableAt(index);
-            var row = CategoryRect(area, index, scale);
-            var enabled = board.IsAvailable(category);
-            var tint = TintOf(category, accent);
-            var rounding = row.Height * 0.42f;
-            var isHovered = enabled && hovered == index;
-            var fillAlpha = !enabled ? 0.05f : isHovered ? 0.26f : 0.14f;
-            if (isHovered)
-            {
-                ProgressRing.Glow(row.Center, row.Height * 0.6f, tint, 0.35f);
-            }
-
-            Squircle.FillVerticalGradient(drawList, row.Min, row.Max, rounding,
-                ImGui.GetColorU32(GamePalette.Lighten(tint, 0.24f) with { W = fillAlpha }),
-                ImGui.GetColorU32(GamePalette.Darken(tint, 0.28f) with { W = fillAlpha + 0.14f }));
-            Squircle.Stroke(drawList, row.Min, row.Max, rounding,
-                ImGui.GetColorU32(tint with { W = !enabled ? 0.12f : isHovered ? 0.75f : 0.32f }),
-                (isHovered ? 1.6f : 1f) * scale);
-            var dotCenter = new Vector2(row.Min.X + 22f * scale, row.Center.Y);
-            drawList.AddCircleFilled(dotCenter, 5f * scale,
-                ImGui.GetColorU32(tint with { W = enabled ? 0.95f : 0.25f }), 16);
-            var label = Loc.T(TriviaBoard.LabelOf(category));
-            var ink = enabled ? theme.TextStrong : theme.TextMuted;
-            var maxWidth = row.Width - 56f * scale;
-            Typography.Draw(new Vector2(dotCenter.X + 16f * scale, row.Center.Y - 9f * scale),
-                Typography.FitText(label, maxWidth, TextStyles.Headline), ink, TextStyles.Headline);
-        }
-    }
-
-    public void Draw(TriviaBoard board, Rect area, ITextureProvider textures, PhoneTheme theme, Vector4 accent,
-        int hovered, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var subject = SubjectOf(area, scale);
-        DrawSubject(drawList, board, subject, textures, theme, accent, scale);
-        DrawTimer(drawList, board, subject, accent, scale);
-        for (var index = 0; index < TriviaBoard.Options; index++)
-        {
-            DrawOption(drawList, board, area, index, textures, theme, accent, hovered == index, scale);
-        }
-    }
-
-    private static void DrawSubject(ImDrawListPtr drawList, TriviaBoard board, Rect subject, ITextureProvider textures,
-        PhoneTheme theme, Vector4 accent, float scale)
-    {
-        var rounding = 22f * scale;
-        Elevation.Card(drawList, subject.Min, subject.Max, rounding, scale, 0.8f);
-        Squircle.FillVerticalGradient(drawList, subject.Min, subject.Max, rounding,
-            ImGui.GetColorU32(GamePalette.Lighten(accent, 0.10f) with { W = 0.20f }),
-            ImGui.GetColorU32(GamePalette.Darken(accent, 0.45f) with { W = 0.34f }));
-        Squircle.Stroke(drawList, subject.Min, subject.Max, rounding,
-            ImGui.GetColorU32(GamePalette.Lighten(accent, 0.4f) with { W = 0.28f }), 1f * scale);
-        if (!board.HasQuestion)
+        BoardPlate.Draw(drawList, subject, BoardPlate.Radius * scale, scale, accent, ink);
+        if (!showQuestion || !board.HasQuestion)
         {
             return;
         }
 
+        var fraction = Math.Clamp(board.TimeLeft / TriviaBoard.QuestionSeconds, 0f, 1f);
+        var track = ink == StageInk.Dark ? PaperTrack : LightTrack;
         if (board.Kind == TriviaKind.IconToName)
         {
-            var size = MathF.Min(subject.Height * 0.66f, subject.Width * 0.42f);
-            var center = new Vector2(subject.Center.X, subject.Center.Y - 4f * scale);
-            DrawIcon(drawList, textures, board.Correct.IconId, center, size, scale);
+            var size = MathF.Min(subject.Height * IconHeightFraction, subject.Width * 0.4f);
+            var center = subject.Center;
+            DrawIcon(drawList, textures, board.CorrectEntry.IconId, center, size, scale);
+            DrawRing(drawList, center, size * 0.5f + RingGap * scale, fraction, accent, track, scale);
             return;
         }
 
-        Typography.DrawWrappedCentered(drawList, new Vector2(subject.Center.X, subject.Center.Y - 4f * scale),
-            board.Correct.Name, theme.TextStrong, TextStyles.Title2, subject.Width - 26f * scale);
+        Typography.DrawWrappedCentered(drawList, subject.Center, board.CorrectEntry.Name, StrongInk(ink, theme),
+            TextStyles.Title2, subject.Width - 2f * (BadgeInset + BadgeRadius * 2f) * scale);
+        var badge = new Vector2(subject.Max.X - BadgeInset * scale, subject.Min.Y + BadgeInset * scale);
+        ProgressRing.CenterIcon(drawList, badge, FontAwesomeIcon.Clock, MutedInk(ink, theme), BadgeRadius * scale);
+        DrawRing(drawList, badge, BadgeRadius * scale + RingGap * 0.5f * scale, fraction, accent, track, scale);
     }
 
-    private static void DrawTimer(ImDrawListPtr drawList, TriviaBoard board, Rect subject, Vector4 accent, float scale)
+    public static void DrawOption(ImDrawListPtr drawList, TriviaBoard board, Rect cell, int index, bool showQuestion,
+        ITextureProvider textures, Vector4 accent, StageInk ink, PhoneTheme theme, bool hovered, float scale)
     {
-        var fraction = Math.Clamp(board.TimeLeft / TriviaBoard.QuestionSeconds, 0f, 1f);
-        var height = 4f * scale;
-        var width = subject.Width - 40f * scale;
-        var left = subject.Center.X - width * 0.5f;
-        var top = subject.Max.Y - 16f * scale;
-        var min = new Vector2(left, top);
-        var max = new Vector2(left + width, top + height);
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
-        if (fraction <= 0f)
-        {
-            return;
-        }
-
-        var low = fraction < 0.3f;
-        var tone = low ? new Vector4(0.96f, 0.42f, 0.42f, 1f) : GamePalette.Lighten(accent, 0.35f);
-        var pulse = low ? 0.75f + 0.25f * Pulse.Wave(Pulse.Fast) : 1f;
-        Squircle.Fill(drawList, min, new Vector2(left + width * fraction, max.Y), height * 0.5f,
-            ImGui.GetColorU32(tone with { W = pulse }));
-    }
-
-    private static void DrawOption(ImDrawListPtr drawList, TriviaBoard board, Rect area, int index,
-        ITextureProvider textures, PhoneTheme theme, Vector4 accent, bool hovered, float scale)
-    {
-        var cell = OptionRect(area, index, scale);
-        var rounding = 18f * scale;
-        var revealing = board.State == TriviaState.Revealing;
+        var revealing = showQuestion && board.State == TriviaState.Revealing;
         var correct = revealing && index == board.CorrectIndex;
         var wrong = revealing && index == board.PickedIndex && board.PickedIndex != board.CorrectIndex;
-        var tone = correct ? Right :
-            wrong ? theme.Danger : accent;
-        var fillAlpha = correct || wrong ? 0.30f : hovered ? 0.16f : 0.09f;
-        Squircle.FillVerticalGradient(drawList, cell.Min, cell.Max, rounding,
-            ImGui.GetColorU32(GamePalette.Lighten(tone, 0.24f) with { W = fillAlpha }),
-            ImGui.GetColorU32(GamePalette.Darken(tone, 0.30f) with { W = fillAlpha + 0.12f }));
-        Squircle.Stroke(drawList, cell.Min, cell.Max, rounding,
-            ImGui.GetColorU32(tone with { W = correct || wrong ? 0.85f : hovered ? 0.5f : 0.22f }),
-            (correct || wrong ? 1.8f : 1f) * scale);
+        var baseFill = ink == StageInk.Dark ? PaperCell : GamePalette.Cell;
+        var fill = correct ? Vector4.Lerp(baseFill, Right, 0.38f) :
+            wrong ? Vector4.Lerp(baseFill, Wrong, 0.38f) :
+            hovered ? Vector4.Lerp(baseFill, accent, 0.14f) : baseFill;
+        var rect = cell;
         if (correct)
         {
-            ProgressRing.Glow(cell.Center, cell.Height * 0.5f, Right, 0.35f);
+            var pulse = MathF.Sin(board.RevealProgress * MathF.PI);
+            var half = cell.Size * 0.5f * (1f + PulseGrow * pulse);
+            rect = new Rect(cell.Center - half, cell.Center + half);
+            ProgressRing.Glow(cell.Center, cell.Height * 0.5f, Right, 0.3f + 0.3f * pulse);
         }
 
-        if (!board.HasQuestion)
+        var radius = OptionRadius * scale;
+        StageCell.Draw(drawList, rect, fill, CellDepth.Raised, radius, scale);
+        if (correct || wrong)
+        {
+            Squircle.Stroke(drawList, rect.Min, rect.Max, radius,
+                ImGui.GetColorU32((correct ? Right : Wrong) with { W = 0.9f }), 2f * scale);
+        }
+        else if (hovered)
+        {
+            Squircle.Stroke(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(accent with { W = 0.5f }),
+                1.2f * scale);
+        }
+
+        if (!showQuestion || !board.HasQuestion)
         {
             return;
         }
@@ -201,13 +146,29 @@ internal sealed class TriviaRenderer
         var entry = board.Option(index);
         if (board.Kind == TriviaKind.IconToName)
         {
-            Typography.DrawWrappedCentered(drawList, cell.Center, entry.Name, theme.TextStrong,
-                TextStyles.SubheadlineEmphasized, cell.Width - 16f * scale);
+            Typography.DrawWrappedCentered(drawList, rect.Center, entry.Name, GamePalette.InkOn(fill),
+                TextStyles.SubheadlineEmphasized, rect.Width - 16f * scale);
             return;
         }
 
-        var size = MathF.Min(cell.Height * 0.72f, cell.Width * 0.62f);
-        DrawIcon(drawList, textures, entry.IconId, cell.Center, size, scale);
+        var size = MathF.Min(rect.Height * 0.72f, rect.Width * 0.62f);
+        DrawIcon(drawList, textures, entry.IconId, rect.Center, size, scale);
+    }
+
+    private static void DrawRing(ImDrawListPtr drawList, Vector2 center, float radius, float fraction, Vector4 accent,
+        Vector4 track, float scale)
+    {
+        var thickness = RingThickness * scale;
+        ProgressRing.Track(drawList, center, radius, thickness, track);
+        if (fraction <= 0f)
+        {
+            return;
+        }
+
+        var urgent = fraction < UrgentFraction;
+        var tone = urgent ? Wrong : accent;
+        var alpha = urgent ? 0.7f + 0.3f * Pulse.Wave(Pulse.Fast) : 1f;
+        ProgressRing.Fill(drawList, center, radius, thickness, fraction, tone with { W = alpha });
     }
 
     private static void DrawIcon(ImDrawListPtr drawList, ITextureProvider textures, uint iconId, Vector2 center,
