@@ -4397,6 +4397,7 @@
   "games.left": "残り",
   "games.flow": "フロー",
   "games.flow.hook": "同じ色の点をパイプでつなぎ、交差せずにグリッド全体を埋めよう。",
+  "games.flow.hints": "ヒント",
   "games.flows": "フロー",
   "games.filled": "充填",
   "games.solitaire": "ソリティア",

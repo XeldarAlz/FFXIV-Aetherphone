@@ -151,7 +151,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new LegacyGameAdapter(new BreakoutApp(), L.Games.Breakout, L.Breakout.Hook),
             new LegacyGameAdapter(new BubbleShooterApp(), L.Games.Bubbles, L.BubbleShooter.Hook),
             new LegacyGameAdapter(new NonogramApp(), L.Games.Nonogram, L.Nonogram.Hook),
-            new LegacyGameAdapter(new FlowApp(), L.Games.Flow, L.Flow.Hook),
+            new FlowApp(),
             new LegacyGameAdapter(new SolitaireApp(), L.Games.Solitaire, L.Solitaire.Hook),
             new LegacyGameAdapter(new SimonApp(), L.Games.Simon, L.Simon.Hook),
             new LegacyGameAdapter(new FlapApp(), L.Games.Flap, L.Flap.Hook),

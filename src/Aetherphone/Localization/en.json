@@ -4397,6 +4397,7 @@
   "games.left": "Left",
   "games.flow": "Flow",
   "games.flow.hook": "Connect each pair of matching dots with pipes that fill the whole grid without crossing.",
+  "games.flow.hints": "Hints",
   "games.flows": "Flows",
   "games.filled": "Filled",
   "games.solitaire": "Solitaire",

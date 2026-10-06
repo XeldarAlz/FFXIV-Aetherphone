@@ -4397,6 +4397,7 @@
   "games.left": "Restant",
   "games.flow": "Flow",
   "games.flow.hook": "Reliez chaque paire de points de même couleur par des tuyaux qui remplissent toute la grille sans se croiser.",
+  "games.flow.hints": "Indices",
   "games.flows": "Liens",
   "games.filled": "Rempli",
   "games.solitaire": "Solitaire",

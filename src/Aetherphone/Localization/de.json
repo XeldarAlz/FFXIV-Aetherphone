@@ -4397,6 +4397,7 @@
   "games.left": "Übrig",
   "games.flow": "Flow",
   "games.flow.hook": "Verbinde jedes Paar gleichfarbiger Punkte mit Rohren, die das ganze Gitter füllen, ohne sich zu kreuzen.",
+  "games.flow.hints": "Tipps",
   "games.flows": "Linien",
   "games.filled": "Gefüllt",
   "games.solitaire": "Solitär",

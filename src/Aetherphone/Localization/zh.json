@@ -4397,6 +4397,7 @@
   "games.left": "剩余",
   "games.flow": "连线",
   "games.flow.hook": "用不交叉的管道连接每对同色圆点，并填满整个网格。",
+  "games.flow.hints": "提示",
   "games.flows": "连线数",
   "games.filled": "已填充",
   "games.solitaire": "纸牌",

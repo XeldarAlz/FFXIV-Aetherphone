@@ -4397,6 +4397,7 @@
   "games.left": "Faltan",
   "games.flow": "Flow",
   "games.flow.hook": "Conecta cada par de puntos del mismo color con tuberías que llenen toda la cuadrícula sin cruzarse.",
+  "games.flow.hints": "Pistas",
   "games.flows": "Flujos",
   "games.filled": "Relleno",
   "games.solitaire": "Solitaire",

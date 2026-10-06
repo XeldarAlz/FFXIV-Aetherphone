@@ -4397,6 +4397,7 @@
   "games.left": "Kalan",
   "games.flow": "Akış",
   "games.flow.hook": "Eş renkli nokta çiftlerini kesişmeden tüm ızgarayı dolduran borularla birleştir.",
+  "games.flow.hints": "İpuçları",
   "games.flows": "Hatlar",
   "games.filled": "Doluluk",
   "games.solitaire": "Solitaire",

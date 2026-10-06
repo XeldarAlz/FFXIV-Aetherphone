@@ -4397,6 +4397,7 @@
   "games.left": "Осталось",
   "games.flow": "Flow",
   "games.flow.hook": "Соедините пары точек одного цвета трубами, заполнив всю сетку без пересечений.",
+  "games.flow.hints": "Подсказки",
   "games.flows": "Потоки",
   "games.filled": "Заполнено",
   "games.solitaire": "Solitaire",
