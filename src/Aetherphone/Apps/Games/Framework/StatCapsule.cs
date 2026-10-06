@@ -1,10 +1,9 @@
-using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
-namespace Aetherphone.Apps.Games;
+namespace Aetherphone.Apps.Games.Framework;
 
 internal static class StatCapsule
 {

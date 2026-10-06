@@ -66,16 +66,6 @@ public sealed class StageLayoutTests
     }
 
     [Fact]
-    public void LegacyBodyStartsBelowTheChromeBand()
-    {
-        var body = StageLayout.LegacyBody(Full, 1f);
-
-        Assert.Equal(92f, body.Min.Y);
-        Assert.Equal(Full.Min.X, body.Min.X);
-        Assert.Equal(Full.Max, body.Max);
-    }
-
-    [Fact]
     public void PadBandHugsTheBottom()
     {
         var band = StageLayout.PadBand(Full, StageLayout.DPadBand, 1f);

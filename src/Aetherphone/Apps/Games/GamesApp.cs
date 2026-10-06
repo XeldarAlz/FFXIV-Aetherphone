@@ -35,7 +35,6 @@ using Aetherphone.Apps.Games.Whack;
 using Aetherphone.Apps.Games.WordRun;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Changelog;
 using Aetherphone.Core.Game;
@@ -81,7 +80,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private const float CoinChipRingRadius = 7f;
     private const float CoinChipGap = 5f;
     private const string CoinChipTooltipId = "games.coinChip";
-    private const float PausedFadeSeconds = 0.12f;
     private const float ResultAppearSpeed = 3.4f;
     private const int FeaturedStep = 5;
 
@@ -114,7 +112,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private readonly ScreenFx fx;
     private readonly StageIntro intro = new();
     private readonly StagePause pause = new();
-    private Spring pausedVeil = new(0f);
     private Rect screenRect;
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
@@ -591,35 +588,15 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             backdrop.Draw(drawList, full, accent, scale);
             fx.Update(rawSeconds);
             var safe = StageLayout.Safe(full, spec.Hud, scale);
-            if (spec.Legacy)
-            {
-                DrawLegacyGame(game, full, safe, context.Theme, rawSeconds, attentive);
-            }
-            else
-            {
-                DrawStageGame(drawList, game, full, safe, accent, context.Theme, rawSeconds, attentive, scale);
-            }
-
+            DrawStageGame(drawList, game, full, safe, accent, context.Theme, rawSeconds, attentive);
             fx.Draw(drawList, full, accent);
             DrawStageOverlays(drawList, game, full, accent, context.Theme, rawSeconds, scale);
-            DrawChrome(drawList, spec, full, context.Theme, landscape, scale);
+            DrawChrome(drawList, full, context.Theme, landscape, scale);
         }
     }
 
-    private void DrawLegacyGame(IMiniGame game, Rect full, Rect safe, PhoneTheme theme, float rawSeconds,
-        bool attentive)
-    {
-        hud.Clear();
-        var gameContext = new GameContext(full, safe, full, theme, stats, attentive ? rawSeconds : 0f, rawSeconds,
-            session, hud, fx, backdrop);
-        game.Draw(gameContext);
-        var clocked = game is LegacyGameAdapter adapter ? adapter.RunsOnAClock : game.Spec.Clocked;
-        pausedVeil.Step(!attentive && clocked ? 1f : 0f, PausedFadeSeconds, rawSeconds);
-        DrawPausedVeil(full, theme);
-    }
-
     private void DrawStageGame(ImDrawListPtr drawList, IMiniGame game, Rect full, Rect safe, Vector4 accent,
-        PhoneTheme theme, float rawSeconds, bool attentive, float scale)
+        PhoneTheme theme, float rawSeconds, bool attentive)
     {
         var spec = game.Spec;
         if (spec.Clocked && !attentive && session.State == StageFlow.Playing)
@@ -636,8 +613,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         var playing = session.State == StageFlow.Playing && attentive;
         var gameSeconds = playing ? rawSeconds * fx.TimeScale : 0f;
         hud.Clear();
-        var gameContext = new GameContext(full, safe, full, theme, stats, gameSeconds, rawSeconds, session, hud, fx,
-            backdrop);
+        var gameContext = new GameContext(full, safe, theme, gameSeconds, rawSeconds, session, hud, fx, backdrop);
         if (session.State == StageFlow.Intro)
         {
             game.DrawIdle(gameContext);
@@ -652,18 +628,12 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         PhoneTheme theme, float rawSeconds, float scale)
     {
         var spec = game.Spec;
-        if (spec.Legacy)
-        {
-            return;
-        }
-
         var safe = StageLayout.Safe(full, spec.Hud, scale);
         switch (session.State)
         {
             case StageFlow.Intro:
             {
-                var gameContext = new GameContext(full, safe, full, theme, stats, 0f, rawSeconds, session, hud, fx,
-                    backdrop);
+                var gameContext = new GameContext(full, safe, theme, 0f, rawSeconds, session, hud, fx, backdrop);
                 var action = intro.Draw(drawList, gameContext, accent, scale);
                 if (action == IntroAction.Play)
                 {
@@ -748,8 +718,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             outcome);
     }
 
-    private void DrawChrome(ImDrawListPtr drawList, in GameSpec spec, Rect full, PhoneTheme theme, bool landscape,
-        float scale)
+    private void DrawChrome(ImDrawListPtr drawList, Rect full, PhoneTheme theme, bool landscape, float scale)
     {
         var radius = StageLayout.ChipRadius * scale;
         if (StageChrome.BackChip(drawList, StageLayout.BackChipCenter(full, scale), radius, theme, scale))
@@ -763,8 +732,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         }
 
         var pauseCenter = StageLayout.PauseChipCenter(full, scale);
-        var showPause = !spec.Legacy &&
-                        session.State is StageFlow.Playing or StageFlow.Countdown or StageFlow.Paused;
+        var showPause = session.State is StageFlow.Playing or StageFlow.Countdown or StageFlow.Paused;
         var rightEdge = full.Max.X - Metrics.Space.Md * scale;
         if (showPause)
         {
@@ -910,26 +878,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         return false;
     }
 
-    private void DrawPausedVeil(Rect body, PhoneTheme theme)
-    {
-        var alpha = Math.Clamp(pausedVeil.Value, 0f, 1f);
-        if (alpha <= 0.01f)
-        {
-            return;
-        }
-
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(body.Min, body.Max,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.72f * alpha)));
-        var center = body.Center;
-        Typography.DrawCentered(drawList, new Vector2(center.X, center.Y - 12f * scale), Loc.T(L.Games.Paused),
-            new Vector4(1f, 1f, 1f, alpha), TextStyles.Title2);
-        Typography.DrawWrappedCentered(drawList, new Vector2(center.X, center.Y + 14f * scale),
-            Loc.T(L.Games.PausedHint), new Vector4(1f, 1f, 1f, 0.7f * alpha), TextStyles.Subheadline,
-            MathF.Min(body.Width - 48f * scale, 260f * scale));
-    }
-
     private void OpenGame(IMiniGame game, bool animate = true)
     {
         currentGame = game;
@@ -943,14 +891,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         stageHud.Reset();
         intro.Begin(spec);
         pause.Reset();
-        pausedVeil.SnapTo(0f);
         resultProgress = 0f;
-        if (spec.Legacy)
-        {
-            session.Play();
-            game.Start(session.Start);
-        }
-
         coinSessions.GameOpened(spec.Id);
         stats.MarkPlayed(spec.Id);
         if (spec.Landscape)

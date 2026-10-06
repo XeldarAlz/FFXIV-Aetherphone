@@ -27,7 +27,7 @@ This page explains how the Games app hosts its mini-games and how to build a new
 | src/Aetherphone/Apps/Games/Framework/StageHud.cs | Draws the score pill and the secondary capsules from a `HudModel` |
 | src/Aetherphone/Apps/Games/Framework/StageIntro.cs | The intro screen: title, hook, best and rank pills, mode strip, Play |
 | src/Aetherphone/Apps/Games/Framework/StagePause.cs | The pause menu: Resume, Restart, Leaderboard, Quit |
-| src/Aetherphone/Apps/Games/Framework/GameOverlay.cs | The result card (`DrawStage` for stage games, `Draw` for legacy games) |
+| src/Aetherphone/Apps/Games/Framework/GameOverlay.cs | The result card (`DrawStage`) |
 | src/Aetherphone/Apps/Games/Framework/StageChrome.cs | The back and pause glass chips |
 | src/Aetherphone/Apps/Games/Framework/ScreenFx.cs | Screen-side effects: flash, vignette pulse, edge glow, slow motion, punch, sweep |
 | src/Aetherphone/Apps/Games/Framework/FeedbackFx.cs | World-side effects: shake, hit-stop, shockwave rings, floating text, flash |
@@ -49,8 +49,8 @@ This page explains how the Games app hosts its mini-games and how to build a new
 | src/Aetherphone/Apps/Games/Framework/FixedStepClock.cs | Fixed-timestep accumulator with a catch-up cap |
 | src/Aetherphone/Apps/Games/Framework/PixelSprite.cs | Bitmap sprites drawn as filled runs in one color |
 | src/Aetherphone/Apps/Games/Framework/GameBanner.cs | Pop-in, hold, fade banner for "Ready" and "Wave 3" |
-| src/Aetherphone/Apps/Games/Framework/ILegacyMiniGame.cs | The previous contract, kept while games are migrated |
-| src/Aetherphone/Apps/Games/Framework/LegacyGameAdapter.cs | Wraps an `ILegacyMiniGame` as an `IMiniGame` |
+| src/Aetherphone/Apps/Games/Framework/PressSurface.cs | Claims the press over a board with an invisible item so a drag never moves the phone |
+| src/Aetherphone/Apps/Games/Framework/StatCapsule.cs | A frosted HUD capsule with an icon, a count and an optional trophy best (Sweeper mines, Nonogram mistakes) |
 | src/Aetherphone/Core/Games/GameStatsStore.cs | Best scores, best times, win streaks, mode choices, daily challenge |
 | src/Aetherphone/Core/Games/IScoreSink.cs | `ScoreSubmission` and the sink the session hands finished runs to |
 | src/Aetherphone/Core/Games/IRankSource.cs | Where intros and result cards read a `GameRank` from |
@@ -118,7 +118,6 @@ internal interface IMiniGame : IDisposable
 | `Countdown` | Show the 3, 2, 1, Go countdown before play (clocked reflex games only) |
 | `Landscape` | The hub holds the landscape lock while the game is open (Doom) |
 | `Keyboard` | Informational: the game reads keys through `GameInput` |
-| `Legacy` | Set only by `LegacyGameAdapter`; the host skips intro, countdown, pause and result for it |
 
 ### The roster
 
@@ -134,10 +133,6 @@ The source of truth is the `games` array in the `GamesApp` constructor for local
 | Friends (online) | `online.uno`, `online.chess`, `online.pool` (8-Ball Pool), `online.connectfour` (Connect Four) |
 
 A few ids predate their titles and class names: `match3` is Gem Swap (`GemSwapApp`), `memory` is Pairs (`PairsApp`), `minesweeper` is Sweeper (`SweeperApp`). Never rename an id: it keys the saved stats, the release date and the accent.
-
-### Transitional note: the legacy adapter
-
-Every game shipped before the stage kit implements `ILegacyMiniGame` (the previous contract: `Id`, `Title`, `Genre`, `RunsOnAClock`, `WantsLandscape`, `Open`, `Close`, `Draw`). The constructor wraps each one in a `LegacyGameAdapter`, which builds a `GameSpec` with `Legacy = true`, the Nebula backdrop and the game's hook line, maps `Start` to `Open`, and hands the game a `GameContext` whose `Body` is the full rect inset by the 52 unit chrome band so its existing pill row lands under the chips. For a legacy spec the host still draws the backdrop, the chrome chips and the paused veil on focus loss, but the game draws its own start, restart and result as before. The adapter, `ILegacyMiniGame`, `GameScene.Arena` and `GameContext.Body`/`Stats` exist only for this migration window; a migrated game uses none of them, and they go when the last game moves over.
 
 ### The launcher
 
@@ -190,7 +185,6 @@ Each frame the host builds the `GameContext`:
 | `Hud` | The `HudModel` to fill this frame |
 | `Fx` | The host-owned `ScreenFx` |
 | `Backdrop` | The `StageBackdrop`, for `SetSky` and `Ink` |
-| `Body`, `Stats` | Legacy fields for the adapter: the chrome-inset body and the stats store. A stage game never reads them |
 
 `GameFocus.Active` (src/Aetherphone/Apps/Games/Framework/GameFocus.cs) is false while the phone window is unfocused or the game's own text input is active. A clocked stage game whose session is Playing is paused into the pause menu the moment focus is lost; a turn-based game (`Clocked = false`) simply receives a zero delta and stands still. Because the phone UI is Dear ImGui (an immediate-mode UI where everything is redrawn from scratch every frame), `Draw` runs every frame and the game keeps its own state in fields between frames.
 
@@ -296,7 +290,7 @@ Layers shift with the pointer (2, 5 and 9 units across the rect, through a `Spri
 
 ### Boards and cells
 
-`GameScene.Arena` is retired for stage games (it still exists for the legacy adapter window). Grid games use `BoardPlate.Draw(drawList, rect, radius, scale, accent, backdrop.Ink)`: an accent glow beneath, a floating shadow, a fill that reads as glass over the backdrop (the last drawn ground colour darkened, or white on Paper), a one unit rim and a top sheen. `BoardPlate.Around(gridBounds, scale)` gives the plate rect with its 10 unit padding. Cells go through `StageCell.Draw(drawList, rect, fill, depth, radius, scale)` with a `CellDepth` of `Raised` (drop shadow and top highlight), `Flat`, `Sunken` (inner shadow) or `Pressed` (Raised, shrunk 4 percent); `StageCell.Lift(progress)` returns the 0 to 3 unit lift for `GameJuice.PopIn` entrances. Light comes from the top-left in every game. Non-grid worlds use no plate: the world is the full rect and the backdrop is the floor.
+No mini-game draws a `GameScene.Arena` box any more (the helper survives only for the online tables and the casino felt). Grid games use `BoardPlate.Draw(drawList, rect, radius, scale, accent, backdrop.Ink)`: an accent glow beneath, a floating shadow, a fill that reads as glass over the backdrop (the last drawn ground colour darkened, or white on Paper), a one unit rim and a top sheen. `BoardPlate.Around(gridBounds, scale)` gives the plate rect with its 10 unit padding. Cells go through `StageCell.Draw(drawList, rect, fill, depth, radius, scale)` with a `CellDepth` of `Raised` (drop shadow and top highlight), `Flat`, `Sunken` (inner shadow) or `Pressed` (Raised, shrunk 4 percent); `StageCell.Lift(progress)` returns the 0 to 3 unit lift for `GameJuice.PopIn` entrances. Light comes from the top-left in every game. Non-grid worlds use no plate: the world is the full rect and the backdrop is the floor.
 
 ### Camera
 
@@ -331,7 +325,7 @@ World +Y pointing down matches the screen; a game that thinks in altitude negate
 
 - `GameJuice.Advance(progress, deltaSeconds)` drives a 0-to-1 entrance value, `GameJuice.Stagger(progress, index, count)` splits it across cells so tiles appear in sequence, and `GameJuice.PopIn(progress)` maps it through `Easing.EaseOutBack` for an overshooting pop.
 - `GameGrid.Centered(area, columns, rows, gapFraction)` computes a centered square-cell grid; `Cell(column, row)` and `CellCenter(column, row)` give you rects and centers, `Bounds` the whole board.
-- `GameHud.Button(center, size, label, accent, theme)` is the accent button the kit uses for Play, Resume and Play again; `GameHud.Pill` and `GameHud.ScorePill` remain for legacy games.
+- `GameHud.Button(center, size, label, accent, theme)` is the accent button the kit uses for Play, Resume and Play again; `GameHud.ScorePill` is the rolling score pill `StageHud` draws, and `GameHud.LandscapeBack` the back chip of a landscape table.
 - `GamePalette` holds the shared dark board colors plus `InkOn(fill)` to pick readable text ink; `GameNumber.Label(int)` returns a cached string so score text does not allocate every frame; `LabelSlot.Get(locString, value)` caches one formatted label per value and language.
 - `RollingValue` animates a displayed integer toward a target and pops on change; `StageHud` drives it for the score pill.
 
@@ -364,7 +358,7 @@ The rest of the phone uses critically damped motion: springs that settle without
 | `ResetStreak(gameId)` | Clears the streak on a loss |
 | `MarkPlayed(gameId)`, `LastPlayed(gameId)` | Stamp and read the last-played time the launcher sorts `Recent` and `Records` by; the hub calls `MarkPlayed` when it opens a game or an online room, so a game never needs to |
 | `LastMode(gameId)`, `SetLastMode(gameId, mode)` | The remembered `Spec.Modes` index per game, used by the intro's mode strip |
-| `TetrisModern`, `WordBank` | Legacy views kept for the unmigrated Tetris (a view over `LastMode("tetris")`) and Word Run (the bank code) |
+| `TetrisModern`, `WordBank` | `TetrisModern` is a view over `LastMode("tetris")` that still honours the pre-kit configuration flag; `WordBank` is Word Run's remembered bank code, which its mode strip mirrors |
 | `TodayIndex` (static) | UTC day number behind the daily challenge and the featured rotation |
 | `DailyGameId`, `DailyDone`, `DailyStreak` | Daily challenge state; the launcher sets `DailyGameId` and its streak chip reads `DailyDone` and `DailyStreak` |
 
@@ -533,7 +527,7 @@ Games are named for what they do: Whack, Snake, Stack, Water Sort, Crystal Drop,
 - **`WantCaptureKeyboard` does nothing against the game client.** Only `io.WantTextInput` makes Dalamud withhold keys from FFXIV. Read keys through `GameInput`, never through a bare `ImGui.IsKeyDown` behind `SetNextFrameWantCaptureKeyboard`. While a game claims the keyboard, Escape is swallowed too, so the client's system menu opens only after the phone loses focus; that is the intended trade.
 - **Difficulty-suffixed stat ids need launcher support.** Stats keyed like `sudoku.easy` prefix-match for the daily via `GameStatsStore`, but `GamesLibrary.BestRecord` picks the record the launcher and the Records tab display, so a new difficulty tier or mode means updating that switch too.
 - **`HitStop` alone freezes nothing.** The freeze only happens, and only counts down, inside `ScaleDelta`. A game that calls `HitStop` without routing its simulation delta through `ScaleDelta` gets no pause at all.
-- **Legacy games submit on their own.** Until a game is migrated it still calls `context.Stats.Submit*` and draws `GameOverlay.Draw` itself; do not add a `Session.Finish` to a legacy game, or the run is submitted twice. A legacy game also never reaches the leaderboard: only `Session.Finish` feeds the `IScoreSink`.
+- **Only `Session.Finish` reaches the records and the leaderboard.** A game never calls `GameStatsStore.Submit*` itself: that would record the run twice and still leave the `IScoreSink` unfed.
 - **A new stat id is a two-repository change.** `ScoreStatIds.Catalog` must match the server's catalog (`ScoresWireContractTests.StatIdsMirrorTheServerCatalog` pins the list), and the store silently ignores a submission whose stat id is not in it. Add the id to the backend catalog first, then here, with its kind and direction.
 
 ## Related docs

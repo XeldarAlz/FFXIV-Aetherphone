@@ -8008,7 +8008,6 @@ internal static class L
         public static readonly LocString Saved = new("games.saved", "Saved");
         public static readonly LocString Next = new("games.next", "Next");
         public static readonly LocString Paused = new("games.paused", "Paused");
-        public static readonly LocString PausedHint = new("games.pausedHint", "Click the phone to carry on");
         public static readonly LocString CoinTimerHint = new("games.coinTimerHint",
             "Aether Coin timer: stay in this game until the countdown ends to earn coins. It keeps counting while the game is paused.");
         public static readonly LocString CoinTimerDeepHint = new("games.coinTimerDeepHint",

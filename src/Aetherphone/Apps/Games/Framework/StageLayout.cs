@@ -31,9 +31,6 @@ internal static class StageLayout
         return new Rect(min, new Vector2(MathF.Max(min.X, max.X), MathF.Max(min.Y, max.Y)));
     }
 
-    public static Rect LegacyBody(Rect full, float scale) =>
-        new(new Vector2(full.Min.X, MathF.Min(full.Max.Y, full.Min.Y + ChromeBand * scale)), full.Max);
-
     public static Vector2 BackChipCenter(Rect full, float scale) =>
         new(full.Min.X + ChipInsetX * scale, full.Min.Y + ChipCenterY * scale);
 

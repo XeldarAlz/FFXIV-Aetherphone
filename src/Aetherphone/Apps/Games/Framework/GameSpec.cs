@@ -35,12 +35,11 @@ internal readonly struct GameSpec
     public readonly bool Countdown;
     public readonly bool Landscape;
     public readonly bool Keyboard;
-    public readonly bool Legacy;
 
     public GameSpec(string id, LocString title, GameGenre genre, LocString? hook = null,
         Backdrop backdrop = Backdrop.Nebula, HudStyle hud = HudStyle.Standard, ScoreKind kind = ScoreKind.Score,
         LocString[]? modes = null, string[]? modeStatIds = null, bool clocked = false, bool countdown = false,
-        bool landscape = false, bool keyboard = false, bool legacy = false)
+        bool landscape = false, bool keyboard = false)
     {
         Id = id;
         Title = title;
@@ -55,7 +54,6 @@ internal readonly struct GameSpec
         Countdown = countdown;
         Landscape = landscape;
         Keyboard = keyboard;
-        Legacy = legacy;
     }
 
     public bool HasModes => Modes.Length > 1;

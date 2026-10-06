@@ -194,18 +194,7 @@ internal sealed class SnakeApp : IMiniGame
 
     private void HandleSwipe(Rect area)
     {
-        var cursor = ImGui.GetCursorScreenPos();
-        ImGui.SetCursorScreenPos(area.Min);
-        ImGui.InvisibleButton(SwipeSurfaceId, area.Size);
-        var hovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem) &&
-                      UiInteract.Hover(area.Min, area.Max);
-        var activated = hovered && ImGui.IsItemActivated();
-        if (hovered)
-        {
-            UiInteract.ReportGestureSurface();
-        }
-
-        ImGui.SetCursorScreenPos(cursor);
+        PressSurface.Claim(SwipeSurfaceId, area, out var activated);
         var mouse = ImGui.GetMousePos();
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
