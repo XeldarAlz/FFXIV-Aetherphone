@@ -8393,6 +8393,7 @@ internal static class L
     internal static class Blade
     {
         public static readonly LocString Hook = new("games.blade.hook", "Throw your blades into the spinning wheel without hitting one already stuck there.");
+        public static readonly LocString Apples = new("games.blade.apples", "Apples");
     }
 
     internal static class Trivia

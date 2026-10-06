@@ -163,7 +163,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new StackApp(),
             new CrystalDropApp(),
             new LegacyGameAdapter(new BeatApp(), L.Games.Beat, L.Beat.Hook),
-            new LegacyGameAdapter(new BladeApp(), L.Games.Blade, L.Blade.Hook),
+            new BladeApp(),
             new LegacyGameAdapter(new TriviaApp(gameData, textures), L.Games.Trivia, L.Trivia.Hook),
             new LegacyGameAdapter(new SkyfallApp(), L.Games.Skyfall, L.Skyfall.Hook),
             new LegacyGameAdapter(new InvadersApp(), L.Games.Invaders, L.Invaders.Hook),
