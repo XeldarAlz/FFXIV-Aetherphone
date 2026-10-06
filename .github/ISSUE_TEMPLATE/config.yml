@@ -7,7 +7,7 @@ contact_links:
     url: https://discord.gg/3HbJCscMyS
     about: The fastest place to get help, report something small, or hang out.
   - name: Translate Aetherphone
-    url: https://github.com/XeldarAlz/FFXIV-Aetherphone/blob/master/docs/translating.md
+    url: https://github.com/XeldarAlz/FFXIV-Aetherphone/blob/dev/docs/translating.md
     about: Improve one of the nine language files in the browser; no code, no build, no git.
   - name: Security disclosure
     url: https://github.com/XeldarAlz/FFXIV-Aetherphone/security/advisories/new

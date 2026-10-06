@@ -18,7 +18,7 @@ body:
     attributes:
       label: What happened?
       description: What did you see, and what did you expect to see instead?
-      placeholder: "I opened Messages and a tell I'd just received didn't show up as a notification..."
+      placeholder: "I opened Linkpearl and a tell I'd just received didn't show up as a notification..."
     validations:
       required: true
 
@@ -29,7 +29,7 @@ body:
       description: The minimal steps that trigger it, starting from opening the phone.
       placeholder: |
         1. Open `/phone`
-        2. Go to Messages
+        2. Go to Linkpearl
         3. Receive a /tell from another player
         4. ...
     validations:
@@ -83,6 +83,7 @@ body:
         - Calendar
         - Camera
         - Chirper
+        - ChocoChat (direct messages)
         - Clock
         - Collections
         - Dailies
@@ -93,12 +94,12 @@ body:
         - Health
         - Home screen / device shell
         - Housing
+        - Hunts
         - Inventory
         - Jobs
         - Linkpearl (game chat)
         - Maps
         - Market
-        - Message (direct messages)
         - MogCast (video)
         - Music
         - Muster
@@ -110,6 +111,7 @@ body:
         - Settings
         - Shortcuts
         - Skywatcher (weather)
+        - Strats
         - Timers
         - Velvet
         - Venues

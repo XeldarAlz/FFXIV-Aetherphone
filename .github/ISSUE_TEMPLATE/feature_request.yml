@@ -18,7 +18,7 @@ body:
         - A new app
         - Home screen, shell, or system UI
         - Notifications, sounds, or settings
-        - Aethernet social features (Chirper, Aethergram, Velvet, Messages)
+        - Aethernet social features (Chirper, Aethergram, Velvet, ChocoChat)
         - Something else
     validations:
       required: true
@@ -28,7 +28,7 @@ body:
     attributes:
       label: What problem are you trying to solve?
       description: The situation or friction that made you want this. Skip the solution; just the problem.
-      placeholder: "I want to pin a conversation to the top of Messages so I don't lose it..."
+      placeholder: "I want to pin a conversation to the top of ChocoChat so I don't lose it..."
     validations:
       required: true
 

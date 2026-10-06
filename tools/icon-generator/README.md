@@ -20,7 +20,7 @@ npm run build
    `masters/phosphor-2.1.1/`, gitignored),
 2. renders the glyph once to measure its real bounding box, then scales it to
    the keyline: 58 % of the canvas wide, 62 % for symbols flagged `round`, and
-   60 % tall for symbols whose box is taller than wide,
+   60 % tall for symbols narrower than 0.88 of their height (`TALL_ASPECT_LIMIT`),
 3. composes a 1024 x 1024 master: a full-bleed vertical gradient for the tile
    family, then the symbol centred on it,
 4. writes the 1024 px masters to `masters/` (gitignored) and the shipped
@@ -48,8 +48,11 @@ Clear appearances.
 | `graphite` | `#3A3A3C` to `#1C1C1E` | `#D8D8DC` for Settings, white for Camera, Clock, Calculator |
 | `photos` | Gold to coral to azure | White |
 
-Hue anchors are the accent ring values in `src/Aetherphone/Core/Theme/AccentRing.cs`; mini-games take the
-hue listed for their id in `src/Aetherphone/Core/Apps/AppAccents.cs`.
+Each id's hue should equal its entry in `src/Aetherphone/Core/Apps/AppAccents.cs`. The `hues` table
+holds the accent ring values from `src/Aetherphone/Core/Theme/AccentRing.cs` plus the Chirper,
+Aethergram and Velvet brand colours from `BrandAccents.cs`. Keep the `map` and AppAccents in step
+when you add an id or change its accent. An app id with no `map` entry gets no generated pair and
+falls back to the accent tile until one is painted.
 
 ## Regenerating one id
 

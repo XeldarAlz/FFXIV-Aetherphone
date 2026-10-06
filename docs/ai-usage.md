@@ -1,6 +1,6 @@
 # AI Usage
 
-**Last updated:** 2 October 2026
+**Last updated:** 6 October 2026
 
 This document explains how AI tools are used to build Aetherphone, the level of involvement that amounts to, where the content inside the phone comes from, and how AI relates to your content on Aethernet.
 
@@ -47,16 +47,16 @@ Nobody is judged for the level they declare. An undeclared one is the problem.
 
 **No AI-generated content ships inside the phone: no icon, wallpaper, phone case, sound, ringtone or font.** Players see and hear these directly, so the rule for content is stricter than the rule for code. A contribution that adds AI-generated content is rejected on that basis alone.
 
-| Content | Count | Source |
-| --- | --- | --- |
-| App icons | 46 | Built from [Tabler Icons](https://tabler.io/icons), recolored |
-| Emoji | 3,512 | [Twemoji](https://github.com/jdecked/twemoji) 15.1.0, unmodified |
-| Fonts | 6 | Inter and a Tabler Icons subset |
-| Phone cases | 58 | Drawn by ten artists, each credited in the app's Settings |
-| Interface sounds | 38 | Original to Aetherphone, synthesized from code in tools/sound-generator, plus a CC0 shutter from BigSoundBank, one Material Design sound by Google and two Android Open Source Project alarm tones |
-| Game sounds | 50 | Original to Aetherphone, synthesized from code in tools/sound-generator, plus CC0 card and chip recordings from Kenney |
-| Wallpapers | 16 | Original to Aetherphone |
-| Ringtones and notification sounds | 20 | Material Design sounds by Google and the Android Open Source Project |
+| Content | Source |
+| --- | --- |
+| App icons | Painted from [Phosphor Icons](https://phosphoricons.com) fill glyphs, recolored, by the generator in tools/icon-generator |
+| Emoji | [Twemoji](https://github.com/jdecked/twemoji) 15.1.0, unmodified |
+| Fonts | Inter in four weights, and a subset of [Tabler Icons](https://tabler.io/icons) for the glyphs inside apps |
+| Phone cases | Drawn by human artists, each credited by name in the app's Settings |
+| Interface sounds | Original to Aetherphone, synthesized from code in tools/sound-generator, plus a CC0 shutter from BigSoundBank, one Material Design sound by Google and two Android Open Source Project alarm tones |
+| Game sounds | Original to Aetherphone, synthesized from code in tools/sound-generator, plus CC0 card and chip recordings from Kenney |
+| Wallpapers | Original to Aetherphone |
+| Ringtones and notification sounds | Material Design sounds by Google and the Android Open Source Project |
 
 Licenses and attributions are listed in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md), which ships with every release.
 

@@ -1,6 +1,6 @@
 # Mini-games framework
 
-This page explains how the Games app hosts its mini-games and how to build a new one with the shared framework: the `IMiniGame` contract, the juice helpers (screen shake, hit-stop, particles, animated numbers), the scoring and daily-streak plumbing, and the rules that only apply inside games. Read it after [app-framework.md](app-framework.md), when you want to add or change a mini-game. The mini-games themselves are fully client-side and never talk to the Aethernet backend; the `GamesApp` hub around them does, for the coin economy (play-session reporting, the server-picked featured game, coin awards), as described below.
+This page explains how the Games app hosts its mini-games and how to build a new one with the shared framework: the `IMiniGame` contract, the juice helpers (screen shake, hit-stop, particles, animated numbers), the scoring and daily-streak plumbing, and the rules that only apply inside games. Read it after [app-framework.md](app-framework.md), when you want to add or change a mini-game. The mini-games themselves are fully client-side and never talk to the Aethernet backend; the `GamesApp` hub around them does, for the coin economy (play-session reporting, the server-picked featured game, coin awards) and for the online rooms of the Play with friends tab, both described below.
 
 ## Key files
 
@@ -8,10 +8,22 @@ This page explains how the Games app hosts its mini-games and how to build a new
 | --- | --- |
 | src/Aetherphone/Apps/Games/GamesApp.cs | The Games hub: routing, tabs, the running game, the coin chip (pages live in the .Home, .Tiles, .Shelf, .Records and .Together partials) |
 | src/Aetherphone/Apps/Games/GamesLibrary.cs | The catalog behind the launcher: release order, latest wave, recents, genres, records and search |
+| src/Aetherphone/Apps/Games/GamesRoute.cs | Hub screens, tabs and shelves for the router |
+| src/Aetherphone/Apps/Games/GamesHubArt.cs | Shared hub pieces: section headings, empty states, medallions, onboarding anchors |
+| src/Aetherphone/Apps/Games/TileRail.cs | Sideways-panning shelf of tiles |
+| src/Aetherphone/Apps/Games/Widgets/DailyGameWidget.cs | Home screen widget for the daily game plus recent (or latest) games |
 | src/Aetherphone/Apps/Games/Framework/GameGenre.cs | The genre shelves a game can declare |
 | src/Aetherphone/Apps/Games/Online/OnlineHub.cs | The friends lobby: host cards, join by code, open rooms |
+| src/Aetherphone/Apps/Games/Online/OnlineRoomView.cs | One room: lobby, roster, and the table for the room's game kind |
+| src/Aetherphone/Apps/Games/Online/OnlineGameArt.cs | The list of online game kinds plus their medallions and accents |
+| src/Aetherphone/Apps/Games/Online/OnlineUnoTable.cs (and the Chess, Pool and ConnectFour tables) | One table class per online game |
+| src/Aetherphone/Core/Games/GameRoomsStore.cs | Room directory, create/join/leave, actions, and the HTTP fallback poll |
+| src/Aetherphone/Core/Games/GameRoomSession.cs | The live room: epoch and sequence ordering, snapshots, private hands, server clock |
+| src/Aetherphone/Core/Games/GameRoomWire.cs | Game kind ids, actions, phases and end reasons shared with the backend |
+| src/Aetherphone/Core/Coins/CoinGameSessionTracker.cs | Reports play sessions for coin awards |
 | src/Aetherphone/Apps/Games/Framework/IMiniGame.cs | Contract every mini-game implements |
 | src/Aetherphone/Apps/Games/Framework/GameContext.cs | Per-frame data handed to the running game |
+| src/Aetherphone/Apps/Games/Framework/GameFocus.cs | Whether a game may simulate and read keys this frame |
 | src/Aetherphone/Apps/Games/Framework/GameScene.cs | Ambient backdrop glow and arena panel drawing |
 | src/Aetherphone/Apps/Games/Framework/GameJuice.cs | Entrance progress, stagger, and pop-in easing |
 | src/Aetherphone/Apps/Games/Framework/FeedbackFx.cs | Shake, hit-stop, flash, shockwave rings, floating text |
@@ -37,12 +49,14 @@ The whole arcade is one phone app. `GamesApp` implements `IPhoneApp` (the contra
 
 ```csharp
 apps.Add(new GamesApp(services.GameStats, services.GameData, services.Textures, services.Coins,
-    services.CoinSessions, services.GameRooms));
+    services.CoinSessions, services.GameRooms, services.Configuration));
 ```
 
-The last three arguments are the coin plumbing and the friends lobby: `services.Coins` (the wallet store), `services.CoinSessions` (the play-session tracker), and `services.GameRooms` (the online room store). What the hub does with them is described below.
+`services.Coins` (the wallet store), `services.CoinSessions` (the play-session tracker) and `services.GameRooms` (the online room store) are the coin plumbing and the friends lobby; `services.Configuration` drives the new-feature badge. What the hub does with them is described below.
 
-Inside, `GamesApp` owns a plain `IMiniGame[]` array built in its constructor. That array is the registry: a game exists because a line constructs it there. Most games have parameterless constructors; `TriviaApp` shows that a game can take services if `GamesApp` passes them through.
+Inside, `GamesApp` owns a plain `IMiniGame[]` array built in its constructor. That array is the registry: a game exists because a line constructs it there. Most games have parameterless constructors; `TriviaApp` and `WordRunApp` show that a game can take services if `GamesApp` passes them through.
+
+`GamesApp` also implements `INameplateActivitySource`, so the Honorific nameplate title (see [Game integration](game-integration.md)) can show the local game or online room being played, and it shows a new-feature dot on its icon until it is first opened.
 
 Each game implements `IMiniGame` from src/Aetherphone/Apps/Games/Framework/IMiniGame.cs:
 
@@ -67,11 +81,26 @@ internal interface IMiniGame : IDisposable
 
 `RunsOnAClock` defaults to false. A game whose simulation advances on a timer overrides it to true so the hub can fade a Paused veil over it while the phone is unfocused (see the focus gate below); a turn-based game leaves the default and simply stands still.
 
+### The roster
+
+The source of truth is the `games` array in the `GamesApp` constructor for local games and `OnlineGameArt.Kinds` for online ones, with `GamesLibrary.Releases` dating each entry; read those when you need the exact list. At the time of writing the shelves hold these ids:
+
+| Shelf | Game ids |
+| --- | --- |
+| Arcade | `whack`, `snake`, `flap`, `breakout`, `stack`, `beat`, `blade`, `hop`, `updraft` |
+| Action | `skyfall`, `invaders`, `capman`, `squadron`, `doom`, `swoop` |
+| Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil` |
+| Brain | `minesweeper`, `memory`, `nonogram`, `simon`, `sudoku`, `trivia`, `wordrun` |
+| Tabletop | `solitaire`, `reversi`, `chess` |
+| Friends (online) | `online.uno`, `online.chess`, `online.pool` (8-Ball Pool), `online.connectfour` (Connect Four) |
+
+A few ids predate their titles and class names: `match3` is Gem Swap (`GemSwapApp`), `memory` is Pairs (`PairsApp`), `minesweeper` is Sweeper (`SweeperApp`). Never rename an id: it keys the saved stats, the release date and the accent.
+
 ### The launcher
 
-The hub is a tabbed app split across partials: `GamesApp.cs` (routing, tabs, the running game, the coin chip, widget deep links), `GamesApp.Home.cs` (the Home tab and the shelves), `GamesApp.Tiles.cs` (the hero, tiles and the Play with friends card), `GamesApp.Shelf.cs` (a shelf's full grid and the Search tab), `GamesApp.Records.cs` (the Records tab) and `GamesApp.Together.cs` (the online tab, drawn by `OnlineHub`). Shared pieces (section headings with See All, pills, designed empty states, medallions) live in `GamesHubArt`. It draws on the neutral `AppPalettes.Games` skin with the featured game's accent washed over it by `GameScene.Ambient`.
+The hub is a tabbed app split across partials: `GamesApp.cs` (routing, tabs, the running game, the coin chip, widget deep links), `GamesApp.Home.cs` (the Home tab and the shelves), `GamesApp.Tiles.cs` (the hero, tiles and the Play with friends card), `GamesApp.Shelf.cs` (a shelf's full grid and the Search tab), `GamesApp.Records.cs` (the Records tab) and `GamesApp.Together.cs` (the online tab, drawn by `OnlineHub`). Shared pieces (section headings with See All, designed empty states, medallions, onboarding anchors) live in `GamesHubArt`; pills use the shared `Button` kit. It draws on the neutral `AppPalettes.Games` skin with the featured game's accent washed over it by `GameScene.Ambient`.
 
-`GamesLibrary` (src/Aetherphone/Apps/Games/GamesLibrary.cs) is the catalog behind the launcher. It wraps the `IMiniGame[]` plus one `GameEntry` per online game (Uno, Chess, 8-Ball Pool, ids `online.uno`, `online.chess`, `online.pool`) and keeps every list the pages draw from as reusable `int[]` index arrays, so the draw code never allocates:
+`GamesLibrary` (src/Aetherphone/Apps/Games/GamesLibrary.cs) is the catalog behind the launcher. It wraps the `IMiniGame[]` plus one `GameEntry` per kind in `OnlineGameArt.Kinds` (Uno, Chess, 8-Ball Pool and Connect Four; ids `online.uno`, `online.chess`, `online.pool`, `online.connectfour`, built by `GamesLibrary.OnlineEntryId`) and keeps every list the pages draw from as reusable `int[]` index arrays, so the draw code never allocates:
 
 | List | What it holds |
 | --- | --- |
@@ -82,7 +111,7 @@ The hub is a tabbed app split across partials: `GamesApp.cs` (routing, tabs, the
 | `Records` | Entries with a personal best, most recently played first |
 | `Search(query)` | Entries whose title or genre name contains the query; empty for a blank query |
 
-`IsNew` marks an entry for thirty days after its release; `Best` and `Subtitle` carry the cached best-score line ("Best · 1,240", "Best · 1:05", "Streak · 3") or fall back to the genre label, while `BestValue` and `BestKind` give the Records tab the bare value and what it measures. `Rebuild` refreshes the recents, records and best labels; the hub calls it when it opens, when a game closes, and when the player leaves an online room. `EnsureLanguage` rebuilds the labels when the language or the clock format changes.
+`IsNew` marks an entry for thirty days after its release; `Best` and `Subtitle` carry the cached best-score line ("Best · 1,240", "Best · 1:05", "Best · Level 12", "Streak · 3") or fall back to the genre label, while `BestValue` and `BestKind` give the Records tab the bare value and what it measures. `Rebuild` refreshes the recents, records and best labels; the hub calls it when it opens, when a game closes, and when the player leaves an online room. `EnsureLanguage` rebuilds the labels when the language or the clock format changes.
 
 The root has four tabs on the floating `TabBar`, each a large-title page:
 
@@ -91,15 +120,15 @@ The root has four tabs on the floating `TabBar`, each a large-title page:
 - **Records**: a summary card (games played, daily streak, records), the daily challenge row, and every personal best.
 - **Search**: a search field over `Browse` cards for each genre, the online games and the whole library.
 
-Shelves pan sideways through `TileRail`, which claims the press with an `InvisibleButton` so a swipe never drags the phone window, locks to the first axis the pointer travels along, flings on release and shows paging arrows on hover; grids pick three to six columns from the content width. Tiles are accent-gradient squircles with the game's `AppIconArt` (or `OnlineGameArt` for the online three), a `NEW` pill inside the thirty-day window, a people badge on online entries, and a hover lift on a per-entry `Spring`. Tapping a local tile opens the game; tapping an online tile switches to the online tab with that game's card highlighted.
+Shelves pan sideways through `TileRail`, which claims the press with an `InvisibleButton` so a swipe never drags the phone window, locks to the first axis the pointer travels along, flings on release and shows paging arrows on hover; grids pick three to six columns from the content width. Tiles are accent-gradient squircles with the game's painted `AppIconTile` icon or its `AppIconArt` vector art (or `OnlineGameArt` for the online games), a `NEW` pill inside the thirty-day window, a people badge on online entries, and a hover lift on a per-entry `Spring`. Tapping a local tile opens the game; tapping an online tile switches to the online tab with that game's card highlighted.
 
-The app is an `ITabRouteTarget`: `games.tab.home`, `games.tab.together`, `games.tab.records` and `games.tab.search` open a tab, and `GamesApp.PlayRoute(id)` (`games.play.<id>`) opens a game directly, which the medium Daily Game widget uses for its recent games.
+The app is an `ITabRouteTarget`: `games.tab.home`, `games.tab.together`, `games.tab.records` and `games.tab.search` open a tab, and `GamesApp.PlayRoute(id)` (`games.play.<id>`) opens a game directly, which the medium Daily Game widget uses for its recent (or, before anything has been played, latest) games.
 
-The server picks the featured game when it can: `RebuildLayout` first computes the daily-rotation fallback `featuredIndex = GameStatsStore.TodayIndex * FeaturedStep % games.Length`, then overrides it when `coins.Wallet?.FeaturedGameId` (a field on the coin wallet DTO in src/Aetherphone/Core/Aethernet/Contracts/CoinDtos.cs) names a game in the array. Whichever wins, its id lands in `stats.DailyGameId`, which makes it the daily challenge.
+The server picks the featured game when it can: `FeaturedIndex` (called from `RebuildLayout`) uses `coins.Wallet?.FeaturedGameId` (a field on the coin wallet DTO in src/Aetherphone/Core/Aethernet/Contracts/CoinDtos.cs) when it names a game in the array, and otherwise falls back to the daily rotation `GameStatsStore.TodayIndex * FeaturedStep % games.Length`. Whichever wins, its id lands in `stats.DailyGameId`, which makes it the daily challenge.
 
 ### Routes and the running game
 
-Navigation uses a `ViewRouter<GamesRoute>` over four screens (`Root`, `Shelf`, `Playing`, `OnlineRoom`). Tapping a tile calls `OpenGame`, which sets `currentGame`, calls `game.Open()`, stamps the game as played, and pushes `Playing`. The back button pops the route, and `GamesApp.Draw` calls `CloseCurrentGame` (which calls `game.Close()`) once the transition lands back on the launcher. `OnlineHub` (src/Aetherphone/Apps/Games/Online/OnlineHub.cs) is the friends lobby on its own tab: one host card per online game, the join-by-code field, and the player's open rooms, with pull to refresh and a manual retry when the room list fails; `OnlineRoomView` is the room itself. When a round ends, `OnlineFinishHold` (src/Aetherphone/Apps/Games/Online/OnlineFinishHold.cs) keeps the finished table on screen until its last card flight or shot replay has settled, then shows a five-second countdown card (tap to skip) before the room shows the lobby again.
+Navigation uses a `ViewRouter<GamesRoute>` over four screens (`Root`, `Shelf`, `Playing`, `OnlineRoom`). Tapping a tile calls `OpenGame`, which sets `currentGame`, calls `game.Open()`, stamps the game as played, and pushes `Playing`. The back button pops the route, and `GamesApp.Draw` calls `CloseCurrentGame` (which calls `game.Close()`) once the transition lands back on the launcher. `OnlineHub` (src/Aetherphone/Apps/Games/Online/OnlineHub.cs) is the friends lobby on its own tab: one host card per online game, the join-by-code field, and the player's open rooms, with pull to refresh and a manual retry when the room list fails; `OnlineRoomView` is the room itself. When a round ends, `OnlineFinishHold` (src/Aetherphone/Apps/Games/Online/OnlineFinishHold.cs) keeps the finished table on screen until its last card flight or shot replay has settled, then shows a five-second countdown card (tap to skip) before the room shows the lobby again. The store and protocol behind these screens are covered under "Play with friends: online rooms" below.
 
 The hub also owns the coin plumbing that wraps every game. `OpenGame` and `CloseCurrentGame` report the play session to the backend through `CoinGameSessionTracker` (`GameOpened` and `GameClosed`), a chip in the in-game header counts the open session toward the server's earning thresholds, and `GamesApp.Draw` polls `coinSessions.TakeAward` to spawn a floating coin reward when the server grants one. None of this reaches the games: an `IMiniGame` only ever sees its `GameContext`.
 
@@ -119,11 +148,38 @@ game.Draw(new GameContext(body, context.Theme, stats, attentive ? frameSeconds :
 
 1. Create a folder src/Aetherphone/Apps/Games/YourGame with a `YourGameApp : IMiniGame`. Most games split logic into a `*Board` class and drawing into a `*Renderer` class.
 2. Add `new YourGameApp()` to the `games` array in the `GamesApp` constructor.
-3. Pick a `GameGenre` for `Genre` and add the `Title` string to the `Games` section of L.cs and the nine language JSONs (see [localization.md](localization.md)).
+3. Pick a `GameGenre` for `Genre` (its shelf label already exists in `GameGenres.Label`) and add the `Title` string to L.cs and the nine language JSONs (see [localization.md](localization.md)). Small games put it in the `Games` section; a game with many strings gets its own section, as `L.Coil`, `L.Updraft` and `L.Swoop` do.
 4. Add a row for your id to `GamesLibrary.Releases` with the release date, so the game sorts newest-first, joins the `Latest additions` shelf and wears the `NEW` pill for its first month.
 5. Add an accent color keyed by your game id in src/Aetherphone/Core/Apps/AppAccents.cs; `IMiniGame.Accent` defaults to `AppAccents.For(Id)`.
-6. Optionally add icon art for your id in src/Aetherphone/Windows/Components/Chrome/AppIconArt.cs; the launcher falls back to drawing your title text on the tile.
+6. Optionally add a painted icon for your id (`AppIconTile`, src/Aetherphone/Windows/Components/Chrome/AppIconTile.cs) or vector art in src/Aetherphone/Windows/Components/Chrome/AppIconArt.cs. The tile tries `AppIconTile` first, then `AppIconArt`, and falls back to drawing your title text.
 7. If the launcher should show a best-score line for your game, add a case to `GamesLibrary.BestRecord`.
+
+## Play with friends: online rooms
+
+The online games are not `IMiniGame`s: the Aethernet backend runs their rules, and the client renders a table and sends actions. They need an Aethernet account; signed out, `OnlineHub` shows a sign-in card that opens Settings.
+
+**The store.** `GameRoomsStore` (src/Aetherphone/Core/Games/GameRoomsStore.cs) owns everything online for the hub:
+
+- The room directory (the rooms this account is in) through `GamesClient.RoomsAsync`, on a `PollCadence` of 30 seconds while the phone is visible and 120 seconds while it is hidden. Opening the tab calls `EnsureFresh`, pull to refresh calls `RefreshNow`, and every intent answer or `game.ended` signal asks for an immediate refresh.
+- Intents: `CreateRoom(kind)`, `JoinByCode`, `LeaveRoom`, and the host's `CloseRoom` and `Kick`. Each runs in the background and lands as one `GameRoomAnswer` that the draw code picks up with `TakeRoomAnswer`.
+- Actions: `SendStart`, `SendPlay`, `SendDraw`, `SendPass`, `SendMove`, `SendResign`, `SendDrop`, `SendShoot`, and `SendPlace`, all thin wrappers over one private `SendAction`. Every request carries the roster's `ActionCount`; the server refuses a mismatch as stale instead of applying it twice, and a stale answer triggers an immediate room refresh. The result lands through `TakeActOutcome`.
+- The live room, a `GameRoomSession` (src/Aetherphone/Core/Games/GameRoomSession.cs) fed by `game.*` signals from `RealtimeSignalBus` (see [Networking](networking.md)). Epoch and sequence numbers decide whether an event applies, a gap asks for a fresh snapshot instead of guessing, Uno's private hand rides its own lane, and the server clock offset is smoothed so turn countdowns stay honest. While the socket is down, the room is not attached, or a snapshot is pending, the store polls the room over HTTP instead (3 seconds visible, 10 seconds hidden); a 404 closes the room locally.
+
+**The state.** `GameRoomSession.Build` parses each snapshot by its `GameKind` into a `GameRoomState` that carries one typed board per kind (`Uno`, `Chess`, `Pool`, `ConnectFour`, DTOs in src/Aetherphone/Core/Aethernet/Contracts/GamesDtos.cs) plus a kind-agnostic `GameRoomRoster` (host, players, action count, winner) that the lobby, the roster and the act guard read.
+
+**The screens.** `OnlineHub` is the lobby tab: one host card per kind in `OnlineGameArt.Kinds`, join by code, and the open rooms. `OnlineRoomView` draws one room: the lobby and roster while it waits, then the table for whichever board the state holds (`OnlineUnoTable`, `OnlineChessTable`, `OnlinePoolTable`, `OnlineConnectFourTable`), and `OnlineFinishHold` once a round ends. A table that wants the whole screen says so through `OnlineRoomView.WantsLandscape` (today only Pool), and `GamesApp.SyncOnlineRoomLandscape` requests or releases the landscape lock every frame. `GamesOnlineText` maps kinds and server reason codes to localized text; `OnlineGameArt` holds each kind's medallion, accent id and seat cap.
+
+### Checklist for adding an online game
+
+The server has to know the kind first: game kinds and their rule engines live in the Aethernet backend repository. Then, on the client:
+
+1. Add the kind constant, plus any action, end-reason or board-size constants, to `GameRoomWire`.
+2. Add the room state DTO to GamesDtos.cs, register it in `AethernetJsonContext`, add a field for it to `GameRoomState`, and teach `GameRoomSession.Build` to parse it and build its `GameRoomRoster`.
+3. Add a `Send*` wrapper to `GameRoomsStore` for any new action, extending `GameRoomActionRequest` if the action needs a new field.
+4. Write `Online<Name>Table` in src/Aetherphone/Apps/Games/Online, construct it in `OnlineRoomView`, and dispatch to it in `DrawTable`, `ShowsTable` and `FinishedText`.
+5. Add the kind to `OnlineGameArt.Kinds` and give it a branch in `OnlineGameArt.AccentId` (unknown kinds fall back to `uno`) and in `OnlineGameArt.Draw`, plus a seat cap in `MaxPlayers` when it is not a two-player game. Add a matching host anchor to `OnlineHub.HostIds` (the array lines up with `Kinds`) and a branch in `OnlineHub.HostHint`.
+6. Add its name to `GamesOnlineText.GameName`, and every new string to L.cs and the nine JSONs.
+7. Add an accent keyed by the accent id in src/Aetherphone/Core/Apps/AppAccents.cs (Connect Four uses `connectfour`) and a `GamesLibrary.Releases` row for `online.<accent id>`, so the entry dates, sorts and wears the `NEW` pill like a local game.
 
 ## The juice framework
 
@@ -145,7 +201,7 @@ game.Draw(new GameContext(body, context.Theme, stats, attentive ? frameSeconds :
 | `Update(float deltaSeconds)` | Advances all of the above; call once per frame |
 | `Clear()` | Reset on restart |
 
-The hit-stop contract has a strict frame order. Call `ScaleDelta` exactly once per frame with the raw delta, feed its result to the simulation only, and feed the raw delta to the feedback systems so shake and particles keep animating during the freeze. Every game that uses hit-stop follows this shape (here from src/Aetherphone/Apps/Games/Snake/SnakeApp.cs):
+The hit-stop contract has a strict frame order. Call `ScaleDelta` exactly once per frame with the raw delta, feed its result to the simulation only, and feed the raw delta to the feedback systems so shake and particles keep animating during the freeze. Every game that freezes its simulation with hit-stop follows this shape (here from src/Aetherphone/Apps/Games/Snake/SnakeApp.cs):
 
 ```csharp
 var simDelta = fx.ScaleDelta(deltaSeconds);
@@ -185,7 +241,7 @@ GameHud.ScorePill(center, Loc.T(L.Games.Score), ref scoreRoll, board.Score, Acce
 
 ### Scene, HUD, grid, overlay
 
-- `GameScene.Ambient(drawList, body, accent)` draws the drifting glow-blob backdrop plus vignette that every game except Flap (which paints its own sky) uses behind its board. `GameScene.Arena(drawList, rect, rounding, scale, accent)` draws a raised board panel.
+- `GameScene.Ambient(drawList, body, accent)` draws the drifting glow-blob backdrop plus vignette that every game uses behind its board, except the sky games (Flap, Swoop, Updraft), which paint their own sky. `GameScene.Arena(drawList, rect, rounding, scale, accent)` draws a raised board panel.
 - `GameJuice.Advance(progress, deltaSeconds)` drives a 0-to-1 entrance value, `GameJuice.Stagger(progress, index, count)` splits it across cells so tiles appear in sequence, and `GameJuice.PopIn(progress)` maps it through `Easing.EaseOutBack` for an overshooting pop.
 - `GameGrid.Centered(area, columns, rows, gapFraction)` computes a centered square-cell grid; `Cell(column, row)` and `CellCenter(column, row)` give you rects and centers, `Bounds` the whole board.
 - `GameHud` also has `Pill` (static value), `RestartButton`, and `Button`.
@@ -194,15 +250,19 @@ GameHud.ScorePill(center, Loc.T(L.Games.Score), ref scoreRoll, board.Score, Acce
 
 ### Input, clocks, sprites, banners
 
-- `GameInput` is the only way a game may read the physical keyboard. `GameInput.Claim()` returns false unless `GameFocus.Active`; when it returns true it has raised `io.WantTextInput` for this frame and cleared the game client's key state for every key a game consumes. Dalamud honours `WantTextInput` (it swallows the key messages and clears `KeyState` on its input frame); it does not honour `WantCaptureKeyboard` against the game at all, so a game that only calls `SetNextFrameWantCaptureKeyboard` still walks the character with WASD. The convenience readers `Held(key, alternate)` and `Pressed(key, alternate, repeat)` call `Claim` for you and pair WASD with the arrows. Call them only while the game actually wants keys (not under the result overlay), so the keyboard returns to the client the moment play stops.
+- `GameInput` is the only way a game may read the physical keyboard. `GameInput.Claim()` returns false unless `GameFocus.Active`; when it returns true it has raised `io.WantTextInput` for this frame and cleared the game client's key state for every key a game consumes. Dalamud honours `WantTextInput` (it swallows the key messages and clears `KeyState` on its input frame); it does not honour `WantCaptureKeyboard` against the game at all, so a game that only calls `SetNextFrameWantCaptureKeyboard` still walks the character with WASD. The convenience readers `Held(key, alternate)` and `Pressed(key, alternate, repeat)` call `Claim` for you and OR the two keys you pass (by convention a WASD key and its arrow); single-key overloads `Held(key)` and `Pressed(key, repeat)` exist too, and `Claim(ReadOnlySpan<VirtualKey>)` lets a game claim a narrower key set than the default (letters, digits, arrows, Space, Escape, and the editing and modifier keys). Call them only while the game actually wants keys (not under the result overlay), so the keyboard returns to the client the moment play stops.
 - `GamePad.DPad(area, accent, theme)` draws a W/A/S/D cross and returns the `PadDirection` pressed this frame (press-fired, one per frame). `GamePad.Shooter(area, accent, theme)` draws A, W, D and returns `ShooterPadInput` with `Left` and `Right` held and `Fire` pressed. `DPadHeight(scale)` and `ShooterHeight(scale)` size the band. Games combine pad and keyboard themselves: `var left = pad.Left || GameInput.Held(ImGuiKey.A, ImGuiKey.LeftArrow);`.
 - `new Substeps(deltaSeconds, maxStepSeconds)` gives `Count` and `Step` for a loop that advances fast projectiles without tunnelling; the count is capped at 16 so a stall never becomes a burst. `FixedStepClock(step, maxCatchUp)` is the alternative for sims that must run on an exact tick: `Advance(delta)` returns how many steps to run, `Alpha` is the render interpolation fraction, `Reset()` on restart.
 - `PixelSprite` takes bitmap rows (`#` lit) once, at static init, and `Draw(drawList, topLeft, unit, color)` emits one rect per lit run. It is the sprite path for Invaders-style games; draw it in the game's accent with a `ProgressRing.Glow` behind it, never in a flat ink.
 - `GameBanner.Draw(drawList, center, text, accent, theme, progress)` pops a frosted pill in over the first 18% of `progress`, holds, and fades over the last 25%. Drive `progress` with `GameBanner.Advance(progress, delta, lifetimeSeconds)`. Use it for stage and ready text that must hold; `FeedbackFx.AddText` rises and fades and is for score pops.
 
+### Sound
+
+Games are voiced through the phone's interface sound system. Call `UiFeedback.Play(UiSound.GameHitSoft)` (or `GameClear`, `GamePowerUp`, `GameMatch`, `GameWrong`, `SimonTone1` and the other game values in src/Aetherphone/Core/Notifications/UiSound.cs) for hits, clears, power-ups and misses. Those entries sit on the `Game` channel, which the player can switch off or turn down on its own in Settings > Sounds (`Configuration.GameSounds`, `Configuration.GameSoundVolume`); silent mode and the master interface-sounds switch mute it too. `GameWin` is the exception: it is on the `Event` channel, so the new-best chime `GameOverlay` plays with its confetti still sounds with game sounds off. Each catalog entry carries a minimum replay interval, so firing a sound on every hit of a burst does not stack. Never play audio files from a game directly. `UiSoundCatalog.Entries` is indexed by the `UiSound` enum, so a new sound needs its entry at the matching position.
+
 ### Games with data files
 
-Word Run reads its word banks from src/Aetherphone/Words (`<code>.answers.txt` and `<code>.valid.txt`, one word per line, shipped as content next to the plugin). They are generated, never hand-edited: `tools/build-word-banks.ps1` rebuilds them from SCOWL and the FrequencyWords lists, and THIRD-PARTY-NOTICES.md records both sources. Doom keeps no data in the repo at all; `DoomAssets` downloads the shareware episode and the soundfont into the plugin's config folder on first use and verifies them against pinned checksums.
+Word Run reads its word banks from src/Aetherphone/Words (`<code>.answers.txt` and `<code>.valid.txt`, one word per line, shipped as content next to the plugin). They are generated, never hand-edited: `tools/build-word-banks.ps1` rebuilds them from SCOWL and the FrequencyWords lists, and THIRD-PARTY-NOTICES.md records both sources. Doom keeps no data in the repo at all; `DoomAssets` downloads the shareware episode, optionally Freedoom (Phase 1 and 2), and the soundfont into the `doom` folder under the plugin's config directory, verifies them against pinned SHA-256 checksums, and also runs any commercial IWAD the player drops there (`doom.wad`, `doom2.wad`, `plutonia.wad`, `tnt.wad`).
 
 ## The motion exception
 
@@ -219,9 +279,12 @@ The rest of the phone uses critically damped motion: springs that settle without
 | `SubmitTime(gameId, seconds)` | Lower is better; returns true only on a new best |
 | `RecordWin(gameId)` | Increments and returns a win streak (used by Pairs, Reversi, and Chess) |
 | `ResetStreak(gameId)` | Clears the streak on a loss |
+| `MarkPlayed(gameId)`, `LastPlayed(gameId)` | Stamp and read the last-played time the launcher sorts `Recent` and `Records` by; the hub calls `MarkPlayed` when it opens a game or an online room, so a game never needs to |
+| `TetrisModern`, `WordBank` | Saved per-game choices (Tetris ruleset, Word Run word bank) |
+| `TodayIndex` (static) | UTC day number behind the daily challenge and the featured rotation |
 | `DailyGameId`, `DailyDone`, `DailyStreak` | Daily challenge state; the launcher sets `DailyGameId` and its streak chip reads `DailyDone` and `DailyStreak` |
 
-Stat ids may carry a difficulty suffix, for example `sudoku.easy` or `minesweeper.easy`, or a ruleset suffix like `tetris.modern` (Tetris keeps separate bests for its Classic and Modern rulesets and remembers the last choice in `Configuration.TetrisModern`). Every submit path first calls the private `RecordDailyPlay`, which prefix-matches the stat id against `DailyGameId` (so `sudoku.easy` counts for a `sudoku` daily) and advances or resets the streak based on `TodayIndex`. This means finishing the featured game through any `Submit*` or `RecordWin` call completes the daily automatically; there is no separate daily API.
+Stat ids may carry a difficulty suffix, for example `sudoku.easy` or `minesweeper.easy`, or a mode suffix like `tetris.modern`, `match3.blitz` or `updraft.height` (Tetris keeps separate bests for its Classic and Modern rulesets and remembers the last choice through `GameStatsStore.TetrisModern`; Gem Swap keeps its Blitz best apart; Updraft stores its best height next to its score). Every submit path first calls the private `RecordDailyPlay`, which prefix-matches the stat id against `DailyGameId` (so `sudoku.easy` counts for a `sudoku` daily) and advances or resets the streak based on `TodayIndex`. This means finishing the featured game through any `Submit*`, `RecordWin` or `ResetStreak` call completes the daily automatically, a recorded loss included; there is no separate daily API.
 
 ## Worked example: a minimal game
 
@@ -252,7 +315,7 @@ internal sealed class TapApp : IMiniGame
     private float resultAppear;
     public string Id => GameId;
     public string Title => "Tap";
-    public string Genre => Loc.T(L.Games.GenreArcade);
+    public GameGenre Genre => GameGenre.Arcade;
     public Vector4 Accent => AppAccents.For(Id);
     public bool RunsOnAClock => true;
 
@@ -357,7 +420,7 @@ Compare with src/Aetherphone/Apps/Games/Whack/WhackApp.cs, which is the same ske
 
 ## Naming rule
 
-Games are named for what they do: Whack, Snake, Stack, Water Sort, Crystal Drop, Flow. Never theme a game name with the word "Aether"; that prefix is reserved for platform features (Aethernet, Aethergram). Check the `Games` section of L.cs: no game title uses it, and new ones must not either.
+Games are named for what they do: Whack, Snake, Stack, Water Sort, Crystal Drop, Flow. Never theme a game name with the word "Aether"; that prefix is reserved for platform features (Aethernet, Aethergram). Check the game titles in L.cs (the `Games` section and the per-game sections such as `Coil`): none uses it, and new ones must not either.
 
 ## Gotchas
 
@@ -368,7 +431,8 @@ Games are named for what they do: Whack, Snake, Stack, Water Sort, Crystal Drop,
 - **Always submit through `GameStatsStore`, even for losing runs.** `SubmitScore` calls `RecordDailyPlay` before rejecting a non-positive or non-best score, so a zero-point run still completes the daily challenge. Bypassing the store (or only submitting on a new best) silently breaks the streak.
 - **Use `GameContext.DeltaSeconds`, not `ImGui.GetIO().DeltaTime`.** `GamesApp` clamps the delta to 0.1 seconds before building the context so a hitched frame cannot teleport the simulation, and it zeroes the delta while `GameFocus.Active` is false. Reading the IO delta directly loses both protections: a hitch teleports the game and it keeps simulating while the phone is unfocused.
 - **`WantCaptureKeyboard` does nothing against the game client.** Only `io.WantTextInput` makes Dalamud withhold keys from FFXIV. Read keys through `GameInput`, never through a bare `ImGui.IsKeyDown` behind `SetNextFrameWantCaptureKeyboard`. While a game claims the keyboard, Escape is swallowed too, so the client's system menu opens only after the phone loses focus; that is the intended trade.
-- **Difficulty-suffixed stat ids need launcher support.** Stats keyed like `sudoku.easy` prefix-match for the daily via `GameStatsStore`, but `GamesApp.StatValue` picks one concrete record to display, so a new difficulty tier means updating that switch too.
+- **Difficulty-suffixed stat ids need launcher support.** Stats keyed like `sudoku.easy` prefix-match for the daily via `GameStatsStore`, but `GamesLibrary.BestRecord` picks the concrete record (or, for `match3` and `tetris`, the higher of two) that the launcher and the Records tab display, so a new difficulty tier or mode means updating that switch too.
+- **`HitStop` alone freezes nothing.** The freeze only happens, and only counts down, inside `ScaleDelta`. A game that calls `HitStop` without routing its simulation delta through `ScaleDelta` gets no pause at all.
 
 ## Related docs
 
@@ -376,5 +440,7 @@ Games are named for what they do: Whack, Snake, Stack, Water Sort, Crystal Drop,
 - [Creating an app](creating-an-app.md): the full tutorial for a new phone app
 - [UI toolkit](ui-toolkit.md): `Typography`, `UiInteract`, `Squircle`, `Metrics`, and friends used throughout the games
 - [State and persistence](state-and-persistence.md): how `Configuration` loads, saves, and what belongs in it
-- [Localization](localization.md): adding `Title` and `Genre` strings to L.cs and the nine JSONs
+- [Localization](localization.md): adding a game's `Title` string to L.cs and the nine JSONs (genre labels already exist in `GameGenres.Label`)
+- [Game integration](game-integration.md): Honorific nameplate titles and the Dalamud services (such as `IKeyState`) the games rely on
+- [Networking](networking.md): the Aethernet client and realtime socket the online rooms ride on
 - [Testing and release](testing-and-release.md): the test project that hosts the chess and sudoku suites

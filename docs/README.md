@@ -7,7 +7,7 @@ Welcome. Aetherphone is an open-source plugin for Dalamud, the community plugin 
 | Path | Role |
 | --- | --- |
 | src/Aetherphone/Plugin.cs | Plugin entry point; constructs and owns everything |
-| src/Aetherphone/Windows/PhoneWindow.cs | The single ImGui window the whole phone renders in |
+| src/Aetherphone/Windows/PhoneWindow.cs | The main ImGui window the phone renders in (pop-outs and overlays have their own windows under Windows/) |
 | src/Aetherphone/Core/Apps/IPhoneApp.cs | The contract every phone app implements |
 | src/Aetherphone/Core/Apps/AppRegistry.cs | Builds the list of every app at boot |
 | src/Aetherphone/Core/Localization/L.cs | Source of truth for every user-visible string |
@@ -41,9 +41,9 @@ Terms that recur across every doc, defined once here:
 
 Every doc opens with one paragraph saying what it covers and when to read it, then a "Key files" table mapping the paths you will open most. Docs end with "Gotchas" (real traps verified in code, worth skimming even if you skip the middle) and "Related docs" links. When any doc and the code disagree, the code wins.
 
-One exception keeps its own format: [accent colors](design-accents.md), a short design rationale without the standard sections. Art specs for artists live on the website, not in this doc set. Even [the translator guide](translating.md), a step-by-step walkthrough for contributors who are not engineers, follows the standard shape.
+Two docs keep their own format without the standard sections: [accent colors](design-accents.md), a short design rationale, and [AI usage](ai-usage.md), a policy statement. Art specs for artists live on the website, not in this doc set. Even [the translator guide](translating.md), a step-by-step walkthrough for contributors who are not engineers, follows the standard shape.
 
-`readme/` is not part of this doc set. It holds the eight translations of the user-facing project README, which follow the README's shape rather than the one described above. The English README stays at the repo root because GitHub renders only that one.
+`readme/` and `media/` are not part of this doc set. `readme/` holds the eight translations of the user-facing project README, which follow the README's shape rather than the one described above; the English README stays at the repo root because GitHub renders only that one. `media/` holds the images and clips the README shows, rendered by tools/readme-media.
 
 ## All docs
 
@@ -118,8 +118,8 @@ Read [CONTRIBUTING.md](../CONTRIBUTING.md) at the repo root for the pull request
 
 ## Gotchas
 
-- Dev plugin loading points at a fixed dll path. Release builds `bin/Release/Aetherphone.dll`, Debug builds the side-by-side `bin/Debug/AetherphoneDev.dll` (`/phonedev`, its own config, development Aethernet instance). Build the configuration you did not register and the game silently keeps loading your previous plugin.
-- Bundled asset folders (Fonts, Emoji, Icons, Images, Sounds, Wallpapers, Cases, Localization) are copied to the build output by `<Content>` items in src/Aetherphone/Aetherphone.csproj. Editing an asset file does nothing in game until you rebuild.
+- Dev plugin loading points at a fixed dll path. Release builds `bin/Release/Aetherphone.dll`, Debug builds the side-by-side `bin/Debug/AetherphoneDev.dll` (`/phonedev`, its own config, development Aethernet instance). A third side-by-side variant, Beta, is a Release build with `-p:AetherphoneBeta=true`: AetherphoneBeta.dll, opened with `/phonebeta`, its own config, on the development Aethernet instance by default. Build the configuration you did not register and the game silently keeps loading your previous plugin.
+- Bundled assets and data (Fonts, Emoji, Icons, Sounds, Wallpapers, Cases, Localization, Words, Hunts, Fishing, the Icon.png and Emblem.png images, and the license files that ship beside them) are copied to the build output by `<Content>` items in src/Aetherphone/Aetherphone.csproj. Editing an asset file does nothing in game until you rebuild.
 - These docs cover the client only. The Aethernet backend lives in a separate repository, so server behavior can change without any commit here; where a doc and the code disagree, the code wins.
 
 ## Related docs

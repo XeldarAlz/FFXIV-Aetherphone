@@ -3,6 +3,7 @@ Title: conventional commit style with a scope and a lowercase summary, e.g.
   feat(timers): add a retainer venture alarm
   fix(net): cap the rate-limit pause at 30 seconds
 One concern per PR. If the title needs an "and", split the PR.
+Target dev, the default branch; master only moves when a release is cut.
 
 Translation-only PR (editing one JSON under src/Aetherphone/Localization/)?
 Fill in "What" and open it; CI runs the lockstep check for you and the rest
@@ -56,10 +57,11 @@ New asset in this PR? Say where it came from on the same line.
 
 Gates (CI enforces all of these):
 
-- [ ] `dotnet build Aetherphone.sln -c Release` is clean
+- [ ] `dotnet build Aetherphone.sln -c Release` finishes with zero warnings (CI treats every warning, code-style rules included, as an error)
 - [ ] `dotnet test` passes (this is where localization lockstep and accent contrast are enforced)
 - [ ] No em dashes anywhere: code, strings, JSON catalogs, docs
 - [ ] No `async void`, no new LINQ outside the allowlisted files, no raw `ImGuiHelpers.GlobalScale` (use `UiScale.Current`), no hand-formatted clock text (use `TimeText.Clock`)
+- [ ] Namespaces match their folders (Windows/Components is one flat namespace), no `_`-prefixed fields, no UTF-8 byte order marks, and Core or Windows code never imports an app
 
 Strings:
 
