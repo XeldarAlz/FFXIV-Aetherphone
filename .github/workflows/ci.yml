@@ -81,13 +81,8 @@ jobs:
         shell: bash
         run: |
           offenders=$(grep -rln 'using System\.Linq;' src/Aetherphone --include=*.cs \
-            | grep -v '^src/Aetherphone/Apps/Calendar/CalendarEvents.cs$' \
-            | grep -v '^src/Aetherphone/Apps/Music/MusicApp.cs$' \
-            | grep -v '^src/Aetherphone/Apps/Photos/PhotosApp.Grid.cs$' \
             | grep -v '^src/Aetherphone/Apps/Velvet/VelvetFilterSelection.cs$' \
             | grep -v '^src/Aetherphone/Apps/Velvet/VelvetNotInterestedArchive.cs$' \
-            | grep -v '^src/Aetherphone/Apps/Velvet/VelvetStore.cs$' \
-            | grep -v '^src/Aetherphone/Core/Radio/RadioPlayer.cs$' \
             | grep -v '^src/Aetherphone/Core/Songs/SongPlayer.cs$' || true)
           if [ -n "$offenders" ]; then
             echo "$offenders"
