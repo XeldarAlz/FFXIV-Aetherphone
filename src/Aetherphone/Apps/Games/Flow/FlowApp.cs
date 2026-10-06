@@ -1,44 +1,60 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Flow;
 
-internal sealed class FlowApp : ILegacyMiniGame
+internal sealed class FlowApp : IMiniGame
 {
     private const string GameId = "flow";
-    private const float DifficultyRowY = 22f;
-    private const float StatsRowY = 62f;
-    private const float ProgressRowY = 92f;
-    private const float BoardTop = 106f;
+    private const int HintsPerLevel = 1;
+    private const float RowGap = 6f;
+    private const float HintRadius = 16f;
+    private const float StripGap = 10f;
+    private static readonly LocString[] Modes = { L.Games.Easy, L.Games.Medium, L.Games.Hard };
+    private static readonly string[] ModeStatIds = { "flow.easy", "flow.medium", "flow.hard" };
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Flow, GameGenre.Puzzle, L.Flow.Hook,
+        Backdrop.Paper, HudStyle.Compact, ScoreKind.Level, Modes, ModeStatIds);
+
     private readonly FlowBoard board = new();
     private readonly FlowRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private readonly string[] difficultyLabels = new string[FlowBoard.DifficultyCount];
-    private bool statsLoaded;
-    private int difficulty;
-    private int bestCleared;
-    private int currentLevel = 1;
+    private RatioLabel flowsLabel;
+    private RatioLabel filledLabel;
+    private int mode;
+    private ulong salt;
+    private int boardLevel = -1;
+    private int boardMode = -1;
+    private ulong boardSalt;
+    private bool boardPending;
+    private int hintsUsed;
     private bool finished;
-    private bool newBest;
-    private bool pendingSubmit;
-    private int clearedLevel;
-    private float resultAppear;
+    private float entrance;
+    private float liquidTime;
     private float fillNudge;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Flow);
-    public GameGenre Genre => GameGenre.Puzzle;
 
-    public void Open()
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
     {
-        statsLoaded = false;
+        mode = start.Mode;
+        salt = start.Daily ? start.Seed : 0UL;
+        boardPending = true;
+        hintsUsed = 0;
+        finished = false;
+        entrance = 0f;
+        fillNudge = 0f;
+        particles.Clear();
+        fx.Clear();
     }
 
     public void Close()
@@ -49,119 +65,115 @@ internal sealed class FlowApp : ILegacyMiniGame
     {
     }
 
-    private void StartLevel(int level)
+    public void DrawIdle(in GameContext context)
     {
-        currentLevel = level;
-        board.Reset(level, difficulty);
-        particles.Clear();
-        fx.Clear();
-        finished = false;
-        newBest = false;
-        pendingSubmit = false;
-        resultAppear = 0f;
-        fillNudge = 0f;
-    }
-
-    private void SelectDifficulty(int target, in GameContext context)
-    {
-        difficulty = target;
-        bestCleared = context.Stats.Get(StatId(difficulty)).BestScore;
-        StartLevel(bestCleared + 1);
+        var session = context.Session;
+        SyncBoard(session.Best + 1, session.Mode, session.Daily ? session.Seed : 0UL, false);
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        Layout(context.Safe, scale, out var header, out _, out var boardArea);
+        var grid = GameGrid.Centered(boardArea, board.Columns, board.Rows, FlowRenderer.CellGap);
+        var dark = context.Backdrop.Ink == StageInk.Dark;
+        var ink = dark ? GamePalette.InkDark : context.Theme.TextStrong;
+        var muted = dark ? GamePalette.InkDark with { W = 0.62f } : context.Theme.TextMuted;
+        renderer.DrawStrip(drawList, StripRect(header, scale), board.Level, session.Best, Accent, ink, muted, 1f, scale);
+        renderer.Draw(drawList, board, grid, Accent, context.Backdrop.Ink, 0f, liquidTime, 1f, Vector2.Zero, scale);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
         var theme = context.Theme;
-        var body = context.Body;
-        if (!statsLoaded)
+        var session = context.Session;
+        if (boardPending)
         {
-            statsLoaded = true;
-            SelectDifficulty(difficulty, context);
+            boardPending = false;
+            SyncBoard(session.Best + 1, mode, salt, true);
         }
 
-        if (pendingSubmit)
+        var playing = session.State == StageFlow.Playing && !finished;
+        var rawSeconds = context.RawDeltaSeconds;
+        particles.Update(rawSeconds);
+        fx.Update(rawSeconds);
+        entrance = GameJuice.Advance(entrance, rawSeconds);
+        liquidTime += rawSeconds;
+        Layout(context.Safe, scale, out var header, out var progressRow, out var boardArea);
+        var grid = GameGrid.Centered(Scaled(boardArea, context.Fx.PlateScale), board.Columns, board.Rows,
+            FlowRenderer.CellGap);
+        var hovered = playing ? ResolveHover(grid) : -1;
+        if (playing)
         {
-            context.Stats.SubmitScore(StatId(difficulty), clearedLevel);
-            pendingSubmit = false;
+            HandleInput(hovered, grid, scale, context);
         }
 
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
-        var area = new Rect(new Vector2(body.Min.X + 8f * scale, body.Min.Y + BoardTop * scale),
-            new Vector2(body.Max.X - 8f * scale, body.Max.Y - 10f * scale));
-        var grid = GameGrid.Centered(area, board.Columns, board.Rows, 0.06f);
-        var hovered = ResolveHover(grid);
-        if (!finished)
+        var dark = context.Backdrop.Ink == StageInk.Dark;
+        var ink = dark ? GamePalette.InkDark : theme.TextStrong;
+        var muted = dark ? GamePalette.InkDark with { W = 0.62f } : theme.TextMuted;
+        renderer.DrawStrip(drawList, StripRect(header, scale), board.Level, session.Best, Accent, ink, muted, entrance,
+            scale);
+        var hintCenter = new Vector2(header.Max.X - HintRadius * scale, header.Center.Y);
+        var hintReady = playing && hintsUsed < HintsPerLevel && board.HintColor() >= 0;
+        if (FlowRenderer.HintButton(drawList, hintCenter, HintRadius * scale, hintReady, theme, Accent, scale))
         {
-            HandleInput(hovered, grid, scale);
-        }
-
-        if (DrawDifficultyRow(context, scale))
-        {
-            return;
+            UseHint(grid, scale, context);
         }
 
         var filled = board.FilledCells();
         var connected = board.ConnectedColors();
-        var awaitingFill = !finished && connected == board.ColorCount && filled < board.CellCount;
-        fillNudge = Math.Clamp(fillNudge + deltaSeconds * (awaitingFill ? 4f : -5f), 0f, 1f);
-        var statsY = body.Min.Y + StatsRowY * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 52f * scale, statsY), Loc.T(L.Games.Level),
-            GameNumber.Label(currentLevel), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 52f * scale, statsY), Loc.T(L.Games.Flows),
-            $"{connected}/{board.ColorCount}", Accent, theme);
-        var progressRow = new Rect(new Vector2(body.Min.X + 12f * scale, body.Min.Y + ProgressRowY * scale),
-            new Vector2(body.Max.X - 12f * scale, body.Min.Y + (ProgressRowY + 14f) * scale));
-        renderer.DrawProgress(progressRow, theme, Accent, scale, filled, board.CellCount, awaitingFill);
-        renderer.Draw(board, grid, theme, scale, fillNudge);
-        var drawList = ImGui.GetWindowDrawList();
-        fx.DrawFlash(drawList, body, 0f);
+        var awaitingFill = playing && connected == board.ColorCount && filled < board.CellCount;
+        fillNudge = Math.Clamp(fillNudge + rawSeconds * (awaitingFill ? 4f : -5f), 0f, 1f);
+        renderer.DrawProgress(drawList, progressRow, ink, muted, Accent, scale, flowsLabel.Get(connected, board.ColorCount),
+            filledLabel.Get(filled, board.CellCount), filled, board.CellCount, awaitingFill);
+        renderer.Draw(drawList, board, grid, Accent, context.Backdrop.Ink, fillNudge, liquidTime, entrance,
+            fx.ShakeOffset(scale), scale);
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
-        if (finished)
-        {
-            DrawResult(theme, body, deltaSeconds);
-        }
+        context.Hud.Level(board.Level);
+        session.Report(board.Level);
     }
 
-    private bool DrawDifficultyRow(in GameContext context, float scale)
+    private void SyncBoard(int level, int wantedMode, ulong wantedSalt, bool force)
     {
-        var body = context.Body;
-        var theme = context.Theme;
-        difficultyLabels[0] = Loc.T(L.Games.Easy);
-        difficultyLabels[1] = Loc.T(L.Games.Medium);
-        difficultyLabels[2] = Loc.T(L.Games.Hard);
-        var rowY = body.Min.Y + DifficultyRowY * scale;
-        var segmentRow = new Rect(new Vector2(body.Min.X + 4f * scale, rowY - 13f * scale),
-            new Vector2(body.Max.X - 44f * scale, rowY + 13f * scale));
-        var selection = SegmentStrip.Draw("flow.difficulty", segmentRow, difficultyLabels, difficulty, theme);
-        if (selection != difficulty)
+        if (!force && boardLevel == level && boardMode == wantedMode && boardSalt == wantedSalt && board.Moves == 0)
         {
-            SelectDifficulty(selection, context);
-            return true;
+            return;
         }
 
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 15f * scale, theme))
-        {
-            StartLevel(currentLevel);
-            return true;
-        }
-
-        return false;
+        boardLevel = level;
+        boardMode = wantedMode;
+        boardSalt = wantedSalt;
+        board.Reset(level, wantedMode, wantedSalt);
     }
 
-    private int ResolveHover(GameGrid grid)
+    private static void Layout(Rect safe, float scale, out Rect header, out Rect progressRow, out Rect boardArea)
     {
-        var mouse = ImGui.GetMousePos();
-        if (!grid.Bounds.Contains(mouse))
+        var gap = RowGap * scale;
+        header = new Rect(safe.Min, new Vector2(safe.Max.X, safe.Min.Y + FlowRenderer.HeaderHeight * scale));
+        progressRow = new Rect(new Vector2(safe.Min.X, header.Max.Y + gap),
+            new Vector2(safe.Max.X, header.Max.Y + gap + FlowRenderer.ProgressHeight * scale));
+        var inset = BoardPlate.Padding * scale;
+        boardArea = new Rect(new Vector2(safe.Min.X + inset, progressRow.Max.Y + gap + inset),
+            new Vector2(safe.Max.X - inset, safe.Max.Y - inset));
+    }
+
+    private static Rect StripRect(Rect header, float scale) =>
+        new(header.Min, new Vector2(header.Max.X - (HintRadius * 2f + StripGap) * scale, header.Max.Y));
+
+    private static Rect Scaled(Rect rect, float factor)
+    {
+        var half = rect.Size * 0.5f * factor;
+        return new Rect(rect.Center - half, rect.Center + half);
+    }
+
+    private int ResolveHover(in GameGrid grid)
+    {
+        if (!UiInteract.Hover(grid.Bounds.Min, grid.Bounds.Max))
         {
             return -1;
         }
 
-        var local = mouse - grid.Origin;
+        var local = ImGui.GetMousePos() - grid.Origin;
         var column = (int)(local.X / grid.Pitch);
         var row = (int)(local.Y / grid.Pitch);
         if (column < 0 || column >= board.Columns || row < 0 || row >= board.Rows)
@@ -172,7 +184,7 @@ internal sealed class FlowApp : ILegacyMiniGame
         return row * board.Columns + column;
     }
 
-    private void HandleInput(int hovered, GameGrid grid, float scale)
+    private void HandleInput(int hovered, in GameGrid grid, float scale, in GameContext context)
     {
         if (hovered >= 0 && (board.IsEndpoint(hovered) || board.Owner(hovered) >= 0))
         {
@@ -181,14 +193,14 @@ internal sealed class FlowApp : ILegacyMiniGame
 
         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
-            if (UiInteract.Hover(grid.Bounds.Min, grid.Bounds.Max))
+            if (hovered >= 0)
             {
                 board.Press(hovered);
             }
         }
         else if (ImGui.IsMouseDown(ImGuiMouseButton.Left) && board.ActiveColor >= 0)
         {
-            DragTo(hovered, grid, scale);
+            DragTo(hovered, grid, scale, context);
         }
 
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
@@ -197,7 +209,7 @@ internal sealed class FlowApp : ILegacyMiniGame
         }
     }
 
-    private void DragTo(int target, GameGrid grid, float scale)
+    private void DragTo(int target, in GameGrid grid, float scale, in GameContext context)
     {
         if (target < 0)
         {
@@ -220,7 +232,7 @@ internal sealed class FlowApp : ILegacyMiniGame
 
             if (result == FlowEvent.Completed)
             {
-                OnConnected(grid, scale);
+                OnConnected(grid, scale, context);
                 return;
             }
         }
@@ -247,7 +259,7 @@ internal sealed class FlowApp : ILegacyMiniGame
         return board.Extend(aside);
     }
 
-    private void OnConnected(GameGrid grid, float scale)
+    private void OnConnected(in GameGrid grid, float scale, in GameContext context)
     {
         UiFeedback.Play(UiSound.GameMatch);
         var color = board.ActiveColor;
@@ -258,58 +270,60 @@ internal sealed class FlowApp : ILegacyMiniGame
 
         var head = board.PathCell(color, board.PathLength(color) - 1);
         var center = grid.CellCenter(head % board.Columns, head / board.Columns);
-        particles.Burst(center, 14, FlowRenderer.ColorOf(color), 150f * scale, 3f, 0.5f, 240f);
-        particles.Sparkle(center, 6, GamePalette.Lighten(FlowRenderer.ColorOf(color), 0.4f), 120f * scale, 2.2f, 0.6f);
-        fx.Shockwave(center, grid.Pitch * 0.9f, GamePalette.Lighten(FlowRenderer.ColorOf(color), 0.25f), 0.42f, 2.6f);
+        var tint = FlowRenderer.ColorOf(color);
+        particles.Burst(center, 14, tint, 150f * scale, 3f, 0.5f, 240f);
+        particles.Sparkle(center, 6, GamePalette.Lighten(tint, 0.4f), 120f * scale, 2.2f, 0.6f);
+        fx.Shockwave(center, grid.Pitch * 0.9f, GamePalette.Lighten(tint, 0.25f), 0.42f, 2.6f);
         fx.AddTrauma(0.12f);
+        context.Fx.Punch(0.03f);
         if (board.IsSolved())
         {
-            OnSolved(grid, scale);
+            OnSolved(grid, scale, context);
         }
     }
 
-    private void OnSolved(GameGrid grid, float scale)
+    private void UseHint(in GameGrid grid, float scale, in GameContext context)
+    {
+        var color = board.HintColor();
+        if (color < 0 || !board.ApplyHint(color))
+        {
+            return;
+        }
+
+        hintsUsed++;
+        UiFeedback.Play(UiSound.GamePowerUp);
+        var tint = FlowRenderer.ColorOf(color);
+        var sparkle = GamePalette.Lighten(tint, 0.4f);
+        var length = board.SolutionLength(color);
+        for (var index = 0; index < length; index++)
+        {
+            var cell = board.SolutionCell(color, index);
+            particles.Sparkle(grid.CellCenter(cell % board.Columns, cell / board.Columns), 2, sparkle, 90f * scale,
+                1.8f, 0.5f);
+        }
+
+        var last = board.SolutionCell(color, length - 1);
+        fx.Shockwave(grid.CellCenter(last % board.Columns, last / board.Columns), grid.Pitch * 1.2f,
+            tint with { W = 0.8f }, 0.45f, 2.4f);
+        fx.AddTrauma(0.08f);
+        if (board.IsSolved())
+        {
+            OnSolved(grid, scale, context);
+        }
+    }
+
+    private void OnSolved(in GameGrid grid, float scale, in GameContext context)
     {
         UiFeedback.Play(UiSound.GameClear);
         finished = true;
-        resultAppear = 0f;
-        clearedLevel = currentLevel;
-        newBest = clearedLevel > bestCleared;
-        if (newBest)
-        {
-            bestCleared = clearedLevel;
-        }
-
-        pendingSubmit = true;
         fx.AddTrauma(0.3f);
-        fx.Flash(Accent, 0.35f);
+        context.Fx.Flash(Accent, 0.3f);
+        context.Fx.Sweep();
         fx.Shockwave(grid.Center, grid.Width * 0.6f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3.2f);
-        ReadOnlySpan<Vector4> palette = new[]
-        {
-            FlowRenderer.ColorOf(0), FlowRenderer.ColorOf(1), FlowRenderer.ColorOf(2), FlowRenderer.ColorOf(3),
-        };
-        particles.Confetti(new Vector2(grid.Center.X, grid.Bounds.Min.Y), 70, palette, 260f * scale, 4f, 1.3f);
-    }
-
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
-    {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        var secondary = $"{GameNumber.Label(board.Moves)} {Loc.T(L.Games.Moves)}";
-        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Level), GameNumber.Label(clearedLevel),
-            secondary, newBest, Loc.T(L.Games.NextLevel));
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
-        {
-            StartLevel(currentLevel + 1);
-        }
-    }
-
-    private static string StatId(int difficulty)
-    {
-        return difficulty switch
-        {
-            1 => "flow.medium",
-            2 => "flow.hard",
-            _ => "flow.easy",
-        };
+        particles.Confetti(new Vector2(grid.Center.X, grid.Bounds.Min.Y), 70, FlowRenderer.ConfettiPalette,
+            260f * scale, 4f, 1.3f);
+        context.Session.Finish(new GameOutcome(board.Level, ScoreKind.Level, context.Session.StatId)
+            .WithStat(L.Games.Moves, GameNumber.Label(board.Moves))
+            .WithStat(L.Flow.Hints, GameNumber.Label(hintsUsed)));
     }
 }

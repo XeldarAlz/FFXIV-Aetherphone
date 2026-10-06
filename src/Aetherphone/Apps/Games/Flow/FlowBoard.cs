@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.Flow;
 
 internal enum FlowEvent
@@ -29,7 +31,14 @@ internal sealed class FlowBoard
     private readonly int[] order = new int[MaxCells];
     private readonly bool[] reached = new bool[MaxCells];
     private readonly int[] frontier = new int[MaxCells];
-    private Random random = new(1);
+    private readonly int[] solutionOrder = new int[MaxCells];
+    private readonly int[] segmentStart = new int[MaxColors];
+    private readonly int[] segmentLength = new int[MaxColors];
+    private readonly int[] fallbackOrder = new int[MaxCells];
+    private readonly int[] fallbackStart = new int[MaxColors];
+    private readonly int[] fallbackLength = new int[MaxColors];
+    private GameRandom random;
+    private ulong salt;
     public int Columns { get; private set; } = 5;
     public int Rows { get; private set; } = 8;
     public int ColorCount { get; private set; } = 4;
@@ -52,6 +61,8 @@ internal sealed class FlowBoard
     public int EndpointB(int color) => endpointB[color];
     public int PathLength(int color) => paths[color].Count;
     public int PathCell(int color, int index) => paths[color][index];
+    public int SolutionLength(int color) => segmentLength[color];
+    public int SolutionCell(int color, int index) => solutionOrder[segmentStart[color] + index];
     public int CellCount => Columns * Rows;
     public int Head => ActiveColor < 0 || paths[ActiveColor].Count == 0
         ? -1
@@ -118,10 +129,11 @@ internal sealed class FlowBoard
         return true;
     }
 
-    public void Reset(int level, int difficulty)
+    public void Reset(int level, int difficulty, ulong salt = 0UL)
     {
         Level = level;
         Difficulty = Math.Clamp(difficulty, 0, DifficultyCount - 1);
+        this.salt = salt;
         Configure(level, Difficulty, out var columns, out var rows, out var colors);
         Columns = columns;
         Rows = rows;
@@ -242,6 +254,51 @@ internal sealed class FlowBoard
         ActiveColor = -1;
     }
 
+    public int HintColor()
+    {
+        for (var color = 0; color < ColorCount; color++)
+        {
+            if (!IsConnected(color))
+            {
+                return color;
+            }
+        }
+
+        return -1;
+    }
+
+    public bool ApplyHint(int color)
+    {
+        if (color < 0 || color >= ColorCount || IsConnected(color))
+        {
+            return false;
+        }
+
+        var start = segmentStart[color];
+        BeginFromEndpoint(color, solutionOrder[start]);
+        var path = paths[color];
+        for (var index = 1; index < segmentLength[color]; index++)
+        {
+            var cell = solutionOrder[start + index];
+            var occupant = owner[cell];
+            if (occupant >= 0 && occupant != color)
+            {
+                var occupantIndex = paths[occupant].IndexOf(cell);
+                if (occupantIndex >= 0)
+                {
+                    TruncateFrom(occupant, occupantIndex);
+                }
+            }
+
+            owner[cell] = color;
+            path.Add(cell);
+        }
+
+        ActiveColor = -1;
+        Moves++;
+        return true;
+    }
+
     public int StepToward(int from, int target)
     {
         var fromColumn = from % Columns;
@@ -359,7 +416,7 @@ internal sealed class FlowBoard
         var hasCandidate = false;
         for (var attempt = 0; attempt < GenerationAttempts; attempt++)
         {
-            random = new Random(SeedFor(Level, Difficulty, attempt));
+            random = GameRandom.FromSeed((ulong)(uint)SeedFor(Level, Difficulty, attempt) ^ salt);
             if (!BuildHamiltonianPath())
             {
                 BuildSnakePath();
@@ -379,20 +436,26 @@ internal sealed class FlowBoard
             if (!hasCandidate)
             {
                 hasCandidate = true;
+                Array.Copy(order, fallbackOrder, CellCount);
                 for (var color = 0; color < ColorCount; color++)
                 {
                     fallbackA[color] = endpointA[color];
                     fallbackB[color] = endpointB[color];
+                    fallbackStart[color] = segmentStart[color];
+                    fallbackLength[color] = segmentLength[color];
                 }
             }
         }
 
         if (hasCandidate)
         {
+            Array.Copy(fallbackOrder, order, CellCount);
             for (var color = 0; color < ColorCount; color++)
             {
                 endpointA[color] = fallbackA[color];
                 endpointB[color] = fallbackB[color];
+                segmentStart[color] = fallbackStart[color];
+                segmentLength[color] = fallbackLength[color];
             }
         }
         else
@@ -406,6 +469,7 @@ internal sealed class FlowBoard
 
     private void ApplyLayout()
     {
+        Array.Copy(order, solutionOrder, CellCount);
         for (var color = 0; color < ColorCount; color++)
         {
             var first = endpointA[color];
@@ -685,6 +749,8 @@ internal sealed class FlowBoard
         {
             endpointA[color] = order[cursor];
             endpointB[color] = order[cursor + lengths[color] - 1];
+            segmentStart[color] = cursor;
+            segmentLength[color] = lengths[color];
             cursor += lengths[color];
         }
 
@@ -701,6 +767,8 @@ internal sealed class FlowBoard
             var length = color < extra ? baseLength + 1 : baseLength;
             endpointA[color] = order[cursor];
             endpointB[color] = order[cursor + length - 1];
+            segmentStart[color] = cursor;
+            segmentLength[color] = length;
             cursor += length;
         }
     }

@@ -8327,6 +8327,7 @@ internal static class L
     internal static class Flow
     {
         public static readonly LocString Hook = new("games.flow.hook", "Connect each pair of matching dots with pipes that fill the whole grid without crossing.");
+        public static readonly LocString Hints = new("games.flow.hints", "Hints");
     }
 
     internal static class Solitaire
@@ -8365,6 +8366,7 @@ internal static class L
     internal static class Sudoku
     {
         public static readonly LocString Hook = new("games.sudoku.hook", "Fill the grid so every row, column and box holds the digits one to nine.");
+        public static readonly LocString Hints = new("games.sudoku.hints", "Hints");
     }
 
     internal static class Chess

@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.Sudoku;
 
 internal enum SudokuDifficulty : byte
@@ -44,12 +46,12 @@ internal sealed class SudokuBoard
     private readonly int[] placedPerDigit = new int[Size + 1];
     private readonly List<Change> changes = new(512);
     private readonly List<int> moveStarts = new(256);
-    private readonly Random random = new();
     private readonly byte[] digOrder = new byte[CellCount];
     private readonly byte[] workGrid = new byte[CellCount];
     private readonly int[] rowMask = new int[Size];
     private readonly int[] columnMask = new int[Size];
     private readonly int[] boxMask = new int[Size];
+    private GameRandom random;
     private int filledCount;
     private int correctCount;
     private int solutionsFound;
@@ -62,9 +64,10 @@ internal sealed class SudokuBoard
 
     public int RemainingCells => CellCount - filledCount;
 
-    public void Reset(SudokuDifficulty difficulty)
+    public void Reset(SudokuDifficulty difficulty, ulong seed)
     {
         Difficulty = difficulty;
+        random = GameRandom.FromSeed(seed);
         Array.Clear(entries, 0, CellCount);
         Array.Clear(notes, 0, CellCount);
         Array.Clear(revealed, 0, CellCount);

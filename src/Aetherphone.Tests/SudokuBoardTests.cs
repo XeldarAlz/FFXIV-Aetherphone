@@ -5,6 +5,8 @@ namespace Aetherphone.Tests;
 
 public sealed class SudokuBoardTests
 {
+    private const ulong Seed = 0x5EED5EEDUL;
+
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
@@ -14,7 +16,7 @@ public sealed class SudokuBoardTests
         var board = new SudokuBoard();
         for (var attempt = 0; attempt < 3; attempt++)
         {
-            board.Reset((SudokuDifficulty)difficulty);
+            board.Reset((SudokuDifficulty)difficulty, Seed + (ulong)attempt);
             var grid = new byte[SudokuBoard.CellCount];
             for (var cell = 0; cell < SudokuBoard.CellCount; cell++)
             {
@@ -31,7 +33,7 @@ public sealed class SudokuBoardTests
     public void GivensAlwaysAgreeWithTheStoredAnswer(int difficulty)
     {
         var board = new SudokuBoard();
-        board.Reset((SudokuDifficulty)difficulty);
+        board.Reset((SudokuDifficulty)difficulty, Seed);
 
         for (var cell = 0; cell < SudokuBoard.CellCount; cell++)
         {
@@ -43,10 +45,44 @@ public sealed class SudokuBoardTests
     }
 
     [Fact]
+    public void SameSeedReplaysIdentically()
+    {
+        var first = new SudokuBoard();
+        var second = new SudokuBoard();
+        first.Reset(SudokuDifficulty.Hard, 0xC0FFEEUL);
+        second.Reset(SudokuDifficulty.Hard, 0xC0FFEEUL);
+
+        for (var cell = 0; cell < SudokuBoard.CellCount; cell++)
+        {
+            Assert.Equal(first.Given(cell), second.Given(cell));
+            Assert.Equal(first.Answer(cell), second.Answer(cell));
+        }
+
+        Assert.Equal(first.PickHintCell(-1), second.PickHintCell(-1));
+    }
+
+    [Fact]
+    public void DifferentSeedsProduceDifferentPuzzles()
+    {
+        var first = new SudokuBoard();
+        var second = new SudokuBoard();
+        first.Reset(SudokuDifficulty.Easy, 1UL);
+        second.Reset(SudokuDifficulty.Easy, 2UL);
+
+        var same = true;
+        for (var cell = 0; cell < SudokuBoard.CellCount && same; cell++)
+        {
+            same = first.Answer(cell) == second.Answer(cell);
+        }
+
+        Assert.False(same);
+    }
+
+    [Fact]
     public void FillingEveryEmptyCellWithTheAnswerSolvesTheBoard()
     {
         var board = new SudokuBoard();
-        board.Reset(SudokuDifficulty.Medium);
+        board.Reset(SudokuDifficulty.Medium, Seed);
 
         for (var cell = 0; cell < SudokuBoard.CellCount; cell++)
         {
@@ -64,7 +100,7 @@ public sealed class SudokuBoardTests
     public void AWrongDigitIsFlaggedAndDoesNotSolveTheBoard()
     {
         var board = new SudokuBoard();
-        board.Reset(SudokuDifficulty.Easy);
+        board.Reset(SudokuDifficulty.Easy, Seed);
         var target = FirstEmptyCell(board);
         var wrong = (byte)(board.Answer(target) % 9 + 1);
 
@@ -77,7 +113,7 @@ public sealed class SudokuBoardTests
     public void UndoRestoresThePreviousEntry()
     {
         var board = new SudokuBoard();
-        board.Reset(SudokuDifficulty.Easy);
+        board.Reset(SudokuDifficulty.Easy, Seed);
         var target = FirstEmptyCell(board);
         board.SetEntry(target, board.Answer(target));
 
@@ -91,7 +127,7 @@ public sealed class SudokuBoardTests
     public void PlacingADigitClearsThatNoteFromItsPeersAndUndoBringsItBack()
     {
         var board = new SudokuBoard();
-        board.Reset(SudokuDifficulty.Hard);
+        board.Reset(SudokuDifficulty.Hard, Seed);
         var target = FirstEmptyCell(board);
         var peer = FirstEmptyPeer(board, target);
         var digit = board.Answer(target);
@@ -112,7 +148,7 @@ public sealed class SudokuBoardTests
     public void DuplicateDigitsInAUnitAreReportedAsConflicts()
     {
         var board = new SudokuBoard();
-        board.Reset(SudokuDifficulty.Easy);
+        board.Reset(SudokuDifficulty.Easy, Seed);
         var source = FirstGivenCell(board);
         var peer = FirstEmptyPeer(board, source);
 
@@ -126,7 +162,7 @@ public sealed class SudokuBoardTests
     public void RevealFillsTheCellWithTheAnswer()
     {
         var board = new SudokuBoard();
-        board.Reset(SudokuDifficulty.Medium);
+        board.Reset(SudokuDifficulty.Medium, Seed);
         var target = board.PickHintCell(-1);
 
         Assert.True(target >= 0);
