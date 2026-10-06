@@ -270,6 +270,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
     public void OnClosed()
     {
         store.FlushFeedSignals();
+        threadView.OnAppClosed();
         postSheet.Close();
         threadSheet.Close();
         profileMenu.Close();
