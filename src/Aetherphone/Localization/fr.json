@@ -4424,6 +4424,7 @@
   "games.sudoku.hook": "Remplissez la grille pour que chaque ligne, colonne et région contienne les chiffres de un à neuf.",
   "games.chess": "Échecs",
   "games.chess.hook": "Mettez le roi de l'ordinateur échec et mat et entretenez votre série de victoires.",
+  "games.chess.result": "Résultat",
   "games.notes": "Notes",
   "games.erase": "Effacer",
   "games.hint": "Indice",

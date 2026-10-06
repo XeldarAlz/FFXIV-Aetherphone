@@ -4424,6 +4424,7 @@
   "games.sudoku.hook": "填满网格，让每行、每列和每宫都包含一到九。",
   "games.chess": "国际象棋",
   "games.chess.hook": "将死电脑的国王，保持你的连胜。",
+  "games.chess.result": "结果",
   "games.notes": "笔记",
   "games.erase": "擦除",
   "games.hint": "提示",

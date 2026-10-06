@@ -187,9 +187,35 @@ public sealed class ChessRulesTests
         }
     }
 
+    [Fact]
+    public void TheTieBreakIsDeterministicForASeed()
+    {
+        var board = new ChessBoard();
+        board.Reset();
+        var engine = new ChessEngine();
+
+        var first = PickWithSeed(engine, board, 0xC0FFEE);
+        var second = PickWithSeed(engine, board, 0xC0FFEE);
+        var distinct = new HashSet<ChessMove>();
+        for (ulong seed = 1; seed <= 24; seed++)
+        {
+            distinct.Add(PickWithSeed(engine, board, seed));
+        }
+
+        Assert.Equal(first, second);
+        Assert.True(distinct.Count > 1);
+    }
+
     private const int D1 = 59;
     private const int H5 = 31;
     private const int F7 = 13;
+
+    private static ChessMove PickWithSeed(ChessEngine engine, ChessBoard board, ulong seed)
+    {
+        engine.Reseed(seed);
+        engine.Prepare(board);
+        return engine.Search(1, 100_000, 5_000);
+    }
 
     private static void Play(ChessBoard board, int from, int to)
     {

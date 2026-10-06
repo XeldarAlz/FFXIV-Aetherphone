@@ -257,6 +257,21 @@ public sealed class GamesLibraryTests
     }
 
     [Fact]
+    public void ChessShowsTheHighestStreakAcrossThreeDifficulties()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "chess.easy", Streak = 1 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "chess.medium", Streak = 4 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "chess.hard", Streak = 2 });
+        var library = Build(configuration);
+        var chess = library.IndexOf("chess");
+
+        Assert.Equal(RecordKind.Streak, library.BestKind(chess));
+        Assert.Equal("4", library.BestValue(chess));
+        Assert.Equal("Medium", library.BestTier(chess));
+    }
+
+    [Fact]
     public void AStreakRecordedBeforeTiersStillShowsWithoutATierLabel()
     {
         var games = new IMiniGame[] { new FakeGame("reversi", "Reversi", GameGenre.Tabletop) };

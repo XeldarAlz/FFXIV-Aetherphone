@@ -4424,6 +4424,7 @@
   "games.sudoku.hook": "Rellena la cuadrícula para que cada fila, columna y caja contenga los dígitos del uno al nueve.",
   "games.chess": "Ajedrez",
   "games.chess.hook": "Da jaque mate al rey de la CPU y mantén viva tu racha de victorias.",
+  "games.chess.result": "Resultado",
   "games.notes": "Notas",
   "games.erase": "Borrar",
   "games.hint": "Pista",
