@@ -12,19 +12,42 @@ internal sealed class AethernetClientIdentity
     public const string StatusWarned = "warned";
     public const string StatusBlocked = "blocked";
 
-    private readonly string host;
+    private readonly Func<string> baseUrl;
     private readonly Action<string> onSourceStatus;
+    private ResolvedHost resolved = new(string.Empty, string.Empty);
 
-    public AethernetClientIdentity(string baseUrl, Action<string> onSourceStatus)
+    public AethernetClientIdentity(Func<string> baseUrl, Action<string> onSourceStatus)
     {
-        host = Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) ? uri.Host : string.Empty;
+        this.baseUrl = baseUrl;
         this.onSourceStatus = onSourceStatus;
     }
 
     public bool Matches(Uri? uri)
     {
-        return host.Length > 0 && uri is not null && string.Equals(uri.Host, host, StringComparison.OrdinalIgnoreCase);
+        if (uri is null)
+        {
+            return false;
+        }
+
+        var host = CurrentHost();
+        return host.Length > 0 && string.Equals(uri.Host, host, StringComparison.OrdinalIgnoreCase);
     }
+
+    private string CurrentHost()
+    {
+        var current = baseUrl();
+        var cached = resolved;
+        if (string.Equals(cached.BaseUrl, current, StringComparison.Ordinal))
+        {
+            return cached.Host;
+        }
+
+        var host = Uri.TryCreate(current, UriKind.Absolute, out var uri) ? uri.Host : string.Empty;
+        resolved = new ResolvedHost(current, host);
+        return host;
+    }
+
+    private sealed record ResolvedHost(string BaseUrl, string Host);
 
     public void Apply(HttpRequestHeaders headers)
     {
