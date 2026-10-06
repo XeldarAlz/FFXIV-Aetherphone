@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.CapMan;
 
 internal enum GhostState : byte
@@ -7,6 +9,15 @@ internal enum GhostState : byte
     Normal,
     Frightened,
     Eyes,
+}
+
+internal enum FruitKind : byte
+{
+    Cherry,
+    Strawberry,
+    Orange,
+    Apple,
+    Melon,
 }
 
 internal struct Ghost
@@ -36,6 +47,12 @@ internal sealed class CapManBoard
     public const int DotPoints = 10;
     public const int PelletPoints = 50;
     public const int LevelClearBonus = 500;
+    public const int FruitKindCount = 5;
+    public const int FirstFruitCollectables = 70;
+    public const int FruitRepeatCollectables = 100;
+    public const float FruitSeconds = 9f;
+    public const int FirstFruitPoints = 100;
+    public const int LaterFruitPoints = 300;
     public const int ChaserPersonality = 0;
     public const int AmbusherPersonality = 1;
     public const int WandererPersonality = 2;
@@ -96,10 +113,12 @@ internal sealed class CapManBoard
     private readonly Vector2[] ghostEatPositions = new Vector2[GhostCount];
     private readonly int[] ghostEatPoints = new int[GhostCount];
     private readonly Vector2[] options = new Vector2[DirectionOrder.Length];
-    private readonly Random random = new();
+    private GameRandom random;
     private Vector2 playerStart;
     private Vector2 queuedDirection;
     private float frightTimer;
+    private float fruitTimer;
+    private int fruitsSpawned;
     private int ghostChain;
     private float readyTimer;
     private float deathTimer;
@@ -107,6 +126,9 @@ internal sealed class CapManBoard
     public int Level { get; private set; }
     public int Lives { get; private set; }
     public int DotsLeft { get; private set; }
+    public int Collected { get; private set; }
+    public int GhostsEaten { get; private set; }
+    public int FruitEaten { get; private set; }
     public bool GameOver { get; private set; }
     public Vector2 PlayerPosition { get; private set; }
     public Vector2 PlayerDirection { get; private set; }
@@ -115,6 +137,10 @@ internal sealed class CapManBoard
     public bool Dying => deathTimer > 0f;
     public float DeathProgress => deathTimer > 0f ? 1f - deathTimer / DeathSeconds : 0f;
     public bool Frozen => Ready || Dying;
+    public bool FruitActive => fruitTimer > 0f;
+    public float FruitRemaining => fruitTimer;
+    public FruitKind Fruit { get; private set; }
+    public Vector2 FruitPosition => playerStart;
     public int DotsEatenThisFrame { get; private set; }
     public Vector2 LastDotPosition { get; private set; }
     public bool PelletEatenThisFrame { get; private set; }
@@ -122,6 +148,9 @@ internal sealed class CapManBoard
     public bool PlayerDiedThisFrame { get; private set; }
     public bool LevelClearedThisFrame { get; private set; }
     public bool ReadyStartedThisFrame { get; private set; }
+    public bool FruitSpawnedThisFrame { get; private set; }
+    public bool FruitEatenThisFrame { get; private set; }
+    public int LastFruitPoints { get; private set; }
     public Ghost GetGhost(int index) => ghosts[index];
     public Vector2 GhostEatPosition(int index) => ghostEatPositions[index];
     public int GhostEatPoints(int index) => ghostEatPoints[index];
@@ -133,11 +162,21 @@ internal sealed class CapManBoard
 
     public static int ChainPoints(int chain) => 100 * (1 << chain);
 
-    public void StartGame()
+    public static bool FruitSpawnsAt(int collected) =>
+        collected >= FirstFruitCollectables && (collected - FirstFruitCollectables) % FruitRepeatCollectables == 0;
+
+    public static int FruitPoints(int fruitIndex) => fruitIndex == 0 ? FirstFruitPoints : LaterFruitPoints;
+
+    public void StartGame(GameRandom seededRandom)
     {
+        random = seededRandom;
         Score = 0;
         Level = 0;
         Lives = StartLives;
+        Collected = 0;
+        GhostsEaten = 0;
+        FruitEaten = 0;
+        fruitsSpawned = 0;
         GameOver = false;
         ClearFrameEvents();
         StartLevel();
@@ -184,7 +223,8 @@ internal sealed class CapManBoard
         }
 
         TickFright(deltaSeconds);
-        var substeps = new Framework.Substeps(deltaSeconds, MaxSubstepSeconds);
+        TickFruit(deltaSeconds);
+        var substeps = new Substeps(deltaSeconds, MaxSubstepSeconds);
         for (var step = 0; step < substeps.Count; step++)
         {
             MovePlayer(substeps.Step);
@@ -238,6 +278,8 @@ internal sealed class CapManBoard
         PlayerDiedThisFrame = false;
         LevelClearedThisFrame = false;
         ReadyStartedThisFrame = false;
+        FruitSpawnedThisFrame = false;
+        FruitEatenThisFrame = false;
     }
 
     private void StartLevel()
@@ -294,6 +336,7 @@ internal sealed class CapManBoard
         }
 
         frightTimer = 0f;
+        fruitTimer = 0f;
         ghostChain = 0;
         readyTimer = ReadySeconds;
         ReadyStartedThisFrame = true;
@@ -354,6 +397,11 @@ internal sealed class CapManBoard
             return;
         }
 
+        if (fruitTimer > 0f && x == (int)playerStart.X && y == (int)playerStart.Y)
+        {
+            EatFruit();
+        }
+
         var index = y * Columns + x;
         var tile = tiles[index];
         if (tile == Dot)
@@ -363,6 +411,7 @@ internal sealed class CapManBoard
             Score += DotPoints;
             DotsEatenThisFrame++;
             LastDotPosition = new Vector2(x, y);
+            Collect();
             return;
         }
 
@@ -389,6 +438,42 @@ internal sealed class CapManBoard
             ghost.State = GhostState.Frightened;
             ghost.Direction = -ghost.Direction;
         }
+
+        Collect();
+    }
+
+    private void Collect()
+    {
+        Collected++;
+        if (!FruitSpawnsAt(Collected))
+        {
+            return;
+        }
+
+        Fruit = (FruitKind)random.Next(FruitKindCount);
+        fruitTimer = FruitSeconds;
+        fruitsSpawned++;
+        FruitSpawnedThisFrame = true;
+    }
+
+    private void EatFruit()
+    {
+        var points = FruitPoints(fruitsSpawned - 1);
+        fruitTimer = 0f;
+        Score += points;
+        FruitEaten++;
+        LastFruitPoints = points;
+        FruitEatenThisFrame = true;
+    }
+
+    private void TickFruit(float deltaSeconds)
+    {
+        if (fruitTimer <= 0f)
+        {
+            return;
+        }
+
+        fruitTimer = MathF.Max(0f, fruitTimer - deltaSeconds);
     }
 
     private void MoveGhost(ref Ghost ghost, float deltaSeconds)
@@ -548,6 +633,7 @@ internal sealed class CapManBoard
                 ghostChain = Math.Min(ghostChain + 1, MaxGhostChain);
                 var points = ChainPoints(ghostChain);
                 Score += points;
+                GhostsEaten++;
                 ghostEatPositions[GhostsEatenThisFrame] = ghost.Position;
                 ghostEatPoints[GhostsEatenThisFrame] = points;
                 GhostsEatenThisFrame++;

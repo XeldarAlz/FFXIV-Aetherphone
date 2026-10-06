@@ -8439,11 +8439,14 @@ internal static class L
     internal static class CapMan
     {
         public static readonly LocString Hook = new("games.capman.hook", "Eat every pellet in the maze while dodging the ghosts, or grab a power pellet and chase them.");
+        public static readonly LocString GhostsEaten = new("games.capman.ghostsEaten", "Ghosts eaten");
+        public static readonly LocString Fruit = new("games.capman.fruit", "Fruit");
     }
 
     internal static class Hop
     {
         public static readonly LocString Hook = new("games.hop.hook", "Hop across the road and the river, one lane at a time, without getting hit or swept away.");
+        public static readonly LocString LevelNumber = new("games.hop.levelNumber", "Level {0}");
     }
 
     internal static class Squadron

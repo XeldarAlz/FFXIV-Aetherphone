@@ -32,6 +32,7 @@ internal sealed class HopBoard
     public const float DeathPauseSeconds = 1.2f;
     public const float LevelClearPauseSeconds = 1.5f;
     public const float LowTimerSeconds = 10f;
+    public const float NearMissCells = 1f;
     public static readonly int[] BayColumns = { 0, 3, 6, 9, 12 };
     public static readonly float[] RoadSpeeds = { 1.5f, 2.1f, 1.7f, 2.4f, 1.9f };
     public static readonly int[] RoadBaseCounts = { 2, 3, 2, 3, 2 };
@@ -57,11 +58,12 @@ internal sealed class HopBoard
     private readonly float[] roadLaneSpeeds = new float[LaneCount];
     private readonly float[] streamLaneSpeeds = new float[LaneCount];
     private readonly bool[] bays = new bool[BayCount];
-    private readonly Random random = new();
+    private GameRandom random;
     private FixedStepClock clock = new(FixedStepSeconds, MaxCatchUpSeconds);
     private int maxRowReached;
     private float deathTimer;
     private float clearTimer;
+    private int nearMissVehicle = -1;
     public int Score { get; private set; }
     public int Level { get; private set; }
     public int Lives { get; private set; }
@@ -74,6 +76,7 @@ internal sealed class HopBoard
     public int Row { get; private set; }
     public float HopFlash { get; private set; }
     public int LastBankedBay { get; private set; } = -1;
+    public int LastBankPoints { get; private set; }
     public float BankFlash { get; private set; }
     public float BumpFlash { get; private set; }
     public int BumpColumn { get; private set; } = -1;
@@ -86,6 +89,10 @@ internal sealed class HopBoard
     public bool DiedThisFrame { get; private set; }
     public bool LevelClearedThisFrame { get; private set; }
     public bool LevelStartedThisFrame { get; private set; }
+    public bool NearMissThisFrame { get; private set; }
+    public float NearMissX { get; private set; }
+    public float NearMissDirection { get; private set; }
+    public bool OnLog => OnStream && IsSupported(Row - StreamFirstRow);
     public bool BayFilled(int bay) => bays[bay];
     public int RoadCount(int lane) => roadCounts[lane];
     public int PadCount(int lane) => PadCounts[lane];
@@ -122,6 +129,20 @@ internal sealed class HopBoard
         return distance <= padLength + PadGripSlack || distance >= Columns - PadGripSlack;
     }
 
+    public static bool NearMiss(float hopperX, float vehicleX, int vehicleLength, float direction)
+    {
+        var hopperStart = hopperX + CollisionMargin;
+        var hopperLength = 1f - CollisionMargin * 2f;
+        if (SpansOverlap(hopperStart, hopperLength, vehicleX, vehicleLength))
+        {
+            return false;
+        }
+
+        var ahead = Wrap(vehicleX - (hopperStart + hopperLength));
+        var behind = Wrap(hopperStart - (vehicleX + vehicleLength));
+        return (direction >= 0f ? ahead : behind) < NearMissCells;
+    }
+
     public static int BayAt(float x)
     {
         for (var bay = 0; bay < BayCount; bay++)
@@ -146,8 +167,9 @@ internal sealed class HopBoard
     public static int PerLevelMaximum() =>
         BayCount * ((StreamLastRow - StartRow) * HopPoints + BankPoints(LifeTimerSeconds)) + LevelClearBonus;
 
-    public void StartGame()
+    public void StartGame(GameRandom seededRandom)
     {
+        random = seededRandom;
         Score = 0;
         Level = 1;
         Lives = StartLives;
@@ -156,7 +178,9 @@ internal sealed class HopBoard
         BankedThisLevel = 0;
         deathTimer = 0f;
         clearTimer = 0f;
+        nearMissVehicle = -1;
         LastBankedBay = -1;
+        LastBankPoints = 0;
         BumpColumn = -1;
         BankFlash = 0f;
         BumpFlash = 0f;
@@ -237,6 +261,7 @@ internal sealed class HopBoard
         DiedThisFrame = false;
         LevelClearedThisFrame = false;
         LevelStartedThisFrame = false;
+        NearMissThisFrame = false;
     }
 
     private void BuildLanes()
@@ -248,7 +273,7 @@ internal sealed class HopBoard
             var count = RoadCountForLevel(lane, Level);
             roadCounts[lane] = count;
             var spacing = Columns / (float)count;
-            var phase = Chance() * Columns;
+            var phase = random.NextFloat() * Columns;
             for (var index = 0; index < count; index++)
             {
                 roadEntities[lane * MaxEntitiesPerLane + index] = new LaneEntity
@@ -260,7 +285,7 @@ internal sealed class HopBoard
 
             streamLaneSpeeds[lane] = StreamSpeeds[lane] * ramp * (lane % 2 == 0 ? -1f : 1f);
             var padSpacing = Columns / (float)PadCounts[lane];
-            var padPhase = Chance() * Columns;
+            var padPhase = random.NextFloat() * Columns;
             for (var index = 0; index < PadCounts[lane]; index++)
             {
                 streamEntities[lane * MaxEntitiesPerLane + index] = new LaneEntity
@@ -339,6 +364,7 @@ internal sealed class HopBoard
                 }
             }
 
+            DetectNearMiss(lane);
             return;
         }
 
@@ -374,6 +400,33 @@ internal sealed class HopBoard
                 pad.X = Wrap(pad.X + streamLaneSpeeds[lane] * deltaSeconds);
             }
         }
+    }
+
+    private void DetectNearMiss(int lane)
+    {
+        var direction = roadLaneSpeeds[lane] >= 0f ? 1f : -1f;
+        for (var index = 0; index < roadCounts[lane]; index++)
+        {
+            var slot = lane * MaxEntitiesPerLane + index;
+            var vehicle = roadEntities[slot];
+            if (!NearMiss(X, vehicle.X, vehicle.Length, direction))
+            {
+                continue;
+            }
+
+            if (slot == nearMissVehicle)
+            {
+                return;
+            }
+
+            nearMissVehicle = slot;
+            NearMissThisFrame = true;
+            NearMissX = Wrap(vehicle.X + vehicle.Length * 0.5f);
+            NearMissDirection = direction;
+            return;
+        }
+
+        nearMissVehicle = -1;
     }
 
     private bool IsSupported(int lane)
@@ -438,7 +491,8 @@ internal sealed class HopBoard
         LastBankedBay = bay;
         BankFlash = BankFlashSeconds;
         BankedBayThisFrame = bay;
-        Score += BankPoints(TimerRemaining);
+        LastBankPoints = BankPoints(TimerRemaining);
+        Score += LastBankPoints;
         if (BankedThisLevel >= BayCount)
         {
             Score += LevelClearBonus;
@@ -482,7 +536,6 @@ internal sealed class HopBoard
         TimerRemaining = LifeTimerSeconds;
         maxRowReached = StartRow;
         HopFlash = 0f;
+        nearMissVehicle = -1;
     }
-
-    private float Chance() => (float)random.NextDouble();
 }
