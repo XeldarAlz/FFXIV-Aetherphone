@@ -8027,7 +8027,6 @@ internal static class L
         public static readonly LocString Moves = new("games.moves", "Moves");
         public static readonly LocString Undo = new("games.undo", "Undo");
         public static readonly LocString NextLevel = new("games.nextLevel", "Next Level");
-        public static readonly LocPlural AttemptsCount = new("games.attemptsCount", "{0} attempt", "{0} attempts");
         public static readonly LocString Nonogram = new("games.nonogram", "Nonogram");
         public static readonly LocString Left = new("games.left", "Left");
         public static readonly LocString Flow = new("games.flow", "Flow");
@@ -8296,6 +8295,7 @@ internal static class L
     internal static class Pairs
     {
         public static readonly LocString Hook = new("games.memory.hook", "Flip two cards at a time and match every pair in as few tries as you can.");
+        public static readonly LocString Streak = new("games.memory.streak", "Best streak");
     }
 
     internal static class GemSwap
