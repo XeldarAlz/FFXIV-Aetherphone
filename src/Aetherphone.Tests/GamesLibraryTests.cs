@@ -279,6 +279,21 @@ public sealed class GamesLibraryTests
     }
 
     [Fact]
+    public void GemSwapReadsTheHigherOfItsClassicAndBlitzRecords()
+    {
+        var games = new IMiniGame[] { new FakeGame("match3", "Gem Swap", GameGenre.Puzzle) };
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "match3", BestScore = 400 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "match3.blitz", BestScore = 1250 });
+        var library = new GamesLibrary(games, new GameStatsStore(configuration));
+        var gemSwap = library.IndexOf("match3");
+
+        Assert.Equal(RecordKind.Score, library.BestKind(gemSwap));
+        Assert.Equal("1250", library.BestValue(gemSwap));
+        Assert.Equal(string.Empty, library.BestTier(gemSwap));
+    }
+
+    [Fact]
     public void GamesWithoutTiersCarryNoTierLabel()
     {
         var configuration = new Configuration();

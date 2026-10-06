@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.GemSwap;
 
 internal sealed class GemSwapBoard
@@ -22,24 +24,24 @@ internal sealed class GemSwapBoard
     private readonly int[] clearedByColor = new int[ColorCount];
     private readonly int[] activatedCells = new int[CellCount];
     private readonly GemSpecial[] activatedKinds = new GemSpecial[CellCount];
-    private readonly Random random;
+    private GameRandom random;
     private int worklistCount;
     private int runCount;
     private int activatedCount;
     private int lastSwapA = -1;
     private int lastSwapB = -1;
 
-    public GemSwapBoard() : this(new Random())
+    public GemSwapBoard() : this(GameRandom.Fresh())
     {
     }
 
-    public GemSwapBoard(int seed) : this(new Random(seed))
+    public GemSwapBoard(int seed) : this(GameRandom.FromSeed((ulong)seed))
     {
     }
 
-    private GemSwapBoard(Random random)
+    private GemSwapBoard(GameRandom seededRandom)
     {
-        this.random = random;
+        random = seededRandom;
     }
 
     public int Score { get; private set; }
@@ -70,6 +72,12 @@ internal sealed class GemSwapBoard
 
             return false;
         }
+    }
+
+    public void Reset(GameRandom seededRandom)
+    {
+        random = seededRandom;
+        Reset();
     }
 
     public void Reset()

@@ -1,77 +1,48 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.GemSwap;
 
-internal sealed class GemSwapBlitzHud
+internal sealed class GemSwapPowerDock
 {
-    public const float DockHeight = 84f;
-    public const float ClockRadius = 23f;
-    public const float LowSeconds = 10f;
-    private const float BarHeight = 11f;
-    private const float BarGap = 12f;
+    public const float BandHeight = 64f;
     private const float ButtonRadius = 20f;
     private const float ButtonGap = 14f;
+    private const float ChargeInset = 6f;
+    private const float ChargeAlpha = 0.14f;
     private const float NearlyFull = 0.8f;
-    private static readonly Vector4 LowRed = new(0.98f, 0.30f, 0.30f, 1f);
+    private const float ChargeFollow = 9f;
+    private const float FlashDecay = 2.2f;
+    private const float ReadyFlashDecay = 1.8f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private readonly float[] readyFlash = new float[GemSwapBlitz.PowerCount];
-    private float barShown;
-    private float barFlash;
-    private float clockPop;
-    private float frostShown;
-    private int lastSecond = -1;
-
-    public float FrostShown => frostShown;
+    private float chargeShown;
+    private float chargeFlash;
 
     public void Reset()
     {
         Array.Clear(readyFlash, 0, readyFlash.Length);
-        barShown = 0f;
-        barFlash = 0f;
-        clockPop = 0f;
-        frostShown = 0f;
-        lastSecond = -1;
+        chargeShown = 0f;
+        chargeFlash = 0f;
     }
 
-    public bool Update(GemSwapBlitz blitz, float deltaSeconds, bool running)
+    public void Update(GemSwapBlitz blitz, float deltaSeconds)
     {
-        var target = blitz.BarFraction;
-        barShown += (target - barShown) * MathF.Min(1f, deltaSeconds * 9f);
-        barFlash = MathF.Max(0f, barFlash - deltaSeconds * 2.2f);
-        clockPop = MathF.Max(0f, clockPop - deltaSeconds * 3.2f);
-        var frostTarget = blitz.Frozen && running ? 1f : 0f;
-        frostShown += (frostTarget - frostShown) * MathF.Min(1f, deltaSeconds * 5f);
+        chargeShown += (blitz.BarFraction - chargeShown) * MathF.Min(1f, deltaSeconds * ChargeFollow);
+        chargeFlash = MathF.Max(0f, chargeFlash - deltaSeconds * FlashDecay);
         for (var power = 0; power < readyFlash.Length; power++)
         {
-            readyFlash[power] = MathF.Max(0f, readyFlash[power] - deltaSeconds * 1.8f);
+            readyFlash[power] = MathF.Max(0f, readyFlash[power] - deltaSeconds * ReadyFlashDecay);
         }
-
-        var second = (int)MathF.Ceiling(blitz.TimeLeft);
-        var ticked = running && second != lastSecond && lastSecond >= 0 && second < lastSecond &&
-            blitz.TimeLeft < LowSeconds && second > 0;
-        lastSecond = second;
-        if (ticked)
-        {
-            clockPop = 1f;
-        }
-
-        return ticked;
     }
 
     public void OnBonus()
     {
-        barShown = 1f;
-        barFlash = 1f;
-    }
-
-    public void OnBonusArrived()
-    {
-        clockPop = 1f;
+        chargeShown = 1f;
+        chargeFlash = 1f;
     }
 
     public void OnReady(int power)
@@ -79,101 +50,50 @@ internal sealed class GemSwapBlitzHud
         readyFlash[power] = 1f;
     }
 
-    public static Rect BarRect(GameGrid grid, float scale)
+    public static Rect Band(in GameGrid grid, float scale)
     {
-        var top = grid.Bounds.Max.Y + grid.Gap + BarGap * scale;
-        return new Rect(new Vector2(grid.Bounds.Min.X, top), new Vector2(grid.Bounds.Max.X, top + BarHeight * scale));
+        var top = grid.Bounds.Max.Y + grid.Gap;
+        return new Rect(new Vector2(grid.Bounds.Min.X, top),
+            new Vector2(grid.Bounds.Max.X, top + BandHeight * scale));
     }
 
-    public static Vector2 ButtonCenter(GameGrid grid, int power, float scale)
+    public static Vector2 ButtonCenter(in GameGrid grid, int power, float scale)
     {
-        var bar = BarRect(grid, scale);
+        var band = Band(grid, scale);
         var pitch = (ButtonRadius * 2f + ButtonGap) * scale;
         var totalWidth = pitch * GemSwapBlitz.PowerCount - ButtonGap * scale;
-        var left = grid.Center.X - totalWidth * 0.5f + ButtonRadius * scale;
-        return new Vector2(left + power * pitch, bar.Max.Y + (BarGap + ButtonRadius) * scale);
+        var left = band.Center.X - totalWidth * 0.5f + ButtonRadius * scale;
+        return new Vector2(left + power * pitch, band.Center.Y);
     }
 
     public static float ButtonSize(float scale) => ButtonRadius * scale;
 
-    public void DrawBar(ImDrawListPtr drawList, Rect bar, Vector4 accent, float scale)
+    public void DrawCharge(ImDrawListPtr drawList, Rect band, Vector4 accent, float scale)
     {
-        var radius = bar.Height * 0.5f;
-        Squircle.Fill(drawList, bar.Min, bar.Max, radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.38f)));
-        var near = barShown >= NearlyFull;
+        var inset = ChargeInset * scale;
+        var min = band.Min + new Vector2(inset, inset);
+        var max = band.Max - new Vector2(inset, inset);
+        var radius = (max.Y - min.Y) * 0.5f;
+        var near = chargeShown >= NearlyFull;
         var pulse = near ? Pulse.Wave(Pulse.Fast) : 0f;
-        if (near)
+        var fillWidth = (max.X - min.X) * Math.Clamp(chargeShown, 0f, 1f);
+        if (fillWidth > radius)
         {
-            var bloom = new Vector2(4f, 4f) * scale * (1f + pulse);
-            Squircle.Fill(drawList, bar.Min - bloom, bar.Max + bloom, radius + bloom.Y,
-                ImGui.GetColorU32(accent with { W = 0.14f + 0.16f * pulse }));
+            var fillMax = new Vector2(min.X + fillWidth, max.Y);
+            Squircle.FillHorizontalGradient(drawList, min, fillMax, radius,
+                ImGui.GetColorU32(accent with { W = ChargeAlpha * 0.5f }),
+                ImGui.GetColorU32(GamePalette.Lighten(accent, 0.3f) with { W = ChargeAlpha + 0.12f * pulse }));
+            ProgressRing.Glow(new Vector2(fillMax.X - radius, band.Center.Y), radius * (1.2f + 0.5f * pulse),
+                GamePalette.Lighten(accent, 0.35f), 0.35f + 0.5f * pulse);
         }
 
-        var fillWidth = bar.Width * Math.Clamp(barShown, 0f, 1f);
-        if (fillWidth > bar.Height * 0.5f)
+        if (chargeFlash > 0f)
         {
-            var fillMax = new Vector2(bar.Min.X + fillWidth, bar.Max.Y);
-            var head = new Vector2(fillMax.X - radius, bar.Center.Y);
-            ProgressRing.Glow(head, bar.Height * (1.4f + 0.6f * pulse), GamePalette.Lighten(accent, 0.35f),
-                0.7f + 0.6f * pulse);
-            Squircle.FillHorizontalGradient(drawList, bar.Min, fillMax, radius,
-                ImGui.GetColorU32(GamePalette.Darken(accent, 0.05f)),
-                ImGui.GetColorU32(GamePalette.Lighten(accent, 0.4f + 0.2f * pulse)));
-            var sweep = Pulse.Phase(1400.0);
-            var sheenX = bar.Min.X + (fillWidth + 30f * scale) * sweep - 15f * scale;
-            drawList.PushClipRect(bar.Min, fillMax, true);
-            drawList.AddQuadFilled(new Vector2(sheenX - 6f * scale, bar.Max.Y), new Vector2(sheenX, bar.Min.Y),
-                new Vector2(sheenX + 8f * scale, bar.Min.Y), new Vector2(sheenX + 2f * scale, bar.Max.Y),
-                ImGui.GetColorU32(White with { W = 0.35f }));
-            drawList.PopClipRect();
-        }
-
-        if (barFlash > 0f)
-        {
-            Squircle.Fill(drawList, bar.Min, bar.Max, radius, ImGui.GetColorU32(White with { W = 0.7f * barFlash }));
-        }
-
-        Squircle.Stroke(drawList, bar.Min, bar.Max, radius,
-            ImGui.GetColorU32(GamePalette.Lighten(accent, 0.3f) with { W = 0.35f + 0.4f * pulse }), 1f * scale);
-    }
-
-    public void DrawClock(ImDrawListPtr drawList, Vector2 center, GemSwapBlitz blitz, PhoneTheme theme,
-        Vector4 accent, float scale)
-    {
-        var low = blitz.TimeLeft < LowSeconds && !blitz.Frozen;
-        var tone = low ? LowRed : accent;
-        tone = Vector4.Lerp(tone, GemSwapRenderer.FrostTint, frostShown);
-        var pop = Easing.EaseOutCubic(clockPop);
-        var radius = ClockRadius * scale * (1f + 0.14f * pop);
-        var corner = new Vector2(radius, radius);
-        var glow = low ? 0.55f + 0.45f * Pulse.Wave(Pulse.Fast) : 0.35f + 0.3f * frostShown;
-        ProgressRing.Glow(center, radius * 1.3f, tone, glow + pop * 0.6f);
-        Material.Frosted(drawList, center - corner, center + corner, radius, scale);
-        if (frostShown > 0.01f)
-        {
-            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(GemSwapRenderer.FrostTint with
-            {
-                W = 0.28f * frostShown,
-            }));
-        }
-
-        var ringRadius = radius - 3.5f * scale;
-        var ringThickness = 3.5f * scale;
-        ProgressRing.Track(drawList, center, ringRadius, ringThickness, White with { W = 0.12f });
-        ProgressRing.Fill(drawList, center, ringRadius, ringThickness,
-            blitz.TimeLeft / GemSwapBlitz.StartSeconds, tone);
-        var seconds = (int)MathF.Ceiling(blitz.TimeLeft);
-        var ink = low ? LowRed : Vector4.Lerp(theme.TextStrong, GemSwapRenderer.FrostTint, frostShown);
-        var textScale = TextStyles.Title3.Scale * (1f + (low ? 0.45f : 0.2f) * pop);
-        Typography.DrawCentered(drawList, center, GameNumber.Label(seconds), ink, textScale, TextStyles.Title3.Weight);
-        if (frostShown > 0.01f)
-        {
-            GemSwapRenderer.DrawCrystal(drawList, new Vector2(center.X, center.Y - radius), 5f * scale * frostShown,
-                ImGui.GetColorU32(White with { W = 0.85f * frostShown }), scale);
+            Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(White with { W = 0.45f * chargeFlash }));
         }
     }
 
-    public int DrawPowers(ImDrawListPtr drawList, GameGrid grid, GemSwapBlitz blitz, float scale, bool interactive)
+    public int DrawPowers(ImDrawListPtr drawList, in GameGrid grid, GemSwapBlitz blitz, float scale, bool interactive)
     {
         var clicked = -1;
         var radius = ButtonRadius * scale;

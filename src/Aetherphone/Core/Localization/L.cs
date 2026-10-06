@@ -7967,10 +7967,6 @@ internal static class L
         public static readonly LocString Pairs = new("games.pairs", "Pairs");
         public static readonly LocString GemSwap = new("games.gemSwap", "Gem Swap");
         public static readonly LocString Blitz = new("games.blitz", "Blitz");
-        public static readonly LocString GemSwapClassicHint =
-            new("games.gemSwapClassicHint", "Swap neighboring gems to line up three or more");
-        public static readonly LocString GemSwapBlitzHint =
-            new("games.gemSwapBlitzHint", "60 seconds on the clock. Matches fill the bar for extra time");
         public static readonly LocString GemSwapTimeUp = new("games.gemSwapTimeUp", "Time!");
         public static readonly LocString GemSwapBonusTime = new("games.gemSwapBonusTime", "+{0}s");
         public static readonly LocString GemSwapFire = new("games.gemSwapFire", "Fire");
@@ -8291,6 +8287,7 @@ internal static class L
     internal static class GemSwap
     {
         public static readonly LocString Hook = new("games.match3.hook", "Swap neighboring gems to line up three or more and keep the cascades coming.");
+        public static readonly LocString Bonuses = new("games.match3.bonuses", "Time bonuses");
     }
 
     internal static class Tetris
@@ -8302,6 +8299,7 @@ internal static class L
     {
         public static readonly LocString Title = new("games.2048.title", "2048");
         public static readonly LocString Hook = new("games.2048.hook", "Slide the tiles to merge matching numbers and build your way up to 2048.");
+        public static readonly LocString BestTile = new("games.2048.bestTile", "Best tile");
     }
 
     internal static class WaterSort

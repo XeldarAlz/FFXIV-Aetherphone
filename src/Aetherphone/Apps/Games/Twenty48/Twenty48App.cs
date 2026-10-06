@@ -1,23 +1,41 @@
-using Aetherphone.Core.Animation;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Twenty48;
 
-internal sealed class Twenty48App : ILegacyMiniGame
+internal sealed class Twenty48App : IMiniGame
 {
     private const string GameId = "2048";
+    private const string SwipeSurfaceId = "2048.swipe";
     private const float SlideDuration = 0.10f;
     private const float ResolveDuration = 0.16f;
-    private const float MilestoneFloor = 256f;
+    private const int MilestoneFloor = 256;
+    private const int PunchFloor = 512;
+    private const float SwipeThreshold = 18f;
+    private const float CapsulePadX = 10f;
+    private const float CapsuleIconSize = 11f;
+    private const float CapsuleIconGap = 5f;
+    private const float CapsuleSectionGap = 8f;
+    private const float ChipPadX = 6f;
+    private const float ChipMinWidth = 24f;
+    private const float ChipInsetY = 5f;
+    private const int MaxRank = 16;
+    private static readonly GameSpec StageSpec = new(GameId, L.Twenty48.Title, GameGenre.Puzzle, L.Twenty48.Hook,
+        Backdrop.Paper, HudStyle.Standard, ScoreKind.Score, keyboard: true);
+    private static readonly string?[] MilestoneLabels = new string?[MaxRank + 1];
+    private static readonly Dictionary<int, string> GainLabels = new();
+    private static readonly Vector4 Spark = new(1f, 0.95f, 0.7f, 1f);
+    private static readonly TextStyle CapsuleStyle = TextStyles.FootnoteEmphasized;
 
-    private enum Phase
+    private enum Phase : byte
     {
         Idle,
         Sliding,
@@ -25,158 +43,142 @@ internal sealed class Twenty48App : ILegacyMiniGame
     }
 
     private readonly Twenty48Board board = new();
-    private readonly Twenty48Renderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private RollingValue scoreRoll;
-    private float entrance;
-    private int previousScore;
+    private readonly Ribbon[] trails = new Ribbon[Twenty48Board.CellCount];
     private Phase phase;
     private float slideTimer;
     private float resolveTimer;
+    private float entrance;
+    private int previousScore;
+    private ulong idleSeed;
+    private bool idleSynced;
     private bool finished;
-    private bool finishedAsWin;
-    private float resultAppear;
-    private bool newBest;
-    private bool pendingSubmit;
-    private int loadedBest;
-    private int displayBest;
+    private bool winCelebrated;
     private bool swipeActive;
+    private bool swipeConsumed;
     private Vector2 swipeStart;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => "2048";
-    public GameGenre Genre => GameGenre.Puzzle;
-    public void Open()
+
+    public Twenty48App()
     {
-        loadedBest = 0;
-        StartNewGame();
+        for (var index = 0; index < trails.Length; index++)
+        {
+            trails[index] = new Ribbon();
+        }
+    }
+
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
+    {
+        board.Reset(start.Random);
+        idleSeed = start.Seed;
+        idleSynced = true;
+        particles.Clear();
+        fx.Clear();
+        ClearTrails();
+        phase = Phase.Idle;
+        slideTimer = 0f;
+        resolveTimer = 0f;
+        entrance = 0f;
+        previousScore = 0;
+        finished = false;
+        winCelebrated = false;
+        swipeActive = false;
+        swipeConsumed = false;
     }
 
     public void Close()
     {
+        particles.Clear();
+        fx.Clear();
+        ClearTrails();
+        idleSynced = false;
     }
 
     public void Dispose()
     {
     }
 
-    private void StartNewGame()
+    public void DrawIdle(in GameContext context)
     {
-        board.Reset();
-        particles.Clear();
-        fx.Clear();
-        scoreRoll.Snap(0);
-        entrance = 0f;
-        previousScore = 0;
-        phase = Phase.Idle;
-        slideTimer = 0f;
-        resolveTimer = 0f;
-        finished = false;
-        finishedAsWin = false;
-        resultAppear = 0f;
-        newBest = false;
-        pendingSubmit = false;
-        displayBest = loadedBest;
+        SyncIdle(context.Session.Seed);
+        var grid = GameGrid.Centered(context.Safe, Twenty48Board.Size, Twenty48Board.Size,
+            Twenty48Renderer.GapFraction);
+        Twenty48Renderer.DrawBoard(ImGui.GetWindowDrawList(), board, grid, TileAnim.Still, null, 0f, UiScale.Current,
+            Accent, 1f, context.Backdrop.Ink);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (loadedBest == 0)
-        {
-            loadedBest = context.Stats.Get(GameId).BestScore;
-            displayBest = loadedBest;
-        }
-
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        if (pendingSubmit)
-        {
-            context.Stats.SubmitScore(GameId, board.Score);
-            if (board.Score > loadedBest)
-            {
-                loadedBest = board.Score;
-            }
-
-            pendingSubmit = false;
-        }
-
-        entrance = GameJuice.Advance(entrance, deltaSeconds);
-        var rowY = body.Min.Y + 32f * scale;
-        var shake = fx.ShakeOffset(scale);
-        var gridArea = new Rect(new Vector2(body.Min.X + shake.X, body.Min.Y + 70f * scale + shake.Y),
-            new Vector2(body.Max.X + shake.X, body.Max.Y - 8f * scale + shake.Y));
-        var grid = GameGrid.Centered(gridArea, Twenty48Board.Size, Twenty48Board.Size, 0.06f);
-        AdvanceAnimation(fx.ScaleDelta(deltaSeconds), grid);
-        if (!finished && phase == Phase.Idle)
-        {
-            HandleSwipe(grid);
-        }
-
-        if (board.Score > displayBest)
-        {
-            displayBest = board.Score;
-        }
-
         var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
-        var beatingBest = board.Score > 0 && board.Score > loadedBest;
-        GameHud.ScorePill(new Vector2(body.Center.X - 68f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
-            board.Score, Accent, theme, deltaSeconds, beatingBest);
-        GameHud.Pill(new Vector2(body.Center.X + 20f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest),
-            Accent, theme, displayBest > loadedBest);
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
-        {
-            StartNewGame();
-            return;
-        }
-
+        var simDelta = fx.ScaleDelta(context.DeltaSeconds);
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds);
+        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var grid = GameGrid.Centered(area, Twenty48Board.Size, Twenty48Board.Size, Twenty48Renderer.GapFraction);
+        AdvanceAnimation(simDelta, grid, scale, context);
+        HandleInput(grid, scale, context);
         var anim = BuildAnim();
-        renderer.Draw(board, grid, anim, scale, Accent, entrance);
+        PushTrails(grid, anim);
+        Twenty48Renderer.DrawBoard(drawList, board, grid, anim, trails, TrailFade(), scale, Accent, entrance,
+            context.Backdrop.Ink);
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
         fx.DrawText();
-        if (finished)
+        DrawCapsule(drawList, context, scale);
+        context.Hud.Score(board.Score);
+        context.Hud.Best(context.Session.Best);
+        context.Session.Report(board.Score);
+    }
+
+    private void SyncIdle(ulong seed)
+    {
+        if (idleSynced && idleSeed == seed)
         {
-            DrawResult(context, theme, body);
+            return;
+        }
+
+        board.Reset(GameRandom.FromSeed(seed));
+        idleSeed = seed;
+        idleSynced = true;
+    }
+
+    private void AdvanceAnimation(float deltaSeconds, in GameGrid grid, float scale, in GameContext context)
+    {
+        switch (phase)
+        {
+            case Phase.Sliding:
+                slideTimer += deltaSeconds;
+                if (slideTimer >= SlideDuration)
+                {
+                    phase = Phase.Resolving;
+                    resolveTimer = 0f;
+                    OnSlideResolved(grid, scale, context);
+                }
+
+                return;
+            case Phase.Resolving:
+                resolveTimer += deltaSeconds;
+                if (resolveTimer >= ResolveDuration)
+                {
+                    phase = Phase.Idle;
+                    ClearTrails();
+                    CheckEndState(context);
+                }
+
+                return;
+            default:
+                return;
         }
     }
 
-    private void AdvanceAnimation(float deltaSeconds, GameGrid grid)
+    private void OnSlideResolved(in GameGrid grid, float scale, in GameContext context)
     {
-        if (phase == Phase.Sliding)
-        {
-            slideTimer += deltaSeconds;
-            if (slideTimer >= SlideDuration)
-            {
-                phase = Phase.Resolving;
-                resolveTimer = 0f;
-                OnSlideResolved(grid);
-            }
-        }
-        else if (phase == Phase.Resolving)
-        {
-            resolveTimer += deltaSeconds;
-            if (resolveTimer >= ResolveDuration)
-            {
-                phase = Phase.Idle;
-                CheckEndState();
-            }
-        }
-
-        if (finished)
-        {
-            resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        }
-    }
-
-    private void OnSlideResolved(GameGrid grid)
-    {
-        var scale = UiScale.Current;
         for (var index = 0; index < Twenty48Board.CellCount; index++)
         {
             if (!board.Merged(index))
@@ -194,106 +196,238 @@ internal sealed class Twenty48App : ILegacyMiniGame
         if (scoreDelta > 0)
         {
             UiFeedback.Play(UiSound.GameMatch);
-            fx.AddText($"+{GameNumber.Label(scoreDelta)}",
-                new Vector2(grid.Center.X, grid.Bounds.Min.Y - 16f * scale), Accent, 1.15f);
+            fx.AddText(GainLabel(scoreDelta), new Vector2(grid.Center.X, grid.Bounds.Min.Y - 16f * scale), Accent,
+                1.15f);
         }
 
         previousScore = board.Score;
-        if (board.LastMergeMax >= MilestoneFloor)
+        var mergeMax = board.LastMergeMax;
+        if (mergeMax >= MilestoneFloor)
         {
             fx.HitStop(0.05f);
-            CelebrateMilestone(grid, board.LastMergeMax);
+            CelebrateMilestone(grid, mergeMax, scale);
         }
+
+        if (mergeMax >= PunchFloor)
+        {
+            context.Fx.Punch(0.04f);
+        }
+
+        if (mergeMax < Twenty48Board.WinValue || winCelebrated)
+        {
+            return;
+        }
+
+        winCelebrated = true;
+        UiFeedback.Play(UiSound.GameClear);
+        context.Fx.Sweep();
+        context.Fx.Flash(Twenty48Renderer.ColorFor(mergeMax), 0.22f);
+        context.Fx.Punch(0.06f);
     }
 
-    private void CelebrateMilestone(GameGrid grid, int value)
+    private void CelebrateMilestone(in GameGrid grid, int value, float scale)
     {
         UiFeedback.Play(UiSound.GamePowerUp);
         var color = Twenty48Renderer.ColorFor(value);
         var center = grid.Center;
-        fx.AddTrauma(value >= Twenty48Board.WinValue ? 0.7f : 0.4f);
-        fx.AddText(GameNumber.Label(value) + "!", center, color, 1.6f);
+        var win = value >= Twenty48Board.WinValue;
+        fx.AddTrauma(win ? 0.7f : 0.4f);
+        fx.AddText(MilestoneLabel(value), center, color, 1.6f);
         fx.Shockwave(center, grid.Pitch * 1.6f, GamePalette.Lighten(color, 0.3f), 0.6f, 3.4f);
-        particles.Burst(center, value >= Twenty48Board.WinValue ? 60 : 34, color, 320f * UiScale.Current, 4f,
-            0.9f, 360f);
-        particles.Sparkle(center, 16, new Vector4(1f, 0.95f, 0.7f, 1f), 220f * UiScale.Current, 2.8f, 0.9f);
+        particles.Burst(center, win ? 60 : 34, color, 320f * scale, 4f, 0.9f, 360f);
+        particles.Sparkle(center, 16, Spark, 220f * scale, 2.8f, 0.9f);
     }
 
-    private void CheckEndState()
+    private void CheckEndState(in GameContext context)
     {
-        if (board.Won && !finished)
+        if (finished || board.CanMove())
         {
-            Finish(true);
             return;
         }
 
-        if (!board.CanMove())
-        {
-            Finish(false);
-        }
-    }
-
-    private void Finish(bool asWin)
-    {
         finished = true;
-        finishedAsWin = asWin;
-        resultAppear = 0f;
-        newBest = board.Score > loadedBest;
-        pendingSubmit = true;
+        UiFeedback.Play(UiSound.GameWrong);
+        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+            .WithStat(L.Twenty48.BestTile, GameNumber.Label(board.MaxTile))
+            .WithStat(L.Games.Moves, GameNumber.Label(board.Moves)));
     }
 
-    private void HandleSwipe(GameGrid grid)
+    private void HandleInput(in GameGrid grid, float scale, in GameContext context)
+    {
+        var accepting = !finished && phase == Phase.Idle && context.Session.State == StageFlow.Playing;
+        if (accepting && HandleKeys(grid, scale))
+        {
+            return;
+        }
+
+        HandleSwipe(grid, accepting);
+    }
+
+    private bool HandleKeys(in GameGrid grid, float scale)
+    {
+        if (GameInput.Pressed(ImGuiKey.W, ImGuiKey.UpArrow))
+        {
+            Move(SwipeDirection.Up, grid);
+            return true;
+        }
+
+        if (GameInput.Pressed(ImGuiKey.S, ImGuiKey.DownArrow))
+        {
+            Move(SwipeDirection.Down, grid);
+            return true;
+        }
+
+        if (GameInput.Pressed(ImGuiKey.A, ImGuiKey.LeftArrow))
+        {
+            Move(SwipeDirection.Left, grid);
+            return true;
+        }
+
+        if (GameInput.Pressed(ImGuiKey.D, ImGuiKey.RightArrow))
+        {
+            Move(SwipeDirection.Right, grid);
+            return true;
+        }
+
+        if (GameInput.Pressed(ImGuiKey.Z) || GameInput.Pressed(ImGuiKey.Backspace))
+        {
+            TryUndo(grid, scale);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void HandleSwipe(in GameGrid grid, bool accepting)
     {
         var bounds = grid.Bounds;
-        var mouse = ImGui.GetMousePos();
-        if (ImGui.IsMouseDown(ImGuiMouseButton.Left) && UiInteract.Hover(bounds.Min, bounds.Max) && !swipeActive)
+        var cursor = ImGui.GetCursorScreenPos();
+        ImGui.SetCursorScreenPos(bounds.Min);
+        ImGui.InvisibleButton(SwipeSurfaceId, bounds.Size);
+        var hovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem) &&
+                      UiInteract.Hover(bounds.Min, bounds.Max);
+        var activated = hovered && ImGui.IsItemActivated();
+        if (hovered)
         {
-            swipeActive = true;
-            swipeStart = mouse;
+            UiInteract.ReportGestureSurface();
         }
 
+        ImGui.SetCursorScreenPos(cursor);
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
-            if (swipeActive && ImGui.IsMouseReleased(ImGuiMouseButton.Left))
+            swipeActive = false;
+            swipeConsumed = false;
+            return;
+        }
+
+        var mouse = ImGui.GetMousePos();
+        if (!swipeActive)
+        {
+            if (!activated)
             {
-                ResolveSwipe(mouse);
+                return;
             }
 
-            swipeActive = false;
+            swipeActive = true;
+            swipeConsumed = false;
+            swipeStart = mouse;
+            return;
         }
-    }
 
-    private void ResolveSwipe(Vector2 mouse)
-    {
+        if (swipeConsumed || !accepting)
+        {
+            return;
+        }
+
         var delta = mouse - swipeStart;
-        var threshold = 18f * UiScale.Current;
+        var threshold = SwipeThreshold * UiScale.Current;
         if (MathF.Abs(delta.X) < threshold && MathF.Abs(delta.Y) < threshold)
         {
             return;
         }
 
+        swipeConsumed = true;
         if (MathF.Abs(delta.X) > MathF.Abs(delta.Y))
         {
-            Move(delta.X > 0f ? SwipeDirection.Right : SwipeDirection.Left);
+            Move(delta.X > 0f ? SwipeDirection.Right : SwipeDirection.Left, grid);
         }
         else
         {
-            Move(delta.Y > 0f ? SwipeDirection.Down : SwipeDirection.Up);
+            Move(delta.Y > 0f ? SwipeDirection.Down : SwipeDirection.Up, grid);
         }
     }
 
-    private void Move(SwipeDirection direction)
+    private void Move(SwipeDirection direction, in GameGrid grid)
     {
-        if (board.TryMove(direction))
+        if (!board.TryMove(direction))
         {
-            phase = Phase.Sliding;
-            slideTimer = 0f;
             return;
         }
 
-        if (!board.CanMove())
+        ClearTrails();
+        for (var index = 0; index < Twenty48Board.CellCount; index++)
         {
-            Finish(false);
+            var source = board.SlideFrom(index);
+            if (source < 0)
+            {
+                continue;
+            }
+
+            trails[index].Push(grid.CellCenter(source % Twenty48Board.Size, source / Twenty48Board.Size));
+        }
+
+        phase = Phase.Sliding;
+        slideTimer = 0f;
+    }
+
+    private void TryUndo(in GameGrid grid, float scale)
+    {
+        if (!board.Undo())
+        {
+            return;
+        }
+
+        UiFeedback.Play(UiSound.GamePop);
+        previousScore = board.Score;
+        ClearTrails();
+        fx.AddTrauma(0.05f);
+        fx.Shockwave(grid.Center, grid.Width * 0.5f, GamePalette.Lighten(Accent, 0.3f) with { W = 0.6f }, 0.4f,
+            2f * scale);
+    }
+
+    private void PushTrails(in GameGrid grid, in TileAnim anim)
+    {
+        if (phase != Phase.Sliding)
+        {
+            return;
+        }
+
+        for (var index = 0; index < Twenty48Board.CellCount; index++)
+        {
+            if (board.SlideFrom(index) < 0)
+            {
+                continue;
+            }
+
+            trails[index].Push(Twenty48Renderer.TileCenter(grid, board, anim, index));
+        }
+    }
+
+    private float TrailFade()
+    {
+        return phase switch
+        {
+            Phase.Sliding => 1f,
+            Phase.Resolving => 1f - MathF.Min(1f, resolveTimer / ResolveDuration),
+            _ => 0f,
+        };
+    }
+
+    private void ClearTrails()
+    {
+        for (var index = 0; index < trails.Length; index++)
+        {
+            trails[index].Clear();
         }
     }
 
@@ -310,20 +444,84 @@ internal sealed class Twenty48App : ILegacyMiniGame
             return new TileAnim(1f, false, resolve, board.SpawnIndex, resolve);
         }
 
-        return new TileAnim(1f, false, 1f, board.SpawnIndex, 1f);
+        return TileAnim.Still;
     }
 
-    private void DrawResult(in GameContext context, PhoneTheme theme, Rect body)
+    private void DrawCapsule(ImDrawListPtr drawList, in GameContext context, float scale)
     {
-        var title = finishedAsWin ? Loc.T(L.Games.YouWin) : Loc.T(L.Games.GameOver);
-        var titleColor = finishedAsWin ? Accent : theme.TextStrong;
-        var bestValue = board.Score > displayBest ? board.Score : displayBest;
-        var secondary = $"{Loc.T(L.Games.Best)} {GameNumber.Label(bestValue)}";
-        var result = new GameResult(title, titleColor, Loc.T(L.Games.Score), GameNumber.Label(board.Score), secondary,
-            newBest);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
+        var theme = context.Theme;
+        var undoLabel = Loc.T(L.Games.Undo);
+        var tileLabel = GameNumber.Label(board.MaxTile);
+        var undoWidth = Typography.Measure(undoLabel, CapsuleStyle).X / scale;
+        var chipWidth = MathF.Max(ChipMinWidth, Typography.Measure(tileLabel, CapsuleStyle).X / scale + ChipPadX * 2f);
+        var width = CapsulePadX * 2f + CapsuleIconSize + CapsuleIconGap + undoWidth + CapsuleSectionGap + chipWidth;
+        context.Hud.Custom(width);
+        var rect = context.Hud.CustomRect;
+        if (rect.Width <= 0f)
         {
-            StartNewGame();
+            return;
         }
+
+        StageHud.Capsule(drawList, rect, scale);
+        var canUndo = board.CanUndo && !finished && phase == Phase.Idle &&
+                      context.Session.State == StageFlow.Playing;
+        var dim = theme.TextMuted with { W = 0.45f };
+        var ink = canUndo ? theme.TextStrong : dim;
+        var iconSize = CapsuleIconSize * scale;
+        var centerY = rect.Center.Y;
+        var left = rect.Min.X + CapsulePadX * scale;
+        ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), FontAwesomeIcon.Undo,
+            canUndo ? Accent : dim, iconSize);
+        left += iconSize + CapsuleIconGap * scale;
+        Typography.Draw(drawList, new Vector2(left, centerY - Typography.LineHeight(CapsuleStyle) * 0.5f), undoLabel,
+            ink, CapsuleStyle);
+        left += undoWidth * scale;
+        var undoMax = new Vector2(left, rect.Max.Y);
+        left += CapsuleSectionGap * scale;
+        var chipMin = new Vector2(left, rect.Min.Y + ChipInsetY * scale);
+        var chipMax = new Vector2(left + chipWidth * scale, rect.Max.Y - ChipInsetY * scale);
+        var color = Twenty48Renderer.ColorFor(board.MaxTile);
+        Squircle.Fill(drawList, chipMin, chipMax, (chipMax.Y - chipMin.Y) * 0.3f, ImGui.GetColorU32(color));
+        Typography.DrawCentered(drawList, (chipMin + chipMax) * 0.5f, tileLabel, GamePalette.InkOn(color),
+            CapsuleStyle);
+        if (!canUndo || !UiInteract.HoverClick(rect.Min, undoMax))
+        {
+            return;
+        }
+
+        var grid = GameGrid.Centered(context.Safe, Twenty48Board.Size, Twenty48Board.Size,
+            Twenty48Renderer.GapFraction);
+        TryUndo(grid, scale);
+    }
+
+    private static string GainLabel(int points)
+    {
+        if (GainLabels.TryGetValue(points, out var label))
+        {
+            return label;
+        }
+
+        label = string.Concat("+", GameNumber.Label(points));
+        GainLabels[points] = label;
+        return label;
+    }
+
+    private static string MilestoneLabel(int value)
+    {
+        var rank = 0;
+        var scan = value;
+        while (scan > 1 && rank < MaxRank)
+        {
+            scan >>= 1;
+            rank++;
+        }
+
+        return MilestoneLabels[rank] ??= string.Concat(GameNumber.Label(value), "!");
+    }
+
+    private static Rect Grow(Rect rect, float factor)
+    {
+        var half = rect.Size * 0.5f * factor;
+        return new Rect(rect.Center - half, rect.Center + half);
     }
 }

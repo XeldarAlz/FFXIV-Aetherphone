@@ -22,10 +22,20 @@ internal readonly struct TileAnim
         SpawnIndex = spawnIndex;
         Spawn = spawn;
     }
+
+    public static TileAnim Still => new(1f, false, 1f, -1, 1f);
 }
 
-internal sealed class Twenty48Renderer
+internal static class Twenty48Renderer
 {
+    public const float GapFraction = 0.08f;
+    private const float Rounding = 8f;
+    private const float TrailWidthFraction = 0.55f;
+    private const float TrailAlpha = 0.5f;
+    private const float MergePulse = 0.16f;
+    private const float SheenAlpha = 0.08f;
+    private static readonly Vector4 PaperCell = new(0.86f, 0.83f, 0.78f, 1f);
+    private static readonly Vector4 Sheen = new(1f, 1f, 1f, SheenAlpha);
     private static readonly Vector4[] TileColors =
     {
         new(0.93f, 0.89f, 0.85f, 1f), new(0.93f, 0.87f, 0.78f, 1f), new(0.95f, 0.69f, 0.47f, 1f),
@@ -52,30 +62,42 @@ internal sealed class Twenty48Renderer
         return TileColors[rank];
     }
 
-    public void Draw(Twenty48Board board, GameGrid grid, in TileAnim anim, float scale, Vector4 accent, float entrance)
+    public static Vector2 TileCenter(in GameGrid grid, Twenty48Board board, in TileAnim anim, int index)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var rounding = 7f * scale;
-        var boardPad = grid.Gap;
-        var boardMin = grid.Origin - new Vector2(boardPad, boardPad);
-        var boardMax = grid.Origin + new Vector2(grid.Width, grid.Height) + new Vector2(boardPad, boardPad);
-        GameScene.Arena(drawList, new Rect(boardMin, boardMax), rounding + boardPad, scale, accent);
-        for (var row = 0; row < Twenty48Board.Size; row++)
+        var center = grid.CellCenter(index % Twenty48Board.Size, index / Twenty48Board.Size);
+        var source = board.SlideFrom(index);
+        if (!anim.Sliding || source < 0)
         {
-            for (var column = 0; column < Twenty48Board.Size; column++)
-            {
-                var index = row * Twenty48Board.Size + column;
-                var pop = GameJuice.PopIn(GameJuice.Stagger(entrance, index, Twenty48Board.CellCount));
-                if (pop <= 0f)
-                {
-                    continue;
-                }
+            return center;
+        }
 
-                var cell = grid.Cell(column, row);
-                var half = cell.Size * 0.5f * pop;
-                Squircle.Fill(drawList, cell.Center - half, cell.Center + half, rounding * pop,
-                    ImGui.GetColorU32(GamePalette.CellSunken));
+        var from = grid.CellCenter(source % Twenty48Board.Size, source / Twenty48Board.Size);
+        return Vector2.Lerp(from, center, Easing.EaseOutCubic(anim.Slide));
+    }
+
+    public static void DrawBoard(ImDrawListPtr drawList, Twenty48Board board, in GameGrid grid, in TileAnim anim,
+        Ribbon[]? trails, float trailFade, float scale, Vector4 accent, float entrance, StageInk ink)
+    {
+        BoardPlate.Draw(drawList, BoardPlate.Around(grid.Bounds, scale), BoardPlate.Radius * scale, scale, accent, ink);
+        var rounding = Rounding * scale;
+        var cellFill = ink == StageInk.Dark ? PaperCell : GamePalette.CellSunken;
+        for (var index = 0; index < Twenty48Board.CellCount; index++)
+        {
+            var pop = GameJuice.PopIn(GameJuice.Stagger(entrance, index, Twenty48Board.CellCount));
+            if (pop <= 0.01f)
+            {
+                continue;
             }
+
+            var cell = grid.Cell(index % Twenty48Board.Size, index / Twenty48Board.Size);
+            var half = cell.Size * 0.5f * pop;
+            StageCell.Draw(drawList, new Rect(cell.Center - half, cell.Center + half), cellFill, CellDepth.Sunken,
+                rounding * pop, scale);
+        }
+
+        if (trails is not null && trailFade > 0.01f)
+        {
+            DrawTrails(drawList, board, grid, trails, trailFade);
         }
 
         for (var index = 0; index < Twenty48Board.CellCount; index++)
@@ -90,25 +112,32 @@ internal sealed class Twenty48Renderer
         }
     }
 
-    private void DrawTile(ImDrawListPtr drawList, Twenty48Board board, GameGrid grid, in TileAnim anim, int index,
-        int value, float rounding, float scale, float entrance)
+    private static void DrawTrails(ImDrawListPtr drawList, Twenty48Board board, in GameGrid grid, Ribbon[] trails,
+        float trailFade)
     {
-        var column = index % Twenty48Board.Size;
-        var row = index / Twenty48Board.Size;
-        var center = grid.CellCenter(column, row);
-        var source = board.SlideFrom(index);
-        if (anim.Sliding && source >= 0)
+        var width = (grid.Pitch - grid.Gap) * TrailWidthFraction;
+        for (var index = 0; index < Twenty48Board.CellCount; index++)
         {
-            var fromCenter = grid.CellCenter(source % Twenty48Board.Size, source / Twenty48Board.Size);
-            center = Vector2.Lerp(fromCenter, center, Easing.EaseOutCubic(anim.Slide));
-        }
+            if (board.SlideFrom(index) < 0 || trails[index].Count < 2)
+            {
+                continue;
+            }
 
+            var color = ColorFor(board.Value(index)) with { W = TrailAlpha * trailFade };
+            trails[index].Draw(drawList, color, width, additive: true);
+        }
+    }
+
+    private static void DrawTile(ImDrawListPtr drawList, Twenty48Board board, in GameGrid grid, in TileAnim anim,
+        int index, int value, float rounding, float scale, float entrance)
+    {
         var tileScale = GameJuice.PopIn(GameJuice.Stagger(entrance, index, Twenty48Board.CellCount));
         if (tileScale <= 0.01f)
         {
             return;
         }
 
+        var center = TileCenter(grid, board, anim, index);
         var merging = board.Merged(index) && !anim.Sliding && anim.Resolve < 1f;
         if (index == anim.SpawnIndex)
         {
@@ -125,30 +154,24 @@ internal sealed class Twenty48Renderer
         }
         else if (merging)
         {
-            tileScale *= 1f + 0.16f * MathF.Sin(anim.Resolve * MathF.PI);
+            tileScale *= 1f + MergePulse * MathF.Sin(anim.Resolve * MathF.PI);
         }
 
-        var halfPitch = (grid.Pitch - grid.Gap) * 0.5f * tileScale;
-        var min = new Vector2(center.X - halfPitch, center.Y - halfPitch);
-        var max = new Vector2(center.X + halfPitch, center.Y + halfPitch);
+        var half = (grid.Pitch - grid.Gap) * 0.5f * tileScale;
+        var rect = new Rect(new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half));
         var color = ColorFor(value);
         if (merging)
         {
-            ProgressRing.Glow(center, halfPitch * 1.15f, GamePalette.Lighten(color, 0.3f),
+            ProgressRing.Glow(center, half * 1.15f, GamePalette.Lighten(color, 0.3f),
                 0.8f * MathF.Sin(anim.Resolve * MathF.PI));
         }
 
-        drawList.AddRectFilled(min + new Vector2(0f, 2f * scale), max + new Vector2(0f, 2f * scale),
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)), rounding);
-        Squircle.FillVerticalGradient(drawList, min, max, rounding,
-            ImGui.GetColorU32(GamePalette.Lighten(color, 0.10f)), ImGui.GetColorU32(GamePalette.Darken(color, 0.10f)));
-        Squircle.Fill(drawList, min, new Vector2(max.X, min.Y + halfPitch * 0.7f), rounding,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)));
-        Squircle.Stroke(drawList, min, max, rounding,
-            ImGui.GetColorU32(GamePalette.Lighten(color, 0.35f) with { W = 0.4f }), 1f * scale);
-        var label = GameNumber.Label(value);
-        var textScale = value >= 1000 ? 1.05f :
-            value >= 100 ? 1.3f : 1.55f;
-        Typography.DrawCentered(center, label, GamePalette.InkOn(color), textScale * tileScale, FontWeight.Bold);
+        var tileRounding = rounding * tileScale;
+        StageCell.Draw(drawList, rect, color, CellDepth.Raised, tileRounding, scale);
+        Squircle.Fill(drawList, rect.Min, new Vector2(rect.Max.X, rect.Min.Y + half * 0.7f), tileRounding,
+            ImGui.GetColorU32(Sheen));
+        var textScale = value >= 1000 ? 1.05f : value >= 100 ? 1.3f : 1.55f;
+        Typography.DrawCentered(drawList, center, GameNumber.Label(value), GamePalette.InkOn(color),
+            textScale * tileScale, FontWeight.Bold);
     }
 }

@@ -1,6 +1,8 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.Twenty48;
 
-internal enum SwipeDirection
+internal enum SwipeDirection : byte
 {
     Up,
     Right,
@@ -13,33 +15,66 @@ internal sealed class Twenty48Board
     public const int Size = 4;
     public const int CellCount = Size * Size;
     public const int WinValue = 2048;
-    private readonly int[] values = new int[CellCount];
-    private readonly int[] previous = new int[CellCount];
+    public const int UndoCharges = 1;
+    private const int FourChanceOneIn = 10;
     private readonly int[] slideFrom = new int[CellCount];
     private readonly bool[] merged = new bool[CellCount];
     private readonly bool[] slotLocked = new bool[Size];
     private readonly int[] slotValue = new int[Size];
-    private readonly Random random = new();
+    private int[] values = new int[CellCount];
+    private int[] previous = new int[CellCount];
+    private int[] undoValues = new int[CellCount];
+    private GameRandom random = GameRandom.Fresh();
+    private GameRandom undoRandom;
+    private int undoScore;
+    private int undoMoves;
+    private int undoMaxTile;
+    private bool undoReady;
+
     public int Score { get; private set; }
-    public bool Won { get; private set; }
+
+    public int Moves { get; private set; }
+
+    public int MaxTile { get; private set; }
+
+    public int UndoLeft { get; private set; } = UndoCharges;
+
     public int SpawnIndex { get; private set; } = -1;
+
     public int LastMergeMax { get; private set; }
+
+    public bool CanUndo => undoReady && UndoLeft > 0;
+
     public int Value(int index) => values[index];
+
     public int SlideFrom(int index) => slideFrom[index];
+
     public bool Merged(int index) => merged[index];
 
-    public void Reset()
+    public void Reset(GameRandom seededRandom)
     {
+        random = seededRandom;
         Array.Clear(values, 0, CellCount);
         ClearTransients();
         Score = 0;
-        Won = false;
-        SpawnIndex = -1;
+        Moves = 0;
+        MaxTile = 0;
         LastMergeMax = 0;
+        UndoLeft = UndoCharges;
+        undoReady = false;
         SpawnRandom();
         SpawnRandom();
         ClearTransients();
         SpawnIndex = -1;
+    }
+
+    public void SetCell(int index, int value)
+    {
+        values[index] = value;
+        if (value > MaxTile)
+        {
+            MaxTile = value;
+        }
     }
 
     public bool CanMove()
@@ -74,6 +109,9 @@ internal sealed class Twenty48Board
 
     public bool TryMove(SwipeDirection direction)
     {
+        var randomBefore = random;
+        var scoreBefore = Score;
+        var maxTileBefore = MaxTile;
         Array.Copy(values, previous, CellCount);
         Array.Clear(values, 0, CellCount);
         ClearTransients();
@@ -93,16 +131,41 @@ internal sealed class Twenty48Board
             }
         }
 
-        if (moved)
-        {
-            SpawnRandom();
-        }
-        else
+        if (!moved)
         {
             SpawnIndex = -1;
+            return false;
         }
 
-        return moved;
+        (undoValues, previous) = (previous, undoValues);
+        undoRandom = randomBefore;
+        undoScore = scoreBefore;
+        undoMoves = Moves;
+        undoMaxTile = maxTileBefore;
+        undoReady = true;
+        Moves++;
+        SpawnRandom();
+        return true;
+    }
+
+    public bool Undo()
+    {
+        if (!CanUndo)
+        {
+            return false;
+        }
+
+        UndoLeft--;
+        undoReady = false;
+        (values, undoValues) = (undoValues, values);
+        random = undoRandom;
+        Score = undoScore;
+        Moves = undoMoves;
+        MaxTile = undoMaxTile;
+        LastMergeMax = 0;
+        ClearTransients();
+        SpawnIndex = -1;
+        return true;
     }
 
     private void CollapseLine(SwipeDirection direction, int line)
@@ -138,9 +201,9 @@ internal sealed class Twenty48Board
                     LastMergeMax = combined;
                 }
 
-                if (combined >= WinValue)
+                if (combined > MaxTile)
                 {
-                    Won = true;
+                    MaxTile = combined;
                 }
             }
             else
@@ -206,7 +269,13 @@ internal sealed class Twenty48Board
 
             if (seen == target)
             {
-                values[index] = random.Next(10) == 0 ? 4 : 2;
+                var value = random.Next(FourChanceOneIn) == 0 ? 4 : 2;
+                values[index] = value;
+                if (value > MaxTile)
+                {
+                    MaxTile = value;
+                }
+
                 SpawnIndex = index;
                 return;
             }

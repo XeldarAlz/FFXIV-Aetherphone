@@ -34,14 +34,19 @@ internal readonly struct GemAnim
         HintB = hintB;
         HintClock = hintClock;
     }
+
+    public static GemAnim Still => new(GemPhase.Idle, -1, -1, 1f, 1f, 1f, -1, -1, -1, 0f);
 }
 
-internal sealed class GemSwapRenderer
+internal static class GemSwapRenderer
 {
+    public const float GapFraction = 0.06f;
+    private const float Rounding = 6f;
+    private const float CellAlpha = 0.55f;
+    private const float HintWobble = 3f;
     public static readonly Vector4 FrostTint = new(0.62f, 0.86f, 1f, 1f);
     private static readonly Vector4 PrismInk = new(0.96f, 0.94f, 1f, 1f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
-
     private static readonly Vector4[] GemColors =
     {
         new(0.95f, 0.83f, 0.26f, 1f), new(0.30f, 0.62f, 0.96f, 1f), new(0.93f, 0.42f, 0.50f, 1f),
@@ -50,30 +55,31 @@ internal sealed class GemSwapRenderer
 
     private static readonly string[] GemSymbols = { "★", "◆", "♥", "▲", "●", "■", };
 
-    public void Draw(GemSwapBoard board, GameGrid grid, in GemAnim anim, PhoneTheme theme, float scale, Vector4 accent,
-        float entrance, float frost)
+    public static Vector4 ColorOf(int color) => color >= 0 && color < GemColors.Length ? GemColors[color] : PrismInk;
+
+    public static void DrawPlate(ImDrawListPtr drawList, Rect plate, float scale, Vector4 accent, StageInk ink)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var rounding = 6f * scale;
+        BoardPlate.Draw(drawList, plate, BoardPlate.Radius * scale, scale, accent, ink);
+    }
+
+    public static void DrawBoard(ImDrawListPtr drawList, GemSwapBoard board, in GameGrid grid, in GemAnim anim,
+        PhoneTheme theme, float scale, float entrance, float frost)
+    {
+        var rounding = Rounding * scale;
         var half = (grid.Pitch - grid.Gap) * 0.5f;
-        var boardPad = grid.Gap + 4f * scale;
-        var boardMin = grid.Origin - new Vector2(boardPad, boardPad);
-        var boardMax = grid.Origin + new Vector2(grid.Width, grid.Height) + new Vector2(boardPad, boardPad);
         var time = (float)ImGui.GetTime();
-        GameScene.Arena(drawList, new Rect(boardMin, boardMax), rounding + boardPad, scale, accent);
+        var cellFill = GamePalette.CellSunken with { W = CellAlpha };
         for (var row = 0; row < GemSwapBoard.Rows; row++)
         {
             for (var column = 0; column < GemSwapBoard.Columns; column++)
             {
-                var cell = grid.Cell(column, row);
-                Squircle.Fill(drawList, cell.Min, cell.Max, rounding,
-                    ImGui.GetColorU32(GamePalette.CellSunken with { W = 0.55f }));
+                StageCell.Draw(drawList, grid.Cell(column, row), cellFill, CellDepth.Sunken, rounding, scale);
             }
         }
 
         if (anim.Phase == GemPhase.Clearing)
         {
-            DrawClearGlow(drawList, board, grid, anim, half);
+            DrawClearGlow(board, grid, anim, half);
         }
 
         for (var index = 0; index < GemSwapBoard.CellCount; index++)
@@ -89,12 +95,14 @@ internal sealed class GemSwapRenderer
 
         if (frost > 0.01f)
         {
-            DrawFrost(drawList, boardMin, boardMax, rounding + boardPad, frost, scale, time);
+            var frostMin = grid.Bounds.Min - new Vector2(grid.Gap, grid.Gap);
+            var frostMax = grid.Bounds.Max + new Vector2(grid.Gap, grid.Gap);
+            DrawFrost(drawList, frostMin, frostMax, rounding + grid.Gap, frost, scale, time);
         }
     }
 
-    private void DrawGem(ImDrawListPtr drawList, GemSwapBoard board, GameGrid grid, in GemAnim anim, int index,
-        int color, float rounding, float half, float scale, PhoneTheme theme, float entrance, float time)
+    private static void DrawGem(ImDrawListPtr drawList, GemSwapBoard board, in GameGrid grid, in GemAnim anim,
+        int index, int color, float rounding, float half, float scale, PhoneTheme theme, float entrance, float time)
     {
         var column = index % GemSwapBoard.Columns;
         var row = index / GemSwapBoard.Columns;
@@ -117,7 +125,7 @@ internal sealed class GemSwapRenderer
         if (anim.Phase == GemPhase.Falling && board.FallFrom(index) != GemSwapBoard.NoFall)
         {
             var distanceRows = row - board.FallFrom(index);
-            var remaining = (1f - Easing.EaseOutCubic(anim.FallProgress)) * distanceRows * grid.Pitch;
+            var remaining = (1f - Easing.EaseOutBack(anim.FallProgress)) * distanceRows * grid.Pitch;
             center.Y -= remaining;
         }
 
@@ -129,8 +137,8 @@ internal sealed class GemSwapRenderer
 
         if ((index == anim.HintA || index == anim.HintB) && anim.Phase == GemPhase.Idle)
         {
-            center.X += MathF.Sin(anim.HintClock * 14f) * 3f * scale;
-            center.Y += MathF.Cos(anim.HintClock * 18f) * 3f * scale;
+            center.X += MathF.Sin(anim.HintClock * 14f) * HintWobble * scale;
+            center.Y += MathF.Cos(anim.HintClock * 18f) * HintWobble * scale;
         }
 
         if (alpha < 0.02f)
@@ -157,21 +165,24 @@ internal sealed class GemSwapRenderer
                 (0.6f + 0.5f * pulse) * alpha);
         }
 
-        Squircle.FillVerticalGradient(drawList, min, max, rounding,
+        var gemRounding = rounding * drawScale;
+        StageCell.Draw(drawList, new Rect(min, max), GamePalette.Darken(gemColor, 0.16f) with { W = alpha },
+            alpha >= 0.99f ? CellDepth.Raised : CellDepth.Flat, gemRounding, scale);
+        Squircle.FillVerticalGradient(drawList, min, max, gemRounding,
             ImGui.GetColorU32(GamePalette.Lighten(gemColor, 0.14f) with { W = gemColor.W * alpha }),
             ImGui.GetColorU32(GamePalette.Darken(gemColor, 0.16f) with { W = gemColor.W * alpha }));
-        Squircle.Fill(drawList, min, new Vector2(max.X, center.Y), rounding,
+        Squircle.Fill(drawList, min, new Vector2(max.X, center.Y), gemRounding,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.12f * alpha)));
         drawList.AddCircleFilled(new Vector2(center.X - gemHalf * 0.4f, center.Y - gemHalf * 0.45f), gemHalf * 0.18f,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.45f * alpha)), 12);
-        Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.16f * alpha)),
+        Squircle.Stroke(drawList, min, max, gemRounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.16f * alpha)),
             1f * scale);
         switch (special)
         {
             case GemSpecial.LineHorizontal:
             case GemSpecial.LineVertical:
                 DrawLineGem(drawList, center, min, max, gemHalf, special == GemSpecial.LineHorizontal, alpha, time,
-                    rounding);
+                    gemRounding);
                 break;
             case GemSpecial.Burst:
                 DrawBurstGem(drawList, center, gemHalf, alpha, time);
@@ -179,7 +190,7 @@ internal sealed class GemSwapRenderer
             default:
             {
                 var ink = GamePalette.InkOn(gemColor);
-                Typography.DrawCentered(center, GemSymbols[color], ink with { W = ink.W * alpha },
+                Typography.DrawCentered(drawList, center, GemSymbols[color], ink with { W = ink.W * alpha },
                     gemHalf / (20f * scale), FontWeight.SemiBold);
                 break;
             }
@@ -339,7 +350,7 @@ internal sealed class GemSwapRenderer
         }
     }
 
-    private void DrawClearGlow(ImDrawListPtr drawList, GemSwapBoard board, GameGrid grid, in GemAnim anim, float half)
+    private static void DrawClearGlow(GemSwapBoard board, in GameGrid grid, in GemAnim anim, float half)
     {
         var fade = 1f - anim.ClearProgress;
         if (fade <= 0.02f)
@@ -358,6 +369,4 @@ internal sealed class GemSwapRenderer
             ProgressRing.Glow(center, half * 1.1f, ColorOf(board.Color(index)), fade * 0.9f);
         }
     }
-
-    public static Vector4 ColorOf(int color) => color >= 0 && color < GemColors.Length ? GemColors[color] : PrismInk;
 }
