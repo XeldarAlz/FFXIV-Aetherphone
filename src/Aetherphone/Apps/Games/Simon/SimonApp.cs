@@ -1,65 +1,58 @@
-using Aetherphone.Core.Animation;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Simon;
 
-internal sealed class SimonApp : ILegacyMiniGame
+internal sealed class SimonApp : IMiniGame
 {
     private const string GameId = "simon";
-    private const float OnDuration = 0.4f;
-    private const float GapDuration = 0.18f;
-    private const float StartDelay = 0.55f;
-    private const float RewardDuration = 0.55f;
     private const float LitDecay = 4.2f;
-
-    private enum Phase
-    {
-        Showing,
-        Input,
-        Reward,
-        Over,
-    }
-
-    private readonly SimonBoard board = new();
-    private readonly SimonRenderer renderer = new();
-    private readonly ParticleSystem particles = new();
-    private readonly FeedbackFx fx = new();
-    private readonly float[] lit = new float[SimonBoard.PadCount];
-
+    private const float ShowingDim = 0.16f;
+    private const float PerfectBannerSeconds = 1.3f;
+    private const ulong IdleSeed = 11;
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Simon, GameGenre.Brain, L.Simon.Hook,
+        Backdrop.Nebula, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true);
     private static readonly UiSound[] PadTones =
     {
         UiSound.SimonTone1, UiSound.SimonTone2, UiSound.SimonTone3, UiSound.SimonTone4,
     };
-    private RollingValue scoreRoll;
-    private Phase phase;
-    private int showStep;
-    private bool showOn;
-    private float phaseTimer;
-    private int inputIndex;
-    private int score;
-    private int bestScore;
-    private bool statsLoaded;
-    private float rewardTimer;
-    private bool pendingSubmit;
-    private bool newBest;
-    private float resultAppear;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Simon);
-    public bool RunsOnAClock => true;
+    private static readonly string?[] GainLabels = new string?[SimonBoard.MaxLength + 1];
+    private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
+    private static readonly Vector4 Spark = new(1f, 0.95f, 0.65f, 1f);
+    private static readonly Vector4 Gold = new(1f, 0.84f, 0.36f, 1f);
 
-    public GameGenre Genre => GameGenre.Brain;
-    public void Open()
+    private readonly SimonBoard board = new();
+    private readonly ParticleSystem particles = new();
+    private readonly FeedbackFx fx = new();
+    private readonly float[] lit = new float[SimonBoard.PadCount];
+    private float entrance;
+    private float perfectBanner = 1f;
+    private bool finished;
+
+    public SimonApp()
     {
-        statsLoaded = false;
-        StartGame();
+        board.Reset(GameRandom.FromSeed(IdleSeed));
+    }
+
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
+    {
+        board.Reset(start.Random);
+        Array.Clear(lit);
+        particles.Clear();
+        fx.Clear();
+        entrance = 0f;
+        perfectBanner = 1f;
+        finished = false;
     }
 
     public void Close()
@@ -70,206 +63,80 @@ internal sealed class SimonApp : ILegacyMiniGame
     {
     }
 
-    private void StartGame()
+    public void DrawIdle(in GameContext context)
     {
-        board.Reset();
-        board.AddStep();
-        Array.Clear(lit, 0, lit.Length);
-        particles.Clear();
-        fx.Clear();
-        scoreRoll.Snap(0);
-        score = 0;
-        pendingSubmit = false;
-        newBest = false;
-        resultAppear = 0f;
-        phase = Phase.Showing;
-        BeginShow();
-    }
-
-    private void BeginShow()
-    {
-        showStep = 0;
-        showOn = false;
-        phaseTimer = StartDelay;
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var grid = GameGrid.Centered(context.Safe, 2, 2, SimonRenderer.GapFraction);
+        SimonRenderer.DrawBoard(drawList, grid, lit, -1, 1f, 0f, Accent, context.Backdrop.Ink, scale);
+        SimonRenderer.DrawHub(drawList, grid.Center, grid.Pitch * SimonRenderer.HubRadiusFraction,
+            GameNumber.Label(board.Round), Loc.Upper(Loc.T(L.Games.Watch)), Accent, context.Theme, scale, false);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (!statsLoaded)
-        {
-            bestScore = context.Stats.Get(GameId).BestScore;
-            statsLoaded = true;
-        }
-
-        if (pendingSubmit)
-        {
-            newBest = context.Stats.SubmitScore(GameId, score);
-            if (newBest)
-            {
-                bestScore = score;
-            }
-
-            pendingSubmit = false;
-        }
-
-        for (var index = 0; index < lit.Length; index++)
-        {
-            lit[index] = MathF.Max(0f, lit[index] - deltaSeconds * LitDecay);
-        }
-
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
         var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
-        var rowY = body.Min.Y + 30f * scale;
-        var beatingBest = score > 0 && score > bestScore;
-        GameHud.ScorePill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll, score,
-            Accent, theme, deltaSeconds, beatingBest);
-        var bestShown = score > bestScore ? score : bestScore;
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(bestShown),
-            Accent, theme);
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
+        var rawSeconds = context.RawDeltaSeconds;
+        particles.Update(rawSeconds);
+        fx.Update(rawSeconds);
+        entrance = GameJuice.Advance(entrance, rawSeconds);
+        perfectBanner = GameBanner.Advance(perfectBanner, rawSeconds, PerfectBannerSeconds);
+        for (var pad = 0; pad < SimonBoard.PadCount; pad++)
         {
-            StartGame();
-            return;
+            lit[pad] = MathF.Max(0f, lit[pad] - rawSeconds * LitDecay);
         }
 
-        var shake = fx.ShakeOffset(scale);
-        var area = new Rect(new Vector2(body.Min.X + 10f * scale, rowY + 28f * scale) + shake,
-            new Vector2(body.Max.X - 10f * scale, body.Max.Y - 10f * scale) + shake);
-        var grid = GameGrid.Centered(area, 2, 2, 0.08f);
-        if (phase == Phase.Showing)
-        {
-            UpdateShowing(deltaSeconds, grid, scale);
-        }
-        else if (phase == Phase.Input)
-        {
-            HandleInput(grid, scale);
-        }
-        else if (phase == Phase.Reward)
-        {
-            rewardTimer -= deltaSeconds;
-            if (rewardTimer <= 0f)
-            {
-                board.AddStep();
-                phase = Phase.Showing;
-                BeginShow();
-            }
-        }
-
-        var hubLabel = phase == Phase.Showing ? Loc.T(L.Games.Watch) : Loc.T(L.Games.YourTurn);
-        renderer.Draw(grid, lit, GameNumber.Label(board.Length), hubLabel, Accent, theme, scale,
-            phase == Phase.Showing ? 0.16f : 0f, phase == Phase.Input);
-        fx.DrawFlash(drawList, body, 0f);
+        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var grid = GameGrid.Centered(area, 2, 2, SimonRenderer.GapFraction);
+        var pressed = finished ? -1 : Step(grid, scale, context);
+        var showing = board.Phase == SimonPhase.Showing;
+        var input = board.Phase == SimonPhase.Input;
+        SimonRenderer.DrawBoard(drawList, grid, lit, pressed, entrance, showing ? ShowingDim : 0f, Accent,
+            context.Backdrop.Ink, scale);
+        SimonRenderer.DrawHub(drawList, grid.Center, grid.Pitch * SimonRenderer.HubRadiusFraction,
+            GameNumber.Label(board.Round), Loc.Upper(Loc.T(input ? L.Games.YourTurn : L.Games.Watch)), Accent,
+            context.Theme, scale, input);
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
         fx.DrawText();
-        if (phase == Phase.Over)
-        {
-            DrawResult(theme, body, deltaSeconds);
-        }
+        GameBanner.Draw(drawList, grid.Center, Loc.T(L.Games.Perfect), Gold, context.Theme, perfectBanner);
+        context.Hud.Score(board.Score);
+        context.Hud.Best(context.Session.Best);
+        context.Session.Report(board.Score);
     }
 
-    private void UpdateShowing(float deltaSeconds, GameGrid grid, float scale)
+    private int Step(in GameGrid grid, float scale, in GameContext context)
     {
-        if (showOn && showStep < board.Length)
+        board.Step(context.DeltaSeconds);
+        if (board.PadLitThisStep)
         {
-            lit[board.PadAt(showStep)] = 1f;
+            OnShow(board.LitPad, grid, scale);
         }
 
-        phaseTimer -= deltaSeconds;
-        if (phaseTimer > 0f)
+        if (context.Session.State != StageFlow.Playing || board.Phase != SimonPhase.Input)
         {
-            return;
+            return -1;
         }
 
-        if (showOn)
-        {
-            showOn = false;
-            phaseTimer = GapDuration;
-            showStep++;
-            if (showStep >= board.Length)
-            {
-                phase = Phase.Input;
-                inputIndex = 0;
-            }
-
-            return;
-        }
-
-        if (showStep < board.Length)
-        {
-            showOn = true;
-            phaseTimer = OnDuration;
-            var pad = board.PadAt(showStep);
-            UiFeedback.Play(PadTones[pad]);
-            lit[pad] = 1f;
-            var center = SimonRenderer.PadRect(grid, pad).Center;
-            fx.Shockwave(center, grid.Pitch * 0.42f, SimonRenderer.ColorOf(pad) with { W = 0.7f }, 0.42f, 2.4f);
-        }
-    }
-
-    private void HandleInput(GameGrid grid, float scale)
-    {
         var hovered = PadHitTest(grid);
-        if (hovered >= 0)
+        if (hovered < 0)
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            return -1;
         }
 
-        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left) || hovered < 0)
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        var pressed = ImGui.IsMouseDown(ImGuiMouseButton.Left) ? hovered : -1;
+        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
-            return;
+            return pressed;
         }
 
-        lit[hovered] = 1f;
-        if (!board.Matches(inputIndex, hovered))
-        {
-            OnFail(grid, scale);
-            return;
-        }
-
-        UiFeedback.Play(PadTones[hovered]);
-
-        BurstPad(grid, hovered, 10, scale);
-        fx.Shockwave(SimonRenderer.PadRect(grid, hovered).Center, grid.Pitch * 0.5f,
-            SimonRenderer.ColorOf(hovered) with { W = 0.8f }, 0.36f, 2.4f);
-        inputIndex++;
-        if (inputIndex < board.Length)
-        {
-            return;
-        }
-
-        score = board.Length;
-        phase = Phase.Reward;
-        rewardTimer = RewardDuration;
-        fx.AddTrauma(0.12f);
-        particles.Sparkle(grid.Center, 14, new Vector4(1f, 0.95f, 0.65f, 1f), 160f * scale, 2.6f, 0.8f);
-        fx.Shockwave(grid.Center, grid.Pitch * 0.9f, GamePalette.Lighten(Accent, 0.3f), 0.55f, 3f);
-        fx.AddText($"+{GameNumber.Label(board.Length)}", grid.Center - new Vector2(0f, grid.Pitch * 0.3f), Accent,
-            1.15f);
+        OnPress(hovered, board.Press(hovered), grid, scale, context);
+        return pressed;
     }
 
-    private void OnFail(GameGrid grid, float scale)
-    {
-        UiFeedback.Play(UiSound.GameWrong);
-        phase = Phase.Over;
-        pendingSubmit = true;
-        resultAppear = 0f;
-        fx.AddTrauma(0.7f);
-        fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.45f);
-        fx.Shockwave(grid.Center, grid.Pitch * 1.3f, new Vector4(0.95f, 0.4f, 0.4f, 1f), 0.6f, 3.4f);
-        for (var pad = 0; pad < SimonBoard.PadCount; pad++)
-        {
-            BurstPad(grid, pad, 14, scale);
-        }
-    }
-
-    private int PadHitTest(GameGrid grid)
+    private static int PadHitTest(in GameGrid grid)
     {
         if (!UiInteract.Hover(grid.Bounds.Min, grid.Bounds.Max))
         {
@@ -278,8 +145,8 @@ internal sealed class SimonApp : ILegacyMiniGame
 
         for (var pad = 0; pad < SimonBoard.PadCount; pad++)
         {
-            var padRect = SimonRenderer.PadRect(grid, pad);
-            if (UiInteract.Hover(padRect.Min, padRect.Max))
+            var rect = SimonRenderer.PadRect(grid, pad);
+            if (UiInteract.Hover(rect.Min, rect.Max))
             {
                 return pad;
             }
@@ -288,26 +155,89 @@ internal sealed class SimonApp : ILegacyMiniGame
         return -1;
     }
 
-    private void BurstPad(GameGrid grid, int pad, int count, float scale)
+    private void OnShow(int pad, in GameGrid grid, float scale)
+    {
+        lit[pad] = 1f;
+        UiFeedback.Play(PadTones[pad]);
+        fx.Shockwave(SimonRenderer.PadRect(grid, pad).Center, grid.Pitch * 0.42f,
+            SimonRenderer.ColorOf(pad) with { W = 0.7f }, 0.42f, 2.4f);
+    }
+
+    private void OnPress(int pad, SimonPress result, in GameGrid grid, float scale, in GameContext context)
+    {
+        if (result == SimonPress.Wrong)
+        {
+            OnFail(grid, scale, context);
+            return;
+        }
+
+        if (result == SimonPress.Ignored)
+        {
+            return;
+        }
+
+        lit[pad] = 1f;
+        UiFeedback.Play(PadTones[pad]);
+        BurstPad(grid, pad, 10, scale);
+        fx.Shockwave(SimonRenderer.PadRect(grid, pad).Center, grid.Pitch * 0.5f,
+            SimonRenderer.ColorOf(pad) with { W = 0.8f }, 0.36f, 2.4f);
+        if (result == SimonPress.RoundComplete)
+        {
+            OnRoundComplete(grid, scale, context);
+        }
+    }
+
+    private void OnRoundComplete(in GameGrid grid, float scale, in GameContext context)
+    {
+        fx.AddTrauma(0.12f);
+        particles.Sparkle(grid.Center, 14, Spark, 160f * scale, 2.6f, 0.8f);
+        fx.Shockwave(grid.Center, grid.Pitch * 0.9f, GamePalette.Lighten(Accent, 0.3f), 0.55f, 3f);
+        fx.AddText(GainLabel(board.Score), grid.Center - new Vector2(0f, grid.Pitch * 0.3f), Accent, 1.15f);
+        context.Fx.Punch(0.03f);
+        if (board.Score % SimonBoard.RampEvery != 0)
+        {
+            return;
+        }
+
+        GameSfx.LevelClear();
+        context.Fx.Sweep();
+        context.Fx.Flash(Gold, 0.18f);
+        context.Fx.Punch(0.06f);
+        perfectBanner = 0f;
+    }
+
+    private void OnFail(in GameGrid grid, float scale, in GameContext context)
+    {
+        finished = true;
+        UiFeedback.Play(UiSound.GameWrong);
+        fx.AddTrauma(0.7f);
+        context.Fx.Flash(Danger, 0.4f);
+        context.Fx.Vignette(Danger, 0.5f, 0.5f);
+        fx.Shockwave(grid.Center, grid.Pitch * 1.3f, Danger, 0.6f, 3.4f);
+        for (var pad = 0; pad < SimonBoard.PadCount; pad++)
+        {
+            BurstPad(grid, pad, 14, scale);
+        }
+
+        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+            .WithStat(L.Games.Time, TimeText.MinutesSeconds((int)context.Session.PlaySeconds)));
+    }
+
+    private void BurstPad(in GameGrid grid, int pad, int count, float scale)
     {
         var center = SimonRenderer.PadRect(grid, pad).Center;
         particles.Burst(center, count, SimonRenderer.ColorOf(pad), 150f * scale, 3f, 0.5f, 240f);
     }
 
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
+    private static string GainLabel(int points)
     {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        string? secondary = null;
-        if (bestScore > 0)
-        {
-            secondary = $"{Loc.T(L.Games.Best)} {GameNumber.Label(bestScore)}";
-        }
+        var index = Math.Clamp(points, 0, SimonBoard.MaxLength);
+        return GainLabels[index] ??= string.Concat("+", GameNumber.Label(index));
+    }
 
-        var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score),
-            GameNumber.Label(score), secondary, newBest);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
-        {
-            StartGame();
-        }
+    private static Rect Grow(Rect rect, float factor)
+    {
+        var half = rect.Size * 0.5f * factor;
+        return new Rect(rect.Center - half, rect.Center + half);
     }
 }
