@@ -79,7 +79,7 @@ Members with a `=>` body are C# default interface implementations: you only over
 | --- | --- |
 | `Id` | Stable lowercase identifier (`"clock"`, `"chirper"`). Keys everything: accents, layout persistence, availability flags, deep links. Never rename it once shipped. |
 | `DisplayName` | Label under the home tile and in the app header. Real apps return `Loc.T(...)` so it follows the phone language (see [Localization](localization.md)). |
-| `Glyph` | One- or two-character fallback text drawn on the tile when no icon texture exists for `Id`. `HomeTileView.DrawApp` (src/Aetherphone/Windows/Components/HomeTileView.cs) tries `AppIconArt.TryDraw` first and falls back to the glyph. |
+| `Glyph` | One- or two-character fallback text drawn on the tile when no icon texture exists for `Id`. `HomeTileView.DrawApp` (src/Aetherphone/Windows/Components/Chrome/HomeTileView.cs) tries `AppIconArt.TryDraw` first and falls back to the glyph. |
 | `Accent` | Tile and highlight color. The default delegates to `AppAccents.For(Id)`; keep it that way and add your color to the `AppAccents` table instead of hardcoding one. Unknown ids get a gray fallback. |
 | `BadgeCount` | Unread count shown on the home tile. Read every frame; return a cached field, never compute or allocate here. `0` means no badge. Always return the raw count here; the user's on/off preference is applied centrally, not by this getter. |
 | `HasBadge` | Opts the app into the shared, user-toggleable badge switch (`Configuration.BadgeSettings`, default on) and into a "Show badge" row on that app's Settings > Notifications and Badges page. Default `false`, so `BadgeCount => 0` apps need not override it. See [Notifications](notifications.md#hiding-a-badge). |

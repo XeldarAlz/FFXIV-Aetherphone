@@ -122,7 +122,7 @@ game.Draw(new GameContext(body, context.Theme, stats, attentive ? frameSeconds :
 3. Pick a `GameGenre` for `Genre` and add the `Title` string to the `Games` section of L.cs and the nine language JSONs (see [localization.md](localization.md)).
 4. Add a row for your id to `GamesLibrary.Releases` with the release date, so the game sorts newest-first, joins the `Latest additions` shelf and wears the `NEW` pill for its first month.
 5. Add an accent color keyed by your game id in src/Aetherphone/Core/Apps/AppAccents.cs; `IMiniGame.Accent` defaults to `AppAccents.For(Id)`.
-6. Optionally add icon art for your id in src/Aetherphone/Windows/Components/AppIconArt.cs; the launcher falls back to drawing your title text on the tile.
+6. Optionally add icon art for your id in src/Aetherphone/Windows/Components/Chrome/AppIconArt.cs; the launcher falls back to drawing your title text on the tile.
 7. If the launcher should show a best-score line for your game, add a case to `GamesLibrary.BestRecord`.
 
 ## The juice framework
