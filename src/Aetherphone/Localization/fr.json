@@ -4440,6 +4440,7 @@
   "games.stack.hook": "Lâchez chaque dalle sur la précédente, tout ce qui dépasse est coupé.",
   "games.crystalDrop": "Chute de Cristaux",
   "games.crystaldrop.hook": "Lâchez des cristaux dans le bocal et fusionnez les identiques avant qu'il ne déborde.",
+  "games.crystaldrop.merges": "Fusions",
   "games.beat": "Rythme",
   "games.beat.hook": "Frappez chaque note quand elle atteint la ligne et gardez le combo.",
   "games.combo": "Combo",

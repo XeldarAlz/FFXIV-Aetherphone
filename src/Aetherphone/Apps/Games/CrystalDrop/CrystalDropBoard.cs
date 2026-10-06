@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.CrystalDrop;
 
 internal struct Crystal
@@ -15,7 +17,7 @@ internal struct CrystalMerge
     public Vector2 Position;
     public int Tier;
     public int Points;
-    public int Chain;
+    public int Multiplier;
     public bool Cleared;
 }
 
@@ -25,6 +27,11 @@ internal sealed class CrystalDropBoard
     public const float DangerLine = 0.15f;
     public const int MaxTier = 10;
     public const int Capacity = 96;
+    public const float ComboWindowSeconds = 1.5f;
+    public const float SpawnGrace = 0.6f;
+    public const float OverflowLimit = 1.7f;
+    public const int ClearPoints = 120;
+    public const float DropCooldown = 0.28f;
     private const int MergeCapacity = 24;
     private const int SpawnTiers = 5;
     private const float Gravity = 3.2f;
@@ -34,12 +41,8 @@ internal sealed class CrystalDropBoard
     private const float Damping = 0.55f;
     private const float FloorFriction = 0.88f;
     private const float SeparationBias = 0.82f;
-    private const float SpawnGrace = 0.6f;
-    private const float OverflowLimit = 1.7f;
-    private const float DropCooldown = 0.28f;
-    private const float ChainWindow = 0.5f;
-    private const int MaxChain = 5;
-    private const int ClearPoints = 120;
+    private const float PopDecay = 3.4f;
+    private const float OverflowRecovery = 2.2f;
     private static readonly float[] Radii =
     {
         0.052f, 0.062f, 0.073f, 0.087f, 0.103f, 0.122f, 0.144f, 0.171f, 0.202f, 0.240f, 0.284f,
@@ -47,36 +50,58 @@ internal sealed class CrystalDropBoard
 
     private readonly Crystal[] crystals = new Crystal[Capacity];
     private readonly CrystalMerge[] merges = new CrystalMerge[MergeCapacity];
-    private readonly Random random = new();
+    private GameRandom random;
+    private ComboMeter combo = new(ComboWindowSeconds);
     private float accumulator;
     private float cooldown;
-    private float chainTimer;
-    private int chain;
+
     public int Count { get; private set; }
+
     public int MergeCount { get; private set; }
+
     public int Score { get; private set; }
+
+    public int Merges { get; private set; }
+
+    public int BestCombo { get; private set; }
+
     public int HeldTier { get; private set; }
+
     public int NextTier { get; private set; }
+
     public float OverflowSeconds { get; private set; }
+
     public bool GameOver { get; private set; }
+
+    public ComboMeter Combo => combo;
+
     public bool CanDrop => !GameOver && cooldown <= 0f && Count < Capacity;
+
     public float DropProgress => cooldown <= 0f ? 1f : 1f - cooldown / DropCooldown;
+
     public float OverflowFraction => OverflowSeconds / OverflowLimit;
+
     public Crystal At(int index) => crystals[index];
+
     public CrystalMerge Merge(int index) => merges[index];
+
     public static float RadiusOf(int tier) => Radii[tier];
 
-    public void Reset()
+    public static int PointsOf(int tier) => tier >= MaxTier ? ClearPoints : (tier + 1) * (tier + 2) / 2;
+
+    public void Reset(GameRandom seededRandom)
     {
+        random = seededRandom;
         Count = 0;
         MergeCount = 0;
         Score = 0;
+        Merges = 0;
+        BestCombo = 0;
         OverflowSeconds = 0f;
         GameOver = false;
         accumulator = 0f;
         cooldown = 0f;
-        chainTimer = 0f;
-        chain = 0;
+        combo.Reset();
         HeldTier = RollTier();
         NextTier = RollTier();
     }
@@ -106,26 +131,28 @@ internal sealed class CrystalDropBoard
         return true;
     }
 
+    public void Place(Vector2 position, int tier)
+    {
+        Add(position, Vector2.Zero, tier);
+    }
+
     public void Step(float deltaSeconds)
     {
+        if (deltaSeconds <= 0f)
+        {
+            return;
+        }
+
         if (cooldown > 0f)
         {
             cooldown = MathF.Max(0f, cooldown - deltaSeconds);
         }
 
-        if (chainTimer > 0f)
-        {
-            chainTimer = MathF.Max(0f, chainTimer - deltaSeconds);
-            if (chainTimer <= 0f)
-            {
-                chain = 0;
-            }
-        }
-
+        combo.Update(deltaSeconds);
         for (var index = 0; index < Count; index++)
         {
             ref var crystal = ref crystals[index];
-            crystal.Pop = MathF.Max(0f, crystal.Pop - deltaSeconds * 3.4f);
+            crystal.Pop = MathF.Max(0f, crystal.Pop - deltaSeconds * PopDecay);
         }
 
         if (GameOver)
@@ -252,13 +279,13 @@ internal sealed class CrystalDropBoard
         var velocity = (a.Velocity + b.Velocity) * 0.5f;
         a.Alive = false;
         b.Alive = false;
-        chain = chainTimer > 0f ? Math.Min(MaxChain, chain + 1) : 1;
-        chainTimer = ChainWindow;
+        var multiplier = combo.Hit();
+        BestCombo = Math.Max(BestCombo, combo.Count);
+        Merges++;
         var cleared = tier >= MaxTier;
-        var points = cleared ? ClearPoints : (tier + 1) * (tier + 2) / 2;
-        points *= chain;
+        var points = PointsOf(tier) * multiplier;
         Score += points;
-        AddMerge(position, cleared ? tier : tier + 1, points, cleared);
+        AddMerge(position, cleared ? tier : tier + 1, points, multiplier, cleared);
         if (cleared)
         {
             return;
@@ -267,7 +294,7 @@ internal sealed class CrystalDropBoard
         Add(position, velocity - normal * 0.05f, tier + 1, 1f);
     }
 
-    private void AddMerge(Vector2 position, int tier, int points, bool cleared)
+    private void AddMerge(Vector2 position, int tier, int points, int multiplier, bool cleared)
     {
         if (MergeCount >= MergeCapacity)
         {
@@ -278,7 +305,7 @@ internal sealed class CrystalDropBoard
         merge.Position = position;
         merge.Tier = tier;
         merge.Points = points;
-        merge.Chain = chain;
+        merge.Multiplier = multiplier;
         merge.Cleared = cleared;
         MergeCount++;
     }
@@ -334,7 +361,7 @@ internal sealed class CrystalDropBoard
 
         if (!overflowing)
         {
-            OverflowSeconds = MathF.Max(0f, OverflowSeconds - deltaSeconds * 2.2f);
+            OverflowSeconds = MathF.Max(0f, OverflowSeconds - deltaSeconds * OverflowRecovery);
             return;
         }
 

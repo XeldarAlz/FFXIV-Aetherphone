@@ -8380,6 +8380,7 @@ internal static class L
     internal static class CrystalDrop
     {
         public static readonly LocString Hook = new("games.crystaldrop.hook", "Drop crystals into the jar and merge matching ones before it overflows.");
+        public static readonly LocString Merges = new("games.crystaldrop.merges", "Merges");
     }
 
     internal static class Beat

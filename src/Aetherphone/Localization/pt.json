@@ -4440,6 +4440,7 @@
   "games.stack.hook": "Solte cada laje sobre a de baixo; tudo o que ficar para fora é cortado.",
   "games.crystalDrop": "Queda de Cristais",
   "games.crystaldrop.hook": "Solte cristais no pote e junte os iguais antes que transborde.",
+  "games.crystaldrop.merges": "Fusões",
   "games.beat": "Ritmo",
   "games.beat.hook": "Acerte cada nota quando ela chegar à linha e mantenha o combo.",
   "games.combo": "Combo",

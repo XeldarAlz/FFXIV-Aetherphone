@@ -4440,6 +4440,7 @@
   "games.stack.hook": "Drop each slab on the one below; anything that hangs over gets cut away.",
   "games.crystalDrop": "Crystal Drop",
   "games.crystaldrop.hook": "Drop crystals into the jar and merge matching ones before it overflows.",
+  "games.crystaldrop.merges": "Merges",
   "games.beat": "Beat",
   "games.beat.hook": "Hit each note as it reaches the line and keep the combo going.",
   "games.combo": "Combo",
