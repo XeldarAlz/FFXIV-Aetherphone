@@ -55,17 +55,23 @@ internal sealed class PcMediaSource : IDisposable
 
     public string PinnedAppId => configuration.WindowsMediaSource;
 
-    public void Pin(string appId)
+    public bool IsEnabled => configuration.ShowWindowsMedia;
+
+    public void Select(string appId)
     {
-        if (string.Equals(configuration.WindowsMediaSource, appId, StringComparison.Ordinal))
+        if (configuration.ShowWindowsMedia &&
+            string.Equals(configuration.WindowsMediaSource, appId, StringComparison.Ordinal))
         {
             return;
         }
 
+        configuration.ShowWindowsMedia = true;
         configuration.WindowsMediaSource = appId;
         configuration.Save();
         sessions.Refresh();
     }
+
+    public void TurnOff() => configuration.SetWindowsMedia(false, configuration.PublishToWindowsMedia);
 
     public void ToggleShuffle(in MediaSessionSnapshot snapshot) => sessions.SetShuffle(!snapshot.ShuffleActive);
 

@@ -104,14 +104,12 @@ internal sealed partial class MusicApp
             Material.ThemedGlass(drawList, min, max, PcCardRadius * scale, scale, ui.BackdropColor);
             var left = min.X + padding;
             var top = min.Y + padding;
-            var sourceLeft = DrawPcSourceButton(drawList, max.X - padding, top, captionHeight, ui.TitleInk, 1f, true,
-                out _);
             var glyphCenter = new Vector2(left + captionHeight * 0.5f, top + captionHeight * 0.5f);
             ProgressRing.CenterIcon(drawList, glyphCenter, PcMediaGlyph.For(MediaAppNames.FromAppUserModelId(pinned)),
                 ui.MutedInk, captionHeight * 0.8f);
             var textLeft = left + captionHeight + Metrics.Space.Xs * scale;
             var text = Typography.FitText(PcMediaView.MissingSource(pinned),
-                MathF.Max(1f, sourceLeft - PcTextGap * scale - textLeft), TextStyles.Footnote);
+                MathF.Max(1f, max.X - padding - textLeft), TextStyles.Footnote);
             Typography.Draw(drawList, new Vector2(textLeft, top), text, ui.MutedInk, TextStyles.Footnote);
         }
 
@@ -128,10 +126,7 @@ internal sealed partial class MusicApp
         var left = min.X + padding;
         var right = max.X - padding;
         var top = min.Y + padding;
-        var sourceLeft = DrawPcSourceButton(drawList, right, top, captionHeight, ui.TitleInk, 1f, true,
-            out var overSource);
-        DrawPcSource(drawList, snapshot, left, top, sourceLeft - PcTextGap * scale - left, captionHeight, ui.MutedInk,
-            1f);
+        DrawPcSource(drawList, snapshot, left, top, right - left, captionHeight, ui.MutedInk, 1f);
         var artMin = new Vector2(left, top + captionHeight + PcCaptionGap * scale);
         PcMediaView.DrawArt(drawList, artMin, artSide, artSide * ArtworkTile.TileRadiusFraction,
             pcMedia.Artwork(snapshot, artSide), snapshot, ui.Accent, 1f);
@@ -151,7 +146,7 @@ internal sealed partial class MusicApp
         var sideRadius = PcTransportRadius * scale;
         var overTransport = DrawPcTransport(drawList, snapshot, transportCenter, PcTransportStride * scale,
             sideRadius, playRadius, ui.TitleInk, 1f, true, left + sideRadius, right - sideRadius);
-        var hovered = !overTransport && !overSource && UiInteract.Hover(min, max);
+        var hovered = !overTransport && UiInteract.Hover(min, max);
         if (!hovered)
         {
             return;

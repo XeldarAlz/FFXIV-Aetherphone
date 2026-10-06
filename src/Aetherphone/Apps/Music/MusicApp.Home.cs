@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Songs;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -31,6 +32,7 @@ internal sealed partial class MusicApp
     private const string HomeLovedContext = "home.loved";
     private const string HomeStationPrefix = "station.";
 
+    private readonly NavBarButton[] homeButtons = new NavBarButton[1];
     private readonly ShelfRail homeRecentRail = new();
     private readonly ShelfRail homePicksRail = new();
     private readonly ShelfRail homeMixesRail = new();
@@ -108,7 +110,17 @@ internal sealed partial class MusicApp
             ImGui.Dummy(new Vector2(0f, MusicUi.SectionGap * scale));
         }
 
-        EndPage(in frame, context, Loc.T(L.Music.TabHome));
+        if (NativeFileDialog.RunsUnderWine)
+        {
+            EndPage(in frame, context, Loc.T(L.Music.TabHome));
+            return;
+        }
+
+        homeButtons[0] = new NavBarButton(IconGlyph.Of(FontAwesomeIcon.Desktop), Loc.T(L.Music.PcMedia.Source));
+        if (EndPage(in frame, context, Loc.T(L.Music.TabHome), homeButtons) == 0)
+        {
+            pcSourceMenu.Toggle(PcSourceMenuId, AppHeader.LargeTitleButtonRect(in frame, 0, homeButtons.Length));
+        }
     }
 
     private void EnsureHomeData()

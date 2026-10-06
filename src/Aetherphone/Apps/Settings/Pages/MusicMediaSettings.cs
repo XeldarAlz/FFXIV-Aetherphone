@@ -61,7 +61,7 @@ internal static class MusicMediaSettings
         SettingsSection.Hint(Loc.T(L.Music.PcMedia.SourceHint), theme);
         if (picked >= 0)
         {
-            pcMedia.Pin(SourceIds[picked]);
+            pcMedia.Select(SourceIds[picked]);
         }
     }
 

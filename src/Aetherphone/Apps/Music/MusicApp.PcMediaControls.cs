@@ -26,7 +26,7 @@ internal sealed partial class MusicApp
     private const long PcVolumeHoldMilliseconds = 1500;
 
     private readonly DropdownMenu pcSourceMenu = new() { Detached = true };
-    private readonly DropdownMenu.Item[] pcSourceItems = new DropdownMenu.Item[PcMediaView.SourceCapacity];
+    private readonly DropdownMenu.Item[] pcSourceItems = new DropdownMenu.Item[PcMediaView.SourceCapacity + 1];
     private readonly string[] pcSourceIds = new string[PcMediaView.SourceCapacity];
     private readonly string[] pcSourceLabels = new string[PcMediaView.SourceCapacity];
     private readonly FontAwesomeIcon[] pcSourceGlyphs = new FontAwesomeIcon[PcMediaView.SourceCapacity];
@@ -73,20 +73,29 @@ internal sealed partial class MusicApp
 
         var count = PcMediaView.SourceOptions(pcMedia, pcSourceIds, pcSourceLabels, pcSourceGlyphs,
             out var selected);
+        var enabled = pcMedia.IsEnabled;
         for (var index = 0; index < count; index++)
         {
             pcSourceItems[index] = new DropdownMenu.Item(pcSourceLabels[index], IconGlyph.Of(pcSourceGlyphs[index]),
-                Selected: index == selected);
+                Selected: enabled && index == selected);
         }
 
+        pcSourceItems[count] = new DropdownMenu.Item(Loc.T(L.Common.Off), IconGlyph.Of(FontAwesomeIcon.PowerOff),
+            Selected: !enabled);
         pcSourceMenu.Header = Loc.T(L.Music.PcMedia.SourceMenuHeader);
-        var picked = pcSourceMenu.Draw(screen, theme, pcSourceItems.AsSpan(0, count));
+        var picked = pcSourceMenu.Draw(screen, theme, pcSourceItems.AsSpan(0, count + 1));
         if (picked < 0)
         {
             return;
         }
 
-        pcMedia.Pin(pcSourceIds[picked]);
+        if (picked == count)
+        {
+            pcMedia.TurnOff();
+            return;
+        }
+
+        pcMedia.Select(pcSourceIds[picked]);
     }
 
     private bool DrawPcModes(ImDrawListPtr drawList, in MediaSessionSnapshot snapshot, float centerY,
