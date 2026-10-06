@@ -81,8 +81,10 @@ internal sealed class ReversiRenderer
         return CapsulePadX * 2f + (CapsuleDisc + CapsuleGap + countWidth) * 2f + CapsuleSideGap;
     }
 
-    public void DrawCounts(ImDrawListPtr drawList, Rect rect, int dark, int light, int current, bool thinking,
-        float dotPhase, Vector4 accent, PhoneTheme theme, float scale)
+    public const float ThinkingWidth = CapsulePadX * 2f + (DotCount - 1) * DotStep + DotRadius * 2f;
+
+    public void DrawCounts(ImDrawListPtr drawList, Rect rect, int dark, int light, int current, Vector4 accent,
+        PhoneTheme theme, float scale)
     {
         StageHud.Capsule(drawList, rect, scale);
         var countWidth = Typography.Measure(WidestCount, CountStyle).X;
@@ -99,14 +101,14 @@ internal sealed class ReversiRenderer
         DrawCountDisc(drawList, new Vector2(penX + disc * 0.5f, centerY), disc * 0.5f, ReversiBoard.Light,
             current == ReversiBoard.Light, accent, scale);
         penX += disc + gap;
-        if (!thinking)
-        {
-            Typography.Draw(drawList, new Vector2(penX, textY), GameNumber.Label(light), theme.TextStrong, CountStyle);
-            return;
-        }
+        Typography.Draw(drawList, new Vector2(penX, textY), GameNumber.Label(light), theme.TextStrong, CountStyle);
+    }
 
-        var dotsWidth = (DotCount - 1) * DotStep * scale;
-        var dotX = penX + (countWidth - dotsWidth) * 0.5f;
+    public static void DrawThinking(ImDrawListPtr drawList, Rect rect, float dotPhase, Vector4 accent, float scale)
+    {
+        StageHud.Capsule(drawList, rect, scale);
+        var centerY = rect.Center.Y;
+        var dotX = rect.Center.X - (DotCount - 1) * DotStep * scale * 0.5f;
         for (var dot = 0; dot < DotCount; dot++)
         {
             var bounce = MathF.Sin(dotPhase * DotSpeed - dot * 0.9f);

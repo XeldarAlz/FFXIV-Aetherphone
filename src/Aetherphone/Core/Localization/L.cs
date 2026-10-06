@@ -8098,7 +8098,6 @@ internal static class L
         public static readonly LocString NotInWordList = new("games.notInWordList", "Not in the word list");
         public static readonly LocString NotEnoughLetters = new("games.notEnoughLetters", "Not enough letters");
         public static readonly LocString SolvedWord = new("games.solvedWord", "Solved!");
-        public static readonly LocString EndRun = new("games.endRun", "End run");
         public static readonly LocString Classic = new("games.classic", "Classic");
         public static readonly LocString Modern = new("games.modern", "Modern");
         public static readonly LocString TSpin = new("games.tSpin", "T-Spin");

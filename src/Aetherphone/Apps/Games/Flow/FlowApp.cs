@@ -99,8 +99,8 @@ internal sealed class FlowApp : IMiniGame
         entrance = GameJuice.Advance(entrance, rawSeconds);
         liquidTime += rawSeconds;
         Layout(context.Safe, scale, out var header, out var progressRow, out var boardArea);
-        var grid = GameGrid.Centered(Scaled(boardArea, context.Fx.PlateScale), board.Columns, board.Rows,
-            FlowRenderer.CellGap);
+        var grid = GameGrid.Centered(StageLayout.Punched(boardArea, context.Fx.PlateScale), board.Columns,
+            board.Rows, FlowRenderer.CellGap);
         var hovered = playing ? ResolveHover(grid) : -1;
         if (playing)
         {
@@ -129,8 +129,8 @@ internal sealed class FlowApp : IMiniGame
             fx.ShakeOffset(scale), scale);
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
-        context.Hud.Level(board.Level);
-        session.Report(board.Level);
+        context.Hud.Score(board.Level, L.Games.Level);
+        session.Report(board.Level - 1);
     }
 
     private void SyncBoard(int level, int wantedMode, ulong wantedSalt, bool force)
@@ -159,12 +159,6 @@ internal sealed class FlowApp : IMiniGame
 
     private static Rect StripRect(Rect header, float scale) =>
         new(header.Min, new Vector2(header.Max.X - (HintRadius * 2f + StripGap) * scale, header.Max.Y));
-
-    private static Rect Scaled(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
-    }
 
     private int ResolveHover(in GameGrid grid)
     {
@@ -323,6 +317,8 @@ internal sealed class FlowApp : IMiniGame
         particles.Confetti(new Vector2(grid.Center.X, grid.Bounds.Min.Y), 70, FlowRenderer.ConfettiPalette,
             260f * scale, 4f, 1.3f);
         context.Session.Finish(new GameOutcome(board.Level, ScoreKind.Level, context.Session.StatId)
+            .WithContinueLabel(L.Games.NextLevel)
+            .WithQuietBest()
             .WithStat(L.Games.Moves, GameNumber.Label(board.Moves))
             .WithStat(L.Flow.Hints, GameNumber.Label(hintsUsed)));
     }

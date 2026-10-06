@@ -32,7 +32,6 @@ internal sealed class TetrisApp : IMiniGame
     private static readonly string[] ModeStatIds = { GameId, ModernStatId };
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Tetris, GameGenre.Puzzle, L.Tetris.Hook,
         Backdrop.Neon, HudStyle.Compact, ScoreKind.Score, Modes, ModeStatIds, clocked: true, keyboard: true);
-    private static readonly Dictionary<int, string> GainLabels = new();
     private static readonly Vector4[] TetrisPalette =
     {
         new(0.40f, 0.82f, 0.98f, 1f), new(0.95f, 0.84f, 0.36f, 1f), new(0.72f, 0.52f, 0.98f, 1f),
@@ -112,7 +111,7 @@ internal sealed class TetrisApp : IMiniGame
         particles.Update(context.RawDeltaSeconds);
         fx.Update(context.RawDeltaSeconds);
         clearFlash = MathF.Max(0f, clearFlash - context.RawDeltaSeconds);
-        Layout(Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale)), scale);
+        Layout(StageLayout.Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale)), scale);
         var playing = context.Session.State == StageFlow.Playing && !finished;
         if (!finished)
         {
@@ -214,19 +213,7 @@ internal sealed class TetrisApp : IMiniGame
 
     private void HandleGestures(float rawDelta, float scale)
     {
-        var area = grid.Bounds;
-        var cursor = ImGui.GetCursorScreenPos();
-        ImGui.SetCursorScreenPos(area.Min);
-        ImGui.InvisibleButton(GestureSurfaceId, area.Size);
-        var hovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem) &&
-                      UiInteract.Hover(area.Min, area.Max);
-        var activated = hovered && ImGui.IsItemActivated();
-        if (hovered)
-        {
-            UiInteract.ReportGestureSurface();
-        }
-
-        ImGui.SetCursorScreenPos(cursor);
+        var hovered = PressSurface.Claim(GestureSurfaceId, grid.Bounds, out var activated);
         if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
             Hold();
@@ -413,7 +400,7 @@ internal sealed class TetrisApp : IMiniGame
         }
 
         fx.Shockwave(grid.Center, grid.Width * (0.3f + 0.1f * lines), GamePalette.Lighten(Accent, 0.3f), 0.5f, 3f);
-        fx.AddText(GainLabel(board.LastLockScore), new Vector2(grid.Center.X, grid.Origin.Y + grid.Height * 0.3f),
+        fx.AddText(GameNumber.Signed(board.LastLockScore), new Vector2(grid.Center.X, grid.Origin.Y + grid.Height * 0.3f),
             Accent, 1.2f);
         if (board.LastCombo >= 1)
         {
@@ -554,21 +541,4 @@ internal sealed class TetrisApp : IMiniGame
         return comboLabels[index] ??= string.Concat(Loc.T(L.Stage.Times, GameNumber.Label(index)), " ", Loc.T(L.Games.Combo));
     }
 
-    private static string GainLabel(int points)
-    {
-        if (GainLabels.TryGetValue(points, out var label))
-        {
-            return label;
-        }
-
-        label = string.Concat("+", GameNumber.Label(points));
-        GainLabels[points] = label;
-        return label;
-    }
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
-    }
 }

@@ -31,8 +31,9 @@ internal sealed class SolitaireApp : IMiniGame
     private const float CapsuleIconGap = 5f;
     private static readonly LocString[] Modes = { L.Solitaire.Classic, L.Solitaire.Vegas };
     private static readonly string[] ModeStatIds = { GameId, VegasStatId };
+    private static readonly ScoreKind[] ModeKinds = { ScoreKind.Time, ScoreKind.Score };
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Solitaire, GameGenre.Tabletop, L.Solitaire.Hook,
-        Backdrop.Felt, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds);
+        Backdrop.Felt, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds, modeKinds: ModeKinds);
     private static readonly Vector4[] WinPalette =
     {
         Core.Theme.Accent.Mint, Core.Theme.Accent.Amber, Core.Theme.Accent.Rose, Core.Theme.Accent.Blue,
@@ -72,8 +73,6 @@ internal sealed class SolitaireApp : IMiniGame
     private bool finished;
     private bool celebrated;
     private bool previewDealt;
-    private bool bestLoaded;
-    private int bestVegas;
     private int checkedMoves = -1;
 
     public SolitaireApp()
@@ -124,7 +123,6 @@ internal sealed class SolitaireApp : IMiniGame
         finishPending = false;
         finished = false;
         celebrated = false;
-        bestLoaded = false;
         checkedMoves = -1;
     }
 
@@ -148,12 +146,6 @@ internal sealed class SolitaireApp : IMiniGame
         var drawList = ImGui.GetWindowDrawList();
         var session = context.Session;
         var playing = session.State == StageFlow.Playing;
-        if (!bestLoaded)
-        {
-            bestVegas = session.Stats.Get(VegasStatId).BestScore;
-            bestLoaded = true;
-        }
-
         particles.Update(context.RawDeltaSeconds);
         fx.Update(context.RawDeltaSeconds);
         entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds, DealSpeed);
@@ -256,11 +248,11 @@ internal sealed class SolitaireApp : IMiniGame
     private void DrawHud(in GameContext context, ImDrawListPtr drawList, float scale, bool playing)
     {
         var hud = context.Hud;
-        hud.Timer(MathF.Floor(elapsed), 0f, false);
+        hud.Clock(elapsed);
+        hud.Best(context.Session.Best);
         if (vegas)
         {
             hud.Score(board.Score);
-            hud.Best(bestVegas);
         }
 
         var autoReady = playing && !autoPlaying && entrance >= 1f && board.IsAutoCompletable;

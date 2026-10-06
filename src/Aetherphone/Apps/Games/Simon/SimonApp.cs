@@ -22,7 +22,6 @@ internal sealed class SimonApp : IMiniGame
     {
         UiSound.SimonTone1, UiSound.SimonTone2, UiSound.SimonTone3, UiSound.SimonTone4,
     };
-    private static readonly string?[] GainLabels = new string?[SimonBoard.MaxLength + 1];
     private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
     private static readonly Vector4 Spark = new(1f, 0.95f, 0.65f, 1f);
     private static readonly Vector4 Gold = new(1f, 0.84f, 0.36f, 1f);
@@ -87,7 +86,7 @@ internal sealed class SimonApp : IMiniGame
             lit[pad] = MathF.Max(0f, lit[pad] - rawSeconds * LitDecay);
         }
 
-        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var area = StageLayout.Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
         var grid = GameGrid.Centered(area, 2, 2, SimonRenderer.GapFraction);
         var pressed = finished ? -1 : Step(grid, scale, context);
         var showing = board.Phase == SimonPhase.Showing;
@@ -192,7 +191,7 @@ internal sealed class SimonApp : IMiniGame
         fx.AddTrauma(0.12f);
         particles.Sparkle(grid.Center, 14, Spark, 160f * scale, 2.6f, 0.8f);
         fx.Shockwave(grid.Center, grid.Pitch * 0.9f, GamePalette.Lighten(Accent, 0.3f), 0.55f, 3f);
-        fx.AddText(GainLabel(board.Score), grid.Center - new Vector2(0f, grid.Pitch * 0.3f), Accent, 1.15f);
+        fx.AddText(GameNumber.Signed(board.Score), grid.Center - new Vector2(0f, grid.Pitch * 0.3f), Accent, 1.15f);
         context.Fx.Punch(0.03f);
         if (board.Score % SimonBoard.RampEvery != 0)
         {
@@ -227,17 +226,5 @@ internal sealed class SimonApp : IMiniGame
     {
         var center = SimonRenderer.PadRect(grid, pad).Center;
         particles.Burst(center, count, SimonRenderer.ColorOf(pad), 150f * scale, 3f, 0.5f, 240f);
-    }
-
-    private static string GainLabel(int points)
-    {
-        var index = Math.Clamp(points, 0, SimonBoard.MaxLength);
-        return GainLabels[index] ??= string.Concat("+", GameNumber.Label(index));
-    }
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
     }
 }

@@ -113,8 +113,8 @@ internal sealed class SudokuApp : IMiniGame
 
         Advance(context.RawDeltaSeconds);
         LayoutRows(context.Safe, scale, out var boardArea, out var toolsRow, out var padRow);
-        grid = GameGrid.Centered(Scaled(boardArea, context.Fx.PlateScale), SudokuBoard.Size, SudokuBoard.Size,
-            SudokuRenderer.CellGap);
+        grid = GameGrid.Centered(StageLayout.Punched(boardArea, context.Fx.PlateScale), SudokuBoard.Size,
+            SudokuBoard.Size, SudokuRenderer.CellGap);
         var hovered = playing ? ResolveHover() : -1;
         if (playing)
         {
@@ -193,12 +193,6 @@ internal sealed class SudokuApp : IMiniGame
         var inset = BoardPlate.Padding * scale;
         boardArea = new Rect(new Vector2(safe.Min.X + inset, safe.Min.Y + inset),
             new Vector2(safe.Max.X - inset, toolsRow.Min.Y - gap - inset));
-    }
-
-    private static Rect Scaled(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
     }
 
     private int ResolveHover()
@@ -395,7 +389,7 @@ internal sealed class SudokuApp : IMiniGame
 
         finished = true;
         won = false;
-        context.Session.Finish(new GameOutcome(0, ScoreKind.Time, context.Session.StatId, won: false)
+        context.Session.Finish(new GameOutcome((int)elapsed, ScoreKind.Time, context.Session.StatId, won: false)
             .WithStat(L.Games.Time, TimeText.MinutesSeconds((int)elapsed))
             .WithStat(L.Games.Mistakes, GameNumber.Label(mistakes)));
     }

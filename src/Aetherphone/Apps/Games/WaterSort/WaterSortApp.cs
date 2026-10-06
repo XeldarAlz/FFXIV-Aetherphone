@@ -123,7 +123,7 @@ internal sealed class WaterSortApp : IMiniGame
         particles.Update(context.RawDeltaSeconds);
         fx.Update(context.RawDeltaSeconds);
         entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds, EntranceSpeed);
-        var area = Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var area = StageLayout.Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
         var lift = liftSpring.Step(board.Selected >= 0 || pour.Active ? SelectedLift * scale : 0f, LiftSmoothSeconds,
             context.RawDeltaSeconds);
         AdvancePour(context.RawDeltaSeconds, area, scale);
@@ -144,12 +144,6 @@ internal sealed class WaterSortApp : IMiniGame
             Celebrate(context, area, scale);
             Finish(context);
         }
-    }
-
-    private static Rect Punched(Rect area, float plateScale)
-    {
-        var half = area.Size * 0.5f * plateScale;
-        return new Rect(area.Center - half, area.Center + half);
     }
 
     private void HandleClick(Rect area, float scale)
@@ -277,7 +271,7 @@ internal sealed class WaterSortApp : IMiniGame
     private void DrawHud(in GameContext context, ImDrawListPtr drawList, float scale, bool interactive)
     {
         var hud = context.Hud;
-        hud.Level(level);
+        hud.Score(level, L.Games.Level);
         var label = GameNumber.Label(board.Moves);
         var width = CapsulePadX * 2f + CapsuleIconSize + CapsuleIconGap + Typography.Measure(label, CapsuleStyle).X / scale;
         hud.Custom(width);
@@ -335,6 +329,8 @@ internal sealed class WaterSortApp : IMiniGame
         finishPending = false;
         finished = true;
         context.Session.Finish(new GameOutcome(level, ScoreKind.Level, GameId)
+            .WithContinueLabel(L.Games.NextLevel)
+            .WithQuietBest()
             .WithStat(L.Games.Moves, GameNumber.Label(board.Moves)));
     }
 }
