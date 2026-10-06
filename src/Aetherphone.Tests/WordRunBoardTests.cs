@@ -1,3 +1,5 @@
+using System.Text;
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.WordRun;
 using Xunit;
 
@@ -5,6 +7,26 @@ namespace Aetherphone.Tests;
 
 public sealed class WordRunBoardTests
 {
+    private const int ReplayWords = 12;
+    private static readonly string[] ReplayAnswers =
+    {
+        "APPLE", "BREAD", "CRANE", "DRIVE", "EARTH", "FLAME", "GRAPE", "HOUSE", "INDEX", "JUICE", "KNIFE", "LEMON",
+        "MANGO", "NIGHT", "OCEAN", "PIANO", "QUEEN", "RIVER", "STONE", "TIGER",
+    };
+
+    [Fact]
+    public void SameSeedReplaysIdentically()
+    {
+        var first = Play(1234, out var firstTrace);
+        var second = Play(1234, out var secondTrace);
+        Play(99, out var otherTrace);
+
+        Assert.Equal(firstTrace, secondTrace);
+        Assert.Equal(first.Score, second.Score);
+        Assert.Equal(first.Answer, second.Answer);
+        Assert.NotEqual(firstTrace, otherTrace);
+    }
+
     [Theory]
     [InlineData("APPLE", "PAPAL", "PPCAP")]
     [InlineData("ROBOT", "BOOTS", "PCPPA")]
@@ -47,7 +69,7 @@ public sealed class WordRunBoardTests
     {
         var board = new WordRunBoard();
         board.Load(new[] { "APPLE" }, new HashSet<string> { "APPLE", "PAPAL", "BREAD", "CRANE", "DRIVE", "EARTH", "FLAME" });
-        board.StartRun();
+        board.StartRun(GameRandom.FromSeed(1));
         Assert.Equal(WordOutcome.Playing, board.Outcome);
         Type(board, "APP");
         Assert.Equal(WordSubmit.TooShort, board.Submit());
@@ -82,7 +104,7 @@ public sealed class WordRunBoardTests
     {
         var board = new WordRunBoard();
         board.Load(new[] { "APPLE" }, new HashSet<string> { "APPLE", "PLEAD", "LAPSE" });
-        board.StartRun();
+        board.StartRun(GameRandom.FromSeed(2));
         Type(board, "PLEAD");
         board.Submit();
         Assert.Equal(WordRunBoard.KeyPresent, board.KeyState('P' - 'A'));
@@ -100,5 +122,23 @@ public sealed class WordRunBoardTests
         {
             board.TypeLetter(letters[index]);
         }
+    }
+
+    private static WordRunBoard Play(int seed, out string trace)
+    {
+        var board = new WordRunBoard();
+        board.Load(ReplayAnswers, new HashSet<string>(ReplayAnswers));
+        board.StartRun(GameRandom.FromSeed((ulong)seed));
+        var builder = new StringBuilder();
+        for (var word = 0; word < ReplayWords; word++)
+        {
+            builder.Append(board.Answer).Append(' ');
+            Type(board, board.Answer);
+            Assert.Equal(WordSubmit.Solved, board.Submit());
+            board.NextWord();
+        }
+
+        trace = builder.ToString();
+        return board;
     }
 }

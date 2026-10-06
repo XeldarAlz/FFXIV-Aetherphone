@@ -8109,10 +8109,7 @@ internal static class L
         public static readonly LocString NotInWordList = new("games.notInWordList", "Not in the word list");
         public static readonly LocString NotEnoughLetters = new("games.notEnoughLetters", "Not enough letters");
         public static readonly LocString SolvedWord = new("games.solvedWord", "Solved!");
-        public static readonly LocString WordWas = new("games.wordWas", "The word was {0}");
         public static readonly LocString EndRun = new("games.endRun", "End run");
-        public static readonly LocString Sure = new("games.sure", "Sure?");
-        public static readonly LocString WordBank = new("games.wordBank", "Word list");
         public static readonly LocString Classic = new("games.classic", "Classic");
         public static readonly LocString Modern = new("games.modern", "Modern");
         public static readonly LocString TSpin = new("games.tSpin", "T-Spin");
@@ -8443,6 +8440,14 @@ internal static class L
     internal static class WordRun
     {
         public static readonly LocString Hook = new("games.wordrun.hook", "Guess the five-letter word in six tries; the colors tell you which letters are right.");
+        public static readonly LocString BankEnglish = new("games.wordrun.bankEn", "EN");
+        public static readonly LocString BankGerman = new("games.wordrun.bankDe", "DE");
+        public static readonly LocString BankSpanish = new("games.wordrun.bankEs", "ES");
+        public static readonly LocString BankFrench = new("games.wordrun.bankFr", "FR");
+        public static readonly LocString BankPortuguese = new("games.wordrun.bankPt", "PT");
+        public static readonly LocString Answer = new("games.wordrun.answer", "Answer");
+        public static readonly LocString EnglishFallback = new("games.wordrun.englishFallback", "Using the English word list");
+        public static readonly LocString NoWordList = new("games.wordrun.noWordList", "No word list found");
     }
 
     internal static class Coil
