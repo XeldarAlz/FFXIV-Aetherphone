@@ -4421,6 +4421,7 @@
   "games.whack.moles": "モグラ",
   "games.snake": "スネーク",
   "games.snake.hook": "ヘビを果物まで導き、自分の体には触れないように。",
+  "games.snake.wrap": "壁なし",
   "games.play": "プレイ",
   "games.sudoku": "数独",
   "games.sudoku.hook": "どの行・列・ブロックにも1から9がそろうようにマスを埋めよう。",

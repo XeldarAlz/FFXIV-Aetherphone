@@ -1,215 +1,305 @@
 using Aetherphone.Apps.Games.Framework;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Snake;
 
-internal sealed class SnakeApp : ILegacyMiniGame
+internal sealed class SnakeApp : IMiniGame
 {
+    internal const string WrapStatId = "snake.wrap";
     private const string GameId = "snake";
-    private const float TrailInterval = 0.045f;
+    private const string SwipeSurfaceId = "snake.swipe";
+    private const int WrapMode = 1;
+    private const float SwipeThreshold = 22f;
+    private const float EatPulseDecay = 3.4f;
+    private const float LeadFraction = 0.05f;
+    private const float FollowSmoothSeconds = 0.4f;
+    private const float RibbonWidth = 0.5f;
+    private const ulong IdleSeed = 7;
+    private static readonly LocString[] Modes = { L.Games.Classic, L.Snake.Wrap };
+    private static readonly string[] ModeStatIds = { GameId, WrapStatId };
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Snake, GameGenre.Arcade, L.Snake.Hook,
+        Backdrop.Meadow, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true, countdown: true,
+        keyboard: true);
+    private static readonly string AppleLabel = string.Concat("+", GameNumber.Label(SnakeBoard.ApplePoints));
+    private static readonly string GoldLabel = string.Concat("+", GameNumber.Label(SnakeBoard.GoldPoints));
+    private static readonly string BombLabel = string.Concat("-", GameNumber.Label(SnakeBoard.BombShrink));
+    private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
+    private static readonly Vector4 Spark = new(1f, 0.95f, 0.7f, 1f);
+    private static readonly Vector4 Smoke = new(0.3f, 0.3f, 0.34f, 0.8f);
+    private static readonly ParticleSpec AppleBurst = new(GamePalette.Lighten(SnakeRenderer.HeadColor, 0.2f),
+        SnakeRenderer.AppleColor, 0.14f, 6f, 0.5f, 8f, shape: ParticleShape.Circle);
+    private static readonly ParticleSpec GoldSparkle = new(SnakeRenderer.GoldColor, Spark, 0.12f, 4f, 0.8f, 1.5f,
+        2.2f, 6f, shape: ParticleShape.Star, additive: true);
+    private static readonly ParticleSpec BombSmoke = new(Smoke, Smoke with { W = 0f }, 0.3f, 3f, 0.7f, -1f, 1.5f,
+        curve: SizeCurve.Grow);
+    private static readonly ParticleSpec CrashShards = new(SnakeRenderer.HeadColor, SnakeRenderer.TailColor, 0.16f,
+        9f, 0.8f, 10f, 1.2f, 8f, shape: ParticleShape.Shard);
     private readonly SnakeBoard board = new();
-    private readonly SnakeRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private RollingValue scoreRoll;
-    private bool started;
-    private bool statsLoaded;
-    private int bestScore;
-    private bool pendingSubmit;
-    private bool newBest;
-    private int finalScore;
-    private float resultAppear;
+    private readonly Ribbon ribbon = new();
+    private Camera2D camera = Camera2D.Create();
+    private Vector2 swipeStart;
+    private bool swipeActive;
     private float eatPulse;
-    private float trailTimer;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Snake);
-    public bool RunsOnAClock => true;
+    private bool finished;
 
-    public GameGenre Genre => GameGenre.Arcade;
-    public void Open()
+    public SnakeApp()
     {
-        started = false;
-        statsLoaded = false;
+        board.Reset(GameRandom.FromSeed(IdleSeed), false);
+    }
+
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
+    {
+        board.Reset(start.Random, start.Mode == WrapMode);
+        particles.Clear();
+        fx.Clear();
+        ribbon.Clear();
+        camera = Camera2D.Create();
+        eatPulse = 0f;
+        swipeActive = false;
+        finished = false;
     }
 
     public void Close()
     {
+        particles.Clear();
+        fx.Clear();
+        ribbon.Clear();
     }
 
     public void Dispose()
     {
     }
 
-    private void Restart(Rect area)
+    public void DrawIdle(in GameContext context)
     {
-        board.Reset(area);
-        particles.Clear();
-        fx.Clear();
-        scoreRoll.Snap(0);
-        pendingSubmit = false;
-        newBest = false;
-        resultAppear = 0f;
-        eatPulse = 0f;
+        PlaceCamera(context);
+        DrawWorld(ImGui.GetWindowDrawList(), UiScale.Current);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        var area = new Rect(new Vector2(body.Min.X + 6f * scale, body.Min.Y + 56f * scale),
-            new Vector2(body.Max.X - 6f * scale, body.Max.Y - 8f * scale));
-        if (!statsLoaded)
+        var drawList = ImGui.GetWindowDrawList();
+        var simDelta = fx.ScaleDelta(context.DeltaSeconds);
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        eatPulse = MathF.Max(0f, eatPulse - context.RawDeltaSeconds * EatPulseDecay);
+        PlaceCamera(context);
+        if (!finished)
         {
-            bestScore = context.Stats.Get(GameId).BestScore;
-            statsLoaded = true;
+            Step(simDelta, context);
         }
 
-        if (!started)
+        DrawWorld(drawList, scale);
+        context.Hud.Score(board.Score);
+        context.Hud.Level(board.Level);
+        context.Hud.Best(context.Session.Best);
+        context.Session.Report(board.Score);
+    }
+
+    private void PlaceCamera(in GameContext context)
+    {
+        camera.Fit(context.Safe, SnakeBoard.Columns, SnakeBoard.Rows, FitMode.Contain);
+        var center = new Vector2(SnakeBoard.Columns * 0.5f, SnakeBoard.Rows * 0.5f);
+        camera.Follow(center + (board.HeadWorld - center) * LeadFraction, Vector2.Zero, FollowSmoothSeconds,
+            context.DeltaSeconds);
+        context.Fx.ApplyTo(ref camera);
+        camera.Update(context.RawDeltaSeconds, UiScale.Current);
+        context.Backdrop.SetCamera(in camera);
+    }
+
+    private void Step(float deltaSeconds, in GameContext context)
+    {
+        HandleInput(context);
+        board.Step(deltaSeconds);
+        if (board.WrappedThisStep)
         {
-            board.Reset(area);
-            started = true;
+            ribbon.Clear();
         }
 
-        if (pendingSubmit)
+        if (board.State == SnakeState.Playing && deltaSeconds > 0f)
         {
-            newBest = context.Stats.SubmitScore(GameId, finalScore);
-            if (newBest)
+            ribbon.Push(board.HeadWorld);
+        }
+
+        if (board.AteThisStep != FruitKind.None)
+        {
+            OnEat(board.AteThisStep, context);
+        }
+
+        if (board.LevelledThisStep)
+        {
+            GameSfx.LevelClear();
+            context.Fx.Sweep();
+        }
+
+        if (board.DiedThisStep)
+        {
+            OnDeath(context);
+        }
+
+        if (board.State != SnakeState.Over)
+        {
+            return;
+        }
+
+        finished = true;
+        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, context.Session.StatId)
+            .WithStat(L.Games.Level, GameNumber.Label(board.Level))
+            .WithStat(L.Games.Time, TimeText.MinutesSeconds((int)board.PlaySeconds)));
+    }
+
+    private void HandleInput(in GameContext context)
+    {
+        if (context.Session.State is not (StageFlow.Playing or StageFlow.Countdown))
+        {
+            swipeActive = false;
+            return;
+        }
+
+        if (GameInput.Pressed(ImGuiKey.W, ImGuiKey.UpArrow))
+        {
+            board.Steer(SnakeDirection.Up);
+        }
+
+        if (GameInput.Pressed(ImGuiKey.S, ImGuiKey.DownArrow))
+        {
+            board.Steer(SnakeDirection.Down);
+        }
+
+        if (GameInput.Pressed(ImGuiKey.A, ImGuiKey.LeftArrow))
+        {
+            board.Steer(SnakeDirection.Left);
+        }
+
+        if (GameInput.Pressed(ImGuiKey.D, ImGuiKey.RightArrow))
+        {
+            board.Steer(SnakeDirection.Right);
+        }
+
+        HandleSwipe(camera.View);
+    }
+
+    private void HandleSwipe(Rect area)
+    {
+        var cursor = ImGui.GetCursorScreenPos();
+        ImGui.SetCursorScreenPos(area.Min);
+        ImGui.InvisibleButton(SwipeSurfaceId, area.Size);
+        var hovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem) &&
+                      UiInteract.Hover(area.Min, area.Max);
+        var activated = hovered && ImGui.IsItemActivated();
+        if (hovered)
+        {
+            UiInteract.ReportGestureSurface();
+        }
+
+        ImGui.SetCursorScreenPos(cursor);
+        var mouse = ImGui.GetMousePos();
+        if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
+        {
+            swipeActive = false;
+            return;
+        }
+
+        if (!swipeActive)
+        {
+            if (!activated)
             {
-                bestScore = finalScore;
+                return;
             }
 
-            pendingSubmit = false;
+            swipeActive = true;
+            swipeStart = mouse;
+            return;
         }
 
-        var mouse = ImGui.GetMousePos();
-        var simDelta = fx.ScaleDelta(deltaSeconds);
-        var crashed = board.Step(simDelta, area, mouse);
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        eatPulse = MathF.Max(0f, eatPulse - deltaSeconds * 3.4f);
-        if (board.State == SnakeState.Ready && ImGui.IsMouseClicked(ImGuiMouseButton.Left) &&
-            UiInteract.Hover(area.Min, area.Max))
+        var delta = mouse - swipeStart;
+        var threshold = SwipeThreshold * UiScale.Current;
+        if (MathF.Abs(delta.X) < threshold && MathF.Abs(delta.Y) < threshold)
         {
-            board.Begin(mouse);
+            return;
         }
 
-        if (board.AteLastStep)
+        if (MathF.Abs(delta.X) > MathF.Abs(delta.Y))
         {
-            OnEat(scale);
+            board.Steer(delta.X > 0f ? SnakeDirection.Right : SnakeDirection.Left);
+        }
+        else
+        {
+            board.Steer(delta.Y > 0f ? SnakeDirection.Down : SnakeDirection.Up);
         }
 
-        if (crashed)
-        {
-            OnCrash(scale);
-        }
-
-        EmitTrail(simDelta, area);
-        var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
-        var shake = fx.ShakeOffset(scale);
-        renderer.Draw(board, area, scale, shake, eatPulse);
-        particles.Draw(drawList, scale);
-        fx.DrawRings(drawList, scale);
-        fx.DrawFlash(drawList, body, 0f);
-        fx.DrawText();
-        DrawHud(body, area, theme, scale, deltaSeconds);
-        if (board.State == SnakeState.Over)
-        {
-            DrawResult(theme, body, deltaSeconds, area);
-        }
+        swipeStart = mouse;
     }
 
-    private void OnEat(float scale)
+    private void OnEat(FruitKind kind, in GameContext context)
     {
-        UiFeedback.Play(UiSound.GameCollect);
         eatPulse = 1f;
-        particles.Burst(board.Head, 12, GamePalette.Lighten(Accent, 0.2f), 190f * scale, 3f, 0.5f, 220f);
-        particles.Sparkle(board.Head, 6, new Vector4(1f, 0.95f, 0.7f, 1f), 120f * scale, 2.2f, 0.6f);
-        fx.Shockwave(board.Head, 42f * scale, GamePalette.Lighten(Accent, 0.35f), 0.4f, 2.6f);
-        fx.AddTrauma(0.12f);
-        fx.HitStop(0.045f);
-    }
-
-    private void EmitTrail(float deltaSeconds, Rect area)
-    {
-        if (board.State != SnakeState.Playing || deltaSeconds <= 0f)
+        var headWorld = board.HeadWorld;
+        var headScreen = camera.ToScreen(headWorld);
+        switch (kind)
         {
-            return;
-        }
-
-        trailTimer -= deltaSeconds;
-        if (trailTimer > 0f)
-        {
-            return;
-        }
-
-        trailTimer = TrailInterval;
-        particles.Burst(board.Head, 1, GamePalette.Lighten(Accent, 0.15f) with { W = 0.35f },
-            14f, SnakeBoard.SegRadiusOf(area) * 0.16f, 0.34f, 0f, MathF.PI * 2f, 0f, ParticleShape.GlowCircle);
-    }
-
-    private void OnCrash(float scale)
-    {
-        UiFeedback.Play(UiSound.GameHitSoft);
-        finalScore = board.Score;
-        pendingSubmit = true;
-        resultAppear = 0f;
-        fx.AddTrauma(0.6f);
-        fx.HitStop(0.12f);
-        fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.45f);
-        fx.Shockwave(board.Head, 110f * scale, new Vector4(0.98f, 0.55f, 0.45f, 1f), 0.6f, 3.4f);
-        particles.Burst(board.Head, 30, Accent, 300f * scale, 4f, 0.8f, 360f);
-        particles.Streaks(board.Head, 14, new Vector4(0.98f, 0.72f, 0.5f, 1f), 420f * scale, 2.6f, 0.5f);
-    }
-
-    private void DrawHud(Rect body, Rect area, PhoneTheme theme, float scale, float deltaSeconds)
-    {
-        var rowY = body.Min.Y + 30f * scale;
-        var beatingBest = board.Score > 0 && board.Score > bestScore;
-        GameHud.ScorePill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
-            board.Score, Accent, theme, deltaSeconds, beatingBest);
-        var bestShown = board.Score > bestScore ? board.Score : bestScore;
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(bestShown),
-            Accent, theme);
-        if (board.State != SnakeState.Over &&
-            GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
-        {
-            Restart(area);
-        }
-
-        if (board.State == SnakeState.Ready)
-        {
-            var pulse = 1f + 0.05f * Pulse.Wave(Pulse.Calm);
-            Typography.DrawCentered(new Vector2(area.Center.X, area.Center.Y - area.Height * 0.16f),
-                Loc.T(L.Games.TapToStart), new Vector4(1f, 1f, 1f, 0.92f), TextStyles.Title2.Scale * pulse,
-                TextStyles.Title2.Weight);
+            case FruitKind.Gold:
+                UiFeedback.Play(UiSound.GamePowerUp);
+                particles.Emit(GoldSparkle, headWorld, 18);
+                fx.Shockwave(headScreen, camera.Px(2.2f), SnakeRenderer.GoldColor, 0.5f, 3f);
+                fx.AddText(GoldLabel, headScreen, SnakeRenderer.GoldColor, 1.3f);
+                context.Fx.Punch(0.08f);
+                context.Fx.Sweep();
+                return;
+            case FruitKind.Bomb:
+                UiFeedback.Play(UiSound.GameExplosion);
+                particles.Emit(BombSmoke, headWorld, 14);
+                fx.Shockwave(headScreen, camera.Px(2.6f), Danger, 0.5f, 3.4f);
+                fx.AddText(BombLabel, headScreen, Danger, 1.2f);
+                camera.Shake(0.35f);
+                context.Fx.Flash(Danger, 0.25f);
+                context.Fx.Punch(0.05f);
+                return;
+            default:
+                UiFeedback.Play(UiSound.GameCollect);
+                particles.Emit(AppleBurst, headWorld, 12);
+                fx.Shockwave(headScreen, camera.Px(1.6f), GamePalette.Lighten(Accent, 0.35f), 0.4f, 2.6f);
+                fx.AddText(AppleLabel, headScreen, Accent, 1.1f);
+                fx.HitStop(0.04f);
+                context.Fx.Punch(0.04f);
+                return;
         }
     }
 
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds, Rect area)
+    private void OnDeath(in GameContext context)
     {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        string? secondary = null;
-        if (bestScore > 0)
-        {
-            secondary = $"{Loc.T(L.Games.Best)} {GameNumber.Label(bestScore)}";
-        }
+        UiFeedback.Play(UiSound.GameBreak);
+        var headWorld = board.HeadWorld;
+        var headScreen = camera.ToScreen(headWorld);
+        particles.Emit(CrashShards, headWorld, 26);
+        fx.Shockwave(headScreen, camera.Px(4f), Danger, 0.6f, 3.4f);
+        camera.Shake(0.6f);
+        context.Fx.Flash(Danger, 0.4f);
+        context.Fx.SlowMo(0.5f, 0.3f);
+    }
 
-        var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score),
-            GameNumber.Label(finalScore), secondary, newBest);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
-        {
-            Restart(area);
-        }
+    private void DrawWorld(ImDrawListPtr drawList, float scale)
+    {
+        SnakeRenderer.DrawFloor(drawList, in camera, board.Wrap, scale);
+        SnakeRenderer.DrawFruit(drawList, in camera, board, scale);
+        ribbon.Draw(drawList, in camera, SnakeRenderer.HeadColor with { W = 0.55f }, camera.Px(RibbonWidth),
+            additive: true);
+        SnakeRenderer.DrawSnake(drawList, in camera, board, eatPulse);
+        particles.Draw(drawList, in camera);
+        fx.DrawRings(drawList, scale);
+        fx.DrawText();
     }
 }

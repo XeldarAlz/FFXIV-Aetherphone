@@ -4421,6 +4421,7 @@
   "games.whack.moles": "Toupeiras",
   "games.snake": "Snake",
   "games.snake.hook": "Guie a cobra até a fruta sem nunca tocar em si mesma.",
+  "games.snake.wrap": "Sem paredes",
   "games.play": "Jogar",
   "games.sudoku": "Sudoku",
   "games.sudoku.hook": "Preencha a grade para que cada linha, coluna e bloco tenha os dígitos de um a nove.",

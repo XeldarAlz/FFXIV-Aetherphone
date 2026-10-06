@@ -4421,6 +4421,7 @@
   "games.whack.moles": "Topos",
   "games.snake": "Snake",
   "games.snake.hook": "Guía a la serpiente hasta la fruta sin tocarte a ti misma.",
+  "games.snake.wrap": "Sin muros",
   "games.play": "Jugar",
   "games.sudoku": "Sudoku",
   "games.sudoku.hook": "Rellena la cuadrícula para que cada fila, columna y caja contenga los dígitos del uno al nueve.",

@@ -4421,6 +4421,7 @@
   "games.whack.moles": "地鼠",
   "games.snake": "贪吃蛇",
   "games.snake.hook": "操控小蛇吃到水果，千万别碰到自己。",
+  "games.snake.wrap": "无墙",
   "games.play": "开始",
   "games.sudoku": "数独",
   "games.sudoku.hook": "填满网格，让每行、每列和每宫都包含一到九。",

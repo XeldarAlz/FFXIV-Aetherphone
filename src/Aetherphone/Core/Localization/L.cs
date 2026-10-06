@@ -8359,6 +8359,7 @@ internal static class L
     internal static class Snake
     {
         public static readonly LocString Hook = new("games.snake.hook", "Steer the snake to the fruit and never touch yourself.");
+        public static readonly LocString Wrap = new("games.snake.wrap", "No walls");
     }
 
     internal static class Sudoku

@@ -4421,6 +4421,7 @@
   "games.whack.moles": "Moles",
   "games.snake": "Snake",
   "games.snake.hook": "Steer the snake to the fruit and never touch yourself.",
+  "games.snake.wrap": "No walls",
   "games.play": "Play",
   "games.sudoku": "Sudoku",
   "games.sudoku.hook": "Fill the grid so every row, column and box holds the digits one to nine.",

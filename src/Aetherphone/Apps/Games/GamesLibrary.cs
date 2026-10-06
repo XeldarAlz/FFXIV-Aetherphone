@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Online;
+using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Games;
@@ -415,7 +416,6 @@ internal sealed class GamesLibrary
             case "simon":
             case "flap":
             case "whack":
-            case "snake":
             case "stack":
             case "crystaldrop":
             case "beat":
@@ -436,6 +436,9 @@ internal sealed class GamesLibrary
                     out value);
             case "tetris":
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(TetrisApp.ModernStatId).BestScore),
+                    out value);
+            case "snake":
+                return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(SnakeApp.WrapStatId).BestScore),
                     out value);
             case "watersort":
             {

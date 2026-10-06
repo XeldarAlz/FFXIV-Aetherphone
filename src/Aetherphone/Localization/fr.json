@@ -4421,6 +4421,7 @@
   "games.whack.moles": "Taupes",
   "games.snake": "Snake",
   "games.snake.hook": "Guidez le serpent vers les fruits sans jamais vous mordre la queue.",
+  "games.snake.wrap": "Sans murs",
   "games.play": "Jouer",
   "games.sudoku": "Sudoku",
   "games.sudoku.hook": "Remplissez la grille pour que chaque ligne, colonne et région contienne les chiffres de un à neuf.",
