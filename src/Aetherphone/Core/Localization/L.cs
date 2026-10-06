@@ -8278,6 +8278,16 @@ internal static class L
         public static readonly LocString Times = new("stage.times", "x{0}");
     }
 
+    internal static class Leaderboard
+    {
+        public static readonly LocString EmptyTitle = new("leaderboard.emptyTitle", "No scores yet");
+        public static readonly LocString EmptyHint = new("leaderboard.emptyHint", "Be the first to set one.");
+        public static readonly LocString SignInHint = new("leaderboard.signInHint", "Sign in to see where you stand and send your bests to the board.");
+        public static readonly LocString You = new("leaderboard.you", "You");
+        public static readonly LocString RankChip = new("leaderboard.rankChip", "#{0}");
+        public static readonly LocString WeekRank = new("leaderboard.weekRank", "#{0} this week");
+    }
+
     internal static class Sweeper
     {
         public static readonly LocString Hook = new("games.minesweeper.hook", "Reveal every safe square and flag the mines before one goes off.");

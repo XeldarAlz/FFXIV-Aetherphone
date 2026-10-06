@@ -42,6 +42,8 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Honorific;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -91,6 +93,9 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private readonly Core.Coins.CoinGameSessionTracker coinSessions;
     private readonly Windows.Components.CoinFloat coinFloats = new();
     private readonly GameRoomsStore gameRooms;
+    private readonly LeaderboardStore leaderboard;
+    private readonly RemoteImageCache images;
+    private readonly LodestoneService lodestone;
     private readonly OnlineHub onlineHub;
     private readonly OnlineRoomView onlineRoom;
     private readonly IMiniGame[] games;
@@ -118,6 +123,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private string pendingRoute = string.Empty;
     private LanguageInfo? countLanguage;
     private int featuredIndex;
+    private int leaderboardVersion = -1;
     private float frameSeconds;
     private float resultProgress;
     private RankText resultRank = new();
@@ -129,14 +135,19 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures,
         Core.Coins.CoinStore coins, Core.Coins.CoinGameSessionTracker coinSessions,
-        GameRoomsStore gameRooms, Configuration configuration, IScoreSink scoreSink, IRankSource rankSource)
+        GameRoomsStore gameRooms, Configuration configuration, LeaderboardStore leaderboard, RemoteImageCache images,
+        LodestoneService lodestone)
     {
         this.stats = stats;
         this.configuration = configuration;
         this.coins = coins;
         this.coinSessions = coinSessions;
         this.gameRooms = gameRooms;
-        session = new GameSession(stats, scoreSink, rankSource);
+        this.leaderboard = leaderboard;
+        this.images = images;
+        this.lodestone = lodestone;
+        refreshLeaderboard = RefreshLeaderboardNow;
+        session = new GameSession(stats, leaderboard, leaderboard);
         fx = new ScreenFx(backdrop);
         onlineHub = new OnlineHub(gameRooms, OpenOnlineRoom);
         onlineRoom = new OnlineRoomView(gameRooms);
@@ -176,7 +187,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new LegacyGameAdapter(new UpdraftApp(), L.Updraft.Title, L.Updraft.Hook),
             new LegacyGameAdapter(new SwoopApp(), L.Swoop.Title, L.Swoop.Hook),
         };
-        library = new GamesLibrary(games, stats);
+        library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];
         RebuildLayout();
         router = new ViewRouter<GamesRoute>(GamesRoute.Root);
@@ -257,6 +268,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         RebuildLayout();
         ResetLauncher();
         onlineHub.Reset();
+        leaderboard.EnsureMyRanksFresh();
     }
 
     public void OnClosed()
@@ -284,6 +296,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         frameSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         library.EnsureLanguage();
         SyncCountLabels();
+        SyncLeaderboardVersion();
         screenRect = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
         ConsumePendingRoute();
         if (!router.IsTransitioning && router.Current.Screen is GamesScreen.Root or GamesScreen.Shelf)
@@ -338,6 +351,22 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         streakText.Reset();
         recordCountText.Reset();
         onlineHub.ResetLabels();
+    }
+
+    private void SyncLeaderboardVersion()
+    {
+        var version = leaderboard.Version;
+        if (version == leaderboardVersion)
+        {
+            return;
+        }
+
+        leaderboardVersion = version;
+        library.RefreshRanks();
+        if (currentGame is not null)
+        {
+            session.RefreshRank();
+        }
     }
 
     private void ConsumePendingRoute()
@@ -411,6 +440,10 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 PaintViewBackdrop(area);
                 DrawShelfPage(context, route.Shelf);
                 return;
+            case GamesScreen.Leaderboard:
+                PaintViewBackdrop(area, leaderboardAccent);
+                DrawLeaderboard(context);
+                return;
             default:
                 PaintViewBackdrop(area);
                 DrawRoot(context, area);
@@ -418,12 +451,14 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         }
     }
 
-    private void PaintViewBackdrop(Rect area)
+    private void PaintViewBackdrop(Rect area) => PaintViewBackdrop(area, games[featuredIndex].Accent);
+
+    private void PaintViewBackdrop(Rect area, Vector4 accent)
     {
         ui.Body(area);
         var drawList = ImGui.GetWindowDrawList();
         drawList.PushClipRect(area.Min, area.Max, true);
-        GameScene.Ambient(drawList, area, games[featuredIndex].Accent);
+        GameScene.Ambient(drawList, area, accent);
         drawList.PopClipRect();
     }
 
@@ -634,6 +669,10 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 {
                     StartRun(game);
                 }
+                else if (action == IntroAction.Leaderboard)
+                {
+                    OpenLeaderboard(game, session.StatId, game.Title);
+                }
 
                 break;
             }
@@ -649,9 +688,14 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             {
                 resultProgress = MathF.Min(1f, resultProgress + rawSeconds * ResultAppearSpeed);
                 var result = BuildStageResult(spec, accent);
-                if (GameOverlay.DrawStage(full, theme, accent, resultProgress, result) == ResultAction.PlayAgain)
+                var resultAction = GameOverlay.DrawStage(full, theme, accent, resultProgress, result);
+                if (resultAction == ResultAction.PlayAgain)
                 {
                     StartRun(game);
+                }
+                else if (resultAction == ResultAction.Leaderboard)
+                {
+                    OpenLeaderboard(game, session.StatId, game.Title);
                 }
 
                 break;
@@ -669,6 +713,9 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 break;
             case PauseAction.Restart:
                 StartRun(game);
+                break;
+            case PauseAction.Leaderboard:
+                OpenLeaderboard(game, session.StatId, game.Title);
                 break;
             case PauseAction.Quit:
                 back();

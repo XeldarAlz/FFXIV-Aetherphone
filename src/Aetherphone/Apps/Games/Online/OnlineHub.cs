@@ -29,8 +29,6 @@ internal sealed class OnlineHub
     private const float TextGap = 14f;
     private const float JoinGap = 8f;
     private const float JoinPillMinWidth = 84f;
-    private const float NoticeIconSize = 18f;
-    private const float NoticePadding = 14f;
     private const float ChevronSize = 13f;
     private const float LampOffset = 16f;
     private const int CodeBufferLength = 16;
@@ -413,20 +411,6 @@ internal sealed class OnlineHub
     }
 
     private static float DrawNotice(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width,
-        float scale, string message, FontAwesomeIcon icon, Vector4 tint)
-    {
-        var pad = NoticePadding * scale;
-        var iconSize = NoticeIconSize * scale;
-        var textLeft = left + pad + iconSize + Metrics.Space.Md * scale;
-        var textWidth = MathF.Max(1f, left + width - pad - textLeft);
-        var block = Typography.MeasureWrappedBlock(message, TextStyles.Subheadline, textWidth);
-        var height = MathF.Max(block.Y, iconSize) + pad * 2f;
-        var max = new Vector2(left + width, top + height);
-        ui.Card(drawList, new Vector2(left, top), max, Metrics.Radius.Widget * scale);
-        ProgressRing.CenterIcon(drawList, new Vector2(left + pad + iconSize * 0.5f, top + height * 0.5f), icon, tint,
-            iconSize);
-        Typography.DrawWrappedLeft(new Vector2(textLeft, top + (height - block.Y) * 0.5f), message,
-            ui.MutedInk, TextStyles.Subheadline, textWidth);
-        return max.Y;
-    }
+        float scale, string message, FontAwesomeIcon icon, Vector4 tint) =>
+        GamesHubArt.Notice(drawList, ui, left, top, width, scale, message, icon, tint);
 }

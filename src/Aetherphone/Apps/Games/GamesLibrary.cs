@@ -95,6 +95,8 @@ internal sealed class GamesLibrary
     private readonly string[] bestValues;
     private readonly string[] bestTiers;
     private readonly RecordKind[] bestKinds;
+    private readonly string[] rankLabels;
+    private readonly IRankSource ranks;
     private int latestCount;
     private int recentCount;
     private int searchedCount;
@@ -113,10 +115,11 @@ internal sealed class GamesLibrary
 
     public int Version { get; private set; }
 
-    public GamesLibrary(IMiniGame[] games, GameStatsStore stats)
+    public GamesLibrary(IMiniGame[] games, GameStatsStore stats, IRankSource? ranks = null)
     {
         this.games = games;
         this.stats = stats;
+        this.ranks = ranks ?? NullRankSource.Instance;
         var kinds = OnlineGameArt.Kinds;
         Entries = new GameEntry[games.Length + kinds.Length];
         for (var index = 0; index < games.Length; index++)
@@ -145,6 +148,7 @@ internal sealed class GamesLibrary
         bestValues = new string[count];
         bestTiers = new string[count];
         bestKinds = new RecordKind[count];
+        rankLabels = new string[count];
         Lift = new Spring[count];
         MarqueeIds = new string[count];
         for (var index = 0; index < count; index++)
@@ -154,6 +158,7 @@ internal sealed class GamesLibrary
             bestLabels[index] = string.Empty;
             bestValues[index] = string.Empty;
             bestTiers[index] = string.Empty;
+            rankLabels[index] = string.Empty;
         }
 
         BuildOrder();
@@ -251,6 +256,14 @@ internal sealed class GamesLibrary
     public string BestTier(int entryIndex) => bestTiers[entryIndex];
 
     public RecordKind BestKind(int entryIndex) => bestKinds[entryIndex];
+
+    public string RankLabel(int entryIndex) => rankLabels[entryIndex];
+
+    public void RefreshRanks()
+    {
+        BuildRankLabels();
+        Version++;
+    }
 
     public int IndexOf(string id)
     {
@@ -401,6 +414,38 @@ internal sealed class GamesLibrary
             };
             bestLabels[index] = bestTiers[index].Length > 0 ? label + " · " + bestTiers[index] : label;
         }
+
+        BuildRankLabels();
+    }
+
+    private void BuildRankLabels()
+    {
+        for (var index = 0; index < Entries.Length; index++)
+        {
+            var best = Entries[index].Online ? 0 : BestRank(Entries[index].Id);
+            rankLabels[index] = best > 0 ? Loc.T(L.Leaderboard.RankChip, GameNumber.Label(best)) : string.Empty;
+        }
+    }
+
+    private int BestRank(string gameId)
+    {
+        var best = 0;
+        var ids = ScoreStatIds.All;
+        for (var index = 0; index < ids.Length; index++)
+        {
+            if (!ScoreStatIds.BelongsTo(ids[index], gameId) || !ranks.TryGetRank(ids[index], out var rank)
+                || !rank.IsRanked)
+            {
+                continue;
+            }
+
+            if (best == 0 || rank.Rank < best)
+            {
+                best = rank.Rank;
+            }
+        }
+
+        return best;
     }
 
     private RecordKind BestRecord(string gameId, out string value, out int tier)
