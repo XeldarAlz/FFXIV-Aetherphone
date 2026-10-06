@@ -99,6 +99,9 @@ internal sealed class DoomAssets : IDisposable
     public int AvailableIwadCount => availableCatalogIndices.Count;
     public DoomIwad AvailableIwad(int index) => Catalog[availableCatalogIndices[index]];
     public string PathFor(in DoomIwad iwad) => Path.Combine(folder, iwad.FileName);
+    public bool HasShareware { get; private set; }
+    public bool HasFreedoom { get; private set; }
+    public bool HasSoundfont { get; private set; }
     public bool SharewareReady => File.Exists(Path.Combine(folder, SharewareFileName));
 
     public bool FreedoomReady =>
@@ -137,14 +140,17 @@ internal sealed class DoomAssets : IDisposable
             }
         }
 
+        HasShareware = SharewareReady;
+        HasFreedoom = FreedoomReady;
+        HasSoundfont = SoundfontPath() is not null;
         if (Installing)
         {
             return;
         }
 
-        SettleState(Shareware, SharewareReady);
-        SettleState(Freedoom, FreedoomReady);
-        SettleState(Soundfont, SoundfontPath() is not null);
+        SettleState(Shareware, HasShareware);
+        SettleState(Freedoom, HasFreedoom);
+        SettleState(Soundfont, HasSoundfont);
     }
 
     private static void SettleState(MediaDependency dependency, bool ready)

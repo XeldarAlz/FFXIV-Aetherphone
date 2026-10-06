@@ -8099,9 +8099,6 @@ internal static class L
         public static readonly LocString DoomMusic = new("games.doomMusic", "Music");
         public static readonly LocString DoomMusicDetail = new("games.doomMusicDetail", "General MIDI soundfont for the soundtrack");
         public static readonly LocString DoomControls = new("games.doomControls", "WASD move, drag or arrows turn, Space fires, E uses, 1-7 weapons, Esc opens the menu");
-        public static readonly LocString DoomMenu = new("games.doomMenu", "Menu");
-        public static readonly LocString DoomFire = new("games.doomFire", "Fire");
-        public static readonly LocString DoomUse = new("games.doomUse", "Use");
         public static readonly LocString DoomFailed = new("games.doomFailed", "Doom could not start");
         public static readonly LocString DoomChooseGame = new("games.doomChooseGame", "Choose a game");
         public static readonly LocString DoomShareware = new("games.doomShareware", "Doom (shareware episode)");
