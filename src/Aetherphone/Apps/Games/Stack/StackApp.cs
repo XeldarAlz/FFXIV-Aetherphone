@@ -1,264 +1,248 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Stack;
 
-internal sealed class StackApp : ILegacyMiniGame
+internal sealed class StackApp : IMiniGame
 {
     private const string GameId = "stack";
-    private const float CameraFollowSpeed = 8.5f;
-    private const float ResultDelay = 0.45f;
+    private const ulong IdleSeed = 5;
+    private const int IdleLevels = 7;
+    private const float ResultDelaySeconds = 0.5f;
+    private const float FollowSmoothSeconds = 0.35f;
+    private const float ViewAnchorFraction = 0.18f;
+    private const float LeadLevels = 0.6f;
+    private const float PerfectPunch = 0.05f;
+    private const float WorldGravity = 6f;
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Stack, GameGenre.Arcade, L.Stack.Hook,
+        Backdrop.Nebula, HudStyle.Standard, ScoreKind.Score, clocked: true);
+    private static readonly Vector4 Danger = new(0.95f, 0.32f, 0.32f, 1f);
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 Ember = new(1f, 0.72f, 0.4f, 1f);
+    private static readonly Vector4 Spark = new(1f, 0.92f, 0.66f, 1f);
+    private static readonly ParticleSpec PerfectSparkle = new(White, White with { W = 0f }, 0.12f, 3f, 0.7f, 2f, 2.2f,
+        6f, shape: ParticleShape.Star, additive: true);
+    private static readonly ParticleSpec MissStreaks = new(Spark, Spark with { W = 0f }, 0.1f, 6f, 0.5f, 5f, 1.2f,
+        shape: ParticleShape.Streak);
     private readonly StackBoard board = new();
-    private readonly StackRenderer renderer = new();
     private readonly ParticleSystem particles = new(256);
     private readonly FeedbackFx fx = new();
-    private RollingValue scoreRoll;
-    private string comboLabel = string.Empty;
-    private int comboShown;
-    private float camera;
-    private float comboPulse;
-    private float overSeconds;
-    private float resultAppear;
-    private bool statsLoaded;
-    private bool pendingSubmit;
-    private bool newBest;
-    private int bestScore;
-    private int finalScore;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Stack);
-    public bool RunsOnAClock => true;
+    private Camera2D camera = Camera2D.Create();
+    private bool cameraPlaced;
+    private float resultDelay;
+    private bool finished;
 
-    public GameGenre Genre => GameGenre.Arcade;
-
-    public void Open()
+    public StackApp()
     {
-        statsLoaded = false;
-        StartGame();
+        BuildIdle();
+    }
+
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
+    {
+        board.Reset(start.Random);
+        particles.Clear();
+        fx.Clear();
+        camera = Camera2D.Create();
+        cameraPlaced = false;
+        resultDelay = 0f;
+        finished = false;
     }
 
     public void Close()
     {
+        BuildIdle();
+        particles.Clear();
+        fx.Clear();
+        cameraPlaced = false;
     }
 
     public void Dispose()
     {
     }
 
-    private void StartGame()
+    public void DrawIdle(in GameContext context)
     {
-        board.Reset();
-        particles.Clear();
-        fx.Clear();
-        scoreRoll.Snap(0);
-        camera = board.Level;
-        comboShown = 0;
-        comboLabel = string.Empty;
-        comboPulse = 0f;
-        overSeconds = 0f;
-        resultAppear = 0f;
-        pendingSubmit = false;
-        newBest = false;
+        PlaceCamera(context);
+        board.Step(context.RawDeltaSeconds);
+        DrawWorld(ImGui.GetWindowDrawList(), UiScale.Current);
     }
 
     public void Draw(in GameContext context)
     {
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        var deltaSeconds = context.DeltaSeconds;
-        var simDelta = fx.ScaleDelta(deltaSeconds);
-        if (!statsLoaded)
-        {
-            bestScore = context.Stats.Get(GameId).BestScore;
-            statsLoaded = true;
-        }
-
-        if (pendingSubmit)
-        {
-            newBest = context.Stats.SubmitScore(GameId, finalScore);
-            if (newBest)
-            {
-                bestScore = finalScore;
-            }
-
-            pendingSubmit = false;
-        }
-
-        var area = new Rect(new Vector2(body.Min.X, body.Min.Y + 58f * scale), body.Max);
-        board.Step(simDelta);
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        camera += (board.Level - camera) * MathF.Min(1f, deltaSeconds * CameraFollowSpeed);
-        comboPulse = MathF.Max(0f, comboPulse - deltaSeconds * 2.6f);
-        if (board.State == StackState.Over)
-        {
-            overSeconds += deltaSeconds;
-        }
-
         var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
-        HandleInput(area, theme, scale);
-        var shake = fx.ShakeOffset(scale);
-        renderer.Draw(board, area, camera, shake, scale);
-        particles.Draw(drawList, scale);
-        fx.DrawRings(drawList, scale);
-        fx.DrawText();
-        fx.DrawFlash(drawList, body, 0f);
-        DrawCombo(area, scale);
-        DrawHud(body, theme, scale, deltaSeconds);
-        if (board.State == StackState.Ready)
+        var simDelta = fx.ScaleDelta(context.DeltaSeconds);
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        PlaceCamera(context);
+        if (!finished)
         {
-            DrawStartHint(area);
+            Step(simDelta, context);
         }
 
-        if (board.State == StackState.Over && overSeconds >= ResultDelay)
-        {
-            DrawResult(theme, body, deltaSeconds);
-        }
+        DrawWorld(drawList, scale);
+        context.Hud.Score(board.Score);
+        context.Hud.Combo(board.Combo);
+        context.Hud.Best(context.Session.Best);
+        context.Session.Report(board.Score);
     }
 
-    private void HandleInput(Rect area, PhoneTheme theme, float scale)
+    private void BuildIdle()
     {
-        if (GameHud.RestartButton(new Vector2(area.Max.X - 22f * scale, area.Min.Y - 28f * scale), 16f * scale, theme))
+        board.Reset(GameRandom.FromSeed(IdleSeed));
+        var idleRandom = GameRandom.FromSeed(IdleSeed);
+        for (var level = 0; level < IdleLevels; level++)
         {
-            StartGame();
-            return;
-        }
-
-        if (board.State == StackState.Over || !ImGui.IsMouseClicked(ImGuiMouseButton.Left) ||
-            !UiInteract.Hover(area.Min, area.Max))
-        {
-            return;
-        }
-
-        if (board.State == StackState.Ready)
-        {
-            board.Begin();
-            return;
-        }
-
-        var result = board.Drop();
-        if (result == StackDrop.Perfect)
-        {
-            OnPerfect(area, scale);
-            return;
-        }
-
-        if (result == StackDrop.Placed)
-        {
-            OnPlaced(area, scale);
-            return;
-        }
-
-        if (result == StackDrop.Missed)
-        {
-            OnMissed(area, scale);
+            board.DropAt(board.Block(board.Level - 1).CenterX + idleRandom.Range(-0.02f, 0.02f));
         }
     }
 
-    private void OnPlaced(Rect area, float scale)
+    private void PlaceCamera(in GameContext context)
+    {
+        camera.Fit(context.Full, StackRenderer.WorldWidth, StackBoard.VisibleLevels, FitMode.CoverWidth);
+        var visibleLevels = camera.View.Height / camera.Zoom;
+        var target = StackRenderer.World(0.5f, board.Level);
+        var lead = new Vector2(0f, -(visibleLevels * ViewAnchorFraction + LeadLevels));
+        if (!cameraPlaced)
+        {
+            camera.Place(target + lead);
+            cameraPlaced = true;
+        }
+        else
+        {
+            camera.Follow(target, lead, FollowSmoothSeconds, context.DeltaSeconds);
+        }
+
+        context.Fx.ApplyTo(ref camera);
+        camera.Update(context.RawDeltaSeconds, UiScale.Current);
+        context.Backdrop.SetCamera(in camera);
+    }
+
+    private void Step(float deltaSeconds, in GameContext context)
+    {
+        HandleInput(context);
+        board.Step(deltaSeconds);
+        if (board.State != StackState.Over)
+        {
+            return;
+        }
+
+        resultDelay -= deltaSeconds;
+        if (resultDelay > 0f)
+        {
+            return;
+        }
+
+        finished = true;
+        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+            .WithStat(L.Stack.Height, GameNumber.Label(board.Height))
+            .WithStat(L.Games.Combo, GameNumber.Label(board.BestCombo))
+            .WithStat(L.Stack.Perfects, GameNumber.Label(board.Perfects)));
+    }
+
+    private void HandleInput(in GameContext context)
+    {
+        if (context.Session.State != StageFlow.Playing || board.State == StackState.Over)
+        {
+            return;
+        }
+
+        var safe = context.Safe;
+        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left) || !UiInteract.Hover(safe.Min, safe.Max))
+        {
+            return;
+        }
+
+        var multiplierBefore = board.Combo.Multiplier;
+        switch (board.Drop())
+        {
+            case StackDrop.Perfect:
+                OnPerfect(multiplierBefore, context);
+                return;
+            case StackDrop.Placed:
+                OnPlaced();
+                return;
+            case StackDrop.Missed:
+                OnMissed(context);
+                return;
+            default:
+                return;
+        }
+    }
+
+    private void OnPlaced()
     {
         UiFeedback.Play(UiSound.GameHitWood);
-        comboShown = 0;
-        var levelHeight = StackRenderer.LevelHeightOf(area);
-        var slicePosition = StackRenderer.ScreenPosition(area, camera, board.LastSliceCenterX, board.Level - 1);
-        var color = StackRenderer.ColorOf(board.Level - 1);
-        particles.Burst(new Vector2(slicePosition.X, slicePosition.Y - levelHeight * 0.5f), 10, color, 150f * scale, 2.6f,
-            0.45f, 320f);
-        fx.AddTrauma(0.10f);
+        var level = board.Level - 1;
+        var color = StackRenderer.ColorOf(level + board.ColorOffset);
+        particles.Burst(StackRenderer.World(board.LastSliceCenterX, level + 0.5f), 10, color, 2.4f, 0.1f, 0.45f,
+            WorldGravity);
+        camera.Shake(0.10f);
     }
 
-    private void OnPerfect(Rect area, float scale)
+    private void OnPerfect(int multiplierBefore, in GameContext context)
     {
         UiFeedback.Play(UiSound.GameMatch);
-        comboShown = board.Combo;
-        comboLabel = "x" + GameNumber.Label(board.Combo);
-        comboPulse = 1f;
-        var top = StackRenderer.ScreenPosition(area, camera, 0.5f, board.Level - 1);
-        var color = StackRenderer.ColorOf(board.Level - 1);
-        var center = new Vector2(area.Min.X + board.Block(board.Level - 1).CenterX * area.Width, top.Y);
+        var scale = UiScale.Current;
+        var level = board.Level - 1;
+        var block = board.Block(level);
+        var world = StackRenderer.BlockCenter(in block, level);
+        var screen = camera.ToScreen(world);
+        var color = StackRenderer.ColorOf(level + board.ColorOffset);
         fx.HitStop(0.045f);
-        fx.AddTrauma(0.22f);
-        fx.Shockwave(center, area.Width * 0.42f, GamePalette.Lighten(color, 0.4f), 0.5f, 3.2f);
-        fx.AddText(Loc.T(L.Games.Perfect), new Vector2(center.X, center.Y - 26f * scale),
-            GamePalette.Lighten(color, 0.45f), 1.15f);
-        particles.Sparkle(center, 14, GamePalette.Lighten(color, 0.5f), 190f * scale, 2.8f, 0.7f);
-        particles.Burst(center, 8, new Vector4(1f, 1f, 1f, 0.9f), 130f * scale, 2.2f, 0.4f, 120f);
-    }
+        camera.Shake(0.2f);
+        fx.Shockwave(screen, camera.Px(block.Width * StackRenderer.WorldWidth * 0.7f), GamePalette.Lighten(color, 0.4f),
+            0.5f, 3.2f);
+        fx.AddText(Loc.T(L.Games.Perfect), screen + new Vector2(0f, -26f * scale), GamePalette.Lighten(color, 0.45f),
+            1.15f);
+        particles.Emit(PerfectSparkle, world, 14);
+        particles.Burst(world, 8, GamePalette.Lighten(color, 0.5f), 2f, 0.08f, 0.4f, 2f);
+        context.Fx.Punch(PerfectPunch);
+        if (board.Combo.Multiplier > multiplierBefore)
+        {
+            GameSfx.ComboTierUp();
+        }
 
-    private void OnMissed(Rect area, float scale)
-    {
-        UiFeedback.Play(UiSound.GameHitSoft);
-        finalScore = board.Score;
-        pendingSubmit = true;
-        overSeconds = 0f;
-        resultAppear = 0f;
-        comboShown = 0;
-        var top = StackRenderer.ScreenPosition(area, camera, board.MovingCenterX, board.Level);
-        fx.Flash(new Vector4(0.95f, 0.32f, 0.32f, 1f), 0.42f);
-        fx.AddTrauma(0.65f);
-        fx.Shockwave(top, area.Width * 0.6f, new Vector4(1f, 0.72f, 0.4f, 1f), 0.6f, 3.4f);
-        particles.Burst(top, 22, StackRenderer.ColorOf(board.Level), 260f * scale, 3.6f, 0.7f, 420f);
-        particles.Streaks(top, 10, new Vector4(1f, 0.92f, 0.66f, 1f), 380f * scale, 2.4f, 0.5f);
-    }
-
-    private void DrawCombo(Rect area, float scale)
-    {
-        if (comboShown < 2)
+        if (!board.WidenedThisDrop)
         {
             return;
         }
 
-        var pop = 1f + 0.32f * Easing.EaseOutCubic(comboPulse);
-        var center = new Vector2(area.Center.X, area.Min.Y + area.Height * 0.16f);
-        var color = StackRenderer.ColorOf(board.Level);
-        Typography.DrawCentered(center + new Vector2(1.5f * scale, 1.5f * scale), comboLabel,
-            new Vector4(0f, 0f, 0f, 0.3f), TextStyles.Title1.Scale * pop, TextStyles.Title1.Weight);
-        Typography.DrawCentered(center, comboLabel, GamePalette.Lighten(color, 0.45f), TextStyles.Title1.Scale * pop,
-            TextStyles.Title1.Weight);
+        UiFeedback.Play(UiSound.GamePowerUp);
+        context.Fx.Sweep();
+        context.Fx.Flash(GamePalette.Lighten(color, 0.5f), 0.18f);
     }
 
-    private static void DrawStartHint(Rect area)
+    private void OnMissed(in GameContext context)
     {
-        var pulse = 1f + 0.05f * Pulse.Wave(Pulse.Calm);
-        var center = new Vector2(area.Center.X, area.Min.Y + area.Height * 0.30f);
-        Typography.DrawCentered(center, Loc.T(L.Games.TapToStart), new Vector4(1f, 1f, 1f, 0.95f),
-            TextStyles.Title2.Scale * pulse, TextStyles.Title2.Weight);
+        UiFeedback.Play(UiSound.GameBreak);
+        var world = StackRenderer.World(board.MovingCenterX, board.Level + 0.5f);
+        var screen = camera.ToScreen(world);
+        context.Fx.Flash(Danger, 0.42f);
+        context.Fx.SlowMo(0.5f, 0.35f);
+        camera.Shake(0.65f);
+        fx.Shockwave(screen, camera.Px(StackRenderer.WorldWidth * 0.3f), Ember, 0.6f, 3.4f);
+        particles.Burst(world, 22, StackRenderer.ColorOf(board.Level + board.ColorOffset), 4f, 0.12f, 0.7f,
+            WorldGravity, shape: ParticleShape.Shard);
+        particles.Emit(MissStreaks, world, 10);
+        resultDelay = ResultDelaySeconds;
     }
 
-    private void DrawHud(Rect body, PhoneTheme theme, float scale, float deltaSeconds)
+    private void DrawWorld(ImDrawListPtr drawList, float scale)
     {
-        var rowY = body.Min.Y + 30f * scale;
-        var beatingBest = board.Score > 0 && board.Score > bestScore;
-        GameHud.ScorePill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
-            board.Score, Accent, theme, deltaSeconds, beatingBest);
-        var bestShown = board.Score > bestScore ? board.Score : bestScore;
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(bestShown),
-            Accent, theme);
-    }
-
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
-    {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        string? secondary = null;
-        if (bestScore > 0)
-        {
-            secondary = $"{Loc.T(L.Games.Best)} {GameNumber.Label(bestScore)}";
-        }
-
-        var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score),
-            GameNumber.Label(finalScore), secondary, newBest);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
-        {
-            StartGame();
-        }
+        StackRenderer.Draw(drawList, in camera, board, board.Combo.Heat, scale);
+        particles.Draw(drawList, in camera);
+        fx.DrawRings(drawList, scale);
+        fx.DrawText();
     }
 }

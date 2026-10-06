@@ -8384,11 +8384,14 @@ internal static class L
     internal static class Stack
     {
         public static readonly LocString Hook = new("games.stack.hook", "Drop each slab on the one below; anything that hangs over gets cut away.");
+        public static readonly LocString Height = new("games.stack.height", "Height");
+        public static readonly LocString Perfects = new("games.stack.perfects", "Perfect drops");
     }
 
     internal static class CrystalDrop
     {
         public static readonly LocString Hook = new("games.crystaldrop.hook", "Drop crystals into the jar and merge matching ones before it overflows.");
+        public static readonly LocString Merges = new("games.crystaldrop.merges", "Merges");
     }
 
     internal static class Beat
@@ -8400,6 +8403,7 @@ internal static class L
     internal static class Blade
     {
         public static readonly LocString Hook = new("games.blade.hook", "Throw your blades into the spinning wheel without hitting one already stuck there.");
+        public static readonly LocString Apples = new("games.blade.apples", "Apples");
     }
 
     internal static class Trivia
