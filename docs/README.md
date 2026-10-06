@@ -41,7 +41,7 @@ Terms that recur across every doc, defined once here:
 
 Every doc opens with one paragraph saying what it covers and when to read it, then a "Key files" table mapping the paths you will open most. Docs end with "Gotchas" (real traps verified in code, worth skimming even if you skip the middle) and "Related docs" links. When any doc and the code disagree, the code wins.
 
-Two exceptions keep their own format: [the art asset specification](ART-ASSET-SPEC.md), written for artists, numbered and table first, and [accent colors](design-accents.md), a short design rationale without the standard sections. Even [the translator guide](translating.md), a step-by-step walkthrough for contributors who are not engineers, follows the standard shape.
+One exception keeps its own format: [accent colors](design-accents.md), a short design rationale without the standard sections. Art specs for artists live on the website, not in this doc set. Even [the translator guide](translating.md), a step-by-step walkthrough for contributors who are not engineers, follows the standard shape.
 
 `readme/` is not part of this doc set. It holds the eight translations of the user-facing project README, which follow the README's shape rather than the one described above. The English README stays at the repo root because GitHub renders only that one.
 
@@ -87,7 +87,7 @@ Two exceptions keep their own format: [the art asset specification](ART-ASSET-SP
 
 | Doc | What it covers |
 | --- | --- |
-| [Art asset specification](ART-ASSET-SPEC.md) | The spec artists follow to produce app icons, phone cases, and avatar frames that drop in without engineering work, plus the open art decisions still on the table |
+| [Art assets](ART-ASSET-SPEC.md) | Where artists work (the spec and checker pages on aetherphone.net), how delivered icons, wallpapers, cases and frames land in the repo, and which plugin constants the website copies |
 | [Translator guide](translating.md) | For translators with no code background: editing one language JSON and opening a pull request entirely in the browser |
 | [AI usage](ai-usage.md) | How Aetherphone is built with AI tools, the declared level, contributor rules, and where the content inside the phone comes from |
 

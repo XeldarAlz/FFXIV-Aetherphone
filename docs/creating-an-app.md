@@ -19,13 +19,13 @@ Two terms you will meet constantly:
 | src/Aetherphone/Core/Apps/ViewRouter.cs | In-app screen stack with slide transitions |
 | src/Aetherphone/Windows/Components/AppSkin.cs | Per-app palette plus common widgets (buttons, fields, chips) |
 | src/Aetherphone/Windows/Components/AppPalettes.cs | The palette catalog apps feed into `AppSkin` |
-| src/Aetherphone/Windows/Components/AppIconArt.cs | Icon resolution entry point with procedural fallbacks |
-| src/Aetherphone/Windows/Components/AppIconTextures.cs | Loads `Icons/<id>.png` and draws it tinted |
+| src/Aetherphone/Windows/Components/Chrome/AppIconTile.cs | Draws the painted icon pair in the chosen appearance |
+| src/Aetherphone/Windows/Components/Chrome/AppIconArt.cs | Fallback art on the accent tile when an id has no painted pair |
 | src/Aetherphone/Windows/Components/AppHeader.cs | Standard title bar with back button |
 | src/Aetherphone/Windows/Components/Metrics.cs | Spacing, radius, and size tokens |
 | src/Aetherphone/Core/Localization/L.cs | Source of truth for every user-facing string |
 | src/Aetherphone/Apps/Calculator/CalculatorApp.cs | The minimal real app this tutorial copies from |
-| tools/icon-generator/ | Regenerates `src/Aetherphone/Icons/*.png` from Tabler Icons |
+| tools/icon-generator/ | Generates the painted `src/Aetherphone/Icons/` pairs from Phosphor glyphs |
 
 Everything here is client side. The backend ("Aethernet") lives in a separate repository; a local app like Counter never touches it.
 
@@ -189,13 +189,13 @@ Do not write a raw color literal here. `AccentRing` (src/Aetherphone/Core/Theme/
 
 Without an entry, `AppAccents.For` returns the grey fallback and your home tile looks unfinished.
 
-**Icon.** The home tile (`HomeTileView.DrawApp` in src/Aetherphone/Windows/Components/HomeTileView.cs) calls `AppIconArt.TryDraw`, which resolves art in three steps:
+**Icon.** The home tile (`HomeTileView.DrawApp` in src/Aetherphone/Windows/Components/Chrome/HomeTileView.cs) resolves art in three steps:
 
-1. `AppIconTextures.TryDraw` looks for `Icons/<Id>.png` next to the plugin assembly and draws it tinted. Source PNGs live in src/Aetherphone/Icons and are copied to the output by the csproj (`Icons\*.png`).
-2. If no PNG exists, `AppIconArt` checks its `switch` of procedural vector icons. Only the mini-games and the Casino app use this path.
+1. `AppIconTile.TryDraw` draws the painted pair `Icons/<Id>.png` and `Icons/<Id>.fg.png` when both exist, in the appearance the user picked. Source files live in src/Aetherphone/Icons and are copied to the output by the csproj (`Icons\*.png`).
+2. If either file is missing, the tile draws your accent with `AppIconArt` on top: a stencil PNG if one exists, or a procedural icon for the ids its `switch` lists.
 3. If both miss, the tile falls back to your `Glyph` letter.
 
-So for a normal app: add a 256 px white-on-transparent PNG named `counter.png` to src/Aetherphone/Icons. The project generates these from Tabler Icons; add a `counter` entry mapping your id to a Tabler icon name in the `map` in tools/icon-generator/generate-app-icons.mjs and run `npm run build` there (see tools/icon-generator/README.md, and [assets and media](assets-and-media.md) for the wider asset story). Ship white art: the renderer tints it to the theme ink at draw time, so baked-in colors get multiplied away.
+So for a normal app: add a painted pair named `counter.png` and `counter.fg.png` to src/Aetherphone/Icons. To generate one, add a `counter` entry to the `map` in tools/icon-generator/generate-painted-icons.mjs (`icon("<phosphor-name>", "colour", "<Hue>")`, using the same hue as your accent) and run `node generate-painted-icons.mjs counter` there (see tools/icon-generator/README.md). For a hand-painted icon, point the artist at the [icon spec](https://aetherphone.net/icon-spec/) and the [icon checker](https://aetherphone.net/icon-checker/). Always ship both files together, and see [assets and media](assets-and-media.md) for the wider asset story.
 
 ## Step 6: localize the name
 

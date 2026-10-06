@@ -21,7 +21,7 @@ Two terms you need up front:
 | src/Aetherphone/Core/Apps/NavigationStack.cs | Which app is open, history, present/dismiss motion |
 | src/Aetherphone/Core/Apps/IPhoneApp.cs | The contract every phone app implements |
 | src/Aetherphone/Core/Apps/AppRegistry.cs | Builds the list of every app at boot |
-| src/Aetherphone/Windows/Components/DeviceChrome.cs | Draws the physical phone body, glass, and screen |
+| src/Aetherphone/Windows/Components/Chrome/DeviceChrome.cs | Draws the physical phone body, glass, and screen |
 | src/Aetherphone/Core/Theme/ChassisGeometry.cs | Body/Glass/Screen rectangles and corner radii |
 | src/Aetherphone/Core/Rect.cs | The tiny rectangle struct the whole UI is measured in |
 | src/Aetherphone/Configuration.cs | All persisted settings, one Dalamud plugin config object |
@@ -218,7 +218,7 @@ Apps are opened through `NavigationStack.Open(appId)` (string id, checks `AppIns
 
 All layout is done in absolute screen coordinates using `Rect` (src/Aetherphone/Core/Rect.cs), a `readonly record struct` of `Min`/`Max` vectors with `Width`, `Height`, `Size`, `Center`, `Inset`, `Translate`, and `Contains`. There is no layout engine: parents compute child rects and pass them down.
 
-`ChassisGeometry.Device(window, theme, scale)` turns the window rect into three nested, pixel-snapped rects with matching corner radii: `Body` (the metal frame), `Glass` (the bezel), and `Screen` (where content lives). `DeviceChrome` (src/Aetherphone/Windows/Components/DeviceChrome.cs) renders them as squircles, plus the hardware key slots (`KeyRect`, one fractional placement per `HardwareKey`), the antenna lines on the metal band, the wallpaper, and `SealScreen`. Each slot spans the full rail gutter so the hit target stays large, while `HardwareButton` paints only the proud part (under half the gutter) as a frame-coloured pill.
+`ChassisGeometry.Device(window, theme, scale)` turns the window rect into three nested, pixel-snapped rects with matching corner radii: `Body` (the metal frame), `Glass` (the bezel), and `Screen` (where content lives). `DeviceChrome` (src/Aetherphone/Windows/Components/Chrome/DeviceChrome.cs) renders them as squircles, plus the hardware key slots (`KeyRect`, one fractional placement per `HardwareKey`), the antenna lines on the metal band, the wallpaper, and `SealScreen`. Each slot spans the full rail gutter so the hit target stays large, while `HardwareButton` paints only the proud part (under half the gutter) as a frame-coloured pill.
 
 Two scale factors are in play and they multiply, which is what `UiScale.Current` returns:
 

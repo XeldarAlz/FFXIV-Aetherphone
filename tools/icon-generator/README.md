@@ -2,8 +2,8 @@
 
 Generates the painted home-screen app icons into `src/Aetherphone/Icons/` from
 [Phosphor Icons](https://phosphoricons.com) (MIT) fill glyphs. The output
-follows the designer spec (1024 px master, two files per app, tile families,
-accent hues) so hand-painted replacements drop in without engineering work.
+follows the [icon spec](https://aetherphone.net/icon-spec/) (1024 px master, two files per app, tile
+families, accent hues) so hand-painted replacements drop in without engineering work.
 
 ## Run
 
@@ -48,7 +48,7 @@ Clear appearances.
 | `graphite` | `#3A3A3C` to `#1C1C1E` | `#D8D8DC` for Settings, white for Camera, Clock, Calculator |
 | `photos` | Gold to coral to azure | White |
 
-Hue anchors are the accent ring values from the icon spec; mini-games take the
+Hue anchors are the accent ring values in `src/Aetherphone/Core/Theme/AccentRing.cs`; mini-games take the
 hue listed for their id in `src/Aetherphone/Core/Apps/AppAccents.cs`.
 
 ## Regenerating one id
