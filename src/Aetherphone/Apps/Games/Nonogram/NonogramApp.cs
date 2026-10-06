@@ -9,7 +9,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Nonogram;
 
-internal sealed class NonogramApp : IMiniGame
+internal sealed class NonogramApp : ILegacyMiniGame
 {
     private const string GameId = "nonogram";
     private const float FillPopSpeed = 6.5f;

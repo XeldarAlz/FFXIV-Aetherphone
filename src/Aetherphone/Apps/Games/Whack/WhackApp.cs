@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Whack;
 
-internal sealed class WhackApp : IMiniGame
+internal sealed class WhackApp : ILegacyMiniGame
 {
     private const string GameId = "whack";
     private readonly WhackBoard board = new();

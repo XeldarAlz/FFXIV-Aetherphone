@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.CapMan;
 
-internal sealed class CapManApp : IMiniGame
+internal sealed class CapManApp : ILegacyMiniGame
 {
     private const string GameId = "capman";
     private const float PadBandFraction = 0.26f;

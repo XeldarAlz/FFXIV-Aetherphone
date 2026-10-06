@@ -11,7 +11,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Chess;
 
-internal sealed class ChessApp : IMiniGame
+internal sealed class ChessApp : ILegacyMiniGame
 {
     private const string GameId = "chess";
     private const float MoveDuration = 0.20f;

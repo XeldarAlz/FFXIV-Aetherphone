@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Twenty48;
 
-internal sealed class Twenty48App : IMiniGame
+internal sealed class Twenty48App : ILegacyMiniGame
 {
     private const string GameId = "2048";
     private const float SlideDuration = 0.10f;

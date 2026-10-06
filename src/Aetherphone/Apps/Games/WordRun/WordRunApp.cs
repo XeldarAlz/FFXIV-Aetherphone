@@ -11,7 +11,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.WordRun;
 
-internal sealed class WordRunApp : IMiniGame
+internal sealed class WordRunApp : ILegacyMiniGame
 {
     private const string GameId = "wordrun";
     private const string WordsFolder = "Words";

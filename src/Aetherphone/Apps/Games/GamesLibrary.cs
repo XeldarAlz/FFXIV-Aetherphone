@@ -77,6 +77,8 @@ internal sealed class GamesLibrary
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
+    private static readonly string[] TierSuffixes = { ".easy", ".medium", ".hard" };
+    private static readonly LocString[] TierLabels = { L.Games.Easy, L.Games.Medium, L.Games.Hard };
 
     private readonly IMiniGame[] games;
     private readonly GameStatsStore stats;
@@ -91,6 +93,7 @@ internal sealed class GamesLibrary
     private readonly long[] lastPlayed;
     private readonly string[] bestLabels;
     private readonly string[] bestValues;
+    private readonly string[] bestTiers;
     private readonly RecordKind[] bestKinds;
     private int latestCount;
     private int recentCount;
@@ -140,6 +143,7 @@ internal sealed class GamesLibrary
         lastPlayed = new long[count];
         bestLabels = new string[count];
         bestValues = new string[count];
+        bestTiers = new string[count];
         bestKinds = new RecordKind[count];
         Lift = new Spring[count];
         MarqueeIds = new string[count];
@@ -149,6 +153,7 @@ internal sealed class GamesLibrary
             MarqueeIds[index] = "games.tile." + Entries[index].Id;
             bestLabels[index] = string.Empty;
             bestValues[index] = string.Empty;
+            bestTiers[index] = string.Empty;
         }
 
         BuildOrder();
@@ -242,6 +247,8 @@ internal sealed class GamesLibrary
     public string Best(int entryIndex) => bestLabels[entryIndex];
 
     public string BestValue(int entryIndex) => bestValues[entryIndex];
+
+    public string BestTier(int entryIndex) => bestTiers[entryIndex];
 
     public RecordKind BestKind(int entryIndex) => bestKinds[entryIndex];
 
@@ -380,22 +387,26 @@ internal sealed class GamesLibrary
         for (var index = 0; index < Entries.Length; index++)
         {
             var value = string.Empty;
-            var kind = Entries[index].Online ? RecordKind.None : BestRecord(Entries[index].Id, out value);
+            var tier = -1;
+            var kind = Entries[index].Online ? RecordKind.None : BestRecord(Entries[index].Id, out value, out tier);
             bestKinds[index] = kind;
             bestValues[index] = kind == RecordKind.None ? string.Empty : value;
-            bestLabels[index] = kind switch
+            bestTiers[index] = kind != RecordKind.None && tier >= 0 ? Loc.T(TierLabels[tier]) : string.Empty;
+            var label = kind switch
             {
                 RecordKind.None => string.Empty,
                 RecordKind.Streak => Loc.T(L.Games.Streak) + " · " + value,
                 RecordKind.Level => Loc.T(L.Games.Best) + " · " + Loc.T(L.Games.Level) + " " + value,
                 _ => Loc.T(L.Games.Best) + " · " + value,
             };
+            bestLabels[index] = bestTiers[index].Length > 0 ? label + " · " + bestTiers[index] : label;
         }
     }
 
-    private RecordKind BestRecord(string gameId, out string value)
+    private RecordKind BestRecord(string gameId, out string value, out int tier)
     {
         value = string.Empty;
+        tier = -1;
         switch (gameId)
         {
             case "2048":
@@ -427,7 +438,6 @@ internal sealed class GamesLibrary
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(TetrisApp.ModernStatId).BestScore),
                     out value);
             case "watersort":
-            case "flow":
             {
                 var bestLevel = stats.Get(gameId).BestScore;
                 if (bestLevel <= 0)
@@ -438,13 +448,15 @@ internal sealed class GamesLibrary
                 value = GameNumber.Label(bestLevel);
                 return RecordKind.Level;
             }
+            case "flow":
+                return BestLevelAcrossTiers(gameId, out value, out tier);
             case "memory":
             case "solitaire":
                 return Time(stats.Get(gameId).BestTimeSeconds, out value);
             case "minesweeper":
             case "nonogram":
             case "sudoku":
-                return Time(stats.Get(gameId + ".easy").BestTimeSeconds, out value);
+                return BestTimeAcrossTiers(gameId, out value, out tier);
             case "reversi":
             case "chess":
             {
@@ -460,6 +472,52 @@ internal sealed class GamesLibrary
             default:
                 return RecordKind.None;
         }
+    }
+
+    private RecordKind BestLevelAcrossTiers(string gameId, out string value, out int tier)
+    {
+        value = string.Empty;
+        tier = -1;
+        var bestLevel = 0;
+        for (var index = 0; index < TierSuffixes.Length; index++)
+        {
+            var level = stats.Get(string.Concat(gameId, TierSuffixes[index])).BestScore;
+            if (level <= bestLevel)
+            {
+                continue;
+            }
+
+            bestLevel = level;
+            tier = index;
+        }
+
+        if (bestLevel <= 0)
+        {
+            return RecordKind.None;
+        }
+
+        value = GameNumber.Label(bestLevel);
+        return RecordKind.Level;
+    }
+
+    private RecordKind BestTimeAcrossTiers(string gameId, out string value, out int tier)
+    {
+        value = string.Empty;
+        tier = -1;
+        var bestSeconds = 0;
+        for (var index = 0; index < TierSuffixes.Length; index++)
+        {
+            var seconds = stats.Get(string.Concat(gameId, TierSuffixes[index])).BestTimeSeconds;
+            if (seconds <= 0 || (bestSeconds > 0 && seconds >= bestSeconds))
+            {
+                continue;
+            }
+
+            bestSeconds = seconds;
+            tier = index;
+        }
+
+        return Time(bestSeconds, out value);
     }
 
     private static RecordKind Score(int best, out string value)

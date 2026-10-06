@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Skyfall;
 
-internal sealed class SkyfallApp : IMiniGame
+internal sealed class SkyfallApp : ILegacyMiniGame
 {
     private const string GameId = "skyfall";
     private const float WaveBannerSeconds = 1.6f;

@@ -116,7 +116,7 @@ internal sealed class VideoLocalFileMapRecord
 
 [Serializable]
 internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, ILookConfiguration,
-    IControlConfiguration, IMinimizedConfiguration
+    IControlConfiguration, IMinimizedConfiguration, IGameStatsConfiguration
 {
     public int Version { get; set; } = 1;
     public bool OpenOnStartup { get; set; } = true;
@@ -350,6 +350,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public List<SongRecord> SongRecents { get; set; } = new();
     public List<PlaylistRecord> Playlists { get; set; } = new();
     public List<GameStatRecord> GameStats { get; set; } = new();
+    public List<GameModeChoice> GameModeChoices { get; set; } = new();
     public int DailyChallengeStreak { get; set; }
     public int DailyChallengeLastDay { get; set; }
     public string WordRunBank { get; set; } = string.Empty;

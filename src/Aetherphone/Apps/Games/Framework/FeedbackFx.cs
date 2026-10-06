@@ -37,7 +37,7 @@ internal sealed class FeedbackFx
 
     private readonly FloatText[] floats = new FloatText[FloatCapacity];
     private readonly Ring[] rings = new Ring[RingCapacity];
-    private readonly Random random = new();
+    private GameRandom random = GameRandom.Fresh();
     private int activeFloats;
     private int activeRings;
     private float trauma;
@@ -111,7 +111,7 @@ internal sealed class FeedbackFx
         ref var entry = ref floats[activeFloats];
         entry.Text = text;
         entry.Position = position;
-        entry.Velocity = new Vector2(((float)random.NextDouble() - 0.5f) * 18f, -rise);
+        entry.Velocity = new Vector2((random.NextFloat() - 0.5f) * 18f, -rise);
         entry.MaxLife = 0.9f;
         entry.Life = entry.MaxLife;
         entry.Scale = scale;
@@ -164,8 +164,8 @@ internal sealed class FeedbackFx
         }
 
         var magnitude = trauma * trauma * MaxShake * scale;
-        var x = ((float)random.NextDouble() * 2f - 1f) * magnitude;
-        var y = ((float)random.NextDouble() * 2f - 1f) * magnitude;
+        var x = (random.NextFloat() * 2f - 1f) * magnitude;
+        var y = (random.NextFloat() * 2f - 1f) * magnitude;
         return new Vector2(x, y);
     }
 

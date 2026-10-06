@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Beat;
 
-internal sealed class BeatApp : IMiniGame
+internal sealed class BeatApp : ILegacyMiniGame
 {
     private const string GameId = "beat";
     private const float FlashDecay = 3.6f;

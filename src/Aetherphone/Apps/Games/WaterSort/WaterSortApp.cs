@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.WaterSort;
 
-internal sealed class WaterSortApp : IMiniGame
+internal sealed class WaterSortApp : ILegacyMiniGame
 {
     private const string GameId = "watersort";
     private const float PourDuration = 0.26f;

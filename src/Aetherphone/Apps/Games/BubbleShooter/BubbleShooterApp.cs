@@ -11,7 +11,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.BubbleShooter;
 
-internal sealed class BubbleShooterApp : IMiniGame
+internal sealed class BubbleShooterApp : ILegacyMiniGame
 {
     private const string GameId = "bubbles";
     private const int ComboChipThreshold = 2;

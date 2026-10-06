@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Swoop;
 
-internal sealed class SwoopApp : IMiniGame
+internal sealed class SwoopApp : ILegacyMiniGame
 {
     private const string GameId = "swoop";
     private const float BannerSeconds = 1.7f;

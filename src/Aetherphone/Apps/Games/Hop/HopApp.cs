@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Hop;
 
-internal sealed class HopApp : IMiniGame
+internal sealed class HopApp : ILegacyMiniGame
 {
     private const string GameId = "hop";
     private const float PadBandFraction = 0.26f;

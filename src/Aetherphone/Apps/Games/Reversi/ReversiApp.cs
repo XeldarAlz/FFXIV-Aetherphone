@@ -9,7 +9,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Reversi;
 
-internal sealed class ReversiApp : IMiniGame
+internal sealed class ReversiApp : ILegacyMiniGame
 {
     private const string GameId = "reversi";
     private const float FlipDuration = 0.26f;

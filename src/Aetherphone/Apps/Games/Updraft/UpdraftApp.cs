@@ -11,7 +11,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Updraft;
 
-internal sealed class UpdraftApp : IMiniGame
+internal sealed class UpdraftApp : ILegacyMiniGame
 {
     private const string GameId = "updraft";
     private const string HeightStatId = "updraft.height";

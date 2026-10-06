@@ -8250,8 +8250,188 @@ internal static class L
         public static readonly LocString TourSearchBody = new("gamesHub.tourSearchBody", "Search by name, or browse a genre such as Puzzle or Arcade to see all of its games.");
     }
 
+    internal static class Stage
+    {
+        public static readonly LocString Resume = new("stage.resume", "Resume");
+        public static readonly LocString Restart = new("stage.restart", "Restart");
+        public static readonly LocString Quit = new("stage.quit", "Quit");
+        public static readonly LocString Leaderboard = new("stage.leaderboard", "Leaderboard");
+        public static readonly LocString Go = new("stage.go", "Go");
+        public static readonly LocString TodaysBoard = new("stage.todaysBoard", "Today's board");
+        public static readonly LocString NotRanked = new("stage.notRanked", "Not ranked");
+        public static readonly LocString SignInToRank = new("stage.signInToRank", "Sign in to rank");
+        public static readonly LocString RankGlobal = new("stage.rankGlobal", "#{0} · Global");
+        public static readonly LocString RankOf = new("stage.rankOf", "#{0} of {1}");
+        public static readonly LocString RankFriends = new("stage.rankFriends", "#{0} among friends");
+        public static readonly LocString Uploading = new("stage.uploading", "Uploading");
+        public static readonly LocString KeptOnPhone = new("stage.keptOnPhone", "Kept on this phone");
+        public static readonly LocString Global = new("stage.global", "Global");
+        public static readonly LocString Friends = new("stage.friends", "Friends");
+        public static readonly LocString AllTime = new("stage.allTime", "All time");
+        public static readonly LocString ThisWeek = new("stage.thisWeek", "This week");
+        public static readonly LocString YourRanks = new("stage.yourRanks", "Your ranks");
+        public static readonly LocString ShowOnLeaderboards = new("stage.showOnLeaderboards", "Show me on leaderboards");
+        public static readonly LocString Rank = new("stage.rank", "Rank");
+        public static readonly LocString Lives = new("stage.lives", "Lives");
+        public static readonly LocString Mode = new("stage.mode", "Mode");
+        public static readonly LocString LevelShort = new("stage.levelShort", "LV {0}");
+        public static readonly LocString Times = new("stage.times", "x{0}");
+    }
+
+    internal static class Sweeper
+    {
+        public static readonly LocString Hook = new("games.minesweeper.hook", "Reveal every safe square and flag the mines before one goes off.");
+    }
+
+    internal static class Pairs
+    {
+        public static readonly LocString Hook = new("games.memory.hook", "Flip two cards at a time and match every pair in as few tries as you can.");
+    }
+
+    internal static class GemSwap
+    {
+        public static readonly LocString Hook = new("games.match3.hook", "Swap neighboring gems to line up three or more and keep the cascades coming.");
+    }
+
+    internal static class Tetris
+    {
+        public static readonly LocString Hook = new("games.tetris.hook", "Rotate and drop the falling pieces to fill whole lines and clear them.");
+    }
+
+    internal static class Twenty48
+    {
+        public static readonly LocString Title = new("games.2048.title", "2048");
+        public static readonly LocString Hook = new("games.2048.hook", "Slide the tiles to merge matching numbers and build your way up to 2048.");
+    }
+
+    internal static class WaterSort
+    {
+        public static readonly LocString Hook = new("games.watersort.hook", "Pour the liquids between tubes until every tube holds a single color.");
+    }
+
+    internal static class Breakout
+    {
+        public static readonly LocString Hook = new("games.breakout.hook", "Bounce the ball off your paddle to smash every brick without letting it drop.");
+    }
+
+    internal static class BubbleShooter
+    {
+        public static readonly LocString Hook = new("games.bubbles.hook", "Aim and shoot bubbles into groups of three or more to pop them before they reach the line.");
+    }
+
+    internal static class Nonogram
+    {
+        public static readonly LocString Hook = new("games.nonogram.hook", "Use the number clues to fill the right cells and reveal the hidden picture.");
+    }
+
+    internal static class Flow
+    {
+        public static readonly LocString Hook = new("games.flow.hook", "Connect each pair of matching dots with pipes that fill the whole grid without crossing.");
+    }
+
+    internal static class Solitaire
+    {
+        public static readonly LocString Hook = new("games.solitaire.hook", "Build the four foundations from ace to king by moving cards between the columns.");
+    }
+
+    internal static class Simon
+    {
+        public static readonly LocString Hook = new("games.simon.hook", "Watch the pads light up, then repeat the sequence back without a mistake.");
+    }
+
+    internal static class Flap
+    {
+        public static readonly LocString Hook = new("games.flap.hook", "Tap to flap through the gaps in the pipes and see how far you can fly.");
+    }
+
+    internal static class Reversi
+    {
+        public static readonly LocString Hook = new("games.reversi.hook", "Outflank the CPU's discs to flip them and own the most of the board when it fills.");
+    }
+
+    internal static class Whack
+    {
+        public static readonly LocString Hook = new("games.whack.hook", "Tap the moles before they hide. Bombs cost you points.");
+    }
+
+    internal static class Snake
+    {
+        public static readonly LocString Hook = new("games.snake.hook", "Steer the snake to the fruit and never touch yourself.");
+    }
+
+    internal static class Sudoku
+    {
+        public static readonly LocString Hook = new("games.sudoku.hook", "Fill the grid so every row, column and box holds the digits one to nine.");
+    }
+
+    internal static class Chess
+    {
+        public static readonly LocString Hook = new("games.chess.hook", "Checkmate the CPU's king and keep your win streak alive.");
+    }
+
+    internal static class Stack
+    {
+        public static readonly LocString Hook = new("games.stack.hook", "Drop each slab on the one below; anything that hangs over gets cut away.");
+    }
+
+    internal static class CrystalDrop
+    {
+        public static readonly LocString Hook = new("games.crystaldrop.hook", "Drop crystals into the jar and merge matching ones before it overflows.");
+    }
+
+    internal static class Beat
+    {
+        public static readonly LocString Hook = new("games.beat.hook", "Hit each note as it reaches the line and keep the combo going.");
+    }
+
+    internal static class Blade
+    {
+        public static readonly LocString Hook = new("games.blade.hook", "Throw your blades into the spinning wheel without hitting one already stuck there.");
+    }
+
+    internal static class Trivia
+    {
+        public static readonly LocString Hook = new("games.trivia.hook", "Look at the icon and pick the right name before the timer runs out.");
+    }
+
+    internal static class Skyfall
+    {
+        public static readonly LocString Hook = new("games.skyfall.hook", "Fire at the falling missiles before they reach your cities.");
+    }
+
+    internal static class Invaders
+    {
+        public static readonly LocString Hook = new("games.invaders.hook", "Slide left and right and shoot down the alien waves before they land.");
+    }
+
+    internal static class CapMan
+    {
+        public static readonly LocString Hook = new("games.capman.hook", "Eat every pellet in the maze while dodging the ghosts, or grab a power pellet and chase them.");
+    }
+
+    internal static class Hop
+    {
+        public static readonly LocString Hook = new("games.hop.hook", "Hop across the road and the river, one lane at a time, without getting hit or swept away.");
+    }
+
+    internal static class Squadron
+    {
+        public static readonly LocString Hook = new("games.squadron.hook", "Weave through the enemy formations and shoot them down stage after stage.");
+    }
+
+    internal static class Doom
+    {
+        public static readonly LocString Hook = new("games.doom.hook", "Fight your way through the demons on Mars with WASD, the mouse and Space.");
+    }
+
+    internal static class WordRun
+    {
+        public static readonly LocString Hook = new("games.wordrun.hook", "Guess the five-letter word in six tries; the colors tell you which letters are right.");
+    }
+
     internal static class Coil
     {
+        public static readonly LocString Hook = new("coil.hook", "Fire marbles into the chain and match three or more to clear it before it reaches the vortex.");
         public static readonly LocString Title = new("coil.title", "Coil");
         public static readonly LocString HowTo = new("coil.howTo", "Aim with the mouse and click to fire. Right-click or Space swaps marbles.");
         public static readonly LocString Goal = new("coil.goal", "Match three or more to clear the chain before it reaches the vortex.");
@@ -8282,6 +8462,7 @@ internal static class L
 
     internal static class Updraft
     {
+        public static readonly LocString Hook = new("updraft.hook", "Steer the bird between the thermals and ride the updrafts as high as you can.");
         public static readonly LocString Title = new("updraft.title", "Updraft");
         public static readonly LocString Hint = new("updraft.hint", "Steer with A and D, the arrow keys or the mouse");
         public static readonly LocString Height = new("updraft.height", "Height");
@@ -8298,6 +8479,7 @@ internal static class L
 
     internal static class Swoop
     {
+        public static readonly LocString Hook = new("swoop.hook", "Hold to dive down the slopes and let go to soar, chasing the islands before nightfall.");
         public static readonly LocString Title = new("swoop.title", "Swoop");
         public static readonly LocString HowTo = new("swoop.howTo", "Hold to dive down the slopes, let go to soar");
         public static readonly LocString Smooth = new("swoop.smooth", "Smooth!");

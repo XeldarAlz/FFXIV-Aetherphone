@@ -9,7 +9,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Sudoku;
 
-internal sealed class SudokuApp : IMiniGame
+internal sealed class SudokuApp : ILegacyMiniGame
 {
     private const string GameId = "sudoku";
     private const int MaxMistakes = 3;

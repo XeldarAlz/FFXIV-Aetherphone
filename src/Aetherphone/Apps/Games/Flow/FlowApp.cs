@@ -9,7 +9,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Flow;
 
-internal sealed class FlowApp : IMiniGame
+internal sealed class FlowApp : ILegacyMiniGame
 {
     private const string GameId = "flow";
     private const float DifficultyRowY = 22f;

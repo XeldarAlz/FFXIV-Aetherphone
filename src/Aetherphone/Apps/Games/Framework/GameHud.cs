@@ -56,10 +56,10 @@ internal static class GameHud
             Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = 0.85f }), 1.5f * scale);
         }
 
-        Typography.DrawCentered(new Vector2(center.X, center.Y - 7f * scale * sizeScale), value,
+        Typography.DrawCentered(drawList, new Vector2(center.X, center.Y - 7f * scale * sizeScale), value,
             highlight ? accent : theme.TextStrong, TextStyles.Title3.Scale * sizeScale * valuePop,
             TextStyles.Title3.Weight);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 12f * scale * sizeScale), Loc.Upper(label),
+        Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + 12f * scale * sizeScale), Loc.Upper(label),
             theme.TextMuted, TextStyles.Caption2.Scale * sizeScale, TextStyles.Caption2.Weight);
     }
 

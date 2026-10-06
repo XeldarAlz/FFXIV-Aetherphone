@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Flap;
 
-internal sealed class FlapApp : IMiniGame
+internal sealed class FlapApp : ILegacyMiniGame
 {
     private const string GameId = "flap";
     private const float TrailInterval = 0.05f;

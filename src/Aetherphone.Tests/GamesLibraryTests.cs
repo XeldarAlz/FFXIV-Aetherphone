@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Games;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core.Games;
+using Aetherphone.Core.Localization;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -11,16 +12,14 @@ public sealed class GamesLibraryTests
     {
         public FakeGame(string id, string title, GameGenre genre)
         {
-            Id = id;
+            Spec = new GameSpec(id, new LocString(string.Concat("test.", id), title), genre);
             Title = title;
-            Genre = genre;
         }
 
-        public string Id { get; }
+        public GameSpec Spec { get; }
         public string Title { get; }
-        public GameGenre Genre { get; }
 
-        public void Open()
+        public void Start(in GameStart start)
         {
         }
 
@@ -191,13 +190,53 @@ public sealed class GamesLibraryTests
     }
 
     [Fact]
-    public void BestLabelReadsTheEasyBoardForTimedPuzzles()
+    public void BestLabelShowsTheFastestTierForTimedPuzzles()
     {
         var configuration = new Configuration();
         configuration.GameStats.Add(new GameStatRecord { GameId = "minesweeper.easy", BestTimeSeconds = 65 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "minesweeper.hard", BestTimeSeconds = 40 });
         var library = Build(configuration);
 
-        Assert.EndsWith("1:05", library.Best(0));
+        Assert.Equal("0:40", library.BestValue(0));
+        Assert.Equal("Hard", library.BestTier(0));
+        Assert.EndsWith("0:40 · Hard", library.Best(0));
         Assert.Equal(string.Empty, library.Best(1));
+    }
+
+    [Fact]
+    public void BestLabelReadsASingleTierWhenOnlyOneHasATime()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "minesweeper.medium", BestTimeSeconds = 65 });
+        var library = Build(configuration);
+
+        Assert.Equal(RecordKind.Time, library.BestKind(0));
+        Assert.Equal("1:05", library.BestValue(0));
+        Assert.Equal("Medium", library.BestTier(0));
+    }
+
+    [Fact]
+    public void FlowReadsItsTieredLevelRecords()
+    {
+        var games = new IMiniGame[] { new FakeGame("flow", "Flow", GameGenre.Puzzle) };
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "flow.easy", BestScore = 4 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "flow.medium", BestScore = 7 });
+        var library = new GamesLibrary(games, new GameStatsStore(configuration));
+        var flow = library.IndexOf("flow");
+
+        Assert.Equal(RecordKind.Level, library.BestKind(flow));
+        Assert.Equal("7", library.BestValue(flow));
+        Assert.Equal("Medium", library.BestTier(flow));
+    }
+
+    [Fact]
+    public void GamesWithoutTiersCarryNoTierLabel()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "snake", BestScore = 40 });
+        var library = Build(configuration);
+
+        Assert.Equal(string.Empty, library.BestTier(library.IndexOf("snake")));
     }
 }

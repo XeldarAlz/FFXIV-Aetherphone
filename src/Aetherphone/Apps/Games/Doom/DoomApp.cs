@@ -10,7 +10,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Doom;
 
-internal sealed class DoomApp : IMiniGame
+internal sealed class DoomApp : ILegacyMiniGame
 {
     private const string GameId = "doom";
     private const float ScreenAspect = 4f / 3f;

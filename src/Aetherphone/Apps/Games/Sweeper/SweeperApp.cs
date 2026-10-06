@@ -9,7 +9,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Sweeper;
 
-internal sealed class SweeperApp : IMiniGame
+internal sealed class SweeperApp : ILegacyMiniGame
 {
     private const string GameId = "minesweeper";
     private const float FlagPopSpeed = 7f;

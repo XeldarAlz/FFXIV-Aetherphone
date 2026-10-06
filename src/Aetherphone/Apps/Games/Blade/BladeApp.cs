@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Blade;
 
-internal sealed class BladeApp : IMiniGame
+internal sealed class BladeApp : ILegacyMiniGame
 {
     private const string GameId = "blade";
     private const float ResultDelay = 0.5f;
