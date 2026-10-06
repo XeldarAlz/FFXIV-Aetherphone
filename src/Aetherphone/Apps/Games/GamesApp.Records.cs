@@ -1,7 +1,9 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -28,11 +30,22 @@ internal sealed partial class GamesApp
     private const float RecordIconGap = 12f;
     private const float RecordValueReserve = 0.38f;
     private const float EmptyBlockHeight = 300f;
+    private const float RankChevronSize = 13f;
     private const int SummaryColumns = 3;
+    private const string RankRowPrefix = "games.records.rank.";
+    private const string RankSeparator = " · ";
 
     private CachedText recordsText;
     private CachedText streakText;
     private CachedText recordCountText;
+    private GameScoreRankDto[] labeledRanks = Array.Empty<GameScoreRankDto>();
+    private LanguageInfo? rankLabelLanguage;
+    private int[] rankGameIndexes = Array.Empty<int>();
+    private string[] rankStatIds = Array.Empty<string>();
+    private string[] rankTitles = Array.Empty<string>();
+    private string[] rankLines = Array.Empty<string>();
+    private string[] rankRowIds = Array.Empty<string>();
+    private int rankRowCount;
 
     private void DrawRecords(in PhoneContext context)
     {
@@ -44,6 +57,7 @@ internal sealed partial class GamesApp
             var width = ScrollLayout.StableContentWidth();
             var y = DrawSummary(origin.X, origin.Y, width, scale);
             y = DrawDailyRow(origin.X, y + Metrics.Space.Md * scale, width, scale);
+            y = DrawYourRanks(origin, y, width, scale);
             y += GamesHubArt.SectionGap * scale;
             var records = library.Records;
             var drawList = ImGui.GetWindowDrawList();
@@ -252,6 +266,139 @@ internal sealed partial class GamesApp
         var kindSize = Typography.Measure(kind, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(row.Max.X - kindSize.X, textTop + titleHeight), kind, ui.MutedInk,
             TextStyles.Footnote);
+        return UiInteract.Click(hit.Min, hit.Max, hovered);
+    }
+
+    private float DrawYourRanks(Vector2 origin, float top, float width, float scale)
+    {
+        var ranks = leaderboard.MyRanks;
+        if (!leaderboard.IsSignedIn || ranks.Length == 0)
+        {
+            return top;
+        }
+
+        RefreshRankLabels(ranks);
+        if (rankRowCount == 0)
+        {
+            return top;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var y = top + GamesHubArt.SectionGap * scale;
+        GamesHubArt.Section(drawList, ui, origin.X, y, width, Loc.T(L.Stage.YourRanks), string.Empty, string.Empty);
+        y += GamesHubArt.SectionHeight * scale;
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, y));
+        var card = GroupCard.Begin(ui, rankRowCount, RecordRowHeight);
+        card.SeparatorInset = RecordIconSize + RecordIconGap;
+        var clipMin = drawList.GetClipRectMin();
+        var clipMax = drawList.GetClipRectMax();
+        var activate = -1;
+        for (var rowIndex = 0; rowIndex < rankRowCount; rowIndex++)
+        {
+            var row = card.NextRow();
+            if (row.Max.Y < clipMin.Y || row.Min.Y > clipMax.Y)
+            {
+                continue;
+            }
+
+            if (DrawRankRow(drawList, row, rowIndex, scale))
+            {
+                activate = rowIndex;
+            }
+        }
+
+        card.End();
+        if (activate >= 0)
+        {
+            OpenLeaderboard(games[rankGameIndexes[activate]], rankStatIds[activate], TabTitle(GamesTab.Records));
+        }
+
+        return card.Bounds.Max.Y;
+    }
+
+    private void RefreshRankLabels(GameScoreRankDto[] ranks)
+    {
+        if (ReferenceEquals(ranks, labeledRanks) && ReferenceEquals(rankLabelLanguage, Loc.Current))
+        {
+            return;
+        }
+
+        labeledRanks = ranks;
+        rankLabelLanguage = Loc.Current;
+        if (rankGameIndexes.Length < ranks.Length)
+        {
+            rankGameIndexes = new int[ranks.Length];
+            rankStatIds = new string[ranks.Length];
+            rankTitles = new string[ranks.Length];
+            rankLines = new string[ranks.Length];
+            rankRowIds = new string[ranks.Length];
+        }
+
+        rankRowCount = 0;
+        for (var index = 0; index < ranks.Length; index++)
+        {
+            var rank = ranks[index];
+            var gameIndex = rank.Rank > 0 ? GameIndexFor(rank.GameId) : -1;
+            if (gameIndex < 0)
+            {
+                continue;
+            }
+
+            var slot = rankRowCount++;
+            rankGameIndexes[slot] = gameIndex;
+            rankStatIds[slot] = rank.GameId;
+            rankRowIds[slot] = RankRowPrefix + rank.GameId;
+            var title = games[gameIndex].Title;
+            rankTitles[slot] = ScoreStatIds.SuffixOf(rank.GameId).Length == 0
+                ? title
+                : string.Concat(title, RankSeparator, Loc.T(LeaderboardModeName(rank.GameId, ScoreKind.Score, false)));
+            var line = Loc.T(L.Stage.RankOf, GameNumber.Label(rank.Rank), CountText.Exact(rank.Total));
+            rankLines[slot] = rank.WeekRank > 0
+                ? string.Concat(line, RankSeparator, Loc.T(L.Leaderboard.WeekRank, GameNumber.Label(rank.WeekRank)))
+                : line;
+        }
+    }
+
+    private int GameIndexFor(string statId)
+    {
+        for (var index = 0; index < games.Length; index++)
+        {
+            if (ScoreStatIds.BelongsTo(statId, games[index].Id))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private bool DrawRankRow(ImDrawListPtr drawList, Rect row, int rowIndex, float scale)
+    {
+        var padding = Metrics.Space.Lg * scale;
+        var hit = new Rect(new Vector2(row.Min.X - padding, row.Min.Y), new Vector2(row.Max.X + padding, row.Max.Y));
+        var hovered = UiInteract.Hover(hit.Min, hit.Max);
+        if (hovered)
+        {
+            drawList.AddRectFilled(hit.Min, hit.Max, ImGui.GetColorU32(ui.HoverWash));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        var game = games[rankGameIndexes[rowIndex]];
+        var iconSize = RecordIconSize * scale;
+        var iconCenter = new Vector2(row.Min.X + iconSize * 0.5f, row.Center.Y);
+        DrawGameIcon(drawList, game.Id, game.Accent, iconCenter, iconSize, scale);
+        var chevron = RankChevronSize * scale;
+        PhoneIcon.Draw(drawList, new Vector2(row.Max.X - chevron * 0.5f, row.Center.Y), PhoneIcons.ChevronRight,
+            ui.MutedInk, chevron);
+        var textLeft = iconCenter.X + iconSize * 0.5f + RecordIconGap * scale;
+        var textWidth = MathF.Max(1f, row.Max.X - chevron - Metrics.Space.Sm * scale - textLeft);
+        var titleHeight = Typography.LineHeight(TextStyles.Headline);
+        var subtitleHeight = Typography.LineHeight(TextStyles.Footnote);
+        var textTop = row.Center.Y - (titleHeight + subtitleHeight) * 0.5f;
+        Marquee.DrawLeft(drawList, rankRowIds[rowIndex], rankTitles[rowIndex], textLeft, textTop, textWidth,
+            TextStyles.Headline, ui.TitleInk, hovered);
+        Typography.Draw(drawList, new Vector2(textLeft, textTop + titleHeight),
+            Typography.FitText(rankLines[rowIndex], textWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
         return UiInteract.Click(hit.Min, hit.Max, hovered);
     }
 

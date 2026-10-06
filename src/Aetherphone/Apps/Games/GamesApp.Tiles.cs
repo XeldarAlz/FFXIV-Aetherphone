@@ -17,6 +17,8 @@ internal sealed partial class GamesApp
     private const float TileRoundingFactor = 0.22f;
     private const float TileEntranceLift = 14f;
     private const float BadgeHeight = 16f;
+    private const float RankChipPadX = 5f;
+    private const float RankChipFillAlpha = 0.20f;
     private const float OnlineBadgeRadius = 9f;
     private const float FriendsMedallionRadius = 18f;
     private const float FriendsMedallionPitch = 1.15f;
@@ -107,9 +109,21 @@ internal sealed partial class GamesApp
         var titleY = rect.Min.Y + artHeight + 7f * scale + entranceLift;
         Marquee.DrawLeft(drawList, library.MarqueeIds[entryIndex], library.Title(entryIndex), textLeft, titleY,
             textWidth, TextStyles.Headline, ui.TitleInk, hovered);
-        Typography.Draw(drawList, new Vector2(textLeft, titleY + 18f * scale),
-            Typography.FitText(library.Subtitle(entryIndex), textWidth, TextStyles.Footnote), ui.MutedInk,
-            TextStyles.Footnote);
+        var subtitleY = titleY + 18f * scale;
+        var rankChip = library.RankLabel(entryIndex);
+        var chipWidth = rankChip.Length > 0
+            ? Typography.Measure(rankChip, TextStyles.Caption2).X + RankChipPadX * 2f * scale
+            : 0f;
+        var subtitleWidth = chipWidth > 0f ? MathF.Max(1f, textWidth - chipWidth - Metrics.Space.Xs * scale) : textWidth;
+        var subtitle = Typography.FitText(library.Subtitle(entryIndex), subtitleWidth, TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(textLeft, subtitleY), subtitle, ui.MutedInk, TextStyles.Footnote);
+        if (chipWidth > 0f)
+        {
+            var chipLeft = textLeft + Typography.Measure(subtitle, TextStyles.Footnote).X + Metrics.Space.Xs * scale;
+            DrawRankChip(drawList, new Vector2(chipLeft, subtitleY + Typography.LineHeight(TextStyles.Footnote) * 0.5f),
+                rankChip, chipWidth, accent, scale);
+        }
+
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -155,6 +169,16 @@ internal sealed partial class GamesApp
         Squircle.Fill(drawList, topLeft, max, height * 0.5f, ImGui.GetColorU32(BadgeFill));
         Typography.DrawCentered(drawList, (topLeft + max) * 0.5f, label, GamePalette.Darken(accent, 0.30f),
             TextStyles.Caption2);
+    }
+
+    private void DrawRankChip(ImDrawListPtr drawList, Vector2 leftCenter, string label, float width, Vector4 accent,
+        float scale)
+    {
+        var height = BadgeHeight * scale;
+        var min = new Vector2(leftCenter.X, leftCenter.Y - height * 0.5f);
+        var max = new Vector2(leftCenter.X + width, leftCenter.Y + height * 0.5f);
+        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(accent with { W = RankChipFillAlpha }));
+        Typography.DrawCentered(drawList, (min + max) * 0.5f, label, ui.TitleInk, TextStyles.Caption2);
     }
 
     private static void DrawOnlineBadge(ImDrawListPtr drawList, Vector2 center, float scale)

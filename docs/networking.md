@@ -287,7 +287,7 @@ The main networking folders under Core/, Aethernet-backed first, third-party las
 | src/Aetherphone/Core/YellowPages/ | Yellow Pages ads and their encrypted inquiry threads |
 | src/Aetherphone/Core/Coins/ | Coin balance, quests, and shop over `CoinsClient` |
 | src/Aetherphone/Core/Casino/ | Casino state store, the money endpoints, and the seat machine behind the Gamba app |
-| src/Aetherphone/Core/Games/ | Online game rooms over `GamesClient` and `game.` signals |
+| src/Aetherphone/Core/Games/ | Online game rooms over `GamesClient` and `game.` signals; the global leaderboard over `ScoresClient` |
 | src/Aetherphone/Core/Jam/ | Music listening parties over `jam.` signals |
 | src/Aetherphone/Core/Video/ | AetherStream watch-along over `stream.` signals |
 | src/Aetherphone/Core/Songs/ | Song search (YouTube, third-party) and listening presence over `MusicListeningClient` |
@@ -297,6 +297,19 @@ The main networking folders under Core/, Aethernet-backed first, third-party las
 | src/Aetherphone/Core/Hunts/, Lyrics/, News/, Venues/, Housing/, Collections/, Rolladeck/ | Third-party clients: Faloop, LRCLIB, lodestonenews.com, FFXIV Venues and Partake, the housing APIs, FFXIV Collect, Rolladeck |
 
 The chat stores that consume these clients are covered in [Messaging and chat](messaging-and-chat.md), and how pings become banners and badges is covered in [Notifications](notifications.md).
+
+### Game score routes
+
+`ScoresClient` (src/Aetherphone/Core/Aethernet/Clients/ScoresClient.cs) covers the leaderboard behind the Games app; `LeaderboardStore` (src/Aetherphone/Core/Games/LeaderboardStore.cs) is its only caller, described in [Mini-games framework](games-framework.md#global-leaderboard). All four need a signed-in session, and the player routes answer domain refusals with HTTP 200 and a `reason` rather than a 4xx, so a `null` from the client is always a transport problem:
+
+| Route | Client method | Shape |
+| --- | --- | --- |
+| `POST /games/scores` | `SubmitAsync(gameId, value, sessionId)` | `GameScoreSubmitRequest` to `GameScoreSubmitDto { accepted, reason, best, rank, total, friendsRank, weekRank }`; reasons are `""`, `unknown_game`, `implausible`, `too_soon`, `not_better`, `hidden` (mirrored in `ScoreReasons`) |
+| `GET /games/scores/{gameId}?scope=global\|friends&span=all\|week&limit=50` | `BoardAsync(gameId, scope, span, limit)` | `GameLeaderboardDto { gameId, scope, span, entries[], me }`; `me` is null when the caller is not on the board; 404 for an unknown game id |
+| `GET /games/scores/me` | `MyRanksAsync()` | `GameScoreRanksDto { ranks[] }`, one row per game with an all-time entry |
+| `POST /me/games-privacy` | `SetShowOnLeaderboardsAsync(show)` | `UpdateGamesPrivacyRequest { showOnLeaderboards }` to the full `UserDto`, which carries `showOnLeaderboards` |
+
+The `gameId` on the wire is the stat id (`tetris.modern`, `sudoku.easy`), and the plugin only ever sends the ids in `ScoreStatIds.All`.
 
 ## Gotchas
 

@@ -116,7 +116,7 @@ internal sealed class VideoLocalFileMapRecord
 
 [Serializable]
 internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, ILookConfiguration,
-    IControlConfiguration, IMinimizedConfiguration, IGameStatsConfiguration
+    IControlConfiguration, IMinimizedConfiguration, IGameStatsConfiguration, IScoreUploadConfiguration
 {
     public int Version { get; set; } = 1;
     public bool OpenOnStartup { get; set; } = true;
@@ -356,6 +356,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public string WordRunBank { get; set; } = string.Empty;
     public bool TetrisModern { get; set; }
     public string PendingCoinGameSession { get; set; } = string.Empty;
+    public List<PendingScoreUpload> PendingScoreUploads { get; set; } = new();
     public Dictionary<string, Core.Coins.CoinSavingGoal> CoinSavingGoals { get; set; } = new();
     public Dictionary<ulong, string> PendingCasinoSittings { get; set; } = new();
     public Dictionary<ulong, long> CasinoSittingSeenAtUnix { get; set; } = new();

@@ -21,6 +21,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
         new(L.Settings.TellArchive),
         new(L.Settings.ReadReceipts),
         new(L.Settings.LastSeenOnline),
+        new(L.Stage.ShowOnLeaderboards),
         new(L.PhotoTag.SettingsTitle),
         new(L.Social.BlockedUsers),
         new(L.Settings.ClearCache, L.Settings.Storage),
@@ -34,6 +35,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private readonly Configuration configuration;
     private readonly AethernetSession session;
     private readonly AccountClient client;
+    private readonly ScoresClient scores;
     private readonly SafetyClient safety;
     private readonly ConfirmService confirm;
     private readonly ISettingsNavigator navigator;
@@ -46,6 +48,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private volatile bool chatPrivacyLoading;
     private volatile bool shareReadReceipts = true;
     private volatile bool sharePresence = true;
+    private volatile bool showOnLeaderboards = true;
     private volatile UserDto[] blockedUsers = Array.Empty<UserDto>();
     private volatile bool blockedLoaded;
     private volatile bool blockedLoading;
@@ -54,13 +57,14 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private string clearCacheLabelFormat = string.Empty;
     private long clearCacheLabelMegabytes = -1;
 
-    public PrivacyPage(Configuration configuration, AethernetSession session, AccountClient client, SafetyClient safety,
-        ConfirmService confirm, ISettingsNavigator navigator, ISettingsPage tagsMentionsPage,
-        CacheStorage cacheStorage)
+    public PrivacyPage(Configuration configuration, AethernetSession session, AccountClient client,
+        ScoresClient scores, SafetyClient safety, ConfirmService confirm, ISettingsNavigator navigator,
+        ISettingsPage tagsMentionsPage, CacheStorage cacheStorage)
     {
         this.configuration = configuration;
         this.session = session;
         this.client = client;
+        this.scores = scores;
         this.safety = safety;
         this.confirm = confirm;
         this.navigator = navigator;
@@ -256,10 +260,12 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
             return;
         }
 
-        var card = GroupCard.Begin(theme, 3);
+        var card = GroupCard.Begin(theme, 4);
         var readReceipts = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ReadReceipts), shareReadReceipts, theme,
             null, Loc.T(L.Settings.ChatPrivacyHint));
         var lastSeen = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.LastSeenOnline), sharePresence, theme);
+        var leaderboards = SettingsRow.Bool(card.NextRow(), Loc.T(L.Stage.ShowOnLeaderboards), showOnLeaderboards,
+            theme);
         var tagsOpened = SettingsRow.Disclosure(card.NextRow(), Loc.T(L.PhotoTag.SettingsTitle), string.Empty, theme);
         card.End();
         if (readReceipts != shareReadReceipts || lastSeen != sharePresence)
@@ -267,6 +273,12 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
             shareReadReceipts = readReceipts;
             sharePresence = lastSeen;
             Push(readReceipts, lastSeen);
+        }
+
+        if (leaderboards != showOnLeaderboards)
+        {
+            showOnLeaderboards = leaderboards;
+            PushLeaderboards(leaderboards);
         }
 
         if (tagsOpened)
@@ -293,6 +305,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
                 {
                     shareReadReceipts = me.ShareReadReceipts;
                     sharePresence = me.SharePresence;
+                    showOnLeaderboards = me.ShowOnLeaderboards;
                     chatPrivacyLoaded = true;
                 }
             }
@@ -325,6 +338,29 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
             catch (Exception exception)
             {
                 AepLog.Warning(exception, "Chat privacy update failed");
+            }
+        });
+    }
+
+    private void PushLeaderboards(bool show)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var me = await scores.SetShowOnLeaderboardsAsync(show, token).ConfigureAwait(false);
+                if (me is null)
+                {
+                    return;
+                }
+
+                showOnLeaderboards = me.ShowOnLeaderboards;
+                session.SetUser(me);
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning(exception, "Leaderboard privacy update failed");
             }
         });
     }

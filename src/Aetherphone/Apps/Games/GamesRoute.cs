@@ -8,6 +8,7 @@ internal enum GamesScreen : byte
     Shelf,
     Playing,
     OnlineRoom,
+    Leaderboard,
 }
 
 internal enum GamesTab : byte
@@ -29,13 +30,16 @@ internal enum GamesShelf : byte
     All,
 }
 
-internal readonly record struct GamesRoute(GamesScreen Screen, GamesShelf Shelf)
+internal readonly record struct GamesRoute(GamesScreen Screen, GamesShelf Shelf, string GameId = "", string StatId = "")
 {
     public static readonly GamesRoute Root = new(GamesScreen.Root, GamesShelf.All);
     public static readonly GamesRoute Playing = new(GamesScreen.Playing, GamesShelf.All);
     public static readonly GamesRoute OnlineRoom = new(GamesScreen.OnlineRoom, GamesShelf.All);
 
     public static GamesRoute ShelfOf(GamesShelf shelf) => new(GamesScreen.Shelf, shelf);
+
+    public static GamesRoute LeaderboardOf(string gameId, string statId) =>
+        new(GamesScreen.Leaderboard, GamesShelf.All, gameId, statId);
 
     public static GamesShelf ShelfFor(GameGenre genre) => (GamesShelf)genre;
 }

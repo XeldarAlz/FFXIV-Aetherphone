@@ -89,7 +89,8 @@ internal sealed record UserDto(
     string FrameId = "",
     string? BioLang = null,
     string? BannerUrl = null,
-    int PendingPhotoTags = 0) : IIdentified;
+    int PendingPhotoTags = 0,
+    bool ShowOnLeaderboards = true) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null,
     string? BannerUrl = null);
