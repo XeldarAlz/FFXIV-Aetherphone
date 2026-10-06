@@ -265,6 +265,20 @@ public sealed class GamesLibraryTests
     }
 
     [Fact]
+    public void TetrisReadsTheHigherOfItsClassicAndModernRecords()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tetris", BestScore = 900 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tetris.modern", BestScore = 2400 });
+        var library = Build(configuration);
+        var tetris = library.IndexOf("tetris");
+
+        Assert.Equal(RecordKind.Score, library.BestKind(tetris));
+        Assert.Equal("2400", library.BestValue(tetris));
+        Assert.Equal(string.Empty, library.BestTier(tetris));
+    }
+
+    [Fact]
     public void GamesWithoutTiersCarryNoTierLabel()
     {
         var configuration = new Configuration();

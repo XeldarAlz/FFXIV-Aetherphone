@@ -1,3 +1,5 @@
+using System.Text;
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.Tetris;
 using Xunit;
 
@@ -5,6 +7,49 @@ namespace Aetherphone.Tests;
 
 public sealed class TetrisModernTests
 {
+    private const int ReplayPieces = 40;
+    private const float LockoutSeconds = 0.2f;
+
+    [Fact]
+    public void SameSeedReplaysIdentically()
+    {
+        var first = Play(1234, out var firstTrace);
+        var second = Play(1234, out var secondTrace);
+        Play(99, out var otherTrace);
+
+        Assert.Equal(firstTrace, secondTrace);
+        Assert.Equal(first.Score, second.Score);
+        Assert.Equal(first.Lines, second.Lines);
+        Assert.Equal(first.NextPieceKind, second.NextPieceKind);
+        Assert.NotEqual(firstTrace, otherTrace);
+    }
+
+    [Fact]
+    public void ClearingReportsTheClearedRowsAndTracksTheBestCombo()
+    {
+        var board = Seeded(TetrisRuleset.Classic, 5);
+        FillRowExceptOColumns(board, 18);
+        FillRowExceptOColumns(board, 19);
+        Assert.True(board.PlaceActive(TetrisPieceKind.O, 3, 17, 0));
+        board.HardDrop();
+        Assert.Equal(2, board.ClearedLinesThisFrame);
+        Assert.Equal((1 << 18) | (1 << 19), board.ClearedRowsMask);
+        Assert.Equal(1, board.BestCombo);
+
+        FillRowExceptOColumns(board, 19);
+        Assert.True(board.PlaceActive(TetrisPieceKind.O, 3, 17, 0));
+        board.HardDrop();
+        Assert.Equal(1 << 19, board.ClearedRowsMask);
+        Assert.Equal(1, board.LastCombo);
+        Assert.Equal(2, board.BestCombo);
+
+        Assert.True(board.PlaceActive(TetrisPieceKind.O, 0, 17, 0));
+        board.HardDrop();
+        Assert.Equal(0, board.ClearedRowsMask);
+        Assert.Equal(-1, board.LastCombo);
+        Assert.Equal(2, board.BestCombo);
+    }
+
     [Fact]
     public void ModernUsesSrsIStatesAndSharesEverySpawnShape()
     {
@@ -23,16 +68,14 @@ public sealed class TetrisModernTests
     [Fact]
     public void SrsKicksAFloorRotationUpAndSideways()
     {
-        var modern = new TetrisBoard();
-        modern.Reset(TetrisRuleset.Modern);
+        var modern = Seeded(TetrisRuleset.Modern, 1);
         Assert.True(modern.PlaceActive(TetrisPieceKind.T, 4, 17, 0));
         Assert.True(modern.Rotate(1));
         Assert.Equal(1, modern.ActiveRotation);
         Assert.Equal(3, modern.ActiveX);
         Assert.Equal(16, modern.ActiveY);
 
-        var classic = new TetrisBoard();
-        classic.Reset(TetrisRuleset.Classic);
+        var classic = Seeded(TetrisRuleset.Classic, 1);
         Assert.True(classic.PlaceActive(TetrisPieceKind.T, 4, 17, 0));
         Assert.True(classic.Rotate(1));
         Assert.Equal(4, classic.ActiveX);
@@ -42,8 +85,7 @@ public sealed class TetrisModernTests
     [Fact]
     public void ATSpinDoubleIsDetectedAndPaidInModern()
     {
-        var board = new TetrisBoard();
-        board.Reset(TetrisRuleset.Modern);
+        var board = Seeded(TetrisRuleset.Modern, 2);
         for (var column = 0; column < TetrisBoard.Columns; column++)
         {
             if (column != 4)
@@ -97,8 +139,7 @@ public sealed class TetrisModernTests
     [Fact]
     public void AGroundedModernPieceLocksAfterHalfASecondNotAtOnce()
     {
-        var board = new TetrisBoard();
-        board.Reset(TetrisRuleset.Modern);
+        var board = Seeded(TetrisRuleset.Modern, 3);
         while (board.SoftDrop())
         {
         }
@@ -125,8 +166,7 @@ public sealed class TetrisModernTests
     [Fact]
     public void ClassicLocksTheMomentSoftDropMeetsTheStack()
     {
-        var board = new TetrisBoard();
-        board.Reset(TetrisRuleset.Classic);
+        var board = Seeded(TetrisRuleset.Classic, 4);
         while (board.SoftDrop())
         {
         }
@@ -137,15 +177,59 @@ public sealed class TetrisModernTests
     [Fact]
     public void HardDropIsIgnoredDuringTheModernLockout()
     {
-        var board = new TetrisBoard();
-        board.Reset(TetrisRuleset.Modern);
+        var board = Seeded(TetrisRuleset.Modern, 6);
         board.HardDrop();
         Assert.True(board.LockedThisFrame);
         var spawnY = board.ActiveY;
         board.HardDrop();
         Assert.Equal(spawnY, board.ActiveY);
-        board.Update(0.2f);
+        board.Update(LockoutSeconds);
         board.HardDrop();
         Assert.True(board.LockedThisFrame);
+    }
+
+    private static TetrisBoard Seeded(TetrisRuleset ruleset, int seed)
+    {
+        var board = new TetrisBoard();
+        board.Reset(ruleset, GameRandom.FromSeed((ulong)seed));
+        return board;
+    }
+
+    private static void FillRowExceptOColumns(TetrisBoard board, int row)
+    {
+        for (var column = 0; column < TetrisBoard.Columns; column++)
+        {
+            if (column != 4 && column != 5)
+            {
+                board.Paint(column, row, 1);
+            }
+        }
+    }
+
+    private static TetrisBoard Play(int seed, out string trace)
+    {
+        var board = Seeded(TetrisRuleset.Modern, seed);
+        var builder = new StringBuilder();
+        for (var piece = 0; piece < ReplayPieces && !board.GameOver; piece++)
+        {
+            builder.Append((int)board.ActiveKind);
+            for (var rotation = 0; rotation < piece % 4; rotation++)
+            {
+                board.Rotate(1);
+            }
+
+            var shift = piece % 7 - 3;
+            for (var step = 0; step < Math.Abs(shift); step++)
+            {
+                board.Move(Math.Sign(shift));
+            }
+
+            board.Update(LockoutSeconds);
+            board.HardDrop();
+            builder.Append(':').Append(board.Score).Append(' ');
+        }
+
+        trace = builder.ToString();
+        return board;
     }
 }

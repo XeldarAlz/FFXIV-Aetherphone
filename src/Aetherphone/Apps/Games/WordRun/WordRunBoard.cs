@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.WordRun;
 
 internal enum WordTile : byte
@@ -43,7 +45,7 @@ internal sealed class WordRunBoard
     private readonly char[] answerChars = new char[WordLength];
     private readonly int[] remaining = new int[LetterCount];
     private readonly HashSet<string> used = new();
-    private readonly Random random = new();
+    private GameRandom random;
     private string[] answers = Array.Empty<string>();
     private HashSet<string> valid = new();
     public int EntryLength { get; private set; }
@@ -71,8 +73,9 @@ internal sealed class WordRunBoard
         used.Clear();
     }
 
-    public void StartRun()
+    public void StartRun(GameRandom seededRandom)
     {
+        random = seededRandom;
         Score = 0;
         WordsSolved = 0;
         TotalGuesses = 0;

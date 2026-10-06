@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.Tetris;
 
 internal enum TetrisPieceKind
@@ -109,7 +111,7 @@ internal sealed class TetrisBoard
     private readonly TetrisPieceKind[] bag = new TetrisPieceKind[7];
     private readonly TetrisLevelSystem levelSystem = new();
     private readonly TetrisScoringSystem scoring = new();
-    private readonly Random random = new();
+    private GameRandom random;
     private int bagIndex;
     private TetrisPieceKind? heldKind;
     private bool holdUsedThisTurn;
@@ -128,11 +130,13 @@ internal sealed class TetrisBoard
     public int Lines => levelSystem.TotalLinesCleared;
     public int Level => levelSystem.Level;
     public int ClearedLinesThisFrame { get; private set; }
+    public int ClearedRowsMask { get; private set; }
     public bool LockedThisFrame { get; private set; }
     public int LastLockScore { get; private set; }
     public TetrisSpin LastSpin { get; private set; }
     public bool LastBackToBack => scoring.LastBackToBack;
     public int LastCombo => scoring.LastCombo;
+    public int BestCombo => scoring.BestCombo;
     public bool GameOver { get; private set; }
     public bool HasActivePiece { get; private set; }
     public TetrisPieceKind? HeldKind => heldKind;
@@ -143,15 +147,15 @@ internal sealed class TetrisBoard
     public int ActiveY => activeY;
     public int CellColor(int column, int row) => cells[row * Columns + column];
 
-    public void Reset() => Reset(TetrisRuleset.Classic);
-
-    public void Reset(TetrisRuleset ruleset)
+    public void Reset(TetrisRuleset ruleset, GameRandom seededRandom)
     {
         Ruleset = ruleset;
+        random = seededRandom;
         Array.Clear(cells, 0, cells.Length);
         scoring.Reset();
         levelSystem.Reset(ruleset);
         ClearedLinesThisFrame = 0;
+        ClearedRowsMask = 0;
         LockedThisFrame = false;
         LastLockScore = 0;
         LastSpin = TetrisSpin.None;
@@ -168,6 +172,7 @@ internal sealed class TetrisBoard
     public void Update(float deltaSeconds)
     {
         ClearedLinesThisFrame = 0;
+        ClearedRowsMask = 0;
         LockedThisFrame = false;
         hardDropLockout = MathF.Max(0f, hardDropLockout - deltaSeconds);
         if (GameOver || !HasActivePiece)
@@ -419,8 +424,9 @@ internal sealed class TetrisBoard
         }
 
         HasActivePiece = false;
-        var clearedLines = ClearLines();
+        var clearedLines = ClearLines(out var clearedMask);
         ClearedLinesThisFrame = clearedLines;
+        ClearedRowsMask = clearedMask;
         LockedThisFrame = true;
         LastSpin = spin;
         LastLockScore = scoring.CommitPiece(clearedLines, levelSystem.Level, spin, Ruleset);
@@ -491,9 +497,10 @@ internal sealed class TetrisBoard
         return false;
     }
 
-    private int ClearLines()
+    private int ClearLines(out int clearedMask)
     {
         var cleared = 0;
+        clearedMask = 0;
         for (var row = Rows - 1; row >= 0; row--)
         {
             var full = true;
@@ -511,6 +518,7 @@ internal sealed class TetrisBoard
                 continue;
             }
 
+            clearedMask |= 1 << (row - cleared);
             cleared++;
             for (var moveRow = row; moveRow > 0; moveRow--)
             {
