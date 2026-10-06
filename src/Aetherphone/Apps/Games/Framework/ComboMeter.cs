@@ -27,15 +27,23 @@ internal struct ComboMeter
 
     public static ComboMeter Create() => new(DefaultWindowSeconds);
 
+    public static ComboMeter Untimed() => new(0f);
+
+    public readonly bool Timed => WindowSeconds > 0f;
+
     public readonly float WindowFraction =>
         WindowSeconds <= 0f ? 0f : Math.Clamp(remaining / WindowSeconds, 0f, 1f);
 
     public readonly bool Active => Count > 0;
 
-    public int Hit()
+    public int Hit(bool resetWindow = true)
     {
         Count++;
-        remaining = WindowSeconds <= 0f ? DefaultWindowSeconds : WindowSeconds;
+        if (resetWindow || Count == 1)
+        {
+            remaining = WindowSeconds;
+        }
+
         Multiplier = MultiplierFor(Count);
         Heat = Math.Clamp(Count / (float)HeatHits, 0f, 1f);
         return Multiplier;
@@ -51,6 +59,11 @@ internal struct ComboMeter
         var decaySeconds = deltaSeconds;
         if (Count > 0)
         {
+            if (!Timed)
+            {
+                return;
+            }
+
             remaining -= deltaSeconds;
             if (remaining > 0f)
             {

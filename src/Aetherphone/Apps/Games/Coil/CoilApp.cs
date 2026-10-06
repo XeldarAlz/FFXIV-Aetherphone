@@ -554,7 +554,7 @@ internal sealed class CoilApp : IMiniGame
         }
 
         context.Hud.Custom(ChainCapsuleWidth);
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         var placed = chainCapsulePlaced;
         chainCapsulePlaced = true;
         if (!placed || rect.Width <= 0f)

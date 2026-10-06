@@ -361,7 +361,7 @@ internal sealed class PairsApp : IMiniGame
         }
 
         context.Hud.Custom(width);
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;

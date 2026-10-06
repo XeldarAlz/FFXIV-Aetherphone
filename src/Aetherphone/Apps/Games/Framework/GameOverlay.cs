@@ -23,6 +23,7 @@ internal readonly struct StageResult
     public readonly string PrimaryLabel;
     public readonly string PrimaryValue;
     public readonly bool NewBest;
+    public readonly string ContinueLabel;
     public readonly string RankLine;
     public readonly string FriendsLine;
     public readonly bool Uploading;
@@ -30,13 +31,15 @@ internal readonly struct StageResult
     public readonly GameOutcome Outcome;
 
     public StageResult(string title, Vector4 titleColor, string primaryLabel, string primaryValue, bool newBest,
-        string rankLine, string friendsLine, bool uploading, bool topTen, in GameOutcome outcome)
+        string continueLabel, string rankLine, string friendsLine, bool uploading, bool topTen,
+        in GameOutcome outcome)
     {
         Title = title;
         TitleColor = titleColor;
         PrimaryLabel = primaryLabel;
         PrimaryValue = primaryValue;
         NewBest = newBest;
+        ContinueLabel = continueLabel;
         RankLine = rankLine;
         FriendsLine = friendsLine;
         Uploading = uploading;
@@ -102,8 +105,9 @@ internal static class GameOverlay
         Material.Veil(drawList, area.Min, area.Max, 0.58f * alpha);
 
         var padding = Metrics.Space.Xl * scale;
-        var label = Loc.Upper(result.PrimaryLabel);
-        var buttonLabel = Loc.T(L.Games.PlayAgain);
+        var hasPrimary = result.PrimaryValue.Length > 0;
+        var label = hasPrimary ? Loc.Upper(result.PrimaryLabel) : string.Empty;
+        var buttonLabel = result.ContinueLabel;
         var leaderboardLabel = Loc.T(L.Stage.Leaderboard);
         var hasRank = result.RankLine.Length > 0;
         var hasFriends = result.FriendsLine.Length > 0;
@@ -112,8 +116,12 @@ internal static class GameOverlay
         var buttonWidth = MathF.Max(MinButtonWidth * scale,
             Typography.Measure(buttonLabel, TextStyles.Headline).X + ButtonSidePadding * scale);
         var widest = MathF.Max(buttonWidth, Typography.Measure(result.Title, TextStyles.Title1).X);
-        widest = MathF.Max(widest, Typography.Measure(result.PrimaryValue, TextStyles.LargeTitle).X);
-        widest = MathF.Max(widest, Typography.Measure(label, TextStyles.Caption1).X);
+        if (hasPrimary)
+        {
+            widest = MathF.Max(widest, Typography.Measure(result.PrimaryValue, TextStyles.LargeTitle).X);
+            widest = MathF.Max(widest, Typography.Measure(label, TextStyles.Caption1).X);
+        }
+
         if (hasRank)
         {
             widest = MathF.Max(widest, Typography.Measure(result.RankLine, TextStyles.Footnote).X + SpinnerRadius * 3f * scale);
@@ -128,17 +136,19 @@ internal static class GameOverlay
         var valueScale = Typography.FitScale(result.PrimaryValue, contentWidth, TextStyles.LargeTitle.Scale,
             TextStyles.LargeTitle.Scale * MinFitFactor, TextStyles.LargeTitle.Weight);
         var titleHeight = Typography.Measure(result.Title, titleScale, TextStyles.Title1.Weight).Y;
-        var labelHeight = Typography.Measure(label, TextStyles.Caption1).Y;
-        var valueHeight = Typography.Measure(result.PrimaryValue, valueScale, TextStyles.LargeTitle.Weight).Y;
+        var labelHeight = hasPrimary ? Typography.Measure(label, TextStyles.Caption1).Y : 0f;
+        var valueHeight = hasPrimary
+            ? Typography.Measure(result.PrimaryValue, valueScale, TextStyles.LargeTitle.Weight).Y
+            : 0f;
+        var primaryHeight = hasPrimary ? labelHeight + Metrics.Space.Xxs * scale + valueHeight : 0f;
         var lineHeight = Typography.LineHeight(TextStyles.Footnote);
         var statLabelHeight = Typography.LineHeight(TextStyles.Caption1);
         var statValueHeight = Typography.LineHeight(TextStyles.Headline);
         var statCellHeight = statLabelHeight + Metrics.Space.Xxs * scale + statValueHeight;
         var buttonHeight = ButtonHeight * scale;
         var leaderboardHeight = Button.Height(ButtonSize.Small) * scale;
-        var cardHeight = padding * 2f + titleHeight + Metrics.Space.Lg * scale + labelHeight +
-            Metrics.Space.Xxs * scale + valueHeight + Metrics.Space.Xl * scale + buttonHeight +
-            Metrics.Space.Sm * scale + leaderboardHeight;
+        var cardHeight = padding * 2f + titleHeight + Metrics.Space.Lg * scale + primaryHeight +
+            Metrics.Space.Xl * scale + buttonHeight + Metrics.Space.Sm * scale + leaderboardHeight;
         if (result.NewBest)
         {
             cardHeight += BadgeHeight * scale + Metrics.Space.Md * scale;
@@ -192,16 +202,20 @@ internal static class GameOverlay
             offset += BadgeHeight * scale + Metrics.Space.Md * scale;
         }
 
-        var labelPhase = Phase(clamped, 0.2f, 0.62f);
-        DrawStaggered(drawList, Place(center, offset + labelHeight * 0.5f, cardScale), label,
-            theme.TextMuted with { W = labelPhase }, TextStyles.Caption1.Scale, TextStyles.Caption1.Weight, labelPhase,
-            scale);
-        offset += labelHeight + Metrics.Space.Xxs * scale;
-        var valuePhase = Phase(clamped, 0.25f, 0.7f);
-        DrawStaggered(drawList, Place(center, offset + valueHeight * 0.5f, cardScale),
-            CountingValue(result.PrimaryValue, valuePhase > 0f ? deltaSeconds : 0f),
-            theme.TextStrong with { W = valuePhase }, valueScale, TextStyles.LargeTitle.Weight, valuePhase, scale);
-        offset += valueHeight;
+        if (hasPrimary)
+        {
+            var labelPhase = Phase(clamped, 0.2f, 0.62f);
+            DrawStaggered(drawList, Place(center, offset + labelHeight * 0.5f, cardScale), label,
+                theme.TextMuted with { W = labelPhase }, TextStyles.Caption1.Scale, TextStyles.Caption1.Weight,
+                labelPhase, scale);
+            offset += labelHeight + Metrics.Space.Xxs * scale;
+            var valuePhase = Phase(clamped, 0.25f, 0.7f);
+            DrawStaggered(drawList, Place(center, offset + valueHeight * 0.5f, cardScale),
+                CountingValue(result.PrimaryValue, valuePhase > 0f ? deltaSeconds : 0f),
+                theme.TextStrong with { W = valuePhase }, valueScale, TextStyles.LargeTitle.Weight, valuePhase, scale);
+            offset += valueHeight;
+        }
+
         if (hasRank)
         {
             offset += Metrics.Space.Sm * scale;

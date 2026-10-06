@@ -14,9 +14,10 @@ internal readonly struct GameContext
     public readonly HudModel Hud;
     public readonly ScreenFx Fx;
     public readonly StageBackdrop Backdrop;
+    public readonly StageChrome Chrome;
 
     public GameContext(Rect full, Rect safe, PhoneTheme theme, float deltaSeconds, float rawDeltaSeconds,
-        GameSession session, HudModel hud, ScreenFx fx, StageBackdrop backdrop)
+        GameSession session, HudModel hud, ScreenFx fx, StageBackdrop backdrop, StageChrome chrome)
     {
         Full = full;
         Safe = safe;
@@ -27,5 +28,8 @@ internal readonly struct GameContext
         Hud = hud;
         Fx = fx;
         Backdrop = backdrop;
+        Chrome = chrome;
     }
+
+    public bool ChromeHit(Vector2 pointer) => Chrome.Consumes(pointer);
 }

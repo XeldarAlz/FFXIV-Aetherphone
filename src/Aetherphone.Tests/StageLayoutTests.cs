@@ -70,7 +70,18 @@ public sealed class StageLayoutTests
     {
         var band = StageLayout.PadBand(Full, StageLayout.DPadBand, 1f);
 
-        Assert.Equal(630f, band.Min.Y);
+        Assert.Equal(600f, band.Min.Y);
         Assert.Equal(Full.Max.Y, band.Max.Y);
+    }
+
+    [Fact]
+    public void PunchedGrowsTheSafeRectAroundItsCentre()
+    {
+        var safe = StageLayout.Safe(Full, HudStyle.Standard, 1f);
+        var punched = StageLayout.Punched(safe, 1.1f);
+
+        Assert.Equal(safe, StageLayout.Punched(safe, 1f));
+        Assert.Equal(safe.Center, punched.Center);
+        Assert.InRange(punched.Width, safe.Width * 1.1f - 0.01f, safe.Width * 1.1f + 0.01f);
     }
 }

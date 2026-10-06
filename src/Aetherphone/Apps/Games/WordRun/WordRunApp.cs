@@ -534,7 +534,7 @@ internal sealed class WordRunApp : IMiniGame
         var label = armed ? Loc.T(L.Games.EndRun) : solvesValue;
         var width = CapsulePadX * 2f + CapsuleIconSize + CapsuleIconGap + Typography.Measure(label, CapsuleStyle).X / scale;
         hud.Custom(width);
-        var rect = hud.CustomRect;
+        var rect = hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;

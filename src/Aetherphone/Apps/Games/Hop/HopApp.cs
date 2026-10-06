@@ -305,7 +305,7 @@ internal sealed class HopApp : IMiniGame
 
     private void DrawTimer(ImDrawListPtr drawList, in GameContext context, Vector4 accent, float scale)
     {
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;

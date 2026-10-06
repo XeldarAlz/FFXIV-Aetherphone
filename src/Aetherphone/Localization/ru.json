@@ -4716,6 +4716,7 @@
   "stage.mode": "Режим",
   "stage.levelShort": "УР {0}",
   "stage.times": "x{0}",
+  "stage.plus": "+{0}",
   "leaderboard.emptyTitle": "Пока нет результатов",
   "leaderboard.emptyHint": "Станьте первым, кто его поставит.",
   "leaderboard.signInHint": "Войдите, чтобы увидеть своё место и отправить лучшие результаты в таблицу.",

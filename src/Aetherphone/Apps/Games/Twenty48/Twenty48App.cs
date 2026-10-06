@@ -456,7 +456,7 @@ internal sealed class Twenty48App : IMiniGame
         var chipWidth = MathF.Max(ChipMinWidth, Typography.Measure(tileLabel, CapsuleStyle).X / scale + ChipPadX * 2f);
         var width = CapsulePadX * 2f + CapsuleIconSize + CapsuleIconGap + undoWidth + CapsuleSectionGap + chipWidth;
         context.Hud.Custom(width);
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;

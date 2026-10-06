@@ -90,7 +90,7 @@ internal sealed class CapManBoard
     private const char PenMarker = 'G';
     private const char StartMarker = 'P';
     private const float TurnSlack = 0.28f;
-    private const float PlayerSpeed = 6.2f;
+    public const float PlayerSpeed = 6.2f;
     private const float EyesSpeed = 10f;
     private const float FrightenedSpeed = 3f;
     private const float HouseSpeed = 2.5f;
@@ -365,8 +365,12 @@ internal sealed class CapManBoard
         var position = PlayerPosition;
         var tileX = (int)MathF.Round(position.X);
         var tileY = (int)MathF.Round(position.Y);
-        if (queuedDirection != Vector2.Zero && NearCentre(position) &&
-            Walkable(tileX + (int)queuedDirection.X, tileY + (int)queuedDirection.Y, false))
+        if (queuedDirection == PlayerDirection)
+        {
+            queuedDirection = Vector2.Zero;
+        }
+        else if (queuedDirection != Vector2.Zero && NearCentre(position) &&
+                 Walkable(tileX + (int)queuedDirection.X, tileY + (int)queuedDirection.Y, false))
         {
             position = new Vector2(tileX, tileY);
             PlayerDirection = queuedDirection;

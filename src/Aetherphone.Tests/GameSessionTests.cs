@@ -49,9 +49,14 @@ public sealed class GameSessionTests
     private static readonly LocString[] Tiers = { new("t.easy", "Easy"), new("t.hard", "Hard") };
     private static readonly string[] TierStatIds = { "tap.easy", "tap.hard" };
 
-    private static GameSpec Spec(bool countdown = false, ScoreKind kind = ScoreKind.Score, bool modes = false) =>
+    private static readonly ScoreKind[] TierKinds = { ScoreKind.Time, ScoreKind.Score };
+    private static readonly bool[] TierCountdowns = { false, true };
+
+    private static GameSpec Spec(bool countdown = false, ScoreKind kind = ScoreKind.Score, bool modes = false,
+        bool modeKinds = false, bool countdownModes = false) =>
         new("tap", new LocString("t.title", "Tap"), GameGenre.Arcade, kind: kind, clocked: true, countdown: countdown,
-            modes: modes ? Tiers : null, modeStatIds: modes ? TierStatIds : null);
+            modes: modes ? Tiers : null, modeStatIds: modes ? TierStatIds : null,
+            modeKinds: modeKinds ? TierKinds : null, countdownModes: countdownModes ? TierCountdowns : null);
 
     private static GameSession Build(out FakeStatsConfiguration configuration, out CountingSink sink,
         FixedRank? ranks = null)
@@ -192,6 +197,96 @@ public sealed class GameSessionTests
         Assert.Equal(65, configuration.GameStats[0].BestTimeSeconds);
         Assert.Equal(ScoreKind.Time, sink.Last.Kind);
         Assert.Equal(65, session.Best);
+    }
+
+    [Fact]
+    public void ALostTimeRunCompletesTheDailyButRecordsNoBestAndUploadsNothing()
+    {
+        var session = Build(out var configuration, out var sink);
+        var stats = session.Stats;
+        stats.DailyGameId = "tap";
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tap", BestTimeSeconds = 90 });
+        session.Begin(Spec(kind: ScoreKind.Time), new GameStart(0, 5, true));
+        session.Play();
+
+        session.Finish(new GameOutcome(30, ScoreKind.Time, "tap", won: false));
+
+        Assert.Equal(StageFlow.Result, session.State);
+        Assert.Equal(90, configuration.GameStats[0].BestTimeSeconds);
+        Assert.False(session.NewBest);
+        Assert.Equal(0, sink.Count);
+        Assert.True(stats.DailyDone);
+        Assert.Equal(90, session.Best);
+    }
+
+    [Fact]
+    public void ADrawKeepsTheStreakAndUploadsNothing()
+    {
+        var session = Build(out var configuration, out var sink);
+        var stats = session.Stats;
+        stats.DailyGameId = "tap";
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tap", Streak = 4 });
+        session.Begin(Spec(kind: ScoreKind.Streak), new GameStart(0, 5, true));
+        session.Play();
+
+        session.Finish(GameOutcome.Drawn("tap"));
+
+        Assert.True(session.Outcome.IsDraw);
+        Assert.Equal(4, configuration.GameStats[0].Streak);
+        Assert.Equal(4, session.ResultValue);
+        Assert.False(session.NewBest);
+        Assert.Equal(0, sink.Count);
+        Assert.True(stats.DailyDone);
+    }
+
+    [Fact]
+    public void ModeKindsDriveTheBestAndTheBeatingGlow()
+    {
+        var session = Build(out var configuration, out _);
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tap.easy", BestTimeSeconds = 40, BestScore = 7 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tap.hard", BestScore = 12, BestTimeSeconds = 3 });
+        session.Begin(Spec(kind: ScoreKind.Time, modes: true, modeKinds: true), new GameStart(0, 5, false));
+        Assert.Equal(ScoreKind.Time, session.Kind);
+        Assert.Equal(40, session.Best);
+
+        session.SelectMode(1);
+
+        Assert.Equal(ScoreKind.Score, session.Kind);
+        Assert.Equal(12, session.Best);
+        session.Play();
+        session.Report(13);
+        Assert.True(session.BeatingBest);
+    }
+
+    [Fact]
+    public void CountdownModesOverrideTheSpecFlagPerMode()
+    {
+        var session = Build(out _, out _);
+        session.Begin(Spec(modes: true, countdownModes: true), new GameStart(0, 5, false));
+        session.Play();
+        Assert.Equal(StageFlow.Playing, session.State);
+
+        var blitz = Build(out _, out _);
+        blitz.Begin(Spec(modes: true, countdownModes: true), new GameStart(1, 5, false));
+        blitz.Play();
+        Assert.Equal(StageFlow.Countdown, blitz.State);
+    }
+
+    [Fact]
+    public void OutcomeDecorationsSurviveEveryBuilder()
+    {
+        var label = new LocString("t.next", "Next level");
+        var outcome = new GameOutcome(3, ScoreKind.Level, "tap")
+            .WithContinueLabel(label)
+            .WithQuietBest()
+            .WithStat(label, "1")
+            .WithSecondary("tap.height", 9);
+
+        Assert.True(outcome.QuietBest);
+        Assert.Equal("t.next", outcome.ContinueLabel!.Value.Key);
+        Assert.Equal(1, outcome.StatCount);
+        Assert.Equal(9, outcome.SecondaryValue);
+        Assert.False(outcome.IsDraw);
     }
 
     [Fact]

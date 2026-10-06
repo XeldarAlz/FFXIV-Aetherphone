@@ -287,7 +287,7 @@ internal sealed class SweeperApp : IMiniGame
         var bestLabel = best > 0 ? TimeText.MinutesSeconds(best) : string.Empty;
         context.Hud.Custom(StatCapsule.Width(minesLabel, bestLabel, scale));
         var flagInk = board.MinesRemaining < 0 ? context.Theme.Danger : Accent;
-        StatCapsule.Draw(drawList, context.Hud.CustomRect, FontAwesomeIcon.Flag, minesLabel, flagInk, bestLabel,
+        StatCapsule.Draw(drawList, context.Hud.CustomRect(0), FontAwesomeIcon.Flag, minesLabel, flagInk, bestLabel,
             Accent, scale);
     }
 

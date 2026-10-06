@@ -461,7 +461,7 @@ internal sealed class SudokuApp : IMiniGame
         var width = CapsulePadX * 2f + CapsuleIconSize + CapsuleIconGap + textWidth + CapsuleSectionGap +
                     MaxMistakes * CapsuleIconSize + (MaxMistakes - 1) * CapsuleHeartGap;
         context.Hud.Custom(width);
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;

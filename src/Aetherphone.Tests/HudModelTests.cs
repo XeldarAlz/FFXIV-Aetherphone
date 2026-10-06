@@ -93,14 +93,14 @@ public sealed class HudModelTests
         hud.Score(12);
         hud.Timer(1f, 2f, true);
         hud.Custom(50f);
-        hud.PlaceCustom(new Core.Rect(new System.Numerics.Vector2(1f, 2f), new System.Numerics.Vector2(3f, 4f)));
+        hud.PlaceSlot(HudSlot.Custom, new Core.Rect(new System.Numerics.Vector2(1f, 2f), new System.Numerics.Vector2(3f, 4f)));
         hud.Clear();
 
         Assert.False(hud.HasScore);
         Assert.False(hud.HasTimer);
         Assert.False(hud.HasCustom);
         Assert.Empty(hud.Visible(HudStyle.Standard).ToArray());
-        Assert.Equal(2f, hud.CustomRect.Width);
+        Assert.Equal(2f, hud.CustomRect(0).Width);
     }
 
     [Fact]
@@ -113,5 +113,75 @@ public sealed class HudModelTests
         Assert.Equal(0f, hud.TimerLeft);
         Assert.Equal(0, hud.LivesLeft);
         Assert.Equal(1, hud.LivesMax);
+    }
+
+    [Fact]
+    public void TwoCustomSlotsKeepTheirOrderAndWidths()
+    {
+        var hud = new HudModel();
+        hud.Custom(40f);
+        hud.Custom(60f);
+        hud.Custom(80f);
+
+        Assert.Equal(2, hud.CustomCount);
+        Assert.Equal(40f, hud.CustomWidth(0));
+        Assert.Equal(60f, hud.CustomWidth(1));
+        Assert.Equal(new[] { HudSlot.Custom, HudSlot.SecondCustom }, hud.Visible(HudStyle.Standard).ToArray());
+    }
+
+    [Fact]
+    public void CustomPlacedIsTrueOnlyForTheFrameAfterTheKitLaidItOut()
+    {
+        var hud = new HudModel();
+        hud.Clear();
+        hud.Custom(40f);
+        Assert.False(hud.CustomPlaced(0));
+
+        hud.PlaceSlot(HudSlot.Custom, new Core.Rect(System.Numerics.Vector2.Zero, new System.Numerics.Vector2(40f, 28f)));
+        hud.Clear();
+        hud.Custom(40f);
+        Assert.True(hud.CustomPlaced(0));
+        Assert.False(hud.CustomPlaced(1));
+
+        hud.Clear();
+        hud.Clear();
+        Assert.False(hud.CustomPlaced(0));
+    }
+
+    [Fact]
+    public void SlotRectsRememberWhereEachCapsuleWasDrawn()
+    {
+        var hud = new HudModel();
+        var rect = new Core.Rect(new System.Numerics.Vector2(10f, 20f), new System.Numerics.Vector2(70f, 48f));
+        hud.PlaceSlot(HudSlot.Timer, rect);
+
+        Assert.Equal(rect, hud.SlotRect(HudSlot.Timer));
+        Assert.Equal(0f, hud.SlotRect(HudSlot.Lives).Width);
+    }
+
+    [Fact]
+    public void ClockIsAnElapsedTimerWithoutATrack()
+    {
+        var hud = new HudModel();
+        hud.Clock(65.9f);
+
+        Assert.True(hud.HasTimer);
+        Assert.True(hud.TimerElapsed);
+        Assert.Equal(0f, hud.TimerTotal);
+        Assert.False(hud.TimerUrgent);
+        Assert.Equal(new[] { HudSlot.Timer }, hud.Visible(HudStyle.Standard).ToArray());
+    }
+
+    [Fact]
+    public void ScoreCanCarryItsOwnLabel()
+    {
+        var hud = new HudModel();
+        var label = new Core.Localization.LocString("t.level", "Level");
+        hud.Score(4, label);
+        Assert.True(hud.HasScore);
+        Assert.Equal("t.level", hud.ScoreLabel!.Value.Key);
+
+        hud.Score(5);
+        Assert.Null(hud.ScoreLabel);
     }
 }

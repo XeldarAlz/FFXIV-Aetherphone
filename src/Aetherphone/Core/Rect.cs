@@ -9,5 +9,12 @@ internal readonly record struct Rect(Vector2 Min, Vector2 Max)
     public bool IsLandscape() => Width > Height;
     public Rect Inset(float amount) => new(Min + new Vector2(amount, amount), Max - new Vector2(amount, amount));
     public Rect Translate(Vector2 offset) => new(Min + offset, Max + offset);
+
+    public Rect Scaled(float factor)
+    {
+        var half = Size * 0.5f * factor;
+        return new Rect(Center - half, Center + half);
+    }
+
     public bool Contains(Vector2 point) => point.X >= Min.X && point.X <= Max.X && point.Y >= Min.Y && point.Y <= Max.Y;
 }

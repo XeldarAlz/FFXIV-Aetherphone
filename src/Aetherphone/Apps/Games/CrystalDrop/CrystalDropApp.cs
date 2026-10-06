@@ -283,7 +283,7 @@ internal sealed class CrystalDropApp : IMiniGame
         var labelWidth = Typography.Measure(label, TextStyles.FootnoteEmphasized).X;
         var width = PreviewPad * 2f * scale + labelWidth + PreviewGap * scale + PreviewCrystalRadius * 2f * scale;
         context.Hud.Custom(width / scale);
-        var slot = context.Hud.CustomRect;
+        var slot = context.Hud.CustomRect(0);
         if (slot.Width <= 0f)
         {
             return;

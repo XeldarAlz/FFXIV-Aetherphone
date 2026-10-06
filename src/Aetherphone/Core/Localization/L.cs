@@ -8259,6 +8259,7 @@ internal static class L
         public static readonly LocString Mode = new("stage.mode", "Mode");
         public static readonly LocString LevelShort = new("stage.levelShort", "LV {0}");
         public static readonly LocString Times = new("stage.times", "x{0}");
+        public static readonly LocString Plus = new("stage.plus", "+{0}");
     }
 
     internal static class Leaderboard

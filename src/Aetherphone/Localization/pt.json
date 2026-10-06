@@ -4716,6 +4716,7 @@
   "stage.mode": "Modo",
   "stage.levelShort": "NV {0}",
   "stage.times": "x{0}",
+  "stage.plus": "+{0}",
   "leaderboard.emptyTitle": "Ainda sem pontuações",
   "leaderboard.emptyHint": "Seja o primeiro a marcar uma.",
   "leaderboard.signInHint": "Entre para ver sua posição e enviar seus melhores resultados ao ranking.",

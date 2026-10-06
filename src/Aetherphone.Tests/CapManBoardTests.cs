@@ -55,6 +55,25 @@ public sealed class CapManBoardTests
         Assert.True(board.DotsLeft < 127);
     }
 
+    [Fact]
+    public void ReQueuingTheCurrentDirectionNeverSnapsThePlayerBackToTheTileCentre()
+    {
+        var board = new CapManBoard();
+        board.StartGame(GameRandom.FromSeed(Seed));
+        Advance(board, CapManBoard.ReadySeconds + 0.05f);
+        board.Turn(CapManBoard.Left);
+        Advance(board, 0.1f);
+        var before = board.PlayerPosition;
+        Assert.NotEqual(MathF.Round(before.X), before.X);
+
+        board.Turn(CapManBoard.Left);
+        board.Tick(Step);
+
+        var expected = before.X - CapManBoard.PlayerSpeed * Step;
+        Assert.InRange(board.PlayerPosition.X, expected - 0.0001f, expected + 0.0001f);
+        Assert.Equal(CapManBoard.Left, board.PlayerDirection);
+    }
+
     [Theory]
     [InlineData(1, 4.8f)]
     [InlineData(7, 6.0f)]

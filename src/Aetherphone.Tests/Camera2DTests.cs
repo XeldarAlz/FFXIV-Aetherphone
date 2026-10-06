@@ -21,6 +21,22 @@ public sealed class Camera2DTests
     }
 
     [Fact]
+    public void FittingAWorldRectKeepsTheOriginOnItsCentreEveryFrame()
+    {
+        var camera = Camera2D.Create();
+        var world = new Rect(new Vector2(-5f, -10f), new Vector2(5f, 10f));
+        camera.Fit(View, world, FitMode.Contain);
+        Assert.Equal(32f, camera.Zoom);
+        Assert.Equal(Vector2.Zero, camera.Origin);
+
+        camera.Place(new Vector2(3f, 3f));
+        camera.Fit(View, world, FitMode.Contain);
+
+        Assert.Equal(Vector2.Zero, camera.Origin);
+        Assert.Equal(View.Center, camera.ToScreen(Vector2.Zero));
+    }
+
+    [Fact]
     public void CoverWidthAndCoverHeightUseOneAxis()
     {
         var wide = Camera2D.Create();

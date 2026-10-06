@@ -281,7 +281,7 @@ internal sealed class WaterSortApp : IMiniGame
         var label = GameNumber.Label(board.Moves);
         var width = CapsulePadX * 2f + CapsuleIconSize + CapsuleIconGap + Typography.Measure(label, CapsuleStyle).X / scale;
         hud.Custom(width);
-        var rect = hud.CustomRect;
+        var rect = hud.CustomRect(0);
         if (rect.Width > 0f)
         {
             DrawUndoCapsule(drawList, rect, label, interactive, context.Theme, scale);

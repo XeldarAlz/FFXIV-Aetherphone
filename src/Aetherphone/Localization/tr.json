@@ -4716,6 +4716,7 @@
   "stage.mode": "Mod",
   "stage.levelShort": "SV {0}",
   "stage.times": "x{0}",
+  "stage.plus": "+{0}",
   "leaderboard.emptyTitle": "Henüz skor yok",
   "leaderboard.emptyHint": "İlk skoru sen koy.",
   "leaderboard.signInHint": "Sıralamanı görmek ve en iyi skorlarını tabloya göndermek için giriş yap.",

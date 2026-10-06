@@ -364,7 +364,7 @@ internal sealed class NonogramApp : IMiniGame
         var bestLabel = best > 0 ? TimeText.MinutesSeconds(best) : string.Empty;
         context.Hud.Custom(StatCapsule.Width(mistakesLabel, bestLabel, scale));
         var mistakeInk = board.Mistakes > 0 ? Danger : Accent;
-        StatCapsule.Draw(drawList, context.Hud.CustomRect, FontAwesomeIcon.Times, mistakesLabel, mistakeInk, bestLabel,
+        StatCapsule.Draw(drawList, context.Hud.CustomRect(0), FontAwesomeIcon.Times, mistakesLabel, mistakeInk, bestLabel,
             Accent, scale);
     }
 

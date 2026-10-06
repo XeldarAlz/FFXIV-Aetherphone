@@ -229,17 +229,8 @@ internal sealed class StageIntro
             rankLine, theme.TextMuted with { W = phase }, PillStyle);
     }
 
-    private static string BestLabel(GameSession session)
-    {
-        if (session.Best <= 0)
-        {
-            return string.Empty;
-        }
-
-        return session.Spec.Kind == ScoreKind.Time
-            ? TimeText.MinutesSeconds(session.Best)
-            : GameNumber.Label(session.Best);
-    }
+    private static string BestLabel(GameSession session) =>
+        session.Best <= 0 ? string.Empty : StageHud.ValueLabel(session.Best, session.Kind);
 
     private static void DrawTag(ImDrawListPtr drawList, Vector2 center, string text, Vector4 accent, float phase,
         float scale)

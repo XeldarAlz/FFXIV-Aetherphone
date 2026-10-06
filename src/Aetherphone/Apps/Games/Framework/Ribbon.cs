@@ -14,6 +14,19 @@ internal sealed class Ribbon
 
     public int Count => count;
 
+    public int Owner { get; private set; } = -1;
+
+    public void Claim(int owner)
+    {
+        if (owner == Owner)
+        {
+            return;
+        }
+
+        Owner = owner;
+        Clear();
+    }
+
     public void Push(Vector2 point)
     {
         points[head] = point;
@@ -25,6 +38,12 @@ internal sealed class Ribbon
     {
         head = 0;
         count = 0;
+    }
+
+    public void Release()
+    {
+        Owner = -1;
+        Clear();
     }
 
     public Vector2 Point(int age) => points[(head - 1 - age + Capacity * 2) % Capacity];

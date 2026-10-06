@@ -47,22 +47,33 @@ internal struct Camera2D
 
     public void Fit(Rect view, float worldWidth, float worldHeight, FitMode mode)
     {
-        View = view;
-        Anchor = view.Center;
-        var safeWidth = MathF.Max(0.0001f, worldWidth);
-        var safeHeight = MathF.Max(0.0001f, worldHeight);
-        Zoom = mode switch
-        {
-            FitMode.CoverWidth => view.Width / safeWidth,
-            FitMode.CoverHeight => view.Height / safeHeight,
-            _ => MathF.Min(view.Width / safeWidth, view.Height / safeHeight),
-        };
+        Zoom = ZoomFor(view, worldWidth, worldHeight, mode);
         if (placed)
         {
             return;
         }
 
         Place(new Vector2(worldWidth * 0.5f, worldHeight * 0.5f));
+    }
+
+    public void Fit(Rect view, Rect world, FitMode mode)
+    {
+        Zoom = ZoomFor(view, world.Width, world.Height, mode);
+        Place(world.Center);
+    }
+
+    private float ZoomFor(Rect view, float worldWidth, float worldHeight, FitMode mode)
+    {
+        View = view;
+        Anchor = view.Center;
+        var safeWidth = MathF.Max(0.0001f, worldWidth);
+        var safeHeight = MathF.Max(0.0001f, worldHeight);
+        return mode switch
+        {
+            FitMode.CoverWidth => view.Width / safeWidth,
+            FitMode.CoverHeight => view.Height / safeHeight,
+            _ => MathF.Min(view.Width / safeWidth, view.Height / safeHeight),
+        };
     }
 
     public void Place(Vector2 origin)

@@ -143,7 +143,7 @@ internal sealed class ReversiApp : IMiniGame
         fx.DrawText();
         board.Counts(out var dark, out var light);
         context.Hud.Custom(ReversiRenderer.CountsWidth(scale));
-        var countsRect = context.Hud.CustomRect;
+        var countsRect = context.Hud.CustomRect(0);
         if (countsRect.Width > 0f)
         {
             renderer.DrawCounts(drawList, countsRect, dark, light, over ? 0 : current,

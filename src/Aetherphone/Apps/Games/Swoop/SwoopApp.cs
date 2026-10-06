@@ -563,7 +563,7 @@ internal sealed class SwoopApp : IMiniGame
 
     private void DrawIslandCapsule(ImDrawListPtr drawList, in GameContext context, float scale)
     {
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;

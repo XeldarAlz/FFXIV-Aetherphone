@@ -106,7 +106,7 @@ internal sealed class GameStatsStore
 
     public bool SubmitScore(string gameId, int score)
     {
-        RecordDailyPlay(gameId);
+        CompleteDaily(gameId);
         if (score <= 0)
         {
             return false;
@@ -125,7 +125,7 @@ internal sealed class GameStatsStore
 
     public bool SubmitTime(string gameId, int seconds)
     {
-        RecordDailyPlay(gameId);
+        CompleteDaily(gameId);
         if (seconds <= 0)
         {
             return false;
@@ -144,7 +144,7 @@ internal sealed class GameStatsStore
 
     public int RecordWin(string gameId)
     {
-        RecordDailyPlay(gameId);
+        CompleteDaily(gameId);
         var record = GetOrCreate(gameId);
         record.Streak += 1;
         configuration.Save();
@@ -153,7 +153,7 @@ internal sealed class GameStatsStore
 
     public void ResetStreak(string gameId)
     {
-        RecordDailyPlay(gameId);
+        CompleteDaily(gameId);
         var record = Find(gameId);
         if (record is null || record.Streak == 0)
         {
@@ -164,7 +164,7 @@ internal sealed class GameStatsStore
         configuration.Save();
     }
 
-    private void RecordDailyPlay(string gameId)
+    public void CompleteDaily(string gameId)
     {
         var daily = DailyGameId;
         if (daily.Length == 0 || !MatchesGame(gameId, daily))

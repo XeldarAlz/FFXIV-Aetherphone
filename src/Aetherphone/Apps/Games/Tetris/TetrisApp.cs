@@ -507,7 +507,7 @@ internal sealed class TetrisApp : IMiniGame
     {
         context.Hud.Score(board.Score);
         context.Hud.Custom(TetrisRenderer.PreviewCapsuleWidth);
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;

@@ -4716,6 +4716,7 @@
   "stage.mode": "Modus",
   "stage.levelShort": "LV {0}",
   "stage.times": "x{0}",
+  "stage.plus": "+{0}",
   "leaderboard.emptyTitle": "Noch keine Ergebnisse",
   "leaderboard.emptyHint": "Stell als Erster eines auf.",
   "leaderboard.signInHint": "Melde dich an, um deine Platzierung zu sehen und deine Bestleistungen einzutragen.",

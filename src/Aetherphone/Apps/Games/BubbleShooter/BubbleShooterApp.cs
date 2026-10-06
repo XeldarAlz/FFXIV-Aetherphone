@@ -264,7 +264,7 @@ internal sealed class BubbleShooterApp : IMiniGame
 
     private void DrawNextCapsule(ImDrawListPtr drawList, in GameContext context, float scale)
     {
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;

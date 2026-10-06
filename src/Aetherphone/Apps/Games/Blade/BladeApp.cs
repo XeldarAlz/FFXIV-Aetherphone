@@ -296,7 +296,7 @@ internal sealed class BladeApp : IMiniGame
     private void DrawPips(ImDrawListPtr drawList, in GameContext context, float scale)
     {
         context.Hud.Custom(BladeRenderer.PipsWidth(board.LevelBlades));
-        var slot = context.Hud.CustomRect;
+        var slot = context.Hud.CustomRect(0);
         if (slot.Width <= 0f)
         {
             return;

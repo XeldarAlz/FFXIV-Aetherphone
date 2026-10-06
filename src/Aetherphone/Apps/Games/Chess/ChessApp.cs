@@ -286,7 +286,7 @@ internal sealed class ChessApp : IMiniGame
             var lead = MaterialLead();
             context.Hud.Custom(ChessRenderer.CapturedCapsuleWidth(whiteCapturedCount, blackCapturedCount, leadLabel, lead,
                 scale));
-            var rect = context.Hud.CustomRect;
+            var rect = context.Hud.CustomRect(0);
             if (rect.Width > 0f)
             {
                 renderer.DrawCapturedCapsule(drawList, rect, whiteCaptured, whiteCapturedCount, blackCaptured,
