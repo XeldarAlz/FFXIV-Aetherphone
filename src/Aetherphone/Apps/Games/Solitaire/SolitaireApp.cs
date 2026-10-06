@@ -1,139 +1,462 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Solitaire;
 
-internal sealed class SolitaireApp : ILegacyMiniGame
+internal sealed class SolitaireApp : IMiniGame
 {
+    public const string VegasStatId = "solitaire.vegas";
     private const string GameId = "solitaire";
+    private const int VegasMode = 1;
+    private const int MaxFlights = 8;
+    private const int MaxGrab = 13;
     private const float DragThreshold = 5f;
+    private const float DealSpeed = 0.9f;
+    private const float FlightSeconds = 0.32f;
+    private const float FlightArc = 28f;
+    private const float FlightPop = 0.22f;
+    private const float FlightRibbonWidth = 7f;
+    private const float AutoStepSeconds = 0.11f;
+    private const float CapsulePadX = 10f;
+    private const float CapsuleIconSize = 11f;
+    private const float CapsuleIconGap = 5f;
+    private static readonly LocString[] Modes = { L.Solitaire.Classic, L.Solitaire.Vegas };
+    private static readonly string[] ModeStatIds = { GameId, VegasStatId };
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Solitaire, GameGenre.Tabletop, L.Solitaire.Hook,
+        Backdrop.Felt, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds);
+    private static readonly Vector4[] WinPalette =
+    {
+        Core.Theme.Accent.Mint, Core.Theme.Accent.Amber, Core.Theme.Accent.Rose, Core.Theme.Accent.Blue,
+    };
+    private static readonly Vector4 SparkleInk = new(1f, 0.95f, 0.7f, 1f);
+    private static readonly TextStyle CapsuleStyle = TextStyles.FootnoteEmphasized;
+
+    private struct CardFlight
+    {
+        public bool Active;
+        public int Card;
+        public Vector2 From;
+        public Vector2 To;
+        public float Progress;
+    }
+
     private readonly SolitaireBoard board = new();
     private readonly SolitaireRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private readonly int[] grabbed = new int[13];
+    private readonly CardFlight[] flights = new CardFlight[MaxFlights];
+    private readonly Ribbon[] trails = new Ribbon[MaxFlights];
+    private readonly int[] inFlight = new int[SolitaireBoard.SuitCount];
+    private readonly int[] grabbed = new int[MaxGrab];
+    private readonly Vector4 accent = AppAccents.For(GameId);
     private SolitaireHit grabSource = SolitaireHit.None;
     private int grabCount;
     private Vector2 grabOffset;
     private Vector2 pressPosition;
     private bool dragMoved;
     private float elapsed;
-    private int lastSeconds = -1;
-    private string timeText = "0:00";
+    private float entrance;
+    private float autoTimer;
+    private bool autoPlaying;
+    private bool vegas;
+    private bool finishPending;
     private bool finished;
-    private bool pendingSubmit;
-    private bool newBestTime;
-    private int loadedBestTime;
-    private float resultAppear;
-    private string resultTimeText = "0:00";
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Solitaire);
-    public GameGenre Genre => GameGenre.Tabletop;
-    public void Open()
+    private bool celebrated;
+    private bool previewDealt;
+    private bool bestLoaded;
+    private int bestVegas;
+    private int checkedMoves = -1;
+
+    public SolitaireApp()
     {
-        StartNewGame();
+        for (var index = 0; index < MaxFlights; index++)
+        {
+            trails[index] = new Ribbon();
+        }
+    }
+
+    public GameSpec Spec => StageSpec;
+
+    public void Start(in GameStart start)
+    {
+        vegas = start.Mode == VegasMode;
+        board.Deal(start.Random, vegas);
+        previewDealt = true;
+        ResetRun();
     }
 
     public void Close()
     {
+        previewDealt = false;
     }
 
     public void Dispose()
     {
     }
 
-    private void StartNewGame()
+    private void ResetRun()
     {
-        board.Deal();
         particles.Clear();
         fx.Clear();
+        for (var index = 0; index < MaxFlights; index++)
+        {
+            flights[index].Active = false;
+            trails[index].Clear();
+        }
+
+        Array.Clear(inFlight);
         grabSource = SolitaireHit.None;
         grabCount = 0;
         dragMoved = false;
         elapsed = 0f;
-        lastSeconds = -1;
+        entrance = 0f;
+        autoTimer = 0f;
+        autoPlaying = false;
+        finishPending = false;
         finished = false;
-        pendingSubmit = false;
-        newBestTime = false;
-        loadedBestTime = -1;
-        resultAppear = 0f;
+        celebrated = false;
+        bestLoaded = false;
+        checkedMoves = -1;
+    }
+
+    public void DrawIdle(in GameContext context)
+    {
+        if (!previewDealt)
+        {
+            board.Deal(GameRandom.FromSeed(context.Session.Seed), false);
+            previewDealt = true;
+            ResetRun();
+        }
+
+        var scale = UiScale.Current;
+        var layout = SolitaireLayout.Compute(context.Safe, board, scale);
+        renderer.Draw(board, layout, context.Theme, accent, scale, SolitaireHit.None, SolitaireHit.None, 1f, inFlight);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (loadedBestTime < 0)
+        var drawList = ImGui.GetWindowDrawList();
+        var session = context.Session;
+        var playing = session.State == StageFlow.Playing;
+        if (!bestLoaded)
         {
-            loadedBestTime = context.Stats.Get(GameId).BestTimeSeconds;
+            bestVegas = session.Stats.Get(VegasStatId).BestScore;
+            bestLoaded = true;
         }
 
-        if (!finished)
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds, DealSpeed);
+        var running = !finished && !finishPending;
+        if (running)
         {
-            elapsed += deltaSeconds;
+            elapsed += context.DeltaSeconds;
         }
 
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        if (pendingSubmit)
-        {
-            newBestTime = context.Stats.SubmitTime(GameId, (int)elapsed);
-            pendingSubmit = false;
-        }
-
-        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
-        DrawHud(body, theme, scale);
-        var area = new Rect(new Vector2(body.Min.X, body.Min.Y + 56f * scale),
-            new Vector2(body.Max.X, body.Max.Y - 6f * scale));
+        var area = context.Safe.Translate(fx.ShakeOffset(scale));
         var layout = SolitaireLayout.Compute(area, board, scale);
-        var dropTarget = SolitaireHit.None;
-        if (!finished)
+        var interactive = playing && running && !autoPlaying && entrance >= 1f;
+        var dropTarget = interactive ? HandleInput(layout, area, scale) : SolitaireHit.None;
+        if (autoPlaying && playing && running)
         {
-            dropTarget = HandleInput(layout, area, scale);
+            AdvanceAuto(context.DeltaSeconds, layout);
         }
 
-        renderer.Draw(board, layout, theme, Accent, scale, grabSource, dropTarget);
+        AdvanceFlights(context.RawDeltaSeconds, layout, scale);
+        CheckOutcome(context, layout, scale);
+        renderer.Draw(board, layout, context.Theme, accent, scale, grabSource, dropTarget, entrance, inFlight);
+        DrawFlights(drawList, layout, scale);
         if (grabCount > 0)
         {
             var topLeft = ImGui.GetMousePos() - grabOffset;
             renderer.DrawFloating(layout, new ReadOnlySpan<int>(grabbed, 0, grabCount), topLeft, scale);
         }
 
-        var drawList = ImGui.GetWindowDrawList();
-        fx.DrawFlash(drawList, body, 0f);
+        fx.DrawFlash(drawList, context.Full, 0f);
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
-        if (finished)
+        DrawHud(context, drawList, scale, playing && running);
+        if (finishPending && !AnyFlightActive())
         {
-            DrawResult(theme, body, deltaSeconds);
+            Finish(context);
         }
     }
 
-    private void DrawHud(Rect body, PhoneTheme theme, float scale)
+    private void CheckOutcome(in GameContext context, in SolitaireLayout layout, float scale)
     {
-        var rowY = body.Min.Y + 26f * scale;
-        var seconds = (int)elapsed;
-        if (seconds != lastSeconds)
+        if (finished || finishPending)
         {
-            lastSeconds = seconds;
-            timeText = TimeText.MinutesSeconds(seconds);
+            return;
         }
 
-        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Time), timeText, Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Moves),
-            GameNumber.Label(board.Moves), Accent, theme);
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 15f * scale, theme))
+        if (board.IsWon)
         {
-            StartNewGame();
+            finishPending = true;
+            Celebrate(context, layout, scale);
+            return;
+        }
+
+        if (!vegas || board.Moves == checkedMoves)
+        {
+            return;
+        }
+
+        checkedMoves = board.Moves;
+        if (!board.HasAnyMove())
+        {
+            finishPending = true;
+            UiFeedback.Play(UiSound.GameWrong);
+        }
+    }
+
+    private void Celebrate(in GameContext context, in SolitaireLayout layout, float scale)
+    {
+        if (celebrated)
+        {
+            return;
+        }
+
+        celebrated = true;
+        UiFeedback.Play(UiSound.GameClear);
+        context.Fx.Sweep();
+        context.Fx.Flash(accent, 0.3f);
+        fx.AddTrauma(0.3f);
+        var top = new Vector2(layout.OriginX + layout.ColumnPitch * 3.5f, layout.TopRowY);
+        particles.Confetti(top, 90, WinPalette, 280f * scale, 4.4f, 1.5f);
+        particles.Sparkle(top + new Vector2(0f, 60f * scale), 18, SparkleInk, 210f * scale, 2.8f, 1f);
+    }
+
+    private void Finish(in GameContext context)
+    {
+        finishPending = false;
+        finished = true;
+        var seconds = Math.Max(1, (int)elapsed);
+        if (vegas)
+        {
+            context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, VegasStatId, board.IsWon)
+                .WithStat(L.Games.Time, TimeText.MinutesSeconds(seconds))
+                .WithStat(L.Games.Moves, GameNumber.Label(board.Moves)));
+            return;
+        }
+
+        context.Session.Finish(new GameOutcome(seconds, ScoreKind.Time, GameId)
+            .WithStat(L.Games.Moves, GameNumber.Label(board.Moves)));
+    }
+
+    private void DrawHud(in GameContext context, ImDrawListPtr drawList, float scale, bool playing)
+    {
+        var hud = context.Hud;
+        hud.Timer(MathF.Floor(elapsed), 0f, false);
+        if (vegas)
+        {
+            hud.Score(board.Score);
+            hud.Best(bestVegas);
+        }
+
+        var autoReady = playing && !autoPlaying && entrance >= 1f && board.IsAutoCompletable;
+        var label = autoReady ? Loc.T(L.Solitaire.Auto) : GameNumber.Label(board.Moves);
+        var width = CapsulePadX * 2f + CapsuleIconSize + CapsuleIconGap + Typography.Measure(label, CapsuleStyle).X / scale;
+        hud.Custom(width);
+        var rect = hud.CustomRect;
+        if (rect.Width > 0f)
+        {
+            DrawMovesCapsule(drawList, rect, label, autoReady, context.Theme, scale);
+        }
+
+        context.Session.Report(vegas ? board.Score : (int)elapsed);
+    }
+
+    private void DrawMovesCapsule(ImDrawListPtr drawList, Rect rect, string label, bool autoReady, PhoneTheme theme,
+        float scale)
+    {
+        var iconSize = CapsuleIconSize * scale;
+        var left = rect.Min.X + CapsulePadX * scale;
+        var centerY = rect.Center.Y;
+        var textOrigin = new Vector2(left + iconSize + CapsuleIconGap * scale,
+            centerY - Typography.LineHeight(CapsuleStyle) * 0.5f);
+        if (!autoReady)
+        {
+            StageHud.Capsule(drawList, rect, scale);
+            ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), FontAwesomeIcon.ShoePrints,
+                accent, iconSize);
+            Typography.Draw(drawList, textOrigin, label, theme.TextStrong, CapsuleStyle);
+            return;
+        }
+
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
+        var pulse = 0.4f + 0.6f * Pulse.Wave(Pulse.Medium);
+        ProgressRing.Glow(rect.Center, rect.Height * 0.9f, accent, 0.5f * pulse);
+        Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f,
+            ImGui.GetColorU32(GamePalette.Lighten(accent, hovered ? 0.2f : 0.08f)));
+        Material.Sheen(drawList, rect.Min, rect.Max, rect.Height * 0.5f,
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.3f)), 1f * scale, 1f * scale);
+        var ink = GamePalette.InkOn(accent);
+        ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), FontAwesomeIcon.Forward, ink,
+            iconSize);
+        Typography.Draw(drawList, textOrigin, label, ink, CapsuleStyle);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (!UiInteract.HoverClick(rect.Min, rect.Max))
+        {
+            return;
+        }
+
+        autoPlaying = true;
+        autoTimer = 0f;
+        grabSource = SolitaireHit.None;
+        grabCount = 0;
+        UiFeedback.Play(UiSound.GamePowerUp);
+    }
+
+    private void AdvanceAuto(float deltaSeconds, in SolitaireLayout layout)
+    {
+        autoTimer -= deltaSeconds;
+        if (autoTimer > 0f)
+        {
+            return;
+        }
+
+        autoTimer = AutoStepSeconds;
+        var move = board.PlanAutoStep(out var pile);
+        switch (move)
+        {
+            case SolitaireAutoMove.WasteToFoundation:
+            {
+                var card = board.WasteTop();
+                var origin = layout.WasteRect.Min;
+                if (board.SendWasteToFoundation())
+                {
+                    LaunchFlight(card, origin, layout.FoundationRect(SolitaireBoard.Suit(card)).Min);
+                }
+
+                return;
+            }
+            case SolitaireAutoMove.TableauToFoundation:
+            {
+                var index = board.TableauCount(pile) - 1;
+                var card = board.TableauCardAt(pile, index);
+                var origin = layout.TableauCardRect(pile, index).Min;
+                if (board.SendTableauToFoundation(pile))
+                {
+                    LaunchFlight(card, origin, layout.FoundationRect(SolitaireBoard.Suit(card)).Min);
+                }
+
+                return;
+            }
+            case SolitaireAutoMove.Draw:
+                if (board.DrawStock())
+                {
+                    UiFeedback.Play(UiSound.GameCardFlip);
+                }
+
+                return;
+            default:
+                autoPlaying = false;
+                return;
+        }
+    }
+
+    private void LaunchFlight(int card, Vector2 fromMin, Vector2 toMin)
+    {
+        for (var index = 0; index < MaxFlights; index++)
+        {
+            ref var flight = ref flights[index];
+            if (flight.Active)
+            {
+                continue;
+            }
+
+            flight.Active = true;
+            flight.Card = card;
+            flight.From = fromMin;
+            flight.To = toMin;
+            flight.Progress = 0f;
+            trails[index].Clear();
+            inFlight[SolitaireBoard.Suit(card)]++;
+            UiFeedback.Play(UiSound.GameCardFlip);
+            return;
+        }
+
+        UiFeedback.Play(UiSound.GameCardPlace);
+    }
+
+    private bool AnyFlightActive()
+    {
+        for (var index = 0; index < MaxFlights; index++)
+        {
+            if (flights[index].Active)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void AdvanceFlights(float deltaSeconds, in SolitaireLayout layout, float scale)
+    {
+        for (var index = 0; index < MaxFlights; index++)
+        {
+            ref var flight = ref flights[index];
+            if (!flight.Active)
+            {
+                continue;
+            }
+
+            flight.Progress += deltaSeconds / FlightSeconds;
+            if (flight.Progress < 1f)
+            {
+                continue;
+            }
+
+            flight.Active = false;
+            trails[index].Clear();
+            inFlight[SolitaireBoard.Suit(flight.Card)]--;
+            LandCard(flight.To + layout.CardSize * 0.5f, scale);
+        }
+    }
+
+    private void LandCard(Vector2 center, float scale)
+    {
+        UiFeedback.Play(UiSound.GameCardPlace);
+        particles.Burst(center, 12, accent, 150f * scale, 3f, 0.5f, 220f);
+        particles.Sparkle(center, 5, SparkleInk, 110f * scale, 2f, 0.6f);
+        fx.Shockwave(center, 40f * scale, GamePalette.Lighten(accent, 0.3f), 0.4f, 2.4f);
+        fx.AddTrauma(0.05f);
+    }
+
+    private void DrawFlights(ImDrawListPtr drawList, in SolitaireLayout layout, float scale)
+    {
+        var halfCard = layout.CardSize * 0.5f;
+        for (var index = 0; index < MaxFlights; index++)
+        {
+            ref readonly var flight = ref flights[index];
+            if (!flight.Active)
+            {
+                continue;
+            }
+
+            var eased = Easing.EaseOutCubic(flight.Progress);
+            var center = Vector2.Lerp(flight.From, flight.To, eased) + halfCard;
+            center.Y -= MathF.Sin(flight.Progress * MathF.PI) * FlightArc * scale;
+            var trail = trails[index];
+            trail.Push(center);
+            trail.Draw(drawList, accent, FlightRibbonWidth * scale, true);
+            var sizeFactor = 1f + (1f - Easing.EaseOutBack(flight.Progress)) * FlightPop;
+            SolitaireRenderer.DrawFlightCard(drawList, layout, flight.Card, center, sizeFactor, scale);
         }
     }
 
@@ -171,7 +494,7 @@ internal sealed class SolitaireApp : ILegacyMiniGame
         var dropTarget = ComputeDropTarget(layout, mouse);
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
-            ReleaseGrab(layout, mouse, dropTarget);
+            ReleaseGrab(layout, mouse, dropTarget, scale);
             return SolitaireHit.None;
         }
 
@@ -215,7 +538,7 @@ internal sealed class SolitaireApp : ILegacyMiniGame
             }
 
             var count = board.TableauCount(hit.Pile);
-            for (var index = hit.CardIndex; index < count; index++)
+            for (var index = hit.CardIndex; index < count && grabCount < MaxGrab; index++)
             {
                 grabbed[grabCount++] = board.TableauCardAt(hit.Pile, index);
             }
@@ -262,16 +585,21 @@ internal sealed class SolitaireApp : ILegacyMiniGame
         return SolitaireHit.None;
     }
 
-    private void ReleaseGrab(in SolitaireLayout layout, Vector2 mouse, in SolitaireHit dropTarget)
+    private void ReleaseGrab(in SolitaireLayout layout, Vector2 mouse, in SolitaireHit dropTarget, float scale)
     {
+        var card = grabbed[0];
+        var origin = dragMoved ? mouse - grabOffset : GrabOrigin(layout);
+        var toFoundation = false;
         var acted = false;
         if (!dragMoved)
         {
             acted = TapToFoundation();
+            toFoundation = acted;
         }
         else if (dropTarget.Kind == SolitairePileKind.Foundation)
         {
             acted = DropToFoundation();
+            toFoundation = acted;
         }
         else if (dropTarget.Kind == SolitairePileKind.Tableau)
         {
@@ -280,13 +608,20 @@ internal sealed class SolitaireApp : ILegacyMiniGame
 
         if (acted)
         {
-            AfterMove(layout);
+            AfterMove(layout, card, toFoundation, origin, scale);
         }
 
         grabSource = SolitaireHit.None;
         grabCount = 0;
         dragMoved = false;
     }
+
+    private Vector2 GrabOrigin(in SolitaireLayout layout) => grabSource.Kind switch
+    {
+        SolitairePileKind.Waste => layout.WasteRect.Min,
+        SolitairePileKind.Foundation => layout.FoundationRect(grabSource.Pile).Min,
+        _ => layout.TableauCardRect(grabSource.Pile, grabSource.CardIndex).Min,
+    };
 
     private bool TapToFoundation()
     {
@@ -338,69 +673,29 @@ internal sealed class SolitaireApp : ILegacyMiniGame
         return false;
     }
 
-    private void AfterMove(in SolitaireLayout layout)
+    private void AfterMove(in SolitaireLayout layout, int card, bool toFoundation, Vector2 origin, float scale)
     {
-        UiFeedback.Play(UiSound.GameCardPlace);
-        var card = grabbed[0];
-        var suit = SolitaireBoard.Suit(card);
-        if (board.FoundationTop(suit) == card)
+        if (toFoundation)
         {
-            var scale = UiScale.Current;
-            var center = layout.FoundationRect(suit).Center;
-            particles.Burst(center, 12, Accent, 150f * scale, 3f, 0.5f, 220f);
-            particles.Sparkle(center, 5, new Vector4(1f, 0.95f, 0.65f, 1f), 110f * scale, 2f, 0.6f);
-            fx.Shockwave(center, 40f * scale, GamePalette.Lighten(Accent, 0.3f), 0.4f, 2.4f);
-            fx.AddTrauma(0.08f);
+            LaunchFlight(card, origin, layout.FoundationRect(SolitaireBoard.Suit(card)).Min);
+        }
+        else
+        {
+            UiFeedback.Play(UiSound.GameCardPlace);
         }
 
-        if (board.LastFlippedPile >= 0)
+        if (board.LastFlippedPile < 0)
         {
-            UiFeedback.Play(UiSound.GameCardFlip);
-            var pile = board.LastFlippedPile;
-            var top = board.TableauCount(pile) - 1;
-            if (top >= 0)
-            {
-                var center = layout.TableauCardRect(pile, top).Center;
-                particles.Burst(center, 8, Core.Theme.Accent.Amber, 120f * UiScale.Current, 2.6f, 0.45f, 220f);
-            }
+            return;
         }
 
-        if (board.IsWon)
+        UiFeedback.Play(UiSound.GameCardFlip);
+        var pile = board.LastFlippedPile;
+        var top = board.TableauCount(pile) - 1;
+        if (top >= 0)
         {
-            OnWon(layout);
-        }
-    }
-
-    private void OnWon(in SolitaireLayout layout)
-    {
-        finished = true;
-        resultAppear = 0f;
-        pendingSubmit = true;
-        var seconds = (int)elapsed;
-        resultTimeText = TimeText.MinutesSeconds(seconds);
-        fx.AddTrauma(0.4f);
-        fx.Flash(Accent, 0.4f);
-        ReadOnlySpan<Vector4> palette = new[] { Accent, Core.Theme.Accent.Amber, Core.Theme.Accent.Rose, Core.Theme.Accent.Blue, };
-        var top = new Vector2(layout.OriginX + layout.ColumnPitch * 3f, layout.TopRowY);
-        particles.Confetti(top, 90, palette, 280f * UiScale.Current, 4.4f, 1.5f);
-        particles.Sparkle(top + new Vector2(0f, 60f * UiScale.Current), 18, new Vector4(1f, 0.95f, 0.7f, 1f),
-            210f * UiScale.Current, 2.8f, 1f);
-    }
-
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
-    {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        string? secondary = null;
-        if (loadedBestTime > 0)
-        {
-            secondary = $"{Loc.T(L.Games.Best)} {TimeText.MinutesSeconds(loadedBestTime)}";
-        }
-
-        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondary,
-            newBestTime);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
-        {
-            StartNewGame();
+            var center = layout.TableauCardRect(pile, top).Center;
+            particles.Burst(center, 8, Core.Theme.Accent.Amber, 120f * scale, 2.6f, 0.45f, 220f);
         }
     }
 }

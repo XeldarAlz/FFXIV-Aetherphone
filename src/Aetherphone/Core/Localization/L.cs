@@ -8099,9 +8099,6 @@ internal static class L
         public static readonly LocString DoomMusic = new("games.doomMusic", "Music");
         public static readonly LocString DoomMusicDetail = new("games.doomMusicDetail", "General MIDI soundfont for the soundtrack");
         public static readonly LocString DoomControls = new("games.doomControls", "WASD move, drag or arrows turn, Space fires, E uses, 1-7 weapons, Esc opens the menu");
-        public static readonly LocString DoomMenu = new("games.doomMenu", "Menu");
-        public static readonly LocString DoomFire = new("games.doomFire", "Fire");
-        public static readonly LocString DoomUse = new("games.doomUse", "Use");
         public static readonly LocString DoomFailed = new("games.doomFailed", "Doom could not start");
         public static readonly LocString DoomChooseGame = new("games.doomChooseGame", "Choose a game");
         public static readonly LocString DoomShareware = new("games.doomShareware", "Doom (shareware episode)");
@@ -8343,6 +8340,9 @@ internal static class L
     internal static class Solitaire
     {
         public static readonly LocString Hook = new("games.solitaire.hook", "Build the four foundations from ace to king by moving cards between the columns.");
+        public static readonly LocString Classic = new("games.solitaire.classic", "Classic");
+        public static readonly LocString Vegas = new("games.solitaire.vegas", "Vegas");
+        public static readonly LocString Auto = new("games.solitaire.auto", "Auto");
     }
 
     internal static class Simon

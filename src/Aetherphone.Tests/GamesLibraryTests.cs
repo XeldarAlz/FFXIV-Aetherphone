@@ -216,6 +216,26 @@ public sealed class GamesLibraryTests
     }
 
     [Fact]
+    public void SolitaireShowsItsVegasScoreUntilAClassicTimeExists()
+    {
+        var games = new IMiniGame[] { new FakeGame("solitaire", "Solitaire", GameGenre.Tabletop) };
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "solitaire.vegas", BestScore = 120 });
+        var library = new GamesLibrary(games, new GameStatsStore(configuration));
+        var solitaire = library.IndexOf("solitaire");
+
+        Assert.Equal(RecordKind.Score, library.BestKind(solitaire));
+        Assert.Equal("120", library.BestValue(solitaire));
+
+        configuration.GameStats.Add(new GameStatRecord { GameId = "solitaire", BestTimeSeconds = 95 });
+        library.Rebuild();
+
+        Assert.Equal(RecordKind.Time, library.BestKind(solitaire));
+        Assert.Equal("1:35", library.BestValue(solitaire));
+        Assert.Equal(string.Empty, library.BestTier(solitaire));
+    }
+
+    [Fact]
     public void FlowReadsItsTieredLevelRecords()
     {
         var games = new IMiniGame[] { new FakeGame("flow", "Flow", GameGenre.Puzzle) };

@@ -1,16 +1,32 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.Solitaire;
+
+internal enum SolitaireAutoMove : byte
+{
+    None,
+    Draw,
+    WasteToFoundation,
+    TableauToFoundation,
+}
 
 internal sealed class SolitaireBoard
 {
     public const int TableauPiles = 7;
     public const int SuitCount = 4;
-    private readonly List<int> stock = new(52);
-    private readonly List<int> waste = new(52);
+    public const int DeckSize = 52;
+    public const int StockSize = 24;
+    public const int VegasRecycles = 2;
+    public const int VegasDeckCost = 52;
+    public const int VegasCardValue = 5;
+    private readonly List<int> stock = new(DeckSize);
+    private readonly List<int> waste = new(DeckSize);
     private readonly List<int>[] foundations = new List<int>[SuitCount];
     private readonly List<int>[] tableau = new List<int>[TableauPiles];
     private readonly int[] faceDown = new int[TableauPiles];
-    private readonly int[] deck = new int[52];
-    private readonly Random random = new();
+    private readonly int[] deck = new int[DeckSize];
+    private bool vegas;
+    private int recyclesLeft;
     public int Moves { get; private set; }
     public int LastFlippedPile { get; private set; } = -1;
 
@@ -30,8 +46,11 @@ internal sealed class SolitaireBoard
     public static int Rank(int card) => card % 13;
     public static int Suit(int card) => card / 13;
     public static bool IsRed(int card) => card / 13 == 1 || card / 13 == 2;
+    public bool Vegas => vegas;
+    public int RecyclesLeft => recyclesLeft;
     public int StockCount => stock.Count;
     public int WasteCount => waste.Count;
+    public int StockPeek(int fromTop) => stock.Count > fromTop ? stock[stock.Count - 1 - fromTop] : -1;
     public int WasteTop() => waste.Count > 0 ? waste[waste.Count - 1] : -1;
     public int WastePeek(int fromTop) => waste.Count > fromTop ? waste[waste.Count - 1 - fromTop] : -1;
     public int FoundationCount(int suit) => foundations[suit].Count;
@@ -46,8 +65,9 @@ internal sealed class SolitaireBoard
     public int TableauCardAt(int pile, int index) => tableau[pile][index];
     public int TableauFaceDownCount(int pile) => faceDown[pile];
     public bool IsTableauFaceUp(int pile, int index) => index >= faceDown[pile];
+    public bool CanRecycle => stock.Count == 0 && waste.Count > 0 && (!vegas || recyclesLeft > 0);
 
-    public bool IsWon
+    public int FoundationTotal
     {
         get
         {
@@ -57,12 +77,36 @@ internal sealed class SolitaireBoard
                 total += foundations[suit].Count;
             }
 
-            return total == 52;
+            return total;
         }
     }
 
-    public void Deal()
+    public int Score => vegas ? FoundationTotal * VegasCardValue - VegasDeckCost : 0;
+
+    public bool IsWon => FoundationTotal == DeckSize;
+
+    public bool AllFaceUp
     {
+        get
+        {
+            for (var pile = 0; pile < TableauPiles; pile++)
+            {
+                if (faceDown[pile] > 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+
+    public bool IsAutoCompletable => !IsWon && AllFaceUp && (!vegas || (stock.Count == 0 && waste.Count == 0));
+
+    public void Deal(GameRandom random, bool vegasRules)
+    {
+        vegas = vegasRules;
+        recyclesLeft = vegasRules ? VegasRecycles : 0;
         Moves = 0;
         LastFlippedPile = -1;
         stock.Clear();
@@ -78,12 +122,12 @@ internal sealed class SolitaireBoard
             faceDown[pile] = 0;
         }
 
-        for (var card = 0; card < 52; card++)
+        for (var card = 0; card < DeckSize; card++)
         {
             deck[card] = card;
         }
 
-        for (var index = 51; index > 0; index--)
+        for (var index = DeckSize - 1; index > 0; index--)
         {
             var swap = random.Next(index + 1);
             (deck[index], deck[swap]) = (deck[swap], deck[index]);
@@ -100,7 +144,7 @@ internal sealed class SolitaireBoard
             faceDown[pile] = pile;
         }
 
-        for (; cursor < 52; cursor++)
+        for (; cursor < DeckSize; cursor++)
         {
             stock.Add(deck[cursor]);
         }
@@ -111,7 +155,7 @@ internal sealed class SolitaireBoard
         LastFlippedPile = -1;
         if (stock.Count == 0)
         {
-            if (waste.Count == 0)
+            if (!CanRecycle)
             {
                 return false;
             }
@@ -122,6 +166,11 @@ internal sealed class SolitaireBoard
             }
 
             waste.Clear();
+            if (vegas)
+            {
+                recyclesLeft--;
+            }
+
             Moves++;
             return true;
         }
@@ -259,6 +308,88 @@ internal sealed class SolitaireBoard
         }
 
         return true;
+    }
+
+    public bool HasAnyMove()
+    {
+        if (stock.Count > 0 || CanRecycle)
+        {
+            return true;
+        }
+
+        var wasteCard = WasteTop();
+        if (wasteCard >= 0)
+        {
+            if (CanFoundation(wasteCard))
+            {
+                return true;
+            }
+
+            for (var pile = 0; pile < TableauPiles; pile++)
+            {
+                if (CanTableau(wasteCard, pile))
+                {
+                    return true;
+                }
+            }
+        }
+
+        for (var pile = 0; pile < TableauPiles; pile++)
+        {
+            var cards = tableau[pile];
+            var count = cards.Count;
+            if (count == 0)
+            {
+                continue;
+            }
+
+            if (CanFoundation(cards[count - 1]))
+            {
+                return true;
+            }
+
+            for (var index = faceDown[pile]; index < count; index++)
+            {
+                var card = cards[index];
+                var wholeColumn = index == 0;
+                for (var destPile = 0; destPile < TableauPiles; destPile++)
+                {
+                    if (destPile == pile || (wholeColumn && tableau[destPile].Count == 0))
+                    {
+                        continue;
+                    }
+
+                    if (CanTableau(card, destPile))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public SolitaireAutoMove PlanAutoStep(out int pile)
+    {
+        pile = -1;
+        var wasteCard = WasteTop();
+        if (wasteCard >= 0 && CanFoundation(wasteCard))
+        {
+            return SolitaireAutoMove.WasteToFoundation;
+        }
+
+        for (var candidate = 0; candidate < TableauPiles; candidate++)
+        {
+            var cards = tableau[candidate];
+            if (cards.Count > 0 && CanFoundation(cards[cards.Count - 1]))
+            {
+                pile = candidate;
+                return SolitaireAutoMove.TableauToFoundation;
+            }
+        }
+
+        return stock.Count > 0 || CanRecycle ? SolitaireAutoMove.Draw : SolitaireAutoMove.None;
     }
 
     private void FlipIfNeeded(int pile)
