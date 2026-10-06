@@ -4394,7 +4394,6 @@
   "games.attemptsCount.other": "{0} Versuche",
   "games.nonogram": "Nonogramm",
   "games.nonogram.hook": "Nutze die Zahlenhinweise, um die richtigen Felder zu füllen und das verborgene Bild freizulegen.",
-  "games.left": "Übrig",
   "games.flow": "Flow",
   "games.flow.hook": "Verbinde jedes Paar gleichfarbiger Punkte mit Rohren, die das ganze Gitter füllen, ohne sich zu kreuzen.",
   "games.flows": "Linien",

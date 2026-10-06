@@ -4394,7 +4394,6 @@
   "games.attemptsCount.other": "{0} попыток",
   "games.nonogram": "Nonogram",
   "games.nonogram.hook": "По числовым подсказкам закрасьте нужные клетки и откройте скрытую картинку.",
-  "games.left": "Осталось",
   "games.flow": "Flow",
   "games.flow.hook": "Соедините пары точек одного цвета трубами, заполнив всю сетку без пересечений.",
   "games.flows": "Потоки",

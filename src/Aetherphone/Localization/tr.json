@@ -4394,7 +4394,6 @@
   "games.attemptsCount.other": "{0} deneme",
   "games.nonogram": "Nonogram",
   "games.nonogram.hook": "Sayı ipuçlarıyla doğru hücreleri doldur ve gizli resmi ortaya çıkar.",
-  "games.left": "Kalan",
   "games.flow": "Akış",
   "games.flow.hook": "Eş renkli nokta çiftlerini kesişmeden tüm ızgarayı dolduran borularla birleştir.",
   "games.flows": "Hatlar",

@@ -4394,7 +4394,6 @@
   "games.attemptsCount.other": "{0} essais",
   "games.nonogram": "Nonogramme",
   "games.nonogram.hook": "Utilisez les indices numériques pour remplir les bonnes cases et révéler l'image cachée.",
-  "games.left": "Restant",
   "games.flow": "Flow",
   "games.flow.hook": "Reliez chaque paire de points de même couleur par des tuyaux qui remplissent toute la grille sans se croiser.",
   "games.flows": "Liens",

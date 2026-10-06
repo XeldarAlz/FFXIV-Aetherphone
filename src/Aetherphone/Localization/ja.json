@@ -4394,7 +4394,6 @@
   "games.attemptsCount.other": "{0} 回",
   "games.nonogram": "ノノグラム",
   "games.nonogram.hook": "数字のヒントを頼りに正しいマスを塗り、隠れた絵を浮かび上がらせよう。",
-  "games.left": "残り",
   "games.flow": "フロー",
   "games.flow.hook": "同じ色の点をパイプでつなぎ、交差せずにグリッド全体を埋めよう。",
   "games.flows": "フロー",

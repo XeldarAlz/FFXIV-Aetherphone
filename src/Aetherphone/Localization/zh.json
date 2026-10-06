@@ -4394,7 +4394,6 @@
   "games.attemptsCount.other": "{0} 次尝试",
   "games.nonogram": "数织",
   "games.nonogram.hook": "根据数字提示填涂正确的格子，揭开隐藏的图案。",
-  "games.left": "剩余",
   "games.flow": "连线",
   "games.flow.hook": "用不交叉的管道连接每对同色圆点，并填满整个网格。",
   "games.flows": "连线数",

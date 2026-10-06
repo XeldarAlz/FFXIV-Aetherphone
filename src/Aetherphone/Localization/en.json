@@ -4394,7 +4394,6 @@
   "games.attemptsCount.other": "{0} attempts",
   "games.nonogram": "Nonogram",
   "games.nonogram.hook": "Use the number clues to fill the right cells and reveal the hidden picture.",
-  "games.left": "Left",
   "games.flow": "Flow",
   "games.flow.hook": "Connect each pair of matching dots with pipes that fill the whole grid without crossing.",
   "games.flows": "Flows",

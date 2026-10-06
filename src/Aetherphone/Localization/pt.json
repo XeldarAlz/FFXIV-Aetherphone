@@ -4394,7 +4394,6 @@
   "games.attemptsCount.other": "{0} tentativas",
   "games.nonogram": "Nonogram",
   "games.nonogram.hook": "Use as dicas numéricas para preencher as casas certas e revelar a imagem escondida.",
-  "games.left": "Restantes",
   "games.flow": "Flow",
   "games.flow.hook": "Ligue cada par de pontos da mesma cor com canos que preencham toda a grade sem se cruzar.",
   "games.flows": "Fluxos",

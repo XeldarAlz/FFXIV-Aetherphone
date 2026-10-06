@@ -4394,7 +4394,6 @@
   "games.attemptsCount.other": "{0} intentos",
   "games.nonogram": "Nonogram",
   "games.nonogram.hook": "Usa las pistas numéricas para rellenar las casillas correctas y revelar la imagen oculta.",
-  "games.left": "Faltan",
   "games.flow": "Flow",
   "games.flow.hook": "Conecta cada par de puntos del mismo color con tuberías que llenen toda la cuadrícula sin cruzarse.",
   "games.flows": "Flujos",
