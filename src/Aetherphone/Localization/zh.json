@@ -4438,6 +4438,8 @@
   "games.promote": "升变为",
   "games.stack": "叠塔",
   "games.stack.hook": "把每块板放到下面那块上，突出去的部分会被切掉。",
+  "games.stack.height": "高度",
+  "games.stack.perfects": "完美落放",
   "games.crystalDrop": "水晶掉落",
   "games.crystaldrop.hook": "把水晶投进罐子里，在溢出之前合并相同的水晶。",
   "games.crystaldrop.merges": "合并次数",

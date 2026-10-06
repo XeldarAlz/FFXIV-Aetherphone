@@ -4438,6 +4438,8 @@
   "games.promote": "Promocionar a",
   "games.stack": "Torre",
   "games.stack.hook": "Suelta cada losa sobre la anterior; todo lo que sobresalga se corta.",
+  "games.stack.height": "Altura",
+  "games.stack.perfects": "Caídas perfectas",
   "games.crystalDrop": "Caída de Cristales",
   "games.crystaldrop.hook": "Deja caer cristales en el frasco y fusiona los iguales antes de que se desborde.",
   "games.crystaldrop.merges": "Fusiones",

@@ -4438,6 +4438,8 @@
   "games.promote": "Promover para",
   "games.stack": "Torre",
   "games.stack.hook": "Solte cada laje sobre a de baixo; tudo o que ficar para fora é cortado.",
+  "games.stack.height": "Altura",
+  "games.stack.perfects": "Quedas perfeitas",
   "games.crystalDrop": "Queda de Cristais",
   "games.crystaldrop.hook": "Solte cristais no pote e junte os iguais antes que transborde.",
   "games.crystaldrop.merges": "Fusões",

@@ -4438,6 +4438,8 @@
   "games.promote": "Şuna terfi et",
   "games.stack": "Kule",
   "games.stack.hook": "Her bloğu alttakinin üstüne bırak; taşan kısım kesilir.",
+  "games.stack.height": "Yükseklik",
+  "games.stack.perfects": "Kusursuz bırakmalar",
   "games.crystalDrop": "Kristal Damla",
   "games.crystaldrop.hook": "Kristalleri kavanoza bırak ve taşmadan önce eşleri birleştir.",
   "games.crystaldrop.merges": "Birleşmeler",

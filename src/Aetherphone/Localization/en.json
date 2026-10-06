@@ -4438,6 +4438,8 @@
   "games.promote": "Promote to",
   "games.stack": "Stack",
   "games.stack.hook": "Drop each slab on the one below; anything that hangs over gets cut away.",
+  "games.stack.height": "Height",
+  "games.stack.perfects": "Perfect drops",
   "games.crystalDrop": "Crystal Drop",
   "games.crystaldrop.hook": "Drop crystals into the jar and merge matching ones before it overflows.",
   "games.crystaldrop.merges": "Merges",

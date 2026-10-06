@@ -4438,6 +4438,8 @@
   "games.promote": "昇格先",
   "games.stack": "スタック",
   "games.stack.hook": "下の板にぴったり重ねて落とそう。はみ出た部分は切り落とされる。",
+  "games.stack.height": "高さ",
+  "games.stack.perfects": "パーフェクト数",
   "games.crystalDrop": "クリスタルドロップ",
   "games.crystaldrop.hook": "結晶を瓶に落として同じもの同士を合体させ、あふれる前に片づけよう。",
   "games.crystaldrop.merges": "合体数",

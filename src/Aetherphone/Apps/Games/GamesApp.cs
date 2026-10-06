@@ -160,7 +160,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new SnakeApp(),
             new LegacyGameAdapter(new SudokuApp(), L.Games.Sudoku, L.Sudoku.Hook),
             new LegacyGameAdapter(new ChessApp(), L.Games.Chess, L.Chess.Hook),
-            new LegacyGameAdapter(new StackApp(), L.Games.Stack, L.Stack.Hook),
+            new StackApp(),
             new CrystalDropApp(),
             new LegacyGameAdapter(new BeatApp(), L.Games.Beat, L.Beat.Hook),
             new LegacyGameAdapter(new BladeApp(), L.Games.Blade, L.Blade.Hook),

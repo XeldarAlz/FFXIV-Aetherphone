@@ -4438,6 +4438,8 @@
   "games.promote": "Umwandeln in",
   "games.stack": "Stapel",
   "games.stack.hook": "Lass jede Platte auf die darunter fallen; alles, was übersteht, wird abgeschnitten.",
+  "games.stack.height": "Höhe",
+  "games.stack.perfects": "Perfekte Landungen",
   "games.crystalDrop": "Kristallfall",
   "games.crystaldrop.hook": "Lass Kristalle in das Glas fallen und verschmelze gleiche, bevor es überläuft.",
   "games.crystaldrop.merges": "Verschmelzungen",

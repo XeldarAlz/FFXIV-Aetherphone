@@ -4438,6 +4438,8 @@
   "games.promote": "Превратить в",
   "games.stack": "Башня",
   "games.stack.hook": "Бросайте каждую плиту на предыдущую: всё, что свисает, отрезается.",
+  "games.stack.height": "Высота",
+  "games.stack.perfects": "Идеальные броски",
   "games.crystalDrop": "Кристаллы",
   "games.crystaldrop.hook": "Бросайте кристаллы в банку и соединяйте одинаковые, пока она не переполнилась.",
   "games.crystaldrop.merges": "Слияния",

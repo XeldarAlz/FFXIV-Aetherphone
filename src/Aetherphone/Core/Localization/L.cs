@@ -8375,6 +8375,8 @@ internal static class L
     internal static class Stack
     {
         public static readonly LocString Hook = new("games.stack.hook", "Drop each slab on the one below; anything that hangs over gets cut away.");
+        public static readonly LocString Height = new("games.stack.height", "Height");
+        public static readonly LocString Perfects = new("games.stack.perfects", "Perfect drops");
     }
 
     internal static class CrystalDrop

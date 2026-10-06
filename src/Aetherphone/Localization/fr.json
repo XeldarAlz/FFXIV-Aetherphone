@@ -4438,6 +4438,8 @@
   "games.promote": "Promouvoir en",
   "games.stack": "Tour",
   "games.stack.hook": "Lâchez chaque dalle sur la précédente, tout ce qui dépasse est coupé.",
+  "games.stack.height": "Hauteur",
+  "games.stack.perfects": "Poses parfaites",
   "games.crystalDrop": "Chute de Cristaux",
   "games.crystaldrop.hook": "Lâchez des cristaux dans le bocal et fusionnez les identiques avant qu'il ne déborde.",
   "games.crystaldrop.merges": "Fusions",
