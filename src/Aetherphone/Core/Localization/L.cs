@@ -2177,6 +2177,28 @@ internal static class L
         public static readonly LocString SectionTours = new("changelog.sectionTours", "Setup and tours");
         public static readonly LocString SectionSounds = new("changelog.sectionSounds", "Sounds");
 
+        public static readonly LocString[] Release1104Music =
+        {
+            new("changelog.r1104.0",
+                "Changed Windows media to be off by default: what Spotify, foobar2000 or your browser plays on your PC only shows after you turn it on"),
+            new("changelog.r1104.1",
+                "Changed Show Windows media to off once for everyone with this update, and you can turn it back on in Music or in Settings > Apps > Music"),
+            new("changelog.r1104.2",
+                "Added a welcome screen to Music that explains Windows media and lets you choose: it only uses the media controls built into Windows and sends nothing to our servers"),
+        };
+
+        public static readonly LocString[] Release1104Phone =
+        {
+            new("changelog.r1104.3",
+                "Fixed large numbers drawing on top of each other in widgets and in apps like Wallet and Market"),
+        };
+
+        public static readonly LocString[] Release1104Settings =
+        {
+            new("changelog.r1104.4",
+                "Added a hint to Include music from your PC under Nameplate Title when it needs Show Windows media turned on"),
+        };
+
         public static readonly LocString[] Release1103Settings =
         {
             new("changelog.r1103.0",
