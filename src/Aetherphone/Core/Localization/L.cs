@@ -8310,11 +8310,17 @@ internal static class L
     internal static class Breakout
     {
         public static readonly LocString Hook = new("games.breakout.hook", "Bounce the ball off your paddle to smash every brick without letting it drop.");
+        public static readonly LocString Bricks = new("games.breakout.bricks", "Bricks");
+        public static readonly LocString LevelNumber = new("games.breakout.levelNumber", "Level {0}");
+        public static readonly LocString MultiBall = new("games.breakout.multiball", "Multiball");
+        public static readonly LocString Wide = new("games.breakout.wide", "Wide paddle");
     }
 
     internal static class BubbleShooter
     {
         public static readonly LocString Hook = new("games.bubbles.hook", "Aim and shoot bubbles into groups of three or more to pop them before they reach the line.");
+        public static readonly LocString Popped = new("games.bubbles.popped", "Popped");
+        public static readonly LocString Shots = new("games.bubbles.shots", "Shots");
     }
 
     internal static class Nonogram
