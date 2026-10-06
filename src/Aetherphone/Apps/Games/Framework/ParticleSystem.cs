@@ -110,6 +110,10 @@ internal struct Emitter
 
 internal sealed class ParticleSystem
 {
+    public const float BurstGravity = 360f;
+    public const float SparkleGravity = 40f;
+    public const float StreakGravity = 220f;
+    public const float ConfettiGravity = 540f;
     private const float HaloScale = 2.4f;
     private const float HaloAlpha = 0.22f;
     private const int FirstGlyph = 32;
@@ -158,7 +162,7 @@ internal sealed class ParticleSystem
     }
 
     public void Burst(Vector2 origin, int count, Vector4 color, float speed, float size, float life,
-        float gravity = 360f, float spread = MathF.PI * 2f, float direction = 0f,
+        float gravity = BurstGravity, float spread = MathF.PI * 2f, float direction = 0f,
         ParticleShape shape = ParticleShape.Circle)
     {
         for (var index = 0; index < count; index++)
@@ -191,7 +195,8 @@ internal sealed class ParticleSystem
         }
     }
 
-    public void Sparkle(Vector2 origin, int count, Vector4 color, float speed, float size, float life)
+    public void Sparkle(Vector2 origin, int count, Vector4 color, float speed, float size, float life,
+        float gravity = SparkleGravity)
     {
         for (var index = 0; index < count; index++)
         {
@@ -208,7 +213,7 @@ internal sealed class ParticleSystem
             particle.MaxLife = life * (0.6f + random.NextFloat() * 0.8f);
             particle.Life = particle.MaxLife;
             particle.Size = size * (0.6f + random.NextFloat() * 0.8f);
-            particle.Gravity = 40f;
+            particle.Gravity = gravity;
             particle.Drag = 2.4f;
             particle.Spin = (random.NextFloat() - 0.5f) * 6f;
             particle.Rotation = random.NextFloat() * MathF.PI * 2f;
@@ -223,12 +228,13 @@ internal sealed class ParticleSystem
     }
 
     public void Streaks(Vector2 origin, int count, Vector4 color, float speed, float size, float life,
-        float spread = MathF.PI * 2f, float direction = 0f)
+        float spread = MathF.PI * 2f, float direction = 0f, float gravity = StreakGravity)
     {
-        Burst(origin, count, color, speed, size, life, 220f, spread, direction, ParticleShape.Streak);
+        Burst(origin, count, color, speed, size, life, gravity, spread, direction, ParticleShape.Streak);
     }
 
-    public void Confetti(Vector2 origin, int count, ReadOnlySpan<Vector4> palette, float speed, float size, float life)
+    public void Confetti(Vector2 origin, int count, ReadOnlySpan<Vector4> palette, float speed, float size, float life,
+        float gravity = ConfettiGravity)
     {
         for (var index = 0; index < count; index++)
         {
@@ -246,7 +252,7 @@ internal sealed class ParticleSystem
             particle.MaxLife = life * (0.7f + random.NextFloat() * 0.7f);
             particle.Life = particle.MaxLife;
             particle.Size = size * (0.7f + random.NextFloat() * 0.7f);
-            particle.Gravity = 540f;
+            particle.Gravity = gravity;
             particle.Drag = 0.7f;
             particle.Spin = (random.NextFloat() - 0.5f) * 16f;
             particle.Rotation = random.NextFloat() * MathF.PI * 2f;

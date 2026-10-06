@@ -239,8 +239,8 @@ internal sealed class FlapApp : IMiniGame
         }
 
         var full = context.Full;
-        var hitMin = new Vector2(full.Min.X, full.Min.Y + StageLayout.ChromeBand * UiScale.Current);
-        var tapped = ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(hitMin, full.Max);
+        var tapped = ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(full.Min, full.Max) &&
+                     !context.ChromeHit(ImGui.GetMousePos());
         var pressed = GameInput.Pressed(ImGuiKey.Space) || GameInput.Pressed(ImGuiKey.W, ImGuiKey.UpArrow);
         if (!tapped && !pressed)
         {

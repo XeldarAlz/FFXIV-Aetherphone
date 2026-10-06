@@ -17,4 +17,8 @@ internal interface IMiniGame : IDisposable
     void DrawIdle(in GameContext context)
     {
     }
+
+    void OnQuit(GameSession session)
+    {
+    }
 }

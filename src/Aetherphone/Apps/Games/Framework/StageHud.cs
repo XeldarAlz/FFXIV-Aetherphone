@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -36,8 +37,8 @@ internal sealed class StageHud
         livesLabel.Reset();
     }
 
-    public void Draw(ImDrawListPtr drawList, HudModel model, Rect full, HudStyle style, Vector4 accent,
-        PhoneTheme theme, float deltaSeconds, bool beatingBest, ScreenFx fx)
+    public void Draw(ImDrawListPtr drawList, HudModel model, Rect full, HudStyle style, ScoreKind kind,
+        Vector4 accent, PhoneTheme theme, float deltaSeconds, bool beatingBest, ScreenFx fx)
     {
         var scale = UiScale.Current;
         if (model.HasScore)
@@ -60,10 +61,10 @@ internal sealed class StageHud
         if (style == HudStyle.Compact)
         {
             var center = StageLayout.CompactSecondaryCenter(full, scale);
-            var width = CapsuleWidth(visible[0], model, scale);
+            var width = CapsuleWidth(visible[0], model, kind, scale);
             var rect = new Rect(center - new Vector2(width * 0.5f, height * 0.5f),
                 center + new Vector2(width * 0.5f, height * 0.5f));
-            DrawCapsule(drawList, visible[0], model, rect, accent, theme, scale);
+            DrawCapsule(drawList, visible[0], model, kind, rect, accent, theme, scale);
             return;
         }
 
@@ -71,16 +72,16 @@ internal sealed class StageHud
         var total = -gap;
         for (var index = 0; index < visible.Length; index++)
         {
-            total += CapsuleWidth(visible[index], model, scale) + gap;
+            total += CapsuleWidth(visible[index], model, kind, scale) + gap;
         }
 
         var rowY = StageLayout.SecondaryRowY(full, scale);
         var x = full.Center.X - total * 0.5f;
         for (var index = 0; index < visible.Length; index++)
         {
-            var width = CapsuleWidth(visible[index], model, scale);
+            var width = CapsuleWidth(visible[index], model, kind, scale);
             var rect = new Rect(new Vector2(x, rowY - height * 0.5f), new Vector2(x + width, rowY + height * 0.5f));
-            DrawCapsule(drawList, visible[index], model, rect, accent, theme, scale);
+            DrawCapsule(drawList, visible[index], model, kind, rect, accent, theme, scale);
             x += width + gap;
         }
     }
@@ -90,10 +91,31 @@ internal sealed class StageHud
         Material.Frosted(drawList, rect.Min, rect.Max, rect.Height * 0.5f, scale, opacity);
     }
 
+    public static void Bar(ImDrawListPtr drawList, Rect rect, float fraction, Vector4 color, float scale)
+    {
+        var inset = BarInset * scale;
+        var height = BarHeight * scale;
+        var bottom = rect.Max.Y - height * 0.8f;
+        var left = rect.Min.X + inset;
+        var right = rect.Max.X - inset;
+        drawList.AddRectFilled(new Vector2(left, bottom - height), new Vector2(right, bottom),
+            ImGui.GetColorU32(color with { W = 0.18f }), height * 0.5f);
+        if (fraction <= 0f)
+        {
+            return;
+        }
+
+        drawList.AddRectFilled(new Vector2(left, bottom - height), new Vector2(left + (right - left) * fraction, bottom),
+            ImGui.GetColorU32(color with { W = 0.9f }), height * 0.5f);
+    }
+
+    public static string ValueLabel(int value, ScoreKind kind) =>
+        kind == ScoreKind.Time ? TimeText.MinutesSeconds(value) : GameNumber.Label(value);
+
     private void DrawScore(HudModel model, Rect full, HudStyle style, Vector4 accent, PhoneTheme theme,
         float deltaSeconds, bool beatingBest, float scale)
     {
-        var label = Loc.T(L.Games.Score);
+        var label = Loc.T(model.ScoreLabel ?? L.Games.Score);
         var sizeScale = style == HudStyle.Compact ? CompactSizeScale : 1f;
         var width = GameHud.PillWidth(label, GameNumber.Label(model.ScoreValue), sizeScale);
         var maxWidth = StageLayout.PrimaryMaxWidth(full, scale);
@@ -109,7 +131,7 @@ internal sealed class StageHud
             sizeScale);
     }
 
-    private float CapsuleWidth(HudSlot slot, HudModel model, float scale)
+    private float CapsuleWidth(HudSlot slot, HudModel model, ScoreKind kind, float scale)
     {
         var pad = CapsulePadX * scale * 2f;
         var icon = (IconSize + IconGap) * scale;
@@ -130,20 +152,21 @@ internal sealed class StageHud
                 return pad + Typography.Measure(comboLabel.Get(L.Stage.Times, model.ComboValue.Multiplier), CapsuleStyle).X +
                        icon;
             case HudSlot.Best:
-                return pad + icon + Typography.Measure(GameNumber.Label(model.BestValue), CapsuleStyle).X;
+                return pad + icon + Typography.Measure(ValueLabel(model.BestValue, kind), CapsuleStyle).X;
             case HudSlot.Custom:
-                return model.CustomWidth * scale;
+            case HudSlot.SecondCustom:
+                return model.CustomWidth(HudModel.CustomIndex(slot)) * scale;
             default:
                 return 0f;
         }
     }
 
-    private void DrawCapsule(ImDrawListPtr drawList, HudSlot slot, HudModel model, Rect rect, Vector4 accent,
-        PhoneTheme theme, float scale)
+    private void DrawCapsule(ImDrawListPtr drawList, HudSlot slot, HudModel model, ScoreKind kind, Rect rect,
+        Vector4 accent, PhoneTheme theme, float scale)
     {
-        if (slot == HudSlot.Custom)
+        model.PlaceSlot(slot, rect);
+        if (slot is HudSlot.Custom or HudSlot.SecondCustom)
         {
-            model.PlaceCustom(rect);
             return;
         }
 
@@ -163,8 +186,12 @@ internal sealed class StageHud
                     urgent ? Danger : accent, iconSize);
                 Typography.Draw(drawList, TextOrigin(left + iconSize + IconGap * scale, centerY), TimerLabel(model), ink,
                     CapsuleStyle);
-                var fraction = model.TimerTotal <= 0f ? 0f : Math.Clamp(model.TimerLeft / model.TimerTotal, 0f, 1f);
-                DrawBar(drawList, rect, fraction, urgent ? Danger : accent, scale);
+                if (model.TimerTotal > 0f)
+                {
+                    Bar(drawList, rect, Math.Clamp(model.TimerLeft / model.TimerTotal, 0f, 1f), urgent ? Danger : accent,
+                        scale);
+                }
+
                 return;
             }
             case HudSlot.Lives:
@@ -203,14 +230,18 @@ internal sealed class StageHud
                     color, iconSize);
                 Typography.Draw(drawList, TextOrigin(left + iconSize + IconGap * scale, centerY),
                     comboLabel.Get(L.Stage.Times, meter.Multiplier), color, CapsuleStyle);
-                DrawBar(drawList, rect, meter.WindowFraction, color, scale);
+                if (meter.Timed)
+                {
+                    Bar(drawList, rect, meter.WindowFraction, color, scale);
+                }
+
                 return;
             }
             case HudSlot.Best:
                 ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), FontAwesomeIcon.Trophy,
                     accent, iconSize);
                 Typography.Draw(drawList, TextOrigin(left + iconSize + IconGap * scale, centerY),
-                    GameNumber.Label(model.BestValue), theme.TextStrong, CapsuleStyle);
+                    ValueLabel(model.BestValue, kind), theme.TextStrong, CapsuleStyle);
                 return;
             default:
                 return;
@@ -220,23 +251,6 @@ internal sealed class StageHud
     private static Vector2 TextOrigin(float left, float centerY) =>
         new(left, centerY - Typography.LineHeight(CapsuleStyle) * 0.5f);
 
-    private static string TimerLabel(HudModel model) => TimeText.MinutesSeconds((int)MathF.Ceiling(model.TimerLeft));
-
-    private static void DrawBar(ImDrawListPtr drawList, Rect rect, float fraction, Vector4 color, float scale)
-    {
-        var inset = BarInset * scale;
-        var height = BarHeight * scale;
-        var bottom = rect.Max.Y - height * 0.8f;
-        var left = rect.Min.X + inset;
-        var right = rect.Max.X - inset;
-        drawList.AddRectFilled(new Vector2(left, bottom - height), new Vector2(right, bottom),
-            ImGui.GetColorU32(color with { W = 0.18f }), height * 0.5f);
-        if (fraction <= 0f)
-        {
-            return;
-        }
-
-        drawList.AddRectFilled(new Vector2(left, bottom - height), new Vector2(left + (right - left) * fraction, bottom),
-            ImGui.GetColorU32(color with { W = 0.9f }), height * 0.5f);
-    }
+    private static string TimerLabel(HudModel model) =>
+        TimeText.MinutesSeconds(model.TimerElapsed ? (int)model.TimerLeft : (int)MathF.Ceiling(model.TimerLeft));
 }

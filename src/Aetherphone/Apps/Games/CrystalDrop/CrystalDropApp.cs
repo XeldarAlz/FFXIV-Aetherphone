@@ -24,10 +24,11 @@ internal sealed class CrystalDropApp : IMiniGame
     private const float PreviewPad = 10f;
     private const float PreviewGap = 6f;
     private const float PreviewCrystalRadius = 9f;
-    private const int MaxGain = CrystalDropBoard.ClearPoints * ComboMeter.MaxMultiplier;
     private static readonly GameSpec StageSpec = new(GameId, L.Games.CrystalDrop, GameGenre.Puzzle,
         L.CrystalDrop.Hook, Backdrop.Cavern, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true);
-    private static readonly string?[] GainLabels = new string?[MaxGain + 1];
+    private static readonly Vector2 WorldHalf = new(0.5f, CrystalDropRenderer.WorldHeight * 0.5f);
+    private static readonly Rect World = new(CrystalDropRenderer.WorldCenter - WorldHalf,
+        CrystalDropRenderer.WorldCenter + WorldHalf);
     private static readonly string?[] MultiplierLabels = new string?[ComboMeter.MaxMultiplier + 1];
     private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
     private static readonly Vector4 Gold = new(1f, 0.92f, 0.6f, 1f);
@@ -126,8 +127,7 @@ internal sealed class CrystalDropApp : IMiniGame
 
     private void PlaceCamera(in GameContext context)
     {
-        camera.Fit(context.Safe, 1f, CrystalDropRenderer.WorldHeight, FitMode.Contain);
-        camera.Place(CrystalDropRenderer.WorldCenter);
+        camera.Fit(context.Safe, World, FitMode.Contain);
         context.Fx.ApplyTo(ref camera);
         camera.Update(context.RawDeltaSeconds, UiScale.Current);
         context.Backdrop.SetCamera(in camera);
@@ -228,7 +228,7 @@ internal sealed class CrystalDropApp : IMiniGame
             var color = CrystalDropRenderer.TierColor(tier);
             particles.Emit(MergeShards[tier], merge.Position, 8 + tier * 2);
             fx.Shockwave(screen, camera.Px(0.10f + tier * 0.035f), GamePalette.Lighten(color, 0.4f), 0.45f, 2.8f);
-            fx.AddText(GainLabel(merge.Points), screen, GamePalette.Lighten(color, 0.45f), 1f + tier * 0.045f);
+            fx.AddText(GameNumber.Signed(merge.Points), screen, GamePalette.Lighten(color, 0.45f), 1f + tier * 0.045f);
             if (merge.Multiplier > 1)
             {
                 fx.AddText(MultiplierLabel(merge.Multiplier), screen + new Vector2(0f, -22f * scale), Gold, 1.05f);
@@ -283,7 +283,7 @@ internal sealed class CrystalDropApp : IMiniGame
         var labelWidth = Typography.Measure(label, TextStyles.FootnoteEmphasized).X;
         var width = PreviewPad * 2f * scale + labelWidth + PreviewGap * scale + PreviewCrystalRadius * 2f * scale;
         context.Hud.Custom(width / scale);
-        var slot = context.Hud.CustomRect;
+        var slot = context.Hud.CustomRect(0);
         if (slot.Width <= 0f)
         {
             return;
@@ -295,12 +295,6 @@ internal sealed class CrystalDropApp : IMiniGame
             context.Theme.TextMuted, TextStyles.FootnoteEmphasized);
         var crystalCenter = new Vector2(slot.Max.X - PreviewPad * scale - PreviewCrystalRadius * scale, slot.Center.Y);
         CrystalDropRenderer.DrawCrystal(drawList, crystalCenter, PreviewCrystalRadius * scale, board.NextTier, scale);
-    }
-
-    private static string GainLabel(int points)
-    {
-        var index = Math.Clamp(points, 0, MaxGain);
-        return GainLabels[index] ??= string.Concat("+", GameNumber.Label(index));
     }
 
     private static string MultiplierLabel(int multiplier)

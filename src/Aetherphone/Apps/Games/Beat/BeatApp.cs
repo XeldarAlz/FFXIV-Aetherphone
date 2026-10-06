@@ -119,9 +119,10 @@ internal sealed class BeatApp : IMiniGame
 
     private void PlaceCamera(in GameContext context)
     {
-        camera.Fit(context.Full, BeatBoard.Lanes * MaxLaneWidth, BeatBoard.WorldHeight, FitMode.CoverHeight);
-        laneWidth = MathF.Min(MaxLaneWidth, context.Safe.Width / camera.Zoom / BeatBoard.Lanes);
-        camera.Place(new Vector2(BeatBoard.Lanes * laneWidth * 0.5f, BeatBoard.WorldHeight * 0.5f));
+        var zoom = context.Full.Height / BeatBoard.WorldHeight;
+        laneWidth = MathF.Min(MaxLaneWidth, context.Safe.Width / zoom / BeatBoard.Lanes);
+        var world = new Rect(Vector2.Zero, new Vector2(BeatBoard.Lanes * laneWidth, BeatBoard.WorldHeight));
+        camera.Fit(context.Full, world, FitMode.CoverHeight);
         context.Fx.ApplyTo(ref camera);
         camera.Update(context.RawDeltaSeconds, UiScale.Current);
         context.Backdrop.SetCamera(in camera);
@@ -176,13 +177,13 @@ internal sealed class BeatApp : IMiniGame
         }
 
         var lanes = BeatRenderer.LanesRect(in camera, laneWidth);
-        var min = new Vector2(lanes.Min.X, MathF.Max(lanes.Min.Y, context.Full.Min.Y + StageLayout.ChromeBand * scale));
-        if (!UiInteract.Hover(min, lanes.Max))
+        var mouse = ImGui.GetMousePos();
+        if (!UiInteract.Hover(lanes.Min, lanes.Max) || context.ChromeHit(mouse))
         {
             return;
         }
 
-        var world = camera.ToWorld(ImGui.GetMousePos());
+        var world = camera.ToWorld(mouse);
         TapLane(Math.Clamp((int)(world.X / laneWidth), 0, BeatBoard.Lanes - 1), context, scale);
     }
 

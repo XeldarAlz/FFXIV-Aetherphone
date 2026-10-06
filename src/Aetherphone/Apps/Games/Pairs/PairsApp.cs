@@ -98,7 +98,7 @@ internal sealed class PairsApp : IMiniGame
         fx.Update(rawSeconds);
         entrance = GameJuice.Advance(entrance, rawSeconds);
         AdvanceVisuals(rawSeconds);
-        Layout(Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale)), scale);
+        Layout(StageLayout.Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale)), scale);
         if (!finished)
         {
             Step(scale, context);
@@ -342,26 +342,19 @@ internal sealed class PairsApp : IMiniGame
 
     private void DrawHud(ImDrawListPtr drawList, PhoneTheme theme, float scale, in GameContext context)
     {
-        var timeLabel = TimeText.MinutesSeconds((int)board.Elapsed);
+        context.Hud.Clock(board.Elapsed);
+        context.Hud.Best(context.Session.Best);
         var attemptsLabel = GameNumber.Label(board.Attempts);
         var streakShown = board.Streak >= StreakShown;
         var streakLabel = GameNumber.Label(board.Streak);
-        var best = context.Session.Best;
-        var bestLabel = best > 0 ? TimeText.MinutesSeconds(best) : string.Empty;
-        var width = CapsulePadX * 2f + SectionWidth(timeLabel, scale) + CapsuleSectionGap +
-                    SectionWidth(attemptsLabel, scale);
+        var width = CapsulePadX * 2f + SectionWidth(attemptsLabel, scale);
         if (streakShown)
         {
             width += CapsuleSectionGap + SectionWidth(streakLabel, scale);
         }
 
-        if (best > 0)
-        {
-            width += CapsuleSectionGap + SectionWidth(bestLabel, scale);
-        }
-
         context.Hud.Custom(width);
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;
@@ -369,20 +362,13 @@ internal sealed class PairsApp : IMiniGame
 
         StageHud.Capsule(drawList, rect, scale);
         var centerY = rect.Center.Y;
-        var gap = CapsuleSectionGap * scale;
         var left = rect.Min.X + CapsulePadX * scale;
-        left = DrawSection(drawList, left, centerY, FontAwesomeIcon.Clock, Accent, timeLabel, theme.TextStrong, scale);
-        left = DrawSection(drawList, left + gap, centerY, FontAwesomeIcon.Clone, Accent, attemptsLabel,
-            theme.TextStrong, scale);
+        left = DrawSection(drawList, left, centerY, FontAwesomeIcon.Clone, Accent, attemptsLabel, theme.TextStrong,
+            scale);
         if (streakShown)
         {
-            left = DrawSection(drawList, left + gap, centerY, FontAwesomeIcon.Fire, Warm, streakLabel, Warm, scale);
-        }
-
-        if (best > 0)
-        {
-            DrawSection(drawList, left + gap, centerY, FontAwesomeIcon.Trophy, Accent, bestLabel, theme.TextStrong,
-                scale);
+            DrawSection(drawList, left + CapsuleSectionGap * scale, centerY, FontAwesomeIcon.Fire, Warm, streakLabel,
+                Warm, scale);
         }
     }
 
@@ -401,10 +387,4 @@ internal sealed class PairsApp : IMiniGame
     }
 
     private Rect CellOf(int index) => grid.Cell(index % PairsBoard.Columns, index / PairsBoard.Columns);
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
-    }
 }

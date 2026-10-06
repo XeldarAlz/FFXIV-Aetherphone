@@ -18,6 +18,11 @@ internal sealed class InvadersApp : IMiniGame
     private const float PadOpacity = 0.92f;
     private const float LastInvaderSlowFactor = 0.5f;
     private const float LastInvaderSlowSeconds = 0.3f;
+    private const int ConfettiCount = 60;
+    private const float ConfettiSpeed = 67f;
+    private const float ConfettiSize = 1f;
+    private const float ConfettiLife = 1.4f;
+    private const float ConfettiGravity = 138f;
     private const ulong IdleSeed = 0x494E5641444552UL;
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Invaders, GameGenre.Action, L.Invaders.Hook,
         Backdrop.Neon, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true, keyboard: true);
@@ -28,8 +33,6 @@ internal sealed class InvadersApp : IMiniGame
         new(0.98f, 0.95f, 0.90f, 1f), new(0.98f, 0.45f, 0.62f, 1f), new(1f, 0.62f, 0.30f, 1f),
         new(0.40f, 0.70f, 0.98f, 1f), new(0.72f, 0.50f, 0.96f, 1f), new(0.46f, 0.86f, 0.62f, 1f),
     };
-
-    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
 
     private readonly InvadersBoard board = new();
     private readonly InvadersBoard idleBoard = new();
@@ -177,7 +180,7 @@ internal sealed class InvadersApp : IMiniGame
                 center, 4);
             var screen = camera.ToScreen(center);
             fx.Shockwave(screen, camera.Px(InvadersBoard.InvaderWidth * 1.3f), color with { W = 0.6f }, 0.3f, 2f);
-            fx.AddText(GameNumber.Label(InvadersBoard.RowPoints[RowForKind(board.KillKind(index))]), screen, color, 0.9f);
+            fx.AddText(GameNumber.Signed(InvadersBoard.RowPoints[RowForKind(board.KillKind(index))]), screen, color, 0.9f);
         }
 
         if (board.KillCount > 0)
@@ -234,7 +237,8 @@ internal sealed class InvadersApp : IMiniGame
             GameSfx.LevelClear();
             context.Fx.Sweep();
             context.Fx.SlowMo(LastInvaderSlowFactor, LastInvaderSlowSeconds);
-            EmitConfetti(new Vector2(InvadersBoard.Width * 0.5f, InvadersBoard.Height * 0.2f), 60);
+            particles.Confetti(new Vector2(InvadersBoard.Width * 0.5f, InvadersBoard.Height * 0.2f), ConfettiCount,
+                CelebrationPalette, ConfettiSpeed, ConfettiSize, ConfettiLife, ConfettiGravity);
             context.Fx.Flash(GamePalette.Lighten(accent, 0.4f), 0.16f);
         }
 
@@ -263,15 +267,6 @@ internal sealed class InvadersApp : IMiniGame
         bannerProgress = 0f;
     }
 
-    private void EmitConfetti(Vector2 origin, int count)
-    {
-        var perColor = Math.Max(1, count / ConfettiSpecs.Length);
-        for (var index = 0; index < ConfettiSpecs.Length; index++)
-        {
-            particles.Emit(in ConfettiSpecs[index], origin, perColor);
-        }
-    }
-
     private void Finish(in GameContext context)
     {
         var outcome = new GameOutcome(board.Score, ScoreKind.Score, GameId)
@@ -284,17 +279,5 @@ internal sealed class InvadersApp : IMiniGame
         }
 
         context.Session.Finish(outcome);
-    }
-
-    private static ParticleSpec[] BuildConfetti()
-    {
-        var specs = new ParticleSpec[CelebrationPalette.Length];
-        for (var index = 0; index < specs.Length; index++)
-        {
-            specs[index] = new ParticleSpec(CelebrationPalette[index], CelebrationPalette[index], 1f, 67f, 1.4f, 138f,
-                0.7f, 16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
-        }
-
-        return specs;
     }
 }

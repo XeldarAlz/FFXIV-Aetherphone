@@ -31,7 +31,6 @@ internal sealed class Twenty48App : IMiniGame
     private static readonly GameSpec StageSpec = new(GameId, L.Twenty48.Title, GameGenre.Puzzle, L.Twenty48.Hook,
         Backdrop.Paper, HudStyle.Standard, ScoreKind.Score, keyboard: true);
     private static readonly string?[] MilestoneLabels = new string?[MaxRank + 1];
-    private static readonly Dictionary<int, string> GainLabels = new();
     private static readonly Vector4 Spark = new(1f, 0.95f, 0.7f, 1f);
     private static readonly TextStyle CapsuleStyle = TextStyles.FootnoteEmphasized;
 
@@ -119,7 +118,7 @@ internal sealed class Twenty48App : IMiniGame
         particles.Update(context.RawDeltaSeconds);
         fx.Update(context.RawDeltaSeconds);
         entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds);
-        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var area = StageLayout.Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
         var grid = GameGrid.Centered(area, Twenty48Board.Size, Twenty48Board.Size, Twenty48Renderer.GapFraction);
         AdvanceAnimation(simDelta, grid, scale, context);
         HandleInput(grid, scale, context);
@@ -196,8 +195,8 @@ internal sealed class Twenty48App : IMiniGame
         if (scoreDelta > 0)
         {
             UiFeedback.Play(UiSound.GameMatch);
-            fx.AddText(GainLabel(scoreDelta), new Vector2(grid.Center.X, grid.Bounds.Min.Y - 16f * scale), Accent,
-                1.15f);
+            fx.AddText(GameNumber.Signed(scoreDelta), new Vector2(grid.Center.X, grid.Bounds.Min.Y - 16f * scale),
+                Accent, 1.15f);
         }
 
         previousScore = board.Score;
@@ -300,19 +299,7 @@ internal sealed class Twenty48App : IMiniGame
 
     private void HandleSwipe(in GameGrid grid, bool accepting)
     {
-        var bounds = grid.Bounds;
-        var cursor = ImGui.GetCursorScreenPos();
-        ImGui.SetCursorScreenPos(bounds.Min);
-        ImGui.InvisibleButton(SwipeSurfaceId, bounds.Size);
-        var hovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem) &&
-                      UiInteract.Hover(bounds.Min, bounds.Max);
-        var activated = hovered && ImGui.IsItemActivated();
-        if (hovered)
-        {
-            UiInteract.ReportGestureSurface();
-        }
-
-        ImGui.SetCursorScreenPos(cursor);
+        PressSurface.Claim(SwipeSurfaceId, grid.Bounds, out var activated);
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
             swipeActive = false;
@@ -456,7 +443,7 @@ internal sealed class Twenty48App : IMiniGame
         var chipWidth = MathF.Max(ChipMinWidth, Typography.Measure(tileLabel, CapsuleStyle).X / scale + ChipPadX * 2f);
         var width = CapsulePadX * 2f + CapsuleIconSize + CapsuleIconGap + undoWidth + CapsuleSectionGap + chipWidth;
         context.Hud.Custom(width);
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;
@@ -494,18 +481,6 @@ internal sealed class Twenty48App : IMiniGame
         TryUndo(grid, scale);
     }
 
-    private static string GainLabel(int points)
-    {
-        if (GainLabels.TryGetValue(points, out var label))
-        {
-            return label;
-        }
-
-        label = string.Concat("+", GameNumber.Label(points));
-        GainLabels[points] = label;
-        return label;
-    }
-
     private static string MilestoneLabel(int value)
     {
         var rank = 0;
@@ -517,11 +492,5 @@ internal sealed class Twenty48App : IMiniGame
         }
 
         return MilestoneLabels[rank] ??= string.Concat(GameNumber.Label(value), "!");
-    }
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
     }
 }

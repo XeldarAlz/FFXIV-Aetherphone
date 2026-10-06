@@ -2,7 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
-namespace Aetherphone.Apps.Games;
+namespace Aetherphone.Apps.Games.Framework;
 
 internal static class PressSurface
 {

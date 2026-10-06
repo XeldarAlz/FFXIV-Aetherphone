@@ -17,11 +17,8 @@ internal sealed class WhackApp : IMiniGame
     private const float FrenzyBannerSeconds = 1.4f;
     private const float HitReach = 0.15f;
     private const int PunchMultiplier = 3;
-    private const int MaxGain = WhackBoard.MolePoints * ComboMeter.MaxMultiplier * 2;
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Whack, GameGenre.Arcade, L.Whack.Hook,
         Backdrop.Meadow, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true);
-    private static readonly string?[] GainLabels = new string?[MaxGain + 1];
-    private static readonly string BombLabel = string.Concat("-", GameNumber.Label(WhackBoard.BombPenalty));
     private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
     private static readonly Vector4 Gold = new(1f, 0.84f, 0.36f, 1f);
     private static readonly Vector4 Dirt = new(0.95f, 0.82f, 0.45f, 1f);
@@ -73,7 +70,7 @@ internal sealed class WhackApp : IMiniGame
         fx.Update(context.RawDeltaSeconds);
         entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds);
         frenzyBanner = GameBanner.Advance(frenzyBanner, context.RawDeltaSeconds, FrenzyBannerSeconds);
-        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var area = StageLayout.Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
         var grid = GameGrid.Centered(area, WhackBoard.Columns, WhackBoard.Rows, WhackRenderer.GapFraction);
         if (!finished)
         {
@@ -183,7 +180,7 @@ internal sealed class WhackApp : IMiniGame
         particles.Burst(center, 12, tint, 170f * scale, 3f, 0.5f, 320f);
         particles.Sparkle(center, 7, Spark, 130f * scale, 2.4f, 0.6f);
         fx.Shockwave(center, 44f * scale, Ring, 0.38f, 2.6f);
-        fx.AddText(GainLabel(board.GainAt(hole)), center, Accent, 1.1f);
+        fx.AddText(GameNumber.Signed(board.GainAt(hole)), center, Accent, 1.1f);
         fx.AddTrauma(0.08f);
         if (tierUp)
         {
@@ -202,7 +199,7 @@ internal sealed class WhackApp : IMiniGame
         particles.Burst(center, 24, Ember, 280f * scale, 4f, 0.7f, 360f);
         particles.Streaks(center, 12, Flame, 420f * scale, 2.6f, 0.5f);
         fx.Shockwave(center, 100f * scale, Flame, 0.55f, 3.4f);
-        fx.AddText(BombLabel, center, Danger, 1.2f);
+        fx.AddText(GameNumber.Signed(-WhackBoard.BombPenalty), center, Danger, 1.2f);
         fx.AddTrauma(0.6f);
         context.Fx.Flash(Danger, 0.35f);
     }
@@ -218,7 +215,7 @@ internal sealed class WhackApp : IMiniGame
         }
 
         particles.Burst(center, 8, Dirt, 140f * scale, 2.6f, 0.45f, 320f);
-        fx.AddText(GainLabel(board.GainAt(hole)), center, Accent, 0.95f);
+        fx.AddText(GameNumber.Signed(board.GainAt(hole)), center, Accent, 0.95f);
     }
 
     private void OnFrenzy(Vector2 center, float scale, in GameContext context)
@@ -229,17 +226,5 @@ internal sealed class WhackApp : IMiniGame
         context.Fx.Flash(Gold, 0.22f);
         context.Fx.Punch(0.06f);
         frenzyBanner = 0f;
-    }
-
-    private static string GainLabel(int points)
-    {
-        var index = Math.Clamp(points, 0, MaxGain);
-        return GainLabels[index] ??= string.Concat("+", GameNumber.Label(index));
-    }
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
     }
 }

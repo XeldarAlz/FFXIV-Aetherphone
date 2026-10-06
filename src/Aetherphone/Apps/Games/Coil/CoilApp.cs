@@ -18,6 +18,7 @@ internal sealed class CoilApp : IMiniGame
     private const float ComboBannerSeconds = 1.2f;
     private const float ChainCapsuleSeconds = 1.6f;
     private const float ChainCapsuleWidth = 56f;
+    private const int ConfettiPerColour = 15;
     private const float AimFollowRate = 22f;
     private const float RecoilDecay = 6f;
     private const float SwapDecay = 7f;
@@ -51,7 +52,6 @@ internal sealed class CoilApp : IMiniGame
         ParticleShape.Star, 0.35f);
     private static readonly ParticleSpec[] SwallowBursts = BuildColourSpecs(0.006f, 0.33f, 0.5f, 0f, 1.6f,
         ParticleShape.Circle, 0f);
-    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
     private static readonly ParticleSpec[] PowerSparkles = BuildPowerSparkles();
     private static readonly ParticleSpec GapStreaks = new(Gold, Gold, 0.006f, 0.9f, 0.5f, 0.6f, 1.6f,
         shape: ParticleShape.Streak);
@@ -62,7 +62,6 @@ internal sealed class CoilApp : IMiniGame
     private static readonly ParticleSpec StageSparkle = new(StageSpark, StageSpark, 0.0083f, 0.55f, 0.9f, 0.11f, 2.4f,
         6f, shape: ParticleShape.Star, additive: true);
     private static readonly string[] ChainLabels = BuildChainLabels();
-    private static readonly Dictionary<int, string> PlusLabels = new();
 
     private readonly CoilBoard board = new(IdleSeed);
     private readonly ParticleSystem particles = new(640);
@@ -79,7 +78,6 @@ internal sealed class CoilApp : IMiniGame
     private int chainShown;
     private int maxChain;
     private int powerUpsUsed;
-    private bool chainCapsulePlaced;
     private bool fired;
     private bool finished;
     private string comboText = string.Empty;
@@ -104,7 +102,6 @@ internal sealed class CoilApp : IMiniGame
         stageBanner = 0f;
         comboBanner = 1f;
         chainCapsule = 0f;
-        chainCapsulePlaced = false;
         chainShown = 0;
         maxChain = 0;
         powerUpsUsed = 0;
@@ -300,11 +297,8 @@ internal sealed class CoilApp : IMiniGame
         context.Fx.Sweep();
         context.Fx.Flash(GamePalette.Lighten(Accent, 0.4f), 0.22f);
         var top = new Vector2(CoilBoard.FieldWidth * 0.5f, CoilBoard.FieldHeight * 0.12f);
-        for (var colour = 0; colour < ConfettiSpecs.Length; colour++)
-        {
-            particles.Emit(ConfettiSpecs[colour], top, 15);
-        }
-
+        particles.Confetti(top, ConfettiPerColour * CoilArt.MarbleColours.Length, CoilArt.MarbleColours, 0.83f, 0.011f,
+            1.6f, 1.5f);
         particles.Emit(StageSparkle, board.Track.End, 24);
     }
 
@@ -327,7 +321,7 @@ internal sealed class CoilApp : IMiniGame
             var colour = CoilArt.ColourOf(clear.Colour);
             fx.Shockwave(center, radius * (3.2f + clear.Count * 0.5f), GamePalette.Lighten(colour, 0.3f), 0.45f, 3f,
                 radius);
-            fx.AddText(PlusLabel(clear.Points), center, GamePalette.Lighten(colour, 0.4f), 1.1f);
+            fx.AddText(GameNumber.Signed(clear.Points), center, GamePalette.Lighten(colour, 0.4f), 1.1f);
             camera.Shake(MathF.Min(0.3f, 0.04f * clear.Count * clear.Multiplier));
             deepest = Math.Max(deepest, clear.Multiplier);
         }
@@ -370,7 +364,7 @@ internal sealed class CoilApp : IMiniGame
             particles.Emit(GapSparkle, position, 10);
             fx.Shockwave(center, radius * 4.5f, Gold, 0.5f, 3.2f, radius);
             fx.AddText(Loc.T(L.Coil.GapShot), center - new Vector2(0f, radius * 3.2f), Gold, 1.05f);
-            fx.AddText(PlusLabel(gaps[index].Points), center - new Vector2(0f, radius * 1.4f), Gold, 1f);
+            fx.AddText(GameNumber.Signed(gaps[index].Points), center - new Vector2(0f, radius * 1.4f), Gold, 1f);
             UiFeedback.Play(UiSound.GameCollect);
         }
     }
@@ -414,18 +408,6 @@ internal sealed class CoilApp : IMiniGame
         stageLabelNumber = board.Stage;
         stageLabel = string.Concat(prefix, " ", GameNumber.Label(board.Stage));
         return stageLabel;
-    }
-
-    private static string PlusLabel(int points)
-    {
-        if (PlusLabels.TryGetValue(points, out var label))
-        {
-            return label;
-        }
-
-        label = string.Concat("+", GameNumber.Label(points));
-        PlusLabels[points] = label;
-        return label;
     }
 
     private void DrawWorld(ImDrawListPtr drawList, Vector2 turret, float scale, float time)
@@ -549,19 +531,16 @@ internal sealed class CoilApp : IMiniGame
     {
         if (chainCapsule <= 0f || chainShown < 2)
         {
-            chainCapsulePlaced = false;
             return;
         }
 
         context.Hud.Custom(ChainCapsuleWidth);
-        var rect = context.Hud.CustomRect;
-        var placed = chainCapsulePlaced;
-        chainCapsulePlaced = true;
-        if (!placed || rect.Width <= 0f)
+        if (!context.Hud.CustomPlaced(0))
         {
             return;
         }
 
+        var rect = context.Hud.CustomRect(0);
         StageHud.Capsule(drawList, rect, scale);
         var alpha = MathF.Min(1f, chainCapsule * 4f);
         Typography.DrawCentered(drawList, rect.Center, ChainLabels[Math.Min(chainShown, MaxChainLabel)],
@@ -576,19 +555,6 @@ internal sealed class CoilApp : IMiniGame
         {
             var tint = lighten > 0f ? GamePalette.Lighten(CoilArt.MarbleColours[colour], lighten) : CoilArt.MarbleColours[colour];
             specs[colour] = new ParticleSpec(tint, tint, size, speed, life, gravity, drag, 6f, shape: shape);
-        }
-
-        return specs;
-    }
-
-    private static ParticleSpec[] BuildConfetti()
-    {
-        var specs = new ParticleSpec[CoilArt.MarbleColours.Length];
-        for (var colour = 0; colour < specs.Length; colour++)
-        {
-            var tint = CoilArt.MarbleColours[colour];
-            specs[colour] = new ParticleSpec(tint, tint, 0.011f, 0.83f, 1.6f, 1.5f, 0.7f, 16f, 1.4f, -MathF.PI * 0.5f,
-                ParticleShape.Square);
         }
 
         return specs;

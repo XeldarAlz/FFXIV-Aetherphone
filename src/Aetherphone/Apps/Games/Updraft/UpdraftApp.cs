@@ -24,6 +24,11 @@ internal sealed class UpdraftApp : IMiniGame
     private const float BoostGlowRate = 33f;
     private const float GlideSparkleRate = 33f;
     private const float CrystalPulseDecay = 3f;
+    private const int ConfettiCount = 90;
+    private const float ConfettiSpeed = 7f;
+    private const float ConfettiSize = 0.09f;
+    private const float ConfettiLife = 1.4f;
+    private const float ConfettiGravity = 12.6f;
     private const ulong IdleSeed = 0x55504452UL;
     private static readonly GameSpec StageSpec = new(GameId, L.Updraft.Title, GameGenre.Arcade, L.Updraft.Hook,
         Backdrop.Sky, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true, keyboard: true);
@@ -61,8 +66,6 @@ internal sealed class UpdraftApp : IMiniGame
         0.45f, 0.35f, shape: ParticleShape.GlowCircle);
     private static readonly ParticleSpec GoldBoostGlow = new(UpdraftArt.GoldColor with { W = 0.5f },
         UpdraftArt.GoldColor with { W = 0f }, 0.1f, 0.45f, 0.35f, shape: ParticleShape.GlowCircle);
-    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
-    private static readonly string[] CrystalLabels = BuildCrystalLabels();
 
     private readonly UpdraftBoard board = new();
     private readonly UpdraftBoard idleBoard = new();
@@ -217,8 +220,7 @@ internal sealed class UpdraftApp : IMiniGame
         var axis = (right ? 1f : 0f) - (left ? 1f : 0f);
         var mouse = ImGui.GetMousePos();
         var full = context.Full;
-        var hitMin = new Vector2(full.Min.X, full.Min.Y + StageLayout.ChromeBand * UiScale.Current);
-        var hovering = UiInteract.Hover(hitMin, full.Max);
+        var hovering = UiInteract.Hover(full.Min, full.Max) && !context.ChromeHit(mouse);
         if (left || right)
         {
             pointerMode = false;
@@ -345,8 +347,8 @@ internal sealed class UpdraftApp : IMiniGame
         var color = Vector4.Lerp(UpdraftArt.CrystalColor, UpdraftArt.GoldColor, climb);
         particles.Emit(new ParticleSpec(color, color, 0.055f, 2.8f, 0.6f, 0.9f, 2.4f, 6f, shape: ParticleShape.Star), world,
             6 + item.Detail * 2);
-        fx.AddText(CrystalLabels[Math.Max(0, chain - 1)], screen - new Vector2(0f, 14f * scale), color,
-            0.9f + 0.12f * item.Detail, 46f + 10f * item.Detail);
+        fx.AddText(GameNumber.Signed(UpdraftBoard.CrystalPoints * Math.Max(1, chain)), screen - new Vector2(0f, 14f * scale),
+            color, 0.9f + 0.12f * item.Detail, 46f + 10f * item.Detail);
     }
 
     private void EmitTrails(float deltaSeconds)
@@ -376,10 +378,8 @@ internal sealed class UpdraftApp : IMiniGame
 
     private void EmitConfetti(Vector2 origin)
     {
-        for (var index = 0; index < ConfettiSpecs.Length; index++)
-        {
-            particles.Emit(in ConfettiSpecs[index], origin, 15);
-        }
+        particles.Confetti(origin, ConfettiCount, CelebrationPalette, ConfettiSpeed, ConfettiSize, ConfettiLife,
+            ConfettiGravity);
     }
 
     private void Finish(in GameContext context)
@@ -416,7 +416,7 @@ internal sealed class UpdraftApp : IMiniGame
 
     private void DrawHeightCapsule(ImDrawListPtr drawList, in GameContext context, float scale)
     {
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;
@@ -456,28 +456,5 @@ internal sealed class UpdraftApp : IMiniGame
 
         Material.Frosted(drawList, center - corner, center + corner, radius, scale);
         UpdraftArt.DrawBubble(drawList, center, radius * 0.62f, time, 1f);
-    }
-
-    private static ParticleSpec[] BuildConfetti()
-    {
-        var specs = new ParticleSpec[CelebrationPalette.Length];
-        for (var index = 0; index < specs.Length; index++)
-        {
-            specs[index] = new ParticleSpec(CelebrationPalette[index], CelebrationPalette[index], 0.09f, 7f, 1.4f, 12.6f,
-                0.7f, 16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
-        }
-
-        return specs;
-    }
-
-    private static string[] BuildCrystalLabels()
-    {
-        var labels = new string[UpdraftBoard.MaxChain];
-        for (var index = 0; index < labels.Length; index++)
-        {
-            labels[index] = string.Concat("+", GameNumber.Label(UpdraftBoard.CrystalPoints * (index + 1)));
-        }
-
-        return labels;
     }
 }

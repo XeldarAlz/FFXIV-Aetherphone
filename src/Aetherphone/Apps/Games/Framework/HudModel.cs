@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Apps.Games.Framework;
 
@@ -11,21 +12,31 @@ internal enum HudSlot : byte
     Combo,
     Best,
     Custom,
+    SecondCustom,
 }
 
 internal sealed class HudModel
 {
     public const int MaxSecondary = 4;
     public const int MaxHearts = 5;
+    public const int CustomSlots = 2;
+    private const int SlotCount = (int)HudSlot.SecondCustom + 1;
 
     private readonly HudSlot[] visible = new HudSlot[MaxSecondary];
+    private readonly Rect[] slotRects = new Rect[SlotCount];
+    private readonly float[] customWidths = new float[CustomSlots];
+    private readonly int[] customPlacedGeneration = new int[CustomSlots];
     private int visibleCount;
+    private int customCount;
+    private int generation = 1;
     private HudStyle visibleStyle;
     private bool visibleDirty = true;
 
     public bool HasScore { get; private set; }
 
     public int ScoreValue { get; private set; }
+
+    public LocString? ScoreLabel { get; private set; }
 
     public bool HasTimer { get; private set; }
 
@@ -34,6 +45,8 @@ internal sealed class HudModel
     public float TimerTotal { get; private set; }
 
     public bool TimerUrgent { get; private set; }
+
+    public bool TimerElapsed { get; private set; }
 
     public bool HasLives { get; private set; }
 
@@ -53,21 +66,21 @@ internal sealed class HudModel
 
     public int BestValue { get; private set; }
 
-    public bool HasCustom { get; private set; }
+    public bool HasCustom => customCount > 0;
 
-    public float CustomWidth { get; private set; }
-
-    public Rect CustomRect { get; private set; }
+    public int CustomCount => customCount;
 
     public void Clear()
     {
         HasScore = false;
+        ScoreLabel = null;
         HasTimer = false;
         HasLives = false;
         HasLevel = false;
         HasCombo = false;
         HasBest = false;
-        HasCustom = false;
+        customCount = 0;
+        generation++;
         visibleDirty = true;
     }
 
@@ -75,6 +88,14 @@ internal sealed class HudModel
     {
         HasScore = true;
         ScoreValue = value;
+        ScoreLabel = null;
+    }
+
+    public void Score(int value, LocString label)
+    {
+        HasScore = true;
+        ScoreValue = value;
+        ScoreLabel = label;
     }
 
     public void Timer(float left, float total, bool urgent)
@@ -83,6 +104,17 @@ internal sealed class HudModel
         TimerLeft = MathF.Max(0f, left);
         TimerTotal = MathF.Max(0f, total);
         TimerUrgent = urgent;
+        TimerElapsed = false;
+        visibleDirty = true;
+    }
+
+    public void Clock(float seconds)
+    {
+        HasTimer = true;
+        TimerLeft = MathF.Max(0f, seconds);
+        TimerTotal = 0f;
+        TimerUrgent = false;
+        TimerElapsed = true;
         visibleDirty = true;
     }
 
@@ -117,15 +149,40 @@ internal sealed class HudModel
 
     public void Custom(float width)
     {
-        HasCustom = width > 0f;
-        CustomWidth = width;
+        if (width <= 0f || customCount >= CustomSlots)
+        {
+            return;
+        }
+
+        customWidths[customCount++] = width;
         visibleDirty = true;
     }
 
-    public void PlaceCustom(Rect rect)
+    public float CustomWidth(int index) => index >= 0 && index < customCount ? customWidths[index] : 0f;
+
+    public Rect CustomRect(int index) => SlotRect(CustomSlot(index));
+
+    public bool CustomPlaced(int index) =>
+        index >= 0 && index < CustomSlots && customPlacedGeneration[index] == generation - 1;
+
+    public Rect SlotRect(HudSlot slot) => slotRects[(int)slot];
+
+    public void PlaceSlot(HudSlot slot, Rect rect)
     {
-        CustomRect = rect;
+        slotRects[(int)slot] = rect;
+        if (slot == HudSlot.Custom)
+        {
+            customPlacedGeneration[0] = generation;
+        }
+        else if (slot == HudSlot.SecondCustom)
+        {
+            customPlacedGeneration[1] = generation;
+        }
     }
+
+    public static HudSlot CustomSlot(int index) => index == 0 ? HudSlot.Custom : HudSlot.SecondCustom;
+
+    public static int CustomIndex(HudSlot slot) => slot == HudSlot.SecondCustom ? 1 : 0;
 
     public ReadOnlySpan<HudSlot> Visible(HudStyle style)
     {
@@ -143,7 +200,7 @@ internal sealed class HudModel
         visibleDirty = false;
         var limit = style == HudStyle.Compact ? 1 : MaxSecondary;
         var wanted = (HasTimer ? 1 : 0) + (HasLives ? 1 : 0) + (HasLevel ? 1 : 0) + (HasCombo ? 1 : 0) +
-                     (HasBest ? 1 : 0) + (HasCustom ? 1 : 0);
+                     (HasBest ? 1 : 0) + customCount;
         var dropBest = wanted > limit && HasBest;
         if (dropBest)
         {
@@ -157,7 +214,8 @@ internal sealed class HudModel
         Append(HudSlot.Level, HasLevel && !dropLevel, limit);
         Append(HudSlot.Combo, HasCombo, limit);
         Append(HudSlot.Best, HasBest && !dropBest, limit);
-        Append(HudSlot.Custom, HasCustom, limit);
+        Append(HudSlot.Custom, customCount > 0, limit);
+        Append(HudSlot.SecondCustom, customCount > 1, limit);
     }
 
     private void Append(HudSlot slot, bool present, int limit)

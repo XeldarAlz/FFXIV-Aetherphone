@@ -82,8 +82,6 @@ internal sealed class ChessApp : IMiniGame
     private int movingTo = -1;
     private int promotionFrom = -1;
     private int promotionTo = -1;
-    private int leadShown;
-    private string leadLabel = string.Empty;
     private float movingPhase = 1f;
     private float promotionProgress;
     private float thinkDelay;
@@ -146,7 +144,7 @@ internal sealed class ChessApp : IMiniGame
         movingPhase = MathF.Min(1f, movingPhase + simDelta / MoveDuration);
         particles.Update(rawDelta);
         fx.Update(rawDelta);
-        ComputeLayout(Grow(context.Safe, context.Fx.PlateScale), scale);
+        ComputeLayout(StageLayout.Punched(context.Safe, context.Fx.PlateScale), scale);
         if (!over && playing)
         {
             CollectSearchResult(context, scale);
@@ -208,14 +206,6 @@ internal sealed class ChessApp : IMiniGame
         wasInCheck = false;
         over = false;
         finished = false;
-        leadShown = 0;
-        leadLabel = string.Empty;
-    }
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
     }
 
     private void ComputeLayout(Rect safe, float scale)
@@ -284,9 +274,10 @@ internal sealed class ChessApp : IMiniGame
         if (whiteCapturedCount + blackCapturedCount > 0)
         {
             var lead = MaterialLead();
+            var leadLabel = lead == 0 ? string.Empty : GameNumber.Signed(Math.Abs(lead));
             context.Hud.Custom(ChessRenderer.CapturedCapsuleWidth(whiteCapturedCount, blackCapturedCount, leadLabel, lead,
                 scale));
-            var rect = context.Hud.CustomRect;
+            var rect = context.Hud.CustomRect(0);
             if (rect.Width > 0f)
             {
                 renderer.DrawCapturedCapsule(drawList, rect, whiteCaptured, whiteCapturedCount, blackCaptured,
@@ -414,7 +405,6 @@ internal sealed class ChessApp : IMiniGame
             particles.Sparkle(center, 5, GamePalette.Lighten(AccentColor, 0.3f), 80f * scale, 1.6f, 0.35f);
         }
 
-        RefreshLead();
         UpdateOutcome(context, moverIsBlack);
     }
 
@@ -578,7 +568,6 @@ internal sealed class ChessApp : IMiniGame
         lastFrom = last >= 0 ? moveLog[last].Move.From : -1;
         lastTo = last >= 0 ? moveLog[last].Move.To : -1;
         wasInCheck = board.InCheck(false);
-        RefreshLead();
     }
 
     private void PopMove()
@@ -620,18 +609,6 @@ internal sealed class ChessApp : IMiniGame
         return white - dark;
     }
 
-    private void RefreshLead()
-    {
-        var magnitude = Math.Abs(MaterialLead());
-        if (magnitude == leadShown)
-        {
-            return;
-        }
-
-        leadShown = magnitude;
-        leadLabel = magnitude == 0 ? string.Empty : string.Concat("+", GameNumber.Label(magnitude));
-    }
-
     private void DrawPromotion(in GameContext context, float scale)
     {
         promotionProgress = MathF.Min(1f, promotionProgress + context.RawDeltaSeconds * PromotionSpeed);
@@ -671,8 +648,11 @@ internal sealed class ChessApp : IMiniGame
             context.Fx.Vignette(Danger, 0.3f, 0.9f);
         }
 
-        var streakAfter = playerWon ? context.Session.Best + 1 : 0;
-        context.Session.Finish(new GameOutcome(streakAfter, ScoreKind.Streak, StageSpec.StatIdFor(mode), playerWon)
+        var statId = StageSpec.StatIdFor(mode);
+        var result = outcome == ChessOutcome.Checkmate
+            ? new GameOutcome(playerWon ? context.Session.Best + 1 : 0, ScoreKind.Streak, statId, playerWon)
+            : GameOutcome.Drawn(statId);
+        context.Session.Finish(result
             .WithStat(L.Chess.Result, OutcomeLabel())
             .WithStat(L.Games.Moves, GameNumber.Label(PlayerMoves)));
     }

@@ -49,12 +49,17 @@ public sealed class GameSessionTests
     private static readonly LocString[] Tiers = { new("t.easy", "Easy"), new("t.hard", "Hard") };
     private static readonly string[] TierStatIds = { "tap.easy", "tap.hard" };
 
-    private static GameSpec Spec(bool countdown = false, ScoreKind kind = ScoreKind.Score, bool modes = false) =>
+    private static readonly ScoreKind[] TierKinds = { ScoreKind.Time, ScoreKind.Score };
+    private static readonly bool[] TierCountdowns = { false, true };
+
+    private static GameSpec Spec(bool countdown = false, ScoreKind kind = ScoreKind.Score, bool modes = false,
+        bool modeKinds = false, bool countdownModes = false) =>
         new("tap", new LocString("t.title", "Tap"), GameGenre.Arcade, kind: kind, clocked: true, countdown: countdown,
-            modes: modes ? Tiers : null, modeStatIds: modes ? TierStatIds : null);
+            modes: modes ? Tiers : null, modeStatIds: modes ? TierStatIds : null,
+            modeKinds: modeKinds ? TierKinds : null, countdownModes: countdownModes ? TierCountdowns : null);
 
     private static GameSession Build(out FakeStatsConfiguration configuration, out CountingSink sink,
-        FixedRank? ranks = null)
+        IRankSource? ranks = null)
     {
         configuration = new FakeStatsConfiguration();
         sink = new CountingSink();
@@ -195,6 +200,96 @@ public sealed class GameSessionTests
     }
 
     [Fact]
+    public void ALostTimeRunCompletesTheDailyButRecordsNoBestAndUploadsNothing()
+    {
+        var session = Build(out var configuration, out var sink);
+        var stats = session.Stats;
+        stats.DailyGameId = "tap";
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tap", BestTimeSeconds = 90 });
+        session.Begin(Spec(kind: ScoreKind.Time), new GameStart(0, 5, true));
+        session.Play();
+
+        session.Finish(new GameOutcome(30, ScoreKind.Time, "tap", won: false));
+
+        Assert.Equal(StageFlow.Result, session.State);
+        Assert.Equal(90, configuration.GameStats[0].BestTimeSeconds);
+        Assert.False(session.NewBest);
+        Assert.Equal(0, sink.Count);
+        Assert.True(stats.DailyDone);
+        Assert.Equal(90, session.Best);
+    }
+
+    [Fact]
+    public void ADrawKeepsTheStreakAndUploadsNothing()
+    {
+        var session = Build(out var configuration, out var sink);
+        var stats = session.Stats;
+        stats.DailyGameId = "tap";
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tap", Streak = 4 });
+        session.Begin(Spec(kind: ScoreKind.Streak), new GameStart(0, 5, true));
+        session.Play();
+
+        session.Finish(GameOutcome.Drawn("tap"));
+
+        Assert.True(session.Outcome.IsDraw);
+        Assert.Equal(4, configuration.GameStats[0].Streak);
+        Assert.Equal(4, session.ResultValue);
+        Assert.False(session.NewBest);
+        Assert.Equal(0, sink.Count);
+        Assert.True(stats.DailyDone);
+    }
+
+    [Fact]
+    public void ModeKindsDriveTheBestAndTheBeatingGlow()
+    {
+        var session = Build(out var configuration, out _);
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tap.easy", BestTimeSeconds = 40, BestScore = 7 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tap.hard", BestScore = 12, BestTimeSeconds = 3 });
+        session.Begin(Spec(kind: ScoreKind.Time, modes: true, modeKinds: true), new GameStart(0, 5, false));
+        Assert.Equal(ScoreKind.Time, session.Kind);
+        Assert.Equal(40, session.Best);
+
+        session.SelectMode(1);
+
+        Assert.Equal(ScoreKind.Score, session.Kind);
+        Assert.Equal(12, session.Best);
+        session.Play();
+        session.Report(13);
+        Assert.True(session.BeatingBest);
+    }
+
+    [Fact]
+    public void CountdownModesOverrideTheSpecFlagPerMode()
+    {
+        var session = Build(out _, out _);
+        session.Begin(Spec(modes: true, countdownModes: true), new GameStart(0, 5, false));
+        session.Play();
+        Assert.Equal(StageFlow.Playing, session.State);
+
+        var blitz = Build(out _, out _);
+        blitz.Begin(Spec(modes: true, countdownModes: true), new GameStart(1, 5, false));
+        blitz.Play();
+        Assert.Equal(StageFlow.Countdown, blitz.State);
+    }
+
+    [Fact]
+    public void OutcomeDecorationsSurviveEveryBuilder()
+    {
+        var label = new LocString("t.next", "Next level");
+        var outcome = new GameOutcome(3, ScoreKind.Level, "tap")
+            .WithContinueLabel(label)
+            .WithQuietBest()
+            .WithStat(label, "1")
+            .WithSecondary("tap.height", 9);
+
+        Assert.True(outcome.QuietBest);
+        Assert.Equal("t.next", outcome.ContinueLabel!.Value.Key);
+        Assert.Equal(1, outcome.StatCount);
+        Assert.Equal(9, outcome.SecondaryValue);
+        Assert.False(outcome.IsDraw);
+    }
+
+    [Fact]
     public void StreakOutcomesRecordWinsAndLosses()
     {
         var session = Build(out var configuration, out var sink);
@@ -213,9 +308,9 @@ public sealed class GameSessionTests
     }
 
     [Fact]
-    public void SecondaryStatsLandNextToThePrimary()
+    public void SecondaryStatsLandNextToThePrimaryAndReachTheSink()
     {
-        var session = Build(out var configuration, out _);
+        var session = Build(out var configuration, out var sink);
         session.Begin(Spec(), new GameStart(0, 5, false));
         session.Play();
 
@@ -223,6 +318,38 @@ public sealed class GameSessionTests
 
         Assert.Equal(2, configuration.GameStats.Count);
         Assert.Equal(120, configuration.GameStats[1].BestScore);
+        Assert.Equal(2, sink.Count);
+        Assert.Equal("tap", sink.Last.StatId);
+        Assert.Equal(40, sink.Last.Value);
+    }
+
+    [Fact]
+    public void TheRankLookupFoldsATierOntoItsCatalogRoot()
+    {
+        var ranks = new RecordingRank();
+        var session = Build(out _, out _, ranks);
+        var tiers = new LocString[] { new("t.easy", "Easy"), new("t.hard", "Hard") };
+        var tierStatIds = new[] { "chess.easy", "chess.hard" };
+        var spec = new GameSpec("chess", new LocString("t.chess", "Chess"), GameGenre.Tabletop, kind: ScoreKind.Streak,
+            modes: tiers, modeStatIds: tierStatIds);
+
+        session.Begin(spec, new GameStart(1, 5, false));
+
+        Assert.Equal("chess.hard", session.StatId);
+        Assert.Equal("chess", session.LeaderboardStatId);
+        Assert.Equal("chess", ranks.LastStatId);
+    }
+
+    private sealed class RecordingRank : IRankSource
+    {
+        public string LastStatId { get; private set; } = string.Empty;
+
+        public bool TryGetRank(string statId, out GameRank rank)
+        {
+            LastStatId = statId;
+            rank = GameRank.Unknown;
+            return false;
+        }
     }
 
     [Fact]
@@ -282,9 +409,10 @@ public sealed class GameSessionTests
     {
         var ranks = new FixedRank { Rank = new GameRank(8, 1240, 2, 3, RankState.Ranked) };
         var session = Build(out _, out _, ranks);
-        session.Begin(Spec(), new GameStart(0, 5, false));
+        var spec = new GameSpec("snake", new LocString("t.snake", "Snake"), GameGenre.Arcade, clocked: true);
+        session.Begin(spec, new GameStart(0, 5, false));
         session.Play();
-        session.Finish(new GameOutcome(40, ScoreKind.Score, "tap"));
+        session.Finish(new GameOutcome(40, ScoreKind.Score, "snake"));
 
         Assert.Equal(8, session.Rank.Rank);
         Assert.True(session.Rank.IsRanked);

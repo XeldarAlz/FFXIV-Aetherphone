@@ -20,6 +20,13 @@ internal sealed class SquadronApp : IMiniGame
     private const float RollPunchDelay = 0.14f;
     private const float JoinPunch = 0.08f;
     private const float JoinRollPunch = 0.04f;
+    private const int RescueConfetti = 40;
+    private const int StageConfetti = 50;
+    private const int PerfectConfetti = 80;
+    private const float ConfettiSpeed = 67f;
+    private const float ConfettiSize = 1f;
+    private const float ConfettiLife = 1.4f;
+    private const float ConfettiGravity = 138f;
     private const ulong IdleSeed = 0x535155414452UL;
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Squadron, GameGenre.Action, L.Squadron.Hook,
         Backdrop.Neon, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true, keyboard: true);
@@ -31,8 +38,6 @@ internal sealed class SquadronApp : IMiniGame
         new(0.98f, 0.95f, 0.90f, 1f), new(0.98f, 0.45f, 0.62f, 1f), new(1f, 0.62f, 0.30f, 1f),
         new(0.40f, 0.70f, 0.98f, 1f), new(0.72f, 0.50f, 0.96f, 1f), new(0.46f, 0.86f, 0.62f, 1f),
     };
-
-    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
 
     private readonly SquadronBoard board = new();
     private readonly SquadronBoard idleBoard = new();
@@ -260,7 +265,7 @@ internal sealed class SquadronApp : IMiniGame
             var points = board.KillPoints(index);
             if (points > 0)
             {
-                fx.AddText(GameNumber.Label(points), screen, color, points >= SquadronBoard.WardenDivingPoints ? 1.2f : 0.9f);
+                fx.AddText(GameNumber.Signed(points), screen, color, points >= SquadronBoard.WardenDivingPoints ? 1.2f : 0.9f);
             }
         }
 
@@ -289,7 +294,7 @@ internal sealed class SquadronApp : IMiniGame
         {
             UiFeedback.Play(UiSound.GamePowerUp);
             var center = board.PlayerCenter;
-            EmitConfetti(center, 40);
+            EmitConfetti(center, RescueConfetti);
             fx.Shockwave(camera.ToScreen(center), camera.Px(SquadronBoard.PlayerWidth * 3f),
                 GamePalette.Lighten(accent, 0.4f) with { W = 0.7f }, 0.5f, 3f);
             fx.AddText(bonusLabel.Get(L.Squadron.Bonus, SquadronBoard.RescueBonus), camera.ToScreen(center),
@@ -330,7 +335,7 @@ internal sealed class SquadronApp : IMiniGame
         {
             GameSfx.LevelClear();
             context.Fx.Sweep();
-            EmitConfetti(new Vector2(SquadronBoard.Width * 0.5f, SquadronBoard.Height * 0.2f), 50);
+            EmitConfetti(new Vector2(SquadronBoard.Width * 0.5f, SquadronBoard.Height * 0.2f), StageConfetti);
             context.Fx.Flash(GamePalette.Lighten(accent, 0.4f), 0.14f);
         }
 
@@ -339,7 +344,7 @@ internal sealed class SquadronApp : IMiniGame
             ShowChallengeResult();
             if (board.LastChallengeWasPerfect)
             {
-                EmitConfetti(new Vector2(SquadronBoard.Width * 0.5f, SquadronBoard.Height * 0.2f), 80);
+                EmitConfetti(new Vector2(SquadronBoard.Width * 0.5f, SquadronBoard.Height * 0.2f), PerfectConfetti);
                 context.Fx.Sweep();
             }
         }
@@ -376,11 +381,7 @@ internal sealed class SquadronApp : IMiniGame
 
     private void EmitConfetti(Vector2 origin, int count)
     {
-        var perColor = Math.Max(1, count / ConfettiSpecs.Length);
-        for (var index = 0; index < ConfettiSpecs.Length; index++)
-        {
-            particles.Emit(in ConfettiSpecs[index], origin, perColor);
-        }
+        particles.Confetti(origin, count, CelebrationPalette, ConfettiSpeed, ConfettiSize, ConfettiLife, ConfettiGravity);
     }
 
     private void Finish(in GameContext context)
@@ -395,17 +396,5 @@ internal sealed class SquadronApp : IMiniGame
         }
 
         context.Session.Finish(outcome);
-    }
-
-    private static ParticleSpec[] BuildConfetti()
-    {
-        var specs = new ParticleSpec[CelebrationPalette.Length];
-        for (var index = 0; index < specs.Length; index++)
-        {
-            specs[index] = new ParticleSpec(CelebrationPalette[index], CelebrationPalette[index], 1f, 67f, 1.4f, 138f,
-                0.7f, 16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
-        }
-
-        return specs;
     }
 }

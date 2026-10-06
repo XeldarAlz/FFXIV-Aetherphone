@@ -36,10 +36,11 @@ internal sealed class GemSwapApp : IMiniGame
     private const int DustPerGem = 2;
     private static readonly LocString[] Modes = { L.Games.Classic, L.Games.Blitz };
     private static readonly string[] ModeStatIds = { GameId, BlitzStatId };
+    private static readonly bool[] CountdownModes = { false, true };
     private static readonly GameSpec StageSpec = new(GameId, L.Games.GemSwap, GameGenre.Puzzle, L.GemSwap.Hook,
-        Backdrop.Nebula, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true);
+        Backdrop.Nebula, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true,
+        countdownModes: CountdownModes);
     private static readonly string?[] ChainLabels = new string?[MaxChainLabel + 1];
-    private static readonly Dictionary<int, string> GainLabels = new();
     private static readonly Vector4 FireTint = new(1f, 0.52f, 0.2f, 1f);
     private static readonly Vector4 HotTint = new(1f, 0.38f, 0.42f, 1f);
     private static readonly Vector4 TimeUpTint = new(0.98f, 0.30f, 0.30f, 1f);
@@ -181,7 +182,7 @@ internal sealed class GemSwapApp : IMiniGame
 
         dock.Update(blitz, context.RawDeltaSeconds);
         UpdateEffects(context.RawDeltaSeconds);
-        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var area = StageLayout.Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
         Layout(area, blitzMode, scale, out grid, out var plate);
         AdvanceAnimation(simDelta, scale, context);
         if (stage == GemStage.Finale)
@@ -474,12 +475,27 @@ internal sealed class GemSwapApp : IMiniGame
             return;
         }
 
+        UiFeedback.Play(UiSound.GameWrong);
+        context.Fx.Flash(TimeUpTint, 0.15f);
+        FinishClassic(context.Session);
+    }
+
+    public void OnQuit(GameSession session)
+    {
+        if (finished || mode != GemMode.Classic || board.Score <= 0)
+        {
+            return;
+        }
+
+        FinishClassic(session);
+    }
+
+    private void FinishClassic(GameSession session)
+    {
         finished = true;
         stage = GemStage.Over;
         selectedIndex = -1;
-        UiFeedback.Play(UiSound.GameWrong);
-        context.Fx.Flash(TimeUpTint, 0.15f);
-        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+        session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
             .WithStat(L.Games.Combo, GameNumber.Label(bestChain))
             .WithStat(L.Games.Moves, GameNumber.Label(swaps)));
     }
@@ -516,8 +532,8 @@ internal sealed class GemSwapApp : IMiniGame
         var scoreDelta = board.Score - previousScore;
         if (scoreDelta > 0)
         {
-            fx.AddText(GainLabel(scoreDelta), new Vector2(grid.Center.X, grid.Bounds.Min.Y - 14f * scale), Accent,
-                1.1f);
+            fx.AddText(GameNumber.Signed(scoreDelta), new Vector2(grid.Center.X, grid.Bounds.Min.Y - 14f * scale),
+                Accent, 1.1f);
         }
 
         previousScore = board.Score;
@@ -637,9 +653,12 @@ internal sealed class GemSwapApp : IMiniGame
         {
             var band = GemSwapPowerDock.Band(grid, scale);
             dock.OnBonus();
-            fx.AddText(bonusLabel.Get(L.Games.GemSwapBonusTime, (int)GemSwapBlitz.BonusSeconds),
-                new Vector2(grid.Center.X, grid.Bounds.Min.Y + grid.Pitch * 0.5f), GamePalette.Lighten(Accent, 0.3f),
-                1.4f);
+            var clock = context.Hud.SlotRect(HudSlot.Timer);
+            var bonusAt = clock.Width > 0f
+                ? new Vector2(clock.Center.X, clock.Max.Y + grid.Pitch * 0.5f)
+                : new Vector2(grid.Center.X, grid.Bounds.Min.Y + grid.Pitch * 0.5f);
+            fx.AddText(bonusLabel.Get(L.Games.GemSwapBonusTime, (int)GemSwapBlitz.BonusSeconds), bonusAt,
+                GamePalette.Lighten(Accent, 0.3f), 1.4f);
             particles.Sparkle(band.Center, 16, GamePalette.Lighten(Accent, 0.45f), 200f * scale, 2.6f, 0.7f);
             context.Fx.Flash(Accent, 0.12f);
             UiFeedback.Play(UiSound.GamePowerUp);
@@ -889,21 +908,4 @@ internal sealed class GemSwapApp : IMiniGame
         return ChainLabels[index] ??= string.Concat("x", GameNumber.Label(index));
     }
 
-    private static string GainLabel(int points)
-    {
-        if (GainLabels.TryGetValue(points, out var label))
-        {
-            return label;
-        }
-
-        label = string.Concat("+", GameNumber.Label(points));
-        GainLabels[points] = label;
-        return label;
-    }
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
-    }
 }

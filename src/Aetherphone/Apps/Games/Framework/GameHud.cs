@@ -9,12 +9,6 @@ namespace Aetherphone.Apps.Games.Framework;
 
 internal static class GameHud
 {
-    public static void Pill(Vector2 center, string label, string value, Vector4 accent, PhoneTheme theme,
-        bool highlight = false, float sizeScale = 1f)
-    {
-        DrawPill(center, label, value, accent, theme, highlight, 1f, sizeScale);
-    }
-
     public static void ScorePill(Vector2 center, string label, ref RollingValue value, int target, Vector4 accent,
         PhoneTheme theme, float deltaSeconds, bool highlight = false, float sizeScale = 1f)
     {
@@ -61,25 +55,6 @@ internal static class GameHud
             TextStyles.Title3.Weight);
         Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + 12f * scale * sizeScale), Loc.Upper(label),
             theme.TextMuted, TextStyles.Caption2.Scale * sizeScale, TextStyles.Caption2.Weight);
-    }
-
-    public static bool RestartButton(Vector2 center, float radius, PhoneTheme theme)
-    {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-        var min = center - new Vector2(radius, radius);
-        var max = center + new Vector2(radius, radius);
-        var hovered = UiInteract.Hover(min, max);
-        Material.Frosted(drawList, min, max, radius, scale, hovered ? 1f : 0.92f);
-        if (hovered)
-        {
-            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(theme.Accent with { W = 0.16f }));
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        ProgressRing.CenterIcon(center, FontAwesomeIcon.Redo, hovered ? theme.TextStrong : theme.Accent,
-            radius * 0.95f);
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     public static bool LandscapeBack(Vector2 center, float radius, PhoneTheme theme)

@@ -23,7 +23,8 @@ internal sealed class BladeApp : IMiniGame
     private const float RibbonWidth = 0.07f;
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Blade, GameGenre.Arcade, L.Blade.Hook,
         Backdrop.Sky, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true);
-    private static readonly string AppleLabel = string.Concat("+", GameNumber.Label(BladeBoard.ApplePoints));
+    private static readonly Vector2 WorldHalf = new(BladeRenderer.WorldWidth * 0.5f, BladeRenderer.WorldHeight * 0.5f);
+    private static readonly Rect World = new(BladeRenderer.WorldCenter - WorldHalf, BladeRenderer.WorldCenter + WorldHalf);
     private static readonly Vector4 Danger = new(0.95f, 0.32f, 0.32f, 1f);
     private static readonly Vector4 WoodChip = new(0.72f, 0.54f, 0.38f, 1f);
     private static readonly Vector4 Steel = new(0.88f, 0.90f, 0.96f, 1f);
@@ -132,8 +133,7 @@ internal sealed class BladeApp : IMiniGame
 
     private void PlaceCamera(in GameContext context)
     {
-        camera.Fit(context.Safe, BladeRenderer.WorldWidth, BladeRenderer.WorldHeight, FitMode.Contain);
-        camera.Place(BladeRenderer.WorldCenter);
+        camera.Fit(context.Safe, World, FitMode.Contain);
         context.Fx.ApplyTo(ref camera);
         camera.Update(context.RawDeltaSeconds, UiScale.Current);
         context.Backdrop.SetCamera(in camera);
@@ -236,7 +236,8 @@ internal sealed class BladeApp : IMiniGame
         UiFeedback.Play(UiSound.GameCollect);
         var world = BladeRenderer.ApplePoint(board.AppleHitAngle);
         particles.Emit(AppleShards, world, 14);
-        fx.AddText(AppleLabel, camera.ToScreen(world), GamePalette.Lighten(AppleRed, 0.3f), 1.1f);
+        fx.AddText(GameNumber.Signed(BladeBoard.ApplePoints), camera.ToScreen(world), GamePalette.Lighten(AppleRed, 0.3f),
+            1.1f);
         context.Fx.Punch(0.03f);
     }
 
@@ -296,7 +297,7 @@ internal sealed class BladeApp : IMiniGame
     private void DrawPips(ImDrawListPtr drawList, in GameContext context, float scale)
     {
         context.Hud.Custom(BladeRenderer.PipsWidth(board.LevelBlades));
-        var slot = context.Hud.CustomRect;
+        var slot = context.Hud.CustomRect(0);
         if (slot.Width <= 0f)
         {
             return;

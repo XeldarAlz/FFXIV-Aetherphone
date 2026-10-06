@@ -16,8 +16,6 @@ internal sealed class TriviaApp : IMiniGame
 {
     private const string GameId = "trivia";
     private const float UrgentSeconds = 3f;
-    private const int MaxGain = (TriviaBoard.BasePoints + (int)TriviaBoard.QuestionSeconds + 1) *
-                                ComboMeter.MaxMultiplier;
     private static readonly LocString[] Modes =
     {
         L.Games.CategoryAll, L.Games.CategoryMounts, L.Games.CategoryMinions, L.Games.CategoryActions,
@@ -26,7 +24,6 @@ internal sealed class TriviaApp : IMiniGame
     private static readonly string[] ModeStatIds = { GameId, GameId, GameId, GameId, GameId };
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Trivia, GameGenre.Brain, L.Trivia.Hook,
         Backdrop.Paper, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true);
-    private static readonly string?[] GainLabels = new string?[MaxGain + 1];
     private static readonly Vector4 Danger = new(0.95f, 0.32f, 0.32f, 1f);
     private static readonly Vector4 RightRing = new(0.42f, 0.88f, 0.56f, 0.9f);
     private static readonly Vector4 RightInk = new(0.30f, 0.72f, 0.44f, 1f);
@@ -85,7 +82,7 @@ internal sealed class TriviaApp : IMiniGame
         particles.Update(rawSeconds);
         fx.Update(rawSeconds);
         entrance = GameJuice.Advance(entrance, rawSeconds);
-        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var area = StageLayout.Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
         var layout = TriviaRenderer.Layout(area, scale);
         if (!finished)
         {
@@ -183,7 +180,8 @@ internal sealed class TriviaApp : IMiniGame
 
         fx.AddTrauma(0.10f);
         fx.Shockwave(cell.Center, cell.Width * 0.6f, RightRing, 0.45f, 2.6f);
-        fx.AddText(GainLabel(board.LastPoints), new Vector2(cell.Center.X, cell.Min.Y + 6f * scale), RightInk, 1.1f);
+        fx.AddText(GameNumber.Signed(board.LastPoints), new Vector2(cell.Center.X, cell.Min.Y + 6f * scale), RightInk,
+            1.1f);
         particles.Sparkle(cell.Center, 12, RightSpark, 170f * scale, 2.4f, 0.6f);
         context.Fx.Punch(0.03f);
     }
@@ -237,15 +235,4 @@ internal sealed class TriviaApp : IMiniGame
         }
     }
 
-    private static string GainLabel(int points)
-    {
-        var index = Math.Clamp(points, 0, MaxGain);
-        return GainLabels[index] ??= string.Concat("+", GameNumber.Label(index));
-    }
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
-    }
 }

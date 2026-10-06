@@ -142,12 +142,22 @@ internal sealed class ReversiApp : IMiniGame
         fx.DrawRings(drawList, scale);
         fx.DrawText();
         board.Counts(out var dark, out var light);
+        var thinking = !over && current == ReversiBoard.Light;
         context.Hud.Custom(ReversiRenderer.CountsWidth(scale));
-        var countsRect = context.Hud.CustomRect;
-        if (countsRect.Width > 0f)
+        if (thinking)
         {
-            renderer.DrawCounts(drawList, countsRect, dark, light, over ? 0 : current,
-                !over && current == ReversiBoard.Light, dotPhase, Accent, context.Theme, scale);
+            context.Hud.Custom(ReversiRenderer.ThinkingWidth);
+        }
+
+        if (context.Hud.CustomPlaced(0))
+        {
+            renderer.DrawCounts(drawList, context.Hud.CustomRect(0), dark, light, over ? 0 : current, Accent,
+                context.Theme, scale);
+        }
+
+        if (thinking && context.Hud.CustomPlaced(1))
+        {
+            ReversiRenderer.DrawThinking(drawList, context.Hud.CustomRect(1), dotPhase, Accent, scale);
         }
 
         context.Hud.Best(context.Session.Best);
@@ -175,14 +185,8 @@ internal sealed class ReversiApp : IMiniGame
 
     private static GameGrid BuildGrid(Rect safe, float plateScale, Vector2 shake, float scale)
     {
-        var area = Grow(safe, plateScale).Inset(BoardPlate.Padding * scale).Translate(shake);
+        var area = StageLayout.Punched(safe, plateScale).Inset(BoardPlate.Padding * scale).Translate(shake);
         return GameGrid.Centered(area, ReversiBoard.Size, ReversiBoard.Size, 0f);
-    }
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
     }
 
     private void DrawTable(ImDrawListPtr drawList, GameGrid grid, in ReversiRenderState state,
@@ -368,8 +372,11 @@ internal sealed class ReversiApp : IMiniGame
             context.Fx.Vignette(Danger, 0.3f, 0.9f);
         }
 
-        var streakAfter = won ? context.Session.Best + 1 : 0;
-        context.Session.Finish(new GameOutcome(streakAfter, ScoreKind.Streak, StageSpec.StatIdFor(mode), won)
+        var statId = StageSpec.StatIdFor(mode);
+        var result = dark == light
+            ? GameOutcome.Drawn(statId)
+            : new GameOutcome(won ? context.Session.Best + 1 : 0, ScoreKind.Streak, statId, won);
+        context.Session.Finish(result
             .WithStat(L.Games.You, GameNumber.Label(dark))
             .WithStat(L.Games.Cpu, GameNumber.Label(light)));
     }

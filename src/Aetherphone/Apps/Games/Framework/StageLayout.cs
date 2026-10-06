@@ -19,7 +19,7 @@ internal static class StageLayout
     public const float SafeTopStandard = 96f;
     public const float SafeTopCompact = 56f;
     public const float SafeBottom = 16f;
-    public const float DPadBand = 110f;
+    public const float DPadBand = 140f;
     public const float ShooterBand = 70f;
 
     public static float SafeTop(HudStyle style) => style == HudStyle.Compact ? SafeTopCompact : SafeTopStandard;
@@ -31,8 +31,7 @@ internal static class StageLayout
         return new Rect(min, new Vector2(MathF.Max(min.X, max.X), MathF.Max(min.Y, max.Y)));
     }
 
-    public static Rect LegacyBody(Rect full, float scale) =>
-        new(new Vector2(full.Min.X, MathF.Min(full.Max.Y, full.Min.Y + ChromeBand * scale)), full.Max);
+    public static Rect Punched(Rect safe, float plateScale) => plateScale == 1f ? safe : safe.Scaled(plateScale);
 
     public static Vector2 BackChipCenter(Rect full, float scale) =>
         new(full.Min.X + ChipInsetX * scale, full.Min.Y + ChipCenterY * scale);

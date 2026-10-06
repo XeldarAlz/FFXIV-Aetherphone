@@ -45,12 +45,8 @@ internal sealed class ScoreUploadQueue
 
     public bool Enqueue(in ScoreSubmission submission, long nowUnix)
     {
-        if (!ScoreStatIds.TryFind(submission.StatId, out var stat) || submission.Value <= 0)
-        {
-            return false;
-        }
-
-        if ((submission.Kind == ScoreKind.Streak) != (stat.Kind == ScoreKind.Streak))
+        var statId = ScoreStatIds.LeaderboardId(submission.StatId, submission.GameId, submission.Kind);
+        if (statId.Length == 0 || submission.Value <= 0 || !ScoreStatIds.TryFind(statId, out var stat))
         {
             return false;
         }
@@ -59,7 +55,7 @@ internal sealed class ScoreUploadQueue
         for (var index = 0; index < pending.Count; index++)
         {
             var existing = pending[index];
-            if (!string.Equals(existing.StatId, submission.StatId, StringComparison.Ordinal))
+            if (!string.Equals(existing.StatId, statId, StringComparison.Ordinal))
             {
                 continue;
             }
@@ -74,14 +70,14 @@ internal sealed class ScoreUploadQueue
             existing.Seed = submission.Seed;
             existing.Daily = submission.Daily;
             existing.QueuedAtUnix = nowUnix;
-            failed.Remove(submission.StatId);
+            failed.Remove(statId);
             configuration.Save();
             return true;
         }
 
         pending.Add(new PendingScoreUpload
         {
-            StatId = submission.StatId,
+            StatId = statId,
             GameId = submission.GameId,
             Value = submission.Value,
             Kind = submission.Kind,
@@ -89,7 +85,7 @@ internal sealed class ScoreUploadQueue
             Daily = submission.Daily,
             QueuedAtUnix = nowUnix,
         });
-        failed.Remove(submission.StatId);
+        failed.Remove(statId);
         configuration.Save();
         return true;
     }

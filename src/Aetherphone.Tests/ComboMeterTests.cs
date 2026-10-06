@@ -103,6 +103,35 @@ public sealed class ComboMeterTests
     }
 
     [Fact]
+    public void AnUntimedMeterNeverDropsItsCountAndHidesTheTrack()
+    {
+        var meter = ComboMeter.Untimed();
+        meter.Hit();
+        meter.Hit();
+        meter.Update(100f);
+
+        Assert.False(meter.Timed);
+        Assert.Equal(2, meter.Count);
+        Assert.Equal(0f, meter.WindowFraction);
+        meter.Reset();
+        Assert.Equal(0, meter.Count);
+    }
+
+    [Fact]
+    public void AHitWithoutResetKeepsTheWindowDraining()
+    {
+        var meter = new ComboMeter(2f);
+        meter.Hit();
+        meter.Update(1f);
+        meter.Hit(resetWindow: false);
+
+        Assert.Equal(2, meter.Count);
+        Assert.InRange(meter.WindowFraction, 0.49f, 0.51f);
+        meter.Update(1.1f);
+        Assert.Equal(0, meter.Count);
+    }
+
+    [Fact]
     public void ResetClearsEverything()
     {
         var meter = ComboMeter.Create();

@@ -65,10 +65,14 @@ internal sealed class GameSession
 
     public GameStatsStore Stats => stats;
 
+    public ScoreKind Kind => Spec.KindFor(Mode);
+
+    public string LeaderboardStatId => ScoreStatIds.LeaderboardId(StatId, Spec.Id, Kind);
+
     public GameStart Start => new(Mode, Seed, Daily);
 
     public bool BeatingBest =>
-        Spec.Kind is ScoreKind.Score or ScoreKind.Level && Score > 0 && Score > Best;
+        Kind is ScoreKind.Score or ScoreKind.Level && Score > 0 && Score > Best;
 
     public int CountdownStep
     {
@@ -150,7 +154,7 @@ internal sealed class GameSession
         CountdownStepChanged = true;
         StatId = Spec.StatIdFor(Mode);
         LoadBest();
-        State = Spec.Countdown ? StageFlow.Countdown : StageFlow.Playing;
+        State = Spec.CountdownFor(Mode) ? StageFlow.Countdown : StageFlow.Playing;
     }
 
     public void Tick(float deltaSeconds)
@@ -227,10 +231,22 @@ internal sealed class GameSession
         Outcome = outcome;
         var statId = outcome.StatId.Length > 0 ? outcome.StatId : StatId;
         var value = outcome.Value;
+        var submits = true;
         switch (outcome.Kind)
         {
+            case ScoreKind.Time when !outcome.Won:
+                stats.CompleteDaily(statId);
+                NewBest = false;
+                submits = false;
+                break;
             case ScoreKind.Time:
                 NewBest = stats.SubmitTime(statId, value);
+                break;
+            case ScoreKind.Streak when outcome.IsDraw:
+                stats.CompleteDaily(statId);
+                value = stats.Get(statId).Streak;
+                NewBest = false;
+                submits = false;
                 break;
             case ScoreKind.Streak:
                 if (outcome.Won)
@@ -260,26 +276,34 @@ internal sealed class GameSession
             {
                 stats.SubmitScore(outcome.SecondaryStatId, outcome.SecondaryValue);
             }
+
+            sink.Submit(new ScoreSubmission(outcome.SecondaryStatId, outcome.SecondaryValue, outcome.SecondaryKind,
+                Seed, Daily, Spec.Id));
         }
 
         ResultValue = value;
         Score = outcome.Kind is ScoreKind.Score or ScoreKind.Level ? value : Score;
         StatId = statId;
         LoadBest();
-        sink.Submit(new ScoreSubmission(statId, value, outcome.Kind, Seed, Daily, Spec.Id));
+        if (submits)
+        {
+            sink.Submit(new ScoreSubmission(statId, value, outcome.Kind, Seed, Daily, Spec.Id));
+        }
+
         State = StageFlow.Result;
         RefreshRank();
     }
 
     public void RefreshRank()
     {
-        Rank = ranks.TryGetRank(StatId, out var rank) ? rank : GameRank.Unknown;
+        var leaderboardId = LeaderboardStatId;
+        Rank = leaderboardId.Length > 0 && ranks.TryGetRank(leaderboardId, out var rank) ? rank : GameRank.Unknown;
     }
 
     private void LoadBest()
     {
         var record = stats.Get(StatId);
-        Best = Spec.Kind switch
+        Best = Kind switch
         {
             ScoreKind.Time => record.BestTimeSeconds,
             ScoreKind.Streak => record.Streak,

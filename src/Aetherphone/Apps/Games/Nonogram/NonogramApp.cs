@@ -128,7 +128,7 @@ internal sealed class NonogramApp : IMiniGame
             elapsed += context.DeltaSeconds;
         }
 
-        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var area = StageLayout.Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
         var layout = NonogramRenderer.Layout(area, board, scale);
         var playing = !finished && context.Session.State == StageFlow.Playing;
         var hovered = playing ? HoveredCell(layout) : -1;
@@ -343,7 +343,7 @@ internal sealed class NonogramApp : IMiniGame
 
     private void CountDownToResult(in GameContext context)
     {
-        finishDelay -= context.RawDeltaSeconds;
+        finishDelay -= context.DeltaSeconds;
         if (finishDelay > 0f)
         {
             return;
@@ -358,14 +358,12 @@ internal sealed class NonogramApp : IMiniGame
 
     private void DrawHud(ImDrawListPtr drawList, float scale, in GameContext context)
     {
-        context.Hud.Timer(MathF.Floor(elapsed), 0f, false);
+        context.Hud.Clock(elapsed);
+        context.Hud.Best(context.Session.Best);
         var mistakesLabel = GameNumber.Label(board.Mistakes);
-        var best = context.Session.Best;
-        var bestLabel = best > 0 ? TimeText.MinutesSeconds(best) : string.Empty;
-        context.Hud.Custom(StatCapsule.Width(mistakesLabel, bestLabel, scale));
+        context.Hud.Custom(StatCapsule.Width(mistakesLabel, scale));
         var mistakeInk = board.Mistakes > 0 ? Danger : Accent;
-        StatCapsule.Draw(drawList, context.Hud.CustomRect, FontAwesomeIcon.Times, mistakesLabel, mistakeInk, bestLabel,
-            Accent, scale);
+        StatCapsule.Draw(drawList, context.Hud.CustomRect(0), FontAwesomeIcon.Times, mistakesLabel, mistakeInk, scale);
     }
 
     private int HoveredCell(in NonogramLayout layout)
@@ -388,11 +386,5 @@ internal sealed class NonogramApp : IMiniGame
                 cellPop[index] = MathF.Max(0f, cellPop[index] - deltaSeconds * CellPopSpeed);
             }
         }
-    }
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
     }
 }

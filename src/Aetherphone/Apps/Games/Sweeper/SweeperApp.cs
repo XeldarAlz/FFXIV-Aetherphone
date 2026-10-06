@@ -103,7 +103,7 @@ internal sealed class SweeperApp : IMiniGame
             elapsed += context.DeltaSeconds;
         }
 
-        var area = Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var area = StageLayout.Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
         var grid = GameGrid.Centered(area, board.Columns, board.Rows, SweeperRenderer.GapFraction);
         var playing = !finished && context.Session.State == StageFlow.Playing;
         var hovered = playing ? HoveredCell(grid) : -1;
@@ -273,7 +273,7 @@ internal sealed class SweeperApp : IMiniGame
             fx.Shockwave(center, 130f * scale, Flame, 0.6f, 3.6f);
         }
 
-        context.Session.Finish(new GameOutcome(0, ScoreKind.Time, context.Session.StatId, won: false)
+        context.Session.Finish(new GameOutcome((int)elapsed, ScoreKind.Time, context.Session.StatId, won: false)
             .WithStat(L.Games.Time, TimeText.MinutesSeconds((int)elapsed))
             .WithStat(L.Games.Mines, GameNumber.Label(board.MineCount))
             .WithStat(L.Sweeper.Flags, GameNumber.Label(board.FlagCount)));
@@ -281,14 +281,12 @@ internal sealed class SweeperApp : IMiniGame
 
     private void DrawHud(ImDrawListPtr drawList, float scale, in GameContext context)
     {
-        context.Hud.Timer(MathF.Floor(elapsed), 0f, false);
+        context.Hud.Clock(elapsed);
+        context.Hud.Best(context.Session.Best);
         var minesLabel = GameNumber.Label(board.MinesRemaining);
-        var best = context.Session.Best;
-        var bestLabel = best > 0 ? TimeText.MinutesSeconds(best) : string.Empty;
-        context.Hud.Custom(StatCapsule.Width(minesLabel, bestLabel, scale));
+        context.Hud.Custom(StatCapsule.Width(minesLabel, scale));
         var flagInk = board.MinesRemaining < 0 ? context.Theme.Danger : Accent;
-        StatCapsule.Draw(drawList, context.Hud.CustomRect, FontAwesomeIcon.Flag, minesLabel, flagInk, bestLabel,
-            Accent, scale);
+        StatCapsule.Draw(drawList, context.Hud.CustomRect(0), FontAwesomeIcon.Flag, minesLabel, flagInk, scale);
     }
 
     private int HoveredCell(in GameGrid grid)
@@ -322,10 +320,4 @@ internal sealed class SweeperApp : IMiniGame
     }
 
     private static Difficulty ModeDifficulty(int mode) => (Difficulty)Math.Clamp(mode, 0, Modes.Length - 1);
-
-    private static Rect Grow(Rect rect, float factor)
-    {
-        var half = rect.Size * 0.5f * factor;
-        return new Rect(rect.Center - half, rect.Center + half);
-    }
 }

@@ -137,13 +137,24 @@ internal sealed class BubbleShooterApp : IMiniGame
 
         board.Update(deltaSeconds);
         ReactToEvents(context);
-        if (!board.GameOver)
+        if (board.GameOver)
         {
-            return;
+            Finish(context.Session);
         }
+    }
 
+    public void OnQuit(GameSession session)
+    {
+        if (!finished && board.Score > 0)
+        {
+            Finish(session);
+        }
+    }
+
+    private void Finish(GameSession session)
+    {
         finished = true;
-        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+        session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
             .WithStat(L.Games.Combo, GameNumber.Label(board.BestCombo))
             .WithStat(L.BubbleShooter.Popped, GameNumber.Label(board.TotalPopped))
             .WithStat(L.BubbleShooter.Shots, GameNumber.Label(board.ShotsFired)));
@@ -152,8 +163,7 @@ internal sealed class BubbleShooterApp : IMiniGame
     private void HandleInput(Vector2 aim, in GameContext context)
     {
         var full = context.Full;
-        var hitMin = new Vector2(full.Min.X, full.Min.Y + StageLayout.ChromeBand * UiScale.Current);
-        if (!UiInteract.Hover(hitMin, full.Max))
+        if (!UiInteract.Hover(full.Min, full.Max) || context.ChromeHit(ImGui.GetMousePos()))
         {
             return;
         }
@@ -220,7 +230,7 @@ internal sealed class BubbleShooterApp : IMiniGame
         camera.Shake(MathF.Min(0.35f, 0.04f * board.PopCount));
         if (board.LastShotScore > 0)
         {
-            fx.AddText(GameNumber.Label(board.LastShotScore), burstScreen, Accent, 1.25f);
+            fx.AddText(GameNumber.Signed(board.LastShotScore), burstScreen, Accent, 1.25f);
         }
 
         if (board.TierUpThisShot)
@@ -264,7 +274,7 @@ internal sealed class BubbleShooterApp : IMiniGame
 
     private void DrawNextCapsule(ImDrawListPtr drawList, in GameContext context, float scale)
     {
-        var rect = context.Hud.CustomRect;
+        var rect = context.Hud.CustomRect(0);
         if (rect.Width <= 0f)
         {
             return;

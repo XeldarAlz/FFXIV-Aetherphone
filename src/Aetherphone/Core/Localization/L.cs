@@ -2177,6 +2177,92 @@ internal static class L
         public static readonly LocString SectionTours = new("changelog.sectionTours", "Setup and tours");
         public static readonly LocString SectionSounds = new("changelog.sectionSounds", "Sounds");
 
+        public static readonly LocString[] Release1200Games =
+        {
+            new("changelog.r1200.0",
+                "Overhauled every game in Games to run full screen on one shared stage: an intro with your best and rank, a 3, 2, 1 countdown for timed games, a pause menu, and a result card with your stats"),
+            new("changelog.r1200.1",
+                "Every game has its own living backdrop, from the felt under Chess and Solitaire to the sky over Flap and Hop and the neon grid under Tetris"),
+            new("changelog.r1200.2",
+                "Score, timer, lives, level, combo and best now sit in one HUD shared by every game"),
+            new("changelog.r1200.3",
+                "Overhauled Sudoku with pencil marks, same-digit highlight and a completion wave when you solve it"),
+            new("changelog.r1200.4",
+                "Overhauled Sweeper with chord clicks, hold to flag, and reveals that ripple out from your click"),
+            new("changelog.r1200.5",
+                "Overhauled Nonogram with drag painting, lines that cross themselves off once solved, and puzzles that never need a guess"),
+            new("changelog.r1200.6",
+                "Overhauled Flow with a level strip, one hint per level, and a shape on every endpoint so color is never the only clue"),
+            new("changelog.r1200.7",
+                "Overhauled Solitaire with cards that fly to the foundations, an Auto button once every card is face up, and a Vegas mode"),
+            new("changelog.r1200.8",
+                "Overhauled Pairs with cards that deal in from a tray, matched pairs that fly up into it, and a match streak"),
+            new("changelog.r1200.9",
+                "Overhauled Chess with a win streak of its own for Easy, Medium and Hard, captures that burst into shards, and a mating move in slow motion"),
+            new("changelog.r1200.10",
+                "Overhauled Reversi with a win streak of its own for Easy and Hard, flips that ripple out from your disc, and ghost discs on every legal move"),
+            new("changelog.r1200.11",
+                "Overhauled Tetris with gestures in place of the five buttons: drag to move, flick down to drop, tap to rotate, long press to hold"),
+            new("changelog.r1200.12",
+                "Overhauled 2048 with WASD and arrow keys, one undo per game, and a run that keeps going past 2048"),
+            new("changelog.r1200.13",
+                "Overhauled Water Sort with a real pour from tube to tube, sorted tubes that glow, and every level checked to be solvable"),
+            new("changelog.r1200.14",
+                "Overhauled Gem Swap with Classic and Blitz picked on the intro, slow motion on big cascades, and gems that bounce as they land"),
+            new("changelog.r1200.15",
+                "Overhauled Word Run with tiles that flip letter by letter, a keyboard that heats up with your streak, and a speed bonus bar"),
+            new("changelog.r1200.16",
+                "Overhauled Trivia with Everything, Mounts, Minions, Actions and Emotes picked on the intro, and a timer ring on every question"),
+            new("changelog.r1200.17",
+                "Overhauled Simon with pads that bloom when lit and a sequence that speeds up every five rounds"),
+            new("changelog.r1200.18",
+                "Overhauled Whack with a golden mole frenzy at combo 8 and bombs that chain into their neighbors"),
+            new("changelog.r1200.19",
+                "Overhauled Snake with a No walls mode, gold fruit, bombs that shrink you, and a speed trail"),
+            new("changelog.r1200.20",
+                "Overhauled Breakout with armored and explosive bricks, multiball and wide paddle drops, and a trail behind every ball"),
+            new("changelog.r1200.21",
+                "Overhauled Bubbles with an aim guide that bounces off the walls to the landing spot, and slow motion on big pops"),
+            new("changelog.r1200.22",
+                "Overhauled Crystal Drop with a preview of the next crystal, a jar that wobbles on every drop, and merges that bloom with the tier"),
+            new("changelog.r1200.23",
+                "Overhauled Stack with a camera that leads the tower upward, sliced slabs that tumble away, and a miss in slow motion"),
+            new("changelog.r1200.24",
+                "Overhauled Beat with note trails, lanes that heat up with your combo, and keys 1 to 4 or A, S, D, F"),
+            new("changelog.r1200.25",
+                "Overhauled Coil with chain clears that punch the camera and a warning pulse at the edges as the chain nears the drain"),
+            new("changelog.r1200.26",
+                "Overhauled Blade Throw with apples on the rim worth bonus points, boss wheels that reverse direction, and a sky that deepens toward night"),
+            new("changelog.r1200.27",
+                "Overhauled CapMan with fruit bonuses, a maze that pulses while the ghosts are frightened, and eaten ghosts that run home as eyes"),
+            new("changelog.r1200.28",
+                "Overhauled Invaders with bunkers that scorch as they chip away, a glowing saucer, and the last invader of a wave dying in slow motion"),
+            new("changelog.r1200.29",
+                "Overhauled Skyfall with a city skyline, explosions that light the ground, and a shield pickup every second wave"),
+            new("changelog.r1200.30",
+                "Overhauled Squadron with exhaust trails behind every fighter, kills that burst into shards, and a punch when your fighters join"),
+            new("changelog.r1200.31",
+                "Overhauled Hop with logs that splash when you land, cars that just miss you leaving wind streaks, and a sky that darkens every level"),
+            new("changelog.r1200.32",
+                "Overhauled Flap with bronze, silver and gold medals at 10, 25 and 50 pipes, a trail behind the bird, and a slow-motion tumble on a hit"),
+            new("changelog.r1200.33",
+                "Updraft and Swoop share the same sky as Flap and Hop, drifting from dawn to night as you climb or glide"),
+            new("changelog.r1200.34",
+                "Doom opens on the same stage as every other game, and its lobby no longer checks your disk every frame"),
+            new("changelog.r1200.35",
+                "Added a global leaderboard to every game: the top 50 worldwide or among your friends, all time or this week, from the intro, the pause menu, the result card or Records"),
+            new("changelog.r1200.36",
+                "Your rank shows on the result card, on each game's tile, and in a Your ranks list at the top of Records"),
+            new("changelog.r1200.37",
+                "Added Show me on leaderboards to Settings > Privacy; turned off, your bests stay on this phone"),
+            new("changelog.r1200.38",
+                "The daily challenge now deals everyone the same board, so a daily Sudoku, Sweeper or Tetris is the same puzzle for every player"),
+            new("changelog.r1200.39",
+                "Fixed Flow never showing a best, and Sweeper, Nonogram and Sudoku showing only their Easy time: the best across tiers now shows with its tier label"),
+            new("changelog.r1200.40",
+                "Fixed a tie in Reversi and a draw in Chess counting as a loss and ending your win streak"),
+        };
+
         public static readonly LocString[] Release1104Music =
         {
             new("changelog.r1104.0",
@@ -8008,7 +8094,6 @@ internal static class L
         public static readonly LocString Saved = new("games.saved", "Saved");
         public static readonly LocString Next = new("games.next", "Next");
         public static readonly LocString Paused = new("games.paused", "Paused");
-        public static readonly LocString PausedHint = new("games.pausedHint", "Click the phone to carry on");
         public static readonly LocString CoinTimerHint = new("games.coinTimerHint",
             "Aether Coin timer: stay in this game until the countdown ends to earn coins. It keeps counting while the game is paused.");
         public static readonly LocString CoinTimerDeepHint = new("games.coinTimerDeepHint",
@@ -8031,7 +8116,6 @@ internal static class L
         public static readonly LocString Watch = new("games.watch", "Watch");
         public static readonly LocString YourTurn = new("games.yourTurn", "Your Turn");
         public static readonly LocString Flap = new("games.flap", "Flap");
-        public static readonly LocString TapToStart = new("games.tapToStart", "Tap to start");
         public static readonly LocString Reversi = new("games.reversi", "Reversi");
         public static readonly LocString You = new("games.you", "You");
         public static readonly LocString Cpu = new("games.cpu", "CPU");
@@ -8070,7 +8154,6 @@ internal static class L
         public static readonly LocString CategoryActions = new("games.categoryActions", "Actions");
         public static readonly LocString CategoryEmotes = new("games.categoryEmotes", "Emotes");
         public static readonly LocString Skyfall = new("games.skyfall", "Skyfall");
-        public static readonly LocString Ammo = new("games.ammo", "Ammo");
         public static readonly LocString Invaders = new("games.invaders", "Invaders");
         public static readonly LocString CapMan = new("games.capman", "CapMan");
         public static readonly LocString Ready = new("games.ready", "Ready!");
@@ -8099,7 +8182,6 @@ internal static class L
         public static readonly LocString NotInWordList = new("games.notInWordList", "Not in the word list");
         public static readonly LocString NotEnoughLetters = new("games.notEnoughLetters", "Not enough letters");
         public static readonly LocString SolvedWord = new("games.solvedWord", "Solved!");
-        public static readonly LocString EndRun = new("games.endRun", "End run");
         public static readonly LocString Classic = new("games.classic", "Classic");
         public static readonly LocString Modern = new("games.modern", "Modern");
         public static readonly LocString TSpin = new("games.tSpin", "T-Spin");
@@ -8136,9 +8218,7 @@ internal static class L
         public static readonly LocString OnlineWins = new("games.onlineWins", "{0} wins");
         public static readonly LocString OnlineYourTurn = new("games.onlineYourTurn", "Your turn");
         public static readonly LocString OnlineTheirTurn = new("games.onlineTheirTurn", "{0}'s turn");
-        public static readonly LocString OnlineDraw = new("games.onlineDraw", "Draw");
         public static readonly LocString OnlinePass = new("games.onlinePass", "Pass");
-        public static readonly LocString OnlineCards = new("games.onlineCards", "{0} cards");
         public static readonly LocString OnlinePickColor = new("games.onlinePickColor", "Pick a color");
         public static readonly LocString OnlineWinner = new("games.onlineWinner", "{0} wins the round!");
         public static readonly LocString OnlineRoundVoid = new("games.onlineRoundVoid", "The round ended with nobody left");
@@ -8255,11 +8335,9 @@ internal static class L
         public static readonly LocString ThisWeek = new("stage.thisWeek", "This week");
         public static readonly LocString YourRanks = new("stage.yourRanks", "Your ranks");
         public static readonly LocString ShowOnLeaderboards = new("stage.showOnLeaderboards", "Show me on leaderboards");
-        public static readonly LocString Rank = new("stage.rank", "Rank");
-        public static readonly LocString Lives = new("stage.lives", "Lives");
-        public static readonly LocString Mode = new("stage.mode", "Mode");
         public static readonly LocString LevelShort = new("stage.levelShort", "LV {0}");
         public static readonly LocString Times = new("stage.times", "x{0}");
+        public static readonly LocString Plus = new("stage.plus", "+{0}");
     }
 
     internal static class Leaderboard

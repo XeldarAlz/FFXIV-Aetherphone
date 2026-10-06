@@ -206,6 +206,31 @@ public sealed class ChessRulesTests
         Assert.True(distinct.Count > 1);
     }
 
+    [Fact]
+    public void SameSeedReplaysIdentically()
+    {
+        var first = new ChessBoard();
+        var second = new ChessBoard();
+        first.Reset();
+        second.Reset();
+        var firstEngine = new ChessEngine();
+        var secondEngine = new ChessEngine();
+        firstEngine.Reseed(0xC0FFEE);
+        secondEngine.Reseed(0xC0FFEE);
+        for (var ply = 0; ply < 8; ply++)
+        {
+            firstEngine.Prepare(first);
+            secondEngine.Prepare(second);
+            var move = firstEngine.Search(1, 100_000, 5_000);
+            Assert.Equal(move, secondEngine.Search(1, 100_000, 5_000));
+            Assert.False(move.IsNone);
+            first.Make(move, out _);
+            second.Make(move, out _);
+        }
+
+        Assert.Equal(Snapshot(first), Snapshot(second));
+    }
+
     private const int D1 = 59;
     private const int H5 = 31;
     private const int F7 = 13;
