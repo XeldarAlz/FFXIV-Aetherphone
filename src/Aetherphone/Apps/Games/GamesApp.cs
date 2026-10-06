@@ -185,7 +185,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new LegacyGameAdapter(new WordRunApp(gameData), L.Games.WordRun, L.WordRun.Hook),
             new LegacyGameAdapter(new CoilApp(), L.Coil.Title, L.Coil.Hook),
             new UpdraftApp(),
-            new LegacyGameAdapter(new SwoopApp(), L.Swoop.Title, L.Swoop.Hook),
+            new SwoopApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

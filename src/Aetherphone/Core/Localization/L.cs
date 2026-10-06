@@ -8519,18 +8519,18 @@ internal static class L
     {
         public static readonly LocString Hook = new("swoop.hook", "Hold to dive down the slopes and let go to soar, chasing the islands before nightfall.");
         public static readonly LocString Title = new("swoop.title", "Swoop");
-        public static readonly LocString HowTo = new("swoop.howTo", "Hold to dive down the slopes, let go to soar");
         public static readonly LocString Smooth = new("swoop.smooth", "Smooth!");
         public static readonly LocString Thud = new("swoop.thud", "Thud!");
         public static readonly LocString AirTime = new("swoop.airTime", "Air {0}s");
-        public static readonly LocString Fever = new("swoop.fever", "Fever");
         public static readonly LocString FeverStart = new("swoop.feverStart", "Fever! Double points");
         public static readonly LocString Island = new("swoop.island", "Island {0}!");
         public static readonly LocString TimeBonus = new("swoop.timeBonus", "+{0}s");
         public static readonly LocString Nightfall = new("swoop.nightfall", "Nightfall");
-        public static readonly LocString ResultTitle = new("swoop.resultTitle", "Good night");
-        public static readonly LocString ResultLine = new("swoop.resultLine", "{0} m · Island {1} · Best air {2}s");
         public static readonly LocString Altitude = new("swoop.altitude", "{0} m");
+        public static readonly LocString Distance = new("swoop.distance", "Distance");
+        public static readonly LocString Islands = new("swoop.islands", "Islands");
+        public static readonly LocString Crystals = new("swoop.crystals", "Crystals");
+        public static readonly LocString FeverTime = new("swoop.feverTime", "Fever time");
     }
 
     internal static class Nameplate
