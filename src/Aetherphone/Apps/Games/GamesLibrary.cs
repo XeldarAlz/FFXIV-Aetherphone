@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Online;
+using Aetherphone.Apps.Games.Solitaire;
 using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Games;
@@ -451,8 +452,14 @@ internal sealed class GamesLibrary
             case "flow":
                 return BestLevelAcrossTiers(gameId, out value, out tier);
             case "memory":
-            case "solitaire":
                 return Time(stats.Get(gameId).BestTimeSeconds, out value);
+            case "solitaire":
+            {
+                var classic = Time(stats.Get(gameId).BestTimeSeconds, out value);
+                return classic != RecordKind.None
+                    ? classic
+                    : Score(stats.Get(SolitaireApp.VegasStatId).BestScore, out value);
+            }
             case "minesweeper":
             case "nonogram":
             case "sudoku":

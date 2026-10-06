@@ -8332,6 +8332,9 @@ internal static class L
     internal static class Solitaire
     {
         public static readonly LocString Hook = new("games.solitaire.hook", "Build the four foundations from ace to king by moving cards between the columns.");
+        public static readonly LocString Classic = new("games.solitaire.classic", "Classic");
+        public static readonly LocString Vegas = new("games.solitaire.vegas", "Vegas");
+        public static readonly LocString Auto = new("games.solitaire.auto", "Auto");
     }
 
     internal static class Simon
