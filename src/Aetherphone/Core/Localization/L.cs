@@ -8429,6 +8429,13 @@ internal static class L
     internal static class Squadron
     {
         public static readonly LocString Hook = new("games.squadron.hook", "Weave through the enemy formations and shoot them down stage after stage.");
+        public static readonly LocString StageNumber = new("games.squadron.stageNumber", "Stage {0}");
+        public static readonly LocString PerfectBonus = new("games.squadron.perfectBonus", "Perfect!  +{0}");
+        public static readonly LocString StagesCleared = new("games.squadron.stagesCleared", "Stages cleared");
+        public static readonly LocString Rescues = new("games.squadron.rescues", "Rescues");
+        public static readonly LocString Accuracy = new("games.squadron.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.squadron.percent", "{0}%");
+        public static readonly LocString Bonus = new("games.squadron.bonus", "+{0}");
     }
 
     internal static class Doom
