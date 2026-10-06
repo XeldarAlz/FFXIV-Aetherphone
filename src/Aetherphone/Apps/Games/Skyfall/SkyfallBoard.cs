@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.Skyfall;
 
 internal struct Meteor
@@ -23,6 +25,8 @@ internal struct Blast
     public float Radius;
     public bool Growing;
     public float Hold;
+    public bool FromShot;
+    public bool Scored;
 }
 
 internal sealed class SkyfallBoard
@@ -43,6 +47,11 @@ internal sealed class SkyfallBoard
     public const int MaxMeteors = 64;
     public const int MaxInterceptors = 32;
     public const int MaxBlasts = 96;
+    public const int ShieldWaveInterval = 2;
+    public const float ShieldFallSpeed = 6f;
+    public const float ShieldSpawnDelay = 2f;
+    public const float ShieldRadius = 3f;
+    public const float MeteorSpawnY = -4f;
     public static readonly float[] CityX = { 9f, 22f, 35f, 65f, 78f, 91f };
     private const float ShotSpeed = 110f;
     private const float BlastGrowth = 30f;
@@ -55,7 +64,8 @@ internal sealed class SkyfallBoard
     private const float SplitChance = 0.25f;
     private const float BatteryTargetChance = 0.15f;
     private const float FirstSpawnDelay = 0.6f;
-    private const float MeteorSpawnY = -4f;
+    private const float ShieldSpawnMinX = 15f;
+    private const float ShieldSpawnMaxX = 85f;
     private const float MinimumShotDistanceSquared = 1f;
     private readonly bool[] cities = new bool[CityCount];
     private readonly Meteor[] meteors = new Meteor[MaxMeteors];
@@ -63,10 +73,11 @@ internal sealed class SkyfallBoard
     private readonly Blast[] blasts = new Blast[MaxBlasts];
     private readonly Vector2[] destroyedPositions = new Vector2[MaxMeteors];
     private readonly Vector2[] blastSpawnPositions = new Vector2[MaxBlasts];
-    private readonly Random random = new();
+    private GameRandom random;
     private int pendingSpawns;
     private float spawnTimer;
     private float waveBreak;
+    private float shieldSpawnTimer = -1f;
     public int Score { get; private set; }
     public int Wave { get; private set; }
     public int Ammo { get; private set; }
@@ -78,9 +89,18 @@ internal sealed class SkyfallBoard
     public int BlastCount { get; private set; }
     public int DestroyedCount { get; private set; }
     public int BlastSpawnCount { get; private set; }
+    public int ShotsFired { get; private set; }
+    public int ShotsHit { get; private set; }
+    public int MeteorsDestroyed { get; private set; }
+    public int ShieldCharges { get; private set; }
+    public bool ShieldFalling { get; private set; }
+    public Vector2 ShieldPosition { get; private set; }
     public int CityLostThisFrame { get; private set; } = -1;
+    public int ShieldAbsorbedCityThisFrame { get; private set; } = -1;
+    public bool ShieldCollectedThisFrame { get; private set; }
     public bool WaveStartedThisFrame { get; private set; }
     public bool WaveClearedThisFrame { get; private set; }
+    public bool LastMeteorDestroyedThisFrame { get; private set; }
     public bool ShotFiredThisFrame { get; private set; }
     public bool DryFireThisFrame { get; private set; }
     public bool InWaveBreak => waveBreak > 0f;
@@ -93,8 +113,9 @@ internal sealed class SkyfallBoard
 
     public static Vector2 CityCenter(int index) => new(CityX[index], GroundY);
 
-    public void StartGame()
+    public void StartGame(GameRandom seededRandom)
     {
+        random = seededRandom;
         Score = 0;
         Wave = 0;
         GameOver = false;
@@ -109,6 +130,11 @@ internal sealed class SkyfallBoard
         BlastCount = 0;
         waveBreak = 0f;
         LastWaveBonus = 0;
+        ShotsFired = 0;
+        ShotsHit = 0;
+        MeteorsDestroyed = 0;
+        ShieldCharges = 0;
+        ShieldFalling = false;
         ClearFrameEvents();
         StartWave();
     }
@@ -139,6 +165,7 @@ internal sealed class SkyfallBoard
         }
 
         Ammo--;
+        ShotsFired++;
         interceptors[InterceptorCount++] = new Interceptor
         {
             Position = origin,
@@ -170,6 +197,7 @@ internal sealed class SkyfallBoard
         }
 
         Spawn(deltaSeconds);
+        TickShield(deltaSeconds);
         MoveInterceptors(deltaSeconds);
         MoveBlasts(deltaSeconds);
         MoveMeteors(deltaSeconds);
@@ -183,13 +211,18 @@ internal sealed class SkyfallBoard
 
     public static int WaveBonus(int citiesLeft, int ammo) => citiesLeft * CityBonus + ammo * AmmoBonus;
 
+    public static bool WaveCarriesShield(int wave) => wave % ShieldWaveInterval == 0;
+
     private void ClearFrameEvents()
     {
         DestroyedCount = 0;
         BlastSpawnCount = 0;
         CityLostThisFrame = -1;
+        ShieldAbsorbedCityThisFrame = -1;
+        ShieldCollectedThisFrame = false;
         WaveStartedThisFrame = false;
         WaveClearedThisFrame = false;
+        LastMeteorDestroyedThisFrame = false;
         ShotFiredThisFrame = false;
         DryFireThisFrame = false;
     }
@@ -200,6 +233,7 @@ internal sealed class SkyfallBoard
         Ammo = AmmoPerWave;
         pendingSpawns = MeteorsForWave(Wave);
         spawnTimer = FirstSpawnDelay;
+        shieldSpawnTimer = WaveCarriesShield(Wave) && ShieldCharges == 0 ? ShieldSpawnDelay : -1f;
         WaveStartedThisFrame = true;
     }
 
@@ -207,6 +241,8 @@ internal sealed class SkyfallBoard
     {
         LastWaveBonus = WaveBonus(CitiesLeft, Ammo);
         Score += LastWaveBonus;
+        ShieldFalling = false;
+        shieldSpawnTimer = -1f;
         WaveClearedThisFrame = true;
         waveBreak = WaveBreakSeconds;
     }
@@ -237,6 +273,37 @@ internal sealed class SkyfallBoard
             CanSplit = Wave >= SplitFromWave && Chance() < SplitChance,
             SplitY = 40f + Chance() * 30f,
         };
+    }
+
+    private void TickShield(float deltaSeconds)
+    {
+        if (ShieldFalling)
+        {
+            var position = ShieldPosition;
+            position.Y += ShieldFallSpeed * deltaSeconds;
+            ShieldPosition = position;
+            if (position.Y >= GroundY)
+            {
+                ShieldFalling = false;
+            }
+
+            return;
+        }
+
+        if (shieldSpawnTimer < 0f)
+        {
+            return;
+        }
+
+        shieldSpawnTimer -= deltaSeconds;
+        if (shieldSpawnTimer > 0f)
+        {
+            return;
+        }
+
+        shieldSpawnTimer = -1f;
+        ShieldFalling = true;
+        ShieldPosition = new Vector2(ShieldSpawnMinX + Chance() * (ShieldSpawnMaxX - ShieldSpawnMinX), MeteorSpawnY);
     }
 
     private Vector2 PickTarget()
@@ -273,7 +340,7 @@ internal sealed class SkyfallBoard
             ref var shot = ref interceptors[index];
             if (Vector2.Distance(shot.Position, shot.Target) <= step)
             {
-                SpawnBlast(shot.Target);
+                SpawnBlast(shot.Target, true);
                 interceptors[index] = interceptors[--InterceptorCount];
                 continue;
             }
@@ -311,29 +378,59 @@ internal sealed class SkyfallBoard
                 }
             }
 
-            SweepMeteors(blast.Center, blast.Radius);
+            SweepMeteors(ref blast);
+            CatchShield(in blast);
         }
     }
 
-    private void SweepMeteors(Vector2 center, float radius)
+    private void SweepMeteors(ref Blast blast)
     {
-        var radiusSquared = radius * radius;
+        var radiusSquared = blast.Radius * blast.Radius;
         for (var index = MeteorCount - 1; index >= 0; index--)
         {
             var position = meteors[index].Position;
-            if (Vector2.DistanceSquared(position, center) > radiusSquared)
+            if (Vector2.DistanceSquared(position, blast.Center) > radiusSquared)
             {
                 continue;
             }
 
             Score += MeteorPoints;
+            MeteorsDestroyed++;
+            if (blast.FromShot && !blast.Scored)
+            {
+                blast.Scored = true;
+                ShotsHit++;
+            }
+
             if (DestroyedCount < destroyedPositions.Length)
             {
                 destroyedPositions[DestroyedCount++] = position;
             }
 
             meteors[index] = meteors[--MeteorCount];
+            if (MeteorCount == 0 && pendingSpawns == 0)
+            {
+                LastMeteorDestroyedThisFrame = true;
+            }
         }
+    }
+
+    private void CatchShield(in Blast blast)
+    {
+        if (!ShieldFalling)
+        {
+            return;
+        }
+
+        var reach = blast.Radius + ShieldRadius;
+        if (Vector2.DistanceSquared(ShieldPosition, blast.Center) > reach * reach)
+        {
+            return;
+        }
+
+        ShieldFalling = false;
+        ShieldCharges = 1;
+        ShieldCollectedThisFrame = true;
     }
 
     private void MoveMeteors(float deltaSeconds)
@@ -355,7 +452,7 @@ internal sealed class SkyfallBoard
 
             var impactX = meteor.Position.X;
             meteors[index] = meteors[--MeteorCount];
-            SpawnBlast(new Vector2(impactX, GroundY));
+            SpawnBlast(new Vector2(impactX, GroundY), false);
             Impact(impactX);
         }
     }
@@ -378,7 +475,7 @@ internal sealed class SkyfallBoard
         };
     }
 
-    private void SpawnBlast(Vector2 center)
+    private void SpawnBlast(Vector2 center, bool fromShot)
     {
         if (BlastSpawnCount < blastSpawnPositions.Length)
         {
@@ -396,6 +493,8 @@ internal sealed class SkyfallBoard
             Radius = BlastStartRadius,
             Growing = true,
             Hold = 0f,
+            FromShot = fromShot,
+            Scored = false,
         };
     }
 
@@ -405,6 +504,13 @@ internal sealed class SkyfallBoard
         {
             if (!cities[cityIndex] || MathF.Abs(CityX[cityIndex] - x) > CityHalfWidth)
             {
+                continue;
+            }
+
+            if (ShieldCharges > 0)
+            {
+                ShieldCharges--;
+                ShieldAbsorbedCityThisFrame = cityIndex;
                 continue;
             }
 
@@ -419,5 +525,5 @@ internal sealed class SkyfallBoard
         }
     }
 
-    private float Chance() => (float)random.NextDouble();
+    private float Chance() => random.NextFloat();
 }
