@@ -11,6 +11,7 @@ public sealed class GameSessionTests
     {
         public List<GameStatRecord> GameStats { get; } = new();
         public List<GameModeChoice> GameModeChoices { get; } = new();
+        public List<GameLevelProgress> GameLevelProgress { get; } = new();
         public int DailyChallengeStreak { get; set; }
         public int DailyChallengeLastDay { get; set; }
         public string WordRunBank { get; set; } = string.Empty;
@@ -417,5 +418,202 @@ public sealed class GameSessionTests
         Assert.Equal(8, session.Rank.Rank);
         Assert.True(session.Rank.IsRanked);
         Assert.True(GameOverlay.IsTopTen(session.Rank));
+    }
+
+    private static readonly LocString[] PackModes = { new("t.levels", "Levels"), new("t.endless", "Endless") };
+    private static readonly string[] PackStatIds = { "fling", "fling.endless" };
+    private static readonly bool[] PackLevelModes = { true, false };
+
+    private static GameSpec LevelSpec(ScoreKind kind = ScoreKind.Level, int levels = 40, bool modes = false) =>
+        new("fling", new LocString("t.fling", "Fling"), GameGenre.Puzzle, kind: kind, levelCount: levels,
+            modes: modes ? PackModes : null, modeStatIds: modes ? PackStatIds : null,
+            levelModes: modes ? PackLevelModes : null);
+
+    [Fact]
+    public void LevelProgressKeepsTheBestStarsPerLevelAndPersists()
+    {
+        var configuration = new FakeStatsConfiguration();
+        var stats = new GameStatsStore(configuration);
+
+        Assert.True(stats.SetStars("fling", 1, 2));
+        Assert.False(stats.SetStars("fling", 1, 1));
+        Assert.False(stats.SetStars("fling", 2, 0));
+        Assert.True(stats.SetStars("fling", 1, 3));
+        Assert.True(stats.SetStars("fling", 3, 1));
+        Assert.True(stats.SetStars("fling", 4, 9));
+
+        Assert.Single(configuration.GameLevelProgress);
+        Assert.Equal("fling", configuration.GameLevelProgress[0].GameId);
+        Assert.Equal("3013", configuration.GameLevelProgress[0].Stars);
+        Assert.Equal(4, configuration.Saves);
+        var reloaded = new GameStatsStore(configuration);
+        Assert.Equal(3, reloaded.Stars("fling", 1));
+        Assert.Equal(0, reloaded.Stars("fling", 2));
+        Assert.Equal(3, reloaded.Stars("fling", 4));
+        Assert.Equal(0, reloaded.Stars("fling", 41));
+        Assert.Equal(7, reloaded.TotalStars("fling"));
+        Assert.Equal(0, reloaded.TotalStars("snip"));
+    }
+
+    [Fact]
+    public void ALevelUnlocksOnceTheLevelBeforeHoldsAStar()
+    {
+        var stats = new GameStatsStore(new FakeStatsConfiguration());
+
+        Assert.True(stats.IsUnlocked("fling", 1));
+        Assert.False(stats.IsUnlocked("fling", 2));
+        Assert.False(stats.IsUnlocked("fling", 0));
+        Assert.Equal(1, stats.HighestUnlocked("fling"));
+        Assert.Equal(1, stats.NextLevel("fling", 40));
+        Assert.Equal(0, stats.NextLevel("fling", 0));
+
+        stats.SetStars("fling", 1, 3);
+        stats.SetStars("fling", 2, 1);
+
+        Assert.True(stats.IsUnlocked("fling", 3));
+        Assert.False(stats.IsUnlocked("fling", 4));
+        Assert.Equal(3, stats.HighestUnlocked("fling", 40));
+        Assert.Equal(2, stats.HighestUnlocked("fling", 2));
+        Assert.Equal(3, stats.NextLevel("fling", 40));
+        Assert.Equal(2, stats.NextLevel("fling", 2));
+    }
+
+    [Fact]
+    public void BeginStartsTheNextUnclearedLevelAndHandsItToTheGame()
+    {
+        var session = Build(out var configuration, out _);
+        configuration.GameLevelProgress.Add(new GameLevelProgress { GameId = "fling", Stars = "3210" });
+
+        session.Begin(LevelSpec(), new GameStart(0, 5, false));
+
+        Assert.True(session.HasLevels);
+        Assert.Equal(40, session.LevelCount);
+        Assert.Equal(4, session.Level);
+        Assert.Equal(6, session.TotalStars);
+        Assert.False(session.SelectLevel(6));
+        Assert.True(session.SelectLevel(2));
+        session.Play();
+        Assert.Equal(2, session.Start.Level);
+        Assert.False(session.SelectLevel(1));
+    }
+
+    [Fact]
+    public void AStarRunRecordsTheLevelAndSubmitsTheTotalStars()
+    {
+        var session = Build(out _, out var sink);
+        session.Begin(LevelSpec(), new GameStart(0, 5, false));
+        session.Play();
+        session.Report(1200);
+        Assert.False(session.BeatingBest);
+
+        session.Finish(new GameOutcome(1200, ScoreKind.Level, "fling").WithStars(2));
+
+        Assert.Equal(2, session.LevelStars);
+        Assert.Equal(2, session.Stats.Stars("fling", 1));
+        Assert.Equal(1, sink.Count);
+        Assert.Equal(2, sink.Last.Value);
+        Assert.Equal(ScoreKind.Level, sink.Last.Kind);
+        Assert.Equal(2, session.ResultValue);
+        Assert.True(session.NewBest);
+        Assert.True(session.AdvanceLevel());
+        Assert.Equal(2, session.Level);
+
+        session.Play();
+        Assert.Equal(GameOutcome.NoStars, session.LevelStars);
+        session.Finish(new GameOutcome(900, ScoreKind.Level, "fling").WithStars(3));
+
+        Assert.Equal(5, sink.Last.Value);
+        Assert.Equal(5, session.Best);
+        Assert.Equal(3, session.Stats.Stars("fling", 2));
+    }
+
+    [Fact]
+    public void ReplayingALevelForFewerStarsKeepsTheBestAndTheTotal()
+    {
+        var session = Build(out _, out var sink);
+        session.Begin(LevelSpec(), new GameStart(0, 5, false));
+        session.Play();
+        session.Finish(new GameOutcome(0, ScoreKind.Level, "fling").WithStars(3));
+        session.Play();
+
+        session.Finish(new GameOutcome(0, ScoreKind.Level, "fling").WithStars(1));
+
+        Assert.Equal(3, session.Stats.Stars("fling", 1));
+        Assert.Equal(3, sink.Last.Value);
+        Assert.False(session.NewBest);
+        Assert.Equal(1, session.LevelStars);
+    }
+
+    [Fact]
+    public void NextLevelIsOfferedOnlyWhenTheRunEarnedStars()
+    {
+        var failed = Build(out _, out _);
+        failed.Begin(LevelSpec(), new GameStart(0, 5, false));
+        failed.Play();
+        failed.Finish(new GameOutcome(0, ScoreKind.Level, "fling", won: false).WithStars(0));
+        Assert.False(failed.CanAdvance);
+        Assert.False(failed.AdvanceLevel());
+        Assert.Equal(1, failed.Level);
+
+        var silent = Build(out _, out _);
+        silent.Begin(LevelSpec(), new GameStart(0, 5, false));
+        silent.Play();
+        silent.Finish(new GameOutcome(0, ScoreKind.Level, "fling"));
+        Assert.Equal(GameOutcome.NoStars, silent.LevelStars);
+        Assert.False(silent.CanAdvance);
+
+        var last = Build(out _, out _);
+        last.Begin(LevelSpec(levels: 1), new GameStart(0, 5, false));
+        last.Play();
+        last.Finish(new GameOutcome(0, ScoreKind.Level, "fling").WithStars(3));
+        Assert.False(last.CanAdvance);
+
+        var cleared = Build(out _, out _);
+        cleared.Begin(LevelSpec(), new GameStart(0, 5, false));
+        cleared.Play();
+        Assert.False(cleared.CanAdvance);
+        cleared.Finish(new GameOutcome(0, ScoreKind.Level, "fling").WithStars(1));
+        Assert.True(cleared.CanAdvance);
+
+        var plain = Build(out _, out _);
+        plain.Begin(Spec(), new GameStart(0, 5, false));
+        plain.Play();
+        plain.Finish(new GameOutcome(40, ScoreKind.Score, "tap").WithStars(3));
+        Assert.False(plain.HasLevels);
+        Assert.Equal(0, plain.Level);
+        Assert.False(plain.CanAdvance);
+        Assert.Equal(40, plain.ResultValue);
+    }
+
+    [Fact]
+    public void ScoreKindLevelRunsRecordStarsButKeepSubmittingTheirScore()
+    {
+        var session = Build(out _, out var sink);
+        session.Begin(LevelSpec(ScoreKind.Score), new GameStart(0, 5, false));
+        session.Play();
+
+        session.Finish(new GameOutcome(48000, ScoreKind.Score, "fling").WithStars(2));
+
+        Assert.Equal(48000, sink.Last.Value);
+        Assert.Equal(2, session.Stats.Stars("fling", 1));
+        Assert.True(session.CanAdvance);
+    }
+
+    [Fact]
+    public void LevelModesKeepThePackOutOfTheOtherModes()
+    {
+        var session = Build(out _, out var sink);
+        session.Begin(LevelSpec(modes: true), new GameStart(0, 5, false));
+        Assert.Equal(1, session.Level);
+
+        session.SelectMode(1);
+
+        Assert.False(session.HasLevels);
+        Assert.Equal(0, session.Level);
+        session.Play();
+        session.Finish(new GameOutcome(12, ScoreKind.Level, "fling.endless").WithStars(3));
+        Assert.Equal(0, session.Stats.TotalStars("fling"));
+        Assert.Equal(12, sink.Last.Value);
+        Assert.Equal(GameOutcome.NoStars, session.LevelStars);
     }
 }

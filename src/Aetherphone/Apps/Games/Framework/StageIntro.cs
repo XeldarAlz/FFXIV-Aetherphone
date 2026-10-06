@@ -14,6 +14,7 @@ internal enum IntroAction : byte
     None,
     Play,
     Leaderboard,
+    Levels,
 }
 
 internal sealed class StageIntro
@@ -22,11 +23,8 @@ internal sealed class StageIntro
     private const float EntranceSpeed = 1.6f;
     private const float PlayWidth = 220f;
     private const float PlayHeight = 52f;
-    private const float PillHeight = 28f;
-    private const float PillPadX = 12f;
     private const float PillGap = 8f;
-    private const float IconSize = 11f;
-    private const float IconGap = 5f;
+    private const float TagPadX = 12f;
     private const float StripWidth = 280f;
     private const float StripHeight = 30f;
     private const float HookMaxWidth = 300f;
@@ -34,12 +32,16 @@ internal sealed class StageIntro
     private const float LiftDistance = 14f;
     private const int StackSlots = 7;
     private const string ModeStripId = "stage.mode";
-    private static readonly TextStyle PillStyle = TextStyles.FootnoteEmphasized;
+    private static readonly TextStyle TagStyle = TextStyles.FootnoteEmphasized;
+    private static readonly TextStyle LevelStyle = TextStyles.Title3;
 
     private string[] modeLabels = Array.Empty<string>();
     private LanguageInfo? modeLanguage;
     private RankText rankText = new();
+    private LabelSlot levelLabel;
+    private LabelPairSlot starsLabel;
     private float entrance;
+    private int slotCount = StackSlots;
 
     public void Begin(in GameSpec spec)
     {
@@ -72,9 +74,10 @@ internal sealed class StageIntro
         var hookWidth = MathF.Min(safe.Width, HookMaxWidth * scale);
         var hook = spec.Hook.HasValue ? Loc.T(spec.Hook.Value) : string.Empty;
         var hookHeight = hook.Length > 0 ? Typography.MeasureWrappedBlock(hook, TextStyles.Subheadline, hookWidth).Y : 0f;
-        var dailyHeight = session.Daily ? PillHeight * scale : 0f;
-        var pillHeight = PillHeight * scale;
+        var dailyHeight = session.Daily ? StagePill.Height * scale : 0f;
+        var pillHeight = StagePill.Height * scale;
         var stripHeight = spec.HasModes ? StripHeight * scale : 0f;
+        var levelHeight = session.HasLevels ? Typography.LineHeight(LevelStyle) : 0f;
         var playHeight = PlayHeight * scale;
         var leaderboardHeight = Button.Height(ButtonSize.Small) * scale;
         var gapSm = Metrics.Space.Sm * scale;
@@ -95,6 +98,13 @@ internal sealed class StageIntro
         if (spec.HasModes)
         {
             stackHeight += gapLg + stripHeight;
+        }
+
+        slotCount = StackSlots;
+        if (session.HasLevels)
+        {
+            stackHeight += levelHeight + gapMd;
+            slotCount++;
         }
 
         var top = MathF.Max(safe.Min.Y, full.Center.Y - stackHeight * 0.5f);
@@ -146,6 +156,15 @@ internal sealed class StageIntro
         }
 
         top += gapXl;
+        if (session.HasLevels)
+        {
+            var levelPhase = Phase(slot++);
+            Typography.DrawCentered(drawList,
+                new Vector2(centerX, top + levelHeight * 0.5f + Lift(levelPhase, scale)),
+                levelLabel.Get(L.Stage.LevelNumber, session.Level), ink with { W = ink.W * levelPhase }, LevelStyle);
+            top += levelHeight + gapMd;
+        }
+
         var playPhase = Phase(slot++);
         if (playPhase > 0f)
         {
@@ -159,11 +178,15 @@ internal sealed class StageIntro
         }
 
         top += playHeight + gapMd;
-        var leaderboardPhase = Phase(slot);
-        if (leaderboardPhase > 0.6f &&
-            TextButton.Draw(new Vector2(centerX, top + leaderboardHeight * 0.5f), Loc.T(L.Stage.Leaderboard), muted, scale))
+        var linksPhase = Phase(slot);
+        if (linksPhase > 0.6f)
         {
-            action = IntroAction.Leaderboard;
+            var linksAction = DrawLinks(new Vector2(centerX, top + leaderboardHeight * 0.5f), session.HasLevels, muted,
+                scale);
+            if (linksAction != IntroAction.None)
+            {
+                action = linksAction;
+            }
         }
 
         if (action == IntroAction.None && entrance >= 0.5f && GameInput.Pressed(ImGuiKey.Space, ImGuiKey.Enter))
@@ -174,9 +197,31 @@ internal sealed class StageIntro
         return action;
     }
 
-    private float Phase(int slot) => Easing.EaseOutCubic(GameJuice.Stagger(entrance, slot, StackSlots));
+    private float Phase(int slot) => Easing.EaseOutCubic(GameJuice.Stagger(entrance, slot, slotCount));
 
     private static float Lift(float phase, float scale) => (1f - phase) * LiftDistance * scale;
+
+    private static IntroAction DrawLinks(Vector2 center, bool levels, Vector4 muted, float scale)
+    {
+        var leaderboard = Loc.T(L.Stage.Leaderboard);
+        if (!levels)
+        {
+            return TextButton.Draw(center, leaderboard, muted, scale) ? IntroAction.Leaderboard : IntroAction.None;
+        }
+
+        var levelsLabel = Loc.T(L.Stage.Levels);
+        var levelsWidth = TextButton.Width(levelsLabel, scale);
+        var leaderboardWidth = TextButton.Width(leaderboard, scale);
+        var gap = Metrics.Space.Sm * scale;
+        var left = center.X - (levelsWidth + gap + leaderboardWidth) * 0.5f;
+        if (TextButton.Draw(new Vector2(left + levelsWidth * 0.5f, center.Y), levelsLabel, muted, scale))
+        {
+            return IntroAction.Levels;
+        }
+
+        var leaderboardCenter = new Vector2(left + levelsWidth + gap + leaderboardWidth * 0.5f, center.Y);
+        return TextButton.Draw(leaderboardCenter, leaderboard, muted, scale) ? IntroAction.Leaderboard : IntroAction.None;
+    }
 
     private void SyncModeLabels(in GameSpec spec)
     {
@@ -200,33 +245,26 @@ internal sealed class StageIntro
             return;
         }
 
-        var bestValue = BestLabel(session);
-        var hasBest = bestValue.Length > 0;
+        var stars = session.HasLevels;
+        var recordValue = stars
+            ? starsLabel.Get(L.Stage.StarsOf, session.TotalStars, session.LevelCount * GameStatsStore.MaxStars)
+            : BestLabel(session);
+        var hasRecord = recordValue.Length > 0;
         var rankLine = rankText.IntroLine;
-        var iconSpan = (IconSize + IconGap) * scale;
-        var pad = PillPadX * scale;
-        var bestWidth = hasBest ? pad * 2f + iconSpan + Typography.Measure(bestValue, PillStyle).X : 0f;
-        var rankWidth = pad * 2f + Typography.Measure(rankLine, PillStyle).X;
-        var gap = hasBest ? PillGap * scale : 0f;
-        var total = bestWidth + gap + rankWidth;
-        var height = PillHeight * scale;
-        var left = center.X - total * 0.5f;
-        if (hasBest)
+        var recordWidth = hasRecord ? StagePill.Width(recordValue, true, scale) : 0f;
+        var rankWidth = StagePill.Width(rankLine, false, scale);
+        var gap = hasRecord ? PillGap * scale : 0f;
+        var left = center.X - (recordWidth + gap + rankWidth) * 0.5f;
+        if (hasRecord)
         {
-            var rect = new Rect(new Vector2(left, center.Y - height * 0.5f), new Vector2(left + bestWidth, center.Y + height * 0.5f));
-            Material.Frosted(drawList, rect.Min, rect.Max, height * 0.5f, scale, 0.9f * phase);
-            ProgressRing.CenterIcon(drawList, new Vector2(rect.Min.X + pad + IconSize * scale * 0.5f, center.Y),
-                FontAwesomeIcon.Trophy, accent with { W = phase }, IconSize * scale);
-            Typography.Draw(drawList,
-                new Vector2(rect.Min.X + pad + iconSpan, center.Y - Typography.LineHeight(PillStyle) * 0.5f), bestValue,
-                theme.TextStrong with { W = phase }, PillStyle);
-            left += bestWidth + gap;
+            var record = StagePill.Around(new Vector2(left + recordWidth * 0.5f, center.Y), recordWidth, scale);
+            StagePill.Draw(drawList, record, stars ? FontAwesomeIcon.Star : FontAwesomeIcon.Trophy,
+                stars ? GamePalette.Star : accent, recordValue, theme.TextStrong, phase, scale);
+            left += recordWidth + gap;
         }
 
-        var rankRect = new Rect(new Vector2(left, center.Y - height * 0.5f), new Vector2(left + rankWidth, center.Y + height * 0.5f));
-        Material.Frosted(drawList, rankRect.Min, rankRect.Max, height * 0.5f, scale, 0.9f * phase);
-        Typography.Draw(drawList, new Vector2(rankRect.Min.X + pad, center.Y - Typography.LineHeight(PillStyle) * 0.5f),
-            rankLine, theme.TextMuted with { W = phase }, PillStyle);
+        var rank = StagePill.Around(new Vector2(left + rankWidth * 0.5f, center.Y), rankWidth, scale);
+        StagePill.Draw(drawList, rank, rankLine, theme.TextMuted, phase, scale);
     }
 
     private static string BestLabel(GameSession session) =>
@@ -240,10 +278,11 @@ internal sealed class StageIntro
             return;
         }
 
-        var half = new Vector2(Typography.Measure(text, PillStyle).X * 0.5f + PillPadX * scale, PillHeight * scale * 0.5f);
+        var half = new Vector2(Typography.Measure(text, TagStyle).X * 0.5f + TagPadX * scale,
+            StagePill.Height * scale * 0.5f);
         Squircle.Fill(drawList, center - half, center + half, half.Y, ImGui.GetColorU32(accent with { W = 0.26f * phase }));
         Squircle.Stroke(drawList, center - half, center + half, half.Y, ImGui.GetColorU32(accent with { W = 0.5f * phase }),
             1f * scale);
-        Typography.DrawCentered(drawList, center, text, GamePalette.Lighten(accent, 0.45f) with { W = phase }, PillStyle);
+        Typography.DrawCentered(drawList, center, text, GamePalette.Lighten(accent, 0.45f) with { W = phase }, TagStyle);
     }
 }

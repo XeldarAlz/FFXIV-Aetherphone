@@ -113,6 +113,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private readonly StageIntro intro = new();
     private readonly StagePause pause = new();
     private readonly StageChrome chrome = new();
+    private readonly LevelSelect levelSelect = new();
     private Rect screenRect;
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
@@ -125,6 +126,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private float frameSeconds;
     private float resultProgress;
     private RankText resultRank = new();
+    private LabelSlot levelClearedLabel;
     public string Id => "games";
     public string DisplayName => Loc.T(L.Apps.Games);
     public string Glyph => ">";
@@ -638,14 +640,26 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             {
                 var gameContext = new GameContext(full, safe, theme, 0f, rawSeconds, session, hud, fx, backdrop,
                     chrome);
-                var action = intro.Draw(drawList, gameContext, accent, scale);
+                var action = levelSelect.IsOpen ? IntroAction.None : intro.Draw(drawList, gameContext, accent, scale);
                 if (action == IntroAction.Play)
                 {
                     StartRun(game);
+                    break;
                 }
-                else if (action == IntroAction.Leaderboard)
+
+                if (action == IntroAction.Leaderboard)
                 {
                     OpenLeaderboard(game, session.LeaderboardStatId, game.Title);
+                }
+                else if (action == IntroAction.Levels)
+                {
+                    levelSelect.Open();
+                }
+
+                var chosen = levelSelect.Draw(drawList, gameContext, accent, scale);
+                if (chosen > 0 && session.SelectLevel(chosen))
+                {
+                    StartRun(game);
                 }
 
                 break;
@@ -663,7 +677,12 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 resultProgress = MathF.Min(1f, resultProgress + rawSeconds * ResultAppearSpeed);
                 var result = BuildStageResult(spec, accent);
                 var resultAction = GameOverlay.DrawStage(full, theme, accent, resultProgress, result);
-                if (resultAction == ResultAction.PlayAgain)
+                if (resultAction == ResultAction.Primary)
+                {
+                    session.AdvanceLevel();
+                    StartRun(game);
+                }
+                else if (resultAction == ResultAction.Secondary)
                 {
                     StartRun(game);
                 }
@@ -722,10 +741,27 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             };
         var value = hidePrimary ? string.Empty : StageHud.ValueLabel(session.ResultValue, kind);
         var continueLabel = Loc.T(outcome.ContinueLabel ?? L.Games.PlayAgain);
+        var secondaryLabel = string.Empty;
+        var stars = session.HasLevels ? session.LevelStars : GameOutcome.NoStars;
+        if (stars >= 0)
+        {
+            title = stars > 0 ? levelClearedLabel.Get(L.Stage.LevelCleared, session.Level) : Loc.T(L.Games.GameOver);
+            if (kind == ScoreKind.Level)
+            {
+                label = Loc.T(L.Stage.TotalStars);
+            }
+        }
+
+        if (session.HasLevels)
+        {
+            continueLabel = Loc.T(session.CanAdvance ? L.Stage.NextLevel : L.Stage.Retry);
+            secondaryLabel = session.CanAdvance ? Loc.T(L.Stage.Retry) : string.Empty;
+        }
+
         resultRank.Refresh(session.Rank);
         return new StageResult(title, accent, label, value, session.NewBest && !outcome.QuietBest, continueLabel,
             resultRank.ResultLine, resultRank.FriendsLine, session.Rank.State == RankState.Uploading,
-            GameOverlay.IsTopTen(session.Rank), outcome);
+            GameOverlay.IsTopTen(session.Rank), outcome, secondaryLabel, stars);
     }
 
     private void DrawChrome(ImDrawListPtr drawList, Rect full, PhoneTheme theme, bool landscape, float scale)
@@ -733,7 +769,14 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         var radius = StageLayout.ChipRadius * scale;
         if (chrome.BackChip(drawList, StageLayout.BackChipCenter(full, scale), radius, theme, scale))
         {
-            back();
+            if (levelSelect.IsOpen)
+            {
+                levelSelect.Close();
+            }
+            else
+            {
+                back();
+            }
         }
 
         if (landscape)
@@ -783,6 +826,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         hud.Clear();
         stageHud.Reset();
         pause.Reset();
+        levelSelect.Reset();
         resultProgress = 0f;
         game.Start(session.Start);
     }
@@ -902,6 +946,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         stageHud.Reset();
         intro.Begin(spec);
         pause.Reset();
+        levelSelect.Reset();
         resultProgress = 0f;
         coinSessions.GameOpened(spec.Id);
         stats.MarkPlayed(spec.Id);

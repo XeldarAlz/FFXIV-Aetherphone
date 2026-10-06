@@ -8339,6 +8339,13 @@ internal static class L
         public static readonly LocString LevelShort = new("stage.levelShort", "LV {0}");
         public static readonly LocString Times = new("stage.times", "x{0}");
         public static readonly LocString Plus = new("stage.plus", "+{0}");
+        public static readonly LocString Levels = new("stage.levels", "Levels");
+        public static readonly LocString LevelNumber = new("stage.levelNumber", "Level {0}");
+        public static readonly LocString LevelCleared = new("stage.levelCleared", "Level {0} cleared");
+        public static readonly LocString NextLevel = new("stage.nextLevel", "Next level");
+        public static readonly LocString Retry = new("stage.retry", "Retry");
+        public static readonly LocString TotalStars = new("stage.totalStars", "Total stars");
+        public static readonly LocString StarsOf = new("stage.starsOf", "{0} / {1}");
     }
 
     internal static class Leaderboard

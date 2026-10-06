@@ -12,7 +12,8 @@ namespace Aetherphone.Apps.Games.Framework;
 internal enum ResultAction : byte
 {
     None,
-    PlayAgain,
+    Primary,
+    Secondary,
     Leaderboard,
 }
 
@@ -29,11 +30,15 @@ internal readonly struct StageResult
     public readonly bool Uploading;
     public readonly bool TopTen;
     public readonly GameOutcome Outcome;
+    public readonly string SecondaryLabel;
+    public readonly int Stars;
 
     public StageResult(string title, Vector4 titleColor, string primaryLabel, string primaryValue, bool newBest,
         string continueLabel, string rankLine, string friendsLine, bool uploading, bool topTen,
-        in GameOutcome outcome)
+        in GameOutcome outcome, string secondaryLabel, int stars)
     {
+        SecondaryLabel = secondaryLabel;
+        Stars = stars;
         Title = title;
         TitleColor = titleColor;
         PrimaryLabel = primaryLabel;
@@ -61,6 +66,9 @@ internal static class GameOverlay
     private const float ButtonSidePadding = 52f;
     private const float MinFitFactor = 0.62f;
     private const float SpinnerRadius = 6f;
+    private const float StarSize = 30f;
+    private const float EmptyStarAlpha = 0.3f;
+    private const float SecondaryTint = 0.18f;
     private const int TopTenRank = 10;
 
     private static readonly ParticleSystem Celebration = new(224);
@@ -111,10 +119,18 @@ internal static class GameOverlay
         var leaderboardLabel = Loc.T(L.Stage.Leaderboard);
         var hasRank = result.RankLine.Length > 0;
         var hasFriends = result.FriendsLine.Length > 0;
+        var hasSecondary = result.SecondaryLabel.Length > 0;
+        var hasStars = result.Stars >= 0;
         var statCount = result.Outcome.StatCount;
         var statRows = (statCount + 1) / 2;
         var buttonWidth = MathF.Max(MinButtonWidth * scale,
             Typography.Measure(buttonLabel, TextStyles.Headline).X + ButtonSidePadding * scale);
+        if (hasSecondary)
+        {
+            buttonWidth = MathF.Max(buttonWidth,
+                Typography.Measure(result.SecondaryLabel, TextStyles.Headline).X + ButtonSidePadding * scale);
+        }
+
         var widest = MathF.Max(buttonWidth, Typography.Measure(result.Title, TextStyles.Title1).X);
         if (hasPrimary)
         {
@@ -152,6 +168,16 @@ internal static class GameOverlay
         if (result.NewBest)
         {
             cardHeight += BadgeHeight * scale + Metrics.Space.Md * scale;
+        }
+
+        if (hasStars)
+        {
+            cardHeight += StarSize * scale + Metrics.Space.Md * scale;
+        }
+
+        if (hasSecondary)
+        {
+            cardHeight += Metrics.Space.Sm * scale + buttonHeight;
         }
 
         if (hasRank)
@@ -195,6 +221,14 @@ internal static class GameOverlay
             result.TitleColor with { W = result.TitleColor.W * titlePhase }, titleScale, TextStyles.Title1.Weight,
             titlePhase, scale);
         offset += titleHeight + Metrics.Space.Lg * scale;
+        if (hasStars)
+        {
+            var starsPhase = Phase(clamped, 0.15f, 0.85f);
+            StarRow.Draw(drawList, Place(center, offset + StarSize * 0.5f * scale, cardScale), StarSize * scale * cardScale,
+                result.Stars, theme.TextMuted with { W = EmptyStarAlpha }, alpha, starsPhase);
+            offset += StarSize * scale + Metrics.Space.Md * scale;
+        }
+
         if (result.NewBest)
         {
             DrawBestBadge(drawList, Place(center, offset + BadgeHeight * 0.5f * scale, cardScale), accent,
@@ -286,10 +320,21 @@ internal static class GameOverlay
         if (GameHud.Button(Place(center, offset + buttonHeight * 0.5f, cardScale) + new Vector2(0f, buttonLift),
                 buttonSize, buttonLabel, accent, theme))
         {
-            action = ResultAction.PlayAgain;
+            action = ResultAction.Primary;
         }
 
         offset += buttonHeight + Metrics.Space.Sm * scale;
+        if (hasSecondary)
+        {
+            if (GameHud.Button(Place(center, offset + buttonHeight * 0.5f, cardScale) + new Vector2(0f, buttonLift),
+                    buttonSize, result.SecondaryLabel, Palette.Mix(theme.SurfaceMuted, accent, SecondaryTint), theme))
+            {
+                action = ResultAction.Secondary;
+            }
+
+            offset += buttonHeight + Metrics.Space.Sm * scale;
+        }
+
         if (buttonPhase > 0.8f &&
             TextButton.Draw(Place(center, offset + leaderboardHeight * 0.5f, cardScale), leaderboardLabel, theme.TextMuted,
                 scale))
