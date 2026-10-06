@@ -1,162 +1,155 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.WaterSort;
 
-internal sealed class WaterSortApp : ILegacyMiniGame
+internal sealed class WaterSortApp : IMiniGame
 {
     private const string GameId = "watersort";
-    private const float PourDuration = 0.26f;
+    private const float PourSeconds = 0.46f;
+    private const float StreamFade = 0.9f;
+    private const float EntranceSpeed = 1.1f;
+    private const float SelectedLift = 10f;
+    private const float LiftSmoothSeconds = 0.06f;
+    private const float SortedGlowSpeed = 3f;
+    private const float DropletRate = 36f;
+    private const float CapsulePadX = 10f;
+    private const float CapsuleIconSize = 11f;
+    private const float CapsuleIconGap = 5f;
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.WaterSort, GameGenre.Puzzle, L.WaterSort.Hook,
+        Backdrop.Cavern, HudStyle.Standard, ScoreKind.Level);
+    private static readonly Vector4[] WinPalette =
+    {
+        Core.Theme.Accent.Mint, Core.Theme.Accent.Amber, Core.Theme.Accent.Pink, Core.Theme.Accent.Blue,
+    };
+    private static readonly Vector4 SparkleInk = new(1f, 0.95f, 0.7f, 1f);
+    private static readonly TextStyle CapsuleStyle = TextStyles.FootnoteEmphasized;
+
     private readonly WaterSortBoard board = new();
     private readonly WaterSortRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
+    private readonly float[] sortedGlow = new float[WaterSortBoard.MaxTubes];
+    private readonly bool[] wasSorted = new bool[WaterSortBoard.MaxTubes];
+    private readonly Vector4 accent = AppAccents.For(GameId);
     private Spring liftSpring = new(0f);
-    private bool statsLoaded;
-    private int bestCleared;
-    private int currentLevel = 1;
-    private bool pouring;
-    private float pourTimer;
-    private Rect pourFrom;
-    private Rect pourTo;
-    private Vector4 pourColor;
+    private Emitter droplets;
+    private WaterSortPour pour;
+    private int level;
+    private bool cleared;
+    private bool boardReady;
+    private bool finishPending;
     private bool finished;
-    private bool newBest;
-    private bool pendingSubmit;
-    private int clearedLevel;
-    private float resultAppear;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.WaterSort);
-    public GameGenre Genre => GameGenre.Puzzle;
-    public void Open()
+    private float entrance;
+
+    public GameSpec Spec => StageSpec;
+
+    public void Start(in GameStart start)
     {
-        statsLoaded = false;
+        if (cleared)
+        {
+            level++;
+            cleared = false;
+        }
+
+        boardReady = false;
     }
 
     public void Close()
     {
+        level = 0;
+        cleared = false;
+        boardReady = false;
     }
 
     public void Dispose()
     {
     }
 
-    private void StartLevel(int level)
+    private void EnsureBoard(in GameContext context)
     {
-        currentLevel = level;
-        board.Reset(level);
+        if (boardReady)
+        {
+            return;
+        }
+
+        if (level <= 0)
+        {
+            level = Math.Max(1, context.Session.Best + 1);
+        }
+
+        board.Reset(level, GameRandom.FromSeed(WaterSortBoard.SeedFor(context.Session.Seed, level)));
         particles.Clear();
         fx.Clear();
         liftSpring.SnapTo(0f);
-        pouring = false;
-        pourTimer = 0f;
+        pour.Active = false;
+        entrance = 0f;
+        finishPending = false;
         finished = false;
-        newBest = false;
-        pendingSubmit = false;
-        resultAppear = 0f;
+        Array.Clear(sortedGlow);
+        SnapshotSorted();
+        boardReady = true;
+    }
+
+    private void SnapshotSorted()
+    {
+        for (var tube = 0; tube < board.TubeCount; tube++)
+        {
+            wasSorted[tube] = board.IsTubeSorted(tube);
+        }
+    }
+
+    public void DrawIdle(in GameContext context)
+    {
+        EnsureBoard(context);
+        renderer.Draw(board, context.Safe, UiScale.Current, context.Theme, 0f, 1f, in pour, sortedGlow);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
+        EnsureBoard(context);
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (!statsLoaded)
-        {
-            bestCleared = context.Stats.Get(GameId).BestScore;
-            statsLoaded = true;
-            StartLevel(bestCleared + 1);
-        }
-
-        if (pendingSubmit)
-        {
-            context.Stats.SubmitScore(GameId, clearedLevel);
-            pendingSubmit = false;
-        }
-
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
-        var lift = liftSpring.Step(board.Selected >= 0 ? 10f * scale : 0f, 0.06f, deltaSeconds);
-        if (pouring)
-        {
-            pourTimer += deltaSeconds / PourDuration;
-            if (pourTimer >= 1f)
-            {
-                pouring = false;
-            }
-        }
-
-        var rowY = body.Min.Y + 30f * scale;
-        var levelLabel = Loc.T(L.Games.Level);
-        var levelText = GameNumber.Label(currentLevel);
-        var movesLabel = Loc.T(L.Games.Moves);
-        var movesText = GameNumber.Label(board.Moves);
-        var levelWidth = GameHud.PillWidth(levelLabel, levelText);
-        var movesWidth = GameHud.PillWidth(movesLabel, movesText);
-
-        var undoWidth = 58f * scale;
-        var edgeMargin = 6f * scale;
-        var undoCenterX = body.Min.X + edgeMargin + undoWidth * 0.5f;
-        var restartRadius = 16f * scale;
-        var restartCenterX = body.Max.X - edgeMargin - restartRadius;
-
-        var pillGap = 12f * scale;
-        var slotMargin = 10f * scale;
-        var middleLeft = undoCenterX + undoWidth * 0.5f + slotMargin;
-        var middleRight = restartCenterX - restartRadius - slotMargin;
-        var groupWidth = levelWidth + pillGap + movesWidth;
-        var clampMin = middleLeft + groupWidth * 0.5f;
-        var clampMax = middleRight - groupWidth * 0.5f;
-        var groupCenter = clampMin <= clampMax
-            ? Math.Clamp(body.Center.X, clampMin, clampMax)
-            : (middleLeft + middleRight) * 0.5f;
-        var levelX = groupCenter - groupWidth * 0.5f + levelWidth * 0.5f;
-        var movesX = groupCenter + groupWidth * 0.5f - movesWidth * 0.5f;
-        GameHud.Pill(new Vector2(levelX, rowY), levelLabel, levelText, Accent, theme);
-        GameHud.Pill(new Vector2(movesX, rowY), movesLabel, movesText, Accent, theme);
-        if (GameHud.Button(new Vector2(undoCenterX, rowY), new Vector2(undoWidth, 28f * scale),
-                Loc.T(L.Games.Undo), theme.SurfaceMuted, theme))
-        {
-            board.Undo();
-        }
-
-        if (GameHud.RestartButton(new Vector2(restartCenterX, rowY), restartRadius, theme))
-        {
-            StartLevel(currentLevel);
-            return;
-        }
-
-        var area = new Rect(new Vector2(body.Min.X + 6f * scale, rowY + 28f * scale),
-            new Vector2(body.Max.X - 6f * scale, body.Max.Y - 8f * scale));
-        if (!finished)
+        var drawList = ImGui.GetWindowDrawList();
+        var playing = context.Session.State == StageFlow.Playing;
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds, EntranceSpeed);
+        var area = Punched(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale));
+        var lift = liftSpring.Step(board.Selected >= 0 || pour.Active ? SelectedLift * scale : 0f, LiftSmoothSeconds,
+            context.RawDeltaSeconds);
+        AdvancePour(context.RawDeltaSeconds, area, scale);
+        UpdateSortedGlow(context.RawDeltaSeconds);
+        var interactive = playing && !finished && !finishPending && !pour.Active && entrance >= 1f;
+        if (interactive)
         {
             HandleClick(area, scale);
         }
 
-        renderer.Draw(board, area, scale, theme, lift);
-        if (pouring)
-        {
-            renderer.DrawPourStream(pourFrom, pourTo, pourColor, MathF.Min(1f, pourTimer), scale);
-        }
-
-        var drawList = ImGui.GetWindowDrawList();
+        renderer.Draw(board, area, scale, context.Theme, lift, entrance, in pour, sortedGlow);
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
         fx.DrawText();
-        if (finished)
+        DrawHud(context, drawList, scale, interactive);
+        if (finishPending && !pour.Active)
         {
-            DrawResult(theme, body, scale);
+            Celebrate(context, area, scale);
+            Finish(context);
         }
+    }
+
+    private static Rect Punched(Rect area, float plateScale)
+    {
+        var half = area.Size * 0.5f * plateScale;
+        return new Rect(area.Center - half, area.Center + half);
     }
 
     private void HandleClick(Rect area, float scale)
@@ -183,60 +176,165 @@ internal sealed class WaterSortApp : ILegacyMiniGame
             return;
         }
 
-        var action = board.ClickTube(hoveredTube);
-        if (action == TubeAction.Poured)
+        switch (board.ClickTube(hoveredTube))
         {
-            OnPoured(area, scale);
+            case TubeAction.Selected:
+                UiFeedback.Play(UiSound.GameHitSoft);
+                return;
+            case TubeAction.Poured:
+                BeginPour();
+                return;
+            default:
+                return;
         }
     }
 
-    private void OnPoured(Rect area, float scale)
+    private void BeginPour()
     {
         UiFeedback.Play(UiSound.GameMatch);
-        var pour = board.LastPour;
-        pourFrom = WaterSortRenderer.TubeRect(area, pour.FromTube, board.TubeCount, scale);
-        pourTo = WaterSortRenderer.TubeRect(area, pour.ToTube, board.TubeCount, scale);
-        pourColor = WaterSortRenderer.ColorOf(pour.Color);
-        pouring = true;
-        pourTimer = 0f;
-        var splash = new Vector2(pourTo.Center.X, pourTo.Min.Y + pourTo.Height * 0.2f);
-        particles.Burst(splash, 9, pourColor, 130f * scale, 2.6f, 0.45f, 320f);
-        fx.Shockwave(splash, 30f * scale, GamePalette.Lighten(pourColor, 0.25f), 0.35f, 2.2f);
+        var info = board.LastPour;
+        pour.Active = true;
+        pour.FromTube = info.FromTube;
+        pour.ToTube = info.ToTube;
+        pour.Color = info.Color;
+        pour.Count = info.Count;
+        pour.Progress = 0f;
+        pour.Splashed = false;
+        var color = WaterSortRenderer.ColorOf(info.Color);
+        var spec = new ParticleSpec(color, color with { W = 0f }, 2.2f, 90f, 0.5f, 420f, 1.2f, 0f, MathF.PI * 0.9f,
+            -MathF.PI * 0.5f);
+        droplets = new Emitter(in spec, DropletRate);
         if (board.IsSolved())
         {
-            OnSolved(area, scale);
+            cleared = true;
+            finishPending = true;
         }
     }
 
-    private void OnSolved(Rect area, float scale)
+    private void AdvancePour(float deltaSeconds, Rect area, float scale)
     {
-        UiFeedback.Play(UiSound.GameClear);
-        finished = true;
-        resultAppear = 0f;
-        clearedLevel = currentLevel;
-        newBest = clearedLevel > bestCleared;
-        if (newBest)
+        if (!pour.Active)
         {
-            bestCleared = clearedLevel;
+            return;
         }
 
-        pendingSubmit = true;
+        pour.Progress += deltaSeconds / PourSeconds;
+        var target = WaterSortRenderer.TubeRect(area, pour.ToTube, board.TubeCount, scale);
+        var surface = WaterSortRenderer.Surface(target, board.Count(pour.ToTube) - pour.Count);
+        if (pour.Progress >= WaterSortRenderer.StreamArrive)
+        {
+            if (!pour.Splashed)
+            {
+                pour.Splashed = true;
+                var color = WaterSortRenderer.ColorOf(pour.Color);
+                particles.Burst(surface, 9, color, 130f * scale, 2.6f, 0.45f, 320f);
+                fx.Shockwave(surface, 30f * scale, GamePalette.Lighten(color, 0.25f), 0.35f, 2.2f);
+            }
+
+            if (pour.Progress < StreamFade)
+            {
+                droplets.Advance(deltaSeconds, surface, particles);
+            }
+        }
+
+        if (pour.Progress < 1f)
+        {
+            return;
+        }
+
+        pour.Active = false;
+        RewardNewlySortedTubes(area, scale);
+    }
+
+    private void RewardNewlySortedTubes(Rect area, float scale)
+    {
+        for (var tube = 0; tube < board.TubeCount; tube++)
+        {
+            var sorted = board.IsTubeSorted(tube);
+            if (sorted && !wasSorted[tube])
+            {
+                var rect = WaterSortRenderer.TubeRect(area, tube, board.TubeCount, scale);
+                particles.Sparkle(rect.Center, 10, SparkleInk, 120f * scale, 2.4f, 0.7f);
+                UiFeedback.Play(UiSound.GamePowerUp);
+            }
+
+            wasSorted[tube] = sorted;
+        }
+    }
+
+    private void UpdateSortedGlow(float deltaSeconds)
+    {
+        for (var tube = 0; tube < board.TubeCount; tube++)
+        {
+            var target = board.IsTubeSorted(tube) ? 1f : 0f;
+            var glow = sortedGlow[tube];
+            sortedGlow[tube] = glow < target
+                ? MathF.Min(target, glow + deltaSeconds * SortedGlowSpeed)
+                : MathF.Max(target, glow - deltaSeconds * SortedGlowSpeed);
+        }
+    }
+
+    private void DrawHud(in GameContext context, ImDrawListPtr drawList, float scale, bool interactive)
+    {
+        var hud = context.Hud;
+        hud.Level(level);
+        var label = GameNumber.Label(board.Moves);
+        var width = CapsulePadX * 2f + CapsuleIconSize + CapsuleIconGap + Typography.Measure(label, CapsuleStyle).X / scale;
+        hud.Custom(width);
+        var rect = hud.CustomRect;
+        if (rect.Width > 0f)
+        {
+            DrawUndoCapsule(drawList, rect, label, interactive, context.Theme, scale);
+        }
+
+        hud.Best(context.Session.Best);
+        context.Session.Report(level - 1);
+    }
+
+    private void DrawUndoCapsule(ImDrawListPtr drawList, Rect rect, string label, bool interactive, PhoneTheme theme,
+        float scale)
+    {
+        var canUndo = interactive && board.CanUndo;
+        var hovered = canUndo && UiInteract.Hover(rect.Min, rect.Max);
+        StageHud.Capsule(drawList, rect, scale, hovered ? 1f : 0.9f);
+        var iconSize = CapsuleIconSize * scale;
+        var left = rect.Min.X + CapsulePadX * scale;
+        var centerY = rect.Center.Y;
+        ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), FontAwesomeIcon.Undo,
+            canUndo ? accent : theme.TextMuted with { W = 0.45f }, iconSize);
+        Typography.Draw(drawList,
+            new Vector2(left + iconSize + CapsuleIconGap * scale, centerY - Typography.LineHeight(CapsuleStyle) * 0.5f),
+            label, theme.TextStrong, CapsuleStyle);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (!canUndo || !UiInteract.HoverClick(rect.Min, rect.Max) || !board.Undo())
+        {
+            return;
+        }
+
+        UiFeedback.Play(UiSound.GameHitSoft);
+        SnapshotSorted();
+    }
+
+    private void Celebrate(in GameContext context, Rect area, float scale)
+    {
+        GameSfx.LevelClear();
+        context.Fx.Sweep();
+        context.Fx.Punch(0.05f);
         fx.AddTrauma(0.25f);
-        fx.Shockwave(area.Center, area.Width * 0.45f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3f);
-        ReadOnlySpan<Vector4> palette = new[] { Accent, Core.Theme.Accent.Mint, Core.Theme.Accent.Amber, Core.Theme.Accent.Pink, };
-        particles.Confetti(new Vector2(area.Center.X, area.Min.Y), 64, palette, 260f * scale, 4f, 1.3f);
-        particles.Sparkle(area.Center, 18, new Vector4(1f, 0.95f, 0.7f, 1f), 200f * scale, 2.8f, 1f);
+        fx.Shockwave(area.Center, area.Width * 0.45f, GamePalette.Lighten(accent, 0.3f), 0.6f, 3f);
+        particles.Confetti(new Vector2(area.Center.X, area.Min.Y), 64, WinPalette, 260f * scale, 4f, 1.3f);
+        particles.Sparkle(area.Center, 18, SparkleInk, 200f * scale, 2.8f, 1f);
     }
 
-    private void DrawResult(PhoneTheme theme, Rect body, float scale)
+    private void Finish(in GameContext context)
     {
-        resultAppear = MathF.Min(1f, resultAppear + ImGui.GetIO().DeltaTime * 3.4f);
-        var secondary = $"{GameNumber.Label(board.Moves)} {Loc.T(L.Games.Moves)}";
-        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Level), GameNumber.Label(clearedLevel),
-            secondary, newBest, Loc.T(L.Games.NextLevel));
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
-        {
-            StartLevel(currentLevel + 1);
-        }
+        finishPending = false;
+        finished = true;
+        context.Session.Finish(new GameOutcome(level, ScoreKind.Level, GameId)
+            .WithStat(L.Games.Moves, GameNumber.Label(board.Moves)));
     }
 }
