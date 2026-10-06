@@ -8350,6 +8350,12 @@ internal static class L
     internal static class Flap
     {
         public static readonly LocString Hook = new("games.flap.hook", "Tap to flap through the gaps in the pipes and see how far you can fly.");
+        public static readonly LocString Medal = new("games.flap.medal", "Medal");
+        public static readonly LocString Flaps = new("games.flap.flaps", "Flaps");
+        public static readonly LocString Bronze = new("games.flap.bronze", "Bronze");
+        public static readonly LocString Silver = new("games.flap.silver", "Silver");
+        public static readonly LocString Gold = new("games.flap.gold", "Gold");
+        public static readonly LocString MedalEarned = new("games.flap.medalEarned", "{0} medal!");
     }
 
     internal static class Reversi

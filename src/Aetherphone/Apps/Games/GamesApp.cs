@@ -165,7 +165,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new FlowApp(),
             new SolitaireApp(),
             new LegacyGameAdapter(new SimonApp(), L.Games.Simon, L.Simon.Hook),
-            new LegacyGameAdapter(new FlapApp(), L.Games.Flap, L.Flap.Hook),
+            new FlapApp(),
             new ReversiApp(),
             new WhackApp(),
             new SnakeApp(),
