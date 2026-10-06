@@ -2,9 +2,12 @@ namespace Aetherphone.Core.Games;
 
 internal sealed class GameStatsStore
 {
-    private readonly Configuration configuration;
+    private const string TetrisGameId = "tetris";
+    private const int TetrisModernMode = 1;
 
-    public GameStatsStore(Configuration configuration)
+    private readonly IGameStatsConfiguration configuration;
+
+    public GameStatsStore(IGameStatsConfiguration configuration)
     {
         this.configuration = configuration;
     }
@@ -13,17 +16,49 @@ internal sealed class GameStatsStore
 
     public bool TetrisModern
     {
-        get => configuration.TetrisModern;
-        set
+        get => LastMode(TetrisGameId) == TetrisModernMode;
+        set => SetLastMode(TetrisGameId, value ? TetrisModernMode : 0);
+    }
+
+    public int LastMode(string gameId)
+    {
+        var choices = configuration.GameModeChoices;
+        for (var index = 0; index < choices.Count; index++)
         {
-            if (configuration.TetrisModern == value)
+            if (string.Equals(choices[index].GameId, gameId, StringComparison.Ordinal))
+            {
+                return choices[index].Mode;
+            }
+        }
+
+        return string.Equals(gameId, TetrisGameId, StringComparison.Ordinal) && configuration.TetrisModern
+            ? TetrisModernMode
+            : 0;
+    }
+
+    public void SetLastMode(string gameId, int mode)
+    {
+        var choices = configuration.GameModeChoices;
+        for (var index = 0; index < choices.Count; index++)
+        {
+            var choice = choices[index];
+            if (!string.Equals(choice.GameId, gameId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (choice.Mode == mode)
             {
                 return;
             }
 
-            configuration.TetrisModern = value;
+            choice.Mode = mode;
             configuration.Save();
+            return;
         }
+
+        choices.Add(new GameModeChoice { GameId = gameId, Mode = mode, });
+        configuration.Save();
     }
 
     public string WordBank
