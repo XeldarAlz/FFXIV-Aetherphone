@@ -8030,7 +8030,6 @@ internal static class L
         public static readonly LocString Watch = new("games.watch", "Watch");
         public static readonly LocString YourTurn = new("games.yourTurn", "Your Turn");
         public static readonly LocString Flap = new("games.flap", "Flap");
-        public static readonly LocString TapToStart = new("games.tapToStart", "Tap to start");
         public static readonly LocString Reversi = new("games.reversi", "Reversi");
         public static readonly LocString You = new("games.you", "You");
         public static readonly LocString Cpu = new("games.cpu", "CPU");
@@ -8069,7 +8068,6 @@ internal static class L
         public static readonly LocString CategoryActions = new("games.categoryActions", "Actions");
         public static readonly LocString CategoryEmotes = new("games.categoryEmotes", "Emotes");
         public static readonly LocString Skyfall = new("games.skyfall", "Skyfall");
-        public static readonly LocString Ammo = new("games.ammo", "Ammo");
         public static readonly LocString Invaders = new("games.invaders", "Invaders");
         public static readonly LocString CapMan = new("games.capman", "CapMan");
         public static readonly LocString Ready = new("games.ready", "Ready!");
@@ -8134,9 +8132,7 @@ internal static class L
         public static readonly LocString OnlineWins = new("games.onlineWins", "{0} wins");
         public static readonly LocString OnlineYourTurn = new("games.onlineYourTurn", "Your turn");
         public static readonly LocString OnlineTheirTurn = new("games.onlineTheirTurn", "{0}'s turn");
-        public static readonly LocString OnlineDraw = new("games.onlineDraw", "Draw");
         public static readonly LocString OnlinePass = new("games.onlinePass", "Pass");
-        public static readonly LocString OnlineCards = new("games.onlineCards", "{0} cards");
         public static readonly LocString OnlinePickColor = new("games.onlinePickColor", "Pick a color");
         public static readonly LocString OnlineWinner = new("games.onlineWinner", "{0} wins the round!");
         public static readonly LocString OnlineRoundVoid = new("games.onlineRoundVoid", "The round ended with nobody left");
@@ -8253,9 +8249,6 @@ internal static class L
         public static readonly LocString ThisWeek = new("stage.thisWeek", "This week");
         public static readonly LocString YourRanks = new("stage.yourRanks", "Your ranks");
         public static readonly LocString ShowOnLeaderboards = new("stage.showOnLeaderboards", "Show me on leaderboards");
-        public static readonly LocString Rank = new("stage.rank", "Rank");
-        public static readonly LocString Lives = new("stage.lives", "Lives");
-        public static readonly LocString Mode = new("stage.mode", "Mode");
         public static readonly LocString LevelShort = new("stage.levelShort", "LV {0}");
         public static readonly LocString Times = new("stage.times", "x{0}");
         public static readonly LocString Plus = new("stage.plus", "+{0}");
