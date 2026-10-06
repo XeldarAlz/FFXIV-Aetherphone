@@ -4646,6 +4646,7 @@
   "games.onlineConnectFourDraw": "Unentschieden, das Brett ist voll",
   "games.genreAction": "Action",
   "games.genreBrain": "Denkspiele",
+  "games.genreStrategy": "Strategie",
   "games.genreTabletop": "Brett & Karten",
   "games.genreFriends": "Mit Freunden",
   "games.shelfLatest": "Neu dabei",

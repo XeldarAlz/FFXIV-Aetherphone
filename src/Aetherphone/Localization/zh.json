@@ -4646,6 +4646,7 @@
   "games.onlineConnectFourDraw": "平局，棋盘已满",
   "games.genreAction": "动作",
   "games.genreBrain": "益智",
+  "games.genreStrategy": "策略",
   "games.genreTabletop": "棋牌",
   "games.genreFriends": "和好友一起",
   "games.shelfLatest": "最新加入",

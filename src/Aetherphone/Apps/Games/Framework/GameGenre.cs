@@ -8,6 +8,7 @@ internal enum GameGenre : byte
     Action,
     Puzzle,
     Brain,
+    Strategy,
     Tabletop,
     Friends,
 }
@@ -16,7 +17,8 @@ internal static class GameGenres
 {
     public static readonly GameGenre[] Shelves =
     {
-        GameGenre.Arcade, GameGenre.Action, GameGenre.Puzzle, GameGenre.Brain, GameGenre.Tabletop, GameGenre.Friends,
+        GameGenre.Arcade, GameGenre.Action, GameGenre.Puzzle, GameGenre.Brain, GameGenre.Strategy, GameGenre.Tabletop,
+        GameGenre.Friends,
     };
 
     public static LocString Label(GameGenre genre)
@@ -26,6 +28,7 @@ internal static class GameGenres
             GameGenre.Action => L.Games.GenreAction,
             GameGenre.Puzzle => L.Games.GenrePuzzle,
             GameGenre.Brain => L.Games.GenreBrain,
+            GameGenre.Strategy => L.Games.GenreStrategy,
             GameGenre.Tabletop => L.Games.GenreTabletop,
             GameGenre.Friends => L.Games.GenreFriends,
             _ => L.Games.GenreArcade,

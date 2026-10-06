@@ -4646,6 +4646,7 @@
   "games.onlineConnectFourDraw": "Match nul, la grille est pleine",
   "games.genreAction": "Action",
   "games.genreBrain": "Réflexion",
+  "games.genreStrategy": "Stratégie",
   "games.genreTabletop": "Plateau et cartes",
   "games.genreFriends": "Entre amis",
   "games.shelfLatest": "Nouveautés",

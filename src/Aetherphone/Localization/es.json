@@ -4646,6 +4646,7 @@
   "games.onlineConnectFourDraw": "Empate, el tablero está lleno",
   "games.genreAction": "Acción",
   "games.genreBrain": "Ingenio",
+  "games.genreStrategy": "Estrategia",
   "games.genreTabletop": "Mesa y cartas",
   "games.genreFriends": "Con amigos",
   "games.shelfLatest": "Recién llegados",

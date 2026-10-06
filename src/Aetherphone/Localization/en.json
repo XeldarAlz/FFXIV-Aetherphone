@@ -4646,6 +4646,7 @@
   "games.onlineConnectFourDraw": "Draw, the board is full",
   "games.genreAction": "Action",
   "games.genreBrain": "Brain",
+  "games.genreStrategy": "Strategy",
   "games.genreTabletop": "Board & Cards",
   "games.genreFriends": "With friends",
   "games.shelfLatest": "Latest additions",

@@ -20,20 +20,20 @@ internal sealed partial class GamesApp
     private const float BrowseIconSize = 22f;
     private const float BrowsePad = 14f;
     private const int BrowseColumns = 2;
-    private const int BrowseCount = 7;
-    private const int BrowseTogether = 5;
-    private const int BrowseAll = 6;
+    private const int BrowseTogether = (int)GameGenre.Friends;
+    private const int BrowseAll = BrowseTogether + 1;
+    private const int BrowseCount = BrowseAll + 1;
 
     private static readonly FontAwesomeIcon[] BrowseIcons =
     [
         FontAwesomeIcon.Gamepad, FontAwesomeIcon.Bolt, FontAwesomeIcon.PuzzlePiece, FontAwesomeIcon.Lightbulb,
-        FontAwesomeIcon.Chess, FontAwesomeIcon.UserFriends, FontAwesomeIcon.ThLarge,
+        FontAwesomeIcon.Flag, FontAwesomeIcon.Chess, FontAwesomeIcon.UserFriends, FontAwesomeIcon.ThLarge,
     ];
 
     private static readonly string[] BrowseIds =
     [
         "games.browse.arcade", "games.browse.action", "games.browse.puzzle", "games.browse.brain",
-        "games.browse.tabletop", "games.browse.together", "games.browse.all",
+        "games.browse.strategy", "games.browse.tabletop", "games.browse.together", "games.browse.all",
     ];
 
     private bool focusSearch;
@@ -143,10 +143,17 @@ internal sealed partial class GamesApp
         var cardHeight = BrowseCardHeight * scale;
         var top = y;
         var tapped = -1;
+        var shown = 0;
         for (var index = 0; index < BrowseCount; index++)
         {
-            var column = index % BrowseColumns;
-            var row = index / BrowseColumns;
+            if (BrowseCountOf(index) == 0)
+            {
+                continue;
+            }
+
+            var column = shown % BrowseColumns;
+            var row = shown / BrowseColumns;
+            shown++;
             var min = new Vector2(left + column * (cardWidth + gap), y + row * (cardHeight + gap));
             if (DrawBrowseCard(new Rect(min, min + new Vector2(cardWidth, cardHeight)), index, scale))
             {
@@ -154,7 +161,7 @@ internal sealed partial class GamesApp
             }
         }
 
-        var rows = (BrowseCount + BrowseColumns - 1) / BrowseColumns;
+        var rows = (shown + BrowseColumns - 1) / BrowseColumns;
         var bottom = y + rows * (cardHeight + gap) - gap;
         GamesHubArt.ReportAnchor("games.browse", new Rect(new Vector2(left, top), new Vector2(left + width, bottom)));
         if (tapped == BrowseTogether)

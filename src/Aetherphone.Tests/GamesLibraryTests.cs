@@ -119,6 +119,26 @@ public sealed class GamesLibraryTests
     }
 
     [Fact]
+    public void AnEmptyStrategyShelfLeavesTheNeighbouringShelvesIntact()
+    {
+        var library = Build(new Configuration());
+
+        var tabletop = library.Genre(GameGenre.Tabletop).ToArray();
+
+        Assert.Equal(0, library.Genre(GameGenre.Strategy).Length);
+        Assert.Single(tabletop);
+        Assert.Equal("chess", library.Entries[tabletop[0]].Id);
+        Assert.Equal(4, library.Genre(GameGenre.Friends).Length);
+        for (var shelf = 0; shelf < GameGenres.Shelves.Length; shelf++)
+        {
+            Assert.Equal((GameGenre)shelf, GameGenres.Shelves[shelf]);
+        }
+
+        Assert.Equal(GameGenre.Tabletop, GameGenres.Shelves[(int)GameGenre.Strategy + 1]);
+        Assert.Equal("games.genreStrategy", GameGenres.Label(GameGenre.Strategy).Key);
+    }
+
+    [Fact]
     public void SearchMatchesTitlesCaseInsensitively()
     {
         var library = Build(new Configuration());
