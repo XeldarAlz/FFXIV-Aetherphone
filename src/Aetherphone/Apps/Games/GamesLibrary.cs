@@ -76,6 +76,7 @@ internal sealed class GamesLibrary
         new("online.uno", 2026, 8, 25), new("online.chess", 2026, 8, 25), new("online.pool", 2026, 8, 25),
         new("coil", 2026, 10, 3), new("updraft", 2026, 10, 3), new("swoop", 2026, 10, 3),
         new("online.connectfour", 2026, 10, 3),
+        new("mahjong", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -511,6 +512,7 @@ internal sealed class GamesLibrary
             case "minesweeper":
             case "nonogram":
             case "sudoku":
+            case "mahjong":
                 return BestTimeAcrossTiers(gameId, out value, out tier);
             case "reversi":
             case "chess":

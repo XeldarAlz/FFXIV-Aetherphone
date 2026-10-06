@@ -121,6 +121,9 @@ internal static class AppIconArt
             case "swoop":
                 SwoopIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "mahjong":
+                DrawMahjong(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -757,6 +760,27 @@ internal static class AppIconArt
         dl.AddRectFilled(new Vector2(markCenter.X - extent * 0.08f, markCenter.Y + markRadius * 0.55f),
             new Vector2(markCenter.X + extent * 0.08f, markCenter.Y + markRadius * 1.25f), hole, extent * 0.03f);
         dl.AddCircleFilled(new Vector2(markCenter.X, markCenter.Y + markRadius * 1.72f), extent * 0.10f, hole, 12);
+    }
+
+    private static void DrawMahjong(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var rounding = extent * 0.16f;
+        var gap = extent * 0.08f;
+        drawList.AddRectFilled(At(center, extent, -0.56f, -0.64f), At(center, extent, 0.80f, 0.96f), ink, rounding);
+        var faceMin = At(center, extent, -0.80f, -0.90f);
+        var faceMax = At(center, extent, 0.56f, 0.70f);
+        drawList.AddRectFilled(faceMin - new Vector2(gap, gap), faceMax + new Vector2(gap, gap), hole, rounding);
+        drawList.AddRectFilled(faceMin, faceMax, ink, rounding);
+        var pip = (faceMin + faceMax) * 0.5f;
+        var half = extent * 0.2f;
+        Span<Vector2> crystal = stackalloc Vector2[4]
+        {
+            new(pip.X, pip.Y - half * 1.5f), new(pip.X + half, pip.Y), new(pip.X, pip.Y + half * 1.5f),
+            new(pip.X - half, pip.Y),
+        };
+        FillConvex(drawList, hole, crystal);
+        drawList.AddCircleFilled(At(center, extent, -0.54f, -0.64f), extent * 0.1f, hole, 12);
+        drawList.AddCircleFilled(At(center, extent, 0.30f, 0.44f), extent * 0.1f, hole, 12);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)
