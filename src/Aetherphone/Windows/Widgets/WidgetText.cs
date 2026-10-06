@@ -44,8 +44,8 @@ internal static class WidgetText
 
     private struct DigitAdvance
     {
-        public float Scale;
-        public FontWeight Weight;
+        public nint Font;
+        public float FontSize;
         public float Advance;
     }
 
@@ -320,12 +320,12 @@ internal static class WidgetText
             return 0f;
         }
 
-        var advance = DigitAdvanceFor(style);
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
             Plugin.Fonts.NoticeText(text);
             var font = ImGui.GetFont();
             var fontSize = ImGui.GetFontSize();
+            var advance = PushedDigitAdvance(font, fontSize);
             var packed = ImGui.GetColorU32(color);
             var cursor = position;
             for (var index = 0; index < text.Length; index++)
@@ -355,9 +355,9 @@ internal static class WidgetText
             return 0f;
         }
 
-        var advance = DigitAdvanceFor(style);
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
+            var advance = PushedDigitAdvance(ImGui.GetFont(), ImGui.GetFontSize());
             var width = 0f;
             for (var index = 0; index < text.Length; index++)
             {
@@ -404,7 +404,7 @@ internal static class WidgetText
     public static string Integer(ref CachedText cache, long value) =>
         cache.IsCurrent(value) ? cache.Value : cache.Store(value, value.ToString(Loc.Culture));
 
-    private static float DigitAdvanceFor(in TextStyle style)
+    private static unsafe float PushedDigitAdvance(ImFontPtr font, float fontSize)
     {
         var generation = Plugin.Fonts.Generation;
         if (generation != digitGeneration)
@@ -413,24 +413,22 @@ internal static class WidgetText
             digitCount = 0;
         }
 
+        var fontAddress = (nint)font.Handle;
         for (var index = 0; index < digitCount; index++)
         {
-            var entry = DigitAdvances[index];
-            if (entry.Scale == style.Scale && entry.Weight == style.Weight)
+            ref readonly var entry = ref DigitAdvances[index];
+            if (entry.Font == fontAddress && entry.FontSize == fontSize)
             {
                 return entry.Advance;
             }
         }
 
         var advance = 0f;
-        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        Span<char> digit = stackalloc char[1];
+        for (var value = 0; value < 10; value++)
         {
-            Span<char> digit = stackalloc char[1];
-            for (var value = 0; value < 10; value++)
-            {
-                digit[0] = (char)('0' + value);
-                advance = MathF.Max(advance, ImGui.CalcTextSize((ReadOnlySpan<char>)digit).X);
-            }
+            digit[0] = (char)('0' + value);
+            advance = MathF.Max(advance, ImGui.CalcTextSize((ReadOnlySpan<char>)digit).X);
         }
 
         if (digitCount == DigitCacheCapacity)
@@ -438,7 +436,7 @@ internal static class WidgetText
             digitCount = 0;
         }
 
-        DigitAdvances[digitCount++] = new DigitAdvance { Scale = style.Scale, Weight = style.Weight, Advance = advance };
+        DigitAdvances[digitCount++] = new DigitAdvance { Font = fontAddress, FontSize = fontSize, Advance = advance };
         return advance;
     }
 }

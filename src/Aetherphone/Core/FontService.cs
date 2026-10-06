@@ -161,6 +161,7 @@ internal sealed class FontService : IDisposable
 
         zoom = value;
         ApplyZoom();
+        Interlocked.Increment(ref generation);
     }
 
     public void SetPhoneZoom(float value)
