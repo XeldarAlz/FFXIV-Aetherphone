@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Coil;
+using Aetherphone.Apps.Games.Framework;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -352,16 +353,23 @@ public sealed class CoilBoardTests
     }
 
     [Fact]
-    public void TheSameSeedPlaysTheSameGame()
+    public void SameSeedReplaysIdentically()
     {
-        var first = Play(1234);
-        var second = Play(1234);
+        var first = Play(SessionSeed(1234UL));
+        var second = Play(SessionSeed(1234UL));
         Assert.Equal(first.Score, second.Score);
+        Assert.Equal(first.Stage, second.Stage);
         Assert.Equal(first.MarbleCount, second.MarbleCount);
         Assert.Equal(Colours(first), Colours(second));
         Assert.Equal(first.LoadedColour, second.LoadedColour);
         Assert.Equal(first.NextColour, second.NextColour);
-        Assert.NotEqual(Colours(first), Colours(Play(99)));
+        Assert.NotEqual(Colours(first), Colours(Play(SessionSeed(99UL))));
+    }
+
+    private static int SessionSeed(ulong seed)
+    {
+        var random = GameRandom.FromSeed(seed);
+        return (int)random.NextUInt();
     }
 
     private static CoilBoard Play(int seed)

@@ -8451,12 +8451,12 @@ internal static class L
         public static readonly LocString Hook = new("coil.hook", "Fire marbles into the chain and match three or more to clear it before it reaches the vortex.");
         public static readonly LocString Title = new("coil.title", "Coil");
         public static readonly LocString HowTo = new("coil.howTo", "Aim with the mouse and click to fire. Right-click or Space swaps marbles.");
-        public static readonly LocString Goal = new("coil.goal", "Match three or more to clear the chain before it reaches the vortex.");
         public static readonly LocString StageClear = new("coil.stageClear", "Stage clear!");
         public static readonly LocString Bonus = new("coil.bonus", "Clear bonus");
         public static readonly LocString Chain = new("coil.chain", "Chain x{0}");
         public static readonly LocString GapShot = new("coil.gapShot", "Gap shot!");
-        public static readonly LocString ReachedStage = new("coil.reachedStage", "Reached stage {0}");
+        public static readonly LocString MaxChain = new("coil.maxChain", "Max chain");
+        public static readonly LocString PowerUps = new("coil.powerUps", "Power-ups");
         public static readonly LocString PowerFreeze = new("coil.powerFreeze", "Freeze");
         public static readonly LocString PowerSlow = new("coil.powerSlow", "Slow");
         public static readonly LocString PowerReverse = new("coil.powerReverse", "Reverse");
