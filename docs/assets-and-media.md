@@ -21,10 +21,12 @@ All bundled assets ship inside the plugin output folder. `src/Aetherphone/Aether
 | src/Aetherphone/Core/Emoji/EmojiImages.cs | Draws an emoji PNG through the texture provider |
 | src/Aetherphone/Core/Emoji/EmojiScanner.cs | Finds `:shortcode:` spans in message text |
 | tools/emoji-generator/ | Downloads Twemoji images and rebuilds catalog.json |
-| src/Aetherphone/Icons/ | White-on-transparent app icon PNGs, one per app id |
-| src/Aetherphone/Windows/Components/AppIconTextures.cs | Resolves and tints icon PNGs |
-| src/Aetherphone/Windows/Components/AppIconArt.cs | Procedural fallback art for the mini-games |
-| tools/icon-generator/ | Regenerates icon PNGs from Tabler Icons |
+| src/Aetherphone/Icons/ | Painted app icons: `<id>.png` finished tile plus `<id>.fg.png` symbol, one pair per app id |
+| src/Aetherphone/Windows/Components/Chrome/AppIconTile.cs | Draws a painted icon cut to the squircle in the chosen appearance |
+| src/Aetherphone/Windows/Components/Chrome/AppIconCache.cs | Decodes and bakes icon textures off the main thread |
+| src/Aetherphone/Core/Media/IconBake.cs | Builds the Dark, Tinted and Clear appearances from the symbol file |
+| src/Aetherphone/Windows/Components/Chrome/AppIconArt.cs | Fallback art on the accent tile for ids without a painted pair |
+| tools/icon-generator/ | Generates the painted icon set from Phosphor glyphs |
 | src/Aetherphone/Images/ | Plugin installer icon and repo screenshots, not runtime UI art |
 | src/Aetherphone/Sounds/ | Bundled ringtones, notification, interface and game sounds, with its own README |
 | tools/sound-generator/ | Rebuilds every bundled sound: synthesis, pinned downloads, trim and loudness |
@@ -32,8 +34,8 @@ All bundled assets ship inside the plugin output folder. `src/Aetherphone/Aether
 | src/Aetherphone/Wallpapers/ | Built-in wallpapers, shipped as Light/Dark pairs |
 | src/Aetherphone/Core/Wallpapers/WallpaperLibrary.cs | Discovery, custom imports, brightness analysis, theme darkness |
 | src/Aetherphone/Cases/ | Art case PNGs plus the _template folder |
-| src/Aetherphone/Windows/Components/PhoneCaseTextures.cs | Resolves case skin and thumbnail textures |
-| docs/ART-ASSET-SPEC.md | Authoritative spec for icon and case artwork |
+| src/Aetherphone/Windows/Components/Chrome/PhoneCaseTextures.cs | Resolves case skin and thumbnail textures |
+| docs/ART-ASSET-SPEC.md | Where artists work (aetherphone.net) and how delivered art lands here |
 
 ## Fonts
 
@@ -120,21 +122,23 @@ Do not hand-add PNGs. Update `TWEMOJI_VERSION` in tools/emoji-generator/generate
 
 ## App icons
 
-Home-screen and in-app icons live in src/Aetherphone/Icons/ as 256x256 PNGs named after the app's registered id (`messages.png`, `settings.png`, and one per remaining app). They are stencils: pure white shapes on transparency, tinted to the active theme at draw time.
+Home-screen and in-app icons live in src/Aetherphone/Icons/ as painted pairs named after the app's registered id. `<id>.png` is the finished 512 px tile, opaque and painted to the square edges; `<id>.fg.png` is the symbol alone on transparency, in the same position and size. The plugin cuts the squircle, draws the shadow and lit edge, and builds the other appearances at runtime, so neither file carries corners or effects.
 
-Callers ask `AppIconArt.TryDraw` (src/Aetherphone/Windows/Components/AppIconArt.cs) for an app icon, and it resolves in order:
+Callers draw through `AppIconTile` (src/Aetherphone/Windows/Components/Chrome/AppIconTile.cs), which resolves in order:
 
-1. It first tries `AppIconTextures.TryDraw` (src/Aetherphone/Windows/Components/AppIconTextures.cs), which looks for `Icons/<id>.png`, caches the resolved path, and draws it tinted, inset to 62% of the tile (`GlyphFraction`).
-2. If no PNG exists, `AppIconArt` falls through to its own procedural vector art, but only for the mini-game ids its switch lists (`minesweeper`, `tetris`, `chess`, and the rest).
-3. If both fail, the caller draws a letter glyph fallback; see `HomeTileView` or `AppStoreApp.Rows` drawing `app.Glyph` with `Typography.DrawCentered`.
+1. `AppIconTile.TryDraw` asks `AppIconCache` (src/Aetherphone/Windows/Components/Chrome/AppIconCache.cs) whether both files exist. If they do, it draws the tile in `Configuration.IconAppearance`: Default is the finished file, while Dark, Tinted and Clear are baked from the symbol file by `IconBake` (src/Aetherphone/Core/Media/IconBake.cs). The cache decodes off the main thread into the `TextureSizes` ladder (32 to 512 px) and never blocks a frame.
+2. If either file is missing, the caller draws the accent tile and `AppIconArt` paints the stencil through `AppIconTextures` or its own procedural art.
+3. If both miss, the tile falls back to the app's `Glyph` letter.
 
-The full authoring spec (canvas, stroke weight, alpha rules, export steps) is section 1 of [the art asset spec](ART-ASSET-SPEC.md). Do not restyle icons from memory; follow it.
+`AppIconTile.TryDrawGlyph` serves the in-app logo sites (Velvet's top bar, the Aethergram logo, the Coin wallet) with the symbol file as a tinted mask.
+
+Artists author icons from the [icon spec](https://aetherphone.net/icon-spec/) and check them with the [icon checker](https://aetherphone.net/icon-checker/). [Art assets](ART-ASSET-SPEC.md) covers the handoff.
 
 ### To add or change an app icon
 
-1. Preferred path: edit the `map` (app id to Tabler icon name) in tools/icon-generator/generate-app-icons.mjs and run `npm install` plus `npm run build` inside tools/icon-generator/. Pass app ids as arguments (`node generate-app-icons.mjs messages`) to regenerate a subset. Avoid Tabler `brand-*` icons; they are trademarked logos.
-2. Hand-drawn path: author to [the art asset spec](ART-ASSET-SPEC.md) and drop `<appid>.png` into src/Aetherphone/Icons/. The file name must match `IPhoneApp.Id` exactly.
-3. Rebuild. The csproj glob `Icons\*.png` copies the folder; `AppIconTextures` picks the file up by name with no registration step.
+1. Generated path: add the id to the `map` in tools/icon-generator/generate-painted-icons.mjs (`icon("<phosphor-name>", "<family>", "<Hue>")`), run `npm install`, then `node generate-painted-icons.mjs <id>` inside tools/icon-generator/. It writes both files. See tools/icon-generator/README.md.
+2. Hand-painted path: the artist follows the icon spec and passes the icon checker; drop both files into src/Aetherphone/Icons/. The names must match `IPhoneApp.Id` exactly.
+3. Rebuild. The csproj glob `Icons\*.png` copies the folder; there is no registration step.
 
 ## General images
 
@@ -181,9 +185,11 @@ Textures are sized to the draw, not the file. `WallpaperLibrary.TryGetTexture(pa
 - `ThemeMode.Light` targets 0, `ThemeMode.Dark` targets 1.
 - In Auto mode the target is `Darkness`, which follows the local clock: day from 07:00, night from 19:00 (`DayStartHour`, `NightStartHour`), stepped through a spring in `StepDayNight` so the switch glides instead of snapping.
 
-`DeviceChrome.DrawWallpaper` (src/Aetherphone/Windows/Components/DeviceChrome.cs) passes `ThemeDarkness` to `WallpaperRenderer.Draw`, which draws the light wallpaper and crossfades the dark one on top at that alpha. `ThemeProvider.Select` (src/Aetherphone/Core/Theme/ThemeProvider.cs) flips the whole UI palette to the dark theme when Auto-mode `Darkness` crosses 0.5.
+`DeviceChrome.DrawWallpaper` (src/Aetherphone/Windows/Components/Chrome/DeviceChrome.cs) passes `ThemeDarkness` to `WallpaperRenderer.Draw`, which draws the light wallpaper and crossfades the dark one on top at that alpha. `ThemeProvider.Select` (src/Aetherphone/Core/Theme/ThemeProvider.cs) flips the whole UI palette to the dark theme when Auto-mode `Darkness` crosses 0.5.
 
-Wallpaper luminance is a separate coupling, for legibility rather than theme choice: `WallpaperLibrary.MeasureBrightness` downsamples each loaded wallpaper to 24x24 and scores its luma. `HomeBrightness` blends the light and dark wallpapers' scores by `ThemeDarkness`, and `WallpaperLegibility.Strength` (src/Aetherphone/Windows/Components/WallpaperLegibility.cs) turns that into the strength of the home-screen scrim (`DeviceChrome.DrawHomeScrim`), so bright wallpapers get a stronger darkening layer behind icon labels.
+Wallpaper luminance is a separate coupling, for legibility rather than theme choice: `WallpaperLibrary.MeasureBrightness` downsamples each loaded wallpaper to 24x24 and scores its luma. `HomeBrightness` blends the light and dark wallpapers' scores by `ThemeDarkness`, and `WallpaperLegibility.Strength` (src/Aetherphone/Windows/Components/Chrome/WallpaperLegibility.cs) turns that into the strength of the home-screen scrim (`DeviceChrome.DrawHomeScrim`), so bright wallpapers get a stronger darkening layer behind icon labels.
+
+Artists author wallpapers from the [wallpaper spec](https://aetherphone.net/wallpaper-spec/) and check a pair with the [wallpaper checker](https://aetherphone.net/wallpaper-checker/), which previews it under the real status bar, labels, scrim and glass dock.
 
 ### To add a built-in wallpaper
 
@@ -196,15 +202,15 @@ Wallpaper luminance is a separate coupling, for legibility rather than theme cho
 A phone case is the chassis art around the screen. `PhoneCaseKind` (src/Aetherphone/Core/Theme/PhoneCase.cs) has two kinds:
 
 - `Color`: a flat tint, drawn procedurally (the default `Titanium`, the only shipped one).
-- `Art`: a painted PNG skin, drawn under everything by `CaseArt` (src/Aetherphone/Windows/Components/CaseArt.cs), which stretches one quad and swaps UVs to rotate the artwork when the phone is in landscape camera mode. 58 art cases ship alongside `Titanium`.
+- `Art`: a painted PNG skin, drawn under everything by `CaseArt` (src/Aetherphone/Windows/Components/Chrome/CaseArt.cs), which stretches one quad and swaps UVs to rotate the artwork when the phone is in landscape camera mode. 58 art cases ship alongside `Titanium`.
 
-The catalog is `ThemeCatalog.BuiltInCases` (src/Aetherphone/Core/Theme/ThemeCatalog.cs), exposed as `ThemeCatalog.Cases`; each entry is `PhoneCase.Color(id, tint)` or `PhoneCase.Art(id, category, tint, artistName, artistUrl)`. Every case carries a `PhoneCaseCategory` (`Colors`, `Gradients`, or `ArtistSeries`), and art cases record artist attribution (`ArtistName`, optionally `ArtistUrl`). The `Art` factory sets `TextureId` to the case id, and `PhoneCaseTextures` (src/Aetherphone/Windows/Components/PhoneCaseTextures.cs) keys on `TextureId`, not `CaseId`: it resolves `Cases/<TextureId>.png` for the skin and `Cases/<TextureId>.thumb.png` for the Settings picker, falling back to the skin when the thumb is missing.
+The catalog is `ThemeCatalog.BuiltInCases` (src/Aetherphone/Core/Theme/ThemeCatalog.cs), exposed as `ThemeCatalog.Cases`; each entry is `PhoneCase.Color(id, tint)` or `PhoneCase.Art(id, category, tint, artistName, artistUrl)`. Every case carries a `PhoneCaseCategory` (`Colors`, `Gradients`, or `ArtistSeries`), and art cases record artist attribution (`ArtistName`, optionally `ArtistUrl`). The `Art` factory sets `TextureId` to the case id, and `PhoneCaseTextures` (src/Aetherphone/Windows/Components/Chrome/PhoneCaseTextures.cs) keys on `TextureId`, not `CaseId`: it resolves `Cases/<TextureId>.png` for the skin and `Cases/<TextureId>.thumb.png` for the Settings picker, falling back to the skin when the thumb is missing.
 
-The artwork itself (canvas size, the 38 px metal band, the 250 px overflow margin, superellipse corners, alpha bleed, size budgets) is specified in section 2 of [the art asset spec](ART-ASSET-SPEC.md). That document is authoritative; do not work from this page for case art. src/Aetherphone/Cases/_template/ carries the working materials: `ArtCaseTemplate.svg` (the guide template), `generate-template.ps1` (regenerates it from its own hardcoded copies of the `Core/Theme/ChassisMetrics.cs` fractions; the script reads no code, so the two agree only by hand and nothing enforces it), `generate-case.ps1` (produces conforming reference cases), and a README mirror of the spec.
+Artists author the artwork itself (canvas size, the 38 px metal band, the 250 px overflow margin, superellipse corners, alpha bleed, size budgets) from the [case spec](https://aetherphone.net/case-spec/) and check it with the [case checker](https://aetherphone.net/case-checker/); do not work from this page for case art. src/Aetherphone/Cases/_template/ carries the engineering materials: `ArtCaseTemplate.svg` (the guide template), `generate-template.ps1` (regenerates it from its own hardcoded copies of the `Core/Theme/ChassisMetrics.cs` fractions and the `DeviceChrome` key placements; the script reads no code, so they agree only by hand and nothing enforces it), and `generate-case.ps1` (produces conforming reference cases).
 
 ### To add a case
 
-1. Author `<CaseId>.png` and `<CaseId>.thumb.png` to [the art asset spec](ART-ASSET-SPEC.md) and drop both into src/Aetherphone/Cases/. `CaseId` is PascalCase ASCII.
+1. Take `<CaseId>.png` and `<CaseId>.thumb.png` that pass the case checker and drop both into src/Aetherphone/Cases/. `CaseId` is PascalCase ASCII.
 2. Add one line to `ThemeCatalog.BuiltInCases`: `PhoneCase.Art("<CaseId>", <category>, <dominant metal colour>, "<artist name>")`, plus the artist URL when there is one. Pick the `PhoneCaseCategory` the case belongs to; every existing entry passes one. The tint fills the minimized phone and the pre-load frame, and it colors the procedural hardware buttons, so pick the case's main body tone.
 3. Add the display name: a `catalog.case.<caseid>` entry in `L.cs` (see `L.Catalogs.CaseSilkie`), a matching arm in `CatalogLabels.PhoneCase` (src/Aetherphone/Core/Localization/CatalogLabels.cs), and the key in all nine JSON files under src/Aetherphone/Localization/.
 4. Rebuild and check the Settings > Case picker, the minimize animation, and camera-mode landscape rotation.
@@ -213,12 +219,13 @@ The artwork itself (canvas size, the 38 px metal band, the 250 px overflow margi
 
 - **Font handle churn without `SuppressAutoRebuild` is quadratic.** Each handle created or disposed outside `atlas.SuppressAutoRebuild()` triggers its own full atlas rebuild; `FontService` manages 48 handles, so an unguarded rebuild storm freezes the UI. Both `FontService.Build` and `FontService.OnLanguageChanged` show the required pattern.
 - **The glyph ledger has a hard cap.** `FontService.NoticeText` stops recording once a bucket holds `LedgerCapPerBucket` (2500) codepoints, and it never records characters that were not passed to `NoticeText` in the first place. Draw sites that render user text without calling `NoticeText` show missing-glyph boxes for non-Latin text and no rebuild ever fixes them.
-- **App icons are stencils.** `AppIconTextures.TryDraw` multiplies the whole PNG by the caller's ink tint, so only white-on-transparent art tints correctly; painted color survives the multiply and clashes with the themed ink instead of being restyled. Shape must live in the alpha channel; see section 1 of [the art asset spec](ART-ASSET-SPEC.md).
+- **A painted icon needs both files.** `AppIconCache.IsPainted` requires `<id>.png` and `<id>.fg.png`. With one missing, the id drops to the stencil path, where `AppIconTextures.TryDraw` multiplies the whole PNG by the caller's ink tint, so a full-colour file comes out as a flat smear.
+- **Tinted and Clear read the symbol's brightness.** `IconBake` uses luminance times alpha of `<id>.fg.png` as the mask, so a coloured symbol (Calendar, Notes) renders at about half strength in those two appearances. Keep foreground symbols white unless the design accepts that.
 - **The emoji generator skips existing PNGs.** Re-running with the same pinned versions only rewrites catalog.json. If upstream Twemoji redrew an image, delete the local PNG or the stale art ships forever.
 - **catalog.json and the PNG set must move together.** `EmojiCatalog` resolves `file` names against the folder with no validation pass; a catalog entry without its PNG draws nothing (`EmojiImages.TryDraw` returns false).
 - **Sound default tokens are file names.** `SoundLibrary.BundledRingtoneToken` and `BundledNotificationToken` embed `Signal.mp3` and `Chime.mp3`. Renaming those files without updating the constants silently shifts every fresh install to the alphabetically first file.
 - **Wallpaper and case ids are persisted config values.** A built-in wallpaper's id is its file name stem, and `CaseId` is both the saved setting and the localization key suffix. Renaming either after release resets or breaks every user who selected it (`ThemeCatalog.IndexOf` and `WallpaperLibrary.Resolve` both fall back to the first entry on a miss).
-- **Icon and case texture paths are cached in static dictionaries.** `AppIconTextures` and `PhoneCaseTextures` cache resolved paths for the plugin's lifetime, and `PhoneCaseTextures` caches misses too, so case art that was requested while missing is never re-checked until reload (icon misses are re-checked each draw). Rebuild and reload after adding assets.
+- **Icon and case lookups are cached in static dictionaries.** `AppIconCache` remembers per id whether both painted files exist, misses included, and `PhoneCaseTextures` caches resolved paths and misses too, so art requested while missing is never re-checked until reload. Rebuild and reload after adding assets.
 - **Assets load from the build output, not the repo.** Every loader resolves against `AssemblyLocation.DirectoryName`. Editing a file under src/Aetherphone/ does nothing for a running dev plugin until you rebuild so the csproj copies it.
 
 ## Related docs
@@ -228,4 +235,4 @@ The artwork itself (canvas size, the 38 px metal band, the 250 px overflow margi
 - [Notifications](notifications.md): where notification sounds and per-app sound overrides fire.
 - [State and persistence](state-and-persistence.md): the Dalamud config directory that holds imported sounds, custom wallpapers, and the glyph ledger.
 - [Architecture](architecture.md): plugin boot order, including font and emoji initialization.
-- [Art asset spec](ART-ASSET-SPEC.md): the authoritative icon and case artwork specification.
+- [Art assets](ART-ASSET-SPEC.md): where artists work on aetherphone.net, the handoff for each asset, and the constants the website copies.
