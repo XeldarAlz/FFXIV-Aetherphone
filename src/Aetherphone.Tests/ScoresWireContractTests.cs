@@ -17,7 +17,10 @@ public sealed class ScoresWireContractTests
         "flow.easy", "flow.medium", "flow.hard", "solitaire", "memory", "memory.attempts",
         "minesweeper.easy", "minesweeper.medium", "minesweeper.hard", "sudoku.easy", "sudoku.medium",
         "sudoku.hard", "nonogram.easy", "nonogram.medium", "nonogram.hard", "chess", "reversi",
-        "casino.barkeep",
+        "casino.barkeep", "mahjong.easy", "mahjong.medium", "mahjong.hard", "gloop", "gloop.versus", "slice",
+        "slice.arcade", "spiral", "drift", "crawler", "trails", "moogleclicker", "pinball", "pegfall", "fling",
+        "snip", "crater", "siege", "siege.endless", "trailblaze", "thrust", "crates", "delve", "luckydraw",
+        "broadside", "herd", "claim", "tempo", "fuse", "lander", "minigolf",
     };
 
     [Fact]
@@ -188,6 +191,27 @@ public sealed class ScoresWireContractTests
         Assert.False(snake.LowerIsBetter);
         Assert.True(snake.IsBetter(6, 4));
         Assert.False(ScoreStatIds.Contains("doom"));
+    }
+
+    [Fact]
+    public void NextWaveStatKindsFollowTheServerCatalog()
+    {
+        Assert.Equal(ScoreKind.Time, ScoreStatIds.KindOf("mahjong.hard"));
+        Assert.Equal(ScoreKind.Streak, ScoreStatIds.KindOf("gloop.versus"));
+        Assert.Equal(ScoreKind.Level, ScoreStatIds.KindOf("moogleclicker"));
+        Assert.Equal(ScoreKind.Level, ScoreStatIds.KindOf("siege.endless"));
+        Assert.Equal(ScoreKind.Streak, ScoreStatIds.KindOf("luckydraw"));
+        Assert.Equal(ScoreKind.Score, ScoreStatIds.KindOf("pegfall"));
+        Assert.True(ScoreStatIds.TryFind("minigolf", out var golf));
+        Assert.Equal(ScoreKind.Time, golf.Kind);
+        Assert.True(golf.LowerIsBetter);
+        Assert.True(golf.IsBetter(52, 58));
+        Assert.True(ScoreStatIds.TryFind("fling", out var fling));
+        Assert.Equal(ScoreKind.Level, fling.Kind);
+        Assert.True(fling.IsBetter(15, 12));
+        Assert.Equal(2, ScoreStatIds.CountFor("siege"));
+        Assert.Equal(3, ScoreStatIds.CountFor("mahjong"));
+        Assert.False(ScoreStatIds.Contains("mahjong"));
     }
 
     [Fact]
