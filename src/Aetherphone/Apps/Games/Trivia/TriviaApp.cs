@@ -12,7 +12,7 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Games.Trivia;
 
-internal sealed class TriviaApp : IMiniGame
+internal sealed class TriviaApp : ILegacyMiniGame
 {
     private const string GameId = "trivia";
     private readonly TriviaBoard board;

@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Stack;
 
-internal sealed class StackApp : IMiniGame
+internal sealed class StackApp : ILegacyMiniGame
 {
     private const string GameId = "stack";
     private const float CameraFollowSpeed = 8.5f;

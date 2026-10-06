@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Coil;
 
-internal sealed class CoilApp : IMiniGame
+internal sealed class CoilApp : ILegacyMiniGame
 {
     private const string GameId = "coil";
     private const float StageBannerSeconds = 2.4f;

@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.CrystalDrop;
 
-internal sealed class CrystalDropApp : IMiniGame
+internal sealed class CrystalDropApp : ILegacyMiniGame
 {
     private const string GameId = "crystaldrop";
     private readonly CrystalDropBoard board = new();

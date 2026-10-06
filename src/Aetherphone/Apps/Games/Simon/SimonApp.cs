@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Simon;
 
-internal sealed class SimonApp : IMiniGame
+internal sealed class SimonApp : ILegacyMiniGame
 {
     private const string GameId = "simon";
     private const float OnDuration = 0.4f;

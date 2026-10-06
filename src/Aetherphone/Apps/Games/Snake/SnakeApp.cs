@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Snake;
 
-internal sealed class SnakeApp : IMiniGame
+internal sealed class SnakeApp : ILegacyMiniGame
 {
     private const string GameId = "snake";
     private const float TrailInterval = 0.045f;

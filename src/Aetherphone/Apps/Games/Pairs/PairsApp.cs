@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Pairs;
 
-internal sealed class PairsApp : IMiniGame
+internal sealed class PairsApp : ILegacyMiniGame
 {
     private const string GameId = "memory";
     private const string AttemptsStatId = "memory.attempts";

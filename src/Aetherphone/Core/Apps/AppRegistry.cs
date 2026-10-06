@@ -40,6 +40,7 @@ using Aetherphone.Apps.Venues;
 using Aetherphone.Apps.Wallet;
 using Aetherphone.Apps.YellowPages;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Inventory;
 using Aetherphone.Core.Photos;
@@ -129,7 +130,8 @@ internal static class AppRegistry
         apps.Add(new DailiesApp(services.Dailies));
         apps.Add(new FishingApp(services.Fishing, services.FishingAlerts, services.Textures));
         apps.Add(new GamesApp(services.GameStats, services.GameData, services.Textures, services.Coins,
-            services.CoinSessions, services.GameRooms, services.Configuration));
+            services.CoinSessions, services.GameRooms, services.Configuration, NullScoreSink.Instance,
+            NullRankSource.Instance));
         apps.Add(new NotificationsApp(services, apps));
         var calendarEvents = new CalendarEvents(services.Http, services.AethernetSession);
         apps.Add(new CalendarApp(services.Configuration, calendarEvents, services.Confirm));

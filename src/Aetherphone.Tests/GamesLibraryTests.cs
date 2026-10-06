@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Games;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core.Games;
+using Aetherphone.Core.Localization;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -11,16 +12,14 @@ public sealed class GamesLibraryTests
     {
         public FakeGame(string id, string title, GameGenre genre)
         {
-            Id = id;
+            Spec = new GameSpec(id, new LocString(string.Concat("test.", id), title), genre);
             Title = title;
-            Genre = genre;
         }
 
-        public string Id { get; }
+        public GameSpec Spec { get; }
         public string Title { get; }
-        public GameGenre Genre { get; }
 
-        public void Open()
+        public void Start(in GameStart start)
         {
         }
 

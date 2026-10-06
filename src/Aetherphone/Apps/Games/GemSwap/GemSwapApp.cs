@@ -11,7 +11,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.GemSwap;
 
-internal sealed class GemSwapApp : IMiniGame
+internal sealed class GemSwapApp : ILegacyMiniGame
 {
     private const string GameId = "match3";
     internal const string BlitzStatId = "match3.blitz";

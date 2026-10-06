@@ -9,7 +9,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Solitaire;
 
-internal sealed class SolitaireApp : IMiniGame
+internal sealed class SolitaireApp : ILegacyMiniGame
 {
     private const string GameId = "solitaire";
     private const float DragThreshold = 5f;

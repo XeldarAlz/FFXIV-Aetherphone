@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Squadron;
 
-internal sealed class SquadronApp : IMiniGame
+internal sealed class SquadronApp : ILegacyMiniGame
 {
     private const string GameId = "squadron";
     private static readonly Vector4[] CelebrationPalette =

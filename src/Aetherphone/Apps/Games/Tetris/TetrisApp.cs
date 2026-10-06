@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Tetris;
 
-internal sealed class TetrisApp : IMiniGame
+internal sealed class TetrisApp : ILegacyMiniGame
 {
     private const string GameId = "tetris";
     private static readonly Vector4[] TetrisPalette =

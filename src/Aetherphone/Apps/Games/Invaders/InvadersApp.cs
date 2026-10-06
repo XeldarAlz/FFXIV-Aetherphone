@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Invaders;
 
-internal sealed class InvadersApp : IMiniGame
+internal sealed class InvadersApp : ILegacyMiniGame
 {
     private const string GameId = "invaders";
     private const float WaveBannerSeconds = 1.6f;

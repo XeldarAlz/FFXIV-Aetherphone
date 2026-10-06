@@ -10,7 +10,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Breakout;
 
-internal sealed class BreakoutApp : IMiniGame
+internal sealed class BreakoutApp : ILegacyMiniGame
 {
     private const string GameId = "breakout";
     private const float TrailInterval = 0.04f;
