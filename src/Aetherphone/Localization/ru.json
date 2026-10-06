@@ -4379,6 +4379,8 @@
   "games.breakout.wide": "Широкая платформа",
   "games.bubbles": "Пузыри",
   "games.bubbles.hook": "Целься и стреляй пузырями, собирая три и больше одного цвета, пока они не дошли до линии.",
+  "games.bubbles.popped": "Лопнуто",
+  "games.bubbles.shots": "Выстрелы",
   "games.waterSort": "Сортировка воды",
   "games.watersort.hook": "Переливайте жидкости между пробирками, пока в каждой не останется один цвет.",
   "games.saved": "Сохранено",

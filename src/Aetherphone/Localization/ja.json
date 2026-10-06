@@ -4379,6 +4379,8 @@
   "games.breakout.wide": "ワイドパドル",
   "games.bubbles": "バブル",
   "games.bubbles.hook": "狙って泡を撃ち、3つ以上そろえてラインに届く前に割ろう。",
+  "games.bubbles.popped": "割った数",
+  "games.bubbles.shots": "ショット数",
   "games.waterSort": "ウォーターソート",
   "games.watersort.hook": "すべての試験管が1色になるまで、液体を注ぎ移そう。",
   "games.saved": "ホールド",

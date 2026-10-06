@@ -4379,6 +4379,8 @@
   "games.breakout.wide": "Geniş raket",
   "games.bubbles": "Baloncuk",
   "games.bubbles.hook": "Nişan al ve baloncukları üç veya daha fazlasını gruplayıp çizgiye ulaşmadan patlat.",
+  "games.bubbles.popped": "Patlatılan",
+  "games.bubbles.shots": "Atış",
   "games.waterSort": "Su Ayır",
   "games.watersort.hook": "Her tüpte tek renk kalana kadar sıvıları tüpler arasında aktar.",
   "games.saved": "Kaydedildi",

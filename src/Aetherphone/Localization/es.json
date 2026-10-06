@@ -4379,6 +4379,8 @@
   "games.breakout.wide": "Paleta ancha",
   "games.bubbles": "Burbujas",
   "games.bubbles.hook": "Apunta y dispara burbujas para formar grupos de tres o más y reventarlas antes de que lleguen a la línea.",
+  "games.bubbles.popped": "Reventadas",
+  "games.bubbles.shots": "Disparos",
   "games.waterSort": "Agua y tubos",
   "games.watersort.hook": "Vierte los líquidos entre los tubos hasta que cada tubo tenga un solo color.",
   "games.saved": "Guardado",

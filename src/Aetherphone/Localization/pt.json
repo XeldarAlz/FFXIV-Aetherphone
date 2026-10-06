@@ -4379,6 +4379,8 @@
   "games.breakout.wide": "Raquete larga",
   "games.bubbles": "Bolhas",
   "games.bubbles.hook": "Mire e atire bolhas para formar grupos de três ou mais e estourá-las antes que cheguem à linha.",
+  "games.bubbles.popped": "Estouradas",
+  "games.bubbles.shots": "Disparos",
   "games.waterSort": "Água e Tubos",
   "games.watersort.hook": "Despeje os líquidos entre os tubos até que cada tubo tenha uma única cor.",
   "games.saved": "Salvo",

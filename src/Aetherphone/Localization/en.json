@@ -4379,6 +4379,8 @@
   "games.breakout.wide": "Wide paddle",
   "games.bubbles": "Bubbles",
   "games.bubbles.hook": "Aim and shoot bubbles into groups of three or more to pop them before they reach the line.",
+  "games.bubbles.popped": "Popped",
+  "games.bubbles.shots": "Shots",
   "games.waterSort": "Water Sort",
   "games.watersort.hook": "Pour the liquids between tubes until every tube holds a single color.",
   "games.saved": "Saved",

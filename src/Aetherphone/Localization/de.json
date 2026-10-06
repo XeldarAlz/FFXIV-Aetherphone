@@ -4379,6 +4379,8 @@
   "games.breakout.wide": "Breiter Schläger",
   "games.bubbles": "Blasen",
   "games.bubbles.hook": "Ziele und schieße Blasen in Gruppen von drei oder mehr, um sie zu zerplatzen, bevor sie die Linie erreichen.",
+  "games.bubbles.popped": "Zerplatzt",
+  "games.bubbles.shots": "Schüsse",
   "games.waterSort": "Wasser sortieren",
   "games.watersort.hook": "Gieße die Flüssigkeiten zwischen den Röhrchen um, bis jedes Röhrchen nur eine Farbe enthält.",
   "games.saved": "Gespeichert",
