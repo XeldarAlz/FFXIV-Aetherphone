@@ -132,7 +132,7 @@ internal sealed class SquadronBoard
     private readonly Vector2[] killPositions = new Vector2[MaxShips];
     private readonly ShipKind[] killKinds = new ShipKind[MaxShips];
     private readonly int[] killPoints = new int[MaxShips];
-    private readonly Random random = new();
+    private GameRandom random;
     private int shipCount;
     private int bulletCount;
     private int shotCount;
@@ -161,6 +161,9 @@ internal sealed class SquadronBoard
     public bool LastChallengeWasPerfect { get; private set; }
     public bool CaptureActive { get; private set; }
     public bool RescueActive { get; private set; }
+    public int ShotsFired { get; private set; }
+    public int ShotsHit { get; private set; }
+    public int Rescues { get; private set; }
     public bool Respawning => respawnTimer > 0f;
     public float RespawnRemaining => respawnTimer;
     public bool ShowingResult => resultTimer > 0f;
@@ -250,8 +253,9 @@ internal sealed class SquadronBoard
     public Vector2 SlotPosition(in Ship ship) =>
         BreatheCenter + (ship.Slot - BreatheCenter) * (1f + BreatheAmplitude * MathF.Sin(breathePhase));
 
-    public void StartGame()
+    public void StartGame(GameRandom seededRandom)
     {
+        random = seededRandom;
         Score = 0;
         Lives = StartLives;
         GameOver = false;
@@ -263,6 +267,9 @@ internal sealed class SquadronBoard
         respawnTimer = 0f;
         resultTimer = 0f;
         frameTimer = 0f;
+        ShotsFired = 0;
+        ShotsHit = 0;
+        Rescues = 0;
         PlayerX = CenterX;
         ClearFrameEvents();
         StartStage(1);
@@ -295,14 +302,17 @@ internal sealed class SquadronBoard
         if (!Dual)
         {
             bullets[bulletCount++] = new Vector2(PlayerX, muzzleY);
+            ShotsFired++;
             ShotFiredThisFrame = true;
             return true;
         }
 
         bullets[bulletCount++] = new Vector2(PlayerX - DualSpread, muzzleY);
+        ShotsFired++;
         if (bulletCount < cap)
         {
             bullets[bulletCount++] = new Vector2(PlayerX + DualSpread, muzzleY);
+            ShotsFired++;
         }
 
         ShotFiredThisFrame = true;
@@ -832,6 +842,7 @@ internal sealed class SquadronBoard
         RescueActive = false;
         Dual = true;
         DualAchieved = true;
+        Rescues++;
         Score += RescueBonus;
         RescueCompletedThisFrame = true;
     }
@@ -854,6 +865,7 @@ internal sealed class SquadronBoard
                 continue;
             }
 
+            ShotsHit++;
             KillShip(hit);
             bullets[index] = bullets[--bulletCount];
         }
@@ -1033,5 +1045,5 @@ internal sealed class SquadronBoard
         return t * t * (3f - 2f * t);
     }
 
-    private float Chance() => (float)random.NextDouble();
+    private float Chance() => random.NextFloat();
 }

@@ -1,49 +1,62 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Invaders;
 
-internal sealed class InvadersApp : ILegacyMiniGame
+internal sealed class InvadersApp : IMiniGame
 {
     private const string GameId = "invaders";
     private const float WaveBannerSeconds = 1.6f;
+    private const float PadInsetX = 12f;
+    private const float PadInsetY = 6f;
+    private const float PadOpacity = 0.92f;
+    private const float LastInvaderSlowFactor = 0.5f;
+    private const float LastInvaderSlowSeconds = 0.3f;
+    private const ulong IdleSeed = 0x494E5641444552UL;
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Invaders, GameGenre.Action, L.Invaders.Hook,
+        Backdrop.Neon, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true, keyboard: true);
+    private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4[] CelebrationPalette =
     {
         new(0.98f, 0.95f, 0.90f, 1f), new(0.98f, 0.45f, 0.62f, 1f), new(1f, 0.62f, 0.30f, 1f),
         new(0.40f, 0.70f, 0.98f, 1f), new(0.72f, 0.50f, 0.96f, 1f), new(0.46f, 0.86f, 0.62f, 1f),
     };
 
+    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
+
     private readonly InvadersBoard board = new();
+    private readonly InvadersBoard idleBoard = new();
     private readonly InvadersRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private RollingValue scoreRoll;
-    private bool started;
+    private Camera2D camera = Camera2D.Create();
+    private LabelSlot waveLabel;
+    private LabelSlot bonusLabel;
     private bool finished;
-    private bool pendingSubmit;
-    private bool newBest;
-    private int loadedBest;
-    private float resultAppear;
+    private bool idleReady;
     private float bannerProgress = 1f;
     private string bannerText = string.Empty;
-    private string resultWave = string.Empty;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Invaders);
-    public GameGenre Genre => GameGenre.Action;
-    public bool RunsOnAClock => true;
 
-    public void Open()
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
     {
-        loadedBest = 0;
-        started = false;
+        board.StartGame(start.Random);
+        particles.Clear();
+        particles.Reseed(start.Seed);
+        fx.Clear();
+        finished = false;
+        bannerProgress = 1f;
+        ShowWaveBanner();
     }
 
     public void Close()
@@ -54,101 +67,82 @@ internal sealed class InvadersApp : ILegacyMiniGame
     {
     }
 
-    private void StartNewGame()
+    public void DrawIdle(in GameContext context)
     {
-        board.StartGame();
-        particles.Clear();
-        fx.Clear();
-        scoreRoll.Snap(0);
-        finished = false;
-        pendingSubmit = false;
-        newBest = false;
-        resultAppear = 0f;
-        started = true;
-        ShowWaveBanner();
+        if (!idleReady || idleBoard.GameOver)
+        {
+            idleBoard.StartGame(GameRandom.FromSeed(IdleSeed));
+            idleReady = true;
+        }
+
+        var scale = UiScale.Current;
+        PlaceCamera(context, scale);
+        idleBoard.Update(context.RawDeltaSeconds);
+        renderer.Draw(ImGui.GetWindowDrawList(), idleBoard, in camera, context.Full, Accent, scale);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (loadedBest == 0)
-        {
-            loadedBest = context.Stats.Get(GameId).BestScore;
-        }
-
-        if (!started)
-        {
-            StartNewGame();
-        }
-
-        if (pendingSubmit)
-        {
-            newBest = context.Stats.SubmitScore(GameId, board.Score);
-            if (newBest)
-            {
-                loadedBest = board.Score;
-            }
-
-            pendingSubmit = false;
-        }
-
-        var rowY = body.Min.Y + 30f * scale;
-        var padHeight = GamePad.ShooterHeight(scale);
-        var padArea = new Rect(new Vector2(body.Min.X, body.Max.Y - padHeight), body.Max);
-        var field = FieldRect(body, rowY, padArea.Min.Y, scale);
-        var factor = field.Width / InvadersBoard.Width;
         var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
+        var accent = Accent;
+        PlaceCamera(context, scale);
+        var simDelta = fx.ScaleDelta(context.DeltaSeconds);
         if (!finished)
         {
-            var pad = GamePad.Shooter(padArea, Accent, theme);
-            HandleInput(pad, deltaSeconds);
-            var simDelta = fx.ScaleDelta(deltaSeconds);
             board.Update(simDelta);
-            ReactToEvents(field, factor, scale);
         }
 
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        bannerProgress = GameBanner.Advance(bannerProgress, deltaSeconds, WaveBannerSeconds);
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        bannerProgress = GameBanner.Advance(bannerProgress, context.DeltaSeconds, WaveBannerSeconds);
+        renderer.Draw(drawList, board, in camera, context.Full, accent, scale);
+        var pad = DrawPad(drawList, context, accent, scale);
+        if (!finished)
+        {
+            if (context.Session.State == StageFlow.Playing)
+            {
+                HandleInput(in pad, simDelta);
+            }
+
+            ReactToEvents(context, accent);
+        }
+
+        particles.Draw(drawList, in camera);
+        fx.DrawRings(drawList, scale);
+        fx.DrawText();
+        GameBanner.Draw(drawList, camera.ToScreen(new Vector2(InvadersBoard.Width * 0.5f, InvadersBoard.Height * 0.62f)),
+            bannerText, accent, context.Theme, bannerProgress);
+        context.Hud.Score(board.Score);
+        context.Hud.Lives(board.Lives, InvadersBoard.StartingLives);
+        context.Hud.Level(board.Wave);
+        context.Hud.Best(context.Session.Best);
+        context.Session.Report(board.Score);
         if (board.GameOver && !finished)
         {
             finished = true;
-            resultAppear = 0f;
-            pendingSubmit = true;
-            resultWave = $"{Loc.T(L.Games.Wave)} {GameNumber.Label(board.Wave)}";
-        }
-
-        var shake = fx.ShakeOffset(scale);
-        var shakenField = new Rect(field.Min + shake, field.Max + shake);
-        DrawHud(body, rowY, theme, deltaSeconds, scale);
-        GameScene.Arena(drawList, shakenField, 14f * scale, scale, Accent);
-        renderer.Draw(board, shakenField, Accent, scale);
-        fx.DrawFlash(drawList, field, 0f);
-        particles.Draw(drawList, scale);
-        fx.DrawRings(drawList, scale);
-        fx.DrawText();
-        GameBanner.Draw(drawList, new Vector2(field.Center.X, field.Min.Y + field.Height * 0.62f), bannerText, Accent,
-            theme, bannerProgress);
-        if (finished)
-        {
-            DrawResult(theme, body, deltaSeconds);
+            Finish(context);
         }
     }
 
-    private static Rect FieldRect(Rect body, float rowY, float bottom, float scale)
+    private void PlaceCamera(in GameContext context, float scale)
     {
-        var pad = 6f * scale;
-        var top = rowY + 26f * scale;
-        var availableWidth = body.Width - pad * 2f;
-        var availableHeight = bottom - pad - top;
-        var factor = MathF.Min(availableWidth / InvadersBoard.Width, availableHeight / InvadersBoard.Height);
-        var size = new Vector2(InvadersBoard.Width, InvadersBoard.Height) * factor;
-        var min = new Vector2(body.Center.X - size.X * 0.5f, top + (availableHeight - size.Y) * 0.5f);
-        return new Rect(min, min + size);
+        var full = context.Full;
+        var band = StageLayout.PadBand(full, StageLayout.ShooterBand, scale);
+        var view = new Rect(new Vector2(full.Min.X, context.Safe.Min.Y), new Vector2(full.Max.X, band.Min.Y));
+        camera.Fit(view, InvadersBoard.Width, InvadersBoard.Height, FitMode.Contain);
+        context.Fx.ApplyTo(ref camera);
+        camera.Update(context.RawDeltaSeconds, scale);
+        context.Backdrop.SetCamera(in camera);
+    }
+
+    private static ShooterPadInput DrawPad(ImDrawListPtr drawList, in GameContext context, Vector4 accent, float scale)
+    {
+        var band = StageLayout.PadBand(context.Full, StageLayout.ShooterBand, scale);
+        var panel = new Rect(new Vector2(band.Min.X + PadInsetX * scale, band.Min.Y + PadInsetY * scale),
+            new Vector2(band.Max.X - PadInsetX * scale, band.Max.Y - PadInsetY * scale));
+        Material.Frosted(drawList, panel.Min, panel.Max, Metrics.Radius.Lg * scale, scale, PadOpacity);
+        return GamePad.Shooter(panel, accent, context.Theme);
     }
 
     private void HandleInput(in ShooterPadInput pad, float deltaSeconds)
@@ -164,71 +158,84 @@ internal sealed class InvadersApp : ILegacyMiniGame
         }
     }
 
-    private void ReactToEvents(Rect field, float factor, float scale)
+    private void ReactToEvents(in GameContext context, Vector4 accent)
     {
         if (board.ShotFiredThisFrame)
         {
             UiFeedback.Play(UiSound.GameShoot);
-            var muzzle = field.Min + new Vector2(board.PlayerX, InvadersBoard.PlayerY - InvadersBoard.PlayerHeight) * factor;
-            particles.Streaks(muzzle, 3, GamePalette.Lighten(Accent, 0.4f), 110f * scale, 2f, 0.2f, 0.5f, -MathF.PI * 0.5f);
+            var muzzle = new Vector2(board.PlayerX, InvadersBoard.PlayerY - InvadersBoard.PlayerHeight);
+            particles.Burst(muzzle, 3, GamePalette.Lighten(accent, 0.4f), 28f, 0.5f, 0.2f, 56f, 0.5f, -MathF.PI * 0.5f,
+                ParticleShape.Streak);
         }
 
         for (var index = 0; index < board.KillCount; index++)
         {
-            var center = field.Min + board.KillPosition(index) * factor;
-            var color = InvadersRenderer.KindColor(board.KillKind(index), Accent);
-            particles.Burst(center, 10, color, 150f * scale, 2.4f, 0.5f, 220f, MathF.PI * 2f, 0f, ParticleShape.Square);
-            particles.Sparkle(center, 4, new Vector4(1f, 1f, 1f, 1f), 100f * scale, 2f, 0.4f);
-            fx.Shockwave(center, InvadersBoard.InvaderWidth * factor * 1.3f, color with { W = 0.6f }, 0.3f, 2f);
-            fx.AddText(GameNumber.Label(InvadersBoard.RowPoints[RowForKind(board.KillKind(index))]), center, color, 0.9f);
+            var center = board.KillPosition(index);
+            var color = InvadersRenderer.KindColor(board.KillKind(index), accent);
+            particles.Burst(center, 10, color, 38f, 0.62f, 0.5f, 56f, MathF.PI * 2f, 0f, ParticleShape.Square);
+            particles.Emit(new ParticleSpec(White, White, 0.5f, 26f, 0.4f, 10f, 2.4f, 6f, shape: ParticleShape.Star),
+                center, 4);
+            var screen = camera.ToScreen(center);
+            fx.Shockwave(screen, camera.Px(InvadersBoard.InvaderWidth * 1.3f), color with { W = 0.6f }, 0.3f, 2f);
+            fx.AddText(GameNumber.Label(InvadersBoard.RowPoints[RowForKind(board.KillKind(index))]), screen, color, 0.9f);
         }
 
         if (board.KillCount > 0)
         {
             UiFeedback.Play(UiSound.GameExplosion);
-            fx.AddTrauma(0.06f);
+            camera.Shake(0.06f);
             fx.HitStop(0.03f);
         }
 
         for (var index = 0; index < board.ChipCount; index++)
         {
-            var center = field.Min + board.ChipPosition(index) * factor;
-            particles.Burst(center, 4, GamePalette.Lighten(Accent, 0.12f), 90f * scale, 1.6f, 0.35f, 260f, MathF.PI * 2f, 0f,
-                ParticleShape.Square);
+            particles.Burst(board.ChipPosition(index), 4, GamePalette.Lighten(accent, 0.12f), 23f, 0.4f, 0.35f, 67f,
+                MathF.PI * 2f, 0f, ParticleShape.Square);
         }
 
         if (board.SaucerKilledThisFrame)
         {
-            var center = field.Min + board.SaucerKillPosition * factor;
-            particles.Sparkle(center, 16, InvadersRenderer.SaucerColor, 170f * scale, 2.8f, 0.8f);
-            fx.Shockwave(center, InvadersBoard.SaucerHalfWidth * factor * 3f, InvadersRenderer.SaucerColor with { W = 0.7f },
-                0.45f, 2.5f);
-            fx.AddText($"+{GameNumber.Label(InvadersBoard.SaucerPoints)}", center, InvadersRenderer.SaucerColor, 1.2f);
+            UiFeedback.Play(UiSound.GamePowerUp);
+            var center = board.SaucerKillPosition;
+            particles.Emit(new ParticleSpec(InvadersRenderer.SaucerColor, White, 0.7f, 44f, 0.8f, 10f, 2.4f, 6f,
+                shape: ParticleShape.Star), center, 16);
+            var screen = camera.ToScreen(center);
+            fx.Shockwave(screen, camera.Px(InvadersBoard.SaucerHalfWidth * 3f),
+                InvadersRenderer.SaucerColor with { W = 0.7f }, 0.45f, 2.5f);
+            fx.AddText(bonusLabel.Get(L.Invaders.Bonus, InvadersBoard.SaucerPoints), screen, InvadersRenderer.SaucerColor,
+                1.2f);
             fx.HitStop(0.05f);
+            context.Fx.Punch(0.05f);
         }
 
         if (board.PlayerHitThisFrame)
         {
             UiFeedback.Play(UiSound.GameHitSoft);
-            var center = field.Min + new Vector2(board.PlayerX, InvadersBoard.PlayerY) * factor;
-            particles.Burst(center, 16, Accent, 170f * scale, 2.6f, 0.7f, 300f);
-            fx.AddTrauma(0.7f);
+            var center = new Vector2(board.PlayerX, InvadersBoard.PlayerY);
+            particles.Burst(center, 16, accent, 44f, 0.67f, 0.7f, 77f);
+            camera.Shake(0.7f);
             fx.HitStop(0.1f);
-            fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.35f);
+            context.Fx.Punch(0.06f);
+            context.Fx.Flash(Danger, 0.35f);
+            if (board.Lives == 1)
+            {
+                context.Fx.Vignette(Danger, 0.5f, 1f);
+            }
         }
 
         if (board.LandedThisFrame)
         {
-            fx.AddTrauma(0.8f);
-            fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.45f);
+            camera.Shake(0.8f);
+            context.Fx.Flash(Danger, 0.45f);
         }
 
         if (board.WaveClearedThisFrame)
         {
-            UiFeedback.Play(UiSound.GamePowerUp);
-            var top = new Vector2(field.Center.X, field.Min.Y + field.Height * 0.2f);
-            particles.Confetti(top, 60, CelebrationPalette, 260f * scale, 4f, 1.4f);
-            fx.Flash(GamePalette.Lighten(Accent, 0.4f), 0.16f);
+            GameSfx.LevelClear();
+            context.Fx.Sweep();
+            context.Fx.SlowMo(LastInvaderSlowFactor, LastInvaderSlowSeconds);
+            EmitConfetti(new Vector2(InvadersBoard.Width * 0.5f, InvadersBoard.Height * 0.2f), 60);
+            context.Fx.Flash(GamePalette.Lighten(accent, 0.4f), 0.16f);
         }
 
         if (board.WaveStartedThisFrame)
@@ -252,65 +259,42 @@ internal sealed class InvadersApp : ILegacyMiniGame
 
     private void ShowWaveBanner()
     {
-        bannerText = $"{Loc.T(L.Games.Wave)} {GameNumber.Label(board.Wave)}";
+        bannerText = waveLabel.Get(L.Invaders.WaveNumber, board.Wave);
         bannerProgress = 0f;
     }
 
-    private void DrawHud(Rect body, float rowY, PhoneTheme theme, float deltaSeconds, float scale)
+    private void EmitConfetti(Vector2 origin, int count)
     {
-        var scoreLabel = Loc.T(L.Games.Score);
-        var scoreText = GameNumber.Label(board.Score);
-        var waveLabel = Loc.T(L.Games.Wave);
-        var waveText = GameNumber.Label(board.Wave);
-        var scoreWidth = GameHud.PillWidth(scoreLabel, scoreText);
-        var waveWidth = GameHud.PillWidth(waveLabel, waveText);
-        var gap = 12f * scale;
-        var scoreX = body.Center.X - gap * 0.5f - scoreWidth * 0.5f;
-        var waveX = body.Center.X + gap * 0.5f + waveWidth * 0.5f;
-        var beatingBest = board.Score > 0 && board.Score > loadedBest;
-        GameHud.ScorePill(new Vector2(scoreX, rowY), scoreLabel, ref scoreRoll, board.Score, Accent, theme, deltaSeconds,
-            beatingBest);
-        GameHud.Pill(new Vector2(waveX, rowY), waveLabel, waveText, Accent, theme);
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 22f * scale, rowY), 16f * scale, theme))
+        var perColor = Math.Max(1, count / ConfettiSpecs.Length);
+        for (var index = 0; index < ConfettiSpecs.Length; index++)
         {
-            StartNewGame();
-        }
-
-        DrawLives(body, rowY, scale);
-    }
-
-    private void DrawLives(Rect body, float rowY, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var unit = 1.6f * scale;
-        var pitch = InvadersRenderer.Cannon.Height * unit + 4f * scale;
-        var origin = new Vector2(body.Min.X + 22f * scale, rowY);
-        var lastLife = board.Lives == 1;
-        for (var life = 0; life < InvadersBoard.StartingLives; life++)
-        {
-            var center = new Vector2(origin.X, origin.Y + (life - 1) * pitch);
-            if (life >= board.Lives)
-            {
-                InvadersRenderer.Cannon.DrawCentered(drawList, center, unit,
-                    ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.2f)));
-                continue;
-            }
-
-            var color = lastLife
-                ? new Vector4(0.95f, 0.35f, 0.35f, 0.6f + 0.4f * Pulse.Wave(Pulse.Fast))
-                : Accent;
-            InvadersRenderer.Cannon.DrawCentered(drawList, center, unit, ImGui.GetColorU32(color));
+            particles.Emit(in ConfettiSpecs[index], origin, perColor);
         }
     }
 
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
+    private void Finish(in GameContext context)
     {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score),
-            GameNumber.Label(board.Score), resultWave, newBest);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
+        var outcome = new GameOutcome(board.Score, ScoreKind.Score, GameId)
+            .WithStat(L.Invaders.WavesCleared, GameNumber.Label(board.Wave - 1))
+            .WithStat(L.Invaders.Saucers, GameNumber.Label(board.SaucersHit));
+        if (board.ShotsFired > 0)
         {
-            StartNewGame();
+            var percent = board.ShotsHit * 100 / board.ShotsFired;
+            outcome = outcome.WithStat(L.Invaders.Accuracy, Loc.T(L.Invaders.Percent, GameNumber.Label(percent)));
         }
+
+        context.Session.Finish(outcome);
+    }
+
+    private static ParticleSpec[] BuildConfetti()
+    {
+        var specs = new ParticleSpec[CelebrationPalette.Length];
+        for (var index = 0; index < specs.Length; index++)
+        {
+            specs[index] = new ParticleSpec(CelebrationPalette[index], CelebrationPalette[index], 1f, 67f, 1.4f, 138f,
+                0.7f, 16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
+        }
+
+        return specs;
     }
 }

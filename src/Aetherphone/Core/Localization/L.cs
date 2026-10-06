@@ -8078,9 +8078,7 @@ internal static class L
         public static readonly LocString CategoryActions = new("games.categoryActions", "Actions");
         public static readonly LocString CategoryEmotes = new("games.categoryEmotes", "Emotes");
         public static readonly LocString Skyfall = new("games.skyfall", "Skyfall");
-        public static readonly LocString Wave = new("games.wave", "Wave");
         public static readonly LocString Ammo = new("games.ammo", "Ammo");
-        public static readonly LocString WaveClear = new("games.waveClear", "Wave clear");
         public static readonly LocString Invaders = new("games.invaders", "Invaders");
         public static readonly LocString CapMan = new("games.capman", "CapMan");
         public static readonly LocString Ready = new("games.ready", "Ready!");
@@ -8413,11 +8411,25 @@ internal static class L
     internal static class Skyfall
     {
         public static readonly LocString Hook = new("games.skyfall.hook", "Fire at the falling missiles before they reach your cities.");
+        public static readonly LocString WaveNumber = new("games.skyfall.waveNumber", "Wave {0}");
+        public static readonly LocString WaveClearBonus = new("games.skyfall.waveClearBonus", "Wave clear  +{0}");
+        public static readonly LocString Shield = new("games.skyfall.shield", "Shield");
+        public static readonly LocString Shielded = new("games.skyfall.shielded", "Shielded!");
+        public static readonly LocString WavesCleared = new("games.skyfall.wavesCleared", "Waves cleared");
+        public static readonly LocString Meteors = new("games.skyfall.meteors", "Meteors");
+        public static readonly LocString Accuracy = new("games.skyfall.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.skyfall.percent", "{0}%");
     }
 
     internal static class Invaders
     {
         public static readonly LocString Hook = new("games.invaders.hook", "Slide left and right and shoot down the alien waves before they land.");
+        public static readonly LocString WaveNumber = new("games.invaders.waveNumber", "Wave {0}");
+        public static readonly LocString WavesCleared = new("games.invaders.wavesCleared", "Waves cleared");
+        public static readonly LocString Saucers = new("games.invaders.saucers", "Saucers");
+        public static readonly LocString Accuracy = new("games.invaders.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.invaders.percent", "{0}%");
+        public static readonly LocString Bonus = new("games.invaders.bonus", "+{0}");
     }
 
     internal static class CapMan
@@ -8433,6 +8445,13 @@ internal static class L
     internal static class Squadron
     {
         public static readonly LocString Hook = new("games.squadron.hook", "Weave through the enemy formations and shoot them down stage after stage.");
+        public static readonly LocString StageNumber = new("games.squadron.stageNumber", "Stage {0}");
+        public static readonly LocString PerfectBonus = new("games.squadron.perfectBonus", "Perfect!  +{0}");
+        public static readonly LocString StagesCleared = new("games.squadron.stagesCleared", "Stages cleared");
+        public static readonly LocString Rescues = new("games.squadron.rescues", "Rescues");
+        public static readonly LocString Accuracy = new("games.squadron.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.squadron.percent", "{0}%");
+        public static readonly LocString Bonus = new("games.squadron.bonus", "+{0}");
     }
 
     internal static class Doom

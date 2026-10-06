@@ -14,6 +14,8 @@ internal sealed class SquadronRenderer
     private const float BeamFillAlpha = 0.2f;
     private const float BeamEdgeAlpha = 0.45f;
     private const float RespawnBlinkSeconds = 0.12f;
+    private const float HaloIntensity = 0.3f;
+    private const float CaptiveSizeFactor = 0.8f;
     private static readonly PixelSprite[][] Sprites =
     {
         new[]
@@ -48,13 +50,13 @@ internal sealed class SquadronRenderer
         }
     }
 
-    public void Draw(SquadronBoard board, Rect field, Vector4 accent, float scale)
+    public void Draw(ImDrawListPtr drawList, SquadronBoard board, in Camera2D camera, Rect full, Vector4 accent,
+        float scale)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.PushClipRect(field.Min, field.Max, true);
-        var factor = field.Width / SquadronBoard.Width;
+        drawList.PushClipRect(full.Min, full.Max, true);
         var frame = board.AnimFrame ? 1 : 0;
-        var unit = SquadronBoard.ShipWidth / 8f * factor;
+        var unit = camera.Px(SquadronBoard.ShipWidth / 8f);
+        var haloRadius = camera.Px(SquadronBoard.ShipWidth * 0.55f);
         for (var index = 0; index < board.ShipCount; index++)
         {
             var ship = board.GetShip(index);
@@ -63,45 +65,47 @@ internal sealed class SquadronRenderer
                 continue;
             }
 
-            var center = ToScreen(field, factor, ship.Position);
+            var center = camera.ToScreen(ship.Position);
             var extent = board.BeamExtent(in ship);
             if (extent > 0f)
             {
-                DrawBeam(drawList, field, factor, ship.Position, extent);
+                DrawBeam(drawList, in camera, ship.Position, extent);
             }
 
             var color = KindColor(ship.Kind, accent);
+            ProgressRing.Glow(center, haloRadius, color, HaloIntensity);
             Sprites[(int)ship.Kind][frame].DrawCentered(drawList, center, unit, ImGui.GetColorU32(color));
             if (ship.HoldsCaptive)
             {
-                DrawFighter(drawList, center - new Vector2(0f, SquadronBoard.ShipHeight * factor), factor * 0.8f, accent, 0.8f);
+                DrawFighter(drawList, center - new Vector2(0f, camera.Px(SquadronBoard.ShipHeight)), in camera, accent,
+                    0.8f, CaptiveSizeFactor);
             }
         }
 
-        DrawPlayer(drawList, board, field, factor, accent);
-        DrawBullets(drawList, board, field, factor);
-        DrawShots(drawList, board, field, factor, scale);
+        DrawPlayer(drawList, board, in camera, accent);
+        DrawBullets(drawList, board, in camera);
+        DrawShots(drawList, board, in camera, scale);
         if (board.RescueActive)
         {
-            DrawFighter(drawList, ToScreen(field, factor, board.RescuePosition), factor, accent, 0.9f);
+            DrawFighter(drawList, camera.ToScreen(board.RescuePosition), in camera, accent, 0.9f, 1f);
         }
 
         if (board.CaptureActive)
         {
-            DrawFighter(drawList, ToScreen(field, factor, board.CapturePosition), factor, accent, 0.9f);
+            DrawFighter(drawList, camera.ToScreen(board.CapturePosition), in camera, accent, 0.9f, 1f);
         }
 
         drawList.PopClipRect();
     }
 
-    private static Vector2 ToScreen(Rect field, float factor, Vector2 world) => field.Min + world * factor;
-
-    private static void DrawBeam(ImDrawListPtr drawList, Rect field, float factor, Vector2 shipPosition, float extent)
+    private static void DrawBeam(ImDrawListPtr drawList, in Camera2D camera, Vector2 shipPosition, float extent)
     {
-        var top = ToScreen(field, factor, new Vector2(shipPosition.X, shipPosition.Y + SquadronBoard.ShipHeight * 0.5f));
-        var reach = (SquadronBoard.PlayerRowY - (shipPosition.Y + SquadronBoard.ShipHeight * 0.5f)) * extent * factor;
-        var bottomHalf = (SquadronBoard.BeamTopHalfWidth + (SquadronBoard.BeamBottomHalfWidth - SquadronBoard.BeamTopHalfWidth) * extent) * factor;
-        var topHalf = SquadronBoard.BeamTopHalfWidth * factor;
+        var topY = shipPosition.Y + SquadronBoard.ShipHeight * 0.5f;
+        var top = camera.ToScreen(new Vector2(shipPosition.X, topY));
+        var reach = camera.Px((SquadronBoard.PlayerRowY - topY) * extent);
+        var bottomHalf = camera.Px(SquadronBoard.BeamTopHalfWidth +
+                                   (SquadronBoard.BeamBottomHalfWidth - SquadronBoard.BeamTopHalfWidth) * extent);
+        var topHalf = camera.Px(SquadronBoard.BeamTopHalfWidth);
         var bottomY = top.Y + reach;
         var fill = ImGui.GetColorU32(WardenColor with { W = BeamFillAlpha });
         var edge = ImGui.GetColorU32(WardenColor with { W = BeamEdgeAlpha });
@@ -115,7 +119,7 @@ internal sealed class SquadronRenderer
         drawList.AddLine(topRight, bottomRight, edge, 1.5f);
     }
 
-    private static void DrawPlayer(ImDrawListPtr drawList, SquadronBoard board, Rect field, float factor, Vector4 accent)
+    private static void DrawPlayer(ImDrawListPtr drawList, SquadronBoard board, in Camera2D camera, Vector4 accent)
     {
         if (board.CaptureActive)
         {
@@ -127,46 +131,48 @@ internal sealed class SquadronRenderer
             return;
         }
 
-        var center = ToScreen(field, factor, board.PlayerCenter);
+        var center = camera.ToScreen(board.PlayerCenter);
         if (!board.Dual)
         {
-            DrawFighter(drawList, center, factor, accent, 1f);
+            DrawFighter(drawList, center, in camera, accent, 1f, 1f);
             return;
         }
 
-        var offset = new Vector2(SquadronBoard.PlayerWidth * 0.5f * factor, 0f);
-        DrawFighter(drawList, center - offset, factor, accent, 1f);
-        DrawFighter(drawList, center + offset, factor, accent, 1f);
+        var offset = new Vector2(camera.Px(SquadronBoard.PlayerWidth * 0.5f), 0f);
+        DrawFighter(drawList, center - offset, in camera, accent, 1f, 1f);
+        DrawFighter(drawList, center + offset, in camera, accent, 1f, 1f);
     }
 
-    public static void DrawFighter(ImDrawListPtr drawList, Vector2 center, float factor, Vector4 accent, float alpha)
+    public static void DrawFighter(ImDrawListPtr drawList, Vector2 center, in Camera2D camera, Vector4 accent, float alpha,
+        float sizeFactor)
     {
-        var unit = SquadronBoard.PlayerWidth / Fighter.Width * factor;
-        ProgressRing.Glow(center, SquadronBoard.PlayerWidth * factor * 0.7f, accent, 0.35f * alpha);
+        var unit = camera.Px(SquadronBoard.PlayerWidth / Fighter.Width) * sizeFactor;
+        ProgressRing.Glow(center, camera.Px(SquadronBoard.PlayerWidth * 0.7f) * sizeFactor, accent, 0.35f * alpha);
         Fighter.DrawCentered(drawList, center, unit, ImGui.GetColorU32(GamePalette.Lighten(accent, 0.2f) with { W = alpha }));
     }
 
-    private static void DrawBullets(ImDrawListPtr drawList, SquadronBoard board, Rect field, float factor)
+    private static void DrawBullets(ImDrawListPtr drawList, SquadronBoard board, in Camera2D camera)
     {
         var color = ImGui.GetColorU32(BulletColor);
-        var halfWidth = MathF.Max(1f, 0.5f * factor);
+        var halfWidth = MathF.Max(1f, camera.Px(0.5f));
+        var length = camera.Px(3f);
         for (var index = 0; index < board.BulletCount; index++)
         {
-            var position = ToScreen(field, factor, board.GetBullet(index));
-            ProgressRing.Glow(position, 2.5f * factor, BulletColor, 0.5f);
-            drawList.AddRectFilled(position - new Vector2(halfWidth, 3f * factor), position + new Vector2(halfWidth, 0f), color);
+            var position = camera.ToScreen(board.GetBullet(index));
+            ProgressRing.Glow(position, camera.Px(2.5f), BulletColor, 0.5f);
+            drawList.AddRectFilled(position - new Vector2(halfWidth, length), position + new Vector2(halfWidth, 0f), color);
         }
     }
 
-    private static void DrawShots(ImDrawListPtr drawList, SquadronBoard board, Rect field, float factor, float scale)
+    private static void DrawShots(ImDrawListPtr drawList, SquadronBoard board, in Camera2D camera, float scale)
     {
         var color = ImGui.GetColorU32(ShotColor);
         for (var index = 0; index < board.ShotCount; index++)
         {
             var shot = board.GetShot(index);
-            var head = ToScreen(field, factor, shot.Position);
-            var tail = ToScreen(field, factor, shot.Position - Vector2.Normalize(shot.Velocity) * 2.4f);
-            ProgressRing.Glow(head, 2.2f * factor, ShotColor, 0.45f);
+            var head = camera.ToScreen(shot.Position);
+            var tail = camera.ToScreen(shot.Position - Vector2.Normalize(shot.Velocity) * 2.4f);
+            ProgressRing.Glow(head, camera.Px(2.2f), ShotColor, 0.45f);
             drawList.AddLine(tail, head, color, MathF.Max(1.5f, 2f * scale));
         }
     }

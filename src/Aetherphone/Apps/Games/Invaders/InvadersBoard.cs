@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.Invaders;
 
 internal sealed class InvadersBoard
@@ -34,6 +36,8 @@ internal sealed class InvadersBoard
     public const float SaucerHalfHeight = 2f;
     public const float SaucerSpeed = 18f;
     public const int SaucerPoints = 300;
+    public const float SaucerMinInterval = 18f;
+    public const float SaucerMaxInterval = 30f;
     public static readonly int[] RowPoints = { 30, 20, 20, 10, 10 };
     public static readonly int[] RowKinds = { 0, 1, 1, 2, 2 };
     public static readonly float[] ShieldX = { 14f, 38f, 62f, 86f };
@@ -44,8 +48,6 @@ internal sealed class InvadersBoard
     private const float FormationDropPerWave = 3f;
     private const int FormationDropWaveCap = 6;
     private const float EdgeMargin = 2f;
-    private const float SaucerMinInterval = 18f;
-    private const float SaucerMaxInterval = 30f;
     private const float PlayerMinX = PlayerWidth * 0.5f;
     private const float PlayerMaxX = Width - PlayerWidth * 0.5f;
     private readonly bool[] invaders = new bool[InvaderCount];
@@ -55,7 +57,7 @@ internal sealed class InvadersBoard
     private readonly Vector2[] killPositions = new Vector2[InvaderCount];
     private readonly int[] killKinds = new int[InvaderCount];
     private readonly Vector2[] chipPositions = new Vector2[MaxBombs + 1];
-    private readonly Random random = new();
+    private GameRandom random;
     private int bombCount;
     private bool hasBullet;
     private Vector2 bullet;
@@ -78,9 +80,13 @@ internal sealed class InvadersBoard
     public bool Respawning => respawnTimer > 0f;
     public bool SaucerActive { get; private set; }
     public float SaucerX { get; private set; }
+    public int SaucerDirection => saucerDirection;
     public int BombCount => bombCount;
     public bool HasBullet => hasBullet;
     public Vector2 Bullet => bullet;
+    public int ShotsFired { get; private set; }
+    public int ShotsHit { get; private set; }
+    public int SaucersHit { get; private set; }
     public int KillCount { get; private set; }
     public int ChipCount { get; private set; }
     public bool PlayerHitThisFrame { get; private set; }
@@ -121,12 +127,16 @@ internal sealed class InvadersBoard
         return total;
     }
 
-    public void StartGame()
+    public void StartGame(GameRandom seededRandom)
     {
+        random = seededRandom;
         Score = 0;
         Wave = 0;
         Lives = StartingLives;
         GameOver = false;
+        ShotsFired = 0;
+        ShotsHit = 0;
+        SaucersHit = 0;
         ClearFrameEvents();
         StartWave();
     }
@@ -150,6 +160,7 @@ internal sealed class InvadersBoard
 
         bullet = new Vector2(PlayerX, PlayerY - PlayerHeight);
         hasBullet = true;
+        ShotsFired++;
         ShotFiredThisFrame = true;
         return true;
     }
@@ -176,7 +187,7 @@ internal sealed class InvadersBoard
 
         DropBombs(deltaSeconds);
         TickSaucer(deltaSeconds);
-        var substeps = new Framework.Substeps(deltaSeconds, ShieldCell * 0.5f / BulletSpeed);
+        var substeps = new Substeps(deltaSeconds, ShieldCell * 0.5f / BulletSpeed);
         for (var step = 0; step < substeps.Count; step++)
         {
             MoveBullet(substeps.Step);
@@ -384,6 +395,8 @@ internal sealed class InvadersBoard
             SaucerActive = false;
             saucerTimer = NextSaucerDelay();
             Score += SaucerPoints;
+            ShotsHit++;
+            SaucersHit++;
             SaucerKilledThisFrame = true;
             SaucerKillPosition = new Vector2(SaucerX, SaucerY);
             hasBullet = false;
@@ -410,6 +423,7 @@ internal sealed class InvadersBoard
                 invaders[index] = false;
                 AliveCount--;
                 Score += RowPoints[row];
+                ShotsHit++;
                 killPositions[KillCount] = position + new Vector2(InvaderWidth * 0.5f, InvaderHeight * 0.5f);
                 killKinds[KillCount] = RowKinds[row];
                 KillCount++;
@@ -500,5 +514,5 @@ internal sealed class InvadersBoard
         respawnTimer = RespawnSeconds;
     }
 
-    private float Chance() => (float)random.NextDouble();
+    private float Chance() => random.NextFloat();
 }
