@@ -1,7 +1,7 @@
 # Case template
 
-Artists work from the [case spec](https://aetherphone.net/case-spec/), which also offers the Clip Studio
-guide and the exact band and outline overlays, and check a finished case with the
+Artists work from the [case spec](https://aetherphone.net/case-spec/), which also offers the exact band
+and outline overlays and a vector guide, and check a finished case with the
 [case checker](https://aetherphone.net/case-checker/). This folder holds the engineering side.
 
 | File | What it is |
