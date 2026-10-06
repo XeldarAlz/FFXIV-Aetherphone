@@ -1,48 +1,77 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.CapMan;
 
-internal sealed class CapManApp : ILegacyMiniGame
+internal sealed class CapManApp : IMiniGame
 {
     private const string GameId = "capman";
-    private const float PadBandFraction = 0.26f;
+    private const float PadInset = 4f;
+    private const float PadKeyInset = 4f;
+    private const float PadGap = 6f;
+    private const float PadOpacity = 0.92f;
+    private const float DeathShake = 0.5f;
+    private const float DeathSlowFactor = 0.4f;
+    private const float DeathSlowSeconds = 0.4f;
+    private const float GhostEatPunch = 0.03f;
+    private const float FruitPunch = 0.04f;
+    private const ulong IdleSeed = 0x4341504D414EUL;
+    private static readonly Vector2 ReadyBannerTile = new(7f, 11f);
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.CapMan, GameGenre.Action, L.CapMan.Hook,
+        Backdrop.Neon, HudStyle.Standard, ScoreKind.Score, clocked: true, countdown: true, keyboard: true);
+    private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4[] CelebrationPalette =
     {
         new(1f, 0.85f, 0.30f, 1f), new(0.98f, 0.35f, 0.35f, 1f), new(0.98f, 0.55f, 0.85f, 1f),
         new(0.40f, 0.90f, 0.95f, 1f), new(1f, 0.70f, 0.35f, 1f), new(0.98f, 0.98f, 0.9f, 1f),
     };
 
+    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
+    private static readonly ParticleSpec DotPuff = new(CapManRenderer.DotColor with { W = 0.7f },
+        CapManRenderer.DotColor with { W = 0f }, 0.08f, 1.5f, 0.25f);
+    private static readonly ParticleSpec PelletSparkle = new(CapManRenderer.PlayerColor, White, 0.14f, 4f, 0.6f, 1.5f,
+        2.4f, 6f, shape: ParticleShape.Star, additive: true);
+    private static readonly ParticleSpec GhostShards = new(CapManRenderer.FrightColor,
+        CapManRenderer.FrightColor with { W = 0f }, 0.16f, 5f, 0.5f, 8f, 1.6f, 10f, shape: ParticleShape.Shard,
+        additive: true);
+    private static readonly ParticleSpec DeathBurst = new(CapManRenderer.PlayerColor,
+        CapManRenderer.PlayerColor with { W = 0.2f }, 0.18f, 6f, 0.8f, 10f, 1.2f, 8f);
+    private static readonly ParticleSpec FruitSparkle = new(White, CapManRenderer.PlayerColor, 0.12f, 3.5f, 0.6f, 4f,
+        2.4f, 6f, shape: ParticleShape.Star, additive: true);
+    private static readonly ParticleSpec FruitArrival = new(CapManRenderer.PlayerColor,
+        CapManRenderer.PlayerColor with { W = 0f }, 0.3f, 0f, 0.5f, shape: ParticleShape.Ring, additive: true);
+    private static readonly string FirstFruitLabel = string.Concat("+", GameNumber.Label(CapManBoard.FirstFruitPoints));
+    private static readonly string LaterFruitLabel = string.Concat("+", GameNumber.Label(CapManBoard.LaterFruitPoints));
+
     private readonly CapManBoard board = new();
+    private readonly CapManBoard idleBoard = new();
     private readonly CapManRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private RollingValue scoreRoll;
-    private bool started;
+    private Camera2D camera = Camera2D.Create();
     private bool finished;
-    private bool pendingSubmit;
-    private bool newBest;
-    private int loadedBest;
-    private float resultAppear;
+    private bool idleReady;
     private float bannerProgress = 1f;
-    private string resultLevel = string.Empty;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.CapMan);
-    public GameGenre Genre => GameGenre.Action;
-    public bool RunsOnAClock => true;
 
-    public void Open()
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
     {
-        loadedBest = 0;
-        started = false;
+        board.StartGame(start.Random);
+        particles.Clear();
+        particles.Reseed(start.Seed);
+        fx.Clear();
+        finished = false;
+        bannerProgress = 0f;
     }
 
     public void Close()
@@ -53,91 +82,83 @@ internal sealed class CapManApp : ILegacyMiniGame
     {
     }
 
-    private void StartNewGame()
+    public void DrawIdle(in GameContext context)
     {
-        board.StartGame();
-        particles.Clear();
-        fx.Clear();
-        scoreRoll.Snap(0);
-        finished = false;
-        pendingSubmit = false;
-        newBest = false;
-        resultAppear = 0f;
-        bannerProgress = 0f;
-        started = true;
+        if (!idleReady)
+        {
+            idleBoard.StartGame(GameRandom.FromSeed(IdleSeed));
+            idleReady = true;
+        }
+
+        var scale = UiScale.Current;
+        PlaceCamera(context, scale);
+        renderer.Draw(ImGui.GetWindowDrawList(), idleBoard, in camera, Accent, scale);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (loadedBest == 0)
-        {
-            loadedBest = context.Stats.Get(GameId).BestScore;
-        }
-
-        if (!started)
-        {
-            StartNewGame();
-        }
-
-        if (pendingSubmit)
-        {
-            newBest = context.Stats.SubmitScore(GameId, board.Score);
-            if (newBest)
-            {
-                loadedBest = board.Score;
-            }
-
-            pendingSubmit = false;
-        }
-
-        var rowY = body.Min.Y + 30f * scale;
-        var padHeight = MathF.Min(GamePad.DPadHeight(scale), body.Height * PadBandFraction);
-        var padArea = new Rect(new Vector2(body.Min.X, body.Max.Y - padHeight), body.Max);
-        var pad = 6f * scale;
-        var area = new Rect(new Vector2(body.Min.X + pad, rowY + 26f * scale), new Vector2(body.Max.X - pad, padArea.Min.Y - pad));
-        var boardRect = CapManRenderer.BoardRect(area, out var cell);
         var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
+        var accent = Accent;
+        PlaceCamera(context, scale);
+        var simDelta = fx.ScaleDelta(context.DeltaSeconds);
         if (!finished)
         {
-            var direction = GamePad.DPad(padArea, Accent, theme);
-            HandleInput(direction);
-            var simDelta = fx.ScaleDelta(deltaSeconds);
             board.Tick(simDelta);
-            ReactToEvents(boardRect, cell, scale);
         }
 
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        bannerProgress = GameBanner.Advance(bannerProgress, deltaSeconds, CapManBoard.ReadySeconds);
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        bannerProgress = GameBanner.Advance(bannerProgress, simDelta, CapManBoard.ReadySeconds);
+        renderer.Draw(drawList, board, in camera, accent, scale);
+        var pad = DrawPad(drawList, context, accent, scale);
+        if (!finished)
+        {
+            if (context.Session.State is StageFlow.Playing or StageFlow.Countdown)
+            {
+                HandleInput(pad);
+            }
+
+            ReactToEvents(context);
+        }
+
+        particles.Draw(drawList, in camera);
+        fx.DrawRings(drawList, scale);
+        fx.DrawText();
+        GameBanner.Draw(drawList, camera.ToScreen(ReadyBannerTile + CapManRenderer.Half), Loc.T(L.Games.Ready), accent,
+            context.Theme, bannerProgress);
+        context.Hud.Score(board.Score);
+        context.Hud.Lives(board.Lives, CapManBoard.StartLives);
+        context.Hud.Level(board.Level);
+        context.Hud.Best(context.Session.Best);
+        context.Session.Report(board.Score);
         if (board.GameOver && !finished)
         {
             finished = true;
-            resultAppear = 0f;
-            pendingSubmit = true;
-            resultLevel = $"{Loc.T(L.Games.Level)} {GameNumber.Label(board.Level)}";
+            Finish(context);
         }
+    }
 
-        var shake = fx.ShakeOffset(scale);
-        var shakenBoard = new Rect(boardRect.Min + shake, boardRect.Max + shake);
-        DrawHud(body, rowY, theme, deltaSeconds, scale);
-        GameScene.Arena(drawList, new Rect(shakenBoard.Min - new Vector2(pad, pad), shakenBoard.Max + new Vector2(pad, pad)),
-            14f * scale, scale, Accent);
-        renderer.Draw(board, shakenBoard, cell, Accent, scale);
-        fx.DrawFlash(drawList, boardRect, 0f);
-        particles.Draw(drawList, scale);
-        fx.DrawRings(drawList, scale);
-        fx.DrawText();
-        GameBanner.Draw(drawList, CapManRenderer.ToScreen(boardRect, cell, new Vector2(7f, 11f)), Loc.T(L.Games.Ready),
-            Accent, theme, bannerProgress);
-        if (finished)
-        {
-            DrawResult(theme, body, deltaSeconds);
-        }
+    private void PlaceCamera(in GameContext context, float scale)
+    {
+        var band = StageLayout.PadBand(context.Full, StageLayout.DPadBand, scale);
+        var safe = context.Safe;
+        var bottom = MathF.Max(safe.Min.Y, band.Min.Y - PadGap * scale);
+        var view = new Rect(safe.Min, new Vector2(safe.Max.X, bottom));
+        camera.Fit(view, CapManBoard.Columns, CapManBoard.Rows, FitMode.Contain);
+        context.Fx.ApplyTo(ref camera);
+        camera.Update(context.RawDeltaSeconds, scale);
+        context.Backdrop.SetCamera(in camera);
+    }
+
+    private static PadDirection DrawPad(ImDrawListPtr drawList, in GameContext context, Vector4 accent, float scale)
+    {
+        var band = StageLayout.PadBand(context.Full, StageLayout.DPadBand, scale);
+        var side = MathF.Max(0f, band.Height - PadInset * 2f * scale);
+        var panel = new Rect(new Vector2(band.Center.X - side * 0.5f, band.Min.Y + PadInset * scale),
+            new Vector2(band.Center.X + side * 0.5f, band.Min.Y + PadInset * scale + side));
+        Material.Frosted(drawList, panel.Min, panel.Max, Metrics.Radius.Lg * scale, scale, PadOpacity);
+        return GamePad.DPad(panel.Inset(PadKeyInset * scale), accent, context.Theme);
     }
 
     private void HandleInput(PadDirection pad)
@@ -160,22 +181,21 @@ internal sealed class CapManApp : ILegacyMiniGame
         }
     }
 
-    private void ReactToEvents(Rect boardRect, float cell, float scale)
+    private void ReactToEvents(in GameContext context)
     {
         if (board.DotsEatenThisFrame > 0)
         {
-            var center = CapManRenderer.ToScreen(boardRect, cell, board.LastDotPosition);
-            particles.Burst(center, 2, CapManRenderer.DotColor with { W = 0.7f }, 40f * scale, 1.4f, 0.25f, 0f);
+            particles.Emit(DotPuff, board.LastDotPosition + CapManRenderer.Half, 2);
         }
 
         if (board.PelletEatenThisFrame)
         {
             UiFeedback.Play(UiSound.GamePowerUp);
-            var center = CapManRenderer.ToScreen(boardRect, cell, board.LastDotPosition);
-            particles.Sparkle(center, 10, CapManRenderer.PlayerColor, 120f * scale, 2.4f, 0.6f);
-            fx.Shockwave(center, cell * 4f, CapManRenderer.FrightColor with { W = 0.7f }, 0.5f, 3f);
-            fx.Flash(CapManRenderer.FrightColor, 0.14f);
-            fx.AddTrauma(0.12f);
+            var world = board.LastDotPosition + CapManRenderer.Half;
+            particles.Emit(PelletSparkle, world, 10);
+            fx.Shockwave(camera.ToScreen(world), camera.Px(4f), CapManRenderer.FrightColor with { W = 0.7f }, 0.5f, 3f);
+            context.Fx.Flash(CapManRenderer.FrightColor, 0.14f);
+            camera.Shake(0.12f);
         }
 
         if (board.GhostsEatenThisFrame > 0)
@@ -185,30 +205,52 @@ internal sealed class CapManApp : ILegacyMiniGame
 
         for (var index = 0; index < board.GhostsEatenThisFrame; index++)
         {
-            var center = CapManRenderer.ToScreen(boardRect, cell, board.GhostEatPosition(index));
-            particles.Burst(center, 12, CapManRenderer.FrightColor, 150f * scale, 2.6f, 0.5f, 220f);
-            fx.AddText(GameNumber.Label(board.GhostEatPoints(index)), center, CapManRenderer.DotColor, 1.1f);
-            fx.Shockwave(center, cell * 2.5f, CapManRenderer.DotColor with { W = 0.6f }, 0.35f, 2f);
+            var world = board.GhostEatPosition(index) + CapManRenderer.Half;
+            var screen = camera.ToScreen(world);
+            particles.Emit(GhostShards, world, 12);
+            fx.AddText(GameNumber.Label(board.GhostEatPoints(index)), screen, CapManRenderer.DotColor, 1.1f);
+            fx.Shockwave(screen, camera.Px(2.5f), CapManRenderer.DotColor with { W = 0.6f }, 0.35f, 2f);
             fx.HitStop(0.06f);
-            fx.AddTrauma(0.18f);
+            camera.Shake(0.18f);
+            context.Fx.Punch(GhostEatPunch);
+        }
+
+        if (board.FruitSpawnedThisFrame)
+        {
+            particles.Emit(FruitArrival, board.FruitPosition + CapManRenderer.Half, 1);
+        }
+
+        if (board.FruitEatenThisFrame)
+        {
+            UiFeedback.Play(UiSound.GameMatch);
+            var world = board.FruitPosition + CapManRenderer.Half;
+            var screen = camera.ToScreen(world);
+            particles.Emit(FruitSparkle, world, 14);
+            fx.AddText(board.LastFruitPoints == CapManBoard.FirstFruitPoints ? FirstFruitLabel : LaterFruitLabel, screen,
+                CapManRenderer.PlayerColor, 1.2f);
+            fx.Shockwave(screen, camera.Px(2f), CapManRenderer.PlayerColor with { W = 0.7f }, 0.4f, 2.5f);
+            context.Fx.Punch(FruitPunch);
         }
 
         if (board.PlayerDiedThisFrame)
         {
             UiFeedback.Play(UiSound.GameHitSoft);
-            var center = CapManRenderer.ToScreen(boardRect, cell, board.PlayerPosition);
-            particles.Burst(center, 18, CapManRenderer.PlayerColor, 160f * scale, 2.8f, 0.8f, 300f);
-            fx.AddTrauma(0.7f);
-            fx.HitStop(0.1f);
-            fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.35f);
+            particles.Emit(DeathBurst, board.PlayerPosition + CapManRenderer.Half, 18);
+            camera.Shake(DeathShake);
+            context.Fx.SlowMo(DeathSlowFactor, DeathSlowSeconds);
+            context.Fx.Flash(Danger, 0.35f);
+            if (board.Lives == 1)
+            {
+                context.Fx.Vignette(Danger, 0.5f, 1f);
+            }
         }
 
         if (board.LevelClearedThisFrame)
         {
-            UiFeedback.Play(UiSound.GameClear);
-            var top = new Vector2(boardRect.Center.X, boardRect.Min.Y + boardRect.Height * 0.2f);
-            particles.Confetti(top, 70, CelebrationPalette, 280f * scale, 4f, 1.4f);
-            fx.Flash(GamePalette.Lighten(Accent, 0.4f), 0.18f);
+            GameSfx.LevelClear();
+            context.Fx.Sweep();
+            EmitConfetti(new Vector2(CapManBoard.Columns * 0.5f, CapManBoard.Rows * 0.2f), 60);
+            context.Fx.Flash(GamePalette.Lighten(Accent, 0.4f), 0.18f);
         }
 
         if (board.ReadyStartedThisFrame)
@@ -217,63 +259,32 @@ internal sealed class CapManApp : ILegacyMiniGame
         }
     }
 
-    private void DrawHud(Rect body, float rowY, PhoneTheme theme, float deltaSeconds, float scale)
+    private void EmitConfetti(Vector2 origin, int count)
     {
-        var scoreLabel = Loc.T(L.Games.Score);
-        var scoreText = GameNumber.Label(board.Score);
-        var levelLabel = Loc.T(L.Games.Level);
-        var levelText = GameNumber.Label(board.Level);
-        var scoreWidth = GameHud.PillWidth(scoreLabel, scoreText);
-        var levelWidth = GameHud.PillWidth(levelLabel, levelText);
-        var gap = 12f * scale;
-        var scoreX = body.Center.X - gap * 0.5f - scoreWidth * 0.5f;
-        var levelX = body.Center.X + gap * 0.5f + levelWidth * 0.5f;
-        var beatingBest = board.Score > 0 && board.Score > loadedBest;
-        GameHud.ScorePill(new Vector2(scoreX, rowY), scoreLabel, ref scoreRoll, board.Score, Accent, theme, deltaSeconds,
-            beatingBest);
-        GameHud.Pill(new Vector2(levelX, rowY), levelLabel, levelText, Accent, theme);
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 22f * scale, rowY), 16f * scale, theme))
+        var perColor = Math.Max(1, count / ConfettiSpecs.Length);
+        for (var index = 0; index < ConfettiSpecs.Length; index++)
         {
-            StartNewGame();
-        }
-
-        DrawLives(body, rowY, scale);
-    }
-
-    private void DrawLives(Rect body, float rowY, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var radius = 5f * scale;
-        var origin = new Vector2(body.Min.X + 22f * scale, rowY);
-        var lastLife = board.Lives == 1;
-        for (var life = 0; life < CapManBoard.StartLives; life++)
-        {
-            var center = new Vector2(origin.X, origin.Y + (life - 1) * radius * 2.8f);
-            if (life >= board.Lives)
-            {
-                drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.25f)), 12,
-                    MathF.Max(1f, scale));
-                continue;
-            }
-
-            var color = lastLife
-                ? new Vector4(0.95f, 0.35f, 0.35f, 0.6f + 0.4f * Pulse.Wave(Pulse.Fast))
-                : CapManRenderer.PlayerColor;
-            drawList.PathClear();
-            drawList.PathLineTo(center);
-            drawList.PathArcTo(center, radius, 0.3f, MathF.PI * 2f - 0.3f, 16);
-            drawList.PathFillConvex(ImGui.GetColorU32(color));
+            particles.Emit(in ConfettiSpecs[index], origin, perColor);
         }
     }
 
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
+    private void Finish(in GameContext context)
     {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score),
-            GameNumber.Label(board.Score), resultLevel, newBest);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
+        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+            .WithStat(L.Games.Level, GameNumber.Label(board.Level))
+            .WithStat(L.CapMan.GhostsEaten, GameNumber.Label(board.GhostsEaten))
+            .WithStat(L.CapMan.Fruit, GameNumber.Label(board.FruitEaten)));
+    }
+
+    private static ParticleSpec[] BuildConfetti()
+    {
+        var specs = new ParticleSpec[CelebrationPalette.Length];
+        for (var index = 0; index < specs.Length; index++)
         {
-            StartNewGame();
+            specs[index] = new ParticleSpec(CelebrationPalette[index], CelebrationPalette[index], 0.16f, 10f, 1.4f, 20f,
+                0.7f, 16f, 1.4f, -MathF.PI * 0.5f, ParticleShape.Square);
         }
+
+        return specs;
     }
 }

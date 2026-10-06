@@ -4486,6 +4486,8 @@
   "games.invaders.bonus": "+{0}",
   "games.capman": "CapMan",
   "games.capman.hook": "Mangez toutes les pastilles du labyrinthe en évitant les fantômes, ou prenez une super pastille et chassez-les.",
+  "games.capman.ghostsEaten": "Fantômes mangés",
+  "games.capman.fruit": "Fruits",
   "games.ready": "Prêt !",
   "games.hop": "Saut",
   "games.hop.hook": "Sautez à travers la route et la rivière, une voie à la fois, sans vous faire écraser ni emporter.",

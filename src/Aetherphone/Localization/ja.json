@@ -4486,6 +4486,8 @@
   "games.invaders.bonus": "+{0}",
   "games.capman": "キャップマン",
   "games.capman.hook": "ゴーストをかわして迷路のドットを全部食べるか、パワーエサを取って逆に追いかけよう。",
+  "games.capman.ghostsEaten": "食べたゴースト",
+  "games.capman.fruit": "フルーツ",
   "games.ready": "レディ！",
   "games.hop": "ホップ",
   "games.hop.hook": "道路と川を1レーンずつ跳んで渡ろう。ひかれたり流されたりしないように。",

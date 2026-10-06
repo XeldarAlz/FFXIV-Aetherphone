@@ -4486,6 +4486,8 @@
   "games.invaders.bonus": "+{0}",
   "games.capman": "CapMan",
   "games.capman.hook": "Friss jede Pille im Labyrinth, weiche den Geistern aus oder schnapp dir eine Kraftpille und jage sie.",
+  "games.capman.ghostsEaten": "Gefressene Geister",
+  "games.capman.fruit": "Früchte",
   "games.ready": "Bereit!",
   "games.hop": "Hüpfer",
   "games.hop.hook": "Hüpfe Spur für Spur über die Straße und den Fluss, ohne überfahren oder weggespült zu werden.",

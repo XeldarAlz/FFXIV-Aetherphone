@@ -4486,6 +4486,8 @@
   "games.invaders.bonus": "+{0}",
   "games.capman": "CapMan",
   "games.capman.hook": "Hayaletlerden kaçarak labirentteki tüm yemleri ye ya da güç yemini al ve onları kovala.",
+  "games.capman.ghostsEaten": "Yenen hayaletler",
+  "games.capman.fruit": "Meyve",
   "games.ready": "Hazır!",
   "games.hop": "Zıpla",
   "games.hop.hook": "Yolu ve nehri şerit şerit geç, ezilmeden ve sürüklenmeden karşıya ulaş.",

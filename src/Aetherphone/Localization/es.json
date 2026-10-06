@@ -4486,6 +4486,8 @@
   "games.invaders.bonus": "+{0}",
   "games.capman": "CapMan",
   "games.capman.hook": "Cómete todas las bolitas del laberinto esquivando a los fantasmas, o coge una bolita de poder y persíguelos.",
+  "games.capman.ghostsEaten": "Fantasmas comidos",
+  "games.capman.fruit": "Fruta",
   "games.ready": "¡Listo!",
   "games.hop": "Salto",
   "games.hop.hook": "Salta por la carretera y el río, carril a carril, sin que te atropellen ni te arrastre la corriente.",

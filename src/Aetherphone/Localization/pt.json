@@ -4486,6 +4486,8 @@
   "games.invaders.bonus": "+{0}",
   "games.capman": "CapMan",
   "games.capman.hook": "Coma todas as pastilhas do labirinto desviando dos fantasmas, ou pegue uma pastilha de poder e persiga-os.",
+  "games.capman.ghostsEaten": "Fantasmas comidos",
+  "games.capman.fruit": "Frutas",
   "games.ready": "Pronto!",
   "games.hop": "Pulo",
   "games.hop.hook": "Pule pela estrada e pelo rio, uma pista de cada vez, sem ser atropelado nem levado pela água.",
