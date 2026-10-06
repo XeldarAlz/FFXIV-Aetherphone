@@ -8504,11 +8504,9 @@ internal static class L
     {
         public static readonly LocString Hook = new("updraft.hook", "Steer the bird between the thermals and ride the updrafts as high as you can.");
         public static readonly LocString Title = new("updraft.title", "Updraft");
-        public static readonly LocString Hint = new("updraft.hint", "Steer with A and D, the arrow keys or the mouse");
         public static readonly LocString Height = new("updraft.height", "Height");
         public static readonly LocString Crystals = new("updraft.crystals", "Crystals");
         public static readonly LocString Metres = new("updraft.metres", "{0} m");
-        public static readonly LocString ResultLine = new("updraft.resultLine", "{0} m climbed, {1} crystals");
         public static readonly LocString PassedBest = new("updraft.passedBest", "New best height!");
         public static readonly LocString SuperBounce = new("updraft.superBounce", "Super bounce!");
         public static readonly LocString Feather = new("updraft.feather", "Feather!");

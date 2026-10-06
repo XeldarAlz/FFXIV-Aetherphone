@@ -1,3 +1,4 @@
+using System.Text;
 using Aetherphone.Apps.Games.Updraft;
 using Xunit;
 
@@ -6,6 +7,43 @@ namespace Aetherphone.Tests;
 public sealed class UpdraftBoardTests
 {
     private const float Frame = 1f / 60f;
+
+    [Fact]
+    public void SameSeedReplaysIdentically()
+    {
+        var first = Play(4321, out var firstTrace);
+        var second = Play(4321, out var secondTrace);
+        Play(8765, out var otherTrace);
+
+        Assert.Equal(firstTrace, secondTrace);
+        Assert.Equal(first.Score, second.Score);
+        Assert.Equal(first.MaxHeight, second.MaxHeight);
+        Assert.Equal(first.Crystals, second.Crystals);
+        Assert.Equal(first.GameOver, second.GameOver);
+        Assert.NotEqual(firstTrace, otherTrace);
+    }
+
+    private static UpdraftBoard Play(int seed, out string trace)
+    {
+        var board = new UpdraftBoard();
+        board.StartGame(seed, 0f);
+        board.Launch();
+        var builder = new StringBuilder();
+        for (var frame = 0; frame < 60 * 20 && !board.GameOver; frame++)
+        {
+            var axis = MathF.Sin(frame * 0.07f) > 0.3f ? 1f : MathF.Sin(frame * 0.07f) < -0.3f ? -1f : 0f;
+            board.Tick(Frame, UpdraftInput.Keys(axis));
+            var events = board.Events;
+            for (var index = 0; index < events.Length; index++)
+            {
+                builder.Append((int)events[index].Kind).Append(':').Append(events[index].Value).Append(' ');
+            }
+        }
+
+        builder.Append('|').Append(board.HeightMetres).Append('|').Append(board.ActiveCloudCount);
+        trace = builder.ToString();
+        return board;
+    }
 
     private readonly struct PathCloud
     {
