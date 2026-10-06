@@ -291,8 +291,9 @@ internal sealed class NameplateStatusPage : ISettingsPage
         {
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
             var card = GroupCard.Begin(theme, 1);
+            var windowsMediaOff = !configuration.ShowWindowsMedia;
             var pcMedia = SettingsRow.Bool(card.NextRow(), Loc.T(L.Nameplate.PcMedia), settings.IncludePcMedia, theme,
-                "nameplate.pcMedia");
+                "nameplate.pcMedia", windowsMediaOff ? Loc.T(L.Nameplate.PcMediaHint) : null, windowsMediaOff);
             card.End();
             if (pcMedia != settings.IncludePcMedia)
             {

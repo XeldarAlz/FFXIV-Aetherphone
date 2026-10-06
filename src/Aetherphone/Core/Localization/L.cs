@@ -5405,6 +5405,13 @@ internal static class L
             public static readonly LocString SourceAutomatic = new("music.pcMedia.sourceAutomatic", "Automatic");
             public static readonly LocString SourceNotOpen = new("music.pcMedia.sourceNotOpen", "{0} (not open)");
             public static readonly LocString SourceHint = new("music.pcMedia.sourceHint", "Automatic shows the app that played most recently. Pick an app to only ever show that one. An app that stays paused for 15 minutes hides until it plays again.");
+            public static readonly LocString WelcomeTitle = new("music.pcMedia.welcomeTitle", "Your sound, your way.");
+            public static readonly LocString WelcomeIntro = new("music.pcMedia.welcomeIntro", "Enjoy your system media from the comfort of your Aetherphone without looking away.");
+            public static readonly LocString WelcomePrivacy = new("music.pcMedia.welcomePrivacy", "Your playback data stays on your device. Media controls operate strictly client-side using basic Windows metadata, with zero information sent to our servers.");
+            public static readonly LocString WelcomeDirect = new("music.pcMedia.welcomeDirect", "Aetherphone never talks to your other apps directly. Everything goes through the media controls built into Windows.");
+            public static readonly LocString WelcomeSettings = new("music.pcMedia.welcomeSettings", "You may change these settings anytime in Settings > Apps > Music.");
+            public static readonly LocString WelcomeSource = new("music.pcMedia.welcomeSource", "Select your playback source");
+            public static readonly LocString WelcomeContinue = new("music.pcMedia.welcomeContinue", "Continue");
         }
 
         internal static class Home
@@ -8315,6 +8322,7 @@ internal static class L
         public static readonly LocString NowPlaying = new("nameplate.nowPlaying", "Now playing");
         public static readonly LocString NowPlayingHint = new("nameplate.nowPlayingHint", "The song you are playing.");
         public static readonly LocString PcMedia = new("nameplate.pcMedia", "Include music from your PC");
+        public static readonly LocString PcMediaHint = new("nameplate.pcMediaHint", "Turn on Show Windows media in Settings > Apps > Music first.");
         public static readonly LocString LongTitles = new("nameplate.longTitles", "Long titles");
         public static readonly LocString TakeTurns = new("nameplate.takeTurns", "Take turns");
         public static readonly LocString Shorten = new("nameplate.shorten", "Shorten");
