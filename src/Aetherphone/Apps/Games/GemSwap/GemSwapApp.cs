@@ -475,12 +475,27 @@ internal sealed class GemSwapApp : IMiniGame
             return;
         }
 
+        UiFeedback.Play(UiSound.GameWrong);
+        context.Fx.Flash(TimeUpTint, 0.15f);
+        FinishClassic(context.Session);
+    }
+
+    public void OnQuit(GameSession session)
+    {
+        if (finished || mode != GemMode.Classic || board.Score <= 0)
+        {
+            return;
+        }
+
+        FinishClassic(session);
+    }
+
+    private void FinishClassic(GameSession session)
+    {
         finished = true;
         stage = GemStage.Over;
         selectedIndex = -1;
-        UiFeedback.Play(UiSound.GameWrong);
-        context.Fx.Flash(TimeUpTint, 0.15f);
-        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+        session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
             .WithStat(L.Games.Combo, GameNumber.Label(bestChain))
             .WithStat(L.Games.Moves, GameNumber.Label(swaps)));
     }

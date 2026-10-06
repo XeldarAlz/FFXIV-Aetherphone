@@ -137,13 +137,24 @@ internal sealed class BubbleShooterApp : IMiniGame
 
         board.Update(deltaSeconds);
         ReactToEvents(context);
-        if (!board.GameOver)
+        if (board.GameOver)
         {
-            return;
+            Finish(context.Session);
         }
+    }
 
+    public void OnQuit(GameSession session)
+    {
+        if (!finished && board.Score > 0)
+        {
+            Finish(session);
+        }
+    }
+
+    private void Finish(GameSession session)
+    {
         finished = true;
-        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+        session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
             .WithStat(L.Games.Combo, GameNumber.Label(board.BestCombo))
             .WithStat(L.BubbleShooter.Popped, GameNumber.Label(board.TotalPopped))
             .WithStat(L.BubbleShooter.Shots, GameNumber.Label(board.ShotsFired)));

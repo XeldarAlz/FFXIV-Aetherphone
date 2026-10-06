@@ -343,7 +343,7 @@ internal sealed class NonogramApp : IMiniGame
 
     private void CountDownToResult(in GameContext context)
     {
-        finishDelay -= context.RawDeltaSeconds;
+        finishDelay -= context.DeltaSeconds;
         if (finishDelay > 0f)
         {
             return;
