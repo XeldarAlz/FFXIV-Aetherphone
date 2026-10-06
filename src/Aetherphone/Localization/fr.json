@@ -4429,6 +4429,7 @@
   "games.sudoku.hints": "Indices",
   "games.chess": "Échecs",
   "games.chess.hook": "Mettez le roi de l'ordinateur échec et mat et entretenez votre série de victoires.",
+  "games.chess.result": "Résultat",
   "games.notes": "Notes",
   "games.erase": "Effacer",
   "games.hint": "Indice",

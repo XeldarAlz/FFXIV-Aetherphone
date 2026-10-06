@@ -253,4 +253,49 @@ public sealed class GamesLibraryTests
 
         Assert.Equal(string.Empty, library.BestTier(library.IndexOf("snake")));
     }
+
+    [Fact]
+    public void ReversiShowsTheHigherOfItsTwoDifficultyStreaks()
+    {
+        var games = new IMiniGame[] { new FakeGame("reversi", "Reversi", GameGenre.Tabletop) };
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "reversi.easy", Streak = 5 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "reversi.hard", Streak = 2 });
+        var library = new GamesLibrary(games, new GameStatsStore(configuration));
+        var reversi = library.IndexOf("reversi");
+
+        Assert.Equal(RecordKind.Streak, library.BestKind(reversi));
+        Assert.Equal("5", library.BestValue(reversi));
+        Assert.Equal("Easy", library.BestTier(reversi));
+        Assert.EndsWith("5 · Easy", library.Best(reversi));
+    }
+
+    [Fact]
+    public void ChessShowsTheHighestStreakAcrossThreeDifficulties()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "chess.easy", Streak = 1 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "chess.medium", Streak = 4 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "chess.hard", Streak = 2 });
+        var library = Build(configuration);
+        var chess = library.IndexOf("chess");
+
+        Assert.Equal(RecordKind.Streak, library.BestKind(chess));
+        Assert.Equal("4", library.BestValue(chess));
+        Assert.Equal("Medium", library.BestTier(chess));
+    }
+
+    [Fact]
+    public void AStreakRecordedBeforeTiersStillShowsWithoutATierLabel()
+    {
+        var games = new IMiniGame[] { new FakeGame("reversi", "Reversi", GameGenre.Tabletop) };
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "reversi", Streak = 3 });
+        var library = new GamesLibrary(games, new GameStatsStore(configuration));
+        var reversi = library.IndexOf("reversi");
+
+        Assert.Equal(RecordKind.Streak, library.BestKind(reversi));
+        Assert.Equal("3", library.BestValue(reversi));
+        Assert.Equal(string.Empty, library.BestTier(reversi));
+    }
 }

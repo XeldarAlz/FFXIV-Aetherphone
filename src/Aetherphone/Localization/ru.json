@@ -4429,6 +4429,7 @@
   "games.sudoku.hints": "Подсказки",
   "games.chess": "Шахматы",
   "games.chess.hook": "Поставьте мат королю компьютера и продолжайте серию побед.",
+  "games.chess.result": "Результат",
   "games.notes": "Заметки",
   "games.erase": "Стереть",
   "games.hint": "Подсказка",

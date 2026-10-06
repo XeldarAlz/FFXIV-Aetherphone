@@ -4429,6 +4429,7 @@
   "games.sudoku.hints": "İpuçları",
   "games.chess": "Satranç",
   "games.chess.hook": "Bilgisayarın şahını mat et ve galibiyet serini sürdür.",
+  "games.chess.result": "Sonuç",
   "games.notes": "Notlar",
   "games.erase": "Sil",
   "games.hint": "İpucu",

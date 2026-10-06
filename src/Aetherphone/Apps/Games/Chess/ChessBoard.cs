@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Aetherphone.Apps.Games.Framework;
 
 namespace Aetherphone.Apps.Games.Chess;
 
@@ -783,16 +784,13 @@ internal sealed class ChessBoard
 
     private static ulong[] BuildPieceKeys() => BuildKeys(16 * SquareCount, 20240607);
 
-    private static ulong[] BuildKeys(int count, int seed)
+    private static ulong[] BuildKeys(int count, ulong seed)
     {
         var keys = new ulong[count];
-        var random = new Random(seed);
+        var random = GameRandom.FromSeed(seed);
         for (var index = 0; index < count; index++)
         {
-            var high = (ulong)random.Next() << 40;
-            var middle = (ulong)random.Next() << 16;
-            var low = (ulong)random.Next() & 0xFFFF;
-            keys[index] = high ^ middle ^ low;
+            keys[index] = ((ulong)random.NextUInt() << 32) | random.NextUInt();
         }
 
         return keys;

@@ -4429,6 +4429,7 @@
   "games.sudoku.hints": "Dicas",
   "games.chess": "Xadrez",
   "games.chess.hook": "Dê xeque-mate no rei da CPU e mantenha sua sequência de vitórias.",
+  "games.chess.result": "Resultado",
   "games.notes": "Notas",
   "games.erase": "Apagar",
   "games.hint": "Dica",

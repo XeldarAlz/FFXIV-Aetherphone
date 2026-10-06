@@ -4429,6 +4429,7 @@
   "games.sudoku.hints": "Hints",
   "games.chess": "Chess",
   "games.chess.hook": "Checkmate the CPU's king and keep your win streak alive.",
+  "games.chess.result": "Result",
   "games.notes": "Notes",
   "games.erase": "Erase",
   "games.hint": "Hint",

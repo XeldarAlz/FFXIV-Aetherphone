@@ -4429,6 +4429,7 @@
   "games.sudoku.hints": "ヒント",
   "games.chess": "チェス",
   "games.chess.hook": "CPUのキングをチェックメイトして連勝を伸ばそう。",
+  "games.chess.result": "結果",
   "games.notes": "メモ",
   "games.erase": "消去",
   "games.hint": "ヒント",

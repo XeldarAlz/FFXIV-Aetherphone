@@ -6,8 +6,10 @@ internal sealed class ReversiBoard
     public const int CellCount = Size * Size;
     public const int Dark = 1;
     public const int Light = 2;
-    private const int CpuColor = Light;
-    private const int SearchDepth = 4;
+    public const int MaxFlips = 24;
+    public const int MaxSearchDepth = 8;
+    private const int MobilityWeight = 6;
+    private const int TerminalDiscValue = 200;
     private static readonly int[] DirectionRow = { -1, -1, -1, 0, 0, 1, 1, 1 };
     private static readonly int[] DirectionColumn = { -1, 0, 1, -1, 1, -1, 0, 1 };
 
@@ -19,8 +21,18 @@ internal sealed class ReversiBoard
     };
 
     private readonly sbyte[] cells = new sbyte[CellCount];
+    private readonly int[] flipStack = new int[(MaxSearchDepth + 1) * MaxFlips];
+    private int rootPlayer = Light;
+
     public int Cell(int index) => cells[index];
+
     public static int Opponent(int player) => player == Dark ? Light : Dark;
+
+    public static int RowOf(int cell) => cell / Size;
+
+    public static int ColumnOf(int cell) => cell % Size;
+
+    public static bool IsCorner(int cell) => cell == 0 || cell == Size - 1 || cell == CellCount - Size || cell == CellCount - 1;
 
     public void Reset()
     {
@@ -31,24 +43,55 @@ internal sealed class ReversiBoard
         cells[4 * Size + 4] = Light;
     }
 
-    public bool IsLegal(int cell, int player) => cells[cell] == 0 && ComputeFlips(cells, cell, player, null) > 0;
-    public bool HasAnyMove(int player) => AnyMove(cells, player);
-
-    public bool ApplyMove(int cell, int player, List<int> flippedOut)
+    public void CopyFrom(ReversiBoard other)
     {
-        flippedOut.Clear();
-        if (cells[cell] != 0 || ComputeFlips(cells, cell, player, flippedOut) == 0)
+        Array.Copy(other.cells, cells, CellCount);
+    }
+
+    public bool IsLegal(int cell, int player) => cells[cell] == 0 && CanFlip(cell, player);
+
+    public bool HasAnyMove(int player)
+    {
+        for (var cell = 0; cell < CellCount; cell++)
         {
-            return false;
+            if (cells[cell] == 0 && CanFlip(cell, player))
+            {
+                return true;
+            }
         }
 
-        cells[cell] = (sbyte)player;
-        for (var index = 0; index < flippedOut.Count; index++)
+        return false;
+    }
+
+    public ulong LegalMask(int player)
+    {
+        var mask = 0UL;
+        for (var cell = 0; cell < CellCount; cell++)
         {
-            cells[flippedOut[index]] = (sbyte)player;
+            if (cells[cell] == 0 && CanFlip(cell, player))
+            {
+                mask |= 1UL << cell;
+            }
         }
 
-        return true;
+        return mask;
+    }
+
+    public int ApplyMove(int cell, int player, Span<int> flippedOut)
+    {
+        if (cells[cell] != 0)
+        {
+            return 0;
+        }
+
+        var count = CollectFlips(cell, player, flippedOut);
+        if (count == 0)
+        {
+            return 0;
+        }
+
+        Place(cell, player, flippedOut, count);
+        return count;
     }
 
     public void Counts(out int dark, out int light)
@@ -68,20 +111,29 @@ internal sealed class ReversiBoard
         }
     }
 
-    public int BestMove(int player)
+    public int BestMove(int player, int depth)
     {
+        rootPlayer = player;
+        var searchDepth = Math.Clamp(depth, 1, MaxSearchDepth);
+        var flips = flipStack.AsSpan(0, MaxFlips);
         var best = -1;
         var bestValue = int.MinValue;
         for (var cell = 0; cell < CellCount; cell++)
         {
-            if (cells[cell] != 0 || ComputeFlips(cells, cell, player, null) == 0)
+            if (cells[cell] != 0)
             {
                 continue;
             }
 
-            var next = (sbyte[])cells.Clone();
-            PlaceInternal(next, cell, player);
-            var value = Search(next, Opponent(player), SearchDepth - 1, int.MinValue, int.MaxValue);
+            var count = CollectFlips(cell, player, flips);
+            if (count == 0)
+            {
+                continue;
+            }
+
+            Place(cell, player, flips, count);
+            var value = Search(Opponent(player), searchDepth - 1, int.MinValue, int.MaxValue, 1);
+            Unplace(cell, player, flips, count);
             if (value > bestValue)
             {
                 bestValue = value;
@@ -92,35 +144,42 @@ internal sealed class ReversiBoard
         return best;
     }
 
-    private int Search(sbyte[] state, int player, int depth, int alpha, int beta)
+    private int Search(int player, int depth, int alpha, int beta, int ply)
     {
         if (depth == 0)
         {
-            return Evaluate(state);
+            return Evaluate();
         }
 
-        if (!AnyMove(state, player))
+        if (!HasAnyMove(player))
         {
-            if (!AnyMove(state, Opponent(player)))
+            if (!HasAnyMove(Opponent(player)))
             {
-                return TerminalValue(state);
+                return TerminalValue();
             }
 
-            return Search(state, Opponent(player), depth - 1, alpha, beta);
+            return Search(Opponent(player), depth - 1, alpha, beta, ply);
         }
 
-        var maximizing = player == CpuColor;
+        var maximizing = player == rootPlayer;
         var best = maximizing ? int.MinValue : int.MaxValue;
+        var flips = flipStack.AsSpan(ply * MaxFlips, MaxFlips);
         for (var cell = 0; cell < CellCount; cell++)
         {
-            if (state[cell] != 0 || ComputeFlips(state, cell, player, null) == 0)
+            if (cells[cell] != 0)
             {
                 continue;
             }
 
-            var next = (sbyte[])state.Clone();
-            PlaceInternal(next, cell, player);
-            var value = Search(next, Opponent(player), depth - 1, alpha, beta);
+            var count = CollectFlips(cell, player, flips);
+            if (count == 0)
+            {
+                continue;
+            }
+
+            Place(cell, player, flips, count);
+            var value = Search(Opponent(player), depth - 1, alpha, beta, ply + 1);
+            Unplace(cell, player, flips, count);
             if (maximizing)
             {
                 if (value > best)
@@ -155,50 +214,39 @@ internal sealed class ReversiBoard
         return best;
     }
 
-    private int Evaluate(sbyte[] state)
+    private int Evaluate()
     {
         var positional = 0;
         for (var index = 0; index < CellCount; index++)
         {
-            if (state[index] == CpuColor)
+            if (cells[index] == rootPlayer)
             {
                 positional += Weights[index];
             }
-            else if (state[index] != 0)
+            else if (cells[index] != 0)
             {
                 positional -= Weights[index];
             }
         }
 
-        var mobility = (CountMoves(state, CpuColor) - CountMoves(state, Opponent(CpuColor))) * 6;
+        var mobility = (CountMoves(rootPlayer) - CountMoves(Opponent(rootPlayer))) * MobilityWeight;
         return positional + mobility;
     }
 
-    private int TerminalValue(sbyte[] state)
+    private int TerminalValue()
     {
-        var cpu = 0;
-        var human = 0;
-        for (var index = 0; index < CellCount; index++)
-        {
-            if (state[index] == CpuColor)
-            {
-                cpu++;
-            }
-            else if (state[index] != 0)
-            {
-                human++;
-            }
-        }
-
-        return (cpu - human) * 200;
+        Counts(out var dark, out var light);
+        var mine = rootPlayer == Dark ? dark : light;
+        var theirs = rootPlayer == Dark ? light : dark;
+        return (mine - theirs) * TerminalDiscValue;
     }
 
-    private int CountMoves(sbyte[] state, int player)
+    private int CountMoves(int player)
     {
         var count = 0;
         for (var cell = 0; cell < CellCount; cell++)
         {
-            if (state[cell] == 0 && ComputeFlips(state, cell, player, null) > 0)
+            if (cells[cell] == 0 && CanFlip(cell, player))
             {
                 count++;
             }
@@ -207,11 +255,33 @@ internal sealed class ReversiBoard
         return count;
     }
 
-    private bool AnyMove(sbyte[] state, int player)
+    private void Place(int cell, int player, ReadOnlySpan<int> flips, int count)
     {
-        for (var cell = 0; cell < CellCount; cell++)
+        cells[cell] = (sbyte)player;
+        for (var index = 0; index < count; index++)
         {
-            if (state[cell] == 0 && ComputeFlips(state, cell, player, null) > 0)
+            cells[flips[index]] = (sbyte)player;
+        }
+    }
+
+    private void Unplace(int cell, int player, ReadOnlySpan<int> flips, int count)
+    {
+        cells[cell] = 0;
+        var opponent = (sbyte)Opponent(player);
+        for (var index = 0; index < count; index++)
+        {
+            cells[flips[index]] = opponent;
+        }
+    }
+
+    private bool CanFlip(int cell, int player)
+    {
+        var row = RowOf(cell);
+        var column = ColumnOf(cell);
+        var opponent = Opponent(player);
+        for (var direction = 0; direction < 8; direction++)
+        {
+            if (RunLength(row, column, DirectionRow[direction], DirectionColumn[direction], player, opponent) > 0)
             {
                 return true;
             }
@@ -220,78 +290,18 @@ internal sealed class ReversiBoard
         return false;
     }
 
-    private void PlaceInternal(sbyte[] state, int cell, int player)
+    private int CollectFlips(int cell, int player, Span<int> output)
     {
-        state[cell] = (sbyte)player;
-        var row = cell / Size;
-        var column = cell % Size;
-        var opponent = Opponent(player);
-        for (var direction = 0; direction < 8; direction++)
-        {
-            var stepRow = DirectionRow[direction];
-            var stepColumn = DirectionColumn[direction];
-            var row2 = row + stepRow;
-            var column2 = column + stepColumn;
-            var run = 0;
-            while (row2 >= 0 && row2 < Size && column2 >= 0 && column2 < Size &&
-                   state[row2 * Size + column2] == opponent)
-            {
-                row2 += stepRow;
-                column2 += stepColumn;
-                run++;
-            }
-
-            if (run == 0 || row2 < 0 || row2 >= Size || column2 < 0 || column2 >= Size ||
-                state[row2 * Size + column2] != player)
-            {
-                continue;
-            }
-
-            var flipRow = row + stepRow;
-            var flipColumn = column + stepColumn;
-            for (var step = 0; step < run; step++)
-            {
-                state[flipRow * Size + flipColumn] = (sbyte)player;
-                flipRow += stepRow;
-                flipColumn += stepColumn;
-            }
-        }
-    }
-
-    private int ComputeFlips(sbyte[] state, int cell, int player, List<int>? output)
-    {
-        if (state[cell] != 0)
-        {
-            return 0;
-        }
-
-        var row = cell / Size;
-        var column = cell % Size;
+        var row = RowOf(cell);
+        var column = ColumnOf(cell);
         var opponent = Opponent(player);
         var total = 0;
         for (var direction = 0; direction < 8; direction++)
         {
             var stepRow = DirectionRow[direction];
             var stepColumn = DirectionColumn[direction];
-            var row2 = row + stepRow;
-            var column2 = column + stepColumn;
-            var run = 0;
-            while (row2 >= 0 && row2 < Size && column2 >= 0 && column2 < Size &&
-                   state[row2 * Size + column2] == opponent)
-            {
-                row2 += stepRow;
-                column2 += stepColumn;
-                run++;
-            }
-
-            if (run == 0 || row2 < 0 || row2 >= Size || column2 < 0 || column2 >= Size ||
-                state[row2 * Size + column2] != player)
-            {
-                continue;
-            }
-
-            total += run;
-            if (output is null)
+            var run = RunLength(row, column, stepRow, stepColumn, player, opponent);
+            if (run == 0)
             {
                 continue;
             }
@@ -300,12 +310,34 @@ internal sealed class ReversiBoard
             var flipColumn = column + stepColumn;
             for (var step = 0; step < run; step++)
             {
-                output.Add(flipRow * Size + flipColumn);
+                output[total++] = flipRow * Size + flipColumn;
                 flipRow += stepRow;
                 flipColumn += stepColumn;
             }
         }
 
         return total;
+    }
+
+    private int RunLength(int row, int column, int stepRow, int stepColumn, int player, int opponent)
+    {
+        var probeRow = row + stepRow;
+        var probeColumn = column + stepColumn;
+        var run = 0;
+        while (probeRow >= 0 && probeRow < Size && probeColumn >= 0 && probeColumn < Size &&
+               cells[probeRow * Size + probeColumn] == opponent)
+        {
+            probeRow += stepRow;
+            probeColumn += stepColumn;
+            run++;
+        }
+
+        if (run == 0 || probeRow < 0 || probeRow >= Size || probeColumn < 0 || probeColumn >= Size ||
+            cells[probeRow * Size + probeColumn] != player)
+        {
+            return 0;
+        }
+
+        return run;
     }
 }

@@ -507,19 +507,36 @@ internal sealed class GamesLibrary
                 return BestTimeAcrossTiers(gameId, out value, out tier);
             case "reversi":
             case "chess":
-            {
-                var wins = stats.Get(gameId).Streak;
-                if (wins <= 0)
-                {
-                    return RecordKind.None;
-                }
-
-                value = GameNumber.Label(wins);
-                return RecordKind.Streak;
-            }
+                return BestStreakAcrossTiers(gameId, out value, out tier);
             default:
                 return RecordKind.None;
         }
+    }
+
+    private RecordKind BestStreakAcrossTiers(string gameId, out string value, out int tier)
+    {
+        value = string.Empty;
+        tier = -1;
+        var bestStreak = stats.Get(gameId).Streak;
+        for (var index = 0; index < TierSuffixes.Length; index++)
+        {
+            var streak = stats.Get(string.Concat(gameId, TierSuffixes[index])).Streak;
+            if (streak <= bestStreak)
+            {
+                continue;
+            }
+
+            bestStreak = streak;
+            tier = index;
+        }
+
+        if (bestStreak <= 0)
+        {
+            return RecordKind.None;
+        }
+
+        value = GameNumber.Label(bestStreak);
+        return RecordKind.Streak;
     }
 
     private RecordKind BestLevelAcrossTiers(string gameId, out string value, out int tier)

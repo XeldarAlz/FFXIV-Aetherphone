@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Aetherphone.Apps.Games.Framework;
 
 namespace Aetherphone.Apps.Games.Chess;
 
@@ -100,7 +101,7 @@ internal sealed class ChessEngine
     private readonly ChessBoard board = new() { TrackHistory = false, };
     private readonly ChessMove[][] moveBuffers = BuildMoveBuffers();
     private readonly int[][] orderBuffers = BuildOrderBuffers();
-    private readonly Random random = new();
+    private GameRandom random = GameRandom.Fresh();
     private long nodes;
     private long budget;
     private bool stopped;
@@ -108,6 +109,11 @@ internal sealed class ChessEngine
     public void Prepare(ChessBoard position)
     {
         board.CopyFrom(position);
+    }
+
+    public void Reseed(ulong seed)
+    {
+        random = GameRandom.FromSeed(seed);
     }
 
     public ChessMove Search(int depth, long nodeBudget, int slack)

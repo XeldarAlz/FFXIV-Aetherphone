@@ -8382,6 +8382,7 @@ internal static class L
     internal static class Chess
     {
         public static readonly LocString Hook = new("games.chess.hook", "Checkmate the CPU's king and keep your win streak alive.");
+        public static readonly LocString Result = new("games.chess.result", "Result");
     }
 
     internal static class Stack

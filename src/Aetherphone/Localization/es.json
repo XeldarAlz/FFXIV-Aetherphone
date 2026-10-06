@@ -4429,6 +4429,7 @@
   "games.sudoku.hints": "Pistas",
   "games.chess": "Ajedrez",
   "games.chess.hook": "Da jaque mate al rey de la CPU y mantén viva tu racha de victorias.",
+  "games.chess.result": "Resultado",
   "games.notes": "Notas",
   "games.erase": "Borrar",
   "games.hint": "Pista",

@@ -4429,6 +4429,7 @@
   "games.sudoku.hints": "Tipps",
   "games.chess": "Schach",
   "games.chess.hook": "Setze den König der CPU schachmatt und halte deine Siegesserie am Leben.",
+  "games.chess.result": "Ergebnis",
   "games.notes": "Notizen",
   "games.erase": "Löschen",
   "games.hint": "Tipp",
