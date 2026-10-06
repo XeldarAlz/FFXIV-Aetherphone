@@ -1,62 +1,76 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Pairs;
 
-internal sealed class PairsApp : ILegacyMiniGame
+internal sealed class PairsApp : IMiniGame
 {
     private const string GameId = "memory";
     private const string AttemptsStatId = "memory.attempts";
-    private const float FlipDuration = 0.22f;
-    private const float RevealDelay = 0.55f;
-    private const float CelebrateDuration = 0.45f;
-    private const float ShakeDuration = 0.35f;
-
-    private enum Phase
+    private const float FlipSeconds = 0.22f;
+    private const float GlowSeconds = 0.6f;
+    private const float FlightSeconds = 0.5f;
+    private const float FlightArc = 18f;
+    private const float ShakeAmplitude = 5f;
+    private const float ShakeCycles = 8f;
+    private const int StreakShown = 2;
+    private const int PunchStreak = 3;
+    private const float CapsulePadX = 10f;
+    private const float CapsuleIconSize = 11f;
+    private const float CapsuleIconGap = 5f;
+    private const float CapsuleSectionGap = 8f;
+    private const ulong IdleSeed = 7;
+    private static readonly GameSpec StageSpec = new(GameId, L.Games.Pairs, GameGenre.Brain, L.Pairs.Hook,
+        Backdrop.Felt, HudStyle.Standard, ScoreKind.Time);
+    private static readonly Vector4 Warm = new(1f, 0.72f, 0.30f, 1f);
+    private static readonly Vector4 WinSparkle = new(1f, 0.95f, 0.7f, 1f);
+    private static readonly Vector4[] WinPalette =
     {
-        Selecting,
-        Revealing,
-        Celebrating,
-        Shaking,
-        FlippingBack,
-        Won,
-    }
+        Core.Theme.Accent.Mint, Core.Theme.Accent.Amber, Core.Theme.Accent.Pink, Core.Theme.Accent.Blue,
+    };
+    private static readonly TextStyle CapsuleStyle = TextStyles.FootnoteEmphasized;
 
     private readonly PairsBoard board = new();
-    private readonly PairsRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
-    private readonly float[] flipProgress = new float[PairsBoard.CardCount];
-    private readonly float[] flipTarget = new float[PairsBoard.CardCount];
-    private readonly float[] matchGlow = new float[PairsBoard.CardCount];
-    private readonly float[] shakePhase = new float[PairsBoard.CardCount];
-    private Phase phase;
+    private readonly float[] flip = new float[PairsBoard.CardCount];
+    private readonly float[] glow = new float[PairsBoard.CardCount];
+    private readonly float[] flight = new float[PairsBoard.CardCount];
+    private GameGrid grid;
+    private Rect tray;
+    private ulong idleSeed = IdleSeed;
     private float entrance;
-    private float phaseTimer;
-    private float elapsed;
-    private bool matchBurstPending;
-    private int streak;
-    private float resultAppear;
-    private string resultTimeText = "0:00";
-    private bool newBestTime;
-    private bool pendingWinSubmit;
-    private bool statsLoaded;
-    private GameStats loadedStats;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Games.Pairs);
-    public GameGenre Genre => GameGenre.Brain;
-    public void Open()
+    private float shake;
+    private int hoveredCard = -1;
+    private bool finished;
+
+    public PairsApp()
     {
-        statsLoaded = false;
-        StartNewGame();
+        board.Reset(GameRandom.FromSeed(IdleSeed));
+    }
+
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
+    {
+        idleSeed = start.Seed;
+        board.Reset(start.Random);
+        ClearVisuals();
+        particles.Clear();
+        fx.Clear();
+        entrance = 0f;
+        finished = false;
     }
 
     public void Close()
@@ -67,297 +81,330 @@ internal sealed class PairsApp : ILegacyMiniGame
     {
     }
 
-    private void StartNewGame()
+    public void DrawIdle(in GameContext context)
     {
-        board.Reset();
-        particles.Clear();
-        fx.Clear();
-        for (var index = 0; index < PairsBoard.CardCount; index++)
-        {
-            flipProgress[index] = 0f;
-            flipTarget[index] = 0f;
-            matchGlow[index] = 0f;
-            shakePhase[index] = 0f;
-        }
-
-        phase = Phase.Selecting;
-        entrance = 0f;
-        phaseTimer = 0f;
-        elapsed = 0f;
-        matchBurstPending = false;
-        resultAppear = 0f;
-        newBestTime = false;
-        pendingWinSubmit = false;
+        SyncIdle(context.Session.Seed);
+        var scale = UiScale.Current;
+        Layout(context.Safe, scale);
+        DrawBoard(ImGui.GetWindowDrawList(), 1f, scale, context.Backdrop.Ink);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        if (!statsLoaded)
-        {
-            loadedStats = context.Stats.Get(GameId);
-            streak = loadedStats.Streak;
-            statsLoaded = true;
-        }
-
-        if (pendingWinSubmit)
-        {
-            var seconds = (int)elapsed;
-            newBestTime = context.Stats.SubmitTime(GameId, seconds);
-            context.Stats.SubmitTime(AttemptsStatId, board.Attempts);
-            streak = context.Stats.RecordWin(GameId);
-            pendingWinSubmit = false;
-        }
-
-        if (phase != Phase.Won)
-        {
-            elapsed += deltaSeconds;
-        }
-
-        UpdateAnimations(deltaSeconds);
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        entrance = GameJuice.Advance(entrance, deltaSeconds);
-        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
-        var rowY = body.Min.Y + 32f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 58f * scale, rowY), Loc.T(L.Games.Attempts),
-            GameNumber.Label(board.Attempts), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 38f * scale, rowY), Loc.T(L.Games.Time),
-            GameNumber.Label((int)elapsed), Accent, theme);
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
-        {
-            if (phase != Phase.Won)
-            {
-                context.Stats.ResetStreak(GameId);
-                streak = 0;
-            }
-
-            StartNewGame();
-            return;
-        }
-
-        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 70f * scale),
-            new Vector2(body.Max.X, body.Max.Y - 8f * scale));
-        var grid = GameGrid.Centered(gridArea, PairsBoard.Columns, PairsBoard.Rows, 0.10f);
-        if (matchBurstPending)
-        {
-            EmitMatchBurst(grid);
-            matchBurstPending = false;
-        }
-
-        DrawCards(grid, theme, scale);
         var drawList = ImGui.GetWindowDrawList();
+        var rawSeconds = context.RawDeltaSeconds;
+        particles.Update(rawSeconds);
+        fx.Update(rawSeconds);
+        entrance = GameJuice.Advance(entrance, rawSeconds);
+        AdvanceVisuals(rawSeconds);
+        Layout(Grow(context.Safe, context.Fx.PlateScale).Translate(fx.ShakeOffset(scale)), scale);
+        if (!finished)
+        {
+            Step(scale, context);
+        }
+
+        DrawBoard(drawList, entrance, scale, context.Backdrop.Ink);
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
         fx.DrawText();
-        if (phase == Phase.Won)
-        {
-            DrawResult(context, theme, body);
-        }
+        DrawHud(drawList, context.Theme, scale, context);
+        context.Session.Report((int)board.Elapsed);
     }
 
-    private void DrawCards(GameGrid grid, PhoneTheme theme, float scale)
+    private void SyncIdle(ulong seed)
     {
-        for (var row = 0; row < PairsBoard.Rows; row++)
+        if (idleSeed == seed)
         {
-            for (var column = 0; column < PairsBoard.Columns; column++)
-            {
-                var index = row * PairsBoard.Columns + column;
-                var pop = GameJuice.PopIn(GameJuice.Stagger(entrance, index, PairsBoard.CardCount));
-                if (pop <= 0.01f)
-                {
-                    continue;
-                }
+            return;
+        }
 
-                var fullCell = grid.Cell(column, row);
-                var half = fullCell.Size * 0.5f * pop;
-                var cell = new Rect(fullCell.Center - half, fullCell.Center + half);
-                var hovered = phase == Phase.Selecting && board.CanReveal(index) && flipProgress[index] < 0.02f &&
-                              UiInteract.Hover(cell.Min, cell.Max);
-                var shakeX = shakePhase[index] > 0f
-                    ? MathF.Sin(shakePhase[index] * MathF.PI * 8f) * 5f * scale * shakePhase[index]
-                    : 0f;
-                renderer.DrawCard(cell, board.Symbol(index), board.State(index), flipProgress[index], matchGlow[index],
-                    shakeX, hovered, theme, scale);
-                if (hovered)
-                {
-                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                    if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                    {
-                        OnCardClicked(index);
-                    }
-                }
+        idleSeed = seed;
+        board.Reset(GameRandom.FromSeed(seed));
+        ClearVisuals();
+    }
+
+    private void ClearVisuals()
+    {
+        Array.Clear(flip);
+        Array.Clear(glow);
+        Array.Clear(flight);
+        shake = 0f;
+        hoveredCard = -1;
+    }
+
+    private void Layout(Rect area, float scale)
+    {
+        var trayHeight = PairsRenderer.TrayHeight * scale;
+        var trayGap = PairsRenderer.TrayGap * scale;
+        var pitch = MathF.Min(area.Width / PairsBoard.Columns,
+            (area.Height - trayHeight - trayGap) / PairsBoard.Rows);
+        var gridWidth = pitch * PairsBoard.Columns;
+        var gridHeight = pitch * PairsBoard.Rows;
+        var blockTop = area.Center.Y - (gridHeight + trayHeight + trayGap) * 0.5f;
+        var gridMin = new Vector2(area.Center.X - gridWidth * 0.5f, blockTop + trayHeight + trayGap);
+        grid = GameGrid.Centered(new Rect(gridMin, gridMin + new Vector2(gridWidth, gridHeight)), PairsBoard.Columns,
+            PairsBoard.Rows, PairsRenderer.GapFraction);
+        tray = new Rect(new Vector2(grid.Origin.X, blockTop), new Vector2(grid.Origin.X + grid.Width, blockTop + trayHeight));
+    }
+
+    private void AdvanceVisuals(float deltaSeconds)
+    {
+        shake = MathF.Max(0f, shake - deltaSeconds / PairsBoard.MismatchSeconds);
+        for (var index = 0; index < PairsBoard.CardCount; index++)
+        {
+            var state = board.State(index);
+            var target = state == CardState.FaceDown ? 0f : 1f;
+            var step = deltaSeconds / FlipSeconds;
+            flip[index] = target > flip[index]
+                ? MathF.Min(target, flip[index] + step)
+                : MathF.Max(target, flip[index] - step);
+            glow[index] = MathF.Max(0f, glow[index] - deltaSeconds / GlowSeconds);
+            if (state == CardState.Matched)
+            {
+                flight[index] = MathF.Min(1f, flight[index] + deltaSeconds / FlightSeconds);
             }
         }
     }
 
-    private void OnCardClicked(int index)
+    private void Step(float scale, in GameContext context)
     {
-        if (!board.CanReveal(index))
+        board.Step(context.DeltaSeconds);
+        if (board.MatchedThisStep)
+        {
+            OnMatch(scale, context);
+        }
+
+        if (board.MismatchedThisStep)
+        {
+            OnMismatch();
+        }
+
+        if (board.Over)
+        {
+            OnWin(scale, context);
+            return;
+        }
+
+        hoveredCard = -1;
+        if (context.Session.State != StageFlow.Playing)
         {
             return;
         }
 
-        if (board.FirstCard < 0)
+        hoveredCard = HoveredCard();
+        if (hoveredCard < 0)
         {
-            board.RevealFirst(index);
-            UiFeedback.Play(UiSound.GameCardFlip);
-            flipTarget[index] = 1f;
             return;
         }
 
-        board.RevealSecond(index);
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left) || !board.Reveal(hoveredCard))
+        {
+            return;
+        }
+
         UiFeedback.Play(UiSound.GameCardFlip);
-        flipTarget[index] = 1f;
-        phase = Phase.Revealing;
-        phaseTimer = 0f;
     }
 
-    private void UpdateAnimations(float deltaSeconds)
+    private int HoveredCard()
     {
         for (var index = 0; index < PairsBoard.CardCount; index++)
         {
-            var target = flipTarget[index];
-            var current = flipProgress[index];
-            if (MathF.Abs(current - target) >= 0.001f)
+            if (!board.CanReveal(index) || flip[index] > 0.02f)
             {
-                var step = deltaSeconds / FlipDuration;
-                flipProgress[index] = Math.Clamp(current + (target > current ? step : -step), 0f, 1f);
-            }
-            else
-            {
-                flipProgress[index] = target;
+                continue;
             }
 
-            if (matchGlow[index] > 0f)
+            var cell = CellOf(index);
+            if (UiInteract.Hover(cell.Min, cell.Max))
             {
-                matchGlow[index] = MathF.Max(0f, matchGlow[index] - deltaSeconds / CelebrateDuration);
-            }
-
-            if (shakePhase[index] > 0f)
-            {
-                shakePhase[index] = MathF.Max(0f, shakePhase[index] - deltaSeconds / ShakeDuration);
+                return index;
             }
         }
 
-        AdvancePhase(deltaSeconds);
+        return -1;
     }
 
-    private void AdvancePhase(float deltaSeconds)
+    private void OnMatch(float scale, in GameContext context)
     {
-        switch (phase)
+        glow[board.FirstCard] = 1f;
+        glow[board.SecondCard] = 1f;
+        UiFeedback.Play(UiSound.GameMatch);
+        EmitAtCard(board.FirstCard, scale);
+        EmitAtCard(board.SecondCard, scale);
+        if (board.Streak == PunchStreak)
         {
-            case Phase.Revealing:
-                phaseTimer += deltaSeconds;
-                if (phaseTimer >= RevealDelay)
-                {
-                    ResolveSelection();
-                }
-
-                break;
-            case Phase.Celebrating:
-                phaseTimer += deltaSeconds;
-                if (phaseTimer >= CelebrateDuration)
-                {
-                    board.ConfirmMatch();
-                    if (board.AllMatched())
-                    {
-                        OnWin();
-                    }
-                    else
-                    {
-                        phase = Phase.Selecting;
-                    }
-                }
-
-                break;
-            case Phase.Shaking:
-                phaseTimer += deltaSeconds;
-                if (phaseTimer >= ShakeDuration)
-                {
-                    flipTarget[board.FirstCard] = 0f;
-                    flipTarget[board.SecondCard] = 0f;
-                    phase = Phase.FlippingBack;
-                }
-
-                break;
-            case Phase.FlippingBack:
-                if (flipProgress[board.FirstCard] <= 0.001f && flipProgress[board.SecondCard] <= 0.001f)
-                {
-                    board.HideSelection();
-                    phase = Phase.Selecting;
-                }
-
-                break;
-            case Phase.Won:
-                resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-                break;
+            GameSfx.ComboTierUp();
         }
-    }
 
-    private void ResolveSelection()
-    {
-        if (board.SelectionMatches)
+        if (board.Streak >= PunchStreak)
         {
-            UiFeedback.Play(UiSound.GameMatch);
-            matchGlow[board.FirstCard] = 1f;
-            matchGlow[board.SecondCard] = 1f;
-            matchBurstPending = true;
-            phase = Phase.Celebrating;
-            phaseTimer = 0f;
+            context.Fx.Flash(Accent, 0.1f);
+            context.Fx.Punch(0.05f);
             return;
         }
 
-        shakePhase[board.FirstCard] = 1f;
-        shakePhase[board.SecondCard] = 1f;
+        context.Fx.Punch(0.03f);
+    }
+
+    private void OnMismatch()
+    {
+        shake = 1f;
         UiFeedback.Play(UiSound.GameWrong);
-        fx.AddTrauma(0.12f);
-        phase = Phase.Shaking;
-        phaseTimer = 0f;
+        fx.AddTrauma(0.1f);
     }
 
-    private void EmitMatchBurst(GameGrid grid)
+    private void OnWin(float scale, in GameContext context)
     {
-        EmitAtCard(grid, board.FirstCard);
-        EmitAtCard(grid, board.SecondCard);
+        finished = true;
+        UiFeedback.Play(UiSound.GameClear);
+        context.Fx.Sweep();
+        context.Fx.Flash(Accent, 0.25f);
+        particles.Confetti(new Vector2(tray.Center.X, tray.Min.Y), 72, WinPalette, 260f * scale, 4f, 1.3f);
+        particles.Sparkle(grid.Center, 16, WinSparkle, 200f * scale, 2.6f, 0.9f);
+        fx.Shockwave(grid.Center, grid.Width * 0.6f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3f);
+        context.Session.Finish(new GameOutcome(Math.Max(1, (int)board.Elapsed), ScoreKind.Time, GameId)
+            .WithStat(L.Games.Attempts, GameNumber.Label(board.Attempts))
+            .WithStat(L.Pairs.Streak, GameNumber.Label(board.BestStreak))
+            .WithSecondary(AttemptsStatId, board.Attempts, ScoreKind.Time));
     }
 
-    private void EmitAtCard(GameGrid grid, int index)
+    private void EmitAtCard(int index, float scale)
     {
-        if (index < 0)
-        {
-            return;
-        }
-
-        var scale = UiScale.Current;
-        var center = grid.CellCenter(index % PairsBoard.Columns, index / PairsBoard.Columns);
+        var center = CellOf(index).Center;
         var color = PairsRenderer.ColorFor(board.Symbol(index));
         particles.Burst(center, 14, color, 170f * scale, 3.2f, 0.6f, 240f);
         particles.Sparkle(center, 6, GamePalette.Lighten(color, 0.35f), 130f * scale, 2.2f, 0.7f);
         fx.Shockwave(center, grid.Pitch * 0.7f, GamePalette.Lighten(color, 0.3f), 0.4f, 2.4f);
     }
 
-    private void OnWin()
+    private void DrawBoard(ImDrawListPtr drawList, float dealProgress, float scale, StageInk ink)
     {
-        phase = Phase.Won;
-        resultAppear = 0f;
-        pendingWinSubmit = true;
-        var seconds = (int)elapsed;
-        resultTimeText = TimeText.MinutesSeconds(seconds);
+        var plate = BoardPlate.Around(new Rect(tray.Min, grid.Bounds.Max), scale);
+        BoardPlate.Draw(drawList, plate, BoardPlate.Radius * scale, scale, Accent, ink);
+        PairsRenderer.DrawTray(drawList, board, tray, flight, Accent, scale);
+        for (var index = 0; index < PairsBoard.CardCount; index++)
+        {
+            var cell = CellOf(index);
+            if (board.State(index) == CardState.Matched)
+            {
+                PairsRenderer.DrawEmptyCell(drawList, cell, Accent, scale);
+                continue;
+            }
+
+            var pop = GameJuice.PopIn(GameJuice.Stagger(dealProgress, index, PairsBoard.CardCount));
+            if (pop <= 0.01f)
+            {
+                continue;
+            }
+
+            var shakeX = shake > 0f && board.IsSelected(index)
+                ? MathF.Sin(shake * MathF.PI * ShakeCycles) * ShakeAmplitude * scale * shake
+                : 0f;
+            PairsRenderer.DrawCard(drawList, Dealt(cell, pop), board.Symbol(index), flip[index], glow[index], shakeX,
+                hoveredCard == index, Accent, scale);
+        }
+
+        for (var index = 0; index < PairsBoard.CardCount; index++)
+        {
+            if (board.State(index) != CardState.Matched || flight[index] >= 1f)
+            {
+                continue;
+            }
+
+            DrawFlight(drawList, index, scale);
+        }
     }
 
-    private void DrawResult(in GameContext context, PhoneTheme theme, Rect body)
+    private void DrawFlight(ImDrawListPtr drawList, int index, float scale)
     {
-        var secondaryParts =
-            $"{Loc.Plural(L.Games.AttemptsCount, board.Attempts)}  ·  {Loc.T(L.Games.Streak)} {GameNumber.Label(streak)}";
-        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondaryParts,
-            newBestTime);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
+        var cell = CellOf(index);
+        var slot = PairsRenderer.TraySlot(tray, board.TraySlot(board.Symbol(index)), scale);
+        var progress = Easing.EaseInOutCubic(flight[index]);
+        var center = Vector2.Lerp(cell.Center, slot.Center, progress);
+        center.Y -= MathF.Sin(progress * MathF.PI) * FlightArc * scale;
+        var size = Vector2.Lerp(cell.Size, slot.Size, progress);
+        PairsRenderer.DrawFlyer(drawList, center, size, board.Symbol(index), progress, scale);
+    }
+
+    private Rect Dealt(Rect cell, float pop)
+    {
+        if (pop >= 1f)
         {
-            StartNewGame();
+            return cell;
         }
+
+        var center = new Vector2(cell.Center.X, Easing.Lerp(tray.Center.Y, cell.Center.Y, pop));
+        var half = cell.Size * 0.5f * MathF.Max(0.05f, pop);
+        return new Rect(center - half, center + half);
+    }
+
+    private void DrawHud(ImDrawListPtr drawList, PhoneTheme theme, float scale, in GameContext context)
+    {
+        var timeLabel = TimeText.MinutesSeconds((int)board.Elapsed);
+        var attemptsLabel = GameNumber.Label(board.Attempts);
+        var streakShown = board.Streak >= StreakShown;
+        var streakLabel = GameNumber.Label(board.Streak);
+        var best = context.Session.Best;
+        var bestLabel = best > 0 ? TimeText.MinutesSeconds(best) : string.Empty;
+        var width = CapsulePadX * 2f + SectionWidth(timeLabel, scale) + CapsuleSectionGap +
+                    SectionWidth(attemptsLabel, scale);
+        if (streakShown)
+        {
+            width += CapsuleSectionGap + SectionWidth(streakLabel, scale);
+        }
+
+        if (best > 0)
+        {
+            width += CapsuleSectionGap + SectionWidth(bestLabel, scale);
+        }
+
+        context.Hud.Custom(width);
+        var rect = context.Hud.CustomRect;
+        if (rect.Width <= 0f)
+        {
+            return;
+        }
+
+        StageHud.Capsule(drawList, rect, scale);
+        var centerY = rect.Center.Y;
+        var gap = CapsuleSectionGap * scale;
+        var left = rect.Min.X + CapsulePadX * scale;
+        left = DrawSection(drawList, left, centerY, FontAwesomeIcon.Clock, Accent, timeLabel, theme.TextStrong, scale);
+        left = DrawSection(drawList, left + gap, centerY, FontAwesomeIcon.Clone, Accent, attemptsLabel,
+            theme.TextStrong, scale);
+        if (streakShown)
+        {
+            left = DrawSection(drawList, left + gap, centerY, FontAwesomeIcon.Fire, Warm, streakLabel, Warm, scale);
+        }
+
+        if (best > 0)
+        {
+            DrawSection(drawList, left + gap, centerY, FontAwesomeIcon.Trophy, Accent, bestLabel, theme.TextStrong,
+                scale);
+        }
+    }
+
+    private static float SectionWidth(string text, float scale) =>
+        CapsuleIconSize + CapsuleIconGap + Typography.Measure(text, CapsuleStyle).X / scale;
+
+    private static float DrawSection(ImDrawListPtr drawList, float left, float centerY, FontAwesomeIcon icon,
+        Vector4 iconColor, string text, Vector4 ink, float scale)
+    {
+        var iconSize = CapsuleIconSize * scale;
+        ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), icon, iconColor, iconSize);
+        left += iconSize + CapsuleIconGap * scale;
+        Typography.Draw(drawList, new Vector2(left, centerY - Typography.LineHeight(CapsuleStyle) * 0.5f), text, ink,
+            CapsuleStyle);
+        return left + Typography.Measure(text, CapsuleStyle).X;
+    }
+
+    private Rect CellOf(int index) => grid.Cell(index % PairsBoard.Columns, index / PairsBoard.Columns);
+
+    private static Rect Grow(Rect rect, float factor)
+    {
+        var half = rect.Size * 0.5f * factor;
+        return new Rect(rect.Center - half, rect.Center + half);
     }
 }

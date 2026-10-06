@@ -8026,7 +8026,6 @@ internal static class L
         public static readonly LocString Moves = new("games.moves", "Moves");
         public static readonly LocString Undo = new("games.undo", "Undo");
         public static readonly LocString NextLevel = new("games.nextLevel", "Next Level");
-        public static readonly LocPlural AttemptsCount = new("games.attemptsCount", "{0} attempt", "{0} attempts");
         public static readonly LocString Nonogram = new("games.nonogram", "Nonogram");
         public static readonly LocString Flow = new("games.flow", "Flow");
         public static readonly LocString Flows = new("games.flows", "Flows");
@@ -8069,7 +8068,6 @@ internal static class L
         public static readonly LocString Trivia = new("games.trivia", "Trivia");
         public static readonly LocString WhatIsThis = new("games.whatIsThis", "What is this?");
         public static readonly LocString PickTheIcon = new("games.pickTheIcon", "Pick the right one");
-        public static readonly LocString ChooseCategory = new("games.chooseCategory", "Choose a category");
         public static readonly LocString CategoryAll = new("games.categoryAll", "Everything");
         public static readonly LocString CategoryMounts = new("games.categoryMounts", "Mounts");
         public static readonly LocString CategoryMinions = new("games.categoryMinions", "Minions");
@@ -8290,6 +8288,7 @@ internal static class L
     internal static class Pairs
     {
         public static readonly LocString Hook = new("games.memory.hook", "Flip two cards at a time and match every pair in as few tries as you can.");
+        public static readonly LocString Streak = new("games.memory.streak", "Best streak");
     }
 
     internal static class GemSwap

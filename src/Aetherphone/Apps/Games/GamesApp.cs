@@ -154,7 +154,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         games = new IMiniGame[]
         {
             new SweeperApp(),
-            new LegacyGameAdapter(new PairsApp(), L.Games.Pairs, L.Pairs.Hook),
+            new PairsApp(),
             new LegacyGameAdapter(new GemSwapApp(), L.Games.GemSwap, L.GemSwap.Hook),
             new LegacyGameAdapter(new TetrisApp(), L.Games.Tetris, L.Tetris.Hook),
             new LegacyGameAdapter(new Twenty48App(), L.Twenty48.Title, L.Twenty48.Hook),
@@ -164,7 +164,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new NonogramApp(),
             new FlowApp(),
             new SolitaireApp(),
-            new LegacyGameAdapter(new SimonApp(), L.Games.Simon, L.Simon.Hook),
+            new SimonApp(),
             new LegacyGameAdapter(new FlapApp(), L.Games.Flap, L.Flap.Hook),
             new ReversiApp(),
             new WhackApp(),
@@ -175,7 +175,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new LegacyGameAdapter(new CrystalDropApp(), L.Games.CrystalDrop, L.CrystalDrop.Hook),
             new BeatApp(),
             new LegacyGameAdapter(new BladeApp(), L.Games.Blade, L.Blade.Hook),
-            new LegacyGameAdapter(new TriviaApp(gameData, textures), L.Games.Trivia, L.Trivia.Hook),
+            new TriviaApp(gameData, textures),
             new SkyfallApp(),
             new InvadersApp(),
             new LegacyGameAdapter(new CapManApp(), L.Games.CapMan, L.CapMan.Hook),
