@@ -7977,7 +7977,6 @@ internal static class L
         public static readonly LocString GemSwapFrost = new("games.gemSwapFrost", "Frost");
         public static readonly LocString GemSwapGale = new("games.gemSwapGale", "Gale");
         public static readonly LocString GemSwapStorm = new("games.gemSwapStorm", "Storm");
-        public static readonly LocString Boom = new("games.boom", "Boom");
         public static readonly LocString Mines = new("games.mines", "Mines");
         public static readonly LocString Time = new("games.time", "Time");
         public static readonly LocString Attempts = new("games.attempts", "Attempts");
@@ -8281,6 +8280,7 @@ internal static class L
     internal static class Sweeper
     {
         public static readonly LocString Hook = new("games.minesweeper.hook", "Reveal every safe square and flag the mines before one goes off.");
+        public static readonly LocString Flags = new("games.minesweeper.flags", "Flags");
     }
 
     internal static class Pairs

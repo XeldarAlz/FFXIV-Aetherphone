@@ -142,7 +142,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         onlineRoom = new OnlineRoomView(gameRooms);
         games = new IMiniGame[]
         {
-            new LegacyGameAdapter(new SweeperApp(), L.Games.Sweeper, L.Sweeper.Hook),
+            new SweeperApp(),
             new LegacyGameAdapter(new PairsApp(), L.Games.Pairs, L.Pairs.Hook),
             new LegacyGameAdapter(new GemSwapApp(), L.Games.GemSwap, L.GemSwap.Hook),
             new LegacyGameAdapter(new TetrisApp(), L.Games.Tetris, L.Tetris.Hook),
