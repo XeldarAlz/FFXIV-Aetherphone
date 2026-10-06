@@ -59,7 +59,7 @@ public sealed class GameSessionTests
             modeKinds: modeKinds ? TierKinds : null, countdownModes: countdownModes ? TierCountdowns : null);
 
     private static GameSession Build(out FakeStatsConfiguration configuration, out CountingSink sink,
-        FixedRank? ranks = null)
+        IRankSource? ranks = null)
     {
         configuration = new FakeStatsConfiguration();
         sink = new CountingSink();
@@ -308,9 +308,9 @@ public sealed class GameSessionTests
     }
 
     [Fact]
-    public void SecondaryStatsLandNextToThePrimary()
+    public void SecondaryStatsLandNextToThePrimaryAndReachTheSink()
     {
-        var session = Build(out var configuration, out _);
+        var session = Build(out var configuration, out var sink);
         session.Begin(Spec(), new GameStart(0, 5, false));
         session.Play();
 
@@ -318,6 +318,38 @@ public sealed class GameSessionTests
 
         Assert.Equal(2, configuration.GameStats.Count);
         Assert.Equal(120, configuration.GameStats[1].BestScore);
+        Assert.Equal(2, sink.Count);
+        Assert.Equal("tap", sink.Last.StatId);
+        Assert.Equal(40, sink.Last.Value);
+    }
+
+    [Fact]
+    public void TheRankLookupFoldsATierOntoItsCatalogRoot()
+    {
+        var ranks = new RecordingRank();
+        var session = Build(out _, out _, ranks);
+        var tiers = new LocString[] { new("t.easy", "Easy"), new("t.hard", "Hard") };
+        var tierStatIds = new[] { "chess.easy", "chess.hard" };
+        var spec = new GameSpec("chess", new LocString("t.chess", "Chess"), GameGenre.Tabletop, kind: ScoreKind.Streak,
+            modes: tiers, modeStatIds: tierStatIds);
+
+        session.Begin(spec, new GameStart(1, 5, false));
+
+        Assert.Equal("chess.hard", session.StatId);
+        Assert.Equal("chess", session.LeaderboardStatId);
+        Assert.Equal("chess", ranks.LastStatId);
+    }
+
+    private sealed class RecordingRank : IRankSource
+    {
+        public string LastStatId { get; private set; } = string.Empty;
+
+        public bool TryGetRank(string statId, out GameRank rank)
+        {
+            LastStatId = statId;
+            rank = GameRank.Unknown;
+            return false;
+        }
     }
 
     [Fact]
@@ -377,9 +409,10 @@ public sealed class GameSessionTests
     {
         var ranks = new FixedRank { Rank = new GameRank(8, 1240, 2, 3, RankState.Ranked) };
         var session = Build(out _, out _, ranks);
-        session.Begin(Spec(), new GameStart(0, 5, false));
+        var spec = new GameSpec("snake", new LocString("t.snake", "Snake"), GameGenre.Arcade, clocked: true);
+        session.Begin(spec, new GameStart(0, 5, false));
         session.Play();
-        session.Finish(new GameOutcome(40, ScoreKind.Score, "tap"));
+        session.Finish(new GameOutcome(40, ScoreKind.Score, "snake"));
 
         Assert.Equal(8, session.Rank.Rank);
         Assert.True(session.Rank.IsRanked);

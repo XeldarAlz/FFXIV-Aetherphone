@@ -13,7 +13,7 @@ public sealed class ReversiBoardTests
     private const int D4 = 3 * ReversiBoard.Size + 3;
 
     [Fact]
-    public void SameMoveListReplaysIdentically()
+    public void SameSeedReplaysIdentically()
     {
         var first = new ReversiBoard();
         var second = new ReversiBoard();

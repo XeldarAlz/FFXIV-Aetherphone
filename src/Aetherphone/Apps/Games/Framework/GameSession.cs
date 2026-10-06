@@ -67,6 +67,8 @@ internal sealed class GameSession
 
     public ScoreKind Kind => Spec.KindFor(Mode);
 
+    public string LeaderboardStatId => ScoreStatIds.LeaderboardId(StatId, Spec.Id, Kind);
+
     public GameStart Start => new(Mode, Seed, Daily);
 
     public bool BeatingBest =>
@@ -274,6 +276,9 @@ internal sealed class GameSession
             {
                 stats.SubmitScore(outcome.SecondaryStatId, outcome.SecondaryValue);
             }
+
+            sink.Submit(new ScoreSubmission(outcome.SecondaryStatId, outcome.SecondaryValue, outcome.SecondaryKind,
+                Seed, Daily, Spec.Id));
         }
 
         ResultValue = value;
@@ -291,7 +296,8 @@ internal sealed class GameSession
 
     public void RefreshRank()
     {
-        Rank = ranks.TryGetRank(StatId, out var rank) ? rank : GameRank.Unknown;
+        var leaderboardId = LeaderboardStatId;
+        Rank = leaderboardId.Length > 0 && ranks.TryGetRank(leaderboardId, out var rank) ? rank : GameRank.Unknown;
     }
 
     private void LoadBest()

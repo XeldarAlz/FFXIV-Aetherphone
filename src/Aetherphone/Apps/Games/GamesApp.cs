@@ -645,7 +645,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 }
                 else if (action == IntroAction.Leaderboard)
                 {
-                    OpenLeaderboard(game, session.StatId, game.Title);
+                    OpenLeaderboard(game, session.LeaderboardStatId, game.Title);
                 }
 
                 break;
@@ -669,7 +669,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 }
                 else if (resultAction == ResultAction.Leaderboard)
                 {
-                    OpenLeaderboard(game, session.StatId, game.Title);
+                    OpenLeaderboard(game, session.LeaderboardStatId, game.Title);
                 }
 
                 break;
@@ -689,7 +689,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 StartRun(game);
                 break;
             case PauseAction.Leaderboard:
-                OpenLeaderboard(game, session.StatId, game.Title);
+                OpenLeaderboard(game, session.LeaderboardStatId, game.Title);
                 break;
             case PauseAction.Quit:
                 game.OnQuit(session);

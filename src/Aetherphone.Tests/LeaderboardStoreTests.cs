@@ -61,6 +61,27 @@ public sealed class LeaderboardStoreTests
     }
 
     [Fact]
+    public void TierAndModeStatIdsFoldOntoTheCatalogRoot()
+    {
+        var queue = Build(out var configuration);
+
+        Assert.True(queue.Enqueue(Submission("chess.hard", 3, ScoreKind.Streak, "chess"), Now));
+        Assert.True(queue.Enqueue(Submission("snake.wrap", 40, gameId: "snake"), Now));
+        Assert.False(queue.Enqueue(Submission("solitaire.vegas", 120, gameId: "solitaire"), Now));
+        Assert.False(queue.Enqueue(Submission("chess.easy", 2, ScoreKind.Streak, "chess"), Now));
+
+        Assert.Equal(2, queue.Count);
+        Assert.Equal("chess", configuration.PendingScoreUploads[0].StatId);
+        Assert.Equal("snake", configuration.PendingScoreUploads[1].StatId);
+        Assert.True(queue.IsQueued("chess"));
+        Assert.False(queue.IsQueued("chess.hard"));
+        Assert.Equal("chess", ScoreStatIds.LeaderboardId("chess.medium", "chess", ScoreKind.Streak));
+        Assert.Equal("sudoku.easy", ScoreStatIds.LeaderboardId("sudoku.easy", "sudoku", ScoreKind.Time));
+        Assert.Equal(string.Empty, ScoreStatIds.LeaderboardId("solitaire.vegas", "solitaire", ScoreKind.Score));
+        Assert.Equal(string.Empty, ScoreStatIds.LeaderboardId("doom", "doom", ScoreKind.Score));
+    }
+
+    [Fact]
     public void TheQueueKeepsOnlyTheBestPerStatId()
     {
         var queue = Build(out var configuration);

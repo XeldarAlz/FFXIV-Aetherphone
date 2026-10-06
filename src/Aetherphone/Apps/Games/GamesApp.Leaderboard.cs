@@ -84,12 +84,7 @@ internal sealed partial class GamesApp
     {
         if (spec.HasModes)
         {
-            leaderboardModeStatIds = new string[spec.Modes.Length];
-            leaderboardModeNames = spec.Modes;
-            for (var index = 0; index < spec.Modes.Length; index++)
-            {
-                leaderboardModeStatIds[index] = spec.StatIdFor(index);
-            }
+            BuildLeaderboardModesFromSpec(spec);
         }
         else
         {
@@ -128,6 +123,41 @@ internal sealed partial class GamesApp
                 ? Array.Empty<string>()
                 : new string[leaderboardModeNames.Length];
         }
+    }
+
+    private void BuildLeaderboardModesFromSpec(in GameSpec spec)
+    {
+        var ids = new string[spec.Modes.Length];
+        var names = new LocString[spec.Modes.Length];
+        var count = 0;
+        for (var index = 0; index < spec.Modes.Length; index++)
+        {
+            var id = ScoreStatIds.LeaderboardId(spec.StatIdFor(index), spec.Id, spec.KindFor(index));
+            if (id.Length == 0 || Array.IndexOf(ids, id, 0, count) >= 0)
+            {
+                continue;
+            }
+
+            ids[count] = id;
+            names[count] = spec.Modes[index];
+            count++;
+        }
+
+        if (count <= 1)
+        {
+            leaderboardModeStatIds = new[] { count == 0 ? spec.Id : ids[0] };
+            leaderboardModeNames = Array.Empty<LocString>();
+            return;
+        }
+
+        if (count < ids.Length)
+        {
+            Array.Resize(ref ids, count);
+            Array.Resize(ref names, count);
+        }
+
+        leaderboardModeStatIds = ids;
+        leaderboardModeNames = names;
     }
 
     private static bool HasRulesetSibling(string gameId)

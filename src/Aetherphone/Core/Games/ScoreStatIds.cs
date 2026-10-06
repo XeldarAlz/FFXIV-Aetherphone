@@ -54,6 +54,25 @@ internal static class ScoreStatIds
 
     public static ScoreKind KindOf(string statId) => TryFind(statId, out var stat) ? stat.Kind : ScoreKind.Score;
 
+    public static string LeaderboardId(string statId, string gameId, ScoreKind kind)
+    {
+        if (TryFind(statId, out var exact))
+        {
+            return StreakAgrees(exact, kind) ? statId : string.Empty;
+        }
+
+        if (!TryFind(gameId, out var root) || !StreakAgrees(root, kind) ||
+            (root.Kind == ScoreKind.Time) != (kind == ScoreKind.Time))
+        {
+            return string.Empty;
+        }
+
+        return gameId;
+    }
+
+    private static bool StreakAgrees(in ScoreStat stat, ScoreKind kind) =>
+        (kind == ScoreKind.Streak) == (stat.Kind == ScoreKind.Streak);
+
     public static bool BelongsTo(string statId, string gameId)
     {
         if (string.Equals(statId, gameId, StringComparison.Ordinal))
