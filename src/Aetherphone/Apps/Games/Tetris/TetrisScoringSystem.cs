@@ -13,6 +13,7 @@ internal sealed class TetrisScoringSystem
     public int Score { get; private set; }
     public bool LastBackToBack { get; private set; }
     public int LastCombo { get; private set; } = -1;
+    public int BestCombo { get; private set; }
 
     public void Reset()
     {
@@ -22,6 +23,7 @@ internal sealed class TetrisScoringSystem
         comboChain = -1;
         LastBackToBack = false;
         LastCombo = -1;
+        BestCombo = 0;
     }
 
     public void AddSoftDrop(int cellsDropped)
@@ -62,6 +64,7 @@ internal sealed class TetrisScoringSystem
 
         comboChain = comboChain < 0 ? 0 : comboChain + 1;
         LastCombo = comboChain;
+        BestCombo = Math.Max(BestCombo, comboChain + 1);
         var difficult = clearedLines == 4 || (ruleset == TetrisRuleset.Modern && spin != TetrisSpin.None);
         var applied = difficult && backToBack;
         LastBackToBack = applied;

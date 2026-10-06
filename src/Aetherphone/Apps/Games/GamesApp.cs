@@ -156,7 +156,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new LegacyGameAdapter(new SweeperApp(), L.Games.Sweeper, L.Sweeper.Hook),
             new LegacyGameAdapter(new PairsApp(), L.Games.Pairs, L.Pairs.Hook),
             new LegacyGameAdapter(new GemSwapApp(), L.Games.GemSwap, L.GemSwap.Hook),
-            new LegacyGameAdapter(new TetrisApp(), L.Games.Tetris, L.Tetris.Hook),
+            new TetrisApp(),
             new LegacyGameAdapter(new Twenty48App(), L.Twenty48.Title, L.Twenty48.Hook),
             new WaterSortApp(),
             new LegacyGameAdapter(new BreakoutApp(), L.Games.Breakout, L.Breakout.Hook),
