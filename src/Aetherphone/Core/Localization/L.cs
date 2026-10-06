@@ -1654,7 +1654,7 @@ internal static class L
         public static readonly LocString SignupUsernameLabel = new("hunts.signupUsernameLabel", "Username");
         public static readonly LocString SignupPasswordLabel = new("hunts.signupPasswordLabel", "Password");
         public static readonly LocString SignupLoginButton = new("hunts.signupLoginButton", "Log In");
-        public static readonly LocString SignupLoggingIn = new("hunts.signupLoggingIn", "Logging In...");
+        public static readonly LocString SignupLoggingIn = new("hunts.signupLoggingIn", "Logging In…");
         public static readonly LocString SignupFailed = new("hunts.signupFailed",
             "Login failed. Check your username and password and try again.");
         public static readonly LocString SignupAuthenticatedMessage =
@@ -2111,8 +2111,8 @@ internal static class L
         public static readonly LocString LinkedDevicesShown = new("settings.linkedDevicesShown", "Linked Devices is now in Settings.");
         public static readonly LocString LinkedDevicesAlreadyShown = new("settings.linkedDevicesAlreadyShown", "Linked Devices is already in Settings.");
         public static readonly LocString TellArchiveTitle = new("settings.tellArchiveTitle", "Chat History");
-        public static readonly LocString TellArchive = new("settings.tellArchive", "Save tell history on this PC");
-        public static readonly LocString TellArchiveHint = new("settings.tellArchiveHint", "Tells are saved as plain text files on this PC so conversations survive a restart. They are never uploaded anywhere. Turn this off to keep new tells in memory only. Deleting a conversation also deletes its file.");
+        public static readonly LocString TellArchive = new("settings.tellArchive", "Save chat history on this PC");
+        public static readonly LocString TellArchiveHint = new("settings.tellArchiveHint", "Tells, party, Free Company, linkshell and other chat the phone shows are saved as plain text files on this PC so conversations survive a restart. They are never uploaded anywhere. Linkpearl's settings choose how long each channel is kept, 30 days unless you change it. Turn this off to keep new messages in memory only. Deleting a conversation also deletes its file.");
         public static readonly LocString Storage = new("settings.storage", "Storage");
         public static readonly LocString StorageHint = new("settings.storageHint", "Images and media you have viewed are kept on this PC, encrypted, so they open faster.");
         public static readonly LocString ClearCache = new("settings.clearCache", "Clear cached images and media");
@@ -2151,7 +2151,7 @@ internal static class L
     internal static class Translate
     {
         public static readonly LocString Action = new("translate.action", "Translate");
-        public static readonly LocString Pending = new("translate.pending", "Translating...");
+        public static readonly LocString Pending = new("translate.pending", "Translating…");
         public static readonly LocString ShowOriginal = new("translate.showOriginal", "Show original");
         public static readonly LocString ShowTranslation = new("translate.showTranslation", "Show translation");
         public static readonly LocString TranslatedFrom = new("translate.translatedFrom", "Translated from {0}");
@@ -6615,7 +6615,7 @@ internal static class L
         public static readonly LocString CastingScreenPositionHint = new(
             "aetherstream.castingScreenPositionHint", "Start playback to move and resize the screen.");
         public static readonly LocString CastingPresetNameHint = new("aetherstream.castingPresetNameHint",
-            "Preset name...");
+            "Preset name…");
         public static readonly LocString CastingSavePreset = new("aetherstream.castingSavePreset", "Save Preset");
         public static readonly LocString CastingSavedPresets = new("aetherstream.castingSavedPresets",
             "Saved Presets");
@@ -6658,7 +6658,7 @@ internal static class L
         public static readonly LocString SettingsUpdateDeno = new("aetherstream.settingsUpdateDeno",
             "Update deno");
         public static readonly LocString SettingsDownloading = new("aetherstream.settingsDownloading",
-            "Downloading...");
+            "Downloading…");
         public static readonly LocString SettingsHideNameplates = new("aetherstream.settingsHideNameplates",
             "Hide nameplates");
         public static readonly LocString SettingsMaxQuality = new("aetherstream.settingsMaxQuality", "Max quality");
@@ -6704,7 +6704,7 @@ internal static class L
         public static readonly LocString JoinDeniedBody = new("aetherstream.joinDeniedBody",
             "The host declined your request to join.");
         public static readonly LocString JoinWaitingApproval = new("aetherstream.joinWaitingApproval",
-            "Waiting for approval...");
+            "Waiting for approval…");
         public static readonly LocString CancelRequest = new("aetherstream.cancelRequest", "Cancel request");
         public static readonly LocString CastingPendingRequestsHeader = new(
             "aetherstream.castingPendingRequestsHeader", "Waiting to join");
