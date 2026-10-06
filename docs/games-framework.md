@@ -548,3 +548,48 @@ Games are named for what they do: Whack, Snake, Stack, Water Sort, Crystal Drop,
 - [Game integration](game-integration.md): Honorific nameplate titles and the Dalamud services (such as `IKeyState`) the games rely on
 - [Networking](networking.md): the Aethernet client and realtime socket the online rooms ride on
 - [Testing and release](testing-and-release.md): the test project that hosts the chess, sudoku and stage kit suites
+
+## World pieces
+
+Reusable worlds for games that need more than a grid: destructible terrain (Crater, Lander, Herd), a pseudo-3D lane projection (Trailblaze) and the lane defense trio (Garden Siege). They live in src/Aetherphone/Apps/Games/Framework/World (namespace `Aetherphone.Apps.Games.Framework.World`). Everything except `TerrainTexture` is Dalamud-free, so the rules are pinned by TerrainMaskTests, TerrainPainterTests, LaneProjectionTests, LaneGridTests, WaveSpawnerTests and DripEconomyTests. None of them allocates per frame (`TerrainTexture` creates a texture wrap only when the terrain changed); give a game one instance of each and reuse it across runs.
+
+### TerrainMask
+
+A bit grid of solid cells, row-major in a `ulong[]` (64 cells per word), built as `new TerrainMask(width, height, metresPerCell)`; 640 by 360 cells is the expected size. World units are metres with +Y down, the same space as `Camera2D`, and cell (column, row) covers `column * metresPerCell` to `(column + 1) * metresPerCell`.
+
+| Member | What it does |
+| --- | --- |
+| `Generate(ref random, style)` | Clears the grid and shapes seeded terrain. `Hills` is rolling ground; `Islands` splits the land with open channels down to the bottom edge and leaves sea at both sides; `Caverns` raises the ground, hollows it with noise caves and hangs a ragged roof from the top edge. It advances the caller's `GameRandom`, and the same seed always gives the same cells |
+| `Plateaus`, `SpawnPoints(count)` | Up to `MaxPlateaus` (8) flat plateaus spread left to right, each 21 cells wide on a 640 mask, with clear air above and solid ground below (caves never undercut them). `SpawnPoints` returns `count` plateau centres on the top surface, spread evenly from the leftmost plateau to the rightmost; stand a body of radius r at `point.Y - r`. The returned span is reused by the next call. Carving can of course destroy a plateau later |
+| `IsSolid(column, row)`, `IsSolid(point)` | Out of bounds is air |
+| `Carve(center, radius)`, `Fill(center, radius)` | Clears or sets every cell whose centre lies inside the circle and returns how many cells changed |
+| `CarveRect(rect)`, `FillRect(rect)` | The same for an axis-aligned world rect (Herd's dig and bridge, stamping a hand-made level) |
+| `SurfaceY(x)`, `SurfaceY(x, fromY)` | World Y of the top of the first solid cell in that column, scanning down from the top or from `fromY`; `WorldHeight` when nothing is solid. Use the second form under a cavern roof |
+| `Normal(point)` | Outward surface normal from a 7-cell disc of samples; straight up when the disc is all air or all ground |
+| `Raycast(origin, direction, maxDistance, out hit)` | Steps cell by cell (clipped to the mask) to the first solid cell; `TerrainHit` carries the point, the outward normal, the distance and the cell |
+| `CollideCircle(center, radius, out normal, out depth)` | True when the circle overlaps ground: move the body by `normal * depth` and reflect or cancel its velocity along `normal` |
+| `TakeDirty(out region)` | The union of changed cells since the last call (generation, `Clear`, and every carve or fill that changed something). `TerrainTexture` consumes it, so a game never calls it while a texture is attached |
+
+### TerrainTexture
+
+The Dalamud half. `new TerrainTexture(textures, mask, TerrainMaterial.Earth)` takes the `ITextureProvider` a game receives from `GamesApp` (as Trivia does) and owns a `TerrainPainter`, which allocates the RGBA buffer once, at mask resolution. There are no mip maps (Dalamud gives plugin textures none), and a 640 by 360 texture drawn near its native size never minifies far. The painter draws a top-to-bottom gradient between the material's `Surface` and `Deep` colours, a brighter topsoil band over the first 10 cells under open air, a 2-cell lit edge in `Edge` on every upward-facing surface (crater floors included), darker wavy strata bands, a shaded underside where ground overhangs air, per-cell grain, and transparent air that keeps the edge colour in its RGB so bilinear sampling never draws a dark rim. Materials: `Earth`, `Sand`, `Stone`, `Lunar`, or any `new TerrainMaterial(surface, deep, edge)`; `SetMaterial` repaints the whole mask.
+
+`Draw(drawList, in camera)` repaints only the dirty region (plus the 10 rows below it, which the topsoil depends on), re-uploads at most once per ImGui frame and only after a change, then draws one `AddImage` quad over the visible part of the world with matching UVs. The replaced texture is disposed a frame later, never inside the frame that may still reference it. Draw the terrain after the backdrop and before bodies and particles, and dispose it with the game.
+
+### LaneProjection
+
+A `readonly struct` for the three-lane runner: a pinhole camera `CameraHeight` above the ground looking along +Z, the horizon at `HorizonY`, the vanishing point at `VanishingX`, the ground at `NearZ` mapped to `BottomY`, and `LaneCount` lanes of `LaneWidth` world units. Rebuild it each frame with `LaneProjection.Fit(view, laneCount, laneWidth, horizonFraction, roadWidthFraction, nearZ, farZ)`, which derives the camera height so the road spans `roadWidthFraction` of the view width at the near plane.
+
+- `ToScreen(laneX, height, depth)`: `laneX` counts lanes from the middle of the road (`LaneOffset(lane)` gives -1, 0 and 1 for three lanes; a player sliding between lanes passes a fraction), `height` is in world units above the ground, `depth` is the distance ahead of the camera.
+- `Scale(depth)`: pixels per world unit at that depth; size sprites and coins with it.
+- `LaneEdge(edge, depth)`: the ground point of lane boundary `edge` (0 is the left edge of lane 0, `LaneCount` the right edge of the last lane). Draw the road as quads between two depths.
+- `Fog(depth)`: 0 at `NearZ` rising to 1 at `FarZ` (quadratic); lerp distant things toward the horizon colour.
+
+Depths at or behind the camera are clamped to a tiny positive value, so they project far below the screen instead of dividing by zero. Cull by depth before drawing.
+
+### Lane defense: LaneGrid, WaveSpawner, DripEconomy
+
+- **`LaneGrid(columns, rows, cellSize = 1)`**: occupancy per cell as a `byte` kind (0 is empty) plus an `int` entity id. `CanPlace`, `Place(column, row, kind, entity)` (false when occupied, outside or kind 0), `Remove`, `KindAt`, `EntityAt` (`NoEntity` when empty), `NextOccupied(column, fromRow, step)` for the first defender ahead of an enemy or a digger's target, and `CellCenter` and `CellAt` in world units with (0, 0) at the top-left.
+- **`WaveSpawner(laneCount, capacity = 256)`**: `Load(table)` copies a level's `WaveEntry { Time, Lane, EnemyKind }` array in any order and sorts it by time (ties keep table order). `Endless(ref random, wave, in budget)` builds a seeded wave instead: it spends `budget.BudgetFor(wave)` on kinds unlocked by that wave that still fit the remaining budget, gives each spawn the less loaded of two random lanes, and spaces the spawns evenly, with jitter, across `budget.WaveSeconds`. Each frame `Advance(deltaSeconds, due)` writes the spawns whose time has come into the caller's span and returns how many; spawns that do not fit stay due for the next call. Also `Rewind`, `Clear`, `Finished`, `Remaining`, `Duration`, `SpentBudget` and `Entries`.
+- **`EnemyBudget(costs, unlockWaves, baseBudget, budgetPerWave, waveSeconds)`**: the game's endless recipe. Both arrays are indexed by enemy kind and a cost of 0 never spawns; keep them in `static readonly` fields. `BudgetFor(wave)` is `baseBudget + budgetPerWave * (wave - 1)`.
+- **`DripEconomy(amount, ratePerSecond, cap)`**: a mutable struct. `Advance(deltaSeconds)` accrues `RatePerSecond` up to `Cap` (raise `RatePerSecond` when a generator is planted), `TrySpend(cost)` deducts only when affordable, `CanAfford` dims a card, `Add(pickup)` returns what fit under the cap, and `Whole` is the display value.
