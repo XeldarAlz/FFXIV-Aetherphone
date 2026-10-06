@@ -261,7 +261,6 @@ internal sealed class SimonApp : IMiniGame
         pendingSubmit = true;
         resultAppear = 0f;
         fx.AddTrauma(0.7f);
-        fx.HitStop(0.1f);
         fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.45f);
         fx.Shockwave(grid.Center, grid.Pitch * 1.3f, new Vector4(0.95f, 0.4f, 0.4f, 1f), 0.6f, 3.4f);
         for (var pad = 0; pad < SimonBoard.PadCount; pad++)
