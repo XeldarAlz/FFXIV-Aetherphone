@@ -8362,6 +8362,7 @@ internal static class L
     internal static class Sudoku
     {
         public static readonly LocString Hook = new("games.sudoku.hook", "Fill the grid so every row, column and box holds the digits one to nine.");
+        public static readonly LocString Hints = new("games.sudoku.hints", "Hints");
     }
 
     internal static class Chess

@@ -158,7 +158,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new LegacyGameAdapter(new ReversiApp(), L.Games.Reversi, L.Reversi.Hook),
             new LegacyGameAdapter(new WhackApp(), L.Games.Whack, L.Whack.Hook),
             new LegacyGameAdapter(new SnakeApp(), L.Games.Snake, L.Snake.Hook),
-            new LegacyGameAdapter(new SudokuApp(), L.Games.Sudoku, L.Sudoku.Hook),
+            new SudokuApp(),
             new LegacyGameAdapter(new ChessApp(), L.Games.Chess, L.Chess.Hook),
             new LegacyGameAdapter(new StackApp(), L.Games.Stack, L.Stack.Hook),
             new LegacyGameAdapter(new CrystalDropApp(), L.Games.CrystalDrop, L.CrystalDrop.Hook),

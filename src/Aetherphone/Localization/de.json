@@ -4422,6 +4422,7 @@
   "games.play": "Spielen",
   "games.sudoku": "Sudoku",
   "games.sudoku.hook": "Fülle das Gitter so, dass jede Zeile, Spalte und jeder Block die Ziffern eins bis neun enthält.",
+  "games.sudoku.hints": "Tipps",
   "games.chess": "Schach",
   "games.chess.hook": "Setze den König der CPU schachmatt und halte deine Siegesserie am Leben.",
   "games.notes": "Notizen",

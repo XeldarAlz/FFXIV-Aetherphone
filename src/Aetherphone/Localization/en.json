@@ -4422,6 +4422,7 @@
   "games.play": "Play",
   "games.sudoku": "Sudoku",
   "games.sudoku.hook": "Fill the grid so every row, column and box holds the digits one to nine.",
+  "games.sudoku.hints": "Hints",
   "games.chess": "Chess",
   "games.chess.hook": "Checkmate the CPU's king and keep your win streak alive.",
   "games.notes": "Notes",
