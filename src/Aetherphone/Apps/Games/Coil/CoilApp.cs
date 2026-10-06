@@ -2,6 +2,7 @@ using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
@@ -10,16 +11,22 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Coil;
 
-internal sealed class CoilApp : ILegacyMiniGame
+internal sealed class CoilApp : IMiniGame
 {
     private const string GameId = "coil";
     private const float StageBannerSeconds = 2.4f;
     private const float ComboBannerSeconds = 1.2f;
+    private const float ChainCapsuleSeconds = 1.6f;
+    private const float ChainCapsuleWidth = 56f;
     private const float AimFollowRate = 22f;
     private const float RecoilDecay = 6f;
     private const float SwapDecay = 7f;
+    private const float HintFadeRate = 2.5f;
     private const float DangerShake = 0.9f;
+    private const float ChainPunch = 0.04f;
     private const int BigChain = 3;
+    private const int IdleSeed = 7;
+    private const int MaxChainLabel = 16;
 
     private static readonly LocString[] StageNames =
     {
@@ -29,183 +36,157 @@ internal sealed class CoilApp : ILegacyMiniGame
     };
 
     private static readonly CoilPower[] TimedPowers = { CoilPower.Freeze, CoilPower.Slow, CoilPower.Reverse, CoilPower.Guide };
+    private static readonly GameSpec StageSpec = new(GameId, L.Coil.Title, GameGenre.Puzzle, L.Coil.Hook,
+        Backdrop.Cavern, HudStyle.Standard, ScoreKind.Score, clocked: true, keyboard: true);
+    private static readonly Vector4 Gold = new(1f, 0.88f, 0.45f, 1f);
+    private static readonly Vector4 Cream = new(1f, 1f, 0.9f, 1f);
+    private static readonly Vector4 ChainGold = new(1f, 0.86f, 0.42f, 1f);
+    private static readonly Vector4 BigChainSpark = new(1f, 0.95f, 0.7f, 1f);
+    private static readonly Vector4 StageSpark = new(1f, 0.95f, 0.8f, 1f);
+    private static readonly Vector4 LandRing = new(1f, 1f, 1f, 0.5f);
+    private static readonly Vector4 ChipTrack = new(1f, 1f, 1f, 0.14f);
+    private static readonly ParticleSpec[] ClearBursts = BuildColourSpecs(0.0072f, 0.42f, 0.45f, 0.44f, 1.6f,
+        ParticleShape.GlowCircle, 0f);
+    private static readonly ParticleSpec[] ClearSparkles = BuildColourSpecs(0.0067f, 0.36f, 0.6f, 0.11f, 2.4f,
+        ParticleShape.Star, 0.35f);
+    private static readonly ParticleSpec[] SwallowBursts = BuildColourSpecs(0.006f, 0.33f, 0.5f, 0f, 1.6f,
+        ParticleShape.Circle, 0f);
+    private static readonly ParticleSpec[] ConfettiSpecs = BuildConfetti();
+    private static readonly ParticleSpec[] PowerSparkles = BuildPowerSparkles();
+    private static readonly ParticleSpec GapStreaks = new(Gold, Gold, 0.006f, 0.9f, 0.5f, 0.6f, 1.6f,
+        shape: ParticleShape.Streak);
+    private static readonly ParticleSpec GapSparkle = new(Cream, Cream, 0.0072f, 0.44f, 0.7f, 0.11f, 2.4f, 6f,
+        shape: ParticleShape.Star);
+    private static readonly ParticleSpec BigChainSparkle = new(BigChainSpark, BigChainSpark, 0.0083f, 0.6f, 0.8f, 0.11f,
+        2.4f, 6f, shape: ParticleShape.Star, additive: true);
+    private static readonly ParticleSpec StageSparkle = new(StageSpark, StageSpark, 0.0083f, 0.55f, 0.9f, 0.11f, 2.4f,
+        6f, shape: ParticleShape.Star, additive: true);
+    private static readonly string[] ChainLabels = BuildChainLabels();
+    private static readonly Dictionary<int, string> PlusLabels = new();
 
-    private readonly CoilBoard board = new(Environment.TickCount);
-    private readonly CoilRenderer renderer = new();
+    private readonly CoilBoard board = new(IdleSeed);
     private readonly ParticleSystem particles = new(640);
     private readonly FeedbackFx fx = new();
-    private RollingValue scoreRoll;
-    private bool started;
-    private bool finished;
-    private bool pendingSubmit;
-    private bool newBest;
-    private int loadedBest = -1;
-    private float resultAppear;
-    private float readyAppear;
+    private Camera2D camera = Camera2D.Create();
+    private LabelSlot chainBannerLabel;
     private float recoil;
     private float swapPulse;
     private float turretAngle = -MathF.PI * 0.5f;
     private float stageBanner = 1f;
     private float comboBanner = 1f;
+    private float chainCapsule;
+    private float hintAlpha;
+    private int chainShown;
+    private int maxChain;
+    private int powerUpsUsed;
+    private bool chainCapsulePlaced;
+    private bool fired;
+    private bool finished;
     private string comboText = string.Empty;
-    private string resultLine = string.Empty;
     private string stageLabel = string.Empty;
     private string? stageLabelPrefix;
     private int stageLabelNumber = -1;
-    public string Id => GameId;
-    public Vector4 Accent => AppAccents.For(Id);
-    public string Title => Loc.T(L.Coil.Title);
-    public GameGenre Genre => GameGenre.Puzzle;
-    public bool RunsOnAClock => true;
 
-    public void Open()
+    public GameSpec Spec => StageSpec;
+
+    public Vector4 Accent => AppAccents.For(GameId);
+
+    public void Start(in GameStart start)
     {
-        loadedBest = -1;
-        started = false;
+        var random = start.Random;
+        board.Reset((int)random.NextUInt());
+        board.Begin();
+        particles.Clear();
+        fx.Clear();
+        camera = Camera2D.Create();
+        recoil = 0f;
+        swapPulse = 0f;
+        stageBanner = 0f;
+        comboBanner = 1f;
+        chainCapsule = 0f;
+        chainCapsulePlaced = false;
+        chainShown = 0;
+        maxChain = 0;
+        powerUpsUsed = 0;
+        hintAlpha = 1f;
+        fired = false;
+        finished = false;
     }
 
     public void Close()
     {
+        particles.Clear();
+        fx.Clear();
     }
 
     public void Dispose()
     {
     }
 
-    private void NewRun(bool playImmediately)
+    public void DrawIdle(in GameContext context)
     {
-        board.Reset(Environment.TickCount);
-        particles.Clear();
-        fx.Clear();
-        scoreRoll.Snap(0);
-        finished = false;
-        pendingSubmit = false;
-        newBest = false;
-        resultAppear = 0f;
-        readyAppear = 0f;
-        recoil = 0f;
-        swapPulse = 0f;
-        comboBanner = 1f;
-        stageBanner = 1f;
-        started = true;
-        if (playImmediately)
-        {
-            BeginPlay();
-        }
-    }
-
-    private void BeginPlay()
-    {
-        board.Begin();
-        stageBanner = 0f;
+        PlaceCamera(context);
+        var time = (float)ImGui.GetTime();
+        DrawWorld(ImGui.GetWindowDrawList(), CoilShapes.Polar(turretAngle), UiScale.Current, time);
     }
 
     public void Draw(in GameContext context)
     {
-        var deltaSeconds = context.DeltaSeconds;
         var scale = UiScale.Current;
-        var theme = context.Theme;
-        var body = context.Body;
-        var time = (float)ImGui.GetTime();
-        if (loadedBest < 0)
-        {
-            loadedBest = context.Stats.Get(GameId).BestScore;
-        }
-
-        if (!started)
-        {
-            NewRun(false);
-        }
-
-        if (pendingSubmit)
-        {
-            newBest = context.Stats.SubmitScore(GameId, board.Score);
-            if (newBest)
-            {
-                loadedBest = board.Score;
-            }
-
-            pendingSubmit = false;
-        }
-
-        var rowY = body.Min.Y + 30f * scale;
-        var pad = 8f * scale;
-        var area = new Rect(new Vector2(body.Min.X + pad * 2f, rowY + 34f * scale), body.Max - new Vector2(pad * 2f, pad * 2f));
-        var field = CoilRenderer.FitField(area);
         var drawList = ImGui.GetWindowDrawList();
-        GameScene.Ambient(drawList, body, Accent);
+        var theme = context.Theme;
+        var time = (float)ImGui.GetTime();
+        var simDelta = fx.ScaleDelta(context.DeltaSeconds);
+        particles.Update(context.RawDeltaSeconds);
+        fx.Update(context.RawDeltaSeconds);
+        PlaceCamera(context);
         board.BeginFrame();
-        var aim = AimAt(field);
-        if (!finished)
+        var aim = AimAt();
+        if (!finished && context.Session.State == StageFlow.Playing)
         {
-            HandleInput(field, aim);
+            HandleInput(context.Safe, aim);
         }
 
-        board.Tick(fx.ScaleDelta(deltaSeconds));
-        ReactToEvents(field, scale, theme);
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
-        Animate(aim, deltaSeconds);
-        var shake = fx.ShakeOffset(scale);
-        var shaken = new Rect(field.Min + shake, field.Max + shake);
+        board.Tick(simDelta);
+        ReactToEvents(context, theme);
+        Animate(aim, context);
         var turret = CoilShapes.Polar(turretAngle);
-        DrawHud(body, rowY, theme, deltaSeconds, scale);
-        GameScene.Arena(drawList, new Rect(shaken.Min - new Vector2(pad, pad), shaken.Max + new Vector2(pad, pad)), 18f * scale,
-            scale, Accent);
-        renderer.DrawTrack(drawList, board, shaken, Accent, scale, time);
-        renderer.DrawVortex(drawList, board, shaken, Accent, time);
-        renderer.DrawMarbles(drawList, board, shaken, time);
-        renderer.DrawShots(drawList, board, shaken, time);
-        if (board.State == CoilState.Playing)
-        {
-            renderer.DrawAim(drawList, board, shaken, turret, scale);
-        }
-
-        renderer.DrawLauncher(drawList, board, shaken, turret, Accent, recoil, swapPulse, time);
-        CoilRenderer.DrawDangerVignette(drawList, shaken, board.State == CoilState.Draining ? 1f : board.Danger, time);
-        fx.DrawFlash(drawList, shaken, 0f);
-        particles.Draw(drawList, scale);
-        fx.DrawRings(drawList, scale);
-        fx.DrawText();
-        DrawPowerChips(drawList, shaken, theme, scale);
-        DrawBanners(drawList, shaken, theme, scale);
-        if (board.State == CoilState.Ready)
-        {
-            DrawReady(drawList, field, theme, deltaSeconds, scale);
-        }
-
-        if (finished)
-        {
-            DrawResult(theme, body, deltaSeconds);
-        }
+        DrawWorld(drawList, turret, scale, time);
+        var field = CoilRenderer.FieldRect(in camera);
+        DrawPowerChips(drawList, field, scale);
+        DrawBanners(drawList, field, theme, scale);
+        DrawHint(drawList, field, theme, scale);
+        DrawChainCapsule(drawList, context, scale);
+        context.Hud.Score(board.Score);
+        context.Hud.Lives(board.Lives, CoilBoard.StartLives);
+        context.Hud.Level(board.Stage);
+        context.Hud.Best(context.Session.Best);
+        context.Session.Report(board.Score);
     }
 
-    private Vector2 AimAt(Rect field)
+    private void PlaceCamera(in GameContext context)
     {
-        var launcher = CoilRenderer.ToScreen(field, board.Launcher);
-        var direction = ImGui.GetMousePos() - launcher;
-        return direction.LengthSquared() < 1f ? CoilShapes.Polar(turretAngle) : Vector2.Normalize(direction);
+        camera.Fit(context.Safe, CoilBoard.FieldWidth, CoilBoard.FieldHeight, FitMode.Contain);
+        context.Fx.ApplyTo(ref camera);
+        camera.Update(context.RawDeltaSeconds, UiScale.Current);
+        context.Backdrop.SetCamera(in camera);
     }
 
-    private void HandleInput(Rect field, Vector2 aim)
+    private Vector2 AimAt()
     {
-        var hovered = UiInteract.Hover(field.Min, field.Max);
-        var swapKey = GameInput.Pressed(ImGuiKey.Space);
-        if (board.State == CoilState.Ready)
-        {
-            if ((hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left)) || swapKey)
-            {
-                BeginPlay();
-            }
+        var direction = camera.ToWorld(ImGui.GetMousePos()) - board.Launcher;
+        return direction.LengthSquared() < 0.000001f ? CoilShapes.Polar(turretAngle) : Vector2.Normalize(direction);
+    }
 
-            return;
-        }
-
+    private void HandleInput(Rect area, Vector2 aim)
+    {
         if (board.State != CoilState.Playing)
         {
             return;
         }
 
+        var hovered = UiInteract.Hover(area.Min, area.Max);
+        var swapKey = GameInput.Pressed(ImGuiKey.Space);
         if ((hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Right)) || swapKey)
         {
             if (board.Swap())
@@ -217,70 +198,83 @@ internal sealed class CoilApp : ILegacyMiniGame
             return;
         }
 
-        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && board.Fire(aim))
+        if (!hovered || !ImGui.IsMouseClicked(ImGuiMouseButton.Left) || !board.Fire(aim))
         {
-            recoil = 1f;
-            UiFeedback.Play(UiSound.GameShoot);
+            return;
         }
+
+        recoil = 1f;
+        fired = true;
+        UiFeedback.Play(UiSound.GameShoot);
     }
 
-    private void Animate(Vector2 aim, float deltaSeconds)
+    private void Animate(Vector2 aim, in GameContext context)
     {
+        var raw = context.RawDeltaSeconds;
         var target = MathF.Atan2(aim.Y, aim.X);
         var difference = MathF.IEEERemainder(target - turretAngle, MathF.Tau);
-        turretAngle += difference * MathF.Min(1f, deltaSeconds * AimFollowRate);
-        recoil = MathF.Max(0f, recoil - deltaSeconds * RecoilDecay);
-        swapPulse = MathF.Max(0f, swapPulse - deltaSeconds * SwapDecay);
-        stageBanner = GameBanner.Advance(stageBanner, deltaSeconds, StageBannerSeconds);
-        comboBanner = GameBanner.Advance(comboBanner, deltaSeconds, ComboBannerSeconds);
-        if (board.State == CoilState.Playing && board.Danger > 0f)
+        turretAngle += difference * MathF.Min(1f, context.DeltaSeconds * AimFollowRate);
+        recoil = MathF.Max(0f, recoil - raw * RecoilDecay);
+        swapPulse = MathF.Max(0f, swapPulse - raw * SwapDecay);
+        stageBanner = GameBanner.Advance(stageBanner, raw, StageBannerSeconds);
+        comboBanner = GameBanner.Advance(comboBanner, raw, ComboBannerSeconds);
+        chainCapsule = MathF.Max(0f, chainCapsule - raw / ChainCapsuleSeconds);
+        if (fired)
         {
-            fx.AddTrauma(deltaSeconds * DangerShake * board.Danger);
+            hintAlpha = MathF.Max(0f, hintAlpha - raw * HintFadeRate);
         }
+
+        if (board.State == CoilState.Draining)
+        {
+            context.Fx.Vignette(CoilRenderer.Danger, 0.32f * (0.65f + 0.35f * Pulse.Wave(Pulse.Fast)), 0.3f);
+            return;
+        }
+
+        if (board.State != CoilState.Playing || board.Danger <= 0f)
+        {
+            return;
+        }
+
+        camera.Shake(context.DeltaSeconds * DangerShake * board.Danger);
+        context.Fx.Vignette(CoilRenderer.Danger, 0.32f * board.Danger * (0.65f + 0.35f * Pulse.Wave(Pulse.Fast)), 0.3f);
     }
 
-    private void ReactToEvents(Rect field, float scale, PhoneTheme theme)
+    private void ReactToEvents(in GameContext context, PhoneTheme theme)
     {
-        var unit = field.Width / CoilBoard.FieldWidth;
-        var radius = CoilBoard.MarbleRadius * unit;
-        ReactToClears(field, radius, scale);
-        ReactToGaps(field, radius, scale);
-        ReactToPowers(field, radius, scale);
+        var radius = camera.Px(CoilBoard.MarbleRadius);
+        ReactToClears(context, radius);
+        ReactToGaps(radius);
+        ReactToPowers(radius);
         var swallowed = board.Swallowed;
         for (var index = 0; index < swallowed.Length; index++)
         {
-            var vortex = CoilRenderer.ToScreen(field, swallowed[index].Position);
-            particles.Burst(vortex, 4, CoilArt.ColourOf(swallowed[index].Colour), 120f * scale, 2.2f, 0.5f, 0f);
+            particles.Emit(SwallowBursts[swallowed[index].Colour % CoilArt.MarbleColours.Length],
+                swallowed[index].Position, 4);
         }
 
         if (board.LandedThisFrame && board.Clears.Length == 0)
         {
-            var land = CoilRenderer.ToScreen(field, board.LandPosition);
-            fx.Shockwave(land, radius * 2.2f, new Vector4(1f, 1f, 1f, 0.5f), 0.22f, 1.6f, radius);
+            fx.Shockwave(camera.ToScreen(board.LandPosition), radius * 2.2f, LandRing, 0.22f, 1.6f, radius);
             UiFeedback.Play(UiSound.GamePiece);
         }
 
         if (board.DrainStartedThisFrame)
         {
             UiFeedback.Play(UiSound.GameWrong);
-            fx.Flash(theme.Danger, 0.35f);
-            fx.AddTrauma(0.55f);
+            context.Fx.Flash(theme.Danger, 0.35f);
+            context.Fx.SlowMo(0.6f, 0.4f);
+            camera.Shake(0.55f);
         }
 
         if (board.LifeLostThisFrame)
         {
             UiFeedback.Play(UiSound.GameHitSoft);
-            fx.AddTrauma(0.3f);
+            camera.Shake(0.3f);
         }
 
         if (board.StageClearedThisFrame)
         {
-            UiFeedback.Play(UiSound.GameClear);
-            var top = new Vector2(field.Center.X, field.Min.Y + field.Height * 0.12f);
-            particles.Confetti(top, 90, CoilArt.MarbleColours, 300f * scale, 4f, 1.6f);
-            particles.Sparkle(CoilRenderer.ToScreen(field, board.Track.End), 24, GamePalette.Lighten(Accent, 0.4f),
-                200f * scale, 3f, 0.9f);
-            fx.Flash(GamePalette.Lighten(Accent, 0.4f), 0.22f);
+            OnStageCleared(context);
         }
 
         if (board.StageStartedThisFrame)
@@ -288,24 +282,40 @@ internal sealed class CoilApp : ILegacyMiniGame
             stageBanner = 0f;
         }
 
-        if (board.GameOverThisFrame && !finished)
+        if (!board.GameOverThisFrame || finished)
         {
-            finished = true;
-            pendingSubmit = true;
-            resultAppear = 0f;
-            resultLine = Loc.T(L.Coil.ReachedStage, board.Stage);
+            return;
         }
+
+        finished = true;
+        context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, GameId)
+            .WithStat(L.Games.Stage, GameNumber.Label(board.Stage))
+            .WithStat(L.Coil.MaxChain, GameNumber.Label(maxChain))
+            .WithStat(L.Coil.PowerUps, GameNumber.Label(powerUpsUsed)));
     }
 
-    private void ReactToClears(Rect field, float radius, float scale)
+    private void OnStageCleared(in GameContext context)
+    {
+        GameSfx.LevelClear();
+        context.Fx.Sweep();
+        context.Fx.Flash(GamePalette.Lighten(Accent, 0.4f), 0.22f);
+        var top = new Vector2(CoilBoard.FieldWidth * 0.5f, CoilBoard.FieldHeight * 0.12f);
+        for (var colour = 0; colour < ConfettiSpecs.Length; colour++)
+        {
+            particles.Emit(ConfettiSpecs[colour], top, 15);
+        }
+
+        particles.Emit(StageSparkle, board.Track.End, 24);
+    }
+
+    private void ReactToClears(in GameContext context, float radius)
     {
         var bursts = board.Bursts;
         for (var index = 0; index < bursts.Length; index++)
         {
-            var center = CoilRenderer.ToScreen(field, bursts[index].Position);
-            var colour = CoilArt.ColourOf(bursts[index].Colour);
-            particles.Sparkle(center, 5, GamePalette.Lighten(colour, 0.35f), 130f * scale, 2.4f, 0.6f);
-            particles.Burst(center, 6, colour, 150f * scale, 2.6f, 0.45f, 160f, MathF.Tau, 0f, ParticleShape.GlowCircle);
+            var colour = bursts[index].Colour % CoilArt.MarbleColours.Length;
+            particles.Emit(ClearSparkles[colour], bursts[index].Position, 5);
+            particles.Emit(ClearBursts[colour], bursts[index].Position, 6);
         }
 
         var clears = board.Clears;
@@ -313,11 +323,12 @@ internal sealed class CoilApp : ILegacyMiniGame
         for (var index = 0; index < clears.Length; index++)
         {
             ref readonly var clear = ref clears[index];
-            var center = CoilRenderer.ToScreen(field, clear.Center);
+            var center = camera.ToScreen(clear.Center);
             var colour = CoilArt.ColourOf(clear.Colour);
-            fx.Shockwave(center, radius * (3.2f + clear.Count * 0.5f), GamePalette.Lighten(colour, 0.3f), 0.45f, 3f, radius);
-            fx.AddText("+" + GameNumber.Label(clear.Points), center, GamePalette.Lighten(colour, 0.4f), 1.1f);
-            fx.AddTrauma(MathF.Min(0.3f, 0.04f * clear.Count * clear.Multiplier));
+            fx.Shockwave(center, radius * (3.2f + clear.Count * 0.5f), GamePalette.Lighten(colour, 0.3f), 0.45f, 3f,
+                radius);
+            fx.AddText(PlusLabel(clear.Points), center, GamePalette.Lighten(colour, 0.4f), 1.1f);
+            camera.Shake(MathF.Min(0.3f, 0.04f * clear.Count * clear.Multiplier));
             deepest = Math.Max(deepest, clear.Multiplier);
         }
 
@@ -326,51 +337,57 @@ internal sealed class CoilApp : ILegacyMiniGame
             return;
         }
 
+        maxChain = Math.Max(maxChain, deepest);
         UiFeedback.Play(deepest >= 2 ? UiSound.GameMatch : UiSound.GamePop);
         if (deepest < 2)
         {
             return;
         }
 
-        comboText = Loc.T(L.Coil.Chain, deepest);
+        comboText = chainBannerLabel.Get(L.Coil.Chain, deepest);
         comboBanner = 0f;
+        chainShown = deepest;
+        chainCapsule = 1f;
+        context.Fx.Punch(ChainPunch);
         if (deepest < BigChain)
         {
             return;
         }
 
         fx.HitStop(MathF.Min(0.1f, 0.04f + 0.015f * (deepest - BigChain)));
-        fx.Flash(GamePalette.Lighten(Accent, 0.5f), 0.18f);
-        particles.Sparkle(field.Center, 18, new Vector4(1f, 0.95f, 0.7f, 1f), 220f * scale, 3f, 0.8f);
+        context.Fx.Flash(GamePalette.Lighten(Accent, 0.5f), 0.18f);
+        particles.Emit(BigChainSparkle, new Vector2(CoilBoard.FieldWidth * 0.5f, CoilBoard.FieldHeight * 0.5f), 18);
     }
 
-    private void ReactToGaps(Rect field, float radius, float scale)
+    private void ReactToGaps(float radius)
     {
         var gaps = board.Gaps;
         for (var index = 0; index < gaps.Length; index++)
         {
-            var center = CoilRenderer.ToScreen(field, gaps[index].Position);
-            var gold = new Vector4(1f, 0.88f, 0.45f, 1f);
-            particles.Streaks(center, 12, gold, 320f * scale, 2.2f, 0.5f);
-            particles.Sparkle(center, 10, new Vector4(1f, 1f, 0.9f, 1f), 160f * scale, 2.6f, 0.7f);
-            fx.Shockwave(center, radius * 4.5f, gold, 0.5f, 3.2f, radius);
-            fx.AddText(Loc.T(L.Coil.GapShot) + " +" + GameNumber.Label(gaps[index].Points),
-                center - new Vector2(0f, radius * 2f), gold, 1.05f);
+            var position = gaps[index].Position;
+            var center = camera.ToScreen(position);
+            particles.Emit(GapStreaks, position, 12);
+            particles.Emit(GapSparkle, position, 10);
+            fx.Shockwave(center, radius * 4.5f, Gold, 0.5f, 3.2f, radius);
+            fx.AddText(Loc.T(L.Coil.GapShot), center - new Vector2(0f, radius * 3.2f), Gold, 1.05f);
+            fx.AddText(PlusLabel(gaps[index].Points), center - new Vector2(0f, radius * 1.4f), Gold, 1f);
             UiFeedback.Play(UiSound.GameCollect);
         }
     }
 
-    private void ReactToPowers(Rect field, float radius, float scale)
+    private void ReactToPowers(float radius)
     {
         var triggers = board.Triggers;
         for (var index = 0; index < triggers.Length; index++)
         {
-            var center = CoilRenderer.ToScreen(field, triggers[index].Position);
-            var color = CoilArt.PowerColour(triggers[index].Power);
+            var power = triggers[index].Power;
+            var position = triggers[index].Position;
+            var center = camera.ToScreen(position);
+            var color = CoilArt.PowerColour(power);
+            powerUpsUsed++;
             fx.Shockwave(center, radius * 7f, color, 0.6f, 3.6f, radius);
-            fx.Flash(color, 0.16f);
-            fx.AddText(Loc.T(PowerName(triggers[index].Power)), center - new Vector2(0f, radius * 2.6f), color, 1.2f);
-            particles.Sparkle(center, 16, color, 200f * scale, 3f, 0.8f);
+            fx.AddText(Loc.T(PowerName(power)), center - new Vector2(0f, radius * 2.6f), color, 1.2f);
+            particles.Emit(PowerSparkles[(int)power], position, 16);
             UiFeedback.Play(UiSound.GamePowerUp);
         }
     }
@@ -395,61 +412,40 @@ internal sealed class CoilApp : ILegacyMiniGame
 
         stageLabelPrefix = prefix;
         stageLabelNumber = board.Stage;
-        stageLabel = prefix + " " + GameNumber.Label(board.Stage);
+        stageLabel = string.Concat(prefix, " ", GameNumber.Label(board.Stage));
         return stageLabel;
     }
 
-    private void DrawHud(Rect body, float rowY, PhoneTheme theme, float deltaSeconds, float scale)
+    private static string PlusLabel(int points)
     {
-        var scoreLabel = Loc.T(L.Games.Score);
-        var stageCaption = Loc.T(L.Games.Stage);
-        var stageText = GameNumber.Label(board.Stage);
-        var restartRadius = 16f * scale;
-        var restartCenter = new Vector2(body.Max.X - 22f * scale, rowY);
-        var gap = 10f * scale;
-        var left = body.Min.X + 40f * scale;
-        var available = restartCenter.X - restartRadius - gap - left;
-        var natural = GameHud.PillWidth(scoreLabel, GameNumber.Label(board.Score)) + GameHud.PillWidth(stageCaption, stageText) + gap;
-        var sizeScale = MathF.Min(1f, available / natural);
-        var scoreWidth = GameHud.PillWidth(scoreLabel, GameNumber.Label(board.Score), sizeScale);
-        var stageWidth = GameHud.PillWidth(stageCaption, stageText, sizeScale);
-        var start = left + (available - scoreWidth - stageWidth - gap) * 0.5f;
-        var beatingBest = board.Score > 0 && board.Score > loadedBest;
-        GameHud.ScorePill(new Vector2(start + scoreWidth * 0.5f, rowY), scoreLabel, ref scoreRoll, board.Score, Accent, theme,
-            deltaSeconds, beatingBest, sizeScale);
-        GameHud.Pill(new Vector2(start + scoreWidth + gap + stageWidth * 0.5f, rowY), stageCaption, stageText, Accent, theme,
-            false, sizeScale);
-        if (GameHud.RestartButton(restartCenter, restartRadius, theme))
+        if (PlusLabels.TryGetValue(points, out var label))
         {
-            NewRun(true);
+            return label;
         }
 
-        DrawLives(body, rowY, scale);
+        label = string.Concat("+", GameNumber.Label(points));
+        PlusLabels[points] = label;
+        return label;
     }
 
-    private void DrawLives(Rect body, float rowY, float scale)
+    private void DrawWorld(ImDrawListPtr drawList, Vector2 turret, float scale, float time)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var radius = 5.5f * scale;
-        var x = body.Min.X + 20f * scale;
-        var lastLife = board.Lives == 1;
-        for (var life = 0; life < CoilBoard.StartLives; life++)
+        CoilRenderer.DrawTrack(drawList, board, in camera, Accent, scale, time);
+        CoilRenderer.DrawVortex(drawList, board, in camera, Accent, time);
+        CoilRenderer.DrawMarbles(drawList, board, in camera, time);
+        CoilRenderer.DrawShots(drawList, board, in camera, time);
+        if (board.State == CoilState.Playing)
         {
-            var center = new Vector2(x, rowY + (life - 1) * radius * 2.7f);
-            if (life >= board.Lives)
-            {
-                drawList.AddCircle(center, radius * 0.8f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.25f)), 12,
-                    MathF.Max(1f, scale));
-                continue;
-            }
-
-            var alpha = lastLife ? 0.55f + 0.45f * Pulse.Wave(Pulse.Fast) : 1f;
-            CoilArt.Marble(drawList, center, radius, (byte)life, CoilPower.None, 0f, new Vector2(1f, 0f), alpha,
-                (float)ImGui.GetTime());
+            CoilRenderer.DrawAim(drawList, board, in camera, turret, scale);
         }
+
+        CoilRenderer.DrawLauncher(drawList, board, in camera, turret, Accent, recoil, swapPulse, time);
+        particles.Draw(drawList, in camera);
+        fx.DrawRings(drawList, scale);
+        fx.DrawText();
     }
 
-    private void DrawPowerChips(ImDrawListPtr drawList, Rect field, PhoneTheme theme, float scale)
+    private void DrawPowerChips(ImDrawListPtr drawList, Rect field, float scale)
     {
         var chipSize = new Vector2(50f * scale, 22f * scale);
         var cursor = field.Min + new Vector2(8f * scale, 8f * scale);
@@ -472,21 +468,22 @@ internal sealed class CoilApp : ILegacyMiniGame
         }
     }
 
-    private void DrawChip(ImDrawListPtr drawList, Vector2 min, Vector2 size, CoilPower power, float fraction, bool armed,
-        float scale)
+    private static void DrawChip(ImDrawListPtr drawList, Vector2 min, Vector2 size, CoilPower power, float fraction,
+        bool armed, float scale)
     {
         var max = min + size;
         var color = CoilArt.PowerColour(power);
         var radius = size.Y * 0.5f;
         Material.Frosted(drawList, min, max, radius, scale, 0.9f);
         var pulse = armed ? 0.5f + 0.5f * MathF.Sin((float)ImGui.GetTime() * 6f) : 0f;
-        Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(color with { W = 0.45f + pulse * 0.45f }), 1.2f * scale);
+        Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(color with { W = 0.45f + pulse * 0.45f }),
+            1.2f * scale);
         var glyphCenter = new Vector2(min.X + radius, min.Y + radius);
         drawList.AddCircleFilled(glyphCenter, radius * 0.72f, ImGui.GetColorU32(GamePalette.Darken(color, 0.55f)));
         CoilArt.PowerGlyph(drawList, glyphCenter, radius * 0.48f, power, ImGui.GetColorU32(color), 1.4f * scale);
         var barMin = new Vector2(min.X + radius * 2f + 2f * scale, min.Y + radius - 2f * scale);
         var barMax = new Vector2(max.X - 8f * scale, barMin.Y + 4f * scale);
-        drawList.AddRectFilled(barMin, barMax, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.14f)), 2f * scale);
+        drawList.AddRectFilled(barMin, barMax, ImGui.GetColorU32(ChipTrack), 2f * scale);
         var fillMax = new Vector2(barMin.X + (barMax.X - barMin.X) * Math.Clamp(fraction, 0f, 1f), barMax.Y);
         drawList.AddRectFilled(barMin, fillMax, ImGui.GetColorU32(color with { W = armed ? 0.5f + pulse * 0.5f : 1f }),
             2f * scale);
@@ -511,15 +508,11 @@ internal sealed class CoilApp : ILegacyMiniGame
     private void DrawBanners(ImDrawListPtr drawList, Rect field, PhoneTheme theme, float scale)
     {
         var upper = new Vector2(field.Center.X, field.Min.Y + field.Height * 0.2f);
-        if (board.State != CoilState.Ready)
-        {
-            GameBanner.Draw(drawList, upper, StageLabel(), Accent, theme, stageBanner);
-            GameBanner.Draw(drawList, upper + new Vector2(0f, 44f * scale), Loc.T(StageNames[CoilBoard.ShapeFor(board.Stage)]),
-                Accent, theme, stageBanner, TextStyles.Headline);
-        }
-
-        GameBanner.Draw(drawList, new Vector2(field.Center.X, field.Min.Y + field.Height * 0.36f), comboText,
-            new Vector4(1f, 0.86f, 0.42f, 1f), theme, comboBanner, TextStyles.Title1);
+        GameBanner.Draw(drawList, upper, StageLabel(), Accent, theme, stageBanner);
+        GameBanner.Draw(drawList, upper + new Vector2(0f, 44f * scale), Loc.T(StageNames[CoilBoard.ShapeFor(board.Stage)]),
+            Accent, theme, stageBanner, TextStyles.Headline);
+        GameBanner.Draw(drawList, new Vector2(field.Center.X, field.Min.Y + field.Height * 0.36f), comboText, ChainGold,
+            theme, comboBanner, TextStyles.Title1);
         if (board.State != CoilState.StageClear)
         {
             return;
@@ -537,43 +530,91 @@ internal sealed class CoilApp : ILegacyMiniGame
             GamePalette.Lighten(Accent, 0.45f) with { W = alpha }, TextStyles.Title2.Scale, TextStyles.Title2.Weight);
     }
 
-    private void DrawReady(ImDrawListPtr drawList, Rect field, PhoneTheme theme, float deltaSeconds, float scale)
+    private void DrawHint(ImDrawListPtr drawList, Rect field, PhoneTheme theme, float scale)
     {
-        readyAppear = GameJuice.Advance(readyAppear, deltaSeconds, 2.2f);
-        var pop = GameJuice.PopIn(readyAppear);
+        if (hintAlpha <= 0f)
+        {
+            return;
+        }
+
         var width = field.Width * 0.86f;
-        var center = new Vector2(field.Center.X, field.Max.Y - field.Height * 0.2f);
-        var hintWidth = width - 28f * scale;
-        var howTo = Loc.T(L.Coil.HowTo);
-        var goal = Loc.T(L.Coil.Goal);
-        var howToHeight = Typography.MeasureWrappedBlock(howTo, TextStyles.Footnote, hintWidth).Y;
-        var goalHeight = Typography.MeasureWrappedBlock(goal, TextStyles.Footnote, hintWidth).Y;
-        var height = 44f * scale + howToHeight + goalHeight + 30f * scale;
-        var half = new Vector2(width, height) * 0.5f * (0.9f + 0.1f * pop);
-        var alpha = MathF.Min(1f, readyAppear * 2f);
-        Material.Frosted(drawList, center - half, center + half, 20f * scale, scale, alpha);
-        Squircle.Stroke(drawList, center - half, center + half, 20f * scale, ImGui.GetColorU32(Accent with { W = 0.45f * alpha }),
-            1.2f * scale);
-        var pulse = 1f + 0.05f * Pulse.Wave(Pulse.Calm);
-        var top = center.Y - half.Y + 24f * scale;
-        Typography.DrawCentered(drawList, new Vector2(center.X, top), Loc.T(L.Games.TapToStart),
-            theme.TextStrong with { W = alpha }, TextStyles.Title2.Scale * pulse, TextStyles.Title2.Weight);
-        var cursor = top + 26f * scale;
-        Typography.DrawWrappedCentered(drawList, new Vector2(center.X, cursor + howToHeight * 0.5f), howTo,
-            theme.TextMuted with { W = alpha }, TextStyles.Footnote, hintWidth);
-        cursor += howToHeight + 8f * scale;
-        Typography.DrawWrappedCentered(drawList, new Vector2(center.X, cursor + goalHeight * 0.5f), goal,
-            theme.TextMuted with { W = alpha }, TextStyles.Footnote, hintWidth);
+        var text = Loc.T(L.Coil.HowTo);
+        var height = Typography.MeasureWrappedBlock(text, TextStyles.Footnote, width).Y;
+        var center = new Vector2(field.Center.X, field.Max.Y - height * 0.5f - 6f * scale);
+        Typography.DrawWrappedCentered(drawList, center, text, theme.TextMuted with { W = hintAlpha }, TextStyles.Footnote,
+            width);
     }
 
-    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
+    private void DrawChainCapsule(ImDrawListPtr drawList, in GameContext context, float scale)
     {
-        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-        var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score),
-            GameNumber.Label(board.Score), resultLine, newBest);
-        if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
+        if (chainCapsule <= 0f || chainShown < 2)
         {
-            NewRun(true);
+            chainCapsulePlaced = false;
+            return;
         }
+
+        context.Hud.Custom(ChainCapsuleWidth);
+        var rect = context.Hud.CustomRect;
+        var placed = chainCapsulePlaced;
+        chainCapsulePlaced = true;
+        if (!placed || rect.Width <= 0f)
+        {
+            return;
+        }
+
+        StageHud.Capsule(drawList, rect, scale);
+        var alpha = MathF.Min(1f, chainCapsule * 4f);
+        Typography.DrawCentered(drawList, rect.Center, ChainLabels[Math.Min(chainShown, MaxChainLabel)],
+            ChainGold with { W = alpha }, TextStyles.Headline);
+    }
+
+    private static ParticleSpec[] BuildColourSpecs(float size, float speed, float life, float gravity, float drag,
+        ParticleShape shape, float lighten)
+    {
+        var specs = new ParticleSpec[CoilArt.MarbleColours.Length];
+        for (var colour = 0; colour < specs.Length; colour++)
+        {
+            var tint = lighten > 0f ? GamePalette.Lighten(CoilArt.MarbleColours[colour], lighten) : CoilArt.MarbleColours[colour];
+            specs[colour] = new ParticleSpec(tint, tint, size, speed, life, gravity, drag, 6f, shape: shape);
+        }
+
+        return specs;
+    }
+
+    private static ParticleSpec[] BuildConfetti()
+    {
+        var specs = new ParticleSpec[CoilArt.MarbleColours.Length];
+        for (var colour = 0; colour < specs.Length; colour++)
+        {
+            var tint = CoilArt.MarbleColours[colour];
+            specs[colour] = new ParticleSpec(tint, tint, 0.011f, 0.83f, 1.6f, 1.5f, 0.7f, 16f, 1.4f, -MathF.PI * 0.5f,
+                ParticleShape.Square);
+        }
+
+        return specs;
+    }
+
+    private static ParticleSpec[] BuildPowerSparkles()
+    {
+        var specs = new ParticleSpec[(int)CoilPower.Guide + 1];
+        for (var power = 0; power < specs.Length; power++)
+        {
+            var tint = CoilArt.PowerColour((CoilPower)power);
+            specs[power] = new ParticleSpec(tint, tint, 0.0083f, 0.55f, 0.8f, 0.11f, 2.4f, 6f, shape: ParticleShape.Star,
+                additive: true);
+        }
+
+        return specs;
+    }
+
+    private static string[] BuildChainLabels()
+    {
+        var labels = new string[MaxChainLabel + 1];
+        for (var chain = 0; chain < labels.Length; chain++)
+        {
+            labels[chain] = string.Concat("x", GameNumber.Label(chain));
+        }
+
+        return labels;
     }
 }

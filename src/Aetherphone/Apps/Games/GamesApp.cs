@@ -173,7 +173,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new ChessApp(),
             new LegacyGameAdapter(new StackApp(), L.Games.Stack, L.Stack.Hook),
             new LegacyGameAdapter(new CrystalDropApp(), L.Games.CrystalDrop, L.CrystalDrop.Hook),
-            new LegacyGameAdapter(new BeatApp(), L.Games.Beat, L.Beat.Hook),
+            new BeatApp(),
             new LegacyGameAdapter(new BladeApp(), L.Games.Blade, L.Blade.Hook),
             new LegacyGameAdapter(new TriviaApp(gameData, textures), L.Games.Trivia, L.Trivia.Hook),
             new SkyfallApp(),
@@ -183,7 +183,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new SquadronApp(),
             new DoomApp(),
             new LegacyGameAdapter(new WordRunApp(gameData), L.Games.WordRun, L.WordRun.Hook),
-            new LegacyGameAdapter(new CoilApp(), L.Coil.Title, L.Coil.Hook),
+            new CoilApp(),
             new LegacyGameAdapter(new UpdraftApp(), L.Updraft.Title, L.Updraft.Hook),
             new LegacyGameAdapter(new SwoopApp(), L.Swoop.Title, L.Swoop.Hook),
         };
