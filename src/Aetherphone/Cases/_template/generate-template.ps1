@@ -52,24 +52,24 @@ $cutoutPath = Squircle-Path ($Margin + $Metal + $Bleed) ($Margin + $Metal + $Ble
 $screenPath = Squircle-Path ($Margin + $Metal + $Glass) ($Margin + $Metal + $Glass) ($BodyRight - $Metal - $Glass) `
     ($BodyBottom - $Metal - $Glass) ($BodyRadius - $Metal - $Glass)
 
-function Button-Rect {
-    param([double]$topFraction, [double]$heightFraction, [string]$edge, [string]$label)
+function Key-Rect {
+    param([double]$startFraction, [double]$lengthFraction, [string]$edge, [double]$proudShare, [string]$label)
 
-    # A button sits mostly in the overflow margin: it spans the rail gutter outside the body and bites only
-    # 2 design px into the band. The engine draws it over the art, so this whole footprint gets covered.
-    $top = $Margin + $topFraction * ($BodyBottom - $Margin)
-    $height = $heightFraction * ($BodyBottom - $Margin)
-    $rail = 0.0195 / $BodySpan * $BodyWidth
-    $bite = 2.0 * $BodyWidth / 480.5
-    $width = $rail + $bite
-    $x = if ($edge -eq "left") { $Margin - $rail } else { $BodyRight - $bite }
+    $top = $Margin + $startFraction * ($BodyBottom - $Margin)
+    $height = $lengthFraction * ($BodyBottom - $Margin)
+    $rail = $RailFraction / $BodySpan * $BodyWidth
+    $proud = $rail * $proudShare
+    $bury = $BodyWidth / $BodySpan / 360.0
+    $width = $proud + $bury
+    $x = if ($edge -eq "left") { $Margin - $proud } else { $BodyRight - $bury }
     return "<rect x='{0:F1}' y='{1:F1}' width='{2:F1}' height='{3:F1}' class='button'/><text x='{4:F1}' y='{5:F1}' class='tag'>{6}</text>" -f `
-        $x, $top, $width, $height, ($(if ($edge -eq "left") { $x - 96 } else { $x + $width + 12 })), ($top + $height * 0.5), $label
+        $x, $top, $width, $height, ($(if ($edge -eq "left") { $x - 110 } else { $x + $width + 12 })), ($top + $height * 0.5), $label
 }
 
-$mute = Button-Rect 0.205 0.082 "left" "mute"
-$side = Button-Rect 0.250 0.108 "right" "side"
-$lock = Button-Rect 0.315 0.082 "left" "lock"
+$action = Key-Rect 0.157 0.046 "left" 0.45 "action"
+$lockPosition = Key-Rect 0.241 0.090 "left" 0.45 "lock"
+$side = Key-Rect 0.243 0.113 "right" 0.45 "side"
+$camera = Key-Rect 0.590 0.050 "right" 0.30 "camera"
 
 $svg = @"
 <svg xmlns="http://www.w3.org/2000/svg" width="$CanvasWidth" height="$CanvasHeight" viewBox="0 0 $CanvasWidth $CanvasHeight">
@@ -90,9 +90,10 @@ $svg = @"
   <path class="guide glass" d="$glassPath"/>
   <path class="guide cutout" d="$cutoutPath"/>
   <path class="guide screen" d="$screenPath"/>
-  $mute
+  $action
+  $lockPosition
   $side
-  $lock
+  $camera
   <text x="40" y="70" class="note">PAINT BETWEEN GREEN AND RED, AND ANYWHERE OUTSIDE GREEN</text>
   <text x="40" y="118" class="note">green silhouette / blue glass edge / red alpha cutout / purple screen</text>
   <text x="40" y="166" class="note">the $Margin px margin outside green is free: charms, ears, straps, figures</text>
