@@ -4340,6 +4340,7 @@
   "games.tetris.hook": "旋转并放下落下的方块，填满整行来消除。",
   "games.2048.title": "2048",
   "games.2048.hook": "滑动方块合并相同的数字，一路拼到2048。",
+  "games.2048.bestTile": "最大方块",
   "games.sweeper": "扫雷",
   "games.minesweeper.hook": "翻开所有安全格子，在踩雷之前标出地雷。",
   "games.pairs": "翻牌",

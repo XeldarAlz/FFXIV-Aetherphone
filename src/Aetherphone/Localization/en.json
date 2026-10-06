@@ -4340,6 +4340,7 @@
   "games.tetris.hook": "Rotate and drop the falling pieces to fill whole lines and clear them.",
   "games.2048.title": "2048",
   "games.2048.hook": "Slide the tiles to merge matching numbers and build your way up to 2048.",
+  "games.2048.bestTile": "Best tile",
   "games.sweeper": "Sweeper",
   "games.minesweeper.hook": "Reveal every safe square and flag the mines before one goes off.",
   "games.pairs": "Pairs",

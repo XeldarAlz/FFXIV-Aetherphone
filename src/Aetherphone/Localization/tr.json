@@ -4340,6 +4340,7 @@
   "games.tetris.hook": "Düşen parçaları çevirip bırak, satırları doldur ve temizle.",
   "games.2048.title": "2048",
   "games.2048.hook": "Karoları kaydırıp eş sayıları birleştir ve 2048'e ulaş.",
+  "games.2048.bestTile": "En iyi karo",
   "games.sweeper": "Mayın Tarlası",
   "games.minesweeper.hook": "Güvenli tüm kareleri aç ve biri patlamadan önce mayınları işaretle.",
   "games.pairs": "Eşleştirme",

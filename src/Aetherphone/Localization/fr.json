@@ -4340,6 +4340,7 @@
   "games.tetris.hook": "Tournez et faites tomber les pièces pour remplir des lignes entières et les effacer.",
   "games.2048.title": "2048",
   "games.2048.hook": "Faites glisser les tuiles pour fusionner les nombres identiques et montez jusqu'à 2048.",
+  "games.2048.bestTile": "Meilleure tuile",
   "games.sweeper": "Démineur",
   "games.minesweeper.hook": "Révélez chaque case sûre et marquez les mines avant qu'une n'explose.",
   "games.pairs": "Paires",

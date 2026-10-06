@@ -4340,6 +4340,7 @@
   "games.tetris.hook": "Gire e solte as peças que caem para completar linhas inteiras e limpá-las.",
   "games.2048.title": "2048",
   "games.2048.hook": "Deslize as peças para juntar números iguais e chegue até 2048.",
+  "games.2048.bestTile": "Melhor peça",
   "games.sweeper": "Sweeper",
   "games.minesweeper.hook": "Revele todas as casas seguras e marque as minas antes que uma exploda.",
   "games.pairs": "Pairs",

@@ -8307,6 +8307,7 @@ internal static class L
     {
         public static readonly LocString Title = new("games.2048.title", "2048");
         public static readonly LocString Hook = new("games.2048.hook", "Slide the tiles to merge matching numbers and build your way up to 2048.");
+        public static readonly LocString BestTile = new("games.2048.bestTile", "Best tile");
     }
 
     internal static class WaterSort

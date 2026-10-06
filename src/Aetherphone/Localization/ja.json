@@ -4340,6 +4340,7 @@
   "games.tetris.hook": "落ちてくるピースを回して置き、横一列をそろえて消そう。",
   "games.2048.title": "2048",
   "games.2048.hook": "タイルを滑らせて同じ数字を合体させ、2048を目指そう。",
+  "games.2048.bestTile": "最大タイル",
   "games.sweeper": "スイーパー",
   "games.minesweeper.hook": "安全なマスをすべて開き、爆発する前に地雷に旗を立てよう。",
   "games.pairs": "ペアーズ",

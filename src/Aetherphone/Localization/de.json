@@ -4340,6 +4340,7 @@
   "games.tetris.hook": "Drehe und lass die fallenden Teile fallen, um ganze Reihen zu füllen und abzubauen.",
   "games.2048.title": "2048",
   "games.2048.hook": "Schiebe die Kacheln, um gleiche Zahlen zu verschmelzen, und arbeite dich bis zur 2048 vor.",
+  "games.2048.bestTile": "Beste Kachel",
   "games.sweeper": "Minesweeper",
   "games.minesweeper.hook": "Decke jedes sichere Feld auf und markiere die Minen, bevor eine hochgeht.",
   "games.pairs": "Memory",
