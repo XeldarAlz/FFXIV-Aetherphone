@@ -30,6 +30,17 @@ internal static class CraterArt
     private static readonly Vector4 DrillBody = new(0.74f, 0.75f, 0.82f, 1f);
     private static readonly Vector4 Shine = new(1f, 1f, 1f, 0.55f);
     private static readonly Vector4 Spark = new(1f, 0.86f, 0.40f, 1f);
+    private static readonly float[] WindRows = { -0.2f, 0f, 0.2f };
+    private static readonly float[] WindLengths = { 0.62f, 0.9f, 0.5f };
+    private static readonly float[] WindCurls = { -1f, 0f, 1f };
+    private static readonly float[] WindPhases = { 0f, 2.1f, 4.2f };
+    private const float WindTail = -0.45f;
+    private const float WindCurlRadius = 0.085f;
+    private const float WindCurlSweep = MathF.PI * 1.45f;
+    private const int WindCurlSegments = 10;
+    private const float WindSway = 0.04f;
+    private const float WindCalmSpeed = 2f;
+    private const float WindGustSpeed = 3f;
 
     public static uint Color(Vector4 color) => ImGui.GetColorU32(color);
 
@@ -41,6 +52,40 @@ internal static class CraterArt
     };
 
     public static int Segments(float radius) => Math.Clamp((int)(radius * 0.8f), 12, 40);
+
+    public static void Wind(ImDrawListPtr drawList, Vector2 center, float width, int direction, float gust,
+        Vector4 ink, float time)
+    {
+        var side = direction < 0 ? -1f : 1f;
+        var color = Color(ink);
+        var thickness = MathF.Max(1.2f, width * 0.08f);
+        var curlRadius = width * WindCurlRadius;
+        var speed = WindCalmSpeed + WindGustSpeed * gust;
+        for (var row = 0; row < WindRows.Length; row++)
+        {
+            var sway = MathF.Sin(time * speed + WindPhases[row]) * WindSway;
+            var y = center.Y + WindRows[row] * width;
+            var tailX = (WindTail + sway) * width;
+            var headX = tailX + WindLengths[row] * width;
+            var head = new Vector2(center.X + headX * side, y);
+            drawList.PathClear();
+            drawList.PathLineTo(new Vector2(center.X + tailX * side, y));
+            drawList.PathLineTo(head);
+            var vertical = WindCurls[row];
+            if (vertical != 0f)
+            {
+                var hub = head + new Vector2(0f, curlRadius * vertical);
+                for (var step = 1; step <= WindCurlSegments; step++)
+                {
+                    var angle = MathF.PI * 0.5f - WindCurlSweep * step / WindCurlSegments;
+                    drawList.PathLineTo(hub + new Vector2(side * MathF.Cos(angle), -vertical * MathF.Sin(angle)) *
+                        curlRadius);
+                }
+            }
+
+            drawList.PathStroke(color, ImDrawFlags.None, thickness);
+        }
+    }
 
     public static void Moogle(ImDrawListPtr drawList, Vector2 center, float radius, int facing, Vector4 team,
         float flap, float hurt, float sway)

@@ -124,13 +124,12 @@ internal sealed partial class OnlineCraterTable : IDisposable
         backdrop.Draw(drawList, body, accent, scale);
         DrawWorld(drawList, shown, myTurn, scale);
         screen.Draw(drawList, body, accent);
-        juice.DrawBanners(drawList, body, theme);
 
         var landscape = back is not null && body.IsLandscape();
         var safe = Safe(body, landscape, scale);
         var layout = CraterControls.Layout(body, safe, Math.Max(1, teamCount), scale);
         DrawRoster(drawList, layout, shown, scale);
-        CraterControls.Wind(drawList, layout.Wind, shown.Wind, accent, time, scale);
+        CraterControls.Wind(drawList, layout.Wind, shown.Wind, time, scale);
         var roundLeft = landscape
             ? BackCenter(body, scale).X + (BackRadius + 8f) * scale
             : layout.Wind.Max.X - (RoundWidth + 8f + RingRadius * 2f) * scale;
@@ -147,6 +146,7 @@ internal sealed partial class OnlineCraterTable : IDisposable
             DrawStatus(drawList, layout, shown, live, notice, scale);
         }
 
+        juice.DrawBanners(drawList, body, theme, MathF.Max(layout.Wind.Max.Y, roundCenterY + RingRadius * scale));
         if (hold.Holding)
         {
             var center = new Vector2(body.Center.X, body.Min.Y + body.Height * HoldLift);

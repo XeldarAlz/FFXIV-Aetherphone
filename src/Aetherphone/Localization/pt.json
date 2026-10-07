@@ -4647,7 +4647,7 @@
   "games.onlineLuckyDrawChoosing": "{0} está escolhendo um alvo",
   "games.onlineLuckyDrawNextDeal": "Entra na próxima rodada",
   "games.onlineCrater": "Cratera",
-  "games.onlineCraterHostHint": "De 2 a 4 jogadores, 45 segundos por jogada",
+  "games.onlineCraterHostHint": "De 2 a 4 jogadores, 25 segundos por jogada",
   "games.onlineCraterWin": "Os moogles de {0} são os últimos de pé!",
   "games.onlineCraterDraw": "Empate, nenhum moogle ficou de pé",
   "games.onlineCraterControls": "A e D andam, arraste ou use as setas para mirar, segure Espaço ou o botão para disparar",

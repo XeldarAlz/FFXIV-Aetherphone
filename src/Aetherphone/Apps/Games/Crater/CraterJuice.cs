@@ -4,6 +4,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Crater;
@@ -18,6 +19,7 @@ internal sealed class CraterJuice
 
     private const int BannerCapacity = 4;
     private const float BannerHeightShare = 0.3f;
+    private const float BannerClearance = 10f;
     private const int EmberCapacity = 12;
     private const float EmberSeconds = 1.2f;
     private const float TrailSmokeRate = 26f;
@@ -178,14 +180,15 @@ internal sealed class CraterJuice
         bannerCount = slot + 1;
     }
 
-    public void DrawBanners(ImDrawListPtr drawList, Rect full, PhoneTheme theme)
+    public void DrawBanners(ImDrawListPtr drawList, Rect full, PhoneTheme theme, float clearBelow)
     {
         if (bannerCount == 0)
         {
             return;
         }
 
-        var center = new Vector2(full.Center.X, full.Min.Y + full.Height * BannerHeightShare);
+        var lowest = clearBelow + BannerClearance * UiScale.Current + GameBanner.HalfHeight(TextStyles.Title2);
+        var center = new Vector2(full.Center.X, MathF.Max(full.Min.Y + full.Height * BannerHeightShare, lowest));
         GameBanner.Draw(drawList, center, bannerTexts[0], bannerColors[0], theme, bannerProgress);
     }
 

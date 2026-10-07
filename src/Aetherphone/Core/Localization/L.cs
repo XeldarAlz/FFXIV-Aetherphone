@@ -8345,7 +8345,7 @@ internal static class L
         public static readonly LocString OnlineLuckyDrawChoosing = new("games.onlineLuckyDrawChoosing", "{0} is picking a target");
         public static readonly LocString OnlineLuckyDrawNextDeal = new("games.onlineLuckyDrawNextDeal", "Joins next round");
         public static readonly LocString OnlineCrater = new("games.onlineCrater", "Crater");
-        public static readonly LocString OnlineCraterHostHint = new("games.onlineCraterHostHint", "2 to 4 players, 45 seconds a turn");
+        public static readonly LocString OnlineCraterHostHint = new("games.onlineCraterHostHint", "2 to 4 players, 25 seconds a turn");
         public static readonly LocString OnlineCraterWin = new("games.onlineCraterWin", "{0}'s moogles are the last ones standing!");
         public static readonly LocString OnlineCraterDraw = new("games.onlineCraterDraw", "Draw, no moogle is left standing");
         public static readonly LocString OnlineCraterControls = new("games.onlineCraterControls", "A and D walk, drag or arrows aim, hold Space or the button to fire");

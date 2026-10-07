@@ -117,9 +117,9 @@ internal sealed partial class CraterApp : IMiniGame
         Drain(context, false);
         var layout = CraterControls.Layout(context.Full, context.Safe, board.TeamCount, scale);
         DrawWorld(drawList, context, true, scale);
-        juice.DrawBanners(drawList, context.Full, context.Theme);
         DrawControls(drawList, context, layout, scale);
         FillHud(drawList, context, layout, scale);
+        juice.DrawBanners(drawList, context.Full, context.Theme, layout.Wind.Max.Y);
         CheckFinish(context);
     }
 
@@ -244,7 +244,7 @@ internal sealed partial class CraterApp : IMiniGame
         var hud = context.Hud;
         hud.Score(board.Round, L.Crater.Round);
         hud.Timer(board.TurnLeft, CraterRules.TurnSeconds, board.HumanTurn && board.TurnLeft <= UrgentSeconds);
-        CraterControls.Wind(drawList, layout.Wind, board.WindLevel, Accent, time, scale);
+        CraterControls.Wind(drawList, layout.Wind, board.WindLevel, time, scale);
         context.Session.Report(board.DamageDealt(0));
     }
 

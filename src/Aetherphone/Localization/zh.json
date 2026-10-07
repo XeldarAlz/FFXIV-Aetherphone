@@ -4647,7 +4647,7 @@
   "games.onlineLuckyDrawChoosing": "{0} 正在选择目标",
   "games.onlineLuckyDrawNextDeal": "下一回合加入",
   "games.onlineCrater": "弹坑大战",
-  "games.onlineCraterHostHint": "2至4名玩家，每回合45秒",
+  "games.onlineCraterHostHint": "2至4名玩家，每回合25秒",
   "games.onlineCraterWin": "{0}的莫古力屹立到了最后！",
   "games.onlineCraterDraw": "平局，没有莫古力屹立到最后",
   "games.onlineCraterControls": "A和D移动，拖动或方向键瞄准，按住空格或按钮开火",

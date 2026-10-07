@@ -8,6 +8,11 @@ internal static class GameBanner
 {
     private const float PopFraction = 0.18f;
     private const float FadeFraction = 0.25f;
+    private const float PaddingX = 22f;
+    private const float PaddingY = 10f;
+
+    public static float HalfHeight(in TextStyle style) =>
+        Typography.LineHeight(style) * 0.5f + PaddingY * UiScale.Current;
 
     public static float Advance(float progress, float deltaSeconds, float lifetimeSeconds)
     {
@@ -38,7 +43,7 @@ internal static class GameBanner
         var alpha = progress > 1f - FadeFraction ? (1f - progress) / FadeFraction : 1f;
         var textScale = style.Scale * MathF.Max(0.01f, pop);
         var textSize = Typography.Measure(text, textScale, style.Weight);
-        var padding = new Vector2(22f * scale, 10f * scale);
+        var padding = new Vector2(PaddingX * scale, PaddingY * scale);
         var half = textSize * 0.5f + padding;
         var min = center - half;
         var max = center + half;

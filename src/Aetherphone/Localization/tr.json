@@ -4647,7 +4647,7 @@
   "games.onlineLuckyDrawChoosing": "{0} bir hedef seçiyor",
   "games.onlineLuckyDrawNextDeal": "Sonraki turda katılır",
   "games.onlineCrater": "Krater",
-  "games.onlineCraterHostHint": "2 ila 4 oyuncu, tur başına 45 saniye",
+  "games.onlineCraterHostHint": "2 ila 4 oyuncu, tur başına 25 saniye",
   "games.onlineCraterWin": "Ayakta kalan son moogle'lar {0} oyuncusunun!",
   "games.onlineCraterDraw": "Berabere, ayakta moogle kalmadı",
   "games.onlineCraterControls": "A ve D yürür, sürükle veya oklarla nişan al, ateş için Boşluk veya düğmeyi basılı tut",

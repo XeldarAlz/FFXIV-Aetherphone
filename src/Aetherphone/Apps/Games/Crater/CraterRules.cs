@@ -76,7 +76,7 @@ internal static class CraterRules
     public const int FallDamageBase = 4;
     public const float FallDamagePerMetre = 8f;
     public const int FallDamageCap = 40;
-    public const float TurnSeconds = 45f;
+    public const float TurnSeconds = 25f;
     public const float TurnIntroSeconds = 0.9f;
     public const float ImpactHoldSeconds = 0.6f;
     public const float UtilityHoldSeconds = 0.8f;

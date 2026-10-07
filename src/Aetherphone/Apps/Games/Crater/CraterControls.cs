@@ -51,11 +51,13 @@ internal static class CraterControls
     private const float TeamPadding = 7f;
     private const float TeamBarWidth = 52f;
     private const float IconSize = 20f;
-    private const float WindArrowMin = 8f;
-    private const float WindArrowSpan = 26f;
     private const float WindDrop = 4f;
+    private const float WindInset = 10f;
+    private const float WindLabelGap = 6f;
+    private const float WindGlyphShare = 1.05f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 Dim = new(1f, 1f, 1f, 0.32f);
+    private static readonly Vector4 Calm = new(1f, 1f, 1f, 0.5f);
     private static readonly Vector4 Track = new(1f, 1f, 1f, 0.18f);
     private static readonly Vector4 Gale = new(1f, 0.62f, 0.3f, 1f);
     private static readonly Vector4 BarBack = new(0f, 0f, 0f, 0.4f);
@@ -190,34 +192,21 @@ internal static class CraterControls
         CraterArt.WeaponIcon(drawList, center, size * 0.85f, weapon, (held ? accent : White) with { W = alpha });
     }
 
-    public static void Wind(ImDrawListPtr drawList, Rect rect, int level, Vector4 accent, float time, float scale)
+    public static void Wind(ImDrawListPtr drawList, Rect rect, int level, float time, float scale)
     {
         StageHud.Capsule(drawList, rect, scale);
         var strength = Math.Abs(level);
+        var gale = strength >= CraterRules.MaxWindLevel * 7 / 10;
         var label = GameNumber.Label(strength);
         var labelWidth = Typography.Measure(label, TextStyles.FootnoteEmphasized).X;
-        var right = rect.Max.X - 10f * scale;
-        Typography.DrawCentered(drawList, new Vector2(right - labelWidth * 0.5f, rect.Center.Y), label, White,
-            TextStyles.FootnoteEmphasized);
-        var arrowCenter = new Vector2((rect.Min.X + 10f * scale + right - labelWidth - 6f * scale) * 0.5f,
-            rect.Center.Y);
-        var color = strength >= CraterRules.MaxWindLevel * 7 / 10 ? Gale : accent;
-        if (level == 0)
-        {
-            drawList.AddCircle(arrowCenter, 4f * scale, ImGui.GetColorU32(color), 12, 1.5f * scale);
-            return;
-        }
-
-        var direction = level > 0 ? 1f : -1f;
-        var length = (WindArrowMin + WindArrowSpan * strength / CraterRules.MaxWindLevel) * scale;
-        var drift = MathF.Sin(time * 4f) * 1.5f * scale * direction;
-        var tail = arrowCenter - new Vector2(length * 0.5f * direction - drift, 0f);
-        var tip = arrowCenter + new Vector2(length * 0.5f * direction + drift, 0f);
-        var head = 5f * scale;
-        var thickness = 2.2f * scale;
-        drawList.AddLine(tail, tip - new Vector2(head * 0.6f * direction, 0f), ImGui.GetColorU32(color), thickness);
-        drawList.AddTriangleFilled(tip, tip - new Vector2(head * 1.4f * direction, head),
-            tip - new Vector2(head * 1.4f * direction, -head), ImGui.GetColorU32(color));
+        var right = rect.Max.X - WindInset * scale;
+        Typography.DrawCentered(drawList, new Vector2(right - labelWidth * 0.5f, rect.Center.Y), label,
+            gale ? Gale : White, TextStyles.FootnoteEmphasized);
+        var glyphCenter = new Vector2(
+            (rect.Min.X + WindInset * scale + right - labelWidth - WindLabelGap * scale) * 0.5f, rect.Center.Y);
+        var ink = level == 0 ? Calm : gale ? Gale : White;
+        CraterArt.Wind(drawList, glyphCenter, rect.Height * WindGlyphShare, level,
+            strength / (float)CraterRules.MaxWindLevel, ink, time);
     }
 
     public static void Teams(ImDrawListPtr drawList, Rect rect, CraterBoard board, CraterLabels labels, float scale)
