@@ -82,6 +82,8 @@ internal sealed class TrailblazeBoard
     public const float BodyHalfDepth = 0.4f;
     public const float PlayerHalfWidth = 0.3f;
     public const float HazardHalfWidth = 0.45f;
+    public const float CartHitHalfWidth = 0.34f;
+    public const float CartHitDepthInset = 0.2f;
     public const float BarrierBottom = 0.95f;
     public const float BarrierTop = 2.6f;
     public const float BarrierDepth = 0.5f;
@@ -769,12 +771,16 @@ internal sealed class TrailblazeBoard
         }
     }
 
-    private bool Overlaps(in TrailblazeHazard hazard) =>
-        Distance + BodyHalfDepth > hazard.Z && Distance - BodyHalfDepth < hazard.Z + hazard.Length;
+    private bool Overlaps(in TrailblazeHazard hazard)
+    {
+        var inset = hazard.Kind == TrailblazeCell.Cart ? CartHitDepthInset : 0f;
+        return Distance + BodyHalfDepth > hazard.Z + inset && Distance - BodyHalfDepth < hazard.Z + hazard.Length - inset;
+    }
 
     public static bool Collides(TrailblazeCell kind, int lane, float laneX, float height, float bodyTop)
     {
-        if (MathF.Abs(laneX - lane) >= PlayerHalfWidth + HazardHalfWidth)
+        var hazardHalfWidth = kind == TrailblazeCell.Cart ? CartHitHalfWidth : HazardHalfWidth;
+        if (MathF.Abs(laneX - lane) >= PlayerHalfWidth + hazardHalfWidth)
         {
             return false;
         }
