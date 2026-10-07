@@ -142,6 +142,12 @@ internal static class AppIconArt
             case "trails":
                 DrawTrails(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "trailblaze":
+                DrawTrailblaze(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "thrust":
+                DrawThrust(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -905,6 +911,68 @@ internal static class AppIconArt
         drawList.AddCircleFilled(corner, thickness * 0.5f, ink, 12);
         drawList.AddCircleFilled(head, extent * 0.22f, ink, 20);
         drawList.AddCircleFilled(head, extent * 0.08f, hole, 12);
+    }
+
+    private static void DrawTrailblaze(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        Span<Vector2> road = stackalloc Vector2[4]
+        {
+            At(center, extent, -1f, 1f), At(center, extent, 1f, 1f), At(center, extent, 0.2f, -0.2f),
+            At(center, extent, -0.2f, -0.2f),
+        };
+        FillConvex(drawList, ink, road);
+        Span<Vector2> stripe = stackalloc Vector2[4];
+        for (var side = -1; side <= 1; side += 2)
+        {
+            for (var dash = 0; dash < 2; dash++)
+            {
+                var near = 0.92f - dash * 0.62f;
+                var far = near - 0.34f + dash * 0.08f;
+                var nearX = side * 0.34f * (near + 0.2f) / 1.2f;
+                var farX = side * 0.34f * (far + 0.2f) / 1.2f;
+                var nearHalf = 0.055f * (near + 0.4f);
+                var farHalf = 0.055f * (far + 0.4f);
+                stripe[0] = At(center, extent, nearX - nearHalf, near);
+                stripe[1] = At(center, extent, nearX + nearHalf, near);
+                stripe[2] = At(center, extent, farX + farHalf, far);
+                stripe[3] = At(center, extent, farX - farHalf, far);
+                FillConvex(drawList, hole, stripe);
+            }
+        }
+
+        var coin = At(center, extent, 0f, -0.6f);
+        drawList.AddCircleFilled(coin, extent * 0.32f, ink, 28);
+        drawList.AddCircle(coin, extent * 0.2f, hole, 24, extent * 0.07f);
+        drawList.AddCircleFilled(At(center, extent, -0.62f, -0.42f), extent * 0.1f, ink, 14);
+        drawList.AddCircleFilled(At(center, extent, 0.62f, -0.42f), extent * 0.1f, ink, 14);
+    }
+
+    private static void DrawThrust(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        Span<Vector2> bolt = stackalloc Vector2[5]
+        {
+            At(center, extent, -0.74f, -0.86f), At(center, extent, -0.58f, -0.46f), At(center, extent, -0.86f, -0.16f),
+            At(center, extent, -0.6f, 0.14f), At(center, extent, -0.74f, 0.48f),
+        };
+        for (var segment = 1; segment < bolt.Length; segment++)
+        {
+            drawList.AddLine(bolt[segment - 1], bolt[segment], ink, extent * 0.1f);
+        }
+
+        drawList.AddCircleFilled(bolt[0], extent * 0.15f, ink, 14);
+        drawList.AddCircleFilled(bolt[^1], extent * 0.15f, ink, 14);
+        Span<Vector2> flame = stackalloc Vector2[3]
+        {
+            At(center, extent, -0.24f, 0.46f), At(center, extent, 0.02f, 0.46f), At(center, extent, -0.18f, 1f),
+        };
+        FillConvex(drawList, ink, flame);
+        drawList.AddRectFilled(At(center, extent, -0.26f, -0.22f), At(center, extent, 0.02f, 0.5f), ink, extent * 0.1f);
+        var body = At(center, extent, 0.32f, 0.04f);
+        drawList.AddCircleFilled(body, extent * 0.46f, hole, 28);
+        drawList.AddCircleFilled(body, extent * 0.4f, ink, 28);
+        drawList.AddCircleFilled(At(center, extent, 0.5f, -0.06f), extent * 0.07f, hole, 10);
+        drawList.AddLine(At(center, extent, 0.3f, -0.34f), At(center, extent, 0.44f, -0.72f), ink, extent * 0.07f);
+        drawList.AddCircleFilled(At(center, extent, 0.46f, -0.8f), extent * 0.14f, ink, 14);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)
