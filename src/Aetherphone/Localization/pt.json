@@ -3160,6 +3160,8 @@
   "velvet.deleteCommentConfirmMessage": "Excluir este comentário? Isso não pode ser desfeito.",
   "velvet.deleteCommentFailed": "Não foi possível excluir o comentário",
   "velvet.removeCommentConfirmMessage": "Remover este comentário da sua publicação? Isso não pode ser desfeito.",
+  "velvet.deleteComment": "Excluir comentário",
+  "velvet.removeComment": "Remover comentário",
   "velvet.tabMe": "Eu",
   "velvet.settings": "Ajustes",
   "velvet.onboardIntent": "O que traz você aqui?",

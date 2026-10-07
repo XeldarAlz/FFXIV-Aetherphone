@@ -6478,6 +6478,8 @@ internal static class L
         public static readonly LocString DeleteCommentConfirmMessage = new("velvet.deleteCommentConfirmMessage", "Delete this comment? This can't be undone.");
         public static readonly LocString DeleteCommentFailed = new("velvet.deleteCommentFailed", "Couldn't delete the comment");
         public static readonly LocString RemoveCommentConfirmMessage = new("velvet.removeCommentConfirmMessage", "Remove this comment from your post? This can't be undone.");
+        public static readonly LocString DeleteComment = new("velvet.deleteComment", "Delete comment");
+        public static readonly LocString RemoveComment = new("velvet.removeComment", "Remove comment");
         public static readonly LocString TabMe = new("velvet.tabMe", "Me");
         public static readonly LocString Settings = new("velvet.settings", "Settings");
         public static readonly LocString OnboardIntent = new("velvet.onboardIntent", "What brings you here?");

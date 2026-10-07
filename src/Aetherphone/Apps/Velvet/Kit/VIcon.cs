@@ -1,3 +1,4 @@
+using Aetherphone.Core;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -19,4 +20,20 @@ internal static class VIcon
         string tooltip = "", HoverLabelSide side = HoverLabelSide.Above, int badge = 0) =>
         SocialChrome.DrawHeaderIcon(ImGui.GetWindowDrawList(), center, radius, glyph, size, tooltip, VelvetInk.Shared,
             ink, false, badge, side);
+
+    public static bool Plain(Vector2 center, float radius, string glyph, float size, Vector4 ink, string tooltip)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var extent = new Vector2(radius, radius);
+        var hovered = UiInteract.Hover(center - extent, center + extent);
+        if (hovered)
+        {
+            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(VelvetInk.Shared.FieldFill), 24);
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        PhoneIcon.Draw(drawList, center, glyph, ink, size * UiScale.Current);
+        HoverTooltip.Show(new Rect(center - extent, center + extent), tooltip, HoverLabelSide.Above);
+        return UiInteract.Click(center - extent, center + extent, hovered);
+    }
 }

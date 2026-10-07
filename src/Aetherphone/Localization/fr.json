@@ -3160,6 +3160,8 @@
   "velvet.deleteCommentConfirmMessage": "Supprimer ce commentaire ? Cette action est irréversible.",
   "velvet.deleteCommentFailed": "Impossible de supprimer le commentaire",
   "velvet.removeCommentConfirmMessage": "Retirer ce commentaire de votre publication ? Cette action est irréversible.",
+  "velvet.deleteComment": "Supprimer le commentaire",
+  "velvet.removeComment": "Retirer le commentaire",
   "velvet.tabMe": "Moi",
   "velvet.settings": "Réglages",
   "velvet.onboardIntent": "Qu'est-ce qui t'amène ici ?",

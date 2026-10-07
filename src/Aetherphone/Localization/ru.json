@@ -3160,6 +3160,8 @@
   "velvet.deleteCommentConfirmMessage": "Удалить этот комментарий? Это действие нельзя отменить.",
   "velvet.deleteCommentFailed": "Не удалось удалить комментарий",
   "velvet.removeCommentConfirmMessage": "Убрать этот комментарий из вашего поста? Это действие нельзя отменить.",
+  "velvet.deleteComment": "Удалить комментарий",
+  "velvet.removeComment": "Убрать комментарий",
   "velvet.tabMe": "Я",
   "velvet.settings": "Настройки",
   "velvet.onboardIntent": "Что вас сюда привело?",

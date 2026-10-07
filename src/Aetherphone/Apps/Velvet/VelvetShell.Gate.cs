@@ -14,6 +14,7 @@ internal sealed partial class VelvetShell
     {
         postSheet.Gate();
         threadSheet.Gate();
+        commentSheet.Gate();
         threadView.GateMenus();
     }
 

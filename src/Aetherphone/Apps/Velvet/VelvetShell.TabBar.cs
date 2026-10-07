@@ -73,6 +73,7 @@ internal sealed partial class VelvetShell
 
         postSheet.Close();
         threadSheet.Close();
+        commentSheet.Close();
         profileMenu.Close();
         activeTab = tab;
     }

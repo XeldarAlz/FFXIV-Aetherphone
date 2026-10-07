@@ -3160,6 +3160,8 @@
   "velvet.deleteCommentConfirmMessage": "このコメントを削除しますか？ この操作は取り消せません。",
   "velvet.deleteCommentFailed": "コメントを削除できませんでした",
   "velvet.removeCommentConfirmMessage": "このコメントを投稿から削除しますか？ この操作は取り消せません。",
+  "velvet.deleteComment": "コメントを削除",
+  "velvet.removeComment": "コメントを削除",
   "velvet.tabMe": "マイページ",
   "velvet.settings": "設定",
   "velvet.onboardIntent": "ここに来た目的は？",

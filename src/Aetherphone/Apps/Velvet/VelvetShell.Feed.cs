@@ -294,7 +294,7 @@ internal sealed partial class VelvetShell
 
         var moreCenter = new Vector2(origin.X + width - inset - 6f * scale, avatarCenter.Y);
         var moreRadius = 14f * scale;
-        if (VIcon.Button(moreCenter, moreRadius, PhoneIcons.Dots, VIcon.Overflow, VelvetTheme.BodyInk,
+        if (VIcon.Plain(moreCenter, moreRadius, PhoneIcons.Dots, VIcon.Overflow, VelvetTheme.TitleInk,
                 Loc.T(L.Velvet.More)))
         {
             OpenPostSheet(entry, true);
