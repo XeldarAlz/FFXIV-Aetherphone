@@ -64,6 +64,7 @@ internal sealed class CrawlerApp : IMiniGame
     private Camera2D camera = Camera2D.Create();
     private CrawlerControls controls;
     private LabelSlot waveLabel;
+    private Vector2 grabOffset;
     private float zoneHeat;
     private float bannerProgress = 1f;
     private float time;
@@ -216,6 +217,7 @@ internal sealed class CrawlerApp : IMiniGame
     {
         PressSurface.Claim(FieldSurfaceId, field, out var activated);
         var mouse = ImGui.GetMousePos();
+        var pointer = camera.ToWorld(mouse);
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
             dragging = false;
@@ -223,6 +225,7 @@ internal sealed class CrawlerApp : IMiniGame
         else if (activated && !context.ChromeHit(mouse))
         {
             dragging = true;
+            grabOffset = board.Player - pointer;
         }
 
         var left = pad.Left || GameInput.Held(ImGuiKey.A, ImGuiKey.LeftArrow);
@@ -231,7 +234,7 @@ internal sealed class CrawlerApp : IMiniGame
         var down = GameInput.Held(ImGuiKey.S, ImGuiKey.DownArrow);
         var fire = pad.FireHeld || dragging || GameInput.Held(ImGuiKey.Space);
         return new CrawlerControls((right ? 1f : 0f) - (left ? 1f : 0f), (down ? 1f : 0f) - (up ? 1f : 0f), fire,
-            dragging, dragging ? camera.ToWorld(mouse) : Vector2.Zero);
+            dragging, dragging ? pointer + grabOffset : Vector2.Zero);
     }
 
     private static CrawlerControls Autopilot(CrawlerBoard target)
