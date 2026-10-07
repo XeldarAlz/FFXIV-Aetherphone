@@ -231,7 +231,7 @@ internal sealed class UpdraftApp : IMiniGame
         }
 
         lastMouse = mouse;
-        return pointerMode && hovering
+        return pointerMode && !context.ChromeHit(mouse)
             ? UpdraftInput.Pointer(UpdraftBoard.Wrap(camera.ToWorld(mouse).X))
             : UpdraftInput.Keys(axis);
     }
