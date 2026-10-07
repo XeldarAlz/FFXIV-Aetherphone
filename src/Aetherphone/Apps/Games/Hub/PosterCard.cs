@@ -91,7 +91,7 @@ internal sealed class PosterCard
     private const float TopScrimTo = 0.5f;
     private const float ScrimFrom = 0.4f;
     private const float CapsulePadFraction = 0.4f;
-    private const float CapsuleGap = 4f;
+    private const float CapsuleBreathing = 2f;
     private const float CapsuleGlyphFraction = 0.5f;
     private const float CapsuleGlyphGap = 4f;
     private const float CapsuleFill = 0.32f;
@@ -116,26 +116,30 @@ internal sealed class PosterCard
         ResumeHeight * scale + HubMetrics.CaptionGap * scale + Typography.LineHeight(TextStyles.FootnoteEmphasized)
         + Typography.LineHeight(TextStyles.Footnote);
 
+    public static float CapsuleHeight(float height) =>
+        MathF.Max(height, Typography.LineHeight(TextStyles.FootnoteEmphasized) + CapsuleBreathing * UiScale.Current);
+
     public static float CapsuleWidth(string label, string glyph, float height)
     {
-        var glyphSpan = glyph.Length > 0 ? height * CapsuleGlyphFraction + CapsuleGlyphGap * UiScale.Current : 0f;
-        return Typography.Measure(label, TextStyles.FootnoteEmphasized).X + glyphSpan
-               + height * CapsulePadFraction * 2f;
+        var side = CapsuleHeight(height);
+        var glyphSpan = glyph.Length > 0 ? side * CapsuleGlyphFraction + CapsuleGlyphGap * UiScale.Current : 0f;
+        return Typography.Measure(label, TextStyles.FootnoteEmphasized).X + glyphSpan + side * CapsulePadFraction * 2f;
     }
 
     public static float DrawCapsule(ImDrawListPtr drawList, Vector2 anchor, bool alignRight, string label,
         string glyph, Vector4 glyphInk, float height, float fillAlpha)
     {
-        var width = CapsuleWidth(label, glyph, height);
+        var side = CapsuleHeight(height);
+        var width = CapsuleWidth(label, glyph, side);
         var left = alignRight ? anchor.X - width : anchor.X;
         var min = new Vector2(left, anchor.Y);
-        var max = new Vector2(left + width, anchor.Y + height);
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, fillAlpha)));
-        var centerY = anchor.Y + height * 0.5f;
-        var textLeft = left + height * CapsulePadFraction;
+        var max = new Vector2(left + width, anchor.Y + side);
+        Squircle.Fill(drawList, min, max, side * 0.5f, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, fillAlpha)));
+        var centerY = anchor.Y + side * 0.5f;
+        var textLeft = left + side * CapsulePadFraction;
         if (glyph.Length > 0)
         {
-            var glyphSize = height * CapsuleGlyphFraction;
+            var glyphSize = side * CapsuleGlyphFraction;
             PhoneIcon.Draw(drawList, new Vector2(textLeft + glyphSize * 0.5f, centerY), glyph, glyphInk, glyphSize);
             textLeft += glyphSize + CapsuleGlyphGap * UiScale.Current;
         }
@@ -182,7 +186,7 @@ internal sealed class PosterCard
         GameIconArt.Draw(drawList, library.IconIds[entryIndex], accent, iconMin,
             iconMin + new Vector2(ResumeIcon * unit), IconAppearance.Default, true);
         var rank = library.RankLabel(entryIndex);
-        var capsuleHeight = ResumeCapsule * unit;
+        var capsuleHeight = CapsuleHeight(ResumeCapsule * unit);
         if (rank.Length > 0)
         {
             DrawCapsule(drawList, new Vector2(card.Max.X - inset, card.Min.Y + inset), true, rank, string.Empty,
