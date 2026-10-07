@@ -21,10 +21,10 @@ internal sealed class TrailsApp : IMiniGame
     private const int IdleBots = 3;
     private const float IdleSpeed = 11f;
     private const ulong IdleSeed = 0x545241494CUL;
-    private static readonly LocString[] Modes = { L.Games.Easy, L.Trails.Duel, L.Games.Hard };
-    private static readonly int[] ModeBots = { 2, 1, 3 };
+    private static readonly LocString[] Modes = { L.Trails.Duel, L.Trails.TwoRivals, L.Trails.ThreeRivals };
+    private static readonly int[] ModeBots = { 1, 2, 3 };
     private static readonly BotSkill[] ModeSkills = { BotSkill.Easy, BotSkill.Hard, BotSkill.Hard };
-    private static readonly float[] ModeSpeeds = { 9f, 10.5f, 11f };
+    private static readonly float[] ModeSpeeds = { 9.5f, 10.5f, 11f };
     private static readonly GameSpec StageSpec = new(GameId, L.Trails.Title, GameGenre.Action, L.Trails.Hook,
         Backdrop.Neon, HudStyle.Standard, ScoreKind.Streak, Modes, clocked: true, countdown: true, keyboard: true);
     private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);

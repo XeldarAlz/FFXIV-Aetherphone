@@ -5301,6 +5301,8 @@
   "games.trails.title": "Traînées",
   "games.trails.hook": "Tournez à gauche ou à droite sans jamais toucher une traînée. Survivez aux bots pour remporter la manche ; le premier à trois gagne le match.",
   "games.trails.duel": "Duel",
+  "games.trails.twoRivals": "2 rivaux",
+  "games.trails.threeRivals": "3 rivaux",
   "games.trails.wins": "Victoires",
   "games.trails.roundNumber": "Manche {0}",
   "games.trails.matchPoint": "Balle de match",

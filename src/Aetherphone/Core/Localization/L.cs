@@ -8869,6 +8869,8 @@ internal static class L
         public static readonly LocString Title = new("games.trails.title", "Trails");
         public static readonly LocString Hook = new("games.trails.hook", "Turn left or right and never touch a trail. Outlast the bots to take the round; first to three wins the match.");
         public static readonly LocString Duel = new("games.trails.duel", "Duel");
+        public static readonly LocString TwoRivals = new("games.trails.twoRivals", "2 rivals");
+        public static readonly LocString ThreeRivals = new("games.trails.threeRivals", "3 rivals");
         public static readonly LocString Wins = new("games.trails.wins", "Wins");
         public static readonly LocString RoundNumber = new("games.trails.roundNumber", "Round {0}");
         public static readonly LocString MatchPoint = new("games.trails.matchPoint", "Match point");

@@ -5301,6 +5301,8 @@
   "games.trails.title": "İzler",
   "games.trails.hook": "Sola ya da sağa dön ve asla bir ize dokunma. Raundu almak için botlardan uzun dayan; ilk üç raundu kazanan maçı alır.",
   "games.trails.duel": "Düello",
+  "games.trails.twoRivals": "2 rakip",
+  "games.trails.threeRivals": "3 rakip",
   "games.trails.wins": "Galibiyet",
   "games.trails.roundNumber": "Raunt {0}",
   "games.trails.matchPoint": "Maç sayısı",
