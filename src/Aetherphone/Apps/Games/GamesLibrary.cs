@@ -373,8 +373,10 @@ internal sealed class GamesLibrary
         return entry.Online ? OnlineGameArt.Accent(entry.OnlineKind) : games[entry.GameIndex].Accent;
     }
 
+    public static bool IsFreshOn(int today, int addedDay) => addedDay > 0 && today - addedDay <= NewDays;
+
     public static bool IsNewOn(int today, int addedDay, long lastPlayed) =>
-        addedDay > 0 && today - addedDay <= NewDays && lastPlayed <= 0;
+        IsFreshOn(today, addedDay) && lastPlayed <= 0;
 
     public bool IsNew(int entryIndex) =>
         IsNewOn(Today, Entries[entryIndex].AddedDay, lastPlayed[entryIndex]);
@@ -631,7 +633,9 @@ internal sealed class GamesLibrary
             BuildBest(index);
             var genre = Loc.T(GameGenres.Label(Entries[index].Genre));
             hooks[index] = HookFor(index);
-            eyebrows[index] = string.Concat(newGame, Separator, genre);
+            eyebrows[index] = IsFreshOn(Today, Entries[index].AddedDay)
+                ? string.Concat(newGame, Separator, genre)
+                : genre;
             metaLabels[index] = IsNew(index) ? newWord : genre;
             BuildProgress(index);
             TotalStars += stars[index];

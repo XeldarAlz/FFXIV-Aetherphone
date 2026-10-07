@@ -467,6 +467,27 @@ public sealed class GamesLibraryTests
     }
 
     [Fact]
+    public void TheNewGameEyebrowLastsAsLongAsTheReleaseWindow()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord
+        {
+            GameId = GamesLibrary.OnlineEntryId(GameRoomWire.CraterKind), LastPlayedUnixSeconds = 50,
+        });
+        var library = Build(configuration);
+        var crater = library.IndexOf("online.crater");
+
+        library.Rebuild(ReleaseWave + GamesLibrary.NewDays);
+
+        Assert.Equal("New game · With friends", library.Eyebrow(crater));
+        Assert.False(library.IsNew(crater));
+
+        library.Rebuild(ReleaseWave + GamesLibrary.NewDays + 1);
+
+        Assert.Equal("With friends", library.Eyebrow(crater));
+    }
+
+    [Fact]
     public void EyebrowsAndHooksAreCachedPerEntry()
     {
         var hooked = new GameSpec("tetris", new LocString("test.tetris", "Tetris"), GameGenre.Puzzle,
@@ -476,7 +497,7 @@ public sealed class GamesLibraryTests
         var tetris = library.IndexOf("tetris");
 
         Assert.Equal("Clear lines before the stack tops out.", library.Hook(tetris));
-        Assert.Equal("New game · Puzzle", library.Eyebrow(tetris));
+        Assert.Equal("Puzzle", library.Eyebrow(tetris));
         Assert.Equal("Head-to-head, 10 minutes on each clock", library.Hook(library.IndexOf("online.chess")));
         Assert.Equal("Up to 6 players", library.Hook(library.IndexOf("online.uno")));
     }
