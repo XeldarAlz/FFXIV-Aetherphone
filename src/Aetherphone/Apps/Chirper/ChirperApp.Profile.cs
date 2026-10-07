@@ -477,7 +477,7 @@ internal sealed partial class ChirperApp
                 continue;
             }
 
-            DrawPost(post);
+            DrawPost(post, showPinned: true);
             profileVirtualizer.Record(post.Id);
         }
     }

@@ -53,6 +53,8 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         DeleteReply,
         RemoveReply,
         BadgeProgress,
+        Pin,
+        Unpin,
     }
 
     private enum ActionGlyph
@@ -857,6 +859,15 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
                     Loc.T(post.Sensitive ? L.Moderation.SensitiveOn : L.Moderation.MarkSensitive), false);
             }
 
+            if (post.PinnedAtUnix is null)
+            {
+                AddSheetItem(PostSheetAction.Pin, Loc.T(L.Social.PinToProfile), false);
+            }
+            else
+            {
+                AddSheetItem(PostSheetAction.Unpin, Loc.T(L.Social.UnpinFromProfile), false);
+            }
+
             AddSheetItem(PostSheetAction.Delete, Loc.T(L.Chirper.DeleteChirp), true);
         }
         else
@@ -928,7 +939,39 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             case PostSheetAction.Delete:
                 profile.AskDeletePost(post.Id, () => toast.Show(Loc.T(L.Chirper.DeletedToast)));
                 break;
+            case PostSheetAction.Pin:
+                AskPinChirp(post.Id);
+                break;
+            case PostSheetAction.Unpin:
+                store.UnpinPost(post.Id,
+                    unpinned => toast.Show(Loc.T(unpinned ? L.Social.UnpinnedToast : L.Social.UnpinFailed)));
+                break;
         }
+    }
+
+    private void AskPinChirp(string postId)
+    {
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Chirper.PinTitle),
+            Message = Loc.T(L.Chirper.PinMessage),
+            ConfirmLabel = Loc.T(L.Chirper.PinConfirm),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = false,
+            Sheet = true,
+            BusyLabel = Loc.T(L.Chirper.Saving),
+            FailedMessage = Loc.T(L.Social.PinFailed),
+            ConfirmAsync = done => store.PinPost(postId, true, outcome =>
+            {
+                var pinned = outcome == PinOutcome.Pinned;
+                if (pinned)
+                {
+                    toast.Show(Loc.T(L.Social.PinnedToast));
+                }
+
+                done(pinned);
+            }),
+        });
     }
 
     private void OpenActivity()
@@ -1066,7 +1109,8 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         }
     }
 
-    private void DrawPost(PostDto post, bool isThreadHead = false, PostDto? repostBy = null, string? suggestion = null)
+    private void DrawPost(PostDto post, bool isThreadHead = false, PostDto? repostBy = null, string? suggestion = null,
+        bool showPinned = false)
     {
         if (post.RepostOfId is not null)
         {
@@ -1088,7 +1132,8 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var width = ImGui.GetContentRegionAvail().X;
         var padX = CellPadX * scale;
         var cellRight = origin.X + width;
-        var bannerHeight = repostBy is not null || suggestion is not null ? Typography.LineHeight(BannerStyle) + 6f * scale : 0f;
+        var pinned = showPinned && post.PinnedAtUnix is not null;
+        var bannerHeight = repostBy is not null || suggestion is not null || pinned ? Typography.LineHeight(BannerStyle) + 6f * scale : 0f;
         var headerTop = origin.Y + CellPadTop * scale + bannerHeight;
         var avatarRadius = FeedAvatarRadius * scale;
         var avatarCenter = new Vector2(origin.X + padX + avatarRadius, headerTop + avatarRadius);
@@ -1144,6 +1189,10 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         else if (suggestion is not null)
         {
             DrawBanner(origin, cellRight, PhoneIcons.Sparkles, suggestion);
+        }
+        else if (pinned)
+        {
+            DrawBanner(origin, cellRight, PhoneIcons.PinFilled, Loc.T(L.Social.PinnedLabel));
         }
 
         DrawAvatar(drawList, avatarCenter, avatarRadius,

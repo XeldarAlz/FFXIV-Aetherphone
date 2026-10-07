@@ -272,49 +272,6 @@ internal sealed class AethergramStore : SocialFeedStore
         }, () => pendingTagsLane.LoadingMore = false);
     }
 
-    public void PinPost(string postId, bool replace, Action<PinOutcome> onComplete)
-    {
-        var outcome = PinOutcome.Failed;
-        work.Run("pin post", async token =>
-        {
-            var result = await grams.PinAsync(postId, replace, token, failure =>
-            {
-                if (failure.Code == FailureCodes.PostPinLimit)
-                {
-                    outcome = PinOutcome.LimitReached;
-                }
-            }).ConfigureAwait(false);
-            if (result is null)
-            {
-                return false;
-            }
-
-            if (result.ReplacedPostId is { } replacedPostId)
-            {
-                ApplyPinnedEverywhere(replacedPostId, null);
-            }
-
-            ApplyPinnedEverywhere(postId, result.Post.PinnedAtUnix);
-            outcome = PinOutcome.Pinned;
-            return true;
-        }, _ => onComplete(outcome));
-    }
-
-    public void UnpinPost(string postId, Action<bool> onComplete)
-    {
-        work.Run("unpin post", async token =>
-        {
-            var updated = await grams.UnpinAsync(postId, token).ConfigureAwait(false);
-            if (updated is null)
-            {
-                return false;
-            }
-
-            ApplyPinnedEverywhere(postId, null);
-            return true;
-        }, onComplete);
-    }
-
     public void RefreshArchived()
     {
         if (!IsSignedIn || archivedLane.Loading)
