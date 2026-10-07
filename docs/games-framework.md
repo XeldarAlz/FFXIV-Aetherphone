@@ -385,7 +385,7 @@ The session opens on `NextLevel`, so Play always starts the next uncleared level
 
 ```csharp
 private static readonly GameSpec StageSpec = new(GameId, L.Games.Crates, GameGenre.Puzzle, L.Crates.Hook,
-    Backdrop.Paper, kind: ScoreKind.Level, levelCount: CratesLevels.Count);
+    Backdrop.Slate, kind: ScoreKind.Level, levelCount: CratesLevels.Count);
 
 public void Start(in GameStart start)
 {
@@ -447,7 +447,7 @@ The chrome is an instance the host owns (`context.Chrome`). `context.ChromeHit(p
 
 ### Stage inks
 
-The stage is always dark: the frosted material under the HUD capsules, score pill, banners, chips, pads, the result card, the pause menu and the level select is a fixed dark fill, and every backdrop except Paper is dark too. So nothing drawn on the stage takes its text colour from the phone theme, which turns dark in a light phone theme. `StageInks` holds the stage's inks: `Strong` and `Muted` for text and glyphs, `Surface` for the secondary buttons and `Track` for the intro strips; `StrongOn(ink)` and `MutedOn(ink)` pick dark ink for text drawn straight on a Paper backdrop (`backdrop.Ink`). Reach for `context.Theme` only for colours that are not text (`theme.Danger`, `theme.Accent`).
+The stage is always dark: the frosted material under the HUD capsules, score pill, banners, chips, pads, the result card, the pause menu and the level select is a fixed dark fill, and every backdrop is dark too. So nothing drawn on the stage takes its text colour from the phone theme, which turns dark in a light phone theme. `StageInks` holds the stage's inks: `Strong` and `Muted` for text and glyphs, `Surface` for the secondary buttons and `Track` for the intro strips; `StrongOn(ink)` and `MutedOn(ink)` follow `backdrop.Ink`, which is `StageInk.Light` on every preset, so text drawn straight on the stage is always light; text on a fixed light piece (a cream tile, a white key) picks its ink from that piece, never from the stage. Reach for `context.Theme` only for colours that are not text (`theme.Danger`, `theme.Accent`).
 
 ### Backdrops
 
@@ -461,13 +461,13 @@ The stage is always dark: the frosted material under the HUD capsules, score pil
 | `Meadow` | Sky to grass, sun, cloud banks, two hill layers, swaying grass blades | Whack, Snake |
 | `Neon` | Near-black blue, a horizon with a perspective grid scrolling toward the viewer, accent haze bands, sparks | Skyfall, Invaders, Squadron, CapMan, Beat, Breakout, Tetris |
 | `Cavern` | Charcoal brown to black, faint crystal facets, stalactite silhouettes, drifting specks | Crystal Drop, Coil, Bubbles, Water Sort |
-| `Paper` | Warm off-white, two soft accent circles; the only light preset, so `backdrop.Ink` is `StageInk.Dark` | Sudoku, Nonogram, Sweeper, Word Run, Trivia, 2048, Flow |
+| `Slate` | Charcoal blue to near-black, a faint 26 unit grid that drifts with the pointer, two soft accent glows | Sudoku, Nonogram, Sweeper, Word Run, Trivia, 2048, Flow, Crates, Snip |
 
 Layers shift with the pointer (2, 5 and 9 units across the rect, through a `Spring`) and, when the game calls `backdrop.SetCamera(in camera)` each frame, with the camera at parallax 0.05, 0.15 and 0.35. `ScreenFx.Sweep()` fires the light sweep; the kit fires it on a new best. Layers move slower than 20 units per second so they never distract (Reduce Motion is not a setting on this phone).
 
 ### Boards and cells
 
-No mini-game draws a `GameScene.Arena` box any more (the helper survives only for the online tables and the casino felt). Grid games use `BoardPlate.Draw(drawList, rect, radius, scale, accent, backdrop.Ink)`: an accent glow beneath, a floating shadow, a fill that reads as glass over the backdrop (the last drawn ground colour darkened, or white on Paper), a one unit rim and a top sheen. `BoardPlate.Around(gridBounds, scale)` gives the plate rect with its 10 unit padding. Cells go through `StageCell.Draw(drawList, rect, fill, depth, radius, scale)` with a `CellDepth` of `Raised` (drop shadow and top highlight), `Flat`, `Sunken` (inner shadow) or `Pressed` (Raised, shrunk 4 percent); `StageCell.Lift(progress)` returns the 0 to 3 unit lift for `GameJuice.PopIn` entrances. Light comes from the top-left in every game. Non-grid worlds use no plate: the world is the full rect and the backdrop is the floor.
+No mini-game draws a `GameScene.Arena` box any more (the helper survives only for the online tables and the casino felt). Grid games use `BoardPlate.Draw(drawList, rect, radius, scale, accent, backdrop.Ink)`: an accent glow beneath, a floating shadow, a fill that reads as glass over the backdrop (the last drawn ground colour darkened), a one unit rim and a top sheen. `BoardPlate.Around(gridBounds, scale)` gives the plate rect with its 10 unit padding. Cells go through `StageCell.Draw(drawList, rect, fill, depth, radius, scale)` with a `CellDepth` of `Raised` (drop shadow and top highlight), `Flat`, `Sunken` (inner shadow) or `Pressed` (Raised, shrunk 4 percent); `StageCell.Lift(progress)` returns the 0 to 3 unit lift for `GameJuice.PopIn` entrances. Light comes from the top-left in every game. Non-grid worlds use no plate: the world is the full rect and the backdrop is the floor.
 
 ### Camera
 

@@ -20,7 +20,7 @@ internal sealed class FlowApp : IMiniGame
     private static readonly LocString[] Modes = { L.Games.Easy, L.Games.Medium, L.Games.Hard };
     private static readonly string[] ModeStatIds = { "flow.easy", "flow.medium", "flow.hard" };
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Flow, GameGenre.Puzzle, L.Flow.Hook,
-        Backdrop.Paper, HudStyle.Compact, ScoreKind.Level, Modes, ModeStatIds);
+        Backdrop.Slate, HudStyle.Compact, ScoreKind.Level, Modes, ModeStatIds);
 
     private readonly FlowBoard board = new();
     private readonly FlowRenderer renderer = new();

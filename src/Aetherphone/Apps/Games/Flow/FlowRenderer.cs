@@ -44,7 +44,7 @@ internal sealed class FlowRenderer
     };
 
     private static readonly Vector4[] Confetti = { Colors[0], Colors[1], Colors[2], Colors[3] };
-    private static readonly Vector4 EmptyFill = new(1f, 1f, 1f, 0.55f);
+    private static readonly Vector4 EmptyFill = GamePalette.CellSunken;
     private static readonly TextStyle CaptionStyle = TextStyles.Caption2;
 
     public static Vector4 ColorOf(int color) => Colors[color % Colors.Length];

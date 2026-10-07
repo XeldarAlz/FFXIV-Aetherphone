@@ -32,7 +32,7 @@ internal sealed class CratesApp : IMiniGame
     private const float BannerSeconds = 1.6f;
     private const float HopHeight = 0.22f;
     private static readonly GameSpec StageSpec = new(GameId, L.Crates.Title, GameGenre.Puzzle, L.Crates.Hook,
-        Backdrop.Paper, HudStyle.Standard, ScoreKind.Level, keyboard: true, levelCount: CratesLevels.Count);
+        Backdrop.Slate, HudStyle.Standard, ScoreKind.Level, keyboard: true, levelCount: CratesLevels.Count);
     private static readonly Vector4 Silver = new(0.78f, 0.80f, 0.86f, 1f);
     private static readonly Vector4 Spark = new(1f, 0.95f, 0.70f, 1f);
     private static readonly Vector4[] ClearPalette =
@@ -342,7 +342,7 @@ internal sealed class CratesApp : IMiniGame
         if (board.TileAt(column, row) == CratesTile.Floor && length < 0)
         {
             fx.Shockwave(view.Center(new Vector2(column, row)), view.Pitch * 0.35f,
-                GamePalette.InkDark with { W = 0.4f }, 0.3f, 1.6f);
+                StageInks.Strong with { W = 0.4f }, 0.3f, 1.6f);
         }
     }
 
@@ -448,7 +448,7 @@ internal sealed class CratesApp : IMiniGame
         }
 
         fx.AddText(placedLabel.Get(L.Stage.StarsOf, board.CratesOnTargets, board.CrateCount),
-            center - new Vector2(0f, view.Pitch * 0.55f), GamePalette.Darken(Accent, 0.1f), 0.95f, 34f * scale);
+            center - new Vector2(0f, view.Pitch * 0.55f), GamePalette.Lighten(Accent, 0.1f), 0.95f, 34f * scale);
     }
 
     private void Undo()

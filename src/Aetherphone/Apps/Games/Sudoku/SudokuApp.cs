@@ -30,7 +30,7 @@ internal sealed class SudokuApp : IMiniGame
     private static readonly LocString[] Modes = { L.Games.Easy, L.Games.Medium, L.Games.Hard };
     private static readonly string[] ModeStatIds = { "sudoku.easy", "sudoku.medium", "sudoku.hard" };
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Sudoku, GameGenre.Brain, L.Sudoku.Hook,
-        Backdrop.Paper, HudStyle.Compact, ScoreKind.Time, Modes, ModeStatIds, keyboard: true);
+        Backdrop.Slate, HudStyle.Compact, ScoreKind.Time, Modes, ModeStatIds, keyboard: true);
     private static readonly Vector4 ErrorColor = new(0.92f, 0.28f, 0.32f, 1f);
     private static readonly Vector4 ErrorSpark = new(0.95f, 0.36f, 0.40f, 1f);
     private static readonly Vector4 WinSparkle = new(1f, 0.95f, 0.7f, 1f);

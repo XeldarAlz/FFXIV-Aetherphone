@@ -51,8 +51,8 @@ internal static class CratesRenderer
     private const float CrateSize = 0.80f;
     private const float FloorGap = 0.05f;
     private const float WallGap = 0.06f;
-    private static readonly Vector4 Floor = new(0.91f, 0.87f, 0.80f, 1f);
-    private static readonly Vector4 FloorAlternate = new(0.88f, 0.84f, 0.76f, 1f);
+    private static readonly Vector4 Floor = GamePalette.Cell;
+    private static readonly Vector4 FloorAlternate = GamePalette.CellSunken;
     private static readonly Vector4 Wall = new(0.52f, 0.44f, 0.40f, 1f);
     private static readonly Vector4 WallTop = new(0.62f, 0.54f, 0.49f, 1f);
     private static readonly Vector4 WoodDark = new(0.52f, 0.33f, 0.17f, 1f);
@@ -178,7 +178,7 @@ internal static class CratesRenderer
         var stemBase = new Vector2(bodyCenter.X + side * body.X * 0.15f, bodyCenter.Y - body.Y * 0.95f);
         var sway = MathF.Sin(bob * 1.7f) * pitch * 0.03f - side * pitch * 0.04f - CratesBoard.Step(facing).X * squash * pitch * 0.08f;
         var pompom = stemBase + new Vector2(sway, -pitch * 0.2f);
-        drawList.AddLine(stemBase, pompom, ImGui.GetColorU32(Ink with { W = 0.8f }), MathF.Max(1f, pitch * 0.025f));
+        drawList.AddLine(stemBase, pompom, ImGui.GetColorU32(Wing), MathF.Max(1f, pitch * 0.025f));
         ProgressRing.Glow(pompom, pitch * 0.12f, Pompom, 0.35f);
         drawList.AddCircleFilled(pompom, pitch * 0.075f, ImGui.GetColorU32(Pompom), 14);
         drawList.AddCircleFilled(pompom - new Vector2(pitch * 0.02f, pitch * 0.025f), pitch * 0.025f,
@@ -218,16 +218,22 @@ internal static class CratesRenderer
             ProgressRing.Glow(center, radius * 1.4f, accent, 0.4f);
         }
 
-        Squircle.Fill(drawList, center - corner + new Vector2(0f, 2f * scale), center + corner + new Vector2(0f, 2f * scale),
-            radius, ImGui.GetColorU32(Shadow with { W = 0.16f * opacity }));
-        Squircle.Fill(drawList, center - corner, center + corner, radius,
-            ImGui.GetColorU32(White with { W = 0.82f * opacity }));
-        Squircle.Stroke(drawList, center - corner, center + corner, radius,
-            ImGui.GetColorU32((hovered ? accent : Ink) with { W = hovered ? 0.8f : 0.12f }), 1f * scale);
-        var ink = enabled ? (hovered ? GamePalette.Darken(accent, 0.15f) : GamePalette.InkDark) : GamePalette.InkDark with { W = 0.35f };
+        Material.Frosted(drawList, center - corner, center + corner, radius, scale, opacity);
+        if (hovered)
+        {
+            Squircle.Stroke(drawList, center - corner, center + corner, radius,
+                ImGui.GetColorU32(accent with { W = 0.8f }), 1f * scale);
+        }
+
+        var ink = StageInks.Muted with { W = 0.45f };
+        if (enabled)
+        {
+            ink = hovered ? GamePalette.Lighten(accent, 0.15f) : StageInks.Strong;
+        }
+
         ProgressRing.CenterIcon(drawList, center, icon, ink, radius * 0.8f);
         Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + radius + 9f * scale), caption,
-            GamePalette.InkDark with { W = enabled ? 0.85f : 0.4f }, TextStyles.Caption2);
+            enabled ? StageInks.Strong : StageInks.Muted with { W = 0.55f }, TextStyles.Caption2);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

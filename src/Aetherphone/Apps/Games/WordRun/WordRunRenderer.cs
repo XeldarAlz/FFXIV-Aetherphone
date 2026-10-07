@@ -50,11 +50,14 @@ internal static class WordRunRenderer
     private const float StrokeAlpha = 0.55f;
     private const float ShakeFrequency = 40f;
     private const float ShakeAmplitude = 3f;
-    private static readonly Vector4 EntryFill = new(1f, 1f, 1f, 0.92f);
-    private static readonly Vector4 KeyBase = new(0.98f, 0.97f, 0.94f, 1f);
-    private static readonly Vector4 KeyDim = new(0.92f, 0.91f, 0.88f, 1f);
+    private const float DisabledInkAlpha = 0.35f;
+    private static readonly Vector4 EntryFill = GamePalette.Cell;
+    private static readonly Vector4 EmptyFill = GamePalette.CellSunken;
+    private static readonly Vector4 KeyBase = GamePalette.Cell;
+    private static readonly Vector4 KeyDim = GamePalette.CellSunken;
     private static readonly Vector4 Warm = new(1f, 0.72f, 0.30f, 1f);
     private static readonly Vector4 InkLight = new(0.98f, 0.98f, 1f, 1f);
+    private static readonly Vector4 DisabledInk = InkLight with { W = DisabledInkAlpha };
     private static readonly string[] KeyboardRows = { "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" };
     private static readonly string[] LetterLabels = BuildLetterLabels();
     private static readonly TextStyle TileStyle = TextStyles.Title2;
@@ -95,7 +98,6 @@ internal static class WordRunRenderer
     {
         BoardPlate.Draw(drawList, PlateRect(grid, scale), BoardPlate.Radius * scale, scale, accent, ink);
         var rounding = grid.Pitch * TileRoundingFraction;
-        var inkDark = ink == StageInk.Dark ? GamePalette.InkDark : GamePalette.InkLight;
         var shakeOffset = 0f;
         if (shakeRemaining > 0f)
         {
@@ -113,8 +115,8 @@ internal static class WordRunRenderer
                 if (row < board.RowCount)
                 {
                     var flip = row == revealRow ? (revealSeconds - column * FlipStagger) / FlipDuration : 1f;
-                    DrawJudgedTile(drawList, cell, board.Letter(row, column), board.Tile(row, column), rounding, inkDark,
-                        accent, flip, scale);
+                    DrawJudgedTile(drawList, cell, board.Letter(row, column), board.Tile(row, column), rounding, accent,
+                        flip, scale);
                     continue;
                 }
 
@@ -122,17 +124,17 @@ internal static class WordRunRenderer
                 {
                     var shaken = cell.Translate(new Vector2(shakeOffset, 0f));
                     DrawEntryTile(drawList, shaken, column < board.EntryLength ? board.EntryLetter(column) : '\0',
-                        rounding, inkDark, accent, scale);
+                        rounding, accent, scale);
                     continue;
                 }
 
-                StageCell.Draw(drawList, cell, inkDark with { W = EmptyAlpha }, CellDepth.Sunken, rounding, scale);
+                StageCell.Draw(drawList, cell, EmptyFill, CellDepth.Sunken, rounding, scale);
             }
         }
     }
 
-    private static void DrawEntryTile(ImDrawListPtr drawList, Rect cell, char letter, float rounding, Vector4 ink,
-        Vector4 accent, float scale)
+    private static void DrawEntryTile(ImDrawListPtr drawList, Rect cell, char letter, float rounding, Vector4 accent,
+        float scale)
     {
         StageCell.Draw(drawList, cell, EntryFill, CellDepth.Sunken, rounding, scale);
         var strokeAlpha = letter == '\0' ? EmptyAlpha * 2f : StrokeAlpha;
@@ -143,11 +145,12 @@ internal static class WordRunRenderer
             return;
         }
 
-        Typography.DrawCentered(drawList, cell.Center, LetterLabels[letter - 'A'], ink, TileStyle.Scale, TileStyle.Weight);
+        Typography.DrawCentered(drawList, cell.Center, LetterLabels[letter - 'A'], InkLight, TileStyle.Scale,
+            TileStyle.Weight);
     }
 
     private static void DrawJudgedTile(ImDrawListPtr drawList, Rect cell, char letter, WordTile tile, float rounding,
-        Vector4 ink, Vector4 accent, float flip, float scale)
+        Vector4 accent, float flip, float scale)
     {
         var label = LetterLabels[letter - 'A'];
         if (flip < 0.5f)
@@ -159,7 +162,8 @@ internal static class WordRunRenderer
                 1.2f * scale);
             if (squash > LetterHideSquash)
             {
-                Typography.DrawCentered(drawList, cell.Center, label, ink, TileStyle.Scale * squash, TileStyle.Weight);
+                Typography.DrawCentered(drawList, cell.Center, label, InkLight, TileStyle.Scale * squash,
+                    TileStyle.Weight);
             }
 
             return;
@@ -284,7 +288,7 @@ internal static class WordRunRenderer
                 break;
             case WordRunBoard.KeyAbsent:
                 StageCell.Draw(drawList, key, KeyDim, CellDepth.Flat, radius, scale);
-                ink = GamePalette.InkDark with { W = 0.35f };
+                ink = DisabledInk;
                 break;
             default:
                 StageCell.Draw(drawList, key, hotKey, depth, radius, scale);
@@ -329,7 +333,7 @@ internal static class WordRunRenderer
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var ink = armed ? GamePalette.InkOn(accent) : GamePalette.InkDark with { W = 0.35f };
+        var ink = armed ? GamePalette.InkOn(accent) : DisabledInk;
         ProgressRing.CenterIcon(drawList, key.Center, icon, ink, key.Height * 0.42f);
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }

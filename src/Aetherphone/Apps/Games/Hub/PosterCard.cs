@@ -108,7 +108,7 @@ internal sealed class PosterCard
     private readonly ClampedLines[] hooks = new ClampedLines[EditorialSlots];
 
     public static Backdrop PosterBackdrop(Backdrop preset) =>
-        preset is Backdrop.Paper or Backdrop.Meadow ? Backdrop.Nebula : preset;
+        preset is Backdrop.Slate or Backdrop.Meadow ? Backdrop.Nebula : preset;
 
     public static float EditorialWidth(float width) => MathF.Round(width * EditorialFraction);
 

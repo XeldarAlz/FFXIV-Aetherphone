@@ -22,7 +22,8 @@ internal static class SnipRenderer
     public static readonly Vector4 Fur = new(0.99f, 0.97f, 0.94f, 1f);
     public static readonly Vector4 BubbleTint = new(0.50f, 0.78f, 0.98f, 1f);
     public static readonly Vector4 PuffTint = new(0.92f, 0.96f, 1f, 0.9f);
-    public static readonly Vector4 Steel = new(0.36f, 0.38f, 0.45f, 1f);
+    public static readonly Vector4 Steel = new(0.72f, 0.75f, 0.82f, 1f);
+    private static readonly Vector4 SteelDark = new(0.36f, 0.38f, 0.45f, 1f);
     private static readonly Vector4 RopeDark = new(0.34f, 0.24f, 0.16f, 1f);
     private static readonly Vector4 RopeLight = new(0.70f, 0.54f, 0.36f, 1f);
     private static readonly Vector4 Pin = new(0.26f, 0.28f, 0.34f, 1f);
@@ -37,7 +38,6 @@ internal static class SnipRenderer
     private static readonly Vector4 Blush = new(0.98f, 0.62f, 0.66f, 0.55f);
     private static readonly Vector4 Cushion = new(0.42f, 0.62f, 0.70f, 1f);
     private static readonly Vector4 CushionDark = new(0.22f, 0.36f, 0.44f, 1f);
-    private static readonly Vector4 SpikeTip = new(0.72f, 0.75f, 0.82f, 1f);
     private static readonly Vector4 StarRim = new(0.62f, 0.42f, 0.08f, 1f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 Shadow = new(0.10f, 0.08f, 0.12f, 1f);
@@ -212,7 +212,7 @@ internal static class SnipRenderer
         var antennaBase = head - new Vector2(0f, radius * 0.95f);
         var tip = antennaBase + new Vector2(radius * 0.18f * MathF.Sin(time * 2.6f), -radius * 0.62f);
         drawList.AddBezierQuadratic(antennaBase, antennaBase + new Vector2(-radius * 0.2f, -radius * 0.35f), tip,
-            ImGui.GetColorU32(Outline), MathF.Max(1f, radius * 0.07f), 12);
+            ImGui.GetColorU32(Wing), MathF.Max(1f, radius * 0.07f), 12);
         ProgressRing.Glow(tip, radius * 0.4f, Pompom, 0.35f);
         drawList.AddCircleFilled(tip, radius * 0.2f, ImGui.GetColorU32(Pompom), 20);
         drawList.AddCircleFilled(tip - new Vector2(radius * 0.06f, radius * 0.06f), radius * 0.07f,
@@ -332,7 +332,7 @@ internal static class SnipRenderer
         var count = Math.Max(1, (int)(length / spacing));
         var step = length / count;
         var steel = ImGui.GetColorU32(Steel);
-        var light = ImGui.GetColorU32(SpikeTip);
+        var crease = ImGui.GetColorU32(SteelDark);
         for (var index = 0; index < count; index++)
         {
             var baseCenter = from + along * (step * (index + 0.5f));
@@ -340,11 +340,11 @@ internal static class SnipRenderer
             var right = baseCenter + along * step * 0.5f;
             drawList.AddTriangleFilled(left, right, baseCenter + normal * (half + tip), steel);
             drawList.AddTriangleFilled(left, right, baseCenter - normal * (half + tip), steel);
-            drawList.AddLine(baseCenter + normal * half, baseCenter + normal * (half + tip), light, 1f);
-            drawList.AddLine(baseCenter - normal * half, baseCenter - normal * (half + tip), light, 1f);
+            drawList.AddLine(baseCenter + normal * half, baseCenter + normal * (half + tip), crease, 1f);
+            drawList.AddLine(baseCenter - normal * half, baseCenter - normal * (half + tip), crease, 1f);
         }
 
-        drawList.AddLine(from, to, ImGui.GetColorU32(GamePalette.Darken(Steel, 0.3f)), half * 2f);
+        drawList.AddLine(from, to, crease, half * 2f);
     }
 
     private static void DrawWing(ImDrawListPtr drawList, Vector2 root, float radius, float side, float flap)

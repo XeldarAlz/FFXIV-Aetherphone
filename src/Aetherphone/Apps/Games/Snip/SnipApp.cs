@@ -30,10 +30,9 @@ internal sealed class SnipApp : IMiniGame
     private const float StarFlying = 0f;
     private const float StarResting = -1f;
     private static readonly GameSpec StageSpec = new(GameId, L.Snip.Title, GameGenre.Puzzle, L.Snip.Hook,
-        Backdrop.Paper, HudStyle.Standard, ScoreKind.Level, clocked: true, levelCount: SnipLevels.Count);
+        Backdrop.Slate, HudStyle.Standard, ScoreKind.Level, clocked: true, levelCount: SnipLevels.Count);
     private static readonly Rect WorldRect = new(Vector2.Zero, new Vector2(SnipBoard.WorldWidth, SnipBoard.WorldHeight));
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
-    private static readonly Vector4 Ink = new(0.22f, 0.20f, 0.24f, 1f);
     private static readonly Vector4 Danger = new(0.92f, 0.30f, 0.30f, 1f);
     private static readonly Vector4 Spark = new(1f, 0.86f, 0.52f, 1f);
     private static readonly ParticleSpec CutSparks = new(Spark, Spark with { W = 0f }, 0.06f, 4.5f, 0.35f, 6f, 2f,
@@ -551,7 +550,7 @@ internal sealed class SnipApp : IMiniGame
 
         blade.Draw(drawList, in camera, GamePalette.Lighten(Accent, 0.3f) with { W = 0.5f }, camera.Px(BladeGlowWidth),
             additive: true);
-        blade.Draw(drawList, in camera, Ink with { W = 0.85f }, camera.Px(BladeCoreWidth));
+        blade.Draw(drawList, in camera, StageInks.Strong with { W = 0.85f }, camera.Px(BladeCoreWidth));
     }
 
     private void FillHud(ImDrawListPtr drawList, in GameContext context, float scale)

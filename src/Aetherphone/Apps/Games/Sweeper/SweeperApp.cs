@@ -23,7 +23,7 @@ internal sealed class SweeperApp : IMiniGame
     private static readonly LocString[] Modes = { L.Games.Easy, L.Games.Medium, L.Games.Hard };
     private static readonly string[] ModeStatIds = { "minesweeper.easy", "minesweeper.medium", "minesweeper.hard" };
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Sweeper, GameGenre.Brain, L.Sweeper.Hook,
-        Backdrop.Paper, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds);
+        Backdrop.Slate, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds);
     private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
     private static readonly Vector4 Ember = new(0.95f, 0.40f, 0.32f, 1f);
     private static readonly Vector4 Flame = new(1f, 0.70f, 0.40f, 1f);

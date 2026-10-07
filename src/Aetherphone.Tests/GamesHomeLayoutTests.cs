@@ -135,7 +135,7 @@ public sealed class GamesHomeLayoutTests
     [Fact]
     public void PostersKeepADarkGroundUnderWhiteType()
     {
-        Assert.Equal(Backdrop.Nebula, PosterCard.PosterBackdrop(Backdrop.Paper));
+        Assert.Equal(Backdrop.Nebula, PosterCard.PosterBackdrop(Backdrop.Slate));
         Assert.Equal(Backdrop.Nebula, PosterCard.PosterBackdrop(Backdrop.Meadow));
         Assert.Equal(Backdrop.Neon, PosterCard.PosterBackdrop(Backdrop.Neon));
         Assert.Equal(Backdrop.Sky, PosterCard.PosterBackdrop(Backdrop.Sky));
