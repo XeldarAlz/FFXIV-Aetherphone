@@ -47,6 +47,7 @@ This page explains how the Games app hosts its mini-games and how to build a new
 | src/Aetherphone/Apps/Games/Framework/GamePad.cs | On-screen d-pad and left/fire/right pad |
 | src/Aetherphone/Apps/Games/Framework/Substeps.cs | Splits a frame delta into capped simulation substeps |
 | src/Aetherphone/Apps/Games/Framework/FixedStepClock.cs | Fixed-timestep accumulator with a catch-up cap |
+| src/Aetherphone/Apps/Games/Framework/Physics/PhysicsWorld.cs | Physics2D: rigid bodies, joints, ropes, queries and contact events on a fixed 1/120 s step (see [Physics2D](#physics2d)) |
 | src/Aetherphone/Apps/Games/Framework/PixelSprite.cs | Bitmap sprites drawn as filled runs in one color |
 | src/Aetherphone/Apps/Games/Framework/GameBanner.cs | Pop-in, hold, fade banner for "Ready" and "Wave 3" |
 | src/Aetherphone/Apps/Games/Framework/PressSurface.cs | Claims the press over a board with an invisible item so a drag never moves the phone |
@@ -346,6 +347,59 @@ World +Y pointing down matches the screen; a game that thinks in altitude negate
 ### Games with data files
 
 Word Run reads its word banks from src/Aetherphone/Words (`<code>.answers.txt` and `<code>.valid.txt`, one word per line, shipped as content next to the plugin). They are generated, never hand-edited: `tools/build-word-banks.ps1` rebuilds them from SCOWL and the FrequencyWords lists, and THIRD-PARTY-NOTICES.md records both sources. Doom keeps no data in the repo at all; `DoomAssets` downloads the shareware episode, optionally Freedoom (Phase 1 and 2), and the soundfont into the `doom` folder under the plugin's config directory, verifies them against pinned SHA-256 checksums, and also runs any commercial IWAD the player drops there (`doom.wad`, `doom2.wad`, `plutonia.wad`, `tnt.wad`).
+
+## Physics2D
+
+`PhysicsWorld` (src/Aetherphone/Apps/Games/Framework/Physics) is the shared rigid-body engine for table and toy games: pinball, peg shooters, slingshots, rope puzzles, mini golf. It has no ImGui or Dalamud types, so a board drives it and a test pins it like any other rule set. Every body lives in parallel arrays sized once by the constructor, `Step` allocates nothing, and two worlds fed the same calls in the same order stay bit-identical.
+
+### Units
+
+Metres, kilograms, seconds and radians. World +Y points down, as in `Camera2D`, so gravity defaults to `(0, 9.81)`; set `Gravity = Vector2.Zero` for a top-down course. A positive angle turns +X toward +Y (clockwise on screen). The solver tolerances (a 0.005 slop, 0.02 speculative contacts) assume moving shapes between about 0.1 and 10 units across, so scale the table to the engine rather than the other way round: a pinball ball of radius 0.15 on a 6 by 12 table works well.
+
+### Stepping
+
+`world.Step(context.DeltaSeconds)` clears last frame's contact events, then runs as many fixed 1/120 s ticks as the `FixedStepClock` owes (at most 0.1 s of catch-up), and returns the tick count. Forces applied with `ApplyForce` and `ApplyTorque` act on every tick of that call and are cleared after it, so apply them every frame. `Tick()` runs exactly one step without touching the event buffer (tests and replays). Draw with `RenderPosition(body)` and `RenderAngle(body)`, which interpolate between the last two ticks, for smooth motion on high refresh rates; read `Position` and `Angle` for rules. `Clear()` empties the world for a level restart without allocating.
+
+### Bodies
+
+Handles are `int` ids. `PhysicsWorld.Ground` (0) is a static, shapeless body at the origin for anchoring joints to the world. Ids are reused after `DestroyBody`, so drop yours when you destroy one.
+
+| Call | Shape |
+| --- | --- |
+| `CreateCircle(type, position, radius, material, flags)` | Circle |
+| `CreateBox(type, position, halfExtents, angle, material, flags)` | Oriented box |
+| `CreateSegment(start, end, material, flags)` | Static two-sided segment |
+| `CreatePolyline(points, material, closed, flags)` | Static two-sided chain (walls, course edges); vertices between segments never snag a rolling circle |
+
+`BodyType` is `Static`, `Dynamic` or `Kinematic` (moved only by `SetVelocity` and `SetAngularVelocity`, pushes dynamic bodies, ignores everything else). `PhysicsMaterial(density, restitution, friction)` mixes per pair as the larger restitution and the geometric mean of the frictions; `PhysicsMaterial.Default` is `(1, 0, 0.6)`. `BodyFlags`: `Sensor` reports overlaps and never pushes, `Bullet` sub-steps a fast circle against everything it could reach this tick (walls, flippers, pegs) so it cannot tunnel, `FixedRotation` locks the angle. Per body you also have `SetGravityScale` (a bubble lifts the candy with a negative scale), `SetDamping` (rolling resistance on a golf surface), `SetCollisionFilter(category, mask)` (two bodies collide when each one's category is in the other's mask; ramps switch layers this way), `SetTransform`, `SetVelocity`, `ApplyImpulse`, `Wake` and an `int` `Tag` for your own lookup. `ChainPoints(body)` returns a polyline's world points for drawing.
+
+### Joints and ropes
+
+- `CreateDistanceJoint(bodyA, bodyB, anchorA, anchorB)` keeps the anchors at their current distance; pass `stiffnessHertz` and `dampingRatio` for a spring instead.
+- `CreateHinge(bodyA, bodyB, pivot)` pins two bodies at a world point. `SetHingeLimits(joint, lower, upper)` and `SetHingeMotor(joint, speed, maxTorque)` make a flipper: drive it toward the upper limit while the key is held and back while it is released, every frame, and read `HingeAngle(joint)`.
+- `CreateRope(anchor, body, segments, length, anchorBody)` hangs `body` from a world point (on `Ground` unless you pass an anchor body) through `segments - 1` light circles linked by slack distance constraints, plus a direct length limit so the rope never stretches by more than a couple of percent. Each rope uses `segments - 1` bodies and `segments + 1` joints of the world's capacity (up to 64 segments, 32 ropes). `CutRope(rope, segment)` cuts one link and frees the body; `CutRopes(swipeStart, swipeEnd)` cuts every rope the swipe crosses and returns the count. Draw a rope from `RopePoint(rope, 0)` to `RopePoint(rope, RopeSegments(rope))`, skipping links where `IsRopeSegmentCut` is true. Destroying the anchor or the hanging body destroys its ropes.
+
+### Queries and events
+
+`Raycast(origin, direction, maxDistance, out RaycastHit hit, mask)` returns the nearest non-sensor body with the hit point, surface normal and distance. `OverlapCircle(center, radius, results, mask)` fills a caller span (use `stackalloc`) with every non-sensor body the circle overlaps; for a polyline that means crossing its line. `PredictPath(start, velocity, gravityScale, linearDamping, stepsPerPoint, path)` runs the same integrator as the solver, so an aiming preview matches real flight until the first contact.
+
+After `Step`, read `EventCount` and `Event(index)` (oldest first; a ring buffer of the constructor's event capacity keeps the newest). Each `ContactEvent` carries `BodyA`, `BodyB`, `Point`, `Normal` (from A to B), `Impulse` and a `Kind`: `Hit` when two solid bodies start touching (including a bullet's mid-tick hit), `SensorEnter` and `SensorExit` for sensors. Use `contact.Involves(body)` and `contact.Other(body)` rather than assuming an order. A contact that is already touching reports another `Hit` only when its impulse in one tick reaches `ImpactThreshold`, which is infinite by default; set it to your weakest plank's strength to break structures under load.
+
+### Solver
+
+Sequential impulses with 8 velocity iterations per tick, warm started from the last tick by contact feature (falling back to the nearest point on the same face), Coulomb friction clamped to the normal impulse, and a two-point block solver for box faces so stacks stand still. Bounces apply after the iterations from the approach speed measured before them, and only above 1 m/s, so resting contacts never gain energy. Penetration is removed by Baumgarte stabilisation (0.2 with a 0.005 slop) through separate position velocities that are discarded after integration, so pushing bodies apart never adds speed. Joints use the same position pass. Bodies sleep together in islands after 0.5 s below 0.05 m/s and 0.05 rad/s, and wake on contact with a moving body, a new transform, velocity, impulse, force or gravity, a motor change, a cut, or the removal of a body they rest on.
+
+### Debug view
+
+`world.Debug.Outline(body, span)` writes a body's outline in world points (24 for a circle, starting at its angle so a spoke shows rotation, 4 for a box, the chain for a polyline) and `Debug.IsClosed(body)` says whether to close it. `Debug.ContactCount`, `ContactPosition(index)` and `ContactNormal(index)` show this tick's contacts, and `Debug.JointAnchors(joint, out a, out b)` the joint anchors. The engine never draws; map the points through your `Camera2D`.
+
+### Limits
+
+- A bullet sweeps against every other body except other bullets; two bullets meeting head-on rely on the normal contact path.
+- Non-bullet bodies have no continuous collision. A fast box can pass through a thin wall, so mark small fast things as bullets and keep walls thicker than one tick of travel.
+- A box sliding along a polyline that bends at a vertex can catch on it; flat runs of collinear segments are smooth.
+- Polylines and segments are static. Moving walls are kinematic boxes.
+- Capacities are fixed: creating past the body, joint, chain point or rope capacity throws, contacts past the contact capacity are dropped, and events past the event capacity overwrite the oldest.
 
 ## The motion exception
 
