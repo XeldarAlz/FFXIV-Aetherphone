@@ -4740,6 +4740,7 @@
   "leaderboard.joinShort": "加入",
   "leaderboard.notOnBoards": "你未加入排行榜",
   "leaderboard.joinToSeeRanks": "加入排行榜即可查看你的排名",
+  "leaderboard.offHint": "关闭时，你的成绩只会保存在本机。",
   "coil.title": "旋珠",
   "coil.howTo": "用鼠标瞄准，点击发射。右键或空格键交换珠子。",
   "coil.hook": "向珠链发射弹珠，凑齐三颗以上消除，别让珠链到达漩涡。",

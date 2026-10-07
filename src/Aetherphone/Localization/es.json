@@ -4740,6 +4740,7 @@
   "leaderboard.joinShort": "Unirme",
   "leaderboard.notOnBoards": "No apareces en las clasificaciones",
   "leaderboard.joinToSeeRanks": "Únete a las clasificaciones para ver tus posiciones",
+  "leaderboard.offHint": "Si está desactivado, tus puntuaciones se quedan en este teléfono.",
   "coil.title": "Espiral",
   "coil.howTo": "Apunta con el ratón y haz clic para disparar. Clic derecho o Espacio cambia las canicas.",
   "coil.hook": "Dispara canicas a la cadena y junta tres o más para eliminarla antes de que llegue al vórtice.",

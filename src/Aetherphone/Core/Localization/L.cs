@@ -8373,6 +8373,7 @@ internal static class L
         public static readonly LocString JoinShort = new("leaderboard.joinShort", "Join");
         public static readonly LocString NotOnBoards = new("leaderboard.notOnBoards", "You are not on leaderboards");
         public static readonly LocString JoinToSeeRanks = new("leaderboard.joinToSeeRanks", "Join leaderboards to see your ranks");
+        public static readonly LocString OffHint = new("leaderboard.offHint", "When this is off, your scores stay on this phone.");
     }
 
     internal static class Sweeper

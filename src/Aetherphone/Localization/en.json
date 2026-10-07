@@ -4740,6 +4740,7 @@
   "leaderboard.joinShort": "Join",
   "leaderboard.notOnBoards": "You are not on leaderboards",
   "leaderboard.joinToSeeRanks": "Join leaderboards to see your ranks",
+  "leaderboard.offHint": "When this is off, your scores stay on this phone.",
   "coil.title": "Coil",
   "coil.howTo": "Aim with the mouse and click to fire. Right-click or Space swaps marbles.",
   "coil.hook": "Fire marbles into the chain and match three or more to clear it before it reaches the vortex.",

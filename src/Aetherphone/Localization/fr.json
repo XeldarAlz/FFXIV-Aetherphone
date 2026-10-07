@@ -4740,6 +4740,7 @@
   "leaderboard.joinShort": "Rejoindre",
   "leaderboard.notOnBoards": "Tu n'apparais pas dans les classements",
   "leaderboard.joinToSeeRanks": "Rejoins les classements pour voir tes rangs",
+  "leaderboard.offHint": "Quand c'est désactivé, tes scores restent sur ce téléphone.",
   "coil.title": "Spirale",
   "coil.howTo": "Visez à la souris et cliquez pour tirer. Clic droit ou Espace échange les billes.",
   "coil.hook": "Tirez des billes dans la chaîne et alignez-en trois ou plus pour l'effacer avant qu'elle n'atteigne le vortex.",

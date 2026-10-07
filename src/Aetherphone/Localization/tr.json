@@ -4740,6 +4740,7 @@
   "leaderboard.joinShort": "Katıl",
   "leaderboard.notOnBoards": "Liderlik tablolarında değilsin",
   "leaderboard.joinToSeeRanks": "Sıralamalarını görmek için liderlik tablolarına katıl",
+  "leaderboard.offHint": "Bu kapalıyken skorların bu telefonda kalır.",
   "coil.title": "Sarmal",
   "coil.howTo": "Fareyle nişan al ve ateşlemek için tıkla. Sağ tık veya Boşluk bilyeleri değiştirir.",
   "coil.hook": "Zincire misket fırlat, üç veya daha fazlasını eşleştirip girdaba ulaşmadan temizle.",
