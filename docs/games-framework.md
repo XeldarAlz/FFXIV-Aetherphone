@@ -126,7 +126,7 @@ The source of truth is the `games` array in the `GamesApp` constructor for local
 
 | Shelf | Game ids |
 | --- | --- |
-| Arcade | `whack`, `snake`, `flap`, `breakout`, `stack`, `beat`, `blade`, `hop`, `updraft`, `slice`, `spiral` |
+| Arcade | `whack`, `snake`, `flap`, `breakout`, `stack`, `beat`, `blade`, `hop`, `updraft`, `slice`, `spiral`, `pinball` |
 | Action | `skyfall`, `invaders`, `capman`, `squadron`, `doom`, `swoop` |
 | Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil` |
 | Brain | `minesweeper`, `memory`, `nonogram`, `simon`, `sudoku`, `trivia`, `wordrun` |

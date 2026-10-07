@@ -127,6 +127,9 @@ internal static class AppIconArt
             case "spiral":
                 SpiralIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "pinball":
+                PinballIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }

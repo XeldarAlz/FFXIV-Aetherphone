@@ -16,6 +16,7 @@ using Aetherphone.Apps.Games.Invaders;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Pairs;
+using Aetherphone.Apps.Games.Pinball;
 using Aetherphone.Apps.Games.Reversi;
 using Aetherphone.Apps.Games.Simon;
 using Aetherphone.Apps.Games.Skyfall;
@@ -188,6 +189,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new SwoopApp(),
             new SliceApp(),
             new SpiralApp(),
+            new PinballApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

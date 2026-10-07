@@ -19,6 +19,7 @@ public sealed class ScoresWireContractTests
         "sudoku.hard", "nonogram.easy", "nonogram.medium", "nonogram.hard", "chess", "reversi",
         "casino.barkeep",
         "slice", "slice.arcade", "spiral",
+        "pinball",
     };
 
     [Fact]

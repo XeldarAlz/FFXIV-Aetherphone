@@ -79,6 +79,7 @@ internal sealed class GamesLibrary
         new("online.connectfour", 2026, 10, 3),
         new("slice", 2026, 10, 8),
         new("spiral", 2026, 10, 8),
+        new("pinball", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -480,6 +481,7 @@ internal sealed class GamesLibrary
             case "updraft":
             case "swoop":
             case "spiral":
+            case "pinball":
                 return Score(stats.Get(gameId).BestScore, out value);
             case "match3":
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(GemSwapApp.BlitzStatId).BestScore),
