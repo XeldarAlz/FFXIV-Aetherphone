@@ -393,8 +393,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         }
 
-        if (!router.IsTransitioning && !LaunchActive && router.Current.Screen is GamesScreen.Root or GamesScreen.Shelf
-            && currentGame is not null)
+        if (!router.IsTransitioning && !LaunchActive && currentGame is not null && !GamesStack.HoldsGame(router))
         {
             CloseCurrentGame();
         }

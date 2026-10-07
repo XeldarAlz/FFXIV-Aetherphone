@@ -1,4 +1,5 @@
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Apps;
 
 namespace Aetherphone.Apps.Games;
 
@@ -46,4 +47,20 @@ internal readonly record struct GamesRoute(GamesScreen Screen, GamesShelf Shelf,
         new(GamesScreen.Leaderboard, GamesShelf.All, gameId, statId);
 
     public static GamesShelf ShelfFor(GameGenre genre) => (GamesShelf)genre;
+}
+
+internal static class GamesStack
+{
+    public static bool HoldsGame(ViewRouter<GamesRoute> router)
+    {
+        for (var index = router.Depth - 1; index >= 0; index--)
+        {
+            if (router.TryGetView(index, out var route) && route.Screen == GamesScreen.Playing)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
