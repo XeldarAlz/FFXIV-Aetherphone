@@ -25,7 +25,7 @@ internal sealed class TrailblazeApp : IMiniGame
     private const float WingsSmoothSeconds = 0.18f;
     private const float BobStiffness = 260f;
     private const float BobDamping = 16f;
-    private const float BobPerImpact = 10f;
+    private const float BobPerImpact = 5f;
     private const float StrideRate = 0.9f;
     private const float FlapRate = 9f;
     private const float CurveAmount = 0.42f;
@@ -402,7 +402,7 @@ internal sealed class TrailblazeApp : IMiniGame
         if (board.BumpedThisStep != 0)
         {
             UiFeedback.Play(UiSound.GameHitWood);
-            fx.AddTrauma(0.22f);
+            fx.AddTrauma(0.1f);
             lean.Velocity -= board.BumpedThisStep * 5f;
             particles.Emit(DustPuff, feet + new Vector2(board.BumpedThisStep * 0.5f * view.PlayerScale, 0f), 5);
         }
@@ -457,7 +457,7 @@ internal sealed class TrailblazeApp : IMiniGame
         if (impact > TrailblazeBoard.SlamVelocity * 0.8f)
         {
             UiFeedback.Play(UiSound.GameHitSoft);
-            fx.AddTrauma(0.12f);
+            fx.AddTrauma(0.05f);
         }
     }
 
@@ -497,7 +497,7 @@ internal sealed class TrailblazeApp : IMiniGame
     {
         context.Fx.Flash(Danger, 0.45f);
         context.Fx.Vignette(Danger, 0.3f, 0.8f);
-        fx.AddTrauma(board.Death == TrailblazeDeath.Crash ? 0.75f : 0.4f);
+        fx.AddTrauma(board.Death == TrailblazeDeath.Crash ? 0.45f : 0.25f);
         if (board.Death == TrailblazeDeath.Crash)
         {
             UiFeedback.Play(UiSound.GameBreak);

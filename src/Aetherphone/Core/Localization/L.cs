@@ -8883,7 +8883,7 @@ internal static class L
 
     internal static class Trailblaze
     {
-        public static readonly LocString Title = new("games.trailblaze.title", "Trailblaze");
+        public static readonly LocString Title = new("games.trailblaze.title", "Choco Surfer");
         public static readonly LocString Hook = new("games.trailblaze.hook", "Swipe or use the arrow keys to switch lanes, jump the pits and slide under the beams as your chocobo races on.");
         public static readonly LocString Distance = new("games.trailblaze.distance", "Distance");
         public static readonly LocString Metres = new("games.trailblaze.metres", "{0} m");
