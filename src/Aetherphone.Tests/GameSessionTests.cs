@@ -781,6 +781,161 @@ public sealed class GameSessionTests
         Assert.Equal(5, session.Best);
     }
 
+    private static readonly LocString[] CourseModes = { new("t.eighteen", "18 holes"), new("t.nine", "9 holes") };
+    private static readonly string[] CourseStatIds = { "minigolf", "minigolf.nine" };
+    private static readonly bool[] CourseUnranked = { false, true };
+    private static readonly LocString Strokes = new("t.strokes", "Strokes");
+
+    private static GameSpec CourseSpec(int seats = 1) =>
+        new("minigolf", new LocString("t.golf", "Mini Golf"), GameGenre.Arcade, kind: ScoreKind.Count,
+            modes: CourseModes, modeStatIds: CourseStatIds, seats: seats, unit: Strokes,
+            unrankedModes: CourseUnranked);
+
+    [Fact]
+    public void CountOutcomesAreStoredLikeTimesAndReadBackAsTheBest()
+    {
+        var session = Build(out var configuration, out var sink, new FixedRank
+        {
+            Rank = new GameRank(4, 90, 0, 0, RankState.Ranked),
+        });
+        session.Begin(CourseSpec(), new GameStart(0, 5, false));
+        session.Play();
+
+        session.Finish(new GameOutcome(58, ScoreKind.Count, "minigolf"));
+
+        Assert.True(session.NewBest);
+        Assert.Equal(58, configuration.GameStats[0].BestTimeSeconds);
+        Assert.Equal(0, configuration.GameStats[0].BestScore);
+        Assert.Equal(ScoreKind.Count, sink.Last.Kind);
+        Assert.Equal(58, sink.Last.Value);
+        Assert.Equal(58, session.Best);
+        Assert.Equal("minigolf", session.LeaderboardStatId);
+        Assert.Equal(4, session.Rank.Rank);
+
+        session.Play();
+        session.Finish(new GameOutcome(61, ScoreKind.Count, "minigolf"));
+        Assert.False(session.NewBest);
+        Assert.Equal(58, session.Stats.Best("minigolf", ScoreKind.Count));
+        Assert.Equal(StageHud.ValueLabel(58, ScoreKind.Count), GameNumber.Label(58));
+        Assert.Equal("Strokes", Loc.T(session.Spec.LabelFor(session.Mode)!.Value));
+    }
+
+    [Fact]
+    public void ACountSecondaryLandsLikeATimeAndMapsToTheWireTimeKind()
+    {
+        var session = Build(out _, out var sink);
+        session.Begin(Spec(kind: ScoreKind.Time), new GameStart(0, 5, false));
+        session.Play();
+
+        session.Finish(new GameOutcome(42, ScoreKind.Time, "memory")
+            .WithSecondary("memory.attempts", 14, ScoreKind.Count));
+
+        Assert.Equal(14, session.Stats.Get("memory.attempts").BestTimeSeconds);
+        Assert.Equal(14, session.SecondaryBest("memory.attempts", ScoreKind.Count));
+        Assert.Equal(ScoreKind.Time, ScoreKinds.Wire(ScoreKind.Count));
+        Assert.Equal(ScoreKind.Score, ScoreKinds.Wire(ScoreKind.Score));
+        Assert.True(ScoreKinds.LowerIsBetter(ScoreKind.Count));
+        Assert.False(ScoreKinds.LowerIsBetter(ScoreKind.Level));
+        Assert.Equal("minigolf", ScoreStatIds.LeaderboardId("minigolf", "minigolf", ScoreKind.Count));
+        Assert.Equal("minigolf", ScoreStatIds.LeaderboardId("minigolf.nine", "minigolf", ScoreKind.Count));
+        Assert.Equal("memory.attempts", ScoreStatIds.LeaderboardId("memory.attempts", "memory", ScoreKind.Count));
+        Assert.Equal(string.Empty, ScoreStatIds.LeaderboardId("minigolf.nine", "minigolf", ScoreKind.Score));
+    }
+
+    [Fact]
+    public void AnUnrankedModeShowsNoRankAndRecordsNothing()
+    {
+        var session = Build(out var configuration, out var sink, new FixedRank
+        {
+            Rank = new GameRank(2, 40, 0, 0, RankState.Ranked),
+        });
+        session.Begin(CourseSpec(), new GameStart(1, 5, false));
+
+        Assert.False(session.RankedMode);
+        Assert.Equal(string.Empty, session.LeaderboardStatId);
+        Assert.Equal(RankState.Unknown, session.Rank.State);
+
+        session.SelectMode(0);
+        Assert.True(session.RankedMode);
+        Assert.Equal("minigolf", session.LeaderboardStatId);
+        Assert.Equal(RankState.Ranked, session.Rank.State);
+
+        session.SelectMode(1);
+        session.Play();
+        session.Finish(new GameOutcome(30, ScoreKind.Count, "minigolf.nine"));
+
+        Assert.True(session.Unranked);
+        Assert.Equal(0, sink.Count);
+        Assert.False(session.NewBest);
+        Assert.Empty(configuration.GameStats);
+    }
+
+    [Fact]
+    public void SoloOnlyModesHideOnceTheIntroPicksMorePlayers()
+    {
+        var spec = new GameSpec("luckydraw", new LocString("t.draw", "Lucky Draw"), GameGenre.Tabletop,
+            kind: ScoreKind.Streak, modes: Tiers, seats: 6, modesSoloOnly: true);
+        var session = Build(out _, out _);
+        session.Begin(spec, new GameStart(0, 5, false));
+
+        Assert.True(session.ShowsModes);
+        session.SelectSeats(3);
+        Assert.False(session.ShowsModes);
+        session.SelectSeats(1);
+        Assert.True(session.ShowsModes);
+
+        var shared = Build(out _, out _);
+        shared.Begin(CourseSpec(seats: 4), new GameStart(0, 5, false));
+        shared.SelectSeats(2);
+        Assert.True(shared.ShowsModes);
+    }
+
+    [Fact]
+    public void AWonLevelWithNoStarsStillClearsWithOne()
+    {
+        var session = Build(out _, out var sink);
+        session.Begin(LevelSpec(), new GameStart(0, 5, false));
+        session.Play();
+
+        session.Finish(new GameOutcome(0, ScoreKind.Level, "fling").WithStars(0));
+
+        Assert.Equal(1, session.LevelStars);
+        Assert.Equal(1, session.Stats.Stars("fling", 1));
+        Assert.True(session.Stats.IsUnlocked("fling", 2));
+        Assert.True(session.CanAdvance);
+        Assert.Equal(1, sink.Last.Value);
+
+        var lost = Build(out _, out _);
+        lost.Begin(LevelSpec(), new GameStart(0, 5, false));
+        lost.Play();
+        lost.Finish(new GameOutcome(0, ScoreKind.Level, "fling", won: false).WithStars(0));
+        Assert.Equal(0, lost.LevelStars);
+        Assert.False(lost.Stats.IsUnlocked("fling", 2));
+    }
+
+    [Fact]
+    public void ModeLabelsOverrideTheUnitPerMode()
+    {
+        var waves = new LocString("t.waves", "Waves");
+        var labels = new[] { new LocString("t.stars", "Stars"), waves };
+        var spec = new GameSpec("siege", new LocString("t.siege", "Siege"), GameGenre.Strategy, kind: ScoreKind.Level,
+            modes: PackModes, modeLabels: labels, unit: Strokes);
+
+        Assert.Equal("Stars", Loc.T(spec.LabelFor(0)!.Value));
+        Assert.Equal("Waves", Loc.T(spec.LabelFor(1)!.Value));
+        Assert.Equal("Strokes", Loc.T(CourseSpec().LabelFor(1)!.Value));
+        Assert.Null(Spec().LabelFor(0));
+    }
+
+    [Fact]
+    public void StarTotalsReadAsStarsOfThePack()
+    {
+        Assert.Equal(90, StarTotal.Max(30));
+        Assert.Equal(0, StarTotal.Max(-2));
+        Assert.Equal(Loc.T(L.Stage.StarsTotal, "12", "90"), StarTotal.Label(12, 30));
+        Assert.Equal("12 / 90 stars", StarTotal.Label(12, 30));
+    }
+
     [Fact]
     public void SeatsCarryOneLocalizedNameAndAColourEach()
     {

@@ -79,7 +79,12 @@ internal sealed class GameSession
 
     public ScoreKind Kind => Spec.KindFor(Mode);
 
-    public string LeaderboardStatId => ScoreStatIds.LeaderboardId(StatId, Spec.Id, Kind);
+    public bool RankedMode => !Spec.UnrankedFor(Mode);
+
+    public bool ShowsModes => Spec.ShowsModes(Seats);
+
+    public string LeaderboardStatId =>
+        RankedMode ? ScoreStatIds.LeaderboardId(StatId, Spec.Id, Kind) : string.Empty;
 
     public GameStart Start => new(Mode, Seed, Daily, Level, Seats);
 
@@ -313,7 +318,7 @@ internal sealed class GameSession
         HandoffPending = false;
         var statId = outcome.StatId.Length > 0 ? outcome.StatId : StatId;
         var value = outcome.Value;
-        if (outcome.IsUnranked || HotSeat)
+        if (outcome.IsUnranked || HotSeat || !RankedMode)
         {
             FinishUnranked(statId, value);
             return;
@@ -322,7 +327,7 @@ internal sealed class GameSession
         var submits = true;
         if (outcome.HasStars && HasLevels && Level > 0)
         {
-            LevelStars = outcome.Stars;
+            LevelStars = ClearedStars(outcome);
             stats.SetStars(Spec.Id, Level, LevelStars);
             if (outcome.Kind == ScoreKind.Level)
             {
@@ -332,13 +337,13 @@ internal sealed class GameSession
 
         switch (outcome.Kind)
         {
-            case ScoreKind.Time when !outcome.Won:
+            case ScoreKind.Time or ScoreKind.Count when !outcome.Won:
                 stats.CompleteDaily(statId);
                 NewBest = false;
                 submits = false;
                 break;
-            case ScoreKind.Time:
-                NewBest = stats.SubmitTime(statId, value);
+            case ScoreKind.Time or ScoreKind.Count:
+                NewBest = stats.SubmitBest(statId, value, outcome.Kind);
                 break;
             case ScoreKind.Streak when outcome.IsDraw:
                 stats.CompleteDaily(statId);
@@ -366,15 +371,7 @@ internal sealed class GameSession
 
         if (outcome.HasSecondary)
         {
-            if (outcome.SecondaryKind == ScoreKind.Time)
-            {
-                stats.SubmitTime(outcome.SecondaryStatId, outcome.SecondaryValue);
-            }
-            else
-            {
-                stats.SubmitScore(outcome.SecondaryStatId, outcome.SecondaryValue);
-            }
-
+            stats.SubmitBest(outcome.SecondaryStatId, outcome.SecondaryValue, outcome.SecondaryKind);
             sink.Submit(new ScoreSubmission(outcome.SecondaryStatId, outcome.SecondaryValue, outcome.SecondaryKind,
                 Seed, Daily, Spec.Id));
         }
@@ -399,13 +396,7 @@ internal sealed class GameSession
             return false;
         }
 
-        var improved = kind switch
-        {
-            ScoreKind.Time => stats.SubmitTime(statId, value),
-            ScoreKind.Streak => stats.SubmitStreak(statId, value),
-            _ => stats.SubmitScore(statId, value),
-        };
-        if (!improved)
+        if (!stats.SubmitBest(statId, value, kind))
         {
             return false;
         }
@@ -457,14 +448,13 @@ internal sealed class GameSession
             : stats.NextLevel(Spec.Id, count);
     }
 
+    public int SecondaryBest(string statId, ScoreKind kind = ScoreKind.Score) => stats.Best(statId, kind);
+
+    private static int ClearedStars(in GameOutcome outcome) =>
+        outcome.Won && !outcome.IsDraw ? Math.Max(1, outcome.Stars) : outcome.Stars;
+
     private void LoadBest()
     {
-        var record = stats.Get(StatId);
-        Best = Kind switch
-        {
-            ScoreKind.Time => record.BestTimeSeconds,
-            ScoreKind.Streak => record.Streak,
-            _ => record.BestScore,
-        };
+        Best = stats.Best(StatId, Kind);
     }
 }

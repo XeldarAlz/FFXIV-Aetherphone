@@ -39,6 +39,24 @@ public sealed class LeaderboardStoreTests
     }
 
     [Fact]
+    public void CountSubmissionsQueueUnderTheWireTimeKind()
+    {
+        var queue = Build(out var configuration);
+
+        Assert.True(queue.Enqueue(Submission("minigolf", 58, ScoreKind.Count), Now));
+        Assert.False(queue.Enqueue(Submission("minigolf", 61, ScoreKind.Count), Now));
+        Assert.True(queue.Enqueue(Submission("minigolf", 54, ScoreKind.Count), Now + 1));
+        Assert.True(queue.Enqueue(Submission("memory.attempts", 14, ScoreKind.Count, "memory"), Now));
+        Assert.False(queue.Enqueue(Submission("minigolf.nine", 30, ScoreKind.Score, "minigolf"), Now));
+
+        Assert.Equal(2, queue.Count);
+        Assert.Equal("minigolf", configuration.PendingScoreUploads[0].StatId);
+        Assert.Equal(54, configuration.PendingScoreUploads[0].Value);
+        Assert.Equal(ScoreKind.Time, configuration.PendingScoreUploads[0].Kind);
+        Assert.Equal(ScoreKind.Time, configuration.PendingScoreUploads[1].Kind);
+    }
+
+    [Fact]
     public void UnknownStatIdsAndEmptyValuesAreIgnored()
     {
         var queue = Build(out var configuration);
@@ -360,6 +378,7 @@ public sealed class LeaderboardStoreTests
         configuration.GameStats.Add(Record("memory.attempts", bestTime: 14));
         configuration.GameStats.Add(Record("solitaire.vegas", bestScore: 300));
         configuration.GameStats.Add(Record("doom", bestScore: 100));
+        configuration.GameStats.Add(Record("casino.barkeep", bestScore: 2400));
         configuration.GameStats.Add(Record("snake"));
         Assert.True(queue.Enqueue(Submission("tetris", 800), Now));
         var participation = new LeaderboardParticipation();
@@ -384,6 +403,7 @@ public sealed class LeaderboardStoreTests
         Assert.Equal("memory.attempts", pending[3].StatId);
         Assert.Equal(14, pending[3].Value);
         Assert.False(queue.IsQueued("solitaire"));
+        Assert.False(queue.IsQueued("casino.barkeep"));
 
         Assert.Equal(ParticipationChange.None, participation.Observe("u1", true));
         Assert.Equal(0, queue.EnqueueLocalBests(configuration.GameStats, Now + 1));

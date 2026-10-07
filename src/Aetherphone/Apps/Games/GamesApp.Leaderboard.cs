@@ -45,6 +45,7 @@ internal sealed partial class GamesApp
     private readonly string[] leaderboardSpanLabels = new string[LeaderboardSpanNames.Length];
     private IMiniGame? leaderboardGame;
     private string[] leaderboardModeStatIds = Array.Empty<string>();
+    private ScoreKind[] leaderboardModeKinds = Array.Empty<ScoreKind>();
     private LocString[] leaderboardModeNames = Array.Empty<LocString>();
     private string[] leaderboardModeLabels = Array.Empty<string>();
     private LeaderboardKey leaderboardKey;
@@ -82,7 +83,35 @@ internal sealed partial class GamesApp
     private string CurrentLeaderboardStatId() =>
         leaderboardModeStatIds.Length > 0 ? leaderboardModeStatIds[leaderboardMode] : string.Empty;
 
+    private ScoreKind CurrentLeaderboardKind() =>
+        leaderboardModeKinds.Length > 0 ? leaderboardModeKinds[leaderboardMode] : ScoreKind.Score;
+
     private void BuildLeaderboardModes(in GameSpec spec)
+    {
+        BuildLeaderboardModeIds(spec);
+        leaderboardModeKinds = new ScoreKind[leaderboardModeStatIds.Length];
+        for (var index = 0; index < leaderboardModeKinds.Length; index++)
+        {
+            leaderboardModeKinds[index] = LeaderboardKind(spec, leaderboardModeStatIds[index]);
+        }
+    }
+
+    private static ScoreKind LeaderboardKind(in GameSpec spec, string statId)
+    {
+        var modes = Math.Max(1, spec.Modes.Length);
+        for (var mode = 0; mode < modes; mode++)
+        {
+            var modeBoard = ScoreStatIds.LeaderboardId(spec.StatIdFor(mode), spec.Id, spec.KindFor(mode));
+            if (string.Equals(modeBoard, statId, StringComparison.Ordinal))
+            {
+                return spec.KindFor(mode);
+            }
+        }
+
+        return ScoreStatIds.KindOf(statId);
+    }
+
+    private void BuildLeaderboardModeIds(in GameSpec spec)
     {
         if (spec.HasModes)
         {
@@ -134,7 +163,9 @@ internal sealed partial class GamesApp
         var count = 0;
         for (var index = 0; index < spec.Modes.Length; index++)
         {
-            var id = ScoreStatIds.LeaderboardId(spec.StatIdFor(index), spec.Id, spec.KindFor(index));
+            var id = spec.UnrankedFor(index)
+                ? string.Empty
+                : ScoreStatIds.LeaderboardId(spec.StatIdFor(index), spec.Id, spec.KindFor(index));
             if (id.Length == 0 || Array.IndexOf(ids, id, 0, count) >= 0)
             {
                 continue;
@@ -384,8 +415,7 @@ internal sealed partial class GamesApp
         }
 
         var entries = data.Entries ?? Array.Empty<GameLeaderboardEntryDto>();
-        var kind = ScoreStatIds.KindOf(CurrentLeaderboardStatId());
-        LabelLeaderboard(data, entries, kind);
+        LabelLeaderboard(data, entries, CurrentLeaderboardKind());
         if (entries.Length == 0)
         {
             var block = new Rect(new Vector2(left, top), new Vector2(left + width, top + LeaderboardBlockHeight * scale));

@@ -8317,6 +8317,7 @@ internal static class L
         public static readonly LocString KindTime = new("gamesHub.kindTime", "Best time");
         public static readonly LocString KindLevel = new("gamesHub.kindLevel", "Highest level");
         public static readonly LocString KindStreak = new("gamesHub.kindStreak", "Win streak");
+        public static readonly LocString KindStars = new("gamesHub.kindStars", "Stars collected");
         public static readonly LocString SignInTitle = new("gamesHub.signInTitle", "Sign in to play together");
         public static readonly LocString OpenSettings = new("gamesHub.openSettings", "Open Settings");
         public static readonly LocString Players = new("gamesHub.players", "Players");
@@ -8359,6 +8360,7 @@ internal static class L
         public static readonly LocString Retry = new("stage.retry", "Retry");
         public static readonly LocString TotalStars = new("stage.totalStars", "Total stars");
         public static readonly LocString StarsOf = new("stage.starsOf", "{0} / {1}");
+        public static readonly LocString StarsTotal = new("stage.starsTotal", "{0} / {1} stars");
         public static readonly LocString Players = new("stage.players", "Players");
         public static readonly LocString PlayerName = new("stage.playerName", "Player {0}");
         public static readonly LocString PassTo = new("stage.passTo", "Pass to {0}");
@@ -9111,7 +9113,6 @@ internal static class L
         public static readonly LocString TipDigger = new("games.siege.tipDigger", "Diggers tunnel under your first defender and pop up behind it.");
         public static readonly LocString TipBoss = new("games.siege.tipBoss", "The King Mandragora is huge, slow, and calls for help.");
         public static readonly LocString TipEndless = new("games.siege.tipEndless", "Endless waves that keep growing. How long can your garden hold?");
-        public static readonly LocString StarsRecord = new("games.siege.starsRecord", "{0} stars");
         public static readonly LocString WavesRecord = new("games.siege.wavesRecord", "{0} waves");
     }
 
@@ -9191,7 +9192,6 @@ internal static class L
         public static readonly LocString Perfect = new("games.snip.perfect", "All three stars!");
         public static readonly LocString Shattered = new("games.snip.shattered", "Shattered!");
         public static readonly LocString Missed = new("games.snip.missed", "Missed!");
-        public static readonly LocString StarCount = new("games.snip.starCount", "{0} stars");
     }
 
     internal static class MiniGolf

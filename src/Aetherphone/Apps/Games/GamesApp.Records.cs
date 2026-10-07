@@ -263,7 +263,7 @@ internal sealed partial class GamesApp
         var valueSize = Typography.Measure(value, TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(row.Max.X - valueSize.X, textTop), value, ui.TitleInk,
             TextStyles.Headline);
-        var kind = Typography.FitText(Loc.T(KindLabel(library.BestKind(entryIndex))), valueWidth, TextStyles.Footnote);
+        var kind = Typography.FitText(Loc.T(library.KindLabel(entryIndex)), valueWidth, TextStyles.Footnote);
         var kindSize = Typography.Measure(kind, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(row.Max.X - kindSize.X, textTop + titleHeight), kind, ui.MutedInk,
             TextStyles.Footnote);
@@ -452,12 +452,4 @@ internal sealed partial class GamesApp
             Typography.FitText(rankLines[rowIndex], textWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
         return UiInteract.Click(hit.Min, hit.Max, hovered);
     }
-
-    private static LocString KindLabel(RecordKind kind) => kind switch
-    {
-        RecordKind.Time => L.GamesHub.KindTime,
-        RecordKind.Level => L.GamesHub.KindLevel,
-        RecordKind.Streak => L.GamesHub.KindStreak,
-        _ => L.GamesHub.KindScore,
-    };
 }

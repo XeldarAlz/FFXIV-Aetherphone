@@ -37,7 +37,7 @@ internal sealed class StagePause
     }
 
     public PauseAction Draw(ImDrawListPtr drawList, Rect full, PhoneTheme theme, Vector4 accent, float deltaSeconds,
-        bool shown, float scale)
+        bool shown, bool leaderboard, float scale)
     {
         veil.Step(shown ? 1f : 0f, FadeSeconds, deltaSeconds);
         var alpha = Alpha;
@@ -50,18 +50,19 @@ internal sealed class StagePause
         var buttonHeight = ButtonHeight * scale;
         var gap = ButtonGap * scale;
         var titleHeight = Typography.LineHeight(TextStyles.Title2);
-        var stackHeight = titleHeight + TitleGap * scale + ButtonCount * buttonHeight + (ButtonCount - 1) * gap;
+        var buttons = leaderboard ? ButtonCount : ButtonCount - 1;
+        var stackHeight = titleHeight + TitleGap * scale + buttons * buttonHeight + (buttons - 1) * gap;
         var top = full.Center.Y - stackHeight * 0.5f;
         var centerX = full.Center.X;
         Typography.DrawCentered(drawList, new Vector2(centerX, top + titleHeight * 0.5f), Loc.T(L.Games.Paused),
-            new Vector4(1f, 1f, 1f, alpha), TextStyles.Title2);
+            StageInks.Strong with { W = alpha }, TextStyles.Title2);
         if (alpha < ActiveThreshold)
         {
             return PauseAction.None;
         }
 
         var size = new Vector2(ButtonWidth * scale, buttonHeight);
-        var secondary = Palette.Mix(theme.SurfaceMuted, accent, 0.18f);
+        var secondary = Palette.Mix(StageInks.Surface, accent, 0.18f);
         var y = top + titleHeight + TitleGap * scale + buttonHeight * 0.5f;
         if (GameHud.Button(new Vector2(centerX, y), size, Loc.T(L.Stage.Resume), accent, theme))
         {
@@ -75,12 +76,16 @@ internal sealed class StagePause
         }
 
         y += buttonHeight + gap;
-        if (GameHud.Button(new Vector2(centerX, y), size, Loc.T(L.Stage.Leaderboard), secondary, theme))
+        if (leaderboard)
         {
-            return PauseAction.Leaderboard;
+            if (GameHud.Button(new Vector2(centerX, y), size, Loc.T(L.Stage.Leaderboard), secondary, theme))
+            {
+                return PauseAction.Leaderboard;
+            }
+
+            y += buttonHeight + gap;
         }
 
-        y += buttonHeight + gap;
         if (GameHud.Button(new Vector2(centerX, y), size, Loc.T(L.Stage.Quit), secondary, theme))
         {
             return PauseAction.Quit;
