@@ -454,6 +454,10 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public string MessageWallpaper { get; set; } = string.Empty;
     public bool MessageWallpaperPattern { get; set; } = true;
     public Dictionary<string, string> MessageChatWallpapers { get; set; } = new();
+    public float MessagePopoutOpacity { get; set; } = 1f;
+    public float MessagePopoutTextScale { get; set; } = 1f;
+    public bool MessagePopoutFade { get; set; }
+    public float MessagePopoutIdleOpacity { get; set; } = 0.62f;
     public string LinkpearlChatTheme { get; set; } = string.Empty;
     public string LinkpearlWallpaper { get; set; } = string.Empty;
     public bool LinkpearlWallpaperPattern { get; set; } = true;

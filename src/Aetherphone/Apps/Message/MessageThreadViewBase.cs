@@ -117,8 +117,10 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
         var conversationId = messages.CurrentThreadId ?? string.Empty;
         ChatWallpapers.Paint(ImGui.GetWindowDrawList(), listRect,
             ChatWallpapers.Effective(configuration.MessageChatWallpapers, configuration.MessageWallpaper,
-                conversationId), configuration.MessageWallpaperPattern, wallpapers);
+                conversationId), configuration.MessageWallpaperPattern, wallpapers, BackdropAlpha);
     }
+
+    protected virtual float BackdropAlpha => 1f;
 
     protected override bool IsDeleted(ChatMessageDto message) => message.Deleted;
 
