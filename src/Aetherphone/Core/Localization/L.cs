@@ -8966,7 +8966,7 @@ internal static class L
 
     internal static class MoogleClicker
     {
-        public static readonly LocString Title = new("games.moogleclicker.title", "Moogle Clicker");
+        public static readonly LocString Title = new("games.moogleclicker.title", "Kupo Clicker");
         public static readonly LocString Hook = new("games.moogleclicker.hook", "Tap the moogle for kupo, hire a workshop that keeps earning while you play, and close the ledger for stamps.");
         public static readonly LocString Kupo = new("games.moogleclicker.kupo", "Kupo");
         public static readonly LocString PerSecond = new("games.moogleclicker.perSecond", "{0}/s");
