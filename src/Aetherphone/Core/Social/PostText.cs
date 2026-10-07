@@ -20,17 +20,17 @@ internal static class PostText
         return maxWeight - CountLineBreaks(text) * (LineBreakCost - 1);
     }
 
-    public static bool CanBreak(string text, int cursor, int maxWeight)
+    public static PostBreak CanBreak(string text, int cursor, int maxWeight)
     {
         if (Weight(text) + LineBreakCost > maxWeight)
         {
-            return false;
+            return PostBreak.NoRoom;
         }
 
         var position = Math.Clamp(cursor, 0, text.Length);
         if (BreaksBefore(text, position) + BreaksFrom(text, position) + 1 > MaxConsecutiveBreaks)
         {
-            return false;
+            return PostBreak.BlankRun;
         }
 
         var candidate = string.Concat(text.AsSpan(0, position), "\n", text.AsSpan(position));
@@ -40,7 +40,7 @@ internal static class PostText
             lines++;
         }
 
-        return lines <= MaxLines;
+        return lines <= MaxLines ? PostBreak.Allowed : PostBreak.LineCap;
     }
 
     public static string Fit(string text, int maxWeight, ref int cursor)

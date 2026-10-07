@@ -291,6 +291,7 @@
   "social.quotedPhoto": "quoted your photo",
   "social.viewProfile": "View profile",
   "social.viewHashtag": "View tag",
+  "social.lineLimit": "Posts can have up to {0} lines",
   "social.hashtagEmpty": "No posts with this tag yet",
   "social.blockAction": "Block",
   "social.blockConfirmTitle": "Block {0}?",

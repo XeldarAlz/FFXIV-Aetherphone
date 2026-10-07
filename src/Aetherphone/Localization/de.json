@@ -291,6 +291,7 @@
   "social.quotedPhoto": "hat dein Foto zitiert",
   "social.viewProfile": "Profil ansehen",
   "social.viewHashtag": "Tag ansehen",
+  "social.lineLimit": "Beiträge können bis zu {0} Zeilen haben",
   "social.hashtagEmpty": "Noch keine Beiträge mit diesem Tag",
   "social.blockAction": "Blockieren",
   "social.blockConfirmTitle": "{0} blockieren?",

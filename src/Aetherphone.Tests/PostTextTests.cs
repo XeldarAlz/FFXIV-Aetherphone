@@ -21,8 +21,8 @@ public sealed class PostTextTests
     [Fact]
     public void AFifthLineIsTheLastOneAllowed()
     {
-        Assert.True(PostText.CanBreak("a\nb\nc\nd", 7, 100));
-        Assert.False(PostText.CanBreak("a\nb\nc\nd\ne", 9, 100));
+        Assert.Equal(PostBreak.Allowed, PostText.CanBreak("a\nb\nc\nd", 7, 100));
+        Assert.Equal(PostBreak.LineCap, PostText.CanBreak("a\nb\nc\nd\ne", 9, 100));
     }
 
     [Fact]
@@ -30,16 +30,16 @@ public sealed class PostTextTests
     {
         const string text = "a\n\nb\n\nc\n\nd";
 
-        Assert.True(PostText.CanBreak(text, text.Length, 100));
-        Assert.False(PostText.CanBreak(text + "\n\ne", text.Length + 3, 100));
+        Assert.Equal(PostBreak.Allowed, PostText.CanBreak(text, text.Length, 100));
+        Assert.Equal(PostBreak.LineCap, PostText.CanBreak(text + "\n\ne", text.Length + 3, 100));
     }
 
     [Fact]
     public void OnlyOneBlankLineFitsBetweenParagraphs()
     {
-        Assert.False(PostText.CanBreak("a\n\nb", 3, 100));
-        Assert.False(PostText.CanBreak("a\n\nb", 2, 100));
-        Assert.True(PostText.CanBreak("a\nb", 2, 100));
+        Assert.Equal(PostBreak.BlankRun, PostText.CanBreak("a\n\nb", 3, 100));
+        Assert.Equal(PostBreak.BlankRun, PostText.CanBreak("a\n\nb", 2, 100));
+        Assert.Equal(PostBreak.Allowed, PostText.CanBreak("a\nb", 2, 100));
     }
 
     [Fact]
@@ -47,15 +47,15 @@ public sealed class PostTextTests
     {
         const string text = "a\nb\nc\nd\ne";
 
-        Assert.True(PostText.CanBreak(text, text.Length - 1, 100));
-        Assert.False(PostText.CanBreak(text, text.Length, 100));
+        Assert.Equal(PostBreak.Allowed, PostText.CanBreak(text, text.Length - 1, 100));
+        Assert.Equal(PostBreak.LineCap, PostText.CanBreak(text, text.Length, 100));
     }
 
     [Fact]
     public void ALineBreakNeedsRoomForBothOfItsCharacters()
     {
-        Assert.True(PostText.CanBreak("abcdefgh", 8, 10));
-        Assert.False(PostText.CanBreak("abcdefghi", 9, 10));
+        Assert.Equal(PostBreak.Allowed, PostText.CanBreak("abcdefgh", 8, 10));
+        Assert.Equal(PostBreak.NoRoom, PostText.CanBreak("abcdefghi", 9, 10));
     }
 
     [Fact]

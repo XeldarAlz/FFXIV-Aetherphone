@@ -107,6 +107,7 @@ internal static class L
         public static readonly LocString QuotedPhoto = new("social.quotedPhoto", "quoted your photo");
         public static readonly LocString ViewProfile = new("social.viewProfile", "View profile");
         public static readonly LocString ViewHashtag = new("social.viewHashtag", "View tag");
+        public static readonly LocString LineLimit = new("social.lineLimit", "Posts can have up to {0} lines");
         public static readonly LocString HashtagEmpty = new("social.hashtagEmpty", "No posts with this tag yet");
         public static readonly LocString BlockAction = new("social.blockAction", "Block");
         public static readonly LocString BlockConfirmTitle = new("social.blockConfirmTitle", "Block {0}?");

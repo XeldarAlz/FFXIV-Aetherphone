@@ -291,6 +291,7 @@
   "social.quotedPhoto": "引用了你的照片",
   "social.viewProfile": "查看资料",
   "social.viewHashtag": "查看标签",
+  "social.lineLimit": "帖子最多可以有 {0} 行",
   "social.hashtagEmpty": "还没有带此标签的帖子",
   "social.blockAction": "屏蔽",
   "social.blockConfirmTitle": "要屏蔽 {0} 吗？",

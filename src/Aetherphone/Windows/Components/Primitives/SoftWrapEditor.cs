@@ -1,5 +1,6 @@
 using System.Text;
 using Aetherphone.Core;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Dalamud.Bindings.ImGui;
 
@@ -30,6 +31,7 @@ internal sealed class SoftWrapEditor
     private int maxBytes;
     private bool pendingSync;
     private bool enterPressed;
+    private bool lineCapHit;
 
     public SoftWrapEditor(SoftWrapLines lines = SoftWrapLines.SubmitOnReturn, bool completesOnTab = false)
     {
@@ -107,6 +109,7 @@ internal sealed class SoftWrapEditor
         maxCharacters = characterLimit;
         maxBytes = byteLimit;
         enterPressed = false;
+        lineCapHit = false;
         Edited = false;
         CompletionRequested = false;
         var display = wrapped.Display;
@@ -124,6 +127,11 @@ internal sealed class SoftWrapEditor
         if (clipped)
         {
             ImGui.PopClipRect();
+        }
+
+        if (lineCapHit)
+        {
+            ShellToast.Show(Loc.T(L.Social.LineLimit, PostText.MaxLines));
         }
 
         if (!ImGui.IsItemActive())
@@ -243,9 +251,11 @@ internal sealed class SoftWrapEditor
 
         if (lines == SoftWrapLines.Paragraphs)
         {
-            if (!PostText.CanBreak(text, Cursor, maxCharacters))
+            var verdict = PostText.CanBreak(text, Cursor, maxCharacters);
+            if (verdict != PostBreak.Allowed)
             {
                 data.EventChar = 0;
+                lineCapHit = verdict == PostBreak.LineCap;
             }
 
             return 0;

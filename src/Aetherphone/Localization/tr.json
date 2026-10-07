@@ -291,6 +291,7 @@
   "social.quotedPhoto": "fotoğrafından alıntı yaptı",
   "social.viewProfile": "Profili gör",
   "social.viewHashtag": "Etiketi gör",
+  "social.lineLimit": "Gönderiler en fazla {0} satır olabilir",
   "social.hashtagEmpty": "Bu etiketle henüz gönderi yok",
   "social.blockAction": "Engelle",
   "social.blockConfirmTitle": "{0} engellensin mi?",

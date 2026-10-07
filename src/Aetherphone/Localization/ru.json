@@ -291,6 +291,7 @@
   "social.quotedPhoto": "процитировал(а) ваше фото",
   "social.viewProfile": "Открыть профиль",
   "social.viewHashtag": "Посмотреть тег",
+  "social.lineLimit": "В публикации может быть не больше {0} строк",
   "social.hashtagEmpty": "Постов с этим тегом пока нет",
   "social.blockAction": "Заблокировать",
   "social.blockConfirmTitle": "Заблокировать {0}?",

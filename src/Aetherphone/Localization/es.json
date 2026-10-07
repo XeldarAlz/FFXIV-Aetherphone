@@ -291,6 +291,7 @@
   "social.quotedPhoto": "citó tu foto",
   "social.viewProfile": "Ver perfil",
   "social.viewHashtag": "Ver etiqueta",
+  "social.lineLimit": "Las publicaciones pueden tener hasta {0} líneas",
   "social.hashtagEmpty": "Aún no hay publicaciones con esta etiqueta",
   "social.blockAction": "Bloquear",
   "social.blockConfirmTitle": "¿Bloquear a {0}?",
