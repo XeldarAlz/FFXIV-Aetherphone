@@ -1166,7 +1166,7 @@ internal sealed class SiegeApp : IMiniGame
             iconSize);
         Typography.Draw(drawList,
             new Vector2(left + iconSize + CapsuleIconGap * scale, rect.Center.Y - Typography.LineHeight(CapsuleStyle) * 0.5f),
-            label, context.Theme.TextStrong, CapsuleStyle);
+            label, StageInks.Strong, CapsuleStyle);
         StageHud.Bar(drawList, rect, WaveBarFraction(), barColor, scale);
     }
 

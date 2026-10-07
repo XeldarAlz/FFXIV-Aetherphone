@@ -136,8 +136,8 @@ internal static class SudokuControls
             drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(accent with { W = 0.16f }));
         }
 
-        var ink = !enabled ? theme.TextMuted with { W = DisabledAlpha } :
-            active ? GamePalette.Lighten(accent, 0.45f) : theme.TextStrong;
+        var ink = !enabled ? StageInks.Muted with { W = DisabledAlpha } :
+            active ? GamePalette.Lighten(accent, 0.45f) : StageInks.Strong;
         ProgressRing.CenterIcon(drawList, center, icon, ink, radius * 0.82f);
         if (badge is not null)
         {

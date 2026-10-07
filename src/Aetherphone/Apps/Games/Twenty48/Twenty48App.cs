@@ -452,8 +452,8 @@ internal sealed class Twenty48App : IMiniGame
         StageHud.Capsule(drawList, rect, scale);
         var canUndo = board.CanUndo && !finished && phase == Phase.Idle &&
                       context.Session.State == StageFlow.Playing;
-        var dim = theme.TextMuted with { W = 0.45f };
-        var ink = canUndo ? theme.TextStrong : dim;
+        var dim = StageInks.Muted with { W = 0.45f };
+        var ink = canUndo ? StageInks.Strong : dim;
         var iconSize = CapsuleIconSize * scale;
         var centerY = rect.Center.Y;
         var left = rect.Min.X + CapsulePadX * scale;

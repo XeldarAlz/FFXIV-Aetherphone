@@ -315,7 +315,7 @@ internal static class LuckyDrawRenderer
         var top = min.Y + pad;
         var titleHeight = Typography.LineHeight(TextStyles.Title2);
         Typography.DrawCentered(drawList, new Vector2(center.X, top + titleHeight * 0.5f),
-            Typography.FitText(title, width - pad * 2f, TextStyles.Title2), theme.TextStrong with { W = alpha },
+            Typography.FitText(title, width - pad * 2f, TextStyles.Title2), StageInks.Strong with { W = alpha },
             TextStyles.Title2);
         top += titleHeight + 10f * scale;
         var rowHeight = SheetRowHeight * scale;
@@ -366,14 +366,14 @@ internal static class LuckyDrawRenderer
         var nameWidth = MathF.Max(8f * scale, resultRight - resultWidth - 10f * scale - nameLeft);
         var lineHeight = Typography.LineHeight(TextStyles.Subheadline);
         Typography.Draw(drawList, new Vector2(nameLeft, centerY - lineHeight * 0.5f),
-            Typography.FitText(name, nameWidth, TextStyles.Subheadline), theme.TextStrong with { W = alpha },
+            Typography.FitText(name, nameWidth, TextStyles.Subheadline), StageInks.Strong with { W = alpha },
             TextStyles.Subheadline);
         var resultHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
         Typography.Draw(drawList, new Vector2(resultRight - resultWidth, centerY - resultHeight * 0.5f), resultLabel,
             resultInk with { W = alpha }, TextStyles.FootnoteEmphasized);
         var totalHeight = Typography.LineHeight(TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(row.Max.X - totalWidth, centerY - totalHeight * 0.5f), totalLabel,
-            theme.TextStrong with { W = alpha }, TextStyles.Headline);
+            StageInks.Strong with { W = alpha }, TextStyles.Headline);
         var barY = row.Max.Y - 5f * scale;
         var barHeight = 3f * scale;
         var fraction = Math.Clamp(board.Total(seat) / (float)LuckyDrawBoard.WinTarget, 0f, 1f);

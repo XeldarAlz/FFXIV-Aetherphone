@@ -127,7 +127,7 @@ internal sealed class SudokuApp : IMiniGame
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
         fx.DrawText();
-        var caption = context.Backdrop.Ink == StageInk.Dark ? GamePalette.InkDark with { W = 0.62f } : theme.TextMuted;
+        var caption = StageInks.MutedOn(context.Backdrop.Ink);
         var tool = SudokuControls.DrawTools(toolsRow, theme, caption, Accent, notesMode, board.CanUndo,
             MaxHints - hintsUsed, scale);
         var digit = SudokuControls.DrawPad(board, padRow, Accent, notesMode, scale);
@@ -469,11 +469,11 @@ internal sealed class SudokuApp : IMiniGame
             iconSize);
         left += iconSize + CapsuleIconGap * scale;
         Typography.Draw(drawList, new Vector2(left, centerY - Typography.LineHeight(CapsuleStyle) * 0.5f), timeLabel,
-            theme.TextStrong, CapsuleStyle);
+            StageInks.Strong, CapsuleStyle);
         left += textWidth * scale + CapsuleSectionGap * scale;
         var lastLife = mistakes == MaxMistakes - 1;
         var alive = lastLife ? Vector4.Lerp(Accent, theme.Danger, 0.5f + 0.5f * Pulse.Wave(Pulse.Fast)) : Accent;
-        var lost = theme.TextMuted with { W = 0.35f };
+        var lost = StageInks.Muted with { W = 0.35f };
         for (var heart = 0; heart < MaxMistakes; heart++)
         {
             var x = left + heart * (CapsuleIconSize + CapsuleHeartGap) * scale + iconSize * 0.5f;

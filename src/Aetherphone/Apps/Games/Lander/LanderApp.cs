@@ -710,7 +710,7 @@ internal sealed class LanderApp : IMiniGame
         {
             2 => LanderRenderer.Danger,
             1 => Warn,
-            _ => safe ? Safe : context.Theme.TextStrong,
+            _ => safe ? Safe : StageInks.Strong,
         };
         if (status == 2)
         {

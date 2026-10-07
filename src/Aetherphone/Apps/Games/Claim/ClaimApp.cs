@@ -611,7 +611,7 @@ internal sealed class ClaimApp : IMiniGame
         var style = TextStyles.FootnoteEmphasized;
         var textX = left + iconSize + IconGap * scale;
         Typography.Draw(drawList, new Vector2(textX, rect.Center.Y - Typography.LineHeight(style) * 0.5f), label,
-            context.Theme.TextStrong, style);
+            StageInks.Strong, style);
         var barRight = rect.Max.X - CapsulePadX * scale;
         var barLeft = barRight - BarWidth * scale;
         var barHalf = BarHeight * scale * 0.5f;

@@ -363,7 +363,7 @@ internal sealed class PairsApp : IMiniGame
         StageHud.Capsule(drawList, rect, scale);
         var centerY = rect.Center.Y;
         var left = rect.Min.X + CapsulePadX * scale;
-        left = DrawSection(drawList, left, centerY, FontAwesomeIcon.Clone, Accent, attemptsLabel, theme.TextStrong,
+        left = DrawSection(drawList, left, centerY, FontAwesomeIcon.Clone, Accent, attemptsLabel, StageInks.Strong,
             scale);
         if (streakShown)
         {

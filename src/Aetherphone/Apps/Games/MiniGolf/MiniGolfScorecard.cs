@@ -71,10 +71,10 @@ internal static class MiniGolfScorecard
         Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = 0.25f * alpha }), scale);
         var top = min.Y + padding * grow;
         Typography.DrawCentered(drawList, new Vector2(center.X, top + titleHeight * 0.5f), title,
-            theme.TextStrong with { W = alpha }, TextStyles.Title2);
+            StageInks.Strong with { W = alpha }, TextStyles.Title2);
         top += titleHeight + Metrics.Space.Xxs * scale;
         Typography.DrawCentered(drawList, new Vector2(center.X, top + subtitleHeight * 0.5f), subtitle,
-            theme.TextMuted with { W = alpha }, LabelStyle);
+            StageInks.Muted with { W = alpha }, LabelStyle);
         top += subtitleHeight + Metrics.Space.Lg * scale;
         var left = center.X - contentWidth * 0.5f * grow;
         DrawGrid(drawList, new Vector2(left, top), contentWidth * grow, rowHeight, round, shownHole, accent, theme, alpha,
@@ -98,8 +98,8 @@ internal static class MiniGolfScorecard
         var totalWidth = TotalWidth * scale;
         var toParWidth = ToParWidth * scale;
         var cellWidth = MathF.Max(1f, (width - labelWidth - totalWidth - toParWidth) / Columns);
-        var ink = theme.TextStrong with { W = alpha };
-        var muted = theme.TextMuted with { W = alpha };
+        var ink = StageInks.Strong with { W = alpha };
+        var muted = StageInks.Muted with { W = alpha };
         var highlightLeft = origin.X + labelWidth + (shownHole - firstHole) * cellWidth;
         drawList.AddRectFilled(new Vector2(highlightLeft, origin.Y), new Vector2(highlightLeft + cellWidth,
             origin.Y + rowHeight * (2 + round.Players)), ImGui.GetColorU32(accent with { W = 0.16f * alpha }), 6f * scale);

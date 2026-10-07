@@ -259,15 +259,15 @@ internal sealed class MahjongRenderer
             Squircle.Stroke(drawList, center - corner, center + corner, radius, ImGui.GetColorU32(accent), 2f * scale);
         }
 
-        var ink = theme.TextMuted with { W = 0.45f };
+        var ink = StageInks.Muted with { W = 0.45f };
         if (enabled)
         {
-            ink = hovered || highlight ? theme.TextStrong : GamePalette.Lighten(accent, 0.35f);
+            ink = hovered || highlight ? StageInks.Strong : GamePalette.Lighten(accent, 0.35f);
         }
 
         ProgressRing.CenterIcon(drawList, center, icon, ink, radius * 0.82f);
         Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + radius + 9f * scale), caption,
-            enabled ? theme.TextStrong : theme.TextMuted with { W = 0.55f }, TextStyles.Caption2);
+            enabled ? StageInks.Strong : StageInks.Muted with { W = 0.55f }, TextStyles.Caption2);
         if (badge.Length > 0)
         {
             var badgeSize = Typography.Measure(badge, TextStyles.Caption2);

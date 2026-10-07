@@ -138,7 +138,7 @@ internal static class BeatRenderer
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            var ink = held ? accent : theme.TextStrong with { W = 0.75f + 0.25f * flash };
+            var ink = held ? accent : StageInks.Strong with { W = 0.75f + 0.25f * flash };
             Typography.DrawCentered(drawList, (min + max) * 0.5f, labels[lane], ink, TextStyles.Title3);
         }
     }

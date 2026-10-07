@@ -84,7 +84,7 @@ internal sealed class BubbleRenderer
         var text = Loc.T(L.Games.Next);
         var left = rect.Min.X + NextPadX * scale;
         Typography.Draw(drawList, new Vector2(left, rect.Center.Y - Typography.LineHeight(NextStyle) * 0.5f), text,
-            theme.TextMuted, NextStyle);
+            StageInks.Muted, NextStyle);
         var bubbleCenter = new Vector2(left + Typography.Measure(text, NextStyle).X + (NextGap + NextBubbleRadius) * scale,
             rect.Center.Y);
         DrawBubble(drawList, bubbleCenter, NextBubbleRadius * scale, board.NextColor, board.NextKind);
@@ -232,7 +232,7 @@ internal sealed class BubbleRenderer
         var trackMax = new Vector2(field.Max.X - inset, center + height * 0.5f);
         var used = board.RowInterval - board.ShotsUntilRow;
         var progress = board.RowInterval <= 0 ? 0f : Math.Clamp(used / (float)board.RowInterval, 0f, 1f);
-        Squircle.Fill(drawList, trackMin, trackMax, height * 0.5f, ImGui.GetColorU32(theme.TextMuted with { W = 0.22f }));
+        Squircle.Fill(drawList, trackMin, trackMax, height * 0.5f, ImGui.GetColorU32(StageInks.Muted with { W = 0.22f }));
         if (progress <= 0f)
         {
             return;

@@ -430,7 +430,7 @@ internal sealed class UpdraftApp : IMiniGame
             iconSize);
         var origin = new Vector2(left + iconSize + IconGap * scale, rect.Center.Y - Typography.LineHeight(HeightStyle) * 0.5f);
         var pop = 1f + 0.08f * crystalPulse;
-        Typography.Draw(drawList, origin, heightLabel.Get(L.Updraft.Metres, board.HeightMetres), context.Theme.TextStrong,
+        Typography.Draw(drawList, origin, heightLabel.Get(L.Updraft.Metres, board.HeightMetres), StageInks.Strong,
             HeightStyle.Scale * pop, HeightStyle.Weight);
     }
 

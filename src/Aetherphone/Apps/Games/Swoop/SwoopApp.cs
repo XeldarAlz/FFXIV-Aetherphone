@@ -575,7 +575,7 @@ internal sealed class SwoopApp : IMiniGame
         left += iconSize + IconGap * scale;
         var label = GameNumber.Label(board.CurrentIsland + 1);
         Typography.Draw(drawList, new Vector2(left, rect.Center.Y - Typography.LineHeight(CapsuleStyle) * 0.5f), label,
-            context.Theme.TextStrong, CapsuleStyle);
+            StageInks.Strong, CapsuleStyle);
         left += Typography.Measure(label, CapsuleStyle).X + IconGap * scale;
         var barHeight = IslandBarHeight * scale;
         var barMin = new Vector2(left, rect.Center.Y - barHeight * 0.5f);

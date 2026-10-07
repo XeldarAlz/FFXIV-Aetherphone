@@ -238,7 +238,7 @@ internal sealed class ChessApp : IMiniGame
         }
 
         var inCheck = !over && board.InCheck(false);
-        var color = inCheck ? theme.Danger : theme.TextMuted;
+        var color = inCheck ? theme.Danger : StageInks.Muted;
         Typography.Draw(drawList,
             new Vector2(plate.Min.X + StatusInset * scale, rowTop + rowHeight * 0.5f - Typography.LineHeight(StatusStyle) * 0.5f),
             StatusText(inCheck), color, StatusStyle);
