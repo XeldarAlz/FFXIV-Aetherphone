@@ -22,7 +22,7 @@ internal static class PressSurface
         activated = hovered && ImGui.IsItemActivated();
         if (hovered)
         {
-            UiInteract.ReportGestureSurface();
+            UiInteract.ReportDragSurface();
         }
 
         ImGui.SetCursorScreenPos(cursor);
