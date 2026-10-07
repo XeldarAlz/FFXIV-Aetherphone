@@ -16,6 +16,7 @@ internal sealed class SolitaireApp : IMiniGame
 {
     public const string VegasStatId = "solitaire.vegas";
     private const string GameId = "solitaire";
+    private const string TableSurfaceId = "solitaire.table";
     private const int VegasMode = 1;
     private const int MaxFlights = 8;
     private const int MaxGrab = 13;
@@ -455,7 +456,8 @@ internal sealed class SolitaireApp : IMiniGame
     private SolitaireHit HandleInput(in SolitaireLayout layout, Rect area, float scale)
     {
         var mouse = ImGui.GetMousePos();
-        if (grabCount == 0 && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(area.Min, area.Max))
+        PressSurface.Claim(TableSurfaceId, area, out var activated);
+        if (grabCount == 0 && activated)
         {
             var hit = layout.Hit(mouse);
             if (hit.Kind == SolitairePileKind.Stock)
