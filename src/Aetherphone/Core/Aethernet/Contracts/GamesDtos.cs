@@ -67,7 +67,10 @@ internal sealed record GameRoomActionRequest(
     float Power = 0f,
     float PlaceX = 0f,
     float PlaceY = 0f,
-    int Column = -1);
+    int Column = -1,
+    int Cell = -1,
+    BroadsideShipDto[]? Fleet = null,
+    int Target = -1);
 
 internal sealed record GameRoomActionResultDto(bool Granted = false, string Reason = "", int ActionCount = 0);
 
@@ -195,6 +198,88 @@ internal sealed record PoolRoomStateDto(
     int ShotCount = 0,
     int ActionCount = 0,
     int TurnSeconds = 0,
+    string LastKind = "",
+    string EndKind = "",
+    int WinnerSeat = -1);
+
+internal sealed record BroadsideShipDto(int Ship = 0, int Cell = 0, bool Across = true);
+
+internal sealed record BroadsidePlayerDto(
+    string UserId = "",
+    string DisplayName = "",
+    int Seat = 0,
+    bool Away = false,
+    int Wins = 0,
+    int Missed = 0,
+    bool Ready = false,
+    int[]? Marks = null,
+    BroadsideShipDto[]? Sunk = null);
+
+internal sealed record BroadsideRoomStateDto(
+    long RoundIndex = 0,
+    string HostUserId = "",
+    BroadsidePlayerDto[]? Players = null,
+    bool Placing = false,
+    int TurnSeat = -1,
+    int TurnSeconds = 0,
+    int LastSeat = -1,
+    int LastCell = -1,
+    string LastResult = "",
+    int LastShip = -1,
+    int ShotCount = 0,
+    int ActionCount = 0,
+    string LastKind = "",
+    string EndKind = "",
+    int WinnerSeat = -1);
+
+internal sealed record BroadsideYouDto(int Seat = -1, BroadsideShipDto[]? Ships = null, int ActionCount = 0);
+
+internal sealed record LuckyDrawPlayerDto(
+    string UserId = "",
+    string DisplayName = "",
+    int Seat = 0,
+    bool Away = false,
+    int Wins = 0,
+    int Missed = 0,
+    int State = 0,
+    int Total = 0,
+    int RoundScore = 0,
+    int BestRound = 0,
+    int Sevens = 0,
+    int[]? Cards = null);
+
+internal sealed record LuckyDrawEventDto(
+    string Kind = "",
+    int Seat = -1,
+    int Target = -1,
+    int Face = -1,
+    int Slot = -1,
+    int OtherSlot = -1,
+    bool Reshuffled = false);
+
+internal sealed record LuckyDrawRoomStateDto(
+    long RoundIndex = 0,
+    string HostUserId = "",
+    LuckyDrawPlayerDto[]? Players = null,
+    int Phase = 0,
+    int Round = 0,
+    int Dealer = -1,
+    int TurnSeat = -1,
+    bool Dealing = false,
+    int Actor = -1,
+    int PendingFace = -1,
+    int ForcedSeat = -1,
+    int ForcedLeft = 0,
+    int SevenSeat = -1,
+    int DeckCount = 0,
+    int[]? Discard = null,
+    int Step = 0,
+    LuckyDrawEventDto[]? Events = null,
+    int TurnSeconds = 0,
+    int BreakSeconds = 0,
+    int TargetScore = 0,
+    int ActionCount = 0,
+    int LastSeat = -1,
     string LastKind = "",
     string EndKind = "",
     int WinnerSeat = -1);

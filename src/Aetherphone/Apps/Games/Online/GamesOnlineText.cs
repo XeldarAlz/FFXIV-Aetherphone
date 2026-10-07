@@ -21,6 +21,16 @@ internal static class GamesOnlineText
             return L.Games.OnlineConnectFour;
         }
 
+        if (string.Equals(gameKind, Core.Games.GameRoomWire.BroadsideKind, StringComparison.Ordinal))
+        {
+            return L.Broadside.Title;
+        }
+
+        if (string.Equals(gameKind, Core.Games.GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
+        {
+            return L.LuckyDraw.Title;
+        }
+
         return L.Games.OnlineUno;
     }
 

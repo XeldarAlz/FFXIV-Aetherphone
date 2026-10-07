@@ -1,5 +1,6 @@
 using Aetherphone.Apps.Games;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.Online;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Xunit;
@@ -64,8 +65,8 @@ public sealed class GamesLibraryTests
 
         Assert.Equal(new[]
         {
-            "online.connectfour", "online.uno", "online.chess", "online.pool", "doom", "wordrun", "chess", "tetris",
-            "minesweeper", "snake", "breakout",
+            "online.broadside", "online.luckydraw", "online.connectfour", "online.uno", "online.chess", "online.pool",
+            "doom", "wordrun", "chess", "tetris", "minesweeper", "snake", "breakout",
         }, ids);
     }
 
@@ -76,10 +77,11 @@ public sealed class GamesLibraryTests
 
         var latest = library.Latest.ToArray();
 
-        Assert.Single(latest);
+        Assert.NotEmpty(latest);
         for (var index = 0; index < latest.Length; index++)
         {
             Assert.NotEqual("chess", library.Entries[latest[index]].Id);
+            Assert.StartsWith("online.", library.Entries[latest[index]].Id, StringComparison.Ordinal);
         }
     }
 
@@ -114,7 +116,7 @@ public sealed class GamesLibraryTests
         Assert.Equal(2, arcade.Length);
         Assert.Equal("snake", library.Entries[arcade[0]].Id);
         Assert.Equal("breakout", library.Entries[arcade[1]].Id);
-        Assert.Equal(4, friends.Length);
+        Assert.Equal(OnlineGameArt.Kinds.Length, friends.Length);
         Assert.True(library.Entries[friends[0]].Online);
     }
 
@@ -128,7 +130,7 @@ public sealed class GamesLibraryTests
         Assert.Equal(0, library.Genre(GameGenre.Strategy).Length);
         Assert.Single(tabletop);
         Assert.Equal("chess", library.Entries[tabletop[0]].Id);
-        Assert.Equal(4, library.Genre(GameGenre.Friends).Length);
+        Assert.Equal(OnlineGameArt.Kinds.Length, library.Genre(GameGenre.Friends).Length);
         for (var shelf = 0; shelf < GameGenres.Shelves.Length; shelf++)
         {
             Assert.Equal((GameGenre)shelf, GameGenres.Shelves[shelf]);
