@@ -1,258 +1,235 @@
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.Hub;
 using Aetherphone.Core;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Games;
 
+internal static class LineClamp
+{
+    public static string Remainder(string text, string firstLine, string secondLine)
+    {
+        var firstStart = text.IndexOf(firstLine, StringComparison.Ordinal);
+        var searchFrom = firstStart < 0 ? 0 : firstStart + firstLine.Length;
+        var secondStart = text.IndexOf(secondLine, searchFrom, StringComparison.Ordinal);
+        return secondStart < 0 ? secondLine : text[secondStart..];
+    }
+}
+
 internal sealed partial class GamesApp
 {
     private const string ShelfNavId = "games.shelf.nav";
-    private const string SearchNavId = "games.search.nav";
-    private const int SearchMaxLength = 40;
-    private const float BrowseCardHeight = 84f;
-    private const float BrowseIconSize = 22f;
-    private const float BrowsePad = 14f;
-    private const int BrowseColumns = 2;
-    private const int BrowseTogether = (int)GameGenre.Friends;
-    private const int BrowseAll = BrowseTogether + 1;
-    private const int BrowseCount = BrowseAll + 1;
+    private const string CategoryScopeId = "games.shelf";
+    private const string CategoryTitleMarquee = "games.shelf.title.";
+    private const float CategoryRowHeight = 76f;
+    private const float CategoryRowInset = 14f;
+    private const float CategoryRowPadY = 8f;
+    private const float CategoryIconSize = 60f;
+    private const float CategoryTextGap = 12f;
+    private const float CategoryLineGap = 2f;
+    private const float CategoryPlayMinWidth = 64f;
+    private const int CategoryHookLines = 2;
 
-    private static readonly FontAwesomeIcon[] BrowseIcons =
-    [
-        FontAwesomeIcon.Gamepad, FontAwesomeIcon.Bolt, FontAwesomeIcon.PuzzlePiece, FontAwesomeIcon.Lightbulb,
-        FontAwesomeIcon.Flag, FontAwesomeIcon.Chess, FontAwesomeIcon.UserFriends, FontAwesomeIcon.ThLarge,
-    ];
+    private string?[] categoryHookTails = Array.Empty<string?>();
+    private float categoryHookWidth;
+    private float categoryHookLineHeight;
+    private int categoryHookVersion = -1;
 
-    private static readonly string[] BrowseIds =
-    [
-        "games.browse.arcade", "games.browse.action", "games.browse.puzzle", "games.browse.brain",
-        "games.browse.strategy", "games.browse.tabletop", "games.browse.together", "games.browse.all",
-    ];
-
-    private bool focusSearch;
-    private string searchText = string.Empty;
-    private string lastSearchText = string.Empty;
-
-    private ReadOnlySpan<int> ShelfEntries(GamesShelf shelf) => shelf switch
+    internal static ReadOnlySpan<int> ShelfEntries(GamesLibrary library, GamesShelf shelf) => shelf switch
     {
-        GamesShelf.Latest => library.Latest,
+        GamesShelf.New or GamesShelf.Latest => library.Latest,
         GamesShelf.All => library.Ordered,
         _ => library.Genre((GameGenre)shelf),
     };
 
-    private string ShelfTitle(GamesShelf shelf) => shelf switch
+    internal static float CategoryRowHeightFor(float titleHeight, float lineHeight, float scale) =>
+        MathF.Max(CategoryRowHeight * scale,
+            titleHeight + CategoryLineGap * scale + lineHeight * CategoryHookLines + CategoryRowPadY * 2f * scale);
+
+    private static string ShelfTitle(GamesShelf shelf) => shelf switch
     {
-        GamesShelf.Latest => Loc.T(L.Games.ShelfLatest),
+        GamesShelf.New or GamesShelf.Latest => Loc.T(L.GamesHub.JustAdded),
         GamesShelf.All => Loc.T(L.Games.LibraryHeading),
         _ => Loc.T(GameGenres.Label((GameGenre)shelf)),
     };
 
+    private string CategoryBackTitle() => tab == GamesTab.Home ? Loc.T(L.GamesHub.TabHome) : TabTitle(tab);
+
     private void DrawShelfPage(in PhoneContext context, GamesShelf shelf)
     {
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("games.shelf"))
+        using (ImRaii.PushId(CategoryScopeId))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;
-            entrance = GameJuice.Advance(entrance, frameSeconds, EntranceSpeed);
-            var entries = ShelfEntries(shelf);
+            var drawList = ImGui.GetWindowDrawList();
             var origin = ImGui.GetCursorScreenPos();
             var width = ScrollLayout.StableContentWidth();
-            var drawList = ImGui.GetWindowDrawList();
-            Typography.Draw(drawList, origin, CountLabel(entries.Length), ui.MutedInk, TextStyles.Subheadline);
-            var y = origin.Y + Typography.LineHeight(TextStyles.Subheadline) + Metrics.Space.Md * scale;
-            var gridTop = y;
-            y = DrawGrid(entries, origin.X, y, width, scale);
-            GamesHubArt.ReportAnchor("games.shelf", new Rect(new Vector2(origin.X, gridTop),
-                new Vector2(origin.X + width, y)));
-            FinishPage(origin, width, y, scale);
+            var entries = ShelfEntries(library, shelf);
+            Typography.Draw(drawList, origin, CountLabel(entries.Length), ui.MutedInk, TextStyles.Footnote);
+            var top = origin.Y + Typography.LineHeight(TextStyles.Footnote) + Metrics.Space.Sm * scale;
+            var bottom = DrawCategoryCard(drawList, new Vector2(origin.X, top), width, entries, scale);
+            FinishPage(origin, width, bottom, scale);
         }
 
         AppHeader.EndLargeTitle(in navBar, context, ShelfNavId, ShelfTitle(shelf), NavBarStyle.From(ui),
-            ReadOnlySpan<NavBarButton>.Empty, TabTitle(tab), back);
+            ReadOnlySpan<NavBarButton>.Empty, CategoryBackTitle(), back);
     }
 
-    private void DrawSearch(in PhoneContext context)
+    private float DrawCategoryCard(ImDrawListPtr drawList, Vector2 origin, float width, ReadOnlySpan<int> entries,
+        float scale)
     {
-        var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (AppSurface.Begin(navBar.Body))
+        if (entries.Length == 0)
         {
-            var scale = UiScale.Current;
-            var origin = ImGui.GetCursorScreenPos();
-            var width = ScrollLayout.StableContentWidth();
-            var drawList = ImGui.GetWindowDrawList();
-            var field = new Rect(origin, new Vector2(origin.X + width, origin.Y + GlassField.HeightUnits * scale));
-            SearchBar.Surface(drawList, field, ControlInk.From(theme));
-            GlassField.Search(drawList, field, "##gamesSearch", Loc.T(L.Games.SearchHint), ref searchText, theme,
-                scale, SearchMaxLength, focusSearch);
-            focusSearch = false;
-            if (!string.Equals(searchText, lastSearchText, StringComparison.Ordinal))
-            {
-                lastSearchText = searchText;
-                entrance = 0f;
-            }
-
-            entrance = GameJuice.Advance(entrance, frameSeconds, EntranceSpeed);
-            var y = field.Max.Y + GamesHubArt.SectionGap * scale;
-            var results = library.Search(searchText);
-            if (results.Length > 0)
-            {
-                GamesHubArt.Section(drawList, ui, origin.X, y, width, CountLabel(results.Length), string.Empty,
-                    string.Empty);
-                y += GamesHubArt.SectionHeight * scale;
-                y = DrawGrid(results, origin.X, y, width, scale);
-            }
-            else if (searchText.AsSpan().Trim().Length > 0)
-            {
-                var empty = new Rect(new Vector2(origin.X, y), new Vector2(origin.X + width, navBar.Body.Max.Y));
-                if (GamesHubArt.StateScreen(drawList, ui, empty, FontAwesomeIcon.Search, Loc.T(L.Games.SearchEmpty),
-                        Loc.T(L.Games.SearchEmptyHint), Loc.T(L.GamesHub.ClearSearch), "games.search.clear"))
-                {
-                    searchText = string.Empty;
-                    focusSearch = true;
-                }
-
-                y = empty.Max.Y;
-            }
-            else
-            {
-                GamesHubArt.Section(drawList, ui, origin.X, y, width, Loc.T(L.GamesHub.Browse), string.Empty,
-                    string.Empty);
-                y += GamesHubArt.SectionHeight * scale;
-                y = DrawBrowse(origin.X, y, width, scale);
-            }
-
-            FinishPage(origin, width, y, scale);
+            return origin.Y;
         }
 
-        AppHeader.EndLargeTitle(in navBar, context, SearchNavId, Loc.T(L.Common.Search), NavBarStyle.From(ui),
-            ReadOnlySpan<NavBarButton>.Empty);
-    }
-
-    private float DrawBrowse(float left, float y, float width, float scale)
-    {
-        var gap = TileGap * scale;
-        var cardWidth = (width - gap * (BrowseColumns - 1)) / BrowseColumns;
-        var cardHeight = BrowseCardHeight * scale;
-        var top = y;
-        var tapped = -1;
-        var shown = 0;
-        for (var index = 0; index < BrowseCount; index++)
-        {
-            if (BrowseCountOf(index) == 0)
-            {
-                continue;
-            }
-
-            var column = shown % BrowseColumns;
-            var row = shown / BrowseColumns;
-            shown++;
-            var min = new Vector2(left + column * (cardWidth + gap), y + row * (cardHeight + gap));
-            if (DrawBrowseCard(new Rect(min, min + new Vector2(cardWidth, cardHeight)), index, scale))
-            {
-                tapped = index;
-            }
-        }
-
-        var rows = (shown + BrowseColumns - 1) / BrowseColumns;
-        var bottom = y + rows * (cardHeight + gap) - gap;
-        GamesHubArt.ReportAnchor("games.browse", new Rect(new Vector2(left, top), new Vector2(left + width, bottom)));
-        if (tapped == BrowseTogether)
-        {
-            OpenOnlineHub(string.Empty);
-        }
-        else if (tapped == BrowseAll)
-        {
-            router.Push(GamesRoute.ShelfOf(GamesShelf.All));
-        }
-        else if (tapped >= 0)
-        {
-            router.Push(GamesRoute.ShelfOf((GamesShelf)tapped));
-        }
-
-        return bottom;
-    }
-
-    private bool DrawBrowseCard(Rect rect, int index, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered = UiInteract.Hover(rect.Min, rect.Max);
-        var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var press = PressFx.Scale(BrowseIds[index], pressed, Motion.PressScaleCard);
-        var half = rect.Size * 0.5f * press;
-        var min = rect.Center - half;
-        var max = rect.Center + half;
-        var rounding = Metrics.Radius.Widget * scale;
-        var accent = BrowseAccent(index);
-        Squircle.FillVerticalGradient(drawList, min, max, rounding,
-            ImGui.GetColorU32(GamePalette.Lighten(accent, hovered ? 0.20f : 0.12f)),
-            ImGui.GetColorU32(GamePalette.Darken(accent, 0.38f)));
-        drawList.PushClipRect(min, max, true);
-        var watermark = new Vector2(max.X - BrowsePad * scale, max.Y - BrowsePad * 0.5f * scale);
-        ProgressRing.CenterIcon(drawList, watermark, BrowseIcons[index], new Vector4(1f, 1f, 1f, 0.16f),
-            (max.Y - min.Y) * 0.7f);
-        drawList.PopClipRect();
-        var pad = BrowsePad * scale;
-        ProgressRing.CenterIcon(drawList,
-            new Vector2(min.X + pad + BrowseIconSize * scale * 0.5f, min.Y + pad + BrowseIconSize * scale * 0.5f),
-            BrowseIcons[index], HeroInk, BrowseIconSize * scale);
-        var textWidth = MathF.Max(1f, max.X - min.X - pad * 2f);
-        var subtitleHeight = Typography.LineHeight(TextStyles.Footnote);
         var titleHeight = Typography.LineHeight(TextStyles.Headline);
-        var subtitleY = max.Y - pad - subtitleHeight;
-        Typography.Draw(drawList, new Vector2(min.X + pad, subtitleY - titleHeight),
-            Typography.FitText(BrowseTitle(index), textWidth, TextStyles.Headline), HeroInk, TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(min.X + pad, subtitleY),
-            Typography.FitText(CountLabel(BrowseCountOf(index)), textWidth, TextStyles.Footnote),
-            HeroInk with { W = 0.78f }, TextStyles.Footnote);
+        var lineHeight = Typography.LineHeight(TextStyles.Footnote);
+        var rowHeight = CategoryRowHeightFor(titleHeight, lineHeight, scale);
+        var cardMax = new Vector2(origin.X + width, origin.Y + entries.Length * rowHeight);
+        ui.Card(drawList, origin, cardMax, HubMetrics.CardRadius * scale);
+        var inset = CategoryRowInset * scale;
+        var dividerLeft = origin.X + inset + (CategoryIconSize + CategoryTextGap) * scale;
+        var dividerColor = ImGui.GetColorU32(ui.Hairline);
+        var rows = VisibleRows.Between(entries.Length, origin.Y, rowHeight, drawList.GetClipRectMin().Y,
+            drawList.GetClipRectMax().Y);
+        var tapped = -1;
+        var tappedIcon = default(Rect);
+        for (var rowIndex = rows.First; rowIndex < rows.End; rowIndex++)
+        {
+            var rowTop = origin.Y + rowIndex * rowHeight;
+            if (rowIndex > 0)
+            {
+                drawList.AddLine(new Vector2(dividerLeft, rowTop), new Vector2(cardMax.X - inset, rowTop),
+                    dividerColor, Metrics.Stroke.Hairline);
+            }
+
+            var row = new Rect(new Vector2(origin.X + inset, rowTop),
+                new Vector2(cardMax.X - inset, rowTop + rowHeight));
+            if (DrawCategoryRow(drawList, row, entries[rowIndex], titleHeight, lineHeight, scale, out var icon))
+            {
+                tapped = entries[rowIndex];
+                tappedIcon = icon;
+            }
+        }
+
+        if (tapped >= 0)
+        {
+            Activate(tapped, tappedIcon);
+        }
+
+        return cardMax.Y;
+    }
+
+    private bool DrawCategoryRow(ImDrawListPtr drawList, Rect row, int entryIndex, float titleHeight, float lineHeight,
+        float scale, out Rect icon)
+    {
+        var playLabel = Loc.T(L.Games.Play);
+        var playHeight = Button.SmallHeight * scale;
+        var playWidth = MathF.Max(Button.WidthFor(playLabel, ButtonSize.Small), CategoryPlayMinWidth * scale);
+        var play = new Rect(new Vector2(row.Max.X - playWidth, row.Center.Y - playHeight * 0.5f),
+            new Vector2(row.Max.X, row.Center.Y + playHeight * 0.5f));
+        var overPlay = UiInteract.Hover(play.Min, play.Max);
+        var hovered = UiInteract.Hover(row.Min, row.Max) && !overPlay;
+        var tileId = library.TileIds[entryIndex];
+        var hover = HoverFx.Amount(tileId, hovered);
+        var press = PressFx.Scale(tileId, hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left), Motion.PressScaleCard);
+        if (hover > 0f)
+        {
+            var wash = ui.HoverTint;
+            var bleed = CategoryRowInset * 0.5f * scale;
+            var trim = Metrics.Space.Xxs * scale;
+            Squircle.Fill(drawList, new Vector2(row.Min.X - bleed, row.Min.Y + trim),
+                new Vector2(row.Max.X + bleed, row.Max.Y - trim), Metrics.Radius.Md * scale,
+                ImGui.GetColorU32(wash with { W = wash.W * hover }));
+        }
+
+        var side = CategoryIconSize * scale;
+        var center = new Vector2(row.Min.X + side * 0.5f, row.Center.Y);
+        icon = new Rect(new Vector2(row.Min.X, center.Y - side * 0.5f),
+            new Vector2(row.Min.X + side, center.Y + side * 0.5f));
+        var half = side * 0.5f * press;
+        GameIconArt.Draw(drawList, library.IconIds[entryIndex], library.Accent(entryIndex),
+            new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half), null, true);
+        var textLeft = row.Min.X + side + CategoryTextGap * scale;
+        var textWidth = MathF.Max(1f, play.Min.X - CategoryTextGap * scale - textLeft);
+        WrapCategoryHook(entryIndex, textWidth, lineHeight, out var firstLine, out var secondLine);
+        var lines = secondLine.Length > 0 ? 2 : firstLine.Length > 0 ? 1 : 0;
+        var blockHeight = titleHeight + (lines > 0 ? CategoryLineGap * scale + lines * lineHeight : 0f);
+        var titleTop = row.Center.Y - blockHeight * 0.5f;
+        Marquee.DrawLeft(drawList, new MarqueeId(CategoryTitleMarquee, library.Entries[entryIndex].Id),
+            library.Title(entryIndex), textLeft, titleTop, textWidth, TextStyles.Headline, ui.TitleInk, hovered);
+        var lineTop = titleTop + titleHeight + CategoryLineGap * scale;
+        if (lines > 0)
+        {
+            Typography.Draw(drawList, new Vector2(textLeft, lineTop), firstLine, ui.MutedInk, TextStyles.Footnote);
+        }
+
+        if (lines > 1)
+        {
+            Typography.Draw(drawList, new Vector2(textLeft, lineTop + lineHeight), secondLine, ui.MutedInk,
+                TextStyles.Footnote);
+        }
+
+        var played = Button.Draw(drawList, play, playLabel, ui.Ink, ButtonStyle.Gray,
+            id: library.PlayIds[entryIndex]);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(rect.Min, rect.Max, hovered);
+        return played || UiInteract.Click(row.Min, row.Max, hovered);
     }
 
-    private Vector4 BrowseAccent(int index)
+    private void WrapCategoryHook(int entryIndex, float width, float lineHeight, out string firstLine,
+        out string secondLine)
     {
-        if (index == BrowseTogether)
+        var hook = library.Hook(entryIndex);
+        if (hook.Length == 0)
         {
-            return library.Accent(library.Genre(GameGenre.Friends)[0]);
+            hook = library.Meta(entryIndex);
         }
 
-        if (index == BrowseAll)
+        var wrapped = Typography.WrapText(hook, TextStyles.Footnote, width);
+        firstLine = wrapped.Length > 0 ? wrapped[0] : string.Empty;
+        secondLine = wrapped.Length > 1 ? wrapped[1] : string.Empty;
+        if (wrapped.Length <= CategoryHookLines)
         {
-            return ui.Accent;
+            return;
         }
 
-        var entries = library.Genre((GameGenre)index);
-        return entries.Length > 0 ? library.Accent(entries[0]) : ui.Accent;
+        SyncCategoryHookTails(width, lineHeight);
+        var tail = categoryHookTails[entryIndex];
+        if (tail is null)
+        {
+            tail = Typography.FitText(LineClamp.Remainder(hook, firstLine, secondLine), width, TextStyles.Footnote);
+            categoryHookTails[entryIndex] = tail;
+        }
+
+        secondLine = tail;
     }
 
-    private string BrowseTitle(int index)
+    private void SyncCategoryHookTails(float width, float lineHeight)
     {
-        if (index == BrowseTogether)
+        if (categoryHookTails.Length != library.Entries.Length)
         {
-            return Loc.T(L.Games.OnlineTitle);
+            categoryHookTails = new string?[library.Entries.Length];
+        }
+        else if (categoryHookVersion == library.Version && categoryHookWidth == width
+                 && categoryHookLineHeight == lineHeight)
+        {
+            return;
         }
 
-        return index == BrowseAll ? Loc.T(L.Games.LibraryHeading) : Loc.T(GameGenres.Label((GameGenre)index));
-    }
-
-    private int BrowseCountOf(int index)
-    {
-        if (index == BrowseTogether)
-        {
-            return library.Genre(GameGenre.Friends).Length;
-        }
-
-        return index == BrowseAll ? library.Ordered.Length : library.Genre((GameGenre)index).Length;
+        Array.Clear(categoryHookTails);
+        categoryHookVersion = library.Version;
+        categoryHookWidth = width;
+        categoryHookLineHeight = lineHeight;
     }
 }
