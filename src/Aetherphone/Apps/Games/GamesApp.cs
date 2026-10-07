@@ -20,6 +20,7 @@ using Aetherphone.Apps.Games.Mahjong;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Pairs;
+using Aetherphone.Apps.Games.Pegfall;
 using Aetherphone.Apps.Games.Reversi;
 using Aetherphone.Apps.Games.Simon;
 using Aetherphone.Apps.Games.Skyfall;
@@ -201,6 +202,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new DriftApp(),
             new CrawlerApp(),
             new TrailsApp(),
+            new PegfallApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

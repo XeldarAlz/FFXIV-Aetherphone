@@ -142,6 +142,9 @@ internal static class AppIconArt
             case "trails":
                 DrawTrails(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "pegfall":
+                DrawPegfall(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -905,6 +908,41 @@ internal static class AppIconArt
         drawList.AddCircleFilled(corner, thickness * 0.5f, ink, 12);
         drawList.AddCircleFilled(head, extent * 0.22f, ink, 20);
         drawList.AddCircleFilled(head, extent * 0.08f, hole, 12);
+    }
+
+    private static void DrawPegfall(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var launcher = At(center, extent, -0.5f, -0.78f);
+        drawList.AddCircleFilled(launcher, extent * 0.24f, ink, 20);
+        drawList.AddCircleFilled(launcher + new Vector2(-extent * 0.07f, -extent * 0.07f), extent * 0.07f, hole, 10);
+        Span<Vector2> trail = stackalloc Vector2[3]
+        {
+            At(center, extent, -0.18f, -0.62f), At(center, extent, 0.08f, -0.56f), At(center, extent, 0.3f, -0.42f),
+        };
+        for (var dot = 0; dot < trail.Length; dot++)
+        {
+            drawList.AddCircleFilled(trail[dot], extent * 0.06f, ink, 10);
+        }
+
+        var ball = At(center, extent, 0.56f, -0.2f);
+        drawList.AddCircleFilled(ball, extent * 0.16f, ink, 16);
+        drawList.AddCircleFilled(ball + new Vector2(-extent * 0.05f, -extent * 0.05f), extent * 0.05f, hole, 10);
+        Span<Vector2> pegs = stackalloc Vector2[5]
+        {
+            At(center, extent, -0.66f, 0.02f), At(center, extent, -0.1f, 0.02f), At(center, extent, -0.38f, 0.42f),
+            At(center, extent, 0.18f, 0.42f), At(center, extent, 0.74f, 0.42f),
+        };
+        for (var peg = 0; peg < pegs.Length; peg++)
+        {
+            drawList.AddCircleFilled(pegs[peg], extent * 0.13f, ink, 14);
+        }
+
+        drawList.AddCircleFilled(pegs[1], extent * 0.06f, hole, 10);
+        var cupTop = At(center, extent, 0f, 0.7f).Y;
+        var cupBottom = At(center, extent, 0f, 0.94f).Y;
+        var cupCenter = At(center, extent, -0.08f, 0f).X;
+        drawList.AddQuadFilled(new Vector2(cupCenter - extent * 0.42f, cupTop), new Vector2(cupCenter + extent * 0.42f, cupTop),
+            new Vector2(cupCenter + extent * 0.3f, cupBottom), new Vector2(cupCenter - extent * 0.3f, cupBottom), ink);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)
