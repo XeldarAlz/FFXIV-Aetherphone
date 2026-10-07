@@ -137,7 +137,7 @@ The source of truth is the `games` array in the `GamesApp` constructor for local
 | --- | --- |
 | Arcade | `whack`, `snake`, `flap`, `breakout`, `stack`, `beat`, `blade`, `hop`, `updraft`, `slice`, `spiral` |
 | Action | `skyfall`, `invaders`, `capman`, `squadron`, `doom`, `swoop` |
-| Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil` |
+| Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil`, `mahjong`, `gloop` |
 | Brain | `minesweeper`, `memory`, `nonogram`, `simon`, `sudoku`, `trivia`, `wordrun` |
 | Strategy | none yet: the Home rail and the Search browse card stay hidden while a genre has no games |
 | Tabletop | `solitaire`, `reversi`, `chess` |

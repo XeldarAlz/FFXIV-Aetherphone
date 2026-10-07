@@ -127,6 +127,12 @@ internal static class AppIconArt
             case "spiral":
                 SpiralIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "mahjong":
+                DrawMahjong(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "gloop":
+                DrawGloop(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -763,6 +769,51 @@ internal static class AppIconArt
         dl.AddRectFilled(new Vector2(markCenter.X - extent * 0.08f, markCenter.Y + markRadius * 0.55f),
             new Vector2(markCenter.X + extent * 0.08f, markCenter.Y + markRadius * 1.25f), hole, extent * 0.03f);
         dl.AddCircleFilled(new Vector2(markCenter.X, markCenter.Y + markRadius * 1.72f), extent * 0.10f, hole, 12);
+    }
+
+    private static void DrawMahjong(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var rounding = extent * 0.16f;
+        var gap = extent * 0.08f;
+        drawList.AddRectFilled(At(center, extent, -0.56f, -0.64f), At(center, extent, 0.80f, 0.96f), ink, rounding);
+        var faceMin = At(center, extent, -0.80f, -0.90f);
+        var faceMax = At(center, extent, 0.56f, 0.70f);
+        drawList.AddRectFilled(faceMin - new Vector2(gap, gap), faceMax + new Vector2(gap, gap), hole, rounding);
+        drawList.AddRectFilled(faceMin, faceMax, ink, rounding);
+        var pip = (faceMin + faceMax) * 0.5f;
+        var half = extent * 0.2f;
+        Span<Vector2> crystal = stackalloc Vector2[4]
+        {
+            new(pip.X, pip.Y - half * 1.5f), new(pip.X + half, pip.Y), new(pip.X, pip.Y + half * 1.5f),
+            new(pip.X - half, pip.Y),
+        };
+        FillConvex(drawList, hole, crystal);
+        drawList.AddCircleFilled(At(center, extent, -0.54f, -0.64f), extent * 0.1f, hole, 12);
+        drawList.AddCircleFilled(At(center, extent, 0.30f, 0.44f), extent * 0.1f, hole, 12);
+    }
+
+    private static void DrawGloop(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var radius = extent * 0.4f;
+        var bridge = radius * 0.62f;
+        var top = At(center, extent, -0.46f, -0.42f);
+        var left = At(center, extent, -0.46f, 0.42f);
+        var right = At(center, extent, 0.46f, 0.42f);
+        drawList.AddRectFilled(new Vector2(left.X, left.Y - bridge), new Vector2(right.X, right.Y + bridge), ink);
+        drawList.AddRectFilled(new Vector2(top.X - bridge, top.Y), new Vector2(left.X + bridge, left.Y), ink);
+        Span<Vector2> blobs = stackalloc Vector2[3] { top, left, right };
+        var rightEye = new Vector2(radius * 0.32f, -radius * 0.08f);
+        var leftEye = new Vector2(-rightEye.X, rightEye.Y);
+        for (var blob = 0; blob < blobs.Length; blob++)
+        {
+            drawList.AddCircleFilled(blobs[blob], radius, ink, 24);
+            drawList.AddCircleFilled(blobs[blob] + leftEye, radius * 0.16f, hole, 10);
+            drawList.AddCircleFilled(blobs[blob] + rightEye, radius * 0.16f, hole, 10);
+        }
+
+        var falling = At(center, extent, 0.5f, -0.6f);
+        drawList.AddCircleFilled(falling, radius * 0.72f, ink, 20);
+        drawList.AddCircleFilled(falling + new Vector2(-radius * 0.22f, -radius * 0.22f), radius * 0.16f, hole, 10);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

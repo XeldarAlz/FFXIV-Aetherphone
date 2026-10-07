@@ -1,5 +1,6 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
+using Aetherphone.Apps.Games.Gloop;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Slice;
 using Aetherphone.Apps.Games.Snake;
@@ -79,6 +80,8 @@ internal sealed class GamesLibrary
         new("online.connectfour", 2026, 10, 3),
         new("slice", 2026, 10, 8),
         new("spiral", 2026, 10, 8),
+        new("mahjong", 2026, 10, 8),
+        new("gloop", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -493,6 +496,18 @@ internal sealed class GamesLibrary
             case "slice":
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(SliceApp.ArcadeStatId).BestScore),
                     out value);
+            case "gloop":
+            {
+                var endless = Score(stats.Get(gameId).BestScore, out value);
+                if (endless != RecordKind.None)
+                {
+                    return endless;
+                }
+
+                var streak = stats.Get(GloopApp.VersusStatId).Streak;
+                value = streak > 0 ? GameNumber.Label(streak) : string.Empty;
+                return streak > 0 ? RecordKind.Streak : RecordKind.None;
+            }
             case "watersort":
             {
                 var bestLevel = stats.Get(gameId).BestScore;
@@ -518,6 +533,7 @@ internal sealed class GamesLibrary
             case "minesweeper":
             case "nonogram":
             case "sudoku":
+            case "mahjong":
                 return BestTimeAcrossTiers(gameId, out value, out tier);
             case "reversi":
             case "chess":

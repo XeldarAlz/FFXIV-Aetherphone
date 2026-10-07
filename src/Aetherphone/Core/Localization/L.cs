@@ -8669,6 +8669,42 @@ internal static class L
         public static readonly LocString Smashes = new("games.spiral.smashes", "Smashes");
     }
 
+    internal static class Mahjong
+    {
+        public static readonly LocString Title = new("games.mahjong.title", "Mahjong Solitaire");
+        public static readonly LocString Hook = new("games.mahjong.hook", "Match pairs of free tiles, ones with nothing on top and an open left or right side, until the table is clear.");
+        public static readonly LocString Moogle = new("games.mahjong.moogle", "Moogle");
+        public static readonly LocString Bridge = new("games.mahjong.bridge", "Bridge");
+        public static readonly LocString Tower = new("games.mahjong.tower", "Tower");
+        public static readonly LocString Crossroads = new("games.mahjong.crossroads", "Crossroads");
+        public static readonly LocString Fortress = new("games.mahjong.fortress", "Fortress");
+        public static readonly LocString Dragon = new("games.mahjong.dragon", "Dragon");
+        public static readonly LocString Shuffle = new("games.mahjong.shuffle", "Shuffle");
+        public static readonly LocString Penalty = new("games.mahjong.penalty", "+{0}s");
+        public static readonly LocString NoMoves = new("games.mahjong.noMoves", "No moves left");
+        public static readonly LocString Shuffled = new("games.mahjong.shuffled", "Shuffled!");
+        public static readonly LocString UndoToContinue = new("games.mahjong.undoToContinue", "Undo a move to keep going");
+        public static readonly LocString TableClear = new("games.mahjong.tableClear", "Table clear!");
+        public static readonly LocString Layout = new("games.mahjong.layout", "Layout");
+        public static readonly LocString Hints = new("games.mahjong.hints", "Hints");
+        public static readonly LocString Shuffles = new("games.mahjong.shuffles", "Shuffles");
+        public static readonly LocString Undos = new("games.mahjong.undos", "Undos");
+    }
+
+    internal static class Gloop
+    {
+        public static readonly LocString Title = new("games.gloop.title", "Gloop");
+        public static readonly LocString Hook = new("games.gloop.hook", "Drop pairs of blobs, link four or more of a color to pop them, and set off chains for big points.");
+        public static readonly LocString Endless = new("games.gloop.endless", "Endless");
+        public static readonly LocString Versus = new("games.gloop.versus", "Versus");
+        public static readonly LocString Chain = new("games.gloop.chain", "{0} chain!");
+        public static readonly LocString AllClear = new("games.gloop.allClear", "All clear!");
+        public static readonly LocString BestChain = new("games.gloop.bestChain", "Best chain");
+        public static readonly LocString Popped = new("games.gloop.popped", "Popped");
+        public static readonly LocString Sent = new("games.gloop.sent", "Rocks sent");
+        public static readonly LocString Rival = new("games.gloop.rival", "Rival");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
