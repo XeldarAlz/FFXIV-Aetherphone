@@ -8,6 +8,7 @@ namespace Aetherphone.Windows.Components;
 internal static class Typography
 {
     private const string Ellipsis = "…";
+    private const float FitTolerance = 0.5f;
 
     private static readonly Vector2[] HaloOffsets =
     {
@@ -1049,7 +1050,8 @@ internal static class Typography
 
     private static string Shorten(string text, float maxWidth)
     {
-        if (ImGui.CalcTextSize(text).X <= maxWidth)
+        var limit = maxWidth + FitTolerance;
+        if (ImGui.CalcTextSize(text).X <= limit)
         {
             return text;
         }
@@ -1057,7 +1059,7 @@ internal static class Typography
         for (var length = text.Length - 1; length > 0; length--)
         {
             var candidate = string.Concat(text.AsSpan(0, length).TrimEnd(), Ellipsis.AsSpan());
-            if (ImGui.CalcTextSize(candidate).X <= maxWidth)
+            if (ImGui.CalcTextSize(candidate).X <= limit)
             {
                 return candidate;
             }
