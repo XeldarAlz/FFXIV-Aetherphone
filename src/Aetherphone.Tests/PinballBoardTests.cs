@@ -160,6 +160,41 @@ public sealed class PinballBoardTests
         Assert.True(board.TargetDown(1));
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void ABallThrownAtASlingFaceIsKickedBackOut(int sling)
+    {
+        var board = Fresh(12);
+        var face = PinballTable.Sling(sling);
+        var normal = PinballTable.SlingFaceNormal(sling);
+        var middle = (face[0] + face[2]) * 0.5f;
+
+        Assert.True(normal.X * (sling == 0 ? 1f : -1f) > 0f);
+        Assert.True(normal.Y < 0f);
+        Place(board, middle + normal * 0.4f, -normal * 4f);
+        Run(board, 0.12f);
+
+        Assert.True(board.SlingFlash(sling) > 0f);
+        Assert.True(Vector2.Dot(board.BallVelocityAt(0), normal) > 4f);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    public void ADroppedTargetSlotNeverTrapsTheBall(int target)
+    {
+        var board = Fresh(13);
+        board.HitTarget(target);
+        var position = PinballTable.Targets[target];
+        var facing = PinballTable.TargetFacing[target];
+
+        Place(board, position + facing * 0.3f, -facing * 3f);
+        Run(board, 1.5f);
+
+        Assert.True(Vector2.Distance(board.BallPositionAt(0), position) > 0.8f);
+    }
+
     [Fact]
     public void ThirdLockStartsAThreeBallMultiball()
     {
