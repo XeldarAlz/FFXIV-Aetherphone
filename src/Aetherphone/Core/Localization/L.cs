@@ -8485,6 +8485,10 @@ internal static class L
         public static readonly LocString NotNow = new("leaderboard.notNow", "Not now");
         public static readonly LocString JoinShort = new("leaderboard.joinShort", "Join");
         public static readonly LocString NotOnBoards = new("leaderboard.notOnBoards", "You are not on leaderboards");
+        public static readonly LocString UnavailableTitle = new("leaderboard.unavailableTitle",
+            "Leaderboards aren't open yet");
+        public static readonly LocString UnavailableHint = new("leaderboard.unavailableHint",
+            "Your best scores stay on this phone until they open.");
         public static readonly LocString OffHint = new("leaderboard.offHint", "When this is off, your scores stay on this phone.");
     }
 

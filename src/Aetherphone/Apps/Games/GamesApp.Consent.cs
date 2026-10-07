@@ -59,7 +59,7 @@ internal sealed partial class GamesApp
         return leaderboard.NeedsConsent;
     }
 
-    private bool ShowsConsentCompact => leaderboard.OptedOut;
+    private bool ShowsConsentCompact => leaderboard.Available && leaderboard.OptedOut;
 
     private void DrawConsent(Rect area, float scale)
     {

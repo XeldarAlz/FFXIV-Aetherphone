@@ -4790,6 +4790,8 @@
   "leaderboard.notNow": "Plus tard",
   "leaderboard.joinShort": "Rejoindre",
   "leaderboard.notOnBoards": "Tu n'apparais pas dans les classements",
+  "leaderboard.unavailableTitle": "Les classements ne sont pas encore ouverts",
+  "leaderboard.unavailableHint": "Tes meilleurs scores restent sur ce téléphone jusqu'à leur ouverture.",
   "leaderboard.offHint": "Quand c'est désactivé, tes scores restent sur ce téléphone.",
   "coil.title": "Spirale",
   "coil.howTo": "Visez à la souris et cliquez pour tirer. Clic droit ou Espace échange les billes.",

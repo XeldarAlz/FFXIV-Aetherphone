@@ -9,6 +9,7 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
 {
     private const long BoardTtlMilliseconds = 60_000;
     private const long MyRanksTtlMilliseconds = 60_000;
+    private const int NotFoundStatus = 404;
     private const long RetryAfterAttemptMilliseconds = 30_000;
     private const long MinimumWaitMilliseconds = 250;
     private const long MaximumWaitMilliseconds = 30_000;
@@ -31,6 +32,9 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
     private volatile bool loadingMyRanks;
     private volatile bool savingParticipation;
     private volatile bool requestedParticipation;
+    private volatile LeaderboardSupport support;
+    private int probingSupport;
+    private long supportAttemptedAtTick;
     private AepFailure participationFailure;
     private int flushing;
     private int fetchingMyRanks;
@@ -74,7 +78,57 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
 
     public bool OptedOut => session.IsSignedIn && session.CurrentUser is { ShowOnLeaderboards: false };
 
-    public bool NeedsConsent => consent.Needed(session.IsSignedIn, session.CurrentUser);
+    public bool NeedsConsent => Available && consent.Needed(session.IsSignedIn, session.CurrentUser);
+
+    public LeaderboardSupport Support => support;
+
+    public bool Available => support == LeaderboardSupport.Supported;
+
+    public bool Unavailable => support == LeaderboardSupport.Unsupported;
+
+    internal static LeaderboardSupport SupportAfter(LeaderboardSupport current, bool replied, in AepFailure failure)
+    {
+        if (replied)
+        {
+            return LeaderboardSupport.Supported;
+        }
+
+        return failure.StatusCode == NotFoundStatus ? LeaderboardSupport.Unsupported : current;
+    }
+
+    public void EnsureSupportKnown()
+    {
+        if (support != LeaderboardSupport.Unknown || !session.IsSignedIn)
+        {
+            return;
+        }
+
+        var now = Environment.TickCount64;
+        if (CoolingDown(Interlocked.Read(ref supportAttemptedAtTick), now))
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref probingSupport, 1) != 0)
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref supportAttemptedAtTick, now);
+        var failure = AepFailure.None;
+        work.Run("leaderboard support", async token =>
+        {
+            var reply = await scores.MyRanksAsync(token, reported => failure = reported).ConfigureAwait(false);
+            var next = SupportAfter(support, reply is not null, failure);
+            if (next == support)
+            {
+                return;
+            }
+
+            support = next;
+            Bump();
+        }, () => Interlocked.Exchange(ref probingSupport, 0));
+    }
 
     public bool SavingParticipation => savingParticipation;
 
@@ -116,6 +170,11 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
                 .ConfigureAwait(false);
             if (reply is null)
             {
+                if (failure.StatusCode == NotFoundStatus)
+                {
+                    support = LeaderboardSupport.Unsupported;
+                }
+
                 return false;
             }
 
@@ -125,6 +184,13 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
         }, succeeded =>
         {
             Interlocked.Exchange(ref participationInFlight, 0);
+            if (support == LeaderboardSupport.Unsupported)
+            {
+                savingParticipation = false;
+                Bump();
+                return;
+            }
+
             if (!succeeded)
             {
                 SetParticipationFailure(failure.Failed ? failure : AepFailure.Transport(AepFailureKind.BadResponse));
@@ -172,6 +238,12 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
 
     public bool TryGetRank(string statId, out GameRank rank)
     {
+        if (support == LeaderboardSupport.Unsupported)
+        {
+            rank = default;
+            return false;
+        }
+
         lock (gate)
         {
             rank = queue.RankFor(statId, session.IsSignedIn, OptedOut);
@@ -221,7 +293,7 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
 
     private void FetchMyRanks(long ttlMilliseconds)
     {
-        if (!session.IsSignedIn || OptedOut)
+        if (!session.IsSignedIn || OptedOut || support == LeaderboardSupport.Unsupported)
         {
             return;
         }
@@ -245,11 +317,14 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
 
         loadingMyRanks = true;
         Interlocked.Exchange(ref myRanksAttemptedAtTick, now);
+        var failure = AepFailure.None;
         work.Run("my ranks", async token =>
         {
-            var reply = await scores.MyRanksAsync(token).ConfigureAwait(false);
+            var reply = await scores.MyRanksAsync(token, reported => failure = reported).ConfigureAwait(false);
+            support = SupportAfter(support, reply is not null, failure);
             if (reply is null)
             {
+                Bump();
                 return;
             }
 
@@ -439,6 +514,8 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
         if (!string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
         {
             lastAccountId = accountId;
+            support = LeaderboardSupport.Unknown;
+            Interlocked.Exchange(ref supportAttemptedAtTick, 0);
             ForgetAccountState();
             SetParticipationFailure(AepFailure.None);
         }

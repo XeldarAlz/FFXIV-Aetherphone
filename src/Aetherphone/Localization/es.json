@@ -4790,6 +4790,8 @@
   "leaderboard.notNow": "Ahora no",
   "leaderboard.joinShort": "Unirme",
   "leaderboard.notOnBoards": "No apareces en las clasificaciones",
+  "leaderboard.unavailableTitle": "Las clasificaciones aún no están abiertas",
+  "leaderboard.unavailableHint": "Tus mejores puntuaciones se quedan en este teléfono hasta que abran.",
   "leaderboard.offHint": "Si está desactivado, tus puntuaciones se quedan en este teléfono.",
   "coil.title": "Espiral",
   "coil.howTo": "Apunta con el ratón y haz clic para disparar. Clic derecho o Espacio cambia las canicas.",

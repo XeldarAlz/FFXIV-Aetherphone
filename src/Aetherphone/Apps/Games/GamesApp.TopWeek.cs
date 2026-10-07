@@ -30,7 +30,7 @@ internal sealed partial class GamesApp
     private float DrawTopThisWeek(float left, float top, float width, float scale)
     {
         SyncTopWeekStat();
-        if (topWeekStatId.Length == 0)
+        if (topWeekStatId.Length == 0 || leaderboard.Unavailable)
         {
             return top;
         }

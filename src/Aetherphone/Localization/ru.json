@@ -4790,6 +4790,8 @@
   "leaderboard.notNow": "Не сейчас",
   "leaderboard.joinShort": "Участвовать",
   "leaderboard.notOnBoards": "Вас нет в таблицах лидеров",
+  "leaderboard.unavailableTitle": "Таблицы лидеров пока не открыты",
+  "leaderboard.unavailableHint": "До их открытия ваши рекорды хранятся на этом телефоне.",
   "leaderboard.offHint": "Когда это выключено, результаты остаются на этом телефоне.",
   "coil.title": "Спираль",
   "coil.howTo": "Цельтесь мышью и щёлкайте, чтобы стрелять. Правый клик или пробел меняет шары.",

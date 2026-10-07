@@ -4790,6 +4790,8 @@
   "leaderboard.notNow": "今はしない",
   "leaderboard.joinShort": "参加",
   "leaderboard.notOnBoards": "ランキングに参加していません",
+  "leaderboard.unavailableTitle": "ランキングはまだ公開されていません",
+  "leaderboard.unavailableHint": "公開されるまで、ベストスコアはこのスマホに保存されます。",
   "leaderboard.offHint": "オフの間、スコアはこの端末にのみ保存されます。",
   "coil.title": "コイル",
   "coil.howTo": "マウスで狙い、クリックで発射。右クリックかスペースで玉を入れ替え。",

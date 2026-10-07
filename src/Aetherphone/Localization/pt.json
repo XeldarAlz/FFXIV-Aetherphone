@@ -4790,6 +4790,8 @@
   "leaderboard.notNow": "Agora não",
   "leaderboard.joinShort": "Entrar",
   "leaderboard.notOnBoards": "Você não está nos rankings",
+  "leaderboard.unavailableTitle": "Os rankings ainda não estão abertos",
+  "leaderboard.unavailableHint": "Suas melhores pontuações ficam neste telefone até eles abrirem.",
   "leaderboard.offHint": "Com isto desativado, suas pontuações ficam neste telefone.",
   "coil.title": "Espiral",
   "coil.howTo": "Mire com o mouse e clique para disparar. Clique direito ou Espaço troca as bolinhas.",

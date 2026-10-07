@@ -4790,6 +4790,8 @@
   "leaderboard.notNow": "暂不",
   "leaderboard.joinShort": "加入",
   "leaderboard.notOnBoards": "你未加入排行榜",
+  "leaderboard.unavailableTitle": "排行榜尚未开放",
+  "leaderboard.unavailableHint": "开放之前，你的最佳成绩会保存在这部手机上。",
   "leaderboard.offHint": "关闭时，你的成绩只会保存在本机。",
   "coil.title": "旋珠",
   "coil.howTo": "用鼠标瞄准，点击发射。右键或空格键交换珠子。",

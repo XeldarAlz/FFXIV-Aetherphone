@@ -127,7 +127,7 @@ internal sealed partial class GamesApp
 
     private void SyncProfileRanks()
     {
-        if (!leaderboard.IsSignedIn || leaderboard.OptedOut)
+        if (!leaderboard.IsSignedIn || leaderboard.OptedOut || leaderboard.Unavailable)
         {
             return;
         }
@@ -197,7 +197,7 @@ internal sealed partial class GamesApp
             streak > 0 ? HubMetrics.Ember : ui.MutedInk, StatGlyphSize * scale);
 
         tile = tile.Translate(step);
-        var ranked = leaderboard.IsSignedIn && !leaderboard.OptedOut;
+        var ranked = leaderboard.IsSignedIn && !leaderboard.OptedOut && !leaderboard.Unavailable;
         var third = ranked ? rankRowCount : library.TotalStars;
         DrawStatTile(drawList, tile, GameNumber.Label(third),
             Loc.T(ranked ? L.GamesHub.StatRanked : L.GamesHub.KindStars), scale);
@@ -246,6 +246,11 @@ internal sealed partial class GamesApp
 
     private float DrawProfileRanks(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
+        if (leaderboard.Unavailable)
+        {
+            return top;
+        }
+
         var signedIn = leaderboard.IsSignedIn;
         var optedOut = leaderboard.OptedOut;
         var loading = signedIn && !optedOut && !leaderboard.MyRanksLoaded && leaderboard.LoadingMyRanks;

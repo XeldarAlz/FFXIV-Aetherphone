@@ -552,6 +552,11 @@ internal sealed partial class GamesApp
     private float DrawLeaderboardBody(ImDrawListPtr drawList, LeaderboardBoard board, float left, float top,
         float width, float barTop, float scale)
     {
+        if (leaderboard.Unavailable)
+        {
+            return DrawLeaderboardUnavailable(left, top, width, scale);
+        }
+
         var data = board.Data;
         if (data is null)
         {
@@ -757,6 +762,14 @@ internal sealed partial class GamesApp
             new Vector2(left + width, rowsTop + LeaderboardSkeletonRows * LeaderboardRowHeight * scale));
         Skeleton.Rows(drawList, rows, LeaderboardRowHeight, 0f, scale);
         return rows.Max.Y;
+    }
+
+    private float DrawLeaderboardUnavailable(float left, float top, float width, float scale)
+    {
+        var body = new Rect(new Vector2(left, top), new Vector2(left + width, top + LeaderboardBlockHeight * scale));
+        EmptyState.Draw(body, ui, FontAwesomeIcon.Trophy, Loc.T(L.Leaderboard.UnavailableTitle),
+            Loc.T(L.Leaderboard.UnavailableHint), string.Empty);
+        return body.Max.Y;
     }
 
     private float DrawLeaderboardFailure(float left, float top, float width, float scale)

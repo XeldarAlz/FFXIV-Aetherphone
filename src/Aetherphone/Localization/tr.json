@@ -4790,6 +4790,8 @@
   "leaderboard.notNow": "Şimdi değil",
   "leaderboard.joinShort": "Katıl",
   "leaderboard.notOnBoards": "Liderlik tablolarında değilsin",
+  "leaderboard.unavailableTitle": "Liderlik tabloları henüz açılmadı",
+  "leaderboard.unavailableHint": "Açılana kadar en iyi skorların bu telefonda kalır.",
   "leaderboard.offHint": "Bu kapalıyken skorların bu telefonda kalır.",
   "coil.title": "Sarmal",
   "coil.howTo": "Fareyle nişan al ve ateşlemek için tıkla. Sağ tık veya Boşluk bilyeleri değiştirir.",

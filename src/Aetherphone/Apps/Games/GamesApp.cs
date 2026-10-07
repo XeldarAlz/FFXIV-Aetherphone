@@ -367,6 +367,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         SyncLeaderboardVersion();
         screenRect = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
         appArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
+        leaderboard.EnsureSupportKnown();
         if (ShowsConsent())
         {
             TourHolds.Hold(Id);

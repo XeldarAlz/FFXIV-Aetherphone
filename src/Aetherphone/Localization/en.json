@@ -4790,6 +4790,8 @@
   "leaderboard.notNow": "Not now",
   "leaderboard.joinShort": "Join",
   "leaderboard.notOnBoards": "You are not on leaderboards",
+  "leaderboard.unavailableTitle": "Leaderboards aren't open yet",
+  "leaderboard.unavailableHint": "Your best scores stay on this phone until they open.",
   "leaderboard.offHint": "When this is off, your scores stay on this phone.",
   "coil.title": "Coil",
   "coil.howTo": "Aim with the mouse and click to fire. Right-click or Space swaps marbles.",

@@ -4790,6 +4790,8 @@
   "leaderboard.notNow": "Nicht jetzt",
   "leaderboard.joinShort": "Beitreten",
   "leaderboard.notOnBoards": "Du bist nicht in den Bestenlisten",
+  "leaderboard.unavailableTitle": "Die Bestenlisten sind noch nicht geöffnet",
+  "leaderboard.unavailableHint": "Deine Bestwerte bleiben auf diesem Telefon, bis sie öffnen.",
   "leaderboard.offHint": "Ist das aus, bleiben deine Punktzahlen auf diesem Handy.",
   "coil.title": "Spirale",
   "coil.howTo": "Mit der Maus zielen und klicken, um zu schießen. Rechtsklick oder Leertaste tauscht die Murmeln.",
