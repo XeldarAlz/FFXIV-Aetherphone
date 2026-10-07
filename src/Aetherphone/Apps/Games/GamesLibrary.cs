@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Online;
+using Aetherphone.Apps.Games.Slice;
 using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
 using Aetherphone.Apps.Games.Tetris;
@@ -76,6 +77,7 @@ internal sealed class GamesLibrary
         new("online.uno", 2026, 8, 25), new("online.chess", 2026, 8, 25), new("online.pool", 2026, 8, 25),
         new("coil", 2026, 10, 3), new("updraft", 2026, 10, 3), new("swoop", 2026, 10, 3),
         new("online.connectfour", 2026, 10, 3),
+        new("slice", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -485,6 +487,9 @@ internal sealed class GamesLibrary
                     out value);
             case "snake":
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(SnakeApp.WrapStatId).BestScore),
+                    out value);
+            case "slice":
+                return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(SliceApp.ArcadeStatId).BestScore),
                     out value);
             case "watersort":
             {
