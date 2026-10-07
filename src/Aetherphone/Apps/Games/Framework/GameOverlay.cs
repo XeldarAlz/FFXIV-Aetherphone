@@ -165,40 +165,53 @@ internal static class GameOverlay
         var statCellHeight = statLabelHeight + Metrics.Space.Xxs * scale + statValueHeight;
         var buttonHeight = ButtonHeight * scale;
         var leaderboardHeight = result.ShowsLeaderboard ? Button.Height(ButtonSize.Small) * scale : 0f;
-        var cardHeight = padding * 2f + titleHeight + Metrics.Space.Lg * scale + primaryHeight +
-            Metrics.Space.Xl * scale + buttonHeight + Metrics.Space.Sm * scale + leaderboardHeight;
+        var headerHeight = titleHeight + Metrics.Space.Lg * scale + primaryHeight;
         if (result.NewBest)
         {
-            cardHeight += BadgeHeight * scale + Metrics.Space.Md * scale;
+            headerHeight += BadgeHeight * scale + Metrics.Space.Md * scale;
         }
 
         if (hasStars)
         {
-            cardHeight += StarSize * scale + Metrics.Space.Md * scale;
-        }
-
-        if (hasSecondary)
-        {
-            cardHeight += Metrics.Space.Sm * scale + buttonHeight;
+            headerHeight += StarSize * scale + Metrics.Space.Md * scale;
         }
 
         if (hasRank)
         {
-            cardHeight += Metrics.Space.Sm * scale + lineHeight;
+            headerHeight += Metrics.Space.Sm * scale + lineHeight;
         }
 
         if (hasFriends)
         {
-            cardHeight += Metrics.Space.Xxs * scale + lineHeight;
+            headerHeight += Metrics.Space.Xxs * scale + lineHeight;
         }
 
-        if (statRows > 0)
+        var statsHeight = statRows > 0
+            ? Metrics.Space.Lg * scale + statRows * statCellHeight + (statRows - 1) * Metrics.Space.Sm * scale
+            : 0f;
+        var footerHeight = statsHeight + Metrics.Space.Xl * scale + buttonHeight + Metrics.Space.Sm * scale +
+                           leaderboardHeight;
+        if (hasSecondary)
         {
-            cardHeight += Metrics.Space.Lg * scale + statRows * statCellHeight + (statRows - 1) * Metrics.Space.Sm * scale;
+            footerHeight += Metrics.Space.Sm * scale + buttonHeight;
+        }
+
+        var cardHeight = padding * 2f + headerHeight + footerHeight;
+        var columnGap = Metrics.Space.Xl * scale;
+        var sideBySideWidth = padding * 2f + contentWidth * 2f + columnGap;
+        var sideBySide = cardHeight > area.Height - padding * 2f && sideBySideWidth <= area.Width * CardWidthFraction;
+        var footerLead = statRows > 0 ? Metrics.Space.Lg * scale : Metrics.Space.Xl * scale;
+        if (sideBySide)
+        {
+            cardWidth = sideBySideWidth;
+            cardHeight = padding * 2f + MathF.Max(headerHeight, footerHeight - footerLead);
         }
 
         var cardScale = 0.86f + 0.14f * grow;
         var center = area.Center;
+        var columnShift = sideBySide ? (contentWidth + columnGap) * 0.5f * cardScale : 0f;
+        var headerAnchor = new Vector2(center.X - columnShift, center.Y);
+        var footerAnchor = new Vector2(center.X + columnShift, center.Y);
         var half = new Vector2(cardWidth, cardHeight) * 0.5f * cardScale;
         var min = center - half;
         var max = center + half;
@@ -217,23 +230,24 @@ internal static class GameOverlay
         Material.Frosted(drawList, min, max, radius, scale, alpha);
         Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = 0.20f * alpha }), 1f * scale);
 
-        var offset = padding - cardHeight * 0.5f;
+        var columnSpan = cardHeight - padding * 2f;
+        var offset = padding - cardHeight * 0.5f + (sideBySide ? (columnSpan - headerHeight) * 0.5f : 0f);
         var titlePhase = Phase(clamped, 0.05f, 0.5f);
-        DrawStaggered(drawList, Place(center, offset + titleHeight * 0.5f, cardScale), result.Title,
+        DrawStaggered(drawList, Place(headerAnchor, offset + titleHeight * 0.5f, cardScale), result.Title,
             result.TitleColor with { W = result.TitleColor.W * titlePhase }, titleScale, TextStyles.Title1.Weight,
             titlePhase, scale);
         offset += titleHeight + Metrics.Space.Lg * scale;
         if (hasStars)
         {
             var starsPhase = Phase(clamped, 0.15f, 0.85f);
-            StarRow.Draw(drawList, Place(center, offset + StarSize * 0.5f * scale, cardScale), StarSize * scale * cardScale,
+            StarRow.Draw(drawList, Place(headerAnchor, offset + StarSize * 0.5f * scale, cardScale), StarSize * scale * cardScale,
                 result.Stars, StageInks.Muted with { W = EmptyStarAlpha }, alpha, starsPhase);
             offset += StarSize * scale + Metrics.Space.Md * scale;
         }
 
         if (result.NewBest)
         {
-            DrawBestBadge(drawList, Place(center, offset + BadgeHeight * 0.5f * scale, cardScale), accent,
+            DrawBestBadge(drawList, Place(headerAnchor, offset + BadgeHeight * 0.5f * scale, cardScale), accent,
                 Phase(clamped, 0.2f, 0.65f), scale);
             offset += BadgeHeight * scale + Metrics.Space.Md * scale;
         }
@@ -241,12 +255,12 @@ internal static class GameOverlay
         if (hasPrimary)
         {
             var labelPhase = Phase(clamped, 0.2f, 0.62f);
-            DrawStaggered(drawList, Place(center, offset + labelHeight * 0.5f, cardScale), label,
+            DrawStaggered(drawList, Place(headerAnchor, offset + labelHeight * 0.5f, cardScale), label,
                 StageInks.Muted with { W = labelPhase }, TextStyles.Caption1.Scale, TextStyles.Caption1.Weight,
                 labelPhase, scale);
             offset += labelHeight + Metrics.Space.Xxs * scale;
             var valuePhase = Phase(clamped, 0.25f, 0.7f);
-            DrawStaggered(drawList, Place(center, offset + valueHeight * 0.5f, cardScale),
+            DrawStaggered(drawList, Place(headerAnchor, offset + valueHeight * 0.5f, cardScale),
                 CountingValue(result.PrimaryValue, valuePhase > 0f ? deltaSeconds : 0f),
                 StageInks.Strong with { W = valuePhase }, valueScale, TextStyles.LargeTitle.Weight, valuePhase, scale);
             offset += valueHeight;
@@ -256,7 +270,7 @@ internal static class GameOverlay
         {
             offset += Metrics.Space.Sm * scale;
             var rankPhase = Phase(clamped, 0.32f, 0.78f);
-            var rankCenter = Place(center, offset + lineHeight * 0.5f, cardScale);
+            var rankCenter = Place(headerAnchor, offset + lineHeight * 0.5f, cardScale);
             if (result.Uploading)
             {
                 var textWidth = Typography.Measure(result.RankLine, TextStyles.Footnote).X;
@@ -275,10 +289,15 @@ internal static class GameOverlay
         {
             offset += Metrics.Space.Xxs * scale;
             var friendsPhase = Phase(clamped, 0.36f, 0.8f);
-            DrawStaggered(drawList, Place(center, offset + lineHeight * 0.5f, cardScale), result.FriendsLine,
+            DrawStaggered(drawList, Place(headerAnchor, offset + lineHeight * 0.5f, cardScale), result.FriendsLine,
                 StageInks.Muted with { W = friendsPhase }, TextStyles.Footnote.Scale, TextStyles.Footnote.Weight,
                 friendsPhase, scale);
             offset += lineHeight;
+        }
+
+        if (sideBySide)
+        {
+            offset = padding - cardHeight * 0.5f + (columnSpan - (footerHeight - footerLead)) * 0.5f - footerLead;
         }
 
         if (statRows > 0)
@@ -290,7 +309,7 @@ internal static class GameOverlay
                 var stat = result.Outcome.Stat(statIndex);
                 var row = statIndex / 2;
                 var column = statIndex % 2;
-                var columnCenterX = center.X + (column == 0 ? -cellWidth * 0.5f : cellWidth * 0.5f) * cardScale;
+                var columnCenterX = footerAnchor.X + (column == 0 ? -cellWidth * 0.5f : cellWidth * 0.5f) * cardScale;
                 var cellTop = offset + row * (statCellHeight + Metrics.Space.Sm * scale);
                 var statPhase = Phase(clamped, 0.38f + statIndex * 0.04f, 0.82f + statIndex * 0.04f);
                 DrawStaggered(drawList, Place(new Vector2(columnCenterX, center.Y), cellTop + statLabelHeight * 0.5f, cardScale),
@@ -319,7 +338,7 @@ internal static class GameOverlay
         var buttonSize = new Vector2(MathF.Min(buttonWidth, contentWidth), buttonHeight) * pop;
         var buttonLift = (1f - buttonPhase) * 8f * scale;
         var action = ResultAction.None;
-        if (GameHud.Button(Place(center, offset + buttonHeight * 0.5f, cardScale) + new Vector2(0f, buttonLift),
+        if (GameHud.Button(Place(footerAnchor, offset + buttonHeight * 0.5f, cardScale) + new Vector2(0f, buttonLift),
                 buttonSize, buttonLabel, accent, theme))
         {
             action = ResultAction.Primary;
@@ -328,7 +347,7 @@ internal static class GameOverlay
         offset += buttonHeight + Metrics.Space.Sm * scale;
         if (hasSecondary)
         {
-            if (GameHud.Button(Place(center, offset + buttonHeight * 0.5f, cardScale) + new Vector2(0f, buttonLift),
+            if (GameHud.Button(Place(footerAnchor, offset + buttonHeight * 0.5f, cardScale) + new Vector2(0f, buttonLift),
                     buttonSize, result.SecondaryLabel, Palette.Mix(StageInks.Surface, accent, SecondaryTint), theme))
             {
                 action = ResultAction.Secondary;
@@ -338,7 +357,7 @@ internal static class GameOverlay
         }
 
         if (result.ShowsLeaderboard && buttonPhase > 0.8f &&
-            TextButton.Draw(Place(center, offset + leaderboardHeight * 0.5f, cardScale), leaderboardLabel, StageInks.Muted,
+            TextButton.Draw(Place(footerAnchor, offset + leaderboardHeight * 0.5f, cardScale), leaderboardLabel, StageInks.Muted,
                 scale))
         {
             action = ResultAction.Leaderboard;

@@ -41,11 +41,9 @@ internal sealed class StageHud
         Vector4 accent, PhoneTheme theme, float deltaSeconds, bool beatingBest, ScreenFx fx)
     {
         var scale = UiScale.Current;
-        if (model.HasScore)
-        {
-            DrawScore(model, full, style, accent, theme, deltaSeconds, beatingBest, scale);
-        }
-
+        var scoreWidth = model.HasScore
+            ? DrawScore(model, full, style, accent, theme, deltaSeconds, beatingBest, scale)
+            : 0f;
         if (model.HasCombo && model.ComboValue.Multiplier >= EdgeGlowMultiplier)
         {
             fx.EdgeGlow(model.ComboValue.Heat);
@@ -68,22 +66,14 @@ internal sealed class StageHud
             return;
         }
 
-        var gap = StageLayout.SecondaryGap * scale;
-        var total = -gap;
-        for (var index = 0; index < visible.Length; index++)
+        if (full.IsLandscape())
         {
-            total += CapsuleWidth(visible[index], model, kind, scale) + gap;
+            DrawBesideScore(drawList, visible, model, kind, full, scoreWidth, accent, theme, scale);
+            return;
         }
 
-        var rowY = StageLayout.SecondaryRowY(full, scale);
-        var x = full.Center.X - total * 0.5f;
-        for (var index = 0; index < visible.Length; index++)
-        {
-            var width = CapsuleWidth(visible[index], model, kind, scale);
-            var rect = new Rect(new Vector2(x, rowY - height * 0.5f), new Vector2(x + width, rowY + height * 0.5f));
-            DrawCapsule(drawList, visible[index], model, kind, rect, accent, theme, scale);
-            x += width + gap;
-        }
+        DrawRow(drawList, visible, model, kind, full.Center.X - RowWidth(visible, model, kind, scale) * 0.5f,
+            StageLayout.SecondaryRowY(full, scale), accent, theme, scale);
     }
 
     public static void Capsule(ImDrawListPtr drawList, Rect rect, float scale, float opacity = 0.9f)
@@ -112,7 +102,54 @@ internal sealed class StageHud
     public static string ValueLabel(int value, ScoreKind kind) =>
         kind == ScoreKind.Time ? TimeText.MinutesSeconds(value) : GameNumber.Label(value);
 
-    private void DrawScore(HudModel model, Rect full, HudStyle style, Vector4 accent, PhoneTheme theme,
+    private void DrawBesideScore(ImDrawListPtr drawList, ReadOnlySpan<HudSlot> visible, HudModel model,
+        ScoreKind kind, Rect full, float scoreWidth, Vector4 accent, PhoneTheme theme, float scale)
+    {
+        var rowY = StageLayout.PrimaryCenter(full, scale).Y;
+        if (scoreWidth <= 0f)
+        {
+            DrawRow(drawList, visible, model, kind, full.Center.X - RowWidth(visible, model, kind, scale) * 0.5f, rowY,
+                accent, theme, scale);
+            return;
+        }
+
+        var split = (visible.Length + 1) / 2;
+        var leading = visible[..split];
+        var trailing = visible[split..];
+        var clearance = scoreWidth * 0.5f + StageLayout.SecondaryGap * scale;
+        DrawRow(drawList, leading, model, kind, full.Center.X - clearance - RowWidth(leading, model, kind, scale), rowY,
+            accent, theme, scale);
+        DrawRow(drawList, trailing, model, kind, full.Center.X + clearance, rowY, accent, theme, scale);
+    }
+
+    private float RowWidth(ReadOnlySpan<HudSlot> slots, HudModel model, ScoreKind kind, float scale)
+    {
+        var gap = StageLayout.SecondaryGap * scale;
+        var total = -gap;
+        for (var index = 0; index < slots.Length; index++)
+        {
+            total += CapsuleWidth(slots[index], model, kind, scale) + gap;
+        }
+
+        return MathF.Max(0f, total);
+    }
+
+    private void DrawRow(ImDrawListPtr drawList, ReadOnlySpan<HudSlot> slots, HudModel model, ScoreKind kind,
+        float left, float rowY, Vector4 accent, PhoneTheme theme, float scale)
+    {
+        var height = StageLayout.SecondaryHeight * scale;
+        var gap = StageLayout.SecondaryGap * scale;
+        var x = left;
+        for (var index = 0; index < slots.Length; index++)
+        {
+            var width = CapsuleWidth(slots[index], model, kind, scale);
+            var rect = new Rect(new Vector2(x, rowY - height * 0.5f), new Vector2(x + width, rowY + height * 0.5f));
+            DrawCapsule(drawList, slots[index], model, kind, rect, accent, theme, scale);
+            x += width + gap;
+        }
+    }
+
+    private float DrawScore(HudModel model, Rect full, HudStyle style, Vector4 accent, PhoneTheme theme,
         float deltaSeconds, bool beatingBest, float scale)
     {
         var label = Loc.T(model.ScoreLabel ?? L.Games.Score);
@@ -129,6 +166,7 @@ internal sealed class StageHud
             : StageLayout.PrimaryCenter(full, scale);
         GameHud.ScorePill(center, label, ref scoreRoll, model.ScoreValue, accent, theme, deltaSeconds, beatingBest,
             sizeScale);
+        return MathF.Min(width, maxWidth > 0f ? maxWidth : width);
     }
 
     private float CapsuleWidth(HudSlot slot, HudModel model, ScoreKind kind, float scale)
