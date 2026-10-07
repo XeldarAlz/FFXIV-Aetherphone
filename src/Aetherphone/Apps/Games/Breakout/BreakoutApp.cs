@@ -16,9 +16,9 @@ internal sealed class BreakoutApp : IMiniGame
     private const float BannerSeconds = 1.4f;
     private const float BannerHeightFraction = 0.58f;
     private const float RibbonWidth = BreakoutBoard.BallRadius * 1.8f;
-    private const float BrickPunch = 0.03f;
-    private const float ExplosionShake = 0.35f;
-    private const float LifeLostShake = 0.6f;
+    private const float BrickPunch = 0.012f;
+    private const float ExplosionShake = 0.2f;
+    private const float LifeLostShake = 0.35f;
     private const float LastBrickSlowFactor = 0.5f;
     private const float LastBrickSlowSeconds = 0.25f;
     private const float PaddleKeySpeed = 1.6f;
@@ -311,7 +311,7 @@ internal sealed class BreakoutApp : IMiniGame
         var multiBall = board.CaughtKind == PowerUpKind.MultiBall;
         fx.AddText(Loc.T(multiBall ? L.Breakout.MultiBall : L.Breakout.Wide), screen - new Vector2(0f, camera.Px(0.06f)),
             multiBall ? BreakoutRenderer.MultiBallColor : BreakoutRenderer.WideColor, 1.1f);
-        context.Fx.Punch(0.04f);
+        context.Fx.Punch(0.025f);
     }
 
     private void OnLevelCleared(in GameContext context)
