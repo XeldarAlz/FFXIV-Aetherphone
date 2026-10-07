@@ -8782,6 +8782,20 @@ internal static class L
         public static readonly LocString Saved = new("games.thrust.saved", "Saved!");
     }
 
+    internal static class Snip
+    {
+        public static readonly LocString Title = new("games.snip.title", "Snip");
+        public static readonly LocString Hook = new("games.snip.hook", "Swipe across the ropes to drop the crystal into the moogle's mouth, and catch all three stars on the way.");
+        public static readonly LocString Stars = new("games.snip.stars", "Stars");
+        public static readonly LocString Attempts = new("games.snip.attempts", "Attempts");
+        public static readonly LocString Cuts = new("games.snip.cuts", "Cuts");
+        public static readonly LocString Kupo = new("games.snip.kupo", "Kupo!");
+        public static readonly LocString Perfect = new("games.snip.perfect", "All three stars!");
+        public static readonly LocString Shattered = new("games.snip.shattered", "Shattered!");
+        public static readonly LocString Missed = new("games.snip.missed", "Missed!");
+        public static readonly LocString StarCount = new("games.snip.starCount", "{0} stars");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

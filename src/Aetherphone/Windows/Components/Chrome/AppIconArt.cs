@@ -148,6 +148,9 @@ internal static class AppIconArt
             case "thrust":
                 DrawThrust(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "snip":
+                DrawSnip(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -973,6 +976,25 @@ internal static class AppIconArt
         drawList.AddCircleFilled(At(center, extent, 0.5f, -0.06f), extent * 0.07f, hole, 10);
         drawList.AddLine(At(center, extent, 0.3f, -0.34f), At(center, extent, 0.44f, -0.72f), ink, extent * 0.07f);
         drawList.AddCircleFilled(At(center, extent, 0.46f, -0.8f), extent * 0.14f, ink, 14);
+    }
+
+    private static void DrawSnip(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var anchor = At(center, extent, -0.2f, -0.95f);
+        var knot = At(center, extent, 0.05f, -0.02f);
+        drawList.AddLine(anchor, knot, ink, extent * 0.13f);
+        drawList.AddCircleFilled(anchor, extent * 0.16f, ink, 14);
+        drawList.AddLine(At(center, extent, -0.55f, -0.62f), At(center, extent, 0.3f, -0.36f), hole, extent * 0.14f);
+        Span<Vector2> gem = stackalloc Vector2[4]
+        {
+            At(center, extent, 0.05f, -0.08f), At(center, extent, 0.58f, 0.42f), At(center, extent, 0.05f, 1f),
+            At(center, extent, -0.48f, 0.42f),
+        };
+        FillConvex(drawList, ink, gem);
+        drawList.AddLine(gem[3], gem[1], hole, extent * 0.06f);
+        drawList.AddLine(At(center, extent, -0.2f, 0.42f), gem[2], hole, extent * 0.05f);
+        drawList.AddCircleFilled(At(center, extent, 0.7f, -0.72f), extent * 0.13f, ink, 12);
+        drawList.AddCircleFilled(At(center, extent, 0.88f, -0.32f), extent * 0.08f, ink, 10);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)
