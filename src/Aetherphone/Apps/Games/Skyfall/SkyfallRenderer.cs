@@ -29,7 +29,6 @@ internal sealed class SkyfallRenderer
     private const int TowerCount = 3;
     private const float DomeRadius = 7.5f;
     private const float HazeHeight = 34f;
-    private const float LightClipAbove = 12f;
     private const float SkylineStartX = -40f;
     private const float SkylineEndX = 140f;
     private const int FarBuildingCount = 30;
@@ -149,8 +148,6 @@ internal sealed class SkyfallRenderer
             return;
         }
 
-        var groundY = camera.ToScreen(new Vector2(0f, SkyfallBoard.GroundY)).Y;
-        drawList.PushClipRect(new Vector2(full.Min.X, groundY - camera.Px(LightClipAbove)), full.Max, true);
         for (var index = 0; index < lights.Length; index++)
         {
             ref readonly var light = ref lights[index];
@@ -161,11 +158,9 @@ internal sealed class SkyfallRenderer
             {
                 var alpha = 0.32f * light.Strength * fade * (4 - layer) / 3f;
                 drawList.AddCircleFilled(center, radius * (0.35f + layer * 0.22f),
-                    ImGui.GetColorU32(light.Color with { W = alpha }), 24);
+                    ImGui.GetColorU32(light.Color with { W = alpha }), 48);
             }
         }
-
-        drawList.PopClipRect();
     }
 
     private static void DrawCities(ImDrawListPtr drawList, SkyfallBoard board, in Camera2D camera, Vector4 accent)

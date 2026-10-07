@@ -79,6 +79,10 @@ internal sealed class OnlineRoomView : IDisposable
     private string spacedCode = string.Empty;
     private string spacedSource = string.Empty;
     private string finishedLabel = string.Empty;
+    private string[] finishedLines = Array.Empty<string>();
+    private string finishedWrapSource = string.Empty;
+    private float finishedWrapWidth;
+    private float finishedLinesWidth;
     private GameRoomRoster? labeledRoster;
     private LanguageInfo? labelLanguage;
 
@@ -562,22 +566,49 @@ internal sealed class OnlineRoomView : IDisposable
     private float DrawFinishedBanner(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width,
         float scale, Vector4 accent)
     {
-        var height = BannerHeight * scale;
+        var pad = Metrics.Space.Lg * scale;
+        var gap = Metrics.Space.Md * scale;
+        var iconSize = BannerIconSize * scale;
+        var style = TextStyles.SubheadlineEmphasized;
+        WrapFinished(MathF.Max(1f, width - pad * 2f - iconSize - gap), style);
+        var lineHeight = Typography.LineHeight(style);
+        var textHeight = lineHeight * finishedLines.Length;
+        var height = MathF.Max(BannerHeight * scale, textHeight + pad * 2f);
         var min = new Vector2(left, top);
         var max = new Vector2(left + width, top + height);
         var rounding = Metrics.Radius.Widget * scale;
         Material.AccentGlass(drawList, min, max, rounding, scale, Palette.WithAlpha(accent, 0.22f), 1f);
-        var pad = Metrics.Space.Lg * scale;
-        var iconSize = BannerIconSize * scale;
-        ProgressRing.CenterIcon(drawList, new Vector2(min.X + pad + iconSize * 0.5f, min.Y + height * 0.5f),
-            FontAwesomeIcon.Trophy, accent, iconSize);
-        var textLeft = min.X + pad + iconSize + Metrics.Space.Md * scale;
-        var fitted = Typography.FitText(finishedLabel, MathF.Max(1f, max.X - pad - textLeft),
-            TextStyles.SubheadlineEmphasized);
-        var textHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
-        Typography.Draw(drawList, new Vector2(textLeft, min.Y + (height - textHeight) * 0.5f), fitted,
-            ui.TitleInk, TextStyles.SubheadlineEmphasized);
+        var blockWidth = iconSize + gap + finishedLinesWidth;
+        var blockLeft = min.X + (width - blockWidth) * 0.5f;
+        var centerY = min.Y + height * 0.5f;
+        ProgressRing.CenterIcon(drawList, new Vector2(blockLeft + iconSize * 0.5f, centerY), FontAwesomeIcon.Trophy,
+            GamePalette.Star, iconSize);
+        var textLeft = blockLeft + iconSize + gap;
+        var textTop = centerY - textHeight * 0.5f;
+        for (var lineIndex = 0; lineIndex < finishedLines.Length; lineIndex++)
+        {
+            Typography.Draw(drawList, new Vector2(textLeft, textTop + lineHeight * lineIndex), finishedLines[lineIndex],
+                ui.TitleInk, style);
+        }
+
         return max.Y;
+    }
+
+    private void WrapFinished(float maxWidth, in TextStyle style)
+    {
+        if (maxWidth == finishedWrapWidth && string.Equals(finishedLabel, finishedWrapSource, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        finishedWrapSource = finishedLabel;
+        finishedWrapWidth = maxWidth;
+        finishedLines = Typography.WrapText(finishedLabel, style, maxWidth);
+        finishedLinesWidth = 0f;
+        for (var lineIndex = 0; lineIndex < finishedLines.Length; lineIndex++)
+        {
+            finishedLinesWidth = MathF.Max(finishedLinesWidth, Typography.Measure(finishedLines[lineIndex], style).X);
+        }
     }
 
     private static string FinishedText(GameRoomState held)
