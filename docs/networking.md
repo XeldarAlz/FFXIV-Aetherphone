@@ -309,7 +309,37 @@ The chat stores that consume these clients are covered in [Messaging and chat](m
 | `GET /games/scores/me` | `MyRanksAsync()` | `GameScoreRanksDto { ranks[] }`, one row per game with an all-time entry |
 | `POST /me/games-privacy` | `SetShowOnLeaderboardsAsync(show)` | `UpdateGamesPrivacyRequest { showOnLeaderboards }` to the full `UserDto`, which carries `showOnLeaderboards` |
 
-The `gameId` on the wire is the stat id (`tetris.modern`, `sudoku.easy`), and the plugin only ever sends the ids in `ScoreStatIds.All`.
+The `gameId` on the wire is the stat id (`tetris.modern`, `sudoku.easy`), and the plugin only ever sends the ids in `ScoreStatIds.All`. Nothing uploads until the account has joined the boards through `/me/games-privacy`: `showOnLeaderboards` is false by default on the server and on the wire.
+
+### Game room routes
+
+`GamesClient` (src/Aetherphone/Core/Aethernet/Clients/GamesClient.cs) carries the online rooms on the Games app's Together tab; `GameRoomsStore` (src/Aetherphone/Core/Games/GameRoomsStore.cs) is its only caller, described in [Mini-games framework](games-framework.md#play-with-friends-online-rooms). Like the score routes, every room route needs a signed-in session and answers a refused intent or action with HTTP 200, `granted: false` and a `reason`:
+
+| Route | Client method | Shape |
+| --- | --- | --- |
+| `GET /games/rooms` | `RoomsAsync()` | `GameRoomListDto { rooms[], serverNowUnixMs }`, the rooms this account is in |
+| `POST /games/rooms` | `CreateRoomAsync(clientRoomId, gameKind)` | `GameRoomCreateRequest` to `GameRoomResultDto { granted, reason, room }` |
+| `POST /games/rooms/join` | `JoinByCodeAsync(code)` | `GameRoomJoinRequest` to `GameRoomResultDto` |
+| `GET /games/rooms/{roomId}` | `RoomCardAsync(roomId)` | `GameRoomCardDto`, one room's card |
+| `GET /games/rooms/{roomId}/state` | `RoomStateAsync(roomId)` | `GameRoomSnapshotDto`, the HTTP fallback while the socket is down; a 404 closes the room locally |
+| `GET /games/rooms/{roomId}/you` | `YouAsync(roomId)` | `GameRoomYouDto`, the caller's private lane (an Uno hand, a Broadside fleet) |
+| `POST /games/rooms/{roomId}/act` | `ActAsync(roomId, request)` | `GameRoomActionRequest { action, actionCount, card, color, clientActionId, ... }` to `GameRoomActionResultDto { granted, reason, actionCount }` |
+| `POST /games/rooms/{roomId}/leave`, `/kick`, `/close` | `LeaveAsync`, `KickAsync(roomId, userId)`, `CloseAsync` | `GameRoomActionDto { granted, reason }`; kick posts a `GameRoomMemberRequest` |
+
+The room kinds live in `GameRoomWire` (src/Aetherphone/Core/Games/GameRoomWire.cs). Every action names the roster's `actionCount` it was decided against, and the server refuses a mismatch as `stale_action` instead of applying it twice:
+
+| Kind | Actions the client sends |
+| --- | --- |
+| `games.uno` | `start` (the card slot carries the rule set), `play`, `draw`, `pass` |
+| `games.chess` | `start`, `move`, `resign` |
+| `games.pool` | `start`, `shoot`, `place` (ball in hand), `resign` |
+| `games.connectfour` | `start`, `drop`, `resign` |
+| `games.broadside` | `start`, `place` (the fleet), `fire`, `resign` |
+| `games.luckydraw` | `start`, `hit`, `stay`, `target` |
+| `games.crater` | `start`, `shoot` (weapon, facing, elevation, power, fuse and walk), `resign` |
+| `games.minigolf` | `start` (the card slot carries 9 or 18 holes), `shoot` |
+
+The live room rides the realtime socket under the `game.` prefix (`game.attach`, `game.snapshot`, `game.event`, `game.private`, `game.ended` and the rest in src/Aetherphone/Core/Telephony/Contracts/Signals.cs); see [The realtime layer](#the-realtime-layer) above.
 
 ## Gotchas
 
