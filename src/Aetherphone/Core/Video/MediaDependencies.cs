@@ -39,12 +39,13 @@ internal sealed class MediaDependency
     private volatile DependencyState state = DependencyState.Unknown;
     private volatile string? failureReason;
     private volatile bool requiresRestart;
+    private volatile string releaseUrl;
 
     internal MediaDependency(string id, string releaseUrl, string assetPrefix, string assetSuffix, string payloadName,
         long minimumPayloadBytes)
     {
         Id = id;
-        ReleaseUrl = releaseUrl;
+        this.releaseUrl = releaseUrl;
         AssetPrefix = assetPrefix;
         AssetSuffix = assetSuffix;
         PayloadName = payloadName;
@@ -52,7 +53,11 @@ internal sealed class MediaDependency
     }
 
     internal string Id { get; }
-    internal string ReleaseUrl { get; }
+    internal string ReleaseUrl
+    {
+        get => releaseUrl;
+        set => releaseUrl = value;
+    }
     internal string AssetPrefix { get; }
     internal string AssetSuffix { get; }
     internal string PayloadName { get; }
@@ -121,7 +126,13 @@ internal sealed class MediaDependencies : IDisposable
     private const string LatestReleaseSuffix = "/releases/latest";
     private const string TagSegment = "/releases/tag/";
     private const string UserAgent = "Aetherphone-AetherStream";
+    private const string StableResolverReleaseUrl = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest";
+    private const string NightlyResolverReleaseUrl =
+        "https://api.github.com/repos/yt-dlp/yt-dlp-nightly-builds/releases/latest";
+    private const long RoutineResolverAttemptSpacingMilliseconds = 60 * 60 * 1000;
+    private const long UrgentResolverCheckCooldownMilliseconds = 10 * 60 * 1000;
 
+    private static readonly TimeSpan ResolverCheckInterval = TimeSpan.FromDays(1);
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan RedirectProbeTimeout = TimeSpan.FromSeconds(20);
     private static readonly UTF8Encoding ResolverConfigurationEncoding = new(encoderShouldEmitUTF8Identifier: true);
@@ -132,6 +143,10 @@ internal sealed class MediaDependencies : IDisposable
     private readonly SemaphoreSlim installGate = new(1, 1);
     private readonly MediaDependency[] songComponents;
     private readonly MediaDependency[] videoComponents;
+    private readonly CancellationTokenSource lifetime = new();
+    private long lastRoutineResolverAttemptTicks = long.MinValue;
+    private long lastUrgentResolverCheckTicks = long.MinValue;
+    private int resolverRefreshRunning;
 
     internal MediaDependencies()
     {
@@ -146,7 +161,7 @@ internal sealed class MediaDependencies : IDisposable
 
         VideoLibrary = new MediaDependency("mpv", "https://api.github.com/repos/zhongfly/mpv-winbuild/releases/latest",
             "mpv-dev-lgpl-x86_64-", ".7z", "libmpv-2.dll", MinimumLibraryBytes);
-        LinkResolver = new MediaDependency("yt-dlp", "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest",
+        LinkResolver = new MediaDependency("yt-dlp", ResolverReleaseUrl(Plugin.Cfg.VideoNightlyLinkResolver),
             "yt-dlp.exe", ".exe", "yt-dlp.exe", MinimumLibraryBytes);
         JsRuntime = new MediaDependency("deno", "https://api.github.com/repos/denoland/deno/releases/latest",
             "deno-x86_64-pc-windows-msvc", ".zip", "deno.exe", MinimumLibraryBytes);
@@ -333,6 +348,7 @@ internal sealed class MediaDependencies : IDisposable
     {
         if (IsReadyFor(components))
         {
+            RefreshLinkResolverInBackground(urgent: false);
             return true;
         }
 
@@ -800,6 +816,119 @@ internal sealed class MediaDependencies : IDisposable
         }
     }
 
+    internal void UseNightlyLinkResolver(bool nightly)
+    {
+        LinkResolver.ReleaseUrl = ResolverReleaseUrl(nightly);
+        LinkResolver.DownloadUrl = null;
+        LinkResolver.RemoteVersion = null;
+    }
+
+    private static string ResolverReleaseUrl(bool nightly) =>
+        nightly ? NightlyResolverReleaseUrl : StableResolverReleaseUrl;
+
+    internal void RefreshLinkResolverInBackground(bool urgent)
+    {
+        if (LinkResolverPath is null || lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+
+        var now = Environment.TickCount64;
+        if (urgent)
+        {
+            if (lastUrgentResolverCheckTicks != long.MinValue
+                && now - lastUrgentResolverCheckTicks < UrgentResolverCheckCooldownMilliseconds)
+            {
+                return;
+            }
+
+            lastUrgentResolverCheckTicks = now;
+        }
+        else
+        {
+            if (lastRoutineResolverAttemptTicks != long.MinValue
+                && now - lastRoutineResolverAttemptTicks < RoutineResolverAttemptSpacingMilliseconds)
+            {
+                return;
+            }
+
+            lastRoutineResolverAttemptTicks = now;
+            if (ResolverCheckedRecently())
+            {
+                return;
+            }
+        }
+
+        if (Interlocked.Exchange(ref resolverRefreshRunning, 1) == 1)
+        {
+            return;
+        }
+
+        _ = Task.Run(RefreshLinkResolverAsync);
+    }
+
+    private bool ResolverCheckedRecently()
+    {
+        try
+        {
+            var marker = new FileInfo(Path.Combine(ComponentFolder(LinkResolver), VersionMarker));
+            return marker.Exists && DateTime.UtcNow - marker.LastWriteTimeUtc < ResolverCheckInterval;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Deps] Could not read when the link resolver was last checked: {exception.Message}");
+            return true;
+        }
+    }
+
+    private async Task RefreshLinkResolverAsync()
+    {
+        try
+        {
+            var outcome = await UpdateIfNewerAsync(LinkResolver, lifetime.Token).ConfigureAwait(false);
+            switch (outcome)
+            {
+                case ResolverUpdateOutcome.Updated:
+                    AepLog.Debug($"[Deps] Updated the link resolver to {LinkResolver.RemoteVersion}");
+                    break;
+                case ResolverUpdateOutcome.AlreadyCurrent:
+                    MarkResolverChecked();
+                    break;
+                case ResolverUpdateOutcome.Failed when LinkResolverPath is not null:
+                    LinkResolver.SetState(DependencyState.Ready);
+                    AepLog.Debug("[Deps] Routine link resolver check failed; keeping the installed copy");
+                    break;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Deps] Link resolver refresh failed: {exception.Message}");
+        }
+        finally
+        {
+            Volatile.Write(ref resolverRefreshRunning, 0);
+        }
+    }
+
+    private void MarkResolverChecked()
+    {
+        try
+        {
+            var marker = Path.Combine(ComponentFolder(LinkResolver), VersionMarker);
+            if (File.Exists(marker))
+            {
+                File.SetLastWriteTimeUtc(marker, DateTime.UtcNow);
+            }
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Deps] Could not record the link resolver check: {exception.Message}");
+        }
+    }
+
     internal async Task<bool> ReinstallAsync(MediaDependency dependency, CancellationToken token)
     {
         await installGate.WaitAsync(token).ConfigureAwait(false);
@@ -836,6 +965,8 @@ internal sealed class MediaDependencies : IDisposable
 
     public void Dispose()
     {
+        lifetime.Cancel();
+        lifetime.Dispose();
         httpClient.Dispose();
         redirectProbe.Dispose();
         installGate.Dispose();

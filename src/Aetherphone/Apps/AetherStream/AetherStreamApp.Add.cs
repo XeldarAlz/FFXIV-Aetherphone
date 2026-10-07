@@ -83,6 +83,7 @@ internal sealed partial class AetherStreamApp
 
         if (viewing)
         {
+            DrawSupportedSitesHint(content, top + ButtonHeight * scale + Metrics.Space.Md * scale);
             return;
         }
 
@@ -92,6 +93,14 @@ internal sealed partial class AetherStreamApp
         {
             PickLocalFile();
         }
+
+        DrawSupportedSitesHint(content, top + ButtonHeight * scale + Metrics.Space.Md * scale);
+    }
+
+    private void DrawSupportedSitesHint(Rect content, float top)
+    {
+        Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), Loc.T(L.AetherStream.SupportedSitesHint),
+            Ink.MutedInk, TextStyles.Footnote, content.Width);
     }
 
     private bool DrawLinkField(Rect row, string imguiId, string pasteId, float scale)

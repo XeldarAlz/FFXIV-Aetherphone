@@ -37,10 +37,8 @@ internal sealed partial class AetherStreamApp
 
     private bool TryDescribeFailure(out string title, out string body)
     {
-        if (video.State == VideoPlaybackState.Failed && video.FailureKind == PlaybackFailureKind.BotCheck)
+        if (video.State == VideoPlaybackState.Failed && TryDescribeFailureKind(video.FailureKind, out title, out body))
         {
-            title = Loc.T(L.AetherStream.FailureBotCheckTitle);
-            body = Loc.T(L.AetherStream.FailureBotCheckBody);
             return true;
         }
 
@@ -61,6 +59,41 @@ internal sealed partial class AetherStreamApp
         title = string.Empty;
         body = string.Empty;
         return false;
+    }
+
+    private static bool TryDescribeFailureKind(PlaybackFailureKind kind, out string title, out string body)
+    {
+        switch (kind)
+        {
+            case PlaybackFailureKind.BotCheck:
+                return Describe(L.AetherStream.FailureBotCheckTitle, L.AetherStream.FailureBotCheckBody, out title,
+                    out body);
+            case PlaybackFailureKind.DrmProtected:
+                return Describe(L.AetherStream.FailureDrmTitle, L.AetherStream.FailureDrmBody, out title, out body);
+            case PlaybackFailureKind.RegionLocked:
+                return Describe(L.AetherStream.FailureRegionTitle, L.AetherStream.FailureRegionBody, out title,
+                    out body);
+            case PlaybackFailureKind.LoginRequired:
+                return Describe(L.AetherStream.FailureLoginTitle, L.AetherStream.FailureLoginBody, out title,
+                    out body);
+            case PlaybackFailureKind.UnsupportedSite:
+                return Describe(L.AetherStream.FailureUnsupportedTitle, L.AetherStream.FailureUnsupportedBody,
+                    out title, out body);
+            case PlaybackFailureKind.SiteChanged:
+                return Describe(L.AetherStream.FailureSiteChangedTitle, L.AetherStream.FailureSiteChangedBody,
+                    out title, out body);
+        }
+
+        title = string.Empty;
+        body = string.Empty;
+        return false;
+    }
+
+    private static bool Describe(LocString titleText, LocString bodyText, out string title, out string body)
+    {
+        title = Loc.T(titleText);
+        body = Loc.T(bodyText);
+        return true;
     }
 
     private void DrawFailureCard(float scale, string title, string body, bool resumeFromPosition)

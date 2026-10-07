@@ -756,6 +756,12 @@ internal sealed class WatchAlongSession : IDisposable
             return;
         }
 
+        if (PlaybackFailureClassifier.RetryCannotHelp(video.FailureKind))
+        {
+            autoReplayUrl = null;
+            return;
+        }
+
         var now = Environment.TickCount64;
         var botCheck = video.FailureKind == PlaybackFailureKind.BotCheck;
         if (autoReplayUrl != failedUrl)
