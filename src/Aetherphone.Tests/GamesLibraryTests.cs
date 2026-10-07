@@ -65,8 +65,8 @@ public sealed class GamesLibraryTests
 
         Assert.Equal(new[]
         {
-            "online.luckydraw", "online.connectfour", "online.uno", "online.chess", "online.pool", "doom", "wordrun",
-            "chess", "tetris", "minesweeper", "snake", "breakout",
+            "online.broadside", "online.luckydraw", "online.connectfour", "online.uno", "online.chess", "online.pool",
+            "doom", "wordrun", "chess", "tetris", "minesweeper", "snake", "breakout",
         }, ids);
     }
 
