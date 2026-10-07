@@ -8386,10 +8386,6 @@ internal static class L
         public static readonly LocString Players = new("gamesHub.players", "Players");
         public static readonly LocString Rules = new("gamesHub.rules", "Rules");
         public static readonly LocString CodeHint = new("gamesHub.codeHint", "Share this code so friends can join.");
-        public static readonly LocString TourRecordsTitle = new("gamesHub.tourRecordsTitle", "Your records");
-        public static readonly LocString TourRecordsBody = new("gamesHub.tourRecordsBody", "Every personal best and your daily streak live here. Tap to have a look.");
-        public static readonly LocString TourSearchTitle = new("gamesHub.tourSearchTitle", "Find any game");
-        public static readonly LocString TourSearchBody = new("gamesHub.tourSearchBody", "Search by name, or browse a genre such as Puzzle or Arcade to see all of its games.");
         public static readonly LocString TabTogether = new("gamesHub.tabTogether", "Together");
         public static readonly LocString TabLibrary = new("gamesHub.tabLibrary", "Library");
         public static readonly LocString TabProfile = new("gamesHub.tabProfile", "Profile");
@@ -10861,8 +10857,6 @@ internal static class L
         public static readonly LocString HealthGoalCardBody = new("onboarding.healthGoalCardBody", "The ring fills as you get closer. Tap a goal to change its target or switch it off.");
         public static readonly LocString GamesDailyTitle = new("onboarding.gamesDailyTitle", "Daily challenge");
         public static readonly LocString GamesDailyBody = new("onboarding.gamesDailyBody", "A new game takes this card every day. Tap it to play, and come back daily to build your streak.");
-        public static readonly LocString GamesFriendsTitle = new("onboarding.gamesFriendsTitle", "Play with friends");
-        public static readonly LocString GamesFriendsBody = new("onboarding.gamesFriendsBody", "Uno, Chess and 8-Ball Pool are played online. Tap here to host a room or join one with a code.");
         public static readonly LocString CasinoIntroBody = new("onboarding.casinoIntroBody", "A casino floor played with chips you change from Aether Coin. No real money goes in, and none comes out.");
         public static readonly LocString CasinoDailySpinTitle = new("onboarding.casinoDailySpinTitle", "Free daily spin");
         public static readonly LocString CasinoDailySpinBody = new("onboarding.casinoDailySpinBody", "One turn of the coin wheel every day, on the house. It never costs chips.");
