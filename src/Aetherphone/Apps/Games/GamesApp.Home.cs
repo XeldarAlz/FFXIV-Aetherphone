@@ -56,22 +56,9 @@ internal sealed partial class GamesApp
     private const float HeroStatusAlpha = 0.78f;
     private const float HeroHookAlpha = 0.82f;
     private const float HomeCardPad = 16f;
-    private const float HomeJoinPadY = 14f;
-    private const float HomeJoinIcon = 28f;
-    private const float HomeJoinGlyph = 0.55f;
-    private const float HomeRoomHeight = 76f;
-    private const float HomeRoomPad = 14f;
-    private const float HomeRoomIcon = 48f;
-    private const float HomeRoomMonogram = 12f;
-    private const float HomeRoomMonogramRing = 2f;
-    private const float HomeRoomMonogramShade = 0.3f;
-    private const int HomeRoomSeatCap = 8;
-    private const float HomeSeatDot = 8f;
-    private const float HomeSeatGap = 4f;
     private const float HomeBrowseHeight = 56f;
     private const float HomeChevron = 14f;
     private const float HomeAppearDone = 0.999f;
-    private const int HomeAvatarSegments = 24;
     private const int HomeShelfGenres = (int)GameGenre.Friends;
 
     private static readonly string[] HomeGenreRailIds =
@@ -93,7 +80,6 @@ internal sealed partial class GamesApp
     private readonly ShelfColumns[] homeShelves =
         [new ShelfColumns(), new ShelfColumns(), new ShelfColumns(), new ShelfColumns(), new ShelfColumns(),
             new ShelfColumns()];
-    private readonly FailureSlot homeJoinFailure = new();
     private LivePreview? homePreview;
     private Backdrop[]? homePresets;
     private DailyCountdown homeCountdown;
@@ -150,12 +136,11 @@ internal sealed partial class GamesApp
             homeClipTop = drawList.GetClipRectMin().Y;
             homeClipBottom = drawList.GetClipRectMax().Y;
             var y = DrawHomeHero(drawList, left, origin.Y, width, scale) + Metrics.Space.Md * scale;
-            y = DrawHomeJoin(drawList, left, y, width, scale);
+            y = DrawHomeJoin(left, y, width, scale);
             y = DrawHomeRoom(drawList, left, y, width, scale);
             y = DrawHomeRecent(drawList, left, y, width, scale);
             y = DrawHomeLatest(drawList, left, y, width, scale);
-            var weekBottom = DrawTopThisWeek(left, y, width, scale);
-            y = weekBottom > y ? weekBottom + HubMetrics.SectionGap * scale : y;
+            y = DrawTopThisWeek(left, y, width, scale);
             y = DrawHomeShelves(drawList, left, y, width, scale);
             y = DrawHomeBrowse(drawList, left, y, width, scale);
             DrawHomeAppear(drawList);
@@ -606,50 +591,10 @@ internal sealed partial class GamesApp
         return homeRoomsLabel;
     }
 
-    private float DrawHomeJoin(ImDrawListPtr drawList, float left, float top, float width, float scale)
-    {
-        if (!leaderboard.IsSignedIn || leaderboard.CurrentUser is null || leaderboard.OptedIn)
-        {
-            return top;
-        }
-
-        homeJoinFailure.Set(leaderboard.ParticipationFailure);
-        var failed = homeJoinFailure.Failed;
-        var message = failed ? homeJoinFailure.Text() : Loc.T(L.Leaderboard.NotOnBoards);
-        var label = Loc.T(L.Leaderboard.JoinShort);
-        var pad = HomeCardPad * scale;
-        var buttonHeight = Button.SmallHeight * scale;
-        var buttonWidth = Button.WidthFor(label, ButtonSize.Small);
-        var iconSide = HomeJoinIcon * scale;
-        var textLeft = left + pad + iconSide + Metrics.Space.Md * scale;
-        var textWidth = MathF.Max(1f, left + width - pad - buttonWidth - Metrics.Space.Md * scale - textLeft);
-        var block = Typography.MeasureWrappedBlock(message, TextStyles.Subheadline, textWidth);
-        var height = MathF.Max(block.Y, MathF.Max(iconSide, buttonHeight)) + HomeJoinPadY * 2f * scale;
-        var max = new Vector2(left + width, top + height);
-        if (HomeOutOfView(top, max.Y))
-        {
-            return max.Y + Metrics.Space.Md * scale;
-        }
-
-        ui.Card(drawList, new Vector2(left, top), max, HubMetrics.CardRadius * scale);
-        var centerY = top + height * 0.5f;
-        var iconMin = new Vector2(left + pad, centerY - iconSide * 0.5f);
-        IconTile.FillShaded(drawList, iconMin, iconMin + new Vector2(iconSide), GameIconArt.Radius(iconSide),
-            IconTile.Surface(GamePalette.Star));
-        PhoneIcon.Draw(drawList, iconMin + new Vector2(iconSide * 0.5f), PhoneIcons.Crown, AccentRing.Ink,
-            iconSide * HomeJoinGlyph);
-        Typography.DrawWrappedLeft(new Vector2(textLeft, centerY - block.Y * 0.5f), message,
-            failed ? ui.Theme.Danger : ui.TitleInk, TextStyles.Subheadline, textWidth);
-        var button = new Rect(new Vector2(max.X - pad - buttonWidth, centerY - buttonHeight * 0.5f),
-            new Vector2(max.X - pad, centerY + buttonHeight * 0.5f));
-        if (Button.Draw(drawList, button, label, ui.Ink, ButtonStyle.Tinted,
-                enabled: !leaderboard.SavingParticipation, id: HomeJoinId))
-        {
-            leaderboard.SetParticipation(true);
-        }
-
-        return max.Y + Metrics.Space.Md * scale;
-    }
+    private float DrawHomeJoin(float left, float top, float width, float scale) =>
+        ShowsConsentCompact
+            ? DrawConsentCompact(left, top, width, scale, HomeJoinId) + Metrics.Space.Md * scale
+            : top;
 
     private float DrawHomeRoom(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
@@ -659,97 +604,21 @@ internal sealed partial class GamesApp
         }
 
         var room = gameRooms.Rooms[0];
-        var rect = new Rect(new Vector2(left, top), new Vector2(left + width, top + HomeRoomHeight * scale));
-        if (!HomeOutOfView(rect.Min.Y, rect.Max.Y) && DrawHomeRoomCard(drawList, rect, room, scale))
+        var rect = new Rect(new Vector2(left, top), new Vector2(left + width, top + RoomCard.Height * scale));
+        if (!HomeOutOfView(rect.Min.Y, rect.Max.Y))
         {
-            gameRooms.Enter(room.RoomId);
-            OpenOnlineRoom(room.RoomId, room.GameKind);
+            ImGui.PushID(HomeRoomCardId);
+            var entered = RoomCard.Draw(drawList, ui, rect, room, Loc.T(GamesOnlineText.GameName(room.GameKind)),
+                HomeRoomSubtitle(room), Initials.Of(room.OwnerName), scale);
+            ImGui.PopID();
+            if (entered)
+            {
+                gameRooms.Enter(room.RoomId);
+                OpenOnlineRoom(room.RoomId, room.GameKind);
+            }
         }
 
         return rect.Max.Y + Metrics.Space.Md * scale;
-    }
-
-    private bool DrawHomeRoomCard(ImDrawListPtr drawList, Rect rect, GameRoomCardDto room, float scale)
-    {
-        var hovered = UiInteract.Hover(rect.Min, rect.Max);
-        var card = rect.Scaled(PosterCard.Pose(HomeRoomCardId, hovered));
-        var radius = HubMetrics.CardRadius * scale;
-        ui.Card(drawList, card.Min, card.Max, radius);
-        if (hovered)
-        {
-            Squircle.Fill(drawList, card.Min, card.Max, radius, ImGui.GetColorU32(ui.HoverTint));
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        var pad = HomeRoomPad * scale;
-        var accent = OnlineGameArt.Accent(room.GameKind);
-        var iconSide = HomeRoomIcon * scale;
-        var iconMin = new Vector2(card.Min.X + pad, card.Center.Y - iconSide * 0.5f);
-        var iconMax = iconMin + new Vector2(iconSide);
-        GameIconArt.Draw(drawList, OnlineGameArt.AccentId(room.GameKind), accent, iconMin, iconMax, null, true);
-        DrawHomeRoomOwner(drawList, iconMax, room.OwnerName, accent, scale);
-        var chevron = HomeChevron * scale;
-        PhoneIcon.Draw(drawList, new Vector2(card.Max.X - pad - chevron * 0.5f, card.Center.Y),
-            PhoneIcons.ChevronRight, ui.MutedInk, chevron);
-        var statusRight = card.Max.X - pad - chevron - Metrics.Space.Sm * scale;
-        var statusLeft = DrawHomeRoomStatus(drawList, room, statusRight, card.Center.Y, accent, scale);
-        var textLeft = iconMax.X + Metrics.Space.Md * scale;
-        var textWidth = MathF.Max(1f, statusLeft - Metrics.Space.Sm * scale - textLeft);
-        var titleHeight = Typography.LineHeight(TextStyles.Headline);
-        var subtitleHeight = Typography.LineHeight(TextStyles.Footnote);
-        var textTop = card.Center.Y - (titleHeight + subtitleHeight) * 0.5f;
-        Typography.Draw(drawList, new Vector2(textLeft, textTop),
-            Typography.FitText(Loc.T(GamesOnlineText.GameName(room.GameKind)), textWidth, TextStyles.Headline),
-            ui.TitleInk, TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(textLeft, textTop + titleHeight),
-            Typography.FitText(HomeRoomSubtitle(room), textWidth, TextStyles.Footnote), ui.MutedInk,
-            TextStyles.Footnote);
-        return UiInteract.Click(rect.Min, rect.Max, hovered);
-    }
-
-    private void DrawHomeRoomOwner(ImDrawListPtr drawList, Vector2 iconMax, string owner, Vector4 accent, float scale)
-    {
-        var radius = HomeRoomMonogram * scale;
-        var center = iconMax - new Vector2(radius * 0.5f);
-        var ring = Vector4.Lerp(homeGround.At(center.Y), PosterCard.White, ui.Palette.CardFill.W) with { W = 1f };
-        drawList.AddCircleFilled(center, radius + HomeRoomMonogramRing * scale, ImGui.GetColorU32(ring),
-            HomeAvatarSegments);
-        AvatarView.Draw(drawList, center, radius, Palette.Darken(accent, HomeRoomMonogramShade), Initials.Of(owner),
-            TextStyles.FootnoteEmphasized.Scale, default, HomeAvatarSegments);
-    }
-
-    private float DrawHomeRoomStatus(ImDrawListPtr drawList, GameRoomCardDto room, float right, float centerY,
-        Vector4 accent, float scale)
-    {
-        var seats = Math.Clamp(room.MaxSeats, 0, HomeRoomSeatCap);
-        var dot = HomeSeatDot * scale;
-        var gap = HomeSeatGap * scale;
-        var seatsWidth = seats > 0 ? seats * dot + (seats - 1) * gap : 0f;
-        var playing = room.Phase == GameRoomWire.PhasePlaying;
-        var label = Loc.T(playing ? L.GamesHub.Playing : L.GamesHub.Waiting);
-        var statusHeight = playing ? LivePill.Height(scale) : Typography.LineHeight(TextStyles.Footnote);
-        var statusWidth = playing ? LivePill.Width(label, scale) : Typography.Measure(label, TextStyles.Footnote).X;
-        var blockHeight = statusHeight + (seats > 0 ? Metrics.Space.Xs * scale + dot : 0f);
-        var top = centerY - blockHeight * 0.5f;
-        if (playing)
-        {
-            LivePill.Draw(drawList, new Vector2(right - statusWidth, top), label, accent, (float)ImGui.GetTime(), scale);
-        }
-        else
-        {
-            Typography.Draw(drawList, new Vector2(right - statusWidth, top), label, ui.MutedInk, TextStyles.Footnote);
-        }
-
-        var dotTop = top + statusHeight + Metrics.Space.Xs * scale;
-        var empty = Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary);
-        for (var seat = 0; seat < seats; seat++)
-        {
-            var center = new Vector2(right - seatsWidth + seat * (dot + gap) + dot * 0.5f, dotTop + dot * 0.5f);
-            drawList.AddCircleFilled(center, dot * 0.5f,
-                ImGui.GetColorU32(seat < room.SeatedCount ? accent : empty), HomeAvatarSegments);
-        }
-
-        return right - MathF.Max(statusWidth, seatsWidth);
     }
 
     private string HomeRoomSubtitle(GameRoomCardDto room)
