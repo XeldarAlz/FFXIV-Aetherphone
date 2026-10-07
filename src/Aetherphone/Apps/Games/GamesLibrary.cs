@@ -106,6 +106,7 @@ internal sealed class GamesLibrary
         new("fuse", 2026, 10, 8),
         new("snip", 2026, 10, 8),
         new("minigolf", 2026, 10, 8),
+        new("online.broadside", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;

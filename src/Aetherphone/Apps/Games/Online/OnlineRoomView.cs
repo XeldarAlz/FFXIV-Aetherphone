@@ -55,6 +55,7 @@ internal sealed class OnlineRoomView
     private readonly OnlineChessTable chessTable;
     private readonly OnlinePoolTable poolTable;
     private readonly OnlineConnectFourTable connectFourTable;
+    private readonly OnlineBroadsideTable broadsideTable;
     private readonly OnlineFinishHold finishHold = new();
     private readonly string[] rosterNames = new string[MaxSeats];
     private readonly string[] rosterWins = new string[MaxSeats];
@@ -78,6 +79,7 @@ internal sealed class OnlineRoomView
         chessTable = new OnlineChessTable(store);
         poolTable = new OnlinePoolTable(store);
         connectFourTable = new OnlineConnectFourTable(store);
+        broadsideTable = new OnlineBroadsideTable(store);
     }
 
     public void Enter()
@@ -90,6 +92,7 @@ internal sealed class OnlineRoomView
         chessTable.Reset();
         poolTable.Reset();
         connectFourTable.Reset();
+        broadsideTable.Reset();
         finishHold.Clear();
         lastSeenPhase = -1;
         labeledRoster = null;
@@ -169,6 +172,13 @@ internal sealed class OnlineRoomView
         if (held.ConnectFour is not null)
         {
             connectFourTable.Draw(body, theme, scale, held.Snapshot, held.ConnectFour, FreshNotice(), finishHold);
+            return;
+        }
+
+        if (held.Broadside is not null)
+        {
+            broadsideTable.Draw(body, theme, scale, held.Snapshot, held.Broadside, store.Room.Private?.Broadside,
+                FreshNotice(), finishHold);
         }
     }
 
@@ -190,7 +200,8 @@ internal sealed class OnlineRoomView
     private bool ShowsTable(GameRoomState? held)
     {
         if (held is null || held.Roster is null
-            || (held.Uno is null && held.Chess is null && held.Pool is null && held.ConnectFour is null))
+            || (held.Uno is null && held.Chess is null && held.Pool is null && held.ConnectFour is null
+                && held.Broadside is null))
         {
             return false;
         }
@@ -553,6 +564,20 @@ internal sealed class OnlineRoomView
                 GameRoomWire.ConnectFourEndTimeout => Loc.T(L.Games.OnlineTimeoutWin, winnerName),
                 GameRoomWire.ConnectFourEndResign => Loc.T(L.Games.OnlineResignWin, winnerName),
                 GameRoomWire.ConnectFourEndDesertion => Loc.T(L.Games.OnlineDesertWin, winnerName),
+                _ => winnerName.Length > 0
+                    ? Loc.T(L.Games.OnlineWinner, winnerName)
+                    : Loc.T(L.Games.OnlineRoundVoid),
+            };
+        }
+
+        if (held.Broadside is not null)
+        {
+            return held.Broadside.EndKind switch
+            {
+                GameRoomWire.BroadsideEndFleet => Loc.T(L.Games.OnlineBroadsideWin, winnerName),
+                GameRoomWire.BroadsideEndTimeout => Loc.T(L.Games.OnlineTimeoutWin, winnerName),
+                GameRoomWire.BroadsideEndResign => Loc.T(L.Games.OnlineResignWin, winnerName),
+                GameRoomWire.BroadsideEndDesertion => Loc.T(L.Games.OnlineDesertWin, winnerName),
                 _ => winnerName.Length > 0
                     ? Loc.T(L.Games.OnlineWinner, winnerName)
                     : Loc.T(L.Games.OnlineRoundVoid),

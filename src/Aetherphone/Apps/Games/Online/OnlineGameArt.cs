@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Games.Broadside;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
@@ -16,6 +17,7 @@ internal static class OnlineGameArt
     public static readonly string[] Kinds =
     {
         GameRoomWire.UnoKind, GameRoomWire.ChessKind, GameRoomWire.PoolKind, GameRoomWire.ConnectFourKind,
+        GameRoomWire.BroadsideKind,
     };
 
     private static readonly Vector4 BallInk = new(0.09f, 0.09f, 0.11f, 1f);
@@ -32,6 +34,11 @@ internal static class OnlineGameArt
         if (string.Equals(kind, GameRoomWire.PoolKind, StringComparison.Ordinal))
         {
             return "pool";
+        }
+
+        if (string.Equals(kind, GameRoomWire.BroadsideKind, StringComparison.Ordinal))
+        {
+            return "broadside";
         }
 
         return string.Equals(kind, GameRoomWire.ConnectFourKind, StringComparison.Ordinal) ? "connectfour" : "uno";
@@ -66,7 +73,29 @@ internal static class OnlineGameArt
             return;
         }
 
+        if (string.Equals(kind, GameRoomWire.BroadsideKind, StringComparison.Ordinal))
+        {
+            DrawBroadsideMedallion(drawList, center, size, scale);
+            return;
+        }
+
         DrawUnoFan(drawList, center, size, scale);
+    }
+
+    private static void DrawBroadsideMedallion(ImDrawListPtr drawList, Vector2 center, float size, float scale)
+    {
+        var half = size * 0.46f;
+        var clock = (float)ImGui.GetTime();
+        drawList.AddCircleFilled(center + new Vector2(0f, half * 0.14f), half, ImGui.GetColorU32(Shadow), 48);
+        Squircle.FillVerticalGradient(drawList, center - new Vector2(half, half), center + new Vector2(half, half),
+            size * 0.16f, ImGui.GetColorU32(BroadsideArt.SkyTop), ImGui.GetColorU32(BroadsideArt.SkyBottom));
+        var pitch = size * 0.2f;
+        BroadsideArt.DrawPuff(drawList, center + new Vector2(-size * 0.2f, size * 0.24f), pitch, clock, 3, -1f);
+        var burst = center + new Vector2(size * 0.22f, size * 0.22f);
+        drawList.AddCircleFilled(burst, pitch * 0.34f, ImGui.GetColorU32(BroadsideArt.Ember), 16);
+        drawList.AddCircleFilled(burst, pitch * 0.18f, ImGui.GetColorU32(BroadsideArt.Flame), 12);
+        var hull = new Rect(center + new Vector2(-size * 0.36f, -size * 0.22f), center + new Vector2(size * 0.36f, 0f));
+        BroadsideArt.DrawAirship(drawList, hull, true, BroadsideArt.Hull, scale, clock, -1f, 1f);
     }
 
     private static void DrawConnectFourMedallion(ImDrawListPtr drawList, Vector2 center, float size)

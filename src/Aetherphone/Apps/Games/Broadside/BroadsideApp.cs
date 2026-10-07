@@ -24,7 +24,6 @@ internal enum BroadsideStage : byte
 internal sealed class BroadsideApp : IMiniGame
 {
     private const string GameId = "broadside";
-    private const string PlaceSurfaceId = "broadside.place";
     private const string AimSurfaceId = "broadside.aim";
     private const int HardMode = 1;
     private const int CellCount = BroadsideFleet.CellCount;
@@ -32,10 +31,6 @@ internal sealed class BroadsideApp : IMiniGame
     private const int StartCursor = 44;
     private const ulong IdleSeed = 21;
     private const ulong AiSalt = 0xB0A7B0A7UL;
-    private const float FlightSeconds = 0.42f;
-    private const float MissHold = 0.55f;
-    private const float HitHold = 0.8f;
-    private const float SunkHold = 1.6f;
     private const float HotSeatHold = 1.2f;
     private const float AimSeconds = 0.8f;
     private const float SwapSmooth = 0.13f;
@@ -44,49 +39,20 @@ internal sealed class BroadsideApp : IMiniGame
     private const float OverSeconds = 2.3f;
     private const float DemoGap = 0.32f;
     private const float DemoOverSeconds = 2.6f;
-    private const float DragThreshold = 6f;
-    private const float SinkSeconds = 1.4f;
     private const float BannerSeconds = 1.7f;
-    private const float WarnDecay = 2.2f;
-    private const float PopSeconds = 0.32f;
-    private const float RibbonWidth = 5f;
-    private const float ArcFraction = 0.16f;
-    private const float PanelIconUnit = 0.32f;
-    private const float TextRise = 34f;
     private static readonly LocString[] Modes = { L.Games.Easy, L.Games.Hard };
     private static readonly GameSpec StageSpec = new(GameId, L.Broadside.Title, GameGenre.Strategy, L.Broadside.Hook,
         Backdrop.Neon, HudStyle.Standard, ScoreKind.Streak, Modes, keyboard: true, seats: BroadsideBoard.Players);
-    private static readonly LocString[] ShipNames =
-    {
-        L.Broadside.Dreadnought, L.Broadside.Cruiser, L.Broadside.Frigate, L.Broadside.Corvette, L.Broadside.Skiff,
-    };
-    private static readonly Vector4 AutoInk = new(0.36f, 0.56f, 0.86f, 1f);
-    private static readonly Vector4 Muted = new(1f, 1f, 1f, 0.6f);
-    private static readonly Vector4 Disabled = new(1f, 1f, 1f, 0.35f);
-    private static readonly ParticleSpec Embers = new(BroadsideArt.Flame, BroadsideArt.Ember with { W = 0f }, 3.2f,
-        260f, 0.6f, 320f, 1.6f, shape: ParticleShape.Spark, additive: true);
-    private static readonly ParticleSpec Debris = new(BroadsideArt.Wreck, BroadsideArt.Smoke, 3.4f, 220f, 0.8f, 460f,
-        1.2f, 12f, shape: ParticleShape.Shard);
-    private static readonly ParticleSpec SmokePuffs = new(BroadsideArt.Smoke with { W = 0.7f },
-        BroadsideArt.Smoke with { W = 0f }, 7f, 50f, 1.1f, -40f, 1.4f, curve: SizeCurve.Grow);
-    private static readonly ParticleSpec CloudPuffs = new(BroadsideArt.Cloud with { W = 0.85f },
-        BroadsideArt.Cloud with { W = 0f }, 6f, 90f, 0.7f, -20f, 2.4f, shape: ParticleShape.GlowCircle,
-        curve: SizeCurve.Grow);
-    private static readonly ParticleSpec Muzzle = new(BroadsideArt.Flame, BroadsideArt.Ember, 2.6f, 200f, 0.4f, 0f,
-        2f, shape: ParticleShape.Spark, additive: true);
-    private static readonly ParticleSpec Dust = new(new Vector4(1f, 1f, 1f, 0.6f), new Vector4(1f, 1f, 1f, 0f), 3f,
-        60f, 0.4f, 0f, 2.6f, shape: ParticleShape.GlowCircle, curve: SizeCurve.Grow);
 
     private readonly BroadsideBoard board = new();
     private readonly BroadsideAi ai = new();
     private readonly BroadsideLayout layout = new();
+    private readonly BroadsidePlacement placement = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
     private readonly Ribbon ribbon = new();
     private readonly float[] markAge = new float[CellCount * BroadsideBoard.Players];
     private readonly float[] sinkAge = new float[ShipCount * BroadsideBoard.Players];
-    private readonly float[] placePop = new float[ShipCount];
-    private readonly float[] warn = new float[ShipCount];
     private readonly string[] shipDown = new string[ShipCount];
     private readonly string[] fireLines = new string[BroadsideBoard.Players];
     private readonly Vector4[] confetti;
@@ -108,8 +74,6 @@ internal sealed class BroadsideApp : IMiniGame
     private int aimFromCell = -1;
     private int hoverCell = -1;
     private int cursorCell = StartCursor;
-    private int dragShip = -1;
-    private int dragGrab;
     private float swapTarget;
     private float battleTarget;
     private float shotProgress;
@@ -121,10 +85,6 @@ internal sealed class BroadsideApp : IMiniGame
     private string bannerText = string.Empty;
     private Vector4 bannerColor;
     private Vector2 bannerCenter;
-    private Vector2 dragStart;
-    private bool dragAcross;
-    private bool dragMoved;
-    private bool dragWasPlaced;
     private bool cursorShown;
     private bool shotFromTop;
     private bool hotSeat;
@@ -236,10 +196,8 @@ internal sealed class BroadsideApp : IMiniGame
         ribbon.Clear();
         Array.Fill(markAge, -1f);
         Array.Fill(sinkAge, -1f);
-        Array.Fill(placePop, 1f);
-        Array.Clear(warn);
+        placement.Reset();
         bannerProgress = 1f;
-        dragShip = -1;
         shotCell = -1;
         aimCell = -1;
         aimFromCell = -1;
@@ -280,28 +238,30 @@ internal sealed class BroadsideApp : IMiniGame
 
         if (blend > 0.01f)
         {
-            DrawGridLabel(drawList, target, Loc.T(L.Broadside.EnemySkies), scale, blend);
+            BroadsideArt.DrawGridLabel(drawList, target, Loc.T(L.Broadside.EnemySkies), scale, blend);
             DrawFleet(drawList, target, BroadsideBoard.Opponent(viewer), demo, revealed, context, scale, blend);
         }
 
-        DrawGridLabel(drawList, home, HomeLabel(), scale, 1f);
+        BroadsideArt.DrawGridLabel(drawList, home, HomeLabel(), scale, 1f);
         DrawFleet(drawList, home, viewer, true, false, context, scale, 1f);
         DrawReticles(drawList, target, home, scale, interactive);
         DrawShot(drawList, context, home, target, scale);
         if (blend > 0.5f)
         {
-            DrawPanel(drawList, context, blend, scale);
+            DrawPanel(drawList, blend, scale);
         }
 
         if (placing && !demo)
         {
-            var action = DrawPlacementControls(drawList, context, scale, interactive);
-            DrawGhost(drawList, home, scale);
-            if (action == 1)
+            var fleet = board.Fleet(placingSeat);
+            var action = placement.DrawControls(drawList, fleet, layout, context.Theme, Accent, clock, scale,
+                1f - blend, interactive, true);
+            placement.DrawGhost(drawList, fleet, home, Accent, clock, scale);
+            if (action == PlacementAction.Auto)
             {
-                AutoPlace();
+                placement.AutoPlace(fleet, ref placeRandom);
             }
-            else if (action == 2)
+            else if (action == PlacementAction.Ready)
             {
                 Ready(context);
             }
@@ -324,7 +284,7 @@ internal sealed class BroadsideApp : IMiniGame
         textLanguage = Loc.Current;
         for (var ship = 0; ship < ShipCount; ship++)
         {
-            shipDown[ship] = Loc.T(L.Broadside.ShipDown, Loc.T(ShipNames[ship]));
+            shipDown[ship] = Loc.T(L.Broadside.ShipDown, Loc.T(BroadsideArt.ShipNames[ship]));
         }
 
         for (var seat = 0; seat < BroadsideBoard.Players; seat++)
@@ -351,11 +311,7 @@ internal sealed class BroadsideApp : IMiniGame
             }
         }
 
-        for (var ship = 0; ship < ShipCount; ship++)
-        {
-            placePop[ship] = MathF.Min(1f, placePop[ship] + raw / PopSeconds);
-            warn[ship] = MathF.Max(0f, warn[ship] - raw * WarnDecay);
-        }
+        placement.Age(raw);
     }
 
     private void Step(in GameContext context, float tick, float scale, bool interactive, Rect home, Rect target)
@@ -365,7 +321,8 @@ internal sealed class BroadsideApp : IMiniGame
             case BroadsideStage.Placing:
                 if (interactive)
                 {
-                    HandlePlacement(context, home, scale);
+                    placement.Handle(board.Fleet(placingSeat), layout, home, context.ChromeHit(ImGui.GetMousePos()),
+                        scale, particles, fx);
                 }
 
                 return;
@@ -390,7 +347,7 @@ internal sealed class BroadsideApp : IMiniGame
 
                 return;
             case BroadsideStage.Flying:
-                shotProgress += tick / FlightSeconds;
+                shotProgress += tick / BroadsideJuice.FlightSeconds;
                 if (shotProgress >= 1f)
                 {
                     Impact(context, scale, home, target);
@@ -563,31 +520,27 @@ internal sealed class BroadsideApp : IMiniGame
         var rect = shotFleet == viewer ? home : target;
         var center = BroadsideLayout.CellCenter(rect, shotCell);
         var pitch = BroadsideLayout.Pitch(rect);
-        var unit = pitch / 30f;
         var mine = shotFleet == viewer && !demo;
         markAge[shotFleet * CellCount + shotCell] = 0f;
         ribbon.Clear();
         switch (result)
         {
             case ShotResult.Miss:
-                particles.Emit(CloudPuffs, center, 10);
-                fx.Shockwave(center, pitch * 1.2f, BroadsideArt.Cloud with { W = 0.6f }, 0.4f, 2f);
-                fx.AddText(Loc.T(L.Broadside.Miss), center - new Vector2(0f, pitch * 0.6f), Muted, 1f, TextRise * scale);
+                BroadsideJuice.Splash(particles, fx, center, pitch, scale);
                 Sound(UiSound.GamePop);
-                holdTimer = MissHold;
+                holdTimer = BroadsideJuice.MissHold;
                 break;
             case ShotResult.Hit:
-                Explode(context, center, pitch, unit, mine, false);
-                fx.AddText(Loc.T(L.Broadside.Hit), center - new Vector2(0f, pitch * 0.6f), BroadsideArt.Flame, 1.2f,
-                    TextRise * scale);
-                holdTimer = HitHold;
+                BroadsideJuice.Explode(particles, fx, context.Fx, !demo, center, pitch, mine, false);
+                BroadsideJuice.Struck(fx, center, pitch, scale);
+                holdTimer = BroadsideJuice.HitHold;
                 break;
             case ShotResult.Sunk:
-                Explode(context, center, pitch, unit, mine, true);
+                BroadsideJuice.Explode(particles, fx, context.Fx, !demo, center, pitch, mine, true);
                 sinkAge[shotFleet * ShipCount + ship] = 0f;
                 SinkBurst(rect, shotFleet, ship, pitch);
                 Banner(shipDown[Math.Max(0, ship)], mine ? BroadsideArt.Danger : BroadsideArt.Flame, rect.Center);
-                holdTimer = SunkHold;
+                holdTimer = BroadsideJuice.SunkHold;
                 if (!demo)
                 {
                     context.Fx.SlowMo(0.5f, 0.4f);
@@ -611,47 +564,11 @@ internal sealed class BroadsideApp : IMiniGame
         stage = BroadsideStage.Resolving;
     }
 
-    private void Explode(in GameContext context, Vector2 center, float pitch, float unit, bool mine, bool big)
-    {
-        var count = big ? 2 : 1;
-        particles.Emit(Embers, center, 14 * count);
-        particles.Emit(Debris, center, 8 * count);
-        particles.Emit(SmokePuffs, center, 5 * count);
-        particles.Burst(center, 10 * count, BroadsideArt.Ember, 150f * unit * 3f, 2.4f, 0.45f, 200f);
-        fx.Shockwave(center, pitch * (big ? 2.6f : 1.6f), BroadsideArt.Flame, big ? 0.6f : 0.45f, big ? 3.6f : 2.8f);
-        fx.AddTrauma(mine ? 0.45f : big ? 0.35f : 0.22f);
-        Sound(big ? UiSound.GameBreak : UiSound.GameExplosion);
-        if (demo)
-        {
-            return;
-        }
-
-        context.Fx.Punch(big ? 0.06f : 0.035f);
-        if (mine)
-        {
-            context.Fx.Flash(BroadsideArt.Danger, 0.18f);
-            context.Fx.Vignette(BroadsideArt.Danger, 0.3f, 0.6f);
-        }
-        else
-        {
-            context.Fx.Flash(BroadsideArt.Flame, big ? 0.16f : 0.08f);
-        }
-    }
-
     private void SinkBurst(Rect grid, int fleetIndex, int ship, float pitch)
     {
         Span<int> cells = stackalloc int[BroadsideFleet.LongestShip];
         var count = board.Fleet(fleetIndex).ShipCellsOf(ship, cells);
-        for (var index = 0; index < count; index++)
-        {
-            var center = BroadsideLayout.CellCenter(grid, cells[index]);
-            particles.Emit(SmokePuffs, center, 3);
-            particles.Emit(Embers, center, 4);
-        }
-
-        fx.Shockwave(BroadsideLayout.CellCenter(grid, cells[count / 2]), pitch * count * 0.8f, BroadsideArt.Ember, 0.7f,
-            3f, pitch * 0.5f);
-        Sound(UiSound.GameClear);
+        BroadsideJuice.SinkBurst(particles, fx, grid, cells[..count], pitch, !demo);
     }
 
     private void AfterShot(in GameContext context, float scale)
@@ -739,166 +656,6 @@ internal sealed class BroadsideApp : IMiniGame
             .WithStat(L.Broadside.ShipsLost, GameNumber.Label(ShipCount - board.Fleet(focus).ShipsAfloat)));
     }
 
-    private void HandlePlacement(in GameContext context, Rect grid, float scale)
-    {
-        var fleet = board.Fleet(placingSeat);
-        var mouse = ImGui.GetMousePos();
-        var surface = new Rect(Vector2.Min(grid.Min, layout.Dock.Min), Vector2.Max(grid.Max, layout.Dock.Max));
-        PressSurface.Claim(PlaceSurfaceId, surface, out var activated);
-        if (dragShip < 0)
-        {
-            if (!activated || context.ChromeHit(mouse))
-            {
-                return;
-            }
-
-            var picked = PickShip(fleet, grid, mouse, out var grab, out var across);
-            if (picked < 0)
-            {
-                return;
-            }
-
-            dragShip = picked;
-            dragGrab = grab;
-            dragAcross = across;
-            dragStart = mouse;
-            dragMoved = false;
-            dragWasPlaced = fleet.IsPlaced(picked);
-            Sound(UiSound.GameTick);
-            return;
-        }
-
-        if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
-        {
-            if (!dragMoved && Vector2.Distance(mouse, dragStart) > DragThreshold * scale)
-            {
-                dragMoved = true;
-            }
-
-            return;
-        }
-
-        var ship = dragShip;
-        dragShip = -1;
-        if (!dragMoved)
-        {
-            if (dragWasPlaced)
-            {
-                Rotate(fleet, grid, ship);
-            }
-
-            return;
-        }
-
-        Drop(fleet, grid, ship, mouse);
-    }
-
-    private int PickShip(BroadsideFleet fleet, Rect grid, Vector2 mouse, out int grab, out bool across)
-    {
-        grab = 0;
-        across = true;
-        if (grid.Contains(mouse) && BroadsideLayout.CellAt(grid, mouse, out var column, out var row))
-        {
-            var occupant = fleet.OccupantAt(BroadsideFleet.CellOf(column, row));
-            if (occupant >= 0)
-            {
-                across = fleet.Horizontal(occupant);
-                grab = across ? column - fleet.Column(occupant) : row - fleet.Row(occupant);
-                return occupant;
-            }
-        }
-
-        for (var ship = 0; ship < ShipCount; ship++)
-        {
-            var slot = layout.DockSlot(ship);
-            if (fleet.IsPlaced(ship) || !slot.Contains(mouse))
-            {
-                continue;
-            }
-
-            grab = Math.Clamp((int)((mouse.X - slot.Min.X) / layout.DockPitch), 0, BroadsideFleet.Length(ship) - 1);
-            return ship;
-        }
-
-        return -1;
-    }
-
-    private void Rotate(BroadsideFleet fleet, Rect grid, int ship)
-    {
-        var column = fleet.Column(ship);
-        var row = fleet.Row(ship);
-        var across = fleet.Horizontal(ship);
-        var turned = fleet.Place(ship, column, row, !across);
-        if (!turned)
-        {
-            var pivotColumn = across ? column + dragGrab : column;
-            var pivotRow = across ? row : row + dragGrab;
-            turned = across
-                ? fleet.Place(ship, pivotColumn, pivotRow - dragGrab, false)
-                : fleet.Place(ship, pivotColumn - dragGrab, pivotRow, true);
-        }
-
-        if (!turned)
-        {
-            Reject(ship);
-            return;
-        }
-
-        Settle(fleet, grid, ship);
-    }
-
-    private void Drop(BroadsideFleet fleet, Rect grid, int ship, Vector2 mouse)
-    {
-        if (grid.Contains(mouse) && GhostHead(grid, mouse, ship, out var column, out var row) &&
-            fleet.Place(ship, column, row, dragAcross))
-        {
-            Settle(fleet, grid, ship);
-            return;
-        }
-
-        Reject(ship);
-    }
-
-    private void Settle(BroadsideFleet fleet, Rect grid, int ship)
-    {
-        placePop[ship] = 0f;
-        Span<int> cells = stackalloc int[BroadsideFleet.LongestShip];
-        var count = fleet.ShipCellsOf(ship, cells);
-        for (var index = 0; index < count; index++)
-        {
-            particles.Emit(Dust, BroadsideLayout.CellCenter(grid, cells[index]), 3);
-        }
-
-        Sound(UiSound.GamePiece);
-    }
-
-    private void Reject(int ship)
-    {
-        warn[ship] = 1f;
-        fx.AddTrauma(0.08f);
-        Sound(UiSound.GameWrong);
-    }
-
-    private bool GhostHead(Rect grid, Vector2 mouse, int ship, out int column, out int row)
-    {
-        BroadsideLayout.CellAt(grid, mouse, out var pointerColumn, out var pointerRow);
-        column = dragAcross ? pointerColumn - dragGrab : pointerColumn;
-        row = dragAcross ? pointerRow : pointerRow - dragGrab;
-        return BroadsideFleet.Fits(ship, column, row, dragAcross);
-    }
-
-    private void AutoPlace()
-    {
-        board.Fleet(placingSeat).AutoPlace(ref placeRandom);
-        dragShip = -1;
-        for (var ship = 0; ship < ShipCount; ship++)
-        {
-            placePop[ship] = -ship * 0.12f;
-        }
-
-        Sound(UiSound.GameShuffle);
-    }
-
     private void Ready(in GameContext context)
     {
         if (!board.Fleet(placingSeat).AllPlaced)
@@ -906,7 +663,7 @@ internal sealed class BroadsideApp : IMiniGame
             return;
         }
 
-        dragShip = -1;
+        placement.Release();
         Sound(UiSound.GamePowerUp);
         if (hotSeat && placingSeat == 0)
         {
@@ -962,15 +719,6 @@ internal sealed class BroadsideApp : IMiniGame
         return Loc.T(L.Broadside.YourFleet);
     }
 
-    private void DrawGridLabel(ImDrawListPtr drawList, Rect grid, string text, float scale, float alpha)
-    {
-        var height = Typography.LineHeight(TextStyles.FootnoteEmphasized);
-        var position = new Vector2(grid.Min.X + 2f * scale,
-            grid.Min.Y - BroadsideLayout.LabelHeight * scale * 0.5f - height * 0.5f - 2f * scale);
-        Typography.Draw(drawList, position, Typography.FitText(text, grid.Width, TextStyles.FootnoteEmphasized),
-            Muted with { W = Muted.W * alpha }, TextStyles.FootnoteEmphasized);
-    }
-
     private void DrawFleet(ImDrawListPtr drawList, Rect grid, int fleetIndex, bool showShips, bool ghostRemaining,
         in GameContext context, float scale, float alpha)
     {
@@ -982,7 +730,7 @@ internal sealed class BroadsideApp : IMiniGame
         var placing = stage == BroadsideStage.Placing && fleetIndex == placingSeat;
         for (var ship = 0; ship < ShipCount; ship++)
         {
-            if (!fleet.IsPlaced(ship) || (placing && ship == dragShip && dragMoved))
+            if (!fleet.IsPlaced(ship) || (placing && placement.Lifted(ship)))
             {
                 continue;
             }
@@ -996,8 +744,8 @@ internal sealed class BroadsideApp : IMiniGame
             var shipRect = BroadsideLayout.ShipRect(grid, fleet.Column(ship), fleet.Row(ship),
                 BroadsideFleet.Length(ship), fleet.Horizontal(ship));
             var age = sinkAge[fleetIndex * ShipCount + ship];
-            var sink = sunk ? (age < 0f ? 1f : Easing.Clamp01(age / SinkSeconds)) : -1f;
-            var pop = placing ? placePop[ship] : 1f;
+            var sink = sunk ? (age < 0f ? 1f : Easing.Clamp01(age / BroadsideJuice.SinkSeconds)) : -1f;
+            var pop = placing ? placement.Pop(ship) : 1f;
             if (pop < 0f)
             {
                 continue;
@@ -1008,10 +756,10 @@ internal sealed class BroadsideApp : IMiniGame
                 shipRect = shipRect.Scaled(0.7f + 0.3f * GameJuice.PopIn(pop));
             }
 
-            var lift = placing && ship == dragShip ? 3f * scale : 0f;
+            var lift = placing && ship == placement.DragShip ? 3f * scale : 0f;
             var shipAlpha = !showShips && !sunk ? 0.45f : alpha;
             BroadsideArt.DrawAirship(drawList, shipRect, fleet.Horizontal(ship), own ? BroadsideArt.Hull : BroadsideArt.EnemyHull,
-                scale, clock, sink, shipAlpha, placing ? warn[ship] : 0f, lift);
+                scale, clock, sink, shipAlpha, placing ? placement.Warn(ship) : 0f, lift);
         }
 
         for (var cell = 0; cell < CellCount; cell++)
@@ -1039,39 +787,7 @@ internal sealed class BroadsideApp : IMiniGame
             return;
         }
 
-        var last = BroadsideLayout.CellCenter(grid, fleet.LastShot);
-        var pulse = Pulse.Wave(Pulse.Calm);
-        drawList.AddCircle(last, pitch * (0.48f + 0.06f * pulse),
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.25f + 0.25f * pulse)), 20, MathF.Max(1f, 1.4f * scale));
-    }
-
-    private void DrawGhost(ImDrawListPtr drawList, Rect grid, float scale)
-    {
-        if (dragShip < 0 || !dragMoved)
-        {
-            return;
-        }
-
-        var fleet = board.Fleet(placingSeat);
-        var mouse = ImGui.GetMousePos();
-        var length = BroadsideFleet.Length(dragShip);
-        var pitch = BroadsideLayout.Pitch(grid);
-        if (grid.Contains(mouse) && GhostHead(grid, mouse, dragShip, out var column, out var row))
-        {
-            var valid = fleet.CanPlace(dragShip, column, row, dragAcross);
-            var snapped = BroadsideLayout.ShipRect(grid, column, row, length, dragAcross);
-            Squircle.Fill(drawList, snapped.Min, snapped.Max, pitch * 0.2f,
-                ImGui.GetColorU32((valid ? Accent : BroadsideArt.Danger) with { W = 0.22f }));
-            BroadsideArt.DrawAirship(drawList, snapped, dragAcross, BroadsideArt.Hull, scale, clock, -1f, 0.9f,
-                valid ? 0f : 0.8f, 3f * scale);
-            return;
-        }
-
-        var offset = dragAcross ? new Vector2((dragGrab + 0.5f) * pitch, pitch * 0.5f)
-            : new Vector2(pitch * 0.5f, (dragGrab + 0.5f) * pitch);
-        var free = BroadsideLayout.ShipRect(new Rect(mouse - offset, mouse - offset + new Vector2(pitch * 10f, pitch * 10f)),
-            0, 0, length, dragAcross);
-        BroadsideArt.DrawAirship(drawList, free, dragAcross, BroadsideArt.Hull, scale, clock, -1f, 0.75f, 0f, 4f * scale);
+        BroadsideArt.DrawLastShot(drawList, BroadsideLayout.CellCenter(grid, fleet.LastShot), pitch, scale);
     }
 
     private void DrawReticles(ImDrawListPtr drawList, Rect target, Rect home, float scale, bool interactive)
@@ -1084,7 +800,7 @@ internal sealed class BroadsideApp : IMiniGame
             if (cell >= 0)
             {
                 var open = fleet.MarkAt(cell) == CellMark.None;
-                var color = open ? Accent : Disabled;
+                var color = open ? Accent : BroadsideArt.Disabled;
                 StageCell.Draw(drawList, BroadsideLayout.CellRect(target, BroadsideFleet.ColumnOf(cell),
                         BroadsideFleet.RowOf(cell)).Inset(pitch * 0.06f), color with { W = open ? 0.35f : 0.12f },
                     CellDepth.Raised, pitch * 0.16f, scale);
@@ -1109,61 +825,30 @@ internal sealed class BroadsideApp : IMiniGame
     {
         if (stage != BroadsideStage.Flying || shotCell < 0)
         {
-            ribbon.Draw(drawList, BroadsideArt.Flame with { W = 0.5f }, RibbonWidth * scale, true);
+            BroadsideJuice.DrawTrail(drawList, ribbon, scale);
             return;
         }
 
         var rect = shotFleet == viewer ? home : target;
         var destination = BroadsideLayout.CellCenter(rect, shotCell);
         var origin = new Vector2(layout.Area.Center.X, shotFromTop ? context.Full.Min.Y : context.Full.Max.Y);
-        var progress = Easing.Clamp01(shotProgress);
-        var eased = Easing.EaseInOutCubic(progress);
-        var distance = Vector2.Distance(origin, destination);
-        var position = Vector2.Lerp(origin, destination, eased) +
-                       new Vector2(MathF.Sin(progress * MathF.PI) * distance * ArcFraction, 0f);
-        ribbon.Push(position);
-        ribbon.Draw(drawList, BroadsideArt.Flame with { W = 0.7f }, RibbonWidth * scale, true);
-        BroadsideArt.DrawProjectile(drawList, position, 4.5f * scale, BroadsideArt.Flame);
-        if (progress < 0.08f)
-        {
-            particles.Emit(Muzzle, position, 2);
-        }
+        BroadsideJuice.DrawFlight(drawList, ribbon, particles, origin, destination, shotProgress, scale);
     }
 
-    private void DrawPanel(ImDrawListPtr drawList, in GameContext context, float alpha, float scale)
+    private void DrawPanel(ImDrawListPtr drawList, float alpha, float scale)
     {
-        var panel = layout.Panel;
-        var titleStyle = TextStyles.FootnoteEmphasized;
-        var lineHeight = Typography.LineHeight(titleStyle);
-        var top = panel.Min.Y + BroadsideLayout.LabelHeight * scale * 0.5f - lineHeight * 0.5f;
-        Typography.Draw(drawList, new Vector2(panel.Min.X, top),
-            Typography.FitText(Loc.T(L.Broadside.EnemyFleet), panel.Width, titleStyle), Muted with { W = Muted.W * alpha },
-            titleStyle);
         var enemy = board.Fleet(BroadsideBoard.Opponent(viewer));
-        var unit = MathF.Min(panel.Width / (BroadsideFleet.LongestShip + 0.5f), BroadsideLayout.Pitch(layout.Big) * PanelIconUnit * 2f);
-        var rowHeight = unit * 1.25f;
-        var y = top + lineHeight + rowHeight * 0.6f;
+        var sunkMask = 0;
         for (var ship = 0; ship < ShipCount; ship++)
         {
-            BroadsideArt.DrawShipIcon(drawList, new Vector2(panel.Min.X, y), unit, BroadsideFleet.Length(ship),
-                enemy.IsSunk(ship), BroadsideArt.EnemyHull, scale);
-            y += rowHeight;
+            if (enemy.IsSunk(ship))
+            {
+                sunkMask |= 1 << ship;
+            }
         }
 
-        var status = StatusText();
-        if (status.Length == 0)
-        {
-            return;
-        }
-
-        var statusStyle = TextStyles.SubheadlineEmphasized;
-        var statusHeight = Typography.LineHeight(statusStyle) + 12f * scale;
-        var statusTop = MathF.Min(panel.Max.Y - statusHeight, y);
-        var statusRect = new Rect(new Vector2(panel.Min.X, statusTop), new Vector2(panel.Max.X, statusTop + statusHeight));
-        Material.Frosted(drawList, statusRect.Min, statusRect.Max, statusHeight * 0.5f, scale, 0.85f * alpha);
-        var ink = stage == BroadsideStage.Aiming ? Accent : Muted;
-        Typography.DrawCentered(drawList, statusRect.Center,
-            Typography.FitText(status, statusRect.Width - 16f * scale, statusStyle), ink with { W = alpha }, statusStyle);
+        BroadsideArt.DrawFleetPanel(drawList, layout.Panel, BroadsideLayout.Pitch(layout.Big), sunkMask, StatusText(),
+            stage == BroadsideStage.Aiming ? Accent : BroadsideArt.Muted, alpha, scale);
     }
 
     private string StatusText()
@@ -1185,66 +870,6 @@ internal sealed class BroadsideApp : IMiniGame
                 return demo ? string.Empty : Loc.T(shooter == viewer ? L.Games.YourTurn : L.Broadside.EnemyTurn);
             default:
                 return string.Empty;
-        }
-    }
-
-    private int DrawPlacementControls(ImDrawListPtr drawList, in GameContext context, float scale, bool interactive)
-    {
-        var fade = 1f - Easing.Clamp01(battle.Value);
-        if (fade <= 0.01f)
-        {
-            return 0;
-        }
-
-        var hint = layout.Hint;
-        Typography.DrawCentered(drawList, hint.Center,
-            Typography.FitText(Loc.T(L.Broadside.PlaceHint), hint.Width, TextStyles.Caption1), Muted with { W = Muted.W * fade },
-            TextStyles.Caption1);
-        DrawDock(drawList, scale);
-        var fleet = board.Fleet(placingSeat);
-        var auto = GameHud.Button(layout.AutoCenter, layout.ButtonSize, Loc.T(L.Broadside.Auto), AutoInk, context.Theme);
-        var ready = false;
-        if (fleet.AllPlaced)
-        {
-            ProgressRing.Glow(layout.ReadyCenter, layout.ButtonSize.X * 0.55f, Accent, 0.2f + 0.2f * Pulse.Wave(Pulse.Calm));
-            ready = GameHud.Button(layout.ReadyCenter, layout.ButtonSize, Loc.T(L.Broadside.Ready), Accent, context.Theme);
-        }
-        else
-        {
-            var half = layout.ButtonSize * 0.5f;
-            Material.Frosted(drawList, layout.ReadyCenter - half, layout.ReadyCenter + half, half.Y, scale, 0.6f);
-            Typography.DrawCentered(drawList, layout.ReadyCenter, Loc.T(L.Broadside.Ready), Disabled, TextStyles.Headline);
-        }
-
-        if (!interactive || dragShip >= 0)
-        {
-            return 0;
-        }
-
-        if (auto)
-        {
-            return 1;
-        }
-
-        return ready || (fleet.AllPlaced && GameInput.Pressed(ImGuiKey.Enter)) ? 2 : 0;
-    }
-
-    private void DrawDock(ImDrawListPtr drawList, float scale)
-    {
-        var fleet = board.Fleet(placingSeat);
-        var pitch = layout.DockPitch;
-        for (var ship = 0; ship < ShipCount; ship++)
-        {
-            var slot = layout.DockSlot(ship);
-            Squircle.Stroke(drawList, slot.Min, slot.Max, pitch * 0.3f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.14f)),
-                MathF.Max(1f, 1f * scale));
-            if (fleet.IsPlaced(ship) || (ship == dragShip && dragMoved))
-            {
-                continue;
-            }
-
-            BroadsideArt.DrawAirship(drawList, slot, true, BroadsideArt.Hull, scale, clock, -1f, 1f, warn[ship],
-                ship == dragShip ? 3f * scale : 0f);
         }
     }
 }
