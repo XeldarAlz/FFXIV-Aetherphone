@@ -2179,6 +2179,12 @@ internal static class L
 
         public static readonly LocString[] Release1200Games =
         {
+            new("changelog.r1200.70",
+                "Redesigned the Games app around four tabs, Home, Together, Library and Profile, with today's game playing live at the top of Home above Continue Playing, Just Added and Top This Week"),
+            new("changelog.r1200.71",
+                "Library shows every game in one grid with search, genre filters and sorting, and Profile keeps your daily streak calendar, ranks and personal bests"),
+            new("changelog.r1200.72",
+                "Leaderboards open on a podium for the top three, games zoom open from their icon, and every game has its own painted icon"),
             new("changelog.r1200.0",
                 "Overhauled every game in Games to run full screen on one shared stage: an intro with your best and rank, a 3, 2, 1 countdown for timed games, a pause menu, and a result card with your stats"),
             new("changelog.r1200.1",
@@ -2308,9 +2314,9 @@ internal static class L
             new("changelog.r1200.69",
                 "Added Crater, Broadside, Lucky Draw and Mini Golf rooms to Play with friends"),
             new("changelog.r1200.35",
-                "Added a global leaderboard to every game that you join by choice: a card the first time you open Games shows how you would appear, and each board lists the top 50 worldwide or among your friends, all time or this week, from the intro, the pause menu, the result card or Records"),
+                "Added a global leaderboard to every game that you join by choice: a card the first time you open Games shows how you would appear, and each board lists the top 50 worldwide or among your friends, all time or this week, from the intro, the pause menu, the result card or Profile"),
             new("changelog.r1200.36",
-                "Your rank shows on the result card, on each game's tile, and in a Your ranks list at the top of Records"),
+                "Your rank shows on the result card, on each game's icon, and in Your ranks on Profile"),
             new("changelog.r1200.37",
                 "Added Show me on leaderboards to Settings > Privacy; turned off, your bests stay on this phone"),
             new("changelog.r1200.38",
