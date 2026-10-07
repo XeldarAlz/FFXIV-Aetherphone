@@ -8782,6 +8782,30 @@ internal static class L
         public static readonly LocString Saved = new("games.thrust.saved", "Saved!");
     }
 
+    internal static class Pinball
+    {
+        public static readonly LocString Title = new("games.pinball.title", "Pinball");
+        public static readonly LocString Hook = new("games.pinball.hook", "Pull the plunger with Space or a drag, flip with A and D or a tap on each side, and drop both banks to light the jackpot.");
+        public static readonly LocString Launch = new("games.pinball.launch", "Pull the plunger to launch");
+        public static readonly LocString BallNumber = new("games.pinball.ballNumber", "Ball {0}");
+        public static readonly LocString SkillShot = new("games.pinball.skillShot", "Skill shot!");
+        public static readonly LocString BallSaved = new("games.pinball.ballSaved", "Ball saved!");
+        public static readonly LocString LockNumber = new("games.pinball.lockNumber", "Ball {0} locked");
+        public static readonly LocString Multiball = new("games.pinball.multiball", "Multiball!");
+        public static readonly LocString Jackpot = new("games.pinball.jackpot", "Jackpot!");
+        public static readonly LocString JackpotLit = new("games.pinball.jackpotLit", "Jackpot lit");
+        public static readonly LocString JackpotRaised = new("games.pinball.jackpotRaised", "Jackpot raised");
+        public static readonly LocString ExtraBall = new("games.pinball.extraBall", "Extra ball!");
+        public static readonly LocString ShootAgain = new("games.pinball.shootAgain", "Shoot again");
+        public static readonly LocString BonusMultiplier = new("games.pinball.bonusMultiplier", "Bonus x{0}");
+        public static readonly LocString Bonus = new("games.pinball.bonus", "Bonus");
+        public static readonly LocString TiltWarning = new("games.pinball.tiltWarning", "Tilt warning {0}");
+        public static readonly LocString Tilt = new("games.pinball.tilt", "Tilt");
+        public static readonly LocString Jackpots = new("games.pinball.jackpots", "Jackpots");
+        public static readonly LocString Ramps = new("games.pinball.ramps", "Ramps");
+        public static readonly LocString Multiballs = new("games.pinball.multiballs", "Multiballs");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

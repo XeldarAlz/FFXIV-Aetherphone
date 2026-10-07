@@ -148,6 +148,9 @@ internal static class AppIconArt
             case "thrust":
                 DrawThrust(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "pinball":
+                PinballIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
