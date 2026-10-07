@@ -186,6 +186,7 @@ internal sealed class PhoneServices : IDisposable
 
     public required RadioLauncher RadioLauncher { get; init; }
     public required JamSession Jam { get; init; }
+    public required MusicUninstallStop MusicUninstallStop { get; init; }
     public required JamLauncher JamLauncher { get; init; }
     public required YellowPagesStore YellowPages { get; init; }
 
@@ -394,6 +395,7 @@ internal sealed class PhoneServices : IDisposable
         var streamSignals = new StreamSignalRouter(calls.Router);
         var radioRooms = new RadioRoomRouter(realtimeSignals, aethernetSession, framework);
         var jam = new JamSession(calls.Router, playback, aethernetSession, notifications, framework);
+        var musicUninstall = new MusicUninstallStop(installer, playback, jam);
         var listening = new ListeningPresence(aethernet.MusicListening, aethernetSession, playback, jam, configuration,
             framework);
         var characterSwitcher = new CharacterSessionManager(framework, aethernetSession, aethernet.Account,
@@ -452,7 +454,7 @@ internal sealed class PhoneServices : IDisposable
         var huntsMapMarkers = new Maps.HuntsMapMarkers(configuration, hunts, huntMobCatalog, huntZoneCatalog,
             huntCandidateCache);
         var windowsMedia = new WindowsMediaSessions(configuration);
-        var pcMedia = new PcMediaSource(configuration, windowsMedia);
+        var pcMedia = new PcMediaSource(configuration, windowsMedia, installer.Gate(MusicUninstallStop.MusicAppId));
         var nameplateTitles = new NameplateTitleService(configuration, framework, clientState, objectTable,
             aethernetSession, playback, pcMedia, jam, radioRooms, musters, calls,
             new HonorificBridge(Plugin.PluginInterface));
@@ -577,6 +579,7 @@ internal sealed class PhoneServices : IDisposable
             MusterLauncher = new MusterLauncher(),
             RadioLauncher = new RadioLauncher(),
             Jam = jam,
+            MusicUninstallStop = musicUninstall,
             JamLauncher = new JamLauncher(),
             YellowPages = yellowPages,
             AdInquiries = adInquiries,
@@ -635,6 +638,7 @@ internal sealed class PhoneServices : IDisposable
         KeyVault.Dispose();
         RadioRooms.Dispose();
         Listening.Dispose();
+        MusicUninstallStop.Dispose();
         Jam.Dispose();
         StreamSignals.Dispose();
         Calls.Dispose();
