@@ -64,6 +64,11 @@ internal sealed class ShellScreenPainter
     public void PaintHome(Rect screen, float screenRadius, PhoneTheme theme, in HomeMotion motion)
     {
         DeviceChrome.DrawWallpaper(screen, screenRadius, theme, motion);
+        PaintHomeContent(screen, screenRadius, theme, motion);
+    }
+
+    public void PaintHomeContent(Rect screen, float screenRadius, PhoneTheme theme, in HomeMotion motion)
+    {
         DeviceChrome.DrawHomeScrim(screen, screenRadius, theme);
         home.Draw(screen, ContentRect(screen, theme), theme, navigation, motion);
     }

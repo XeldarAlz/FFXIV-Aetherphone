@@ -44,7 +44,7 @@ internal sealed class AppSwitcher
 
     private sealed class Card
     {
-        public readonly IPhoneApp? App;
+        public readonly IPhoneApp App;
         public readonly string LayerId;
         public Spring Slot;
         public Spring Lift;
@@ -60,14 +60,12 @@ internal sealed class AppSwitcher
         public bool FlyingOff;
         public bool Hovered;
 
-        public Card(IPhoneApp? app, int slotIndex)
+        public Card(IPhoneApp app, int slotIndex)
         {
             App = app;
-            LayerId = app?.Id ?? ShellScreenPainter.HomeLayerId;
+            LayerId = app.Id;
             Slot.SnapTo(slotIndex);
         }
-
-        public bool IsHome => App is null;
     }
 
     private readonly NavigationStack navigation;
@@ -115,15 +113,13 @@ internal sealed class AppSwitcher
         openedFrame = ImGui.GetFrameCount();
         navigation.CollectOpen(snapshot);
         cards.Clear();
-        cards.Add(new Card(null, 0));
         for (var index = 0; index < snapshot.Count; index++)
         {
-            cards.Add(new Card(snapshot[index], index + 1));
+            cards.Add(new Card(snapshot[index], index));
         }
 
-        var focusSlot = navigation.AtHome ? 0f : 1f;
-        scrollTarget = focusSlot;
-        scroll.SnapTo(focusSlot);
+        scrollTarget = 0f;
+        scroll.SnapTo(0f);
         commit.SnapTo(0f);
         parallaxReachSlots = SwitcherGeometry.ParallaxReachSlots(cards.Count);
         ResetPress();
@@ -179,6 +175,7 @@ internal sealed class AppSwitcher
             }
         }
 
+        var hadCards = cards.Count > 0;
         StepCards(delta);
         if (!panning)
         {
@@ -187,9 +184,8 @@ internal sealed class AppSwitcher
         }
 
         ComputeCardRects();
-        if (closingAll && !HasAppCards())
+        if (hadCards && cards.Count == 0)
         {
-            closingAll = false;
             Dismiss();
         }
     }
@@ -203,13 +199,7 @@ internal sealed class AppSwitcher
         commit.SnapTo(0f);
         cards.Clear();
         ResetPress();
-        if (chosen.App is { } app)
-        {
-            navigation.OpenSettled(app.Id);
-            return;
-        }
-
-        navigation.GoHomeSettled();
+        navigation.OpenSettled(chosen.App.Id);
     }
 
     private void StepCards(float delta)
@@ -288,32 +278,14 @@ internal sealed class AppSwitcher
 
     private bool IsCurrent(Card card)
     {
-        if (card.FlyingOff)
-        {
-            return false;
-        }
-
-        return card.App is { } app ? ReferenceEquals(app, navigation.Current) : navigation.AtHome;
-    }
-
-    private bool HasAppCards()
-    {
-        for (var index = 0; index < cards.Count; index++)
-        {
-            if (!cards[index].IsHome)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return !card.FlyingOff && ReferenceEquals(card.App, navigation.Current);
     }
 
     private bool HasOpenApps()
     {
         for (var index = 0; index < cards.Count; index++)
         {
-            if (!cards[index].IsHome && !cards[index].FlyingOff)
+            if (!cards[index].FlyingOff)
             {
                 return true;
             }
@@ -346,26 +318,37 @@ internal sealed class AppSwitcher
         return true;
     }
 
-    private Rect BackdropQuad(Rect screen) =>
-        SwitcherGeometry.ParallaxQuad(screen, scroll.Value, layout.Pitch, parallaxReachSlots);
+    private float BackdropAmount()
+    {
+        var revealValue = Easing.Clamp01(reveal.Value);
+        var commitValue = committing is null ? 0f : Easing.Clamp01(commit.Value);
+        return revealValue * (1f - commitValue);
+    }
+
+    private Rect BackdropQuad(Rect screen, float backdrop) =>
+        LerpRect(screen, SwitcherGeometry.ParallaxQuad(screen, scroll.Value, layout.Pitch, parallaxReachSlots),
+            backdrop);
 
     public void DrawStage(Rect screen, float screenRadius, PhoneTheme theme)
     {
         var scale = UiScale.Current;
-        var revealValue = Easing.Clamp01(reveal.Value);
-        var commitValue = committing is null ? 0f : Easing.Clamp01(commit.Value);
-        var backdrop = revealValue * (1f - commitValue);
+        var backdrop = BackdropAmount();
         using (ScreenLayer.BeginPassive(BackdropLayerId, screen))
         {
-            var backdropList = ImGui.GetWindowDrawList();
-            DeviceChrome.DrawWallpaper(backdropList, screen, screen, BackdropQuad(screen), screenRadius, theme,
-                HomeMotion.Recede(backdrop, null).Recession);
-            Material.Veil(backdropList, screen.Min, screen.Max, BackdropVeil * backdrop, screenRadius);
+            DeviceChrome.DrawWallpaper(ImGui.GetWindowDrawList(), screen, screen, BackdropQuad(screen, backdrop),
+                screenRadius, theme, HomeMotion.Recede(backdrop, null).Recession);
+        }
+
+        if (navigation.AtHome)
+        {
+            using var homeLayer = ScreenLayer.Begin(ShellScreenPainter.HomeLayerId, screen, true);
+            painter.PaintHomeContent(screen, screenRadius, theme, HomeMotion.Recede(Easing.Clamp01(reveal.Value), null));
         }
 
         using (ScreenLayer.BeginPassive(ShadowLayerId, screen))
         {
             var shadowList = ImGui.GetWindowDrawList();
+            Material.Veil(shadowList, screen.Min, screen.Max, BackdropVeil * backdrop, screenRadius);
             for (var index = 0; index < cards.Count; index++)
             {
                 var card = cards[index];
@@ -389,7 +372,7 @@ internal sealed class AppSwitcher
 
             var transform = LayerTransform.Fit(screen, card.DrawRect, clip, card.Alpha);
             using var layer = ScreenLayer.Begin(card.LayerId, screen, true);
-            PaintCard(screen, screenRadius, theme, card);
+            painter.PaintApp(screen, screenRadius, theme, card.App);
             layer.Transform(in transform);
         }
 
@@ -408,17 +391,6 @@ internal sealed class AppSwitcher
                     SwitcherGeometry.CardRounding(card.DrawRect.Width, screen.Width, screenRadius), scale, card.Alpha);
             }
         }
-    }
-
-    private void PaintCard(Rect screen, float screenRadius, PhoneTheme theme, Card card)
-    {
-        if (card.App is { } app)
-        {
-            painter.PaintApp(screen, screenRadius, theme, app);
-            return;
-        }
-
-        painter.PaintHome(screen, screenRadius, theme, HomeMotion.Still);
     }
 
     public void DrawOverlay(Rect screen, PhoneTheme theme, float delta, bool inputEnabled)
@@ -450,7 +422,7 @@ internal sealed class AppSwitcher
             ClearPointer();
         }
 
-        DeviceChrome.RecordWallpaperBackdrop(screen, BackdropQuad(screen), theme);
+        DeviceChrome.RecordWallpaperBackdrop(screen, BackdropQuad(screen, BackdropAmount()), theme);
         for (var index = 0; index < cards.Count; index++)
         {
             var card = cards[index];
@@ -464,6 +436,7 @@ internal sealed class AppSwitcher
             DrawCardLabel(drawList, card, theme, scale, card.Alpha * opacity, interactive);
         }
 
+        DrawEmptyHint(drawList, screen, theme, opacity);
         DrawArrows(drawList, screen, scale, delta, opacity, interactive);
         DrawFooter(drawList, screen, theme, scale, opacity, interactive);
         drawList.PopClipRect();
@@ -487,7 +460,7 @@ internal sealed class AppSwitcher
 
             var bounds = card.DrawRect;
             var maxTextWidth = MathF.Max(0f, bounds.Width - (inset + tile + gap + trailing));
-            card.LabelText = Typography.FitText(LabelName(card), maxTextWidth, TextStyles.FootnoteEmphasized);
+            card.LabelText = Typography.FitText(card.App.DisplayName, maxTextWidth, TextStyles.FootnoteEmphasized);
             card.LabelTextSize = Typography.Measure(card.LabelText, TextStyles.FootnoteEmphasized);
             var halfWidth = (inset + tile + gap + card.LabelTextSize.X + trailing) * 0.5f;
             var bottom = bounds.Min.Y - LabelLiftUnits * scale;
@@ -496,8 +469,6 @@ internal sealed class AppSwitcher
             card.LabelHitRect = new Rect(card.LabelRect.Min - hitPad, card.LabelRect.Max + hitPad);
         }
     }
-
-    private static string LabelName(Card card) => card.App is { } app ? app.DisplayName : Loc.T(L.Home.HomeScreen);
 
     private void UpdateInput(Rect screen, float scale, float delta)
     {
@@ -599,7 +570,7 @@ internal sealed class AppSwitcher
             }
             else if (MathF.Abs(travel.Y) > slop)
             {
-                if (pressCard is { FlyingOff: false, IsHome: false } && travel.Y < 0f)
+                if (pressCard is { FlyingOff: false } && travel.Y < 0f)
                 {
                     lifting = true;
                 }
@@ -625,7 +596,7 @@ internal sealed class AppSwitcher
 
     private void ReleasePress(Vector2 travel, float velocityY, float scale)
     {
-        if (lifting && pressCard is { FlyingOff: false, IsHome: false } card)
+        if (lifting && pressCard is { FlyingOff: false } card)
         {
             if (SwitcherGeometry.ClosesOnRelease(card.Lift.Value, layout.CardHeight, velocityY,
                     CloseFlingUnitsPerSecond * scale))
@@ -673,14 +644,14 @@ internal sealed class AppSwitcher
 
     private void CloseCard(Card card)
     {
-        if (card.FlyingOff || card.App is not { } app)
+        if (card.FlyingOff)
         {
             return;
         }
 
         card.FlyingOff = true;
-        var wasCurrent = ReferenceEquals(navigation.Current, app);
-        navigation.Forget(app.Id);
+        var wasCurrent = ReferenceEquals(navigation.Current, card.App);
+        navigation.Forget(card.App.Id);
         if (!wasCurrent)
         {
             UiFeedback.Play(UiSound.AppClose);
@@ -716,10 +687,7 @@ internal sealed class AppSwitcher
         var closesCurrent = navigation.Current is not null;
         for (var index = 0; index < cards.Count; index++)
         {
-            if (!cards[index].IsHome)
-            {
-                cards[index].FlyingOff = true;
-            }
+            cards[index].FlyingOff = true;
         }
 
         navigation.ForgetAll();
@@ -752,7 +720,7 @@ internal sealed class AppSwitcher
         var inset = (rect.Height - tile) * 0.5f;
         Material.LiquidGlass(drawList, rect.Min, rect.Max, rect.Height * 0.5f, scale, GlassTone.Light, 0f, alpha);
         var tileCenter = new Vector2(rect.Min.X + inset + tile * 0.5f, rect.Center.Y);
-        DrawLabelIcon(drawList, card, theme, tileCenter, tile, alpha);
+        DrawLabelIcon(drawList, card, tileCenter, tile, alpha);
         var textPosition = new Vector2(tileCenter.X + tile * 0.5f + LabelGapUnits * scale,
             rect.Center.Y - card.LabelTextSize.Y * 0.5f);
         Typography.Draw(drawList, textPosition, card.LabelText, Palette.WithAlpha(theme.TextStrong, alpha),
@@ -765,12 +733,11 @@ internal sealed class AppSwitcher
         }
     }
 
-    private static void DrawLabelIcon(ImDrawListPtr drawList, Card card, PhoneTheme theme, Vector2 center, float size,
-        float alpha)
+    private static void DrawLabelIcon(ImDrawListPtr drawList, Card card, Vector2 center, float size, float alpha)
     {
         var half = new Vector2(size, size) * 0.5f;
-        var accent = card.App is { } app ? app.Accent : theme.Accent;
-        if (card.App is not null && AppIconTile.TryDraw(drawList, card.App.Id, accent, center - half, center + half,
+        var accent = card.App.Accent;
+        if (AppIconTile.TryDraw(drawList, card.App.Id, accent, center - half, center + half,
                 size * Metrics.Radius.TileFactor, alpha, false))
         {
             return;
@@ -779,13 +746,6 @@ internal sealed class AppSwitcher
         var surface = IconTile.Surface(accent);
         Squircle.Fill(drawList, center - half, center + half, size * Metrics.Radius.TileFactor,
             ImGui.GetColorU32(Palette.WithAlpha(surface, alpha)));
-        if (card.App is null)
-        {
-            ProgressRing.CenterIcon(drawList, center, FontAwesomeIcon.Home, Palette.WithAlpha(AccentRing.Ink, alpha),
-                size * 0.5f);
-            return;
-        }
-
         var ink = AppAccents.InkFor(card.App.Id);
         if (AppIconArt.TryDraw(drawList, card.App.Id, center, size * 0.9f, Palette.WithAlpha(ink, alpha),
                 Palette.WithAlpha(Palette.Mix(surface, ink, 0.28f), alpha)))
@@ -794,6 +754,17 @@ internal sealed class AppSwitcher
         }
 
         drawList.AddCircleFilled(center, size * 0.16f, ImGui.GetColorU32(Palette.WithAlpha(ink, alpha)), 12);
+    }
+
+    private void DrawEmptyHint(ImDrawListPtr drawList, Rect screen, PhoneTheme theme, float opacity)
+    {
+        if (cards.Count > 0)
+        {
+            return;
+        }
+
+        Typography.DrawCentered(drawList, screen.Center, Loc.T(L.AppSwitcher.Empty),
+            Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.SubheadlineEmphasized);
     }
 
     private Vector2 ArrowCenter(Rect screen, float scale, bool left)
