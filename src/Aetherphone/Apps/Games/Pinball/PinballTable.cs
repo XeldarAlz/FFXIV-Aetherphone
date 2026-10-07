@@ -66,8 +66,8 @@ internal static class PinballTable
 
     public static readonly Vector2[] Targets =
     {
-        new(0.92f, 4.45f), new(0.92f, 4.95f), new(0.92f, 5.45f),
-        new(4.02f, 5f), new(4.02f, 5.5f), new(4.02f, 6f),
+        new(0.66f, 4.45f), new(0.66f, 4.95f), new(0.66f, 5.45f),
+        new(4.29f, 5f), new(4.29f, 5.5f), new(4.29f, 6f),
     };
 
     public static readonly Vector2[] TargetFacing =
@@ -95,7 +95,7 @@ internal static class PinballTable
 
     public static readonly Vector2[] RightOrbitWall = { new(4.85f, 2.9f), new(4.85f, 5.75f) };
 
-    public static readonly Vector2[] RampMouthRail = { new(4.35f, 4.45f), new(4.35f, 5.75f) };
+    public static readonly Vector2[] RampMouthRail = { new(4.35f, 4.45f), new(4.35f, 6.25f) };
 
     public static readonly Vector2[] RightDeflector = { new(LaneInnerX, 6.35f), new(4.98f, 6.85f) };
 
@@ -139,7 +139,7 @@ internal static class PinballTable
         var points = Sling(sling);
         var along = Vector2.Normalize(points[2] - points[0]);
         var normal = new Vector2(along.Y, -along.X);
-        return sling == 0 ? -normal : normal;
+        return sling == 0 ? normal : -normal;
     }
 
     public static bool InLane(Vector2 position) =>
