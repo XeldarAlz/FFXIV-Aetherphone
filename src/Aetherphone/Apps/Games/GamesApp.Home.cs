@@ -135,7 +135,8 @@ internal sealed partial class GamesApp
             homeGround = new HubGround(ui.Palette, SceneChrome.ScreenFrom(context.Content, ui.Theme, scale));
             homeClipTop = drawList.GetClipRectMin().Y;
             homeClipBottom = drawList.GetClipRectMax().Y;
-            var y = DrawHomeHero(drawList, left, origin.Y, width, scale) + Metrics.Space.Md * scale;
+            var y = DrawWhatsNew(drawList, left, origin.Y, width, scale);
+            y = DrawHomeHero(drawList, left, y, width, scale) + Metrics.Space.Md * scale;
             y = DrawHomeJoin(left, y, width, scale);
             y = DrawHomeRoom(drawList, left, y, width, scale);
             y = DrawHomeRecent(drawList, left, y, width, scale);
@@ -592,7 +593,7 @@ internal sealed partial class GamesApp
     }
 
     private float DrawHomeJoin(float left, float top, float width, float scale) =>
-        ShowsConsentCompact
+        WhatsNewNotice.ShowsJoinCard(ShowsConsentCompact, whatsNewShowing)
             ? DrawConsentCompact(left, top, width, scale, HomeJoinId) + Metrics.Space.Md * scale
             : top;
 

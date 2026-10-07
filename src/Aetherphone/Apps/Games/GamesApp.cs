@@ -123,6 +123,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private readonly LeaderboardStore leaderboard;
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
+    private readonly SettingsLauncher settingsLauncher;
     private readonly OnlineHub onlineHub;
     private readonly OnlineRoomView onlineRoom;
     private readonly IMiniGame[] games;
@@ -167,7 +168,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures,
         Core.Coins.CoinStore coins, Core.Coins.CoinGameSessionTracker coinSessions,
         GameRoomsStore gameRooms, Configuration configuration, LeaderboardStore leaderboard, RemoteImageCache images,
-        LodestoneService lodestone, MoogleClickerService moogleClicker)
+        LodestoneService lodestone, MoogleClickerService moogleClicker, SettingsLauncher settingsLauncher)
     {
         this.stats = stats;
         this.configuration = configuration;
@@ -177,6 +178,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         this.leaderboard = leaderboard;
         this.images = images;
         this.lodestone = lodestone;
+        this.settingsLauncher = settingsLauncher;
         refreshLeaderboard = RefreshLeaderboardNow;
         session = new GameSession(stats, leaderboard, leaderboard);
         fx = new ScreenFx(backdrop);

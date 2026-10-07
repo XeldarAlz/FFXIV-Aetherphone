@@ -259,12 +259,12 @@ internal sealed partial class GamesApp
         y += (GamesHubArt.SectionHeight + HubMetrics.HeaderGap) * scale;
         if (!signedIn)
         {
-            var settings = navigation.IsAvailable(LeaderboardSettingsAppId) ? Loc.T(L.GamesHub.OpenSettings) : string.Empty;
+            var settings = navigation.IsAvailable(SettingsAppId) ? Loc.T(L.GamesHub.OpenSettings) : string.Empty;
             var bottom = DrawCompactCard(drawList, left, y, width, scale, PhoneIcons.UserCircle,
                 Loc.T(L.Stage.SignInToRank), ui.TitleInk, settings, ProfileSignInId, true, out var openSettings);
             if (openSettings)
             {
-                navigation.Open(LeaderboardSettingsAppId);
+                navigation.Open(SettingsAppId);
             }
 
             return bottom;

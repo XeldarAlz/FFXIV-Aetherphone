@@ -6,6 +6,7 @@ internal enum SettingsPageKind : byte
     Notifications,
     Privacy,
     Calls,
+    Changelog,
 }
 
 internal sealed class SettingsLauncher

@@ -8414,6 +8414,12 @@ internal static class L
         public static readonly LocString TourProfileBody = new("gamesHub.tourProfileBody", "Your daily streak, ranks and personal bests live here. Tap to have a look.");
         public static readonly LocString HoursMinutes = new("gamesHub.hoursMinutes", "{0}h {1}m");
         public static readonly LocString MinutesShort = new("gamesHub.minutesShort", "{0}m");
+        public static readonly LocString WhatsNewTitle = new("gamesHub.whatsNewTitle", "What's new in Games");
+        public static readonly LocString WhatsNewGames = new("gamesHub.whatsNewGames", "26 new games, from Mahjong Solitaire to Mini Golf");
+        public static readonly LocString WhatsNewLeaderboards = new("gamesHub.whatsNewLeaderboards", "Leaderboards you can choose to join, worldwide or among friends");
+        public static readonly LocString WhatsNewRooms = new("gamesHub.whatsNewRooms", "Play Crater, Broadside, Lucky Draw and Mini Golf online with friends");
+        public static readonly LocString WhatsNewRedesign = new("gamesHub.whatsNewRedesign", "A new look with Home, Together, Library and Profile tabs");
+        public static readonly LocString WhatsNewSeeAll = new("gamesHub.whatsNewSeeAll", "See what's new");
     }
 
     internal static class Stage

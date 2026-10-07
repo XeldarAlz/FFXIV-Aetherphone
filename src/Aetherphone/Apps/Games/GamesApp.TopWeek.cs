@@ -62,11 +62,11 @@ internal sealed partial class GamesApp
         if (!signedIn)
         {
             var footer = PodiumCard.DrawPlaceholder(drawList, ui, card, true, false, scale);
-            var settings = navigation.IsAvailable(LeaderboardSettingsAppId);
+            var settings = navigation.IsAvailable(SettingsAppId);
             if (DrawTopWeekRow(drawList, footer, Loc.T(L.Stage.SignInToRank), ui.TitleInk, string.Empty, settings,
                     scale))
             {
-                navigation.Open(LeaderboardSettingsAppId);
+                navigation.Open(SettingsAppId);
             }
 
             return bottom;
