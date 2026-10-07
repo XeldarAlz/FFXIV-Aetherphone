@@ -86,10 +86,10 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ReminderService reminders;
     private readonly ScreenshotImportService screenshotImport;
     private readonly ServerBarEntry serverBar;
+    private readonly PhoneCommands commands;
     private static CommandInfo? primaryCommand;
     private static CommandInfo? aliasCommand;
     private bool autoOpenPending;
-    private int sampleCounter;
 
     public Plugin()
     {
@@ -149,6 +149,7 @@ public sealed class Plugin : IDalamudPlugin
             services.NameplateTitles.Bind(videoSuite.WatchAlong, () => shell.ForegroundApp, bundle.Apps);
             screenshotImport = new ScreenshotImportService(bundle.Photos, Cfg);
             phoneWindow = new PhoneWindow(shell, Cfg);
+            commands = new PhoneCommands(services, phoneWindow, bundle.Apps, videoDebugWindow, ChatGui);
             Updates = new UpdateCheckService(services.Http, PluginInterface);
             updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
             huntsMapMarkersIndicatorWindow =
@@ -200,7 +201,10 @@ public sealed class Plugin : IDalamudPlugin
             serverBar = new ServerBarEntry(DtrBar, Cfg, services.Notifications, phoneWindow.ToggleShell);
             services.MarketIndex.EnsureBuilt();
             ContextMenu.OnMenuOpened += OnMenuOpened;
-            primaryCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelp) };
+            primaryCommand = new CommandInfo(OnCommand)
+            {
+                HelpMessage = Loc.T(L.Plugin.CommandHelp, AepConstants.PrimaryCommand),
+            };
             aliasCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelpAlias) };
             CommandManager.AddHandler(AepConstants.PrimaryCommand, primaryCommand);
             CommandManager.AddHandler(AepConstants.AliasCommand, aliasCommand);
@@ -336,12 +340,7 @@ public sealed class Plugin : IDalamudPlugin
         ShowPhoneApp("market");
     }
 
-    private void ShowPhoneApp(string appId)
-    {
-        phoneWindow.Maximize();
-        phoneWindow.IsOpen = true;
-        shell.OpenApp(appId);
-    }
+    private void ShowPhoneApp(string appId) => phoneWindow.OpenApp(appId);
 
     private void OnVideoFrameworkUpdate(IFramework framework)
     {
@@ -444,7 +443,7 @@ public sealed class Plugin : IDalamudPlugin
         TimeText.ApplyClockPreference(Cfg.Use24HourClock);
         if (primaryCommand is not null)
         {
-            primaryCommand.HelpMessage = Loc.T(L.Plugin.CommandHelp);
+            primaryCommand.HelpMessage = Loc.T(L.Plugin.CommandHelp, AepConstants.PrimaryCommand);
         }
 
         if (aliasCommand is not null)
@@ -497,68 +496,7 @@ public sealed class Plugin : IDalamudPlugin
         return "en";
     }
 
-    private void OnCommand(string command, string arguments)
-    {
-        var argument = arguments.Trim();
-        if (argument.Equals("test", StringComparison.OrdinalIgnoreCase))
-        {
-            SendSampleNotification();
-            return;
-        }
-
-        if (argument.Equals("reset", StringComparison.OrdinalIgnoreCase))
-        {
-            phoneWindow.Recenter();
-            return;
-        }
-
-        if (argument.Equals("videodebug", StringComparison.OrdinalIgnoreCase))
-        {
-            videoDebugWindow.IsOpen = true;
-            return;
-        }
-
-        if (argument.Equals("perfhud", StringComparison.OrdinalIgnoreCase))
-        {
-            Cfg.ShowPerfHud = !Cfg.ShowPerfHud;
-            Cfg.Save();
-            return;
-        }
-
-        if (argument.StartsWith("market", StringComparison.OrdinalIgnoreCase))
-        {
-            var query = argument.Length > 6 ? argument.Substring(6).Trim() : string.Empty;
-            OpenMarket(query);
-            return;
-        }
-
-        if (argument.Equals("run", StringComparison.OrdinalIgnoreCase) ||
-            argument.StartsWith("run ", StringComparison.OrdinalIgnoreCase))
-        {
-            RunShortcut(argument.Length > 4 ? argument.Substring(4).Trim() : string.Empty);
-            return;
-        }
-
-        phoneWindow.ToggleShell();
-    }
-
-    private void RunShortcut(string name)
-    {
-        if (name.Length == 0)
-        {
-            ChatGui.Print(Loc.T(L.Plugin.RunUsage));
-            return;
-        }
-
-        var shortcut = services.Shortcuts.FindByName(name);
-        if (shortcut is null)
-        {
-            ChatGui.Print(Loc.T(L.Plugin.ShortcutNotFound, name));
-            return;
-        }
-
-        services.ShortcutRunner.Run(shortcut);
-    }
+    private void OnCommand(string command, string arguments) => commands.Run(arguments);
 
     private void BringPhoneForward()
     {
@@ -586,7 +524,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         args.AddMenuItem(
-            new MenuItem { Name = Loc.T(L.Plugin.SearchTheMarket), OnClicked = _ => OpenMarketAt(itemId), });
+            new MenuItem { Name = Loc.T(L.Plugin.SearchTheMarket), OnClicked = _ => OpenMarketItem(itemId), });
     }
 
     private void AddLinkpearlMenuItem(IMenuOpenedArgs args)
@@ -625,36 +563,5 @@ public sealed class Plugin : IDalamudPlugin
 
         var hovered = GameGui.HoveredItem;
         return hovered == 0 ? 0u : (uint)(hovered % 1_000_000);
-    }
-
-    private void OpenMarketAt(uint itemId)
-    {
-        services.MarketLauncher.RequestItem(itemId);
-        phoneWindow.Maximize();
-        phoneWindow.IsOpen = true;
-        shell.OpenApp("market");
-    }
-
-    private void OpenMarket(string query)
-    {
-        if (query.Length > 0)
-        {
-            services.MarketLauncher.RequestSearch(query);
-        }
-
-        phoneWindow.Maximize();
-        phoneWindow.IsOpen = true;
-        shell.OpenApp("market");
-    }
-
-    private static readonly string[] SampleSenders = { "Alisaie", "Y'shtola", "Thancred" };
-
-    private void SendSampleNotification()
-    {
-        sampleCounter++;
-        var accent = new Vector4(0.30f, 0.78f, 0.42f, 1f);
-        var sender = SampleSenders[sampleCounter % SampleSenders.Length];
-        services.Notifications.Notify(new PhoneNotification("messages", sender, $"Sample message #{sampleCounter}",
-            DateTime.Now, accent, $"{sender}@Sample"));
     }
 }

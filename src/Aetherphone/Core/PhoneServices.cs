@@ -28,6 +28,7 @@ using Aetherphone.Core.Muster;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.News;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Photos;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.Radio;
 using Aetherphone.Core.Report;
@@ -157,6 +158,7 @@ internal sealed class PhoneServices : IDisposable
     public required MarketboardService Market { get; init; }
     public required TranslationService Translation { get; init; }
     public required MarketLauncher MarketLauncher { get; init; }
+    public required CameraShutter CameraShutter { get; init; }
     public required MarketAlertService MarketAlerts { get; init; }
     public required MarketWatchlist MarketWatchlist { get; init; }
     public required NewsService News { get; init; }
@@ -550,6 +552,7 @@ internal sealed class PhoneServices : IDisposable
             Market = market,
             Translation = translation,
             MarketLauncher = marketLauncher,
+            CameraShutter = new CameraShutter(),
             MarketAlerts = marketAlerts,
             MarketWatchlist = marketWatchlist,
             News = news,

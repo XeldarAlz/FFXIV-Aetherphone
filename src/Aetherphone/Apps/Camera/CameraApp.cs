@@ -45,6 +45,7 @@ internal sealed class CameraApp : IPhoneApp
     private const int CaptureWatchdogTicks = 30;
     private const int ShortTimerSeconds = 3;
     private const int LongTimerSeconds = 10;
+    private const float RequestedShotSettleSeconds = 0.6f;
     private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto };
     private static readonly string[] ModeAnchors = { "camera.mode.square", "camera.mode.photo" };
     private static readonly string[] CountdownDigits = new string[LongTimerSeconds + 1];
@@ -73,6 +74,7 @@ internal sealed class CameraApp : IPhoneApp
     private readonly PhotoLibrary library;
     private readonly Configuration configuration;
     private readonly GameUiVisibility gameUiVisibility;
+    private readonly CameraShutter shutter;
     private readonly CameraModeDial dial = new(Modes, ModeAnchors);
     private readonly CancellationTokenSource cancellation = new();
     private CachedText timerLabel;
@@ -95,14 +97,16 @@ internal sealed class CameraApp : IPhoneApp
     private int captureWatchdogTicks;
     private Rect pendingCaptureRect;
     private bool captureHooksAttached;
+    private float requestedShotDelay;
 
     public CameraApp(PhotoCaptureService capture, PhotoLibrary library, Configuration configuration,
-        GameUiVisibility gameUiVisibility)
+        GameUiVisibility gameUiVisibility, CameraShutter shutter)
     {
         this.capture = capture;
         this.library = library;
         this.configuration = configuration;
         this.gameUiVisibility = gameUiVisibility;
+        this.shutter = shutter;
     }
 
     private bool TimerRunning => timerEndsAt > 0d;
@@ -123,6 +127,7 @@ internal sealed class CameraApp : IPhoneApp
     public void OnClosed()
     {
         timerEndsAt = 0d;
+        requestedShotDelay = 0f;
         AppLandscape.Release(Id);
         DetachCaptureHooks();
     }
@@ -169,6 +174,29 @@ internal sealed class CameraApp : IPhoneApp
 
         DrawFlight(drawList, delta, scale);
         CameraChrome.Flash(drawList, screen, flashAge, FlashDuration, rounding);
+        TakeRequestedShot(captureRect, delta);
+    }
+
+    private void TakeRequestedShot(Rect captureRect, float delta)
+    {
+        if (shutter.TryConsume())
+        {
+            requestedShotDelay = RequestedShotSettleSeconds;
+        }
+
+        if (requestedShotDelay <= 0f)
+        {
+            return;
+        }
+
+        requestedShotDelay -= delta;
+        if (requestedShotDelay > 0f || TimerRunning)
+        {
+            return;
+        }
+
+        requestedShotDelay = 0f;
+        Shoot(captureRect);
     }
 
     private void DrawTopBar(ImDrawListPtr drawList, Rect screen, float rounding, float scale)

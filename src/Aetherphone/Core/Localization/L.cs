@@ -9574,8 +9574,36 @@ internal static class L
 
     internal static class Plugin
     {
-        public static readonly LocString CommandHelp = new("plugin.commandHelp", "Toggle the Aetherphone. /phone run [shortcut] runs a shortcut, /phone market [item] opens the market board, /phone reset recenters the phone, /phone test sends a sample notification.");
+        public static readonly LocString CommandHelp = new("plugin.commandHelp", "Toggle the Aetherphone. Type {0} help to list every command.");
         public static readonly LocString CommandHelpAlias = new("plugin.commandHelpAlias", "Alias for /phone.");
+        public static readonly LocString HelpTitle = new("plugin.helpTitle", "Aetherphone commands:");
+        public static readonly LocString HelpToggle = new("plugin.help.toggle", "{0}: show or hide the phone.");
+        public static readonly LocString HelpMini = new("plugin.help.mini", "{0} mini: switch between the full and mini phone.");
+        public static readonly LocString HelpFull = new("plugin.help.full", "{0} full: bring up the full phone.");
+        public static readonly LocString HelpHide = new("plugin.help.hide", "{0} hide: put the phone away.");
+        public static readonly LocString HelpOpen = new("plugin.help.open", "{0} open [app]: open an app by name.");
+        public static readonly LocString HelpSettings = new("plugin.help.settings", "{0} settings: open Settings.");
+        public static readonly LocString HelpPhoto = new("plugin.help.photo", "{0} photo: open the Camera and take a photo.");
+        public static readonly LocString HelpDoNotDisturb = new("plugin.help.dnd", "{0} dnd: turn Do Not Disturb on or off.");
+        public static readonly LocString HelpMute = new("plugin.help.mute", "{0} mute: turn Silent Mode on or off.");
+        public static readonly LocString HelpMusic = new("plugin.help.music", "{0} music [play, pause, next, prev]: control the music player.");
+        public static readonly LocString HelpTell = new("plugin.help.tell", "{0} tell [name]: message your target, or a player by name.");
+        public static readonly LocString HelpCall = new("plugin.help.call", "{0} call [contact]: call a contact.");
+        public static readonly LocString HelpRun = new("plugin.help.run", "{0} run [shortcut]: run a shortcut by name.");
+        public static readonly LocString HelpMarket = new("plugin.help.market", "{0} market [item]: search the market board.");
+        public static readonly LocString HelpReset = new("plugin.help.reset", "{0} reset: move the phone back to the center of the screen.");
+        public static readonly LocString HelpTest = new("plugin.help.test", "{0} test: send a sample notification.");
+        public static readonly LocString OpenUsage = new("plugin.openUsage", "Type {0} open followed by an app name.");
+        public static readonly LocString AppNotFound = new("plugin.appNotFound", "No app named {0}.");
+        public static readonly LocString AppNotInstalled = new("plugin.appNotInstalled", "Install {0} from the App Store first.");
+        public static readonly LocString StateLine = new("plugin.stateLine", "{0}: {1}");
+        public static readonly LocString MusicUsage = new("plugin.musicUsage", "Type {0} music followed by play, pause, next, or prev.");
+        public static readonly LocString NothingPlaying = new("plugin.nothingPlaying", "Nothing is playing.");
+        public static readonly LocString TellUsage = new("plugin.tellUsage", "Target a player, or type {0} tell followed by their name and world.");
+        public static readonly LocString WorldNotFound = new("plugin.worldNotFound", "No world named {0}.");
+        public static readonly LocString CallUsage = new("plugin.callUsage", "Type {0} call followed by a contact name.");
+        public static readonly LocString ContactNotFound = new("plugin.contactNotFound", "No contact named {0}.");
+        public static readonly LocString UnknownCommand = new("plugin.unknownCommand", "Unknown command {0}. Type {1} help to see every command.");
         public static readonly LocString RunUsage = new("plugin.runUsage", "Type /phone run followed by a shortcut name.");
         public static readonly LocString ShortcutNotFound = new("plugin.shortcutNotFound", "No shortcut named {0}.");
         public static readonly LocString SearchTheMarket = new("plugin.searchTheMarket", "Search the Market");

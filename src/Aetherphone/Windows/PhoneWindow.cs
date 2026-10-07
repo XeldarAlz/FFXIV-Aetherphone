@@ -95,6 +95,41 @@ internal sealed class PhoneWindow : Window
         IsOpen = true;
     }
 
+    public void ShowFull()
+    {
+        if (!IsOpen)
+        {
+            Maximize();
+            IsOpen = true;
+            return;
+        }
+
+        shell.Expand();
+    }
+
+    public void ShowMinimized()
+    {
+        if (!IsOpen)
+        {
+            StartMinimized();
+            IsOpen = true;
+            return;
+        }
+
+        shell.Collapse();
+    }
+
+    public void ToggleMinimized()
+    {
+        if (IsOpen && shell.MinimizePhase is MinimizePhase.Minimized or MinimizePhase.Collapsing)
+        {
+            shell.Expand();
+            return;
+        }
+
+        ShowMinimized();
+    }
+
     public void ToggleShell()
     {
         if (IsOpen)
@@ -107,11 +142,13 @@ internal sealed class PhoneWindow : Window
         IsOpen = true;
     }
 
-    public void OpenSettings()
+    public void OpenSettings() => OpenApp("settings");
+
+    public void OpenApp(string appId)
     {
         Maximize();
         IsOpen = true;
-        shell.OpenApp("settings");
+        shell.OpenApp(appId);
     }
 
     private void RequestPosition(Vector2? target)

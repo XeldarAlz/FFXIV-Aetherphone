@@ -73,6 +73,20 @@ internal sealed class GameData
         return string.Empty;
     }
 
+    public string FindWorldName(string typed)
+    {
+        foreach (var world in data.GetExcelSheet<World>())
+        {
+            var name = world.Name.ExtractText();
+            if (name.Length > 0 && string.Equals(name, typed, StringComparison.OrdinalIgnoreCase))
+            {
+                return name;
+            }
+        }
+
+        return string.Empty;
+    }
+
     public string JobAbbreviation(uint rowId)
     {
         if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))

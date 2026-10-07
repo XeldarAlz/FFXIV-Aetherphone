@@ -91,12 +91,6 @@ internal sealed class SpotlightIndex
     private const int MarketBias = 70;
     private const int StoreBias = 20;
 
-    private const int ExactQuality = 1000;
-    private const int PrefixQuality = 800;
-    private const int WordStartQuality = 600;
-    private const int ContainsQuality = 400;
-    private const int LengthPenaltyCap = 48;
-
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly AppInstaller installer;
     private readonly ContactBook contacts;
@@ -348,34 +342,6 @@ internal sealed class SpotlightIndex
         results.Sort(comparer);
     }
 
-    private static int Match(string text, string query)
-    {
-        if (text.Length == 0)
-        {
-            return 0;
-        }
-
-        var position = text.IndexOf(query, StringComparison.CurrentCultureIgnoreCase);
-        if (position < 0)
-        {
-            return 0;
-        }
-
-        int quality;
-        if (position == 0)
-        {
-            quality = text.Length == query.Length ? ExactQuality : PrefixQuality;
-        }
-        else
-        {
-            quality = IsWordStart(text, position) ? WordStartQuality : ContainsQuality;
-        }
-
-        return quality - Math.Min(text.Length, LengthPenaltyCap);
-    }
-
-    private static bool IsWordStart(string text, int position) => !char.IsLetterOrDigit(text[position - 1]);
-
     private void CollectCalculation(string query)
     {
         if (!SpotlightMath.TryEvaluate(query, out var formatted))
@@ -399,15 +365,15 @@ internal sealed class SpotlightIndex
             }
 
             var entry = AppStoreCatalog.For(app.Id);
-            var score = Match(app.DisplayName, query);
+            var score = SpotlightMatch.Score(app.DisplayName, query);
             if (score == 0)
             {
-                score = Match(app.Id, query) / 2;
+                score = SpotlightMatch.Score(app.Id, query) / 2;
             }
 
             if (score == 0)
             {
-                score = Match(Loc.T(entry.Subtitle), query) / 3;
+                score = SpotlightMatch.Score(Loc.T(entry.Subtitle), query) / 3;
             }
 
             if (score == 0)
@@ -429,10 +395,10 @@ internal sealed class SpotlightIndex
         {
             var kind = actions[index];
             var label = Loc.T(SpotlightActions.Label(kind));
-            var score = Match(label, query);
+            var score = SpotlightMatch.Score(label, query);
             if (score == 0 && SpotlightActions.IsAppearance(kind))
             {
-                score = Match(Loc.T(L.Settings.Theme), query);
+                score = SpotlightMatch.Score(Loc.T(L.Settings.Theme), query);
             }
 
             if (score == 0)
@@ -463,7 +429,7 @@ internal sealed class SpotlightIndex
                 continue;
             }
 
-            var score = Match(app.DisplayName, query);
+            var score = SpotlightMatch.Score(app.DisplayName, query);
             if (score == 0)
             {
                 continue;
@@ -483,9 +449,9 @@ internal sealed class SpotlightIndex
         for (var index = 0; index < list.Length && added < MaxContacts; index++)
         {
             var contact = list[index];
-            var score = Math.Max(Match(contact.Alias, query), Match(contact.DisplayName, query));
-            score = Math.Max(score, Match(contact.Handle, query));
-            score = Math.Max(score, Match(contact.PhoneNumber, query));
+            var score = Math.Max(SpotlightMatch.Score(contact.Alias, query), SpotlightMatch.Score(contact.DisplayName, query));
+            score = Math.Max(score, SpotlightMatch.Score(contact.Handle, query));
+            score = Math.Max(score, SpotlightMatch.Score(contact.PhoneNumber, query));
             if (score == 0)
             {
                 continue;
@@ -510,11 +476,11 @@ internal sealed class SpotlightIndex
         {
             var thread = threads[index];
             var title = ConversationTitle.Of(thread, contacts);
-            var score = Math.Max(Match(title, query), Match(thread.OtherHandle, query));
-            score = Math.Max(score, Match(thread.OtherDisplayName, query));
+            var score = Math.Max(SpotlightMatch.Score(title, query), SpotlightMatch.Score(thread.OtherHandle, query));
+            score = Math.Max(score, SpotlightMatch.Score(thread.OtherDisplayName, query));
             if (score == 0)
             {
-                score = Match(thread.LastMessagePreview, query) / 2;
+                score = SpotlightMatch.Score(thread.LastMessagePreview, query) / 2;
             }
 
             if (score == 0)
@@ -545,7 +511,7 @@ internal sealed class SpotlightIndex
             }
 
             var title = settingsPages.SpotlightPageTitle(index);
-            var score = Match(title, query);
+            var score = SpotlightMatch.Score(title, query);
             if (score == 0)
             {
                 continue;
@@ -564,7 +530,7 @@ internal sealed class SpotlightIndex
         for (var index = 0; index < entries.Count && added < MaxShortcuts; index++)
         {
             var entry = entries[index];
-            var score = Match(entry.Name, query);
+            var score = SpotlightMatch.Score(entry.Name, query);
             if (score == 0)
             {
                 continue;
@@ -591,7 +557,7 @@ internal sealed class SpotlightIndex
             for (var entryIndex = 0; entryIndex < region.Aetherytes.Count && added < MaxAetherytes; entryIndex++)
             {
                 var aetheryte = region.Aetherytes[entryIndex];
-                var score = Match(aetheryte.Name, query);
+                var score = SpotlightMatch.Score(aetheryte.Name, query);
                 if (score == 0)
                 {
                     continue;
@@ -612,7 +578,7 @@ internal sealed class SpotlightIndex
         for (var index = 0; index < hits.Count && added < MaxConversations; index++)
         {
             var hit = hits[index];
-            var score = Math.Max(Match(hit.Title, query), Match(hit.Entry.Text, query) / 2);
+            var score = Math.Max(SpotlightMatch.Score(hit.Title, query), SpotlightMatch.Score(hit.Entry.Text, query) / 2);
             results.Add(new SpotlightResult(SpotlightKind.Conversation, hit.Title, hit.Entry.Text,
                 hit.ConversationKey, 0, Guid.Empty, 0, ConversationBias + score));
             added++;
@@ -627,7 +593,7 @@ internal sealed class SpotlightIndex
         {
             var note = notes[index];
             var title = note.Title();
-            var score = Math.Max(Match(title, query), Match(note.Body, query) / 2);
+            var score = Math.Max(SpotlightMatch.Score(title, query), SpotlightMatch.Score(note.Body, query) / 2);
             if (score == 0)
             {
                 continue;
@@ -655,7 +621,7 @@ internal sealed class SpotlightIndex
             for (var fightIndex = 0; fightIndex < fights.Length && added < MaxGuides; fightIndex++)
             {
                 var fight = fights[fightIndex];
-                var score = Math.Max(Match(fight.Title, query), Match(fight.Abbrev, query));
+                var score = Math.Max(SpotlightMatch.Score(fight.Title, query), SpotlightMatch.Score(fight.Abbrev, query));
                 if (score == 0)
                 {
                     continue;
@@ -680,7 +646,7 @@ internal sealed class SpotlightIndex
         for (var index = 0; index < events.Count && added < MaxVenues; index++)
         {
             var venue = events[index];
-            var score = Math.Max(Match(venue.Title, query), Match(venue.Host, query) / 2);
+            var score = Math.Max(SpotlightMatch.Score(venue.Title, query), SpotlightMatch.Score(venue.Host, query) / 2);
             if (score == 0)
             {
                 continue;
@@ -706,7 +672,7 @@ internal sealed class SpotlightIndex
         {
             var name = marketScratch[index].Name;
             results.Add(new SpotlightResult(SpotlightKind.MarketItem, name, string.Empty,
-                string.Empty, marketScratch[index].Id, Guid.Empty, 0, MarketBias + Match(name, query)));
+                string.Empty, marketScratch[index].Id, Guid.Empty, 0, MarketBias + SpotlightMatch.Score(name, query)));
         }
     }
 
