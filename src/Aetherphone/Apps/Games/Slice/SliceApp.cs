@@ -30,7 +30,7 @@ internal sealed class SliceApp : IMiniGame
     private static readonly LocString[] Modes = { L.Games.Classic, L.Slice.Arcade };
     private static readonly string[] ModeStatIds = { GameId, ArcadeStatId };
     private static readonly GameSpec StageSpec = new(GameId, L.Slice.Title, GameGenre.Arcade, L.Slice.Hook,
-        Backdrop.Nebula, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true, countdown: true);
+        Backdrop.Nebula, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true, countdown: true, landscape: true);
     private static readonly Rect WorldRect = new(Vector2.Zero, new Vector2(SliceBoard.WorldWidth, SliceBoard.WorldHeight));
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 WhiteHot = new(1f, 0.97f, 0.9f, 1f);
@@ -178,8 +178,8 @@ internal sealed class SliceApp : IMiniGame
     }
 
     private static Vector2 IdleBlade(float seconds) =>
-        new(SliceBoard.WorldWidth * 0.5f + 3.4f * MathF.Sin(seconds * 1.9f),
-            6.4f + 2.3f * MathF.Sin(seconds * 2.7f + 0.8f));
+        new(SliceBoard.WorldWidth * 0.5f + 6f * MathF.Sin(seconds * 1.9f),
+            4.6f + 1.8f * MathF.Sin(seconds * 2.7f + 0.8f));
 
     private void PlaceCamera(in GameContext context)
     {
@@ -482,7 +482,7 @@ internal sealed class SliceApp : IMiniGame
         if (board.FreezeLeft > 0f)
         {
             frost.Advance(context.RawDeltaSeconds,
-                new Vector2(effects.Range(0.5f, SliceBoard.WorldWidth - 0.5f), effects.Range(2.5f, 12f)), particles);
+                new Vector2(effects.Range(0.5f, SliceBoard.WorldWidth - 0.5f), effects.Range(1.5f, 7f)), particles);
         }
 
         var pulse = 0.5f + 0.5f * Pulse.Wave(Pulse.Fast);

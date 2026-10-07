@@ -11,7 +11,7 @@ public sealed class SliceBoardTests
 {
     private const float Frame = 1f / 60f;
     private const float Tolerance = 0.001f;
-    private const float Row = 8f;
+    private const float Row = 5f;
 
     [Fact]
     public void SameSeedReplaysIdentically()
@@ -405,6 +405,21 @@ public sealed class SliceBoardTests
         }
 
         return trace.ToString();
+    }
+
+    [Theory]
+    [InlineData(1.6f, -6f)]
+    [InlineData(1.6f, 20f)]
+    [InlineData(8f, 0f)]
+    [InlineData(14.4f, 30f)]
+    [InlineData(14.4f, -3f)]
+    public void EveryThrownArcLandsBackInsideTheField(float startX, float apexX)
+    {
+        var apex = SliceBoard.KeepArcInside(startX, apexX);
+        var landing = apex * 2f - startX;
+
+        Assert.InRange(apex, 1f, SliceBoard.WorldWidth - 1f);
+        Assert.InRange(landing, 1f, SliceBoard.WorldWidth - 1f);
     }
 
     private static SliceBoard Play(ulong seed, out string trace)

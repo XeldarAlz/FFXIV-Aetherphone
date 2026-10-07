@@ -71,13 +71,13 @@ internal readonly struct SliceHit
 
 internal sealed class SliceBoard
 {
-    public const float WorldWidth = 9f;
-    public const float WorldHeight = 16f;
-    public const float Gravity = 14f;
-    public const float SpawnY = WorldHeight + 2.4f;
+    public const float WorldWidth = 16f;
+    public const float WorldHeight = 9f;
+    public const float Gravity = 10f;
+    public const float SpawnY = WorldHeight + 2f;
     public const float MissY = SpawnY + 0.8f;
-    public const float ApexMin = 3.2f;
-    public const float ApexMax = 7.6f;
+    public const float ApexMin = 1.8f;
+    public const float ApexMax = 4.3f;
     public const int StartLives = 3;
     public const int MissesPerLife = 3;
     public const float ArcadeSeconds = 60f;
@@ -97,7 +97,7 @@ internal sealed class SliceBoard
     private const int PendingCapacity = 16;
     private const int HitCapacity = 24;
     private const int MissCapacity = 8;
-    private const float SideMargin = 1.3f;
+    private const float SideMargin = 1.6f;
     private const float SplitSpeed = 1.8f;
     private const float SplitKick = 0.9f;
     private const float SplitSpin = 3.2f;
@@ -398,7 +398,7 @@ internal sealed class SliceBoard
                 continue;
             }
 
-            Throw(entry.Kind, entry.Tint, entry.StartX, entry.ApexX, entry.ApexY);
+            Throw(entry.Kind, entry.Tint, entry.StartX, KeepArcInside(entry.StartX, entry.ApexX), entry.ApexY);
             pending[index] = pending[pendingCount - 1];
             pendingCount--;
         }
@@ -421,8 +421,8 @@ internal sealed class SliceBoard
         frenzyFromLeft = !frenzyFromLeft;
         var side = frenzyFromLeft ? 1f : -1f;
         var startX = frenzyFromLeft ? -0.7f : WorldWidth + 0.7f;
-        var position = new Vector2(startX, random.Range(9f, 13f));
-        var velocity = new Vector2(side * random.Range(4.5f, 6.5f), -random.Range(8f, 11f));
+        var position = new Vector2(startX, random.Range(4.5f, 7f));
+        var velocity = new Vector2(side * random.Range(7f, 9.5f), -random.Range(6f, 8f));
         var kind = TargetKind();
         Spawn(kind, TintFor(kind), position, velocity);
     }
@@ -471,7 +471,7 @@ internal sealed class SliceBoard
     private void OnFell(in SliceObject fallen)
     {
         if (State != SliceState.Playing || fallen.Kind == SliceKind.Bomb || IsPickup(fallen.Kind) ||
-            Mode == SliceMode.Preview)
+            Mode == SliceMode.Preview || fallen.Position.X < 0f || fallen.Position.X > WorldWidth)
         {
             return;
         }
@@ -546,7 +546,7 @@ internal sealed class SliceBoard
                 case 1:
                 {
                     var spread = size <= 1 ? 0.5f : slot / (float)(size - 1);
-                    entry.StartX = WorldWidth * 0.5f + random.Range(-1f, 1f);
+                    entry.StartX = WorldWidth * 0.5f + random.Range(-1.6f, 1.6f);
                     entry.ApexX = SideMargin + spread * (WorldWidth - SideMargin * 2f);
                     entry.Delay = random.Range(0f, 0.12f);
                     break;
@@ -555,13 +555,13 @@ internal sealed class SliceBoard
                 {
                     var spread = size <= 1 ? 0.5f : slot / (float)(size - 1);
                     entry.StartX = SideMargin + spread * (WorldWidth - SideMargin * 2f);
-                    entry.ApexX = Math.Clamp(entry.StartX + random.Range(-0.8f, 0.8f), SideMargin, WorldWidth - SideMargin);
+                    entry.ApexX = entry.StartX + random.Range(-1.2f, 1.2f);
                     entry.Delay = slot * 0.18f;
                     break;
                 }
                 default:
                     entry.StartX = random.Range(SideMargin, WorldWidth - SideMargin);
-                    entry.ApexX = Math.Clamp(entry.StartX + random.Range(-2.4f, 2.4f), SideMargin, WorldWidth - SideMargin);
+                    entry.ApexX = entry.StartX + random.Range(-4f, 4f);
                     entry.Delay = random.Range(0f, 0.32f);
                     break;
             }
@@ -574,6 +574,9 @@ internal sealed class SliceBoard
     {
         Spawn(kind, tint, new Vector2(startX, SpawnY), LaunchVelocity(startX, apexX, apexY));
     }
+
+    public static float KeepArcInside(float startX, float apexX) =>
+        Math.Clamp(apexX, (startX + SideMargin) * 0.5f, (startX + WorldWidth - SideMargin) * 0.5f);
 
     private SliceKind TargetKind()
     {
