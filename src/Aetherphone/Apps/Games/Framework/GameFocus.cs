@@ -7,7 +7,7 @@ internal static class GameFocus
 {
     public static bool Active => UiInteract.WindowFocused && !GameOwnsInput;
 
-    private static unsafe bool GameOwnsInput
+    public static unsafe bool GameOwnsInput
     {
         get
         {

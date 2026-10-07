@@ -20,9 +20,28 @@ internal static class GameInput
         VirtualKey.NUMPAD6, VirtualKey.NUMPAD7, VirtualKey.NUMPAD8, VirtualKey.NUMPAD9,
     };
 
-    private static int claimedFrame = -1;
+    private const long ReleaseDelayMilliseconds = 2000;
 
-    public static bool Claim() => Claim(ConsumedKeys);
+    private static int claimedFrame = -1;
+    private static long lastClaimTick;
+    private static bool releasePending;
+
+    public static bool Claim()
+    {
+        if (!Claim(ConsumedKeys))
+        {
+            return false;
+        }
+
+        lastClaimTick = Environment.TickCount64;
+        if (!releasePending)
+        {
+            releasePending = true;
+            Plugin.PluginInterface.UiBuilder.Draw += HoldUntilReleased;
+        }
+
+        return true;
+    }
 
     public static bool Claim(ReadOnlySpan<VirtualKey> consumedKeys)
     {
@@ -39,6 +58,30 @@ internal static class GameInput
 
         claimedFrame = frame;
         ImGui.GetIO().WantTextInput = true;
+        Consume(consumedKeys);
+        return true;
+    }
+
+    private static void HoldUntilReleased()
+    {
+        if (Environment.TickCount64 - lastClaimTick > ReleaseDelayMilliseconds)
+        {
+            releasePending = false;
+            Plugin.PluginInterface.UiBuilder.Draw -= HoldUntilReleased;
+            return;
+        }
+
+        if (claimedFrame == ImGui.GetFrameCount() || GameFocus.GameOwnsInput)
+        {
+            return;
+        }
+
+        ImGui.GetIO().WantTextInput = true;
+        Consume(ConsumedKeys);
+    }
+
+    private static void Consume(ReadOnlySpan<VirtualKey> consumedKeys)
+    {
         var keyState = Plugin.KeyState;
         for (var keyIndex = 0; keyIndex < consumedKeys.Length; keyIndex++)
         {
@@ -48,8 +91,6 @@ internal static class GameInput
                 keyState[key] = false;
             }
         }
-
-        return true;
     }
 
     public static bool Held(ImGuiKey key) => Claim() && ImGui.IsKeyDown(key);
