@@ -2280,7 +2280,7 @@ internal static class L
             new("changelog.r1200.52",
                 "Added Fling: sling birds at goblin forts of planks, boxes and stone, across 40 levels"),
             new("changelog.r1200.53",
-                "Added Snip: cut the ropes so the crystal drops into the moogle's mouth, across 40 levels"),
+                "Added Snip: cut the ropes so the crystal drops into the moogle's mouth, across 100 levels"),
             new("changelog.r1200.54",
                 "Added Crates: push every crate onto a glowing target, across 60 levels with undo"),
             new("changelog.r1200.55",
