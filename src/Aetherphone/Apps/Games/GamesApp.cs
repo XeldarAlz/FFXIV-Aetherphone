@@ -10,6 +10,7 @@ using Aetherphone.Apps.Games.CrystalDrop;
 using Aetherphone.Apps.Games.Doom;
 using Aetherphone.Apps.Games.Drift;
 using Aetherphone.Apps.Games.Flap;
+using Aetherphone.Apps.Games.Fling;
 using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
@@ -203,6 +204,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new CrawlerApp(),
             new TrailsApp(),
             new PegfallApp(),
+            new FlingApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

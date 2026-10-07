@@ -145,6 +145,9 @@ internal static class AppIconArt
             case "pegfall":
                 DrawPegfall(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "fling":
+                DrawFling(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -943,6 +946,41 @@ internal static class AppIconArt
         var cupCenter = At(center, extent, -0.08f, 0f).X;
         drawList.AddQuadFilled(new Vector2(cupCenter - extent * 0.42f, cupTop), new Vector2(cupCenter + extent * 0.42f, cupTop),
             new Vector2(cupCenter + extent * 0.3f, cupBottom), new Vector2(cupCenter - extent * 0.3f, cupBottom), ink);
+    }
+
+    private static void DrawFling(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var thickness = extent * 0.16f;
+        var fork = At(center, extent, -0.6f, 0.2f);
+        drawList.AddLine(At(center, extent, -0.6f, 0.92f), fork, ink, thickness);
+        drawList.AddLine(fork, At(center, extent, -0.86f, -0.3f), ink, thickness);
+        drawList.AddLine(fork, At(center, extent, -0.34f, -0.3f), ink, thickness);
+        drawList.AddCircleFilled(fork, thickness * 0.5f, ink, 10);
+        var bird = At(center, extent, -0.12f, -0.56f);
+        var birdRadius = extent * 0.3f;
+        drawList.AddCircleFilled(bird, birdRadius, ink, 20);
+        drawList.AddCircleFilled(bird + new Vector2(birdRadius * 0.3f, -birdRadius * 0.2f), birdRadius * 0.24f, hole, 10);
+        drawList.AddTriangleFilled(bird + new Vector2(birdRadius * 0.85f, -birdRadius * 0.3f),
+            bird + new Vector2(birdRadius * 1.5f, 0f), bird + new Vector2(birdRadius * 0.85f, birdRadius * 0.3f), ink);
+        var postWidth = extent * 0.07f;
+        Span<float> posts = stackalloc float[2] { 0.42f, 0.86f };
+        for (var post = 0; post < posts.Length; post++)
+        {
+            var top = At(center, extent, posts[post], 0.12f);
+            var bottom = At(center, extent, posts[post], 0.92f);
+            drawList.AddRectFilled(new Vector2(top.X - postWidth, top.Y), new Vector2(bottom.X + postWidth, bottom.Y), ink);
+        }
+
+        var roofLeft = At(center, extent, 0.3f, -0.02f);
+        var roofRight = At(center, extent, 0.98f, 0.12f);
+        drawList.AddRectFilled(roofLeft, roofRight, ink);
+        var goblin = At(center, extent, 0.64f, -0.24f);
+        var goblinRadius = extent * 0.2f;
+        drawList.AddCircleFilled(goblin, goblinRadius, ink, 16);
+        drawList.AddCircleFilled(goblin + new Vector2(-goblinRadius * 0.35f, -goblinRadius * 0.1f), goblinRadius * 0.22f,
+            hole, 8);
+        drawList.AddCircleFilled(goblin + new Vector2(goblinRadius * 0.35f, -goblinRadius * 0.1f), goblinRadius * 0.22f,
+            hole, 8);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

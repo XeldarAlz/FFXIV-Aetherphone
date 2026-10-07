@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Games.Fling;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
@@ -86,6 +87,7 @@ internal sealed class GamesLibrary
         new("crawler", 2026, 10, 8),
         new("trails", 2026, 10, 8),
         new("pegfall", 2026, 10, 8),
+        new("fling", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -514,6 +516,15 @@ internal sealed class GamesLibrary
                 var streak = stats.Get(GloopApp.VersusStatId).Streak;
                 value = streak > 0 ? GameNumber.Label(streak) : string.Empty;
                 return streak > 0 ? RecordKind.Streak : RecordKind.None;
+            }
+            case "fling":
+            {
+                var stars = stats.TotalStars(gameId);
+                value = stars > 0
+                    ? Loc.T(L.Stage.StarsOf, GameNumber.Label(stars),
+                        GameNumber.Label(FlingLevels.Count * GameStatsStore.MaxStars))
+                    : string.Empty;
+                return stars > 0 ? RecordKind.Score : RecordKind.None;
             }
             case "watersort":
             {
