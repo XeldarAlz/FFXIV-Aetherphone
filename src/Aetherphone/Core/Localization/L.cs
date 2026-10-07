@@ -576,7 +576,7 @@ internal static class L
             "Daily mixes, stations from around the world, your own playlists with synced lyrics, and Jams to listen in sync with friends.");
         public static readonly LocString GamesSub = new("storeCopy.gamesSub", "Pocket distractions");
         public static readonly LocString GamesBody = new("storeCopy.gamesBody",
-            "More than thirty games for queue times with high scores worth chasing, plus Uno, Chess and Pool to play online with friends.");
+            "59 games for queue times with high scores worth chasing, plus eight to play online with friends, from Uno to Mini Golf.");
         public static readonly LocString AetherStreamSub = new("storeCopy.aetherstreamSub", "Watch videos together");
         public static readonly LocString AetherStreamBody = new("storeCopy.aetherstreamBody",
             "Play videos on your phone or on a screen you place in the world, and watch in sync with nearby Aetherphone users who join your party.");
