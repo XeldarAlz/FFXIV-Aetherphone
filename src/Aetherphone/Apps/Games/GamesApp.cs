@@ -14,6 +14,7 @@ using Aetherphone.Apps.Games.Delve;
 using Aetherphone.Apps.Games.Doom;
 using Aetherphone.Apps.Games.Drift;
 using Aetherphone.Apps.Games.Flap;
+using Aetherphone.Apps.Games.Fling;
 using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
@@ -28,6 +29,7 @@ using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Pairs;
 using Aetherphone.Apps.Games.Pinball;
+using Aetherphone.Apps.Games.Pegfall;
 using Aetherphone.Apps.Games.Reversi;
 using Aetherphone.Apps.Games.Simon;
 using Aetherphone.Apps.Games.Skyfall;
@@ -222,6 +224,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new LanderApp(textures),
             new LuckyDrawApp(),
             new BroadsideApp(),
+            new PegfallApp(),
+            new FlingApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

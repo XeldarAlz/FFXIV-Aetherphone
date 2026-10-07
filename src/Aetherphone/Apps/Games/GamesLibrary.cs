@@ -1,5 +1,6 @@
 using Aetherphone.Apps.Games.Crates;
 using Aetherphone.Apps.Games.Delve;
+using Aetherphone.Apps.Games.Fling;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
@@ -97,6 +98,8 @@ internal sealed class GamesLibrary
         new("lander", 2026, 10, 8),
         new("luckydraw", 2026, 10, 8),
         new("broadside", 2026, 10, 8),
+        new("pegfall", 2026, 10, 8),
+        new("fling", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -505,6 +508,7 @@ internal sealed class GamesLibrary
             case "pinball":
             case "claim":
             case "lander":
+            case "pegfall":
                 return Score(stats.Get(gameId).BestScore, out value);
             case "match3":
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(GemSwapApp.BlitzStatId).BestScore),
@@ -529,6 +533,15 @@ internal sealed class GamesLibrary
                 var streak = stats.Get(GloopApp.VersusStatId).Streak;
                 value = streak > 0 ? GameNumber.Label(streak) : string.Empty;
                 return streak > 0 ? RecordKind.Streak : RecordKind.None;
+            }
+            case "fling":
+            {
+                var stars = stats.TotalStars(gameId);
+                value = stars > 0
+                    ? Loc.T(L.Stage.StarsOf, GameNumber.Label(stars),
+                        GameNumber.Label(FlingLevels.Count * GameStatsStore.MaxStars))
+                    : string.Empty;
+                return stars > 0 ? RecordKind.Score : RecordKind.None;
             }
             case "watersort":
             case "moogleclicker":

@@ -9014,6 +9014,36 @@ internal static class L
         public static readonly LocString ShipsLost = new("games.broadside.shipsLost", "Ships lost");
     }
 
+    internal static class Pegfall
+    {
+        public static readonly LocString Title = new("games.pegfall.title", "Pegfall");
+        public static readonly LocString Hook = new("games.pegfall.hook", "Aim from the top and bounce the ball through the pegs. Light every orange peg to clear the level, and catch the ball in the moving bucket for a free one.");
+        public static readonly LocString Fever = new("games.pegfall.fever", "Fever!");
+        public static readonly LocString FreeBall = new("games.pegfall.freeBall", "Free ball!");
+        public static readonly LocString Multiball = new("games.pegfall.multiball", "Multiball!");
+        public static readonly LocString Magnet = new("games.pegfall.magnet", "Magnet!");
+        public static readonly LocString LastOrange = new("games.pegfall.lastOrange", "Last orange!");
+        public static readonly LocString LastBall = new("games.pegfall.lastBall", "Last ball!");
+        public static readonly LocString Oranges = new("games.pegfall.oranges", "Oranges");
+        public static readonly LocString OrangesCount = new("games.pegfall.orangesCount", "{0} / {1}");
+        public static readonly LocString BestShot = new("games.pegfall.bestShot", "Best shot");
+        public static readonly LocString BallsLeft = new("games.pegfall.ballsLeft", "Balls left");
+        public static readonly LocString PegsHit = new("games.pegfall.pegsHit", "Pegs hit");
+    }
+
+    internal static class Fling
+    {
+        public static readonly LocString Title = new("games.fling.title", "Fling");
+        public static readonly LocString Hook = new("games.fling.hook", "Drag the sling back and let go to launch birds at the goblin forts. Pop every goblin, and tap mid-flight to split a blue bird into three.");
+        public static readonly LocString Cleared = new("games.fling.cleared", "All goblins down!");
+        public static readonly LocString OutOfBirds = new("games.fling.outOfBirds", "Out of birds");
+        public static readonly LocString TapToSplit = new("games.fling.tapToSplit", "Tap to split!");
+        public static readonly LocString Goblins = new("games.fling.goblins", "Goblins");
+        public static readonly LocString GoblinsCount = new("games.fling.goblinsCount", "{0} / {1}");
+        public static readonly LocString BirdsUsed = new("games.fling.birdsUsed", "Birds used");
+        public static readonly LocString Broken = new("games.fling.broken", "Blocks broken");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
