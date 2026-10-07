@@ -2179,6 +2179,12 @@ internal static class L
         public static readonly LocString SectionTours = new("changelog.sectionTours", "Setup and tours");
         public static readonly LocString SectionSounds = new("changelog.sectionSounds", "Sounds");
 
+        public static readonly LocString[] Release1200Chirper =
+        {
+            new("changelog.r1200.73",
+                "Added pinned chirps: pin one of your chirps to the top of your profile from its menu, and pinning another replaces it"),
+        };
+
         public static readonly LocString[] Release1200Games =
         {
             new("changelog.r1200.70",
@@ -6293,6 +6299,9 @@ internal static class L
         public static readonly LocString BlockHandle = new("chirper.blockHandle", "Block @{0}");
         public static readonly LocString DeleteChirp = new("chirper.deleteChirp", "Delete chirp");
         public static readonly LocString DeletedToast = new("chirper.deletedToast", "Chirp deleted");
+        public static readonly LocString PinTitle = new("chirper.pinTitle", "Pin chirp to your profile?");
+        public static readonly LocString PinMessage = new("chirper.pinMessage", "It will appear at the top of your profile and replace any chirp you pinned before.");
+        public static readonly LocString PinConfirm = new("chirper.pinConfirm", "Pin");
         public static readonly LocString CopyChirp = new("chirper.copyChirp", "Copy chirp");
         public static readonly LocPlural ReactionsLabel = new("chirper.reactionsLabel", "reaction", "reactions");
         public static readonly LocString OriginalPoster = new("chirper.originalPoster", "OP");

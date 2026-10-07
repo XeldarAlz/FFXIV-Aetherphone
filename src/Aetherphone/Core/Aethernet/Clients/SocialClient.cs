@@ -175,6 +175,25 @@ internal sealed class SocialClient
             AethernetJsonContext.Default.PostDto, token, null, onFailure);
     }
 
+    public Task<PinPostResponse?> PinAsync(string postId, bool replace, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        var path = $"/posts/{Uri.EscapeDataString(postId)}/pin";
+        if (replace)
+        {
+            path += "?replace=true";
+        }
+
+        return net.RequestAsync(HttpMethod.Put, path, AethernetJsonContext.Default.PinPostResponse, token, null,
+            onFailure);
+    }
+
+    public Task<PostDto?> UnpinAsync(string postId, CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.RequestAsync(HttpMethod.Delete, $"/posts/{Uri.EscapeDataString(postId)}/pin",
+            AethernetJsonContext.Default.PostDto, token, null, onFailure);
+    }
+
     public Task<TagSearchResult?> TagSearchAsync(string query, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
