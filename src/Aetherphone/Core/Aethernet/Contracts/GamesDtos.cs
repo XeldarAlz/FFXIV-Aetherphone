@@ -74,7 +74,8 @@ internal sealed record GameRoomActionRequest(
     int Facing = 0,
     int Weapon = -1,
     int Fuse = 0,
-    float WalkX = -1f);
+    float WalkX = -1f,
+    int[]? Steps = null);
 
 internal sealed record GameRoomActionResultDto(bool Granted = false, string Reason = "", int ActionCount = 0);
 

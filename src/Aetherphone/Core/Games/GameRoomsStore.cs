@@ -303,10 +303,15 @@ internal sealed class GameRoomsStore : IDisposable
     }
 
     public void SendCraterShot(int weapon, int facing, float elevation, float power, int fuse, float walkX,
-        float targetX, float targetY)
+        float targetX, float targetY, int[]? steps)
     {
         SendAction(GameRoomWire.ActionShoot, -1, -1, -1, -1, elevation, power, targetX, targetY, facing: facing,
-            weapon: weapon, fuse: fuse, walkX: walkX);
+            weapon: weapon, fuse: fuse, walkX: walkX, steps: steps);
+    }
+
+    public void SendCraterPass(int[] steps)
+    {
+        SendAction(GameRoomWire.ActionPass, -1, -1, steps: steps);
     }
 
     // Every action names the action count it was decided against; the server refuses a mismatch as
@@ -315,7 +320,7 @@ internal sealed class GameRoomsStore : IDisposable
     private void SendAction(string action, int card, int color, int from = -1, int to = -1,
         float angle = 0f, float power = 0f, float placeX = 0f, float placeY = 0f, int column = -1, int cell = -1,
         BroadsideShipDto[]? fleet = null, int targetSeat = -1, int facing = 0, int weapon = -1, int fuse = 0,
-        float walkX = -1f)
+        float walkX = -1f, int[]? steps = null)
     {
         var target = room.RoomId;
         var roster = room.State?.Roster;
@@ -326,7 +331,7 @@ internal sealed class GameRoomsStore : IDisposable
 
         var request = new GameRoomActionRequest(action, roster.ActionCount, card, color,
             Guid.NewGuid().ToString("N"), from, to, angle, power, placeX, placeY, column, cell, fleet, targetSeat,
-            facing, weapon, fuse, walkX);
+            facing, weapon, fuse, walkX, steps);
         actInFlight = true;
         work.Run("room action", async token =>
         {

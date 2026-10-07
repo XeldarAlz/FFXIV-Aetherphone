@@ -79,11 +79,12 @@ public sealed class OnlineCraterWireTests
     public void TheShotRequestCarriesTheWholeTurn()
     {
         var request = new GameRoomActionRequest("shoot", 7, -1, -1, "turn1", Angle: 0.5f, Power: 0.75f,
-            PlaceX: 12.5f, PlaceY: 3.25f, Facing: -1, Weapon: 1, Fuse: 3, WalkX: 9.5f);
+            PlaceX: 12.5f, PlaceY: 3.25f, Facing: -1, Weapon: 1, Fuse: 3, WalkX: 9.5f, Steps: new[] { 120, -30 });
         var json = JsonSerializer.Serialize(request, AethernetJsonContext.Default.GameRoomActionRequest);
         Assert.StartsWith("{\"action\":\"shoot\",\"actionCount\":7,", json, StringComparison.Ordinal);
         Assert.Contains("\"angle\":0.5,\"power\":0.75,\"placeX\":12.5,\"placeY\":3.25,", json, StringComparison.Ordinal);
-        Assert.EndsWith(",\"facing\":-1,\"weapon\":1,\"fuse\":3,\"walkX\":9.5}", json, StringComparison.Ordinal);
+        Assert.EndsWith(",\"facing\":-1,\"weapon\":1,\"fuse\":3,\"walkX\":9.5,\"steps\":[120,-30]}", json,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -246,6 +247,38 @@ public sealed class OnlineCraterWireTests
         }
 
         Assert.True(scene.Moogle(0).Position.X - start.X <= GameRoomWire.CraterMaxWalk);
+        var total = 0;
+        foreach (var run in scene.Steps)
+        {
+            total += Math.Abs(run);
+        }
+
+        Assert.InRange(total, 1, GameRoomWire.CraterMaxWalkTicks);
+    }
+
+    [Fact]
+    public void AWalkRecordsOneRunPerDirectionAndIgnoresStandingStill()
+    {
+        var scene = new OnlineCraterScene();
+        scene.Sync(Field());
+
+        for (var frame = 0; frame < 5; frame++)
+        {
+            scene.Walk(1, 0.1f);
+        }
+
+        Assert.False(scene.Walk(0, 0.1f));
+        for (var frame = 0; frame < 2; frame++)
+        {
+            scene.Walk(-1, 0.1f);
+        }
+
+        var steps = scene.Steps.ToArray();
+        Assert.Equal(2, steps.Length);
+        Assert.True(steps[0] > 0);
+        Assert.True(steps[1] < 0);
+        Assert.True(scene.Moogle(0).Grounded);
+        Assert.False(scene.Stranded);
     }
 
     private static CraterRoomStateDto Field()

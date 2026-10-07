@@ -52,6 +52,7 @@ internal static class CraterControls
     private const float TeamBarWidth = 52f;
     private const float IconSize = 20f;
     private const float WindDrop = 4f;
+    private const float WindRowClearance = 112f;
     private const float WindInset = 10f;
     private const float WindLabelGap = 6f;
     private const float WindGlyphShare = 1.05f;
@@ -98,12 +99,23 @@ internal static class CraterControls
             ? new Vector2(full.Max.X - margin - teamWidth, full.Min.Y + margin)
             : new Vector2(safe.Min.X, safe.Min.Y);
         var windTopLeft = landscape
-            ? new Vector2(full.Center.X - windSize.X * 0.5f, full.Min.Y + (StageLayout.ChromeBand + WindDrop) * scale)
+            ? LandscapeWind(full, teamTopLeft.X - margin, windSize, scale)
             : new Vector2(safe.Max.X - windSize.X, safe.Min.Y);
         var teamsRect = new Rect(teamTopLeft, teamTopLeft + new Vector2(teamWidth, teamHeight));
         var windRect = new Rect(windTopLeft, windTopLeft + windSize);
         return new CraterLayout(weapons, pad, fireCenter, fireRadius, teamsRect, windRect,
             weapons.Min.Y - StackGap * scale);
+    }
+
+    private static Vector2 LandscapeWind(Rect full, float right, Vector2 size, float scale)
+    {
+        var left = right - size.X;
+        if (left >= full.Center.X + WindRowClearance * scale)
+        {
+            return new Vector2(left, full.Min.Y + StageLayout.ChipCenterY * scale - size.Y * 0.5f);
+        }
+
+        return new Vector2(full.Center.X - size.X * 0.5f, full.Min.Y + (StageLayout.ChromeBand + WindDrop) * scale);
     }
 
     public static int Weapons(ImDrawListPtr drawList, Rect row, CraterBoard board, CraterLabels labels, int team,

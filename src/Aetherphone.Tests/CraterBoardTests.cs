@@ -283,6 +283,58 @@ public sealed class CraterBoardTests
     }
 
     [Fact]
+    public void WalkingClimbsASlopeSteeperThanSixtyDegrees()
+    {
+        var board = FlatBoard(2);
+        AdvanceToAiming(board);
+        var active = board.ActiveMoogle;
+        board.PlaceMoogle(active, new Vector2(4f, GroundY - CraterRules.MoogleRadius));
+        Ramp(board.Terrain, 5f, 3f, 0.6f);
+
+        board.SetWalk(1);
+        Run(board, TicksPerSecond * 3);
+
+        var moogle = board.Moogle(active);
+        Assert.True(moogle.Grounded);
+        Assert.True(moogle.Position.Y < GroundY - 1.5f, "the moogle should walk up the ramp onto the ledge");
+    }
+
+    [Fact]
+    public void WalkingStopsAtASheerWall()
+    {
+        var board = FlatBoard(2);
+        AdvanceToAiming(board);
+        var active = board.ActiveMoogle;
+        board.PlaceMoogle(active, new Vector2(4f, GroundY - CraterRules.MoogleRadius));
+        board.Terrain.FillRect(new Rect(new Vector2(5f, GroundY - 2f), new Vector2(6f, GroundY)));
+
+        board.SetWalk(1);
+        Run(board, TicksPerSecond * 2);
+
+        var moogle = board.Moogle(active);
+        Assert.True(moogle.Position.X < 5f - CraterRules.MoogleRadius * 0.5f);
+        Assert.Equal(GroundY - CraterRules.MoogleRadius, moogle.Position.Y, 2);
+    }
+
+    [Fact]
+    public void WalkingOffTheIslandEdgeFallsIntoTheWater()
+    {
+        var board = FlatBoard(2, groundRight: 16f);
+        AdvanceToAiming(board);
+        var active = board.ActiveMoogle;
+        board.PlaceMoogle(active, new Vector2(15f, GroundY - CraterRules.MoogleRadius));
+
+        board.SetWalk(1);
+        for (var tick = 0; tick < TicksPerSecond * 4 && !board.Moogle(active).Sunk; tick++)
+        {
+            board.Tick();
+        }
+
+        Assert.True(board.Moogle(active).Sunk);
+        Assert.False(board.Moogle(active).Alive);
+    }
+
+    [Fact]
     public void TeleportLandsOnTheGroundBelowTheTarget()
     {
         var board = FlatBoard(2, groundRight: 24f);
@@ -334,6 +386,20 @@ public sealed class CraterBoardTests
         }
 
         return board;
+    }
+
+    private static void Ramp(TerrainMask terrain, float left, float slope, float width)
+    {
+        var cells = (int)MathF.Round(width / CraterRules.MetresPerCell);
+        for (var column = 0; column < cells; column++)
+        {
+            var x = left + column * CraterRules.MetresPerCell;
+            var top = GroundY - (column + 1) * CraterRules.MetresPerCell * slope;
+            terrain.FillRect(new Rect(new Vector2(x, top), new Vector2(x + CraterRules.MetresPerCell, GroundY)));
+        }
+
+        var plateau = GroundY - cells * CraterRules.MetresPerCell * slope;
+        terrain.FillRect(new Rect(new Vector2(left + width, plateau), new Vector2(left + width + 4f, GroundY)));
     }
 
     private static CraterBoard ScriptedMatch(ulong seed)

@@ -20,12 +20,14 @@ internal sealed partial class CraterApp
     private bool aimDragging;
     private bool teleportPressed;
     private HoldLatch fireHold;
+    private CraterPan pan;
     private bool spaceHeld;
     private bool firstShotTaken;
 
     private void ResetInput()
     {
         ReleaseHolds();
+        pan.Release();
         firstShotTaken = false;
     }
 
@@ -49,6 +51,10 @@ internal sealed partial class CraterApp
             GameInput.Claim();
             surfaceHovered = PressSurface.Claim(SurfaceId, context.Full, out surfaceActivated);
         }
+
+        var mouse = ImGui.GetMousePos();
+        var free = !layout.Covers(mouse) && !context.ChromeHit(mouse);
+        pan.Track(in camera, playing && !board.Over && !board.HumanTurn, surfaceActivated && free);
 
         if (board.Over || board.IsBot(board.ActiveTeam))
         {

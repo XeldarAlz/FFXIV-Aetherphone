@@ -14,7 +14,7 @@ internal sealed class OnlineCraterScene
     private const int MaxMoves = 64;
     private const float ReplayTailSeconds = 0.3f;
     private const float NeverBlasted = 1000f;
-    private const float WalkEpsilon = 0.01f;
+    private const float HardLanding = 1f;
     private const float MilliradiansPerRadian = 1000f;
     private const float Permille = 1000f;
 
@@ -26,6 +26,7 @@ internal sealed class OnlineCraterScene
     private readonly CraterEvent[] events = new CraterEvent[EventCapacity];
     private readonly ReplayTrack[] moves = new ReplayTrack[MaxMoves];
     private readonly ReplayTrack[] flights = new ReplayTrack[CraterBoard.MaxProjectiles];
+    private readonly int[] steps = new int[GameRoomWire.CraterMaxSteps];
     private int[] points = new int[1024];
     private FixedStepClock walkClock = new(CraterRules.TickSeconds, CraterRules.MaxCatchUpSeconds);
     private CraterRoomStateDto? shown;
@@ -48,7 +49,8 @@ internal sealed class OnlineCraterScene
     private float frameSeconds;
     private float waterFrom;
     private float waterTarget;
-    private float walkOriginX;
+    private int stepCount;
+    private int walkTicks;
     private bool muted;
 
     public TerrainMask Terrain => terrain;
@@ -75,9 +77,15 @@ internal sealed class OnlineCraterScene
 
     public float SinceBlast { get; private set; } = NeverBlasted;
 
-    public bool Walked => ActiveMoogle >= 0 && MathF.Abs(moogles[ActiveMoogle].Position.X - walkOriginX) > WalkEpsilon;
+    public bool Walked => stepCount > 0;
 
     public float WalkedX => ActiveMoogle >= 0 ? moogles[ActiveMoogle].Position.X : 0f;
+
+    public ReadOnlySpan<int> Steps => new(steps, 0, stepCount);
+
+    public bool Airborne => ActiveMoogle >= 0 && !moogles[ActiveMoogle].Grounded && !moogles[ActiveMoogle].Sunk;
+
+    public bool Stranded => ActiveMoogle >= 0 && Walked && !moogles[ActiveMoogle].Alive;
 
     public ref readonly CraterMoogle Moogle(int index) => ref moogles[index];
 
@@ -185,37 +193,123 @@ internal sealed class OnlineCraterScene
     public void BeginAiming()
     {
         walkClock.Reset();
-        if (ActiveMoogle >= 0)
-        {
-            walkOriginX = moogles[ActiveMoogle].Position.X;
-        }
+        stepCount = 0;
+        walkTicks = 0;
     }
 
     public bool Walk(int direction, float deltaSeconds)
     {
-        if (ActiveMoogle < 0 || direction == 0 || replay is not null)
+        if (ActiveMoogle < 0 || replay is not null)
         {
             walkClock.Reset();
             return false;
         }
 
         ref var moogle = ref moogles[ActiveMoogle];
-        moogle.Facing = direction;
+        if (!moogle.Alive || moogle.Sunk || (moogle.Grounded && direction == 0))
+        {
+            walkClock.Reset();
+            return false;
+        }
+
         var ticks = walkClock.Advance(deltaSeconds);
         var moved = false;
-        for (var tick = 0; tick < ticks; tick++)
+        for (var tick = 0; tick < ticks && moogle.Alive; tick++)
         {
-            if (!CraterFooting.TryWalkStep(terrain, moogle.Position, direction, Water, out var next)
-                || MathF.Abs(next.X - walkOriginX) > GameRoomWire.CraterMaxWalk)
+            if (moogle.Grounded)
             {
-                break;
+                if (direction == 0 || !CanRecord(direction)
+                    || !CraterMotion.Stride(terrain, ref moogle, direction, CraterRules.TickSeconds))
+                {
+                    break;
+                }
+
+                Record(direction);
+                if (moogle.Grounded)
+                {
+                    CraterMotion.KeepSupported(terrain, ref moogle);
+                }
+            }
+            else
+            {
+                Fall(ref moogle);
             }
 
-            moogle.Position = next;
+            if (moogle.Position.Y > Water)
+            {
+                Drown(ref moogle);
+            }
+
             moved = true;
         }
 
         return moved;
+    }
+
+    private bool CanRecord(int direction)
+    {
+        if (walkTicks >= GameRoomWire.CraterMaxWalkTicks)
+        {
+            return false;
+        }
+
+        return stepCount < steps.Length || Math.Sign(steps[stepCount - 1]) == direction;
+    }
+
+    private void Record(int direction)
+    {
+        walkTicks++;
+        if (stepCount > 0 && Math.Sign(steps[stepCount - 1]) == direction)
+        {
+            steps[stepCount - 1] += direction;
+            return;
+        }
+
+        steps[stepCount++] = direction;
+    }
+
+    private void Fall(ref CraterMoogle moogle)
+    {
+        if (!CraterMotion.Fly(terrain, ref moogle, CraterRules.TickSeconds))
+        {
+            return;
+        }
+
+        var fall = moogle.Position.Y - moogle.ApexY;
+        var damage = CraterRules.FallDamage(fall);
+        if (damage <= 0)
+        {
+            if (fall >= HardLanding)
+            {
+                Push(CraterEventKind.Landed, moogle.Position, Vector2.Zero, fall, 0, ActiveMoogle, moogle.Team);
+            }
+
+            return;
+        }
+
+        Push(CraterEventKind.FallHurt, moogle.Position, Vector2.Zero, fall, damage, ActiveMoogle, moogle.Team);
+        moogle.Health -= Math.Min(damage, moogle.Health);
+        if (moogle.Health > 0)
+        {
+            return;
+        }
+
+        moogle.Alive = false;
+        moogle.Shielded = false;
+        Push(CraterEventKind.Died, moogle.Position, Vector2.Zero, 0f, 0, ActiveMoogle, moogle.Team);
+    }
+
+    private void Drown(ref CraterMoogle moogle)
+    {
+        var surface = new Vector2(moogle.Position.X, Water);
+        moogle.Sunk = true;
+        moogle.Grounded = true;
+        moogle.Velocity = Vector2.Zero;
+        moogle.Shielded = false;
+        var kind = moogle.Alive ? CraterEventKind.Drowned : CraterEventKind.Splashed;
+        moogle.Alive = false;
+        moogle.Health = 0;
+        Push(kind, surface, Vector2.Zero, 0f, 0, ActiveMoogle, moogle.Team);
     }
 
     public void SetAim(float elevation, int facing)

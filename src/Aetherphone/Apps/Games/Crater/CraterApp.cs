@@ -169,7 +169,11 @@ internal sealed partial class CraterApp : IMiniGame
             cameraPlaced = true;
         }
 
-        camera.Follow(goal, Vector2.Zero, smoothSeconds, followSeconds);
+        if (!pan.Steer(ref camera, board.WaterLevel))
+        {
+            camera.Follow(goal, Vector2.Zero, smoothSeconds, followSeconds);
+        }
+
         context.Fx.ApplyTo(ref camera);
         camera.Update(context.RawDeltaSeconds, UiScale.Current);
         context.Backdrop.SetSky(skyProgress);

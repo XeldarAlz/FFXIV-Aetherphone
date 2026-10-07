@@ -7,8 +7,8 @@ internal static class CraterFooting
     public const float GroundEpsilon = 0.002f;
     private const float CeilingNormal = 0.2f;
     private const float WallNormal = -0.5f;
-    private const float ClearanceLift = 0.04f;
-    private const float ClearanceShrink = 0.92f;
+    private const float HeadLift = 0.1f;
+    private const float HeadShrink = 0.7f;
     private const float TunnelStepShare = 0.5f;
 
     public static float GroundTop(TerrainMask terrain, float x, float fromY)
@@ -27,49 +27,15 @@ internal static class CraterFooting
                terrain.IsSolid(new Vector2(x + spread, probeY));
     }
 
-    public static bool Obstructed(TerrainMask terrain, Vector2 center, int direction)
+    public static bool HeadObstructed(TerrainMask terrain, Vector2 center, int direction)
     {
-        var lifted = center - new Vector2(0f, ClearanceLift);
-        if (!terrain.CollideCircle(lifted, CraterRules.MoogleRadius * ClearanceShrink, out var normal, out _))
+        var head = center - new Vector2(0f, HeadLift);
+        if (!terrain.CollideCircle(head, CraterRules.MoogleRadius * HeadShrink, out var normal, out _))
         {
             return false;
         }
 
         return normal.Y > CeilingNormal || normal.X * direction < WallNormal;
-    }
-
-    public static bool TryWalkStep(TerrainMask terrain, Vector2 center, int direction, float waterLevel,
-        out Vector2 next)
-    {
-        next = center;
-        var radius = CraterRules.MoogleRadius;
-        var nextX = center.X + direction * CraterRules.WalkSpeed * CraterRules.TickSeconds;
-        if (nextX < radius || nextX > CraterRules.WorldWidth - radius)
-        {
-            return false;
-        }
-
-        var bottom = center.Y + radius;
-        var limit = bottom - CraterRules.StepUp;
-        if (FootBlocked(terrain, nextX, limit))
-        {
-            return false;
-        }
-
-        var top = GroundTop(terrain, nextX, limit + GroundEpsilon);
-        if (top > bottom + CraterRules.SnapDown)
-        {
-            return false;
-        }
-
-        var candidate = new Vector2(nextX, top - radius);
-        if (Obstructed(terrain, candidate, direction) || candidate.Y + radius >= waterLevel)
-        {
-            return false;
-        }
-
-        next = candidate;
-        return true;
     }
 
     public static bool TeleportSpot(TerrainMask terrain, float waterLevel, Vector2 target, out Vector2 destination)

@@ -29,6 +29,7 @@ internal sealed partial class OnlineCraterTable
     private long sentAtTick;
     private bool charging;
     private HoldLatch fireHold;
+    private CraterPan pan;
     private bool spaceHeld;
     private bool aimDragging;
     private bool teleportPressed;
@@ -39,6 +40,7 @@ internal sealed partial class OnlineCraterTable
     private void ResetControls()
     {
         ReleaseHolds();
+        pan.Release();
         if (Ammo(weapon) == 0)
         {
             weapon = CraterWeapon.Shell;
@@ -96,6 +98,12 @@ internal sealed partial class OnlineCraterTable
         }
 
         Keyboard(raw, pad, shown);
+        if (scene.Stranded)
+        {
+            Pass(shown);
+            return;
+        }
+
         FireButton(layout, shown);
         Pointer(body, layout, surfaceHovered, surfaceActivated, shown, scale);
         if (charging)
@@ -219,13 +227,24 @@ internal sealed partial class OnlineCraterTable
         }
     }
 
+    private void TrackPan(Rect body, in CraterLayout layout, bool allowed, float scale)
+    {
+        PressSurface.Claim(SurfaceId, body, out var activated);
+        pan.Track(in camera, allowed, activated && !PointerBlocked(body, layout, ImGui.GetMousePos(), scale));
+    }
+
+    private static bool PointerBlocked(Rect body, in CraterLayout layout, Vector2 mouse, float scale)
+    {
+        var backReach = BackRadius * ButtonReach * scale;
+        return layout.Covers(mouse) || ResignRect(layout, scale).Contains(mouse) ||
+               Vector2.DistanceSquared(mouse, BackCenter(body, scale)) <= backReach * backReach;
+    }
+
     private void Pointer(Rect body, in CraterLayout layout, bool hovered, bool activated, CraterRoomStateDto shown,
         float scale)
     {
         var mouse = ImGui.GetMousePos();
-        var backReach = BackRadius * ButtonReach * scale;
-        var blocked = layout.Covers(mouse) || fireHold.Held || ResignRect(layout, scale).Contains(mouse) ||
-                      Vector2.DistanceSquared(mouse, BackCenter(body, scale)) <= backReach * backReach;
+        var blocked = fireHold.Held || PointerBlocked(body, layout, mouse, scale);
         var world = camera.ToWorld(mouse);
         showTeleport = weapon == CraterWeapon.Teleport && hovered && !blocked;
         if (showTeleport)
@@ -285,7 +304,7 @@ internal sealed partial class OnlineCraterTable
 
     private void BeginCharge(CraterRoomStateDto shown)
     {
-        if (charging || Ammo(weapon) == 0)
+        if (charging || Ammo(weapon) == 0 || scene.Airborne)
         {
             return;
         }
@@ -326,17 +345,35 @@ internal sealed partial class OnlineCraterTable
     private void Send(CraterRoomStateDto shown, float power, Vector2 target)
     {
         var active = scene.ActiveMoogle;
-        if (active < 0 || store.ActInFlight)
+        if (active < 0 || store.ActInFlight || scene.Airborne)
         {
             return;
         }
 
         ref readonly var moogle = ref scene.Moogle(active);
         var walkX = scene.Walked ? scene.WalkedX : -1f;
-        store.SendCraterShot((int)weapon, moogle.Facing, scene.Aim(active), power, fuse, walkX, target.X, target.Y);
+        var steps = scene.Walked ? scene.Steps.ToArray() : null;
+        store.SendCraterShot((int)weapon, moogle.Facing, scene.Aim(active), power, fuse, walkX, target.X, target.Y,
+            steps);
+        Sent(shown);
+        firstShotTaken = true;
+    }
+
+    private void Pass(CraterRoomStateDto shown)
+    {
+        if (store.ActInFlight)
+        {
+            return;
+        }
+
+        store.SendCraterPass(scene.Steps.ToArray());
+        Sent(shown);
+    }
+
+    private void Sent(CraterRoomStateDto shown)
+    {
         awaitingActionCount = shown.ActionCount;
         sentAtTick = Environment.TickCount64;
-        firstShotTaken = true;
         ReleaseHolds();
     }
 }

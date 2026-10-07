@@ -139,10 +139,12 @@ internal sealed partial class OnlineCraterTable : IDisposable
         DrawRound(drawList, new Vector2(roundLeft, roundCenterY), snapshot, shown, theme, scale);
         if (myTurn)
         {
+            pan.Release();
             DrawControls(drawList, body, layout, shown, accent, theme, raw, scale);
         }
         else
         {
+            TrackPan(body, layout, live, scale);
             DrawStatus(drawList, layout, shown, live, notice, scale);
         }
 
@@ -265,7 +267,11 @@ internal sealed partial class OnlineCraterTable : IDisposable
             cameraPlaced = true;
         }
 
-        camera.Follow(goal, Vector2.Zero, smoothSeconds, raw);
+        if (!pan.Steer(ref camera, scene.Water))
+        {
+            camera.Follow(goal, Vector2.Zero, smoothSeconds, raw);
+        }
+
         screen.ApplyTo(ref camera);
         camera.Update(raw, scale);
         backdrop.SetSky(skyProgress);

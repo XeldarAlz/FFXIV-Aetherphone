@@ -70,6 +70,7 @@ internal static class CraterRules
     public const float JumpSpeedX = 2.2f;
     public const float JumpSpeedY = 4.8f;
     public const float StepUp = 0.1f;
+    public const float ClimbStep = 0.2f;
     public const float SnapDown = 0.08f;
     public const float FootSpread = 0.55f;
     public const float SafeFall = 3f;

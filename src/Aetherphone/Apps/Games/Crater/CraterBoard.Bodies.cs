@@ -2,12 +2,6 @@ namespace Aetherphone.Apps.Games.Crater;
 
 internal sealed partial class CraterBoard
 {
-    private const float FloorNormal = -0.55f;
-    private const float BodyBounce = 0.25f;
-    private const float BodyDrag = 0.96f;
-    private const float StillSpeed = 0.1f;
-    private const float StillLimitSeconds = 0.4f;
-    private const float LandingSlack = 0.05f;
     private const float KnockLift = 0.6f;
     private const float KnockClearance = 0.02f;
     private const float HardLanding = 1f;
@@ -54,13 +48,13 @@ internal sealed partial class CraterBoard
                 }
                 else if (walkIntent != 0 && !Charging)
                 {
-                    Walk(ref moogle, walkIntent, deltaSeconds);
+                    CraterMotion.Stride(terrain, ref moogle, walkIntent, deltaSeconds);
                 }
             }
 
             if (moogle.Grounded)
             {
-                KeepSupported(ref moogle);
+                CraterMotion.KeepSupported(terrain, ref moogle);
             }
         }
         else
@@ -74,127 +68,28 @@ internal sealed partial class CraterBoard
         }
     }
 
-    private void Walk(ref CraterMoogle moogle, int direction, float deltaSeconds)
-    {
-        moogle.Facing = direction;
-        var nextX = moogle.Position.X + direction * CraterRules.WalkSpeed * deltaSeconds;
-        var bottom = moogle.Position.Y + CraterRules.MoogleRadius;
-        var limit = bottom - CraterRules.StepUp;
-        if (CraterFooting.FootBlocked(terrain, nextX, limit))
-        {
-            return;
-        }
-
-        var top = GroundTop(nextX, limit + CraterFooting.GroundEpsilon);
-        if (top > bottom + CraterRules.SnapDown)
-        {
-            moogle.Position = new Vector2(nextX, moogle.Position.Y);
-            Unground(ref moogle, new Vector2(direction * CraterRules.WalkSpeed, 0f));
-            return;
-        }
-
-        var center = new Vector2(nextX, top - CraterRules.MoogleRadius);
-        if (CraterFooting.Obstructed(terrain, center, direction))
-        {
-            return;
-        }
-
-        moogle.Position = center;
-    }
-
-    private void KeepSupported(ref CraterMoogle moogle)
-    {
-        var bottom = moogle.Position.Y + CraterRules.MoogleRadius;
-        var top = GroundTop(moogle.Position.X, bottom - CraterRules.StepUp + CraterFooting.GroundEpsilon);
-        if (top > bottom + CraterRules.SnapDown)
-        {
-            Unground(ref moogle, Vector2.Zero);
-            return;
-        }
-
-        if (top > bottom + CraterFooting.GroundEpsilon)
-        {
-            moogle.Position = new Vector2(moogle.Position.X, top - CraterRules.MoogleRadius);
-        }
-    }
-
     private void Leap(int index, ref CraterMoogle moogle)
     {
-        Unground(ref moogle, new Vector2(moogle.Facing * CraterRules.JumpSpeedX, -CraterRules.JumpSpeedY));
+        var leap = new Vector2(moogle.Facing * CraterRules.JumpSpeedX, -CraterRules.JumpSpeedY);
+        CraterMotion.Unground(ref moogle, leap);
         Push(CraterEventKind.Jumped, moogle.Position, Vector2.Zero, 0f, 0, index, moogle.Team, ProjectileKind.Shell);
-    }
-
-    private static void Unground(ref CraterMoogle moogle, Vector2 velocity)
-    {
-        moogle.Grounded = false;
-        moogle.Velocity = velocity;
-        moogle.ApexY = moogle.Position.Y;
-        moogle.StillSeconds = 0f;
     }
 
     private void Fly(int index, ref CraterMoogle moogle, float deltaSeconds)
     {
-        moogle.Velocity += new Vector2(0f, CraterRules.Gravity * deltaSeconds);
-        moogle.Position += moogle.Velocity * deltaSeconds;
-        moogle.ApexY = MathF.Min(moogle.ApexY, moogle.Position.Y);
-        if (terrain.CollideCircle(moogle.Position, CraterRules.MoogleRadius, out var normal, out var depth))
+        if (!CraterMotion.Fly(terrain, ref moogle, deltaSeconds) || !moogle.Alive)
         {
-            moogle.Position += normal * depth;
-            if (normal.Y < FloorNormal && TryLand(index, ref moogle))
-            {
-                return;
-            }
-
-            var into = Vector2.Dot(moogle.Velocity, normal);
-            if (into < 0f)
-            {
-                moogle.Velocity -= normal * into * (1f + BodyBounce);
-            }
-
-            moogle.Velocity *= BodyDrag;
-        }
-
-        if (moogle.Velocity.LengthSquared() >= StillSpeed * StillSpeed)
-        {
-            moogle.StillSeconds = 0f;
             return;
         }
 
-        moogle.StillSeconds += deltaSeconds;
-        if (moogle.StillSeconds >= StillLimitSeconds)
-        {
-            moogle.Grounded = true;
-            moogle.Velocity = Vector2.Zero;
-            moogle.StillSeconds = 0f;
-        }
-    }
-
-    private bool TryLand(int index, ref CraterMoogle moogle)
-    {
-        var bottom = moogle.Position.Y + CraterRules.MoogleRadius;
-        var top = GroundTop(moogle.Position.X, bottom - CraterRules.StepUp);
-        if (top > bottom + CraterRules.SnapDown + LandingSlack)
-        {
-            return false;
-        }
-
-        moogle.Position = new Vector2(moogle.Position.X, top - CraterRules.MoogleRadius);
         var fall = moogle.Position.Y - moogle.ApexY;
-        moogle.Grounded = true;
-        moogle.Velocity = Vector2.Zero;
-        moogle.StillSeconds = 0f;
-        if (!moogle.Alive)
-        {
-            return true;
-        }
-
         var damage = CraterRules.FallDamage(fall);
         if (damage > 0)
         {
             Push(CraterEventKind.FallHurt, moogle.Position, Vector2.Zero, fall, damage, index, moogle.Team,
                 ProjectileKind.Shell);
             ApplyDamage(index, damage, lastAttackers[index]);
-            return true;
+            return;
         }
 
         if (fall >= HardLanding)
@@ -202,8 +97,6 @@ internal sealed partial class CraterBoard
             Push(CraterEventKind.Landed, moogle.Position, Vector2.Zero, fall, 0, index, moogle.Team,
                 ProjectileKind.Shell);
         }
-
-        return true;
     }
 
     private void Drown(int index, ref CraterMoogle moogle)
@@ -268,6 +161,6 @@ internal sealed partial class CraterBoard
         var lifted = direction + new Vector2(0f, -KnockLift);
         var push = lifted.LengthSquared() > 0.0001f ? Vector2.Normalize(lifted) * strength : Vector2.Zero;
         moogle.Position -= new Vector2(0f, KnockClearance);
-        Unground(ref moogle, moogle.Velocity + push);
+        CraterMotion.Unground(ref moogle, moogle.Velocity + push);
     }
 }
