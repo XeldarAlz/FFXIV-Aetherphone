@@ -50,6 +50,10 @@ public sealed class ScoresWireContractTests
     [Fact]
     public void PrivacyRequestSerializesBothAValueAndAClear()
     {
+        var joined = JsonSerializer.Serialize(new UpdateGamesPrivacyRequest(true),
+            AethernetJsonContext.Default.UpdateGamesPrivacyRequest);
+        Assert.Equal("{\"showOnLeaderboards\":true}", joined);
+
         var hidden = JsonSerializer.Serialize(new UpdateGamesPrivacyRequest(false),
             AethernetJsonContext.Default.UpdateGamesPrivacyRequest);
         Assert.Equal("{\"showOnLeaderboards\":false}", hidden);
@@ -150,8 +154,13 @@ public sealed class ScoresWireContractTests
     }
 
     [Fact]
-    public void UserPayloadCarriesTheLeaderboardFlagAndDefaultsToShown()
+    public void UserPayloadCarriesTheLeaderboardFlagAndDefaultsToHidden()
     {
+        var joined = JsonSerializer.Deserialize("{\"id\":\"u1\",\"showOnLeaderboards\":true}",
+            AethernetJsonContext.Default.UserDto);
+        Assert.NotNull(joined);
+        Assert.True(joined.ShowOnLeaderboards);
+
         var hidden = JsonSerializer.Deserialize("{\"id\":\"u1\",\"showOnLeaderboards\":false}",
             AethernetJsonContext.Default.UserDto);
         Assert.NotNull(hidden);
@@ -159,7 +168,7 @@ public sealed class ScoresWireContractTests
 
         var legacy = JsonSerializer.Deserialize("{\"id\":\"u1\"}", AethernetJsonContext.Default.UserDto);
         Assert.NotNull(legacy);
-        Assert.True(legacy.ShowOnLeaderboards);
+        Assert.False(legacy.ShowOnLeaderboards);
     }
 
     [Fact]

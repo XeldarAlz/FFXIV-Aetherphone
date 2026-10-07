@@ -1,3 +1,4 @@
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Net;
@@ -13,6 +14,8 @@ public sealed class LeaderboardStoreTests
     private sealed class FakeUploadConfiguration : IScoreUploadConfiguration
     {
         public List<PendingScoreUpload> PendingScoreUploads { get; } = new();
+        public List<GameStatRecord> GameStats { get; } = new();
+        public List<string> LeaderboardConsentAnswered { get; } = new();
         public int Saves { get; private set; }
 
         public void Save()
@@ -326,5 +329,161 @@ public sealed class LeaderboardStoreTests
         Assert.Equal(123456789UL, upload.Seed);
         Assert.True(upload.Daily);
         Assert.Equal(Now, upload.QueuedAtUnix);
+    }
+
+    [Fact]
+    public void NothingFlushesBeforeTheAccountOptsIn()
+    {
+        var queue = Build(out _);
+        Assert.True(queue.Enqueue(Submission("tetris", 900), Now));
+
+        Assert.False(LeaderboardStore.UploadsAllowed(true, null));
+        Assert.False(LeaderboardStore.UploadsAllowed(true, User("u1", false)));
+        Assert.False(LeaderboardStore.UploadsAllowed(false, User("u1", true)));
+        Assert.True(LeaderboardStore.UploadsAllowed(true, User("u1", true)));
+
+        Assert.Equal(1, queue.Count);
+        Assert.Equal(RankState.Hidden, queue.RankFor("tetris", true, true).State);
+        Assert.Equal(RankState.Hidden, queue.RankFor("snake", true, true).State);
+        Assert.Equal(RankState.SignedOut, queue.RankFor("tetris", false, true).State);
+        Assert.Equal(RankState.Uploading, queue.RankFor("tetris", true).State);
+    }
+
+    [Fact]
+    public void OptingInQueuesTheLocalBestsOnce()
+    {
+        var queue = Build(out var configuration);
+        configuration.GameStats.Add(Record("tetris", bestScore: 500));
+        configuration.GameStats.Add(Record("chess.hard", streak: 4));
+        configuration.GameStats.Add(Record("chess.easy", streak: 2));
+        configuration.GameStats.Add(Record("sudoku.easy", bestTime: 90));
+        configuration.GameStats.Add(Record("memory.attempts", bestTime: 14));
+        configuration.GameStats.Add(Record("solitaire.vegas", bestScore: 300));
+        configuration.GameStats.Add(Record("doom", bestScore: 100));
+        configuration.GameStats.Add(Record("snake"));
+        Assert.True(queue.Enqueue(Submission("tetris", 800), Now));
+        var participation = new LeaderboardParticipation();
+
+        Assert.Equal(ParticipationChange.None, participation.Observe("u1", false));
+        Assert.Equal(ParticipationChange.Joined, participation.Observe("u1", true));
+        var savesBefore = configuration.Saves;
+        Assert.Equal(3, queue.EnqueueLocalBests(configuration.GameStats, Now));
+
+        Assert.Equal(savesBefore + 1, configuration.Saves);
+        Assert.Equal(4, queue.Count);
+        var pending = configuration.PendingScoreUploads;
+        Assert.Equal("tetris", pending[0].StatId);
+        Assert.Equal(800, pending[0].Value);
+        Assert.Equal("chess", pending[1].StatId);
+        Assert.Equal("chess", pending[1].GameId);
+        Assert.Equal(4, pending[1].Value);
+        Assert.Equal(ScoreKind.Streak, pending[1].Kind);
+        Assert.Equal("sudoku.easy", pending[2].StatId);
+        Assert.Equal("sudoku", pending[2].GameId);
+        Assert.Equal(90, pending[2].Value);
+        Assert.Equal("memory.attempts", pending[3].StatId);
+        Assert.Equal(14, pending[3].Value);
+        Assert.False(queue.IsQueued("solitaire"));
+
+        Assert.Equal(ParticipationChange.None, participation.Observe("u1", true));
+        Assert.Equal(0, queue.EnqueueLocalBests(configuration.GameStats, Now + 1));
+        Assert.Equal(savesBefore + 1, configuration.Saves);
+    }
+
+    [Fact]
+    public void OptingOutClearsThePendingQueue()
+    {
+        var queue = Build(out var configuration);
+        queue.Enqueue(Submission("tetris", 900), Now);
+        queue.Enqueue(Submission("snake", 12), Now);
+        Assert.True(queue.TryTakeDue(1000, out var attempt));
+        queue.Resolve(attempt, Reply(ScoreReasons.Implausible), AepFailure.None, 1000);
+        Assert.Equal(RankState.Failed, queue.RankFor("tetris", true).State);
+        var participation = new LeaderboardParticipation();
+        participation.Observe("u1", true);
+
+        Assert.Equal(ParticipationChange.Left, participation.Observe("u1", false));
+        var savesBefore = configuration.Saves;
+        Assert.True(queue.Clear());
+
+        Assert.Equal(0, queue.Count);
+        Assert.Empty(configuration.PendingScoreUploads);
+        Assert.Equal(savesBefore + 1, configuration.Saves);
+        Assert.Equal(RankState.Unknown, queue.RankFor("tetris", true).State);
+        Assert.False(queue.Clear());
+        Assert.Equal(savesBefore + 1, configuration.Saves);
+    }
+
+    [Fact]
+    public void AnAccountSwitchIsNeverReadAsAChoice()
+    {
+        var participation = new LeaderboardParticipation();
+
+        Assert.Equal(ParticipationChange.None, participation.Observe(null, false));
+        Assert.Equal(ParticipationChange.None, participation.Observe("main", true));
+        Assert.Equal(ParticipationChange.None, participation.Observe("alt", false));
+        Assert.Equal(ParticipationChange.None, participation.Observe(null, false));
+        Assert.Equal(ParticipationChange.None, participation.Observe("main", true));
+        Assert.Equal(ParticipationChange.Left, participation.Observe("main", false));
+        Assert.Equal(ParticipationChange.Joined, participation.Observe("main", true));
+    }
+
+    [Fact]
+    public void TheConsentAnswerIsKeptPerAccount()
+    {
+        var configuration = new FakeUploadConfiguration();
+        var consent = new LeaderboardConsent(configuration);
+
+        Assert.True(consent.Needed(true, User("main", false)));
+        Assert.False(consent.Needed(false, User("main", false)));
+        Assert.False(consent.Needed(true, User("main", true)));
+        Assert.False(consent.Needed(true, null));
+
+        Assert.True(consent.Answer("main"));
+        Assert.False(consent.Answer("main"));
+        Assert.False(consent.Answer(string.Empty));
+
+        Assert.Equal(new[] { "main" }, configuration.LeaderboardConsentAnswered);
+        Assert.Equal(1, configuration.Saves);
+        Assert.True(consent.HasAnswered("main"));
+        Assert.False(consent.HasAnswered("alt"));
+        Assert.False(consent.Needed(true, User("main", false)));
+        Assert.True(consent.Needed(true, User("alt", false)));
+    }
+
+    [Fact]
+    public void ConsentAnswersRoundTripThroughConfiguration()
+    {
+        var saved = new Configuration();
+        saved.LeaderboardConsentAnswered.Add("main");
+        saved.LeaderboardConsentAnswered.Add("alt");
+        var json = string.Concat("{\"LeaderboardConsentAnswered\":",
+            JsonConvert.SerializeObject(saved.LeaderboardConsentAnswered), "}");
+
+        var loaded = JsonConvert.DeserializeObject<Configuration>(json);
+
+        Assert.NotNull(loaded);
+        var consent = new LeaderboardConsent(loaded);
+        Assert.True(consent.HasAnswered("main"));
+        Assert.True(consent.HasAnswered("alt"));
+        Assert.False(consent.HasAnswered("third"));
+    }
+
+    private static GameStatRecord Record(string statId, int bestScore = 0, int bestTime = 0, int streak = 0) =>
+        new()
+        {
+            GameId = statId,
+            BestScore = bestScore,
+            BestTimeSeconds = bestTime,
+            Streak = streak,
+            LastPlayedUnixSeconds = Now,
+        };
+
+    private static UserDto User(string id, bool showOnLeaderboards)
+    {
+        var user = System.Text.Json.JsonSerializer.Deserialize("{\"id\":\"" + id + "\"}",
+            AethernetJsonContext.Default.UserDto);
+        Assert.NotNull(user);
+        return user with { ShowOnLeaderboards = showOnLeaderboards };
     }
 }

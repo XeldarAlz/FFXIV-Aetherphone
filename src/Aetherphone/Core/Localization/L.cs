@@ -8364,6 +8364,7 @@ internal static class L
         public static readonly LocString PassTo = new("stage.passTo", "Pass to {0}");
         public static readonly LocString TapWhenReady = new("stage.tapWhenReady", "Tap when ready");
         public static readonly LocString SeatWins = new("stage.seatWins", "{0} wins");
+        public static readonly LocString LeaderboardsOff = new("stage.leaderboardsOff", "Leaderboards off");
     }
 
     internal static class Leaderboard
@@ -8374,6 +8375,18 @@ internal static class L
         public static readonly LocString You = new("leaderboard.you", "You");
         public static readonly LocString RankChip = new("leaderboard.rankChip", "#{0}");
         public static readonly LocString WeekRank = new("leaderboard.weekRank", "#{0} this week");
+        public static readonly LocString ConsentTitle = new("leaderboard.consentTitle", "Show up on the leaderboards?");
+        public static readonly LocString ConsentBody = new("leaderboard.consentBody", "Your best score in each game can go on the global and friends leaderboards.");
+        public static readonly LocString ConsentShown = new("leaderboard.consentShown", "Other players see your display name, @handle, avatar and badges next to your scores.");
+        public static readonly LocString ConsentOff = new("leaderboard.consentOff", "If you stay off, your scores stay on this phone.");
+        public static readonly LocString ConsentPreview = new("leaderboard.consentPreview", "How you would appear");
+        public static readonly LocString ConsentSettings = new("leaderboard.consentSettings", "You can change this any time in Settings > Privacy.");
+        public static readonly LocString Join = new("leaderboard.join", "Join leaderboards");
+        public static readonly LocString NotNow = new("leaderboard.notNow", "Not now");
+        public static readonly LocString JoinShort = new("leaderboard.joinShort", "Join");
+        public static readonly LocString NotOnBoards = new("leaderboard.notOnBoards", "You are not on leaderboards");
+        public static readonly LocString JoinToSeeRanks = new("leaderboard.joinToSeeRanks", "Join leaderboards to see your ranks");
+        public static readonly LocString OffHint = new("leaderboard.offHint", "When this is off, your scores stay on this phone.");
     }
 
     internal static class Sweeper
