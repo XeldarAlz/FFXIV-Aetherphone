@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Games.Beat;
 using Aetherphone.Apps.Games.Blade;
 using Aetherphone.Apps.Games.Breakout;
+using Aetherphone.Apps.Games.Broadside;
 using Aetherphone.Apps.Games.BubbleShooter;
 using Aetherphone.Apps.Games.CapMan;
 using Aetherphone.Apps.Games.Chess;
@@ -193,6 +194,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new SliceApp(),
             new SpiralApp(),
             new LuckyDrawApp(),
+            new BroadsideApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

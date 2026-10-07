@@ -80,6 +80,7 @@ internal sealed class GamesLibrary
         new("slice", 2026, 10, 8),
         new("spiral", 2026, 10, 8),
         new("luckydraw", 2026, 10, 8),
+        new("broadside", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -523,6 +524,7 @@ internal sealed class GamesLibrary
             case "reversi":
             case "chess":
             case "luckydraw":
+            case "broadside":
                 return BestStreakAcrossTiers(gameId, out value, out tier);
             default:
                 return RecordKind.None;

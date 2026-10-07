@@ -8708,6 +8708,37 @@ internal static class L
         public static readonly LocString Sevens = new("games.luckydraw.sevens", "Sevens");
     }
 
+    internal static class Broadside
+    {
+        public static readonly LocString Title = new("games.broadside.title", "Broadside");
+        public static readonly LocString Hook = new("games.broadside.hook", "Hide five airships on your grid, then trade cannon fire across the clouds until one fleet is gone.");
+        public static readonly LocString Dreadnought = new("games.broadside.dreadnought", "Dreadnought");
+        public static readonly LocString Cruiser = new("games.broadside.cruiser", "Cruiser");
+        public static readonly LocString Frigate = new("games.broadside.frigate", "Frigate");
+        public static readonly LocString Corvette = new("games.broadside.corvette", "Corvette");
+        public static readonly LocString Skiff = new("games.broadside.skiff", "Skiff");
+        public static readonly LocString ShipDown = new("games.broadside.shipDown", "{0} down!");
+        public static readonly LocString ToFire = new("games.broadside.toFire", "{0} to fire");
+        public static readonly LocString Hit = new("games.broadside.hit", "Hit!");
+        public static readonly LocString Miss = new("games.broadside.miss", "Miss");
+        public static readonly LocString EnemyTurn = new("games.broadside.enemyTurn", "Enemy turn");
+        public static readonly LocString TapToFire = new("games.broadside.tapToFire", "Tap a cell to fire");
+        public static readonly LocString PlaceHint = new("games.broadside.placeHint", "Drag ships onto the grid. Tap a ship to turn it.");
+        public static readonly LocString Auto = new("games.broadside.auto", "Auto");
+        public static readonly LocString Ready = new("games.broadside.ready", "Ready");
+        public static readonly LocString EnemySkies = new("games.broadside.enemySkies", "Enemy skies");
+        public static readonly LocString YourFleet = new("games.broadside.yourFleet", "Your fleet");
+        public static readonly LocString EnemyFleet = new("games.broadside.enemyFleet", "Enemy fleet");
+        public static readonly LocString Victory = new("games.broadside.victory", "Victory!");
+        public static readonly LocString Defeat = new("games.broadside.defeat", "Defeat");
+        public static readonly LocString Hits = new("games.broadside.hits", "Hits");
+        public static readonly LocString Shots = new("games.broadside.shots", "Shots");
+        public static readonly LocString Accuracy = new("games.broadside.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.broadside.percent", "{0}%");
+        public static readonly LocString ShipsSunk = new("games.broadside.shipsSunk", "Ships sunk");
+        public static readonly LocString ShipsLost = new("games.broadside.shipsLost", "Ships lost");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

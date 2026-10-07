@@ -87,6 +87,7 @@ internal static class AppAccents
         ["slice"] = AccentRing.Orange,
         ["spiral"] = AccentRing.Teal,
         ["luckydraw"] = AccentRing.Red,
+        ["broadside"] = AccentRing.Cyan,
         ["rolladeck"] = AccentRing.Violet,
         ["hunts"] = AccentRing.Indigo
     }.ToFrozenDictionary();

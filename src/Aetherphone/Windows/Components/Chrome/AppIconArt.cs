@@ -130,6 +130,9 @@ internal static class AppIconArt
             case "luckydraw":
                 LuckyDrawIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "broadside":
+                BroadsideIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
