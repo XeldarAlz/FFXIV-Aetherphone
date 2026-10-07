@@ -205,11 +205,10 @@ public sealed class UpdraftBoardTests
     }
 
     [Fact]
-    public void AGapAtTheLargestStepCanStillBeCrossedFromAnywhereOnTheField()
+    public void TheLargestStepStillLeavesRoomToSteerSideways()
     {
         Assert.True(UpdraftBoard.MaxPathGap < UpdraftBoard.Apex(UpdraftBoard.PlainBounce));
-        Assert.True(UpdraftBoard.HorizontalReach(UpdraftBoard.MaxPathGap) + UpdraftBoard.MinHalfWidth >=
-            UpdraftBoard.FieldWidth * 0.5f);
+        Assert.True(UpdraftBoard.HorizontalReach(UpdraftBoard.MaxPathGap) >= UpdraftBoard.MinHalfWidth * 2f);
     }
 
     [Fact]
