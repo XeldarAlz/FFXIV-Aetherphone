@@ -21,7 +21,8 @@ internal sealed class HerdApp : IMiniGame
     private const int ControlCount = 3;
     private const float TrayBottom = 12f;
     private const float SkillRowHeight = 56f;
-    private const float ControlRowHeight = 34f;
+    private const float ControlRowHeight = 40f;
+    private const int HintMaxLines = 2;
     private const float RowGap = 6f;
     private const float TileGap = 6f;
     private const float ViewGap = 4f;
@@ -94,6 +95,10 @@ internal sealed class HerdApp : IMiniGame
     private readonly FeedbackFx fx = new();
     private readonly float[] tilePops = new float[SkillCount];
     private readonly float[] tileShakes = new float[SkillCount];
+    private readonly string[] hintLines = new string[HintMaxLines];
+    private string hintSource = string.Empty;
+    private float hintWrapWidth;
+    private int hintLineCount;
     private Camera2D camera = Camera2D.Create();
     private LabelSlot levelLabel;
     private LabelPairSlot savedLabel;
@@ -686,10 +691,40 @@ internal sealed class HerdApp : IMiniGame
             return;
         }
 
-        var hint = Typography.FitText(Loc.T(SkillHints[skillIndex]), hintWidth, TextStyles.Caption1);
-        Typography.Draw(drawList,
-            new Vector2(left + nameWidth + 8f * scale, centerY - Typography.LineHeight(TextStyles.Caption1) * 0.5f), hint,
-            Muted, TextStyles.Caption1);
+        WrapHint(Loc.T(SkillHints[skillIndex]), hintWidth);
+        var lineHeight = Typography.Measure("Ay", TextStyles.Caption1).Y;
+        var hintLeft = left + nameWidth + 8f * scale;
+        var top = centerY - lineHeight * hintLineCount * 0.5f;
+        for (var lineIndex = 0; lineIndex < hintLineCount; lineIndex++)
+        {
+            Typography.Draw(drawList, new Vector2(hintLeft, top + lineHeight * lineIndex), hintLines[lineIndex], Muted,
+                TextStyles.Caption1);
+        }
+    }
+
+    private void WrapHint(string text, float width)
+    {
+        if (hintLineCount > 0 && width == hintWrapWidth && string.Equals(text, hintSource, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        hintSource = text;
+        hintWrapWidth = width;
+        var lines = Typography.WrapText(text, TextStyles.Caption1, width);
+        hintLineCount = Math.Clamp(lines.Length, 1, HintMaxLines);
+        for (var lineIndex = 0; lineIndex < hintLineCount; lineIndex++)
+        {
+            hintLines[lineIndex] = lineIndex < lines.Length ? lines[lineIndex] : string.Empty;
+        }
+
+        if (lines.Length <= HintMaxLines)
+        {
+            return;
+        }
+
+        var overflow = string.Join(' ', lines, HintMaxLines - 1, lines.Length - HintMaxLines + 1);
+        hintLines[HintMaxLines - 1] = Typography.FitText(overflow, width, TextStyles.Caption1);
     }
 
     private void DrawControls(ImDrawListPtr drawList, bool interactive, Vector2 mouse, float scale)
