@@ -14,10 +14,13 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
     private const long MaximumWaitMilliseconds = 30_000;
     private const int BoardLimit = ScoresClient.DefaultLimit;
 
+    private readonly IScoreUploadConfiguration configuration;
     private readonly AethernetSession session;
     private readonly ScoresClient scores;
     private readonly RealtimeSignalBus signals;
     private readonly ScoreUploadQueue queue;
+    private readonly LeaderboardConsent consent;
+    private readonly LeaderboardParticipation participation = new();
     private readonly StoreWork work = new("Leaderboard");
     private readonly object gate = new();
     private readonly Dictionary<LeaderboardKey, LeaderboardBoard> boards = new();
@@ -26,8 +29,12 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
     private volatile GameScoreRankDto[] myRanks = Array.Empty<GameScoreRankDto>();
     private volatile bool myRanksLoaded;
     private volatile bool loadingMyRanks;
+    private volatile bool savingParticipation;
+    private volatile bool requestedParticipation;
+    private AepFailure participationFailure;
     private int flushing;
     private int fetchingMyRanks;
+    private int participationInFlight;
     private int version;
     private long myRanksLoadedAtTick;
     private long myRanksAttemptedAtTick;
@@ -36,11 +43,14 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
     public LeaderboardStore(IScoreUploadConfiguration configuration, AethernetSession session, ScoresClient scores,
         RealtimeSignalBus signals)
     {
+        this.configuration = configuration;
         this.session = session;
         this.scores = scores;
         this.signals = signals;
         queue = new ScoreUploadQueue(configuration);
+        consent = new LeaderboardConsent(configuration);
         lastAccountId = session.CurrentUser?.Id;
+        participation.Observe(ObservedAccountId(), OptedIn);
         session.Changed += OnSessionChanged;
         signals.ConnectedChanged += OnRealtimeConnected;
         Flush();
@@ -59,6 +69,89 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
     public bool MyRanksLoaded => myRanksLoaded;
 
     public bool LoadingMyRanks => loadingMyRanks;
+
+    public bool OptedIn => UploadsAllowed(session.IsSignedIn, session.CurrentUser);
+
+    public bool OptedOut => session.IsSignedIn && session.CurrentUser is { ShowOnLeaderboards: false };
+
+    public bool NeedsConsent => consent.Needed(session.IsSignedIn, session.CurrentUser);
+
+    public bool SavingParticipation => savingParticipation;
+
+    public bool ShownParticipation => savingParticipation ? requestedParticipation : OptedIn;
+
+    public AepFailure ParticipationFailure
+    {
+        get
+        {
+            lock (gate)
+            {
+                return participationFailure;
+            }
+        }
+    }
+
+    internal static bool UploadsAllowed(bool signedIn, UserDto? user) =>
+        signedIn && user is { ShowOnLeaderboards: true };
+
+    public void SetParticipation(bool show)
+    {
+        if (session.CurrentUser is null || !session.IsSignedIn)
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref participationInFlight, 1) != 0)
+        {
+            return;
+        }
+
+        requestedParticipation = show;
+        savingParticipation = true;
+        SetParticipationFailure(AepFailure.None);
+        var failure = AepFailure.None;
+        work.Run("participation", async token =>
+        {
+            var reply = await scores.SetShowOnLeaderboardsAsync(show, token, reported => failure = reported)
+                .ConfigureAwait(false);
+            if (reply is null)
+            {
+                return false;
+            }
+
+            consent.Answer(reply.Id);
+            session.SetUser(reply);
+            return true;
+        }, succeeded =>
+        {
+            Interlocked.Exchange(ref participationInFlight, 0);
+            if (!succeeded)
+            {
+                SetParticipationFailure(failure.Failed ? failure : AepFailure.Transport(AepFailureKind.BadResponse));
+            }
+
+            if (!succeeded || session.CurrentUser?.ShowOnLeaderboards == requestedParticipation)
+            {
+                savingParticipation = false;
+            }
+
+            Bump();
+        });
+    }
+
+    public void DeclineConsent()
+    {
+        var user = session.CurrentUser;
+        if (user is null)
+        {
+            return;
+        }
+
+        consent.Answer(user.Id);
+        SetParticipationFailure(AepFailure.None);
+    }
+
+    public void ClearParticipationFailure() => SetParticipationFailure(AepFailure.None);
 
     public void Submit(in ScoreSubmission submission)
     {
@@ -81,7 +174,7 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
     {
         lock (gate)
         {
-            rank = queue.RankFor(statId, session.IsSignedIn);
+            rank = queue.RankFor(statId, session.IsSignedIn, OptedOut);
         }
 
         if (rank.State != RankState.Unknown)
@@ -128,7 +221,7 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
 
     private void FetchMyRanks(long ttlMilliseconds)
     {
-        if (!session.IsSignedIn)
+        if (!session.IsSignedIn || OptedOut)
         {
             return;
         }
@@ -264,7 +357,7 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
 
     private void Flush()
     {
-        if (!session.IsSignedIn)
+        if (!OptedIn)
         {
             return;
         }
@@ -287,7 +380,7 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
 
     private async Task FlushAsync(CancellationToken token)
     {
-        while (session.IsSignedIn)
+        while (OptedIn)
         {
             ScoreUploadAttempt attempt;
             long waitMilliseconds;
@@ -346,20 +439,64 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
         if (!string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
         {
             lastAccountId = accountId;
-            lock (gate)
-            {
-                queue.ForgetReplies();
-                boards.Clear();
-            }
-
-            myRanks = Array.Empty<GameScoreRankDto>();
-            myRanksLoaded = false;
-            Interlocked.Exchange(ref myRanksLoadedAtTick, 0);
-            Interlocked.Exchange(ref myRanksAttemptedAtTick, 0);
-            Bump();
+            ForgetAccountState();
+            SetParticipationFailure(AepFailure.None);
         }
 
+        switch (participation.Observe(ObservedAccountId(), OptedIn))
+        {
+            case ParticipationChange.Joined:
+                lock (gate)
+                {
+                    queue.EnqueueLocalBests(configuration.GameStats, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                }
+
+                break;
+            case ParticipationChange.Left:
+                lock (gate)
+                {
+                    queue.Clear();
+                }
+
+                ForgetAccountState();
+                break;
+            default:
+                break;
+        }
+
+        if (Volatile.Read(ref participationInFlight) == 0)
+        {
+            savingParticipation = false;
+        }
+
+        Bump();
         Flush();
+    }
+
+    private void ForgetAccountState()
+    {
+        lock (gate)
+        {
+            queue.ForgetReplies();
+            boards.Clear();
+        }
+
+        myRanks = Array.Empty<GameScoreRankDto>();
+        myRanksLoaded = false;
+        Interlocked.Exchange(ref myRanksLoadedAtTick, 0);
+        Interlocked.Exchange(ref myRanksAttemptedAtTick, 0);
+    }
+
+    private string? ObservedAccountId() => session.IsSignedIn ? session.CurrentUser?.Id : null;
+
+    private void SetParticipationFailure(in AepFailure failure)
+    {
+        lock (gate)
+        {
+            participationFailure = failure;
+        }
+
+        Bump();
     }
 
     private void OnRealtimeConnected(bool connected)

@@ -31,6 +31,7 @@ internal sealed partial class GamesApp
     private const float RecordValueReserve = 0.38f;
     private const float EmptyBlockHeight = 300f;
     private const float RankChevronSize = 13f;
+    private const float JoinRanksGlyphScale = 0.5f;
     private const int SummaryColumns = 3;
     private const string RankRowPrefix = "games.records.rank.";
     private const string RankSeparator = " · ";
@@ -271,6 +272,11 @@ internal sealed partial class GamesApp
 
     private float DrawYourRanks(Vector2 origin, float top, float width, float scale)
     {
+        if (leaderboard.OptedOut)
+        {
+            return DrawJoinRanks(origin, top, width, scale);
+        }
+
         var ranks = leaderboard.MyRanks;
         if (!leaderboard.IsSignedIn || ranks.Length == 0)
         {
@@ -311,6 +317,51 @@ internal sealed partial class GamesApp
         if (activate >= 0)
         {
             OpenLeaderboard(games[rankGameIndexes[activate]], rankStatIds[activate], TabTitle(GamesTab.Records));
+        }
+
+        return card.Bounds.Max.Y;
+    }
+
+    private float DrawJoinRanks(Vector2 origin, float top, float width, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var y = top + GamesHubArt.SectionGap * scale;
+        GamesHubArt.Section(drawList, ui, origin.X, y, width, Loc.T(L.Stage.YourRanks), string.Empty, string.Empty);
+        y += GamesHubArt.SectionHeight * scale;
+        var label = Loc.T(L.Leaderboard.JoinToSeeRanks);
+        var iconSize = RecordIconSize * scale;
+        var chevron = RankChevronSize * scale;
+        var rowInset = Metrics.Space.Lg * scale;
+        var textWidth = MathF.Max(1f,
+            width - rowInset * 2f - iconSize - RecordIconGap * scale - chevron - Metrics.Space.Sm * scale);
+        var textHeight = Typography.MeasureWrappedBlock(label, TextStyles.Headline, textWidth).Y;
+        var rowHeight = MathF.Max(RecordRowHeight, textHeight / scale + Metrics.Space.Md * 2f);
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, y));
+        var card = GroupCard.Begin(ui, 1, rowHeight);
+        var row = card.NextRow();
+        var padding = Metrics.Space.Lg * scale;
+        var hit = new Rect(new Vector2(row.Min.X - padding, row.Min.Y), new Vector2(row.Max.X + padding, row.Max.Y));
+        var hovered = UiInteract.Hover(hit.Min, hit.Max);
+        if (hovered)
+        {
+            drawList.AddRectFilled(hit.Min, hit.Max, ImGui.GetColorU32(ui.HoverWash));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        var iconMin = new Vector2(row.Min.X, row.Center.Y - iconSize * 0.5f);
+        var iconMax = iconMin + new Vector2(iconSize, iconSize);
+        IconTile.FillShaded(drawList, iconMin, iconMax, iconSize * Metrics.Radius.TileFactor,
+            IconTile.Surface(ui.Accent));
+        ProgressRing.CenterIcon(drawList, (iconMin + iconMax) * 0.5f, FontAwesomeIcon.Trophy, AccentRing.Ink,
+            iconSize * JoinRanksGlyphScale);
+        PhoneIcon.Draw(drawList, new Vector2(row.Max.X - chevron * 0.5f, row.Center.Y), PhoneIcons.ChevronRight,
+            ui.MutedInk, chevron);
+        Typography.DrawWrappedLeft(new Vector2(iconMax.X + RecordIconGap * scale, row.Center.Y - textHeight * 0.5f),
+            label, ui.TitleInk, TextStyles.Headline, textWidth);
+        card.End();
+        if (UiInteract.Click(hit.Min, hit.Max, hovered))
+        {
+            RequestConsent();
         }
 
         return card.Bounds.Max.Y;

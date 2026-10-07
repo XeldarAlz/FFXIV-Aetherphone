@@ -70,7 +70,11 @@ internal sealed record GameRoomActionRequest(
     int Column = -1,
     int Cell = -1,
     BroadsideShipDto[]? Fleet = null,
-    int Target = -1);
+    int Target = -1,
+    int Facing = 0,
+    int Weapon = -1,
+    int Fuse = 0,
+    float WalkX = -1f);
 
 internal sealed record GameRoomActionResultDto(bool Granted = false, string Reason = "", int ActionCount = 0);
 
@@ -158,6 +162,72 @@ internal sealed record ConnectFourRoomStateDto(
     int LastRow = -1,
     int LastSeat = -1,
     int ActionCount = 0,
+    string LastKind = "",
+    string EndKind = "",
+    int WinnerSeat = -1);
+
+internal sealed record CraterPlayerDto(
+    string UserId = "",
+    string DisplayName = "",
+    int Seat = 0,
+    bool Away = false,
+    int Wins = 0,
+    int Team = -1,
+    int Missed = 0);
+
+internal sealed record CraterMoogleDto(
+    int Team = 0,
+    int X = 0,
+    int Y = 0,
+    int Health = 0,
+    int Facing = 1,
+    int Aim = 0,
+    bool Alive = false,
+    bool Sunk = false,
+    bool Shielded = false);
+
+internal sealed record CraterFlightDto(int Kind = 0, int Frame = 0, int[]? Path = null);
+
+internal sealed record CraterMoveDto(int Moogle = 0, int Frame = 0, bool Walk = false, int[]? Path = null);
+
+internal sealed record CraterShotDto(
+    int Team = -1,
+    int Moogle = -1,
+    int Weapon = -1,
+    int Facing = 1,
+    int Aim = 0,
+    int Power = 0,
+    int Fuse = 0,
+    int Stride = 4,
+    int Frames = 0,
+    int WalkFrames = 0,
+    int WaterFrom = 0,
+    CraterFlightDto[]? Flights = null,
+    CraterMoveDto[]? Moves = null,
+    int[]? Beats = null);
+
+internal sealed record CraterRoomStateDto(
+    long RoundIndex = 0,
+    string HostUserId = "",
+    CraterPlayerDto[]? Players = null,
+    int Seed = 0,
+    int TeamCount = 0,
+    CraterMoogleDto[]? Moogles = null,
+    int[]? Craters = null,
+    int[]? Tunnels = null,
+    int[]? Ammo = null,
+    int[]? NextMembers = null,
+    int TurnTeam = -1,
+    int TurnMoogle = -1,
+    int Wind = 0,
+    int Water = 0,
+    int Round = 0,
+    int PlayedMask = 0,
+    int TurnCount = 0,
+    CraterShotDto? Shot = null,
+    int ActionCount = 0,
+    int TurnSeconds = 0,
+    int LastSeat = -1,
     string LastKind = "",
     string EndKind = "",
     int WinnerSeat = -1);

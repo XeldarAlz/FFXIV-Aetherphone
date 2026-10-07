@@ -19,6 +19,7 @@ internal sealed partial class GamesApp
     private const string LeaderboardModeId = "games.leaderboard.mode";
     private const string LeaderboardRowPrefix = "games.leaderboard.row.";
     private const string LeaderboardMeRowId = "games.leaderboard.me";
+    private const string LeaderboardJoinId = "games.leaderboard.join";
     private const string LeaderboardSettingsAppId = "settings";
     private const string LeaderboardHandlePrefix = "@";
     private const float LeaderboardRowHeight = 60f;
@@ -30,6 +31,7 @@ internal sealed partial class GamesApp
     private const float LeaderboardStripGap = 8f;
     private const float LeaderboardBlockHeight = 300f;
     private const float LeaderboardSpinnerRadius = 9f;
+    private const float LeaderboardBannerIconSize = 18f;
     private const float LeaderboardHighlightAlpha = 0.12f;
     private const float LeaderboardMonogramScale = 0.95f;
     private const int LeaderboardAvatarSegments = 32;
@@ -317,7 +319,13 @@ internal sealed partial class GamesApp
                 var board = leaderboard.Board(leaderboardKey);
                 leaderboardRefresh.Draw(navBar.Body, surface.Pull, surface.Dragging, board.Loading, ui.MutedInk,
                     refreshLeaderboard);
-                var y = DrawLeaderboardStrips(origin.X, origin.Y, width, scale);
+                var y = origin.Y;
+                if (leaderboard.OptedOut)
+                {
+                    y = DrawJoinBanner(drawList, origin.X, y, width, scale) + LeaderboardStripGap * scale;
+                }
+
+                y = DrawLeaderboardStrips(origin.X, y, width, scale);
                 y = DrawLeaderboardBody(drawList, board, origin.X, y, width, scale);
                 FinishPage(origin, width, y, scale);
             }
@@ -409,7 +417,7 @@ internal sealed partial class GamesApp
             DrawLeaderboardRow(drawList, row, leaderboardRowIds[index], entry.Rank,
                 SocialIdentity.Name(entry.DisplayName, entry.Handle), leaderboardHandles[index], entry.AvatarUrl,
                 entry.Badges, leaderboardValues[index], string.Equals(entry.UserId, me, StringComparison.Ordinal),
-                scale);
+                leaderboardAccent, scale);
         }
 
         card.End();
@@ -426,26 +434,26 @@ internal sealed partial class GamesApp
         var pinned = GroupCard.Begin(ui, 1, LeaderboardRowHeight);
         DrawLeaderboardRow(drawList, pinned.NextRow(), LeaderboardMeRowId, mine.Rank,
             SocialIdentity.Name(user.DisplayName, user.Handle), Loc.T(L.Leaderboard.You), user.AvatarUrl, user.Badges,
-            leaderboardMeValue, true, scale);
+            leaderboardMeValue, true, leaderboardAccent, scale);
         pinned.End();
         return pinned.Bounds.Max.Y;
     }
 
     private void DrawLeaderboardRow(ImDrawListPtr drawList, Rect row, string rowId, int rank, string name,
-        string subtitle, string? avatarUrl, int badges, string value, bool highlighted, float scale)
+        string subtitle, string? avatarUrl, int badges, string value, bool highlighted, Vector4 accent, float scale)
     {
         var padding = Metrics.Space.Lg * scale;
         if (highlighted)
         {
             drawList.AddRectFilled(new Vector2(row.Min.X - padding, row.Min.Y), new Vector2(row.Max.X + padding, row.Max.Y),
-                ImGui.GetColorU32(leaderboardAccent with { W = LeaderboardHighlightAlpha }));
+                ImGui.GetColorU32(accent with { W = LeaderboardHighlightAlpha }));
         }
 
         var rankWidth = LeaderboardRankWidth * scale;
         var rankLabel = Typography.FitText(GameNumber.Label(rank), rankWidth, TextStyles.Headline);
         var rankSize = Typography.Measure(rankLabel, TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(row.Min.X, row.Center.Y - rankSize.Y * 0.5f), rankLabel,
-            highlighted ? leaderboardAccent : ui.MutedInk, TextStyles.Headline);
+            highlighted ? accent : ui.MutedInk, TextStyles.Headline);
         var radius = LeaderboardAvatarRadius * scale;
         var avatarCenter = new Vector2(row.Min.X + rankWidth + radius, row.Center.Y);
         AvatarView.DrawRemote(drawList, avatarCenter, radius, ui.Theme, name, string.Empty, avatarUrl, images,
@@ -464,6 +472,36 @@ internal sealed partial class GamesApp
         var valueSize = Typography.Measure(fittedValue, TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(row.Max.X - valueSize.X, row.Center.Y - valueSize.Y * 0.5f), fittedValue,
             ui.TitleInk, TextStyles.Headline);
+    }
+
+    private float DrawJoinBanner(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        var pad = Metrics.Space.Md * scale;
+        var label = Loc.T(L.Leaderboard.JoinShort);
+        var buttonHeight = Button.SmallHeight * scale;
+        var buttonWidth = Button.WidthFor(label, ButtonSize.Small);
+        var failure = ParticipationFailureText();
+        var message = failure.Length > 0 ? failure : Loc.T(L.Leaderboard.NotOnBoards);
+        var iconSize = LeaderboardBannerIconSize * scale;
+        var textLeft = left + pad + iconSize + Metrics.Space.Sm * scale;
+        var textWidth = MathF.Max(1f, left + width - pad - buttonWidth - Metrics.Space.Md * scale - textLeft);
+        var block = Typography.MeasureWrappedBlock(message, TextStyles.Subheadline, textWidth);
+        var height = MathF.Max(block.Y, buttonHeight) + pad * 2f;
+        var max = new Vector2(left + width, top + height);
+        ui.Card(drawList, new Vector2(left, top), max, Metrics.Radius.Widget * scale);
+        ProgressRing.CenterIcon(drawList, new Vector2(left + pad + iconSize * 0.5f, top + height * 0.5f),
+            FontAwesomeIcon.EyeSlash, ui.MutedInk, iconSize);
+        Typography.DrawWrappedLeft(new Vector2(textLeft, top + (height - block.Y) * 0.5f), message,
+            failure.Length > 0 ? ui.Theme.Danger : ui.TitleInk, TextStyles.Subheadline, textWidth);
+        var button = new Rect(new Vector2(max.X - pad - buttonWidth, top + (height - buttonHeight) * 0.5f),
+            new Vector2(max.X - pad, top + (height + buttonHeight) * 0.5f));
+        if (Button.Draw(drawList, button, label, ui.Ink, enabled: !leaderboard.SavingParticipation,
+                id: LeaderboardJoinId))
+        {
+            leaderboard.SetParticipation(true);
+        }
+
+        return max.Y;
     }
 
     private float DrawLeaderboardLoading(float left, float top, float width, float scale)

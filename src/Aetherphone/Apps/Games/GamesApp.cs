@@ -21,6 +21,7 @@ using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.Fuse;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
+using Aetherphone.Apps.Games.Herd;
 using Aetherphone.Apps.Games.Hop;
 using Aetherphone.Apps.Games.Invaders;
 using Aetherphone.Apps.Games.Mahjong;
@@ -47,6 +48,7 @@ using Aetherphone.Apps.Games.Stack;
 using Aetherphone.Apps.Games.Sudoku;
 using Aetherphone.Apps.Games.Sweeper;
 using Aetherphone.Apps.Games.Swoop;
+using Aetherphone.Apps.Games.Tempo;
 using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Apps.Games.Trails;
 using Aetherphone.Apps.Games.Thrust;
@@ -68,6 +70,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.MoogleClicker;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -176,7 +179,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         session = new GameSession(stats, leaderboard, leaderboard);
         fx = new ScreenFx(backdrop);
         onlineHub = new OnlineHub(gameRooms, OpenOnlineRoom);
-        onlineRoom = new OnlineRoomView(gameRooms);
+        onlineRoom = new OnlineRoomView(gameRooms, textures);
         games = new IMiniGame[]
         {
             new SweeperApp(),
@@ -236,6 +239,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new FuseApp(),
             new SnipApp(),
             new MiniGolfApp(),
+            new HerdApp(textures),
+            new TempoApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];
@@ -318,6 +323,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         RebuildLayout();
         ResetLauncher();
         onlineHub.Reset();
+        consentRequested = false;
+        leaderboard.ClearParticipationFailure();
         leaderboard.EnsureMyRanksFresh();
     }
 
@@ -326,8 +333,10 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         CloseCurrentGame();
         gameRooms.Exit();
         AppLandscape.Release(Id);
+        TourHolds.Release(Id);
         router.Reset();
         pendingRoute = string.Empty;
+        consentRequested = false;
     }
 
     public void Dispose()
@@ -336,6 +345,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         {
             games[index].Dispose();
         }
+
+        onlineRoom.Dispose();
     }
 
     public void Draw(in PhoneContext context)
@@ -348,6 +359,17 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         SyncCountLabels();
         SyncLeaderboardVersion();
         screenRect = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
+        if (ShowsConsent())
+        {
+            TourHolds.Hold(Id);
+            ui.Backdrop(screenRect);
+            var consentArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
+            PaintViewBackdrop(consentArea);
+            DrawConsent(consentArea, UiScale.Current);
+            return;
+        }
+
+        TourHolds.Release(Id);
         ConsumePendingRoute();
         if (!router.IsTransitioning && router.Current.Screen is GamesScreen.Root or GamesScreen.Shelf)
         {

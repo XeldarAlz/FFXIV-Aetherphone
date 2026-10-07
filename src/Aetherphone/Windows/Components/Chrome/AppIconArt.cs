@@ -193,6 +193,12 @@ internal static class AppIconArt
             case "minigolf":
                 DrawMiniGolf(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "herd":
+                DrawHerd(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "tempo":
+                DrawTempo(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -1229,6 +1235,55 @@ internal static class AppIconArt
         drawList.AddCircleFilled(ball, extent * 0.26f, ink, 20);
         drawList.AddCircleFilled(ball + new Vector2(-extent * 0.08f, -extent * 0.08f), extent * 0.06f, hole, 8);
         drawList.AddCircleFilled(ball + new Vector2(extent * 0.08f, extent * 0.02f), extent * 0.05f, hole, 8);
+    }
+
+    private static void DrawHerd(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        for (var side = -1; side <= 1; side += 2)
+        {
+            var back = At(center, extent, side * 0.62f, 0.42f);
+            drawList.AddCircleFilled(back, extent * 0.34f, ink, 24);
+            drawList.AddCircleFilled(At(center, extent, side * 0.62f + side * 0.02f, 0.4f), extent * 0.05f, hole, 8);
+        }
+
+        var head = At(center, extent, 0f, 0.28f);
+        drawList.AddCircleFilled(head, extent * 0.6f, hole, 32);
+        drawList.AddCircleFilled(head, extent * 0.52f, ink, 32);
+        drawList.AddCircleFilled(At(center, extent, -0.18f, 0.2f), extent * 0.075f, hole, 10);
+        drawList.AddCircleFilled(At(center, extent, 0.18f, 0.2f), extent * 0.075f, hole, 10);
+        drawList.AddCircleFilled(At(center, extent, 0f, 0.42f), extent * 0.09f, hole, 12);
+        drawList.AddBezierQuadratic(At(center, extent, 0f, -0.22f), At(center, extent, 0.16f, -0.5f),
+            At(center, extent, 0.3f, -0.72f), ink, extent * 0.08f);
+        drawList.AddCircleFilled(At(center, extent, 0.32f, -0.78f), extent * 0.2f, ink, 20);
+        drawList.AddCircleFilled(At(center, extent, 0.26f, -0.84f), extent * 0.06f, hole, 10);
+    }
+
+    private static void DrawTempo(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        drawList.AddRectFilled(At(center, extent, -1f, 0.78f), At(center, extent, 1f, 0.92f), ink, extent * 0.05f);
+        Span<Vector2> spike = stackalloc Vector2[3]
+        {
+            At(center, extent, 0.34f, 0.78f), At(center, extent, 0.62f, 0.26f), At(center, extent, 0.9f, 0.78f),
+        };
+        FillConvex(drawList, ink, spike);
+        var cube = At(center, extent, -0.26f, -0.3f);
+        Span<Vector2> outer = stackalloc Vector2[4];
+        Span<Vector2> inner = stackalloc Vector2[4];
+        for (var corner = 0; corner < 4; corner++)
+        {
+            var angle = 0.42f + corner * MathF.PI * 0.5f;
+            var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            outer[corner] = cube + direction * extent * 0.56f;
+            inner[corner] = cube + direction * extent * 0.26f;
+        }
+
+        FillConvex(drawList, ink, outer);
+        FillConvex(drawList, hole, inner);
+        for (var dash = 0; dash < 3; dash++)
+        {
+            var y = -0.52f + dash * 0.22f;
+            drawList.AddLine(At(center, extent, -1f + dash * 0.08f, y), At(center, extent, -0.78f, y), ink, extent * 0.07f);
+        }
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

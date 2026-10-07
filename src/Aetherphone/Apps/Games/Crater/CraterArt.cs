@@ -1,4 +1,5 @@
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.Framework.World;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Crater;
@@ -31,6 +32,13 @@ internal static class CraterArt
     private static readonly Vector4 Spark = new(1f, 0.86f, 0.40f, 1f);
 
     public static uint Color(Vector4 color) => ImGui.GetColorU32(color);
+
+    public static TerrainMaterial Material(TerrainStyle style) => style switch
+    {
+        TerrainStyle.Islands => TerrainMaterial.Sand,
+        TerrainStyle.Caverns => TerrainMaterial.Stone,
+        _ => TerrainMaterial.Earth,
+    };
 
     public static int Segments(float radius) => Math.Clamp((int)(radius * 0.8f), 12, 40);
 

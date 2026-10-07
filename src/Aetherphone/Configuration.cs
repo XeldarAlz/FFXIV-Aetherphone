@@ -359,6 +359,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool TetrisModern { get; set; }
     public string PendingCoinGameSession { get; set; } = string.Empty;
     public List<PendingScoreUpload> PendingScoreUploads { get; set; } = new();
+    public List<string> LeaderboardConsentAnswered { get; set; } = new();
     public MoogleClickerSave MoogleClicker { get; set; } = new();
     public Dictionary<string, Core.Coins.CoinSavingGoal> CoinSavingGoals { get; set; } = new();
     public Dictionary<ulong, string> PendingCasinoSittings { get; set; } = new();

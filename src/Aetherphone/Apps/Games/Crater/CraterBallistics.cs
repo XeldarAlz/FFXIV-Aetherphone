@@ -8,7 +8,58 @@ internal static class CraterBallistics
     private const float BounceNudge = 0.01f;
     private const float RestNormal = -0.6f;
     private const float SupportProbe = 0.03f;
+    private const float PredictSeconds = 8f;
     private static readonly Vector2 Up = new(0f, -1f);
+
+    public static CraterProjectile Launch(Vector2 shooter, int owner, int team, in CraterShot shot)
+    {
+        var direction = CraterRules.AimDirection(shot.Elevation, shot.Facing);
+        return new CraterProjectile
+        {
+            Position = shooter + direction * CraterRules.MuzzleDistance,
+            Velocity = direction * CraterRules.LaunchSpeed(shot.Power),
+            Kind = CraterRules.KindOf(shot.Weapon),
+            Alive = true,
+            Fuse = Math.Clamp(shot.Fuse, CraterRules.MinFuse, CraterRules.MaxFuse),
+            Owner = owner,
+            Team = team,
+        };
+    }
+
+    public static bool Predict(CraterProjectile projectile, TerrainMask terrain, float wind, float waterLevel,
+        ReadOnlySpan<CraterMoogle> moogles, Span<Vector2> path, int stride, out int pathCount, out FlightStep end,
+        out float seconds)
+    {
+        var maxTicks = (int)(PredictSeconds / CraterRules.TickSeconds);
+        var every = Math.Max(1, stride);
+        pathCount = 0;
+        for (var tick = 0; tick < maxTicks; tick++)
+        {
+            if (pathCount < path.Length && tick % every == 0)
+            {
+                path[pathCount++] = projectile.Position;
+            }
+
+            var step = Advance(ref projectile, terrain, wind, waterLevel, moogles, CraterRules.TickSeconds);
+            if (step.Outcome == FlightOutcome.Flying)
+            {
+                continue;
+            }
+
+            end = step;
+            seconds = (tick + 1) * CraterRules.TickSeconds;
+            if (pathCount < path.Length)
+            {
+                path[pathCount++] = step.Point;
+            }
+
+            return step.Outcome is FlightOutcome.Impact or FlightOutcome.Fused;
+        }
+
+        end = new FlightStep(FlightOutcome.Lost, projectile.Position, Up, CraterEvent.None, 0f);
+        seconds = PredictSeconds;
+        return false;
+    }
 
     public static FlightStep Advance(ref CraterProjectile projectile, TerrainMask terrain, float wind, float waterLevel,
         ReadOnlySpan<CraterMoogle> moogles, float deltaSeconds)

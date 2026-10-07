@@ -1,4 +1,6 @@
 using Aetherphone.Apps.Games.Broadside;
+using Aetherphone.Apps.Games.Crater;
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.Framework.Cards;
 using Aetherphone.Apps.Games.LuckyDraw;
 using Aetherphone.Apps.Games.MiniGolf;
@@ -26,6 +28,7 @@ internal static class OnlineGameArt
         GameRoomWire.UnoKind, GameRoomWire.ChessKind, GameRoomWire.PoolKind, GameRoomWire.ConnectFourKind,
         GameRoomWire.BroadsideKind,
         GameRoomWire.LuckyDrawKind,
+        GameRoomWire.CraterKind,
         GameRoomWire.MiniGolfKind,
     };
 
@@ -61,6 +64,11 @@ internal static class OnlineGameArt
             return "broadside";
         }
 
+        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
+        {
+            return "crater";
+        }
+
         if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
         {
             return OnlineMiniGolfTable.AccentId;
@@ -76,6 +84,11 @@ internal static class OnlineGameArt
         if (string.Equals(kind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
         {
             return LuckyDrawMaxPlayers;
+        }
+
+        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
+        {
+            return GameRoomWire.CraterMaxPlayers;
         }
 
         if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
@@ -122,6 +135,12 @@ internal static class OnlineGameArt
             return;
         }
 
+        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
+        {
+            DrawCraterMedallion(drawList, center, size);
+            return;
+        }
+
         if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
         {
             DrawGreenMedallion(drawList, center, size);
@@ -163,6 +182,16 @@ internal static class OnlineGameArt
         drawList.AddCircleFilled(burst, pitch * 0.18f, ImGui.GetColorU32(BroadsideArt.Flame), 12);
         var hull = new Rect(center + new Vector2(-size * 0.36f, -size * 0.22f), center + new Vector2(size * 0.36f, 0f));
         BroadsideArt.DrawAirship(drawList, hull, true, BroadsideArt.Hull, scale, clock, -1f, 1f);
+    }
+
+    private static void DrawCraterMedallion(ImDrawListPtr drawList, Vector2 center, float size)
+    {
+        var radius = size * 0.3f;
+        var body = center + new Vector2(-size * 0.04f, size * 0.06f);
+        drawList.AddCircleFilled(body + new Vector2(0f, radius * 1.05f), radius * 1.1f, ImGui.GetColorU32(Shadow), 32);
+        CraterArt.Launcher(drawList, body, radius, CraterRules.AimDirection(CraterRules.DefaultElevation, 1),
+            GameSeats.Color(0));
+        CraterArt.Moogle(drawList, body, radius, 1, GameSeats.Color(0), 0.2f, 0f, 0.3f);
     }
 
     private static void DrawConnectFourMedallion(ImDrawListPtr drawList, Vector2 center, float size)

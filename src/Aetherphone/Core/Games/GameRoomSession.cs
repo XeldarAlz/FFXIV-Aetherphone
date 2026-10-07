@@ -33,6 +33,7 @@ internal sealed record GameRoomState(
     GameRoomRoster? Roster,
     BroadsideRoomStateDto? Broadside = null,
     LuckyDrawRoomStateDto? LuckyDraw = null,
+    CraterRoomStateDto? Crater = null,
     MiniGolfRoomStateDto? MiniGolf = null);
 
 internal sealed record GameRoomPrivate(
@@ -378,6 +379,13 @@ internal sealed class GameRoomSession
                 LuckyDraw: luckyDraw);
         }
 
+        if (string.Equals(snapshot.GameKind, GameRoomWire.CraterKind, StringComparison.Ordinal))
+        {
+            var crater = Parse(snapshot.GameState, AethernetJsonContext.Default.CraterRoomStateDto);
+            return new GameRoomState(roomId, epoch, seq, snapshot, null, null, null, null, RosterOf(crater),
+                Crater: crater);
+        }
+
         if (string.Equals(snapshot.GameKind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
         {
             var miniGolf = Parse(snapshot.GameState, AethernetJsonContext.Default.MiniGolfRoomStateDto);
@@ -424,6 +432,25 @@ internal sealed class GameRoomSession
         }
 
         return new GameRoomRoster(luckyDraw.HostUserId, members, luckyDraw.ActionCount, luckyDraw.WinnerSeat);
+    }
+
+    private static GameRoomRoster? RosterOf(CraterRoomStateDto? crater)
+    {
+        if (crater is null)
+        {
+            return null;
+        }
+
+        var players = crater.Players ?? Array.Empty<CraterPlayerDto>();
+        var members = new GameRoomMemberView[players.Length];
+        for (var index = 0; index < players.Length; index++)
+        {
+            var player = players[index];
+            members[index] = new GameRoomMemberView(player.UserId, player.DisplayName, player.Seat,
+                player.Away, player.Wins);
+        }
+
+        return new GameRoomRoster(crater.HostUserId, members, crater.ActionCount, crater.WinnerSeat);
     }
 
     private static GameRoomRoster? RosterOf(MiniGolfRoomStateDto? miniGolf)

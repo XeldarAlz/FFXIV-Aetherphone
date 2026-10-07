@@ -31,6 +31,11 @@ internal static class GamesOnlineText
             return L.LuckyDraw.Title;
         }
 
+        if (string.Equals(gameKind, Core.Games.GameRoomWire.CraterKind, StringComparison.Ordinal))
+        {
+            return L.Games.OnlineCrater;
+        }
+
         if (string.Equals(gameKind, Core.Games.GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
         {
             return L.MiniGolf.Title;

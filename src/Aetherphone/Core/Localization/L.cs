@@ -8290,6 +8290,11 @@ internal static class L
         public static readonly LocString OnlineLuckyDrawDesertWin = new("games.onlineLuckyDrawDesertWin", "{0} wins, everyone else left");
         public static readonly LocString OnlineLuckyDrawChoosing = new("games.onlineLuckyDrawChoosing", "{0} is picking a target");
         public static readonly LocString OnlineLuckyDrawNextDeal = new("games.onlineLuckyDrawNextDeal", "Joins next round");
+        public static readonly LocString OnlineCrater = new("games.onlineCrater", "Crater");
+        public static readonly LocString OnlineCraterHostHint = new("games.onlineCraterHostHint", "2 to 4 players, 45 seconds a turn");
+        public static readonly LocString OnlineCraterWin = new("games.onlineCraterWin", "{0}'s moogles are the last ones standing!");
+        public static readonly LocString OnlineCraterDraw = new("games.onlineCraterDraw", "Draw, no moogle is left standing");
+        public static readonly LocString OnlineCraterControls = new("games.onlineCraterControls", "A and D walk, drag or arrows aim, hold Space or the button to fire");
         public static readonly LocString OnlineMiniGolfHostHint = new("games.onlineMiniGolfHostHint", "Two to four players, 30 seconds a stroke");
         public static readonly LocString OnlineMiniGolfWin = new("games.onlineMiniGolfWin", "{0} wins the round in {1} strokes!");
         public static readonly LocString OnlineMiniGolfTie = new("games.onlineMiniGolfTie", "A tie for first at {0} strokes!");
@@ -8364,6 +8369,7 @@ internal static class L
         public static readonly LocString PassTo = new("stage.passTo", "Pass to {0}");
         public static readonly LocString TapWhenReady = new("stage.tapWhenReady", "Tap when ready");
         public static readonly LocString SeatWins = new("stage.seatWins", "{0} wins");
+        public static readonly LocString LeaderboardsOff = new("stage.leaderboardsOff", "Leaderboards off");
     }
 
     internal static class Leaderboard
@@ -8374,6 +8380,18 @@ internal static class L
         public static readonly LocString You = new("leaderboard.you", "You");
         public static readonly LocString RankChip = new("leaderboard.rankChip", "#{0}");
         public static readonly LocString WeekRank = new("leaderboard.weekRank", "#{0} this week");
+        public static readonly LocString ConsentTitle = new("leaderboard.consentTitle", "Show up on the leaderboards?");
+        public static readonly LocString ConsentBody = new("leaderboard.consentBody", "Your best score in each game can go on the global and friends leaderboards.");
+        public static readonly LocString ConsentShown = new("leaderboard.consentShown", "Other players see your display name, @handle, avatar and badges next to your scores.");
+        public static readonly LocString ConsentOff = new("leaderboard.consentOff", "If you stay off, your scores stay on this phone.");
+        public static readonly LocString ConsentPreview = new("leaderboard.consentPreview", "How you would appear");
+        public static readonly LocString ConsentSettings = new("leaderboard.consentSettings", "You can change this any time in Settings > Privacy.");
+        public static readonly LocString Join = new("leaderboard.join", "Join leaderboards");
+        public static readonly LocString NotNow = new("leaderboard.notNow", "Not now");
+        public static readonly LocString JoinShort = new("leaderboard.joinShort", "Join");
+        public static readonly LocString NotOnBoards = new("leaderboard.notOnBoards", "You are not on leaderboards");
+        public static readonly LocString JoinToSeeRanks = new("leaderboard.joinToSeeRanks", "Join leaderboards to see your ranks");
+        public static readonly LocString OffHint = new("leaderboard.offHint", "When this is off, your scores stay on this phone.");
     }
 
     internal static class Sweeper
@@ -9213,6 +9231,50 @@ internal static class L
         public static readonly LocString SecondPlace = new("games.minigolf.secondPlace", "2nd");
         public static readonly LocString ThirdPlace = new("games.minigolf.thirdPlace", "3rd");
         public static readonly LocString FourthPlace = new("games.minigolf.fourthPlace", "4th");
+    }
+
+    internal static class Herd
+    {
+        public static readonly LocString Title = new("games.herd.title", "Herd");
+        public static readonly LocString Hook = new("games.herd.hook", "Pick a skill, then tap a moogle to dig, build, block or bash a way from the door to the hut. Save enough of them to clear the level.");
+        public static readonly LocString Saved = new("games.herd.saved", "Saved");
+        public static readonly LocString SavedOf = new("games.herd.savedOf", "{0} / {1}");
+        public static readonly LocString Needed = new("games.herd.needed", "Needed");
+        public static readonly LocString SkillsUsed = new("games.herd.skillsUsed", "Skills used");
+        public static readonly LocString Block = new("games.herd.block", "Block");
+        public static readonly LocString Dig = new("games.herd.dig", "Dig down");
+        public static readonly LocString Bridge = new("games.herd.bridge", "Bridge");
+        public static readonly LocString Climb = new("games.herd.climb", "Climb");
+        public static readonly LocString Float = new("games.herd.float", "Float");
+        public static readonly LocString Bash = new("games.herd.bash", "Bash");
+        public static readonly LocString BlockHint = new("games.herd.blockHint", "Stands firm and turns the others around");
+        public static readonly LocString DigHint = new("games.herd.digHint", "Digs straight down through the ground");
+        public static readonly LocString BridgeHint = new("games.herd.bridgeHint", "Lays a staircase of twelve steps");
+        public static readonly LocString ClimbHint = new("games.herd.climbHint", "Climbs every wall it meets from now on");
+        public static readonly LocString FloatHint = new("games.herd.floatHint", "Opens a pom-pom canopy on long falls");
+        public static readonly LocString BashHint = new("games.herd.bashHint", "Punches a tunnel straight ahead");
+        public static readonly LocString Paused = new("games.herd.paused", "Paused: tap moogles to give skills");
+        public static readonly LocString NukeArmed = new("games.herd.nukeArmed", "Tap again to pop them all");
+        public static readonly LocString GoalReached = new("games.herd.goalReached", "Goal reached!");
+    }
+
+    internal static class Tempo
+    {
+        public static readonly LocString Title = new("games.tempo.title", "Tempo");
+        public static readonly LocString Hook = new("games.tempo.hook", "Tap to jump to the beat over spikes and gaps, and hold on a jump pad to soar further. Three hidden coins wait on every level.");
+        public static readonly LocString Normal = new("games.tempo.normal", "Normal");
+        public static readonly LocString Practice = new("games.tempo.practice", "Practice");
+        public static readonly LocString Attempt = new("games.tempo.attempt", "Attempt");
+        public static readonly LocString AttemptNumber = new("games.tempo.attemptNumber", "Attempt {0}");
+        public static readonly LocString Percent = new("games.tempo.percent", "{0}%");
+        public static readonly LocString Complete = new("games.tempo.complete", "Complete!");
+        public static readonly LocString Flawless = new("games.tempo.flawless", "Flawless!");
+        public static readonly LocString Attempts = new("games.tempo.attempts", "Attempts");
+        public static readonly LocString Coins = new("games.tempo.coins", "Coins");
+        public static readonly LocString CoinsOf = new("games.tempo.coinsOf", "{0} / {1}");
+        public static readonly LocString Jumps = new("games.tempo.jumps", "Jumps");
+        public static readonly LocString Checkpoints = new("games.tempo.checkpoints", "Checkpoints");
+        public static readonly LocString PracticeHint = new("games.tempo.practiceHint", "Tap the flag to drop a checkpoint, the cross to lift the last one");
     }
 
     internal static class Nameplate

@@ -96,6 +96,12 @@ internal static class ScoreStatIds
         return separator < 0 ? ReadOnlySpan<char>.Empty : statId.AsSpan(separator + 1);
     }
 
+    public static string RootOf(string statId)
+    {
+        var separator = statId.IndexOf(Separator);
+        return separator < 0 ? statId : statId.Substring(0, separator);
+    }
+
     public static int CountFor(string gameId)
     {
         var count = 0;

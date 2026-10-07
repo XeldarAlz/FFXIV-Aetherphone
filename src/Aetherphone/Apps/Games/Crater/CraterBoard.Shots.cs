@@ -5,48 +5,15 @@ internal sealed partial class CraterBoard
     public const int NoOwner = -1;
     private const float BombletLift = 0.08f;
     private const float BounceEventSpeed = 1.5f;
-    private const float PredictSeconds = 8f;
     private const float GrenadeNudgeReach = 1.5f;
     private const float GrenadeNudgeShare = 0.5f;
     private const float GrenadeNudgeLift = 0.5f;
-    private const float TunnelStepShare = 0.5f;
     private static readonly Vector2 Up = new(0f, -1f);
 
     public bool Predict(int moogle, in CraterShot shot, Span<Vector2> path, int stride, out int pathCount,
-        out FlightStep end, out float seconds)
-    {
-        var projectile = MakeProjectile(moogle, shot);
-        var maxTicks = (int)(PredictSeconds / CraterRules.TickSeconds);
-        var every = Math.Max(1, stride);
-        pathCount = 0;
-        for (var tick = 0; tick < maxTicks; tick++)
-        {
-            if (pathCount < path.Length && tick % every == 0)
-            {
-                path[pathCount++] = projectile.Position;
-            }
-
-            var step = CraterBallistics.Advance(ref projectile, terrain, Wind, WaterLevel, Moogles,
-                CraterRules.TickSeconds);
-            if (step.Outcome == FlightOutcome.Flying)
-            {
-                continue;
-            }
-
-            end = step;
-            seconds = (tick + 1) * CraterRules.TickSeconds;
-            if (pathCount < path.Length)
-            {
-                path[pathCount++] = step.Point;
-            }
-
-            return step.Outcome is FlightOutcome.Impact or FlightOutcome.Fused;
-        }
-
-        end = new FlightStep(FlightOutcome.Lost, projectile.Position, Up, CraterEvent.None, 0f);
-        seconds = PredictSeconds;
-        return false;
-    }
+        out FlightStep end, out float seconds) =>
+        CraterBallistics.Predict(MakeProjectile(moogle, shot), terrain, Wind, WaterLevel, Moogles, path, stride,
+            out pathCount, out end, out seconds);
 
     private void StepProjectiles(float deltaSeconds)
     {
@@ -195,15 +162,7 @@ internal sealed partial class CraterBoard
         projectile.DrillCarve += CraterRules.DrillCarveSeconds;
     }
 
-    private void CarveTunnel(Vector2 from, Vector2 to)
-    {
-        var offset = to - from;
-        var steps = Math.Max(1, (int)MathF.Ceiling(offset.Length() / (CraterRules.TunnelRadius * TunnelStepShare)));
-        for (var step = 0; step <= steps; step++)
-        {
-            terrain.Carve(from + offset * (step / (float)steps), CraterRules.TunnelRadius);
-        }
-    }
+    private void CarveTunnel(Vector2 from, Vector2 to) => CraterFooting.CarveTunnel(terrain, from, to);
 
     private void Detonate(ref CraterProjectile projectile, Vector2 point)
     {

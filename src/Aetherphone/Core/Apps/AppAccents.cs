@@ -108,6 +108,8 @@ internal static class AppAccents
         ["fuse"] = AccentRing.Indigo,
         ["snip"] = AccentRing.Rose,
         ["minigolf"] = AccentRing.Emerald,
+        ["herd"] = AccentRing.Rose,
+        ["tempo"] = AccentRing.Violet,
         ["rolladeck"] = AccentRing.Violet,
         ["hunts"] = AccentRing.Indigo
     }.ToFrozenDictionary();
