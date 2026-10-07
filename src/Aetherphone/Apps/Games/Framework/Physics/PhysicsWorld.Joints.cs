@@ -258,7 +258,7 @@ internal sealed partial class PhysicsWorld
             for (var segment = 0; segment < ropes[rope].Segments; segment++)
             {
                 if (IsRopeSegmentCut(rope, segment) ||
-                    !PhysicsMath.SegmentsCross(RopePoint(rope, segment), RopePoint(rope, segment + 1), from, to))
+                    !Geometry2D.SegmentSegment(RopePoint(rope, segment), RopePoint(rope, segment + 1), from, to))
                 {
                     continue;
                 }
