@@ -66,10 +66,6 @@ internal readonly struct TrailblazeView
     public Vector2 At(float laneOffset, float height, float worldZ) =>
         Transform(Raw(laneOffset, height, Depth(worldZ)));
 
-    public Vector2 AtDepth(float laneOffset, float height, float depth) => Transform(Raw(laneOffset, height, depth));
-
-    public Vector2 Horizon(float screenX) => Transform(new Vector2(screenX, Road.HorizonY));
-
     public Vector2 VanishingPoint => Transform(new Vector2(Road.VanishingX + Bend, Road.HorizonY));
 
     public float BendAt(float depth)

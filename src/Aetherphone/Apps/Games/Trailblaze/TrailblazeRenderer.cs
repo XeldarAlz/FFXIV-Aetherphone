@@ -82,8 +82,6 @@ internal sealed class TrailblazeRenderer
         }
     }
 
-    public float Night => night;
-
     public void Prepare(Vector4 fogColor, float skyProgress)
     {
         night = SmoothStep(0.36f, 0.74f, skyProgress);
