@@ -24,6 +24,7 @@ internal sealed class DoomApp : IMiniGame
     private const float TipToastSeconds = 6f;
     private const float TipCaptionInset = 14f;
     private const float CardHeight = 66f;
+    private const float CompactCardHeight = 44f;
     private const float GameButtonHeight = 40f;
     private const float InstallButtonWidth = 118f;
     private const float LobbyMargin = 18f;
@@ -309,8 +310,10 @@ internal sealed class DoomApp : IMiniGame
 
     private void DrawInstallCards(Rect column, PhoneTheme theme, float scale)
     {
-        var cardHeight = CardHeight * scale;
         var gap = 8f * scale;
+        var cards = (assets.HasShareware ? 0 : 1) + (assets.HasFreedoom ? 0 : 1) + (assets.HasSoundfont ? 0 : 1);
+        var fitted = cards == 0 ? 0f : (column.Height - gap * (cards - 1)) / cards;
+        var cardHeight = Math.Clamp(fitted, CompactCardHeight * scale, CardHeight * scale);
         var y = column.Min.Y;
         if (!assets.HasShareware)
         {
@@ -348,13 +351,24 @@ internal sealed class DoomApp : IMiniGame
         Typography.Draw(drawList, new Vector2(left, card.Min.Y + pad * 0.7f),
             Typography.FitText(title, right - left, TextStyles.BodyEmphasized), StageInks.Strong, TextStyles.BodyEmphasized);
         var detailY = card.Min.Y + pad * 0.7f + titleHeight;
-        Typography.Draw(drawList, new Vector2(left, detailY), Typography.FitText(detail, right - left, TextStyles.Caption1),
-            StageInks.Muted, TextStyles.Caption1);
-        var statusY = detailY + Typography.LineHeight(TextStyles.Caption1) + 2f * scale;
-        var statusColor = snapshot.State == DependencyState.Failed ? theme.Danger : StageInks.Muted;
-        Typography.Draw(drawList, new Vector2(left, statusY),
-            Typography.FitText(StatusLabel(target, in snapshot), right - left, TextStyles.Caption1), statusColor,
-            TextStyles.Caption1);
+        var lineHeight = Typography.LineHeight(TextStyles.Caption1);
+        var statusY = detailY + lineHeight + 2f * scale;
+        var roomy = statusY + lineHeight <= card.Max.Y - pad * 0.3f;
+        var urgent = snapshot.State is DependencyState.Failed or DependencyState.Downloading;
+        if (roomy || !urgent)
+        {
+            Typography.Draw(drawList, new Vector2(left, detailY),
+                Typography.FitText(detail, right - left, TextStyles.Caption1), StageInks.Muted, TextStyles.Caption1);
+        }
+
+        if (roomy || urgent)
+        {
+            var statusColor = snapshot.State == DependencyState.Failed ? theme.Danger : StageInks.Muted;
+            Typography.Draw(drawList, new Vector2(left, roomy ? statusY : detailY),
+                Typography.FitText(StatusLabel(target, in snapshot), right - left, TextStyles.Caption1), statusColor,
+                TextStyles.Caption1);
+        }
+
         var busy = DependencySetup.IsBusy(snapshot);
         var label = busy
             ? Loc.T(L.AetherStream.SetupInstalling)
