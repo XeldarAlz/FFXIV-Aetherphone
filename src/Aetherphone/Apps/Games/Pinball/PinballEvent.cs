@@ -30,6 +30,26 @@ internal enum PinballEventKind : byte
     TiltWarning,
     Tilt,
     FlipperHit,
+    Orbit,
+    Combo,
+    PlayfieldRaised,
+    FeverStart,
+    FeverEnd,
+    Kickback,
+    KickbackLit,
+    MysteryLit,
+    Mystery,
+    SuperJackpotLit,
+    SuperJackpot,
+}
+
+internal enum MysteryAward : byte
+{
+    BigPoints,
+    Kickback,
+    Playfield,
+    Fever,
+    BallSave,
 }
 
 internal readonly struct PinballEvent

@@ -31,6 +31,9 @@ internal struct PinballBall
     public BallState State;
     public BallLayer Layer;
     public bool PlayerLaunched;
+    public bool Kicked;
+    public byte OrbitSide;
+    public float OrbitSeconds;
     public float HoldSeconds;
     public float SaucerGrace;
     public float StillSeconds;
@@ -80,7 +83,7 @@ internal sealed partial class PinballBoard
     public const int SkillShotPoints = 50000;
     public const int JackpotBase = 100000;
     public const int JackpotStep = 50000;
-    public const int ExtraBallScore = 750000;
+    public const int ExtraBallScore = 1500000;
     public const int BonusPerBumper = 100;
     public const int BonusPerLane = 500;
     public const int BonusPerTarget = 750;
@@ -275,6 +278,7 @@ internal sealed partial class PinballBoard
         saucerFlash = 0f;
         rampFlash = 0f;
         ResetBallState();
+        ResetModes();
         BuildWorld();
         ServeBall(true);
         if (attract)
@@ -391,17 +395,17 @@ internal sealed partial class PinballBoard
         }
 
         DisarmSkill();
-        AddScore(TargetPoints);
         Bonus += BonusPerTarget;
-        Emit(PinballEventKind.Target, position, TargetPoints, index);
+        Emit(PinballEventKind.Target, position, AddScore(TargetPoints), index);
+        Charge(SwitchCharge);
         var bank = index / PinballTable.BankSize;
         if (!BankDown(bank))
         {
             return true;
         }
 
-        AddScore(BankPoints);
-        Emit(PinballEventKind.BankDown, PinballTable.Targets[bank * PinballTable.BankSize + 1], BankPoints, bank);
+        Emit(PinballEventKind.BankDown, PinballTable.Targets[bank * PinballTable.BankSize + 1], AddScore(BankPoints),
+            bank);
         if (!BankDown(1 - bank))
         {
             return true;
@@ -437,23 +441,22 @@ internal sealed partial class PinballBoard
             SkillArmed = false;
             if (lane == SkillLane)
             {
-                AddScore(SkillShotPoints);
-                Emit(PinballEventKind.SkillShot, position, SkillShotPoints, lane);
+                Emit(PinballEventKind.SkillShot, position, AddScore(SkillShotPoints), lane);
+                MajorShot(position);
             }
         }
 
+        Charge(SwitchCharge);
         var bit = 1 << lane;
         if ((LanesLit & bit) != 0)
         {
-            AddScore(LitLanePoints);
-            Emit(PinballEventKind.TopLane, position, LitLanePoints, lane);
+            Emit(PinballEventKind.TopLane, position, AddScore(LitLanePoints), lane);
             return;
         }
 
         LanesLit |= bit;
-        AddScore(TopLanePoints);
         Bonus += BonusPerLane;
-        Emit(PinballEventKind.TopLane, position, TopLanePoints, lane);
+        Emit(PinballEventKind.TopLane, position, AddScore(TopLanePoints), lane);
         if (LanesLit != AllLanes)
         {
             return;
@@ -475,20 +478,27 @@ internal sealed partial class PinballBoard
 
         DisarmSkill();
         Ramps++;
-        AddScore(RampPoints);
         Bonus += BonusPerRamp;
-        Emit(PinballEventKind.RampMade, position, RampPoints, Ramps);
+        Emit(PinballEventKind.RampMade, position, AddScore(RampPoints), Ramps);
+        MajorShot(position);
         if (!JackpotLit)
         {
             return;
         }
 
-        var value = MultiballActive ? JackpotValue * 2 : JackpotValue;
-        AddScore(value);
+        var value = AddScore(MultiballActive ? JackpotValue * 2 : JackpotValue);
         Jackpots++;
         JackpotLit = false;
         JackpotValue += JackpotStep;
+        LightShow = LightShowSeconds;
         Emit(PinballEventKind.Jackpot, position, value, Jackpots);
+        if (!MultiballActive)
+        {
+            return;
+        }
+
+        SuperJackpotLit = true;
+        Emit(PinballEventKind.SuperJackpotLit, PinballTable.Saucer, JackpotValue * SuperJackpotFactor, 0);
     }
 
     public void CaptureBall(int slot)
@@ -513,28 +523,40 @@ internal sealed partial class PinballBoard
             return;
         }
 
+        MajorShot(PinballTable.Saucer);
+        if (MysteryLit)
+        {
+            AwardMystery();
+        }
+
         if (MultiballActive)
         {
-            AddScore(SaucerPoints);
-            Emit(PinballEventKind.SaucerHold, PinballTable.Saucer, SaucerPoints, 0);
+            if (SuperJackpotLit)
+            {
+                CollectSuperJackpot();
+                return;
+            }
+
+            Emit(PinballEventKind.SaucerHold, PinballTable.Saucer, AddScore(SaucerPoints), 0);
             return;
         }
 
         Locks++;
-        AddScore(LockPoints);
         Bonus += BonusPerLock;
         if (Locks < LocksForMultiball)
         {
-            Emit(PinballEventKind.Locked, PinballTable.Saucer, LockPoints, Locks);
+            Emit(PinballEventKind.Locked, PinballTable.Saucer, AddScore(LockPoints), Locks);
             return;
         }
 
+        AddScore(LockPoints);
         MultiballActive = true;
         Multiballs++;
+        JackpotLit = true;
+        LightShow = LightShowSeconds;
         pendingLaunches += MultiballBalls - 1;
         launchDelay = MathF.Max(launchDelay, SaucerHoldSeconds * 0.5f);
-        AddScore(MultiballPoints);
-        Emit(PinballEventKind.Multiball, PinballTable.Saucer, MultiballPoints, MultiballBalls);
+        Emit(PinballEventKind.Multiball, PinballTable.Saucer, AddScore(MultiballPoints), MultiballBalls);
     }
 
     public void DrainBall(int slot)
@@ -565,6 +587,7 @@ internal sealed partial class PinballBoard
         if (MultiballActive && live <= 1)
         {
             MultiballActive = false;
+            SuperJackpotLit = false;
             Locks = 0;
         }
 
@@ -619,6 +642,7 @@ internal sealed partial class PinballBoard
         saucerFlash = MathF.Max(0f, saucerFlash - seconds * 2f);
         rampFlash = MathF.Max(0f, rampFlash - seconds * 2f);
         TiltMeter = MathF.Max(0f, TiltMeter - TiltDecayPerSecond * seconds);
+        AdvanceModes(seconds);
         if (BallSaveLeft > 0f && !AnyBallInLane())
         {
             BallSaveLeft = MathF.Max(0f, BallSaveLeft - seconds);
@@ -664,6 +688,11 @@ internal sealed partial class PinballBoard
             if (ball.SaucerGrace > 0f)
             {
                 ball.SaucerGrace -= seconds;
+            }
+
+            if (ball.OrbitSeconds > 0f)
+            {
+                ball.OrbitSeconds -= seconds;
             }
 
             if (ball.State != BallState.Held)
@@ -720,11 +749,13 @@ internal sealed partial class PinballBoard
     {
         Phase = PinballPhase.BallEnd;
         phaseSeconds = BallEndSeconds;
-        var award = Tilted ? 0 : Bonus * Multiplier;
-        if (award > 0)
+        if (FeverActive)
         {
-            AddScore(award);
+            FinishFever();
         }
+
+        var award = Tilted ? 0 : Bonus * Multiplier;
+        Credit(award);
 
         Emit(PinballEventKind.Bonus, position, award, Multiplier);
     }
@@ -739,6 +770,7 @@ internal sealed partial class PinballBoard
         LanesLit = 0;
         SkillArmed = false;
         BallSaveLeft = 0f;
+        ClearBallModes();
         if (ExtraBalls > 0)
         {
             ExtraBalls--;
@@ -781,24 +813,6 @@ internal sealed partial class PinballBoard
     private void DisarmSkill()
     {
         SkillArmed = false;
-    }
-
-    private void AddScore(int points)
-    {
-        if (points <= 0)
-        {
-            return;
-        }
-
-        Score = (int)Math.Min(int.MaxValue, (long)Score + points);
-        if (Attract || ExtraBallAwarded || Score < ExtraBallScore)
-        {
-            return;
-        }
-
-        ExtraBallAwarded = true;
-        ExtraBalls++;
-        Emit(PinballEventKind.ExtraBall, PinballTable.LanePlunger, 0, 0);
     }
 
     private void Emit(PinballEventKind kind, Vector2 position, int value, int index)

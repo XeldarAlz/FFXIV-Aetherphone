@@ -21,6 +21,7 @@ internal enum TablePart : byte
     RampMade,
     RampExit,
     Gate,
+    Orbit,
 }
 
 internal sealed partial class PinballBoard
@@ -207,6 +208,12 @@ internal sealed partial class PinballBoard
         {
             AddSensorBox(PinballTable.Rollovers[rollover], PinballTable.RolloverHalfExtents, TablePart.Rollover,
                 rollover, PlayfieldLayer);
+        }
+
+        for (var orbit = 0; orbit < PinballTable.OrbitCount; orbit++)
+        {
+            AddSensorBox(PinballTable.OrbitSensors[orbit], PinballTable.OrbitSensorHalfExtents, TablePart.Orbit, orbit,
+                PlayfieldLayer);
         }
 
         var saucer = world.CreateCircle(BodyType.Static, PinballTable.Saucer, PinballTable.SaucerCatchRadius,
@@ -556,7 +563,10 @@ internal sealed partial class PinballBoard
                 RollTopLane(index);
                 return;
             case TablePart.Rollover when ball.Layer == BallLayer.Playfield:
-                Rollover(index);
+                Rollover(slot, index);
+                return;
+            case TablePart.Orbit when ball.Layer == BallLayer.Playfield:
+                PassOrbit(slot, index);
                 return;
             case TablePart.Saucer when ball.Layer == BallLayer.Playfield && ball.SaucerGrace <= 0f:
                 CaptureBall(slot);
@@ -601,10 +611,11 @@ internal sealed partial class PinballBoard
         ball.Velocity += direction * (MathF.Max(BumperKick, along) - along);
         world.SetVelocity(ball.Body, ball.Velocity);
         DisarmSkill();
-        AddScore(BumperPoints);
         Bonus += BonusPerBumper;
         Emit(PinballEventKind.Bumper, PinballTable.Bumpers[index] + direction * PinballTable.BumperRadius,
-            BumperPoints, index);
+            AddScore(BumperPoints), index);
+        Charge(BumperCharge);
+        CountMystery();
     }
 
     private void KickFromSling(int slot, int index)
@@ -627,24 +638,33 @@ internal sealed partial class PinballBoard
         ball.Velocity += normal * (MathF.Max(SlingKick, along) - along);
         world.SetVelocity(ball.Body, ball.Velocity);
         DisarmSkill();
-        AddScore(SlingPoints);
-        Emit(PinballEventKind.Sling, ball.Position - normal * PinballTable.BallRadius, SlingPoints, index);
+        Emit(PinballEventKind.Sling, ball.Position - normal * PinballTable.BallRadius, AddScore(SlingPoints), index);
+        Charge(SlingCharge);
     }
 
-    private void Rollover(int index)
+    private void Rollover(int slot, int index)
     {
         rolloverFlash[index] = 1f;
-        if (Tilted)
+        if (Tilted || balls[slot].Kicked)
         {
             return;
         }
 
+        if (index == PinballTable.LeftOutlane && KickbackLit && balls[slot].Velocity.Y > 0f)
+        {
+            FireKickback(slot);
+            return;
+        }
+
         var outlane = index == PinballTable.LeftOutlane || index == PinballTable.RightOutlane;
-        var points = outlane ? OutlanePoints : InlanePoints;
-        AddScore(points);
         Bonus += BonusPerLane;
-        Emit(outlane ? PinballEventKind.Outlane : PinballEventKind.Inlane, PinballTable.Rollovers[index], points,
-            index);
+        Emit(outlane ? PinballEventKind.Outlane : PinballEventKind.Inlane, PinballTable.Rollovers[index],
+            AddScore(outlane ? OutlanePoints : InlanePoints), index);
+        Charge(SwitchCharge);
+        if (!outlane)
+        {
+            LightInlane(index);
+        }
     }
 
     private void Spin(float verticalSpeed)
@@ -680,8 +700,8 @@ internal sealed partial class PinballBoard
             return;
         }
 
-        AddScore(SpinnerPoints);
-        Emit(PinballEventKind.Spinner, PinballTable.Spinner, SpinnerPoints, halfTurns);
+        Emit(PinballEventKind.Spinner, PinballTable.Spinner, AddScore(SpinnerPoints), halfTurns);
+        Charge(SpinnerCharge);
     }
 
     private void TrackBalls(float seconds)
@@ -705,6 +725,7 @@ internal sealed partial class PinballBoard
                         continue;
                     }
 
+                    GuideKick(ref ball);
                     WatchStill(ref ball, seconds);
                     continue;
                 default:
