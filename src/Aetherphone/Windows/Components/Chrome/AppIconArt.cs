@@ -127,6 +127,9 @@ internal static class AppIconArt
             case "spiral":
                 SpiralIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "crater":
+                DrawCrater(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -763,6 +766,37 @@ internal static class AppIconArt
         dl.AddRectFilled(new Vector2(markCenter.X - extent * 0.08f, markCenter.Y + markRadius * 0.55f),
             new Vector2(markCenter.X + extent * 0.08f, markCenter.Y + markRadius * 1.25f), hole, extent * 0.03f);
         dl.AddCircleFilled(new Vector2(markCenter.X, markCenter.Y + markRadius * 1.72f), extent * 0.10f, hole, 12);
+    }
+
+    private static void DrawCrater(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var groundTop = center.Y + extent * 0.38f;
+        drawList.AddRectFilled(new Vector2(center.X - extent, groundTop), new Vector2(center.X + extent, center.Y + extent),
+            ink, extent * 0.08f);
+        var crater = new Vector2(center.X + extent * 0.34f, groundTop);
+        drawList.PathClear();
+        drawList.PathArcTo(crater, extent * 0.36f, 0f, MathF.PI, 16);
+        drawList.PathFillConvex(hole);
+        var moogle = At(center, extent, -0.62f, 0.14f);
+        drawList.AddCircleFilled(moogle, extent * 0.24f, ink, 20);
+        drawList.AddLine(moogle - new Vector2(0f, extent * 0.2f), moogle + new Vector2(-extent * 0.12f, -extent * 0.46f), ink,
+            extent * 0.06f);
+        drawList.AddCircleFilled(moogle + new Vector2(-extent * 0.12f, -extent * 0.5f), extent * 0.09f, ink, 12);
+        for (var dot = 0; dot < 6; dot++)
+        {
+            var along = (dot + 1) / 7f;
+            var x = -0.4f + along * 0.74f;
+            var y = 0.02f - MathF.Sin(along * MathF.PI) * 0.86f;
+            drawList.AddCircleFilled(At(center, extent, x, y), extent * (0.05f + along * 0.025f), ink, 10);
+        }
+
+        var burst = crater - new Vector2(0f, extent * 0.06f);
+        for (var ray = 0; ray < 5; ray++)
+        {
+            var angle = MathF.PI * (1.15f + ray * 0.175f);
+            var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            drawList.AddLine(burst + direction * extent * 0.22f, burst + direction * extent * 0.42f, ink, extent * 0.07f);
+        }
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

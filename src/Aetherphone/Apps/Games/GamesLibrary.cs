@@ -79,6 +79,7 @@ internal sealed class GamesLibrary
         new("online.connectfour", 2026, 10, 3),
         new("slice", 2026, 10, 8),
         new("spiral", 2026, 10, 8),
+        new("crater", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -521,6 +522,7 @@ internal sealed class GamesLibrary
                 return BestTimeAcrossTiers(gameId, out value, out tier);
             case "reversi":
             case "chess":
+            case "crater":
                 return BestStreakAcrossTiers(gameId, out value, out tier);
             default:
                 return RecordKind.None;
