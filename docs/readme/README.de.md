@@ -168,7 +168,7 @@ Ein einziges Aethernet-Konto meldet dich bei jeder sozialen App an, und jede App
 
 **Für die Pause zwischendurch**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Spiele" title="Spiele" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Schach" title="Schach" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitär" title="Solitär" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Eine Arcade mit neunundfünfzig Spielen, Doom inklusive · weltweite und Freundes-Bestenlisten, denen du nur beitrittst, wenn du willst · dazu Uno, Schach, 8-Ball-Pool, Vier gewinnt, Breitseite, Glückszug, Krater und Minigolf online mit Freunden · Doom und Krater sowie die Räume für 8-Ball-Pool und Krater laufen im Querformat</sub>
+<sub>Eine Arcade mit neunundfünfzig Spielen, Doom inklusive · Tabs Start, Zusammen, Bibliothek und Profil, mit dem Spiel des Tages live ganz oben, einem Kalender der Tagesserie und einem gemalten Symbol für jedes Spiel · weltweite und Freundes-Bestenlisten, denen du nur beitrittst, wenn du willst · dazu Uno, Schach, 8-Ball-Pool, Vier gewinnt, Breitseite, Glückszug, Krater und Minigolf online mit Freunden · Doom und Krater sowie die Räume für 8-Ball-Pool und Krater laufen im Querformat</sub>
 
 ## Gebaut wie das Handy in deiner Tasche
 

@@ -168,7 +168,7 @@ Un seul compte Aethernet vous connecte à toutes les applications sociales, et c
 
 **Pour souffler**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Jeux" title="Jeux" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Échecs" title="Échecs" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Une salle d'arcade de cinquante-neuf jeux, dont Doom · des classements mondiaux et entre amis que tu ne rejoins que si tu le veux · plus Uno, les Échecs, le Billard 8-ball, le Puissance 4, Bordée, Coup de chance, Cratère et Mini-golf en ligne entre amis · Doom et Cratère, ainsi que les salons de Billard 8-ball et de Cratère, se jouent à l'horizontale</sub>
+<sub>Une salle d'arcade de cinquante-neuf jeux, dont Doom · des onglets Accueil, Ensemble, Bibliothèque et Profil, avec le jeu du jour en direct en haut, un calendrier de série quotidienne et une icône peinte pour chaque jeu · des classements mondiaux et entre amis que tu ne rejoins que si tu le veux · plus Uno, les Échecs, le Billard 8-ball, le Puissance 4, Bordée, Coup de chance, Cratère et Mini-golf en ligne entre amis · Doom et Cratère, ainsi que les salons de Billard 8-ball et de Cratère, se jouent à l'horizontale</sub>
 
 ## Conçu comme le téléphone dans votre poche
 

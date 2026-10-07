@@ -168,7 +168,7 @@ Uma única conta do Aethernet faz seu login em todos os apps sociais, e cada app
 
 **Pra relaxar**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Jogos" title="Jogos" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Xadrez" title="Xadrez" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Um fliperama com cinquenta e nove jogos, Doom entre eles · rankings globais e entre amigos dos quais você só participa se quiser · além de Uno, Xadrez, Sinuca bola 8, Lig 4, Bordada, Golpe de sorte, Cratera e Minigolfe online com amigos · Doom e Cratera, e as salas de Sinuca bola 8 e Cratera, são jogados na horizontal</sub>
+<sub>Um fliperama com cinquenta e nove jogos, Doom entre eles · abas Início, Juntos, Biblioteca e Perfil, com o jogo do dia ao vivo no topo, um calendário de sequência diária e um ícone pintado para cada jogo · rankings globais e entre amigos dos quais você só participa se quiser · além de Uno, Xadrez, Sinuca bola 8, Lig 4, Bordada, Golpe de sorte, Cratera e Minigolfe online com amigos · Doom e Cratera, e as salas de Sinuca bola 8 e Cratera, são jogados na horizontal</sub>
 
 ## Feito como o celular no seu bolso
 

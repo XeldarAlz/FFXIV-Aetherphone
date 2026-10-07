@@ -168,7 +168,7 @@ Aethernet 于 2026 年 7 月 2 日正式开放。到这个季度结束时，来�
 
 **闲暇时光**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="游戏" title="游戏" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="国际象棋" title="国际象棋" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="单词接力" title="单词接力" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="纸牌" title="纸牌" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>收录五十九款游戏的街机厅，Doom 也在其中 · 全球和好友排行榜，是否加入由你决定 · 另有 Uno、国际象棋、八球台球、四子棋、舷炮齐射、幸运抽牌、弹坑大战和迷你高尔夫可与好友在线对战 · Doom 和弹坑大战，以及八球台球和弹坑大战房间均以横屏游玩</sub>
+<sub>收录五十九款游戏的街机厅，Doom 也在其中 · 首页、一起玩、游戏库和个人四个标签，顶部实时运行今日游戏，另有每日连胜日历，每款游戏都有手绘图标 · 全球和好友排行榜，是否加入由你决定 · 另有 Uno、国际象棋、八球台球、四子棋、舷炮齐射、幸运抽牌、弹坑大战和迷你高尔夫可与好友在线对战 · Doom 和弹坑大战，以及八球台球和弹坑大战房间均以横屏游玩</sub>
 
 ## 用起来，就像你口袋里的手机
 
