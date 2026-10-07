@@ -43,8 +43,20 @@ internal static class MiniGolfScorecard
         _ => GameNumber.Label(difference),
     };
 
+    public static string ResultText(HoleResult result, int overPar) => result switch
+    {
+        HoleResult.HoleInOne => Loc.T(L.MiniGolf.HoleInOne),
+        HoleResult.Eagle => Loc.T(L.MiniGolf.Eagle),
+        HoleResult.Birdie => Loc.T(L.MiniGolf.Birdie),
+        HoleResult.Par => Loc.T(L.MiniGolf.Par),
+        HoleResult.Bogey => Loc.T(L.MiniGolf.Bogey),
+        HoleResult.DoubleBogey => Loc.T(L.MiniGolf.DoubleBogey),
+        _ => GameNumber.Signed(overPar),
+    };
+
     public static bool Draw(ImDrawListPtr drawList, Rect area, MiniGolfRound round, int shownHole, string subtitle,
-        bool final, Vector4 accent, PhoneTheme theme, float appear, float scale)
+        bool final, Vector4 accent, PhoneTheme theme, float appear, float scale, ReadOnlySpan<string> names = default,
+        bool button = true)
     {
         var alpha = Math.Clamp(appear * 1.6f, 0f, 1f);
         Material.Veil(drawList, area.Min, area.Max, 0.45f * alpha);
@@ -60,7 +72,7 @@ internal static class MiniGolfScorecard
         var gridHeight = rows * rowHeight;
         var buttonHeight = ButtonHeight * scale;
         var cardHeight = padding * 2f + titleHeight + Metrics.Space.Xxs * scale + subtitleHeight + Metrics.Space.Lg * scale +
-                         gridHeight + Metrics.Space.Xl * scale + buttonHeight;
+                         gridHeight + (button ? Metrics.Space.Xl * scale + buttonHeight : 0f);
         var center = area.Center;
         var half = new Vector2(cardWidth, cardHeight) * 0.5f * grow;
         var min = center - half;
@@ -78,9 +90,9 @@ internal static class MiniGolfScorecard
         top += subtitleHeight + Metrics.Space.Lg * scale;
         var left = center.X - contentWidth * 0.5f * grow;
         DrawGrid(drawList, new Vector2(left, top), contentWidth * grow, rowHeight, round, shownHole, accent, theme, alpha,
-            scale);
+            scale, names);
         top += gridHeight + Metrics.Space.Xl * scale;
-        if (appear < 0.6f)
+        if (!button || appear < 0.6f)
         {
             return false;
         }
@@ -91,7 +103,7 @@ internal static class MiniGolfScorecard
     }
 
     private static void DrawGrid(ImDrawListPtr drawList, Vector2 origin, float width, float rowHeight, MiniGolfRound round,
-        int shownHole, Vector4 accent, PhoneTheme theme, float alpha, float scale)
+        int shownHole, Vector4 accent, PhoneTheme theme, float alpha, float scale, ReadOnlySpan<string> names)
     {
         var firstHole = shownHole >= Columns && round.Holes > Columns ? Columns : 0;
         var labelWidth = LabelWidth * scale;
@@ -140,7 +152,8 @@ internal static class MiniGolfScorecard
         for (var player = 0; player < round.Players; player++)
         {
             rowTop += rowHeight;
-            var name = round.Players > 1 ? GameSeats.Name(player) : Loc.T(L.MiniGolf.You);
+            var name = player < names.Length ? names[player]
+                : round.Players > 1 ? GameSeats.Name(player) : Loc.T(L.MiniGolf.You);
             DrawLabel(drawList, origin.X, rowTop, labelWidth, rowHeight, name,
                 round.Players > 1 ? GameSeats.Color(player) with { W = alpha } : ink);
             for (var column = 0; column < Columns; column++)

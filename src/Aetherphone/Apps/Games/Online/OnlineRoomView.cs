@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.MiniGolf;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
@@ -42,6 +43,10 @@ internal sealed class OnlineRoomView
 
     private static readonly LocString[] RuleSetLabels = [L.Games.OnlineRuleDefault, L.Games.OnlineRuleHouse];
 
+    private static readonly LocString[] CourseLabels = [L.MiniGolf.NineHoles, L.MiniGolf.EighteenHoles];
+
+    private static readonly int[] CourseHoles = [MiniGolfCourse.FrontNine, MiniGolfCourse.HoleCount];
+
     private static readonly string[] KickIds =
     [
         "games.room.kick.0", "games.room.kick.1", "games.room.kick.2", "games.room.kick.3", "games.room.kick.4",
@@ -57,6 +62,7 @@ internal sealed class OnlineRoomView
     private readonly OnlineConnectFourTable connectFourTable;
     private readonly OnlineBroadsideTable broadsideTable;
     private readonly OnlineLuckyDrawTable luckyDrawTable;
+    private readonly OnlineMiniGolfTable miniGolfTable;
     private readonly OnlineFinishHold finishHold = new();
     private readonly string[] rosterNames = new string[MaxSeats];
     private readonly string[] rosterWins = new string[MaxSeats];
@@ -82,6 +88,7 @@ internal sealed class OnlineRoomView
         connectFourTable = new OnlineConnectFourTable(store);
         broadsideTable = new OnlineBroadsideTable(store);
         luckyDrawTable = new OnlineLuckyDrawTable(store);
+        miniGolfTable = new OnlineMiniGolfTable(store);
     }
 
     public void Enter()
@@ -96,6 +103,7 @@ internal sealed class OnlineRoomView
         connectFourTable.Reset();
         broadsideTable.Reset();
         luckyDrawTable.Reset();
+        miniGolfTable.Reset();
         finishHold.Clear();
         lastSeenPhase = -1;
         labeledRoster = null;
@@ -188,6 +196,12 @@ internal sealed class OnlineRoomView
         if (held.LuckyDraw is not null)
         {
             luckyDrawTable.Draw(body, theme, scale, held.Snapshot, held.LuckyDraw, FreshNotice(), finishHold);
+            return;
+        }
+
+        if (held.MiniGolf is not null)
+        {
+            miniGolfTable.Draw(body, theme, scale, held.Snapshot, held.MiniGolf, FreshNotice(), finishHold);
         }
     }
 
@@ -210,7 +224,7 @@ internal sealed class OnlineRoomView
     {
         if (held is null || held.Roster is null
             || (held.Uno is null && held.Chess is null && held.Pool is null && held.ConnectFour is null
-                && held.Broadside is null && held.LuckyDraw is null))
+                && held.Broadside is null && held.LuckyDraw is null && held.MiniGolf is null))
         {
             return false;
         }
@@ -360,9 +374,11 @@ internal sealed class OnlineRoomView
             y += Typography.DrawWrappedLeft(new Vector2(left, y), message, theme.Danger, TextStyles.Footnote, width);
         }
 
-        if (isHost && held.Snapshot.GameKind == GameRoomWire.UnoKind)
+        var kind = held.Snapshot.GameKind;
+        var options = LobbyOptions(kind);
+        if (isHost && options.Length > 0)
         {
-            y = DrawRulesRow(drawList, ui, left, y + Metrics.Space.Md * scale, width, scale);
+            y = DrawRulesRow(drawList, ui, left, y + Metrics.Space.Md * scale, width, scale, kind, options);
         }
 
         y += GamesHubArt.SectionGap * scale;
@@ -384,7 +400,7 @@ internal sealed class OnlineRoomView
 
         card.End();
         y = card.Bounds.Max.Y + GamesHubArt.SectionGap * scale;
-        y = DrawPrimary(drawList, ui, left, y, width, scale, isHost, phase, players.Length, accent);
+        y = DrawPrimary(drawList, ui, left, y, width, scale, isHost, phase, players.Length, accent, StartOption(kind));
         y += Metrics.Space.Lg * scale;
         var leaveLabel = LeaveLabel(isHost);
         var leaveWidth = MathF.Min(width, GamesHubArt.ButtonWidth(leaveLabel, SecondaryHeight * scale) +
@@ -403,7 +419,7 @@ internal sealed class OnlineRoomView
     }
 
     private float DrawPrimary(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale,
-        bool isHost, int phase, int playerCount, Vector4 accent)
+        bool isHost, int phase, int playerCount, Vector4 accent, int startOption)
     {
         var height = PrimaryHeight * scale;
         if (!isHost)
@@ -429,7 +445,7 @@ internal sealed class OnlineRoomView
         if (Button.Draw(drawList, rect, startLabel, ui.Ink.WithAccent(accent), enabled: enough && !store.ActInFlight,
                 id: "games.room.start"))
         {
-            store.SendStart(selectedRuleSet);
+            store.SendStart(startOption);
         }
 
         if (enough)
@@ -443,7 +459,24 @@ internal sealed class OnlineRoomView
             new Vector2(left + width * 0.5f, hintTop), width);
     }
 
-    private float DrawRulesRow(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale)
+    private static LocString[] LobbyOptions(string kind)
+    {
+        if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
+        {
+            return CourseLabels;
+        }
+
+        return string.Equals(kind, GameRoomWire.UnoKind, StringComparison.Ordinal)
+            ? RuleSetLabels
+            : Array.Empty<LocString>();
+    }
+
+    private int StartOption(string kind) => string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal)
+        ? CourseHoles[Math.Clamp(selectedRuleSet, 0, CourseHoles.Length - 1)]
+        : selectedRuleSet;
+
+    private float DrawRulesRow(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale,
+        string kind, LocString[] options)
     {
         var height = RulesRowHeight * scale;
         var rect = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
@@ -459,18 +492,20 @@ internal sealed class OnlineRoomView
         var pad = Metrics.Space.Lg * scale;
         var labelHeight = Typography.LineHeight(TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(rect.Min.X + pad, rect.Center.Y - labelHeight * 0.5f),
-            Loc.T(L.GamesHub.Rules), ui.TitleInk, TextStyles.Headline);
+            Loc.T(string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal)
+                ? L.Games.OnlineMiniGolfCourse
+                : L.GamesHub.Rules), ui.TitleInk, TextStyles.Headline);
         var chevron = ChevronSize * scale;
         PhoneIcon.Draw(drawList, new Vector2(rect.Max.X - pad - chevron * 0.5f, rect.Center.Y),
             PhoneIcons.ChevronDown, ui.MutedInk, chevron);
-        var value = Loc.T(RuleSetLabels[selectedRuleSet]);
+        var value = Loc.T(options[Math.Clamp(selectedRuleSet, 0, options.Length - 1)]);
         var valueSize = Typography.Measure(value, TextStyles.Body);
         Typography.Draw(drawList,
             new Vector2(rect.Max.X - pad - chevron - Metrics.Space.Sm * scale - valueSize.X,
                 rect.Center.Y - valueSize.Y * 0.5f), value, ui.MutedInk, TextStyles.Body);
         if (UiInteract.Click(rect.Min, rect.Max, hovered))
         {
-            OpenRulesMenu(rect);
+            OpenRulesMenu(rect, options);
         }
 
         return rect.Max.Y;
@@ -492,12 +527,12 @@ internal sealed class OnlineRoomView
         return picked;
     }
 
-    private void OpenRulesMenu(Rect anchor)
+    private void OpenRulesMenu(Rect anchor, LocString[] options)
     {
         rulesMenuItems.Clear();
-        for (var index = 0; index < RuleSetLabels.Length; index++)
+        for (var index = 0; index < options.Length; index++)
         {
-            rulesMenuItems.Add(new DropdownMenu.Item(Loc.T(RuleSetLabels[index]), string.Empty, false,
+            rulesMenuItems.Add(new DropdownMenu.Item(Loc.T(options[index]), string.Empty, false,
                 index == selectedRuleSet));
         }
 
@@ -603,9 +638,44 @@ internal sealed class OnlineRoomView
             };
         }
 
+        if (held.MiniGolf is not null)
+        {
+            return MiniGolfFinishedText(held.MiniGolf, winnerName);
+        }
+
         return winnerName.Length > 0
             ? Loc.T(L.Games.OnlineWinner, winnerName)
             : Loc.T(L.Games.OnlineRoundVoid);
+    }
+
+    // A finished course names the winner and their total, or the shared total when first place is tied.
+    private static string MiniGolfFinishedText(MiniGolfRoomStateDto board, string winnerName)
+    {
+        if (string.Equals(board.EndKind, GameRoomWire.MiniGolfEndDesertion, StringComparison.Ordinal))
+        {
+            return winnerName.Length > 0
+                ? Loc.T(L.Games.OnlineLuckyDrawDesertWin, winnerName)
+                : Loc.T(L.Games.OnlineRoundVoid);
+        }
+
+        var players = board.Players ?? Array.Empty<MiniGolfPlayerDto>();
+        var best = -1;
+        for (var index = 0; index < players.Length; index++)
+        {
+            if (players[index].Place == 1)
+            {
+                best = players[index].Total;
+            }
+        }
+
+        if (best < 0)
+        {
+            return Loc.T(L.Games.OnlineRoundVoid);
+        }
+
+        return winnerName.Length > 0
+            ? Loc.T(L.Games.OnlineMiniGolfWin, winnerName, GameNumber.Label(best))
+            : Loc.T(L.Games.OnlineMiniGolfTie, GameNumber.Label(best));
     }
 
     private float DrawCodeCard(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale,

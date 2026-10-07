@@ -32,11 +32,8 @@ internal sealed class MiniGolfApp : IMiniGame
     private const float MinPower = 0.04f;
     private const float HoleDoneSeconds = 1.7f;
     private const float BannerSeconds = 1.5f;
-    private const float TrailSpeed = 2.2f;
-    private const float TrailWidth = 0.13f;
     private const float EntranceSpeed = 2.4f;
     private const float ScorecardSpeed = 2.8f;
-    private const float FlashDecay = 4f;
     private const float IdleShotSeconds = 1.6f;
     private const float IdleResetSeconds = 2.2f;
     private const float BannerHeight = 0.3f;
@@ -47,29 +44,9 @@ internal sealed class MiniGolfApp : IMiniGame
         Backdrop.Meadow, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds, clocked: true,
         seats: MiniGolfRound.MaxPlayers);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
-    private static readonly Vector4 Danger = new(0.95f, 0.32f, 0.32f, 1f);
-    private static readonly Vector4 Dust = new(0.86f, 0.80f, 0.62f, 0.9f);
-    private static readonly Vector4[] AcePalette =
-    {
-        new(1f, 0.84f, 0.30f, 1f), new(0.98f, 0.72f, 0.18f, 1f), new(1f, 0.93f, 0.62f, 1f),
-        new(0.42f, 0.86f, 0.52f, 1f), new(1f, 1f, 1f, 1f), new(0.40f, 0.78f, 1f, 1f),
-    };
-    private static readonly ParticleSpec GrassBits = new(MiniGolfRenderer.Grass, MiniGolfRenderer.Fairway with { W = 0f },
-        0.05f, 2.2f, 0.45f, 0f, 3f, 8f, shape: ParticleShape.Square);
-    private static readonly ParticleSpec WallDust = new(White with { W = 0.8f }, White with { W = 0f }, 0.06f, 1.6f,
-        0.35f, 0f, 3f, shape: ParticleShape.GlowCircle, curve: SizeCurve.Grow);
-    private static readonly ParticleSpec SandPuff = new(Dust, MiniGolfRenderer.SandTint with { W = 0f }, 0.1f, 1.4f,
-        0.6f, 0f, 2.6f, shape: ParticleShape.GlowCircle, curve: SizeCurve.Grow);
-    private static readonly ParticleSpec Droplets = new(White, MiniGolfRenderer.WaterTint with { W = 0f }, 0.06f, 3.2f,
-        0.6f, 0f, 2.2f);
-    private static readonly ParticleSpec CupSparkle = new(White, new Vector4(1f, 0.84f, 0.3f, 0f), 0.08f, 2.6f, 0.8f,
-        0f, 2f, 6f, shape: ParticleShape.Star, additive: true);
     private readonly MiniGolfBoard board = new();
     private readonly MiniGolfRound round = new();
-    private readonly ParticleSystem particles = new(320);
-    private readonly ParticleSystem celebration = new(160);
-    private readonly FeedbackFx fx = new();
-    private readonly Ribbon trail = new();
+    private readonly MiniGolfJuice juice = new();
     private readonly Vector2[] aimPath = new Vector2[MiniGolfRenderer.MaxAimPoints];
     private Camera2D camera = Camera2D.Create();
     private LabelPairSlot holeLabel;
@@ -77,7 +54,6 @@ internal sealed class MiniGolfApp : IMiniGame
     private string bannerText = string.Empty;
     private Vector4 bannerColor = White;
     private Vector2 dragStart;
-    private Vector2 flashPoint;
     private ulong seed = IdleSeed;
     private GolfStage stage;
     private int aimPathCount;
@@ -87,7 +63,6 @@ internal sealed class MiniGolfApp : IMiniGame
     private float stageSeconds;
     private float entrance = 1f;
     private float scorecardAppear;
-    private float bumpFlash;
     private float idleSeconds;
     private float time;
     private bool dragging;
@@ -111,19 +86,15 @@ internal sealed class MiniGolfApp : IMiniGame
         finalCard = false;
         bannerProgress = 1f;
         camera = Camera2D.Create();
-        particles.Clear();
-        particles.Reseed(start.Seed);
-        celebration.Clear();
-        fx.Clear();
+        juice.Clear();
+        juice.Particles.Reseed(start.Seed);
         LoadHole();
     }
 
     public void Close()
     {
         BuildIdle();
-        particles.Clear();
-        celebration.Clear();
-        fx.Clear();
+        juice.Clear();
     }
 
     public void Dispose()
@@ -134,8 +105,7 @@ internal sealed class MiniGolfApp : IMiniGame
     {
         var deltaSeconds = context.RawDeltaSeconds;
         time += deltaSeconds;
-        particles.Update(deltaSeconds);
-        fx.Update(deltaSeconds);
+        juice.Update(deltaSeconds);
         entrance = GameJuice.Advance(entrance, deltaSeconds, EntranceSpeed);
         PlaceCamera(context);
         board.BeginFrame();
@@ -166,15 +136,12 @@ internal sealed class MiniGolfApp : IMiniGame
         var drawList = ImGui.GetWindowDrawList();
         var rawSeconds = context.RawDeltaSeconds;
         time += rawSeconds;
-        particles.Update(rawSeconds);
-        celebration.Update(rawSeconds);
-        fx.Update(rawSeconds);
+        juice.Update(rawSeconds);
         bannerProgress = GameBanner.Advance(bannerProgress, rawSeconds, BannerSeconds);
         entrance = GameJuice.Advance(entrance, rawSeconds, EntranceSpeed);
-        bumpFlash = MathF.Max(0f, bumpFlash - rawSeconds * FlashDecay);
         PlaceCamera(context);
         board.BeginFrame();
-        var simDelta = fx.ScaleDelta(context.DeltaSeconds);
+        var simDelta = juice.Fx.ScaleDelta(context.DeltaSeconds);
         if (!finished)
         {
             Step(simDelta, context, scale);
@@ -193,7 +160,7 @@ internal sealed class MiniGolfApp : IMiniGame
             DrawScorecard(drawList, context, scale);
         }
 
-        celebration.Draw(drawList, scale);
+        juice.Celebration.Draw(drawList, scale);
         FillHud(drawList, context, scale);
         context.Session.Report(board.Strokes);
     }
@@ -203,7 +170,7 @@ internal sealed class MiniGolfApp : IMiniGame
         seed = IdleSeed;
         round.Reset(MiniGolfCourse.HoleCount, 1);
         board.Load(MiniGolfCourse.Get(IdleHole), GameRandom.FromSeed(IdleSeed));
-        trail.Clear();
+        juice.Trail.Clear();
         idleSeconds = 0f;
         stageSeconds = 0f;
         stage = GolfStage.Playing;
@@ -219,7 +186,7 @@ internal sealed class MiniGolfApp : IMiniGame
         entrance = 0f;
         dragging = false;
         aimPathCount = 0;
-        trail.Clear();
+        juice.Trail.Clear();
         ShowBanner(holeLabel.Get(L.MiniGolf.HolePar, round.Hole + 1, board.Hole.Par), Accent);
     }
 
@@ -344,30 +311,8 @@ internal sealed class MiniGolfApp : IMiniGame
 
         var par = board.Hole.Par;
         var result = MiniGolfRound.Classify(strokes, par);
-        var color = MiniGolfScorecard.ResultColor(result);
-        ShowBanner(ResultText(result, strokes - par), color);
-        var cup = board.Hole.Cup;
-        particles.Emit(CupSparkle, cup, 18 + (result <= HoleResult.Birdie ? 18 : 0));
-        fx.Shockwave(camera.ToScreen(cup), camera.Px(1.4f), color, 0.55f, 3.2f);
-        if (result == HoleResult.HoleInOne)
-        {
-            UiFeedback.Play(UiSound.GameWin);
-            celebration.Confetti(new Vector2(context.Full.Center.X, context.Full.Min.Y + context.Full.Height * 0.3f), 110,
-                AcePalette, 320f * UiScale.Current, 4.2f, 1.6f);
-            context.Fx.Flash(new Vector4(1f, 0.86f, 0.4f, 1f), 0.35f);
-            context.Fx.Punch(0.1f);
-            context.Fx.Sweep();
-            return;
-        }
-
-        GameSfx.LevelClear();
-        if (result > HoleResult.Birdie)
-        {
-            return;
-        }
-
-        context.Fx.Punch(0.05f);
-        context.Fx.Sweep();
+        ShowBanner(MiniGolfScorecard.ResultText(result, strokes - par), MiniGolfScorecard.ResultColor(result));
+        juice.Holed(result, board.Hole.Cup, context.Full, in camera, context.Fx);
     }
 
     private void AfterHole(in GameContext context)
@@ -448,107 +393,8 @@ internal sealed class MiniGolfApp : IMiniGame
 
     private void React(in GameContext context, bool live)
     {
-        var events = board.Events;
-        if (events == GolfEvents.None)
-        {
-            return;
-        }
-
-        var point = board.EventPoint;
-        if ((events & GolfEvents.Shot) != 0)
-        {
-            var direction = Vector2.Normalize(board.BallVelocity + new Vector2(0.0001f, 0f));
-            particles.Emit(GrassBits.WithDirection(MathF.Atan2(-direction.Y, -direction.X), 1.4f), point, 8);
-            trail.Clear();
-            if (live)
-            {
-                UiFeedback.Play(UiSound.GameHitWood);
-                camera.Shake(0.03f + 0.06f * board.ImpactStrength);
-                context.Fx.Punch(0.01f + 0.025f * board.ImpactStrength);
-            }
-        }
-
-        if ((events & GolfEvents.Wall) != 0)
-        {
-            particles.Emit(WallDust, point, 5);
-            if (live && board.ImpactStrength > 2f)
-            {
-                UiFeedback.Play(UiSound.GameHitSoft);
-                camera.Shake(MathF.Min(0.2f, board.ImpactStrength * 0.025f));
-            }
-        }
-
-        if ((events & GolfEvents.Post) != 0)
-        {
-            bumpFlash = 1f;
-            flashPoint = point;
-            fx.Shockwave(camera.ToScreen(point), camera.Px(0.9f), MiniGolfRenderer.BallWhite, 0.35f, 2.4f);
-            if (live)
-            {
-                UiFeedback.Play(UiSound.GamePop);
-                context.Fx.Punch(0.03f);
-            }
-        }
-
-        if ((events & GolfEvents.Mill) != 0 && live)
-        {
-            UiFeedback.Play(UiSound.GameHitWood);
-            camera.Shake(0.15f);
-        }
-
-        if ((events & GolfEvents.Tunnel) != 0)
-        {
-            trail.Clear();
-            fx.Shockwave(camera.ToScreen(board.TunnelFrom), camera.Px(0.8f), White, 0.3f, 2f);
-            fx.Shockwave(camera.ToScreen(point), camera.Px(1f), Accent, 0.4f, 2.6f);
-            if (live)
-            {
-                UiFeedback.Play(UiSound.GameJump);
-            }
-        }
-
-        if ((events & GolfEvents.Sand) != 0)
-        {
-            particles.Emit(SandPuff, point, 10);
-        }
-
-        if ((events & GolfEvents.Splash) != 0)
-        {
-            particles.Emit(Droplets, point, 22);
-            fx.Shockwave(camera.ToScreen(point), camera.Px(1f), MiniGolfRenderer.WaterTint, 0.5f, 2.6f);
-            if (live)
-            {
-                UiFeedback.Play(UiSound.GameWrong);
-                fx.AddText(Loc.T(L.MiniGolf.Penalty), camera.ToScreen(point), Danger, 1.1f);
-                camera.Shake(0.12f);
-            }
-        }
-
-        if ((events & GolfEvents.Reset) != 0 && live)
-        {
-            UiFeedback.Play(UiSound.GameWrong);
-        }
-
-        if ((events & GolfEvents.LipOut) != 0 && live)
-        {
-            UiFeedback.Play(UiSound.GameHitSoft);
-            fx.AddText(Loc.T(L.MiniGolf.LipOut), camera.ToScreen(point) - new Vector2(0f, camera.Px(0.4f)), White, 1f);
-        }
-
-        if ((events & GolfEvents.Drop) != 0)
-        {
-            fx.Shockwave(camera.ToScreen(point), camera.Px(0.6f), White, 0.3f, 2.2f);
-            if (live)
-            {
-                UiFeedback.Play(UiSound.GameCollect);
-                context.Fx.SlowMo(0.5f, 0.3f);
-            }
-        }
-
-        if ((events & GolfEvents.Stopped) != 0)
-        {
-            trail.Clear();
-        }
+        juice.React(new GolfImpact(board.Events, board.EventPoint, board.ImpactStrength, board.BallVelocity,
+            board.TunnelFrom), ref camera, context.Fx, Accent, live);
     }
 
     private void DrawWorld(ImDrawListPtr drawList, float scale)
@@ -558,45 +404,31 @@ internal sealed class MiniGolfApp : IMiniGame
         MiniGolfRenderer.DrawCourse(drawList, in camera, hole, alpha, time);
         var ball = board.BallRenderPosition;
         MiniGolfRenderer.DrawCup(drawList, in camera, hole.Cup, ball, Accent, alpha, time);
-        MiniGolfRenderer.DrawPosts(drawList, in camera, hole, flashPoint, bumpFlash, alpha);
-        if (board.Phase == GolfPhase.Rolling && board.BallSpeed > TrailSpeed)
-        {
-            trail.Push(ball);
-        }
-
-        trail.Draw(drawList, in camera, White with { W = 0.45f }, camera.Px(TrailWidth), additive: true);
+        MiniGolfRenderer.DrawPosts(drawList, in camera, hole, juice.FlashPoint, juice.BumpFlash, alpha);
+        juice.TrackBall(ball, board.Phase == GolfPhase.Rolling, board.BallSpeed);
+        juice.DrawTrail(drawList, in camera);
         DrawBall(drawList, ball);
         MiniGolfRenderer.DrawMills(drawList, in camera, board, alpha);
-        particles.Draw(drawList, in camera);
-        fx.DrawRings(drawList, scale);
-        fx.DrawText();
+        juice.DrawEffects(drawList, in camera, scale);
     }
 
     private void DrawBall(ImDrawListPtr drawList, Vector2 ball)
     {
-        var radius = camera.Px(MiniGolfBoard.BallRadius);
         var band = round.Players > 1 ? GameSeats.Color(round.Player) : Accent with { W = 0f };
         switch (board.Phase)
         {
             case GolfPhase.Sinking:
-            {
-                var progress = Easing.EaseInCubic(board.PhaseProgress);
-                var position = Vector2.Lerp(board.SinkFrom, board.Hole.Cup, progress);
-                MiniGolfRenderer.DrawBall(drawList, camera.ToScreen(position), radius * (1f - 0.55f * progress), band,
-                    1f - 0.6f * progress);
+                MiniGolfRenderer.DrawSinking(drawList, in camera, board.SinkFrom, board.Hole.Cup, board.PhaseProgress,
+                    band);
                 return;
-            }
             case GolfPhase.Holed:
                 return;
             case GolfPhase.Drowning:
-            {
-                var progress = board.PhaseProgress;
-                MiniGolfRenderer.DrawBall(drawList, camera.ToScreen(board.SinkFrom), radius * (1f - progress), band,
-                    1f - progress);
+                MiniGolfRenderer.DrawDrowning(drawList, in camera, board.SinkFrom, board.PhaseProgress, band);
                 return;
-            }
             default:
-                MiniGolfRenderer.DrawBall(drawList, camera.ToScreen(ball), radius, band, 1f);
+                MiniGolfRenderer.DrawBall(drawList, camera.ToScreen(ball), camera.Px(MiniGolfBoard.BallRadius), band,
+                    1f);
                 return;
         }
     }
@@ -634,15 +466,4 @@ internal sealed class MiniGolfApp : IMiniGame
         bannerColor = color;
         bannerProgress = 0f;
     }
-
-    private static string ResultText(HoleResult result, int overPar) => result switch
-    {
-        HoleResult.HoleInOne => Loc.T(L.MiniGolf.HoleInOne),
-        HoleResult.Eagle => Loc.T(L.MiniGolf.Eagle),
-        HoleResult.Birdie => Loc.T(L.MiniGolf.Birdie),
-        HoleResult.Par => Loc.T(L.MiniGolf.Par),
-        HoleResult.Bogey => Loc.T(L.MiniGolf.Bogey),
-        HoleResult.DoubleBogey => Loc.T(L.MiniGolf.DoubleBogey),
-        _ => GameNumber.Signed(overPar),
-    };
 }

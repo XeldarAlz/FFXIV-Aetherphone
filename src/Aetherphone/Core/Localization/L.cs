@@ -8290,6 +8290,11 @@ internal static class L
         public static readonly LocString OnlineLuckyDrawDesertWin = new("games.onlineLuckyDrawDesertWin", "{0} wins, everyone else left");
         public static readonly LocString OnlineLuckyDrawChoosing = new("games.onlineLuckyDrawChoosing", "{0} is picking a target");
         public static readonly LocString OnlineLuckyDrawNextDeal = new("games.onlineLuckyDrawNextDeal", "Joins next round");
+        public static readonly LocString OnlineMiniGolfHostHint = new("games.onlineMiniGolfHostHint", "Two to four players, 30 seconds a stroke");
+        public static readonly LocString OnlineMiniGolfWin = new("games.onlineMiniGolfWin", "{0} wins the round in {1} strokes!");
+        public static readonly LocString OnlineMiniGolfTie = new("games.onlineMiniGolfTie", "A tie for first at {0} strokes!");
+        public static readonly LocString OnlineMiniGolfCourse = new("games.onlineMiniGolfCourse", "Course");
+        public static readonly LocString OnlineMiniGolfAimHint = new("games.onlineMiniGolfAimHint", "Drag back from the ball and let go to putt");
     }
 
     internal static class GamesHub
