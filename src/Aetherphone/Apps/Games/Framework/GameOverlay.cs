@@ -37,8 +37,6 @@ internal readonly struct StageResult
         string continueLabel, string rankLine, string friendsLine, bool uploading, bool topTen,
         in GameOutcome outcome, string secondaryLabel, int stars)
     {
-        SecondaryLabel = secondaryLabel;
-        Stars = stars;
         Title = title;
         TitleColor = titleColor;
         PrimaryLabel = primaryLabel;
@@ -50,6 +48,8 @@ internal readonly struct StageResult
         Uploading = uploading;
         TopTen = topTen;
         Outcome = outcome;
+        SecondaryLabel = secondaryLabel;
+        Stars = stars;
     }
 }
 
