@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Social;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -10,7 +11,19 @@ internal static class SoftWrapField
     public static void Multiline(string id, ref string value, int maxLength, Vector2 size, float wrapWidth,
         MentionAutocomplete? mentions = null)
     {
-        var editor = GetEditor(id, mentions is not null);
+        Draw(id, SoftWrapLines.SingleLine, ref value, maxLength, size, wrapWidth, mentions);
+    }
+
+    public static void Paragraphs(string id, ref string value, int maxWeight, Vector2 size, float wrapWidth,
+        MentionAutocomplete? mentions = null)
+    {
+        Draw(id, SoftWrapLines.Paragraphs, ref value, maxWeight, size, wrapWidth, mentions);
+    }
+
+    private static void Draw(string id, SoftWrapLines lines, ref string value, int maxLength, Vector2 size,
+        float wrapWidth, MentionAutocomplete? mentions)
+    {
+        var editor = GetEditor(id, lines, mentions is not null);
         var logical = value ?? string.Empty;
         if (!string.Equals(editor.Text, logical, StringComparison.Ordinal))
         {
@@ -52,7 +65,7 @@ internal static class SoftWrapField
         var replacement = string.Concat("@", handle, " ");
         var updated = string.Concat(editor.Text.AsSpan(0, start), replacement,
             editor.Text.AsSpan(start + length));
-        if (updated.Length > maxLength)
+        if (PostText.Weight(updated) > maxLength)
         {
             return navigated;
         }
@@ -83,11 +96,11 @@ internal static class SoftWrapField
         }
     }
 
-    private static SoftWrapEditor GetEditor(string id, bool completesOnTab)
+    private static SoftWrapEditor GetEditor(string id, SoftWrapLines lines, bool completesOnTab)
     {
         if (!Editors.TryGetValue(id, out var editor))
         {
-            editor = new SoftWrapEditor(SoftWrapLines.SingleLine, completesOnTab);
+            editor = new SoftWrapEditor(lines, completesOnTab);
             Editors[id] = editor;
         }
 

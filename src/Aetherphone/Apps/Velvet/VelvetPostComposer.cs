@@ -376,7 +376,7 @@ internal sealed class VelvetPostComposer
         {
             var panelBottom = shareRect.Min.Y - CardGap * scale;
             captionEmoji.DrawPanel(new Rect(new Vector2(area.Min.X, panelBottom - panelHeight),
-                new Vector2(area.Max.X, panelBottom)), ui, ref caption, CaptionLimit);
+                new Vector2(area.Max.X, panelBottom)), ui, ref caption, PostText.CharacterBudget(caption, CaptionLimit));
         }
 
         var picked = mentionPopup.Draw(captionMentions, area, context.Theme, images, lodestone);
@@ -415,8 +415,17 @@ internal sealed class VelvetPostComposer
         using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
         using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
         {
-            SoftWrapField.Multiline("##velvetCaption", ref caption, CaptionLimit, field.Size,
-                field.Width - padding.X * 2f - 4f * scale, captionMentions);
+            var wrapWidth = field.Width - padding.X * 2f - 4f * scale;
+            if (storyMode)
+            {
+                SoftWrapField.Multiline("##velvetStoryCaption", ref caption, CaptionLimit, field.Size, wrapWidth,
+                    captionMentions);
+            }
+            else
+            {
+                SoftWrapField.Paragraphs("##velvetCaption", ref caption, CaptionLimit, field.Size, wrapWidth,
+                    captionMentions);
+            }
         }
 
         if (caption.Length > 0)
@@ -442,18 +451,19 @@ internal sealed class VelvetPostComposer
         SyncCounter();
         var size = Typography.Measure(counterText, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(row.Max.X - size.X, row.Center.Y - size.Y * 0.5f), counterText,
-            caption.Length >= CaptionLimit - CounterWarning ? VelvetTheme.Danger : VelvetTheme.Faint,
+            counterLength >= CaptionLimit - CounterWarning ? VelvetTheme.Danger : VelvetTheme.Faint,
             TextStyles.Footnote);
     }
 
     private void SyncCounter()
     {
-        if (counterLength == caption.Length)
+        var weight = PostText.Weight(caption);
+        if (counterLength == weight)
         {
             return;
         }
 
-        counterLength = caption.Length;
+        counterLength = weight;
         counterText = counterLength.ToString(Loc.Culture) + "/" + CaptionLimit.ToString(Loc.Culture);
     }
 

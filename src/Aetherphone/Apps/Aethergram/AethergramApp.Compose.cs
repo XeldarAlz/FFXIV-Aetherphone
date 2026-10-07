@@ -339,7 +339,8 @@ internal sealed partial class AethergramApp
             }
         }
 
-        DrawCaptionCard(captionCard, area, scale, "##gramCaption", ref caption, composeMentions);
+        DrawCaptionCard(captionCard, area, scale, composeStoryMode ? "##gramStoryCaption" : "##gramCaption",
+            !composeStoryMode, ref caption, composeMentions);
         if (showOptions && DrawComposeOptionsCard(optionsCard, scale, ref composeSensitive))
         {
             composeTagMode = true;
@@ -356,7 +357,8 @@ internal sealed partial class AethergramApp
         {
             var panelBottom = shareRect.Min.Y - ComposeCardGap * scale;
             captionEmoji.DrawPanel(new Rect(new Vector2(area.Min.X, panelBottom - panelHeight),
-                new Vector2(area.Max.X, panelBottom)), ui, ref caption, MaxCaptionLength);
+                new Vector2(area.Max.X, panelBottom)), ui, ref caption,
+                PostText.CharacterBudget(caption, MaxCaptionLength));
         }
 
         var pickedPerson = personPicker.Draw(area, theme, images, lodestone);
@@ -383,21 +385,21 @@ internal sealed partial class AethergramApp
         CommitGram();
     }
 
-    private void DrawCaptionCard(Rect card, Rect screen, float scale, string fieldId, ref string text,
-        MentionAutocomplete mentions)
+    private void DrawCaptionCard(Rect card, Rect screen, float scale, string fieldId, bool paragraphs,
+        ref string text, MentionAutocomplete mentions)
     {
         ui.Card(ImGui.GetWindowDrawList(), card.Min, card.Max, Metrics.Radius.Grouped * scale);
         var pad = ComposeCardPad * scale;
         var field = new Rect(new Vector2(card.Min.X + pad, card.Min.Y + pad),
             new Vector2(card.Max.X - pad, card.Min.Y + pad + ComposeCaptionFieldHeight * scale));
-        DrawCaptionField(field, screen, scale, fieldId, ref text, mentions);
+        DrawCaptionField(field, screen, scale, fieldId, paragraphs, ref text, mentions);
         var metaTop = field.Max.Y + ComposeMetaGap * scale;
         DrawCaptionMetaRow(new Rect(new Vector2(field.Min.X, metaTop),
-            new Vector2(field.Max.X, metaTop + ComposeMetaRowHeight * scale)), scale, text.Length);
+            new Vector2(field.Max.X, metaTop + ComposeMetaRowHeight * scale)), scale, PostText.Weight(text));
     }
 
-    private void DrawCaptionField(Rect field, Rect screen, float scale, string fieldId, ref string text,
-        MentionAutocomplete mentions)
+    private void DrawCaptionField(Rect field, Rect screen, float scale, string fieldId, bool paragraphs,
+        ref string text, MentionAutocomplete mentions)
     {
         ImGui.SetCursorScreenPos(field.Min);
         if (captionFocus)
@@ -410,7 +412,14 @@ internal sealed partial class AethergramApp
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, Ink.TitleInk))
         {
-            SoftWrapField.Multiline(fieldId, ref text, MaxCaptionLength, field.Size, wrapWidth, mentions);
+            if (paragraphs)
+            {
+                SoftWrapField.Paragraphs(fieldId, ref text, MaxCaptionLength, field.Size, wrapWidth, mentions);
+            }
+            else
+            {
+                SoftWrapField.Multiline(fieldId, ref text, MaxCaptionLength, field.Size, wrapWidth, mentions);
+            }
         }
 
         var pickedMention = mentionPopup.Draw(mentions, screen, theme, images, lodestone);

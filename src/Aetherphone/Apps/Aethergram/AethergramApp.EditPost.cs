@@ -110,7 +110,8 @@ internal sealed partial class AethergramApp
         }
 
         DrawEditPostDots(preview, photos.Length, page, dotsBlock);
-        DrawCaptionCard(captionCard, area, scale, "##aethergramEditCaption", ref editPostCaption, editPostMentions);
+        DrawCaptionCard(captionCard, area, scale, "##aethergramEditCaption", true, ref editPostCaption,
+            editPostMentions);
         if (DrawComposeOptionsCard(optionsCard, scale, ref editPostSensitive))
         {
             composeTagMode = true;
@@ -127,7 +128,8 @@ internal sealed partial class AethergramApp
         {
             var panelBottom = area.Max.Y - margin;
             captionEmoji.DrawPanel(new Rect(new Vector2(area.Min.X, panelBottom - panelHeight),
-                new Vector2(area.Max.X, panelBottom)), ui, ref editPostCaption, MaxCaptionLength);
+                new Vector2(area.Max.X, panelBottom)), ui, ref editPostCaption,
+                PostText.CharacterBudget(editPostCaption, MaxCaptionLength));
         }
     }
 

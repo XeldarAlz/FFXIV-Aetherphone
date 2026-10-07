@@ -1,5 +1,6 @@
 using System.Text;
 using Aetherphone.Core;
+using Aetherphone.Core.Social;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -9,6 +10,7 @@ internal enum SoftWrapLines : byte
     SubmitOnReturn,
     BreakOnReturn,
     SingleLine,
+    Paragraphs,
 }
 
 internal sealed class SoftWrapEditor
@@ -239,6 +241,16 @@ internal sealed class SoftWrapEditor
             return 0;
         }
 
+        if (lines == SoftWrapLines.Paragraphs)
+        {
+            if (!PostText.CanBreak(text, maxCharacters))
+            {
+                data.EventChar = 0;
+            }
+
+            return 0;
+        }
+
         if (lines == SoftWrapLines.SingleLine)
         {
             data.EventChar = 0;
@@ -305,7 +317,9 @@ internal sealed class SoftWrapEditor
 
     private string Cap(string value, ref int cursor)
     {
-        var capped = maxCharacters > 0 ? CapCharacters(value, maxCharacters, ref cursor) : value;
+        var capped = maxCharacters <= 0 ? value
+            : lines == SoftWrapLines.Paragraphs ? PostText.Fit(value, maxCharacters, ref cursor)
+            : CapCharacters(value, maxCharacters, ref cursor);
         return maxBytes > 0 ? CapBytes(capped, maxBytes, ref cursor) : capped;
     }
 
