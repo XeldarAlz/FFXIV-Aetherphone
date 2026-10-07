@@ -8627,6 +8627,22 @@ internal static class L
         public static readonly LocString FeverTime = new("swoop.feverTime", "Fever time");
     }
 
+    internal static class Trailblaze
+    {
+        public static readonly LocString Title = new("games.trailblaze.title", "Trailblaze");
+        public static readonly LocString Hook = new("games.trailblaze.hook", "Swipe or use the arrow keys to switch lanes, jump the pits and slide under the beams as your chocobo races on.");
+        public static readonly LocString Distance = new("games.trailblaze.distance", "Distance");
+        public static readonly LocString Metres = new("games.trailblaze.metres", "{0} m");
+        public static readonly LocString Milestone = new("games.trailblaze.milestone", "{0} m!");
+        public static readonly LocString Gil = new("games.trailblaze.gil", "Gil");
+        public static readonly LocString Stunts = new("games.trailblaze.stunts", "Stunts");
+        public static readonly LocString Leap = new("games.trailblaze.leap", "Nice jump!");
+        public static readonly LocString Duck = new("games.trailblaze.duck", "Nice slide!");
+        public static readonly LocString Magnet = new("games.trailblaze.magnet", "Gil magnet!");
+        public static readonly LocString Double = new("games.trailblaze.double", "Double gil!");
+        public static readonly LocString Wings = new("games.trailblaze.wings", "Wings!");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
