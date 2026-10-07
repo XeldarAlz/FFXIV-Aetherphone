@@ -58,10 +58,11 @@ internal sealed class RichTextLayout
     public readonly Vector2 Size;
     public readonly float WrapWidth;
     public readonly float FontSize;
+    public readonly float LineHeight;
     public readonly int FontGeneration;
 
     public RichTextLayout(RichTextRun[] runs, string[] urls, string[] emojiFiles, MentionSpan[] mentions,
-        string[] tags, Vector2 size, float wrapWidth, float fontSize, int fontGeneration)
+        string[] tags, Vector2 size, float wrapWidth, float fontSize, float lineHeight, int fontGeneration)
     {
         Runs = runs;
         Urls = urls;
@@ -71,6 +72,7 @@ internal sealed class RichTextLayout
         Size = size;
         WrapWidth = wrapWidth;
         FontSize = fontSize;
+        LineHeight = lineHeight;
         FontGeneration = fontGeneration;
     }
 }
@@ -146,7 +148,7 @@ internal static class RichText
     }
 
     public static void Draw(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin, in RichTextInk ink,
-        out RichTextHit hit)
+        out RichTextHit hit, float visibleHeight = float.PositiveInfinity)
     {
         var font = ImGui.GetFont();
         var pop = ink.Pop;
@@ -162,7 +164,7 @@ internal static class RichText
             for (var index = 0; index < runs.Length; index++)
             {
                 var run = runs[index];
-                if (run.Kind is RichTextRunKind.Plain or RichTextRunKind.Emoji)
+                if (run.Kind is RichTextRunKind.Plain or RichTextRunKind.Emoji || Folded(run, pop, visibleHeight))
                 {
                     continue;
                 }
@@ -191,6 +193,11 @@ internal static class RichText
         for (var index = 0; index < runs.Length; index++)
         {
             var run = runs[index];
+            if (Folded(run, pop, visibleHeight))
+            {
+                continue;
+            }
+
             var position = origin + run.Offset * pop;
             if (run.Kind == RichTextRunKind.Plain)
             {
@@ -227,6 +234,9 @@ internal static class RichText
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         hit = new RichTextHit(hoveredKind, hoveredIndex, UiInteract.Click(hoveredMin, hoveredMax, true));
     }
+
+    private static bool Folded(in RichTextRun run, float pop, float visibleHeight) =>
+        run.Offset.Y * pop >= visibleHeight - 0.5f;
 
     private static bool HasLinkCandidate(string text)
     {
@@ -745,7 +755,7 @@ internal static class RichText
         var height = length == 0 ? lineHeight : y + lineHeight;
         var mentionCopy = mentions.Length == 0 ? NoMentions : mentions.ToArray();
         return new RichTextLayout(runs.ToArray(), urls, emojiFiles, mentionCopy, tags, new Vector2(maxWidth, height),
-            wrapWidth, fontSize, fontGeneration);
+            wrapWidth, fontSize, lineHeight, fontGeneration);
     }
 
     private static int SpanIndexAt(List<RichSpan> spans, int position)

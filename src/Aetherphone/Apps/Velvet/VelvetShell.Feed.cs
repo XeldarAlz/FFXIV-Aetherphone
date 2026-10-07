@@ -14,8 +14,10 @@ namespace Aetherphone.Apps.Velvet;
 internal sealed partial class VelvetShell
 {
     private const float FabRadius = 27f;
+    private const int FeedCaptionMaxLines = 2;
 
     private readonly FeedVirtualizer feedVirtualizer = new(400f);
+    private readonly HashSet<string> expandedCaptions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string[]> feedTagLabels = new(StringComparer.Ordinal);
     private bool feedScrollTopPending;
 
@@ -216,18 +218,23 @@ internal sealed partial class VelvetShell
         var translateKey = new TranslationKey(TranslationSurface.Post, entry.Id);
         var captionView = translation.View(translateKey, entry.Caption, entry.Lang);
         var captionText = captionView.Text;
+        var captionLineHeight = 0f;
         if (captionText.Length > 0)
         {
             using (Plugin.Fonts.Push(TextStyles.Callout.Scale, TextStyles.Callout.Weight))
             {
                 captionLayout = feedCaptionLayouts.LayoutFor(captionView.LayoutKey, captionText, entry.Mentions,
                     innerWidth);
+                captionLineHeight = captionLayout?.LineHeight ?? ImGui.GetTextLineHeightWithSpacing();
             }
         }
 
-        var captionTextHeight = captionText.Length == 0
+        var fullCaptionHeight = captionText.Length == 0
             ? 0f
             : captionLayout?.Size.Y ?? Typography.MeasureWrappedBlock(captionText, TextStyles.Callout, innerWidth).Y;
+        var captionFold = TextFold.Measure(fullCaptionHeight, captionLineHeight, FeedCaptionMaxLines,
+            expandedCaptions.Contains(entry.Id));
+        var captionTextHeight = captionFold.Height;
         var translateHeight = TranslateLink.Height(translation, translateKey, entry.Lang, scale);
         var captionHeight = captionText.Length == 0
             ? 0f
@@ -345,16 +352,21 @@ internal sealed partial class VelvetShell
         if (captionText.Length > 0)
         {
             var captionOrigin = new Vector2(innerX, lineY);
-            if (captionLayout is null)
+            using (Plugin.Fonts.Push(TextStyles.Callout.Scale, TextStyles.Callout.Weight))
             {
-                Typography.DrawWrappedLeft(captionOrigin, captionText, VelvetTheme.BodyInk, TextStyles.Callout,
-                    innerWidth);
-            }
-            else
-            {
-                using (Plugin.Fonts.Push(TextStyles.Callout.Scale, TextStyles.Callout.Weight))
+                if (captionLayout is null)
                 {
-                    DrawRichBody(drawList, captionLayout, captionOrigin);
+                    Typography.DrawWrappedLines(drawList, captionOrigin, captionText, VelvetTheme.BodyInk, innerWidth,
+                        captionLineHeight, captionFold.VisibleLines);
+                }
+                else
+                {
+                    DrawRichBody(drawList, captionLayout, captionOrigin, captionFold.VisibleHeight);
+                }
+
+                if (captionFold.DrawReadMore(drawList, captionOrigin, VelvetTheme.MutedInk, VelvetTheme.RoseGlow))
+                {
+                    expandedCaptions.Add(entry.Id);
                 }
             }
 

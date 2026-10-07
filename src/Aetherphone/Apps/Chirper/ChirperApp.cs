@@ -74,6 +74,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
     private const int MaxPostLength = 300;
     private const int MaxCommentLength = 500;
+    private const int FeedBodyMaxLines = 6;
     private const int PostSheetMaxItems = 5;
     private const float TopBarButtonRadius = 18f;
     private const float FeedTabRowHeight = 44f;
@@ -193,6 +194,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private readonly TranslationService translation;
     private readonly RichTextCache bodyLayouts = new(scanHashtags: true);
     private readonly RichTextCache commentLayouts = new(scanHashtags: true);
+    private readonly HashSet<string> expandedBodies = new(StringComparer.Ordinal);
     private readonly FeedVirtualizer feedVirtualizer = new(400f);
     private readonly FeedVirtualizer profileVirtualizer = new(400f);
     private readonly MentionPopup mentionPopup = new();
@@ -1151,17 +1153,22 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var translateKey = new TranslationKey(TranslationSurface.Post, post.Id);
         var bodyView = translation.View(translateKey, post.Text, post.Lang);
         var bodyText = bodyView.Text;
+        var bodyLineHeight = 0f;
         if (bodyText.Length > 0)
         {
             using (Plugin.Fonts.Push(bodyStyle.Scale))
             {
                 bodyLayout = bodyLayouts.LayoutFor(bodyView.LayoutKey, bodyText, post.Mentions, contentWidth);
+                bodyLineHeight = bodyLayout?.LineHeight ?? ImGui.GetTextLineHeight();
             }
         }
 
-        var textHeight = bodyText.Length == 0
+        var fullTextHeight = bodyText.Length == 0
             ? 0f
             : bodyLayout?.Size.Y ?? Typography.MeasureWrapped(bodyText, contentWidth, bodyStyle.Scale);
+        var fold = TextFold.Measure(fullTextHeight, bodyLineHeight, FeedBodyMaxLines,
+            isThreadHead || expandedBodies.Contains(post.Id));
+        var textHeight = fold.Height;
         var translateHeight = TranslateLink.Height(translation, translateKey, post.Lang, scale);
         var dateHeight = isThreadHead && post.CreatedAtUnix > 0
             ? 10f * scale + Typography.LineHeight(DateStyle)
@@ -1250,7 +1257,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             OpenPostSheet(post);
         }
 
-        if (bodyText.Length > 0 && bodyLayout is null)
+        if (bodyText.Length > 0 && bodyLayout is null && !fold.Folded)
         {
             ImGui.SetCursorScreenPos(new Vector2(contentLeft, textTop));
             using (Typography.WrapAt(contentRight))
@@ -1260,11 +1267,25 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
                 Typography.Wrapped(bodyText);
             }
         }
-        else if (bodyLayout is not null)
+        else if (bodyText.Length > 0)
         {
             using (Plugin.Fonts.Push(bodyStyle.Scale))
             {
-                DrawRichBody(drawList, bodyLayout, new Vector2(contentLeft, textTop));
+                var bodyOrigin = new Vector2(contentLeft, textTop);
+                if (bodyLayout is null)
+                {
+                    Typography.DrawWrappedLines(drawList, bodyOrigin, bodyText, ChirperInk.BodyInk, contentWidth,
+                        bodyLineHeight, fold.VisibleLines);
+                }
+                else
+                {
+                    DrawRichBody(drawList, bodyLayout, bodyOrigin, fold.VisibleHeight);
+                }
+
+                if (fold.DrawReadMore(drawList, bodyOrigin, ChirperInk.MutedInk, ChirperInk.AccentLink))
+                {
+                    expandedBodies.Add(post.Id);
+                }
             }
         }
 
@@ -2347,10 +2368,11 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         OpenProfile(userId);
     }
 
-    private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin)
+    private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin,
+        float visibleHeight = float.PositiveInfinity)
     {
         var ink = new RichTextInk(ChirperInk.BodyInk, ChirperInk.AccentLink, ChirperInk.AccentLink);
-        RichText.Draw(drawList, layout, origin, ink, out var hit);
+        RichText.Draw(drawList, layout, origin, ink, out var hit, visibleHeight);
         if (hit.Kind == RichTextRunKind.Mention && hit.Clicked)
         {
             OpenProfile(layout.Mentions[hit.TargetIndex].UserId);

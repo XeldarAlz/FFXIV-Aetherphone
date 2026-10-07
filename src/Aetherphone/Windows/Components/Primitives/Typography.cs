@@ -823,6 +823,22 @@ internal static class Typography
         }
     }
 
+    public static void DrawWrappedLines(ImDrawListPtr drawList, Vector2 topLeft, string text, Vector4 color,
+        float maxWidth, float lineHeight, int maxLines)
+    {
+        Plugin.Fonts.NoticeText(text);
+        var lines = WrapLines(text, maxWidth);
+        var font = ImGui.GetFont();
+        var fontSize = ImGui.GetFontSize();
+        var packed = ImGui.GetColorU32(color);
+        var count = Math.Min(lines.Length, maxLines);
+        for (var index = 0; index < count; index++)
+        {
+            drawList.AddText(font, fontSize, new Vector2(topLeft.X, topLeft.Y + index * lineHeight), packed,
+                lines[index]);
+        }
+    }
+
     public static string[] WrapText(string text, in TextStyle style, float maxWidth) =>
         WrapText(text, style.Scale, style.Weight, maxWidth);
 

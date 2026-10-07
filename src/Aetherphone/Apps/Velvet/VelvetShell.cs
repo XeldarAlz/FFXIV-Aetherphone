@@ -554,10 +554,11 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
         DrawTabBar(area);
     }
 
-    private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin)
+    private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin,
+        float visibleHeight = float.PositiveInfinity)
     {
         var ink = new RichTextInk(VelvetTheme.BodyInk, VelvetTheme.RoseGlow, VelvetTheme.RoseGlow);
-        RichText.Draw(drawList, layout, origin, ink, out var hit);
+        RichText.Draw(drawList, layout, origin, ink, out var hit, visibleHeight);
         if (hit.Kind == RichTextRunKind.Mention && hit.Clicked)
         {
             OpenProfile(layout.Mentions[hit.TargetIndex].UserId);

@@ -70,6 +70,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private const int MaxCaptionLength = 500;
     private const int MaxPhotoTags = 20;
     private const int MaxCommentLength = 500;
+    private const int FeedCaptionMaxLines = 2;
     private const int NavTabCount = 4;
     private const int FilterToggleCount = 3;
     private const float TopBarIconSize = 26f;
@@ -197,6 +198,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private readonly RichTextCache bodyLayouts = new(scanHashtags: true);
     private readonly FeedVirtualizer feedVirtualizer = new(400f);
     private readonly RichTextCache commentLayouts = new(scanHashtags: true);
+    private readonly HashSet<string> expandedCaptions = new(StringComparer.Ordinal);
     private readonly MentionPopup mentionPopup = new();
     private readonly EmojiComposer commentEmoji = new();
     private readonly EmojiComposer captionEmoji = new();
@@ -1168,17 +1170,22 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var translateKey = new TranslationKey(TranslationSurface.Post, post.Id);
         var captionView = translation.View(translateKey, post.Text, post.Lang);
         var captionText = captionView.Text;
+        var captionLineHeight = 0f;
         if (captionText.Length > 0)
         {
             using (Plugin.Fonts.Push(CardCaptionScale))
             {
                 captionLayout = bodyLayouts.LayoutFor(captionView.LayoutKey, captionText, post.Mentions, innerWidth);
+                captionLineHeight = captionLayout?.LineHeight ?? ImGui.GetTextLineHeight();
             }
         }
 
-        var captionTextHeight = captionText.Length == 0
+        var fullCaptionHeight = captionText.Length == 0
             ? 0f
             : captionLayout?.Size.Y ?? Typography.MeasureWrapped(captionText, innerWidth, CardCaptionScale);
+        var captionFold = TextFold.Measure(fullCaptionHeight, captionLineHeight, FeedCaptionMaxLines,
+            detail || expandedCaptions.Contains(post.Id));
+        var captionTextHeight = captionFold.Height;
         var translateHeight = TranslateLink.Height(translation, translateKey, post.Lang, scale);
         var lineGap = CardLineGap * scale;
         var captionHeight = captionText.Length == 0 ? 0f : captionTextHeight + translateHeight + lineGap;
@@ -1350,7 +1357,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var y = textTop;
         if (captionText.Length > 0)
         {
-            if (captionLayout is null)
+            if (captionLayout is null && !captionFold.Folded)
             {
                 ImGui.SetCursorScreenPos(new Vector2(innerX, y));
                 using (Typography.WrapAt(innerX + innerWidth))
@@ -1364,7 +1371,21 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             {
                 using (Plugin.Fonts.Push(CardCaptionScale))
                 {
-                    DrawRichBody(drawList, captionLayout, new Vector2(innerX, y));
+                    var captionOrigin = new Vector2(innerX, y);
+                    if (captionLayout is null)
+                    {
+                        Typography.DrawWrappedLines(drawList, captionOrigin, captionText, Ink.BodyInk, innerWidth,
+                            captionLineHeight, captionFold.VisibleLines);
+                    }
+                    else
+                    {
+                        DrawRichBody(drawList, captionLayout, captionOrigin, captionFold.VisibleHeight);
+                    }
+
+                    if (captionFold.DrawReadMore(drawList, captionOrigin, Ink.MutedInk, Ink.TitleInk))
+                    {
+                        expandedCaptions.Add(post.Id);
+                    }
                 }
             }
 
@@ -1662,10 +1683,11 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         OpenProfile(userId);
     }
 
-    private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin)
+    private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin,
+        float visibleHeight = float.PositiveInfinity)
     {
         var ink = new RichTextInk(Ink.BodyInk, Ink.AccentLink, Ink.AccentLink);
-        RichText.Draw(drawList, layout, origin, ink, out var hit);
+        RichText.Draw(drawList, layout, origin, ink, out var hit, visibleHeight);
         if (hit.Kind == RichTextRunKind.Mention && hit.Clicked)
         {
             OpenProfile(layout.Mentions[hit.TargetIndex].UserId);
