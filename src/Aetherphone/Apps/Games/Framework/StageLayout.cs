@@ -15,6 +15,7 @@ internal static class StageLayout
     public const float SecondaryGap = 8f;
     public const float CompactPillHeight = 36f;
     public const float CompactOffset = 64f;
+    public const float CompactRightReserve = 120f;
     public const float SafeSide = 12f;
     public const float SafeTopStandard = 96f;
     public const float SafeTopCompact = 56f;
@@ -49,8 +50,12 @@ internal static class StageLayout
     public static Vector2 CompactScoreCenter(Rect full, float scale) =>
         new(full.Center.X - CompactOffset * scale, full.Min.Y + ChipCenterY * scale);
 
-    public static Vector2 CompactSecondaryCenter(Rect full, float scale) =>
-        new(full.Center.X + CompactOffset * scale, full.Min.Y + ChipCenterY * scale);
+    public static Vector2 CompactSecondaryCenter(Rect full, float width, bool beside, float scale)
+    {
+        var x = beside ? full.Center.X + CompactOffset * scale : full.Center.X;
+        x = MathF.Min(x, full.Max.X - CompactRightReserve * scale - width * 0.5f);
+        return new Vector2(x, full.Min.Y + ChipCenterY * scale);
+    }
 
     public static Rect PadBand(Rect full, float bandHeight, float scale) =>
         new(new Vector2(full.Min.X, MathF.Max(full.Min.Y, full.Max.Y - bandHeight * scale)), full.Max);

@@ -60,8 +60,8 @@ internal sealed class StageHud
         var height = StageLayout.SecondaryHeight * scale;
         if (style == HudStyle.Compact)
         {
-            var center = StageLayout.CompactSecondaryCenter(full, scale);
             var width = CapsuleWidth(visible[0], model, kind, scale);
+            var center = StageLayout.CompactSecondaryCenter(full, width, model.HasScore, scale);
             var rect = new Rect(center - new Vector2(width * 0.5f, height * 0.5f),
                 center + new Vector2(width * 0.5f, height * 0.5f));
             DrawCapsule(drawList, visible[0], model, kind, rect, accent, theme, scale);
