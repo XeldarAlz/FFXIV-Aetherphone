@@ -8642,6 +8642,21 @@ internal static class L
         public static readonly LocString Percent = new("games.drift.percent", "{0}%");
     }
 
+    internal static class Crawler
+    {
+        public static readonly LocString Title = new("games.crawler.title", "Crawler");
+        public static readonly LocString Hook = new("games.crawler.hook", "Slide along the bottom and shoot the crawler as it winds down the mushroom field; every segment you hit splits it and sprouts a mushroom.");
+        public static readonly LocString WaveNumber = new("games.crawler.waveNumber", "Wave {0}");
+        public static readonly LocString WaveClear = new("games.crawler.waveClear", "Wave clear!");
+        public static readonly LocString Incoming = new("games.crawler.incoming", "Incoming!");
+        public static readonly LocString ExtraLife = new("games.crawler.extraLife", "Extra life!");
+        public static readonly LocString WavesCleared = new("games.crawler.wavesCleared", "Waves cleared");
+        public static readonly LocString Segments = new("games.crawler.segments", "Segments shot");
+        public static readonly LocString Spiders = new("games.crawler.spiders", "Spiders shot");
+        public static readonly LocString Accuracy = new("games.crawler.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.crawler.percent", "{0}%");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

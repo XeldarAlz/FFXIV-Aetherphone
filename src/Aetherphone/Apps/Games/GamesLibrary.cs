@@ -77,6 +77,7 @@ internal sealed class GamesLibrary
         new("coil", 2026, 10, 3), new("updraft", 2026, 10, 3), new("swoop", 2026, 10, 3),
         new("online.connectfour", 2026, 10, 3),
         new("drift", 2026, 10, 8),
+        new("crawler", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -478,6 +479,7 @@ internal sealed class GamesLibrary
             case "updraft":
             case "swoop":
             case "drift":
+            case "crawler":
                 return Score(stats.Get(gameId).BestScore, out value);
             case "match3":
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(GemSwapApp.BlitzStatId).BestScore),

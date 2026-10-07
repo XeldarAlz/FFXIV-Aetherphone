@@ -17,7 +17,7 @@ public sealed class ScoresWireContractTests
         "flow.easy", "flow.medium", "flow.hard", "solitaire", "memory", "memory.attempts",
         "minesweeper.easy", "minesweeper.medium", "minesweeper.hard", "sudoku.easy", "sudoku.medium",
         "sudoku.hard", "nonogram.easy", "nonogram.medium", "nonogram.hard", "chess", "reversi",
-        "casino.barkeep", "drift",
+        "casino.barkeep", "drift", "crawler",
     };
 
     [Fact]
