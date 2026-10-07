@@ -178,6 +178,9 @@ internal static class AppIconArt
             case "fling":
                 DrawFling(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "siege":
+                SiegeIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }

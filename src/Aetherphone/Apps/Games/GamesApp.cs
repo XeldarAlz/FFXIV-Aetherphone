@@ -31,6 +31,7 @@ using Aetherphone.Apps.Games.Pairs;
 using Aetherphone.Apps.Games.Pinball;
 using Aetherphone.Apps.Games.Pegfall;
 using Aetherphone.Apps.Games.Reversi;
+using Aetherphone.Apps.Games.Siege;
 using Aetherphone.Apps.Games.Simon;
 using Aetherphone.Apps.Games.Skyfall;
 using Aetherphone.Apps.Games.Slice;
@@ -226,6 +227,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new BroadsideApp(),
             new PegfallApp(),
             new FlingApp(),
+            new SiegeApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];
