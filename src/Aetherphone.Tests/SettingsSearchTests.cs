@@ -86,10 +86,10 @@ public sealed class SettingsSearchTests
     }
 
     [Fact]
-    public void AppSettingsDeclareTheFourSwitches()
+    public void AppSettingsDeclareTheFiveSwitches()
     {
         var entries = AppSettingsPage.Searchable;
-        Assert.Equal(4, entries.Length);
+        Assert.Equal(5, entries.Length);
         var badgeHits = 0;
         for (var index = 0; index < entries.Length; index++)
         {

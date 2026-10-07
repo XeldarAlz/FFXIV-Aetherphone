@@ -175,6 +175,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool LegacyShowActivityBadge { get; set; } = true;
     public Dictionary<string, bool> BadgeSettings { get; set; } = new();
     public bool BadgeSettingsMigrated { get; set; }
+    public Dictionary<string, bool> IslandSettings { get; set; } = new();
     public List<DailyCheckRecord> DailyChecks { get; set; } = new();
     public List<DailyCustomTask> DailyCustomTasks { get; set; } = new();
     public List<string> DailyHiddenItems { get; set; } = new();
@@ -1022,6 +1023,15 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     {
         BadgeSettings[appId] = enabled;
         BadgeSettingsChanged?.Invoke();
+    }
+
+    public bool IsIslandEnabled(string appId) =>
+        !IslandSettings.TryGetValue(appId, out var enabled) || enabled;
+
+    public void SetIslandEnabled(string appId, bool enabled)
+    {
+        IslandSettings[appId] = enabled;
+        Save();
     }
 
     public void MigrateBadgeSettings()

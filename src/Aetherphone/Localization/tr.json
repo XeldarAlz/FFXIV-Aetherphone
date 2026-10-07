@@ -1121,6 +1121,8 @@
   "settings.phoneWidthReadout": "{0} px genişlik",
   "settings.banners": "Bannerlar",
   "settings.badges": "Rozetler",
+  "settings.dynamicIsland": "Dynamic Island",
+  "settings.showInIsland": "Dynamic Island'da göster",
   "settings.removeApp": "Uygulamayı Kaldır",
   "translate.action": "Çevir",
   "translate.pending": "Çevriliyor…",

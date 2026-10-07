@@ -97,6 +97,21 @@ public sealed class IslandActivityTests
     }
 
     [Theory]
+    [InlineData("aetherstream", true)]
+    [InlineData("music", true)]
+    [InlineData("clock", true)]
+    [InlineData("muster", true)]
+    [InlineData("timers", true)]
+    [InlineData("fishing", true)]
+    [InlineData("message", false)]
+    [InlineData("notes", false)]
+    [InlineData("", false)]
+    public void OnlyNonCallActivitiesOfferAnIslandToggle(string appId, bool expected)
+    {
+        Assert.Equal(expected, IslandActivities.HasOptionalActivity(appId));
+    }
+
+    [Theory]
     [InlineData(3600L, true)]
     [InlineData(3601L, false)]
     [InlineData(1L, true)]

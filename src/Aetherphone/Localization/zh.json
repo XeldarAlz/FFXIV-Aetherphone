@@ -1121,6 +1121,8 @@
   "settings.phoneWidthReadout": "宽 {0} px",
   "settings.banners": "横幅",
   "settings.badges": "角标",
+  "settings.dynamicIsland": "Dynamic Island",
+  "settings.showInIsland": "在 Dynamic Island 中显示",
   "settings.removeApp": "移除应用",
   "translate.action": "翻译",
   "translate.pending": "翻译中…",

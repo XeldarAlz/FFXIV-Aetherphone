@@ -70,6 +70,24 @@ internal static class IslandActivities
         return signals.Fishing ? IslandActivity.Fishing : IslandActivity.None;
     }
 
+    public static bool HasOptionalActivity(string appId)
+    {
+        if (appId.Length == 0)
+        {
+            return false;
+        }
+
+        for (var activity = IslandActivity.Session; activity <= IslandActivity.Fishing; activity++)
+        {
+            if (string.Equals(OwnerAppId(activity), appId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static string OwnerAppId(IslandActivity activity)
     {
         switch (activity)

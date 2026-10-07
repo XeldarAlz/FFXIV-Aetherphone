@@ -2145,6 +2145,8 @@ internal static class L
         public static readonly LocString PhoneWidthReadout = new("settings.phoneWidthReadout", "{0} px wide");
         public static readonly LocString Banners = new("settings.banners", "Banners");
         public static readonly LocString Badges = new("settings.badges", "Badges");
+        public static readonly LocString DynamicIsland = new("settings.dynamicIsland", "Dynamic Island");
+        public static readonly LocString ShowInIsland = new("settings.showInIsland", "Show in Dynamic Island");
         public static readonly LocString RemoveApp = new("settings.removeApp", "Remove App");
     }
 

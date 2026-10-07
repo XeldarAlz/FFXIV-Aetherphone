@@ -94,7 +94,8 @@ internal sealed class PhoneShell : IDisposable
         AdChatBridge.Bind(services.YellowPages, services.YellowPagesLauncher, navigation);
         banner = new NotificationBanner(notifications, VisibleAppId, PhoneVisible, router);
         notifications.Vibration += OnVibration;
-        island = new DynamicIsland(services.Playback, calls, configuration, bundle.Video, services.Musters,
+        island = new DynamicIsland(services.Playback, calls, configuration, services.Installer, bundle.Video,
+            services.Musters,
             services.MusterLauncher, services.PcMedia, services.GameTimers, services.FishingAlerts);
         var rateLimitPill = new RateLimitPill(services.Http, services.AethernetSession);
         shortcutPill = new ShortcutRunPill(services.ShortcutRunner);

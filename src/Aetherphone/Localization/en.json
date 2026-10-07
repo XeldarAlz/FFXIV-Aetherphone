@@ -1121,6 +1121,8 @@
   "settings.phoneWidthReadout": "{0} px wide",
   "settings.banners": "Banners",
   "settings.badges": "Badges",
+  "settings.dynamicIsland": "Dynamic Island",
+  "settings.showInIsland": "Show in Dynamic Island",
   "settings.removeApp": "Remove App",
   "translate.action": "Translate",
   "translate.pending": "Translating…",
