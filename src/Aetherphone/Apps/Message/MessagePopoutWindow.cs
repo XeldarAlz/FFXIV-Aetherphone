@@ -15,7 +15,7 @@ using Dalamud.Interface.Windowing;
 
 namespace Aetherphone.Apps.Message;
 
-internal sealed class MessagePopoutWindow : Window
+internal sealed partial class MessagePopoutWindow : Window
 {
     public const float DefaultWidth = 340f;
     public const float DefaultHeight = 470f;
@@ -43,6 +43,11 @@ internal sealed class MessagePopoutWindow : Window
     private const float GripArm = 9f;
     private const float MinBodyHeight = 120f;
     private const int SwitchMenuLimit = 14;
+    private const float MinOpacity = 0.5f;
+    private const float MinIdleOpacity = 0.15f;
+    private const float MinTextScale = 0.6f;
+    private const float MaxTextScale = 1.8f;
+    private const float SettingsWashAlpha = 0.16f;
 
     private static readonly Vector4 GripInk = new(1f, 1f, 1f, 0.22f);
     private static readonly TextStyle TitleStyle = TextStyles.Headline;
@@ -65,6 +70,7 @@ internal sealed class MessagePopoutWindow : Window
     private readonly string closeButtonId;
     private readonly string phoneButtonId;
     private readonly string collapseButtonId;
+    private readonly string settingsButtonId;
 
     private DirectMessagesStore? store;
     private PopoutThreadView? view;
@@ -76,6 +82,7 @@ internal sealed class MessagePopoutWindow : Window
     private bool collapsed;
     private bool focusedLastFrame;
     private Spring collapseSpring;
+    private Spring fadeSpring;
     private MessagePopoutState? savedPlacement;
     private Vector2 pendingPosition;
     private Vector2 pendingSize;
@@ -98,6 +105,9 @@ internal sealed class MessagePopoutWindow : Window
         closeButtonId = "message.popout.close." + slotText;
         phoneButtonId = "message.popout.phone." + slotText;
         collapseButtonId = "message.popout.collapse." + slotText;
+        settingsButtonId = "message.popout.settings." + slotText;
+        textSizeMenuId = "message.popout.textSize." + slotText;
+        settingIds = new PopoutSettingIds(slotText);
         RespectCloseHotkey = false;
     }
 
@@ -107,6 +117,7 @@ internal sealed class MessagePopoutWindow : Window
         Picker,
         Reactions,
         Encryption,
+        Settings,
     }
 
     public bool Bound => conversationId.Length > 0;
@@ -131,6 +142,7 @@ internal sealed class MessagePopoutWindow : Window
         view ??= new PopoutThreadView(this, store);
         savedPlacement = saved;
         placePending = true;
+        fadeSpring.SnapTo(1f);
         IsOpen = true;
         BringToFront();
     }
@@ -170,6 +182,7 @@ internal sealed class MessagePopoutWindow : Window
     public void Focus()
     {
         SetCollapsed(false);
+        fadeSpring.SnapTo(1f);
         BringToFront();
     }
 
@@ -234,7 +247,7 @@ internal sealed class MessagePopoutWindow : Window
             MaximumSize = new Vector2(MaxSide, MaxSide),
         };
         var style = ImGui.GetStyle();
-        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, style.Alpha);
+        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, style.Alpha * IdleAlpha());
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, style.FramePadding * zoom);
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, style.ItemSpacing * zoom);
@@ -276,6 +289,9 @@ internal sealed class MessagePopoutWindow : Window
         view.GateMenus();
         switchMenu.Gate();
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var lively = hoveredWindow || focusedWindow;
+        fadeSpring.Step(lively || !configuration.MessagePopoutFade ? 1f : 0f, TransitionTiming.PresentSmoothTime,
+            delta);
         var confirming = confirmOverlay.CapturesPointer;
         if (confirming && focusedWindow)
         {
@@ -298,16 +314,16 @@ internal sealed class MessagePopoutWindow : Window
 
             using (InputShield.Engage(confirming))
             {
-                DrawSurface(theme, scale, hoveredWindow || focusedWindow, barHeight);
+                DrawSurface(theme, scale, lively, barHeight);
                 var titleBar = new Rect(frame.Min, new Vector2(frame.Max.X, frame.Min.Y + barHeight));
-                if (screen == PopoutScreen.Thread)
+                if (screen is PopoutScreen.Thread or PopoutScreen.Settings)
                 {
                     DrawTitleBar(titleBar, theme, scale, delta);
                 }
 
                 if (bodyOpen)
                 {
-                    DrawBody(theme, scale);
+                    DrawBody(theme, scale, barHeight);
                     DrawGrip(scale);
                 }
 
@@ -321,7 +337,7 @@ internal sealed class MessagePopoutWindow : Window
         HoverTooltip.Flush();
     }
 
-    private void DrawBody(PhoneTheme theme, float scale)
+    private void DrawBody(PhoneTheme theme, float scale, float barHeight)
     {
         if (view is null || store is null)
         {
@@ -348,6 +364,9 @@ internal sealed class MessagePopoutWindow : Window
                 return;
             case PopoutScreen.Encryption:
                 view.DrawEncryptionScreen(body);
+                return;
+            case PopoutScreen.Settings:
+                DrawSettingsPanel(new Rect(new Vector2(body.Min.X, frame.Min.Y + barHeight), body.Max), theme);
                 return;
             default:
                 view.Draw(body, conversationId, true);
@@ -403,7 +422,21 @@ internal sealed class MessagePopoutWindow : Window
         }
     }
 
-    private float OwnZoom() => PhoneSizeCatalog.ZoomFor(PhoneBounds.ClampWidth(configuration.PhoneWidth));
+    private float OwnZoom() => PhoneSizeCatalog.ZoomFor(PhoneBounds.ClampWidth(configuration.PhoneWidth)) *
+                               Math.Clamp(configuration.MessagePopoutTextScale, MinTextScale, MaxTextScale);
+
+    private float Opacity() => Math.Clamp(configuration.MessagePopoutOpacity, MinOpacity, 1f);
+
+    private float IdleAlpha()
+    {
+        if (!configuration.MessagePopoutFade)
+        {
+            return 1f;
+        }
+
+        var idle = Math.Clamp(configuration.MessagePopoutIdleOpacity, MinIdleOpacity, 1f);
+        return idle + (1f - idle) * Math.Clamp(fadeSpring.Value, 0f, 1f);
+    }
 
     private void ResolvePlacement(float zoom)
     {
@@ -473,18 +506,20 @@ internal sealed class MessagePopoutWindow : Window
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = Rounding * scale;
+        var opacity = Opacity();
         Elevation.Floating(drawList, frame.Min, frame.Max, rounding, scale, lively ? 1f : 0.7f);
-        var surface = ImGui.GetColorU32(theme.AppBackground);
+        var surface = ImGui.GetColorU32(Palette.WithAlpha(theme.AppBackground, opacity));
         Squircle.FillVerticalGradient(drawList, frame.Min, frame.Max, rounding, surface, surface);
         var titleBottom = MathF.Min(frame.Min.Y + stripHeight, frame.Max.Y);
-        var strip = ImGui.GetColorU32(theme.GroupedCard);
+        var strip = ImGui.GetColorU32(Palette.WithAlpha(theme.GroupedCard, theme.GroupedCard.W * opacity));
         drawList.PushClipRect(frame.Min, new Vector2(frame.Max.X, titleBottom), true);
         Squircle.FillVerticalGradient(drawList, frame.Min, frame.Max, rounding, strip, strip);
         drawList.PopClipRect();
         if (titleBottom < frame.Max.Y)
         {
             drawList.AddLine(new Vector2(frame.Min.X, titleBottom), new Vector2(frame.Max.X, titleBottom),
-                ImGui.GetColorU32(theme.Separator), Metrics.Stroke.Hairline);
+                ImGui.GetColorU32(Palette.WithAlpha(theme.Separator, theme.Separator.W * opacity)),
+                Metrics.Stroke.Hairline);
         }
 
         Material.EdgeSquircle(drawList, frame.Min, frame.Max, rounding, scale, lively ? 1f : 0.6f);
@@ -519,6 +554,22 @@ internal sealed class MessagePopoutWindow : Window
             ToggleCollapsed(!collapsed);
         }
 
+        var buttonsLeft = collapseCenter.X - radius;
+        if (!collapsed)
+        {
+            var settingsCenter = new Vector2(collapseCenter.X - ButtonPitch * scale, centerY);
+            var settingsOpen = screen == PopoutScreen.Settings;
+            if (HoverButton.Circle(drawList, settingsButtonId, settingsCenter, radius, FontAwesomeIcon.Cog,
+                    settingsOpen ? Palette.WithAlpha(theme.Accent, SettingsWashAlpha) : AppSkin.Transparent,
+                    settingsOpen ? theme.Accent : theme.TextMuted, delta, 1f, true,
+                    Loc.T(L.Linkpearl.ChatSettings)))
+            {
+                ToggleSettings();
+            }
+
+            buttonsLeft = settingsCenter.X - radius;
+        }
+
         var avatarRadius = AvatarRadius * scale;
         var avatarCenter = new Vector2(bar.Min.X + EdgeInset * scale + avatarRadius, centerY);
         var conversation = store?.Conversation;
@@ -534,7 +585,7 @@ internal sealed class MessagePopoutWindow : Window
         }
 
         var textLeft = avatarCenter.X + avatarRadius + Metrics.Space.Sm * scale;
-        var textLimit = collapseCenter.X - radius - Metrics.Space.Sm * scale;
+        var textLimit = buttonsLeft - Metrics.Space.Sm * scale;
         var caretWidth = 10f * scale;
         var titleSize = Typography.Measure(headerTitle, TitleStyle);
         var titleWidth = MathF.Min(titleSize.X, MathF.Max(1f, textLimit - textLeft - caretWidth));
@@ -577,7 +628,7 @@ internal sealed class MessagePopoutWindow : Window
             }
         }
 
-        if (BarDoubleClicked(bar, titleAnchor, collapseCenter.X - radius))
+        if (BarDoubleClicked(bar, titleAnchor, buttonsLeft))
         {
             ToggleCollapsed(!collapsed);
         }
@@ -655,6 +706,12 @@ internal sealed class MessagePopoutWindow : Window
 
     private void DrawSwitchMenu(PhoneTheme theme)
     {
+        if (switchMenu.IsOpenFor(textSizeMenuId))
+        {
+            DrawTextSizeMenu(theme);
+            return;
+        }
+
         if (!switchMenu.IsOpenFor(switchMenuId))
         {
             return;
@@ -699,6 +756,8 @@ internal sealed class MessagePopoutWindow : Window
         protected override Action BackAction => back;
 
         protected override ChatTheme ChatTheme => ChatThemes.Resolve(configuration.MessageChatTheme);
+
+        protected override float BackdropAlpha => window.Opacity();
 
         protected override void DrawHeader(Rect area, string threadId)
         {
