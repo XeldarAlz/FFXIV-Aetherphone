@@ -249,8 +249,8 @@ internal sealed class SwoopApp : IMiniGame
             zoom.Step(zoomTarget, ZoomSmoothSeconds, deltaSeconds);
         }
 
-        camera.Fit(full, ViewWidthMeters * MathF.Max(1f, zoom.Value), 1f, FitMode.CoverWidth);
-        camera.Anchor = new Vector2(full.Min.X + full.Width * AnchorXFraction, full.Min.Y + full.Height * AnchorYFraction);
+        camera.Fit(full, ViewWidthMeters * MathF.Max(1f, zoom.Value), 1f, FitMode.CoverWidth,
+            new Vector2(full.Min.X + full.Width * AnchorXFraction, full.Min.Y + full.Height * AnchorYFraction));
         camera.Place(World(target.X + lead.Value, floor.Value));
         context.Fx.ApplyTo(ref camera);
         camera.Update(context.RawDeltaSeconds, UiScale.Current);

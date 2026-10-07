@@ -45,9 +45,13 @@ internal struct Camera2D
 
     public readonly bool Placed => placed;
 
-    public void Fit(Rect view, float worldWidth, float worldHeight, FitMode mode)
+    public void Fit(Rect view, float worldWidth, float worldHeight, FitMode mode) =>
+        Fit(view, worldWidth, worldHeight, mode, view.Center);
+
+    public void Fit(Rect view, float worldWidth, float worldHeight, FitMode mode, Vector2 anchor)
     {
         Zoom = ZoomFor(view, worldWidth, worldHeight, mode);
+        Anchor = anchor;
         if (placed)
         {
             return;
@@ -59,13 +63,13 @@ internal struct Camera2D
     public void Fit(Rect view, Rect world, FitMode mode)
     {
         Zoom = ZoomFor(view, world.Width, world.Height, mode);
+        Anchor = view.Center;
         Place(world.Center);
     }
 
     private float ZoomFor(Rect view, float worldWidth, float worldHeight, FitMode mode)
     {
         View = view;
-        Anchor = view.Center;
         var safeWidth = MathF.Max(0.0001f, worldWidth);
         var safeHeight = MathF.Max(0.0001f, worldHeight);
         return mode switch

@@ -185,7 +185,7 @@ internal sealed class UpdraftApp : IMiniGame
 
     private void BeginRun(in GameContext context)
     {
-        var bestMetres = context.Session.Stats.Get(HeightStatId).BestScore;
+        var bestMetres = context.Session.SecondaryBest(HeightStatId);
         board.StartGame(SeedOf(pendingSeed), bestMetres / UpdraftBoard.MetresPerUnit);
         renderer.Reset();
         startPending = false;
