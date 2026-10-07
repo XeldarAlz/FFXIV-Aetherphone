@@ -7,6 +7,8 @@ internal interface IGameStatsConfiguration
     List<GameLevelProgress> GameLevelProgress { get; }
     int DailyChallengeStreak { get; set; }
     int DailyChallengeLastDay { get; set; }
+    ulong DailyChallengeHistory { get; set; }
+    int DailyChallengeBestStreak { get; set; }
     string WordRunBank { get; set; }
     bool TetrisModern { get; set; }
     void Save();

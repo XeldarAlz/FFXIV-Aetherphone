@@ -355,6 +355,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public List<GameLevelProgress> GameLevelProgress { get; set; } = new();
     public int DailyChallengeStreak { get; set; }
     public int DailyChallengeLastDay { get; set; }
+    public ulong DailyChallengeHistory { get; set; }
+    public int DailyChallengeBestStreak { get; set; }
     public string WordRunBank { get; set; } = string.Empty;
     public bool TetrisModern { get; set; }
     public string PendingCoinGameSession { get; set; } = string.Empty;

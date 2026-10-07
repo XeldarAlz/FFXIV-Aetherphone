@@ -7,23 +7,6 @@ namespace Aetherphone.Tests;
 
 public sealed class GameSessionTests
 {
-    private sealed class FakeStatsConfiguration : IGameStatsConfiguration
-    {
-        public List<GameStatRecord> GameStats { get; } = new();
-        public List<GameModeChoice> GameModeChoices { get; } = new();
-        public List<GameLevelProgress> GameLevelProgress { get; } = new();
-        public int DailyChallengeStreak { get; set; }
-        public int DailyChallengeLastDay { get; set; }
-        public string WordRunBank { get; set; } = string.Empty;
-        public bool TetrisModern { get; set; }
-        public int Saves { get; private set; }
-
-        public void Save()
-        {
-            Saves++;
-        }
-    }
-
     private sealed class CountingSink : IScoreSink
     {
         public int Count { get; private set; }
