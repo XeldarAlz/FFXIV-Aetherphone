@@ -121,6 +121,12 @@ internal static class AppIconArt
             case "swoop":
                 SwoopIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "slice":
+                SliceIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "spiral":
+                SpiralIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }

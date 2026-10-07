@@ -18,6 +18,7 @@ public sealed class ScoresWireContractTests
         "minesweeper.easy", "minesweeper.medium", "minesweeper.hard", "sudoku.easy", "sudoku.medium",
         "sudoku.hard", "nonogram.easy", "nonogram.medium", "nonogram.hard", "chess", "reversi",
         "casino.barkeep",
+        "slice", "slice.arcade", "spiral",
     };
 
     [Fact]

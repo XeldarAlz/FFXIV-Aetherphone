@@ -8627,6 +8627,35 @@ internal static class L
         public static readonly LocString FeverTime = new("swoop.feverTime", "Fever time");
     }
 
+    internal static class Slice
+    {
+        public static readonly LocString Title = new("games.slice.title", "Slice");
+        public static readonly LocString Hook = new("games.slice.hook", "Swipe to slice everything thrown into the air, and never touch a bomb.");
+        public static readonly LocString Arcade = new("games.slice.arcade", "Arcade");
+        public static readonly LocString SwipeCombo = new("games.slice.swipeCombo", "{0} in one swipe!");
+        public static readonly LocString Freeze = new("games.slice.freeze", "Freeze!");
+        public static readonly LocString Frenzy = new("games.slice.frenzy", "Frenzy!");
+        public static readonly LocString Double = new("games.slice.double", "Double points!");
+        public static readonly LocString TimeUp = new("games.slice.timeUp", "Time!");
+        public static readonly LocString Penalty = new("games.slice.penalty", "-{0}s");
+        public static readonly LocString LastLife = new("games.slice.lastLife", "Last life!");
+        public static readonly LocString Sliced = new("games.slice.sliced", "Sliced");
+        public static readonly LocString BestSwipe = new("games.slice.bestSwipe", "Best swipe");
+        public static readonly LocString Bombs = new("games.slice.bombs", "Bombs hit");
+    }
+
+    internal static class Spiral
+    {
+        public static readonly LocString Title = new("games.spiral.title", "Spiral");
+        public static readonly LocString Hook = new("games.spiral.hook", "Drag to turn the tower and drop the ball through the gaps, but never land on red.");
+        public static readonly LocString Fireball = new("games.spiral.fireball", "Fireball!");
+        public static readonly LocString Smash = new("games.spiral.smash", "Smash!");
+        public static readonly LocString LevelBanner = new("games.spiral.levelBanner", "Level {0}");
+        public static readonly LocString Rings = new("games.spiral.rings", "Rings");
+        public static readonly LocString BestDrop = new("games.spiral.bestDrop", "Best drop");
+        public static readonly LocString Smashes = new("games.spiral.smashes", "Smashes");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
