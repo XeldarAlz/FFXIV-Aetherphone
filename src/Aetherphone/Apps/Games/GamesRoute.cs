@@ -29,7 +29,6 @@ internal enum GamesShelf : byte
     Brain = (byte)GameGenre.Brain,
     Strategy = (byte)GameGenre.Strategy,
     Tabletop = (byte)GameGenre.Tabletop,
-    Latest,
     All,
     New,
 }

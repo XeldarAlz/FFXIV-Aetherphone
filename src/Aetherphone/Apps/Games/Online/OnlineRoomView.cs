@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.Hub;
 using Aetherphone.Apps.Games.MiniGolf;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -350,8 +351,7 @@ internal sealed class OnlineRoomView : IDisposable
             GameRoomWire.ReasonRestarting => Loc.T(L.Games.OnlineRestarting),
             _ => Loc.T(L.Games.OnlineRoomEnded),
         };
-        if (GamesHubArt.StateScreen(ImGui.GetWindowDrawList(), ui, body, FontAwesomeIcon.DoorClosed, message,
-                string.Empty, Loc.T(L.Common.Close), "games.room.closed"))
+        if (EmptyState.Draw(body, ui, FontAwesomeIcon.DoorClosed, message, string.Empty, Loc.T(L.Common.Close)))
         {
             back();
         }
@@ -401,7 +401,7 @@ internal sealed class OnlineRoomView : IDisposable
             y = DrawRulesRow(drawList, ui, left, y + Metrics.Space.Md * scale, width, scale, kind, options);
         }
 
-        y += GamesHubArt.SectionGap * scale;
+        y += HubMetrics.SectionGap * scale;
         GamesHubArt.Section(drawList, ui, left, y, width, Loc.T(L.GamesHub.Players), string.Empty, string.Empty);
         y += GamesHubArt.SectionHeight * scale;
         ImGui.SetCursorScreenPos(new Vector2(left, y));
@@ -419,7 +419,7 @@ internal sealed class OnlineRoomView : IDisposable
         }
 
         card.End();
-        y = card.Bounds.Max.Y + GamesHubArt.SectionGap * scale;
+        y = card.Bounds.Max.Y + HubMetrics.SectionGap * scale;
         y = DrawPrimary(drawList, ui, left, y, width, scale, isHost, phase, players.Length, accent, StartOption(kind));
         y += Metrics.Space.Lg * scale;
         var leaveLabel = LeaveLabel(isHost);

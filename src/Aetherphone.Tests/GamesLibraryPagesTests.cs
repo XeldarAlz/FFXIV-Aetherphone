@@ -125,12 +125,11 @@ public sealed class GamesLibraryPagesTests
     }
 
     [Fact]
-    public void JustAddedAndTheLegacyLatestShelfShowTheNewestWave()
+    public void JustAddedShowsTheNewestWave()
     {
         var library = Build();
 
         Assert.Equal(library.Latest.ToArray(), GamesApp.ShelfEntries(library, GamesShelf.New).ToArray());
-        Assert.Equal(library.Latest.ToArray(), GamesApp.ShelfEntries(library, GamesShelf.Latest).ToArray());
     }
 
     [Fact]

@@ -42,7 +42,7 @@ internal sealed partial class GamesApp
 
     internal static ReadOnlySpan<int> ShelfEntries(GamesLibrary library, GamesShelf shelf) => shelf switch
     {
-        GamesShelf.New or GamesShelf.Latest => library.Latest,
+        GamesShelf.New => library.Latest,
         GamesShelf.All => library.Ordered,
         _ => library.Genre((GameGenre)shelf),
     };
@@ -53,7 +53,7 @@ internal sealed partial class GamesApp
 
     private static string ShelfTitle(GamesShelf shelf) => shelf switch
     {
-        GamesShelf.New or GamesShelf.Latest => Loc.T(L.GamesHub.JustAdded),
+        GamesShelf.New => Loc.T(L.GamesHub.JustAdded),
         GamesShelf.All => Loc.T(L.Games.LibraryHeading),
         _ => Loc.T(GameGenres.Label((GameGenre)shelf)),
     };

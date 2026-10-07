@@ -184,14 +184,13 @@ public sealed class GamesLibraryTests
     {
         var library = Build(new Configuration());
 
-        var hits = library.Search("  WORD ").ToArray();
-        var none = library.Search("zzz").ToArray();
-        var blank = library.Search("   ").ToArray();
+        var hits = IdsOf(library, library.View(GamesFilter.All, GamesSort.Newest, "  WORD "));
+        var none = IdsOf(library, library.View(GamesFilter.All, GamesSort.Newest, "zzz"));
+        var blank = IdsOf(library, library.View(GamesFilter.All, GamesSort.Newest, "   "));
 
-        Assert.Single(hits);
-        Assert.Equal("wordrun", library.Entries[hits[0]].Id);
+        Assert.Equal(new[] { "wordrun" }, hits);
         Assert.Empty(none);
-        Assert.Empty(blank);
+        Assert.Equal(library.Entries.Length, blank.Length);
     }
 
     [Fact]
@@ -199,10 +198,7 @@ public sealed class GamesLibraryTests
     {
         var library = Build(new Configuration());
 
-        var hits = library.Search("board").ToArray();
-
-        Assert.Single(hits);
-        Assert.Equal("chess", library.Entries[hits[0]].Id);
+        Assert.Equal(new[] { "chess" }, IdsOf(library, library.View(GamesFilter.All, GamesSort.Newest, "board")));
     }
 
     [Fact]
@@ -260,8 +256,7 @@ public sealed class GamesLibraryTests
 
         Assert.Equal("0:40", library.BestValue(0));
         Assert.Equal("Hard", library.BestTier(0));
-        Assert.EndsWith("0:40 · Hard", library.Best(0));
-        Assert.Equal(string.Empty, library.Best(1));
+        Assert.Equal(string.Empty, library.BestValue(1));
     }
 
     [Fact]
@@ -377,7 +372,6 @@ public sealed class GamesLibraryTests
         Assert.Equal(RecordKind.Streak, library.BestKind(reversi));
         Assert.Equal("5", library.BestValue(reversi));
         Assert.Equal("Easy", library.BestTier(reversi));
-        Assert.EndsWith("5 · Easy", library.Best(reversi));
     }
 
     [Fact]

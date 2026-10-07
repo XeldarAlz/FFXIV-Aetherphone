@@ -328,7 +328,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         ResetLibrary();
         ResetProfile();
         onlineHub.Reset();
-        consentRequested = false;
         leaderboard.ClearParticipationFailure();
         leaderboard.EnsureMyRanksFresh();
         gameRooms.EnsureFresh();
@@ -343,7 +342,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         TourHolds.Release(Id);
         router.Reset();
         pendingRoute = string.Empty;
-        consentRequested = false;
     }
 
     public void Dispose()

@@ -1,28 +1,15 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games;
 
 internal static class GamesHubArt
 {
     public const float SectionHeight = CardSectionHeader.HeightUnits;
-    public const float SectionGap = 22f;
     private const float SeeAllChevron = 11f;
     private const float SeeAllGap = 4f;
-    private const float StateTileSize = 76f;
-    private const float StateGlyphSize = 34f;
-    private const float StateLift = 44f;
-    private const float StateTitleGap = 18f;
-    private const float StateHintGap = 6f;
-    private const float StateActionGap = 20f;
-    private const float StateActionHeight = Button.RegularHeight;
-    private const float StateActionMinWidth = 150f;
-    private const float StateTextInset = 56f;
-    private const float StateMaxText = 290f;
 
     public static float ButtonWidth(string label, float height) =>
         Typography.Measure(label, Button.LabelStyle(height)).X + height;
@@ -59,38 +46,6 @@ internal static class GamesHubArt
         var reserve = actionWidth > 0f ? actionWidth + Metrics.Space.Md * scale : 0f;
         CardSectionHeader.Draw(drawList, new Vector2(left, top), width, title, ui.TitleInk, reserve);
         return clicked;
-    }
-
-    public static bool StateScreen(ImDrawListPtr drawList, AppSkin ui, Rect body, FontAwesomeIcon icon, string title,
-        string hint, string action, string id)
-    {
-        var scale = UiScale.Current;
-        var centerX = body.Center.X;
-        var tileSize = StateTileSize * scale;
-        var tileTop = MathF.Max(body.Min.Y + Metrics.Space.Xl * scale, body.Center.Y - StateLift * scale - tileSize);
-        var tileMin = new Vector2(centerX - tileSize * 0.5f, tileTop);
-        var tileMax = new Vector2(centerX + tileSize * 0.5f, tileTop + tileSize);
-        IconTile.FillShaded(drawList, tileMin, tileMax, tileSize * Metrics.Radius.TileFactor,
-            IconTile.Surface(ui.Accent));
-        ProgressRing.CenterIcon(drawList, (tileMin + tileMax) * 0.5f, icon, AccentRing.Ink, StateGlyphSize * scale);
-        var maxWidth = MathF.Min(body.Width - StateTextInset * scale, StateMaxText * scale);
-        var titleBottom = Typography.DrawWrappedCentered(drawList, title, TextStyles.Title3, ui.TitleInk,
-            new Vector2(centerX, tileMax.Y + StateTitleGap * scale), maxWidth);
-        var hintBottom = hint.Length == 0
-            ? titleBottom
-            : Typography.DrawWrappedCentered(drawList, hint, TextStyles.Subheadline, ui.MutedInk,
-                new Vector2(centerX, titleBottom + StateHintGap * scale), maxWidth);
-        if (action.Length == 0)
-        {
-            return false;
-        }
-
-        var height = StateActionHeight * scale;
-        var width = MathF.Min(maxWidth, MathF.Max(StateActionMinWidth * scale,
-            ButtonWidth(action, height)));
-        var top = hintBottom + StateActionGap * scale;
-        var rect = new Rect(new Vector2(centerX - width * 0.5f, top), new Vector2(centerX + width * 0.5f, top + height));
-        return Button.Draw(drawList, rect, action, ui.Ink, id: id);
     }
 
     public static void ReportAnchor(string key, Rect rect)
