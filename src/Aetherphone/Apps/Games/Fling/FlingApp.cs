@@ -23,6 +23,8 @@ internal sealed class FlingApp : IMiniGame
     private const float IntroHoldSeconds = 1.1f;
     private const float FollowSeconds = 0.14f;
     private const float PanSeconds = 0.45f;
+    private const float SwipeSeconds = 0.08f;
+    private const float SwipeGain = 2.5f;
     private const float FollowLead = 0.12f;
     private const float FlightHeadroom = 0.3f;
     private const float ResultDelaySeconds = 1.8f;
@@ -216,7 +218,9 @@ internal sealed class FlingApp : IMiniGame
             camera.Place(target);
         }
 
-        var smooth = board.Phase == FlingPhase.Flying && introHold <= 0f ? FollowSeconds : PanSeconds;
+        var smooth = board.Phase == FlingPhase.Flying && introHold <= 0f ? FollowSeconds
+            : panning ? SwipeSeconds
+            : PanSeconds;
         camera.Follow(target, Vector2.Zero, smooth, context.RawDeltaSeconds);
         context.Fx.ApplyTo(ref camera);
         camera.Update(context.RawDeltaSeconds, UiScale.Current);
@@ -310,7 +314,7 @@ internal sealed class FlingApp : IMiniGame
 
         var ready = board.CanAim && introHold <= 0f &&
                     MathF.Abs(camera.Origin.X - (SlingViewX + panOffset)) < AimReadyDistance;
-        if (!ready)
+        if (!ready && !panning)
         {
             dragging = false;
             panning = false;
@@ -359,7 +363,8 @@ internal sealed class FlingApp : IMiniGame
             return;
         }
 
-        panOffset = Math.Clamp(panStartOffset - camera.Units(pointer.X - panStartPointer), 0f, MaxPan);
+        panOffset = Math.Clamp(panStartOffset - camera.Units(pointer.X - panStartPointer) * SwipeGain, 0f,
+            MaxPan);
     }
 
     private void React(in FlingEvent entry, in GameContext context)
