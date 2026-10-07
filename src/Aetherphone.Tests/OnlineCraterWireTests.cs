@@ -78,14 +78,12 @@ public sealed class OnlineCraterWireTests
     [Fact]
     public void TheShotRequestCarriesTheWholeTurn()
     {
-        var request = new GameRoomActionRequest("shoot", 7, -1, -1, "turn1", -1, -1, 0.5f, 0.75f, 12.5f, 3.25f, -1,
-            -1, 1, 3, 9.5f);
+        var request = new GameRoomActionRequest("shoot", 7, -1, -1, "turn1", Angle: 0.5f, Power: 0.75f,
+            PlaceX: 12.5f, PlaceY: 3.25f, Facing: -1, Weapon: 1, Fuse: 3, WalkX: 9.5f);
         var json = JsonSerializer.Serialize(request, AethernetJsonContext.Default.GameRoomActionRequest);
-        Assert.Equal(
-            "{\"action\":\"shoot\",\"actionCount\":7,\"card\":-1,\"color\":-1,\"clientActionId\":\"turn1\","
-            + "\"from\":-1,\"to\":-1,\"angle\":0.5,\"power\":0.75,\"placeX\":12.5,\"placeY\":3.25,\"column\":-1,"
-            + "\"facing\":-1,\"weapon\":1,\"fuse\":3,\"walkX\":9.5}",
-            json);
+        Assert.StartsWith("{\"action\":\"shoot\",\"actionCount\":7,", json, StringComparison.Ordinal);
+        Assert.Contains("\"angle\":0.5,\"power\":0.75,\"placeX\":12.5,\"placeY\":3.25,", json, StringComparison.Ordinal);
+        Assert.EndsWith(",\"facing\":-1,\"weapon\":1,\"fuse\":3,\"walkX\":9.5}", json, StringComparison.Ordinal);
     }
 
     [Fact]

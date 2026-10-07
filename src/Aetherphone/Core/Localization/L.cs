@@ -8282,6 +8282,14 @@ internal static class L
         public static readonly LocString OnlineConnectFourHostHint = new("games.onlineConnectFourHostHint", "Head-to-head, 30 seconds a turn");
         public static readonly LocString OnlineConnectFourWin = new("games.onlineConnectFourWin", "{0} connects four and wins!");
         public static readonly LocString OnlineConnectFourDraw = new("games.onlineConnectFourDraw", "Draw, the board is full");
+        public static readonly LocString OnlineBroadsideHostHint = new("games.onlineBroadsideHostHint", "Head-to-head, 30 seconds a shot");
+        public static readonly LocString OnlineBroadsideWin = new("games.onlineBroadsideWin", "{0} downs the whole fleet and wins!");
+        public static readonly LocString OnlineBroadsideWaiting = new("games.onlineBroadsideWaiting", "Waiting for {0} to ready their fleet");
+        public static readonly LocString OnlineLuckyDrawHostHint = new("games.onlineLuckyDrawHostHint", "Two to six players, first to 200");
+        public static readonly LocString OnlineLuckyDrawWin = new("games.onlineLuckyDrawWin", "{0} reaches 200 and wins!");
+        public static readonly LocString OnlineLuckyDrawDesertWin = new("games.onlineLuckyDrawDesertWin", "{0} wins, everyone else left");
+        public static readonly LocString OnlineLuckyDrawChoosing = new("games.onlineLuckyDrawChoosing", "{0} is picking a target");
+        public static readonly LocString OnlineLuckyDrawNextDeal = new("games.onlineLuckyDrawNextDeal", "Joins next round");
         public static readonly LocString OnlineCrater = new("games.onlineCrater", "Crater");
         public static readonly LocString OnlineCraterHostHint = new("games.onlineCraterHostHint", "2 to 4 players, 45 seconds a turn");
         public static readonly LocString OnlineCraterWin = new("games.onlineCraterWin", "{0}'s moogles are the last ones standing!");
@@ -9133,6 +9141,122 @@ internal static class L
         public static readonly LocString BotMogsy = new("games.crater.botMogsy", "Mogsy");
         public static readonly LocString BotPukla = new("games.crater.botPukla", "Pukla");
         public static readonly LocString BotKumop = new("games.crater.botKumop", "Kumop");
+    }
+
+    internal static class Fuse
+    {
+        public static readonly LocString Title = new("games.fuse.title", "Fuse");
+        public static readonly LocString Hook = new("games.fuse.hook", "Drop bombs to blast the crates, grab their power-ups and be the last moogle standing; win two rounds to take the match.");
+        public static readonly LocString Wins = new("games.fuse.wins", "Wins");
+        public static readonly LocString RoundNumber = new("games.fuse.roundNumber", "Round {0}");
+        public static readonly LocString MatchPoint = new("games.fuse.matchPoint", "Match point");
+        public static readonly LocString Fight = new("games.fuse.fight", "Fight!");
+        public static readonly LocString RoundWon = new("games.fuse.roundWon", "Round won!");
+        public static readonly LocString RoundLost = new("games.fuse.roundLost", "Round lost");
+        public static readonly LocString KnockedOut = new("games.fuse.knockedOut", "Knocked out!");
+        public static readonly LocString Knockout = new("games.fuse.knockout", "KO!");
+        public static readonly LocString SuddenDeath = new("games.fuse.suddenDeath", "Sudden death!");
+        public static readonly LocString Chain = new("games.fuse.chain", "Chain x{0}!");
+        public static readonly LocString ExtraBomb = new("games.fuse.extraBomb", "Extra bomb!");
+        public static readonly LocString BiggerBlast = new("games.fuse.biggerBlast", "Bigger blast!");
+        public static readonly LocString SpeedUp = new("games.fuse.speedUp", "Speed up!");
+        public static readonly LocString Kick = new("games.fuse.kick", "Kick!");
+        public static readonly LocString RoundsWon = new("games.fuse.roundsWon", "Rounds won");
+        public static readonly LocString Knockouts = new("games.fuse.knockouts", "Knockouts");
+        public static readonly LocString Crates = new("games.fuse.crates", "Crates broken");
+        public static readonly LocString PowerUps = new("games.fuse.powerUps", "Power-ups");
+    }
+
+    internal static class Snip
+    {
+        public static readonly LocString Title = new("games.snip.title", "Snip");
+        public static readonly LocString Hook = new("games.snip.hook", "Swipe across the ropes to drop the crystal into the moogle's mouth, and catch all three stars on the way.");
+        public static readonly LocString Stars = new("games.snip.stars", "Stars");
+        public static readonly LocString Attempts = new("games.snip.attempts", "Attempts");
+        public static readonly LocString Cuts = new("games.snip.cuts", "Cuts");
+        public static readonly LocString Kupo = new("games.snip.kupo", "Kupo!");
+        public static readonly LocString Perfect = new("games.snip.perfect", "All three stars!");
+        public static readonly LocString Shattered = new("games.snip.shattered", "Shattered!");
+        public static readonly LocString Missed = new("games.snip.missed", "Missed!");
+        public static readonly LocString StarCount = new("games.snip.starCount", "{0} stars");
+    }
+
+    internal static class MiniGolf
+    {
+        public static readonly LocString Title = new("games.minigolf.title", "Mini Golf");
+        public static readonly LocString Hook = new("games.minigolf.hook", "Drag back from the ball to aim, let go to putt, and sink every hole in as few strokes as you can.");
+        public static readonly LocString EighteenHoles = new("games.minigolf.eighteenHoles", "18 holes");
+        public static readonly LocString NineHoles = new("games.minigolf.nineHoles", "9 holes");
+        public static readonly LocString Strokes = new("games.minigolf.strokes", "Strokes");
+        public static readonly LocString HolePar = new("games.minigolf.holePar", "Hole {0} · Par {1}");
+        public static readonly LocString HoleOf = new("games.minigolf.holeOf", "Hole {0} of {1}");
+        public static readonly LocString Scorecard = new("games.minigolf.scorecard", "Scorecard");
+        public static readonly LocString Hole = new("games.minigolf.hole", "Hole");
+        public static readonly LocString Par = new("games.minigolf.par", "Par");
+        public static readonly LocString Total = new("games.minigolf.total", "Total");
+        public static readonly LocString ToPar = new("games.minigolf.toPar", "To par");
+        public static readonly LocString Even = new("games.minigolf.even", "E");
+        public static readonly LocString You = new("games.minigolf.you", "You");
+        public static readonly LocString Birdies = new("games.minigolf.birdies", "Birdies");
+        public static readonly LocString HolesInOne = new("games.minigolf.holesInOne", "Holes in one");
+        public static readonly LocString HoleInOne = new("games.minigolf.holeInOne", "Hole in one!");
+        public static readonly LocString Eagle = new("games.minigolf.eagle", "Eagle!");
+        public static readonly LocString Birdie = new("games.minigolf.birdie", "Birdie!");
+        public static readonly LocString Bogey = new("games.minigolf.bogey", "Bogey");
+        public static readonly LocString DoubleBogey = new("games.minigolf.doubleBogey", "Double bogey");
+        public static readonly LocString PickedUp = new("games.minigolf.pickedUp", "Picked up");
+        public static readonly LocString Penalty = new("games.minigolf.penalty", "+1 stroke");
+        public static readonly LocString LipOut = new("games.minigolf.lipOut", "Lip out!");
+        public static readonly LocString NextHole = new("games.minigolf.nextHole", "Next hole");
+        public static readonly LocString FinishRound = new("games.minigolf.finishRound", "Finish round");
+        public static readonly LocString FirstPlace = new("games.minigolf.firstPlace", "1st");
+        public static readonly LocString SecondPlace = new("games.minigolf.secondPlace", "2nd");
+        public static readonly LocString ThirdPlace = new("games.minigolf.thirdPlace", "3rd");
+        public static readonly LocString FourthPlace = new("games.minigolf.fourthPlace", "4th");
+    }
+
+    internal static class Herd
+    {
+        public static readonly LocString Title = new("games.herd.title", "Herd");
+        public static readonly LocString Hook = new("games.herd.hook", "Pick a skill, then tap a moogle to dig, build, block or bash a way from the door to the hut. Save enough of them to clear the level.");
+        public static readonly LocString Saved = new("games.herd.saved", "Saved");
+        public static readonly LocString SavedOf = new("games.herd.savedOf", "{0} / {1}");
+        public static readonly LocString Needed = new("games.herd.needed", "Needed");
+        public static readonly LocString SkillsUsed = new("games.herd.skillsUsed", "Skills used");
+        public static readonly LocString Block = new("games.herd.block", "Block");
+        public static readonly LocString Dig = new("games.herd.dig", "Dig down");
+        public static readonly LocString Bridge = new("games.herd.bridge", "Bridge");
+        public static readonly LocString Climb = new("games.herd.climb", "Climb");
+        public static readonly LocString Float = new("games.herd.float", "Float");
+        public static readonly LocString Bash = new("games.herd.bash", "Bash");
+        public static readonly LocString BlockHint = new("games.herd.blockHint", "Stands firm and turns the others around");
+        public static readonly LocString DigHint = new("games.herd.digHint", "Digs straight down through the ground");
+        public static readonly LocString BridgeHint = new("games.herd.bridgeHint", "Lays a staircase of twelve steps");
+        public static readonly LocString ClimbHint = new("games.herd.climbHint", "Climbs every wall it meets from now on");
+        public static readonly LocString FloatHint = new("games.herd.floatHint", "Opens a pom-pom canopy on long falls");
+        public static readonly LocString BashHint = new("games.herd.bashHint", "Punches a tunnel straight ahead");
+        public static readonly LocString Paused = new("games.herd.paused", "Paused: tap moogles to give skills");
+        public static readonly LocString NukeArmed = new("games.herd.nukeArmed", "Tap again to pop them all");
+        public static readonly LocString GoalReached = new("games.herd.goalReached", "Goal reached!");
+    }
+
+    internal static class Tempo
+    {
+        public static readonly LocString Title = new("games.tempo.title", "Tempo");
+        public static readonly LocString Hook = new("games.tempo.hook", "Tap to jump to the beat over spikes and gaps, and hold on a jump pad to soar further. Three hidden coins wait on every level.");
+        public static readonly LocString Normal = new("games.tempo.normal", "Normal");
+        public static readonly LocString Practice = new("games.tempo.practice", "Practice");
+        public static readonly LocString Attempt = new("games.tempo.attempt", "Attempt");
+        public static readonly LocString AttemptNumber = new("games.tempo.attemptNumber", "Attempt {0}");
+        public static readonly LocString Percent = new("games.tempo.percent", "{0}%");
+        public static readonly LocString Complete = new("games.tempo.complete", "Complete!");
+        public static readonly LocString Flawless = new("games.tempo.flawless", "Flawless!");
+        public static readonly LocString Attempts = new("games.tempo.attempts", "Attempts");
+        public static readonly LocString Coins = new("games.tempo.coins", "Coins");
+        public static readonly LocString CoinsOf = new("games.tempo.coinsOf", "{0} / {1}");
+        public static readonly LocString Jumps = new("games.tempo.jumps", "Jumps");
+        public static readonly LocString Checkpoints = new("games.tempo.checkpoints", "Checkpoints");
+        public static readonly LocString PracticeHint = new("games.tempo.practiceHint", "Tap the flag to drop a checkpoint, the cross to lift the last one");
     }
 
     internal static class Nameplate

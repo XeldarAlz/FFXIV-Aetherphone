@@ -31,13 +31,19 @@ internal sealed record GameRoomState(
     PoolRoomStateDto? Pool,
     ConnectFourRoomStateDto? ConnectFour,
     GameRoomRoster? Roster,
+    BroadsideRoomStateDto? Broadside = null,
+    LuckyDrawRoomStateDto? LuckyDraw = null,
     CraterRoomStateDto? Crater = null);
 
 internal sealed record GameRoomPrivate(
     string RoomId,
     int Epoch,
     long Seq,
-    UnoYouDto? Uno);
+    UnoYouDto? Uno,
+    BroadsideYouDto? Broadside = null)
+{
+    public int ActionCount => Uno?.ActionCount ?? Broadside?.ActionCount ?? -1;
+}
 
 internal enum GameRoomApply
 {
@@ -239,7 +245,8 @@ internal sealed class GameRoomSession
         Absorb(requestedRoomId, fresh.Epoch, fresh.Seq, fresh);
     }
 
-    public void AbsorbHttpPrivate(string requestedRoomId, int epoch, long seq, UnoYouDto mine)
+    public void AbsorbHttpPrivate(string requestedRoomId, int epoch, long seq, UnoYouDto? uno,
+        BroadsideYouDto? broadside)
     {
         lock (gate)
         {
@@ -249,7 +256,7 @@ internal sealed class GameRoomSession
                 return;
             }
 
-            privateState = new GameRoomPrivate(requestedRoomId, epoch, seq, mine);
+            privateState = new GameRoomPrivate(requestedRoomId, epoch, seq, uno, broadside);
         }
     }
 
@@ -357,6 +364,20 @@ internal sealed class GameRoomSession
                 RosterOf(connectFour));
         }
 
+        if (string.Equals(snapshot.GameKind, GameRoomWire.BroadsideKind, StringComparison.Ordinal))
+        {
+            var broadside = Parse(snapshot.GameState, AethernetJsonContext.Default.BroadsideRoomStateDto);
+            return new GameRoomState(roomId, epoch, seq, snapshot, null, null, null, null, RosterOf(broadside),
+                Broadside: broadside);
+        }
+
+        if (string.Equals(snapshot.GameKind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
+        {
+            var luckyDraw = Parse(snapshot.GameState, AethernetJsonContext.Default.LuckyDrawRoomStateDto);
+            return new GameRoomState(roomId, epoch, seq, snapshot, null, null, null, null, RosterOf(luckyDraw),
+                LuckyDraw: luckyDraw);
+        }
+
         if (string.Equals(snapshot.GameKind, GameRoomWire.CraterKind, StringComparison.Ordinal))
         {
             var crater = Parse(snapshot.GameState, AethernetJsonContext.Default.CraterRoomStateDto);
@@ -365,6 +386,44 @@ internal sealed class GameRoomSession
         }
 
         return new GameRoomState(roomId, epoch, seq, snapshot, null, null, null, null, null);
+    }
+
+    private static GameRoomRoster? RosterOf(BroadsideRoomStateDto? broadside)
+    {
+        if (broadside is null)
+        {
+            return null;
+        }
+
+        var players = broadside.Players ?? Array.Empty<BroadsidePlayerDto>();
+        var members = new GameRoomMemberView[players.Length];
+        for (var index = 0; index < players.Length; index++)
+        {
+            var player = players[index];
+            members[index] = new GameRoomMemberView(player.UserId, player.DisplayName, player.Seat,
+                player.Away, player.Wins);
+        }
+
+        return new GameRoomRoster(broadside.HostUserId, members, broadside.ActionCount, broadside.WinnerSeat);
+    }
+
+    private static GameRoomRoster? RosterOf(LuckyDrawRoomStateDto? luckyDraw)
+    {
+        if (luckyDraw is null)
+        {
+            return null;
+        }
+
+        var players = luckyDraw.Players ?? Array.Empty<LuckyDrawPlayerDto>();
+        var members = new GameRoomMemberView[players.Length];
+        for (var index = 0; index < players.Length; index++)
+        {
+            var player = players[index];
+            members[index] = new GameRoomMemberView(player.UserId, player.DisplayName, player.Seat,
+                player.Away, player.Wins);
+        }
+
+        return new GameRoomRoster(luckyDraw.HostUserId, members, luckyDraw.ActionCount, luckyDraw.WinnerSeat);
     }
 
     private static GameRoomRoster? RosterOf(CraterRoomStateDto? crater)
@@ -574,7 +633,7 @@ internal sealed class GameRoomSession
             }
 
             privateState = new GameRoomPrivate(payload.RoomId, payload.Epoch, payload.PairSeq,
-                BuildPrivate(personal));
+                BuildPrivate(personal), BuildBroadsidePrivate(personal));
         }
     }
 
@@ -586,6 +645,16 @@ internal sealed class GameRoomSession
         }
 
         return Parse(personal.Payload, AethernetJsonContext.Default.UnoYouDto);
+    }
+
+    internal static BroadsideYouDto? BuildBroadsidePrivate(GamePrivateDto personal)
+    {
+        if (!string.Equals(personal.EventKind, GameRoomWire.BroadsideFleetEvent, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return Parse(personal.Payload, AethernetJsonContext.Default.BroadsideYouDto);
     }
 
     private bool AsksForResync(long localNowUnixMs)

@@ -4,11 +4,13 @@ using Aetherphone.Apps.Games.Fling;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
+using Aetherphone.Apps.Games.Herd;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Siege;
 using Aetherphone.Apps.Games.Slice;
 using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
+using Aetherphone.Apps.Games.Tempo;
 using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Games;
@@ -103,6 +105,13 @@ internal sealed class GamesLibrary
         new("fling", 2026, 10, 8),
         new("siege", 2026, 10, 8),
         new("crater", 2026, 10, 8),
+        new("fuse", 2026, 10, 8),
+        new("snip", 2026, 10, 8),
+        new("minigolf", 2026, 10, 8),
+        new("online.broadside", 2026, 10, 8),
+        new("online.luckydraw", 2026, 10, 8),
+        new("herd", 2026, 10, 8),
+        new("tempo", 2026, 10, 8),
         new("online.crater", 2026, 10, 8),
     };
 
@@ -583,11 +592,31 @@ internal sealed class GamesLibrary
             case "luckydraw":
             case "broadside":
             case "crater":
+            case "fuse":
                 return BestStreakAcrossTiers(gameId, out value, out tier);
             case "crates":
                 return StarTotal(stats.TotalStars(gameId), CratesLevels.Count, out value);
             case "delve":
                 return StarTotal(stats.TotalStars(gameId), DelveLevels.Count, out value);
+            case "snip":
+            {
+                var stars = stats.TotalStars(gameId);
+                value = stars > 0 ? Loc.T(L.Snip.StarCount, GameNumber.Label(stars)) : string.Empty;
+                return stars > 0 ? RecordKind.Score : RecordKind.None;
+            }
+            case "minigolf":
+                return Score(stats.Get(gameId).BestTimeSeconds, out value);
+            case "herd":
+            case "tempo":
+            {
+                var stars = stats.TotalStars(gameId);
+                var levels = gameId == "herd" ? HerdLevels.Count : TempoLevels.Count;
+                value = stars > 0
+                    ? Loc.T(L.Stage.StarsOf, GameNumber.Label(stars),
+                        GameNumber.Label(levels * GameStatsStore.MaxStars))
+                    : string.Empty;
+                return stars > 0 ? RecordKind.Score : RecordKind.None;
+            }
             default:
                 return RecordKind.None;
         }

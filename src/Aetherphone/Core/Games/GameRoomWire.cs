@@ -10,6 +10,38 @@ internal static class GameRoomWire
 
     public const string ConnectFourKind = "games.connectfour";
 
+    public const string BroadsideKind = "games.broadside";
+
+    public const int BroadsideSize = 10;
+
+    public const int BroadsideCellCount = BroadsideSize * BroadsideSize;
+
+    public const int BroadsideShipCount = 5;
+
+    public const int BroadsideMarkMiss = 1;
+
+    public const int BroadsideMarkHit = 2;
+
+    public const string BroadsideFleetEvent = "broadside.fleet";
+
+    public const string BroadsideResultMiss = "miss";
+
+    public const string BroadsideResultHit = "hit";
+
+    public const string BroadsideResultSunk = "sunk";
+
+    public const string BroadsideEndFleet = "fleet";
+
+    public const string BroadsideEndResign = "resign";
+
+    public const string BroadsideEndDesertion = "desertion";
+
+    public const string BroadsideEndTimeout = "timeout";
+
+    public const string ActionFire = "fire";
+
+    public const string LuckyDrawKind = "games.luckydraw";
+
     public const string CraterKind = "games.crater";
 
     public const string CraterTimeoutEvent = "crater.timeout";
@@ -133,6 +165,16 @@ internal static class GameRoomWire
     public const string ActionResign = "resign";
 
     public const string ActionDrop = "drop";
+
+    public const string ActionHit = "hit";
+
+    public const string ActionStay = "stay";
+
+    public const string ActionTarget = "target";
+
+    public const string LuckyDrawEndTarget = "target";
+
+    public const string LuckyDrawEndDesertion = "desertion";
 
     public const string ConnectFourEndConnect = "connect";
 

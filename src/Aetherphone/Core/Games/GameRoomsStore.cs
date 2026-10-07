@@ -277,6 +277,31 @@ internal sealed class GameRoomsStore : IDisposable
         SendAction(GameRoomWire.ActionPlace, -1, -1, -1, -1, 0f, 0f, x, y);
     }
 
+    public void SendFleet(BroadsideShipDto[] fleet)
+    {
+        SendAction(GameRoomWire.ActionPlace, -1, -1, fleet: fleet);
+    }
+
+    public void SendFire(int cell)
+    {
+        SendAction(GameRoomWire.ActionFire, -1, -1, cell: cell);
+    }
+
+    public void SendHit()
+    {
+        SendAction(GameRoomWire.ActionHit, -1, -1);
+    }
+
+    public void SendStay()
+    {
+        SendAction(GameRoomWire.ActionStay, -1, -1);
+    }
+
+    public void SendTarget(int seat)
+    {
+        SendAction(GameRoomWire.ActionTarget, -1, -1, targetSeat: seat);
+    }
+
     public void SendCraterShot(int weapon, int facing, float elevation, float power, int fuse, float walkX,
         float targetX, float targetY)
     {
@@ -288,8 +313,9 @@ internal sealed class GameRoomsStore : IDisposable
     // stale rather than applying it twice, so a lost response costs one refresh and never a double
     // move.
     private void SendAction(string action, int card, int color, int from = -1, int to = -1,
-        float angle = 0f, float power = 0f, float placeX = 0f, float placeY = 0f, int column = -1, int facing = 0,
-        int weapon = -1, int fuse = 0, float walkX = -1f)
+        float angle = 0f, float power = 0f, float placeX = 0f, float placeY = 0f, int column = -1, int cell = -1,
+        BroadsideShipDto[]? fleet = null, int targetSeat = -1, int facing = 0, int weapon = -1, int fuse = 0,
+        float walkX = -1f)
     {
         var target = room.RoomId;
         var roster = room.State?.Roster;
@@ -299,8 +325,8 @@ internal sealed class GameRoomsStore : IDisposable
         }
 
         var request = new GameRoomActionRequest(action, roster.ActionCount, card, color,
-            Guid.NewGuid().ToString("N"), from, to, angle, power, placeX, placeY, column, facing, weapon, fuse,
-            walkX);
+            Guid.NewGuid().ToString("N"), from, to, angle, power, placeX, placeY, column, cell, fleet, targetSeat,
+            facing, weapon, fuse, walkX);
         actInFlight = true;
         work.Run("room action", async token =>
         {
@@ -363,19 +389,19 @@ internal sealed class GameRoomsStore : IDisposable
 
     // The hand is stale the moment the board has moved past it. While the socket is live the
     // private lane usually lands first and this never fires; on a dead socket it is the only way
-    // cards arrive.
+    // cards (or a Broadside fleet) arrive.
     private void SyncYou()
     {
         var target = room.RoomId;
-        var board = room.State?.Uno;
-        if (target.Length == 0 || board is null)
+        var held = room.State;
+        if (target.Length == 0 || held?.Roster is not { } roster || (held.Uno is null && held.Broadside is null))
         {
             return;
         }
 
-        var mine = room.Private?.Uno;
+        var mine = room.Private;
         var seated = false;
-        var players = board.Players ?? Array.Empty<UnoPlayerDto>();
+        var players = roster.Players;
         var me = AccountId;
         for (var index = 0; index < players.Length; index++)
         {
@@ -386,7 +412,7 @@ internal sealed class GameRoomsStore : IDisposable
             }
         }
 
-        if (!seated || (mine is not null && mine.ActionCount >= board.ActionCount))
+        if (!seated || (mine is not null && mine.ActionCount >= roster.ActionCount))
         {
             return;
         }
@@ -412,10 +438,12 @@ internal sealed class GameRoomsStore : IDisposable
                 return;
             }
 
-            var mineFresh = GameRoomSession.BuildPrivate(new GamePrivateDto(you.EventKind, you.Payload));
-            if (mineFresh is not null)
+            var personal = new GamePrivateDto(you.EventKind, you.Payload);
+            var hand = GameRoomSession.BuildPrivate(personal);
+            var fleet = GameRoomSession.BuildBroadsidePrivate(personal);
+            if (hand is not null || fleet is not null)
             {
-                room.AbsorbHttpPrivate(target, you.Epoch, you.Seq, mineFresh);
+                room.AbsorbHttpPrivate(target, you.Epoch, you.Seq, hand, fleet);
             }
         }, () => Interlocked.Exchange(ref fetchingYou, 0));
     }

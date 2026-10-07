@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -19,6 +20,12 @@ internal static class BroadsideArt
     public static readonly Vector4 Cloud = new(0.96f, 0.98f, 1f, 1f);
     public static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
     public static readonly Vector4 Brass = new(0.92f, 0.74f, 0.36f, 1f);
+    public static readonly Vector4 Muted = new(1f, 1f, 1f, 0.6f);
+    public static readonly Vector4 Disabled = new(1f, 1f, 1f, 0.35f);
+    public static readonly LocString[] ShipNames =
+    {
+        L.Broadside.Dreadnought, L.Broadside.Cruiser, L.Broadside.Frigate, L.Broadside.Corvette, L.Broadside.Skiff,
+    };
     private static readonly Vector4 Shadow = new(0f, 0f, 0f, 0.28f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private const float CellInset = 0.06f;
@@ -30,6 +37,7 @@ internal static class BroadsideArt
     private const float SinkDrop = 0.16f;
     private const float PuffPop = 0.35f;
     private const float FirePop = 0.25f;
+    private const float PanelIconUnit = 0.32f;
 
     public static void DrawSky(ImDrawListPtr drawList, Rect grid, Vector4 accent, StageInk ink, float scale,
         float clock, bool compact, float alpha)
@@ -255,6 +263,56 @@ internal static class BroadsideArt
         ProgressRing.Glow(position, radius * 3f, color, 0.6f);
         drawList.AddCircleFilled(position, radius, ImGui.GetColorU32(color), 16);
         drawList.AddCircleFilled(position, radius * 0.45f, ImGui.GetColorU32(White with { W = 0.9f }), 10);
+    }
+
+    public static void DrawLastShot(ImDrawListPtr drawList, Vector2 center, float pitch, float scale)
+    {
+        var pulse = Pulse.Wave(Pulse.Calm);
+        drawList.AddCircle(center, pitch * (0.48f + 0.06f * pulse),
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.25f + 0.25f * pulse)), 20, MathF.Max(1f, 1.4f * scale));
+    }
+
+    public static void DrawGridLabel(ImDrawListPtr drawList, Rect grid, string text, float scale, float alpha)
+    {
+        var height = Typography.LineHeight(TextStyles.FootnoteEmphasized);
+        var position = new Vector2(grid.Min.X + 2f * scale,
+            grid.Min.Y - BroadsideLayout.LabelHeight * scale * 0.5f - height * 0.5f - 2f * scale);
+        Typography.Draw(drawList, position, Typography.FitText(text, grid.Width, TextStyles.FootnoteEmphasized),
+            Muted with { W = Muted.W * alpha }, TextStyles.FootnoteEmphasized);
+    }
+
+    public static void DrawFleetPanel(ImDrawListPtr drawList, Rect panel, float bigPitch, int sunkMask, string status,
+        Vector4 statusInk, float alpha, float scale)
+    {
+        var titleStyle = TextStyles.FootnoteEmphasized;
+        var lineHeight = Typography.LineHeight(titleStyle);
+        var top = panel.Min.Y + BroadsideLayout.LabelHeight * scale * 0.5f - lineHeight * 0.5f;
+        Typography.Draw(drawList, new Vector2(panel.Min.X, top),
+            Typography.FitText(Loc.T(L.Broadside.EnemyFleet), panel.Width, titleStyle), Muted with { W = Muted.W * alpha },
+            titleStyle);
+        var unit = MathF.Min(panel.Width / (BroadsideFleet.LongestShip + 0.5f), bigPitch * PanelIconUnit * 2f);
+        var rowHeight = unit * 1.25f;
+        var y = top + lineHeight + rowHeight * 0.6f;
+        for (var ship = 0; ship < BroadsideFleet.ShipCount; ship++)
+        {
+            DrawShipIcon(drawList, new Vector2(panel.Min.X, y), unit, BroadsideFleet.Length(ship),
+                (sunkMask & (1 << ship)) != 0, EnemyHull, scale);
+            y += rowHeight;
+        }
+
+        if (status.Length == 0)
+        {
+            return;
+        }
+
+        var statusStyle = TextStyles.SubheadlineEmphasized;
+        var statusHeight = Typography.LineHeight(statusStyle) + 12f * scale;
+        var statusTop = MathF.Min(panel.Max.Y - statusHeight, y);
+        var statusRect = new Rect(new Vector2(panel.Min.X, statusTop), new Vector2(panel.Max.X, statusTop + statusHeight));
+        Material.Frosted(drawList, statusRect.Min, statusRect.Max, statusHeight * 0.5f, scale, 0.85f * alpha);
+        Typography.DrawCentered(drawList, statusRect.Center,
+            Typography.FitText(status, statusRect.Width - 16f * scale, statusStyle), statusInk with { W = alpha },
+            statusStyle);
     }
 
     private static float LayoutPitch(Rect grid) => grid.Width / BroadsideFleet.Size;

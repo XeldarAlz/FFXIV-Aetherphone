@@ -18,14 +18,17 @@ using Aetherphone.Apps.Games.Flap;
 using Aetherphone.Apps.Games.Fling;
 using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.Fuse;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
+using Aetherphone.Apps.Games.Herd;
 using Aetherphone.Apps.Games.Hop;
 using Aetherphone.Apps.Games.Invaders;
 using Aetherphone.Apps.Games.Mahjong;
 using Aetherphone.Apps.Games.MoogleClicker;
 using Aetherphone.Apps.Games.Lander;
 using Aetherphone.Apps.Games.LuckyDraw;
+using Aetherphone.Apps.Games.MiniGolf;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Pairs;
@@ -37,6 +40,7 @@ using Aetherphone.Apps.Games.Simon;
 using Aetherphone.Apps.Games.Skyfall;
 using Aetherphone.Apps.Games.Slice;
 using Aetherphone.Apps.Games.Snake;
+using Aetherphone.Apps.Games.Snip;
 using Aetherphone.Apps.Games.Solitaire;
 using Aetherphone.Apps.Games.Spiral;
 using Aetherphone.Apps.Games.Squadron;
@@ -44,6 +48,7 @@ using Aetherphone.Apps.Games.Stack;
 using Aetherphone.Apps.Games.Sudoku;
 using Aetherphone.Apps.Games.Sweeper;
 using Aetherphone.Apps.Games.Swoop;
+using Aetherphone.Apps.Games.Tempo;
 using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Apps.Games.Trails;
 using Aetherphone.Apps.Games.Thrust;
@@ -230,6 +235,11 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new FlingApp(),
             new SiegeApp(),
             new CraterApp(textures),
+            new FuseApp(),
+            new SnipApp(),
+            new MiniGolfApp(),
+            new HerdApp(textures),
+            new TempoApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

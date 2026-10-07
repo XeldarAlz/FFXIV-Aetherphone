@@ -1,23 +1,31 @@
+using Aetherphone.Apps.Games.Broadside;
 using Aetherphone.Apps.Games.Crater;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.Framework.Cards;
+using Aetherphone.Apps.Games.LuckyDraw;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Online;
 
 internal static class OnlineGameArt
 {
     private const int UnoMaxPlayers = 6;
+    private const int LuckyDrawMaxPlayers = 6;
     private const int DuelMaxPlayers = 2;
     private const float UnoFanAngle = 0.30f;
+    private const float LuckyFanAngle = 0.26f;
 
     public static readonly string[] Kinds =
     {
         GameRoomWire.UnoKind, GameRoomWire.ChessKind, GameRoomWire.PoolKind, GameRoomWire.ConnectFourKind,
+        GameRoomWire.BroadsideKind,
+        GameRoomWire.LuckyDrawKind,
         GameRoomWire.CraterKind,
     };
 
@@ -25,8 +33,19 @@ internal static class OnlineGameArt
     private static readonly Vector4 White = new(0.97f, 0.97f, 0.99f, 1f);
     private static readonly Vector4 Shadow = new(0f, 0f, 0f, 0.30f);
 
+    private static readonly CardDesign[] LuckyFan =
+    {
+        CardDesign.Action(FontAwesomeIcon.Snowflake, LuckyDrawRenderer.FreezeTint), CardDesign.Numbered(7),
+        CardDesign.Action(FontAwesomeIcon.ShieldAlt, LuckyDrawRenderer.ChanceTint),
+    };
+
     public static string AccentId(string kind)
     {
+        if (string.Equals(kind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
+        {
+            return OnlineLuckyDrawTable.AccentId;
+        }
+
         if (string.Equals(kind, GameRoomWire.ChessKind, StringComparison.Ordinal))
         {
             return "chess";
@@ -35,6 +54,11 @@ internal static class OnlineGameArt
         if (string.Equals(kind, GameRoomWire.PoolKind, StringComparison.Ordinal))
         {
             return "pool";
+        }
+
+        if (string.Equals(kind, GameRoomWire.BroadsideKind, StringComparison.Ordinal))
+        {
+            return "broadside";
         }
 
         if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
@@ -49,6 +73,11 @@ internal static class OnlineGameArt
 
     public static int MaxPlayers(string kind)
     {
+        if (string.Equals(kind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
+        {
+            return LuckyDrawMaxPlayers;
+        }
+
         if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
         {
             return GameRoomWire.CraterMaxPlayers;
@@ -59,6 +88,12 @@ internal static class OnlineGameArt
 
     public static void Draw(ImDrawListPtr drawList, string kind, Vector2 center, float size, float scale)
     {
+        if (string.Equals(kind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
+        {
+            DrawLuckyFan(drawList, center, size, scale);
+            return;
+        }
+
         if (string.Equals(kind, GameRoomWire.ChessKind, StringComparison.Ordinal))
         {
             if (!AppIconTile.TryDrawGlyph(drawList, "chess", center, size * AppIconTextures.GlyphFraction, White))
@@ -81,6 +116,12 @@ internal static class OnlineGameArt
             return;
         }
 
+        if (string.Equals(kind, GameRoomWire.BroadsideKind, StringComparison.Ordinal))
+        {
+            DrawBroadsideMedallion(drawList, center, size, scale);
+            return;
+        }
+
         if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
         {
             DrawCraterMedallion(drawList, center, size);
@@ -88,6 +129,22 @@ internal static class OnlineGameArt
         }
 
         DrawUnoFan(drawList, center, size, scale);
+    }
+
+    private static void DrawBroadsideMedallion(ImDrawListPtr drawList, Vector2 center, float size, float scale)
+    {
+        var half = size * 0.46f;
+        var clock = (float)ImGui.GetTime();
+        drawList.AddCircleFilled(center + new Vector2(0f, half * 0.14f), half, ImGui.GetColorU32(Shadow), 48);
+        Squircle.FillVerticalGradient(drawList, center - new Vector2(half, half), center + new Vector2(half, half),
+            size * 0.16f, ImGui.GetColorU32(BroadsideArt.SkyTop), ImGui.GetColorU32(BroadsideArt.SkyBottom));
+        var pitch = size * 0.2f;
+        BroadsideArt.DrawPuff(drawList, center + new Vector2(-size * 0.2f, size * 0.24f), pitch, clock, 3, -1f);
+        var burst = center + new Vector2(size * 0.22f, size * 0.22f);
+        drawList.AddCircleFilled(burst, pitch * 0.34f, ImGui.GetColorU32(BroadsideArt.Ember), 16);
+        drawList.AddCircleFilled(burst, pitch * 0.18f, ImGui.GetColorU32(BroadsideArt.Flame), 12);
+        var hull = new Rect(center + new Vector2(-size * 0.36f, -size * 0.22f), center + new Vector2(size * 0.36f, 0f));
+        BroadsideArt.DrawAirship(drawList, hull, true, BroadsideArt.Hull, scale, clock, -1f, 1f);
     }
 
     private static void DrawCraterMedallion(ImDrawListPtr drawList, Vector2 center, float size)
@@ -129,6 +186,19 @@ internal static class OnlineGameArt
             var offset = new Vector2(spread * cardWidth * 0.55f, MathF.Abs(spread) * cardWidth * 0.14f);
             var rect = UnoCardArt.RectAround(center + offset, cardWidth);
             UnoCardArt.DrawBack(drawList, rect, scale, 1f, spread * UnoFanAngle);
+        }
+    }
+
+    private static void DrawLuckyFan(ImDrawListPtr drawList, Vector2 center, float size, float scale)
+    {
+        var cardWidth = size * 0.4f;
+        var accent = OnlineLuckyDrawTable.Accent;
+        for (var index = 0; index < LuckyFan.Length; index++)
+        {
+            var spread = index - 1;
+            var offset = new Vector2(spread * cardWidth * 0.62f, MathF.Abs(spread) * cardWidth * 0.12f);
+            CardFace.Draw(drawList, new CardPose(center + offset, cardWidth, spread * LuckyFanAngle), LuckyFan[index],
+                accent, scale);
         }
     }
 
