@@ -178,7 +178,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         session = new GameSession(stats, leaderboard, leaderboard);
         fx = new ScreenFx(backdrop);
         onlineHub = new OnlineHub(gameRooms, OpenOnlineRoom);
-        onlineRoom = new OnlineRoomView(gameRooms);
+        onlineRoom = new OnlineRoomView(gameRooms, textures);
         games = new IMiniGame[]
         {
             new SweeperApp(),
@@ -340,6 +340,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         {
             games[index].Dispose();
         }
+
+        onlineRoom.Dispose();
     }
 
     public void Draw(in PhoneContext context)

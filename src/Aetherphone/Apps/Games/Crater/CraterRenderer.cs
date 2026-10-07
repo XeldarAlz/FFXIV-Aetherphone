@@ -79,9 +79,12 @@ internal static class CraterRenderer
     }
 
     public static void Bodies(ImDrawListPtr drawList, in Camera2D camera, CraterBoard board, ReadOnlySpan<float> hurt,
-        bool showLauncher, float time)
+        bool showLauncher, float time) =>
+        Bodies(drawList, in camera, board.Moogles, board.ActiveMoogle, board.ActiveAim, hurt, showLauncher, time);
+
+    public static void Bodies(ImDrawListPtr drawList, in Camera2D camera, ReadOnlySpan<CraterMoogle> moogles,
+        int activeMoogle, float activeAim, ReadOnlySpan<float> hurt, bool showLauncher, float time)
     {
-        var moogles = board.Moogles;
         var radius = camera.Px(CraterRules.MoogleRadius);
         for (var index = 0; index < moogles.Length; index++)
         {
@@ -101,10 +104,11 @@ internal static class CraterRenderer
 
             var flap = moogle.Grounded ? 0.15f * MathF.Sin(time * 2f + index) : MathF.Sin(time * 18f + index);
             var sway = MathF.Sin(time * 2.4f + index * 1.3f);
-            CraterArt.Moogle(drawList, center, radius, moogle.Facing, team, flap, hurt[index], sway);
-            if (showLauncher && index == board.ActiveMoogle)
+            CraterArt.Moogle(drawList, center, radius, moogle.Facing, team, flap, index < hurt.Length ? hurt[index] : 0f,
+                sway);
+            if (showLauncher && index == activeMoogle)
             {
-                var direction = CraterRules.AimDirection(board.Aim(index), moogle.Facing);
+                var direction = CraterRules.AimDirection(activeAim, moogle.Facing);
                 CraterArt.Launcher(drawList, center, radius, direction, team);
             }
 
@@ -116,9 +120,12 @@ internal static class CraterRenderer
     }
 
     public static void Projectiles(ImDrawListPtr drawList, in Camera2D camera, CraterBoard board, float time,
-        float scale)
+        float scale) =>
+        Projectiles(drawList, in camera, board.Projectiles, time, scale);
+
+    public static void Projectiles(ImDrawListPtr drawList, in Camera2D camera,
+        ReadOnlySpan<CraterProjectile> projectiles, float time, float scale)
     {
-        var projectiles = board.Projectiles;
         for (var index = 0; index < projectiles.Length; index++)
         {
             ref readonly var projectile = ref projectiles[index];
@@ -147,9 +154,12 @@ internal static class CraterRenderer
     }
 
     public static void Labels(ImDrawListPtr drawList, in Camera2D camera, CraterBoard board, CraterLabels labels,
-        bool showMarker, float time, float scale)
+        bool showMarker, float time, float scale) =>
+        Labels(drawList, in camera, board.Moogles, board.ActiveMoogle, labels.TeamNames, showMarker, time, scale);
+
+    public static void Labels(ImDrawListPtr drawList, in Camera2D camera, ReadOnlySpan<CraterMoogle> moogles,
+        int activeMoogle, ReadOnlySpan<string> teamNames, bool showMarker, float time, float scale)
     {
-        var moogles = board.Moogles;
         for (var index = 0; index < moogles.Length; index++)
         {
             ref readonly var moogle = ref moogles[index];
@@ -179,9 +189,9 @@ internal static class CraterRenderer
                 head.Y - barHeight * 0.5f);
             Shadowed(drawList, healthCenter, health, White, TextStyles.Caption2, scale);
             var nameCenter = new Vector2(head.X, head.Y - barHeight - NameGap * scale);
-            Shadowed(drawList, nameCenter, labels.TeamName(moogle.Team), GamePalette.Lighten(team, 0.35f),
-                TextStyles.Caption1, scale);
-            if (!showMarker || index != board.ActiveMoogle)
+            var name = moogle.Team >= 0 && moogle.Team < teamNames.Length ? teamNames[moogle.Team] : string.Empty;
+            Shadowed(drawList, nameCenter, name, GamePalette.Lighten(team, 0.35f), TextStyles.Caption1, scale);
+            if (!showMarker || index != activeMoogle)
             {
                 continue;
             }

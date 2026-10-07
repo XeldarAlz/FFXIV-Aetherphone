@@ -391,25 +391,8 @@ internal sealed partial class CraterBoard
         return true;
     }
 
-    public bool TryTeleportSpot(Vector2 target, out Vector2 destination)
-    {
-        destination = target;
-        var radius = CraterRules.MoogleRadius;
-        if (target.X < radius || target.X > CraterRules.WorldWidth - radius || target.Y < 0f ||
-            target.Y >= WaterLevel || terrain.IsSolid(target))
-        {
-            return false;
-        }
-
-        var top = GroundTop(target.X, target.Y);
-        if (top >= WaterLevel - radius)
-        {
-            return false;
-        }
-
-        destination = new Vector2(target.X, top - radius);
-        return !terrain.CollideCircle(destination - new Vector2(0f, radius * 0.2f), radius * 0.8f, out _, out _);
-    }
+    public bool TryTeleportSpot(Vector2 target, out Vector2 destination) =>
+        CraterFooting.TeleportSpot(terrain, WaterLevel, target, out destination);
 
     public bool TryTakeEvent(out CraterEvent entry)
     {
@@ -456,21 +439,8 @@ internal sealed partial class CraterBoard
         return false;
     }
 
-    public CraterProjectile MakeProjectile(int moogle, in CraterShot shot)
-    {
-        var direction = CraterRules.AimDirection(shot.Elevation, shot.Facing);
-        var kind = CraterRules.KindOf(shot.Weapon);
-        return new CraterProjectile
-        {
-            Position = moogles[moogle].Position + direction * CraterRules.MuzzleDistance,
-            Velocity = direction * CraterRules.LaunchSpeed(shot.Power),
-            Kind = kind,
-            Alive = true,
-            Fuse = Math.Clamp(shot.Fuse, CraterRules.MinFuse, CraterRules.MaxFuse),
-            Owner = moogle,
-            Team = moogles[moogle].Team,
-        };
-    }
+    public CraterProjectile MakeProjectile(int moogle, in CraterShot shot) =>
+        CraterBallistics.Launch(moogles[moogle].Position, moogle, moogles[moogle].Team, shot);
 
     private void PlaceTeams()
     {

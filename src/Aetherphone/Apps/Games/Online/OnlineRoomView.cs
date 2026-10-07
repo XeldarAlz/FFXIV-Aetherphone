@@ -9,6 +9,7 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Games.Online;
 
@@ -16,7 +17,7 @@ namespace Aetherphone.Apps.Games.Online;
 // the room hosts, and the winner screen that leads back to another round. Everything rendered
 // here is the server's word; a tap only ever sends an intent and the next event repaints the
 // truth.
-internal sealed class OnlineRoomView
+internal sealed class OnlineRoomView : IDisposable
 {
     private const string NavId = "games.room.nav";
     private const float HeaderHeight = 42f;
@@ -57,6 +58,7 @@ internal sealed class OnlineRoomView
     private readonly OnlineConnectFourTable connectFourTable;
     private readonly OnlineBroadsideTable broadsideTable;
     private readonly OnlineLuckyDrawTable luckyDrawTable;
+    private readonly OnlineCraterTable craterTable;
     private readonly OnlineFinishHold finishHold = new();
     private readonly string[] rosterNames = new string[MaxSeats];
     private readonly string[] rosterWins = new string[MaxSeats];
@@ -73,7 +75,7 @@ internal sealed class OnlineRoomView
     private GameRoomRoster? labeledRoster;
     private LanguageInfo? labelLanguage;
 
-    public OnlineRoomView(GameRoomsStore store)
+    public OnlineRoomView(GameRoomsStore store, ITextureProvider textures)
     {
         this.store = store;
         unoTable = new OnlineUnoTable(store);
@@ -82,6 +84,12 @@ internal sealed class OnlineRoomView
         connectFourTable = new OnlineConnectFourTable(store);
         broadsideTable = new OnlineBroadsideTable(store);
         luckyDrawTable = new OnlineLuckyDrawTable(store);
+        craterTable = new OnlineCraterTable(store, textures);
+    }
+
+    public void Dispose()
+    {
+        craterTable.Dispose();
     }
 
     public void Enter()
@@ -96,13 +104,15 @@ internal sealed class OnlineRoomView
         connectFourTable.Reset();
         broadsideTable.Reset();
         luckyDrawTable.Reset();
+        craterTable.Reset();
         finishHold.Clear();
         lastSeenPhase = -1;
         labeledRoster = null;
         finishedLabel = string.Empty;
     }
 
-    public bool WantsLandscape => ShowsPool(store.Room.State) && store.Room.RoomId.Length > 0;
+    public bool WantsLandscape =>
+        (ShowsPool(store.Room.State) || ShowsCrater(store.Room.State)) && store.Room.RoomId.Length > 0;
 
     public void Draw(in PhoneContext context, Action back, AppSkin ui, bool landscape, string backTitle)
     {
@@ -188,6 +198,13 @@ internal sealed class OnlineRoomView
         if (held.LuckyDraw is not null)
         {
             luckyDrawTable.Draw(body, theme, scale, held.Snapshot, held.LuckyDraw, FreshNotice(), finishHold);
+            return;
+        }
+
+        if (held.Crater is not null)
+        {
+            craterTable.Draw(body, theme, scale, held.Snapshot, held.Crater, FreshNotice(),
+                fullScreenTable ? back : null, finishHold);
         }
     }
 
@@ -206,11 +223,13 @@ internal sealed class OnlineRoomView
 
     private bool ShowsPool(GameRoomState? held) => held is { Pool: not null } && ShowsTable(held);
 
+    private bool ShowsCrater(GameRoomState? held) => held is { Crater: not null } && ShowsTable(held);
+
     private bool ShowsTable(GameRoomState? held)
     {
         if (held is null || held.Roster is null
             || (held.Uno is null && held.Chess is null && held.Pool is null && held.ConnectFour is null
-                && held.Broadside is null && held.LuckyDraw is null))
+                && held.Broadside is null && held.LuckyDraw is null && held.Crater is null))
         {
             return false;
         }
@@ -600,6 +619,21 @@ internal sealed class OnlineRoomView
                 GameRoomWire.LuckyDrawEndTarget => Loc.T(L.Games.OnlineLuckyDrawWin, winnerName),
                 GameRoomWire.LuckyDrawEndDesertion => Loc.T(L.Games.OnlineLuckyDrawDesertWin, winnerName),
                 _ => Loc.T(L.Games.OnlineWinner, winnerName),
+            };
+        }
+
+        if (held.Crater is not null)
+        {
+            return held.Crater.EndKind switch
+            {
+                GameRoomWire.CraterEndKnockout => Loc.T(L.Games.OnlineCraterWin, winnerName),
+                GameRoomWire.CraterEndDraw => Loc.T(L.Games.OnlineCraterDraw),
+                GameRoomWire.CraterEndTimeout => Loc.T(L.Games.OnlineTimeoutWin, winnerName),
+                GameRoomWire.CraterEndResign => Loc.T(L.Games.OnlineResignWin, winnerName),
+                GameRoomWire.CraterEndDesertion => Loc.T(L.Games.OnlineDesertWin, winnerName),
+                _ => winnerName.Length > 0
+                    ? Loc.T(L.Games.OnlineWinner, winnerName)
+                    : Loc.T(L.Games.OnlineRoundVoid),
             };
         }
 

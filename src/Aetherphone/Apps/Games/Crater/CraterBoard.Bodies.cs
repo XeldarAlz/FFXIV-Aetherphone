@@ -3,16 +3,11 @@ namespace Aetherphone.Apps.Games.Crater;
 internal sealed partial class CraterBoard
 {
     private const float FloorNormal = -0.55f;
-    private const float CeilingNormal = 0.2f;
-    private const float WallNormal = -0.5f;
     private const float BodyBounce = 0.25f;
     private const float BodyDrag = 0.96f;
     private const float StillSpeed = 0.1f;
     private const float StillLimitSeconds = 0.4f;
-    private const float GroundEpsilon = 0.002f;
     private const float LandingSlack = 0.05f;
-    private const float ClearanceLift = 0.04f;
-    private const float ClearanceShrink = 0.92f;
     private const float KnockLift = 0.6f;
     private const float KnockClearance = 0.02f;
     private const float HardLanding = 1f;
@@ -31,13 +26,7 @@ internal sealed partial class CraterBoard
         return true;
     }
 
-    public float GroundTop(float x, float fromY)
-    {
-        var spread = CraterRules.MoogleRadius * CraterRules.FootSpread;
-        var top = terrain.SurfaceY(x, fromY);
-        top = MathF.Min(top, terrain.SurfaceY(x - spread, fromY));
-        return MathF.Min(top, terrain.SurfaceY(x + spread, fromY));
-    }
+    public float GroundTop(float x, float fromY) => CraterFooting.GroundTop(terrain, x, fromY);
 
     private void StepBodies(float deltaSeconds)
     {
@@ -91,12 +80,12 @@ internal sealed partial class CraterBoard
         var nextX = moogle.Position.X + direction * CraterRules.WalkSpeed * deltaSeconds;
         var bottom = moogle.Position.Y + CraterRules.MoogleRadius;
         var limit = bottom - CraterRules.StepUp;
-        if (FootBlocked(nextX, limit))
+        if (CraterFooting.FootBlocked(terrain, nextX, limit))
         {
             return;
         }
 
-        var top = GroundTop(nextX, limit + GroundEpsilon);
+        var top = GroundTop(nextX, limit + CraterFooting.GroundEpsilon);
         if (top > bottom + CraterRules.SnapDown)
         {
             moogle.Position = new Vector2(nextX, moogle.Position.Y);
@@ -105,7 +94,7 @@ internal sealed partial class CraterBoard
         }
 
         var center = new Vector2(nextX, top - CraterRules.MoogleRadius);
-        if (Obstructed(center, direction))
+        if (CraterFooting.Obstructed(terrain, center, direction))
         {
             return;
         }
@@ -113,36 +102,17 @@ internal sealed partial class CraterBoard
         moogle.Position = center;
     }
 
-    private bool FootBlocked(float x, float limit)
-    {
-        var spread = CraterRules.MoogleRadius * CraterRules.FootSpread;
-        var probeY = limit - CraterRules.MetresPerCell * 0.5f;
-        return terrain.IsSolid(new Vector2(x, probeY)) || terrain.IsSolid(new Vector2(x - spread, probeY)) ||
-               terrain.IsSolid(new Vector2(x + spread, probeY));
-    }
-
-    private bool Obstructed(Vector2 center, int direction)
-    {
-        var lifted = center - new Vector2(0f, ClearanceLift);
-        if (!terrain.CollideCircle(lifted, CraterRules.MoogleRadius * ClearanceShrink, out var normal, out _))
-        {
-            return false;
-        }
-
-        return normal.Y > CeilingNormal || normal.X * direction < WallNormal;
-    }
-
     private void KeepSupported(ref CraterMoogle moogle)
     {
         var bottom = moogle.Position.Y + CraterRules.MoogleRadius;
-        var top = GroundTop(moogle.Position.X, bottom - CraterRules.StepUp + GroundEpsilon);
+        var top = GroundTop(moogle.Position.X, bottom - CraterRules.StepUp + CraterFooting.GroundEpsilon);
         if (top > bottom + CraterRules.SnapDown)
         {
             Unground(ref moogle, Vector2.Zero);
             return;
         }
 
-        if (top > bottom + GroundEpsilon)
+        if (top > bottom + CraterFooting.GroundEpsilon)
         {
             moogle.Position = new Vector2(moogle.Position.X, top - CraterRules.MoogleRadius);
         }
