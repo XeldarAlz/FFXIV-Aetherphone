@@ -133,6 +133,15 @@ internal static class AppIconArt
             case "gloop":
                 DrawGloop(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "drift":
+                DrawDrift(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "crawler":
+                DrawCrawler(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "trails":
+                DrawTrails(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -814,6 +823,88 @@ internal static class AppIconArt
         var falling = At(center, extent, 0.5f, -0.6f);
         drawList.AddCircleFilled(falling, radius * 0.72f, ink, 20);
         drawList.AddCircleFilled(falling + new Vector2(-radius * 0.22f, -radius * 0.22f), radius * 0.16f, hole, 10);
+    }
+
+    private static readonly float[] DriftRockReach = { 1f, 0.8f, 0.96f, 0.76f, 1f, 0.84f, 0.98f, 0.78f, 0.93f };
+
+    private static void DrawDrift(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var rock = At(center, extent, 0.36f, -0.36f);
+        var rockRadius = extent * 0.52f;
+        var step = MathF.Tau / DriftRockReach.Length;
+        for (var vertex = 0; vertex < DriftRockReach.Length; vertex++)
+        {
+            var next = (vertex + 1) % DriftRockReach.Length;
+            var first = rock + new Vector2(MathF.Cos(vertex * step), MathF.Sin(vertex * step)) *
+                rockRadius * DriftRockReach[vertex];
+            var second = rock + new Vector2(MathF.Cos(next * step), MathF.Sin(next * step)) *
+                rockRadius * DriftRockReach[next];
+            drawList.AddTriangleFilled(rock, first, second, ink);
+        }
+
+        drawList.AddCircleFilled(rock + new Vector2(-rockRadius * 0.2f, rockRadius * 0.12f), rockRadius * 0.2f, hole, 14);
+        drawList.AddCircleFilled(rock + new Vector2(rockRadius * 0.3f, -rockRadius * 0.28f), rockRadius * 0.12f, hole, 12);
+        var ship = At(center, extent, -0.62f, 0.62f);
+        var forward = Vector2.Normalize(rock - ship);
+        var side = new Vector2(-forward.Y, forward.X);
+        var size = extent * 0.36f;
+        var nose = ship + forward * size * 1.25f;
+        var notch = ship - forward * size * 0.5f;
+        var leftWing = ship - forward * size + side * size * 0.85f;
+        var rightWing = ship - forward * size - side * size * 0.85f;
+        drawList.AddTriangleFilled(nose, leftWing, notch, ink);
+        drawList.AddTriangleFilled(nose, notch, rightWing, ink);
+        var shotRadius = extent * 0.08f;
+        drawList.AddCircleFilled(ship + forward * size * 1.7f, shotRadius, ink, 10);
+        drawList.AddCircleFilled(ship + forward * size * 2.2f, shotRadius, ink, 10);
+    }
+
+    private static void DrawCrawler(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var segmentRadius = extent * 0.2f;
+        var legWidth = extent * 0.07f;
+        for (var segment = 0; segment < 4; segment++)
+        {
+            var body = At(center, extent, -0.8f + segment * 0.36f, -0.42f + (segment % 2) * 0.08f);
+            drawList.AddLine(body, body + new Vector2(-segmentRadius * 0.5f, segmentRadius * 1.5f), ink, legWidth);
+            drawList.AddLine(body, body + new Vector2(segmentRadius * 0.5f, segmentRadius * 1.5f), ink, legWidth);
+            drawList.AddCircleFilled(body, segmentRadius, ink, 18);
+        }
+
+        var head = At(center, extent, 0.66f, -0.42f);
+        drawList.AddLine(head, head + new Vector2(extent * 0.22f, -extent * 0.4f), ink, legWidth);
+        drawList.AddLine(head, head + new Vector2(extent * 0.38f, -extent * 0.24f), ink, legWidth);
+        drawList.AddCircleFilled(head, segmentRadius * 1.2f, ink, 20);
+        drawList.AddCircleFilled(head + new Vector2(segmentRadius * 0.4f, -segmentRadius * 0.2f), segmentRadius * 0.28f,
+            hole, 10);
+        var cap = At(center, extent, -0.1f, 0.62f);
+        var capRadius = extent * 0.46f;
+        drawList.PathClear();
+        drawList.PathArcTo(cap, capRadius, MathF.PI, MathF.Tau, 20);
+        drawList.PathFillConvex(ink);
+        drawList.AddRectFilled(new Vector2(cap.X - capRadius * 0.32f, cap.Y - 1f),
+            new Vector2(cap.X + capRadius * 0.32f, cap.Y + capRadius * 0.62f), ink, capRadius * 0.12f);
+        drawList.AddCircleFilled(cap + new Vector2(-capRadius * 0.42f, -capRadius * 0.38f), capRadius * 0.14f, hole, 10);
+        drawList.AddCircleFilled(cap + new Vector2(capRadius * 0.28f, -capRadius * 0.56f), capRadius * 0.12f, hole, 10);
+    }
+
+    private static void DrawTrails(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        DrawTrail(drawList, At(center, extent, -0.82f, 0.9f), At(center, extent, -0.82f, -0.22f),
+            At(center, extent, 0.3f, -0.22f), extent, ink, hole);
+        DrawTrail(drawList, At(center, extent, 0.82f, -0.9f), At(center, extent, 0.82f, 0.3f),
+            At(center, extent, -0.26f, 0.3f), extent, ink, hole);
+    }
+
+    private static void DrawTrail(ImDrawListPtr drawList, Vector2 start, Vector2 corner, Vector2 head, float extent,
+        uint ink, uint hole)
+    {
+        var thickness = extent * 0.16f;
+        drawList.AddLine(start, corner, ink, thickness);
+        drawList.AddLine(corner, head, ink, thickness);
+        drawList.AddCircleFilled(corner, thickness * 0.5f, ink, 12);
+        drawList.AddCircleFilled(head, extent * 0.22f, ink, 20);
+        drawList.AddCircleFilled(head, extent * 0.08f, hole, 12);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

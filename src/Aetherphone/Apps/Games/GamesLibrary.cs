@@ -82,6 +82,9 @@ internal sealed class GamesLibrary
         new("spiral", 2026, 10, 8),
         new("mahjong", 2026, 10, 8),
         new("gloop", 2026, 10, 8),
+        new("drift", 2026, 10, 8),
+        new("crawler", 2026, 10, 8),
+        new("trails", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -483,6 +486,8 @@ internal sealed class GamesLibrary
             case "updraft":
             case "swoop":
             case "spiral":
+            case "drift":
+            case "crawler":
                 return Score(stats.Get(gameId).BestScore, out value);
             case "match3":
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(GemSwapApp.BlitzStatId).BestScore),
@@ -537,6 +542,7 @@ internal sealed class GamesLibrary
                 return BestTimeAcrossTiers(gameId, out value, out tier);
             case "reversi":
             case "chess":
+            case "trails":
                 return BestStreakAcrossTiers(gameId, out value, out tier);
             default:
                 return RecordKind.None;

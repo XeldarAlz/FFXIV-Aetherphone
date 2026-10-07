@@ -5,8 +5,10 @@ using Aetherphone.Apps.Games.BubbleShooter;
 using Aetherphone.Apps.Games.CapMan;
 using Aetherphone.Apps.Games.Chess;
 using Aetherphone.Apps.Games.Coil;
+using Aetherphone.Apps.Games.Crawler;
 using Aetherphone.Apps.Games.CrystalDrop;
 using Aetherphone.Apps.Games.Doom;
+using Aetherphone.Apps.Games.Drift;
 using Aetherphone.Apps.Games.Flap;
 using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
@@ -31,6 +33,7 @@ using Aetherphone.Apps.Games.Sudoku;
 using Aetherphone.Apps.Games.Sweeper;
 using Aetherphone.Apps.Games.Swoop;
 using Aetherphone.Apps.Games.Tetris;
+using Aetherphone.Apps.Games.Trails;
 using Aetherphone.Apps.Games.Trivia;
 using Aetherphone.Apps.Games.Twenty48;
 using Aetherphone.Apps.Games.Updraft;
@@ -195,6 +198,9 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new SpiralApp(),
             new MahjongApp(),
             new GloopApp(),
+            new DriftApp(),
+            new CrawlerApp(),
+            new TrailsApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

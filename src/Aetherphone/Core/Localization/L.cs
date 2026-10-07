@@ -8705,6 +8705,53 @@ internal static class L
         public static readonly LocString Rival = new("games.gloop.rival", "Rival");
     }
 
+    internal static class Drift
+    {
+        public static readonly LocString Title = new("games.drift.title", "Drift");
+        public static readonly LocString Hook = new("games.drift.hook", "Rotate, thrust and blast the drifting rocks to pieces. Every edge wraps around, and saucers hunt you from wave 3.");
+        public static readonly LocString WaveNumber = new("games.drift.waveNumber", "Wave {0}");
+        public static readonly LocString WaveClear = new("games.drift.waveClear", "Wave clear!");
+        public static readonly LocString Saucer = new("games.drift.saucer", "Saucer!");
+        public static readonly LocString ExtraShip = new("games.drift.extraShip", "Extra ship!");
+        public static readonly LocString WavesCleared = new("games.drift.wavesCleared", "Waves cleared");
+        public static readonly LocString Rocks = new("games.drift.rocks", "Rocks blasted");
+        public static readonly LocString Saucers = new("games.drift.saucers", "Saucers downed");
+        public static readonly LocString Accuracy = new("games.drift.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.drift.percent", "{0}%");
+    }
+
+    internal static class Crawler
+    {
+        public static readonly LocString Title = new("games.crawler.title", "Crawler");
+        public static readonly LocString Hook = new("games.crawler.hook", "Slide along the bottom and shoot the crawler as it winds down the mushroom field; every segment you hit splits it and sprouts a mushroom.");
+        public static readonly LocString WaveNumber = new("games.crawler.waveNumber", "Wave {0}");
+        public static readonly LocString WaveClear = new("games.crawler.waveClear", "Wave clear!");
+        public static readonly LocString Incoming = new("games.crawler.incoming", "Incoming!");
+        public static readonly LocString ExtraLife = new("games.crawler.extraLife", "Extra life!");
+        public static readonly LocString WavesCleared = new("games.crawler.wavesCleared", "Waves cleared");
+        public static readonly LocString Segments = new("games.crawler.segments", "Segments shot");
+        public static readonly LocString Spiders = new("games.crawler.spiders", "Spiders shot");
+        public static readonly LocString Accuracy = new("games.crawler.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.crawler.percent", "{0}%");
+    }
+
+    internal static class Trails
+    {
+        public static readonly LocString Title = new("games.trails.title", "Trails");
+        public static readonly LocString Hook = new("games.trails.hook", "Turn left or right and never touch a trail. Outlast the bots to take the round; first to three wins the match.");
+        public static readonly LocString Duel = new("games.trails.duel", "Duel");
+        public static readonly LocString Wins = new("games.trails.wins", "Wins");
+        public static readonly LocString RoundNumber = new("games.trails.roundNumber", "Round {0}");
+        public static readonly LocString MatchPoint = new("games.trails.matchPoint", "Match point");
+        public static readonly LocString Go = new("games.trails.go", "Go!");
+        public static readonly LocString RoundWon = new("games.trails.roundWon", "Round won!");
+        public static readonly LocString RoundLost = new("games.trails.roundLost", "Round lost");
+        public static readonly LocString Takedown = new("games.trails.takedown", "Takedown!");
+        public static readonly LocString RoundsWon = new("games.trails.roundsWon", "Rounds won");
+        public static readonly LocString Takedowns = new("games.trails.takedowns", "Takedowns");
+        public static readonly LocString LongestRide = new("games.trails.longestRide", "Longest ride");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
