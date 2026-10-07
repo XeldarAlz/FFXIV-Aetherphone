@@ -98,7 +98,7 @@ internal static class GameTileView
 
     private static void DrawRank(ImDrawListPtr drawList, Vector2 topRight, string label, float scale)
     {
-        var height = RankHeight * scale;
+        var height = PosterCard.CapsuleHeight(RankHeight * scale);
         var width = Typography.Measure(label, TextStyles.FootnoteEmphasized).X + RankPad * 2f * scale;
         var min = new Vector2(topRight.X - width, topRight.Y);
         var max = new Vector2(topRight.X, topRight.Y + height);

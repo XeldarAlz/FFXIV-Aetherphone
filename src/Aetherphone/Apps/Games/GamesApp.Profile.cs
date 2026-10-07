@@ -171,7 +171,9 @@ internal sealed partial class GamesApp
     {
         var gap = StatTileGap * scale;
         var tileWidth = (width - gap * (StatColumns - 1)) / StatColumns;
-        var height = StatTileHeight * scale;
+        var height = MathF.Max(StatTileHeight * scale,
+            (CardPadding * 2f + StatGlyphSize + CardTextGap) * scale + Typography.LineHeight(TextStyles.Title2)
+            + Typography.LineHeight(TextStyles.Footnote));
         var played = library.PlayedCount;
         var total = library.Entries.Length;
         var playedKey = ((long)played << 20) | (uint)total;
@@ -188,12 +190,13 @@ internal sealed partial class GamesApp
         ProgressRing.Fill(drawList, glyphCenter, ringRadius, stroke, total > 0 ? played / (float)total : 0f, ui.Accent);
 
         var streak = stats.DailyStreak;
-        tile = Offset(tile, tileWidth + gap);
+        var step = new Vector2(tileWidth + gap, 0f);
+        tile = tile.Translate(step);
         DrawStatTile(drawList, tile, GameNumber.Label(streak), Loc.T(L.GamesHub.StatStreak), scale);
         PhoneIcon.Draw(drawList, StatGlyphCenter(tile, scale), streak > 0 ? PhoneIcons.FlameFilled : PhoneIcons.Flame,
             streak > 0 ? HubMetrics.Ember : ui.MutedInk, StatGlyphSize * scale);
 
-        tile = Offset(tile, tileWidth + gap);
+        tile = tile.Translate(step);
         var ranked = leaderboard.IsSignedIn && !leaderboard.OptedOut;
         var third = ranked ? rankRowCount : library.TotalStars;
         DrawStatTile(drawList, tile, GameNumber.Label(third),
@@ -202,9 +205,6 @@ internal sealed partial class GamesApp
             third > 0 ? GamePalette.Star : ui.MutedInk, StatGlyphSize * scale);
         return top + height;
     }
-
-    private static Rect Offset(Rect rect, float dx) =>
-        new(new Vector2(rect.Min.X + dx, rect.Min.Y), new Vector2(rect.Max.X + dx, rect.Max.Y));
 
     private static Vector2 StatGlyphCenter(Rect tile, float scale)
     {
