@@ -21,6 +21,7 @@ using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.Fuse;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
+using Aetherphone.Apps.Games.Herd;
 using Aetherphone.Apps.Games.Hop;
 using Aetherphone.Apps.Games.Invaders;
 using Aetherphone.Apps.Games.Mahjong;
@@ -47,6 +48,7 @@ using Aetherphone.Apps.Games.Stack;
 using Aetherphone.Apps.Games.Sudoku;
 using Aetherphone.Apps.Games.Sweeper;
 using Aetherphone.Apps.Games.Swoop;
+using Aetherphone.Apps.Games.Tempo;
 using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Apps.Games.Trails;
 using Aetherphone.Apps.Games.Thrust;
@@ -236,6 +238,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new FuseApp(),
             new SnipApp(),
             new MiniGolfApp(),
+            new HerdApp(textures),
+            new TempoApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

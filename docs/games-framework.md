@@ -135,11 +135,11 @@ The source of truth is the `games` array in the `GamesApp` constructor for local
 
 | Shelf | Game ids |
 | --- | --- |
-| Arcade | `whack`, `snake`, `flap`, `breakout`, `stack`, `beat`, `blade`, `hop`, `updraft`, `slice`, `spiral`, `pinball`, `moogleclicker`, `claim`, `lander`, `pegfall`, `minigolf` |
+| Arcade | `whack`, `snake`, `flap`, `breakout`, `stack`, `beat`, `blade`, `hop`, `updraft`, `slice`, `spiral`, `pinball`, `moogleclicker`, `claim`, `lander`, `pegfall`, `minigolf`, `tempo` |
 | Action | `skyfall`, `invaders`, `capman`, `squadron`, `doom`, `swoop`, `drift`, `crawler`, `trails`, `trailblaze`, `thrust`, `delve`, `fuse` |
 | Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil`, `mahjong`, `gloop`, `crates`, `fling`, `snip` |
 | Brain | `minesweeper`, `memory`, `nonogram`, `simon`, `sudoku`, `trivia`, `wordrun` |
-| Strategy | `broadside`, `siege`, `crater` |
+| Strategy | `broadside`, `siege`, `crater`, `herd` |
 | Tabletop | `solitaire`, `reversi`, `chess`, `luckydraw` |
 | Friends (online) | `online.uno`, `online.chess`, `online.pool` (8-Ball Pool), `online.connectfour` (Connect Four), `online.broadside` (Broadside) |
 

@@ -9210,6 +9210,50 @@ internal static class L
         public static readonly LocString FourthPlace = new("games.minigolf.fourthPlace", "4th");
     }
 
+    internal static class Herd
+    {
+        public static readonly LocString Title = new("games.herd.title", "Herd");
+        public static readonly LocString Hook = new("games.herd.hook", "Pick a skill, then tap a moogle to dig, build, block or bash a way from the door to the hut. Save enough of them to clear the level.");
+        public static readonly LocString Saved = new("games.herd.saved", "Saved");
+        public static readonly LocString SavedOf = new("games.herd.savedOf", "{0} / {1}");
+        public static readonly LocString Needed = new("games.herd.needed", "Needed");
+        public static readonly LocString SkillsUsed = new("games.herd.skillsUsed", "Skills used");
+        public static readonly LocString Block = new("games.herd.block", "Block");
+        public static readonly LocString Dig = new("games.herd.dig", "Dig down");
+        public static readonly LocString Bridge = new("games.herd.bridge", "Bridge");
+        public static readonly LocString Climb = new("games.herd.climb", "Climb");
+        public static readonly LocString Float = new("games.herd.float", "Float");
+        public static readonly LocString Bash = new("games.herd.bash", "Bash");
+        public static readonly LocString BlockHint = new("games.herd.blockHint", "Stands firm and turns the others around");
+        public static readonly LocString DigHint = new("games.herd.digHint", "Digs straight down through the ground");
+        public static readonly LocString BridgeHint = new("games.herd.bridgeHint", "Lays a staircase of twelve steps");
+        public static readonly LocString ClimbHint = new("games.herd.climbHint", "Climbs every wall it meets from now on");
+        public static readonly LocString FloatHint = new("games.herd.floatHint", "Opens a pom-pom canopy on long falls");
+        public static readonly LocString BashHint = new("games.herd.bashHint", "Punches a tunnel straight ahead");
+        public static readonly LocString Paused = new("games.herd.paused", "Paused: tap moogles to give skills");
+        public static readonly LocString NukeArmed = new("games.herd.nukeArmed", "Tap again to pop them all");
+        public static readonly LocString GoalReached = new("games.herd.goalReached", "Goal reached!");
+    }
+
+    internal static class Tempo
+    {
+        public static readonly LocString Title = new("games.tempo.title", "Tempo");
+        public static readonly LocString Hook = new("games.tempo.hook", "Tap to jump to the beat over spikes and gaps, and hold on a jump pad to soar further. Three hidden coins wait on every level.");
+        public static readonly LocString Normal = new("games.tempo.normal", "Normal");
+        public static readonly LocString Practice = new("games.tempo.practice", "Practice");
+        public static readonly LocString Attempt = new("games.tempo.attempt", "Attempt");
+        public static readonly LocString AttemptNumber = new("games.tempo.attemptNumber", "Attempt {0}");
+        public static readonly LocString Percent = new("games.tempo.percent", "{0}%");
+        public static readonly LocString Complete = new("games.tempo.complete", "Complete!");
+        public static readonly LocString Flawless = new("games.tempo.flawless", "Flawless!");
+        public static readonly LocString Attempts = new("games.tempo.attempts", "Attempts");
+        public static readonly LocString Coins = new("games.tempo.coins", "Coins");
+        public static readonly LocString CoinsOf = new("games.tempo.coinsOf", "{0} / {1}");
+        public static readonly LocString Jumps = new("games.tempo.jumps", "Jumps");
+        public static readonly LocString Checkpoints = new("games.tempo.checkpoints", "Checkpoints");
+        public static readonly LocString PracticeHint = new("games.tempo.practiceHint", "Tap the flag to drop a checkpoint, the cross to lift the last one");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
