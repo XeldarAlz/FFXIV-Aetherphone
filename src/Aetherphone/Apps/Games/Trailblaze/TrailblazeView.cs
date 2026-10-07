@@ -13,6 +13,7 @@ internal readonly struct TrailblazeView
     public const float RoadWidthFraction = 1.55f;
     public const float SpeedWidening = 0.18f;
     private const float FadeStart = 0.78f;
+    private const float NearClipShare = 0.55f;
 
     public readonly LaneProjection Road;
     public readonly Rect Area;
@@ -45,7 +46,9 @@ internal readonly struct TrailblazeView
 
     public float Depth(float worldZ) => worldZ - Distance + PlayerDepth;
 
-    public float NearWorldZ => WorldZ(NearZ * 0.55f);
+    public float NearWorldZ => NearWorldZAt(Distance);
+
+    public static float NearWorldZAt(float distance) => distance - PlayerDepth + NearZ * NearClipShare;
 
     public float FarWorldZ => WorldZ(FarZ);
 

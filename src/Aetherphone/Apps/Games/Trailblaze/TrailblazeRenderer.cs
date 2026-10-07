@@ -226,6 +226,21 @@ internal sealed class TrailblazeRenderer
         }
     }
 
+    public void DrawTrailingCarts(ImDrawListPtr drawList, in TrailblazeView view, TrailblazeBoard board, float nearZ)
+    {
+        for (var index = LastAtOrBelow(board, nearZ, 0); index >= 0; index--)
+        {
+            ref readonly var hazard = ref board.HazardAt(index);
+            if (IsTrailingCart(hazard, nearZ))
+            {
+                DrawCart(drawList, view, hazard);
+            }
+        }
+    }
+
+    internal static bool IsTrailingCart(in TrailblazeHazard hazard, float nearZ) =>
+        hazard.Kind == TrailblazeCell.Cart && hazard.Z <= nearZ && hazard.Z + hazard.Length > nearZ;
+
     public void DrawSpeedLines(ImDrawListPtr drawList, in TrailblazeView view, float intensity, float time, float scale)
     {
         if (intensity <= 0.01f)
@@ -502,21 +517,25 @@ internal sealed class TrailblazeRenderer
 
     private void DrawCart(ImDrawListPtr drawList, in TrailblazeView view, in TrailblazeHazard cart)
     {
-        var near = cart.Z;
+        var front = cart.Z;
+        var end = front + cart.Length;
+        var near = MathF.Max(front, view.NearWorldZ);
         var nearDepth = view.Depth(near);
-        if (nearDepth >= TrailblazeView.FarZ || view.Depth(near + cart.Length) <= TrailblazeView.NearZ * 0.35f)
+        if (nearDepth >= TrailblazeView.FarZ || end <= near)
         {
             return;
         }
 
-        var far = MathF.Min(near + cart.Length, view.FarWorldZ);
+        var clipped = near > front;
+        var far = MathF.Min(end, view.FarWorldZ);
         var fogAmount = view.Fog(MathF.Max(nearDepth, TrailblazeView.NearZ));
         var alpha = view.Fade(nearDepth);
         var lane = cart.Lane - 1f;
         var left = lane - HazardHalf;
         var right = lane + HazardHalf;
         var canvasTop = TrailblazeBoard.CartHeight;
-        Strip(drawList, view, left - 0.06f, right + 0.14f, near - 0.1f, far + 0.3f, Shade(Shadow with { W = 0.26f }, fogAmount, alpha));
+        Strip(drawList, view, left - 0.06f, right + 0.14f, clipped ? near : near - 0.1f, far + 0.3f,
+            Shade(Shadow with { W = 0.26f }, fogAmount, alpha));
         var wheel = Shade(Wheel, fogAmount, alpha);
         var camera = view.CameraOffset;
         if (right < camera || left > camera)
@@ -529,7 +548,11 @@ internal sealed class TrailblazeRenderer
                 view.At(inner, canvasTop, far), view.At(inner, canvasTop, near), Shade(CanvasShade, fogAmount, alpha));
             drawList.AddLine(view.At(side, (CartBodyTop + canvasTop) * 0.5f, near), view.At(inner, (CartBodyTop + canvasTop) * 0.5f, far),
                 Shade(CanvasStripe, fogAmount, alpha), MathF.Max(1f, 0.06f * view.Scale(nearDepth)));
-            DrawWheel(drawList, view, side, near + 0.75f, wheel);
+            if (front + 0.75f >= near)
+            {
+                DrawWheel(drawList, view, side, front + 0.75f, wheel);
+            }
+
             if (cart.Length > 2.5f)
             {
                 DrawWheel(drawList, view, side, far - 0.75f, wheel);
@@ -539,6 +562,11 @@ internal sealed class TrailblazeRenderer
         drawList.AddQuadFilled(view.At(left + CartCanvasInset, canvasTop, near), view.At(right - CartCanvasInset, canvasTop, near),
             view.At(right - CartCanvasInset, canvasTop, far), view.At(left + CartCanvasInset, canvasTop, far),
             Shade(Vector4.Lerp(Canvas, CanvasShade, 0.35f), fogAmount, alpha));
+        if (clipped)
+        {
+            return;
+        }
+
         DrawWheel(drawList, view, left + 0.1f, near + 0.2f, wheel);
         DrawWheel(drawList, view, right - 0.1f, near + 0.2f, wheel);
         var bodyLowerLeft = view.At(left, CartBodyBottom, near);

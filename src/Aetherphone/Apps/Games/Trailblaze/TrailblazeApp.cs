@@ -576,6 +576,7 @@ internal sealed class TrailblazeApp : IMiniGame
 
         DrawRunner(drawList, view, target, full);
         renderer.DrawObjects(drawList, view, target, view.NearWorldZ, target.Distance, time);
+        renderer.DrawTrailingCarts(drawList, view, target, view.NearWorldZ);
         if (live)
         {
             particles.Draw(drawList, UiScale.Current);

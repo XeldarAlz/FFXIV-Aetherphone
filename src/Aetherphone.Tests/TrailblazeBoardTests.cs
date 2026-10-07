@@ -317,6 +317,49 @@ public sealed class TrailblazeBoardTests
     }
 
     [Fact]
+    public void ACartAlongsideStaysDrawnForAsLongAsItBlocksTheLane()
+    {
+        var board = Opening(CartChunk);
+        var cartIndex = -1;
+        for (var index = 0; index < board.HazardCount; index++)
+        {
+            ref readonly var hazard = ref board.HazardAt(index);
+            if (hazard.Kind == TrailblazeCell.Cart && hazard.Lane == 2)
+            {
+                cartIndex = index;
+                break;
+            }
+        }
+
+        Assert.True(cartIndex >= 0);
+        var cart = board.HazardAt(cartIndex);
+        var alongside = cart.Z + TrailblazeView.PlayerDepth + 0.5f;
+        Assert.True(alongside < cart.Z + cart.Length - TrailblazeBoard.BodyHalfDepth);
+        while (board.Distance < alongside && board.State == TrailblazeState.Running)
+        {
+            board.Step(Frame);
+        }
+
+        var nearZ = TrailblazeView.NearWorldZAt(board.Distance);
+        Assert.Equal(TrailblazeState.Running, board.State);
+        Assert.True(board.LaneBlocked(2));
+        Assert.True(cart.Z <= nearZ);
+        Assert.True(TrailblazeRenderer.IsTrailingCart(cart, nearZ));
+    }
+
+    [Fact]
+    public void OnlyACartStraddlingTheNearPlaneCountsAsTrailing()
+    {
+        var ahead = new TrailblazeHazard { Z = 20f, Length = 12f, Lane = 0, Kind = TrailblazeCell.Cart };
+        var gone = new TrailblazeHazard { Z = 2f, Length = 6f, Lane = 0, Kind = TrailblazeCell.Cart };
+        var barrier = new TrailblazeHazard { Z = 5f, Length = 0.5f, Lane = 0, Kind = TrailblazeCell.Barrier };
+
+        Assert.False(TrailblazeRenderer.IsTrailingCart(ahead, 10f));
+        Assert.False(TrailblazeRenderer.IsTrailingCart(gone, 10f));
+        Assert.False(TrailblazeRenderer.IsTrailingCart(barrier, 5.2f));
+    }
+
+    [Fact]
     public void CoinsInYourLaneAreCollectedAndBuildAChain()
     {
         var board = Opening(WarmUpChunk);
