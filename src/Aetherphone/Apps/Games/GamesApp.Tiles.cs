@@ -107,7 +107,7 @@ internal sealed partial class GamesApp
         var textLeft = rect.Min.X + 2f * scale;
         var textWidth = MathF.Max(1f, rect.Width - 4f * scale);
         var titleY = rect.Min.Y + artHeight + 7f * scale + entranceLift;
-        Marquee.DrawLeft(drawList, library.MarqueeIds[entryIndex], library.Title(entryIndex), textLeft, titleY,
+        Marquee.DrawLeft(drawList, library.TileIds[entryIndex], library.Title(entryIndex), textLeft, titleY,
             textWidth, TextStyles.Headline, ui.TitleInk, hovered);
         var subtitleY = titleY + 18f * scale;
         var rankChip = library.RankLabel(entryIndex);
