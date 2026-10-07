@@ -249,27 +249,4 @@ internal sealed partial class AetherStreamApp
             DependencySetup.FormatMegabytes(snapshot.ReceivedBytes),
             DependencySetup.FormatMegabytes(snapshot.TotalBytes));
     }
-
-    private void DrawInfo(Rect area, float scale)
-    {
-        SocialChrome.DrawScreenHeader(area, Loc.T(L.AetherStream.InfoTitle), Ink, back, ScreenTitleStyle);
-        var content = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        using (AppSurface.Begin(content))
-        {
-            DrawInfoEntry(L.AetherStream.InfoStartupTitle, L.AetherStream.InfoStartupBody);
-            DrawInfoEntry(L.AetherStream.InfoPartiesTitle, L.AetherStream.InfoPartiesBody);
-            DrawInfoEntry(L.AetherStream.InfoCodesTitle, L.AetherStream.InfoCodesBody);
-            DrawInfoEntry(L.AetherStream.InfoSitesTitle, L.AetherStream.InfoSitesBody);
-            DrawInfoEntry(L.AetherStream.InfoFailuresTitle, L.AetherStream.InfoFailuresBody);
-            DrawInfoEntry(L.AetherStream.InfoVpnTitle, L.AetherStream.InfoVpnBody);
-            Gap(Metrics.Space.Lg);
-        }
-    }
-
-    private void DrawInfoEntry(LocString title, LocString body)
-    {
-        SettingsSection.Header(Loc.T(title), accentedTheme);
-        SettingsSection.Hint(Loc.T(body), accentedTheme);
-        Gap(Metrics.Space.Md);
-    }
 }

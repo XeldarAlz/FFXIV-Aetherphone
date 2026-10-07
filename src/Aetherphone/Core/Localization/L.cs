@@ -6922,6 +6922,14 @@ internal static class L
         public static readonly LocString LoadingVideo = new("aetherstream.loadingVideo", "Loading video");
 
         public static readonly LocString InfoTitle = new("aetherstream.infoTitle", "Good to know");
+        public static readonly LocString InfoIntro = new("aetherstream.infoIntro",
+            "How MogCast plays videos, and what to try when one won't.");
+        public static readonly LocString InfoSectionPlayback = new("aetherstream.infoSectionPlayback",
+            "Playback");
+        public static readonly LocString InfoSectionTogether = new("aetherstream.infoSectionTogether",
+            "Together");
+        public static readonly LocString InfoSectionHelp = new("aetherstream.infoSectionHelp",
+            "When something goes wrong");
         public static readonly LocString InfoVpnTitle = new("aetherstream.infoVpnTitle", "Using a VPN?");
         public static readonly LocString InfoVpnBody = new("aetherstream.infoVpnBody",
             "Video sites often block VPN and proxy connections. If videos refuse to load or keep failing, try again with the VPN off, or switch to another server.");
@@ -6931,8 +6939,20 @@ internal static class L
             "Every link is resolved before it plays, so a new video needs a few seconds to start. The first video after installing also downloads the player components.");
         public static readonly LocString InfoSitesTitle = new("aetherstream.infoSitesTitle",
             "Which sites work");
-        public static readonly LocString InfoSitesBody = new("aetherstream.infoSitesBody",
-            "MogCast plays links from YouTube, Twitch, Kick, Dailymotion, Bilibili, Niconico and hundreds of other sites, plus direct video links and your own files. Services that lock their videos with DRM, such as Netflix, Disney+ and Plex, can't play, and sites that only play for signed-in accounts, such as Vimeo, won't work either.");
+        public static readonly LocString InfoSitesLead = new("aetherstream.infoSitesLead",
+            "Hundreds of sites work, plus direct video links and your own files.");
+        public static readonly LocString InfoSitesPlays = new("aetherstream.infoSitesPlays",
+            "Plays");
+        public static readonly LocString InfoSitesBlocked = new("aetherstream.infoSitesBlocked",
+            "Can't play");
+        public static readonly LocString InfoSitesDirectLinks = new("aetherstream.infoSitesDirectLinks",
+            "Direct links");
+        public static readonly LocString InfoSitesYourFiles = new("aetherstream.infoSitesYourFiles",
+            "Your own files");
+        public static readonly LocString InfoSitesDrm = new("aetherstream.infoSitesDrm",
+            "DRM");
+        public static readonly LocString InfoSitesSignIn = new("aetherstream.infoSitesSignIn",
+            "Sign-in");
         public static readonly LocString InfoFailuresTitle = new("aetherstream.infoFailuresTitle",
             "A video won't play?");
         public static readonly LocString InfoFailuresBody = new("aetherstream.infoFailuresBody",
