@@ -101,8 +101,10 @@ internal sealed partial class GamesApp
         var field = new Rect(origin, new Vector2(origin.X + width, origin.Y + SearchBar.HeightUnits * scale));
         var ink = ui.Ink;
         SearchBar.Surface(drawList, field, ink);
+        ImGui.BeginDisabled(librarySortMenu.Open);
         GlassField.Search(drawList, field, LibrarySearchId, Loc.T(L.Games.SearchHint), ref searchText, ink.Ink,
             ink.Muted, scale, SearchMaxLength, focusSearch);
+        ImGui.EndDisabled();
         focusSearch = false;
         if (!string.Equals(searchText, libraryQuery, StringComparison.Ordinal))
         {

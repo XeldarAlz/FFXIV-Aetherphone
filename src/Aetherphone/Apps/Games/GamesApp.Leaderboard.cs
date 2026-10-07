@@ -692,7 +692,8 @@ internal sealed partial class GamesApp
         var content = new Rect(new Vector2(bar.Min.X + pad, bar.Min.Y), new Vector2(bar.Max.X - pad, bar.Max.Y));
         if (leaderboardSelfMode == SelfBarMode.Join)
         {
-            DrawSelfBarJoin(drawList, content, alpha > SelfBarShowThreshold && show, scale);
+            DrawSelfBarJoin(drawList, content, alpha > SelfBarShowThreshold && show && !leaderboardPeriodMenu.Open,
+                scale);
         }
         else
         {
