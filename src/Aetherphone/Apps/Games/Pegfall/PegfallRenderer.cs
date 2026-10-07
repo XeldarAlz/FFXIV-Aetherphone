@@ -16,8 +16,8 @@ internal static class PegfallRenderer
     private const float GuideDotRadius = 0.05f;
     private const float PopSeconds = 0.22f;
     private const float PopGrowth = 0.4f;
-    private const float BucketDepth = 0.62f;
-    private const float BucketTaper = 0.2f;
+    private const float BucketDepth = 0.7f;
+    private const float BucketTaper = 0.25f;
     private const float SlotDepth = 1.1f;
     private const int DangerOranges = 3;
     public static readonly Vector4 Blue = new(0.30f, 0.58f, 1f, 1f);
