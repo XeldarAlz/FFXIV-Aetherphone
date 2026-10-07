@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Crater;
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
@@ -16,6 +18,7 @@ internal static class OnlineGameArt
     public static readonly string[] Kinds =
     {
         GameRoomWire.UnoKind, GameRoomWire.ChessKind, GameRoomWire.PoolKind, GameRoomWire.ConnectFourKind,
+        GameRoomWire.CraterKind,
     };
 
     private static readonly Vector4 BallInk = new(0.09f, 0.09f, 0.11f, 1f);
@@ -34,13 +37,25 @@ internal static class OnlineGameArt
             return "pool";
         }
 
+        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
+        {
+            return "crater";
+        }
+
         return string.Equals(kind, GameRoomWire.ConnectFourKind, StringComparison.Ordinal) ? "connectfour" : "uno";
     }
 
     public static Vector4 Accent(string kind) => AppAccents.For(AccentId(kind));
 
-    public static int MaxPlayers(string kind) =>
-        string.Equals(kind, GameRoomWire.UnoKind, StringComparison.Ordinal) ? UnoMaxPlayers : DuelMaxPlayers;
+    public static int MaxPlayers(string kind)
+    {
+        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
+        {
+            return GameRoomWire.CraterMaxPlayers;
+        }
+
+        return string.Equals(kind, GameRoomWire.UnoKind, StringComparison.Ordinal) ? UnoMaxPlayers : DuelMaxPlayers;
+    }
 
     public static void Draw(ImDrawListPtr drawList, string kind, Vector2 center, float size, float scale)
     {
@@ -66,7 +81,23 @@ internal static class OnlineGameArt
             return;
         }
 
+        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
+        {
+            DrawCraterMedallion(drawList, center, size);
+            return;
+        }
+
         DrawUnoFan(drawList, center, size, scale);
+    }
+
+    private static void DrawCraterMedallion(ImDrawListPtr drawList, Vector2 center, float size)
+    {
+        var radius = size * 0.3f;
+        var body = center + new Vector2(-size * 0.04f, size * 0.06f);
+        drawList.AddCircleFilled(body + new Vector2(0f, radius * 1.05f), radius * 1.1f, ImGui.GetColorU32(Shadow), 32);
+        CraterArt.Launcher(drawList, body, radius, CraterRules.AimDirection(CraterRules.DefaultElevation, 1),
+            GameSeats.Color(0));
+        CraterArt.Moogle(drawList, body, radius, 1, GameSeats.Color(0), 0.2f, 0f, 0.3f);
     }
 
     private static void DrawConnectFourMedallion(ImDrawListPtr drawList, Vector2 center, float size)

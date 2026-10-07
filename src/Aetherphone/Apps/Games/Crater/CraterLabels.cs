@@ -43,6 +43,15 @@ internal sealed class CraterLabels
         language = null;
     }
 
+    public ReadOnlySpan<string> TeamNames
+    {
+        get
+        {
+            Sync();
+            return teamNames;
+        }
+    }
+
     public string TeamName(int team)
     {
         Sync();

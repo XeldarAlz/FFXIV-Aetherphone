@@ -93,6 +93,22 @@ internal static class GamePad
         return new ShooterPadInput(leftHeld, rightHeld, fire);
     }
 
+    public static ShooterPadInput Walker(Rect area, Vector4 accent, PhoneTheme theme)
+    {
+        var scale = UiScale.Current;
+        var gap = Gap * scale;
+        var key = MathF.Min(KeySize * scale, MathF.Min(area.Height - gap * 2f, (area.Width - gap * 3f) / 2.7f));
+        var wide = key * 1.35f;
+        var left = area.Center.X - (wide * 2f + gap) * 0.5f;
+        var top = area.Center.Y - key * 0.5f;
+        var leftMin = new Vector2(left, top);
+        var rightMin = new Vector2(left + wide + gap, top);
+        var size = new Vector2(wide, key);
+        Key(leftMin, leftMin + size, "A", accent, theme, scale, out var leftHeld);
+        Key(rightMin, rightMin + size, "D", accent, theme, scale, out var rightHeld);
+        return new ShooterPadInput(leftHeld, rightHeld, false);
+    }
+
     private static bool Key(Vector2 min, Vector2 max, string glyph, Vector4 accent, PhoneTheme theme, float scale,
         out bool held)
     {

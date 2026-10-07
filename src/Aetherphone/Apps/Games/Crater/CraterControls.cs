@@ -107,6 +107,18 @@ internal static class CraterControls
     public static int Weapons(ImDrawListPtr drawList, Rect row, CraterBoard board, CraterLabels labels, int team,
         Vector4 accent, bool enabled, float scale)
     {
+        Span<int> ammo = stackalloc int[CraterRules.WeaponCount];
+        for (var slot = 0; slot < CraterRules.WeaponCount; slot++)
+        {
+            ammo[slot] = board.Ammo(team, (CraterWeapon)slot);
+        }
+
+        return Weapons(drawList, row, ammo, board.Weapon, board.Fuse, labels, accent, enabled, scale);
+    }
+
+    public static int Weapons(ImDrawListPtr drawList, Rect row, ReadOnlySpan<int> ammo, CraterWeapon selection,
+        int fuse, CraterLabels labels, Vector4 accent, bool enabled, float scale)
+    {
         var alpha = enabled ? 1f : 0.55f;
         Material.Frosted(drawList, row.Min, row.Max, row.Height * 0.5f, scale, 0.92f * alpha);
         var padding = RowPadding * scale;
@@ -117,9 +129,9 @@ internal static class CraterControls
             var weapon = (CraterWeapon)slot;
             var min = new Vector2(row.Min.X + padding + slot * slotWidth, row.Min.Y + padding * 0.6f);
             var max = new Vector2(min.X + slotWidth, row.Max.Y - padding * 0.6f);
-            var ammo = board.Ammo(team, weapon);
-            var available = ammo != 0;
-            var selected = board.Weapon == weapon;
+            var left = slot < ammo.Length ? ammo[slot] : 0;
+            var available = left != 0;
+            var selected = selection == weapon;
             var hovered = enabled && available && UiInteract.Hover(min, max);
             var radius = (max.Y - min.Y) * 0.32f;
             if (selected)
@@ -137,8 +149,8 @@ internal static class CraterControls
             var ink = available ? White with { W = alpha } : Dim;
             var center = (min + max) * 0.5f;
             CraterArt.WeaponIcon(drawList, center - new Vector2(0f, 4f * scale), IconSize * scale, weapon, ink);
-            var badge = weapon == CraterWeapon.Grenade ? labels.FuseLabel(board.Fuse)
-                : ammo >= 0 ? GameNumber.Label(ammo) : string.Empty;
+            var badge = weapon == CraterWeapon.Grenade ? labels.FuseLabel(fuse)
+                : left >= 0 ? GameNumber.Label(left) : string.Empty;
             if (badge.Length > 0)
             {
                 Typography.DrawCentered(drawList, new Vector2(center.X, max.Y - 7f * scale), badge,
@@ -210,33 +222,48 @@ internal static class CraterControls
 
     public static void Teams(ImDrawListPtr drawList, Rect rect, CraterBoard board, CraterLabels labels, float scale)
     {
+        Span<int> health = stackalloc int[CraterRules.MaxTeams];
+        var teams = Math.Min(board.TeamCount, CraterRules.MaxTeams);
+        for (var team = 0; team < teams; team++)
+        {
+            health[team] = board.TeamHealth(team);
+        }
+
+        Teams(drawList, rect, labels.TeamNames[..teams], health[..teams],
+            CraterRules.MaxHealth * CraterRules.MooglesPerTeam, board.Over ? CraterBoard.NoTeam : board.ActiveTeam,
+            scale);
+    }
+
+    public static void Teams(ImDrawListPtr drawList, Rect rect, ReadOnlySpan<string> names, ReadOnlySpan<int> health,
+        float full, int activeTeam, float scale)
+    {
         Material.Frosted(drawList, rect.Min, rect.Max, 12f * scale, scale, 0.88f);
         var padding = TeamPadding * scale;
         var rowHeight = TeamRowHeight * scale;
         var barWidth = TeamBarWidth * scale;
-        var full = (float)(CraterRules.MaxHealth * CraterRules.MooglesPerTeam);
-        for (var team = 0; team < board.TeamCount; team++)
+        var teams = Math.Min(names.Length, health.Length);
+        for (var team = 0; team < teams; team++)
         {
             var top = rect.Min.Y + padding + team * rowHeight;
             var centerY = top + rowHeight * 0.5f;
             var color = GameSeats.Color(team);
-            var alive = board.TeamAlive(team);
+            var alive = health[team] > 0;
             var ink = alive ? White : Dim;
-            var active = alive && team == board.ActiveTeam && !board.Over;
+            var active = alive && team == activeTeam;
             var dotCenter = new Vector2(rect.Min.X + padding + 4f * scale, centerY);
             drawList.AddCircleFilled(dotCenter, (active ? 5f : 3.5f) * scale,
                 ImGui.GetColorU32(alive ? color : Dim), 12);
             var nameLeft = dotCenter.X + 9f * scale;
             var barRight = rect.Max.X - padding;
             var barLeft = barRight - barWidth;
-            var name = Typography.FitText(labels.TeamName(team), barLeft - nameLeft - 6f * scale, TextStyles.Caption1);
+            var name = Typography.FitText(names[team], barLeft - nameLeft - 6f * scale, TextStyles.Caption1);
             Typography.Draw(drawList, new Vector2(nameLeft, centerY - Typography.LineHeight(TextStyles.Caption1) * 0.5f),
                 name, active ? GamePalette.Lighten(color, 0.4f) : ink, TextStyles.Caption1);
             var barHeight = 5f * scale;
             var barMin = new Vector2(barLeft, centerY - barHeight * 0.5f);
             var barMax = new Vector2(barRight, centerY + barHeight * 0.5f);
             drawList.AddRectFilled(barMin, barMax, ImGui.GetColorU32(BarBack), barHeight);
-            var fraction = Math.Clamp(board.TeamHealth(team) / full, 0f, 1f);
+            var fraction = Math.Clamp(health[team] / full, 0f, 1f);
             if (fraction > 0f)
             {
                 drawList.AddRectFilled(barMin, new Vector2(barMin.X + barWidth * fraction, barMax.Y),

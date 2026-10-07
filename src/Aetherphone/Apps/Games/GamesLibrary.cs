@@ -103,6 +103,7 @@ internal sealed class GamesLibrary
         new("fling", 2026, 10, 8),
         new("siege", 2026, 10, 8),
         new("crater", 2026, 10, 8),
+        new("online.crater", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;

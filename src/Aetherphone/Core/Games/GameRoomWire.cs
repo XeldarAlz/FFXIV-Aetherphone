@@ -10,6 +10,64 @@ internal static class GameRoomWire
 
     public const string ConnectFourKind = "games.connectfour";
 
+    public const string CraterKind = "games.crater";
+
+    public const string CraterTimeoutEvent = "crater.timeout";
+
+    public const string CraterEndKnockout = "knockout";
+
+    public const string CraterEndDraw = "draw";
+
+    public const string CraterEndResign = "resign";
+
+    public const string CraterEndDesertion = "desertion";
+
+    public const string CraterEndTimeout = "timeout";
+
+    public const int CraterMaxPlayers = 4;
+
+    public const int CraterBeatStride = 6;
+
+    public const int CraterBeatLaunched = 1;
+
+    public const int CraterBeatBounced = 2;
+
+    public const int CraterBeatExploded = 3;
+
+    public const int CraterBeatDamaged = 4;
+
+    public const int CraterBeatShielded = 5;
+
+    public const int CraterBeatDied = 6;
+
+    public const int CraterBeatDrowned = 7;
+
+    public const int CraterBeatSplashed = 8;
+
+    public const int CraterBeatClusterSplit = 9;
+
+    public const int CraterBeatDrillStarted = 10;
+
+    public const int CraterBeatLanded = 12;
+
+    public const int CraterBeatFallHurt = 13;
+
+    public const int CraterBeatTeleported = 14;
+
+    public const int CraterBeatShieldRaised = 15;
+
+    public const int CraterBeatSuddenDeath = 17;
+
+    public const int CraterBeatWaterRising = 18;
+
+    public const int CraterBeatTunnel = 20;
+
+    public const float CraterMaxWalk = 9f;
+
+    public const float CraterCentimetres = 100f;
+
+    public const int CraterTicksPerSecond = 120;
+
     public const int ConnectFourColumns = 7;
 
     public const int ConnectFourRows = 6;

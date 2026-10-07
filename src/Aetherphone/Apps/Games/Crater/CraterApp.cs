@@ -1,5 +1,4 @@
 using Aetherphone.Apps.Games.Framework;
-using Aetherphone.Apps.Games.Framework.World;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
@@ -22,20 +21,8 @@ internal sealed partial class CraterApp : IMiniGame
     private const float ChargeZoom = 1.15f;
     private const float FlightZoom = 1.08f;
     private const float ZoomSmoothSeconds = 0.4f;
-    private const float EdgeSlack = 1f;
-    private const float SkyCeiling = -3f;
-    private const float FlightCeiling = -30f;
-    private const float BelowWater = 2.4f;
-    private const float ProjectileLeadSeconds = 0.22f;
-    private const float MaxLead = 3f;
-    private const float AimLead = 1.4f;
-    private const float FollowSmoothSeconds = 0.35f;
-    private const float ProjectileSmoothSeconds = 0.16f;
-    private const float ImpactSmoothSeconds = 0.25f;
-    private const float MovingSpeed = 0.6f;
     private const float WinBannerSeconds = 2.2f;
     private const float DemoRestartSeconds = 2.5f;
-    private const float HurtDecay = 3f;
     private const int HintCapacity = 192;
     private const int HintStride = 3;
     private const float UrgentSeconds = 10f;
@@ -49,11 +36,7 @@ internal sealed partial class CraterApp : IMiniGame
     private readonly ITextureProvider textures;
     private readonly CraterBoard board = new();
     private readonly CraterLabels labels = new();
-    private readonly ParticleSystem particles = new(900);
-    private readonly FeedbackFx fx = new();
-    private readonly Ribbon[] trails = new Ribbon[CraterBoard.MaxProjectiles];
-    private readonly Emitter[] smoke = new Emitter[CraterBoard.MaxProjectiles];
-    private readonly float[] hurt = new float[CraterRules.MaxMoogles];
+    private readonly CraterJuice juice = new();
     private readonly Vector2[] hintPath = new Vector2[HintCapacity];
     private CraterTerrain? terrainTexture;
     private Camera2D camera = Camera2D.Create();
@@ -70,11 +53,6 @@ internal sealed partial class CraterApp : IMiniGame
     public CraterApp(ITextureProvider textures)
     {
         this.textures = textures;
-        for (var index = 0; index < trails.Length; index++)
-        {
-            trails[index] = new Ribbon();
-            smoke[index] = new Emitter(TrailSmoke, TrailSmokeRate);
-        }
     }
 
     public GameSpec Spec => StageSpec;
@@ -94,8 +72,7 @@ internal sealed partial class CraterApp : IMiniGame
     {
         demo = false;
         finished = true;
-        particles.Clear();
-        fx.Clear();
+        juice.Clear();
         ResetInput();
     }
 
@@ -133,14 +110,14 @@ internal sealed partial class CraterApp : IMiniGame
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var simDelta = fx.ScaleDelta(context.DeltaSeconds);
+        var simDelta = juice.Fx.ScaleDelta(context.DeltaSeconds);
         Advance(context.RawDeltaSeconds);
         PlaceCamera(context, context.DeltaSeconds);
         board.Step(simDelta);
         Drain(context, false);
         var layout = CraterControls.Layout(context.Full, context.Safe, board.TeamCount, scale);
         DrawWorld(drawList, context, true, scale);
-        DrawBanners(drawList, context);
+        juice.DrawBanners(drawList, context.Full, context.Theme);
         DrawControls(drawList, context, layout, scale);
         FillHud(drawList, context, layout, scale);
         CheckFinish(context);
@@ -158,18 +135,8 @@ internal sealed partial class CraterApp : IMiniGame
         demo = demoMatch;
         board.Start(seed, setup);
         labels.Configure(seed, hotSeat, humans);
-        EnsureTerrain().Reset(MaterialFor(board.Style));
-        particles.Clear();
-        particles.Reseed(seed);
-        fx.Clear();
-        for (var index = 0; index < trails.Length; index++)
-        {
-            trails[index].Release();
-            smoke[index].Reset();
-        }
-
-        Array.Clear(hurt);
-        ClearJuice();
+        EnsureTerrain().Reset(CraterArt.Material(board.Style));
+        juice.Reset(seed);
         ResetInput();
         finished = false;
         overSeconds = 0f;
@@ -181,23 +148,10 @@ internal sealed partial class CraterApp : IMiniGame
 
     private CraterTerrain EnsureTerrain() => terrainTexture ??= new CraterTerrain(textures, board.Terrain);
 
-    private static TerrainMaterial MaterialFor(TerrainStyle style) => style switch
-    {
-        TerrainStyle.Islands => TerrainMaterial.Sand,
-        TerrainStyle.Caverns => TerrainMaterial.Stone,
-        _ => TerrainMaterial.Earth,
-    };
-
     private void Advance(float rawSeconds)
     {
         time += rawSeconds;
-        particles.Update(rawSeconds);
-        fx.Update(rawSeconds);
-        AdvanceJuice(rawSeconds);
-        for (var index = 0; index < hurt.Length; index++)
-        {
-            hurt[index] = MathF.Max(0f, hurt[index] - rawSeconds * HurtDecay);
-        }
+        juice.Advance(rawSeconds);
     }
 
     private void PlaceCamera(in GameContext context, float followSeconds)
@@ -205,7 +159,10 @@ internal sealed partial class CraterApp : IMiniGame
         var wanted = board.Charging ? ChargeZoom : board.Phase == CraterPhase.Flight ? FlightZoom : 1f;
         zoom.Step(wanted, ZoomSmoothSeconds, context.RawDeltaSeconds);
         camera.Fit(context.Full, ViewWidth * zoom.Value, ViewHeight * zoom.Value, FitMode.Contain);
-        var goal = KeepInView(FocusGoal(out var smoothSeconds, out var flying), flying);
+        var focus = CraterFocus.Goal(board.Projectiles, board.Moogles, board.SinceBlast, board.LastBlast,
+            board.ActiveMoogle, board.Phase == CraterPhase.Aiming, board.ActiveAim, out var smoothSeconds,
+            out var flying);
+        var goal = CraterFocus.KeepInView(in camera, focus, flying, board.WaterLevel);
         if (!cameraPlaced)
         {
             camera.Place(goal);
@@ -219,104 +176,13 @@ internal sealed partial class CraterApp : IMiniGame
         context.Backdrop.SetCamera(in camera);
     }
 
-    private Vector2 FocusGoal(out float smoothSeconds, out bool flying)
-    {
-        flying = false;
-        var projectiles = board.Projectiles;
-        var lead = -1;
-        var lowestId = int.MaxValue;
-        for (var index = 0; index < projectiles.Length; index++)
-        {
-            if (projectiles[index].Alive && projectiles[index].Id < lowestId)
-            {
-                lowestId = projectiles[index].Id;
-                lead = index;
-            }
-        }
-
-        if (lead >= 0)
-        {
-            flying = true;
-            smoothSeconds = ProjectileSmoothSeconds;
-            ref readonly var projectile = ref projectiles[lead];
-            var ahead = projectile.Velocity * ProjectileLeadSeconds;
-            if (ahead.LengthSquared() > MaxLead * MaxLead)
-            {
-                ahead = Vector2.Normalize(ahead) * MaxLead;
-            }
-
-            return projectile.Position + ahead;
-        }
-
-        smoothSeconds = ImpactSmoothSeconds;
-        if (board.SinceBlast < CraterRules.ImpactHoldSeconds)
-        {
-            return board.LastBlast;
-        }
-
-        var mover = FastestMover();
-        if (mover >= 0)
-        {
-            return board.Moogle(mover).Position;
-        }
-
-        smoothSeconds = FollowSmoothSeconds;
-        ref readonly var active = ref board.Moogle(board.ActiveMoogle);
-        if (board.Phase != CraterPhase.Aiming || !active.Alive)
-        {
-            return active.Position;
-        }
-
-        return active.Position + CraterRules.AimDirection(board.ActiveAim, active.Facing) * AimLead;
-    }
-
-    private int FastestMover()
-    {
-        var moogles = board.Moogles;
-        var fastest = -1;
-        var best = MovingSpeed * MovingSpeed;
-        for (var index = 0; index < moogles.Length; index++)
-        {
-            ref readonly var moogle = ref moogles[index];
-            if (moogle.Sunk || moogle.Grounded)
-            {
-                continue;
-            }
-
-            var speed = moogle.Velocity.LengthSquared();
-            if (speed <= best)
-            {
-                continue;
-            }
-
-            best = speed;
-            fastest = index;
-        }
-
-        return fastest;
-    }
-
-    private Vector2 KeepInView(Vector2 goal, bool flying)
-    {
-        var zoomPixels = MathF.Max(0.0001f, camera.Zoom);
-        var halfWidth = camera.View.Width / zoomPixels * 0.5f;
-        var halfHeight = camera.View.Height / zoomPixels * 0.5f;
-        var minX = halfWidth - EdgeSlack;
-        var maxX = CraterRules.WorldWidth - halfWidth + EdgeSlack;
-        var x = minX > maxX ? CraterRules.WorldWidth * 0.5f : Math.Clamp(goal.X, minX, maxX);
-        var minY = (flying ? FlightCeiling : SkyCeiling) + halfHeight;
-        var maxY = board.WaterLevel + BelowWater - halfHeight;
-        var y = minY > maxY ? maxY : Math.Clamp(goal.Y, minY, maxY);
-        return new Vector2(x, y);
-    }
-
     private void DrawWorld(ImDrawListPtr drawList, in GameContext context, bool live, float scale)
     {
         EnsureTerrain().Draw(drawList, in camera, board.Craters);
-        DrawEmbers(drawList);
+        juice.DrawEmbers(drawList, in camera);
         var aiming = board.Phase is CraterPhase.Aiming or CraterPhase.TurnIntro;
-        CraterRenderer.Bodies(drawList, in camera, board, hurt, aiming, time);
-        DrawTrails(drawList, scale);
+        CraterRenderer.Bodies(drawList, in camera, board, juice.Hurt, aiming, time);
+        juice.DrawTrails(drawList, in camera, board.Projectiles, CraterArt.Material(board.Style), scale);
         CraterRenderer.Projectiles(drawList, in camera, board, time, scale);
         if (live)
         {
@@ -324,9 +190,9 @@ internal sealed partial class CraterApp : IMiniGame
         }
 
         CraterRenderer.Water(drawList, in camera, board.Terrain, board.WaterLevel, time, scale);
-        particles.Draw(drawList, in camera);
-        fx.DrawRings(drawList, scale);
-        fx.DrawText();
+        juice.Particles.Draw(drawList, in camera);
+        juice.Fx.DrawRings(drawList, scale);
+        juice.Fx.DrawText();
         CraterRenderer.Labels(drawList, in camera, board, labels, aiming, time, scale);
     }
 
