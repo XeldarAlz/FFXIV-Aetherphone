@@ -4744,6 +4744,8 @@
   "gamesHub.tourLibraryBody": "Ada göre ara, türe göre filtrele ya da en yeni veya son oynananlara göre sırala.",
   "gamesHub.tourProfileTitle": "Profilin",
   "gamesHub.tourProfileBody": "Günlük serin, sıralamaların ve kişisel rekorların burada. Görmek için dokun.",
+  "gamesHub.hoursMinutes": "{0} sa {1} dk",
+  "gamesHub.minutesShort": "{0} dk",
   "stage.resume": "Devam Et",
   "stage.restart": "Yeniden Başlat",
   "stage.quit": "Çık",

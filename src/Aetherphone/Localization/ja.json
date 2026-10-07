@@ -4744,6 +4744,8 @@
   "gamesHub.tourLibraryBody": "名前で検索したり、ジャンルで絞り込んだり、新しい順や最近遊んだ順に並べ替えたりできます。",
   "gamesHub.tourProfileTitle": "プロフィール",
   "gamesHub.tourProfileBody": "連続プレイ日数、ランキング、自己ベストはここにまとまっています。タップして確認しましょう。",
+  "gamesHub.hoursMinutes": "{0}時間{1}分",
+  "gamesHub.minutesShort": "{0}分",
   "stage.resume": "再開",
   "stage.restart": "やり直す",
   "stage.quit": "やめる",

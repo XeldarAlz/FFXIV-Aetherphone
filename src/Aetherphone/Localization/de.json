@@ -4744,6 +4744,8 @@
   "gamesHub.tourLibraryBody": "Suche nach Namen, filtere nach Genre oder sortiere nach Neuheit oder zuletzt gespielt.",
   "gamesHub.tourProfileTitle": "Dein Profil",
   "gamesHub.tourProfileBody": "Hier findest du deine Tagesserie, deine Platzierungen und deine persönlichen Bestleistungen. Tippe zum Ansehen.",
+  "gamesHub.hoursMinutes": "{0} Std. {1} Min.",
+  "gamesHub.minutesShort": "{0} Min.",
   "stage.resume": "Fortsetzen",
   "stage.restart": "Neu starten",
   "stage.quit": "Beenden",

@@ -4744,6 +4744,8 @@
   "gamesHub.tourLibraryBody": "按名称搜索、按类型筛选，或按最新、最近玩过排序。",
   "gamesHub.tourProfileTitle": "你的主页",
   "gamesHub.tourProfileBody": "你的每日连续记录、排名和个人最佳都在这里。点击查看。",
+  "gamesHub.hoursMinutes": "{0}小时{1}分",
+  "gamesHub.minutesShort": "{0}分钟",
   "stage.resume": "继续",
   "stage.restart": "重新开始",
   "stage.quit": "退出",

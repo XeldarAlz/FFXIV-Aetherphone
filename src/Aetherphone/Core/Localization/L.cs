@@ -8425,6 +8425,8 @@ internal static class L
         public static readonly LocString TourLibraryBody = new("gamesHub.tourLibraryBody", "Search by name, filter by genre, or sort by newest or recently played.");
         public static readonly LocString TourProfileTitle = new("gamesHub.tourProfileTitle", "Your profile");
         public static readonly LocString TourProfileBody = new("gamesHub.tourProfileBody", "Your daily streak, ranks and personal bests live here. Tap to have a look.");
+        public static readonly LocString HoursMinutes = new("gamesHub.hoursMinutes", "{0}h {1}m");
+        public static readonly LocString MinutesShort = new("gamesHub.minutesShort", "{0}m");
     }
 
     internal static class Stage

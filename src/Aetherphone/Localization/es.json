@@ -4744,6 +4744,8 @@
   "gamesHub.tourLibraryBody": "Busca por nombre, filtra por género u ordena por más recientes o jugados recientemente.",
   "gamesHub.tourProfileTitle": "Tu perfil",
   "gamesHub.tourProfileBody": "Aquí están tu racha diaria, tus clasificaciones y tus mejores marcas. Toca para verlas.",
+  "gamesHub.hoursMinutes": "{0} h {1} min",
+  "gamesHub.minutesShort": "{0} min",
   "stage.resume": "Reanudar",
   "stage.restart": "Reiniciar",
   "stage.quit": "Salir",

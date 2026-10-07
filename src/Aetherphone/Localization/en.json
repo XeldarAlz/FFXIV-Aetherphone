@@ -4744,6 +4744,8 @@
   "gamesHub.tourLibraryBody": "Search by name, filter by genre, or sort by newest or recently played.",
   "gamesHub.tourProfileTitle": "Your profile",
   "gamesHub.tourProfileBody": "Your daily streak, ranks and personal bests live here. Tap to have a look.",
+  "gamesHub.hoursMinutes": "{0}h {1}m",
+  "gamesHub.minutesShort": "{0}m",
   "stage.resume": "Resume",
   "stage.restart": "Restart",
   "stage.quit": "Quit",

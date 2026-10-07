@@ -4744,6 +4744,8 @@
   "gamesHub.tourLibraryBody": "Ищите по названию, фильтруйте по жанру или сортируйте по новизне и недавним играм.",
   "gamesHub.tourProfileTitle": "Ваш профиль",
   "gamesHub.tourProfileBody": "Здесь ваша ежедневная серия, места в рейтингах и личные рекорды. Нажмите, чтобы посмотреть.",
+  "gamesHub.hoursMinutes": "{0} ч {1} мин",
+  "gamesHub.minutesShort": "{0} мин",
   "stage.resume": "Продолжить",
   "stage.restart": "Заново",
   "stage.quit": "Выйти",
