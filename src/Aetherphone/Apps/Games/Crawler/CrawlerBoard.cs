@@ -87,8 +87,8 @@ internal sealed class CrawlerBoard
     public const float FleaDropChance = 0.32f;
     private const float StepSeconds = 1f / 240f;
     private const float BulletLength = 0.6f;
-    private const float SpiderSpeed = 3.2f;
-    private const float SpiderClimb = 5f;
+    private const float SpiderSpeed = 2.4f;
+    private const float SpiderClimb = 3.8f;
     private const float SpiderEatChance = 0.35f;
     private const float FleaCheckSeconds = 2.5f;
     private const int MaxChips = 8;
@@ -217,7 +217,7 @@ internal sealed class CrawlerBoard
 
     public static Vector2 CellCenter(int column, int row) => new(column + 0.5f, row + 0.5f);
 
-    public static float TickFor(int wave) => MathF.Max(0.055f, 0.105f - (Math.Max(1, wave) - 1) * 0.007f);
+    public static float TickFor(int wave) => MathF.Max(0.07f, 0.2f - (Math.Max(1, wave) - 1) * 0.013f);
 
     public static int ExtraHeadsFor(int wave) => Math.Min(Math.Max(0, wave - 1), MaxExtraHeads);
 
@@ -829,7 +829,7 @@ internal sealed class CrawlerBoard
     private void LaunchSpider()
     {
         var fromLeft = random.Next(2) == 0;
-        var speed = SpiderSpeed * (1f + Math.Min(Wave - 1, 8) * 0.06f);
+        var speed = SpiderSpeed * (1f + Math.Min(Wave - 1, 8) * 0.08f);
         Spider = new Vector2(fromLeft ? -1f : Columns + 1f, random.Range(ZoneTop, Rows - 1f));
         spiderVelocity = new Vector2(fromLeft ? speed : -speed, random.Sign() * SpiderClimb);
         spiderHopTimer = random.Range(0.35f, 0.9f);

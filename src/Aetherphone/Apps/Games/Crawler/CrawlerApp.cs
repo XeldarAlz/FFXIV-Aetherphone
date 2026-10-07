@@ -227,9 +227,9 @@ internal sealed class CrawlerApp : IMiniGame
 
         var left = pad.Left || GameInput.Held(ImGuiKey.A, ImGuiKey.LeftArrow);
         var right = pad.Right || GameInput.Held(ImGuiKey.D, ImGuiKey.RightArrow);
-        var up = GameInput.Held(ImGuiKey.UpArrow);
-        var down = GameInput.Held(ImGuiKey.DownArrow);
-        var fire = pad.FireHeld || dragging || GameInput.Held(ImGuiKey.Space, ImGuiKey.W);
+        var up = GameInput.Held(ImGuiKey.W, ImGuiKey.UpArrow);
+        var down = GameInput.Held(ImGuiKey.S, ImGuiKey.DownArrow);
+        var fire = pad.FireHeld || dragging || GameInput.Held(ImGuiKey.Space);
         return new CrawlerControls((right ? 1f : 0f) - (left ? 1f : 0f), (down ? 1f : 0f) - (up ? 1f : 0f), fire,
             dragging, dragging ? camera.ToWorld(mouse) : Vector2.Zero);
     }
