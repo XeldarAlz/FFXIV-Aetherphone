@@ -228,7 +228,20 @@ internal sealed partial class MusicApp
 
     private void DrawCommunityRow(float scale, CommunityStationDto station, float sideInset)
     {
-        var rowHeight = CommunityRowHeight * scale;
+        var texts = RowTextFor(station);
+        var nowPlaying = NowPlayingFor(station);
+        var subtitle = nowPlaying.Length > 0 ? nowPlaying : texts.Schedule;
+        if (subtitle.Length == 0)
+        {
+            subtitle = station.Description;
+        }
+
+        var lineGap = Metrics.Space.Xxs * scale;
+        var nameHeight = Typography.LineHeight(TextStyles.BodyEmphasized);
+        var statusHeight = station.IsLive ? LivePill.Height(scale) : Typography.LineHeight(TextStyles.Caption1);
+        var subtitleHeight = subtitle.Length > 0 ? lineGap + Typography.LineHeight(TextStyles.Caption1) : 0f;
+        var blockHeight = nameHeight + lineGap + statusHeight + subtitleHeight;
+        var rowHeight = MathF.Max(CommunityRowHeight * scale, blockHeight + Metrics.Space.Md * 2f * scale);
         var drawList = ImGui.GetWindowDrawList();
         var cell = FeedCell.Begin(drawList, rowHeight, ui.HoverWash);
         var min = cell.Bounds.Min;
@@ -239,30 +252,22 @@ internal sealed partial class MusicApp
         var artMax = artMin + new Vector2(artSize, artSize);
         DrawStationArt(drawList, artMin, artMax, station, 10f * scale);
 
-        var texts = RowTextFor(station);
         var current = IsCurrentCommunityStation(station);
         var textLeft = artMax.X + 12f * scale;
         var textWidth = max.X - inset - (current ? 34f : 8f) * scale - textLeft;
-        var nameY = min.Y + 12f * scale;
+        var nameY = min.Y + (rowHeight - blockHeight) * 0.5f;
         var fittedName = texts.Name.Fit(station.Name, textWidth, TextStyles.BodyEmphasized);
         Typography.Draw(drawList, new Vector2(textLeft, nameY), fittedName, current ? ui.Accent : ui.TitleInk,
             TextStyles.BodyEmphasized);
 
-        var statusY = min.Y + 33f * scale;
+        var statusY = nameY + nameHeight + lineGap;
         DrawLiveMark(drawList, new Vector2(textLeft, statusY), scale, station, texts, textWidth);
-
-        var nowPlaying = NowPlayingFor(station);
-        var subtitle = nowPlaying.Length > 0 ? nowPlaying : texts.Schedule;
-        if (subtitle.Length == 0)
-        {
-            subtitle = station.Description;
-        }
 
         if (subtitle.Length > 0)
         {
             var fittedSubtitle = texts.Subtitle.Fit(subtitle, textWidth, TextStyles.Caption1);
-            Typography.Draw(drawList, new Vector2(textLeft, min.Y + 47f * scale), fittedSubtitle, ui.MutedInk,
-                TextStyles.Caption1);
+            Typography.Draw(drawList, new Vector2(textLeft, statusY + statusHeight + lineGap), fittedSubtitle,
+                ui.MutedInk, TextStyles.Caption1);
         }
 
         if (current)

@@ -107,16 +107,18 @@ internal sealed partial class MusicApp
             new Vector2(body.Max.X - inset, stageBottom + SegmentRowHeight * scale));
         var panel = SelectStationPanel(segmentRect);
         var panelRect = new Rect(new Vector2(body.Min.X, segmentRect.Max.Y + Metrics.Space.Xxs * scale), body.Max);
+        var insetPanel = new Rect(new Vector2(segmentRect.Min.X, panelRect.Min.Y),
+            new Vector2(segmentRect.Max.X, panelRect.Max.Y));
         switch (panel)
         {
             case StationPanel.Requests:
-                DrawStationRequests(panelRect, scale);
+                DrawStationRequests(insetPanel, scale);
                 break;
             case StationPanel.About:
                 DrawStationAbout(panelRect, station, scale);
                 break;
             case StationPanel.Host:
-                DrawStationHost(panelRect, scale);
+                DrawStationHost(insetPanel, scale);
                 break;
             default:
                 DrawStationChat(new Rect(panelRect.Min, new Vector2(body.Max.X,
@@ -187,11 +189,10 @@ internal sealed partial class MusicApp
         var infoWidth = MathF.Max(1f, playCenter.X - radius - gap - infoLeft);
         var showsRoom = RoomShows(station);
         var live = station.IsLive || (showsRoom && room.IsLive);
-        var listeners = showsRoom ? room.ListenerCount : station.Listeners;
         var pillHeight = LivePill.Height(scale);
         if (live)
         {
-            var label = stageLiveLabel.Prefixed(Loc.T(L.Music.LiveBadge), L.Music.ListeningCount, listeners);
+            var label = stageLiveLabel.Prefixed(Loc.T(L.Music.LiveBadge), L.Music.ListeningCount, station.Listeners);
             LivePill.Draw(drawList, new Vector2(infoLeft, top), label, ui.Theme.Danger, clock, scale);
         }
         else

@@ -1,5 +1,6 @@
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.ControlCenter.Modules;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.Telephony;
@@ -12,11 +13,13 @@ internal sealed class ControlRegistry : IControlRegistry
 {
     private readonly List<IControlModule> modules = new();
     private readonly Dictionary<string, IControlModule> byId = new();
+    private readonly AppGate mediaGate;
 
     public ControlRegistry(Configuration configuration, ThemeProvider themes, PlaybackHub playback, CallHub calls,
         INavigator navigation, Action dismiss, Coins.CoinStore coins, Aethernet.AethernetSession session,
-        SystemMedia.PcMediaSource pcMedia)
+        SystemMedia.PcMediaSource pcMedia, AppInstaller installer)
     {
+        mediaGate = installer.Gate(MediaModule.AppId);
         Add(new ToggleModule("dnd", FontAwesomeIcon.Moon, L.Settings.DoNotDisturb,
             () => configuration.DoNotDisturb, () =>
             {
@@ -67,6 +70,9 @@ internal sealed class ControlRegistry : IControlRegistry
     public IReadOnlyList<IControlModule> Modules => modules;
 
     public bool TryGet(string id, out IControlModule module) => byId.TryGetValue(id, out module!);
+
+    public bool IsAvailable(string moduleId) =>
+        mediaGate.Open || !string.Equals(moduleId, MediaModule.ModuleId, StringComparison.Ordinal);
 
     private static Func<FontAwesomeIcon> VolumeIcon(PlaybackHub playback) => () =>
         playback.Volume <= 0.001f ? FontAwesomeIcon.VolumeMute

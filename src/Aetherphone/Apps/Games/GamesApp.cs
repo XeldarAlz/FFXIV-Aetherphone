@@ -348,6 +348,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     public void Dispose()
     {
+        SettleRun();
         for (var index = 0; index < games.Length; index++)
         {
             games[index].Dispose();
@@ -774,13 +775,13 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 session.Resume();
                 break;
             case PauseAction.Restart:
+                SettleRun();
                 StartRun(game);
                 break;
             case PauseAction.Leaderboard:
                 OpenLeaderboard(game, session.LeaderboardStatId, game.Title);
                 break;
             case PauseAction.Quit:
-                game.OnQuit(session);
                 back();
                 break;
             default:
@@ -1094,6 +1095,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     private void PrepareGame(IMiniGame game)
     {
+        SettleRun();
         currentGame = game;
         var spec = game.Spec;
         var daily = string.Equals(spec.Id, stats.DailyGameId, StringComparison.Ordinal);
@@ -1116,6 +1118,17 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         }
     }
 
+    private void SettleRun()
+    {
+        if (currentGame is null)
+        {
+            return;
+        }
+
+        currentGame.OnQuit(session);
+        session.Settle();
+    }
+
     private void CloseCurrentGame()
     {
         AppLandscape.Release(Id);
@@ -1124,6 +1137,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             return;
         }
 
+        SettleRun();
         currentGame.Close();
         currentGame = null;
         coinSessions.GameClosed();

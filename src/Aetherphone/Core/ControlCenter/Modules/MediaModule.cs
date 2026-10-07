@@ -11,7 +11,8 @@ namespace Aetherphone.Core.ControlCenter.Modules;
 
 internal sealed partial class MediaModule : IControlModule
 {
-    private const string AppId = "music";
+    public const string ModuleId = "media";
+    public const string AppId = "music";
     private const float IdleArtAlpha = 0.55f;
     private const float DisabledTransportAlpha = 0.45f;
     private const float TransportSpread = 2.35f;
@@ -37,7 +38,7 @@ internal sealed partial class MediaModule : IControlModule
         this.pcMedia = pcMedia;
     }
 
-    public string Id => "media";
+    public string Id => ModuleId;
     public string GalleryLabel => Loc.T(L.Apps.Music);
     public FontAwesomeIcon GalleryIcon => FontAwesomeIcon.Music;
     public IReadOnlyList<ControlSpan> Sizes => SpanOptions;

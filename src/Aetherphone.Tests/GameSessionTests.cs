@@ -51,6 +51,79 @@ public sealed class GameSessionTests
     }
 
     [Fact]
+    public void ALeftRunRecordsItsLiveScore()
+    {
+        var session = Build(out _, out var sink);
+        session.Begin(Spec(), new GameStart(0, 1, false));
+        session.Play();
+        session.Report(1200);
+        session.Pause();
+
+        Assert.True(session.Settle());
+        Assert.Equal(1, sink.Count);
+        Assert.Equal(1200, sink.Last.Value);
+        Assert.Equal("tap", sink.Last.StatId);
+        Assert.Equal(1200, session.Best);
+        Assert.False(session.Settle());
+        Assert.Equal(1, sink.Count);
+    }
+
+    [Fact]
+    public void ALeftRunBelowTheBestStillUploadsForTheWeeklyBoard()
+    {
+        var session = Build(out _, out var sink);
+        session.Begin(Spec(), new GameStart(0, 1, false));
+        session.Play();
+        session.Report(5000);
+        session.Settle();
+        session.Play();
+        session.Report(3000);
+
+        Assert.True(session.Settle());
+        Assert.Equal(2, sink.Count);
+        Assert.Equal(3000, sink.Last.Value);
+        Assert.Equal(5000, session.Best);
+    }
+
+    [Fact]
+    public void NothingIsSettledBeforePlayWithoutAScoreOrForACompletionKind()
+    {
+        var session = Build(out _, out var sink);
+        session.Begin(Spec(), new GameStart(0, 1, false));
+        Assert.False(session.Settle());
+        session.Play();
+        Assert.False(session.Settle());
+
+        var timed = Build(out _, out var timedSink);
+        timed.Begin(Spec(kind: ScoreKind.Time), new GameStart(0, 1, false));
+        timed.Play();
+        timed.Report(42);
+
+        Assert.False(timed.Settle());
+        Assert.Equal(0, sink.Count);
+        Assert.Equal(0, timedSink.Count);
+    }
+
+    [Fact]
+    public void ASettledRunUsesTheModesStatAndKind()
+    {
+        var session = Build(out _, out var sink);
+        session.Begin(Spec(modes: true, modeKinds: true), new GameStart(0, 1, false));
+        session.SelectMode(1);
+        session.Play();
+        session.Report(800);
+        Assert.True(session.Settle());
+        Assert.Equal("tap.hard", sink.Last.StatId);
+
+        var timed = Build(out _, out var timedSink);
+        timed.Begin(Spec(modes: true, modeKinds: true), new GameStart(0, 1, false));
+        timed.Play();
+        timed.Report(90);
+        Assert.False(timed.Settle());
+        Assert.Equal(0, timedSink.Count);
+    }
+
+    [Fact]
     public void BeginLandsOnTheIntroWithTheStartValues()
     {
         var session = Build(out _, out _);
