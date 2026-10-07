@@ -34,7 +34,7 @@ internal sealed partial class GamesApp
     private const string LeaderboardBarJoinId = "games.leaderboard.bar.join";
     private const string LeaderboardPlayId = "games.leaderboard.play";
     private const string LeaderboardSelfLayerId = "games.leaderboard.self";
-    private const string LeaderboardSettingsAppId = "settings";
+    private const string SettingsAppId = "settings";
     private const string MetaSeparator = " · ";
     private const float LeaderboardRowHeight = 56f;
     private const float LeaderboardAvatarRadius = 16f;
@@ -465,11 +465,11 @@ internal sealed partial class GamesApp
     private float DrawLeaderboardSignedOut(float left, float top, float width, float scale)
     {
         var body = new Rect(new Vector2(left, top), new Vector2(left + width, top + LeaderboardBlockHeight * scale));
-        var action = navigation.IsAvailable(LeaderboardSettingsAppId) ? Loc.T(L.GamesHub.OpenSettings) : string.Empty;
+        var action = navigation.IsAvailable(SettingsAppId) ? Loc.T(L.GamesHub.OpenSettings) : string.Empty;
         if (EmptyState.Draw(body, ui, FontAwesomeIcon.Trophy, Loc.T(L.Stage.SignInToRank),
                 Loc.T(L.Leaderboard.SignInHint), action))
         {
-            navigation.Open(LeaderboardSettingsAppId);
+            navigation.Open(SettingsAppId);
         }
 
         return body.Max.Y;
@@ -692,7 +692,8 @@ internal sealed partial class GamesApp
         var content = new Rect(new Vector2(bar.Min.X + pad, bar.Min.Y), new Vector2(bar.Max.X - pad, bar.Max.Y));
         if (leaderboardSelfMode == SelfBarMode.Join)
         {
-            DrawSelfBarJoin(drawList, content, alpha > SelfBarShowThreshold && show, scale);
+            DrawSelfBarJoin(drawList, content, alpha > SelfBarShowThreshold && show && !leaderboardPeriodMenu.Open,
+                scale);
         }
         else
         {

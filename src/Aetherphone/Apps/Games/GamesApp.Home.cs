@@ -135,7 +135,8 @@ internal sealed partial class GamesApp
             homeGround = new HubGround(ui.Palette, SceneChrome.ScreenFrom(context.Content, ui.Theme, scale));
             homeClipTop = drawList.GetClipRectMin().Y;
             homeClipBottom = drawList.GetClipRectMax().Y;
-            var y = DrawHomeHero(drawList, left, origin.Y, width, scale) + Metrics.Space.Md * scale;
+            var y = DrawWhatsNew(drawList, left, origin.Y, width, scale);
+            y = DrawHomeHero(drawList, left, y, width, scale) + Metrics.Space.Md * scale;
             y = DrawHomeJoin(left, y, width, scale);
             y = DrawHomeRoom(drawList, left, y, width, scale);
             y = DrawHomeRecent(drawList, left, y, width, scale);
@@ -448,12 +449,12 @@ internal sealed partial class GamesApp
 
         var start = Button.Draw(drawList, button, label, ui.Ink.WithAccent(accent), ButtonStyle.Prominent,
             id: HomeTogetherStartId);
-        if (rooms > 0)
+        var pill = rooms > 0 ? HomeRoomsLabel(rooms) : string.Empty;
+        var pillLeft = button.Max.X + Metrics.Space.Md * scale;
+        if (pill.Length > 0 && pillLeft + LivePill.Width(pill, scale) <= card.Max.X - pad)
         {
-            var pill = HomeRoomsLabel(rooms);
-            LivePill.Draw(drawList,
-                new Vector2(button.Max.X + Metrics.Space.Md * scale, button.Center.Y - LivePill.Height(scale) * 0.5f),
-                pill, PosterCard.White, (float)ImGui.GetTime(), scale);
+            LivePill.Draw(drawList, new Vector2(pillLeft, button.Center.Y - LivePill.Height(scale) * 0.5f), pill,
+                PosterCard.White, (float)ImGui.GetTime(), scale);
         }
 
         return HeroTap(hit, hovered, start && interactive, HomeHeroAction.OpenTogether);
@@ -592,7 +593,7 @@ internal sealed partial class GamesApp
     }
 
     private float DrawHomeJoin(float left, float top, float width, float scale) =>
-        ShowsConsentCompact
+        WhatsNewNotice.ShowsJoinCard(ShowsConsentCompact, whatsNewShowing)
             ? DrawConsentCompact(left, top, width, scale, HomeJoinId) + Metrics.Space.Md * scale
             : top;
 

@@ -284,7 +284,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
         if (requestedPage != SettingsPageKind.None)
         {
             router.Reset();
-            router.Push(PageFor(requestedPage));
+            Open(PageFor(requestedPage));
             PushAppNotifications(settingsLauncher.TryConsumeAppId());
         }
 
@@ -320,6 +320,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
         SettingsPageKind.Notifications => notificationsPage,
         SettingsPageKind.Privacy => privacyPage,
         SettingsPageKind.Calls => callsPage,
+        SettingsPageKind.Changelog => changelogPage,
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 

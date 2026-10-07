@@ -576,7 +576,7 @@ internal static class L
             "Daily mixes, stations from around the world, your own playlists with synced lyrics, and Jams to listen in sync with friends.");
         public static readonly LocString GamesSub = new("storeCopy.gamesSub", "Pocket distractions");
         public static readonly LocString GamesBody = new("storeCopy.gamesBody",
-            "More than thirty games for queue times with high scores worth chasing, plus Uno, Chess and Pool to play online with friends.");
+            "59 games for queue times with high scores worth chasing, plus eight to play online with friends, from Uno to Mini Golf.");
         public static readonly LocString AetherStreamSub = new("storeCopy.aetherstreamSub", "Watch videos together");
         public static readonly LocString AetherStreamBody = new("storeCopy.aetherstreamBody",
             "Play videos on your phone or on a screen you place in the world, and watch in sync with nearby Aetherphone users who join your party.");
@@ -2179,6 +2179,12 @@ internal static class L
 
         public static readonly LocString[] Release1200Games =
         {
+            new("changelog.r1200.70",
+                "Redesigned the Games app around four tabs, Home, Together, Library and Profile, with today's game playing live at the top of Home above Continue Playing, Just Added and Top This Week"),
+            new("changelog.r1200.71",
+                "Library shows every game in one grid with search, genre filters and sorting, and Profile keeps your daily streak calendar, ranks and personal bests"),
+            new("changelog.r1200.72",
+                "Leaderboards open on a podium for the top three, games zoom open from their icon, and every game has its own painted icon"),
             new("changelog.r1200.0",
                 "Overhauled every game in Games to run full screen on one shared stage: an intro with your best and rank, a 3, 2, 1 countdown for timed games, a pause menu, and a result card with your stats"),
             new("changelog.r1200.1",
@@ -2308,9 +2314,9 @@ internal static class L
             new("changelog.r1200.69",
                 "Added Crater, Broadside, Lucky Draw and Mini Golf rooms to Play with friends"),
             new("changelog.r1200.35",
-                "Added a global leaderboard to every game that you join by choice: a card the first time you open Games shows how you would appear, and each board lists the top 50 worldwide or among your friends, all time or this week, from the intro, the pause menu, the result card or Records"),
+                "Added a global leaderboard to every game that you join by choice: a card the first time you open Games shows how you would appear, and each board lists the top 50 worldwide or among your friends, all time or this week, from the intro, the pause menu, the result card or Profile"),
             new("changelog.r1200.36",
-                "Your rank shows on the result card, on each game's tile, and in a Your ranks list at the top of Records"),
+                "Your rank shows on the result card, on each game's icon, and in Your ranks on Profile"),
             new("changelog.r1200.37",
                 "Added Show me on leaderboards to Settings > Privacy; turned off, your bests stay on this phone"),
             new("changelog.r1200.38",
@@ -8137,14 +8143,10 @@ internal static class L
         public static readonly LocString GenreStrategy = new("games.genreStrategy", "Strategy");
         public static readonly LocString GenreTabletop = new("games.genreTabletop", "Board & Cards");
         public static readonly LocString GenreFriends = new("games.genreFriends", "With friends");
-        public static readonly LocString ShelfLatest = new("games.shelfLatest", "Latest additions");
         public static readonly LocString LibraryHeading = new("games.libraryHeading", "All games");
-        public static readonly LocString BadgeNew = new("games.badgeNew", "NEW");
         public static readonly LocString SearchHint = new("games.searchHint", "Search games");
         public static readonly LocString SearchEmpty = new("games.searchEmpty", "No games match");
         public static readonly LocString SearchEmptyHint = new("games.searchEmptyHint", "Try another name, or clear the search.");
-        public static readonly LocString OnlineCardHint = new("games.onlineCardHint", "Uno, Chess and 8-Ball Pool. Host a room or join with a code.");
-        public static readonly LocString OnlineHostShort = new("games.onlineHostShort", "Host");
         public static readonly LocPlural OnlineRoomsOpen = new("games.onlineRoomsOpen", "{0} room open", "{0} rooms open");
         public static readonly LocPlural GameCount = new("games.gameCount", "{0} game", "{0} games");
         public static readonly LocString Breakout = new("games.breakout", "Breakout");
@@ -8252,16 +8254,10 @@ internal static class L
         public static readonly LocString OnlineMyRooms = new("games.onlineMyRooms", "Your rooms");
         public static readonly LocString OnlineNoRooms = new("games.onlineNoRooms", "No rooms yet. Host one or enter a friend's code.");
         public static readonly LocString OnlineLoading = new("games.onlineLoading", "Looking for your rooms…");
-        public static readonly LocString OnlineHost = new("games.onlineHost", "Host a room");
         public static readonly LocString OnlineHostHint = new("games.onlineHostHint", "Up to {0} players");
         public static readonly LocString OnlineJoinHeading = new("games.onlineJoinHeading", "Join with a code");
         public static readonly LocString OnlineJoinHint = new("games.onlineJoinHint", "Enter code");
         public static readonly LocString OnlineJoin = new("games.onlineJoin", "Join");
-        public static readonly LocString OnlineHostedBy = new("games.onlineHostedBy", "Hosted by {0}");
-        public static readonly LocString OnlineSeats = new("games.onlineSeats", "{0}/{1} seats");
-        public static readonly LocString OnlinePhaseLobby = new("games.onlinePhaseLobby", "In the lobby");
-        public static readonly LocString OnlinePhasePlaying = new("games.onlinePhasePlaying", "Round in progress");
-        public static readonly LocString OnlinePhaseFinished = new("games.onlinePhaseFinished", "Round finished");
         public static readonly LocString OnlineRoomCode = new("games.onlineRoomCode", "Room code");
         public static readonly LocString OnlineCopyCode = new("games.onlineCopyCode", "Copy");
         public static readonly LocString OnlineCodeCopied = new("games.onlineCodeCopied", "Copied");
@@ -8363,15 +8359,12 @@ internal static class L
     internal static class GamesHub
     {
         public static readonly LocString TabHome = new("gamesHub.tabHome", "Home");
-        public static readonly LocString TabRecords = new("gamesHub.tabRecords", "Records");
         public static readonly LocString ContinuePlaying = new("gamesHub.continuePlaying", "Continue Playing");
         public static readonly LocString SeeAll = new("gamesHub.seeAll", "See All");
         public static readonly LocString ClearSearch = new("gamesHub.clearSearch", "Clear Search");
-        public static readonly LocString Browse = new("gamesHub.browse", "Browse");
         public static readonly LocString PlayedOf = new("gamesHub.playedOf", "{0}/{1}");
         public static readonly LocString StatPlayed = new("gamesHub.statPlayed", "Games played");
         public static readonly LocString StatStreak = new("gamesHub.statStreak", "Day streak");
-        public static readonly LocString StatRecords = new("gamesHub.statRecords", "Records");
         public static readonly LocString PersonalBests = new("gamesHub.personalBests", "Personal Bests");
         public static readonly LocString RecordsEmptyTitle = new("gamesHub.recordsEmptyTitle", "No records yet");
         public static readonly LocString RecordsEmptyHint = new("gamesHub.recordsEmptyHint", "Finish a game and your best result lands here.");
@@ -8418,7 +8411,6 @@ internal static class L
         public static readonly LocString Period = new("gamesHub.period", "Period");
         public static readonly LocString StatRanked = new("gamesHub.statRanked", "Ranked");
         public static readonly LocString YourGames = new("gamesHub.yourGames", "Your games");
-        public static readonly LocString Practice = new("gamesHub.practice", "Practice");
         public static readonly LocString TourTogetherTitle = new("gamesHub.tourTogetherTitle", "Play together");
         public static readonly LocString TourTogetherBody = new("gamesHub.tourTogetherBody", "Host a room for Uno, Chess, Mini Golf and more, or join a friend's room with a code.");
         public static readonly LocString TourLibraryTitle = new("gamesHub.tourLibraryTitle", "Every game in one place");
@@ -8427,6 +8419,12 @@ internal static class L
         public static readonly LocString TourProfileBody = new("gamesHub.tourProfileBody", "Your daily streak, ranks and personal bests live here. Tap to have a look.");
         public static readonly LocString HoursMinutes = new("gamesHub.hoursMinutes", "{0}h {1}m");
         public static readonly LocString MinutesShort = new("gamesHub.minutesShort", "{0}m");
+        public static readonly LocString WhatsNewTitle = new("gamesHub.whatsNewTitle", "What's new in Games");
+        public static readonly LocString WhatsNewGames = new("gamesHub.whatsNewGames", "26 new games, from Mahjong Solitaire to Mini Golf");
+        public static readonly LocString WhatsNewLeaderboards = new("gamesHub.whatsNewLeaderboards", "Leaderboards you can choose to join, worldwide or among friends");
+        public static readonly LocString WhatsNewRooms = new("gamesHub.whatsNewRooms", "Play Crater, Broadside, Lucky Draw and Mini Golf online with friends");
+        public static readonly LocString WhatsNewRedesign = new("gamesHub.whatsNewRedesign", "A new look with Home, Together, Library and Profile tabs");
+        public static readonly LocString WhatsNewSeeAll = new("gamesHub.whatsNewSeeAll", "See what's new");
     }
 
     internal static class Stage
@@ -8487,7 +8485,6 @@ internal static class L
         public static readonly LocString NotNow = new("leaderboard.notNow", "Not now");
         public static readonly LocString JoinShort = new("leaderboard.joinShort", "Join");
         public static readonly LocString NotOnBoards = new("leaderboard.notOnBoards", "You are not on leaderboards");
-        public static readonly LocString JoinToSeeRanks = new("leaderboard.joinToSeeRanks", "Join leaderboards to see your ranks");
         public static readonly LocString OffHint = new("leaderboard.offHint", "When this is off, your scores stay on this phone.");
     }
 
@@ -12225,7 +12222,6 @@ internal static class L
         public static readonly LocString DailyGameDescription = new("widgetsUtility.dailyGameDescription", "Today's featured game and your streak.");
         public static readonly LocString TodaysGame = new("widgetsUtility.todaysGame", "Today's game");
         public static readonly LocString Streak = new("widgetsUtility.streak", "{0} day streak");
-        public static readonly LocString PlayedToday = new("widgetsUtility.playedToday", "Played today");
         public static readonly LocString StartStreak = new("widgetsUtility.startStreak", "Play to start a streak");
         public static readonly LocString DailySpinName = new("widgetsUtility.dailySpinName", "Daily Spin");
         public static readonly LocString DailySpinDescription = new("widgetsUtility.dailySpinDescription", "Your free daily spin, ready to claim.");

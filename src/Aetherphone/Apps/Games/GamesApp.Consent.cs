@@ -32,7 +32,6 @@ internal sealed partial class GamesApp
     private const float CompactPadding = Metrics.Space.Md;
 
     private readonly FailureSlot participationFailure = new();
-    private bool consentRequested;
     private UserDto? handleUser;
     private string userHandle = string.Empty;
 
@@ -40,7 +39,6 @@ internal sealed partial class GamesApp
     {
         if (!leaderboard.IsSignedIn || leaderboard.CurrentUser is null || leaderboard.OptedIn)
         {
-            consentRequested = false;
             return false;
         }
 
@@ -49,7 +47,7 @@ internal sealed partial class GamesApp
             return false;
         }
 
-        return consentRequested || leaderboard.NeedsConsent;
+        return leaderboard.NeedsConsent;
     }
 
     private bool ShowsConsentCompact => leaderboard.OptedOut;
@@ -148,14 +146,11 @@ internal sealed partial class GamesApp
             leaderboard.SetParticipation(true);
         }
 
-        if (!Button.Draw(drawList, notNow, Loc.T(L.Leaderboard.NotNow), ui.Ink, ButtonStyle.Gray, enabled: !saving,
+        if (Button.Draw(drawList, notNow, Loc.T(L.Leaderboard.NotNow), ui.Ink, ButtonStyle.Gray, enabled: !saving,
                 id: ConsentNotNowId))
         {
-            return;
+            leaderboard.DeclineConsent();
         }
-
-        leaderboard.DeclineConsent();
-        consentRequested = false;
     }
 
     private float DrawConsentCompact(float left, float top, float width, float scale, string joinId)

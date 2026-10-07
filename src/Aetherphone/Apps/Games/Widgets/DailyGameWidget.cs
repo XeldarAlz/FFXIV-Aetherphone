@@ -148,7 +148,7 @@ internal sealed class DailyGameWidget : IHomeWidget
         var drawList = context.DrawList;
         var scale = context.Scale;
         WidgetText.EyebrowFit(drawList, area.Min,
-            slotsRecent ? Loc.T(L.GamesHub.ContinuePlaying) : Loc.T(L.Games.ShelfLatest), area.Width, secondary,
+            slotsRecent ? Loc.T(L.GamesHub.ContinuePlaying) : Loc.T(L.GamesHub.JustAdded), area.Width, secondary,
             scale);
         var top = area.Min.Y + WidgetText.EyebrowHeight() + WidgetMetrics.RowGap * scale * 2f;
         var rowHeight = (area.Max.Y - top) / SlotCount;

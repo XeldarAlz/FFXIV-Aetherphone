@@ -123,6 +123,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private readonly LeaderboardStore leaderboard;
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
+    private readonly SettingsLauncher settingsLauncher;
     private readonly OnlineHub onlineHub;
     private readonly OnlineRoomView onlineRoom;
     private readonly IMiniGame[] games;
@@ -167,7 +168,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures,
         Core.Coins.CoinStore coins, Core.Coins.CoinGameSessionTracker coinSessions,
         GameRoomsStore gameRooms, Configuration configuration, LeaderboardStore leaderboard, RemoteImageCache images,
-        LodestoneService lodestone, MoogleClickerService moogleClicker)
+        LodestoneService lodestone, MoogleClickerService moogleClicker, SettingsLauncher settingsLauncher)
     {
         this.stats = stats;
         this.configuration = configuration;
@@ -177,6 +178,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         this.leaderboard = leaderboard;
         this.images = images;
         this.lodestone = lodestone;
+        this.settingsLauncher = settingsLauncher;
         refreshLeaderboard = RefreshLeaderboardNow;
         session = new GameSession(stats, leaderboard, leaderboard);
         fx = new ScreenFx(backdrop);
@@ -328,7 +330,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         ResetLibrary();
         ResetProfile();
         onlineHub.Reset();
-        consentRequested = false;
         leaderboard.ClearParticipationFailure();
         leaderboard.EnsureMyRanksFresh();
         gameRooms.EnsureFresh();
@@ -343,7 +344,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         TourHolds.Release(Id);
         router.Reset();
         pendingRoute = string.Empty;
-        consentRequested = false;
     }
 
     public void Dispose()
@@ -393,8 +393,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         }
 
-        if (!router.IsTransitioning && !LaunchActive && router.Current.Screen is GamesScreen.Root or GamesScreen.Shelf
-            && currentGame is not null)
+        if (!router.IsTransitioning && !LaunchActive && currentGame is not null && !GamesStack.HoldsGame(router))
         {
             CloseCurrentGame();
         }
@@ -900,7 +899,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         var chip = BuildCoinSessionChip();
         if (chip.Visible)
         {
-            chrome.RecordCoinChip(DrawCoinSessionChip(chip, rightEdge, pauseCenter.Y, theme, scale));
+            chrome.RecordCoinChip(DrawCoinSessionChip(chip, rightEdge, pauseCenter.Y, backdrop.Ink, scale));
         }
     }
 
@@ -965,10 +964,11 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         return new CoinSessionChip(string.Empty, 1f, true);
     }
 
-    private static Rect DrawCoinSessionChip(in CoinSessionChip chip, float right, float rowCenterY, PhoneTheme theme,
+    private static Rect DrawCoinSessionChip(in CoinSessionChip chip, float right, float rowCenterY, StageInk tone,
         float scale)
     {
-        var accent = chip.CoolingDown ? theme.TextMuted : AppAccents.For("coin");
+        var muted = StageInks.MutedOn(tone);
+        var accent = chip.CoolingDown ? muted : AppAccents.For("coin");
         var ringRadius = CoinChipRingRadius * scale;
         var thickness = Metrics.Stroke.Ring * scale;
         var textSize = chip.Label.Length > 0 ? Typography.Measure(chip.Label, TextStyles.Caption1) : Vector2.Zero;
@@ -1001,7 +1001,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         }
 
         Typography.DrawCentered(ImGui.GetWindowDrawList(), new Vector2(right - textSize.X * 0.5f, rowCenterY),
-            chip.Label, chip.CoolingDown ? theme.TextMuted : theme.TextStrong, TextStyles.Caption1);
+            chip.Label, chip.CoolingDown ? muted : StageInks.StrongOn(tone), TextStyles.Caption1);
         return hoverRect;
     }
 

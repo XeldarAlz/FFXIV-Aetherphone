@@ -102,35 +102,11 @@ public sealed class GamesLibraryPagesTests
     }
 
     [Fact]
-    public void TheClampedLineCarriesTheRestOfTheHook()
-    {
-        const string hook = "Tap to flap through the gaps and dodge every pipe on the way";
-
-        Assert.Equal("the gaps and dodge every pipe on the way",
-            LineClamp.Remainder(hook, "Tap to flap through", "the gaps and dodge"));
-    }
-
-    [Fact]
-    public void TheClampedLineStartsAfterTheFirstLineWhenTheWordsRepeat()
-    {
-        const string hook = "go go go go go";
-
-        Assert.Equal("go go go", LineClamp.Remainder(hook, "go go", "go go"));
-    }
-
-    [Fact]
-    public void AWrappedLineMissingFromTheHookFallsBackToItself()
-    {
-        Assert.Equal("elsewhere", LineClamp.Remainder("Line one line two", "Line one", "elsewhere"));
-    }
-
-    [Fact]
-    public void JustAddedAndTheLegacyLatestShelfShowTheNewestWave()
+    public void JustAddedShowsTheNewestWave()
     {
         var library = Build();
 
         Assert.Equal(library.Latest.ToArray(), GamesApp.ShelfEntries(library, GamesShelf.New).ToArray());
-        Assert.Equal(library.Latest.ToArray(), GamesApp.ShelfEntries(library, GamesShelf.Latest).ToArray());
     }
 
     [Fact]

@@ -171,7 +171,9 @@ internal sealed partial class GamesApp
     {
         var gap = StatTileGap * scale;
         var tileWidth = (width - gap * (StatColumns - 1)) / StatColumns;
-        var height = StatTileHeight * scale;
+        var height = MathF.Max(StatTileHeight * scale,
+            (CardPadding * 2f + StatGlyphSize + CardTextGap) * scale + Typography.LineHeight(TextStyles.Title2)
+            + Typography.LineHeight(TextStyles.Footnote));
         var played = library.PlayedCount;
         var total = library.Entries.Length;
         var playedKey = ((long)played << 20) | (uint)total;
@@ -188,12 +190,13 @@ internal sealed partial class GamesApp
         ProgressRing.Fill(drawList, glyphCenter, ringRadius, stroke, total > 0 ? played / (float)total : 0f, ui.Accent);
 
         var streak = stats.DailyStreak;
-        tile = Offset(tile, tileWidth + gap);
+        var step = new Vector2(tileWidth + gap, 0f);
+        tile = tile.Translate(step);
         DrawStatTile(drawList, tile, GameNumber.Label(streak), Loc.T(L.GamesHub.StatStreak), scale);
         PhoneIcon.Draw(drawList, StatGlyphCenter(tile, scale), streak > 0 ? PhoneIcons.FlameFilled : PhoneIcons.Flame,
             streak > 0 ? HubMetrics.Ember : ui.MutedInk, StatGlyphSize * scale);
 
-        tile = Offset(tile, tileWidth + gap);
+        tile = tile.Translate(step);
         var ranked = leaderboard.IsSignedIn && !leaderboard.OptedOut;
         var third = ranked ? rankRowCount : library.TotalStars;
         DrawStatTile(drawList, tile, GameNumber.Label(third),
@@ -202,9 +205,6 @@ internal sealed partial class GamesApp
             third > 0 ? GamePalette.Star : ui.MutedInk, StatGlyphSize * scale);
         return top + height;
     }
-
-    private static Rect Offset(Rect rect, float dx) =>
-        new(new Vector2(rect.Min.X + dx, rect.Min.Y), new Vector2(rect.Max.X + dx, rect.Max.Y));
 
     private static Vector2 StatGlyphCenter(Rect tile, float scale)
     {
@@ -259,12 +259,12 @@ internal sealed partial class GamesApp
         y += (GamesHubArt.SectionHeight + HubMetrics.HeaderGap) * scale;
         if (!signedIn)
         {
-            var settings = navigation.IsAvailable(LeaderboardSettingsAppId) ? Loc.T(L.GamesHub.OpenSettings) : string.Empty;
+            var settings = navigation.IsAvailable(SettingsAppId) ? Loc.T(L.GamesHub.OpenSettings) : string.Empty;
             var bottom = DrawCompactCard(drawList, left, y, width, scale, PhoneIcons.UserCircle,
                 Loc.T(L.Stage.SignInToRank), ui.TitleInk, settings, ProfileSignInId, true, out var openSettings);
             if (openSettings)
             {
-                navigation.Open(LeaderboardSettingsAppId);
+                navigation.Open(SettingsAppId);
             }
 
             return bottom;
@@ -585,9 +585,8 @@ internal sealed partial class GamesApp
             rankStatIds[slot] = rank.GameId;
             rankCardIds[slot] = RankCardPrefix + rank.GameId;
             var title = games[gameIndex].Title;
-            rankTitles[slot] = ScoreStatIds.SuffixOf(rank.GameId).Length == 0
-                ? title
-                : string.Concat(title, MetaSeparator, Loc.T(LeaderboardModeName(rank.GameId, ScoreKind.Score, false)));
+            var mode = RankModeName(games[gameIndex].Spec, rank.GameId);
+            rankTitles[slot] = mode.Length == 0 ? title : string.Concat(title, MetaSeparator, mode);
             rankChips[slot] = Loc.T(L.Leaderboard.RankChip, GameNumber.Label(rank.Rank));
             rankTotals[slot] = Loc.T(L.GamesHub.OfTotal, CountText.Exact(rank.Total));
             rankWeeks[slot] = rank.WeekRank > 0
@@ -596,6 +595,25 @@ internal sealed partial class GamesApp
         }
 
         SortByRank(rankOrder, rankValues, rankRowCount);
+    }
+
+    internal static string RankModeName(in GameSpec spec, string statId)
+    {
+        if (ScoreStatIds.SuffixOf(statId).Length == 0)
+        {
+            return string.Empty;
+        }
+
+        for (var mode = 0; mode < spec.Modes.Length; mode++)
+        {
+            var board = ScoreStatIds.LeaderboardId(spec.StatIdFor(mode), spec.Id, spec.KindFor(mode));
+            if (string.Equals(board, statId, StringComparison.Ordinal))
+            {
+                return Loc.T(spec.Modes[mode]);
+            }
+        }
+
+        return Loc.T(LeaderboardModeName(statId, ScoreKind.Score, false));
     }
 
     internal static void SortByRank(int[] order, int[] values, int count)

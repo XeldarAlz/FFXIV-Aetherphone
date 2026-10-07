@@ -168,7 +168,7 @@ Aethernet アカウントひとつですべてのソーシャルアプリにサ�
 
 **ひと休みに**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="ゲーム" title="ゲーム" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="チェス" title="チェス" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Doom を含む59本のアーケードゲーム · 参加するかを自分で選べる世界とフレンドのランキング · さらに Uno、チェス、8ボールプール、コネクトフォー、ブロードサイド、ラッキードロー、クレーター、ミニゴルフを友達とオンラインで · Doom とクレーター、8ボールプールとクレーターのルームは横向きで遊べます</sub>
+<sub>Doom を含む59本のアーケードゲーム · ホーム、みんなで、ライブラリ、プロフィールのタブ。一番上では今日のゲームがライブで動き、連続記録のカレンダーとすべてのゲームの描き下ろしアイコンつき · 参加するかを自分で選べる世界とフレンドのランキング · さらに Uno、チェス、8ボールプール、コネクトフォー、ブロードサイド、ラッキードロー、クレーター、ミニゴルフを友達とオンラインで · Doom とクレーター、8ボールプールとクレーターのルームは横向きで遊べます</sub>
 
 ## ポケットの中のスマホと同じ作り
 

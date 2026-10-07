@@ -8,7 +8,6 @@ using Aetherphone.Apps.Games.Slice;
 using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
 using Aetherphone.Apps.Games.Tetris;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 
@@ -176,7 +175,6 @@ internal sealed class GamesLibrary
     private readonly int[] ordered;
     private readonly int[] latest;
     private readonly int[] recent;
-    private readonly int[] searched;
     private readonly int[] records;
     private readonly int[] byGenre;
     private readonly int[] genreStart;
@@ -187,7 +185,6 @@ internal sealed class GamesLibrary
     private readonly int[] genrePlays = new int[ShelfGenreCount];
     private readonly GameGenre[] genreOrder = new GameGenre[ShelfGenreCount];
     private readonly long[] lastPlayed;
-    private readonly string[] bestLabels;
     private readonly string[] bestValues;
     private readonly string[] bestTiers;
     private readonly RecordKind[] bestKinds;
@@ -202,7 +199,6 @@ internal sealed class GamesLibrary
     private readonly int[] starMax;
     private int latestCount;
     private int recentCount;
-    private int searchedCount;
     private int recordCount;
     private int playedCount;
     private int viewCount;
@@ -210,8 +206,6 @@ internal sealed class GamesLibrary
     private GamesFilter viewFilter;
     private GamesSort viewSort;
     private string viewQuery = string.Empty;
-    private string searchedQuery = string.Empty;
-    private bool searchDirty = true;
     private LanguageInfo? labelLanguage;
     private int labelFormatVersion = -1;
 
@@ -219,7 +213,6 @@ internal sealed class GamesLibrary
     public readonly string[] IconIds;
     public readonly string[] TileIds;
     public readonly string[] PlayIds;
-    public readonly Spring[] Lift;
 
     public int Today { get; private set; }
 
@@ -250,7 +243,6 @@ internal sealed class GamesLibrary
         ordered = new int[count];
         latest = new int[count];
         recent = new int[count];
-        searched = new int[count];
         records = new int[count];
         byGenre = new int[count];
         genreStart = new int[GenreCount];
@@ -259,7 +251,6 @@ internal sealed class GamesLibrary
         byRecent = new int[count];
         view = new int[count];
         lastPlayed = new long[count];
-        bestLabels = new string[count];
         bestValues = new string[count];
         bestTiers = new string[count];
         bestKinds = new RecordKind[count];
@@ -275,15 +266,12 @@ internal sealed class GamesLibrary
         IconIds = new string[count];
         TileIds = new string[count];
         PlayIds = new string[count];
-        Lift = new Spring[count];
         for (var index = 0; index < count; index++)
         {
             ref readonly var entry = ref Entries[index];
-            Lift[index] = new Spring(1f);
             IconIds[index] = entry.Online ? OnlineGameArt.AccentId(entry.OnlineKind) : entry.Id;
             TileIds[index] = TileIdPrefix + entry.Id;
             PlayIds[index] = PlayIdPrefix + entry.Id;
-            bestLabels[index] = string.Empty;
             bestValues[index] = string.Empty;
             bestTiers[index] = string.Empty;
             rankLabels[index] = string.Empty;
@@ -321,7 +309,6 @@ internal sealed class GamesLibrary
         BuildRecent();
         BuildLabels();
         BuildRecords();
-        searchDirty = true;
         Version++;
     }
 
@@ -333,36 +320,7 @@ internal sealed class GamesLibrary
         }
 
         BuildLabels();
-        searchDirty = true;
         Version++;
-    }
-
-    public ReadOnlySpan<int> Search(string query)
-    {
-        if (!searchDirty && string.Equals(query, searchedQuery, StringComparison.Ordinal))
-        {
-            return searched.AsSpan(0, searchedCount);
-        }
-
-        searchedQuery = query;
-        searchDirty = false;
-        searchedCount = 0;
-        var needle = query.AsSpan().Trim();
-        if (needle.Length == 0)
-        {
-            return ReadOnlySpan<int>.Empty;
-        }
-
-        for (var position = 0; position < ordered.Length; position++)
-        {
-            var entryIndex = ordered[position];
-            if (MatchesQuery(entryIndex, needle))
-            {
-                searched[searchedCount++] = entryIndex;
-            }
-        }
-
-        return searched.AsSpan(0, searchedCount);
     }
 
     public ReadOnlySpan<int> View(GamesFilter filter, GamesSort sort, string query)
@@ -415,13 +373,13 @@ internal sealed class GamesLibrary
         return entry.Online ? OnlineGameArt.Accent(entry.OnlineKind) : games[entry.GameIndex].Accent;
     }
 
+    public static bool IsFreshOn(int today, int addedDay) => addedDay > 0 && today - addedDay <= NewDays;
+
     public static bool IsNewOn(int today, int addedDay, long lastPlayed) =>
-        addedDay > 0 && today - addedDay <= NewDays && lastPlayed <= 0;
+        IsFreshOn(today, addedDay) && lastPlayed <= 0;
 
     public bool IsNew(int entryIndex) =>
         IsNewOn(Today, Entries[entryIndex].AddedDay, lastPlayed[entryIndex]);
-
-    public long LastPlayed(int entryIndex) => lastPlayed[entryIndex];
 
     public string Hook(int entryIndex) => hooks[entryIndex];
 
@@ -450,8 +408,6 @@ internal sealed class GamesLibrary
     }
 
     public int Rank(int entryIndex) => bestRanks[entryIndex];
-
-    public string Best(int entryIndex) => bestLabels[entryIndex];
 
     public string BestValue(int entryIndex) => bestValues[entryIndex];
 
@@ -491,12 +447,6 @@ internal sealed class GamesLibrary
     }
 
     public static string OnlineEntryId(string gameKind) => OnlineIdPrefix + OnlineGameArt.AccentId(gameKind);
-
-    public string Subtitle(int entryIndex)
-    {
-        var best = bestLabels[entryIndex];
-        return best.Length > 0 ? best : Loc.T(GameGenres.Label(Entries[entryIndex].Genre));
-    }
 
     private void BuildOrder()
     {
@@ -683,7 +633,9 @@ internal sealed class GamesLibrary
             BuildBest(index);
             var genre = Loc.T(GameGenres.Label(Entries[index].Genre));
             hooks[index] = HookFor(index);
-            eyebrows[index] = string.Concat(newGame, Separator, genre);
+            eyebrows[index] = IsFreshOn(Today, Entries[index].AddedDay)
+                ? string.Concat(newGame, Separator, genre)
+                : genre;
             metaLabels[index] = IsNew(index) ? newWord : genre;
             BuildProgress(index);
             TotalStars += stars[index];
@@ -703,15 +655,6 @@ internal sealed class GamesLibrary
         bestKinds[entryIndex] = kind;
         bestValues[entryIndex] = kind == RecordKind.None ? string.Empty : value;
         bestTiers[entryIndex] = kind != RecordKind.None && tier >= 0 ? Loc.T(TierLabels[tier]) : string.Empty;
-        var label = kind switch
-        {
-            RecordKind.None => string.Empty,
-            RecordKind.Stars => value,
-            RecordKind.Streak => string.Concat(Loc.T(L.Games.Streak), Separator, value),
-            RecordKind.Level => string.Concat(Loc.T(L.Games.Best), Separator, Loc.T(L.Games.Level), " ", value),
-            _ => string.Concat(Loc.T(L.Games.Best), Separator, value),
-        };
-        bestLabels[entryIndex] = WithTier(label, bestTiers[entryIndex]);
     }
 
     private void BuildProgress(int entryIndex)

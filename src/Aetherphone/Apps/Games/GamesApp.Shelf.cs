@@ -10,17 +10,6 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Games;
 
-internal static class LineClamp
-{
-    public static string Remainder(string text, string firstLine, string secondLine)
-    {
-        var firstStart = text.IndexOf(firstLine, StringComparison.Ordinal);
-        var searchFrom = firstStart < 0 ? 0 : firstStart + firstLine.Length;
-        var secondStart = text.IndexOf(secondLine, searchFrom, StringComparison.Ordinal);
-        return secondStart < 0 ? secondLine : text[secondStart..];
-    }
-}
-
 internal sealed partial class GamesApp
 {
     private const string ShelfNavId = "games.shelf.nav";
@@ -35,14 +24,11 @@ internal sealed partial class GamesApp
     private const float CategoryPlayMinWidth = 64f;
     private const int CategoryHookLines = 2;
 
-    private string?[] categoryHookTails = Array.Empty<string?>();
-    private float categoryHookWidth;
-    private float categoryHookLineHeight;
-    private int categoryHookVersion = -1;
+    private ClampedLines[] categoryHooks = Array.Empty<ClampedLines>();
 
     internal static ReadOnlySpan<int> ShelfEntries(GamesLibrary library, GamesShelf shelf) => shelf switch
     {
-        GamesShelf.New or GamesShelf.Latest => library.Latest,
+        GamesShelf.New => library.Latest,
         GamesShelf.All => library.Ordered,
         _ => library.Genre((GameGenre)shelf),
     };
@@ -53,7 +39,7 @@ internal sealed partial class GamesApp
 
     private static string ShelfTitle(GamesShelf shelf) => shelf switch
     {
-        GamesShelf.New or GamesShelf.Latest => Loc.T(L.GamesHub.JustAdded),
+        GamesShelf.New => Loc.T(L.GamesHub.JustAdded),
         GamesShelf.All => Loc.T(L.Games.LibraryHeading),
         _ => Loc.T(GameGenres.Label((GameGenre)shelf)),
     };
@@ -159,8 +145,8 @@ internal sealed partial class GamesApp
             new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half), null, true);
         var textLeft = row.Min.X + side + CategoryTextGap * scale;
         var textWidth = MathF.Max(1f, play.Min.X - CategoryTextGap * scale - textLeft);
-        WrapCategoryHook(entryIndex, textWidth, lineHeight, out var firstLine, out var secondLine);
-        var lines = secondLine.Length > 0 ? 2 : firstLine.Length > 0 ? 1 : 0;
+        ref readonly var hook = ref CategoryHook(entryIndex, textWidth);
+        var lines = hook.Count;
         var blockHeight = titleHeight + (lines > 0 ? CategoryLineGap * scale + lines * lineHeight : 0f);
         var titleTop = row.Center.Y - blockHeight * 0.5f;
         Marquee.DrawLeft(drawList, new MarqueeId(CategoryTitleMarquee, library.Entries[entryIndex].Id),
@@ -168,12 +154,12 @@ internal sealed partial class GamesApp
         var lineTop = titleTop + titleHeight + CategoryLineGap * scale;
         if (lines > 0)
         {
-            Typography.Draw(drawList, new Vector2(textLeft, lineTop), firstLine, ui.MutedInk, TextStyles.Footnote);
+            Typography.Draw(drawList, new Vector2(textLeft, lineTop), hook.First, ui.MutedInk, TextStyles.Footnote);
         }
 
         if (lines > 1)
         {
-            Typography.Draw(drawList, new Vector2(textLeft, lineTop + lineHeight), secondLine, ui.MutedInk,
+            Typography.Draw(drawList, new Vector2(textLeft, lineTop + lineHeight), hook.Second, ui.MutedInk,
                 TextStyles.Footnote);
         }
 
@@ -187,49 +173,16 @@ internal sealed partial class GamesApp
         return played || UiInteract.Click(row.Min, row.Max, hovered);
     }
 
-    private void WrapCategoryHook(int entryIndex, float width, float lineHeight, out string firstLine,
-        out string secondLine)
+    private ref readonly ClampedLines CategoryHook(int entryIndex, float width)
     {
+        if (categoryHooks.Length != library.Entries.Length)
+        {
+            categoryHooks = new ClampedLines[library.Entries.Length];
+        }
+
         var hook = library.Hook(entryIndex);
-        if (hook.Length == 0)
-        {
-            hook = library.Meta(entryIndex);
-        }
-
-        var wrapped = Typography.WrapText(hook, TextStyles.Footnote, width);
-        firstLine = wrapped.Length > 0 ? wrapped[0] : string.Empty;
-        secondLine = wrapped.Length > 1 ? wrapped[1] : string.Empty;
-        if (wrapped.Length <= CategoryHookLines)
-        {
-            return;
-        }
-
-        SyncCategoryHookTails(width, lineHeight);
-        var tail = categoryHookTails[entryIndex];
-        if (tail is null)
-        {
-            tail = Typography.FitText(LineClamp.Remainder(hook, firstLine, secondLine), width, TextStyles.Footnote);
-            categoryHookTails[entryIndex] = tail;
-        }
-
-        secondLine = tail;
-    }
-
-    private void SyncCategoryHookTails(float width, float lineHeight)
-    {
-        if (categoryHookTails.Length != library.Entries.Length)
-        {
-            categoryHookTails = new string?[library.Entries.Length];
-        }
-        else if (categoryHookVersion == library.Version && categoryHookWidth == width
-                 && categoryHookLineHeight == lineHeight)
-        {
-            return;
-        }
-
-        Array.Clear(categoryHookTails);
-        categoryHookVersion = library.Version;
-        categoryHookWidth = width;
-        categoryHookLineHeight = lineHeight;
+        ref var lines = ref categoryHooks[entryIndex];
+        lines.Update(hook.Length > 0 ? hook : library.Meta(entryIndex), width, TextStyles.Footnote);
+        return ref lines;
     }
 }

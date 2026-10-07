@@ -168,7 +168,7 @@ Una sola cuenta de Aethernet te da acceso a todas las apps sociales, y cada app 
 
 **Tiempo libre**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Juegos" title="Juegos" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Ajedrez" title="Ajedrez" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Un salón recreativo de cincuenta y nueve juegos, Doom entre ellos · clasificaciones globales y de amigos a las que solo te unes si quieres · además de Uno, Ajedrez, Billar bola 8, Cuatro en raya, Andanada, Golpe de suerte, Cráter y Minigolf para jugar en línea con amigos · Doom y Cráter, y las salas de Billar bola 8 y Cráter, se juegan en horizontal</sub>
+<sub>Un salón recreativo de cincuenta y nueve juegos, Doom entre ellos · pestañas Inicio, Juntos, Biblioteca y Perfil, con el juego del día en vivo arriba, un calendario de racha diaria y un icono pintado para cada juego · clasificaciones globales y de amigos a las que solo te unes si quieres · además de Uno, Ajedrez, Billar bola 8, Cuatro en raya, Andanada, Golpe de suerte, Cráter y Minigolf para jugar en línea con amigos · Doom y Cráter, y las salas de Billar bola 8 y Cráter, se juegan en horizontal</sub>
 
 ## Hecho como el teléfono que llevas en el bolsillo
 

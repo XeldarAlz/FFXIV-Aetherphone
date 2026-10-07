@@ -143,6 +143,9 @@ public sealed class GamesHomeLayoutTests
 
     [Theory]
     [InlineData("Stack the blocks as high as you can.", "Stack the blocks", "fallback", "as high as you can.")]
+    [InlineData("Tap to flap through the gaps and dodge every pipe", "Tap to flap through", "the gaps",
+        "the gaps and dodge every pipe")]
+    [InlineData("go go go go go", "go go", "go go", "go go go")]
     [InlineData("Stack the blocks", "Other", "fallback", "fallback")]
     [InlineData("Stack", "", "fallback", "fallback")]
     public void TheSecondHookLineCarriesTheRestOfTheSentence(string text, string firstLine, string fallback,
