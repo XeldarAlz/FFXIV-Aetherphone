@@ -34,7 +34,7 @@ internal sealed class OnlineHub
     private const int CodeBufferLength = 16;
 
     private static readonly string[] HostIds =
-        ["games.host.uno", "games.host.chess", "games.host.pool", "games.host.connectfour"];
+        ["games.host.uno", "games.host.chess", "games.host.pool", "games.host.connectfour", "games.host.luckydraw"];
 
     private readonly GameRoomsStore store;
     private readonly Action<string, string> openRoom;
@@ -181,6 +181,11 @@ internal sealed class OnlineHub
         if (string.Equals(kind, GameRoomWire.ConnectFourKind, StringComparison.Ordinal))
         {
             return Loc.T(L.Games.OnlineConnectFourHostHint);
+        }
+
+        if (string.Equals(kind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
+        {
+            return Loc.T(L.Games.OnlineLuckyDrawHostHint);
         }
 
         if (unoHint.Length == 0)

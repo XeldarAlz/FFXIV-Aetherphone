@@ -64,7 +64,7 @@ internal readonly struct LuckyEvent
     }
 }
 
-internal sealed class LuckyDrawBoard
+internal sealed class LuckyDrawBoard : ILuckyScoreboard
 {
     public const int MinSeats = 2;
     public const int MaxSeats = GameSeats.Max;
@@ -305,53 +305,12 @@ internal sealed class LuckyDrawBoard
         return count;
     }
 
-    public int HandScore(int seat)
-    {
-        if (states[seat] == LuckySeatState.Busted)
-        {
-            return 0;
-        }
+    public int HandScore(int seat) =>
+        LuckyHand.Score(Row(seat), states[seat] == LuckySeatState.Busted, SevenSeat == seat);
 
-        var numbers = 0;
-        var plus = 0;
-        var doubled = false;
-        var count = rowCounts[seat];
-        for (var slot = 0; slot < count; slot++)
-        {
-            var face = rows[seat * RowCapacity + slot];
-            if (LuckyCards.IsNumber(face))
-            {
-                numbers += face;
-            }
-            else if (face == LuckyCards.Times)
-            {
-                doubled = true;
-            }
-            else
-            {
-                plus += LuckyCards.PlusValue(face);
-            }
-        }
+    public int UniqueNumbers(int seat) => LuckyHand.UniqueNumbers(Row(seat));
 
-        var score = (doubled ? numbers * 2 : numbers) + plus;
-        return SevenSeat == seat ? score + SevenBonus : score;
-    }
-
-    public int UniqueNumbers(int seat)
-    {
-        var mask = 0;
-        var count = rowCounts[seat];
-        for (var slot = 0; slot < count; slot++)
-        {
-            var face = rows[seat * RowCapacity + slot];
-            if (LuckyCards.IsNumber(face))
-            {
-                mask |= 1 << face;
-            }
-        }
-
-        return BitOperations.PopCount((uint)mask);
-    }
+    private ReadOnlySpan<byte> Row(int seat) => rows.AsSpan(seat * RowCapacity, rowCounts[seat]);
 
     public bool HoldsNumber(int seat, int number) => FindFace(seat, number, -1) >= 0;
 

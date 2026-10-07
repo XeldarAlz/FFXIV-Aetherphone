@@ -10,6 +10,8 @@ internal static class GameRoomWire
 
     public const string ConnectFourKind = "games.connectfour";
 
+    public const string LuckyDrawKind = "games.luckydraw";
+
     public const int ConnectFourColumns = 7;
 
     public const int ConnectFourRows = 6;
@@ -75,6 +77,16 @@ internal static class GameRoomWire
     public const string ActionResign = "resign";
 
     public const string ActionDrop = "drop";
+
+    public const string ActionHit = "hit";
+
+    public const string ActionStay = "stay";
+
+    public const string ActionTarget = "target";
+
+    public const string LuckyDrawEndTarget = "target";
+
+    public const string LuckyDrawEndDesertion = "desertion";
 
     public const string ConnectFourEndConnect = "connect";
 

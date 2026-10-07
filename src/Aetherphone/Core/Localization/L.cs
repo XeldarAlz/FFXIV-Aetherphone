@@ -8282,6 +8282,11 @@ internal static class L
         public static readonly LocString OnlineConnectFourHostHint = new("games.onlineConnectFourHostHint", "Head-to-head, 30 seconds a turn");
         public static readonly LocString OnlineConnectFourWin = new("games.onlineConnectFourWin", "{0} connects four and wins!");
         public static readonly LocString OnlineConnectFourDraw = new("games.onlineConnectFourDraw", "Draw, the board is full");
+        public static readonly LocString OnlineLuckyDrawHostHint = new("games.onlineLuckyDrawHostHint", "Two to six players, first to 200");
+        public static readonly LocString OnlineLuckyDrawWin = new("games.onlineLuckyDrawWin", "{0} reaches 200 and wins!");
+        public static readonly LocString OnlineLuckyDrawDesertWin = new("games.onlineLuckyDrawDesertWin", "{0} wins, everyone else left");
+        public static readonly LocString OnlineLuckyDrawChoosing = new("games.onlineLuckyDrawChoosing", "{0} is picking a target");
+        public static readonly LocString OnlineLuckyDrawNextDeal = new("games.onlineLuckyDrawNextDeal", "Joins next round");
     }
 
     internal static class GamesHub
