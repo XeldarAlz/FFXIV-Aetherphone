@@ -168,7 +168,7 @@ One Aethernet account signs you in to every social app, and each app can keep it
 
 **Downtime**<br>
 <img src="docs/media/readme/icons/games.png" width="36" alt="Games" title="Games" /> <img src="docs/media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="docs/media/readme/icons/chess.png" width="36" alt="Chess" title="Chess" /> <img src="docs/media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="docs/media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="docs/media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="docs/media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>An arcade of thirty-three games, Doom among them, each full screen with an intro, a countdown, a pause menu and a result card · a daily board that is the same for everyone · global and friends leaderboards, all time and this week · plus Uno, Chess, 8-Ball Pool and Connect Four online with friends</sub>
+<sub>An arcade of thirty-three games, Doom among them, each full screen with an intro, a countdown, a pause menu and a result card · a daily board that is the same for everyone · global and friends leaderboards you choose to join, all time and this week · plus Uno, Chess, 8-Ball Pool and Connect Four online with friends</sub>
 
 ## Built like the phone in your pocket
 
