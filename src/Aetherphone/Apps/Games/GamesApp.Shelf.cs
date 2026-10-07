@@ -24,21 +24,21 @@ internal static class LineClamp
 internal sealed partial class GamesApp
 {
     private const string ShelfNavId = "games.shelf.nav";
-    private const string ShelfScopeId = "games.shelf";
-    private const string ShelfTitleMarquee = "games.shelf.title.";
-    private const float ShelfRowHeight = 76f;
-    private const float ShelfRowInset = 14f;
-    private const float ShelfRowPadY = 8f;
-    private const float ShelfIconSize = 60f;
-    private const float ShelfTextGap = 12f;
-    private const float ShelfLineGap = 2f;
-    private const float ShelfPlayMinWidth = 64f;
-    private const int ShelfHookLines = 2;
+    private const string CategoryScopeId = "games.shelf";
+    private const string CategoryTitleMarquee = "games.shelf.title.";
+    private const float CategoryRowHeight = 76f;
+    private const float CategoryRowInset = 14f;
+    private const float CategoryRowPadY = 8f;
+    private const float CategoryIconSize = 60f;
+    private const float CategoryTextGap = 12f;
+    private const float CategoryLineGap = 2f;
+    private const float CategoryPlayMinWidth = 64f;
+    private const int CategoryHookLines = 2;
 
-    private string?[] shelfHookTails = Array.Empty<string?>();
-    private float shelfHookWidth;
-    private float shelfHookLineHeight;
-    private int shelfHookVersion = -1;
+    private string?[] categoryHookTails = Array.Empty<string?>();
+    private float categoryHookWidth;
+    private float categoryHookLineHeight;
+    private int categoryHookVersion = -1;
 
     internal static ReadOnlySpan<int> ShelfEntries(GamesLibrary library, GamesShelf shelf) => shelf switch
     {
@@ -47,9 +47,9 @@ internal sealed partial class GamesApp
         _ => library.Genre((GameGenre)shelf),
     };
 
-    internal static float ShelfRowHeightFor(float titleHeight, float lineHeight, float scale) =>
-        MathF.Max(ShelfRowHeight * scale,
-            titleHeight + ShelfLineGap * scale + lineHeight * ShelfHookLines + ShelfRowPadY * 2f * scale);
+    internal static float CategoryRowHeightFor(float titleHeight, float lineHeight, float scale) =>
+        MathF.Max(CategoryRowHeight * scale,
+            titleHeight + CategoryLineGap * scale + lineHeight * CategoryHookLines + CategoryRowPadY * 2f * scale);
 
     private static string ShelfTitle(GamesShelf shelf) => shelf switch
     {
@@ -58,12 +58,12 @@ internal sealed partial class GamesApp
         _ => Loc.T(GameGenres.Label((GameGenre)shelf)),
     };
 
-    private string ShelfBackTitle() => tab == GamesTab.Home ? Loc.T(L.GamesHub.TabHome) : TabTitle(tab);
+    private string CategoryBackTitle() => tab == GamesTab.Home ? Loc.T(L.GamesHub.TabHome) : TabTitle(tab);
 
     private void DrawShelfPage(in PhoneContext context, GamesShelf shelf)
     {
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId(ShelfScopeId))
+        using (ImRaii.PushId(CategoryScopeId))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;
@@ -73,15 +73,15 @@ internal sealed partial class GamesApp
             var entries = ShelfEntries(library, shelf);
             Typography.Draw(drawList, origin, CountLabel(entries.Length), ui.MutedInk, TextStyles.Footnote);
             var top = origin.Y + Typography.LineHeight(TextStyles.Footnote) + Metrics.Space.Sm * scale;
-            var bottom = DrawShelfCard(drawList, new Vector2(origin.X, top), width, entries, scale);
+            var bottom = DrawCategoryCard(drawList, new Vector2(origin.X, top), width, entries, scale);
             FinishPage(origin, width, bottom, scale);
         }
 
         AppHeader.EndLargeTitle(in navBar, context, ShelfNavId, ShelfTitle(shelf), NavBarStyle.From(ui),
-            ReadOnlySpan<NavBarButton>.Empty, ShelfBackTitle(), back);
+            ReadOnlySpan<NavBarButton>.Empty, CategoryBackTitle(), back);
     }
 
-    private float DrawShelfCard(ImDrawListPtr drawList, Vector2 origin, float width, ReadOnlySpan<int> entries,
+    private float DrawCategoryCard(ImDrawListPtr drawList, Vector2 origin, float width, ReadOnlySpan<int> entries,
         float scale)
     {
         if (entries.Length == 0)
@@ -91,11 +91,11 @@ internal sealed partial class GamesApp
 
         var titleHeight = Typography.LineHeight(TextStyles.Headline);
         var lineHeight = Typography.LineHeight(TextStyles.Footnote);
-        var rowHeight = ShelfRowHeightFor(titleHeight, lineHeight, scale);
+        var rowHeight = CategoryRowHeightFor(titleHeight, lineHeight, scale);
         var cardMax = new Vector2(origin.X + width, origin.Y + entries.Length * rowHeight);
         ui.Card(drawList, origin, cardMax, HubMetrics.CardRadius * scale);
-        var inset = ShelfRowInset * scale;
-        var dividerLeft = origin.X + inset + (ShelfIconSize + ShelfTextGap) * scale;
+        var inset = CategoryRowInset * scale;
+        var dividerLeft = origin.X + inset + (CategoryIconSize + CategoryTextGap) * scale;
         var dividerColor = ImGui.GetColorU32(ui.Hairline);
         var rows = VisibleRows.Between(entries.Length, origin.Y, rowHeight, drawList.GetClipRectMin().Y,
             drawList.GetClipRectMax().Y);
@@ -112,7 +112,7 @@ internal sealed partial class GamesApp
 
             var row = new Rect(new Vector2(origin.X + inset, rowTop),
                 new Vector2(cardMax.X - inset, rowTop + rowHeight));
-            if (DrawShelfRow(drawList, row, entries[rowIndex], titleHeight, lineHeight, scale, out var icon))
+            if (DrawCategoryRow(drawList, row, entries[rowIndex], titleHeight, lineHeight, scale, out var icon))
             {
                 tapped = entries[rowIndex];
                 tappedIcon = icon;
@@ -127,12 +127,12 @@ internal sealed partial class GamesApp
         return cardMax.Y;
     }
 
-    private bool DrawShelfRow(ImDrawListPtr drawList, Rect row, int entryIndex, float titleHeight, float lineHeight,
+    private bool DrawCategoryRow(ImDrawListPtr drawList, Rect row, int entryIndex, float titleHeight, float lineHeight,
         float scale, out Rect icon)
     {
         var playLabel = Loc.T(L.Games.Play);
         var playHeight = Button.SmallHeight * scale;
-        var playWidth = MathF.Max(Button.WidthFor(playLabel, ButtonSize.Small), ShelfPlayMinWidth * scale);
+        var playWidth = MathF.Max(Button.WidthFor(playLabel, ButtonSize.Small), CategoryPlayMinWidth * scale);
         var play = new Rect(new Vector2(row.Max.X - playWidth, row.Center.Y - playHeight * 0.5f),
             new Vector2(row.Max.X, row.Center.Y + playHeight * 0.5f));
         var overPlay = UiInteract.Hover(play.Min, play.Max);
@@ -143,29 +143,29 @@ internal sealed partial class GamesApp
         if (hover > 0f)
         {
             var wash = ui.HoverTint;
-            var bleed = ShelfRowInset * 0.5f * scale;
+            var bleed = CategoryRowInset * 0.5f * scale;
             var trim = Metrics.Space.Xxs * scale;
             Squircle.Fill(drawList, new Vector2(row.Min.X - bleed, row.Min.Y + trim),
                 new Vector2(row.Max.X + bleed, row.Max.Y - trim), Metrics.Radius.Md * scale,
                 ImGui.GetColorU32(wash with { W = wash.W * hover }));
         }
 
-        var side = ShelfIconSize * scale;
+        var side = CategoryIconSize * scale;
         var center = new Vector2(row.Min.X + side * 0.5f, row.Center.Y);
         icon = new Rect(new Vector2(row.Min.X, center.Y - side * 0.5f),
             new Vector2(row.Min.X + side, center.Y + side * 0.5f));
         var half = side * 0.5f * press;
         GameIconArt.Draw(drawList, library.IconIds[entryIndex], library.Accent(entryIndex),
             new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half), null, true);
-        var textLeft = row.Min.X + side + ShelfTextGap * scale;
-        var textWidth = MathF.Max(1f, play.Min.X - ShelfTextGap * scale - textLeft);
-        WrapShelfHook(entryIndex, textWidth, lineHeight, out var firstLine, out var secondLine);
+        var textLeft = row.Min.X + side + CategoryTextGap * scale;
+        var textWidth = MathF.Max(1f, play.Min.X - CategoryTextGap * scale - textLeft);
+        WrapCategoryHook(entryIndex, textWidth, lineHeight, out var firstLine, out var secondLine);
         var lines = secondLine.Length > 0 ? 2 : firstLine.Length > 0 ? 1 : 0;
-        var blockHeight = titleHeight + (lines > 0 ? ShelfLineGap * scale + lines * lineHeight : 0f);
+        var blockHeight = titleHeight + (lines > 0 ? CategoryLineGap * scale + lines * lineHeight : 0f);
         var titleTop = row.Center.Y - blockHeight * 0.5f;
-        Marquee.DrawLeft(drawList, new MarqueeId(ShelfTitleMarquee, library.Entries[entryIndex].Id),
+        Marquee.DrawLeft(drawList, new MarqueeId(CategoryTitleMarquee, library.Entries[entryIndex].Id),
             library.Title(entryIndex), textLeft, titleTop, textWidth, TextStyles.Headline, ui.TitleInk, hovered);
-        var lineTop = titleTop + titleHeight + ShelfLineGap * scale;
+        var lineTop = titleTop + titleHeight + CategoryLineGap * scale;
         if (lines > 0)
         {
             Typography.Draw(drawList, new Vector2(textLeft, lineTop), firstLine, ui.MutedInk, TextStyles.Footnote);
@@ -187,7 +187,7 @@ internal sealed partial class GamesApp
         return played || UiInteract.Click(row.Min, row.Max, hovered);
     }
 
-    private void WrapShelfHook(int entryIndex, float width, float lineHeight, out string firstLine,
+    private void WrapCategoryHook(int entryIndex, float width, float lineHeight, out string firstLine,
         out string secondLine)
     {
         var hook = library.Hook(entryIndex);
@@ -199,37 +199,37 @@ internal sealed partial class GamesApp
         var wrapped = Typography.WrapText(hook, TextStyles.Footnote, width);
         firstLine = wrapped.Length > 0 ? wrapped[0] : string.Empty;
         secondLine = wrapped.Length > 1 ? wrapped[1] : string.Empty;
-        if (wrapped.Length <= ShelfHookLines)
+        if (wrapped.Length <= CategoryHookLines)
         {
             return;
         }
 
-        SyncShelfHookTails(width, lineHeight);
-        var tail = shelfHookTails[entryIndex];
+        SyncCategoryHookTails(width, lineHeight);
+        var tail = categoryHookTails[entryIndex];
         if (tail is null)
         {
             tail = Typography.FitText(LineClamp.Remainder(hook, firstLine, secondLine), width, TextStyles.Footnote);
-            shelfHookTails[entryIndex] = tail;
+            categoryHookTails[entryIndex] = tail;
         }
 
         secondLine = tail;
     }
 
-    private void SyncShelfHookTails(float width, float lineHeight)
+    private void SyncCategoryHookTails(float width, float lineHeight)
     {
-        if (shelfHookTails.Length != library.Entries.Length)
+        if (categoryHookTails.Length != library.Entries.Length)
         {
-            shelfHookTails = new string?[library.Entries.Length];
+            categoryHookTails = new string?[library.Entries.Length];
         }
-        else if (shelfHookVersion == library.Version && shelfHookWidth == width
-                 && shelfHookLineHeight == lineHeight)
+        else if (categoryHookVersion == library.Version && categoryHookWidth == width
+                 && categoryHookLineHeight == lineHeight)
         {
             return;
         }
 
-        Array.Clear(shelfHookTails);
-        shelfHookVersion = library.Version;
-        shelfHookWidth = width;
-        shelfHookLineHeight = lineHeight;
+        Array.Clear(categoryHookTails);
+        categoryHookVersion = library.Version;
+        categoryHookWidth = width;
+        categoryHookLineHeight = lineHeight;
     }
 }

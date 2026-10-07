@@ -148,13 +148,13 @@ public sealed class GamesLibraryPagesTests
     [InlineData(1.5f)]
     public void ARowKeepsItsStandardHeightAtTheDefaultTextSize(float scale)
     {
-        Assert.Equal(76f * scale, GamesApp.ShelfRowHeightFor(21f * scale, 17f * scale, scale), 3);
+        Assert.Equal(76f * scale, GamesApp.CategoryRowHeightFor(21f * scale, 17f * scale, scale), 3);
     }
 
     [Fact]
     public void ARowGrowsSoLargeTextNeverSpillsOutOfIt()
     {
-        var height = GamesApp.ShelfRowHeightFor(32f, 26f, 1f);
+        var height = GamesApp.CategoryRowHeightFor(32f, 26f, 1f);
 
         Assert.Equal(32f + 2f + 26f * 2f + 16f, height, 3);
     }
