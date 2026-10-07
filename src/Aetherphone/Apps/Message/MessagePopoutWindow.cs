@@ -34,8 +34,8 @@ internal sealed class MessagePopoutWindow : Window
     private const float Rounding = 18f;
     private const float BodyInset = 4f;
     private const float AvatarRadius = 14f;
-    private const float ButtonRadius = SocialChrome.HeaderIconRadius;
-    private const float ButtonPitch = SocialChrome.HeaderIconPitch;
+    private const float ButtonRadius = 14f;
+    private const float ButtonPitch = 31f;
     private const float EdgeInset = 14f;
     private const float CaretGap = 6f;
     private const float StaggerStep = 28f;

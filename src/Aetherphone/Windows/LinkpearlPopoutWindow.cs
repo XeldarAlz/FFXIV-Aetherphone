@@ -33,8 +33,8 @@ internal sealed partial class LinkpearlPopoutWindow : Window
     private const float TitleHeight = 44f;
     private const float Rounding = 18f;
     private const float BodyInset = 4f;
-    private const float ButtonRadius = SocialChrome.HeaderIconRadius;
-    private const float ButtonPitch = SocialChrome.HeaderIconPitch;
+    private const float ButtonRadius = 14f;
+    private const float ButtonPitch = 31f;
     private const float ButtonGlyph = 18f;
     private const float EdgeInset = 8f;
     private const float ChipHeight = 30f;
@@ -853,22 +853,19 @@ internal sealed partial class LinkpearlPopoutWindow : Window
         var closeCenter = new Vector2(bar.Max.X - EdgeInset * scale - radius, centerY);
         var phoneCenter = new Vector2(closeCenter.X - ButtonPitch * scale, centerY);
         var collapseCenter = new Vector2(phoneCenter.X - ButtonPitch * scale, centerY);
-        if (SocialChrome.DrawHeaderIcon(drawList, closeCenter, radius, PhoneIcons.X, ButtonGlyph, Loc.T(L.Common.Close),
-                ink, ink.MutedInk))
+        if (DrawTitleButton(drawList, closeCenter, radius, PhoneIcons.X, Loc.T(L.Common.Close)))
         {
             owner.Close(Key);
             return;
         }
 
-        if (SocialChrome.DrawHeaderIcon(drawList, phoneCenter, radius, PhoneIcons.DeviceMobile, ButtonGlyph,
-                Loc.T(L.Linkpearl.OpenInPhone), ink, ink.MutedInk))
+        if (DrawTitleButton(drawList, phoneCenter, radius, PhoneIcons.DeviceMobile, Loc.T(L.Linkpearl.OpenInPhone)))
         {
             owner.OpenInPhone?.Invoke(Key);
         }
 
-        if (SocialChrome.DrawHeaderIcon(drawList, collapseCenter, radius,
-                collapsed ? PhoneIcons.ChevronDown : PhoneIcons.ChevronUp, ButtonGlyph,
-                Loc.T(collapsed ? L.Linkpearl.Expand : L.Linkpearl.Collapse), ink, ink.MutedInk))
+        if (DrawTitleButton(drawList, collapseCenter, radius, collapsed ? PhoneIcons.ChevronDown : PhoneIcons.ChevronUp,
+                Loc.T(collapsed ? L.Linkpearl.Expand : L.Linkpearl.Collapse)))
         {
             ToggleCollapsed(!collapsed);
         }
@@ -877,8 +874,8 @@ internal sealed partial class LinkpearlPopoutWindow : Window
         if (!collapsed)
         {
             var settingsCenter = new Vector2(collapseCenter.X - ButtonPitch * scale, centerY);
-            if (SocialChrome.DrawHeaderIcon(drawList, settingsCenter, radius, PhoneIcons.Settings, ButtonGlyph,
-                    Loc.T(L.Linkpearl.ChatSettings), ink, ink.MutedInk, settingsOpen))
+            if (DrawTitleButton(drawList, settingsCenter, radius, PhoneIcons.Settings, Loc.T(L.Linkpearl.ChatSettings),
+                    settingsOpen))
             {
                 ToggleSettings();
             }
@@ -956,13 +953,33 @@ internal sealed partial class LinkpearlPopoutWindow : Window
         }
 
         var plusCenter = new Vector2(x + plusRadius, centerY);
-        if (SocialChrome.DrawHeaderIcon(drawList, plusCenter, plusRadius, PhoneIcons.Plus, ButtonGlyph,
-                Loc.T(L.Linkpearl.AddTab), ink, ink.MutedInk))
+        if (DrawTitleButton(drawList, plusCenter, plusRadius, PhoneIcons.Plus, Loc.T(L.Linkpearl.AddTab)))
         {
             OpenAddMenu();
         }
 
         chipsBand = new Rect(chipsBand.Min, new Vector2(plusCenter.X + plusRadius, bar.Max.Y));
+    }
+
+    private bool DrawTitleButton(ImDrawListPtr drawList, Vector2 center, float radius, string glyph, string tooltip,
+        bool highlighted = false)
+    {
+        var extent = new Vector2(radius, radius);
+        var hovered = UiInteract.Hover(center - extent, center + extent);
+        if (hovered || highlighted)
+        {
+            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(highlighted ? ink.AccentWash : ink.FieldFill), 32);
+        }
+
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        PhoneIcon.Draw(drawList, center, glyph, highlighted ? ink.AccentLink : ink.MutedInk,
+            ButtonGlyph * UiScale.Current);
+        HoverTooltip.Show(new Rect(center - extent, center + extent), tooltip, HoverLabelSide.Below);
+        return UiInteract.Click(center - extent, center + extent, hovered);
     }
 
     private float ChipWidth(int index, bool labelled, bool flashing, float scale)
