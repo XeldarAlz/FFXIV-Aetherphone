@@ -8944,6 +8944,76 @@ internal static class L
         public static readonly LocString Perfects = new("games.lander.perfects", "Perfect landings");
     }
 
+    internal static class LuckyDraw
+    {
+        public static readonly LocString Title = new("games.luckydraw.title", "Lucky Draw");
+        public static readonly LocString Hook = new("games.luckydraw.hook", "Draw cards to build your score, stop before a duplicate busts you, and race to 200.");
+        public static readonly LocString OneBot = new("games.luckydraw.oneBot", "1 bot");
+        public static readonly LocString ThreeBots = new("games.luckydraw.threeBots", "3 bots");
+        public static readonly LocString FiveBots = new("games.luckydraw.fiveBots", "5 bots");
+        public static readonly LocString Round = new("games.luckydraw.round", "Round");
+        public static readonly LocString RoundNumber = new("games.luckydraw.roundNumber", "Round {0}");
+        public static readonly LocString BotName = new("games.luckydraw.botName", "Bot {0}");
+        public static readonly LocString ToPlay = new("games.luckydraw.toPlay", "{0} to play");
+        public static readonly LocString Bust = new("games.luckydraw.bust", "Bust!");
+        public static readonly LocString Saved = new("games.luckydraw.saved", "Saved!");
+        public static readonly LocString Seven = new("games.luckydraw.seven", "Seven!");
+        public static readonly LocString SecondChance = new("games.luckydraw.secondChance", "Second Chance");
+        public static readonly LocString Frozen = new("games.luckydraw.frozen", "Frozen");
+        public static readonly LocString FlipThree = new("games.luckydraw.flipThree", "Flip Three!");
+        public static readonly LocString Banked = new("games.luckydraw.banked", "Banked");
+        public static readonly LocString Shuffled = new("games.luckydraw.shuffled", "Shuffled");
+        public static readonly LocString Careful = new("games.luckydraw.careful", "Careful");
+        public static readonly LocString Steady = new("games.luckydraw.steady", "Steady");
+        public static readonly LocString Bold = new("games.luckydraw.bold", "Bold");
+        public static readonly LocString Hit = new("games.luckydraw.hit", "Hit");
+        public static readonly LocString Stay = new("games.luckydraw.stay", "Stay");
+        public static readonly LocString Risk = new("games.luckydraw.risk", "Bust risk {0}%");
+        public static readonly LocString ChanceReady = new("games.luckydraw.chanceReady", "Second Chance ready");
+        public static readonly LocString PickFreeze = new("games.luckydraw.pickFreeze", "Tap a player to freeze");
+        public static readonly LocString PickFlipThree = new("games.luckydraw.pickFlipThree", "Tap a player to flip three");
+        public static readonly LocString PickChance = new("games.luckydraw.pickChance", "Tap a player to give your Second Chance");
+        public static readonly LocString Dealing = new("games.luckydraw.dealing", "Dealing…");
+        public static readonly LocString NextRound = new("games.luckydraw.nextRound", "Next round");
+        public static readonly LocString SeeResults = new("games.luckydraw.seeResults", "See results");
+        public static readonly LocString Rounds = new("games.luckydraw.rounds", "Rounds");
+        public static readonly LocString YourTotal = new("games.luckydraw.yourTotal", "Your total");
+        public static readonly LocString WinningTotal = new("games.luckydraw.winningTotal", "Winning total");
+        public static readonly LocString BestRound = new("games.luckydraw.bestRound", "Best round");
+        public static readonly LocString Sevens = new("games.luckydraw.sevens", "Sevens");
+    }
+
+    internal static class Broadside
+    {
+        public static readonly LocString Title = new("games.broadside.title", "Broadside");
+        public static readonly LocString Hook = new("games.broadside.hook", "Hide five airships on your grid, then trade cannon fire across the clouds until one fleet is gone.");
+        public static readonly LocString Dreadnought = new("games.broadside.dreadnought", "Dreadnought");
+        public static readonly LocString Cruiser = new("games.broadside.cruiser", "Cruiser");
+        public static readonly LocString Frigate = new("games.broadside.frigate", "Frigate");
+        public static readonly LocString Corvette = new("games.broadside.corvette", "Corvette");
+        public static readonly LocString Skiff = new("games.broadside.skiff", "Skiff");
+        public static readonly LocString ShipDown = new("games.broadside.shipDown", "{0} down!");
+        public static readonly LocString ToFire = new("games.broadside.toFire", "{0} to fire");
+        public static readonly LocString Hit = new("games.broadside.hit", "Hit!");
+        public static readonly LocString Miss = new("games.broadside.miss", "Miss");
+        public static readonly LocString EnemyTurn = new("games.broadside.enemyTurn", "Enemy turn");
+        public static readonly LocString TapToFire = new("games.broadside.tapToFire", "Tap a cell to fire");
+        public static readonly LocString PlaceHint = new("games.broadside.placeHint", "Drag ships onto the grid. Tap a ship to turn it.");
+        public static readonly LocString Auto = new("games.broadside.auto", "Auto");
+        public static readonly LocString Ready = new("games.broadside.ready", "Ready");
+        public static readonly LocString EnemySkies = new("games.broadside.enemySkies", "Enemy skies");
+        public static readonly LocString YourFleet = new("games.broadside.yourFleet", "Your fleet");
+        public static readonly LocString EnemyFleet = new("games.broadside.enemyFleet", "Enemy fleet");
+        public static readonly LocString Victory = new("games.broadside.victory", "Victory!");
+        public static readonly LocString Defeat = new("games.broadside.defeat", "Defeat");
+        public static readonly LocString Hits = new("games.broadside.hits", "Hits");
+        public static readonly LocString Shots = new("games.broadside.shots", "Shots");
+        public static readonly LocString Accuracy = new("games.broadside.accuracy", "Accuracy");
+        public static readonly LocString Percent = new("games.broadside.percent", "{0}%");
+        public static readonly LocString ShipsSunk = new("games.broadside.shipsSunk", "Ships sunk");
+        public static readonly LocString ShipsLost = new("games.broadside.shipsLost", "Ships lost");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

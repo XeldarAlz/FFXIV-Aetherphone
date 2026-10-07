@@ -99,6 +99,8 @@ internal static class AppAccents
         ["moogleclicker"] = AccentRing.Violet,
         ["claim"] = AccentRing.Violet,
         ["lander"] = AccentRing.Azure,
+        ["luckydraw"] = AccentRing.Red,
+        ["broadside"] = AccentRing.Cyan,
         ["rolladeck"] = AccentRing.Violet,
         ["hunts"] = AccentRing.Indigo
     }.ToFrozenDictionary();

@@ -139,8 +139,8 @@ The source of truth is the `games` array in the `GamesApp` constructor for local
 | Action | `skyfall`, `invaders`, `capman`, `squadron`, `doom`, `swoop`, `drift`, `crawler`, `trails`, `trailblaze`, `thrust`, `delve` |
 | Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil`, `mahjong`, `gloop`, `crates` |
 | Brain | `minesweeper`, `memory`, `nonogram`, `simon`, `sudoku`, `trivia`, `wordrun` |
-| Strategy | none yet: the Home rail and the Search browse card stay hidden while a genre has no games |
-| Tabletop | `solitaire`, `reversi`, `chess` |
+| Strategy | `broadside` |
+| Tabletop | `solitaire`, `reversi`, `chess`, `luckydraw` |
 | Friends (online) | `online.uno`, `online.chess`, `online.pool` (8-Ball Pool), `online.connectfour` (Connect Four) |
 
 A few ids predate their titles and class names: `match3` is Gem Swap (`GemSwapApp`), `memory` is Pairs (`PairsApp`), `minesweeper` is Sweeper (`SweeperApp`). Never rename an id: it keys the saved stats, the release date and the accent.
