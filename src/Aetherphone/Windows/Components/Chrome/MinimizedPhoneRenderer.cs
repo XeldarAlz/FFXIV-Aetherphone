@@ -157,8 +157,17 @@ internal static partial class MinimizedPhoneRenderer
         string time, float clockScale, in FaceInk ink, float alpha)
     {
         var centerX = screen.Center.X;
-        Typography.Draw(drawList, new Vector2(centerX - dateSize.X * 0.5f, top), date,
-            Palette.WithAlpha(ink.Muted, ink.Muted.W * alpha), DateStyle());
+        if (date.Length > 0)
+        {
+            Typography.Draw(drawList, new Vector2(centerX - dateSize.X * 0.5f, top), date,
+                Palette.WithAlpha(ink.Muted, ink.Muted.W * alpha), DateStyle());
+        }
+
+        if (time.Length == 0)
+        {
+            return;
+        }
+
         var clockSize = Typography.Measure(time, clockScale, FontWeight.Bold);
         Typography.Draw(drawList, new Vector2(centerX - clockSize.X * 0.5f, top + dateSize.Y), time,
             Palette.WithAlpha(ink.Strong, alpha), clockScale, FontWeight.Bold);

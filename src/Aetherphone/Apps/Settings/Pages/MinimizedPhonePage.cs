@@ -144,10 +144,12 @@ internal sealed class MinimizedPhonePage : ISettingsPage
 
     private void DrawPhoneSettings(PhoneTheme theme, float scale)
     {
-        var wallpaperCard = GroupCard.Begin(theme, 1);
-        var wallpaper = SettingsRow.Bool(wallpaperCard.NextRow(), Loc.T(L.Minimized.Wallpaper),
+        var faceCard = GroupCard.Begin(theme, 3);
+        var wallpaper = SettingsRow.Bool(faceCard.NextRow(), Loc.T(L.Minimized.Wallpaper),
             configuration.MinimizedWallpaper, theme, "minimized.wallpaper");
-        wallpaperCard.End();
+        DrawPartToggle(faceCard.NextRow(), MinimizedPart.Clock, theme);
+        DrawPartToggle(faceCard.NextRow(), MinimizedPart.Date, theme);
+        faceCard.End();
         if (wallpaper != configuration.MinimizedWallpaper)
         {
             configuration.MinimizedWallpaper = wallpaper;
@@ -186,6 +188,27 @@ internal sealed class MinimizedPhonePage : ISettingsPage
         }
 
         resetCard.End();
+    }
+
+    private void DrawPartToggle(Rect row, MinimizedPart part, PhoneTheme theme)
+    {
+        var slots = layout.Slots;
+        for (var index = 0; index < slots.Length; index++)
+        {
+            if (slots[index].Part != part)
+            {
+                continue;
+            }
+
+            var enabled = SettingsRow.Bool(row, Loc.T(MinimizedParts.Label(part)), slots[index].Enabled, theme,
+                RowIds[(int)part]);
+            if (enabled != slots[index].Enabled)
+            {
+                layout.SetEnabled(index, enabled);
+            }
+
+            return;
+        }
     }
 
     private void DrawPartRow(Rect row, int index, in MinimizedSlot slot, int ordinal, int count, PhoneTheme theme,
