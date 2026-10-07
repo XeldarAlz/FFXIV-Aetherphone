@@ -32,6 +32,8 @@ internal sealed class UpdraftBoard
     public const float StartCamera = -2.5f;
     private const float MaxCatchUpSeconds = 0.25f;
     private const float MouseGain = 2.5f;
+    private const float KeyboardSpeed = 6.5f;
+    private const float KeyboardAcceleration = 24f;
     private const float StunSeconds = 0.35f;
     private const float ZapDrop = 4f;
     private const float StormCooldown = 1.2f;
@@ -123,7 +125,7 @@ internal sealed class UpdraftBoard
     }
 
     public static float HorizontalReach(float rise) =>
-        MathF.Max(0f, (MaxSpeed - MaxWind) * (AirTime(rise, PlainBounce) - MaxSpeed / Acceleration));
+        MathF.Max(0f, (KeyboardSpeed - MaxWind) * (AirTime(rise, PlainBounce) - KeyboardSpeed / KeyboardAcceleration));
 
     public static float Difficulty(float height) => Math.Clamp(height / RampHeight, 0f, 1f);
 
@@ -321,10 +323,14 @@ internal sealed class UpdraftBoard
             return;
         }
 
-        var desired = input.HasTarget
-            ? Math.Clamp(WrapDelta(input.TargetX - BirdX) * MouseGain, -MaxSpeed, MaxSpeed)
-            : Math.Clamp(input.Axis, -1f, 1f) * MaxSpeed;
-        VelocityX = Approach(VelocityX, desired, Acceleration * deltaSeconds);
+        if (input.HasTarget)
+        {
+            var desired = Math.Clamp(WrapDelta(input.TargetX - BirdX) * MouseGain, -MaxSpeed, MaxSpeed);
+            VelocityX = Approach(VelocityX, desired, Acceleration * deltaSeconds);
+            return;
+        }
+
+        VelocityX = Approach(VelocityX, Math.Clamp(input.Axis, -1f, 1f) * KeyboardSpeed, KeyboardAcceleration * deltaSeconds);
     }
 
     private void MoveClouds(float deltaSeconds)
