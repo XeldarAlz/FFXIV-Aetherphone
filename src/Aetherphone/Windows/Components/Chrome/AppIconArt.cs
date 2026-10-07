@@ -124,6 +124,9 @@ internal static class AppIconArt
             case "slice":
                 SliceIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "spiral":
+                SpiralIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }

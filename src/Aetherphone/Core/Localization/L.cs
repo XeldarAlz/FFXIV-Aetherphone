@@ -8644,6 +8644,18 @@ internal static class L
         public static readonly LocString Bombs = new("games.slice.bombs", "Bombs hit");
     }
 
+    internal static class Spiral
+    {
+        public static readonly LocString Title = new("games.spiral.title", "Spiral");
+        public static readonly LocString Hook = new("games.spiral.hook", "Drag to turn the tower and drop the ball through the gaps, but never land on red.");
+        public static readonly LocString Fireball = new("games.spiral.fireball", "Fireball!");
+        public static readonly LocString Smash = new("games.spiral.smash", "Smash!");
+        public static readonly LocString LevelBanner = new("games.spiral.levelBanner", "Level {0}");
+        public static readonly LocString Rings = new("games.spiral.rings", "Rings");
+        public static readonly LocString BestDrop = new("games.spiral.bestDrop", "Best drop");
+        public static readonly LocString Smashes = new("games.spiral.smashes", "Smashes");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

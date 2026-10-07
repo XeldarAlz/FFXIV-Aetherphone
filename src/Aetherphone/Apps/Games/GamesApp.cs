@@ -22,6 +22,7 @@ using Aetherphone.Apps.Games.Skyfall;
 using Aetherphone.Apps.Games.Slice;
 using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
+using Aetherphone.Apps.Games.Spiral;
 using Aetherphone.Apps.Games.Squadron;
 using Aetherphone.Apps.Games.Stack;
 using Aetherphone.Apps.Games.Sudoku;
@@ -186,6 +187,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new UpdraftApp(),
             new SwoopApp(),
             new SliceApp(),
+            new SpiralApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];
