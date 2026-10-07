@@ -8137,7 +8137,6 @@ internal static class L
         public static readonly LocString GenreStrategy = new("games.genreStrategy", "Strategy");
         public static readonly LocString GenreTabletop = new("games.genreTabletop", "Board & Cards");
         public static readonly LocString GenreFriends = new("games.genreFriends", "With friends");
-        public static readonly LocString ShelfLatest = new("games.shelfLatest", "Latest additions");
         public static readonly LocString LibraryHeading = new("games.libraryHeading", "All games");
         public static readonly LocString SearchHint = new("games.searchHint", "Search games");
         public static readonly LocString SearchEmpty = new("games.searchEmpty", "No games match");
