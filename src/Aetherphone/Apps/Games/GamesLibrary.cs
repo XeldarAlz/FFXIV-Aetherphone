@@ -1,5 +1,6 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
+using Aetherphone.Apps.Games.Gloop;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
@@ -77,6 +78,7 @@ internal sealed class GamesLibrary
         new("coil", 2026, 10, 3), new("updraft", 2026, 10, 3), new("swoop", 2026, 10, 3),
         new("online.connectfour", 2026, 10, 3),
         new("mahjong", 2026, 10, 8),
+        new("gloop", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -487,6 +489,18 @@ internal sealed class GamesLibrary
             case "snake":
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(SnakeApp.WrapStatId).BestScore),
                     out value);
+            case "gloop":
+            {
+                var endless = Score(stats.Get(gameId).BestScore, out value);
+                if (endless != RecordKind.None)
+                {
+                    return endless;
+                }
+
+                var streak = stats.Get(GloopApp.VersusStatId).Streak;
+                value = streak > 0 ? GameNumber.Label(streak) : string.Empty;
+                return streak > 0 ? RecordKind.Streak : RecordKind.None;
+            }
             case "watersort":
             {
                 var bestLevel = stats.Get(gameId).BestScore;

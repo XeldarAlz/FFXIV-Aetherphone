@@ -124,6 +124,9 @@ internal static class AppIconArt
             case "mahjong":
                 DrawMahjong(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "gloop":
+                DrawGloop(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -781,6 +784,30 @@ internal static class AppIconArt
         FillConvex(drawList, hole, crystal);
         drawList.AddCircleFilled(At(center, extent, -0.54f, -0.64f), extent * 0.1f, hole, 12);
         drawList.AddCircleFilled(At(center, extent, 0.30f, 0.44f), extent * 0.1f, hole, 12);
+    }
+
+    private static void DrawGloop(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var radius = extent * 0.4f;
+        var bridge = radius * 0.62f;
+        var top = At(center, extent, -0.46f, -0.42f);
+        var left = At(center, extent, -0.46f, 0.42f);
+        var right = At(center, extent, 0.46f, 0.42f);
+        drawList.AddRectFilled(new Vector2(left.X, left.Y - bridge), new Vector2(right.X, right.Y + bridge), ink);
+        drawList.AddRectFilled(new Vector2(top.X - bridge, top.Y), new Vector2(left.X + bridge, left.Y), ink);
+        Span<Vector2> blobs = stackalloc Vector2[3] { top, left, right };
+        var rightEye = new Vector2(radius * 0.32f, -radius * 0.08f);
+        var leftEye = new Vector2(-rightEye.X, rightEye.Y);
+        for (var blob = 0; blob < blobs.Length; blob++)
+        {
+            drawList.AddCircleFilled(blobs[blob], radius, ink, 24);
+            drawList.AddCircleFilled(blobs[blob] + leftEye, radius * 0.16f, hole, 10);
+            drawList.AddCircleFilled(blobs[blob] + rightEye, radius * 0.16f, hole, 10);
+        }
+
+        var falling = At(center, extent, 0.5f, -0.6f);
+        drawList.AddCircleFilled(falling, radius * 0.72f, ink, 20);
+        drawList.AddCircleFilled(falling + new Vector2(-radius * 0.22f, -radius * 0.22f), radius * 0.16f, hole, 10);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

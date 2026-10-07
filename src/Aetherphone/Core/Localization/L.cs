@@ -8649,6 +8649,20 @@ internal static class L
         public static readonly LocString Undos = new("games.mahjong.undos", "Undos");
     }
 
+    internal static class Gloop
+    {
+        public static readonly LocString Title = new("games.gloop.title", "Gloop");
+        public static readonly LocString Hook = new("games.gloop.hook", "Drop pairs of blobs, link four or more of a color to pop them, and set off chains for big points.");
+        public static readonly LocString Endless = new("games.gloop.endless", "Endless");
+        public static readonly LocString Versus = new("games.gloop.versus", "Versus");
+        public static readonly LocString Chain = new("games.gloop.chain", "{0} chain!");
+        public static readonly LocString AllClear = new("games.gloop.allClear", "All clear!");
+        public static readonly LocString BestChain = new("games.gloop.bestChain", "Best chain");
+        public static readonly LocString Popped = new("games.gloop.popped", "Popped");
+        public static readonly LocString Sent = new("games.gloop.sent", "Rocks sent");
+        public static readonly LocString Rival = new("games.gloop.rival", "Rival");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

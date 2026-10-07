@@ -127,7 +127,7 @@ The source of truth is the `games` array in the `GamesApp` constructor for local
 | --- | --- |
 | Arcade | `whack`, `snake`, `flap`, `breakout`, `stack`, `beat`, `blade`, `hop`, `updraft` |
 | Action | `skyfall`, `invaders`, `capman`, `squadron`, `doom`, `swoop` |
-| Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil`, `mahjong` |
+| Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil`, `mahjong`, `gloop` |
 | Brain | `minesweeper`, `memory`, `nonogram`, `simon`, `sudoku`, `trivia`, `wordrun` |
 | Tabletop | `solitaire`, `reversi`, `chess` |
 | Friends (online) | `online.uno`, `online.chess`, `online.pool` (8-Ball Pool), `online.connectfour` (Connect Four) |

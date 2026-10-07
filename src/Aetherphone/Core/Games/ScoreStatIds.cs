@@ -31,7 +31,7 @@ internal static class ScoreStatIds
         Time("minesweeper.easy"), Time("minesweeper.medium"), Time("minesweeper.hard"), Time("sudoku.easy"),
         Time("sudoku.medium"), Time("sudoku.hard"), Time("nonogram.easy"), Time("nonogram.medium"),
         Time("nonogram.hard"), Streak("chess"), Streak("reversi"), Score("casino.barkeep"), Time("mahjong.easy"),
-        Time("mahjong.medium"), Time("mahjong.hard"),
+        Time("mahjong.medium"), Time("mahjong.hard"), Score("gloop"), Streak("gloop.versus"),
     };
 
     public static readonly string[] All = Ids(Catalog);
