@@ -585,9 +585,8 @@ internal sealed partial class GamesApp
             rankStatIds[slot] = rank.GameId;
             rankCardIds[slot] = RankCardPrefix + rank.GameId;
             var title = games[gameIndex].Title;
-            rankTitles[slot] = ScoreStatIds.SuffixOf(rank.GameId).Length == 0
-                ? title
-                : string.Concat(title, MetaSeparator, Loc.T(LeaderboardModeName(rank.GameId, ScoreKind.Score, false)));
+            var mode = RankModeName(games[gameIndex].Spec, rank.GameId);
+            rankTitles[slot] = mode.Length == 0 ? title : string.Concat(title, MetaSeparator, mode);
             rankChips[slot] = Loc.T(L.Leaderboard.RankChip, GameNumber.Label(rank.Rank));
             rankTotals[slot] = Loc.T(L.GamesHub.OfTotal, CountText.Exact(rank.Total));
             rankWeeks[slot] = rank.WeekRank > 0
@@ -596,6 +595,25 @@ internal sealed partial class GamesApp
         }
 
         SortByRank(rankOrder, rankValues, rankRowCount);
+    }
+
+    internal static string RankModeName(in GameSpec spec, string statId)
+    {
+        if (ScoreStatIds.SuffixOf(statId).Length == 0)
+        {
+            return string.Empty;
+        }
+
+        for (var mode = 0; mode < spec.Modes.Length; mode++)
+        {
+            var board = ScoreStatIds.LeaderboardId(spec.StatIdFor(mode), spec.Id, spec.KindFor(mode));
+            if (string.Equals(board, statId, StringComparison.Ordinal))
+            {
+                return Loc.T(spec.Modes[mode]);
+            }
+        }
+
+        return Loc.T(LeaderboardModeName(statId, ScoreKind.Score, false));
     }
 
     internal static void SortByRank(int[] order, int[] values, int count)
