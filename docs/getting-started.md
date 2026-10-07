@@ -98,6 +98,7 @@ Both run the same `OnCommand` method, which dispatches on the argument:
 | `/phone run <name>` | Run the named shortcut from the Shortcuts app; without a name it prints usage in chat |
 | `/phone videodebug` | Open the video debug window, a developer tool |
 | `/phone perfhud` | Toggle the frame-time HUD above the phone (average and worst frame, shell draw time), a developer tool; the setting is saved |
+| `/phone help` | List every player-facing command in chat (mini, full, hide, open, photo, dnd, mute, music, tell, call, and the ones above) |
 
 Any argument `OnCommand` does not recognize falls through to the plain toggle. `market` matches as a prefix, so `/phone marketboard` opens Market and searches for "board". The Settings app shows the everyday commands in-game (`src/Aetherphone/Apps/Settings/Pages/CommandsPage.cs`); today its list covers the toggle, alias, market, reset, and test entries. If you add a command, update that page too.
 

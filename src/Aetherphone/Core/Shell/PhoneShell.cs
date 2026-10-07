@@ -218,6 +218,10 @@ internal sealed class PhoneShell : IDisposable
 
     public void ForceMinimized() => minimize.SnapMinimized();
 
+    public void Collapse() => minimize.BeginCollapse();
+
+    public void Expand() => minimize.BeginExpand();
+
     private void ApplyResize(float width, bool landscape)
     {
         if (landscape)

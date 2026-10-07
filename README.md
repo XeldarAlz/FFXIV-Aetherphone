@@ -205,10 +205,22 @@ Playing the Chinese client? The phone detects it and signs you in through your R
 |---|---|
 | `/phone` | Toggle the phone |
 | `/aetherphone` | Alias for `/phone` |
+| `/phone mini` | Switch between the full and mini phone; brings the mini phone up when the phone is hidden |
+| `/phone full` | Bring up the full phone |
+| `/phone hide` | Put the phone away |
+| `/phone open <app>` | Open an app by name |
+| `/phone settings` | Open Settings |
+| `/phone photo` | Open the Camera and take a photo |
+| `/phone dnd` | Turn Do Not Disturb on or off |
+| `/phone mute` | Turn Silent Mode on or off |
+| `/phone music [play, pause, next, prev]` | Control the music player; on its own it plays or pauses |
+| `/phone tell [name]` | Open a Linkpearl tell with your target, or with `First Last World` |
+| `/phone call <contact>` | Call a contact |
 | `/phone run <name>` | Run a shortcut by name, so it can sit on a hotbar macro |
 | `/phone market [item]` | Open the market board, searching for an item if you name one |
 | `/phone reset` | Recenter the phone on screen |
 | `/phone test` | Send a sample notification |
+| `/phone help` | List every command in chat |
 
 </details>
 
