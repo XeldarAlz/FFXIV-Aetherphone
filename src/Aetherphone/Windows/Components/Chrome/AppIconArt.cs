@@ -130,6 +130,9 @@ internal static class AppIconArt
             case "claim":
                 ClaimIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "lander":
+                LanderIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }

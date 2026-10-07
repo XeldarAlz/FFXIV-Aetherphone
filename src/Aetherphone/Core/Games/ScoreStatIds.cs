@@ -32,7 +32,7 @@ internal static class ScoreStatIds
         Time("sudoku.medium"), Time("sudoku.hard"), Time("nonogram.easy"), Time("nonogram.medium"),
         Time("nonogram.hard"), Streak("chess"), Streak("reversi"), Score("casino.barkeep"),
         Score("slice"), Score("slice.arcade"), Score("spiral"),
-        Score("claim"),
+        Score("claim"), Score("lander"),
     };
 
     public static readonly string[] All = Ids(Catalog);
