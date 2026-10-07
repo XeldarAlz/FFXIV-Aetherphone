@@ -4,6 +4,7 @@ internal sealed class GameStatsStore
 {
     public const int MaxStars = 3;
     public const int MaxLevels = 999;
+    public const int DailyHistoryDays = 64;
     private const string TetrisGameId = "tetris";
     private const int TetrisModernMode = 1;
     private const int StackStarsLimit = 256;
@@ -13,6 +14,7 @@ internal sealed class GameStatsStore
     public GameStatsStore(IGameStatsConfiguration configuration)
     {
         this.configuration = configuration;
+        SeedDailyHistory();
     }
 
     public static int TodayIndex => (int)(DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay);
@@ -82,6 +84,13 @@ internal sealed class GameStatsStore
     public bool DailyDone => configuration.DailyChallengeLastDay == TodayIndex;
     public int DailyStreak =>
         configuration.DailyChallengeLastDay >= TodayIndex - 1 ? configuration.DailyChallengeStreak : 0;
+    public int DailyBestStreak => Math.Max(configuration.DailyChallengeBestStreak, configuration.DailyChallengeStreak);
+
+    public bool DailyDoneOn(int dayIndex)
+    {
+        var offset = configuration.DailyChallengeLastDay - dayIndex;
+        return offset is >= 0 and < DailyHistoryDays && ((configuration.DailyChallengeHistory >> offset) & 1UL) != 0UL;
+    }
 
     public GameStats Get(string gameId)
     {
@@ -306,7 +315,9 @@ internal sealed class GameStatsStore
         return 1;
     }
 
-    public void CompleteDaily(string gameId)
+    public void CompleteDaily(string gameId) => CompleteDaily(gameId, TodayIndex);
+
+    public void CompleteDaily(string gameId, int today)
     {
         var daily = DailyGameId;
         if (daily.Length == 0 || !MatchesGame(gameId, daily))
@@ -314,16 +325,41 @@ internal sealed class GameStatsStore
             return;
         }
 
-        var today = TodayIndex;
-        if (configuration.DailyChallengeLastDay == today)
+        var lastDay = configuration.DailyChallengeLastDay;
+        if (lastDay == today)
         {
             return;
         }
 
-        configuration.DailyChallengeStreak =
-            configuration.DailyChallengeLastDay == today - 1 ? configuration.DailyChallengeStreak + 1 : 1;
+        var streak = lastDay == today - 1 ? configuration.DailyChallengeStreak + 1 : 1;
+        configuration.DailyChallengeStreak = streak;
+        configuration.DailyChallengeHistory = AdvanceHistory(configuration.DailyChallengeHistory, lastDay, today);
         configuration.DailyChallengeLastDay = today;
+        configuration.DailyChallengeBestStreak = Math.Max(configuration.DailyChallengeBestStreak, streak);
         configuration.Save();
+    }
+
+    private static ulong AdvanceHistory(ulong history, int lastDay, int today)
+    {
+        var gap = today - lastDay;
+        if (lastDay <= 0 || gap <= 0 || gap >= DailyHistoryDays)
+        {
+            return 1UL;
+        }
+
+        return (history << gap) | 1UL;
+    }
+
+    private void SeedDailyHistory()
+    {
+        var streak = configuration.DailyChallengeStreak;
+        if (configuration.DailyChallengeHistory != 0UL || streak <= 0 || configuration.DailyChallengeLastDay <= 0)
+        {
+            return;
+        }
+
+        configuration.DailyChallengeHistory = streak >= DailyHistoryDays ? ulong.MaxValue : (1UL << streak) - 1UL;
+        configuration.DailyChallengeBestStreak = Math.Max(configuration.DailyChallengeBestStreak, streak);
     }
 
     private static bool MatchesGame(string statId, string gameId)

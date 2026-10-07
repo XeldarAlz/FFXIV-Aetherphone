@@ -9,7 +9,7 @@ namespace Aetherphone.Windows.Components;
 
 internal static class HomeTileView
 {
-    private const float TiltDepth = 0.07f;
+    public const float TiltDepth = 0.07f;
     private const float FolderMiniPadFraction = 0.14f;
     private const float FolderMiniCellFraction = (1f - FolderMiniPadFraction * 2f) / FolderMiniColumns;
     public const int FolderMiniColumns = 3;

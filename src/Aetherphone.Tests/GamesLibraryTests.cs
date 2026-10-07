@@ -17,6 +17,12 @@ public sealed class GamesLibraryTests
             Title = title;
         }
 
+        public FakeGame(GameSpec spec, string title)
+        {
+            Spec = spec;
+            Title = title;
+        }
+
         public GameSpec Spec { get; }
         public string Title { get; }
 
@@ -48,8 +54,41 @@ public sealed class GamesLibraryTests
         new FakeGame("breakout", "Breakout", GameGenre.Arcade),
     };
 
+    private sealed class FixedRanks : IRankSource
+    {
+        private readonly string rankedStatId;
+        private readonly int rankValue;
+
+        public FixedRanks(string rankedStatId, int rankValue)
+        {
+            this.rankedStatId = rankedStatId;
+            this.rankValue = rankValue;
+        }
+
+        public bool TryGetRank(string statId, out GameRank rank)
+        {
+            rank = string.Equals(statId, rankedStatId, StringComparison.Ordinal)
+                ? new GameRank(rankValue, 5000, 0, 0, RankState.Ranked)
+                : GameRank.Unknown;
+            return rank.IsRanked;
+        }
+    }
+
+    private static readonly int ReleaseWave = new DateOnly(2026, 10, 8).DayNumber;
+
     private static GamesLibrary Build(Configuration configuration) =>
         new(Games, new GameStatsStore(configuration));
+
+    private static string[] IdsOf(GamesLibrary library, ReadOnlySpan<int> entries)
+    {
+        var ids = new string[entries.Length];
+        for (var index = 0; index < entries.Length; index++)
+        {
+            ids[index] = library.Entries[entries[index]].Id;
+        }
+
+        return ids;
+    }
 
     [Fact]
     public void OrderedListsNewestReleasesFirst()
@@ -368,5 +407,301 @@ public sealed class GamesLibraryTests
         Assert.Equal(RecordKind.Streak, library.BestKind(reversi));
         Assert.Equal("3", library.BestValue(reversi));
         Assert.Equal(string.Empty, library.BestTier(reversi));
+    }
+
+    [Fact]
+    public void LatestKeepsEveryReleaseWithinTwoWeeksOfTheNewestUncapped()
+    {
+        var library = Build(new Configuration());
+
+        Assert.Equal(new[]
+        {
+            "online.broadside", "online.luckydraw", "online.crater", "online.minigolf", "online.connectfour",
+        }, IdsOf(library, library.Latest));
+    }
+
+    [Fact]
+    public void IdsArePrecomputedForEveryEntry()
+    {
+        var library = Build(new Configuration());
+        var snake = library.IndexOf("snake");
+        var pool = library.IndexOf("online.pool");
+        var luckyDraw = library.IndexOf("online.luckydraw");
+
+        Assert.Equal("games.tile.snake", library.TileIds[snake]);
+        Assert.Equal("games.play.snake", library.PlayIds[snake]);
+        Assert.Equal("snake", library.IconIds[snake]);
+        Assert.Equal("pool", library.IconIds[pool]);
+        Assert.Equal("luckydraw", library.IconIds[luckyDraw]);
+        Assert.Equal("games.tile.online.pool", library.TileIds[pool]);
+    }
+
+    [Theory]
+    [InlineData(100, 86, 0L, true)]
+    [InlineData(100, 85, 0L, false)]
+    [InlineData(100, 100, 0L, true)]
+    [InlineData(100, 102, 0L, true)]
+    [InlineData(100, 90, 1L, false)]
+    [InlineData(100, 0, 0L, false)]
+    public void NewMeansReleasedInTheLastTwoWeeksAndNeverPlayed(int today, int addedDay, long lastPlayed,
+        bool expected)
+    {
+        Assert.Equal(expected, GamesLibrary.IsNewOn(today, addedDay, lastPlayed));
+    }
+
+    [Fact]
+    public void TheMetaWordIsNewOnlyForFreshUnplayedEntries()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord
+        {
+            GameId = GamesLibrary.OnlineEntryId(GameRoomWire.CraterKind), LastPlayedUnixSeconds = 50,
+        });
+        var library = Build(configuration);
+
+        library.Rebuild(ReleaseWave + 3);
+
+        Assert.True(library.IsNew(library.IndexOf("online.broadside")));
+        Assert.Equal("New", library.Meta(library.IndexOf("online.broadside")));
+        Assert.False(library.IsNew(library.IndexOf("online.crater")));
+        Assert.Equal("With friends", library.Meta(library.IndexOf("online.crater")));
+        Assert.Equal("Arcade", library.Meta(library.IndexOf("snake")));
+
+        library.Rebuild(ReleaseWave + GamesLibrary.NewDays + 1);
+
+        Assert.False(library.IsNew(library.IndexOf("online.broadside")));
+    }
+
+    [Fact]
+    public void EyebrowsAndHooksAreCachedPerEntry()
+    {
+        var hooked = new GameSpec("tetris", new LocString("test.tetris", "Tetris"), GameGenre.Puzzle,
+            new LocString("test.tetris.hook", "Clear lines before the stack tops out."));
+        var games = new IMiniGame[] { new FakeGame(hooked, "Tetris") };
+        var library = new GamesLibrary(games, new GameStatsStore(new Configuration()));
+        var tetris = library.IndexOf("tetris");
+
+        Assert.Equal("Clear lines before the stack tops out.", library.Hook(tetris));
+        Assert.Equal("New game · Puzzle", library.Eyebrow(tetris));
+        Assert.Equal("Head-to-head, 10 minutes on each clock", library.Hook(library.IndexOf("online.chess")));
+        Assert.Equal("Up to 6 players", library.Hook(library.IndexOf("online.uno")));
+    }
+
+    [Fact]
+    public void AStarPackReportsItsStarsAndProgress()
+    {
+        var spec = new GameSpec("crates", new LocString("test.crates", "Crates"), GameGenre.Puzzle,
+            kind: ScoreKind.Level, levelCount: 10);
+        var configuration = new Configuration();
+        configuration.GameLevelProgress.Add(new GameLevelProgress { GameId = "crates", Stars = "3321" });
+        var library = new GamesLibrary(new IMiniGame[] { new FakeGame(spec, "Crates") },
+            new GameStatsStore(configuration));
+        var crates = library.IndexOf("crates");
+
+        Assert.Equal(9, library.Stars(crates));
+        Assert.Equal(30, library.StarMax(crates));
+        Assert.Equal(1, library.StarTier(crates));
+        Assert.Equal(0.3f, library.Progress(crates), 3);
+        Assert.Equal("9 / 30 stars", library.ProgressLabel(crates));
+        Assert.Equal(9, library.TotalStars);
+    }
+
+    [Fact]
+    public void AScoredLevelPackReportsTheLevelItIsOn()
+    {
+        var spec = new GameSpec("pegfall", new LocString("test.pegfall", "Pegfall"), GameGenre.Arcade,
+            levelCount: 20);
+        var configuration = new Configuration();
+        configuration.GameLevelProgress.Add(new GameLevelProgress { GameId = "pegfall", Stars = "32" });
+        var library = new GamesLibrary(new IMiniGame[] { new FakeGame(spec, "Pegfall") },
+            new GameStatsStore(configuration));
+        var pegfall = library.IndexOf("pegfall");
+
+        Assert.Equal(0.1f, library.Progress(pegfall), 3);
+        Assert.Equal("Level 3 of 20", library.ProgressLabel(pegfall));
+        Assert.Equal(5, library.Stars(pegfall));
+        Assert.Equal(60, library.StarMax(pegfall));
+    }
+
+    [Fact]
+    public void AClearedLevelPackIsFullyDone()
+    {
+        var spec = new GameSpec("pegfall", new LocString("test.pegfall", "Pegfall"), GameGenre.Arcade,
+            levelCount: 2);
+        var configuration = new Configuration();
+        configuration.GameLevelProgress.Add(new GameLevelProgress { GameId = "pegfall", Stars = "33" });
+        var library = new GamesLibrary(new IMiniGame[] { new FakeGame(spec, "Pegfall") },
+            new GameStatsStore(configuration));
+        var pegfall = library.IndexOf("pegfall");
+
+        Assert.Equal(1f, library.Progress(pegfall), 3);
+        Assert.Equal("Level 2 of 2", library.ProgressLabel(pegfall));
+        Assert.Equal(3, library.StarTier(pegfall));
+    }
+
+    [Fact]
+    public void WithoutALevelPackTheProgressLineIsTheBest()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "snake", BestScore = 40 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "chess.hard", Streak = 3 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "minesweeper.easy", BestTimeSeconds = 65 });
+        var library = Build(configuration);
+
+        Assert.Equal(-1f, library.Progress(library.IndexOf("snake")));
+        Assert.Equal("Best 40", library.ProgressLabel(library.IndexOf("snake")));
+        Assert.Equal("Streak 3 · Hard", library.ProgressLabel(library.IndexOf("chess")));
+        Assert.Equal("Best 1:05 · Easy", library.ProgressLabel(library.IndexOf("minesweeper")));
+        Assert.Equal("Action", library.ProgressLabel(library.IndexOf("doom")));
+        Assert.Equal(0, library.StarMax(library.IndexOf("snake")));
+    }
+
+    [Fact]
+    public void RankLabelsStopAtTheCapButTheRankIsKept()
+    {
+        var near = new GamesLibrary(Games, new GameStatsStore(new Configuration()), new FixedRanks("snake", 12));
+        var far = new GamesLibrary(Games, new GameStatsStore(new Configuration()),
+            new FixedRanks("snake", GamesLibrary.RankCap + 1));
+
+        Assert.Equal("#12", near.RankLabel(near.IndexOf("snake")));
+        Assert.Equal(12, near.Rank(near.IndexOf("snake")));
+        Assert.Equal(string.Empty, far.RankLabel(far.IndexOf("snake")));
+        Assert.Equal(GamesLibrary.RankCap + 1, far.Rank(far.IndexOf("snake")));
+        Assert.Equal(0, near.Rank(near.IndexOf("tetris")));
+    }
+
+    [Fact]
+    public void GenreOrderFollowsThePlayedGamesWithTiesInShelfOrder()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "snake", LastPlayedUnixSeconds = 10 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "breakout", LastPlayedUnixSeconds = 20 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "chess", LastPlayedUnixSeconds = 30 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "tetris", LastPlayedUnixSeconds = 40 });
+        configuration.GameStats.Add(new GameStatRecord
+        {
+            GameId = GamesLibrary.OnlineEntryId(GameRoomWire.PoolKind), LastPlayedUnixSeconds = 50,
+        });
+        var library = Build(configuration);
+
+        Assert.Equal(new[]
+        {
+            GameGenre.Arcade, GameGenre.Puzzle, GameGenre.Tabletop, GameGenre.Action, GameGenre.Brain,
+            GameGenre.Strategy,
+        }, library.GenreOrder.ToArray());
+    }
+
+    [Fact]
+    public void GenreOrderIsShelfOrderBeforeAnythingIsPlayed()
+    {
+        var library = Build(new Configuration());
+
+        Assert.Equal(new[]
+        {
+            GameGenre.Arcade, GameGenre.Action, GameGenre.Puzzle, GameGenre.Brain, GameGenre.Strategy,
+            GameGenre.Tabletop,
+        }, library.GenreOrder.ToArray());
+    }
+
+    [Fact]
+    public void ViewFiltersByGenreInEverySortOrder()
+    {
+        var library = Build(new Configuration());
+
+        Assert.Equal(new[] { "snake", "breakout" },
+            IdsOf(library, library.View(GamesFilter.Arcade, GamesSort.Newest, string.Empty)));
+        Assert.Equal(new[] { "breakout", "snake" },
+            IdsOf(library, library.View(GamesFilter.Arcade, GamesSort.Title, string.Empty)));
+        Assert.Equal(new[] { "minesweeper", "wordrun" },
+            IdsOf(library, library.View(GamesFilter.Brain, GamesSort.Title, string.Empty)));
+        Assert.Equal(library.Entries.Length, library.View(GamesFilter.All, GamesSort.Newest, string.Empty).Length);
+    }
+
+    [Fact]
+    public void TheTitleSortIsAlphabetical()
+    {
+        var library = Build(new Configuration());
+
+        var view = library.View(GamesFilter.All, GamesSort.Title, string.Empty);
+
+        for (var position = 1; position < view.Length; position++)
+        {
+            Assert.True(string.Compare(library.Title(view[position - 1]), library.Title(view[position]),
+                StringComparison.OrdinalIgnoreCase) <= 0);
+        }
+    }
+
+    [Fact]
+    public void TheTogetherFilterKeepsOnlyOnlineEntries()
+    {
+        var library = Build(new Configuration());
+
+        var view = library.View(GamesFilter.Together, GamesSort.Newest, string.Empty);
+
+        Assert.Equal(OnlineGameArt.Kinds.Length, view.Length);
+        for (var position = 0; position < view.Length; position++)
+        {
+            Assert.True(library.Entries[view[position]].Online);
+        }
+    }
+
+    [Fact]
+    public void TheRecentSortPutsPlayedGamesFirstThenTheNewest()
+    {
+        var configuration = new Configuration();
+        configuration.GameStats.Add(new GameStatRecord { GameId = "snake", LastPlayedUnixSeconds = 100 });
+        configuration.GameStats.Add(new GameStatRecord { GameId = "chess", LastPlayedUnixSeconds = 300 });
+        var library = Build(configuration);
+
+        var ids = IdsOf(library, library.View(GamesFilter.All, GamesSort.Recent, string.Empty));
+
+        Assert.Equal(library.Entries.Length, ids.Length);
+        Assert.Equal("chess", ids[0]);
+        Assert.Equal("snake", ids[1]);
+        Assert.Equal("online.broadside", ids[2]);
+        Assert.Equal("breakout", ids[^1]);
+    }
+
+    [Fact]
+    public void TheQueryNarrowsTheFilteredView()
+    {
+        var library = Build(new Configuration());
+
+        Assert.Equal(new[] { "wordrun" },
+            IdsOf(library, library.View(GamesFilter.Brain, GamesSort.Newest, "  word ")));
+        Assert.Empty(IdsOf(library, library.View(GamesFilter.Arcade, GamesSort.Newest, "word")));
+        Assert.Equal(new[] { "online.chess", "chess" },
+            IdsOf(library, library.View(GamesFilter.All, GamesSort.Newest, "CHESS")));
+    }
+
+    [Fact]
+    public void TheViewIsRebuiltWhenTheLibraryChanges()
+    {
+        var configuration = new Configuration();
+        var library = Build(configuration);
+        var query = string.Empty;
+
+        Assert.Equal("online.broadside", IdsOf(library, library.View(GamesFilter.All, GamesSort.Recent, query))[0]);
+
+        configuration.GameStats.Add(new GameStatRecord { GameId = "doom", LastPlayedUnixSeconds = 10 });
+        Assert.Equal("online.broadside", IdsOf(library, library.View(GamesFilter.All, GamesSort.Recent, query))[0]);
+        library.Rebuild();
+
+        Assert.Equal("doom", IdsOf(library, library.View(GamesFilter.All, GamesSort.Recent, query))[0]);
+    }
+
+    [Fact]
+    public void EveryFilterNamesItsGenre()
+    {
+        Assert.Equal(GamesFilters.Count, (int)GamesFilter.Together + 1);
+        Assert.Equal(GameGenre.Arcade, GamesFilters.Genre(GamesFilter.Arcade));
+        Assert.Equal(GameGenre.Tabletop, GamesFilters.Genre(GamesFilter.Tabletop));
+        Assert.Equal(GameGenre.Friends, GamesFilters.Genre(GamesFilter.Together));
+        Assert.True(GamesFilters.Matches(GamesFilter.All, GameGenre.Friends));
+        Assert.False(GamesFilters.Matches(GamesFilter.Puzzle, GameGenre.Brain));
+        Assert.Equal("gamesHub.filterAll", GamesFilters.Label(GamesFilter.All).Key);
+        Assert.Equal("gamesHub.tabTogether", GamesFilters.Label(GamesFilter.Together).Key);
+        Assert.Equal("games.genreTabletop", GamesFilters.Label(GamesFilter.Tabletop).Key);
+        Assert.Equal("gamesHub.sortRecent", GamesSorts.Label(GamesSort.Recent).Key);
     }
 }

@@ -316,7 +316,7 @@ internal sealed partial class GamesApp
         card.End();
         if (activate >= 0)
         {
-            OpenLeaderboard(games[rankGameIndexes[activate]], rankStatIds[activate], TabTitle(GamesTab.Records));
+            OpenLeaderboard(games[rankGameIndexes[activate]], rankStatIds[activate], TabTitle(GamesTab.Profile));
         }
 
         return card.Bounds.Max.Y;

@@ -37,7 +37,7 @@ public sealed class TourRegistryTests
         { "health", (3, 4) },
         { "shortcuts", (3, 6) },
         { "aetherstream", (3, 6) },
-        { "games", (4, 4) },
+        { "games", (5, 4) },
         { "clock", (4, 5) },
         { "calendar", (3, 5) },
         { "calculator", (4, 3) },
