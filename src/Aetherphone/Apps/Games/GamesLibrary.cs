@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Online;
+using Aetherphone.Apps.Games.Siege;
 using Aetherphone.Apps.Games.Slice;
 using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
@@ -79,6 +80,7 @@ internal sealed class GamesLibrary
         new("online.connectfour", 2026, 10, 3),
         new("slice", 2026, 10, 8),
         new("spiral", 2026, 10, 8),
+        new("siege", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -506,6 +508,8 @@ internal sealed class GamesLibrary
             }
             case "flow":
                 return BestLevelAcrossTiers(gameId, out value, out tier);
+            case "siege":
+                return SiegeRecord(out value);
             case "memory":
                 return Time(stats.Get(gameId).BestTimeSeconds, out value);
             case "solitaire":
@@ -597,6 +601,20 @@ internal sealed class GamesLibrary
         }
 
         return Time(bestSeconds, out value);
+    }
+
+    private RecordKind SiegeRecord(out string value)
+    {
+        var stars = stats.TotalStars("siege");
+        if (stars > 0)
+        {
+            value = Loc.T(L.Siege.StarsRecord, GameNumber.Label(stars));
+            return RecordKind.Score;
+        }
+
+        var waves = stats.Get(SiegeApp.EndlessStatId).BestScore;
+        value = waves > 0 ? Loc.T(L.Siege.WavesRecord, GameNumber.Label(waves)) : string.Empty;
+        return waves > 0 ? RecordKind.Score : RecordKind.None;
     }
 
     private static RecordKind Score(int best, out string value)

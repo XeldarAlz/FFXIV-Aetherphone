@@ -139,7 +139,7 @@ The source of truth is the `games` array in the `GamesApp` constructor for local
 | Action | `skyfall`, `invaders`, `capman`, `squadron`, `doom`, `swoop` |
 | Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil` |
 | Brain | `minesweeper`, `memory`, `nonogram`, `simon`, `sudoku`, `trivia`, `wordrun` |
-| Strategy | none yet: the Home rail and the Search browse card stay hidden while a genre has no games |
+| Strategy | `siege` (Garden Siege) |
 | Tabletop | `solitaire`, `reversi`, `chess` |
 | Friends (online) | `online.uno`, `online.chess`, `online.pool` (8-Ball Pool), `online.connectfour` (Connect Four) |
 

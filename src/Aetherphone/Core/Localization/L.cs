@@ -8669,6 +8669,51 @@ internal static class L
         public static readonly LocString Smashes = new("games.spiral.smashes", "Smashes");
     }
 
+    internal static class Siege
+    {
+        public static readonly LocString Title = new("games.siege.title", "Garden Siege");
+        public static readonly LocString Hook = new("games.siege.hook", "Drag defenders onto the garden, tap the falling sunlight, and stop the mandragoras before they reach your flowers.");
+        public static readonly LocString Campaign = new("games.siege.campaign", "Campaign");
+        public static readonly LocString Endless = new("games.siege.endless", "Endless");
+        public static readonly LocString Sunlight = new("games.siege.sunlight", "Sunlight");
+        public static readonly LocString WaveBanner = new("games.siege.waveBanner", "Wave {0}");
+        public static readonly LocString WaveOfBanner = new("games.siege.waveOfBanner", "Wave {0} of {1}");
+        public static readonly LocString FinalWave = new("games.siege.finalWave", "Final wave!");
+        public static readonly LocString WaveCleared = new("games.siege.waveCleared", "Wave cleared!");
+        public static readonly LocString BossArrives = new("games.siege.bossArrives", "The King Mandragora approaches!");
+        public static readonly LocString Clonk = new("games.siege.clonk", "Clonk!");
+        public static readonly LocString NotEnough = new("games.siege.notEnough", "Not enough sunlight");
+        public static readonly LocString Recharging = new("games.siege.recharging", "Still regrowing");
+        public static readonly LocString Occupied = new("games.siege.occupied", "Spot taken");
+        public static readonly LocString Locked = new("games.siege.locked", "Not unlocked yet");
+        public static readonly LocString Garden = new("games.siege.garden", "Garden");
+        public static readonly LocString WavesSurvived = new("games.siege.wavesSurvived", "Waves survived");
+        public static readonly LocString Defeated = new("games.siege.defeated", "Mandragoras stopped");
+        public static readonly LocString Planted = new("games.siege.planted", "Planted");
+        public static readonly LocString Gathered = new("games.siege.gathered", "Sunlight gathered");
+        public static readonly LocString Sprout = new("games.siege.sprout", "Sprout");
+        public static readonly LocString Sunbloom = new("games.siege.sunbloom", "Sunbloom");
+        public static readonly LocString Thornwall = new("games.siege.thornwall", "Thornwall");
+        public static readonly LocString Frostbud = new("games.siege.frostbud", "Frostbud");
+        public static readonly LocString Bombcap = new("games.siege.bombcap", "Bombcap");
+        public static readonly LocString ShovelHint = new("games.siege.shovelHint", "Shovel: tap a defender to dig it up");
+        public static readonly LocString TipPlant = new("games.siege.tipPlant", "Drag a card onto the garden, or tap a card and then a square.");
+        public static readonly LocString TipSprout = new("games.siege.tipSprout", "Sprouts shoot seeds straight up their column.");
+        public static readonly LocString TipSunbloom = new("games.siege.tipSunbloom", "Sunblooms grow extra sunlight. Tap it to collect it.");
+        public static readonly LocString TipThornwall = new("games.siege.tipThornwall", "Thornwalls block a column and take ages to chew through.");
+        public static readonly LocString TipFrostbud = new("games.siege.tipFrostbud", "Frostbud seeds chill mandragoras and slow them down.");
+        public static readonly LocString TipBombcap = new("games.siege.tipBombcap", "Bombcaps burst a moment after planting and hit the 3 x 3 around them.");
+        public static readonly LocString TipWalker = new("games.siege.tipWalker", "Mandragoras march down the columns. Stop them before they reach your flowers.");
+        public static readonly LocString TipRunner = new("games.siege.tipRunner", "Runners are fast but fragile.");
+        public static readonly LocString TipArmoured = new("games.siege.tipArmoured", "Armoured mandragoras wear a pot that falls off at half health.");
+        public static readonly LocString TipFlyer = new("games.siege.tipFlyer", "Flyers glide over Thornwalls, so keep shooters in their column.");
+        public static readonly LocString TipDigger = new("games.siege.tipDigger", "Diggers tunnel under your first defender and pop up behind it.");
+        public static readonly LocString TipBoss = new("games.siege.tipBoss", "The King Mandragora is huge, slow, and calls for help.");
+        public static readonly LocString TipEndless = new("games.siege.tipEndless", "Endless waves that keep growing. How long can your garden hold?");
+        public static readonly LocString StarsRecord = new("games.siege.starsRecord", "{0} stars");
+        public static readonly LocString WavesRecord = new("games.siege.wavesRecord", "{0} waves");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
