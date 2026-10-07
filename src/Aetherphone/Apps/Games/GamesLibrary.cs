@@ -6,6 +6,7 @@ using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Slice;
 using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
+using Aetherphone.Apps.Games.Tempo;
 using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Games;
@@ -89,6 +90,7 @@ internal sealed class GamesLibrary
         new("trailblaze", 2026, 10, 8),
         new("thrust", 2026, 10, 8),
         new("herd", 2026, 10, 8),
+        new("tempo", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -551,11 +553,13 @@ internal sealed class GamesLibrary
             case "trails":
                 return BestStreakAcrossTiers(gameId, out value, out tier);
             case "herd":
+            case "tempo":
             {
                 var stars = stats.TotalStars(gameId);
+                var levels = gameId == "herd" ? HerdLevels.Count : TempoLevels.Count;
                 value = stars > 0
                     ? Loc.T(L.Stage.StarsOf, GameNumber.Label(stars),
-                        GameNumber.Label(HerdLevels.Count * GameStatsStore.MaxStars))
+                        GameNumber.Label(levels * GameStatsStore.MaxStars))
                     : string.Empty;
                 return stars > 0 ? RecordKind.Score : RecordKind.None;
             }

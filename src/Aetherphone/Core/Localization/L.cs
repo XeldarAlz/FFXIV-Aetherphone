@@ -8807,6 +8807,25 @@ internal static class L
         public static readonly LocString GoalReached = new("games.herd.goalReached", "Goal reached!");
     }
 
+    internal static class Tempo
+    {
+        public static readonly LocString Title = new("games.tempo.title", "Tempo");
+        public static readonly LocString Hook = new("games.tempo.hook", "Tap to jump to the beat over spikes and gaps, and hold on a jump pad to soar further. Three hidden coins wait on every level.");
+        public static readonly LocString Normal = new("games.tempo.normal", "Normal");
+        public static readonly LocString Practice = new("games.tempo.practice", "Practice");
+        public static readonly LocString Attempt = new("games.tempo.attempt", "Attempt");
+        public static readonly LocString AttemptNumber = new("games.tempo.attemptNumber", "Attempt {0}");
+        public static readonly LocString Percent = new("games.tempo.percent", "{0}%");
+        public static readonly LocString Complete = new("games.tempo.complete", "Complete!");
+        public static readonly LocString Flawless = new("games.tempo.flawless", "Flawless!");
+        public static readonly LocString Attempts = new("games.tempo.attempts", "Attempts");
+        public static readonly LocString Coins = new("games.tempo.coins", "Coins");
+        public static readonly LocString CoinsOf = new("games.tempo.coinsOf", "{0} / {1}");
+        public static readonly LocString Jumps = new("games.tempo.jumps", "Jumps");
+        public static readonly LocString Checkpoints = new("games.tempo.checkpoints", "Checkpoints");
+        public static readonly LocString PracticeHint = new("games.tempo.practiceHint", "Tap the flag to drop a checkpoint, the cross to lift the last one");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
