@@ -9130,6 +9130,30 @@ internal static class L
         public static readonly LocString BotKumop = new("games.crater.botKumop", "Kumop");
     }
 
+    internal static class Fuse
+    {
+        public static readonly LocString Title = new("games.fuse.title", "Fuse");
+        public static readonly LocString Hook = new("games.fuse.hook", "Drop bombs to blast the crates, grab their power-ups and be the last moogle standing; win two rounds to take the match.");
+        public static readonly LocString Wins = new("games.fuse.wins", "Wins");
+        public static readonly LocString RoundNumber = new("games.fuse.roundNumber", "Round {0}");
+        public static readonly LocString MatchPoint = new("games.fuse.matchPoint", "Match point");
+        public static readonly LocString Fight = new("games.fuse.fight", "Fight!");
+        public static readonly LocString RoundWon = new("games.fuse.roundWon", "Round won!");
+        public static readonly LocString RoundLost = new("games.fuse.roundLost", "Round lost");
+        public static readonly LocString KnockedOut = new("games.fuse.knockedOut", "Knocked out!");
+        public static readonly LocString Knockout = new("games.fuse.knockout", "KO!");
+        public static readonly LocString SuddenDeath = new("games.fuse.suddenDeath", "Sudden death!");
+        public static readonly LocString Chain = new("games.fuse.chain", "Chain x{0}!");
+        public static readonly LocString ExtraBomb = new("games.fuse.extraBomb", "Extra bomb!");
+        public static readonly LocString BiggerBlast = new("games.fuse.biggerBlast", "Bigger blast!");
+        public static readonly LocString SpeedUp = new("games.fuse.speedUp", "Speed up!");
+        public static readonly LocString Kick = new("games.fuse.kick", "Kick!");
+        public static readonly LocString RoundsWon = new("games.fuse.roundsWon", "Rounds won");
+        public static readonly LocString Knockouts = new("games.fuse.knockouts", "Knockouts");
+        public static readonly LocString Crates = new("games.fuse.crates", "Crates broken");
+        public static readonly LocString PowerUps = new("games.fuse.powerUps", "Power-ups");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

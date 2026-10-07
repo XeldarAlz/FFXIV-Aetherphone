@@ -136,7 +136,7 @@ The source of truth is the `games` array in the `GamesApp` constructor for local
 | Shelf | Game ids |
 | --- | --- |
 | Arcade | `whack`, `snake`, `flap`, `breakout`, `stack`, `beat`, `blade`, `hop`, `updraft`, `slice`, `spiral`, `pinball`, `moogleclicker`, `claim`, `lander`, `pegfall` |
-| Action | `skyfall`, `invaders`, `capman`, `squadron`, `doom`, `swoop`, `drift`, `crawler`, `trails`, `trailblaze`, `thrust`, `delve` |
+| Action | `skyfall`, `invaders`, `capman`, `squadron`, `doom`, `swoop`, `drift`, `crawler`, `trails`, `trailblaze`, `thrust`, `delve`, `fuse` |
 | Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil`, `mahjong`, `gloop`, `crates`, `fling` |
 | Brain | `minesweeper`, `memory`, `nonogram`, `simon`, `sudoku`, `trivia`, `wordrun` |
 | Strategy | `broadside`, `siege`, `crater` |

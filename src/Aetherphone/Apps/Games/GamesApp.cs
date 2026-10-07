@@ -18,6 +18,7 @@ using Aetherphone.Apps.Games.Flap;
 using Aetherphone.Apps.Games.Fling;
 using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.Fuse;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
 using Aetherphone.Apps.Games.Hop;
@@ -230,6 +231,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new FlingApp(),
             new SiegeApp(),
             new CraterApp(textures),
+            new FuseApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];
