@@ -57,6 +57,17 @@ internal static class LuckyDrawRenderer
     public static readonly Vector4 ChanceTint = new(0.26f, 0.70f, 0.44f, 1f);
     public static readonly Vector4 PlusTint = new(0.98f, 0.80f, 0.34f, 1f);
     public static readonly Vector4 TimesTint = new(1f, 0.46f, 0.58f, 1f);
+    public static readonly Vector4 StayInk = new(0.86f, 0.66f, 0.24f, 1f);
+    public static readonly Vector4 Muted = new(1f, 1f, 1f, 0.62f);
+    public static readonly Vector4 Dust = new(1f, 0.96f, 0.88f, 0.8f);
+    public static readonly ParticleSpec BustShards = new(Danger, GamePalette.Darken(Danger, 0.5f), 4f, 230f, 0.7f, 420f,
+        1.4f, 10f, shape: ParticleShape.Shard);
+    public static readonly ParticleSpec IceShards = new(Ice, new Vector4(1f, 1f, 1f, 0.6f), 3.6f, 170f, 0.8f, 120f,
+        1.8f, 8f, shape: ParticleShape.Shard, additive: true);
+    public static readonly ParticleSpec ChanceGlow = new(Mint, new Vector4(1f, 1f, 1f, 0f), 5f, 120f, 0.7f, 0f, 2.2f,
+        shape: ParticleShape.GlowCircle, curve: SizeCurve.Pulse);
+    public static readonly ParticleSpec FlipSparks = new(FlipTint, Gold, 2.6f, 260f, 0.55f, 0f, 2.6f,
+        shape: ParticleShape.Spark, additive: true);
     private const float PlateRadiusFraction = 0.5f;
     private const float AvatarFraction = 0.34f;
     private const float BarHeight = 2.5f;
@@ -279,7 +290,7 @@ internal static class LuckyDrawRenderer
         (SheetPad * 2f + Typography.LineHeight(TextStyles.Title2) / scale + 10f + rows * SheetRowHeight + 14f +
          SheetButtonHeight) * scale;
 
-    public static bool DrawSheet(ImDrawListPtr drawList, Rect full, Rect area, LuckyDrawBoard board,
+    public static bool DrawSheet(ImDrawListPtr drawList, Rect full, Rect area, ILuckyScoreboard board,
         ReadOnlySpan<int> order, string[] names, string title, string button, float progress, Vector4 accent,
         PhoneTheme theme, float scale, bool interactive)
     {
@@ -327,7 +338,7 @@ internal static class LuckyDrawRenderer
         return GameHud.Button(buttonCenter, buttonSize, button, accent, theme) && progress >= 0.6f;
     }
 
-    private static void DrawSheetRow(ImDrawListPtr drawList, Rect row, LuckyDrawBoard board, int seat, string name,
+    private static void DrawSheetRow(ImDrawListPtr drawList, Rect row, ILuckyScoreboard board, int seat, string name,
         float alpha, bool leader, PhoneTheme theme, float scale)
     {
         if (alpha <= 0f)
@@ -376,7 +387,7 @@ internal static class LuckyDrawRenderer
         }
     }
 
-    private static string ResultLabel(LuckyDrawBoard board, int seat, out Vector4 ink)
+    private static string ResultLabel(ILuckyScoreboard board, int seat, out Vector4 ink)
     {
         if (board.State(seat) == LuckySeatState.Busted)
         {

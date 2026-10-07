@@ -287,12 +287,27 @@ internal sealed class GameRoomsStore : IDisposable
         SendAction(GameRoomWire.ActionFire, -1, -1, cell: cell);
     }
 
+    public void SendHit()
+    {
+        SendAction(GameRoomWire.ActionHit, -1, -1);
+    }
+
+    public void SendStay()
+    {
+        SendAction(GameRoomWire.ActionStay, -1, -1);
+    }
+
+    public void SendTarget(int seat)
+    {
+        SendAction(GameRoomWire.ActionTarget, -1, -1, targetSeat: seat);
+    }
+
     // Every action names the action count it was decided against; the server refuses a mismatch as
     // stale rather than applying it twice, so a lost response costs one refresh and never a double
     // move.
     private void SendAction(string action, int card, int color, int from = -1, int to = -1,
         float angle = 0f, float power = 0f, float placeX = 0f, float placeY = 0f, int column = -1, int cell = -1,
-        BroadsideShipDto[]? fleet = null)
+        BroadsideShipDto[]? fleet = null, int targetSeat = -1)
     {
         var target = room.RoomId;
         var roster = room.State?.Roster;
@@ -302,7 +317,7 @@ internal sealed class GameRoomsStore : IDisposable
         }
 
         var request = new GameRoomActionRequest(action, roster.ActionCount, card, color,
-            Guid.NewGuid().ToString("N"), from, to, angle, power, placeX, placeY, column, cell, fleet);
+            Guid.NewGuid().ToString("N"), from, to, angle, power, placeX, placeY, column, cell, fleet, targetSeat);
         actInFlight = true;
         work.Run("room action", async token =>
         {

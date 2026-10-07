@@ -51,17 +51,13 @@ internal sealed class LuckyDrawApp : IMiniGame
     private static readonly int[] BotCounts = { 1, 3, 5 };
     private static readonly GameSpec StageSpec = new(GameId, L.LuckyDraw.Title, GameGenre.Tabletop, L.LuckyDraw.Hook,
         Backdrop.Felt, HudStyle.Standard, ScoreKind.Streak, Modes, keyboard: true, seats: GameSeats.Max);
-    private static readonly Vector4 StayInk = new(0.86f, 0.66f, 0.24f, 1f);
-    private static readonly Vector4 Muted = new(1f, 1f, 1f, 0.62f);
-    private static readonly Vector4 Dust = new(1f, 0.96f, 0.88f, 0.8f);
-    private static readonly ParticleSpec BustShards = new(LuckyDrawRenderer.Danger,
-        GamePalette.Darken(LuckyDrawRenderer.Danger, 0.5f), 4f, 230f, 0.7f, 420f, 1.4f, 10f, shape: ParticleShape.Shard);
-    private static readonly ParticleSpec IceShards = new(LuckyDrawRenderer.Ice, new Vector4(1f, 1f, 1f, 0.6f), 3.6f,
-        170f, 0.8f, 120f, 1.8f, 8f, shape: ParticleShape.Shard, additive: true);
-    private static readonly ParticleSpec ChanceGlow = new(LuckyDrawRenderer.Mint, new Vector4(1f, 1f, 1f, 0f), 5f,
-        120f, 0.7f, 0f, 2.2f, shape: ParticleShape.GlowCircle, curve: SizeCurve.Pulse);
-    private static readonly ParticleSpec FlipSparks = new(LuckyDrawRenderer.FlipTint, LuckyDrawRenderer.Gold, 2.6f,
-        260f, 0.55f, 0f, 2.6f, shape: ParticleShape.Spark, additive: true);
+    private static readonly Vector4 StayInk = LuckyDrawRenderer.StayInk;
+    private static readonly Vector4 Muted = LuckyDrawRenderer.Muted;
+    private static readonly Vector4 Dust = LuckyDrawRenderer.Dust;
+    private static readonly ParticleSpec BustShards = LuckyDrawRenderer.BustShards;
+    private static readonly ParticleSpec IceShards = LuckyDrawRenderer.IceShards;
+    private static readonly ParticleSpec ChanceGlow = LuckyDrawRenderer.ChanceGlow;
+    private static readonly ParticleSpec FlipSparks = LuckyDrawRenderer.FlipSparks;
 
     private readonly LuckyDrawBoard board = new();
     private readonly LuckyDrawLayout layout = new();

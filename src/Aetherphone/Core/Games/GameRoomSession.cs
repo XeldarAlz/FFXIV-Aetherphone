@@ -31,7 +31,8 @@ internal sealed record GameRoomState(
     PoolRoomStateDto? Pool,
     ConnectFourRoomStateDto? ConnectFour,
     GameRoomRoster? Roster,
-    BroadsideRoomStateDto? Broadside = null);
+    BroadsideRoomStateDto? Broadside = null,
+    LuckyDrawRoomStateDto? LuckyDraw = null);
 
 internal sealed record GameRoomPrivate(
     string RoomId,
@@ -369,6 +370,13 @@ internal sealed class GameRoomSession
                 Broadside: broadside);
         }
 
+        if (string.Equals(snapshot.GameKind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
+        {
+            var luckyDraw = Parse(snapshot.GameState, AethernetJsonContext.Default.LuckyDrawRoomStateDto);
+            return new GameRoomState(roomId, epoch, seq, snapshot, null, null, null, null, RosterOf(luckyDraw),
+                LuckyDraw: luckyDraw);
+        }
+
         return new GameRoomState(roomId, epoch, seq, snapshot, null, null, null, null, null);
     }
 
@@ -389,6 +397,25 @@ internal sealed class GameRoomSession
         }
 
         return new GameRoomRoster(broadside.HostUserId, members, broadside.ActionCount, broadside.WinnerSeat);
+    }
+
+    private static GameRoomRoster? RosterOf(LuckyDrawRoomStateDto? luckyDraw)
+    {
+        if (luckyDraw is null)
+        {
+            return null;
+        }
+
+        var players = luckyDraw.Players ?? Array.Empty<LuckyDrawPlayerDto>();
+        var members = new GameRoomMemberView[players.Length];
+        for (var index = 0; index < players.Length; index++)
+        {
+            var player = players[index];
+            members[index] = new GameRoomMemberView(player.UserId, player.DisplayName, player.Seat,
+                player.Away, player.Wins);
+        }
+
+        return new GameRoomRoster(luckyDraw.HostUserId, members, luckyDraw.ActionCount, luckyDraw.WinnerSeat);
     }
 
     private static GameRoomRoster? RosterOf(ConnectFourRoomStateDto? connectFour)

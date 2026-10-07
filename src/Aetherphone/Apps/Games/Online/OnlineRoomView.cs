@@ -56,6 +56,7 @@ internal sealed class OnlineRoomView
     private readonly OnlinePoolTable poolTable;
     private readonly OnlineConnectFourTable connectFourTable;
     private readonly OnlineBroadsideTable broadsideTable;
+    private readonly OnlineLuckyDrawTable luckyDrawTable;
     private readonly OnlineFinishHold finishHold = new();
     private readonly string[] rosterNames = new string[MaxSeats];
     private readonly string[] rosterWins = new string[MaxSeats];
@@ -80,6 +81,7 @@ internal sealed class OnlineRoomView
         poolTable = new OnlinePoolTable(store);
         connectFourTable = new OnlineConnectFourTable(store);
         broadsideTable = new OnlineBroadsideTable(store);
+        luckyDrawTable = new OnlineLuckyDrawTable(store);
     }
 
     public void Enter()
@@ -93,6 +95,7 @@ internal sealed class OnlineRoomView
         poolTable.Reset();
         connectFourTable.Reset();
         broadsideTable.Reset();
+        luckyDrawTable.Reset();
         finishHold.Clear();
         lastSeenPhase = -1;
         labeledRoster = null;
@@ -179,6 +182,12 @@ internal sealed class OnlineRoomView
         {
             broadsideTable.Draw(body, theme, scale, held.Snapshot, held.Broadside, store.Room.Private?.Broadside,
                 FreshNotice(), finishHold);
+            return;
+        }
+
+        if (held.LuckyDraw is not null)
+        {
+            luckyDrawTable.Draw(body, theme, scale, held.Snapshot, held.LuckyDraw, FreshNotice(), finishHold);
         }
     }
 
@@ -201,7 +210,7 @@ internal sealed class OnlineRoomView
     {
         if (held is null || held.Roster is null
             || (held.Uno is null && held.Chess is null && held.Pool is null && held.ConnectFour is null
-                && held.Broadside is null))
+                && held.Broadside is null && held.LuckyDraw is null))
         {
             return false;
         }
@@ -581,6 +590,16 @@ internal sealed class OnlineRoomView
                 _ => winnerName.Length > 0
                     ? Loc.T(L.Games.OnlineWinner, winnerName)
                     : Loc.T(L.Games.OnlineRoundVoid),
+            };
+        }
+
+        if (held.LuckyDraw is not null && winnerName.Length > 0)
+        {
+            return held.LuckyDraw.EndKind switch
+            {
+                GameRoomWire.LuckyDrawEndTarget => Loc.T(L.Games.OnlineLuckyDrawWin, winnerName),
+                GameRoomWire.LuckyDrawEndDesertion => Loc.T(L.Games.OnlineLuckyDrawDesertWin, winnerName),
+                _ => Loc.T(L.Games.OnlineWinner, winnerName),
             };
         }
 
