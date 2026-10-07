@@ -267,7 +267,7 @@ internal sealed class PairsApp : IMiniGame
         context.Session.Finish(new GameOutcome(Math.Max(1, (int)board.Elapsed), ScoreKind.Time, GameId)
             .WithStat(L.Games.Attempts, GameNumber.Label(board.Attempts))
             .WithStat(L.Pairs.Streak, GameNumber.Label(board.BestStreak))
-            .WithSecondary(AttemptsStatId, board.Attempts, ScoreKind.Time));
+            .WithSecondary(AttemptsStatId, board.Attempts, ScoreKind.Count));
     }
 
     private void EmitAtCard(int index, float scale)

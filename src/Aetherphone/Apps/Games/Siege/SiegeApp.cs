@@ -52,9 +52,10 @@ internal sealed class SiegeApp : IMiniGame
     private static readonly LocString[] Modes = { L.Siege.Campaign, L.Siege.Endless };
     private static readonly string[] ModeStatIds = { GameId, EndlessStatId };
     private static readonly bool[] LevelModes = { true, false };
+    private static readonly LocString[] ModeLabels = { L.Stage.TotalStars, L.Siege.WavesSurvived };
     private static readonly GameSpec StageSpec = new(GameId, L.Siege.Title, GameGenre.Strategy, L.Siege.Hook,
         Backdrop.Meadow, HudStyle.Standard, ScoreKind.Level, Modes, ModeStatIds, clocked: true, keyboard: true,
-        levelCount: SiegeLevels.Count, levelModes: LevelModes);
+        levelCount: SiegeLevels.Count, levelModes: LevelModes, modeLabels: ModeLabels);
     private static readonly ImGuiKey[] SlotKeys =
     {
         ImGuiKey.Key1, ImGuiKey.Key2, ImGuiKey.Key3, ImGuiKey.Key4, ImGuiKey.Key5, ImGuiKey.Key6,

@@ -42,10 +42,11 @@ internal sealed class MiniGolfApp : IMiniGame
     private const float BannerHeight = 0.3f;
     private static readonly LocString[] Modes = { L.MiniGolf.EighteenHoles, L.MiniGolf.NineHoles };
     private static readonly string[] ModeStatIds = { GameId, NineStatId };
+    private static readonly bool[] UnrankedModes = { false, true };
     private static readonly LocString[] Places = { L.MiniGolf.FirstPlace, L.MiniGolf.SecondPlace, L.MiniGolf.ThirdPlace, L.MiniGolf.FourthPlace };
     private static readonly GameSpec StageSpec = new(GameId, L.MiniGolf.Title, GameGenre.Arcade, L.MiniGolf.Hook,
-        Backdrop.Meadow, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds, clocked: true,
-        seats: MiniGolfRound.MaxPlayers);
+        Backdrop.Meadow, HudStyle.Standard, ScoreKind.Count, Modes, ModeStatIds, clocked: true,
+        seats: MiniGolfRound.MaxPlayers, unit: L.MiniGolf.Strokes, unrankedModes: UnrankedModes);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 Danger = new(0.95f, 0.32f, 0.32f, 1f);
     private static readonly Vector4 Dust = new(0.86f, 0.80f, 0.62f, 0.9f);
@@ -438,7 +439,7 @@ internal sealed class MiniGolfApp : IMiniGame
         var total = round.Total(0);
         var solo = round.Holes < MiniGolfCourse.HoleCount
             ? GameOutcome.Unranked()
-            : new GameOutcome(total, ScoreKind.Time, GameId);
+            : new GameOutcome(total, ScoreKind.Count, GameId);
         context.Session.Finish(solo
             .WithStat(L.MiniGolf.Strokes, GameNumber.Label(total))
             .WithStat(L.MiniGolf.ToPar, MiniGolfScorecard.ToParLabel(round.ToPar(0)))

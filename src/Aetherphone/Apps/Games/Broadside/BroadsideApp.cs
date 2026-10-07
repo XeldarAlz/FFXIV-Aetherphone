@@ -42,7 +42,8 @@ internal sealed class BroadsideApp : IMiniGame
     private const float BannerSeconds = 1.7f;
     private static readonly LocString[] Modes = { L.Games.Easy, L.Games.Hard };
     private static readonly GameSpec StageSpec = new(GameId, L.Broadside.Title, GameGenre.Strategy, L.Broadside.Hook,
-        Backdrop.Neon, HudStyle.Standard, ScoreKind.Streak, Modes, keyboard: true, seats: BroadsideBoard.Players);
+        Backdrop.Neon, HudStyle.Standard, ScoreKind.Streak, Modes, keyboard: true, seats: BroadsideBoard.Players,
+        modesSoloOnly: true);
 
     private readonly BroadsideBoard board = new();
     private readonly BroadsideAi ai = new();

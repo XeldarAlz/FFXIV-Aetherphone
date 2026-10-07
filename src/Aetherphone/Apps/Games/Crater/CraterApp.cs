@@ -30,7 +30,7 @@ internal sealed partial class CraterApp : IMiniGame
     private static readonly LocString[] Modes = { L.Games.Easy, L.Games.Hard };
     private static readonly GameSpec StageSpec = new(GameId, L.Crater.Title, GameGenre.Strategy, L.Crater.Hook,
         Backdrop.Sky, HudStyle.Compact, ScoreKind.Streak, Modes, landscape: true, keyboard: true,
-        seats: CraterRules.MaxTeams);
+        seats: CraterRules.MaxTeams, modesSoloOnly: true);
     private static readonly float[] SkyMoments = { 0.12f, 0.2f, 0.26f, 0.32f, 0.46f };
 
     private readonly ITextureProvider textures;
