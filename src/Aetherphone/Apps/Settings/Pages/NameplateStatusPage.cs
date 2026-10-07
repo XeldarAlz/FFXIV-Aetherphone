@@ -357,7 +357,7 @@ internal sealed class NameplateStatusPage : ISettingsPage
         {
             var child = children[index];
             ref readonly var info = ref NameplateStatusCatalog.For(child);
-            var value = Loc.T(settings.Shows(child) ? L.Common.On : L.Common.Off);
+            var value = Loc.T(settings.Shows(status) && settings.Shows(child) ? L.Common.On : L.Common.Off);
             if (!SettingsRow.Link(card.NextRow(), info.Icon, info.Tint, Loc.T(info.Label), value, theme,
                     id: ChildIds[NameplateStatusCatalog.IndexOf(child)]))
             {
