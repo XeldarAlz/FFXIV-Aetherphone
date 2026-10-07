@@ -128,7 +128,7 @@ internal sealed class SnakeApp : IMiniGame
 
         if (board.State == SnakeState.Playing && deltaSeconds > 0f)
         {
-            ribbon.Push(board.HeadWorld);
+            ribbon.PushSpaced(board.HeadWorld, Ribbon.Spacing(1f / board.StepSeconds));
         }
 
         if (board.AteThisStep != FruitKind.None)

@@ -19,7 +19,7 @@ internal sealed partial class CraterApp
     private bool showTeleport;
     private bool aimDragging;
     private bool teleportPressed;
-    private bool fireHeld;
+    private HoldLatch fireHold;
     private bool spaceHeld;
     private bool firstShotTaken;
 
@@ -33,7 +33,7 @@ internal sealed partial class CraterApp
     {
         aimDragging = false;
         teleportPressed = false;
-        fireHeld = false;
+        fireHold.Release();
         spaceHeld = false;
         showTeleport = false;
     }
@@ -61,7 +61,7 @@ internal sealed partial class CraterApp
         var clicked = CraterControls.Weapons(drawList, layout.Weapons, board, labels, board.ActiveTeam, Accent,
             enabled, scale);
         CraterControls.Fire(drawList, layout.FireCenter, layout.FireRadius, board.Weapon, board.Charge, Accent,
-            enabled && board.Weapon != CraterWeapon.Teleport, fireHeld, scale);
+            enabled && board.Weapon != CraterWeapon.Teleport, fireHold.Held, scale);
         var pad = GamePad.Shooter(layout.Pad, Accent, context.Theme);
         if (!enabled)
         {
@@ -163,25 +163,24 @@ internal sealed partial class CraterApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        if (!fireHeld && over && board.Weapon != CraterWeapon.Teleport && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        var pressed = over && board.Weapon != CraterWeapon.Teleport && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        switch (fireHold.Update(pressed, ImGui.IsMouseDown(ImGuiMouseButton.Left)))
         {
-            fireHeld = true;
-            board.BeginCharge();
+            case HoldEdge.Pressed:
+                board.BeginCharge();
+                return;
+            case HoldEdge.Released:
+                board.ReleaseCharge();
+                return;
+            default:
+                return;
         }
-
-        if (!fireHeld || ImGui.IsMouseDown(ImGuiMouseButton.Left))
-        {
-            return;
-        }
-
-        fireHeld = false;
-        board.ReleaseCharge();
     }
 
     private void Pointer(in GameContext context, in CraterLayout layout, bool hovered, bool activated)
     {
         var mouse = ImGui.GetMousePos();
-        var blocked = layout.Covers(mouse) || context.ChromeHit(mouse) || fireHeld;
+        var blocked = layout.Covers(mouse) || context.ChromeHit(mouse) || fireHold.Held;
         var world = camera.ToWorld(mouse);
         showTeleport = board.Weapon == CraterWeapon.Teleport && hovered && !blocked;
         if (showTeleport)

@@ -1,4 +1,3 @@
-using Aetherphone.Apps.Games.Drift;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Dalamud.Bindings.ImGui;

@@ -1,6 +1,5 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -24,7 +23,7 @@ internal sealed class FusePad
     private float bombRadius;
     private Vector2 statsCenter;
     private float bombFlash;
-    private bool padHeld;
+    private HeldPadState padHold;
 
     public FuseDirection Direction { get; private set; }
 
@@ -44,7 +43,7 @@ internal sealed class FusePad
 
     public void Release()
     {
-        padHeld = false;
+        padHold.Release();
         Direction = FuseDirection.None;
         BombPressed = false;
     }
@@ -55,17 +54,9 @@ internal sealed class FusePad
         var padRect = new Rect(padCenter - new Vector2(padRadius, padRadius), padCenter + new Vector2(padRadius, padRadius));
         PressSurface.Claim(PadSurfaceId, padRect, out var padActivated);
         var mouse = ImGui.GetMousePos();
-        if (padActivated && Vector2.Distance(mouse, padCenter) <= padRadius)
-        {
-            padHeld = true;
-        }
-
-        if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
-        {
-            padHeld = false;
-        }
-
-        Direction = padHeld ? DirectionFrom(mouse - padCenter) : FuseDirection.None;
+        padHold.Update(mouse, ImGui.IsMouseDown(ImGuiMouseButton.Left),
+            padActivated && Vector2.Distance(mouse, padCenter) <= padRadius, padCenter, padRadius * DeadZone);
+        Direction = DirectionOf(padHold.Held);
         var bombRect = new Rect(bombCenter - new Vector2(bombRadius, bombRadius), bombCenter + new Vector2(bombRadius, bombRadius));
         PressSurface.Claim(BombSurfaceId, bombRect, out var bombActivated);
         BombPressed = bombActivated && Vector2.Distance(mouse, bombCenter) <= bombRadius;
@@ -80,7 +71,7 @@ internal sealed class FusePad
         bombFlash = 1f;
     }
 
-    public void Draw(ImDrawListPtr drawList, in Moogle moogle, Vector4 accent, PhoneTheme theme, float scale, float time)
+    public void Draw(ImDrawListPtr drawList, in Moogle moogle, Vector4 accent, float scale, float time)
     {
         if (panel.Width <= 0f || panel.Height <= 0f)
         {
@@ -88,30 +79,24 @@ internal sealed class FusePad
         }
 
         Material.Frosted(drawList, panel.Min, panel.Max, Metrics.Radius.Lg * scale, scale, PanelOpacity);
-        DrawCross(drawList, accent, theme, scale);
-        DrawStats(drawList, in moogle, theme, scale, time);
+        DrawCross(drawList, accent, scale);
+        DrawStats(drawList, in moogle, scale, time);
         DrawBombButton(drawList, in moogle, accent, scale, time);
     }
 
-    private FuseDirection DirectionFrom(Vector2 offset)
+    private static FuseDirection DirectionOf(PadDirection direction) => direction switch
     {
-        if (offset.Length() < padRadius * DeadZone)
-        {
-            return FuseDirection.None;
-        }
+        PadDirection.Up => FuseDirection.Up,
+        PadDirection.Down => FuseDirection.Down,
+        PadDirection.Left => FuseDirection.Left,
+        PadDirection.Right => FuseDirection.Right,
+        _ => FuseDirection.None,
+    };
 
-        if (MathF.Abs(offset.X) > MathF.Abs(offset.Y))
-        {
-            return offset.X > 0f ? FuseDirection.Right : FuseDirection.Left;
-        }
-
-        return offset.Y > 0f ? FuseDirection.Down : FuseDirection.Up;
-    }
-
-    private void DrawCross(ImDrawListPtr drawList, Vector4 accent, PhoneTheme theme, float scale)
+    private void DrawCross(ImDrawListPtr drawList, Vector4 accent, float scale)
     {
         drawList.AddCircleFilled(padCenter, padRadius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.16f)), 32);
-        drawList.AddCircle(padCenter, padRadius, ImGui.GetColorU32(theme.TextStrong with { W = 0.12f }), 32, 1f * scale);
+        drawList.AddCircle(padCenter, padRadius, ImGui.GetColorU32(StageInks.Strong with { W = 0.12f }), 32, 1f * scale);
         var key = padRadius * KeyFraction;
         var directions = FuseBoard.Directions;
         for (var index = 0; index < directions.Length; index++)
@@ -122,16 +107,16 @@ internal sealed class FusePad
             var half = new Vector2(key, key) * (held ? 0.92f : 1f);
             var radius = key * 0.5f;
             Squircle.Fill(drawList, center - half, center + half, radius,
-                ImGui.GetColorU32(held ? accent with { W = 0.55f } : theme.TextStrong with { W = 0.1f }));
+                ImGui.GetColorU32(held ? accent with { W = 0.55f } : StageInks.Strong with { W = 0.1f }));
             if (held)
             {
                 Squircle.Stroke(drawList, center - half, center + half, radius, ImGui.GetColorU32(accent), 1.5f * scale);
             }
 
-            DrawArrow(drawList, center, key * 0.5f, direction, held ? FuseArt.White : theme.TextStrong with { W = 0.8f });
+            DrawArrow(drawList, center, key * 0.5f, direction, held ? FuseArt.White : StageInks.Strong with { W = 0.8f });
         }
 
-        drawList.AddCircleFilled(padCenter, key * 0.42f, ImGui.GetColorU32(theme.TextStrong with { W = 0.12f }), 20);
+        drawList.AddCircleFilled(padCenter, key * 0.42f, ImGui.GetColorU32(StageInks.Strong with { W = 0.12f }), 20);
     }
 
     private static void DrawArrow(ImDrawListPtr drawList, Vector2 center, float size, FuseDirection direction, Vector4 color)
@@ -142,29 +127,29 @@ internal sealed class FusePad
             center - forward * size * 0.45f - side * size * 0.6f, ImGui.GetColorU32(color));
     }
 
-    private void DrawStats(ImDrawListPtr drawList, in Moogle moogle, PhoneTheme theme, float scale, float time)
+    private void DrawStats(ImDrawListPtr drawList, in Moogle moogle, float scale, float time)
     {
         var row = StatRow * scale;
         var top = statsCenter.Y - row;
-        DrawStat(drawList, new Vector2(statsCenter.X - 26f * scale, top), PowerUp.ExtraBomb, GameNumber.Label(moogle.Bombs), theme,
+        DrawStat(drawList, new Vector2(statsCenter.X - 26f * scale, top), PowerUp.ExtraBomb, GameNumber.Label(moogle.Bombs),
             scale, time);
-        DrawStat(drawList, new Vector2(statsCenter.X + 26f * scale, top), PowerUp.Range, GameNumber.Label(moogle.Range), theme,
+        DrawStat(drawList, new Vector2(statsCenter.X + 26f * scale, top), PowerUp.Range, GameNumber.Label(moogle.Range),
             scale, time);
         DrawStat(drawList, new Vector2(statsCenter.X - 26f * scale, top + row), PowerUp.Speed,
-            GameNumber.Label(moogle.SpeedLevel + 1), theme, scale, time);
+            GameNumber.Label(moogle.SpeedLevel + 1), scale, time);
         var kickAlpha = moogle.Kick ? 1f : 0.3f;
         var kickCenter = new Vector2(statsCenter.X + 26f * scale - 6f * scale, top + row);
         FuseArt.DrawGlyph(drawList, kickCenter, StatIcon * scale, PowerUp.Kick, FuseArt.KickColor, kickAlpha, time);
     }
 
-    private static void DrawStat(ImDrawListPtr drawList, Vector2 center, PowerUp kind, string label, PhoneTheme theme, float scale,
+    private static void DrawStat(ImDrawListPtr drawList, Vector2 center, PowerUp kind, string label, float scale,
         float time)
     {
         var icon = center - new Vector2(StatIcon * scale + StatGap * scale * 0.5f, 0f);
         FuseArt.DrawGlyph(drawList, icon, StatIcon * scale, kind, FuseArt.PowerUpColor(kind), 1f, time);
         var style = TextStyles.FootnoteEmphasized;
         Typography.Draw(drawList, new Vector2(center.X + StatGap * scale * 0.5f, center.Y - Typography.LineHeight(style) * 0.5f),
-            label, theme.TextStrong, style);
+            label, StageInks.Strong, style);
     }
 
     private void DrawBombButton(ImDrawListPtr drawList, in Moogle moogle, Vector4 accent, float scale, float time)

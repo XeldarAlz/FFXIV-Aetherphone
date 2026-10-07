@@ -67,6 +67,82 @@ public sealed class TerrainPainterTests
         Assert.Equal(TerrainMaterial.Lunar.Edge.X, painter.Material.Edge.X);
     }
 
+    [Fact]
+    public void ARepaintCoversTheRowAboveAndTheTopsoilBelowInsideTheMask()
+    {
+        var painter = new TerrainPainter(FlatGround(), TerrainMaterial.Earth);
+
+        var inside = painter.Coverage(new CellRegion(4, 6, 9, 8));
+        Assert.Equal(4, inside.MinColumn);
+        Assert.Equal(5, inside.MinRow);
+        Assert.Equal(9, inside.MaxColumn);
+        Assert.Equal(8 + TerrainPainter.TopsoilCells, inside.MaxRow);
+
+        var edge = painter.Coverage(new CellRegion(-6, -3, 40, 30));
+        Assert.Equal(0, edge.MinColumn);
+        Assert.Equal(0, edge.MinRow);
+        Assert.Equal(Size - 1, edge.MaxColumn);
+        Assert.Equal(Size - 1, edge.MaxRow);
+        Assert.Equal(Size, painter.Whole.Columns);
+        Assert.Equal(Size, painter.Whole.Rows);
+    }
+
+    [Fact]
+    public void RegionsUniteAndOverlapByCell()
+    {
+        var first = new CellRegion(2, 3, 5, 6);
+        var second = new CellRegion(4, 1, 9, 4);
+        var apart = new CellRegion(6, 7, 8, 9);
+
+        var union = CellRegion.Union(first, second);
+        Assert.Equal(2, union.MinColumn);
+        Assert.Equal(1, union.MinRow);
+        Assert.Equal(9, union.MaxColumn);
+        Assert.Equal(6, union.MaxRow);
+        Assert.True(first.Overlaps(second));
+        Assert.True(second.Overlaps(first));
+        Assert.False(first.Overlaps(apart));
+        Assert.True(new CellRegion(5, 6, 5, 6).Overlaps(first));
+    }
+
+    [Fact]
+    public void AnOverlayPaintsOverEveryRepaintedRegion()
+    {
+        var mask = FlatGround();
+        var overlay = new MarkingOverlay();
+        var painter = new TerrainPainter(mask, TerrainMaterial.Earth);
+        overlay.Paint(painter.Canvas, Size, painter.Coverage(new CellRegion(5, SurfaceRow, 5, SurfaceRow)));
+
+        Assert.Equal(1, overlay.Calls);
+        Assert.Equal(MarkingOverlay.Marker, painter.Pixels[(SurfaceRow * Size + 5) * TerrainPainter.BytesPerPixel]);
+        Assert.False(overlay.TakeDirty(out _));
+    }
+
+    private sealed class MarkingOverlay : ITerrainOverlay
+    {
+        public const byte Marker = 7;
+
+        public int Calls { get; private set; }
+
+        public bool TakeDirty(out CellRegion region)
+        {
+            region = default;
+            return false;
+        }
+
+        public void Paint(Span<byte> pixels, int width, in CellRegion region)
+        {
+            Calls++;
+            for (var row = region.MinRow; row <= region.MaxRow; row++)
+            {
+                for (var column = region.MinColumn; column <= region.MaxColumn; column++)
+                {
+                    pixels[(row * width + column) * TerrainPainter.BytesPerPixel] = Marker;
+                }
+            }
+        }
+    }
+
     private static TerrainMask FlatGround()
     {
         var mask = new TerrainMask(Size, Size, 1f);

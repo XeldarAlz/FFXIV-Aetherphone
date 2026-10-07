@@ -569,7 +569,7 @@ internal sealed class TempoApp : IMiniGame
             return;
         }
 
-        ribbon.Push(TempoRenderer.World(board.RenderX, board.RenderY));
+        ribbon.PushSpaced(TempoRenderer.World(board.RenderX, board.RenderY), Ribbon.Spacing(board.Level?.Speed ?? 0f));
     }
 
     private void DrawWorld(ImDrawListPtr drawList, in GameContext context, float scale, bool live)

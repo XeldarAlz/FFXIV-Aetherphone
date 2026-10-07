@@ -52,6 +52,14 @@ internal sealed class TerrainPainter
 
     public ReadOnlySpan<byte> Pixels => pixels;
 
+    public Span<byte> Canvas => pixels;
+
+    public CellRegion Whole => new(0, 0, mask.Width - 1, mask.Height - 1);
+
+    public CellRegion Coverage(in CellRegion region) => new(Math.Max(0, region.MinColumn),
+        Math.Max(0, region.MinRow - 1), Math.Min(mask.Width - 1, region.MaxColumn),
+        Math.Min(mask.Height - 1, region.MaxRow + TopsoilCells));
+
     public void SetMaterial(TerrainMaterial material)
     {
         Material = material;
@@ -71,14 +79,11 @@ internal sealed class TerrainPainter
 
     public void Paint(in CellRegion region)
     {
-        var firstColumn = Math.Max(0, region.MinColumn);
-        var lastColumn = Math.Min(mask.Width - 1, region.MaxColumn);
-        var firstRow = Math.Max(0, region.MinRow - 1);
-        var lastRow = Math.Min(mask.Height - 1, region.MaxRow + TopsoilCells);
-        for (var column = firstColumn; column <= lastColumn; column++)
+        var painted = Coverage(region);
+        for (var column = painted.MinColumn; column <= painted.MaxColumn; column++)
         {
-            var depth = DepthAbove(column, firstRow);
-            for (var row = firstRow; row <= lastRow; row++)
+            var depth = DepthAbove(column, painted.MinRow);
+            for (var row = painted.MinRow; row <= painted.MaxRow; row++)
             {
                 var offset = (row * mask.Width + column) * BytesPerPixel;
                 if (!mask.IsSolid(column, row))
@@ -94,7 +99,7 @@ internal sealed class TerrainPainter
         }
     }
 
-    private void PaintAll() => Paint(new CellRegion(0, 0, mask.Width - 1, mask.Height - 1));
+    private void PaintAll() => Paint(Whole);
 
     private int DepthAbove(int column, int row)
     {
