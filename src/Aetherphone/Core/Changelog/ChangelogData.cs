@@ -9,7 +9,17 @@ internal static class ChangelogData
         new ChangelogEntry("1.2.0.0", "2026-10-07", new ChangelogSection[]
         {
             new(L.Apps.Games, L.Changelog.Release1200Games),
+            new(L.Apps.AetherStream, L.Changelog.Release1200MogCast),
+            new(L.Changelog.SectionPhone, L.Changelog.Release1200Phone),
+            new(L.Changelog.SectionChirperAethergramVelvet, L.Changelog.Release1200ChirperAethergramVelvet),
             new(L.Apps.Chirper, L.Changelog.Release1200Chirper),
+            new(L.Changelog.SectionMessaging, L.Changelog.Release1200Messaging),
+            new(L.Apps.Velvet, L.Changelog.Release1200Velvet),
+            new(L.Apps.Music, L.Changelog.Release1200Music),
+            new(L.Apps.Linkpearl, L.Changelog.Release1200Linkpearl),
+            new(L.Apps.Calendar, L.Changelog.Release1200Calendar),
+            new(L.Apps.Settings, L.Changelog.Release1200Settings),
+            new(L.Changelog.SectionSounds, L.Changelog.Release1200Sounds),
         }),
         new ChangelogEntry("1.1.0.4", "2026-10-06", new ChangelogSection[]
         {

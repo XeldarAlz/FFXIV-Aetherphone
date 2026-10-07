@@ -2291,7 +2291,7 @@ internal static class L
             new("changelog.r1200.47",
                 "Added Trails: light cycles against up to three bots, where you never touch a trail and the first to three rounds wins"),
             new("changelog.r1200.48",
-                "Added Trailblaze: an endless chocobo run across three lanes, jumping pits, sliding under beams and scooping up gil"),
+                "Added Choco Surfer: an endless chocobo run across three lanes, jumping pits, sliding under beams and scooping up gil"),
             new("changelog.r1200.49",
                 "Added Thrust: hold to fly and let go to drop, dodging zappers and missiles, with a chocobo that saves you from one hit"),
             new("changelog.r1200.50",
@@ -2311,7 +2311,7 @@ internal static class L
             new("changelog.r1200.57",
                 "Added Lander: set a lander down gently on lit pads over rugged ground before the fuel runs out"),
             new("changelog.r1200.58",
-                "Added Moogle Clicker: tap the moogle for kupo and build up a workshop that keeps earning while you play"),
+                "Added Kupo Clicker: tap the moogle for kupo and build up a workshop that keeps earning while you play"),
             new("changelog.r1200.59",
                 "Added Crater: turn-based artillery between moogle teams on ground that crumbles under every shell"),
             new("changelog.r1200.60",
@@ -2346,6 +2346,96 @@ internal static class L
                 "Fixed Flow never showing a best, and Sweeper, Nonogram and Sudoku showing only their Easy time: the best across tiers now shows with its tier label"),
             new("changelog.r1200.40",
                 "Fixed a tie in Reversi and a draw in Chess counting as a loss and ending your win streak"),
+        };
+
+        public static readonly LocString[] Release1200MogCast =
+        {
+            new("changelog.r1200.74",
+                "Rebuilt Good to know around cards for Playback, Together and When something goes wrong, with a list of the sites that play and the services that can't, and why"),
+            new("changelog.r1200.75",
+                "Added a reason to every failed link: DRM, a region lock, a sign-in wall, an unsupported site or a site change, and links no longer retry when a retry cannot help"),
+            new("changelog.r1200.76",
+                "Added automatic yt-dlp updates, checked at most once a day and again right after a site change breaks a link"),
+            new("changelog.r1200.77",
+                "Added Early site fixes to Settings, which takes yt-dlp's nightly builds so broken sites get fixed sooner"),
+            new("changelog.r1200.78",
+                "The Add sheet now says which sites work"),
+            new("changelog.r1200.79",
+                "Fixed some playable videos failing with Requested format is not available"),
+            new("changelog.r1200.80",
+                "Fixed Tubi links that stopped playing after Tubi changed its site"),
+        };
+
+        public static readonly LocString[] Release1200Phone =
+        {
+            new("changelog.r1200.81",
+                "Added /phone commands for macros: open an app or Settings, take a photo, toggle Do Not Disturb or mute, control music, start a tell or a call, and set the phone to mini, full or hidden"),
+            new("changelog.r1200.82",
+                "Settings > Commands now lists every slash command, and /phone help prints the same list in chat"),
+            new("changelog.r1200.83",
+                "Added a Show in Dynamic Island switch to the settings page of every app that puts activities on the island"),
+            new("changelog.r1200.84",
+                "Added Clock and Date switches to Minimized phone in Settings, to hide them from the mini phone"),
+            new("changelog.r1200.85",
+                "Fixed the app switcher showing the home screen as a card: it now shows only open apps, with a hint when nothing is open"),
+            new("changelog.r1200.86",
+                "Fixed island activities of uninstalled apps staying up, like a running timer or an old meetup"),
+            new("changelog.r1200.87",
+                "Fixed media controls still showing in the Dynamic Island, Control Center, mini phone and Nameplate Title after Music was uninstalled"),
+        };
+
+        public static readonly LocString[] Release1200ChirperAethergramVelvet =
+        {
+            new("changelog.r1200.88",
+                "Added line breaks to chirps and to Aethergram and Velvet captions: Enter starts a new line"),
+        };
+
+        public static readonly LocString[] Release1200Messaging =
+        {
+            new("changelog.r1200.89",
+                "Added a settings gear to ChocoChat pop-outs for text size, window opacity and fading while you are away"),
+            new("changelog.r1200.90",
+                "Fixed the title bar buttons on chat pop-outs drawing as large glass circles"),
+        };
+
+        public static readonly LocString[] Release1200Velvet =
+        {
+            new("changelog.r1200.91",
+                "Added deleting comments: right-click your own comment, or any comment on your post"),
+            new("changelog.r1200.92",
+                "Fixed post buttons drawing inside glass circles, and comment likes now show one heart with the count below"),
+        };
+
+        public static readonly LocString[] Release1200Music =
+        {
+            new("changelog.r1200.93",
+                "Fixed a radio station showing a different live count on its page than in the station list"),
+            new("changelog.r1200.94",
+                "Fixed overlaps on radio station pages, like the live pill on the now playing line and the empty chat under the pinned notice"),
+        };
+
+        public static readonly LocString[] Release1200Linkpearl =
+        {
+            new("changelog.r1200.95",
+                "Fixed the composer only taking focus when you clicked right on its text, and the channel chip label getting cut off"),
+        };
+
+        public static readonly LocString[] Release1200Calendar =
+        {
+            new("changelog.r1200.96",
+                "Fixed calendar widgets showing only the weekday for events a week or more away, they now show the date"),
+        };
+
+        public static readonly LocString[] Release1200Settings =
+        {
+            new("changelog.r1200.97",
+                "Fixed slots win and loss titles showing in Nameplate Title while Gamba is turned off"),
+        };
+
+        public static readonly LocString[] Release1200Sounds =
+        {
+            new("changelog.r1200.98",
+                "Fixed crackling and gaps in sounds and music while the game is busy"),
         };
 
         public static readonly LocString[] Release1104Music =
