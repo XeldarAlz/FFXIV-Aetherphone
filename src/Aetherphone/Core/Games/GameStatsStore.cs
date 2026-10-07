@@ -2,8 +2,11 @@ namespace Aetherphone.Core.Games;
 
 internal sealed class GameStatsStore
 {
+    public const int MaxStars = 3;
+    public const int MaxLevels = 999;
     private const string TetrisGameId = "tetris";
     private const int TetrisModernMode = 1;
+    private const int StackStarsLimit = 256;
 
     private readonly IGameStatsConfiguration configuration;
 
@@ -142,6 +145,25 @@ internal sealed class GameStatsStore
         return true;
     }
 
+    public bool SubmitStreak(string gameId, int streak)
+    {
+        CompleteDaily(gameId);
+        if (streak <= 0)
+        {
+            return false;
+        }
+
+        var record = GetOrCreate(gameId);
+        if (streak <= record.Streak)
+        {
+            return false;
+        }
+
+        record.Streak = streak;
+        configuration.Save();
+        return true;
+    }
+
     public int RecordWin(string gameId)
     {
         CompleteDaily(gameId);
@@ -162,6 +184,105 @@ internal sealed class GameStatsStore
 
         record.Streak = 0;
         configuration.Save();
+    }
+
+    public int Stars(string gameId, int level)
+    {
+        var progress = FindProgress(gameId);
+        return progress is null ? 0 : StarsAt(progress.Stars, level);
+    }
+
+    public bool SetStars(string gameId, int level, int stars)
+    {
+        var earned = Math.Clamp(stars, 0, MaxStars);
+        if (level < 1 || level > MaxLevels || earned == 0)
+        {
+            return false;
+        }
+
+        var progress = FindProgress(gameId);
+        if (progress is not null && StarsAt(progress.Stars, level) >= earned)
+        {
+            return false;
+        }
+
+        if (progress is null)
+        {
+            progress = new GameLevelProgress { GameId = gameId, };
+            configuration.GameLevelProgress.Add(progress);
+        }
+
+        progress.Stars = WithStars(progress.Stars, level, earned);
+        configuration.Save();
+        return true;
+    }
+
+    public int TotalStars(string gameId)
+    {
+        var progress = FindProgress(gameId);
+        if (progress is null)
+        {
+            return 0;
+        }
+
+        var total = 0;
+        for (var level = 1; level <= progress.Stars.Length; level++)
+        {
+            total += StarsAt(progress.Stars, level);
+        }
+
+        return total;
+    }
+
+    public bool IsUnlocked(string gameId, int level) =>
+        level == 1 || (level > 1 && Stars(gameId, level - 1) > 0);
+
+    public int HighestUnlocked(string gameId, int levelCount = MaxLevels)
+    {
+        var limit = Math.Clamp(levelCount, 1, MaxLevels);
+        var progress = FindProgress(gameId);
+        var highest = 1;
+        if (progress is null)
+        {
+            return highest;
+        }
+
+        for (var level = 1; level < limit && level <= progress.Stars.Length; level++)
+        {
+            if (StarsAt(progress.Stars, level) > 0)
+            {
+                highest = level + 1;
+            }
+        }
+
+        return highest;
+    }
+
+    public int NextLevel(string gameId, int levelCount)
+    {
+        if (levelCount <= 0)
+        {
+            return 0;
+        }
+
+        var limit = Math.Min(levelCount, MaxLevels);
+        for (var level = 1; level <= limit; level++)
+        {
+            if (IsUnlocked(gameId, level) && Stars(gameId, level) == 0)
+            {
+                return level;
+            }
+        }
+
+        for (var level = 1; level <= limit; level++)
+        {
+            if (IsUnlocked(gameId, level) && Stars(gameId, level) < MaxStars)
+            {
+                return level;
+            }
+        }
+
+        return 1;
     }
 
     public void CompleteDaily(string gameId)
@@ -207,6 +328,44 @@ internal sealed class GameStatsStore
         }
 
         return null;
+    }
+
+    private GameLevelProgress? FindProgress(string gameId)
+    {
+        var progress = configuration.GameLevelProgress;
+        for (var index = 0; index < progress.Count; index++)
+        {
+            if (string.Equals(progress[index].GameId, gameId, StringComparison.Ordinal))
+            {
+                return progress[index];
+            }
+        }
+
+        return null;
+    }
+
+    private static int StarsAt(string stars, int level)
+    {
+        if (level < 1 || level > stars.Length)
+        {
+            return 0;
+        }
+
+        var digit = stars[level - 1] - '0';
+        return digit is >= 0 and <= MaxStars ? digit : 0;
+    }
+
+    private static string WithStars(string stars, int level, int earned)
+    {
+        var length = Math.Max(stars.Length, level);
+        var buffer = length <= StackStarsLimit ? stackalloc char[length] : new char[length];
+        for (var index = 0; index < length; index++)
+        {
+            buffer[index] = index < stars.Length ? stars[index] : '0';
+        }
+
+        buffer[level - 1] = (char)('0' + earned);
+        return new string(buffer);
     }
 
     private GameStatRecord GetOrCreate(string gameId)

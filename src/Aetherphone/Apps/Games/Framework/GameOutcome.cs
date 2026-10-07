@@ -18,95 +18,101 @@ internal readonly struct OutcomeStat
 internal readonly struct GameOutcome
 {
     public const int MaxStats = 4;
-
-    public readonly int Value;
-    public readonly ScoreKind Kind;
-    public readonly bool Won;
-    public readonly bool IsDraw;
-    public readonly bool QuietBest;
-    public readonly string StatId;
-    public readonly LocString? ContinueLabel;
-    public readonly int SecondaryValue;
-    public readonly string SecondaryStatId;
-    public readonly ScoreKind SecondaryKind;
-    public readonly int StatCount;
-    private readonly OutcomeStat stat0;
-    private readonly OutcomeStat stat1;
-    private readonly OutcomeStat stat2;
-    private readonly OutcomeStat stat3;
+    public const int NoStars = -1;
+    public const int NoSeat = -1;
 
     public GameOutcome(int value, ScoreKind kind, string statId, bool won = true)
-        : this(value, kind, won, false, false, statId, null, 0, string.Empty, ScoreKind.Score, 0, default, default,
-            default, default)
-    {
-    }
-
-    private GameOutcome(int value, ScoreKind kind, bool won, bool isDraw, bool quietBest, string statId,
-        LocString? continueLabel, int secondaryValue, string secondaryStatId, ScoreKind secondaryKind, int statCount,
-        OutcomeStat stat0, OutcomeStat stat1, OutcomeStat stat2, OutcomeStat stat3)
     {
         Value = value;
         Kind = kind;
-        Won = won;
-        IsDraw = isDraw;
-        QuietBest = quietBest;
         StatId = statId;
-        ContinueLabel = continueLabel;
-        SecondaryValue = secondaryValue;
-        SecondaryStatId = secondaryStatId;
-        SecondaryKind = secondaryKind;
-        StatCount = statCount;
-        this.stat0 = stat0;
-        this.stat1 = stat1;
-        this.stat2 = stat2;
-        this.stat3 = stat3;
+        Won = won;
+        SecondaryStatId = string.Empty;
     }
 
+    public int Value { get; private init; }
+
+    public ScoreKind Kind { get; private init; }
+
+    public bool Won { get; private init; }
+
+    public bool IsDraw { get; private init; }
+
+    public bool QuietBest { get; private init; }
+
+    public string StatId { get; private init; }
+
+    public LocString? ContinueLabel { get; private init; }
+
+    public int SecondaryValue { get; private init; }
+
+    public string SecondaryStatId { get; private init; }
+
+    public ScoreKind SecondaryKind { get; private init; }
+
+    public int StatCount { get; private init; }
+
+    public int Stars => StarsPlusOne - 1;
+
+    public bool IsUnranked { get; private init; }
+
+    public int WinnerSeat => WinnerSeatPlusOne - 1;
+
+    private int StarsPlusOne { get; init; }
+
+    private int WinnerSeatPlusOne { get; init; }
+
+    private OutcomeStat FirstStat { get; init; }
+
+    private OutcomeStat SecondStat { get; init; }
+
+    private OutcomeStat ThirdStat { get; init; }
+
+    private OutcomeStat FourthStat { get; init; }
+
+    public bool HasSecondary => SecondaryStatId.Length > 0;
+
+    public bool HasStars => Stars >= 0;
+
+    public bool HasWinner => WinnerSeat >= 0;
+
     public static GameOutcome Drawn(string statId) =>
-        new(0, ScoreKind.Streak, false, true, false, statId, null, 0, string.Empty, ScoreKind.Score, 0, default,
-            default, default, default);
+        new GameOutcome(0, ScoreKind.Streak, statId, false) with { IsDraw = true };
+
+    public static GameOutcome Unranked(bool won = true) =>
+        new GameOutcome(0, ScoreKind.Score, string.Empty, won) with { IsUnranked = true };
 
     public OutcomeStat Stat(int index) => index switch
     {
-        0 => stat0,
-        1 => stat1,
-        2 => stat2,
-        _ => stat3,
+        0 => FirstStat,
+        1 => SecondStat,
+        2 => ThirdStat,
+        _ => FourthStat,
     };
 
     public GameOutcome WithStat(LocString label, string value)
     {
-        if (StatCount >= MaxStats)
-        {
-            return this;
-        }
-
         var stat = new OutcomeStat(label, value);
         return StatCount switch
         {
-            0 => Copy(1, stat, stat1, stat2, stat3),
-            1 => Copy(2, stat0, stat, stat2, stat3),
-            2 => Copy(3, stat0, stat1, stat, stat3),
-            _ => Copy(4, stat0, stat1, stat2, stat),
+            0 => this with { FirstStat = stat, StatCount = 1 },
+            1 => this with { SecondStat = stat, StatCount = 2 },
+            2 => this with { ThirdStat = stat, StatCount = 3 },
+            3 => this with { FourthStat = stat, StatCount = MaxStats },
+            _ => this,
         };
     }
 
     public GameOutcome WithSecondary(string statId, int value, ScoreKind kind = ScoreKind.Score) =>
-        new(Value, Kind, Won, IsDraw, QuietBest, StatId, ContinueLabel, value, statId, kind, StatCount, stat0, stat1,
-            stat2, stat3);
+        this with { SecondaryStatId = statId, SecondaryValue = value, SecondaryKind = kind };
 
-    public GameOutcome WithContinueLabel(LocString label) =>
-        new(Value, Kind, Won, IsDraw, QuietBest, StatId, label, SecondaryValue, SecondaryStatId, SecondaryKind,
-            StatCount, stat0, stat1, stat2, stat3);
+    public GameOutcome WithContinueLabel(LocString label) => this with { ContinueLabel = label };
 
-    public GameOutcome WithQuietBest() =>
-        new(Value, Kind, Won, IsDraw, true, StatId, ContinueLabel, SecondaryValue, SecondaryStatId, SecondaryKind,
-            StatCount, stat0, stat1, stat2, stat3);
+    public GameOutcome WithQuietBest() => this with { QuietBest = true };
 
-    public bool HasSecondary => SecondaryStatId.Length > 0;
+    public GameOutcome WithStars(int stars) =>
+        this with { StarsPlusOne = Math.Clamp(stars, 0, GameStatsStore.MaxStars) + 1 };
 
-    private GameOutcome Copy(int statCount, OutcomeStat first, OutcomeStat second, OutcomeStat third,
-        OutcomeStat fourth) =>
-        new(Value, Kind, Won, IsDraw, QuietBest, StatId, ContinueLabel, SecondaryValue, SecondaryStatId, SecondaryKind,
-            statCount, first, second, third, fourth);
+    public GameOutcome WithWinner(int seat) =>
+        this with { WinnerSeatPlusOne = Math.Clamp(seat, NoSeat, GameSeats.Max - 1) + 1 };
 }

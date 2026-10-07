@@ -20,24 +20,24 @@ internal sealed partial class GamesApp
     private const float EntranceSpeed = 1.6f;
     private const int MinColumns = 3;
     private const int MaxColumns = 6;
-    private const int ShelfGenreCount = 5;
+    private const int ShelfGenreCount = (int)GameGenre.Friends;
 
     private static readonly string[] GenreRailIds =
     [
         "##games.rail.arcade", "##games.rail.action", "##games.rail.puzzle", "##games.rail.brain",
-        "##games.rail.tabletop",
+        "##games.rail.strategy", "##games.rail.tabletop",
     ];
 
     private static readonly string[] GenreSeeAllIds =
     [
         "games.seeAll.arcade", "games.seeAll.action", "games.seeAll.puzzle", "games.seeAll.brain",
-        "games.seeAll.tabletop",
+        "games.seeAll.strategy", "games.seeAll.tabletop",
     ];
 
     private readonly TileRail latestRail = new();
     private readonly TileRail recentRail = new();
     private readonly TileRail[] genreRails =
-        [new TileRail(), new TileRail(), new TileRail(), new TileRail(), new TileRail()];
+        [new TileRail(), new TileRail(), new TileRail(), new TileRail(), new TileRail(), new TileRail()];
     private string dailyEyebrow = string.Empty;
     private string roomsLabel = string.Empty;
     private int roomsLabelCount = -1;

@@ -82,6 +82,31 @@ public sealed class LeaderboardStoreTests
     }
 
     [Fact]
+    public void NextWaveStatsKeepTheMostStarsAndTheFewestStrokes()
+    {
+        var queue = Build(out var configuration);
+
+        Assert.True(queue.Enqueue(Submission("fling", 12, ScoreKind.Level), Now));
+        Assert.False(queue.Enqueue(Submission("fling", 9, ScoreKind.Level), Now));
+        Assert.True(queue.Enqueue(Submission("fling", 15, ScoreKind.Level), Now));
+        Assert.True(queue.Enqueue(Submission("minigolf", 58, ScoreKind.Time), Now));
+        Assert.True(queue.Enqueue(Submission("minigolf", 52, ScoreKind.Time), Now));
+        Assert.False(queue.Enqueue(Submission("minigolf", 60, ScoreKind.Time), Now));
+        Assert.True(queue.Enqueue(Submission("crater.hard", 4, ScoreKind.Streak, "crater"), Now));
+        Assert.False(queue.Enqueue(Submission("crater", 4), Now));
+        Assert.True(queue.Enqueue(Submission("siege.endless", 40, ScoreKind.Level, "siege"), Now));
+
+        Assert.Equal(4, queue.Count);
+        Assert.Equal(15, configuration.PendingScoreUploads[0].Value);
+        Assert.Equal(52, configuration.PendingScoreUploads[1].Value);
+        Assert.Equal("crater", configuration.PendingScoreUploads[2].StatId);
+        Assert.Equal("siege.endless", configuration.PendingScoreUploads[3].StatId);
+        Assert.Equal("mahjong.easy", ScoreStatIds.LeaderboardId("mahjong.easy", "mahjong", ScoreKind.Time));
+        Assert.Equal(string.Empty, ScoreStatIds.LeaderboardId("mahjong", "mahjong", ScoreKind.Time));
+        Assert.Equal("gloop.versus", ScoreStatIds.LeaderboardId("gloop.versus", "gloop", ScoreKind.Streak));
+    }
+
+    [Fact]
     public void TheQueueKeepsOnlyTheBestPerStatId()
     {
         var queue = Build(out var configuration);

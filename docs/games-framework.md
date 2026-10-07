@@ -13,11 +13,17 @@ This page explains how the Games app hosts its mini-games and how to build a new
 | src/Aetherphone/Apps/Games/TileRail.cs | Sideways-panning shelf of tiles |
 | src/Aetherphone/Apps/Games/Widgets/DailyGameWidget.cs | Home screen widget for the daily game plus recent (or latest) games |
 | src/Aetherphone/Apps/Games/Framework/IMiniGame.cs | Contract every mini-game implements |
-| src/Aetherphone/Apps/Games/Framework/GameSpec.cs | What a game declares once: id, title, hook, genre, backdrop, HUD style, score kind, modes, flags |
-| src/Aetherphone/Apps/Games/Framework/GameStart.cs | The mode, seed and daily flag a run starts with |
+| src/Aetherphone/Apps/Games/Framework/GameSpec.cs | What a game declares once: id, title, hook, genre, backdrop, HUD style, score kind, modes, flags, level count, seats |
+| src/Aetherphone/Apps/Games/Framework/GameStart.cs | The mode, seed, daily flag, level and seat count a run starts with |
 | src/Aetherphone/Apps/Games/Framework/GameContext.cs | Per-frame data handed to the running game |
-| src/Aetherphone/Apps/Games/Framework/GameSession.cs | The host-owned run: flow state, score reports, the single `Finish`, stats and leaderboard submission |
-| src/Aetherphone/Apps/Games/Framework/GameOutcome.cs | What a game hands `Finish`: value, kind, win flag, stat id, up to four stat lines, a secondary stat |
+| src/Aetherphone/Apps/Games/Framework/GameSession.cs | The host-owned run: flow state, score reports, the single `Finish`, `Record`, levels, hot-seat handoffs, stats and leaderboard submission |
+| src/Aetherphone/Apps/Games/Framework/GameOutcome.cs | What a game hands `Finish`: value, kind, win flag, stat id, up to four stat lines, a secondary stat, stars, unranked and winner seat |
+| src/Aetherphone/Apps/Games/Framework/LevelSelect.cs | The level grid the intro's Levels button opens: stars per tile, locked tiles, tap to play |
+| src/Aetherphone/Apps/Games/Framework/StageHandoff.cs | The full-screen pass-the-phone interstitial between hot-seat turns |
+| src/Aetherphone/Apps/Games/Framework/GameSeats.cs | Seat colours and the cached, localized Player 1 to 6 names, pass lines and win lines |
+| src/Aetherphone/Apps/Games/Framework/StarRow.cs | Three stars, earned ones filled, with an optional pop-in reveal (level tiles, result card) |
+| src/Aetherphone/Apps/Games/Framework/StagePill.cs | The frosted pill behind the intro's best, stars and rank lines |
+| src/Aetherphone/Apps/Games/Framework/Cards/ | The card table toolkit: `CardPose`, `HandLayout`, `SeatLayout`, `PileLayout`, `CardFlight` (plain math) and `CardFace`, `PileDraw` (drawing) |
 | src/Aetherphone/Apps/Games/Framework/StageLayout.cs | Full and Safe rect geometry, chrome chip and HUD row positions |
 | src/Aetherphone/Apps/Games/Framework/StageBackdrop.cs | The seven layered backdrops with pointer and camera parallax, vignette and light sweep |
 | src/Aetherphone/Apps/Games/Framework/BoardPlate.cs | The glass plate under a grid |
@@ -42,7 +48,7 @@ This page explains how the Games app hosts its mini-games and how to build a new
 | src/Aetherphone/Apps/Games/Framework/GameGrid.cs | Centered cell-grid math for board games |
 | src/Aetherphone/Apps/Games/Framework/GamePalette.cs | Shared board colors and ink-contrast picker |
 | src/Aetherphone/Apps/Games/Framework/GameNumber.cs | Cached integer-to-string labels (no per-frame allocation) |
-| src/Aetherphone/Apps/Games/Framework/LabelSlot.cs | One cached formatted label, rebuilt on value or language change |
+| src/Aetherphone/Apps/Games/Framework/LabelSlot.cs | One cached formatted label, rebuilt on value or language change (`LabelPairSlot` for two values, "12 / 120") |
 | src/Aetherphone/Apps/Games/Framework/GameInput.cs | Keyboard reads that keep the keys away from the game client |
 | src/Aetherphone/Apps/Games/Framework/GamePad.cs | On-screen d-pad and left/fire/right pad |
 | src/Aetherphone/Apps/Games/Framework/Substeps.cs | Splits a frame delta into capped simulation substeps |
@@ -52,7 +58,7 @@ This page explains how the Games app hosts its mini-games and how to build a new
 | src/Aetherphone/Apps/Games/Framework/GameBanner.cs | Pop-in, hold, fade banner for "Ready" and "Wave 3" |
 | src/Aetherphone/Apps/Games/Framework/PressSurface.cs | Claims the press over a board with an invisible item so a drag never moves the phone |
 | src/Aetherphone/Apps/Games/Framework/StatCapsule.cs | A frosted HUD capsule with an icon, a count and an optional trophy best (Sweeper mines, Nonogram mistakes) |
-| src/Aetherphone/Core/Games/GameStatsStore.cs | Best scores, best times, win streaks, mode choices, daily challenge |
+| src/Aetherphone/Core/Games/GameStatsStore.cs | Best scores, best times, win streaks, mode choices, level stars, daily challenge |
 | src/Aetherphone/Core/Games/IScoreSink.cs | `ScoreSubmission` and the sink the session hands finished runs to |
 | src/Aetherphone/Core/Games/IRankSource.cs | Where intros and result cards read a `GameRank` from |
 | src/Aetherphone/Core/Games/LeaderboardStore.cs | The registered sink and rank source: the upload queue, the board cache, your ranks |
@@ -65,7 +71,8 @@ This page explains how the Games app hosts its mini-games and how to build a new
 | src/Aetherphone/Apps/Games/Online/OnlineHub.cs | The friends lobby: host cards, join by code, open rooms |
 | src/Aetherphone/Apps/Games/Online/OnlineRoomView.cs | One room: lobby, roster, and the table for the room's game kind |
 | src/Aetherphone/Core/Games/GameRoomsStore.cs | Room directory, create/join/leave, actions, and the HTTP fallback poll |
-| src/Aetherphone.Tests/GameSessionTests.cs | Pins the flow transitions and the single submission per run |
+| src/Aetherphone.Tests/GameSessionTests.cs | Pins the flow transitions, the single submission per run, level progress, hot-seat handoffs and `Record` |
+| src/Aetherphone.Tests/CardTableLayoutTests.cs | Pins the fan, seat ring, pile and card flight math |
 | src/Aetherphone.Tests/LeaderboardStoreTests.cs | Pins the upload queue: dedupe, spacing, reasons, rank states, persistence |
 | src/Aetherphone.Tests/ScoresWireContractTests.cs | Pins the score routes, the JSON shapes and the stat id list against the server |
 
@@ -110,7 +117,7 @@ internal interface IMiniGame : IDisposable
 | --- | --- |
 | `Id` | The stat and accent key. Never rename one |
 | `Title`, `Hook` | `LocString`s; the hook is one sentence of how to play, shown on the intro (`L.<Game>.Hook`) |
-| `Genre` | One of `Arcade`, `Action`, `Puzzle`, `Brain`, `Tabletop` (the shelf); `Friends` is reserved for the online games |
+| `Genre` | One of `Arcade`, `Action`, `Puzzle`, `Brain`, `Strategy`, `Tabletop` (the shelf); `Friends` is reserved for the online games |
 | `Backdrop` | One of the seven `Backdrop` presets, drawn under everything |
 | `Hud` | `HudStyle.Standard` (score pill on the chrome row, capsules below) or `HudStyle.Compact` (everything on the chrome row, for tall boards) |
 | `Kind` | `ScoreKind.Score`, `Time`, `Level` or `Streak`: how the run's value is stored and labelled |
@@ -119,6 +126,8 @@ internal interface IMiniGame : IDisposable
 | `Countdown` | Show the 3, 2, 1, Go countdown before play (clocked reflex games only) |
 | `Landscape` | The hub holds the landscape lock while the game is open (Doom) |
 | `Keyboard` | Informational: the game reads keys through `GameInput` |
+| `LevelCount`, `LevelModes` | A level pack of that many levels with stars and a level select (0 means none); `LevelModes[mode]` keeps a daily or endless mode out of the pack, see [Level packs](#level-packs) |
+| `Seats` | How many players can share the phone (1, the default, is solo; up to six); more than one adds the intro's Players strip, see [Hot-seat](#hot-seat) |
 
 ### The roster
 
@@ -130,6 +139,7 @@ The source of truth is the `games` array in the `GamesApp` constructor for local
 | Action | `skyfall`, `invaders`, `capman`, `squadron`, `doom`, `swoop` |
 | Puzzle | `match3`, `tetris`, `2048`, `watersort`, `bubbles`, `flow`, `crystaldrop`, `coil` |
 | Brain | `minesweeper`, `memory`, `nonogram`, `simon`, `sudoku`, `trivia`, `wordrun` |
+| Strategy | none yet: the Home rail and the Search browse card stay hidden while a genre has no games |
 | Tabletop | `solitaire`, `reversi`, `chess` |
 | Friends (online) | `online.uno`, `online.chess`, `online.pool` (8-Ball Pool), `online.connectfour` (Connect Four) |
 
@@ -157,7 +167,7 @@ The root has four tabs on the floating `TabBar`, each a large-title page:
 - **Home**: the daily hero, `Continue Playing` (only once something has been played), the `Play with friends` card, then `Latest additions` and one shelf per genre, each with See All pushing that shelf's full grid.
 - **Play with friends**: `OnlineHub`, see below.
 - **Records**: a summary card (games played, daily streak, records), the daily challenge row, and every personal best.
-- **Search**: a search field over `Browse` cards for each genre, the online games and the whole library.
+- **Search**: a search field over `Browse` cards for each genre that has games, the online games and the whole library.
 
 Shelves pan sideways through `TileRail`, which claims the press with an `InvisibleButton` so a swipe never drags the phone window, locks to the first axis the pointer travels along, flings on release and shows paging arrows on hover; grids pick three to six columns from the content width. Tiles are accent-gradient squircles with the game's painted `AppIconTile` icon or its `AppIconArt` vector art (or `OnlineGameArt` for the online games), a `NEW` pill inside the thirty-day window, a people badge on online entries, and a hover lift on a per-entry `Spring`. Tapping a local tile opens the game; tapping an online tile switches to the online tab with that game's card highlighted.
 
@@ -192,7 +202,7 @@ Each frame the host builds the `GameContext`:
 ### Checklist for registering a new game
 
 1. Create a folder src/Aetherphone/Apps/Games/YourGame with a `YourGameApp : IMiniGame`. Most games split logic into a `*Board` class and drawing into a `*Renderer` class.
-2. Declare a `private static readonly GameSpec Spec` with the id, `L.Games.YourGame` title, `L.YourGame.Hook`, genre, backdrop, HUD style, score kind, modes and flags, and return it from `Spec`.
+2. Declare a `private static readonly GameSpec Spec` with the id, `L.Games.YourGame` title, `L.YourGame.Hook`, genre, backdrop, HUD style, score kind, modes, flags, and `levelCount` or `seats` when it has a level pack or a hot-seat mode, and return it from `Spec`.
 3. Add `new YourGameApp()` to the `games` array in the `GamesApp` constructor.
 4. Add the `Title` string to L.cs (the `Games` section) and a nested `L.YourGame` class with `Hook`, plus both keys in the nine language JSONs (see [localization.md](localization.md)). A game with many strings gets its own section, as `L.Coil`, `L.Updraft` and `L.Swoop` do.
 5. Add a row for your id to `GamesLibrary.Releases` with the release date, so the game sorts newest-first, joins the `Latest additions` shelf and wears the `NEW` pill for its first month.
@@ -236,11 +246,11 @@ The kit owns the frame; the game owns the world. Intro, countdown, pause, result
 
 The host owns one `GameSession` per run. Its `State` is a `StageFlow`: `Intro`, `Countdown`, `Playing`, `Paused`, `Result`.
 
-- **Intro** (`StageIntro`): the backdrop runs, the game's `DrawIdle` shows dimmed behind, and the kit draws the title (fit to the Safe width), the hook line, a Best pill and a Rank pill ("#12 · Global", "Not ranked" or "Sign in to rank"), a `SegmentStrip` when `Spec.Modes` has more than one entry, the Play button and a Leaderboard text button, all staggered in. Space or Enter also starts. Picking a mode calls `session.SelectMode`, which persists through `GameStatsStore.LastMode(gameId)` and reloads the Best for that mode's stat id.
+- **Intro** (`StageIntro`): the backdrop runs, the game's `DrawIdle` shows dimmed behind, and the kit draws the title (fit to the Safe width), the hook line, a Best pill and a Rank pill ("#12 · Global", "Not ranked" or "Sign in to rank"), a `SegmentStrip` when `Spec.Modes` has more than one entry, the Play button and a Leaderboard text button, all staggered in. Space or Enter also starts. Picking a mode calls `session.SelectMode`, which persists through `GameStatsStore.LastMode(gameId)` and reloads the Best for that mode's stat id. A level pack swaps the Best pill for a star total ("12 / 120"), adds a "Level 12" line above Play and a Levels text button beside Leaderboard; a hot-seat spec adds a Players strip under the modes (see [Level packs](#level-packs) and [Hot-seat](#hot-seat)).
 - **Countdown**: only when `Spec.CountdownFor(mode)` says so: `countdown: true` for every mode, or `countdownModes` per entry (Gem Swap counts down into Blitz and not into Classic). "3, 2, 1, Go" with `GameBanner`, 0.6 seconds per step with a `GameTick` each, the world visible and frozen (`DeltaSeconds` is zero).
 - **Playing**: the game ticks with `context.DeltaSeconds`.
 - **Paused** (`StagePause`): the pause chip, or focus loss for a clocked game. A 0.72 veil with Resume, Restart, Leaderboard and Quit stacked as `GameHud.Button`s. A turn-based game never auto-pauses; its delta is simply zero while unfocused. Quit calls the game's `OnQuit(session)` before leaving, the one chance an open-ended game has to `Finish` the run it was in the middle of (Bubbles, Gem Swap classic and Word Run do; a game with nothing honest to record leaves the default no-op).
-- **Result** (`GameOverlay.DrawStage`): the card with the title (You win or You lose from `Won`; a `GameOutcome.Drawn` run reads as a draw), the New Best badge, the primary stat label and counting value, a rank line ("#8 of 1,240 · Global", "#2 among friends", "Uploading" with a spinner, or "Kept on this phone"), up to four stat lines in a two-by-two grid, Play again (or the `WithContinueLabel` text, Word Run's Next word) and a Leaderboard text button. Confetti and `GameWin` on a new personal best unless the outcome carries `WithQuietBest`; a gold palette when the global rank is 10 or better. A lost Time run hides the primary value instead of showing a meaningless 0:00.
+- **Result** (`GameOverlay.DrawStage`): the card with the title (You win or You lose from `Won`; a `GameOutcome.Drawn` run reads as a draw), the New Best badge, the primary stat label and counting value, a rank line ("#8 of 1,240 · Global", "#2 among friends", "Uploading" with a spinner, or "Kept on this phone"), up to four stat lines in a two-by-two grid, Play again (or the `WithContinueLabel` text, Word Run's Next word) and a Leaderboard text button. Confetti and `GameWin` on a new personal best unless the outcome carries `WithQuietBest`; a gold palette when the global rank is 10 or better. A lost Time run hides the primary value instead of showing a meaningless 0:00. A level run shows its stars under the title and trades Play again for Next level plus Retry, or Retry alone; an unranked run shows no primary value and no rank line.
 
 Game side, the whole contract is two calls:
 
@@ -254,6 +264,61 @@ context.Session.Finish(new GameOutcome(board.Score, ScoreKind.Score, Spec.Id)
 `Report` feeds the score pill and the beating-best glow every frame. `Finish` is accepted once per run (later calls are ignored): the session submits to `GameStatsStore` by `ScoreKind` (`SubmitScore` for Score and Level, `SubmitTime` for Time, `RecordWin` or `ResetStreak` for Streak by `Won`), submits the optional secondary stat (`WithSecondary`, for Updraft's height or Pairs' attempts) to the store and to the sink as its own `ScoreSubmission`, completes the daily, hands the primary `ScoreSubmission` to the `IScoreSink`, moves to Result and asks the `IRankSource` for the rank. Two outcomes only complete the daily and record nothing: a lost Time run (`won: false` on a Time kind, the Sudoku you gave up on) and a draw (`GameOutcome.Drawn(statId)`, Reversi's tie or a Chess stalemate, which leaves the streak where it was). A game never calls `Stats.Submit*` itself.
 
 The session's `Kind` is `Spec.KindFor(Mode)`: one spec can mix kinds per mode through `modeKinds` (Solitaire's Classic is a Time, Vegas a Score). Its `LeaderboardStatId` folds a tier or mode stat onto its catalog root through `ScoreStatIds.LeaderboardId` (`chess.easy` ranks and uploads as `chess`, `snake.wrap` as `snake`) and is empty when the catalog refuses the pair, in which case the rank pill stays Unknown.
+
+### Level packs
+
+A game with hand-made levels declares `levelCount` on its spec, and the kit owns the rest: progress, unlocking, the level select, the result card and the leaderboard value.
+
+| Piece | What it does |
+| --- | --- |
+| `GameSpec.LevelCount`, `LevelModes` | The pack size (capped at `GameStatsStore.MaxLevels`, 999) and, parallel to `Modes`, which modes play it; an empty `LevelModes` means every mode. `Spec.LevelsFor(mode)` answers it |
+| `GameStart.Level` | The 1-based level of the run, 0 when the mode has no levels. Read it in `Start` and build that level |
+| `GameOutcome.WithStars(stars)` | Zero to three stars for `start.Level`; a run that finishes without it records no stars |
+| `GameSession.Level`, `LevelCount`, `HasLevels`, `TotalStars`, `LevelStars`, `CanAdvance` | The chosen level, the pack size for the current mode, the stars of the whole pack, the stars the finished run earned (`GameOutcome.NoStars` when it reported none) and whether Next level is on offer |
+| `GameSession.SelectLevel(level)`, `AdvanceLevel()` | Pick an unlocked level on the intro or the result card; step to the next one after a starred run. The host calls both |
+| `GameStatsStore.Stars`, `SetStars`, `TotalStars`, `IsUnlocked`, `HighestUnlocked`, `NextLevel` | Progress per game id. `SetStars` keeps the best and saves only on an improvement; level 1 is always open and level n opens once level n-1 holds a star; `NextLevel` is the first open level without a star, else the first below three stars, else level 1 |
+| `Configuration.GameLevelProgress` | One `GameLevelProgress { GameId, Stars }` per game, `Stars` a digit string with one character per level ("3210" is three, two and one star, then level 4 open), behind `IGameStatsConfiguration` |
+| `LevelSelect` | The overlay the intro's Levels button opens: a scrollable grid (five columns at phone width, more when wider) of tiles with the level number and zero to three stars, locked tiles dimmed behind a lock glyph, the current level ringed in the accent. Tap an open tile to play it; the back chip or Escape closes it |
+
+The session opens on `NextLevel`, so Play always starts the next uncleared level. `Finish` with stars records them for `start.Level` first; for a `ScoreKind.Level` outcome it then ranks the pack by its total stars (the value submitted to the store and the sink is `TotalStars`, never the run's own value), while a `Score` or `Time` outcome keeps submitting its own value (Pegfall ranks its score, its stars are local progress). The result card shows the earned stars, titles a starred run "Level 12 cleared", and offers Next level as the primary button with Retry under it once the run earned at least one star and a next level exists; otherwise Retry alone. A Level kind pack never glows "beating best" on the score pill, because the best is a star total.
+
+```csharp
+private static readonly GameSpec StageSpec = new(GameId, L.Games.Crates, GameGenre.Puzzle, L.Crates.Hook,
+    Backdrop.Paper, kind: ScoreKind.Level, levelCount: CratesLevels.Count);
+
+public void Start(in GameStart start)
+{
+    board.Load(CratesLevels.Get(start.Level));
+    level = start.Level;
+}
+
+context.Session.Finish(new GameOutcome(board.Moves, ScoreKind.Level, GameId)
+    .WithStars(board.Moves <= par ? 3 : board.Moves <= par * 3 / 2 ? 2 : 1)
+    .WithStat(L.Crates.Moves, GameNumber.Label(board.Moves)));
+```
+
+### Hot-seat
+
+A game that can be played by several people passing one phone declares `seats` on its spec (2 to 6). The intro then shows a Players strip (1 to `Spec.Seats`, 1 meaning solo against bots or the clock), and the chosen count reaches the game as `GameStart.Seats` (`start.HotSeat` when above one).
+
+- **Turns**: when the next player has to take the phone, call `context.Session.Handoff(seat)` (0-based). The host covers the whole screen at once in that seat's colour with "Pass to Player 2" and "Tap when ready", stops calling the game's `Draw`, freezes the clock and the delta, and lifts the cover when the player taps or presses Space or Enter. Hidden information therefore never shows to the wrong player. `Session.HandoffPending` and `Session.HandoffSeat` say where the handoff stands; `Handoff` returns false outside a run.
+- **Results**: a run with more than one local player always finishes unranked, whatever the game hands `Finish`. `GameOutcome.Unranked()` is the explicit form (also for practice modes): it completes the daily and records nothing else, no best, no streak, no stars, no secondary stat and no upload, and the card shows no primary value, no rank line and no confetti. `WithWinner(seat)` titles the card "Player 2 wins" in that seat's colour; `GameOutcome.Drawn` reads as a draw.
+- **Names and colours**: `GameSeats.Name(seat)`, `PassLine(seat)`, `WinLine(seat)` and `Color(seat)` are cached per language from one `L.Stage.PlayerName` format, so seat labels never allocate in `Draw`.
+
+```csharp
+private void EndTurn(in GameContext context)
+{
+    turn = (turn + 1) % seatCount;
+    if (context.Session.HotSeat)
+    {
+        context.Session.Handoff(turn);
+    }
+}
+```
+
+### Recording without a run
+
+A game with no runs (Moogle Clicker never finishes) records a best with `context.Session.Record(statId, value, kind)`. The value goes to `GameStatsStore` by kind (`SubmitScore` for Score and Level, `SubmitTime` for Time, `SubmitStreak` for Streak) and, only when that improved the stored best, to the `IScoreSink` as a `ScoreSubmission`; it returns whether it improved. It never touches `State`, `Finished` or the result card, so it is safe from inside an endless run. Like every submit path it completes the daily when the stat belongs to the daily game.
 
 ### HUD
 
@@ -344,6 +409,41 @@ World +Y pointing down matches the screen; a game that thinks in altitude negate
 - `PixelSprite` takes bitmap rows (`#` lit) once, at static init, and `Draw(drawList, topLeft, unit, color)` emits one rect per lit run. It is the sprite path for Invaders-style games; draw it in the game's accent with a `ProgressRing.Glow` behind it, never in a flat ink.
 - `GameBanner.Draw(drawList, center, text, accent, theme, progress)` pops a frosted pill in over the first 18% of `progress`, holds, and fades over the last 25%. Drive `progress` with `GameBanner.Advance(progress, delta, lifetimeSeconds)`. Use it for stage and wave text that must hold; `FeedbackFx.AddText` rises and fades and is for score pops.
 
+### Card table
+
+Card games build on src/Aetherphone/Apps/Games/Framework/Cards (namespace `Aetherphone.Apps.Games.Framework.Cards`). The layout half is plain math with no Dalamud types, so `CardTableLayoutTests` pins it; the drawing half emits primitives and spins the emitted vertices, the way the online Uno table does (so nothing inside a card may push a clip rect). The online tables keep their own art; this kit is for the local card games.
+
+| Piece | What it does |
+| --- | --- |
+| `CardPose` | A card on screen: centre, width (height is `Width * CardPose.Aspect`, 1.4), angle in radians (clockwise), face up or down, and a horizontal `Squash` for flips. `Contains(point)` hit-tests the rotated card; `Lifted`, `Moved`, `Turned`, `Sized` derive poses |
+| `HandLayout.Fan(count, center, width, maxAngle)` | An arced hand: card centres on one circle, spanning `width` with the outer cards tilted to `±maxAngle` and dropped along the arc; `center` is where the middle card sits. Pass `maxStep` to cap the gap between neighbours so a short hand closes up on the same arc. The span overload fills a `Span<FanSlot>`; `FanSlot.Pose(cardWidth)` turns a slot into a pose. `HitTest(poses, point)` returns the topmost card under the pointer |
+| `SeatLayout.Ring(seats, rect, centers)` | Two to six seats on the ellipse inscribed in `rect`, seat 0 at the bottom and the rest clockwise (left, top, right); `bottomSeat` rotates the ring so any seat sits at the bottom. `Seat`, `Angle` and `Inward(seat, rect, distance)` (where a seat's cards go, toward the table centre) |
+| `PileLayout` | `Layers(count)` (one visible layer per five cards, at most six), `LayerOffset`, `Top(center, width, count, scale)` for where a drawn card leaves the deck, and `Scatter(center, width, sequence)` for a discard's seeded tilt and offset |
+| `CardFlight` | A pooled list of card tweens (32 by default): `Launch(card, from, to, delay, flip, tag, seconds, arc)`, `Advance(deltaSeconds)`, then per index `Pose`, `Card`, `Tag`, `Waiting` and `Progress`. Flights arc above the straight line, ease out, and with `flip` turn edge-on halfway and land on the `to` pose's face. `TryTakeLanded` drains landing events (card, tag, final pose) in order; a full pool lands its oldest card at once |
+| `CardFace` | `Draw(drawList, pose, design, backAccent, scale, alpha, highlight)` paints any card, its back when the pose is face down; `DrawBack` and `DrawSlot` (an empty pile outline) on their own. A `CardDesign` is `Numbered(0..12)` (cream face, big numeral, pips, corner indices, a tint per number), `Action(glyph, tint)` (a FontAwesome glyph on its tint) or `Modifier(label, tint)` ("+4", "x2" on a dark face). Keep a `CardDesign[]` table indexed by your card id |
+| `PileDraw` | `Deck` (stacked backs, thicker with the count, an outline when empty) and `Discard` (the newest four cards of a discard list, scattered, drawn through the design table) |
+
+```csharp
+var count = hand.Count;
+for (var index = 0; index < count; index++)
+{
+    var slot = HandLayout.Fan(index, count, handCenter, handWidth, 0.3f, 44f * scale);
+    var pose = slot.Pose(58f * scale);
+    CardFace.Draw(drawList, hovered == index ? pose.Lifted(14f * scale) : pose, Designs[hand[index]], Accent, scale);
+}
+
+flights.Advance(context.RawDeltaSeconds);
+for (var index = 0; index < flights.Count; index++)
+{
+    CardFace.Draw(drawList, flights.Pose(index), Designs[flights.Card(index)], Accent, scale);
+}
+
+while (flights.TryTakeLanded(out var landing))
+{
+    board.Arrive(landing.Card, landing.Tag);
+}
+```
+
 ### Games with data files
 
 Word Run reads its word banks from src/Aetherphone/Words (`<code>.answers.txt` and `<code>.valid.txt`, one word per line, shipped as content next to the plugin). They are generated, never hand-edited: `tools/build-word-banks.ps1` rebuilds them from SCOWL and the FrequencyWords lists, and THIRD-PARTY-NOTICES.md records both sources. Doom keeps no data in the repo at all; `DoomAssets` downloads the shareware episode, optionally Freedoom (Phase 1 and 2), and the soundfont into the `doom` folder under the plugin's config directory, verifies them against pinned SHA-256 checksums, and also runs any commercial IWAD the player drops there (`doom.wad`, `doom2.wad`, `plutonia.wad`, `tnt.wad`).
@@ -407,7 +507,7 @@ The rest of the phone uses critically damped motion: springs that settle without
 
 ## Scoring, streaks, and the daily challenge
 
-`GameStatsStore` (src/Aetherphone/Core/Games/GameStatsStore.cs) is the only persistence a run touches, and in a stage game the session touches it, never the game. It wraps `Configuration` through the `IGameStatsConfiguration` interface (so tests substitute a fake), which stores a `List<GameStatRecord>`, a `List<GameModeChoice>`, `DailyChallengeStreak` and `DailyChallengeLastDay`. See [state-and-persistence.md](state-and-persistence.md) for how `Configuration` is saved.
+`GameStatsStore` (src/Aetherphone/Core/Games/GameStatsStore.cs) is the only persistence a run touches, and in a stage game the session touches it, never the game. It wraps `Configuration` through the `IGameStatsConfiguration` interface (so tests substitute a fake), which stores a `List<GameStatRecord>`, a `List<GameModeChoice>`, a `List<GameLevelProgress>`, `DailyChallengeStreak` and `DailyChallengeLastDay`. See [state-and-persistence.md](state-and-persistence.md) for how `Configuration` is saved.
 
 | Member | Semantics |
 | --- | --- |
@@ -416,6 +516,8 @@ The rest of the phone uses critically damped motion: springs that settle without
 | `SubmitTime(gameId, seconds)` | Lower is better; returns true only on a new best |
 | `RecordWin(gameId)` | Increments and returns a win streak (Pairs, Reversi, Chess) |
 | `ResetStreak(gameId)` | Clears the streak on a loss |
+| `SubmitStreak(gameId, streak)` | Keeps the higher streak; returns true only on a new best (`GameSession.Record` with a Streak kind) |
+| `Stars`, `SetStars`, `TotalStars`, `IsUnlocked`, `HighestUnlocked`, `NextLevel` | Level pack progress, see [Level packs](#level-packs) |
 | `MarkPlayed(gameId)`, `LastPlayed(gameId)` | Stamp and read the last-played time the launcher sorts `Recent` and `Records` by; the hub calls `MarkPlayed` when it opens a game or an online room, so a game never needs to |
 | `LastMode(gameId)`, `SetLastMode(gameId, mode)` | The remembered `Spec.Modes` index per game, used by the intro's mode strip |
 | `TetrisModern`, `WordBank` | `TetrisModern` is a view over `LastMode("tetris")` that still honours the pre-kit configuration flag; `WordBank` is Word Run's remembered bank code, which its mode strip mirrors |
@@ -590,6 +692,8 @@ Games are named for what they do: Whack, Snake, Stack, Water Sort, Crystal Drop,
 - **Difficulty-suffixed stat ids need launcher support.** Stats keyed like `sudoku.easy` prefix-match for the daily via `GameStatsStore`, but `GamesLibrary.BestRecord` picks the record the launcher and the Records tab display, so a new difficulty tier or mode means updating that switch too.
 - **`HitStop` alone freezes nothing.** The freeze only happens, and only counts down, inside `ScaleDelta`. A game that calls `HitStop` without routing its simulation delta through `ScaleDelta` gets no pause at all.
 - **Only `Session.Finish` reaches the records and the leaderboard.** A game never calls `GameStatsStore.Submit*` itself: that would record the run twice and still leave the `IScoreSink` unfed.
+- **A side mode must not fold onto a star board.** `LeaderboardId` folds any non-streak, non-time mode stat onto its root, so a `crates.daily` Score or Level run would upload under `crates`, the total-stars board. Give a daily, endless or nine-hole mode its own catalog row (`siege.endless`), finish it `Unranked()`, or keep its kind apart from the root's (a Time mode never folds onto a Level root).
+- **A Time kind reads as a clock everywhere the host shows it.** The intro Best pill, the HUD Best capsule, the result card and the leaderboard rows format a Time value as m:ss; a stat that counts strokes under the Time kind (`minigolf`) shows "1:12" for 72 strokes unless the game overrides those labels.
 - **A new stat id is a two-repository change.** `ScoreStatIds.Catalog` must match the server's catalog (`ScoresWireContractTests.StatIdsMirrorTheServerCatalog` pins the list), and the store silently ignores a submission whose stat id is not in it. Add the id to the backend catalog first, then here, with its kind and direction.
 
 ## Related docs

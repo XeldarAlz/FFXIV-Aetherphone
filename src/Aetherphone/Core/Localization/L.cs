@@ -8076,6 +8076,7 @@ internal static class L
         public static readonly LocString GenreArcade = new("games.genreArcade", "Arcade");
         public static readonly LocString GenreAction = new("games.genreAction", "Action");
         public static readonly LocString GenreBrain = new("games.genreBrain", "Brain");
+        public static readonly LocString GenreStrategy = new("games.genreStrategy", "Strategy");
         public static readonly LocString GenreTabletop = new("games.genreTabletop", "Board & Cards");
         public static readonly LocString GenreFriends = new("games.genreFriends", "With friends");
         public static readonly LocString ShelfLatest = new("games.shelfLatest", "Latest additions");
@@ -8338,6 +8339,18 @@ internal static class L
         public static readonly LocString LevelShort = new("stage.levelShort", "LV {0}");
         public static readonly LocString Times = new("stage.times", "x{0}");
         public static readonly LocString Plus = new("stage.plus", "+{0}");
+        public static readonly LocString Levels = new("stage.levels", "Levels");
+        public static readonly LocString LevelNumber = new("stage.levelNumber", "Level {0}");
+        public static readonly LocString LevelCleared = new("stage.levelCleared", "Level {0} cleared");
+        public static readonly LocString NextLevel = new("stage.nextLevel", "Next level");
+        public static readonly LocString Retry = new("stage.retry", "Retry");
+        public static readonly LocString TotalStars = new("stage.totalStars", "Total stars");
+        public static readonly LocString StarsOf = new("stage.starsOf", "{0} / {1}");
+        public static readonly LocString Players = new("stage.players", "Players");
+        public static readonly LocString PlayerName = new("stage.playerName", "Player {0}");
+        public static readonly LocString PassTo = new("stage.passTo", "Pass to {0}");
+        public static readonly LocString TapWhenReady = new("stage.tapWhenReady", "Tap when ready");
+        public static readonly LocString SeatWins = new("stage.seatWins", "{0} wins");
     }
 
     internal static class Leaderboard

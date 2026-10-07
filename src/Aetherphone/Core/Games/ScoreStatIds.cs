@@ -30,8 +30,13 @@ internal static class ScoreStatIds
         Level("flow.medium"), Level("flow.hard"), Time("solitaire"), Time("memory"), Count("memory.attempts"),
         Time("minesweeper.easy"), Time("minesweeper.medium"), Time("minesweeper.hard"), Time("sudoku.easy"),
         Time("sudoku.medium"), Time("sudoku.hard"), Time("nonogram.easy"), Time("nonogram.medium"),
-        Time("nonogram.hard"), Streak("chess"), Streak("reversi"), Score("casino.barkeep"),
-        Score("slice"), Score("slice.arcade"), Score("spiral"),
+        Time("nonogram.hard"), Streak("chess"), Streak("reversi"), Score("casino.barkeep"), Time("mahjong.easy"),
+        Time("mahjong.medium"), Time("mahjong.hard"), Score("gloop"), Streak("gloop.versus"), Score("slice"),
+        Score("slice.arcade"), Score("spiral"), Score("drift"), Score("crawler"), Streak("trails"),
+        Level("moogleclicker"), Score("pinball"), Score("pegfall"), Level("fling"), Level("snip"), Streak("crater"),
+        Level("siege"), Level("siege.endless"), Score("trailblaze"), Score("thrust"), Level("crates"), Level("delve"),
+        Streak("luckydraw"), Streak("broadside"), Level("herd"), Score("claim"), Level("tempo"), Streak("fuse"),
+        Score("lander"), Time("minigolf"),
     };
 
     public static readonly string[] All = Ids(Catalog);
