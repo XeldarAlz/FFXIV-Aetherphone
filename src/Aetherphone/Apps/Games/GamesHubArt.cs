@@ -1,4 +1,3 @@
-using Aetherphone.Apps.Games.Online;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
@@ -24,10 +23,6 @@ internal static class GamesHubArt
     private const float StateActionMinWidth = 150f;
     private const float StateTextInset = 56f;
     private const float StateMaxText = 290f;
-    private const float MedallionRim = 2f;
-    private const float MedallionArt = 1.3f;
-    private const float NoticeIconSize = 18f;
-    private const float NoticePadding = 14f;
 
     public static float ButtonWidth(string label, float height) =>
         Typography.Measure(label, Button.LabelStyle(height)).X + height;
@@ -96,35 +91,6 @@ internal static class GamesHubArt
         var top = hintBottom + StateActionGap * scale;
         var rect = new Rect(new Vector2(centerX - width * 0.5f, top), new Vector2(centerX + width * 0.5f, top + height));
         return Button.Draw(drawList, rect, action, ui.Ink, id: id);
-    }
-
-    public static float Notice(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale,
-        string message, FontAwesomeIcon icon, Vector4 tint)
-    {
-        var pad = NoticePadding * scale;
-        var iconSize = NoticeIconSize * scale;
-        var textLeft = left + pad + iconSize + Metrics.Space.Md * scale;
-        var textWidth = MathF.Max(1f, left + width - pad - textLeft);
-        var block = Typography.MeasureWrappedBlock(message, TextStyles.Subheadline, textWidth);
-        var height = MathF.Max(block.Y, iconSize) + pad * 2f;
-        var max = new Vector2(left + width, top + height);
-        ui.Card(drawList, new Vector2(left, top), max, Metrics.Radius.Widget * scale);
-        ProgressRing.CenterIcon(drawList, new Vector2(left + pad + iconSize * 0.5f, top + height * 0.5f), icon, tint,
-            iconSize);
-        Typography.DrawWrappedLeft(new Vector2(textLeft, top + (height - block.Y) * 0.5f), message,
-            ui.MutedInk, TextStyles.Subheadline, textWidth);
-        return max.Y;
-    }
-
-    public static void Medallion(ImDrawListPtr drawList, string kind, Vector2 center, float radius, Vector4 rim,
-        float scale)
-    {
-        var accent = OnlineGameArt.Accent(kind);
-        drawList.AddCircleFilled(center, radius + MedallionRim * scale, ImGui.GetColorU32(rim), 40);
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.Darken(accent, 0.30f)), 40);
-        drawList.AddCircle(center, radius, ImGui.GetColorU32(Palette.Lighten(accent, 0.35f) with { W = 0.55f }), 40,
-            1f * scale);
-        OnlineGameArt.Draw(drawList, kind, center, radius * MedallionArt, scale);
     }
 
     public static void ReportAnchor(string key, Rect rect)
