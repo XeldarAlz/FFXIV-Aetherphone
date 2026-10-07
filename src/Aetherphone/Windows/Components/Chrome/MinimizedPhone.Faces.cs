@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Shell;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
@@ -45,8 +46,10 @@ internal sealed partial class MinimizedPhone
         var musicPlaying = ShowsPcMusic() ? pcSnapshot.IsPlaying : playback.IsPlaying;
         MinimizedPhoneRenderer.DrawIsland(drawList, line.Center, liveCall, musicPlaying, clock,
             heroAlpha * Math.Clamp(island.Value, 0f, 1f), scale);
-        MinimizedPhoneRenderer.DrawHero(drawList, screen, screen.Min.Y + HeroTop * scale, dateLabel, dateSize,
-            timeLabel, clockScale, frameInk, heroAlpha);
+        var showDate = layout.IsEnabled(MinimizedPart.Date);
+        MinimizedPhoneRenderer.DrawHero(drawList, screen, screen.Min.Y + HeroTop * scale,
+            showDate ? dateLabel : string.Empty, showDate ? dateSize : Vector2.Zero,
+            layout.IsEnabled(MinimizedPart.Clock) ? timeLabel : string.Empty, clockScale, frameInk, heroAlpha);
         DrawSlot(drawList, screen);
         MinimizedPhoneRenderer.DrawIndicator(drawList, screen, frameInk, frameAlpha, scale);
     }
