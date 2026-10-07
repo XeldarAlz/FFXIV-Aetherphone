@@ -82,6 +82,8 @@ internal sealed class OnlineRoomView : IDisposable
     private string[] finishedLines = Array.Empty<string>();
     private string finishedWrapSource = string.Empty;
     private float finishedWrapWidth;
+    private float finishedWrapScale;
+    private int finishedWrapGeneration = -1;
     private float finishedLinesWidth;
     private GameRoomRoster? labeledRoster;
     private LanguageInfo? labelLanguage;
@@ -579,7 +581,7 @@ internal sealed class OnlineRoomView : IDisposable
         var rounding = Metrics.Radius.Widget * scale;
         Material.AccentGlass(drawList, min, max, rounding, scale, Palette.WithAlpha(accent, 0.22f), 1f);
         var blockWidth = iconSize + gap + finishedLinesWidth;
-        var blockLeft = min.X + (width - blockWidth) * 0.5f;
+        var blockLeft = min.X + MathF.Max(pad, (width - blockWidth) * 0.5f);
         var centerY = min.Y + height * 0.5f;
         ProgressRing.CenterIcon(drawList, new Vector2(blockLeft + iconSize * 0.5f, centerY), FontAwesomeIcon.Trophy,
             GamePalette.Star, iconSize);
@@ -596,13 +598,17 @@ internal sealed class OnlineRoomView : IDisposable
 
     private void WrapFinished(float maxWidth, in TextStyle style)
     {
-        if (maxWidth == finishedWrapWidth && string.Equals(finishedLabel, finishedWrapSource, StringComparison.Ordinal))
+        var generation = Plugin.Fonts.Generation;
+        if (maxWidth == finishedWrapWidth && style.Scale == finishedWrapScale && generation == finishedWrapGeneration &&
+            string.Equals(finishedLabel, finishedWrapSource, StringComparison.Ordinal))
         {
             return;
         }
 
         finishedWrapSource = finishedLabel;
         finishedWrapWidth = maxWidth;
+        finishedWrapScale = style.Scale;
+        finishedWrapGeneration = generation;
         finishedLines = Typography.WrapText(finishedLabel, style, maxWidth);
         finishedLinesWidth = 0f;
         for (var lineIndex = 0; lineIndex < finishedLines.Length; lineIndex++)
