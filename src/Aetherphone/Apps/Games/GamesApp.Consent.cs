@@ -54,12 +54,6 @@ internal sealed partial class GamesApp
 
     private bool ShowsConsentCompact => leaderboard.OptedOut;
 
-    private void RequestConsent()
-    {
-        leaderboard.ClearParticipationFailure();
-        consentRequested = true;
-    }
-
     private void DrawConsent(Rect area, float scale)
     {
         var user = leaderboard.CurrentUser;
