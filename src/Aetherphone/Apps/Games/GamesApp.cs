@@ -27,6 +27,7 @@ using Aetherphone.Apps.Games.Mahjong;
 using Aetherphone.Apps.Games.MoogleClicker;
 using Aetherphone.Apps.Games.Lander;
 using Aetherphone.Apps.Games.LuckyDraw;
+using Aetherphone.Apps.Games.MiniGolf;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Pairs;
@@ -38,6 +39,7 @@ using Aetherphone.Apps.Games.Simon;
 using Aetherphone.Apps.Games.Skyfall;
 using Aetherphone.Apps.Games.Slice;
 using Aetherphone.Apps.Games.Snake;
+using Aetherphone.Apps.Games.Snip;
 using Aetherphone.Apps.Games.Solitaire;
 using Aetherphone.Apps.Games.Spiral;
 using Aetherphone.Apps.Games.Squadron;
@@ -232,6 +234,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new SiegeApp(),
             new CraterApp(textures),
             new FuseApp(),
+            new SnipApp(),
+            new MiniGolfApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

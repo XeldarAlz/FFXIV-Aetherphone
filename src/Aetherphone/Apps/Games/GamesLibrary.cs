@@ -104,6 +104,8 @@ internal sealed class GamesLibrary
         new("siege", 2026, 10, 8),
         new("crater", 2026, 10, 8),
         new("fuse", 2026, 10, 8),
+        new("snip", 2026, 10, 8),
+        new("minigolf", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -589,6 +591,14 @@ internal sealed class GamesLibrary
                 return StarTotal(stats.TotalStars(gameId), CratesLevels.Count, out value);
             case "delve":
                 return StarTotal(stats.TotalStars(gameId), DelveLevels.Count, out value);
+            case "snip":
+            {
+                var stars = stats.TotalStars(gameId);
+                value = stars > 0 ? Loc.T(L.Snip.StarCount, GameNumber.Label(stars)) : string.Empty;
+                return stars > 0 ? RecordKind.Score : RecordKind.None;
+            }
+            case "minigolf":
+                return Score(stats.Get(gameId).BestTimeSeconds, out value);
             default:
                 return RecordKind.None;
         }
