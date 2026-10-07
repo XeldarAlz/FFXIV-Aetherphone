@@ -39,7 +39,7 @@ internal readonly struct GameComposerResult
 
 internal sealed class GameComposer
 {
-    private const float ChipMaxWidth = 64f;
+    private const float ChipMaxWidth = 88f;
     private const float ChipHeight = 34f;
     private const float ChipPadLeft = 12f;
     private const float ChipPadRight = 8f;
@@ -252,6 +252,7 @@ internal sealed class GameComposer
             DrawSingleLine(fieldMin, fieldMax, innerWidth, theme, scale);
         }
 
+        FocusOnFieldPress(fieldMin, fieldMax, emojiCenter, emojiRadius);
         var suggested = editor.Text;
         emoji.DrawSuggestions(bar, model.Screen, theme, ref suggested);
         if (!string.Equals(suggested, editor.Text, StringComparison.Ordinal))
@@ -381,6 +382,27 @@ internal sealed class GameComposer
             new Vector2(fieldMin.X + TextPad * scale + padding.X,
                 (fieldMin.Y + fieldMax.Y) * 0.5f - boxHeight * 0.5f + padding.Y),
             Loc.T(L.Messages.Placeholder), theme.TextMuted, TextStyles.Body);
+    }
+
+    private void FocusOnFieldPress(Vector2 fieldMin, Vector2 fieldMax, Vector2 emojiCenter, float emojiRadius)
+    {
+        if (!UiInteract.Hover(fieldMin, fieldMax) || ImGui.IsMouseHoveringRect(ImGui.GetItemRectMin(),
+                ImGui.GetItemRectMax()))
+        {
+            return;
+        }
+
+        var emojiOffset = ImGui.GetMousePos() - emojiCenter;
+        if (emojiRadius > 0f && emojiOffset.LengthSquared() <= emojiRadius * emojiRadius)
+        {
+            return;
+        }
+
+        ImGui.SetMouseCursor(ImGuiMouseCursor.TextInput);
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            focus = true;
+        }
     }
 
     private bool ConsumeEnter()
