@@ -87,6 +87,7 @@ internal sealed class GamesLibrary
         new("trails", 2026, 10, 8),
         new("trailblaze", 2026, 10, 8),
         new("thrust", 2026, 10, 8),
+        new("fuse", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -547,6 +548,7 @@ internal sealed class GamesLibrary
             case "reversi":
             case "chess":
             case "trails":
+            case "fuse":
                 return BestStreakAcrossTiers(gameId, out value, out tier);
             default:
                 return RecordKind.None;

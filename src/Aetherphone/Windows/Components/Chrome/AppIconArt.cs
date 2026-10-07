@@ -148,6 +148,9 @@ internal static class AppIconArt
             case "thrust":
                 DrawThrust(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "fuse":
+                DrawFuse(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -973,6 +976,31 @@ internal static class AppIconArt
         drawList.AddCircleFilled(At(center, extent, 0.5f, -0.06f), extent * 0.07f, hole, 10);
         drawList.AddLine(At(center, extent, 0.3f, -0.34f), At(center, extent, 0.44f, -0.72f), ink, extent * 0.07f);
         drawList.AddCircleFilled(At(center, extent, 0.46f, -0.8f), extent * 0.14f, ink, 14);
+    }
+
+    private static void DrawFuse(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var body = At(center, extent, -0.14f, 0.2f);
+        var radius = extent * 0.68f;
+        drawList.AddCircleFilled(body, radius, ink, 36);
+        drawList.AddCircleFilled(body + new Vector2(-radius * 0.38f, -radius * 0.36f), radius * 0.17f, hole, 14);
+        Span<Vector2> cap = stackalloc Vector2[4]
+        {
+            At(center, extent, 0.18f, -0.54f), At(center, extent, 0.44f, -0.3f), At(center, extent, 0.3f, -0.16f),
+            At(center, extent, 0.04f, -0.4f),
+        };
+        FillConvex(drawList, ink, cap);
+        var cordStart = At(center, extent, 0.32f, -0.44f);
+        var cordTip = At(center, extent, 0.62f, -0.76f);
+        drawList.AddBezierQuadratic(cordStart, At(center, extent, 0.34f, -0.8f), cordTip, ink, extent * 0.09f, 10);
+        var spark = At(center, extent, 0.7f, -0.84f);
+        var arm = extent * 0.2f;
+        var thickness = extent * 0.07f;
+        drawList.AddLine(spark - new Vector2(arm, 0f), spark + new Vector2(arm, 0f), ink, thickness);
+        drawList.AddLine(spark - new Vector2(0f, arm), spark + new Vector2(0f, arm), ink, thickness);
+        drawList.AddLine(spark - new Vector2(arm, arm) * 0.68f, spark + new Vector2(arm, arm) * 0.68f, ink, thickness);
+        drawList.AddLine(spark - new Vector2(arm, -arm) * 0.68f, spark + new Vector2(arm, -arm) * 0.68f, ink, thickness);
+        drawList.AddCircleFilled(spark, extent * 0.08f, hole, 10);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)
