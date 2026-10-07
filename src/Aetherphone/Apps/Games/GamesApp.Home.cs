@@ -449,12 +449,12 @@ internal sealed partial class GamesApp
 
         var start = Button.Draw(drawList, button, label, ui.Ink.WithAccent(accent), ButtonStyle.Prominent,
             id: HomeTogetherStartId);
-        if (rooms > 0)
+        var pill = rooms > 0 ? HomeRoomsLabel(rooms) : string.Empty;
+        var pillLeft = button.Max.X + Metrics.Space.Md * scale;
+        if (pill.Length > 0 && pillLeft + LivePill.Width(pill, scale) <= card.Max.X - pad)
         {
-            var pill = HomeRoomsLabel(rooms);
-            LivePill.Draw(drawList,
-                new Vector2(button.Max.X + Metrics.Space.Md * scale, button.Center.Y - LivePill.Height(scale) * 0.5f),
-                pill, PosterCard.White, (float)ImGui.GetTime(), scale);
+            LivePill.Draw(drawList, new Vector2(pillLeft, button.Center.Y - LivePill.Height(scale) * 0.5f), pill,
+                PosterCard.White, (float)ImGui.GetTime(), scale);
         }
 
         return HeroTap(hit, hovered, start && interactive, HomeHeroAction.OpenTogether);
