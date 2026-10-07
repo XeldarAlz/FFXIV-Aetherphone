@@ -37,6 +37,8 @@ internal sealed class PinballApp : IMiniGame
     private const int BannerMedium = 2;
     private const int BannerHigh = 3;
     private const int ConfettiCount = 46;
+    private const int MaxComboScaleSteps = 6;
+    private const float FeverGlow = 0.45f;
     private static readonly GameSpec StageSpec = new(GameId, L.Pinball.Title, GameGenre.Arcade, L.Pinball.Hook,
         Backdrop.Neon, HudStyle.Compact, ScoreKind.Score, clocked: true, keyboard: true);
     private static readonly Rect WorldRect = new(new Vector2(-0.1f, -0.06f), new Vector2(6.1f, 12.32f));
@@ -69,6 +71,12 @@ internal sealed class PinballApp : IMiniGame
         0.18f, 0.2f, 0.6f, 0f, 1f, shape: ParticleShape.Ring, additive: true);
     private static readonly ParticleSpec LaneStars = new(White, new Vector4(1f, 0.82f, 0.36f, 0f), 0.06f, 2.2f, 0.6f,
         1f, 2.2f, 6f, shape: ParticleShape.Star, additive: true);
+    private static readonly ParticleSpec ComboStars = new(White, PinballRenderer.Gold with { W = 0f }, 0.07f, 3.4f,
+        0.6f, 1.5f, 2f, 6f, shape: ParticleShape.Star, additive: true);
+    private static readonly ParticleSpec KickbackStreaks = new(White, PinballRenderer.Lime with { W = 0f }, 0.05f, 6f,
+        0.35f, 0f, 2.5f, spread: 0.45f, direction: -MathF.PI * 0.5f, shape: ParticleShape.Streak, additive: true);
+    private static readonly ParticleSpec MysteryGlow = new(White, PinballRenderer.Gold with { W = 0f }, 0.1f, 4f, 0.9f,
+        2f, 1.6f, shape: ParticleShape.GlowCircle, additive: true);
 
     private readonly PinballBoard board = new();
     private readonly PinballDisplay display = new();
@@ -80,6 +88,9 @@ internal sealed class PinballApp : IMiniGame
     private LabelSlot lockLabel;
     private LabelSlot multiplierLabel;
     private LabelSlot warningLabel;
+    private LabelSlot comboLabel;
+    private LabelSlot playfieldLabel;
+    private LabelSlot timesLabel;
     private string bannerText = string.Empty;
     private Vector4 bannerColor = White;
     private float bannerProgress = 1f;
@@ -176,7 +187,7 @@ internal sealed class PinballApp : IMiniGame
         time += context.RawDeltaSeconds;
         particles.Update(context.RawDeltaSeconds);
         fx.Update(context.RawDeltaSeconds);
-        display.Update(context.RawDeltaSeconds);
+        display.Update(context.RawDeltaSeconds, board.Score);
         plungerKick = MathF.Max(0f, plungerKick - context.RawDeltaSeconds * KickDecay);
         bannerProgress = GameBanner.Advance(bannerProgress, context.RawDeltaSeconds, BannerSeconds);
         PlaceCamera(context);
@@ -185,6 +196,11 @@ internal sealed class PinballApp : IMiniGame
         if (!finished)
         {
             Step(simDelta, context);
+        }
+
+        if (board.FeverActive)
+        {
+            context.Fx.EdgeGlow(FeverGlow + 0.15f * MathF.Sin(time * 6f));
         }
 
         DrawWorld(drawList, scale);
@@ -519,6 +535,45 @@ internal sealed class PinballApp : IMiniGame
                 case PinballEventKind.FlipperHit:
                     UiFeedback.Play(UiSound.GameHitSoft);
                     break;
+                case PinballEventKind.Orbit:
+                    OnOrbit(happened, context);
+                    break;
+                case PinballEventKind.Combo:
+                    OnCombo(happened, context);
+                    break;
+                case PinballEventKind.PlayfieldRaised:
+                    OnPlayfieldRaised(happened, context);
+                    break;
+                case PinballEventKind.FeverStart:
+                    OnFeverStart(happened, context);
+                    break;
+                case PinballEventKind.FeverEnd:
+                    OnFeverEnd(happened);
+                    break;
+                case PinballEventKind.Kickback:
+                    OnKickback(happened, context);
+                    break;
+                case PinballEventKind.KickbackLit:
+                    UiFeedback.Play(UiSound.GamePowerUp);
+                    particles.Emit(KickbackStreaks, happened.Position, 8);
+                    ShowBanner(Loc.T(L.Pinball.KickbackLit), PinballRenderer.Lime, BannerLow);
+                    break;
+                case PinballEventKind.MysteryLit:
+                    UiFeedback.Play(UiSound.GamePowerUp);
+                    particles.Emit(MysteryGlow, happened.Position, 8);
+                    ShowBanner(Loc.T(L.Pinball.MysteryLit), PinballRenderer.Gold, BannerMedium);
+                    break;
+                case PinballEventKind.Mystery:
+                    OnMystery(happened, context);
+                    break;
+                case PinballEventKind.SuperJackpotLit:
+                    UiFeedback.Play(UiSound.GamePowerUp);
+                    ShowBanner(Loc.T(L.Pinball.SuperJackpotLit), PinballRenderer.Ember, BannerMedium);
+                    fx.Shockwave(camera.ToScreen(happened.Position), camera.Px(0.9f), PinballRenderer.Ember, 0.5f, 3f);
+                    break;
+                case PinballEventKind.SuperJackpot:
+                    OnSuperJackpot(happened, context);
+                    break;
             }
         }
     }
@@ -533,7 +588,7 @@ internal sealed class PinballApp : IMiniGame
     private void OnBumper(in PinballEvent happened)
     {
         UiFeedback.Play(UiSound.GamePop);
-        particles.Emit(BumperSparks, happened.Position, 10);
+        particles.Emit(BumperSparks, happened.Position, board.FeverActive ? 18 : 10);
         var center = camera.ToScreen(PinballTable.Bumpers[happened.Index]);
         fx.Shockwave(center, camera.Px(PinballTable.BumperRadius * 1.9f), Ring, 0.3f, 2.4f,
             camera.Px(PinballTable.BumperRadius));
@@ -691,6 +746,129 @@ internal sealed class PinballApp : IMiniGame
         display.Award(happened.Value, true);
     }
 
+    private void OnOrbit(in PinballEvent happened, in GameContext context)
+    {
+        UiFeedback.Play(UiSound.GameCollect);
+        var screen = camera.ToScreen(happened.Position);
+        particles.Emit(RampStars, happened.Position, 14);
+        fx.Shockwave(screen, camera.Px(0.8f), PinballRenderer.Cyan, 0.45f, 3f);
+        fx.AddText(GameNumber.Signed(happened.Value), screen - new Vector2(0f, camera.Px(0.3f)), PinballRenderer.Cyan,
+            1.05f);
+        display.Award(happened.Value, false);
+        context.Fx.Punch(0.03f);
+        camera.Shake(0.08f);
+    }
+
+    private void OnCombo(in PinballEvent happened, in GameContext context)
+    {
+        GameSfx.ComboTierUp();
+        var steps = Math.Min(happened.Index, MaxComboScaleSteps);
+        var screen = camera.ToScreen(happened.Position);
+        particles.Emit(ComboStars, happened.Position, 6 + steps * 3);
+        fx.Shockwave(screen, camera.Px(0.7f + 0.15f * steps), PinballRenderer.Gold, 0.5f, 3f);
+        fx.AddText(comboLabel.Get(L.Pinball.Combo, happened.Index), screen - new Vector2(0f, camera.Px(0.75f)),
+            PinballRenderer.Gold, 1f + 0.12f * steps, 60f);
+        context.Fx.Punch(0.015f + 0.006f * steps);
+        camera.Shake(0.05f + 0.02f * steps);
+    }
+
+    private void OnPlayfieldRaised(in PinballEvent happened, in GameContext context)
+    {
+        UiFeedback.Play(UiSound.GamePowerUp);
+        var emblem = PinballRenderer.EmblemCenter;
+        particles.Burst(emblem, 24, PinballRenderer.Gold, 4f, 0.07f, 0.8f, 5f, MathF.PI * 2f, 0f, ParticleShape.Star);
+        fx.Shockwave(camera.ToScreen(emblem), camera.Px(1.6f), PinballRenderer.Gold, 0.6f, 3.6f);
+        ShowBanner(playfieldLabel.Get(L.Pinball.PlayfieldMultiplier, happened.Value), PinballRenderer.Gold,
+            BannerMedium);
+        context.Fx.Flash(PinballRenderer.Gold, 0.12f);
+        context.Fx.Sweep();
+        context.Fx.Punch(0.04f);
+    }
+
+    private void OnFeverStart(in PinballEvent happened, in GameContext context)
+    {
+        UiFeedback.Play(UiSound.GameClear);
+        GameSfx.ComboTierUp();
+        particles.Confetti(happened.Position, ConfettiCount * 2, CelebrationPalette, 6f, 0.08f, 1.6f, 7f);
+        fx.Shockwave(camera.ToScreen(happened.Position), camera.Px(4f), PinballRenderer.Magenta, 0.8f, 5f);
+        fx.Shockwave(camera.ToScreen(happened.Position), camera.Px(2.6f), White, 0.6f, 3f);
+        ShowBanner(Loc.T(L.Pinball.Fever), PinballRenderer.Magenta, BannerHigh);
+        context.Fx.SlowMo(0.5f, 0.45f);
+        context.Fx.Flash(PinballRenderer.Magenta, 0.35f);
+        context.Fx.Sweep();
+        context.Fx.Punch(0.08f);
+        camera.Shake(0.45f);
+    }
+
+    private void OnFeverEnd(in PinballEvent happened)
+    {
+        if (happened.Value <= 0)
+        {
+            return;
+        }
+
+        GameSfx.LevelClear();
+        ShowBanner(Loc.T(L.Pinball.FeverTotal), PinballRenderer.Magenta, BannerMedium);
+        display.Award(happened.Value, true);
+    }
+
+    private void OnKickback(in PinballEvent happened, in GameContext context)
+    {
+        UiFeedback.Play(UiSound.GameShoot);
+        particles.Emit(KickbackStreaks, happened.Position, 16);
+        fx.Shockwave(camera.ToScreen(happened.Position), camera.Px(0.9f), PinballRenderer.Lime, 0.45f, 3.4f);
+        ShowBanner(Loc.T(L.Pinball.Kickback), PinballRenderer.Lime, BannerHigh);
+        context.Fx.Flash(PinballRenderer.Lime, 0.14f);
+        camera.Shake(0.2f);
+    }
+
+    private void OnMystery(in PinballEvent happened, in GameContext context)
+    {
+        UiFeedback.Play(UiSound.GameWin);
+        particles.Emit(MysteryGlow, happened.Position, 20);
+        particles.Confetti(happened.Position, ConfettiCount / 2, CelebrationPalette, 3.5f, 0.06f, 1.1f, 7f);
+        fx.Shockwave(camera.ToScreen(happened.Position), camera.Px(1.5f), PinballRenderer.Gold, 0.6f, 3.4f);
+        ShowBanner(Loc.T(MysteryText((MysteryAward)happened.Index)), PinballRenderer.Gold, BannerHigh);
+        if ((MysteryAward)happened.Index == MysteryAward.BigPoints)
+        {
+            display.Award(happened.Value, true);
+        }
+
+        context.Fx.Flash(PinballRenderer.Gold, 0.18f);
+        context.Fx.Punch(0.05f);
+    }
+
+    private static LocString MysteryText(MysteryAward award) => award switch
+    {
+        MysteryAward.Kickback => L.Pinball.MysteryKickback,
+        MysteryAward.Playfield => L.Pinball.MysteryPlayfield,
+        MysteryAward.Fever => L.Pinball.MysteryFever,
+        MysteryAward.BallSave => L.Pinball.MysteryBallSave,
+        _ => L.Pinball.MysteryPoints,
+    };
+
+    private void OnSuperJackpot(in PinballEvent happened, in GameContext context)
+    {
+        UiFeedback.Play(UiSound.GameClear);
+        GameSfx.ComboTierUp();
+        var screen = camera.ToScreen(happened.Position);
+        particles.Emit(JackpotGlow, happened.Position, 40);
+        particles.Confetti(happened.Position, ConfettiCount * 2, CelebrationPalette, 6f, 0.08f, 1.6f, 7f);
+        fx.Shockwave(screen, camera.Px(3.4f), PinballRenderer.Ember, 0.8f, 5f);
+        fx.Shockwave(screen, camera.Px(2.2f), PinballRenderer.Gold, 0.65f, 4f);
+        fx.Shockwave(screen, camera.Px(1.2f), White, 0.45f, 3f);
+        fx.AddText(GameNumber.Label(happened.Value), screen - new Vector2(0f, camera.Px(0.5f)), PinballRenderer.Ember,
+            1.8f);
+        fx.HitStop(0.08f);
+        ShowBanner(Loc.T(L.Pinball.SuperJackpot), PinballRenderer.Ember, BannerHigh);
+        display.Award(happened.Value, true);
+        context.Fx.SlowMo(0.35f, 0.6f);
+        context.Fx.Flash(PinballRenderer.Ember, 0.45f);
+        context.Fx.Sweep();
+        context.Fx.Punch(0.1f);
+        camera.Shake(0.55f);
+    }
+
     private void OnTilt(in GameContext context)
     {
         UiFeedback.Play(UiSound.GameExplosion);
@@ -717,9 +895,12 @@ internal sealed class PinballApp : IMiniGame
     private void DrawWorld(ImDrawListPtr drawList, float scale)
     {
         var table = PinballRenderer.TableRect(in camera);
-        var accent = Accent;
+        var accent = PinballRenderer.TableAccent(board, Accent, time);
+        var playfieldText = board.PlayfieldMultiplier > 1
+            ? timesLabel.Get(L.Pinball.Times, board.PlayfieldMultiplier)
+            : string.Empty;
         drawList.PushClipRect(table.Min - new Vector2(camera.Px(0.1f)), table.Max + new Vector2(camera.Px(0.1f)), true);
-        PinballRenderer.DrawTable(drawList, in camera, board, accent, time, plungerKick);
+        PinballRenderer.DrawTable(drawList, in camera, board, accent, time, plungerKick, playfieldText);
         DrawBalls(drawList, accent, BallLayer.Playfield);
         PinballRenderer.DrawRamp(drawList, in camera, board, time);
         DrawBalls(drawList, accent, BallLayer.Ramp);
@@ -731,7 +912,6 @@ internal sealed class PinballApp : IMiniGame
 
     private void DrawBalls(ImDrawListPtr drawList, Vector4 accent, BallLayer layer)
     {
-        var trail = GamePalette.Lighten(accent, 0.45f) with { W = 0.5f };
         for (var slot = 0; slot < PinballBoard.MaxBalls; slot++)
         {
             if (board.BallStateAt(slot) == BallState.None || board.BallLayerAt(slot) != layer)
@@ -739,14 +919,17 @@ internal sealed class PinballApp : IMiniGame
                 continue;
             }
 
-            ribbons[slot].Draw(drawList, in camera, trail, camera.Px(RibbonWidth), additive: true);
+            var tint = board.FeverActive ? PinballRenderer.FeverInk(time, slot * 0.25f) : accent;
+            var trail = GamePalette.Lighten(tint, 0.45f) with { W = board.FeverActive ? 0.75f : 0.5f };
+            var width = camera.Px(RibbonWidth * (board.FeverActive ? 1.5f : 1f));
+            ribbons[slot].Draw(drawList, in camera, trail, width, additive: true);
             var position = board.BallPositionAt(slot);
             if (board.BallStateAt(slot) == BallState.Lane && board.BallWaiting)
             {
                 position.Y += board.PlungerPull * PinballRenderer.PlungerTravel;
             }
 
-            PinballRenderer.DrawBall(drawList, in camera, position, accent, layer == BallLayer.Ramp);
+            PinballRenderer.DrawBall(drawList, in camera, position, tint, layer == BallLayer.Ramp);
         }
     }
 

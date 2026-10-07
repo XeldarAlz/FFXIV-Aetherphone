@@ -9097,7 +9097,7 @@ internal static class L
     internal static class Pinball
     {
         public static readonly LocString Title = new("games.pinball.title", "Pinball");
-        public static readonly LocString Hook = new("games.pinball.hook", "Pull the plunger with Space or a drag, flip with A and D or a tap on each side, and drop both banks to light the jackpot.");
+        public static readonly LocString Hook = new("games.pinball.hook", "Pull the plunger with Space or a drag and flip with A and D or a tap on each side. Chain ramps, orbits and the saucer into combos to raise the playfield multiplier and charge Fever.");
         public static readonly LocString Launch = new("games.pinball.launch", "Pull the plunger to launch");
         public static readonly LocString BallNumber = new("games.pinball.ballNumber", "Ball {0}");
         public static readonly LocString SkillShot = new("games.pinball.skillShot", "Skill shot!");
@@ -9116,6 +9116,21 @@ internal static class L
         public static readonly LocString Jackpots = new("games.pinball.jackpots", "Jackpots");
         public static readonly LocString Ramps = new("games.pinball.ramps", "Ramps");
         public static readonly LocString Multiballs = new("games.pinball.multiballs", "Multiballs");
+        public static readonly LocString Fever = new("games.pinball.fever", "Fever!");
+        public static readonly LocString FeverTotal = new("games.pinball.feverTotal", "Fever total");
+        public static readonly LocString Combo = new("games.pinball.combo", "Combo x{0}");
+        public static readonly LocString PlayfieldMultiplier = new("games.pinball.playfieldMultiplier", "Playfield x{0}");
+        public static readonly LocString Times = new("games.pinball.times", "x{0}");
+        public static readonly LocString Kickback = new("games.pinball.kickback", "Kickback!");
+        public static readonly LocString KickbackLit = new("games.pinball.kickbackLit", "Kickback lit");
+        public static readonly LocString MysteryLit = new("games.pinball.mysteryLit", "Mystery lit");
+        public static readonly LocString MysteryPoints = new("games.pinball.mysteryPoints", "Mystery: big points");
+        public static readonly LocString MysteryKickback = new("games.pinball.mysteryKickback", "Mystery: kickback lit");
+        public static readonly LocString MysteryPlayfield = new("games.pinball.mysteryPlayfield", "Mystery: playfield up");
+        public static readonly LocString MysteryFever = new("games.pinball.mysteryFever", "Mystery: fever boost");
+        public static readonly LocString MysteryBallSave = new("games.pinball.mysteryBallSave", "Mystery: ball save");
+        public static readonly LocString SuperJackpot = new("games.pinball.superJackpot", "Super jackpot!");
+        public static readonly LocString SuperJackpotLit = new("games.pinball.superJackpotLit", "Super jackpot lit");
     }
 
     internal static class Crates
