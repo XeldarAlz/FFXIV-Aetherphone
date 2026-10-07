@@ -1,15 +1,16 @@
+using Aetherphone.Apps.Games.Framework;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Thrust;
 
 internal static class ThrustArt
 {
+    public const int EllipseSegments = 16;
     public static readonly Vector4 Electric = new(0.62f, 0.95f, 1f, 1f);
     public static readonly Vector4 Coin = new(1f, 0.83f, 0.27f, 1f);
     public static readonly Vector4 Flame = new(1f, 0.62f, 0.2f, 1f);
     public static readonly Vector4 Pom = new(1f, 0.36f, 0.46f, 1f);
     public static readonly Vector4 Plumage = new(1f, 0.82f, 0.26f, 1f);
-    private const int EllipseSegments = 16;
     private static readonly Vector4 Fur = new(0.99f, 0.97f, 0.94f, 1f);
     private static readonly Vector4 FurShade = new(0.86f, 0.83f, 0.86f, 1f);
     private static readonly Vector4 Nose = new(0.95f, 0.42f, 0.46f, 1f);
@@ -45,21 +46,25 @@ internal static class ThrustArt
             var leg = Color(Leg, alpha);
             drawList.AddLine(hip, knee, leg, MathF.Max(1f, unit * 0.14f));
             drawList.AddLine(knee, foot, leg, MathF.Max(1f, unit * 0.11f));
-            FillEllipse(drawList, foot + Rotate(new Vector2(unit * 0.12f, 0f), tilt), unit * 0.18f, unit * 0.07f, leg, tilt);
+            Shapes.FillEllipse(drawList, foot + Rotate(new Vector2(unit * 0.12f, 0f), tilt), unit * 0.18f, unit * 0.07f, tilt,
+                leg, EllipseSegments);
         }
 
         for (var feather = 0; feather < 3; feather++)
         {
             var angle = MathF.PI + 0.55f + feather * 0.32f + MathF.Sin(run) * 0.08f;
             var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-            FillEllipse(drawList, Point(center, unit, tilt, -0.95f + direction.X * 0.35f, -0.1f + direction.Y * 0.35f),
-                unit * 0.42f, unit * 0.13f, Color(Vector4.Lerp(Plumage, White, 0.35f), alpha), tilt + angle);
+            Shapes.FillEllipse(drawList, Point(center, unit, tilt, -0.95f + direction.X * 0.35f, -0.1f + direction.Y * 0.35f),
+                unit * 0.42f, unit * 0.13f, tilt + angle, Color(Vector4.Lerp(Plumage, White, 0.35f), alpha),
+                EllipseSegments);
         }
 
-        FillEllipse(drawList, Point(center, unit, tilt, -0.1f, 0f), unit, unit * 0.72f, Color(PlumageShade, alpha), tilt);
-        FillEllipse(drawList, Point(center, unit, tilt, -0.1f, -0.06f), unit * 0.94f, unit * 0.62f, Color(Plumage, alpha), tilt);
-        FillEllipse(drawList, Point(center, unit, tilt, -0.3f, 0.05f), unit * 0.55f, unit * 0.3f, Color(PlumageShade, alpha),
-            tilt - 0.3f + (grounded ? 0f : MathF.Sin(time * 18f) * 0.4f));
+        Shapes.FillEllipse(drawList, Point(center, unit, tilt, -0.1f, 0f), unit, unit * 0.72f, tilt, Color(PlumageShade, alpha),
+            EllipseSegments);
+        Shapes.FillEllipse(drawList, Point(center, unit, tilt, -0.1f, -0.06f), unit * 0.94f, unit * 0.62f, tilt,
+            Color(Plumage, alpha), EllipseSegments);
+        Shapes.FillEllipse(drawList, Point(center, unit, tilt, -0.3f, 0.05f), unit * 0.55f, unit * 0.3f,
+            tilt - 0.3f + (grounded ? 0f : MathF.Sin(time * 18f) * 0.4f), Color(PlumageShade, alpha), EllipseSegments);
         var neckBase = Point(center, unit, tilt, 0.55f, -0.35f);
         var head = Point(center, unit, tilt, 1f, -1.25f);
         drawList.AddLine(neckBase, head, Color(Plumage, alpha), unit * 0.42f);
@@ -81,31 +86,10 @@ internal static class ThrustArt
 
     public static void DrawFeather(ImDrawListPtr drawList, Vector2 center, float size, float angle, float alpha)
     {
-        FillEllipse(drawList, center, size, size * 0.32f, Color(Plumage, alpha), angle);
+        Shapes.FillEllipse(drawList, center, size, size * 0.32f, angle, Color(Plumage, alpha), EllipseSegments);
         var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
         drawList.AddLine(center - direction * size * 1.1f, center + direction * size * 0.9f, Color(PlumageShade, alpha),
             MathF.Max(1f, size * 0.1f));
-    }
-
-    public static void FillEllipse(ImDrawListPtr drawList, Vector2 center, float radiusX, float radiusY, uint color, float angle)
-    {
-        if (radiusX <= 0.2f || radiusY <= 0.2f)
-        {
-            return;
-        }
-
-        var cosine = MathF.Cos(angle);
-        var sine = MathF.Sin(angle);
-        drawList.PathClear();
-        for (var segment = 0; segment < EllipseSegments; segment++)
-        {
-            var theta = MathF.Tau * segment / EllipseSegments;
-            var localX = MathF.Cos(theta) * radiusX;
-            var localY = MathF.Sin(theta) * radiusY;
-            drawList.PathLineTo(new Vector2(center.X + localX * cosine - localY * sine, center.Y + localX * sine + localY * cosine));
-        }
-
-        drawList.PathFillConvex(color);
     }
 
     private static void DrawJetpack(ImDrawListPtr drawList, Vector2 center, float radius, float tilt, float thrust, float alpha,
@@ -157,8 +141,8 @@ internal static class ThrustArt
             for (var side = -1; side <= 1; side += 2)
             {
                 var lift = MathF.Max(0f, side * MathF.Sin(run)) * 0.18f;
-                FillEllipse(drawList, Point(center, radius, tilt, side * 0.32f, 0.92f - lift), radius * 0.24f, radius * 0.14f,
-                    Color(FurShade, alpha), tilt);
+                Shapes.FillEllipse(drawList, Point(center, radius, tilt, side * 0.32f, 0.92f - lift), radius * 0.24f,
+                    radius * 0.14f, tilt, Color(FurShade, alpha), EllipseSegments);
             }
         }
 
@@ -175,7 +159,8 @@ internal static class ThrustArt
             drawList.PathStroke(eye, ImDrawFlags.None, thickness);
         }
 
-        FillEllipse(drawList, Point(center, radius, tilt, 0.84f, 0.14f), radius * 0.2f, radius * 0.15f, Color(Nose, alpha), tilt);
+        Shapes.FillEllipse(drawList, Point(center, radius, tilt, 0.84f, 0.14f), radius * 0.2f, radius * 0.15f, tilt,
+            Color(Nose, alpha), EllipseSegments);
         var sway = MathF.Sin(time * 5f) * 0.12f;
         var antennaBase = Point(center, radius, tilt, 0.05f, -0.92f);
         var antennaTip = Point(center, radius, tilt, 0.22f + sway, -1.55f);

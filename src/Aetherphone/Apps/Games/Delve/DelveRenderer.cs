@@ -29,7 +29,6 @@ internal static class DelveRenderer
     public static readonly Vector4 Ember = new(1f, 0.58f, 0.22f, 1f);
     public static readonly Vector4 Flame = new(1f, 0.92f, 0.62f, 1f);
     public static readonly Vector4 Rock = new(0.58f, 0.55f, 0.52f, 1f);
-    private const int EllipseSegments = 20;
     private static readonly Vector4 Tunnel = new(0.065f, 0.05f, 0.045f, 0.94f);
     private static readonly Vector4 Dirt = new(0.42f, 0.29f, 0.18f, 1f);
     private static readonly Vector4 DirtDark = new(0.30f, 0.20f, 0.12f, 1f);
@@ -153,7 +152,7 @@ internal static class DelveRenderer
         var feet = center + new Vector2(0f, cell * 0.42f);
         var bodyCenter = feet - new Vector2(0f, body.Y * 1.05f) + new Vector2(0f, bob);
         ProgressRing.Glow(bodyCenter, cell * 1.8f, Lamp, 0.10f + 0.08f * lampGlow);
-        FillEllipse(drawList, feet, new Vector2(cell * 0.28f, cell * 0.07f), ImGui.GetColorU32(Shadow));
+        Shapes.FillEllipse(drawList, feet, new Vector2(cell * 0.28f, cell * 0.07f), ImGui.GetColorU32(Shadow));
         var side = facing switch
         {
             3 => -1f,
@@ -163,8 +162,8 @@ internal static class DelveRenderer
         var flap = 0.5f + 0.5f * MathF.Sin(time * 9f);
         DrawWing(drawList, bodyCenter + new Vector2(-body.X * 0.85f, -body.Y * 0.2f), -1f, cell, flap);
         DrawWing(drawList, bodyCenter + new Vector2(body.X * 0.85f, -body.Y * 0.2f), 1f, cell, flap);
-        FillEllipse(drawList, bodyCenter + new Vector2(0f, body.Y * 0.08f), body * 1.05f, ImGui.GetColorU32(FluffShade));
-        FillEllipse(drawList, bodyCenter, body, ImGui.GetColorU32(Fluff));
+        Shapes.FillEllipse(drawList, bodyCenter + new Vector2(0f, body.Y * 0.08f), body * 1.05f, ImGui.GetColorU32(FluffShade));
+        Shapes.FillEllipse(drawList, bodyCenter, body, ImGui.GetColorU32(Fluff));
         var helmetCenter = bodyCenter - new Vector2(0f, body.Y * 0.45f);
         var helmetRadius = body.X * 0.95f;
         drawList.PathClear();
@@ -195,18 +194,6 @@ internal static class DelveRenderer
             faceCenter + new Vector2(eyeSpread + eyeWidth * 0.5f, 0f), eyeInk, thickness);
         drawList.AddCircleFilled(faceCenter + new Vector2(0f, body.Y * 0.3f), cell * 0.035f,
             ImGui.GetColorU32(Pompom with { W = 0.75f }), 8);
-    }
-
-    public static void FillEllipse(ImDrawListPtr drawList, Vector2 center, Vector2 radii, uint color)
-    {
-        drawList.PathClear();
-        for (var segment = 0; segment < EllipseSegments; segment++)
-        {
-            var angle = segment * MathF.Tau / EllipseSegments;
-            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radii.X, MathF.Sin(angle) * radii.Y));
-        }
-
-        drawList.PathFillConvex(color);
     }
 
     private static void DrawDirt(ImDrawListPtr drawList, DelveBoard board, int column, int row, Vector2 min,
@@ -361,10 +348,10 @@ internal static class DelveRenderer
         var radii = new Vector2(cell * (0.38f + 0.04f * wobble), cell * (0.30f - 0.04f * wobble));
         var ground = center + new Vector2(0f, cell * 0.42f);
         var blob = ground - new Vector2(0f, radii.Y);
-        FillEllipse(drawList, ground, new Vector2(radii.X, cell * 0.06f), ImGui.GetColorU32(Shadow));
-        FillEllipse(drawList, blob, radii, ImGui.GetColorU32(SlimeDark));
-        FillEllipse(drawList, blob - new Vector2(0f, radii.Y * 0.12f), radii * 0.88f, ImGui.GetColorU32(Slime));
-        FillEllipse(drawList, blob - new Vector2(radii.X * 0.4f, radii.Y * 0.45f), radii * 0.22f,
+        Shapes.FillEllipse(drawList, ground, new Vector2(radii.X, cell * 0.06f), ImGui.GetColorU32(Shadow));
+        Shapes.FillEllipse(drawList, blob, radii, ImGui.GetColorU32(SlimeDark));
+        Shapes.FillEllipse(drawList, blob - new Vector2(0f, radii.Y * 0.12f), radii * 0.88f, ImGui.GetColorU32(Slime));
+        Shapes.FillEllipse(drawList, blob - new Vector2(radii.X * 0.4f, radii.Y * 0.45f), radii * 0.22f,
             ImGui.GetColorU32(White with { W = 0.55f }));
         var eye = ImGui.GetColorU32(Ink);
         drawList.AddCircleFilled(blob + new Vector2(-radii.X * 0.3f, -radii.Y * 0.05f), cell * 0.05f, eye, 8);

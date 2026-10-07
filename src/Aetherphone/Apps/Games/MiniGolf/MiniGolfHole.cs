@@ -1,4 +1,5 @@
 using System.Globalization;
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 
 namespace Aetherphone.Apps.Games.MiniGolf;
@@ -110,13 +111,13 @@ internal sealed class MiniGolfHole
         Tee = tee;
         Cup = cup;
         Course = course;
-        CourseTriangles = GolfGeometry.Triangulate(course);
+        CourseTriangles = Polygon.Triangulate(course);
         Walls = walls;
         Blocks = blocks;
         BlockTriangles = new int[blocks.Length][];
         for (var index = 0; index < blocks.Length; index++)
         {
-            BlockTriangles[index] = GolfGeometry.Triangulate(blocks[index]);
+            BlockTriangles[index] = Polygon.Triangulate(blocks[index]);
         }
 
         Posts = posts;
@@ -138,14 +139,14 @@ internal sealed class MiniGolfHole
 
     public bool OnCourse(Vector2 point)
     {
-        if (!GolfGeometry.InsidePolygon(point, Course))
+        if (!Geometry2D.PointInPolygon(point, Course))
         {
             return false;
         }
 
         for (var index = 0; index < Blocks.Length; index++)
         {
-            if (GolfGeometry.InsidePolygon(point, Blocks[index]))
+            if (Geometry2D.PointInPolygon(point, Blocks[index]))
             {
                 return false;
             }

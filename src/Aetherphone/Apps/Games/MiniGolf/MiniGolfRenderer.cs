@@ -38,8 +38,10 @@ internal static class MiniGolfRenderer
     public static void DrawCourse(ImDrawListPtr drawList, in Camera2D camera, MiniGolfHole hole, float alpha, float time)
     {
         var lift = new Vector2(0f, 0.14f);
-        FillTriangles(drawList, camera, hole.Course, hole.CourseTriangles, lift, Shadow with { W = 0.28f * alpha });
-        FillTriangles(drawList, camera, hole.Course, hole.CourseTriangles, Vector2.Zero, Fairway with { W = alpha });
+        Shapes.FillTriangles(drawList, camera, hole.Course, hole.CourseTriangles, lift,
+            ImGui.GetColorU32(Shadow with { W = 0.28f * alpha }));
+        Shapes.FillTriangles(drawList, camera, hole.Course, hole.CourseTriangles, Vector2.Zero,
+            ImGui.GetColorU32(Fairway with { W = alpha }));
         DrawMowing(drawList, camera, hole, alpha);
         for (var index = 0; index < hole.Slopes.Length; index++)
         {
@@ -66,8 +68,10 @@ internal static class MiniGolfRenderer
 
         for (var index = 0; index < hole.Blocks.Length; index++)
         {
-            FillTriangles(drawList, camera, hole.Blocks[index], hole.BlockTriangles[index], lift, Shadow with { W = 0.25f * alpha });
-            FillTriangles(drawList, camera, hole.Blocks[index], hole.BlockTriangles[index], Vector2.Zero, Stone with { W = alpha });
+            Shapes.FillTriangles(drawList, camera, hole.Blocks[index], hole.BlockTriangles[index], lift,
+                ImGui.GetColorU32(Shadow with { W = 0.25f * alpha }));
+            Shapes.FillTriangles(drawList, camera, hole.Blocks[index], hole.BlockTriangles[index], Vector2.Zero,
+                ImGui.GetColorU32(Stone with { W = alpha }));
             StrokeChain(drawList, camera, hole.Blocks[index], true, alpha);
         }
 
@@ -257,18 +261,6 @@ internal static class MiniGolfRenderer
         }
 
         return total;
-    }
-
-    private static void FillTriangles(ImDrawListPtr drawList, in Camera2D camera, ReadOnlySpan<Vector2> points,
-        ReadOnlySpan<int> triangles, Vector2 offset, Vector4 color)
-    {
-        var packed = ImGui.GetColorU32(color);
-        for (var index = 0; index + 2 < triangles.Length; index += 3)
-        {
-            drawList.AddTriangleFilled(camera.ToScreen(points[triangles[index]] + offset),
-                camera.ToScreen(points[triangles[index + 1]] + offset), camera.ToScreen(points[triangles[index + 2]] + offset),
-                packed);
-        }
     }
 
     private static void DrawMowing(ImDrawListPtr drawList, in Camera2D camera, MiniGolfHole hole, float alpha)

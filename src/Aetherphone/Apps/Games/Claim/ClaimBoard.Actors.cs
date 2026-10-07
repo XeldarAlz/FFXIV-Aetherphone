@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.Claim;
 
 internal struct ClaimSpark
@@ -214,8 +216,7 @@ internal sealed partial class ClaimBoard
         }
 
         var player = PlayerPosition;
-        var closest = ClosestOnSegment(bossHead, bossTail, player);
-        if (Vector2.DistanceSquared(closest, player) <= BossTouchRadius * BossTouchRadius)
+        if (Geometry2D.SegmentCircle(bossHead, bossTail, player, BossTouchRadius))
         {
             contact = player;
             return true;
@@ -223,19 +224,6 @@ internal sealed partial class ClaimBoard
 
         contact = default;
         return false;
-    }
-
-    private static Vector2 ClosestOnSegment(Vector2 start, Vector2 end, Vector2 point)
-    {
-        var span = end - start;
-        var lengthSquared = span.LengthSquared();
-        if (lengthSquared <= 1e-6f)
-        {
-            return start;
-        }
-
-        var along = Math.Clamp(Vector2.Dot(point - start, span) / lengthSquared, 0f, 1f);
-        return start + span * along;
     }
 
     private int BossAnchorCell()

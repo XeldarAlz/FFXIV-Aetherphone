@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
+
 namespace Aetherphone.Apps.Games.Crater;
 
 internal sealed partial class CraterBoard
@@ -124,7 +126,7 @@ internal sealed partial class CraterBoard
         for (var index = 0; index < MoogleCount; index++)
         {
             ref readonly var moogle = ref moogles[index];
-            if (!moogle.Alive || !CraterBallistics.SegmentCircle(start, travel, moogle.Position, reach, out var along))
+            if (!moogle.Alive || !Geometry2D.SweepCircle(start, travel, moogle.Position, reach, out var along))
             {
                 continue;
             }

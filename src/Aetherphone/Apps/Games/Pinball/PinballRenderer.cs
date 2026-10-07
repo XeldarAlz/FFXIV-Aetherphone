@@ -168,14 +168,7 @@ internal static class PinballRenderer
         var saucer = ImGui.GetColorU32(GamePalette.Lighten(accent, 0.2f) with { W = 0.22f });
         var ellipseCenter = center + new Vector2(0f, camera.Px(0.06f));
         var radii = new Vector2(camera.Px(0.46f), camera.Px(0.13f));
-        drawList.PathClear();
-        for (var segment = 0; segment < EllipseSegments; segment++)
-        {
-            var angle = segment * MathF.Tau / EllipseSegments;
-            drawList.PathLineTo(ellipseCenter + new Vector2(MathF.Cos(angle) * radii.X, MathF.Sin(angle) * radii.Y));
-        }
-
-        drawList.PathStroke(saucer, ImDrawFlags.Closed, line * 1.4f);
+        Shapes.StrokeEllipse(drawList, ellipseCenter, radii, saucer, line * 1.4f, EllipseSegments);
         drawList.PathClear();
         drawList.PathArcTo(center + new Vector2(0f, camera.Px(0.02f)), camera.Px(0.24f), MathF.PI, MathF.Tau, 16);
         drawList.PathStroke(saucer, ImDrawFlags.None, line * 1.4f);

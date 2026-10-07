@@ -96,7 +96,7 @@ internal static class MoogleClickerRenderer
         var wobble = Wobble(squashAge);
         var bob = MathF.Sin(time * BobSpeed);
         var shadowCenter = new Vector2(layout.MoogleCenter.X, layout.MoogleCenter.Y + radius * 1.66f);
-        Ellipse(drawList, shadowCenter, new Vector2(radius * (0.82f - bob * 0.06f), radius * 0.16f),
+        Shapes.FillEllipse(drawList, shadowCenter, new Vector2(radius * (0.82f - bob * 0.06f), radius * 0.16f),
             ImGui.GetColorU32(Shadow), EllipseSegments);
         var glow = frenzy ? PomGold : accent;
         ProgressRing.Glow(center, radius * (1.55f + 0.12f * MathF.Max(0f, wobble)), glow,
@@ -128,11 +128,11 @@ internal static class MoogleClickerRenderer
         ProgressRing.Glow(center, size * 1.7f, ChickBody, 0.6f * alpha);
         var flap = MathF.Sin(time * 18f) * 0.35f;
         var wingCenter = center + new Vector2(-facing * size * 0.35f, -size * 0.05f);
-        Ellipse(drawList, wingCenter + new Vector2(0f, -flap * size * 0.4f), new Vector2(size * 0.42f, size * 0.26f),
+        Shapes.FillEllipse(drawList, wingCenter + new Vector2(0f, -flap * size * 0.4f), new Vector2(size * 0.42f, size * 0.26f),
             ImGui.GetColorU32(ChickWing with { W = alpha }), EllipseSegments);
-        Ellipse(drawList, center, new Vector2(size, size * 0.92f), ImGui.GetColorU32(ChickBody with { W = alpha }),
+        Shapes.FillEllipse(drawList, center, new Vector2(size, size * 0.92f), ImGui.GetColorU32(ChickBody with { W = alpha }),
             EllipseSegments);
-        Ellipse(drawList, center + new Vector2(facing * size * 0.12f, size * 0.3f), new Vector2(size * 0.55f, size * 0.45f),
+        Shapes.FillEllipse(drawList, center + new Vector2(facing * size * 0.12f, size * 0.3f), new Vector2(size * 0.55f, size * 0.45f),
             ImGui.GetColorU32(ChickBelly with { W = alpha }), EllipseSegments);
         var eye = center + new Vector2(facing * size * 0.38f, -size * 0.22f);
         drawList.AddCircleFilled(eye, size * 0.12f, ImGui.GetColorU32(Ink with { W = alpha }), 12);
@@ -178,18 +178,6 @@ internal static class MoogleClickerRenderer
             valueStyle.Weight);
         Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + 12f * scale), caption,
             StageInks.Muted, captionStyle.Scale, captionStyle.Weight);
-    }
-
-    public static void Ellipse(ImDrawListPtr drawList, Vector2 center, Vector2 radii, uint color, int segments)
-    {
-        drawList.PathClear();
-        for (var segment = 0; segment < segments; segment++)
-        {
-            var angle = segment * MathF.PI * 2f / segments;
-            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radii.X, MathF.Sin(angle) * radii.Y));
-        }
-
-        drawList.PathFillConvex(color);
     }
 
     private static void DrawWing(ImDrawListPtr drawList, in MoogleShape shape, float side, float flap)
@@ -299,23 +287,15 @@ internal static class MoogleClickerRenderer
 
         public void Ellipse(ImDrawListPtr drawList, Vector2 unitCenter, Vector2 unitRadii, Vector4 color)
         {
-            MoogleClickerRenderer.Ellipse(drawList, Point(unitCenter), unitRadii * Radius * stretch,
-                ImGui.GetColorU32(color), EllipseSegments);
+            Shapes.FillEllipse(drawList, Point(unitCenter), unitRadii * Radius * stretch, ImGui.GetColorU32(color),
+                EllipseSegments);
         }
 
         public void Stroke(ImDrawListPtr drawList, Vector2 unitCenter, Vector2 unitRadii, Vector4 color,
             float thickness)
         {
-            var center = Point(unitCenter);
-            var radii = unitRadii * Radius * stretch;
-            drawList.PathClear();
-            for (var segment = 0; segment < EllipseSegments; segment++)
-            {
-                var angle = segment * MathF.PI * 2f / EllipseSegments;
-                drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radii.X, MathF.Sin(angle) * radii.Y));
-            }
-
-            drawList.PathStroke(ImGui.GetColorU32(color), ImDrawFlags.Closed, thickness);
+            Shapes.StrokeEllipse(drawList, Point(unitCenter), unitRadii * Radius * stretch, ImGui.GetColorU32(color),
+                thickness, EllipseSegments);
         }
     }
 }

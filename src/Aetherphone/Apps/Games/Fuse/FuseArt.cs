@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Games.Framework;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Fuse;
@@ -22,7 +23,6 @@ internal static class FuseArt
     public static readonly Vector4 RangeColor = new(1f, 0.50f, 0.16f, 1f);
     public static readonly Vector4 SpeedColor = new(0.30f, 0.88f, 0.58f, 1f);
     public static readonly Vector4 KickColor = new(0.78f, 0.48f, 1f, 1f);
-    private const int EllipseSegments = 20;
 
     public static Vector4 PowerUpColor(PowerUp kind) => kind switch
     {
@@ -35,29 +35,12 @@ internal static class FuseArt
 
     public static uint Color(Vector4 color, float alpha) => ImGui.GetColorU32(color with { W = color.W * alpha });
 
-    public static void FillEllipse(ImDrawListPtr drawList, Vector2 center, float radiusX, float radiusY, uint color)
-    {
-        if (radiusX <= 0.2f || radiusY <= 0.2f)
-        {
-            return;
-        }
-
-        drawList.PathClear();
-        for (var segment = 0; segment < EllipseSegments; segment++)
-        {
-            var theta = MathF.Tau * segment / EllipseSegments;
-            drawList.PathLineTo(new Vector2(center.X + MathF.Cos(theta) * radiusX, center.Y + MathF.Sin(theta) * radiusY));
-        }
-
-        drawList.PathFillConvex(color);
-    }
-
     public static void DrawMoogle(ImDrawListPtr drawList, Vector2 feet, float radius, Vector4 team, FuseDirection facing,
         float stride, bool moving, float alpha, float hop, float time)
     {
         var bob = moving ? MathF.Abs(MathF.Sin(stride)) * radius * 0.16f : MathF.Sin(time * 2.4f) * radius * 0.04f;
         var lift = bob + hop * radius;
-        FillEllipse(drawList, feet, radius * (0.82f - hop * 0.2f), radius * 0.3f, Color(Shadow, alpha));
+        Shapes.FillEllipse(drawList, feet, radius * (0.82f - hop * 0.2f), radius * 0.3f, Color(Shadow, alpha));
         var center = feet - new Vector2(0f, radius * 0.95f + lift);
         var side = facing switch
         {
@@ -76,17 +59,17 @@ internal static class FuseArt
         }
 
         var footSwing = moving ? MathF.Sin(stride) * radius * 0.16f : 0f;
-        FillEllipse(drawList, feet + new Vector2(-radius * 0.34f, -radius * 0.12f - MathF.Max(0f, footSwing) - lift * 0.4f),
+        Shapes.FillEllipse(drawList, feet + new Vector2(-radius * 0.34f, -radius * 0.12f - MathF.Max(0f, footSwing) - lift * 0.4f),
             radius * 0.22f, radius * 0.14f, Color(FurShade, alpha));
-        FillEllipse(drawList, feet + new Vector2(radius * 0.34f, -radius * 0.12f - MathF.Max(0f, -footSwing) - lift * 0.4f),
+        Shapes.FillEllipse(drawList, feet + new Vector2(radius * 0.34f, -radius * 0.12f - MathF.Max(0f, -footSwing) - lift * 0.4f),
             radius * 0.22f, radius * 0.14f, Color(FurShade, alpha));
         drawList.AddCircleFilled(center, radius * 0.9f, Color(FurShade, alpha), 28);
         drawList.AddCircleFilled(center - new Vector2(radius * 0.05f, radius * 0.06f), radius * 0.84f, Color(Fur, alpha), 28);
         drawList.AddCircleFilled(center + new Vector2(-radius * 0.3f, -radius * 0.38f), radius * 0.24f,
             Color(White, 0.75f * alpha), 14);
         var collar = center + new Vector2(0f, radius * 0.7f);
-        FillEllipse(drawList, collar, radius * 0.62f, radius * 0.2f, Color(team, alpha));
-        FillEllipse(drawList, collar - new Vector2(0f, radius * 0.05f), radius * 0.46f, radius * 0.09f,
+        Shapes.FillEllipse(drawList, collar, radius * 0.62f, radius * 0.2f, Color(team, alpha));
+        Shapes.FillEllipse(drawList, collar - new Vector2(0f, radius * 0.05f), radius * 0.46f, radius * 0.09f,
             Color(White, 0.35f * alpha));
         if (!away)
         {
@@ -101,7 +84,7 @@ internal static class FuseArt
                 drawList.PathStroke(eyeColor, ImDrawFlags.None, thickness);
             }
 
-            FillEllipse(drawList, center + new Vector2(faceShift, radius * 0.2f), radius * 0.18f, radius * 0.13f,
+            Shapes.FillEllipse(drawList, center + new Vector2(faceShift, radius * 0.2f), radius * 0.18f, radius * 0.13f,
                 Color(Nose, alpha));
         }
 
@@ -160,7 +143,7 @@ internal static class FuseArt
     public static void DrawBomb(ImDrawListPtr drawList, Vector2 center, float radius, float squash, float heat,
         float alpha, float time)
     {
-        FillEllipse(drawList, center + new Vector2(0f, radius * 0.86f), radius * 0.9f, radius * 0.3f, Color(Shadow, alpha));
+        Shapes.FillEllipse(drawList, center + new Vector2(0f, radius * 0.86f), radius * 0.9f, radius * 0.3f, Color(Shadow, alpha));
         var radiusX = radius * (1f + squash);
         var radiusY = radius * (1f - squash);
         var body = center + new Vector2(0f, radius * squash);
@@ -169,10 +152,10 @@ internal static class FuseArt
             drawList.AddCircleFilled(body, radius * (1.25f + heat * 0.25f), Color(BombHot, 0.22f * heat * alpha), 24);
         }
 
-        FillEllipse(drawList, body, radiusX, radiusY, Color(Vector4.Lerp(BombBody, BombHot, heat * 0.75f), alpha));
-        FillEllipse(drawList, body + new Vector2(radiusX * 0.05f, radiusY * 0.08f), radiusX * 0.86f, radiusY * 0.84f,
+        Shapes.FillEllipse(drawList, body, radiusX, radiusY, Color(Vector4.Lerp(BombBody, BombHot, heat * 0.75f), alpha));
+        Shapes.FillEllipse(drawList, body + new Vector2(radiusX * 0.05f, radiusY * 0.08f), radiusX * 0.86f, radiusY * 0.84f,
             Color(Vector4.Lerp(new Vector4(0.24f, 0.27f, 0.42f, 1f), BombHot, heat), alpha));
-        FillEllipse(drawList, body + new Vector2(-radiusX * 0.36f, -radiusY * 0.38f), radiusX * 0.24f, radiusY * 0.16f,
+        Shapes.FillEllipse(drawList, body + new Vector2(-radiusX * 0.36f, -radiusY * 0.38f), radiusX * 0.24f, radiusY * 0.16f,
             Color(White, 0.7f * alpha));
         var capCenter = body + new Vector2(radiusX * 0.42f, -radiusY * 0.82f);
         drawList.AddRectFilled(capCenter - new Vector2(radius * 0.2f, radius * 0.14f),

@@ -351,17 +351,17 @@ public sealed class MiniGolfBoardTests
     private static void AssertPlayable(MiniGolfHole hole, Vector2 point, float clearance, int index, string what)
     {
         Assert.True(hole.OnCourse(point), $"hole {index + 1} {what} is off the course");
-        Assert.True(GolfGeometry.ChainDistance(point, hole.Course, true) > clearance,
+        Assert.True(Geometry2D.ChainDistance(point, hole.Course, true) > clearance,
             $"hole {index + 1} {what} touches the border");
         for (var wall = 0; wall < hole.Walls.Length; wall++)
         {
-            Assert.True(GolfGeometry.ChainDistance(point, hole.Walls[wall], false) > clearance,
+            Assert.True(Geometry2D.ChainDistance(point, hole.Walls[wall], false) > clearance,
                 $"hole {index + 1} {what} touches a wall");
         }
 
         for (var block = 0; block < hole.Blocks.Length; block++)
         {
-            Assert.True(GolfGeometry.ChainDistance(point, hole.Blocks[block], true) > clearance,
+            Assert.True(Geometry2D.ChainDistance(point, hole.Blocks[block], true) > clearance,
                 $"hole {index + 1} {what} touches a block");
         }
 

@@ -33,12 +33,12 @@ public sealed class SliceBoardTests
     {
         var center = new Vector2(4f, 4f);
 
-        Assert.True(SliceBoard.SegmentHitsCircle(new Vector2(2f, 4f), new Vector2(6f, 4f), center, 0.5f));
-        Assert.True(SliceBoard.SegmentHitsCircle(new Vector2(2f, 4.45f), new Vector2(6f, 4.45f), center, 0.5f));
-        Assert.True(SliceBoard.SegmentHitsCircle(new Vector2(3.8f, 4f), new Vector2(4.1f, 4f), center, 0.5f));
-        Assert.False(SliceBoard.SegmentHitsCircle(new Vector2(2f, 4.6f), new Vector2(6f, 4.6f), center, 0.5f));
-        Assert.False(SliceBoard.SegmentHitsCircle(new Vector2(1f, 4f), new Vector2(3.4f, 4f), center, 0.5f));
-        Assert.True(SliceBoard.SegmentHitsCircle(new Vector2(3f, 3f), new Vector2(5f, 5f), center, 0.1f));
+        Assert.True(Geometry2D.SegmentCircle(new Vector2(2f, 4f), new Vector2(6f, 4f), center, 0.5f));
+        Assert.True(Geometry2D.SegmentCircle(new Vector2(2f, 4.45f), new Vector2(6f, 4.45f), center, 0.5f));
+        Assert.True(Geometry2D.SegmentCircle(new Vector2(3.8f, 4f), new Vector2(4.1f, 4f), center, 0.5f));
+        Assert.False(Geometry2D.SegmentCircle(new Vector2(2f, 4.6f), new Vector2(6f, 4.6f), center, 0.5f));
+        Assert.False(Geometry2D.SegmentCircle(new Vector2(1f, 4f), new Vector2(3.4f, 4f), center, 0.5f));
+        Assert.True(Geometry2D.SegmentCircle(new Vector2(3f, 3f), new Vector2(5f, 5f), center, 0.1f));
     }
 
     [Fact]

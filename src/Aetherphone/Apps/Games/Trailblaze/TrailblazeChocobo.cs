@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Games.Framework;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Trailblaze;
@@ -79,8 +80,8 @@ internal static class TrailblazeChocobo
         }
 
         var shrink = 1f / (1f + MathF.Max(0f, pose.Height) * 0.4f);
-        TrailblazeRenderer.FillEllipse(drawList, pose.Ground, 0.58f * pose.Scale * shrink, 0.17f * pose.Scale * shrink,
-            Color(Shade, 0.3f * shrink * pose.Alpha * pose.Shadow), 0f, 18);
+        Shapes.FillEllipse(drawList, pose.Ground, 0.58f * pose.Scale * shrink, 0.17f * pose.Scale * shrink,
+            Color(Shade, 0.3f * shrink * pose.Alpha * pose.Shadow), 18);
     }
 
     private static void DrawBigWings(ImDrawListPtr drawList, in TrailblazePose pose, float bodyY)
@@ -150,8 +151,8 @@ internal static class TrailblazeChocobo
             var foot = new Vector2(side * Lerp(0.22f, 0.16f, pose.Air), lift * 0.34f);
             drawList.AddLine(Point(pose, hip.X, hip.Y), Point(pose, knee.X, knee.Y), leg, thickness * 1.3f);
             drawList.AddLine(Point(pose, knee.X, knee.Y), Point(pose, foot.X, foot.Y), leg, thickness);
-            TrailblazeRenderer.FillEllipse(drawList, Point(pose, foot.X, foot.Y), 0.12f * pose.Scale, 0.055f * pose.Scale,
-                leg, pose.Angle, 10);
+            Shapes.FillEllipse(drawList, Point(pose, foot.X, foot.Y), 0.12f * pose.Scale, 0.055f * pose.Scale,
+                pose.Angle, leg, 10);
             drawList.AddLine(Point(pose, foot.X - 0.07f, foot.Y - 0.02f), Point(pose, foot.X - 0.1f, foot.Y - 0.07f), talon,
                 MathF.Max(1f, thickness * 0.5f));
             drawList.AddLine(Point(pose, foot.X + 0.07f, foot.Y - 0.02f), Point(pose, foot.X + 0.1f, foot.Y - 0.07f), talon,
@@ -164,17 +165,17 @@ internal static class TrailblazeChocobo
         var squashX = 1f + 0.14f * pose.Squash;
         var squashY = 1f - 0.16f * pose.Squash;
         var center = Point(pose, 0f, bodyY);
-        TrailblazeRenderer.FillEllipse(drawList, center, radiusX * squashX * pose.Scale, radiusY * squashY * pose.Scale,
-            Color(PlumageShade, pose.Alpha), pose.Angle, 24);
-        TrailblazeRenderer.FillEllipse(drawList, Point(pose, 0f, bodyY + radiusY * 0.12f), radiusX * squashX * 0.94f * pose.Scale,
-            radiusY * squashY * 0.86f * pose.Scale, Color(Plumage, pose.Alpha), pose.Angle, 24);
-        TrailblazeRenderer.FillEllipse(drawList, Point(pose, -radiusX * 0.25f, bodyY + radiusY * 0.45f),
-            radiusX * 0.42f * pose.Scale, radiusY * 0.3f * pose.Scale, Color(PlumageLight, pose.Alpha * 0.75f), pose.Angle, 16);
+        Shapes.FillEllipse(drawList, center, radiusX * squashX * pose.Scale, radiusY * squashY * pose.Scale,
+            pose.Angle, Color(PlumageShade, pose.Alpha), 24);
+        Shapes.FillEllipse(drawList, Point(pose, 0f, bodyY + radiusY * 0.12f), radiusX * squashX * 0.94f * pose.Scale,
+            radiusY * squashY * 0.86f * pose.Scale, pose.Angle, Color(Plumage, pose.Alpha), 24);
+        Shapes.FillEllipse(drawList, Point(pose, -radiusX * 0.25f, bodyY + radiusY * 0.45f),
+            radiusX * 0.42f * pose.Scale, radiusY * 0.3f * pose.Scale, pose.Angle, Color(PlumageLight, pose.Alpha * 0.75f), 16);
         var clothY = bodyY + radiusY * 0.52f;
-        TrailblazeRenderer.FillEllipse(drawList, Point(pose, 0f, clothY), radiusX * 0.62f * pose.Scale, radiusY * 0.3f * pose.Scale,
-            Color(ClothTrim, pose.Alpha), pose.Angle, 18);
-        TrailblazeRenderer.FillEllipse(drawList, Point(pose, 0f, clothY), radiusX * 0.54f * pose.Scale, radiusY * 0.22f * pose.Scale,
-            Color(Cloth, pose.Alpha), pose.Angle, 18);
+        Shapes.FillEllipse(drawList, Point(pose, 0f, clothY), radiusX * 0.62f * pose.Scale, radiusY * 0.3f * pose.Scale,
+            pose.Angle, Color(ClothTrim, pose.Alpha), 18);
+        Shapes.FillEllipse(drawList, Point(pose, 0f, clothY), radiusX * 0.54f * pose.Scale, radiusY * 0.22f * pose.Scale,
+            pose.Angle, Color(Cloth, pose.Alpha), 18);
     }
 
     private static void DrawSmallWings(ImDrawListPtr drawList, in TrailblazePose pose, float bodyY, float radiusX)
@@ -216,8 +217,8 @@ internal static class TrailblazeChocobo
         float halfWidth, Vector2 direction, uint color)
     {
         var screenDirection = Rotate(new Vector2(direction.X, -direction.Y), pose.Angle);
-        TrailblazeRenderer.FillEllipse(drawList, Point(pose, middle.X, middle.Y), halfLength * pose.Scale, halfWidth * pose.Scale,
-            color, MathF.Atan2(screenDirection.Y, screenDirection.X), 12);
+        Shapes.FillEllipse(drawList, Point(pose, middle.X, middle.Y), halfLength * pose.Scale, halfWidth * pose.Scale,
+            MathF.Atan2(screenDirection.Y, screenDirection.X), color, 12);
     }
 
     private static Vector2 Point(in TrailblazePose pose, float x, float y)
