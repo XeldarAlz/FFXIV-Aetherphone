@@ -203,6 +203,29 @@ public sealed class CardTableLayoutTests
     }
 
     [Fact]
+    public void AHiddenFlightStaysOutOfSightUntilItsDelayRunsOut()
+    {
+        var flight = new CardFlight(4);
+        var from = new CardPose(Vector2.Zero, 40f);
+        var to = new CardPose(new Vector2(100f, 0f), 40f);
+
+        flight.Launch(4, from, to, delay: 0.2f, hideWhileWaiting: true);
+        flight.Launch(5, from, to, delay: 0.2f);
+        flight.Launch(6, from, to, hideWhileWaiting: true);
+
+        Assert.False(flight.Visible(0));
+        Assert.True(flight.Visible(1));
+        Assert.True(flight.Visible(2));
+        flight.Advance(0.1f);
+        Assert.False(flight.Visible(0));
+        Assert.True(flight.Waiting(0));
+        flight.Advance(0.15f);
+        Assert.True(flight.Visible(0));
+        Assert.False(flight.Waiting(0));
+        Assert.True(flight.Progress(0) > 0f);
+    }
+
+    [Fact]
     public void AFullFlightPoolLandsItsOldestCardFirst()
     {
         var flight = new CardFlight(2);
