@@ -20,7 +20,7 @@ internal enum IntroAction : byte
 
 internal sealed class StageIntro
 {
-    private const float IdleDim = 0.45f;
+    private const float IdleDim = 0.8f;
     private const float EntranceSpeed = 1.6f;
     private const float PlayHeight = 52f;
     private const float PillGap = 8f;
@@ -35,6 +35,7 @@ internal sealed class StageIntro
     private static readonly TextStyle TagStyle = TextStyles.FootnoteEmphasized;
     private static readonly TextStyle LevelStyle = TextStyles.Title3;
     private static readonly TextStyle CaptionStyle = TextStyles.Footnote;
+    private static readonly Vector4 HookInk = StageInks.Strong with { W = 0.82f };
 
     private string[] modeLabels = Array.Empty<string>();
     private string[] seatLabels = Array.Empty<string>();
@@ -73,8 +74,8 @@ internal sealed class StageIntro
         var spec = session.Spec;
         var theme = context.Theme;
         var full = context.Full;
-        var ink = StageInks.StrongOn(context.Backdrop.Ink);
-        var muted = StageInks.MutedOn(context.Backdrop.Ink);
+        var ink = StageInks.Strong;
+        var muted = StageInks.Muted;
         entrance = GameJuice.Advance(entrance, context.RawDeltaSeconds, EntranceSpeed);
         Material.Veil(drawList, full.Min, full.Max, IdleDim);
         rankText.Refresh(session.Rank);
@@ -119,7 +120,7 @@ internal sealed class StageIntro
         {
             var hookPhase = Phase(slot++);
             Typography.DrawWrappedCentered(drawList, Lifted(layout.Hook.Center, hookPhase, scale), hook,
-                muted with { W = muted.W * hookPhase }, TextStyles.Subheadline, hookWidth);
+                HookInk with { W = HookInk.W * hookPhase }, TextStyles.Subheadline, hookWidth);
         }
 
         var pillPhase = Phase(slot++);
