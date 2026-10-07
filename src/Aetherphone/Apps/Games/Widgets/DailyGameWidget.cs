@@ -1,4 +1,5 @@
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.Hub;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
@@ -34,6 +35,7 @@ internal sealed class DailyGameWidget : IHomeWidget
     private IMiniGame? game;
     private WidgetRefresh refresh;
     private CachedText streakText;
+    private DailyCountdown countdown;
     private int slotFilled;
     private bool slotsRecent;
 
@@ -219,7 +221,7 @@ internal sealed class DailyGameWidget : IHomeWidget
     {
         if (done)
         {
-            return Loc.T(L.WidgetsUtility.PlayedToday);
+            return countdown.Label();
         }
 
         if (streak <= 0)
