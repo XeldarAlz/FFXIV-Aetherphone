@@ -420,7 +420,7 @@ internal sealed partial class PhysicsWorld
         for (var pairIndex = 0; pairIndex < pairCount; pairIndex++)
         {
             ref var pair = ref pairs[pairIndex];
-            if (pair.BodyA != body && pair.BodyB != body)
+            if (pair.BodyA < 0 || (pair.BodyA != body && pair.BodyB != body))
             {
                 continue;
             }
@@ -436,6 +436,11 @@ internal sealed partial class PhysicsWorld
         for (var pairIndex = 0; pairIndex < pairCount; pairIndex++)
         {
             ref readonly var pair = ref pairs[pairIndex];
+            if (pair.BodyA < 0)
+            {
+                continue;
+            }
+
             if (pair.BodyA == body)
             {
                 Wake(pair.BodyB);

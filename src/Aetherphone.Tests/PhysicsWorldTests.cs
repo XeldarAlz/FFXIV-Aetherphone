@@ -35,6 +35,26 @@ public sealed class PhysicsWorldTests
     }
 
     [Fact]
+    public void DestroyingTwoTouchingBodiesBetweenTicksKeepsTheWorldStepping()
+    {
+        var world = DownwardWorld();
+        CreateGround(world);
+        var lower = world.CreateBox(BodyType.Dynamic, new Vector2(0f, -0.5f), new Vector2(0.5f), 0f, Solid);
+        var upper = world.CreateBox(BodyType.Dynamic, new Vector2(0f, -1.5f), new Vector2(0.5f), 0f, Solid);
+        Run(world, 120);
+
+        world.DestroyBody(lower);
+        world.DestroyBody(upper);
+        var reused = world.CreateBox(BodyType.Dynamic, new Vector2(0f, -3f), new Vector2(0.5f), 0f, Solid);
+        world.SetTransform(reused, new Vector2(0f, -2.5f), 0f);
+        world.SetCollisionFilter(reused, PhysicsWorld.DefaultCategory, PhysicsWorld.AllCategories);
+        Run(world, 240);
+
+        Assert.True(world.IsAlive(reused));
+        Assert.InRange(world.Position(reused).Y, -0.6f, -0.4f);
+    }
+
+    [Fact]
     public void PostAndPlankTowerSettlesAndSleeps()
     {
         var world = DownwardWorld();
