@@ -8390,6 +8390,45 @@ internal static class L
         public static readonly LocString TourRecordsBody = new("gamesHub.tourRecordsBody", "Every personal best and your daily streak live here. Tap to have a look.");
         public static readonly LocString TourSearchTitle = new("gamesHub.tourSearchTitle", "Find any game");
         public static readonly LocString TourSearchBody = new("gamesHub.tourSearchBody", "Search by name, or browse a genre such as Puzzle or Arcade to see all of its games.");
+        public static readonly LocString TabTogether = new("gamesHub.tabTogether", "Together");
+        public static readonly LocString TabLibrary = new("gamesHub.tabLibrary", "Library");
+        public static readonly LocString TabProfile = new("gamesHub.tabProfile", "Profile");
+        public static readonly LocString JustAdded = new("gamesHub.justAdded", "Just Added");
+        public static readonly LocString TopThisWeek = new("gamesHub.topThisWeek", "Top This Week");
+        public static readonly LocPlural BrowseAll = new("gamesHub.browseAll", "Browse {0} game", "Browse all {0} games");
+        public static readonly LocString NewGame = new("gamesHub.newGame", "New game");
+        public static readonly LocString New = new("gamesHub.new", "New");
+        public static readonly LocString Today = new("gamesHub.today", "Today");
+        public static readonly LocString TodayGame = new("gamesHub.todayGame", "Today: {0}");
+        public static readonly LocString ResetsIn = new("gamesHub.resetsIn", "Resets in {0}");
+        public static readonly LocString BestValue = new("gamesHub.bestValue", "Best {0}");
+        public static readonly LocString StreakValue = new("gamesHub.streakValue", "Streak {0}");
+        public static readonly LocString LevelOf = new("gamesHub.levelOf", "Level {0} of {1}");
+        public static readonly LocString OfTotal = new("gamesHub.ofTotal", "of {0}");
+        public static readonly LocString YouAreRank = new("gamesHub.youAreRank", "You are #{0} this week");
+        public static readonly LocString BeFirst = new("gamesHub.beFirst", "Be the first this week");
+        public static readonly LocString StartRoom = new("gamesHub.startRoom", "Start a room");
+        public static readonly LocString TogetherHint = new("gamesHub.togetherHint", "Host a room for friends, or join one with a code.");
+        public static readonly LocPlural PlayerCount = new("gamesHub.playerCount", "{0} player", "{0} players");
+        public static readonly LocString PlayerRange = new("gamesHub.playerRange", "{0} to {1} players");
+        public static readonly LocString RoomOf = new("gamesHub.roomOf", "{0}'s room");
+        public static readonly LocString Waiting = new("gamesHub.waiting", "Waiting");
+        public static readonly LocString Playing = new("gamesHub.playing", "Playing");
+        public static readonly LocString Sort = new("gamesHub.sort", "Sort");
+        public static readonly LocString SortNewest = new("gamesHub.sortNewest", "Newest");
+        public static readonly LocString SortTitle = new("gamesHub.sortTitle", "A to Z");
+        public static readonly LocString SortRecent = new("gamesHub.sortRecent", "Recently played");
+        public static readonly LocString FilterAll = new("gamesHub.filterAll", "All");
+        public static readonly LocString Period = new("gamesHub.period", "Period");
+        public static readonly LocString StatRanked = new("gamesHub.statRanked", "Ranked");
+        public static readonly LocString YourGames = new("gamesHub.yourGames", "Your games");
+        public static readonly LocString Practice = new("gamesHub.practice", "Practice");
+        public static readonly LocString TourTogetherTitle = new("gamesHub.tourTogetherTitle", "Play together");
+        public static readonly LocString TourTogetherBody = new("gamesHub.tourTogetherBody", "Host a room for Uno, Chess, Mini Golf and more, or join a friend's room with a code.");
+        public static readonly LocString TourLibraryTitle = new("gamesHub.tourLibraryTitle", "Every game in one place");
+        public static readonly LocString TourLibraryBody = new("gamesHub.tourLibraryBody", "Search by name, filter by genre, or sort by newest or recently played.");
+        public static readonly LocString TourProfileTitle = new("gamesHub.tourProfileTitle", "Your profile");
+        public static readonly LocString TourProfileBody = new("gamesHub.tourProfileBody", "Your daily streak, ranks and personal bests live here. Tap to have a look.");
     }
 
     internal static class Stage
