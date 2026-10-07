@@ -8,6 +8,7 @@ using Aetherphone.Apps.Games.Coil;
 using Aetherphone.Apps.Games.Crates;
 using Aetherphone.Apps.Games.Crawler;
 using Aetherphone.Apps.Games.CrystalDrop;
+using Aetherphone.Apps.Games.Delve;
 using Aetherphone.Apps.Games.Doom;
 using Aetherphone.Apps.Games.Drift;
 using Aetherphone.Apps.Games.Flap;
@@ -203,6 +204,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new CrawlerApp(),
             new TrailsApp(),
             new CratesApp(),
+            new DelveApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

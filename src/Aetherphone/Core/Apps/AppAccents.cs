@@ -92,6 +92,7 @@ internal static class AppAccents
         ["crawler"] = AccentRing.Emerald,
         ["trails"] = AccentRing.Orchid,
         ["crates"] = AccentRing.Gold,
+        ["delve"] = AccentRing.Teal,
         ["rolladeck"] = AccentRing.Violet,
         ["hunts"] = AccentRing.Indigo
     }.ToFrozenDictionary();

@@ -1,4 +1,5 @@
 using Aetherphone.Apps.Games.Crates;
+using Aetherphone.Apps.Games.Delve;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
@@ -87,6 +88,7 @@ internal sealed class GamesLibrary
         new("crawler", 2026, 10, 8),
         new("trails", 2026, 10, 8),
         new("crates", 2026, 10, 8),
+        new("delve", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -548,6 +550,8 @@ internal sealed class GamesLibrary
                 return BestStreakAcrossTiers(gameId, out value, out tier);
             case "crates":
                 return StarTotal(stats.TotalStars(gameId), CratesLevels.Count, out value);
+            case "delve":
+                return StarTotal(stats.TotalStars(gameId), DelveLevels.Count, out value);
             default:
                 return RecordKind.None;
         }

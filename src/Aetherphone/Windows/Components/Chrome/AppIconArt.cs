@@ -145,6 +145,9 @@ internal static class AppIconArt
             case "crates":
                 DrawCrates(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "delve":
+                DrawDelve(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -929,6 +932,30 @@ internal static class AppIconArt
         drawList.AddTriangleFilled(arrow + new Vector2(extent * 0.34f, 0f), arrow + new Vector2(0f, -extent * 0.16f),
             arrow + new Vector2(0f, extent * 0.16f), ink);
         drawList.AddLine(arrow - new Vector2(extent * 0.42f, 0f), arrow, ink, extent * 0.1f);
+    }
+
+    private static void DrawDelve(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var handleStart = At(center, extent, -0.86f, 0.86f);
+        var handleEnd = At(center, extent, 0.2f, -0.2f);
+        drawList.AddLine(handleStart, handleEnd, ink, extent * 0.16f);
+        var head = At(center, extent, 0.2f, -0.2f);
+        drawList.PathClear();
+        drawList.PathArcTo(head + new Vector2(-extent * 0.61f, extent * 0.61f), extent * 0.86f,
+            MathF.PI * 1.75f - 0.48f, MathF.PI * 1.75f + 0.48f, 14);
+        drawList.PathStroke(ink, ImDrawFlags.None, extent * 0.2f);
+        var gem = At(center, extent, 0.5f, 0.42f);
+        var half = extent * 0.34f;
+        Span<Vector2> facets = stackalloc Vector2[4]
+        {
+            new(gem.X, gem.Y - half * 1.25f), new(gem.X + half, gem.Y), new(gem.X, gem.Y + half * 1.25f),
+            new(gem.X - half, gem.Y),
+        };
+        FillConvex(drawList, ink, facets);
+        drawList.AddLine(new Vector2(gem.X - half * 0.55f, gem.Y - half * 0.1f),
+            new Vector2(gem.X + half * 0.55f, gem.Y - half * 0.1f), hole, extent * 0.07f);
+        drawList.AddCircleFilled(At(center, extent, -0.62f, -0.7f), extent * 0.09f, ink, 10);
+        drawList.AddCircleFilled(At(center, extent, -0.82f, -0.38f), extent * 0.06f, ink, 8);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)
