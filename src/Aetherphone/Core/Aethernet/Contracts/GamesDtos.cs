@@ -353,3 +353,49 @@ internal sealed record LuckyDrawRoomStateDto(
     string LastKind = "",
     string EndKind = "",
     int WinnerSeat = -1);
+
+internal sealed record MiniGolfPlayerDto(
+    string UserId = "",
+    string DisplayName = "",
+    int Seat = 0,
+    bool Away = false,
+    bool Left = false,
+    bool InRound = false,
+    int Wins = 0,
+    int Missed = 0,
+    int[]? Strokes = null,
+    int Total = 0,
+    int Place = 0);
+
+internal sealed record MiniGolfShotDto(
+    int Seat = -1,
+    int Hole = 0,
+    int Strokes = 0,
+    long ClockMs = 0,
+    int[]? Path = null,
+    int[]? Marks = null,
+    string Result = "",
+    bool PickedUp = false,
+    bool Timed = false,
+    float RestX = 0f,
+    float RestY = 0f);
+
+internal sealed record MiniGolfRoomStateDto(
+    long RoundIndex = 0,
+    string HostUserId = "",
+    MiniGolfPlayerDto[]? Players = null,
+    int Holes = 18,
+    int Hole = 0,
+    int TurnSeat = -1,
+    int HoleStrokes = 0,
+    float BallX = 0f,
+    float BallY = 0f,
+    long MillEpochUnixMs = 0,
+    MiniGolfShotDto? LastShot = null,
+    int ShotCount = 0,
+    int TurnSeconds = 0,
+    int ActionCount = 0,
+    int LastSeat = -1,
+    string LastKind = "",
+    string EndKind = "",
+    int WinnerSeat = -1);

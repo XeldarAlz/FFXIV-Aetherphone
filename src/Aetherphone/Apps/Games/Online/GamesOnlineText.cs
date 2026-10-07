@@ -36,6 +36,11 @@ internal static class GamesOnlineText
             return L.Games.OnlineCrater;
         }
 
+        if (string.Equals(gameKind, Core.Games.GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
+        {
+            return L.MiniGolf.Title;
+        }
+
         return L.Games.OnlineUno;
     }
 

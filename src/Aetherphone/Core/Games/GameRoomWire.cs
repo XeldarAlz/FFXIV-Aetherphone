@@ -100,6 +100,46 @@ internal static class GameRoomWire
 
     public const int CraterTicksPerSecond = 120;
 
+    public const string MiniGolfKind = "games.minigolf";
+
+    public const string MiniGolfEndCourse = "course";
+
+    public const string MiniGolfEndDesertion = "desertion";
+
+    public const string MiniGolfResultRest = "rest";
+
+    public const string MiniGolfResultHoled = "holed";
+
+    public const string MiniGolfResultWater = "water";
+
+    public const string MiniGolfResultOut = "out";
+
+    public const string MiniGolfResultPicked = "picked";
+
+    public const int MiniGolfMarkWall = 1;
+
+    public const int MiniGolfMarkPost = 2;
+
+    public const int MiniGolfMarkMill = 3;
+
+    public const int MiniGolfMarkSand = 4;
+
+    public const int MiniGolfMarkTunnel = 5;
+
+    public const int MiniGolfMarkSplash = 6;
+
+    public const int MiniGolfMarkOut = 7;
+
+    public const int MiniGolfMarkLipOut = 8;
+
+    public const int MiniGolfMarkDrop = 9;
+
+    public const int MiniGolfPathScale = 1000;
+
+    public const int MiniGolfSamplesPerSecond = 30;
+
+    public const int MiniGolfMaxStrokes = 10;
+
     public const int ConnectFourColumns = 7;
 
     public const int ConnectFourRows = 6;

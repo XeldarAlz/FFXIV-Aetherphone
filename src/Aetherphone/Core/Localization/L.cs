@@ -8295,6 +8295,11 @@ internal static class L
         public static readonly LocString OnlineCraterWin = new("games.onlineCraterWin", "{0}'s moogles are the last ones standing!");
         public static readonly LocString OnlineCraterDraw = new("games.onlineCraterDraw", "Draw, no moogle is left standing");
         public static readonly LocString OnlineCraterControls = new("games.onlineCraterControls", "A and D walk, drag or arrows aim, hold Space or the button to fire");
+        public static readonly LocString OnlineMiniGolfHostHint = new("games.onlineMiniGolfHostHint", "Two to four players, 30 seconds a stroke");
+        public static readonly LocString OnlineMiniGolfWin = new("games.onlineMiniGolfWin", "{0} wins the round in {1} strokes!");
+        public static readonly LocString OnlineMiniGolfTie = new("games.onlineMiniGolfTie", "A tie for first at {0} strokes!");
+        public static readonly LocString OnlineMiniGolfCourse = new("games.onlineMiniGolfCourse", "Course");
+        public static readonly LocString OnlineMiniGolfAimHint = new("games.onlineMiniGolfAimHint", "Drag back from the ball and let go to putt");
     }
 
     internal static class GamesHub

@@ -35,7 +35,7 @@ internal sealed class OnlineHub
 
     private static readonly string[] HostIds =
         ["games.host.uno", "games.host.chess", "games.host.pool", "games.host.connectfour", "games.host.broadside",
-            "games.host.luckydraw", "games.host.crater"];
+            "games.host.luckydraw", "games.host.crater", "games.host.minigolf"];
 
     private readonly GameRoomsStore store;
     private readonly Action<string, string> openRoom;
@@ -197,6 +197,11 @@ internal sealed class OnlineHub
         if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
         {
             return Loc.T(L.Games.OnlineCraterHostHint);
+        }
+
+        if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
+        {
+            return Loc.T(L.Games.OnlineMiniGolfHostHint);
         }
 
         if (unoHint.Length == 0)

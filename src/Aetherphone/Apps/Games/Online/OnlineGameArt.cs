@@ -3,6 +3,7 @@ using Aetherphone.Apps.Games.Crater;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.Framework.Cards;
 using Aetherphone.Apps.Games.LuckyDraw;
+using Aetherphone.Apps.Games.MiniGolf;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
@@ -17,6 +18,7 @@ internal static class OnlineGameArt
 {
     private const int UnoMaxPlayers = 6;
     private const int LuckyDrawMaxPlayers = 6;
+    private const int MiniGolfMaxPlayers = 4;
     private const int DuelMaxPlayers = 2;
     private const float UnoFanAngle = 0.30f;
     private const float LuckyFanAngle = 0.26f;
@@ -27,6 +29,7 @@ internal static class OnlineGameArt
         GameRoomWire.BroadsideKind,
         GameRoomWire.LuckyDrawKind,
         GameRoomWire.CraterKind,
+        GameRoomWire.MiniGolfKind,
     };
 
     private static readonly Vector4 BallInk = new(0.09f, 0.09f, 0.11f, 1f);
@@ -66,6 +69,11 @@ internal static class OnlineGameArt
             return "crater";
         }
 
+        if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
+        {
+            return OnlineMiniGolfTable.AccentId;
+        }
+
         return string.Equals(kind, GameRoomWire.ConnectFourKind, StringComparison.Ordinal) ? "connectfour" : "uno";
     }
 
@@ -81,6 +89,11 @@ internal static class OnlineGameArt
         if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
         {
             return GameRoomWire.CraterMaxPlayers;
+        }
+
+        if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
+        {
+            return MiniGolfMaxPlayers;
         }
 
         return string.Equals(kind, GameRoomWire.UnoKind, StringComparison.Ordinal) ? UnoMaxPlayers : DuelMaxPlayers;
@@ -128,7 +141,31 @@ internal static class OnlineGameArt
             return;
         }
 
+        if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
+        {
+            DrawGreenMedallion(drawList, center, size);
+            return;
+        }
+
         DrawUnoFan(drawList, center, size, scale);
+    }
+
+    private static void DrawGreenMedallion(ImDrawListPtr drawList, Vector2 center, float size)
+    {
+        var half = size * 0.46f;
+        drawList.AddCircleFilled(center + new Vector2(0f, half * 0.14f), half, ImGui.GetColorU32(Shadow), 48);
+        Squircle.FillVerticalGradient(drawList, center - new Vector2(half, half), center + new Vector2(half, half),
+            size * 0.16f, ImGui.GetColorU32(MiniGolfRenderer.Fairway), ImGui.GetColorU32(MiniGolfRenderer.Grass));
+        var cup = center + new Vector2(size * 0.14f, -size * 0.04f);
+        var cupRadius = size * 0.1f;
+        drawList.AddCircleFilled(cup, cupRadius * 1.2f, ImGui.GetColorU32(White with { W = 0.5f }), 20);
+        drawList.AddCircleFilled(cup, cupRadius, ImGui.GetColorU32(BallInk), 20);
+        var top = cup - new Vector2(0f, size * 0.32f);
+        drawList.AddLine(cup, top, ImGui.GetColorU32(White), MathF.Max(1.5f, size * 0.03f));
+        drawList.AddTriangleFilled(top, top + new Vector2(size * 0.2f, size * 0.07f), top + new Vector2(0f, size * 0.14f),
+            ImGui.GetColorU32(Accent(GameRoomWire.MiniGolfKind)));
+        MiniGolfRenderer.DrawBall(drawList, center + new Vector2(-size * 0.18f, size * 0.2f), size * 0.1f,
+            Accent(GameRoomWire.MiniGolfKind) with { W = 0f }, 1f);
     }
 
     private static void DrawBroadsideMedallion(ImDrawListPtr drawList, Vector2 center, float size, float scale)

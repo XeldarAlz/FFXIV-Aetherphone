@@ -1,5 +1,6 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -104,49 +105,66 @@ internal static class MiniGolfRenderer
     {
         var hole = board.Hole;
         var world = board.World;
-        Span<Vector2> corners = stackalloc Vector2[4];
         for (var index = 0; index < board.MillCount; index++)
         {
-            var mill = hole.Mills[index];
-            var body = board.MillBody(index);
-            var angle = world.RenderAngle(body);
-            var axis = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-            var side = new Vector2(-axis.Y, axis.X);
-            var hub = camera.ToScreen(mill.Hub);
-            var reach = camera.Px(mill.Reach);
-            var thickness = camera.Px(MiniGolfBoard.MillThickness);
-            var shadow = new Vector2(0f, camera.Px(0.1f));
-            corners[0] = hub - axis * reach - side * thickness + shadow;
-            corners[1] = hub + axis * reach - side * thickness + shadow;
-            corners[2] = hub + axis * reach + side * thickness + shadow;
-            corners[3] = hub - axis * reach + side * thickness + shadow;
-            drawList.AddConvexPolyFilled(ref corners[0], corners.Length, ImGui.GetColorU32(Shadow with { W = 0.3f * alpha }));
-            for (var blade = -1; blade <= 1; blade += 2)
-            {
-                var tip = hub + axis * reach * blade;
-                var root = hub + axis * reach * 0.18f * blade;
-                corners[0] = root - side * thickness * 1.6f;
-                corners[1] = tip - side * thickness * 1.6f;
-                corners[2] = tip + side * thickness * 1.6f;
-                corners[3] = root + side * thickness * 1.6f;
-                drawList.AddConvexPolyFilled(ref corners[0], corners.Length, ImGui.GetColorU32(White with { W = 0.92f * alpha }));
-                drawList.AddPolyline(ref corners[0], corners.Length, ImGui.GetColorU32(Wood with { W = alpha }),
-                    ImDrawFlags.Closed, MathF.Max(1f, thickness * 0.45f));
-                for (var slat = 1; slat < 4; slat++)
-                {
-                    var at = Vector2.Lerp(root, tip, slat / 4f);
-                    drawList.AddLine(at - side * thickness * 1.6f, at + side * thickness * 1.6f,
-                        ImGui.GetColorU32(Wood with { W = alpha }), MathF.Max(1f, thickness * 0.3f));
-                }
-            }
-
-            var roof = camera.Px(0.24f);
-            drawList.AddRectFilled(hub - new Vector2(roof), hub + new Vector2(roof), ImGui.GetColorU32(Roof with { W = alpha }),
-                roof * 0.2f);
-            drawList.AddLine(hub - new Vector2(roof, 0f), hub + new Vector2(roof, 0f),
-                ImGui.GetColorU32(GamePalette.Darken(Roof, 0.3f) with { W = alpha }), MathF.Max(1f, roof * 0.18f));
-            drawList.AddCircleFilled(hub, roof * 0.35f, ImGui.GetColorU32(Wood with { W = alpha }), 12);
+            DrawMill(drawList, in camera, hole.Mills[index], world.RenderAngle(board.MillBody(index)), alpha);
         }
+    }
+
+    public static void DrawMill(ImDrawListPtr drawList, in Camera2D camera, in GolfMill mill, float angle, float alpha)
+    {
+        Span<Vector2> corners = stackalloc Vector2[4];
+        var axis = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+        var side = new Vector2(-axis.Y, axis.X);
+        var hub = camera.ToScreen(mill.Hub);
+        var reach = camera.Px(mill.Reach);
+        var thickness = camera.Px(MiniGolfBoard.MillThickness);
+        var shadow = new Vector2(0f, camera.Px(0.1f));
+        corners[0] = hub - axis * reach - side * thickness + shadow;
+        corners[1] = hub + axis * reach - side * thickness + shadow;
+        corners[2] = hub + axis * reach + side * thickness + shadow;
+        corners[3] = hub - axis * reach + side * thickness + shadow;
+        drawList.AddConvexPolyFilled(ref corners[0], corners.Length, ImGui.GetColorU32(Shadow with { W = 0.3f * alpha }));
+        for (var blade = -1; blade <= 1; blade += 2)
+        {
+            var tip = hub + axis * reach * blade;
+            var root = hub + axis * reach * 0.18f * blade;
+            corners[0] = root - side * thickness * 1.6f;
+            corners[1] = tip - side * thickness * 1.6f;
+            corners[2] = tip + side * thickness * 1.6f;
+            corners[3] = root + side * thickness * 1.6f;
+            drawList.AddConvexPolyFilled(ref corners[0], corners.Length, ImGui.GetColorU32(White with { W = 0.92f * alpha }));
+            drawList.AddPolyline(ref corners[0], corners.Length, ImGui.GetColorU32(Wood with { W = alpha }),
+                ImDrawFlags.Closed, MathF.Max(1f, thickness * 0.45f));
+            for (var slat = 1; slat < 4; slat++)
+            {
+                var at = Vector2.Lerp(root, tip, slat / 4f);
+                drawList.AddLine(at - side * thickness * 1.6f, at + side * thickness * 1.6f,
+                    ImGui.GetColorU32(Wood with { W = alpha }), MathF.Max(1f, thickness * 0.3f));
+            }
+        }
+
+        var roof = camera.Px(0.24f);
+        drawList.AddRectFilled(hub - new Vector2(roof), hub + new Vector2(roof), ImGui.GetColorU32(Roof with { W = alpha }),
+            roof * 0.2f);
+        drawList.AddLine(hub - new Vector2(roof, 0f), hub + new Vector2(roof, 0f),
+            ImGui.GetColorU32(GamePalette.Darken(Roof, 0.3f) with { W = alpha }), MathF.Max(1f, roof * 0.18f));
+        drawList.AddCircleFilled(hub, roof * 0.35f, ImGui.GetColorU32(Wood with { W = alpha }), 12);
+    }
+
+    public static void DrawSinking(ImDrawListPtr drawList, in Camera2D camera, Vector2 from, Vector2 cup, float progress,
+        Vector4 band)
+    {
+        var eased = Easing.EaseInCubic(progress);
+        var radius = camera.Px(MiniGolfBoard.BallRadius);
+        DrawBall(drawList, camera.ToScreen(Vector2.Lerp(from, cup, eased)), radius * (1f - 0.55f * eased), band,
+            1f - 0.6f * eased);
+    }
+
+    public static void DrawDrowning(ImDrawListPtr drawList, in Camera2D camera, Vector2 at, float progress, Vector4 band)
+    {
+        DrawBall(drawList, camera.ToScreen(at), camera.Px(MiniGolfBoard.BallRadius) * (1f - progress), band,
+            1f - progress);
     }
 
     public static void DrawCup(ImDrawListPtr drawList, in Camera2D camera, Vector2 cup, Vector2 ball, Vector4 flag,

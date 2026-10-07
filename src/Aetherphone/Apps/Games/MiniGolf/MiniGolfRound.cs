@@ -48,6 +48,12 @@ internal sealed class MiniGolfRound
         strokes[Slot(Player, Hole)] = Math.Max(1, count);
     }
 
+    public void Set(int player, int hole, int count)
+    {
+        strokes[Slot(Math.Clamp(player, 0, MaxPlayers - 1), Math.Clamp(hole, 0, MiniGolfCourse.HoleCount - 1))] =
+            Math.Max(0, count);
+    }
+
     public RoundStep Advance()
     {
         if (Player + 1 < Players)
