@@ -273,6 +273,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
         threadView.OnAppClosed();
         postSheet.Close();
         threadSheet.Close();
+        commentSheet.Close();
         profileMenu.Close();
         photoSheet.Close();
         stories.Close();
@@ -360,6 +361,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
         DrainPostNotices();
         DrawPostSheet(screen);
         DrawThreadSheet(screen);
+        DrawCommentSheet(screen);
         DrawProfileMenu(screen);
         DrawPhotoSheet(screen);
         toast.Draw(screen, ScreenToastStyle.From(ui));

@@ -19,7 +19,17 @@ internal sealed partial class VelvetShell
     private static readonly TextStyle CommentBodyStyle = TextStyles.Subheadline;
     private const float CommentHeadHeight = 18f;
     private const float CommentPadY = 10f;
-    private const float CommentActionWidth = 44f;
+    private const float CommentActionWidth = 40f;
+    private const float CommentHeartSize = 16f;
+    private const float CommentHeartHitRadius = 14f;
+    private const float CommentCountGap = 3f;
+
+    private static readonly TextStyle CommentCountStyle = TextStyles.Caption1;
+
+    private readonly ActionSheet commentSheet = new();
+    private readonly ActionSheet.Item[] commentSheetItems = new ActionSheet.Item[1];
+    private string commentSheetCommentId = string.Empty;
+    private bool commentSheetMine;
 
     private string commentsPostId = string.Empty;
     private string commentDraft = string.Empty;
@@ -120,50 +130,23 @@ internal sealed partial class VelvetShell
 
             var actionsY = imageRect.Max.Y + 22f * scale;
             var liked = post.MyReaction >= 0;
-            var heartCenter = new Vector2(innerX + 13f * scale, actionsY);
-            if (VIcon.Button(heartCenter, 15f * scale, liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
-                    VIcon.CardAction, liked ? VelvetTheme.Rose : VelvetTheme.BodyInk, Loc.T(L.Velvet.Like)))
+            var actionX = innerX + CardActionInset * scale - VIcon.CardAction * scale * 0.5f;
+            var likeTap = DrawCardAction(drawList, ref actionX, actionsY,
+                liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
+                liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk, post.TotalReactions, Loc.T(L.Velvet.Like),
+                Loc.T(L.Velvet.LikesTitle));
+            if (likeTap == CardActionTap.Icon)
             {
                 store.ToggleReaction(post, 0);
             }
-
-            var actionCursorX = heartCenter.X + 20f * scale;
-            if (post.TotalReactions > 0)
+            else if (likeTap == CardActionTap.Count)
             {
-                var likeText = post.TotalReactions.ToString(Loc.Culture);
-                var likeSize = Typography.Measure(likeText, TextStyles.Callout);
-                var likePos = new Vector2(actionCursorX, actionsY - 8f * scale);
-                var likeHovered = UiInteract.Hover(likePos, likePos + likeSize);
-                Typography.Draw(likePos, likeText, likeHovered ? VelvetTheme.RoseInk : VelvetTheme.BodyInk,
-                    TextStyles.Callout);
-                if (likeHovered)
-                {
-                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                }
-
-                if (UiInteract.Click(likePos, likePos + likeSize, likeHovered))
-                {
-                    OpenLikers(post.Id);
-                }
-
-                actionCursorX += likeSize.X + 16f * scale;
-            }
-            else
-            {
-                actionCursorX += 6f * scale;
+                OpenLikers(post.Id);
             }
 
-            var commentCenter = new Vector2(actionCursorX + 13f * scale, actionsY);
-            PhoneIcon.Draw(drawList, commentCenter, PhoneIcons.MessageCircle, VelvetTheme.BodyInk,
-                VIcon.CardAction * scale);
-            var actionsRight = commentCenter.X + 20f * scale;
-            if (post.CommentCount > 0)
-            {
-                var commentText = post.CommentCount.ToString(Loc.Culture);
-                Typography.Draw(new Vector2(actionsRight, actionsY - 8f * scale), commentText, VelvetTheme.BodyInk,
-                    TextStyles.Callout);
-                actionsRight += Typography.Measure(commentText, TextStyles.Callout).X;
-            }
+            DrawCardAction(drawList, ref actionX, actionsY, PhoneIcons.MessageCircle, VelvetTheme.TitleInk,
+                post.CommentCount, Loc.T(L.Velvet.Comments));
+            var actionsRight = actionX;
 
             var trailingCenter = new Vector2(origin.X + width - pad - 4f * scale, actionsY);
             if (photos.Length > 1)
@@ -176,8 +159,8 @@ internal sealed partial class VelvetShell
             }
 
             var trailingRadius = 14f * scale;
-            if (VIcon.Button(trailingCenter, trailingRadius, PhoneIcons.Dots, VIcon.Overflow,
-                    VelvetTheme.BodyInk, Loc.T(L.Velvet.More)))
+            if (VIcon.Plain(trailingCenter, trailingRadius, PhoneIcons.Dots, VIcon.Overflow,
+                    VelvetTheme.TitleInk, Loc.T(L.Velvet.More)))
             {
                 OpenPostSheet(post, false);
             }
@@ -356,31 +339,78 @@ internal sealed partial class VelvetShell
             OpenProfile(comment.AuthorId);
         }
 
-        var trailingX = cell.Bounds.Max.X - pad;
+        var heartCenter = new Vector2(cell.Bounds.Max.X - pad - CommentHeartSize * 0.5f * scale,
+            origin.Y + CommentHeadHeight * 0.5f * scale);
+        DrawCommentHeart(drawList, comment, heartCenter);
         var mine = store.Me is { } me && me.UserId == comment.AuthorId;
-        if (mine || viewerOwnsPost)
+        if ((mine || viewerOwnsPost) && UiInteract.Hover(cell.Bounds.Min, cell.Bounds.Max)
+            && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
-            if (VIcon.Button(new Vector2(trailingX - 4f * scale, origin.Y + 8f * scale), 10f * scale, PhoneIcons.X,
-                    VIcon.Small, VelvetTheme.MutedInk))
-            {
-                if (mine)
-                {
-                    AskDeleteComment(commentsPostId, comment.Id);
-                }
-                else
-                {
-                    AskRemoveComment(commentsPostId, comment.Id);
-                }
-            }
-        }
-
-        if (CommentHeart.Draw(ui, new Vector2(trailingX + 3f * scale, origin.Y + 30f * scale), comment.Liked,
-                comment.LikeCount, VelvetTheme.MutedInk, VelvetTheme.MutedInk, Loc.T(L.Velvet.Like)))
-        {
-            store.ToggleCommentLike(comment);
+            OpenCommentSheet(comment.Id, mine);
         }
 
         FeedCell.End(drawList, cell, VelvetTheme.Hairline);
+    }
+
+    private void DrawCommentHeart(ImDrawListPtr drawList, VelvetCommentDto comment, Vector2 center)
+    {
+        var scale = UiScale.Current;
+        var hit = new Vector2(CommentHeartHitRadius * scale, CommentHeartHitRadius * scale);
+        var hovered = UiInteract.Hover(center - hit, center + hit);
+        var ink = comment.Liked ? VelvetInk.Shared.LikeRed : hovered ? VelvetTheme.TitleInk : VelvetTheme.MutedInk;
+        PhoneIcon.Draw(drawList, center, comment.Liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, ink,
+            CommentHeartSize * scale);
+        if (comment.LikeCount > 0)
+        {
+            var count = CountText.Compact(comment.LikeCount);
+            var size = Typography.Measure(count, CommentCountStyle);
+            Typography.Draw(drawList,
+                new Vector2(center.X - size.X * 0.5f, center.Y + CommentHeartSize * 0.5f * scale + CommentCountGap * scale),
+                count, VelvetTheme.MutedInk, CommentCountStyle);
+        }
+
+        HoverTooltip.Show(new Rect(center - hit, center + hit), Loc.T(L.Velvet.Like), HoverLabelSide.Above);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(center - hit, center + hit, hovered))
+        {
+            store.ToggleCommentLike(comment);
+        }
+    }
+
+    private void OpenCommentSheet(string commentId, bool mine)
+    {
+        commentSheetCommentId = commentId;
+        commentSheetMine = mine;
+        commentSheetItems[0] = new ActionSheet.Item(
+            Loc.T(mine ? L.Velvet.DeleteComment : L.Velvet.RemoveComment), string.Empty, true);
+        commentSheet.Open();
+    }
+
+    private void DrawCommentSheet(Rect screen)
+    {
+        if (!commentSheet.CapturesPointer)
+        {
+            return;
+        }
+
+        var picked = commentSheet.Draw(screen, ActionSheetStyle.From(ui), commentSheetItems, Loc.T(L.Common.Cancel),
+            false);
+        if (picked != 0 || commentSheetCommentId.Length == 0)
+        {
+            return;
+        }
+
+        if (commentSheetMine)
+        {
+            AskDeleteComment(commentsPostId, commentSheetCommentId);
+            return;
+        }
+
+        AskRemoveComment(commentsPostId, commentSheetCommentId);
     }
 
     private void DrawCommentComposer(Rect bar, Rect screen, string postId)

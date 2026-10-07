@@ -3160,6 +3160,8 @@
   "velvet.deleteCommentConfirmMessage": "Bu yorum silinsin mi? Bu işlem geri alınamaz.",
   "velvet.deleteCommentFailed": "Yorum silinemedi",
   "velvet.removeCommentConfirmMessage": "Bu yorum gönderinden kaldırılsın mı? Bu işlem geri alınamaz.",
+  "velvet.deleteComment": "Yorumu sil",
+  "velvet.removeComment": "Yorumu kaldır",
   "velvet.tabMe": "Ben",
   "velvet.settings": "Ayarlar",
   "velvet.onboardIntent": "Seni buraya ne getirdi?",

@@ -3160,6 +3160,8 @@
   "velvet.deleteCommentConfirmMessage": "¿Eliminar este comentario? No se puede deshacer.",
   "velvet.deleteCommentFailed": "No se pudo eliminar el comentario",
   "velvet.removeCommentConfirmMessage": "¿Quitar este comentario de tu publicación? No se puede deshacer.",
+  "velvet.deleteComment": "Eliminar comentario",
+  "velvet.removeComment": "Quitar comentario",
   "velvet.tabMe": "Yo",
   "velvet.settings": "Ajustes",
   "velvet.onboardIntent": "¿Qué te trae por aquí?",

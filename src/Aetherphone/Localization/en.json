@@ -3160,6 +3160,8 @@
   "velvet.deleteCommentConfirmMessage": "Delete this comment? This can't be undone.",
   "velvet.deleteCommentFailed": "Couldn't delete the comment",
   "velvet.removeCommentConfirmMessage": "Remove this comment from your post? This can't be undone.",
+  "velvet.deleteComment": "Delete comment",
+  "velvet.removeComment": "Remove comment",
   "velvet.tabMe": "Me",
   "velvet.settings": "Settings",
   "velvet.onboardIntent": "What brings you here?",

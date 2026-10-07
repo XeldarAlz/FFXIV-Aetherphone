@@ -3160,6 +3160,8 @@
   "velvet.deleteCommentConfirmMessage": "Diesen Kommentar löschen? Das kann nicht rückgängig gemacht werden.",
   "velvet.deleteCommentFailed": "Kommentar konnte nicht gelöscht werden",
   "velvet.removeCommentConfirmMessage": "Diesen Kommentar von deinem Beitrag entfernen? Das kann nicht rückgängig gemacht werden.",
+  "velvet.deleteComment": "Kommentar löschen",
+  "velvet.removeComment": "Kommentar entfernen",
   "velvet.tabMe": "Ich",
   "velvet.settings": "Einstellungen",
   "velvet.onboardIntent": "Was führt dich hierher?",
