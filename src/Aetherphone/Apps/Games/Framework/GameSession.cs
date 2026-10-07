@@ -389,6 +389,17 @@ internal sealed class GameSession
         RefreshRank();
     }
 
+    public bool Settle()
+    {
+        if (Finished || State is not (StageFlow.Playing or StageFlow.Paused) || Kind != ScoreKind.Score || Score <= 0)
+        {
+            return false;
+        }
+
+        Finish(new GameOutcome(Score, ScoreKind.Score, string.Empty, false));
+        return true;
+    }
+
     public bool Record(string statId, int value, ScoreKind kind)
     {
         if (statId.Length == 0)
