@@ -19,13 +19,14 @@ public sealed class IntroLayoutTests
     private const float LevelHeight = 25f;
     private const float PlayHeight = 52f;
     private const float LinksHeight = 28f;
+    private const float IconHeight = 72f;
 
     private static IntroBlocks Blocks(float scale, bool daily = true, int hookLines = 3, bool modes = true,
-        bool seats = true, bool levels = true) =>
+        bool seats = true, bool levels = true, bool icon = false) =>
         new(daily ? PillHeight * scale : 0f, TitleHeight * scale, hookLines * HookLineHeight * scale,
             PillHeight * scale, modes ? StripHeight * scale : 0f, seats ? CaptionHeight * scale : 0f,
             seats ? StripHeight * scale : 0f, levels ? LevelHeight * scale : 0f, PlayHeight * scale,
-            LinksHeight * scale);
+            LinksHeight * scale, icon ? IconHeight * scale : 0f);
 
     private static Rect Full(float width, float height, float scale) =>
         new(new Vector2(100f, 40f), new Vector2(100f + width * scale, 40f + height * scale));
@@ -114,6 +115,61 @@ public sealed class IntroLayoutTests
         Assert.True(column.Width > content.Width * 0.5f);
         Assert.True(column.Width < content.Width * 0.6f);
         Assert.Equal(IntroLayout.HookMaxWidth * scale, IntroLayout.HookWidth(column, scale), 3);
+    }
+
+    [Theory]
+    [InlineData(1f)]
+    [InlineData(1.5f)]
+    public void TheIconLeadsTheLandscapeTextColumnAndStillFits(float scale)
+    {
+        var full = Full(LandscapeWidth, LandscapeHeight, scale);
+        var safe = StageLayout.Safe(full, HudStyle.Compact, scale);
+        var layout = IntroLayout.Compute(full, safe, true, Blocks(scale, icon: true), scale);
+        var content = IntroLayout.Content(full, scale);
+
+        Assert.Equal(IconHeight * scale, layout.Icon.Height, 3);
+        Assert.Equal(layout.Icon.Width, layout.Icon.Height, 3);
+        Assert.Equal(layout.TextColumn.Center.X, layout.Icon.Center.X, 3);
+        AssertStack(content, layout.Icon, layout.Daily, layout.Title, layout.Hook, layout.Pills);
+        AssertWithin(layout.TextColumn, layout.Icon, layout.Daily, layout.Title, layout.Hook, layout.Pills);
+        AssertStack(content, layout.Modes, layout.SeatsCaption, layout.Seats, layout.Level, layout.Play, layout.Links);
+    }
+
+    [Fact]
+    public void ThePortraitIconSitsCentredAboveTheStack()
+    {
+        const float scale = 1f;
+        var full = Full(PortraitWidth, PortraitHeight, scale);
+        var safe = StageLayout.Safe(full, HudStyle.Standard, scale);
+        var layout = IntroLayout.Compute(full, safe, false, Blocks(scale, seats: false, icon: true), scale);
+        var crowded = IntroLayout.Compute(full, safe, false, Blocks(scale, icon: true), scale);
+
+        Assert.Equal(IconHeight * scale, layout.Icon.Height, 3);
+        Assert.Equal(full.Center.X, layout.Icon.Center.X, 3);
+        AssertStack(safe, layout.Icon, layout.Daily, layout.Title, layout.Hook, layout.Pills, layout.Modes,
+            layout.Level, layout.Play, layout.Links);
+        var stack = layout.Links.Max.Y - layout.Icon.Min.Y;
+        Assert.Equal(full.Center.Y, layout.Icon.Min.Y + stack * 0.5f, 3);
+        Assert.Equal(IconHeight * scale, crowded.Icon.Height, 3);
+        AssertStack(safe, crowded.Icon, crowded.Daily, crowded.Title, crowded.Hook, crowded.Pills, crowded.Modes,
+            crowded.SeatsCaption, crowded.Seats, crowded.Level, crowded.Play, crowded.Links);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TheIconStepsAsideWhenTheStackWouldOverflow(bool columns)
+    {
+        const float scale = 1f;
+        var full = columns ? Full(LandscapeWidth, LandscapeHeight, scale) : Full(PortraitWidth, 560f, scale);
+        var safe = StageLayout.Safe(full, columns ? HudStyle.Compact : HudStyle.Standard, scale);
+        var crowded = Blocks(scale, hookLines: columns ? 6 : 3, icon: true);
+        var layout = IntroLayout.Compute(full, safe, columns, crowded, scale);
+        var plain = IntroLayout.Compute(full, safe, columns, crowded with { Icon = 0f }, scale);
+
+        Assert.Equal(0f, layout.Icon.Height);
+        Assert.Equal(plain.Title, layout.Title);
+        Assert.Equal(plain.Play, layout.Play);
     }
 
     private static void AssertStack(Rect bounds, params Rect[] items)

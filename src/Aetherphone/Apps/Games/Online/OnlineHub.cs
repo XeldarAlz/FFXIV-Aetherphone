@@ -1,10 +1,12 @@
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.Hub;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -13,52 +15,81 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Online;
 
-// The friends lobby: host a room, type a code, or walk back into a room you are already in. The
-// code IS the door, so this screen owns exactly three verbs and the room screen owns the rest.
 internal sealed class OnlineHub
 {
     private const string SettingsAppId = "settings";
-    private const float HostCardHeight = 84f;
-    private const float HostCardGap = 10f;
-    private const float MedallionRadius = 25f;
-    private const float RoomMedallionRadius = 18f;
-    private const float RoomRowHeight = 64f;
-    private const float HostPillHeight = Button.RegularHeight;
-    private const float HostPillMinWidth = 72f;
-    private const float CardPadding = 16f;
-    private const float TextGap = 14f;
-    private const float JoinGap = 8f;
-    private const float JoinPillMinWidth = 84f;
+    private const string JoinId = "games.join";
+    private const string CodeFieldId = "##gameRoomCode";
+    private const string RetryId = "games.rooms.retry";
+    private const string CardId = "card";
+    private const float RoomCardHeight = 76f;
+    private const float RoomIconSize = 48f;
+    private const float CardPad = 14f;
+    private const float TextGap = 12f;
+    private const float OwnerRadius = 12f;
+    private const float OwnerRing = 2f;
+    private const float OwnerOverhang = 4f;
+    private const float SeatDotSize = 8f;
+    private const float SeatDotGap = 4f;
+    private const float StatusGap = 6f;
     private const float ChevronSize = 13f;
-    private const float LampOffset = 16f;
+    private const float ChevronGap = 8f;
+    private const float CardGap = 12f;
+    private const float HostTileHeight = 132f;
+    private const float HostIconSize = 52f;
+    private const float HostLighten = 0.10f;
+    private const float HostDarken = 0.50f;
+    private const float HostRimAlpha = 0.10f;
+    private const float HostHoverAlpha = 0.06f;
+    private const float HoverFloor = 0.001f;
+    private const float PlayersAlpha = 0.8f;
+    private const float BusyAlpha = 0.5f;
+    private const float SpinnerRadius = 9f;
+    private const float HighlightRest = 0.35f;
+    private const float HighlightPulse = 0.45f;
+    private const float HighlightStroke = 2f;
+    private const float NoticeGlyph = 18f;
+    private const float SkeletonLine = 9f;
+    private const float SkeletonTitleShare = 0.45f;
+    private const float SkeletonSubtitleShare = 0.3f;
+    private const float JoinGap = 8f;
+    private const float JoinMinWidth = 84f;
+    private const int HostColumns = 2;
+    private const int SkeletonRows = 2;
+    private const int MaxSeatDots = 6;
     private const int CodeBufferLength = 16;
+    private const int DiscSegments = 32;
 
-    private static readonly string[] HostIds =
-        ["games.host.uno", "games.host.chess", "games.host.pool", "games.host.connectfour", "games.host.broadside",
-            "games.host.luckydraw", "games.host.crater", "games.host.minigolf"];
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
     private readonly GameRoomsStore store;
     private readonly Action<string, string> openRoom;
+    private readonly Action refreshNow;
     private readonly PullToRefresh refresh = new();
+    private readonly string?[] playerLabels = new string?[OnlineGameArt.Infos.Length];
 
     private string codeBuffer = string.Empty;
     private string inlineReason = string.Empty;
     private string preferredKind = string.Empty;
-    private string unoHint = string.Empty;
+    private string pendingKind = string.Empty;
     private GameRoomCardDto[] labeledRooms = Array.Empty<GameRoomCardDto>();
     private string[] roomTitles = Array.Empty<string>();
     private string[] roomSubtitles = Array.Empty<string>();
+    private string[] roomMonograms = Array.Empty<string>();
     private bool roomsFailed;
+    private int drawnFrame = -1;
 
     public OnlineHub(GameRoomsStore store, Action<string, string> openRoom)
     {
         this.store = store;
         this.openRoom = openRoom;
+        refreshNow = RefreshNow;
     }
 
     public void Reset()
     {
         preferredKind = string.Empty;
+        pendingKind = string.Empty;
         inlineReason = string.Empty;
         codeBuffer = string.Empty;
         roomsFailed = false;
@@ -67,7 +98,7 @@ internal sealed class OnlineHub
 
     public void ResetLabels()
     {
-        unoHint = string.Empty;
+        Array.Clear(playerLabels);
         labeledRooms = Array.Empty<GameRoomCardDto>();
     }
 
@@ -91,6 +122,7 @@ internal sealed class OnlineHub
             return;
         }
 
+        pendingKind = string.Empty;
         if (answer.Granted && answer.Room is not null)
         {
             inlineReason = string.Empty;
@@ -106,59 +138,63 @@ internal sealed class OnlineHub
 
     public void Draw(Rect body, float pull, bool dragging, AppSkin ui, INavigator navigation)
     {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
         if (store.AccountId.Length == 0)
         {
-            if (GamesHubArt.StateScreen(drawList, ui, body, FontAwesomeIcon.UserFriends,
-                    Loc.T(L.GamesHub.SignInTitle), Loc.T(L.Games.OnlineSignIn),
-                    navigation.IsAvailable(SettingsAppId) ? Loc.T(L.GamesHub.OpenSettings) : string.Empty,
-                    "games.together.signin"))
-            {
-                navigation.Open(SettingsAppId);
-            }
-
+            DrawSignedOut(body, ui, navigation);
             return;
         }
 
-        store.EnsureFresh();
-        refresh.Draw(body, pull, dragging, store.LoadingRooms, ui.MutedInk, RefreshNow);
+        RefreshWhenShown();
+        refresh.Draw(body, pull, dragging, store.LoadingRooms, ui.MutedInk, refreshNow);
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth();
         var left = origin.X;
-        var y = origin.Y;
-        GamesHubArt.Section(drawList, ui, left, y, width, Loc.T(L.Games.OnlineHost), string.Empty, string.Empty);
-        y += GamesHubArt.SectionHeight * scale;
-        var kinds = OnlineGameArt.Kinds;
-        for (var index = 0; index < kinds.Length; index++)
-        {
-            y = DrawHostCard(drawList, ui, left, y, width, scale, kinds[index], HostIds[index]) + HostCardGap * scale;
-        }
-
-        y += GamesHubArt.SectionGap * scale - HostCardGap * scale;
-        GamesHubArt.Section(drawList, ui, left, y, width, Loc.T(L.Games.OnlineJoinHeading), string.Empty,
-            string.Empty);
-        y += GamesHubArt.SectionHeight * scale;
+        var y = DrawHeader(drawList, ui, left, origin.Y, width, Loc.T(L.Games.OnlineMyRooms), scale);
+        y = DrawRooms(drawList, ui, left, y, width, scale);
+        y = DrawHeader(drawList, ui, left, y + HubMetrics.SectionGap * scale, width,
+            Loc.T(L.Games.OnlineJoinHeading), scale);
         y = DrawJoinByCode(drawList, ui, left, y, width, scale);
         if (inlineReason.Length > 0)
         {
-            y = DrawNotice(drawList, ui, left, y + Metrics.Space.Md * scale, width, scale,
+            y = DrawNotice(drawList, ui, left, y + Metrics.Space.Md * scale, width,
                 Loc.T(GamesOnlineText.ReasonMessage(inlineReason)), FontAwesomeIcon.ExclamationCircle,
-                ui.Theme.Danger);
+                ui.Theme.Danger, 0f, scale);
         }
 
-        y += GamesHubArt.SectionGap * scale;
-        GamesHubArt.Section(drawList, ui, left, y, width, Loc.T(L.Games.OnlineMyRooms), string.Empty, string.Empty);
-        if (store.LoadingRooms)
-        {
-            LoadingPulse.Spinner(new Vector2(left + width - Metrics.Space.Sm * scale,
-                y + GamesHubArt.SectionHeight * scale * 0.5f), 7f * scale, ui.Accent);
-        }
-
-        y += GamesHubArt.SectionHeight * scale;
-        y = DrawRooms(drawList, ui, left, y, width, scale);
+        y = DrawHeader(drawList, ui, left, y + HubMetrics.SectionGap * scale, width, Loc.T(L.GamesHub.StartRoom),
+            scale);
+        y = DrawHostGrid(drawList, ui, left, y, width, scale);
         ImGui.SetCursorScreenPos(new Vector2(left, y));
         ImGui.Dummy(new Vector2(width, Metrics.Space.Xl * scale));
+    }
+
+    private static void DrawSignedOut(Rect body, AppSkin ui, INavigator navigation)
+    {
+        var title = Loc.T(L.GamesHub.SignInTitle);
+        var hint = Loc.T(L.Games.OnlineSignIn);
+        if (!navigation.IsAvailable(SettingsAppId))
+        {
+            EmptyState.Draw(body, ui, PhoneIcons.Users, title, hint);
+            return;
+        }
+
+        if (EmptyState.Draw(body, ui, PhoneIcons.Users, title, hint, Loc.T(L.GamesHub.OpenSettings)))
+        {
+            navigation.Open(SettingsAppId);
+        }
+    }
+
+    private void RefreshWhenShown()
+    {
+        var frame = ImGui.GetFrameCount();
+        if (frame - drawnFrame > 1)
+        {
+            store.EnsureFresh();
+        }
+
+        drawnFrame = frame;
     }
 
     private void RefreshNow()
@@ -167,141 +203,10 @@ internal sealed class OnlineHub
         store.RefreshNow();
     }
 
-    private string HostHint(string kind)
-    {
-        if (string.Equals(kind, GameRoomWire.ChessKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineChessHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.PoolKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlinePoolHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.ConnectFourKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineConnectFourHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.BroadsideKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineBroadsideHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineLuckyDrawHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineCraterHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineMiniGolfHostHint);
-        }
-
-        if (unoHint.Length == 0)
-        {
-            unoHint = Loc.T(L.Games.OnlineHostHint,
-                OnlineGameArt.MaxPlayers(GameRoomWire.UnoKind).ToString(Loc.Culture));
-        }
-
-        return unoHint;
-    }
-
-    private float DrawHostCard(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale,
-        string kind, string pillId)
-    {
-        var height = HostCardHeight * scale;
-        var rect = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
-        var rounding = Metrics.Radius.Widget * scale;
-        var accent = OnlineGameArt.Accent(kind);
-        var pad = CardPadding * scale;
-        var pillLabel = Loc.T(L.Games.OnlineHostShort);
-        var pillHeight = HostPillHeight * scale;
-        var pillWidth = MathF.Max(GamesHubArt.ButtonWidth(pillLabel, pillHeight), HostPillMinWidth * scale);
-        var pillRect = new Rect(new Vector2(rect.Max.X - pad - pillWidth, rect.Center.Y - pillHeight * 0.5f),
-            new Vector2(rect.Max.X - pad, rect.Center.Y + pillHeight * 0.5f));
-        var overPill = UiInteract.Hover(pillRect.Min, pillRect.Max);
-        var hovered = !overPill && UiInteract.Hover(rect.Min, rect.Max);
-        var enabled = !store.IntentInFlight;
-        ui.Card(drawList, rect.Min, rect.Max, rounding);
-        drawList.PushClipRect(rect.Min, rect.Max, true);
-        var radius = MedallionRadius * scale;
-        var medallion = new Vector2(rect.Min.X + pad + radius, rect.Center.Y);
-        drawList.AddCircleFilled(medallion, radius * 2.6f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.10f)), 48);
-        drawList.PopClipRect();
-        if (hovered && enabled)
-        {
-            Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(ui.HoverTint));
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        if (string.Equals(kind, preferredKind, StringComparison.Ordinal))
-        {
-            Squircle.Stroke(drawList, rect.Min, rect.Max, rounding,
-                ImGui.GetColorU32(Palette.WithAlpha(accent, 0.30f + 0.35f * Pulse.Wave())), 1.5f * scale);
-        }
-
-        if (hovered || overPill)
-        {
-            ProgressRing.Glow(medallion, radius * 1.1f, accent, 0.4f);
-        }
-
-        GamesHubArt.Medallion(drawList, kind, medallion, radius, ui.Palette.BackdropBottom, scale);
-        var textLeft = medallion.X + radius + TextGap * scale;
-        var textWidth = MathF.Max(1f, pillRect.Min.X - Metrics.Space.Md * scale - textLeft);
-        var titleHeight = Typography.LineHeight(TextStyles.Headline);
-        var hintHeight = Typography.LineHeight(TextStyles.Footnote);
-        var textTop = rect.Center.Y - (titleHeight + hintHeight) * 0.5f;
-        Typography.Draw(drawList, new Vector2(textLeft, textTop),
-            Typography.FitText(Loc.T(GamesOnlineText.GameName(kind)), textWidth, TextStyles.Headline), ui.TitleInk,
-            TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(textLeft, textTop + titleHeight),
-            Typography.FitText(HostHint(kind), textWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
-        var pillClicked = Button.Draw(drawList, pillRect, pillLabel, ui.Ink.WithAccent(accent), enabled: enabled,
-            id: pillId);
-        var cardClicked = enabled && !overPill && UiInteract.Click(rect.Min, rect.Max, hovered);
-        if ((pillClicked || cardClicked) && enabled)
-        {
-            inlineReason = string.Empty;
-            preferredKind = kind;
-            store.CreateRoom(kind);
-        }
-
-        return rect.Max.Y;
-    }
-
-    private float DrawJoinByCode(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale)
-    {
-        var height = GlassField.HeightUnits * scale;
-        var label = Loc.T(L.Games.OnlineJoin);
-        var buttonHeight = Button.RegularHeight * scale;
-        var pillWidth = MathF.Max(JoinPillMinWidth * scale, GamesHubArt.ButtonWidth(label, buttonHeight));
-        var field = new Rect(new Vector2(left, top),
-            new Vector2(left + width - pillWidth - JoinGap * scale, top + height));
-        SearchBar.Surface(drawList, field, ControlInk.From(ui.Theme));
-        var submitted = GlassField.Text(field, "##gameRoomCode", Loc.T(L.Games.OnlineJoinHint), ref codeBuffer,
-            ui.Theme, scale, CodeBufferLength, false, ImGuiInputTextFlags.EnterReturnsTrue);
-        var trimmed = codeBuffer.AsSpan().Trim();
-        var ready = trimmed.Length > 0 && !store.IntentInFlight;
-        var buttonTop = top + (height - buttonHeight) * 0.5f;
-        var pillRect = new Rect(new Vector2(field.Max.X + JoinGap * scale, buttonTop),
-            new Vector2(left + width, buttonTop + buttonHeight));
-        var tapped = Button.Draw(drawList, pillRect, label, ui.Ink, enabled: ready, id: "games.join");
-        if ((tapped || submitted) && ready)
-        {
-            inlineReason = string.Empty;
-            store.JoinByCode(trimmed.ToString());
-        }
-
-        GamesHubArt.ReportAnchor("games.join", new Rect(field.Min, pillRect.Max));
-        return top + height;
-    }
+    private static float DrawHeader(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width,
+        string title, float scale) =>
+        top + CardSectionHeader.Draw(drawList, new Vector2(left, top), width, title, ui.TitleInk)
+            + HubMetrics.HeaderGap * scale;
 
     private float DrawRooms(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale)
     {
@@ -313,25 +218,35 @@ internal sealed class OnlineHub
                 return DrawFailure(drawList, ui, left, top, width, scale);
             }
 
-            var message = Loc.T(store.LoadedRooms ? L.Games.OnlineNoRooms : L.Games.OnlineLoading);
-            return DrawNotice(drawList, ui, left, top, width, scale, message, FontAwesomeIcon.DoorOpen, ui.MutedInk);
+            return store.LoadedRooms
+                ? DrawNotice(drawList, ui, left, top, width, Loc.T(L.Games.OnlineNoRooms), FontAwesomeIcon.DoorOpen,
+                    ui.MutedInk, 0f, scale)
+                : DrawSkeleton(drawList, ui, left, top, width, scale);
         }
 
         RefreshRoomLabels(rooms);
-        ImGui.SetCursorScreenPos(new Vector2(left, top));
-        var card = GroupCard.Begin(ui, rooms.Length, RoomRowHeight);
-        card.SeparatorInset = RoomMedallionRadius * 2f + TextGap;
+        var height = RoomCardHeight * scale;
+        var gap = CardGap * scale;
         var entered = -1;
+        var y = top;
         for (var index = 0; index < rooms.Length; index++)
         {
-            if (DrawRoomRow(drawList, ui, card.NextRow(), scale, rooms[index], roomTitles[index],
-                    roomSubtitles[index]))
+            var rect = new Rect(new Vector2(left, y), new Vector2(left + width, y + height));
+            y += height + gap;
+            if (!ImGui.IsRectVisible(rect.Min, rect.Max))
+            {
+                continue;
+            }
+
+            ImGui.PushID(rooms[index].RoomId);
+            if (DrawRoomCard(drawList, ui, rect, rooms[index], index, scale))
             {
                 entered = index;
             }
+
+            ImGui.PopID();
         }
 
-        card.End();
         if (entered >= 0)
         {
             inlineReason = string.Empty;
@@ -339,24 +254,7 @@ internal sealed class OnlineHub
             openRoom(rooms[entered].RoomId, rooms[entered].GameKind);
         }
 
-        return card.Bounds.Max.Y;
-    }
-
-    private float DrawFailure(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale)
-    {
-        var bottom = DrawNotice(drawList, ui, left, top, width, scale, Loc.T(L.Common.LoadFailed),
-            FontAwesomeIcon.ExclamationTriangle, ui.MutedInk);
-        var label = Loc.T(L.Common.Retry);
-        var height = HostPillHeight * scale;
-        var pillWidth = GamesHubArt.ButtonWidth(label, height);
-        var rect = new Rect(new Vector2(left + (width - pillWidth) * 0.5f, bottom + Metrics.Space.Md * scale),
-            new Vector2(left + (width + pillWidth) * 0.5f, bottom + Metrics.Space.Md * scale + height));
-        if (Button.Draw(drawList, rect, label, ui.Ink, enabled: !store.LoadingRooms, id: "games.rooms.retry"))
-        {
-            RefreshNow();
-        }
-
-        return rect.Max.Y;
+        return y - gap;
     }
 
     private void RefreshRoomLabels(GameRoomCardDto[] rooms)
@@ -372,66 +270,345 @@ internal sealed class OnlineHub
         {
             roomTitles = new string[rooms.Length];
             roomSubtitles = new string[rooms.Length];
+            roomMonograms = new string[rooms.Length];
         }
 
         for (var index = 0; index < rooms.Length; index++)
         {
             var room = rooms[index];
-            roomTitles[index] = Loc.T(GamesOnlineText.GameName(room.GameKind)) + " · "
-                                + Loc.T(L.Games.OnlineHostedBy, room.OwnerName);
-            var phase = room.Phase switch
-            {
-                GameRoomWire.PhasePlaying => L.Games.OnlinePhasePlaying,
-                GameRoomWire.PhaseFinished => L.Games.OnlinePhaseFinished,
-                _ => L.Games.OnlinePhaseLobby,
-            };
-            roomSubtitles[index] = Loc.T(L.Games.OnlineSeats, room.SeatedCount.ToString(Loc.Culture),
-                room.MaxSeats.ToString(Loc.Culture)) + " · " + Loc.T(phase);
+            roomTitles[index] = Loc.T(GamesOnlineText.GameName(room.GameKind));
+            roomSubtitles[index] = Loc.T(L.GamesHub.RoomOf, room.OwnerName);
+            roomMonograms[index] = Initials.Of(room.OwnerName);
         }
     }
 
-    private static bool DrawRoomRow(ImDrawListPtr drawList, AppSkin ui, Rect row, float scale, GameRoomCardDto room,
-        string title, string subtitle)
+    private bool DrawRoomCard(ImDrawListPtr drawList, AppSkin ui, Rect rect, GameRoomCardDto room, int labelIndex,
+        float scale)
     {
-        var padding = Metrics.Space.Lg * scale;
-        var hit = new Rect(new Vector2(row.Min.X - padding, row.Min.Y), new Vector2(row.Max.X + padding, row.Max.Y));
-        var hovered = UiInteract.Hover(hit.Min, hit.Max);
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
+        var card = CardPose(rect, hovered, out var hover);
+        var radius = HubMetrics.CardRadius * scale;
+        ui.Card(drawList, card.Min, card.Max, radius);
+        if (hover > HoverFloor)
+        {
+            Squircle.Fill(drawList, card.Min, card.Max, radius,
+                ImGui.GetColorU32(ui.HoverTint with { W = ui.HoverTint.W * hover }));
+        }
+
         if (hovered)
         {
-            drawList.AddRectFilled(hit.Min, hit.Max, ImGui.GetColorU32(ui.HoverWash));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var accent = OnlineGameArt.Accent(room.GameKind);
-        var radius = RoomMedallionRadius * scale;
-        var medallion = new Vector2(row.Min.X + radius, row.Center.Y);
-        GamesHubArt.Medallion(drawList, room.GameKind, medallion, radius, ui.Palette.BackdropBottom, scale);
+        ref readonly var info = ref OnlineGameArt.Info(room.GameKind);
+        var accent = AppAccents.For(info.AccentId);
+        var pad = CardPad * scale;
+        var iconSize = RoomIconSize * scale;
+        var iconMin = new Vector2(card.Min.X + pad, card.Center.Y - iconSize * 0.5f);
+        var iconMax = new Vector2(iconMin.X + iconSize, iconMin.Y + iconSize);
+        GameIconArt.Draw(drawList, info.AccentId, accent, iconMin, iconMax, null, true);
+        DrawOwner(drawList, ui, iconMax, roomMonograms[labelIndex], scale);
         var chevron = ChevronSize * scale;
-        PhoneIcon.Draw(drawList, new Vector2(row.Max.X - chevron * 0.5f, row.Center.Y), PhoneIcons.ChevronRight,
-            ui.MutedInk, chevron);
-        var textLeft = medallion.X + radius + TextGap * scale;
-        var textWidth = MathF.Max(1f, row.Max.X - chevron - Metrics.Space.Sm * scale - textLeft);
-        var titleHeight = Typography.LineHeight(TextStyles.Headline);
-        var subtitleHeight = Typography.LineHeight(TextStyles.Footnote);
-        var textTop = row.Center.Y - (titleHeight + subtitleHeight) * 0.5f;
-        Typography.Draw(drawList, new Vector2(textLeft, textTop),
-            Typography.FitText(title, textWidth, TextStyles.Headline), ui.TitleInk, TextStyles.Headline);
-        var subtitleLeft = textLeft;
-        var subtitleY = textTop + titleHeight;
-        if (room.Phase == GameRoomWire.PhasePlaying)
+        var chevronCenter = new Vector2(card.Max.X - pad - chevron * 0.5f, card.Center.Y);
+        PhoneIcon.Draw(drawList, chevronCenter, PhoneIcons.ChevronRight, ui.MutedInk, chevron);
+        var statusLeft = DrawStatus(drawList, ui, room, chevronCenter.X - chevron * 0.5f - ChevronGap * scale,
+            card.Center.Y, accent, scale);
+        var textLeft = iconMax.X + TextGap * scale;
+        DrawTitlePair(drawList, ui, textLeft, card.Center.Y, MathF.Max(1f, statusLeft - TextGap * scale - textLeft),
+            roomTitles[labelIndex], roomSubtitles[labelIndex]);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
+    }
+
+    private static Rect CardPose(Rect rect, bool hovered, out float hover)
+    {
+        var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+        hover = HoverFx.Amount(CardId, hovered);
+        var press = PressFx.Scale(CardId, pressed, Motion.PressScaleCard);
+        var half = rect.Size * 0.5f * press * (1f + Motion.HoverLiftCard * hover);
+        return new Rect(rect.Center - half, rect.Center + half);
+    }
+
+    private static void DrawOwner(ImDrawListPtr drawList, AppSkin ui, Vector2 iconMax, string monogram, float scale)
+    {
+        var radius = OwnerRadius * scale;
+        var overhang = OwnerOverhang * scale;
+        var center = new Vector2(iconMax.X + overhang - radius, iconMax.Y + overhang - radius);
+        drawList.AddCircleFilled(center, radius + OwnerRing * scale, ImGui.GetColorU32(ui.Palette.BackdropBottom),
+            DiscSegments);
+        AvatarView.Draw(drawList, center, radius, ui.Accent, monogram, TextStyles.FootnoteEmphasized.Scale,
+            AvatarHandle.Disabled, DiscSegments);
+    }
+
+    private static float DrawStatus(ImDrawListPtr drawList, AppSkin ui, GameRoomCardDto room, float right,
+        float centerY, Vector4 accent, float scale)
+    {
+        var playing = room.Phase == GameRoomWire.PhasePlaying;
+        var label = Loc.T(playing ? L.GamesHub.Playing : L.GamesHub.Waiting);
+        var statusWidth = playing ? LivePill.Width(label, scale) : Typography.Measure(label, TextStyles.Footnote).X;
+        var statusHeight = playing ? LivePill.Height(scale) : Typography.LineHeight(TextStyles.Footnote);
+        var seats = Math.Clamp(room.MaxSeats, 0, MaxSeatDots);
+        var dot = SeatDotSize * scale;
+        var dotGap = SeatDotGap * scale;
+        var dotsWidth = seats > 0 ? seats * dot + (seats - 1) * dotGap : 0f;
+        var dotsBand = seats > 0 ? StatusGap * scale + dot : 0f;
+        var top = centerY - (statusHeight + dotsBand) * 0.5f;
+        var statusMin = new Vector2(right - statusWidth, top);
+        if (playing)
         {
-            LivePill.DrawLamp(drawList, new Vector2(textLeft + 5f * scale, subtitleY + subtitleHeight * 0.5f), accent,
-                (float)ImGui.GetTime(), scale);
-            subtitleLeft += LampOffset * scale;
+            LivePill.Draw(drawList, statusMin, label, accent, (float)ImGui.GetTime(), scale);
+        }
+        else
+        {
+            Typography.Draw(drawList, statusMin, label, ui.MutedInk, TextStyles.Footnote);
         }
 
-        Typography.Draw(drawList, new Vector2(subtitleLeft, subtitleY),
-            Typography.FitText(subtitle, MathF.Max(1f, textWidth - (subtitleLeft - textLeft)), TextStyles.Footnote),
-            ui.MutedInk, TextStyles.Footnote);
-        return UiInteract.Click(hit.Min, hit.Max, hovered);
+        var empty = ImGui.GetColorU32(Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary));
+        var filled = ImGui.GetColorU32(accent);
+        var dotCenterY = top + statusHeight + StatusGap * scale + dot * 0.5f;
+        for (var seat = 0; seat < seats; seat++)
+        {
+            var dotCenter = new Vector2(right - dotsWidth + seat * (dot + dotGap) + dot * 0.5f, dotCenterY);
+            drawList.AddCircleFilled(dotCenter, dot * 0.5f, seat < room.SeatedCount ? filled : empty, DiscSegments);
+        }
+
+        return right - MathF.Max(statusWidth, dotsWidth);
+    }
+
+    private static void DrawTitlePair(ImDrawListPtr drawList, AppSkin ui, float left, float centerY, float width,
+        string title, string subtitle)
+    {
+        var titleHeight = Typography.LineHeight(TextStyles.Headline);
+        var subtitleHeight = Typography.LineHeight(TextStyles.Footnote);
+        var top = centerY - (titleHeight + subtitleHeight) * 0.5f;
+        Typography.Draw(drawList, new Vector2(left, top), Typography.FitText(title, width, TextStyles.Headline),
+            ui.TitleInk, TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(left, top + titleHeight),
+            Typography.FitText(subtitle, width, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
+    }
+
+    private static float DrawSkeleton(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width,
+        float scale)
+    {
+        var height = RoomCardHeight * scale;
+        var gap = CardGap * scale;
+        var radius = HubMetrics.CardRadius * scale;
+        var pad = CardPad * scale;
+        var iconSize = RoomIconSize * scale;
+        var line = SkeletonLine * scale;
+        var y = top;
+        for (var index = 0; index < SkeletonRows; index++)
+        {
+            var centerY = y + height * 0.5f;
+            ui.Card(drawList, new Vector2(left, y), new Vector2(left + width, y + height), radius);
+            var iconMin = new Vector2(left + pad, centerY - iconSize * 0.5f);
+            Skeleton.Bar(drawList, iconMin, iconMin + new Vector2(iconSize, iconSize), GameIconArt.Radius(iconSize));
+            var textLeft = iconMin.X + iconSize + TextGap * scale;
+            var textWidth = left + width - pad - textLeft;
+            Skeleton.Bar(drawList, new Vector2(textLeft, centerY - line - StatusGap * scale * 0.5f),
+                new Vector2(textLeft + textWidth * SkeletonTitleShare, centerY - StatusGap * scale * 0.5f),
+                line * 0.5f);
+            Skeleton.Bar(drawList, new Vector2(textLeft, centerY + StatusGap * scale * 0.5f),
+                new Vector2(textLeft + textWidth * SkeletonSubtitleShare, centerY + StatusGap * scale * 0.5f + line),
+                line * 0.5f);
+            y += height + gap;
+        }
+
+        return y - gap;
+    }
+
+    private float DrawFailure(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale)
+    {
+        var label = Loc.T(L.Common.Retry);
+        var buttonWidth = Button.WidthFor(label, ButtonSize.Small);
+        var pad = CardPad * scale;
+        var bottom = DrawNotice(drawList, ui, left, top, width, Loc.T(L.Common.LoadFailed),
+            FontAwesomeIcon.ExclamationTriangle, ui.MutedInk, buttonWidth + TextGap * scale, scale);
+        var buttonHeight = Button.SmallHeight * scale;
+        var centerY = (top + bottom) * 0.5f;
+        var rect = new Rect(new Vector2(left + width - pad - buttonWidth, centerY - buttonHeight * 0.5f),
+            new Vector2(left + width - pad, centerY + buttonHeight * 0.5f));
+        if (Button.Draw(drawList, rect, label, ui.Ink, ButtonStyle.Gray, enabled: !store.LoadingRooms, id: RetryId))
+        {
+            RefreshNow();
+        }
+
+        return bottom;
     }
 
     private static float DrawNotice(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width,
-        float scale, string message, FontAwesomeIcon icon, Vector4 tint) =>
-        GamesHubArt.Notice(drawList, ui, left, top, width, scale, message, icon, tint);
+        string message, FontAwesomeIcon glyph, Vector4 tint, float trailing, float scale)
+    {
+        var pad = CardPad * scale;
+        var slot = RoomIconSize * scale;
+        var textLeft = left + pad + slot + TextGap * scale;
+        var textWidth = MathF.Max(1f, left + width - pad - trailing - textLeft);
+        var block = Typography.MeasureWrappedBlock(message, TextStyles.Subheadline, textWidth);
+        var height = MathF.Max(RoomCardHeight * scale, block.Y + pad * 2f);
+        var max = new Vector2(left + width, top + height);
+        ui.Card(drawList, new Vector2(left, top), max, HubMetrics.CardRadius * scale);
+        var slotCenter = new Vector2(left + pad + slot * 0.5f, top + height * 0.5f);
+        drawList.AddCircleFilled(slotCenter, slot * 0.5f,
+            ImGui.GetColorU32(Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary)), DiscSegments);
+        ProgressRing.CenterIcon(drawList, slotCenter, glyph, tint, NoticeGlyph * scale);
+        Typography.DrawWrappedLeft(new Vector2(textLeft, top + (height - block.Y) * 0.5f), message, ui.MutedInk,
+            TextStyles.Subheadline, textWidth);
+        return max.Y;
+    }
+
+    private float DrawJoinByCode(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale)
+    {
+        var height = GlassField.HeightUnits * scale;
+        var label = Loc.T(L.Games.OnlineJoin);
+        var buttonHeight = Button.RegularHeight * scale;
+        var buttonWidth = MathF.Max(JoinMinWidth * scale, Button.WidthFor(label, ButtonSize.Regular));
+        var field = new Rect(new Vector2(left, top),
+            new Vector2(left + width - buttonWidth - JoinGap * scale, top + height));
+        SearchBar.Surface(drawList, field, ui.Ink);
+        var submitted = GlassField.Text(field, CodeFieldId, Loc.T(L.Games.OnlineJoinHint), ref codeBuffer,
+            ui.Theme, scale, CodeBufferLength, false, ImGuiInputTextFlags.EnterReturnsTrue);
+        var trimmed = codeBuffer.AsSpan().Trim();
+        var ready = trimmed.Length > 0 && !store.IntentInFlight;
+        var buttonTop = top + (height - buttonHeight) * 0.5f;
+        var buttonRect = new Rect(new Vector2(field.Max.X + JoinGap * scale, buttonTop),
+            new Vector2(left + width, buttonTop + buttonHeight));
+        var tapped = Button.Draw(drawList, buttonRect, label, ui.Ink, enabled: ready, id: JoinId);
+        if ((tapped || submitted) && ready)
+        {
+            inlineReason = string.Empty;
+            pendingKind = string.Empty;
+            store.JoinByCode(trimmed.ToString());
+        }
+
+        GamesHubArt.ReportAnchor(JoinId, new Rect(field.Min, buttonRect.Max));
+        return top + height;
+    }
+
+    private float DrawHostGrid(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale)
+    {
+        var busy = store.IntentInFlight;
+        if (!busy)
+        {
+            pendingKind = string.Empty;
+        }
+
+        var gap = CardGap * scale;
+        var tileWidth = HubMetrics.GridTile(width, HostColumns, gap);
+        var tileHeight = HostTileHeightFor(scale);
+        var infos = OnlineGameArt.Infos;
+        var tapped = -1;
+        for (var index = 0; index < infos.Length; index++)
+        {
+            var min = new Vector2(left + index % HostColumns * (tileWidth + gap),
+                top + index / HostColumns * (tileHeight + gap));
+            var rect = new Rect(min, new Vector2(min.X + tileWidth, min.Y + tileHeight));
+            if (!ImGui.IsRectVisible(rect.Min, rect.Max))
+            {
+                continue;
+            }
+
+            ImGui.PushID(infos[index].HostId);
+            if (DrawHostTile(drawList, rect, index, busy, scale))
+            {
+                tapped = index;
+            }
+
+            ImGui.PopID();
+        }
+
+        if (tapped >= 0)
+        {
+            var kind = infos[tapped].Kind;
+            inlineReason = string.Empty;
+            preferredKind = kind;
+            pendingKind = kind;
+            store.CreateRoom(kind);
+        }
+
+        var rows = (infos.Length + HostColumns - 1) / HostColumns;
+        return top + rows * tileHeight + (rows - 1) * gap;
+    }
+
+    private static float HostTileHeightFor(float scale)
+    {
+        var stack = CardPad * 2f * scale + HostIconSize * scale + Metrics.Space.Sm * scale
+                    + Typography.LineHeight(TextStyles.Headline) + Typography.LineHeight(TextStyles.Footnote);
+        return MathF.Max(HostTileHeight * scale, stack);
+    }
+
+    private bool DrawHostTile(ImDrawListPtr drawList, Rect rect, int kindIndex, bool busy, float scale)
+    {
+        ref readonly var info = ref OnlineGameArt.Infos[kindIndex];
+        var pending = busy && string.Equals(info.Kind, pendingKind, StringComparison.Ordinal);
+        var hovered = !busy && UiInteract.Hover(rect.Min, rect.Max);
+        var card = CardPose(rect, hovered, out var hover);
+        var firstVertex = drawList.VtxBuffer.Size;
+        var radius = HubMetrics.CardRadius * scale;
+        var accent = AppAccents.For(info.AccentId);
+        Squircle.FillVerticalGradient(drawList, card.Min, card.Max, radius,
+            ImGui.GetColorU32(Palette.Lighten(accent, HostLighten) with { W = 1f }),
+            ImGui.GetColorU32(Palette.Darken(accent, HostDarken) with { W = 1f }));
+        if (hover > HoverFloor)
+        {
+            Squircle.Fill(drawList, card.Min, card.Max, radius,
+                ImGui.GetColorU32(White with { W = HostHoverAlpha * hover }));
+        }
+
+        Squircle.Stroke(drawList, card.Min, card.Max, radius, ImGui.GetColorU32(White with { W = HostRimAlpha }),
+            Metrics.Stroke.Hairline * scale);
+        if (string.Equals(info.Kind, preferredKind, StringComparison.Ordinal))
+        {
+            Squircle.Stroke(drawList, card.Min, card.Max, radius,
+                ImGui.GetColorU32(White with { W = HighlightRest + HighlightPulse * Pulse.Wave() }),
+                HighlightStroke * scale);
+        }
+
+        var pad = CardPad * scale;
+        var iconSize = HostIconSize * scale;
+        var iconMin = new Vector2(card.Min.X + pad, card.Min.Y + pad);
+        var iconMax = new Vector2(iconMin.X + iconSize, iconMin.Y + iconSize);
+        GameIconArt.Draw(drawList, info.AccentId, accent, iconMin, iconMax, IconAppearance.Default, true);
+        if (pending)
+        {
+            var spinner = SpinnerRadius * scale;
+            LoadingPulse.Spinner(new Vector2(card.Max.X - pad - spinner, card.Min.Y + pad + spinner), spinner, White,
+                1f, drawList);
+        }
+
+        var textWidth = MathF.Max(1f, card.Width - pad * 2f);
+        var playersTop = card.Max.Y - pad - Typography.LineHeight(TextStyles.Footnote);
+        var nameTop = playersTop - Typography.LineHeight(TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(card.Min.X + pad, nameTop),
+            Typography.FitText(Loc.T(GamesOnlineText.GameName(info.Kind)), textWidth, TextStyles.Headline), White,
+            TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(card.Min.X + pad, playersTop),
+            Typography.FitText(PlayersLabel(kindIndex), textWidth, TextStyles.Footnote),
+            White with { W = PlayersAlpha }, TextStyles.Footnote);
+        if (busy && !pending)
+        {
+            LayerCompositor.Fade(drawList, firstVertex, BusyAlpha);
+        }
+
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return !busy && UiInteract.Click(rect.Min, rect.Max, hovered);
+    }
+
+    private string PlayersLabel(int kindIndex)
+    {
+        var label = playerLabels[kindIndex];
+        if (label is not null)
+        {
+            return label;
+        }
+
+        var most = OnlineGameArt.Infos[kindIndex].MaxPlayers;
+        label = most <= OnlineGameArt.MinPlayers
+            ? Loc.Plural(L.GamesHub.PlayerCount, most)
+            : Loc.T(L.GamesHub.PlayerRange, GameNumber.Label(OnlineGameArt.MinPlayers), GameNumber.Label(most));
+        playerLabels[kindIndex] = label;
+        return label;
+    }
 }
