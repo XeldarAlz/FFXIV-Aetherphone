@@ -54,6 +54,22 @@ Aethergram and Velvet brand colours from `BrandAccents.cs`. Keep the `map` and A
 when you add an id or change its accent. An app id with no `map` entry gets no generated pair and
 falls back to the accent tile until one is painted.
 
+## Game icons
+
+Every mini-game and every online room has a painted pair as well, all in the `colour` family. The
+`map` holds the home apps first and the games after them.
+
+- A mini-game's id is the `GameId` its `GameSpec` registers (the class in
+  `src/Aetherphone/Apps/Games/<Game>/`), which is also its key in AppAccents.
+- An online room shows the pair of `OnlineGameArt.AccentId(kind)`
+  (`src/Aetherphone/Apps/Games/Online/OnlineGameArt.cs`). A room for a game that also plays
+  locally reuses that game's pair; the online-only rooms (`uno`, `pool`, `connectfour`) have their own.
+- When you add a game, add its `map` entry in the same change, with the hue of its AppAccents
+  entry, then run `npm run sheet` and compare the 32 px sheet against the other games on the same
+  genre shelf (`GameGenre`). Two games on one shelf must not share a silhouette; grid glyphs are the
+  usual trap (sudoku, nonogram and breakout already use one), which is why Pegfall shows confetti
+  rather than a dot grid.
+
 ## Regenerating one id
 
 Pass ids as arguments to repaint only those:
