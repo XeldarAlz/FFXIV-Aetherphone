@@ -21,15 +21,52 @@ public sealed class PostTextTests
     [Fact]
     public void AFifthLineIsTheLastOneAllowed()
     {
-        Assert.True(PostText.CanBreak("a\nb\nc\nd", 100));
-        Assert.False(PostText.CanBreak("a\nb\nc\nd\ne", 100));
+        Assert.True(PostText.CanBreak("a\nb\nc\nd", 7, 100));
+        Assert.False(PostText.CanBreak("a\nb\nc\nd\ne", 9, 100));
+    }
+
+    [Fact]
+    public void BlankLinesBetweenParagraphsDoNotCountAsLines()
+    {
+        const string text = "a\n\nb\n\nc\n\nd";
+
+        Assert.True(PostText.CanBreak(text, text.Length, 100));
+        Assert.False(PostText.CanBreak(text + "\n\ne", text.Length + 3, 100));
+    }
+
+    [Fact]
+    public void OnlyOneBlankLineFitsBetweenParagraphs()
+    {
+        Assert.False(PostText.CanBreak("a\n\nb", 3, 100));
+        Assert.False(PostText.CanBreak("a\n\nb", 2, 100));
+        Assert.True(PostText.CanBreak("a\nb", 2, 100));
+    }
+
+    [Fact]
+    public void ABlankLineCanStillGoBeforeTheFifthParagraph()
+    {
+        const string text = "a\nb\nc\nd\ne";
+
+        Assert.True(PostText.CanBreak(text, text.Length - 1, 100));
+        Assert.False(PostText.CanBreak(text, text.Length, 100));
     }
 
     [Fact]
     public void ALineBreakNeedsRoomForBothOfItsCharacters()
     {
-        Assert.True(PostText.CanBreak("abcdefgh", 10));
-        Assert.False(PostText.CanBreak("abcdefghi", 10));
+        Assert.True(PostText.CanBreak("abcdefgh", 8, 10));
+        Assert.False(PostText.CanBreak("abcdefghi", 9, 10));
+    }
+
+    [Fact]
+    public void PastedRunsOfBlankLinesCollapseToOne()
+    {
+        var cursor = 6;
+
+        var fitted = PostText.Fit("a\n\n\n\nb", 100, ref cursor);
+
+        Assert.Equal("a\n\nb", fitted);
+        Assert.Equal(4, cursor);
     }
 
     [Fact]
@@ -49,9 +86,9 @@ public sealed class PostTextTests
     {
         var cursor = 0;
 
-        var fitted = PostText.Fit("1\n2\n3\n4\n5\n6\n7", 100, ref cursor);
+        var fitted = PostText.Fit("1\n\n2\n3\n4\n5\n6\n7", 100, ref cursor);
 
-        Assert.Equal("1\n2\n3\n4\n5 6 7", fitted);
+        Assert.Equal("1\n\n2\n3\n4\n5 6 7", fitted);
     }
 
     [Fact]

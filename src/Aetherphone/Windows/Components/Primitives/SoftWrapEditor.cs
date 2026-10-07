@@ -243,7 +243,7 @@ internal sealed class SoftWrapEditor
 
         if (lines == SoftWrapLines.Paragraphs)
         {
-            if (!PostText.CanBreak(text, maxCharacters))
+            if (!PostText.CanBreak(text, Cursor, maxCharacters))
             {
                 data.EventChar = 0;
             }
