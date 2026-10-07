@@ -8,6 +8,11 @@ internal static class AudioOutputFactory
 {
     public static IWavePlayer Create(int desiredLatencyMs = 200)
     {
+        return new RealtimeWavePlayer(CreateDefault(desiredLatencyMs), desiredLatencyMs);
+    }
+
+    private static IWavePlayer CreateDefault(int desiredLatencyMs)
+    {
         try
         {
             return new WasapiOut(AudioClientShareMode.Shared, desiredLatencyMs);
@@ -30,7 +35,8 @@ internal static class AudioOutputFactory
 
         try
         {
-            return new WasapiOut(device, AudioClientShareMode.Shared, true, desiredLatencyMs);
+            return new RealtimeWavePlayer(new WasapiOut(device, AudioClientShareMode.Shared, true, desiredLatencyMs),
+                desiredLatencyMs);
         }
         catch (Exception exception)
         {
