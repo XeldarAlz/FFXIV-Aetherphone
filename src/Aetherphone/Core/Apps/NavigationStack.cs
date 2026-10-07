@@ -351,12 +351,6 @@ internal sealed class NavigationStack : INavigator
         BeginDismiss(leaving, null);
     }
 
-    public void GoHomeSettled()
-    {
-        GoHome();
-        SettleAny();
-    }
-
     public bool Scrub(float coverValue, Vector2 drift)
     {
         if (!scrubbing && !TryBeginScrub())
