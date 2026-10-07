@@ -13,18 +13,22 @@ internal sealed class TerrainTexture : IDisposable
     private readonly ITextureProvider textures;
     private readonly TerrainMask mask;
     private readonly TerrainPainter painter;
+    private readonly ITerrainOverlay? overlay;
     private IDalamudTextureWrap? current;
     private IDalamudTextureWrap? retired;
     private int retiredFrame;
     private int uploadFrame = -1;
     private bool uploadPending;
 
-    public TerrainTexture(ITextureProvider textures, TerrainMask mask, TerrainMaterial material)
+    public TerrainTexture(ITextureProvider textures, TerrainMask mask, TerrainMaterial material,
+        ITerrainOverlay? overlay = null)
     {
         this.textures = textures;
         this.mask = mask;
+        this.overlay = overlay;
         mask.TakeDirty(out _);
         painter = new TerrainPainter(mask, material);
+        PaintOverlay(painter.Whole);
         uploadPending = true;
     }
 
@@ -34,6 +38,7 @@ internal sealed class TerrainTexture : IDisposable
     {
         mask.TakeDirty(out _);
         painter.SetMaterial(material);
+        PaintOverlay(painter.Whole);
         uploadPending = true;
     }
 
@@ -73,9 +78,17 @@ internal sealed class TerrainTexture : IDisposable
             retired = null;
         }
 
-        if (mask.TakeDirty(out var region))
+        var changed = mask.TakeDirty(out var region);
+        if (overlay is not null && overlay.TakeDirty(out var marked))
+        {
+            region = changed ? CellRegion.Union(region, marked) : marked;
+            changed = true;
+        }
+
+        if (changed)
         {
             painter.Paint(region);
+            PaintOverlay(painter.Coverage(region));
             uploadPending = true;
         }
 
@@ -85,6 +98,11 @@ internal sealed class TerrainTexture : IDisposable
         }
 
         Upload(frame);
+    }
+
+    private void PaintOverlay(in CellRegion region)
+    {
+        overlay?.Paint(painter.Canvas, mask.Width, region);
     }
 
     private void Upload(int frame)
