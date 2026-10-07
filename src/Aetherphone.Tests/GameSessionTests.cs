@@ -616,4 +616,136 @@ public sealed class GameSessionTests
         Assert.Equal(12, sink.Last.Value);
         Assert.Equal(GameOutcome.NoStars, session.LevelStars);
     }
+
+    private static GameSpec SeatSpec(int seats = 4, int levels = 0) =>
+        new("crater", new LocString("t.crater", "Crater"), GameGenre.Strategy, kind: ScoreKind.Streak, seats: seats,
+            levelCount: levels);
+
+    [Fact]
+    public void ASoloSpecKeepsOneSeatAndTheStartDefaultsToSolo()
+    {
+        var session = Build(out _, out _);
+        session.Begin(Spec(), new GameStart(0, 5, false, seats: 3));
+
+        session.SelectSeats(2);
+
+        Assert.Equal(1, session.Spec.Seats);
+        Assert.False(session.Spec.HotSeat);
+        Assert.Equal(1, session.Seats);
+        Assert.False(session.HotSeat);
+        Assert.Equal(1, new GameStart(0, 5, false).Seats);
+        Assert.Equal(1, session.Start.Seats);
+    }
+
+    [Fact]
+    public void TheIntroPicksHowManyPlayersShareThePhone()
+    {
+        var session = Build(out _, out _);
+        session.Begin(SeatSpec(), new GameStart(0, 5, false));
+        Assert.Equal(1, session.Seats);
+
+        session.SelectSeats(3);
+        Assert.Equal(3, session.Seats);
+        session.SelectSeats(9);
+        Assert.Equal(4, session.Seats);
+        session.Play();
+        session.SelectSeats(2);
+
+        Assert.Equal(4, session.Seats);
+        Assert.True(session.HotSeat);
+        Assert.True(session.Start.HotSeat);
+        Assert.Equal(4, session.Start.Seats);
+    }
+
+    [Fact]
+    public void AHandoffHoldsTheRunUntilTheNextPlayerIsReady()
+    {
+        var session = Build(out _, out _);
+        session.Begin(SeatSpec(), new GameStart(0, 5, false, seats: 2));
+        Assert.False(session.Handoff(1));
+        session.Play();
+
+        Assert.True(session.Handoff(1));
+        Assert.True(session.HandoffPending);
+        Assert.Equal(1, session.HandoffSeat);
+        session.Tick(1f);
+        Assert.Equal(0f, session.PlaySeconds);
+
+        session.CompleteHandoff();
+        Assert.False(session.HandoffPending);
+        Assert.Equal(1, session.HandoffSeat);
+        session.Tick(0.5f);
+        Assert.Equal(0.5f, session.PlaySeconds);
+
+        Assert.True(session.Handoff(9));
+        Assert.Equal(GameSeats.Max - 1, session.HandoffSeat);
+        session.Finish(GameOutcome.Unranked().WithWinner(0));
+        Assert.False(session.HandoffPending);
+        Assert.False(session.Handoff(0));
+        session.Play();
+        Assert.Equal(GameOutcome.NoSeat, session.HandoffSeat);
+    }
+
+    [Fact]
+    public void UnrankedCompletesTheDailyAndSubmitsNothing()
+    {
+        var session = Build(out var configuration, out var sink);
+        var stats = session.Stats;
+        stats.DailyGameId = "tap";
+        session.Begin(Spec(), new GameStart(0, 5, true));
+        session.Play();
+
+        session.Finish(GameOutcome.Unranked().WithWinner(1).WithStat(new LocString("t.shots", "Shots"), "12"));
+
+        Assert.Equal(StageFlow.Result, session.State);
+        Assert.True(session.Unranked);
+        Assert.True(session.Outcome.IsUnranked);
+        Assert.Equal(1, session.Outcome.WinnerSeat);
+        Assert.Equal(1, session.Outcome.StatCount);
+        Assert.Equal(0, sink.Count);
+        Assert.Empty(configuration.GameStats);
+        Assert.False(session.NewBest);
+        Assert.True(stats.DailyDone);
+        Assert.False(session.CanAdvance);
+    }
+
+    [Fact]
+    public void AHotSeatRunNeverRanksWhateverTheGameFinishesWith()
+    {
+        var session = Build(out var configuration, out var sink);
+        session.Begin(SeatSpec(levels: 10), new GameStart(0, 5, false, seats: 2));
+        session.Play();
+
+        session.Finish(new GameOutcome(0, ScoreKind.Streak, "crater").WithStars(3).WithSecondary("crater.shots", 4));
+
+        Assert.True(session.Unranked);
+        Assert.Equal(0, sink.Count);
+        Assert.Empty(configuration.GameStats);
+        Assert.Equal(0, session.Stats.TotalStars("crater"));
+        Assert.Equal(GameOutcome.NoStars, session.LevelStars);
+        Assert.False(session.CanAdvance);
+
+        var solo = Build(out var soloConfiguration, out var soloSink);
+        solo.Begin(SeatSpec(), new GameStart(0, 5, false));
+        solo.Play();
+        solo.Finish(new GameOutcome(0, ScoreKind.Streak, "crater"));
+
+        Assert.False(solo.Unranked);
+        Assert.Equal(1, soloSink.Count);
+        Assert.Equal(1, soloConfiguration.GameStats[0].Streak);
+    }
+
+    [Fact]
+    public void SeatsCarryOneLocalizedNameAndAColourEach()
+    {
+        Assert.Equal(Loc.T(L.Stage.PlayerName, "2"), GameSeats.Name(1));
+        Assert.Same(GameSeats.Name(1), GameSeats.Name(1));
+        Assert.Equal(Loc.T(L.Stage.PassTo, GameSeats.Name(1)), GameSeats.PassLine(1));
+        Assert.Equal(Loc.T(L.Stage.SeatWins, GameSeats.Name(0)), GameSeats.WinLine(0));
+        Assert.Equal(GameSeats.Name(GameSeats.Max - 1), GameSeats.Name(40));
+        for (var seat = 1; seat < GameSeats.Max; seat++)
+        {
+            Assert.NotEqual(GameSeats.Color(seat - 1), GameSeats.Color(seat));
+        }
+    }
 }

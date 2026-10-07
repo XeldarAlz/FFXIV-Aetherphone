@@ -39,12 +39,13 @@ internal readonly struct GameSpec
     public readonly bool Keyboard;
     public readonly int LevelCount;
     public readonly bool[] LevelModes;
+    public readonly int Seats;
 
     public GameSpec(string id, LocString title, GameGenre genre, LocString? hook = null,
         Backdrop backdrop = Backdrop.Nebula, HudStyle hud = HudStyle.Standard, ScoreKind kind = ScoreKind.Score,
         LocString[]? modes = null, string[]? modeStatIds = null, bool clocked = false, bool countdown = false,
         bool landscape = false, bool keyboard = false, ScoreKind[]? modeKinds = null, bool[]? countdownModes = null,
-        int levelCount = 0, bool[]? levelModes = null)
+        int levelCount = 0, bool[]? levelModes = null, int seats = 1)
     {
         Id = id;
         Title = title;
@@ -63,9 +64,12 @@ internal readonly struct GameSpec
         Keyboard = keyboard;
         LevelCount = Math.Clamp(levelCount, 0, GameStatsStore.MaxLevels);
         LevelModes = levelModes ?? Array.Empty<bool>();
+        Seats = Math.Clamp(seats, 1, GameSeats.Max);
     }
 
     public bool HasModes => Modes.Length > 1;
+
+    public bool HotSeat => Seats > 1;
 
     public bool LevelsFor(int mode) =>
         LevelCount > 0 && (mode < 0 || mode >= LevelModes.Length || LevelModes[mode]);

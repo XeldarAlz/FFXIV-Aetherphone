@@ -32,10 +32,13 @@ internal sealed class StageIntro
     private const float LiftDistance = 14f;
     private const int StackSlots = 7;
     private const string ModeStripId = "stage.mode";
+    private const string SeatStripId = "stage.seats";
     private static readonly TextStyle TagStyle = TextStyles.FootnoteEmphasized;
     private static readonly TextStyle LevelStyle = TextStyles.Title3;
+    private static readonly TextStyle CaptionStyle = TextStyles.Footnote;
 
     private string[] modeLabels = Array.Empty<string>();
+    private string[] seatLabels = Array.Empty<string>();
     private LanguageInfo? modeLanguage;
     private RankText rankText = new();
     private LabelSlot levelLabel;
@@ -50,6 +53,18 @@ internal sealed class StageIntro
         if (modeLabels.Length != spec.Modes.Length)
         {
             modeLabels = spec.Modes.Length == 0 ? Array.Empty<string>() : new string[spec.Modes.Length];
+        }
+
+        var seats = spec.HotSeat ? spec.Seats : 0;
+        if (seatLabels.Length == seats)
+        {
+            return;
+        }
+
+        seatLabels = seats == 0 ? Array.Empty<string>() : new string[seats];
+        for (var seat = 0; seat < seats; seat++)
+        {
+            seatLabels[seat] = GameNumber.Label(seat + 1);
         }
     }
 
@@ -77,6 +92,8 @@ internal sealed class StageIntro
         var dailyHeight = session.Daily ? StagePill.Height * scale : 0f;
         var pillHeight = StagePill.Height * scale;
         var stripHeight = spec.HasModes ? StripHeight * scale : 0f;
+        var seatsHeight = StripHeight * scale;
+        var captionHeight = Typography.LineHeight(CaptionStyle);
         var levelHeight = session.HasLevels ? Typography.LineHeight(LevelStyle) : 0f;
         var playHeight = PlayHeight * scale;
         var leaderboardHeight = Button.Height(ButtonSize.Small) * scale;
@@ -101,6 +118,12 @@ internal sealed class StageIntro
         }
 
         slotCount = StackSlots;
+        if (spec.HotSeat)
+        {
+            stackHeight += gapLg + captionHeight + Metrics.Space.Xs * scale + seatsHeight;
+            slotCount++;
+        }
+
         if (session.HasLevels)
         {
             stackHeight += levelHeight + gapMd;
@@ -153,6 +176,28 @@ internal sealed class StageIntro
             }
 
             top += stripHeight;
+        }
+
+        if (spec.HotSeat)
+        {
+            top += gapLg;
+            var seatsPhase = Phase(slot++);
+            Typography.DrawCentered(drawList, new Vector2(centerX, top + captionHeight * 0.5f + Lift(seatsPhase, scale)),
+                Loc.T(L.Stage.Players), muted with { W = muted.W * seatsPhase }, CaptionStyle);
+            top += captionHeight + Metrics.Space.Xs * scale;
+            if (seatsPhase > 0.5f)
+            {
+                var stripWidth = MathF.Min(safe.Width, StripWidth * scale);
+                var row = new Rect(new Vector2(centerX - stripWidth * 0.5f, top),
+                    new Vector2(centerX + stripWidth * 0.5f, top + seatsHeight));
+                var selected = SegmentStrip.Draw(SeatStripId, row, seatLabels, session.Seats - 1, theme);
+                if (selected != session.Seats - 1)
+                {
+                    session.SelectSeats(selected + 1);
+                }
+            }
+
+            top += seatsHeight;
         }
 
         top += gapXl;
@@ -250,7 +295,7 @@ internal sealed class StageIntro
             ? starsLabel.Get(L.Stage.StarsOf, session.TotalStars, session.LevelCount * GameStatsStore.MaxStars)
             : BestLabel(session);
         var hasRecord = recordValue.Length > 0;
-        var rankLine = rankText.IntroLine;
+        var rankLine = session.HotSeat ? Loc.T(L.Stage.NotRanked) : rankText.IntroLine;
         var recordWidth = hasRecord ? StagePill.Width(recordValue, true, scale) : 0f;
         var rankWidth = StagePill.Width(rankLine, false, scale);
         var gap = hasRecord ? PillGap * scale : 0f;

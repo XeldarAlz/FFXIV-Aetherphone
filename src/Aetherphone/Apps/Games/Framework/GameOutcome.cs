@@ -19,6 +19,7 @@ internal readonly struct GameOutcome
 {
     public const int MaxStats = 4;
     public const int NoStars = -1;
+    public const int NoSeat = -1;
 
     public GameOutcome(int value, ScoreKind kind, string statId, bool won = true)
     {
@@ -53,7 +54,13 @@ internal readonly struct GameOutcome
 
     public int Stars => StarsPlusOne - 1;
 
+    public bool IsUnranked { get; private init; }
+
+    public int WinnerSeat => WinnerSeatPlusOne - 1;
+
     private int StarsPlusOne { get; init; }
+
+    private int WinnerSeatPlusOne { get; init; }
 
     private OutcomeStat FirstStat { get; init; }
 
@@ -67,8 +74,13 @@ internal readonly struct GameOutcome
 
     public bool HasStars => Stars >= 0;
 
+    public bool HasWinner => WinnerSeat >= 0;
+
     public static GameOutcome Drawn(string statId) =>
         new GameOutcome(0, ScoreKind.Streak, statId, false) with { IsDraw = true };
+
+    public static GameOutcome Unranked(bool won = true) =>
+        new GameOutcome(0, ScoreKind.Score, string.Empty, won) with { IsUnranked = true };
 
     public OutcomeStat Stat(int index) => index switch
     {
@@ -100,4 +112,7 @@ internal readonly struct GameOutcome
 
     public GameOutcome WithStars(int stars) =>
         this with { StarsPlusOne = Math.Clamp(stars, 0, GameStatsStore.MaxStars) + 1 };
+
+    public GameOutcome WithWinner(int seat) =>
+        this with { WinnerSeatPlusOne = Math.Clamp(seat, NoSeat, GameSeats.Max - 1) + 1 };
 }

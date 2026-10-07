@@ -8346,6 +8346,11 @@ internal static class L
         public static readonly LocString Retry = new("stage.retry", "Retry");
         public static readonly LocString TotalStars = new("stage.totalStars", "Total stars");
         public static readonly LocString StarsOf = new("stage.starsOf", "{0} / {1}");
+        public static readonly LocString Players = new("stage.players", "Players");
+        public static readonly LocString PlayerName = new("stage.playerName", "Player {0}");
+        public static readonly LocString PassTo = new("stage.passTo", "Pass to {0}");
+        public static readonly LocString TapWhenReady = new("stage.tapWhenReady", "Tap when ready");
+        public static readonly LocString SeatWins = new("stage.seatWins", "{0} wins");
     }
 
     internal static class Leaderboard
