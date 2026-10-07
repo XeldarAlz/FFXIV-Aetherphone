@@ -132,7 +132,7 @@ internal sealed partial class ChirperApp
             using (ImRaii.PushColor(ImGuiCol.Text, ChirperInk.TitleInk))
             using (Plugin.Fonts.Push(ComposeInputStyle.Scale))
             {
-                SoftWrapField.Multiline("##chirpBody", ref draft, MaxPostLength,
+                SoftWrapField.Paragraphs("##chirpBody", ref draft, MaxPostLength,
                     new Vector2(inputWidth, inputHeight), composeWrapWidth, composeMentions);
             }
 
@@ -180,7 +180,7 @@ internal sealed partial class ChirperApp
             {
                 var panel = new Rect(new Vector2(area.Min.X, panelTop),
                     new Vector2(area.Max.X, area.Max.Y - toolbarHeight));
-                composeEmoji.DrawPanel(panel, ui, ref draft, MaxPostLength);
+                composeEmoji.DrawPanel(panel, ui, ref draft, PostText.CharacterBudget(draft, MaxPostLength));
             }
 
             DrawComposeToolbar(area, toolbarHeight);
@@ -191,7 +191,7 @@ internal sealed partial class ChirperApp
     {
         var actionLabel = store.Posting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.ChirpAction);
         var canPost = (!string.IsNullOrWhiteSpace(draft) || composeAttachments.Count > 0)
-            && draft.Length <= MaxPostLength && !store.Posting;
+            && PostText.Weight(draft) <= MaxPostLength && !store.Posting;
         var action = HeaderActionRect(area, actionLabel);
         UiAnchors.Report("chirper.compose.post", action);
         var title = Loc.T(quoteTarget is not null ? L.Chirper.QuoteTitle : L.Chirper.NewChirp);
@@ -294,14 +294,15 @@ internal sealed partial class ChirperApp
             }
         }
 
-        var remaining = MaxPostLength - draft.Length;
+        var weight = PostText.Weight(draft);
+        var remaining = MaxPostLength - weight;
         var ringRadius = ComposeRingRadius * scale;
         var ringCenter = new Vector2(area.Max.X - CellPadX * scale - 13f * scale, centerY);
         var ringColor = remaining < 0 ? ChirperInk.Danger
             : remaining < ComposeWarnRemaining ? ChirperInk.Warning
             : ChirperInk.Accent;
         ProgressRing.Track(ringCenter, ringRadius, ComposeRingStroke * scale, RingTrack);
-        ProgressRing.Fill(ringCenter, ringRadius, ComposeRingStroke * scale, draft.Length / (float)MaxPostLength,
+        ProgressRing.Fill(ringCenter, ringRadius, ComposeRingStroke * scale, weight / (float)MaxPostLength,
             ringColor);
         if (remaining < ComposeWarnRemaining)
         {
