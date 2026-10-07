@@ -8752,6 +8752,18 @@ internal static class L
         public static readonly LocString LongestRide = new("games.trails.longestRide", "Longest ride");
     }
 
+    internal static class Crates
+    {
+        public static readonly LocString Title = new("games.crates.title", "Crates");
+        public static readonly LocString Hook = new("games.crates.hook", "Push every crate onto a glowing target. Crates only move when pushed, so think before you shove.");
+        public static readonly LocString Moves = new("games.crates.moves", "Moves");
+        public static readonly LocString Pushes = new("games.crates.pushes", "Pushes");
+        public static readonly LocString Par = new("games.crates.par", "Par");
+        public static readonly LocString Undos = new("games.crates.undos", "Undos");
+        public static readonly LocString Solved = new("games.crates.solved", "Solved!");
+        public static readonly LocString Perfect = new("games.crates.perfect", "Perfect solve!");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

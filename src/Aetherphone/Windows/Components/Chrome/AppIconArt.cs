@@ -142,6 +142,9 @@ internal static class AppIconArt
             case "trails":
                 DrawTrails(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "crates":
+                DrawCrates(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -905,6 +908,27 @@ internal static class AppIconArt
         drawList.AddCircleFilled(corner, thickness * 0.5f, ink, 12);
         drawList.AddCircleFilled(head, extent * 0.22f, ink, 20);
         drawList.AddCircleFilled(head, extent * 0.08f, hole, 12);
+    }
+
+    private static void DrawCrates(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var rounding = extent * 0.14f;
+        var crateMin = At(center, extent, -0.92f, -0.5f);
+        var crateMax = At(center, extent, 0.22f, 0.64f);
+        drawList.AddRectFilled(crateMin, crateMax, ink, rounding);
+        var inset = new Vector2(extent * 0.17f, extent * 0.17f);
+        var panelMin = crateMin + inset;
+        var panelMax = crateMax - inset;
+        drawList.AddRectFilled(panelMin, panelMax, hole, rounding * 0.5f);
+        drawList.AddLine(panelMin, panelMax, ink, extent * 0.14f);
+        drawList.AddLine(new Vector2(panelMin.X, panelMax.Y), panelMax, ink, extent * 0.06f);
+        var target = At(center, extent, 0.66f, 0.07f);
+        drawList.AddCircle(target, extent * 0.28f, ink, 24, extent * 0.11f);
+        drawList.AddCircleFilled(target, extent * 0.09f, ink, 12);
+        var arrow = At(center, extent, 0.3f, -0.84f);
+        drawList.AddTriangleFilled(arrow + new Vector2(extent * 0.34f, 0f), arrow + new Vector2(0f, -extent * 0.16f),
+            arrow + new Vector2(0f, extent * 0.16f), ink);
+        drawList.AddLine(arrow - new Vector2(extent * 0.42f, 0f), arrow, ink, extent * 0.1f);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)
