@@ -68,9 +68,6 @@ internal sealed class TileRail
         drawList.PushClipRect(row.Min, row.Max, true);
     }
 
-    public void End(ImDrawListPtr drawList, Rect row, float contentWidth, AppSkin ui) =>
-        End(drawList, row, contentWidth, ui, 0f);
-
     public void End(ImDrawListPtr drawList, Rect row, float contentWidth, AppSkin ui, float pageStride)
     {
         drawList.PopClipRect();
