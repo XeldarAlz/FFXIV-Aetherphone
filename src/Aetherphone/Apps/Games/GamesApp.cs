@@ -589,7 +589,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             var drawList = ImGui.GetWindowDrawList();
             var rawSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
             var attentive = GameFocus.Active;
-            chrome.BeginFrame();
             backdrop.Update(rawSeconds, full, ImGui.GetMousePos(), UiInteract.Hover(full.Min, full.Max));
             backdrop.Draw(drawList, full, accent, scale);
             fx.Update(rawSeconds);
@@ -597,6 +596,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             DrawStageGame(drawList, game, full, safe, accent, context.Theme, rawSeconds, attentive);
             fx.Draw(drawList, full, accent);
             DrawStageOverlays(drawList, game, full, accent, context.Theme, rawSeconds, scale);
+            chrome.BeginFrame();
             DrawChrome(drawList, full, context.Theme, landscape, scale);
         }
     }
