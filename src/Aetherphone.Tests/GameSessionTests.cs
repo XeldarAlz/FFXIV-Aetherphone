@@ -733,6 +733,13 @@ public sealed class GameSessionTests
         Assert.False(solo.Unranked);
         Assert.Equal(1, soloSink.Count);
         Assert.Equal(1, soloConfiguration.GameStats[0].Streak);
+
+        var party = Build(out _, out _);
+        party.Begin(new GameSpec("tap", new LocString("t.title", "Tap"), GameGenre.Arcade, seats: 2),
+            new GameStart(0, 5, false, seats: 2));
+        party.Play();
+        party.Report(50);
+        Assert.False(party.BeatingBest);
     }
 
     [Fact]

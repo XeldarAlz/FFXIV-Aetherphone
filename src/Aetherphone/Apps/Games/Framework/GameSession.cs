@@ -94,7 +94,7 @@ internal sealed class GameSession
     public bool CanAdvance => State == StageFlow.Result && HasLevels && LevelStars > 0 && Level < LevelCount;
 
     public bool BeatingBest =>
-        (Kind == ScoreKind.Score || (Kind == ScoreKind.Level && !HasLevels)) && Score > 0 && Score > Best;
+        !HotSeat && (Kind == ScoreKind.Score || (Kind == ScoreKind.Level && !HasLevels)) && Score > 0 && Score > Best;
 
     public int CountdownStep
     {
