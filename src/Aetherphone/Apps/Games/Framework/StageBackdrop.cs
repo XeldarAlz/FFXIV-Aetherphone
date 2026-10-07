@@ -20,7 +20,9 @@ internal sealed class StageBackdrop
     private const float SweepAlpha = 0.08f;
     private const float VignetteFraction = 0.34f;
     private const float VignetteAlpha = 0.38f;
-    private const float PaperVignetteAlpha = 0.10f;
+    private const float SlateGridPitch = 26f;
+    private const float SlateGridAlpha = 0.035f;
+    private const float SlateGlowAlpha = 0.07f;
     private const float CornerAlpha = 0.18f;
     private const float CornerFraction = 0.28f;
     private const int StarCount = 36;
@@ -91,8 +93,8 @@ internal sealed class StageBackdrop
     private static readonly Vector4 NeonBottom = new(0.063f, 0.078f, 0.165f, 1f);
     private static readonly Vector4 CavernTop = new(0.13f, 0.10f, 0.08f, 1f);
     private static readonly Vector4 CavernBottom = new(0.02f, 0.015f, 0.015f, 1f);
-    private static readonly Vector4 PaperTop = new(0.96f, 0.94f, 0.90f, 1f);
-    private static readonly Vector4 PaperBottom = new(0.90f, 0.88f, 0.84f, 1f);
+    private static readonly Vector4 SlateTop = new(0.125f, 0.13f, 0.165f, 1f);
+    private static readonly Vector4 SlateBottom = new(0.055f, 0.058f, 0.08f, 1f);
     private static readonly Vector4 MeadowSky = new(0.50f, 0.74f, 0.96f, 1f);
     private static readonly Vector4 MeadowHorizon = new(0.78f, 0.90f, 0.98f, 1f);
     private static readonly Vector4 MeadowGrassFar = new(0.38f, 0.66f, 0.36f, 1f);
@@ -155,7 +157,7 @@ internal sealed class StageBackdrop
 
     public Backdrop Preset { get; private set; }
 
-    public StageInk Ink => Preset == Backdrop.Paper ? StageInk.Dark : StageInk.Light;
+    public StageInk Ink => StageInk.Light;
 
     public Vector4 Ground => ground;
 
@@ -232,8 +234,8 @@ internal sealed class StageBackdrop
             case Backdrop.Cavern:
                 DrawCavern(drawList, full, accent, scale);
                 break;
-            case Backdrop.Paper:
-                DrawPaper(drawList, full, accent, scale);
+            case Backdrop.Slate:
+                DrawSlate(drawList, full, accent, scale);
                 break;
             default:
                 DrawNebula(drawList, full, accent, scale);
@@ -569,11 +571,26 @@ internal sealed class StageBackdrop
         DrawDust(drawList, full, LayerOffset(2, scale), scale, Palette.Lighten(accent, 0.3f), 0.12f);
     }
 
-    private void DrawPaper(ImDrawListPtr drawList, Rect full, Vector4 accent, float scale)
+    private void DrawSlate(ImDrawListPtr drawList, Rect full, Vector4 accent, float scale)
     {
-        Gradient(drawList, full, PaperTop, PaperBottom);
+        Gradient(drawList, full, SlateTop, SlateBottom);
+        ground = Vector4.Lerp(SlateTop, SlateBottom, 0.5f);
+        var back = LayerOffset(0, scale);
+        var pitch = SlateGridPitch * scale;
+        var line = ImGui.GetColorU32(White with { W = SlateGridAlpha });
+        var thickness = MathF.Max(1f, scale);
+        for (var x = full.Min.X + Wrap(back.X, pitch); x < full.Max.X; x += pitch)
+        {
+            drawList.AddLine(new Vector2(x, full.Min.Y), new Vector2(x, full.Max.Y), line, thickness);
+        }
+
+        for (var y = full.Min.Y + Wrap(back.Y, pitch); y < full.Max.Y; y += pitch)
+        {
+            drawList.AddLine(new Vector2(full.Min.X, y), new Vector2(full.Max.X, y), line, thickness);
+        }
+
         var mid = LayerOffset(1, scale);
-        var soft = ImGui.GetColorU32(accent with { W = 0.05f });
+        var soft = ImGui.GetColorU32(accent with { W = SlateGlowAlpha });
         var first = new Vector2(full.Min.X + full.Width * 0.22f, full.Min.Y + full.Height * 0.26f) + mid +
                     new Vector2(MathF.Sin(time * 0.25f) * 10f * scale, MathF.Cos(time * 0.2f) * 8f * scale);
         var second = new Vector2(full.Min.X + full.Width * 0.78f, full.Min.Y + full.Height * 0.72f) + mid +
@@ -584,8 +601,8 @@ internal sealed class StageBackdrop
 
     private void DrawVignette(ImDrawListPtr drawList, Rect full)
     {
-        var strength = Preset == Backdrop.Paper ? PaperVignetteAlpha : VignetteAlpha;
-        var corner = Preset == Backdrop.Paper ? CornerAlpha * 0.35f : CornerAlpha;
+        var strength = VignetteAlpha;
+        var corner = CornerAlpha;
         var clear = ImGui.GetColorU32(Black with { W = 0f });
         var bottom = ImGui.GetColorU32(Black with { W = strength });
         drawList.AddRectFilledMultiColor(new Vector2(full.Min.X, full.Max.Y - full.Height * VignetteFraction), full.Max,

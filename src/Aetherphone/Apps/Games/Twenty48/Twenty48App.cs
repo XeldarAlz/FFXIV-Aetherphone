@@ -29,7 +29,7 @@ internal sealed class Twenty48App : IMiniGame
     private const float ChipInsetY = 5f;
     private const int MaxRank = 16;
     private static readonly GameSpec StageSpec = new(GameId, L.Twenty48.Title, GameGenre.Puzzle, L.Twenty48.Hook,
-        Backdrop.Paper, HudStyle.Standard, ScoreKind.Score, keyboard: true);
+        Backdrop.Slate, HudStyle.Standard, ScoreKind.Score, keyboard: true);
     private static readonly string?[] MilestoneLabels = new string?[MaxRank + 1];
     private static readonly Vector4 Spark = new(1f, 0.95f, 0.7f, 1f);
     private static readonly TextStyle CapsuleStyle = TextStyles.FootnoteEmphasized;

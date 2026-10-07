@@ -34,7 +34,6 @@ internal static class Twenty48Renderer
     private const float TrailAlpha = 0.5f;
     private const float MergePulse = 0.16f;
     private const float SheenAlpha = 0.08f;
-    private static readonly Vector4 PaperCell = new(0.86f, 0.83f, 0.78f, 1f);
     private static readonly Vector4 Sheen = new(1f, 1f, 1f, SheenAlpha);
     private static readonly Vector4[] TileColors =
     {
@@ -80,7 +79,6 @@ internal static class Twenty48Renderer
     {
         BoardPlate.Draw(drawList, BoardPlate.Around(grid.Bounds, scale), BoardPlate.Radius * scale, scale, accent, ink);
         var rounding = Rounding * scale;
-        var cellFill = ink == StageInk.Dark ? PaperCell : GamePalette.CellSunken;
         for (var index = 0; index < Twenty48Board.CellCount; index++)
         {
             var pop = GameJuice.PopIn(GameJuice.Stagger(entrance, index, Twenty48Board.CellCount));
@@ -91,8 +89,8 @@ internal static class Twenty48Renderer
 
             var cell = grid.Cell(index % Twenty48Board.Size, index / Twenty48Board.Size);
             var half = cell.Size * 0.5f * pop;
-            StageCell.Draw(drawList, new Rect(cell.Center - half, cell.Center + half), cellFill, CellDepth.Sunken,
-                rounding * pop, scale);
+            StageCell.Draw(drawList, new Rect(cell.Center - half, cell.Center + half), GamePalette.CellSunken,
+                CellDepth.Sunken, rounding * pop, scale);
         }
 
         if (trails is not null && trailFade > 0.01f)

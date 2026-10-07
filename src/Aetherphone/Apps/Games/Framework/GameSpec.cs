@@ -11,7 +11,7 @@ internal enum Backdrop : byte
     Meadow,
     Neon,
     Cavern,
-    Paper,
+    Slate,
 }
 
 internal enum HudStyle : byte

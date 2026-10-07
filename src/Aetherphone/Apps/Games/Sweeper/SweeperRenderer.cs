@@ -35,17 +35,12 @@ internal static class SweeperRenderer
     private const float MinNumberPop = 0.3f;
     private static readonly Vector4[] NumberInks =
     {
-        new(0.22f, 0.48f, 0.95f, 1f), new(0.18f, 0.62f, 0.38f, 1f), new(0.90f, 0.28f, 0.34f, 1f),
-        new(0.52f, 0.34f, 0.86f, 1f), new(0.86f, 0.50f, 0.18f, 1f), new(0.16f, 0.64f, 0.70f, 1f),
-        new(0.24f, 0.24f, 0.30f, 1f), new(0.50f, 0.50f, 0.56f, 1f),
+        new(0.40f, 0.68f, 0.98f, 1f), new(0.46f, 0.86f, 0.66f, 1f), new(0.93f, 0.42f, 0.50f, 1f),
+        new(0.75f, 0.50f, 0.95f, 1f), new(0.90f, 0.55f, 0.35f, 1f), new(0.62f, 0.86f, 1f, 1f),
+        GamePalette.InkLight, StageInks.Muted,
     };
 
-    private static readonly Vector4 Covered = new(0.84f, 0.81f, 0.76f, 1f);
-    private static readonly Vector4 Revealed = new(0.96f, 0.95f, 0.92f, 1f);
-    private static readonly Vector4 MineBed = new(0.90f, 0.86f, 0.82f, 1f);
     private static readonly Vector4 Detonated = new(0.95f, 0.36f, 0.34f, 1f);
-    private static readonly Vector4 MineInk = new(0.18f, 0.18f, 0.22f, 1f);
-    private static readonly Vector4 Pole = new(0.40f, 0.38f, 0.36f, 1f);
     private static readonly Vector4 WrongFlag = new(0.90f, 0.25f, 0.28f, 1f);
     private static readonly Vector4 Shine = new(1f, 1f, 1f, 0.55f);
 
@@ -55,7 +50,7 @@ internal static class SweeperRenderer
         BoardPlate.Draw(drawList, BoardPlate.Around(grid.Bounds, scale), BoardPlate.Radius * scale, scale, accent, ink);
         var count = board.CellCount;
         var radius = grid.Pitch * CellRadiusFraction;
-        var coveredFill = Vector4.Lerp(Covered, accent, AccentTint);
+        var coveredFill = Vector4.Lerp(GamePalette.Cell, accent, AccentTint);
         var numberScale = Math.Clamp(grid.Pitch / (30f * scale), 0.7f, 1.35f);
         var lost = board.State == SweeperState.Lost;
         for (var index = 0; index < count; index++)
@@ -96,14 +91,13 @@ internal static class SweeperRenderer
         var pop = MathF.Max(MinNumberPop, GameJuice.PopIn(local));
         if (board.IsMine(index))
         {
-            var detonated = index == board.ClickedBomb;
-            var fill = detonated ? Detonated : MineBed;
+            var fill = index == board.ClickedBomb ? Detonated : GamePalette.CellSunken;
             StageCell.Draw(drawList, rect, fill, CellDepth.Sunken, radius, scale);
-            DrawMine(drawList, rect.Center, rect.Width * 0.22f * pop, detonated ? GamePalette.InkOn(fill) : MineInk);
+            DrawMine(drawList, rect.Center, rect.Width * 0.22f * pop, GamePalette.InkOn(fill));
             return;
         }
 
-        StageCell.Draw(drawList, rect, Revealed, CellDepth.Sunken, radius, scale);
+        StageCell.Draw(drawList, rect, GamePalette.CellSunken, CellDepth.Sunken, radius, scale);
         if (local < 1f)
         {
             Squircle.Fill(drawList, rect.Min, rect.Max, radius,
@@ -154,7 +148,8 @@ internal static class SweeperRenderer
     {
         var poleTop = new Vector2(center.X - size * 0.35f, center.Y - size);
         var poleBottom = new Vector2(center.X - size * 0.35f, center.Y + size);
-        drawList.AddLine(poleTop, poleBottom, ImGui.GetColorU32(Pole), MathF.Max(1.5f * scale, size * 0.18f));
+        drawList.AddLine(poleTop, poleBottom, ImGui.GetColorU32(StageInks.Muted),
+            MathF.Max(1.5f * scale, size * 0.18f));
         var flagTip = new Vector2(center.X + size * 0.75f, center.Y - size * 0.45f);
         drawList.AddTriangleFilled(poleTop, new Vector2(poleTop.X, center.Y), flagTip, ImGui.GetColorU32(accent));
     }

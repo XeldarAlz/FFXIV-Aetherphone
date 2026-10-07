@@ -92,12 +92,8 @@ internal static class NonogramRenderer
     private const float SolvedOverlap = 0.6f;
     private const float SolvedBulge = 0.14f;
     private const int BlockSize = 5;
-    private static readonly Vector4 EmptyFill = new(0.90f, 0.88f, 0.84f, 1f);
-    private static readonly Vector4 MarkedFill = new(0.94f, 0.93f, 0.90f, 1f);
-    private static readonly Vector4 InkFill = new(0.18f, 0.19f, 0.23f, 1f);
-    private static readonly Vector4 CrossInk = new(0.55f, 0.53f, 0.50f, 1f);
     private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
-    private static readonly Vector4 Separator = new(0.18f, 0.19f, 0.23f, 0.18f);
+    private static readonly Vector4 Separator = GamePalette.InkLight with { W = 0.18f };
     private static readonly Vector4 ClueMuted = new(0.97f, 0.97f, 0.98f, 0.38f);
 
     public static NonogramLayout Layout(Rect area, NonogramBoard board, float scale)
@@ -166,14 +162,14 @@ internal static class NonogramRenderer
         switch (board.MarkAt(index))
         {
             case CellMark.Filled:
-                StageCell.Draw(drawList, Scaled(rect, pop), InkFill, CellDepth.Flat, radius, scale);
+                StageCell.Draw(drawList, Scaled(rect, pop), GamePalette.InkLight, CellDepth.Flat, radius, scale);
                 break;
             case CellMark.Marked:
-                StageCell.Draw(drawList, rect, MarkedFill, CellDepth.Sunken, radius, scale);
-                DrawCross(drawList, rect.Center, rect.Width * CrossReach * pop, CrossInk, scale);
+                StageCell.Draw(drawList, rect, GamePalette.CellSunken, CellDepth.Sunken, radius, scale);
+                DrawCross(drawList, rect.Center, rect.Width * CrossReach * pop, StageInks.Muted, scale);
                 break;
             default:
-                var fill = index == view.Hovered ? GamePalette.Lighten(EmptyFill, 0.06f) : EmptyFill;
+                var fill = index == view.Hovered ? GamePalette.CellHover : GamePalette.Cell;
                 var depth = index == view.Pressed ? CellDepth.Pressed : CellDepth.Raised;
                 StageCell.Draw(drawList, rect, fill, depth, radius, scale);
                 break;
@@ -193,7 +189,7 @@ internal static class NonogramRenderer
         {
             var local = GameJuice.Stagger(solved, index, count, SolvedOverlap);
             var grow = 1f + SolvedBulge * MathF.Sin(local * MathF.PI);
-            var fill = Vector4.Lerp(InkFill, accent, local);
+            var fill = Vector4.Lerp(GamePalette.InkLight, accent, local);
             StageCell.Draw(drawList, Scaled(rect, grow), fill, local > 0.5f ? CellDepth.Raised : CellDepth.Flat, radius,
                 scale);
             return;
@@ -205,7 +201,7 @@ internal static class NonogramRenderer
             return;
         }
 
-        StageCell.Draw(drawList, rect, EmptyFill with { W = alpha }, CellDepth.Flat, radius, scale);
+        StageCell.Draw(drawList, rect, GamePalette.Cell with { W = alpha }, CellDepth.Flat, radius, scale);
     }
 
     private static void DrawCrosshair(ImDrawListPtr drawList, in NonogramLayout layout, int hovered, Vector4 accent)

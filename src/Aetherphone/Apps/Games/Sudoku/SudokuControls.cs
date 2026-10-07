@@ -27,8 +27,8 @@ internal static class SudokuControls
     private const float ToolRadius = 17f;
     private const float BadgeRadius = 7f;
     private const float DisabledAlpha = 0.45f;
-    private static readonly Vector4 KeyFill = new(1f, 1f, 1f, 1f);
-    private static readonly Vector4 KeyExhaustedFill = new(1f, 1f, 1f, 0.38f);
+    private static readonly Vector4 KeyFill = GamePalette.Cell;
+    private static readonly Vector4 KeyExhaustedFill = GamePalette.CellSunken;
 
     public static SudokuTool DrawTools(Rect row, PhoneTheme theme, Vector4 caption, Vector4 accent, bool notesMode,
         bool canUndo, int hintsLeft, float scale)
@@ -90,7 +90,7 @@ internal static class SudokuControls
             var digitColor = exhausted
                 ? ink with { W = DisabledAlpha }
                 : notesMode
-                    ? GamePalette.Darken(accent, 0.1f)
+                    ? SudokuRenderer.AccentInk(accent)
                     : ink;
             var center = (min + max) * 0.5f;
             Typography.DrawCentered(drawList, new Vector2(center.X, center.Y - 5f * scale), GameNumber.Label(digit),

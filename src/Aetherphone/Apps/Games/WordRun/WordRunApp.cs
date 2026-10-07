@@ -34,7 +34,7 @@ internal sealed class WordRunApp : IMiniGame
     };
     private static readonly string[] ModeStatIds = { GameId, GameId, GameId, GameId, GameId };
     private static readonly GameSpec StageSpec = new(GameId, L.Games.WordRun, GameGenre.Brain, L.WordRun.Hook,
-        Backdrop.Paper, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true, keyboard: true);
+        Backdrop.Slate, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true, keyboard: true);
     private static readonly Vector4[] CelebrationPalette =
     {
         new(0.33f, 0.70f, 0.42f, 1f), new(0.80f, 0.65f, 0.26f, 1f), new(0.98f, 0.98f, 0.9f, 1f),

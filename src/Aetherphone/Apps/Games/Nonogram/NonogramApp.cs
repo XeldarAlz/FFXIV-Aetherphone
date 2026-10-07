@@ -39,7 +39,7 @@ internal sealed class NonogramApp : IMiniGame
     private static readonly LocString[] Modes = { L.Games.Easy, L.Games.Medium, L.Games.Hard };
     private static readonly string[] ModeStatIds = { "nonogram.easy", "nonogram.medium", "nonogram.hard" };
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Nonogram, GameGenre.Brain, L.Nonogram.Hook,
-        Backdrop.Paper, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds);
+        Backdrop.Slate, HudStyle.Standard, ScoreKind.Time, Modes, ModeStatIds);
     private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
     private static readonly Vector4 Glow = new(1f, 0.95f, 0.70f, 1f);
     private readonly NonogramBoard board = new();

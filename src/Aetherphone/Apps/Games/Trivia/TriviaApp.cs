@@ -23,7 +23,7 @@ internal sealed class TriviaApp : IMiniGame
     };
     private static readonly string[] ModeStatIds = { GameId, GameId, GameId, GameId, GameId };
     private static readonly GameSpec StageSpec = new(GameId, L.Games.Trivia, GameGenre.Brain, L.Trivia.Hook,
-        Backdrop.Paper, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true);
+        Backdrop.Slate, HudStyle.Standard, ScoreKind.Score, Modes, ModeStatIds, clocked: true);
     private static readonly Vector4 Danger = new(0.95f, 0.32f, 0.32f, 1f);
     private static readonly Vector4 RightRing = new(0.42f, 0.88f, 0.56f, 0.9f);
     private static readonly Vector4 RightInk = new(0.30f, 0.72f, 0.44f, 1f);

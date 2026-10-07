@@ -49,11 +49,15 @@ internal sealed class SudokuRenderer
     private const float NoteAlpha = 0.55f;
     private const float BoxLineAlpha = 0.30f;
     private const float BoxLineWidth = 2f;
-    private static readonly Vector4 GivenFill = new(0.88f, 0.86f, 0.82f, 1f);
-    private static readonly Vector4 EntryFill = new(1f, 1f, 1f, 1f);
-    private static readonly Vector4 EmptyFill = new(0.975f, 0.965f, 0.945f, 0.92f);
-    private static readonly Vector4 EmptyAltFill = new(0.935f, 0.925f, 0.900f, 0.92f);
-    private static readonly Vector4 RevealedInk = new(0.16f, 0.52f, 0.38f, 1f);
+    private const float AccentInkLighten = 0.3f;
+    private static readonly Vector4 GivenFill = GamePalette.CellSunken;
+    private static readonly Vector4 EntryFill = GamePalette.CellHover;
+    private static readonly Vector4 EmptyFill = GamePalette.Cell;
+    private static readonly Vector4 EmptyAltFill = GamePalette.CellSunken;
+    private static readonly Vector4 CellInk = GamePalette.InkLight;
+    private static readonly Vector4 RevealedInk = Core.Theme.Accent.Mint;
+
+    public static Vector4 AccentInk(Vector4 accent) => GamePalette.Lighten(accent, AccentInkLighten);
 
     public void Draw(ImDrawListPtr drawList, SudokuBoard board, in GameGrid grid, in SudokuView view, float[] pop,
         float[] shake, Vector4 accent, StageInk ink, PhoneTheme theme, float scale)
@@ -64,19 +68,18 @@ internal sealed class SudokuRenderer
         var selectedDigit = view.Selected >= 0 ? board.Value(view.Selected) : (byte)0;
         var digitScale = Math.Clamp(grid.Pitch / (DigitUnit * scale), 0.7f, 1.6f);
         var noteScale = digitScale * NoteScaleFactor;
-        var strongInk = ink == StageInk.Dark ? GamePalette.InkDark : GamePalette.InkLight;
         for (var cell = 0; cell < SudokuBoard.CellCount; cell++)
         {
-            DrawCell(drawList, board, grid, view, cell, pop[cell], shake[cell], selectedDigit, accent, strongInk, theme,
-                radius, digitScale, noteScale, scale);
+            DrawCell(drawList, board, grid, view, cell, pop[cell], shake[cell], selectedDigit, accent, theme, radius,
+                digitScale, noteScale, scale);
         }
 
-        DrawBoxLines(drawList, grid, view.Shake, strongInk, scale);
+        DrawBoxLines(drawList, grid, view.Shake, StageInks.StrongOn(ink), scale);
     }
 
     private static void DrawCell(ImDrawListPtr drawList, SudokuBoard board, in GameGrid grid, in SudokuView view,
-        int cell, float pop, float shake, byte selectedDigit, Vector4 accent, Vector4 strongInk, PhoneTheme theme,
-        float radius, float digitScale, float noteScale, float scale)
+        int cell, float pop, float shake, byte selectedDigit, Vector4 accent, PhoneTheme theme, float radius,
+        float digitScale, float noteScale, float scale)
     {
         var column = SudokuBoard.ColumnOf(cell);
         var row = SudokuBoard.RowOf(cell);
@@ -130,7 +133,7 @@ internal sealed class SudokuRenderer
 
         if (cell == view.Hovered && !selected)
         {
-            Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(strongInk with { W = HoverAlpha }));
+            Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(CellInk with { W = HoverAlpha }));
         }
 
         if (selected)
@@ -143,22 +146,22 @@ internal sealed class SudokuRenderer
         var center = rect.Center;
         if (value == 0)
         {
-            DrawNotes(drawList, board.Notes(cell), center, strongInk with { W = NoteAlpha * entrance }, noteScale,
+            DrawNotes(drawList, board.Notes(cell), center, CellInk with { W = NoteAlpha * entrance }, noteScale,
                 grid.Pitch);
             return;
         }
 
-        var color = DigitColor(board, cell, strongInk, accent, theme) with { W = entrance };
+        var color = DigitColor(board, cell, accent, theme) with { W = entrance };
         var scalePop = 1f + PopScale * Easing.EaseOutCubic(pop);
         Typography.DrawCentered(drawList, center, GameNumber.Label(value), color, digitScale * scalePop,
             given ? FontWeight.Bold : FontWeight.SemiBold);
     }
 
-    private static Vector4 DigitColor(SudokuBoard board, int cell, Vector4 strongInk, Vector4 accent, PhoneTheme theme)
+    private static Vector4 DigitColor(SudokuBoard board, int cell, Vector4 accent, PhoneTheme theme)
     {
         if (board.IsGiven(cell))
         {
-            return strongInk;
+            return CellInk;
         }
 
         if (board.IsWrong(cell))
@@ -171,7 +174,7 @@ internal sealed class SudokuRenderer
             return RevealedInk;
         }
 
-        return GamePalette.Darken(accent, 0.15f);
+        return AccentInk(accent);
     }
 
     private static void DrawNotes(ImDrawListPtr drawList, ushort notes, Vector2 center, Vector4 ink, float noteScale,
