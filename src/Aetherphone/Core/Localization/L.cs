@@ -8669,6 +8669,45 @@ internal static class L
         public static readonly LocString Smashes = new("games.spiral.smashes", "Smashes");
     }
 
+    internal static class LuckyDraw
+    {
+        public static readonly LocString Title = new("games.luckydraw.title", "Lucky Draw");
+        public static readonly LocString Hook = new("games.luckydraw.hook", "Draw cards to build your score, stop before a duplicate busts you, and race to 200.");
+        public static readonly LocString OneBot = new("games.luckydraw.oneBot", "1 bot");
+        public static readonly LocString ThreeBots = new("games.luckydraw.threeBots", "3 bots");
+        public static readonly LocString FiveBots = new("games.luckydraw.fiveBots", "5 bots");
+        public static readonly LocString Round = new("games.luckydraw.round", "Round");
+        public static readonly LocString RoundNumber = new("games.luckydraw.roundNumber", "Round {0}");
+        public static readonly LocString BotName = new("games.luckydraw.botName", "Bot {0}");
+        public static readonly LocString ToPlay = new("games.luckydraw.toPlay", "{0} to play");
+        public static readonly LocString Bust = new("games.luckydraw.bust", "Bust!");
+        public static readonly LocString Saved = new("games.luckydraw.saved", "Saved!");
+        public static readonly LocString Seven = new("games.luckydraw.seven", "Seven!");
+        public static readonly LocString SecondChance = new("games.luckydraw.secondChance", "Second Chance");
+        public static readonly LocString Frozen = new("games.luckydraw.frozen", "Frozen");
+        public static readonly LocString FlipThree = new("games.luckydraw.flipThree", "Flip Three!");
+        public static readonly LocString Banked = new("games.luckydraw.banked", "Banked");
+        public static readonly LocString Shuffled = new("games.luckydraw.shuffled", "Shuffled");
+        public static readonly LocString Careful = new("games.luckydraw.careful", "Careful");
+        public static readonly LocString Steady = new("games.luckydraw.steady", "Steady");
+        public static readonly LocString Bold = new("games.luckydraw.bold", "Bold");
+        public static readonly LocString Hit = new("games.luckydraw.hit", "Hit");
+        public static readonly LocString Stay = new("games.luckydraw.stay", "Stay");
+        public static readonly LocString Risk = new("games.luckydraw.risk", "Bust risk {0}%");
+        public static readonly LocString ChanceReady = new("games.luckydraw.chanceReady", "Second Chance ready");
+        public static readonly LocString PickFreeze = new("games.luckydraw.pickFreeze", "Tap a player to freeze");
+        public static readonly LocString PickFlipThree = new("games.luckydraw.pickFlipThree", "Tap a player to flip three");
+        public static readonly LocString PickChance = new("games.luckydraw.pickChance", "Tap a player to give your Second Chance");
+        public static readonly LocString Dealing = new("games.luckydraw.dealing", "Dealing…");
+        public static readonly LocString NextRound = new("games.luckydraw.nextRound", "Next round");
+        public static readonly LocString SeeResults = new("games.luckydraw.seeResults", "See results");
+        public static readonly LocString Rounds = new("games.luckydraw.rounds", "Rounds");
+        public static readonly LocString YourTotal = new("games.luckydraw.yourTotal", "Your total");
+        public static readonly LocString WinningTotal = new("games.luckydraw.winningTotal", "Winning total");
+        public static readonly LocString BestRound = new("games.luckydraw.bestRound", "Best round");
+        public static readonly LocString Sevens = new("games.luckydraw.sevens", "Sevens");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

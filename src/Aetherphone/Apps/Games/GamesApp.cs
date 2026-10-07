@@ -13,6 +13,7 @@ using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Hop;
 using Aetherphone.Apps.Games.Invaders;
+using Aetherphone.Apps.Games.LuckyDraw;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Pairs;
@@ -191,6 +192,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new SwoopApp(),
             new SliceApp(),
             new SpiralApp(),
+            new LuckyDrawApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];
