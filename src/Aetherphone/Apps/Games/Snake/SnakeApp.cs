@@ -242,7 +242,7 @@ internal sealed class SnakeApp : IMiniGame
                 particles.Emit(GoldSparkle, headWorld, 18);
                 fx.Shockwave(headScreen, camera.Px(2.2f), SnakeRenderer.GoldColor, 0.5f, 3f);
                 fx.AddText(GameNumber.Signed(SnakeBoard.GoldPoints), headScreen, SnakeRenderer.GoldColor, 1.3f);
-                context.Fx.Punch(0.08f);
+                context.Fx.Punch(0.04f);
                 context.Fx.Sweep();
                 return;
             case FruitKind.Bomb:
@@ -250,9 +250,9 @@ internal sealed class SnakeApp : IMiniGame
                 particles.Emit(BombSmoke, headWorld, 14);
                 fx.Shockwave(headScreen, camera.Px(2.6f), Danger, 0.5f, 3.4f);
                 fx.AddText(GameNumber.Signed(-SnakeBoard.BombShrink), headScreen, Danger, 1.2f);
-                camera.Shake(0.35f);
+                camera.Shake(0.2f);
                 context.Fx.Flash(Danger, 0.25f);
-                context.Fx.Punch(0.05f);
+                context.Fx.Punch(0.03f);
                 return;
             default:
                 UiFeedback.Play(UiSound.GameCollect);
@@ -260,7 +260,7 @@ internal sealed class SnakeApp : IMiniGame
                 fx.Shockwave(headScreen, camera.Px(1.6f), GamePalette.Lighten(Accent, 0.35f), 0.4f, 2.6f);
                 fx.AddText(GameNumber.Signed(SnakeBoard.ApplePoints), headScreen, Accent, 1.1f);
                 fx.HitStop(0.04f);
-                context.Fx.Punch(0.04f);
+                context.Fx.Punch(0.015f);
                 return;
         }
     }
@@ -272,7 +272,7 @@ internal sealed class SnakeApp : IMiniGame
         var headScreen = camera.ToScreen(headWorld);
         particles.Emit(CrashShards, headWorld, 26);
         fx.Shockwave(headScreen, camera.Px(4f), Danger, 0.6f, 3.4f);
-        camera.Shake(0.6f);
+        camera.Shake(0.35f);
         context.Fx.Flash(Danger, 0.4f);
         context.Fx.SlowMo(0.5f, 0.3f);
     }

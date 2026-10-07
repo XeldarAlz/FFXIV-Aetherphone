@@ -13,6 +13,7 @@ namespace Aetherphone.Apps.Games.Flow;
 internal sealed class FlowApp : IMiniGame
 {
     private const string GameId = "flow";
+    private const string BoardSurfaceId = "flow.board";
     private const int HintsPerLevel = 1;
     private const float RowGap = 6f;
     private const float HintRadius = 16f;
@@ -183,7 +184,8 @@ internal sealed class FlowApp : IMiniGame
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        PressSurface.Claim(BoardSurfaceId, grid.Bounds, out var activated);
+        if (activated)
         {
             if (hovered >= 0)
             {
