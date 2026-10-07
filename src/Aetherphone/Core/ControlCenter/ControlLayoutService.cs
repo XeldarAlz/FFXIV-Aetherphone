@@ -11,6 +11,7 @@ internal sealed class ControlLayoutService
     private readonly IControlRegistry registry;
     private readonly IControlConfiguration configuration;
     private readonly List<ControlSlot> slots = new();
+    private readonly List<ControlSlot> visible = new();
     private readonly List<GridCell> placements = new();
     private readonly HashSet<string> enabled = new();
     private bool placementsDirty = true;
@@ -23,12 +24,13 @@ internal sealed class ControlLayoutService
         Load();
     }
 
-    public IReadOnlyList<ControlSlot> Slots => slots;
+    public IReadOnlyList<ControlSlot> Slots => SyncVisible();
 
     public int RowsUsed
     {
         get
         {
+            SyncVisible();
             if (placementsDirty)
             {
                 Solve();
@@ -42,6 +44,7 @@ internal sealed class ControlLayoutService
     {
         get
         {
+            SyncVisible();
             if (placementsDirty)
             {
                 Solve();
@@ -57,7 +60,7 @@ internal sealed class ControlLayoutService
         var all = registry.Modules;
         for (var index = 0; index < all.Count; index++)
         {
-            if (IndexOf(all[index].Id) < 0)
+            if (registry.IsAvailable(all[index].Id) && IndexOf(all[index].Id) < 0)
             {
                 hidden.Add(all[index]);
             }
@@ -66,18 +69,16 @@ internal sealed class ControlLayoutService
         return hidden;
     }
 
-    public int IndexOf(ControlSlot slot) => slots.IndexOf(slot);
+    public int IndexOf(ControlSlot slot) => SyncVisible().IndexOf(slot);
 
     public void Move(ControlSlot slot, int insertIndex)
     {
-        var from = slots.IndexOf(slot);
-        if (from < 0)
+        if (!slots.Remove(slot))
         {
             return;
         }
 
-        slots.RemoveAt(from);
-        slots.Insert(Math.Clamp(insertIndex, 0, slots.Count), slot);
+        slots.Insert(StoredIndex(insertIndex), slot);
         Commit();
     }
 
@@ -90,7 +91,7 @@ internal sealed class ControlLayoutService
         }
 
         slots.RemoveAt(from);
-        var target = Math.Clamp(insertIndex, 0, slots.Count);
+        var target = StoredIndex(insertIndex);
         if (target == from)
         {
             slots.Insert(from, slot);
@@ -141,6 +142,60 @@ internal sealed class ControlLayoutService
         configuration.ControlPanel = null;
         Load();
         Save();
+    }
+
+    private List<ControlSlot> SyncVisible()
+    {
+        var cursor = 0;
+        var matches = true;
+        for (var index = 0; index < slots.Count && matches; index++)
+        {
+            if (!registry.IsAvailable(slots[index].Id))
+            {
+                continue;
+            }
+
+            matches = cursor < visible.Count && ReferenceEquals(visible[cursor], slots[index]);
+            cursor++;
+        }
+
+        if (matches && cursor == visible.Count)
+        {
+            return visible;
+        }
+
+        visible.Clear();
+        for (var index = 0; index < slots.Count; index++)
+        {
+            if (registry.IsAvailable(slots[index].Id))
+            {
+                visible.Add(slots[index]);
+            }
+        }
+
+        placementsDirty = true;
+        return visible;
+    }
+
+    private int StoredIndex(int visibleIndex)
+    {
+        var seen = 0;
+        for (var index = 0; index < slots.Count; index++)
+        {
+            if (!registry.IsAvailable(slots[index].Id))
+            {
+                continue;
+            }
+
+            if (seen >= visibleIndex)
+            {
+                return index;
+            }
+
+            seen++;
+        }
+
+        return slots.Count;
     }
 
     private int IndexOf(string moduleId)
@@ -315,11 +370,11 @@ internal sealed class ControlLayoutService
 
     private void Solve()
     {
-        HomeGridSolver.Solve(slots, Columns, SolverRows, placements);
+        HomeGridSolver.Solve(visible, Columns, SolverRows, placements);
         var used = 0;
-        for (var index = 0; index < placements.Count && index < slots.Count; index++)
+        for (var index = 0; index < placements.Count && index < visible.Count; index++)
         {
-            used = Math.Max(used, placements[index].Row + slots[index].RowSpan);
+            used = Math.Max(used, placements[index].Row + visible[index].RowSpan);
         }
 
         rowsUsed = used;

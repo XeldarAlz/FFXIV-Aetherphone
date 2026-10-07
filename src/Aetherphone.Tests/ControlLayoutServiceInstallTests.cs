@@ -160,6 +160,27 @@ public sealed class ControlLayoutServiceInstallTests
         Assert.True(SlotIndexOf(reloaded, "c") < 0, "A module the user removed must stay removed across a restart");
     }
 
+    [Fact]
+    public void UnavailableModule_LeavesTheGridAndTheGalleryButKeepsItsSavedPlace()
+    {
+        var modules = MakeModules();
+        var configuration = SavedWith("a", "b", "c");
+        var registry = new FakeControlRegistry(modules);
+        var service = new ControlLayoutService(registry, configuration);
+
+        registry.Unavailable.Add("b");
+
+        Assert.Equal(new[] { "a", "c" }, SlotIds(service));
+        Assert.Equal(new GridCell(1, 0), service.Placements[SlotIndexOf(service, "c")]);
+        Assert.DoesNotContain(service.Hidden(), module => module.Id == "b");
+
+        service.Move(service.Slots[SlotIndexOf(service, "c")], 0);
+        registry.Unavailable.Clear();
+
+        Assert.Equal(new[] { "c", "a", "b" }, SlotIds(service));
+        Assert.Equal(new[] { "c", "a", "b" }, SlotIds(new ControlLayoutService(registry, configuration)));
+    }
+
     private static int SlotIndexOf(ControlLayoutService service, string moduleId)
     {
         for (var index = 0; index < service.Slots.Count; index++)
@@ -270,7 +291,9 @@ public sealed class ControlLayoutServiceInstallTests
         }
 
         public IReadOnlyList<IControlModule> Modules { get; }
+        public HashSet<string> Unavailable { get; } = new();
         public bool TryGet(string id, out IControlModule module) => byId.TryGetValue(id, out module!);
+        public bool IsAvailable(string moduleId) => !Unavailable.Contains(moduleId);
     }
 
     private sealed class FakeControlConfiguration : IControlConfiguration

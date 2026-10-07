@@ -1,3 +1,4 @@
+using Aetherphone.Core.Home;
 using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Core.SystemMedia;
@@ -6,19 +7,21 @@ internal sealed class PcMediaSource : IDisposable
 {
     private readonly Configuration configuration;
     private readonly WindowsMediaSessions sessions;
+    private readonly AppGate musicGate;
     private readonly PcMediaArtwork artwork = new();
 
-    public PcMediaSource(Configuration configuration, WindowsMediaSessions sessions)
+    public PcMediaSource(Configuration configuration, WindowsMediaSessions sessions, AppGate musicGate)
     {
         this.configuration = configuration;
         this.sessions = sessions;
+        this.musicGate = musicGate;
     }
 
     public ref readonly MediaSessionSnapshot Current
     {
         get
         {
-            if (!configuration.ShowWindowsMedia)
+            if (!configuration.ShowWindowsMedia || !musicGate.Open)
             {
                 return ref MediaSessionSnapshot.Empty;
             }
