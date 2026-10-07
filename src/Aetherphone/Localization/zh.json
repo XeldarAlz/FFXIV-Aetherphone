@@ -5301,6 +5301,8 @@
   "games.trails.title": "光迹",
   "games.trails.hook": "向左或向右转弯，绝不能碰到光迹。比机器人坚持得更久即可赢下本回合；先赢三回合者赢得比赛。",
   "games.trails.duel": "决斗",
+  "games.trails.twoRivals": "2 名对手",
+  "games.trails.threeRivals": "3 名对手",
   "games.trails.wins": "胜场",
   "games.trails.roundNumber": "第 {0} 回合",
   "games.trails.matchPoint": "赛点",

@@ -5301,6 +5301,8 @@
   "games.trails.title": "Rastros",
   "games.trails.hook": "Vire à esquerda ou à direita e nunca toque em um rastro. Sobreviva aos bots para vencer a rodada; quem vencer três primeiro leva a partida.",
   "games.trails.duel": "Duelo",
+  "games.trails.twoRivals": "2 rivais",
+  "games.trails.threeRivals": "3 rivais",
   "games.trails.wins": "Vitórias",
   "games.trails.roundNumber": "Rodada {0}",
   "games.trails.matchPoint": "Ponto decisivo",

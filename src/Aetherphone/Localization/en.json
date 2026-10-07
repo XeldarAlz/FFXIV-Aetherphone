@@ -5301,6 +5301,8 @@
   "games.trails.title": "Trails",
   "games.trails.hook": "Turn left or right and never touch a trail. Outlast the bots to take the round; first to three wins the match.",
   "games.trails.duel": "Duel",
+  "games.trails.twoRivals": "2 rivals",
+  "games.trails.threeRivals": "3 rivals",
   "games.trails.wins": "Wins",
   "games.trails.roundNumber": "Round {0}",
   "games.trails.matchPoint": "Match point",

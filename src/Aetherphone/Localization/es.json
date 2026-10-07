@@ -5301,6 +5301,8 @@
   "games.trails.title": "Estelas",
   "games.trails.hook": "Gira a la izquierda o a la derecha y nunca toques una estela. Sobrevive a los bots para ganar la ronda; quien gane tres se lleva la partida.",
   "games.trails.duel": "Duelo",
+  "games.trails.twoRivals": "2 rivales",
+  "games.trails.threeRivals": "3 rivales",
   "games.trails.wins": "Victorias",
   "games.trails.roundNumber": "Ronda {0}",
   "games.trails.matchPoint": "Punto de partido",

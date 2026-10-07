@@ -5301,6 +5301,8 @@
   "games.trails.title": "Следы",
   "games.trails.hook": "Поворачивайте налево или направо и не касайтесь следов. Переживите ботов, чтобы выиграть раунд; кто первым возьмёт три, выигрывает матч.",
   "games.trails.duel": "Дуэль",
+  "games.trails.twoRivals": "2 соперника",
+  "games.trails.threeRivals": "3 соперника",
   "games.trails.wins": "Победы",
   "games.trails.roundNumber": "Раунд {0}",
   "games.trails.matchPoint": "Матчбол",

@@ -5301,6 +5301,8 @@
   "games.trails.title": "Spuren",
   "games.trails.hook": "Biege links oder rechts ab und berühre nie eine Spur. Überlebe die Bots, um die Runde zu holen; wer zuerst drei gewinnt, holt das Match.",
   "games.trails.duel": "Duell",
+  "games.trails.twoRivals": "2 Gegner",
+  "games.trails.threeRivals": "3 Gegner",
   "games.trails.wins": "Siege",
   "games.trails.roundNumber": "Runde {0}",
   "games.trails.matchPoint": "Matchball",
