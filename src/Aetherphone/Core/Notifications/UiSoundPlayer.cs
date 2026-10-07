@@ -11,7 +11,7 @@ internal sealed class UiSoundPlayer : IDisposable
     private const int ChannelCount = 2;
     private const int MaxVoices = 8;
     private const long IdleCloseMilliseconds = 20_000;
-    private const int OutputLatencyMilliseconds = 40;
+    private const int OutputLatencyMilliseconds = 60;
     private const float MinimumRate = 0.5f;
     private const float MaximumRate = 2f;
 
