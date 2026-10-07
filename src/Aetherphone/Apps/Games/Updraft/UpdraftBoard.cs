@@ -12,10 +12,10 @@ internal sealed class UpdraftBoard
     public const float PlainBounce = 14f;
     public const float SpringBounce = 20f;
     public const float GoldenBounce = 30f;
-    public const float MaxSpeed = 10f;
-    public const float Acceleration = 60f;
-    public const float MaxWind = 2.5f;
-    public const float MaxPathGap = 2.6f;
+    public const float MaxSpeed = 8f;
+    public const float Acceleration = 50f;
+    public const float MaxWind = 2f;
+    public const float MaxPathGap = 2.2f;
     public const float MinHalfWidth = 0.7f;
     public const float FeatherSeconds = 3.5f;
     public const float FeatherLift = 8f;
@@ -31,7 +31,7 @@ internal sealed class UpdraftBoard
     public const float StepSeconds = 1f / 120f;
     public const float StartCamera = -2.5f;
     private const float MaxCatchUpSeconds = 0.25f;
-    private const float MouseGain = 7f;
+    private const float MouseGain = 2.5f;
     private const float StunSeconds = 0.35f;
     private const float ZapDrop = 4f;
     private const float StormCooldown = 1.2f;
