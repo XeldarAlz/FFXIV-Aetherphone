@@ -32,11 +32,13 @@ internal readonly struct StageResult
     public readonly GameOutcome Outcome;
     public readonly string SecondaryLabel;
     public readonly int Stars;
+    public readonly bool ShowsLeaderboard;
 
     public StageResult(string title, Vector4 titleColor, string primaryLabel, string primaryValue, bool newBest,
         string continueLabel, string rankLine, string friendsLine, bool uploading, bool topTen,
-        in GameOutcome outcome, string secondaryLabel, int stars)
+        in GameOutcome outcome, string secondaryLabel, int stars, bool showsLeaderboard = true)
     {
+        ShowsLeaderboard = showsLeaderboard;
         Title = title;
         TitleColor = titleColor;
         PrimaryLabel = primaryLabel;
@@ -162,7 +164,7 @@ internal static class GameOverlay
         var statValueHeight = Typography.LineHeight(TextStyles.Headline);
         var statCellHeight = statLabelHeight + Metrics.Space.Xxs * scale + statValueHeight;
         var buttonHeight = ButtonHeight * scale;
-        var leaderboardHeight = Button.Height(ButtonSize.Small) * scale;
+        var leaderboardHeight = result.ShowsLeaderboard ? Button.Height(ButtonSize.Small) * scale : 0f;
         var cardHeight = padding * 2f + titleHeight + Metrics.Space.Lg * scale + primaryHeight +
             Metrics.Space.Xl * scale + buttonHeight + Metrics.Space.Sm * scale + leaderboardHeight;
         if (result.NewBest)
@@ -225,7 +227,7 @@ internal static class GameOverlay
         {
             var starsPhase = Phase(clamped, 0.15f, 0.85f);
             StarRow.Draw(drawList, Place(center, offset + StarSize * 0.5f * scale, cardScale), StarSize * scale * cardScale,
-                result.Stars, theme.TextMuted with { W = EmptyStarAlpha }, alpha, starsPhase);
+                result.Stars, StageInks.Muted with { W = EmptyStarAlpha }, alpha, starsPhase);
             offset += StarSize * scale + Metrics.Space.Md * scale;
         }
 
@@ -240,13 +242,13 @@ internal static class GameOverlay
         {
             var labelPhase = Phase(clamped, 0.2f, 0.62f);
             DrawStaggered(drawList, Place(center, offset + labelHeight * 0.5f, cardScale), label,
-                theme.TextMuted with { W = labelPhase }, TextStyles.Caption1.Scale, TextStyles.Caption1.Weight,
+                StageInks.Muted with { W = labelPhase }, TextStyles.Caption1.Scale, TextStyles.Caption1.Weight,
                 labelPhase, scale);
             offset += labelHeight + Metrics.Space.Xxs * scale;
             var valuePhase = Phase(clamped, 0.25f, 0.7f);
             DrawStaggered(drawList, Place(center, offset + valueHeight * 0.5f, cardScale),
                 CountingValue(result.PrimaryValue, valuePhase > 0f ? deltaSeconds : 0f),
-                theme.TextStrong with { W = valuePhase }, valueScale, TextStyles.LargeTitle.Weight, valuePhase, scale);
+                StageInks.Strong with { W = valuePhase }, valueScale, TextStyles.LargeTitle.Weight, valuePhase, scale);
             offset += valueHeight;
         }
 
@@ -264,7 +266,7 @@ internal static class GameOverlay
                 rankCenter.X += spinner;
             }
 
-            DrawStaggered(drawList, rankCenter, result.RankLine, theme.TextMuted with { W = rankPhase },
+            DrawStaggered(drawList, rankCenter, result.RankLine, StageInks.Muted with { W = rankPhase },
                 TextStyles.Footnote.Scale, TextStyles.Footnote.Weight, rankPhase, scale);
             offset += lineHeight;
         }
@@ -274,7 +276,7 @@ internal static class GameOverlay
             offset += Metrics.Space.Xxs * scale;
             var friendsPhase = Phase(clamped, 0.36f, 0.8f);
             DrawStaggered(drawList, Place(center, offset + lineHeight * 0.5f, cardScale), result.FriendsLine,
-                theme.TextMuted with { W = friendsPhase }, TextStyles.Footnote.Scale, TextStyles.Footnote.Weight,
+                StageInks.Muted with { W = friendsPhase }, TextStyles.Footnote.Scale, TextStyles.Footnote.Weight,
                 friendsPhase, scale);
             offset += lineHeight;
         }
@@ -292,13 +294,13 @@ internal static class GameOverlay
                 var cellTop = offset + row * (statCellHeight + Metrics.Space.Sm * scale);
                 var statPhase = Phase(clamped, 0.38f + statIndex * 0.04f, 0.82f + statIndex * 0.04f);
                 DrawStaggered(drawList, Place(new Vector2(columnCenterX, center.Y), cellTop + statLabelHeight * 0.5f, cardScale),
-                    Loc.Upper(Loc.T(stat.Label)), theme.TextMuted with { W = statPhase }, TextStyles.Caption1.Scale,
+                    Loc.Upper(Loc.T(stat.Label)), StageInks.Muted with { W = statPhase }, TextStyles.Caption1.Scale,
                     TextStyles.Caption1.Weight, statPhase, scale);
                 DrawStaggered(drawList,
                     Place(new Vector2(columnCenterX, center.Y),
                         cellTop + statLabelHeight + Metrics.Space.Xxs * scale + statValueHeight * 0.5f, cardScale),
                     Typography.FitText(stat.Value, cellWidth - Metrics.Space.Sm * scale, TextStyles.Headline),
-                    theme.TextStrong with { W = statPhase }, TextStyles.Headline.Scale, TextStyles.Headline.Weight,
+                    StageInks.Strong with { W = statPhase }, TextStyles.Headline.Scale, TextStyles.Headline.Weight,
                     statPhase, scale);
             }
 
@@ -327,7 +329,7 @@ internal static class GameOverlay
         if (hasSecondary)
         {
             if (GameHud.Button(Place(center, offset + buttonHeight * 0.5f, cardScale) + new Vector2(0f, buttonLift),
-                    buttonSize, result.SecondaryLabel, Palette.Mix(theme.SurfaceMuted, accent, SecondaryTint), theme))
+                    buttonSize, result.SecondaryLabel, Palette.Mix(StageInks.Surface, accent, SecondaryTint), theme))
             {
                 action = ResultAction.Secondary;
             }
@@ -335,8 +337,8 @@ internal static class GameOverlay
             offset += buttonHeight + Metrics.Space.Sm * scale;
         }
 
-        if (buttonPhase > 0.8f &&
-            TextButton.Draw(Place(center, offset + leaderboardHeight * 0.5f, cardScale), leaderboardLabel, theme.TextMuted,
+        if (result.ShowsLeaderboard && buttonPhase > 0.8f &&
+            TextButton.Draw(Place(center, offset + leaderboardHeight * 0.5f, cardScale), leaderboardLabel, StageInks.Muted,
                 scale))
         {
             action = ResultAction.Leaderboard;

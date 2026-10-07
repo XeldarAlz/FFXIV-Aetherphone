@@ -51,10 +51,10 @@ internal static class GameHud
         }
 
         Typography.DrawCentered(drawList, new Vector2(center.X, center.Y - 7f * scale * sizeScale), value,
-            highlight ? accent : theme.TextStrong, TextStyles.Title3.Scale * sizeScale * valuePop,
+            highlight ? accent : StageInks.Strong, TextStyles.Title3.Scale * sizeScale * valuePop,
             TextStyles.Title3.Weight);
         Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + 12f * scale * sizeScale), Loc.Upper(label),
-            theme.TextMuted, TextStyles.Caption2.Scale * sizeScale, TextStyles.Caption2.Weight);
+            StageInks.Muted, TextStyles.Caption2.Scale * sizeScale, TextStyles.Caption2.Weight);
     }
 
     public static bool LandscapeBack(Vector2 center, float radius, PhoneTheme theme)
@@ -65,7 +65,7 @@ internal static class GameHud
         var hovered = UiInteract.Hover(center - corner, center + corner);
         Material.Frosted(drawList, center - corner, center + corner, radius, scale, hovered ? 1f : 0.85f);
         ProgressRing.CenterIcon(drawList, center, FontAwesomeIcon.ChevronLeft,
-            hovered ? theme.TextStrong : theme.Accent, radius * 0.9f);
+            hovered ? StageInks.Strong : theme.Accent, radius * 0.9f);
         return UiInteract.HoverClickCircle(center, radius);
     }
 

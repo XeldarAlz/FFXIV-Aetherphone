@@ -249,29 +249,6 @@ internal sealed class TrailblazeRenderer
         }
     }
 
-    public static void FillEllipse(ImDrawListPtr drawList, Vector2 center, float radiusX, float radiusY, uint color,
-        float angle = 0f, int segments = EllipseSegments)
-    {
-        if (radiusX <= 0.2f || radiusY <= 0.2f)
-        {
-            return;
-        }
-
-        var cosine = MathF.Cos(angle);
-        var sine = MathF.Sin(angle);
-        drawList.PathClear();
-        for (var segment = 0; segment < segments; segment++)
-        {
-            var theta = MathF.Tau * segment / segments;
-            var localX = MathF.Cos(theta) * radiusX;
-            var localY = MathF.Sin(theta) * radiusY;
-            drawList.PathLineTo(new Vector2(center.X + localX * cosine - localY * sine,
-                center.Y + localX * sine + localY * cosine));
-        }
-
-        drawList.PathFillConvex(color);
-    }
-
     private static int LastAtOrBelow(TrailblazeBoard board, float farZ, int source)
     {
         var count = source switch
@@ -396,7 +373,8 @@ internal sealed class TrailblazeRenderer
         var scale = view.Scale(depth);
         var kind = (int)(Hash(slice, side + 7) * 4f);
         var ground = view.At(offset, 0f, z);
-        FillEllipse(drawList, ground, 0.7f * size * scale, 0.16f * size * scale, Shade(Shadow with { W = 0.18f }, fogAmount, alpha));
+        Shapes.FillEllipse(drawList, ground, 0.7f * size * scale, 0.16f * size * scale,
+            Shade(Shadow with { W = 0.18f }, fogAmount, alpha), EllipseSegments);
         switch (kind)
         {
             case 0:
@@ -409,10 +387,10 @@ internal sealed class TrailblazeRenderer
                 DrawLamp(drawList, view, offset, z, scale, fogAmount, alpha, time + slice);
                 return;
             default:
-                FillEllipse(drawList, view.At(offset, 0.28f * size, z), 0.55f * size * scale, 0.36f * size * scale,
-                    Shade(Rock, fogAmount, alpha));
-                FillEllipse(drawList, view.At(offset - 0.1f, 0.42f * size, z), 0.28f * size * scale, 0.14f * size * scale,
-                    Shade(Vector4.Lerp(Rock, White, 0.3f), fogAmount, alpha));
+                Shapes.FillEllipse(drawList, view.At(offset, 0.28f * size, z), 0.55f * size * scale, 0.36f * size * scale,
+                    Shade(Rock, fogAmount, alpha), EllipseSegments);
+                Shapes.FillEllipse(drawList, view.At(offset - 0.1f, 0.42f * size, z), 0.28f * size * scale,
+                    0.14f * size * scale, Shade(Vector4.Lerp(Rock, White, 0.3f), fogAmount, alpha), EllipseSegments);
                 return;
         }
     }
@@ -597,7 +575,8 @@ internal sealed class TrailblazeRenderer
 
         var scale = view.Scale(depth);
         var center = view.At(offset, WheelRadius, z);
-        FillEllipse(drawList, center, WheelRadius * scale * 0.42f, WheelRadius * scale, color, view.Roll);
+        Shapes.FillEllipse(drawList, center, WheelRadius * scale * 0.42f, WheelRadius * scale, view.Roll, color,
+            EllipseSegments);
     }
 
     private static void DrawArch(ImDrawListPtr drawList, in TrailblazeView view, float left, float right, float bottom,
@@ -630,8 +609,8 @@ internal sealed class TrailblazeRenderer
         var offset = coin.LaneX - 1f;
         if (coin.Height > 0.9f && !coin.Magnetized)
         {
-            FillEllipse(drawList, view.At(offset, 0f, coin.Z), radius * 0.9f, radius * 0.3f,
-                Shade(Shadow with { W = 0.16f }, fogAmount, alpha), view.Roll, 10);
+            Shapes.FillEllipse(drawList, view.At(offset, 0f, coin.Z), radius * 0.9f, radius * 0.3f, view.Roll,
+                Shade(Shadow with { W = 0.16f }, fogAmount, alpha), 10);
         }
 
         var center = view.At(offset, coin.Height, coin.Z);
@@ -645,15 +624,16 @@ internal sealed class TrailblazeRenderer
         var width = radius * (0.22f + 0.78f * spin);
         var glow = 0.18f + 0.22f * night;
         drawList.AddCircleFilled(center, radius * 1.9f, ImGui.GetColorU32(CoinGold with { W = glow * alpha }), 16);
-        FillEllipse(drawList, center, width, radius, Shade(CoinRim, fogAmount, alpha), view.Roll);
-        FillEllipse(drawList, center, width * 0.76f, radius * 0.76f, Shade(CoinGold, fogAmount, alpha), view.Roll);
+        Shapes.FillEllipse(drawList, center, width, radius, view.Roll, Shade(CoinRim, fogAmount, alpha), EllipseSegments);
+        Shapes.FillEllipse(drawList, center, width * 0.76f, radius * 0.76f, view.Roll, Shade(CoinGold, fogAmount, alpha),
+            EllipseSegments);
         if (spin <= 0.45f)
         {
             return;
         }
 
-        FillEllipse(drawList, center - new Vector2(width * 0.28f, radius * 0.3f), width * 0.22f, radius * 0.18f,
-            ImGui.GetColorU32(White with { W = 0.8f * alpha }), view.Roll, 8);
+        Shapes.FillEllipse(drawList, center - new Vector2(width * 0.28f, radius * 0.3f), width * 0.22f, radius * 0.18f,
+            view.Roll, ImGui.GetColorU32(White with { W = 0.8f * alpha }), 8);
     }
 
     private void DrawPickup(ImDrawListPtr drawList, in TrailblazeView view, in TrailblazePickup pickup, float time)
@@ -671,8 +651,8 @@ internal sealed class TrailblazeRenderer
         var center = view.At(offset, TrailblazeBoard.PickupHeight + bob, pickup.Z);
         var radius = PickupRadius * scale;
         var color = TrailblazePowerArt.Color(pickup.Kind);
-        FillEllipse(drawList, view.At(offset, 0f, pickup.Z), radius * 0.9f, radius * 0.28f,
-            Shade(Shadow with { W = 0.18f }, view.Fog(depth), alpha), view.Roll, 10);
+        Shapes.FillEllipse(drawList, view.At(offset, 0f, pickup.Z), radius * 0.9f, radius * 0.28f, view.Roll,
+            Shade(Shadow with { W = 0.18f }, view.Fog(depth), alpha), 10);
         for (var layer = 3; layer >= 1; layer--)
         {
             drawList.AddCircleFilled(center, radius * (1f + layer * 0.45f), ImGui.GetColorU32(color with { W = 0.09f * (4 - layer) * alpha }), 20);

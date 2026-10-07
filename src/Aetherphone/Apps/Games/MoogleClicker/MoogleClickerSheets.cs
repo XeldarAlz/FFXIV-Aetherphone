@@ -135,7 +135,7 @@ internal sealed class MoogleClickerSheets
         var y = inner.Min.Y;
         Typography.DrawCentered(drawList, new Vector2(inner.Center.X, y + titleHeight * 0.5f),
             Typography.FitText(Loc.T(L.MoogleClicker.StatsTitle), inner.Width, TextStyles.Title2),
-            MoogleClickerText.Ink with { W = alpha }, TextStyles.Title2);
+            StageInks.Strong with { W = alpha }, TextStyles.Title2);
         y += titleHeight + Metrics.Space.Md * scale;
         var labelWidth = inner.Width * LabelShare;
         var lineHeight = Typography.LineHeight(TextStyles.Subheadline);
@@ -144,15 +144,15 @@ internal sealed class MoogleClickerSheets
             var textY = y + (rowHeight - lineHeight) * 0.5f;
             Typography.Draw(drawList, new Vector2(inner.Min.X, textY),
                 Typography.FitText(Loc.T(StatLabels[stat]), labelWidth, TextStyles.Subheadline),
-                MoogleClickerText.Muted with { W = alpha }, TextStyles.Subheadline);
+                StageInks.Muted with { W = alpha }, TextStyles.Subheadline);
             var value = statValues[stat];
             var valueSize = Typography.Measure(value, TextStyles.SubheadlineEmphasized);
             Typography.Draw(drawList, new Vector2(inner.Max.X - valueSize.X, textY), value,
-                MoogleClickerText.Ink with { W = alpha }, TextStyles.SubheadlineEmphasized);
+                StageInks.Strong with { W = alpha }, TextStyles.SubheadlineEmphasized);
             if (stat > 0)
             {
                 drawList.AddLine(new Vector2(inner.Min.X, y), new Vector2(inner.Max.X, y),
-                    ImGui.GetColorU32(MoogleClickerText.Ink with { W = 0.07f * alpha }), Metrics.Stroke.Hairline * scale);
+                    ImGui.GetColorU32(StageInks.Strong with { W = 0.07f * alpha }), Metrics.Stroke.Hairline * scale);
             }
 
             y += rowHeight;
@@ -208,21 +208,21 @@ internal sealed class MoogleClickerSheets
         var y = inner.Min.Y;
         Typography.DrawCentered(drawList, new Vector2(centerX, y + titleHeight * 0.5f),
             Typography.FitText(Loc.T(L.MoogleClicker.LedgerTitle), inner.Width, TextStyles.Title2),
-            MoogleClickerText.Ink with { W = alpha }, TextStyles.Title2);
+            StageInks.Strong with { W = alpha }, TextStyles.Title2);
         y += titleHeight + Metrics.Space.Md * scale;
         DrawEmblem(drawList, new Vector2(centerX, y + emblem * 0.5f), FontAwesomeIcon.BookOpen,
             pending >= 1d ? Gold : accent, pending >= 1d, alpha, scale);
         y += emblem + Metrics.Space.Sm * scale;
         Typography.DrawCentered(drawList, new Vector2(centerX, y + levelHeight * 0.5f), level,
-            MoogleClickerText.Ink with { W = alpha }, TextStyles.Title3);
+            StageInks.Strong with { W = alpha }, TextStyles.Title3);
         y += levelHeight;
         Typography.DrawCentered(drawList, new Vector2(centerX, y + bonusHeight * 0.5f),
-            Typography.FitText(bonus, inner.Width, TextStyles.Subheadline), MoogleClickerText.Muted with { W = alpha },
+            Typography.FitText(bonus, inner.Width, TextStyles.Subheadline), StageInks.Muted with { W = alpha },
             TextStyles.Subheadline);
         y += bonusHeight + Metrics.Space.Lg * scale;
         Typography.DrawCentered(drawList, new Vector2(centerX, y + waitingHeight * 0.5f),
             Typography.FitText(waiting, inner.Width, TextStyles.Headline),
-            (pending >= 1d ? Gold : MoogleClickerText.Ink) with { W = alpha }, TextStyles.Headline);
+            (pending >= 1d ? Gold : StageInks.Strong) with { W = alpha }, TextStyles.Headline);
         y += waitingHeight + Metrics.Space.Xs * scale;
         var bar = new Rect(new Vector2(inner.Min.X, y), new Vector2(inner.Max.X, y + barHeight));
         Squircle.Fill(drawList, bar.Min, bar.Max, barHeight * 0.5f, ImGui.GetColorU32(White with { W = 0.12f * alpha }));
@@ -234,11 +234,11 @@ internal sealed class MoogleClickerSheets
 
         y += barHeight + Metrics.Space.Xs * scale;
         Typography.DrawCentered(drawList, new Vector2(centerX, y + nextHeight * 0.5f),
-            Typography.FitText(next, inner.Width, TextStyles.Caption1), MoogleClickerText.Muted with { W = alpha },
+            Typography.FitText(next, inner.Width, TextStyles.Caption1), StageInks.Muted with { W = alpha },
             TextStyles.Caption1);
         y += nextHeight + Metrics.Space.Md * scale;
         Typography.DrawWrappedCentered(drawList, new Vector2(centerX, y + explainHeight * 0.5f), explain,
-            MoogleClickerText.Muted with { W = alpha }, TextStyles.Footnote, width);
+            StageInks.Muted with { W = alpha }, TextStyles.Footnote, width);
         y += explainHeight + Metrics.Space.Lg * scale;
         var ink = MoogleClickerText.Controls(accent, theme);
         var button = Centered(centerX, y, inner.Width, buttonHeight);
@@ -251,7 +251,7 @@ internal sealed class MoogleClickerSheets
 
         y += buttonHeight + Metrics.Space.Sm * scale;
         var closeClicked = TextButton.Draw(new Vector2(centerX, y + closeHeight * 0.5f), Loc.T(L.Common.Close),
-            MoogleClickerText.Muted, scale);
+            StageInks.Muted, scale);
         if ((closeClicked && interactive) || DismissedOutside(card, interactive))
         {
             Close();
@@ -282,10 +282,10 @@ internal sealed class MoogleClickerSheets
         y += emblem + Metrics.Space.Md * scale;
         Typography.DrawCentered(drawList, new Vector2(centerX, y + titleHeight * 0.5f),
             Typography.FitText(Loc.T(L.MoogleClicker.ConfirmTitle), inner.Width, TextStyles.Title2),
-            MoogleClickerText.Ink with { W = alpha }, TextStyles.Title2);
+            StageInks.Strong with { W = alpha }, TextStyles.Title2);
         y += titleHeight + Metrics.Space.Sm * scale;
         Typography.DrawWrappedCentered(drawList, new Vector2(centerX, y + bodyHeight * 0.5f), body,
-            MoogleClickerText.Muted with { W = alpha }, TextStyles.Subheadline, width);
+            StageInks.Muted with { W = alpha }, TextStyles.Subheadline, width);
         y += bodyHeight + Metrics.Space.Xl * scale;
         var ink = MoogleClickerText.Controls(accent, theme);
         var button = Centered(centerX, y, inner.Width, buttonHeight);
@@ -298,7 +298,7 @@ internal sealed class MoogleClickerSheets
 
         y += buttonHeight + Metrics.Space.Sm * scale;
         var cancelClicked = TextButton.Draw(new Vector2(centerX, y + cancelHeight * 0.5f),
-            Loc.T(L.MoogleClicker.ConfirmNo), MoogleClickerText.Muted, scale);
+            Loc.T(L.MoogleClicker.ConfirmNo), StageInks.Muted, scale);
         if ((cancelClicked && interactive) || DismissedOutside(card, interactive))
         {
             Kind = SheetKind.Ledger;
@@ -339,19 +339,19 @@ internal sealed class MoogleClickerSheets
         y += emblem + Metrics.Space.Md * scale;
         Typography.DrawCentered(drawList, new Vector2(centerX, y + titleHeight * 0.5f),
             Typography.FitText(Loc.T(L.MoogleClicker.AwayTitle), inner.Width, TextStyles.Title2),
-            MoogleClickerText.Ink with { W = alpha }, TextStyles.Title2);
+            StageInks.Strong with { W = alpha }, TextStyles.Title2);
         y += titleHeight + Metrics.Space.Sm * scale;
         Typography.DrawCentered(drawList, new Vector2(centerX, y + amountHeight * 0.5f), amount, Gold with { W = alpha },
             TextStyles.Title1);
         y += amountHeight + Metrics.Space.Sm * scale;
         Typography.DrawWrappedCentered(drawList, new Vector2(centerX, y + bodyHeight * 0.5f), body,
-            MoogleClickerText.Muted with { W = alpha }, TextStyles.Subheadline, width);
+            StageInks.Muted with { W = alpha }, TextStyles.Subheadline, width);
         y += bodyHeight;
         if (cappedHeight > 0f)
         {
             y += Metrics.Space.Xs * scale;
             Typography.DrawWrappedCentered(drawList, new Vector2(centerX, y + cappedHeight * 0.5f), capped,
-                MoogleClickerText.Muted with { W = 0.75f * alpha }, TextStyles.Footnote, width);
+                StageInks.Muted with { W = 0.75f * alpha }, TextStyles.Footnote, width);
             y += cappedHeight;
         }
 

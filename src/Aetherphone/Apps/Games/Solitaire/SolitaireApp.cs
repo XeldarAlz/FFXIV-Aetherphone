@@ -281,7 +281,7 @@ internal sealed class SolitaireApp : IMiniGame
             StageHud.Capsule(drawList, rect, scale);
             ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), FontAwesomeIcon.ShoePrints,
                 accent, iconSize);
-            Typography.Draw(drawList, textOrigin, label, theme.TextStrong, CapsuleStyle);
+            Typography.Draw(drawList, textOrigin, label, StageInks.Strong, CapsuleStyle);
             return;
         }
 

@@ -295,10 +295,10 @@ internal sealed class WaterSortApp : IMiniGame
         var left = rect.Min.X + CapsulePadX * scale;
         var centerY = rect.Center.Y;
         ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), FontAwesomeIcon.Undo,
-            canUndo ? accent : theme.TextMuted with { W = 0.45f }, iconSize);
+            canUndo ? accent : StageInks.Muted with { W = 0.45f }, iconSize);
         Typography.Draw(drawList,
             new Vector2(left + iconSize + CapsuleIconGap * scale, centerY - Typography.LineHeight(CapsuleStyle) * 0.5f),
-            label, theme.TextStrong, CapsuleStyle);
+            label, StageInks.Strong, CapsuleStyle);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

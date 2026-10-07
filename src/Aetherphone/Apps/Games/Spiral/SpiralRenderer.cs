@@ -34,7 +34,6 @@ internal static class SpiralRenderer
     public const float Tilt = 0.3f;
     public const float PipsWidth = 68f;
     private const int ArcSteps = 4;
-    private const int EllipseSides = 20;
     private const int PoleStripes = 6;
     private const float PipRadius = 4.2f;
     private const float PipSpacing = 14f;
@@ -136,7 +135,7 @@ internal static class SpiralRenderer
         var color = danger
             ? Red with { W = 0.45f + 0.35f * Pulse.Wave(Pulse.Fast) }
             : Shadow with { W = Shadow.W * fade };
-        FillEllipse(drawList, center, radius, radius * Tilt * 1.4f, ImGui.GetColorU32(color));
+        Shapes.FillEllipse(drawList, center, radius, radius * Tilt * 1.4f, ImGui.GetColorU32(color));
         if (!danger)
         {
             return;
@@ -159,18 +158,18 @@ internal static class SpiralRenderer
         {
             var flicker = 0.75f + 0.25f * MathF.Sin(time * 31f);
             ProgressRing.Glow(center, radius * 2.6f, Fire, 1.1f * flicker);
-            FillEllipse(drawList, center, radiusX * 1.25f, radiusY * 1.25f, ImGui.GetColorU32(Fire with { W = 0.55f }));
-            FillEllipse(drawList, center, radiusX, radiusY, ImGui.GetColorU32(Fire));
-            FillEllipse(drawList, center - new Vector2(radiusX * 0.18f, radiusY * 0.2f), radiusX * 0.62f, radiusY * 0.62f,
+            Shapes.FillEllipse(drawList, center, radiusX * 1.25f, radiusY * 1.25f, ImGui.GetColorU32(Fire with { W = 0.55f }));
+            Shapes.FillEllipse(drawList, center, radiusX, radiusY, ImGui.GetColorU32(Fire));
+            Shapes.FillEllipse(drawList, center - new Vector2(radiusX * 0.18f, radiusY * 0.2f), radiusX * 0.62f, radiusY * 0.62f,
                 ImGui.GetColorU32(FireCore));
             return;
         }
 
         ProgressRing.Glow(center, radius * 1.8f, BallColor, 0.35f);
-        FillEllipse(drawList, center, radiusX, radiusY, ImGui.GetColorU32(GamePalette.Darken(Paint, 0.18f)));
-        FillEllipse(drawList, center - new Vector2(radiusX * 0.1f, radiusY * 0.12f), radiusX * 0.86f, radiusY * 0.86f,
+        Shapes.FillEllipse(drawList, center, radiusX, radiusY, ImGui.GetColorU32(GamePalette.Darken(Paint, 0.18f)));
+        Shapes.FillEllipse(drawList, center - new Vector2(radiusX * 0.1f, radiusY * 0.12f), radiusX * 0.86f, radiusY * 0.86f,
             ImGui.GetColorU32(BallColor));
-        FillEllipse(drawList, center - new Vector2(radiusX * 0.34f, radiusY * 0.38f), radiusX * 0.26f, radiusY * 0.22f,
+        Shapes.FillEllipse(drawList, center - new Vector2(radiusX * 0.34f, radiusY * 0.38f), radiusX * 0.26f, radiusY * 0.22f,
             ImGui.GetColorU32(White with { W = 0.9f }));
     }
 
@@ -350,7 +349,7 @@ internal static class SpiralRenderer
             var center = camera.ToScreen(Project(angle, SpiralBoard.BallOrbit, SpiralBoard.RingY(ring)));
             var radius = camera.Px(splat.Size * grow);
             var color = ImGui.GetColorU32(Shade(splat.Color, angle) with { W = 0.88f });
-            FillEllipse(drawList, center, radius, radius * Tilt * 1.3f, color);
+            Shapes.FillEllipse(drawList, center, radius, radius * Tilt * 1.3f, color);
             for (var drop = 0; drop < 3; drop++)
             {
                 var dropAngle = splat.LocalAngle * 7f + drop * 2.1f;
@@ -375,17 +374,5 @@ internal static class SpiralRenderer
         var factor = Math.Clamp(0.56f + 0.36f * depth + 0.1f * light, 0.35f, 1.08f);
         return new Vector4(MathF.Min(1f, color.X * factor), MathF.Min(1f, color.Y * factor),
             MathF.Min(1f, color.Z * factor), color.W);
-    }
-
-    private static void FillEllipse(ImDrawListPtr drawList, Vector2 center, float radiusX, float radiusY, uint color)
-    {
-        drawList.PathClear();
-        for (var side = 0; side < EllipseSides; side++)
-        {
-            var angle = side * MathF.Tau / EllipseSides;
-            drawList.PathLineTo(new Vector2(center.X + MathF.Cos(angle) * radiusX, center.Y + MathF.Sin(angle) * radiusY));
-        }
-
-        drawList.PathFillConvex(color);
     }
 }

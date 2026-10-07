@@ -21,6 +21,23 @@ public sealed class Camera2DTests
     }
 
     [Fact]
+    public void AFitAnchorPinsTheOriginWhereTheGameWantsIt()
+    {
+        var camera = Camera2D.Create();
+        var anchor = new Vector2(View.Min.X + View.Width * 0.4f, View.Min.Y + View.Height * 0.72f);
+        camera.Fit(View, 10f, 20f, FitMode.CoverWidth, anchor);
+        camera.Place(new Vector2(3f, 7f));
+
+        Assert.Equal(36f, camera.Zoom);
+        Assert.Equal(anchor, camera.Anchor);
+        Assert.Equal(anchor, camera.ToScreen(new Vector2(3f, 7f)));
+
+        camera.Fit(View, 10f, 20f, FitMode.CoverWidth);
+        Assert.Equal(View.Center, camera.Anchor);
+        Assert.Equal(new Vector2(3f, 7f), camera.Origin);
+    }
+
+    [Fact]
     public void FittingAWorldRectKeepsTheOriginOnItsCentreEveryFrame()
     {
         var camera = Camera2D.Create();

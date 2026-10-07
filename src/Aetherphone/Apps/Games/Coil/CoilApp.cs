@@ -506,7 +506,7 @@ internal sealed class CoilApp : IMiniGame
         var alpha = progress < 0.15f ? progress / 0.15f : progress > 0.8f ? (1f - progress) / 0.2f : 1f;
         var counted = (int)(board.ClearBonus * Math.Clamp((progress - 0.12f) * 2.4f, 0f, 1f));
         var bonusCenter = center + new Vector2(0f, 52f * scale);
-        Typography.DrawCentered(drawList, bonusCenter, Loc.Upper(Loc.T(L.Coil.Bonus)), theme.TextMuted with { W = alpha },
+        Typography.DrawCentered(drawList, bonusCenter, Loc.Upper(Loc.T(L.Coil.Bonus)), StageInks.Muted with { W = alpha },
             TextStyles.Caption1.Scale, TextStyles.Caption1.Weight);
         Typography.DrawCentered(drawList, bonusCenter + new Vector2(0f, 22f * scale), GameNumber.Label(counted),
             GamePalette.Lighten(Accent, 0.45f) with { W = alpha }, TextStyles.Title2.Scale, TextStyles.Title2.Weight);
@@ -523,7 +523,7 @@ internal sealed class CoilApp : IMiniGame
         var text = Loc.T(L.Coil.HowTo);
         var height = Typography.MeasureWrappedBlock(text, TextStyles.Footnote, width).Y;
         var center = new Vector2(field.Center.X, field.Max.Y - height * 0.5f - 6f * scale);
-        Typography.DrawWrappedCentered(drawList, center, text, theme.TextMuted with { W = hintAlpha }, TextStyles.Footnote,
+        Typography.DrawWrappedCentered(drawList, center, text, StageInks.Muted with { W = hintAlpha }, TextStyles.Footnote,
             width);
     }
 

@@ -223,7 +223,7 @@ internal sealed class SnipBoard
         {
             Lose(SnipLoss.Spikes, current);
         }
-        else if (SnipGeometry.SegmentHitsCircle(previous, current, level.Moogle, MouthRadius))
+        else if (Geometry2D.SegmentCircle(previous, current, level.Moogle, MouthRadius))
         {
             Eat(current);
         }
@@ -361,7 +361,7 @@ internal sealed class SnipBoard
         for (var index = 0; index < stars.Length; index++)
         {
             var bit = 1 << index;
-            if ((StarMask & bit) != 0 || !SnipGeometry.SegmentHitsCircle(from, to, stars[index], StarRadius + CandyRadius))
+            if ((StarMask & bit) != 0 || !Geometry2D.SegmentCircle(from, to, stars[index], StarRadius + CandyRadius))
             {
                 continue;
             }
@@ -382,7 +382,7 @@ internal sealed class SnipBoard
         for (var index = 0; index < bubbles.Length; index++)
         {
             if (bubbleStates[index] != BubbleState.Free ||
-                !SnipGeometry.SegmentHitsCircle(from, to, bubbles[index], BubbleRadius * BubbleCatch))
+                !Geometry2D.SegmentCircle(from, to, bubbles[index], BubbleRadius * BubbleCatch))
             {
                 continue;
             }
@@ -410,8 +410,8 @@ internal sealed class SnipBoard
         for (var index = 0; index < spikes.Length; index++)
         {
             var spike = spikes[index];
-            if (SnipGeometry.SegmentDistance(to, spike.From, spike.To) <= reach ||
-                SnipGeometry.SegmentDistance((from + to) * 0.5f, spike.From, spike.To) <= reach)
+            if (Geometry2D.SegmentDistance(to, spike.From, spike.To) <= reach ||
+                Geometry2D.SegmentDistance((from + to) * 0.5f, spike.From, spike.To) <= reach)
             {
                 return true;
             }

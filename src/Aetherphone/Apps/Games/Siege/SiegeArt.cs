@@ -72,30 +72,6 @@ internal static class SiegeArt
         _ => SproutHead,
     };
 
-    public static void Ellipse(ImDrawListPtr drawList, Vector2 center, float radiusX, float radiusY, float angle,
-        uint color)
-    {
-        var cos = MathF.Cos(angle);
-        var sin = MathF.Sin(angle);
-        for (var index = 0; index < Round.Length; index++)
-        {
-            var local = new Vector2(Round[index].X * radiusX, Round[index].Y * radiusY);
-            drawList.PathLineTo(center + new Vector2(local.X * cos - local.Y * sin, local.X * sin + local.Y * cos));
-        }
-
-        drawList.PathFillConvex(color);
-    }
-
-    public static void Oval(ImDrawListPtr drawList, Vector2 center, float radiusX, float radiusY, uint color)
-    {
-        for (var index = 0; index < Round.Length; index++)
-        {
-            drawList.PathLineTo(center + new Vector2(Round[index].X * radiusX, Round[index].Y * radiusY));
-        }
-
-        drawList.PathFillConvex(color);
-    }
-
     public static void Dome(ImDrawListPtr drawList, Vector2 baseCenter, float radiusX, float radiusY, uint color)
     {
         var half = RoundSegments / 2;
@@ -110,7 +86,7 @@ internal static class SiegeArt
 
     public static void GroundShadow(ImDrawListPtr drawList, Vector2 feet, float unit, float width, float alpha)
     {
-        Oval(drawList, feet, unit * 0.3f * width, unit * 0.085f * width, Color(Shadow, alpha));
+        Shapes.FillEllipse(drawList, feet, unit * 0.3f * width, unit * 0.085f * width, Color(Shadow, alpha));
     }
 
     public static void Defender(ImDrawListPtr drawList, in SiegeDefender defender, Vector2 center, float unit,
@@ -167,8 +143,8 @@ internal static class SiegeArt
         var stemBase = center + new Vector2(0f, unit * 0.32f);
         var head = center + new Vector2(sway * unit, -unit * 0.04f + recoil * unit * 0.05f);
         var leaf = Color(frost ? FrostDark : LeafDark, alpha);
-        Ellipse(drawList, stemBase + new Vector2(-unit * 0.15f, -unit * 0.04f), unit * 0.17f, unit * 0.065f, -0.5f, leaf);
-        Ellipse(drawList, stemBase + new Vector2(unit * 0.15f, -unit * 0.04f), unit * 0.17f, unit * 0.065f, 0.5f, leaf);
+        Shapes.FillEllipse(drawList, stemBase + new Vector2(-unit * 0.15f, -unit * 0.04f), unit * 0.17f, unit * 0.065f, -0.5f, leaf);
+        Shapes.FillEllipse(drawList, stemBase + new Vector2(unit * 0.15f, -unit * 0.04f), unit * 0.17f, unit * 0.065f, 0.5f, leaf);
         drawList.AddLine(stemBase, head, Color(Stem, alpha), unit * 0.075f);
         if (frost)
         {
@@ -187,11 +163,11 @@ internal static class SiegeArt
         var muzzleTop = head.Y - unit * 0.34f + recoil * unit * 0.07f;
         drawList.AddRectFilled(new Vector2(head.X - unit * 0.075f, muzzleTop), new Vector2(head.X + unit * 0.075f, head.Y - unit * 0.08f),
             Color(darkColor, alpha), unit * 0.04f);
-        Oval(drawList, new Vector2(head.X, muzzleTop), unit * 0.09f, unit * 0.045f, Color(darkColor, alpha));
-        Oval(drawList, new Vector2(head.X, muzzleTop), unit * 0.055f, unit * 0.026f, Color(Ink, alpha));
-        Oval(drawList, head, unit * 0.22f * (1f + 0.12f * recoil), unit * 0.2f * (1f - 0.1f * recoil),
+        Shapes.FillEllipse(drawList, new Vector2(head.X, muzzleTop), unit * 0.09f, unit * 0.045f, Color(darkColor, alpha));
+        Shapes.FillEllipse(drawList, new Vector2(head.X, muzzleTop), unit * 0.055f, unit * 0.026f, Color(Ink, alpha));
+        Shapes.FillEllipse(drawList, head, unit * 0.22f * (1f + 0.12f * recoil), unit * 0.2f * (1f - 0.1f * recoil),
             Color(Mix(headColor, White, flash * 0.6f), alpha));
-        Ellipse(drawList, head + new Vector2(-unit * 0.08f, -unit * 0.07f), unit * 0.07f, unit * 0.045f, -0.6f,
+        Shapes.FillEllipse(drawList, head + new Vector2(-unit * 0.08f, -unit * 0.07f), unit * 0.07f, unit * 0.045f, -0.6f,
             Color(Highlight, alpha));
         Eyes(drawList, head + new Vector2(0f, unit * 0.02f), unit * 0.08f, unit * 0.034f, alpha);
     }
@@ -202,8 +178,8 @@ internal static class SiegeArt
         var stemBase = center + new Vector2(0f, unit * 0.32f);
         var flower = center + new Vector2(sway * unit, -unit * 0.08f);
         var leaf = Color(LeafDark, alpha);
-        Ellipse(drawList, stemBase + new Vector2(-unit * 0.14f, -unit * 0.05f), unit * 0.15f, unit * 0.06f, -0.55f, leaf);
-        Ellipse(drawList, stemBase + new Vector2(unit * 0.14f, -unit * 0.05f), unit * 0.15f, unit * 0.06f, 0.55f, leaf);
+        Shapes.FillEllipse(drawList, stemBase + new Vector2(-unit * 0.14f, -unit * 0.05f), unit * 0.15f, unit * 0.06f, -0.55f, leaf);
+        Shapes.FillEllipse(drawList, stemBase + new Vector2(unit * 0.14f, -unit * 0.05f), unit * 0.15f, unit * 0.06f, 0.55f, leaf);
         drawList.AddLine(stemBase, flower, Color(Stem, alpha), unit * 0.07f);
         ProgressRing.Glow(flower, unit * (0.34f + 0.12f * glow), Sun, (0.3f + 0.6f * glow) * alpha);
         var spin = MathF.Sin(time * 0.8f) * 0.15f;
@@ -213,7 +189,7 @@ internal static class SiegeArt
         {
             var angle = index * MathF.Tau / 10f + spin;
             var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-            Ellipse(drawList, flower + direction * unit * 0.18f, unit * 0.11f, unit * 0.055f, angle, petal);
+            Shapes.FillEllipse(drawList, flower + direction * unit * 0.18f, unit * 0.11f, unit * 0.055f, angle, petal);
             drawList.AddCircleFilled(flower + direction * unit * 0.25f, unit * 0.025f, tip, 6);
         }
 
@@ -344,12 +320,12 @@ internal static class SiegeArt
 
         var swing = walking ? MathF.Sin(gait) * 0.5f : MathF.Sin(time * 14f) * 0.4f;
         var arm = Color(Mix(tint, Ink, 0.15f), alpha);
-        Ellipse(drawList, body + new Vector2(-radiusX * 0.98f, size * 0.04f), size * 0.08f, size * 0.045f, 1.2f + swing, arm);
-        Ellipse(drawList, body + new Vector2(radiusX * 0.98f, size * 0.04f), size * 0.08f, size * 0.045f, -1.2f - swing, arm);
-        Oval(drawList, body, radiusX, radiusY, Color(tint, alpha));
-        Oval(drawList, body + new Vector2(0f, radiusY * 0.35f), radiusX * 0.62f, radiusY * 0.5f,
+        Shapes.FillEllipse(drawList, body + new Vector2(-radiusX * 0.98f, size * 0.04f), size * 0.08f, size * 0.045f, 1.2f + swing, arm);
+        Shapes.FillEllipse(drawList, body + new Vector2(radiusX * 0.98f, size * 0.04f), size * 0.08f, size * 0.045f, -1.2f - swing, arm);
+        Shapes.FillEllipse(drawList, body, radiusX, radiusY, Color(tint, alpha));
+        Shapes.FillEllipse(drawList, body + new Vector2(0f, radiusY * 0.35f), radiusX * 0.62f, radiusY * 0.5f,
             Color(Mix(tint, White, 0.25f), alpha * 0.8f));
-        Ellipse(drawList, body + new Vector2(-radiusX * 0.4f, -radiusY * 0.45f), radiusX * 0.28f, radiusY * 0.16f, -0.5f,
+        Shapes.FillEllipse(drawList, body + new Vector2(-radiusX * 0.4f, -radiusY * 0.45f), radiusX * 0.28f, radiusY * 0.16f, -0.5f,
             Color(Highlight, alpha));
         var top = body - new Vector2(0f, radiusY * 0.92f);
         if (enemy.HasPot)
@@ -379,7 +355,7 @@ internal static class SiegeArt
         }
 
         var chomp = enemy.State == EnemyState.Eating ? 0.5f + 0.5f * MathF.Sin(time * 16f + enemy.Id) : 0f;
-        Oval(drawList, body + new Vector2(0f, radiusY * 0.3f), size * 0.06f, size * (0.022f + 0.04f * chomp),
+        Shapes.FillEllipse(drawList, body + new Vector2(0f, radiusY * 0.3f), size * 0.06f, size * (0.022f + 0.04f * chomp),
             Color(Mouth, alpha));
         if (kind == EnemyKind.Runner && walking)
         {
@@ -406,12 +382,12 @@ internal static class SiegeArt
         {
             var angle = index * 0.45f + MathF.Sin(time * 6f + index) * 0.12f;
             var direction = new Vector2(MathF.Sin(angle), -MathF.Cos(angle));
-            Ellipse(drawList, feet + new Vector2(index * unit * 0.05f, -unit * 0.14f) + direction * unit * 0.1f,
+            Shapes.FillEllipse(drawList, feet + new Vector2(index * unit * 0.05f, -unit * 0.14f) + direction * unit * 0.1f,
                 unit * 0.1f, unit * 0.04f, angle - MathF.PI * 0.5f, leaf);
         }
 
-        Oval(drawList, feet + new Vector2(wobble, -unit * 0.04f), unit * 0.3f, unit * 0.13f, Color(Dirt, alpha));
-        Oval(drawList, feet + new Vector2(wobble, -unit * 0.08f), unit * 0.22f, unit * 0.07f, Color(MoundTop, alpha));
+        Shapes.FillEllipse(drawList, feet + new Vector2(wobble, -unit * 0.04f), unit * 0.3f, unit * 0.13f, Color(Dirt, alpha));
+        Shapes.FillEllipse(drawList, feet + new Vector2(wobble, -unit * 0.08f), unit * 0.22f, unit * 0.07f, Color(MoundTop, alpha));
         var pebble = Color(Mix(Dirt, Ink, 0.3f), alpha);
         drawList.AddCircleFilled(feet + new Vector2(-unit * 0.2f, -unit * 0.02f), unit * 0.03f, pebble, 6);
         drawList.AddCircleFilled(feet + new Vector2(unit * 0.17f, 0f), unit * 0.025f, pebble, 6);
@@ -506,7 +482,7 @@ internal static class SiegeArt
         for (var side = -1; side <= 1; side += 2)
         {
             var eye = center + new Vector2(side * spread, 0f);
-            Oval(drawList, eye, radius, radius * 1.25f, ink);
+            Shapes.FillEllipse(drawList, eye, radius, radius * 1.25f, ink);
             drawList.AddCircleFilled(eye - new Vector2(radius * 0.3f, radius * 0.45f), radius * 0.38f, glint, 6);
         }
     }
@@ -514,9 +490,9 @@ internal static class SiegeArt
     private static void Legs(ImDrawListPtr drawList, Vector2 feet, float size, float gait, bool walking, uint color)
     {
         var step = walking ? MathF.Sin(gait) : 0f;
-        Oval(drawList, feet + new Vector2(-size * 0.1f, -size * (0.04f + 0.04f * MathF.Max(0f, step))), size * 0.065f,
+        Shapes.FillEllipse(drawList, feet + new Vector2(-size * 0.1f, -size * (0.04f + 0.04f * MathF.Max(0f, step))), size * 0.065f,
             size * 0.05f, color);
-        Oval(drawList, feet + new Vector2(size * 0.1f, -size * (0.04f + 0.04f * MathF.Max(0f, -step))), size * 0.065f,
+        Shapes.FillEllipse(drawList, feet + new Vector2(size * 0.1f, -size * (0.04f + 0.04f * MathF.Max(0f, -step))), size * 0.065f,
             size * 0.05f, color);
     }
 
@@ -529,7 +505,7 @@ internal static class SiegeArt
             var angle = index * (swept ? 0.32f : 0.55f) + sway;
             var direction = new Vector2(MathF.Sin(angle), -MathF.Cos(angle));
             var length = size * (index == 0 ? 0.17f : 0.14f);
-            Ellipse(drawList, top + direction * length, length, size * 0.06f, angle - MathF.PI * 0.5f, index == 0 ? leaf : dark);
+            Shapes.FillEllipse(drawList, top + direction * length, length, size * 0.06f, angle - MathF.PI * 0.5f, index == 0 ? leaf : dark);
         }
     }
 
@@ -538,8 +514,8 @@ internal static class SiegeArt
         var rimY = top.Y + size * 0.12f;
         var crownY = top.Y - size * 0.2f;
         var leaf = Color(Leaf, alpha);
-        Ellipse(drawList, new Vector2(top.X - size * 0.05f, crownY - size * 0.06f), size * 0.08f, size * 0.035f, -1f, leaf);
-        Ellipse(drawList, new Vector2(top.X + size * 0.06f, crownY - size * 0.07f), size * 0.08f, size * 0.035f, -2.2f, leaf);
+        Shapes.FillEllipse(drawList, new Vector2(top.X - size * 0.05f, crownY - size * 0.06f), size * 0.08f, size * 0.035f, -1f, leaf);
+        Shapes.FillEllipse(drawList, new Vector2(top.X + size * 0.06f, crownY - size * 0.07f), size * 0.08f, size * 0.035f, -2.2f, leaf);
         drawList.AddQuadFilled(new Vector2(top.X - size * 0.2f, crownY), new Vector2(top.X + size * 0.2f, crownY),
             new Vector2(top.X + size * 0.27f, rimY), new Vector2(top.X - size * 0.27f, rimY), Color(Pot, alpha));
         drawList.AddRectFilled(new Vector2(top.X - size * 0.3f, rimY - size * 0.02f), new Vector2(top.X + size * 0.3f, rimY + size * 0.07f),
@@ -576,7 +552,7 @@ internal static class SiegeArt
             var angle = side > 0 ? -lift : MathF.PI + lift;
             var root = body + new Vector2(side * size * 0.18f, -size * 0.1f);
             var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-            Ellipse(drawList, root + direction * size * 0.16f, size * 0.19f, size * 0.07f, angle, wing);
+            Shapes.FillEllipse(drawList, root + direction * size * 0.16f, size * 0.19f, size * 0.07f, angle, wing);
         }
     }
 

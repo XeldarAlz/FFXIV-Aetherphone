@@ -1,6 +1,5 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -38,8 +37,7 @@ internal sealed class LanderPad
         Right,
     }
 
-    public LanderPadInput Draw(ImDrawListPtr drawList, Rect band, Vector4 accent, PhoneTheme theme, bool interactive,
-        string thrustLabel)
+    public LanderPadInput Draw(ImDrawListPtr drawList, Rect band, Vector4 accent, bool interactive, string thrustLabel)
     {
         var scale = UiScale.Current;
         var gap = KeyGap * scale;
@@ -58,10 +56,10 @@ internal sealed class LanderPad
 
         var steering = pressed == PadKey.Thrust ? input.Rotate : 0;
         DrawKey(drawList, left, pressed == PadKey.Left || steering < 0, FontAwesomeIcon.UndoAlt, string.Empty, accent,
-            theme, scale);
+            scale);
         DrawKey(drawList, right, pressed == PadKey.Right || steering > 0, FontAwesomeIcon.RedoAlt, string.Empty, accent,
-            theme, scale);
-        DrawKey(drawList, thrust, input.Thrust, FontAwesomeIcon.Fire, thrustLabel, LanderRenderer.Flame, theme, scale);
+            scale);
+        DrawKey(drawList, thrust, input.Thrust, FontAwesomeIcon.Fire, thrustLabel, LanderRenderer.Flame, scale);
         return input;
     }
 
@@ -102,18 +100,11 @@ internal sealed class LanderPad
     }
 
     private static void DrawKey(ImDrawListPtr drawList, Rect rect, bool held, FontAwesomeIcon icon, string label,
-        Vector4 accent, PhoneTheme theme, float scale)
+        Vector4 accent, float scale)
     {
         var radius = rect.Height * 0.3f;
-        Material.Frosted(drawList, rect.Min, rect.Max, radius, scale, held ? 1f : 0.85f);
-        if (held)
-        {
-            Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(accent with { W = 0.3f }));
-            Squircle.Stroke(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(accent with { W = 0.9f }),
-                1.5f * scale);
-        }
-
-        var ink = held ? accent : theme.TextStrong;
+        GamePad.KeyFace(drawList, rect, radius, held, false, accent, scale);
+        var ink = GamePad.GlyphInk(held, accent);
         var iconSize = rect.Height * 0.36f;
         var style = TextStyles.FootnoteEmphasized;
         var gap = 6f * scale;

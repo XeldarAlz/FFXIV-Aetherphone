@@ -67,7 +67,7 @@ internal sealed class StageChrome
         var corner = new Vector2(chipRadius, chipRadius);
         var hovered = UiInteract.Hover(center - corner, center + corner);
         Material.Frosted(drawList, center - corner, center + corner, chipRadius, scale, hovered ? 1f : 0.85f);
-        ProgressRing.CenterIcon(drawList, center, icon, hovered ? theme.TextStrong : theme.Accent, chipRadius * 0.9f);
+        ProgressRing.CenterIcon(drawList, center, icon, hovered ? StageInks.Strong : theme.Accent, chipRadius * 0.9f);
         return UiInteract.HoverClickCircle(center, chipRadius);
     }
 }

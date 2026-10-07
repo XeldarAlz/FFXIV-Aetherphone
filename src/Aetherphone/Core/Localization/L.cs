@@ -2249,8 +2249,66 @@ internal static class L
                 "Updraft and Swoop share the same sky as Flap and Hop, drifting from dawn to night as you climb or glide"),
             new("changelog.r1200.34",
                 "Doom opens on the same stage as every other game, and its lobby no longer checks your disk every frame"),
+            new("changelog.r1200.41",
+                "Added Mahjong Solitaire: match pairs of free tiles across six layouts on Easy, Medium and Hard, and every deal can be cleared"),
+            new("changelog.r1200.42",
+                "Added Gloop: drop pairs of blobs, link four or more of a color to pop them and set off chains, alone or against a bot"),
+            new("changelog.r1200.43",
+                "Added Slice: swipe through everything thrown into the air and never touch a bomb"),
+            new("changelog.r1200.44",
+                "Added Spiral: turn a tower of rings so the ball drops through the gaps, and never land on red"),
+            new("changelog.r1200.45",
+                "Added Drift: steer, thrust and blast drifting rocks to pieces on a field that wraps at every edge, with saucers on the hunt"),
+            new("changelog.r1200.46",
+                "Added Crawler: shoot the crawler as it winds down a mushroom field, splitting it with every segment you hit"),
+            new("changelog.r1200.47",
+                "Added Trails: light cycles against up to three bots, where you never touch a trail and the first to three rounds wins"),
+            new("changelog.r1200.48",
+                "Added Trailblaze: an endless chocobo run across three lanes, jumping pits, sliding under beams and scooping up gil"),
+            new("changelog.r1200.49",
+                "Added Thrust: hold to fly and let go to drop, dodging zappers and missiles, with a chocobo that saves you from one hit"),
+            new("changelog.r1200.50",
+                "Added Pinball: a Gold Saucer table with flippers, bumpers, drop targets, a jackpot and multiball"),
+            new("changelog.r1200.51",
+                "Added Pegfall: bounce a ball through a field of pegs and light every orange one, across 20 levels"),
+            new("changelog.r1200.52",
+                "Added Fling: sling birds at goblin forts of planks, boxes and stone, across 40 levels"),
+            new("changelog.r1200.53",
+                "Added Snip: cut the ropes so the crystal drops into the moogle's mouth, across 40 levels"),
+            new("changelog.r1200.54",
+                "Added Crates: push every crate onto a glowing target, across 60 levels with undo"),
+            new("changelog.r1200.55",
+                "Added Delve: dig through caves for gems while boulders fall and roll, then get out before time runs out, across 30 levels"),
+            new("changelog.r1200.56",
+                "Added Claim: cut lines into the field to claim three quarters of it while the boss and sparks hunt your line"),
+            new("changelog.r1200.57",
+                "Added Lander: set a lander down gently on lit pads over rugged ground before the fuel runs out"),
+            new("changelog.r1200.58",
+                "Added Moogle Clicker: tap the moogle for kupo and build up a workshop that keeps earning while you play"),
+            new("changelog.r1200.59",
+                "Added Crater: turn-based artillery between moogle teams on ground that crumbles under every shell"),
+            new("changelog.r1200.60",
+                "Added Garden Siege: plant defenders to stop marching mandragoras before they reach your flowers, across 30 levels or in an endless mode"),
+            new("changelog.r1200.61",
+                "Added Lucky Draw: a push-your-luck card game where a duplicate number busts you and the first to 200 wins"),
+            new("changelog.r1200.62",
+                "Added Broadside: hide five airships, then trade cannon fire across the clouds until one fleet is gone"),
+            new("changelog.r1200.63",
+                "Added Herd: give moogles skills to dig, build and block a way from the door to the hut, across 30 levels"),
+            new("changelog.r1200.64",
+                "Added Tempo: a one-tap rhythm runner over spikes, jump pads and gravity portals, across 20 levels with a practice mode"),
+            new("changelog.r1200.65",
+                "Added Fuse: drop bombs, blast crates for power-ups and be the last moogle standing against three bots"),
+            new("changelog.r1200.66",
+                "Added Mini Golf: 18 holes of windmills, sand and water, counted in strokes against par"),
+            new("changelog.r1200.67",
+                "Added a Strategy shelf for Crater, Garden Siege, Broadside and Herd"),
+            new("changelog.r1200.68",
+                "Added pass-the-phone play to Crater, Broadside, Lucky Draw and Mini Golf: pick how many players share the phone on the intro, and a cover hides each turn until the next player is ready"),
+            new("changelog.r1200.69",
+                "Added Crater, Broadside, Lucky Draw and Mini Golf rooms to Play with friends"),
             new("changelog.r1200.35",
-                "Added a global leaderboard to every game: the top 50 worldwide or among your friends, all time or this week, from the intro, the pause menu, the result card or Records"),
+                "Added a global leaderboard to every game that you join by choice: a card the first time you open Games shows how you would appear, and each board lists the top 50 worldwide or among your friends, all time or this week, from the intro, the pause menu, the result card or Records"),
             new("changelog.r1200.36",
                 "Your rank shows on the result card, on each game's tile, and in a Your ranks list at the top of Records"),
             new("changelog.r1200.37",
@@ -8322,6 +8380,7 @@ internal static class L
         public static readonly LocString KindTime = new("gamesHub.kindTime", "Best time");
         public static readonly LocString KindLevel = new("gamesHub.kindLevel", "Highest level");
         public static readonly LocString KindStreak = new("gamesHub.kindStreak", "Win streak");
+        public static readonly LocString KindStars = new("gamesHub.kindStars", "Stars collected");
         public static readonly LocString SignInTitle = new("gamesHub.signInTitle", "Sign in to play together");
         public static readonly LocString OpenSettings = new("gamesHub.openSettings", "Open Settings");
         public static readonly LocString Players = new("gamesHub.players", "Players");
@@ -8364,6 +8423,7 @@ internal static class L
         public static readonly LocString Retry = new("stage.retry", "Retry");
         public static readonly LocString TotalStars = new("stage.totalStars", "Total stars");
         public static readonly LocString StarsOf = new("stage.starsOf", "{0} / {1}");
+        public static readonly LocString StarsTotal = new("stage.starsTotal", "{0} / {1} stars");
         public static readonly LocString Players = new("stage.players", "Players");
         public static readonly LocString PlayerName = new("stage.playerName", "Player {0}");
         public static readonly LocString PassTo = new("stage.passTo", "Pass to {0}");
@@ -9116,7 +9176,6 @@ internal static class L
         public static readonly LocString TipDigger = new("games.siege.tipDigger", "Diggers tunnel under your first defender and pop up behind it.");
         public static readonly LocString TipBoss = new("games.siege.tipBoss", "The King Mandragora is huge, slow, and calls for help.");
         public static readonly LocString TipEndless = new("games.siege.tipEndless", "Endless waves that keep growing. How long can your garden hold?");
-        public static readonly LocString StarsRecord = new("games.siege.starsRecord", "{0} stars");
         public static readonly LocString WavesRecord = new("games.siege.wavesRecord", "{0} waves");
     }
 
@@ -9196,7 +9255,6 @@ internal static class L
         public static readonly LocString Perfect = new("games.snip.perfect", "All three stars!");
         public static readonly LocString Shattered = new("games.snip.shattered", "Shattered!");
         public static readonly LocString Missed = new("games.snip.missed", "Missed!");
-        public static readonly LocString StarCount = new("games.snip.starCount", "{0} stars");
     }
 
     internal static class MiniGolf

@@ -51,7 +51,7 @@ internal static class SimonRenderer
         drawList.AddCircleFilled(center, radius + 4f * scale, ImGui.GetColorU32(GamePalette.Board), 48);
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(GamePalette.Cell), 48);
         drawList.AddCircle(center, radius, ImGui.GetColorU32(color with { W = 0.6f }), 48, 1.6f * scale);
-        Typography.DrawCentered(drawList, new Vector2(center.X, center.Y - radius * 0.16f), value, theme.TextStrong,
+        Typography.DrawCentered(drawList, new Vector2(center.X, center.Y - radius * 0.16f), value, StageInks.Strong,
             TextStyles.Title1.Scale, TextStyles.Title1.Weight);
         Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + radius * 0.42f), label, color,
             TextStyles.Caption2.Scale, TextStyles.Caption2.Weight);

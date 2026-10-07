@@ -168,7 +168,7 @@ Tek bir Aethernet hesabı seni tüm sosyal uygulamalara sokar ve her uygulama ke
 
 **Mola zamanı**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Oyunlar" title="Oyunlar" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Satranç" title="Satranç" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Doom'un da aralarında olduğu otuz üç oyunluk bir atari salonu, üstüne arkadaşlarınla çevrimiçi Uno, Satranç, 8 Top Bilardo ve Dört Kazan</sub>
+<sub>Doom'un da aralarında olduğu elli dokuz oyunluk bir atari salonu · yalnızca istersen katıldığın küresel ve arkadaş liderlik tabloları · üstüne arkadaşlarınla çevrimiçi Uno, Satranç, 8 Top Bilardo, Dört Kazan, Borda Ateşi, Şans Kartı, Krater ve Mini Golf · Doom ve Krater ile 8 Top Bilardo ve Krater odaları yatay oynanır</sub>
 
 ## Cebindeki telefon gibi tasarlandı
 

@@ -38,9 +38,10 @@ internal sealed class TempoApp : IMiniGame
     private const ulong IdleSeed = 0x54454D50UL;
     private static readonly LocString[] Modes = { L.Tempo.Normal, L.Tempo.Practice };
     private static readonly bool[] LevelModes = { true, false };
+    private static readonly bool[] UnrankedModes = { false, true };
     private static readonly GameSpec StageSpec = new(GameId, L.Tempo.Title, GameGenre.Arcade, L.Tempo.Hook,
         Backdrop.Neon, HudStyle.Standard, ScoreKind.Level, Modes, clocked: true, countdown: true, keyboard: true,
-        levelCount: TempoLevels.Count, levelModes: LevelModes);
+        levelCount: TempoLevels.Count, levelModes: LevelModes, unrankedModes: UnrankedModes);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 Danger = new(0.98f, 0.32f, 0.36f, 1f);
     private static readonly Vector4 Gold = new(1f, 0.82f, 0.3f, 1f);
@@ -568,7 +569,7 @@ internal sealed class TempoApp : IMiniGame
             return;
         }
 
-        ribbon.Push(TempoRenderer.World(board.RenderX, board.RenderY));
+        ribbon.PushSpaced(TempoRenderer.World(board.RenderX, board.RenderY), Ribbon.Spacing(board.Level?.Speed ?? 0f));
     }
 
     private void DrawWorld(ImDrawListPtr drawList, in GameContext context, float scale, bool live)

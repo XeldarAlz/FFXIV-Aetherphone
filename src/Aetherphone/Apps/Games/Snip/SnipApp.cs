@@ -208,10 +208,11 @@ internal sealed class SnipApp : IMiniGame
         }
 
         finished = true;
-        var stars = board.StarCount;
+        var collected = board.StarCount;
+        var stars = Math.Max(1, collected);
         context.Session.Finish(new GameOutcome(stars, ScoreKind.Level, GameId)
             .WithStars(stars)
-            .WithStat(L.Snip.Stars, starsLabel.Get(L.Stage.StarsOf, stars, SnipLevel.StarCount))
+            .WithStat(L.Snip.Stars, starsLabel.Get(L.Stage.StarsOf, collected, SnipLevel.StarCount))
             .WithStat(L.Snip.Attempts, GameNumber.Label(attempts))
             .WithStat(L.Snip.Cuts, GameNumber.Label(totalCuts))
             .WithStat(L.Games.Time, TimeText.MinutesSeconds((int)board.Elapsed)));

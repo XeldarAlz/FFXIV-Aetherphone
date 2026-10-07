@@ -249,8 +249,8 @@ internal sealed class SwoopApp : IMiniGame
             zoom.Step(zoomTarget, ZoomSmoothSeconds, deltaSeconds);
         }
 
-        camera.Fit(full, ViewWidthMeters * MathF.Max(1f, zoom.Value), 1f, FitMode.CoverWidth);
-        camera.Anchor = new Vector2(full.Min.X + full.Width * AnchorXFraction, full.Min.Y + full.Height * AnchorYFraction);
+        camera.Fit(full, ViewWidthMeters * MathF.Max(1f, zoom.Value), 1f, FitMode.CoverWidth,
+            new Vector2(full.Min.X + full.Width * AnchorXFraction, full.Min.Y + full.Height * AnchorYFraction));
         camera.Place(World(target.X + lead.Value, floor.Value));
         context.Fx.ApplyTo(ref camera);
         camera.Update(context.RawDeltaSeconds, UiScale.Current);
@@ -575,7 +575,7 @@ internal sealed class SwoopApp : IMiniGame
         left += iconSize + IconGap * scale;
         var label = GameNumber.Label(board.CurrentIsland + 1);
         Typography.Draw(drawList, new Vector2(left, rect.Center.Y - Typography.LineHeight(CapsuleStyle) * 0.5f), label,
-            context.Theme.TextStrong, CapsuleStyle);
+            StageInks.Strong, CapsuleStyle);
         left += Typography.Measure(label, CapsuleStyle).X + IconGap * scale;
         var barHeight = IslandBarHeight * scale;
         var barMin = new Vector2(left, rect.Center.Y - barHeight * 0.5f);

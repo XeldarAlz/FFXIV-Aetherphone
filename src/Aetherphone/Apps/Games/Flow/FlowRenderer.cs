@@ -157,7 +157,7 @@ internal sealed class FlowRenderer
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var ink = !enabled ? theme.TextMuted with { W = 0.45f } : hovered ? theme.TextStrong : accent;
+        var ink = !enabled ? StageInks.Muted with { W = 0.45f } : hovered ? StageInks.Strong : accent;
         ProgressRing.CenterIcon(drawList, center, FontAwesomeIcon.Lightbulb, ink, radius * 0.95f);
         return enabled && UiInteract.HoverClickCircle(center, radius);
     }

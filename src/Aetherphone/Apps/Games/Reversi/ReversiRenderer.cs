@@ -96,12 +96,12 @@ internal sealed class ReversiRenderer
         DrawCountDisc(drawList, new Vector2(penX + disc * 0.5f, centerY), disc * 0.5f, ReversiBoard.Dark,
             current == ReversiBoard.Dark, accent, scale);
         penX += disc + gap;
-        Typography.Draw(drawList, new Vector2(penX, textY), GameNumber.Label(dark), theme.TextStrong, CountStyle);
+        Typography.Draw(drawList, new Vector2(penX, textY), GameNumber.Label(dark), StageInks.Strong, CountStyle);
         penX += countWidth + CapsuleSideGap * scale;
         DrawCountDisc(drawList, new Vector2(penX + disc * 0.5f, centerY), disc * 0.5f, ReversiBoard.Light,
             current == ReversiBoard.Light, accent, scale);
         penX += disc + gap;
-        Typography.Draw(drawList, new Vector2(penX, textY), GameNumber.Label(light), theme.TextStrong, CountStyle);
+        Typography.Draw(drawList, new Vector2(penX, textY), GameNumber.Label(light), StageInks.Strong, CountStyle);
     }
 
     public static void DrawThinking(ImDrawListPtr drawList, Rect rect, float dotPhase, Vector4 accent, float scale)

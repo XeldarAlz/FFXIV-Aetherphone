@@ -12,7 +12,6 @@ internal static class HerdArt
     public static readonly Vector4 Nose = new(0.96f, 0.56f, 0.62f, 1f);
     public static readonly Vector4 Eye = new(0.15f, 0.12f, 0.18f, 1f);
     public static readonly Vector4 Ink = new(1f, 1f, 1f, 1f);
-    private const int EllipseSegments = 18;
     private const float Tau = MathF.PI * 2f;
 
     public readonly struct Pose
@@ -113,20 +112,20 @@ internal static class HerdArt
         }
 
         DrawWings(drawList, bodyCenter, scaleX, scaleY, facing, pose, wing);
-        FillEllipse(drawList, Local(root, scaleX, scaleY, lean, -0.11f + pose.LeftFoot, -0.04f), 0.09f * scaleX,
+        Shapes.FillEllipse(drawList, Local(root, scaleX, scaleY, lean, -0.11f + pose.LeftFoot, -0.04f), 0.09f * scaleX,
             0.05f * scaleY, shade);
-        FillEllipse(drawList, Local(root, scaleX, scaleY, lean, 0.11f + pose.RightFoot, -0.04f), 0.09f * scaleX,
+        Shapes.FillEllipse(drawList, Local(root, scaleX, scaleY, lean, 0.11f + pose.RightFoot, -0.04f), 0.09f * scaleX,
             0.05f * scaleY, shade);
-        FillEllipse(drawList, bodyCenter + new Vector2(0f, 0.02f * scaleY), 0.25f * scaleX, 0.22f * scaleY, shade);
-        FillEllipse(drawList, bodyCenter, 0.24f * scaleX, 0.21f * scaleY, fur);
+        Shapes.FillEllipse(drawList, bodyCenter + new Vector2(0f, 0.02f * scaleY), 0.25f * scaleX, 0.22f * scaleY, shade);
+        Shapes.FillEllipse(drawList, bodyCenter, 0.24f * scaleX, 0.21f * scaleY, fur);
         DrawPaws(drawList, bodyCenter, scaleX, scaleY, facing, pose, fur, shade);
         if (pose.Canopy <= 0f)
         {
             DrawAntenna(drawList, headCenter, scaleX, scaleY, facing, pose, alpha, pomPom);
         }
 
-        FillEllipse(drawList, headCenter + new Vector2(0f, 0.02f * scaleY), 0.29f * scaleX, 0.27f * scaleY, shade);
-        FillEllipse(drawList, headCenter, 0.28f * scaleX, 0.26f * scaleY, fur);
+        Shapes.FillEllipse(drawList, headCenter + new Vector2(0f, 0.02f * scaleY), 0.29f * scaleX, 0.27f * scaleY, shade);
+        Shapes.FillEllipse(drawList, headCenter, 0.28f * scaleX, 0.26f * scaleY, fur);
         DrawFace(drawList, headCenter, scaleX, scaleY, facing, pose, alpha);
     }
 
@@ -252,23 +251,6 @@ internal static class HerdArt
         var blush = ImGui.GetColorU32(Nose with { W = 0.35f * alpha });
         drawList.AddCircleFilled(first + new Vector2(-0.04f * scaleX, 0.08f * scaleY), eyeRadius * 1.3f, blush, 8);
         drawList.AddCircleFilled(second + new Vector2(0.04f * scaleX, 0.08f * scaleY), eyeRadius * 1.3f, blush, 8);
-    }
-
-    public static void FillEllipse(ImDrawListPtr drawList, Vector2 center, float radiusX, float radiusY, uint color)
-    {
-        if (radiusX <= 0f || radiusY <= 0f)
-        {
-            return;
-        }
-
-        drawList.PathClear();
-        for (var segment = 0; segment < EllipseSegments; segment++)
-        {
-            var angle = segment * Tau / EllipseSegments;
-            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radiusX, MathF.Sin(angle) * radiusY));
-        }
-
-        drawList.PathFillConvex(color);
     }
 
     public static void DrawSkillIcon(ImDrawListPtr drawList, HerdSkill skill, Vector2 center, float size, uint ink)

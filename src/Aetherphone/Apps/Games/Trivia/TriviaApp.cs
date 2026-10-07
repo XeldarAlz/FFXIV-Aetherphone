@@ -222,10 +222,10 @@ internal sealed class TriviaApp : IMiniGame
         if (question)
         {
             var prompt = Loc.T(board.Kind == TriviaKind.IconToName ? L.Games.WhatIsThis : L.Games.PickTheIcon);
-            TriviaRenderer.DrawPrompt(drawList, layout.Prompt, prompt, TriviaRenderer.MutedInk(ink, theme));
+            TriviaRenderer.DrawPrompt(drawList, layout.Prompt, prompt, StageInks.MutedOn(ink));
         }
 
-        TriviaRenderer.DrawSubject(drawList, board, layout.Subject, showQuestion, textures, Accent, ink, theme, scale);
+        TriviaRenderer.DrawSubject(drawList, board, layout.Subject, showQuestion, textures, Accent, ink, scale);
         for (var index = 0; index < TriviaBoard.Options; index++)
         {
             var cell = TriviaRenderer.OptionRect(layout.Options, index, scale);

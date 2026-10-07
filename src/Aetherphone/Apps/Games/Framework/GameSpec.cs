@@ -40,12 +40,17 @@ internal readonly struct GameSpec
     public readonly int LevelCount;
     public readonly bool[] LevelModes;
     public readonly int Seats;
+    public readonly LocString? Unit;
+    public readonly LocString[] ModeLabels;
+    public readonly bool[] UnrankedModes;
+    public readonly bool ModesSoloOnly;
 
     public GameSpec(string id, LocString title, GameGenre genre, LocString? hook = null,
         Backdrop backdrop = Backdrop.Nebula, HudStyle hud = HudStyle.Standard, ScoreKind kind = ScoreKind.Score,
         LocString[]? modes = null, string[]? modeStatIds = null, bool clocked = false, bool countdown = false,
         bool landscape = false, bool keyboard = false, ScoreKind[]? modeKinds = null, bool[]? countdownModes = null,
-        int levelCount = 0, bool[]? levelModes = null, int seats = 1)
+        int levelCount = 0, bool[]? levelModes = null, int seats = 1, LocString? unit = null,
+        LocString[]? modeLabels = null, bool[]? unrankedModes = null, bool modesSoloOnly = false)
     {
         Id = id;
         Title = title;
@@ -65,9 +70,19 @@ internal readonly struct GameSpec
         LevelCount = Math.Clamp(levelCount, 0, GameStatsStore.MaxLevels);
         LevelModes = levelModes ?? Array.Empty<bool>();
         Seats = Math.Clamp(seats, 1, GameSeats.Max);
+        Unit = unit;
+        ModeLabels = modeLabels ?? Array.Empty<LocString>();
+        UnrankedModes = unrankedModes ?? Array.Empty<bool>();
+        ModesSoloOnly = modesSoloOnly;
     }
 
     public bool HasModes => Modes.Length > 1;
+
+    public bool ShowsModes(int seats) => HasModes && (seats <= 1 || !ModesSoloOnly);
+
+    public bool UnrankedFor(int mode) => mode >= 0 && mode < UnrankedModes.Length && UnrankedModes[mode];
+
+    public LocString? LabelFor(int mode) => mode >= 0 && mode < ModeLabels.Length ? ModeLabels[mode] : Unit;
 
     public bool HotSeat => Seats > 1;
 

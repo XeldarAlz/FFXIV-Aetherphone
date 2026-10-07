@@ -143,12 +143,13 @@ internal static class ThrustRenderer
         var spin = MathF.Abs(MathF.Cos(time * 4.5f + coin.X * 0.8f));
         var width = radius * (0.25f + 0.75f * spin);
         drawList.AddCircleFilled(center, radius * 1.8f, ImGui.GetColorU32(ThrustArt.Coin with { W = 0.16f }), 16);
-        ThrustArt.FillEllipse(drawList, center, width, radius, ImGui.GetColorU32(CoinRim), 0f);
-        ThrustArt.FillEllipse(drawList, center, width * 0.76f, radius * 0.76f, ImGui.GetColorU32(ThrustArt.Coin), 0f);
+        Shapes.FillEllipse(drawList, center, width, radius, ImGui.GetColorU32(CoinRim), ThrustArt.EllipseSegments);
+        Shapes.FillEllipse(drawList, center, width * 0.76f, radius * 0.76f, ImGui.GetColorU32(ThrustArt.Coin),
+            ThrustArt.EllipseSegments);
         if (spin > 0.5f)
         {
-            ThrustArt.FillEllipse(drawList, center - new Vector2(width * 0.28f, radius * 0.3f), width * 0.2f, radius * 0.16f,
-                ImGui.GetColorU32(White with { W = 0.8f }), 0f);
+            Shapes.FillEllipse(drawList, center - new Vector2(width * 0.28f, radius * 0.3f), width * 0.2f, radius * 0.16f,
+                ImGui.GetColorU32(White with { W = 0.8f }), ThrustArt.EllipseSegments);
         }
     }
 
@@ -166,8 +167,8 @@ internal static class ThrustRenderer
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0.12f, 0.16f, 0.3f, 0.75f)), 28);
         drawList.AddCircle(center, radius, ImGui.GetColorU32(ThrustArt.Electric with { W = 0.85f }), 28,
             MathF.Max(1f, camera.Px(0.05f)));
-        ThrustArt.FillEllipse(drawList, center + new Vector2(radius * 0.08f, -radius * 0.05f), radius * 0.55f, radius * 0.2f,
-            ImGui.GetColorU32(ThrustArt.Plumage), -0.9f + MathF.Sin(time * 2f) * 0.1f);
+        Shapes.FillEllipse(drawList, center + new Vector2(radius * 0.08f, -radius * 0.05f), radius * 0.55f, radius * 0.2f,
+            -0.9f + MathF.Sin(time * 2f) * 0.1f, ImGui.GetColorU32(ThrustArt.Plumage), ThrustArt.EllipseSegments);
         ThrustArt.DrawFeather(drawList, center + new Vector2(-radius * 0.12f, radius * 0.08f), radius * 0.48f,
             -0.9f + MathF.Sin(time * 2f) * 0.1f, 1f);
         var shine = time * 2.2f;

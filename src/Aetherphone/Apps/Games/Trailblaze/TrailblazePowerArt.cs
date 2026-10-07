@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Games.Framework;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Trailblaze;
@@ -80,8 +81,8 @@ internal static class TrailblazePowerArt
                 var angle = -MathF.PI * 0.5f + side * (0.55f + index * 0.38f);
                 var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
                 var featherCenter = center + new Vector2(side * size * 0.08f, size * 0.15f) + direction * size * 0.48f;
-                TrailblazeRenderer.FillEllipse(drawList, featherCenter, size * (0.5f - index * 0.08f), size * 0.15f,
-                    index == 0 ? bright : feather, angle, 12);
+                Shapes.FillEllipse(drawList, featherCenter, size * (0.5f - index * 0.08f), size * 0.15f, angle,
+                    index == 0 ? bright : feather, 12);
             }
         }
 

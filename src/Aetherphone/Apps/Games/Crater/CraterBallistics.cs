@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.Framework.World;
 
 namespace Aetherphone.Apps.Games.Crater;
@@ -110,7 +111,8 @@ internal static class CraterBallistics
                     continue;
                 }
 
-                if (!SegmentCircle(start, travel, moogle.Position, CraterRules.MoogleRadius + radius, out var along) ||
+                if (!Geometry2D.SweepCircle(start, travel, moogle.Position, CraterRules.MoogleRadius + radius,
+                        out var along) ||
                     along >= fraction)
                 {
                     continue;
@@ -137,33 +139,6 @@ internal static class CraterBallistics
         }
 
         return Bounce(ref projectile, point, normal, radius, hitMoogle);
-    }
-
-    public static bool SegmentCircle(Vector2 start, Vector2 travel, Vector2 center, float radius, out float along)
-    {
-        along = 0f;
-        var offset = start - center;
-        var outside = offset.LengthSquared() - radius * radius;
-        if (outside <= 0f)
-        {
-            return true;
-        }
-
-        var lengthSquared = travel.LengthSquared();
-        var approach = Vector2.Dot(offset, travel);
-        if (approach >= 0f || lengthSquared <= Epsilon)
-        {
-            return false;
-        }
-
-        var discriminant = approach * approach - lengthSquared * outside;
-        if (discriminant < 0f)
-        {
-            return false;
-        }
-
-        along = (-approach - MathF.Sqrt(discriminant)) / lengthSquared;
-        return along <= 1f;
     }
 
     private static FlightStep Bounce(ref CraterProjectile projectile, Vector2 point, Vector2 normal, float radius,

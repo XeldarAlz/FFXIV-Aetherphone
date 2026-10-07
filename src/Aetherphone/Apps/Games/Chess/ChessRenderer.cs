@@ -172,7 +172,7 @@ internal sealed class ChessRenderer
         penX += CapsuleGroupGap * scale;
         var inset = rect.Height * CapsuleDividerInset;
         drawList.AddLine(new Vector2(penX, rect.Min.Y + inset), new Vector2(penX, rect.Max.Y - inset),
-            ImGui.GetColorU32(theme.TextMuted with { W = 0.35f }), 1f * scale);
+            ImGui.GetColorU32(StageInks.Muted with { W = 0.35f }), 1f * scale);
         penX += (1f + CapsuleGroupGap) * scale;
         penX = DrawGroup(drawList, penX, centerY, rightPieces, rightCount, theme, scale);
         if (lead < 0)
@@ -195,15 +195,15 @@ internal sealed class ChessRenderer
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var dim = theme.TextMuted with { W = 0.45f };
-        var iconInk = !enabled ? dim : hovered ? theme.TextStrong : accent;
+        var dim = StageInks.Muted with { W = 0.45f };
+        var iconInk = !enabled ? dim : hovered ? StageInks.Strong : accent;
         var iconSize = UndoIconSize * scale;
         var left = rect.Min.X + UndoPadX * scale;
         ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, rect.Center.Y), FontAwesomeIcon.Undo,
             iconInk, iconSize);
         Typography.Draw(drawList,
             new Vector2(left + iconSize + UndoIconGap * scale, rect.Center.Y - Typography.LineHeight(CapsuleStyle) * 0.5f),
-            label, enabled ? theme.TextStrong : dim, CapsuleStyle);
+            label, enabled ? StageInks.Strong : dim, CapsuleStyle);
         return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
@@ -225,7 +225,7 @@ internal sealed class ChessRenderer
             1f * scale);
         var titleHeight = Typography.LineHeight(TextStyles.Headline);
         Typography.DrawCentered(drawList, new Vector2(center.X, rect.Min.Y - PromotionTitleGap * scale - titleHeight * 0.5f),
-            Loc.T(L.Games.Promote), theme.TextStrong with { W = alpha }, TextStyles.Headline);
+            Loc.T(L.Games.Promote), StageInks.Strong with { W = alpha }, TextStyles.Headline);
         Span<ChessPieceType> choices = stackalloc ChessPieceType[4];
         choices[0] = ChessPieceType.Queen;
         choices[1] = ChessPieceType.Rook;
@@ -424,7 +424,7 @@ internal sealed class ChessRenderer
         if (shown == 0)
         {
             drawList.AddCircleFilled(new Vector2(penX + CapsuleEmptyWidth * scale * 0.5f, centerY), CapsuleEmptyDot * scale,
-                ImGui.GetColorU32(theme.TextMuted with { W = 0.4f }), 10);
+                ImGui.GetColorU32(StageInks.Muted with { W = 0.4f }), 10);
             return penX + CapsuleEmptyWidth * scale;
         }
 
@@ -450,7 +450,7 @@ internal sealed class ChessRenderer
 
         penX += CapsuleLeadGap * scale;
         Typography.Draw(drawList, new Vector2(penX, centerY - Typography.LineHeight(CapsuleStyle) * 0.5f), leadLabel,
-            theme.TextStrong, CapsuleStyle);
+            StageInks.Strong, CapsuleStyle);
         return penX + Typography.Measure(leadLabel, CapsuleStyle).X;
     }
 

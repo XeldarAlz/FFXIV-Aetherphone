@@ -253,7 +253,7 @@ internal sealed class DoomApp : IMiniGame
         var content = new Rect(body.Min + new Vector2(margin, margin + topClearance), body.Max - new Vector2(margin, margin));
         var titleHeight = Typography.LineHeight(TextStyles.Title2);
         Typography.DrawCentered(drawList, new Vector2(content.Center.X, content.Min.Y + titleHeight * 0.5f),
-            assets.AvailableIwadCount > 0 ? Loc.T(L.Games.DoomChooseGame) : Loc.T(L.Games.DoomSetupTitle), theme.TextStrong,
+            assets.AvailableIwadCount > 0 ? Loc.T(L.Games.DoomChooseGame) : Loc.T(L.Games.DoomSetupTitle), StageInks.Strong,
             TextStyles.Title2);
         var cursorY = content.Min.Y + titleHeight + 6f * scale;
         if (failureLine.Length > 0)
@@ -303,7 +303,7 @@ internal sealed class DoomApp : IMiniGame
         if (assets.AvailableIwadCount == 0)
         {
             Typography.DrawWrappedCentered(new Vector2(column.Center.X, column.Min.Y), Loc.T(L.Games.DoomSetupBody),
-                theme.TextMuted, TextStyles.Subheadline, column.Width);
+                StageInks.Muted, TextStyles.Subheadline, column.Width);
         }
     }
 
@@ -346,12 +346,12 @@ internal sealed class DoomApp : IMiniGame
         var right = card.Max.X - pad - buttonWidth - pad;
         var titleHeight = Typography.LineHeight(TextStyles.BodyEmphasized);
         Typography.Draw(drawList, new Vector2(left, card.Min.Y + pad * 0.7f),
-            Typography.FitText(title, right - left, TextStyles.BodyEmphasized), theme.TextStrong, TextStyles.BodyEmphasized);
+            Typography.FitText(title, right - left, TextStyles.BodyEmphasized), StageInks.Strong, TextStyles.BodyEmphasized);
         var detailY = card.Min.Y + pad * 0.7f + titleHeight;
         Typography.Draw(drawList, new Vector2(left, detailY), Typography.FitText(detail, right - left, TextStyles.Caption1),
-            theme.TextMuted, TextStyles.Caption1);
+            StageInks.Muted, TextStyles.Caption1);
         var statusY = detailY + Typography.LineHeight(TextStyles.Caption1) + 2f * scale;
-        var statusColor = snapshot.State == DependencyState.Failed ? theme.Danger : theme.TextMuted;
+        var statusColor = snapshot.State == DependencyState.Failed ? theme.Danger : StageInks.Muted;
         Typography.Draw(drawList, new Vector2(left, statusY),
             Typography.FitText(StatusLabel(target, in snapshot), right - left, TextStyles.Caption1), statusColor,
             TextStyles.Caption1);

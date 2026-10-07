@@ -62,13 +62,14 @@ internal static class ScoreStatIds
 
     public static string LeaderboardId(string statId, string gameId, ScoreKind kind)
     {
+        var wire = ScoreKinds.Wire(kind);
         if (TryFind(statId, out var exact))
         {
-            return StreakAgrees(exact, kind) ? statId : string.Empty;
+            return StreakAgrees(exact, wire) ? statId : string.Empty;
         }
 
-        if (!TryFind(gameId, out var root) || !StreakAgrees(root, kind) ||
-            (root.Kind == ScoreKind.Time) != (kind == ScoreKind.Time))
+        if (!TryFind(gameId, out var root) || !StreakAgrees(root, wire) ||
+            (root.Kind == ScoreKind.Time) != (wire == ScoreKind.Time))
         {
             return string.Empty;
         }

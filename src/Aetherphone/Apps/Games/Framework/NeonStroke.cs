@@ -1,6 +1,6 @@
 using Dalamud.Bindings.ImGui;
 
-namespace Aetherphone.Apps.Games.Drift;
+namespace Aetherphone.Apps.Games.Framework;
 
 internal static class NeonStroke
 {

@@ -226,7 +226,7 @@ internal static class FuseRenderer
         var pop = GameJuice.PopIn(Math.Clamp(age / 0.35f, 0f, 1f));
         var bob = MathF.Sin(time * 3f + index) * 0.07f;
         var ground = camera.ToScreen(FuseBoard.CellCenter(index) + new Vector2(0f, 0.28f));
-        FuseArt.FillEllipse(drawList, ground, cell * 0.24f * (1f - bob), cell * 0.08f, FuseArt.Color(FuseArt.Shadow, 0.8f));
+        Shapes.FillEllipse(drawList, ground, cell * 0.24f * (1f - bob), cell * 0.08f, FuseArt.Color(FuseArt.Shadow, 0.8f));
         var center = camera.ToScreen(FuseBoard.CellCenter(index) + new Vector2(0f, -0.12f + bob));
         FuseArt.DrawPowerUp(drawList, center, cell * ItemRadius * MathF.Max(0.01f, pop), kind, 1f, time);
     }
@@ -270,7 +270,7 @@ internal static class FuseRenderer
             var radius = cell * MoogleRadius;
             if (index == FuseBoard.Player)
             {
-                FuseArt.FillEllipse(drawList, feet, radius * 1.15f, radius * 0.42f,
+                Shapes.FillEllipse(drawList, feet, radius * 1.15f, radius * 0.42f,
                     FuseArt.Color(TeamColor(index), 0.35f + 0.15f * MathF.Sin(time * 4f)));
             }
 

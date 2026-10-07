@@ -1,6 +1,5 @@
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Theme;
-using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Drift;
@@ -42,7 +41,7 @@ internal static class DriftPad
     private const float GlyphStroke = 2f;
     private const float ArcSweep = 4.2f;
 
-    public static DriftPadInput Draw(Rect area, Vector4 accent, PhoneTheme theme)
+    public static DriftPadInput Draw(Rect area, Vector4 accent)
     {
         var scale = UiScale.Current;
         var gap = Gap * scale;
@@ -56,40 +55,21 @@ internal static class DriftPad
         var thrustMin = new Vector2(fireMin.X - gap - key, top);
         var warpSize = key * WarpFraction;
         var warpMin = new Vector2(area.Center.X - warpSize * 0.5f, area.Center.Y - warpSize * 0.5f);
-        Key(leftMin, leftMin + size, PadGlyph.RotateLeft, accent, theme, scale, out var left);
-        Key(rightMin, rightMin + size, PadGlyph.RotateRight, accent, theme, scale, out var right);
-        var warp = Key(warpMin, warpMin + new Vector2(warpSize, warpSize), PadGlyph.Warp, accent, theme, scale, out _);
-        Key(thrustMin, thrustMin + size, PadGlyph.Thrust, accent, theme, scale, out var thrust);
-        Key(fireMin, fireMin + size, PadGlyph.Fire, accent, theme, scale, out var fire);
+        Key(new Rect(leftMin, leftMin + size), PadGlyph.RotateLeft, accent, scale, out var left);
+        Key(new Rect(rightMin, rightMin + size), PadGlyph.RotateRight, accent, scale, out var right);
+        var warp = Key(new Rect(warpMin, warpMin + new Vector2(warpSize, warpSize)), PadGlyph.Warp, accent, scale,
+            out _);
+        Key(new Rect(thrustMin, thrustMin + size), PadGlyph.Thrust, accent, scale, out var thrust);
+        Key(new Rect(fireMin, fireMin + size), PadGlyph.Fire, accent, scale, out var fire);
         return new DriftPadInput(left, right, thrust, fire, warp);
     }
 
-    private static bool Key(Vector2 min, Vector2 max, PadGlyph glyph, Vector4 accent, PhoneTheme theme, float scale,
-        out bool held)
+    private static bool Key(Rect key, PadGlyph glyph, Vector4 accent, float scale, out bool held)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered = UiInteract.Hover(min, max);
-        held = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var radius = (max.Y - min.Y) * 0.28f;
-        Material.Frosted(drawList, min, max, radius, scale, held ? 1f : 0.85f);
-        if (held)
-        {
-            Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = 0.32f }));
-            Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = 0.9f }), 1.5f * scale);
-        }
-        else if (hovered)
-        {
-            Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = 0.45f }), 1f * scale);
-        }
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        var ink = ImGui.GetColorU32(held ? accent : theme.TextStrong);
-        DrawGlyph(drawList, glyph, (min + max) * 0.5f, (max.Y - min.Y) * 0.22f, ink, GlyphStroke * scale);
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        var pressed = GamePad.HoldButton(key, accent, out held);
+        DrawGlyph(ImGui.GetWindowDrawList(), glyph, key.Center, key.Height * 0.22f,
+            ImGui.GetColorU32(GamePad.GlyphInk(held, accent)), GlyphStroke * scale);
+        return pressed;
     }
 
     private static void DrawGlyph(ImDrawListPtr drawList, PadGlyph glyph, Vector2 center, float extent, uint ink,

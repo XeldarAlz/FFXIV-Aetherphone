@@ -1,16 +1,11 @@
-using Aetherphone.Apps.Games.Crates;
-using Aetherphone.Apps.Games.Delve;
-using Aetherphone.Apps.Games.Fling;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
-using Aetherphone.Apps.Games.Herd;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Siege;
 using Aetherphone.Apps.Games.Slice;
 using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
-using Aetherphone.Apps.Games.Tempo;
 using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Games;
@@ -45,6 +40,8 @@ internal enum RecordKind : byte
     Time,
     Level,
     Streak,
+    Count,
+    Stars,
 }
 
 internal sealed class GamesLibrary
@@ -297,6 +294,16 @@ internal sealed class GamesLibrary
 
     public RecordKind BestKind(int entryIndex) => bestKinds[entryIndex];
 
+    public LocString KindLabel(int entryIndex) => bestKinds[entryIndex] switch
+    {
+        RecordKind.Time => L.GamesHub.KindTime,
+        RecordKind.Level => L.GamesHub.KindLevel,
+        RecordKind.Streak => L.GamesHub.KindStreak,
+        RecordKind.Stars => L.GamesHub.KindStars,
+        RecordKind.Count => games[Entries[entryIndex].GameIndex].Spec.Unit ?? L.GamesHub.KindScore,
+        _ => L.GamesHub.KindScore,
+    };
+
     public string RankLabel(int entryIndex) => rankLabels[entryIndex];
 
     public void RefreshRanks()
@@ -441,13 +448,16 @@ internal sealed class GamesLibrary
         {
             var value = string.Empty;
             var tier = -1;
-            var kind = Entries[index].Online ? RecordKind.None : BestRecord(Entries[index].Id, out value, out tier);
+            var kind = Entries[index].Online
+                ? RecordKind.None
+                : BestRecord(games[Entries[index].GameIndex].Spec, out value, out tier);
             bestKinds[index] = kind;
             bestValues[index] = kind == RecordKind.None ? string.Empty : value;
             bestTiers[index] = kind != RecordKind.None && tier >= 0 ? Loc.T(TierLabels[tier]) : string.Empty;
             var label = kind switch
             {
                 RecordKind.None => string.Empty,
+                RecordKind.Stars => value,
                 RecordKind.Streak => Loc.T(L.Games.Streak) + " · " + value,
                 RecordKind.Level => Loc.T(L.Games.Best) + " · " + Loc.T(L.Games.Level) + " " + value,
                 _ => Loc.T(L.Games.Best) + " · " + value,
@@ -486,6 +496,19 @@ internal sealed class GamesLibrary
         }
 
         return best;
+    }
+
+    private RecordKind BestRecord(in GameSpec spec, out string value, out int tier)
+    {
+        var stars = spec.LevelCount > 0 && spec.Kind == ScoreKind.Level ? stats.TotalStars(spec.Id) : 0;
+        if (stars <= 0)
+        {
+            return BestRecord(spec.Id, out value, out tier);
+        }
+
+        tier = -1;
+        value = StarTotal.Label(stars, spec.LevelCount);
+        return RecordKind.Stars;
     }
 
     private RecordKind BestRecord(string gameId, out string value, out int tier)
@@ -548,15 +571,6 @@ internal sealed class GamesLibrary
                 value = streak > 0 ? GameNumber.Label(streak) : string.Empty;
                 return streak > 0 ? RecordKind.Streak : RecordKind.None;
             }
-            case "fling":
-            {
-                var stars = stats.TotalStars(gameId);
-                value = stars > 0
-                    ? Loc.T(L.Stage.StarsOf, GameNumber.Label(stars),
-                        GameNumber.Label(FlingLevels.Count * GameStatsStore.MaxStars))
-                    : string.Empty;
-                return stars > 0 ? RecordKind.Score : RecordKind.None;
-            }
             case "watersort":
             case "moogleclicker":
             {
@@ -572,7 +586,7 @@ internal sealed class GamesLibrary
             case "flow":
                 return BestLevelAcrossTiers(gameId, out value, out tier);
             case "siege":
-                return SiegeRecord(out value);
+                return EndlessWaves(out value);
             case "memory":
                 return Time(stats.Get(gameId).BestTimeSeconds, out value);
             case "solitaire":
@@ -595,40 +609,11 @@ internal sealed class GamesLibrary
             case "crater":
             case "fuse":
                 return BestStreakAcrossTiers(gameId, out value, out tier);
-            case "crates":
-                return StarTotal(stats.TotalStars(gameId), CratesLevels.Count, out value);
-            case "delve":
-                return StarTotal(stats.TotalStars(gameId), DelveLevels.Count, out value);
-            case "snip":
-            {
-                var stars = stats.TotalStars(gameId);
-                value = stars > 0 ? Loc.T(L.Snip.StarCount, GameNumber.Label(stars)) : string.Empty;
-                return stars > 0 ? RecordKind.Score : RecordKind.None;
-            }
             case "minigolf":
-                return Score(stats.Get(gameId).BestTimeSeconds, out value);
-            case "herd":
-            case "tempo":
-            {
-                var stars = stats.TotalStars(gameId);
-                var levels = gameId == "herd" ? HerdLevels.Count : TempoLevels.Count;
-                value = stars > 0
-                    ? Loc.T(L.Stage.StarsOf, GameNumber.Label(stars),
-                        GameNumber.Label(levels * GameStatsStore.MaxStars))
-                    : string.Empty;
-                return stars > 0 ? RecordKind.Score : RecordKind.None;
-            }
+                return Count(stats.Best(gameId, ScoreKind.Count), out value);
             default:
                 return RecordKind.None;
         }
-    }
-
-    private static RecordKind StarTotal(int stars, int levels, out string value)
-    {
-        value = stars > 0
-            ? Loc.T(L.Stage.StarsOf, GameNumber.Label(stars), GameNumber.Label(levels * GameStatsStore.MaxStars))
-            : string.Empty;
-        return stars > 0 ? RecordKind.Score : RecordKind.None;
     }
 
     private RecordKind BestStreakAcrossTiers(string gameId, out string value, out int tier)
@@ -703,15 +688,8 @@ internal sealed class GamesLibrary
         return Time(bestSeconds, out value);
     }
 
-    private RecordKind SiegeRecord(out string value)
+    private RecordKind EndlessWaves(out string value)
     {
-        var stars = stats.TotalStars("siege");
-        if (stars > 0)
-        {
-            value = Loc.T(L.Siege.StarsRecord, GameNumber.Label(stars));
-            return RecordKind.Score;
-        }
-
         var waves = stats.Get(SiegeApp.EndlessStatId).BestScore;
         value = waves > 0 ? Loc.T(L.Siege.WavesRecord, GameNumber.Label(waves)) : string.Empty;
         return waves > 0 ? RecordKind.Score : RecordKind.None;
@@ -721,6 +699,12 @@ internal sealed class GamesLibrary
     {
         value = best > 0 ? GameNumber.Label(best) : string.Empty;
         return best > 0 ? RecordKind.Score : RecordKind.None;
+    }
+
+    private static RecordKind Count(int best, out string value)
+    {
+        value = best > 0 ? GameNumber.Label(best) : string.Empty;
+        return best > 0 ? RecordKind.Count : RecordKind.None;
     }
 
     private static RecordKind Time(int seconds, out string value)

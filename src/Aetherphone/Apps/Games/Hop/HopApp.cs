@@ -307,7 +307,7 @@ internal sealed class HopApp : IMiniGame
         StageHud.Capsule(drawList, rect, scale);
         var low = board.TimerRemaining < HopBoard.LowTimerSeconds && !board.Frozen && !board.GameOver;
         var pulse = low ? 0.5f + 0.5f * Pulse.Wave(Pulse.Fast) : 0f;
-        var ink = low ? Vector4.Lerp(context.Theme.TextStrong, Danger, pulse) : context.Theme.TextStrong;
+        var ink = low ? Vector4.Lerp(StageInks.Strong, Danger, pulse) : StageInks.Strong;
         var tint = low ? Danger : accent;
         var iconSize = IconSize * scale;
         var left = rect.Min.X + CapsulePadX * scale;

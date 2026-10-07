@@ -67,12 +67,6 @@ internal static class TriviaRenderer
         return new Rect(min, new Vector2(min.X + cellWidth, min.Y + cellHeight));
     }
 
-    public static Vector4 StrongInk(StageInk ink, PhoneTheme theme) =>
-        ink == StageInk.Dark ? GamePalette.InkDark : theme.TextStrong;
-
-    public static Vector4 MutedInk(StageInk ink, PhoneTheme theme) =>
-        ink == StageInk.Dark ? GamePalette.InkDark with { W = 0.62f } : theme.TextMuted;
-
     public static void DrawPrompt(ImDrawListPtr drawList, Rect prompt, string text, Vector4 ink)
     {
         Typography.DrawCentered(drawList, prompt.Center, text, ink, TextStyles.FootnoteEmphasized.Scale,
@@ -80,7 +74,7 @@ internal static class TriviaRenderer
     }
 
     public static void DrawSubject(ImDrawListPtr drawList, TriviaBoard board, Rect subject, bool showQuestion,
-        ITextureProvider textures, Vector4 accent, StageInk ink, PhoneTheme theme, float scale)
+        ITextureProvider textures, Vector4 accent, StageInk ink, float scale)
     {
         BoardPlate.Draw(drawList, subject, BoardPlate.Radius * scale, scale, accent, ink);
         if (!showQuestion || !board.HasQuestion)
@@ -99,10 +93,10 @@ internal static class TriviaRenderer
             return;
         }
 
-        Typography.DrawWrappedCentered(drawList, subject.Center, board.CorrectEntry.Name, StrongInk(ink, theme),
+        Typography.DrawWrappedCentered(drawList, subject.Center, board.CorrectEntry.Name, StageInks.StrongOn(ink),
             TextStyles.Title2, subject.Width - 2f * (BadgeInset + BadgeRadius * 2f) * scale);
         var badge = new Vector2(subject.Max.X - BadgeInset * scale, subject.Min.Y + BadgeInset * scale);
-        ProgressRing.CenterIcon(drawList, badge, FontAwesomeIcon.Clock, MutedInk(ink, theme), BadgeRadius * scale);
+        ProgressRing.CenterIcon(drawList, badge, FontAwesomeIcon.Clock, StageInks.MutedOn(ink), BadgeRadius * scale);
         DrawRing(drawList, badge, BadgeRadius * scale + RingGap * 0.5f * scale, fraction, accent, track, scale);
     }
 

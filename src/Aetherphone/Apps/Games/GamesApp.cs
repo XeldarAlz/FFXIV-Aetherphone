@@ -776,7 +776,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
         handoff.Draw(drawList, full, session, rawSeconds, scale);
         var pauseAction = pause.Draw(drawList, full, theme, accent, rawSeconds, session.State == StageFlow.Paused,
-            scale);
+            session.RankedMode, scale);
         switch (pauseAction)
         {
             case PauseAction.Resume:
@@ -807,16 +807,9 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             : kind == ScoreKind.Score || (kind == ScoreKind.Level && lost)
                 ? Loc.T(L.Games.GameOver)
                 : outcome.Won ? Loc.T(L.Games.YouWin) : Loc.T(L.Games.Lose);
-        var hidePrimary = kind == ScoreKind.Time && lost;
-        var label = hidePrimary
-            ? string.Empty
-            : kind switch
-            {
-                ScoreKind.Time => Loc.T(L.Games.Time),
-                ScoreKind.Level => Loc.T(L.Games.Level),
-                ScoreKind.Streak => Loc.T(L.Games.Streak),
-                _ => Loc.T(L.Games.Score),
-            };
+        var hidePrimary = ScoreKinds.LowerIsBetter(kind) && lost;
+        var specLabel = spec.LabelFor(session.Mode);
+        var label = hidePrimary ? string.Empty : PrimaryLabel(specLabel, kind);
         var value = hidePrimary ? string.Empty : StageHud.ValueLabel(session.ResultValue, kind);
         var continueLabel = Loc.T(outcome.ContinueLabel ?? L.Games.PlayAgain);
         var secondaryLabel = string.Empty;
@@ -824,7 +817,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         if (stars >= 0)
         {
             title = stars > 0 ? levelClearedLabel.Get(L.Stage.LevelCleared, session.Level) : Loc.T(L.Games.GameOver);
-            if (kind == ScoreKind.Level)
+            if (kind == ScoreKind.Level && !specLabel.HasValue)
             {
                 label = Loc.T(L.Stage.TotalStars);
             }
@@ -838,7 +831,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
         if (session.Unranked)
         {
-            return BuildUnrankedResult(outcome, accent, continueLabel, secondaryLabel);
+            return BuildUnrankedResult(outcome, accent, continueLabel, secondaryLabel, session.RankedMode);
         }
 
         resultRank.Refresh(session.Rank);
@@ -847,8 +840,24 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             GameOverlay.IsTopTen(session.Rank), outcome, secondaryLabel, stars);
     }
 
+    private static string PrimaryLabel(LocString? specLabel, ScoreKind kind)
+    {
+        if (specLabel.HasValue)
+        {
+            return Loc.T(specLabel.Value);
+        }
+
+        return kind switch
+        {
+            ScoreKind.Time => Loc.T(L.Games.Time),
+            ScoreKind.Level => Loc.T(L.Games.Level),
+            ScoreKind.Streak => Loc.T(L.Games.Streak),
+            _ => Loc.T(L.Games.Score),
+        };
+    }
+
     private static StageResult BuildUnrankedResult(in GameOutcome outcome, Vector4 accent, string continueLabel,
-        string secondaryLabel)
+        string secondaryLabel, bool showsLeaderboard)
     {
         var title = outcome.IsDraw
             ? Loc.T(L.Games.Draw)
@@ -861,7 +870,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         }
 
         return new StageResult(title, titleColor, string.Empty, string.Empty, false, continueLabel, string.Empty,
-            string.Empty, false, false, outcome, secondaryLabel, GameOutcome.NoStars);
+            string.Empty, false, false, outcome, secondaryLabel, GameOutcome.NoStars, showsLeaderboard);
     }
 
     private void DrawChrome(ImDrawListPtr drawList, Rect full, PhoneTheme theme, bool landscape, float scale)

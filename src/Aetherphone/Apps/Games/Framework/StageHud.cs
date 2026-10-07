@@ -181,7 +181,7 @@ internal sealed class StageHud
             {
                 var urgent = model.TimerUrgent;
                 var pulse = urgent ? 0.5f + 0.5f * Pulse.Wave(Pulse.Fast) : 0f;
-                var ink = urgent ? Vector4.Lerp(theme.TextStrong, Danger, pulse) : theme.TextStrong;
+                var ink = urgent ? Vector4.Lerp(StageInks.Strong, Danger, pulse) : StageInks.Strong;
                 ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), FontAwesomeIcon.Clock,
                     urgent ? Danger : accent, iconSize);
                 Typography.Draw(drawList, TextOrigin(left + iconSize + IconGap * scale, centerY), TimerLabel(model), ink,
@@ -201,11 +201,11 @@ internal sealed class StageHud
                     ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), FontAwesomeIcon.Heart,
                         accent, iconSize);
                     Typography.Draw(drawList, TextOrigin(left + iconSize + IconGap * scale, centerY),
-                        livesLabel.Get(L.Stage.Times, model.LivesLeft), theme.TextStrong, CapsuleStyle);
+                        livesLabel.Get(L.Stage.Times, model.LivesLeft), StageInks.Strong, CapsuleStyle);
                     return;
                 }
 
-                var dim = theme.TextMuted with { W = 0.35f };
+                var dim = StageInks.Muted with { W = 0.35f };
                 for (var heart = 0; heart < model.LivesMax; heart++)
                 {
                     var x = left + heart * (IconSize + HeartGap) * scale + iconSize * 0.5f;
@@ -217,7 +217,7 @@ internal sealed class StageHud
             }
             case HudSlot.Level:
                 Typography.Draw(drawList, TextOrigin(left, centerY), levelLabel.Get(L.Stage.LevelShort, model.LevelValue),
-                    theme.TextStrong, CapsuleStyle);
+                    StageInks.Strong, CapsuleStyle);
                 return;
             case HudSlot.Combo:
             {
@@ -241,7 +241,7 @@ internal sealed class StageHud
                 ProgressRing.CenterIcon(drawList, new Vector2(left + iconSize * 0.5f, centerY), FontAwesomeIcon.Trophy,
                     accent, iconSize);
                 Typography.Draw(drawList, TextOrigin(left + iconSize + IconGap * scale, centerY),
-                    ValueLabel(model.BestValue, kind), theme.TextStrong, CapsuleStyle);
+                    ValueLabel(model.BestValue, kind), StageInks.Strong, CapsuleStyle);
                 return;
             default:
                 return;

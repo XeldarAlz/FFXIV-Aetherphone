@@ -48,7 +48,6 @@ internal static class CratesRenderer
     public static readonly Vector4 Lit = new(1f, 0.83f, 0.36f, 1f);
     public static readonly Vector4 Fluff = new(0.99f, 0.97f, 0.93f, 1f);
     public static readonly Vector4 Pompom = new(0.94f, 0.27f, 0.36f, 1f);
-    private const int EllipseSegments = 22;
     private const float CrateSize = 0.80f;
     private const float FloorGap = 0.05f;
     private const float WallGap = 0.06f;
@@ -152,7 +151,7 @@ internal static class CratesRenderer
         var body = new Vector2(pitch * 0.34f * stretchX * breathe, pitch * 0.32f * stretchY / breathe);
         var feet = center + new Vector2(0f, pitch * 0.30f);
         var bodyCenter = feet - new Vector2(0f, body.Y * 0.95f) + CratesBoard.Step(facing) * pitch * 0.06f * squash;
-        FillEllipse(drawList, feet + new Vector2(0f, pitch * 0.02f), new Vector2(pitch * 0.26f, pitch * 0.07f),
+        Shapes.FillEllipse(drawList, feet + new Vector2(0f, pitch * 0.02f), new Vector2(pitch * 0.26f, pitch * 0.07f),
             ImGui.GetColorU32(Shadow));
         var side = facing switch
         {
@@ -163,10 +162,10 @@ internal static class CratesRenderer
         var wingFlap = 0.5f + 0.5f * MathF.Sin(bob * 2.4f);
         DrawWing(drawList, bodyCenter + new Vector2(-body.X * 0.82f, -body.Y * 0.35f), -1f, pitch, wingFlap);
         DrawWing(drawList, bodyCenter + new Vector2(body.X * 0.82f, -body.Y * 0.35f), 1f, pitch, wingFlap);
-        FillEllipse(drawList, bodyCenter + new Vector2(0f, body.Y * 0.08f), body * 1.04f,
+        Shapes.FillEllipse(drawList, bodyCenter + new Vector2(0f, body.Y * 0.08f), body * 1.04f,
             ImGui.GetColorU32(FluffShade));
-        FillEllipse(drawList, bodyCenter, body, ImGui.GetColorU32(Fluff));
-        FillEllipse(drawList, bodyCenter - new Vector2(body.X * 0.3f, body.Y * 0.4f), body * 0.28f,
+        Shapes.FillEllipse(drawList, bodyCenter, body, ImGui.GetColorU32(Fluff));
+        Shapes.FillEllipse(drawList, bodyCenter - new Vector2(body.X * 0.3f, body.Y * 0.4f), body * 0.28f,
             ImGui.GetColorU32(White with { W = 0.7f }));
         var earOffset = body.X * 0.62f;
         var earTop = bodyCenter.Y - body.Y * 1.05f;
@@ -235,18 +234,6 @@ internal static class CratesRenderer
         }
 
         return enabled && UiInteract.HoverClickCircle(center, radius);
-    }
-
-    public static void FillEllipse(ImDrawListPtr drawList, Vector2 center, Vector2 radii, uint color)
-    {
-        drawList.PathClear();
-        for (var segment = 0; segment < EllipseSegments; segment++)
-        {
-            var angle = segment * MathF.Tau / EllipseSegments;
-            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radii.X, MathF.Sin(angle) * radii.Y));
-        }
-
-        drawList.PathFillConvex(color);
     }
 
     private static float WavePhase(float wave, int distance, int spread)

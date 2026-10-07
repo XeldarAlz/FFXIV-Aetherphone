@@ -160,7 +160,7 @@ internal sealed class MoogleClickerShop
             new Vector2(toggleRight, centerY + ToggleHeight * 0.5f * scale));
         var titleWidth = MathF.Max(0f, toggle.Min.X - header.Min.X - Metrics.Space.Sm * scale);
         Typography.Draw(drawList, new Vector2(header.Min.X, centerY - titleHeight * 0.5f),
-            Typography.FitText(title, titleWidth, TextStyles.Headline), MoogleClickerText.Ink, TextStyles.Headline);
+            Typography.FitText(title, titleWidth, TextStyles.Headline), StageInks.Strong, TextStyles.Headline);
         DrawToggle(drawList, toggle, accent, interactive, scale);
         var controlInk = MoogleClickerText.Controls(accent, theme);
         var glyph = radius * 0.95f;
@@ -209,7 +209,7 @@ internal sealed class MoogleClickerShop
                     ImGui.GetColorU32(White with { W = 0.08f }));
             }
 
-            var ink = mode == Mode ? GamePalette.InkOn(accent) : MoogleClickerText.Muted;
+            var ink = mode == Mode ? GamePalette.InkOn(accent) : StageInks.Muted;
             Typography.DrawCentered(drawList, (min + max) * 0.5f, modeLabels[mode], ink, TextStyles.Caption1.Scale,
                 FontWeight.SemiBold);
             if (hovered)
@@ -278,14 +278,14 @@ internal sealed class MoogleClickerShop
             var tag = countLabels[building].Get(L.Stage.Times, count);
             var tagSize = Typography.Measure(tag, TextStyles.Caption2);
             Typography.Draw(drawList, new Vector2(button.Max.X - tagSize.X - Metrics.Space.Xs * scale,
-                button.Min.Y - tagSize.Y), tag, affordable ? Gold : MoogleClickerText.Muted, TextStyles.Caption2);
+                button.Min.Y - tagSize.Y), tag, affordable ? Gold : StageInks.Muted, TextStyles.Caption2);
         }
 
         var ownedLabel = GameNumber.Label(owned);
         var ownedSize = Typography.Measure(ownedLabel, TextStyles.Title3);
         var ownedRight = resting.Min.X - Metrics.Space.Md * scale;
         Typography.Draw(drawList, new Vector2(ownedRight - ownedSize.X, row.Center.Y - ownedSize.Y * 0.5f), ownedLabel,
-            owned > 0 ? MoogleClickerText.Ink : MoogleClickerText.Muted with { W = 0.5f }, TextStyles.Title3);
+            owned > 0 ? StageInks.Strong : StageInks.Muted with { W = 0.5f }, TextStyles.Title3);
         var textLeft = iconRect.Max.X + Metrics.Space.Md * scale;
         var textWidth = MathF.Max(0f, ownedRight - ownedSize.X - Metrics.Space.Sm * scale - textLeft);
         var nameHeight = Typography.LineHeight(TextStyles.Headline);
@@ -293,12 +293,12 @@ internal sealed class MoogleClickerShop
         var blockTop = row.Center.Y - (nameHeight + captionHeight) * 0.5f;
         var name = revealed ? Loc.T(MoogleClickerText.BuildingNames[building]) : Loc.T(L.MoogleClicker.Unknown);
         Typography.Draw(drawList, new Vector2(textLeft, blockTop), Typography.FitText(name, textWidth, TextStyles.Headline),
-            revealed ? MoogleClickerText.Ink : MoogleClickerText.Muted, TextStyles.Headline);
+            revealed ? StageInks.Strong : StageInks.Muted, TextStyles.Headline);
         if (revealed)
         {
             var rate = rateLabels[building].Get(L.MoogleClicker.EachRate, KupoFormat.Rate(workshop.UnitRate(building)));
             Typography.Draw(drawList, new Vector2(textLeft, blockTop + nameHeight),
-                Typography.FitText(rate, textWidth, TextStyles.Caption1), MoogleClickerText.Muted, TextStyles.Caption1);
+                Typography.FitText(rate, textWidth, TextStyles.Caption1), StageInks.Muted, TextStyles.Caption1);
         }
 
         if (!pointer || !UiInteract.Click(visibleMin, visibleMax, pointer, false))

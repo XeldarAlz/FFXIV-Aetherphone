@@ -73,9 +73,8 @@ internal sealed class FlowApp : IMiniGame
         var drawList = ImGui.GetWindowDrawList();
         Layout(context.Safe, scale, out var header, out _, out var boardArea);
         var grid = GameGrid.Centered(boardArea, board.Columns, board.Rows, FlowRenderer.CellGap);
-        var dark = context.Backdrop.Ink == StageInk.Dark;
-        var ink = dark ? GamePalette.InkDark : context.Theme.TextStrong;
-        var muted = dark ? GamePalette.InkDark with { W = 0.62f } : context.Theme.TextMuted;
+        var ink = StageInks.StrongOn(context.Backdrop.Ink);
+        var muted = StageInks.MutedOn(context.Backdrop.Ink);
         renderer.DrawStrip(drawList, StripRect(header, scale), board.Level, session.Best, Accent, ink, muted, 1f, scale);
         renderer.Draw(drawList, board, grid, Accent, context.Backdrop.Ink, 0f, liquidTime, 1f, Vector2.Zero, scale);
     }
@@ -107,9 +106,8 @@ internal sealed class FlowApp : IMiniGame
             HandleInput(hovered, grid, scale, context);
         }
 
-        var dark = context.Backdrop.Ink == StageInk.Dark;
-        var ink = dark ? GamePalette.InkDark : theme.TextStrong;
-        var muted = dark ? GamePalette.InkDark with { W = 0.62f } : theme.TextMuted;
+        var ink = StageInks.StrongOn(context.Backdrop.Ink);
+        var muted = StageInks.MutedOn(context.Backdrop.Ink);
         renderer.DrawStrip(drawList, StripRect(header, scale), board.Level, session.Best, Accent, ink, muted, entrance,
             scale);
         var hintCenter = new Vector2(header.Max.X - HintRadius * scale, header.Center.Y);

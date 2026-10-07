@@ -50,7 +50,8 @@ internal sealed class LuckyDrawApp : IMiniGame
     private static readonly LocString[] Modes = { L.LuckyDraw.OneBot, L.LuckyDraw.ThreeBots, L.LuckyDraw.FiveBots };
     private static readonly int[] BotCounts = { 1, 3, 5 };
     private static readonly GameSpec StageSpec = new(GameId, L.LuckyDraw.Title, GameGenre.Tabletop, L.LuckyDraw.Hook,
-        Backdrop.Felt, HudStyle.Standard, ScoreKind.Streak, Modes, keyboard: true, seats: GameSeats.Max);
+        Backdrop.Felt, HudStyle.Standard, ScoreKind.Streak, Modes, keyboard: true, seats: GameSeats.Max,
+        modesSoloOnly: true);
     private static readonly Vector4 StayInk = LuckyDrawRenderer.StayInk;
     private static readonly Vector4 Muted = LuckyDrawRenderer.Muted;
     private static readonly Vector4 Dust = LuckyDrawRenderer.Dust;

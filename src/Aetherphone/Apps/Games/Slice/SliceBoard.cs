@@ -295,15 +295,6 @@ internal sealed class SliceBoard
         return new Vector2((apexX - startX) / flight, -MathF.Sqrt(2f * Gravity * rise));
     }
 
-    public static bool SegmentHitsCircle(Vector2 from, Vector2 to, Vector2 center, float radius)
-    {
-        var segment = to - from;
-        var lengthSquared = segment.LengthSquared();
-        var along = lengthSquared <= 0.000001f ? 0f : Math.Clamp(Vector2.Dot(center - from, segment) / lengthSquared, 0f, 1f);
-        var closest = from + segment * along;
-        return Vector2.DistanceSquared(closest, center) <= radius * radius;
-    }
-
     public void MoveBlade(Vector2 point, bool held, float deltaSeconds)
     {
         if (!held || State != SliceState.Playing)
@@ -632,7 +623,7 @@ internal sealed class SliceBoard
         for (var index = 0; index < ObjectCount; index++)
         {
             ref readonly var item = ref objects[index];
-            if (!SegmentHitsCircle(from, to, item.Position, item.Radius))
+            if (!Geometry2D.SegmentCircle(from, to, item.Position, item.Radius))
             {
                 continue;
             }

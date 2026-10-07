@@ -35,6 +35,7 @@ internal sealed class CardFlight
         public float Elapsed;
         public float Arc;
         public bool Flip;
+        public bool HideWhileWaiting;
     }
 
     private readonly Tween[] tweens;
@@ -54,7 +55,7 @@ internal sealed class CardFlight
     public bool Busy => count > 0;
 
     public void Launch(int card, in CardPose from, in CardPose to, float delay = 0f, bool flip = false, int tag = 0,
-        float seconds = DefaultSeconds, float arc = DefaultArc)
+        float seconds = DefaultSeconds, float arc = DefaultArc, bool hideWhileWaiting = false)
     {
         if (count == tweens.Length)
         {
@@ -72,6 +73,7 @@ internal sealed class CardFlight
             Elapsed = 0f,
             Arc = arc,
             Flip = flip,
+            HideWhileWaiting = hideWhileWaiting,
         };
         count++;
     }
@@ -111,6 +113,8 @@ internal sealed class CardFlight
     public int Tag(int index) => tweens[index].Tag;
 
     public bool Waiting(int index) => tweens[index].Delay > 0f;
+
+    public bool Visible(int index) => !tweens[index].HideWhileWaiting || tweens[index].Delay <= 0f;
 
     public float Progress(int index)
     {

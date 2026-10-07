@@ -292,7 +292,7 @@ internal sealed class CrystalDropApp : IMiniGame
         StageHud.Capsule(drawList, slot, scale);
         var textLeft = slot.Min.X + PreviewPad * scale;
         Typography.DrawCentered(drawList, new Vector2(textLeft + labelWidth * 0.5f, slot.Center.Y), label,
-            context.Theme.TextMuted, TextStyles.FootnoteEmphasized);
+            StageInks.Muted, TextStyles.FootnoteEmphasized);
         var crystalCenter = new Vector2(slot.Max.X - PreviewPad * scale - PreviewCrystalRadius * scale, slot.Center.Y);
         CrystalDropRenderer.DrawCrystal(drawList, crystalCenter, PreviewCrystalRadius * scale, board.NextTier, scale);
     }

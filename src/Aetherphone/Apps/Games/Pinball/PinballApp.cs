@@ -766,6 +766,6 @@ internal sealed class PinballApp : IMiniGame
         Material.Frosted(drawList, center - half, center + half, half.Y, scale, 0.85f * pulse);
         Squircle.Stroke(drawList, center - half, center + half, half.Y, ImGui.GetColorU32(Accent with { W = 0.6f }),
             MathF.Max(1f, 1.2f * scale));
-        Typography.DrawCentered(drawList, center, text, context.Theme.TextStrong with { W = pulse }, style);
+        Typography.DrawCentered(drawList, center, text, StageInks.Strong with { W = pulse }, style);
     }
 }

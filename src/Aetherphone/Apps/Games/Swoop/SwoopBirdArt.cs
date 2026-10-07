@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Games.Framework;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Swoop;
@@ -43,7 +44,7 @@ internal static class SwoopBirdArt
         }
 
         var color = ImGui.GetColorU32(new Vector4(0.05f, 0.06f, 0.14f, 0.28f * fade * lightAlpha));
-        SwoopShapes.Ellipse(drawList, pose.Contact, pose.Radius * (0.6f + 0.6f * fade), pose.Radius * 0.22f * fade + 1f, 0f,
+        Shapes.FillEllipse(drawList, pose.Contact, pose.Radius * (0.6f + 0.6f * fade), pose.Radius * 0.22f * fade + 1f, 0f,
             color, 20);
     }
 
@@ -73,10 +74,10 @@ internal static class SwoopBirdArt
                 wing, true);
         }
 
-        SwoopShapes.Ellipse(drawList, center, radiusX, radiusY, pose.Tilt, body, 28);
-        SwoopShapes.Ellipse(drawList, Point(center, cosine, sine, -radiusX * 0.22f, -radiusY * 0.38f), radiusX * 0.5f, radiusY * 0.28f,
+        Shapes.FillEllipse(drawList, center, radiusX, radiusY, pose.Tilt, body, 28);
+        Shapes.FillEllipse(drawList, Point(center, cosine, sine, -radiusX * 0.22f, -radiusY * 0.38f), radiusX * 0.5f, radiusY * 0.28f,
             pose.Tilt - 0.35f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.16f)), 20);
-        SwoopShapes.Ellipse(drawList, Point(center, cosine, sine, radiusX * 0.14f, radiusY * 0.34f), radiusX * 0.6f, radiusY * 0.5f,
+        Shapes.FillEllipse(drawList, Point(center, cosine, sine, radiusX * 0.14f, radiusY * 0.34f), radiusX * 0.6f, radiusY * 0.5f,
             pose.Tilt, ImGui.GetColorU32(Lit(Belly, light)), 24);
         if (pose.Wing == SwoopWing.Tucked)
         {
@@ -98,7 +99,7 @@ internal static class SwoopBirdArt
         var reach = spread ? radius * 0.62f : radius * 0.5f;
         var local = new Vector2(-reach * 0.55f, spread ? -reach * 0.45f : 0f);
         var wingCenter = pivot + SwoopShapes.Rotate(local, MathF.Cos(angle), MathF.Sin(angle));
-        SwoopShapes.Ellipse(drawList, wingCenter, reach, radius * (spread ? 0.3f : 0.24f), angle, color, 20);
+        Shapes.FillEllipse(drawList, wingCenter, reach, radius * (spread ? 0.3f : 0.24f), angle, color, 20);
     }
 
     private static void DrawFace(ImDrawListPtr drawList, Vector2 center, float cosine, float sine, float radius, float radiusX,

@@ -94,6 +94,27 @@ internal sealed class GameStatsStore
         return new GameStats(record.BestScore, record.BestTimeSeconds, record.Streak);
     }
 
+    public int Best(string statId, ScoreKind kind)
+    {
+        var record = Get(statId);
+        if (ScoreKinds.LowerIsBetter(kind))
+        {
+            return record.BestTimeSeconds;
+        }
+
+        return kind == ScoreKind.Streak ? record.Streak : record.BestScore;
+    }
+
+    public bool SubmitBest(string statId, int value, ScoreKind kind)
+    {
+        if (ScoreKinds.LowerIsBetter(kind))
+        {
+            return SubmitTime(statId, value);
+        }
+
+        return kind == ScoreKind.Streak ? SubmitStreak(statId, value) : SubmitScore(statId, value);
+    }
+
     public long LastPlayed(string gameId)
     {
         var record = Find(gameId);

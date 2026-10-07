@@ -5,6 +5,7 @@ namespace Aetherphone.Apps.Games.Framework;
 internal sealed class Ribbon
 {
     public const int Capacity = 24;
+    public const float TunedFrameSeconds = 1f / 60f;
     private const float HaloWidthScale = 2.4f;
     private const float HaloAlpha = 0.22f;
 
@@ -27,11 +28,35 @@ internal sealed class Ribbon
         Clear();
     }
 
+    public static float Spacing(float speed) => MathF.Abs(speed) * TunedFrameSeconds;
+
     public void Push(Vector2 point)
     {
         points[head] = point;
         head = (head + 1) % Capacity;
         count = Math.Min(Capacity, count + 1);
+    }
+
+    public void PushSpaced(Vector2 point, float minimumDistance)
+    {
+        if (count < 2 || minimumDistance <= 0f)
+        {
+            Push(point);
+            return;
+        }
+
+        var newest = (head - 1 + Capacity) % Capacity;
+        var anchor = Point(1);
+        var reach = point - anchor;
+        var distanceSquared = reach.LengthSquared();
+        if (distanceSquared < minimumDistance * minimumDistance)
+        {
+            points[newest] = point;
+            return;
+        }
+
+        points[newest] = anchor + reach * (minimumDistance / MathF.Sqrt(distanceSquared));
+        Push(point);
     }
 
     public void Clear()

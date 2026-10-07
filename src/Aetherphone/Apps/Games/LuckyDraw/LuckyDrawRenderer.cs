@@ -113,17 +113,16 @@ internal static class LuckyDrawRenderer
     {
         var center = ring.Center;
         var radius = new Vector2(ring.Width * 0.5f, ring.Height * 0.5f) * 0.82f;
-        TracePath(drawList, center + new Vector2(0f, 6f * scale), radius);
-        drawList.PathFillConvex(ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)));
-        TracePath(drawList, center, radius);
-        drawList.PathFillConvex(ImGui.GetColorU32(GamePalette.Darken(accent, 0.62f) with { W = 0.55f }));
-        TracePath(drawList, center, radius * 0.94f);
-        drawList.PathFillConvex(ImGui.GetColorU32(GamePalette.Darken(accent, 0.48f) with { W = 0.35f }));
-        TracePath(drawList, center, radius);
-        drawList.PathStroke(ImGui.GetColorU32(GamePalette.Lighten(accent, 0.25f) with { W = 0.35f }), ImDrawFlags.Closed,
-            2f * scale);
-        TracePath(drawList, center, radius * 0.94f);
-        drawList.PathStroke(ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)), ImDrawFlags.Closed, 1f * scale);
+        Shapes.FillEllipse(drawList, center + new Vector2(0f, 6f * scale), radius,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)), TableSegments);
+        Shapes.FillEllipse(drawList, center, radius,
+            ImGui.GetColorU32(GamePalette.Darken(accent, 0.62f) with { W = 0.55f }), TableSegments);
+        Shapes.FillEllipse(drawList, center, radius * 0.94f,
+            ImGui.GetColorU32(GamePalette.Darken(accent, 0.48f) with { W = 0.35f }), TableSegments);
+        Shapes.StrokeEllipse(drawList, center, radius,
+            ImGui.GetColorU32(GamePalette.Lighten(accent, 0.25f) with { W = 0.35f }), 2f * scale, TableSegments);
+        Shapes.StrokeEllipse(drawList, center, radius * 0.94f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)),
+            1f * scale, TableSegments);
     }
 
     public static void DrawCard(ImDrawListPtr drawList, in CardPose pose, in CardDesign design, Vector4 accent,
@@ -315,7 +314,7 @@ internal static class LuckyDrawRenderer
         var top = min.Y + pad;
         var titleHeight = Typography.LineHeight(TextStyles.Title2);
         Typography.DrawCentered(drawList, new Vector2(center.X, top + titleHeight * 0.5f),
-            Typography.FitText(title, width - pad * 2f, TextStyles.Title2), theme.TextStrong with { W = alpha },
+            Typography.FitText(title, width - pad * 2f, TextStyles.Title2), StageInks.Strong with { W = alpha },
             TextStyles.Title2);
         top += titleHeight + 10f * scale;
         var rowHeight = SheetRowHeight * scale;
@@ -366,14 +365,14 @@ internal static class LuckyDrawRenderer
         var nameWidth = MathF.Max(8f * scale, resultRight - resultWidth - 10f * scale - nameLeft);
         var lineHeight = Typography.LineHeight(TextStyles.Subheadline);
         Typography.Draw(drawList, new Vector2(nameLeft, centerY - lineHeight * 0.5f),
-            Typography.FitText(name, nameWidth, TextStyles.Subheadline), theme.TextStrong with { W = alpha },
+            Typography.FitText(name, nameWidth, TextStyles.Subheadline), StageInks.Strong with { W = alpha },
             TextStyles.Subheadline);
         var resultHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
         Typography.Draw(drawList, new Vector2(resultRight - resultWidth, centerY - resultHeight * 0.5f), resultLabel,
             resultInk with { W = alpha }, TextStyles.FootnoteEmphasized);
         var totalHeight = Typography.LineHeight(TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(row.Max.X - totalWidth, centerY - totalHeight * 0.5f), totalLabel,
-            theme.TextStrong with { W = alpha }, TextStyles.Headline);
+            StageInks.Strong with { W = alpha }, TextStyles.Headline);
         var barY = row.Max.Y - 5f * scale;
         var barHeight = 3f * scale;
         var fraction = Math.Clamp(board.Total(seat) / (float)LuckyDrawBoard.WinTarget, 0f, 1f);
@@ -397,15 +396,6 @@ internal static class LuckyDrawRenderer
 
         ink = board.SevenSeat == seat ? Gold : Mint;
         return GameNumber.Signed(board.LastRoundScore(seat));
-    }
-
-    private static void TracePath(ImDrawListPtr drawList, Vector2 center, Vector2 radius)
-    {
-        for (var segment = 0; segment < TableSegments; segment++)
-        {
-            var angle = segment * MathF.Tau / TableSegments;
-            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radius.X, MathF.Sin(angle) * radius.Y));
-        }
     }
 
     private static void Rotate(ImDrawListPtr drawList, int firstVertex, in CardPose pose)

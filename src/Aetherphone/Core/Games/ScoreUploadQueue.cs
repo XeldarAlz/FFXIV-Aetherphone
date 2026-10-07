@@ -29,6 +29,7 @@ internal sealed class ScoreUploadQueue
     public const long SpacingMilliseconds = 5_000;
     public const long RetryMilliseconds = 30_000;
     private const int ServerErrorFloor = 500;
+    private const string CasinoGameId = "casino";
 
     private readonly IScoreUploadConfiguration configuration;
     private readonly Dictionary<string, GameRank> replies = new(StringComparer.Ordinal);
@@ -91,7 +92,8 @@ internal sealed class ScoreUploadQueue
     {
         var statId = record.GameId;
         var gameId = ScoreStatIds.RootOf(statId);
-        if (!ScoreStatIds.TryFind(statId, out var stat) && !ScoreStatIds.TryFind(gameId, out stat))
+        if (string.Equals(gameId, CasinoGameId, StringComparison.Ordinal) ||
+            (!ScoreStatIds.TryFind(statId, out var stat) && !ScoreStatIds.TryFind(gameId, out stat)))
         {
             submission = default;
             return false;
@@ -127,7 +129,7 @@ internal sealed class ScoreUploadQueue
             }
 
             existing.Value = submission.Value;
-            existing.Kind = submission.Kind;
+            existing.Kind = ScoreKinds.Wire(submission.Kind);
             existing.Seed = submission.Seed;
             existing.Daily = submission.Daily;
             existing.QueuedAtUnix = nowUnix;
@@ -140,7 +142,7 @@ internal sealed class ScoreUploadQueue
             StatId = statId,
             GameId = submission.GameId,
             Value = submission.Value,
-            Kind = submission.Kind,
+            Kind = ScoreKinds.Wire(submission.Kind),
             Seed = submission.Seed,
             Daily = submission.Daily,
             QueuedAtUnix = nowUnix,

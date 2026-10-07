@@ -218,10 +218,11 @@ internal static class SnipRenderer
         drawList.AddCircleFilled(tip - new Vector2(radius * 0.06f, radius * 0.06f), radius * 0.07f,
             ImGui.GetColorU32(White with { W = 0.7f }), 10);
         var headHalf = new Vector2(radius * squash, radius / squash);
-        FillEllipse(drawList, head + new Vector2(0f, radius * 0.06f), headHalf * 1.02f,
-            ImGui.GetColorU32(Shadow with { W = 0.16f }));
-        FillEllipse(drawList, head, headHalf, ImGui.GetColorU32(Fur));
-        StrokeEllipse(drawList, head, headHalf, ImGui.GetColorU32(Outline), MathF.Max(1f, radius * 0.06f));
+        Shapes.FillEllipse(drawList, head + new Vector2(0f, radius * 0.06f), headHalf * 1.02f,
+            ImGui.GetColorU32(Shadow with { W = 0.16f }), EllipseSegments);
+        Shapes.FillEllipse(drawList, head, headHalf, ImGui.GetColorU32(Fur), EllipseSegments);
+        Shapes.StrokeEllipse(drawList, head, headHalf, ImGui.GetColorU32(Outline), MathF.Max(1f, radius * 0.06f),
+            EllipseSegments);
         DrawEar(drawList, head, radius, -1f);
         DrawEar(drawList, head, radius, 1f);
         DrawFace(drawList, head, radius, mouthOpen, chomp, blinking);
@@ -396,7 +397,8 @@ internal static class SnipRenderer
         drawList.AddCircleFilled(new Vector2(head.X - radius * 0.55f, head.Y + radius * 0.15f), radius * 0.13f, cheek, 12);
         drawList.AddCircleFilled(new Vector2(head.X + radius * 0.55f, head.Y + radius * 0.15f), radius * 0.13f, cheek, 12);
         var nose = new Vector2(head.X, head.Y + radius * 0.08f);
-        FillEllipse(drawList, nose, new Vector2(radius * 0.11f, radius * 0.08f), ImGui.GetColorU32(Nose));
+        Shapes.FillEllipse(drawList, nose, new Vector2(radius * 0.11f, radius * 0.08f), ImGui.GetColorU32(Nose),
+            EllipseSegments);
         var mouthCenter = new Vector2(head.X, head.Y + radius * 0.4f);
         if (happy)
         {
@@ -404,7 +406,8 @@ internal static class SnipRenderer
             var gape = radius * 0.24f * (1f - close);
             if (gape > 1f)
             {
-                FillEllipse(drawList, mouthCenter, new Vector2(radius * 0.26f, gape), ImGui.GetColorU32(Mouth));
+                Shapes.FillEllipse(drawList, mouthCenter, new Vector2(radius * 0.26f, gape), ImGui.GetColorU32(Mouth),
+                    EllipseSegments);
             }
 
             drawList.PathArcTo(mouthCenter - new Vector2(0f, radius * 0.08f), radius * 0.18f, MathF.PI * 0.15f,
@@ -422,31 +425,9 @@ internal static class SnipRenderer
         }
 
         var half = new Vector2(radius * (0.16f + 0.12f * mouthOpen), radius * (0.05f + 0.24f * mouthOpen));
-        FillEllipse(drawList, mouthCenter, half, ImGui.GetColorU32(Mouth));
-        FillEllipse(drawList, mouthCenter + new Vector2(0f, half.Y * 0.45f), half * new Vector2(0.6f, 0.45f),
-            ImGui.GetColorU32(Tongue));
-        StrokeEllipse(drawList, mouthCenter, half, ink, MathF.Max(1f, radius * 0.05f));
-    }
-
-    private static void EllipsePath(ImDrawListPtr drawList, Vector2 center, Vector2 half)
-    {
-        drawList.PathClear();
-        for (var segment = 0; segment < EllipseSegments; segment++)
-        {
-            var angle = segment * MathF.Tau / EllipseSegments;
-            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * half.X, MathF.Sin(angle) * half.Y));
-        }
-    }
-
-    private static void FillEllipse(ImDrawListPtr drawList, Vector2 center, Vector2 half, uint color)
-    {
-        EllipsePath(drawList, center, half);
-        drawList.PathFillConvex(color);
-    }
-
-    private static void StrokeEllipse(ImDrawListPtr drawList, Vector2 center, Vector2 half, uint color, float thickness)
-    {
-        EllipsePath(drawList, center, half);
-        drawList.PathStroke(color, ImDrawFlags.Closed, thickness);
+        Shapes.FillEllipse(drawList, mouthCenter, half, ImGui.GetColorU32(Mouth), EllipseSegments);
+        Shapes.FillEllipse(drawList, mouthCenter + new Vector2(0f, half.Y * 0.45f), half * new Vector2(0.6f, 0.45f),
+            ImGui.GetColorU32(Tongue), EllipseSegments);
+        Shapes.StrokeEllipse(drawList, mouthCenter, half, ink, MathF.Max(1f, radius * 0.05f), EllipseSegments);
     }
 }
