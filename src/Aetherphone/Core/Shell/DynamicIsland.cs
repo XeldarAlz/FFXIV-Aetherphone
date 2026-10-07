@@ -2,6 +2,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Fishing;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Muster;
 using Aetherphone.Core.Notifications;
@@ -62,6 +63,7 @@ internal sealed partial class DynamicIsland
     private readonly PlaybackHub playback;
     private readonly CallHub calls;
     private readonly Configuration configuration;
+    private readonly AppInstaller installer;
     private readonly VideoSuite? video;
     private readonly MusterStore? musters;
     private readonly MusterLauncher? musterLauncher;
@@ -101,10 +103,11 @@ internal sealed partial class DynamicIsland
     private Rect lastBubble;
     private bool lastBubbleVisible;
 
-    public DynamicIsland(PlaybackHub playback, CallHub calls, Configuration configuration, VideoSuite? video,
-        MusterStore? musters, MusterLauncher? musterLauncher, PcMediaSource? pcMedia,
+    public DynamicIsland(PlaybackHub playback, CallHub calls, Configuration configuration, AppInstaller installer,
+        VideoSuite? video, MusterStore? musters, MusterLauncher? musterLauncher, PcMediaSource? pcMedia,
         GameTimers? gameTimers = null, FishingAlerts? fishing = null)
     {
+        this.installer = installer;
         this.gameTimers = gameTimers;
         this.fishing = fishing;
         this.playback = playback;
@@ -198,17 +201,27 @@ internal sealed partial class DynamicIsland
     private IslandSignals ReadSignals(in CallView view)
     {
         var call = view.State is CallState.Ringing or CallState.Dialing or CallState.Connecting or CallState.Active;
-        var session = video is { } suite && suite.WatchAlong.InParty;
-        upcomingMuster = musters is { } store
-            ? IslandActivities.SoonestMuster(store.GoingMusters, store.Mine, DateTimeOffset.UtcNow.ToUnixTimeSeconds())
-            : null;
+        var session = Allows(IslandActivity.Session) && video is { } suite && suite.WatchAlong.InParty;
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        upcomingGameTimer = gameTimers is { Enabled: true } timers
+        upcomingMuster = Allows(IslandActivity.Muster) && musters is { } store
+            ? IslandActivities.SoonestMuster(store.GoingMusters, store.Mine, nowUnix)
+            : null;
+        upcomingGameTimer = Allows(IslandActivity.GameTimer) && gameTimers is { Enabled: true } timers
             ? TimerBoard.Tally(timers.Characters, timers.Workshops, nowUnix).Soonest
             : default;
-        return new IslandSignals(call, session, playback.IsActive, TimerRemainingSeconds() > 0,
-            upcomingMuster is not null, ReadPcMedia(call || session || playback.IsActive),
-            TimerBoard.InIslandWindow(upcomingGameTimer, nowUnix), fishing is { Island.Kind: not FishingIslandKind.None });
+        var music = Allows(IslandActivity.Playback);
+        var phonePlayback = music && playback.IsActive;
+        var pcMediaLive = music && ReadPcMedia(call || session || phonePlayback);
+        var timer = Allows(IslandActivity.Timer) && TimerRemainingSeconds() > 0;
+        var fishingLive = Allows(IslandActivity.Fishing) && fishing is { Island.Kind: not FishingIslandKind.None };
+        return new IslandSignals(call, session, phonePlayback, timer, upcomingMuster is not null, pcMediaLive,
+            TimerBoard.InIslandWindow(upcomingGameTimer, nowUnix), fishingLive);
+    }
+
+    private bool Allows(IslandActivity activity)
+    {
+        var appId = IslandActivities.OwnerAppId(activity);
+        return installer.IsInstalled(appId) && configuration.IsIslandEnabled(appId);
     }
 
     private void DrawContent(Rect screen, PhoneTheme theme, INavigator navigation, in CallView view,

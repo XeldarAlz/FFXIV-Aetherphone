@@ -1121,6 +1121,8 @@
   "settings.phoneWidthReadout": "幅 {0} px",
   "settings.banners": "バナー",
   "settings.badges": "バッジ",
+  "settings.dynamicIsland": "Dynamic Island",
+  "settings.showInIsland": "Dynamic Island に表示",
   "settings.removeApp": "アプリを削除",
   "translate.action": "翻訳",
   "translate.pending": "翻訳中…",

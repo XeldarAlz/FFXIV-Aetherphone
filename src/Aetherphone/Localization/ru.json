@@ -1121,6 +1121,8 @@
   "settings.phoneWidthReadout": "{0} px в ширину",
   "settings.banners": "Баннеры",
   "settings.badges": "Значки",
+  "settings.dynamicIsland": "Dynamic Island",
+  "settings.showInIsland": "Показывать в Dynamic Island",
   "settings.removeApp": "Удалить приложение",
   "translate.action": "Перевести",
   "translate.pending": "Перевод…",

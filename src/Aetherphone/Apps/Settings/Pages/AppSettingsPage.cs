@@ -4,6 +4,7 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Shell;
 using Aetherphone.Core.SystemMedia;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -20,6 +21,7 @@ internal sealed class AppSettingsPage : ISettingsPage
         new(L.Settings.Banners),
         new(L.Settings.Sounds),
         new(L.Settings.Badges),
+        new(L.Settings.ShowInIsland),
     };
 
     private const float HeroRowHeight = 84f;
@@ -34,6 +36,7 @@ internal sealed class AppSettingsPage : ISettingsPage
     private readonly IPhoneApp app;
     private readonly bool hasChannel;
     private readonly bool hasBadge;
+    private readonly bool hasIsland;
     private readonly bool hasStoreEntry;
     private readonly StoreEntry storeEntry;
     private readonly Configuration configuration;
@@ -51,6 +54,7 @@ internal sealed class AppSettingsPage : ISettingsPage
         app = entry.App;
         hasChannel = entry.HasChannel;
         hasBadge = entry.HasBadge;
+        hasIsland = IslandActivities.HasOptionalActivity(entry.AppId);
         hasStoreEntry = AppStoreCatalog.TryFor(entry.AppId, out storeEntry);
         this.configuration = configuration;
         this.sound = sound;
@@ -73,6 +77,11 @@ internal sealed class AppSettingsPage : ISettingsPage
             if (hasChannel || hasBadge)
             {
                 DrawAlerts(theme);
+            }
+
+            if (hasIsland)
+            {
+                DrawIsland(theme);
             }
 
             if (string.Equals(app.Id, MusicMediaSettings.AppId, StringComparison.Ordinal))
@@ -158,6 +167,19 @@ internal sealed class AppSettingsPage : ISettingsPage
         SettingsSection.Header(Loc.T(L.Settings.Sound), theme);
         SoundOptionList.Draw(theme, sound, SoundKind.Notification, configuration.AppSoundOverride(app.Id), true,
             selectSound);
+    }
+
+    private void DrawIsland(PhoneTheme theme)
+    {
+        SettingsSection.Header(Loc.T(L.Settings.DynamicIsland), theme);
+        var enabled = configuration.IsIslandEnabled(app.Id);
+        var card = GroupCard.Begin(theme, 1);
+        var show = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ShowInIsland), enabled, theme);
+        card.End();
+        if (show != enabled)
+        {
+            configuration.SetIslandEnabled(app.Id, show);
+        }
     }
 
     private void DrawActions(in PhoneContext context, PhoneTheme theme)

@@ -1121,6 +1121,8 @@
   "settings.phoneWidthReadout": "{0} px de largura",
   "settings.banners": "Banners",
   "settings.badges": "Contadores",
+  "settings.dynamicIsland": "Dynamic Island",
+  "settings.showInIsland": "Mostrar na Dynamic Island",
   "settings.removeApp": "Remover app",
   "translate.action": "Traduzir",
   "translate.pending": "Traduzindo…",
