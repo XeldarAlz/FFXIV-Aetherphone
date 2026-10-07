@@ -14,6 +14,7 @@ using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
+using Aetherphone.Apps.Games.Herd;
 using Aetherphone.Apps.Games.Hop;
 using Aetherphone.Apps.Games.Invaders;
 using Aetherphone.Apps.Games.Mahjong;
@@ -205,6 +206,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new TrailsApp(),
             new TrailblazeApp(),
             new ThrustApp(),
+            new HerdApp(textures),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

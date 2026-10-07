@@ -148,6 +148,9 @@ internal static class AppIconArt
             case "thrust":
                 DrawThrust(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "herd":
+                DrawHerd(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -973,6 +976,27 @@ internal static class AppIconArt
         drawList.AddCircleFilled(At(center, extent, 0.5f, -0.06f), extent * 0.07f, hole, 10);
         drawList.AddLine(At(center, extent, 0.3f, -0.34f), At(center, extent, 0.44f, -0.72f), ink, extent * 0.07f);
         drawList.AddCircleFilled(At(center, extent, 0.46f, -0.8f), extent * 0.14f, ink, 14);
+    }
+
+    private static void DrawHerd(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        for (var side = -1; side <= 1; side += 2)
+        {
+            var back = At(center, extent, side * 0.62f, 0.42f);
+            drawList.AddCircleFilled(back, extent * 0.34f, ink, 24);
+            drawList.AddCircleFilled(At(center, extent, side * 0.62f + side * 0.02f, 0.4f), extent * 0.05f, hole, 8);
+        }
+
+        var head = At(center, extent, 0f, 0.28f);
+        drawList.AddCircleFilled(head, extent * 0.6f, hole, 32);
+        drawList.AddCircleFilled(head, extent * 0.52f, ink, 32);
+        drawList.AddCircleFilled(At(center, extent, -0.18f, 0.2f), extent * 0.075f, hole, 10);
+        drawList.AddCircleFilled(At(center, extent, 0.18f, 0.2f), extent * 0.075f, hole, 10);
+        drawList.AddCircleFilled(At(center, extent, 0f, 0.42f), extent * 0.09f, hole, 12);
+        drawList.AddBezierQuadratic(At(center, extent, 0f, -0.22f), At(center, extent, 0.16f, -0.5f),
+            At(center, extent, 0.3f, -0.72f), ink, extent * 0.08f);
+        drawList.AddCircleFilled(At(center, extent, 0.32f, -0.78f), extent * 0.2f, ink, 20);
+        drawList.AddCircleFilled(At(center, extent, 0.26f, -0.84f), extent * 0.06f, hole, 10);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)
