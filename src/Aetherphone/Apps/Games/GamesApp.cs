@@ -66,6 +66,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.MoogleClicker;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -314,6 +315,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         RebuildLayout();
         ResetLauncher();
         onlineHub.Reset();
+        consentRequested = false;
+        leaderboard.ClearParticipationFailure();
         leaderboard.EnsureMyRanksFresh();
     }
 
@@ -322,8 +325,10 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         CloseCurrentGame();
         gameRooms.Exit();
         AppLandscape.Release(Id);
+        TourHolds.Release(Id);
         router.Reset();
         pendingRoute = string.Empty;
+        consentRequested = false;
     }
 
     public void Dispose()
@@ -344,6 +349,17 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         SyncCountLabels();
         SyncLeaderboardVersion();
         screenRect = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
+        if (ShowsConsent())
+        {
+            TourHolds.Hold(Id);
+            ui.Backdrop(screenRect);
+            var consentArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
+            PaintViewBackdrop(consentArea);
+            DrawConsent(consentArea, UiScale.Current);
+            return;
+        }
+
+        TourHolds.Release(Id);
         ConsumePendingRoute();
         if (!router.IsTransitioning && router.Current.Screen is GamesScreen.Root or GamesScreen.Shelf)
         {
