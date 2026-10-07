@@ -357,8 +357,7 @@ internal sealed partial class AethergramApp
         {
             var panelBottom = shareRect.Min.Y - ComposeCardGap * scale;
             captionEmoji.DrawPanel(new Rect(new Vector2(area.Min.X, panelBottom - panelHeight),
-                new Vector2(area.Max.X, panelBottom)), ui, ref caption,
-                PostText.CharacterBudget(caption, MaxCaptionLength));
+                new Vector2(area.Max.X, panelBottom)), ui, ref caption, MaxCaptionLength);
         }
 
         var pickedPerson = personPicker.Draw(area, theme, images, lodestone);
@@ -395,7 +394,7 @@ internal sealed partial class AethergramApp
         DrawCaptionField(field, screen, scale, fieldId, paragraphs, ref text, mentions);
         var metaTop = field.Max.Y + ComposeMetaGap * scale;
         DrawCaptionMetaRow(new Rect(new Vector2(field.Min.X, metaTop),
-            new Vector2(field.Max.X, metaTop + ComposeMetaRowHeight * scale)), scale, PostText.Weight(text));
+            new Vector2(field.Max.X, metaTop + ComposeMetaRowHeight * scale)), scale, text.Length);
     }
 
     private void DrawCaptionField(Rect field, Rect screen, float scale, string fieldId, bool paragraphs,

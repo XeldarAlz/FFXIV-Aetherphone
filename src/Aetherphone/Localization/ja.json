@@ -291,7 +291,6 @@
   "social.quotedPhoto": "あなたの写真を引用しました",
   "social.viewProfile": "プロフィールを見る",
   "social.viewHashtag": "タグを見る",
-  "social.lineLimit": "投稿は最大{0}行までです",
   "social.hashtagEmpty": "このタグの投稿はまだありません",
   "social.blockAction": "ブロック",
   "social.blockConfirmTitle": "{0}をブロックしますか？",

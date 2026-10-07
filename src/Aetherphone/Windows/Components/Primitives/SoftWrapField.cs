@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Social;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -14,10 +13,10 @@ internal static class SoftWrapField
         Draw(id, SoftWrapLines.SingleLine, ref value, maxLength, size, wrapWidth, mentions);
     }
 
-    public static void Paragraphs(string id, ref string value, int maxWeight, Vector2 size, float wrapWidth,
+    public static void Paragraphs(string id, ref string value, int maxLength, Vector2 size, float wrapWidth,
         MentionAutocomplete? mentions = null)
     {
-        Draw(id, SoftWrapLines.Paragraphs, ref value, maxWeight, size, wrapWidth, mentions);
+        Draw(id, SoftWrapLines.BreakOnReturn, ref value, maxLength, size, wrapWidth, mentions);
     }
 
     private static void Draw(string id, SoftWrapLines lines, ref string value, int maxLength, Vector2 size,
@@ -65,7 +64,7 @@ internal static class SoftWrapField
         var replacement = string.Concat("@", handle, " ");
         var updated = string.Concat(editor.Text.AsSpan(0, start), replacement,
             editor.Text.AsSpan(start + length));
-        if (PostText.Weight(updated) > maxLength)
+        if (updated.Length > maxLength)
         {
             return navigated;
         }

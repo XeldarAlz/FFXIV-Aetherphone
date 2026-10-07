@@ -376,7 +376,7 @@ internal sealed class VelvetPostComposer
         {
             var panelBottom = shareRect.Min.Y - CardGap * scale;
             captionEmoji.DrawPanel(new Rect(new Vector2(area.Min.X, panelBottom - panelHeight),
-                new Vector2(area.Max.X, panelBottom)), ui, ref caption, PostText.CharacterBudget(caption, CaptionLimit));
+                new Vector2(area.Max.X, panelBottom)), ui, ref caption, CaptionLimit);
         }
 
         var picked = mentionPopup.Draw(captionMentions, area, context.Theme, images, lodestone);
@@ -457,13 +457,12 @@ internal sealed class VelvetPostComposer
 
     private void SyncCounter()
     {
-        var weight = PostText.Weight(caption);
-        if (counterLength == weight)
+        if (counterLength == caption.Length)
         {
             return;
         }
 
-        counterLength = weight;
+        counterLength = caption.Length;
         counterText = counterLength.ToString(Loc.Culture) + "/" + CaptionLimit.ToString(Loc.Culture);
     }
 

@@ -128,8 +128,7 @@ internal sealed partial class AethergramApp
         {
             var panelBottom = area.Max.Y - margin;
             captionEmoji.DrawPanel(new Rect(new Vector2(area.Min.X, panelBottom - panelHeight),
-                new Vector2(area.Max.X, panelBottom)), ui, ref editPostCaption,
-                PostText.CharacterBudget(editPostCaption, MaxCaptionLength));
+                new Vector2(area.Max.X, panelBottom)), ui, ref editPostCaption, MaxCaptionLength);
         }
     }
 

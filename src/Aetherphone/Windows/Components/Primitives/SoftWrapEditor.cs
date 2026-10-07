@@ -1,7 +1,5 @@
 using System.Text;
 using Aetherphone.Core;
-using Aetherphone.Core.Localization;
-using Aetherphone.Core.Social;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -11,7 +9,6 @@ internal enum SoftWrapLines : byte
     SubmitOnReturn,
     BreakOnReturn,
     SingleLine,
-    Paragraphs,
 }
 
 internal sealed class SoftWrapEditor
@@ -31,7 +28,6 @@ internal sealed class SoftWrapEditor
     private int maxBytes;
     private bool pendingSync;
     private bool enterPressed;
-    private bool lineCapHit;
 
     public SoftWrapEditor(SoftWrapLines lines = SoftWrapLines.SubmitOnReturn, bool completesOnTab = false)
     {
@@ -109,7 +105,6 @@ internal sealed class SoftWrapEditor
         maxCharacters = characterLimit;
         maxBytes = byteLimit;
         enterPressed = false;
-        lineCapHit = false;
         Edited = false;
         CompletionRequested = false;
         var display = wrapped.Display;
@@ -127,11 +122,6 @@ internal sealed class SoftWrapEditor
         if (clipped)
         {
             ImGui.PopClipRect();
-        }
-
-        if (lineCapHit)
-        {
-            ShellToast.Show(Loc.T(L.Social.LineLimit, PostText.MaxLines));
         }
 
         if (!ImGui.IsItemActive())
@@ -249,18 +239,6 @@ internal sealed class SoftWrapEditor
             return 0;
         }
 
-        if (lines == SoftWrapLines.Paragraphs)
-        {
-            var verdict = PostText.CanBreak(text, Cursor, maxCharacters);
-            if (verdict != PostBreak.Allowed)
-            {
-                data.EventChar = 0;
-                lineCapHit = verdict == PostBreak.LineCap;
-            }
-
-            return 0;
-        }
-
         if (lines == SoftWrapLines.SingleLine)
         {
             data.EventChar = 0;
@@ -327,9 +305,7 @@ internal sealed class SoftWrapEditor
 
     private string Cap(string value, ref int cursor)
     {
-        var capped = maxCharacters <= 0 ? value
-            : lines == SoftWrapLines.Paragraphs ? PostText.Fit(value, maxCharacters, ref cursor)
-            : CapCharacters(value, maxCharacters, ref cursor);
+        var capped = maxCharacters > 0 ? CapCharacters(value, maxCharacters, ref cursor) : value;
         return maxBytes > 0 ? CapBytes(capped, maxBytes, ref cursor) : capped;
     }
 
