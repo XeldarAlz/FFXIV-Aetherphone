@@ -352,6 +352,11 @@ internal sealed class NameplateTitleService : IDisposable
 
     private NameplateTitle ResolveRanked(NameplateStatus status)
     {
+        if (!settings.Shows(status))
+        {
+            return NameplateTitle.None;
+        }
+
         Span<NameplateStatus> children = stackalloc NameplateStatus[MaxChildren];
         var count = NameplateStatusCatalog.ChildrenOf(status, children);
         for (var index = 0; index < count; index++)
@@ -368,7 +373,7 @@ internal sealed class NameplateTitleService : IDisposable
             }
         }
 
-        return settings.Shows(status) ? ResolveStatus(status) : NameplateTitle.None;
+        return ResolveStatus(status);
     }
 
     private NameplateTitle ResolveStatus(NameplateStatus status)
