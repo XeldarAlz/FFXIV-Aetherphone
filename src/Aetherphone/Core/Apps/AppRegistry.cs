@@ -131,7 +131,7 @@ internal static class AppRegistry
         apps.Add(new FishingApp(services.Fishing, services.FishingAlerts, services.Textures));
         apps.Add(new GamesApp(services.GameStats, services.GameData, services.Textures, services.Coins,
             services.CoinSessions, services.GameRooms, services.Configuration, services.Leaderboard,
-            services.RemoteImages, services.Lodestone));
+            services.RemoteImages, services.Lodestone, services.MoogleClicker));
         apps.Add(new NotificationsApp(services, apps));
         var calendarEvents = new CalendarEvents(services.Http, services.AethernetSession);
         apps.Add(new CalendarApp(services.Configuration, calendarEvents, services.Confirm));

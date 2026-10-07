@@ -127,6 +127,9 @@ internal static class AppIconArt
             case "spiral":
                 SpiralIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "moogleclicker":
+                MoogleClickerIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }

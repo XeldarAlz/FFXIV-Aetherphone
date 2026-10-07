@@ -79,6 +79,7 @@ internal sealed class GamesLibrary
         new("online.connectfour", 2026, 10, 3),
         new("slice", 2026, 10, 8),
         new("spiral", 2026, 10, 8),
+        new("moogleclicker", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -494,6 +495,7 @@ internal sealed class GamesLibrary
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(SliceApp.ArcadeStatId).BestScore),
                     out value);
             case "watersort":
+            case "moogleclicker":
             {
                 var bestLevel = stats.Get(gameId).BestScore;
                 if (bestLevel <= 0)

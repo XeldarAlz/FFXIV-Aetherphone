@@ -8669,6 +8669,75 @@ internal static class L
         public static readonly LocString Smashes = new("games.spiral.smashes", "Smashes");
     }
 
+    internal static class MoogleClicker
+    {
+        public static readonly LocString Title = new("games.moogleclicker.title", "Moogle Clicker");
+        public static readonly LocString Hook = new("games.moogleclicker.hook", "Tap the moogle for kupo, hire a workshop that keeps earning while you play, and close the ledger for stamps.");
+        public static readonly LocString Kupo = new("games.moogleclicker.kupo", "Kupo");
+        public static readonly LocString PerSecond = new("games.moogleclicker.perSecond", "{0}/s");
+        public static readonly LocString EachRate = new("games.moogleclicker.eachRate", "{0}/s each");
+        public static readonly LocString Workshop = new("games.moogleclicker.workshop", "Workshop");
+        public static readonly LocString BuyMax = new("games.moogleclicker.buyMax", "Max");
+        public static readonly LocString Unknown = new("games.moogleclicker.unknown", "???");
+        public static readonly LocString PomBrush = new("games.moogleclicker.pomBrush", "Pom Brush");
+        public static readonly LocString Apprentice = new("games.moogleclicker.apprentice", "Apprentice");
+        public static readonly LocString KupoGrove = new("games.moogleclicker.kupoGrove", "Kupo Nut Grove");
+        public static readonly LocString MogPost = new("games.moogleclicker.mogPost", "Mog Post");
+        public static readonly LocString CrystalMine = new("games.moogleclicker.crystalMine", "Crystal Mine");
+        public static readonly LocString ArtisanHall = new("games.moogleclicker.artisanHall", "Artisan Hall");
+        public static readonly LocString ChocoboCaravan = new("games.moogleclicker.chocoboCaravan", "Chocobo Caravan");
+        public static readonly LocString AirshipDock = new("games.moogleclicker.airshipDock", "Airship Dock");
+        public static readonly LocString GoldSaucer = new("games.moogleclicker.goldSaucer", "Gold Saucer");
+        public static readonly LocString CrystalTower = new("games.moogleclicker.crystalTower", "Crystal Tower");
+        public static readonly LocString PrimalForge = new("games.moogleclicker.primalForge", "Primal Forge");
+        public static readonly LocString MoonAtelier = new("games.moogleclicker.moonAtelier", "Moon Atelier");
+        public static readonly LocString SturdyPom = new("games.moogleclicker.sturdyPom", "Sturdy Pom");
+        public static readonly LocString GoldenPom = new("games.moogleclicker.goldenPom", "Golden Pom");
+        public static readonly LocString KupoRhythm = new("games.moogleclicker.kupoRhythm", "Kupo Rhythm");
+        public static readonly LocString MoogleSpirit = new("games.moogleclicker.moogleSpirit", "Moogle Spirit");
+        public static readonly LocString UpgradeTier = new("games.moogleclicker.upgradeTier", "{0}, tier {1}");
+        public static readonly LocString EffectDouble = new("games.moogleclicker.effectDouble", "Output x2");
+        public static readonly LocString EffectTapDouble = new("games.moogleclicker.effectTapDouble", "Taps x2");
+        public static readonly LocString EffectTapShare = new("games.moogleclicker.effectTapShare", "Taps add {0}% of kupo per second");
+        public static readonly LocString UpgradesHint = new("games.moogleclicker.upgradesHint", "Upgrades appear as your workshop grows");
+        public static readonly LocString Critical = new("games.moogleclicker.critical", "Critical!");
+        public static readonly LocString FrenzyBanner = new("games.moogleclicker.frenzyBanner", "Kupo frenzy! x{0}");
+        public static readonly LocString TapFrenzyBanner = new("games.moogleclicker.tapFrenzyBanner", "Pom frenzy! Taps x{0}");
+        public static readonly LocString LumpBanner = new("games.moogleclicker.lumpBanner", "+{0} kupo!");
+        public static readonly LocString StatsTitle = new("games.moogleclicker.statsTitle", "Workshop stats");
+        public static readonly LocString StatBank = new("games.moogleclicker.statBank", "Kupo in the bank");
+        public static readonly LocString StatLedger = new("games.moogleclicker.statLedger", "Kupo this ledger");
+        public static readonly LocString StatLifetime = new("games.moogleclicker.statLifetime", "Kupo all time");
+        public static readonly LocString StatPerSecond = new("games.moogleclicker.statPerSecond", "Kupo per second");
+        public static readonly LocString StatPerTap = new("games.moogleclicker.statPerTap", "Kupo per tap");
+        public static readonly LocString StatTaps = new("games.moogleclicker.statTaps", "Taps");
+        public static readonly LocString StatTapKupo = new("games.moogleclicker.statTapKupo", "Kupo from taps");
+        public static readonly LocString StatBuildings = new("games.moogleclicker.statBuildings", "Buildings");
+        public static readonly LocString StatUpgrades = new("games.moogleclicker.statUpgrades", "Upgrades");
+        public static readonly LocString StatMinions = new("games.moogleclicker.statMinions", "Minions caught");
+        public static readonly LocString StatLedgerLevel = new("games.moogleclicker.statLedgerLevel", "Ledger level");
+        public static readonly LocString StatPages = new("games.moogleclicker.statPages", "Ledgers closed");
+        public static readonly LocString StatBonus = new("games.moogleclicker.statBonus", "Stamp bonus");
+        public static readonly LocString CountOf = new("games.moogleclicker.countOf", "{0} of {1}");
+        public static readonly LocString BonusPercent = new("games.moogleclicker.bonusPercent", "+{0}%");
+        public static readonly LocString LedgerTitle = new("games.moogleclicker.ledgerTitle", "Kupo Ledger");
+        public static readonly LocString LedgerLevel = new("games.moogleclicker.ledgerLevel", "Level {0}");
+        public static readonly LocString LedgerBonus = new("games.moogleclicker.ledgerBonus", "+{0}% kupo, forever");
+        public static readonly LocString LedgerWaiting = new("games.moogleclicker.ledgerWaiting", "Stamps waiting: {0}");
+        public static readonly LocString LedgerNext = new("games.moogleclicker.ledgerNext", "Next stamp at {0} kupo all time");
+        public static readonly LocString LedgerExplain = new("games.moogleclicker.ledgerExplain", "Each stamp adds {0}% kupo forever. Closing the ledger resets kupo, buildings and upgrades.");
+        public static readonly LocString LedgerClose = new("games.moogleclicker.ledgerClose", "Close the ledger");
+        public static readonly LocString ConfirmTitle = new("games.moogleclicker.confirmTitle", "Close the ledger?");
+        public static readonly LocString ConfirmBody = new("games.moogleclicker.confirmBody", "You keep every stamp and add {0} more. Kupo, buildings and upgrades start over.");
+        public static readonly LocString ConfirmYes = new("games.moogleclicker.confirmYes", "Close it, kupo!");
+        public static readonly LocString ConfirmNo = new("games.moogleclicker.confirmNo", "Not yet");
+        public static readonly LocString LedgerClosed = new("games.moogleclicker.ledgerClosed", "Ledger closed! +{0} stamps");
+        public static readonly LocString AwayTitle = new("games.moogleclicker.awayTitle", "While you were away");
+        public static readonly LocString AwayBody = new("games.moogleclicker.awayBody", "Your workshop made {0} kupo in {1}.");
+        public static readonly LocString AwayCapped = new("games.moogleclicker.awayCapped", "Offline earnings stop after {0} hours.");
+        public static readonly LocString AwayCollect = new("games.moogleclicker.awayCollect", "Kupo!");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

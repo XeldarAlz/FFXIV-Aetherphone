@@ -19,6 +19,7 @@ using Aetherphone.Core.Housing;
 using Aetherphone.Core.Hunts;
 using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Market;
+using Aetherphone.Core.MoogleClicker;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Radio;
 using Aetherphone.Core.Shell;
@@ -358,6 +359,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool TetrisModern { get; set; }
     public string PendingCoinGameSession { get; set; } = string.Empty;
     public List<PendingScoreUpload> PendingScoreUploads { get; set; } = new();
+    public MoogleClickerSave MoogleClicker { get; set; } = new();
     public Dictionary<string, Core.Coins.CoinSavingGoal> CoinSavingGoals { get; set; } = new();
     public Dictionary<ulong, string> PendingCasinoSittings { get; set; } = new();
     public Dictionary<ulong, long> CasinoSittingSeenAtUnix { get; set; } = new();
