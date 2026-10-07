@@ -44,11 +44,8 @@ internal sealed partial class GamesApp
     private Spring heroScale = new(1f);
     private float entrance;
 
-    private void ResetLauncher()
+    private void ResetHome()
     {
-        focusSearch = false;
-        searchText = string.Empty;
-        lastSearchText = string.Empty;
         heroScale.SnapTo(1f);
         entrance = 0f;
         latestRail.Reset();
@@ -58,7 +55,6 @@ internal sealed partial class GamesApp
             genreRails[index].Reset();
         }
 
-        Array.Clear(countLabels);
         roomsLabelCount = -1;
         dailyEyebrow = Loc.Culture.TextInfo.ToUpper(Loc.T(L.Games.Daily));
     }
@@ -70,7 +66,6 @@ internal sealed partial class GamesApp
         {
             var scale = UiScale.Current;
             entrance = GameJuice.Advance(entrance, frameSeconds, EntranceSpeed);
-            gameRooms.EnsureFresh();
             var origin = ImGui.GetCursorScreenPos();
             var width = ScrollLayout.StableContentWidth();
             var left = origin.X;
@@ -246,24 +241,6 @@ internal sealed partial class GamesApp
         return y + rows * (tileHeight + gap) - gap;
     }
 
-    private static void FinishPage(Vector2 origin, float width, float bottom, float scale)
-    {
-        ImGui.SetCursorScreenPos(new Vector2(origin.X, bottom));
-        ImGui.Dummy(new Vector2(width, Metrics.Space.Xl * scale));
-    }
-
-    private string CountLabel(int count)
-    {
-        var label = countLabels[count];
-        if (label is null)
-        {
-            label = Loc.Plural(L.Games.GameCount, count);
-            countLabels[count] = label;
-        }
-
-        return label;
-    }
-
     private string RoomsLabel(int count)
     {
         if (count != roomsLabelCount)
@@ -273,17 +250,5 @@ internal sealed partial class GamesApp
         }
 
         return roomsLabel;
-    }
-
-    private void Activate(int entryIndex)
-    {
-        ref readonly var entry = ref library.Entries[entryIndex];
-        if (entry.Online)
-        {
-            OpenOnlineHub(entry.OnlineKind);
-            return;
-        }
-
-        OpenGame(games[entry.GameIndex]);
     }
 }

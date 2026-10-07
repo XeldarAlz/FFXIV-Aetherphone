@@ -101,7 +101,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     public const string HomeTabRoute = "games.tab.home";
     public const string TogetherTabRoute = "games.tab.together";
-    public const string RecordsTabRoute = "games.tab.records";
+    public const string LibraryTabRoute = "games.tab.library";
+    public const string ProfileTabRoute = "games.tab.records";
     public const string SearchTabRoute = "games.tab.search";
     private const string PlayRoutePrefix = "games.play.";
     private const int TabCount = 4;
@@ -111,7 +112,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private const float ResultAppearSpeed = 3.4f;
     private const int FeaturedStep = 5;
 
-    private static readonly string[] TabIds = [HomeTabRoute, TogetherTabRoute, RecordsTabRoute, SearchTabRoute];
+    private static readonly string[] TabIds = [HomeTabRoute, TogetherTabRoute, LibraryTabRoute, ProfileTabRoute];
 
     private readonly GameStatsStore stats;
     private readonly Configuration configuration;
@@ -144,6 +145,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private readonly LevelSelect levelSelect = new();
     private readonly StageHandoff handoff = new();
     private Rect screenRect;
+    private Rect appArea;
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private IMiniGame? currentGame;
@@ -247,7 +249,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         RebuildLayout();
         router = new ViewRouter<GamesRoute>(GamesRoute.Root);
         drawView = DrawView;
-        back = () => router.Pop();
+        back = Back;
     }
 
     public IMiniGame DailyGame => games[FeaturedIndex()];
@@ -321,15 +323,20 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         router.Reset();
         tab = GamesTab.Home;
         RebuildLayout();
-        ResetLauncher();
+        ResetLaunch();
+        ResetHome();
+        ResetLibrary();
+        ResetProfile();
         onlineHub.Reset();
         consentRequested = false;
         leaderboard.ClearParticipationFailure();
         leaderboard.EnsureMyRanksFresh();
+        gameRooms.EnsureFresh();
     }
 
     public void OnClosed()
     {
+        ResetLaunch();
         CloseCurrentGame();
         gameRooms.Exit();
         AppLandscape.Release(Id);
@@ -359,13 +366,13 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         SyncCountLabels();
         SyncLeaderboardVersion();
         screenRect = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
+        appArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
         if (ShowsConsent())
         {
             TourHolds.Hold(Id);
             ui.Backdrop(screenRect);
-            var consentArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
-            PaintViewBackdrop(consentArea);
-            DrawConsent(consentArea, UiScale.Current);
+            ui.Body(appArea);
+            DrawConsent(appArea, UiScale.Current);
             return;
         }
 
@@ -376,14 +383,17 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             onlineHub.Consume();
         }
 
-        if (router.IsTransitioning || router.Current.Screen != GamesScreen.Playing)
+        if (router.IsTransitioning || LaunchActive || router.Current.Screen != GamesScreen.Playing)
         {
             ui.Backdrop(screenRect);
         }
 
-        var appArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
-        router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
-        if (!router.IsTransitioning && router.Current.Screen is GamesScreen.Root or GamesScreen.Shelf
+        if (!DrawLaunchLayer(appArea))
+        {
+            router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        }
+
+        if (!router.IsTransitioning && !LaunchActive && router.Current.Screen is GamesScreen.Root or GamesScreen.Shelf
             && currentGame is not null)
         {
             CloseCurrentGame();
@@ -417,11 +427,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
         countLanguage = Loc.Current;
         Array.Clear(countLabels);
-        roomsLabelCount = -1;
-        dailyEyebrow = Loc.Culture.TextInfo.ToUpper(Loc.T(L.Games.Daily));
-        recordsText.Reset();
-        streakText.Reset();
-        recordCountText.Reset();
         onlineHub.ResetLabels();
     }
 
@@ -469,6 +474,14 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             return;
         }
 
+        if (string.Equals(route, SearchTabRoute, StringComparison.Ordinal))
+        {
+            router.Reset();
+            SelectTab(GamesTab.Library);
+            FocusLibrarySearch();
+            return;
+        }
+
         for (var index = 0; index < TabIds.Length; index++)
         {
             if (string.Equals(TabIds[index], route, StringComparison.Ordinal))
@@ -509,29 +522,22 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                     AppLandscape.Held(Id) && context.Content.IsLandscape(), TabTitle(GamesTab.Together));
                 return;
             case GamesScreen.Shelf:
-                PaintViewBackdrop(area);
+                ui.Body(area);
                 DrawShelfPage(context, route.Shelf);
                 return;
             case GamesScreen.Leaderboard:
-                PaintViewBackdrop(area, leaderboardAccent);
+                ui.Body(area);
                 DrawLeaderboard(context);
                 return;
+            case GamesScreen.Bests:
+                ui.Body(area);
+                DrawBests(context);
+                return;
             default:
-                PaintViewBackdrop(area);
+                ui.Body(area);
                 DrawRoot(context, area);
                 return;
         }
-    }
-
-    private void PaintViewBackdrop(Rect area) => PaintViewBackdrop(area, games[featuredIndex].Accent);
-
-    private void PaintViewBackdrop(Rect area, Vector4 accent)
-    {
-        ui.Body(area);
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.PushClipRect(area.Min, area.Max, true);
-        GameScene.Ambient(drawList, area, accent);
-        drawList.PopClipRect();
     }
 
     private void DrawRoot(in PhoneContext context, Rect area)
@@ -544,11 +550,11 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 case GamesTab.Together:
                     DrawTogether(context);
                     break;
-                case GamesTab.Records:
-                    DrawRecords(context);
+                case GamesTab.Library:
+                    DrawLibrary(context);
                     break;
-                case GamesTab.Search:
-                    DrawSearch(context);
+                case GamesTab.Profile:
+                    DrawProfile(context);
                     break;
                 default:
                     DrawHome(context);
@@ -565,12 +571,12 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     {
         tabItems[(int)GamesTab.Home] = new TabItem(Loc.T(L.GamesHub.TabHome), IconGlyph.Of(FontAwesomeIcon.Gamepad),
             AnchorKey: HomeTabRoute);
-        tabItems[(int)GamesTab.Together] = new TabItem(Loc.T(L.Games.OnlineTitle),
+        tabItems[(int)GamesTab.Together] = new TabItem(Loc.T(L.GamesHub.TabTogether),
             IconGlyph.Of(FontAwesomeIcon.UserFriends), AnchorKey: TogetherTabRoute);
-        tabItems[(int)GamesTab.Records] = new TabItem(Loc.T(L.GamesHub.TabRecords),
-            IconGlyph.Of(FontAwesomeIcon.Trophy), AnchorKey: RecordsTabRoute);
-        tabItems[(int)GamesTab.Search] = new TabItem(Loc.T(L.Common.Search), IconGlyph.Of(FontAwesomeIcon.Search),
-            AnchorKey: SearchTabRoute);
+        tabItems[(int)GamesTab.Library] = new TabItem(Loc.T(L.GamesHub.TabLibrary),
+            IconGlyph.Of(FontAwesomeIcon.ThLarge), AnchorKey: LibraryTabRoute);
+        tabItems[(int)GamesTab.Profile] = new TabItem(Loc.T(L.GamesHub.TabProfile),
+            IconGlyph.Of(FontAwesomeIcon.UserCircle), AnchorKey: ProfileTabRoute);
         var result = tabBar.Draw(area, ui, tabItems, (int)tab);
         if (result.Tapped < 0)
         {
@@ -582,30 +588,15 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     private void SelectTab(GamesTab wanted)
     {
-        if (wanted == GamesTab.Search)
-        {
-            focusSearch = true;
-        }
-
-        if (wanted == GamesTab.Together)
-        {
-            gameRooms.EnsureFresh();
-        }
-
-        if (wanted == tab)
-        {
-            return;
-        }
-
+        gameRooms.EnsureFresh();
         tab = wanted;
-        entrance = 0f;
     }
 
     private string TabTitle(GamesTab target) => target switch
     {
         GamesTab.Together => Loc.T(L.Games.OnlineTitle),
-        GamesTab.Records => Loc.T(L.GamesHub.TabRecords),
-        GamesTab.Search => Loc.T(L.Common.Search),
+        GamesTab.Library => Loc.T(L.GamesHub.TabLibrary),
+        GamesTab.Profile => Loc.T(L.GamesHub.TabProfile),
         _ => DisplayName,
     };
 
@@ -1043,7 +1034,64 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         return false;
     }
 
+    private void Back()
+    {
+        if (TryDismissLaunch())
+        {
+            return;
+        }
+
+        router.Pop();
+    }
+
+    private void Activate(int entryIndex) => Activate(entryIndex, default);
+
+    private void Activate(int entryIndex, Rect source)
+    {
+        ref readonly var entry = ref library.Entries[entryIndex];
+        if (entry.Online)
+        {
+            OpenOnlineHub(entry.OnlineKind);
+            return;
+        }
+
+        OpenGame(games[entry.GameIndex], source);
+    }
+
     private void OpenGame(IMiniGame game, bool animate = true)
+    {
+        PrepareGame(game);
+        router.Push(GamesRoute.Playing, animate);
+    }
+
+    private void OpenGame(IMiniGame game, Rect source)
+    {
+        PrepareGame(game);
+        var localSource = new Rect(source.Min - appArea.Min, source.Max - appArea.Min);
+        var morph = source.Width > 0f && source.Height > 0f && !game.Spec.Landscape
+                    && BeginLaunch(game, localSource);
+        router.Push(GamesRoute.Playing, !morph);
+    }
+
+    private static void FinishPage(Vector2 origin, float width, float bottom, float scale)
+    {
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, bottom));
+        ImGui.Dummy(new Vector2(width, Metrics.Space.Xl * scale));
+    }
+
+    private string CountLabel(int count)
+    {
+        var label = countLabels[count];
+        if (label is null)
+        {
+            label = Loc.Plural(L.Games.GameCount, count);
+            countLabels[count] = label;
+        }
+
+        return label;
+    }
+
+    private void PrepareGame(IMiniGame game)
     {
         currentGame = game;
         var spec = game.Spec;
@@ -1065,8 +1113,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         {
             AppLandscape.Request(Id);
         }
-
-        router.Push(GamesRoute.Playing, animate);
     }
 
     private void CloseCurrentGame()

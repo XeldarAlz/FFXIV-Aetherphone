@@ -9,14 +9,15 @@ internal enum GamesScreen : byte
     Playing,
     OnlineRoom,
     Leaderboard,
+    Bests,
 }
 
 internal enum GamesTab : byte
 {
     Home,
     Together,
-    Records,
-    Search,
+    Library,
+    Profile,
 }
 
 internal enum GamesShelf : byte
@@ -29,6 +30,7 @@ internal enum GamesShelf : byte
     Tabletop = (byte)GameGenre.Tabletop,
     Latest,
     All,
+    New,
 }
 
 internal readonly record struct GamesRoute(GamesScreen Screen, GamesShelf Shelf, string GameId = "", string StatId = "")
@@ -36,6 +38,7 @@ internal readonly record struct GamesRoute(GamesScreen Screen, GamesShelf Shelf,
     public static readonly GamesRoute Root = new(GamesScreen.Root, GamesShelf.All);
     public static readonly GamesRoute Playing = new(GamesScreen.Playing, GamesShelf.All);
     public static readonly GamesRoute OnlineRoom = new(GamesScreen.OnlineRoom, GamesShelf.All);
+    public static readonly GamesRoute Bests = new(GamesScreen.Bests, GamesShelf.All);
 
     public static GamesRoute ShelfOf(GamesShelf shelf) => new(GamesScreen.Shelf, shelf);
 
