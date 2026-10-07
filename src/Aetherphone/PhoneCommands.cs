@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Commands;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Shell.Spotlight;
@@ -19,14 +20,6 @@ internal sealed class PhoneCommands
     private const string MarketAppId = "market";
 
     private static readonly string[] SampleSenders = { "Alisaie", "Y'shtola", "Thancred" };
-
-    private static readonly LocString[] HelpLines =
-    {
-        L.Plugin.HelpToggle, L.Plugin.HelpMini, L.Plugin.HelpFull, L.Plugin.HelpHide, L.Plugin.HelpOpen,
-        L.Plugin.HelpSettings, L.Plugin.HelpPhoto, L.Plugin.HelpDoNotDisturb, L.Plugin.HelpMute, L.Plugin.HelpMusic,
-        L.Plugin.HelpTell, L.Plugin.HelpCall, L.Plugin.HelpRun, L.Plugin.HelpMarket, L.Plugin.HelpReset,
-        L.Plugin.HelpTest,
-    };
 
     private readonly PhoneServices services;
     private readonly PhoneWindow phoneWindow;
@@ -130,9 +123,10 @@ internal sealed class PhoneCommands
     private void PrintHelp()
     {
         chat.Print(Loc.T(L.Plugin.HelpTitle));
-        for (var index = 0; index < HelpLines.Length; index++)
+        var entries = PhoneCommandCatalog.Entries;
+        for (var index = 0; index < entries.Length; index++)
         {
-            chat.Print(Loc.T(HelpLines[index], AepConstants.PrimaryCommand));
+            chat.Print(Loc.T(L.Plugin.StateLine, entries[index].Syntax, Loc.T(entries[index].Description)));
         }
     }
 
