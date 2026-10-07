@@ -357,8 +357,33 @@ internal sealed class GameRoomsStore : IDisposable
         return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 
+    internal static GameRoomCardDto[] WithCard(GameRoomCardDto[] cards, GameRoomCardDto card)
+    {
+        for (var index = 0; index < cards.Length; index++)
+        {
+            if (!string.Equals(cards[index].RoomId, card.RoomId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var replaced = (GameRoomCardDto[])cards.Clone();
+            replaced[index] = card;
+            return replaced;
+        }
+
+        var grown = new GameRoomCardDto[cards.Length + 1];
+        grown[0] = card;
+        Array.Copy(cards, 0, grown, 1, cards.Length);
+        return grown;
+    }
+
     private void Answer(GameRoomIntent intent, bool granted, string reason, GameRoomCardDto? card)
     {
+        if (granted && card is { RoomId.Length: > 0 })
+        {
+            rooms = WithCard(rooms, card);
+        }
+
         Interlocked.Exchange(ref roomAnswer, new GameRoomAnswer(intent, granted, reason, card));
         Interlocked.Exchange(ref roomsAttemptedAtTick, 0);
         directoryCadence.RequestImmediate();
