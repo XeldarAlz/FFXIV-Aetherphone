@@ -127,6 +127,9 @@ internal static class AppIconArt
             case "crawler":
                 DrawCrawler(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "trails":
+                DrawTrails(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -826,6 +829,25 @@ internal static class AppIconArt
             new Vector2(cap.X + capRadius * 0.32f, cap.Y + capRadius * 0.62f), ink, capRadius * 0.12f);
         drawList.AddCircleFilled(cap + new Vector2(-capRadius * 0.42f, -capRadius * 0.38f), capRadius * 0.14f, hole, 10);
         drawList.AddCircleFilled(cap + new Vector2(capRadius * 0.28f, -capRadius * 0.56f), capRadius * 0.12f, hole, 10);
+    }
+
+    private static void DrawTrails(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        DrawTrail(drawList, At(center, extent, -0.82f, 0.9f), At(center, extent, -0.82f, -0.22f),
+            At(center, extent, 0.3f, -0.22f), extent, ink, hole);
+        DrawTrail(drawList, At(center, extent, 0.82f, -0.9f), At(center, extent, 0.82f, 0.3f),
+            At(center, extent, -0.26f, 0.3f), extent, ink, hole);
+    }
+
+    private static void DrawTrail(ImDrawListPtr drawList, Vector2 start, Vector2 corner, Vector2 head, float extent,
+        uint ink, uint hole)
+    {
+        var thickness = extent * 0.16f;
+        drawList.AddLine(start, corner, ink, thickness);
+        drawList.AddLine(corner, head, ink, thickness);
+        drawList.AddCircleFilled(corner, thickness * 0.5f, ink, 12);
+        drawList.AddCircleFilled(head, extent * 0.22f, ink, 20);
+        drawList.AddCircleFilled(head, extent * 0.08f, hole, 12);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

@@ -8657,6 +8657,23 @@ internal static class L
         public static readonly LocString Percent = new("games.crawler.percent", "{0}%");
     }
 
+    internal static class Trails
+    {
+        public static readonly LocString Title = new("games.trails.title", "Trails");
+        public static readonly LocString Hook = new("games.trails.hook", "Turn left or right and never touch a trail. Outlast the bots to take the round; first to three wins the match.");
+        public static readonly LocString Duel = new("games.trails.duel", "Duel");
+        public static readonly LocString Wins = new("games.trails.wins", "Wins");
+        public static readonly LocString RoundNumber = new("games.trails.roundNumber", "Round {0}");
+        public static readonly LocString MatchPoint = new("games.trails.matchPoint", "Match point");
+        public static readonly LocString Go = new("games.trails.go", "Go!");
+        public static readonly LocString RoundWon = new("games.trails.roundWon", "Round won!");
+        public static readonly LocString RoundLost = new("games.trails.roundLost", "Round lost");
+        public static readonly LocString Takedown = new("games.trails.takedown", "Takedown!");
+        public static readonly LocString RoundsWon = new("games.trails.roundsWon", "Rounds won");
+        public static readonly LocString Takedowns = new("games.trails.takedowns", "Takedowns");
+        public static readonly LocString LongestRide = new("games.trails.longestRide", "Longest ride");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
