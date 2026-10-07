@@ -40,6 +40,8 @@ internal sealed class OnlineHub
     private const float HostLighten = 0.10f;
     private const float HostDarken = 0.50f;
     private const float HostRimAlpha = 0.10f;
+    private const float HostHoverAlpha = 0.06f;
+    private const float HoverFloor = 0.001f;
     private const float PlayersAlpha = 0.8f;
     private const float BusyAlpha = 0.5f;
     private const float SpinnerRadius = 9f;
@@ -284,12 +286,17 @@ internal sealed class OnlineHub
         float scale)
     {
         var hovered = UiInteract.Hover(rect.Min, rect.Max);
-        var card = CardPose(rect, hovered);
+        var card = CardPose(rect, hovered, out var hover);
         var radius = HubMetrics.CardRadius * scale;
         ui.Card(drawList, card.Min, card.Max, radius);
+        if (hover > HoverFloor)
+        {
+            Squircle.Fill(drawList, card.Min, card.Max, radius,
+                ImGui.GetColorU32(ui.HoverTint with { W = ui.HoverTint.W * hover }));
+        }
+
         if (hovered)
         {
-            Squircle.Fill(drawList, card.Min, card.Max, radius, ImGui.GetColorU32(ui.HoverTint));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
@@ -312,10 +319,10 @@ internal sealed class OnlineHub
         return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
-    private static Rect CardPose(Rect rect, bool hovered)
+    private static Rect CardPose(Rect rect, bool hovered, out float hover)
     {
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var hover = HoverFx.Amount(CardId, hovered);
+        hover = HoverFx.Amount(CardId, hovered);
         var press = PressFx.Scale(CardId, pressed, Motion.PressScaleCard);
         var half = rect.Size * 0.5f * press * (1f + Motion.HoverLiftCard * hover);
         return new Rect(rect.Center - half, rect.Center + half);
@@ -533,13 +540,19 @@ internal sealed class OnlineHub
         ref readonly var info = ref OnlineGameArt.Infos[kindIndex];
         var pending = busy && string.Equals(info.Kind, pendingKind, StringComparison.Ordinal);
         var hovered = !busy && UiInteract.Hover(rect.Min, rect.Max);
-        var card = CardPose(rect, hovered);
+        var card = CardPose(rect, hovered, out var hover);
         var firstVertex = drawList.VtxBuffer.Size;
         var radius = HubMetrics.CardRadius * scale;
         var accent = AppAccents.For(info.AccentId);
         Squircle.FillVerticalGradient(drawList, card.Min, card.Max, radius,
             ImGui.GetColorU32(Palette.Lighten(accent, HostLighten) with { W = 1f }),
             ImGui.GetColorU32(Palette.Darken(accent, HostDarken) with { W = 1f }));
+        if (hover > HoverFloor)
+        {
+            Squircle.Fill(drawList, card.Min, card.Max, radius,
+                ImGui.GetColorU32(White with { W = HostHoverAlpha * hover }));
+        }
+
         Squircle.Stroke(drawList, card.Min, card.Max, radius, ImGui.GetColorU32(White with { W = HostRimAlpha }),
             Metrics.Stroke.Hairline * scale);
         if (string.Equals(info.Kind, preferredKind, StringComparison.Ordinal))
