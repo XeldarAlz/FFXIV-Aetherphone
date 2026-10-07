@@ -50,6 +50,7 @@ internal enum PegfallEventKind : byte
     Won,
     Lost,
     Unstuck,
+    RimBounce,
 }
 
 internal readonly struct PegfallEvent
@@ -87,10 +88,10 @@ internal sealed class PegfallBoard
     public const float MuzzleLength = 0.62f;
     public const float MinAimY = 0.12f;
     public const float BucketTop = 14.3f;
-    public const float BucketInnerHalfWidth = 0.95f;
-    public const float RimHalfWidth = 0.1f;
-    public const float RimHalfHeight = 0.32f;
-    public const float BucketTravel = 3.7f;
+    public const float BucketInnerHalfWidth = 1.45f;
+    public const float RimHalfWidth = 0.12f;
+    public const float RimHalfHeight = 0.4f;
+    public const float BucketTravel = 3.25f;
     public const float BucketBaseSpeed = 0.8f;
     public const float DrainY = Height + 0.6f;
     public const float MagnetSeconds = 3f;
@@ -121,6 +122,7 @@ internal sealed class PegfallBoard
     private static readonly PhysicsMaterial BallMaterial = new(1f, BallRestitution, 0.08f);
     private static readonly PhysicsMaterial PegMaterial = new(1f, BallRestitution, 0.08f);
     private static readonly PhysicsMaterial WallMaterial = new(1f, 0.55f, 0.05f);
+    private static readonly PhysicsMaterial RimMaterial = new(1f, 0.92f, 0.02f);
     private static readonly Vector2 RimHalfExtents = new(RimHalfWidth, RimHalfHeight);
 
     private readonly PhysicsWorld world = new(BodyCapacity, 512, 4, 16, 128);
@@ -329,8 +331,8 @@ internal sealed class PegfallBoard
         elapsed = 0f;
         bucketX = BucketCenterAt(0f);
         bucketPrevious = bucketX;
-        leftRim = world.CreateBox(BodyType.Kinematic, RimCenter(bucketX, -1f), RimHalfExtents, 0f, WallMaterial);
-        rightRim = world.CreateBox(BodyType.Kinematic, RimCenter(bucketX, 1f), RimHalfExtents, 0f, WallMaterial);
+        leftRim = world.CreateBox(BodyType.Kinematic, RimCenter(bucketX, -1f), RimHalfExtents, 0f, RimMaterial);
+        rightRim = world.CreateBox(BodyType.Kinematic, RimCenter(bucketX, 1f), RimHalfExtents, 0f, RimMaterial);
         clock.Reset();
         combo = ComboMeter.Untimed();
         ballCount = 0;
@@ -533,6 +535,12 @@ internal sealed class PegfallBoard
 
             if (ball < 0)
             {
+                continue;
+            }
+
+            if (other == leftRim || other == rightRim)
+            {
+                Push(new PegfallEvent(PegfallEventKind.RimBounce, world.Position(ballBodies[ball])));
                 continue;
             }
 

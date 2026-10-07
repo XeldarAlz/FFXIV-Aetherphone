@@ -15,7 +15,11 @@ internal sealed class UiSoundService : IDisposable
         variantCursor = new int[UiSoundCatalog.Entries.Length];
     }
 
-    public void Play(UiSound sound)
+    public void Play(UiSound sound) => Play(sound, 0f, false);
+
+    public void PlayPitched(UiSound sound, float rate) => Play(sound, rate, true);
+
+    private void Play(UiSound sound, float rate, bool pitched)
     {
         if (configuration.SilentMode || !configuration.UiSounds)
         {
@@ -48,7 +52,7 @@ internal sealed class UiSoundService : IDisposable
         var files = entry.Files;
         var cursor = variantCursor[index];
         variantCursor[index] = (cursor + 1) % files.Length;
-        player.Play(files[cursor], volume, PlaybackRate(entry.PitchVariance));
+        player.Play(files[cursor], volume, pitched ? rate : PlaybackRate(entry.PitchVariance));
     }
 
     private static float PlaybackRate(float variance)
@@ -85,4 +89,6 @@ internal static class UiFeedback
     public static void Unbind() => service = null;
 
     public static void Play(UiSound sound) => service?.Play(sound);
+
+    public static void PlayPitched(UiSound sound, float rate) => service?.PlayPitched(sound, rate);
 }

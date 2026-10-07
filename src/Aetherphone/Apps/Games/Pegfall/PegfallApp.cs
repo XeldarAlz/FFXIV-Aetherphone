@@ -24,6 +24,7 @@ internal sealed class PegfallApp : IMiniGame
     private const float FeverSlowFactor = 0.3f;
     private const float FeverSlowSeconds = 1.4f;
     private const float KeyboardTurnSpeed = 1.4f;
+    private const float WheelTurnStep = 0.006f;
     private const float KickDecay = 5f;
     private const float BannerSeconds = 1.3f;
     private const float IdleFireSeconds = 2.4f;
@@ -32,6 +33,7 @@ internal sealed class PegfallApp : IMiniGame
     private static readonly GameSpec StageSpec = new(GameId, L.Pegfall.Title, GameGenre.Arcade, L.Pegfall.Hook,
         Backdrop.Cavern, HudStyle.Standard, ScoreKind.Score, keyboard: true, levelCount: PegfallLevels.Count);
     private static readonly Vector2 FieldCenter = new(PegfallBoard.Width * 0.5f, PegfallBoard.Height * 0.5f);
+    private static readonly float[] HitScale = BuildHitScale(-5, -3, -1, 0, 2, 4, 5, 7, 9, 11, 12);
     private static readonly Vector4 Danger = new(0.95f, 0.30f, 0.30f, 1f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 Dust = new(0.75f, 0.72f, 0.80f, 0.6f);
@@ -81,6 +83,7 @@ internal sealed class PegfallApp : IMiniGame
     private float rainbowPhase;
     private int level = 1;
     private int trailedBalls;
+    private int shotHits;
     private bool finished;
 
     public PegfallApp()
@@ -104,6 +107,7 @@ internal sealed class PegfallApp : IMiniGame
         aim = Vector2.UnitY;
         zoom = 1f;
         kick = 0f;
+        shotHits = 0;
         resultDelay = ResultDelaySeconds;
         bannerProgress = 1f;
         finished = false;
@@ -250,6 +254,13 @@ internal sealed class PegfallApp : IMiniGame
             aim = PegfallBoard.ClampAim(new Vector2(MathF.Cos(angle), MathF.Sin(angle)));
         }
 
+        var wheel = ImGui.GetIO().MouseWheel;
+        if (wheel != 0f && UiInteract.Hover(full.Min, full.Max))
+        {
+            var angle = MathF.Atan2(aim.Y, aim.X) - wheel * WheelTurnStep;
+            aim = PegfallBoard.ClampAim(new Vector2(MathF.Cos(angle), MathF.Sin(angle)));
+        }
+
         PressSurface.Claim(AimSurfaceId, full, out var activated);
         var fire = activated && !context.ChromeHit(pointer);
         if (GameInput.Pressed(ImGuiKey.Space) || GameInput.Pressed(ImGuiKey.Enter))
@@ -328,6 +339,11 @@ internal sealed class PegfallApp : IMiniGame
                 context.Fx.Vignette(Danger, 0.35f, 0.9f);
                 camera.Shake(0.3f);
                 return;
+            case PegfallEventKind.RimBounce:
+                UiFeedback.Play(UiSound.GameHitWood);
+                particles.Emit(ReboundSpark, entry.Position, 6);
+                camera.Shake(0.05f);
+                return;
             case PegfallEventKind.Unstuck:
                 UiFeedback.Play(UiSound.GameHitSoft);
                 particles.Emit(DrainPuff, entry.Position, 5);
@@ -341,6 +357,7 @@ internal sealed class PegfallApp : IMiniGame
     private void OnFire(in PegfallEvent entry)
     {
         UiFeedback.Play(UiSound.GameShoot);
+        shotHits = 0;
         kick = 1f;
         particles.Emit(MuzzleFlash.WithDirection(MathF.Atan2(aim.Y, aim.X), 0.9f), entry.Position, 10);
         camera.Shake(0.06f);
@@ -358,17 +375,19 @@ internal sealed class PegfallApp : IMiniGame
         particles.Emit(SparkFor(kind), entry.Position, kind == PegKind.Orange ? 10 : 6);
         fx.Shockwave(screen, camera.Px(0.65f), color, 0.3f, 2f);
         var textScale = 0.8f + 0.08f * MathF.Min(board.Multiplier, 8);
+        var rate = HitScale[Math.Min(shotHits, HitScale.Length - 1)];
+        shotHits++;
         fx.AddText(GameNumber.Signed(entry.Value), screen - new Vector2(0f, camera.Px(0.35f)), color, textScale);
         switch (kind)
         {
             case PegKind.Orange:
-                UiFeedback.Play(UiSound.GamePop);
+                UiFeedback.PlayPitched(UiSound.GamePop, rate);
                 camera.Shake(0.05f);
                 break;
             case PegKind.Green:
                 break;
             default:
-                UiFeedback.Play(UiSound.GameHitSoft);
+                UiFeedback.PlayPitched(UiSound.GameHitSoft, rate);
                 break;
         }
 
@@ -381,6 +400,17 @@ internal sealed class PegfallApp : IMiniGame
         fx.AddText(multiplierLabel.Get(L.Stage.Times, board.Multiplier), screen - new Vector2(0f, camera.Px(1.1f)),
             PegfallRenderer.Gold, 1.35f);
         context.Fx.Punch(0.04f);
+    }
+
+    private static float[] BuildHitScale(params int[] semitones)
+    {
+        var rates = new float[semitones.Length];
+        for (var index = 0; index < semitones.Length; index++)
+        {
+            rates[index] = MathF.Pow(2f, semitones[index] / 12f);
+        }
+
+        return rates;
     }
 
     private void OnPegCleared(in PegfallEvent entry)
