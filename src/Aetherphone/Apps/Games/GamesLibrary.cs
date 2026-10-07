@@ -102,6 +102,7 @@ internal sealed class GamesLibrary
         new("pegfall", 2026, 10, 8),
         new("fling", 2026, 10, 8),
         new("siege", 2026, 10, 8),
+        new("crater", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -580,6 +581,7 @@ internal sealed class GamesLibrary
             case "trails":
             case "luckydraw":
             case "broadside":
+            case "crater":
                 return BestStreakAcrossTiers(gameId, out value, out tier);
             case "crates":
                 return StarTotal(stats.TotalStars(gameId), CratesLevels.Count, out value);

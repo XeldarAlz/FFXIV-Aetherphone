@@ -9089,6 +9089,47 @@ internal static class L
         public static readonly LocString WavesRecord = new("games.siege.wavesRecord", "{0} waves");
     }
 
+    internal static class Crater
+    {
+        public static readonly LocString Title = new("games.crater.title", "Crater");
+        public static readonly LocString Hook = new("games.crater.hook", "Take turns lobbing shells and be the last moogle team standing.");
+        public static readonly LocString Round = new("games.crater.round", "Round");
+        public static readonly LocString You = new("games.crater.you", "You");
+        public static readonly LocString YourTurn = new("games.crater.yourTurn", "Your turn");
+        public static readonly LocString TeamTurn = new("games.crater.teamTurn", "{0}'s turn");
+        public static readonly LocString YourTeamWins = new("games.crater.yourTeamWins", "Your team wins!");
+        public static readonly LocString TeamWins = new("games.crater.teamWins", "{0} wins!");
+        public static readonly LocString TimeUp = new("games.crater.timeUp", "Time's up!");
+        public static readonly LocString SuddenDeath = new("games.crater.suddenDeath", "Sudden death!");
+        public static readonly LocString WaterRises = new("games.crater.waterRises", "The water rises");
+        public static readonly LocString Shell = new("games.crater.shell", "Shell");
+        public static readonly LocString Grenade = new("games.crater.grenade", "Grenade");
+        public static readonly LocString Cluster = new("games.crater.cluster", "Cluster");
+        public static readonly LocString Drill = new("games.crater.drill", "Drill");
+        public static readonly LocString Shield = new("games.crater.shield", "Shield");
+        public static readonly LocString Teleport = new("games.crater.teleport", "Teleport");
+        public static readonly LocString FuseSeconds = new("games.crater.fuseSeconds", "{0}s");
+        public static readonly LocString GrenadeHint = new("games.crater.grenadeHint", "Fuse {0}s, press 1 to 5 to change it");
+        public static readonly LocString TeleportHint = new("games.crater.teleportHint", "Tap a spot to teleport there");
+        public static readonly LocString ShieldHint = new("games.crater.shieldHint", "Fire to raise a shield that absorbs one hit");
+        public static readonly LocString ControlsHint = new("games.crater.controlsHint", "A and D walk, W jumps, drag or arrows aim, hold Space or the button to fire");
+        public static readonly LocString DirectHit = new("games.crater.directHit", "Direct hit!");
+        public static readonly LocString Blocked = new("games.crater.blocked", "Blocked!");
+        public static readonly LocString Drowned = new("games.crater.drowned", "Splash!");
+        public static readonly LocString KnockedOut = new("games.crater.knockedOut", "Knocked out!");
+        public static readonly LocString ShieldUp = new("games.crater.shieldUp", "Shield up!");
+        public static readonly LocString Damage = new("games.crater.damage", "Damage dealt");
+        public static readonly LocString Knockouts = new("games.crater.knockouts", "Knockouts");
+        public static readonly LocString Rounds = new("games.crater.rounds", "Rounds");
+        public static readonly LocString Craters = new("games.crater.craters", "Craters");
+        public static readonly LocString BotMogwin = new("games.crater.botMogwin", "Mogwin");
+        public static readonly LocString BotKupka = new("games.crater.botKupka", "Kupka");
+        public static readonly LocString BotMoglin = new("games.crater.botMoglin", "Moglin");
+        public static readonly LocString BotMogsy = new("games.crater.botMogsy", "Mogsy");
+        public static readonly LocString BotPukla = new("games.crater.botPukla", "Pukla");
+        public static readonly LocString BotKumop = new("games.crater.botKumop", "Kumop");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

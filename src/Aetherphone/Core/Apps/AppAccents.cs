@@ -104,6 +104,7 @@ internal static class AppAccents
         ["pegfall"] = AccentRing.Azure,
         ["fling"] = AccentRing.Red,
         ["siege"] = AccentRing.Green,
+        ["crater"] = AccentRing.Orange,
         ["rolladeck"] = AccentRing.Violet,
         ["hunts"] = AccentRing.Indigo
     }.ToFrozenDictionary();
