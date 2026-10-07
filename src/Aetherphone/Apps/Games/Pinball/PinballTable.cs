@@ -33,6 +33,9 @@ internal static class PinballTable
     public const int RolloverCount = 4;
     public const int LeftOutlane = 0;
     public const int RightOutlane = 3;
+    public const int LeftInlane = 1;
+    public const int RightInlane = 2;
+    public const int OrbitCount = 2;
     private const float LaneTopY = 3f;
     private const float GateHighY = 2.62f;
     private const float LaneClearY = 2.4f;
@@ -54,6 +57,7 @@ internal static class PinballTable
     public static readonly Vector2 LaneSensorHalfExtents = new(0.12f, 0.1f);
     public static readonly Vector2 RolloverHalfExtents = new(0.12f, 0.08f);
     public static readonly Vector2 RampSensorHalfExtents = new(0.23f, 0.08f);
+    public static readonly Vector2 OrbitSensorHalfExtents = new(0.2f, 0.08f);
     public static readonly Vector2 RampEntrance = new(4.6f, 5.25f);
     public static readonly Vector2 RampMade = new(5.7f, 3.4f);
     public static readonly Vector2 RampExit = new(4.66f, 7.95f);
@@ -75,6 +79,8 @@ internal static class PinballTable
         new(1f, 0f), new(1f, 0f), new(1f, 0f),
         new(-1f, 0f), new(-1f, 0f), new(-1f, 0f),
     };
+
+    public static readonly Vector2[] OrbitSensors = { new(0.3f, 3.9f), new(5.12f, 4.4f) };
 
     public static readonly Vector2[] TopLanes = { new(2.25f, 1.55f), new(2.85f, 1.55f), new(3.45f, 1.55f) };
 

@@ -334,7 +334,9 @@ public sealed class PinballBoardTests
         board.HitTarget(0);
         board.RollTopLane(1);
         board.CompleteRamp(PinballTable.RampMade);
+        board.CompleteOrbit(PinballTable.OrbitSensors[0]);
         Assert.Equal(score, board.Score);
+        Assert.Equal(0f, board.FeverCharge);
 
         board.SetFlippers(true, true);
         Run(board, 0.3f);
@@ -512,6 +514,196 @@ public sealed class PinballBoardTests
         }
 
         Assert.True(board.Score > 0);
+    }
+
+    [Fact]
+    public void ChainedShotsBuildACombosThatRaiseThePlayfieldMultiplier()
+    {
+        var board = Fresh(19);
+        board.BeginFrame();
+
+        for (var shot = 0; shot < PinballBoard.CombosPerMultiplier; shot++)
+        {
+            board.CompleteRamp(PinballTable.RampMade);
+        }
+
+        Assert.Equal(PinballBoard.CombosPerMultiplier, board.Combo);
+        Assert.Equal(PinballBoard.CombosPerMultiplier - 1, CountEvents(board, PinballEventKind.Combo));
+        Assert.True(HasEvent(board, PinballEventKind.PlayfieldRaised));
+        Assert.Equal(2, board.PlayfieldMultiplier);
+
+        var before = board.Score;
+        board.HitTarget(0);
+
+        Assert.Equal(before + PinballBoard.TargetPoints * 2, board.Score);
+    }
+
+    [Fact]
+    public void ACombosLapsesWhenTheWindowRunsOut()
+    {
+        var board = Fresh(20);
+        board.BeginFrame();
+        board.CompleteRamp(PinballTable.RampMade);
+
+        Run(board, PinballBoard.ComboWindowSeconds + 0.1f);
+        board.BeginFrame();
+        board.CompleteRamp(PinballTable.RampMade);
+
+        Assert.Equal(1, board.Combo);
+        Assert.False(HasEvent(board, PinballEventKind.Combo));
+    }
+
+    [Fact]
+    public void ThePlayfieldMultiplierFallsBackAfterItsTimer()
+    {
+        var board = Fresh(21);
+        board.BeginFrame();
+        for (var shot = 0; shot < PinballBoard.CombosPerMultiplier; shot++)
+        {
+            board.CompleteRamp(PinballTable.RampMade);
+        }
+
+        Assert.Equal(2, board.PlayfieldMultiplier);
+        Run(board, PinballBoard.PlayfieldSeconds + 0.1f);
+
+        Assert.Equal(1, board.PlayfieldMultiplier);
+    }
+
+    [Fact]
+    public void AFullMeterStartsFeverWhichDoublesScoringUntilItEnds()
+    {
+        var board = Fresh(22);
+        for (var roll = 0; roll < 200 && !board.FeverActive; roll++)
+        {
+            board.BeginFrame();
+            board.RollTopLane(roll % PinballTable.TopLaneCount);
+        }
+
+        Assert.True(board.FeverActive);
+        Assert.True(HasEvent(board, PinballEventKind.FeverStart));
+        Assert.Equal(1, board.Fevers);
+        Assert.Equal(0f, board.FeverCharge);
+
+        var before = board.Score;
+        var feverBefore = board.FeverTotal;
+        board.HitTarget(0);
+        Assert.Equal(before + PinballBoard.TargetPoints * PinballBoard.FeverFactor, board.Score);
+
+        var ended = false;
+        var steps = (int)MathF.Ceiling((PinballBoard.FeverSeconds + 0.2f) / Frame);
+        for (var step = 0; step < steps; step++)
+        {
+            board.BeginFrame();
+            board.Update(Frame);
+            ended |= HasEvent(board, PinballEventKind.FeverEnd);
+        }
+
+        Assert.True(ended);
+        Assert.False(board.FeverActive);
+        Assert.Equal(feverBefore + PinballBoard.TargetPoints * PinballBoard.FeverFactor, board.FeverTotal);
+    }
+
+    [Fact]
+    public void TheLitKickbackThrowsALeftOutlaneBallBackIntoPlay()
+    {
+        var board = Fresh(23);
+        Assert.True(board.KickbackLit);
+
+        Place(board, new Vector2(0.25f, 8.5f), new Vector2(0f, 3f));
+        var kicked = false;
+        var drained = false;
+        var outlaned = false;
+        var highest = float.MaxValue;
+        var rightmost = 0f;
+        for (var frame = 0; frame < 70; frame++)
+        {
+            board.BeginFrame();
+            board.Update(Frame);
+            kicked |= HasEvent(board, PinballEventKind.Kickback);
+            drained |= HasEvent(board, PinballEventKind.Drain);
+            outlaned |= HasEvent(board, PinballEventKind.Outlane);
+            highest = MathF.Min(highest, board.BallPositionAt(0).Y);
+            rightmost = MathF.Max(rightmost, board.BallPositionAt(0).X);
+        }
+
+        Assert.True(kicked);
+        Assert.False(drained);
+        Assert.False(outlaned);
+        Assert.False(board.KickbackLit);
+        Assert.True(highest < 6f);
+        Assert.True(rightmost > 1.5f);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void ABallSentUpEitherOrbitComesDownTheOtherAndScoresTheOrbit(int side)
+    {
+        var board = Fresh(24);
+        var start = new Vector2(PinballTable.OrbitSensors[side].X, 5.6f);
+
+        Place(board, start, new Vector2(0f, -15f));
+        var orbited = false;
+        for (var frame = 0; frame < 150 && !orbited; frame++)
+        {
+            board.BeginFrame();
+            board.Update(Frame);
+            orbited = HasEvent(board, PinballEventKind.Orbit);
+        }
+
+        Assert.True(orbited);
+        Assert.Equal(1, board.Orbits);
+    }
+
+    [Fact]
+    public void BumperHitsLightTheMysteryWhichTheSaucerPaysOnce()
+    {
+        var board = Fresh(25);
+        var bumper = PinballTable.Bumpers[2];
+        for (var attempt = 0; attempt < 200 && !board.MysteryLit; attempt++)
+        {
+            Place(board, bumper + new Vector2(0f, 0.7f), new Vector2(0f, -6f));
+            Run(board, 0.1f);
+        }
+
+        Assert.True(board.MysteryLit);
+        Assert.Equal(1f, board.MysteryProgress);
+
+        board.BeginFrame();
+        board.CaptureBall(0);
+
+        Assert.True(HasEvent(board, PinballEventKind.Mystery));
+        Assert.False(board.MysteryLit);
+    }
+
+    [Fact]
+    public void AMultiballJackpotLightsTheSuperJackpotAtTheSaucer()
+    {
+        var board = Fresh(26);
+        board.Autopilot = true;
+        Place(board, FieldCenter, Vector2.Zero);
+        for (var lockIndex = 0; lockIndex < PinballBoard.LocksForMultiball; lockIndex++)
+        {
+            board.CaptureBall(0);
+            Run(board, PinballBoard.SaucerHoldSeconds + 0.05f);
+        }
+
+        Assert.True(board.MultiballActive);
+        Assert.True(board.JackpotLit);
+
+        board.BeginFrame();
+        board.CompleteRamp(PinballTable.RampMade);
+        Assert.True(HasEvent(board, PinballEventKind.Jackpot));
+        Assert.True(board.SuperJackpotLit);
+
+        var jackpots = board.Jackpots;
+        board.BeginFrame();
+        board.CaptureBall(RollingSlot(board));
+
+        Assert.True(HasEvent(board, PinballEventKind.SuperJackpot));
+        Assert.False(board.SuperJackpotLit);
+        Assert.True(board.JackpotLit);
+        Assert.Equal(jackpots + 1, board.Jackpots);
     }
 
     private static PinballBoard Fresh(ulong seed)

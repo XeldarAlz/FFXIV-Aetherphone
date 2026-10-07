@@ -24,6 +24,8 @@ internal sealed class PinballDisplay
     private const int Gap = 1;
     private const int MaxDigits = 10;
     private const int StatusRow = 9;
+    private const int MeterRow = 0;
+    private const float RollPerSecond = 9f;
     private const int SparkleCount = 26;
     private const float AwardSeconds = 1.3f;
     private const float BigSeconds = 2f;
@@ -61,6 +63,7 @@ internal sealed class PinballDisplay
     private float moodSeconds;
     private float moodTotal = 1f;
     private int columns;
+    private int shownScore;
 
     public DisplayMood Mood => moodSeconds > 0f ? mood : DisplayMood.Score;
 
@@ -68,6 +71,7 @@ internal sealed class PinballDisplay
     {
         moodSeconds = 0f;
         awardValue = 0;
+        shownScore = 0;
         mood = DisplayMood.Score;
     }
 
@@ -91,7 +95,7 @@ internal sealed class PinballDisplay
         moodSeconds = DangerSeconds;
     }
 
-    public void Update(float deltaSeconds)
+    public void Update(float deltaSeconds, int score)
     {
         if (deltaSeconds <= 0f)
         {
@@ -99,6 +103,14 @@ internal sealed class PinballDisplay
         }
 
         moodSeconds = MathF.Max(0f, moodSeconds - deltaSeconds);
+        if (score <= shownScore)
+        {
+            shownScore = score;
+            return;
+        }
+
+        var gap = score - shownScore;
+        shownScore += Math.Max(1, (int)(gap * MathF.Min(1f, deltaSeconds * RollPerSecond)));
     }
 
     public void Draw(ImDrawListPtr drawList, Rect rect, Vector4 color, float scale, PinballBoard board, float time)
@@ -106,7 +118,8 @@ internal sealed class PinballDisplay
         var pitch = Frame(drawList, rect, color, scale, out var origin);
         Array.Clear(lit);
         Compose(board, time);
-        var ink = Mood == DisplayMood.Danger && ((int)(time * 8f) & 1) == 0 ? Danger : color;
+        var tone = board.FeverActive ? PinballRenderer.FeverInk(time, 0.3f) : color;
+        var ink = Mood == DisplayMood.Danger && ((int)(time * 8f) & 1) == 0 ? Danger : tone;
         Paint(drawList, origin, pitch, ink);
         DrawTiltMeter(drawList, rect, color, scale, board);
     }
@@ -165,7 +178,7 @@ internal sealed class PinballDisplay
     private void Compose(PinballBoard board, float time)
     {
         var current = Mood;
-        var value = current is DisplayMood.Award or DisplayMood.Big ? awardValue : board.Score;
+        var value = current is DisplayMood.Award or DisplayMood.Big ? awardValue : shownScore;
         var progress = 1f - moodSeconds / moodTotal;
         var blinkOff = current == DisplayMood.Big && progress < 0.35f && ((int)(time * 10f) & 1) == 0;
         if (!blinkOff)
@@ -187,6 +200,23 @@ internal sealed class PinballDisplay
         }
 
         StampStatus(board, time);
+        StampMeter(board, time);
+    }
+
+    private void StampMeter(PinballBoard board, float time)
+    {
+        var fraction = board.FeverActive ? board.FeverLeft / PinballBoard.FeverSeconds : board.FeverCharge;
+        var lit = (int)(columns * Math.Clamp(fraction, 0f, 1f));
+        var march = (int)(time * 30f);
+        for (var column = 0; column < lit; column++)
+        {
+            if (board.FeverActive && ((column + march) & 3) == 0)
+            {
+                continue;
+            }
+
+            Light(column, MeterRow);
+        }
     }
 
     private void StampStatus(PinballBoard board, float time)
