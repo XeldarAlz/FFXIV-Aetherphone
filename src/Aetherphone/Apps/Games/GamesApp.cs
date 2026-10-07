@@ -899,7 +899,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         var chip = BuildCoinSessionChip();
         if (chip.Visible)
         {
-            chrome.RecordCoinChip(DrawCoinSessionChip(chip, rightEdge, pauseCenter.Y, theme, scale));
+            chrome.RecordCoinChip(DrawCoinSessionChip(chip, rightEdge, pauseCenter.Y, backdrop.Ink, scale));
         }
     }
 
@@ -964,10 +964,11 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         return new CoinSessionChip(string.Empty, 1f, true);
     }
 
-    private static Rect DrawCoinSessionChip(in CoinSessionChip chip, float right, float rowCenterY, PhoneTheme theme,
+    private static Rect DrawCoinSessionChip(in CoinSessionChip chip, float right, float rowCenterY, StageInk tone,
         float scale)
     {
-        var accent = chip.CoolingDown ? theme.TextMuted : AppAccents.For("coin");
+        var muted = StageInks.MutedOn(tone);
+        var accent = chip.CoolingDown ? muted : AppAccents.For("coin");
         var ringRadius = CoinChipRingRadius * scale;
         var thickness = Metrics.Stroke.Ring * scale;
         var textSize = chip.Label.Length > 0 ? Typography.Measure(chip.Label, TextStyles.Caption1) : Vector2.Zero;
@@ -1000,7 +1001,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         }
 
         Typography.DrawCentered(ImGui.GetWindowDrawList(), new Vector2(right - textSize.X * 0.5f, rowCenterY),
-            chip.Label, chip.CoolingDown ? theme.TextMuted : theme.TextStrong, TextStyles.Caption1);
+            chip.Label, chip.CoolingDown ? muted : StageInks.StrongOn(tone), TextStyles.Caption1);
         return hoverRect;
     }
 
