@@ -145,6 +145,25 @@ internal sealed class GameStatsStore
         return true;
     }
 
+    public bool SubmitStreak(string gameId, int streak)
+    {
+        CompleteDaily(gameId);
+        if (streak <= 0)
+        {
+            return false;
+        }
+
+        var record = GetOrCreate(gameId);
+        if (streak <= record.Streak)
+        {
+            return false;
+        }
+
+        record.Streak = streak;
+        configuration.Save();
+        return true;
+    }
+
     public int RecordWin(string gameId)
     {
         CompleteDaily(gameId);

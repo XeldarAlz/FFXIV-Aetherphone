@@ -736,6 +736,45 @@ public sealed class GameSessionTests
     }
 
     [Fact]
+    public void RecordSubmitsOncePerImprovementAndLeavesTheFlowAlone()
+    {
+        var session = Build(out var configuration, out var sink);
+        var spec = new GameSpec("moogleclicker", new LocString("t.clicker", "Moogle Clicker"), GameGenre.Arcade,
+            kind: ScoreKind.Level);
+        session.Begin(spec, new GameStart(0, 5, true));
+
+        Assert.True(session.Record("moogleclicker", 3, ScoreKind.Level));
+        Assert.False(session.Record("moogleclicker", 3, ScoreKind.Level));
+        Assert.False(session.Record("moogleclicker", 2, ScoreKind.Level));
+        Assert.False(session.Record("moogleclicker", 0, ScoreKind.Level));
+        Assert.False(session.Record(string.Empty, 9, ScoreKind.Level));
+        Assert.True(session.Record("moogleclicker", 5, ScoreKind.Level));
+
+        Assert.Equal(2, sink.Count);
+        Assert.Equal(5, sink.Last.Value);
+        Assert.Equal(ScoreKind.Level, sink.Last.Kind);
+        Assert.Equal("moogleclicker", sink.Last.GameId);
+        Assert.True(sink.Last.Daily);
+        Assert.Equal(StageFlow.Intro, session.State);
+        Assert.False(session.Finished);
+        Assert.Equal(5, session.Best);
+        Assert.Equal(5, configuration.GameStats[0].BestScore);
+
+        session.Play();
+        Assert.True(session.Record("moogleclicker.fastest", 40, ScoreKind.Time));
+        Assert.False(session.Record("moogleclicker.fastest", 45, ScoreKind.Time));
+        Assert.True(session.Record("moogleclicker.fastest", 30, ScoreKind.Time));
+        Assert.True(session.Record("moogleclicker.days", 4, ScoreKind.Streak));
+        Assert.False(session.Record("moogleclicker.days", 4, ScoreKind.Streak));
+
+        Assert.Equal(5, sink.Count);
+        Assert.Equal(StageFlow.Playing, session.State);
+        Assert.Equal(30, session.Stats.Get("moogleclicker.fastest").BestTimeSeconds);
+        Assert.Equal(4, session.Stats.Get("moogleclicker.days").Streak);
+        Assert.Equal(5, session.Best);
+    }
+
+    [Fact]
     public void SeatsCarryOneLocalizedNameAndAColourEach()
     {
         Assert.Equal(Loc.T(L.Stage.PlayerName, "2"), GameSeats.Name(1));

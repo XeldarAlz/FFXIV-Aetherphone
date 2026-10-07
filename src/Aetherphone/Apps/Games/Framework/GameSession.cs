@@ -392,6 +392,34 @@ internal sealed class GameSession
         RefreshRank();
     }
 
+    public bool Record(string statId, int value, ScoreKind kind)
+    {
+        if (statId.Length == 0)
+        {
+            return false;
+        }
+
+        var improved = kind switch
+        {
+            ScoreKind.Time => stats.SubmitTime(statId, value),
+            ScoreKind.Streak => stats.SubmitStreak(statId, value),
+            _ => stats.SubmitScore(statId, value),
+        };
+        if (!improved)
+        {
+            return false;
+        }
+
+        sink.Submit(new ScoreSubmission(statId, value, kind, Seed, Daily, Spec.Id));
+        if (string.Equals(statId, StatId, StringComparison.Ordinal))
+        {
+            LoadBest();
+            RefreshRank();
+        }
+
+        return true;
+    }
+
     public void RefreshRank()
     {
         var leaderboardId = LeaderboardStatId;
