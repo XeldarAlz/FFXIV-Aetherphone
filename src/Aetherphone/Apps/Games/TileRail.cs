@@ -27,6 +27,7 @@ internal sealed class TileRail
     private float pageTarget;
     private Spring pageSpring;
     private bool hovered;
+    private float bound;
 
     public float Offset => scroller.Offset;
 
@@ -48,7 +49,8 @@ internal sealed class TileRail
     {
         var scale = UiScale.Current;
         scroller.Scale = scale;
-        scroller.SetBounds(MathF.Max(0f, contentWidth - row.Width));
+        bound = MathF.Max(0f, contentWidth - row.Width);
+        scroller.SetBounds(bound);
         var cursor = ImGui.GetCursorScreenPos();
         ImGui.SetCursorScreenPos(claim.Min);
         ImGui.InvisibleButton(id, claim.Size);
@@ -66,7 +68,10 @@ internal sealed class TileRail
         drawList.PushClipRect(row.Min, row.Max, true);
     }
 
-    public void End(ImDrawListPtr drawList, Rect row, float contentWidth, AppSkin ui)
+    public void End(ImDrawListPtr drawList, Rect row, float contentWidth, AppSkin ui) =>
+        End(drawList, row, contentWidth, ui, 0f);
+
+    public void End(ImDrawListPtr drawList, Rect row, float contentWidth, AppSkin ui, float pageStride)
     {
         drawList.PopClipRect();
         if (!hovered || scroller.IsDragging)
@@ -76,19 +81,34 @@ internal sealed class TileRail
 
         var maxOffset = MathF.Max(0f, contentWidth - row.Width);
         var offset = scroller.Offset;
-        var page = row.Width * PageFraction;
         var scale = UiScale.Current;
         if (offset > RestEpsilon && DrawArrow(drawList, ui,
                 new Vector2(row.Min.X + ArrowInset * scale, row.Center.Y), PhoneIcons.ChevronLeft, scale))
         {
-            PageTo(offset - page, maxOffset);
+            PageTo(PageStep(offset, row.Width, pageStride, -1f), maxOffset);
         }
 
         if (offset < maxOffset - RestEpsilon && DrawArrow(drawList, ui,
                 new Vector2(row.Max.X - ArrowInset * scale, row.Center.Y), PhoneIcons.ChevronRight, scale))
         {
-            PageTo(offset + page, maxOffset);
+            PageTo(PageStep(offset, row.Width, pageStride, 1f), maxOffset);
         }
+    }
+
+    public void SettleTo(float target)
+    {
+        scroller.CancelMomentum();
+        PageTo(target, bound);
+    }
+
+    public static float PageStep(float offset, float rowWidth, float pageStride, float direction)
+    {
+        if (pageStride <= 0f)
+        {
+            return offset + rowWidth * PageFraction * direction;
+        }
+
+        return (MathF.Round(offset / pageStride) + direction) * pageStride;
     }
 
     private static bool DrawArrow(ImDrawListPtr drawList, AppSkin ui, Vector2 center, string glyph, float scale) =>
