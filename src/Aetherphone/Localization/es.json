@@ -4722,6 +4722,7 @@
   "stage.passTo": "Pásale el teléfono a {0}",
   "stage.tapWhenReady": "Toca cuando estés listo",
   "stage.seatWins": "Gana {0}",
+  "stage.leaderboardsOff": "Clasificaciones desactivadas",
   "leaderboard.emptyTitle": "Aún no hay puntuaciones",
   "leaderboard.emptyHint": "Sé el primero en conseguir una.",
   "leaderboard.signInHint": "Inicia sesión para ver tu posición y enviar tus mejores marcas a la tabla.",

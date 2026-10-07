@@ -4722,6 +4722,7 @@
   "stage.passTo": "Telefonu ver: {0}",
   "stage.tapWhenReady": "Hazır olunca dokun",
   "stage.seatWins": "{0} kazandı",
+  "stage.leaderboardsOff": "Liderlik tabloları kapalı",
   "leaderboard.emptyTitle": "Henüz skor yok",
   "leaderboard.emptyHint": "İlk skoru sen koy.",
   "leaderboard.signInHint": "Sıralamanı görmek ve en iyi skorlarını tabloya göndermek için giriş yap.",

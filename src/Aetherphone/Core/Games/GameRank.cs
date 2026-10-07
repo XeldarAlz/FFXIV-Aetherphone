@@ -7,6 +7,7 @@ internal enum RankState : byte
     Ranked,
     SignedOut,
     Failed,
+    Hidden,
 }
 
 internal readonly struct GameRank

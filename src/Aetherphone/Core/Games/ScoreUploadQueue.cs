@@ -45,6 +45,67 @@ internal sealed class ScoreUploadQueue
 
     public bool Enqueue(in ScoreSubmission submission, long nowUnix)
     {
+        if (!TryQueue(submission, nowUnix))
+        {
+            return false;
+        }
+
+        configuration.Save();
+        return true;
+    }
+
+    public int EnqueueLocalBests(List<GameStatRecord> records, long nowUnix)
+    {
+        var queued = 0;
+        for (var index = 0; index < records.Count; index++)
+        {
+            if (TryLocalBest(records[index], out var submission) && TryQueue(submission, nowUnix))
+            {
+                queued++;
+            }
+        }
+
+        if (queued > 0)
+        {
+            configuration.Save();
+        }
+
+        return queued;
+    }
+
+    public bool Clear()
+    {
+        failed.Clear();
+        var pending = configuration.PendingScoreUploads;
+        if (pending.Count == 0)
+        {
+            return false;
+        }
+
+        pending.Clear();
+        configuration.Save();
+        return true;
+    }
+
+    internal static bool TryLocalBest(GameStatRecord record, out ScoreSubmission submission)
+    {
+        var statId = record.GameId;
+        var gameId = ScoreStatIds.RootOf(statId);
+        if (!ScoreStatIds.TryFind(statId, out var stat) && !ScoreStatIds.TryFind(gameId, out stat))
+        {
+            submission = default;
+            return false;
+        }
+
+        var value = stat.LowerIsBetter
+            ? record.BestTimeSeconds
+            : stat.Kind == ScoreKind.Streak ? record.Streak : record.BestScore;
+        submission = new ScoreSubmission(statId, value, stat.Kind, 0UL, false, gameId);
+        return value > 0;
+    }
+
+    private bool TryQueue(in ScoreSubmission submission, long nowUnix)
+    {
         var statId = ScoreStatIds.LeaderboardId(submission.StatId, submission.GameId, submission.Kind);
         if (statId.Length == 0 || submission.Value <= 0 || !ScoreStatIds.TryFind(statId, out var stat))
         {
@@ -71,7 +132,6 @@ internal sealed class ScoreUploadQueue
             existing.Daily = submission.Daily;
             existing.QueuedAtUnix = nowUnix;
             failed.Remove(statId);
-            configuration.Save();
             return true;
         }
 
@@ -86,7 +146,6 @@ internal sealed class ScoreUploadQueue
             QueuedAtUnix = nowUnix,
         });
         failed.Remove(statId);
-        configuration.Save();
         return true;
     }
 
@@ -172,11 +231,16 @@ internal sealed class ScoreUploadQueue
         }
     }
 
-    public GameRank RankFor(string statId, bool signedIn)
+    public GameRank RankFor(string statId, bool signedIn, bool hidden = false)
     {
         if (!signedIn)
         {
             return new GameRank(0, 0, 0, 0, RankState.SignedOut);
+        }
+
+        if (hidden)
+        {
+            return new GameRank(0, 0, 0, 0, RankState.Hidden);
         }
 
         if (string.Equals(attemptingStatId, statId, StringComparison.Ordinal))

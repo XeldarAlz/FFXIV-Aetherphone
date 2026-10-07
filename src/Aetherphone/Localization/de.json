@@ -4722,6 +4722,7 @@
   "stage.passTo": "Weitergeben an {0}",
   "stage.tapWhenReady": "Tippe, wenn du bereit bist",
   "stage.seatWins": "{0} gewinnt",
+  "stage.leaderboardsOff": "Bestenlisten aus",
   "leaderboard.emptyTitle": "Noch keine Ergebnisse",
   "leaderboard.emptyHint": "Stell als Erster eines auf.",
   "leaderboard.signInHint": "Melde dich an, um deine Platzierung zu sehen und deine Bestleistungen einzutragen.",

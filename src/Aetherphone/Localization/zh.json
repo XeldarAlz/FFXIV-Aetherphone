@@ -4722,6 +4722,7 @@
   "stage.passTo": "请交给{0}",
   "stage.tapWhenReady": "准备好后点击",
   "stage.seatWins": "{0} 获胜",
+  "stage.leaderboardsOff": "未加入排行榜",
   "leaderboard.emptyTitle": "暂无成绩",
   "leaderboard.emptyHint": "来创下第一个成绩吧。",
   "leaderboard.signInHint": "登录后可查看你的排名，并把最佳成绩上传到排行榜。",

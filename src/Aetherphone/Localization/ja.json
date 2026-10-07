@@ -4722,6 +4722,7 @@
   "stage.passTo": "{0}に渡してください",
   "stage.tapWhenReady": "準備ができたらタップ",
   "stage.seatWins": "{0}の勝ち",
+  "stage.leaderboardsOff": "ランキング不参加",
   "leaderboard.emptyTitle": "まだスコアがありません",
   "leaderboard.emptyHint": "最初の記録を打ち立てましょう。",
   "leaderboard.signInHint": "サインインすると自分の順位を確認し、ベスト記録をランキングに送信できます。",

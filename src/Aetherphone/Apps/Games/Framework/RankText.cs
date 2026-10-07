@@ -59,6 +59,11 @@ internal struct RankText
                 ResultLine = Loc.T(L.Stage.KeptOnPhone);
                 FriendsLine = string.Empty;
                 return;
+            case RankState.Hidden:
+                IntroLine = Loc.T(L.Stage.LeaderboardsOff);
+                ResultLine = IntroLine;
+                FriendsLine = string.Empty;
+                return;
             default:
                 IntroLine = Loc.T(L.Stage.NotRanked);
                 ResultLine = string.Empty;

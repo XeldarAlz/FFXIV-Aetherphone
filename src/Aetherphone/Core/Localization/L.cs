@@ -8351,6 +8351,7 @@ internal static class L
         public static readonly LocString PassTo = new("stage.passTo", "Pass to {0}");
         public static readonly LocString TapWhenReady = new("stage.tapWhenReady", "Tap when ready");
         public static readonly LocString SeatWins = new("stage.seatWins", "{0} wins");
+        public static readonly LocString LeaderboardsOff = new("stage.leaderboardsOff", "Leaderboards off");
     }
 
     internal static class Leaderboard

@@ -4722,6 +4722,7 @@
   "stage.passTo": "Pass to {0}",
   "stage.tapWhenReady": "Tap when ready",
   "stage.seatWins": "{0} wins",
+  "stage.leaderboardsOff": "Leaderboards off",
   "leaderboard.emptyTitle": "No scores yet",
   "leaderboard.emptyHint": "Be the first to set one.",
   "leaderboard.signInHint": "Sign in to see where you stand and send your bests to the board.",

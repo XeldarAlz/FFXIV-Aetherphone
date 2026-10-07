@@ -4722,6 +4722,7 @@
   "stage.passTo": "Passez le téléphone à {0}",
   "stage.tapWhenReady": "Touchez quand vous êtes prêt",
   "stage.seatWins": "{0} gagne",
+  "stage.leaderboardsOff": "Classements désactivés",
   "leaderboard.emptyTitle": "Pas encore de scores",
   "leaderboard.emptyHint": "Sois le premier à en établir un.",
   "leaderboard.signInHint": "Connecte-toi pour voir ta position et envoyer tes meilleurs scores au classement.",
