@@ -174,10 +174,10 @@ internal static class MoogleClickerRenderer
         }
 
         Typography.DrawCentered(drawList, new Vector2(center.X, center.Y - 7f * scale), value,
-            glow ? GamePalette.Lighten(accent, 0.35f) : MoogleClickerText.Ink, valueStyle.Scale * pop,
+            glow ? GamePalette.Lighten(accent, 0.35f) : StageInks.Strong, valueStyle.Scale * pop,
             valueStyle.Weight);
         Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + 12f * scale), caption,
-            MoogleClickerText.Muted, captionStyle.Scale, captionStyle.Weight);
+            StageInks.Muted, captionStyle.Scale, captionStyle.Weight);
     }
 
     public static void Ellipse(ImDrawListPtr drawList, Vector2 center, Vector2 radii, uint color, int segments)

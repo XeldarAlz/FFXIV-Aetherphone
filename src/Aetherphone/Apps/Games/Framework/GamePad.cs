@@ -132,7 +132,7 @@ internal static class GamePad
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        Typography.DrawCentered(drawList, (min + max) * 0.5f, glyph, held ? accent : theme.TextStrong,
+        Typography.DrawCentered(drawList, (min + max) * 0.5f, glyph, held ? accent : StageInks.Strong,
             TextStyles.Title3.Scale, TextStyles.Title3.Weight);
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }

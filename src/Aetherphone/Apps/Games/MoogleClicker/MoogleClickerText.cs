@@ -77,9 +77,6 @@ internal sealed class KupoLabels
 
 internal static class MoogleClickerText
 {
-    public static readonly Vector4 Ink = GamePalette.InkLight;
-    public static readonly Vector4 Muted = GamePalette.InkLight with { W = 0.62f };
-
     public static readonly LocString[] BuildingNames =
     {
         L.MoogleClicker.PomBrush, L.MoogleClicker.Apprentice, L.MoogleClicker.KupoGrove, L.MoogleClicker.MogPost,
@@ -121,7 +118,7 @@ internal static class MoogleClickerText
         "moogleclicker.buy.8", "moogleclicker.buy.9", "moogleclicker.buy.10", "moogleclicker.buy.11",
     };
 
-    public static ControlInk Controls(Vector4 accent, PhoneTheme theme) => new(accent, Ink, Muted, theme.Danger);
+    public static ControlInk Controls(Vector4 accent, PhoneTheme theme) => new(accent, StageInks.Strong, StageInks.Muted, theme.Danger);
 
     public static FontAwesomeIcon UpgradeIcon(int upgrade) =>
         KupoUpgrades.IsBuilding(upgrade)

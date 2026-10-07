@@ -46,6 +46,6 @@ internal static class GameBanner
         ProgressRing.Glow(center, radius * 1.6f, accent, 0.45f * alpha);
         Material.Frosted(drawList, min, max, radius, scale, 0.92f * alpha);
         Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = 0.7f * alpha }), 1.5f * scale);
-        Typography.DrawCentered(drawList, center, text, theme.TextStrong with { W = alpha }, textScale, style.Weight);
+        Typography.DrawCentered(drawList, center, text, StageInks.Strong with { W = alpha }, textScale, style.Weight);
     }
 }

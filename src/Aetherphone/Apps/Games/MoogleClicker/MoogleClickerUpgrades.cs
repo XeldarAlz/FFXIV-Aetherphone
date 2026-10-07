@@ -82,7 +82,7 @@ internal sealed class MoogleClickerUpgrades
             var maxWidth = rect.Width - StagePill.Width(string.Empty, false, scale);
             var hint = Typography.FitText(Loc.T(L.MoogleClicker.UpgradesHint), maxWidth, TextStyles.FootnoteEmphasized);
             var pill = StagePill.Around(rect.Center, StagePill.Width(hint, false, scale), scale);
-            StagePill.Draw(drawList, pill, hint, MoogleClickerText.Muted, 0.85f, scale);
+            StagePill.Draw(drawList, pill, hint, StageInks.Muted, 0.85f, scale);
             return UpgradePick.None;
         }
 
@@ -200,16 +200,16 @@ internal sealed class MoogleClickerUpgrades
         var innerWidth = width - CaptionPadX * 2f * scale;
         var top = min.Y + CaptionPadY * scale;
         Typography.DrawCentered(drawList, new Vector2(centerX, top + nameSize.Y * 0.5f),
-            Typography.FitText(name, innerWidth, TextStyles.FootnoteEmphasized), MoogleClickerText.Ink,
+            Typography.FitText(name, innerWidth, TextStyles.FootnoteEmphasized), StageInks.Strong,
             TextStyles.FootnoteEmphasized);
         var detailLeft = centerX - MathF.Min(detailWidth, innerWidth) * 0.5f;
         var detailY = top + nameSize.Y;
         var affordable = workshop.CanBuyUpgrade(upgrade);
         var effectWidth = MathF.Min(effectSize.X, MathF.Max(0f, innerWidth - gap - costSize.X));
         Typography.Draw(drawList, new Vector2(detailLeft, detailY),
-            Typography.FitText(effect, effectWidth + 1f, TextStyles.Caption1), MoogleClickerText.Muted, TextStyles.Caption1);
+            Typography.FitText(effect, effectWidth + 1f, TextStyles.Caption1), StageInks.Muted, TextStyles.Caption1);
         Typography.Draw(drawList, new Vector2(detailLeft + effectWidth + gap, detailY), cost,
-            affordable ? Gold : MoogleClickerText.Muted, TextStyles.Caption1);
+            affordable ? Gold : StageInks.Muted, TextStyles.Caption1);
     }
 
     private string UpgradeName(int upgrade)

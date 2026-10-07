@@ -187,7 +187,7 @@ internal sealed class LevelSelect
         var text = totalLabel.Get(L.Stage.StarsOf, session.TotalStars, count * GameStatsStore.MaxStars);
         var pillCenter = new Vector2(full.Center.X, StageLayout.SecondaryRowY(full, scale));
         var pill = StagePill.Around(pillCenter, StagePill.Width(text, true, scale), scale);
-        StagePill.Draw(drawList, pill, FontAwesomeIcon.Star, GamePalette.Star, text, theme.TextStrong, alpha, scale);
+        StagePill.Draw(drawList, pill, FontAwesomeIcon.Star, GamePalette.Star, text, StageInks.Strong, alpha, scale);
     }
 
     private static bool DrawTile(ImDrawListPtr drawList, Rect tile, Rect area, GameSession session, int level,
