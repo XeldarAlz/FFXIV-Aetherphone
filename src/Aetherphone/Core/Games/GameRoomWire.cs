@@ -10,6 +10,36 @@ internal static class GameRoomWire
 
     public const string ConnectFourKind = "games.connectfour";
 
+    public const string BroadsideKind = "games.broadside";
+
+    public const int BroadsideSize = 10;
+
+    public const int BroadsideCellCount = BroadsideSize * BroadsideSize;
+
+    public const int BroadsideShipCount = 5;
+
+    public const int BroadsideMarkMiss = 1;
+
+    public const int BroadsideMarkHit = 2;
+
+    public const string BroadsideFleetEvent = "broadside.fleet";
+
+    public const string BroadsideResultMiss = "miss";
+
+    public const string BroadsideResultHit = "hit";
+
+    public const string BroadsideResultSunk = "sunk";
+
+    public const string BroadsideEndFleet = "fleet";
+
+    public const string BroadsideEndResign = "resign";
+
+    public const string BroadsideEndDesertion = "desertion";
+
+    public const string BroadsideEndTimeout = "timeout";
+
+    public const string ActionFire = "fire";
+
     public const int ConnectFourColumns = 7;
 
     public const int ConnectFourRows = 6;

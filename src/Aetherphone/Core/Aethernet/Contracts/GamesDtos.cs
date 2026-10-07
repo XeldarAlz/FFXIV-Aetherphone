@@ -67,7 +67,9 @@ internal sealed record GameRoomActionRequest(
     float Power = 0f,
     float PlaceX = 0f,
     float PlaceY = 0f,
-    int Column = -1);
+    int Column = -1,
+    int Cell = -1,
+    BroadsideShipDto[]? Fleet = null);
 
 internal sealed record GameRoomActionResultDto(bool Granted = false, string Reason = "", int ActionCount = 0);
 
@@ -198,3 +200,35 @@ internal sealed record PoolRoomStateDto(
     string LastKind = "",
     string EndKind = "",
     int WinnerSeat = -1);
+
+internal sealed record BroadsideShipDto(int Ship = 0, int Cell = 0, bool Across = true);
+
+internal sealed record BroadsidePlayerDto(
+    string UserId = "",
+    string DisplayName = "",
+    int Seat = 0,
+    bool Away = false,
+    int Wins = 0,
+    int Missed = 0,
+    bool Ready = false,
+    int[]? Marks = null,
+    BroadsideShipDto[]? Sunk = null);
+
+internal sealed record BroadsideRoomStateDto(
+    long RoundIndex = 0,
+    string HostUserId = "",
+    BroadsidePlayerDto[]? Players = null,
+    bool Placing = false,
+    int TurnSeat = -1,
+    int TurnSeconds = 0,
+    int LastSeat = -1,
+    int LastCell = -1,
+    string LastResult = "",
+    int LastShip = -1,
+    int ShotCount = 0,
+    int ActionCount = 0,
+    string LastKind = "",
+    string EndKind = "",
+    int WinnerSeat = -1);
+
+internal sealed record BroadsideYouDto(int Seat = -1, BroadsideShipDto[]? Ships = null, int ActionCount = 0);
