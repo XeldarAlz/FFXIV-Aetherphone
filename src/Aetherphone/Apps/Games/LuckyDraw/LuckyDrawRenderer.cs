@@ -113,17 +113,16 @@ internal static class LuckyDrawRenderer
     {
         var center = ring.Center;
         var radius = new Vector2(ring.Width * 0.5f, ring.Height * 0.5f) * 0.82f;
-        TracePath(drawList, center + new Vector2(0f, 6f * scale), radius);
-        drawList.PathFillConvex(ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)));
-        TracePath(drawList, center, radius);
-        drawList.PathFillConvex(ImGui.GetColorU32(GamePalette.Darken(accent, 0.62f) with { W = 0.55f }));
-        TracePath(drawList, center, radius * 0.94f);
-        drawList.PathFillConvex(ImGui.GetColorU32(GamePalette.Darken(accent, 0.48f) with { W = 0.35f }));
-        TracePath(drawList, center, radius);
-        drawList.PathStroke(ImGui.GetColorU32(GamePalette.Lighten(accent, 0.25f) with { W = 0.35f }), ImDrawFlags.Closed,
-            2f * scale);
-        TracePath(drawList, center, radius * 0.94f);
-        drawList.PathStroke(ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)), ImDrawFlags.Closed, 1f * scale);
+        Shapes.FillEllipse(drawList, center + new Vector2(0f, 6f * scale), radius,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)), TableSegments);
+        Shapes.FillEllipse(drawList, center, radius,
+            ImGui.GetColorU32(GamePalette.Darken(accent, 0.62f) with { W = 0.55f }), TableSegments);
+        Shapes.FillEllipse(drawList, center, radius * 0.94f,
+            ImGui.GetColorU32(GamePalette.Darken(accent, 0.48f) with { W = 0.35f }), TableSegments);
+        Shapes.StrokeEllipse(drawList, center, radius,
+            ImGui.GetColorU32(GamePalette.Lighten(accent, 0.25f) with { W = 0.35f }), 2f * scale, TableSegments);
+        Shapes.StrokeEllipse(drawList, center, radius * 0.94f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)),
+            1f * scale, TableSegments);
     }
 
     public static void DrawCard(ImDrawListPtr drawList, in CardPose pose, in CardDesign design, Vector4 accent,
@@ -397,15 +396,6 @@ internal static class LuckyDrawRenderer
 
         ink = board.SevenSeat == seat ? Gold : Mint;
         return GameNumber.Signed(board.LastRoundScore(seat));
-    }
-
-    private static void TracePath(ImDrawListPtr drawList, Vector2 center, Vector2 radius)
-    {
-        for (var segment = 0; segment < TableSegments; segment++)
-        {
-            var angle = segment * MathF.Tau / TableSegments;
-            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radius.X, MathF.Sin(angle) * radius.Y));
-        }
     }
 
     private static void Rotate(ImDrawListPtr drawList, int firstVertex, in CardPose pose)

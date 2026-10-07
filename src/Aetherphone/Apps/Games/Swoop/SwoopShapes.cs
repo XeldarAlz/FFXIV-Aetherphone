@@ -21,23 +21,6 @@ internal static class SwoopShapes
         }
     }
 
-    public static void Ellipse(ImDrawListPtr drawList, Vector2 center, float radiusX, float radiusY, float angle, uint color,
-        int segments = 24)
-    {
-        var cosine = MathF.Cos(angle);
-        var sine = MathF.Sin(angle);
-        drawList.PathClear();
-        for (var segment = 0; segment < segments; segment++)
-        {
-            var theta = MathF.Tau * segment / segments;
-            var localX = MathF.Cos(theta) * radiusX;
-            var localY = MathF.Sin(theta) * radiusY;
-            drawList.PathLineTo(new Vector2(center.X + localX * cosine - localY * sine, center.Y + localX * sine + localY * cosine));
-        }
-
-        drawList.PathFillConvex(color);
-    }
-
     public static Vector2 Rotate(Vector2 local, float cosine, float sine) =>
         new(local.X * cosine - local.Y * sine, local.X * sine + local.Y * cosine);
 

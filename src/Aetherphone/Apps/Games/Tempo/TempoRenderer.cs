@@ -255,28 +255,16 @@ internal static class TempoRenderer
             var phase = (time * 1.4f + ring / 3f) % 1f;
             var shrink = 1f - phase * 0.5f;
             var alpha = (1f - phase) * 0.8f;
-            Ellipse(drawList, center, radiusX * shrink, radiusY * shrink, ImGui.GetColorU32(color with { W = alpha }),
-                MathF.Max(1.2f, camera.Px(0.06f)));
+            Shapes.StrokeEllipse(drawList, center, new Vector2(radiusX, radiusY) * shrink,
+                ImGui.GetColorU32(color with { W = alpha }), MathF.Max(1.2f, camera.Px(0.06f)));
         }
 
-        Ellipse(drawList, center, radiusX, radiusY, ImGui.GetColorU32(color), MathF.Max(2f, camera.Px(0.1f)));
+        Shapes.StrokeEllipse(drawList, center, new Vector2(radiusX, radiusY), ImGui.GetColorU32(color),
+            MathF.Max(2f, camera.Px(0.1f)));
         var arrow = camera.Px(0.22f) * (item == TempoItem.GravityUp ? -1f : 1f);
         var tip = center + new Vector2(0f, arrow);
         drawList.AddTriangleFilled(tip, center + new Vector2(-MathF.Abs(arrow), -arrow * 0.2f),
             center + new Vector2(MathF.Abs(arrow), -arrow * 0.2f), ImGui.GetColorU32(White with { W = 0.85f }));
-    }
-
-    private static void Ellipse(ImDrawListPtr drawList, Vector2 center, float radiusX, float radiusY, uint color,
-        float thickness)
-    {
-        drawList.PathClear();
-        for (var segment = 0; segment < 24; segment++)
-        {
-            var angle = segment * MathF.Tau / 24f;
-            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radiusX, MathF.Sin(angle) * radiusY));
-        }
-
-        drawList.PathStroke(color, ImDrawFlags.Closed, thickness);
     }
 
     private static void DrawFinish(ImDrawListPtr drawList, in Camera2D camera, TempoLevel level, Vector4 accent, float time)
@@ -329,8 +317,8 @@ internal static class TempoRenderer
 
             var spin = MathF.Abs(MathF.Cos(time * 3f + index));
             ProgressRing.Glow(center, radius * 1.8f, Coin, 0.35f);
-            FillEllipse(drawList, center, radius * MathF.Max(0.15f, spin), radius, ImGui.GetColorU32(CoinShade));
-            FillEllipse(drawList, center, radius * MathF.Max(0.1f, spin) * 0.82f, radius * 0.82f, ImGui.GetColorU32(Coin));
+            Shapes.FillEllipse(drawList, center, radius * MathF.Max(0.15f, spin), radius, ImGui.GetColorU32(CoinShade));
+            Shapes.FillEllipse(drawList, center, radius * MathF.Max(0.1f, spin) * 0.82f, radius * 0.82f, ImGui.GetColorU32(Coin));
             drawList.AddCircleFilled(center + new Vector2(-radius * 0.25f * spin, -radius * 0.35f), radius * 0.16f,
                 ImGui.GetColorU32(White with { W = 0.7f }), 8);
         }
@@ -371,18 +359,6 @@ internal static class TempoRenderer
         var normal = new Vector2(-axis.Y, axis.X);
         drawList.AddQuadFilled(center - axis - normal, center + axis - normal, center + axis + normal, center - axis + normal,
             color);
-    }
-
-    private static void FillEllipse(ImDrawListPtr drawList, Vector2 center, float radiusX, float radiusY, uint color)
-    {
-        drawList.PathClear();
-        for (var segment = 0; segment < 20; segment++)
-        {
-            var angle = segment * MathF.Tau / 20f;
-            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radiusX, MathF.Sin(angle) * radiusY));
-        }
-
-        drawList.PathFillConvex(color);
     }
 
     public static void DrawProgress(ImDrawListPtr drawList, Rect bar, float progress, float best, Vector4 accent,
