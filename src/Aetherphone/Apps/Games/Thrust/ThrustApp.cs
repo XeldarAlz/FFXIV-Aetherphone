@@ -409,7 +409,7 @@ internal sealed class ThrustApp : IMiniGame
 
         if (board.State == ThrustState.Running)
         {
-            ribbon.Push(Nozzle());
+            ribbon.PushSpaced(Nozzle(), Ribbon.Spacing(board.Speed));
         }
 
         if (board.Holding && !board.Mounted && board.State == ThrustState.Running)
