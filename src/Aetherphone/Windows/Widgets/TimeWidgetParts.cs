@@ -10,6 +10,7 @@ namespace Aetherphone.Windows.Widgets;
 internal static class TimeWidgetParts
 {
     private const int SplitCacheCapacity = 128;
+    private const int DaysPerWeek = 7;
     private static readonly Vector4 DarkFace = new(0.17f, 0.17f, 0.19f, 1f);
 
     private readonly struct ClockSplit
@@ -94,9 +95,13 @@ internal static class TimeWidgetParts
             return TimeText.Clock(localMoment);
         }
 
-        var day = localMoment.Date == DateTime.Today.AddDays(1)
-            ? Loc.T(L.Time.Tomorrow)
-            : localMoment.ToString("ddd", Loc.Culture);
+        var dayOffset = (localMoment.Date - DateTime.Today).Days;
+        var day = dayOffset switch
+        {
+            1 => Loc.T(L.Time.Tomorrow),
+            >= DaysPerWeek => localMoment.ToString("ddd d", Loc.Culture),
+            _ => localMoment.ToString("ddd", Loc.Culture),
+        };
         return string.Concat(day, " ", TimeText.Clock(localMoment));
     }
 
@@ -105,7 +110,12 @@ internal static class TimeWidgetParts
     public static long DayAndClockKey(DateTime localMoment)
     {
         var dayOffset = (localMoment.Date - DateTime.Today).Days;
-        var relation = dayOffset is 0 or 1 ? dayOffset : 2;
+        var relation = dayOffset switch
+        {
+            0 or 1 => dayOffset,
+            >= DaysPerWeek => 3,
+            _ => 2,
+        };
         return MinuteKey(localMoment) * 4 + relation;
     }
 
