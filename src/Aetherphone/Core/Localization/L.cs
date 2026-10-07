@@ -8656,6 +8656,26 @@ internal static class L
         public static readonly LocString Smashes = new("games.spiral.smashes", "Smashes");
     }
 
+    internal static class Claim
+    {
+        public static readonly LocString Title = new("games.claim.title", "Claim");
+        public static readonly LocString Hook = new("games.claim.hook", "Cut lines into the field to claim 75% of it; slow lines score double, but never let the boss touch a line you are drawing.");
+        public static readonly LocString Fast = new("games.claim.fast", "Fast");
+        public static readonly LocString Slow = new("games.claim.slow", "Slow");
+        public static readonly LocString Percent = new("games.claim.percent", "{0}%");
+        public static readonly LocString Double = new("games.claim.double", "Double!");
+        public static readonly LocString Huge = new("games.claim.huge", "Huge claim!");
+        public static readonly LocString LevelBanner = new("games.claim.levelBanner", "Level {0}");
+        public static readonly LocString Cleared = new("games.claim.cleared", "Field claimed!");
+        public static readonly LocString ExtraLife = new("games.claim.extraLife", "Extra life!");
+        public static readonly LocString CaughtSpark = new("games.claim.caughtSpark", "Caught by a spark");
+        public static readonly LocString CaughtBoss = new("games.claim.caughtBoss", "The boss cut your line");
+        public static readonly LocString CaughtFuse = new("games.claim.caughtFuse", "The fuse caught up");
+        public static readonly LocString LastLife = new("games.claim.lastLife", "Last life!");
+        public static readonly LocString BestClaim = new("games.claim.bestClaim", "Best claim");
+        public static readonly LocString SlowLines = new("games.claim.slowLines", "Slow lines");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
