@@ -151,6 +151,9 @@ internal static class AppIconArt
             case "snip":
                 DrawSnip(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "minigolf":
+                DrawMiniGolf(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -995,6 +998,27 @@ internal static class AppIconArt
         drawList.AddLine(At(center, extent, -0.2f, 0.42f), gem[2], hole, extent * 0.05f);
         drawList.AddCircleFilled(At(center, extent, 0.7f, -0.72f), extent * 0.13f, ink, 12);
         drawList.AddCircleFilled(At(center, extent, 0.88f, -0.32f), extent * 0.08f, ink, 10);
+    }
+
+    private static void DrawMiniGolf(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        Span<Vector2> green = stackalloc Vector2[4]
+        {
+            At(center, extent, -0.95f, 0.62f), At(center, extent, 0.95f, 0.62f), At(center, extent, 0.7f, 1f),
+            At(center, extent, -0.7f, 1f),
+        };
+        FillConvex(drawList, ink, green);
+        drawList.AddCircleFilled(At(center, extent, 0.2f, 0.8f), extent * 0.16f, hole, 16);
+        drawList.AddLine(At(center, extent, 0.2f, 0.78f), At(center, extent, 0.2f, -0.95f), ink, extent * 0.09f);
+        Span<Vector2> flag = stackalloc Vector2[3]
+        {
+            At(center, extent, 0.24f, -0.95f), At(center, extent, 0.92f, -0.66f), At(center, extent, 0.24f, -0.36f),
+        };
+        FillConvex(drawList, ink, flag);
+        var ball = At(center, extent, -0.48f, 0.2f);
+        drawList.AddCircleFilled(ball, extent * 0.26f, ink, 20);
+        drawList.AddCircleFilled(ball + new Vector2(-extent * 0.08f, -extent * 0.08f), extent * 0.06f, hole, 8);
+        drawList.AddCircleFilled(ball + new Vector2(extent * 0.08f, extent * 0.02f), extent * 0.05f, hole, 8);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

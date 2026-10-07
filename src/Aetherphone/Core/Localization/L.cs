@@ -8796,6 +8796,40 @@ internal static class L
         public static readonly LocString StarCount = new("games.snip.starCount", "{0} stars");
     }
 
+    internal static class MiniGolf
+    {
+        public static readonly LocString Title = new("games.minigolf.title", "Mini Golf");
+        public static readonly LocString Hook = new("games.minigolf.hook", "Drag back from the ball to aim, let go to putt, and sink every hole in as few strokes as you can.");
+        public static readonly LocString EighteenHoles = new("games.minigolf.eighteenHoles", "18 holes");
+        public static readonly LocString NineHoles = new("games.minigolf.nineHoles", "9 holes");
+        public static readonly LocString Strokes = new("games.minigolf.strokes", "Strokes");
+        public static readonly LocString HolePar = new("games.minigolf.holePar", "Hole {0} · Par {1}");
+        public static readonly LocString HoleOf = new("games.minigolf.holeOf", "Hole {0} of {1}");
+        public static readonly LocString Scorecard = new("games.minigolf.scorecard", "Scorecard");
+        public static readonly LocString Hole = new("games.minigolf.hole", "Hole");
+        public static readonly LocString Par = new("games.minigolf.par", "Par");
+        public static readonly LocString Total = new("games.minigolf.total", "Total");
+        public static readonly LocString ToPar = new("games.minigolf.toPar", "To par");
+        public static readonly LocString Even = new("games.minigolf.even", "E");
+        public static readonly LocString You = new("games.minigolf.you", "You");
+        public static readonly LocString Birdies = new("games.minigolf.birdies", "Birdies");
+        public static readonly LocString HolesInOne = new("games.minigolf.holesInOne", "Holes in one");
+        public static readonly LocString HoleInOne = new("games.minigolf.holeInOne", "Hole in one!");
+        public static readonly LocString Eagle = new("games.minigolf.eagle", "Eagle!");
+        public static readonly LocString Birdie = new("games.minigolf.birdie", "Birdie!");
+        public static readonly LocString Bogey = new("games.minigolf.bogey", "Bogey");
+        public static readonly LocString DoubleBogey = new("games.minigolf.doubleBogey", "Double bogey");
+        public static readonly LocString PickedUp = new("games.minigolf.pickedUp", "Picked up");
+        public static readonly LocString Penalty = new("games.minigolf.penalty", "+1 stroke");
+        public static readonly LocString LipOut = new("games.minigolf.lipOut", "Lip out!");
+        public static readonly LocString NextHole = new("games.minigolf.nextHole", "Next hole");
+        public static readonly LocString FinishRound = new("games.minigolf.finishRound", "Finish round");
+        public static readonly LocString FirstPlace = new("games.minigolf.firstPlace", "1st");
+        public static readonly LocString SecondPlace = new("games.minigolf.secondPlace", "2nd");
+        public static readonly LocString ThirdPlace = new("games.minigolf.thirdPlace", "3rd");
+        public static readonly LocString FourthPlace = new("games.minigolf.fourthPlace", "4th");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

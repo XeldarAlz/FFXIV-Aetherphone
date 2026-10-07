@@ -17,6 +17,7 @@ using Aetherphone.Apps.Games.Gloop;
 using Aetherphone.Apps.Games.Hop;
 using Aetherphone.Apps.Games.Invaders;
 using Aetherphone.Apps.Games.Mahjong;
+using Aetherphone.Apps.Games.MiniGolf;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Pairs;
@@ -207,6 +208,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new TrailblazeApp(),
             new ThrustApp(),
             new SnipApp(),
+            new MiniGolfApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];
