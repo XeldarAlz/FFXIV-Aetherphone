@@ -773,24 +773,12 @@ internal sealed class GamesLibrary
         ref readonly var entry = ref Entries[entryIndex];
         if (entry.Online)
         {
-            return OnlineHook(entry.OnlineKind);
+            return OnlineGameArt.Hint(entry.OnlineKind);
         }
 
         var hook = games[entry.GameIndex].Spec.Hook;
         return hook.HasValue ? Loc.T(hook.Value) : string.Empty;
     }
-
-    private static string OnlineHook(string kind) => kind switch
-    {
-        GameRoomWire.ChessKind => Loc.T(L.Games.OnlineChessHostHint),
-        GameRoomWire.PoolKind => Loc.T(L.Games.OnlinePoolHostHint),
-        GameRoomWire.ConnectFourKind => Loc.T(L.Games.OnlineConnectFourHostHint),
-        GameRoomWire.BroadsideKind => Loc.T(L.Games.OnlineBroadsideHostHint),
-        GameRoomWire.LuckyDrawKind => Loc.T(L.Games.OnlineLuckyDrawHostHint),
-        GameRoomWire.CraterKind => Loc.T(L.Games.OnlineCraterHostHint),
-        GameRoomWire.MiniGolfKind => Loc.T(L.Games.OnlineMiniGolfHostHint),
-        _ => Loc.T(L.Games.OnlineHostHint, GameNumber.Label(OnlineGameArt.MaxPlayers(kind))),
-    };
 
     private void BuildRankLabels()
     {

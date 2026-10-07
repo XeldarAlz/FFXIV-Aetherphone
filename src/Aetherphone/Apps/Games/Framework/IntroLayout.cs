@@ -4,7 +4,7 @@ using Aetherphone.Windows.Components;
 namespace Aetherphone.Apps.Games.Framework;
 
 internal readonly record struct IntroBlocks(float Daily, float Title, float Hook, float Pills, float Modes,
-    float SeatsCaption, float Seats, float Level, float Play, float Links);
+    float SeatsCaption, float Seats, float Level, float Play, float Links, float Icon = 0f);
 
 internal readonly struct IntroLayout
 {
@@ -18,6 +18,8 @@ internal readonly struct IntroLayout
     public Rect TextColumn { get; private init; }
 
     public Rect ActionColumn { get; private init; }
+
+    public Rect Icon { get; private init; }
 
     public Rect Daily { get; private init; }
 
@@ -61,31 +63,49 @@ internal readonly struct IntroLayout
     {
         if (!columns)
         {
-            var stack = TextHeight(blocks, scale) + ActionHeight(blocks, true, scale);
+            var stacked = FitIcon(blocks, safe.Height, true, scale);
+            var stack = TextHeight(stacked, scale) + ActionHeight(stacked, true, scale);
             var top = MathF.Max(safe.Min.Y, full.Center.Y - stack * 0.5f);
             var column = new Rect(new Vector2(safe.Min.X, top), new Vector2(safe.Max.X, safe.Max.Y));
-            var single = PlaceText(blocks, column, column.Center.X, top, scale);
-            return PlaceActions(single, blocks, column, single.Pills.Max.Y, true, scale);
+            var single = PlaceText(stacked, column, column.Center.X, top, scale);
+            return PlaceActions(single, stacked, column, single.Pills.Max.Y, true, scale);
         }
 
         var content = Content(full, scale);
+        var split = FitIcon(blocks, content.Height, false, scale);
         var textColumn = TextColumnOf(full, safe, true, scale);
         var actionColumn = new Rect(new Vector2(textColumn.Max.X + Metrics.Space.Xl * scale, content.Min.Y),
             content.Max);
-        var textTop = MathF.Max(content.Min.Y, content.Center.Y - TextHeight(blocks, scale) * 0.5f);
-        var actionTop = MathF.Max(content.Min.Y, content.Center.Y - ActionHeight(blocks, false, scale) * 0.5f);
-        var text = PlaceText(blocks, textColumn, textColumn.Center.X, textTop, scale) with
+        var textTop = MathF.Max(content.Min.Y, content.Center.Y - TextHeight(split, scale) * 0.5f);
+        var actionTop = MathF.Max(content.Min.Y, content.Center.Y - ActionHeight(split, false, scale) * 0.5f);
+        var text = PlaceText(split, textColumn, textColumn.Center.X, textTop, scale) with
         {
             Columns = true,
             TextColumn = textColumn,
             ActionColumn = actionColumn,
         };
-        return PlaceActions(text, blocks, actionColumn, actionTop, false, scale);
+        return PlaceActions(text, split, actionColumn, actionTop, false, scale);
+    }
+
+    private static IntroBlocks FitIcon(in IntroBlocks blocks, float available, bool attached, float scale)
+    {
+        if (blocks.Icon <= 0f)
+        {
+            return blocks;
+        }
+
+        var needed = TextHeight(blocks, scale) + (attached ? ActionHeight(blocks, true, scale) : 0f);
+        return needed <= available ? blocks : blocks with { Icon = 0f };
     }
 
     private static float TextHeight(in IntroBlocks blocks, float scale)
     {
         var height = blocks.Title + Metrics.Space.Md * scale + blocks.Pills;
+        if (blocks.Icon > 0f)
+        {
+            height += blocks.Icon + Metrics.Space.Md * scale;
+        }
+
         if (blocks.Daily > 0f)
         {
             height += blocks.Daily + Metrics.Space.Sm * scale;
@@ -129,6 +149,13 @@ internal readonly struct IntroLayout
     private static IntroLayout PlaceText(in IntroBlocks blocks, Rect column, float centerX, float top, float scale)
     {
         var cursor = top;
+        var icon = Centered(centerX, cursor, 0f, 0f);
+        if (blocks.Icon > 0f)
+        {
+            icon = Centered(centerX, cursor, blocks.Icon, blocks.Icon);
+            cursor += blocks.Icon + Metrics.Space.Md * scale;
+        }
+
         var daily = Band(column, cursor, blocks.Daily);
         if (blocks.Daily > 0f)
         {
@@ -150,6 +177,7 @@ internal readonly struct IntroLayout
         {
             TextColumn = column,
             ActionColumn = column,
+            Icon = icon,
             Daily = daily,
             Title = title,
             Hook = hook,

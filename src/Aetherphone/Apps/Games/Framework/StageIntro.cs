@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Games.Hub;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Games;
@@ -27,6 +28,7 @@ internal sealed class StageIntro
     private const float StripHeight = 30f;
     private const float MinTitleFit = 0.6f;
     private const float LiftDistance = 14f;
+    private const float IconSize = 72f;
     private const int StackSlots = 7;
     private const string ModeStripId = "stage.mode";
     private const string SeatStripId = "stage.seats";
@@ -92,11 +94,17 @@ internal sealed class StageIntro
             StagePill.Height * scale, showModes ? StripHeight * scale : 0f,
             spec.HotSeat ? Typography.LineHeight(CaptionStyle) : 0f, spec.HotSeat ? StripHeight * scale : 0f,
             session.HasLevels ? Typography.LineHeight(LevelStyle) : 0f, PlayHeight * scale,
-            Button.Height(ButtonSize.Small) * scale);
+            Button.Height(ButtonSize.Small) * scale, IconSize * scale);
         var layout = IntroLayout.Compute(full, context.Safe, columns, blocks, scale);
-        slotCount = StackSlots + (spec.HotSeat ? 1 : 0) + (session.HasLevels ? 1 : 0);
+        var showIcon = layout.Icon.Height > 0f;
+        slotCount = StackSlots + (showIcon ? 1 : 0) + (spec.HotSeat ? 1 : 0) + (session.HasLevels ? 1 : 0);
         var slot = 0;
         var action = IntroAction.None;
+        if (showIcon)
+        {
+            DrawIcon(drawList, spec.Id, layout.Icon, accent, Phase(slot++), scale);
+        }
+
         if (session.Daily)
         {
             var phase = Phase(slot++);
@@ -185,6 +193,21 @@ internal sealed class StageIntro
 
     private static Vector2 Lifted(Vector2 center, float phase, float scale) =>
         new(center.X, center.Y + (1f - phase) * LiftDistance * scale);
+
+    private static void DrawIcon(ImDrawListPtr drawList, string gameId, Rect rect, Vector4 accent, float phase,
+        float scale)
+    {
+        if (phase <= 0f)
+        {
+            return;
+        }
+
+        var center = Lifted(rect.Center, phase, scale);
+        var half = rect.Size * 0.5f;
+        var firstVertex = drawList.VtxBuffer.Size;
+        GameIconArt.Draw(drawList, gameId, accent, center - half, center + half, IconAppearance.Default, true);
+        LayerCompositor.Fade(drawList, firstVertex, phase);
+    }
 
     private static int StageStrip(string id, Rect row, string[] labels, int selected, PhoneTheme theme) =>
         SegmentStrip.Draw(id, row, labels, selected, StageInks.Track, theme.Accent, StageInks.Muted, StageInks.Strong);

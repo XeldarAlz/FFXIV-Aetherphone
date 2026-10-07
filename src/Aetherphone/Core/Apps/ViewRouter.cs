@@ -36,6 +36,8 @@ internal sealed class ViewRouter<TView>
     public bool IsTransitioning => transitioning;
     private string CurrentId => viewIds[viewIds.Count - 1];
 
+    public string LayerId(int index) => viewIds[index];
+
     public bool TryGetView(int index, out TView view)
     {
         if (index < 0 || index >= stack.Count)

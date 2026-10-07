@@ -7,6 +7,7 @@ using Aetherphone.Apps.Games.MiniGolf;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -14,8 +15,29 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Games.Online;
 
+internal readonly struct OnlineKindInfo
+{
+    private const string HostIdPrefix = "games.host.";
+
+    public readonly string Kind;
+    public readonly string AccentId;
+    public readonly string HostId;
+    public readonly LocString Hint;
+    public readonly int MaxPlayers;
+
+    public OnlineKindInfo(string kind, string accentId, LocString hint, int maxPlayers)
+    {
+        Kind = kind;
+        AccentId = accentId;
+        HostId = HostIdPrefix + accentId;
+        Hint = hint;
+        MaxPlayers = maxPlayers;
+    }
+}
+
 internal static class OnlineGameArt
 {
+    public const int MinPlayers = 2;
     private const int UnoMaxPlayers = 6;
     private const int LuckyDrawMaxPlayers = 6;
     private const int MiniGolfMaxPlayers = 4;
@@ -23,14 +45,21 @@ internal static class OnlineGameArt
     private const float UnoFanAngle = 0.30f;
     private const float LuckyFanAngle = 0.26f;
 
-    public static readonly string[] Kinds =
+    public static readonly OnlineKindInfo[] Infos =
     {
-        GameRoomWire.UnoKind, GameRoomWire.ChessKind, GameRoomWire.PoolKind, GameRoomWire.ConnectFourKind,
-        GameRoomWire.BroadsideKind,
-        GameRoomWire.LuckyDrawKind,
-        GameRoomWire.CraterKind,
-        GameRoomWire.MiniGolfKind,
+        new(GameRoomWire.UnoKind, "uno", L.Games.OnlineHostHint, UnoMaxPlayers),
+        new(GameRoomWire.ChessKind, "chess", L.Games.OnlineChessHostHint, DuelMaxPlayers),
+        new(GameRoomWire.PoolKind, "pool", L.Games.OnlinePoolHostHint, DuelMaxPlayers),
+        new(GameRoomWire.ConnectFourKind, "connectfour", L.Games.OnlineConnectFourHostHint, DuelMaxPlayers),
+        new(GameRoomWire.BroadsideKind, "broadside", L.Games.OnlineBroadsideHostHint, DuelMaxPlayers),
+        new(GameRoomWire.LuckyDrawKind, OnlineLuckyDrawTable.AccentId, L.Games.OnlineLuckyDrawHostHint,
+            LuckyDrawMaxPlayers),
+        new(GameRoomWire.CraterKind, "crater", L.Games.OnlineCraterHostHint, GameRoomWire.CraterMaxPlayers),
+        new(GameRoomWire.MiniGolfKind, OnlineMiniGolfTable.AccentId, L.Games.OnlineMiniGolfHostHint,
+            MiniGolfMaxPlayers),
     };
+
+    public static readonly string[] Kinds = KindsOf(Infos);
 
     private static readonly Vector4 BallInk = new(0.09f, 0.09f, 0.11f, 1f);
     private static readonly Vector4 White = new(0.97f, 0.97f, 0.99f, 1f);
@@ -42,112 +71,88 @@ internal static class OnlineGameArt
         CardDesign.Action(FontAwesomeIcon.ShieldAlt, LuckyDrawRenderer.ChanceTint),
     };
 
-    public static string AccentId(string kind)
+    public static int IndexOf(string? kind)
     {
-        if (string.Equals(kind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
+        for (var index = 0; index < Infos.Length; index++)
         {
-            return OnlineLuckyDrawTable.AccentId;
+            if (string.Equals(Infos[index].Kind, kind, StringComparison.Ordinal))
+            {
+                return index;
+            }
         }
 
-        if (string.Equals(kind, GameRoomWire.ChessKind, StringComparison.Ordinal))
-        {
-            return "chess";
-        }
-
-        if (string.Equals(kind, GameRoomWire.PoolKind, StringComparison.Ordinal))
-        {
-            return "pool";
-        }
-
-        if (string.Equals(kind, GameRoomWire.BroadsideKind, StringComparison.Ordinal))
-        {
-            return "broadside";
-        }
-
-        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
-        {
-            return "crater";
-        }
-
-        if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
-        {
-            return OnlineMiniGolfTable.AccentId;
-        }
-
-        return string.Equals(kind, GameRoomWire.ConnectFourKind, StringComparison.Ordinal) ? "connectfour" : "uno";
+        return -1;
     }
+
+    public static ref readonly OnlineKindInfo Info(string? kind)
+    {
+        var index = IndexOf(kind);
+        return ref Infos[index < 0 ? 0 : index];
+    }
+
+    public static string AccentId(string kind) => Info(kind).AccentId;
 
     public static Vector4 Accent(string kind) => AppAccents.For(AccentId(kind));
 
-    public static int MaxPlayers(string kind)
+    public static int MaxPlayers(string kind) => Info(kind).MaxPlayers;
+
+    public static string Hint(string kind)
     {
-        if (string.Equals(kind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
-        {
-            return LuckyDrawMaxPlayers;
-        }
-
-        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
-        {
-            return GameRoomWire.CraterMaxPlayers;
-        }
-
-        if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
-        {
-            return MiniGolfMaxPlayers;
-        }
-
-        return string.Equals(kind, GameRoomWire.UnoKind, StringComparison.Ordinal) ? UnoMaxPlayers : DuelMaxPlayers;
+        ref readonly var info = ref Info(kind);
+        return Loc.T(info.Hint, GameNumber.Label(info.MaxPlayers));
     }
 
     public static void Draw(ImDrawListPtr drawList, string kind, Vector2 center, float size, float scale)
     {
-        if (string.Equals(kind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
+        switch (Info(kind).Kind)
         {
-            DrawLuckyFan(drawList, center, size, scale);
+            case GameRoomWire.LuckyDrawKind:
+                DrawLuckyFan(drawList, center, size, scale);
+                return;
+            case GameRoomWire.ChessKind:
+                DrawChessGlyph(drawList, center, size);
+                return;
+            case GameRoomWire.PoolKind:
+                DrawEightBall(drawList, center, size);
+                return;
+            case GameRoomWire.ConnectFourKind:
+                DrawConnectFourMedallion(drawList, center, size);
+                return;
+            case GameRoomWire.BroadsideKind:
+                DrawBroadsideMedallion(drawList, center, size, scale);
+                return;
+            case GameRoomWire.CraterKind:
+                DrawCraterMedallion(drawList, center, size);
+                return;
+            case GameRoomWire.MiniGolfKind:
+                DrawGreenMedallion(drawList, center, size);
+                return;
+            default:
+                DrawUnoFan(drawList, center, size, scale);
+                return;
+        }
+    }
+
+    private static string[] KindsOf(OnlineKindInfo[] infos)
+    {
+        var kinds = new string[infos.Length];
+        for (var index = 0; index < infos.Length; index++)
+        {
+            kinds[index] = infos[index].Kind;
+        }
+
+        return kinds;
+    }
+
+    private static void DrawChessGlyph(ImDrawListPtr drawList, Vector2 center, float size)
+    {
+        if (AppIconTile.TryDrawGlyph(drawList, "chess", center, size * AppIconTextures.GlyphFraction, White))
+        {
             return;
         }
 
-        if (string.Equals(kind, GameRoomWire.ChessKind, StringComparison.Ordinal))
-        {
-            if (!AppIconTile.TryDrawGlyph(drawList, "chess", center, size * AppIconTextures.GlyphFraction, White))
-            {
-                AppIconArt.TryDraw(drawList, "chess", center, size, White, Palette.Darken(Accent(kind), 0.16f));
-            }
-
-            return;
-        }
-
-        if (string.Equals(kind, GameRoomWire.PoolKind, StringComparison.Ordinal))
-        {
-            DrawEightBall(drawList, center, size);
-            return;
-        }
-
-        if (string.Equals(kind, GameRoomWire.ConnectFourKind, StringComparison.Ordinal))
-        {
-            DrawConnectFourMedallion(drawList, center, size);
-            return;
-        }
-
-        if (string.Equals(kind, GameRoomWire.BroadsideKind, StringComparison.Ordinal))
-        {
-            DrawBroadsideMedallion(drawList, center, size, scale);
-            return;
-        }
-
-        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
-        {
-            DrawCraterMedallion(drawList, center, size);
-            return;
-        }
-
-        if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
-        {
-            DrawGreenMedallion(drawList, center, size);
-            return;
-        }
-
-        DrawUnoFan(drawList, center, size, scale);
+        AppIconArt.TryDraw(drawList, "chess", center, size, White,
+            Palette.Darken(Accent(GameRoomWire.ChessKind), 0.16f));
     }
 
     private static void DrawGreenMedallion(ImDrawListPtr drawList, Vector2 center, float size)
