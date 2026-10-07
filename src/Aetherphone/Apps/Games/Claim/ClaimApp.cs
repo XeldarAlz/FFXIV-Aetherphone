@@ -55,7 +55,6 @@ internal sealed class ClaimApp : IMiniGame
     private readonly ClaimBoard board = new();
     private readonly ClaimRenderer renderer = new();
     private readonly ClaimMosaic mosaic = new();
-    private readonly ClaimPad pad = new();
     private readonly ParticleSystem particles = new(640);
     private readonly FeedbackFx fx = new();
     private readonly Ribbon ribbon = new();
@@ -185,7 +184,7 @@ internal sealed class ClaimApp : IMiniGame
 
         DrawWorld(drawList, context, scale);
         var band = StageLayout.PadBand(context.Full, StageLayout.DPadBand, scale);
-        padInput = pad.Draw(drawList, band, Accent, ClaimRenderer.SlowColor, context.Theme, fastToggle, slowToggle,
+        padInput = ClaimPad.Draw(drawList, band, Accent, ClaimRenderer.SlowColor, context.Theme, fastToggle, slowToggle,
             context.Session.State == StageFlow.Playing && !finished, Loc.T(L.Claim.Fast), Loc.T(L.Claim.Slow));
         ApplyToggles();
         if (bannerText.Length > 0)

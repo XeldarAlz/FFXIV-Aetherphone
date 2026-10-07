@@ -177,7 +177,7 @@ internal sealed class DriftApp : IMiniGame
         var panel = new Rect(new Vector2(band.Min.X + PadInsetX * scale, band.Min.Y + PadInsetY * scale),
             new Vector2(band.Max.X - PadInsetX * scale, band.Max.Y - PadInsetY * scale));
         Material.Frosted(drawList, panel.Min, panel.Max, Metrics.Radius.Lg * scale, scale, PadOpacity);
-        return DriftPad.Draw(panel, accent, context.Theme);
+        return DriftPad.Draw(panel, accent);
     }
 
     private static DriftControls ReadControls(in DriftPadInput pad)

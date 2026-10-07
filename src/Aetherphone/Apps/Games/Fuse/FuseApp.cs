@@ -168,7 +168,7 @@ internal sealed class FuseApp : IMiniGame
         fx.DrawText();
         var arena = camera.ToScreen(new Vector2(FuseBoard.Columns * 0.5f, FuseBoard.Rows * 0.5f));
         GameBanner.Draw(drawList, arena, bannerText, Accent, context.Theme, bannerProgress);
-        pad.Draw(drawList, in board.MoogleAt(FuseBoard.Player), Accent, context.Theme, scale, time);
+        pad.Draw(drawList, in board.MoogleAt(FuseBoard.Player), Accent, scale, time);
         DrawHud(drawList, context, scale);
         if (board.Phase != FusePhase.MatchOver || finished)
         {

@@ -28,7 +28,7 @@ internal sealed partial class OnlineCraterTable
     private int awaitingActionCount = -1;
     private long sentAtTick;
     private bool charging;
-    private bool fireHeld;
+    private HoldLatch fireHold;
     private bool spaceHeld;
     private bool aimDragging;
     private bool teleportPressed;
@@ -49,7 +49,7 @@ internal sealed partial class OnlineCraterTable
     {
         charging = false;
         charge = 0f;
-        fireHeld = false;
+        fireHold.Release();
         spaceHeld = false;
         aimDragging = false;
         teleportPressed = false;
@@ -88,7 +88,7 @@ internal sealed partial class OnlineCraterTable
         var clicked = CraterControls.Weapons(drawList, layout.Weapons, ammo, weapon, fuse, labels, accent, true,
             scale);
         CraterControls.Fire(drawList, layout.FireCenter, layout.FireRadius, weapon, charge, accent,
-            weapon != CraterWeapon.Teleport, fireHeld, scale);
+            weapon != CraterWeapon.Teleport, fireHold.Held, scale);
         var pad = GamePad.Walker(layout.Pad, accent, theme);
         if (clicked >= 0)
         {
@@ -205,19 +205,18 @@ internal sealed partial class OnlineCraterTable
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        if (!fireHeld && over && weapon != CraterWeapon.Teleport && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        var pressed = over && weapon != CraterWeapon.Teleport && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        switch (fireHold.Update(pressed, ImGui.IsMouseDown(ImGuiMouseButton.Left)))
         {
-            fireHeld = true;
-            BeginCharge(shown);
+            case HoldEdge.Pressed:
+                BeginCharge(shown);
+                return;
+            case HoldEdge.Released:
+                ReleaseCharge(shown);
+                return;
+            default:
+                return;
         }
-
-        if (!fireHeld || ImGui.IsMouseDown(ImGuiMouseButton.Left))
-        {
-            return;
-        }
-
-        fireHeld = false;
-        ReleaseCharge(shown);
     }
 
     private void Pointer(Rect body, in CraterLayout layout, bool hovered, bool activated, CraterRoomStateDto shown,
@@ -225,7 +224,7 @@ internal sealed partial class OnlineCraterTable
     {
         var mouse = ImGui.GetMousePos();
         var backReach = BackRadius * ButtonReach * scale;
-        var blocked = layout.Covers(mouse) || fireHeld || ResignRect(layout, scale).Contains(mouse) ||
+        var blocked = layout.Covers(mouse) || fireHold.Held || ResignRect(layout, scale).Contains(mouse) ||
                       Vector2.DistanceSquared(mouse, BackCenter(body, scale)) <= backReach * backReach;
         var world = camera.ToWorld(mouse);
         showTeleport = weapon == CraterWeapon.Teleport && hovered && !blocked;

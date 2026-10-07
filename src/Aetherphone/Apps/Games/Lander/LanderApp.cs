@@ -214,8 +214,8 @@ internal sealed class LanderApp : IMiniGame
         }
 
         var band = StageLayout.PadBand(context.Full, StageLayout.ShooterBand, scale);
-        padInput = pad.Draw(drawList, band, Accent, context.Theme,
-            context.Session.State == StageFlow.Playing && !finished, Loc.T(L.Lander.Thrust));
+        padInput = pad.Draw(drawList, band, Accent, context.Session.State == StageFlow.Playing && !finished,
+            Loc.T(L.Lander.Thrust));
         context.Hud.Score(board.Score);
         context.Hud.Lives(board.Lives, LanderBoard.StartLives);
         context.Hud.Level(board.Level);
