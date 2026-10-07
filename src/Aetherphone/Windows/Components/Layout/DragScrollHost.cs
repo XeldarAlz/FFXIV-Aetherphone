@@ -162,7 +162,7 @@ internal static class DragScrollHost
             }
         }
         else if (down && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && hovered && !widgetOwnsClick &&
-                 !UiInteract.InputBlocked)
+                 !UiInteract.InputBlocked && !UiInteract.PointerOverDragSurface)
         {
             scroller.Press(pointerY);
             region.Pressed = true;

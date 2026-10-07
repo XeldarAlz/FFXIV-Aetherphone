@@ -24,6 +24,7 @@ internal static class UiInteract
     private static bool windowFocused = true;
     private static int windowFocusedFrame = -1;
     private static int gestureSurfaceFrame = -1;
+    private static int dragSurfaceFrame = -1;
 
     public static void BlockThisFrame()
     {
@@ -58,6 +59,14 @@ internal static class UiInteract
     public static void ReportGestureSurface() => gestureSurfaceFrame = ImGui.GetFrameCount();
 
     public static bool PointerOverGestureSurface => ImGui.GetFrameCount() - gestureSurfaceFrame <= 1;
+
+    public static void ReportDragSurface()
+    {
+        ReportGestureSurface();
+        dragSurfaceFrame = ImGui.GetFrameCount();
+    }
+
+    public static bool PointerOverDragSurface => ImGui.GetFrameCount() - dragSurfaceFrame <= 1;
 
     private static int[] CreateOverlayFrames()
     {
