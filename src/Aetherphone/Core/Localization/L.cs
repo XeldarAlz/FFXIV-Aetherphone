@@ -8806,6 +8806,35 @@ internal static class L
         public static readonly LocString Multiballs = new("games.pinball.multiballs", "Multiballs");
     }
 
+    internal static class Crates
+    {
+        public static readonly LocString Title = new("games.crates.title", "Crates");
+        public static readonly LocString Hook = new("games.crates.hook", "Push every crate onto a glowing target. Crates only move when pushed, so think before you shove.");
+        public static readonly LocString Moves = new("games.crates.moves", "Moves");
+        public static readonly LocString Pushes = new("games.crates.pushes", "Pushes");
+        public static readonly LocString Par = new("games.crates.par", "Par");
+        public static readonly LocString Undos = new("games.crates.undos", "Undos");
+        public static readonly LocString Solved = new("games.crates.solved", "Solved!");
+        public static readonly LocString Perfect = new("games.crates.perfect", "Perfect solve!");
+    }
+
+    internal static class Delve
+    {
+        public static readonly LocString Title = new("games.delve.title", "Delve");
+        public static readonly LocString Hook = new("games.delve.hook", "Dig through the cave, grab enough gems to open the exit and get out before time runs out. Falling boulders crush anything below, you included.");
+        public static readonly LocString Gems = new("games.delve.gems", "Gems");
+        public static readonly LocString Goal = new("games.delve.goal", "Find {0} gems");
+        public static readonly LocString ExitOpen = new("games.delve.exitOpen", "Exit open!");
+        public static readonly LocString Escaped = new("games.delve.escaped", "Escaped!");
+        public static readonly LocString Crushed = new("games.delve.crushed", "Crushed!");
+        public static readonly LocString Caught = new("games.delve.caught", "Caught!");
+        public static readonly LocString OutOfTime = new("games.delve.outOfTime", "Out of time!");
+        public static readonly LocString Squashed = new("games.delve.squashed", "Squashed!");
+        public static readonly LocString GemShower = new("games.delve.gemShower", "Gem shower!");
+        public static readonly LocString TimeLeft = new("games.delve.timeLeft", "Time left");
+        public static readonly LocString Foes = new("games.delve.foes", "Foes crushed");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

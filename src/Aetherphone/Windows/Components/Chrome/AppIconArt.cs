@@ -151,6 +151,12 @@ internal static class AppIconArt
             case "pinball":
                 PinballIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "crates":
+                DrawCrates(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "delve":
+                DrawDelve(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -976,6 +982,51 @@ internal static class AppIconArt
         drawList.AddCircleFilled(At(center, extent, 0.5f, -0.06f), extent * 0.07f, hole, 10);
         drawList.AddLine(At(center, extent, 0.3f, -0.34f), At(center, extent, 0.44f, -0.72f), ink, extent * 0.07f);
         drawList.AddCircleFilled(At(center, extent, 0.46f, -0.8f), extent * 0.14f, ink, 14);
+    }
+
+    private static void DrawCrates(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var rounding = extent * 0.14f;
+        var crateMin = At(center, extent, -0.92f, -0.5f);
+        var crateMax = At(center, extent, 0.22f, 0.64f);
+        drawList.AddRectFilled(crateMin, crateMax, ink, rounding);
+        var inset = new Vector2(extent * 0.17f, extent * 0.17f);
+        var panelMin = crateMin + inset;
+        var panelMax = crateMax - inset;
+        drawList.AddRectFilled(panelMin, panelMax, hole, rounding * 0.5f);
+        drawList.AddLine(panelMin, panelMax, ink, extent * 0.14f);
+        drawList.AddLine(new Vector2(panelMin.X, panelMax.Y), panelMax, ink, extent * 0.06f);
+        var target = At(center, extent, 0.66f, 0.07f);
+        drawList.AddCircle(target, extent * 0.28f, ink, 24, extent * 0.11f);
+        drawList.AddCircleFilled(target, extent * 0.09f, ink, 12);
+        var arrow = At(center, extent, 0.3f, -0.84f);
+        drawList.AddTriangleFilled(arrow + new Vector2(extent * 0.34f, 0f), arrow + new Vector2(0f, -extent * 0.16f),
+            arrow + new Vector2(0f, extent * 0.16f), ink);
+        drawList.AddLine(arrow - new Vector2(extent * 0.42f, 0f), arrow, ink, extent * 0.1f);
+    }
+
+    private static void DrawDelve(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var handleStart = At(center, extent, -0.86f, 0.86f);
+        var handleEnd = At(center, extent, 0.2f, -0.2f);
+        drawList.AddLine(handleStart, handleEnd, ink, extent * 0.16f);
+        var head = At(center, extent, 0.2f, -0.2f);
+        drawList.PathClear();
+        drawList.PathArcTo(head + new Vector2(-extent * 0.61f, extent * 0.61f), extent * 0.86f,
+            MathF.PI * 1.75f - 0.48f, MathF.PI * 1.75f + 0.48f, 14);
+        drawList.PathStroke(ink, ImDrawFlags.None, extent * 0.2f);
+        var gem = At(center, extent, 0.5f, 0.42f);
+        var half = extent * 0.34f;
+        Span<Vector2> facets = stackalloc Vector2[4]
+        {
+            new(gem.X, gem.Y - half * 1.25f), new(gem.X + half, gem.Y), new(gem.X, gem.Y + half * 1.25f),
+            new(gem.X - half, gem.Y),
+        };
+        FillConvex(drawList, ink, facets);
+        drawList.AddLine(new Vector2(gem.X - half * 0.55f, gem.Y - half * 0.1f),
+            new Vector2(gem.X + half * 0.55f, gem.Y - half * 0.1f), hole, extent * 0.07f);
+        drawList.AddCircleFilled(At(center, extent, -0.62f, -0.7f), extent * 0.09f, ink, 10);
+        drawList.AddCircleFilled(At(center, extent, -0.82f, -0.38f), extent * 0.06f, ink, 8);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Games.Crates;
+using Aetherphone.Apps.Games.Delve;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Gloop;
@@ -88,6 +90,8 @@ internal sealed class GamesLibrary
         new("trailblaze", 2026, 10, 8),
         new("thrust", 2026, 10, 8),
         new("pinball", 2026, 10, 8),
+        new("crates", 2026, 10, 8),
+        new("delve", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -550,9 +554,21 @@ internal sealed class GamesLibrary
             case "chess":
             case "trails":
                 return BestStreakAcrossTiers(gameId, out value, out tier);
+            case "crates":
+                return StarTotal(stats.TotalStars(gameId), CratesLevels.Count, out value);
+            case "delve":
+                return StarTotal(stats.TotalStars(gameId), DelveLevels.Count, out value);
             default:
                 return RecordKind.None;
         }
+    }
+
+    private static RecordKind StarTotal(int stars, int levels, out string value)
+    {
+        value = stars > 0
+            ? Loc.T(L.Stage.StarsOf, GameNumber.Label(stars), GameNumber.Label(levels * GameStatsStore.MaxStars))
+            : string.Empty;
+        return stars > 0 ? RecordKind.Score : RecordKind.None;
     }
 
     private RecordKind BestStreakAcrossTiers(string gameId, out string value, out int tier)
