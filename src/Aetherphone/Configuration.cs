@@ -262,6 +262,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool VideoShareWatchPresence { get; set; } = true;
     public bool VideoHardwareDecoding { get; set; }
     public bool VideoAllowInsecureDirectUrls { get; set; }
+    public bool VideoNightlyLinkResolver { get; set; }
     public bool VideoStreamApprovalRequired { get; set; }
     public bool VideoStreamDiscoverable { get; set; } = true;
     public bool VideoScreenVisible { get; set; } = true;

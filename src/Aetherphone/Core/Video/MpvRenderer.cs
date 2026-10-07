@@ -14,12 +14,6 @@ internal enum MpvEndReason : byte
     Redirect,
 }
 
-internal enum PlaybackFailureKind : byte
-{
-    Unknown,
-    BotCheck,
-}
-
 internal readonly record struct PlaybackEnding(MpvEndReason Reason, string? Detail, PlaybackFailureKind FailureKind);
 
 internal sealed class MpvRenderer : IDisposable
@@ -55,7 +49,6 @@ internal sealed class MpvRenderer : IDisposable
     private const string ResolverLogPrefix = "ytdl_hook";
     private const string ResolverErrorPrefix = "ERROR: ";
     private const string ResolverFailedPrefix = "youtube-dl failed: ";
-    private const string BotCheckMarker = "not a bot";
 
     private static readonly Regex ResolverSitePrefix = new(@"^\[[^\]]+\]\s+\S+:\s+", RegexOptions.Compiled);
 
@@ -218,7 +211,7 @@ internal sealed class MpvRenderer : IDisposable
     private int consecutiveRenderFailures;
     private int httpForbiddenHits;
     private int streamErrorHits;
-    private int botCheckHits;
+    private int detectedFailure;
 
     internal event Action? FileLoaded;
     internal event Action<PlaybackEnding>? FileEnded;
@@ -229,7 +222,7 @@ internal sealed class MpvRenderer : IDisposable
 
     internal bool SawStreamError => Volatile.Read(ref streamErrorHits) > 0;
 
-    internal bool SawBotCheck => Volatile.Read(ref botCheckHits) > 0;
+    internal PlaybackFailureKind DetectedFailure => (PlaybackFailureKind)Volatile.Read(ref detectedFailure);
 
     internal string? LastErrorDetail => lastErrorDetail;
 
@@ -263,10 +256,8 @@ internal sealed class MpvRenderer : IDisposable
             SetOption("script-opts", $"ytdl_hook-ytdl_path={linkResolverPath}");
         }
 
-        SetOption("ytdl-format",
-            $"bestvideo[height<={maxQualityHeight}][vcodec^=avc1]+bestaudio/"
-            + $"bestvideo[height<={maxQualityHeight}][ext=mp4]+bestaudio/best[height<={maxQualityHeight}]");
-        SetOption("ytdl-raw-options", "force-ipv4=,hls-use-mpegts=");
+        SetOption("ytdl-format", FormatSelector(maxQualityHeight));
+        SetOption("ytdl-raw-options", ResolverSiteOptions.BaseRawOptions);
         SetOption("stream-lavf-o", StreamReconnectOptions);
         SetOption("volume", initialVolume.ToString(CultureInfo.InvariantCulture));
         SetOption("msg-level", "all=warn,ffmpeg=error");
@@ -380,8 +371,9 @@ internal sealed class MpvRenderer : IDisposable
             lastErrorFromResolver = false;
             Interlocked.Exchange(ref httpForbiddenHits, 0);
             Interlocked.Exchange(ref streamErrorHits, 0);
-            Interlocked.Exchange(ref botCheckHits, 0);
+            Interlocked.Exchange(ref detectedFailure, (int)PlaybackFailureKind.Unknown);
             _ = MpvCommand(mpvContext, ["set", "speed", "1", null]);
+            _ = MpvCommand(mpvContext, ["set", "ytdl-raw-options", ResolverSiteOptions.RawOptionsFor(url), null]);
             var result = MpvCommand(mpvContext, ["loadfile", url, "replace", "0", options, null]);
             if (result < 0)
             {
@@ -763,9 +755,10 @@ internal sealed class MpvRenderer : IDisposable
                 Interlocked.Increment(ref streamErrorHits);
             }
 
-            if (IsBotCheckText(text))
+            var kind = PlaybackFailureClassifier.Classify(text);
+            if (kind != PlaybackFailureKind.Unknown)
             {
-                Interlocked.Increment(ref botCheckHits);
+                _ = Interlocked.CompareExchange(ref detectedFailure, (int)kind, (int)PlaybackFailureKind.Unknown);
             }
 
             RememberErrorDetail(prefix, text);
@@ -781,8 +774,9 @@ internal sealed class MpvRenderer : IDisposable
         && (text.Contains("http", StringComparison.OrdinalIgnoreCase)
             || text.Contains("forbidden", StringComparison.OrdinalIgnoreCase));
 
-    internal static bool IsBotCheckText(string text) =>
-        text.Contains(BotCheckMarker, StringComparison.OrdinalIgnoreCase);
+    internal static string FormatSelector(int maxQualityHeight) =>
+        $"bestvideo[height<=?{maxQualityHeight}][vcodec^=avc1]+bestaudio/"
+        + $"bestvideo[height<=?{maxQualityHeight}][ext=mp4]+bestaudio/best[height<=?{maxQualityHeight}]/best";
 
     private static bool IsStreamErrorText(string text)
     {
@@ -893,7 +887,7 @@ internal sealed class MpvRenderer : IDisposable
         {
             var errorText = ErrorText(errorCode);
             detail = lastErrorDetail is { Length: > 0 } logged ? logged : errorText;
-            failureKind = SawBotCheck ? PlaybackFailureKind.BotCheck : PlaybackFailureKind.Unknown;
+            failureKind = DetectedFailure;
             AepLog.Warning($"[MPV] Playback failed ({errorText}): {detail}");
         }
 

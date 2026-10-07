@@ -327,6 +327,11 @@ internal sealed class VideoEngine : IDisposable
         var detail = ending.Detail;
         if (ending.Reason == MpvEndReason.Failed)
         {
+            if (ending.FailureKind == PlaybackFailureKind.SiteChanged)
+            {
+                Dependencies.RefreshLinkResolverInBackground(urgent: true);
+            }
+
             if (RefusedStreamUrl() is { } refusedUrl)
             {
                 if (TryBeginRecovery(refusedUrl))

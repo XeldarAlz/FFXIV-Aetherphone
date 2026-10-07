@@ -60,7 +60,7 @@ internal sealed partial class AetherStreamApp
 
             Gap(Metrics.Space.Md);
             SettingsSection.Header(Loc.T(L.AetherStream.SettingsSectionStatus), accentedTheme);
-            var statusCard = GroupCard.Begin(accentedTheme, 6);
+            var statusCard = GroupCard.Begin(accentedTheme, 7);
             SettingsRow.Info(statusCard.NextRow(), Loc.T(L.AetherStream.SettingsDependencyStatus),
                 DependencyStatusText(dependencies, dependencies.VideoLibrary), accentedTheme);
             DrawDependencyAction(statusCard.NextRow(), dependencies, dependencies.VideoLibrary,
@@ -69,11 +69,20 @@ internal sealed partial class AetherStreamApp
                 DependencyStatusText(dependencies, dependencies.LinkResolver), accentedTheme);
             DrawDependencyAction(statusCard.NextRow(), dependencies, dependencies.LinkResolver,
                 L.AetherStream.SettingsDownloadYtdlp, L.AetherStream.SettingsUpdateYtdlp);
+            var nightlyResolver = SettingsRow.Bool(statusCard.NextRow(),
+                Loc.T(L.AetherStream.SettingsNightlyResolver), configuration.VideoNightlyLinkResolver, accentedTheme,
+                hint: Loc.T(L.AetherStream.SettingsNightlyResolverHint));
             SettingsRow.Info(statusCard.NextRow(), Loc.T(L.AetherStream.SettingsDependencyDeno),
                 DependencyStatusText(dependencies, dependencies.JsRuntime), accentedTheme);
             DrawDependencyAction(statusCard.NextRow(), dependencies, dependencies.JsRuntime,
                 L.AetherStream.SettingsDownloadDeno, L.AetherStream.SettingsUpdateDeno);
             statusCard.End();
+            if (nightlyResolver != configuration.VideoNightlyLinkResolver)
+            {
+                configuration.VideoNightlyLinkResolver = nightlyResolver;
+                configuration.Save();
+                SwitchLinkResolverChannel(dependencies, nightlyResolver);
+            }
 
             Gap(Metrics.Space.Md);
             SettingsSection.Header(Loc.T(L.AetherStream.SettingsSectionAdvanced), accentedTheme);
@@ -186,6 +195,19 @@ internal sealed partial class AetherStreamApp
             async token => await dependencies.ReinstallAsync(dependency, token).ConfigureAwait(false));
     }
 
+    private void SwitchLinkResolverChannel(MediaDependencies dependencies, bool nightly)
+    {
+        dependencies.UseNightlyLinkResolver(nightly);
+        if (dependencies.LinkResolverPath is null)
+        {
+            return;
+        }
+
+        dependencyWork.Run("switch link resolver",
+            async token => await dependencies.UpdateIfNewerAsync(dependencies.LinkResolver, token)
+                .ConfigureAwait(false));
+    }
+
     private static string DependencyStatusText(MediaDependencies dependencies, MediaDependency dependency)
     {
         var snapshot = dependency.Snapshot();
@@ -237,6 +259,7 @@ internal sealed partial class AetherStreamApp
             DrawInfoEntry(L.AetherStream.InfoStartupTitle, L.AetherStream.InfoStartupBody);
             DrawInfoEntry(L.AetherStream.InfoPartiesTitle, L.AetherStream.InfoPartiesBody);
             DrawInfoEntry(L.AetherStream.InfoCodesTitle, L.AetherStream.InfoCodesBody);
+            DrawInfoEntry(L.AetherStream.InfoSitesTitle, L.AetherStream.InfoSitesBody);
             DrawInfoEntry(L.AetherStream.InfoFailuresTitle, L.AetherStream.InfoFailuresBody);
             DrawInfoEntry(L.AetherStream.InfoVpnTitle, L.AetherStream.InfoVpnBody);
             Gap(Metrics.Space.Lg);

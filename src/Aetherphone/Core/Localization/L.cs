@@ -2839,12 +2839,22 @@ internal static class L
 
         public static readonly LocString[] Release1100MogCast =
         {
+            new("changelog.r1100.162",
+                "Added clear reasons when MogCast can't play a link: the site needs a sign-in, locks its videos with DRM, blocks your region, isn't supported, or has changed"),
+            new("changelog.r1100.163",
+                "MogCast now keeps yt-dlp up to date on its own, so fixes for broken sites arrive without you doing anything"),
+            new("changelog.r1100.164",
+                "Added Early site fixes to MogCast settings, which uses the nightly yt-dlp to pick up site fixes sooner"),
             new("changelog.r1100.2",
                 "Fixed MogCast dragging the game down to one frame per second for some players while it waited for a link"),
             new("changelog.r1100.50",
                 "Fixed MogCast checking your clipboard every second; it now reads it only when it changes"),
             new("changelog.r1100.151",
                 "Fixed MogCast showing your previous character's account in watch parties after you switched characters"),
+            new("changelog.r1100.165",
+                "Fixed Tubi links that stopped playing in MogCast"),
+            new("changelog.r1100.166",
+                "Fixed MogCast refusing videos from sites that don't report a video size"),
         };
 
         public static readonly LocString[] Release1041MogCast =
@@ -6745,6 +6755,8 @@ internal static class L
 
         public static readonly LocString NothingPlaying = new("aetherstream.nothingPlaying", "Nothing playing");
         public static readonly LocString UrlHint = new("aetherstream.urlHint", "Paste a video link");
+        public static readonly LocString SupportedSitesHint = new("aetherstream.supportedSitesHint",
+            "Works with YouTube, Twitch, Kick, Dailymotion, direct video links and many more sites. Netflix, Disney+ and other DRM services can't play.");
         public static readonly LocString BrowseLocalFile = new("aetherstream.browseLocalFile", "Play a local file");
         public static readonly LocString LocalFileSource = new("aetherstream.localFileSource", "Local file");
         public static readonly LocString PasteClipboard = new("aetherstream.pasteClipboard",
@@ -6805,6 +6817,10 @@ internal static class L
             "Update mpv");
         public static readonly LocString SettingsUpdateYtdlp = new("aetherstream.settingsUpdateYtdlp",
             "Update yt-dlp");
+        public static readonly LocString SettingsNightlyResolver = new("aetherstream.settingsNightlyResolver",
+            "Early site fixes");
+        public static readonly LocString SettingsNightlyResolverHint = new("aetherstream.settingsNightlyResolverHint",
+            "Uses the nightly yt-dlp, which picks up fixes for broken sites days sooner.");
         public static readonly LocString SettingsDownloadDeno = new("aetherstream.settingsDownloadDeno",
             "Download deno");
         public static readonly LocString SettingsUpdateDeno = new("aetherstream.settingsUpdateDeno",
@@ -6889,10 +6905,14 @@ internal static class L
             "Videos take a moment");
         public static readonly LocString InfoStartupBody = new("aetherstream.infoStartupBody",
             "Every link is resolved before it plays, so a new video needs a few seconds to start. The first video after installing also downloads the player components.");
+        public static readonly LocString InfoSitesTitle = new("aetherstream.infoSitesTitle",
+            "Which sites work");
+        public static readonly LocString InfoSitesBody = new("aetherstream.infoSitesBody",
+            "MogCast plays links from YouTube, Twitch, Kick, Dailymotion, Bilibili, Niconico and hundreds of other sites, plus direct video links and your own files. Services that lock their videos with DRM, such as Netflix, Disney+ and Plex, can't play, and sites that only play for signed-in accounts, such as Vimeo, won't work either.");
         public static readonly LocString InfoFailuresTitle = new("aetherstream.infoFailuresTitle",
             "A video won't play?");
         public static readonly LocString InfoFailuresBody = new("aetherstream.infoFailuresBody",
-            "Video sites change constantly. Updating yt-dlp under Settings fixes most refusals, and MogCast retries stubborn streams on its own. Direct video links are the most reliable.");
+            "Video sites change constantly. MogCast keeps yt-dlp up to date on its own, retries stubborn streams, and tells you why a link failed. Direct video links are the most reliable.");
         public static readonly LocString InfoPartiesTitle = new("aetherstream.infoPartiesTitle", "Watch parties");
         public static readonly LocString InfoPartiesBody = new("aetherstream.infoPartiesBody",
             "Everyone plays the same link on their own phone, so it has to be reachable for every viewer. For a file from your own machine, each viewer picks their own copy of the same file.");
@@ -6981,6 +7001,26 @@ internal static class L
             "YouTube is checking this connection");
         public static readonly LocString FailureBotCheckBody = new("aetherstream.failureBotCheckBody",
             "YouTube wants this connection to sign in to prove it is not a bot. Quick retries make the check last longer: wait a few minutes, or turn off any VPN, then retry.");
+        public static readonly LocString FailureDrmTitle = new("aetherstream.failureDrmTitle",
+            "This site locks its videos");
+        public static readonly LocString FailureDrmBody = new("aetherstream.failureDrmBody",
+            "Netflix, Disney+, Plex and similar services protect their videos with DRM, so they only play in their own player.");
+        public static readonly LocString FailureRegionTitle = new("aetherstream.failureRegionTitle",
+            "Not available in your region");
+        public static readonly LocString FailureRegionBody = new("aetherstream.failureRegionBody",
+            "The site blocks this video where you are.");
+        public static readonly LocString FailureLoginTitle = new("aetherstream.failureLoginTitle",
+            "This video needs a sign-in");
+        public static readonly LocString FailureLoginBody = new("aetherstream.failureLoginBody",
+            "The site only plays this for signed-in accounts, and MogCast can't sign in for you. Try a public link instead.");
+        public static readonly LocString FailureUnsupportedTitle = new("aetherstream.failureUnsupportedTitle",
+            "MogCast can't read this site");
+        public static readonly LocString FailureUnsupportedBody = new("aetherstream.failureUnsupportedBody",
+            "This site isn't supported. YouTube, Twitch, Kick, Dailymotion and direct video links work best.");
+        public static readonly LocString FailureSiteChangedTitle = new("aetherstream.failureSiteChangedTitle",
+            "This site changed");
+        public static readonly LocString FailureSiteChangedBody = new("aetherstream.failureSiteChangedBody",
+            "The site changed how it serves videos. MogCast checks for a fix on its own, and fixes usually arrive within a few days.");
         public static readonly LocString FailureViewersTitle = new("aetherstream.failureViewersTitle",
             "{0} of {1} watching can't play this");
         public static readonly LocString FailureViewersHint = new("aetherstream.failureViewersHint",
