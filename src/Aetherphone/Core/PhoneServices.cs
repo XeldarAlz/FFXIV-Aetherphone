@@ -23,6 +23,7 @@ using Aetherphone.Core.Maps;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Moderation;
+using Aetherphone.Core.MoogleClicker;
 using Aetherphone.Core.Muster;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.News;
@@ -175,6 +176,7 @@ internal sealed class PhoneServices : IDisposable
     public required PlaybackSystemBridge PlaybackBridge { get; init; }
     public required LyricsService Lyrics { get; init; }
     public required GameStatsStore GameStats { get; init; }
+    public required MoogleClickerService MoogleClicker { get; init; }
     public required VenuesService Venues { get; init; }
     public required RolladeckService Rolladeck { get; init; }
     public required StratsManifestStore StratsManifest { get; init; }
@@ -350,6 +352,7 @@ internal sealed class PhoneServices : IDisposable
         var mediaPublisher = new WindowsMediaPublisher(configuration, framework,
             static () => Platform.GameWindowHandle.Current);
         var gameStats = new GameStatsStore(configuration);
+        var moogleClicker = new MoogleClickerService(configuration, framework, installer.Gate("games"));
         var rolladeck = new RolladeckService(http);
         var venues = new VenuesService(http, notifications, configuration, gameData, rolladeck);
         var stratsRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "strats"));
@@ -565,6 +568,7 @@ internal sealed class PhoneServices : IDisposable
                 framework),
             Lyrics = lyrics,
             GameStats = gameStats,
+            MoogleClicker = moogleClicker,
             Venues = venues,
             Rolladeck = rolladeck,
             StratsManifest = stratsManifest,
@@ -688,6 +692,7 @@ internal sealed class PhoneServices : IDisposable
         RemoteImages.Dispose();
         Windows.Components.UserName.Reset();
         Moderation.ModerationNoticeText.Reset();
+        MoogleClicker.Dispose();
         Leaderboard.Dispose();
         GameRooms.Dispose();
         CasinoTurns.Dispose();

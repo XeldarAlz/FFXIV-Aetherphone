@@ -92,6 +92,7 @@ internal sealed class GamesLibrary
         new("pinball", 2026, 10, 8),
         new("crates", 2026, 10, 8),
         new("delve", 2026, 10, 8),
+        new("moogleclicker", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -524,6 +525,7 @@ internal sealed class GamesLibrary
                 return streak > 0 ? RecordKind.Streak : RecordKind.None;
             }
             case "watersort":
+            case "moogleclicker":
             {
                 var bestLevel = stats.Get(gameId).BestScore;
                 if (bestLevel <= 0)

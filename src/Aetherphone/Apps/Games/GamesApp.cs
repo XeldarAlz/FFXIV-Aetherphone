@@ -19,6 +19,7 @@ using Aetherphone.Apps.Games.Gloop;
 using Aetherphone.Apps.Games.Hop;
 using Aetherphone.Apps.Games.Invaders;
 using Aetherphone.Apps.Games.Mahjong;
+using Aetherphone.Apps.Games.MoogleClicker;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Pairs;
@@ -55,6 +56,7 @@ using Aetherphone.Core.Honorific;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.MoogleClicker;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -149,7 +151,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures,
         Core.Coins.CoinStore coins, Core.Coins.CoinGameSessionTracker coinSessions,
         GameRoomsStore gameRooms, Configuration configuration, LeaderboardStore leaderboard, RemoteImageCache images,
-        LodestoneService lodestone)
+        LodestoneService lodestone, MoogleClickerService moogleClicker)
     {
         this.stats = stats;
         this.configuration = configuration;
@@ -211,6 +213,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new PinballApp(),
             new CratesApp(),
             new DelveApp(),
+            new MoogleClickerApp(moogleClicker),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];
