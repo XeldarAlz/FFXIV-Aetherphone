@@ -4,6 +4,7 @@ using Aetherphone.Apps.Games.Breakout;
 using Aetherphone.Apps.Games.BubbleShooter;
 using Aetherphone.Apps.Games.CapMan;
 using Aetherphone.Apps.Games.Chess;
+using Aetherphone.Apps.Games.Claim;
 using Aetherphone.Apps.Games.Coil;
 using Aetherphone.Apps.Games.Crates;
 using Aetherphone.Apps.Games.Crawler;
@@ -20,6 +21,7 @@ using Aetherphone.Apps.Games.Hop;
 using Aetherphone.Apps.Games.Invaders;
 using Aetherphone.Apps.Games.Mahjong;
 using Aetherphone.Apps.Games.MoogleClicker;
+using Aetherphone.Apps.Games.Lander;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Online;
 using Aetherphone.Apps.Games.Pairs;
@@ -214,6 +216,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new CratesApp(),
             new DelveApp(),
             new MoogleClickerApp(moogleClicker),
+            new ClaimApp(),
+            new LanderApp(textures),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];

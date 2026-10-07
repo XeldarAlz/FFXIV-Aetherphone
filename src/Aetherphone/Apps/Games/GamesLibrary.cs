@@ -93,6 +93,8 @@ internal sealed class GamesLibrary
         new("crates", 2026, 10, 8),
         new("delve", 2026, 10, 8),
         new("moogleclicker", 2026, 10, 8),
+        new("claim", 2026, 10, 8),
+        new("lander", 2026, 10, 8),
     };
 
     private static readonly int GenreCount = GameGenres.Shelves.Length;
@@ -499,6 +501,8 @@ internal sealed class GamesLibrary
             case "trailblaze":
             case "thrust":
             case "pinball":
+            case "claim":
+            case "lander":
                 return Score(stats.Get(gameId).BestScore, out value);
             case "match3":
                 return Score(Math.Max(stats.Get(gameId).BestScore, stats.Get(GemSwapApp.BlitzStatId).BestScore),

@@ -160,6 +160,12 @@ internal static class AppIconArt
             case "moogleclicker":
                 MoogleClickerIcon.Draw(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "claim":
+                ClaimIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "lander":
+                LanderIcon.Draw(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }

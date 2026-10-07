@@ -8904,6 +8904,46 @@ internal static class L
         public static readonly LocString AwayCollect = new("games.moogleclicker.awayCollect", "Kupo!");
     }
 
+    internal static class Claim
+    {
+        public static readonly LocString Title = new("games.claim.title", "Claim");
+        public static readonly LocString Hook = new("games.claim.hook", "Cut lines into the field to claim 75% of it; slow lines score double, but never let the boss touch a line you are drawing.");
+        public static readonly LocString Fast = new("games.claim.fast", "Fast");
+        public static readonly LocString Slow = new("games.claim.slow", "Slow");
+        public static readonly LocString Percent = new("games.claim.percent", "{0}%");
+        public static readonly LocString Double = new("games.claim.double", "Double!");
+        public static readonly LocString Huge = new("games.claim.huge", "Huge claim!");
+        public static readonly LocString LevelBanner = new("games.claim.levelBanner", "Level {0}");
+        public static readonly LocString Cleared = new("games.claim.cleared", "Field claimed!");
+        public static readonly LocString ExtraLife = new("games.claim.extraLife", "Extra life!");
+        public static readonly LocString CaughtSpark = new("games.claim.caughtSpark", "Caught by a spark");
+        public static readonly LocString CaughtBoss = new("games.claim.caughtBoss", "The boss cut your line");
+        public static readonly LocString CaughtFuse = new("games.claim.caughtFuse", "The fuse caught up");
+        public static readonly LocString LastLife = new("games.claim.lastLife", "Last life!");
+        public static readonly LocString BestClaim = new("games.claim.bestClaim", "Best claim");
+        public static readonly LocString SlowLines = new("games.claim.slowLines", "Slow lines");
+    }
+
+    internal static class Lander
+    {
+        public static readonly LocString Title = new("games.lander.title", "Lander");
+        public static readonly LocString Hook = new("games.lander.hook", "Tilt and fire the engine to set down gently on a lit pad; the narrow pads pay the most, and the fuel runs out.");
+        public static readonly LocString Thrust = new("games.lander.thrust", "Thrust");
+        public static readonly LocString LevelBanner = new("games.lander.levelBanner", "Level {0}");
+        public static readonly LocString Landed = new("games.lander.landed", "Landed! x{0}");
+        public static readonly LocString Perfect = new("games.lander.perfect", "Perfect landing!");
+        public static readonly LocString TooFast = new("games.lander.tooFast", "Too fast");
+        public static readonly LocString TooSteep = new("games.lander.tooSteep", "Too steep");
+        public static readonly LocString MissedPad = new("games.lander.missedPad", "Missed the pad");
+        public static readonly LocString HullHit = new("games.lander.hullHit", "Hit the rocks");
+        public static readonly LocString LowFuel = new("games.lander.lowFuel", "Low fuel");
+        public static readonly LocString NoFuel = new("games.lander.noFuel", "Out of fuel");
+        public static readonly LocString Degrees = new("games.lander.degrees", "{0}°");
+        public static readonly LocString Landings = new("games.lander.landings", "Landings");
+        public static readonly LocString BestLanding = new("games.lander.bestLanding", "Best landing");
+        public static readonly LocString Perfects = new("games.lander.perfects", "Perfect landings");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");
