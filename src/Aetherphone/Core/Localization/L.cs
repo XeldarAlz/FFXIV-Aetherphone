@@ -8643,6 +8643,20 @@ internal static class L
         public static readonly LocString Wings = new("games.trailblaze.wings", "Wings!");
     }
 
+    internal static class Thrust
+    {
+        public static readonly LocString Title = new("games.thrust.title", "Thrust");
+        public static readonly LocString Hook = new("games.thrust.hook", "Hold to fly up and let go to drop, dodging zappers and missiles as you grab the coins.");
+        public static readonly LocString Distance = new("games.thrust.distance", "Distance");
+        public static readonly LocString Metres = new("games.thrust.metres", "{0} m");
+        public static readonly LocString Milestone = new("games.thrust.milestone", "{0} m!");
+        public static readonly LocString Coins = new("games.thrust.coins", "Coins");
+        public static readonly LocString Close = new("games.thrust.close", "Close call!");
+        public static readonly LocString CloseCalls = new("games.thrust.closeCalls", "Close calls");
+        public static readonly LocString Chocobo = new("games.thrust.chocobo", "Chocobo!");
+        public static readonly LocString Saved = new("games.thrust.saved", "Saved!");
+    }
+
     internal static class Nameplate
     {
         public static readonly LocString Title = new("nameplate.title", "Nameplate Title");

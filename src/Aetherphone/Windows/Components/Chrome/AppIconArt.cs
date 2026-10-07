@@ -124,6 +124,9 @@ internal static class AppIconArt
             case "trailblaze":
                 DrawTrailblaze(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "thrust":
+                DrawThrust(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -794,6 +797,34 @@ internal static class AppIconArt
         drawList.AddCircle(coin, extent * 0.2f, hole, 24, extent * 0.07f);
         drawList.AddCircleFilled(At(center, extent, -0.62f, -0.42f), extent * 0.1f, ink, 14);
         drawList.AddCircleFilled(At(center, extent, 0.62f, -0.42f), extent * 0.1f, ink, 14);
+    }
+
+    private static void DrawThrust(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        Span<Vector2> bolt = stackalloc Vector2[5]
+        {
+            At(center, extent, -0.74f, -0.86f), At(center, extent, -0.58f, -0.46f), At(center, extent, -0.86f, -0.16f),
+            At(center, extent, -0.6f, 0.14f), At(center, extent, -0.74f, 0.48f),
+        };
+        for (var segment = 1; segment < bolt.Length; segment++)
+        {
+            drawList.AddLine(bolt[segment - 1], bolt[segment], ink, extent * 0.1f);
+        }
+
+        drawList.AddCircleFilled(bolt[0], extent * 0.15f, ink, 14);
+        drawList.AddCircleFilled(bolt[^1], extent * 0.15f, ink, 14);
+        Span<Vector2> flame = stackalloc Vector2[3]
+        {
+            At(center, extent, -0.24f, 0.46f), At(center, extent, 0.02f, 0.46f), At(center, extent, -0.18f, 1f),
+        };
+        FillConvex(drawList, ink, flame);
+        drawList.AddRectFilled(At(center, extent, -0.26f, -0.22f), At(center, extent, 0.02f, 0.5f), ink, extent * 0.1f);
+        var body = At(center, extent, 0.32f, 0.04f);
+        drawList.AddCircleFilled(body, extent * 0.46f, hole, 28);
+        drawList.AddCircleFilled(body, extent * 0.4f, ink, 28);
+        drawList.AddCircleFilled(At(center, extent, 0.5f, -0.06f), extent * 0.07f, hole, 10);
+        drawList.AddLine(At(center, extent, 0.3f, -0.34f), At(center, extent, 0.44f, -0.72f), ink, extent * 0.07f);
+        drawList.AddCircleFilled(At(center, extent, 0.46f, -0.8f), extent * 0.14f, ink, 14);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

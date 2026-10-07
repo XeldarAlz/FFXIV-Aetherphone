@@ -27,6 +27,7 @@ using Aetherphone.Apps.Games.Sudoku;
 using Aetherphone.Apps.Games.Sweeper;
 using Aetherphone.Apps.Games.Swoop;
 using Aetherphone.Apps.Games.Tetris;
+using Aetherphone.Apps.Games.Thrust;
 using Aetherphone.Apps.Games.Trailblaze;
 using Aetherphone.Apps.Games.Trivia;
 using Aetherphone.Apps.Games.Twenty48;
@@ -186,6 +187,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new UpdraftApp(),
             new SwoopApp(),
             new TrailblazeApp(),
+            new ThrustApp(),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];
