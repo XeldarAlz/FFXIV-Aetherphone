@@ -33,18 +33,14 @@ internal sealed class OnlineHub
     private const float LampOffset = 16f;
     private const int CodeBufferLength = 16;
 
-    private static readonly string[] HostIds =
-        ["games.host.uno", "games.host.chess", "games.host.pool", "games.host.connectfour", "games.host.broadside",
-            "games.host.luckydraw", "games.host.crater", "games.host.minigolf"];
-
     private readonly GameRoomsStore store;
     private readonly Action<string, string> openRoom;
     private readonly PullToRefresh refresh = new();
+    private readonly string?[] hostHints = new string?[OnlineGameArt.Infos.Length];
 
     private string codeBuffer = string.Empty;
     private string inlineReason = string.Empty;
     private string preferredKind = string.Empty;
-    private string unoHint = string.Empty;
     private GameRoomCardDto[] labeledRooms = Array.Empty<GameRoomCardDto>();
     private string[] roomTitles = Array.Empty<string>();
     private string[] roomSubtitles = Array.Empty<string>();
@@ -67,7 +63,7 @@ internal sealed class OnlineHub
 
     public void ResetLabels()
     {
-        unoHint = string.Empty;
+        Array.Clear(hostHints);
         labeledRooms = Array.Empty<GameRoomCardDto>();
     }
 
@@ -129,10 +125,10 @@ internal sealed class OnlineHub
         var y = origin.Y;
         GamesHubArt.Section(drawList, ui, left, y, width, Loc.T(L.Games.OnlineHost), string.Empty, string.Empty);
         y += GamesHubArt.SectionHeight * scale;
-        var kinds = OnlineGameArt.Kinds;
-        for (var index = 0; index < kinds.Length; index++)
+        var infos = OnlineGameArt.Infos;
+        for (var index = 0; index < infos.Length; index++)
         {
-            y = DrawHostCard(drawList, ui, left, y, width, scale, kinds[index], HostIds[index]) + HostCardGap * scale;
+            y = DrawHostCard(drawList, ui, left, y, width, scale, index) + HostCardGap * scale;
         }
 
         y += GamesHubArt.SectionGap * scale - HostCardGap * scale;
@@ -167,55 +163,25 @@ internal sealed class OnlineHub
         store.RefreshNow();
     }
 
-    private string HostHint(string kind)
+    private string HostHint(int kindIndex)
     {
-        if (string.Equals(kind, GameRoomWire.ChessKind, StringComparison.Ordinal))
+        var hint = hostHints[kindIndex];
+        if (hint is not null)
         {
-            return Loc.T(L.Games.OnlineChessHostHint);
+            return hint;
         }
 
-        if (string.Equals(kind, GameRoomWire.PoolKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlinePoolHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.ConnectFourKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineConnectFourHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.BroadsideKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineBroadsideHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.LuckyDrawKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineLuckyDrawHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.CraterKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineCraterHostHint);
-        }
-
-        if (string.Equals(kind, GameRoomWire.MiniGolfKind, StringComparison.Ordinal))
-        {
-            return Loc.T(L.Games.OnlineMiniGolfHostHint);
-        }
-
-        if (unoHint.Length == 0)
-        {
-            unoHint = Loc.T(L.Games.OnlineHostHint,
-                OnlineGameArt.MaxPlayers(GameRoomWire.UnoKind).ToString(Loc.Culture));
-        }
-
-        return unoHint;
+        hint = OnlineGameArt.Hint(OnlineGameArt.Infos[kindIndex].Kind);
+        hostHints[kindIndex] = hint;
+        return hint;
     }
 
     private float DrawHostCard(ImDrawListPtr drawList, AppSkin ui, float left, float top, float width, float scale,
-        string kind, string pillId)
+        int kindIndex)
     {
+        ref readonly var info = ref OnlineGameArt.Infos[kindIndex];
+        var kind = info.Kind;
+        var pillId = info.HostId;
         var height = HostCardHeight * scale;
         var rect = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
         var rounding = Metrics.Radius.Widget * scale;
@@ -262,7 +228,7 @@ internal sealed class OnlineHub
             Typography.FitText(Loc.T(GamesOnlineText.GameName(kind)), textWidth, TextStyles.Headline), ui.TitleInk,
             TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(textLeft, textTop + titleHeight),
-            Typography.FitText(HostHint(kind), textWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
+            Typography.FitText(HostHint(kindIndex), textWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
         var pillClicked = Button.Draw(drawList, pillRect, pillLabel, ui.Ink.WithAccent(accent), enabled: enabled,
             id: pillId);
         var cardClicked = enabled && !overPill && UiInteract.Click(rect.Min, rect.Max, hovered);
