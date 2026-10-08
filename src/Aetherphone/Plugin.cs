@@ -88,7 +88,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ServerBarEntry serverBar;
     private readonly PhoneCommands commands;
     private static CommandInfo? primaryCommand;
-    private static CommandInfo? aliasCommand;
     private bool autoOpenPending;
 
     public Plugin()
@@ -205,9 +204,8 @@ public sealed class Plugin : IDalamudPlugin
             {
                 HelpMessage = Loc.T(L.Plugin.CommandHelp, AepConstants.PrimaryCommand),
             };
-            aliasCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelpAlias) };
             CommandManager.AddHandler(AepConstants.PrimaryCommand, primaryCommand);
-            CommandManager.AddHandler(AepConstants.AliasCommand, aliasCommand);
+            CommandManager.AddHandler(AepConstants.AliasCommand, new CommandInfo(OnCommand) { ShowInHelp = false });
             PluginInterface.UiBuilder.Draw += windowSystem.Draw;
             PluginInterface.UiBuilder.Draw += FilePicker.Draw;
             PluginInterface.UiBuilder.Draw += linkpearlHotkey.Tick;
@@ -444,11 +442,6 @@ public sealed class Plugin : IDalamudPlugin
         if (primaryCommand is not null)
         {
             primaryCommand.HelpMessage = Loc.T(L.Plugin.CommandHelp, AepConstants.PrimaryCommand);
-        }
-
-        if (aliasCommand is not null)
-        {
-            aliasCommand.HelpMessage = Loc.T(L.Plugin.CommandHelpAlias);
         }
 
         Instance?.serverBar?.Refresh();

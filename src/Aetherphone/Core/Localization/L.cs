@@ -9716,8 +9716,7 @@ internal static class L
 
     internal static class Plugin
     {
-        public static readonly LocString CommandHelp = new("plugin.commandHelp", "Toggle the Aetherphone. Type {0} help to list every command.");
-        public static readonly LocString CommandHelpAlias = new("plugin.commandHelpAlias", "Alias for /phone.");
+        public static readonly LocString CommandHelp = new("plugin.commandHelp", "Type {0} help to list every command.");
         public static readonly LocString HelpTitle = new("plugin.helpTitle", "Aetherphone commands:");
         public static readonly LocString OpenUsage = new("plugin.openUsage", "Type {0} open followed by an app name.");
         public static readonly LocString AppNotFound = new("plugin.appNotFound", "No app named {0}.");
