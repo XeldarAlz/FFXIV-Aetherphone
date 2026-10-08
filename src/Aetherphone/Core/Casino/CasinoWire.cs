@@ -4,6 +4,8 @@ internal static class CasinoWire
 {
     public const string SlotsKind = "casino.slots";
 
+    public const string SlotsGambleKind = "casino.slots.gamble";
+
     public const string ScratchKind = "casino.scratch";
 
     public const string BartenderKind = "casino.bartender";

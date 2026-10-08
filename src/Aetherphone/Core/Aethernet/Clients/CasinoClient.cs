@@ -186,10 +186,10 @@ internal sealed partial class CasinoClient
             AethernetJsonContext.Default.CasinoLimitsDto, token, null, onFailure);
     }
 
-    public Task<CasinoSlotsSpinDto?> SpinSlotsAsync(string sittingId, string clientRoundId, long stake,
-        CancellationToken token, Action<AepFailure>? onFailure = null)
+    public Task<CasinoSlotsSpinDto?> SpinSlotsAsync(string sittingId, string clientRoundId, long bet,
+        string machineId, string mode, CancellationToken token, Action<AepFailure>? onFailure = null)
     {
-        return net.PostAsync(SpinSlotsPath, new CasinoSlotsSpinRequest(sittingId, clientRoundId, stake),
+        return net.PostAsync(SpinSlotsPath, new CasinoSlotsSpinRequest(sittingId, clientRoundId, bet, machineId, mode),
             AethernetJsonContext.Default.CasinoSlotsSpinRequest,
             AethernetJsonContext.Default.CasinoSlotsSpinDto, token, null, onFailure);
     }

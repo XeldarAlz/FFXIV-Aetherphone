@@ -50,8 +50,10 @@ internal sealed partial class CasinoApp
 
                 using (ImRaii.PushId(index))
                 {
-                    cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY), width, FloorGameIds[index],
-                        FloorGameNames[index], index == 0, scale);
+                    cursorY = string.Equals(FloorGameIds[index], CasinoGames.Slots, StringComparison.Ordinal)
+                        ? DrawMachineRows(drawList, new Vector2(origin.X, cursorY), width, scale)
+                        : DrawGameRow(drawList, new Vector2(origin.X, cursorY), width, FloorGameIds[index],
+                            FloorGameNames[index], index == 0, scale);
                 }
             }
 
@@ -89,6 +91,27 @@ internal sealed partial class CasinoApp
                 scale);
             CoinArt.Reserve(origin, width, cursorY + CoinArt.BottomPad * scale);
         }
+    }
+
+    private float DrawMachineRows(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
+    {
+        var cursorY = origin.Y;
+        for (var index = 0; index < Machines.MachineCabinet.MachineIds.Length; index++)
+        {
+            if (index > 0)
+            {
+                cursorY += CardGap * scale;
+            }
+
+            var gameId = Machines.MachineCabinet.MachineIds[index];
+            using (ImRaii.PushId(gameId))
+            {
+                cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY), width, gameId,
+                    Machines.MachineCabinet.TitleOf(gameId), false, scale);
+            }
+        }
+
+        return cursorY;
     }
 
     private float DrawGameRow(ImDrawListPtr drawList, Vector2 origin, float width, string gameId, LocString name,
@@ -177,7 +200,9 @@ internal sealed partial class CasinoApp
                 ? texts.Number(L.Casino.MinimumStake, Core.Casino.OriginalsRules.MinBet)
                 : string.Equals(gameId, CasinoGames.Plinko, StringComparison.Ordinal)
                     ? texts.Number(L.Casino.MinimumStake, Core.Casino.PlinkoRules.MinBet)
-                    : MinimumStakeLine(gameId);
+                    : Machines.MachineCabinet.Owns(gameId)
+                        ? texts.Number(L.Casino.MinimumStake, Core.Casino.SlotsRules.MinStake)
+                        : MinimumStakeLine(gameId);
         if (stake.Length == 0)
         {
             return;

@@ -119,7 +119,12 @@ internal sealed record CasinoLimitsDto(
     long? PendingRaiseLimit = null,
     long? PendingRaiseAtUnix = null);
 
-internal sealed record CasinoSlotsSpinRequest(string SittingId, string ClientRoundId, long Stake);
+internal sealed record CasinoSlotsSpinRequest(
+    string SittingId = "",
+    string ClientRoundId = "",
+    long Stake = 0,
+    string MachineId = "slots.bird",
+    string Mode = "base");
 
 internal sealed record CasinoSlotsLineWinDto(int Line = 0, int Symbol = 0, int Count = 0, long Pay = 0);
 
@@ -143,7 +148,62 @@ internal sealed record CasinoSlotsSpinDto(
     string NextSeedHash = "",
     long Stack = 0,
     long Jackpot = 0,
-    long Ceiling = 0);
+    long Ceiling = 0,
+    string MachineId = "slots.bird",
+    long Bet = 0,
+    string Mode = "base",
+    CasinoSlotsStepDto[]? Steps = null,
+    bool BonusTriggered = false,
+    int FreeSpinsPlayed = 0,
+    int Expander = -1,
+    int FeatureMultiplier = 0,
+    CasinoSlotsMeterDto[]? Meters = null);
+
+internal sealed record CasinoSlotsWinDto(int Line = 0, int Symbol = 0, int Count = 0, int[]? Cells = null,
+    long Pay = 0);
+
+internal sealed record CasinoSlotsCoinDto(int Cell = -1, int Kind = 0, long Multiple = 0, long Value = 0);
+
+internal sealed record CasinoSlotsStepDto(
+    string Kind = "",
+    int[]? Grid = null,
+    CasinoSlotsWinDto[]? Wins = null,
+    long Pay = 0,
+    int Multiplier = 1,
+    int SpinsAdded = 0,
+    int SpinsLeft = 0,
+    int Expander = -1,
+    CasinoSlotsCoinDto[]? Coins = null,
+    long Running = 0);
+
+internal sealed record CasinoSlotsMeterDto(
+    string Tier = "",
+    long Value = 0,
+    long MultipleHundredths = 0,
+    long ResetHundredths = 0,
+    long CeilingHundredths = 0);
+
+internal sealed record CasinoSlotsMetersDto(string MachineId = "", long Bet = 0, CasinoSlotsMeterDto[]? Meters = null);
+
+internal sealed record CasinoSlotsGambleRequest(
+    string SittingId = "",
+    string ClientRoundId = "",
+    string ParentRoundId = "",
+    int Pick = 0);
+
+internal sealed record CasinoSlotsGambleDto(
+    bool Granted = false,
+    string Reason = "",
+    string RoundId = "",
+    string ParentRoundId = "",
+    int Step = 0,
+    long Stake = 0,
+    int Card = 0,
+    bool Won = false,
+    long Payout = 0,
+    bool CanContinue = false,
+    string NextSeedHash = "",
+    long Stack = 0);
 
 internal sealed record CasinoScratchBuyRequest(string SittingId, string ClientRoundId, int Tier);
 

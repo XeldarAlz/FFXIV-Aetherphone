@@ -42,7 +42,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly CashierBonusShelf bonusShelf;
     private readonly CashierCashOut cashierCashOut;
     private readonly CashierClubCard clubCard = new();
-    private readonly Cabinets.SlotsCabinet slots;
+    private readonly Machines.MachineCabinet machines;
     private readonly Cabinets.ScratchCabinet scratch;
     private readonly Cabinets.BarkeepCabinet barkeep;
     private readonly Cabinets.WheelCabinet wheel;
@@ -107,7 +107,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         bonusShelf = new CashierBonusShelf(casino);
         cashierCashOut = new CashierCashOut(casino, confirm);
         cashier = new CashierDrawer(casino, coins, confirm, bonusShelf, cashierCashOut);
-        slots = new Cabinets.SlotsCabinet(casino, casinoPlay, OpenCashier);
+        machines = new Machines.MachineCabinet(casino, casinoPlay, confirm, OpenCashier);
         scratch = new Cabinets.ScratchCabinet(casino, casinoPlay, OpenCashier);
         barkeep = new Cabinets.BarkeepCabinet(casino, casinoPlay, gameStats, OpenCashier);
         wheel = new Cabinets.WheelCabinet(casino, casinoRooms, OpenCashier, PopRoute);
@@ -145,10 +145,10 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             case NameplateStatus.Gamba:
                 values = NameplateValues.Empty with { Game = Loc.T(PlayingName(router.Current)) };
                 return true;
-            case NameplateStatus.SlotsWin when slots.TryRecentResult(out var won) && won > 0:
+            case NameplateStatus.SlotsWin when machines.TryRecentResult(out var won) && won > 0:
                 values = NameplateValues.Empty with { Chips = NameplateTitleService.ChipCount(won) };
                 return true;
-            case NameplateStatus.SlotsLoss when slots.TryRecentResult(out var lost) && lost < 0:
+            case NameplateStatus.SlotsLoss when machines.TryRecentResult(out var lost) && lost < 0:
                 values = NameplateValues.Empty with { Chips = NameplateTitleService.ChipCount(-lost) };
                 return true;
             default:
@@ -161,7 +161,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         router.Reset();
         cashier.Close();
         bonusShelf.Reset();
-        slots.Reset();
+        machines.Reset();
         scratch.Reset();
         barkeep.Reset();
         wheel.Reset();
@@ -192,7 +192,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         router.Reset();
         cashier.Close();
         bonusShelf.Reset();
-        slots.Reset();
+        machines.Reset();
         scratch.Reset();
         barkeep.Reset();
         wheel.Reset();
@@ -278,7 +278,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         barkeep.Tick();
         bonusShelf.Update(MathF.Min(ImGui.GetIO().DeltaTime, Core.Animation.TransitionTiming.MaxFrameSeconds), scale);
         cashier.Gate();
-        slots.Gate();
+        machines.Gate();
         scratch.Gate();
         wheel.Gate();
         bingo.Gate();
@@ -290,7 +290,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         stage.Gate();
         SyncRaceLandscape();
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
-        slots.DrawOverlay(screenArea, ui);
+        machines.DrawOverlay(screenArea, ui);
         scratch.DrawOverlay(screenArea, ui);
         wheel.DrawOverlay(screenArea, ui);
         bingo.DrawOverlay(screenArea, ui);
@@ -376,8 +376,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         var body = frame.Body;
         switch (route.Screen)
         {
-            case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Slots, StringComparison.Ordinal):
-                slots.Draw(body, ui);
+            case CasinoScreen.Cabinet when Machines.MachineCabinet.Owns(route.GameId):
+                machines.Draw(stage, frame, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Scratch, StringComparison.Ordinal):
                 scratch.Draw(stage, frame, ui);
@@ -442,8 +442,6 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
         return route.GameId switch
         {
-            CasinoGames.Slots => new CasinoStageSpec(route.GameId, L.Casino.GameSlots, Backdrop.Strip,
-                Extra: L.Casino.SlotsPays),
             CasinoGames.Scratch => new CasinoStageSpec(route.GameId, L.Casino.GameScratch, Backdrop.Strip,
                 DeckHeight: Cabinets.ScratchCabinet.DeckHeight, BetsRail: true, InstantAvailable: true,
                 ReturnTenths: Core.Casino.ScratchRules.ReturnTenths(scratch.CurrentTier), Extra: L.Casino.ScratchOdds),
@@ -458,6 +456,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             _ when Originals.OriginalsCabinet.Owns(route.GameId) => originals.SpecFor(route.GameId),
             CasinoGames.Race => race.Spec(RaceLandscape()),
             CasinoGames.Plinko => plinko.Spec,
+            _ when Machines.MachineCabinet.Owns(route.GameId) => machines.SpecFor(route.GameId),
             _ => new CasinoStageSpec(route.GameId, GameName(route.GameId), Backdrop.Strip),
         };
     }
@@ -482,7 +481,10 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             return plinko.DisplayStack();
         }
 
-        return state?.Sitting?.Stack ?? 0;
+        var stack = state?.Sitting?.Stack ?? 0;
+        return route.Screen == CasinoScreen.Cabinet && Machines.MachineCabinet.Owns(route.GameId)
+            ? machines.DisplayStack(stack)
+            : stack;
     }
 
     private void HandleStageRequests()
@@ -500,9 +502,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             case CasinoInfoRequest.Rules:
                 rulesSheet.Open(StageSpecFor(current).GameId);
                 break;
-            case CasinoInfoRequest.Extra when string.Equals(current.GameId, CasinoGames.Slots,
-                StringComparison.Ordinal):
-                slots.OpenPayTable();
+            case CasinoInfoRequest.Extra when Machines.MachineCabinet.Owns(current.GameId):
+                machines.OpenPayTable();
                 break;
             case CasinoInfoRequest.Extra when string.Equals(current.GameId, CasinoGames.Scratch,
                 StringComparison.Ordinal):
@@ -652,7 +653,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
     private void PopRoute()
     {
-        slots.ClosePayTable();
+        machines.ClosePayTable();
         scratch.CloseOdds();
         if (IsStage(router.Current))
         {
@@ -716,6 +717,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         {
             originals.Reset();
             return;
+            return;
+        }
+
+        if (Machines.MachineCabinet.Owns(route.GameId))
+        {
+            machines.Reset();
         }
 
         if (string.Equals(route.GameId, CasinoGames.Plinko, StringComparison.Ordinal))
@@ -994,9 +1001,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             return;
         }
 
-        if (string.Equals(gameId, CasinoGames.Slots, StringComparison.Ordinal))
+        if (Machines.MachineCabinet.Owns(gameId))
         {
-            slots.Enter();
+            machines.Enter(gameId);
         }
         else if (string.Equals(gameId, CasinoGames.Scratch, StringComparison.Ordinal))
         {
@@ -1050,6 +1057,10 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         CasinoGames.Blackjack => L.Casino.GameBlackjack,
         CasinoGames.Holdem => L.Casino.GameHoldem,
         CasinoGames.Slots => L.Casino.GameSlots,
+        CasinoGames.SlotsBird => L.Machines.GameBird,
+        CasinoGames.SlotsCascade => L.Machines.GameCascade,
+        CasinoGames.SlotsMoogle => L.Machines.GameMoogle,
+        CasinoGames.SlotsGamble => L.Machines.GambleTitle,
         CasinoGames.Scratch => L.Casino.GameScratch,
         CasinoGames.Bingo => L.Casino.GameBingo,
         CasinoGames.Wheel => L.Casino.GameWheel,

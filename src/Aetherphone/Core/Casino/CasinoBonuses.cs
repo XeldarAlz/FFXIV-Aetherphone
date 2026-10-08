@@ -18,6 +18,8 @@ internal static class CasinoFeatures
 
     public const string GilTables = "gil.tables";
 
+    public const string Machines = "machines";
+
     public static bool Has(CasinoStateDto? state, string feature)
     {
         var features = state?.Features;

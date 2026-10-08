@@ -91,6 +91,7 @@ internal static class CasinoReasons
     public const string AlreadyConfirmed = "already_confirmed";
     public const string Settled = "settled";
     public const string GilOnly = "gil_only";
+    public const string MachineUnknown = "machine_unknown";
 
     public static readonly string[] All =
     {
@@ -179,6 +180,7 @@ internal static class CasinoReasons
         BoundElsewhere,
         NoTables,
         InvalidMove,
+        MachineUnknown,
     };
 
     private static readonly FrozenDictionary<string, LocString> Messages = new Dictionary<string, LocString>
@@ -268,6 +270,7 @@ internal static class CasinoReasons
         [BoundElsewhere] = L.Casino.ReasonBoundElsewhere,
         [NoTables] = L.Casino.ReasonNoTables,
         [InvalidMove] = L.Originals.ReasonInvalidMove,
+        [MachineUnknown] = L.Machines.ReasonMachineUnknown,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     private static long ceilingTextValue;
