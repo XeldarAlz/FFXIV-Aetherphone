@@ -10,7 +10,8 @@ internal readonly record struct FeltTableOptions(
     string Print = "",
     bool Cloth = false,
     bool Rail = true,
-    bool Circles = true);
+    bool Circles = true,
+    bool Practice = false);
 
 internal sealed class FeltTable
 {
@@ -18,6 +19,9 @@ internal sealed class FeltTable
     public const float LineAlpha = 0.22f;
     public const float CircleAlpha = 0.30f;
     public const int MaxPrintGlyphs = 48;
+
+    public static readonly Vector4 PracticeCenter = new(0.20f, 0.205f, 0.21f, 1f);
+    public static readonly Vector4 PracticeEdge = new(0.075f, 0.078f, 0.082f, 1f);
 
     private const int ArcSegments = 40;
 
@@ -29,7 +33,24 @@ internal sealed class FeltTable
     private float printWidth;
     private float printHeight;
 
-    public static FeltTable Shared { get; } = new();
+    public static void DrawCloth(ImDrawListPtr drawList, Rect full, Vector2 lamp, bool rail, bool practice,
+        float scale)
+    {
+        if (full.Width <= 0f || full.Height <= 0f)
+        {
+            return;
+        }
+
+        StageBackdrop.NightFelt(drawList, full, lamp, Vector2.Zero, rail,
+            practice ? PracticeCenter : StageBackdrop.NightFeltCenter,
+            practice ? PracticeEdge : StageBackdrop.NightFeltEdge, scale);
+    }
+
+    public static void DrawCloth(ImDrawListPtr drawList, Rect full, bool rail, bool practice, float scale) =>
+        DrawCloth(drawList, full, LampFor(full), rail, practice, scale);
+
+    public static Vector2 LampFor(Rect full) =>
+        new(full.Center.X, full.Min.Y + full.Height * StageBackdrop.NightFeltLampY);
 
     public FeltTableGeometry Draw(ImDrawListPtr drawList, Rect full, Rect table, in FeltTableOptions options,
         float scale)
@@ -37,8 +58,7 @@ internal sealed class FeltTable
         var geometry = FeltTableGeometry.Compute(table, options.Seats, scale);
         if (options.Cloth)
         {
-            var lamp = new Vector2(full.Center.X, full.Min.Y + full.Height * StageBackdrop.NightFeltLampY);
-            StageBackdrop.NightFelt(drawList, full, lamp, Vector2.Zero, options.Rail, scale);
+            DrawCloth(drawList, full, options.Rail, options.Practice, scale);
         }
 
         DrawInsuranceLine(drawList, geometry, scale);

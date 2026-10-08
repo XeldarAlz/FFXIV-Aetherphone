@@ -319,7 +319,7 @@ internal sealed partial class HoldemTable : ICabinetIdle
         var boardBottom = layout.BoardCenter.Y + PlayingCards.HeightFor(layout.BoardCardWidth) * 0.5f;
         var center = new Vector2(layout.BoardCenter.X, boardBottom + 22f * scale);
         var ink = text.Key == L.Holdem.StateYourTurn.Key ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle;
-        HoldemArt.StateLine(drawList, center, Loc.T(text), layout.Ring.Width * 0.8f, ink);
+        StageText.StateLine(drawList, center, Loc.T(text), layout.Ring.Width * 0.8f, ink);
     }
 
     internal static LocString StateText(CasinoHoldemRoomStateDto board, CasinoHoldemYouDto? mine,

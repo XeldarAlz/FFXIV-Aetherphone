@@ -594,10 +594,14 @@ internal sealed class StageBackdrop
     }
 
     public static void NightFelt(ImDrawListPtr drawList, Rect rect, Vector2 lamp, Vector2 weaveOffset, bool rail,
-        float scale)
+        float scale) =>
+        NightFelt(drawList, rect, lamp, weaveOffset, rail, NightFeltCenter, NightFeltEdge, scale);
+
+    public static void NightFelt(ImDrawListPtr drawList, Rect rect, Vector2 lamp, Vector2 weaveOffset, bool rail,
+        Vector4 center, Vector4 edge, float scale)
     {
         drawList.PushClipRect(rect.Min, rect.Max, true);
-        drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(NightFeltEdge));
+        drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(edge));
         var reach = new Vector2(MathF.Max(lamp.X - rect.Min.X, rect.Max.X - lamp.X),
             MathF.Max(lamp.Y - rect.Min.Y, rect.Max.Y - lamp.Y));
         for (var layer = 0; layer < NightPoolLayers; layer++)
@@ -605,7 +609,7 @@ internal sealed class StageBackdrop
             var share = layer / (float)(NightPoolLayers - 1);
             var radii = reach * (1f - layer / (float)NightPoolLayers);
             FillEllipse(drawList, lamp, radii,
-                ImGui.GetColorU32(Vector4.Lerp(NightFeltEdge, NightFeltCenter, Easing.SmoothStep(share))));
+                ImGui.GetColorU32(Vector4.Lerp(edge, center, Easing.SmoothStep(share))));
         }
 
         DrawWeave(drawList, rect, weaveOffset, scale);

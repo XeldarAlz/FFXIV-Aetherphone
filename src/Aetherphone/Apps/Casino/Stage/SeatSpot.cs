@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -29,7 +30,6 @@ internal static class SeatSpot
     public const float PlusArm = 7f;
     public const float PlusStroke = 2.4f;
     public const float RingStroke = 2f;
-    public const float PulseHertz = 0.8f;
     public const float GlowReach = 12f;
     public const float PuckInset = 4f;
 
@@ -39,10 +39,12 @@ internal static class SeatSpot
 
     public static float RadiusFor(float requested, float scale) => MathF.Max(requested, MinimumRadius * scale);
 
-    public static float Pulse(float phase) => 0.5f + 0.5f * MathF.Sin(phase * MathF.Tau * PulseHertz);
-
     public static bool DrawEmpty(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 accent, bool invite,
-        float phase, float scale)
+        float scale) =>
+        DrawEmpty(drawList, center, radius, Loc.T(L.Strip.SeatSit), accent, invite, scale);
+
+    public static bool DrawEmpty(ImDrawListPtr drawList, Vector2 center, float radius, string label, Vector4 accent,
+        bool invite, float scale)
     {
         radius = RadiusFor(radius, scale);
         var min = center - new Vector2(radius, radius);
@@ -50,36 +52,23 @@ internal static class SeatSpot
         var hovered = UiInteract.Hover(min, max) && Vector2.DistanceSquared(ImGui.GetMousePos(), center) <= radius * radius;
         if (invite)
         {
-            DrawGlow(drawList, center, radius, accent, Pulse(phase), scale);
+            DrawGlow(drawList, center, radius, accent, Pulse.Wave(Pulse.Breath), scale);
         }
 
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(StageText.CapsuleFill), Segments);
         var ring = hovered ? CasinoColors.MoneyHighlight : accent;
-        drawList.AddCircle(center, radius - RingStroke * scale * 0.5f, ImGui.GetColorU32(ring with { W = 0.9f }),
-            Segments, RingStroke * scale);
-        var label = Loc.T(L.Strip.SeatSit);
+        drawList.AddCircle(center, radius - RingStroke * scale * 0.5f,
+            ImGui.GetColorU32(ring with { W = invite || hovered ? 0.9f : 0.5f }), Segments, RingStroke * scale);
         var style = StageText.Resolve(StageTextRole.Label, TextStyles.FootnoteEmphasized);
-        var labelSize = Typography.Measure(label, style);
+        var labelSize = label.Length > 0 ? Typography.Measure(label, style) : Vector2.Zero;
         var arm = PlusArm * scale;
-        var stack = arm * 2f + LabelGap * scale + labelSize.Y;
+        var stack = label.Length > 0 ? arm * 2f + LabelGap * scale + labelSize.Y : arm * 2f;
         var plusCenter = new Vector2(center.X, center.Y - stack * 0.5f + arm);
         var ink = ImGui.GetColorU32(StageText.Strong);
         var stroke = PlusStroke * scale;
         drawList.AddLine(plusCenter - new Vector2(arm, 0f), plusCenter + new Vector2(arm, 0f), ink, stroke);
         drawList.AddLine(plusCenter - new Vector2(0f, arm), plusCenter + new Vector2(0f, arm), ink, stroke);
-        var labelWidth = radius * 1.7f;
-        var labelTop = plusCenter.Y + arm + LabelGap * scale;
-        if (StageText.Fits(labelSize.X, labelWidth))
-        {
-            Typography.Draw(drawList, new Vector2(center.X - labelSize.X * 0.5f, labelTop), label, StageText.Strong,
-                style);
-        }
-        else
-        {
-            Typography.Draw(drawList, new Vector2(center.X - labelWidth * 0.5f, labelTop),
-                Typography.FitText(label, labelWidth, style), StageText.Strong, style);
-        }
-
+        DrawLabel(drawList, center.X, plusCenter.Y + arm + LabelGap * scale, label, labelSize, radius * 1.7f, style);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -89,7 +78,7 @@ internal static class SeatSpot
     }
 
     public static SeatPuck DrawOccupied(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 ring,
-        bool highlight, float phase, float scale)
+        bool highlight, float scale)
     {
         radius = RadiusFor(radius, scale);
         var min = center - new Vector2(radius, radius);
@@ -97,7 +86,7 @@ internal static class SeatSpot
         var hovered = UiInteract.Hover(min, max) && Vector2.DistanceSquared(ImGui.GetMousePos(), center) <= radius * radius;
         if (highlight)
         {
-            DrawGlow(drawList, center, radius, ring, Pulse(phase), scale);
+            DrawGlow(drawList, center, radius, ring, Pulse.Wave(Pulse.Breath), scale);
         }
 
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(StageText.CapsuleFill), Segments);
@@ -105,6 +94,19 @@ internal static class SeatSpot
             RingStroke * scale);
         var clicked = UiInteract.Click(min, max, hovered);
         return new SeatPuck(center, MathF.Max(0f, radius - (RingStroke + PuckInset) * scale), hovered, clicked);
+    }
+
+    private static void DrawLabel(ImDrawListPtr drawList, float centerX, float top, string label, Vector2 size,
+        float width, in TextStyle style)
+    {
+        if (label.Length == 0)
+        {
+            return;
+        }
+
+        var shown = StageText.Fits(size.X, width) ? label : Typography.FitText(label, width, style);
+        var shownWidth = MathF.Min(size.X, width);
+        Typography.Draw(drawList, new Vector2(centerX - shownWidth * 0.5f, top), shown, StageText.Strong, style);
     }
 
     private static void DrawGlow(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 color, float pulse,

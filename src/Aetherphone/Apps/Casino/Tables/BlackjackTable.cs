@@ -187,7 +187,6 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         ConsumeStakeResults();
         var drawList = ImGui.GetWindowDrawList();
         var safe = frame.Safe;
-        FeltTable.Draw(drawList, frame.Full, scale);
         var room = rooms.Room;
         var closedReason = room.ClosedReason;
         if (closedReason.Length > 0)
@@ -446,7 +445,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         }
 
         var info = gil ? hostedText.GilLimits(board) : hostedText.Rules(board);
-        var ink = gil ? TableRow.CurrencyTint(CasinoCurrencies.Gil, ui.Accent) : StageInks.Strong;
+        var ink = gil ? TableRow.CurrencyTint(CasinoCurrencies.Gil, ui.Accent) : StageText.Strong;
         var rowBottom = y + height;
         var infoWidth = right - left;
         if (infoWidth > height * 3f)

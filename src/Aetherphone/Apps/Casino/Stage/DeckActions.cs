@@ -21,6 +21,26 @@ internal static class DeckActions
         return new Rect(new Vector2(deck.Min.X + pad, top), new Vector2(deck.Max.X - pad, bottom));
     }
 
+    public static Rect Above(Rect row, float height, float scale)
+    {
+        var bottom = row.Min.Y - Gap * scale;
+        return new Rect(new Vector2(row.Min.X, bottom - height), new Vector2(row.Max.X, bottom));
+    }
+
+    public static Rect Slice(Rect row, int index, int count, float scale)
+    {
+        var gap = Gap * scale;
+        var width = (row.Width - gap * (count - 1)) / count;
+        var left = row.Min.X + index * (width + gap);
+        return new Rect(new Vector2(left, row.Min.Y), new Vector2(left + width, row.Max.Y));
+    }
+
+    public static bool DrawPrimary(Rect rect, string label, in ControlInk ink, bool enabled, string id) =>
+        Button.Draw(rect, label, ink, ButtonStyle.Prominent, enabled: enabled, id: id);
+
+    public static bool DrawSecondary(Rect rect, string label, in ControlInk ink, bool enabled, string id) =>
+        Button.Draw(rect, label, ink, ButtonStyle.Gray, enabled: enabled, id: id);
+
     public static float PillWidth(float labelWidth, float rowHeight, float scale) =>
         Math.Clamp(labelWidth + rowHeight * 0.6f, PillMinWidth * scale, PillMaxWidth * scale);
 

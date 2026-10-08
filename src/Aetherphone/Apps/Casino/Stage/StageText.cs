@@ -43,10 +43,11 @@ internal static class StageText
     public const float FitSlack = 0.5f;
 
     public static readonly Vector4 Strong = CasinoColors.InkTitle;
+    public static readonly Vector4 Body = CasinoColors.InkBody;
     public static readonly Vector4 Muted = CasinoColors.InkMuted;
     public static readonly Vector4 CapsuleFill = new(0.035f, 0.03f, 0.06f, 0.8f);
+    public static readonly Vector4 Shadow = new(0f, 0f, 0f, ShadowAlpha);
 
-    private static readonly Vector4 Shadow = new(0f, 0f, 0f, ShadowAlpha);
     private static readonly Vector4 CapsuleRim = new(1f, 1f, 1f, 0.08f);
 
     public static TextStyle Minimum(StageTextRole role) => role switch
@@ -67,6 +68,53 @@ internal static class StageText
             MathF.Max(1f, ShadowOffset * scale));
 
     public static bool Fits(float textWidth, float maxWidth) => textWidth <= maxWidth + FitSlack;
+
+    public static float FitScale(string text, float maxWidth, in TextStyle style, StageTextRole role)
+    {
+        var floor = MathF.Min(style.Scale, Minimum(role).Scale);
+        return Typography.FitScale(text, maxWidth, style.Scale, floor, style.Weight);
+    }
+
+    public static float StateLine(ImDrawListPtr drawList, Vector2 center, string text, float maxWidth, Vector4 ink)
+    {
+        if (text.Length == 0)
+        {
+            return 0f;
+        }
+
+        var style = Resolve(StageTextRole.State, TextStyles.Title2);
+        var shown = Typography.FitText(text, maxWidth, style);
+        var size = Typography.Measure(shown, style);
+        var origin = new Vector2(center.X - size.X * 0.5f, center.Y - size.Y * 0.5f);
+        Typography.Draw(drawList, origin + new Vector2(0f, MathF.Max(1f, ShadowOffset * UiScale.Current)), shown,
+            Shadow with { W = Shadow.W * ink.W }, style);
+        Typography.Draw(drawList, origin, shown, ink, style);
+        return size.Y;
+    }
+
+    public static Rect Plate(ImDrawListPtr drawList, Vector2 center, string text, float maxWidth, Vector4 ink,
+        in TextStyle requested, float scale)
+    {
+        if (text.Length == 0)
+        {
+            return new Rect(center, center);
+        }
+
+        var plan = Plan(StageTextRole.Label, requested, scale);
+        var shown = Typography.FitText(text, MathF.Max(1f, maxWidth - plan.PadX * 2f), plan.Style);
+        var size = Typography.Measure(shown, plan.Style);
+        var height = plan.CapsuleHeight(size.Y);
+        var half = new Vector2(size.X * 0.5f + plan.PadX, height * 0.5f);
+        var min = center - half;
+        var max = center + half;
+        Capsule(drawList, min, max, ink.W);
+        Typography.Draw(drawList, new Vector2(center.X - size.X * 0.5f, center.Y - size.Y * 0.5f), shown, ink,
+            plan.Style);
+        return new Rect(min, max);
+    }
+
+    public static Rect Status(ImDrawListPtr drawList, Vector2 center, string text, float maxWidth, float scale) =>
+        Plate(drawList, center, text, maxWidth, Strong, TextStyles.Footnote, scale);
 
     public static Vector2 State(ImDrawListPtr drawList, Vector2 center, string text, float maxWidth, MarqueeId id) =>
         State(drawList, center, text, maxWidth, id, TextStyles.Title2, Strong);
@@ -138,11 +186,12 @@ internal static class StageText
         return Line(drawList, center, text, maxWidth, id, plan.Style, Strong);
     }
 
-    public static void Capsule(ImDrawListPtr drawList, Vector2 min, Vector2 max)
+    public static void Capsule(ImDrawListPtr drawList, Vector2 min, Vector2 max, float opacity = 1f)
     {
         var radius = (max.Y - min.Y) * 0.5f;
-        Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(CapsuleFill));
-        Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(CapsuleRim), MathF.Max(1f, UiScale.Current));
+        Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(CapsuleFill with { W = CapsuleFill.W * opacity }));
+        Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(CapsuleRim with { W = CapsuleRim.W * opacity }),
+            MathF.Max(1f, UiScale.Current));
     }
 
     private static Vector2 Line(ImDrawListPtr drawList, Vector2 center, string text, float maxWidth, MarqueeId id,

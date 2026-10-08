@@ -61,11 +61,10 @@ internal sealed partial class BlackjackTable
         var ringRadius = StateRingRadius * scale;
         var reserve = timed ? (ringRadius * 2f + Metrics.Space.Sm * scale) : 0f;
         var maxWidth = felt.Width * StateLineShare - reserve;
-        var fit = Typography.FitScale(stateLabel, maxWidth, TextStyles.Title2.Scale,
-            TextStyles.Title2.Scale * StageText.MinimumFit, TextStyles.Title2.Weight);
+        var fit = StageText.FitScale(stateLabel, maxWidth, TextStyles.Title2, StageTextRole.State);
         var width = MathF.Min(maxWidth, Typography.Measure(stateLabel, fit, TextStyles.Title2.Weight).X);
         var center = new Vector2(felt.Center.X + reserve * 0.5f, y);
-        StageText.StateLine(drawList, center, stateLabel, maxWidth, StageInks.Strong);
+        StageText.StateLine(drawList, center, stateLabel, maxWidth, StageText.Strong);
         if (!timed)
         {
             return;
@@ -200,7 +199,8 @@ internal sealed partial class BlackjackTable
             var view = seatViews[seatIndex];
             if (view.Phase == SeatPhase.Empty)
             {
-                if (SeatSpot.Draw(drawList, puck, puckRadius, seated ? string.Empty : sitLabel, columnWidth, scale))
+                if (SeatSpot.DrawEmpty(drawList, puck, puckRadius, seated ? string.Empty : sitLabel, CasinoColors.Money,
+                        !seated, scale))
                 {
                     tapped = seatIndex;
                 }
@@ -253,12 +253,13 @@ internal sealed partial class BlackjackTable
         var lineHeight = (max.Y - min.Y) * 0.5f;
         var name = Typography.FitText(view.DisplayName, inner, TextStyles.Footnote);
         Typography.DrawCentered(drawList, new Vector2(puck.X, min.Y + lineHeight * 0.55f), name,
-            dimmed ? StageInks.Body : StageInks.Strong, TextStyles.Footnote);
+            dimmed ? StageText.Body : StageText.Strong, TextStyles.Footnote);
         var stack = StackLabel(currency, view.Stack, true);
         var style = TextStyles.FootnoteEmphasized;
-        var fit = Typography.FitScale(stack, inner, style.Scale, style.Scale * StageText.MinimumFit, style.Weight);
-        Typography.DrawCentered(drawList, new Vector2(puck.X, min.Y + lineHeight * 1.45f), stack,
-            dimmed ? StageInks.Body : StackInk(currency), fit, style.Weight);
+        var fit = StageText.FitScale(stack, inner, style, StageTextRole.Label);
+        Typography.DrawCentered(drawList, new Vector2(puck.X, min.Y + lineHeight * 1.45f),
+            Typography.FitText(stack, inner, fit, style.Weight), dimmed ? StageText.Body : StackInk(currency), fit,
+            style.Weight);
     }
 
     private static void DrawBalanceTitle(ImDrawListPtr drawList, int currency, long stack, Vector2 puck,
@@ -536,7 +537,7 @@ internal sealed partial class BlackjackTable
         var textX = puck.X + puckRadius + pad * 0.75f;
         var nameTop = center.Y - (nameSize.Y + stackSize.Y) * 0.5f;
         var stackTop = nameTop + nameSize.Y;
-        Typography.Draw(drawList, new Vector2(textX, nameTop), name, StageInks.Strong, TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(textX, nameTop), name, StageText.Strong, TextStyles.Footnote);
         var glyphSize = stackSize.Y * CurrencyGlyph.GlyphFraction;
         var glyphCenter = new Vector2(textX + glyphSize * 0.5f, stackTop + stackSize.Y * 0.5f);
         if (currency == CasinoCurrencies.Practice)
