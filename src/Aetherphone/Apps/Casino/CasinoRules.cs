@@ -178,6 +178,8 @@ internal static class CasinoRules
                 return OriginalsFact(index, Core.Casino.CasinoWire.KenoKind, false, ref label, ref value);
             case CasinoGames.HiLo:
                 return OriginalsFact(index, Core.Casino.CasinoWire.HiLoKind, false, ref label, ref value);
+            case CasinoGames.Race:
+                return RaceFact(index, ref label, ref value);
             default:
                 return false;
         }
@@ -204,8 +206,6 @@ internal static class CasinoRules
                 label = L.Originals.FactMines;
                 value = Range(Core.Casino.OriginalsRules.MinMines, Core.Casino.OriginalsRules.MaxMines);
                 return true;
-            case CasinoGames.Race:
-                return RaceFact(index, ref label, ref value);
             default:
                 return false;
         }
