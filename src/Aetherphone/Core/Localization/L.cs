@@ -2355,6 +2355,8 @@ internal static class L
 
         public static readonly LocString[] Release1200MogCast =
         {
+            new("changelog.r1200.101",
+                "Watch parties now hold up to 100 people, up from 16"),
             new("changelog.r1200.74",
                 "Rebuilt Good to know around cards for Playback, Together and When something goes wrong, with a list of the sites that play and the services that can't, and why"),
             new("changelog.r1200.75",

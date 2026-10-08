@@ -7828,6 +7828,7 @@
   "changelog.r1200.78": "Ekleme penceresi artık hangi sitelerin çalıştığını gösteriyor",
   "changelog.r1200.79": "Oynatılabilir bazı videoların Requested format is not available hatasıyla açılmaması düzeltildi",
   "changelog.r1200.80": "Tubi sitesini değiştirdikten sonra Tubi bağlantılarının oynamaması düzeltildi",
+  "changelog.r1200.101": "Partiler artık 16 yerine 100 kişiye kadar alabiliyor",
   "changelog.r1200.81": "Makrolar için /phone komutları eklendi: bir uygulamayı ya da ayarları aç, fotoğraf çek, Rahatsız etme ya da sessizi aç kapat, müziği yönet, fısıltı ya da arama başlat ve telefonu mini, tam ya da gizli yap",
   "changelog.r1200.82": "Ayarlar > Komutlar artık her eğik çizgi komutunu listeliyor, /phone help de aynı listeyi sohbete yazıyor",
   "changelog.r1200.83": "Adada etkinlik gösteren her uygulamanın ayar sayfasına Dynamic Island'da göster anahtarı eklendi",

@@ -7828,6 +7828,7 @@
   "changelog.r1200.78": "Das Hinzufügen-Fenster zeigt jetzt, welche Seiten funktionieren",
   "changelog.r1200.79": "Behoben, dass manche abspielbare Videos mit Requested format is not available fehlschlugen",
   "changelog.r1200.80": "Behoben, dass Tubi-Links nach einer Seitenänderung bei Tubi nicht mehr abspielten",
+  "changelog.r1200.101": "Partys fassen jetzt bis zu 100 Personen statt 16",
   "changelog.r1200.81": "/phone-Befehle für Makros hinzugefügt: eine App oder die Einstellungen öffnen, ein Foto machen, Nicht stören oder Stumm umschalten, Musik steuern, eine Tell oder einen Anruf starten und das Telefon auf Mini, Voll oder Ausgeblendet stellen",
   "changelog.r1200.82": "Einstellungen > Befehle listet jetzt jeden Slash-Befehl, und /phone help gibt dieselbe Liste im Chat aus",
   "changelog.r1200.83": "In der Dynamic Island zeigen hinzugefügt: ein Schalter auf der Einstellungsseite jeder App, die Aktivitäten auf der Insel zeigt",

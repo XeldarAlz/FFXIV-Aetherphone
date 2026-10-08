@@ -7828,6 +7828,7 @@
   "changelog.r1200.78": "添加面板现在会说明哪些网站可用",
   "changelog.r1200.79": "修复了部分可播放的视频报错 Requested format is not available 的问题",
   "changelog.r1200.80": "修复了 Tubi 网站改版后 Tubi 链接无法播放的问题",
+  "changelog.r1200.101": "聚会人数上限从 16 人提高到 100 人",
   "changelog.r1200.81": "新增用于宏的 /phone 命令：打开应用或设置、拍照、切换免打扰或静音、控制音乐、发起悄悄话或通话，以及把手机切换为迷你、完整或隐藏",
   "changelog.r1200.82": "设置 > 命令现在列出所有斜杠命令，/phone help 也会在聊天中显示同一列表",
   "changelog.r1200.83": "为每个会在岛上显示活动的应用的设置页面新增了在 Dynamic Island 中显示开关",
