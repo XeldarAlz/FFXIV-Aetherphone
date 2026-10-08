@@ -348,10 +348,11 @@ internal sealed class KenoSkin : IOriginalsSkin
             ? hitsLabel.Get(L.Originals.KenoHits, GameNumber.Label(playback.HitsShown), GameNumber.Label(playback.Picks))
             : pickedLabel.Get(L.Originals.KenoPicked, pickCount);
         var available = MathF.Max(1f, row.Max.X - clearRect.Max.X - gap);
-        var fitted = Typography.FitText(status, available, TextStyles.Footnote);
-        var size = Typography.Measure(fitted, TextStyles.Footnote);
+        var fitted = Typography.FitText(status, available, TextStyles.FootnoteEmphasized);
+        var size = Typography.Measure(fitted, TextStyles.FootnoteEmphasized);
         Typography.Draw(drawList, new Vector2(row.Max.X - size.X, row.Center.Y - size.Y * 0.5f), fitted,
-            playback.HasDraw && playback.HitsShown > 0 ? CasinoColors.Money : ui.MutedInk, TextStyles.Footnote);
+            playback.HasDraw && playback.HitsShown > 0 ? CasinoColors.Money : CasinoColors.InkTitle,
+            TextStyles.FootnoteEmphasized);
     }
 
     private void Toggle(int tile)

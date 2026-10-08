@@ -9,7 +9,7 @@ internal readonly struct BingoHallLayout
     public const float TopMin = 76f;
     public const float TopMax = 118f;
     public const float Gap = 8f;
-    public const float PodiumHeight = 54f;
+    public const float PodiumHeight = 70f;
     public const float BoardColumns = BingoRules.NumbersPerColumn + 1;
     public const float BoardMaxCell = 24f;
     public const float LabelHeight = 18f;

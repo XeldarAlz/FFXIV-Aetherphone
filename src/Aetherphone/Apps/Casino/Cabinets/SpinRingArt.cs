@@ -116,14 +116,14 @@ internal static class SpinRingArt
         for (var segment = 0; segment < DailySpinRules.SegmentCount; segment++)
         {
             var label = GameNumber.Label((int)DailySpinRules.AwardOf(segment));
-            if (Typography.Measure(label, TextStyles.Caption2).X + LabelPadding * 2f * scale > chord)
+            if (Typography.Measure(label, TextStyles.FootnoteEmphasized).X + LabelPadding * 2f * scale > chord)
             {
                 continue;
             }
 
             var at = center + WheelRingArt.Direction(rotation + segment * span) * labelRadius;
             Typography.DrawCentered(drawList, at, label, WheelRingArt.InkOn(Lit(segment, highlightSegment,
-                highlightGlow)), TextStyles.Caption2);
+                highlightGlow)), TextStyles.FootnoteEmphasized);
         }
     }
 }

@@ -42,7 +42,7 @@ internal static class PhaseRibbon
             TurnTimerRing.Draw(drawList, ringCenter, ring, remainingMs, windowSeconds, accent, scale);
             var seconds = (int)((Math.Max(0, remainingMs) + 999) / 1000);
             Typography.DrawCentered(drawList, ringCenter, GameNumber.Label(seconds), CasinoColors.InkTitle,
-                TextStyles.Caption1);
+                TextStyles.FootnoteEmphasized);
             cursor = ringCenter.X + ring + Metrics.Space.Sm * scale;
         }
 
@@ -50,13 +50,13 @@ internal static class PhaseRibbon
         if (crowd > 0)
         {
             var count = GameNumber.Label(crowd);
-            var countSize = Typography.Measure(count, TextStyles.Caption1);
+            var countSize = Typography.Measure(count, TextStyles.Footnote);
             var avatars = Math.Min(MaxAvatars, crowd);
             crowdWidth = AvatarRadius * 2f * scale + (avatars - 1) * AvatarStep * scale + Metrics.Space.Xs * scale
                 + countSize.X;
             var right = max.X - radius * 0.6f;
             Typography.Draw(drawList, new Vector2(right - countSize.X, centerY - countSize.Y * 0.5f), count,
-                CasinoColors.InkBody, TextStyles.Caption1);
+                CasinoColors.InkTitle, TextStyles.Footnote);
             var avatarRight = right - countSize.X - Metrics.Space.Xs * scale - AvatarRadius * scale;
             for (var avatar = 0; avatar < avatars; avatar++)
             {

@@ -591,7 +591,7 @@ internal sealed class RaceCabinet : ICabinetIdle
 
         var hintTop = bottom - hintHeight;
         Marquee.DrawLeftAuto(drawList, "casino.race.hint", hint, side.Min.X, hintTop, side.Width, TextStyles.Footnote,
-            builder.Ready ? CasinoColors.MoneyHighlight : CasinoColors.InkMuted);
+            builder.Ready ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle);
         var list = new Rect(side.Min, new Vector2(side.Max.X, MathF.Max(side.Min.Y, hintTop - gap * 0.5f)));
         boards.DrawTickets(drawList, list, bets?.Tickets, texts, false, false, roundIndex, deltaSeconds, scale);
     }
@@ -613,7 +613,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         var hintTop = strip.Min.Y + (rowHeight - Typography.LineHeight(TextStyles.Footnote)) * 0.5f;
         Marquee.DrawLeftAuto(drawList, "casino.race.hint", hint, strip.Min.X, hintTop,
             MathF.Max(1f, strip.Width - rideWidth), TextStyles.Footnote,
-            builder.Ready ? CasinoColors.MoneyHighlight : CasinoColors.InkMuted);
+            builder.Ready ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle);
         var list = new Rect(new Vector2(strip.Min.X, strip.Min.Y + rowHeight + 4f * scale), strip.Max);
         boards.DrawTickets(drawList, list, bets?.Tickets, texts, false, true, roundIndex, deltaSeconds, scale);
     }
@@ -767,10 +767,8 @@ internal sealed class RaceCabinet : ICabinetIdle
         Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
             Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), ui.TitleInk,
             TextStyles.SubheadlineEmphasized);
-        var top = deck.Min.Y + inset + titleHeight + Metrics.Space.Sm * scale;
-        var rect = new Rect(new Vector2(deck.Min.X + inset, top),
-            new Vector2(deck.Max.X - inset, top + Button.LargeHeight * scale));
-        if (Button.Draw(drawList, rect, Loc.T(L.Casino.Cashier), ui.Ink))
+        var row = DeckActions.Row(deck, scale);
+        if (DeckActions.DrawPrimary(row, row.Min.X, Loc.T(L.Casino.Cashier), true, ui.Ink))
         {
             openCashier();
         }

@@ -25,7 +25,7 @@ internal static class OriginalsControls
         var height = StatHeight * scale;
         var pad = StatPad * scale;
         var gap = Metrics.Space.Xs * scale;
-        var captionSize = Typography.Measure(caption, TextStyles.Caption1);
+        var captionSize = Typography.Measure(caption, TextStyles.Footnote);
         var valueSize = Typography.Measure(value, TextStyles.FootnoteEmphasized);
         var width = pad * 2f + captionSize.X + gap + valueSize.X;
         var max = new Vector2(origin.X + width, origin.Y + height);
@@ -33,14 +33,14 @@ internal static class OriginalsControls
             ImGui.GetColorU32(Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary)));
         var center = origin.Y + height * 0.5f;
         Typography.Draw(drawList, new Vector2(origin.X + pad, center - captionSize.Y * 0.5f), caption, ui.MutedInk,
-            TextStyles.Caption1);
+            TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(origin.X + pad + captionSize.X + gap, center - valueSize.Y * 0.5f), value,
             valueInk, TextStyles.FootnoteEmphasized);
         return width;
     }
 
     public static float StatWidth(string caption, string value, float scale) =>
-        StatPad * 2f * scale + Typography.Measure(caption, TextStyles.Caption1).X + Metrics.Space.Xs * scale
+        StatPad * 2f * scale + Typography.Measure(caption, TextStyles.Footnote).X + Metrics.Space.Xs * scale
         + Typography.Measure(value, TextStyles.FootnoteEmphasized).X;
 
     public static void StatRow(ImDrawListPtr drawList, Rect row, string firstCaption, string firstValue,
@@ -125,10 +125,10 @@ internal sealed class OriginalsStepper
         var number = GameNumber.Label(value);
         var numberSize = Typography.Measure(number, TextStyles.FootnoteEmphasized);
         var title = Typography.FitText(caption, MathF.Max(1f, trackRight - trackLeft - numberSize.X - 4f * scale),
-            TextStyles.Caption1);
-        var titleSize = Typography.Measure(title, TextStyles.Caption1);
+            TextStyles.Footnote);
+        var titleSize = Typography.Measure(title, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(trackLeft, labelTop + (numberSize.Y - titleSize.Y) * 0.5f), title,
-            ui.MutedInk, TextStyles.Caption1);
+            CasinoColors.InkBody, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(trackRight - numberSize.X, labelTop), number,
             enabled ? CasinoColors.InkTitle : ui.MutedInk, TextStyles.FootnoteEmphasized);
         if (!enabled)

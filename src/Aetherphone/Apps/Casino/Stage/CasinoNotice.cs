@@ -88,9 +88,6 @@ internal static class CasinoNotice
     private static TextStyle TitleStyle(CasinoNoticeKind kind) =>
         kind == CasinoNoticeKind.Card ? TextStyles.SubheadlineEmphasized : TextStyles.FootnoteEmphasized;
 
-    private static TextStyle BodyStyle(CasinoNoticeKind kind) => kind switch
-    {
-        CasinoNoticeKind.Info => TextStyles.Caption1,
-        _ => TextStyles.Footnote,
-    };
+    private static TextStyle BodyStyle(CasinoNoticeKind kind) =>
+        kind == CasinoNoticeKind.Card ? TextStyles.Subheadline : TextStyles.Footnote;
 }

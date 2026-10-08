@@ -19,7 +19,7 @@ internal static class BlackjackIdleScene
     {
         script.Advance(deltaSeconds);
         drawList.PushClipRect(rect.Min, rect.Max, true);
-        FeltTable.Draw(drawList, rect, scale);
+        FeltTable.DrawCloth(drawList, rect, true, false, scale);
         var cardWidth = MathF.Max(12f * scale, rect.Width * CardWidthShare);
         var radius = MathF.Max(8f * scale, cardWidth * 0.45f);
         var puck = new Vector2(rect.Center.X, rect.Min.Y + rect.Height * PuckFraction + radius * 0.3f);

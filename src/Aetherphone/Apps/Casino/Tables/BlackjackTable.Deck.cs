@@ -100,7 +100,7 @@ internal sealed partial class BlackjackTable
         var lit = paid ? 1f : targeted ? 0.9f : hovered ? 0.7f : 0.4f;
         var fill = amount > 0 ? CasinoColors.LightA with { W = 0.20f + 0.2f * lit } : CasinoColors.LightB with { W = 0.06f + 0.1f * lit };
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(fill), 32);
-        var ink = paid ? CasinoColors.Money : targeted ? CasinoColors.LightB : StageInks.Strong;
+        var ink = paid ? CasinoColors.Money : targeted ? CasinoColors.LightB : StageText.Strong;
         drawList.AddCircle(center, radius, ImGui.GetColorU32(ink with { W = 0.5f + 0.5f * lit }), 32,
             MathF.Max(1.2f, (targeted ? 2.2f : 1.4f) * scale));
         var label = amount > 0
@@ -108,9 +108,9 @@ internal sealed partial class BlackjackTable
             : Loc.T(bet == BlackjackSideBet.PerfectPairs ? L.Blackjack.SidePairs : L.Blackjack.SideThree);
         var style = TextStyles.FootnoteEmphasized;
         var inner = radius * 1.8f;
-        var fit = Typography.FitScale(label, inner, style.Scale, style.Scale * StageText.MinimumFit, style.Weight);
+        var fit = StageText.FitScale(label, inner, style, StageTextRole.Label);
         Typography.DrawCentered(drawList, center, Typography.FitText(label, inner, fit, style.Weight),
-            amount > 0 ? CasinoColors.Money : StageInks.Strong, fit, style.Weight);
+            amount > 0 ? CasinoColors.Money : StageText.Strong, fit, style.Weight);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -146,7 +146,7 @@ internal sealed partial class BlackjackTable
     {
         var scale = UiScale.Current;
         var deck = frame.Deck;
-        var row = PrimaryAction.Row(deck, scale);
+        var row = DeckActions.Row(deck, scale);
         var draining = snapshot.State != CasinoRoomStates.Live;
         var banked = BlackjackHosting.SeatBanked(board);
         var sitting = CasinoWire.SittingFor(state, CasinoWire.BlackjackKind);
@@ -193,14 +193,14 @@ internal sealed partial class BlackjackTable
                 ? text.Compact(L.Blackjack.Insured, seat.Insurance)
                 : Loc.T(board.InsuranceOpen ? L.Blackjack.InsuranceWaiting : L.Blackjack.BetIn);
             StageText.Status(ImGui.GetWindowDrawList(),
-                new Vector2(row.Center.X, PrimaryAction.Above(row, Button.RegularHeight * scale, scale).Center.Y),
+                new Vector2(row.Center.X, DeckActions.Above(row, Button.RegularHeight * scale, scale).Center.Y),
                 status, row.Width, scale);
         }
 
         var standLabel = seatFlow.StandQueued
             ? Loc.T(L.Casino.StandQueued)
             : stakeBlocked ? Loc.T(L.Casino.CashOut) : Loc.T(L.Casino.StandAction);
-        if (PrimaryAction.Secondary(row, standLabel, ui.Ink, !seatFlow.Busy && !seatFlow.StandQueued,
+        if (DeckActions.DrawSecondary(row, standLabel, ui.Ink, !seatFlow.Busy && !seatFlow.StandQueued,
                 "blackjack.stand"))
         {
             inlineReason = string.Empty;
@@ -214,9 +214,9 @@ internal sealed partial class BlackjackTable
         var cost = BlackjackRules.InsuranceFor(bet > 0 ? bet : projection.SeatAt(mySeat)?.Committed ?? 0);
         var enabled = !rooms.StakeInFlight;
         StageText.Status(ImGui.GetWindowDrawList(),
-            new Vector2(row.Center.X, PrimaryAction.Above(row, Button.RegularHeight * scale, scale).Center.Y),
+            new Vector2(row.Center.X, DeckActions.Above(row, Button.RegularHeight * scale, scale).Center.Y),
             Loc.T(L.Blackjack.InsuranceHint), row.Width, scale);
-        if (PrimaryAction.Draw(PrimaryAction.Slice(row, 0, 2, scale), text.Compact(L.Blackjack.InsurePill, cost),
+        if (DeckActions.DrawPrimary(DeckActions.Slice(row, 0, 2, scale), text.Compact(L.Blackjack.InsurePill, cost),
                 ui.Ink, enabled, "blackjack.insure"))
         {
             inlineReason = string.Empty;
@@ -224,7 +224,7 @@ internal sealed partial class BlackjackTable
             CasinoSfx.Play(UiSound.ChipSlide);
         }
 
-        if (PrimaryAction.Secondary(PrimaryAction.Slice(row, 1, 2, scale), Loc.T(L.Blackjack.NoInsurePill), ui.Ink,
+        if (DeckActions.DrawSecondary(DeckActions.Slice(row, 1, 2, scale), Loc.T(L.Blackjack.NoInsurePill), ui.Ink,
                 enabled, "blackjack.noInsure"))
         {
             inlineReason = string.Empty;
@@ -312,7 +312,7 @@ internal sealed partial class BlackjackTable
     {
         if (BlackjackHosting.CanRebuy(board, seatStack))
         {
-            if (PrimaryAction.Draw(row, hostedText.Rebuy(board.PracticeStack), ui.Ink, !tables.IntentInFlight,
+            if (DeckActions.DrawPrimary(row, hostedText.Rebuy(board.PracticeStack), ui.Ink, !tables.IntentInFlight,
                     "blackjack.rebuy"))
             {
                 inlineReason = string.Empty;
@@ -328,7 +328,7 @@ internal sealed partial class BlackjackTable
             return false;
         }
 
-        if (PrimaryAction.Draw(row, Loc.T(L.Tables.OpenLedger), ui.Ink, true, "blackjack.ledger"))
+        if (DeckActions.DrawPrimary(row, Loc.T(L.Tables.OpenLedger), ui.Ink, true, "blackjack.ledger"))
         {
             openLedger(roomId);
         }
@@ -370,7 +370,7 @@ internal sealed partial class BlackjackTable
                 continue;
             }
 
-            var rect = PrimaryAction.Slice(row, drawn, offered, scale);
+            var rect = DeckActions.Slice(row, drawn, offered, scale);
             drawn++;
             var wagered = bit == BlackjackRules.ActionDouble || bit == BlackjackRules.ActionSplit;
             var legal = !rooms.StakeInFlight && (!wagered || affordable);
@@ -419,7 +419,7 @@ internal sealed partial class BlackjackTable
                 : RackFor(state, board);
         if (!banked && !bought && buyIn <= 0)
         {
-            if (PrimaryAction.Draw(row, Loc.T(L.Casino.BlackjackTakeSeat), ui.Ink, true, "blackjack.cashier"))
+            if (DeckActions.DrawPrimary(row, Loc.T(L.Casino.BlackjackTakeSeat), ui.Ink, true, "blackjack.cashier"))
             {
                 openCashier();
             }
@@ -429,7 +429,7 @@ internal sealed partial class BlackjackTable
 
         var seatIndex = FirstOpenSeat(board);
         var label = seatIndex < 0 ? Loc.T(L.Casino.TableFullBadge) : Loc.T(L.Casino.SitDownAction);
-        if (PrimaryAction.Draw(row, label, ui.Ink, seatIndex >= 0 && !seatFlow.Busy, "blackjack.sit"))
+        if (DeckActions.DrawPrimary(row, label, ui.Ink, seatIndex >= 0 && !seatFlow.Busy, "blackjack.sit"))
         {
             inlineReason = string.Empty;
             seatFlow.Sit(roomId, seatIndex, buyIn, board.Phase);

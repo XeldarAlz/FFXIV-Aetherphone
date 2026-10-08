@@ -302,15 +302,7 @@ internal sealed partial class HoldemTable
         }
 
         var radius = MathF.Max(layout.PuckFor(seat), HoldemTableLayout.SitSpotRadius * scale);
-        var corner = new Vector2(radius, radius);
-        var hovered = UiInteract.Hover(center - corner, center + corner);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        HoldemArt.DrawSitSpot(drawList, center, radius, Loc.T(L.Holdem.Sit), hovered, scale);
-        if (UiInteract.Click(center - corner, center + corner, hovered))
+        if (SeatSpot.DrawEmpty(drawList, center, radius, Loc.T(L.Holdem.Sit), CasinoColors.LightA, true, scale))
         {
             BeginBuyIn(seat);
         }

@@ -133,14 +133,14 @@ internal sealed class BlackjackPit
         var titleTop = card.Min.Y + pad;
         Typography.Draw(drawList, new Vector2(card.Min.X + pad, titleTop),
             Typography.FitText(Loc.T(L.Casino.QuickSeatTitle), card.Width - pad * 2f, TextStyles.Title3),
-            StageInks.Strong, TextStyles.Title3);
+            StageText.Strong, TextStyles.Title3);
         var hintTop = titleTop + Typography.LineHeight(TextStyles.Title3);
         Typography.Draw(drawList, new Vector2(card.Min.X + pad, hintTop),
             Typography.FitText(Loc.T(L.Blackjack.PitQuickHint), card.Width - pad * 2f, TextStyles.Subheadline),
-            StageInks.Body, TextStyles.Subheadline);
+            StageText.Body, TextStyles.Subheadline);
         var pill = new Rect(new Vector2(card.Min.X + pad, card.Max.Y - pad - Button.LargeHeight * scale),
             new Vector2(card.Max.X - pad, card.Max.Y - pad));
-        if (PrimaryAction.Draw(pill, Loc.T(L.Casino.QuickSeatAction), ui.Ink, !tables.IntentInFlight,
+        if (DeckActions.DrawPrimary(pill, Loc.T(L.Casino.QuickSeatAction), ui.Ink, !tables.IntentInFlight,
                 "blackjack.pit.quick"))
         {
             tables.QuickSeat(CasinoStakeTiers.ForHouseTier(BlackjackRules.QuickTierFor(chips.Ceiling.MaxBet)));
@@ -191,18 +191,18 @@ internal sealed class BlackjackPit
         var puck = new Vector2(card.Center.X, card.Min.Y + pad + PuckRadius * scale);
         BlackjackDealer.DrawPuck(drawList, puck, PuckRadius * scale, phase, scale);
         var y = puck.Y + PuckRadius * scale + Metrics.Space.Sm * scale;
-        y = Line(drawList, Loc.T(TierNames[tier]), card.Center.X, y, inner, StageInks.Strong, TextStyles.Headline);
+        y = Line(drawList, Loc.T(TierNames[tier]), card.Center.X, y, inner, StageText.Strong, TextStyles.Headline);
         var band = text.Compacts(L.Casino.TableStakes, BlackjackRules.HouseTierMinBets[tier],
             BlackjackRules.HouseTierMaxBets[tier]);
         y = Line(drawList, band, card.Center.X, y, inner, CasinoColors.Money, TextStyles.FootnoteEmphasized);
         var dotsWidth = MathF.Min(inner, seats * 10f * scale);
         CasinoArt.SeatDots(drawList, new Vector2(card.Center.X - dotsWidth * 0.5f, y + 6f * scale), seated, seats,
-            CasinoColors.LightB, StageInks.Body with { W = 0.35f }, scale);
+            CasinoColors.LightB, StageText.Body with { W = 0.35f }, scale);
         y += 14f * scale;
         var occupancy = row is null
             ? Loc.T(L.Casino.TablesLoading)
             : text.Counts(L.Casino.TableSeats, seated, seats);
-        y = Line(drawList, occupancy, card.Center.X, y, inner, StageInks.Body, TextStyles.Footnote);
+        y = Line(drawList, occupancy, card.Center.X, y, inner, StageText.Body, TextStyles.Footnote);
         var watching = row is null ? 0 : CasinoTableFilters.SpectatorsOf(row);
         if (chips.Ceiling.MaxBet > 0 && chips.Ceiling.MaxBet < BlackjackRules.HouseTierMinBets[tier])
         {
@@ -211,7 +211,7 @@ internal sealed class BlackjackPit
         }
         else if (watching > 0)
         {
-            Line(drawList, text.Count(L.Casino.TableSpectators, watching), card.Center.X, y, inner, StageInks.Body,
+            Line(drawList, text.Count(L.Casino.TableSpectators, watching), card.Center.X, y, inner, StageText.Body,
                 TextStyles.Footnote);
         }
 
@@ -300,13 +300,13 @@ internal sealed class BlackjackPit
         var origin = ImGui.GetCursorScreenPos();
         var height = Button.LargeHeight * scale;
         var row = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
-        if (PrimaryAction.Secondary(PrimaryAction.Slice(row, 0, 2, scale), Loc.T(L.Blackjack.PitBrowse), ui.Ink,
+        if (DeckActions.DrawSecondary(DeckActions.Slice(row, 0, 2, scale), Loc.T(L.Blackjack.PitBrowse), ui.Ink,
                 true, "blackjack.pit.browse"))
         {
             openBrowser();
         }
 
-        if (PrimaryAction.Secondary(PrimaryAction.Slice(row, 1, 2, scale), Loc.T(L.Tables.HostTitle), ui.Ink, true,
+        if (DeckActions.DrawSecondary(DeckActions.Slice(row, 1, 2, scale), Loc.T(L.Tables.HostTitle), ui.Ink, true,
                 "blackjack.pit.host"))
         {
             openHostSheet();

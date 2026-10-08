@@ -73,22 +73,22 @@ internal static class TableRow
             TextStyles.Footnote);
 
         var seatsInk = view.Full ? ui.MutedInk : ui.Accent;
-        var seats = Typography.FitText(view.Seats, fullWidth * 0.5f, TextStyles.Caption1);
+        var seats = Typography.FitText(view.Seats, fullWidth * 0.5f, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 50f * scale), seats, seatsInk,
-            TextStyles.Caption1);
+            TextStyles.Footnote);
         if (view.Spectators.Length > 0)
         {
-            var seatsWidth = Typography.Measure(seats, TextStyles.Caption1).X;
+            var seatsWidth = Typography.Measure(seats, TextStyles.Footnote).X;
             Typography.Draw(drawList, new Vector2(textLeft + seatsWidth + 10f * scale, row.Min.Y + 50f * scale),
-                Typography.FitText(view.Spectators, fullWidth - seatsWidth - 10f * scale, TextStyles.Caption1),
-                ui.MutedInk, TextStyles.Caption1);
+                Typography.FitText(view.Spectators, fullWidth - seatsWidth - 10f * scale, TextStyles.Footnote),
+                ui.MutedInk, TextStyles.Footnote);
         }
 
         if (view.Reputation.Length > 0)
         {
             Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + (Height - 4f) * scale),
-                Typography.FitText(view.Reputation, fullWidth, TextStyles.Caption1),
-                view.ReputationWarns ? ui.Accent : GilTint, TextStyles.Caption1);
+                Typography.FitText(view.Reputation, fullWidth, TextStyles.Footnote),
+                view.ReputationWarns ? ui.Accent : GilTint, TextStyles.Footnote);
         }
 
         return UiInteract.Click(row.Min, row.Max, hovered);
@@ -103,7 +103,7 @@ internal static class TableRow
         }
 
         var tint = CurrencyTint(view.Currency, ui.Accent);
-        var labelSize = Typography.Measure(view.CurrencyLabel, TextStyles.Caption1);
+        var labelSize = Typography.Measure(view.CurrencyLabel, TextStyles.Footnote);
         var chipHeight = labelSize.Y + 6f * scale;
         var right = row.Max.X - 14f * scale - badgeWidth;
         var chipMin = new Vector2(right - labelSize.X - 16f * scale, row.Min.Y + 12f * scale);
@@ -115,7 +115,7 @@ internal static class TableRow
                 ImGui.GetColorU32(Palette.WithAlpha(tint, 0.55f)), 1f * scale);
         }
 
-        Typography.DrawCentered(drawList, (chipMin + chipMax) * 0.5f, view.CurrencyLabel, tint, TextStyles.Caption1);
+        Typography.DrawCentered(drawList, (chipMin + chipMax) * 0.5f, view.CurrencyLabel, tint, TextStyles.Footnote);
         return chipMax.X - chipMin.X + 8f * scale;
     }
 
@@ -127,7 +127,7 @@ internal static class TableRow
             return 0f;
         }
 
-        var labelSize = Typography.Measure(label, TextStyles.Caption1);
+        var labelSize = Typography.Measure(label, TextStyles.Footnote);
         var chipHeight = labelSize.Y + 6f * scale;
         var chipMax = new Vector2(row.Max.X - 14f * scale, row.Min.Y + 12f * scale + chipHeight);
         var chipMin = new Vector2(chipMax.X - labelSize.X - 16f * scale, row.Min.Y + 12f * scale);
@@ -135,7 +135,7 @@ internal static class TableRow
         Squircle.Stroke(drawList, chipMin, chipMax, chipHeight * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.30f)), 1f * scale);
         Typography.DrawCentered(drawList, (chipMin + chipMax) * 0.5f, label,
-            view.Full || view.Draining || view.Paused ? ui.MutedInk : ui.Accent, TextStyles.Caption1);
+            view.Full || view.Draining || view.Paused ? ui.MutedInk : ui.Accent, TextStyles.Footnote);
         return chipMax.X - chipMin.X + 8f * scale;
     }
 

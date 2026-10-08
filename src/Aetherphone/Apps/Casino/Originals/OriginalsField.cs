@@ -37,10 +37,10 @@ internal sealed class OriginalsField
         SearchBar.Surface(drawList, field, ui.Ink);
         var capsule = SearchBar.Capsule(field);
         var inset = capsule.Height * 0.4f;
-        var captionText = Typography.FitText(caption, capsule.Width * 0.5f, TextStyles.Caption1);
-        var captionSize = Typography.Measure(captionText, TextStyles.Caption1);
+        var captionText = Typography.FitText(caption, capsule.Width * 0.5f, TextStyles.Footnote);
+        var captionSize = Typography.Measure(captionText, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(capsule.Min.X + inset, capsule.Center.Y - captionSize.Y * 0.5f),
-            captionText, ui.MutedInk, TextStyles.Caption1);
+            captionText, ui.MutedInk, TextStyles.Footnote);
         var valueLeft = capsule.Min.X + inset + captionSize.X + Metrics.Space.Xs * UiScale.Current;
         var valueWidth = MathF.Max(1f, capsule.Max.X - inset - valueLeft);
         if (editing && enabled)

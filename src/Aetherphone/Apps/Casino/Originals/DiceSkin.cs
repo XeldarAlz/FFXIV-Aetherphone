@@ -267,7 +267,8 @@ internal sealed class DiceSkin : IOriginalsSkin
     {
         if (!playback.HasRoll)
         {
-            Typography.DrawCentered(drawList, center, OriginalsText.Decimal(target), ui.MutedInk, TextStyles.LargeTitle);
+            Typography.DrawCentered(drawList, center, OriginalsText.Decimal(target), CasinoColors.InkBody,
+                TextStyles.LargeTitle);
             return;
         }
 
@@ -315,9 +316,9 @@ internal sealed class DiceSkin : IOriginalsSkin
             drawList.AddLine(new Vector2(x, top), new Vector2(x, top + TickLength * scale),
                 ImGui.GetColorU32(ui.MutedInk), MathF.Max(1f, scale));
             var label = GameNumber.Label(value);
-            var size = Typography.Measure(label, TextStyles.Caption1);
+            var size = Typography.Measure(label, TextStyles.Footnote);
             Typography.Draw(drawList, new Vector2(x - size.X * 0.5f, top + TickLength * scale + 2f * scale), label,
-                ui.MutedInk, TextStyles.Caption1);
+                CasinoColors.InkBody, TextStyles.Footnote);
         }
     }
 

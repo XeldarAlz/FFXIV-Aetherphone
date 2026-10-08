@@ -18,7 +18,7 @@ internal sealed class DailySpinCabinet : ICabinetIdle
     private const float SignMin = 34f;
     private const float SignMax = 56f;
     private const float SignFill = 0.78f;
-    private const float FooterHeight = 112f;
+    private const float FooterHeight = 124f;
     private const float WheelPad = 10f;
     private const float SpotSpread = 0.2f;
     private const float SpotSweep = 0.22f;
@@ -27,9 +27,11 @@ internal sealed class DailySpinCabinet : ICabinetIdle
     private const float RestSpot = 0.16f;
     private const float SpinSpot = 0.26f;
     private const float TopSpot = 0.42f;
-    private const float ButtonShare = 0.64f;
     private const float FlickerRate = 7f;
     private const int FlickerEvery = 23;
+
+    private static readonly MarqueeId BannerMarquee = new("casino.spin.banner", 0L);
+    private static readonly MarqueeId NoteMarquee = new("casino.spin.note", 0L);
 
     private readonly CasinoSpinStore spin;
     private readonly DailySpinPlayback playback = new();
@@ -100,8 +102,8 @@ internal sealed class DailySpinCabinet : ICabinetIdle
         var footerTop = safe.Max.Y - FooterHeight * scale;
         var intro = Loc.T(L.Casino.SpinIntro);
         var introTop = safe.Min.Y + signHeight;
-        var introHeight = Typography.DrawWrappedLeft(new Vector2(safe.Min.X, introTop), intro, CasinoColors.InkBody,
-            TextStyles.Caption1, safe.Width);
+        var introHeight = Typography.DrawWrappedLeft(new Vector2(safe.Min.X, introTop), intro, CasinoColors.InkTitle,
+            TextStyles.Subheadline, safe.Width);
         var wheelTop = introTop + introHeight;
         var wheelArea = new Rect(new Vector2(safe.Min.X, wheelTop),
             new Vector2(safe.Max.X, MathF.Max(wheelTop, footerTop)));
@@ -234,7 +236,7 @@ internal sealed class DailySpinCabinet : ICabinetIdle
                 y - height - Metrics.Space.Sm * scale, width, scale);
         }
 
-        var bannerHeight = Typography.LineHeight(TextStyles.Title3);
+        var bannerHeight = Typography.LineHeight(TextStyles.Title2);
         var bannerCenter = new Vector2(footer.Center.X, y + bannerHeight * 0.5f);
         DrawBanner(drawList, claim, bannerCenter, width, delta);
         y += bannerHeight + Metrics.Space.Sm * scale;
@@ -245,12 +247,10 @@ internal sealed class DailySpinCabinet : ICabinetIdle
 
         if (claim != DailySpinClaim.Claimed)
         {
-            var buttonWidth = width * ButtonShare;
-            var button = new Rect(new Vector2(footer.Center.X - buttonWidth * 0.5f, y),
-                new Vector2(footer.Center.X + buttonWidth * 0.5f, y + Button.LargeHeight * scale));
+            var button = new Rect(new Vector2(footer.Min.X, y),
+                new Vector2(footer.Max.X, y + DeckActions.PrimaryHeight * scale));
             var enabled = DailySpinStatus.CanClaim(answer, spin.Busy) && !frame.Blocked;
-            var pressed = Button.Draw(button, Loc.T(L.Casino.SpinAction), ui.Ink, ButtonStyle.Prominent,
-                enabled: enabled);
+            var pressed = DeckActions.DrawPrimary(button, button.Min.X, Loc.T(L.Casino.SpinAction), enabled, ui.Ink);
             if (!pressed && !(enabled && stage.RepeatPressed()))
             {
                 return;
@@ -262,43 +262,38 @@ internal sealed class DailySpinCabinet : ICabinetIdle
             return;
         }
 
-        var reset = Typography.FitText(NextText(answer), width, TextStyles.Footnote);
-        Typography.DrawCentered(drawList, new Vector2(footer.Center.X, y + Typography.LineHeight(TextStyles.Footnote)),
-            reset, CasinoColors.InkMuted, TextStyles.Footnote);
+        var resetCenter = new Vector2(footer.Center.X, y + StageText.MinimumCapsuleHeight * scale);
+        StageText.Status(drawList, resetCenter, NextText(answer), width, NoteMarquee);
     }
 
     private void DrawBanner(ImDrawListPtr drawList, DailySpinClaim claim, Vector2 center, float width, float delta)
     {
         if (playback.Spinning)
         {
-            Typography.DrawCentered(drawList, center,
-                Typography.FitText(Loc.T(L.Casino.SpinTurning), width, TextStyles.SubheadlineEmphasized),
-                CasinoColors.Money, TextStyles.SubheadlineEmphasized);
+            StageText.State(drawList, center, Loc.T(L.Casino.SpinTurning), width, BannerMarquee, TextStyles.Title2,
+                CasinoColors.Money);
             return;
         }
 
         if (claim != DailySpinClaim.Claimed)
         {
             var note = topLabel.Get(L.Casino.SpinTopNote, (int)DailySpinRules.TopAward);
-            Typography.DrawCentered(drawList, center, Typography.FitText(note, width, TextStyles.Footnote),
-                CasinoColors.InkBody, TextStyles.Footnote);
+            StageText.Status(drawList, center, note, width, NoteMarquee);
             return;
         }
 
         var amount = playback.Amount;
         if (amount <= 0)
         {
-            Typography.DrawCentered(drawList, center,
-                Typography.FitText(Loc.T(L.Casino.SpinClaimedTitle), width, TextStyles.SubheadlineEmphasized),
-                CasinoColors.InkTitle, TextStyles.SubheadlineEmphasized);
+            StageText.State(drawList, center, Loc.T(L.Casino.SpinClaimedTitle), width, BannerMarquee);
             return;
         }
 
         coinRoll.Update(amount, delta);
         var text = Typography.FitText(wonLabel.Get(L.Casino.SpinWonBanner, (int)Math.Min(coinRoll.Display, int.MaxValue)),
-            width, TextStyles.Title3);
-        Typography.DrawCentered(drawList, center, text, CasinoColors.Money, TextStyles.Title3.Scale * coinRoll.PopScale,
-            TextStyles.Title3.Weight);
+            width, TextStyles.Title2);
+        Typography.DrawCentered(drawList, center, text, CasinoColors.Money, TextStyles.Title2.Scale * coinRoll.PopScale,
+            TextStyles.Title2.Weight);
     }
 
     private string NextText(CasinoDailySpinDto? answer)

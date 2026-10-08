@@ -11,8 +11,44 @@ internal enum StageInk : byte
     Dark,
 }
 
+internal enum FeltStyle : byte
+{
+    Classic,
+    Night,
+}
+
 internal sealed class StageBackdrop
 {
+    public const float NightFeltLampY = 0.42f;
+    public const float NightWeaveAlpha = 0.02f;
+    public const float NightWeaveShadeAlpha = 0.05f;
+    public const float RailWidth = 12f;
+    public const float ConeAlpha = 0.03f;
+    public const int ConeLayers = 5;
+    public const float ConeLayerGain = 1.6f;
+    public const float RoseHazeAlpha = 0.07f;
+    public const float CyanHazeAlpha = 0.055f;
+    public const float HazeBlobShare = 0.45f;
+    public const float SkylineGlowAlpha = 0.10f;
+
+    public static readonly Vector4 NightFeltCenter = new(0.14f, 0.235f, 0.185f, 1f);
+    public static readonly Vector4 NightFeltEdge = new(0.05f, 0.095f, 0.075f, 1f);
+    public static readonly Vector4 RailWood = new(0.15f, 0.085f, 0.045f, 1f);
+    public static readonly Vector4 RailShine = new(0.86f, 0.62f, 0.34f, 1f);
+    public static readonly Vector4 StripTop = new(0.039f, 0.027f, 0.086f, 1f);
+    public static readonly Vector4 StripWarmTop = new(0.085f, 0.040f, 0.035f, 1f);
+    public static readonly Vector4 WindowLit = new(1f, 0.80f, 0.48f, 1f);
+    public static readonly Vector4 NeonRose = new(1f, 0.239f, 0.604f, 1f);
+    public static readonly Vector4 NeonCyan = new(0.180f, 0.902f, 1f, 1f);
+    public static readonly Vector4 ArenaTop = new(0.024f, 0.063f, 0.110f, 1f);
+    public static readonly Vector4 Floodlight = new(0.93f, 0.96f, 1f, 1f);
+    private const int NightPoolLayers = 16;
+    private const int EllipseSegments = 48;
+    private const float NightWeavePitch = 7f;
+    private const float RailShadowWidth = 14f;
+    private const float RailShadowAlpha = 0.45f;
+    private const float RailShineAlpha = 0.22f;
+
     private const int LayerCount = 3;
     private const float PointerSmoothSeconds = 0.35f;
     private const float SweepSeconds = 0.6f;
@@ -40,7 +76,6 @@ internal sealed class StageBackdrop
     private const int BokehCount = 24;
     private const int CrowdHeads = 30;
     private const int PhoneLightCount = 60;
-    private const int ConeLayers = 5;
     private const float SkylineBase = 0.80f;
     private const float CrowdTop = 0.66f;
     private const float CrowdBottom = 0.82f;
@@ -92,19 +127,12 @@ internal sealed class StageBackdrop
     private static readonly float[] PhonePhase = new float[PhoneLightCount];
     private static readonly float[] TowerX = { 0.10f, 0.90f };
 
-    private static readonly Vector4 StripTop = new(0.039f, 0.027f, 0.086f, 1f);
     private static readonly Vector4 StripBottom = new(0.016f, 0.012f, 0.035f, 1f);
-    private static readonly Vector4 StripWarmTop = new(0.085f, 0.040f, 0.035f, 1f);
     private static readonly Vector4 StripWarmBottom = new(0.030f, 0.014f, 0.012f, 1f);
     private static readonly Vector4 StripSkyline = new(0.075f, 0.055f, 0.13f, 1f);
-    private static readonly Vector4 WindowLit = new(1f, 0.80f, 0.48f, 1f);
-    private static readonly Vector4 NeonRose = new(1f, 0.239f, 0.604f, 1f);
-    private static readonly Vector4 NeonCyan = new(0.180f, 0.902f, 1f, 1f);
     private static readonly Vector4 BokehGold = new(1f, 0.788f, 0.290f, 1f);
-    private static readonly Vector4 ArenaTop = new(0.024f, 0.063f, 0.110f, 1f);
     private static readonly Vector4 ArenaBottom = new(0.008f, 0.024f, 0.047f, 1f);
     private static readonly Vector4 ArenaSteel = new(0.10f, 0.14f, 0.20f, 1f);
-    private static readonly Vector4 Floodlight = new(0.93f, 0.96f, 1f, 1f);
     private static readonly Vector4 CrowdShade = new(0.020f, 0.035f, 0.060f, 1f);
     private static readonly Vector4 PhoneGlow = new(0.82f, 0.90f, 1f, 1f);
     private static readonly Vector4 TrackDust = new(0.86f, 0.72f, 0.52f, 1f);
@@ -163,6 +191,8 @@ internal sealed class StageBackdrop
     private float skyProgress;
     private float lampPool;
     private float warmth;
+    private FeltStyle feltStyle;
+    private bool feltRail;
     private Vector4 ground = NearBlack;
 
     static StageBackdrop()
@@ -263,6 +293,14 @@ internal sealed class StageBackdrop
         cameraSeen = false;
         lampPool = 0f;
         warmth = 0f;
+        feltStyle = FeltStyle.Classic;
+        feltRail = false;
+    }
+
+    public void SetFeltStyle(FeltStyle style, bool rail)
+    {
+        feltStyle = style;
+        feltRail = rail;
     }
 
     public void SetSky(float progress)
@@ -513,6 +551,14 @@ internal sealed class StageBackdrop
 
     private void DrawFelt(ImDrawListPtr drawList, Rect full, Vector4 accent, float scale)
     {
+        if (feltStyle == FeltStyle.Night)
+        {
+            var lamp = new Vector2(full.Center.X, full.Min.Y + full.Height * NightFeltLampY) + LayerOffset(1, scale) * 0.5f;
+            NightFelt(drawList, full, lamp, LayerOffset(0, scale), feltRail, scale);
+            ground = Vector4.Lerp(NightFeltEdge, NightFeltCenter, 0.5f);
+            return;
+        }
+
         Gradient(drawList, full, Palette.ShadeToLuminance(accent, 0.35f), Palette.ShadeToLuminance(accent, 0.22f));
         var far = LayerOffset(0, scale);
         var spot = new Vector2(full.Center.X, full.Min.Y - full.Width * 0.25f) + far;
@@ -547,6 +593,84 @@ internal sealed class StageBackdrop
         }
     }
 
+    public static void NightFelt(ImDrawListPtr drawList, Rect rect, Vector2 lamp, Vector2 weaveOffset, bool rail,
+        float scale) =>
+        NightFelt(drawList, rect, lamp, weaveOffset, rail, NightFeltCenter, NightFeltEdge, scale);
+
+    public static void NightFelt(ImDrawListPtr drawList, Rect rect, Vector2 lamp, Vector2 weaveOffset, bool rail,
+        Vector4 center, Vector4 edge, float scale)
+    {
+        drawList.PushClipRect(rect.Min, rect.Max, true);
+        drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(edge));
+        var reach = new Vector2(MathF.Max(lamp.X - rect.Min.X, rect.Max.X - lamp.X),
+            MathF.Max(lamp.Y - rect.Min.Y, rect.Max.Y - lamp.Y));
+        for (var layer = 0; layer < NightPoolLayers; layer++)
+        {
+            var share = layer / (float)(NightPoolLayers - 1);
+            var radii = reach * (1f - layer / (float)NightPoolLayers);
+            FillEllipse(drawList, lamp, radii,
+                ImGui.GetColorU32(Vector4.Lerp(edge, center, Easing.SmoothStep(share))));
+        }
+
+        DrawWeave(drawList, rect, weaveOffset, scale);
+        if (rail)
+        {
+            DrawRail(drawList, rect, scale);
+        }
+
+        drawList.PopClipRect();
+    }
+
+    private static void FillEllipse(ImDrawListPtr drawList, Vector2 center, Vector2 radii, uint color)
+    {
+        for (var step = 0; step < EllipseSegments; step++)
+        {
+            var angle = step * MathF.Tau / EllipseSegments;
+            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radii.X, MathF.Sin(angle) * radii.Y));
+        }
+
+        drawList.PathFillConvex(color);
+    }
+
+    private static void DrawWeave(ImDrawListPtr drawList, Rect rect, Vector2 offset, float scale)
+    {
+        var pitch = NightWeavePitch * scale;
+        var light = ImGui.GetColorU32(White with { W = NightWeaveAlpha });
+        var shade = ImGui.GetColorU32(Black with { W = NightWeaveShadeAlpha });
+        var thickness = MathF.Max(1f, scale);
+        var start = rect.Min.X - rect.Height + Wrap(offset.X + offset.Y, pitch);
+        for (var x = start; x < rect.Max.X; x += pitch)
+        {
+            drawList.AddLine(new Vector2(x, rect.Max.Y), new Vector2(x + rect.Height, rect.Min.Y), light, thickness);
+            drawList.AddLine(new Vector2(x + pitch * 0.5f, rect.Min.Y),
+                new Vector2(x + pitch * 0.5f + rect.Height, rect.Max.Y), shade, thickness);
+        }
+    }
+
+    private static void DrawRail(ImDrawListPtr drawList, Rect rect, float scale)
+    {
+        var width = RailWidth * scale;
+        var wood = ImGui.GetColorU32(RailWood);
+        var inner = new Rect(rect.Min + new Vector2(width, width), rect.Max - new Vector2(width, width));
+        drawList.AddRectFilled(rect.Min, new Vector2(rect.Max.X, inner.Min.Y), wood);
+        drawList.AddRectFilled(new Vector2(rect.Min.X, inner.Max.Y), rect.Max, wood);
+        drawList.AddRectFilled(new Vector2(rect.Min.X, inner.Min.Y), new Vector2(inner.Min.X, inner.Max.Y), wood);
+        drawList.AddRectFilled(new Vector2(inner.Max.X, inner.Min.Y), new Vector2(rect.Max.X, inner.Max.Y), wood);
+        var shadow = RailShadowWidth * scale;
+        var dark = ImGui.GetColorU32(Black with { W = RailShadowAlpha });
+        var clear = ImGui.GetColorU32(Black with { W = 0f });
+        drawList.AddRectFilledMultiColor(inner.Min, new Vector2(inner.Max.X, inner.Min.Y + shadow), dark, dark, clear,
+            clear);
+        drawList.AddRectFilledMultiColor(new Vector2(inner.Min.X, inner.Max.Y - shadow), inner.Max, clear, clear, dark,
+            dark);
+        drawList.AddRectFilledMultiColor(inner.Min, new Vector2(inner.Min.X + shadow, inner.Max.Y), dark, clear, clear,
+            dark);
+        drawList.AddRectFilledMultiColor(new Vector2(inner.Max.X - shadow, inner.Min.Y), inner.Max, clear, dark, dark,
+            clear);
+        drawList.AddRect(inner.Min, inner.Max, ImGui.GetColorU32(RailShine with { W = RailShineAlpha }), 0f,
+            ImDrawFlags.None, MathF.Max(1f, scale));
+    }
+
     private void DrawStrip(ImDrawListPtr drawList, Rect full, float scale)
     {
         Gradient(drawList, full, Vector4.Lerp(StripTop, StripWarmTop, warmth),
@@ -556,8 +680,8 @@ internal sealed class StageBackdrop
         var glowColor = Vector4.Lerp(NeonRose, WindowLit, warmth);
         drawList.AddRectFilledMultiColor(new Vector2(full.Min.X, horizon - full.Height * 0.22f),
             new Vector2(full.Max.X, horizon), ImGui.GetColorU32(glowColor with { W = 0f }),
-            ImGui.GetColorU32(glowColor with { W = 0f }), ImGui.GetColorU32(glowColor with { W = 0.10f }),
-            ImGui.GetColorU32(glowColor with { W = 0.10f }));
+            ImGui.GetColorU32(glowColor with { W = 0f }), ImGui.GetColorU32(glowColor with { W = SkylineGlowAlpha }),
+            ImGui.GetColorU32(glowColor with { W = SkylineGlowAlpha }));
         var skyline = ImGui.GetColorU32(StripSkyline);
         for (var index = 0; index < BuildingCount; index++)
         {
@@ -582,8 +706,8 @@ internal sealed class StageBackdrop
         }
 
         var mid = LayerOffset(1, scale);
-        DrawHaze(drawList, full, mid, NeonRose, 0.30f, HazeDrift * scale, 0.07f);
-        DrawHaze(drawList, full, mid, NeonCyan, 0.50f, -HazeDrift * scale, 0.055f);
+        DrawHaze(drawList, full, mid, NeonRose, 0.30f, HazeDrift * scale, RoseHazeAlpha);
+        DrawHaze(drawList, full, mid, NeonCyan, 0.50f, -HazeDrift * scale, CyanHazeAlpha);
         Bokeh(drawList, full, time, 1f, LayerOffset(2, scale), scale);
     }
 
@@ -607,7 +731,7 @@ internal sealed class StageBackdrop
             for (var layer = 3; layer >= 1; layer--)
             {
                 drawList.AddCircleFilled(center, full.Width * (0.10f + layer * 0.07f),
-                    ImGui.GetColorU32(tint with { W = alpha * 0.45f / layer }), 32);
+                    ImGui.GetColorU32(tint with { W = alpha * HazeBlobShare / layer }), 32);
             }
         }
     }
@@ -661,7 +785,7 @@ internal sealed class StageBackdrop
             {
                 var sweep = MathF.Sin(time * (0.18f + cone * 0.07f) + tower * 1.9f + cone) * 0.12f;
                 var angle = MathF.PI * 0.5f - inward * (0.42f + cone * 0.30f) + sweep;
-                Cone(drawList, top, angle, full.Height * 0.85f, 0.10f + cone * 0.02f, Floodlight, 0.05f);
+                Cone(drawList, top, angle, full.Height * 0.85f, 0.10f + cone * 0.02f, Floodlight, ConeAlpha);
             }
         }
 
@@ -706,7 +830,7 @@ internal sealed class StageBackdrop
             var reach = length * (0.7f + 0.3f * share);
             var left = origin + new Vector2(MathF.Cos(angle - half), MathF.Sin(angle - half)) * reach;
             var right = origin + new Vector2(MathF.Cos(angle + half), MathF.Sin(angle + half)) * reach;
-            drawList.AddTriangleFilled(origin, left, right, ImGui.GetColorU32(color with { W = alpha / ConeLayers * 1.6f }));
+            drawList.AddTriangleFilled(origin, left, right, ImGui.GetColorU32(color with { W = alpha / ConeLayers * ConeLayerGain }));
         }
     }
 

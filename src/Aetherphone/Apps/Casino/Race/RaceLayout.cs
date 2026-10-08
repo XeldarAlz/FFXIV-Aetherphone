@@ -10,7 +10,7 @@ internal readonly struct RaceLayout
     public const float SideMin = 250f;
     public const float SideMax = 330f;
     public const float TickerHeight = 30f;
-    public const float TickerHeightStacked = 56f;
+    public const float TickerHeightStacked = 64f;
     public const float TicketsStripHeight = 74f;
     public const float RideHeight = 30f;
 

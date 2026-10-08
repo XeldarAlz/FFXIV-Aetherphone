@@ -471,7 +471,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
         if (route.Screen == CasinoScreen.Table)
         {
-            return new CasinoStageSpec(CasinoGames.Blackjack, L.Casino.GameBlackjack, Backdrop.Strip,
+            return new CasinoStageSpec(CasinoGames.Blackjack, L.Casino.GameBlackjack, Backdrop.Felt,
                 DeckHeight: blackjack.DeckHeight,
                 Practice: blackjack.Currency == Core.Casino.CasinoCurrencies.Practice,
                 ReturnTenths: Core.Casino.BlackjackRules.ReturnTenths, Extra: L.Venue.TableSheet);
