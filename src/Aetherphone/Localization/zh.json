@@ -9007,6 +9007,8 @@
   "casino.strip.realityBody": "{1} 分钟内玩了 {0} 局。本次输赢：{2} 筹码。",
   "casino.strip.keepPlaying": "继续游戏",
   "casino.strip.takeBreak": "休息一下",
+  "casino.strip.reasonCeiling": "这笔投注高于你当前的最高投注。请降低金额，或提升等级、增加余额来提高上限。",
+  "casino.strip.reasonLadder": "投注按固定档位变化。请选择其中一个档位后重试。",
   "conduct.casino.title": "以太赌场场馆规则",
   "conduct.casino.intro": "入座之前，请先阅读场馆规则。",
   "conduct.casino.playMoney.title": "仅限游戏币",

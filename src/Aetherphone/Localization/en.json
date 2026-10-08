@@ -9007,6 +9007,8 @@
   "casino.strip.realityBody": "{0} rounds in {1} minutes. Session net: {2} chips.",
   "casino.strip.keepPlaying": "Keep playing",
   "casino.strip.takeBreak": "Take a break",
+  "casino.strip.reasonCeiling": "That bet is above your max bet right now. Lower it, or grow your level or balance to raise the cap.",
+  "casino.strip.reasonLadder": "Bets move in ladder steps. Pick one of the steps and try again.",
   "conduct.casino.title": "Gamba House Rules",
   "conduct.casino.intro": "Before you sit down at a table, please read the house rules.",
   "conduct.casino.playMoney.title": "Play Money Only",

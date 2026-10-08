@@ -9007,6 +9007,8 @@
   "casino.strip.realityBody": "{0} manches en {1} minutes. Bilan de la session : {2} jetons.",
   "casino.strip.keepPlaying": "Continuer à jouer",
   "casino.strip.takeBreak": "Faire une pause",
+  "casino.strip.reasonCeiling": "Cette mise dépasse ta mise maximale actuelle. Baisse-la, ou fais grimper ton niveau ou ton solde pour relever le plafond.",
+  "casino.strip.reasonLadder": "Les mises suivent des paliers fixes. Choisis l'un des paliers et réessaie.",
   "conduct.casino.title": "Règles de la maison de Gamba",
   "conduct.casino.intro": "Avant de t'asseoir à une table, lis les règles de la maison.",
   "conduct.casino.playMoney.title": "Argent fictif uniquement",

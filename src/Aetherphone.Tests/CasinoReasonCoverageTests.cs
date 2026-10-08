@@ -42,6 +42,15 @@ public sealed class CasinoReasonCoverageTests
     }
 
     [Fact]
+    public void TheEconomyV3RefusalsAreCovered()
+    {
+        Assert.Contains("ceiling", CasinoReasons.All);
+        Assert.Contains("ladder", CasinoReasons.All);
+        Assert.Equal(L.Strip.ReasonCeiling.Key, CasinoReasons.MessageFor("ceiling").Key);
+        Assert.Equal(L.Strip.ReasonLadder.Key, CasinoReasons.MessageFor("ladder").Key);
+    }
+
+    [Fact]
     public void TheTableVocabularyIsInTheList()
     {
         Assert.Contains(CasinoReasons.Full, CasinoReasons.All);

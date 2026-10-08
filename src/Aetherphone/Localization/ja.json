@@ -9007,6 +9007,8 @@
   "casino.strip.realityBody": "{1}分で{0}ラウンド。セッションの収支：{2}チップ。",
   "casino.strip.keepPlaying": "続けて遊ぶ",
   "casino.strip.takeBreak": "休憩する",
+  "casino.strip.reasonCeiling": "このベットは現在の最大ベットを超えています。額を下げるか、レベルや残高を上げて上限を引き上げてください。",
+  "casino.strip.reasonLadder": "ベットは決まった段階で動きます。いずれかの段階を選んでもう一度お試しください。",
   "conduct.casino.title": "Gambaのハウスルール",
   "conduct.casino.intro": "テーブルに着く前に、ハウスルールをお読みください。",
   "conduct.casino.playMoney.title": "遊びのお金だけ",

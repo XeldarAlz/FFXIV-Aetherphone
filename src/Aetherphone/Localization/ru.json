@@ -9007,6 +9007,8 @@
   "casino.strip.realityBody": "{0} раундов за {1} мин. Итог сессии: {2} фишек.",
   "casino.strip.keepPlaying": "Играть дальше",
   "casino.strip.takeBreak": "Сделать перерыв",
+  "casino.strip.reasonCeiling": "Эта ставка сейчас выше вашей максимальной. Уменьшите её или поднимите уровень либо баланс, чтобы увеличить лимит.",
+  "casino.strip.reasonLadder": "Ставки идут фиксированными ступенями. Выберите одну из ступеней и попробуйте снова.",
   "conduct.casino.title": "Правила заведения Gamba",
   "conduct.casino.intro": "Прежде чем сесть за стол, прочитайте правила заведения.",
   "conduct.casino.playMoney.title": "Только игровые деньги",

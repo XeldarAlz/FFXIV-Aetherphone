@@ -10637,6 +10637,8 @@ internal static class L
         public static readonly LocString RealityBody = new("casino.strip.realityBody", "{0} rounds in {1} minutes. Session net: {2} chips.");
         public static readonly LocString KeepPlaying = new("casino.strip.keepPlaying", "Keep playing");
         public static readonly LocString TakeBreak = new("casino.strip.takeBreak", "Take a break");
+        public static readonly LocString ReasonCeiling = new("casino.strip.reasonCeiling", "That bet is above your max bet right now. Lower it, or grow your level or balance to raise the cap.");
+        public static readonly LocString ReasonLadder = new("casino.strip.reasonLadder", "Bets move in ladder steps. Pick one of the steps and try again.");
     }
 
     internal static class Catalogs

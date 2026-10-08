@@ -9007,6 +9007,8 @@
   "casino.strip.realityBody": "{0} rondas en {1} minutos. Balance de la sesión: {2} fichas.",
   "casino.strip.keepPlaying": "Seguir jugando",
   "casino.strip.takeBreak": "Tomar un descanso",
+  "casino.strip.reasonCeiling": "Esa apuesta supera ahora tu apuesta máxima. Bájala, o sube de nivel o de saldo para ampliar el tope.",
+  "casino.strip.reasonLadder": "Las apuestas van por escalones fijos. Elige uno de los escalones y vuelve a intentarlo.",
   "conduct.casino.title": "Reglas de la casa de Gamba",
   "conduct.casino.intro": "Antes de sentarte a una mesa, lee las reglas de la casa.",
   "conduct.casino.playMoney.title": "Solo dinero de juego",

@@ -9007,6 +9007,8 @@
   "casino.strip.realityBody": "{0} Runden in {1} Minuten. Bilanz der Sitzung: {2} Chips.",
   "casino.strip.keepPlaying": "Weiterspielen",
   "casino.strip.takeBreak": "Pause machen",
+  "casino.strip.reasonCeiling": "Dieser Einsatz liegt gerade über deinem Höchsteinsatz. Senke ihn, oder steigere Stufe oder Guthaben, um das Limit anzuheben.",
+  "casino.strip.reasonLadder": "Einsätze gehen in festen Stufen. Wähle eine der Stufen und versuch es noch einmal.",
   "conduct.casino.title": "Gamba-Hausregeln",
   "conduct.casino.intro": "Bevor du an einem Tisch Platz nimmst, lies bitte die Hausregeln.",
   "conduct.casino.playMoney.title": "Nur Spielgeld",

@@ -9007,6 +9007,8 @@
   "casino.strip.realityBody": "{1} dakikada {0} tur. Oturum sonucu: {2} fiş.",
   "casino.strip.keepPlaying": "Oynamaya devam",
   "casino.strip.takeBreak": "Mola ver",
+  "casino.strip.reasonCeiling": "Bu bahis şu anki en yüksek bahsinin üstünde. Düşür ya da sınırı yükseltmek için seviyeni veya bakiyeni artır.",
+  "casino.strip.reasonLadder": "Bahisler sabit basamaklarla ilerler. Basamaklardan birini seçip yeniden dene.",
   "conduct.casino.title": "Gamba Ev Kuralları",
   "conduct.casino.intro": "Bir masaya oturmadan önce lütfen ev kurallarını oku.",
   "conduct.casino.playMoney.title": "Yalnızca oyun parası",

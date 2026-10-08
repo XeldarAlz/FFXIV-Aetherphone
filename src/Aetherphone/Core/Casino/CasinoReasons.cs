@@ -59,9 +59,13 @@ internal static class CasinoReasons
     public const string Kicked = "kicked";
     public const string BoundElsewhere = "bound_elsewhere";
     public const string NoTables = "no_tables";
+    public const string Ceiling = "ceiling";
+    public const string Ladder = "ladder";
 
     public static readonly string[] All =
     {
+        Ceiling,
+        Ladder,
         StakesPaused,
         LossLimit,
         Draining,
@@ -119,6 +123,8 @@ internal static class CasinoReasons
 
     private static readonly FrozenDictionary<string, LocString> Messages = new Dictionary<string, LocString>
     {
+        [Ceiling] = L.Strip.ReasonCeiling,
+        [Ladder] = L.Strip.ReasonLadder,
         [StakesPaused] = L.Casino.ReasonStakesPaused,
         [LossLimit] = L.Casino.ReasonLossLimit,
         [Draining] = L.Casino.ReasonDraining,
