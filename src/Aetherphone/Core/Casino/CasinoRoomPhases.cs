@@ -46,11 +46,11 @@ internal static class CasinoRoomCadence
 
     public const int WheelResultSeconds = 10;
 
-    public const int BingoOpenSeconds = 60;
+    public const int BingoOpenSeconds = 45;
 
-    public const int BingoLockedSeconds = 155;
+    public const int BingoLockedSeconds = 110;
 
-    public const int BingoResultSeconds = 15;
+    public const int BingoResultSeconds = 10;
 
     public const int RaceOpenSeconds = 60;
 

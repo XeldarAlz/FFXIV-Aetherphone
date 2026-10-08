@@ -264,6 +264,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         slots.Gate();
         scratch.Gate();
         wheel.Gate();
+        bingo.Gate();
         originals.Gate();
         race.Gate();
         rulesSheet.Gate();
@@ -273,6 +274,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         slots.DrawOverlay(screenArea, ui);
         scratch.DrawOverlay(screenArea, ui);
         wheel.DrawOverlay(screenArea, ui);
+        bingo.DrawOverlay(screenArea, ui);
         originals.DrawOverlay(screenArea, ui);
         race.DrawOverlay(screenArea, ui);
         if (IsStage(router.Current))
@@ -366,7 +368,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 wheel.Draw(stage, frame, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Bingo, StringComparison.Ordinal):
-                bingo.Draw(body, ui);
+                bingo.Draw(stage, frame, ui);
                 break;
             case CasinoScreen.Cabinet when Originals.OriginalsCabinet.Owns(route.GameId):
                 originals.Draw(stage, frame, ui);
@@ -378,7 +380,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 blackjack.Draw(body, ui);
                 break;
             case CasinoScreen.DailySpin:
-                dailySpin.Draw(body, ui);
+                dailySpin.Draw(stage, frame, ui);
                 break;
             default:
                 EmptyState.Draw(body, ui, FontAwesomeIcon.Hammer, Loc.T(L.Casino.CabinetSoonTitle),
@@ -409,7 +411,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 ReturnTenths: Core.Casino.ScratchRules.ReturnTenths(scratch.CurrentTier), Extra: L.Casino.ScratchOdds),
             CasinoGames.Barkeep => new CasinoStageSpec(route.GameId, L.Casino.GameBarkeep, Backdrop.Strip,
                 Warmth: 1f),
-            CasinoGames.Bingo => new CasinoStageSpec(route.GameId, L.Casino.GameBingo, Backdrop.Arena),
+            CasinoGames.Bingo => new CasinoStageSpec(route.GameId, L.Casino.GameBingo, Backdrop.Arena, Room: true,
+                DeckHeight: Cabinets.BingoCabinet.DeckHeight, ReturnTenths: Core.Casino.BingoRules.ReturnTenths,
+                Extra: bingo.DaubLabel),
             CasinoGames.Wheel => new CasinoStageSpec(route.GameId, L.Casino.GameWheel, Backdrop.Strip, Room: true,
                 DeckHeight: Cabinets.WheelCabinet.DeckHeight),
             _ when Originals.OriginalsCabinet.Owns(route.GameId) => originals.SpecFor(route.GameId),
@@ -452,6 +456,10 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             case CasinoInfoRequest.Extra when string.Equals(current.GameId, CasinoGames.Scratch,
                 StringComparison.Ordinal):
                 scratch.OpenOdds();
+                break;
+            case CasinoInfoRequest.Extra when string.Equals(current.GameId, CasinoGames.Bingo,
+                StringComparison.Ordinal):
+                bingo.ToggleDaub();
                 break;
             case CasinoInfoRequest.Fairness:
                 OpenFairness();

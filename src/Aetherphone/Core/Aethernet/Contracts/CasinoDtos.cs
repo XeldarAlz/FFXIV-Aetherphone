@@ -305,7 +305,9 @@ internal sealed record CasinoBingoRoomStateDto(
     bool Cancelled = false,
     long CardPrice = 0,
     int MaxCards = 0,
-    long MaxWin = 0);
+    long MaxWin = 0,
+    int BallIntervalMs = 0,
+    bool EarlyBird = false);
 
 internal sealed record CasinoWheelBetRequest(
     string RoomId,
