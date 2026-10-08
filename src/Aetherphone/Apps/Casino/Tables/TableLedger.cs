@@ -317,12 +317,12 @@ internal sealed class TableLedger
             Typography.Draw(drawList, new Vector2(origin.X + pad, top + 10f * scale),
                 Typography.FitText(view.Name, textWidth, TextStyles.SubheadlineEmphasized), nameInk,
                 TextStyles.SubheadlineEmphasized);
-            var detail = Typography.FitText(view.BuyIns, textWidth * 0.5f, TextStyles.Caption1);
+            var detail = Typography.FitText(view.BuyIns, textWidth * 0.5f, TextStyles.Footnote);
             Typography.Draw(drawList, new Vector2(origin.X + pad, top + 32f * scale), detail, ui.MutedInk,
-                TextStyles.Caption1);
-            var stack = Typography.FitText(view.Stack, textWidth * 0.5f, TextStyles.Caption1);
+                TextStyles.Footnote);
+            var stack = Typography.FitText(view.Stack, textWidth * 0.5f, TextStyles.Footnote);
             Typography.Draw(drawList, new Vector2(origin.X + pad + textWidth * 0.5f, top + 32f * scale), stack,
-                ui.MutedInk, TextStyles.Caption1);
+                ui.MutedInk, TextStyles.Footnote);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -368,8 +368,8 @@ internal sealed class TableLedger
                 Typography.FitText(view.Title, textWidth, TextStyles.SubheadlineEmphasized), ui.TitleInk,
                 TextStyles.SubheadlineEmphasized);
             Typography.Draw(drawList, new Vector2(origin.X + pad, origin.Y + 30f * scale),
-                Typography.FitText(view.Parties, width - pad * 2f, TextStyles.Caption1), ui.BodyInk,
-                TextStyles.Caption1);
+                Typography.FitText(view.Parties, width - pad * 2f, TextStyles.Footnote), ui.BodyInk,
+                TextStyles.Footnote);
 
             var buttonHeight = Button.SmallHeight * scale;
             var buttonTop = max.Y - pad * 0.7f - buttonHeight;
