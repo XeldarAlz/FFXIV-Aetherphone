@@ -2,9 +2,9 @@ namespace Aetherphone.Apps.Casino;
 
 internal enum CasinoTab
 {
-    Lobby,
-    Games,
+    Floor,
     Live,
+    Tables,
     Cashier,
 }
 
@@ -25,6 +25,7 @@ internal enum CasinoScreen
     Pit,
     VenueRoom,
     Broadcast,
+    Fame,
 }
 
 internal readonly record struct CasinoRoute(

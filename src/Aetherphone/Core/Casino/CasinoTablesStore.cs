@@ -48,6 +48,8 @@ internal sealed class CasinoTablesStore : IDisposable
     private volatile bool intentInFlight;
     private CasinoSeatOutcome? seatOutcome;
     private CasinoStakeOutcome? noticeOutcome;
+    private string closedTableId = string.Empty;
+    private string quickSeatRefusal = string.Empty;
     private string seatIntentId = string.Empty;
     private string createIntentId = string.Empty;
     private string doorRoomId = string.Empty;
@@ -166,6 +168,16 @@ internal sealed class CasinoTablesStore : IDisposable
         return Interlocked.Exchange(ref quickSeat, null);
     }
 
+    public string TakeClosedTable()
+    {
+        return Interlocked.Exchange(ref closedTableId, string.Empty);
+    }
+
+    public string TakeQuickSeatRefusal()
+    {
+        return Interlocked.Exchange(ref quickSeatRefusal, string.Empty);
+    }
+
     public CasinoTableRowDto? TakeHostedTable()
     {
         return Interlocked.Exchange(ref hostedTable, null);
@@ -218,7 +230,7 @@ internal sealed class CasinoTablesStore : IDisposable
 
             if (!answer.Granted)
             {
-                Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(false, Named(answer.Reason)));
+                Interlocked.Exchange(ref quickSeatRefusal, Named(answer.Reason));
                 return;
             }
 
@@ -336,7 +348,28 @@ internal sealed class CasinoTablesStore : IDisposable
 
     public void CloseTable(string roomId)
     {
-        RunHostAction("close table", roomId, token => casino.CloseTableAsync(roomId, token));
+        if (roomId.Length == 0 || !Begin())
+        {
+            return;
+        }
+
+        work.Run("close table", async token =>
+        {
+            var answer = await casino.CloseTableAsync(roomId, token).ConfigureAwait(false);
+            if (answer is null)
+            {
+                Interlocked.Exchange(ref intentFailed, 1);
+                return;
+            }
+
+            Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(answer.Granted, Named(answer.Reason)));
+            if (answer.Granted)
+            {
+                Interlocked.Exchange(ref closedTableId, roomId);
+            }
+
+            RefreshNow();
+        }, EndIntent);
     }
 
     public void Rebuy(string roomId)
@@ -808,6 +841,8 @@ internal sealed class CasinoTablesStore : IDisposable
         Interlocked.Exchange(ref resolvedTable, null);
         Interlocked.Exchange(ref seatOutcome, null);
         Interlocked.Exchange(ref noticeOutcome, null);
+        Interlocked.Exchange(ref closedTableId, string.Empty);
+        Interlocked.Exchange(ref quickSeatRefusal, string.Empty);
         Interlocked.Exchange(ref tablesFailed, 0);
         Interlocked.Exchange(ref intentFailed, 0);
         Interlocked.Exchange(ref tablesAttemptedAtTick, 0);

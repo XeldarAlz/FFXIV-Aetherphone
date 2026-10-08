@@ -10586,8 +10586,6 @@ internal static class L
         public static readonly LocString JackpotHint = new("casino.jackpot.hint", "Every chip you stake is a ticket for the whole pot");
         public static readonly LocString JackpotWon = new("casino.jackpot.won", "JACKPOT");
         public static readonly LocString JackpotWonAmount = new("casino.jackpot.wonAmount", "{0} coins, the whole pot");
-        public static readonly LocString TabLobby = new("casino.tabLobby", "Lobby");
-        public static readonly LocString TabGames = new("casino.tabGames", "Games");
         public static readonly LocString TabLive = new("casino.tabLive", "Live");
         public static readonly LocString TabCashier = new("casino.tabCashier", "Cashier");
         public static readonly LocString LiveHeading = new("casino.liveHeading", "Live right now");
@@ -10992,6 +10990,7 @@ internal static class L
         public static readonly LocString ClubPointsTo = new("casino.strip.clubPointsTo", "{1} points to {0}");
         public static readonly LocString MaxBetLine = new("casino.strip.maxBetLine", "Your max bet right now: {0}");
         public static readonly LocString SeatSit = new("casino.strip.seatSit", "Sit");
+        public static readonly LocString TabFloor = new("casino.strip.tabFloor", "Floor");
     }
 
     internal static class Machines

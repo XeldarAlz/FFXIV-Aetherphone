@@ -89,7 +89,7 @@ internal sealed partial class CasinoApp
             {
                 if (jackpotRail.Draw(ui, jackpot, new Vector2(origin.X, cursorY), width, out var railBottom))
                 {
-                    OpenGame(CasinoGames.Slots);
+                    OpenGame(CasinoGames.SlotsBird);
                 }
 
                 cursorY = railBottom + CardGap * scale;

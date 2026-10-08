@@ -17,21 +17,41 @@ internal sealed partial class CasinoApp
     private static readonly string[] FloorGameIds =
     {
         CasinoGames.Blackjack,
-        CasinoGames.Slots,
+        CasinoGames.Holdem,
+        CasinoGames.SlotsBird,
+        CasinoGames.SlotsCascade,
+        CasinoGames.SlotsMoogle,
+        CasinoGames.Plinko,
+        CasinoGames.Mines,
+        CasinoGames.Dice,
+        CasinoGames.Limbo,
+        CasinoGames.Keno,
+        CasinoGames.HiLo,
+        CasinoGames.Race,
+        CasinoGames.Wheel,
+        CasinoGames.Bingo,
         CasinoGames.Scratch,
         CasinoGames.Barkeep,
-        CasinoGames.Bingo,
-        CasinoGames.Wheel,
     };
 
     private static readonly LocString[] FloorGameNames =
     {
         L.Casino.GameBlackjack,
-        L.Casino.GameSlots,
+        L.Casino.GameHoldem,
+        L.Machines.GameBird,
+        L.Machines.GameCascade,
+        L.Machines.GameMoogle,
+        L.Plinko.Game,
+        L.Originals.GameMines,
+        L.Originals.GameDice,
+        L.Originals.GameLimbo,
+        L.Originals.GameKeno,
+        L.Originals.GameHiLo,
+        L.Race.Title,
+        L.Casino.GameWheel,
+        L.Casino.GameBingo,
         L.Casino.GameScratch,
         L.Casino.GameBarkeep,
-        L.Casino.GameBingo,
-        L.Casino.GameWheel,
     };
 
     private static string RoomOf(string gameId) => gameId switch
@@ -43,19 +63,20 @@ internal sealed partial class CasinoApp
 
     private void DrawFloorTabBar(Rect area)
     {
-        navTabs[0] = new TabItem(Loc.T(L.Casino.TabLobby), IconGlyph.Of(FontAwesomeIcon.DiceD20));
-        navTabs[1] = new TabItem(Loc.T(L.Casino.TabGames), IconGlyph.Of(FontAwesomeIcon.Th),
-            AnchorKey: "casino.tab.games");
-        navTabs[2] = new TabItem(Loc.T(L.Casino.TabLive), IconGlyph.Of(FontAwesomeIcon.BroadcastTower),
-            Badge: LiveHeadcount());
+        navTabs[0] = new TabItem(Loc.T(L.Strip.TabFloor), IconGlyph.Of(FontAwesomeIcon.DiceD20));
+        navTabs[1] = new TabItem(Loc.T(L.Casino.TabLive), IconGlyph.Of(FontAwesomeIcon.BroadcastTower),
+            Badge: LiveHeadcount(), AnchorKey: "casino.tab.live");
+        navTabs[2] = new TabItem(Loc.T(L.Casino.TablesTitle), IconGlyph.Of(FontAwesomeIcon.Couch),
+            AnchorKey: "casino.tab.tables");
         navTabs[3] = new TabItem(Loc.T(L.Casino.TabCashier), IconGlyph.Of(FontAwesomeIcon.CashRegister));
-        var result = bottomNav.Draw(area, ui, navTabs, (int)tab);
-        if (result.Tapped < 0 || result.Tapped == (int)tab)
+        var current = (int)routes.Tab;
+        var result = bottomNav.Draw(area, ui, navTabs, current);
+        if (result.Tapped < 0 || result.Tapped == current)
         {
             return;
         }
 
-        tab = (CasinoTab)result.Tapped;
+        SelectTab((CasinoTab)result.Tapped);
     }
 
     private int LiveHeadcount()
@@ -122,7 +143,12 @@ internal sealed partial class CasinoApp
 
     private static long MinimumStakeOf(string gameId) => gameId switch
     {
-        CasinoGames.Slots => Core.Casino.SlotsRules.MinStake,
+        CasinoGames.Slots or CasinoGames.SlotsBird or CasinoGames.SlotsCascade or CasinoGames.SlotsMoogle =>
+            Core.Casino.SlotsRules.MinStake,
+        CasinoGames.Mines or CasinoGames.Dice or CasinoGames.Limbo or CasinoGames.Keno or CasinoGames.HiLo =>
+            Core.Casino.OriginalsRules.MinBet,
+        CasinoGames.Plinko => Core.Casino.PlinkoRules.MinBet,
+        CasinoGames.Race => Core.Casino.RaceRules.MinBet,
         CasinoGames.Wheel => Core.Casino.WheelRules.MinStakePerSpot,
         CasinoGames.Bingo => Core.Casino.BingoRules.CardPrice,
         CasinoGames.Scratch => Core.Casino.ScratchRules.Prices[0],

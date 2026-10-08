@@ -79,6 +79,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly CasinoTextCache texts = new();
     private readonly AppSkin ui = new(AppPalettes.Gamba);
     private readonly ViewRouter<CasinoRoute> router;
+    private readonly CasinoNavigation routes;
     private readonly RouterDraw<CasinoRoute> drawView;
     private readonly Action popRoute;
     private readonly Action openLimits;
@@ -89,7 +90,6 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private Rect screenArea;
-    private CasinoTab tab;
     private string pendingTableId = string.Empty;
     private bool historyLoadFailed;
 
@@ -150,6 +150,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         tableDoor = new Tables.TableDoor(casinoTables, confirm, openTable,
             new Venue.TournamentDoorCard(casinoVenue));
         router = new ViewRouter<CasinoRoute>(CasinoRoute.Floor);
+        routes = new CasinoNavigation(router);
         drawView = DrawView;
         popRoute = PopRoute;
         openLimits = OpenLimits;
@@ -177,7 +178,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
     public void OnOpened()
     {
-        router.Reset();
+        routes.Reset();
         cashier.Close();
         bonusShelf.Reset();
         machines.Reset();
@@ -198,7 +199,6 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         browser.Reset();
         tableDoor.Reset();
         pendingTableId = string.Empty;
-        tab = CasinoTab.Lobby;
         rulesSheet.Close();
         stage.ResetSession();
         ResetLimitsEditor();
@@ -257,6 +257,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             return;
         }
 
+        routes.Reset();
         if (launch.Kind == Core.Casino.CasinoLaunchKind.Table && launch.TableId.Length > 0)
         {
             OpenTable(launch.TableId);
@@ -265,7 +266,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
         if (launch.Kind == Core.Casino.CasinoLaunchKind.Tables)
         {
-            OpenTables();
+            SelectTab(CasinoTab.Tables);
         }
     }
 
@@ -621,10 +622,10 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         using (TabBar.ReserveContent(scale))
         {
             var navBar = AppHeader.BeginLargeTitle(context, false);
-            switch (tab)
+            switch (routes.Tab)
             {
-                case CasinoTab.Games:
-                    DrawGamesTab(navBar.Body);
+                case CasinoTab.Tables:
+                    browser.Draw(navBar.Body, ui);
                     break;
                 case CasinoTab.Live:
                     DrawLiveTab(navBar.Body);
@@ -638,7 +639,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             }
 
             navButtons[RulesButton] = new NavBarButton(PhoneIcons.ShieldCheck, Loc.T(L.Conduct.Eyebrow));
-            var pressed = AppHeader.EndLargeTitle(in navBar, context, "casino.root.nav", TabTitle(tab),
+            var pressed = AppHeader.EndLargeTitle(in navBar, context, "casino.root.nav", TabTitle(routes.Tab),
                 NavBarStyle.From(ui), navButtons);
             if (pressed == RulesButton)
             {
@@ -651,7 +652,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
     private string TabTitle(CasinoTab target) => target switch
     {
-        CasinoTab.Games => Loc.T(L.Casino.GamesHeading),
+        CasinoTab.Tables => Loc.T(L.Casino.TablesTitle),
         CasinoTab.Live => Loc.T(L.Casino.TabLive),
         CasinoTab.Cashier => Loc.T(L.Casino.Cashier),
         _ => DisplayName,
@@ -674,12 +675,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         CasinoScreen.RoundDetail => Loc.T(L.Casino.RoundDetailTitle),
         CasinoScreen.DailySpin => Loc.T(L.Casino.GameDailySpin),
         CasinoScreen.Cabinet => Loc.T(GameName(route.GameId)),
-        _ => TabTitle(tab),
+        _ => TabTitle(routes.Tab),
     };
 
     private string BackTitle(int depth)
     {
-        return router.TryGetView(depth - 2, out var previous) ? RouteTitle(previous) : TabTitle(tab);
+        return router.TryGetView(depth - 2, out var previous) ? RouteTitle(previous) : TabTitle(routes.Tab);
     }
 
     private void OpenCashier()
@@ -824,13 +825,58 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
     private void OpenTables()
     {
-        if (router.Current.Screen == CasinoScreen.Tables)
+        if (routes.OnRoot)
         {
+            SelectTab(CasinoTab.Tables);
             return;
         }
 
         browser.Enter();
-        router.Push(new CasinoRoute(CasinoScreen.Tables, CasinoGames.Blackjack));
+        routes.Push(new CasinoRoute(CasinoScreen.Tables, CasinoGames.Blackjack));
+    }
+
+    private void SelectTab(CasinoTab next)
+    {
+        if (next == routes.Tab && routes.OnRoot)
+        {
+            return;
+        }
+
+        if (!routes.OnRoot)
+        {
+            stage.Reset();
+            ResetCabinetOf(router.Current);
+        }
+
+        if (next == CasinoTab.Tables)
+        {
+            browser.Enter();
+        }
+
+        routes.Select(next);
+    }
+
+    private void LeaveClosedTable()
+    {
+        var closed = casinoTables.TakeClosedTable();
+        if (closed.Length == 0)
+        {
+            return;
+        }
+
+        while (routes.Holds(closed))
+        {
+            PopRoute();
+        }
+    }
+
+    private void ToastQuickSeatRefusal()
+    {
+        var reason = casinoTables.TakeQuickSeatRefusal();
+        if (reason.Length > 0)
+        {
+            ShellToast.Show(Loc.T(Core.Casino.CasinoReasons.MessageFor(reason)));
+        }
     }
 
     private void OpenPit()
@@ -1075,6 +1121,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
     private void ConsumeTableAnswers()
     {
+        LeaveClosedTable();
+        ToastQuickSeatRefusal();
         var quick = casinoTables.TakeQuickSeat();
         if (quick is not null)
         {

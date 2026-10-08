@@ -196,6 +196,20 @@ internal sealed partial class CasinoApp
         }
     }
 
+    private float DrawTablesLink(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
+    {
+        var rowHeight = RecordRowHeight * scale;
+        var max = new Vector2(origin.X + width, origin.Y + rowHeight);
+        ui.Card(drawList, origin, max, Metrics.Radius.Grouped * scale);
+        if (DrawRecordRow(drawList, new Rect(origin, max), FontAwesomeIcon.ThList,
+                CasinoArt.TintOf(CasinoGames.Blackjack), L.Casino.TablesRow, L.Casino.TablesRowHint, false, scale))
+        {
+            OpenTables();
+        }
+
+        return max.Y;
+    }
+
     private static LocString TierLabel(int tier) => tier switch
     {
         Core.Casino.CasinoHouseTiers.Parlour => L.Casino.TierParlour,
