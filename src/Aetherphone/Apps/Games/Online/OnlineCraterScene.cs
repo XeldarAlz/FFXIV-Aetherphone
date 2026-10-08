@@ -16,8 +16,10 @@ internal sealed class OnlineCraterScene
     private const float ReplayTailSeconds = 0.3f;
     private const float NeverBlasted = 1000f;
     private const float HardLanding = 1f;
-    private const float SteerSmoothSeconds = 0.08f;
-    private const float SteerAirborneSpeed = 2f;
+    private const int FollowLeadTicks = 12;
+    private const int FollowCatchUpTicks = 36;
+    private const float FollowQuietSeconds = 0.15f;
+    private const float FollowAimSeconds = 0.08f;
     private const float MilliradiansPerRadian = 1000f;
     private const float Permille = 1000f;
 
@@ -30,8 +32,10 @@ internal sealed class OnlineCraterScene
     private readonly ReplayTrack[] moves = new ReplayTrack[MaxMoves];
     private readonly ReplayTrack[] flights = new ReplayTrack[CraterBoard.MaxProjectiles];
     private readonly int[] steps = new int[GameRoomWire.CraterMaxSteps];
+    private readonly int[] followRuns = new int[GameRoomWire.CraterMaxSteps];
     private int[] points = new int[1024];
     private FixedStepClock walkClock = new(CraterRules.TickSeconds, CraterRules.MaxCatchUpSeconds);
+    private FixedStepClock followClock = new(CraterRules.TickSeconds, CraterRules.MaxCatchUpSeconds);
     private CraterRoomStateDto? shown;
     private CraterShotDto? replay;
     private int terrainSeed;
@@ -54,12 +58,20 @@ internal sealed class OnlineCraterScene
     private float waterTarget;
     private int stepCount;
     private int walkTicks;
-    private Spring steerX;
-    private Spring steerY;
-    private Vector2 steerTarget;
-    private bool steering;
-    private bool walkPreviewed;
-    private bool walkedHere;
+    private int shownWalkTicks;
+    private int followTurn = -1;
+    private int followMoogle = NoMoogle;
+    private int followCount;
+    private int followTotal;
+    private int followRun;
+    private int followUsed;
+    private int followPlayed;
+    private int followFacing;
+    private float followAimTarget;
+    private float followQuiet;
+    private Spring followAim;
+    private bool followAimPrimed;
+    private bool followBuffering = true;
     private bool muted;
 
     public TerrainMask Terrain => terrain;
@@ -91,6 +103,8 @@ internal sealed class OnlineCraterScene
     public float WalkedX => ActiveMoogle >= 0 ? moogles[ActiveMoogle].Position.X : 0f;
 
     public ReadOnlySpan<int> Steps => new(steps, 0, stepCount);
+
+    public int WalkTicks => walkTicks;
 
     public bool Airborne => ActiveMoogle >= 0 && !moogles[ActiveMoogle].Grounded && !moogles[ActiveMoogle].Sunk;
 
@@ -165,12 +179,13 @@ internal sealed class OnlineCraterScene
     public void Advance(float seconds)
     {
         SinceBlast = MathF.Min(NeverBlasted, SinceBlast + seconds);
-        if (replay is null && steering)
+        if (replay is null)
         {
-            FollowSteer(seconds);
+            FollowWalk(seconds);
+            return;
         }
 
-        if (replay is null || shown is null)
+        if (shown is null)
         {
             return;
         }
@@ -209,47 +224,141 @@ internal sealed class OnlineCraterScene
         walkClock.Reset();
         stepCount = 0;
         walkTicks = 0;
-        steering = false;
-        walkPreviewed = false;
-        walkedHere = false;
+        shownWalkTicks = 0;
+        RewindFollow();
     }
 
-    public void Steer(int moogle, Vector2 target, int facing)
+    public void Follow(int turn, int moogle, int facing, float aim, ReadOnlySpan<int> runs)
     {
-        if (moogle != ActiveMoogle || moogle < 0 || replay is not null)
+        if (turn != followTurn)
+        {
+            followTurn = turn;
+            followCount = 0;
+            followTotal = 0;
+            RewindFollow();
+        }
+
+        var count = Math.Min(runs.Length, followRuns.Length);
+        var total = 0;
+        for (var index = 0; index < count; index++)
+        {
+            total += Math.Abs(Math.Clamp(runs[index], -GameRoomWire.CraterMaxWalkTicks,
+                GameRoomWire.CraterMaxWalkTicks));
+        }
+
+        if (total < followTotal || total > GameRoomWire.CraterMaxWalkTicks)
         {
             return;
         }
 
-        ref var body = ref moogles[moogle];
-        if (!steering)
+        if (total > followTotal)
         {
-            steerX = new Spring(body.Position.X);
-            steerY = new Spring(body.Position.Y);
+            followQuiet = 0f;
         }
 
-        steerTarget = target;
-        steering = true;
-        walkPreviewed = true;
-        if (facing != 0)
-        {
-            body.Facing = Math.Sign(facing);
-        }
+        runs[..count].CopyTo(followRuns);
+        followCount = count;
+        followTotal = total;
+        followMoogle = moogle;
+        followFacing = Math.Sign(facing);
+        followAimTarget = Math.Clamp(aim, CraterRules.MinElevation, CraterRules.MaxElevation);
     }
 
-    private void FollowSteer(float seconds)
+    private void RewindFollow()
     {
-        if (ActiveMoogle < 0 || seconds <= 0f)
+        followClock.Reset();
+        followRun = 0;
+        followUsed = 0;
+        followPlayed = 0;
+        followQuiet = 0f;
+        followBuffering = true;
+        followAimPrimed = false;
+    }
+
+    private void FollowWalk(float seconds)
+    {
+        if (shown is null || followTurn != shown.TurnCount || followMoogle != ActiveMoogle || ActiveMoogle < 0
+            || seconds <= 0f)
         {
             return;
         }
 
-        ref var body = ref moogles[ActiveMoogle];
-        var next = new Vector2(steerX.Step(steerTarget.X, SteerSmoothSeconds, seconds),
-            steerY.Step(steerTarget.Y, SteerSmoothSeconds, seconds));
-        body.Velocity = (next - body.Position) / seconds;
-        body.Position = next;
-        body.Grounded = MathF.Abs(body.Velocity.Y) < SteerAirborneSpeed;
+        ref var moogle = ref moogles[ActiveMoogle];
+        if (!moogle.Alive || moogle.Sunk)
+        {
+            return;
+        }
+
+        FollowAim(seconds);
+        followQuiet += seconds;
+        var backlog = followTotal - followPlayed;
+        var settled = followQuiet >= FollowQuietSeconds;
+        if (moogle.Grounded && (backlog == 0 || (followBuffering && backlog < FollowLeadTicks && !settled)))
+        {
+            followClock.Reset();
+            followBuffering = true;
+            if (backlog == 0 && followFacing != 0)
+            {
+                moogle.Facing = followFacing;
+            }
+
+            return;
+        }
+
+        followBuffering = false;
+        var ticks = followClock.Advance(seconds) * (backlog > FollowCatchUpTicks ? 2 : 1);
+        for (var tick = 0; tick < ticks && moogle.Alive; tick++)
+        {
+            if (moogle.Grounded)
+            {
+                if (!NextFollowRun(out var direction))
+                {
+                    break;
+                }
+
+                if (!CraterMotion.Stride(terrain, ref moogle, direction, CraterRules.TickSeconds))
+                {
+                    followPlayed += Math.Abs(followRuns[followRun]) - followUsed;
+                    followRun++;
+                    followUsed = 0;
+                    continue;
+                }
+
+                followUsed++;
+                followPlayed++;
+                Supported(ref moogle);
+            }
+            else
+            {
+                Fall(ref moogle);
+            }
+
+            Wade(ref moogle);
+            shownWalkTicks++;
+        }
+    }
+
+    private bool NextFollowRun(out int direction)
+    {
+        while (followRun < followCount && followUsed >= Math.Abs(followRuns[followRun]))
+        {
+            followRun++;
+            followUsed = 0;
+        }
+
+        direction = followRun < followCount ? Math.Sign(followRuns[followRun]) : 0;
+        return direction != 0;
+    }
+
+    private void FollowAim(float seconds)
+    {
+        if (!followAimPrimed)
+        {
+            followAim.SnapTo(aims[ActiveMoogle]);
+            followAimPrimed = true;
+        }
+
+        aims[ActiveMoogle] = followAim.Step(followAimTarget, FollowAimSeconds, seconds);
     }
 
     public bool Walk(int direction, float deltaSeconds)
@@ -285,27 +394,35 @@ internal sealed class OnlineCraterScene
                 }
 
                 Record(direction);
-                walkPreviewed = true;
-                walkedHere = true;
-                if (moogle.Grounded)
-                {
-                    CraterMotion.KeepSupported(terrain, ref moogle);
-                }
+                Supported(ref moogle);
             }
             else
             {
                 Fall(ref moogle);
             }
 
-            if (moogle.Position.Y > Water)
-            {
-                Drown(ref moogle);
-            }
-
+            Wade(ref moogle);
+            shownWalkTicks++;
             moved = true;
         }
 
         return moved;
+    }
+
+    private void Supported(ref CraterMoogle moogle)
+    {
+        if (moogle.Grounded)
+        {
+            CraterMotion.KeepSupported(terrain, ref moogle);
+        }
+    }
+
+    private void Wade(ref CraterMoogle moogle)
+    {
+        if (moogle.Position.Y > Water)
+        {
+            Drown(ref moogle);
+        }
     }
 
     private bool CanRecord(int direction)
@@ -479,8 +596,9 @@ internal sealed class OnlineCraterScene
 
     private void BeginReplay(CraterRoomStateDto state, CraterRoomStateDto previous, CraterShotDto shot)
     {
-        var seenWalk = walkPreviewed && shot.Moogle == ActiveMoogle && shot.WalkFrames > 0;
-        var heardWalk = walkedHere;
+        var shownFrames = shot.Moogle == ActiveMoogle && shot.Moogle >= 0
+            ? Math.Min(shot.WalkFrames, shownWalkTicks / Math.Max(1, shot.Stride))
+            : 0;
         var beats = shot.Beats ?? Array.Empty<int>();
         var crateredHere = CountBeats(beats, GameRoomWire.CraterBeatExploded);
         var dugHere = CountBeats(beats, GameRoomWire.CraterBeatDrillStarted) +
@@ -521,16 +639,15 @@ internal sealed class OnlineCraterScene
         waterTarget = state.Water / GameRoomWire.CraterCentimetres;
         Water = waterFrom;
         replay = shot;
-        steering = false;
-        replaySeconds = seenWalk ? shot.WalkFrames * frameSeconds : 0f;
-        if (seenWalk)
+        replaySeconds = shownFrames * frameSeconds;
+        if (shownFrames > 0)
         {
-            muted = heardWalk;
-            FireBeats(shot, shot.WalkFrames - 0.5f);
+            muted = true;
+            FireBeats(shot, shownFrames - 0.5f);
             muted = false;
         }
 
-        PoseMoogles(replaySeconds / frameSeconds);
+        PoseMoogles(shownFrames);
     }
 
     private void Rewind(int[] beats, CraterMoogleDto[] finals)

@@ -258,30 +258,73 @@ public sealed class OnlineCraterWireTests
     }
 
     [Fact]
-    public void ALivePoseGlidesTheActiveMoogleAndIgnoresTheOthers()
+    public void AFollowedWalkLandsExactlyWhereTheWalkerWalked()
     {
-        var scene = new OnlineCraterScene();
-        scene.Sync(Field());
-        var active = scene.ActiveMoogle;
-        var other = active == 0 ? 1 : 0;
-        var start = scene.Moogle(active).Position;
-        var target = start + new Vector2(1.2f, -0.1f);
-        var otherStart = scene.Moogle(other).Position;
-
-        scene.Steer(active, target, -1);
-        scene.Steer(other, otherStart + new Vector2(2f, 0f), 1);
-        scene.Advance(0.02f);
-        var midway = scene.Moogle(active).Position;
-        for (var frame = 0; frame < 30; frame++)
+        var state = Field();
+        var walker = new OnlineCraterScene();
+        var watcher = new OnlineCraterScene();
+        walker.Sync(state);
+        watcher.Sync(state);
+        var active = walker.ActiveMoogle;
+        for (var frame = 0; frame < 8; frame++)
         {
-            scene.Advance(0.02f);
+            walker.Walk(1, 0.1f);
         }
 
-        Assert.True(midway.X > start.X && midway.X < target.X);
-        Assert.Equal(target.X, scene.Moogle(active).Position.X, 2);
-        Assert.Equal(target.Y, scene.Moogle(active).Position.Y, 2);
-        Assert.Equal(-1, scene.Moogle(active).Facing);
-        Assert.Equal(otherStart, scene.Moogle(other).Position);
+        for (var frame = 0; frame < 3; frame++)
+        {
+            walker.Walk(-1, 0.1f);
+        }
+
+        watcher.Follow(state.TurnCount, active, -1, 0.8f, walker.Steps);
+        for (var frame = 0; frame < 120; frame++)
+        {
+            watcher.Advance(1f / 60f);
+        }
+
+        Assert.Equal(walker.Moogle(active).Position.X, watcher.Moogle(active).Position.X, 4);
+        Assert.Equal(walker.Moogle(active).Position.Y, watcher.Moogle(active).Position.Y, 4);
+        Assert.Equal(-1, watcher.Moogle(active).Facing);
+        Assert.Equal(0.8f, watcher.Aim(active), 2);
+    }
+
+    [Fact]
+    public void AFollowWaitsForALeadBeforeWalkingAndThenPlaysTheRest()
+    {
+        var state = Field();
+        var watcher = new OnlineCraterScene();
+        watcher.Sync(state);
+        var active = watcher.ActiveMoogle;
+        var start = watcher.Moogle(active).Position;
+
+        watcher.Follow(state.TurnCount, active, 1, 0.6f, new[] { 4 });
+        watcher.Advance(0.05f);
+        Assert.Equal(start, watcher.Moogle(active).Position);
+
+        watcher.Advance(0.2f);
+        Assert.True(watcher.Moogle(active).Position.X > start.X);
+    }
+
+    [Fact]
+    public void AFollowIgnoresAnotherTurnAnotherMoogleAndForgedRuns()
+    {
+        var state = Field();
+        var watcher = new OnlineCraterScene();
+        watcher.Sync(state);
+        var active = watcher.ActiveMoogle;
+        var other = active == 0 ? 1 : 0;
+        var start = watcher.Moogle(active).Position;
+        var otherStart = watcher.Moogle(other).Position;
+
+        watcher.Follow(state.TurnCount + 1, active, 1, 0.6f, new[] { 60 });
+        watcher.Advance(0.5f);
+        watcher.Follow(state.TurnCount, other, 1, 0.6f, new[] { 60 });
+        watcher.Advance(0.5f);
+        watcher.Follow(state.TurnCount, active, 1, 0.6f, new[] { int.MinValue, int.MaxValue });
+        watcher.Advance(0.5f);
+
+        Assert.Equal(start, watcher.Moogle(active).Position);
+        Assert.Equal(otherStart, watcher.Moogle(other).Position);
     }
 
     [Fact]

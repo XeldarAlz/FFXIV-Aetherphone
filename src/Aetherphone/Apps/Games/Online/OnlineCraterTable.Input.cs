@@ -21,6 +21,7 @@ internal sealed partial class OnlineCraterTable
     private const long SentLockMilliseconds = 1_500;
     private const float ButtonReach = 1.2f;
     private const long MotionIntervalMilliseconds = 66;
+    private const float MilliradiansPerRadian = 1000f;
 
     private CraterWeapon weapon = CraterWeapon.Shell;
     private int fuse = CraterRules.DefaultFuse;
@@ -34,9 +35,10 @@ internal sealed partial class OnlineCraterTable
     private CraterPan pan;
     private long motionSentAt;
     private long motionSeen;
-    private int sentX = int.MinValue;
-    private int sentY = int.MinValue;
+    private int sentTurn = -1;
+    private int sentTicks;
     private int sentFacing;
+    private int sentAim;
     private bool spaceHeld;
     private bool aimDragging;
     private bool teleportPressed;
@@ -105,7 +107,7 @@ internal sealed partial class OnlineCraterTable
         }
 
         Keyboard(raw, pad, shown);
-        ShareMotion();
+        ShareMotion(shown);
         if (scene.Stranded)
         {
             Pass(shown);
@@ -235,7 +237,7 @@ internal sealed partial class OnlineCraterTable
         }
     }
 
-    private void ShareMotion()
+    private void ShareMotion(CraterRoomStateDto shown)
     {
         var active = scene.ActiveMoogle;
         if (active < 0)
@@ -243,38 +245,49 @@ internal sealed partial class OnlineCraterTable
             return;
         }
 
-        ref readonly var moogle = ref scene.Moogle(active);
-        var x = (int)MathF.Round(moogle.Position.X * GameRoomWire.CraterCentimetres);
-        var y = (int)MathF.Round(moogle.Position.Y * GameRoomWire.CraterCentimetres);
+        var facing = scene.Moogle(active).Facing;
+        var aim = (int)MathF.Round(scene.Aim(active) * MilliradiansPerRadian);
+        var ticks = scene.WalkTicks;
         var now = Environment.TickCount64;
-        if ((x == sentX && y == sentY && moogle.Facing == sentFacing) || now - motionSentAt < MotionIntervalMilliseconds)
+        var unchanged = shown.TurnCount == sentTurn && ticks == sentTicks && facing == sentFacing && aim == sentAim;
+        if (unchanged || now - motionSentAt < MotionIntervalMilliseconds)
         {
             return;
         }
 
-        store.Room.SendMotion(new[] { active, x, y, moogle.Facing });
+        var steps = scene.Steps;
+        var values = new int[GameRoomWire.CraterMotionHeader + steps.Length];
+        values[0] = GameRoomWire.CraterMotionWalk;
+        values[1] = shown.TurnCount;
+        values[2] = active;
+        values[3] = facing;
+        values[4] = aim;
+        steps.CopyTo(values.AsSpan(GameRoomWire.CraterMotionHeader));
+        store.Room.SendMotion(values);
         motionSentAt = now;
-        sentX = x;
-        sentY = y;
-        sentFacing = moogle.Facing;
+        sentTurn = shown.TurnCount;
+        sentTicks = ticks;
+        sentFacing = facing;
+        sentAim = aim;
     }
 
     private void FollowMotion(CraterRoomStateDto shown)
     {
-        if (store.Room.Motion is not { } motion || motion.Serial == motionSeen || motion.Values.Length < 4)
+        if (store.Room.Motion is not { } motion || motion.Serial == motionSeen)
         {
             return;
         }
 
         motionSeen = motion.Serial;
-        if (string.Equals(motion.From, myUserId, StringComparison.Ordinal) || !PlaysTurn(shown, motion.From))
+        var values = motion.Values;
+        if (values.Length < GameRoomWire.CraterMotionHeader || values[0] != GameRoomWire.CraterMotionWalk
+            || string.Equals(motion.From, myUserId, StringComparison.Ordinal) || !PlaysTurn(shown, motion.From))
         {
             return;
         }
 
-        var values = motion.Values;
-        var target = new Vector2(values[1], values[2]) / GameRoomWire.CraterCentimetres;
-        scene.Steer(values[0], target, values[3]);
+        scene.Follow(values[1], values[2], values[3], values[4] / MilliradiansPerRadian,
+            values.AsSpan(GameRoomWire.CraterMotionHeader));
     }
 
     private static bool PlaysTurn(CraterRoomStateDto shown, string userId)

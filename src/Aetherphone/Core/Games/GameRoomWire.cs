@@ -98,6 +98,10 @@ internal static class GameRoomWire
 
     public const int CraterMaxSteps = 64;
 
+    public const int CraterMotionWalk = 2;
+
+    public const int CraterMotionHeader = 5;
+
     public const float CraterCentimetres = 100f;
 
     public const int CraterTicksPerSecond = 120;

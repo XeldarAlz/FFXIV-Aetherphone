@@ -336,10 +336,12 @@ The room kinds live in `GameRoomWire` (src/Aetherphone/Core/Games/GameRoomWire.c
 | `games.connectfour` | `start`, `drop`, `resign` |
 | `games.broadside` | `start`, `place` (the fleet), `fire`, `resign` |
 | `games.luckydraw` | `start`, `hit`, `stay`, `target` |
-| `games.crater` | `start`, `shoot` (weapon, facing, elevation, power, fuse and walk), `resign` |
+| `games.crater` | `start`, `shoot` (weapon, facing, elevation, power, fuse and the stepped walk), `pass` (a turn spent walking), `resign` |
 | `games.minigolf` | `start` (the card slot carries 9 or 18 holes), `shoot` |
 
 The live room rides the realtime socket under the `game.` prefix (`game.attach`, `game.snapshot`, `game.event`, `game.private`, `game.ended` and the rest in src/Aetherphone/Core/Telephony/Contracts/Signals.cs); see [The realtime layer](#the-realtime-layer) above.
+
+`game.motion` is the one unsequenced room signal. During a Crater turn the walker sends its whole walk so far (tag, turn count, moogle, facing, aim in milliradians, then the signed tick runs) at most every 66 ms; opponents replay the runs through the same `CraterMotion` code the server uses, a few ticks behind to absorb jitter, so the walk they watch is the walk the server will play. The server relays each packet to the room's other sockets and keeps the newest one per member, so a turn that times out mid-walk keeps the walk instead of snapping the moogle back.
 
 ## Gotchas
 
