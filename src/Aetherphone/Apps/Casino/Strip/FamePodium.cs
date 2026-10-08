@@ -76,7 +76,7 @@ internal sealed class FamePodium
             var nameTop = valueTop - footnote;
             var medalCenter = new Vector2(left + columnWidth * 0.5f, nameTop - Metrics.Space.Xs * scale - Medal * scale * 0.5f);
             drawList.AddCircleFilled(medalCenter, Medal * scale * 0.5f, ImGui.GetColorU32(MedalTints[rank]), 28);
-            AppSkin.Icon(drawList, medalCenter, IconGlyph.Of(rank == 0 ? FontAwesomeIcon.Crown : FontAwesomeIcon.Medal),
+            AppSkin.Icon(drawList, medalCenter, IconGlyph.Of(rank == 0 ? FontAwesomeIcon.Crown : FontAwesomeIcon.Trophy),
                 CasinoColors.FeltBottom, 0.9f);
             Typography.DrawCentered(drawList, new Vector2(medalCenter.X, nameTop + footnote * 0.5f),
                 Typography.FitText(FameText.Name(entry), columnWidth, TextStyles.FootnoteEmphasized), ui.TitleInk,

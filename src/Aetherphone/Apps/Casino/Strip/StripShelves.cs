@@ -161,7 +161,7 @@ internal sealed class StripShelves
 
     private static FontAwesomeIcon IconOf(in StripEntry entry) => entry.Venue switch
     {
-        VenueRoomKind.Dice => FontAwesomeIcon.DiceFive,
+        VenueRoomKind.Dice => FontAwesomeIcon.Dice,
         VenueRoomKind.Deathroll => FontAwesomeIcon.Skull,
         VenueRoomKind.Raffle => FontAwesomeIcon.Ticket,
         _ => FontAwesomeIcon.PlusCircle,
