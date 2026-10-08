@@ -420,7 +420,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
         {
             Typography.DrawWrappedCentered(drawList,
                 Loc.T(state.StakesPaused ? L.Casino.PausedTitle : L.Casino.DrainingTitle), TextStyles.Subheadline,
-                ui.MutedInk, new Vector2(area.Center.X, area.Min.Y), area.Width);
+                CasinoColors.InkBody, new Vector2(area.Center.X, area.Min.Y), area.Width);
             return;
         }
 

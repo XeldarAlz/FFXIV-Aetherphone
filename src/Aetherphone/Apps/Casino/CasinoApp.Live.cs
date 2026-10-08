@@ -138,8 +138,8 @@ internal sealed partial class CasinoApp
         var table = item.Table;
         var join = LiveJoins(item);
         var label = join ? Loc.T(L.Strip.LiveJoin) : Loc.T(L.Strip.LiveWatch);
-        var buttonHeight = Button.RegularHeight * scale;
-        var buttonWidth = MathF.Max(Button.WidthFor(label, ButtonSize.Regular), 72f * scale);
+        var buttonHeight = Button.LargeHeight * scale;
+        var buttonWidth = MathF.Max(Button.WidthFor(label, ButtonSize.Large), 76f * scale);
         var button = new Rect(new Vector2(row.Max.X - pad - buttonWidth, row.Center.Y - buttonHeight * 0.5f),
             new Vector2(row.Max.X - pad, row.Center.Y + buttonHeight * 0.5f));
         var overButton = UiInteract.Hover(button.Min, button.Max);

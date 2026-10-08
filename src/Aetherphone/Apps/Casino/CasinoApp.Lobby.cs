@@ -159,8 +159,8 @@ internal sealed partial class CasinoApp
         var tileCenter = new Vector2(origin.X + pad + tile * 0.5f, origin.Y + height * 0.5f);
         CasinoArt.GameTile(drawList, gameId.Length > 0 ? gameId : CasinoGames.Blackjack, tileCenter, tile);
         var buttonLabel = Loc.T(L.Strip.ResumeAction);
-        var buttonWidth = Button.WidthFor(buttonLabel, ButtonSize.Regular);
-        var buttonHeight = Button.RegularHeight * scale;
+        var buttonWidth = Button.WidthFor(buttonLabel, ButtonSize.Large);
+        var buttonHeight = Button.LargeHeight * scale;
         var button = new Rect(new Vector2(max.X - pad - buttonWidth, tileCenter.Y - buttonHeight * 0.5f),
             new Vector2(max.X - pad, tileCenter.Y + buttonHeight * 0.5f));
         var textLeft = tileCenter.X + tile * 0.5f + CoinArt.TextGap * scale;

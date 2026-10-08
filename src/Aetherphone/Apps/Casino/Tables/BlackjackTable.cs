@@ -399,12 +399,12 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         var owner = tables.CardFor(roomId)?.OwnerUserId ?? string.Empty;
         var dealerPowers = BlackjackHosting.DealerPowers(board, rooms.AccountId, owner);
         var gil = CasinoCurrencies.Of(board) == CasinoCurrencies.Gil;
-        var height = Button.SmallHeight * scale;
+        var height = Button.LargeHeight * scale;
         var right = left + width;
         if (dealerPowers)
         {
             var pauseLabel = board.Paused ? Loc.T(L.Tables.Resume) : Loc.T(L.Tables.Pause);
-            var pauseWidth = Button.WidthFor(pauseLabel, ButtonSize.Small);
+            var pauseWidth = Button.WidthFor(pauseLabel, ButtonSize.Large);
             var pauseRect = new Rect(new Vector2(right - pauseWidth, y), new Vector2(right, y + height));
             if (Button.Draw(drawList, pauseRect, pauseLabel, ui.Ink, ButtonStyle.Gray,
                     enabled: !tables.IntentInFlight, id: "table.pause"))
@@ -417,7 +417,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
             if (BlackjackHosting.HostDeals(board) && board.Phase == BlackjackPhases.Betting)
             {
                 var dealLabel = Loc.T(L.Tables.Deal);
-                var dealWidth = Button.WidthFor(dealLabel, ButtonSize.Small);
+                var dealWidth = Button.WidthFor(dealLabel, ButtonSize.Large);
                 var dealRect = new Rect(new Vector2(right - dealWidth, y), new Vector2(right, y + height));
                 if (Button.Draw(drawList, dealRect, dealLabel, ui.Ink, ButtonStyle.Prominent,
                         enabled: !tables.IntentInFlight && !board.Paused, id: "table.deal"))
@@ -434,7 +434,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         if (gil)
         {
             var ledgerLabel = Loc.T(L.Tables.OpenLedger);
-            var ledgerWidth = Button.WidthFor(ledgerLabel, ButtonSize.Small);
+            var ledgerWidth = Button.WidthFor(ledgerLabel, ButtonSize.Large);
             var ledgerRect = new Rect(new Vector2(right - ledgerWidth, y), new Vector2(right, y + height));
             if (Button.Draw(drawList, ledgerRect, ledgerLabel, ui.Ink, ButtonStyle.Tinted, id: "table.ledger"))
             {

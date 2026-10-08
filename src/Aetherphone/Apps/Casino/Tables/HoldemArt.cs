@@ -11,6 +11,7 @@ internal static class HoldemArt
     public const float RailWidth = 9f;
 
     private const float SignAlpha = 0.16f;
+    private const float DealerButtonRadius = 11f;
     private const float StitchInset = 8f;
 
     private static readonly Vector4 RailHighlight = new(0.36f, 0.22f, 0.14f, 1f);
@@ -74,12 +75,12 @@ internal static class HoldemArt
 
     public static void DrawDealerButton(ImDrawListPtr drawList, Vector2 center, float scale)
     {
-        var radius = 8f * scale;
+        var radius = DealerButtonRadius * scale;
         drawList.AddCircleFilled(center + new Vector2(0f, 1.5f * scale), radius, ImGui.GetColorU32(Shade), 20);
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(ButtonFace), 20);
         drawList.AddCircle(center, radius * 0.72f, ImGui.GetColorU32(ButtonInk with { W = 0.25f }), 20,
             MathF.Max(1f, scale));
-        Typography.DrawCentered(drawList, center, "D", ButtonInk, TextStyles.Caption2);
+        Typography.DrawCentered(drawList, center, "D", ButtonInk, TextStyles.FootnoteEmphasized);
     }
 
     public static void DrawTag(ImDrawListPtr drawList, Vector2 center, string label, Vector4 tint, float scale)

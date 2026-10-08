@@ -233,7 +233,7 @@ internal sealed class TableBrowser
             Loc.T(L.Casino.QuickSeatTitle), ui.TitleInk, TextStyles.SubheadlineEmphasized);
         Typography.Draw(drawList,
             new Vector2(card.Min.X + pad, card.Min.Y + 12f * scale + titleSize.Y + 6f * scale), hintText,
-            ui.MutedInk, TextStyles.Footnote);
+            ui.BodyInk, TextStyles.Footnote);
 
         var pillRect = new Rect(new Vector2(card.Min.X + pad, card.Max.Y - PillHeight * scale - 12f * scale),
             new Vector2(card.Max.X - pad, card.Max.Y - 12f * scale));
@@ -351,7 +351,7 @@ internal sealed class TableBrowser
         var min = origin;
         var max = new Vector2(origin.X + width, origin.Y + height);
         ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
-        Typography.DrawWrappedLeft(new Vector2(min.X + pad, min.Y + pad), text, ui.MutedInk, TextStyles.Footnote,
+        Typography.DrawWrappedLeft(new Vector2(min.X + pad, min.Y + pad), text, ui.BodyInk, TextStyles.Footnote,
             width - pad * 2f);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height + RowGap * scale));
@@ -410,7 +410,7 @@ internal sealed class TableBrowser
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
-        Typography.Draw(drawList, origin, Loc.T(L.Casino.JoinByInvite), ui.MutedInk, TextStyles.FootnoteEmphasized);
+        Typography.Draw(drawList, origin, Loc.T(L.Casino.JoinByInvite), ui.BodyInk, TextStyles.FootnoteEmphasized);
         var fieldTop = origin.Y + 20f * scale;
         var pillWidth = 110f * scale;
         var fieldMin = new Vector2(origin.X, fieldTop);

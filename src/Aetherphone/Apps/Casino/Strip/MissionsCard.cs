@@ -112,8 +112,8 @@ internal sealed class MissionsCard
         var ready = mission.Complete && !mission.Claimed;
         var actionLabel = ready ? texts.Compact(L.Strip.BonusClaim, mission.Reward)
             : mission.Claimed ? Loc.T(L.Club.MissionDone) : texts.Compact(L.Club.MissionReward, mission.Reward);
-        var buttonHeight = Button.RegularHeight * scale;
-        var buttonWidth = MathF.Max(Button.WidthFor(actionLabel, ButtonSize.Regular), 76f * scale);
+        var buttonHeight = Button.LargeHeight * scale;
+        var buttonWidth = MathF.Max(Button.WidthFor(actionLabel, ButtonSize.Large), 76f * scale);
         var button = new Rect(new Vector2(row.Max.X - pad - buttonWidth, row.Center.Y - buttonHeight * 0.5f),
             new Vector2(row.Max.X - pad, row.Center.Y + buttonHeight * 0.5f));
         var textLeft = tileCenter.X + tile * 0.5f + CoinArt.TextGap * scale;

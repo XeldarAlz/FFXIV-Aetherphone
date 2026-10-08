@@ -322,7 +322,7 @@ internal sealed class TableLedger
                 TextStyles.Footnote);
             var stack = Typography.FitText(view.Stack, textWidth * 0.5f, TextStyles.Footnote);
             Typography.Draw(drawList, new Vector2(origin.X + pad + textWidth * 0.5f, top + 32f * scale), stack,
-                ui.MutedInk, TextStyles.Footnote);
+                ui.BodyInk, TextStyles.Footnote);
         }
 
         ImGui.SetCursorScreenPos(origin);

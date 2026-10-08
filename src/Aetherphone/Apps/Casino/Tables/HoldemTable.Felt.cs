@@ -164,17 +164,17 @@ internal sealed partial class HoldemTable
 
         var width = MathF.Min(PotPanelWidth * scale, layout.Felt.Width * 0.86f);
         var pad = Metrics.Space.Sm * scale;
-        var lineHeight = Typography.LineHeight(TextStyles.Caption1);
+        var lineHeight = Typography.LineHeight(TextStyles.Footnote);
         var height = pad * 2f + lineHeight * potLines.Length;
         var min = new Vector2(layout.PotCenter.X - width * 0.5f, layout.PotCenter.Y + 14f * scale);
         var max = new Vector2(min.X + width, min.Y + height);
         Material.LiquidGlass(drawList, min, max, Metrics.Radius.Md * scale, scale, GlassTone.Dark, 0f);
         for (var index = 0; index < potLines.Length; index++)
         {
-            var line = Typography.FitText(potLines[index], width - pad * 2f, TextStyles.Caption1);
+            var line = Typography.FitText(potLines[index], width - pad * 2f, TextStyles.Footnote);
             var ink = index % 2 == 0 ? CasinoColors.Money : CasinoColors.InkBody;
             Typography.Draw(drawList, new Vector2(min.X + pad, min.Y + pad + index * lineHeight), line, ink,
-                TextStyles.Caption1);
+                TextStyles.Footnote);
         }
 
         if (UiInteract.ClickedOutside(min, max))

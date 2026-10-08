@@ -138,7 +138,7 @@ internal sealed partial class CasinoApp
 
         var maxBet = texts.Compact(L.Strip.MaxBetLine, ceiling.MaxBet);
         Typography.Draw(drawList, new Vector2(min.X + pad, capsuleRect.Max.Y + Metrics.Space.Sm * scale),
-            Typography.FitText(maxBet, width - pad * 2f, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
+            Typography.FitText(maxBet, width - pad * 2f, TextStyles.Footnote), ui.BodyInk, TextStyles.Footnote);
         return max.Y;
     }
 
@@ -241,7 +241,7 @@ internal sealed partial class CasinoApp
         var captionTop = discCenter.Y + disc * 0.5f + ExchangeRowGap * 0.5f * scale;
         Typography.DrawCentered(drawList,
             new Vector2(discCenter.X, captionTop + Typography.LineHeight(TextStyles.Footnote) * 0.5f),
-            Typography.FitText(label, width, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
+            Typography.FitText(label, width, TextStyles.Footnote), ui.BodyInk, TextStyles.Footnote);
         var fitted = Typography.FitText(amount, width, TextStyles.Title3);
         var size = Typography.Measure(fitted, TextStyles.Title3);
         Typography.Draw(drawList,
@@ -259,8 +259,8 @@ internal sealed partial class CasinoApp
         var coinsSize = CurrencyGlyph.MeasureAmount(coinsText, TextStyles.Footnote);
         var x = topCenter.X - (chipsSize.X + equalsSize.X + coinsSize.X) * 0.5f;
         x += CurrencyGlyph.DrawAmount(drawList, new Vector2(x, topCenter.Y), chipsText, CurrencyKind.Chips,
-            ui.MutedInk, TextStyles.Footnote).X;
-        Typography.Draw(drawList, new Vector2(x, topCenter.Y), equalsText, ui.MutedInk, TextStyles.Footnote);
+            ui.BodyInk, TextStyles.Footnote).X;
+        Typography.Draw(drawList, new Vector2(x, topCenter.Y), equalsText, ui.BodyInk, TextStyles.Footnote);
         x += equalsSize.X;
         CurrencyGlyph.DrawAmount(drawList, new Vector2(x, topCenter.Y), coinsText, CurrencyKind.Coins, ui.MutedInk,
             TextStyles.Footnote);

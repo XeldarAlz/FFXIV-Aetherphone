@@ -45,10 +45,10 @@ internal struct LevelCapsule
             TextStyles.FootnoteEmphasized);
         if (cap > 0)
         {
-            var capText = Typography.FitText(CapText(cap), textWidth * 0.5f, TextStyles.Caption1);
-            var capSize = Typography.Measure(capText, TextStyles.Caption1);
+            var capText = Typography.FitText(CapText(cap), textWidth * 0.5f, TextStyles.FootnoteEmphasized);
+            var capSize = Typography.Measure(capText, TextStyles.FootnoteEmphasized);
             Typography.Draw(drawList, new Vector2(rect.Max.X - capSize.X, rect.Min.Y + (titleHeight - capSize.Y) * 0.5f),
-                capText, CasinoColors.Money, TextStyles.Caption1);
+                capText, CasinoColors.Money, TextStyles.FootnoteEmphasized);
         }
 
         var barTop = rect.Min.Y + titleHeight + Gap * 0.5f * scale;

@@ -84,7 +84,7 @@ internal sealed class CashierBuyIn
         var y = top;
         var heading = bounds.TopUp ? Loc.T(L.Casino.TopUp) : Loc.T(L.Strip.GetChips);
         Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(heading, width * 0.5f,
-            TextStyles.FootnoteEmphasized), ui.MutedInk, TextStyles.FootnoteEmphasized);
+            TextStyles.FootnoteEmphasized), ui.BodyInk, TextStyles.FootnoteEmphasized);
         DrawRate(drawList, ui, bounds.Rate, new Vector2(left + width, y));
         y += Typography.LineHeight(TextStyles.FootnoteEmphasized) + Gap * scale;
 
@@ -112,7 +112,7 @@ internal sealed class CashierBuyIn
         var allowed = bounds.Allows(coins);
         var line = LineFor(bounds, coins, out var lineIsWarning);
         Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(line, width, TextStyles.Footnote),
-            lineIsWarning ? ui.Accent : ui.MutedInk, TextStyles.Footnote);
+            lineIsWarning ? ui.Accent : ui.BodyInk, TextStyles.Footnote);
         y += Typography.LineHeight(TextStyles.Footnote) + Gap * scale;
 
         var chips = bounds.ChipsFor(coins);
@@ -219,8 +219,8 @@ internal sealed class CashierBuyIn
         var coinsSize = CurrencyGlyph.MeasureAmount(coinsText, TextStyles.Footnote);
         var x = topRight.X - chipsSize.X - equalsSize.X - coinsSize.X;
         x += CurrencyGlyph.DrawAmount(drawList, new Vector2(x, topRight.Y), chipsText, CurrencyKind.Chips,
-            ui.MutedInk, TextStyles.Footnote).X;
-        Typography.Draw(drawList, new Vector2(x, topRight.Y), equalsText, ui.MutedInk, TextStyles.Footnote);
+            ui.BodyInk, TextStyles.Footnote).X;
+        Typography.Draw(drawList, new Vector2(x, topRight.Y), equalsText, ui.BodyInk, TextStyles.Footnote);
         x += equalsSize.X;
         CurrencyGlyph.DrawAmount(drawList, new Vector2(x, topRight.Y), coinsText, CurrencyKind.Coins, ui.MutedInk,
             TextStyles.Footnote);

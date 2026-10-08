@@ -174,7 +174,7 @@ internal sealed class BetsRail
         var width = ScrollLayout.NativeScrollContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var height = Typography.DrawWrappedLeft(new Vector2(origin.X, origin.Y + Metrics.Space.Md * scale),
-            Loc.T(message), skin.MutedInk, TextStyles.Footnote, width);
+            Loc.T(message), skin.BodyInk, TextStyles.Footnote, width);
         ImGui.Dummy(new Vector2(width, height + Metrics.Space.Lg * scale));
     }
 
@@ -208,9 +208,9 @@ internal sealed class BetsRail
             DrawCell(drawList, NumberText.Compact(record.Stake), origin.X + gameWidth, columnWidth, centerY,
                 skin.BodyInk);
             DrawCell(drawList, CasinoMultiples.Label(record.MultipleHundredths), origin.X + gameWidth + columnWidth,
-                columnWidth, centerY, record.Won ? CasinoColors.Money : skin.MutedInk);
+                columnWidth, centerY, record.Won ? CasinoColors.Money : skin.BodyInk);
             DrawCell(drawList, NumberText.Compact(record.Payout), origin.X + gameWidth + columnWidth * 2f,
-                columnWidth, centerY, record.Won ? CasinoColors.Money : skin.MutedInk);
+                columnWidth, centerY, record.Won ? CasinoColors.Money : skin.BodyInk);
             drawList.AddLine(new Vector2(min.X, max.Y), max,
                 ImGui.GetColorU32(Palette.WithAlpha(skin.TitleInk, 0.06f)), 1f);
             if (openable && UiInteract.Click(min, max, hovered))

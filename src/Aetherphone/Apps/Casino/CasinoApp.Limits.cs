@@ -95,7 +95,7 @@ internal sealed partial class CasinoApp
             var hint = texts.Numbers(L.Casino.SelfLimitHint, CasinoLimitPicker.Floor, ceiling);
             var hintTop = cursorY + Metrics.Space.Sm * scale;
             var hintHeight = Typography.DrawWrappedLeft(new Vector2(origin.X + Metrics.Space.Lg * scale, hintTop),
-                hint, ui.MutedInk, TextStyles.Footnote, width - Metrics.Space.Lg * 2f * scale);
+                hint, ui.BodyInk, TextStyles.Footnote, width - Metrics.Space.Lg * 2f * scale);
             CoinArt.Reserve(origin, width, hintTop + hintHeight + CoinArt.BottomPad * scale);
         }
     }
@@ -163,13 +163,13 @@ internal sealed partial class CasinoApp
             var room = NumberText.Group(tonight.Headroom);
             var roomStyle = WidgetText.FitStyle(room, TextStyles.Title2, inner, true);
             var roomHeight = Typography.LineHeight(roomStyle);
-            var captionHeight = Typography.LineHeight(TextStyles.Caption1);
+            var captionHeight = Typography.LineHeight(TextStyles.Footnote);
             var blockTop = center.Y - (roomHeight + captionHeight) * 0.5f;
             WidgetText.TabularCentered(drawList, new Vector2(center.X, blockTop + roomHeight * 0.5f), room,
                 ui.TitleInk, roomStyle, inner);
             Typography.DrawCentered(drawList, new Vector2(center.X, blockTop + roomHeight + captionHeight * 0.5f),
-                Typography.FitText(Loc.T(L.Casino.LimitLeftCaption), inner, TextStyles.Caption1), ui.MutedInk,
-                TextStyles.Caption1);
+                Typography.FitText(Loc.T(L.Casino.LimitLeftCaption), inner, TextStyles.Footnote), ui.BodyInk,
+                TextStyles.Footnote);
         }
         else
         {
@@ -207,7 +207,7 @@ internal sealed partial class CasinoApp
             ? texts.Number(L.Casino.SelfLimitCurrent, tonight.Limit)
             : Loc.T(L.Casino.TonightNoLimit);
         Typography.Draw(drawList, new Vector2(textLeft, top),
-            Typography.FitText(limitLine, textWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
+            Typography.FitText(limitLine, textWidth, TextStyles.Footnote), ui.BodyInk, TextStyles.Footnote);
         if (pending.Length > 0)
         {
             Typography.Draw(drawList, new Vector2(textLeft, top + footnote),
@@ -303,7 +303,7 @@ internal sealed partial class CasinoApp
             TextStyles.Footnote);
         var ceilingText = NumberText.Group(ceiling);
         Typography.Draw(drawList, new Vector2(right - Typography.Measure(ceilingText, TextStyles.Footnote).X, top),
-            ceilingText, ui.MutedInk, TextStyles.Footnote);
+            ceilingText, ui.BodyInk, TextStyles.Footnote);
         top += footnote + lineGap;
 
         limitChoice = chosen;

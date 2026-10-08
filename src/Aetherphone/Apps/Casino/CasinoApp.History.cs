@@ -272,7 +272,7 @@ internal sealed partial class CasinoApp
             var stepsMax = DrawFairnessSteps(drawList, new Vector2(origin.X, stepTop), width, scale);
             cursorY = stepsMax + CardGap * scale;
             cursorY += Typography.DrawWrappedLeft(new Vector2(origin.X + Metrics.Space.Lg * scale, cursorY),
-                Loc.T(L.Casino.FairnessChainNote), ui.MutedInk, TextStyles.Footnote,
+                Loc.T(L.Casino.FairnessChainNote), ui.BodyInk, TextStyles.Footnote,
                 width - Metrics.Space.Lg * 2f * scale);
 
             var listTop = SectionTitle(drawList, new Vector2(origin.X, cursorY), width,
@@ -568,7 +568,7 @@ internal sealed partial class CasinoApp
         var pad = ReferencePad * scale;
         var gap = ReferenceGap * scale;
         var inner = width - pad * 2f;
-        var caption = Typography.LineHeight(TextStyles.Caption1);
+        var caption = Typography.LineHeight(TextStyles.FootnoteEmphasized);
         var height = pad * 2f + caption + Typography.MeasureWrappedBlock(roundId, TextStyles.Footnote, inner).Y;
         if (commit.Length > 0)
         {
@@ -601,8 +601,8 @@ internal sealed partial class CasinoApp
     private float DrawReferenceField(ImDrawListPtr drawList, float left, float top, float width, string label,
         string value)
     {
-        Typography.Draw(drawList, new Vector2(left, top), Loc.Upper(label), ui.MutedInk, TextStyles.Caption1);
-        top += Typography.LineHeight(TextStyles.Caption1);
+        Typography.Draw(drawList, new Vector2(left, top), Loc.Upper(label), ui.BodyInk, TextStyles.FootnoteEmphasized);
+        top += Typography.LineHeight(TextStyles.FootnoteEmphasized);
         return top + Typography.DrawWrappedLeft(new Vector2(left, top), value, ui.BodyInk, TextStyles.Footnote, width);
     }
 
