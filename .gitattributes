@@ -10,3 +10,6 @@
 *.mp3 binary
 *.wav binary
 *.zip binary
+
+# Shared casino vectors are hashed byte for byte against the backend copy.
+src/Aetherphone.Tests/Vectors/plinko.json -text
