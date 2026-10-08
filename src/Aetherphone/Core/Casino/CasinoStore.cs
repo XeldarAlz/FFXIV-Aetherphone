@@ -220,6 +220,28 @@ internal sealed class CasinoStore : IDisposable
         state = next;
     }
 
+    public void AbsorbCeiling(long ceiling)
+    {
+        var next = CeilingAbsorbedInto(state, ceiling);
+        if (next is null)
+        {
+            return;
+        }
+
+        state = next;
+    }
+
+    internal static CasinoStateDto? CeilingAbsorbedInto(CasinoStateDto? current, long ceiling)
+    {
+        if (current is null || ceiling <= 0)
+        {
+            return null;
+        }
+
+        var held = current.Ceiling ?? new CasinoCeilingDto();
+        return held.MaxBet == ceiling ? null : current with { Ceiling = held with { MaxBet = ceiling } };
+    }
+
     internal static CasinoStateDto? StackAbsorbedInto(CasinoStateDto? current, string sittingId, long stack)
     {
         if (current is null || sittingId.Length == 0)

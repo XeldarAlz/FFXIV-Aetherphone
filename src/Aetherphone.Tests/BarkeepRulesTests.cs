@@ -15,9 +15,9 @@ public sealed class BarkeepRulesTests
         Assert.Equal(14, BarkeepRules.MaxPatrons);
         Assert.Equal(4, BarkeepRules.StepKindCount);
         Assert.Equal(100, BarkeepRules.PerfectGrade);
-        Assert.Equal(3000, BarkeepRules.MaxPayout);
-        Assert.Equal(2000, BarkeepRules.EntryChips);
-        Assert.Equal(10000, BarkeepRules.DailyNetWinCap);
+        Assert.Equal(30_000, BarkeepRules.MaxPayout);
+        Assert.Equal(20_000, BarkeepRules.EntryChips);
+        Assert.Equal(100_000, BarkeepRules.DailyNetWinCap);
         Assert.Equal(new[] { 0, 40, 70, 100 }, BarkeepRules.GradeDomain);
         Assert.Equal(new[] { 8, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 13, 14 },
             BarkeepRules.PatronBuckets);
@@ -28,14 +28,14 @@ public sealed class BarkeepRulesTests
     {
         Assert.Equal(0, BarkeepRules.LadderPayout(0));
         Assert.Equal(0, BarkeepRules.LadderPayout(449));
-        Assert.Equal(900, BarkeepRules.LadderPayout(450));
-        Assert.Equal(900, BarkeepRules.LadderPayout(749));
-        Assert.Equal(1500, BarkeepRules.LadderPayout(750));
-        Assert.Equal(1500, BarkeepRules.LadderPayout(999));
-        Assert.Equal(2300, BarkeepRules.LadderPayout(1000));
-        Assert.Equal(2300, BarkeepRules.LadderPayout(1199));
-        Assert.Equal(3000, BarkeepRules.LadderPayout(1200));
-        Assert.Equal(3000, BarkeepRules.LadderPayout(1400));
+        Assert.Equal(9_000, BarkeepRules.LadderPayout(450));
+        Assert.Equal(9_000, BarkeepRules.LadderPayout(749));
+        Assert.Equal(15_000, BarkeepRules.LadderPayout(750));
+        Assert.Equal(15_000, BarkeepRules.LadderPayout(999));
+        Assert.Equal(23_000, BarkeepRules.LadderPayout(1000));
+        Assert.Equal(23_000, BarkeepRules.LadderPayout(1199));
+        Assert.Equal(30_000, BarkeepRules.LadderPayout(1200));
+        Assert.Equal(30_000, BarkeepRules.LadderPayout(1400));
     }
 
     [Fact]

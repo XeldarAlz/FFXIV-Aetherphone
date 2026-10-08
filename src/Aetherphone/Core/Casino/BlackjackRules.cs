@@ -98,9 +98,17 @@ internal static class BlackjackRules
 
     public const int TargetTotal = 21;
 
-    public const long MinBet = 250;
+    public const long MinBet = 500;
 
-    public const long MaxBet = 10000;
+    public const long MaxBet = 100_000;
+
+    public static readonly long[] HouseTierMinBets = { 2_500, 10_000, 25_000 };
+
+    public static readonly long[] HouseTierMaxBets = { 25_000, 50_000, 100_000 };
+
+    public static long HouseFloor => HouseTierMinBets[0];
+
+    public static long HouseTop => HouseTierMaxBets[^1];
 
     public const long BetStep = 10;
 

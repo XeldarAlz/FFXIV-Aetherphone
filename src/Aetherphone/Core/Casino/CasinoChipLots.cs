@@ -2,25 +2,25 @@ namespace Aetherphone.Core.Casino;
 
 internal static class CasinoChipLots
 {
-    public const long ChipPerCoin = 100;
+    public const long ChipPerCoin = 1000;
 
     public const long MaxSingleWinCoins = 5_000;
 
     public const long MaxSingleWin = MaxSingleWinCoins * ChipPerCoin;
 
-    public const long JackpotSeedCoins = 5_000;
+    public const long JackpotSeedCoins = 10_000;
 
-    public const long JackpotCapCoins = 50_000;
+    public const long JackpotCapCoins = 100_000;
 
     public static readonly long[] Chips =
     {
-        2_000,
-        5_000,
-        10_000,
-        25_000,
+        20_000,
         50_000,
         100_000,
-        200_000,
+        250_000,
+        500_000,
+        1_000_000,
+        2_000_000,
     };
 
     public static long CoinsFor(long chips)

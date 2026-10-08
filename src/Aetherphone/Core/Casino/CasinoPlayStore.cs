@@ -239,6 +239,7 @@ internal sealed class CasinoPlayStore : IDisposable
             }
             else
             {
+                store.AbsorbCeiling(result.Ceiling);
                 store.RefreshNow();
             }
         }, () => roundInFlight = false);
@@ -263,6 +264,7 @@ internal sealed class CasinoPlayStore : IDisposable
             }
             else
             {
+                store.AbsorbCeiling(result.Ceiling);
                 store.RefreshNow();
             }
         }, () => roundInFlight = false);

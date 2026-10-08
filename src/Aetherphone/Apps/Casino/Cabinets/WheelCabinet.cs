@@ -146,7 +146,7 @@ internal sealed class WheelCabinet : ICabinetIdle
         DrawPodiums(drawList, ui, board, new Rect(new Vector2(safe.Min.X, podiumTop), safe.Max), betting, scale);
         if (inlineReason.Length > 0)
         {
-            var message = Loc.T(CasinoReasons.MessageFor(inlineReason));
+            var message = CasinoReasons.Text(inlineReason, chips.Ceiling.MaxBet);
             var height = CasinoNotice.Height(CasinoNoticeKind.Reason, string.Empty, message, safe.Width, scale);
             CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Reason, string.Empty, message, safe.Min.X,
                 podiumTop - height - PodiumGap * scale, safe.Width, scale);

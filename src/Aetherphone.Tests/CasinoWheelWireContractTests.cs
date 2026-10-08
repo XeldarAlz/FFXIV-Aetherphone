@@ -121,8 +121,8 @@ public sealed class CasinoWheelWireContractTests
             + "\"segment\":31,\"spot\":1,\"spots\":[{\"spot\":0,\"multiplier\":1,\"segments\":24,"
             + "\"returnBasisPoints\":9600,\"amount\":22000,\"bettors\":5},{\"spot\":4,\"multiplier\":22,"
             + "\"segments\":2,\"returnBasisPoints\":9200,\"amount\":2000,\"bettors\":1}],\"staked\":64000,"
-            + "\"paid\":30000,\"recent\":[4,17,31],\"minBet\":100,\"maxBetPerSpot\":5000,"
-            + "\"maxBetPerRound\":20000,\"maxWin\":500000}";
+            + "\"paid\":30000,\"recent\":[4,17,31],\"minBet\":100,\"maxBetPerSpot\":50000,"
+            + "\"maxBetPerRound\":200000,\"maxWin\":5000000}";
         var board = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.CasinoWheelRoomStateDto);
 
         Assert.NotNull(board);

@@ -7,7 +7,7 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Casino;
 
-internal sealed record CasinoStakeOutcome(bool Granted, string Reason);
+internal sealed record CasinoStakeOutcome(bool Granted, string Reason, long Ceiling = 0);
 
 internal sealed class CasinoRoomsStore : IDisposable
 {
@@ -234,9 +234,11 @@ internal sealed class CasinoRoomsStore : IDisposable
             }
 
             ForgetUnansweredBet(betId);
-            Interlocked.Exchange(ref stakeResult, new CasinoStakeOutcome(result.Granted, result.Reason));
+            Interlocked.Exchange(ref stakeResult,
+                new CasinoStakeOutcome(result.Granted, result.Reason, result.Ceiling));
             if (!result.Granted)
             {
+                chips.AbsorbCeiling(result.Ceiling);
                 chips.RefreshNow();
                 InvalidatePersonal();
                 return;
@@ -295,9 +297,11 @@ internal sealed class CasinoRoomsStore : IDisposable
             }
 
             ForgetUnansweredPurchase(purchaseId);
-            Interlocked.Exchange(ref stakeResult, new CasinoStakeOutcome(result.Granted, result.Reason));
+            Interlocked.Exchange(ref stakeResult,
+                new CasinoStakeOutcome(result.Granted, result.Reason, result.Ceiling));
             if (!result.Granted)
             {
+                chips.AbsorbCeiling(result.Ceiling);
                 chips.RefreshNow();
                 InvalidatePersonal();
                 return;

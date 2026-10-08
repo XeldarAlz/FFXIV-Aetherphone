@@ -7,7 +7,8 @@ internal sealed record CasinoSittingDto(
     int State = 0,
     long Stack = 0,
     long ChipsIn = 0,
-    long ChipsOut = 0);
+    long ChipsOut = 0,
+    long RateChipsPerCoin = 1000);
 
 internal sealed record CasinoStateDto(
     bool StakesPaused = false,
@@ -29,7 +30,50 @@ internal sealed record CasinoStateDto(
     long Jackpot = 0,
     CasinoProgressDto? Progress = null,
     CasinoCeilingDto? Ceiling = null,
-    long[]? LevelCapAnchors = null);
+    long[]? LevelCapAnchors = null,
+    string[]? Features = null,
+    long RateChipsPerCoin = 0,
+    long[]? Ladder = null,
+    CasinoCashierDto? Cashier = null,
+    CasinoBonusDto[]? Bonuses = null,
+    CasinoClubDto? Club = null);
+
+internal sealed record CasinoCashierDto(
+    long DailyNetCashOutCoins = 0,
+    long CashOutCoinsToday = 0,
+    long BuyInCoinsToday = 0,
+    long AllowanceCoins = 0,
+    long QueuedChips = 0);
+
+internal sealed record CasinoBonusDto(
+    string Kind = "",
+    bool Ready = false,
+    long Amount = 0,
+    long NextAtUnix = 0,
+    int StreakDay = 0,
+    bool Eligible = false);
+
+internal sealed record CasinoClubDto(
+    int Tier = 0,
+    string TierKey = "",
+    long Points = 0,
+    long TierFloor = 0,
+    long NextTierPoints = 0,
+    int MultiplierPercent = 100,
+    int RebateBasisPoints = 0);
+
+internal sealed record CasinoBonusClaimRequest(string ClientActionId = "");
+
+internal sealed record CasinoBonusClaimDto(
+    bool Granted = false,
+    string Reason = "",
+    string Kind = "",
+    long Amount = 0,
+    long Stack = 0,
+    CasinoSittingDto? Sitting = null,
+    long NextAtUnix = 0,
+    int StreakDay = 0,
+    int Level = 0);
 
 internal sealed record CasinoProgressDto(
     int Level = 1,
@@ -63,7 +107,9 @@ internal sealed record CasinoSittingResultDto(
     bool Granted = false,
     string Reason = "",
     CasinoSittingDto? Sitting = null,
-    long Balance = 0);
+    long Balance = 0,
+    long ConvertedCoins = 0,
+    long QueuedChips = 0);
 
 internal sealed record CasinoLimitRequest(long? SelfLossLimit);
 
@@ -96,7 +142,8 @@ internal sealed record CasinoSlotsSpinDto(
     bool CapApplied = false,
     string NextSeedHash = "",
     long Stack = 0,
-    long Jackpot = 0);
+    long Jackpot = 0,
+    long Ceiling = 0);
 
 internal sealed record CasinoScratchBuyRequest(string SittingId, string ClientRoundId, int Tier);
 
@@ -108,7 +155,8 @@ internal sealed record CasinoScratchCardDto(
     int[]? Cells = null,
     long Prize = 0,
     string NextSeedHash = "",
-    long Stack = 0);
+    long Stack = 0,
+    long Ceiling = 0);
 
 internal sealed record CasinoBarkeepStartRequest(string SittingId, string ClientRoundId);
 
@@ -180,7 +228,8 @@ internal sealed record CasinoRoomSnapshotDto(
     bool Attached = false,
     int Epoch = 0,
     long Seq = 0,
-    long ServerNowUnixMs = 0);
+    long ServerNowUnixMs = 0,
+    bool Practice = false);
 
 internal sealed record CasinoRoomEventDto(
     int State = 0,
@@ -200,7 +249,8 @@ internal sealed record CasinoRoomListItemDto(
     int Phase = 0,
     long PhaseEndsAtUnixMs = 0,
     long RoundIndex = 0,
-    int Occupancy = 0);
+    int Occupancy = 0,
+    bool Practice = false);
 
 internal sealed record CasinoRoomListDto(
     CasinoRoomListItemDto[]? Rooms = null,
@@ -211,6 +261,7 @@ internal sealed record CasinoWheelSpotDto(
     int Multiplier = 0,
     int Segments = 0,
     int ReturnBasisPoints = 0,
+    long Capacity = 0,
     long Amount = 0,
     int Bettors = 0);
 
@@ -273,7 +324,8 @@ internal sealed record CasinoWheelBetDto(
     int Spot = 0,
     long Amount = 0,
     long MyStake = 0,
-    long Stack = 0);
+    long Stack = 0,
+    long Ceiling = 0);
 
 internal sealed record CasinoWheelMyBetDto(int Spot = 0, long Amount = 0);
 
@@ -312,7 +364,8 @@ internal sealed record CasinoBlackjackSeatDto(
     long HeldUntilUnixMs = 0,
     CasinoBlackjackHandDto[]? Hands = null,
     string AvatarUrl = "",
-    string FrameId = "");
+    string FrameId = "",
+    int TimeBankLeft = 0);
 
 internal sealed record CasinoBlackjackRoomStateDto(
     string HandId = "",
@@ -334,7 +387,41 @@ internal sealed record CasinoBlackjackRoomStateDto(
     long MaxBet = 0,
     long MinBuyIn = 0,
     long MaxBuyIn = 0,
-    long MaxWin = 0);
+    long MaxWin = 0,
+    bool Practice = false,
+    bool Paused = false,
+    int DealerMode = 0,
+    string DealerUserId = "",
+    string DealerName = "",
+    string[]? CoDealers = null,
+    bool AutoDeal = true,
+    bool FaceUp = false,
+    bool PracticeRebuy = false,
+    long PracticeStack = 0,
+    CasinoBlackjackRuleSheetDto? Rules = null,
+    CasinoBlackjackTournamentDto? Tournament = null,
+    string Name = "",
+    int TurnSeconds = 0,
+    int Currency = 0,
+    long Bank = 0,
+    long BankHeadroom = 0,
+    long MaxPayout = 0);
+
+internal sealed record CasinoBlackjackStandingDto(
+    string UserId = "",
+    string DisplayName = "",
+    long Chips = 0,
+    bool Eliminated = false,
+    int Place = 0);
+
+internal sealed record CasinoBlackjackTournamentDto(
+    bool Live = false,
+    int Hands = 0,
+    int HandsPlayed = 0,
+    long Stack = 0,
+    string WinnerUserId = "",
+    string WinnerName = "",
+    CasinoBlackjackStandingDto[]? Standings = null);
 
 internal sealed record CasinoBlackjackYouDto(
     string HandId = "",
@@ -409,7 +496,14 @@ internal sealed record CasinoTableRowDto(
     int Occupancy = 0,
     bool Admitted = false,
     string Reason = "",
-    string InviteToken = "");
+    string InviteToken = "",
+    string Name = "",
+    int Listing = 0,
+    bool Practice = false,
+    bool Paused = false,
+    CasinoTableConfigDto? Config = null,
+    int Currency = 0,
+    CasinoHostReputationDto? Reputation = null);
 
 internal sealed record CasinoTableListDto(
     CasinoTableRowDto[]? Tables = null,
@@ -429,7 +523,238 @@ internal sealed record CasinoQuickSeatDto(
     long MaxBet = 0,
     int SeatIndex = -1);
 
-internal sealed record CasinoTableCreateRequest(string ClientTableId, int StakeTier);
+internal sealed record CasinoTableCreateRequest(string ClientTableId, int StakeTier = 0,
+    CasinoTableConfigDto? Config = null);
+
+internal sealed record CasinoTableConfigDto(
+    string GameKind = "casino.blackjack",
+    string Name = "",
+    int Seats = 6,
+    long MinBet = 0,
+    long MaxBet = 0,
+    long MinBuyIn = 0,
+    long MaxBuyIn = 0,
+    bool Practice = false,
+    long PracticeStack = 100000,
+    bool PracticeRebuy = true,
+    int TurnSeconds = 20,
+    int TimeBankUses = 3,
+    int Listing = 0,
+    bool Spectators = true,
+    bool FaceUp = false,
+    int DealerMode = 0,
+    string[]? CoDealers = null,
+    bool AutoDeal = true,
+    CasinoBlackjackRuleSheetDto? HouseRules = null,
+    CasinoTableLocationDto? Location = null,
+    CasinoPokerTableOptionsDto? Poker = null,
+    CasinoDiceTableOptionsDto? Dice = null,
+    CasinoDeathrollOptionsDto? Deathroll = null,
+    int Currency = 0,
+    long Bank = 0,
+    long MaxPayout = 0);
+
+internal sealed record CasinoBlackjackRuleSheetDto(
+    int BlackjackPays = 0,
+    bool DealerHitsSoft17 = false,
+    int Decks = 6,
+    int Splits = 2,
+    int Doubles = 0,
+    bool FiveCardCharlie = false,
+    bool DealerPeek = true);
+
+internal sealed record CasinoTableLocationDto(
+    int World = 0,
+    int Territory = 0,
+    int Ward = 0,
+    int Plot = 0,
+    int ApartmentWing = 0,
+    int Room = 0);
+
+internal sealed record CasinoPokerTableOptionsDto(
+    long SmallBlind = 50,
+    long Ante = 0,
+    int Straddle = 0,
+    bool RunItTwice = false,
+    int BombPotAnteBb = 0,
+    int BombPotPercent = 0,
+    long SevenDeuceBounty = 0,
+    bool WaitForBigBlind = false,
+    bool AutoMuck = true);
+
+internal sealed record CasinoDiceTableOptionsDto(int Sides = 1000, bool HighestWins = false, int RoundSeconds = 60);
+
+internal sealed record CasinoDeathrollOptionsDto(int StartAt = 1000, long Stake = 10000);
+
+internal sealed record CasinoHostReputationDto(
+    int GilTablesHosted = 0,
+    int PayoutsConfirmed = 0,
+    int DisputesOpen = 0,
+    bool Frozen = false);
+
+internal sealed record CasinoTableRenameRequest(string Name = "");
+
+internal sealed record CasinoTablePauseRequest(bool Paused = true);
+
+internal sealed record CasinoTableCoDealersRequest(string[]? UserIds = null);
+
+internal sealed record CasinoTableTournamentRequest(int Hands = 20, long Stack = 0);
+
+internal sealed record CasinoBlackjackRebuyRequest(string RoomId = "");
+
+internal sealed record CasinoTableLedgerRowDto(
+    string UserId = "",
+    string DisplayName = "",
+    int SeatIndex = -1,
+    long BuyIns = 0,
+    long Stack = 0,
+    long Net = 0,
+    int Hands = 0,
+    bool Seated = false);
+
+internal sealed record CasinoTableLedgerDto(
+    string TableId = "",
+    bool Owner = false,
+    bool Practice = false,
+    CasinoTableLedgerRowDto[]? Rows = null,
+    long ServerNowUnixMs = 0,
+    int Currency = 0,
+    CasinoLedgerEntryDto[]? Entries = null);
+
+internal sealed record CasinoLedgerEntryDto(
+    string EntryId = "",
+    string TableId = "",
+    string Kind = "",
+    long Amount = 0,
+    string PayerUserId = "",
+    string PayerName = "",
+    string PayeeUserId = "",
+    string PayeeName = "",
+    string ProposedBy = "",
+    string Source = "",
+    bool PayerConfirmed = false,
+    bool PayeeConfirmed = false,
+    bool Settled = false,
+    bool Disputed = false,
+    bool DisputeResolved = false,
+    long CreatedAtUnixMs = 0,
+    long SettledAtUnixMs = 0);
+
+internal sealed record CasinoLedgerProposeRequest(
+    string ClientEntryId = "",
+    string Kind = "buyin",
+    string CounterpartyUserId = "",
+    long Amount = 0,
+    string Source = "manual");
+
+internal sealed record CasinoLedgerResultDto(bool Granted = false, string Reason = "",
+    CasinoLedgerEntryDto? Entry = null);
+
+internal sealed record CasinoLedgerListDto(CasinoLedgerEntryDto[]? Entries = null, long ServerNowUnixMs = 0);
+
+internal sealed record CasinoVenueActRequest(
+    string ClientActionId = "",
+    string Action = "",
+    int Count = 0,
+    string Title = "",
+    int Winners = 0,
+    int DurationSeconds = 0,
+    string OpponentUserId = "",
+    long TicketPrice = 0,
+    long Prize = 0);
+
+internal sealed record CasinoVenueActDto(
+    bool Granted = false,
+    string Reason = "",
+    string RoomId = "",
+    long Seq = 0,
+    long Value = 0,
+    string Seed = "",
+    string NextCommit = "");
+
+internal sealed record CasinoVenueRollDto(
+    long Seq = 0,
+    string UserId = "",
+    string DisplayName = "",
+    long Bound = 0,
+    long Value = 0,
+    long AtUnixMs = 0,
+    string Seed = "");
+
+internal sealed record CasinoDiceRoundDto(
+    long Index = 0,
+    long OpenedSeq = 0,
+    long EndsAtUnixMs = 0,
+    string WinnerUserId = "",
+    string WinnerName = "",
+    long WinningValue = 0,
+    bool Closed = false,
+    string[]? Rollers = null);
+
+internal sealed record CasinoDiceTableStateDto(
+    string Name = "",
+    int Sides = 1000,
+    bool HighestWins = false,
+    int RoundSeconds = 60,
+    long LastSeq = 0,
+    string NextCommit = "",
+    CasinoVenueRollDto[]? Rolls = null,
+    CasinoDiceRoundDto? Round = null,
+    CasinoDiceRoundDto? LastRound = null,
+    int Currency = 1);
+
+internal sealed record CasinoDeathrollDuelDto(
+    long Seq = 0,
+    string ChallengerUserId = "",
+    string ChallengerName = "",
+    string OpponentUserId = "",
+    string OpponentName = "",
+    long Stake = 0,
+    int Phase = 0,
+    string TurnUserId = "",
+    long Current = 0,
+    long TurnEndsAtUnixMs = 0,
+    CasinoVenueRollDto[]? Rolls = null,
+    string LoserUserId = "");
+
+internal sealed record CasinoVenueStackDto(string UserId = "", string DisplayName = "", long Chips = 0);
+
+internal sealed record CasinoDeathrollStateDto(
+    string Name = "",
+    int StartAt = 1000,
+    long Stake = 10000,
+    long PracticeStack = 0,
+    long LastSeq = 0,
+    string NextCommit = "",
+    CasinoDeathrollDuelDto? Duel = null,
+    CasinoDeathrollDuelDto[]? Recent = null,
+    CasinoVenueStackDto[]? Stacks = null,
+    int Currency = 1);
+
+internal sealed record CasinoRaffleEntrantDto(string UserId = "", string DisplayName = "", int Tickets = 0);
+
+internal sealed record CasinoRaffleDto(
+    long Seq = 0,
+    string Title = "",
+    int TicketsPerPerson = 0,
+    int Winners = 0,
+    long EndsAtUnixMs = 0,
+    int Tickets = 0,
+    CasinoRaffleEntrantDto[]? Entrants = null,
+    bool Drawn = false,
+    long DrawSeq = 0,
+    string Seed = "",
+    CasinoRaffleEntrantDto[]? WinnersDrawn = null,
+    long TicketPrice = 0,
+    long Prize = 0);
+
+internal sealed record CasinoRaffleStateDto(
+    string Name = "",
+    long LastSeq = 0,
+    string NextCommit = "",
+    CasinoRaffleDto? Raffle = null,
+    CasinoRaffleDto? Last = null,
+    int Currency = 1);
 
 internal sealed record CasinoTableResultDto(
     bool Granted = false,
@@ -480,7 +805,8 @@ internal sealed record CasinoBingoCardsDto(
     int RoundState = 0,
     string SeedCommitHash = "",
     string NextSeedHash = "",
-    long Stack = 0);
+    long Stack = 0,
+    long Ceiling = 0);
 
 internal sealed record CasinoDailySpinDto(
     bool Granted = false,

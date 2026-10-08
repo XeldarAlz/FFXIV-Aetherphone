@@ -100,7 +100,7 @@ public sealed class WheelRulesTests
     public void HeadroomNarrowsAsTheRoundCapFillsAndClosesAtIt()
     {
         Assert.Equal(WheelRules.MaxStakePerSpot, WheelRules.Headroom(0));
-        Assert.Equal(WheelRules.MaxStakePerSpot, WheelRules.Headroom(WheelRules.MaxStakePerRound - 6000));
+        Assert.Equal(WheelRules.MaxStakePerSpot, WheelRules.Headroom(WheelRules.MaxStakePerRound - 60_000));
         Assert.Equal(2000, WheelRules.Headroom(WheelRules.MaxStakePerRound - 2000));
         Assert.Equal(0, WheelRules.Headroom(WheelRules.MaxStakePerRound));
         Assert.Equal(0, WheelRules.Headroom(WheelRules.MaxStakePerRound + 4000));

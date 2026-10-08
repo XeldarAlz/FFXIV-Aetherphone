@@ -10099,7 +10099,7 @@ internal static class L
         public static readonly LocString CashOut = new("casino.cashOut", "Cash out");
         public static readonly LocString CashOutFor = new("casino.cashOutFor", "Cash out {0}");
         public static readonly LocString CashOutHint = new("casino.cashOutHint", "Chips settle back into your wallet as coins, rounded up in your favour. Leave them here and they wait for you.");
-        public static readonly LocString ChipRate = new("casino.chipRate", "100 chips = 1 coin");
+        public static readonly LocString ChipRate = new("casino.chipRate", "1,000 chips = 1 coin");
         public static readonly LocString SlotsTurbo = new("casino.slotsTurbo", "Turbo");
         public static readonly LocString LotCost = new("casino.lotCost", "{0} coins");
         public static readonly LocString NotEnoughCoins = new("casino.notEnoughCoins", "Not enough coins");
@@ -10639,6 +10639,33 @@ internal static class L
         public static readonly LocString TakeBreak = new("casino.strip.takeBreak", "Take a break");
         public static readonly LocString ReasonCeiling = new("casino.strip.reasonCeiling", "That bet is above your max bet right now. Lower it, or grow your level or balance to raise the cap.");
         public static readonly LocString ReasonLadder = new("casino.strip.reasonLadder", "Bets move in ladder steps. Pick one of the steps and try again.");
+        public static readonly LocString ReasonCeilingAt = new("casino.strip.reasonCeilingAt", "That bet is above your max bet of {0} right now. Lower it, or grow your level or balance to raise the cap.");
+        public static readonly LocString ReasonBonusNotReady = new("casino.strip.reasonBonusNotReady", "That bonus is not ready yet. Check its timer and come back.");
+        public static readonly LocString ReasonClubInsufficient = new("casino.strip.reasonClubInsufficient", "Your Gamba Club tier does not include that bonus yet. Keep playing to climb.");
+    }
+
+    internal static class Tables
+    {
+        public static readonly LocString ReasonConfigInvalid = new("casino.tables.reasonConfigInvalid", "Some of those table settings do not work together. Check the stakes and limits, then try again.");
+        public static readonly LocString ReasonPracticeOnly = new("casino.tables.reasonPracticeOnly", "That option is only for practice and gil tables, not house chip tables.");
+        public static readonly LocString ReasonNotDealer = new("casino.tables.reasonNotDealer", "Only the host or a co-dealer can do that.");
+        public static readonly LocString ReasonRebuyOff = new("casino.tables.reasonRebuyOff", "The host turned rebuys off at this table.");
+        public static readonly LocString ReasonTournamentLive = new("casino.tables.reasonTournamentLive", "A tournament is running. Wait for it to finish first.");
+        public static readonly LocString ReasonNoTournament = new("casino.tables.reasonNoTournament", "There is no tournament running at this table.");
+        public static readonly LocString ReasonNothingToDeal = new("casino.tables.reasonNothingToDeal", "Nothing to deal yet. Wait for at least one bet.");
+        public static readonly LocString ReasonNoSpectators = new("casino.tables.reasonNoSpectators", "This table does not take spectators. Take a seat to watch.");
+        public static readonly LocString ReasonDuelLive = new("casino.tables.reasonDuelLive", "A duel is already running in this room.");
+        public static readonly LocString ReasonNoDuel = new("casino.tables.reasonNoDuel", "There is no duel to join right now.");
+        public static readonly LocString ReasonRaffleLive = new("casino.tables.reasonRaffleLive", "A raffle is already open in this room.");
+        public static readonly LocString ReasonNoRaffle = new("casino.tables.reasonNoRaffle", "There is no raffle open right now.");
+        public static readonly LocString ReasonTicketLimit = new("casino.tables.reasonTicketLimit", "You already hold the most tickets this raffle allows.");
+        public static readonly LocString ReasonRoundLive = new("casino.tables.reasonRoundLive", "A highest roll round is already open.");
+        public static readonly LocString ReasonBankLimit = new("casino.tables.reasonBankLimit", "That bet could pay more than the host's bank or max payout covers. Try a smaller bet.");
+        public static readonly LocString ReasonHostFrozen = new("casino.tables.reasonHostFrozen", "Gil hosting is on hold for this host while disputes are reviewed.");
+        public static readonly LocString ReasonNotParty = new("casino.tables.reasonNotParty", "Only the host and that player can record this payment.");
+        public static readonly LocString ReasonAlreadyConfirmed = new("casino.tables.reasonAlreadyConfirmed", "You already confirmed your side of this payment.");
+        public static readonly LocString ReasonSettled = new("casino.tables.reasonSettled", "This payment is already settled on both sides.");
+        public static readonly LocString ReasonGilOnly = new("casino.tables.reasonGilOnly", "That only works at gil tables.");
     }
 
     internal static class Catalogs

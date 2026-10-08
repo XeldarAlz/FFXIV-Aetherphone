@@ -61,11 +61,55 @@ internal static class CasinoReasons
     public const string NoTables = "no_tables";
     public const string Ceiling = "ceiling";
     public const string Ladder = "ladder";
+    public const string BonusNotReady = "bonus_not_ready";
+    public const string ClubInsufficient = "club_insufficient";
+    public const string ConfigInvalid = "config_invalid";
+    public const string PracticeOnly = "practice_only";
+    public const string NotDealer = "not_dealer";
+    public const string RebuyOff = "rebuy_off";
+    public const string TournamentLive = "tournament_live";
+    public const string NoTournament = "no_tournament";
+    public const string NothingToDeal = "nothing_to_deal";
+    public const string NoSpectators = "no_spectators";
+    public const string DuelLive = "duel_live";
+    public const string NoDuel = "no_duel";
+    public const string RaffleLive = "raffle_live";
+    public const string NoRaffle = "no_raffle";
+    public const string TicketLimit = "ticket_limit";
+    public const string RoundLive = "round_live";
+    public const string BankLimit = "bank_limit";
+    public const string HostFrozen = "host_frozen";
+    public const string NotParty = "not_party";
+    public const string AlreadyConfirmed = "already_confirmed";
+    public const string Settled = "settled";
+    public const string GilOnly = "gil_only";
 
     public static readonly string[] All =
     {
         Ceiling,
         Ladder,
+        BonusNotReady,
+        ClubInsufficient,
+        ConfigInvalid,
+        PracticeOnly,
+        NotDealer,
+        RebuyOff,
+        TournamentLive,
+        NoTournament,
+        NothingToDeal,
+        NoSpectators,
+        DuelLive,
+        NoDuel,
+        RaffleLive,
+        NoRaffle,
+        TicketLimit,
+        RoundLive,
+        BankLimit,
+        HostFrozen,
+        NotParty,
+        AlreadyConfirmed,
+        Settled,
+        GilOnly,
         StakesPaused,
         LossLimit,
         Draining,
@@ -125,6 +169,28 @@ internal static class CasinoReasons
     {
         [Ceiling] = L.Strip.ReasonCeiling,
         [Ladder] = L.Strip.ReasonLadder,
+        [BonusNotReady] = L.Strip.ReasonBonusNotReady,
+        [ClubInsufficient] = L.Strip.ReasonClubInsufficient,
+        [ConfigInvalid] = L.Tables.ReasonConfigInvalid,
+        [PracticeOnly] = L.Tables.ReasonPracticeOnly,
+        [NotDealer] = L.Tables.ReasonNotDealer,
+        [RebuyOff] = L.Tables.ReasonRebuyOff,
+        [TournamentLive] = L.Tables.ReasonTournamentLive,
+        [NoTournament] = L.Tables.ReasonNoTournament,
+        [NothingToDeal] = L.Tables.ReasonNothingToDeal,
+        [NoSpectators] = L.Tables.ReasonNoSpectators,
+        [DuelLive] = L.Tables.ReasonDuelLive,
+        [NoDuel] = L.Tables.ReasonNoDuel,
+        [RaffleLive] = L.Tables.ReasonRaffleLive,
+        [NoRaffle] = L.Tables.ReasonNoRaffle,
+        [TicketLimit] = L.Tables.ReasonTicketLimit,
+        [RoundLive] = L.Tables.ReasonRoundLive,
+        [BankLimit] = L.Tables.ReasonBankLimit,
+        [HostFrozen] = L.Tables.ReasonHostFrozen,
+        [NotParty] = L.Tables.ReasonNotParty,
+        [AlreadyConfirmed] = L.Tables.ReasonAlreadyConfirmed,
+        [Settled] = L.Tables.ReasonSettled,
+        [GilOnly] = L.Tables.ReasonGilOnly,
         [StakesPaused] = L.Casino.ReasonStakesPaused,
         [LossLimit] = L.Casino.ReasonLossLimit,
         [Draining] = L.Casino.ReasonDraining,
@@ -180,6 +246,10 @@ internal static class CasinoReasons
         [NoTables] = L.Casino.ReasonNoTables,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
+    private static long ceilingTextValue;
+    private static LanguageInfo? ceilingTextLanguage;
+    private static string ceilingText = string.Empty;
+
     public static bool TryMessage(string reason, out LocString message)
     {
         return Messages.TryGetValue(reason, out message);
@@ -188,5 +258,23 @@ internal static class CasinoReasons
     public static LocString MessageFor(string reason)
     {
         return Messages.TryGetValue(reason, out var message) ? message : L.Casino.ReasonGeneric;
+    }
+
+    public static string Text(string reason, long ceiling)
+    {
+        if (ceiling <= 0 || !string.Equals(reason, Ceiling, StringComparison.Ordinal))
+        {
+            return Loc.T(MessageFor(reason));
+        }
+
+        if (ceiling == ceilingTextValue && ReferenceEquals(Loc.Current, ceilingTextLanguage))
+        {
+            return ceilingText;
+        }
+
+        ceilingTextValue = ceiling;
+        ceilingTextLanguage = Loc.Current;
+        ceilingText = Loc.T(L.Strip.ReasonCeilingAt, NumberText.Compact(ceiling));
+        return ceilingText;
     }
 }
