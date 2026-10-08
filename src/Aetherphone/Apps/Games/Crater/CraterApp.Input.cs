@@ -54,7 +54,8 @@ internal sealed partial class CraterApp
 
         var mouse = ImGui.GetMousePos();
         var free = !layout.Covers(mouse) && !context.ChromeHit(mouse);
-        pan.Track(in camera, playing && !board.Over && !board.HumanTurn, surfaceActivated && free);
+        var rightPressed = surfaceHovered && free && ImGui.IsMouseClicked(ImGuiMouseButton.Right);
+        pan.Track(in camera, playing && !board.Over, !board.HumanTurn, surfaceActivated && free, rightPressed);
 
         if (board.Over || board.IsBot(board.ActiveTeam))
         {

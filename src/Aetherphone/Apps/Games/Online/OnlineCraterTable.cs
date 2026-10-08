@@ -138,14 +138,13 @@ internal sealed partial class OnlineCraterTable : IDisposable
             ? BackCenter(body, scale).Y
             : layout.Wind.Max.Y + (8f + StageLayout.SecondaryHeight * 0.5f) * scale;
         DrawRound(drawList, new Vector2(roundLeft, roundCenterY), snapshot, shown, theme, scale);
+        TrackPan(body, layout, live, !myTurn, scale);
         if (myTurn)
         {
-            pan.Release();
             DrawControls(drawList, body, layout, shown, accent, theme, raw, scale);
         }
         else
         {
-            TrackPan(body, layout, live, scale);
             DrawStatus(drawList, layout, shown, live, notice, scale);
         }
 

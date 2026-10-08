@@ -8,11 +8,12 @@ internal struct CraterPan
     private const float MinZoom = 0.0001f;
 
     private Vector2 origin;
+    private ImGuiMouseButton button;
     private bool dragging;
 
-    public void Track(in Camera2D camera, bool allowed, bool pressed)
+    public void Track(in Camera2D camera, bool allowed, bool leftPans, bool leftPressed, bool rightPressed)
     {
-        if (!allowed || !ImGui.IsMouseDown(ImGuiMouseButton.Left))
+        if (!allowed || (dragging && button == ImGuiMouseButton.Left && !leftPans))
         {
             dragging = false;
             return;
@@ -20,8 +21,21 @@ internal struct CraterPan
 
         if (!dragging)
         {
-            dragging = pressed;
+            var left = leftPans && leftPressed;
+            if (!left && !rightPressed)
+            {
+                return;
+            }
+
+            dragging = true;
+            button = left ? ImGuiMouseButton.Left : ImGuiMouseButton.Right;
             origin = camera.Origin;
+            return;
+        }
+
+        if (!ImGui.IsMouseDown(button))
+        {
+            dragging = false;
             return;
         }
 

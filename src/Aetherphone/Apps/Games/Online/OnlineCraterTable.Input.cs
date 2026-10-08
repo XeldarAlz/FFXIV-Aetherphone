@@ -305,10 +305,17 @@ internal sealed partial class OnlineCraterTable
         return false;
     }
 
-    private void TrackPan(Rect body, in CraterLayout layout, bool allowed, float scale)
+    private void TrackPan(Rect body, in CraterLayout layout, bool allowed, bool leftPans, float scale)
     {
-        PressSurface.Claim(SurfaceId, body, out var activated);
-        pan.Track(in camera, allowed, activated && !PointerBlocked(body, layout, ImGui.GetMousePos(), scale));
+        var activated = false;
+        if (leftPans)
+        {
+            PressSurface.Claim(SurfaceId, body, out activated);
+        }
+
+        var free = !PointerBlocked(body, layout, ImGui.GetMousePos(), scale);
+        var right = free && UiInteract.Hover(body.Min, body.Max) && ImGui.IsMouseClicked(ImGuiMouseButton.Right);
+        pan.Track(in camera, allowed, leftPans, activated && free, right);
     }
 
     private static bool PointerBlocked(Rect body, in CraterLayout layout, Vector2 mouse, float scale)
