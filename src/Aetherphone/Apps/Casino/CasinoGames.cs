@@ -15,4 +15,7 @@ internal static class CasinoGames
     public const string Limbo = "limbo";
     public const string Keno = "keno";
     public const string HiLo = "hilo";
+    public const string DiceTable = "dicetable";
+    public const string Deathroll = "deathroll";
+    public const string Raffle = "raffle";
 }

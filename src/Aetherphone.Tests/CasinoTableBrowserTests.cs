@@ -16,7 +16,8 @@ public sealed class CasinoTableBrowserTests
         Assert.True(CasinoTableFilters.Matches(CasinoTableFilter.All, Row(seatsTaken: 5, seatCount: 5), Me));
         Assert.True(CasinoTableFilters.Matches(CasinoTableFilter.All, Row(inviteOnly: true), Me));
         Assert.True(CasinoTableFilters.Matches(CasinoTableFilter.All, Row(gameKind: CasinoTableFilters.HoldemKind), Me));
-        Assert.False(CasinoTableFilters.Matches(CasinoTableFilter.All, Row(gameKind: "casino.raffle"), Me));
+        Assert.True(CasinoTableFilters.Matches(CasinoTableFilter.All, Row(gameKind: "casino.raffle"), Me));
+        Assert.False(CasinoTableFilters.Matches(CasinoTableFilter.All, Row(gameKind: "casino.unknown"), Me));
     }
 
     [Fact]
@@ -83,7 +84,8 @@ public sealed class CasinoTableBrowserTests
     {
         Assert.Equal(new[]
         {
-            CasinoTableFilter.All, CasinoTableFilter.Blackjack, CasinoTableFilter.Holdem, CasinoTableFilter.LowStakes,
+            CasinoTableFilter.All, CasinoTableFilter.Blackjack, CasinoTableFilter.Holdem, CasinoTableFilter.Rooms,
+            CasinoTableFilter.LowStakes,
             CasinoTableFilter.HighStakes, CasinoTableFilter.Practice, CasinoTableFilter.Gil, CasinoTableFilter.Mine,
         }, CasinoTableFilters.All);
     }

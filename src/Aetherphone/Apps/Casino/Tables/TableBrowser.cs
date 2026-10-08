@@ -22,6 +22,7 @@ internal sealed class TableBrowser
         L.Casino.TableFilterAll,
         L.Tables.FilterBlackjack,
         L.Tables.FilterHoldem,
+        L.Venue.FilterRooms,
         L.Casino.TableFilterLowStakes,
         L.Casino.TableFilterHighStakes,
         L.Tables.FilterPractice,
@@ -37,6 +38,8 @@ internal sealed class TableBrowser
     private readonly Action<string> openTable;
     private readonly Action<string> openDoor;
     private readonly Action openHostSheet;
+    private readonly Venue.NearbyTablesCard nearby;
+    private readonly Action<CasinoTableRowDto> openNearby;
     private readonly ChipRail rail = new();
     private readonly string[] filterLabels = new string[FilterLabels.Length];
     private readonly bool[] filterActive = new bool[FilterLabels.Length];
@@ -50,8 +53,10 @@ internal sealed class TableBrowser
     private string inlineReason = string.Empty;
 
     public TableBrowser(CasinoTablesStore tables, CasinoStore chips, Action<string> openTable, Action<string> openDoor,
-        Action openHostSheet)
+        Action openHostSheet, Venue.NearbyTablesCard nearby)
     {
+        this.nearby = nearby;
+        openNearby = row => openTable(row.TableId);
         this.tables = tables;
         this.chips = chips;
         this.openTable = openTable;
@@ -82,6 +87,7 @@ internal sealed class TableBrowser
         RefreshViews();
         using var surface = AppSurface.Begin(body);
 
+        DrawNearby(ui, scale);
         DrawQuickSeatCard(ui, scale);
         if (inlineReason.Length > 0)
         {
@@ -109,12 +115,16 @@ internal sealed class TableBrowser
             : hosted && row.OwnerName.Length > 0
                 ? Loc.T(L.Casino.TableHostedBy, row.OwnerName)
                 : Loc.T(L.Casino.TableUnnamed);
-        var stakes = currency == CasinoCurrencies.Gil
-            ? Loc.T(L.Tables.GilStakes, NumberText.Group(row.MaxBet), NumberText.Group(row.Config?.Bank ?? 0))
-            : Loc.T(L.Casino.TableStakes, NumberText.Compact(row.MinBet), NumberText.Compact(row.MaxBet));
-        var seats = Loc.T(L.Casino.TableSeats, row.SeatedCount.ToString(Loc.Culture),
-            row.MaxSeats.ToString(Loc.Culture));
-        var watching = CasinoTableFilters.SpectatorsOf(row);
+        var room = VenueKinds.Of(row.GameKind);
+        var stakes = room != VenueRoomKind.None
+            ? Loc.T(Venue.VenueCabinet.NameOf(room))
+            : currency == CasinoCurrencies.Gil
+                ? Loc.T(L.Tables.GilStakes, NumberText.Group(row.MaxBet), NumberText.Group(row.Config?.Bank ?? 0))
+                : Loc.T(L.Casino.TableStakes, NumberText.Compact(row.MinBet), NumberText.Compact(row.MaxBet));
+        var seats = room != VenueRoomKind.None
+            ? Loc.T(L.Venue.InRoom, row.Occupancy.ToString(Loc.Culture))
+            : Loc.T(L.Casino.TableSeats, row.SeatedCount.ToString(Loc.Culture), row.MaxSeats.ToString(Loc.Culture));
+        var watching = room != VenueRoomKind.None ? 0 : CasinoTableFilters.SpectatorsOf(row);
         var spectators = watching > 0
             ? Loc.T(L.Casino.TableSpectators, watching.ToString(Loc.Culture))
             : string.Empty;
@@ -122,7 +132,8 @@ internal sealed class TableBrowser
         var draining = string.Equals(row.Reason, CasinoReasons.Draining, StringComparison.Ordinal)
             || string.Equals(row.Reason, CasinoReasons.TableClosed, StringComparison.Ordinal);
         var inviteOnly = hosted && !mine && row.Listing == CasinoListings.Private;
-        return new TableRowView(name, stakes, seats, spectators, !CasinoTableFilters.HasOpenSeat(row), inviteOnly,
+        return new TableRowView(name, stakes, seats, spectators,
+            room == VenueRoomKind.None && !CasinoTableFilters.HasOpenSeat(row), inviteOnly,
             mine, draining, currency, Loc.T(CurrencyNames[currency]), reputation, warns, row.Paused);
     }
 
@@ -186,6 +197,19 @@ internal sealed class TableBrowser
         {
             inlineReason = notice.Granted ? string.Empty : notice.Reason;
         }
+    }
+
+    private void DrawNearby(AppSkin ui, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var bottom = nearby.Draw(ImGui.GetWindowDrawList(), ui, origin, width, openNearby);
+        if (bottom <= origin.Y)
+        {
+            return;
+        }
+
+        ImGui.Dummy(new Vector2(width, bottom - origin.Y + Metrics.Space.Md * scale));
     }
 
     private void DrawQuickSeatCard(AppSkin ui, float scale)
@@ -304,7 +328,8 @@ internal sealed class TableBrowser
             return;
         }
 
-        if (!string.Equals(row.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal))
+        if (!string.Equals(row.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal)
+            && !VenueKinds.IsVenue(row.GameKind))
         {
             inlineReason = CasinoReasons.Unavailable;
             return;

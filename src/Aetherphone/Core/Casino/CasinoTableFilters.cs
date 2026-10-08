@@ -12,6 +12,7 @@ internal enum CasinoTableFilter
     Practice,
     Gil,
     Mine,
+    Rooms,
 }
 
 internal static class CasinoTableKinds
@@ -73,6 +74,7 @@ internal static class CasinoTableFilters
         CasinoTableFilter.All,
         CasinoTableFilter.Blackjack,
         CasinoTableFilter.Holdem,
+        CasinoTableFilter.Rooms,
         CasinoTableFilter.LowStakes,
         CasinoTableFilter.HighStakes,
         CasinoTableFilter.Practice,
@@ -83,7 +85,8 @@ internal static class CasinoTableFilters
     public static bool Shown(CasinoTableRowDto row)
     {
         return string.Equals(row.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal)
-            || string.Equals(row.GameKind, HoldemKind, StringComparison.Ordinal);
+            || string.Equals(row.GameKind, HoldemKind, StringComparison.Ordinal)
+            || VenueKinds.IsVenue(row.GameKind);
     }
 
     public static bool Matches(CasinoTableFilter filter, CasinoTableRowDto row, string myUserId)
@@ -98,6 +101,7 @@ internal static class CasinoTableFilters
             CasinoTableFilter.Blackjack => string.Equals(row.GameKind, CasinoWire.BlackjackKind,
                 StringComparison.Ordinal),
             CasinoTableFilter.Holdem => string.Equals(row.GameKind, HoldemKind, StringComparison.Ordinal),
+            CasinoTableFilter.Rooms => VenueKinds.IsVenue(row.GameKind),
             CasinoTableFilter.LowStakes => CasinoCurrencies.Of(row) == CasinoCurrencies.Chips && row.MinBet > 0
                 && row.MinBet <= LowStakeCeiling,
             CasinoTableFilter.HighStakes => CasinoCurrencies.Of(row) == CasinoCurrencies.Chips
