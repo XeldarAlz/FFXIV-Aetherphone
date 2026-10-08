@@ -48,6 +48,7 @@ internal sealed class WatchAlongSession : IDisposable
     private const long AutoReplayBotCheckMaxDelayMilliseconds = 15 * 60 * 1000;
     private const long ReactionCooldownMilliseconds = 250;
     private const long ControlCooldownMilliseconds = 250;
+    private const long MinimumPublishIntervalMilliseconds = 250;
     private const long RejoinRetryMilliseconds = 3_000;
     private const int MaxRejoinAttempts = 8;
     private const int MaxSharedQueueEntries = 64;
@@ -70,6 +71,7 @@ internal sealed class WatchAlongSession : IDisposable
 
     private int tickCounter;
     private float heartbeatTimer;
+    private long lastPublishTicks;
     private int dropCount;
     private int seenDropCount;
     private bool resumePending;
@@ -988,6 +990,13 @@ internal sealed class WatchAlongSession : IDisposable
             return;
         }
 
+        var now = Environment.TickCount64;
+        if (now - lastPublishTicks < MinimumPublishIntervalMilliseconds)
+        {
+            return;
+        }
+
+        lastPublishTicks = now;
         heartbeatTimer = 0f;
         publishRequested = false;
         if (url != lastPublishedUrl)
