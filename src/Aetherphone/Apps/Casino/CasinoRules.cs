@@ -247,7 +247,7 @@ internal static class CasinoRules
                 return true;
             case 1:
                 label = L.Casino.FactSpots;
-                value = "1x  3x  5x  11x  22x";
+                value = "1x  3x  5x  11x  23x";
                 return true;
             case 2:
                 label = L.Casino.FactRoundCap;
