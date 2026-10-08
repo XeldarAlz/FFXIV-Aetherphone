@@ -11182,6 +11182,7 @@ internal static class L
         public static readonly LocString ReasonAlreadyConfirmed = new("casino.tables.reasonAlreadyConfirmed", "You already confirmed your side of this payment.");
         public static readonly LocString ReasonSettled = new("casino.tables.reasonSettled", "This payment is already settled on both sides.");
         public static readonly LocString ReasonGilOnly = new("casino.tables.reasonGilOnly", "That only works at gil tables.");
+        public static readonly LocString ReasonNotOwner = new("casino.tables.reasonNotOwner", "Only the host of this table can do that.");
         public static readonly LocString HostTitle = new("casino.tables.hostTitle", "Host a table");
         public static readonly LocString HostRowHint = new("casino.tables.hostRowHint", "Chips, practice or gil, your stakes, your rules");
         public static readonly LocString SectionTable = new("casino.tables.sectionTable", "Table");

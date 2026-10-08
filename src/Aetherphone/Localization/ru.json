@@ -9066,6 +9066,7 @@
   "casino.tables.reasonAlreadyConfirmed": "Вы уже подтвердили свою сторону этого платежа.",
   "casino.tables.reasonSettled": "Этот платёж уже подтверждён обеими сторонами.",
   "casino.tables.reasonGilOnly": "Это работает только за гиловыми столами.",
+  "casino.tables.reasonNotOwner": "Это может сделать только хозяин этого стола.",
   "casino.strip.getChips": "Получить фишки",
   "casino.strip.coinsFieldHint": "Сколько монет?",
   "casino.strip.coinsShort": "{0} монет",

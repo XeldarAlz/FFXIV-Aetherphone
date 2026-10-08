@@ -9066,6 +9066,7 @@
   "casino.tables.reasonAlreadyConfirmed": "Du hast deine Seite dieser Zahlung schon bestätigt.",
   "casino.tables.reasonSettled": "Diese Zahlung ist bereits auf beiden Seiten erledigt.",
   "casino.tables.reasonGilOnly": "Das geht nur an Gil-Tischen.",
+  "casino.tables.reasonNotOwner": "Das kann nur der Gastgeber dieses Tisches.",
   "casino.strip.getChips": "Chips holen",
   "casino.strip.coinsFieldHint": "Wie viele Münzen?",
   "casino.strip.coinsShort": "{0} Münzen",

@@ -9066,6 +9066,7 @@
   "casino.tables.reasonAlreadyConfirmed": "Bu ödemenin kendi tarafını zaten onayladın.",
   "casino.tables.reasonSettled": "Bu ödeme iki taraf için de zaten kapandı.",
   "casino.tables.reasonGilOnly": "Bu yalnızca gil masalarında çalışır.",
+  "casino.tables.reasonNotOwner": "Bunu yalnızca bu masanın ev sahibi yapabilir.",
   "casino.strip.getChips": "Fiş al",
   "casino.strip.coinsFieldHint": "Kaç Coin?",
   "casino.strip.coinsShort": "{0} Coin",

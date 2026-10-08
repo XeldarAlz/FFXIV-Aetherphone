@@ -9066,6 +9066,7 @@
   "casino.tables.reasonAlreadyConfirmed": "Tu as déjà confirmé ta part de ce paiement.",
   "casino.tables.reasonSettled": "Ce paiement est déjà réglé des deux côtés.",
   "casino.tables.reasonGilOnly": "Ça ne marche qu'aux tables de gils.",
+  "casino.tables.reasonNotOwner": "Seul l'hôte de cette table peut faire ça.",
   "casino.strip.getChips": "Prendre des jetons",
   "casino.strip.coinsFieldHint": "Combien de pièces ?",
   "casino.strip.coinsShort": "{0} pièces",

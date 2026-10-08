@@ -9066,6 +9066,7 @@
   "casino.tables.reasonAlreadyConfirmed": "この支払いのあなたの側はすでに確認済みです。",
   "casino.tables.reasonSettled": "この支払いはすでに双方で確定しています。",
   "casino.tables.reasonGilOnly": "それはギルテーブルでのみ使えます。",
+  "casino.tables.reasonNotOwner": "それはこのテーブルのホストだけが行えます。",
   "casino.strip.getChips": "チップを入手",
   "casino.strip.coinsFieldHint": "何コイン？",
   "casino.strip.coinsShort": "{0}コイン",

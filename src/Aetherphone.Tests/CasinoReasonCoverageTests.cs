@@ -72,7 +72,7 @@ public sealed class CasinoReasonCoverageTests
             "bonus_not_ready", "club_insufficient", "config_invalid", "practice_only", "not_dealer", "rebuy_off",
             "tournament_live", "no_tournament", "nothing_to_deal", "no_spectators", "duel_live", "no_duel",
             "raffle_live", "no_raffle", "ticket_limit", "round_live", "bank_limit", "host_frozen", "not_party",
-            "already_confirmed", "settled", "gil_only",
+            "already_confirmed", "settled", "gil_only", "not_owner",
         };
         for (var index = 0; index < reasons.Length; index++)
         {
@@ -82,6 +82,31 @@ public sealed class CasinoReasonCoverageTests
 
         Assert.Equal(L.Tables.ReasonBankLimit.Key, CasinoReasons.MessageFor("bank_limit").Key);
         Assert.Equal(L.Strip.ReasonBonusNotReady.Key, CasinoReasons.MessageFor("bonus_not_ready").Key);
+    }
+
+    [Fact]
+    public void EveryReasonTheCasinoRoutesSendIsInTheList()
+    {
+        var serverReasons = new[]
+        {
+            "already_claimed", "bonus_not_ready", "buyin_range", "cap_reached", "ceiling", "closed",
+            "club_insufficient", "cooldown", "daily_buyin", "daily_cap", "rule_cap", "draining", "expired", "frozen",
+            "insufficient", "invalid_move", "ladder", "loss_limit", "machine_unknown", "mission_incomplete",
+            "pair_limited", "paused", "round_open", "sitting_open", "sold_out", "stake_range", "stakes_paused",
+            "table_closed", "unavailable", "seat_taken", "already_seated", "seated_elsewhere", "not_seated",
+            "not_your_turn", "stale_action", "invalid_action", "too_late", "stale_hand", "hand_over", "at_hand_end",
+            "pvp_loss_cap", "pvp_win_cap", "in_hand", "title_required", "time_bank_empty", "holdem_closed",
+            "config_invalid", "practice_only", "not_dealer", "rebuy_off", "tournament_live", "no_tournament",
+            "nothing_to_deal", "no_spectators", "duel_live", "no_duel", "raffle_live", "no_raffle", "ticket_limit",
+            "round_live", "bank_limit", "host_frozen", "not_party", "already_confirmed", "settled", "gil_only",
+            "ended", "restarting", "full", "private", "denied", "knock_pending", "banned_from_table", "blocked",
+            "not_member", "already_hosting", "not_owner", "kicked",
+        };
+        for (var index = 0; index < serverReasons.Length; index++)
+        {
+            Assert.Contains(serverReasons[index], CasinoReasons.All);
+            Assert.NotEqual(L.Casino.ReasonGeneric.Key, CasinoReasons.MessageFor(serverReasons[index]).Key);
+        }
     }
 
     [Fact]

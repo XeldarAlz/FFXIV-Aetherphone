@@ -9066,6 +9066,7 @@
   "casino.tables.reasonAlreadyConfirmed": "You already confirmed your side of this payment.",
   "casino.tables.reasonSettled": "This payment is already settled on both sides.",
   "casino.tables.reasonGilOnly": "That only works at gil tables.",
+  "casino.tables.reasonNotOwner": "Only the host of this table can do that.",
   "casino.strip.getChips": "Get chips",
   "casino.strip.coinsFieldHint": "How many coins?",
   "casino.strip.coinsShort": "{0} coins",
