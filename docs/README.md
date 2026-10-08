@@ -63,6 +63,7 @@ Two docs keep their own format without the standard sections: [accent colors](de
 | [App framework](app-framework.md) | The `IPhoneApp` contract in full: lifecycle, navigation, theming, badges, sharing, home placement, polling, home widgets, Control Center tiles |
 | [UI toolkit](ui-toolkit.md) | The widget library in src/Aetherphone/Windows/Components: typography, spacing tokens, input, popups, scrolling, common widgets |
 | [Accent colors](design-accents.md) | The generated accent ring: the white-glyph contrast rule, hue spacing, per-app assignment, brand exceptions, and derived palettes |
+| [Gamba stage](casino.md) | The casino's play-screen host: the stage frame, lights and signs, the win celebration ladder, the bet composer and the ladder-scaled bet ceiling |
 | [Mini-games framework](games-framework.md) | The Games app: the hub's four tabs, the stage kit every game runs on (session flow, HUD, backdrops, camera, effects, physics, world pieces), scoring and the daily challenge, the opt-in global leaderboard, and the online rooms |
 
 ### Platform services
