@@ -10600,6 +10600,12 @@ internal static class L
         public static readonly LocString TitleLegend = new("casino.strip.title.legend", "Legend");
         public static readonly LocString Level = new("casino.strip.level", "Level {0}");
         public static readonly LocString Cap = new("casino.strip.cap", "Cap {0}");
+        public static readonly LocString NiceWin = new("casino.strip.niceWin", "Nice win");
+        public static readonly LocString BigWin = new("casino.strip.bigWin", "BIG WIN");
+        public static readonly LocString MegaWin = new("casino.strip.megaWin", "MEGA WIN");
+        public static readonly LocString EpicWin = new("casino.strip.epicWin", "EPIC WIN");
+        public static readonly LocString Legendary = new("casino.strip.legendary", "LEGENDARY");
+        public static readonly LocString TapToSkip = new("casino.strip.tapToSkip", "Tap to skip");
     }
 
     internal static class Catalogs

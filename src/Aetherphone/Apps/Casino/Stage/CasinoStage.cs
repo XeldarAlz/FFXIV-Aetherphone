@@ -23,6 +23,7 @@ internal sealed class CasinoStage
 
     private readonly StageBackdrop backdrop = new();
     private readonly ScreenFx fx;
+    private readonly WinCelebration celebration;
     private readonly ParticleSystem particles = new(ParticleCapacity);
     private readonly CasinoInfoSheet info = new();
     private readonly BetsRail betsRail = new();
@@ -42,7 +43,10 @@ internal sealed class CasinoStage
     public CasinoStage()
     {
         fx = new ScreenFx(backdrop);
+        celebration = new WinCelebration(particles, fx, backdrop);
     }
+
+    public WinCelebration Celebration => celebration;
 
     public StageBackdrop Backdrop => backdrop;
 
@@ -65,6 +69,7 @@ internal sealed class CasinoStage
 
     public void Reset()
     {
+        celebration.Clear();
         particles.Clear();
         fx.Clear();
         info.Close();
@@ -97,6 +102,7 @@ internal sealed class CasinoStage
                      || spec.Preset != next.Preset)
         {
             backdrop.Set(next.Preset);
+            celebration.Clear();
             fx.Clear();
             particles.Clear();
             balance.Snap(balanceValue);
@@ -113,8 +119,10 @@ internal sealed class CasinoStage
         var full = layout.Full;
         backdrop.Update(delta, full, ImGui.GetMousePos(), UiInteract.Hover(full.Min, full.Max));
         backdrop.Draw(drawList, full, AccentFor(next.Preset), scale);
+        CasinoSfx.Arm(focused);
         fx.Update(delta);
         particles.Update(delta);
+        celebration.Update(delta, layout, snap);
         phase += delta;
         if (snap)
         {
@@ -143,6 +151,8 @@ internal sealed class CasinoStage
         var drawList = ImGui.GetWindowDrawList();
         var full = layout.Full;
         particles.Draw(drawList, scale);
+        celebration.Draw(drawList, layout, phase, scale);
+        celebration.HandleSkip(layout);
         fx.Draw(drawList, full, AccentFor(spec.Preset));
         if (layout.HasPractice)
         {
