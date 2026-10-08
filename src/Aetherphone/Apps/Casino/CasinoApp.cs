@@ -52,7 +52,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly NavBarButton[] navButtons = new NavBarButton[1];
     private readonly PullToRefresh lobbyRefresh = new();
     private readonly CasinoTextCache texts = new();
-    private readonly AppSkin ui = new(AppPalettes.Casino);
+    private readonly AppSkin ui = new(AppPalettes.Gamba);
     private readonly ViewRouter<CasinoRoute> router;
     private readonly RouterDraw<CasinoRoute> drawView;
     private readonly Action popRoute;
