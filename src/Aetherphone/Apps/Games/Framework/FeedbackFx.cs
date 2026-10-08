@@ -202,8 +202,8 @@ internal sealed class FeedbackFx
             var fade = entry.Life / entry.MaxLife;
             var alpha = fade > 0.6f ? 1f : fade / 0.6f;
             var pop = entry.Life > entry.MaxLife - 0.12f ? 1.18f : 1f;
-            Typography.DrawCentered(entry.Position, entry.Text, entry.Color with { W = entry.Color.W * alpha },
-                entry.Scale * pop, entry.Weight);
+            Typography.DrawCenteredLine(ImGui.GetWindowDrawList(), entry.Position, entry.Text,
+                entry.Color with { W = entry.Color.W * alpha }, entry.Scale * pop, entry.Weight);
         }
     }
 }
