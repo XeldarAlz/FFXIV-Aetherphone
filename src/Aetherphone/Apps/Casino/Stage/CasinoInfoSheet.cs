@@ -1,5 +1,7 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -23,6 +25,9 @@ internal sealed class CasinoInfoSheet
     private string returnText = string.Empty;
     private int returnTenths = -1;
     private LanguageInfo? returnLanguage;
+    private string reasonText = string.Empty;
+    private CasinoCeiling reasonCeiling;
+    private LanguageInfo? reasonLanguage;
 
     public CasinoInfoSheet()
     {
@@ -32,6 +37,8 @@ internal sealed class CasinoInfoSheet
     public bool IsOpen => sheet.IsOpen;
 
     public bool Instant { get; set; }
+
+    public CasinoCeiling Ceiling { get; set; }
 
     public void Open()
     {
@@ -86,6 +93,12 @@ internal sealed class CasinoInfoSheet
             y += RowGap * scale;
         }
 
+        if (spec.Deck && Ceiling.MaxBet > 0)
+        {
+            y = DrawCeiling(drawList, origin.X, y, width, scale);
+            y += RowGap * scale;
+        }
+
         if (spec.ReturnTenths > 0)
         {
             y = DrawReturnRow(drawList, origin.X, y, width, scale);
@@ -112,8 +125,54 @@ internal sealed class CasinoInfoSheet
         var toggleTop = y + (height - toggleHeight) * 0.5f;
         var toggleRect = new Rect(new Vector2(left + width - toggleWidth, toggleTop),
             new Vector2(left + width, toggleTop + toggleHeight));
-        Instant = Toggle.Draw("casino.info.instant", toggleRect, Instant, skin.Theme, 1f, sheet.IsOpen);
+        var rowMin = new Vector2(left, y);
+        var rowMax = new Vector2(left + width, y + height);
+        var hovered = sheet.IsOpen && UiInteract.HoverWindowOnly(rowMin, rowMax);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(rowMin, rowMax, hovered, false))
+        {
+            Instant = !Instant;
+            UiFeedback.Play(Instant ? UiSound.ToggleOn : UiSound.ToggleOff);
+        }
+
+        Toggle.Draw("casino.info.instant", toggleRect, Instant, skin.Theme, 1f, false);
         return y + height;
+    }
+
+    private float DrawCeiling(ImDrawListPtr drawList, float left, float y, float width, float scale)
+    {
+        var value = NumberText.Compact(Ceiling.MaxBet);
+        var valueSize = CurrencyGlyph.MeasureAmount(value, TextStyles.SubheadlineEmphasized);
+        var label = Typography.FitText(Loc.T(L.Strip.MaxBet), width - valueSize.X - Metrics.Space.Md * scale,
+            TextStyles.SubheadlineEmphasized);
+        Typography.Draw(drawList, new Vector2(left, y), label, skin.TitleInk, TextStyles.SubheadlineEmphasized);
+        CurrencyGlyph.DrawAmount(drawList, new Vector2(left + width - valueSize.X, y), value, CurrencyKind.Chips,
+            CasinoColors.Money, TextStyles.SubheadlineEmphasized);
+        var reasonTop = y + valueSize.Y + Metrics.Space.Xxs * scale;
+        var reason = CeilingReasonText();
+        var height = Typography.DrawWrappedLeft(new Vector2(left, reasonTop), reason, skin.MutedInk,
+            TextStyles.Footnote, width);
+        return reasonTop + height;
+    }
+
+    private string CeilingReasonText()
+    {
+        if (ReferenceEquals(reasonLanguage, Loc.Current) && reasonCeiling == Ceiling)
+        {
+            return reasonText;
+        }
+
+        reasonLanguage = Loc.Current;
+        reasonCeiling = Ceiling;
+        var level = Games.Framework.GameNumber.Label(Ceiling.Level);
+        reasonText = Ceiling.Reason == CeilingReason.Balance
+            ? Loc.T(L.Strip.CeilingBalance, level, NumberText.Compact(Ceiling.LevelCap))
+            : Loc.T(L.Strip.CeilingLevel, level, NumberText.Compact(Ceiling.LevelCap));
+        return reasonText;
     }
 
     private float DrawReturnRow(ImDrawListPtr drawList, float left, float y, float width, float scale)

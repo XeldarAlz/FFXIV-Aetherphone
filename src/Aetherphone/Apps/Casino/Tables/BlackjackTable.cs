@@ -69,7 +69,7 @@ internal sealed class BlackjackTable
     private readonly BlackjackProjection projection = new();
     private readonly BlackjackDealPlayback playback = new();
     private readonly DealerBubble dealer = new();
-    private readonly BetComposer composer = new("##blackjackBet");
+    private readonly ClassicBetComposer composer = new("##blackjackBet");
     private readonly ParticleSystem particles = new(160);
     private readonly SeatView[] seatViews = new SeatView[BlackjackRules.SeatCount];
     private readonly SeatMotion[] motions = new SeatMotion[BlackjackRules.SeatCount];
@@ -319,7 +319,7 @@ internal sealed class BlackjackTable
     private static float FooterHeightFor(int phase, float scale)
     {
         return phase == BlackjackPhases.Betting
-            ? BannerHeight * scale + BetComposer.HeightFor(scale)
+            ? BannerHeight * scale + ClassicBetComposer.HeightFor(scale)
             : BannerHeight * scale + ActionBarHeight * scale;
     }
 
@@ -1185,7 +1185,7 @@ internal sealed class BlackjackTable
         composer.Prefill(minimum);
         var blocked = veiled || state.StakesPaused || state.Draining || rooms.StakeInFlight;
         var bounds = new Rect(new Vector2(left, y),
-            new Vector2(left + width, y + BetComposer.HeightFor(scale)));
+            new Vector2(left + width, y + ClassicBetComposer.HeightFor(scale)));
         var label = Loc.T(L.Casino.BlackjackBetConfirm, NumberText.Group(composer.Amount),
             NumberText.Group(BlackjackRules.BlackjackPayout(composer.Amount)));
         if (composer.Draw(ui, bounds, minimum, maximum, seatStack, BlackjackRules.BetStep, !blocked, label,

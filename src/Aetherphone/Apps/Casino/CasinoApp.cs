@@ -146,7 +146,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         pendingTableId = string.Empty;
         tab = CasinoTab.Lobby;
         rulesSheet.Close();
-        stage.Reset();
+        stage.ResetSession();
         ResetLimitsEditor();
         ResetLobby();
         jackpotRail.Snap(Core.Casino.CasinoChipLots.CoinsFor(casino.Jackpot));
@@ -171,7 +171,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         tableDoor.Reset();
         pendingTableId = string.Empty;
         rulesSheet.Close();
-        stage.Reset();
+        stage.ResetSession();
         ResetLimitsEditor();
     }
 
@@ -306,9 +306,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         using (AppSurface.BeginEdgeToEdge(area, true))
         {
             ImGui.Dummy(new Vector2(area.Width, MathF.Max(1f, area.Height - StageSurfaceSlack * scale)));
-            var frame = stage.Begin(area, spec, StageBalance(route));
+            var frame = stage.Begin(area, spec, StageBalance(route), casino.Ceiling);
             DrawStageWorld(route, frame);
-            var action = stage.End();
+            var action = stage.End(ui);
             if (action == CasinoStageAction.Back)
             {
                 PopRoute();

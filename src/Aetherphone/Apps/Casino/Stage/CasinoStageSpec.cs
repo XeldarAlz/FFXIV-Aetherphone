@@ -9,14 +9,17 @@ internal readonly record struct CasinoStageSpec(
     LocString Title,
     Backdrop Preset,
     bool Room = false,
-    bool Deck = false,
+    float DeckHeight = 0f,
     bool Practice = false,
     bool BetsRail = false,
     bool InstantAvailable = false,
     int ReturnTenths = 0,
     LocString Extra = default,
     float Warmth = 0f,
-    float LampPool = 0f);
+    float LampPool = 0f)
+{
+    public bool Deck => DeckHeight > 0f;
+}
 
 internal enum CasinoStageAction : byte
 {
@@ -40,16 +43,18 @@ internal readonly struct CasinoStageFrame
     public readonly bool SnapToTruth;
     public readonly bool Instant;
     public readonly bool Focused;
+    public readonly bool Blocked;
     public readonly float Phase;
 
     public CasinoStageFrame(in CasinoStageLayout layout, float deltaSeconds, bool snapToTruth, bool instant,
-        bool focused, float phase)
+        bool focused, bool blocked, float phase)
     {
         Layout = layout;
         DeltaSeconds = deltaSeconds;
         SnapToTruth = snapToTruth;
         Instant = instant;
         Focused = focused;
+        Blocked = blocked;
         Phase = phase;
     }
 

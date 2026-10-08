@@ -10606,6 +10606,36 @@ internal static class L
         public static readonly LocString EpicWin = new("casino.strip.epicWin", "EPIC WIN");
         public static readonly LocString Legendary = new("casino.strip.legendary", "LEGENDARY");
         public static readonly LocString TapToSkip = new("casino.strip.tapToSkip", "Tap to skip");
+        public static readonly LocString MaxBet = new("casino.strip.maxBet", "Your max bet");
+        public static readonly LocString CeilingLevel = new("casino.strip.ceilingLevel", "Level {0} cap {1}, or 5 percent of your balance, whichever is higher");
+        public static readonly LocString CeilingBalance = new("casino.strip.ceilingBalance", "5 percent of your balance, above the level {0} cap of {1}");
+        public static readonly LocString BetFor = new("casino.strip.betFor", "Bet {0}");
+        public static readonly LocString Manual = new("casino.strip.manual", "Manual");
+        public static readonly LocString Auto = new("casino.strip.auto", "Auto");
+        public static readonly LocString AutoFor = new("casino.strip.autoFor", "Auto {0}");
+        public static readonly LocString AutoStopLeft = new("casino.strip.autoStopLeft", "Stop ({0} left)");
+        public static readonly LocString AutoStop = new("casino.strip.autoStop", "Stop auto");
+        public static readonly LocString AutoTitle = new("casino.strip.autoTitle", "Auto play");
+        public static readonly LocString AutoRounds = new("casino.strip.autoRounds", "Rounds");
+        public static readonly LocString AutoRoundsHint = new("casino.strip.autoRoundsHint", "0 keeps going until you stop it");
+        public static readonly LocString OnWin = new("casino.strip.onWin", "On win");
+        public static readonly LocString OnLoss = new("casino.strip.onLoss", "On loss");
+        public static readonly LocString AdjustReset = new("casino.strip.adjustReset", "Reset");
+        public static readonly LocString AdjustIncrease = new("casino.strip.adjustIncrease", "Increase");
+        public static readonly LocString StopOnProfit = new("casino.strip.stopOnProfit", "Stop on profit");
+        public static readonly LocString StopOnLoss = new("casino.strip.stopOnLoss", "Stop on loss");
+        public static readonly LocString StopOnBonus = new("casino.strip.stopOnBonus", "Stop on a bonus");
+        public static readonly LocString StopOffHint = new("casino.strip.stopOffHint", "In chips. 0 turns it off");
+        public static readonly LocString AutoStoppedCount = new("casino.strip.autoStoppedCount", "Auto play finished");
+        public static readonly LocString AutoStoppedProfit = new("casino.strip.autoStoppedProfit", "Auto stopped at your profit target");
+        public static readonly LocString AutoStoppedLoss = new("casino.strip.autoStoppedLoss", "Auto stopped at your loss limit");
+        public static readonly LocString AutoStoppedBonus = new("casino.strip.autoStoppedBonus", "Auto stopped on a bonus");
+        public static readonly LocString AutoStoppedChips = new("casino.strip.autoStoppedChips", "Auto stopped: not enough chips for the next bet");
+        public static readonly LocString AutoStoppedRefused = new("casino.strip.autoStoppedRefused", "Auto stopped: the floor turned the bet down");
+        public static readonly LocString RealityTitle = new("casino.strip.realityTitle", "Quick check-in");
+        public static readonly LocString RealityBody = new("casino.strip.realityBody", "{0} rounds in {1} minutes. Session net: {2} chips.");
+        public static readonly LocString KeepPlaying = new("casino.strip.keepPlaying", "Keep playing");
+        public static readonly LocString TakeBreak = new("casino.strip.takeBreak", "Take a break");
     }
 
     internal static class Catalogs

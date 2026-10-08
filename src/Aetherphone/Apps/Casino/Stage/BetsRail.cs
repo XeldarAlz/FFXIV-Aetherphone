@@ -93,7 +93,9 @@ internal sealed class BetsRail
         tabLabels[1] = Loc.T(L.Strip.AllBets);
         tabLabels[2] = Loc.T(L.Strip.HighRollers);
         var tabsRect = new Rect(content.Min, new Vector2(content.Max.X, content.Min.Y + TabsHeight * scale));
-        tab = SegmentStrip.Draw("casino.bets.tabs", tabsRect, tabLabels, tab, skin.Palette);
+        tab = SegmentStrip.Draw("casino.bets.tabs", tabsRect, tabLabels, tab,
+            Surfaces.Fill(skin.TitleInk, FillLevel.Tertiary), skin.Accent, skin.MutedInk, CasinoColors.InkTitle,
+            overlay: true);
         var listTop = tabsRect.Max.Y + Metrics.Space.Md * scale;
         var list = new Rect(new Vector2(content.Min.X, listTop), content.Max);
         ImGui.SetCursorScreenPos(list.Min);
