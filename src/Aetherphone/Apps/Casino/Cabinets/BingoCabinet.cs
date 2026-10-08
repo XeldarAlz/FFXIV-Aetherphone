@@ -15,7 +15,7 @@ namespace Aetherphone.Apps.Casino.Cabinets;
 internal sealed class BingoCabinet : ICabinetIdle
 {
     private const float RailGap = 8f;
-    private const float RailLabelHeight = 14f;
+    private const float RailLabelHeight = 18f;
     private const float DragThreshold = 6f;
     private const float RailSettleSeconds = 0.12f;
     private const float WheelStep = 48f;
@@ -36,6 +36,8 @@ internal sealed class BingoCabinet : ICabinetIdle
     private const float IdlePopSeconds = 1.4f;
     private const float KnobPillGap = 6f;
     private const float VeilAlpha = 0.72f;
+
+    private static readonly MarqueeId CallerMarquee = new("casino.bingo.caller", 0L);
 
     private static readonly LocString[] StageNames =
     {
@@ -474,13 +476,12 @@ internal sealed class BingoCabinet : ICabinetIdle
         var center = rect.Center;
         if (playback.Stage == BingoStage.Selling)
         {
-            var title = Typography.FitText(callerLabel.Duration(L.Casino.BingoFirstBall, seconds), rect.Width,
-                TextStyles.Title3);
-            Typography.DrawCentered(drawList, center - new Vector2(0f, Typography.LineHeight(TextStyles.Title3) * 0.5f),
-                title, CasinoColors.InkTitle, TextStyles.Title3);
-            var price = Typography.FitText(PriceText(), rect.Width, TextStyles.Caption1);
-            Typography.DrawCentered(drawList, center + new Vector2(0f, Typography.LineHeight(TextStyles.Caption1)),
-                price, CasinoColors.InkMuted, TextStyles.Caption1);
+            StageText.State(drawList, center - new Vector2(0f, Typography.LineHeight(TextStyles.Title2) * 0.5f),
+                callerLabel.Duration(L.Casino.BingoFirstBall, seconds), rect.Width, CallerMarquee);
+            var price = Typography.FitText(PriceText(), rect.Width, TextStyles.FootnoteEmphasized);
+            Typography.DrawCentered(drawList,
+                center + new Vector2(0f, Typography.LineHeight(TextStyles.FootnoteEmphasized)), price,
+                CasinoColors.Money, TextStyles.FootnoteEmphasized);
             return;
         }
 
@@ -504,10 +505,11 @@ internal sealed class BingoCabinet : ICabinetIdle
         var caption = playback.BallCount > 0
             ? captionLabel.Numbers(L.Casino.BingoCalledCount, playback.BallCount, BingoRules.Balls)
             : Loc.T(L.Casino.BingoProgressWaiting);
-        caption = Typography.FitText(caption, rect.Width, TextStyles.Footnote);
+        caption = Typography.FitText(caption, rect.Width, TextStyles.FootnoteEmphasized);
         var captionTop = ballCenter.Y + radius * 1.35f + Metrics.Space.Xxs * scale;
-        Typography.DrawCentered(drawList, new Vector2(center.X, captionTop + Typography.LineHeight(TextStyles.Footnote) * 0.5f),
-            caption, CasinoColors.InkBody, TextStyles.Footnote);
+        Typography.DrawCentered(drawList,
+            new Vector2(center.X, captionTop + Typography.LineHeight(TextStyles.FootnoteEmphasized) * 0.5f), caption,
+            CasinoColors.InkTitle, TextStyles.FootnoteEmphasized);
     }
 
     private string PriceText()
@@ -626,10 +628,10 @@ internal sealed class BingoCabinet : ICabinetIdle
         }
         else if (ManualDaub && playback.Stage == BingoStage.Calling)
         {
-            var hint = Typography.FitText(Loc.T(L.Bingo.DaubHint), spare, TextStyles.Caption2);
-            var hintWidth = Typography.Measure(hint, TextStyles.Caption2).X;
-            Typography.Draw(drawList, new Vector2(card.Max.X - hintWidth, labelTop), hint, CasinoColors.InkMuted,
-                TextStyles.Caption2);
+            var hint = Typography.FitText(Loc.T(L.Bingo.DaubHint), spare, TextStyles.Footnote);
+            var hintWidth = Typography.Measure(hint, TextStyles.Footnote).X;
+            Typography.Draw(drawList, new Vector2(card.Max.X - hintWidth, labelTop), hint, CasinoColors.InkBody,
+                TextStyles.Footnote);
         }
 
         if (ManualDaub && playback.Stage == BingoStage.Calling)
@@ -739,8 +741,8 @@ internal sealed class BingoCabinet : ICabinetIdle
     private void DrawMini(ImDrawListPtr drawList, Rect slot, int cardIndex, float side, float scale)
     {
         var label = Typography.FitText(cardLabels[cardIndex].Get(L.Casino.BingoCardLabel, cardIndex + 1), side,
-            TextStyles.Caption2);
-        Typography.Draw(drawList, slot.Min, label, CasinoColors.InkMuted, TextStyles.Caption2);
+            TextStyles.Footnote);
+        Typography.Draw(drawList, slot.Min, label, CasinoColors.InkBody, TextStyles.Footnote);
         var top = slot.Min.Y + RailLabelHeight * scale;
         var inset = 4f * scale;
         var card = new Rect(new Vector2(slot.Min.X + inset, top + inset), new Vector2(slot.Max.X - inset, top + side - inset));
@@ -803,16 +805,15 @@ internal sealed class BingoCabinet : ICabinetIdle
         var pad = PodiumPad * scale;
         var inner = rect.Width - pad * 2f;
         var y = rect.Min.Y + pad;
-        var name = Typography.FitText(Loc.T(StageNames[stageIndex]), inner, TextStyles.Caption1);
-        var nameWidth = Typography.Measure(name, TextStyles.Caption1).X;
+        var name = Typography.FitText(Loc.T(StageNames[stageIndex]), inner, TextStyles.FootnoteEmphasized);
+        var nameWidth = Typography.Measure(name, TextStyles.FootnoteEmphasized).X;
         Typography.Draw(drawList, new Vector2(rect.Center.X - nameWidth * 0.5f, y), name,
-            awarded is null ? CasinoColors.InkBody : CasinoColors.InkTitle, TextStyles.Caption1);
-        y += Typography.LineHeight(TextStyles.Caption1);
+            awarded is null ? CasinoColors.InkBody : CasinoColors.InkTitle, TextStyles.FootnoteEmphasized);
+        y += Typography.LineHeight(TextStyles.FootnoteEmphasized);
         var prize = NumberText.Compact(awarded?.Prize ?? ladder[stageIndex]);
-        var prizeSize = CurrencyGlyph.MeasureAmount(prize, TextStyles.SubheadlineEmphasized);
+        var prizeSize = CurrencyGlyph.MeasureAmount(prize, TextStyles.Title3);
         CurrencyGlyph.DrawAmount(drawList, new Vector2(rect.Center.X - prizeSize.X * 0.5f, y), prize,
-            CurrencyKind.Chips, awarded is null ? CasinoColors.Money with { W = 0.8f } : CasinoColors.Money,
-            TextStyles.SubheadlineEmphasized);
+            CurrencyKind.Chips, CasinoColors.Money, TextStyles.Title3);
         y += prizeSize.Y;
         if (awarded is null)
         {
@@ -822,10 +823,10 @@ internal sealed class BingoCabinet : ICabinetIdle
         var status = mine
             ? Loc.T(L.Bingo.You)
             : stageBalls[stageIndex].Get(L.Casino.BingoLadderGone, awarded.Ball);
-        status = Typography.FitText(status, inner, TextStyles.Caption2);
-        var statusWidth = Typography.Measure(status, TextStyles.Caption2).X;
+        status = Typography.FitText(status, inner, TextStyles.Footnote);
+        var statusWidth = Typography.Measure(status, TextStyles.Footnote).X;
         Typography.Draw(drawList, new Vector2(rect.Center.X - statusWidth * 0.5f, y), status,
-            mine ? CasinoColors.Money : CasinoColors.InkMuted, TextStyles.Caption2);
+            mine ? CasinoColors.Money : CasinoColors.InkBody, TextStyles.Footnote);
     }
 
     private void DrawResult(ImDrawListPtr drawList, CasinoBingoRoomStateDto? board, CasinoBingoCardsDto? mine,
@@ -858,7 +859,7 @@ internal sealed class BingoCabinet : ICabinetIdle
         }
         else
         {
-            y += Typography.DrawWrappedLeft(new Vector2(left, y), outcome, CasinoColors.InkMuted, TextStyles.Footnote,
+            y += Typography.DrawWrappedLeft(new Vector2(left, y), outcome, CasinoColors.InkBody, TextStyles.Subheadline,
                 inner);
         }
 
@@ -931,10 +932,10 @@ internal sealed class BingoCabinet : ICabinetIdle
             CasinoColors.InkTitle, TextStyles.Headline);
         var hintLeft = pillMax.X + Metrics.Space.Sm * scale;
         var hint = Typography.FitText(earlyBirdLabel.Get(L.Bingo.EarlyBirdHint, ball), left + width - hintLeft,
-            TextStyles.Caption1);
+            TextStyles.Footnote);
         Typography.Draw(drawList,
-            new Vector2(hintLeft, y + (height - Typography.LineHeight(TextStyles.Caption1)) * 0.5f), hint,
-            CasinoColors.InkBody, TextStyles.Caption1);
+            new Vector2(hintLeft, y + (height - Typography.LineHeight(TextStyles.Footnote)) * 0.5f), hint,
+            CasinoColors.InkTitle, TextStyles.Footnote);
         return y + height + Metrics.Space.Sm * scale;
     }
 
@@ -970,9 +971,9 @@ internal sealed class BingoCabinet : ICabinetIdle
             label = Loc.T(L.Bingo.You);
         }
 
-        label = Typography.FitText(label, MathF.Max(0f, left + width - labelLeft), TextStyles.Caption1);
-        Typography.Draw(drawList, new Vector2(labelLeft, centerY - Typography.LineHeight(TextStyles.Caption1) * 0.5f),
-            label, mine ? CasinoColors.Money : CasinoColors.InkBody, TextStyles.Caption1);
+        label = Typography.FitText(label, MathF.Max(0f, left + width - labelLeft), TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(labelLeft, centerY - Typography.LineHeight(TextStyles.Footnote) * 0.5f),
+            label, mine ? CasinoColors.Money : CasinoColors.InkTitle, TextStyles.Footnote);
     }
 
     private void DrawDeck(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, CasinoStateDto state,
@@ -1014,16 +1015,16 @@ internal sealed class BingoCabinet : ICabinetIdle
                 : headroom <= 0 && selling
                     ? holdingLabel.Get(L.Casino.BingoHoldingFull, holding)
                     : Loc.T(playback.Stage == BingoStage.Calling ? L.Casino.BingoCardsFinal : L.Casino.BingoNextRoomSale);
-            var fitted = Typography.FitText(message, knob.Width, TextStyles.Footnote);
-            Typography.DrawCentered(drawList, knob.Center, fitted, CasinoColors.InkBody, TextStyles.Footnote);
+            var fitted = Typography.FitText(message, knob.Width, TextStyles.FootnoteEmphasized);
+            Typography.DrawCentered(drawList, knob.Center, fitted, CasinoColors.InkTitle, TextStyles.FootnoteEmphasized);
             return;
         }
 
-        var label = Typography.FitText(Loc.T(L.Bingo.KnobCards), knob.Width * 0.25f, TextStyles.Caption1);
-        var labelWidth = Typography.Measure(label, TextStyles.Caption1).X;
+        var label = Typography.FitText(Loc.T(L.Bingo.KnobCards), knob.Width * 0.25f, TextStyles.Footnote);
+        var labelWidth = Typography.Measure(label, TextStyles.Footnote).X;
         Typography.Draw(drawList,
-            new Vector2(knob.Min.X, knob.Center.Y - Typography.LineHeight(TextStyles.Caption1) * 0.5f), label,
-            CasinoColors.InkMuted, TextStyles.Caption1);
+            new Vector2(knob.Min.X, knob.Center.Y - Typography.LineHeight(TextStyles.Footnote) * 0.5f), label,
+            CasinoColors.InkBody, TextStyles.Footnote);
         var gap = KnobPillGap * scale;
         var left = knob.Min.X + labelWidth + Metrics.Space.Sm * scale;
         var pill = (knob.Max.X - left - gap * (BingoRules.MaxCards - 1)) / BingoRules.MaxCards;
@@ -1080,10 +1081,8 @@ internal sealed class BingoCabinet : ICabinetIdle
         Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
             Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), ui.TitleInk,
             TextStyles.SubheadlineEmphasized);
-        var top = deck.Min.Y + inset + titleHeight + Metrics.Space.Sm * scale;
-        var rect = new Rect(new Vector2(deck.Min.X + inset, top),
-            new Vector2(deck.Max.X - inset, top + Button.LargeHeight * scale));
-        if (Button.Draw(drawList, rect, Loc.T(L.Casino.Cashier), ui.Ink))
+        var row = DeckActions.Row(deck, scale);
+        if (DeckActions.DrawPrimary(row, row.Min.X, Loc.T(L.Casino.Cashier), true, ui.Ink))
         {
             openCashier();
         }
