@@ -62,6 +62,28 @@ internal static class CasinoReasons
     public const string Ceiling = "ceiling";
     public const string Ladder = "ladder";
     public const string InvalidMove = "invalid_move";
+    public const string BonusNotReady = "bonus_not_ready";
+    public const string ClubInsufficient = "club_insufficient";
+    public const string ConfigInvalid = "config_invalid";
+    public const string PracticeOnly = "practice_only";
+    public const string NotDealer = "not_dealer";
+    public const string RebuyOff = "rebuy_off";
+    public const string TournamentLive = "tournament_live";
+    public const string NoTournament = "no_tournament";
+    public const string NothingToDeal = "nothing_to_deal";
+    public const string NoSpectators = "no_spectators";
+    public const string DuelLive = "duel_live";
+    public const string NoDuel = "no_duel";
+    public const string RaffleLive = "raffle_live";
+    public const string NoRaffle = "no_raffle";
+    public const string TicketLimit = "ticket_limit";
+    public const string RoundLive = "round_live";
+    public const string BankLimit = "bank_limit";
+    public const string HostFrozen = "host_frozen";
+    public const string NotParty = "not_party";
+    public const string AlreadyConfirmed = "already_confirmed";
+    public const string Settled = "settled";
+    public const string GilOnly = "gil_only";
 
     public static readonly string[] All =
     {
