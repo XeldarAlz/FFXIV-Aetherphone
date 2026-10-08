@@ -40,15 +40,17 @@ internal static class BlackjackTableArt
     }
 
     public static void DrawOutcomeBadge(ImDrawListPtr drawList, Vector2 center, string label, Vector4 tint,
-        Vector4 ink, float entrance, float scale)
+        Vector4 ink, float entrance, float maxWidth, float scale)
     {
         if (label.Length == 0 || entrance <= 0f)
         {
             return;
         }
 
+        var padX = 8f * scale;
+        label = Typography.FitText(label, MathF.Max(1f, maxWidth - padX * 2f), TextStyles.FootnoteEmphasized);
         var size = Typography.Measure(label, TextStyles.FootnoteEmphasized);
-        var half = new Vector2(size.X * 0.5f + 8f * scale, size.Y * 0.5f + 4f * scale);
+        var half = new Vector2(size.X * 0.5f + padX, size.Y * 0.5f + 4f * scale);
         var bubble = BubblePop.For(entrance, scale, center);
         var min = bubble.Apply(center - half);
         var max = bubble.Apply(center + half);
@@ -69,7 +71,7 @@ internal static class BlackjackTableArt
             return;
         }
 
-        var label = NumberText.Group(amount);
+        var label = NumberText.Compact(amount);
         var size = Typography.Measure(label, TextStyles.Caption2);
         var discRadius = PlateDiscRadius * scale;
         var pad = 5f * scale;

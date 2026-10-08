@@ -50,6 +50,16 @@ public sealed class ScratchRulesTests
     }
 
     [Fact]
+    public void TheInfoSheetPrintsEachTiersReturn()
+    {
+        Assert.Equal(923, ScratchRules.ReturnTenths(0));
+        Assert.Equal(923, ScratchRules.ReturnTenths(1));
+        Assert.Equal(930, ScratchRules.ReturnTenths(2));
+        Assert.Equal(940, ScratchRules.ReturnTenths(3));
+        Assert.Equal(0, ScratchRules.ReturnTenths(9));
+    }
+
+    [Fact]
     public void TierForPriceRoundTripsAndRejectsUnknownPrices()
     {
         Assert.Equal(0, ScratchRules.TierForPrice(500));

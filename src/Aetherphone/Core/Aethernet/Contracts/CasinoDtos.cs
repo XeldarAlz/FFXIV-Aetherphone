@@ -26,7 +26,28 @@ internal sealed record CasinoStateDto(
     long BuyInToday = 0,
     long Balance = 0,
     CasinoSittingDto? TableSitting = null,
-    long Jackpot = 0);
+    long Jackpot = 0,
+    CasinoProgressDto? Progress = null,
+    CasinoCeilingDto? Ceiling = null,
+    long[]? LevelCapAnchors = null);
+
+internal sealed record CasinoProgressDto(
+    int Level = 1,
+    long Xp = 0,
+    long LevelStartXp = 0,
+    long NextLevelXp = 0,
+    long LifetimeWagered = 0,
+    long LifetimeWon = 0,
+    int BestMultiplierTenths = 0,
+    string Title = "");
+
+internal sealed record CasinoCeilingDto(
+    long MaxBet = 0,
+    long LevelCap = 0,
+    long BalanceCap = 0,
+    long Balance = 0,
+    string Reason = "",
+    long NextLevelCap = 0);
 
 internal sealed record CasinoOpenSittingRequest(
     string ClientSittingId,

@@ -143,6 +143,8 @@ internal sealed class CasinoStore : IDisposable
 
     public long Jackpot => state?.Jackpot ?? 0;
 
+    public CasinoCeiling Ceiling => CasinoLadder.CeilingFor(state);
+
     public void TopUp(long amount)
     {
         var sittingId = state?.Sitting?.Id ?? string.Empty;

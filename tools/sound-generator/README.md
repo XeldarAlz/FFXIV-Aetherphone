@@ -25,7 +25,9 @@ python generate-sounds.py
 ```
 
 Writes into the plugin's `Sounds` folder. Pass another output directory as the first argument to
-render somewhere else for auditioning. `Ui/shutter.wav` is a CC0 recording that is re-mastered in
+render somewhere else for auditioning. `python generate-sounds.py --casino` renders only the Gamba
+cues in `Sounds/Casino/` (all synthesized, nothing downloaded); they carry their own seeds, so the
+rest of the set is unaffected. `Ui/shutter.wav` is a CC0 recording that is re-mastered in
 place, so the output folder needs a copy of it. Every synthesized clip is seeded, so re-running
 produces the same audio.
 

@@ -108,11 +108,7 @@ internal sealed class WheelRoundPlayback
         EnterStage(WheelStage.Locking);
     }
 
-    internal static string RoundKeyOf(CasinoRoomSnapshotDto snapshot)
-    {
-        return string.Concat(snapshot.RoomId, "#",
-            snapshot.RoundIndex.ToString(System.Globalization.CultureInfo.InvariantCulture));
-    }
+    internal static string RoundKeyOf(CasinoRoomSnapshotDto snapshot) => RoundKeys.Of(snapshot);
 
     internal static int DrawnSegment(CasinoWheelRoomStateDto? board)
     {

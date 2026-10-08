@@ -69,7 +69,7 @@ internal sealed class BlackjackTable
     private readonly BlackjackProjection projection = new();
     private readonly BlackjackDealPlayback playback = new();
     private readonly DealerBubble dealer = new();
-    private readonly BetComposer composer = new("##blackjackBet");
+    private readonly ClassicBetComposer composer = new("##blackjackBet");
     private readonly ParticleSystem particles = new(160);
     private readonly SeatView[] seatViews = new SeatView[BlackjackRules.SeatCount];
     private readonly SeatMotion[] motions = new SeatMotion[BlackjackRules.SeatCount];
@@ -319,7 +319,7 @@ internal sealed class BlackjackTable
     private static float FooterHeightFor(int phase, float scale)
     {
         return phase == BlackjackPhases.Betting
-            ? BannerHeight * scale + BetComposer.HeightFor(scale)
+            ? BannerHeight * scale + ClassicBetComposer.HeightFor(scale)
             : BannerHeight * scale + ActionBarHeight * scale;
     }
 
@@ -685,7 +685,7 @@ internal sealed class BlackjackTable
                 var won = hand.Delta > 0;
                 BlackjackTableArt.DrawOutcomeBadge(drawList,
                     new Vector2(fanCenter.X, puck.Y - BlackjackTableLayout.RailBadgeLift * scale), outcomeText,
-                    won ? Gold : ui.TitleInk, won ? Gold : ui.BodyInk, badgeEntrance, scale);
+                    won ? Gold : ui.TitleInk, won ? Gold : ui.BodyInk, badgeEntrance, handWidth, scale);
             }
             else if (hand.Total > 0)
             {
@@ -790,7 +790,7 @@ internal sealed class BlackjackTable
             {
                 var won = hand.Delta > 0;
                 BlackjackTableArt.DrawOutcomeBadge(drawList, fanCenter, outcomeText, won ? Gold : ui.TitleInk,
-                    won ? Gold : ui.BodyInk, BadgeEntrance(mySeat), scale);
+                    won ? Gold : ui.BodyInk, BadgeEntrance(mySeat), slotWidth, scale);
             }
         }
 
@@ -1118,7 +1118,7 @@ internal sealed class BlackjackTable
         if (BlackjackPhases.Over(board.Phase) && settledDelta > 0)
         {
             winRoll.Update((int)Math.Min(settledDelta, int.MaxValue), delta);
-            var amount = "+" + NumberText.Group((long)winRoll.Display);
+            var amount = NumberText.Signed(winRoll.Display);
             Typography.DrawCentered(drawList, center, Loc.T(L.Casino.BlackjackYouWon, amount), Gold,
                 TextStyles.Title3.Scale * winRoll.PopScale, TextStyles.Title3.Weight);
             return y + BannerHeight * scale;
@@ -1185,7 +1185,7 @@ internal sealed class BlackjackTable
         composer.Prefill(minimum);
         var blocked = veiled || state.StakesPaused || state.Draining || rooms.StakeInFlight;
         var bounds = new Rect(new Vector2(left, y),
-            new Vector2(left + width, y + BetComposer.HeightFor(scale)));
+            new Vector2(left + width, y + ClassicBetComposer.HeightFor(scale)));
         var label = Loc.T(L.Casino.BlackjackBetConfirm, NumberText.Group(composer.Amount),
             NumberText.Group(BlackjackRules.BlackjackPayout(composer.Amount)));
         if (composer.Draw(ui, bounds, minimum, maximum, seatStack, BlackjackRules.BetStep, !blocked, label,

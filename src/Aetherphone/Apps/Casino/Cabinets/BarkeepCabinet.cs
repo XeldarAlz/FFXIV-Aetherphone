@@ -65,8 +65,6 @@ internal sealed class BarkeepCabinet
     private float tapFlashLeft;
     private Vector2 tapFlashCenter;
     private string inlineReason = string.Empty;
-    private int clockSecond = -1;
-    private string clockText = "0:00";
 
     public BarkeepCabinet(CasinoStore store, CasinoPlayStore play, GameStatsStore stats, Action openCashier)
     {
@@ -545,7 +543,7 @@ internal sealed class BarkeepCabinet
             new Vector2(stage.Center.X + shakeX, stage.Center.Y - 10f * scale), label, color,
             TextStyles.Title3.Scale * (0.6f + 0.4f * pop), TextStyles.Title3.Weight);
         Typography.DrawCentered(drawList, stage.Center with { Y = stage.Center.Y + 14f * scale },
-            "+" + GameNumber.Label(Math.Max(gradeFlash, 0)), Palette.WithAlpha(color, 0.8f),
+            GameNumber.Signed(Math.Max(gradeFlash, 0)), Palette.WithAlpha(color, 0.8f),
             TextStyles.FootnoteEmphasized);
     }
 
@@ -586,7 +584,7 @@ internal sealed class BarkeepCabinet
             }
 
             payoutRoll.Update((int)result.Payout, delta);
-            var amount = "+" + NumberText.Group((long)payoutRoll.Display);
+            var amount = NumberText.Signed(payoutRoll.Display);
             Typography.DrawCentered(drawList, new Vector2(left + width * 0.5f, y + 8f * scale), amount, Gold,
                 TextStyles.Title1.Scale * payoutRoll.PopScale, TextStyles.Title1.Weight);
             y += 44f * scale;
@@ -888,16 +886,5 @@ internal sealed class BarkeepCabinet
         };
     }
 
-    private string ClockLabel(double elapsedSeconds)
-    {
-        var total = (int)elapsedSeconds;
-        if (total != clockSecond)
-        {
-            clockSecond = total;
-            clockText = string.Concat(GameNumber.Label(total / 60), ":",
-                (total % 60).ToString("00", Loc.Culture));
-        }
-
-        return clockText;
-    }
+    private static string ClockLabel(double elapsedSeconds) => TimeText.Duration((int)elapsedSeconds);
 }

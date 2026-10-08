@@ -508,6 +508,79 @@ def game_sounds():
     return sounds
 
 
+def coin_ping(frequency, seed):
+    return bell(frequency, decay=0.09, seed=seed)
+
+
+def hoof(scale, seed):
+    body = partial(150 * scale, 0.03, 1.0) + partial(420 * scale, 0.012, 0.35)
+    return place((0, body), (0, noise(0.02, 400, 3000, 0.004, 0.4, seed)))
+
+
+def casino_sounds():
+    sounds = {}
+    sounds["reel_tick"] = (place((0, partial(1800, 0.003, 1.0) + partial(4200, 0.0018, 0.4)),
+                                 (0, noise(0.004, 2500, 10000, 0.0006, 0.5, 5001))), "game")
+    sounds["reel_stop"] = (room(place((0, partial(140, 0.04, 1.0) + partial(360, 0.015, 0.4)),
+                                      (0, noise(0.012, 300, 2500, 0.003, 0.5, 5002)),
+                                      (0.004, 0.3 * partial(2600, 0.003, 1.0))), 0.06, decay=0.04, seed=5002), "game")
+    sounds["wheel_tick"] = (place((0, partial(2600, 0.0025, 1.0) + partial(5200, 0.0015, 0.3)),
+                                  (0, noise(0.003, 3000, 11000, 0.0005, 0.35, 5003))), "game")
+    sounds["daub"] = (room(place((0, partial(220, 0.025, 1.0) + partial(540, 0.01, 0.3)),
+                                 (0, noise(0.03, 200, 1800, 0.008, 0.6, 5004))), 0.05, decay=0.03, seed=5004), "game")
+    slide = noise(0.28, 1500, 7000, 0.12, 0.6, 5005, attack=0.03)
+    clicks = [(0, slide)] + [(0.04 + index * 0.06, 0.5 * place((0, partial(2900 + index * 180, 0.004, 1.0)),
+                                                                  (0, noise(0.003, 2500, 9000, 0.0005, 0.4, 5050 + index))))
+                             for index in range(4)]
+    sounds["chip_slide"] = (room(place(*clicks), 0.05, decay=0.03, seed=5005), "game")
+    generator = np.random.default_rng(5006)
+    pings = []
+    for index in range(16):
+        offset = index * 0.07 + generator.random() * 0.025
+        frequency = note("C7") * 2 ** (generator.integers(0, 8) / 12)
+        pings.append((offset, (1 - index * 0.04) * coin_ping(frequency, 5060 + index)))
+    sounds["coin_shower"] = (room(place(*pings), 0.12, decay=0.08, seed=5006), "game")
+    sounds["win_small"] = (two_note(marimba, note("G6"), note("D7"), 0.06, decay=0.1), "game")
+    sparkle = [(0.3 + index * 0.05, 0.25 * bell(note("C8") * 2 ** (index / 12), decay=0.05, seed=5080 + index))
+               for index in range(5)]
+    big = arpeggio(bell, [note("C6"), note("E6"), note("G6"), note("C7")], 0.07, 0.22)
+    sounds["win_big"] = (room(place((0, big), *sparkle), 0.1, decay=0.08), "chime")
+    epic_bells = arpeggio(bell, [note("C6"), note("E6"), note("G6"), note("C7"), note("E7")], 0.08, 0.2)
+    epic_marimba = arpeggio(marimba, [note("C5"), note("G5"), note("C6"), note("E6")], 0.08, 0.18)
+    held = 0.7 * bell(note("G7"), decay=0.32, seed=5090)
+    sounds["win_epic"] = (room(place((0, epic_bells), (0, 0.6 * epic_marimba), (0.4, held)), 0.14, decay=0.1), "chime")
+    sounds["turn_chime"] = (two_note(bell, note("E6"), note("A6"), 0.12, second_level=0.75, decay=0.2), "game")
+    low = muted_knock(note("A3"), 5011)
+    sounds["timer_low"] = (room(place((0, low), (0.16, 0.8 * low)), 0.05), "game")
+    brass = ((1, 1.0), (2, 0.6), (3, 0.4), (4, 0.25), (5, 0.12))
+    sounds["race_horn"] = (room(place((0, glide_tone(note("G4"), note("G4") * 1.01, 0.14, brass, attack=0.2)),
+                                      (0.16, glide_tone(note("C5"), note("C5") * 1.01, 0.14, brass, attack=0.2)),
+                                      (0.32, glide_tone(note("E5"), note("E5") * 1.01, 0.14, brass, attack=0.2)),
+                                      (0.48, glide_tone(note("G5"), note("G5"), 0.4, brass, attack=0.1))),
+                                0.12, decay=0.08), "game")
+    sounds["gallop"] = (room(place((0, hoof(1.0, 5013)), (0.09, 0.8 * hoof(1.06, 5014)), (0.18, 0.9 * hoof(0.95, 5015))),
+                             0.05, decay=0.03), "game")
+    sounds["peg_tick"] = (place((0, partial(3600, 0.002, 1.0) + partial(7200, 0.001, 0.25)),
+                                (0, noise(0.002, 4000, 12000, 0.0004, 0.3, 5016))), "game")
+    sounds["tile_safe"] = (room(bell(note("A6"), decay=0.16, seed=5017), 0.1, decay=0.06), "game")
+    sounds["bust"] = (room(muted_knock(note("C3"), 5018), 0.06), "game")
+    snap = place((0, noise(0.012, 2000, 12000, 0.0025, 1.0, 5019, attack=0.0002)),
+                 (0, partial(900, 0.006, 0.4) + partial(2400, 0.003, 0.25)))
+    sounds["card_snap"] = (room(snap, 0.04, decay=0.025, seed=5019), "game")
+    fanfare_bells = arpeggio(bell, [note("C6"), note("E6"), note("G6"), note("C7")], 0.11, 0.22)
+    fanfare_marimba = arpeggio(marimba, [note("C5"), note("E5"), note("G5"), note("C6")], 0.11, 0.2)
+    sounds["fanfare"] = (room(place((0, fanfare_bells), (0, 0.7 * fanfare_marimba),
+                                    (0.45, 0.6 * bell(note("E7"), decay=0.28, seed=5020))), 0.14, decay=0.1), "chime")
+    sounds["level_up"] = (arpeggio(bell, [note("G5"), note("C6"), note("E6"), note("G6"), note("C7"), note("E7")],
+                                   0.05, 0.16), "chime")
+    return sounds
+
+
+def write_casino(output):
+    for index, (name, (clip, category)) in enumerate(casino_sounds().items()):
+        write_wav(os.path.join(output, "Casino", name + ".wav"), master(clip, category), 5000 + index)
+
+
 NOTIFICATIONS = {
     "Chime": ("material", "alert", "notification_simple-01"),
     "Bloom": ("material", "alert", "notification_decorative-01"),
@@ -546,7 +619,11 @@ def load_source(source):
 
 
 def main():
-    output = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_OUTPUT
+    arguments = [argument for argument in sys.argv[1:] if argument != "--casino"]
+    output = arguments[0] if arguments else DEFAULT_OUTPUT
+    write_casino(output)
+    if "--casino" in sys.argv[1:]:
+        return
     seed = 0
     for folder, sounds in (("Ui", ui_sounds(output)), ("Games", game_sounds())):
         for name, (clip, category) in sounds.items():

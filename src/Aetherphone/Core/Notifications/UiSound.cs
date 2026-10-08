@@ -51,6 +51,25 @@ internal enum UiSound
     MessageReceived,
     CasinoChips,
     CasinoDeal,
+    ReelTick,
+    ReelStop,
+    WheelTick,
+    Daub,
+    ChipSlide,
+    CoinShower,
+    WinSmall,
+    WinBig,
+    WinEpic,
+    TurnChime,
+    TimerLow,
+    RaceHorn,
+    Gallop,
+    PegTick,
+    TileSafe,
+    Bust,
+    CardSnap,
+    Fanfare,
+    LevelUp,
 }
 
 internal enum UiSoundChannel
@@ -184,6 +203,25 @@ internal static class UiSoundCatalog
     };
 
     private static readonly string[] Deal = { "Games/deal_1.wav", "Games/deal_2.wav" };
+    private static readonly string[] ReelTick = { "Casino/reel_tick.wav" };
+    private static readonly string[] ReelStop = { "Casino/reel_stop.wav" };
+    private static readonly string[] WheelTick = { "Casino/wheel_tick.wav" };
+    private static readonly string[] Daub = { "Casino/daub.wav" };
+    private static readonly string[] ChipSlide = { "Casino/chip_slide.wav" };
+    private static readonly string[] CoinShower = { "Casino/coin_shower.wav" };
+    private static readonly string[] WinSmall = { "Casino/win_small.wav" };
+    private static readonly string[] WinBig = { "Casino/win_big.wav" };
+    private static readonly string[] WinEpic = { "Casino/win_epic.wav" };
+    private static readonly string[] TurnChime = { "Casino/turn_chime.wav" };
+    private static readonly string[] TimerLow = { "Casino/timer_low.wav" };
+    private static readonly string[] RaceHorn = { "Casino/race_horn.wav" };
+    private static readonly string[] Gallop = { "Casino/gallop.wav" };
+    private static readonly string[] PegTick = { "Casino/peg_tick.wav" };
+    private static readonly string[] TileSafe = { "Casino/tile_safe.wav" };
+    private static readonly string[] Bust = { "Casino/bust.wav" };
+    private static readonly string[] CardSnap = { "Casino/card_snap.wav" };
+    private static readonly string[] Fanfare = { "Casino/fanfare.wav" };
+    private static readonly string[] LevelUp = { "Casino/level_up.wav" };
 
     public static readonly UiSoundEntry[] Entries =
     {
@@ -236,6 +274,25 @@ internal static class UiSoundCatalog
         new(Receive, 0.7f, 120, UiSoundChannel.Event),
         new(Chips, 0.6f, 40, UiSoundChannel.Game, SubtleVariance),
         new(Deal, 0.6f, 50, UiSoundChannel.Game, SubtleVariance),
+        new(ReelTick, 0.45f, 30, UiSoundChannel.Game, SubtleVariance),
+        new(ReelStop, 0.6f, 60, UiSoundChannel.Game),
+        new(WheelTick, 0.45f, 30, UiSoundChannel.Game, SubtleVariance),
+        new(Daub, 0.55f, 60, UiSoundChannel.Game, SubtleVariance),
+        new(ChipSlide, 0.6f, 80, UiSoundChannel.Game, SubtleVariance),
+        new(CoinShower, 0.55f, 1500, UiSoundChannel.Game),
+        new(WinSmall, 0.6f, 150, UiSoundChannel.Game),
+        new(WinBig, 0.65f, 10000, UiSoundChannel.Game),
+        new(WinEpic, 0.7f, 10000, UiSoundChannel.Game),
+        new(TurnChime, 0.55f, 250, UiSoundChannel.Game),
+        new(TimerLow, 0.5f, 250, UiSoundChannel.Game),
+        new(RaceHorn, 0.6f, 250, UiSoundChannel.Game),
+        new(Gallop, 0.5f, 60, UiSoundChannel.Game, SubtleVariance),
+        new(PegTick, 0.45f, 30, UiSoundChannel.Game, SubtleVariance),
+        new(TileSafe, 0.55f, 60, UiSoundChannel.Game),
+        new(Bust, 0.35f, 150, UiSoundChannel.Game),
+        new(CardSnap, 0.6f, 60, UiSoundChannel.Game, SubtleVariance),
+        new(Fanfare, 0.65f, 10000, UiSoundChannel.Game),
+        new(LevelUp, 0.6f, 250, UiSoundChannel.Game),
     };
 
     public static IReadOnlyList<string> Files()

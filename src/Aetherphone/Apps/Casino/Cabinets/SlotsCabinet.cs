@@ -60,7 +60,7 @@ internal sealed class SlotsCabinet
     private readonly SlotsRoundPlayback playback = new();
     private readonly ParticleSystem particles = new(256);
     private readonly SlotsPayTableSheet payTable = new();
-    private readonly BetComposer composer = new("##slotsStake");
+    private readonly ClassicBetComposer composer = new("##slotsStake");
     private readonly int[] restingGrid = new int[SlotsRules.CellCount];
 
     private RollingValue winRoll;
@@ -773,7 +773,7 @@ internal sealed class SlotsCabinet
                     center.Y - 20f * scale, width, TextStyles.FootnoteEmphasized, Gold);
             }
 
-            var amount = "+" + NumberText.Group((long)winRoll.Display);
+            var amount = NumberText.Signed(winRoll.Display);
             Typography.DrawCentered(drawList, center with { Y = center.Y + (bigWin ? 4f : -4f) * scale }, amount,
                 Gold, TextStyles.Title1.Scale * winRoll.PopScale, TextStyles.Title1.Weight);
             if (playback.CapApplied && playback.Phase == SlotsPlaybackPhase.Finished)
@@ -823,7 +823,7 @@ internal sealed class SlotsCabinet
         y += 20f * scale;
         var changeable = !play.RoundInFlight && !PlaybackBusy;
         var bounds = new Rect(new Vector2(left, y),
-            new Vector2(left + width, y + BetComposer.AmountHeightFor(scale)));
+            new Vector2(left + width, y + ClassicBetComposer.AmountHeightFor(scale)));
         return composer.DrawAmount(ui, bounds, SlotsRules.MinStake, SlotsRules.MaxStake, sitting.Stack,
             SlotsRules.StakeStep, changeable, delta);
     }

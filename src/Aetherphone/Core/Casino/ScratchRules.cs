@@ -70,6 +70,23 @@ internal static class ScratchRules
         return -1;
     }
 
+    public static int ReturnTenths(int tier)
+    {
+        if (!IsValidTier(tier))
+        {
+            return 0;
+        }
+
+        var table = PrizeTables[tier];
+        var returned = 0L;
+        for (var prizeIndex = 0; prizeIndex < table.Length; prizeIndex++)
+        {
+            returned += table[prizeIndex].Chips * table[prizeIndex].CountPerMillion;
+        }
+
+        return (int)(returned * 1000 / ((long)TableScale * Prices[tier]));
+    }
+
     public static long WinCountPerMillion(int tier)
     {
         var table = PrizeTables[tier];

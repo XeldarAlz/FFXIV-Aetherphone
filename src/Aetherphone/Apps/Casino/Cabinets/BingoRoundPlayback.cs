@@ -91,11 +91,7 @@ internal sealed class BingoRoundPlayback
         return BingoRules.IsBall(ball) && called[ball];
     }
 
-    internal static string RoundKeyOf(CasinoRoomSnapshotDto snapshot)
-    {
-        return string.Concat(snapshot.RoomId, "#",
-            snapshot.RoundIndex.ToString(System.Globalization.CultureInfo.InvariantCulture));
-    }
+    internal static string RoundKeyOf(CasinoRoomSnapshotDto snapshot) => RoundKeys.Of(snapshot);
 
     internal static int[] CalledBalls(CasinoBingoRoomStateDto? board)
     {
