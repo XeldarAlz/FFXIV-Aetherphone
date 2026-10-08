@@ -667,12 +667,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         {
             originals.Reset();
             return;
-            return;
         }
 
         if (string.Equals(route.GameId, CasinoGames.Plinko, StringComparison.Ordinal))
         {
             plinko.Reset();
+            return;
         }
 
         if (string.Equals(route.GameId, CasinoGames.Race, StringComparison.Ordinal))
