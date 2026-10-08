@@ -134,7 +134,8 @@ public sealed class CasinoWireContractTests
         Assert.Equal("blackjack-pit", CasinoRoomIds.BlackjackPit);
         Assert.Equal("blackjack-parlour", CasinoRoomIds.BlackjackParlour);
         Assert.Equal("blackjack-salon", CasinoRoomIds.BlackjackSalon);
-        Assert.Equal(3, CasinoRoomIds.BlackjackHouse.Length);
+        Assert.Equal("blackjack-vault", CasinoRoomIds.BlackjackVault);
+        Assert.Equal(4, CasinoRoomIds.BlackjackHouse.Length);
     }
 
     [Fact]

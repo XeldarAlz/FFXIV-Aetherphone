@@ -32,10 +32,25 @@ internal static class CasinoRoomIds
 
     public const string BlackjackSalon = "blackjack-salon";
 
+    public const string BlackjackVault = "blackjack-vault";
+
     public static readonly string[] BlackjackHouse =
     {
-        BlackjackPit, BlackjackParlour, BlackjackSalon,
+        BlackjackPit, BlackjackParlour, BlackjackSalon, BlackjackVault,
     };
+
+    public static bool IsBlackjackHouse(string roomId)
+    {
+        for (var index = 0; index < BlackjackHouse.Length; index++)
+        {
+            if (string.Equals(BlackjackHouse[index], roomId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 internal static class CasinoRoomCadence

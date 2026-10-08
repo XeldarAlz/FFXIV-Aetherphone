@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Core.Casino;
 
@@ -22,6 +23,7 @@ internal static class CasinoVerifier
     private const string BingoCardPurpose = "card";
     private const string BingoBallPurpose = "ball";
     private const string BlackjackShufflePurpose = "shuffle";
+    private const string BlackjackShuffleEntry = "shuffle:";
     private const string MinePurpose = "mine";
     private const string RollPurpose = "roll";
     private const string LimboPurpose = "limbo";
@@ -214,6 +216,7 @@ internal static class CasinoVerifier
 
         TrySegmentBound(gameKind, out var segmentBound);
         var holdem = string.Equals(gameKind, HoldemRules.Kind, StringComparison.Ordinal);
+        var shoeCards = ShoeCardsOf(drawLog);
         var stream = new DrawStream(seed, streamKeyInfo);
         var shuffles = default(ShuffleRun);
         var cursor = 0;
@@ -238,7 +241,7 @@ internal static class CasinoVerifier
             var occurrence = shuffles.Next(purpose);
             var bounded = holdem && purpose.SequenceEqual(BlackjackShufflePurpose)
                 ? TryHoldemShuffleBound(occurrence, out var bound)
-                : TryBoundFor(purpose, occurrence, segmentBound, out bound);
+                : TryBoundFor(purpose, occurrence, segmentBound, shoeCards, out bound);
             if (!bounded || loggedValue >= bound)
             {
                 return false;
@@ -412,7 +415,41 @@ internal static class CasinoVerifier
         return TryBoundFor(purpose, 0, segmentBound, out bound);
     }
 
+    internal static int ShoeCardsOf(string drawLog)
+    {
+        var shuffles = 0;
+        var cursor = drawLog.IndexOf(BlackjackShuffleEntry, StringComparison.Ordinal);
+        while (cursor >= 0)
+        {
+            if (cursor == 0 || drawLog[cursor - 1] == ';')
+            {
+                shuffles++;
+            }
+
+            cursor = drawLog.IndexOf(BlackjackShuffleEntry, cursor + BlackjackShuffleEntry.Length,
+                StringComparison.Ordinal);
+        }
+
+        var shoeCards = shuffles + 1;
+        var decks = CasinoRuleSheet.Decks;
+        for (var index = 0; index < decks.Length; index++)
+        {
+            if (decks[index] * PlayingCards.DeckSize == shoeCards)
+            {
+                return shoeCards;
+            }
+        }
+
+        return BlackjackRules.ShoeCards;
+    }
+
     internal static bool TryBoundFor(ReadOnlySpan<char> purpose, int occurrence, uint segmentBound, out uint bound)
+    {
+        return TryBoundFor(purpose, occurrence, segmentBound, BlackjackRules.ShoeCards, out bound);
+    }
+
+    internal static bool TryBoundFor(ReadOnlySpan<char> purpose, int occurrence, uint segmentBound, int shoeCards,
+        out uint bound)
     {
         bound = 0;
         if (occurrence < 0)
@@ -463,12 +500,12 @@ internal static class CasinoVerifier
 
         if (purpose.SequenceEqual(BlackjackShufflePurpose))
         {
-            if (occurrence >= BlackjackRules.ShoeCards - 1)
+            if (occurrence >= shoeCards - 1)
             {
                 return false;
             }
 
-            bound = (uint)(BlackjackRules.ShoeCards - occurrence);
+            bound = (uint)(shoeCards - occurrence);
             return true;
         }
 

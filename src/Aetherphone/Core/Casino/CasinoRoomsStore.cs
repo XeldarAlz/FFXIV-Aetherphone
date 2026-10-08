@@ -45,6 +45,8 @@ internal sealed class CasinoRoomsStore : IDisposable
     private int unansweredBetSpot = -1;
     private long unansweredBetAmount;
     private long unansweredBetRoundIndex = -1;
+    private long unansweredBetPairs;
+    private long unansweredBetThree;
     private string unansweredPurchaseId = string.Empty;
     private long unansweredPurchaseRoundIndex = -1;
     private int unansweredPurchaseCardCount = -1;
@@ -395,7 +397,7 @@ internal sealed class CasinoRoomsStore : IDisposable
         }, () => stakeInFlight = false);
     }
 
-    public void PlaceBlackjackBet(long amount)
+    public void PlaceBlackjackBet(long amount, long perfectPairs = 0, long twentyOnePlusThree = 0)
     {
         var roomId = room.RoomId;
         var snapshot = room.State?.Snapshot;
@@ -420,7 +422,9 @@ internal sealed class CasinoRoomsStore : IDisposable
         lock (stakeGate)
         {
             clientRoundId = ChipRoundFor(roundIndex);
-            betId = ReusableBetId(roundIndex, HandBetSpot, amount);
+            betId = unansweredBetPairs == perfectPairs && unansweredBetThree == twentyOnePlusThree
+                ? ReusableBetId(roundIndex, HandBetSpot, amount)
+                : string.Empty;
             if (betId.Length == 0)
             {
                 betId = Guid.NewGuid().ToString("N");
@@ -430,13 +434,16 @@ internal sealed class CasinoRoomsStore : IDisposable
             unansweredBetSpot = HandBetSpot;
             unansweredBetAmount = amount;
             unansweredBetRoundIndex = roundIndex;
+            unansweredBetPairs = perfectPairs;
+            unansweredBetThree = twentyOnePlusThree;
         }
 
         stakeInFlight = true;
         work.Run("blackjack bet", async token =>
         {
             var result = await casino
-                .PlaceBlackjackBetAsync(roomId, clientRoundId, betId, amount, token)
+                .PlaceBlackjackBetAsync(roomId, clientRoundId, betId, amount, perfectPairs, twentyOnePlusThree,
+                    token)
                 .ConfigureAwait(false);
             if (result is null)
             {

@@ -31,9 +31,13 @@ internal static class CasinoHouseTiers
 
     public const int Salon = 2;
 
+    public const int Vault = 3;
+
     public const int Count = 3;
 
     public static readonly int[] All = { Pit, Parlour, Salon };
+
+    public static readonly int[] PitOrder = { Pit, Parlour, Salon, Vault };
 }
 
 internal static class CasinoStakeTiers

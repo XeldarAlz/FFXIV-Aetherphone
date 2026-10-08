@@ -50,10 +50,17 @@ internal static class BlackjackActions
 
     public const string Split = "split";
 
+    public const string Insurance = "insurance";
+
+    public const string NoInsurance = "no_insurance";
+
+    public const string Surrender = "surrender";
+
     public static bool IsWager(string action)
     {
         return string.Equals(action, Double, StringComparison.Ordinal)
-            || string.Equals(action, Split, StringComparison.Ordinal);
+            || string.Equals(action, Split, StringComparison.Ordinal)
+            || string.Equals(action, Insurance, StringComparison.Ordinal);
     }
 
     public static string VerbFor(int action)
@@ -64,6 +71,9 @@ internal static class BlackjackActions
             BlackjackRules.ActionStand => Stand,
             BlackjackRules.ActionDouble => Double,
             BlackjackRules.ActionSplit => Split,
+            BlackjackRules.ActionInsurance => Insurance,
+            BlackjackRules.ActionDeclineInsurance => NoInsurance,
+            BlackjackRules.ActionSurrender => Surrender,
             _ => string.Empty,
         };
     }
@@ -82,6 +92,8 @@ internal static class BlackjackOutcomes
     public const int Blackjack = 4;
 
     public const int Bust = 5;
+
+    public const int Surrender = 6;
 }
 
 internal static class BlackjackRules
@@ -100,11 +112,15 @@ internal static class BlackjackRules
 
     public const long MinBet = 500;
 
-    public const long MaxBet = 100_000;
+    public const long MaxBet = 10_000_000;
 
-    public static readonly long[] HouseTierMinBets = { 2_500, 10_000, 25_000 };
+    public const int HouseTierCount = 4;
 
-    public static readonly long[] HouseTierMaxBets = { 25_000, 50_000, 100_000 };
+    public const int InsuranceSeconds = 8;
+
+    public static readonly long[] HouseTierMinBets = { 500, 5_000, 50_000, 500_000 };
+
+    public static readonly long[] HouseTierMaxBets = { 10_000, 100_000, 1_000_000, 10_000_000 };
 
     public static long HouseFloor => HouseTierMinBets[0];
 
@@ -120,7 +136,17 @@ internal static class BlackjackRules
 
     public const int ActionSplit = 8;
 
+    public const int ActionInsurance = 16;
+
+    public const int ActionSurrender = 32;
+
+    public const int ActionDeclineInsurance = 64;
+
+    public const int ReturnTenths = 995;
+
     private const long RackHands = 20;
+
+    private const long QuickTierHeadroom = 2;
 
     public static long RackFor(long tableMaxBet, long minBuyIn, long maxBuyIn, long bankroll)
     {
@@ -135,7 +161,36 @@ internal static class BlackjackRules
 
     public static bool Allows(int actionsMask, int action)
     {
+        if (action == ActionDeclineInsurance)
+        {
+            return (actionsMask & ActionInsurance) == ActionInsurance;
+        }
+
         return action != 0 && (actionsMask & action) == action;
+    }
+
+    public static int QuickTierFor(long ceiling)
+    {
+        var tier = 0;
+        for (var index = 1; index < HouseTierCount; index++)
+        {
+            if (HouseTierMinBets[index] * QuickTierHeadroom <= ceiling)
+            {
+                tier = index;
+            }
+        }
+
+        return tier;
+    }
+
+    public static long InsuranceFor(long bet)
+    {
+        return bet <= 0 ? 0 : bet / 2;
+    }
+
+    public static long SurrenderReturn(long bet)
+    {
+        return bet <= 0 ? 0 : bet / 2;
     }
 
     public static bool IsSeat(int seatIndex)

@@ -11208,6 +11208,59 @@ internal static class L
         public static readonly LocString LineWinner2 = new("casino.race.lineWinner2", "{0} gets there first!");
     }
 
+    internal static class Blackjack
+    {
+        public static readonly LocString PitTitle = new("casino.blackjack.pitTitle", "Blackjack pit");
+        public static readonly LocString PitHouseHeading = new("casino.blackjack.pitHouseHeading", "House tables");
+        public static readonly LocString PitHostedHeading = new("casino.blackjack.pitHostedHeading", "Hosted tables");
+        public static readonly LocString PitQuickHint = new("casino.blackjack.pitQuickHint", "We seat you at the busiest table that suits your stakes.");
+        public static readonly LocString PitAboveCeiling = new("casino.blackjack.pitAboveCeiling", "Above your bet ceiling");
+        public static readonly LocString PitBrowse = new("casino.blackjack.pitBrowse", "All tables");
+        public static readonly LocString PitNoHosted = new("casino.blackjack.pitNoHosted", "No hosted blackjack tables are open right now. Host one and invite your friends.");
+        public static readonly LocString TierVault = new("casino.blackjack.tierVault", "The Vault");
+        public static readonly LocString SeatSit = new("casino.blackjack.seatSit", "Sit");
+        public static readonly LocString SidePairs = new("casino.blackjack.sidePairs", "Pairs");
+        public static readonly LocString SideThree = new("casino.blackjack.sideThree", "21+3");
+        public static readonly LocString SideStake = new("casino.blackjack.sideStake", "Stake {0}");
+        public static readonly LocString SideWin = new("casino.blackjack.sideWin", "{0}, {1} to 1");
+        public static readonly LocString PairMixed = new("casino.blackjack.pairMixed", "Mixed pair");
+        public static readonly LocString PairColoured = new("casino.blackjack.pairColoured", "Coloured pair");
+        public static readonly LocString PairPerfect = new("casino.blackjack.pairPerfect", "Perfect pair");
+        public static readonly LocString ThreeFlush = new("casino.blackjack.threeFlush", "Flush");
+        public static readonly LocString ThreeStraight = new("casino.blackjack.threeStraight", "Straight");
+        public static readonly LocString ThreeTrips = new("casino.blackjack.threeTrips", "Three of a kind");
+        public static readonly LocString ThreeStraightFlush = new("casino.blackjack.threeStraightFlush", "Straight flush");
+        public static readonly LocString ThreeSuitedTrips = new("casino.blackjack.threeSuitedTrips", "Suited trips");
+        public static readonly LocString InsurancePays = new("casino.blackjack.insurancePays", "Insurance pays 2 to 1");
+        public static readonly LocString InsuranceQuestion = new("casino.blackjack.insuranceQuestion", "Insurance?");
+        public static readonly LocString InsuranceClosesIn = new("casino.blackjack.insuranceClosesIn", "Insurance closes in {0}");
+        public static readonly LocString InsuranceHint = new("casino.blackjack.insuranceHint", "The dealer shows an ace. Insurance pays 2 to 1 if they hold blackjack.");
+        public static readonly LocString InsurePill = new("casino.blackjack.insurePill", "Insure {0}");
+        public static readonly LocString NoInsurePill = new("casino.blackjack.noInsurePill", "No insurance");
+        public static readonly LocString Insured = new("casino.blackjack.insured", "Insured {0}");
+        public static readonly LocString InsuranceWaiting = new("casino.blackjack.insuranceWaiting", "Waiting for the dealer to peek");
+        public static readonly LocString BetIn = new("casino.blackjack.betIn", "Your bet is in");
+        public static readonly LocString SurrenderPill = new("casino.blackjack.surrenderPill", "Surrender");
+        public static readonly LocString SurrenderHalfBack = new("casino.blackjack.surrenderHalfBack", "Half back");
+        public static readonly LocString OutcomeSurrender = new("casino.blackjack.outcomeSurrender", "Surrendered");
+        public static readonly LocString RecapCaption = new("casino.blackjack.recapCaption", "Every seat plays the dealer on their own");
+        public static readonly LocString SoftTotal = new("casino.blackjack.softTotal", "Soft {0}");
+        public static readonly LocString DealerBusts = new("casino.blackjack.dealerBusts", "Dealer busts");
+        public static readonly LocString TableHandsHeading = new("casino.blackjack.tableHandsHeading", "Table hands");
+        public static readonly LocString TableHandsHint = new("casino.blackjack.tableHandsHint", "Hands from hosted and practice tables are checked against the table's own seed chain.");
+        public static readonly LocString TableHandsEmpty = new("casino.blackjack.tableHandsEmpty", "Hands you play at hosted or practice tables show up here.");
+        public static readonly LocString TableHandLine = new("casino.blackjack.tableHandLine", "Hand {0}");
+        public static readonly LocString VerifyHand = new("casino.blackjack.verifyHand", "Check");
+        public static readonly LocString VerdictMatch = new("casino.blackjack.verdictMatch", "Matches");
+        public static readonly LocString VerdictMismatch = new("casino.blackjack.verdictMismatch", "No match");
+        public static readonly LocString VerdictPending = new("casino.blackjack.verdictPending", "Not yet");
+        public static readonly LocString RulesSideBets = new("casino.blackjack.rulesSideBets", "Side bets ride from 100 chips up to your bet: Pairs pays up to 25 to 1 and 21+3 up to 100 to 1.");
+        public static readonly LocString RulesInsurance = new("casino.blackjack.rulesInsurance", "When the dealer shows an ace, insure for half your bet. It pays 2 to 1 if the dealer has blackjack.");
+        public static readonly LocString RulesSurrender = new("casino.blackjack.rulesSurrender", "On your first two cards you may surrender and take half your bet back.");
+        public static readonly LocString FactSideBets = new("casino.blackjack.factSideBets", "Side bet returns");
+        public static readonly LocString FactSideBetsValue = new("casino.blackjack.factSideBetsValue", "Pairs 93.89%, 21+3 95.38%");
+    }
+
     internal static class Catalogs
     {
         public static readonly LocString AccentViolet = new("catalog.accent.violet", "Violet");
