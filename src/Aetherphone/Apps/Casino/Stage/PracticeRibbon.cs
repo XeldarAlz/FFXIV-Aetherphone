@@ -35,7 +35,7 @@ internal static class PracticeRibbon
         var edge = ImGui.GetColorU32(CasinoColors.Practice with { W = EdgeAlpha });
         drawList.AddLine(new Vector2(rect.Min.X, rect.Max.Y), rect.Max, edge, MathF.Max(1f, scale));
         var label = Typography.FitText(Loc.T(L.Strip.PracticeRibbon), rect.Width - Metrics.Space.Lg * 2f * scale,
-            TextStyles.Caption1);
-        Typography.DrawCentered(drawList, rect.Center, label, CasinoColors.InkTitle, TextStyles.Caption1);
+            TextStyles.FootnoteEmphasized);
+        Typography.DrawCentered(drawList, rect.Center, label, CasinoColors.InkTitle, TextStyles.FootnoteEmphasized);
     }
 }

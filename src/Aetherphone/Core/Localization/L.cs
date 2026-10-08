@@ -10991,6 +10991,7 @@ internal static class L
         public static readonly LocString ClubTop = new("casino.strip.clubTop", "Top tier. Every perk is yours.");
         public static readonly LocString ClubPointsTo = new("casino.strip.clubPointsTo", "{1} points to {0}");
         public static readonly LocString MaxBetLine = new("casino.strip.maxBetLine", "Your max bet right now: {0}");
+        public static readonly LocString SeatSit = new("casino.strip.seatSit", "Sit");
     }
 
     internal static class Machines

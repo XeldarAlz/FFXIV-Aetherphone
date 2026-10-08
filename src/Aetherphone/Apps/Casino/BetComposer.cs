@@ -37,11 +37,10 @@ internal sealed class BetComposer
     public const float Pad = 12f;
     public const float Gap = 8f;
     public const float AmountHeight = 34f;
-    public const float ActionHeight = Button.LargeHeight;
+    public const float ActionHeight = DeckActions.PrimaryHeight;
     public const float KnobHeight = 36f;
     public const float QuickWidth = 52f;
     public const float ModeWidth = 112f;
-    public const float GearRadius = 17f;
 
     private const int BufferLength = 16;
     private const float FlashSeconds = 0.5f;
@@ -292,10 +291,10 @@ internal sealed class BetComposer
     private BetComposerAction DrawActionRow(ImDrawListPtr drawList, AppSkin ui, Rect row, in BetComposerModel model,
         float scale)
     {
-        var actionRect = row;
+        var cursor = row.Min.X;
         if (model.AutoAvailable)
         {
-            var modeRect = new Rect(row.Min, new Vector2(row.Min.X + ModeWidth * scale, row.Max.Y));
+            var modeRect = DeckActions.Secondary(row, cursor, ModeWidth * scale, scale);
             modeLabels[ManualTab] = Loc.T(L.Strip.Manual);
             modeLabels[AutoTab] = Loc.T(L.Strip.Auto);
             var picked = SegmentStrip.Draw(fieldId + ".mode", modeRect, modeLabels, tab,
@@ -305,21 +304,21 @@ internal sealed class BetComposer
                 tab = picked;
             }
 
-            var x = modeRect.Max.X + Gap * scale;
+            cursor = DeckActions.Advance(modeRect, scale);
             if (tab == AutoTab)
             {
-                var gearCenter = new Vector2(x + GearRadius * scale, row.Center.Y);
-                if (RoundButton.Icon(drawList, gearCenter, GearRadius * scale, IconGlyph.Of(FontAwesomeIcon.SlidersH),
-                        ui.Ink, ButtonStyle.Gray, enabled: !Auto.Running))
+                var gearRect = DeckActions.Secondary(row, cursor, row.Height, scale);
+                if (RoundButton.Icon(drawList, gearRect.Center, gearRect.Height * 0.5f,
+                        IconGlyph.Of(FontAwesomeIcon.SlidersH), ui.Ink, ButtonStyle.Gray, enabled: !Auto.Running))
                 {
                     autoSheet.Open();
                 }
 
-                x = gearCenter.X + GearRadius * scale + Gap * scale;
+                cursor = DeckActions.Advance(gearRect, scale);
             }
-
-            actionRect = new Rect(new Vector2(x, row.Min.Y), row.Max);
         }
+
+        var actionRect = DeckActions.Primary(row, cursor);
 
         if (Auto.Running)
         {

@@ -68,9 +68,8 @@ internal sealed class BetsRail
         var max = center + size * 0.5f;
         var hovered = UiInteract.Hover(min, max);
         Material.LiquidGlass(drawList, min, max, size.Y * 0.5f, scale, GlassTone.Dark, hovered ? 0.4f : 0f);
-        var label = Typography.FitText(Loc.T(L.Strip.Bets), size.X - size.Y, TextStyles.Caption1);
-        Typography.DrawCentered(drawList, center, label, hovered ? CasinoColors.InkTitle : CasinoColors.InkBody,
-            TextStyles.Caption1);
+        var label = Typography.FitText(Loc.T(L.Strip.Bets), size.X - size.Y, TextStyles.FootnoteEmphasized);
+        Typography.DrawCentered(drawList, center, label, CasinoColors.InkTitle, TextStyles.FootnoteEmphasized);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

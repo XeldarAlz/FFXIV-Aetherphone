@@ -234,9 +234,9 @@ internal sealed class WinCelebration
         DrawAmount(drawList, amountCenter, count.PopScale, fade);
         if (spec.FullCard && elapsed >= WinLadder.SkipAfterSeconds && !skipped)
         {
-            var hint = Typography.FitText(Loc.T(L.Strip.TapToSkip), layout.Safe.Width, TextStyles.Caption1);
+            var hint = Typography.FitText(Loc.T(L.Strip.TapToSkip), layout.Safe.Width, TextStyles.Footnote);
             Typography.DrawCentered(drawList, amountCenter + new Vector2(0f, SkipHintGap * scale), hint,
-                CasinoColors.InkMuted with { W = fade }, TextStyles.Caption1);
+                StageText.Strong with { W = fade }, TextStyles.Footnote);
         }
     }
 

@@ -47,6 +47,9 @@ internal sealed class CasinoStage
     private float delta;
     private long lastFrameTick;
     private float unfocusedSeconds;
+    private Rect actionRow;
+    private float actionCursor;
+    private int actionSecondaries;
 
     public CasinoStage()
     {
@@ -67,6 +70,8 @@ internal sealed class CasinoStage
     public CasinoStageLayout Layout => layout;
 
     public float Phase => phase;
+
+    public Rect ActionRow => actionRow;
 
     public bool OverlayOpen => info.IsOpen || betsRail.IsOpen;
 
@@ -138,8 +143,12 @@ internal sealed class CasinoStage
         practice = next.Practice;
         backdrop.SetWarmth(next.Warmth);
         backdrop.SetLampPool(next.LampPool);
+        backdrop.SetFeltStyle(FeltStyle.Night, next.Rail);
         layout = CasinoStageLayout.Compute(content, next.Room, next.Practice,
             next.DeckHeight, scale);
+        actionRow = DeckActions.Row(layout.Deck, scale);
+        actionCursor = actionRow.Min.X;
+        actionSecondaries = 0;
         var drawList = ImGui.GetWindowDrawList();
         var full = layout.Full;
         backdrop.Update(delta, full, ImGui.GetMousePos(), UiInteract.Hover(full.Min, full.Max));
@@ -218,6 +227,13 @@ internal sealed class CasinoStage
 
         return action;
     }
+
+    public bool SecondaryAction(string label, bool enabled, in ControlInk ink) =>
+        layout.HasDeck && DeckActions.DrawSecondary(actionRow, ref actionCursor, ref actionSecondaries, label, enabled,
+            ink, UiScale.Current);
+
+    public bool PrimaryAction(string label, bool enabled, in ControlInk ink) =>
+        layout.HasDeck && DeckActions.DrawPrimary(actionRow, actionCursor, label, enabled, ink);
 
     public bool RepeatPressed()
     {
