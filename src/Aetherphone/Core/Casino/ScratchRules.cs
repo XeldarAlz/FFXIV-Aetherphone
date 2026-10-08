@@ -4,7 +4,7 @@ internal readonly record struct ScratchPrizeRow(long Chips, int CountPerMillion)
 
 internal static class ScratchRules
 {
-    public const int TierCount = 4;
+    public const int TierCount = 5;
 
     public const int CellCount = 9;
 
@@ -18,39 +18,15 @@ internal static class ScratchRules
 
     public const int MatchesToWin = 3;
 
-    public static readonly long[] Prices = { 5_000, 10_000, 25_000, 50_000 };
+    public const int ReturnBasisPoints = 9_500;
 
-    public static readonly ScratchPrizeRow[][] PrizeTables =
-    {
-        new ScratchPrizeRow[]
-        {
-            new(10_000, 285_000),
-            new(25_000, 50_000),
-            new(50_000, 7_500),
-            new(100_000, 1_400),
-        },
-        new ScratchPrizeRow[]
-        {
-            new(20_000, 285_000),
-            new(50_000, 50_000),
-            new(100_000, 7_500),
-            new(200_000, 1_400),
-        },
-        new ScratchPrizeRow[]
-        {
-            new(50_000, 285_000),
-            new(125_000, 51_000),
-            new(250_000, 7_600),
-            new(500_000, 1_450),
-        },
-        new ScratchPrizeRow[]
-        {
-            new(100_000, 286_000),
-            new(250_000, 52_000),
-            new(500_000, 7_800),
-            new(1_000_000, 1_500),
-        },
-    };
+    public static readonly long[] Prices = { 250, 1_000, 5_000, 25_000, 100_000 };
+
+    public static readonly int[] PrizeMultiples = { 2, 5, 10, 20 };
+
+    public static readonly int[] PrizeCountsPerMillion = { 285_000, 52_000, 8_000, 2_000 };
+
+    public static readonly ScratchPrizeRow[][] PrizeTables = BuildPrizeTables();
 
     public static bool IsValidTier(int tier)
     {
@@ -99,6 +75,16 @@ internal static class ScratchRules
         return total;
     }
 
+    public static int MultipleOf(int tier, long prize)
+    {
+        if (!IsValidTier(tier) || prize <= 0)
+        {
+            return 0;
+        }
+
+        return (int)(prize / Prices[tier]);
+    }
+
     public static bool AreValidCells(ReadOnlySpan<int> cells)
     {
         if (cells.Length != CellCount)
@@ -134,5 +120,23 @@ internal static class ScratchRules
         }
 
         return -1;
+    }
+
+    private static ScratchPrizeRow[][] BuildPrizeTables()
+    {
+        var tables = new ScratchPrizeRow[TierCount][];
+        for (var tier = 0; tier < TierCount; tier++)
+        {
+            var table = new ScratchPrizeRow[PrizeMultiples.Length];
+            for (var prizeIndex = 0; prizeIndex < table.Length; prizeIndex++)
+            {
+                table[prizeIndex] = new ScratchPrizeRow(Prices[tier] * PrizeMultiples[prizeIndex],
+                    PrizeCountsPerMillion[prizeIndex]);
+            }
+
+            tables[tier] = table;
+        }
+
+        return tables;
     }
 }

@@ -172,14 +172,17 @@ internal static class WheelRingArt
         }
     }
 
-    public static void DrawPointer(ImDrawListPtr drawList, Vector2 center, float radius, float scale)
+    public static void DrawPointer(ImDrawListPtr drawList, Vector2 center, float radius, float scale,
+        float deflection = 0f)
     {
-        var tip = new Vector2(center.X, center.Y - radius + 5f * scale);
-        var width = 7f * scale;
         var back = new Vector2(center.X, center.Y - radius - 13f * scale);
-        drawList.AddTriangleFilled(tip, new Vector2(back.X - width, back.Y), new Vector2(back.X + width, back.Y),
-            ImGui.GetColorU32(Brass));
-        drawList.AddCircleFilled(new Vector2(back.X, back.Y + 2f * scale), 4f * scale,
+        var length = 18f * scale;
+        var width = 7f * scale;
+        var along = new Vector2(MathF.Sin(deflection), MathF.Cos(deflection));
+        var across = new Vector2(along.Y, -along.X);
+        var tip = back + along * length;
+        drawList.AddTriangleFilled(tip, back - across * width, back + across * width, ImGui.GetColorU32(Brass));
+        drawList.AddCircleFilled(back + along * 2f * scale, 4f * scale,
             ImGui.GetColorU32(Palette.WithAlpha(LightInk, 0.85f)), 16);
     }
 

@@ -75,7 +75,7 @@ Every settled round goes through `stage.Settle(new CasinoBetRecord(game, stake, 
 
 ## Reference cabinets
 
-`Cabinets/ScratchCabinet.cs` is the solo reference (fixed-price knob, Auto as buy five, Instant, bets rail) and `Cabinets/WheelCabinet.cs` the room reference (phase ribbon, podiums, ceiling-capped stakes). Slots, barkeep and blackjack still run their previous layouts inside the stage body and use `ClassicBetComposer` where they had a composer.
+`Cabinets/ScratchCabinet.cs` is the solo reference (fixed-price knob, Auto as buy five, Instant, bets rail) and `Cabinets/WheelCabinet.cs` the room reference (phase ribbon, podiums, ceiling-capped stakes). `Cabinets/BarkeepCabinet.cs` is the skill cabinet: a full-bleed bar scene (`BarkeepSceneArt`), patrons choreographed by `BarkeepBarFlow` (seeded from the round id, snapped on a mid-shift join), a cosmetic combo and fever meter (`BarkeepTipMeter`), and practice reachable without chips. Slots and blackjack still run their previous layouts inside the stage body and use `ClassicBetComposer` where they had a composer.
 
 ## Bingo hall
 

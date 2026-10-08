@@ -119,10 +119,10 @@ public sealed class CasinoWheelWireContractTests
     {
         const string json = "{\"roundIndex\":7,\"commit\":\"aa\",\"nextCommit\":\"bb\",\"seed\":\"cc\","
             + "\"segment\":31,\"spot\":1,\"spots\":[{\"spot\":0,\"multiplier\":1,\"segments\":24,"
-            + "\"returnBasisPoints\":9600,\"amount\":22000,\"bettors\":5},{\"spot\":4,\"multiplier\":22,"
-            + "\"segments\":2,\"returnBasisPoints\":9200,\"amount\":2000,\"bettors\":1}],\"staked\":64000,"
-            + "\"paid\":30000,\"recent\":[4,17,31],\"minBet\":100,\"maxBetPerSpot\":50000,"
-            + "\"maxBetPerRound\":200000,\"maxWin\":5000000}";
+            + "\"returnBasisPoints\":9600,\"capacity\":10000000,\"amount\":22000,\"bettors\":5},{\"spot\":4,"
+            + "\"multiplier\":23,\"segments\":2,\"returnBasisPoints\":9600,\"capacity\":434782,\"amount\":2000,"
+            + "\"bettors\":1}],\"staked\":64000,\"paid\":30000,\"recent\":[4,1,0],\"minBet\":500,"
+            + "\"maxBetPerSpot\":50000,\"maxBetPerRound\":200000,\"maxWin\":0}";
         var board = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.CasinoWheelRoomStateDto);
 
         Assert.NotNull(board);
@@ -133,9 +133,11 @@ public sealed class CasinoWheelWireContractTests
         Assert.Equal(2, board.Spots.Length);
         Assert.Equal(22000, board.Spots[0].Amount);
         Assert.Equal(4, board.Spots[1].Spot);
-        Assert.Equal(22, board.Spots[1].Multiplier);
+        Assert.Equal(23, board.Spots[1].Multiplier);
+        Assert.Equal(WheelRules.ReturnBasisPointsFor(4), board.Spots[1].ReturnBasisPoints);
         Assert.Equal(64000, board.Staked);
-        Assert.Equal(new[] { 4, 17, 31 }, board.Recent);
+        Assert.Equal(new[] { 4, 1, 0 }, board.Recent);
+        Assert.Equal(0, board.MaxWin);
         Assert.Equal(WheelRules.MinStakePerSpot, board.MinBet);
         Assert.Equal(WheelRules.MaxStakePerSpot, board.MaxBetPerSpot);
         Assert.Equal(WheelRules.MaxStakePerRound, board.MaxBetPerRound);
@@ -196,11 +198,11 @@ public sealed class CasinoWheelWireContractTests
         Assert.Equal(2000, WheelRules.Headroom(WheelRules.MaxStakePerRound - 2000));
         Assert.Equal(0, WheelRules.Headroom(WheelRules.MaxStakePerRound));
 
-        Assert.Equal(2500, WheelRules.Clamp(2500, 0, 50_000));
-        Assert.Equal(WheelRules.MaxStakePerSpot, WheelRules.Clamp(50_000, 0, 50_000));
-        Assert.Equal(2000, WheelRules.Clamp(5000, WheelRules.MaxStakePerRound - 2000, 50_000));
-        Assert.Equal(0, WheelRules.Clamp(5000, WheelRules.MaxStakePerRound, 50_000));
-        Assert.Equal(0, WheelRules.Clamp(1, 0, 50_000));
+        Assert.Equal(2500, WheelRules.Clamp(2500, 0, 500_000));
+        Assert.Equal(WheelRules.MaxStakePerSpot, WheelRules.Clamp(500_000, 0, 500_000));
+        Assert.Equal(2000, WheelRules.Clamp(5000, WheelRules.MaxStakePerRound - 2000, 500_000));
+        Assert.Equal(0, WheelRules.Clamp(5000, WheelRules.MaxStakePerRound, 500_000));
+        Assert.Equal(0, WheelRules.Clamp(1, 0, 500_000));
         Assert.Equal(0, WheelRules.Clamp(2500, 0, 4));
     }
 

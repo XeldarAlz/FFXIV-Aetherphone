@@ -13,7 +13,7 @@ public sealed class WheelPodiumTests
         Assert.Equal(960, WheelCabinet.ReturnTenths(null, 1));
         Assert.Equal(960, WheelCabinet.ReturnTenths(null, 2));
         Assert.Equal(960, WheelCabinet.ReturnTenths(null, 3));
-        Assert.Equal(920, WheelCabinet.ReturnTenths(null, 4));
+        Assert.Equal(960, WheelCabinet.ReturnTenths(null, 4));
     }
 
     [Fact]

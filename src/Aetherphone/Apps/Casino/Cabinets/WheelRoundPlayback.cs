@@ -1,6 +1,5 @@
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
-using Aetherphone.Core.Notifications;
 
 namespace Aetherphone.Apps.Casino.Cabinets;
 
@@ -30,7 +29,6 @@ internal sealed class WheelRoundPlayback
     private float stageSeconds;
     private int segment = -1;
     private int lastSegment = -1;
-    private int peg;
     private bool spinBegun;
     private bool spunLive;
 
@@ -167,13 +165,6 @@ internal sealed class WheelRoundPlayback
         }
 
         angle = WheelChoreography.AngleAt(spinFromAngle, sweep, spinElapsedSeconds);
-        var nextPeg = WheelChoreography.PegOf(angle, WheelRules.SegmentCount);
-        if (nextPeg != peg && deltaSeconds > 0f)
-        {
-            UiFeedback.Play(UiSound.GameTick);
-        }
-
-        peg = nextPeg;
         if (spinElapsedSeconds < WheelChoreography.SpinSeconds)
         {
             EnterStage(WheelStage.Spinning);

@@ -6,13 +6,13 @@ internal static class WheelRules
 
     public const int SpotCount = 5;
 
-    public const long MinStakePerSpot = 100;
+    public const long MinStakePerSpot = 500;
 
     public const long MaxStakePerSpot = 50_000;
 
     public const long MaxStakePerRound = 200_000;
 
-    public static readonly int[] Multipliers = { 1, 3, 5, 11, 22 };
+    public static readonly int[] Multipliers = { 1, 3, 5, 11, 23 };
 
     public static readonly int[] SegmentCounts = { 24, 12, 8, 4, 2 };
 
@@ -50,6 +50,11 @@ internal static class WheelRules
     public static int SegmentsOn(int spot)
     {
         return IsSpot(spot) ? SegmentCounts[spot] : 0;
+    }
+
+    public static int ReturnBasisPointsFor(int spot)
+    {
+        return IsSpot(spot) ? SegmentCounts[spot] * (Multipliers[spot] + 1) * 10_000 / SegmentCount : 0;
     }
 
     public static bool Wins(int segment, int spot)

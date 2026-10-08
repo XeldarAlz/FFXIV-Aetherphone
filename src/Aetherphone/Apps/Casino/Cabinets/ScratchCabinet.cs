@@ -13,30 +13,20 @@ namespace Aetherphone.Apps.Casino.Cabinets;
 
 internal sealed class ScratchCabinet : ICabinetIdle
 {
-    public const int AutoRounds = 5;
+    public const int RunLength = 5;
 
     private const float RubHoldPerSecond = 0.9f;
     private const float RubDragFactor = 0.05f;
-    private const float TicketMaxWidth = 300f;
-    private const float TicketHeaderShare = 0.24f;
+    private const float TicketMaxWidth = 360f;
     private const float KioskInset = 12f;
     private const float CellGap = 6f;
     private const float AutoPauseSeconds = 0.8f;
-    private const float RubTickSeconds = 0.09f;
+    private const float RubTickSeconds = 0.06f;
     private const float StatusGap = 10f;
+    private const float IdleThemeSeconds = 3f;
+    private const int FlakesPerTick = 3;
+    private const int RevealSparkles = 6;
     private const string MalformedReason = "malformed";
-
-    private static readonly Vector4 FoilTop = new(0.62f, 0.64f, 0.72f, 1f);
-    private static readonly Vector4 FoilBottom = new(0.36f, 0.38f, 0.46f, 1f);
-    private static readonly Vector4 TicketPaper = new(0.10f, 0.07f, 0.16f, 1f);
-
-    private static readonly Vector4[] TierTints =
-    {
-        CasinoColors.LightB,
-        new(0.30f, 0.86f, 0.55f, 1f),
-        CasinoColors.LightA,
-        CasinoColors.Money,
-    };
 
     private readonly CasinoStore store;
     private readonly CasinoPlayStore play;
@@ -49,10 +39,13 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private ScratchPhase seenPhase;
     private string inlineReason = string.Empty;
     private string roundId = string.Empty;
+    private string stampLabel = string.Empty;
     private Rect ticketArea;
     private float autoPause;
     private float rubTick;
     private float idleTime;
+    private float stampSeconds = -1f;
+    private int rasp;
     private bool stroked;
 
     public ScratchCabinet(CasinoStore store, CasinoPlayStore play, Action openCashier)
@@ -60,7 +53,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
         this.store = store;
         this.play = play;
         this.openCashier = openCashier;
-        composer.Auto.Rounds = AutoRounds;
+        composer.Auto.Rounds = RunLength;
         composer.Auto.StopOnBonus = false;
     }
 
@@ -112,6 +105,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
         roundId = string.Empty;
         seenPhase = ScratchPhase.Idle;
         autoPause = 0f;
+        stampSeconds = -1f;
         stroked = false;
     }
 
@@ -135,13 +129,13 @@ internal sealed class ScratchCabinet : ICabinetIdle
         ConsumeResults(stage, frame);
         var sitting = state.Sitting;
         var safe = frame.Safe;
-        var statusHeight = Typography.LineHeight(TextStyles.Subheadline) * 2f + StatusGap * scale;
-        var ticketBottom = safe.Max.Y - statusHeight;
-        LayoutTicket(safe, ticketBottom, scale);
+        var statusHeight = Typography.LineHeight(TextStyles.Subheadline) + Button.LargeHeight * scale
+            + StatusGap * 2f * scale;
+        LayoutTicket(safe, safe.Max.Y - statusHeight, scale);
         DrawKiosk(drawList, stage, frame, scale);
-        DrawTicket(drawList, ui, frame.DeltaSeconds, scale, frame.Blocked);
-        DrawStatus(drawList, ui, state, sitting, new Rect(new Vector2(safe.Min.X, ticketArea.Max.Y + StatusGap * scale),
-            safe.Max), scale);
+        DrawTicket(drawList, stage, ui, frame, scale);
+        var status = new Rect(new Vector2(safe.Min.X, ticketArea.Max.Y + StatusGap * scale), safe.Max);
+        DrawStatus(drawList, stage, ui, state, sitting, status, scale);
         if (sitting is null)
         {
             DrawSeatMissing(drawList, ui, safe, scale);
@@ -155,19 +149,22 @@ internal sealed class ScratchCabinet : ICabinetIdle
     {
         var scale = UiScale.Current;
         idleTime += deltaSeconds;
-        var side = MathF.Min(rect.Width, rect.Height) * 0.78f;
-        var ticket = new Rect(rect.Center - new Vector2(side * 0.5f, side * 0.5f),
-            rect.Center + new Vector2(side * 0.5f, side * 0.5f));
+        var tier = (int)(idleTime / IdleThemeSeconds) % ScratchRules.TierCount;
+        var height = MathF.Min(rect.Height * 0.86f, rect.Width * 0.7f * (1f + ScratchTicketArt.HeaderShare));
+        var width = height / (1f + ScratchTicketArt.HeaderShare);
+        var ticket = new Rect(rect.Center - new Vector2(width * 0.5f, height * 0.5f),
+            rect.Center + new Vector2(width * 0.5f, height * 0.5f));
         CasinoLights.BulbChase(drawList, ticket.Inset(-KioskInset * 0.5f * scale), Metrics.Radius.Grouped * scale, scale,
-            idleTime, CasinoLights.BulbPitch, CasinoColors.Money, CasinoColors.LightA, 0.8f);
-        PaintTicketShell(drawList, ticket, 1, scale);
-        var grid = GridRect(ticket);
-        var cell = (grid.Width - CellGap * scale * (ScratchRules.GridSide - 1)) / ScratchRules.GridSide;
+            idleTime, CasinoLights.BulbPitch, CasinoColors.Money, ScratchTicketArt.For(tier).Accent, 0.8f);
+        ScratchTicketArt.Shell(drawList, ticket, tier, idleTime, scale);
+        var grid = ScratchTicketArt.GridRect(ticket);
+        var cell = CellSize(grid, scale);
         for (var cellIndex = 0; cellIndex < ScratchRules.CellCount; cellIndex++)
         {
             var cellMin = CellMin(grid, cellIndex, cell, scale);
             var shimmer = 0.5f + 0.5f * MathF.Sin(idleTime * 1.6f + cellIndex * 0.7f);
-            DrawFoil(drawList, cellMin, cellMin + new Vector2(cell, cell), cell * 0.18f, 1f, shimmer, scale);
+            ScratchTicketArt.Foil(drawList, cellMin, cellMin + new Vector2(cell, cell), cell * 0.18f, tier, 1f, shimmer,
+                scale);
         }
     }
 
@@ -181,6 +178,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
                 inlineReason = string.Empty;
                 roundId = card.RoundId;
                 stroked = false;
+                stampSeconds = -1f;
                 stage.Celebration.Clear();
                 if (frame.Instant || composer.Auto.Running)
                 {
@@ -202,11 +200,18 @@ internal sealed class ScratchCabinet : ICabinetIdle
             composer.Auto.Stop(AutoStop.Refused);
         }
 
+        if (stampSeconds >= 0f)
+        {
+            stampSeconds += frame.DeltaSeconds;
+        }
+
         if (playback.TakeWinCelebration(out var prize))
         {
             var price = ScratchRules.Prices[playback.Tier];
             stage.Celebration.Celebrate(price, prize, ticketArea.Center, frame.Instant);
             stage.Particles.Emit(CasinoLights.Sparkle(UiScale.Current), ticketArea.Center, 18);
+            stampLabel = CasinoMultiples.Label(ScratchRules.MultipleOf(playback.Tier, prize) * 100);
+            stampSeconds = 0f;
         }
 
         var settledNow = seenPhase == ScratchPhase.Scratching && playback.Phase == ScratchPhase.Settled;
@@ -232,38 +237,40 @@ internal sealed class ScratchCabinet : ICabinetIdle
     {
         var available = MathF.Max(0f, bottom - safe.Min.Y);
         var width = MathF.Min(MathF.Min(safe.Width - KioskInset * 2f * scale, TicketMaxWidth * scale),
-            available / (1f + TicketHeaderShare) - KioskInset * scale);
+            available / (1f + ScratchTicketArt.HeaderShare) - KioskInset * scale);
         width = MathF.Max(0f, width);
-        var height = width * (1f + TicketHeaderShare);
+        var height = width * (1f + ScratchTicketArt.HeaderShare);
         var left = safe.Center.X - width * 0.5f;
         var top = safe.Min.Y + MathF.Max(0f, (available - height) * 0.5f);
         ticketArea = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
     }
 
+    private int DisplayTier => playback.Phase == ScratchPhase.Idle ? tierIndex : playback.Tier;
+
     private void DrawKiosk(ImDrawListPtr drawList, CasinoStage stage, in CasinoStageFrame frame, float scale)
     {
         var celebrating = stage.Celebration.Active;
         var kiosk = ticketArea.Inset(-KioskInset * scale);
+        var accent = ScratchTicketArt.For(DisplayTier).Accent;
         CasinoLights.Spotlight(drawList, new Vector2(kiosk.Center.X, frame.Full.Min.Y), MathF.PI * 0.5f,
-            kiosk.Max.Y - frame.Full.Min.Y, 0.32f, CasinoColors.MoneyHighlight, 0.05f);
+            kiosk.Max.Y - frame.Full.Min.Y, 0.32f, Vector4.Lerp(CasinoColors.MoneyHighlight, accent, 0.35f), 0.06f);
         CasinoLights.BulbChase(drawList, kiosk, Metrics.Radius.Grouped * scale, scale, frame.Phase * (celebrating ? 2f : 1f),
-            CasinoLights.BulbPitch, CasinoColors.Money, TierTints[Math.Clamp(DisplayTier, 0, TierTints.Length - 1)],
-            celebrating ? 1f : 0.55f);
+            CasinoLights.BulbPitch, CasinoColors.Money, accent, celebrating ? 1f : 0.55f);
     }
 
-    private int DisplayTier => playback.Phase == ScratchPhase.Idle ? tierIndex : playback.Tier;
-
-    private void DrawTicket(ImDrawListPtr drawList, AppSkin ui, float delta, float scale, bool blocked)
+    private void DrawTicket(ImDrawListPtr drawList, CasinoStage stage, AppSkin ui, in CasinoStageFrame frame,
+        float scale)
     {
         if (ticketArea.Width <= 0f)
         {
             return;
         }
 
-        PaintTicketShell(drawList, ticketArea, DisplayTier, scale);
-        var grid = GridRect(ticketArea);
-        var cell = (grid.Width - CellGap * scale * (ScratchRules.GridSide - 1)) / ScratchRules.GridSide;
-        var scratching = playback.Phase == ScratchPhase.Scratching && !blocked;
+        var tier = DisplayTier;
+        ScratchTicketArt.Shell(drawList, ticketArea, tier, frame.Phase, scale);
+        var grid = ScratchTicketArt.GridRect(ticketArea);
+        var cell = CellSize(grid, scale);
+        var scratching = playback.Phase == ScratchPhase.Scratching && !frame.Blocked;
         if (scratching && UiInteract.HoverWindowOnly(grid.Min, grid.Max))
         {
             UiInteract.ReportGestureSurface();
@@ -271,7 +278,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
         var rubbing = scratching && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         var drag = ImGui.GetIO().MouseDelta.Length();
-        rubTick = MathF.Max(0f, rubTick - delta);
+        rubTick = MathF.Max(0f, rubTick - frame.DeltaSeconds);
         for (var cellIndex = 0; cellIndex < ScratchRules.CellCount; cellIndex++)
         {
             var cellMin = CellMin(grid, cellIndex, cell, scale);
@@ -282,7 +289,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
                 ImGui.GetColorU32(Palette.WithAlpha(ui.Palette.FieldSurface, 0.95f)));
             if (playback.Phase == ScratchPhase.Idle)
             {
-                DrawFoil(drawList, cellMin, cellMax, rounding, 1f, 0.5f, scale);
+                ScratchTicketArt.Foil(drawList, cellMin, cellMax, rounding, tier, 1f, 0.5f, scale);
                 continue;
             }
 
@@ -294,7 +301,8 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
             if (foilLeft > 0f)
             {
-                DrawFoil(drawList, cellMin, cellMax, rounding, foilLeft, 0.5f, scale);
+                var shimmer = 0.5f + 0.5f * MathF.Sin(frame.Phase * 3f + cellIndex);
+                ScratchTicketArt.Foil(drawList, cellMin, cellMax, rounding, tier, foilLeft, shimmer, scale);
             }
 
             if (!rubbing || playback.IsRevealed(cellIndex) || !UiInteract.Hover(cellMin, cellMax))
@@ -304,19 +312,39 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             stroked = true;
-            playback.Rub(cellIndex, delta * RubHoldPerSecond + drag / MathF.Max(cell, 1f) * RubDragFactor);
+            playback.Rub(cellIndex, frame.DeltaSeconds * RubHoldPerSecond + drag / MathF.Max(cell, 1f) * RubDragFactor);
             if (rubTick <= 0f)
             {
-                CasinoSfx.Pitched(UiSound.PegTick, cellIndex);
+                Rasp(stage, tier, scale);
                 rubTick = RubTickSeconds;
             }
 
             if (playback.IsRevealed(cellIndex))
             {
                 CasinoSfx.Play(UiSound.TileSafe);
+                stage.Particles.Emit(CasinoLights.Sparkle(scale), center, RevealSparkles);
             }
         }
+
+        if (stampSeconds >= 0f && playback.PrizeOnceRevealed > 0)
+        {
+            ScratchTicketArt.Stamp(drawList, ticketArea, stampLabel, stampSeconds, scale);
+        }
     }
+
+    private void Rasp(CasinoStage stage, int tier, float scale)
+    {
+        var finger = ImGui.GetIO().MousePos;
+        var theme = ScratchTicketArt.For(tier);
+        stage.Particles.Emit(FoilFlake(theme, scale), finger, FlakesPerTick);
+        stage.Particles.Emit(CasinoLights.Sparkle(scale), finger, 1);
+        rasp = (rasp + 3) % 7;
+        CasinoSfx.Pitched(UiSound.ReelTick, rasp);
+    }
+
+    private static ParticleSpec FoilFlake(in ScratchTheme theme, float scale) =>
+        new(theme.FoilTop, theme.FoilBottom, 2.4f * scale, 90f * scale, 0.55f, 320f * scale, 1.4f, 9f, MathF.PI * 0.8f,
+            -MathF.PI * 0.5f, ParticleShape.Shard, SizeCurve.Shrink);
 
     private void DrawSymbol(ImDrawListPtr drawList, int cellIndex, Vector2 center, float cell)
     {
@@ -332,13 +360,8 @@ internal sealed class ScratchCabinet : ICabinetIdle
         ScratchSymbolArt.Draw(drawList, playback.CellSymbol(cellIndex), center, cell * 0.3f, dimmed ? 0.45f : 1f);
     }
 
-    private static Rect GridRect(Rect ticket)
-    {
-        var header = ticket.Height - ticket.Width;
-        var inset = ticket.Width * 0.07f;
-        return new Rect(new Vector2(ticket.Min.X + inset, ticket.Min.Y + header + inset * 0.2f),
-            new Vector2(ticket.Max.X - inset, ticket.Max.Y - inset));
-    }
+    private static float CellSize(Rect grid, float scale) =>
+        (grid.Width - CellGap * scale * (ScratchRules.GridSide - 1)) / ScratchRules.GridSide;
 
     private static Vector2 CellMin(Rect grid, int cellIndex, float cell, float scale)
     {
@@ -348,41 +371,8 @@ internal sealed class ScratchCabinet : ICabinetIdle
         return new Vector2(grid.Min.X + column * (cell + gap), grid.Min.Y + row * (cell + gap));
     }
 
-    private static void PaintTicketShell(ImDrawListPtr drawList, Rect ticket, int tier, float scale)
-    {
-        var tint = TierTints[Math.Clamp(tier, 0, TierTints.Length - 1)];
-        var rounding = Metrics.Radius.Grouped * scale;
-        Elevation.Card(drawList, ticket.Min, ticket.Max, rounding, scale, 1f);
-        Squircle.FillVerticalGradient(drawList, ticket.Min, ticket.Max, rounding,
-            ImGui.GetColorU32(Palette.Mix(TicketPaper, tint, 0.18f)), ImGui.GetColorU32(TicketPaper));
-        Squircle.Stroke(drawList, ticket.Min, ticket.Max, rounding, ImGui.GetColorU32(tint with { W = 0.55f }),
-            MathF.Max(1f, 1.4f * scale));
-        var header = ticket.Height - ticket.Width;
-        var signHeight = CasinoSigns.HeightToFit(CasinoSign.Scratch, ticket.Width * 0.72f, header * 0.42f);
-        CasinoSigns.Draw(drawList, CasinoSign.Scratch, new Vector2(ticket.Center.X, ticket.Min.Y + header * 0.42f),
-            signHeight, tint, 1f);
-        var price = NumberText.Compact(ScratchRules.Prices[Math.Clamp(tier, 0, ScratchRules.TierCount - 1)]);
-        var priceSize = CurrencyGlyph.MeasureAmount(price, TextStyles.FootnoteEmphasized);
-        CurrencyGlyph.DrawAmount(drawList, new Vector2(ticket.Center.X - priceSize.X * 0.5f,
-            ticket.Min.Y + header * 0.72f), price, CurrencyKind.Chips, CasinoColors.Money, TextStyles.FootnoteEmphasized);
-    }
-
-    private static void DrawFoil(ImDrawListPtr drawList, Vector2 cellMin, Vector2 cellMax, float rounding,
-        float amount, float shimmer, float scale)
-    {
-        var alpha = Math.Clamp(amount, 0f, 1f);
-        Squircle.FillVerticalGradient(drawList, cellMin, cellMax, rounding,
-            ImGui.GetColorU32(FoilTop with { W = alpha }), ImGui.GetColorU32(FoilBottom with { W = alpha }));
-        var size = cellMax.X - cellMin.X;
-        var sheen = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, (0.06f + 0.10f * shimmer) * alpha));
-        drawList.AddLine(new Vector2(cellMin.X + size * 0.2f, cellMax.Y - size * 0.15f),
-            new Vector2(cellMax.X - size * 0.15f, cellMin.Y + size * 0.2f), sheen, 3f * scale);
-        SlotsSymbolArt.DrawSparkle(drawList, (cellMin + cellMax) * 0.5f, size * 0.14f,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.30f * alpha)));
-    }
-
-    private void DrawStatus(ImDrawListPtr drawList, AppSkin ui, CasinoStateDto state, CasinoSittingDto? sitting,
-        Rect area, float scale)
+    private void DrawStatus(ImDrawListPtr drawList, CasinoStage stage, AppSkin ui, CasinoStateDto state,
+        CasinoSittingDto? sitting, Rect area, float scale)
     {
         var centerX = area.Center.X;
         var top = area.Min.Y;
@@ -396,23 +386,13 @@ internal sealed class ScratchCabinet : ICabinetIdle
         if (state.StakesPaused || state.Draining)
         {
             DrawLine(drawList, Loc.T(state.StakesPaused ? L.Casino.PausedTitle : L.Casino.DrainingTitle), centerX, top,
-                area.Width, ui.MutedInk);
+                area.Width, CasinoColors.InkTitle);
             return;
         }
 
-        if (playback.RevealComplete && playback.PrizeOnceRevealed <= 0)
+        if (playback.Phase == ScratchPhase.Scratching && stroked && !composer.Auto.Running)
         {
-            DrawLine(drawList, Loc.T(L.Casino.ScratchNoWin), centerX, top, area.Width, CasinoColors.Loss);
-            return;
-        }
-
-        if (playback.Phase == ScratchPhase.Scratching && stroked)
-        {
-            var label = Loc.T(L.Casino.ScratchRevealAll);
-            var width = Button.WidthFor(label, ButtonSize.Small);
-            var rect = new Rect(new Vector2(centerX - width * 0.5f, top),
-                new Vector2(centerX + width * 0.5f, top + Button.SmallHeight * scale));
-            if (Button.Draw(drawList, rect, label, ui.Ink, ButtonStyle.Tinted))
+            if (SmallButton(drawList, ui, Loc.T(L.Casino.ScratchRevealAll), centerX, top, area.Width, scale))
             {
                 playback.RevealAll();
                 CasinoSfx.Play(UiSound.TileSafe);
@@ -423,20 +403,57 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
         if (sitting is not null && sitting.Stack < CurrentPrice && playback.Phase != ScratchPhase.Scratching)
         {
-            DrawLine(drawList, Loc.T(L.Casino.ScratchLowStack), centerX, top, area.Width, ui.MutedInk);
+            DrawLine(drawList, Loc.T(L.Casino.ScratchLowStack), centerX, top, area.Width, CasinoColors.InkTitle);
             return;
         }
 
-        if (playback.Phase != ScratchPhase.Settled)
+        var bottom = top + Typography.LineHeight(TextStyles.Subheadline);
+        if (playback.RevealComplete && playback.PrizeOnceRevealed <= 0)
         {
-            DrawLine(drawList, Loc.T(L.Casino.ScratchHint), centerX, top, area.Width, ui.MutedInk);
+            bottom = DrawLine(drawList, Loc.T(L.Casino.ScratchNoWin), centerX, top, area.Width, CasinoColors.InkBody);
         }
+        else if (playback.Phase is ScratchPhase.Idle or ScratchPhase.Scratching)
+        {
+            bottom = DrawLine(drawList, Loc.T(L.Casino.ScratchHint), centerX, top, area.Width, CasinoColors.InkTitle);
+        }
+
+        if (!CanStartRun(stage, state, sitting))
+        {
+            return;
+        }
+
+        var buttonTop = bottom + StatusGap * 0.5f * scale;
+        if (!SmallButton(drawList, ui, Loc.T(L.Casino.ScratchFiveInARow), centerX, buttonTop, area.Width, scale))
+        {
+            return;
+        }
+
+        composer.Auto.Rounds = RunLength;
+        composer.Auto.Start(CurrentPrice);
+        Buy(stage);
     }
 
-    private static void DrawLine(ImDrawListPtr drawList, string text, float centerX, float top, float width,
+    private bool CanStartRun(CasinoStage stage, CasinoStateDto state, CasinoSittingDto? sitting)
+    {
+        return sitting is not null && playback.Phase != ScratchPhase.Scratching && !composer.Auto.Running
+            && !play.RoundInFlight && !stage.Celebration.Blocking && sitting.Stack >= CurrentPrice
+            && !state.StakesPaused && !state.Draining;
+    }
+
+    private static bool SmallButton(ImDrawListPtr drawList, AppSkin ui, string label, float centerX, float top,
+        float maxWidth, float scale)
+    {
+        var width = MathF.Min(MathF.Max(Button.WidthFor(label, ButtonSize.Large), maxWidth * 0.6f), maxWidth);
+        var rect = new Rect(new Vector2(centerX - width * 0.5f, top),
+            new Vector2(centerX + width * 0.5f, top + Button.LargeHeight * scale));
+        return Button.Draw(drawList, rect, label, ui.Ink, ButtonStyle.Tinted);
+    }
+
+    private static float DrawLine(ImDrawListPtr drawList, string text, float centerX, float top, float width,
         Vector4 ink)
     {
-        Typography.DrawWrappedCentered(drawList, text, TextStyles.Subheadline, ink, new Vector2(centerX, top), width);
+        return Typography.DrawWrappedCentered(drawList, text, TextStyles.Subheadline, ink, new Vector2(centerX, top),
+            width);
     }
 
     private void DrawDeck(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, CasinoStateDto state,
@@ -479,6 +496,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
         stage.Celebration.Clear();
         playback.Clear();
         seenPhase = ScratchPhase.Idle;
+        stampSeconds = -1f;
         play.BuyScratch(tierIndex);
         CasinoSfx.Play(UiSound.ChipSlide);
     }
@@ -500,11 +518,17 @@ internal sealed class ScratchCabinet : ICabinetIdle
             var hovered = changeable && UiInteract.Hover(chipRect.Min, chipRect.Max);
             ChipRail.PaintChip(drawList, chipRect, NumberText.Compact(ScratchRules.Prices[tier]), tier == tierIndex,
                 hovered, ui.Ink);
+            var underline = chipRect.Height * 0.5f;
+            drawList.AddLine(new Vector2(chipRect.Min.X + underline, chipRect.Max.Y - scale),
+                new Vector2(chipRect.Max.X - underline, chipRect.Max.Y - scale),
+                ImGui.GetColorU32(ScratchTicketArt.For(tier).Accent with { W = tier == tierIndex ? 1f : 0.45f }),
+                MathF.Max(1f, 2f * scale));
             if (UiInteract.Click(chipRect.Min, chipRect.Max, hovered) && tier != tierIndex)
             {
                 tierIndex = tier;
                 playback.Clear();
                 seenPhase = ScratchPhase.Idle;
+                stampSeconds = -1f;
                 CasinoSfx.Play(UiSound.ChipSlide);
             }
         }

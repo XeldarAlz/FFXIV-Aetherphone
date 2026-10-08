@@ -10304,6 +10304,7 @@ internal static class L
         public static readonly LocString ScratchOddsChance = new("casino.scratch.oddsChance", "Chance");
         public static readonly LocString ScratchOddsChanceValue = new("casino.scratch.oddsChanceValue", "{0}%");
         public static readonly LocString ScratchLowStack = new("casino.scratch.lowStack", "Not enough chips for that card. Top up at the cashier.");
+        public static readonly LocString ScratchFiveInARow = new("casino.scratch.fiveInARow", "Buy 5 in a row");
         public static readonly LocString BarkeepWagerTitle = new("casino.barkeep.wagerTitle", "Paid shift");
         public static readonly LocString BarkeepWagerHint = new("casino.barkeep.wagerHint", "Entry {0}. Serve every patron well and the tip ladder pays out.");
         public static readonly LocString BarkeepStart = new("casino.barkeep.start", "Start a shift");
@@ -10693,6 +10694,15 @@ internal static class L
         public static readonly LocString TourTonightTitle = new("casino.tour.tonightTitle", "Your night at a glance");
         public static readonly LocString TourTonightBody = new("casino.tour.tonightBody", "How your night is going sits right under your chips. Tap it any time to set a daily loss limit.");
     }
+
+    internal static class Barkeep
+    {
+        public static readonly LocString StartFor = new("casino.barkeep.startFor", "Start a shift {0}");
+        public static readonly LocString LadderShare = new("casino.barkeep.ladderShare", "{0}% of a perfect shift pays {1}");
+        public static readonly LocString Combo = new("casino.barkeep.combo", "Combo x{0}");
+        public static readonly LocString Fever = new("casino.barkeep.fever", "Fever");
+        public static readonly LocString Tips = new("casino.barkeep.tips", "Tips");
+        public static readonly LocString ScoreOf = new("casino.barkeep.scoreOf", "{0} of {1}");    }
 
     internal static class Strip
     {
