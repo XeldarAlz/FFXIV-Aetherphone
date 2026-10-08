@@ -80,7 +80,9 @@ internal sealed class CasinoStage
     public static Vector4 AccentFor(Backdrop preset) =>
         preset == Games.Framework.Backdrop.Felt ? AccentRing.Emerald : AppAccents.For("casino");
 
-    public bool InstantFor(string gameId) => instantGames.Contains(gameId);
+    public CasinoPreferences? Preferences { get; set; }
+
+    public bool InstantFor(string gameId) => Preferences?.Instant(gameId) ?? instantGames.Contains(gameId);
 
     public void Reset()
     {
@@ -282,6 +284,7 @@ internal sealed class CasinoStage
             return;
         }
 
+        Preferences?.RememberInstant(gameId, instant);
         if (instant)
         {
             instantGames.Add(gameId);

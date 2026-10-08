@@ -148,14 +148,24 @@ internal static class BlackjackRules
 
     private const long QuickTierHeadroom = 2;
 
-    public static long RackFor(long tableMaxBet, long minBuyIn, long maxBuyIn, long bankroll)
+    public static long RackFor(long playerMaxBet, long tableMinBet, long tableMaxBet, long minBuyIn, long maxBuyIn,
+        long bankroll)
     {
         if (bankroll < minBuyIn)
         {
             return 0;
         }
 
-        var suggested = Math.Clamp(tableMaxBet * RackHands, minBuyIn, maxBuyIn);
+        var bandTop = tableMaxBet > 0 ? tableMaxBet : playerMaxBet;
+        var bandBottom = Math.Min(Math.Max(0, tableMinBet), bandTop);
+        var chosen = playerMaxBet > 0 ? Math.Clamp(playerMaxBet, bandBottom, bandTop) : bandTop;
+        var suggested = chosen * RackHands;
+        if (playerMaxBet > 0)
+        {
+            suggested = Math.Min(suggested, playerMaxBet * RackHands);
+        }
+
+        suggested = Math.Clamp(suggested, minBuyIn, Math.Max(minBuyIn, maxBuyIn));
         return Math.Min(suggested, bankroll);
     }
 

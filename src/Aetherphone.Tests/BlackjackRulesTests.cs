@@ -180,6 +180,18 @@ public sealed class BlackjackRulesTests
     }
 
     [Fact]
+    public void TheRackIsSizedFromThePlayersOwnBetBand()
+    {
+        Assert.Equal(20_000_000, BlackjackRules.RackFor(1_000_000, 500_000, 10_000_000, 20_000, 1_000_000_000,
+            500_000_000));
+        Assert.Equal(5_000_000, BlackjackRules.RackFor(250_000, 500_000, 10_000_000, 20_000, 1_000_000_000,
+            500_000_000));
+        Assert.Equal(500_000, BlackjackRules.RackFor(250_000, 2_500, 25_000, 20_000, 5_000_000, 500_000_000));
+        Assert.Equal(400_000, BlackjackRules.RackFor(1_000_000, 2_500, 25_000, 20_000, 5_000_000, 400_000));
+        Assert.Equal(0, BlackjackRules.RackFor(1_000_000, 2_500, 25_000, 20_000, 5_000_000, 10_000));
+    }
+
+    [Fact]
     public void TheDealLastsAsLongAsItsStaggerPlusOneTravel()
     {
         Assert.Equal(0f, BlackjackDealChoreography.Duration(0), 3);

@@ -31,6 +31,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
     private readonly AethernetSession session;
     private readonly Core.Casino.CasinoFloorStore floor;
     private readonly Configuration configuration;
+    private readonly Core.Casino.CasinoPreferences preferences;
     private readonly Strip.StripHero stripHero = new();
     private readonly Strip.StripCarousel heroCards = new();
     private readonly Strip.StripShelves shelves = new();
@@ -127,7 +128,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         bonusShelf = new CashierBonusShelf(casino);
         cashierCashOut = new CashierCashOut(casino, confirm);
         cashier = new CashierDrawer(casino, coins, confirm, bonusShelf, cashierCashOut);
-        machines = new Machines.MachineCabinet(casino, casinoPlay, confirm, OpenCashier);
+        preferences = new Core.Casino.CasinoPreferences(configuration);
+        stage.Preferences = preferences;
+        machines = new Machines.MachineCabinet(casino, casinoPlay, confirm, OpenCashier, preferences);
         scratch = new Cabinets.ScratchCabinet(casino, casinoPlay, OpenCashier);
         barkeep = new Cabinets.BarkeepCabinet(casino, casinoPlay, gameStats, OpenCashier);
         wheel = new Cabinets.WheelCabinet(casino, casinoRooms, OpenCashier, PopRoute);
@@ -135,7 +138,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         dailySpin = new Cabinets.DailySpinCabinet(casinoSpin);
         originals = new Originals.OriginalsCabinet(casino, casinoPlay.Originals, OpenCashier);
         race = new Race.RaceCabinet(casino, casinoRooms, OpenCashier, PopRoute);
-        plinko = new Plinko.PlinkoCabinet(casino, casinoPlay.Plinko, OpenCashier);
+        plinko = new Plinko.PlinkoCabinet(casino, casinoPlay.Plinko, OpenCashier, preferences);
         blackjack = new Tables.BlackjackTable(casino, casinoRooms, casinoTables, history, casinoTurns, remoteImages,
             lodestone, OpenCashier, PopRoute, OpenLedger);
         playerLedger = new Tables.TableLedger(casinoTables, confirm);
@@ -530,7 +533,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         if (route.Screen == CasinoScreen.Table && IsHoldem(route))
         {
             return new CasinoStageSpec(CasinoGames.Holdem, L.Casino.GameHoldem, Backdrop.Strip, Room: true,
-                DeckHeight: holdem.DeckHeight, Practice: holdem.Practice, LampPool: 1f);
+                DeckHeight: holdem.DeckHeight, Practice: holdem.Practice, LampPool: 1f, Extra: L.Venue.TableSheet);
         }
 
         if (route.Screen == CasinoScreen.Table)
@@ -1127,10 +1130,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
     {
         var tableId = current.TableId;
         var card = casinoTables.CardFor(tableId);
+        var holdemTable = current.Screen == CasinoScreen.Table && IsHoldem(current);
         var gil = current.Screen == CasinoScreen.VenueRoom
             ? venueRoom.Currency == Core.Casino.CasinoCurrencies.Gil
-            : blackjack.Currency == Core.Casino.CasinoCurrencies.Gil;
-        var canBroadcast = current.Screen == CasinoScreen.Table && !SeatedAtTable(tableId)
+            : !holdemTable && blackjack.Currency == Core.Casino.CasinoCurrencies.Gil;
+        var spectating = holdemTable ? holdem.HeroStack < 0 : !SeatedAtTable(tableId);
+        var canBroadcast = current.Screen == CasinoScreen.Table && spectating
             && (card?.Config?.Spectators ?? true);
         venueSheet.Open(new Venue.VenueSheetTarget(tableId, gil, canBroadcast));
     }
@@ -1166,7 +1171,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         var current = router.Current;
         if (current.Screen == CasinoScreen.Table && current.TableId.Length > 0)
         {
-            OpenBroadcast(current.TableId, Venue.BroadcastGame.Blackjack);
+            OpenBroadcast(current.TableId,
+                IsHoldem(current) ? Venue.BroadcastGame.Holdem : Venue.BroadcastGame.Blackjack);
         }
     }
 

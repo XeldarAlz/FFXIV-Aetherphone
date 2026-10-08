@@ -467,6 +467,7 @@ internal sealed partial class BlackjackTable
 
     private static long RackFor(CasinoStateDto state, CasinoBlackjackRoomStateDto board)
     {
-        return BlackjackRules.RackFor(board.MaxBet, state.MinBuyIn, state.MaxBuyIn, state.Sitting?.Stack ?? 0);
+        return BlackjackRules.RackFor(CasinoLadder.CeilingFor(state).MaxBet, board.MinBet, board.MaxBet,
+            state.MinBuyIn, state.MaxBuyIn, state.Sitting?.Stack ?? 0);
     }
 }
