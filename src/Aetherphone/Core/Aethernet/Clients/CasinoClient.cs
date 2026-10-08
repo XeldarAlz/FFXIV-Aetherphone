@@ -21,6 +21,7 @@ internal sealed partial class CasinoClient
     internal const string DailySpinPath = "/casino/dailyspin";
     internal const string WheelBetPath = "/casino/wheel/bet";
     internal const string BingoCardsPath = "/casino/bingo/cards";
+    internal const string RaceBetPath = "/casino/race/bet";
     internal const string BlackjackSitPath = "/casino/blackjack/sit";
     internal const string BlackjackLeavePath = "/casino/blackjack/leave";
     internal const string BlackjackWagerPath = "/casino/blackjack/wager";
@@ -92,6 +93,11 @@ internal sealed partial class CasinoClient
     internal static string WheelBetsPath(string roomId)
     {
         return string.Concat("/casino/wheel/", Uri.EscapeDataString(roomId), "/bets");
+    }
+
+    internal static string RaceBetsPath(string roomId)
+    {
+        return string.Concat("/casino/race/", Uri.EscapeDataString(roomId), "/bets");
     }
 
     internal static string BingoMyCardsPath(string roomId)
@@ -234,6 +240,20 @@ internal sealed partial class CasinoClient
         Action<AepFailure>? onFailure = null)
     {
         return net.GetAsync(WheelBetsPath(roomId), AethernetJsonContext.Default.CasinoWheelBetsDto, token, null,
+            onFailure);
+    }
+
+    public Task<CasinoRaceBetDto?> PlaceRaceBetAsync(CasinoRaceBetRequest request, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(RaceBetPath, request, AethernetJsonContext.Default.CasinoRaceBetRequest,
+            AethernetJsonContext.Default.CasinoRaceBetDto, token, null, onFailure);
+    }
+
+    public Task<CasinoRaceBetsDto?> MyRaceBetsAsync(string roomId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.GetAsync(RaceBetsPath(roomId), AethernetJsonContext.Default.CasinoRaceBetsDto, token, null,
             onFailure);
     }
 

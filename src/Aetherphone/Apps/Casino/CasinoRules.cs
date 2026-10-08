@@ -91,6 +91,14 @@ internal static class CasinoRules
         L.Originals.RulesHiLoStep4,
     };
 
+    private static readonly LocString[] RaceSteps =
+    {
+        L.Race.Rules1,
+        L.Race.Rules2,
+        L.Race.Rules3,
+        L.Race.Rules4,
+    };
+
     public static LocString PitchOf(string gameId) => gameId switch
     {
         CasinoGames.Mines => L.Originals.PitchMines,
@@ -98,6 +106,7 @@ internal static class CasinoRules
         CasinoGames.Limbo => L.Originals.PitchLimbo,
         CasinoGames.Keno => L.Originals.PitchKeno,
         CasinoGames.HiLo => L.Originals.PitchHiLo,
+        CasinoGames.Race => L.Race.Pitch,
         CasinoGames.Slots => L.Casino.PitchSlots,
         CasinoGames.Scratch => L.Casino.PitchScratch,
         CasinoGames.Wheel => L.Casino.PitchWheel,
@@ -114,6 +123,7 @@ internal static class CasinoRules
         CasinoGames.Limbo => L.Originals.GameLimbo,
         CasinoGames.Keno => L.Originals.GameKeno,
         CasinoGames.HiLo => L.Originals.GameHiLo,
+        CasinoGames.Race => L.Race.Title,
         CasinoGames.Slots => L.Casino.GameSlots,
         CasinoGames.Scratch => L.Casino.GameScratch,
         CasinoGames.Wheel => L.Casino.GameWheel,
@@ -130,6 +140,7 @@ internal static class CasinoRules
         CasinoGames.Limbo => LimboSteps,
         CasinoGames.Keno => KenoSteps,
         CasinoGames.HiLo => HiLoSteps,
+        CasinoGames.Race => RaceSteps,
         CasinoGames.Slots => SlotsSteps,
         CasinoGames.Scratch => ScratchSteps,
         CasinoGames.Wheel => WheelSteps,
@@ -193,6 +204,8 @@ internal static class CasinoRules
                 label = L.Originals.FactMines;
                 value = Range(Core.Casino.OriginalsRules.MinMines, Core.Casino.OriginalsRules.MaxMines);
                 return true;
+            case CasinoGames.Race:
+                return RaceFact(index, ref label, ref value);
             default:
                 return false;
         }
@@ -315,6 +328,23 @@ internal static class CasinoRules
             case 1:
                 label = L.Casino.FactSkill;
                 value = Loc.T(L.Casino.FactSkillValue);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static bool RaceFact(int index, ref LocString label, ref string value)
+    {
+        switch (index)
+        {
+            case 0:
+                label = L.Race.FactMinBet;
+                value = Number(Core.Casino.RaceRules.MinBet);
+                return true;
+            case 1:
+                label = L.Race.FactTickets;
+                value = Number(Core.Casino.RaceRules.MaxTickets);
                 return true;
             default:
                 return false;

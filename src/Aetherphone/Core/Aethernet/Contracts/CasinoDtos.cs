@@ -820,3 +820,87 @@ internal sealed record CasinoDailySpinDto(
     string SeedCommitHash = "",
     string NextSeedHash = "",
     bool Claimed = false);
+
+internal sealed record CasinoRaceRunnerDto(
+    int Slot = 0,
+    int Bird = 0,
+    string Name = "",
+    int Colour = 0,
+    int Silk = 0,
+    int Rating = 0,
+    int OddsHundredths = 0,
+    int PlaceOddsHundredths = 0,
+    int[]? Form = null,
+    int Backers = 0,
+    long Pool = 0);
+
+internal sealed record CasinoRaceResultDto(
+    int Kind = 0,
+    int Runner = 0,
+    int RunnerB = -1,
+    long PayHundredths = 0);
+
+internal sealed record CasinoRaceRoomStateDto(
+    long RoundIndex = 0,
+    string Commit = "",
+    string NextCommit = "",
+    string Seed = "",
+    CasinoRaceRunnerDto[]? Runners = null,
+    int[]? Order = null,
+    bool PhotoFinish = false,
+    long RaceStartUnixMs = 0,
+    long Staked = 0,
+    long Paid = 0,
+    CasinoRaceResultDto[]? Results = null,
+    int[][]? FormBook = null,
+    long MinBet = 0,
+    int MaxTickets = 0,
+    int OverroundBasisPoints = 0,
+    int TicksPerSecond = 0,
+    int RaceTicks = 0);
+
+internal sealed record CasinoRaceBetRequest(
+    string RoomId = "",
+    long RoundIndex = 0,
+    string ClientRoundId = "",
+    string ClientBetId = "",
+    int Kind = 0,
+    int Runner = 0,
+    int RunnerB = -1,
+    long Amount = 0);
+
+internal sealed record CasinoRaceBetDto(
+    bool Granted = false,
+    string Reason = "",
+    string RoomId = "",
+    long RoundIndex = 0,
+    string RoundId = "",
+    string BetId = "",
+    int Kind = 0,
+    int Runner = 0,
+    int RunnerB = -1,
+    long Amount = 0,
+    int Tickets = 0,
+    long MyStake = 0,
+    long Stack = 0,
+    long Ceiling = 0);
+
+internal sealed record CasinoRaceTicketDto(
+    string BetId = "",
+    int Kind = 0,
+    int Runner = 0,
+    int RunnerB = -1,
+    long Amount = 0,
+    long Payout = 0);
+
+internal sealed record CasinoRaceBetsDto(
+    string RoomId = "",
+    long RoundIndex = 0,
+    int Phase = 0,
+    string RoundId = "",
+    CasinoRaceTicketDto[]? Tickets = null,
+    long MyStake = 0,
+    long MyPayout = 0,
+    long Stack = 0,
+    long PreviousRoundIndex = -1,
+    long PreviousPayout = 0);

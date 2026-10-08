@@ -65,6 +65,12 @@ internal sealed partial class CasinoApp
                 }
             }
 
+            using (ImRaii.PushId(FloorGameIds.Length + OriginalsGameNames.Length))
+            {
+                cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY + CardGap * scale), width,
+                    CasinoGames.Race, L.Race.Title, false, scale);
+            }
+
             cursorY = DrawTablesLink(drawList, new Vector2(origin.X, cursorY + CoinArt.SectionGap * scale), width,
                 scale);
             CoinArt.Reserve(origin, width, cursorY + CoinArt.BottomPad * scale);
@@ -137,7 +143,8 @@ internal sealed partial class CasinoApp
     private void DrawGameRowFooter(ImDrawListPtr drawList, string gameId, float left, float right, float top,
         float scale)
     {
-        var crowd = CrowdAt(gameId);
+        var racing = string.Equals(gameId, CasinoGames.Race, StringComparison.Ordinal);
+        var crowd = racing ? casinoRooms.OccupancyOf(Core.Casino.CasinoRoomIds.RaceTrack) : CrowdAt(gameId);
         var crowdWidth = 0f;
         if (crowd > 0)
         {
@@ -150,9 +157,11 @@ internal sealed partial class CasinoApp
             crowdWidth = crowdSize.X + (CasinoArt.LiveDotRadius * 2f + 4f + CoinArt.ValueGap) * scale;
         }
 
-        var stake = Originals.OriginalsCabinet.Owns(gameId)
-            ? texts.Number(L.Casino.MinimumStake, Core.Casino.OriginalsRules.MinBet)
-            : MinimumStakeLine(gameId);
+        var stake = racing
+            ? texts.Number(L.Casino.MinimumStake, Core.Casino.RaceRules.MinBet)
+            : Originals.OriginalsCabinet.Owns(gameId)
+                ? texts.Number(L.Casino.MinimumStake, Core.Casino.OriginalsRules.MinBet)
+                : MinimumStakeLine(gameId);
         if (stake.Length == 0)
         {
             return;

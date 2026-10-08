@@ -12,7 +12,8 @@ internal sealed record CasinoRoomState(
     CasinoRoomSnapshotDto Snapshot,
     CasinoWheelRoomStateDto? Wheel,
     CasinoBingoRoomStateDto? Bingo,
-    CasinoBlackjackRoomStateDto? Blackjack);
+    CasinoBlackjackRoomStateDto? Blackjack,
+    CasinoRaceRoomStateDto? Race = null);
 
 internal sealed record CasinoRoomPrivate(
     string RoomId,
@@ -337,6 +338,12 @@ internal sealed class CasinoRoomSession
         {
             return new CasinoRoomState(roomId, epoch, seq, snapshot, null, null,
                 Parse(snapshot.GameState, AethernetJsonContext.Default.CasinoBlackjackRoomStateDto));
+        }
+
+        if (string.Equals(snapshot.GameKind, CasinoWire.RaceKind, StringComparison.Ordinal))
+        {
+            return new CasinoRoomState(roomId, epoch, seq, snapshot, null, null, null,
+                Parse(snapshot.GameState, AethernetJsonContext.Default.CasinoRaceRoomStateDto));
         }
 
         return new CasinoRoomState(roomId, epoch, seq, snapshot, null, null, null);

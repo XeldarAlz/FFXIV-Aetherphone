@@ -15,4 +15,5 @@ internal static class CasinoGames
     public const string Limbo = "limbo";
     public const string Keno = "keno";
     public const string HiLo = "hilo";
+    public const string Race = "race";
 }

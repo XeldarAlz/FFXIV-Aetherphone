@@ -10939,6 +10939,68 @@ internal static class L
         public static readonly LocString RebuyTo = new("casino.tables.rebuyTo", "Rebuy to {0}");
     }
 
+    internal static class Race
+    {
+        public static readonly LocString Title = new("casino.race.title", "Chocobo race");
+        public static readonly LocString Pitch = new("casino.race.pitch", "Eight birds, a minute to bet, a race every two minutes");
+        public static readonly LocString Rules1 = new("casino.race.rules1", "Every race runs eight birds. The tote board shows each bird's odds, place odds, last five finishes and how many players back it.");
+        public static readonly LocString Rules2 = new("casino.race.rules2", "Pick a ticket: Win (first home), Place (in the first three), Forecast (first and second in that order) or Reverse forecast (first two in either order).");
+        public static readonly LocString Rules3 = new("casino.race.rules3", "Betting closes a minute after the field is shown. The finishing order is drawn from a committed seed the moment bets close, and the race you watch is built from it.");
+        public static readonly LocString Rules4 = new("casino.race.rules4", "Up to six tickets a race. Odds are fixed when the field is shown, and a ticket pays its stake times its odds.");
+        public static readonly LocString FactMinBet = new("casino.race.factMinBet", "Smallest ticket");
+        public static readonly LocString FactTickets = new("casino.race.factTickets", "Tickets per race");
+        public static readonly LocString KindWin = new("casino.race.kindWin", "Win");
+        public static readonly LocString KindPlace = new("casino.race.kindPlace", "Place");
+        public static readonly LocString KindForecast = new("casino.race.kindForecast", "Forecast");
+        public static readonly LocString KindReverse = new("casino.race.kindReverse", "Reverse");
+        public static readonly LocString KindReverseLong = new("casino.race.kindReverseLong", "Reverse forecast");
+        public static readonly LocString ColumnRunner = new("casino.race.columnRunner", "Runner");
+        public static readonly LocString ColumnForm = new("casino.race.columnForm", "Form");
+        public static readonly LocString ColumnOdds = new("casino.race.columnOdds", "Odds");
+        public static readonly LocString ColumnPool = new("casino.race.columnPool", "Pool");
+        public static readonly LocString Backers = new("casino.race.backers", "{0} backing");
+        public static readonly LocString PlaceFirst = new("casino.race.placeFirst", "1st");
+        public static readonly LocString PlaceSecond = new("casino.race.placeSecond", "2nd");
+        public static readonly LocString PlaceThird = new("casino.race.placeThird", "3rd");
+        public static readonly LocString PromptPick = new("casino.race.promptPick", "Tap a bird on the board to pick it");
+        public static readonly LocString PromptSecond = new("casino.race.promptSecond", "Now tap the bird you think comes second");
+        public static readonly LocString Pays = new("casino.race.pays", "Pays {0}");
+        public static readonly LocString PaysUpTo = new("casino.race.paysUpTo", "Pays up to {0}");
+        public static readonly LocString TicketsHeading = new("casino.race.ticketsHeading", "Your tickets");
+        public static readonly LocString TicketsCount = new("casino.race.ticketsCount", "{0} of {1}");
+        public static readonly LocString NoTickets = new("casino.race.noTickets", "No tickets on this race yet");
+        public static readonly LocString TicketsFull = new("casino.race.ticketsFull", "Six tickets is the most a race takes");
+        public static readonly LocString TicketSingle = new("casino.race.ticketSingle", "{0} {1}");
+        public static readonly LocString TicketPair = new("casino.race.ticketPair", "{0} {1}-{2}");
+        public static readonly LocString LetItRide = new("casino.race.letItRide", "Let it ride {0}");
+        public static readonly LocString RaceNumber = new("casino.race.raceNumber", "Race {0}");
+        public static readonly LocString Gates = new("casino.race.gates", "The birds are going into the gates");
+        public static readonly LocString WaitingField = new("casino.race.waitingField", "The next field is on its way");
+        public static readonly LocString Running = new("casino.race.running", "They're running");
+        public static readonly LocString Replay = new("casino.race.replay", "Replay");
+        public static readonly LocString PhotoFinish = new("casino.race.photoFinish", "Photo finish");
+        public static readonly LocString ResultTitle = new("casino.race.resultTitle", "Result");
+        public static readonly LocString Dividends = new("casino.race.dividends", "Dividends");
+        public static readonly LocString YouWon = new("casino.race.youWon", "You won {0}");
+        public static readonly LocString NoReturn = new("casino.race.noReturn", "No return this race");
+        public static readonly LocString SatOut = new("casino.race.satOut", "You sat this one out");
+        public static readonly LocString ClosedTitle = new("casino.race.closedTitle", "The track is dark");
+        public static readonly LocString ClosedHint = new("casino.race.closedHint", "Races are not running right now. The rest of the floor is still open.");
+        public static readonly LocString LineOff1 = new("casino.race.lineOff1", "And they're off!");
+        public static readonly LocString LineOff2 = new("casino.race.lineOff2", "The gates fly open!");
+        public static readonly LocString LineSurge1 = new("casino.race.lineSurge1", "{0} finds another gear");
+        public static readonly LocString LineSurge2 = new("casino.race.lineSurge2", "{0} kicks on");
+        public static readonly LocString LineSurge3 = new("casino.race.lineSurge3", "{0} is flying now");
+        public static readonly LocString LineLead1 = new("casino.race.lineLead1", "{0} takes the lead");
+        public static readonly LocString LineLead2 = new("casino.race.lineLead2", "{0} hits the front");
+        public static readonly LocString LineFade1 = new("casino.race.lineFade1", "{0} is starting to tire");
+        public static readonly LocString LineFade2 = new("casino.race.lineFade2", "{0} drifts back");
+        public static readonly LocString LineStretch1 = new("casino.race.lineStretch1", "Into the final stretch!");
+        public static readonly LocString LineStretch2 = new("casino.race.lineStretch2", "Here they come to the line!");
+        public static readonly LocString LineWinner1 = new("casino.race.lineWinner1", "{0} wins it!");
+        public static readonly LocString LineWinner2 = new("casino.race.lineWinner2", "{0} gets there first!");
+    }
+
     internal static class Catalogs
     {
         public static readonly LocString AccentViolet = new("catalog.accent.violet", "Violet");
