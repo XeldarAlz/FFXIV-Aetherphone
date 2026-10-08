@@ -54,6 +54,9 @@ Aethergram and Velvet brand colours from `BrandAccents.cs`. Keep the `map` and A
 when you add an id or change its accent. An app id with no `map` entry gets no generated pair and
 falls back to the accent tile until one is painted.
 
+A `colour` entry may pass `ink` to paint its symbol in a colour other than white. Gamba (`casino`) uses
+this for its gold chip on `GambaRose`, a deeper shade of its Rose accent that keeps the gold legible.
+
 ## Game icons
 
 Every mini-game and every online room has a painted pair as well, all in the `colour` family. The
