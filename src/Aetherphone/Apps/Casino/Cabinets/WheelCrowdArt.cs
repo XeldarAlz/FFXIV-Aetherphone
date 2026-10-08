@@ -53,7 +53,7 @@ internal static class WheelCrowdArt
 
         var overflow = OverflowFor(bettors, mine);
         var plus = overflow > 0 ? NumberText.Signed(overflow) : string.Empty;
-        var plusWidth = overflow > 0 ? Typography.Measure(plus, TextStyles.Caption2).X + PlusGap * scale : 0f;
+        var plusWidth = overflow > 0 ? Typography.Measure(plus, TextStyles.FootnoteEmphasized).X + PlusGap * scale : 0f;
         var radius = FaceRadius * scale;
         var step = FaceStep * scale;
         var available = width - plusWidth - radius * 2f;
@@ -82,9 +82,9 @@ internal static class WheelCrowdArt
         }
 
         var plusLeft = x + step * (faces - 1) + radius + PlusGap * scale;
-        var plusSize = Typography.Measure(plus, TextStyles.Caption2);
-        Typography.Draw(drawList, new Vector2(plusLeft, center.Y - plusSize.Y * 0.5f), plus, CasinoColors.InkBody,
-            TextStyles.Caption2);
+        var plusSize = Typography.Measure(plus, TextStyles.FootnoteEmphasized);
+        Typography.Draw(drawList, new Vector2(plusLeft, center.Y - plusSize.Y * 0.5f), plus, CasinoColors.InkTitle,
+            TextStyles.FootnoteEmphasized);
     }
 
     private static void DrawSilhouette(ImDrawListPtr drawList, Vector2 center, float radius)

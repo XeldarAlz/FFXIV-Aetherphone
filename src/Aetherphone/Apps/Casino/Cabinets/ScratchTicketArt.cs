@@ -85,9 +85,9 @@ internal static class ScratchTicketArt
         DrawMotif(drawList, theme.Motif, new Vector2(ticket.Max.X - ticket.Width * 0.11f, signCenter.Y - bob),
             motifExtent, ink);
         var price = NumberText.Compact(ScratchRules.Prices[Math.Clamp(tier, 0, ScratchRules.TierCount - 1)]);
-        var priceSize = CurrencyGlyph.MeasureAmount(price, TextStyles.FootnoteEmphasized);
+        var priceSize = CurrencyGlyph.MeasureAmount(price, TextStyles.Title3);
         CurrencyGlyph.DrawAmount(drawList, new Vector2(ticket.Center.X - priceSize.X * 0.5f,
-            ticket.Min.Y + header * 0.72f), price, CurrencyKind.Chips, CasinoColors.Money, TextStyles.FootnoteEmphasized);
+            ticket.Min.Y + header * 0.66f), price, CurrencyKind.Chips, CasinoColors.Money, TextStyles.Title3);
     }
 
     public static void Foil(ImDrawListPtr drawList, Vector2 cellMin, Vector2 cellMax, float rounding, int tier,

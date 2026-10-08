@@ -16,12 +16,12 @@ internal sealed class WheelCabinet : ICabinetIdle
 {
     public const float MaxRingRadius = 170f;
 
-    private const float PodiumHeight = 94f;
+    private const float PodiumHeight = 104f;
     private const float PodiumGap = 6f;
     private const float PodiumPad = 6f;
     private const float PodiumCap = 3f;
     private const float StakeChipScale = 0.7f;
-    private const float RailHeight = 22f;
+    private const float RailHeight = 26f;
     private const float RailChipGap = 4f;
     private const float RimInset = 16f;
     private const float LockFlashSeconds = 0.45f;
@@ -396,7 +396,7 @@ internal sealed class WheelCabinet : ICabinetIdle
         {
             var spot = recent.SpotAt(index);
             var text = MultiplierLabel(spot);
-            var chipWidth = Typography.Measure(text, TextStyles.Caption1).X + height * 0.6f;
+            var chipWidth = Typography.Measure(text, TextStyles.FootnoteEmphasized).X + height * 0.6f;
             if (x + chipWidth > left + width)
             {
                 break;
@@ -419,8 +419,8 @@ internal sealed class WheelCabinet : ICabinetIdle
                     MathF.Max(1f, scale));
             }
 
-            Typography.DrawCentered(drawList, chipCenter, text, Palette.WithAlpha(color, newest ? 1f : 0.75f),
-                TextStyles.Caption1);
+            Typography.DrawCentered(drawList, chipCenter, text, Vector4.Lerp(color, Vector4.One, newest ? 0.35f : 0.55f),
+                TextStyles.FootnoteEmphasized);
             x = max.X + RailChipGap * scale;
         }
     }
@@ -472,11 +472,10 @@ internal sealed class WheelCabinet : ICabinetIdle
         var centerX = rect.Center.X;
         var y = rect.Min.Y + pad;
         y = PodiumLine(drawList, MultiplierLabel(spot), centerX, y, inner, color, TextStyles.Title3);
-        y = PodiumLine(drawList, NumberText.Compact(PoolOf(board, spot)), centerX, y, inner, ui.BodyInk,
-            TextStyles.Caption1);
+        y = PodiumLine(drawList, NumberText.Compact(PoolOf(board, spot)), centerX, y, inner, CasinoColors.InkTitle,
+            TextStyles.Footnote);
         y = DrawCrowd(drawList, board, spot, centerX, y, inner, scale);
-        PodiumLine(drawList, returns[spot], centerX, y, inner, Palette.WithAlpha(CasinoColors.Money, 0.8f),
-            TextStyles.Caption2);
+        PodiumLine(drawList, returns[spot], centerX, y, inner, CasinoColors.Money, TextStyles.Footnote);
         var mine = spotStakes[spot];
         if (mine > 0)
         {

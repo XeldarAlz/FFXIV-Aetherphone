@@ -17,7 +17,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
     private const float RubHoldPerSecond = 0.9f;
     private const float RubDragFactor = 0.05f;
-    private const float TicketMaxWidth = 300f;
+    private const float TicketMaxWidth = 360f;
     private const float KioskInset = 12f;
     private const float CellGap = 6f;
     private const float AutoPauseSeconds = 0.8f;
@@ -129,7 +129,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
         ConsumeResults(stage, frame);
         var sitting = state.Sitting;
         var safe = frame.Safe;
-        var statusHeight = Typography.LineHeight(TextStyles.Subheadline) + Button.SmallHeight * scale
+        var statusHeight = Typography.LineHeight(TextStyles.Subheadline) + Button.LargeHeight * scale
             + StatusGap * 2f * scale;
         LayoutTicket(safe, safe.Max.Y - statusHeight, scale);
         DrawKiosk(drawList, stage, frame, scale);
@@ -386,7 +386,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
         if (state.StakesPaused || state.Draining)
         {
             DrawLine(drawList, Loc.T(state.StakesPaused ? L.Casino.PausedTitle : L.Casino.DrainingTitle), centerX, top,
-                area.Width, ui.MutedInk);
+                area.Width, CasinoColors.InkTitle);
             return;
         }
 
@@ -403,18 +403,18 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
         if (sitting is not null && sitting.Stack < CurrentPrice && playback.Phase != ScratchPhase.Scratching)
         {
-            DrawLine(drawList, Loc.T(L.Casino.ScratchLowStack), centerX, top, area.Width, ui.MutedInk);
+            DrawLine(drawList, Loc.T(L.Casino.ScratchLowStack), centerX, top, area.Width, CasinoColors.InkTitle);
             return;
         }
 
         var bottom = top + Typography.LineHeight(TextStyles.Subheadline);
         if (playback.RevealComplete && playback.PrizeOnceRevealed <= 0)
         {
-            bottom = DrawLine(drawList, Loc.T(L.Casino.ScratchNoWin), centerX, top, area.Width, CasinoColors.Loss);
+            bottom = DrawLine(drawList, Loc.T(L.Casino.ScratchNoWin), centerX, top, area.Width, CasinoColors.InkBody);
         }
         else if (playback.Phase is ScratchPhase.Idle or ScratchPhase.Scratching)
         {
-            bottom = DrawLine(drawList, Loc.T(L.Casino.ScratchHint), centerX, top, area.Width, ui.MutedInk);
+            bottom = DrawLine(drawList, Loc.T(L.Casino.ScratchHint), centerX, top, area.Width, CasinoColors.InkTitle);
         }
 
         if (!CanStartRun(stage, state, sitting))
@@ -443,9 +443,9 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private static bool SmallButton(ImDrawListPtr drawList, AppSkin ui, string label, float centerX, float top,
         float maxWidth, float scale)
     {
-        var width = MathF.Min(Button.WidthFor(label, ButtonSize.Small), maxWidth);
+        var width = MathF.Min(MathF.Max(Button.WidthFor(label, ButtonSize.Large), maxWidth * 0.6f), maxWidth);
         var rect = new Rect(new Vector2(centerX - width * 0.5f, top),
-            new Vector2(centerX + width * 0.5f, top + Button.SmallHeight * scale));
+            new Vector2(centerX + width * 0.5f, top + Button.LargeHeight * scale));
         return Button.Draw(drawList, rect, label, ui.Ink, ButtonStyle.Tinted);
     }
 
