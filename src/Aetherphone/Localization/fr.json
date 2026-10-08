@@ -7829,6 +7829,7 @@
   "changelog.r1200.79": "Correction de vidéos lisibles qui échouaient avec Requested format is not available",
   "changelog.r1200.80": "Correction des liens Tubi qui ne se lisaient plus depuis un changement du site",
   "changelog.r1200.101": "Les soirées accueillent désormais jusqu'à 100 personnes, contre 16 auparavant",
+  "changelog.r1200.102": "Correction des personnes qui quittaient la soirée après une courte coupure de connexion et restaient sur l'ancienne vidéo : la soirée garde désormais leur place et elles la rejoignent d'elles-mêmes",
   "changelog.r1200.81": "Ajout de commandes /phone pour les macros : ouvrir une app ou les réglages, prendre une photo, basculer Ne pas déranger ou le silencieux, contrôler la musique, lancer un tell ou un appel, et passer le téléphone en mini, complet ou masqué",
   "changelog.r1200.82": "Réglages > Commandes liste désormais toutes les commandes slash, et /phone help affiche la même liste dans le chat",
   "changelog.r1200.83": "Ajout de l'interrupteur Afficher dans la Dynamic Island sur la page de réglages de chaque app qui affiche des activités sur l'île",

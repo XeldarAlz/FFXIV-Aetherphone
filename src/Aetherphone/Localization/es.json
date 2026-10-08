@@ -7829,6 +7829,7 @@
   "changelog.r1200.79": "Corregido que algunos vídeos reproducibles fallaran con Requested format is not available",
   "changelog.r1200.80": "Corregidos los enlaces de Tubi que dejaron de reproducirse tras un cambio en su sitio",
   "changelog.r1200.101": "Las fiestas ahora admiten hasta 100 personas, en lugar de 16",
+  "changelog.r1200.102": "Corregido que la gente saliera de la fiesta tras un corte breve de conexión y se quedara en el vídeo anterior: ahora la fiesta les guarda el sitio y vuelven a unirse solos",
   "changelog.r1200.81": "Se añadieron comandos /phone para macros: abrir una app o los ajustes, hacer una foto, activar No molestar o silencio, controlar la música, empezar un susurro o una llamada y poner el teléfono en pequeño, completo u oculto",
   "changelog.r1200.82": "Ajustes > Comandos ahora muestra todos los comandos de barra, y /phone help escribe la misma lista en el chat",
   "changelog.r1200.83": "Se añadió el interruptor Mostrar en la Dynamic Island a la página de ajustes de cada app que muestra actividades en la isla",
