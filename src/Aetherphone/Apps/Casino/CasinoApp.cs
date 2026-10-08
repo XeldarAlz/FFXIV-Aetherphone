@@ -1,3 +1,5 @@
+using Aetherphone.Apps.Casino.Stage;
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Apps;
@@ -18,6 +20,7 @@ namespace Aetherphone.Apps.Casino;
 internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 {
     private const int RulesButton = 0;
+    private const float StageSurfaceSlack = 16f;
 
     public string Id => "casino";
     public string DisplayName => Loc.T(L.Apps.Casino);
@@ -45,6 +48,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly Tables.BlackjackTable blackjack;
     private readonly Tables.TableBrowser browser;
     private readonly Tables.TableDoor tableDoor;
+    private readonly CasinoStage stage = new();
     private readonly JackpotRail jackpotRail = new();
     private readonly GameRulesSheet rulesSheet = new();
     private readonly TabBar bottomNav = new();
@@ -142,6 +146,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         pendingTableId = string.Empty;
         tab = CasinoTab.Lobby;
         rulesSheet.Close();
+        stage.Reset();
         ResetLimitsEditor();
         ResetLobby();
         jackpotRail.Snap(Core.Casino.CasinoChipLots.CoinsFor(casino.Jackpot));
@@ -166,6 +171,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         tableDoor.Reset();
         pendingTableId = string.Empty;
         rulesSheet.Close();
+        stage.Reset();
         ResetLimitsEditor();
     }
 
@@ -237,15 +243,28 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         slots.Gate();
         scratch.Gate();
         rulesSheet.Gate();
+        stage.Gate();
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         slots.DrawOverlay(screenArea, ui);
         scratch.DrawOverlay(screenArea, ui);
+        if (IsStage(router.Current))
+        {
+            stage.DrawOverlays(screenArea, ui);
+            HandleStageRequests();
+        }
+
         rulesSheet.Draw(screenArea, ui);
         cashier.Draw(screenArea, ui, openLimits);
-        if (rulesSheet.TakePlayRequest())
+        if (rulesSheet.TakePlayRequest() && !PlayingGame(rulesSheet.GameId))
         {
             OpenGame(rulesSheet.GameId);
         }
+    }
+
+    private bool PlayingGame(string gameId)
+    {
+        var current = router.Current;
+        return IsStage(current) && string.Equals(StageSpecFor(current).GameId, gameId, StringComparison.Ordinal);
     }
 
     private void DrawSignedOut(in PhoneContext context)
@@ -260,50 +279,141 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
     private void DrawView(CasinoRoute route, Rect area, int depth)
     {
+        if (IsStage(route))
+        {
+            DrawStage(route, area);
+            return;
+        }
+
         ui.Body(area);
-        var scale = UiScale.Current;
         var context = new PhoneContext(area, theme, navigation);
-        var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
+        if (route.Screen == CasinoScreen.Floor)
+        {
+            DrawRoot(context, area);
+            return;
+        }
+
+        DrawPushedPage(context, route, depth);
+    }
+
+    private static bool IsStage(CasinoRoute route) =>
+        route.Screen is CasinoScreen.Cabinet or CasinoScreen.Table or CasinoScreen.DailySpin;
+
+    private void DrawStage(CasinoRoute route, Rect area)
+    {
+        var scale = UiScale.Current;
+        var spec = StageSpecFor(route);
+        using (AppSurface.BeginEdgeToEdge(area, true))
+        {
+            ImGui.Dummy(new Vector2(area.Width, MathF.Max(1f, area.Height - StageSurfaceSlack * scale)));
+            var frame = stage.Begin(area, spec, StageBalance(route));
+            DrawStageWorld(route, frame);
+            var action = stage.End();
+            if (action == CasinoStageAction.Back)
+            {
+                PopRoute();
+            }
+            else if (action == CasinoStageAction.Cashier)
+            {
+                OpenCashier();
+            }
+        }
+    }
+
+    private void DrawStageWorld(CasinoRoute route, in CasinoStageFrame frame)
+    {
+        var body = frame.Body;
         switch (route.Screen)
         {
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Slots, StringComparison.Ordinal):
-                DrawSlotsHeader(context, area);
                 slots.Draw(body, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Scratch, StringComparison.Ordinal):
-                DrawScratchHeader(context, area);
                 scratch.Draw(body, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Barkeep, StringComparison.Ordinal):
-                AppHeader.Draw(context, Loc.T(L.Casino.GameBarkeep), popRoute);
                 barkeep.Draw(body, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Wheel, StringComparison.Ordinal):
-                AppHeader.Draw(context, Loc.T(L.Casino.GameWheel), popRoute);
                 wheel.Draw(body, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Bingo, StringComparison.Ordinal):
-                AppHeader.Draw(context, Loc.T(L.Casino.GameBingo), popRoute);
                 bingo.Draw(body, ui);
                 break;
             case CasinoScreen.Table:
-                AppHeader.Draw(context, Loc.T(L.Casino.GameBlackjack), popRoute);
                 blackjack.Draw(body, ui);
                 break;
             case CasinoScreen.DailySpin:
-                AppHeader.Draw(context, Loc.T(L.Casino.GameDailySpin), popRoute);
                 dailySpin.Draw(body, ui);
                 break;
-            case CasinoScreen.Cabinet:
-                AppHeader.Draw(context, Loc.T(GameName(route.GameId)), popRoute);
+            default:
                 EmptyState.Draw(body, ui, FontAwesomeIcon.Hammer, Loc.T(L.Casino.CabinetSoonTitle),
                     Loc.T(L.Casino.CabinetSoonHint));
                 break;
-            case CasinoScreen.Floor:
-                DrawRoot(context, area);
+        }
+    }
+
+    private static CasinoStageSpec StageSpecFor(CasinoRoute route)
+    {
+        if (route.Screen == CasinoScreen.Table)
+        {
+            return new CasinoStageSpec(CasinoGames.Blackjack, L.Casino.GameBlackjack, Backdrop.Felt, LampPool: 1f);
+        }
+
+        if (route.Screen == CasinoScreen.DailySpin)
+        {
+            return new CasinoStageSpec(CasinoGames.DailySpin, L.Casino.GameDailySpin, Backdrop.Strip);
+        }
+
+        return route.GameId switch
+        {
+            CasinoGames.Slots => new CasinoStageSpec(route.GameId, L.Casino.GameSlots, Backdrop.Strip,
+                Extra: L.Casino.SlotsPays),
+            CasinoGames.Scratch => new CasinoStageSpec(route.GameId, L.Casino.GameScratch, Backdrop.Strip,
+                Extra: L.Casino.ScratchOdds),
+            CasinoGames.Barkeep => new CasinoStageSpec(route.GameId, L.Casino.GameBarkeep, Backdrop.Strip,
+                Warmth: 1f),
+            CasinoGames.Bingo => new CasinoStageSpec(route.GameId, L.Casino.GameBingo, Backdrop.Arena),
+            _ => new CasinoStageSpec(route.GameId, GameName(route.GameId), Backdrop.Strip),
+        };
+    }
+
+    private long StageBalance(CasinoRoute route)
+    {
+        var state = casino.State;
+        if (route.Screen == CasinoScreen.Table && state?.TableSitting is { } rack)
+        {
+            return rack.Stack;
+        }
+
+        return state?.Sitting?.Stack ?? 0;
+    }
+
+    private void HandleStageRequests()
+    {
+        var round = stage.TakeRoundRequest();
+        if (round.Length > 0)
+        {
+            history.Invalidate();
+            router.Push(new CasinoRoute(CasinoScreen.RoundDetail, router.Current.GameId, round));
+        }
+
+        var current = router.Current;
+        switch (stage.TakeInfoRequest())
+        {
+            case CasinoInfoRequest.Rules:
+                rulesSheet.Open(StageSpecFor(current).GameId);
                 break;
-            default:
-                DrawPushedPage(context, route, depth);
+            case CasinoInfoRequest.Extra when string.Equals(current.GameId, CasinoGames.Slots,
+                StringComparison.Ordinal):
+                slots.OpenPayTable();
+                break;
+            case CasinoInfoRequest.Extra when string.Equals(current.GameId, CasinoGames.Scratch,
+                StringComparison.Ordinal):
+                scratch.OpenOdds();
+                break;
+            case CasinoInfoRequest.Fairness:
+                OpenFairness();
                 break;
         }
     }
@@ -398,28 +508,6 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         return router.TryGetView(depth - 2, out var previous) ? RouteTitle(previous) : TabTitle(tab);
     }
 
-    private void DrawSlotsHeader(in PhoneContext context, Rect area)
-    {
-        var paysLabel = Loc.T(L.Casino.SlotsPays);
-        var reserve = AppSkin.HeaderActionWidth(paysLabel) + 18f * UiScale.Current;
-        AppHeader.Draw(context, "casino.slotsHeader", Loc.T(L.Casino.GameSlots), reserve, popRoute);
-        if (ui.HeaderAction(area, paysLabel, !slots.PayTableOpen))
-        {
-            slots.OpenPayTable();
-        }
-    }
-
-    private void DrawScratchHeader(in PhoneContext context, Rect area)
-    {
-        var oddsLabel = Loc.T(L.Casino.ScratchOdds);
-        var reserve = AppSkin.HeaderActionWidth(oddsLabel) + 18f * UiScale.Current;
-        AppHeader.Draw(context, "casino.scratchHeader", Loc.T(L.Casino.GameScratch), reserve, popRoute);
-        if (ui.HeaderAction(area, oddsLabel, !scratch.OddsOpen))
-        {
-            scratch.OpenOdds();
-        }
-    }
-
     private void OpenCashier()
     {
         cashier.Open();
@@ -450,6 +538,11 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     {
         slots.ClosePayTable();
         scratch.CloseOdds();
+        if (IsStage(router.Current))
+        {
+            stage.Reset();
+        }
+
         ResetCabinetOf(router.Current);
         router.Pop();
     }

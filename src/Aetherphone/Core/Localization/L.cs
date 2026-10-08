@@ -10574,6 +10574,34 @@ internal static class L
         public static readonly LocString TourTonightBody = new("casino.tour.tonightBody", "How your night is going sits right under your chips. Tap it any time to set a daily loss limit.");
     }
 
+    internal static class Strip
+    {
+        public static readonly LocString Practice = new("casino.strip.practice", "Practice");
+        public static readonly LocString PracticeRibbon = new("casino.strip.practiceRibbon", "Practice table: no chips at stake");
+        public static readonly LocString Back = new("casino.strip.back", "Back");
+        public static readonly LocString Info = new("casino.strip.info", "Game info");
+        public static readonly LocString CashierHint = new("casino.strip.cashierHint", "Open the cashier");
+        public static readonly LocString Instant = new("casino.strip.instant", "Instant mode");
+        public static readonly LocString InstantHint = new("casino.strip.instantHint", "Skip the show and land straight on the result");
+        public static readonly LocString Return = new("casino.strip.return", "Return to player");
+        public static readonly LocString ReturnValue = new("casino.strip.returnValue", "{0}%");
+        public static readonly LocString HowToPlay = new("casino.strip.howToPlay", "How to play");
+        public static readonly LocString Bets = new("casino.strip.bets", "Bets");
+        public static readonly LocString MyBets = new("casino.strip.myBets", "My bets");
+        public static readonly LocString AllBets = new("casino.strip.allBets", "All bets");
+        public static readonly LocString HighRollers = new("casino.strip.highRollers", "High rollers");
+        public static readonly LocString MyBetsEmpty = new("casino.strip.myBetsEmpty", "Rounds you play this visit land here. Tap one to check it.");
+        public static readonly LocString FloorFeedEmpty = new("casino.strip.floorFeedEmpty", "Bets from the whole floor show here once the live feed opens.");
+        public static readonly LocString Multiple = new("casino.strip.multiple", "{0}x");
+        public static readonly LocString TitleShark = new("casino.strip.title.shark", "Shark");
+        public static readonly LocString TitleHighRoller = new("casino.strip.title.highRoller", "High Roller");
+        public static readonly LocString TitleVip = new("casino.strip.title.vip", "VIP");
+        public static readonly LocString TitleWhale = new("casino.strip.title.whale", "Whale");
+        public static readonly LocString TitleLegend = new("casino.strip.title.legend", "Legend");
+        public static readonly LocString Level = new("casino.strip.level", "Level {0}");
+        public static readonly LocString Cap = new("casino.strip.cap", "Cap {0}");
+    }
+
     internal static class Catalogs
     {
         public static readonly LocString AccentViolet = new("catalog.accent.violet", "Violet");
