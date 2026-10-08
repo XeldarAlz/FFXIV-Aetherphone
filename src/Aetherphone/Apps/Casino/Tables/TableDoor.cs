@@ -22,6 +22,7 @@ internal sealed class TableDoor
     private readonly ConfirmService confirm;
     private readonly Action<string> openTable;
     private readonly TableLedger ledger;
+    private readonly Venue.TournamentDoorCard tournament;
     private readonly CasinoTextCache texts = new();
 
     private string roomId = string.Empty;
@@ -30,8 +31,10 @@ internal sealed class TableDoor
     private string nameBuffer = string.Empty;
     private bool nameSeeded;
 
-    public TableDoor(CasinoTablesStore tables, ConfirmService confirm, Action<string> openTable)
+    public TableDoor(CasinoTablesStore tables, ConfirmService confirm, Action<string> openTable,
+        Venue.TournamentDoorCard tournament)
     {
+        this.tournament = tournament;
         this.tables = tables;
         this.confirm = confirm;
         this.openTable = openTable;
@@ -61,6 +64,7 @@ internal sealed class TableDoor
         nameSeeded = false;
         tables.ForgetDoor();
         ledger.Reset();
+        tournament.Reset();
     }
 
     public void Draw(Rect body, AppSkin ui)
@@ -86,6 +90,7 @@ internal sealed class TableDoor
         {
             ui.SectionHeading(Loc.T(L.Tables.HostPanelHeading), 4f);
             DrawHostControls(ui, card, scale);
+            tournament.Draw(ui, card, roomId);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
         }
 

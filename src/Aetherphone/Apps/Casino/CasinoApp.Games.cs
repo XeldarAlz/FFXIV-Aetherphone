@@ -40,7 +40,7 @@ internal sealed partial class CasinoApp
             var drawList = ImGui.GetWindowDrawList();
             var origin = ImGui.GetCursorScreenPos();
             var width = ScrollLayout.StableContentWidth();
-            var cursorY = DrawStakeNotice(origin, width, scale);
+            var cursorY = DrawNearbyTables(drawList, DrawStakeNotice(origin, width, scale), origin.X, width, scale);
             for (var index = 0; index < FloorGameIds.Length; index++)
             {
                 if (index > 0)

@@ -21,4 +21,7 @@ internal static class CasinoGames
     public const string HiLo = "hilo";
     public const string Race = "race";
     public const string Plinko = "plinko";
+    public const string DiceTable = "dicetable";
+    public const string Deathroll = "deathroll";
+    public const string Raffle = "raffle";
 }

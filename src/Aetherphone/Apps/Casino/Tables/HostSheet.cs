@@ -210,6 +210,7 @@ internal sealed class HostSheet
 
     private readonly CasinoTablesStore tables;
     private readonly CasinoStore chips;
+    private readonly Venue.VenueHostOptions venueOptions;
     private readonly HostDraft draft = new();
     private readonly CasinoTextCache texts = new();
     private readonly string[] currencyOptions = new string[3];
@@ -243,10 +244,11 @@ internal sealed class HostSheet
     private LanguageInfo? optionsLanguage;
     private string inlineReason = string.Empty;
 
-    public HostSheet(CasinoTablesStore tables, CasinoStore chips)
+    public HostSheet(CasinoTablesStore tables, CasinoStore chips, Venue.VenueHostOptions venueOptions)
     {
         this.tables = tables;
         this.chips = chips;
+        this.venueOptions = venueOptions;
         seatsDown = () => draft.Seats = Math.Max(CasinoHostingRules.MinSeats, draft.Seats - 1);
         seatsUp = () => draft.Seats = Math.Min(draft.MaxSeats, draft.Seats + 1);
         blindDown = () => draft.BigBlind = Math.Max(CasinoHostingRules.MinHoldemBigBlind,
@@ -272,6 +274,7 @@ internal sealed class HostSheet
     public void Enter()
     {
         draft.Reset();
+        venueOptions.Reset();
         inlineReason = string.Empty;
     }
 
@@ -293,7 +296,14 @@ internal sealed class HostSheet
             draft.Currency = CasinoCurrencies.Chips;
         }
 
-        ui.SectionHeading(Loc.T(L.Tables.SectionTable), 4f);
+        venueOptions.DrawGameCard(ui, scale);
+        if (venueOptions.IsVenue)
+        {
+            DrawVenue(ui, gilOpen, scale);
+            return;
+        }
+
+        ui.SectionHeading(Loc.T(L.Tables.SectionTable), Metrics.Space.Md);
         DrawTableCard(ui, scale);
         Hint(ui, Loc.T(ListingHints[draft.Listing]), scale);
 
@@ -322,6 +332,32 @@ internal sealed class HostSheet
             DrawRulesCard(ui);
         }
 
+        ui.SectionHeading(Loc.T(L.Venue.Location), Metrics.Space.Md);
+        venueOptions.DrawLocation(ui, scale);
+        DrawFooter(ui, scale);
+    }
+
+    private void DrawVenue(AppSkin ui, bool gilOpen, float scale)
+    {
+        ui.SectionHeading(Loc.T(L.Tables.SectionTable), Metrics.Space.Md);
+        var card = GroupCard.Begin(ui, RowUnits + SegmentRowUnits);
+        var nameRow = card.NextRow(RowUnits);
+        Label(ui, nameRow, Loc.T(L.Tables.HostName), scale);
+        Field(ui, FieldRect(nameRow, scale), "##hostName", Loc.T(L.Tables.HostNameHint), ref draft.Name,
+            NameMaxLength, false);
+        draft.Listing = Segment(ui, card.NextRow(SegmentRowUnits), "##hostListing", Loc.T(L.Tables.HostListing),
+            listingOptions, draft.Listing, scale);
+        card.End();
+        Hint(ui, Loc.T(ListingHints[draft.Listing]), scale);
+        ui.SectionHeading(Loc.T(L.Tables.SectionMoney), Metrics.Space.Md);
+        venueOptions.DrawVenueCard(ui, gilOpen, scale);
+        ui.SectionHeading(Loc.T(L.Venue.Location), Metrics.Space.Md);
+        venueOptions.DrawLocation(ui, scale);
+        DrawFooter(ui, scale);
+    }
+
+    private void DrawFooter(AppSkin ui, float scale)
+    {
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
         if (inlineReason.Length > 0)
         {
@@ -531,8 +567,8 @@ internal sealed class HostSheet
 
     private void Submit()
     {
-        var config = draft.Build(chips.Rate);
-        var reason = CasinoHostingRules.Check(config);
+        var config = venueOptions.Apply(draft.Build(chips.Rate));
+        var reason = venueOptions.IsVenue ? VenueRules.Check(config) : CasinoHostingRules.Check(config);
         if (reason.Length > 0)
         {
             inlineReason = reason;

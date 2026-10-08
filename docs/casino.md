@@ -84,3 +84,13 @@ Every settled round goes through `stage.Settle(new CasinoBetRecord(game, stake, 
 ## Daily spin
 
 `Cabinets/DailySpinCabinet.cs` runs on the Strip backdrop with no bet deck: the neon FREE SPIN sign, two crossing spotlights, a bulb rim, and a sprung pointer (`DailySpinPlayback`) that kicks on every peg and settles critically damped. The top wedge lands with the Epic tier and every other wedge with the Win tier through `SpinFlourish`, which mirrors `WinCelebration` with the coin glyph because the spin pays coins, not chips. `DailySpinIdle` is the turning idle wheel shared by `DrawIdle` and the home widget.
+
+## Venue layer
+
+Hosted venue rooms (`casino.dice-table`, `casino.deathroll`, `casino.raffle`) open from the table browser, the door or a deep link into `CasinoScreen.VenueRoom`, drawn by `Apps/Casino/Venue/VenueCabinet.cs` on the Strip with a room ribbon. Each room has a Dalamud-free playback (`DiceTablePlayback`, `DeathrollPlayback`, `RafflePlayback`) that takes the room's GameState and choreographs only what the server returned; a mid-event join snaps to the current state. `CasinoVenueStore` parses the GameState off the draw path (`VenueRoomView`), sends `POST /casino/venue/{roomId}/act` with an idempotent `clientActionId`, verifies the last roll or draw through `GET /casino/rooms/{roomId}/verify/{seq}` (`VenueVerifier` over `VenueDraws`, pinned by `venue.json`), polls `GET /casino/tables/nearby` from the housing position (`IHousingPositionSource`), and indexes listed tables by venue address for the Venues app pill.
+
+The stage Extra button on blackjack tables and venue rooms opens `VenueTableSheet`: verify, trade sync settings (gil tables), the broadcast view for spectators and the report action (`Plugin.Report`, target `casino_table`).
+
+Trade sync is opt-in (`Configuration.CasinoTradeSync`). `TradeWindowReader` listens to the `Trade` addon lifecycle and only reads its text; `TradeSyncTracker` confirms a completed trade from the wallet delta, and `TradeLedgerMatcher` turns it into a buy-in or payout proposal or a confirmation of an existing ledger entry. The host always gets a one-tap prompt (`TradeSyncPrompt`) plus a notification; a player can let their own side confirm automatically.
+
+`BroadcastView` (`CasinoScreen.Broadcast`, landscape) projects the blackjack or Hold'em snapshot into `BroadcastTable` with large seats, stacks and cards and no controls. `TournamentOverlay` draws the practice blackjack tournament strip, leaderboard, eliminations and winner over the table; hosts start and stop it from `TournamentDoorCard` on the door.

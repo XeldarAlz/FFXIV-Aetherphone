@@ -106,7 +106,7 @@ internal static class AppRegistry
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary, services.Configuration, services.GameUiVisibility, services.CameraShutter));
         apps.Add(new PhotosApp(photoLibrary, services.Confirm, services.Share, services.Configuration));
         apps.Add(new SkywatcherApp(services.Weather, services.WeatherControl, services.Configuration));
-        apps.Add(new VenuesApp(services.Venues, services.RemoteImages, services.Artwork, services.GameData, services.Configuration, services.Confirm, services.Translation));
+        apps.Add(new VenuesApp(services.Venues, services.RemoteImages, services.Artwork, services.GameData, services.Configuration, services.Confirm, services.Translation, new VenueCasinoPill(services.CasinoVenue, services.CasinoLauncher)));
         apps.Add(new StratsApp(services.StratsManifest, services.StratsGuides, services.RemoteImages, services.Configuration));
         apps.Add(new MusterApp(services.Musters, services.MusterLauncher, services.Aethernet, services.GameData, services.RemoteImages, services.Lodestone, services.Configuration, services.Confirm, services.Translation, services.Report, services.Conduct));
         apps.Add(new YellowPagesApp(services.YellowPages, services.AdInquiries, services.YellowPagesLauncher, services.SocialNotifications, services.Musters, new AethernetApi(services.Http, services.AethernetSession, "yellowpages"), services.GameData, services.RemoteImages, services.Lodestone, photoLibrary, services.WallpaperImages, services.Configuration, services.Confirm, services.Translation, services.Report, services.Conduct, services.EncryptionHelp, services.Http));
@@ -141,7 +141,8 @@ internal static class AppRegistry
         apps.Add(new CasinoApp(services.AethernetSession, services.Coins, services.Casino, services.CasinoPlay,
             services.CasinoHistory, services.CasinoRooms, services.CasinoTables, services.CasinoSpin,
             services.CasinoTurns, services.CasinoLauncher, services.GameStats, services.Confirm,
-            services.Conduct, services.RemoteImages, services.Lodestone, services.Holdem));
+            services.Conduct, services.RemoteImages, services.Lodestone, services.Holdem, services.CasinoVenue,
+            services.CasinoTrade, services.Report));
         var appStore = new AppStoreApp(services.Installer, services.Confirm, apps);
         apps.Add(appStore);
         apps.Add(new HousingApp(services.Housing, services.Configuration, services.Confirm));

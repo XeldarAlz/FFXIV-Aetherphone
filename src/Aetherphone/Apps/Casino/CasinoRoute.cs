@@ -23,6 +23,8 @@ internal enum CasinoScreen
     HostTable,
     TableLedger,
     Pit,
+    VenueRoom,
+    Broadcast,
 }
 
 internal readonly record struct CasinoRoute(
