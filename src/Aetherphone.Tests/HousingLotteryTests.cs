@@ -9,7 +9,7 @@ public sealed class HousingLotteryTests
     private static readonly DateTime NowUtc = new(2026, 10, 3, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public void EntryProgressIsTheShareOfTheFiveDayWindowAlreadySpent()
+    public void EntryProgressCountsFiveDays()
     {
         var ends = NowUtc.AddDays(4);
 
@@ -19,7 +19,7 @@ public sealed class HousingLotteryTests
     }
 
     [Fact]
-    public void ResultsProgressUsesTheFourDayWindow()
+    public void ResultsProgressCountsFourDays()
     {
         var ends = NowUtc.AddDays(1);
 
@@ -29,7 +29,7 @@ public sealed class HousingLotteryTests
     }
 
     [Fact]
-    public void ProgressClampsWhenTheDeadlineIsFurtherThanOnePhase()
+    public void ProgressStopsAtZero()
     {
         var progress = HousingLottery.Progress(HousingLotteryPhase.Entry, NowUtc.AddDays(9), NowUtc);
 
@@ -37,14 +37,14 @@ public sealed class HousingLotteryTests
     }
 
     [Fact]
-    public void ProgressIsUnknownWithoutAPhaseLengthOrDeadline()
+    public void ProgressNeedsPhaseAndDeadline()
     {
         Assert.Equal(-1f, HousingLottery.Progress(HousingLotteryPhase.Unavailable, NowUtc.AddDays(1), NowUtc));
         Assert.Equal(-1f, HousingLottery.Progress(HousingLotteryPhase.Entry, null, NowUtc));
     }
 
     [Fact]
-    public void ResolvePrefersTheLotteryCycleOverUnavailablePlots()
+    public void ResolvePicksLotteryOverUnavailable()
     {
         var plots = new[]
         {
@@ -53,14 +53,14 @@ public sealed class HousingLotteryTests
             Plot(2, 3, HousingLotteryPhase.Entry, NowUtc.AddDays(2)),
         };
 
-        var state = HousingLottery.Resolve(plots);
+        var state = HousingLottery.Resolve(plots, NowUtc);
 
         Assert.Equal(HousingLotteryPhase.Entry, state.Phase);
         Assert.Equal(NowUtc.AddDays(2), state.EndsUtc);
     }
 
     [Fact]
-    public void ResolveFallsBackToOtherPhasesWhenNoCycleIsReported()
+    public void ResolveFallsBackWithoutLottery()
     {
         var plots = new[]
         {
@@ -68,33 +68,74 @@ public sealed class HousingLotteryTests
             Plot(1, 2, HousingLotteryPhase.Unknown, NowUtc.AddHours(1)),
         };
 
-        var state = HousingLottery.Resolve(plots);
+        var state = HousingLottery.Resolve(plots, NowUtc);
 
         Assert.Equal(HousingLotteryPhase.Unavailable, state.Phase);
         Assert.True(state.IsKnown);
     }
 
     [Fact]
-    public void ResolveIsUnknownForAnEmptyDistrict()
+    public void EmptyDistrictIsUnknown()
     {
-        Assert.False(HousingLottery.Resolve(Array.Empty<HousingPlot>()).IsKnown);
+        Assert.False(HousingLottery.Resolve(Array.Empty<HousingPlot>(), NowUtc).IsKnown);
     }
 
     [Fact]
-    public void PreferKeepsTheSoonerCycleDeadlineAcrossDistricts()
+    public void PreferSoonerDeadline()
     {
         var later = new HousingLotteryState(HousingLotteryPhase.Entry, NowUtc.AddDays(3));
         var sooner = new HousingLotteryState(HousingLotteryPhase.Entry, NowUtc.AddDays(1));
         var unavailable = new HousingLotteryState(HousingLotteryPhase.Unavailable, NowUtc.AddHours(1));
 
-        Assert.Equal(sooner, HousingLottery.Prefer(later, sooner));
-        Assert.Equal(sooner, HousingLottery.Prefer(sooner, unavailable));
-        Assert.Equal(sooner, HousingLottery.Prefer(unavailable, sooner));
-        Assert.Equal(later, HousingLottery.Prefer(HousingLotteryState.Unknown, later));
+        Assert.Equal(sooner, HousingLottery.Prefer(later, sooner, NowUtc));
+        Assert.Equal(sooner, HousingLottery.Prefer(sooner, unavailable, NowUtc));
+        Assert.Equal(sooner, HousingLottery.Prefer(unavailable, sooner, NowUtc));
+        Assert.Equal(later, HousingLottery.Prefer(HousingLotteryState.Unknown, later, NowUtc));
     }
 
     [Fact]
-    public void SummarizeCountsSizesWardsAndTheFewestEntriesInTheEntryPhase()
+    public void ResolveSkipsEndedPhases()
+    {
+        var plots = new[]
+        {
+            Plot(1, 50, HousingLotteryPhase.Results, NowUtc.AddDays(-20)),
+            Plot(7, 44, HousingLotteryPhase.Entry, NowUtc.AddDays(-6)),
+            Plot(7, 13, HousingLotteryPhase.Entry, NowUtc.AddDays(3)),
+        };
+
+        var state = HousingLottery.Resolve(plots, NowUtc);
+
+        Assert.Equal(HousingLotteryPhase.Entry, state.Phase);
+        Assert.Equal(NowUtc.AddDays(3), state.EndsUtc);
+    }
+
+    [Fact]
+    public void ResolveFallsBackToLatestEnded()
+    {
+        var plots = new[]
+        {
+            Plot(1, 50, HousingLotteryPhase.Results, NowUtc.AddDays(-20)),
+            Plot(7, 13, HousingLotteryPhase.Entry, NowUtc.AddMinutes(-2)),
+        };
+
+        var state = HousingLottery.Resolve(plots, NowUtc);
+
+        Assert.Equal(HousingLotteryPhase.Entry, state.Phase);
+        Assert.Equal(NowUtc.AddMinutes(-2), state.EndsUtc);
+    }
+
+    [Fact]
+    public void PreferRunningOverEnded()
+    {
+        var ended = new HousingLotteryState(HousingLotteryPhase.Results, NowUtc.AddDays(-20));
+        var running = new HousingLotteryState(HousingLotteryPhase.Entry, NowUtc.AddDays(3));
+
+        Assert.Equal(running, HousingLottery.Prefer(ended, running, NowUtc));
+        Assert.Equal(running, HousingLottery.Prefer(running, ended, NowUtc));
+    }
+
+    [Fact]
+    public void SummarizeCountsPlots()
     {
         var plots = new[]
         {
@@ -116,7 +157,7 @@ public sealed class HousingLotteryTests
     }
 
     [Fact]
-    public void SummarizeReportsNoFewestEntriesWhenNoneWereScanned()
+    public void SummarizeWithoutEntries()
     {
         var stats = HousingLottery.Summarize(new[]
         {

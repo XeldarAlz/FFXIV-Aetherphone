@@ -149,6 +149,7 @@ internal sealed partial class HousingApp
         worldLottery = HousingLotteryState.Unknown;
         worldOpen = 0;
         worldFetchedUtc = default;
+        var now = DateTime.UtcNow;
         var districts = HousingDistricts.All;
         for (var index = 0; index < districts.Count; index++)
         {
@@ -168,7 +169,7 @@ internal sealed partial class HousingApp
                 worldFetchedUtc = snapshot.FetchedUtc;
             }
 
-            worldLottery = HousingLottery.Prefer(worldLottery, HousingLottery.Resolve(snapshot.Plots));
+            worldLottery = HousingLottery.Prefer(worldLottery, HousingLottery.Resolve(snapshot.Plots, now), now);
         }
     }
 
