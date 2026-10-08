@@ -111,6 +111,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         this.floor = floor;
         this.configuration = configuration;
         fameView = new Strip.FameView(floor);
+        stage.Feed = floor;
         this.session = session;
         this.coins = coins;
         this.casino = casino;

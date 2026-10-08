@@ -1,4 +1,6 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -15,7 +17,9 @@ internal sealed class BetsRail
     private const float PanelHeightShare = 0.7f;
     private const float RowHeight = 44f;
     private const float TabsHeight = 36f;
+    private const float FeedRowHeight = 52f;
     private const int MyBetsTab = 0;
+    private const int HighRollersTab = 2;
     private const int TabCount = 3;
 
     private readonly SheetSurface sheet = new("casino.bets");
@@ -23,6 +27,7 @@ internal sealed class BetsRail
     private readonly string[] tabLabels = new string[TabCount];
 
     private CasinoBetsLog log = null!;
+    private CasinoFloorStore? feed;
     private AppSkin skin = null!;
     private int tab;
     private string requestedRound = string.Empty;
@@ -78,10 +83,11 @@ internal sealed class BetsRail
         return UiInteract.Click(min, max, hovered);
     }
 
-    public void Draw(Rect screen, AppSkin ui, CasinoBetsLog bets)
+    public void Draw(Rect screen, AppSkin ui, CasinoBetsLog bets, CasinoFloorStore? floorFeed)
     {
         skin = ui;
         log = bets;
+        feed = floorFeed;
         sheet.Draw(screen, CasinoArt.Sheet(ui), Loc.T(L.Strip.Bets), PanelHeightShare, drawSheetBody);
     }
 
@@ -106,7 +112,60 @@ internal sealed class BetsRail
                 return;
             }
 
+            if (tab != MyBetsTab && FeedItems() is { Length: > 0 } items)
+            {
+                DrawFeedRows(items, scale);
+                return;
+            }
+
             DrawEmpty(tab == MyBetsTab ? L.Strip.MyBetsEmpty : L.Strip.FloorFeedEmpty, scale);
+        }
+    }
+
+    private CasinoFeedItemDto[]? FeedItems()
+    {
+        if (feed is null)
+        {
+            return null;
+        }
+
+        var key = tab == HighRollersTab ? CasinoFeedTabs.High : CasinoFeedTabs.All;
+        feed.EnsureFeed(key);
+        return feed.Feed(key)?.Items;
+    }
+
+    private void DrawFeedRows(CasinoFeedItemDto[] items, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var width = ScrollLayout.NativeScrollContentWidth();
+        var rowHeight = FeedRowHeight * scale;
+        var columnWidth = width * 0.2f;
+        var nameWidth = width - columnWidth * 3f - Metrics.Space.Sm * scale;
+        var nameHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
+        var gameHeight = Typography.LineHeight(TextStyles.Footnote);
+        for (var index = 0; index < items.Length; index++)
+        {
+            var item = items[index];
+            var origin = ImGui.GetCursorScreenPos();
+            var centerY = origin.Y + rowHeight * 0.5f;
+            var won = item.Payout > item.Stake;
+            var top = centerY - (nameHeight + gameHeight) * 0.5f;
+            var name = Strip.WinsTicker.NameOf(item.Player);
+            Typography.Draw(drawList, new Vector2(origin.X, top),
+                Typography.FitText(name, nameWidth, TextStyles.FootnoteEmphasized),
+                item.Player is null ? skin.BodyInk : skin.TitleInk, TextStyles.FootnoteEmphasized);
+            Typography.Draw(drawList, new Vector2(origin.X, top + nameHeight),
+                Typography.FitText(Loc.T(CasinoGameNames.Of(CasinoRecentGames.ClientGameId(item.GameKind))), nameWidth,
+                    TextStyles.Footnote), skin.BodyInk, TextStyles.Footnote);
+            var left = origin.X + width - columnWidth * 3f;
+            DrawCell(drawList, NumberText.Compact(item.Stake), left, columnWidth, centerY, skin.BodyInk);
+            DrawCell(drawList, CasinoMultiples.Label(item.MultiplierTenths * 10), left + columnWidth, columnWidth,
+                centerY, won ? CasinoColors.Money : skin.BodyInk);
+            DrawCell(drawList, NumberText.Compact(item.Payout), left + columnWidth * 2f, columnWidth, centerY,
+                won ? CasinoColors.Money : skin.BodyInk);
+            drawList.AddLine(new Vector2(origin.X, origin.Y + rowHeight), new Vector2(origin.X + width, origin.Y + rowHeight),
+                ImGui.GetColorU32(Palette.WithAlpha(skin.TitleInk, 0.06f)), 1f);
+            ImGui.Dummy(new Vector2(width, rowHeight));
         }
     }
 

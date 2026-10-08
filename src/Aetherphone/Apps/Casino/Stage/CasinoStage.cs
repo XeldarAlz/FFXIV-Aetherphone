@@ -67,6 +67,8 @@ internal sealed class CasinoStage
 
     public CasinoBetsLog Bets => bets;
 
+    public CasinoFloorStore? Feed { get; set; }
+
     public CasinoStageLayout Layout => layout;
 
     public float Phase => phase;
@@ -260,7 +262,7 @@ internal sealed class CasinoStage
 
         info.Draw(screen, ui, spec);
         SetInstant(spec.GameId, info.Instant);
-        betsRail.Draw(screen, ui, bets);
+        betsRail.Draw(screen, ui, bets, Feed);
     }
 
     public CasinoInfoRequest TakeInfoRequest() => info.TakeRequest();

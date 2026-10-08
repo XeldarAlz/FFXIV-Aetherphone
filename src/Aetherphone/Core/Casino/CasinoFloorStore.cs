@@ -438,6 +438,15 @@ internal sealed class CasinoFloorStore : IDisposable
 
         ticker = next;
         Interlocked.Increment(ref tickerVersion);
+        StaleFeeds();
+    }
+
+    private void StaleFeeds()
+    {
+        for (var index = 0; index < feedLoadedAt.Length; index++)
+        {
+            Interlocked.Exchange(ref feedLoadedAt[index], 0);
+        }
     }
 
     private void AbsorbRain(CasinoPayload payload)
