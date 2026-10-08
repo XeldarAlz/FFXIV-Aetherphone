@@ -10170,6 +10170,28 @@ internal static class L
         public static readonly LocString DaubHint = new("casino.bingo.daubHint", "Tap the called numbers. Prizes pay either way.");
     }
 
+    internal static class Plinko
+    {
+        public static readonly LocString Game = new("casino.plinko.game", "Plinko");
+        public static readonly LocString Pitch = new("casino.plinko.pitch", "Drop a ball through the pegs and watch it bounce into a slot. Pick the rows and the risk; the edge slots pay the most.");
+        public static readonly LocString RulesStep1 = new("casino.plinko.rulesStep1", "Pick 8, 12 or 16 rows and a risk of Low, Medium or High. The slots along the bottom show what each one pays.");
+        public static readonly LocString RulesStep2 = new("casino.plinko.rulesStep2", "Place your bet and drop. The ball bounces left or right at every row, and the server draws every bounce before it falls.");
+        public static readonly LocString RulesStep3 = new("casino.plinko.rulesStep3", "The slot it lands in multiplies your bet. The middle pays least; the edges pay the most and land the least.");
+        public static readonly LocString RulesStep4 = new("casino.plinko.rulesStep4", "Drop as often as you like: up to ten balls fall at once. Every board returns about 99%.");
+        public static readonly LocString DropFor = new("casino.plinko.dropFor", "Drop {0}");
+        public static readonly LocString RowsOption = new("casino.plinko.rowsOption", "{0} rows");
+        public static readonly LocString MaxWin = new("casino.plinko.maxWin", "Max win");
+        public static readonly LocString Edge = new("casino.plinko.edge", "Edge");
+        public static readonly LocString EdgeOdds = new("casino.plinko.edgeOdds", "1 in {0}");
+        public static readonly LocString NotOpenTitle = new("casino.plinko.notOpenTitle", "Not open yet");
+        public static readonly LocString NotOpenBody = new("casino.plinko.notOpenBody", "Plinko opens soon. Every other game on the floor is open.");
+        public static readonly LocString Hint = new("casino.plinko.hint", "Tap Drop as often as you like. Up to ten balls fall at once.");
+        public static readonly LocString RailEmpty = new("casino.plinko.railEmpty", "Your last drops land here.");
+        public static readonly LocString FactRows = new("casino.plinko.factRows", "Rows");
+        public static readonly LocString FactRowsValue = new("casino.plinko.factRowsValue", "8, 12 or 16");
+        public static readonly LocString ReturnRange = new("casino.plinko.returnRange", "{0} to {1}");
+    }
+
     internal static class Casino
     {
         public static readonly LocString SignInTitle = new("casino.signInTitle", "Sign in required");

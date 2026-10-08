@@ -32,6 +32,7 @@ internal static class CasinoVerifier
     private const string RaceRunnerPurpose = "runner";
     private const uint BarkeepJitterBound = 3;
     private const uint BarkeepStepCountBound = 3;
+    private const uint PegBound = 2;
 
     private static readonly uint ScratchWinnerBagSize = (ScratchRules.SymbolCount - 1) * 2;
     private static readonly uint ScratchLoserBagSize = ScratchRules.SymbolCount * 2;
@@ -453,6 +454,17 @@ internal static class CasinoVerifier
             return true;
         }
 
+        if (purpose.SequenceEqual(PlinkoRules.PegPurpose))
+        {
+            if (occurrence >= PlinkoRules.MaxRows)
+            {
+                return false;
+            }
+
+            bound = PegBound;
+            return true;
+        }
+
         if (purpose.Length < 2)
         {
             return false;
@@ -560,8 +572,17 @@ internal static class CasinoVerifier
 
         private int shoeSwaps;
 
+        private int pegs;
+
         public int Next(ReadOnlySpan<char> purpose)
         {
+            if (purpose.SequenceEqual(PlinkoRules.PegPurpose))
+            {
+                var taken = pegs;
+                pegs++;
+                return taken;
+            }
+
             if (purpose.SequenceEqual(BingoCardPurpose))
             {
                 var taken = cards;

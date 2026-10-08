@@ -50,6 +50,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly Cabinets.DailySpinCabinet dailySpin;
     private readonly Originals.OriginalsCabinet originals;
     private readonly Race.RaceCabinet race;
+    private readonly Plinko.PlinkoCabinet plinko;
     private readonly Tables.BlackjackTable blackjack;
     private readonly Tables.TableBrowser browser;
     private readonly Tables.HostSheet hostSheet;
@@ -109,6 +110,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         dailySpin = new Cabinets.DailySpinCabinet(casinoSpin);
         originals = new Originals.OriginalsCabinet(casino, casinoPlay.Originals, OpenCashier);
         race = new Race.RaceCabinet(casino, casinoRooms, OpenCashier, PopRoute);
+        plinko = new Plinko.PlinkoCabinet(casino, casinoPlay.Plinko, OpenCashier);
         blackjack = new Tables.BlackjackTable(casino, casinoRooms, casinoTables, casinoTurns, remoteImages,
             lodestone, OpenCashier, PopRoute, OpenLedger);
         playerLedger = new Tables.TableLedger(casinoTables, confirm);
@@ -156,6 +158,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         dailySpin.Reset();
         originals.Reset();
         race.Reset();
+        plinko.Reset();
         blackjack.Reset();
         browser.Reset();
         tableDoor.Reset();
@@ -186,6 +189,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         originals.Reset();
         race.Reset();
         AppLandscape.Release(Id);
+        plinko.Reset();
         blackjack.Reset();
         browser.Reset();
         tableDoor.Reset();
@@ -267,6 +271,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         bingo.Gate();
         originals.Gate();
         race.Gate();
+        plinko.Gate();
         rulesSheet.Gate();
         stage.Gate();
         SyncRaceLandscape();
@@ -277,6 +282,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         bingo.DrawOverlay(screenArea, ui);
         originals.DrawOverlay(screenArea, ui);
         race.DrawOverlay(screenArea, ui);
+        plinko.DrawOverlay(screenArea, ui);
         if (IsStage(router.Current))
         {
             stage.DrawOverlays(screenArea, ui);
@@ -376,6 +382,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Race, StringComparison.Ordinal):
                 race.Draw(stage, frame, ui, RaceLandscape());
                 break;
+            case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Plinko, StringComparison.Ordinal):
+                plinko.Draw(stage, frame, ui);
+                break;
             case CasinoScreen.Table:
                 blackjack.Draw(body, ui);
                 break;
@@ -418,6 +427,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 DeckHeight: Cabinets.WheelCabinet.DeckHeight),
             _ when Originals.OriginalsCabinet.Owns(route.GameId) => originals.SpecFor(route.GameId),
             CasinoGames.Race => race.Spec(RaceLandscape()),
+            CasinoGames.Plinko => plinko.Spec,
             _ => new CasinoStageSpec(route.GameId, GameName(route.GameId), Backdrop.Strip),
         };
     }
@@ -429,6 +439,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             && !Core.Casino.CasinoCurrencies.SeatBanked(blackjack.Currency))
         {
             return rack.Stack;
+        }
+
+        if (route.Screen == CasinoScreen.Cabinet
+            && string.Equals(route.GameId, CasinoGames.Plinko, StringComparison.Ordinal))
+        {
+            return plinko.DisplayStack();
         }
 
         return state?.Sitting?.Stack ?? 0;
@@ -651,6 +667,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         {
             originals.Reset();
             return;
+            return;
+        }
+
+        if (string.Equals(route.GameId, CasinoGames.Plinko, StringComparison.Ordinal))
+        {
+            plinko.Reset();
         }
 
         if (string.Equals(route.GameId, CasinoGames.Race, StringComparison.Ordinal))
@@ -860,6 +882,10 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         {
             race.Enter();
         }
+        else if (string.Equals(gameId, CasinoGames.Plinko, StringComparison.Ordinal))
+        {
+            plinko.Enter();
+        }
 
         router.Push(new CasinoRoute(CasinoScreen.Cabinet, gameId));
     }
@@ -893,6 +919,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         CasinoGames.Keno => L.Originals.GameKeno,
         CasinoGames.HiLo => L.Originals.GameHiLo,
         CasinoGames.Race => L.Race.Title,
+        CasinoGames.Plinko => L.Plinko.Game,
         _ => L.Apps.Casino,
     };
 

@@ -47,6 +47,9 @@ internal static class CasinoGlyphs
             case CasinoGames.Race:
                 DrawRace(drawList, center, extent, ink, hole);
                 break;
+            case CasinoGames.Plinko:
+                DrawPlinko(drawList, center, extent, ink, hole);
+                break;
             default:
                 DrawChip(drawList, center, extent, ink, hole);
                 break;
@@ -248,6 +251,26 @@ internal static class CasinoGlyphs
         drawList.AddLine(At(center, extent, -0.2f, 0.5f), At(center, extent, -0.42f, 0.95f), ink, extent * 0.12f);
         drawList.AddLine(At(center, extent, 0.04f, 0.5f), At(center, extent, 0.28f, 0.95f), ink, extent * 0.12f);
         drawList.AddCircleFilled(At(center, extent, -0.18f, 0.1f), extent * 0.2f, hole, 16);
+    }
+
+    private static void DrawPlinko(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var pegRadius = extent * 0.1f;
+        for (var row = 0; row < 3; row++)
+        {
+            var y = -0.42f + row * 0.36f;
+            for (var column = 0; column <= row + 1; column++)
+            {
+                var x = (column - (row + 1) * 0.5f) * 0.42f;
+                drawList.AddCircleFilled(At(center, extent, x, y), pegRadius, ink, 10);
+            }
+        }
+
+        drawList.AddRectFilled(At(center, extent, -0.86f, 0.6f), At(center, extent, 0.86f, 0.86f), ink,
+            extent * 0.1f);
+        var ball = At(center, extent, 0.21f, -0.24f);
+        drawList.AddCircleFilled(ball, extent * 0.2f, hole, 14);
+        drawList.AddCircleFilled(ball, extent * 0.14f, ink, 14);
     }
 
     private static void DrawChip(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)

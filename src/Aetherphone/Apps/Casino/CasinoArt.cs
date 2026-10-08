@@ -39,6 +39,7 @@ internal static class CasinoArt
         CasinoGames.Keno => AccentRing.Lime,
         CasinoGames.HiLo => AccentRing.Orchid,
         CasinoGames.Race => AccentRing.Lime,
+        CasinoGames.Plinko => AccentRing.Cyan,
         _ => AccentRing.Emerald,
     };
 

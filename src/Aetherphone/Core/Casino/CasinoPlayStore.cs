@@ -28,9 +28,12 @@ internal sealed class CasinoPlayStore : IDisposable
         this.casino = casino;
         this.store = store;
         Originals = new CasinoOriginalsStore(session, casino, store);
+        Plinko = new CasinoPlinkoStore(session, casino, store);
     }
 
     public CasinoOriginalsStore Originals { get; }
+
+    public CasinoPlinkoStore Plinko { get; }
 
     public bool RoundInFlight => roundInFlight;
 
@@ -400,6 +403,7 @@ internal sealed class CasinoPlayStore : IDisposable
     public void Dispose()
     {
         Originals.Dispose();
+        Plinko.Dispose();
         work.Dispose();
     }
 }

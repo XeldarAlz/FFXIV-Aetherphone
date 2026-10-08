@@ -316,6 +316,8 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(CasinoHiLoCallDto))]
 [JsonSerializable(typeof(CasinoHiLoDto))]
 [JsonSerializable(typeof(CasinoOriginalsOpenDto))]
+[JsonSerializable(typeof(CasinoPlinkoDropRequest))]
+[JsonSerializable(typeof(CasinoPlinkoDropDto))]
 [JsonSerializable(typeof(CasinoCashierDto))]
 [JsonSerializable(typeof(CasinoBonusDto))]
 [JsonSerializable(typeof(CasinoClubDto))]

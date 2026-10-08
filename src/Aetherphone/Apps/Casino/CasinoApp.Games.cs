@@ -71,6 +71,13 @@ internal sealed partial class CasinoApp
                     CasinoGames.Race, L.Race.Title, false, scale);
             }
 
+            cursorY += CardGap * scale;
+            using (ImRaii.PushId(CasinoGames.Plinko))
+            {
+                cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY), width, CasinoGames.Plinko,
+                    L.Plinko.Game, false, scale);
+            }
+
             cursorY = DrawTablesLink(drawList, new Vector2(origin.X, cursorY + CoinArt.SectionGap * scale), width,
                 scale);
             CoinArt.Reserve(origin, width, cursorY + CoinArt.BottomPad * scale);
@@ -161,7 +168,9 @@ internal sealed partial class CasinoApp
             ? texts.Number(L.Casino.MinimumStake, Core.Casino.RaceRules.MinBet)
             : Originals.OriginalsCabinet.Owns(gameId)
                 ? texts.Number(L.Casino.MinimumStake, Core.Casino.OriginalsRules.MinBet)
-                : MinimumStakeLine(gameId);
+                : string.Equals(gameId, CasinoGames.Plinko, StringComparison.Ordinal)
+                    ? texts.Number(L.Casino.MinimumStake, Core.Casino.PlinkoRules.MinBet)
+                    : MinimumStakeLine(gameId);
         if (stake.Length == 0)
         {
             return;

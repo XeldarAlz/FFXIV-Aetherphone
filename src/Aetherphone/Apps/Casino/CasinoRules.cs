@@ -99,6 +99,17 @@ internal static class CasinoRules
         L.Race.Rules4,
     };
 
+    private static readonly LocString[] PlinkoSteps =
+    {
+        L.Plinko.RulesStep1,
+        L.Plinko.RulesStep2,
+        L.Plinko.RulesStep3,
+        L.Plinko.RulesStep4,
+    };
+
+    private static string plinkoReturn = string.Empty;
+    private static LanguageInfo? plinkoReturnLanguage;
+
     public static LocString PitchOf(string gameId) => gameId switch
     {
         CasinoGames.Mines => L.Originals.PitchMines,
@@ -107,6 +118,7 @@ internal static class CasinoRules
         CasinoGames.Keno => L.Originals.PitchKeno,
         CasinoGames.HiLo => L.Originals.PitchHiLo,
         CasinoGames.Race => L.Race.Pitch,
+        CasinoGames.Plinko => L.Plinko.Pitch,
         CasinoGames.Slots => L.Casino.PitchSlots,
         CasinoGames.Scratch => L.Casino.PitchScratch,
         CasinoGames.Wheel => L.Casino.PitchWheel,
@@ -124,6 +136,7 @@ internal static class CasinoRules
         CasinoGames.Keno => L.Originals.GameKeno,
         CasinoGames.HiLo => L.Originals.GameHiLo,
         CasinoGames.Race => L.Race.Title,
+        CasinoGames.Plinko => L.Plinko.Game,
         CasinoGames.Slots => L.Casino.GameSlots,
         CasinoGames.Scratch => L.Casino.GameScratch,
         CasinoGames.Wheel => L.Casino.GameWheel,
@@ -141,6 +154,7 @@ internal static class CasinoRules
         CasinoGames.Keno => KenoSteps,
         CasinoGames.HiLo => HiLoSteps,
         CasinoGames.Race => RaceSteps,
+        CasinoGames.Plinko => PlinkoSteps,
         CasinoGames.Slots => SlotsSteps,
         CasinoGames.Scratch => ScratchSteps,
         CasinoGames.Wheel => WheelSteps,
@@ -180,6 +194,8 @@ internal static class CasinoRules
                 return OriginalsFact(index, Core.Casino.CasinoWire.HiLoKind, false, ref label, ref value);
             case CasinoGames.Race:
                 return RaceFact(index, ref label, ref value);
+            case CasinoGames.Plinko:
+                return PlinkoFact(index, ref label, ref value);
             default:
                 return false;
         }
@@ -209,6 +225,58 @@ internal static class CasinoRules
             default:
                 return false;
         }
+    }
+
+    private static bool PlinkoFact(int index, ref LocString label, ref string value)
+    {
+        switch (index)
+        {
+            case 0:
+                label = L.Originals.FactMinBet;
+                value = Number(Core.Casino.PlinkoRules.MinBet);
+                return true;
+            case 1:
+                label = L.Plinko.FactRows;
+                value = Loc.T(L.Plinko.FactRowsValue);
+                return true;
+            case 2:
+                label = L.Originals.FactTopMultiplier;
+                value = Stage.CasinoMultiples.Label(Core.Casino.PlinkoRules.TopTenths
+                    * Core.Casino.PlinkoRules.TenthsPerMultiple);
+                return true;
+            case 3:
+                label = L.Strip.Return;
+                value = PlinkoReturnRange();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static string PlinkoReturnRange()
+    {
+        if (ReferenceEquals(plinkoReturnLanguage, Loc.Current))
+        {
+            return plinkoReturn;
+        }
+
+        var lowest = int.MaxValue;
+        var highest = 0;
+        for (var rowsIndex = 0; rowsIndex < Core.Casino.PlinkoRules.RowCounts.Length; rowsIndex++)
+        {
+            for (var risk = 0; risk < Core.Casino.PlinkoRules.RiskCount; risk++)
+            {
+                var basisPoints = Core.Casino.PlinkoRules.ReturnBasisPoints(Core.Casino.PlinkoRules.RowCounts[rowsIndex],
+                    risk);
+                lowest = Math.Min(lowest, basisPoints);
+                highest = Math.Max(highest, basisPoints);
+            }
+        }
+
+        plinkoReturnLanguage = Loc.Current;
+        plinkoReturn = Loc.T(L.Plinko.ReturnRange, Originals.OriginalsText.Percent(lowest),
+            Originals.OriginalsText.Percent(highest));
+        return plinkoReturn;
     }
 
     private static bool SlotsFact(int index, ref LocString label, ref string value)
