@@ -36,6 +36,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
     private readonly CasinoStore store;
     private readonly CasinoPlinkoStore plinko;
     private readonly Action openCashier;
+    private readonly CasinoPreferences preferences;
     private readonly BetComposer composer = new("##plinkoDrop");
     private readonly PlinkoFlight flight = new();
     private readonly PlinkoBoardFx fx = new();
@@ -62,8 +63,12 @@ internal sealed class PlinkoCabinet : ICabinetIdle
     private int autoLaunched;
     private float idleTimer;
 
-    public PlinkoCabinet(CasinoStore store, CasinoPlinkoStore plinko, Action openCashier)
+    public PlinkoCabinet(CasinoStore store, CasinoPlinkoStore plinko, Action openCashier,
+        CasinoPreferences preferences)
     {
+        this.preferences = preferences;
+        rows = preferences.PlinkoRows;
+        risk = preferences.PlinkoRisk;
         this.store = store;
         this.plinko = plinko;
         this.openCashier = openCashier;
@@ -97,6 +102,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
 
     public void Reset()
     {
+        preferences.RememberPlinko(rows, risk);
         flight.Clear();
         fx.Clear();
         for (var index = 0; index < trails.Length; index++)
@@ -420,7 +426,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
         {
             Typography.DrawWrappedCentered(drawList,
                 Loc.T(state.StakesPaused ? L.Casino.PausedTitle : L.Casino.DrainingTitle), TextStyles.Subheadline,
-                ui.MutedInk, new Vector2(area.Center.X, area.Min.Y), area.Width);
+                CasinoColors.InkBody, new Vector2(area.Center.X, area.Min.Y), area.Width);
             return;
         }
 

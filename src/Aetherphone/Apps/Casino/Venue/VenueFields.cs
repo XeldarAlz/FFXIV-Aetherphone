@@ -90,7 +90,7 @@ internal static class VenueFields
         var origin = ImGui.GetCursorScreenPos();
         var top = origin.Y + Metrics.Space.Xs * scale;
         var height = Typography.DrawWrappedLeft(new Vector2(origin.X + Metrics.Space.Lg * scale, top), text,
-            ui.MutedInk, TextStyles.Footnote, width - Metrics.Space.Lg * 2f * scale);
+            ui.BodyInk, TextStyles.Footnote, width - Metrics.Space.Lg * 2f * scale);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height + Metrics.Space.Xs * 2f * scale));
         return height;

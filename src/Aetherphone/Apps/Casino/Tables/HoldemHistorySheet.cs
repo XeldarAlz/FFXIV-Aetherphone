@@ -197,7 +197,7 @@ internal sealed class HoldemHistorySheet
             var message = Loc.T(failed ? L.Holdem.HistoryFailed
                 : store.HistoryLoading ? L.Holdem.HistoryLoading : L.Holdem.HistoryEmpty);
             var origin = ImGui.GetCursorScreenPos();
-            var height = Typography.DrawWrappedLeft(origin, message, ui.MutedInk, TextStyles.Footnote, width);
+            var height = Typography.DrawWrappedLeft(origin, message, ui.BodyInk, TextStyles.Footnote, width);
             ImGui.Dummy(new Vector2(width, height + Metrics.Space.Md * scale));
             return;
         }
@@ -411,7 +411,7 @@ internal sealed class HoldemHistorySheet
             if (detail.Length > 0)
             {
                 Typography.Draw(drawList, new Vector2(textLeft, centerY),
-                    Typography.FitText(detail, nameWidth, TextStyles.Caption1), ui.MutedInk, TextStyles.Caption1);
+                    Typography.FitText(detail, nameWidth, TextStyles.Footnote), ui.BodyInk, TextStyles.Footnote);
             }
 
             Typography.Draw(drawList, new Vector2(origin.X + width - amountSize.X, centerY - amountSize.Y * 0.5f),
@@ -474,17 +474,17 @@ internal sealed class HoldemHistorySheet
         var origin = ImGui.GetCursorScreenPos();
         var line = texts.Numbers(L.Holdem.BlindsLine, hand.SmallBlind, hand.BigBlind);
         var rake = hand.Rake > 0 ? texts.Number(L.Holdem.RakeLine, hand.Rake) : string.Empty;
-        var height = Typography.DrawWrappedLeft(origin, line, ui.MutedInk, TextStyles.Caption1, width);
+        var height = Typography.DrawWrappedLeft(origin, line, ui.BodyInk, TextStyles.Footnote, width);
         if (rake.Length > 0)
         {
             height += Typography.DrawWrappedLeft(new Vector2(origin.X, origin.Y + height), rake, ui.MutedInk,
-                TextStyles.Caption1, width);
+                TextStyles.Footnote, width);
         }
 
         if (hand.Seed.Length > 0)
         {
             height += Typography.DrawWrappedLeft(new Vector2(origin.X, origin.Y + height),
-                texts.Named(L.Holdem.SeedLine, hand.Seed), ui.MutedInk, TextStyles.Caption2, width);
+                texts.Named(L.Holdem.SeedLine, hand.Seed), ui.BodyInk, TextStyles.Footnote, width);
         }
 
         ImGui.Dummy(new Vector2(width, height + Metrics.Space.Lg * scale));

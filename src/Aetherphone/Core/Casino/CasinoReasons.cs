@@ -92,9 +92,11 @@ internal static class CasinoReasons
     public const string Settled = "settled";
     public const string GilOnly = "gil_only";
     public const string MachineUnknown = "machine_unknown";
+    public const string MissionIncomplete = "mission_incomplete";
 
     public static readonly string[] All =
     {
+        MissionIncomplete,
         Ceiling,
         Ladder,
         BonusNotReady,
@@ -188,6 +190,7 @@ internal static class CasinoReasons
         [Ceiling] = L.Strip.ReasonCeiling,
         [Ladder] = L.Strip.ReasonLadder,
         [BonusNotReady] = L.Strip.ReasonBonusNotReady,
+        [MissionIncomplete] = L.Club.ReasonMissionIncomplete,
         [ClubInsufficient] = L.Strip.ReasonClubInsufficient,
         [ConfigInvalid] = L.Tables.ReasonConfigInvalid,
         [PracticeOnly] = L.Tables.ReasonPracticeOnly,

@@ -67,6 +67,8 @@ internal sealed class CasinoStage
 
     public CasinoBetsLog Bets => bets;
 
+    public CasinoFloorStore? Feed { get; set; }
+
     public CasinoStageLayout Layout => layout;
 
     public float Phase => phase;
@@ -78,7 +80,9 @@ internal sealed class CasinoStage
     public static Vector4 AccentFor(Backdrop preset) =>
         preset == Games.Framework.Backdrop.Felt ? AccentRing.Emerald : AppAccents.For("casino");
 
-    public bool InstantFor(string gameId) => instantGames.Contains(gameId);
+    public CasinoPreferences? Preferences { get; set; }
+
+    public bool InstantFor(string gameId) => Preferences?.Instant(gameId) ?? instantGames.Contains(gameId);
 
     public void Reset()
     {
@@ -260,7 +264,7 @@ internal sealed class CasinoStage
 
         info.Draw(screen, ui, spec);
         SetInstant(spec.GameId, info.Instant);
-        betsRail.Draw(screen, ui, bets);
+        betsRail.Draw(screen, ui, bets, Feed);
     }
 
     public CasinoInfoRequest TakeInfoRequest() => info.TakeRequest();
@@ -280,6 +284,7 @@ internal sealed class CasinoStage
             return;
         }
 
+        Preferences?.RememberInstant(gameId, instant);
         if (instant)
         {
             instantGames.Add(gameId);

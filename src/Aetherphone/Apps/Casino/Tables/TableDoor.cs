@@ -293,7 +293,7 @@ internal sealed class TableDoor
         Typography.Draw(drawList, new Vector2(card.Min.X + pad, card.Min.Y + pad), Loc.T(L.Casino.DoorInviteHeading),
             ui.TitleInk, TextStyles.SubheadlineEmphasized);
         Typography.DrawWrappedLeft(new Vector2(card.Min.X + pad, card.Min.Y + pad + 20f * scale), shareText,
-            ui.MutedInk, TextStyles.Footnote, width - pad * 2f);
+            ui.BodyInk, TextStyles.Footnote, width - pad * 2f);
 
         var pillRect = new Rect(new Vector2(card.Min.X + pad, card.Max.Y - PillHeight * scale - pad),
             new Vector2(card.Max.X - pad, card.Max.Y - pad));
@@ -352,7 +352,7 @@ internal sealed class TableDoor
         var min = origin;
         var max = new Vector2(origin.X + width, origin.Y + height);
         ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
-        Typography.DrawWrappedLeft(new Vector2(min.X + pad, min.Y + pad), text, ui.MutedInk, TextStyles.Footnote,
+        Typography.DrawWrappedLeft(new Vector2(min.X + pad, min.Y + pad), text, ui.BodyInk, TextStyles.Footnote,
             width - pad * 2f);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height + RowGap * scale));

@@ -73,7 +73,7 @@ internal sealed class ScratchOddsSheet
         var intro = Loc.T(L.Casino.ScratchOddsIntro);
         var introOrigin = ImGui.GetCursorScreenPos();
         var introBlock = Typography.MeasureWrappedBlock(intro, TextStyles.Footnote, width);
-        Typography.DrawWrappedLeft(introOrigin, intro, ui.MutedInk, TextStyles.Footnote, width);
+        Typography.DrawWrappedLeft(introOrigin, intro, ui.BodyInk, TextStyles.Footnote, width);
         ImGui.Dummy(new Vector2(width, introBlock.Y + 10f * scale));
 
         var priceOrigin = ImGui.GetCursorScreenPos();
@@ -86,9 +86,9 @@ internal sealed class ScratchOddsSheet
         var chanceHeaderSize = Typography.Measure(chanceHeader, TextStyles.FootnoteEmphasized);
         Typography.Draw(drawList, new Vector2(headerOrigin.X + 44f * scale, headerOrigin.Y + 6f * scale),
             Typography.FitText(Loc.T(L.Casino.ScratchOddsPrize), width - chanceHeaderSize.X - 52f * scale,
-                TextStyles.FootnoteEmphasized), ui.MutedInk, TextStyles.FootnoteEmphasized);
+                TextStyles.FootnoteEmphasized), ui.BodyInk, TextStyles.FootnoteEmphasized);
         Typography.Draw(drawList, new Vector2(headerOrigin.X + width - chanceHeaderSize.X, headerOrigin.Y + 6f * scale),
-            chanceHeader, ui.MutedInk, TextStyles.FootnoteEmphasized);
+            chanceHeader, ui.BodyInk, TextStyles.FootnoteEmphasized);
         ImGui.Dummy(new Vector2(width, 24f * scale));
 
         var table = ScratchRules.PrizeTables[tier];

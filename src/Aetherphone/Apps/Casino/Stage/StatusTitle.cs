@@ -23,7 +23,7 @@ internal static class StatusTitle
     public const long Legend = 1_000_000_000_000;
 
     private const float PaddingX = 9f;
-    private const float Height = 20f;
+    private const float Height = 24f;
 
     private static readonly long[] Thresholds = { Legend, Whale, Vip, HighRoller, Shark };
     private static readonly BalanceTitle[] Titles =
@@ -74,7 +74,7 @@ internal static class StatusTitle
         }
 
         var text = Loc.T(Label(title));
-        var size = Typography.Measure(text, TextStyles.Caption2);
+        var size = Typography.Measure(text, TextStyles.FootnoteEmphasized);
         return MathF.Min(maxWidth, size.X + PaddingX * 2f * scale);
     }
 
@@ -92,8 +92,8 @@ internal static class StatusTitle
         var max = center + half;
         Squircle.Fill(drawList, min, max, half.Y, ImGui.GetColorU32(tint with { W = 0.18f }));
         Squircle.Stroke(drawList, min, max, half.Y, ImGui.GetColorU32(tint with { W = 0.75f }), MathF.Max(1f, scale));
-        var text = Typography.FitText(Loc.T(Label(title)), width - PaddingX * 2f * scale, TextStyles.Caption2);
-        Typography.DrawCentered(drawList, center, text, tint, TextStyles.Caption2);
+        var text = Typography.FitText(Loc.T(Label(title)), width - PaddingX * 2f * scale, TextStyles.FootnoteEmphasized);
+        Typography.DrawCentered(drawList, center, text, tint, TextStyles.FootnoteEmphasized);
         return width;
     }
 }

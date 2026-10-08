@@ -58,6 +58,13 @@ public sealed class CasinoReasonCoverageTests
     }
 
     [Fact]
+    public void TheMissionRefusalIsCovered()
+    {
+        Assert.Contains("mission_incomplete", CasinoReasons.All);
+        Assert.Equal(L.Club.ReasonMissionIncomplete.Key, CasinoReasons.MessageFor("mission_incomplete").Key);
+    }
+
+    [Fact]
     public void TheBonusAndHostingRefusalsAreCovered()
     {
         var reasons = new[]

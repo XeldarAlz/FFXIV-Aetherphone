@@ -20,6 +20,24 @@ internal static class CasinoFeatures
 
     public const string Machines = "machines";
 
+    public const string Missions = "missions";
+
+    public const string Challenges = "challenges";
+
+    public const string Fame = "fame";
+
+    public const string Feed = "feed";
+
+    public const string Rain = "rain";
+
+    public const string Holdem = "holdem";
+
+    public const string Race = "race";
+
+    public const string Plinko = "plinko";
+
+    public const string Originals = "originals";
+
     public static bool Has(CasinoStateDto? state, string feature)
     {
         var features = state?.Features;
@@ -161,6 +179,8 @@ internal static class CasinoClubTiers
 
 internal static class CasinoCashier
 {
+    public const long DailyNetCashOutCoinsFallback = 500;
+
     public static long WholeCoins(long chips, long rate)
     {
         return chips <= 0 || rate <= 0 ? 0 : chips / rate;

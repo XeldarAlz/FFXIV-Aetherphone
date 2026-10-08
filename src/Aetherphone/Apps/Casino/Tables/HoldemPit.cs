@@ -23,7 +23,7 @@ internal readonly record struct HoldemRoomView(
 internal sealed class HoldemPit
 {
     private const float HeroHeight = 112f;
-    private const float RoomHeight = 92f;
+    private const float RoomHeight = 102f;
     private const float RowGap = 10f;
     private const float HostRowHeight = 60f;
 
@@ -228,7 +228,7 @@ internal sealed class HoldemPit
         var badgeWidth = 0f;
         if (badge.Length > 0)
         {
-            badgeWidth = Typography.Measure(badge, TextStyles.Caption1).X + 30f * scale;
+            badgeWidth = Typography.Measure(badge, TextStyles.Footnote).X + 30f * scale;
             var badgeMax = new Vector2(rect.Max.X - pad, y + 20f * scale);
             var badgeMin = new Vector2(badgeMax.X - badgeWidth, y);
             Squircle.Fill(drawList, badgeMin, badgeMax, 10f * scale,
@@ -236,8 +236,8 @@ internal sealed class HoldemPit
             PhoneIcon.Draw(drawList, new Vector2(badgeMin.X + 11f * scale, (badgeMin.Y + badgeMax.Y) * 0.5f), LockGlyph,
                 CasinoColors.Money, 11f * scale);
             Typography.Draw(drawList, new Vector2(badgeMin.X + 20f * scale,
-                    (badgeMin.Y + badgeMax.Y) * 0.5f - Typography.LineHeight(TextStyles.Caption1) * 0.5f), badge,
-                CasinoColors.Money, TextStyles.Caption1);
+                    (badgeMin.Y + badgeMax.Y) * 0.5f - Typography.LineHeight(TextStyles.Footnote) * 0.5f), badge,
+                CasinoColors.Money, TextStyles.Footnote);
         }
 
         Typography.Draw(drawList, new Vector2(left, y),
@@ -248,15 +248,15 @@ internal sealed class HoldemPit
             CasinoColors.Money, TextStyles.Footnote);
         y += Typography.LineHeight(TextStyles.Footnote);
         var detail = view.Locked ? Loc.T(L.Holdem.RoyalLocked) : view.BuyIn;
-        Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(detail, textWidth, TextStyles.Caption1),
-            ui.MutedInk, TextStyles.Caption1);
-        y += Typography.LineHeight(TextStyles.Caption1) + 3f * scale;
+        Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(detail, textWidth, TextStyles.Footnote),
+            ui.BodyInk, TextStyles.Footnote);
+        y += Typography.LineHeight(TextStyles.Footnote) + 3f * scale;
         var dotsWidth = CasinoArt.SeatDots(drawList, new Vector2(left, y + 4f * scale), view.Seated, view.MaxSeats,
             ui.Accent, ui.MutedInk with { W = 0.3f }, scale);
         Typography.Draw(drawList, new Vector2(left + dotsWidth + Metrics.Space.Sm * scale,
-                y + 4f * scale - Typography.LineHeight(TextStyles.Caption1) * 0.5f),
-            Typography.FitText(view.Seats, textWidth - dotsWidth - Metrics.Space.Sm * scale, TextStyles.Caption1),
-            ui.BodyInk, TextStyles.Caption1);
+                y + 4f * scale - Typography.LineHeight(TextStyles.Footnote) * 0.5f),
+            Typography.FitText(view.Seats, textWidth - dotsWidth - Metrics.Space.Sm * scale, TextStyles.Footnote),
+            ui.BodyInk, TextStyles.Footnote);
         if (UiInteract.Click(rect.Min, rect.Max, hovered))
         {
             inlineReason = string.Empty;

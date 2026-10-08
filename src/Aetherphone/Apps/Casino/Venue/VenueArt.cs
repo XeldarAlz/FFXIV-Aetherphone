@@ -15,8 +15,9 @@ internal static class VenueArt
     public const float RowHeight = 30f;
     public const float RowPad = 12f;
     public const float LineGap = 4f;
-    public const float DeckPad = 16f;
-    public const float ButtonGap = 8f;
+    private const string CaptionMarquee = "venue.deck.caption";
+    private const string StateMarquee = "venue.state";
+    private const string StatusMarquee = "venue.status";
 
     public static float DrawSign(ImDrawListPtr drawList, CasinoSign sign, Rect area, float phase, float scale)
     {
@@ -62,8 +63,12 @@ internal static class VenueArt
     public static void Line(ImDrawListPtr drawList, string text, Vector2 center, float width, Vector4 ink,
         in TextStyle style)
     {
-        var fitted = Typography.FitText(text, width, style);
-        Typography.DrawCentered(drawList, center, fitted, ink, style);
+        var resolved = StageText.Resolve(StageTextRole.Status, style);
+        var fitted = Typography.FitText(text, width, resolved);
+        var shadow = MathF.Max(1f, StageText.ShadowOffset * UiScale.Current);
+        Typography.DrawCentered(drawList, center + new Vector2(0f, shadow), fitted,
+            StageText.Shadow with { W = StageText.Shadow.W * ink.W }, resolved);
+        Typography.DrawCentered(drawList, center, fitted, ink, resolved);
     }
 
     public static void LeftLine(ImDrawListPtr drawList, string text, Vector2 topLeft, float width, Vector4 ink,
@@ -74,47 +79,52 @@ internal static class VenueArt
 
     public static Rect DeckPrimary(Rect deck, float secondaryWidth, float scale)
     {
-        var pad = DeckPad * scale;
-        var height = Button.LargeHeight * scale;
-        var top = deck.Max.Y - pad - height;
-        var right = deck.Max.X - pad - (secondaryWidth > 0f ? secondaryWidth + ButtonGap * scale : 0f);
-        return new Rect(new Vector2(deck.Min.X + pad, top), new Vector2(right, top + height));
+        var row = DeckActions.Row(deck, scale);
+        if (secondaryWidth <= 0f)
+        {
+            return row;
+        }
+
+        var secondary = DeckActions.Secondary(row, row.Min.X, secondaryWidth, scale);
+        return DeckActions.Primary(row, DeckActions.Advance(secondary, scale));
     }
 
     public static Rect DeckSecondary(Rect deck, float width, float scale)
     {
-        var pad = DeckPad * scale;
-        var height = Button.LargeHeight * scale;
-        var top = deck.Max.Y - pad - height;
-        return new Rect(new Vector2(deck.Max.X - pad - width, top), new Vector2(deck.Max.X - pad, top + height));
+        var row = DeckActions.Row(deck, scale);
+        return DeckActions.Secondary(row, row.Min.X, width, scale);
     }
 
     public static float SecondaryWidth(string label)
     {
-        return label.Length == 0 ? 0f : Button.WidthFor(label, ButtonSize.Large);
+        if (label.Length == 0)
+        {
+            return 0f;
+        }
+
+        var scale = UiScale.Current;
+        var height = DeckActions.PrimaryHeight * scale;
+        return DeckActions.PillWidth(Typography.Measure(label, Button.LabelStyle(height)).X, height, scale);
     }
 
     public static float DeckCaption(ImDrawListPtr drawList, Rect deck, string text, float scale)
     {
-        var pad = DeckPad * scale;
-        var top = deck.Min.Y + pad * 0.75f;
-        LeftLine(drawList, text, new Vector2(deck.Min.X + pad, top), deck.Width - pad * 2f, CasinoColors.InkTitle,
-            TextStyles.SubheadlineEmphasized);
-        return top + Typography.LineHeight(TextStyles.SubheadlineEmphasized);
+        var row = DeckActions.Row(deck, scale);
+        var lineHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
+        var above = DeckActions.Above(row, lineHeight, scale);
+        StageText.Label(drawList, above.Center, text, above.Width, CaptionMarquee, TextStyles.SubheadlineEmphasized,
+            false);
+        return above.Max.Y;
     }
 
     public static void StateLine(ImDrawListPtr drawList, string text, Vector2 center, float width, Vector4 ink,
         float scale)
     {
-        var style = TextStyles.Title2;
-        var fitted = Typography.FitText(text, width, style);
-        Typography.DrawCentered(drawList, center + new Vector2(0f, 1.5f * scale), fitted,
-            new Vector4(0f, 0f, 0f, 0.55f), style);
-        Typography.DrawCentered(drawList, center, fitted, ink, style);
+        StageText.State(drawList, center, text, width, StateMarquee, TextStyles.Title2, ink);
     }
 
     public static void Status(ImDrawListPtr drawList, string text, Vector2 center, float width)
     {
-        Line(drawList, text, center, width, CasinoColors.InkBody, TextStyles.Subheadline);
+        StageText.Label(drawList, center, text, width, StatusMarquee, TextStyles.Subheadline, false);
     }
 }

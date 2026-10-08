@@ -19,7 +19,7 @@ internal sealed class CashierBonusShelf
     public const float RowHeight = 62f;
 
     private const float TileSize = 34f;
-    private const float ClaimHeight = Button.SmallHeight;
+    private const float ClaimHeight = Button.LargeHeight;
     private const float ClaimMinWidth = 78f;
     private const float StreakDot = 6f;
     private const float StreakGap = 5f;
@@ -79,6 +79,7 @@ internal sealed class CashierBonusShelf
     private float showerLeft;
     private Vector2 showerOrigin;
     private string note = string.Empty;
+    private string refusal = string.Empty;
     private bool noteIsGrant;
 
     public CashierBonusShelf(CasinoStore store)
@@ -87,6 +88,36 @@ internal sealed class CashierBonusShelf
     }
 
     public string Note => note;
+
+    public void Claim(string kind, Vector2 origin)
+    {
+        var index = CasinoBonusKinds.IndexOf(kind);
+        if (index < 0 || store.ClaimingBonus.Length > 0)
+        {
+            return;
+        }
+
+        claimCenters[index] = origin;
+        ClearNote();
+        store.ClaimBonus(kind);
+        UiFeedback.Play(UiSound.CasinoChips);
+    }
+
+    public void Shower(Vector2 origin, float scale)
+    {
+        showerOrigin = origin;
+        shower.Emit(CasinoLights.CoinShower(scale), showerOrigin, ShowerBurst);
+        emitter = CasinoLights.CoinShowerEmitter(scale, ShowerRate);
+        showerLeft = ShowerSeconds;
+        UiFeedback.Play(UiSound.CoinShower);
+    }
+
+    public string TakeRefusal()
+    {
+        var taken = refusal;
+        refusal = string.Empty;
+        return taken;
+    }
 
     public bool NoteIsGrant => noteIsGrant;
 
@@ -213,7 +244,7 @@ internal sealed class CashierBonusShelf
 
         var claimLabel = bonus.Ready ? texts.Compact(L.Strip.BonusClaim, bonus.Amount) : StateLabel(bonus, nowUnix);
         var buttonHeight = ClaimHeight * scale;
-        var buttonWidth = MathF.Max(ClaimMinWidth * scale, Button.WidthFor(claimLabel, ButtonSize.Small));
+        var buttonWidth = MathF.Max(ClaimMinWidth * scale, Button.WidthFor(claimLabel, ButtonSize.Large));
         var buttonRect = new Rect(new Vector2(row.Max.X - pad - buttonWidth, row.Center.Y - buttonHeight * 0.5f),
             new Vector2(row.Max.X - pad, row.Center.Y + buttonHeight * 0.5f));
         var textLeft = tileCenter.X + tile * 0.5f + 12f * scale;
@@ -232,7 +263,7 @@ internal sealed class CashierBonusShelf
             var size = Typography.Measure(claimLabel, TextStyles.FootnoteEmphasized);
             var fitted = Typography.FitText(claimLabel, buttonWidth + pad * 0.5f, TextStyles.FootnoteEmphasized);
             Typography.Draw(drawList, new Vector2(buttonRect.Max.X - MathF.Min(size.X, buttonWidth + pad * 0.5f),
-                    buttonRect.Center.Y - size.Y * 0.5f), fitted, ui.MutedInk, TextStyles.FootnoteEmphasized);
+                    buttonRect.Center.Y - size.Y * 0.5f), fitted, ui.BodyInk, TextStyles.FootnoteEmphasized);
             return;
         }
 
@@ -318,6 +349,7 @@ internal sealed class CashierBonusShelf
         if (store.TakeBonusFailure())
         {
             note = Loc.T(CasinoReasons.MessageFor(CasinoReasons.Unreachable));
+            refusal = note;
             noteIsGrant = false;
         }
 
@@ -330,6 +362,7 @@ internal sealed class CashierBonusShelf
         if (!result.Granted)
         {
             note = Loc.T(CasinoReasons.MessageFor(result.Reason.Length > 0 ? result.Reason : CasinoReasons.Unreachable));
+            refusal = note;
             noteIsGrant = false;
             return;
         }

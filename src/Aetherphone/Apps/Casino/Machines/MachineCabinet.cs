@@ -37,6 +37,7 @@ internal sealed partial class MachineCabinet
     private readonly CasinoPlayStore play;
     private readonly ConfirmService confirm;
     private readonly Action openCashier;
+    private readonly CasinoPreferences preferences;
     private readonly MachineRoundPlayback playback = new();
     private readonly MachineReels reels = new();
     private readonly MachinePaySheet paySheet = new();
@@ -68,8 +69,10 @@ internal sealed partial class MachineCabinet
     private Rect strip;
     private Rect glass;
 
-    public MachineCabinet(CasinoStore store, CasinoPlayStore play, ConfirmService confirm, Action openCashier)
+    public MachineCabinet(CasinoStore store, CasinoPlayStore play, ConfirmService confirm, Action openCashier,
+        CasinoPreferences preferences)
     {
+        this.preferences = preferences;
         this.store = store;
         this.play = play;
         this.confirm = confirm;
@@ -133,6 +136,11 @@ internal sealed partial class MachineCabinet
         machineId = id;
         machineIndex = index;
         inlineReason = string.Empty;
+        var remembered = preferences.MachineBet(id);
+        if (remembered > 0 && !Composer.Auto.Running)
+        {
+            Composer.Reset(remembered);
+        }
         meterBet = -1;
         reels.Rest(id);
         play.RecoverPendingRound();
@@ -140,6 +148,11 @@ internal sealed partial class MachineCabinet
 
     public void Reset()
     {
+        if (machineId.Length > 0)
+        {
+            preferences.RememberMachineBet(machineId, Composer.Amount);
+        }
+
         ClearRound();
         paySheet.Close();
         for (var index = 0; index < composers.Length; index++)
@@ -249,7 +262,7 @@ internal sealed partial class MachineCabinet
         DrawDeck(stage, frame, ui, state, sitting, scale);
     }
 
-    private static int IndexOf(string id)
+    internal static int IndexOf(string id)
     {
         for (var index = 0; index < MachineIds.Length; index++)
         {

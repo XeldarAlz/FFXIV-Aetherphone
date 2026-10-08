@@ -385,7 +385,7 @@ internal sealed class CashierDrawer
         Typography.Draw(drawList, new Vector2(min.X + pad, min.Y + pad), title, ui.Accent,
             TextStyles.FootnoteEmphasized);
         Typography.DrawWrappedLeft(new Vector2(min.X + pad, min.Y + pad + titleSize.Y + 6f * scale), hint,
-            ui.MutedInk, TextStyles.Footnote, innerWidth - pad * 2f);
+            ui.BodyInk, TextStyles.Footnote, innerWidth - pad * 2f);
         return max.Y;
     }
 
