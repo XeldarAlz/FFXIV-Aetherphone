@@ -150,10 +150,10 @@ public sealed class CasinoEconomyWireContractTests
         Assert.Equal(100_000, CasinoChipLots.JackpotCapCoins);
         Assert.Equal(20_000, CasinoHostingRules.ChipMinBuyIn);
         Assert.Equal(5_000_000, CasinoHostingRules.ChipMaxBuyIn);
-        Assert.Equal(new long[] { 5_000, 10_000, 25_000, 50_000 }, ScratchRules.Prices);
+        Assert.Equal(new long[] { 250, 1_000, 5_000, 25_000, 100_000 }, ScratchRules.Prices);
         Assert.Equal(50_000, WheelRules.MaxStakePerSpot);
         Assert.Equal(200_000, WheelRules.MaxStakePerRound);
-        Assert.Equal(20_000, BarkeepRules.EntryChips);
+        Assert.Equal(2_000, BarkeepRules.EntryChips);
         Assert.Equal(new long[] { 2_500, 10_000, 25_000 }, BlackjackRules.HouseTierMinBets);
         Assert.Equal(new long[] { 25_000, 50_000, 100_000 }, BlackjackRules.HouseTierMaxBets);
         Assert.Equal(500, BlackjackRules.MinBet);
