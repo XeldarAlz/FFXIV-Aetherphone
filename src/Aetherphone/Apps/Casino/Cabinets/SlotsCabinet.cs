@@ -773,7 +773,7 @@ internal sealed class SlotsCabinet
                     center.Y - 20f * scale, width, TextStyles.FootnoteEmphasized, Gold);
             }
 
-            var amount = "+" + NumberText.Group((long)winRoll.Display);
+            var amount = NumberText.Signed(winRoll.Display);
             Typography.DrawCentered(drawList, center with { Y = center.Y + (bigWin ? 4f : -4f) * scale }, amount,
                 Gold, TextStyles.Title1.Scale * winRoll.PopScale, TextStyles.Title1.Weight);
             if (playback.CapApplied && playback.Phase == SlotsPlaybackPhase.Finished)

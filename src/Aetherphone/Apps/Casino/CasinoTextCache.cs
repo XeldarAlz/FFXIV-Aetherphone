@@ -116,7 +116,7 @@ internal sealed class CasinoTextCache
 
     internal static string SignedText(long value) => value switch
     {
-        > 0 => "+" + NumberText.Group(value),
+        > 0 => NumberText.Signed(value),
         < 0 => NumberText.Group(value),
         _ => NumberText.Group(0),
     };

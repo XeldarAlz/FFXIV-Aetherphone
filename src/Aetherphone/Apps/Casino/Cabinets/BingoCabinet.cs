@@ -704,7 +704,7 @@ internal sealed class BingoCabinet
         else if (won)
         {
             winRoll.Update((int)Math.Min(settledPayout, int.MaxValue), delta);
-            outcome = Loc.T(L.Casino.BingoYouWon, "+" + NumberText.Group((long)winRoll.Display));
+            outcome = Loc.T(L.Casino.BingoYouWon, NumberText.Signed(winRoll.Display));
         }
         else
         {

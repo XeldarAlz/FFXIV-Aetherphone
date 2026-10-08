@@ -685,7 +685,7 @@ internal sealed class BlackjackTable
                 var won = hand.Delta > 0;
                 BlackjackTableArt.DrawOutcomeBadge(drawList,
                     new Vector2(fanCenter.X, puck.Y - BlackjackTableLayout.RailBadgeLift * scale), outcomeText,
-                    won ? Gold : ui.TitleInk, won ? Gold : ui.BodyInk, badgeEntrance, scale);
+                    won ? Gold : ui.TitleInk, won ? Gold : ui.BodyInk, badgeEntrance, handWidth, scale);
             }
             else if (hand.Total > 0)
             {
@@ -790,7 +790,7 @@ internal sealed class BlackjackTable
             {
                 var won = hand.Delta > 0;
                 BlackjackTableArt.DrawOutcomeBadge(drawList, fanCenter, outcomeText, won ? Gold : ui.TitleInk,
-                    won ? Gold : ui.BodyInk, BadgeEntrance(mySeat), scale);
+                    won ? Gold : ui.BodyInk, BadgeEntrance(mySeat), slotWidth, scale);
             }
         }
 
@@ -1118,7 +1118,7 @@ internal sealed class BlackjackTable
         if (BlackjackPhases.Over(board.Phase) && settledDelta > 0)
         {
             winRoll.Update((int)Math.Min(settledDelta, int.MaxValue), delta);
-            var amount = "+" + NumberText.Group((long)winRoll.Display);
+            var amount = NumberText.Signed(winRoll.Display);
             Typography.DrawCentered(drawList, center, Loc.T(L.Casino.BlackjackYouWon, amount), Gold,
                 TextStyles.Title3.Scale * winRoll.PopScale, TextStyles.Title3.Weight);
             return y + BannerHeight * scale;
