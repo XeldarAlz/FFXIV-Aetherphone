@@ -15,7 +15,11 @@ Every play screen in Gamba (the casino app, id `casino`) draws inside one host f
 | Apps/Casino/BetComposer.cs | The v2 bet composer (amount, half, double, Max, knob slot, Manual and Auto) |
 | Apps/Casino/Stage/AutoBetPlan.cs, AutoBetSheet.cs, RealityCheck.cs | Auto play state, its settings sheet, and the 100 round or 30 minute check-in |
 | Core/Casino/CasinoLadder.cs | The global bet ladder, `LevelCap`, `MaxBet` and the ceiling read |
-| Apps/Games/Framework/StageBackdrop.cs | The `Strip` and `Arena` presets and the felt lamp pool |
+| Apps/Games/Framework/StageBackdrop.cs | The `Strip` and `Arena` presets, the night felt and the felt lamp pool |
+| Apps/Casino/Stage/StageText.cs, StageContrast.cs | Stage text with enforced minimum sizes and contrast, and the WCAG contrast math behind it |
+| Apps/Casino/Stage/FeltTable.cs, FeltTableGeometry.cs | The stage as a card table: night cloth, rail, printed arc, betting circles and the seat geometry |
+| Apps/Casino/Stage/SeatSpot.cs | Large tappable Sit spots and the occupied seat puck |
+| Apps/Casino/Stage/DeckActions.cs | The bet deck action row: one 56 unit primary and up to two secondary pills |
 
 ## Frame
 
@@ -43,7 +47,41 @@ Snap to truth: when the stage was not drawn for more than 2 seconds, or the phon
 | --- | --- | --- |
 | `Strip` | Indigo night, a skyline with 40 twinkling windows, rose and cyan neon haze drifting opposite ways, rising bokeh; `SetWarmth(1)` shifts it amber | Lobby previews, slots, scratch, wheel, daily spin, barkeep |
 | `Arena` | Stadium night, two floodlight towers with four sweeping cones, a crowd band with 60 flickering phone lights, track dust | Bingo hall, the race, liftoff |
-| `Felt` | The existing felt with `SetLampPool(strength)` for a warm pool over the table | Blackjack and poker |
+| `Felt` | Night felt on every casino stage (`CasinoStage` calls `SetFeltStyle(FeltStyle.Night, spec.Rail)`): a desaturated emerald cloth whose lamp pool peaks at 0.22 luminance and falls to 0.08 at the edges, a fine cloth weave and a wooden rail along the stage edges (`CasinoStageSpec.Rail`, on by default). The Games app keeps the classic felt | Blackjack |
+
+Every wash on every backdrop stays at or under 0.22 luminance (rec. 601 on the drawn colour): `StagePolishTests` stacks the Strip haze bands and blobs over the skyline glow, and all four Arena cones where they cross, against that ceiling. Point lights (windows, bokeh, phone lights, dust) are lights, not fills, and are not counted.
+
+## Full screen and legibility (standard 15b)
+
+Binding for every cabinet, table and room:
+
+1. The game is the screen. The world (felt, track, reels, board, wheel) fills the stage edge to edge under the glass chrome. No boxed play area, no inset panel, no `GameScene.Arena`. Felt tables are the backdrop itself, with seats sitting on it.
+2. Night, never bright. Backdrops stay at or under 0.22 luminance; no bright saturated full-screen fills. Text sits on a dark backdrop or on glass.
+3. Readable text. Body copy at least `Subheadline`, status lines at least `Footnote` in strong ink (`StageText.Strong`), amounts at least `Title3`, the primary state line ("Place your bets", "Your turn") at least `Title2` with a soft shadow. Muted ink only on glass or dark felt and only for secondary labels. Contrast at least 4.5:1 against the brightest point behind the text.
+4. One obvious next action: one full-width primary in the bet deck, secondary actions as smaller pills beside it. Empty seats are large Sit spots, not small "Open" circles.
+5. Use the space: worlds grow to fill Safe, nothing smaller than a 44 unit touch target.
+6. Clean entry: one tap from the Floor into any game, Back returns to where you came from, rules one tap away on the info chip.
+7. Every idle state has motion and every state change has feedback.
+
+### Stage text
+
+`StageText` (Apps/Casino/Stage) is the one way to put words on the world. Each helper resolves the requested style up to its role minimum (`StageText.Minimum(role)`, never shrinking below it) and either fits or marquees against its container:
+
+- `State(drawList, center, text, maxWidth, id)`: Title2 or larger in strong ink with a soft shadow; overflow moves onto a glass capsule and marquees. `StateLine(drawList, center, text, maxWidth, ink)` is the id-free form that ellipsizes.
+- `Status(drawList, center, text, maxWidth, id, overWorld)`: Footnote or larger in strong ink, on a dark glass capsule when it sits over the world. `Status(drawList, center, text, maxWidth, scale)` and `Plate(..., ink, style, scale)` are the id-free capsule forms.
+- `Amount(drawList, center, text, maxWidth, id)`: Title3 or larger in gold.
+- `Label(drawList, center, text, maxWidth, id, muted)`: Footnote or larger; a muted label always sits on the capsule.
+- `FitScale(text, maxWidth, style, role)`: the shrink-to-fit scale clamped at the role minimum.
+
+`StageText.CapsuleFill` is dark enough that muted ink reads at 4.5:1 even over the brightest felt; `StageContrast.Ratio` and `Over` are the WCAG math the tests use.
+
+### Felt tables, seats and the action row
+
+`FeltTable.DrawCloth(drawList, full, rail, practice, scale)` paints the night cloth over any rect (a grey cloth for practice tables) for scenes that are not on a Felt stage, such as idle previews and Hold'em's own felt. A `FeltTable` instance draws the table layer over a Felt stage with `Draw(drawList, full, table, new FeltTableOptions(seats, print, cloth, rail, circles, practice), scale)`: a gold insurance arc, betting circles and an optional printed line such as "BLACKJACK PAYS 3 TO 2" set along an arc in low-contrast gold, and returns `FeltTableGeometry` (dealer anchor at the top centre, the seat arc, `Seat(index)`, `BettingCircle(index)`), all scaled to the table rect with seats of at least 28 units radius.
+
+`SeatSpot.DrawEmpty(drawList, center, radius, label, accent, invite, scale)` is the empty seat: a dark disc of at least 56 units across with a plus glyph and a "Sit" label, pulsing a glow while `invite` is set (you are not seated), returning true on a tap. `SeatSpot.DrawOccupied` draws the occupied ring and returns a `SeatPuck` whose `Bounds` is the avatar slot.
+
+`DeckActions.Row(deck, scale)` is the bottom row of the bet deck, 56 units tall and full width. `stage.SecondaryAction(label, enabled, ink)` lays out up to two pills from the left and `stage.PrimaryAction(label, enabled, ink)` takes the rest, the whole row when there are none. `BetComposer` uses the same row (the Manual and Auto switch and the auto gear are its secondary slots), `DeckActions.Above` places a status line over the row, and `DeckActions.Slice` splits it for two equal choices such as Insure and No insurance.
 
 ## Lights, signs and colours
 
@@ -69,7 +107,7 @@ Every settled round goes through `stage.Settle(new CasinoBetRecord(game, stake, 
 - `PhaseRibbon.Draw(drawList, rect, label, remainingMs, windowSeconds, crowd, accent, scale)`: the room ribbon with a `TurnTimerRing`.
 - `StatusTitle.For(balance)` and `Draw`: Shark 1M, High Roller 10M, VIP 100M, Whale 1B, Legend 1T.
 - `LevelCapsule.Draw(drawList, rect, level, progress, cap, accent, scale)`: level ring, XP bar and cap.
-- `CasinoNotice.Draw` and `DrawWithAction`: the Reason, Info and Card notice shapes.
+- `CasinoNotice.Draw` and `DrawWithAction`: the Reason, Info and Card notice shapes (Card bodies at Subheadline, the rest at Footnote).
 - `ChipStack` (Windows/Components/Layout): ten denominations from 100 to 100M with fixed colours, five discs a column, notched edges, a practice variant, and compact amounts.
 - `NumberText.Compact` reads K, M, B and T without ever rounding a balance up; `NumberText.Signed` caches the plus form.
 
