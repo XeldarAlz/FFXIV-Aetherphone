@@ -51,6 +51,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly Tables.BlackjackTable blackjack;
     private readonly Tables.TableBrowser browser;
     private readonly Tables.HostSheet hostSheet;
+    private readonly Tables.TableLedger playerLedger;
     private readonly Tables.TableDoor tableDoor;
     private readonly CasinoStage stage = new();
     private readonly JackpotRail jackpotRail = new();
@@ -105,7 +106,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         bingo = new Cabinets.BingoCabinet(casino, casinoRooms, OpenCashier, PopRoute);
         dailySpin = new Cabinets.DailySpinCabinet(casinoSpin);
         blackjack = new Tables.BlackjackTable(casino, casinoRooms, casinoTables, casinoTurns, remoteImages,
-            lodestone, OpenCashier, PopRoute);
+            lodestone, OpenCashier, PopRoute, OpenLedger);
+        playerLedger = new Tables.TableLedger(casinoTables, confirm);
         openTable = OpenTable;
         openDoorFromRow = OpenDoor;
         browser = new Tables.TableBrowser(casinoTables, casino, openTable, openDoorFromRow, OpenHostSheet);
@@ -369,7 +371,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     {
         if (route.Screen == CasinoScreen.Table)
         {
-            return new CasinoStageSpec(CasinoGames.Blackjack, L.Casino.GameBlackjack, Backdrop.Felt, LampPool: 1f);
+            return new CasinoStageSpec(CasinoGames.Blackjack, L.Casino.GameBlackjack, Backdrop.Felt,
+                Practice: blackjack.Currency == Core.Casino.CasinoCurrencies.Practice, LampPool: 1f);
         }
 
         if (route.Screen == CasinoScreen.DailySpin)
@@ -396,7 +399,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private long StageBalance(CasinoRoute route)
     {
         var state = casino.State;
-        if (route.Screen == CasinoScreen.Table && state?.TableSitting is { } rack)
+        if (route.Screen == CasinoScreen.Table && state?.TableSitting is { } rack
+            && !Core.Casino.CasinoCurrencies.SeatBanked(blackjack.Currency))
         {
             return rack.Stack;
         }
@@ -446,6 +450,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 break;
             case CasinoScreen.HostTable:
                 hostSheet.Draw(navBar.Body, ui);
+                break;
+            case CasinoScreen.TableLedger:
+                DrawPlayerLedger(navBar.Body, route.TableId);
                 break;
             case CasinoScreen.Limits:
                 DrawLimits(navBar.Body);
@@ -512,6 +519,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         CasinoScreen.Tables => Loc.T(L.Casino.TablesTitle),
         CasinoScreen.TableDoor => Loc.T(L.Casino.DoorTitle),
         CasinoScreen.HostTable => Loc.T(L.Tables.HostTitle),
+        CasinoScreen.TableLedger => Loc.T(L.Tables.LedgerHeading),
         CasinoScreen.Table => Loc.T(L.Casino.GameBlackjack),
         CasinoScreen.Limits => Loc.T(L.Casino.LimitsRow),
         CasinoScreen.History => Loc.T(L.Casino.HistoryRow),
@@ -580,6 +588,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             return;
         }
 
+        if (route.Screen == CasinoScreen.TableLedger)
+        {
+            playerLedger.Reset();
+            return;
+        }
+
         if (route.Screen == CasinoScreen.TableDoor)
         {
             tableDoor.Reset();
@@ -612,6 +626,29 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
         browser.Enter();
         router.Push(new CasinoRoute(CasinoScreen.Tables, CasinoGames.Blackjack));
+    }
+
+    private void OpenLedger(string tableId)
+    {
+        if (tableId.Length == 0 || router.Current.Screen == CasinoScreen.TableLedger)
+        {
+            return;
+        }
+
+        playerLedger.Enter(tableId);
+        casinoTables.RefreshCard(tableId);
+        router.Push(new CasinoRoute(CasinoScreen.TableLedger, CasinoGames.Blackjack, string.Empty, tableId));
+    }
+
+    private void DrawPlayerLedger(Rect body, string tableId)
+    {
+        var scale = UiScale.Current;
+        using (AppSurface.Begin(body))
+        {
+            playerLedger.Draw(ui, casinoTables.AccountId, casinoTables.CardFor(tableId)?.OwnerUserId ?? string.Empty,
+                scale);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
+        }
     }
 
     private void OpenHostSheet()

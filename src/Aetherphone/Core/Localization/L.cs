@@ -10843,6 +10843,16 @@ internal static class L
         public static readonly LocString AmountGilHint = new("casino.tables.amountGilHint", "Amount in gil");
         public static readonly LocString RecordHostHint = new("casino.tables.recordHostHint", "Trade the gil in game first, then record it here. The player confirms their side; until then the entry stays amber.");
         public static readonly LocString RecordPlayerHint = new("casino.tables.recordPlayerHint", "Trade the gil to the host in game first, then record it here. Your seat gets the chips once the host confirms.");
+        public static readonly LocString OpenLedger = new("casino.tables.openLedger", "Ledger");
+        public static readonly LocString Pause = new("casino.tables.pause", "Pause");
+        public static readonly LocString Resume = new("casino.tables.resume", "Resume");
+        public static readonly LocString PausedBanner = new("casino.tables.pausedBanner", "The host paused the table. Hands resume when they are ready.");
+        public static readonly LocString WaitingDeal = new("casino.tables.waitingDeal", "Bets are open. {0} deals when ready.");
+        public static readonly LocString DealtBy = new("casino.tables.dealtBy", "Dealer: {0}");
+        public static readonly LocString RulesLineStands = new("casino.tables.rulesLineStands", "Blackjack pays {0}, dealer stands on soft 17, {1} decks");
+        public static readonly LocString RulesLineHits = new("casino.tables.rulesLineHits", "Blackjack pays {0}, dealer hits soft 17, {1} decks");
+        public static readonly LocString GilLimits = new("casino.tables.gilLimits", "Bank {0} gil, max payout {1} gil");
+        public static readonly LocString RebuyTo = new("casino.tables.rebuyTo", "Rebuy to {0}");
     }
 
     internal static class Catalogs

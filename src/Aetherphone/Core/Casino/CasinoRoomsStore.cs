@@ -334,7 +334,9 @@ internal sealed class CasinoRoomsStore : IDisposable
         }
 
         var roundIndex = board.HandIndex;
-        var sittingId = chips.State?.TableSitting?.Id ?? string.Empty;
+        var sittingId = CasinoCurrencies.SeatBanked(CasinoCurrencies.Of(board))
+            ? string.Empty
+            : chips.State?.TableSitting?.Id ?? string.Empty;
         string betId;
         string clientRoundId;
         lock (stakeGate)
@@ -405,7 +407,9 @@ internal sealed class CasinoRoomsStore : IDisposable
 
         var handId = board.HandId;
         var actionSeq = mine.ActionCount;
-        var sittingId = chips.State?.TableSitting?.Id ?? string.Empty;
+        var sittingId = CasinoCurrencies.SeatBanked(CasinoCurrencies.Of(board))
+            ? string.Empty
+            : chips.State?.TableSitting?.Id ?? string.Empty;
         string actionId;
         lock (stakeGate)
         {
