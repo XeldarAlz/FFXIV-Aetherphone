@@ -10786,6 +10786,95 @@ internal static class L
         public static readonly LocString MaxBetLine = new("casino.strip.maxBetLine", "Your max bet right now: {0}");
     }
 
+    internal static class Machines
+    {
+        public static readonly LocString GameBird = new("casino.slots.bird.title", "Golden Bird Deluxe");
+        public static readonly LocString GameCascade = new("casino.slots.cascade.title", "Crystal Cascade");
+        public static readonly LocString GameMoogle = new("casino.slots.moogle.title", "Moogle Money");
+        public static readonly LocString GambleTitle = new("casino.slots.bird.gambleTitle", "Golden Bird gamble");
+        public static readonly LocString PitchBird = new("casino.slots.bird.pitch", "Five reels, ten lines and free spins where one symbol expands to fill its reels.");
+        public static readonly LocString PitchCascade = new("casino.slots.cascade.pitch", "Eight or more of a kind anywhere pay, winners shatter and the rest tumble down.");
+        public static readonly LocString PitchMoogle = new("casino.slots.moogle.pitch", "Six pom coins lock for hold and spin, and a full grid pays the Grand.");
+        public static readonly LocString RulesBirdStep1 = new("casino.slots.bird.rules1", "Pick your bet. It covers all ten lines, and line wins pay left to right from the first reel.");
+        public static readonly LocString RulesBirdStep2 = new("casino.slots.bird.rules2", "Three or more suns anywhere pay and start 10 free spins.");
+        public static readonly LocString RulesBirdStep3 = new("casino.slots.bird.rules3", "One symbol is picked for the feature. When it lands on three or more reels, those reels fill with it and it pays on every line.");
+        public static readonly LocString RulesBirdStep4 = new("casino.slots.bird.rules4", "After a win under 20 times the bet you can gamble it on red or black, up to five times.");
+        public static readonly LocString RulesCascadeStep1 = new("casino.slots.cascade.rules1", "Pick your bet. Eight or more of the same symbol anywhere on the grid pay.");
+        public static readonly LocString RulesCascadeStep2 = new("casino.slots.cascade.rules2", "Winners shatter and new symbols tumble in. Each tumble in a row raises the multiplier 1x, 2x, 3x, then 5x.");
+        public static readonly LocString RulesCascadeStep3 = new("casino.slots.cascade.rules3", "Four or more crystal stars start 10 free spins. In free spins, orbs on a winning spin add to a total that multiplies the win.");
+        public static readonly LocString RulesCascadeStep4 = new("casino.slots.cascade.rules4", "Ante Bet costs a quarter more and brings the bonus about twice as often. Bonus Buy starts the free spins for 100 times the bet.");
+        public static readonly LocString RulesMoogleStep1 = new("casino.slots.moogle.rules1", "Pick your bet. It covers all ten lines, and pom coins can land on any cell.");
+        public static readonly LocString RulesMoogleStep2 = new("casino.slots.moogle.rules2", "Six or more coins lock and give 3 respins. Every new coin resets the respins to 3.");
+        public static readonly LocString RulesMoogleStep3 = new("casino.slots.moogle.rules3", "Coins pay their values, Mini and Minor pay their meters, Major pays 500x, and all 15 cells pay the Grand 2,000x on top.");
+        public static readonly LocString RulesMoogleStep4 = new("casino.slots.moogle.rules4", "Three wings on the middle reels start 6 free games with a giant symbol, and a giant coin counts as nine coins.");
+        public static readonly LocString SpinFor = new("casino.slots.machine.spinFor", "Spin {0}");
+        public static readonly LocString PaysTitle = new("casino.slots.machine.paysTitle", "Pays and rules");
+        public static readonly LocString ReturnAnte = new("casino.slots.machine.returnAnte", "Return with Ante Bet");
+        public static readonly LocString ReturnBuy = new("casino.slots.machine.returnBuy", "Return on Bonus Buy");
+        public static readonly LocString HitFrequency = new("casino.slots.machine.hitFrequency", "Spins that beat the bet");
+        public static readonly LocString BonusFrequency = new("casino.slots.machine.bonusFrequency", "Free spins");
+        public static readonly LocString HoldFrequency = new("casino.slots.machine.holdFrequency", "Hold and spin");
+        public static readonly LocString FreeGamesFrequency = new("casino.slots.machine.freeGamesFrequency", "Free games");
+        public static readonly LocString MaxWin = new("casino.slots.machine.maxWin", "Max win");
+        public static readonly LocString Volatility = new("casino.slots.machine.volatility", "Volatility");
+        public static readonly LocString PaysAtBet = new("casino.slots.machine.paysAtBet", "Pays at your bet");
+        public static readonly LocString CoinsHeading = new("casino.slots.moogle.coinsHeading", "Pom coins");
+        public static readonly LocString FeaturesHeading = new("casino.slots.machine.featuresHeading", "Features");
+        public static readonly LocString PaylinesHeading = new("casino.slots.machine.paylinesHeading", "Paylines");
+        public static readonly LocString OneIn = new("casino.slots.machine.oneIn", "1 in {0}");
+        public static readonly LocString OneInAnte = new("casino.slots.cascade.oneInAnte", "1 in {0}, 1 in {1} with Ante");
+        public static readonly LocString TimesBet = new("casino.slots.machine.timesBet", "{0}x bet");
+        public static readonly LocString ScatterPay = new("casino.slots.machine.scatterPay", "{0} scatters pay {1}");
+        public static readonly LocString MeterRange = new("casino.slots.moogle.meterRange", "{0} to {1}");
+        public static readonly LocString Mini = new("casino.slots.moogle.mini", "MINI");
+        public static readonly LocString Minor = new("casino.slots.moogle.minor", "MINOR");
+        public static readonly LocString Major = new("casino.slots.moogle.major", "MAJOR");
+        public static readonly LocString Grand = new("casino.slots.moogle.grand", "GRAND");
+        public static readonly LocString BirdRuleFree = new("casino.slots.bird.ruleFree", "Three or more suns award 10 free spins on their own reels. One symbol, never the wild, is drawn for the whole feature; whenever it shows on three or more reels, those reels fill with it and it pays its line pay on all ten lines. Three more suns add 10 spins, up to 60.");
+        public static readonly LocString BirdRuleGamble = new("casino.slots.bird.ruleGamble", "Gamble: a win above zero and under 20 times the bet can be risked on a fair red or black card. A match doubles it, a miss loses it, and you can go again up to five times. Collect any time by spinning again.");
+        public static readonly LocString CascadeRuleTumble = new("casino.slots.cascade.ruleTumble", "Every symbol with 8 or more on the grid pays in bands of 8 to 9, 10 to 11 and 12 or more. Winners shatter, everything else falls, and new symbols fill the gaps. In the base game each tumble in a row is multiplied 1x, 2x, 3x, then 5x.");
+        public static readonly LocString CascadeRuleFree = new("casino.slots.cascade.ruleFree", "Four or more crystal stars pay and award 10 free spins. Orbs worth 2x to 500x land only in free spins; when a spin wins, its orbs join a feature total that multiplies that spin. Three stars add 5 spins, up to 50.");
+        public static readonly LocString MoogleRuleHold = new("casino.slots.moogle.ruleHold", "Each cell can land a pom coin worth 1x to 50x the bet, or Mini, Minor or Major. Six or more start hold and spin: coins lock, 3 respins, each new coin resets them to 3. It ends when the respins run out or all 15 cells hold a coin, which adds the Grand.");
+        public static readonly LocString MoogleRuleGames = new("casino.slots.moogle.ruleGames", "Three wings on reels 2 to 4 start 6 free games. In each, one giant symbol covers the middle reels; a giant coin is nine coins and always starts hold and spin. Mini and Minor grow with every spin at your bet and must hit before they reach their ceiling.");
+        public static readonly LocString JackpotRule = new("casino.slots.machine.jackpotRule", "Floor jackpot: every paid spin on any machine also draws for the floor jackpot, and every chip staked is a ticket. It has nothing to do with the reels.");
+        public static readonly LocString Turbo = new("casino.slots.machine.turbo", "Turbo");
+        public static readonly LocString AnteCost = new("casino.slots.cascade.anteCost", "Ante {0}");
+        public static readonly LocString BuyBonus = new("casino.slots.cascade.buyBonus", "Buy {0}");
+        public static readonly LocString BuyConfirmTitle = new("casino.slots.cascade.buyConfirmTitle", "Buy the bonus?");
+        public static readonly LocString BuyConfirmBody = new("casino.slots.cascade.buyConfirmBody", "{0} chips start 10 free spins straight away.");
+        public static readonly LocString BuyConfirm = new("casino.slots.cascade.buyConfirm", "Buy");
+        public static readonly LocString LinesInfo = new("casino.slots.machine.linesInfo", "10 lines");
+        public static readonly LocString MoogleKnobInfo = new("casino.slots.moogle.knobInfo", "6 coins start hold and spin");
+        public static readonly LocString CostLine = new("casino.slots.machine.costLine", "Spin costs {0}");
+        public static readonly LocString Win = new("casino.slots.machine.win", "WIN");
+        public static readonly LocString FreeSpinsCounter = new("casino.slots.machine.freeSpinsCounter", "Free spin {0} of {1}");
+        public static readonly LocString FreeGamesCounter = new("casino.slots.moogle.freeGamesCounter", "Free game {0} of {1}");
+        public static readonly LocString Respins = new("casino.slots.moogle.respins", "Respins {0}");
+        public static readonly LocString Skip = new("casino.slots.machine.skip", "Skip to the result");
+        public static readonly LocString Gamble = new("casino.slots.bird.gamble", "Gamble the win");
+        public static readonly LocString Collect = new("casino.slots.bird.collect", "Collect");
+        public static readonly LocString GambleHeading = new("casino.slots.bird.gambleHeading", "Red or black?");
+        public static readonly LocString GambleAmount = new("casino.slots.bird.gambleAmount", "At stake {0}");
+        public static readonly LocString Red = new("casino.slots.bird.red", "Red");
+        public static readonly LocString Black = new("casino.slots.bird.black", "Black");
+        public static readonly LocString GambleWon = new("casino.slots.bird.gambleWon", "Doubled");
+        public static readonly LocString GambleLost = new("casino.slots.bird.gambleLost", "Not this time");
+        public static readonly LocString FloorJackpot = new("casino.slots.machine.floorJackpot", "Floor jackpot");
+        public static readonly LocString Expanding = new("casino.slots.bird.expanding", "Expanding symbol");
+        public static readonly LocString FeatureTotal = new("casino.slots.cascade.featureTotal", "Orb total {0}x");
+        public static readonly LocString IntroFreeSpins = new("casino.slots.machine.introFreeSpins", "{0} FREE SPINS");
+        public static readonly LocString IntroFreeGames = new("casino.slots.moogle.introFreeGames", "{0} FREE GAMES");
+        public static readonly LocString IntroHold = new("casino.slots.moogle.introHold", "HOLD AND SPIN");
+        public static readonly LocString Retrigger = new("casino.slots.machine.retrigger", "+{0} SPINS");
+        public static readonly LocString BuyIntro = new("casino.slots.cascade.buyIntro", "BONUS BOUGHT");
+        public static readonly LocString MeterHit = new("casino.slots.moogle.meterHit", "Pays {0}");
+        public static readonly LocString FeatureWin = new("casino.slots.machine.featureWin", "FEATURE WIN");
+        public static readonly LocString CapNote = new("casino.slots.machine.capNote", "Max win reached");
+        public static readonly LocString NotOpenTitle = new("casino.slots.machine.notOpenTitle", "Not open yet");
+        public static readonly LocString NotOpenHint = new("casino.slots.machine.notOpenHint", "This machine opens once the floor update reaches the server.");
+        public static readonly LocString ReasonMachineUnknown = new("casino.slots.machine.reasonUnknown", "That machine is not on the floor.");
+    }
+
     internal static class Tables
     {
         public static readonly LocString ReasonConfigInvalid = new("casino.tables.reasonConfigInvalid", "Some of those table settings do not work together. Check the stakes and limits, then try again.");

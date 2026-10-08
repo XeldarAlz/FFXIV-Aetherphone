@@ -14,6 +14,15 @@ internal static class CasinoGlyphs
             case CasinoGames.Slots:
                 DrawSlots(drawList, center, extent, ink, hole);
                 break;
+            case CasinoGames.SlotsBird:
+                DrawBird(drawList, center, extent, ink, hole);
+                break;
+            case CasinoGames.SlotsCascade:
+                DrawCrystal(drawList, center, extent, ink, hole);
+                break;
+            case CasinoGames.SlotsMoogle:
+                DrawPom(drawList, center, extent, ink, hole);
+                break;
             case CasinoGames.Scratch:
                 DrawScratch(drawList, center, extent, ink, hole);
                 break;
@@ -224,6 +233,51 @@ internal static class CasinoGlyphs
             At(center, extent, -0.26f, 0.12f), At(center, extent, 0.26f, 0.12f), At(center, extent, 0f, 0.55f),
         };
         FillConvex(drawList, hole, down);
+    }
+
+    private static void DrawBird(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        drawList.AddCircleFilled(At(center, extent, 0f, 0.15f), extent * 0.42f, ink, 28);
+        drawList.AddCircleFilled(At(center, extent, 0.32f, -0.38f), extent * 0.24f, ink, 20);
+        Span<Vector2> wing = stackalloc Vector2[3]
+        {
+            At(center, extent, -0.2f, 0f),
+            At(center, extent, -0.95f, -0.75f),
+            At(center, extent, -0.5f, 0.35f),
+        };
+        FillConvex(drawList, ink, wing);
+        Span<Vector2> beak = stackalloc Vector2[3]
+        {
+            At(center, extent, 0.5f, -0.46f),
+            At(center, extent, 0.85f, -0.36f),
+            At(center, extent, 0.5f, -0.26f),
+        };
+        FillConvex(drawList, ink, beak);
+        drawList.AddCircleFilled(At(center, extent, 0.36f, -0.42f), extent * 0.06f, hole, 10);
+    }
+
+    private static void DrawCrystal(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        Span<Vector2> gem = stackalloc Vector2[5]
+        {
+            At(center, extent, 0f, -0.9f),
+            At(center, extent, 0.62f, -0.3f),
+            At(center, extent, 0.38f, 0.85f),
+            At(center, extent, -0.38f, 0.85f),
+            At(center, extent, -0.62f, -0.3f),
+        };
+        FillConvex(drawList, ink, gem);
+        var thickness = MathF.Max(1f, extent * 0.1f);
+        drawList.AddLine(gem[0], At(center, extent, 0f, 0.85f), hole, thickness);
+        drawList.AddLine(gem[4], gem[1], hole, thickness);
+    }
+
+    private static void DrawPom(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        drawList.AddCircleFilled(At(center, extent, 0f, 0.2f), extent * 0.66f, ink, 32);
+        drawList.AddCircle(At(center, extent, 0f, 0.2f), extent * 0.44f, hole, 28, extent * 0.1f);
+        drawList.AddLine(At(center, extent, 0f, -0.46f), At(center, extent, 0f, -0.72f), ink, extent * 0.1f);
+        drawList.AddCircleFilled(At(center, extent, 0f, -0.82f), extent * 0.2f, ink, 16);
     }
 
     private static void DrawChip(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)

@@ -18,6 +18,7 @@ internal static class CasinoVerifier
     private const string ScratchPrizePurpose = "prize";
     private const string BarkeepPatronsPurpose = "patrons";
     private const string SlotsJackpotPurpose = "jackpot";
+    private const string GamblePurpose = "gamble";
     private const string SegmentPurpose = "segment";
     private const string BingoCardPurpose = "card";
     private const string BingoBallPurpose = "ball";
@@ -75,7 +76,9 @@ internal static class CasinoVerifier
         var streamKeyInfo = string.IsNullOrEmpty(streamBinding) ? roundId : streamBinding;
         var replays = IsOriginalsKind(gameKind)
             ? ReplaysFloatDrawLog(seed, streamKeyInfo, drawLog)
-            : ReplaysDrawLog(gameKind, seed, streamKeyInfo, drawLog);
+            : string.Equals(gameKind, CasinoWire.SlotsKind, StringComparison.Ordinal)
+                ? SlotsDrawLog.Replays(seed, streamKeyInfo, drawLog)
+                : ReplaysDrawLog(gameKind, seed, streamKeyInfo, drawLog);
         return replays ? CasinoRoundVerdict.Match : CasinoRoundVerdict.Mismatch;
     }
 
@@ -266,7 +269,13 @@ internal static class CasinoVerifier
 
         if (purpose.SequenceEqual(SlotsJackpotPurpose))
         {
-            bound = (uint)SlotsRules.JackpotChipsPerHit;
+            bound = (uint)SlotsRules.LegacyJackpotChipsPerHit;
+            return true;
+        }
+
+        if (purpose.SequenceEqual(GamblePurpose))
+        {
+            bound = 2;
             return true;
         }
 
@@ -319,12 +328,12 @@ internal static class CasinoVerifier
                 if (reelSplit <= 0 || reelSplit == argument.Length - 1
                     || !TryParseIndex(argument[..reelSplit], out var spinIndex)
                     || !TryParseIndex(argument[(reelSplit + 1)..], out var reelIndex)
-                    || spinIndex > SlotsRules.FreeSpinCap || reelIndex >= SlotsRules.ReelCount)
+                    || spinIndex > SlotsRules.LegacyFreeSpinCap || reelIndex >= SlotsRules.ReelCount)
                 {
                     return false;
                 }
 
-                bound = SlotsRules.StopsPerReel;
+                bound = SlotsRules.LegacyStopsPerReel;
                 return true;
             }
             case 'w':

@@ -6,13 +6,28 @@ internal static class CasinoRules
 {
     private static readonly LocString[] NoSteps = Array.Empty<LocString>();
 
-    private static readonly LocString[] SlotsSteps =
+    private static readonly LocString[] BirdSteps =
     {
-        L.Casino.RulesSlotsStep1,
-        L.Casino.RulesSlotsStep2,
-        L.Casino.RulesSlotsStep3,
-        L.Casino.RulesSlotsStep4,
-        L.Casino.RulesSlotsStep5,
+        L.Machines.RulesBirdStep1,
+        L.Machines.RulesBirdStep2,
+        L.Machines.RulesBirdStep3,
+        L.Machines.RulesBirdStep4,
+    };
+
+    private static readonly LocString[] CascadeSteps =
+    {
+        L.Machines.RulesCascadeStep1,
+        L.Machines.RulesCascadeStep2,
+        L.Machines.RulesCascadeStep3,
+        L.Machines.RulesCascadeStep4,
+    };
+
+    private static readonly LocString[] MoogleSteps =
+    {
+        L.Machines.RulesMoogleStep1,
+        L.Machines.RulesMoogleStep2,
+        L.Machines.RulesMoogleStep3,
+        L.Machines.RulesMoogleStep4,
     };
 
     private static readonly LocString[] ScratchSteps =
@@ -98,7 +113,9 @@ internal static class CasinoRules
         CasinoGames.Limbo => L.Originals.PitchLimbo,
         CasinoGames.Keno => L.Originals.PitchKeno,
         CasinoGames.HiLo => L.Originals.PitchHiLo,
-        CasinoGames.Slots => L.Casino.PitchSlots,
+        CasinoGames.Slots or CasinoGames.SlotsBird => L.Machines.PitchBird,
+        CasinoGames.SlotsCascade => L.Machines.PitchCascade,
+        CasinoGames.SlotsMoogle => L.Machines.PitchMoogle,
         CasinoGames.Scratch => L.Casino.PitchScratch,
         CasinoGames.Wheel => L.Casino.PitchWheel,
         CasinoGames.Bingo => L.Casino.PitchBingo,
@@ -114,7 +131,9 @@ internal static class CasinoRules
         CasinoGames.Limbo => L.Originals.GameLimbo,
         CasinoGames.Keno => L.Originals.GameKeno,
         CasinoGames.HiLo => L.Originals.GameHiLo,
-        CasinoGames.Slots => L.Casino.GameSlots,
+        CasinoGames.Slots or CasinoGames.SlotsBird => L.Machines.GameBird,
+        CasinoGames.SlotsCascade => L.Machines.GameCascade,
+        CasinoGames.SlotsMoogle => L.Machines.GameMoogle,
         CasinoGames.Scratch => L.Casino.GameScratch,
         CasinoGames.Wheel => L.Casino.GameWheel,
         CasinoGames.Bingo => L.Casino.GameBingo,
@@ -130,7 +149,9 @@ internal static class CasinoRules
         CasinoGames.Limbo => LimboSteps,
         CasinoGames.Keno => KenoSteps,
         CasinoGames.HiLo => HiLoSteps,
-        CasinoGames.Slots => SlotsSteps,
+        CasinoGames.Slots or CasinoGames.SlotsBird => BirdSteps,
+        CasinoGames.SlotsCascade => CascadeSteps,
+        CasinoGames.SlotsMoogle => MoogleSteps,
         CasinoGames.Scratch => ScratchSteps,
         CasinoGames.Wheel => WheelSteps,
         CasinoGames.Bingo => BingoSteps,
@@ -146,7 +167,12 @@ internal static class CasinoRules
         switch (gameId)
         {
             case CasinoGames.Slots:
-                return SlotsFact(index, ref label, ref value);
+            case CasinoGames.SlotsBird:
+                return MachineFact(Core.Casino.SlotsMachines.Bird, index, ref label, ref value);
+            case CasinoGames.SlotsCascade:
+                return MachineFact(Core.Casino.SlotsMachines.Cascade, index, ref label, ref value);
+            case CasinoGames.SlotsMoogle:
+                return MachineFact(Core.Casino.SlotsMachines.Moogle, index, ref label, ref value);
             case CasinoGames.Scratch:
                 return ScratchFact(index, ref label, ref value);
             case CasinoGames.Wheel:
@@ -198,21 +224,27 @@ internal static class CasinoRules
         }
     }
 
-    private static bool SlotsFact(int index, ref LocString label, ref string value)
+    private static bool MachineFact(Core.Casino.SlotsMachineInfo info, int index, ref LocString label,
+        ref string value)
     {
         switch (index)
         {
             case 0:
-                label = L.Casino.FactStakeRange;
-                value = Range(Core.Casino.SlotsRules.MinStake, Core.Casino.SlotsRules.MaxStake);
+                label = L.Originals.FactMinBet;
+                value = Number(Core.Casino.SlotsRules.MinStake);
                 return true;
             case 1:
-                label = L.Casino.FactPaylines;
-                value = Number(Core.Casino.SlotsRules.PaylineCount);
+                label = L.Strip.Return;
+                value = Originals.OriginalsText.Percent(info.ReturnBasisPoints);
                 return true;
             case 2:
-                label = L.Casino.FactWinCap;
-                value = Loc.T(L.Casino.FactWinCapValue, Number(Core.Casino.SlotsRules.PayoutCapMultiple));
+                label = L.Machines.MaxWin;
+                value = Loc.T(L.Machines.TimesBet, Number(info.MaxWinMultiple));
+                return true;
+            case 3:
+                label = info.Layout == Core.Casino.SlotsLayout.Hold ? L.Machines.HoldFrequency
+                    : L.Machines.BonusFrequency;
+                value = Loc.T(L.Machines.OneIn, Number(info.BonusOneIn));
                 return true;
             default:
                 return false;

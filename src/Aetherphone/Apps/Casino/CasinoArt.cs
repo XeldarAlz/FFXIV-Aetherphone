@@ -28,6 +28,9 @@ internal static class CasinoArt
     {
         CasinoGames.Blackjack => AccentRing.Green,
         CasinoGames.Slots => AccentRing.Rose,
+        CasinoGames.SlotsBird => AccentRing.Gold,
+        CasinoGames.SlotsCascade => AccentRing.Cyan,
+        CasinoGames.SlotsMoogle => AccentRing.Rose,
         CasinoGames.Scratch => AccentRing.Gold,
         CasinoGames.Barkeep => AccentRing.Orange,
         CasinoGames.Bingo => AccentRing.Azure,

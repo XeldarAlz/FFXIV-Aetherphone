@@ -10,3 +10,7 @@
 *.mp3 binary
 *.wav binary
 *.zip binary
+
+# The slot machine vectors are hashed byte for byte here and in the backend, so they never get a
+# line-ending conversion on checkout.
+src/Aetherphone.Tests/Vectors/slots-*.json -text

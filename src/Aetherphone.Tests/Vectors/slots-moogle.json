@@ -1,0 +1,4573 @@
+{
+  "version": 1,
+  "machineId": "slots.moogle",
+  "rules": {
+    "id": "slots.moogle",
+    "layout": 2,
+    "reels": 5,
+    "rows": 3,
+    "volatilityBars": 3,
+    "maxWinMultiple": 5000,
+    "returnBasisPoints": 9676,
+    "bonusOneIn": 121,
+    "offersAnte": false,
+    "offersBuy": false,
+    "lines": null,
+    "cluster": null,
+    "hold": {
+      "lines": {
+        "strips": [
+          [
+            5,
+            6,
+            4,
+            3,
+            1,
+            5,
+            6,
+            2,
+            0,
+            5,
+            6,
+            4,
+            5,
+            6,
+            3,
+            5,
+            6,
+            1,
+            4,
+            2,
+            5,
+            6,
+            3,
+            5,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1,
+            2,
+            5,
+            6,
+            3,
+            4,
+            5,
+            6
+          ],
+          [
+            8,
+            5,
+            6,
+            4,
+            3,
+            1,
+            5,
+            6,
+            2,
+            0,
+            5,
+            6,
+            4,
+            5,
+            6,
+            3,
+            7,
+            5,
+            6,
+            1,
+            8,
+            4,
+            2,
+            5,
+            6,
+            3,
+            5,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1,
+            2,
+            5,
+            6,
+            3,
+            4,
+            5,
+            6
+          ],
+          [
+            8,
+            5,
+            6,
+            4,
+            3,
+            1,
+            5,
+            6,
+            2,
+            0,
+            5,
+            6,
+            4,
+            5,
+            6,
+            3,
+            7,
+            5,
+            6,
+            1,
+            8,
+            4,
+            2,
+            5,
+            6,
+            3,
+            5,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1,
+            2,
+            5,
+            6,
+            3,
+            4,
+            5,
+            6
+          ],
+          [
+            8,
+            5,
+            6,
+            4,
+            3,
+            1,
+            5,
+            6,
+            2,
+            0,
+            5,
+            6,
+            4,
+            5,
+            6,
+            3,
+            7,
+            5,
+            6,
+            1,
+            8,
+            4,
+            2,
+            5,
+            6,
+            3,
+            5,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1,
+            2,
+            5,
+            6,
+            3,
+            4,
+            5,
+            6
+          ],
+          [
+            5,
+            6,
+            4,
+            3,
+            1,
+            5,
+            6,
+            2,
+            0,
+            5,
+            6,
+            4,
+            5,
+            6,
+            3,
+            7,
+            5,
+            6,
+            1,
+            4,
+            2,
+            5,
+            6,
+            3,
+            5,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1,
+            2,
+            5,
+            6,
+            3,
+            4,
+            5,
+            6
+          ]
+        ],
+        "freeStrips": [
+          [
+            5,
+            6,
+            4,
+            3,
+            1,
+            5,
+            6,
+            2,
+            0,
+            5,
+            6,
+            4,
+            5,
+            6,
+            3,
+            5,
+            6,
+            1,
+            4,
+            2,
+            5,
+            6,
+            3,
+            5,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1,
+            2,
+            5,
+            6,
+            3,
+            4,
+            5,
+            6
+          ],
+          [
+            5,
+            6,
+            4,
+            3,
+            1,
+            5,
+            6,
+            2,
+            0,
+            5,
+            6,
+            4,
+            5,
+            6,
+            3,
+            7,
+            5,
+            6,
+            1,
+            4,
+            2,
+            5,
+            6,
+            3,
+            5,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1,
+            2,
+            5,
+            6,
+            3,
+            4,
+            5,
+            6
+          ],
+          [
+            5,
+            6,
+            4,
+            3,
+            1,
+            5,
+            6,
+            2,
+            0,
+            5,
+            6,
+            4,
+            5,
+            6,
+            3,
+            7,
+            5,
+            6,
+            1,
+            4,
+            2,
+            5,
+            6,
+            3,
+            5,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1,
+            2,
+            5,
+            6,
+            3,
+            4,
+            5,
+            6
+          ],
+          [
+            5,
+            6,
+            4,
+            3,
+            1,
+            5,
+            6,
+            2,
+            0,
+            5,
+            6,
+            4,
+            5,
+            6,
+            3,
+            7,
+            5,
+            6,
+            1,
+            4,
+            2,
+            5,
+            6,
+            3,
+            5,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1,
+            2,
+            5,
+            6,
+            3,
+            4,
+            5,
+            6
+          ],
+          [
+            5,
+            6,
+            4,
+            3,
+            1,
+            5,
+            6,
+            2,
+            0,
+            5,
+            6,
+            4,
+            5,
+            6,
+            3,
+            5,
+            6,
+            1,
+            4,
+            2,
+            5,
+            6,
+            3,
+            5,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1,
+            2,
+            5,
+            6,
+            3,
+            4,
+            5,
+            6
+          ]
+        ],
+        "paylines": [
+          [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            2,
+            2,
+            2,
+            2
+          ],
+          [
+            0,
+            1,
+            2,
+            1,
+            0
+          ],
+          [
+            2,
+            1,
+            0,
+            1,
+            2
+          ],
+          [
+            0,
+            0,
+            1,
+            2,
+            2
+          ],
+          [
+            2,
+            2,
+            1,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            1,
+            2,
+            1
+          ],
+          [
+            1,
+            2,
+            1,
+            0,
+            1
+          ],
+          [
+            2,
+            1,
+            1,
+            1,
+            0
+          ]
+        ],
+        "symbolCount": 7,
+        "wild": 7,
+        "scatter": 8,
+        "linePays": [
+          [
+            20000,
+            100000,
+            500000
+          ],
+          [
+            15000,
+            50000,
+            250000
+          ],
+          [
+            12000,
+            40000,
+            150000
+          ],
+          [
+            11000,
+            30000,
+            120000
+          ],
+          [
+            10500,
+            20000,
+            80000
+          ],
+          [
+            10500,
+            20000,
+            60000
+          ],
+          [
+            10500,
+            15000,
+            50000
+          ]
+        ],
+        "scatterPays": [
+          0
+        ],
+        "freeSpinAwards": [
+          0
+        ],
+        "retriggerSpins": 0,
+        "freeSpinCap": 0,
+        "expanderWeights": [],
+        "expanderMinReels": 3
+      },
+      "coin": 9,
+      "coinChance": 1250,
+      "coinValues": [
+        10000,
+        20000,
+        30000,
+        50000,
+        80000,
+        100000,
+        150000,
+        250000,
+        500000,
+        0,
+        0,
+        5000000
+      ],
+      "coinKinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        2,
+        3
+      ],
+      "coinWeights": [
+        1000,
+        1600,
+        1900,
+        1875,
+        1260,
+        915,
+        460,
+        193,
+        82,
+        40,
+        12,
+        2
+      ],
+      "triggerCoins": 6,
+      "respins": 3,
+      "respinCoinChance": 330,
+      "grandUnits": 20000000,
+      "freeGameScatters": 3,
+      "freeGames": 6,
+      "giantWeights": [
+        6,
+        8,
+        10,
+        10,
+        14,
+        14,
+        14,
+        0,
+        0,
+        12
+      ],
+      "mini": {
+        "reset": 200000,
+        "ceiling": 300000,
+        "step": 10
+      },
+      "minor": {
+        "reset": 500000,
+        "ceiling": 1000000,
+        "step": 8
+      }
+    },
+    "cellCount": 15,
+    "maxWinUnits": 50000000
+  },
+  "rounds": [
+    {
+      "seed": "8c149ac526b6f9b67a853867de9ddb8a3f7595c93eb0ad46ea2d790627c777ff",
+      "roundId": "slots.moogle-vector-0",
+      "bet": 250,
+      "mode": "base",
+      "cost": 250,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:63526;minor.mark:380361;s0r0:2;s0r1:30;s0r2:10;s0r3:29;s0r4:18;c0:8725;c0:2042;c0:9763;c0:1511;c0:1750;c0:1019;c0:3212;c0:4623;c0:694;c0:8163;c0:278;c0:7739;c0:8029;c0:2260;c0:3819;c0:9214;c0:5039;c0:3603;jackpot:574233886",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            4,
+            3,
+            1,
+            5,
+            6,
+            9,
+            5,
+            9,
+            9,
+            0,
+            5,
+            6,
+            1,
+            4,
+            2
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 3,
+              "value": 750
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 10,
+              "value": 2500
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 10,
+              "value": 2500
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 5000,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 12500,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "6acbbaad28d6e53e03610a671f0b9fd4add22c40d328dde337143504517238b2",
+      "roundId": "slots.moogle-vector-1",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:49462;minor.mark:69499;s0r0:8;s0r1:14;s0r2:3;s0r3:7;s0r4:35;c0:5203;c0:3819;c0:5412;c0:6823;c0:4571;c0:8688;c0:1797;c0:4267;c0:7468;c0:6570;c0:4365;c0:700;c0:2249;c0:6164;c0:7931;c0:8222;jackpot:64368854",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            0,
+            5,
+            6,
+            6,
+            3,
+            7,
+            4,
+            3,
+            1,
+            6,
+            2,
+            9,
+            4,
+            5,
+            6
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "fd960e6569829fb6c43623cc3f85cb39a27855576ec63870cbf02f2dd9812b6b",
+      "roundId": "slots.moogle-vector-2",
+      "bet": 250,
+      "mode": "base",
+      "cost": 250,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:81542;minor.mark:416236;s0r0:29;s0r1:19;s0r2:19;s0r3:23;s0r4:28;c0:8854;c0:7260;c0:4567;c0:3647;c0:1482;c0:581;c0:4396;c0:4666;c0:7650;c0:4194;c0:2207;c0:478;c0:150;c0:1088;c0:3899;c0:1958;c0:5488;c0:9520;jackpot:383333724",
+      "totalWin": 375,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            1,
+            2,
+            5,
+            1,
+            8,
+            9,
+            1,
+            8,
+            4,
+            5,
+            9,
+            9,
+            5,
+            6,
+            1
+          ],
+          "wins": [
+            {
+              "line": 1,
+              "symbol": 1,
+              "count": 3,
+              "cells": [
+                0,
+                3,
+                6
+              ],
+              "pay": 375
+            }
+          ],
+          "pay": 375,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 3,
+              "value": 750
+            },
+            {
+              "cell": 10,
+              "kind": 0,
+              "multiple": 1,
+              "value": 250
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 3,
+              "value": 750
+            }
+          ],
+          "running": 375
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 5000,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 12500,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "9aa3950818a063590af3f2580edb1caef9ab4c4375863b59fa5c0770605f9945",
+      "roundId": "slots.moogle-vector-3",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:46911;minor.mark:296624;s0r0:2;s0r1:34;s0r2:39;s0r3:22;s0r4:15;c0:6502;c0:176;c0:6509;c0:4237;c0:7655;c0:551;c0:8106;c0:3607;c0:3510;c0:2522;c0:136;c0:7419;c0:3453;c0:2661;c0:8858;c0:2002;c0:779;c0:704;c0:7230;jackpot:132754061",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            4,
+            9,
+            1,
+            5,
+            9,
+            3,
+            6,
+            8,
+            9,
+            2,
+            5,
+            6,
+            7,
+            9,
+            6
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 1,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "2b763ac6b6da9ce89543ee8163fab5aaa36338d9a420d3c1bf62aac1e951bcf1",
+      "roundId": "slots.moogle-vector-4",
+      "bet": 250,
+      "mode": "base",
+      "cost": 250,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:17551;minor.mark:91472;s0r0:19;s0r1:32;s0r2:31;s0r3:39;s0r4:23;c0:2201;c0:1456;c0:2313;c0:8784;c0:910;c0:5402;c0:3996;c0:9804;c0:9209;c0:4883;c0:1907;c0:8890;c0:1301;c0:2401;c0:7665;c0:738;c0:2379;jackpot:882164505",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            2,
+            5,
+            6,
+            1,
+            9,
+            5,
+            6,
+            1,
+            2,
+            6,
+            8,
+            5,
+            3,
+            5,
+            9
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 5,
+              "value": 1250
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 2,
+              "value": 500
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 5000,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 12500,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "4fee1a6d0f8cbba26cfca3ee3e665671ae1f36f8a9aee2596ef8e44e19c60a61",
+      "roundId": "slots.moogle-vector-5",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:17948;minor.mark:292414;s0r0:20;s0r1:4;s0r2:26;s0r3:27;s0r4:28;c0:8447;c0:549;c0:3383;c0:7853;c0:3758;c0:9633;c0:3582;c0:9462;c0:8931;c0:1132;c0:8202;c0:4161;c0:8164;c0:2666;c0:9475;c0:6513;c0:6760;jackpot:1000303126",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            5,
+            9,
+            3,
+            3,
+            1,
+            5,
+            5,
+            6,
+            9,
+            6,
+            4,
+            0,
+            5,
+            6,
+            1
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 1,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "966168eb3d556e3e1f22c55327ac136f45fe7f6704d8a2a36104aa34ef145200",
+      "roundId": "slots.moogle-vector-6",
+      "bet": 250,
+      "mode": "base",
+      "cost": 250,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:44358;minor.mark:339745;s0r0:13;s0r1:18;s0r2:18;s0r3:38;s0r4:34;c0:512;c0:4578;c0:919;c0:2614;c0:5842;c0:4352;c0:2506;c0:35;c0:9084;c0:5366;c0:322;c0:6561;c0:3060;c0:2010;c0:6059;c0:3856;c0:4845;c0:2398;c0:905;c0:3403;jackpot:678848419",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            9,
+            9,
+            5,
+            6,
+            1,
+            9,
+            6,
+            9,
+            8,
+            5,
+            6,
+            8,
+            3,
+            4,
+            9
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 5,
+              "value": 1250
+            },
+            {
+              "cell": 1,
+              "kind": 0,
+              "multiple": 3,
+              "value": 750
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 25,
+              "value": 6250
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 2000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 750
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 5000,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 12500,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "46aaed5d68008073c1bc56a040f3971575e215b10598c41809ff2717a68e13d8",
+      "roundId": "slots.moogle-vector-7",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:83409;minor.mark:425875;s0r0:28;s0r1:18;s0r2:13;s0r3:10;s0r4:26;c0:2850;c0:2105;c0:2912;c0:3708;c0:1907;c0:5359;c0:4533;c0:3042;c0:7232;c0:3997;c0:4810;c0:585;c0:6527;c0:4885;c0:3332;c0:5793;jackpot:779295982",
+      "totalWin": 1050,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            6,
+            1,
+            2,
+            6,
+            1,
+            8,
+            5,
+            6,
+            3,
+            5,
+            6,
+            9,
+            4,
+            0,
+            5
+          ],
+          "wins": [
+            {
+              "line": 5,
+              "symbol": 6,
+              "count": 3,
+              "cells": [
+                0,
+                3,
+                7
+              ],
+              "pay": 1050
+            }
+          ],
+          "pay": 1050,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            }
+          ],
+          "running": 1050
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "edbb3741bc1109b3d0941c8e7726fa6802b2f4e972dec0459123bf06d736b375",
+      "roundId": "slots.moogle-vector-8",
+      "bet": 250,
+      "mode": "base",
+      "cost": 250,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:14226;minor.mark:297541;s0r0:29;s0r1:31;s0r2:15;s0r3:31;s0r4:20;c0:3208;c0:3111;c0:1656;c0:3641;c0:3221;c0:1800;c0:7907;c0:6543;c0:943;c0:9104;c0:4934;c0:2511;c0:5963;c0:6528;c0:7886;c0:6855;jackpot:1203185644",
+      "totalWin": 300,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            1,
+            2,
+            5,
+            6,
+            1,
+            2,
+            3,
+            7,
+            9,
+            6,
+            1,
+            2,
+            2,
+            5,
+            6
+          ],
+          "wins": [
+            {
+              "line": 8,
+              "symbol": 2,
+              "count": 3,
+              "cells": [
+                1,
+                5,
+                7
+              ],
+              "pay": 300
+            }
+          ],
+          "pay": 300,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 25,
+              "value": 6250
+            }
+          ],
+          "running": 300
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 5000,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 12500,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "b99b22559d9d37e551ac768e252f34c7f562aa2512e8c0c6d00c558dd7f3ee16",
+      "roundId": "slots.moogle-vector-9",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:17927;minor.mark:330032;s0r0:3;s0r1:6;s0r2:8;s0r3:30;s0r4:23;c0:1496;c0:2103;c0:8535;c0:7531;c0:1233;c0:8328;c0:3069;c0:932;c0:1263;c0:6690;c0:2280;c0:5153;c0:1455;c0:306;c0:7388;c0:393;c0:43;c0:1108;c0:9069;c0:1616;jackpot:567195126",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            3,
+            1,
+            5,
+            5,
+            9,
+            2,
+            9,
+            0,
+            5,
+            5,
+            6,
+            9,
+            9,
+            9,
+            6
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 25,
+              "value": 25000
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "2dea7965583d5dd8efb36a4b8c631117ae00d020ad70bb598fc3f0bb1e49bf5f",
+      "roundId": "slots.moogle-vector-10",
+      "bet": 250,
+      "mode": "base",
+      "cost": 250,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:80712;minor.mark:439335;s0r0:1;s0r1:20;s0r2:27;s0r3:28;s0r4:8;c0:3541;c0:4386;c0:4575;c0:1345;c0:8905;c0:6769;c0:6243;c0:8428;c0:2532;c0:4794;c0:8488;c0:8108;c0:5176;c0:4801;c0:8491;jackpot:681289790",
+      "totalWin": 262,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            6,
+            4,
+            3,
+            8,
+            4,
+            2,
+            6,
+            4,
+            0,
+            4,
+            0,
+            5,
+            0,
+            5,
+            6
+          ],
+          "wins": [
+            {
+              "line": 0,
+              "symbol": 4,
+              "count": 3,
+              "cells": [
+                1,
+                4,
+                7
+              ],
+              "pay": 262
+            }
+          ],
+          "pay": 262,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [],
+          "running": 262
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 5000,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 12500,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "63c8b5662724e2cfe2be8e143b3e76376e5ddbe1ac7bc7d8453758d1e418ec27",
+      "roundId": "slots.moogle-vector-11",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:56347;minor.mark:324972;s0r0:18;s0r1:35;s0r2:33;s0r3:38;s0r4:5;c0:443;c0:6999;c0:7472;c0:3248;c0:413;c0:8223;c0:7183;c0:9722;c0:1691;c0:2882;c0:5437;c0:5146;c0:4060;c0:5667;c0:4514;c0:7575;c0:1003;c0:3617;jackpot:1061993480",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            9,
+            2,
+            5,
+            9,
+            3,
+            4,
+            2,
+            5,
+            6,
+            5,
+            6,
+            8,
+            5,
+            6,
+            9
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 3,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "99c365c35ad675249fc7acc10cc45dd6b211a35016f6cc575fb690feda49e1b9",
+      "roundId": "slots.moogle-search-0",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:10508;minor.mark:484357;s0r0:24;s0r1:24;s0r2:8;s0r3:28;s0r4:17;c0:9109;c0:5541;c0:2540;c0:7656;c0:1375;c0:6790;c0:219;c0:551;c0:8238;c0:8418;c0:5340;c0:4820;c0:2576;c0:315;c0:2165;c0:7077;c0:4735;jackpot:1169324197",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            6,
+            4,
+            0,
+            6,
+            3,
+            5,
+            9,
+            0,
+            5,
+            4,
+            0,
+            5,
+            9,
+            1,
+            4
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "7615726b3934ff537364b8755b9508435547e72acc49a87c7d8757991778e1b8",
+      "roundId": "slots.moogle-search-1",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:96665;minor.mark:276302;s0r0:4;s0r1:9;s0r2:5;s0r3:39;s0r4:18;c0:6749;c0:5819;c0:243;c0:1228;c0:610;c0:8732;c0:5525;c0:9605;c0:4256;c0:5647;c0:2322;c0:173;c0:5918;c0:2527;c0:5437;c0:3665;c0:6435;c0:2577;jackpot:1280226678",
+      "totalWin": 1050,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            1,
+            5,
+            9,
+            9,
+            5,
+            6,
+            1,
+            5,
+            6,
+            9,
+            8,
+            5,
+            1,
+            4,
+            2
+          ],
+          "wins": [
+            {
+              "line": 0,
+              "symbol": 5,
+              "count": 3,
+              "cells": [
+                1,
+                4,
+                7
+              ],
+              "pay": 1050
+            }
+          ],
+          "pay": 1050,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 3,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            }
+          ],
+          "running": 1050
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "a9db909a97ab99020634ae5e2fb934fed29489f927ce8cafaef89e88e926ca2e",
+      "roundId": "slots.moogle-search-34",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:94391;minor.mark:437817;s0r0:25;s0r1:19;s0r2:35;s0r3:18;s0r4:6;c0:5658;c0:8051;c0:1121;c0:558;c0:3227;c0:66;c0:8937;c0:4946;c0:329;c0:7480;c0:4850;c0:434;c0:197;c0:513;c0:6708;c0:7362;c0:549;c0:7794;c0:7040;c0:4390;c0:4548;h0r1:6809;h0r1:6038;h0r1:2181;h0r1:5115;h0r1:3402;h0r1:1586;h0r1:2328;h0r1:7570;h0r1:8156;h0r2:2163;h0r2:3077;h0r2:8581;h0r2:6386;h0r2:23;coin:4183;h0r2:6336;h0r2:7035;h0r2:3317;h0r2:5503;h0r3:1354;h0r3:2878;h0r3:6005;h0r3:5102;h0r3:1914;h0r3:5410;h0r3:383;h0r3:7493;h0r4:6296;h0r4:5639;h0r4:779;h0r4:2311;h0r4:5587;h0r4:827;h0r4:4395;h0r4:8224;h0r5:9298;h0r5:2260;h0r5:1517;h0r5:9405;h0r5:4785;h0r5:9987;h0r5:4961;h0r5:7747;jackpot:1388958884",
+      "totalWin": 46000,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": true,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            4,
+            0,
+            9,
+            1,
+            9,
+            4,
+            9,
+            3,
+            9,
+            9,
+            1,
+            9,
+            6,
+            2,
+            0
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "hold",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 3,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 2,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 3,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 2,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 1,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "collect",
+          "grid": [],
+          "wins": [],
+          "pay": 46000,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 46000
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "674d2b6915350901c3fda4f0bcf092e4e6cdc3d3de1dcbd03bcf92f66d02496b",
+      "roundId": "slots.moogle-search-1034",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:74006;minor.mark:322567;s0r0:18;s0r1:39;s0r2:0;s0r3:20;s0r4:20;c0:2106;c0:1278;c0:4760;c0:6313;c0:2293;c0:1071;c0:3940;c0:1770;c0:9356;c0:3070;c0:4601;c0:4922;c0:4815;c0:9080;c0:1424;c0:8664;g1r0:17;g1r1:33;g1r2:0;g1r3:21;g1r4:29;g1giant:21;g1c:1095;g1c:6772;g1c:5345;g1c:1578;g1c:7373;g1c:6385;g1c:5757;g2r0:13;g2r1:28;g2r2:5;g2r3:13;g2r4:13;g2giant:69;g2c:9306;g2c:9779;g2c:2359;g2c:9474;g2c:3054;g2c:4350;g3r0:29;g3r1:30;g3r2:35;g3r3:31;g3r4:5;g3giant:72;g3c:5428;g3c:5364;g3c:3517;g3c:7566;g3c:1134;g3c:6539;g3c:1004;g3c:8254;g4r0:18;g4r1:15;g4r2:1;g4r3:36;g4r4:28;g4giant:4;g4c:8628;g4c:3642;g4c:3159;g4c:2680;g4c:5764;g4c:4541;g5r0:11;g5r1:20;g5r2:17;g5r3:3;g5r4:2;g5giant:73;g5c:8309;g5c:1708;g5c:7909;g5c:1339;g5c:6265;g5c:1036;g5c:8879;g6r0:14;g6r1:21;g6r2:28;g6r3:26;g6r4:15;g6giant:25;g6c:1509;g6c:2464;g6c:7601;g6c:1376;g6c:1813;g6c:4898;jackpot:18107669",
+      "totalWin": 42500,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": true,
+      "freeSpinsPlayed": 6,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            4,
+            2,
+            5,
+            6,
+            8,
+            9,
+            8,
+            5,
+            6,
+            8,
+            4,
+            2,
+            2,
+            5,
+            6
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 6,
+          "spinsLeft": 6,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "game",
+          "grid": [
+            9,
+            4,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            1,
+            2,
+            5
+          ],
+          "wins": [
+            {
+              "line": 2,
+              "symbol": 2,
+              "count": 4,
+              "cells": [
+                2,
+                5,
+                8,
+                11
+              ],
+              "pay": 4000
+            },
+            {
+              "line": 4,
+              "symbol": 2,
+              "count": 4,
+              "cells": [
+                2,
+                4,
+                6,
+                10
+              ],
+              "pay": 4000
+            },
+            {
+              "line": 6,
+              "symbol": 2,
+              "count": 4,
+              "cells": [
+                2,
+                5,
+                7,
+                9
+              ],
+              "pay": 4000
+            },
+            {
+              "line": 9,
+              "symbol": 2,
+              "count": 4,
+              "cells": [
+                2,
+                4,
+                7,
+                10
+              ],
+              "pay": 4000
+            }
+          ],
+          "pay": 16000,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 5,
+          "expander": 2,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            }
+          ],
+          "running": 16000
+        },
+        {
+          "kind": "game",
+          "grid": [
+            6,
+            3,
+            5,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            3,
+            5
+          ],
+          "wins": [
+            {
+              "line": 1,
+              "symbol": 6,
+              "count": 5,
+              "cells": [
+                0,
+                3,
+                6,
+                9,
+                12
+              ],
+              "pay": 5000
+            },
+            {
+              "line": 3,
+              "symbol": 6,
+              "count": 5,
+              "cells": [
+                0,
+                4,
+                8,
+                10,
+                12
+              ],
+              "pay": 5000
+            },
+            {
+              "line": 5,
+              "symbol": 6,
+              "count": 4,
+              "cells": [
+                0,
+                3,
+                7,
+                11
+              ],
+              "pay": 1500
+            }
+          ],
+          "pay": 11500,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 4,
+          "expander": 6,
+          "coins": [],
+          "running": 27500
+        },
+        {
+          "kind": "game",
+          "grid": [
+            1,
+            2,
+            5,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            5,
+            9,
+            9
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 3,
+          "expander": 6,
+          "coins": [
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 27500
+        },
+        {
+          "kind": "game",
+          "grid": [
+            4,
+            2,
+            5,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            6,
+            1,
+            2
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 2,
+          "expander": 0,
+          "coins": [],
+          "running": 27500
+        },
+        {
+          "kind": "game",
+          "grid": [
+            4,
+            5,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            4,
+            3,
+            9
+          ],
+          "wins": [
+            {
+              "line": 2,
+              "symbol": 6,
+              "count": 4,
+              "cells": [
+                2,
+                5,
+                8,
+                11
+              ],
+              "pay": 1500
+            },
+            {
+              "line": 4,
+              "symbol": 6,
+              "count": 4,
+              "cells": [
+                2,
+                4,
+                6,
+                10
+              ],
+              "pay": 1500
+            },
+            {
+              "line": 6,
+              "symbol": 6,
+              "count": 4,
+              "cells": [
+                2,
+                5,
+                7,
+                9
+              ],
+              "pay": 1500
+            },
+            {
+              "line": 9,
+              "symbol": 6,
+              "count": 4,
+              "cells": [
+                2,
+                4,
+                7,
+                10
+              ],
+              "pay": 1500
+            }
+          ],
+          "pay": 6000,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 1,
+          "expander": 6,
+          "coins": [
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            }
+          ],
+          "running": 33500
+        },
+        {
+          "kind": "game",
+          "grid": [
+            3,
+            5,
+            6,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            5,
+            6,
+            1
+          ],
+          "wins": [
+            {
+              "line": 1,
+              "symbol": 3,
+              "count": 4,
+              "cells": [
+                0,
+                3,
+                6,
+                9
+              ],
+              "pay": 3000
+            },
+            {
+              "line": 3,
+              "symbol": 3,
+              "count": 4,
+              "cells": [
+                0,
+                4,
+                8,
+                10
+              ],
+              "pay": 3000
+            },
+            {
+              "line": 5,
+              "symbol": 3,
+              "count": 4,
+              "cells": [
+                0,
+                3,
+                7,
+                11
+              ],
+              "pay": 3000
+            }
+          ],
+          "pay": 9000,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": 3,
+          "coins": [],
+          "running": 42500
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "a9db909a97ab99020634ae5e2fb934fed29489f927ce8cafaef89e88e926ca2e",
+      "roundId": "slots.moogle-search-34",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:94391;minor.mark:437817;s0r0:25;s0r1:19;s0r2:35;s0r3:18;s0r4:6;c0:5658;c0:8051;c0:1121;c0:558;c0:3227;c0:66;c0:8937;c0:4946;c0:329;c0:7480;c0:4850;c0:434;c0:197;c0:513;c0:6708;c0:7362;c0:549;c0:7794;c0:7040;c0:4390;c0:4548;h0r1:6809;h0r1:6038;h0r1:2181;h0r1:5115;h0r1:3402;h0r1:1586;h0r1:2328;h0r1:7570;h0r1:8156;h0r2:2163;h0r2:3077;h0r2:8581;h0r2:6386;h0r2:23;coin:4183;h0r2:6336;h0r2:7035;h0r2:3317;h0r2:5503;h0r3:1354;h0r3:2878;h0r3:6005;h0r3:5102;h0r3:1914;h0r3:5410;h0r3:383;h0r3:7493;h0r4:6296;h0r4:5639;h0r4:779;h0r4:2311;h0r4:5587;h0r4:827;h0r4:4395;h0r4:8224;h0r5:9298;h0r5:2260;h0r5:1517;h0r5:9405;h0r5:4785;h0r5:9987;h0r5:4961;h0r5:7747;jackpot:1388958884",
+      "totalWin": 46000,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": true,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            4,
+            0,
+            9,
+            1,
+            9,
+            4,
+            9,
+            3,
+            9,
+            9,
+            1,
+            9,
+            6,
+            2,
+            0
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "hold",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 3,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 2,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 3,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 2,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 1,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "collect",
+          "grid": [],
+          "wins": [],
+          "pay": 46000,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 15,
+              "value": 15000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 46000
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "6202f992e4ba894efd0c673d89374a9c932152d8d6ead3741c3ce9b0a1d95bf3",
+      "roundId": "slots.moogle-search-194",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:1581;minor.mark:135718;s0r0:31;s0r1:0;s0r2:18;s0r3:18;s0r4:0;c0:5573;c0:1632;c0:2670;c0:3487;c0:9595;c0:4676;c0:7820;c0:2617;c0:3563;c0:5882;c0:3145;c0:2978;c0:5525;c0:3553;c0:551;c0:987;g1r0:22;g1r1:27;g1r2:3;g1r3:5;g1r4:25;g1giant:0;g1c:8455;g1c:1886;g1c:6962;g1c:3810;g1c:4880;g1c:5184;g2r0:17;g2r1:31;g2r2:17;g2r3:37;g2r4:33;g2giant:74;g2c:7972;g2c:7997;g2c:7150;g2c:3313;g2c:6185;g2c:5741;g3r0:26;g3r1:9;g3r2:13;g3r3:25;g3r4:29;g3giant:69;g3c:155;g3c:1727;g3c:2056;g3c:1249;g3c:7793;g3c:3448;g3c:2582;g3c:9436;g4r0:3;g4r1:36;g4r2:8;g4r3:25;g4r4:32;g4giant:65;g4c:2425;g4c:1649;g4c:9119;g4c:2064;g4c:1351;g4c:9036;g5r0:2;g5r1:11;g5r2:20;g5r3:26;g5r4:30;g5giant:70;g5c:6295;g5c:4643;g5c:2663;g5c:8421;g5c:4603;g5c:6447;g6r0:7;g6r1:27;g6r2:32;g6r3:2;g6r4:16;g6giant:25;g6c:4162;g6c:6002;g6c:1981;g6c:5241;g6c:185;g6c:1808;g6c:7384;jackpot:1314391886",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": true,
+      "freeSpinsPlayed": 6,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            5,
+            6,
+            3,
+            8,
+            5,
+            6,
+            6,
+            1,
+            8,
+            6,
+            1,
+            8,
+            5,
+            6,
+            9
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 6,
+          "spinsLeft": 6,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 1,
+              "value": 1000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "game",
+          "grid": [
+            3,
+            5,
+            6,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            0,
+            5
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 5,
+          "expander": 0,
+          "coins": [],
+          "running": 0
+        },
+        {
+          "kind": "game",
+          "grid": [
+            1,
+            4,
+            2,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            3,
+            4,
+            5
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 4,
+          "expander": 6,
+          "coins": [],
+          "running": 0
+        },
+        {
+          "kind": "game",
+          "grid": [
+            9,
+            5,
+            9,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            1,
+            2,
+            5
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 3,
+          "expander": 6,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 2,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "game",
+          "grid": [
+            3,
+            1,
+            5,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            3,
+            4
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 2,
+          "expander": 6,
+          "coins": [],
+          "running": 0
+        },
+        {
+          "kind": "game",
+          "grid": [
+            4,
+            3,
+            1,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            2,
+            5,
+            6
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 1,
+          "expander": 6,
+          "coins": [],
+          "running": 0
+        },
+        {
+          "kind": "game",
+          "grid": [
+            2,
+            0,
+            5,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            6,
+            9,
+            4
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": 3,
+          "coins": [
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "dfd1737b49b6de1463ee495e2badcc7c00ead9e228177e1b05170ddef25290f1",
+      "roundId": "slots.moogle-search-1983",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": false,
+        "miniValue": 0,
+        "miniMark": 0,
+        "minorValue": 0,
+        "minorMark": 0
+      },
+      "drawLog": "mini.mark:85267;minor.mark:458300;s0r0:32;s0r1:11;s0r2:17;s0r3:15;s0r4:5;c0:173;c0:7948;c0:8392;c0:5152;c0:2497;c0:5193;c0:700;c0:1322;c0:1231;c0:8231;c0:1873;c0:766;c0:6915;c0:2593;c0:9819;c0:6876;c0:1221;c0:4730;c0:480;c0:8469;c0:1109;c0:4229;h0r1:7246;h0r1:7659;h0r1:9603;h0r1:716;h0r1:82;coin:6421;h0r1:8839;h0r1:5794;h0r1:8013;h0r2:8297;h0r2:5971;h0r2:4758;h0r2:8122;h0r2:6685;h0r2:8826;h0r2:2437;h0r3:5908;h0r3:6599;h0r3:8095;h0r3:613;h0r3:1233;h0r3:449;h0r3:3569;h0r4:3158;h0r4:6385;h0r4:2851;h0r4:7818;h0r4:234;coin:8311;h0r4:4083;h0r4:2862;h0r5:403;h0r5:3870;h0r5:1975;h0r5:9161;h0r5:8066;h0r5:8433;h0r6:1467;h0r6:5558;h0r6:4723;h0r6:6029;h0r6:323;coin:9327;h0r6:1780;h0r7:5792;h0r7:9784;h0r7:6709;h0r7:1048;h0r7:7180;h0r8:6781;h0r8:2900;h0r8:2362;h0r8:6533;h0r8:3677;h0r9:2716;h0r9:8552;h0r9:3937;h0r9:3920;h0r9:601;jackpot:895584122",
+      "totalWin": 116000,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": true,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            9,
+            3,
+            4,
+            6,
+            4,
+            9,
+            9,
+            6,
+            9,
+            3,
+            7,
+            5,
+            9,
+            9,
+            9
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "hold",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 3,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 3,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 2,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 1,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 3,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 2,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 3,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 10,
+              "kind": 2,
+              "multiple": 0,
+              "value": 0
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 2,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 10,
+              "kind": 2,
+              "multiple": 0,
+              "value": 0
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 1,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 10,
+              "kind": 2,
+              "multiple": 0,
+              "value": 0
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "respin",
+          "grid": [],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 10,
+              "kind": 2,
+              "multiple": 0,
+              "value": 0
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 0
+        },
+        {
+          "kind": "collect",
+          "grid": [],
+          "wins": [],
+          "pay": 116000,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 5,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 6,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 8,
+              "kind": 0,
+              "multiple": 8,
+              "value": 8000
+            },
+            {
+              "cell": 9,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 10,
+              "kind": 2,
+              "multiple": 5000,
+              "value": 50000
+            },
+            {
+              "cell": 12,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            },
+            {
+              "cell": 13,
+              "kind": 0,
+              "multiple": 10,
+              "value": 10000
+            },
+            {
+              "cell": 14,
+              "kind": 0,
+              "multiple": 3,
+              "value": 3000
+            }
+          ],
+          "running": 116000
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20001,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "20e980fdacbee621a8d93c198a281b218821199e9cd7b6e93ec356b11fa7aff6",
+      "roundId": "slots.moogle-vector-12",
+      "bet": 1000,
+      "mode": "base",
+      "cost": 1000,
+      "meters": {
+        "exists": true,
+        "miniValue": 299990,
+        "miniMark": 299995,
+        "minorValue": 999992,
+        "minorMark": 1000000
+      },
+      "drawLog": "mini.mark:69647;minor.mark:238413;s0r0:8;s0r1:21;s0r2:34;s0r3:19;s0r4:34;c0:1122;c0:2221;c0:9649;c0:8558;c0:5910;c0:9552;c0:6092;c0:7918;c0:7024;c0:3619;c0:2273;c0:7758;c0:956;c0:4821;c0:6271;c0:9263;c0:3356;jackpot:411832128",
+      "totalWin": 130000,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "meter",
+          "grid": [],
+          "wins": [],
+          "pay": 30000,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": -1,
+              "kind": 1,
+              "multiple": 3000,
+              "value": 30000
+            }
+          ],
+          "running": 30000
+        },
+        {
+          "kind": "meter",
+          "grid": [],
+          "wins": [],
+          "pay": 100000,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": -1,
+              "kind": 2,
+              "multiple": 10000,
+              "value": 100000
+            }
+          ],
+          "running": 130000
+        },
+        {
+          "kind": "base",
+          "grid": [
+            9,
+            5,
+            6,
+            4,
+            2,
+            5,
+            5,
+            6,
+            3,
+            1,
+            8,
+            9,
+            3,
+            4,
+            5
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 0,
+              "kind": 0,
+              "multiple": 2,
+              "value": 2000
+            },
+            {
+              "cell": 11,
+              "kind": 0,
+              "multiple": 5,
+              "value": 5000
+            }
+          ],
+          "running": 130000
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 20000,
+          "multipleHundredths": 2000,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 50000,
+          "multipleHundredths": 5000,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    },
+    {
+      "seed": "b399a3559bd9c5a904f16bea628aa47167d233cad7c1a8a9a8d9e1f4ca96ef32",
+      "roundId": "slots.moogle-vector-13",
+      "bet": 250,
+      "mode": "base",
+      "cost": 250,
+      "meters": {
+        "exists": true,
+        "miniValue": 204000,
+        "miniMark": 250000,
+        "minorValue": 509000,
+        "minorMark": 620000
+      },
+      "drawLog": "mini.mark:7420;minor.mark:270833;s0r0:5;s0r1:20;s0r2:21;s0r3:0;s0r4:24;c0:5799;c0:5248;c0:9950;c0:9831;c0:823;c0:8;c0:7934;c0:4622;c0:1180;c0:972;c0:8379;c0:6278;c0:8976;c0:2369;c0:9699;c0:1752;c0:3330;jackpot:845706440",
+      "totalWin": 0,
+      "capApplied": false,
+      "jackpotHit": false,
+      "bonusTriggered": false,
+      "freeSpinsPlayed": 0,
+      "expander": -1,
+      "featureMultiplier": 0,
+      "steps": [
+        {
+          "kind": "base",
+          "grid": [
+            5,
+            6,
+            2,
+            8,
+            9,
+            2,
+            4,
+            9,
+            5,
+            8,
+            5,
+            6,
+            5,
+            6,
+            4
+          ],
+          "wins": [],
+          "pay": 0,
+          "multiplier": 1,
+          "spinsAdded": 0,
+          "spinsLeft": 0,
+          "expander": -1,
+          "coins": [
+            {
+              "cell": 4,
+              "kind": 0,
+              "multiple": 1,
+              "value": 250
+            },
+            {
+              "cell": 7,
+              "kind": 0,
+              "multiple": 1,
+              "value": 250
+            }
+          ],
+          "running": 0
+        }
+      ],
+      "metersAfter": [
+        {
+          "tier": "mini",
+          "value": 5100,
+          "multipleHundredths": 2040,
+          "resetHundredths": 2000,
+          "ceilingHundredths": 3000
+        },
+        {
+          "tier": "minor",
+          "value": 12725,
+          "multipleHundredths": 5090,
+          "resetHundredths": 5000,
+          "ceilingHundredths": 10000
+        }
+      ]
+    }
+  ]
+}

@@ -25,7 +25,8 @@ public sealed class CasinoGameWireContractTests
     {
         var request = new CasinoSlotsSpinRequest("sit1", "round1", 2);
         var json = JsonSerializer.Serialize(request, AethernetJsonContext.Default.CasinoSlotsSpinRequest);
-        Assert.Equal("{\"sittingId\":\"sit1\",\"clientRoundId\":\"round1\",\"stake\":2}", json);
+        Assert.Equal("{\"sittingId\":\"sit1\",\"clientRoundId\":\"round1\",\"stake\":2,"
+            + "\"machineId\":\"slots.bird\",\"mode\":\"base\"}", json);
     }
 
     [Fact]
