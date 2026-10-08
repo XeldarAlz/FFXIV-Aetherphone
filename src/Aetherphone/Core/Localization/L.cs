@@ -2238,7 +2238,7 @@ internal static class L
             new("changelog.r1200.58",
                 "Added Kupo Clicker: tap the moogle for kupo and build up a workshop that keeps earning while you play"),
             new("changelog.r1200.59",
-                "Added Crater: turn-based artillery between moogle teams on ground that crumbles under every shell"),
+                "Added Moogle War: turn-based artillery between moogle teams on ground that crumbles under every shell"),
             new("changelog.r1200.60",
                 "Added Garden Siege: plant defenders to stop marching mandragoras before they reach your flowers, across 30 levels or in an endless mode"),
             new("changelog.r1200.61",
@@ -2254,11 +2254,11 @@ internal static class L
             new("changelog.r1200.66",
                 "Added Mini Golf: 18 holes of windmills, sand and water, counted in strokes against par"),
             new("changelog.r1200.69",
-                "Added Crater, Broadside, Lucky Draw and Mini Golf rooms to Play with friends"),
+                "Added Moogle War, Broadside, Lucky Draw and Mini Golf rooms to Play with friends"),
             new("changelog.r1200.68",
-                "Added pass-the-phone play to Crater, Broadside, Lucky Draw and Mini Golf: pick how many players share the phone on the intro, and a cover hides each turn until the next player is ready"),
+                "Added pass-the-phone play to Moogle War, Broadside, Lucky Draw and Mini Golf: pick how many players share the phone on the intro, and a cover hides each turn until the next player is ready"),
             new("changelog.r1200.67",
-                "Added a Strategy shelf for Crater, Garden Siege, Broadside and Herd"),
+                "Added a Strategy shelf for Moogle War, Garden Siege, Broadside and Herd"),
             new("changelog.r1200.35",
                 "Added global leaderboards that you join by choice: each game's board lists the top 50 worldwide or among your friends, all time or this week, with the top three on a podium"),
             new("changelog.r1200.36",
@@ -8525,7 +8525,7 @@ internal static class L
         public static readonly LocString OnlineLuckyDrawDesertWin = new("games.onlineLuckyDrawDesertWin", "{0} wins, everyone else left");
         public static readonly LocString OnlineLuckyDrawChoosing = new("games.onlineLuckyDrawChoosing", "{0} is picking a target");
         public static readonly LocString OnlineLuckyDrawNextDeal = new("games.onlineLuckyDrawNextDeal", "Joins next round");
-        public static readonly LocString OnlineCrater = new("games.onlineCrater", "Crater");
+        public static readonly LocString OnlineCrater = new("games.onlineCrater", "Moogle War");
         public static readonly LocString OnlineCraterHostHint = new("games.onlineCraterHostHint", "2 to 4 players, 25 seconds a turn");
         public static readonly LocString OnlineCraterWin = new("games.onlineCraterWin", "{0}'s moogles are the last ones standing!");
         public static readonly LocString OnlineCraterDraw = new("games.onlineCraterDraw", "Draw, no moogle is left standing");
@@ -8602,7 +8602,7 @@ internal static class L
         public static readonly LocString WhatsNewTitle = new("gamesHub.whatsNewTitle", "What's new in Games");
         public static readonly LocString WhatsNewGames = new("gamesHub.whatsNewGames", "26 new games, from Mahjong Solitaire to Mini Golf");
         public static readonly LocString WhatsNewLeaderboards = new("gamesHub.whatsNewLeaderboards", "Leaderboards you can choose to join, worldwide or among friends");
-        public static readonly LocString WhatsNewRooms = new("gamesHub.whatsNewRooms", "Play Crater, Broadside, Lucky Draw and Mini Golf online with friends");
+        public static readonly LocString WhatsNewRooms = new("gamesHub.whatsNewRooms", "Play Moogle War, Broadside, Lucky Draw and Mini Golf online with friends");
         public static readonly LocString WhatsNewRedesign = new("gamesHub.whatsNewRedesign", "A new look with Home, Together, Library and Profile tabs");
         public static readonly LocString WhatsNewSeeAll = new("gamesHub.whatsNewSeeAll", "See what's new");
     }
@@ -9416,7 +9416,7 @@ internal static class L
 
     internal static class Crater
     {
-        public static readonly LocString Title = new("games.crater.title", "Crater");
+        public static readonly LocString Title = new("games.crater.title", "Moogle War");
         public static readonly LocString Hook = new("games.crater.hook", "Take turns lobbing shells and be the last moogle team standing.");
         public static readonly LocString Round = new("games.crater.round", "Round");
         public static readonly LocString You = new("games.crater.you", "You");
