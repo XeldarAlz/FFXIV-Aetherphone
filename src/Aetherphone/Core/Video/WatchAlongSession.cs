@@ -48,6 +48,8 @@ internal sealed class WatchAlongSession : IDisposable
     private const long AutoReplayBotCheckMaxDelayMilliseconds = 15 * 60 * 1000;
     private const long ReactionCooldownMilliseconds = 250;
     private const long ControlCooldownMilliseconds = 250;
+    private const long RejoinRetryMilliseconds = 3_000;
+    private const int MaxRejoinAttempts = 8;
     private const int MaxSharedQueueEntries = 64;
 
     private const float ScreenPositionDriftTolerance = 0.01f;
@@ -68,6 +70,14 @@ internal sealed class WatchAlongSession : IDisposable
 
     private int tickCounter;
     private float heartbeatTimer;
+    private int dropCount;
+    private int seenDropCount;
+    private bool resumePending;
+    private int rejoinAttempts;
+    private long rejoinNextTicks;
+    private volatile bool rejoining;
+    private string? joinHostId;
+    private string? joinCode;
     private string? lastPublishedUrl;
     private double lastPublishedPosition;
     private DateTime lastPublishedAt = DateTime.UtcNow;
@@ -94,6 +104,7 @@ internal sealed class WatchAlongSession : IDisposable
     private CallControl? pendingJoinSync;
     private CallControl? pendingStateSync;
     private CallControl? pendingHostChange;
+    private CallControl? pendingRejoinDecline;
     private volatile bool pendingViewerStop;
 
     private volatile int serverFeatures;
@@ -150,6 +161,7 @@ internal sealed class WatchAlongSession : IDisposable
         stream.HostChanged += OnHostChanged;
         stream.ControlRequested += OnControlRequested;
         stream.Reacted += OnReacted;
+        stream.ConnectedChanged += OnConnectedChanged;
     }
 
     internal WatchAlongMode Mode { get; private set; } = WatchAlongMode.None;
@@ -158,6 +170,7 @@ internal sealed class WatchAlongSession : IDisposable
     internal bool IsPartyOpen => partyOpen;
     internal bool HasCompany => Roster.Count > 1;
     internal bool InParty => IsViewing || partyOpen || (IsHosting && HasCompany);
+    private bool InSession => Mode != WatchAlongMode.None || awaitingHostAck || partyOpen || IsJoining;
 
     internal IReadOnlyList<WatchAlongParticipant> Roster { get; private set; } = [];
     internal IReadOnlyList<NearbyStream> Nearby { get; private set; } = [];
@@ -243,6 +256,8 @@ internal sealed class WatchAlongSession : IDisposable
     internal void Join(string hostId)
     {
         PrepareToJoin();
+        joinHostId = hostId;
+        joinCode = null;
         stream.Join(hostId);
     }
 
@@ -255,6 +270,8 @@ internal sealed class WatchAlongSession : IDisposable
         }
 
         PrepareToJoin();
+        joinHostId = null;
+        joinCode = code;
         stream.JoinByCode(code);
         return true;
     }
@@ -362,6 +379,8 @@ internal sealed class WatchAlongSession : IDisposable
         joinRequested = false;
         promotionPending = false;
         policyAdopted = false;
+        rejoining = false;
+        rejoinNextTicks = 0;
         grants.Clear();
         publishedGrants = null;
         grantsChanged = false;
@@ -374,6 +393,7 @@ internal sealed class WatchAlongSession : IDisposable
         Interlocked.Exchange(ref pendingJoinSync, null);
         Interlocked.Exchange(ref pendingStateSync, null);
         Interlocked.Exchange(ref pendingHostChange, null);
+        Interlocked.Exchange(ref pendingRejoinDecline, null);
         while (pendingControls.TryDequeue(out _))
         {
         }
@@ -569,6 +589,7 @@ internal sealed class WatchAlongSession : IDisposable
     internal void OnFrameworkUpdate(float deltaSeconds)
     {
         DrainSocketWork();
+        TrackConnection(Environment.TickCount64);
         video.HoldScreen = InParty;
 
         if (Mode == WatchAlongMode.Viewing)
@@ -632,11 +653,113 @@ internal sealed class WatchAlongSession : IDisposable
         return true;
     }
 
+    private void OnConnectedChanged(bool connected)
+    {
+        if (!connected)
+        {
+            Interlocked.Increment(ref dropCount);
+        }
+    }
+
+    private void TrackConnection(long now)
+    {
+        var drops = Volatile.Read(ref dropCount);
+        if (drops != seenDropCount)
+        {
+            seenDropCount = drops;
+            resumePending = InSession;
+        }
+
+        if (!stream.Connected)
+        {
+            return;
+        }
+
+        if (resumePending)
+        {
+            resumePending = false;
+            ResumeAfterDrop();
+        }
+
+        if (rejoinNextTicks != 0 && now >= rejoinNextTicks)
+        {
+            rejoinNextTicks = 0;
+            SendRejoin();
+        }
+    }
+
+    private void ResumeAfterDrop()
+    {
+        if (Mode == WatchAlongMode.Hosting || awaitingHostAck || partyOpen)
+        {
+            publishRequested = true;
+            tickCounter = CheckEveryTicks;
+            return;
+        }
+
+        if (Mode == WatchAlongMode.Viewing)
+        {
+            rejoinAttempts = 0;
+            SendRejoin();
+            return;
+        }
+
+        if (!IsJoining)
+        {
+            return;
+        }
+
+        if (joinHostId is { } hostId)
+        {
+            stream.Join(hostId);
+        }
+        else if (joinCode is { } code)
+        {
+            stream.JoinByCode(code);
+        }
+    }
+
+    private void SendRejoin()
+    {
+        if (Mode != WatchAlongMode.Viewing || roomHostId is not { } hostId)
+        {
+            rejoining = false;
+            return;
+        }
+
+        rejoining = true;
+        rejoinAttempts++;
+        stream.Join(hostId);
+    }
+
+    private void ApplyRejoinDecline(CallControl message)
+    {
+        if (Mode != WatchAlongMode.Viewing)
+        {
+            rejoining = false;
+            return;
+        }
+
+        if (message.Reason == StreamDeclineReason.Unavailable && rejoinAttempts < MaxRejoinAttempts)
+        {
+            rejoinNextTicks = Environment.TickCount64 + RejoinRetryMilliseconds;
+            return;
+        }
+
+        rejoining = false;
+        EndRoom();
+    }
+
     private void DrainSocketWork()
     {
         if (Interlocked.Exchange(ref pendingHostChange, null) is { } hostChange)
         {
             ApplyHostChange(hostChange);
+        }
+
+        if (Interlocked.Exchange(ref pendingRejoinDecline, null) is { } rejoinDecline)
+        {
+            ApplyRejoinDecline(rejoinDecline);
         }
 
         if (Interlocked.Exchange(ref pendingJoinSync, null) is { } joinMessage)
@@ -1020,6 +1143,7 @@ internal sealed class WatchAlongSession : IDisposable
         Mode = WatchAlongMode.Viewing;
         IsAwaitingApproval = false;
         joinRequested = false;
+        rejoining = false;
         roomHostId = message.HostId;
         remoteParticipants = message.Participants;
         RebuildRoster();
@@ -1045,6 +1169,12 @@ internal sealed class WatchAlongSession : IDisposable
     {
         if (Mode != WatchAlongMode.Viewing)
         {
+            return;
+        }
+
+        if (viewingUrl is not null)
+        {
+            ApplyStateSync(message, force: false);
             return;
         }
 
@@ -1111,6 +1241,12 @@ internal sealed class WatchAlongSession : IDisposable
 
     private void OnDeclined(CallControl message)
     {
+        if (rejoining)
+        {
+            Interlocked.Exchange(ref pendingRejoinDecline, message);
+            return;
+        }
+
         Mode = WatchAlongMode.None;
         IsAwaitingApproval = false;
         joinRequested = false;
@@ -1793,7 +1929,9 @@ internal sealed class WatchAlongSession : IDisposable
         return items.ToArray();
     }
 
-    private void OnEnded(CallControl message)
+    private void OnEnded(CallControl message) => EndRoom();
+
+    private void EndRoom()
     {
         if (Mode == WatchAlongMode.Viewing)
         {
@@ -1839,6 +1977,7 @@ internal sealed class WatchAlongSession : IDisposable
         joinRequested = false;
         promotionPending = false;
         policyAdopted = false;
+        rejoining = false;
         Interlocked.Exchange(ref pendingJoinSync, null);
         Interlocked.Exchange(ref pendingStateSync, null);
         Interlocked.Exchange(ref pendingHostChange, null);
@@ -1866,5 +2005,6 @@ internal sealed class WatchAlongSession : IDisposable
         stream.HostChanged -= OnHostChanged;
         stream.ControlRequested -= OnControlRequested;
         stream.Reacted -= OnReacted;
+        stream.ConnectedChanged -= OnConnectedChanged;
     }
 }

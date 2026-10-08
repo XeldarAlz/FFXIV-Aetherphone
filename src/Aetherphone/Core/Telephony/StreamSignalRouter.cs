@@ -27,6 +27,7 @@ internal sealed class StreamSignalRouter : IDisposable
     {
         this.calls = calls;
         calls.Connection.ControlReceived += OnControl;
+        calls.ConnectedChanged += OnConnectedChanged;
     }
 
     public event Action<CallControl>? Joined;
@@ -51,6 +52,8 @@ internal sealed class StreamSignalRouter : IDisposable
     public event Action<CallControl>? HostChanged;
     public event Action<CallControl>? ControlRequested;
     public event Action<CallControl>? Reacted;
+
+    public event Action<bool>? ConnectedChanged;
 
     public bool Connected => calls.Connected;
 
@@ -156,6 +159,8 @@ internal sealed class StreamSignalRouter : IDisposable
         calls.Send(new CallControl { Type = SignalType.StreamLeave, HostId = hostId });
     }
 
+    private void OnConnectedChanged(bool connected) => ConnectedChanged?.Invoke(connected);
+
     private void OnControl(CallControl message)
     {
         switch (message.Type)
@@ -214,5 +219,6 @@ internal sealed class StreamSignalRouter : IDisposable
     public void Dispose()
     {
         calls.Connection.ControlReceived -= OnControl;
+        calls.ConnectedChanged -= OnConnectedChanged;
     }
 }

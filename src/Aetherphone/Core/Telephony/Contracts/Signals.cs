@@ -191,6 +191,7 @@ internal static class StreamDeclineReason
     public const string Denied = "denied";
     public const string Full = "full";
     public const string BadCode = "code";
+    public const string Unavailable = "unavailable";
 }
 
 internal static class ParticipantState
