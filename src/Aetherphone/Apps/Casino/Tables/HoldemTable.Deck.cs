@@ -12,11 +12,12 @@ namespace Aetherphone.Apps.Casino.Tables;
 
 internal sealed partial class HoldemTable
 {
-    public const float BuyInDeckHeight = DeckPad * 2f + DeckRow * 3f + DeckGap * 3f + Button.LargeHeight;
+    public const float BuyInDeckHeight = DeckPad * 2f + DeckRow + TouchRow * 2f + DeckGap * 3f + Button.LargeHeight;
 
     private const float DeckPad = 12f;
     private const float DeckGap = 8f;
     private const float DeckRow = 30f;
+    private const float TouchRow = Metrics.Size.Pill;
     private const float IconRadius = 22f;
     private const float IconGap = 14f;
     private const float FoldShare = 0.28f;
@@ -126,8 +127,11 @@ internal sealed partial class HoldemTable
     {
         var top = deck.Min.Y + DeckPad * scale;
         return new Rect(new Vector2(deck.Min.X + DeckPad * scale, top),
-            new Vector2(deck.Max.X - DeckPad * scale, top + DeckRow * scale));
+            new Vector2(deck.Max.X - DeckPad * scale, top + TouchRow * scale));
     }
+
+    private static Rect TrailingRect(Rect status, float width) =>
+        new(new Vector2(MathF.Max(status.Min.X, status.Max.X - width), status.Min.Y), status.Max);
 
     private static Rect ActionRect(Rect deck, float scale)
     {
@@ -241,21 +245,22 @@ internal sealed partial class HoldemTable
         DrawAmountRow(drawList, ui, new Rect(new Vector2(left, y), new Vector2(right, y + row)),
             practice ? L.Holdem.PracticeStack : L.Holdem.BuyIn, buyIn, scale);
         y += row + gap;
+        var touch = TouchRow * scale;
         if (practice)
         {
-            Typography.DrawCentered(drawList, new Vector2((left + right) * 0.5f, y + row * 0.5f),
+            Typography.DrawCentered(drawList, new Vector2((left + right) * 0.5f, y + touch * 0.5f),
                 Typography.FitText(Loc.T(L.Holdem.PracticeNoChips), right - left, TextStyles.Footnote), CasinoColors.InkBody,
                 TextStyles.Footnote);
         }
         else
         {
-            DrawStepRow(ui, new Rect(new Vector2(left, y), new Vector2(right, y + row)), bigBlind, minimum, top,
+            DrawStepRow(ui, new Rect(new Vector2(left, y), new Vector2(right, y + touch)), bigBlind, minimum, top,
                 ref buyIn, !blocked, scale);
         }
 
-        y += row + gap;
+        y += touch + gap;
         var penalty = store.RejoinPenalty(roomId, Environment.TickCount64);
-        DrawPostRow(ui, new Rect(new Vector2(left, y), new Vector2(right, y + row)), board, penalty, scale);
+        DrawPostRow(ui, new Rect(new Vector2(left, y), new Vector2(right, y + touch)), board, penalty, scale);
         var action = ActionRect(deck, scale);
         var cancel = new Rect(action.Min, new Vector2(action.Min.X + action.Width * FoldShare, action.Max.Y));
         if (Button.Draw(drawList, cancel, Loc.T(L.Holdem.Back), ui.Ink, ButtonStyle.Gray, id: "holdem.buyin.back"))
@@ -369,7 +374,7 @@ internal sealed partial class HoldemTable
             postOptions[1] = Loc.T(L.Holdem.PostNow);
         }
 
-        postNow = SegmentStrip.Draw("##holdemPost", row, postOptions, postNow ? 1 : 0, ui.Palette) == 1;
+        postNow = SegmentStrip.Draw("##holdemPost", row, postOptions, postNow ? 1 : 0, ui.Palette, TouchRow) == 1;
     }
 
     private void DrawRaiseDeck(AppSkin ui, Rect deck, CasinoHoldemRoomStateDto board, in HoldemRaiseModel model)
@@ -411,10 +416,8 @@ internal sealed partial class HoldemTable
         if (prompt.TimeBankLeft > 0)
         {
             var label = texts.Count(L.Holdem.TimeBankButton, HoldemRules.TimeBankSeconds);
-            timeBankWidth = Button.WidthFor(label, ButtonSize.Small);
-            var half = Button.SmallHeight * scale * 0.5f;
-            var rect = new Rect(new Vector2(status.Max.X - timeBankWidth, status.Center.Y - half),
-                new Vector2(status.Max.X, status.Center.Y + half));
+            timeBankWidth = Button.WidthFor(label, ButtonSize.Large);
+            var rect = TrailingRect(status, timeBankWidth);
             if (Button.Draw(drawList, rect, label, ui.Ink, ButtonStyle.Tinted, enabled: model.Enabled,
                     id: "holdem.timebank"))
             {
@@ -549,9 +552,8 @@ internal sealed partial class HoldemTable
         if (waiting && !store.IntentInFlight)
         {
             var label = Loc.T(L.Holdem.PostNow);
-            postWidth = Button.WidthFor(label, ButtonSize.Small);
-            var rect = new Rect(new Vector2(status.Max.X - postWidth, status.Center.Y - Button.SmallHeight * scale * 0.5f),
-                new Vector2(status.Max.X, status.Center.Y + Button.SmallHeight * scale * 0.5f));
+            postWidth = Button.WidthFor(label, ButtonSize.Large);
+            var rect = TrailingRect(status, postWidth);
             if (Button.Draw(drawList, rect, label, ui.Ink, ButtonStyle.Tinted, id: "holdem.postnow"))
             {
                 store.SitOut(roomId, false, true);
@@ -634,14 +636,15 @@ internal sealed partial class HoldemTable
         DrawAmountRow(drawList, ui, new Rect(new Vector2(left, y), new Vector2(right, y + row)),
             practice ? L.Holdem.PracticeStack : L.Holdem.TopUp, buyIn, scale);
         y += row + gap;
+        var touch = TouchRow * scale;
         if (!practice)
         {
-            DrawStepRow(ui, new Rect(new Vector2(left, y), new Vector2(right, y + row)), bigBlind,
+            DrawStepRow(ui, new Rect(new Vector2(left, y), new Vector2(right, y + touch)), bigBlind,
                 Math.Min(bigBlind, top), top, ref buyIn, !blocked, scale);
         }
 
-        y += row + gap;
-        Typography.DrawCentered(drawList, new Vector2((left + right) * 0.5f, y + row * 0.5f),
+        y += touch + gap;
+        Typography.DrawCentered(drawList, new Vector2((left + right) * 0.5f, y + touch * 0.5f),
             Typography.FitText(Loc.T(L.Holdem.TopUpHint), right - left, TextStyles.Footnote), CasinoColors.InkBody,
             TextStyles.Footnote);
         var action = ActionRect(deck, scale);
