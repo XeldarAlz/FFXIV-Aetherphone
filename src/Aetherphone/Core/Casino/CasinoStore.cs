@@ -280,6 +280,30 @@ internal sealed class CasinoStore : IDisposable
         return next with { Bonuses = updated };
     }
 
+    public void AbsorbGrant(CasinoSittingDto? sitting, long stack)
+    {
+        var current = state;
+        if (current is not null)
+        {
+            state = GrantAbsorbedInto(current, sitting, stack);
+        }
+    }
+
+    internal static CasinoStateDto GrantAbsorbedInto(CasinoStateDto current, CasinoSittingDto? sitting, long stack)
+    {
+        if (sitting is { Id.Length: > 0 })
+        {
+            return current with { Sitting = sitting };
+        }
+
+        if (current.Sitting is { } bankroll && stack > 0)
+        {
+            return current with { Sitting = bankroll with { Stack = stack } };
+        }
+
+        return current;
+    }
+
     public void TopUp(long amount)
     {
         var sittingId = state?.Sitting?.Id ?? string.Empty;

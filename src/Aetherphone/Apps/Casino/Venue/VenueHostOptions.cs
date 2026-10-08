@@ -67,6 +67,11 @@ internal sealed class VenueHostOptions
         PracticeStack = string.Empty;
     }
 
+    public void Select(VenueRoomKind kind)
+    {
+        Game = Math.Max(GameBlackjack, Array.IndexOf(GameKinds, kind));
+    }
+
     public void DrawGameCard(AppSkin ui, float scale)
     {
         Refresh();

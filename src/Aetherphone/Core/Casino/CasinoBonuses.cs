@@ -20,6 +20,24 @@ internal static class CasinoFeatures
 
     public const string Machines = "machines";
 
+    public const string Missions = "missions";
+
+    public const string Challenges = "challenges";
+
+    public const string Fame = "fame";
+
+    public const string Feed = "feed";
+
+    public const string Rain = "rain";
+
+    public const string Holdem = "holdem";
+
+    public const string Race = "race";
+
+    public const string Plinko = "plinko";
+
+    public const string Originals = "originals";
+
     public static bool Has(CasinoStateDto? state, string feature)
     {
         var features = state?.Features;

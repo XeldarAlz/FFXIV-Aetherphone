@@ -133,6 +133,7 @@ internal sealed class PhoneServices : IDisposable
     public required Casino.CasinoVenueStore CasinoVenue { get; init; }
     public required Casino.CasinoTradeSync CasinoTrade { get; init; }
     public required Casino.CasinoLauncher CasinoLauncher { get; init; }
+    public required Casino.CasinoFloorStore CasinoFloor { get; init; }
     public required Games.GameRoomsStore GameRooms { get; init; }
     public required Games.LeaderboardStore Leaderboard { get; init; }
     public required Video.AetherStreamLauncher AetherStreamLauncher { get; init; }
@@ -539,6 +540,7 @@ internal sealed class PhoneServices : IDisposable
             CasinoVenue = casinoVenue,
             CasinoTrade = casinoTrade,
             CasinoLauncher = new Casino.CasinoLauncher(),
+            CasinoFloor = new Casino.CasinoFloorStore(aethernetSession, casinoApi.Casino, casino, realtimeSignals),
             GameRooms = gameRooms,
             Leaderboard = leaderboard,
             AetherStreamLauncher = new Video.AetherStreamLauncher(),
@@ -713,6 +715,7 @@ internal sealed class PhoneServices : IDisposable
         MoogleClicker.Dispose();
         Leaderboard.Dispose();
         GameRooms.Dispose();
+        CasinoFloor.Dispose();
         CasinoTrade.Dispose();
         CasinoVenue.Dispose();
         CasinoTurns.Dispose();

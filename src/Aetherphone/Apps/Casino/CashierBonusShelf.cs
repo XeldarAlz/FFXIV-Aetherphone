@@ -79,6 +79,7 @@ internal sealed class CashierBonusShelf
     private float showerLeft;
     private Vector2 showerOrigin;
     private string note = string.Empty;
+    private string refusal = string.Empty;
     private bool noteIsGrant;
 
     public CashierBonusShelf(CasinoStore store)
@@ -87,6 +88,27 @@ internal sealed class CashierBonusShelf
     }
 
     public string Note => note;
+
+    public void Claim(string kind, Vector2 origin)
+    {
+        var index = CasinoBonusKinds.IndexOf(kind);
+        if (index < 0 || store.ClaimingBonus.Length > 0)
+        {
+            return;
+        }
+
+        claimCenters[index] = origin;
+        ClearNote();
+        store.ClaimBonus(kind);
+        UiFeedback.Play(UiSound.CasinoChips);
+    }
+
+    public string TakeRefusal()
+    {
+        var taken = refusal;
+        refusal = string.Empty;
+        return taken;
+    }
 
     public bool NoteIsGrant => noteIsGrant;
 
@@ -318,6 +340,7 @@ internal sealed class CashierBonusShelf
         if (store.TakeBonusFailure())
         {
             note = Loc.T(CasinoReasons.MessageFor(CasinoReasons.Unreachable));
+            refusal = note;
             noteIsGrant = false;
         }
 
@@ -330,6 +353,7 @@ internal sealed class CashierBonusShelf
         if (!result.Granted)
         {
             note = Loc.T(CasinoReasons.MessageFor(result.Reason.Length > 0 ? result.Reason : CasinoReasons.Unreachable));
+            refusal = note;
             noteIsGrant = false;
             return;
         }

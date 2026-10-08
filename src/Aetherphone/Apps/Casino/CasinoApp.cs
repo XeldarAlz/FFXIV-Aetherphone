@@ -17,7 +17,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
-internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
+internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, Strip.IStripFloor
 {
     private const int RulesButton = 0;
     private const float StageSurfaceSlack = 16f;
@@ -28,6 +28,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     public int BadgeCount => 0;
 
     private readonly AethernetSession session;
+    private readonly Core.Casino.CasinoFloorStore floor;
+    private readonly Configuration configuration;
+    private readonly Strip.StripHero stripHero = new();
+    private readonly Strip.StripCarousel heroCards = new();
+    private readonly Strip.StripShelves shelves = new();
+    private readonly Strip.WinsTicker winsTicker = new();
     private readonly CoinStore coins;
     private readonly Core.Casino.CasinoStore casino;
     private readonly Core.Casino.CasinoPlayStore casinoPlay;
@@ -70,7 +76,6 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly Venue.NearbyTablesCard nearbyTables;
     private readonly Action<Core.Aethernet.Contracts.CasinoTableRowDto> openNearbyRow;
     private readonly CasinoStage stage = new();
-    private readonly JackpotRail jackpotRail = new();
     private readonly GameRulesSheet rulesSheet = new();
     private readonly TabBar bottomNav = new();
     private readonly TabItem[] navTabs = new TabItem[4];
@@ -101,8 +106,10 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         ConductGateService conduct, Core.Media.RemoteImageCache remoteImages,
         Core.Lodestone.LodestoneService lodestone, Core.Casino.HoldemStore holdemStore,
         Core.Casino.CasinoVenueStore casinoVenue, Core.Casino.CasinoTradeSync tradeSync,
-        Core.Report.ReportService report)
+        Core.Report.ReportService report, Core.Casino.CasinoFloorStore floor, Configuration configuration)
     {
+        this.floor = floor;
+        this.configuration = configuration;
         this.session = session;
         this.coins = coins;
         this.casino = casino;
@@ -203,9 +210,14 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         stage.ResetSession();
         ResetLimitsEditor();
         ResetLobby();
-        jackpotRail.Snap(Core.Casino.CasinoChipLots.CoinsFor(casino.Jackpot));
+        jackpotRoll.Snap(casino.Jackpot);
         historyLoadFailed = false;
+        ResetLaunch();
+        heroCards.Reset();
+        shelves.Reset();
+        winsTicker.Reset();
         RefreshFloor();
+        floor.Watch();
         casinoPlay.RecoverPendingRound();
         ConsumeLaunch();
     }
@@ -237,6 +249,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         rulesSheet.Close();
         stage.ResetSession();
         ResetLimitsEditor();
+        ResetLaunch();
+        floor.Unwatch();
     }
 
     private void RefreshFloor()
@@ -248,6 +262,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         casinoRooms.RefreshNow();
         casinoTables.RefreshNow();
         casinoSpin.RefreshNow();
+        floor.RefreshMissionsNow();
     }
 
     private void ConsumeLaunch()
@@ -320,7 +335,13 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         tradePrompt.Gate();
         stage.Gate();
         SyncRaceLandscape();
-        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        floor.EnsureFresh();
+        ConsumeFloorNotes();
+        if (!DrawLaunchLayer(context.Content))
+        {
+            router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        }
+
         machines.DrawOverlay(screenArea, ui);
         scratch.DrawOverlay(screenArea, ui);
         wheel.DrawOverlay(screenArea, ui);
@@ -711,15 +732,27 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
     private void PopRoute()
     {
-        machines.ClosePayTable();
-        scratch.CloseOdds();
-        if (IsStage(router.Current))
+        if (TryDismissLaunch())
         {
-            stage.Reset();
+            return;
         }
 
-        ResetCabinetOf(router.Current);
-        router.Pop();
+        PopNow(true);
+    }
+
+    private void PopNow(bool animate)
+    {
+        machines.ClosePayTable();
+        scratch.CloseOdds();
+        var leaving = router.Current;
+        if (IsStage(leaving))
+        {
+            stage.Reset();
+            floor.RefreshMissionsNow();
+        }
+
+        ResetCabinetOf(leaving);
+        router.Pop(animate);
     }
 
     private void ResetCabinetOf(CasinoRoute route)
@@ -866,7 +899,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
         while (routes.Holds(closed))
         {
-            PopRoute();
+            PopNow(true);
         }
     }
 
@@ -922,6 +955,17 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
         hostSheet.Enter();
         router.Push(new CasinoRoute(CasinoScreen.HostTable, CasinoGames.Blackjack));
+    }
+
+    private void OpenVenueHostSheet(Core.Casino.VenueRoomKind kind)
+    {
+        if (router.Current.Screen == CasinoScreen.HostTable)
+        {
+            return;
+        }
+
+        hostSheet.EnterVenue(kind);
+        routes.Push(new CasinoRoute(CasinoScreen.HostTable, Venue.VenueCabinet.GameIdOf(kind)));
     }
 
     private void OpenHoldemHostSheet()
@@ -1174,7 +1218,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         OpenTable(target);
     }
 
-    private void OpenDailySpin()
+    private void OpenDailySpin(Rect source)
     {
         if (router.Current.Screen == CasinoScreen.DailySpin)
         {
@@ -1182,11 +1226,19 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         }
 
         dailySpin.Enter();
-        router.Push(new CasinoRoute(CasinoScreen.DailySpin));
+        PushStage(new CasinoRoute(CasinoScreen.DailySpin), source);
     }
 
-    internal void OpenGame(string gameId)
+    internal void OpenGame(string gameId) => OpenGame(gameId, default);
+
+    private void OpenGame(string gameId, Rect source)
     {
+        if (string.Equals(gameId, CasinoGames.DailySpin, StringComparison.Ordinal))
+        {
+            OpenDailySpin(source);
+            return;
+        }
+
         if (string.Equals(gameId, CasinoGames.Blackjack, StringComparison.Ordinal))
         {
             OpenPit();
@@ -1238,7 +1290,17 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             plinko.Enter();
         }
 
-        router.Push(new CasinoRoute(CasinoScreen.Cabinet, gameId));
+        PushStage(new CasinoRoute(CasinoScreen.Cabinet, gameId), source);
+    }
+
+    private void PushStage(CasinoRoute route, Rect source)
+    {
+        var morph = source.Width > 0f && source.Height > 0f && !router.IsTransitioning;
+        router.Push(route, !morph);
+        if (morph)
+        {
+            BeginLaunch(source);
+        }
     }
 
     private bool SeatedAt(string wireKind)
@@ -1258,29 +1320,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         _ => L.Apps.Casino,
     };
 
-    private static LocString GameName(string gameId) => gameId switch
-    {
-        CasinoGames.Blackjack => L.Casino.GameBlackjack,
-        CasinoGames.Holdem => L.Casino.GameHoldem,
-        CasinoGames.Slots => L.Casino.GameSlots,
-        CasinoGames.SlotsBird => L.Machines.GameBird,
-        CasinoGames.SlotsCascade => L.Machines.GameCascade,
-        CasinoGames.SlotsMoogle => L.Machines.GameMoogle,
-        CasinoGames.SlotsGamble => L.Machines.GambleTitle,
-        CasinoGames.Scratch => L.Casino.GameScratch,
-        CasinoGames.Bingo => L.Casino.GameBingo,
-        CasinoGames.Wheel => L.Casino.GameWheel,
-        CasinoGames.Barkeep => L.Casino.GameBarkeep,
-        CasinoGames.DailySpin => L.Casino.GameDailySpin,
-        CasinoGames.Mines => L.Originals.GameMines,
-        CasinoGames.Dice => L.Originals.GameDice,
-        CasinoGames.Limbo => L.Originals.GameLimbo,
-        CasinoGames.Keno => L.Originals.GameKeno,
-        CasinoGames.HiLo => L.Originals.GameHiLo,
-        CasinoGames.Race => L.Race.Title,
-        CasinoGames.Plinko => L.Plinko.Game,
-        _ => L.Apps.Casino,
-    };
+    private static LocString GameName(string gameId) => CasinoGameNames.Of(gameId);
 
     public void Dispose()
     {

@@ -249,7 +249,7 @@ internal sealed partial class MachineCabinet
         DrawDeck(stage, frame, ui, state, sitting, scale);
     }
 
-    private static int IndexOf(string id)
+    internal static int IndexOf(string id)
     {
         for (var index = 0; index < MachineIds.Length; index++)
         {

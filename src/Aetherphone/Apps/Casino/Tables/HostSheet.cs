@@ -284,6 +284,12 @@ internal sealed class HostSheet
         inlineReason = string.Empty;
     }
 
+    public void EnterVenue(VenueRoomKind kind)
+    {
+        Enter();
+        venueOptions.Select(kind);
+    }
+
     public void Draw(Rect body, AppSkin ui)
     {
         var scale = UiScale.Current;
