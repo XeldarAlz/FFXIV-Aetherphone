@@ -54,6 +54,7 @@ internal static class SignalType
     public const string GameDetach = "game.detach";
     public const string GameResync = "game.resync";
     public const string GameClaim = "game.claim";
+    public const string GameMotion = "game.motion";
     public const string GameAttached = "game.attached";
     public const string GameDeclined = "game.declined";
     public const string GameSnapshot = "game.snapshot";
@@ -439,4 +440,10 @@ internal sealed record GamePayload
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GamePrivateDto? Private { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int[]? Motion { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? From { get; init; }
 }

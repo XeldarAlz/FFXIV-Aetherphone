@@ -10,6 +10,8 @@ internal static class CraterMotion
     private const float StillSpeed = 0.1f;
     private const float StillLimitSeconds = 0.4f;
     private const float LandingSlack = 0.05f;
+    private const float RestProbe = 0.03f;
+    private const float RestNormal = -0.3f;
 
     public static bool Stride(TerrainMask terrain, ref CraterMoogle moogle, int direction, float deltaSeconds)
     {
@@ -53,7 +55,11 @@ internal static class CraterMotion
             bottom - CraterRules.StepUp + CraterFooting.GroundEpsilon);
         if (top > bottom + CraterRules.SnapDown)
         {
-            Unground(ref moogle, Vector2.Zero);
+            if (!Resting(terrain, moogle.Position))
+            {
+                Unground(ref moogle, Vector2.Zero);
+            }
+
             return;
         }
 
@@ -68,6 +74,7 @@ internal static class CraterMotion
         moogle.Velocity += new Vector2(0f, CraterRules.Gravity * deltaSeconds);
         moogle.Position += moogle.Velocity * deltaSeconds;
         moogle.ApexY = MathF.Min(moogle.ApexY, moogle.Position.Y);
+        KeepInside(ref moogle);
         if (terrain.CollideCircle(moogle.Position, CraterRules.MoogleRadius, out var normal, out var depth))
         {
             moogle.Position += normal * depth;
@@ -83,6 +90,7 @@ internal static class CraterMotion
             }
 
             moogle.Velocity *= BodyDrag;
+            KeepInside(ref moogle);
         }
 
         if (moogle.Velocity.LengthSquared() >= StillSpeed * StillSpeed)
@@ -108,6 +116,25 @@ internal static class CraterMotion
         moogle.Velocity = velocity;
         moogle.ApexY = moogle.Position.Y;
         moogle.StillSeconds = 0f;
+    }
+
+    private static bool Resting(TerrainMask terrain, Vector2 position)
+    {
+        var probe = position + new Vector2(0f, RestProbe);
+        return terrain.CollideCircle(probe, CraterRules.MoogleRadius, out var normal, out _) && normal.Y < RestNormal;
+    }
+
+    private static void KeepInside(ref CraterMoogle moogle)
+    {
+        var radius = CraterRules.MoogleRadius;
+        var x = Math.Clamp(moogle.Position.X, radius, CraterRules.WorldWidth - radius);
+        if (x == moogle.Position.X)
+        {
+            return;
+        }
+
+        moogle.Position = new Vector2(x, moogle.Position.Y);
+        moogle.Velocity = new Vector2(0f, moogle.Velocity.Y);
     }
 
     private static bool TryLand(TerrainMask terrain, ref CraterMoogle moogle)

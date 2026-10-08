@@ -46,6 +46,8 @@ internal sealed record GameRoomPrivate(
     public int ActionCount => Uno?.ActionCount ?? Broadside?.ActionCount ?? -1;
 }
 
+internal sealed record GameRoomMotion(string From, int[] Values, long Serial);
+
 internal enum GameRoomApply
 {
     Ignore,
@@ -71,6 +73,7 @@ internal sealed class GameRoomSession
 
     private volatile GameRoomState? state;
     private volatile GameRoomPrivate? privateState;
+    private volatile GameRoomMotion? motion;
     private volatile string roomId = string.Empty;
     private volatile string closedReason = string.Empty;
     private volatile bool attached;
@@ -78,6 +81,7 @@ internal sealed class GameRoomSession
     private long skewMilliseconds;
     private long resyncAskedAtUnixMs;
     private long touchedAtTick;
+    private long motionSerial;
     private bool skewAnchored;
 
     public GameRoomSession(RealtimeSignalBus signals)
@@ -88,6 +92,8 @@ internal sealed class GameRoomSession
     public GameRoomState? State => state;
 
     public GameRoomPrivate? Private => privateState;
+
+    public GameRoomMotion? Motion => motion;
 
     public string RoomId => roomId;
 
@@ -142,6 +148,7 @@ internal sealed class GameRoomSession
             roomId = nextRoomId;
             state = null;
             privateState = null;
+            motion = null;
             closedReason = string.Empty;
             attached = false;
             awaitingSnapshot = true;
@@ -225,6 +232,13 @@ internal sealed class GameRoomSession
                 return;
             case SignalType.GamePrivate:
                 AbsorbPrivate(payload, localNowUnixMs);
+                return;
+            case SignalType.GameMotion:
+                if (payload.Motion is { Length: > 0 } values && payload.From is { Length: > 0 } from)
+                {
+                    motion = new GameRoomMotion(from, values, Interlocked.Increment(ref motionSerial));
+                }
+
                 return;
             case SignalType.GameDeclined:
             case SignalType.GameEnded:
@@ -724,11 +738,27 @@ internal sealed class GameRoomSession
         }
     }
 
+    public void SendMotion(int[] values)
+    {
+        var current = roomId;
+        if (current.Length == 0 || !attached)
+        {
+            return;
+        }
+
+        signals.TrySend(new CallControl
+        {
+            Type = SignalType.GameMotion,
+            Game = new GamePayload { RoomId = current, Motion = values },
+        });
+    }
+
     private void ClearRoom()
     {
         roomId = string.Empty;
         state = null;
         privateState = null;
+        motion = null;
         closedReason = string.Empty;
         attached = false;
         awaitingSnapshot = false;

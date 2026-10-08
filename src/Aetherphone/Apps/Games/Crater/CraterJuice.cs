@@ -282,10 +282,6 @@ internal sealed class CraterJuice
                 particles.Emit(Debris(0.07f, 5f, material), entry.Position, 10);
                 Sound(UiSound.GameHitWood, quiet);
                 break;
-            case CraterEventKind.Jumped:
-                particles.Emit(Dust, Feet(entry.Position), 4);
-                Sound(UiSound.GameJump, quiet);
-                break;
             case CraterEventKind.Landed:
                 particles.Emit(Dust, Feet(entry.Position), 6);
                 break;

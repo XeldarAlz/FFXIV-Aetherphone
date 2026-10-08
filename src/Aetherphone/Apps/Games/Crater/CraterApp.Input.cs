@@ -68,7 +68,7 @@ internal sealed partial class CraterApp
             enabled, scale);
         CraterControls.Fire(drawList, layout.FireCenter, layout.FireRadius, board.Weapon, board.Charge, Accent,
             enabled && board.Weapon != CraterWeapon.Teleport, fireHold.Held, scale);
-        var pad = GamePad.Shooter(layout.Pad, Accent, context.Theme);
+        var pad = GamePad.Walker(layout.Pad, Accent, context.Theme);
         if (!enabled)
         {
             if (!board.HumanTurn)
@@ -94,10 +94,6 @@ internal sealed partial class CraterApp
         var left = pad.Left || GameInput.Held(ImGuiKey.A, ImGuiKey.LeftArrow);
         var right = pad.Right || GameInput.Held(ImGuiKey.D, ImGuiKey.RightArrow);
         board.SetWalk(left == right ? 0 : right ? 1 : -1);
-        if (pad.Fire || GameInput.Pressed(ImGuiKey.W))
-        {
-            board.Jump();
-        }
 
         var raise = GameInput.Held(ImGuiKey.UpArrow);
         var lower = GameInput.Held(ImGuiKey.DownArrow);

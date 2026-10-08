@@ -44,7 +44,6 @@ internal sealed class CraterBot
     private const float MaxWalkSeconds = 1.5f;
     private const float StuckSeconds = 0.15f;
     private const float StuckDistance = 0.0005f;
-    private const int MaxHops = 2;
     private const float RetreatDistance = 3f;
     private const float LedgeProbe = 0.8f;
     private const float WaterMargin = 0.5f;
@@ -76,7 +75,6 @@ internal sealed class CraterBot
     private float stuckSeconds;
     private float lastX;
     private int walkDirection;
-    private int hops;
     private int candidate;
     private bool walked;
     private bool grenadePlanned;
@@ -175,7 +173,6 @@ internal sealed class CraterBot
         waitSeconds = random.Range(MinThinkSeconds, MaxThinkSeconds);
         walked = false;
         grenadePlanned = false;
-        hops = 0;
         candidate = 0;
         best = CraterPlan.Worst;
     }
@@ -341,15 +338,7 @@ internal sealed class CraterBot
             if (stuckSeconds >= StuckSeconds)
             {
                 stuckSeconds = 0f;
-                if (hops < MaxHops)
-                {
-                    board.Jump();
-                    hops++;
-                }
-                else
-                {
-                    walkSeconds = 0f;
-                }
+                walkSeconds = 0f;
             }
         }
         else

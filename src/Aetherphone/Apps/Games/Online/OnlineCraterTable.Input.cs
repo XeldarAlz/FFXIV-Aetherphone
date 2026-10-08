@@ -2,6 +2,7 @@ using Aetherphone.Apps.Games.Crater;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -19,6 +20,7 @@ internal sealed partial class OnlineCraterTable
     private const float DefaultPower = 0.6f;
     private const long SentLockMilliseconds = 1_500;
     private const float ButtonReach = 1.2f;
+    private const long MotionIntervalMilliseconds = 66;
 
     private CraterWeapon weapon = CraterWeapon.Shell;
     private int fuse = CraterRules.DefaultFuse;
@@ -30,6 +32,11 @@ internal sealed partial class OnlineCraterTable
     private bool charging;
     private HoldLatch fireHold;
     private CraterPan pan;
+    private long motionSentAt;
+    private long motionSeen;
+    private int sentX = int.MinValue;
+    private int sentY = int.MinValue;
+    private int sentFacing;
     private bool spaceHeld;
     private bool aimDragging;
     private bool teleportPressed;
@@ -98,6 +105,7 @@ internal sealed partial class OnlineCraterTable
         }
 
         Keyboard(raw, pad, shown);
+        ShareMotion();
         if (scene.Stranded)
         {
             Pass(shown);
@@ -117,7 +125,7 @@ internal sealed partial class OnlineCraterTable
         CraterWeapon.Grenade => labels.FuseHint(fuse),
         CraterWeapon.Teleport => Loc.T(L.Crater.TeleportHint),
         CraterWeapon.Shield => Loc.T(L.Crater.ShieldHint),
-        _ => firstShotTaken ? labels.WeaponName(weapon) : Loc.T(L.Games.OnlineCraterControls),
+        _ => firstShotTaken ? labels.WeaponName(weapon) : Loc.T(L.Crater.ControlsHint),
     };
 
     private void Select(CraterWeapon next)
@@ -225,6 +233,63 @@ internal sealed partial class OnlineCraterTable
             default:
                 return;
         }
+    }
+
+    private void ShareMotion()
+    {
+        var active = scene.ActiveMoogle;
+        if (active < 0)
+        {
+            return;
+        }
+
+        ref readonly var moogle = ref scene.Moogle(active);
+        var x = (int)MathF.Round(moogle.Position.X * GameRoomWire.CraterCentimetres);
+        var y = (int)MathF.Round(moogle.Position.Y * GameRoomWire.CraterCentimetres);
+        var now = Environment.TickCount64;
+        if ((x == sentX && y == sentY && moogle.Facing == sentFacing) || now - motionSentAt < MotionIntervalMilliseconds)
+        {
+            return;
+        }
+
+        store.Room.SendMotion(new[] { active, x, y, moogle.Facing });
+        motionSentAt = now;
+        sentX = x;
+        sentY = y;
+        sentFacing = moogle.Facing;
+    }
+
+    private void FollowMotion(CraterRoomStateDto shown)
+    {
+        if (store.Room.Motion is not { } motion || motion.Serial == motionSeen || motion.Values.Length < 4)
+        {
+            return;
+        }
+
+        motionSeen = motion.Serial;
+        if (string.Equals(motion.From, myUserId, StringComparison.Ordinal) || !PlaysTurn(shown, motion.From))
+        {
+            return;
+        }
+
+        var values = motion.Values;
+        var target = new Vector2(values[1], values[2]) / GameRoomWire.CraterCentimetres;
+        scene.Steer(values[0], target, values[3]);
+    }
+
+    private static bool PlaysTurn(CraterRoomStateDto shown, string userId)
+    {
+        var players = shown.Players ?? Array.Empty<CraterPlayerDto>();
+        for (var index = 0; index < players.Length; index++)
+        {
+            if (players[index].Team == shown.TurnTeam
+                && string.Equals(players[index].UserId, userId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void TrackPan(Rect body, in CraterLayout layout, bool allowed, float scale)

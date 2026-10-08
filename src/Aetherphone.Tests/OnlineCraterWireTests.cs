@@ -68,6 +68,7 @@ public sealed class OnlineCraterWireTests
         Assert.Equal((int)CraterEventKind.DrillStarted, GameRoomWire.CraterBeatDrillStarted);
         Assert.Equal((int)CraterEventKind.Landed, GameRoomWire.CraterBeatLanded);
         Assert.Equal((int)CraterEventKind.FallHurt, GameRoomWire.CraterBeatFallHurt);
+        Assert.Equal(CraterRules.WalkTicks, GameRoomWire.CraterMaxWalkTicks);
         Assert.Equal((int)CraterEventKind.Teleported, GameRoomWire.CraterBeatTeleported);
         Assert.Equal((int)CraterEventKind.ShieldRaised, GameRoomWire.CraterBeatShieldRaised);
         Assert.Equal((int)CraterEventKind.SuddenDeath, GameRoomWire.CraterBeatSuddenDeath);
@@ -246,7 +247,7 @@ public sealed class OnlineCraterWireTests
             scene.Walk(1, 0.1f);
         }
 
-        Assert.True(scene.Moogle(0).Position.X - start.X <= GameRoomWire.CraterMaxWalk);
+        Assert.True(scene.Moogle(0).Position.X - start.X <= CraterRules.WalkBudget + 0.01f);
         var total = 0;
         foreach (var run in scene.Steps)
         {
@@ -254,6 +255,33 @@ public sealed class OnlineCraterWireTests
         }
 
         Assert.InRange(total, 1, GameRoomWire.CraterMaxWalkTicks);
+    }
+
+    [Fact]
+    public void ALivePoseGlidesTheActiveMoogleAndIgnoresTheOthers()
+    {
+        var scene = new OnlineCraterScene();
+        scene.Sync(Field());
+        var active = scene.ActiveMoogle;
+        var other = active == 0 ? 1 : 0;
+        var start = scene.Moogle(active).Position;
+        var target = start + new Vector2(1.2f, -0.1f);
+        var otherStart = scene.Moogle(other).Position;
+
+        scene.Steer(active, target, -1);
+        scene.Steer(other, otherStart + new Vector2(2f, 0f), 1);
+        scene.Advance(0.02f);
+        var midway = scene.Moogle(active).Position;
+        for (var frame = 0; frame < 30; frame++)
+        {
+            scene.Advance(0.02f);
+        }
+
+        Assert.True(midway.X > start.X && midway.X < target.X);
+        Assert.Equal(target.X, scene.Moogle(active).Position.X, 2);
+        Assert.Equal(target.Y, scene.Moogle(active).Position.Y, 2);
+        Assert.Equal(-1, scene.Moogle(active).Facing);
+        Assert.Equal(otherStart, scene.Moogle(other).Position);
     }
 
     [Fact]

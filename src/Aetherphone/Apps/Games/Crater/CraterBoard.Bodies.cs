@@ -40,15 +40,12 @@ internal sealed partial class CraterBoard
 
         if (moogle.Grounded)
         {
-            if (moogle.Alive && index == ActiveMoogle && Phase == CraterPhase.Aiming)
+            if (moogle.Alive && index == ActiveMoogle && Phase == CraterPhase.Aiming && walkIntent != 0 && !Charging)
             {
-                if (jumpQueued)
+                moogle.Facing = walkIntent;
+                if (walkLeft > 0 && CraterMotion.Stride(terrain, ref moogle, walkIntent, deltaSeconds))
                 {
-                    Leap(index, ref moogle);
-                }
-                else if (walkIntent != 0 && !Charging)
-                {
-                    CraterMotion.Stride(terrain, ref moogle, walkIntent, deltaSeconds);
+                    walkLeft--;
                 }
             }
 
@@ -66,13 +63,6 @@ internal sealed partial class CraterBoard
         {
             Drown(index, ref moogle);
         }
-    }
-
-    private void Leap(int index, ref CraterMoogle moogle)
-    {
-        var leap = new Vector2(moogle.Facing * CraterRules.JumpSpeedX, -CraterRules.JumpSpeedY);
-        CraterMotion.Unground(ref moogle, leap);
-        Push(CraterEventKind.Jumped, moogle.Position, Vector2.Zero, 0f, 0, index, moogle.Team, ProjectileKind.Shell);
     }
 
     private void Fly(int index, ref CraterMoogle moogle, float deltaSeconds)

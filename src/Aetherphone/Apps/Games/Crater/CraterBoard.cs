@@ -35,7 +35,7 @@ internal sealed partial class CraterBoard
     private int playedMask;
     private int nextProjectileId;
     private int walkIntent;
-    private bool jumpQueued;
+    private int walkLeft;
     private float holdSeconds;
 
     public ulong Seed { get; private set; }
@@ -93,6 +93,8 @@ internal sealed partial class CraterBoard
     public bool Over => Phase == CraterPhase.Over;
 
     public bool CanAct => Phase == CraterPhase.Aiming && moogles[ActiveMoogle].Alive;
+
+    public int WalkLeft => walkLeft;
 
     public bool HumanTurn => CanAct && !botTeams[ActiveTeam];
 
@@ -245,20 +247,11 @@ internal sealed partial class CraterBoard
         }
 
         StepBodies(deltaSeconds);
-        jumpQueued = false;
     }
 
     public void SetWalk(int direction)
     {
         walkIntent = CanAct ? Math.Sign(direction) : 0;
-    }
-
-    public void Jump()
-    {
-        if (CanAct)
-        {
-            jumpQueued = true;
-        }
     }
 
     public void SetAim(float elevation)
@@ -482,7 +475,7 @@ internal sealed partial class CraterBoard
         Charging = false;
         Charge = 0f;
         walkIntent = 0;
-        jumpQueued = false;
+        walkLeft = CraterRules.WalkTicks;
         Array.Fill(lastAttackers, NoTeam);
         EnterPhase(CraterPhase.TurnIntro);
         Push(CraterEventKind.TurnStarted, moogles[ActiveMoogle].Position, Vector2.Zero, 0f, Round, ActiveMoogle, team,

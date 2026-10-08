@@ -55,7 +55,8 @@ internal static class CraterRules
     public const float MetresPerCell = 0.05f;
     public const float WorldWidth = Columns * MetresPerCell;
     public const float WorldHeight = Rows * MetresPerCell;
-    public const float TickSeconds = 1f / 120f;
+    public const int TicksPerSecond = 120;
+    public const float TickSeconds = 1f / TicksPerSecond;
     public const float MaxCatchUpSeconds = 0.1f;
     public const float Gravity = 9.8f;
     public const int MaxWindLevel = 10;
@@ -67,8 +68,8 @@ internal static class CraterRules
     public const int MaxHealth = 100;
     public const float MoogleRadius = 0.35f;
     public const float WalkSpeed = 1.5f;
-    public const float JumpSpeedX = 2.2f;
-    public const float JumpSpeedY = 4.8f;
+    public const float WalkBudget = 4f;
+    public const int WalkTicks = (int)(WalkBudget * TicksPerSecond / WalkSpeed);
     public const float StepUp = 0.1f;
     public const float ClimbStep = 0.2f;
     public const float SnapDown = 0.08f;

@@ -94,9 +94,7 @@ internal static class GameRoomWire
 
     public const int CraterBeatTunnel = 20;
 
-    public const float CraterMaxWalk = 9f;
-
-    public const int CraterMaxWalkTicks = 720;
+    public const int CraterMaxWalkTicks = 320;
 
     public const int CraterMaxSteps = 64;
 

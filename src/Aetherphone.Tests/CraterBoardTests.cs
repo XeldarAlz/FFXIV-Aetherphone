@@ -335,6 +335,44 @@ public sealed class CraterBoardTests
     }
 
     [Fact]
+    public void AMoogleDroppedIntoAShaftAtTheEdgeStaysOnTheIsland()
+    {
+        var board = FlatBoard(2);
+        AdvanceToAiming(board);
+        var active = board.ActiveMoogle;
+        board.PlaceMoogle(active, new Vector2(0.4f, GroundY - CraterRules.MoogleRadius));
+        board.Terrain.CarveRect(new Rect(new Vector2(0f, GroundY - 0.1f), new Vector2(0.62f, GroundY + 2f)));
+
+        Run(board, TicksPerSecond * 4);
+
+        var moogle = board.Moogle(active);
+        Assert.True(moogle.Alive);
+        Assert.True(moogle.Grounded);
+        Assert.True(moogle.Position.X >= CraterRules.MoogleRadius - 0.001f);
+    }
+
+    [Fact]
+    public void WalkingStopsWhenTheTurnsBudgetRunsOutButTurningStillWorks()
+    {
+        var board = FlatBoard(2);
+        AdvanceToAiming(board);
+        var active = board.ActiveMoogle;
+        board.PlaceMoogle(active, new Vector2(4f, GroundY - CraterRules.MoogleRadius));
+
+        board.SetWalk(1);
+        Run(board, TicksPerSecond * 6);
+
+        var walked = board.Moogle(active).Position.X - 4f;
+        Assert.Equal(0, board.WalkLeft);
+        Assert.Equal(CraterRules.WalkBudget, walked, 2);
+
+        board.SetWalk(-1);
+        Run(board, 10);
+        Assert.Equal(-1, board.Moogle(active).Facing);
+        Assert.Equal(4f + walked, board.Moogle(active).Position.X, 3);
+    }
+
+    [Fact]
     public void TeleportLandsOnTheGroundBelowTheTarget()
     {
         var board = FlatBoard(2, groundRight: 24f);
@@ -431,7 +469,6 @@ public sealed class CraterBoardTests
         board.SetWalk(1);
         Run(board, 40);
         board.SetWalk(0);
-        board.Jump();
         Run(board, TicksPerSecond);
         var active = board.Moogle(board.ActiveMoogle);
         board.SetFacing(active.Position.X < CraterRules.WorldWidth * 0.5f ? 1 : -1);

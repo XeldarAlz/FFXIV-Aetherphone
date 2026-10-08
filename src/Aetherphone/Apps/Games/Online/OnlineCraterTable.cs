@@ -110,6 +110,7 @@ internal sealed partial class OnlineCraterTable : IDisposable
         juice.Advance(raw);
         screen.Update(raw);
         PlaceCamera(body, raw, scale);
+        FollowMotion(shown);
         scene.Advance(juice.Fx.ScaleDelta(raw) * screen.TimeScale);
         Drain();
         var live = shown.EndKind.Length == 0 && shown.TurnTeam >= 0;

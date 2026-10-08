@@ -8529,7 +8529,6 @@ internal static class L
         public static readonly LocString OnlineCraterHostHint = new("games.onlineCraterHostHint", "2 to 4 players, 25 seconds a turn");
         public static readonly LocString OnlineCraterWin = new("games.onlineCraterWin", "{0}'s moogles are the last ones standing!");
         public static readonly LocString OnlineCraterDraw = new("games.onlineCraterDraw", "Draw, no moogle is left standing");
-        public static readonly LocString OnlineCraterControls = new("games.onlineCraterControls", "A and D walk, drag or arrows aim, hold Space or the button to fire");
         public static readonly LocString OnlineMiniGolfHostHint = new("games.onlineMiniGolfHostHint", "Two to four players, 30 seconds a stroke");
         public static readonly LocString OnlineMiniGolfWin = new("games.onlineMiniGolfWin", "{0} wins the round in {1} strokes!");
         public static readonly LocString OnlineMiniGolfTie = new("games.onlineMiniGolfTie", "A tie for first at {0} strokes!");
@@ -9438,7 +9437,7 @@ internal static class L
         public static readonly LocString GrenadeHint = new("games.crater.grenadeHint", "Fuse {0}s, press 1 to 5 to change it");
         public static readonly LocString TeleportHint = new("games.crater.teleportHint", "Tap a spot to teleport there");
         public static readonly LocString ShieldHint = new("games.crater.shieldHint", "Fire to raise a shield that absorbs one hit");
-        public static readonly LocString ControlsHint = new("games.crater.controlsHint", "A and D walk, W jumps, drag or arrows aim, hold Space or the button to fire");
+        public static readonly LocString ControlsHint = new("games.crater.controlsHint", "A and D walk, drag or arrows aim, hold Space or the button to fire");
         public static readonly LocString DirectHit = new("games.crater.directHit", "Direct hit!");
         public static readonly LocString Blocked = new("games.crater.blocked", "Blocked!");
         public static readonly LocString Drowned = new("games.crater.drowned", "Splash!");
