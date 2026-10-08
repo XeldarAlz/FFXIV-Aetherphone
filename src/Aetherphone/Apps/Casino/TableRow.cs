@@ -1,4 +1,6 @@
+using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Core;
+using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -14,11 +16,30 @@ internal readonly record struct TableRowView(
     bool Full,
     bool InviteOnly,
     bool Mine,
-    bool Draining);
+    bool Draining,
+    int Currency,
+    string CurrencyLabel,
+    string Reputation,
+    bool ReputationWarns,
+    bool Paused);
 
 internal static class TableRow
 {
     public const float Height = 74f;
+
+    public const float ReputationHeight = 18f;
+
+    private static readonly Vector4 GilTint = new(1f, 0.788f, 0.290f, 1f);
+
+    public static float HeightOf(in TableRowView view) =>
+        view.Reputation.Length > 0 ? Height + ReputationHeight : Height;
+
+    public static Vector4 CurrencyTint(int currency, Vector4 accent) => currency switch
+    {
+        CasinoCurrencies.Practice => CasinoColors.Practice,
+        CasinoCurrencies.Gil => GilTint,
+        _ => accent,
+    };
 
     public static bool Draw(ImDrawListPtr drawList, in Rect row, AppSkin ui, in TableRowView view, float scale)
     {
@@ -39,27 +60,63 @@ internal static class TableRow
 
         var pad = 14f * scale;
         var badgeWidth = DrawBadge(drawList, row, ui, view, scale);
+        var currencyWidth = DrawCurrency(drawList, row, ui, view, badgeWidth, scale);
         var textLeft = row.Min.X + pad;
-        var textWidth = row.Width - pad * 2f - badgeWidth;
-        var name = Typography.FitText(view.Name, textWidth, TextStyles.SubheadlineEmphasized);
+        var textWidth = row.Width - pad * 2f - badgeWidth - currencyWidth;
+        var name = Typography.FitText(view.Name, MathF.Max(1f, textWidth), TextStyles.SubheadlineEmphasized);
         Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 12f * scale), name,
             view.Draining ? ui.MutedInk : ui.TitleInk, TextStyles.SubheadlineEmphasized);
 
-        var stakes = Typography.FitText(view.Stakes, textWidth, TextStyles.Footnote);
+        var fullWidth = row.Width - pad * 2f;
+        var stakes = Typography.FitText(view.Stakes, fullWidth, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 32f * scale), stakes, ui.MutedInk,
             TextStyles.Footnote);
 
         var seatsInk = view.Full ? ui.MutedInk : ui.Accent;
-        Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 50f * scale), view.Seats, seatsInk,
+        var seats = Typography.FitText(view.Seats, fullWidth * 0.5f, TextStyles.Caption1);
+        Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 50f * scale), seats, seatsInk,
             TextStyles.Caption1);
         if (view.Spectators.Length > 0)
         {
-            var seatsWidth = Typography.Measure(view.Seats, TextStyles.Caption1).X;
+            var seatsWidth = Typography.Measure(seats, TextStyles.Caption1).X;
             Typography.Draw(drawList, new Vector2(textLeft + seatsWidth + 10f * scale, row.Min.Y + 50f * scale),
-                view.Spectators, ui.MutedInk, TextStyles.Caption1);
+                Typography.FitText(view.Spectators, fullWidth - seatsWidth - 10f * scale, TextStyles.Caption1),
+                ui.MutedInk, TextStyles.Caption1);
+        }
+
+        if (view.Reputation.Length > 0)
+        {
+            Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + (Height - 4f) * scale),
+                Typography.FitText(view.Reputation, fullWidth, TextStyles.Caption1),
+                view.ReputationWarns ? ui.Accent : GilTint, TextStyles.Caption1);
         }
 
         return UiInteract.Click(row.Min, row.Max, hovered);
+    }
+
+    private static float DrawCurrency(ImDrawListPtr drawList, in Rect row, AppSkin ui, in TableRowView view,
+        float badgeWidth, float scale)
+    {
+        if (view.CurrencyLabel.Length == 0)
+        {
+            return 0f;
+        }
+
+        var tint = CurrencyTint(view.Currency, ui.Accent);
+        var labelSize = Typography.Measure(view.CurrencyLabel, TextStyles.Caption1);
+        var chipHeight = labelSize.Y + 6f * scale;
+        var right = row.Max.X - 14f * scale - badgeWidth;
+        var chipMin = new Vector2(right - labelSize.X - 16f * scale, row.Min.Y + 12f * scale);
+        var chipMax = new Vector2(right, chipMin.Y + chipHeight);
+        Squircle.Fill(drawList, chipMin, chipMax, chipHeight * 0.5f, ImGui.GetColorU32(Palette.WithAlpha(tint, 0.16f)));
+        if (view.Currency == CasinoCurrencies.Practice)
+        {
+            Squircle.Stroke(drawList, chipMin, chipMax, chipHeight * 0.5f,
+                ImGui.GetColorU32(Palette.WithAlpha(tint, 0.55f)), 1f * scale);
+        }
+
+        Typography.DrawCentered(drawList, (chipMin + chipMax) * 0.5f, view.CurrencyLabel, tint, TextStyles.Caption1);
+        return chipMax.X - chipMin.X + 8f * scale;
     }
 
     private static float DrawBadge(ImDrawListPtr drawList, in Rect row, AppSkin ui, in TableRowView view, float scale)
@@ -78,8 +135,8 @@ internal static class TableRow
         Squircle.Stroke(drawList, chipMin, chipMax, chipHeight * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.30f)), 1f * scale);
         Typography.DrawCentered(drawList, (chipMin + chipMax) * 0.5f, label,
-            view.Full || view.Draining ? ui.MutedInk : ui.Accent, TextStyles.Caption1);
-        return chipMax.X - chipMin.X + 12f * scale;
+            view.Full || view.Draining || view.Paused ? ui.MutedInk : ui.Accent, TextStyles.Caption1);
+        return chipMax.X - chipMin.X + 8f * scale;
     }
 
     private static string BadgeLabel(in TableRowView view)
@@ -87,6 +144,11 @@ internal static class TableRow
         if (view.Draining)
         {
             return Loc.T(L.Casino.TableClosingBadge);
+        }
+
+        if (view.Paused)
+        {
+            return Loc.T(L.Tables.PausedBadge);
         }
 
         if (view.Mine)

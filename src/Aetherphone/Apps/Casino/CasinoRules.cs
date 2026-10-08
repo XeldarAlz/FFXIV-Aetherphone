@@ -285,7 +285,7 @@ internal static class CasinoRules
         {
             case 0:
                 label = L.Casino.FactBetRange;
-                value = Range(Core.Casino.BlackjackRules.MinBet, Core.Casino.BlackjackRules.MaxBet);
+                value = Range(Core.Casino.BlackjackRules.HouseFloor, Core.Casino.BlackjackRules.HouseTop);
                 return true;
             case 1:
                 label = L.Casino.FactDecks;

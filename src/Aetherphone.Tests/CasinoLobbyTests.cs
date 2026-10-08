@@ -12,10 +12,10 @@ public sealed class CasinoLobbyTests
     [Fact]
     public void LimitBoundsMirrorTheServerInChips()
     {
-        Assert.Equal(5_000, CasinoLimits.SelfLimitFloor);
-        Assert.Equal(2_500_000, CasinoLimits.FallbackCeiling);
-        Assert.Equal(2_500_000, CasinoLimitPicker.CeilingFor(0));
-        Assert.Equal(2_500_000, CasinoLimitPicker.CeilingFor(2_500_000));
+        Assert.Equal(50_000, CasinoLimits.SelfLimitFloor);
+        Assert.Equal(25_000_000, CasinoLimits.FallbackCeiling);
+        Assert.Equal(25_000_000, CasinoLimitPicker.CeilingFor(0));
+        Assert.Equal(25_000_000, CasinoLimitPicker.CeilingFor(25_000_000));
     }
 
     [Fact]
@@ -45,42 +45,42 @@ public sealed class CasinoLobbyTests
     }
 
     [Theory]
-    [InlineData(1, 5_000)]
-    [InlineData(5_400, 5_000)]
-    [InlineData(5_600, 6_000)]
-    [InlineData(64_000, 60_000)]
-    [InlineData(65_000, 70_000)]
-    [InlineData(740_000, 700_000)]
-    [InlineData(9_000_000, 2_500_000)]
+    [InlineData(1, 50_000)]
+    [InlineData(54_000, 50_000)]
+    [InlineData(56_000, 60_000)]
+    [InlineData(640_000, 600_000)]
+    [InlineData(650_000, 700_000)]
+    [InlineData(7_400_000, 7_000_000)]
+    [InlineData(90_000_000, 25_000_000)]
     public void ChosenLimitsSnapToStepsThatGrowWithTheAmount(long raw, long expected)
     {
-        Assert.Equal(expected, CasinoLimitPicker.Snap(raw, 2_500_000));
+        Assert.Equal(expected, CasinoLimitPicker.Snap(raw, 25_000_000));
     }
 
     [Fact]
     public void TheSliderEndsLandOnTheBounds()
     {
-        Assert.Equal(CasinoLimitPicker.Floor, CasinoLimitPicker.FromFraction(0f, 2_500_000));
-        Assert.Equal(2_500_000, CasinoLimitPicker.FromFraction(1f, 2_500_000));
-        Assert.Equal(0f, CasinoLimitPicker.FractionOf(CasinoLimitPicker.Floor, 2_500_000));
-        Assert.Equal(1f, CasinoLimitPicker.FractionOf(2_500_000, 2_500_000), 4);
+        Assert.Equal(CasinoLimitPicker.Floor, CasinoLimitPicker.FromFraction(0f, 25_000_000));
+        Assert.Equal(25_000_000, CasinoLimitPicker.FromFraction(1f, 25_000_000));
+        Assert.Equal(0f, CasinoLimitPicker.FractionOf(CasinoLimitPicker.Floor, 25_000_000));
+        Assert.Equal(1f, CasinoLimitPicker.FractionOf(25_000_000, 25_000_000), 4);
     }
 
     [Fact]
     public void TheSliderRoundTripsASnappedValue()
     {
-        const long chosen = 50_000;
-        var fraction = CasinoLimitPicker.FractionOf(chosen, 2_500_000);
-        Assert.Equal(chosen, CasinoLimitPicker.FromFraction(fraction, 2_500_000));
+        const long chosen = 500_000;
+        var fraction = CasinoLimitPicker.FractionOf(chosen, 25_000_000);
+        Assert.Equal(chosen, CasinoLimitPicker.FromFraction(fraction, 25_000_000));
     }
 
     [Fact]
     public void SteppersCrossStepBoundariesCleanly()
     {
-        Assert.Equal(60_000, CasinoLimitPicker.Nudge(50_000, 1, 2_500_000));
-        Assert.Equal(49_000, CasinoLimitPicker.Nudge(50_000, -1, 2_500_000));
-        Assert.Equal(5_000, CasinoLimitPicker.Nudge(5_000, -1, 2_500_000));
-        Assert.Equal(2_500_000, CasinoLimitPicker.Nudge(2_500_000, 1, 2_500_000));
+        Assert.Equal(600_000, CasinoLimitPicker.Nudge(500_000, 1, 25_000_000));
+        Assert.Equal(490_000, CasinoLimitPicker.Nudge(500_000, -1, 25_000_000));
+        Assert.Equal(50_000, CasinoLimitPicker.Nudge(50_000, -1, 25_000_000));
+        Assert.Equal(25_000_000, CasinoLimitPicker.Nudge(25_000_000, 1, 25_000_000));
     }
 
     [Fact]

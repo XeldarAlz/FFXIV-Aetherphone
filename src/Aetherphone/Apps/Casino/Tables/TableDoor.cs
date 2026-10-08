@@ -15,20 +15,27 @@ internal sealed class TableDoor
     private const float PillHeight = Button.RegularHeight;
     private const float RowHeight = 56f;
     private const float RowGap = 8f;
+    private const float ControlRowUnits = 52f;
+    private const float FieldHeight = 36f;
 
     private readonly CasinoTablesStore tables;
     private readonly ConfirmService confirm;
     private readonly Action<string> openTable;
+    private readonly TableLedger ledger;
+    private readonly CasinoTextCache texts = new();
 
     private string roomId = string.Empty;
     private string inviteToken = string.Empty;
     private string inlineReason = string.Empty;
+    private string nameBuffer = string.Empty;
+    private bool nameSeeded;
 
     public TableDoor(CasinoTablesStore tables, ConfirmService confirm, Action<string> openTable)
     {
         this.tables = tables;
         this.confirm = confirm;
         this.openTable = openTable;
+        ledger = new TableLedger(tables, confirm);
     }
 
     public string RoomId => roomId;
@@ -38,7 +45,11 @@ internal sealed class TableDoor
         roomId = tableId;
         inviteToken = token;
         inlineReason = string.Empty;
+        nameBuffer = string.Empty;
+        nameSeeded = false;
         tables.RefreshDoorNow(tableId);
+        tables.RefreshCard(tableId);
+        ledger.Enter(tableId);
     }
 
     public void Reset()
@@ -46,7 +57,10 @@ internal sealed class TableDoor
         roomId = string.Empty;
         inviteToken = string.Empty;
         inlineReason = string.Empty;
+        nameBuffer = string.Empty;
+        nameSeeded = false;
         tables.ForgetDoor();
+        ledger.Reset();
     }
 
     public void Draw(Rect body, AppSkin ui)
@@ -55,7 +69,9 @@ internal sealed class TableDoor
         ConsumeOutcomes();
         using var surface = AppSurface.Begin(body);
         var door = tables.DoorFor(roomId);
+        var card = tables.CardFor(roomId);
         var token = door is not null && door.InviteToken.Length > 0 ? door.InviteToken : inviteToken;
+        SeedName(card);
 
         DrawInviteCard(ui, token, scale);
         if (inlineReason.Length > 0)
@@ -65,6 +81,13 @@ internal sealed class TableDoor
 
         DrawOpenTable(ui, scale);
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+
+        if (card is not null)
+        {
+            ui.SectionHeading(Loc.T(L.Tables.HostPanelHeading), 4f);
+            DrawHostControls(ui, card, scale);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+        }
 
         ui.SectionHeading(Loc.T(L.Casino.DoorKnocksHeading), 4f);
         var knocks = door?.Knocks;
@@ -92,16 +115,33 @@ internal sealed class TableDoor
         }
         else
         {
+            var banked = card is not null && CasinoCurrencies.SeatBanked(CasinoCurrencies.Of(card));
             for (var index = 0; index < seated.Length; index++)
             {
                 using (ImRaii.PushId(index))
                 {
-                    DrawSeatedRow(ui, seated[index], scale);
+                    DrawSeatedRow(ui, seated[index], card, banked, scale);
                 }
             }
         }
 
+        if (card is not null && card.Config is not null)
+        {
+            ledger.Draw(ui, tables.AccountId, card.OwnerUserId, scale);
+        }
+
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
+    }
+
+    private void SeedName(CasinoTableRowDto? card)
+    {
+        if (nameSeeded || card is null)
+        {
+            return;
+        }
+
+        nameSeeded = true;
+        nameBuffer = card.Name;
     }
 
     private void ConsumeOutcomes()
@@ -115,7 +155,120 @@ internal sealed class TableDoor
         if (outcome is not null)
         {
             inlineReason = outcome.Granted ? string.Empty : outcome.Reason;
+            if (outcome.Granted)
+            {
+                tables.RefreshCard(roomId);
+            }
         }
+    }
+
+    private void DrawHostControls(AppSkin ui, CasinoTableRowDto card, float scale)
+    {
+        var config = card.Config;
+        var banked = CasinoCurrencies.SeatBanked(CasinoCurrencies.Of(card));
+        var hostDeals = config is not null && config.DealerMode == CasinoDealerModes.Host;
+        var rows = 2 + (banked ? 1 : 0) + (banked && hostDeals ? 1 : 0);
+        var group = GroupCard.Begin(ui, ControlRowUnits * rows);
+        DrawRenameRow(ui, group.NextRow(ControlRowUnits), scale);
+        if (banked)
+        {
+            var pauseRow = group.NextRow(ControlRowUnits);
+            Label(ui, pauseRow, Loc.T(L.Tables.PauseTable), scale);
+            var width = Metrics.Size.ToggleWidth * scale;
+            var height = Metrics.Size.ToggleHeight * scale;
+            var toggleMin = new Vector2(pauseRow.Max.X - width, pauseRow.Center.Y - height * 0.5f);
+            var paused = Toggle.Draw("door.pause", new Rect(toggleMin, toggleMin + new Vector2(width, height)),
+                card.Paused, ui.Theme, 1f, !tables.IntentInFlight);
+            if (paused != card.Paused)
+            {
+                inlineReason = string.Empty;
+                tables.Pause(roomId, paused);
+            }
+        }
+
+        if (banked && hostDeals)
+        {
+            var dealRow = group.NextRow(ControlRowUnits);
+            Label(ui, dealRow, Loc.T(L.Tables.DealNow), scale);
+            var label = Loc.T(L.Tables.Deal);
+            var buttonWidth = Button.WidthFor(label, ButtonSize.Regular);
+            var rect = new Rect(new Vector2(dealRow.Max.X - buttonWidth, dealRow.Center.Y - PillHeight * scale * 0.5f),
+                new Vector2(dealRow.Max.X, dealRow.Center.Y + PillHeight * scale * 0.5f));
+            if (Button.Draw(rect, label, ui.Ink, ButtonStyle.Prominent, enabled: !tables.IntentInFlight,
+                    id: "door.deal"))
+            {
+                inlineReason = string.Empty;
+                tables.Deal(roomId);
+            }
+        }
+
+        var closeRow = group.NextRow(ControlRowUnits);
+        var closeLabel = Loc.T(L.Tables.CloseTable);
+        var closeWidth = Button.WidthFor(closeLabel, ButtonSize.Regular);
+        Label(ui, closeRow, Loc.T(L.Tables.CloseTableHint), scale, closeWidth);
+        var closeRect = new Rect(new Vector2(closeRow.Max.X - closeWidth, closeRow.Center.Y - PillHeight * scale * 0.5f),
+            new Vector2(closeRow.Max.X, closeRow.Center.Y + PillHeight * scale * 0.5f));
+        if (Button.Draw(closeRect, closeLabel, ui.Ink, ButtonStyle.Gray, ButtonRole.Destructive,
+                !tables.IntentInFlight, id: "door.close"))
+        {
+            AskClose();
+        }
+
+        group.End();
+    }
+
+    private void DrawRenameRow(AppSkin ui, in Rect row, float scale)
+    {
+        var label = Loc.T(L.Tables.Rename);
+        var buttonWidth = Button.WidthFor(label, ButtonSize.Regular);
+        var height = FieldHeight * scale;
+        var field = new Rect(new Vector2(row.Min.X, row.Center.Y - height * 0.5f),
+            new Vector2(row.Max.X - buttonWidth - Metrics.Space.Sm * scale, row.Center.Y + height * 0.5f));
+        var drawList = ImGui.GetWindowDrawList();
+        SearchBar.Surface(drawList, field, ui.Ink);
+        var capsule = SearchBar.Capsule(field);
+        var inset = capsule.Height * 0.4f;
+        var cursor = ImGui.GetCursorScreenPos();
+        ImGui.SetCursorScreenPos(new Vector2(capsule.Min.X + inset, field.Center.Y - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetNextItemWidth(capsule.Width - inset * 2f);
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        {
+            ImGui.InputTextWithHint("##doorName", Loc.T(L.Tables.HostNameHint), ref nameBuffer,
+                CasinoHostingRules.NameMaxLength + 1);
+        }
+
+        ImGui.SetCursorScreenPos(cursor);
+        var rect = new Rect(new Vector2(row.Max.X - buttonWidth, row.Center.Y - PillHeight * scale * 0.5f),
+            new Vector2(row.Max.X, row.Center.Y + PillHeight * scale * 0.5f));
+        if (Button.Draw(rect, label, ui.Ink, ButtonStyle.Tinted, enabled: !tables.IntentInFlight, id: "door.rename"))
+        {
+            inlineReason = string.Empty;
+            tables.Rename(roomId, nameBuffer.Trim());
+        }
+    }
+
+    private void AskClose()
+    {
+        var target = roomId;
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Tables.CloseConfirmTitle),
+            Message = Loc.T(L.Tables.CloseConfirmBody),
+            ConfirmLabel = Loc.T(L.Tables.CloseTable),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Sheet = true,
+            Danger = true,
+            Confirm = () => tables.CloseTable(target),
+        });
+    }
+
+    private static void Label(AppSkin ui, in Rect row, string label, float scale, float reserve = 0f)
+    {
+        var height = Typography.LineHeight(TextStyles.Body);
+        var width = row.Width - Metrics.Size.ToggleWidth * scale - reserve - Metrics.Space.Md * scale;
+        Typography.Draw(ImGui.GetWindowDrawList(), new Vector2(row.Min.X, row.Center.Y - height * 0.5f),
+            Typography.FitText(label, MathF.Max(1f, width), TextStyles.Body), ui.TitleInk, TextStyles.Body);
     }
 
     private void DrawInviteCard(AppSkin ui, string token, float scale)
@@ -235,7 +388,8 @@ internal sealed class TableDoor
         ImGui.Dummy(new Vector2(width, height + RowGap * scale));
     }
 
-    private void DrawSeatedRow(AppSkin ui, CasinoTableSeatedDto occupant, float scale)
+    private void DrawSeatedRow(AppSkin ui, CasinoTableSeatedDto occupant, CasinoTableRowDto? card, bool banked,
+        float scale)
     {
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
@@ -244,12 +398,30 @@ internal sealed class TableDoor
         var row = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
         ui.Card(drawList, row.Min, row.Max, Metrics.Radius.Grouped * scale);
 
-        var buttonWidth = 84f * scale;
-        DrawIdentity(drawList, ui, occupant.DisplayName, row, width - buttonWidth - 32f * scale, scale);
+        var removeWidth = 84f * scale;
+        var coDealer = card?.Config is not null && IsCoDealer(card.Config, occupant.UserId);
+        var dealerLabel = coDealer ? Loc.T(L.Tables.CoDealerOn) : Loc.T(L.Tables.CoDealerOff);
+        var dealerWidth = banked ? Button.WidthFor(dealerLabel, ButtonSize.Regular) : 0f;
+        DrawIdentity(drawList, ui, occupant.DisplayName, row,
+            width - removeWidth - dealerWidth - 40f * scale, scale);
 
         var removeRect = new Rect(
-            new Vector2(row.Max.X - buttonWidth - 10f * scale, row.Center.Y - PillHeight * scale * 0.5f),
+            new Vector2(row.Max.X - removeWidth - 10f * scale, row.Center.Y - PillHeight * scale * 0.5f),
             new Vector2(row.Max.X - 10f * scale, row.Center.Y + PillHeight * scale * 0.5f));
+        if (banked && card?.Config is { } config)
+        {
+            var dealerRect = new Rect(
+                new Vector2(removeRect.Min.X - Metrics.Space.Sm * scale - dealerWidth, removeRect.Min.Y),
+                new Vector2(removeRect.Min.X - Metrics.Space.Sm * scale, removeRect.Max.Y));
+            var full = !coDealer && (config.CoDealers?.Length ?? 0) >= CasinoHostingRules.MaxCoDealers;
+            if (Button.Draw(dealerRect, dealerLabel, ui.Ink, coDealer ? ButtonStyle.Prominent : ButtonStyle.Tinted,
+                    enabled: !tables.IntentInFlight && !full, id: "door.codealer"))
+            {
+                inlineReason = string.Empty;
+                tables.SetCoDealers(roomId, Toggled(config.CoDealers, occupant.UserId));
+            }
+        }
+
         if (ui.DangerGhostButton(removeRect, Loc.T(L.Casino.DoorRemove)) && !tables.IntentInFlight)
         {
             AskRemove(occupant.UserId, occupant.DisplayName);
@@ -259,12 +431,58 @@ internal sealed class TableDoor
         ImGui.Dummy(new Vector2(width, height + RowGap * scale));
     }
 
+    internal static bool IsCoDealer(CasinoTableConfigDto config, string userId)
+    {
+        var coDealers = config.CoDealers;
+        if (coDealers is null)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < coDealers.Length; index++)
+        {
+            if (string.Equals(coDealers[index], userId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static string[] Toggled(string[]? coDealers, string userId)
+    {
+        var current = coDealers ?? Array.Empty<string>();
+        var present = false;
+        for (var index = 0; index < current.Length; index++)
+        {
+            present |= string.Equals(current[index], userId, StringComparison.Ordinal);
+        }
+
+        var next = new string[present ? current.Length - 1 : current.Length + 1];
+        var write = 0;
+        for (var index = 0; index < current.Length; index++)
+        {
+            if (!string.Equals(current[index], userId, StringComparison.Ordinal))
+            {
+                next[write++] = current[index];
+            }
+        }
+
+        if (!present)
+        {
+            next[write] = userId;
+        }
+
+        return next;
+    }
+
     private static void DrawIdentity(ImDrawListPtr drawList, AppSkin ui, string name, in Rect row,
         float textWidth, float scale)
     {
         var left = row.Min.X + 14f * scale;
         Typography.Draw(drawList, new Vector2(left, row.Center.Y - 8f * scale),
-            Typography.FitText(name, textWidth, TextStyles.SubheadlineEmphasized), ui.TitleInk,
+            Typography.FitText(name, MathF.Max(1f, textWidth), TextStyles.SubheadlineEmphasized), ui.TitleInk,
             TextStyles.SubheadlineEmphasized);
     }
 
@@ -274,7 +492,7 @@ internal sealed class TableDoor
         var targetUser = userId;
         confirm.Ask(new ConfirmRequest
         {
-            Title = Loc.T(L.Casino.DoorRemoveConfirmTitle, name),
+            Title = texts.Named(L.Casino.DoorRemoveConfirmTitle, name),
             Message = Loc.T(L.Casino.DoorRemoveConfirmBody),
             ConfirmLabel = Loc.T(L.Casino.DoorRemove),
             CancelLabel = Loc.T(L.Common.Cancel),

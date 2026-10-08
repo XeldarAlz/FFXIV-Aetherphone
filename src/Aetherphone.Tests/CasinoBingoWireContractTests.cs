@@ -126,7 +126,7 @@ public sealed class CasinoBingoWireContractTests
             + "\"cards\":40,\"players\":11,\"prizes\":[11388,15120,32596],\"prizeCardCap\":125,\"ballIndex\":3,"
             + "\"balls\":[42,7,55],\"nextBallAtUnixMs\":1754784003000,\"stages\":[{\"stage\":0,\"ball\":41,"
             + "\"prize\":11388,\"winners\":2,\"paid\":22776}],\"ended\":false,\"cancelled\":false,"
-            + "\"cardPrice\":2000,\"maxCards\":4,\"maxWin\":500000}";
+            + "\"cardPrice\":2000,\"maxCards\":4,\"maxWin\":5000000}";
         var board = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.CasinoBingoRoomStateDto);
 
         Assert.NotNull(board);

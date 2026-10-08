@@ -20,6 +20,8 @@ internal enum CasinoScreen
     Limits,
     RoundDetail,
     DailySpin,
+    HostTable,
+    TableLedger,
 }
 
 internal readonly record struct CasinoRoute(

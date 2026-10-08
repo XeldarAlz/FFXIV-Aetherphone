@@ -58,6 +58,36 @@ public sealed class CasinoReasonCoverageTests
     }
 
     [Fact]
+    public void TheBonusAndHostingRefusalsAreCovered()
+    {
+        var reasons = new[]
+        {
+            "bonus_not_ready", "club_insufficient", "config_invalid", "practice_only", "not_dealer", "rebuy_off",
+            "tournament_live", "no_tournament", "nothing_to_deal", "no_spectators", "duel_live", "no_duel",
+            "raffle_live", "no_raffle", "ticket_limit", "round_live", "bank_limit", "host_frozen", "not_party",
+            "already_confirmed", "settled", "gil_only",
+        };
+        for (var index = 0; index < reasons.Length; index++)
+        {
+            Assert.Contains(reasons[index], CasinoReasons.All);
+            Assert.True(CasinoReasons.TryMessage(reasons[index], out _), reasons[index]);
+        }
+
+        Assert.Equal(L.Tables.ReasonBankLimit.Key, CasinoReasons.MessageFor("bank_limit").Key);
+        Assert.Equal(L.Strip.ReasonBonusNotReady.Key, CasinoReasons.MessageFor("bonus_not_ready").Key);
+    }
+
+    [Fact]
+    public void ACeilingRefusalNamesTheCapItCarried()
+    {
+        var text = CasinoReasons.Text(CasinoReasons.Ceiling, 25_000);
+
+        Assert.Contains("25", text, StringComparison.Ordinal);
+        Assert.Equal(Loc.T(L.Strip.ReasonCeiling), CasinoReasons.Text(CasinoReasons.Ceiling, 0));
+        Assert.Equal(Loc.T(L.Strip.ReasonLadder), CasinoReasons.Text(CasinoReasons.Ladder, 25_000));
+    }
+
+    [Fact]
     public void TheTableVocabularyIsInTheList()
     {
         Assert.Contains(CasinoReasons.Full, CasinoReasons.All);

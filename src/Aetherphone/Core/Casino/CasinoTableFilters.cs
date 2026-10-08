@@ -5,9 +5,12 @@ namespace Aetherphone.Core.Casino;
 internal enum CasinoTableFilter
 {
     All,
-    OpenSeats,
+    Blackjack,
+    Holdem,
     LowStakes,
     HighStakes,
+    Practice,
+    Gil,
     Mine,
 }
 
@@ -59,29 +62,81 @@ internal static class CasinoStakeTiers
 
 internal static class CasinoTableFilters
 {
-    public const long LowStakeCeiling = 1000;
+    public const string HoldemKind = "casino.holdem";
 
-    public const long HighStakeFloor = 2500;
+    public const long LowStakeCeiling = 2_500;
+
+    public const long HighStakeFloor = 25_000;
 
     public static readonly CasinoTableFilter[] All =
     {
         CasinoTableFilter.All,
-        CasinoTableFilter.OpenSeats,
+        CasinoTableFilter.Blackjack,
+        CasinoTableFilter.Holdem,
         CasinoTableFilter.LowStakes,
         CasinoTableFilter.HighStakes,
+        CasinoTableFilter.Practice,
+        CasinoTableFilter.Gil,
         CasinoTableFilter.Mine,
     };
 
-    public static bool Matches(CasinoTableFilter filter, CasinoTableRowDto row)
+    public static bool Shown(CasinoTableRowDto row)
     {
+        return string.Equals(row.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal)
+            || string.Equals(row.GameKind, HoldemKind, StringComparison.Ordinal);
+    }
+
+    public static bool Matches(CasinoTableFilter filter, CasinoTableRowDto row, string myUserId)
+    {
+        if (!Shown(row))
+        {
+            return false;
+        }
+
         return filter switch
         {
-            CasinoTableFilter.OpenSeats => HasOpenSeat(row),
-            CasinoTableFilter.LowStakes => row.MinBet > 0 && row.MinBet <= LowStakeCeiling,
-            CasinoTableFilter.HighStakes => row.MinBet >= HighStakeFloor,
-            CasinoTableFilter.Mine => row.Kind == CasinoTableKinds.Private,
+            CasinoTableFilter.Blackjack => string.Equals(row.GameKind, CasinoWire.BlackjackKind,
+                StringComparison.Ordinal),
+            CasinoTableFilter.Holdem => string.Equals(row.GameKind, HoldemKind, StringComparison.Ordinal),
+            CasinoTableFilter.LowStakes => CasinoCurrencies.Of(row) == CasinoCurrencies.Chips && row.MinBet > 0
+                && row.MinBet <= LowStakeCeiling,
+            CasinoTableFilter.HighStakes => CasinoCurrencies.Of(row) == CasinoCurrencies.Chips
+                && row.MinBet >= HighStakeFloor,
+            CasinoTableFilter.Practice => CasinoCurrencies.Of(row) == CasinoCurrencies.Practice,
+            CasinoTableFilter.Gil => CasinoCurrencies.Of(row) == CasinoCurrencies.Gil,
+            CasinoTableFilter.Mine => myUserId.Length > 0
+                && string.Equals(row.OwnerUserId, myUserId, StringComparison.Ordinal),
             _ => true,
         };
+    }
+
+    public static CasinoTableRowDto[] OfKind(CasinoTableRowDto[] rows, string gameKind)
+    {
+        var count = 0;
+        for (var index = 0; index < rows.Length; index++)
+        {
+            if (string.Equals(rows[index].GameKind, gameKind, StringComparison.Ordinal))
+            {
+                count++;
+            }
+        }
+
+        if (count == rows.Length)
+        {
+            return rows;
+        }
+
+        var kept = new CasinoTableRowDto[count];
+        var next = 0;
+        for (var index = 0; index < rows.Length; index++)
+        {
+            if (string.Equals(rows[index].GameKind, gameKind, StringComparison.Ordinal))
+            {
+                kept[next++] = rows[index];
+            }
+        }
+
+        return kept;
     }
 
     public static bool HasOpenSeat(CasinoTableRowDto row)

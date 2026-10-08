@@ -12,11 +12,11 @@ internal enum LimitChange : byte
 internal static class CasinoLimitPicker
 {
     public const long Floor = CasinoLimits.SelfLimitFloor;
-    public const long FineStep = 1_000;
-    public const long MediumStep = 10_000;
-    public const long CoarseStep = 100_000;
-    public const long MediumFrom = 50_000;
-    public const long CoarseFrom = 500_000;
+    public const long FineStep = 10 * CasinoChipLots.ChipPerCoin;
+    public const long MediumStep = 100 * CasinoChipLots.ChipPerCoin;
+    public const long CoarseStep = 1_000 * CasinoChipLots.ChipPerCoin;
+    public const long MediumFrom = 500 * CasinoChipLots.ChipPerCoin;
+    public const long CoarseFrom = 5_000 * CasinoChipLots.ChipPerCoin;
 
     public static long CeilingFor(long dailyBuyInCap) =>
         dailyBuyInCap > Floor ? dailyBuyInCap : CasinoLimits.FallbackCeiling;

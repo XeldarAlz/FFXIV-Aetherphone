@@ -8,9 +8,9 @@ internal static class WheelRules
 
     public const long MinStakePerSpot = 100;
 
-    public const long MaxStakePerSpot = 5000;
+    public const long MaxStakePerSpot = 50_000;
 
-    public const long MaxStakePerRound = 20000;
+    public const long MaxStakePerRound = 200_000;
 
     public static readonly int[] Multipliers = { 1, 3, 5, 11, 22 };
 

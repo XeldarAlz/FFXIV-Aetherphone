@@ -7,7 +7,7 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Casino;
 
-internal sealed record CasinoStakeOutcome(bool Granted, string Reason);
+internal sealed record CasinoStakeOutcome(bool Granted, string Reason, long Ceiling = 0);
 
 internal sealed class CasinoRoomsStore : IDisposable
 {
@@ -234,9 +234,11 @@ internal sealed class CasinoRoomsStore : IDisposable
             }
 
             ForgetUnansweredBet(betId);
-            Interlocked.Exchange(ref stakeResult, new CasinoStakeOutcome(result.Granted, result.Reason));
+            Interlocked.Exchange(ref stakeResult,
+                new CasinoStakeOutcome(result.Granted, result.Reason, result.Ceiling));
             if (!result.Granted)
             {
+                chips.AbsorbCeiling(result.Ceiling);
                 chips.RefreshNow();
                 InvalidatePersonal();
                 return;
@@ -295,9 +297,11 @@ internal sealed class CasinoRoomsStore : IDisposable
             }
 
             ForgetUnansweredPurchase(purchaseId);
-            Interlocked.Exchange(ref stakeResult, new CasinoStakeOutcome(result.Granted, result.Reason));
+            Interlocked.Exchange(ref stakeResult,
+                new CasinoStakeOutcome(result.Granted, result.Reason, result.Ceiling));
             if (!result.Granted)
             {
+                chips.AbsorbCeiling(result.Ceiling);
                 chips.RefreshNow();
                 InvalidatePersonal();
                 return;
@@ -330,7 +334,9 @@ internal sealed class CasinoRoomsStore : IDisposable
         }
 
         var roundIndex = board.HandIndex;
-        var sittingId = chips.State?.TableSitting?.Id ?? string.Empty;
+        var sittingId = CasinoCurrencies.SeatBanked(CasinoCurrencies.Of(board))
+            ? string.Empty
+            : chips.State?.TableSitting?.Id ?? string.Empty;
         string betId;
         string clientRoundId;
         lock (stakeGate)
@@ -401,7 +407,9 @@ internal sealed class CasinoRoomsStore : IDisposable
 
         var handId = board.HandId;
         var actionSeq = mine.ActionCount;
-        var sittingId = chips.State?.TableSitting?.Id ?? string.Empty;
+        var sittingId = CasinoCurrencies.SeatBanked(CasinoCurrencies.Of(board))
+            ? string.Empty
+            : chips.State?.TableSitting?.Id ?? string.Empty;
         string actionId;
         lock (stakeGate)
         {

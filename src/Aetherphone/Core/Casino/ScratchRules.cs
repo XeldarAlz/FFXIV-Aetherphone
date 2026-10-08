@@ -18,37 +18,37 @@ internal static class ScratchRules
 
     public const int MatchesToWin = 3;
 
-    public static readonly long[] Prices = { 500, 1_000, 2_500, 5_000 };
+    public static readonly long[] Prices = { 5_000, 10_000, 25_000, 50_000 };
 
     public static readonly ScratchPrizeRow[][] PrizeTables =
     {
         new ScratchPrizeRow[]
         {
-            new(1_000, 285_000),
-            new(2_500, 50_000),
-            new(5_000, 7_500),
-            new(10_000, 1_400),
+            new(10_000, 285_000),
+            new(25_000, 50_000),
+            new(50_000, 7_500),
+            new(100_000, 1_400),
         },
         new ScratchPrizeRow[]
         {
-            new(2_000, 285_000),
-            new(5_000, 50_000),
-            new(10_000, 7_500),
-            new(20_000, 1_400),
+            new(20_000, 285_000),
+            new(50_000, 50_000),
+            new(100_000, 7_500),
+            new(200_000, 1_400),
         },
         new ScratchPrizeRow[]
         {
-            new(5_000, 285_000),
-            new(12_500, 51_000),
-            new(25_000, 7_600),
-            new(50_000, 1_450),
+            new(50_000, 285_000),
+            new(125_000, 51_000),
+            new(250_000, 7_600),
+            new(500_000, 1_450),
         },
         new ScratchPrizeRow[]
         {
-            new(10_000, 286_000),
-            new(25_000, 52_000),
-            new(50_000, 7_800),
-            new(100_000, 1_500),
+            new(100_000, 286_000),
+            new(250_000, 52_000),
+            new(500_000, 7_800),
+            new(1_000_000, 1_500),
         },
     };
 

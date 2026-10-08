@@ -15,7 +15,7 @@ public sealed class ScratchRulesTests
         Assert.Equal(7, ScratchRules.SymbolCount);
         Assert.Equal(1_000_000, ScratchRules.TableScale);
         Assert.Equal(3, ScratchRules.MatchesToWin);
-        Assert.Equal(new long[] { 500, 1_000, 2_500, 5_000 }, ScratchRules.Prices);
+        Assert.Equal(new long[] { 5_000, 10_000, 25_000, 50_000 }, ScratchRules.Prices);
     }
 
     [Fact]
@@ -23,10 +23,10 @@ public sealed class ScratchRulesTests
     {
         var expected = new (long Chips, int CountPerMillion)[][]
         {
-            new[] { (1_000L, 285_000), (2_500L, 50_000), (5_000L, 7_500), (10_000L, 1_400) },
-            new[] { (2_000L, 285_000), (5_000L, 50_000), (10_000L, 7_500), (20_000L, 1_400) },
-            new[] { (5_000L, 285_000), (12_500L, 51_000), (25_000L, 7_600), (50_000L, 1_450) },
-            new[] { (10_000L, 286_000), (25_000L, 52_000), (50_000L, 7_800), (100_000L, 1_500) },
+            new[] { (10_000L, 285_000), (25_000L, 50_000), (50_000L, 7_500), (100_000L, 1_400) },
+            new[] { (20_000L, 285_000), (50_000L, 50_000), (100_000L, 7_500), (200_000L, 1_400) },
+            new[] { (50_000L, 285_000), (125_000L, 51_000), (250_000L, 7_600), (500_000L, 1_450) },
+            new[] { (100_000L, 286_000), (250_000L, 52_000), (500_000L, 7_800), (1_000_000L, 1_500) },
         };
         for (var tier = 0; tier < ScratchRules.TierCount; tier++)
         {
@@ -62,11 +62,11 @@ public sealed class ScratchRulesTests
     [Fact]
     public void TierForPriceRoundTripsAndRejectsUnknownPrices()
     {
-        Assert.Equal(0, ScratchRules.TierForPrice(500));
-        Assert.Equal(1, ScratchRules.TierForPrice(1_000));
-        Assert.Equal(2, ScratchRules.TierForPrice(2_500));
-        Assert.Equal(3, ScratchRules.TierForPrice(5_000));
-        Assert.Equal(-1, ScratchRules.TierForPrice(750));
+        Assert.Equal(0, ScratchRules.TierForPrice(5_000));
+        Assert.Equal(1, ScratchRules.TierForPrice(10_000));
+        Assert.Equal(2, ScratchRules.TierForPrice(25_000));
+        Assert.Equal(3, ScratchRules.TierForPrice(50_000));
+        Assert.Equal(-1, ScratchRules.TierForPrice(7_500));
         Assert.True(ScratchRules.IsValidTier(0));
         Assert.True(ScratchRules.IsValidTier(3));
         Assert.False(ScratchRules.IsValidTier(-1));

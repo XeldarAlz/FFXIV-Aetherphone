@@ -389,7 +389,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
         if (inlineReason.Length > 0)
         {
             CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Reason, string.Empty,
-                Loc.T(CasinoReasons.MessageFor(inlineReason)), area.Min.X, top, area.Width, scale);
+                CasinoReasons.Text(inlineReason, store.Ceiling.MaxBet), area.Min.X, top, area.Width, scale);
             return;
         }
 

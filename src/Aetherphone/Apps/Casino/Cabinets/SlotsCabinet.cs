@@ -900,7 +900,8 @@ internal sealed class SlotsCabinet
     {
         if (inlineReason.Length > 0)
         {
-            y = DrawReasonCard(drawList, ui, Loc.T(CasinoReasons.MessageFor(inlineReason)), left, y, width, scale);
+            y = DrawReasonCard(drawList, ui, CasinoReasons.Text(inlineReason, store.Ceiling.MaxBet), left, y, width,
+                scale);
             y += Metrics.Space.Sm * scale;
         }
 

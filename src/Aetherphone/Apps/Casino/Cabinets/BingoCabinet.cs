@@ -743,7 +743,7 @@ internal sealed class BingoCabinet
     {
         if (inlineReason.Length > 0)
         {
-            DrawNote(ui, Loc.T(CasinoReasons.MessageFor(inlineReason)), width, scale);
+            DrawNote(ui, CasinoReasons.Text(inlineReason, chips.Ceiling.MaxBet), width, scale);
         }
 
         var holding = HeldCards(mine);

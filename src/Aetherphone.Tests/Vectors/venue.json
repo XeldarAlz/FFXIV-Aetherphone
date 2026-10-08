@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "dice": [
+    {
+      "seed": "97ec33c536e90738372724fcd2ea5b5b4075042da426ca23c8842baceb4962e5",
+      "roomId": "venue-vectors",
+      "seq": 1,
+      "sides": 2,
+      "value": 1,
+      "drawLog": "roll:0"
+    },
+    {
+      "seed": "a9f9f466c1a465ec7717e754e1c73c2a6766a7656636ec0c193b49e30a8ecc32",
+      "roomId": "venue-vectors",
+      "seq": 2,
+      "sides": 6,
+      "value": 6,
+      "drawLog": "roll:5"
+    },
+    {
+      "seed": "b087185c190e3d417d819b37e3810310f3ba6907a1d5c07e7a6d663301c8935d",
+      "roomId": "venue-vectors",
+      "seq": 3,
+      "sides": 20,
+      "value": 11,
+      "drawLog": "roll:10"
+    },
+    {
+      "seed": "8878b0fcadba0e4cd27b9519db5a856546a5121e06c42f84e00d0585bf8ca80c",
+      "roomId": "venue-vectors",
+      "seq": 4,
+      "sides": 100,
+      "value": 88,
+      "drawLog": "roll:87"
+    },
+    {
+      "seed": "528fe5426b9ca8ee9e00c2394c1c7dcdd425047b773e8b91adda1626e114c74e",
+      "roomId": "venue-vectors",
+      "seq": 5,
+      "sides": 1000,
+      "value": 790,
+      "drawLog": "roll:789"
+    },
+    {
+      "seed": "e30e60f666564eb5c052b866d4d06071e3e0cf59663fb94c532c087193076483",
+      "roomId": "venue-vectors",
+      "seq": 6,
+      "sides": 1000,
+      "value": 404,
+      "drawLog": "roll:403"
+    },
+    {
+      "seed": "7ad7fa8734ca3f640d6ff2ed399deb5201eaa2806a268aba978969dee3c5e1e1",
+      "roomId": "venue-vectors",
+      "seq": 7,
+      "sides": 1000,
+      "value": 210,
+      "drawLog": "roll:209"
+    },
+    {
+      "seed": "c42eaae88b889e3a40a65d9fbfc7a16312c243341c916267290303130dc3823f",
+      "roomId": "venue-vectors",
+      "seq": 8,
+      "sides": 1000000,
+      "value": 709009,
+      "drawLog": "roll:709008"
+    }
+  ],
+  "deathroll": [
+    {
+      "seed": "1c0dd59628c665f30926ffafd5ab68ce73d282bd0050cc4105570e22e27b15b8",
+      "roomId": "venue-vectors",
+      "seq": 9,
+      "bound": 1000,
+      "value": 694,
+      "drawLog": "deathroll:693"
+    },
+    {
+      "seed": "62ec09459e23fc8286929a8dc6bad85b905226197ceb1644450b2309d9dc42b9",
+      "roomId": "venue-vectors",
+      "seq": 10,
+      "bound": 694,
+      "value": 25,
+      "drawLog": "deathroll:24"
+    },
+    {
+      "seed": "6a4033f66d194697b8cdcabf4e26d2619e91fe43f4fa6ed3ab1f78fb799e7020",
+      "roomId": "venue-vectors",
+      "seq": 11,
+      "bound": 25,
+      "value": 4,
+      "drawLog": "deathroll:3"
+    },
+    {
+      "seed": "008a5adae4ff8beb2ff40e6f393bbcb0e72cc692459e5d9e2d7260e8fba3efab",
+      "roomId": "venue-vectors",
+      "seq": 12,
+      "bound": 4,
+      "value": 3,
+      "drawLog": "deathroll:2"
+    },
+    {
+      "seed": "a487441173c409d3b15349a4de489dacb644d500c4e21ff3c184a4a4df5350f2",
+      "roomId": "venue-vectors",
+      "seq": 13,
+      "bound": 3,
+      "value": 2,
+      "drawLog": "deathroll:1"
+    },
+    {
+      "seed": "72ba83c9de350a0377cbbcccfbc86e06b50d51545b513a6f4f4aa3c9696c1085",
+      "roomId": "venue-vectors",
+      "seq": 14,
+      "bound": 2,
+      "value": 1,
+      "drawLog": "deathroll:0"
+    }
+  ],
+  "raffle": [
+    {
+      "seed": "e6f2f60c0aeef7e6f227fc4a0219584910098de5268406c966e8a0d58dc39f5a",
+      "roomId": "venue-vectors",
+      "seq": 15,
+      "tickets": [
+        1
+      ],
+      "winners": 1,
+      "drawn": [
+        0
+      ],
+      "drawLog": "raffle:0"
+    },
+    {
+      "seed": "ae857eb532f71cefb49249441b66bab619889add4b17c6715a7a1a307db37077",
+      "roomId": "venue-vectors",
+      "seq": 16,
+      "tickets": [
+        3,
+        1,
+        2
+      ],
+      "winners": 1,
+      "drawn": [
+        2
+      ],
+      "drawLog": "raffle:4"
+    },
+    {
+      "seed": "7c0f284542ccea6f80d04298309566aca2bb177490a53262361cc22038057ad8",
+      "roomId": "venue-vectors",
+      "seq": 17,
+      "tickets": [
+        5,
+        5,
+        5,
+        5
+      ],
+      "winners": 2,
+      "drawn": [
+        3,
+        2
+      ],
+      "drawLog": "raffle:17;raffle:14"
+    },
+    {
+      "seed": "3cb140a2e9fb5e7017256df1cd1b4888cb1d33c90f4a45e1c7d6a78767f2613b",
+      "roomId": "venue-vectors",
+      "seq": 18,
+      "tickets": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "winners": 3,
+      "drawn": [
+        1,
+        4,
+        3
+      ],
+      "drawLog": "raffle:2;raffle:12;raffle:4"
+    },
+    {
+      "seed": "edc3fff8cfbe2c16a91ed01714cfba002e5dae7b4642d13a7d06ec1d84c2116d",
+      "roomId": "venue-vectors",
+      "seq": 19,
+      "tickets": [
+        2,
+        1
+      ],
+      "winners": 5,
+      "drawn": [
+        1,
+        0
+      ],
+      "drawLog": "raffle:2;raffle:0"
+    }
+  ]
+}

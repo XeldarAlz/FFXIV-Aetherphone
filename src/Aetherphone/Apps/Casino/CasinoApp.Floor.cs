@@ -127,7 +127,7 @@ internal sealed partial class CasinoApp
         CasinoGames.Bingo => Core.Casino.BingoRules.CardPrice,
         CasinoGames.Scratch => Core.Casino.ScratchRules.Prices[0],
         CasinoGames.Barkeep => Core.Casino.BarkeepRules.EntryChips,
-        CasinoGames.Blackjack => Core.Casino.BlackjackRules.MinBet,
+        CasinoGames.Blackjack => Core.Casino.BlackjackRules.HouseFloor,
         _ => 0,
     };
 
@@ -211,16 +211,7 @@ internal sealed partial class CasinoApp
 
     private void AskCashOut(Core.Aethernet.Contracts.CasinoSittingDto sitting)
     {
-        var stackText = NumberText.Group(sitting.Stack);
-        confirm.Ask(new Core.Confirm.ConfirmRequest
-        {
-            Title = Loc.T(L.Casino.CashOutConfirmTitle, stackText),
-            Message = Loc.T(L.Casino.CashOutConfirmBody),
-            ConfirmLabel = Loc.T(L.Casino.CashOut),
-            CancelLabel = Loc.T(L.Common.Cancel),
-            Danger = false,
-            Confirm = casino.CloseSitting,
-        });
+        cashierCashOut.Ask(CashOutSplit.Of(casino.State));
     }
 
     private static string ClientGameId(string wireKind) => CasinoRecentGames.ClientGameId(wireKind);
