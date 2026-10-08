@@ -99,6 +99,7 @@ internal sealed class BarkeepCabinet : ICabinetIdle
     private LabelSlot waitLabel;
     private LabelSlot lastCallLabel;
     private LabelSlot noTipsLabel;
+    private LabelSlot bestLabel;
     private LabelPairSlot counterLabel;
     private LabelPairSlot scoreLabel;
     private LabelPairSlot servedLabel;
@@ -490,7 +491,7 @@ internal sealed class BarkeepCabinet : ICabinetIdle
         }
 
         top += CardGap * scale;
-        var best = Loc.T(L.Casino.BarkeepBestScore, GameNumber.Label(stats.Get(PracticeStatsId).BestScore));
+        var best = bestLabel.Get(L.Casino.BarkeepBestScore, stats.Get(PracticeStatsId).BestScore);
         Typography.DrawCentered(drawList, new Vector2(work.Center.X, top + LadderRowHeight * scale * 0.5f),
             Typography.FitText(best, width, TextStyles.Footnote), CasinoColors.InkBody, TextStyles.Footnote);
         if (state is null || state.Sitting is not null)
@@ -884,7 +885,7 @@ internal sealed class BarkeepCabinet : ICabinetIdle
         y += Typography.LineHeight(style) + CardGap * scale;
         var best = practiceNewBest
             ? Loc.T(L.Casino.BarkeepNewBest)
-            : Loc.T(L.Casino.BarkeepBestScore, GameNumber.Label(stats.Get(PracticeStatsId).BestScore));
+            : bestLabel.Get(L.Casino.BarkeepBestScore, stats.Get(PracticeStatsId).BestScore);
         Line(drawList, best, centerX, y, width, practiceNewBest ? Gold : CasinoColors.InkBody, TextStyles.Footnote);
     }
 
