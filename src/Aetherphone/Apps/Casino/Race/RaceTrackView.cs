@@ -292,7 +292,7 @@ internal sealed class RaceTrackView
         var cloth = RaceBirdArt.ClothOf(runner.Slot);
         drawList.AddCircleFilled(discCenter, disc, ImGui.GetColorU32(cloth), 16);
         Typography.DrawCentered(drawList, discCenter, GameNumber.Label(runner.Slot + 1), RaceBirdArt.InkOn(cloth),
-            TextStyles.Caption2);
+            TextStyles.FootnoteEmphasized);
         var textLeft = discCenter.X + disc + 4f * scale;
         var available = cell.Max.X - radius * 0.6f - textLeft;
         if (available <= 4f * scale)
@@ -300,11 +300,11 @@ internal sealed class RaceTrackView
             return;
         }
 
-        var style = TextStyles.Caption1;
+        var style = TextStyles.FootnoteEmphasized;
         var name = Typography.FitText(runner.Name, available, style);
         var size = Typography.Measure(name, style);
         Typography.Draw(drawList, new Vector2(textLeft, cell.Center.Y - size.Y * 0.5f), name,
-            lead ? CasinoColors.MoneyHighlight : CasinoColors.InkBody, style);
+            lead ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle, style);
     }
 
     private float LeaderUnits(RaceRoundPlayback playback)

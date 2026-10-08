@@ -15,7 +15,7 @@ internal sealed class RaceBoards
     public const float WideBoard = 420f;
 
     private const float Pad = 8f;
-    private const float HeaderRow = 18f;
+    private const float HeaderRow = 20f;
     private const float MaxRow = 46f;
     private const float PoolColumn = 62f;
     private const float PlaceColumn = 50f;
@@ -26,10 +26,10 @@ internal sealed class RaceBoards
     private const float PipGap = 3.4f;
     private const float SlideShare = 0.35f;
     private const float TicketRow = 20f;
-    private const float TicketCell = 24f;
+    private const float TicketCell = 28f;
     private const int StripColumns = 3;
     private const float TicketPopSeconds = 0.35f;
-    private const float ResultRow = 21f;
+    private const float ResultRow = 24f;
 
     private readonly float[] ticketAge = new float[RaceRules.MaxTickets];
 
@@ -107,20 +107,20 @@ internal sealed class RaceBoards
         {
             var heading = Loc.T(L.Race.TicketsHeading);
             var count = texts.Count(list.Length);
-            var countWidth = Typography.Measure(count, TextStyles.Caption1).X;
+            var countWidth = Typography.Measure(count, TextStyles.Footnote).X;
             Typography.Draw(drawList, new Vector2(rect.Min.X, rect.Min.Y),
                 Typography.FitText(heading, MathF.Max(1f, rect.Width - countWidth - Pad * scale),
                     TextStyles.FootnoteEmphasized), CasinoColors.InkTitle, TextStyles.FootnoteEmphasized);
             Typography.Draw(drawList, new Vector2(rect.Max.X - countWidth, rect.Min.Y + 1f * scale), count,
-                CasinoColors.InkMuted, TextStyles.Caption1);
+                CasinoColors.InkBody, TextStyles.Footnote);
             top += HeaderRow * scale + 2f * scale;
         }
 
         if (list.Length == 0)
         {
             Typography.Draw(drawList, new Vector2(rect.Min.X, top),
-                Typography.FitText(Loc.T(L.Race.NoTickets), rect.Width, TextStyles.Caption1), CasinoColors.InkMuted,
-                TextStyles.Caption1);
+                Typography.FitText(Loc.T(L.Race.NoTickets), rect.Width, TextStyles.Footnote), CasinoColors.InkBody,
+                TextStyles.Footnote);
             return;
         }
 
@@ -164,12 +164,12 @@ internal sealed class RaceBoards
         var inner = rect.Inset(pad * 2f);
         var title = Loc.T(L.Race.ResultTitle);
         var race = texts.RaceNumber(roundIndex);
-        var raceWidth = Typography.Measure(race, TextStyles.Caption1).X;
+        var raceWidth = Typography.Measure(race, TextStyles.Footnote).X;
         Typography.Draw(drawList, inner.Min,
             Typography.FitText(title, MathF.Max(1f, inner.Width - raceWidth - pad), TextStyles.Title3),
             CasinoColors.InkTitle, TextStyles.Title3);
         Typography.Draw(drawList, new Vector2(inner.Max.X - raceWidth, inner.Min.Y + 4f * scale), race,
-            CasinoColors.InkMuted, TextStyles.Caption1);
+            CasinoColors.InkBody, TextStyles.Footnote);
         var top = inner.Min.Y + Typography.LineHeight(TextStyles.Title3) + pad;
         var order = board.Order;
         if (order is not { Length: RaceRules.FieldSize })
@@ -190,7 +190,7 @@ internal sealed class RaceBoards
         top += pad * 0.5f;
         Typography.Draw(drawList, new Vector2(inner.Min.X, top),
             Typography.FitText(Loc.T(L.Race.Dividends), inner.Width, TextStyles.FootnoteEmphasized),
-            CasinoColors.InkMuted, TextStyles.FootnoteEmphasized);
+            CasinoColors.InkBody, TextStyles.FootnoteEmphasized);
         top += Typography.LineHeight(TextStyles.FootnoteEmphasized) + 2f * scale;
         var results = board.Results;
         if (results is null || results.Length == 0)
@@ -280,8 +280,8 @@ internal sealed class RaceBoards
 
     private static void DrawToteHeader(ImDrawListPtr drawList, Rect row, in Columns columns, bool wide, float scale)
     {
-        var style = TextStyles.Caption2;
-        var ink = CasinoColors.InkMuted;
+        var style = TextStyles.FootnoteEmphasized;
+        var ink = CasinoColors.InkBody;
         var top = row.Center.Y - Typography.LineHeight(style) * 0.5f;
         Typography.Draw(drawList, new Vector2(columns.NameLeft, top),
             Typography.FitText(Loc.T(L.Race.ColumnRunner), MathF.Max(1f, columns.NameRight - columns.NameLeft), style),
@@ -355,7 +355,7 @@ internal sealed class RaceBoards
 
         var nameWidth = MathF.Max(1f, columns.NameRight - columns.NameLeft);
         var nameStyle = TextStyles.SubheadlineEmphasized;
-        var subStyle = TextStyles.Caption2;
+        var subStyle = TextStyles.Footnote;
         var nameHeight = Typography.LineHeight(nameStyle);
         var subHeight = Typography.LineHeight(subStyle);
         var blockTop = inset.Center.Y - (nameHeight + subHeight) * 0.5f;
@@ -369,7 +369,7 @@ internal sealed class RaceBoards
         var subText = wide ? texts.Backers(slot, runner.Backers) : form;
         Typography.Draw(drawList, new Vector2(subLeft, subTop),
             Typography.FitText(subText, MathF.Max(1f, columns.NameRight - subLeft), subStyle),
-            CasinoColors.InkMuted with { W = alpha }, subStyle);
+            CasinoColors.InkBody with { W = alpha }, subStyle);
         if (wide)
         {
             ValueCell(drawList, form, columns.FormCenter, FormColumn * scale,
@@ -388,13 +388,13 @@ internal sealed class RaceBoards
             ValueCell(drawList, RaceTexts.Odds(runner.OddsHundredths), columns.OddsCenter, OddsColumn * scale,
                 stackTop + oddsHeight * 0.5f, CasinoColors.Money with { W = alpha }, TextStyles.Headline);
             ValueCell(drawList, RaceTexts.Odds(runner.PlaceOddsHundredths), columns.OddsCenter, OddsColumn * scale,
-                stackTop + oddsHeight + subHeight * 0.5f, CasinoColors.InkMuted with { W = alpha }, subStyle);
+                stackTop + oddsHeight + subHeight * 0.5f, CasinoColors.InkBody with { W = alpha }, subStyle);
             var poolHeight = Typography.LineHeight(TextStyles.Footnote);
             var poolTop = inset.Center.Y - (poolHeight + subHeight) * 0.5f;
             ValueCell(drawList, NumberText.Compact(runner.Pool), columns.PoolCenter, PoolColumn * scale,
                 poolTop + poolHeight * 0.5f, CasinoColors.InkBody with { W = alpha }, TextStyles.Footnote);
             ValueCell(drawList, texts.Backers(slot, runner.Backers), columns.PoolCenter, PoolColumn * scale,
-                poolTop + poolHeight + subHeight * 0.5f, CasinoColors.InkMuted with { W = alpha }, subStyle);
+                poolTop + poolHeight + subHeight * 0.5f, CasinoColors.InkBody with { W = alpha }, subStyle);
         }
 
         if (hovered)
@@ -408,7 +408,7 @@ internal sealed class RaceBoards
     private static void DrawPickBadge(ImDrawListPtr drawList, AppSkin ui, Vector2 anchor, string label, float alpha,
         float scale)
     {
-        var style = TextStyles.Caption2;
+        var style = TextStyles.FootnoteEmphasized;
         var size = Typography.Measure(label, style);
         var height = size.Y + 2f * scale;
         var min = new Vector2(anchor.X - size.X * 0.5f - 4f * scale, anchor.Y);
@@ -468,11 +468,11 @@ internal sealed class RaceBoards
             }
 
             var amount = NumberText.Compact(showPayout ? ticket.Payout : ticket.Amount);
-            var amountStyle = TextStyles.Caption1;
+            var amountStyle = TextStyles.FootnoteEmphasized;
             var amountWidth = Typography.Measure(amount, amountStyle).X;
             var padX = scaled.Height * 0.4f;
             var labelWidth = MathF.Max(1f, scaled.Width - padX * 2f - amountWidth - 4f * scale);
-            var labelStyle = TextStyles.Caption2;
+            var labelStyle = TextStyles.Footnote;
             Typography.Draw(drawList,
                 new Vector2(scaled.Min.X + padX, scaled.Center.Y - Typography.LineHeight(labelStyle) * 0.5f),
                 Typography.FitText(texts.Ticket(list, index), labelWidth, labelStyle), CasinoColors.InkBody,
@@ -533,11 +533,11 @@ internal sealed class RaceBoards
             ImGui.GetColorU32(RaceBirdArt.PlumageOf(runner.Colour) with { W = share }), 18);
         drawList.AddCircleFilled(discCenter, discRadius, ImGui.GetColorU32(cloth with { W = share }), 18);
         Typography.DrawCentered(drawList, discCenter, GameNumber.Label(runner.Slot + 1),
-            RaceBirdArt.InkOn(cloth) with { W = share }, TextStyles.Caption1);
+            RaceBirdArt.InkOn(cloth) with { W = share }, TextStyles.FootnoteEmphasized);
         var nameLeft = discCenter.X + discRadius + 8f * scale;
         var nameStyle = place == 0 ? TextStyles.Headline : TextStyles.SubheadlineEmphasized;
         var photoText = photo ? Loc.T(L.Race.PhotoFinish) : string.Empty;
-        var photoWidth = photo ? Typography.Measure(photoText, TextStyles.Caption2).X + 6f * scale : 0f;
+        var photoWidth = photo ? Typography.Measure(photoText, TextStyles.Footnote).X + 6f * scale : 0f;
         Typography.Draw(drawList, new Vector2(nameLeft, popped.Center.Y - Typography.LineHeight(nameStyle) * 0.5f),
             Typography.FitText(runner.Name, MathF.Max(1f, popped.Max.X - nameLeft - photoWidth), nameStyle),
             ink with { W = share }, nameStyle);
@@ -545,8 +545,8 @@ internal sealed class RaceBoards
         {
             Typography.Draw(drawList,
                 new Vector2(popped.Max.X - photoWidth + 6f * scale,
-                    popped.Center.Y - Typography.LineHeight(TextStyles.Caption2) * 0.5f), photoText,
-                CasinoColors.LightB with { W = share }, TextStyles.Caption2);
+                    popped.Center.Y - Typography.LineHeight(TextStyles.Footnote) * 0.5f), photoText,
+                CasinoColors.LightB with { W = share }, TextStyles.Footnote);
         }
     }
 
