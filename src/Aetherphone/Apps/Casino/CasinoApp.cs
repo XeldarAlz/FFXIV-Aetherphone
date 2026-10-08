@@ -717,12 +717,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         {
             originals.Reset();
             return;
-            return;
         }
 
         if (Machines.MachineCabinet.Owns(route.GameId))
         {
             machines.Reset();
+            return;
         }
 
         if (string.Equals(route.GameId, CasinoGames.Plinko, StringComparison.Ordinal))
