@@ -26,7 +26,6 @@ internal sealed class OriginalsCabinet
     private const float SignHeight = 30f;
     private const float SectionGap = 8f;
     private const float AutoPauseSeconds = 0.35f;
-    private const float SecondaryShare = 0.38f;
     private const float SpotlightAlpha = 0.05f;
 
     private readonly CasinoStore store;
@@ -260,7 +259,7 @@ internal sealed class OriginalsCabinet
         {
             Typography.DrawWrappedCentered(drawList,
                 Loc.T(state.StakesPaused ? L.Casino.PausedTitle : L.Casino.DrainingTitle), TextStyles.Subheadline,
-                ui.MutedInk, new Vector2(area.Center.X, top), area.Width);
+                CasinoColors.InkTitle, new Vector2(area.Center.X, top), area.Width);
             return;
         }
 
@@ -270,7 +269,7 @@ internal sealed class OriginalsCabinet
             return;
         }
 
-        Typography.DrawWrappedCentered(drawList, Loc.T(hint), TextStyles.Subheadline, ui.MutedInk,
+        Typography.DrawWrappedCentered(drawList, Loc.T(hint), TextStyles.Subheadline, CasinoColors.InkBody,
             new Vector2(area.Center.X, top), area.Width);
     }
 
@@ -286,27 +285,19 @@ internal sealed class OriginalsCabinet
                 new Vector2(right, knobTop + BetComposer.KnobHeight * scale)), ui, false);
         }
 
-        var actionTop = deck.Max.Y - (BetComposer.Pad + BetComposer.ActionHeight) * scale;
-        var actionBottom = actionTop + BetComposer.ActionHeight * scale;
+        var row = DeckActions.Row(deck, scale);
+        var cursor = row.Min.X;
+        var secondaries = 0;
         var idle = !blocked && !originals.InFlight;
-        var cashLeft = left;
         var secondary = skin.LiveSecondary;
-        if (secondary.Key is not null)
+        if (secondary.Key is not null && DeckActions.DrawSecondary(row, ref cursor, ref secondaries,
+                Loc.T(secondary), idle && !skin.Busy && !Composer.Auto.Running, ui.Ink, scale))
         {
-            var secondaryRight = left + (right - left) * SecondaryShare;
-            var secondaryRect = new Rect(new Vector2(left, actionTop), new Vector2(secondaryRight, actionBottom));
-            if (Button.Draw(drawList, secondaryRect, Loc.T(secondary), ui.Ink, ButtonStyle.Gray,
-                    enabled: idle && !skin.Busy && !Composer.Auto.Running))
-            {
-                skin.Secondary(originals);
-            }
-
-            cashLeft = secondaryRight + BetComposer.Gap * scale;
+            skin.Secondary(originals);
         }
 
         var label = cashOutLabel.Get(L.Originals.CashOutFor, NumberText.Compact(skin.CashOutValue));
-        var cashRect = new Rect(new Vector2(cashLeft, actionTop), new Vector2(right, actionBottom));
-        if (Button.Draw(drawList, cashRect, label, ui.Ink, ButtonStyle.Prominent, enabled: idle && skin.CanCashOut,
+        if (DeckActions.DrawPrimary(row, cursor, label, idle && skin.CanCashOut, ui.Ink,
                 id: "casino.originals.cashout"))
         {
             skin.CashOut(originals);
@@ -388,10 +379,8 @@ internal sealed class OriginalsCabinet
         Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
             Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), ui.TitleInk,
             TextStyles.SubheadlineEmphasized);
-        var top = deck.Min.Y + inset + titleHeight + Metrics.Space.Sm * scale;
-        var rect = new Rect(new Vector2(deck.Min.X + inset, top),
-            new Vector2(deck.Max.X - inset, top + Button.LargeHeight * scale));
-        if (Button.Draw(drawList, rect, Loc.T(L.Casino.Cashier), ui.Ink))
+        var row = DeckActions.Row(deck, scale);
+        if (DeckActions.DrawPrimary(row, row.Min.X, Loc.T(L.Casino.Cashier), true, ui.Ink))
         {
             openCashier();
         }

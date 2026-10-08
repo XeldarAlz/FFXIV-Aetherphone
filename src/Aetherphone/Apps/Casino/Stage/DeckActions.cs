@@ -54,6 +54,6 @@ internal static class DeckActions
     }
 
     public static bool DrawPrimary(Rect row, float cursor, string label, bool enabled, in ControlInk ink,
-        ButtonStyle style = ButtonStyle.Prominent) =>
-        Button.Draw(Primary(row, cursor), label, ink, style, enabled: enabled);
+        ButtonStyle style = ButtonStyle.Prominent, string? id = null) =>
+        Button.Draw(Primary(row, cursor), label, ink, style, enabled: enabled, id: id);
 }

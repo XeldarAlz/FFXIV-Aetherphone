@@ -379,7 +379,7 @@ internal sealed class HiLoSkin : IOriginalsSkin
         var gap = CallGap * scale;
         var columnWidth = MathF.Max(1f, (stage.Width - cardWidth) * 0.5f - gap);
         var buttonHeight = Button.LargeHeight * scale;
-        var top = cardCenter.Y - buttonHeight * 0.5f - Typography.LineHeight(TextStyles.Caption1) * 0.5f;
+        var top = cardCenter.Y - buttonHeight * 0.5f - Typography.LineHeight(TextStyles.Footnote) * 0.5f;
         var leftRect = new Rect(new Vector2(stage.Min.X, top), new Vector2(stage.Min.X + columnWidth, top + buttonHeight));
         var rightRect = new Rect(new Vector2(stage.Max.X - columnWidth, top), new Vector2(stage.Max.X, top + buttonHeight));
         if (!chain.Live)
@@ -433,13 +433,14 @@ internal sealed class HiLoSkin : IOriginalsSkin
         var chance = OriginalsText.Percent(option.ChanceBasisPoints);
         var multiplier = OriginalsText.Multiplier(option.MultiplierTenThousandths);
         var lineTop = rect.Max.Y + 4f * scale;
-        var chanceSize = Typography.Measure(chance, TextStyles.Caption1);
-        var multiplierSize = Typography.Measure(multiplier, TextStyles.Caption1);
+        var chanceSize = Typography.Measure(chance, TextStyles.FootnoteEmphasized);
+        var multiplierSize = Typography.Measure(multiplier, TextStyles.FootnoteEmphasized);
         var gap = Metrics.Space.Sm * scale;
         var left = rect.Center.X - (chanceSize.X + gap + multiplierSize.X) * 0.5f;
-        Typography.Draw(drawList, new Vector2(left, lineTop), chance, ui.MutedInk, TextStyles.Caption1);
+        Typography.Draw(drawList, new Vector2(left, lineTop), chance, CasinoColors.InkTitle,
+            TextStyles.FootnoteEmphasized);
         Typography.Draw(drawList, new Vector2(left + chanceSize.X + gap, lineTop), multiplier, CasinoColors.Money,
-            TextStyles.Caption1);
+            TextStyles.FootnoteEmphasized);
     }
 
     private void DrawOutcome(ImDrawListPtr drawList, Vector2 topCenter, AppSkin ui, float width)
@@ -452,7 +453,7 @@ internal sealed class HiLoSkin : IOriginalsSkin
         if (chain.Phase == OriginalsRules.PhaseBusted)
         {
             Typography.DrawWrappedCentered(drawList, Loc.T(L.Originals.HiLoBusted), TextStyles.Subheadline,
-                CasinoColors.Loss, topCenter, width);
+                CasinoColors.InkBody, topCenter, width);
             return;
         }
 
@@ -462,7 +463,7 @@ internal sealed class HiLoSkin : IOriginalsSkin
         }
 
         var text = cashedLabel.Get(L.Originals.CashedAt, OriginalsText.Multiplier(chain.MultiplierTenThousandths));
-        Typography.DrawWrappedCentered(drawList, text, TextStyles.Subheadline, CasinoColors.Money, topCenter, width);
+        Typography.DrawWrappedCentered(drawList, text, TextStyles.Title3, CasinoColors.Money, topCenter, width);
     }
 
     private int PickOption(HiLoCall first, HiLoCall second, HiLoCall third)

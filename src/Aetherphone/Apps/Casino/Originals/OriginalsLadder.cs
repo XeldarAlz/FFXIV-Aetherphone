@@ -82,13 +82,13 @@ internal static class OriginalsLadder
 
         var pad = Pad * scale;
         var inner = rect.Width - pad * 2f;
-        var captionHeight = Typography.LineHeight(TextStyles.Caption2);
+        var captionHeight = Typography.LineHeight(TextStyles.Footnote);
         var valueHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
         var top = rect.Center.Y - (captionHeight + valueHeight) * 0.5f;
-        var caption = Typography.FitText(step.Caption, inner, TextStyles.Caption2);
-        var captionSize = Typography.Measure(caption, TextStyles.Caption2);
+        var caption = Typography.FitText(step.Caption, inner, TextStyles.Footnote);
+        var captionSize = Typography.Measure(caption, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(rect.Center.X - captionSize.X * 0.5f, top), caption,
-            step.State == LadderState.Upcoming ? ui.MutedInk : Palette.WithAlpha(tint, 0.9f), TextStyles.Caption2);
+            step.State == LadderState.Upcoming ? ui.BodyInk : tint, TextStyles.Footnote);
         var value = Typography.FitText(step.Value, inner, TextStyles.FootnoteEmphasized);
         var valueSize = Typography.Measure(value, TextStyles.FootnoteEmphasized);
         Typography.Draw(drawList, new Vector2(rect.Center.X - valueSize.X * 0.5f, top + captionHeight), value,

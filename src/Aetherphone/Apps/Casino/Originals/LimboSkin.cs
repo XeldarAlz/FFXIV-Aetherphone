@@ -155,10 +155,10 @@ internal sealed class LimboSkin : IOriginalsSkin
             numberInk, TextStyles.LargeTitle);
         var caption = Loc.T(L.Originals.Target);
         var captionTop = dialCenter.Y + Typography.LineHeight(TextStyles.LargeTitle) * 0.6f;
-        Typography.DrawCentered(drawList, new Vector2(dialCenter.X, captionTop + Typography.LineHeight(TextStyles.Caption1)
-            * 0.5f), Typography.FitText(caption, radius, TextStyles.Caption1), ui.MutedInk, TextStyles.Caption1);
+        Typography.DrawCentered(drawList, new Vector2(dialCenter.X, captionTop + Typography.LineHeight(TextStyles.Footnote)
+            * 0.5f), Typography.FitText(caption, radius, TextStyles.Footnote), CasinoColors.InkBody, TextStyles.Footnote);
         Typography.DrawCentered(drawList,
-            new Vector2(dialCenter.X, captionTop + Typography.LineHeight(TextStyles.Caption1)
+            new Vector2(dialCenter.X, captionTop + Typography.LineHeight(TextStyles.Footnote)
                 + Typography.LineHeight(TextStyles.FootnoteEmphasized) * 0.5f),
             OriginalsText.MultiplierHundredths(target), CasinoColors.LightA, TextStyles.FootnoteEmphasized);
         CueStop(frame, scale);
