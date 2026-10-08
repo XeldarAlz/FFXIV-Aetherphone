@@ -75,4 +75,12 @@ Every settled round goes through `stage.Settle(new CasinoBetRecord(game, stake, 
 
 ## Reference cabinets
 
-`Cabinets/ScratchCabinet.cs` is the solo reference (fixed-price knob, Auto as buy five, Instant, bets rail) and `Cabinets/WheelCabinet.cs` the room reference (phase ribbon, podiums, ceiling-capped stakes). Slots, bingo, barkeep, blackjack and the daily spin still run their previous layouts inside the stage body and use `ClassicBetComposer` where they had a composer.
+`Cabinets/ScratchCabinet.cs` is the solo reference (fixed-price knob, Auto as buy five, Instant, bets rail) and `Cabinets/WheelCabinet.cs` the room reference (phase ribbon, podiums, ceiling-capped stakes). Slots, barkeep and blackjack still run their previous layouts inside the stage body and use `ClassicBetComposer` where they had a composer.
+
+## Bingo hall
+
+`Cabinets/BingoCabinet.cs` is a non-scrolling room on the Arena backdrop, laid out by `BingoHallLayout` (tumbler and caller, 75-cell call board, hero card with a swipeable rail of the other cards, three prize podiums). `BingoTumbler` is a decorative `PhysicsWorld` drum of 20 balls kept aloft by a seeded blower; it decides nothing, and the called ball that pops out and flies to the board is always the server's latest call. `BingoRoundPlayback` turns the room state into choreography and cues (`BallPopped`, `BallLanded`, `Daubed`, `OneAway`, `StageWon`): a single new ball flies for `FlightSeconds` before the board lights it and auto-daub stamps it, while a first read or a burst of several balls (a mid-game join or a reconnect) jumps straight to the called balls with no flights and no sounds. Manual daub (the info sheet's Extra button) only stops the auto stamping; the prize is the server's either way, and the Result stamps every called number. A stage counts as the player's when one of their cards reached it on the stage's awarded ball (`BingoRules.CallReaching`); the payout and the celebration tier always come from the settled cards, with the Epic tier forced for the player who took an early-bird full house. Cards are bought through the bet deck knob (`BetComposer` with `FixedAmount` and `Knob`).
+
+## Daily spin
+
+`Cabinets/DailySpinCabinet.cs` runs on the Strip backdrop with no bet deck: the neon FREE SPIN sign, two crossing spotlights, a bulb rim, and a sprung pointer (`DailySpinPlayback`) that kicks on every peg and settles critically damped. The top wedge lands with the Epic tier and every other wedge with the Win tier through `SpinFlourish`, which mirrors `WinCelebration` with the coin glyph because the spin pays coins, not chips. `DailySpinIdle` is the turning idle wheel shared by `DrawIdle` and the home widget.
