@@ -41,8 +41,15 @@ internal sealed partial class CasinoApp
 
                 using (ImRaii.PushId(index))
                 {
-                    cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY), width, index, scale);
+                    cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY), width, FloorGameIds[index],
+                        FloorGameNames[index], index == 0, scale);
                 }
+            }
+
+            using (ImRaii.PushId(FloorGameIds.Length))
+            {
+                cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY + CardGap * scale), width,
+                    CasinoGames.Race, L.Race.Title, false, scale);
             }
 
             cursorY = DrawTablesLink(drawList, new Vector2(origin.X, cursorY + CoinArt.SectionGap * scale), width,
@@ -51,9 +58,9 @@ internal sealed partial class CasinoApp
         }
     }
 
-    private float DrawGameRow(ImDrawListPtr drawList, Vector2 origin, float width, int gameIndex, float scale)
+    private float DrawGameRow(ImDrawListPtr drawList, Vector2 origin, float width, string gameId, LocString name,
+        bool anchored, float scale)
     {
-        var gameId = FloorGameIds[gameIndex];
         var pad = GameRowPad * scale;
         var tile = GameRowTile * scale;
         var info = InfoButtonSize * scale;
@@ -72,7 +79,7 @@ internal sealed partial class CasinoApp
 
         var infoMin = new Vector2(max.X - pad - info, min.Y + pad);
         var infoMax = infoMin + new Vector2(info, info);
-        if (gameIndex == 0)
+        if (anchored)
         {
             UiAnchors.Report("casino.rules", new Rect(infoMin, infoMax));
         }
@@ -93,7 +100,7 @@ internal sealed partial class CasinoApp
             tile);
         var top = min.Y + pad;
         Typography.Draw(drawList, new Vector2(textLeft, top),
-            Typography.FitText(Loc.T(FloorGameNames[gameIndex]), textWidth, TextStyles.Headline), ui.TitleInk,
+            Typography.FitText(Loc.T(name), textWidth, TextStyles.Headline), ui.TitleInk,
             TextStyles.Headline);
         top += headline + GameRowLineGap * scale;
         top = WidgetText.Lines(drawList, pitch, new Vector2(textLeft, top), ui.MutedInk, TextStyles.Footnote,
@@ -117,7 +124,8 @@ internal sealed partial class CasinoApp
     private void DrawGameRowFooter(ImDrawListPtr drawList, string gameId, float left, float right, float top,
         float scale)
     {
-        var crowd = CrowdAt(gameId);
+        var racing = string.Equals(gameId, CasinoGames.Race, StringComparison.Ordinal);
+        var crowd = racing ? casinoRooms.OccupancyOf(Core.Casino.CasinoRoomIds.RaceTrack) : CrowdAt(gameId);
         var crowdWidth = 0f;
         if (crowd > 0)
         {
@@ -130,7 +138,7 @@ internal sealed partial class CasinoApp
             crowdWidth = crowdSize.X + (CasinoArt.LiveDotRadius * 2f + 4f + CoinArt.ValueGap) * scale;
         }
 
-        var stake = MinimumStakeLine(gameId);
+        var stake = racing ? texts.Number(L.Casino.MinimumStake, Core.Casino.RaceRules.MinBet) : MinimumStakeLine(gameId);
         if (stake.Length == 0)
         {
             return;

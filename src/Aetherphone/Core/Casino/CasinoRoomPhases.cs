@@ -24,6 +24,8 @@ internal static class CasinoRoomIds
 
     public const string BingoHall = "bingo-hall";
 
+    public const string RaceTrack = "race-track";
+
     public const string BlackjackPit = "blackjack-pit";
 
     public const string BlackjackParlour = "blackjack-parlour";
@@ -50,6 +52,12 @@ internal static class CasinoRoomCadence
 
     public const int BingoResultSeconds = 15;
 
+    public const int RaceOpenSeconds = 60;
+
+    public const int RaceLockedSeconds = 35;
+
+    public const int RaceResultSeconds = 15;
+
     public static int WheelWindow(int phase) => phase switch
     {
         CasinoRoomPhases.Locked => WheelLockedSeconds,
@@ -62,5 +70,12 @@ internal static class CasinoRoomCadence
         CasinoRoomPhases.Locked => BingoLockedSeconds,
         CasinoRoomPhases.Result => BingoResultSeconds,
         _ => BingoOpenSeconds,
+    };
+
+    public static int RaceWindow(int phase) => phase switch
+    {
+        CasinoRoomPhases.Locked => RaceLockedSeconds,
+        CasinoRoomPhases.Result => RaceResultSeconds,
+        _ => RaceOpenSeconds,
     };
 }

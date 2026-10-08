@@ -29,6 +29,9 @@ internal static class CasinoGlyphs
             case CasinoGames.DailySpin:
                 DrawDailySpin(drawList, center, extent, ink, hole);
                 break;
+            case CasinoGames.Race:
+                DrawRace(drawList, center, extent, ink, hole);
+                break;
             default:
                 DrawChip(drawList, center, extent, ink, hole);
                 break;
@@ -134,6 +137,27 @@ internal static class CasinoGlyphs
 
         drawList.AddCircleFilled(center, extent * 0.3f, hole, 20);
         drawList.AddCircleFilled(center, extent * 0.16f, ink, 16);
+    }
+
+    private static void DrawRace(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        drawList.AddCircleFilled(At(center, extent, -0.12f, 0.12f), extent * 0.5f, ink, 28);
+        drawList.AddLine(At(center, extent, 0.12f, -0.1f), At(center, extent, 0.42f, -0.62f), ink, extent * 0.3f);
+        drawList.AddCircleFilled(At(center, extent, 0.46f, -0.66f), extent * 0.22f, ink, 18);
+        Span<Vector2> beak = stackalloc Vector2[3]
+        {
+            At(center, extent, 0.62f, -0.76f), At(center, extent, 0.95f, -0.62f), At(center, extent, 0.62f, -0.54f),
+        };
+        FillConvex(drawList, ink, beak);
+        Span<Vector2> crest = stackalloc Vector2[3]
+        {
+            At(center, extent, 0.36f, -0.82f), At(center, extent, 0.16f, -1f), At(center, extent, 0.5f, -0.86f),
+        };
+        FillConvex(drawList, ink, crest);
+        drawList.AddCircleFilled(At(center, extent, 0.5f, -0.7f), extent * 0.06f, hole, 8);
+        drawList.AddLine(At(center, extent, -0.2f, 0.5f), At(center, extent, -0.42f, 0.95f), ink, extent * 0.12f);
+        drawList.AddLine(At(center, extent, 0.04f, 0.5f), At(center, extent, 0.28f, 0.95f), ink, extent * 0.12f);
+        drawList.AddCircleFilled(At(center, extent, -0.18f, 0.1f), extent * 0.2f, hole, 16);
     }
 
     private static void DrawChip(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)

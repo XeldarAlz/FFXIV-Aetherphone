@@ -10,4 +10,5 @@ internal static class CasinoGames
     public const string Wheel = "wheel";
     public const string Barkeep = "bartender";
     public const string DailySpin = "dailyspin";
+    public const string Race = "race";
 }

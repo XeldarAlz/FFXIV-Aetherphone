@@ -22,6 +22,9 @@ internal static class CasinoVerifier
     private const string BingoCardPurpose = "card";
     private const string BingoBallPurpose = "ball";
     private const string BlackjackShufflePurpose = "shuffle";
+    private const string RaceFieldPurpose = "field";
+    private const string RaceStrengthPurpose = "strength";
+    private const string RaceRunnerPurpose = "runner";
     private const uint BarkeepJitterBound = 3;
     private const uint BarkeepStepCountBound = 3;
 
@@ -98,6 +101,13 @@ internal static class CasinoVerifier
             return false;
         }
 
+        if (string.Equals(gameKind, CasinoWire.RaceKind, StringComparison.Ordinal))
+        {
+            Span<int> order = stackalloc int[RaceRules.FieldSize];
+            Span<int> birds = stackalloc int[RaceRules.FieldSize];
+            return ReplaysRaceLog(seed, streamKeyInfo, drawLog, birds, order);
+        }
+
         TrySegmentBound(gameKind, out var segmentBound);
         var stream = new DrawStream(seed, streamKeyInfo);
         var shuffles = default(ShuffleRun);
@@ -135,6 +145,145 @@ internal static class CasinoVerifier
         }
 
         return true;
+    }
+
+    internal static bool ReplaysRaceLog(byte[] seed, string streamKeyInfo, string drawLog, Span<int> birds,
+        Span<int> order)
+    {
+        if (drawLog.Length == 0 || birds.Length < RaceRules.FieldSize || order.Length < RaceRules.FieldSize)
+        {
+            return false;
+        }
+
+        var stream = new DrawStream(seed, streamKeyInfo);
+        Span<int> bank = stackalloc int[RaceRules.BirdBank];
+        for (var bird = 0; bird < bank.Length; bird++)
+        {
+            bank[bird] = bird;
+        }
+
+        Span<int> strengths = stackalloc int[RaceRules.FieldSize];
+        Span<bool> placed = stackalloc bool[RaceRules.FieldSize];
+        var fields = 0;
+        var strengthCount = 0;
+        var runners = 0;
+        var remaining = 0L;
+        var cursor = 0;
+        while (cursor < drawLog.Length)
+        {
+            var separator = drawLog.IndexOf(';', cursor);
+            var end = separator < 0 ? drawLog.Length : separator;
+            var pair = drawLog.AsSpan(cursor, end - cursor);
+            var colon = pair.IndexOf(':');
+            if (colon <= 0 || colon == pair.Length - 1
+                || !uint.TryParse(pair[(colon + 1)..], NumberStyles.None, CultureInfo.InvariantCulture,
+                    out var logged))
+            {
+                return false;
+            }
+
+            var purpose = pair[..colon];
+            if (purpose.SequenceEqual(RaceFieldPurpose))
+            {
+                if (fields >= RaceRules.FieldSize || strengthCount > 0)
+                {
+                    return false;
+                }
+
+                var bound = (uint)(RaceRules.BirdBank - fields);
+                if (logged >= bound || stream.NextBelow(bound) != logged)
+                {
+                    return false;
+                }
+
+                var pick = fields + (int)logged;
+                (bank[fields], bank[pick]) = (bank[pick], bank[fields]);
+                birds[fields] = bank[fields];
+                fields++;
+            }
+            else if (purpose.SequenceEqual(RaceStrengthPurpose))
+            {
+                if (fields != RaceRules.FieldSize || strengthCount >= RaceRules.FieldSize || runners > 0)
+                {
+                    return false;
+                }
+
+                const uint bound = RaceRules.StrengthSpread;
+                if (logged >= bound || stream.NextBelow(bound) != logged)
+                {
+                    return false;
+                }
+
+                strengths[strengthCount] = RaceRules.StrengthBase + (int)logged;
+                remaining += strengths[strengthCount];
+                strengthCount++;
+            }
+            else if (purpose.SequenceEqual(RaceRunnerPurpose))
+            {
+                if (strengthCount != RaceRules.FieldSize || runners >= RaceRules.FieldSize - 1 || remaining <= 0)
+                {
+                    return false;
+                }
+
+                var bound = (uint)remaining;
+                if (logged >= bound || stream.NextBelow(bound) != logged)
+                {
+                    return false;
+                }
+
+                var slot = WalkToRunner(strengths, placed, logged);
+                placed[slot] = true;
+                order[runners] = slot;
+                remaining -= strengths[slot];
+                runners++;
+            }
+            else
+            {
+                return false;
+            }
+
+            cursor = end + 1;
+        }
+
+        if (fields != RaceRules.FieldSize || strengthCount != RaceRules.FieldSize
+            || runners != RaceRules.FieldSize - 1)
+        {
+            return false;
+        }
+
+        for (var slot = 0; slot < RaceRules.FieldSize; slot++)
+        {
+            if (!placed[slot])
+            {
+                order[runners] = slot;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int WalkToRunner(ReadOnlySpan<int> strengths, ReadOnlySpan<bool> placed, uint pick)
+    {
+        var left = (long)pick;
+        var last = -1;
+        for (var slot = 0; slot < strengths.Length; slot++)
+        {
+            if (placed[slot])
+            {
+                continue;
+            }
+
+            last = slot;
+            if (left < strengths[slot])
+            {
+                return slot;
+            }
+
+            left -= strengths[slot];
+        }
+
+        return last;
     }
 
     internal static bool TryBoundFor(ReadOnlySpan<char> purpose, uint segmentBound, out uint bound)
