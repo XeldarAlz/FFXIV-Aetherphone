@@ -8980,6 +8980,7 @@
   "casino.strip.ceilingLevel": "Limit von Stufe {0}: {1}, oder 5 Prozent deines Guthabens, je nachdem, was höher ist",
   "casino.strip.ceilingBalance": "5 Prozent deines Guthabens, über dem Limit von Stufe {0} ({1})",
   "casino.strip.betFor": "{0} setzen",
+  "casino.strip.buyFor": "Für {0} kaufen",
   "casino.strip.manual": "Manuell",
   "casino.strip.auto": "Auto",
   "casino.strip.autoFor": "Auto {0}",

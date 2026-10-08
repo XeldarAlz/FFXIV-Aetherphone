@@ -8980,6 +8980,7 @@
   "casino.strip.ceilingLevel": "Teto do nível {0}: {1}, ou 5 por cento do seu saldo, o que for maior",
   "casino.strip.ceilingBalance": "5 por cento do seu saldo, acima do teto do nível {0} ({1})",
   "casino.strip.betFor": "Apostar {0}",
+  "casino.strip.buyFor": "Comprar por {0}",
   "casino.strip.manual": "Manual",
   "casino.strip.auto": "Auto",
   "casino.strip.autoFor": "Auto {0}",

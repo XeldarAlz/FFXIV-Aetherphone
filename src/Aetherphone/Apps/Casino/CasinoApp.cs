@@ -329,7 +329,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 slots.Draw(body, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Scratch, StringComparison.Ordinal):
-                scratch.Draw(body, ui);
+                scratch.Draw(stage, frame, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Barkeep, StringComparison.Ordinal):
                 barkeep.Draw(body, ui);
@@ -353,7 +353,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         }
     }
 
-    private static CasinoStageSpec StageSpecFor(CasinoRoute route)
+    private CasinoStageSpec StageSpecFor(CasinoRoute route)
     {
         if (route.Screen == CasinoScreen.Table)
         {
@@ -370,7 +370,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             CasinoGames.Slots => new CasinoStageSpec(route.GameId, L.Casino.GameSlots, Backdrop.Strip,
                 Extra: L.Casino.SlotsPays),
             CasinoGames.Scratch => new CasinoStageSpec(route.GameId, L.Casino.GameScratch, Backdrop.Strip,
-                Extra: L.Casino.ScratchOdds),
+                DeckHeight: Cabinets.ScratchCabinet.DeckHeight, BetsRail: true, InstantAvailable: true,
+                ReturnTenths: Core.Casino.ScratchRules.ReturnTenths(scratch.CurrentTier), Extra: L.Casino.ScratchOdds),
             CasinoGames.Barkeep => new CasinoStageSpec(route.GameId, L.Casino.GameBarkeep, Backdrop.Strip,
                 Warmth: 1f),
             CasinoGames.Bingo => new CasinoStageSpec(route.GameId, L.Casino.GameBingo, Backdrop.Arena),

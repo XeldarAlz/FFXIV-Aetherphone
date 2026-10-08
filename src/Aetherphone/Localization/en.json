@@ -8980,6 +8980,7 @@
   "casino.strip.ceilingLevel": "Level {0} cap {1}, or 5 percent of your balance, whichever is higher",
   "casino.strip.ceilingBalance": "5 percent of your balance, above the level {0} cap of {1}",
   "casino.strip.betFor": "Bet {0}",
+  "casino.strip.buyFor": "Buy {0}",
   "casino.strip.manual": "Manual",
   "casino.strip.auto": "Auto",
   "casino.strip.autoFor": "Auto {0}",

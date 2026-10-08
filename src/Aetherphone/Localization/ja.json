@@ -8980,6 +8980,7 @@
   "casino.strip.ceilingLevel": "レベル{0}の上限{1}、または残高の5パーセントのうち高い方",
   "casino.strip.ceilingBalance": "残高の5パーセント（レベル{0}の上限{1}を超えています）",
   "casino.strip.betFor": "{0}をベット",
+  "casino.strip.buyFor": "{0}で購入",
   "casino.strip.manual": "手動",
   "casino.strip.auto": "オート",
   "casino.strip.autoFor": "オート {0}",

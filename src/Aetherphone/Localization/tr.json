@@ -8980,6 +8980,7 @@
   "casino.strip.ceilingLevel": "Seviye {0} sınırı {1} ya da bakiyenin yüzde 5'i, hangisi yüksekse",
   "casino.strip.ceilingBalance": "Bakiyenin yüzde 5'i, seviye {0} sınırının ({1}) üstünde",
   "casino.strip.betFor": "{0} yatır",
+  "casino.strip.buyFor": "{0} karşılığında al",
   "casino.strip.manual": "Elle",
   "casino.strip.auto": "Otomatik",
   "casino.strip.autoFor": "Otomatik {0}",

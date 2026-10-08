@@ -10610,6 +10610,7 @@ internal static class L
         public static readonly LocString CeilingLevel = new("casino.strip.ceilingLevel", "Level {0} cap {1}, or 5 percent of your balance, whichever is higher");
         public static readonly LocString CeilingBalance = new("casino.strip.ceilingBalance", "5 percent of your balance, above the level {0} cap of {1}");
         public static readonly LocString BetFor = new("casino.strip.betFor", "Bet {0}");
+        public static readonly LocString BuyFor = new("casino.strip.buyFor", "Buy {0}");
         public static readonly LocString Manual = new("casino.strip.manual", "Manual");
         public static readonly LocString Auto = new("casino.strip.auto", "Auto");
         public static readonly LocString AutoFor = new("casino.strip.autoFor", "Auto {0}");

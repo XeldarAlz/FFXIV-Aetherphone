@@ -8980,6 +8980,7 @@
   "casino.strip.ceilingLevel": "Лимит уровня {0}: {1}, или 5 процентов баланса, что больше",
   "casino.strip.ceilingBalance": "5 процентов баланса, выше лимита уровня {0} ({1})",
   "casino.strip.betFor": "Ставка {0}",
+  "casino.strip.buyFor": "Купить за {0}",
   "casino.strip.manual": "Вручную",
   "casino.strip.auto": "Авто",
   "casino.strip.autoFor": "Авто {0}",

@@ -8980,6 +8980,7 @@
   "casino.strip.ceilingLevel": "等级 {0} 上限 {1}，或余额的 5%，取较高者",
   "casino.strip.ceilingBalance": "余额的 5%，高于等级 {0} 的上限 {1}",
   "casino.strip.betFor": "投注 {0}",
+  "casino.strip.buyFor": "以 {0} 购买",
   "casino.strip.manual": "手动",
   "casino.strip.auto": "自动",
   "casino.strip.autoFor": "自动 {0}",
