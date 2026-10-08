@@ -30,6 +30,9 @@ internal sealed class CasinoTablesStore : IDisposable
     private volatile CasinoTableRowDto[] listed = Array.Empty<CasinoTableRowDto>();
     private volatile CasinoTableDoorDto? door;
     private volatile CasinoTableLedgerDto? ledger;
+    private volatile CasinoTableRowDto? card;
+    private readonly Action<int> cardStatusSink = static _ => { };
+    private int fetchingCard;
     private volatile string ledgerRoomId = string.Empty;
     private CasinoTableConfigDto? createIntentConfig;
     private string ledgerIntentId = string.Empty;
@@ -74,6 +77,43 @@ internal sealed class CasinoTablesStore : IDisposable
     public CasinoTableRowDto[] Tables => tables;
 
     public CasinoTableRowDto[] Listed => listed;
+
+    public CasinoTableRowDto? CardFor(string roomId)
+    {
+        if (roomId.Length == 0)
+        {
+            return null;
+        }
+
+        var rows = listed;
+        for (var index = 0; index < rows.Length; index++)
+        {
+            if (string.Equals(rows[index].TableId, roomId, StringComparison.Ordinal))
+            {
+                return rows[index];
+            }
+        }
+
+        var held = card;
+        return held is not null && string.Equals(held.TableId, roomId, StringComparison.Ordinal) ? held : null;
+    }
+
+    public void RefreshCard(string roomId)
+    {
+        if (roomId.Length == 0 || !session.IsSignedIn || Interlocked.Exchange(ref fetchingCard, 1) != 0)
+        {
+            return;
+        }
+
+        work.Run("table card", async token =>
+        {
+            var fresh = await casino.TableAsync(roomId, cardStatusSink, token).ConfigureAwait(false);
+            if (fresh is not null)
+            {
+                card = fresh;
+            }
+        }, () => Interlocked.Exchange(ref fetchingCard, 0));
+    }
 
     public string AccountId => session.CurrentUser?.Id ?? string.Empty;
 
@@ -784,6 +824,7 @@ internal sealed class CasinoTablesStore : IDisposable
         }
 
         ledger = null;
+        card = null;
         ledgerRoomId = string.Empty;
         Interlocked.Exchange(ref ledgerAttemptedAtTick, 0);
         Interlocked.Exchange(ref ledgerLoadedAtTick, 0);
