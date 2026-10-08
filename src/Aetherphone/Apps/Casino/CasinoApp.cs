@@ -357,7 +357,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 blackjack.Draw(body, ui);
                 break;
             case CasinoScreen.DailySpin:
-                dailySpin.Draw(body, ui);
+                dailySpin.Draw(stage, frame, ui);
                 break;
             default:
                 EmptyState.Draw(body, ui, FontAwesomeIcon.Hammer, Loc.T(L.Casino.CabinetSoonTitle),
