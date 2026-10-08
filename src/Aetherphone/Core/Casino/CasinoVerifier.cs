@@ -22,6 +22,11 @@ internal static class CasinoVerifier
     private const string BingoCardPurpose = "card";
     private const string BingoBallPurpose = "ball";
     private const string BlackjackShufflePurpose = "shuffle";
+    private const string MinePurpose = "mine";
+    private const string RollPurpose = "roll";
+    private const string LimboPurpose = "limbo";
+    private const string KenoPurpose = "keno";
+    private const string CardPurpose = "card";
     private const uint BarkeepJitterBound = 3;
     private const uint BarkeepStepCountBound = 3;
 
@@ -68,9 +73,106 @@ internal static class CasinoVerifier
         }
 
         var streamKeyInfo = string.IsNullOrEmpty(streamBinding) ? roundId : streamBinding;
-        return ReplaysDrawLog(gameKind, seed, streamKeyInfo, drawLog)
-            ? CasinoRoundVerdict.Match
-            : CasinoRoundVerdict.Mismatch;
+        var replays = IsOriginalsKind(gameKind)
+            ? ReplaysFloatDrawLog(seed, streamKeyInfo, drawLog)
+            : ReplaysDrawLog(gameKind, seed, streamKeyInfo, drawLog);
+        return replays ? CasinoRoundVerdict.Match : CasinoRoundVerdict.Mismatch;
+    }
+
+    internal static bool IsOriginalsKind(string gameKind) => gameKind switch
+    {
+        CasinoWire.MinesKind or CasinoWire.DiceKind or CasinoWire.LimboKind or CasinoWire.KenoKind
+            or CasinoWire.HiLoKind => true,
+        _ => false,
+    };
+
+    internal static bool ReplaysFloatDrawLog(byte[] seed, string streamKeyInfo, string drawLog)
+    {
+        if (drawLog.Length == 0)
+        {
+            return false;
+        }
+
+        var stream = new DrawStream(seed, streamKeyInfo);
+        var mines = 0;
+        var keno = 0;
+        var cursor = 0;
+        while (cursor < drawLog.Length)
+        {
+            var separator = drawLog.IndexOf(';', cursor);
+            var end = separator < 0 ? drawLog.Length : separator;
+            var pair = drawLog.AsSpan(cursor, end - cursor);
+            var colon = pair.IndexOf(':');
+            if (colon <= 0 || colon == pair.Length - 1)
+            {
+                return false;
+            }
+
+            var purpose = pair[..colon];
+            if (!uint.TryParse(pair[(colon + 1)..], NumberStyles.None, CultureInfo.InvariantCulture,
+                    out var loggedValue))
+            {
+                return false;
+            }
+
+            if (!TryFloatBoundFor(purpose, ref mines, ref keno, out var bound) || loggedValue >= bound
+                || stream.NextFloatBelow(bound) != loggedValue)
+            {
+                return false;
+            }
+
+            cursor = end + 1;
+        }
+
+        return true;
+    }
+
+    private static bool TryFloatBoundFor(ReadOnlySpan<char> purpose, ref int mines, ref int keno, out uint bound)
+    {
+        bound = 0;
+        if (purpose.SequenceEqual(MinePurpose))
+        {
+            if (mines >= OriginalsRules.MaxMines)
+            {
+                return false;
+            }
+
+            bound = (uint)(OriginalsRules.MinesTiles - mines);
+            mines++;
+            return true;
+        }
+
+        if (purpose.SequenceEqual(KenoPurpose))
+        {
+            if (keno >= OriginalsRules.KenoDraws)
+            {
+                return false;
+            }
+
+            bound = (uint)(OriginalsRules.KenoTiles - keno);
+            keno++;
+            return true;
+        }
+
+        if (purpose.SequenceEqual(RollPurpose))
+        {
+            bound = OriginalsRules.DiceRollBound;
+            return true;
+        }
+
+        if (purpose.SequenceEqual(LimboPurpose))
+        {
+            bound = OriginalsRules.LimboBound;
+            return true;
+        }
+
+        if (purpose.SequenceEqual(CardPurpose))
+        {
+            bound = OriginalsRules.HiLoDeck;
+            return true;
+        }
+
+        return false;
     }
 
     internal static bool TrySegmentBound(string gameKind, out uint bound)
@@ -368,6 +470,11 @@ internal static class CasinoVerifier
 
                 return raw % bound;
             }
+        }
+
+        public uint NextFloatBelow(uint bound)
+        {
+            return (uint)((ulong)NextUInt32() * bound >> 32);
         }
 
         private uint NextUInt32()

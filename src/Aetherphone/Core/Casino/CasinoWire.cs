@@ -18,6 +18,16 @@ internal static class CasinoWire
 
     public const string DailySpinKind = "casino.dailyspin";
 
+    public const string MinesKind = "casino.mines";
+
+    public const string DiceKind = "casino.dice";
+
+    public const string LimboKind = "casino.limbo";
+
+    public const string KenoKind = "casino.keno";
+
+    public const string HiLoKind = "casino.hilo";
+
     private const string KindPrefix = "casino.";
 
     public static string Kind(string gameId)

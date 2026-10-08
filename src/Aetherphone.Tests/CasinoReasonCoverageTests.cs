@@ -51,6 +51,13 @@ public sealed class CasinoReasonCoverageTests
     }
 
     [Fact]
+    public void TheOriginalsRefusalIsCovered()
+    {
+        Assert.Contains("invalid_move", CasinoReasons.All);
+        Assert.Equal(L.Originals.ReasonInvalidMove.Key, CasinoReasons.MessageFor("invalid_move").Key);
+    }
+
+    [Fact]
     public void TheTableVocabularyIsInTheList()
     {
         Assert.Contains(CasinoReasons.Full, CasinoReasons.All);
