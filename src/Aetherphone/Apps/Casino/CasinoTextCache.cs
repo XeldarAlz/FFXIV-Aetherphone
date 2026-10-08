@@ -11,7 +11,13 @@ internal sealed class CasinoTextCache
 
     private readonly record struct Slot(string Key, long First, long Second);
 
+    private readonly record struct CompactSlot(string Key, long First, long Second);
+
+    private readonly record struct NamedSlot(string Key, string Name, long Value);
+
     private readonly Dictionary<Slot, string> texts = new();
+    private readonly Dictionary<CompactSlot, string> compacts = new();
+    private readonly Dictionary<NamedSlot, string> named = new();
     private LanguageInfo? language;
     private int timeFormat = -1;
     private DateTime day;
@@ -90,6 +96,54 @@ internal sealed class CasinoTextCache
         return Remember(slot, Loc.T(template, TimeText.FutureMoment(unixSeconds)));
     }
 
+    public string Compact(LocString template, long value)
+    {
+        Validate();
+        var slot = new CompactSlot(template.Key, value, long.MinValue);
+        if (compacts.TryGetValue(slot, out var cached))
+        {
+            return cached;
+        }
+
+        return Remember(compacts, slot, Loc.T(template, NumberText.Compact(value)));
+    }
+
+    public string Compacts(LocString template, long first, long second)
+    {
+        Validate();
+        var slot = new CompactSlot(template.Key, first, second);
+        if (compacts.TryGetValue(slot, out var cached))
+        {
+            return cached;
+        }
+
+        return Remember(compacts, slot, Loc.T(template, NumberText.Compact(first), NumberText.Compact(second)));
+    }
+
+    public string Named(LocString template, string name)
+    {
+        Validate();
+        var slot = new NamedSlot(template.Key, name, long.MinValue);
+        if (named.TryGetValue(slot, out var cached))
+        {
+            return cached;
+        }
+
+        return Remember(named, slot, Loc.T(template, name));
+    }
+
+    public string NamedNumber(LocString template, string name, long value)
+    {
+        Validate();
+        var slot = new NamedSlot(template.Key, name, value);
+        if (named.TryGetValue(slot, out var cached))
+        {
+            return cached;
+        }
+
+        return Remember(named, slot, Loc.T(template, name, NumberText.Group(value)));
+    }
+
     public string Duration(int seconds)
     {
         Validate();
@@ -121,6 +175,18 @@ internal sealed class CasinoTextCache
         _ => NumberText.Group(0),
     };
 
+    private static string Remember<TSlot>(Dictionary<TSlot, string> cache, TSlot slot, string text)
+        where TSlot : notnull
+    {
+        if (cache.Count >= Limit)
+        {
+            cache.Clear();
+        }
+
+        cache[slot] = text;
+        return text;
+    }
+
     private string Remember(Slot slot, string text)
     {
         if (texts.Count >= Limit)
@@ -151,5 +217,7 @@ internal sealed class CasinoTextCache
         timeFormat = TimeText.FormatVersion;
         day = today;
         texts.Clear();
+        compacts.Clear();
+        named.Clear();
     }
 }

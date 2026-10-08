@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Casino;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
 using Xunit;
@@ -113,6 +114,62 @@ public sealed class CasinoCashierTests
         Assert.Equal(0.22f,
             CasinoClubTiers.Progress(new CasinoClubDto(2, "gold", 94_000, 50_000, 250_000, 150, 750)), 3);
         Assert.Equal(1f, CasinoClubTiers.Progress(new CasinoClubDto(6, "obsidian", 30_000_000, 25_000_000, 0)));
+    }
+
+    [Fact]
+    public void TheCashierCardSplitsTheStackAgainstTheAllowance()
+    {
+        var capped = CashOutSplit.Of(new CasinoStateDto(RateChipsPerCoin: 1000,
+            Sitting: new CasinoSittingDto(Id: "s1", Stack: 1_000_000),
+            Cashier: new CasinoCashierDto(500, 100, 0, 400, 600_000)));
+
+        Assert.True(capped.Capped);
+        Assert.Equal(400, capped.NowCoins);
+        Assert.Equal(600_000, capped.WaitChips);
+        Assert.Equal(0.8f, capped.AllowanceFraction, 3);
+
+        var uncapped = CashOutSplit.Of(new CasinoStateDto(Sitting: new CasinoSittingDto(Id: "s1", Stack: 150_500)));
+        Assert.False(uncapped.Capped);
+        Assert.Equal(150, uncapped.NowCoins);
+        Assert.Equal(0, uncapped.WaitChips);
+    }
+
+    [Fact]
+    public void GettingChipsTakesAnyWholeCoinsInsideTheBand()
+    {
+        var fresh = BuyInBounds.Of(new CasinoStateDto(RateChipsPerCoin: 1000, MinBuyIn: 20_000,
+            MaxBuyIn: 5_000_000), 300);
+
+        Assert.False(fresh.TopUp);
+        Assert.Equal(20, fresh.MinCoins);
+        Assert.Equal(300, fresh.MaxCoins);
+        Assert.True(fresh.Allows(137));
+        Assert.False(fresh.Allows(19));
+        Assert.False(fresh.Allows(301));
+        Assert.Equal(137_000, fresh.ChipsFor(137));
+
+        var topUp = BuyInBounds.Of(new CasinoStateDto(RateChipsPerCoin: 1000, MinBuyIn: 20_000, MaxBuyIn: 5_000_000,
+            Sitting: new CasinoSittingDto(Id: "s1", ChipsIn: 4_990_000)), 300);
+        Assert.True(topUp.TopUp);
+        Assert.Equal(1, topUp.MinCoins);
+        Assert.Equal(10, topUp.MaxCoins);
+    }
+
+    [Fact]
+    public void TheShelfShowsWhatCanBeClaimedAndCountsDownTheRest()
+    {
+        var ready = new CasinoBonusDto(CasinoBonusKinds.Timed, true, 5_000, 0, 0, true);
+        var waiting = new CasinoBonusDto(CasinoBonusKinds.Timed, false, 5_000, 1_000_600, 0, true);
+        var spentWelcome = new CasinoBonusDto(CasinoBonusKinds.Welcome, false, 50_000, 0, 0, false);
+        var unknown = new CasinoBonusDto("mystery", true, 1, 0, 0, true);
+
+        Assert.True(CashierBonusShelf.Shows(ready, true));
+        Assert.False(CashierBonusShelf.Shows(waiting, true));
+        Assert.True(CashierBonusShelf.Shows(waiting, false));
+        Assert.False(CashierBonusShelf.Shows(spentWelcome, false));
+        Assert.False(CashierBonusShelf.Shows(unknown, false));
+        Assert.Equal(600, CashierBonusShelf.SecondsUntil(waiting, 1_000_000));
+        Assert.Equal(0, CashierBonusShelf.SecondsUntil(ready, 1_000_000));
     }
 
     [Fact]

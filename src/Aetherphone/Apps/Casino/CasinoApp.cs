@@ -39,6 +39,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly ConfirmService confirm;
     private readonly ConductGateService conduct;
     private readonly CashierDrawer cashier;
+    private readonly CashierBonusShelf bonusShelf;
+    private readonly CashierCashOut cashierCashOut;
+    private readonly CashierClubCard clubCard = new();
     private readonly Cabinets.SlotsCabinet slots;
     private readonly Cabinets.ScratchCabinet scratch;
     private readonly Cabinets.BarkeepCabinet barkeep;
@@ -91,7 +94,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         this.launcher = launcher;
         this.confirm = confirm;
         this.conduct = conduct;
-        cashier = new CashierDrawer(casino, coins, confirm);
+        bonusShelf = new CashierBonusShelf(casino);
+        cashierCashOut = new CashierCashOut(casino, confirm);
+        cashier = new CashierDrawer(casino, coins, confirm, bonusShelf, cashierCashOut);
         slots = new Cabinets.SlotsCabinet(casino, casinoPlay, OpenCashier);
         scratch = new Cabinets.ScratchCabinet(casino, casinoPlay, OpenCashier);
         barkeep = new Cabinets.BarkeepCabinet(casino, casinoPlay, gameStats, OpenCashier);
@@ -134,6 +139,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     {
         router.Reset();
         cashier.Close();
+        bonusShelf.Reset();
         slots.Reset();
         scratch.Reset();
         barkeep.Reset();
@@ -160,6 +166,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     {
         router.Reset();
         cashier.Close();
+        bonusShelf.Reset();
         slots.Reset();
         scratch.Reset();
         barkeep.Reset();
@@ -239,6 +246,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         ConsumeTableAnswers();
         screenArea = context.Content;
         barkeep.Tick();
+        bonusShelf.Update(MathF.Min(ImGui.GetIO().DeltaTime, Core.Animation.TransitionTiming.MaxFrameSeconds), scale);
         cashier.Gate();
         slots.Gate();
         scratch.Gate();
