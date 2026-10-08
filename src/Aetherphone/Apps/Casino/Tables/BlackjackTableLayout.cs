@@ -1,59 +1,76 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Casino;
+using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
 internal static class BlackjackTableLayout
 {
-    public const float DealerFanFraction = 0.13f;
-
-    public const float BubbleFraction = 0.27f;
-
-    public const float RailFraction = 0.475f;
+    public const float RailFraction = 0.50f;
 
     public const float HeroFanFraction = 0.70f;
 
+    public const float RailArcLift = 14f;
+
+    public const float StateLineGap = 8f;
+
     public const float SideInset = 10f;
+
+    public const float DealerPuckDrop = 24f;
+
+    public const float DealerPuckRadius = 16f;
+
+    public const float DealerFanGap = 8f;
 
     public const float DealerCardWidth = 38f;
 
     public const float DealerTotalDrop = 12f;
 
+    public const float SpeechGap = 10f;
+
     public const float RailCardWidth = 18f;
 
     public const float RailSplitCardWidth = 14f;
 
-    public const float RailPuckRadius = 16f;
+    public const float RailPuckRadius = 22f;
 
-    public const float RailCardsLift = 58f;
+    public const float RailCardsLift = 64f;
 
-    public const float RailTotalLift = 45f;
+    public const float RailTotalLift = 51f;
 
-    public const float RailBadgeLift = 47f;
+    public const float RailBadgeLift = 53f;
 
-    public const float RailBetLift = 26f;
+    public const float RailBetLift = 32f;
 
-    public const float RailNameDrop = 24f;
+    public const float RailPlateGap = 4f;
 
-    public const float RailStackDrop = 35f;
+    public const float RailPlateHeight = 36f;
 
     public const float HeroTotalDrop = 12f;
 
-    public const float HeroChipsDrop = 46f;
+    public const float HeroChipsDrop = 42f;
 
     public const float HeroSlotWidthCap = 150f;
 
     public const float HeroSlotPad = 8f;
 
-    public const float CapsuleDrop = 26f;
+    public const float SideSpotRadius = 22f;
 
-    public const float CapsuleHeight = 44f;
+    public const float SideSpotSpacing = 64f;
+
+    public const float MainSpotRadius = 22f;
+
+    public const float CapsuleDrop = 28f;
+
+    public const float CapsuleHeight = 50f;
 
     public const float CapsulePuckRadius = 17f;
 
     public const float ShoeInsetX = 30f;
 
     public const float ShoeInsetY = 26f;
+
+    public const float FeltRoundingFraction = 0.32f;
 
     public static int RailSeatCount(int mySeat)
     {
@@ -85,7 +102,17 @@ internal static class BlackjackTableLayout
     {
         var columnWidth = RailColumnWidth(felt, railCount, scale);
         var x = felt.Min.X + SideInset * scale + columnWidth * (slot + 0.5f);
-        return new Vector2(x, RailPuckY(felt));
+        var half = MathF.Max(1f, felt.Width * 0.5f);
+        var spread = (x - felt.Center.X) / half;
+        return new Vector2(x, RailPuckY(felt) - spread * spread * RailArcLift * scale);
+    }
+
+    public static float StateLineY(in Rect felt, float scale)
+    {
+        var fan = DealerFanCenter(felt, scale);
+        var totalBottom = fan.Y + PlayingCards.HeightFor(DealerCardWidth * scale) * 0.5f
+            + (DealerTotalDrop + 10f) * scale;
+        return totalBottom + StateLineGap * scale + Typography.LineHeight(TextStyles.Title2) * 0.5f;
     }
 
     public static float RailPuckY(in Rect felt)
@@ -93,14 +120,26 @@ internal static class BlackjackTableLayout
         return felt.Min.Y + felt.Height * RailFraction;
     }
 
-    public static Vector2 DealerFanCenter(in Rect felt)
+    public static Vector2 DealerPuckCenter(in Rect felt, float scale)
     {
-        return new Vector2(felt.Center.X, felt.Min.Y + felt.Height * DealerFanFraction);
+        return new Vector2(felt.Center.X, felt.Min.Y + DealerPuckDrop * scale);
     }
 
-    public static Vector2 BubbleAnchor(in Rect felt)
+    public static Vector2 DealerFanCenter(in Rect felt, float scale)
     {
-        return new Vector2(felt.Center.X, felt.Min.Y + felt.Height * BubbleFraction);
+        var puckBottom = felt.Min.Y + (DealerPuckDrop + DealerPuckRadius) * scale;
+        var cardHalf = PlayingCards.HeightFor(DealerCardWidth * scale) * 0.5f;
+        return new Vector2(felt.Center.X, puckBottom + DealerFanGap * scale + cardHalf);
+    }
+
+    public static Rect SpeechArea(in Rect felt, float scale)
+    {
+        var puck = DealerPuckCenter(felt, scale);
+        var radius = DealerPuckRadius * scale;
+        var right = puck.X - radius - SpeechGap * scale;
+        var left = felt.Min.X + SideInset * 2f * scale;
+        var top = puck.Y - radius;
+        return new Rect(new Vector2(left, top), new Vector2(MathF.Max(left, right), puck.Y + radius));
     }
 
     public static Vector2 ShoeAnchor(in Rect felt, float scale)
@@ -140,9 +179,27 @@ internal static class BlackjackTableLayout
         return new Vector2(x, HeroFanY(felt));
     }
 
+    public static Vector2 HeroBetSpot(in Rect felt, float scale)
+    {
+        var fanBottom = HeroFanY(felt) + PlayingCards.HeightFor(HeroCardWidth(1) * scale) * 0.5f;
+        return new Vector2(felt.Center.X, fanBottom + HeroChipsDrop * scale);
+    }
+
+    public static Vector2 SideSpot(in Rect felt, BlackjackSideBet bet, float scale)
+    {
+        var main = HeroBetSpot(felt, scale);
+        var offset = SideSpotSpacing * scale;
+        return new Vector2(bet == BlackjackSideBet.PerfectPairs ? main.X - offset : main.X + offset, main.Y);
+    }
+
     public static Vector2 CapsuleCenter(in Rect felt, float scale)
     {
         return new Vector2(felt.Center.X, felt.Max.Y - CapsuleDrop * scale);
+    }
+
+    public static float FeltRounding(in Rect felt)
+    {
+        return MathF.Min(felt.Width, felt.Height) * FeltRoundingFraction;
     }
 
     public static float FanStep(float cardWidth, int cardCount, float maxWidth)

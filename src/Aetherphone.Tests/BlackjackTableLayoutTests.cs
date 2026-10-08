@@ -76,38 +76,64 @@ public sealed class BlackjackTableLayoutTests
     [Fact]
     public void TheDealerZoneEndsAboveTheRailCards()
     {
-        var fanCenter = BlackjackTableLayout.DealerFanCenter(Felt);
+        var fanCenter = BlackjackTableLayout.DealerFanCenter(Felt, 1f);
         var dealerBottom = fanCenter.Y + PlayingCards.HeightFor(BlackjackTableLayout.DealerCardWidth) * 0.5f
-            + BlackjackTableLayout.DealerTotalDrop + 8f;
-        var railCardsTop = BlackjackTableLayout.RailPuckY(Felt) - BlackjackTableLayout.RailCardsLift
-            - PlayingCards.HeightFor(BlackjackTableLayout.RailCardWidth) * 0.5f;
-        Assert.True(dealerBottom < railCardsTop);
+            + BlackjackTableLayout.DealerTotalDrop + 9f;
+        for (var slot = 0; slot < BlackjackRules.SeatCount; slot++)
+        {
+            var puck = BlackjackTableLayout.RailPuckCenter(Felt, slot, BlackjackRules.SeatCount, 1f);
+            var railCardsTop = puck.Y - BlackjackTableLayout.RailCardsLift
+                - PlayingCards.HeightFor(BlackjackTableLayout.RailCardWidth) * 0.5f;
+            Assert.True(dealerBottom < railCardsTop);
+        }
     }
 
     [Fact]
-    public void TheRailTextEndsAboveTheHeroCards()
+    public void TheSeatArcBowsTowardThePlayer()
     {
-        var railBottom = BlackjackTableLayout.RailPuckY(Felt) + BlackjackTableLayout.RailStackDrop + 6f;
+        var edge = BlackjackTableLayout.RailPuckCenter(Felt, 0, BlackjackRules.SeatCount, 1f);
+        var middle = BlackjackTableLayout.RailPuckCenter(Felt, 2, BlackjackRules.SeatCount, 1f);
+        Assert.True(edge.Y < middle.Y);
+        Assert.True(BlackjackTableLayout.RailPuckRadius * 2f >= 44f);
+    }
+
+    [Fact]
+    public void TheRailPlateEndsAboveTheHeroCards()
+    {
+        var railBottom = BlackjackTableLayout.RailPuckY(Felt) + BlackjackTableLayout.RailPuckRadius
+            + BlackjackTableLayout.RailPlateGap + BlackjackTableLayout.RailPlateHeight;
         var heroCardsTop = BlackjackTableLayout.HeroFanY(Felt)
-            - PlayingCards.HeightFor(BlackjackTableLayout.HeroCardWidth(1)) * 0.5f - 8f;
+            - PlayingCards.HeightFor(BlackjackTableLayout.HeroCardWidth(1)) * 0.5f;
         Assert.True(railBottom < heroCardsTop);
     }
 
     [Fact]
-    public void TheHeroChipsEndAboveTheCapsule()
+    public void TheHeroBetRowEndsAboveTheCapsule()
     {
-        var fanBottom = BlackjackTableLayout.HeroFanY(Felt)
-            + PlayingCards.HeightFor(BlackjackTableLayout.HeroCardWidth(1)) * 0.5f;
-        var chipsLabelBottom = fanBottom + BlackjackTableLayout.HeroChipsDrop + 16f + 9f;
+        var spot = BlackjackTableLayout.HeroBetSpot(Felt, 1f);
+        var rowBottom = spot.Y + BlackjackTableLayout.MainSpotRadius + 9f;
         var capsuleTop = Felt.Max.Y - BlackjackTableLayout.CapsuleDrop - BlackjackTableLayout.CapsuleHeight * 0.5f;
-        Assert.True(chipsLabelBottom < capsuleTop);
+        Assert.True(rowBottom < capsuleTop);
+    }
+
+    [Fact]
+    public void TheSideSpotsFlankTheMainSpotWithoutTouching()
+    {
+        var main = BlackjackTableLayout.HeroBetSpot(Felt, 1f);
+        var pairs = BlackjackTableLayout.SideSpot(Felt, BlackjackSideBet.PerfectPairs, 1f);
+        var three = BlackjackTableLayout.SideSpot(Felt, BlackjackSideBet.TwentyOnePlusThree, 1f);
+        Assert.True(pairs.X < main.X && three.X > main.X);
+        Assert.True(main.X - pairs.X >= BlackjackTableLayout.SideSpotRadius + BlackjackTableLayout.MainSpotRadius);
+        Assert.True(pairs.X - BlackjackTableLayout.SideSpotRadius > Felt.Min.X);
+        Assert.True(three.X + BlackjackTableLayout.SideSpotRadius < Felt.Max.X);
     }
 
     [Fact]
     public void TheHeroTotalPillClearsTheChipColumn()
     {
-        var pillBottom = BlackjackTableLayout.HeroTotalDrop + 8f;
-        var chipColumnTop = BlackjackTableLayout.HeroChipsDrop
+        const float columnSink = 8f;
+        var pillBottom = BlackjackTableLayout.HeroTotalDrop + 11f;
+        var chipColumnTop = BlackjackTableLayout.HeroChipsDrop + columnSink
             - (BlackjackTableArt.ChipColumnCapacity - 1) * 4.2f - 7f;
         Assert.True(pillBottom < chipColumnTop);
     }

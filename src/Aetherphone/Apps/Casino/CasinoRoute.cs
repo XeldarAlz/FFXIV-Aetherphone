@@ -22,6 +22,7 @@ internal enum CasinoScreen
     DailySpin,
     HostTable,
     TableLedger,
+    Pit,
 }
 
 internal readonly record struct CasinoRoute(

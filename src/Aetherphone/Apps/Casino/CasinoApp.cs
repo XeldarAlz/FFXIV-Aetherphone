@@ -51,6 +51,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly Originals.OriginalsCabinet originals;
     private readonly Tables.BlackjackTable blackjack;
     private readonly Tables.TableBrowser browser;
+    private readonly Tables.BlackjackPit pit;
+    private readonly Tables.TableHandsCard tableHands;
     private readonly Tables.HostSheet hostSheet;
     private readonly Tables.TableLedger playerLedger;
     private readonly Tables.TableDoor tableDoor;
@@ -107,12 +109,14 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         bingo = new Cabinets.BingoCabinet(casino, casinoRooms, OpenCashier, PopRoute);
         dailySpin = new Cabinets.DailySpinCabinet(casinoSpin);
         originals = new Originals.OriginalsCabinet(casino, casinoPlay.Originals, OpenCashier);
-        blackjack = new Tables.BlackjackTable(casino, casinoRooms, casinoTables, casinoTurns, remoteImages,
+        blackjack = new Tables.BlackjackTable(casino, casinoRooms, casinoTables, history, casinoTurns, remoteImages,
             lodestone, OpenCashier, PopRoute, OpenLedger);
         playerLedger = new Tables.TableLedger(casinoTables, confirm);
         openTable = OpenTable;
         openDoorFromRow = OpenDoor;
         browser = new Tables.TableBrowser(casinoTables, casino, openTable, openDoorFromRow, OpenHostSheet);
+        tableHands = new Tables.TableHandsCard(history);
+        pit = new Tables.BlackjackPit(casinoTables, casino, openTable, openDoorFromRow, OpenTables, OpenHostSheet);
         hostSheet = new Tables.HostSheet(casinoTables, casino);
         tableDoor = new Tables.TableDoor(casinoTables, confirm, openTable);
         router = new ViewRouter<CasinoRoute>(CasinoRoute.Floor);
@@ -364,7 +368,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 originals.Draw(stage, frame, ui);
                 break;
             case CasinoScreen.Table:
-                blackjack.Draw(body, ui);
+                blackjack.Draw(stage, frame, ui);
                 break;
             case CasinoScreen.DailySpin:
                 dailySpin.Draw(body, ui);
@@ -380,8 +384,10 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     {
         if (route.Screen == CasinoScreen.Table)
         {
-            return new CasinoStageSpec(CasinoGames.Blackjack, L.Casino.GameBlackjack, Backdrop.Felt,
-                Practice: blackjack.Currency == Core.Casino.CasinoCurrencies.Practice, LampPool: 1f);
+            return new CasinoStageSpec(CasinoGames.Blackjack, L.Casino.GameBlackjack, Backdrop.Strip,
+                DeckHeight: blackjack.DeckHeight,
+                Practice: blackjack.Currency == Core.Casino.CasinoCurrencies.Practice,
+                ReturnTenths: Core.Casino.BlackjackRules.ReturnTenths);
         }
 
         if (route.Screen == CasinoScreen.DailySpin)
@@ -455,6 +461,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             case CasinoScreen.Tables:
                 browser.Draw(navBar.Body, ui);
                 break;
+            case CasinoScreen.Pit:
+                pit.Draw(navBar.Body, ui);
+                break;
             case CasinoScreen.TableDoor:
                 tableDoor.Draw(navBar.Body, ui);
                 break;
@@ -527,6 +536,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private string RouteTitle(CasinoRoute route) => route.Screen switch
     {
         CasinoScreen.Tables => Loc.T(L.Casino.TablesTitle),
+        CasinoScreen.Pit => Loc.T(L.Blackjack.PitTitle),
         CasinoScreen.TableDoor => Loc.T(L.Casino.DoorTitle),
         CasinoScreen.HostTable => Loc.T(L.Tables.HostTitle),
         CasinoScreen.TableLedger => Loc.T(L.Tables.LedgerHeading),
@@ -642,6 +652,17 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
         browser.Enter();
         router.Push(new CasinoRoute(CasinoScreen.Tables, CasinoGames.Blackjack));
+    }
+
+    private void OpenPit()
+    {
+        if (router.Current.Screen == CasinoScreen.Pit)
+        {
+            return;
+        }
+
+        pit.Enter();
+        router.Push(new CasinoRoute(CasinoScreen.Pit, CasinoGames.Blackjack));
     }
 
     private void OpenLedger(string tableId)
@@ -781,7 +802,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     {
         if (string.Equals(gameId, CasinoGames.Blackjack, StringComparison.Ordinal))
         {
-            casinoTables.QuickSeat(Core.Casino.CasinoStakeTiers.Any);
+            OpenPit();
             return;
         }
 
@@ -827,7 +848,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private static LocString PlayingName(CasinoRoute route) => route.Screen switch
     {
         CasinoScreen.Cabinet => GameName(route.GameId),
-        CasinoScreen.Table or CasinoScreen.TableDoor => L.Casino.GameBlackjack,
+        CasinoScreen.Table or CasinoScreen.TableDoor or CasinoScreen.Pit => L.Casino.GameBlackjack,
         CasinoScreen.DailySpin => L.Casino.GameDailySpin,
         _ => L.Apps.Casino,
     };

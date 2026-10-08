@@ -247,10 +247,12 @@ internal sealed partial class CasinoClient
     }
 
     public Task<CasinoBlackjackActionResultDto?> PlaceBlackjackBetAsync(string roomId, string clientRoundId,
-        string clientActionId, long amount, CancellationToken token, Action<AepFailure>? onFailure = null)
+        string clientActionId, long amount, long perfectPairs, long twentyOnePlusThree, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
     {
         return net.PostAsync(BlackjackBetPath,
-            new CasinoBlackjackBetRequest(roomId, clientRoundId, clientActionId, amount),
+            new CasinoBlackjackBetRequest(roomId, clientRoundId, clientActionId, amount, perfectPairs,
+                twentyOnePlusThree),
             AethernetJsonContext.Default.CasinoBlackjackBetRequest,
             AethernetJsonContext.Default.CasinoBlackjackActionResultDto, token, null, onFailure);
     }

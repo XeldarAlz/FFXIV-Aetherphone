@@ -44,6 +44,9 @@ internal static class CasinoRules
         L.Casino.RulesBlackjackStep2,
         L.Casino.RulesBlackjackStep3,
         L.Casino.RulesBlackjackStep4,
+        L.Blackjack.RulesSideBets,
+        L.Blackjack.RulesInsurance,
+        L.Blackjack.RulesSurrender,
     };
 
     private static readonly LocString[] BarkeepSteps =
@@ -296,8 +299,8 @@ internal static class CasinoRules
                 value = Loc.T(L.Casino.FactHouseRulesValue);
                 return true;
             case 3:
-                label = L.Casino.FactNotOffered;
-                value = Loc.T(L.Casino.FactNotOfferedValue);
+                label = L.Blackjack.FactSideBets;
+                value = Loc.T(L.Blackjack.FactSideBetsValue);
                 return true;
             default:
                 return false;

@@ -6,8 +6,19 @@ namespace Aetherphone.Core.Casino;
 
 internal sealed record VerifiedCasinoRound(CasinoRoundVerifyDto Round, CasinoRoundVerdict Verdict);
 
+internal readonly record struct CasinoTableHand(
+    string Key,
+    string RoomId,
+    long HandIndex,
+    string TableName,
+    int Currency,
+    long Net,
+    long SettledAtUnixMs);
+
 internal sealed class CasinoHistoryStore : IDisposable
 {
+    public const int TableHandLimit = 20;
+
     private const long RetryAfterAttemptMilliseconds = 30_000;
 
     private readonly AethernetSession session;
@@ -21,6 +32,7 @@ internal sealed class CasinoHistoryStore : IDisposable
     private volatile bool loaded;
     private volatile bool verifying;
     private volatile Dictionary<string, VerifiedCasinoRound> verified = new(StringComparer.Ordinal);
+    private volatile CasinoTableHand[] tableHands = Array.Empty<CasinoTableHand>();
     private int loadFailed;
     private int verifyFailed;
     private long attemptedAtTick;
@@ -78,6 +90,7 @@ internal sealed class CasinoHistoryStore : IDisposable
             nextCursor = null;
             loaded = false;
             Interlocked.Exchange(ref attemptedAtTick, 0);
+            tableHands = Array.Empty<CasinoTableHand>();
             lock (verifiedSwapLock)
             {
                 verified = new Dictionary<string, VerifiedCasinoRound>(StringComparer.Ordinal);
@@ -136,6 +149,80 @@ internal sealed class CasinoHistoryStore : IDisposable
                     [roundId] = result,
                 };
                 verified = next;
+            }
+        }, () => verifying = false);
+    }
+
+    public CasinoTableHand[] TableHands => tableHands;
+
+    public static string TableHandKey(string roomId, long handIndex)
+    {
+        return string.Concat(roomId, "#", handIndex.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    public void RecordTableHand(string roomId, long handIndex, string tableName, int currency, long net,
+        long settledAtUnixMs)
+    {
+        if (roomId.Length == 0 || handIndex < 0)
+        {
+            return;
+        }
+
+        var held = tableHands;
+        var key = TableHandKey(roomId, handIndex);
+        for (var index = 0; index < held.Length; index++)
+        {
+            if (string.Equals(held[index].Key, key, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+
+        tableHands = Prepend(held, new CasinoTableHand(key, roomId, handIndex, tableName, currency, net,
+            settledAtUnixMs));
+    }
+
+    internal static CasinoTableHand[] Prepend(CasinoTableHand[] held, in CasinoTableHand hand)
+    {
+        var count = Math.Min(held.Length + 1, TableHandLimit);
+        var next = new CasinoTableHand[count];
+        next[0] = hand;
+        Array.Copy(held, 0, next, 1, count - 1);
+        return next;
+    }
+
+    public void RequestTableVerify(in CasinoTableHand hand)
+    {
+        if (verifying || !session.IsSignedIn)
+        {
+            return;
+        }
+
+        var key = hand.Key;
+        if (verified.TryGetValue(key, out var known) && known.Verdict != CasinoRoundVerdict.Unrevealed)
+        {
+            return;
+        }
+
+        var roomId = hand.RoomId;
+        var handIndex = hand.HandIndex;
+        verifying = true;
+        work.Run("table hand verify", async token =>
+        {
+            var round = await casino.VerifyRoomIndexAsync(roomId, handIndex, token).ConfigureAwait(false);
+            if (round is null)
+            {
+                Interlocked.Exchange(ref verifyFailed, 1);
+                return;
+            }
+
+            var result = new VerifiedCasinoRound(round, CasinoVerifier.Verify(round));
+            lock (verifiedSwapLock)
+            {
+                verified = new Dictionary<string, VerifiedCasinoRound>(verified, StringComparer.Ordinal)
+                {
+                    [key] = result,
+                };
             }
         }, () => verifying = false);
     }

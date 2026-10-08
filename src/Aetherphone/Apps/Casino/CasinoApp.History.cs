@@ -278,6 +278,9 @@ internal sealed partial class CasinoApp
             var listTop = SectionTitle(drawList, new Vector2(origin.X, cursorY), width,
                 Loc.T(L.Casino.FairnessRecentHeading), scale);
             cursorY = DrawFairnessRounds(drawList, new Vector2(origin.X, listTop), width, scale);
+            var handsTop = SectionTitle(drawList, new Vector2(origin.X, cursorY), width,
+                Loc.T(L.Blackjack.TableHandsHeading), scale);
+            cursorY = tableHands.Draw(drawList, ui, new Vector2(origin.X, handsTop), width, scale);
             CoinArt.Reserve(origin, width, cursorY + CoinArt.BottomPad * scale);
         }
     }

@@ -33,10 +33,25 @@ internal static class BlackjackTableArt
     public static void DrawTotalPill(ImDrawListPtr drawList, Vector2 center, string label, Vector4 fill, Vector4 ink,
         float scale)
     {
-        var size = Typography.Measure(label, TextStyles.Caption1);
-        var half = new Vector2(size.X * 0.5f + 7f * scale, MathF.Max(8f * scale, size.Y * 0.5f + 2.5f * scale));
+        var size = Typography.Measure(label, TextStyles.FootnoteEmphasized);
+        var half = new Vector2(size.X * 0.5f + 7f * scale, MathF.Max(9f * scale, size.Y * 0.5f + 2.5f * scale));
         Squircle.Fill(drawList, center - half, center + half, half.Y, ImGui.GetColorU32(fill));
-        Typography.DrawCentered(drawList, center, label, ink, TextStyles.Caption1);
+        Typography.DrawCentered(drawList, center, label, ink, TextStyles.FootnoteEmphasized);
+    }
+
+    public static void DrawTotalCapsule(ImDrawListPtr drawList, Vector2 center, string label, Vector4 fill,
+        Vector4 ink, bool active, float scale)
+    {
+        var size = Typography.Measure(label, TextStyles.SubheadlineEmphasized);
+        var half = new Vector2(size.X * 0.5f + 10f * scale, MathF.Max(11f * scale, size.Y * 0.5f + 3f * scale));
+        Squircle.Fill(drawList, center - half, center + half, half.Y, ImGui.GetColorU32(fill));
+        if (active)
+        {
+            Squircle.Stroke(drawList, center - half, center + half, half.Y,
+                ImGui.GetColorU32(Palette.WithAlpha(ink, 0.55f)), Metrics.Stroke.Thin * scale);
+        }
+
+        Typography.DrawCentered(drawList, center, label, ink, TextStyles.SubheadlineEmphasized);
     }
 
     public static void DrawOutcomeBadge(ImDrawListPtr drawList, Vector2 center, string label, Vector4 tint,
@@ -64,7 +79,7 @@ internal static class BlackjackTableArt
     }
 
     public static void DrawBetPlate(ImDrawListPtr drawList, Vector2 center, long amount, Vector4 ink, float entrance,
-        float scale)
+        bool practice, float scale)
     {
         if (amount <= 0 || entrance <= 0f)
         {
@@ -72,7 +87,7 @@ internal static class BlackjackTableArt
         }
 
         var label = NumberText.Compact(amount);
-        var size = Typography.Measure(label, TextStyles.Caption2);
+        var size = Typography.Measure(label, TextStyles.FootnoteEmphasized);
         var discRadius = PlateDiscRadius * scale;
         var pad = 5f * scale;
         var halfWidth = (discRadius * 2f + pad * 2.5f + size.X) * 0.5f;
@@ -84,23 +99,44 @@ internal static class BlackjackTableArt
         Squircle.Fill(drawList, min, max, (max.Y - min.Y) * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(PlateFill, alpha)));
         var middleY = (min.Y + max.Y) * 0.5f;
-        DrawDisc(drawList, new Vector2(min.X + pad + discRadius, middleY), discRadius * bubble.Pop,
-            TopChipColor(amount), alpha);
+        var discCenter = new Vector2(min.X + pad + discRadius, middleY);
+        if (practice)
+        {
+            ChipStack.DrawPractice(drawList, discCenter, discRadius * bubble.Pop);
+        }
+        else
+        {
+            DrawDisc(drawList, discCenter, discRadius * bubble.Pop, TopChipColor(amount), alpha);
+        }
+
         Typography.DrawCentered(drawList,
             new Vector2(min.X + pad * 1.5f + discRadius * 2f + size.X * 0.5f, middleY), label,
-            Palette.WithAlpha(ink, alpha), TextStyles.Caption2);
+            Palette.WithAlpha(ink, alpha), TextStyles.FootnoteEmphasized);
     }
 
-    public static void DrawChipColumn(ImDrawListPtr drawList, Vector2 baseCenter, long amount, float scale)
+    public static void DrawChipColumn(ImDrawListPtr drawList, Vector2 baseCenter, long amount, bool practice,
+        float scale)
     {
         Span<Vector4> colors = stackalloc Vector4[ChipColumnCapacity];
         var discs = ChipColumnDiscs(amount, colors);
         var radius = 7f * scale;
         for (var index = 0; index < discs; index++)
         {
-            DrawDisc(drawList, new Vector2(baseCenter.X, baseCenter.Y - index * ChipDiscStep * scale), radius,
-                colors[index], 1f);
+            var center = new Vector2(baseCenter.X, baseCenter.Y - index * ChipDiscStep * scale);
+            if (practice)
+            {
+                DrawDisc(drawList, center, radius, Stage.CasinoColors.Practice, 1f);
+                ChipStack.DrawPractice(drawList, center, radius * 0.86f);
+                continue;
+            }
+
+            DrawDisc(drawList, center, radius, colors[index], 1f);
         }
+    }
+
+    public static Vector4 DiscColor(long amount, bool practice)
+    {
+        return practice ? Stage.CasinoColors.Practice : TopChipColor(amount);
     }
 
     public static int ChipColumnDiscs(long amount, Span<Vector4> colors)
@@ -152,21 +188,6 @@ internal static class BlackjackTableArt
             drawList.AddCircleFilled(center, radius * (0.6f + layer * 0.30f),
                 ImGui.GetColorU32(Palette.WithAlpha(accent, 0.035f * pulse * (4 - layer))), 40);
         }
-    }
-
-    public static void DrawGhostSeat(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 surface,
-        Vector4 mutedInk, bool hovered, float scale)
-    {
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(surface, 0.35f)), 32);
-        drawList.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(mutedInk, hovered ? 0.7f : 0.35f)),
-            32, Metrics.Stroke.Thin * scale);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        var label = Typography.FitText(Loc.T(L.Casino.SeatOpen), radius * 2f - 4f * scale, TextStyles.Caption2);
-        Typography.DrawCentered(drawList, center, label, mutedInk, TextStyles.Caption2);
     }
 
     public static void DrawDisc(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 color, float alpha)

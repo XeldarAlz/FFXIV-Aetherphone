@@ -349,7 +349,16 @@ internal sealed record CasinoBlackjackHandDto(
     bool Natural = false,
     int Outcome = 0,
     long Delta = 0,
-    bool SplitAces = false);
+    bool SplitAces = false,
+    bool Surrendered = false);
+
+internal sealed record CasinoBlackjackSideBetsDto(
+    long PerfectPairs = 0,
+    long TwentyOnePlusThree = 0,
+    int PerfectPairsKind = 0,
+    int TwentyOnePlusThreeKind = 0,
+    long PerfectPairsWin = 0,
+    long TwentyOnePlusThreeWin = 0);
 
 internal sealed record CasinoBlackjackSeatDto(
     int SeatIndex = -1,
@@ -365,7 +374,11 @@ internal sealed record CasinoBlackjackSeatDto(
     CasinoBlackjackHandDto[]? Hands = null,
     string AvatarUrl = "",
     string FrameId = "",
-    int TimeBankLeft = 0);
+    int TimeBankLeft = 0,
+    CasinoBlackjackSideBetsDto? SideBets = null,
+    long Insurance = 0,
+    bool InsuranceDecided = false,
+    long InsuranceWin = 0);
 
 internal sealed record CasinoBlackjackRoomStateDto(
     string HandId = "",
@@ -405,7 +418,11 @@ internal sealed record CasinoBlackjackRoomStateDto(
     int Currency = 0,
     long Bank = 0,
     long BankHeadroom = 0,
-    long MaxPayout = 0);
+    long MaxPayout = 0,
+    bool InsuranceOpen = false,
+    long SideBetMin = 0,
+    bool Insurance = false,
+    bool Surrender = false);
 
 internal sealed record CasinoBlackjackStandingDto(
     string UserId = "",
@@ -462,7 +479,9 @@ internal sealed record CasinoBlackjackBetRequest(
     string RoomId,
     string ClientRoundId,
     string ClientActionId,
-    long Amount);
+    long Amount,
+    long PerfectPairs = 0,
+    long TwentyOnePlusThree = 0);
 
 internal sealed record CasinoBlackjackActionRequest(
     string RoomId,
