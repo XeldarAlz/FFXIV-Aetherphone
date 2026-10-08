@@ -11028,6 +11028,7 @@ internal static class L
         public static readonly LocString LiveNoFriends = new("casino.strip.liveNoFriends", "None of your friends is hosting a table right now. Your friend list is read from the game.");
         public static readonly LocString LiveGilStakes = new("casino.strip.liveGilStakes", "Up to {0} gil");
         public static readonly LocString LiveSeatsWatching = new("casino.strip.liveSeatsWatching", "{0} seated, {1} watching");
+        public static readonly LocString BackToFloor = new("casino.strip.backToFloor", "Back to the Floor");
     }
 
     internal static class Club

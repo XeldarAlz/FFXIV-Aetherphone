@@ -101,12 +101,6 @@ internal sealed partial class CasinoApp
                 return;
         }
 
-        if (!CasinoGameGate.IsOpen(casino.State, entry.GameId))
-        {
-            ShellToast.Show(Loc.T(L.Strip.NotOpenHint));
-            return;
-        }
-
         OpenGame(entry.GameId, source);
     }
 

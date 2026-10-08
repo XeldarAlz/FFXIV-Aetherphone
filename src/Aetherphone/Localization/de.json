@@ -9900,6 +9900,7 @@
   "casino.club.fameOptIn": "Namen erscheinen nur bei Spielern, die Bestenlisten im Profil erlauben. Alle anderen erscheinen als Verborgen.",
   "casino.club.fameChampionLine": "Champion der letzten Woche: {0}",
   "casino.club.fameChampionValue": "Champion mit {0} Gewinn",
+  "casino.strip.backToFloor": "Zurück zum Floor",
   "conduct.casino.title": "Gamba-Hausregeln",
   "conduct.casino.intro": "Bevor du an einem Tisch Platz nimmst, lies bitte die Hausregeln.",
   "conduct.casino.playMoney.title": "Nur Spielgeld",

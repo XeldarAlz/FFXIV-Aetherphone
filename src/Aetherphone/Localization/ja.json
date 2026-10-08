@@ -9900,6 +9900,7 @@
   "casino.club.fameOptIn": "プロフィールでランキングを許可したプレイヤーのみ名前が表示され、それ以外は非公開と表示されます。",
   "casino.club.fameChampionLine": "先週のチャンピオン：{0}",
   "casino.club.fameChampionValue": "{0}の収支でチャンピオン",
+  "casino.strip.backToFloor": "フロアに戻る",
   "conduct.casino.title": "Gambaのハウスルール",
   "conduct.casino.intro": "テーブルに着く前に、ハウスルールをお読みください。",
   "conduct.casino.playMoney.title": "遊びのお金だけ",

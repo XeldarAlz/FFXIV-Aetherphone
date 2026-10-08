@@ -21,6 +21,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
 {
     private const int RulesButton = 0;
     private const float StageSurfaceSlack = 16f;
+    private const float NotOpenCardWidth = 300f;
 
     public string Id => "casino";
     public string DisplayName => Loc.T(L.Apps.Casino);
@@ -434,9 +435,44 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         }
     }
 
+    private bool RouteOpen(CasinoRoute route)
+    {
+        var features = casino.Features;
+        return route.Screen switch
+        {
+            CasinoScreen.Cabinet => CasinoGameGate.IsOpen(features, route.GameId),
+            CasinoScreen.Table when IsHoldem(route) => CasinoGameGate.IsOpen(features, CasinoGames.Holdem),
+            CasinoScreen.VenueRoom => CasinoGameGate.IsOpen(features, route.GameId),
+            _ => true,
+        };
+    }
+
+    private void DrawNotOpen(in CasinoStageFrame frame)
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var safe = frame.Layout.Safe;
+        var width = MathF.Min(safe.Width, NotOpenCardWidth * scale);
+        var title = Loc.T(L.Strip.NotOpenYet);
+        var body = Loc.T(L.Strip.NotOpenHint);
+        var height = CasinoNotice.Height(CasinoNoticeKind.Card, title, body, width, scale);
+        CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Card, title, body, safe.Center.X - width * 0.5f,
+            safe.Center.Y - height * 0.5f, width, scale);
+        if (stage.PrimaryAction(Loc.T(L.Strip.BackToFloor), true, ui.Ink))
+        {
+            PopRoute();
+        }
+    }
+
     private void DrawStageWorld(CasinoRoute route, in CasinoStageFrame frame)
     {
         var body = frame.Body;
+        if (!RouteOpen(route))
+        {
+            DrawNotOpen(frame);
+            return;
+        }
+
         switch (route.Screen)
         {
             case CasinoScreen.Cabinet when Machines.MachineCabinet.Owns(route.GameId):
@@ -1246,6 +1282,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         if (string.Equals(gameId, CasinoGames.DailySpin, StringComparison.Ordinal))
         {
             OpenDailySpin(source);
+            return;
+        }
+
+        if (!CasinoGameGate.IsOpen(casino.Features, gameId))
+        {
+            PushStage(new CasinoRoute(CasinoScreen.Cabinet, gameId), source);
             return;
         }
 

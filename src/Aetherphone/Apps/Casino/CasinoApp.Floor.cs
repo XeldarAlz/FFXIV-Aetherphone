@@ -200,17 +200,17 @@ internal sealed partial class CasinoApp
 
     public PosterInfo Describe(in StripEntry entry)
     {
-        var state = casino.State;
+        var features = casino.Features;
         switch (entry.Action)
         {
             case StripAction.HostTable:
                 return new PosterInfo(true, 0, Loc.T(L.Strip.HostMeta), string.Empty, string.Empty);
             case StripAction.HostVenue:
-                return new PosterInfo(CasinoGameGate.IsOpen(state, entry.GameId), 0, Loc.T(L.Strip.VenueMeta),
+                return new PosterInfo(CasinoGameGate.IsOpen(features, entry.GameId), 0, Loc.T(L.Strip.VenueMeta),
                     string.Empty, string.Empty);
         }
 
-        var open = CasinoGameGate.IsOpen(state, entry.GameId);
+        var open = CasinoGameGate.IsOpen(features, entry.GameId);
         if (string.Equals(entry.GameId, CasinoGames.DailySpin, StringComparison.Ordinal))
         {
             var ready = DailySpinStatus.OffersWheel(DailySpinStatus.Of(casinoSpin.Answer));
@@ -273,8 +273,8 @@ internal sealed partial class CasinoApp
     private int CollectLiveNow()
     {
         var count = 0;
-        var state = casino.State;
-        if (CasinoGameGate.IsOpen(state, CasinoGames.Race) && RoomLive(CasinoRoomIds.RaceTrack))
+        var features = casino.Features;
+        if (CasinoGameGate.IsOpen(features, CasinoGames.Race) && RoomLive(CasinoRoomIds.RaceTrack))
         {
             liveNow[count++] = new LiveNowItem(CasinoGames.Race, string.Empty, CasinoRoomIds.RaceTrack, null);
         }
@@ -289,16 +289,16 @@ internal sealed partial class CasinoApp
             liveNow[count++] = new LiveNowItem(CasinoGames.Bingo, string.Empty, CasinoRoomIds.BingoHall, null);
         }
 
-        count = CollectTables(casinoTables.Listed, count, state);
-        return CollectTables(holdemStore.Tables, count, state);
+        count = CollectTables(casinoTables.Listed, count, features);
+        return CollectTables(holdemStore.Tables, count, features);
     }
 
-    private int CollectTables(CasinoTableRowDto[] rows, int count, CasinoStateDto? state)
+    private int CollectTables(CasinoTableRowDto[] rows, int count, CasinoFeatureSet features)
     {
         for (var index = 0; index < rows.Length && count < LiveNowCapacity; index++)
         {
             var row = rows[index];
-            if (row.SeatedCount <= 0 || row.Paused || !CasinoGameGate.RoomOpen(state, row.GameKind)
+            if (row.SeatedCount <= 0 || row.Paused || !CasinoGameGate.RoomOpen(features, row.GameKind)
                 || ContainsTable(count, row.TableId))
             {
                 continue;

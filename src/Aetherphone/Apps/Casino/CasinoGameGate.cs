@@ -1,4 +1,3 @@
-using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
 
 namespace Aetherphone.Apps.Casino;
@@ -18,24 +17,24 @@ internal static class CasinoGameGate
         _ => string.Empty,
     };
 
-    public static bool IsOpen(CasinoStateDto? state, string gameId)
+    public static bool IsOpen(CasinoFeatureSet features, string gameId)
     {
         var flag = FlagFor(gameId);
-        return flag.Length == 0 || CasinoFeatures.Has(state, flag);
+        return flag.Length == 0 || features.Has(flag);
     }
 
-    public static bool RoomOpen(CasinoStateDto? state, string gameKind)
+    public static bool RoomOpen(CasinoFeatureSet features, string gameKind)
     {
         if (string.Equals(gameKind, HoldemRules.Kind, StringComparison.Ordinal))
         {
-            return CasinoFeatures.Has(state, CasinoFeatures.Holdem);
+            return features.Has(CasinoFeatures.Holdem);
         }
 
         if (string.Equals(gameKind, CasinoWire.RaceKind, StringComparison.Ordinal))
         {
-            return CasinoFeatures.Has(state, CasinoFeatures.Race);
+            return features.Has(CasinoFeatures.Race);
         }
 
-        return !VenueKinds.IsVenue(gameKind) || CasinoFeatures.Has(state, CasinoFeatures.Venue);
+        return !VenueKinds.IsVenue(gameKind) || features.Has(CasinoFeatures.Venue);
     }
 }

@@ -19,6 +19,7 @@ internal sealed class CasinoStore : IDisposable
     private readonly object bonusGate = new();
 
     private volatile CasinoStateDto? state;
+    private volatile CasinoFeatureSet features = CasinoFeatureSet.Empty;
     private volatile string claimingBonus = string.Empty;
     private CasinoBonusClaimDto? bonusResult;
     private int bonusFailed;
@@ -165,7 +166,9 @@ internal sealed class CasinoStore : IDisposable
 
     public string ClaimingBonus => claimingBonus;
 
-    public bool HasFeature(string feature) => CasinoFeatures.Has(state, feature);
+    public bool HasFeature(string feature) => features.Has(feature);
+
+    public CasinoFeatureSet Features => features;
 
     public CasinoBonusDto? BonusFor(string kind)
     {
@@ -499,6 +502,7 @@ internal sealed class CasinoStore : IDisposable
         {
             lastAccountId = accountId;
             state = null;
+            features = CasinoFeatureSet.Empty;
             Interlocked.Exchange(ref sittingResult, null);
             Interlocked.Exchange(ref closeResult, null);
             Interlocked.Exchange(ref limitsResult, null);
@@ -562,6 +566,7 @@ internal sealed class CasinoStore : IDisposable
                 return;
             }
 
+            features = CasinoFeatureSet.From(fresh.Features);
             state = fresh;
             Interlocked.Exchange(ref stateLoadedAtTick, Environment.TickCount64);
             ReconcilePendingSitting(fresh);

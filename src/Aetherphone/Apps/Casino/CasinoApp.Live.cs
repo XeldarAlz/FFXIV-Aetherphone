@@ -41,7 +41,7 @@ internal sealed partial class CasinoApp
             var cursorY = DrawStakeNotice(origin, width, scale);
             cursorY = DrawLiveFilters(new Vector2(origin.X, cursorY), width, scale);
             var collected = LiveBoard.Collect(casinoRooms.Rooms, casinoTables.Tables, casinoTables.Listed,
-                holdemStore.Tables, casino.State, liveRows);
+                holdemStore.Tables, casino.Features, liveRows);
             var shown = LiveBoard.Filter(liveRows, collected, liveFilter, friends.Names, liveShown);
             if (shown == 0)
             {

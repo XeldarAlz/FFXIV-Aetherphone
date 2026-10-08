@@ -72,18 +72,18 @@ internal sealed partial class CasinoApp
     private void BuildHeroPages()
     {
         heroCards.Clear();
-        var state = casino.State;
+        var features = casino.Features;
         if (casino.Jackpot > 0)
         {
             heroCards.Add(StripPage.Jackpot);
         }
 
-        if (CasinoGameGate.IsOpen(state, CasinoGames.SlotsBird))
+        if (CasinoGameGate.IsOpen(features, CasinoGames.SlotsBird))
         {
             heroCards.Add(StripPage.Machine);
         }
 
-        if (CasinoGameGate.IsOpen(state, CasinoGames.Race))
+        if (CasinoGameGate.IsOpen(features, CasinoGames.Race))
         {
             heroCards.Add(StripPage.Race);
         }
@@ -112,12 +112,12 @@ internal sealed partial class CasinoApp
 
     private CasinoTableRowDto? Hotter(CasinoTableRowDto[] rows, CasinoTableRowDto? best)
     {
-        var state = casino.State;
+        var features = casino.Features;
         for (var index = 0; index < rows.Length; index++)
         {
             var row = rows[index];
             if (row.SeatedCount <= 0 || !CasinoTableFilters.HasOpenSeat(row) || row.Paused
-                || VenueKinds.IsVenue(row.GameKind) || !CasinoGameGate.RoomOpen(state, row.GameKind)
+                || VenueKinds.IsVenue(row.GameKind) || !CasinoGameGate.RoomOpen(features, row.GameKind)
                 || CasinoCurrencies.Of(row) != CasinoCurrencies.Chips)
             {
                 continue;

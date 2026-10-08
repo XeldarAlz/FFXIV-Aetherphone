@@ -52,14 +52,14 @@ internal static class LiveBoard
     };
 
     public static int Collect(CasinoRoomListItemDto[] rooms, CasinoTableRowDto[] house, CasinoTableRowDto[] listed,
-        CasinoTableRowDto[] holdem, CasinoStateDto? state, LiveRow[] into)
+        CasinoTableRowDto[] holdem, CasinoFeatureSet features, LiveRow[] into)
     {
         var count = 0;
         for (var index = 0; index < rooms.Length && count < into.Length; index++)
         {
             var room = rooms[index];
             var gameId = RoomGameOf(room.GameKind);
-            if (gameId.Length == 0 || !CasinoGameGate.IsOpen(state, gameId))
+            if (gameId.Length == 0 || !CasinoGameGate.IsOpen(features, gameId))
             {
                 continue;
             }
@@ -67,9 +67,9 @@ internal static class LiveBoard
             into[count++] = new LiveRow(LiveRowKind.Room, gameId, room.RoomId, room, null);
         }
 
-        count = AddTables(house, state, into, count);
-        count = AddTables(holdem, state, into, count);
-        return AddTables(listed, state, into, count);
+        count = AddTables(house, features, into, count);
+        count = AddTables(holdem, features, into, count);
+        return AddTables(listed, features, into, count);
     }
 
     public static string RoomGameOf(string gameKind) => gameKind switch
@@ -142,12 +142,12 @@ internal static class LiveBoard
         return kept;
     }
 
-    private static int AddTables(CasinoTableRowDto[] rows, CasinoStateDto? state, LiveRow[] into, int count)
+    private static int AddTables(CasinoTableRowDto[] rows, CasinoFeatureSet features, LiveRow[] into, int count)
     {
         for (var index = 0; index < rows.Length && count < into.Length; index++)
         {
             var row = rows[index];
-            if (!CasinoTableFilters.Shown(row) || !CasinoGameGate.RoomOpen(state, row.GameKind)
+            if (!CasinoTableFilters.Shown(row) || !CasinoGameGate.RoomOpen(features, row.GameKind)
                 || Contains(into, count, row.TableId))
             {
                 continue;

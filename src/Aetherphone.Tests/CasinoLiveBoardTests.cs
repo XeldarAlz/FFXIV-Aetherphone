@@ -10,7 +10,7 @@ public sealed class CasinoLiveBoardTests
 {
     private static readonly HashSet<string> NoFriends = new();
 
-    private static readonly CasinoStateDto EveryFeature = new(Features: new[]
+    private static readonly CasinoFeatureSet EveryFeature = CasinoFeatureSet.From(new[]
     {
         CasinoFeatures.Race, CasinoFeatures.Holdem, CasinoFeatures.Venue, CasinoFeatures.Machines,
     });
@@ -40,7 +40,7 @@ public sealed class CasinoLiveBoardTests
         var rows = new LiveRow[LiveBoard.Capacity];
         var holdem = new[] { Table("holdem-1", CasinoTableKinds.House, 0, gameKind: HoldemRules.Kind) };
         var count = LiveBoard.Collect(Rooms(), Array.Empty<CasinoTableRowDto>(), Array.Empty<CasinoTableRowDto>(),
-            holdem, new CasinoStateDto(), rows);
+            holdem, CasinoFeatureSet.Empty, rows);
         Assert.Equal(2, count);
         Assert.DoesNotContain(rows.Take(count), row => row.GameId == CasinoGames.Race);
     }
