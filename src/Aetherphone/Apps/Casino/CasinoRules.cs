@@ -46,6 +46,15 @@ internal static class CasinoRules
         L.Casino.RulesBlackjackStep4,
     };
 
+    private static readonly LocString[] HoldemSteps =
+    {
+        L.Holdem.RulesStep1,
+        L.Holdem.RulesStep2,
+        L.Holdem.RulesStep3,
+        L.Holdem.RulesStep4,
+        L.Holdem.RulesStep5,
+    };
+
     private static readonly LocString[] BarkeepSteps =
     {
         L.Casino.RulesBarkeepStep1,
@@ -124,6 +133,7 @@ internal static class CasinoRules
         CasinoGames.Wheel => L.Casino.PitchWheel,
         CasinoGames.Bingo => L.Casino.PitchBingo,
         CasinoGames.Blackjack => L.Casino.PitchBlackjack,
+        CasinoGames.Holdem => L.Holdem.Pitch,
         CasinoGames.Barkeep => L.Casino.PitchBarkeep,
         _ => L.Casino.PitchGeneric,
     };
@@ -142,6 +152,7 @@ internal static class CasinoRules
         CasinoGames.Wheel => L.Casino.GameWheel,
         CasinoGames.Bingo => L.Casino.GameBingo,
         CasinoGames.Blackjack => L.Casino.GameBlackjack,
+        CasinoGames.Holdem => L.Casino.GameHoldem,
         CasinoGames.Barkeep => L.Casino.GameBarkeep,
         _ => L.Apps.Casino,
     };
@@ -160,6 +171,7 @@ internal static class CasinoRules
         CasinoGames.Wheel => WheelSteps,
         CasinoGames.Bingo => BingoSteps,
         CasinoGames.Blackjack => BlackjackSteps,
+        CasinoGames.Holdem => HoldemSteps,
         CasinoGames.Barkeep => BarkeepSteps,
         _ => NoSteps,
     };
@@ -180,6 +192,8 @@ internal static class CasinoRules
                 return BingoFact(index, ref label, ref value);
             case CasinoGames.Blackjack:
                 return BlackjackFact(index, ref label, ref value);
+            case CasinoGames.Holdem:
+                return HoldemFact(index, ref label, ref value);
             case CasinoGames.Barkeep:
                 return BarkeepFact(index, ref label, ref value);
             case CasinoGames.Mines:
@@ -354,6 +368,32 @@ internal static class CasinoRules
             case 2:
                 label = L.Casino.FactPrizeStages;
                 value = Loc.T(L.Casino.FactPrizeStagesValue);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static bool HoldemFact(int index, ref LocString label, ref string value)
+    {
+        switch (index)
+        {
+            case 0:
+                label = L.Holdem.FactBlinds;
+                value = Range(Core.Casino.HoldemRules.BigBlindFor(Core.Casino.HoldemRules.LowTier),
+                    Core.Casino.HoldemRules.BigBlindFor(Core.Casino.HoldemRules.RoyalTier));
+                return true;
+            case 1:
+                label = L.Holdem.FactBuyIn;
+                value = Loc.T(L.Holdem.FactBuyInValue);
+                return true;
+            case 2:
+                label = L.Holdem.FactRake;
+                value = Loc.T(L.Holdem.FactRakeValue);
+                return true;
+            case 3:
+                label = L.Holdem.FactClock;
+                value = Loc.T(L.Holdem.FactClockValue);
                 return true;
             default:
                 return false;

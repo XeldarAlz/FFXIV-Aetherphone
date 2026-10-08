@@ -33,6 +33,7 @@ internal static class CasinoVerifier
     private const uint BarkeepJitterBound = 3;
     private const uint BarkeepStepCountBound = 3;
     private const uint PegBound = 2;
+    private const int PlayingCardsDeck = 52;
 
     private static readonly uint ScratchWinnerBagSize = (ScratchRules.SymbolCount - 1) * 2;
     private static readonly uint ScratchLoserBagSize = ScratchRules.SymbolCount * 2;
@@ -212,6 +213,7 @@ internal static class CasinoVerifier
         }
 
         TrySegmentBound(gameKind, out var segmentBound);
+        var holdem = string.Equals(gameKind, HoldemRules.Kind, StringComparison.Ordinal);
         var stream = new DrawStream(seed, streamKeyInfo);
         var shuffles = default(ShuffleRun);
         var cursor = 0;
@@ -233,8 +235,11 @@ internal static class CasinoVerifier
                 return false;
             }
 
-            if (!TryBoundFor(purpose, shuffles.Next(purpose), segmentBound, out var bound)
-                || loggedValue >= bound)
+            var occurrence = shuffles.Next(purpose);
+            var bounded = holdem && purpose.SequenceEqual(BlackjackShufflePurpose)
+                ? TryHoldemShuffleBound(occurrence, out var bound)
+                : TryBoundFor(purpose, occurrence, segmentBound, out bound);
+            if (!bounded || loggedValue >= bound)
             {
                 return false;
             }
@@ -387,6 +392,19 @@ internal static class CasinoVerifier
         }
 
         return last;
+    }
+
+    internal static bool TryHoldemShuffleBound(int occurrence, out uint bound)
+    {
+        var deck = PlayingCardsDeck;
+        if (occurrence < 0 || occurrence >= deck - 1)
+        {
+            bound = 0;
+            return false;
+        }
+
+        bound = (uint)(deck - occurrence);
+        return true;
     }
 
     internal static bool TryBoundFor(ReadOnlySpan<char> purpose, uint segmentBound, out uint bound)

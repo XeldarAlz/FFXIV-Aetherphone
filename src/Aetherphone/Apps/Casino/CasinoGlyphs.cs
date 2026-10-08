@@ -11,6 +11,9 @@ internal static class CasinoGlyphs
             case CasinoGames.Blackjack:
                 DrawBlackjack(drawList, center, extent, ink, hole);
                 break;
+            case CasinoGames.Holdem:
+                DrawHoldem(drawList, center, extent, ink, hole);
+                break;
             case CasinoGames.Slots:
                 DrawSlots(drawList, center, extent, ink, hole);
                 break;
@@ -68,6 +71,24 @@ internal static class CasinoGlyphs
         drawList.AddRectFilled(frontMin - new Vector2(gap, gap), frontMax + new Vector2(gap, gap), hole, rounding);
         drawList.AddRectFilled(frontMin, frontMax, ink, rounding);
         DrawSpade(drawList, (frontMin + frontMax) * 0.5f, extent * 0.26f, hole);
+    }
+
+    private static void DrawHoldem(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var rounding = extent * 0.14f;
+        var gap = extent * 0.08f;
+        var leftMin = At(center, extent, -0.86f, -0.78f);
+        var leftMax = At(center, extent, 0.06f, 0.56f);
+        drawList.AddRectFilled(leftMin, leftMax, ink, rounding);
+        var rightMin = At(center, extent, -0.22f, -0.62f);
+        var rightMax = At(center, extent, 0.70f, 0.72f);
+        drawList.AddRectFilled(rightMin - new Vector2(gap, gap), rightMax + new Vector2(gap, gap), hole, rounding);
+        drawList.AddRectFilled(rightMin, rightMax, ink, rounding);
+        DrawSpade(drawList, (rightMin + rightMax) * 0.5f, extent * 0.24f, hole);
+        var chip = At(center, extent, 0.62f, 0.66f);
+        drawList.AddCircleFilled(chip, extent * 0.36f, hole, 24);
+        drawList.AddCircleFilled(chip, extent * 0.28f, ink, 24);
+        drawList.AddCircle(chip, extent * 0.16f, hole, 20, extent * 0.06f);
     }
 
     private static void DrawSlots(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)

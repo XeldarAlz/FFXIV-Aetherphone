@@ -169,6 +169,10 @@ internal static class CasinoHostingRules
 
     public const int DisputesToFreeze = 3;
 
+    public const long DefaultHoldemBigBlind = 100;
+
+    public const long MinHoldemBigBlind = 100;
+
     public static readonly int[] TurnSeconds = { 15, 20, 30, 45 };
 
     public static bool IsTurnSeconds(int seconds)
@@ -178,6 +182,11 @@ internal static class CasinoHostingRules
 
     public static string Check(CasinoTableConfigDto config)
     {
+        if (string.Equals(config.GameKind, HoldemRules.Kind, StringComparison.Ordinal))
+        {
+            return CheckHoldem(config);
+        }
+
         if (config.Seats < MinSeats || config.Seats > MaxSeats || !IsTurnSeconds(config.TurnSeconds)
             || (config.TimeBankUses != TimeBankOff && config.TimeBankUses != TimeBankUses)
             || config.Name.Trim().Length > NameMaxLength
@@ -198,6 +207,53 @@ internal static class CasinoHostingRules
             CasinoCurrencies.Chips => CheckChips(config),
             _ => CasinoReasons.ConfigInvalid,
         };
+    }
+
+    public static string CheckHoldem(CasinoTableConfigDto config)
+    {
+        var poker = config.Poker;
+        if (poker is null || config.Seats < HoldemRules.MinSeats || config.Seats > HoldemRules.MaxSeats
+            || !IsTurnSeconds(config.TurnSeconds)
+            || (config.TimeBankUses != TimeBankOff && config.TimeBankUses != TimeBankUses)
+            || config.Name.Trim().Length > NameMaxLength
+            || config.Listing < CasinoListings.Private || config.Listing > CasinoListings.Open
+            || config.Currency is not (CasinoCurrencies.Chips or CasinoCurrencies.Practice)
+            || config.DealerMode != CasinoDealerModes.House || (config.CoDealers?.Length ?? 0) > 0 || !config.AutoDeal
+            || config.HouseRules is not null)
+        {
+            return CasinoReasons.ConfigInvalid;
+        }
+
+        var bigBlind = poker.SmallBlind * 2;
+        if (poker.SmallBlind < MinHoldemBigBlind / 2 || !CasinoLadder.IsRung(bigBlind) || poker.Ante < 0
+            || poker.Ante > bigBlind || poker.Straddle != 0 || poker.RunItTwice || poker.BombPotAnteBb != 0
+            || poker.BombPotPercent != 0 || poker.SevenDeuceBounty != 0)
+        {
+            return CasinoReasons.ConfigInvalid;
+        }
+
+        if (config.Currency == CasinoCurrencies.Practice)
+        {
+            return config.PracticeStack < bigBlind * HoldemRules.HostedMinBuyInBigBlinds
+                || config.PracticeStack > MaxPracticeStack
+                ? CasinoReasons.ConfigInvalid
+                : string.Empty;
+        }
+
+        if (config.FaceUp)
+        {
+            return CasinoReasons.PracticeOnly;
+        }
+
+        var minBuyIn = config.MinBuyIn == 0 ? bigBlind * HoldemRules.MinBuyInBigBlinds : config.MinBuyIn;
+        var maxBuyIn = config.MaxBuyIn == 0 ? bigBlind * HoldemRules.MaxBuyInBigBlinds : config.MaxBuyIn;
+        if (minBuyIn < bigBlind * HoldemRules.HostedMinBuyInBigBlinds
+            || maxBuyIn > bigBlind * HoldemRules.HostedMaxBuyInBigBlinds || minBuyIn > maxBuyIn)
+        {
+            return CasinoReasons.ConfigInvalid;
+        }
+
+        return string.Empty;
     }
 
     public static long PayoutCeiling(CasinoTableConfigDto config)

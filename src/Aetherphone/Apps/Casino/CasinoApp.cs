@@ -52,6 +52,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly Race.RaceCabinet race;
     private readonly Plinko.PlinkoCabinet plinko;
     private readonly Tables.BlackjackTable blackjack;
+    private readonly Core.Casino.HoldemStore holdemStore;
+    private readonly Tables.HoldemTable holdem;
+    private readonly Tables.HoldemPit holdemPit;
     private readonly Tables.TableBrowser browser;
     private readonly Tables.HostSheet hostSheet;
     private readonly Tables.TableLedger playerLedger;
@@ -86,7 +89,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         Core.Casino.CasinoSpinStore casinoSpin, Core.Casino.CasinoTurnNotifier casinoTurns,
         Core.Casino.CasinoLauncher launcher, Core.Games.GameStatsStore gameStats, ConfirmService confirm,
         ConductGateService conduct, Core.Media.RemoteImageCache remoteImages,
-        Core.Lodestone.LodestoneService lodestone)
+        Core.Lodestone.LodestoneService lodestone, Core.Casino.HoldemStore holdemStore)
     {
         this.session = session;
         this.coins = coins;
@@ -116,6 +119,10 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         playerLedger = new Tables.TableLedger(casinoTables, confirm);
         openTable = OpenTable;
         openDoorFromRow = OpenDoor;
+        this.holdemStore = holdemStore;
+        holdem = new Tables.HoldemTable(casino, casinoRooms, casinoTables, holdemStore, casinoTurns, remoteImages,
+            lodestone, OpenCashier, PopRoute);
+        holdemPit = new Tables.HoldemPit(holdemStore, casino, openTable, openDoorFromRow, OpenHoldemHostSheet);
         browser = new Tables.TableBrowser(casinoTables, casino, openTable, openDoorFromRow, OpenHostSheet);
         hostSheet = new Tables.HostSheet(casinoTables, casino);
         tableDoor = new Tables.TableDoor(casinoTables, confirm, openTable);
@@ -160,6 +167,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         race.Reset();
         plinko.Reset();
         blackjack.Reset();
+        holdem.Reset();
         browser.Reset();
         tableDoor.Reset();
         pendingTableId = string.Empty;
@@ -191,6 +199,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         AppLandscape.Release(Id);
         plinko.Reset();
         blackjack.Reset();
+        holdem.Reset();
         browser.Reset();
         tableDoor.Reset();
         pendingTableId = string.Empty;
@@ -272,6 +281,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         originals.Gate();
         race.Gate();
         plinko.Gate();
+        holdem.Gate();
         rulesSheet.Gate();
         stage.Gate();
         SyncRaceLandscape();
@@ -283,6 +293,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         originals.DrawOverlay(screenArea, ui);
         race.DrawOverlay(screenArea, ui);
         plinko.DrawOverlay(screenArea, ui);
+        holdem.DrawOverlay(screenArea, ui);
         if (IsStage(router.Current))
         {
             stage.DrawOverlays(screenArea, ui);
@@ -385,6 +396,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Plinko, StringComparison.Ordinal):
                 plinko.Draw(stage, frame, ui);
                 break;
+            case CasinoScreen.Table when IsHoldem(route):
+                holdem.Draw(stage, frame, ui);
+                break;
             case CasinoScreen.Table:
                 blackjack.Draw(body, ui);
                 break;
@@ -398,8 +412,17 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         }
     }
 
+    private static bool IsHoldem(CasinoRoute route) =>
+        string.Equals(route.GameId, CasinoGames.Holdem, StringComparison.Ordinal);
+
     private CasinoStageSpec StageSpecFor(CasinoRoute route)
     {
+        if (route.Screen == CasinoScreen.Table && IsHoldem(route))
+        {
+            return new CasinoStageSpec(CasinoGames.Holdem, L.Casino.GameHoldem, Backdrop.Strip, Room: true,
+                DeckHeight: holdem.DeckHeight, Practice: holdem.Practice, LampPool: 1f);
+        }
+
         if (route.Screen == CasinoScreen.Table)
         {
             return new CasinoStageSpec(CasinoGames.Blackjack, L.Casino.GameBlackjack, Backdrop.Felt,
@@ -436,7 +459,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private long StageBalance(CasinoRoute route)
     {
         var state = casino.State;
-        if (route.Screen == CasinoScreen.Table && state?.TableSitting is { } rack
+        if (route.Screen == CasinoScreen.Table && IsHoldem(route) && holdem.HeroStack >= 0)
+        {
+            return holdem.HeroStack;
+        }
+
+        if (route.Screen == CasinoScreen.Table && !IsHoldem(route) && state?.TableSitting is { } rack
             && !Core.Casino.CasinoCurrencies.SeatBanked(blackjack.Currency))
         {
             return rack.Stack;
@@ -489,6 +517,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         var navBar = AppHeader.BeginLargeTitle(context);
         switch (route.Screen)
         {
+            case CasinoScreen.Tables when IsHoldem(route):
+                holdemPit.Draw(navBar.Body, ui);
+                break;
             case CasinoScreen.Tables:
                 browser.Draw(navBar.Body, ui);
                 break;
@@ -563,6 +594,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
 
     private string RouteTitle(CasinoRoute route) => route.Screen switch
     {
+        CasinoScreen.Tables or CasinoScreen.Table when IsHoldem(route) => Loc.T(L.Casino.GameHoldem),
         CasinoScreen.Tables => Loc.T(L.Casino.TablesTitle),
         CasinoScreen.TableDoor => Loc.T(L.Casino.DoorTitle),
         CasinoScreen.HostTable => Loc.T(L.Tables.HostTitle),
@@ -626,6 +658,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         if (route.Screen == CasinoScreen.DailySpin)
         {
             dailySpin.Reset();
+            return;
+        }
+
+        if (route.Screen == CasinoScreen.Table && IsHoldem(route))
+        {
+            holdem.Exit();
             return;
         }
 
@@ -742,10 +780,80 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         router.Push(new CasinoRoute(CasinoScreen.HostTable, CasinoGames.Blackjack));
     }
 
+    private void OpenHoldemHostSheet()
+    {
+        if (router.Current.Screen == CasinoScreen.HostTable)
+        {
+            return;
+        }
+
+        hostSheet.Enter(Core.Casino.HoldemRules.Kind);
+        router.Push(new CasinoRoute(CasinoScreen.HostTable, CasinoGames.Holdem));
+    }
+
+    private void OpenHoldemPit()
+    {
+        if (router.Current.Screen == CasinoScreen.Tables && IsHoldem(router.Current))
+        {
+            return;
+        }
+
+        holdemPit.Enter();
+        router.Push(new CasinoRoute(CasinoScreen.Tables, CasinoGames.Holdem));
+    }
+
+    private bool IsHoldemTable(string tableId)
+    {
+        if (Core.Casino.HoldemRules.IsHouseRoom(tableId))
+        {
+            return true;
+        }
+
+        var card = casinoTables.CardFor(tableId);
+        if (card is not null)
+        {
+            return string.Equals(card.GameKind, Core.Casino.HoldemRules.Kind, StringComparison.Ordinal);
+        }
+
+        return KindIn(holdemStore.Tables, tableId) || KindIn(casinoTables.Listed, tableId);
+    }
+
+    private static bool KindIn(Core.Aethernet.Contracts.CasinoTableRowDto[] rows, string tableId)
+    {
+        for (var index = 0; index < rows.Length; index++)
+        {
+            if (string.Equals(rows[index].TableId, tableId, StringComparison.Ordinal))
+            {
+                return string.Equals(rows[index].GameKind, Core.Casino.HoldemRules.Kind, StringComparison.Ordinal);
+            }
+        }
+
+        return false;
+    }
+
+    private void OpenHoldemTable(string tableId)
+    {
+        var current = router.Current;
+        if (current.Screen == CasinoScreen.Table && IsHoldem(current)
+            && string.Equals(current.TableId, tableId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        holdem.Enter(tableId);
+        router.Push(new CasinoRoute(CasinoScreen.Table, CasinoGames.Holdem, string.Empty, tableId));
+    }
+
     private void OpenTable(string tableId)
     {
         if (tableId.Length == 0)
         {
+            return;
+        }
+
+        if (IsHoldemTable(tableId))
+        {
+            OpenHoldemTable(tableId);
             return;
         }
 
@@ -812,6 +920,10 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             {
                 OpenDoor(resolved.TableId, resolved.InviteToken);
             }
+            else if (string.Equals(resolved.GameKind, Core.Casino.HoldemRules.Kind, StringComparison.Ordinal))
+            {
+                OpenHoldemTable(resolved.TableId);
+            }
             else
             {
                 OpenTable(resolved.TableId);
@@ -846,6 +958,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         if (string.Equals(gameId, CasinoGames.Blackjack, StringComparison.Ordinal))
         {
             casinoTables.QuickSeat(Core.Casino.CasinoStakeTiers.Any);
+            return;
+        }
+
+        if (string.Equals(gameId, CasinoGames.Holdem, StringComparison.Ordinal))
+        {
+            OpenHoldemPit();
             return;
         }
 
@@ -899,6 +1017,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private static LocString PlayingName(CasinoRoute route) => route.Screen switch
     {
         CasinoScreen.Cabinet => GameName(route.GameId),
+        CasinoScreen.Table when string.Equals(route.GameId, CasinoGames.Holdem, StringComparison.Ordinal) =>
+            L.Casino.GameHoldem,
         CasinoScreen.Table or CasinoScreen.TableDoor => L.Casino.GameBlackjack,
         CasinoScreen.DailySpin => L.Casino.GameDailySpin,
         _ => L.Apps.Casino,

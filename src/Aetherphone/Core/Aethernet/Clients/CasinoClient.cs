@@ -110,6 +110,23 @@ internal sealed partial class CasinoClient
         return string.Concat("/casino/blackjack/", Uri.EscapeDataString(roomId), "/hand");
     }
 
+    internal const string HoldemSitPath = "/casino/holdem/sit";
+    internal const string HoldemLeavePath = "/casino/holdem/leave";
+    internal const string HoldemActPath = "/casino/holdem/act";
+    internal const string HoldemTopUpPath = "/casino/holdem/topup";
+    internal const string HoldemTimeBankPath = "/casino/holdem/timebank";
+    internal const string HoldemSitOutPath = "/casino/holdem/sitout";
+
+    internal static string HoldemHandPath(string roomId)
+    {
+        return string.Concat("/casino/holdem/", Uri.EscapeDataString(roomId), "/hand");
+    }
+
+    internal static string HoldemHistoryPath(string roomId)
+    {
+        return string.Concat("/casino/holdem/", Uri.EscapeDataString(roomId), "/history");
+    }
+
     internal static string VerifyRoundPath(string roundId)
     {
         return string.Concat("/casino/rounds/", roundId, "/verify");
@@ -283,6 +300,63 @@ internal sealed partial class CasinoClient
             new CasinoBlackjackActionRequest(roomId, handId, actionCount, action, clientActionId),
             AethernetJsonContext.Default.CasinoBlackjackActionRequest,
             AethernetJsonContext.Default.CasinoBlackjackActionResultDto, token, null, onFailure);
+    }
+
+    public Task<CasinoHoldemSeatResultDto?> SitHoldemAsync(CasinoHoldemSitRequest request, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(HoldemSitPath, request, AethernetJsonContext.Default.CasinoHoldemSitRequest,
+            AethernetJsonContext.Default.CasinoHoldemSeatResultDto, token, null, onFailure);
+    }
+
+    public Task<CasinoHoldemSeatResultDto?> LeaveHoldemAsync(string roomId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(HoldemLeavePath, new CasinoHoldemLeaveRequest(roomId),
+            AethernetJsonContext.Default.CasinoHoldemLeaveRequest,
+            AethernetJsonContext.Default.CasinoHoldemSeatResultDto, token, null, onFailure);
+    }
+
+    public Task<CasinoHoldemActionResultDto?> ActHoldemAsync(CasinoHoldemActRequest request, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(HoldemActPath, request, AethernetJsonContext.Default.CasinoHoldemActRequest,
+            AethernetJsonContext.Default.CasinoHoldemActionResultDto, token, null, onFailure);
+    }
+
+    public Task<CasinoHoldemSeatResultDto?> TopUpHoldemAsync(CasinoHoldemTopUpRequest request,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(HoldemTopUpPath, request, AethernetJsonContext.Default.CasinoHoldemTopUpRequest,
+            AethernetJsonContext.Default.CasinoHoldemSeatResultDto, token, null, onFailure);
+    }
+
+    public Task<CasinoHoldemActionResultDto?> HoldemTimeBankAsync(CasinoHoldemTimeBankRequest request,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(HoldemTimeBankPath, request, AethernetJsonContext.Default.CasinoHoldemTimeBankRequest,
+            AethernetJsonContext.Default.CasinoHoldemActionResultDto, token, null, onFailure);
+    }
+
+    public Task<CasinoHoldemSeatResultDto?> HoldemSitOutAsync(CasinoHoldemSitOutRequest request,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(HoldemSitOutPath, request, AethernetJsonContext.Default.CasinoHoldemSitOutRequest,
+            AethernetJsonContext.Default.CasinoHoldemSeatResultDto, token, null, onFailure);
+    }
+
+    public Task<CasinoBlackjackHandStateDto?> MyHoldemHandAsync(string roomId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.GetAsync(HoldemHandPath(roomId), AethernetJsonContext.Default.CasinoBlackjackHandStateDto,
+            token, null, onFailure);
+    }
+
+    public Task<CasinoHoldemHistoryDto?> HoldemHistoryAsync(string roomId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.GetAsync(HoldemHistoryPath(roomId), AethernetJsonContext.Default.CasinoHoldemHistoryDto, token,
+            null, onFailure);
     }
 
     public Task<CasinoTableListDto?> TablesAsync(string gameKind, CancellationToken token,

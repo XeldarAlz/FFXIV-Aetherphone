@@ -141,7 +141,7 @@ internal static class AppRegistry
         apps.Add(new CasinoApp(services.AethernetSession, services.Coins, services.Casino, services.CasinoPlay,
             services.CasinoHistory, services.CasinoRooms, services.CasinoTables, services.CasinoSpin,
             services.CasinoTurns, services.CasinoLauncher, services.GameStats, services.Confirm,
-            services.Conduct, services.RemoteImages, services.Lodestone));
+            services.Conduct, services.RemoteImages, services.Lodestone, services.Holdem));
         var appStore = new AppStoreApp(services.Installer, services.Confirm, apps);
         apps.Add(appStore);
         apps.Add(new HousingApp(services.Housing, services.Configuration, services.Confirm));

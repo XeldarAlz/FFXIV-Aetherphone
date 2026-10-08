@@ -47,6 +47,31 @@ internal sealed class CasinoTurnNotifier : IDisposable
             splitIndex.ToString(Loc.Culture));
     }
 
+    internal static string? BlackjackTurnKey(Aethernet.Contracts.CasinoBlackjackRoomStateDto? board,
+        Aethernet.Contracts.CasinoBlackjackYouDto? mine)
+    {
+        if (board is null || mine is null || board.HandId.Length == 0 || mine.ActiveHand < 0
+            || !string.Equals(mine.HandId, board.HandId, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return TurnKeyFor(board.HandId, mine.SeatIndex, mine.ActiveHand);
+    }
+
+    internal static string? HoldemTurnKey(Aethernet.Contracts.CasinoHoldemRoomStateDto? board,
+        Aethernet.Contracts.CasinoHoldemYouDto? mine)
+    {
+        if (board is null || mine?.Prompt is null || board.HandId.Length == 0 || board.CursorSeat != mine.SeatIndex
+            || HoldemActions.OnlyShowOrMuck(mine.Prompt.Actions)
+            || !string.Equals(mine.HandId, board.HandId, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return TurnKeyFor(board.HandId, mine.SeatIndex, board.ActionCount);
+    }
+
     internal static bool Watching(long stampedAtTick, long nowTick)
     {
         return stampedAtTick != 0 && nowTick - stampedAtTick <= AttentionWindowMilliseconds;
@@ -59,16 +84,9 @@ internal sealed class CasinoTurnNotifier : IDisposable
             return;
         }
 
-        var board = rooms.Room.State?.Blackjack;
-        var mine = rooms.Room.Private?.Blackjack;
-        if (board is null || mine is null || board.HandId.Length == 0 || mine.ActiveHand < 0
-            || !string.Equals(mine.HandId, board.HandId, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        var key = TurnKeyFor(board.HandId, mine.SeatIndex, mine.ActiveHand);
-        if (string.Equals(spokenTurnKey, key, StringComparison.Ordinal))
+        var key = HoldemTurnKey(rooms.Room.State?.Holdem, rooms.Room.Private?.Holdem)
+            ?? BlackjackTurnKey(rooms.Room.State?.Blackjack, rooms.Room.Private?.Blackjack);
+        if (key is null || string.Equals(spokenTurnKey, key, StringComparison.Ordinal))
         {
             return;
         }

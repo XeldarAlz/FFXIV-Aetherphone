@@ -55,6 +55,13 @@ internal sealed partial class CasinoApp
                 }
             }
 
+            cursorY += CardGap * scale;
+            using (ImRaii.PushId("holdem"))
+            {
+                cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY), width, CasinoGames.Holdem,
+                    L.Casino.GameHoldem, false, scale);
+            }
+
             for (var index = 0; index < OriginalsGameNames.Length; index++)
             {
                 cursorY += CardGap * scale;
