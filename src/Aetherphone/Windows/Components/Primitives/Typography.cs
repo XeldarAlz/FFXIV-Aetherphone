@@ -662,6 +662,22 @@ internal static class Typography
         }
     }
 
+    public static void DrawCenteredLine(ImDrawListPtr drawList, Vector2 center, string text, Vector4 color,
+        in TextStyle style) =>
+        DrawCenteredLine(drawList, center, text, color, style.Scale, style.Weight);
+
+    public static void DrawCenteredLine(ImDrawListPtr drawList, Vector2 center, string text, Vector4 color,
+        float scale, FontWeight weight)
+    {
+        using (Plugin.Fonts.Push(scale, weight))
+        {
+            Plugin.Fonts.NoticeText(text);
+            var size = ImGui.CalcTextSize(text);
+            drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(), center - size * 0.5f, ImGui.GetColorU32(color),
+                text);
+        }
+    }
+
     private static float AutoWrapWidth(float centerX)
     {
         var windowLeft = ImGui.GetWindowPos().X;

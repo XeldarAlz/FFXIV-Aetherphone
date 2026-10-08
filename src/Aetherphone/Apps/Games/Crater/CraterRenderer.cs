@@ -1,5 +1,6 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.Framework.World;
+using Aetherphone.Core;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -17,6 +18,9 @@ internal static class CraterRenderer
     private const float BarWidth = 44f;
     private const float BarHeight = 5f;
     private const float NameGap = 9f;
+    private const float HealthGap = 4f;
+    private const float NameWidth = 132f;
+    private const float LabelMargin = 6f;
     private const float MarkerSize = 7f;
     private const float ReticleDistance = 2.2f;
     private const int PowerDots = 9;
@@ -147,9 +151,7 @@ internal static class CraterRenderer
 
             var seconds = GameNumber.Label(Math.Max(1, (int)MathF.Ceiling(projectile.Fuse)));
             var labelCenter = center - new Vector2(0f, radius * 2.6f);
-            Typography.DrawCentered(drawList, labelCenter + new Vector2(1f, 1f) * scale, seconds, Shadow,
-                TextStyles.FootnoteEmphasized);
-            Typography.DrawCentered(drawList, labelCenter, seconds, White, TextStyles.FootnoteEmphasized);
+            Shadowed(drawList, labelCenter, seconds, White, TextStyles.FootnoteEmphasized, scale);
         }
     }
 
@@ -160,6 +162,9 @@ internal static class CraterRenderer
     public static void Labels(ImDrawListPtr drawList, in Camera2D camera, ReadOnlySpan<CraterMoogle> moogles,
         int activeMoogle, ReadOnlySpan<string> teamNames, bool showMarker, float time, float scale)
     {
+        var view = camera.View;
+        var barWidth = BarWidth * scale;
+        var barHeight = BarHeight * scale;
         for (var index = 0; index < moogles.Length; index++)
         {
             ref readonly var moogle = ref moogles[index];
@@ -170,10 +175,16 @@ internal static class CraterRenderer
 
             var head = camera.ToScreen(moogle.Position - new Vector2(0f, CraterRules.MoogleRadius * LabelLift));
             var team = GameSeats.Color(moogle.Team);
-            var barWidth = BarWidth * scale;
-            var barHeight = BarHeight * scale;
-            var barMin = new Vector2(head.X - barWidth * 0.5f, head.Y - barHeight);
-            var barMax = new Vector2(head.X + barWidth * 0.5f, head.Y);
+            var health = GameNumber.Label(moogle.Health);
+            var healthWidth = Typography.Measure(health, TextStyles.Caption2).X;
+            var listed = moogle.Team >= 0 && moogle.Team < teamNames.Length ? teamNames[moogle.Team] : string.Empty;
+            var name = Typography.FitText(listed, NameWidth * scale, TextStyles.Caption1);
+            var nameHalf = Typography.Measure(name, TextStyles.Caption1).X * 0.5f;
+            var left = MathF.Max(barWidth * 0.5f, nameHalf);
+            var right = MathF.Max(barWidth * 0.5f + HealthGap * scale + healthWidth, nameHalf);
+            var plateX = PlateX(head.X, left, right, in view, LabelMargin * scale);
+            var barMin = new Vector2(plateX - barWidth * 0.5f, head.Y - barHeight);
+            var barMax = new Vector2(plateX + barWidth * 0.5f, head.Y);
             drawList.AddRectFilled(barMin - Vector2.One * scale, barMax + Vector2.One * scale,
                 CraterArt.Color(BarBack), barHeight);
             var fraction = Math.Clamp(moogle.Health / (float)CraterRules.MaxHealth, 0f, 1f);
@@ -184,12 +195,10 @@ internal static class CraterRenderer
                     CraterArt.Color(fill), barHeight);
             }
 
-            var health = GameNumber.Label(moogle.Health);
-            var healthCenter = new Vector2(barMax.X + 4f * scale + Typography.Measure(health, TextStyles.Caption2).X * 0.5f,
+            var healthCenter = new Vector2(barMax.X + HealthGap * scale + healthWidth * 0.5f,
                 head.Y - barHeight * 0.5f);
             Shadowed(drawList, healthCenter, health, White, TextStyles.Caption2, scale);
-            var nameCenter = new Vector2(head.X, head.Y - barHeight - NameGap * scale);
-            var name = moogle.Team >= 0 && moogle.Team < teamNames.Length ? teamNames[moogle.Team] : string.Empty;
+            var nameCenter = new Vector2(plateX, head.Y - barHeight - NameGap * scale);
             Shadowed(drawList, nameCenter, name, GamePalette.Lighten(team, 0.35f), TextStyles.Caption1, scale);
             if (!showMarker || index != activeMoogle)
             {
@@ -204,6 +213,16 @@ internal static class CraterRenderer
             drawList.AddTriangle(tip - new Vector2(size, size * 1.3f), tip + new Vector2(size, -size * 1.3f), tip,
                 CraterArt.Color(White with { W = 0.8f }), MathF.Max(1f, scale));
         }
+    }
+
+    private static float PlateX(float headX, float left, float right, in Rect view, float margin)
+    {
+        if (headX < view.Min.X || headX > view.Max.X)
+        {
+            return headX;
+        }
+
+        return MathF.Min(MathF.Max(headX, view.Min.X + margin + left), view.Max.X - margin - right);
     }
 
     public static void Hint(ImDrawListPtr drawList, in Camera2D camera, ReadOnlySpan<Vector2> path, Vector4 team,
@@ -357,7 +376,7 @@ internal static class CraterRenderer
     private static void Shadowed(ImDrawListPtr drawList, Vector2 center, string text, Vector4 color, in TextStyle style,
         float scale)
     {
-        Typography.DrawCentered(drawList, center + new Vector2(1f, 1f) * scale, text, Shadow, style);
-        Typography.DrawCentered(drawList, center, text, color, style);
+        Typography.DrawCenteredLine(drawList, center + new Vector2(1f, 1f) * scale, text, Shadow, style);
+        Typography.DrawCenteredLine(drawList, center, text, color, style);
     }
 }
