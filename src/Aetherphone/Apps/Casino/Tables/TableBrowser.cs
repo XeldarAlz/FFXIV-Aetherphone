@@ -20,28 +20,43 @@ internal sealed class TableBrowser
     private static readonly LocString[] FilterLabels =
     {
         L.Casino.TableFilterAll,
-        L.Casino.TableFilterOpenSeats,
+        L.Tables.FilterBlackjack,
+        L.Tables.FilterHoldem,
         L.Casino.TableFilterLowStakes,
         L.Casino.TableFilterHighStakes,
+        L.Tables.FilterPractice,
+        L.Tables.FilterGil,
         L.Casino.TableFilterMine,
     };
 
+    private static readonly LocString[] CurrencyNames =
+        { L.Tables.CurrencyChips, L.Tables.CurrencyPractice, L.Tables.CurrencyGil };
+
     private readonly CasinoTablesStore tables;
+    private readonly CasinoStore chips;
     private readonly Action<string> openTable;
     private readonly Action<string> openDoor;
+    private readonly Action openHostSheet;
     private readonly ChipRail rail = new();
     private readonly string[] filterLabels = new string[FilterLabels.Length];
     private readonly bool[] filterActive = new bool[FilterLabels.Length];
 
+    private CasinoTableRowDto[] viewSource = Array.Empty<CasinoTableRowDto>();
+    private TableRowView[] views = Array.Empty<TableRowView>();
+    private LanguageInfo? viewLanguage;
+    private string viewAccount = string.Empty;
     private int filterIndex;
     private string tokenBuffer = string.Empty;
     private string inlineReason = string.Empty;
 
-    public TableBrowser(CasinoTablesStore tables, Action<string> openTable, Action<string> openDoor)
+    public TableBrowser(CasinoTablesStore tables, CasinoStore chips, Action<string> openTable, Action<string> openDoor,
+        Action openHostSheet)
     {
         this.tables = tables;
+        this.chips = chips;
         this.openTable = openTable;
         this.openDoor = openDoor;
+        this.openHostSheet = openHostSheet;
     }
 
     public CasinoTableFilter Filter => CasinoTableFilters.All[filterIndex];
@@ -64,6 +79,7 @@ internal sealed class TableBrowser
     {
         var scale = UiScale.Current;
         ConsumeOutcomes();
+        RefreshViews();
         using var surface = AppSurface.Begin(body);
 
         DrawQuickSeatCard(ui, scale);
@@ -81,6 +97,79 @@ internal sealed class TableBrowser
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
         DrawJoinByToken(ui, scale);
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
+    }
+
+    internal static TableRowView ViewOf(CasinoTableRowDto row, string myUserId)
+    {
+        var currency = CasinoCurrencies.Of(row);
+        var hosted = CasinoTableFilters.IsPrivate(row);
+        var mine = myUserId.Length > 0 && string.Equals(row.OwnerUserId, myUserId, StringComparison.Ordinal);
+        var name = row.Name.Length > 0
+            ? row.Name
+            : hosted && row.OwnerName.Length > 0
+                ? Loc.T(L.Casino.TableHostedBy, row.OwnerName)
+                : Loc.T(L.Casino.TableUnnamed);
+        var stakes = currency == CasinoCurrencies.Gil
+            ? Loc.T(L.Tables.GilStakes, NumberText.Group(row.MaxBet), NumberText.Group(row.Config?.Bank ?? 0))
+            : Loc.T(L.Casino.TableStakes, NumberText.Compact(row.MinBet), NumberText.Compact(row.MaxBet));
+        var seats = Loc.T(L.Casino.TableSeats, row.SeatedCount.ToString(Loc.Culture),
+            row.MaxSeats.ToString(Loc.Culture));
+        var watching = CasinoTableFilters.SpectatorsOf(row);
+        var spectators = watching > 0
+            ? Loc.T(L.Casino.TableSpectators, watching.ToString(Loc.Culture))
+            : string.Empty;
+        var reputation = ReputationOf(row, currency, out var warns);
+        var draining = string.Equals(row.Reason, CasinoReasons.Draining, StringComparison.Ordinal)
+            || string.Equals(row.Reason, CasinoReasons.TableClosed, StringComparison.Ordinal);
+        var inviteOnly = hosted && !mine && row.Listing == CasinoListings.Private;
+        return new TableRowView(name, stakes, seats, spectators, !CasinoTableFilters.HasOpenSeat(row), inviteOnly,
+            mine, draining, currency, Loc.T(CurrencyNames[currency]), reputation, warns, row.Paused);
+    }
+
+    private static string ReputationOf(CasinoTableRowDto row, int currency, out bool warns)
+    {
+        warns = false;
+        var reputation = row.Reputation;
+        if (currency != CasinoCurrencies.Gil || reputation is null)
+        {
+            return string.Empty;
+        }
+
+        if (reputation.Frozen)
+        {
+            warns = true;
+            return Loc.T(L.Tables.ReputationFrozen);
+        }
+
+        var hosted = reputation.GilTablesHosted.ToString(Loc.Culture);
+        var confirmed = reputation.PayoutsConfirmed.ToString(Loc.Culture);
+        if (reputation.DisputesOpen <= 0)
+        {
+            return Loc.T(L.Tables.Reputation, hosted, confirmed);
+        }
+
+        warns = true;
+        return Loc.T(L.Tables.ReputationDisputes, hosted, confirmed, reputation.DisputesOpen.ToString(Loc.Culture));
+    }
+
+    private void RefreshViews()
+    {
+        var source = tables.Listed;
+        var account = tables.AccountId;
+        if (ReferenceEquals(source, viewSource) && ReferenceEquals(viewLanguage, Loc.Current)
+            && string.Equals(account, viewAccount, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        viewSource = source;
+        viewLanguage = Loc.Current;
+        viewAccount = account;
+        views = new TableRowView[source.Length];
+        for (var index = 0; index < source.Length; index++)
+        {
+            views[index] = ViewOf(source[index], account);
+        }
     }
 
     private void ConsumeOutcomes()
@@ -172,36 +261,29 @@ internal sealed class TableBrowser
 
     private void DrawRows(AppSkin ui, float scale)
     {
-        var directory = tables.Tables;
+        var directory = viewSource;
         var filter = Filter;
         var width = ScrollLayout.StableContentWidth();
         var drawList = ImGui.GetWindowDrawList();
         var drawn = 0;
-        for (var index = 0; index < directory.Length; index++)
+        for (var index = 0; index < directory.Length && index < views.Length; index++)
         {
             var row = directory[index];
-            if (!CasinoTableFilters.Matches(filter, row))
+            if (!CasinoTableFilters.Matches(filter, row, viewAccount))
             {
                 continue;
             }
 
             var origin = ImGui.GetCursorScreenPos();
-            var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + TableRow.Height * scale));
-            if (TableRow.Draw(drawList, rect, ui, ViewOf(row), scale))
+            var height = TableRow.HeightOf(views[index]) * scale;
+            var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
+            if (TableRow.Draw(drawList, rect, ui, views[index], scale))
             {
-                inlineReason = string.Empty;
-                if (CasinoTableFilters.IsPrivate(row))
-                {
-                    openDoor(row.TableId);
-                }
-                else
-                {
-                    openTable(row.TableId);
-                }
+                Open(row, views[index]);
             }
 
             ImGui.SetCursorScreenPos(origin);
-            ImGui.Dummy(new Vector2(width, TableRow.Height * scale + RowGap * scale));
+            ImGui.Dummy(new Vector2(width, height + RowGap * scale));
             drawn++;
         }
 
@@ -211,6 +293,24 @@ internal sealed class TableBrowser
         }
 
         DrawEmptyRow(ui, scale, tables.Loaded ? L.Casino.TablesEmpty : L.Casino.TablesLoading);
+    }
+
+    private void Open(CasinoTableRowDto row, in TableRowView view)
+    {
+        inlineReason = string.Empty;
+        if (view.Mine)
+        {
+            openDoor(row.TableId);
+            return;
+        }
+
+        if (!string.Equals(row.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal))
+        {
+            inlineReason = CasinoReasons.Unavailable;
+            return;
+        }
+
+        openTable(row.TableId);
     }
 
     private static void DrawEmptyRow(AppSkin ui, float scale, LocString message)
@@ -258,17 +358,25 @@ internal sealed class TableBrowser
             Typography.FitText(Loc.T(L.Casino.HostTableAction), textWidth, TextStyles.SubheadlineEmphasized),
             ui.TitleInk, TextStyles.SubheadlineEmphasized);
         Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 32f * scale),
-            Typography.FitText(Loc.T(L.Casino.HostTableHint), textWidth, TextStyles.Footnote), ui.MutedInk,
+            Typography.FitText(Loc.T(L.Tables.HostRowHint), textWidth, TextStyles.Footnote), ui.MutedInk,
             TextStyles.Footnote);
 
         var clicked = UiInteract.Click(row.Min, row.Max, hovered);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
-        if (clicked && !tables.IntentInFlight)
+        if (!clicked || tables.IntentInFlight)
         {
-            inlineReason = string.Empty;
-            tables.CreatePrivateTable(CasinoStakeTiers.From(Filter));
+            return;
         }
+
+        inlineReason = string.Empty;
+        if (chips.HasFeature(CasinoFeatures.HostingV2))
+        {
+            openHostSheet();
+            return;
+        }
+
+        tables.CreatePrivateTable(CasinoStakeTiers.From(Filter));
     }
 
     private void DrawJoinByToken(AppSkin ui, float scale)
@@ -306,23 +414,5 @@ internal sealed class TableBrowser
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, 20f * scale + FieldHeight * scale));
-    }
-
-    private static TableRowView ViewOf(CasinoTableRowDto row)
-    {
-        var full = !CasinoTableFilters.HasOpenSeat(row);
-        var isPrivate = CasinoTableFilters.IsPrivate(row);
-        var name = isPrivate && row.OwnerName.Length > 0
-            ? Loc.T(L.Casino.TableHostedBy, row.OwnerName)
-            : Loc.T(L.Casino.TableUnnamed);
-        var stakes = Loc.T(L.Casino.TableStakes, NumberText.Group(row.MinBet),
-            NumberText.Group(row.MaxBet));
-        var seats = Loc.T(L.Casino.TableSeats, row.SeatedCount.ToString(Loc.Culture),
-            row.MaxSeats.ToString(Loc.Culture));
-        var watching = CasinoTableFilters.SpectatorsOf(row);
-        var spectators = watching > 0
-            ? Loc.T(L.Casino.TableSpectators, watching.ToString(Loc.Culture))
-            : string.Empty;
-        return new TableRowView(name, stakes, seats, spectators, full, isPrivate, isPrivate, !row.Admitted);
     }
 }

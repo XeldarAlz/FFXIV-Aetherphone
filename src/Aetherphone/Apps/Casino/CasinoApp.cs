@@ -50,6 +50,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     private readonly Cabinets.DailySpinCabinet dailySpin;
     private readonly Tables.BlackjackTable blackjack;
     private readonly Tables.TableBrowser browser;
+    private readonly Tables.HostSheet hostSheet;
     private readonly Tables.TableDoor tableDoor;
     private readonly CasinoStage stage = new();
     private readonly JackpotRail jackpotRail = new();
@@ -107,7 +108,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             lodestone, OpenCashier, PopRoute);
         openTable = OpenTable;
         openDoorFromRow = OpenDoor;
-        browser = new Tables.TableBrowser(casinoTables, openTable, openDoorFromRow);
+        browser = new Tables.TableBrowser(casinoTables, casino, openTable, openDoorFromRow, OpenHostSheet);
+        hostSheet = new Tables.HostSheet(casinoTables, casino);
         tableDoor = new Tables.TableDoor(casinoTables, confirm, openTable);
         router = new ViewRouter<CasinoRoute>(CasinoRoute.Floor);
         drawView = DrawView;
@@ -442,6 +444,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             case CasinoScreen.TableDoor:
                 tableDoor.Draw(navBar.Body, ui);
                 break;
+            case CasinoScreen.HostTable:
+                hostSheet.Draw(navBar.Body, ui);
+                break;
             case CasinoScreen.Limits:
                 DrawLimits(navBar.Body);
                 break;
@@ -506,6 +511,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
     {
         CasinoScreen.Tables => Loc.T(L.Casino.TablesTitle),
         CasinoScreen.TableDoor => Loc.T(L.Casino.DoorTitle),
+        CasinoScreen.HostTable => Loc.T(L.Tables.HostTitle),
         CasinoScreen.Table => Loc.T(L.Casino.GameBlackjack),
         CasinoScreen.Limits => Loc.T(L.Casino.LimitsRow),
         CasinoScreen.History => Loc.T(L.Casino.HistoryRow),
@@ -608,6 +614,17 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         router.Push(new CasinoRoute(CasinoScreen.Tables, CasinoGames.Blackjack));
     }
 
+    private void OpenHostSheet()
+    {
+        if (router.Current.Screen == CasinoScreen.HostTable)
+        {
+            return;
+        }
+
+        hostSheet.Enter();
+        router.Push(new CasinoRoute(CasinoScreen.HostTable, CasinoGames.Blackjack));
+    }
+
     private void OpenTable(string tableId)
     {
         if (tableId.Length == 0)
@@ -663,6 +680,11 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         var hosted = casinoTables.TakeHostedTable();
         if (hosted is not null)
         {
+            if (router.Current.Screen == CasinoScreen.HostTable)
+            {
+                router.Pop();
+            }
+
             OpenDoor(hosted.TableId, hosted.InviteToken);
         }
 
