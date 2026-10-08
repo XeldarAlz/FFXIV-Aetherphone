@@ -61,6 +61,7 @@ internal static class CasinoReasons
     public const string NoTables = "no_tables";
     public const string Ceiling = "ceiling";
     public const string Ladder = "ladder";
+    public const string InvalidMove = "invalid_move";
 
     public static readonly string[] All =
     {
@@ -119,6 +120,7 @@ internal static class CasinoReasons
         Kicked,
         BoundElsewhere,
         NoTables,
+        InvalidMove,
     };
 
     private static readonly FrozenDictionary<string, LocString> Messages = new Dictionary<string, LocString>
@@ -178,6 +180,7 @@ internal static class CasinoReasons
         [Kicked] = L.Casino.ReasonKicked,
         [BoundElsewhere] = L.Casino.ReasonBoundElsewhere,
         [NoTables] = L.Casino.ReasonNoTables,
+        [InvalidMove] = L.Originals.ReasonInvalidMove,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     public static bool TryMessage(string reason, out LocString message)

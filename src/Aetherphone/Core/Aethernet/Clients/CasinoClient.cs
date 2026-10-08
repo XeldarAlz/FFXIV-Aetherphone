@@ -3,7 +3,7 @@ using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Aethernet.Clients;
 
-internal sealed class CasinoClient
+internal sealed partial class CasinoClient
 {
     internal const string StatePath = "/casino";
     internal const string OpenSittingPath = "/casino/sittings";

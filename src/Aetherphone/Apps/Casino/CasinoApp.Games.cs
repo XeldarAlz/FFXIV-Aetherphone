@@ -22,6 +22,15 @@ internal sealed partial class CasinoApp
     private const float InfoFillAlpha = 0.10f;
     private const float InfoHoverAlpha = 0.18f;
 
+    private static readonly LocString[] OriginalsGameNames =
+    {
+        L.Originals.GameMines,
+        L.Originals.GameDice,
+        L.Originals.GameLimbo,
+        L.Originals.GameKeno,
+        L.Originals.GameHiLo,
+    };
+
     private void DrawGamesTab(Rect body)
     {
         var scale = UiScale.Current;
@@ -41,7 +50,18 @@ internal sealed partial class CasinoApp
 
                 using (ImRaii.PushId(index))
                 {
-                    cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY), width, index, scale);
+                    cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY), width, FloorGameIds[index],
+                        FloorGameNames[index], index == 0, scale);
+                }
+            }
+
+            for (var index = 0; index < OriginalsGameNames.Length; index++)
+            {
+                cursorY += CardGap * scale;
+                using (ImRaii.PushId(FloorGameIds.Length + index))
+                {
+                    cursorY = DrawGameRow(drawList, new Vector2(origin.X, cursorY), width,
+                        Originals.OriginalsCabinet.GameIds[index], OriginalsGameNames[index], false, scale);
                 }
             }
 
@@ -51,9 +71,9 @@ internal sealed partial class CasinoApp
         }
     }
 
-    private float DrawGameRow(ImDrawListPtr drawList, Vector2 origin, float width, int gameIndex, float scale)
+    private float DrawGameRow(ImDrawListPtr drawList, Vector2 origin, float width, string gameId, LocString name,
+        bool first, float scale)
     {
-        var gameId = FloorGameIds[gameIndex];
         var pad = GameRowPad * scale;
         var tile = GameRowTile * scale;
         var info = InfoButtonSize * scale;
@@ -72,7 +92,7 @@ internal sealed partial class CasinoApp
 
         var infoMin = new Vector2(max.X - pad - info, min.Y + pad);
         var infoMax = infoMin + new Vector2(info, info);
-        if (gameIndex == 0)
+        if (first)
         {
             UiAnchors.Report("casino.rules", new Rect(infoMin, infoMax));
         }
@@ -93,7 +113,7 @@ internal sealed partial class CasinoApp
             tile);
         var top = min.Y + pad;
         Typography.Draw(drawList, new Vector2(textLeft, top),
-            Typography.FitText(Loc.T(FloorGameNames[gameIndex]), textWidth, TextStyles.Headline), ui.TitleInk,
+            Typography.FitText(Loc.T(name), textWidth, TextStyles.Headline), ui.TitleInk,
             TextStyles.Headline);
         top += headline + GameRowLineGap * scale;
         top = WidgetText.Lines(drawList, pitch, new Vector2(textLeft, top), ui.MutedInk, TextStyles.Footnote,
@@ -130,7 +150,9 @@ internal sealed partial class CasinoApp
             crowdWidth = crowdSize.X + (CasinoArt.LiveDotRadius * 2f + 4f + CoinArt.ValueGap) * scale;
         }
 
-        var stake = MinimumStakeLine(gameId);
+        var stake = Originals.OriginalsCabinet.Owns(gameId)
+            ? texts.Number(L.Casino.MinimumStake, Core.Casino.OriginalsRules.MinBet)
+            : MinimumStakeLine(gameId);
         if (stake.Length == 0)
         {
             return;

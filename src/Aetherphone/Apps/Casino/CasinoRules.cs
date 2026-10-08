@@ -53,8 +53,51 @@ internal static class CasinoRules
         L.Casino.RulesBarkeepStep3,
     };
 
+    private static readonly LocString[] MinesSteps =
+    {
+        L.Originals.RulesMinesStep1,
+        L.Originals.RulesMinesStep2,
+        L.Originals.RulesMinesStep3,
+        L.Originals.RulesMinesStep4,
+    };
+
+    private static readonly LocString[] DiceSteps =
+    {
+        L.Originals.RulesDiceStep1,
+        L.Originals.RulesDiceStep2,
+        L.Originals.RulesDiceStep3,
+    };
+
+    private static readonly LocString[] LimboSteps =
+    {
+        L.Originals.RulesLimboStep1,
+        L.Originals.RulesLimboStep2,
+        L.Originals.RulesLimboStep3,
+    };
+
+    private static readonly LocString[] KenoSteps =
+    {
+        L.Originals.RulesKenoStep1,
+        L.Originals.RulesKenoStep2,
+        L.Originals.RulesKenoStep3,
+        L.Originals.RulesKenoStep4,
+    };
+
+    private static readonly LocString[] HiLoSteps =
+    {
+        L.Originals.RulesHiLoStep1,
+        L.Originals.RulesHiLoStep2,
+        L.Originals.RulesHiLoStep3,
+        L.Originals.RulesHiLoStep4,
+    };
+
     public static LocString PitchOf(string gameId) => gameId switch
     {
+        CasinoGames.Mines => L.Originals.PitchMines,
+        CasinoGames.Dice => L.Originals.PitchDice,
+        CasinoGames.Limbo => L.Originals.PitchLimbo,
+        CasinoGames.Keno => L.Originals.PitchKeno,
+        CasinoGames.HiLo => L.Originals.PitchHiLo,
         CasinoGames.Slots => L.Casino.PitchSlots,
         CasinoGames.Scratch => L.Casino.PitchScratch,
         CasinoGames.Wheel => L.Casino.PitchWheel,
@@ -66,6 +109,11 @@ internal static class CasinoRules
 
     public static LocString TitleOf(string gameId) => gameId switch
     {
+        CasinoGames.Mines => L.Originals.GameMines,
+        CasinoGames.Dice => L.Originals.GameDice,
+        CasinoGames.Limbo => L.Originals.GameLimbo,
+        CasinoGames.Keno => L.Originals.GameKeno,
+        CasinoGames.HiLo => L.Originals.GameHiLo,
         CasinoGames.Slots => L.Casino.GameSlots,
         CasinoGames.Scratch => L.Casino.GameScratch,
         CasinoGames.Wheel => L.Casino.GameWheel,
@@ -77,6 +125,11 @@ internal static class CasinoRules
 
     public static LocString[] StepsOf(string gameId) => gameId switch
     {
+        CasinoGames.Mines => MinesSteps,
+        CasinoGames.Dice => DiceSteps,
+        CasinoGames.Limbo => LimboSteps,
+        CasinoGames.Keno => KenoSteps,
+        CasinoGames.HiLo => HiLoSteps,
         CasinoGames.Slots => SlotsSteps,
         CasinoGames.Scratch => ScratchSteps,
         CasinoGames.Wheel => WheelSteps,
@@ -104,6 +157,42 @@ internal static class CasinoRules
                 return BlackjackFact(index, ref label, ref value);
             case CasinoGames.Barkeep:
                 return BarkeepFact(index, ref label, ref value);
+            case CasinoGames.Mines:
+                return OriginalsFact(index, Core.Casino.CasinoWire.MinesKind, true, ref label, ref value);
+            case CasinoGames.Dice:
+                return OriginalsFact(index, Core.Casino.CasinoWire.DiceKind, false, ref label, ref value);
+            case CasinoGames.Limbo:
+                return OriginalsFact(index, Core.Casino.CasinoWire.LimboKind, false, ref label, ref value);
+            case CasinoGames.Keno:
+                return OriginalsFact(index, Core.Casino.CasinoWire.KenoKind, false, ref label, ref value);
+            case CasinoGames.HiLo:
+                return OriginalsFact(index, Core.Casino.CasinoWire.HiLoKind, false, ref label, ref value);
+            default:
+                return false;
+        }
+    }
+
+    private static bool OriginalsFact(int index, string wireKind, bool mines, ref LocString label, ref string value)
+    {
+        switch (index)
+        {
+            case 0:
+                label = L.Originals.FactMinBet;
+                value = Number(Core.Casino.OriginalsRules.MinBet);
+                return true;
+            case 1:
+                label = L.Originals.FactTopMultiplier;
+                value = Originals.OriginalsText.MultiplierHundredths(
+                    Core.Casino.OriginalsRules.TopMultiple(wireKind) * 100);
+                return true;
+            case 2:
+                label = L.Strip.Return;
+                value = Originals.OriginalsText.Percent(Core.Casino.OriginalsRules.ReturnTenths * 10);
+                return true;
+            case 3 when mines:
+                label = L.Originals.FactMines;
+                value = Range(Core.Casino.OriginalsRules.MinMines, Core.Casino.OriginalsRules.MaxMines);
+                return true;
             default:
                 return false;
         }

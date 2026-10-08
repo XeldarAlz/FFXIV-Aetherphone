@@ -29,6 +29,21 @@ internal static class CasinoGlyphs
             case CasinoGames.DailySpin:
                 DrawDailySpin(drawList, center, extent, ink, hole);
                 break;
+            case CasinoGames.Mines:
+                DrawMines(drawList, center, extent, ink, hole);
+                break;
+            case CasinoGames.Dice:
+                DrawDice(drawList, center, extent, ink, hole);
+                break;
+            case CasinoGames.Limbo:
+                DrawLimbo(drawList, center, extent, ink, hole);
+                break;
+            case CasinoGames.Keno:
+                DrawKeno(drawList, center, extent, ink, hole);
+                break;
+            case CasinoGames.HiLo:
+                DrawHiLo(drawList, center, extent, ink, hole);
+                break;
             default:
                 DrawChip(drawList, center, extent, ink, hole);
                 break;
@@ -134,6 +149,81 @@ internal static class CasinoGlyphs
 
         drawList.AddCircleFilled(center, extent * 0.3f, hole, 20);
         drawList.AddCircleFilled(center, extent * 0.16f, ink, 16);
+    }
+
+    private static void DrawMines(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var spikeThickness = extent * 0.16f;
+        for (var spoke = 0; spoke < 4; spoke++)
+        {
+            var angle = spoke * (MathF.PI * 0.25f);
+            var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * extent * 0.9f;
+            drawList.AddLine(center - direction, center + direction, ink, spikeThickness);
+        }
+
+        drawList.AddCircleFilled(center, extent * 0.62f, ink, 32);
+        drawList.AddCircleFilled(At(center, extent, -0.2f, -0.2f), extent * 0.16f, hole, 12);
+    }
+
+    private static void DrawDice(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        drawList.AddRectFilled(At(center, extent, -0.8f, -0.8f), At(center, extent, 0.8f, 0.8f), ink, extent * 0.26f);
+        Span<float> pips = stackalloc float[3] { -0.42f, 0f, 0.42f };
+        var radius = extent * 0.14f;
+        for (var pip = 0; pip < pips.Length; pip++)
+        {
+            drawList.AddCircleFilled(At(center, extent, pips[pip], pips[pip]), radius, hole, 12);
+        }
+    }
+
+    private static void DrawLimbo(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        drawList.PathClear();
+        drawList.PathArcTo(center, extent * 0.78f, MathF.PI * 0.8f, MathF.PI * 2.2f, 32);
+        drawList.PathStroke(ink, ImDrawFlags.None, extent * 0.22f);
+        var tip = At(center, extent, 0.42f, -0.5f);
+        drawList.AddLine(center, tip, ink, extent * 0.18f);
+        drawList.AddCircleFilled(center, extent * 0.2f, ink, 16);
+        drawList.AddCircleFilled(center, extent * 0.08f, hole, 10);
+    }
+
+    private static void DrawKeno(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        Span<float> tracks = stackalloc float[3] { -0.6f, 0f, 0.6f };
+        var radius = extent * 0.22f;
+        for (var row = 0; row < tracks.Length; row++)
+        {
+            for (var column = 0; column < tracks.Length; column++)
+            {
+                var spot = At(center, extent, tracks[column], tracks[row]);
+                if ((row + column) % 2 == 0)
+                {
+                    drawList.AddCircleFilled(spot, radius, ink, 16);
+                    continue;
+                }
+
+                drawList.AddCircle(spot, radius * 0.85f, ink, 16, extent * 0.08f);
+            }
+        }
+
+        drawList.AddCircleFilled(center, radius * 0.4f, hole, 10);
+    }
+
+    private static void DrawHiLo(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var cardMin = At(center, extent, -0.5f, -0.8f);
+        var cardMax = At(center, extent, 0.5f, 0.8f);
+        drawList.AddRectFilled(cardMin, cardMax, ink, extent * 0.16f);
+        Span<Vector2> up = stackalloc Vector2[3]
+        {
+            At(center, extent, 0f, -0.55f), At(center, extent, 0.26f, -0.12f), At(center, extent, -0.26f, -0.12f),
+        };
+        FillConvex(drawList, hole, up);
+        Span<Vector2> down = stackalloc Vector2[3]
+        {
+            At(center, extent, -0.26f, 0.12f), At(center, extent, 0.26f, 0.12f), At(center, extent, 0f, 0.55f),
+        };
+        FillConvex(drawList, hole, down);
     }
 
     private static void DrawChip(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
