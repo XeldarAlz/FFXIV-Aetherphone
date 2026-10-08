@@ -26,7 +26,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
     public string Id => "casino";
     public string DisplayName => Loc.T(L.Apps.Casino);
     public string Glyph => "Sa";
-    public int BadgeCount => 0;
+    public int BadgeCount => configuration.HasUnseenFeaturePin(Core.Changelog.NewFeaturePins.Casino) ? 1 : 0;
 
     private readonly AethernetSession session;
     private readonly Core.Casino.CasinoFloorStore floor;
@@ -36,6 +36,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
     private readonly Strip.StripCarousel heroCards = new();
     private readonly Strip.StripShelves shelves = new();
     private readonly Strip.WinsTicker winsTicker = new();
+    private readonly Strip.StripIntro intro = new();
     private readonly CoinStore coins;
     private readonly Core.Casino.CasinoStore casino;
     private readonly Core.Casino.CasinoPlayStore casinoPlay;
@@ -191,6 +192,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
 
     public void OnOpened()
     {
+        configuration.MarkFeaturePinSeen(Core.Changelog.NewFeaturePins.Casino);
+        intro.Reset();
         routes.Reset();
         cashier.Close();
         bonusShelf.Reset();
@@ -346,6 +349,12 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         ConsumeFloorNotes();
         ConsumeMissionNotes();
         clubSheet.Gate();
+        var introShowing = IntroShowing;
+        if (introShowing)
+        {
+            Strip.StripIntro.Gate();
+            TourHolds.Hold(Id);
+        }
         if (!DrawLaunchLayer(context.Content))
         {
             router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
@@ -372,11 +381,22 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         clubSheet.Draw(screenArea, ui);
         cashier.Draw(screenArea, ui, openLimits);
         tradePrompt.Draw(screenArea, ui);
+        if (introShowing && intro.Draw(screenArea, ui, casino.Rate, casino.Cashier?.DailyNetCashOutCoins is > 0
+                ? casino.Cashier.DailyNetCashOutCoins
+                : Core.Casino.CasinoCashier.DailyNetCashOutCoinsFallback,
+                MathF.Min(ImGui.GetIO().DeltaTime, Core.Animation.TransitionTiming.MaxFrameSeconds))
+            == Strip.StripIntroResult.Finished)
+        {
+            preferences.MarkIntroSeen();
+        }
         if (rulesSheet.TakePlayRequest() && !PlayingGame(rulesSheet.GameId))
         {
             OpenGame(rulesSheet.GameId);
         }
     }
+
+    private bool IntroShowing => casino.State is not null && !preferences.IntroSeen && routes.OnRoot
+                                 && routes.Tab == CasinoTab.Floor && !router.IsTransitioning;
 
     private bool PlayingGame(string gameId)
     {

@@ -144,6 +144,17 @@ public sealed class CasinoFloorLayoutTests
     }
 
     [Fact]
+    public void TheIntroWalksThreeCardsThenFinishes()
+    {
+        Assert.Equal(3, StripIntro.PageCount);
+        Assert.False(StripIntro.IsLast(0));
+        Assert.Equal(1, StripIntro.NextPage(0));
+        Assert.True(StripIntro.IsLast(2));
+        Assert.Equal(3, StripIntro.NextPage(3));
+        Assert.Equal("app.casino.1300", Core.Changelog.NewFeaturePins.Casino);
+    }
+
+    [Fact]
     public void TheTickerKeepsTheNewestTwentyAndDropsRepeats()
     {
         var held = Array.Empty<CasinoFloorTickDto>();

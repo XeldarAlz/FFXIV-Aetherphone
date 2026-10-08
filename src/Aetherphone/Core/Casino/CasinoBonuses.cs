@@ -179,6 +179,8 @@ internal static class CasinoClubTiers
 
 internal static class CasinoCashier
 {
+    public const long DailyNetCashOutCoinsFallback = 500;
+
     public static long WholeCoins(long chips, long rate)
     {
         return chips <= 0 || rate <= 0 ? 0 : chips / rate;

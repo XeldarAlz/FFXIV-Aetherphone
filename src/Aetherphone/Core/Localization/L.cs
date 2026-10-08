@@ -11003,6 +11003,15 @@ internal static class L
         public static readonly LocString LiveGilStakes = new("casino.strip.liveGilStakes", "Up to {0} gil");
         public static readonly LocString LiveSeatsWatching = new("casino.strip.liveSeatsWatching", "{0} seated, {1} watching");
         public static readonly LocString BackToFloor = new("casino.strip.backToFloor", "Back to the Floor");
+        public static readonly LocString IntroChipsTitle = new("casino.strip.introChipsTitle", "Big chips you can cash out");
+        public static readonly LocString IntroChipsBody = new("casino.strip.introChipsBody", "1 coin buys {0} chips, and chips turn back into coins at the cashier. Up to {1} coins convert each day; the rest waits safely in your bankroll.");
+        public static readonly LocString IntroBonusTitle = new("casino.strip.introBonusTitle", "Free chips and levels");
+        public static readonly LocString IntroBonusBody = new("casino.strip.introBonusBody", "Claim a timed bonus every 3 hours, keep a daily streak, finish missions and level up. Higher levels raise your max bet.");
+        public static readonly LocString IntroHostTitle = new("casino.strip.introHostTitle", "Host your own table");
+        public static readonly LocString IntroHostBody = new("casino.strip.introHostBody", "Venues host blackjack, dice, deathroll and raffles right from the phone. Practice tables play for fun with no chips at stake.");
+        public static readonly LocString IntroNext = new("casino.strip.introNext", "Next");
+        public static readonly LocString IntroSkip = new("casino.strip.introSkip", "Skip");
+        public static readonly LocString IntroStart = new("casino.strip.introStart", "Start playing");
     }
 
     internal static class Club
