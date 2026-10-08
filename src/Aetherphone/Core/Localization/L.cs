@@ -10156,6 +10156,20 @@ internal static class L
         public static readonly LocString ReasonInvalidMove = new("casino.originals.reasonInvalidMove", "That move is not open right now. The board shows where the round stands.");
     }
 
+    internal static class Bingo
+    {
+        public static readonly LocString BuyAction = new("casino.bingo.buyAction", "Buy cards for {0}");
+        public static readonly LocString KnobCards = new("casino.bingo.knobCards", "Cards");
+        public static readonly LocString EarlyBird = new("casino.bingo.earlyBird", "Early bird");
+        public static readonly LocString EarlyBirdHint = new("casino.bingo.earlyBirdHint", "Full house on ball {0}");
+        public static readonly LocString Winners = new("casino.bingo.winners", "{0} winners, each paid in full");
+        public static readonly LocString OneWinner = new("casino.bingo.oneWinner", "One winner");
+        public static readonly LocString You = new("casino.bingo.you", "You");
+        public static readonly LocString DaubAuto = new("casino.bingo.daubAuto", "Daub: automatic");
+        public static readonly LocString DaubManual = new("casino.bingo.daubManual", "Daub: by hand");
+        public static readonly LocString DaubHint = new("casino.bingo.daubHint", "Tap the called numbers. Prizes pay either way.");
+    }
+
     internal static class Casino
     {
         public static readonly LocString SignInTitle = new("casino.signInTitle", "Sign in required");
@@ -10391,7 +10405,7 @@ internal static class L
         public static readonly LocString BingoCardsPending = new("casino.bingo.cardsPending", "The hall is printing your cards.");
         public static readonly LocString BingoCalledOff = new("casino.bingo.calledOff", "The house called this game off and handed every card back.");
         public static readonly LocString BingoCardPrice = new("casino.bingo.cardPrice", "{0} a card, up to {1} a room");
-        public static readonly LocString BingoHoldingFull = new("casino.bingo.holdingFull", "You are holding {0} for this room. One buy a room, so that is your set.");
+        public static readonly LocString BingoHoldingFull = new("casino.bingo.holdingFull", "You hold {0} cards, the most one room allows.");
         public static readonly LocString BingoCardCount = new("casino.bingo.cardCount", "{0} cards");
         public static readonly LocString BingoOneCard = new("casino.bingo.oneCard", "1 card");
         public static readonly LocString BingoCardLabel = new("casino.bingo.cardLabel", "Card {0}");
@@ -10590,7 +10604,7 @@ internal static class L
         public static readonly LocString RulesWheelStep3 = new("casino.rules.wheel3", "The wheel draws one segment for everybody at the rail.");
         public static readonly LocString RulesWheelStep4 = new("casino.rules.wheel4", "Your spot pays its multiplier and hands your stake back.");
         public static readonly LocString RulesBingoStep1 = new("casino.rules.bingo1", "Buy your cards while the selling window is open.");
-        public static readonly LocString RulesBingoStep2 = new("casino.rules.bingo2", "Balls are called every couple of seconds and marked for you.");
+        public static readonly LocString RulesBingoStep2 = new("casino.rules.bingo2", "Balls are called in quick succession and marked for you, unless you daub by hand.");
         public static readonly LocString RulesBingoStep3 = new("casino.rules.bingo3", "A line pays, then two lines, then the full house.");
         public static readonly LocString RulesBingoStep4 = new("casino.rules.bingo4", "Prizes grow with every card in the room, up to the posted cap.");
         public static readonly LocString RulesBlackjackStep1 = new("casino.rules.blackjack1", "Take an empty seat and buy in with chips.");

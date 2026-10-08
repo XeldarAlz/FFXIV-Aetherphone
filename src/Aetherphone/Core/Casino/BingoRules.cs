@@ -14,9 +14,9 @@ internal static class BingoRules
 
     public const int NumbersPerColumn = 15;
 
-    public const long CardPrice = 2000;
+    public const long CardPrice = 1000;
 
-    public const int MaxCards = 4;
+    public const int MaxCards = 6;
 
     public const int PrizeCardCap = 125;
 
@@ -28,9 +28,11 @@ internal static class BingoRules
 
     public const int StageCount = 3;
 
-    public const int BallIntervalSeconds = 2;
+    public const int BallIntervalMs = 1400;
 
-    public const long MaxSingleWin = CasinoChipLots.MaxSingleWin;
+    public const int EarlyBirdBall = 45;
+
+    public const int ReturnTenths = 940;
 
     public const int FreeMask = 1 << FreeCell;
 
@@ -40,15 +42,15 @@ internal static class BingoRules
 
     private static readonly int[][] BandRateTenths =
     {
-        new[] { 3506, 4655, 10037 },
-        new[] { 3126, 4151, 8949 },
-        new[] { 3028, 4020, 8667 },
-        new[] { 2981, 3959, 8535 },
-        new[] { 2952, 3919, 8450 },
-        new[] { 2919, 3876, 8357 },
-        new[] { 2882, 3827, 8251 },
-        new[] { 2868, 3809, 8211 },
-        new[] { 2833, 3762, 8109 },
+        new[] { 1799, 2389, 5151 },
+        new[] { 1599, 2125, 4579 },
+        new[] { 1554, 2063, 4448 },
+        new[] { 1530, 2032, 4381 },
+        new[] { 1515, 2011, 4337 },
+        new[] { 1498, 1989, 4289 },
+        new[] { 1479, 1964, 4235 },
+        new[] { 1472, 1955, 4214 },
+        new[] { 1454, 1931, 4162 },
     };
 
     public static readonly int[] CardCells =
@@ -130,8 +132,7 @@ internal static class BingoRules
         }
 
         var scaled = cardsInPlay < PrizeCardCap ? cardsInPlay : PrizeCardCap;
-        var prize = (BandRateTenths[BandFor(scaled)][stage] * (long)scaled + 9) / 10;
-        return prize > MaxSingleWin ? MaxSingleWin : prize;
+        return (BandRateTenths[BandFor(scaled)][stage] * (long)scaled + 9) / 10;
     }
 
     private static int BandFor(int scaledCards)
@@ -156,6 +157,51 @@ internal static class BingoRules
         {
             ladder[stage] = PrizeFor(stage, cardsInPlay);
         }
+    }
+
+    public static bool IsEarlyBird(int fullHouseBall)
+    {
+        return fullHouseBall > 0 && fullHouseBall <= EarlyBirdBall;
+    }
+
+    public static int CallReaching(int[]? card, int[]? balls, int stage)
+    {
+        if (card is null || balls is null || !IsStage(stage))
+        {
+            return 0;
+        }
+
+        var mask = FreeMask;
+        for (var ballIndex = 0; ballIndex < balls.Length; ballIndex++)
+        {
+            var slot = SlotOf(card, balls[ballIndex]);
+            if (slot < 0)
+            {
+                continue;
+            }
+
+            mask |= 1 << CardCells[slot];
+            if (StageReached(mask) >= stage)
+            {
+                return ballIndex + 1;
+            }
+        }
+
+        return 0;
+    }
+
+    public static int SlotOf(int[] card, int ball)
+    {
+        var slots = card.Length < CardNumbers ? card.Length : CardNumbers;
+        for (var slot = 0; slot < slots; slot++)
+        {
+            if (card[slot] == ball)
+            {
+                return slot;
+            }
+        }
+
+        return -1;
     }
 
     public static bool PrizesFrozen(int cardsInPlay)

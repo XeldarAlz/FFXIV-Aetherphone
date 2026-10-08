@@ -143,9 +143,9 @@ public sealed class CasinoWireContractTests
         Assert.Equal(25, CasinoRoomCadence.WheelWindow(CasinoRoomPhases.Open));
         Assert.Equal(5, CasinoRoomCadence.WheelWindow(CasinoRoomPhases.Locked));
         Assert.Equal(10, CasinoRoomCadence.WheelWindow(CasinoRoomPhases.Result));
-        Assert.Equal(60, CasinoRoomCadence.BingoWindow(CasinoRoomPhases.Open));
-        Assert.Equal(155, CasinoRoomCadence.BingoWindow(CasinoRoomPhases.Locked));
-        Assert.Equal(15, CasinoRoomCadence.BingoWindow(CasinoRoomPhases.Result));
+        Assert.Equal(45, CasinoRoomCadence.BingoWindow(CasinoRoomPhases.Open));
+        Assert.Equal(110, CasinoRoomCadence.BingoWindow(CasinoRoomPhases.Locked));
+        Assert.Equal(10, CasinoRoomCadence.BingoWindow(CasinoRoomPhases.Result));
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -11,30 +12,30 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Casino.Cabinets;
 
-internal sealed class BingoCabinet
+internal sealed class BingoCabinet : ICabinetIdle
 {
-    private const float StatusRowHeight = 22f;
-    private const float CallerHeight = 162f;
-    private const float BallRailHeight = 48f;
-    private const float ProgressHeight = 62f;
-    private const float LadderRowHeight = 34f;
-    private const float SegmentHeight = 32f;
-    private const float PillHeight = Button.LargeHeight;
-    private const float CardGap = 10f;
-    private const float CardPlatePadding = 5f;
-    private const float CardLabelHeight = 22f;
-    private const int RailCalls = 8;
-
-    private static readonly Vector4 Gold = new(1f, 0.84f, 0.42f, 1f);
-    private static readonly Vector4 CountThumbInk = new(1f, 1f, 1f, 1f);
-
-    private static readonly Vector4[] ConfettiPalette =
-    {
-        new(1.00f, 0.84f, 0.42f, 1f),
-        new(1.00f, 0.95f, 0.75f, 1f),
-        new(0.55f, 0.92f, 0.88f, 1f),
-        new(0.80f, 0.58f, 0.98f, 1f),
-    };
+    private const float RailGap = 8f;
+    private const float RailLabelHeight = 14f;
+    private const float DragThreshold = 6f;
+    private const float RailSettleSeconds = 0.12f;
+    private const float WheelStep = 48f;
+    private const float CallerBallShare = 0.34f;
+    private const float FlightLift = 34f;
+    private const float PopOutShare = 0.22f;
+    private const float HeartbeatGapSeconds = 0.2f;
+    private const float HeartbeatLubRate = 0.62f;
+    private const float HeartbeatDubRate = 0.55f;
+    private const double HeartbeatPeriod = 900.0;
+    private const float PodiumGap = 6f;
+    private const float PodiumPad = 5f;
+    private const float AvatarRadius = 7f;
+    private const float AvatarStep = 10f;
+    private const int MaxAvatars = 6;
+    private const float OverlayPad = 14f;
+    private const float RowHeight = 26f;
+    private const float IdlePopSeconds = 1.4f;
+    private const float KnobPillGap = 6f;
+    private const float VeilAlpha = 0.72f;
 
     private static readonly LocString[] StageNames =
     {
@@ -43,21 +44,49 @@ internal sealed class BingoCabinet
         L.Casino.BingoStageFullHouse,
     };
 
+    private static readonly Vector4[] AvatarTints =
+    {
+        CasinoColors.LightA,
+        CasinoColors.LightB,
+        CasinoColors.Money,
+        new(0.55f, 0.85f, 0.45f, 1f),
+        new(0.80f, 0.58f, 0.98f, 1f),
+        new(1f, 0.55f, 0.35f, 1f),
+    };
+
     private readonly CasinoStore chips;
     private readonly CasinoRoomsStore rooms;
     private readonly Action openCashier;
     private readonly Action leaveRoom;
     private readonly BingoRoundPlayback playback = new();
-    private readonly ParticleSystem particles = new(160);
+    private readonly BingoTumbler tumbler = new();
+    private readonly BetComposer composer = new("##bingoBuy");
     private readonly long[] ladder = new long[BingoRules.StageCount];
+    private readonly LabelSlot[] cardLabels = new LabelSlot[BingoRules.MaxCards];
+    private readonly LabelSlot[] stageBalls = new LabelSlot[BingoRules.StageCount];
+    private readonly LabelSlot[] stageWinners = new LabelSlot[BingoRules.StageCount];
 
-    private RollingValue winRoll;
+    private BingoLabel ribbonLabel;
+    private BingoLabel callerLabel;
+    private BingoLabel captionLabel;
+    private LabelSlot earlyBirdLabel;
+    private LabelSlot holdingLabel;
+    private LabelSlot outcomeLabel;
+    private Spring railOffset;
+    private BingoHallLayout layout;
     private string inlineReason = string.Empty;
     private string celebratedRoundId = string.Empty;
-    private long settledPayout;
     private int requestedCards = 1;
+    private string priceText = string.Empty;
+    private LanguageInfo? priceLanguage;
+    private float lightPhase;
+    private float heartbeatDub;
+    private float railDragFrom;
+    private float railDragStart;
+    private float idlePop;
+    private bool railDragging;
+    private bool railDragMoved;
     private bool entered;
-    private Vector2 celebrationAnchor;
 
     public BingoCabinet(CasinoStore chips, CasinoRoomsStore rooms, Action openCashier, Action leaveRoom)
     {
@@ -65,6 +94,20 @@ internal sealed class BingoCabinet
         this.rooms = rooms;
         this.openCashier = openCashier;
         this.leaveRoom = leaveRoom;
+    }
+
+    public Backdrop IdleBackdrop => Backdrop.Arena;
+
+    public static float DeckHeight => BetComposer.DeckHeightFor(true, true);
+
+    public bool ManualDaub { get; private set; }
+
+    public LocString DaubLabel => ManualDaub ? L.Bingo.DaubManual : L.Bingo.DaubAuto;
+
+    public void ToggleDaub()
+    {
+        ManualDaub = !ManualDaub;
+        CasinoSfx.Play(ManualDaub ? UiSound.ToggleOn : UiSound.ToggleOff);
     }
 
     public void Enter()
@@ -84,100 +127,118 @@ internal sealed class BingoCabinet
 
         entered = false;
         playback.Reset();
-        particles.Clear();
+        tumbler.Reset();
         inlineReason = string.Empty;
         celebratedRoundId = string.Empty;
-        settledPayout = 0;
         requestedCards = 1;
-        winRoll.Snap(0);
+        heartbeatDub = 0f;
+        railDragging = false;
+        railOffset.SnapTo(0f);
     }
 
-    public void Draw(Rect body, AppSkin ui)
+    public void Gate()
+    {
+        composer.Gate();
+    }
+
+    public void DrawOverlay(Rect screen, AppSkin ui)
+    {
+        composer.DrawOverlay(screen, ui, false);
+    }
+
+    public void Draw(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui)
     {
         var scale = UiScale.Current;
-        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var delta = frame.DeltaSeconds;
         ConsumeStakeResults();
-
         var room = rooms.Room;
         var held = room.State;
         var snapshot = held?.Snapshot;
         var board = held?.Bingo;
         var mine = snapshot is null ? null : rooms.BingoCardsFor(snapshot.RoomId, snapshot.RoundIndex);
-        playback.Update(snapshot, board, mine, delta);
-        particles.Update(delta);
+        playback.Update(snapshot, board, mine, delta, ManualDaub);
+        if (frame.SnapToTruth)
+        {
+            playback.Snap();
+        }
 
+        tumbler.Update(delta);
+        lightPhase = frame.Phase;
+        var drawList = ImGui.GetWindowDrawList();
+        var safe = frame.Safe;
         var closedReason = room.ClosedReason;
         if (closedReason.Length > 0)
         {
-            DrawClosed(body, ui, closedReason, scale);
+            DrawClosed(drawList, ui, closedReason, safe, scale);
             return;
         }
 
         var state = chips.State;
         if (state is null || snapshot is null)
         {
-            LoadingPulse.Draw(body.Center, 16f * scale, ui.Palette.Accent, ui.MutedInk, LoadingPulse.SafeLabel());
+            LoadingPulse.Draw(safe.Center, 16f * scale, ui.Palette.Accent, ui.MutedInk, LoadingPulse.SafeLabel());
             return;
         }
 
         var remaining = room.RemainingMilliseconds(snapshot.PhaseEndsAtUnixMs,
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-        CelebrateSettledRoom(snapshot, board, mine, scale);
-
-        using var surface = AppSurface.Begin(body);
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Xs * scale));
-        var width = ScrollLayout.StableContentWidth();
+        var holding = HeldCards(mine);
+        layout = BingoHallLayout.Compute(safe, holding, scale);
+        PlayCues(playback.TakeCues(), frame.Instant);
+        TickHeartbeat(delta);
+        SettleRound(stage, snapshot, board, mine, frame);
+        PhaseRibbon.Draw(drawList, frame.Layout.Ribbon, RibbonLabel(snapshot.Phase, remaining), remaining,
+            CasinoRoomCadence.BingoWindow(snapshot.Phase), snapshot.Occupancy,
+            room.Attached ? CasinoColors.LightA : CasinoColors.InkMuted, scale);
         var calledOff = CalledOff(board, mine);
-        DrawStatusRow(ui, snapshot, board, room.Attached, width, scale);
-        DrawCaller(ui, snapshot, board, mine, remaining, width, scale);
-        if (snapshot.Phase != CasinoRoomPhases.Open)
+        BingoCardArt.DrawTumbler(drawList, layout.Tumbler, tumbler,
+            playback.Stage == BingoStage.Calling ? 1f : 0.4f, scale);
+        DrawCaller(drawList, layout.Caller, snapshot.Phase, remaining, scale);
+        BingoCardArt.DrawBoard(drawList, layout.Board, layout.Cell, playback, scale);
+        DrawCards(drawList, ui, mine, holding, calledOff, frame.DeltaSeconds, scale);
+        DrawPodiums(drawList, board, scale);
+        if (playback.Stage == BingoStage.Wrapped || calledOff)
         {
-            DrawProgress(ui, mine, width, scale);
+            DrawResult(drawList, board, mine, holding, calledOff, scale);
         }
 
-        DrawLadder(ui, board, snapshot.Phase, width, scale);
-        if (snapshot.Phase == CasinoRoomPhases.Result)
+        DrawFlight(drawList, scale);
+        if (inlineReason.Length > 0)
         {
-            DrawRoomSummary(ui, mine, calledOff, width, scale, delta);
+            var message = Loc.T(CasinoReasons.MessageFor(inlineReason));
+            var height = CasinoNotice.Height(CasinoNoticeKind.Reason, string.Empty, message, safe.Width, scale);
+            CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Reason, string.Empty, message, safe.Min.X,
+                layout.Podiums.Min.Y - height - PodiumGap * scale, safe.Width, scale);
         }
 
         var sitting = state.Sitting;
-        var seated = sitting is not null;
-        if (calledOff)
+        if (sitting is null)
         {
-            if (snapshot.Phase != CasinoRoomPhases.Result)
-            {
-                DrawNote(ui, Loc.T(L.Casino.BingoCalledOff), width, scale);
-            }
-        }
-        else if (!seated)
-        {
-            DrawSeatMissing(ui, width, scale);
-        }
-        else if (snapshot.Phase == CasinoRoomPhases.Open)
-        {
-            DrawComposer(ui, state, sitting!, mine, width, scale);
+            DrawSeatMissing(drawList, ui, frame.Deck, scale);
+            return;
         }
 
-        DrawCards(ui, mine, calledOff, snapshot.Phase, width, scale);
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
-        particles.Draw(ImGui.GetWindowDrawList(), scale);
+        DrawDeck(stage, frame, ui, state, sitting, holding, calledOff, scale);
     }
 
-    private void ConsumeStakeResults()
+    public void DrawIdle(ImDrawListPtr drawList, Rect rect, float deltaSeconds)
     {
-        var result = rooms.TakeStakeResult();
-        if (result is not null)
+        var scale = UiScale.Current;
+        tumbler.Update(deltaSeconds);
+        idlePop += deltaSeconds;
+        if (idlePop >= IdlePopSeconds)
         {
-            inlineReason = result.Granted
-                ? string.Empty
-                : result.Reason.Length > 0 ? result.Reason : CasinoReasons.Unreachable;
+            idlePop = 0f;
+            tumbler.Pop(IdlePopSeconds * 0.5f);
         }
 
-        if (rooms.TakeStakeFailure())
-        {
-            inlineReason = CasinoReasons.Unreachable;
-        }
+        var side = MathF.Min(rect.Width, rect.Height) * 0.84f;
+        var drum = new Rect(rect.Center - new Vector2(side * 0.5f, side * 0.5f),
+            rect.Center + new Vector2(side * 0.5f, side * 0.5f));
+        var rim = drum.Inset(-CasinoLights.BulbPitch * 0.5f * scale);
+        CasinoLights.BulbChase(drawList, rim, rim.Width * 0.5f, scale, tumbler.CageAngle * 2f, CasinoLights.BulbPitch,
+            CasinoColors.Money, CasinoColors.LightB, 0.8f);
+        BingoCardArt.DrawTumbler(drawList, drum, tumbler, 0.8f, scale);
     }
 
     internal static int HeldCards(CasinoBingoCardsDto? mine)
@@ -244,69 +305,15 @@ internal sealed class BingoCabinet
         return cap > 0 ? cap : BingoRules.PrizeCardCap;
     }
 
-    private void CelebrateSettledRoom(CasinoRoomSnapshotDto snapshot, CasinoBingoRoomStateDto? board,
-        CasinoBingoCardsDto? mine, float scale)
-    {
-        var roundKey = BingoRoundPlayback.RoundKeyOf(snapshot);
-        settledPayout = Settled(mine) ? mine!.Payout : 0;
-        if (snapshot.Phase != CasinoRoomPhases.Result || !Settled(mine)
-            || string.Equals(celebratedRoundId, roundKey, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        celebratedRoundId = roundKey;
-        winRoll.Snap(0);
-        var fullHouse = settledPayout >= PrizeAt(board, BingoRules.StageFullHouse);
-        if (playback.CalledLive && playback.CardCount > 0)
-        {
-            UiFeedback.Play(settledPayout <= 0 ? UiSound.GameWrong
-                : fullHouse ? UiSound.GamePowerUp : UiSound.GameWin);
-        }
-
-        if (settledPayout <= 0)
-        {
-            return;
-        }
-
-        if (fullHouse)
-        {
-            particles.Confetti(celebrationAnchor, 90, ConfettiPalette, 330f * scale, 5f, 1.6f);
-            particles.Sparkle(celebrationAnchor, 24, Gold, 190f * scale, 4f, 1.0f);
-            return;
-        }
-
-        particles.Confetti(celebrationAnchor, 40, ConfettiPalette, 250f * scale, 4f, 1.2f);
-    }
-
     internal static int CardsInPlay(CasinoBingoRoomStateDto? board)
     {
         return board?.Cards ?? 0;
     }
 
-    private void DrawStatusRow(AppSkin ui, CasinoRoomSnapshotDto snapshot, CasinoBingoRoomStateDto? board,
-        bool attached, float width, float scale)
+    internal static int BallIntervalOf(CasinoBingoRoomStateDto? board)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var height = StatusRowHeight * scale;
-        var hall = Loc.T(L.Casino.BingoInTheHall, GameNumber.Label(snapshot.Occupancy));
-        var holders = board?.Players ?? 0;
-        if (holders > 0)
-        {
-            hall = string.Concat(hall, "  ", Loc.T(L.Casino.BingoHoldingCards, GameNumber.Label(holders)));
-        }
-
-        Typography.Draw(drawList, new Vector2(origin.X, origin.Y + 4f * scale), hall, ui.MutedInk,
-            TextStyles.Caption1);
-
-        if (!attached)
-        {
-            DrawPulseChip(drawList, ui, new Vector2(origin.X + width, origin.Y),
-                Loc.T(L.Casino.WheelReconnecting), scale);
-        }
-
-        ImGui.Dummy(new Vector2(width, height));
+        var interval = board?.BallIntervalMs ?? 0;
+        return interval > 0 ? interval : BingoRules.BallIntervalMs;
     }
 
     internal static int NextRoomSeconds(int phase, long remainingMs)
@@ -319,343 +326,6 @@ internal sealed class BingoCabinet
         };
 
         return (int)((estimate + 999) / 1000);
-    }
-
-    private void DrawCaller(AppSkin ui, CasinoRoomSnapshotDto snapshot, CasinoBingoRoomStateDto? board,
-        CasinoBingoCardsDto? mine, long remainingMs, float width, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var height = CallerHeight * scale;
-        var min = origin;
-        var max = new Vector2(min.X + width, min.Y + height);
-        ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
-        celebrationAnchor = new Vector2((min.X + max.X) * 0.5f, min.Y + 48f * scale);
-
-        var centerX = (min.X + max.X) * 0.5f;
-        var seconds = (int)((remainingMs + 999) / 1000);
-        var ballsRolling = snapshot.Phase == CasinoRoomPhases.Locked && CardsInPlay(board) > 0;
-        if (snapshot.Phase == CasinoRoomPhases.Open)
-        {
-            Typography.DrawCentered(drawList, new Vector2(centerX, min.Y + 34f * scale),
-                Loc.T(L.Casino.BingoCardsClose, TimeText.Duration(seconds)), ui.TitleInk, TextStyles.Title3);
-            Typography.DrawCentered(drawList, new Vector2(centerX, min.Y + 64f * scale),
-                Loc.T(L.Casino.BingoFirstBall, TimeText.Duration(seconds)), ui.MutedInk, TextStyles.Caption1);
-        }
-        else if (ballsRolling)
-        {
-            if (playback.LatestBall > 0)
-            {
-                DrawBallShow(drawList, ui, centerX, min.Y, scale);
-            }
-            else
-            {
-                Typography.DrawCentered(drawList, new Vector2(centerX, min.Y + 48f * scale),
-                    Loc.T(L.Casino.BingoProgressWaiting), ui.MutedInk, TextStyles.Subheadline);
-            }
-
-            if (HeldCards(mine) == 0)
-            {
-                DrawPulseChip(drawList, ui, new Vector2(max.X - 10f * scale, min.Y + 10f * scale),
-                    Loc.T(L.Casino.BingoNextRoom,
-                        TimeText.Duration(NextRoomSeconds(snapshot.Phase, remainingMs))), scale);
-            }
-        }
-        else
-        {
-            DrawNextRoomHero(drawList, ui, centerX, min.Y,
-                NextRoomSeconds(snapshot.Phase, remainingMs), scale);
-        }
-
-        DrawBallRail(drawList, ui, board, min, max, scale);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Sm * scale));
-    }
-
-    private void DrawBallShow(ImDrawListPtr drawList, AppSkin ui, float centerX, float top, float scale)
-    {
-        var ballCenter = new Vector2(centerX, top + 52f * scale);
-        if (playback.Rolling)
-        {
-            var roll = playback.RollProgress;
-            var wobble = (1f - roll) * 3.5f * scale;
-            var jitter = new Vector2(MathF.Sin(playback.SinceBall * 41f) * wobble,
-                MathF.Cos(playback.SinceBall * 37f) * wobble);
-            drawList.AddCircleFilled(ballCenter, 44f * scale,
-                ImGui.GetColorU32(Palette.WithAlpha(ui.Palette.Accent, 0.10f + 0.14f * (1f - roll))), 40);
-            BingoCardArt.DrawBallChip(drawList, ballCenter + jitter, 38f * scale,
-                playback.RollingFace(playback.BallCount), 0.55f + 0.35f * roll, ui.Palette.HeaderInk);
-        }
-        else
-        {
-            var settle = MathF.Min(1f,
-                (playback.SinceBall - BingoRoundPlayback.BallRollSeconds)
-                / BingoRoundPlayback.BallEntrySeconds);
-            var radius = 38f * scale * (0.90f + 0.10f * Easing.EaseOutBack(MathF.Max(0.01f, settle)));
-            drawList.AddCircleFilled(ballCenter, radius * 1.42f,
-                ImGui.GetColorU32(Palette.WithAlpha(ui.Palette.Accent, 0.18f * (1f - settle * 0.5f))), 40);
-            BingoCardArt.DrawBallChip(drawList, ballCenter, radius, playback.LatestBall, 1f,
-                ui.Palette.HeaderInk);
-        }
-
-        Typography.DrawCentered(drawList, new Vector2(centerX, top + 104f * scale),
-            Loc.T(L.Casino.BingoCalledCount, GameNumber.Label(playback.BallCount),
-                GameNumber.Label(BingoRules.Balls)), ui.MutedInk, TextStyles.Subheadline);
-    }
-
-    private static void DrawNextRoomHero(ImDrawListPtr drawList, AppSkin ui, float centerX, float top,
-        int nextRoomSeconds, float scale)
-    {
-        var caption = Loc.T(L.Casino.BingoWaitingRoom);
-        var captionCenter = new Vector2(centerX, top + 30f * scale);
-        Typography.DrawCentered(drawList, captionCenter, caption, ui.MutedInk, TextStyles.Subheadline);
-        var captionSize = Typography.Measure(caption, TextStyles.Subheadline);
-        DrawBreathingDot(drawList, ui,
-            new Vector2(captionCenter.X - captionSize.X * 0.5f - 10f * scale, captionCenter.Y), scale);
-        Typography.DrawCentered(drawList, new Vector2(centerX, top + 62f * scale),
-            TimeText.Duration(nextRoomSeconds), ui.TitleInk, TextStyles.Title1);
-        Typography.DrawCentered(drawList, new Vector2(centerX, top + 94f * scale),
-            Loc.T(L.Casino.BingoNextRoomSale), ui.MutedInk, TextStyles.Caption1);
-    }
-
-    private static void DrawPulseChip(ImDrawListPtr drawList, AppSkin ui, Vector2 topRight, string label,
-        float scale)
-    {
-        var labelSize = Typography.Measure(label, TextStyles.Caption2);
-        var chipMin = new Vector2(topRight.X - labelSize.X - 18f * scale, topRight.Y);
-        var chipMax = new Vector2(topRight.X, topRight.Y + labelSize.Y + 7f * scale);
-        Squircle.Fill(drawList, chipMin, chipMax, (chipMax.Y - chipMin.Y) * 0.5f,
-            ImGui.GetColorU32(ui.FieldSurface));
-        DrawBreathingDot(drawList, ui, new Vector2(chipMin.X + 8f * scale, (chipMin.Y + chipMax.Y) * 0.5f),
-            scale);
-        Typography.Draw(drawList, new Vector2(chipMin.X + 14f * scale, chipMin.Y + 3.5f * scale), label,
-            ui.MutedInk, TextStyles.Caption2);
-    }
-
-    private static void DrawBreathingDot(ImDrawListPtr drawList, AppSkin ui, Vector2 center, float scale)
-    {
-        drawList.AddCircleFilled(center, 2.6f * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.35f + 0.45f * Pulse.Wave(Pulse.Breath))), 12);
-    }
-
-    private readonly record struct CardProgress(int CardIndex, int Gap, int GoalStage);
-
-    private CardProgress BestProgress(CasinoBingoCardsDto? mine)
-    {
-        var holding = HeldCards(mine);
-        var best = new CardProgress(-1, int.MaxValue, BingoRules.StageLine);
-        for (var cardIndex = 0; cardIndex < holding; cardIndex++)
-        {
-            var mask = playback.AutoMaskOf(cardIndex);
-            var gap = BingoRules.NextGoalGap(mask, out var goalStage);
-            if (gap < best.Gap)
-            {
-                best = new CardProgress(cardIndex, gap, goalStage);
-            }
-        }
-
-        return best;
-    }
-
-    private void DrawProgress(AppSkin ui, CasinoBingoCardsDto? mine, float width, float scale)
-    {
-        if (HeldCards(mine) == 0)
-        {
-            return;
-        }
-
-        var best = BestProgress(mine);
-        if (best.CardIndex < 0)
-        {
-            return;
-        }
-
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var height = ProgressHeight * scale;
-        var min = origin;
-        var max = new Vector2(min.X + width, min.Y + height);
-        var hot = best.Gap <= 1;
-        var rounding = Metrics.Radius.Grouped * scale;
-        ui.Card(drawList, min, max, rounding);
-        if (hot)
-        {
-            Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(Gold), 1.4f * scale);
-        }
-
-        var headline = HeadlineFor(best);
-        var ink = hot ? Gold : ui.TitleInk;
-        var centerY = (min.Y + max.Y) * 0.5f;
-        var pad = Metrics.Space.Lg * scale;
-        Typography.Draw(drawList, new Vector2(min.X + pad, centerY - 15f * scale), headline, ink,
-            TextStyles.Title3);
-
-        var onCard = Loc.T(L.Casino.BingoProgressOn,
-            Loc.T(L.Casino.BingoCardLabel, GameNumber.Label(best.CardIndex + 1)));
-        Typography.Draw(drawList, new Vector2(min.X + pad, centerY + 6f * scale), onCard, ui.MutedInk,
-            TextStyles.Subheadline);
-
-        if (hot)
-        {
-            var pulse = 0.5f + 0.5f * Pulse.Wave(Pulse.Fast);
-            var radius = 16f * scale;
-            var center = new Vector2(max.X - pad - radius, centerY);
-            drawList.AddCircleFilled(center, radius * (0.94f + 0.10f * pulse),
-                ImGui.GetColorU32(Palette.WithAlpha(Gold, 0.22f + 0.18f * pulse)), 28);
-            Typography.DrawCentered(drawList, center, GameNumber.Label(best.Gap), Gold,
-                TextStyles.Title3);
-        }
-
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Sm * scale));
-    }
-
-    private static string HeadlineFor(CardProgress best)
-    {
-        if (best.Gap <= 0)
-        {
-            return Loc.T(L.Casino.BingoProgressAllDone);
-        }
-
-        if (best.Gap == 1)
-        {
-            return best.GoalStage switch
-            {
-                BingoRules.StageTwoLines => Loc.T(L.Casino.BingoAwayReadyTwoLines),
-                BingoRules.StageFullHouse => Loc.T(L.Casino.BingoAwayReadyFullHouse),
-                _ => Loc.T(L.Casino.BingoAwayReadyLine),
-            };
-        }
-
-        var count = GameNumber.Label(best.Gap);
-        return best.GoalStage switch
-        {
-            BingoRules.StageTwoLines => Loc.T(L.Casino.BingoAwayTwoLines, count),
-            BingoRules.StageFullHouse => Loc.T(L.Casino.BingoAwayFullHouse, count),
-            _ => Loc.T(L.Casino.BingoAwayLine, count),
-        };
-    }
-
-    private void DrawBallRail(ImDrawListPtr drawList, AppSkin ui, CasinoBingoRoomStateDto? board, Vector2 min,
-        Vector2 max, float scale)
-    {
-        var balls = BingoRoundPlayback.CalledBalls(board);
-        if (balls.Length == 0)
-        {
-            return;
-        }
-
-        var radius = 11f * scale;
-        var gap = 6f * scale;
-        var shown = balls.Length < RailCalls ? balls.Length : RailCalls;
-        var step = radius * 2f + gap;
-        var railWidth = shown * step - gap;
-        var startX = (min.X + max.X) * 0.5f - railWidth * 0.5f + radius;
-        var label = Loc.T(L.Casino.BingoRecentCalls);
-        Typography.Draw(drawList, new Vector2(min.X + 14f * scale, max.Y - BallRailHeight * scale), label,
-            ui.MutedInk, TextStyles.Footnote);
-        var railY = max.Y - radius - 8f * scale;
-        for (var index = 0; index < shown; index++)
-        {
-            var ball = balls[balls.Length - shown + index];
-            var newest = index == shown - 1;
-            var alpha = 0.40f + 0.60f * ((index + 1f) / shown);
-            var center = new Vector2(startX + index * step, railY);
-            if (newest)
-            {
-                var breath = 0.45f + 0.55f * Pulse.Wave(Pulse.Breath);
-                drawList.AddCircle(center, radius + 4f * scale,
-                    ImGui.GetColorU32(Palette.WithAlpha(Gold, 0.30f + 0.35f * breath)), 28, 1.8f * scale);
-            }
-
-            BingoCardArt.DrawBallChip(drawList, center, radius, ball, alpha, ui.Palette.HeaderInk);
-        }
-    }
-
-    private void DrawLadder(AppSkin ui, CasinoBingoRoomStateDto? board, int phase, float width, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var cardsInPlay = CardsInPlay(board);
-        var seeded = cardsInPlay == 0;
-        DisplayLadder(board, ladder);
-        var prizeCardCap = PrizeCardCapOf(board);
-        var capNote = seeded
-            ? Loc.T(L.Casino.BingoLadderSeeds)
-            : cardsInPlay >= prizeCardCap
-                ? Loc.T(L.Casino.BingoLadderCapped, GameNumber.Label(prizeCardCap))
-                : Loc.T(L.Casino.BingoLadderGrows, GameNumber.Label(prizeCardCap));
-        var inset = 14f * scale;
-        var innerWidth = width - inset * 2f;
-        var heading = seeded && phase != CasinoRoomPhases.Open
-            ? Loc.T(L.Casino.BingoLadderNextHeading)
-            : Loc.T(L.Casino.BingoLadderHeading);
-        var headingSize = Typography.Measure(heading, TextStyles.FootnoteEmphasized);
-        var noteBlock = Typography.MeasureWrappedBlock(capNote, TextStyles.Caption2, innerWidth);
-        var height = inset * 2f + headingSize.Y + 6f * scale + BingoRules.StageCount * LadderRowHeight * scale
-            + noteBlock.Y;
-        var min = origin;
-        var max = new Vector2(min.X + width, min.Y + height);
-        ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
-
-        Typography.Draw(drawList, new Vector2(min.X + inset, min.Y + inset), heading, ui.TitleInk,
-            TextStyles.FootnoteEmphasized);
-        if (!seeded)
-        {
-            var inPlay = Loc.T(L.Casino.BingoCardsInPlay, GameNumber.Label(cardsInPlay));
-            var inPlaySize = Typography.Measure(inPlay, TextStyles.Caption1);
-            Typography.Draw(drawList, new Vector2(max.X - inset - inPlaySize.X, min.Y + inset), inPlay,
-                ui.MutedInk, TextStyles.Caption1);
-        }
-
-        var rowY = min.Y + inset + headingSize.Y + 6f * scale;
-        for (var stage = 0; stage < BingoRules.StageCount; stage++)
-        {
-            DrawLadderRow(drawList, ui, board, stage, min.X + inset, rowY, innerWidth, scale);
-            rowY += LadderRowHeight * scale;
-        }
-
-        Typography.DrawWrappedLeft(new Vector2(min.X + inset, rowY + 2f * scale), capNote, ui.MutedInk,
-            TextStyles.Caption2, innerWidth);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Sm * scale));
-    }
-
-    private void DrawLadderRow(ImDrawListPtr drawList, AppSkin ui, CasinoBingoRoomStateDto? board, int stage,
-        float left, float y, float width, float scale)
-    {
-        var awarded = StageAwarded(board, stage);
-        var name = Loc.T(StageNames[stage]);
-        var ink = awarded is null ? ui.TitleInk : Gold;
-        var rowCenter = y + LadderRowHeight * scale * 0.42f;
-
-        var prize = awarded?.Prize ?? ladder[stage];
-        var prizeText = NumberText.Group(prize);
-        var prizeSize = CurrencyGlyph.MeasureAmount(prizeText, TextStyles.Title3);
-        CurrencyGlyph.DrawAmount(drawList, new Vector2(left + width - prizeSize.X, rowCenter - prizeSize.Y * 0.5f),
-            prizeText, CurrencyKind.Chips, ink, TextStyles.Title3);
-
-        var nameSize = Typography.Measure(name, TextStyles.Subheadline);
-        Typography.Draw(drawList, new Vector2(left, rowCenter - nameSize.Y * 0.5f), name, ink,
-            TextStyles.Subheadline);
-
-        if (awarded is null)
-        {
-            return;
-        }
-
-        var chip = awarded.Winners > 1
-            ? Loc.T(L.Casino.BingoLadderShared, GameNumber.Label(awarded.Winners),
-                GameNumber.Label(awarded.Ball))
-            : Loc.T(L.Casino.BingoLadderGone, GameNumber.Label(awarded.Ball));
-        var chipSize = Typography.Measure(chip, TextStyles.Caption1);
-        var chipPad = 7f * scale;
-        var chipMin = new Vector2(left + nameSize.X + 10f * scale, rowCenter - chipSize.Y * 0.5f - 2f * scale);
-        var chipMax = new Vector2(chipMin.X + chipSize.X + chipPad * 2f, chipMin.Y + chipSize.Y + 4f * scale);
-        if (chipMax.X < left + width - prizeSize.X - 8f * scale)
-        {
-            Squircle.Fill(drawList, chipMin, chipMax, (chipMax.Y - chipMin.Y) * 0.5f,
-                ImGui.GetColorU32(new Vector4(Gold.X, Gold.Y, Gold.Z, 0.16f)));
-            Typography.Draw(drawList, new Vector2(chipMin.X + chipPad, chipMin.Y + 2f * scale), chip, Gold,
-                TextStyles.Caption1);
-        }
     }
 
     internal static CasinoBingoStageDto? StageAwarded(CasinoBingoRoomStateDto? board, int stage)
@@ -677,315 +347,304 @@ internal sealed class BingoCabinet
         return null;
     }
 
-    private void DrawRoomSummary(AppSkin ui, CasinoBingoCardsDto? mine, bool calledOff, float width, float scale,
-        float delta)
+    private void ConsumeStakeResults()
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var inset = 14f * scale;
-        var innerWidth = width - inset * 2f;
-        var title = Loc.T(L.Casino.BingoRoomWrapped);
-        var titleSize = Typography.Measure(title, TextStyles.SubheadlineEmphasized);
-        var won = !calledOff && Settled(mine) && settledPayout > 0;
-
-        string outcome;
-        if (calledOff)
+        var result = rooms.TakeStakeResult();
+        if (result is not null)
         {
-            outcome = Loc.T(L.Casino.BingoCalledOff);
-        }
-        else if (HeldCards(mine) == 0)
-        {
-            outcome = Loc.T(L.Casino.BingoWatchedRoom);
-        }
-        else if (!Settled(mine))
-        {
-            outcome = Loc.T(L.Casino.BingoCardsPending);
-        }
-        else if (won)
-        {
-            winRoll.Update((int)Math.Min(settledPayout, int.MaxValue), delta);
-            outcome = Loc.T(L.Casino.BingoYouWon, NumberText.Signed(winRoll.Display));
-        }
-        else
-        {
-            outcome = Loc.T(L.Casino.BingoNoWin);
+            inlineReason = result.Granted
+                ? string.Empty
+                : result.Reason.Length > 0 ? result.Reason : CasinoReasons.Unreachable;
         }
 
-        var outcomeBlock = won
-            ? Typography.Measure(outcome, TextStyles.Title3)
-            : Typography.MeasureWrappedBlock(outcome, TextStyles.Subheadline, innerWidth);
-        var height = inset * 2f + titleSize.Y + 8f * scale + MathF.Max(outcomeBlock.Y, 26f * scale);
-        var min = origin;
-        var max = new Vector2(min.X + width, min.Y + height);
-        ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
-        Squircle.Stroke(drawList, min, max, Metrics.Radius.Grouped * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(won ? Gold : ui.Accent, 0.35f)), 1f * scale);
-
-        Typography.Draw(drawList, new Vector2(min.X + inset, min.Y + inset), title, ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        var outcomeY = min.Y + inset + titleSize.Y + 8f * scale;
-        if (won)
+        if (rooms.TakeStakeFailure())
         {
-            Typography.Draw(drawList, new Vector2(min.X + inset, outcomeY), outcome, Gold,
-                TextStyles.Title3.Scale * winRoll.PopScale, TextStyles.Title3.Weight);
+            inlineReason = CasinoReasons.Unreachable;
         }
-        else
-        {
-            Typography.DrawWrappedLeft(new Vector2(min.X + inset, outcomeY), outcome, ui.MutedInk,
-                TextStyles.Subheadline, innerWidth);
-        }
-
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Sm * scale));
     }
 
-    private void DrawComposer(AppSkin ui, CasinoStateDto state, CasinoSittingDto sitting,
-        CasinoBingoCardsDto? mine, float width, float scale)
+    private void PlayCues(BingoCue cues, bool instant)
     {
-        if (inlineReason.Length > 0)
+        if ((cues & BingoCue.BallPopped) != 0)
         {
-            DrawNote(ui, Loc.T(CasinoReasons.MessageFor(inlineReason)), width, scale);
+            tumbler.Pop(BingoRoundPlayback.FlightSeconds);
+            CasinoSfx.Play(UiSound.GamePop);
         }
 
-        var holding = HeldCards(mine);
-        var room = BingoRules.MaxCards - holding;
-        if (room <= 0)
+        if ((cues & BingoCue.BallLanded) != 0)
         {
-            DrawNote(ui, Loc.T(L.Casino.BingoHoldingFull, CardCountLabel(holding)), width, scale);
+            CasinoSfx.Play(UiSound.PegTick);
+        }
+
+        if ((cues & BingoCue.Daubed) != 0)
+        {
+            CasinoSfx.Play(UiSound.Daub);
+        }
+
+        if ((cues & BingoCue.StageWon) != 0)
+        {
+            CasinoSfx.Play(UiSound.TurnChime);
+        }
+
+        if ((cues & BingoCue.OneAway) != 0 && !instant && CasinoSfx.Audible)
+        {
+            UiFeedback.PlayPitched(UiSound.GameHitSoft, HeartbeatLubRate);
+            heartbeatDub = HeartbeatGapSeconds;
+        }
+    }
+
+    private void TickHeartbeat(float deltaSeconds)
+    {
+        if (heartbeatDub <= 0f)
+        {
             return;
         }
 
-        if (requestedCards > room)
+        heartbeatDub -= deltaSeconds;
+        if (heartbeatDub > 0f || !CasinoSfx.Audible)
         {
-            requestedCards = room;
+            return;
         }
 
-        if (requestedCards < 1)
+        UiFeedback.PlayPitched(UiSound.Daub, HeartbeatDubRate);
+    }
+
+    private void SettleRound(CasinoStage stage, CasinoRoomSnapshotDto snapshot, CasinoBingoRoomStateDto? board,
+        CasinoBingoCardsDto? mine, in CasinoStageFrame frame)
+    {
+        var roundKey = BingoRoundPlayback.RoundKeyOf(snapshot);
+        if (playback.Stage != BingoStage.Wrapped || !Settled(mine)
+            || string.Equals(celebratedRoundId, roundKey, StringComparison.Ordinal))
         {
-            requestedCards = 1;
+            return;
         }
 
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var heading = holding > 0
-            ? Loc.T(L.Casino.BingoBuyMoreHeading, CardCountLabel(holding))
-            : Loc.T(L.Casino.BingoBuyHeading);
-        Typography.Draw(drawList, origin, heading, ui.MutedInk, TextStyles.FootnoteEmphasized);
-        var price = Loc.T(L.Casino.BingoCardPrice, NumberText.Group(BingoRules.CardPrice),
+        celebratedRoundId = roundKey;
+        var stake = mine!.Stake;
+        var payout = mine.Payout;
+        if (stake > 0)
+        {
+            stage.Settle(new CasinoBetRecord(L.Casino.GameBingo, stake, payout, mine.RoundId,
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+        }
+
+        if (!playback.CalledLive)
+        {
+            return;
+        }
+
+        var origin = layout.Hero.Center;
+        var tier = WinLadder.TierFor(stake, payout);
+        if (tier == WinTier.None)
+        {
+            return;
+        }
+
+        if (board is not null && board.EarlyBird && playback.WonStage(BingoRules.StageFullHouse)
+            && tier < WinTier.Epic)
+        {
+            stage.Celebration.Start(WinTier.Epic, payout, origin, frame.Instant, false);
+            return;
+        }
+
+        stage.Celebration.Celebrate(stake, payout, origin, frame.Instant);
+    }
+
+    private string RibbonLabel(int phase, long remainingMs)
+    {
+        var seconds = (int)((Math.Max(0, remainingMs) + 999) / 1000);
+        return phase switch
+        {
+            CasinoRoomPhases.Open => ribbonLabel.Duration(L.Casino.BingoCardsClose, seconds),
+            CasinoRoomPhases.Locked => playback.BallCount > 0
+                ? ribbonLabel.Numbers(L.Casino.BingoCalledCount, playback.BallCount, BingoRules.Balls)
+                : Loc.T(L.Casino.BingoProgressWaiting),
+            _ => ribbonLabel.Duration(L.Casino.BingoNextRoom, NextRoomSeconds(phase, remainingMs)),
+        };
+    }
+
+    private void DrawCaller(ImDrawListPtr drawList, Rect rect, int phase, long remainingMs, float scale)
+    {
+        if (rect.Width <= 0f || rect.Height <= 0f)
+        {
+            return;
+        }
+
+        var seconds = (int)((Math.Max(0, remainingMs) + 999) / 1000);
+        var center = rect.Center;
+        if (playback.Stage == BingoStage.Selling)
+        {
+            var title = Typography.FitText(callerLabel.Duration(L.Casino.BingoFirstBall, seconds), rect.Width,
+                TextStyles.Title3);
+            Typography.DrawCentered(drawList, center - new Vector2(0f, Typography.LineHeight(TextStyles.Title3) * 0.5f),
+                title, CasinoColors.InkTitle, TextStyles.Title3);
+            var price = Typography.FitText(PriceText(), rect.Width, TextStyles.Caption1);
+            Typography.DrawCentered(drawList, center + new Vector2(0f, Typography.LineHeight(TextStyles.Caption1)),
+                price, CasinoColors.InkMuted, TextStyles.Caption1);
+            return;
+        }
+
+        var radius = MathF.Min(rect.Height * CallerBallShare, rect.Width * 0.3f);
+        var ballCenter = new Vector2(center.X, rect.Min.Y + radius + Metrics.Space.Xs * scale);
+        var shown = playback.Flying ? PreviousBall() : playback.LatestBall;
+        if (shown > 0)
+        {
+            var settle = playback.Flying ? 1f : MathF.Min(1f, (playback.SinceBall - BingoRoundPlayback.FlightSeconds) / 0.3f);
+            var pop = 0.85f + 0.15f * Easing.EaseOutBack(MathF.Max(0.01f, settle));
+            drawList.AddCircleFilled(ballCenter, radius * 1.35f,
+                ImGui.GetColorU32(CasinoColors.Money with { W = 0.10f + 0.12f * Pulse.Wave(Pulse.Breath) }), 32);
+            BingoCardArt.DrawBall(drawList, ballCenter, radius * pop, shown, 1f);
+        }
+        else
+        {
+            drawList.AddCircle(ballCenter, radius, ImGui.GetColorU32(CasinoColors.InkMuted with { W = 0.5f }), 32,
+                1.5f * scale);
+        }
+
+        var caption = playback.BallCount > 0
+            ? captionLabel.Numbers(L.Casino.BingoCalledCount, playback.BallCount, BingoRules.Balls)
+            : Loc.T(L.Casino.BingoProgressWaiting);
+        caption = Typography.FitText(caption, rect.Width, TextStyles.Footnote);
+        var captionTop = ballCenter.Y + radius * 1.35f + Metrics.Space.Xxs * scale;
+        Typography.DrawCentered(drawList, new Vector2(center.X, captionTop + Typography.LineHeight(TextStyles.Footnote) * 0.5f),
+            caption, CasinoColors.InkBody, TextStyles.Footnote);
+    }
+
+    private string PriceText()
+    {
+        if (ReferenceEquals(priceLanguage, Loc.Current) && priceText.Length > 0)
+        {
+            return priceText;
+        }
+
+        priceLanguage = Loc.Current;
+        priceText = Loc.T(L.Casino.BingoCardPrice, NumberText.Compact(BingoRules.CardPrice),
             GameNumber.Label(BingoRules.MaxCards));
-        var priceSize = Typography.Measure(price, TextStyles.Caption1);
-        Typography.Draw(drawList, new Vector2(origin.X + width - priceSize.X, origin.Y), price, ui.MutedInk,
-            TextStyles.Caption1);
-
-        var segmentY = origin.Y + 20f * scale;
-        DrawCountSegments(drawList, ui, origin.X, segmentY, width, room, scale);
-
-        var stake = BingoRules.StakeFor(requestedCards);
-        var thin = sitting.Stack < stake;
-        var blocked = state.StakesPaused || state.Draining;
-        var canBuy = !blocked && !thin && !rooms.StakeInFlight;
-        var label = Loc.T(L.Casino.BingoBuyFor, CardCountLabel(requestedCards),
-            NumberText.Group(stake));
-        var pillY = segmentY + SegmentHeight * scale + Metrics.Space.Sm * scale;
-        var pillRect = new Rect(new Vector2(origin.X, pillY),
-            new Vector2(origin.X + width, pillY + PillHeight * scale));
-        if (ui.ActionPill(pillRect, label, canBuy, TextStyles.Subheadline))
-        {
-            inlineReason = string.Empty;
-            rooms.BuyBingoCards(requestedCards);
-            UiFeedback.Play(UiSound.CasinoChips);
-        }
-
-        var noteY = pillRect.Max.Y + 6f * scale;
-        var note = blocked
-            ? Loc.T(state.StakesPaused ? L.Casino.PausedTitle : L.Casino.DrainingTitle)
-            : thin ? Loc.T(L.Casino.SlotsLowStack) : Loc.T(L.Casino.BingoBuyAgainNote);
-        var noteBlock = Typography.MeasureWrappedBlock(note, TextStyles.Caption2, width);
-        Typography.DrawWrappedLeft(new Vector2(origin.X, noteY), note, ui.MutedInk, TextStyles.Caption2, width);
-        var finalNote = Loc.T(L.Casino.BingoCardsFinal);
-        var finalY = noteY + noteBlock.Y + 2f * scale;
-        var finalBlock = Typography.MeasureWrappedBlock(finalNote, TextStyles.Caption2, width);
-        Typography.DrawWrappedLeft(new Vector2(origin.X, finalY), finalNote, ui.MutedInk, TextStyles.Caption2,
-            width);
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, finalY + finalBlock.Y - origin.Y + Metrics.Space.Md * scale));
-        if (thin)
-        {
-            DrawCashierPill(ui, width, scale);
-        }
+        return priceText;
     }
 
-    private void DrawCashierPill(AppSkin ui, float width, float scale)
+    private int PreviousBall()
     {
-        var origin = ImGui.GetCursorScreenPos();
-        var pillRect = new Rect(new Vector2(origin.X + width * 0.25f, origin.Y),
-            new Vector2(origin.X + width * 0.75f, origin.Y + 38f * scale));
-        if (ui.GhostButton(pillRect, Loc.T(L.Casino.Cashier)))
+        var count = playback.BallCount;
+        if (count < 2)
         {
-            openCashier();
+            return 0;
         }
 
-        ImGui.Dummy(new Vector2(width, 38f * scale + Metrics.Space.Sm * scale));
+        var balls = BingoRoundPlayback.CalledBalls(rooms.Room.State?.Bingo);
+        return count - 2 < balls.Length ? balls[count - 2] : 0;
     }
 
-    private void DrawCountSegments(ImDrawListPtr drawList, AppSkin ui, float left, float y, float width,
-        int headroom, float scale)
+    private void DrawFlight(ImDrawListPtr drawList, float scale)
     {
-        var height = SegmentHeight * scale;
-        var rounding = height * 0.5f;
-        var min = new Vector2(left, y);
-        var max = new Vector2(left + width, y + height);
-        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(Surfaces.Fill(ui.Ink, FillLevel.Tertiary)));
-        var slotWidth = width / BingoRules.MaxCards;
-        for (var count = 1; count <= BingoRules.MaxCards; count++)
+        if (!playback.Flying)
         {
-            var slotMin = new Vector2(left + (count - 1) * slotWidth, y);
-            var slotMax = new Vector2(slotMin.X + slotWidth, max.Y);
-            var enabled = count <= headroom;
-            var selected = count == requestedCards;
-            var hovered = enabled && UiInteract.Hover(slotMin, slotMax);
-            if (selected)
-            {
-                var padding = new Vector2(3f * scale, 3f * scale);
-                Squircle.Fill(drawList, slotMin + padding, slotMax - padding, rounding - padding.Y,
-                    ImGui.GetColorU32(ui.Accent with { W = 1f }));
-            }
-            else if (hovered)
-            {
-                Squircle.Fill(drawList, slotMin, slotMax, rounding,
-                    ImGui.GetColorU32(Surfaces.Fill(ui.Ink, FillLevel.Quaternary)));
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
-
-            var ink = selected ? CountThumbInk : enabled ? ui.BodyInk : ui.MutedInk;
-            Typography.DrawCentered(drawList, (slotMin + slotMax) * 0.5f, GameNumber.Label(count),
-                Palette.WithAlpha(ink, enabled ? 1f : 0.4f), TextStyles.Subheadline);
-            if (enabled && UiInteract.Click(slotMin, slotMax, hovered))
-            {
-                requestedCards = count;
-                inlineReason = string.Empty;
-            }
+            return;
         }
+
+        var progress = playback.FlightProgress;
+        var exit = BingoCardArt.TumblerPoint(layout.Tumbler, BingoTumbler.Exit);
+        var drumRadius = layout.Tumbler.Width * 0.5f;
+        var smallRadius = BingoTumbler.BallRadius * drumRadius / BingoTumbler.DrumRadius;
+        var bigRadius = MathF.Max(smallRadius * 2.2f, layout.Cell * 0.9f);
+        var lifted = exit - new Vector2(0f, FlightLift * scale);
+        Vector2 at;
+        float radius;
+        if (progress < PopOutShare)
+        {
+            var rise = Easing.EaseOutCubic(progress / PopOutShare);
+            at = Vector2.Lerp(exit, lifted, rise);
+            radius = smallRadius + (bigRadius - smallRadius) * rise;
+        }
+        else
+        {
+            var travel = Easing.EaseInOutCubic((progress - PopOutShare) / (1f - PopOutShare));
+            var target = BingoHallLayout.BoardCellCenter(layout.Board, layout.Cell, playback.LatestBall);
+            var control = new Vector2((lifted.X + target.X) * 0.5f, MathF.Min(lifted.Y, target.Y) - FlightLift * scale);
+            var inverse = 1f - travel;
+            at = inverse * inverse * lifted + 2f * inverse * travel * control + travel * travel * target;
+            radius = bigRadius + (layout.Cell * 0.42f - bigRadius) * travel;
+        }
+
+        drawList.AddCircleFilled(at, radius * 1.5f, ImGui.GetColorU32(CasinoColors.Money with { W = 0.18f }), 24);
+        BingoCardArt.DrawBall(drawList, at, radius, playback.LatestBall, 1f);
     }
 
-    private static string CardCountLabel(int cards)
+    private void DrawCards(ImDrawListPtr drawList, AppSkin ui, CasinoBingoCardsDto? mine, int holding, bool calledOff,
+        float deltaSeconds, float scale)
     {
-        return cards == 1 ? Loc.T(L.Casino.BingoOneCard) : Loc.T(L.Casino.BingoCardCount, GameNumber.Label(cards));
-    }
-
-    private void DrawCards(AppSkin ui, CasinoBingoCardsDto? mine, bool calledOff, int phase, float width,
-        float scale)
-    {
-        var holding = HeldCards(mine);
         if (holding == 0)
         {
-            if (calledOff || phase == CasinoRoomPhases.Result)
+            if (calledOff || playback.Stage == BingoStage.Wrapped)
             {
                 return;
             }
 
-            DrawNote(ui,
-                Loc.T(phase == CasinoRoomPhases.Open ? L.Casino.BingoNoCardsHint : L.Casino.BingoRoomRolling),
-                width, scale);
+            var hint = Loc.T(playback.Stage == BingoStage.Selling ? L.Casino.BingoNoCardsHint : L.Casino.BingoRoomRolling);
+            var width = MathF.Min(layout.Cards.Width, layout.Hero.Width + OverlayPad * 2f * scale);
+            var height = CasinoNotice.Height(CasinoNoticeKind.Info, string.Empty, hint, width, scale);
+            CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Info, string.Empty, hint, layout.Cards.Center.X - width * 0.5f,
+                layout.Cards.Center.Y - height * 0.5f, width, scale);
             return;
         }
 
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var gap = CardGap * scale;
-        var labelHeight = CardLabelHeight * scale;
-        var hero = HeroIndex(mine, holding);
-
-        var plate = CardPlatePadding * scale;
-        var columns = holding > 1 ? 2 : 1;
-        var usable = width - plate * 2f;
-        var cardWidth = columns == 2 ? (usable - gap - plate * 2f) * 0.5f : usable * 0.56f;
-        var cardHeight = BingoCardArt.HeightFor(cardWidth);
-        var rowStep = cardHeight + labelHeight + gap;
-        var rows = (holding + columns - 1) / columns;
-        for (var cardIndex = 0; cardIndex < holding; cardIndex++)
+        var hero = playback.HeroIndex;
+        DrawHero(drawList, mine, hero, scale);
+        if (layout.HasRail)
         {
-            var column = cardIndex % columns;
-            var row = cardIndex / columns;
-            var left = columns == 1
-                ? origin.X + (width - cardWidth) * 0.5f
-                : origin.X + plate + column * (cardWidth + gap + plate * 2f);
-            var cardMin = new Vector2(left, origin.Y + row * rowStep + labelHeight);
-            var card = new Rect(cardMin, new Vector2(cardMin.X + cardWidth, cardMin.Y + cardHeight));
-            DrawCard(drawList, ui, card, mine, cardIndex, labelHeight, cardIndex == hero && holding > 1, scale);
+            DrawRail(drawList, mine, holding, hero, deltaSeconds, scale);
         }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rows * rowStep - gap + Metrics.Space.Sm * scale));
-
-        var footnote = Loc.T(L.Casino.BingoMarksAuto);
-        var footBlock = Typography.MeasureWrappedBlock(footnote, TextStyles.Caption2, width);
-        Typography.DrawWrappedLeft(ImGui.GetCursorScreenPos(), footnote, ui.MutedInk, TextStyles.Caption2, width);
-        ImGui.Dummy(new Vector2(width, footBlock.Y));
     }
 
-    private int HeroIndex(CasinoBingoCardsDto? mine, int holding)
+    private void DrawHero(ImDrawListPtr drawList, CasinoBingoCardsDto? mine, int hero, float scale)
     {
-        var best = BestProgress(mine);
-        return best.CardIndex >= 0 && best.CardIndex < holding ? best.CardIndex : 0;
+        var card = layout.Hero;
+        if (card.Width <= 0f)
+        {
+            return;
+        }
+
+        var oneAway = playback.Stage == BingoStage.Calling && playback.OneAway(hero);
+        var glow = oneAway ? 0.35f + 0.65f * Pulse.Heartbeat(HeartbeatPeriod) : 0f;
+        BingoCardArt.DrawPlate(drawList, card, true, glow, scale);
+        var visible = playback.VisibleMaskOf(hero);
+        var stamped = playback.StampedMaskOf(hero);
+        BingoCardArt.DrawCard(drawList, card, BingoRoundPlayback.CardAt(mine, hero), visible, stamped, playback, hero,
+            scale);
+        var labelTop = layout.Cards.Min.Y;
+        var label = cardLabels[hero].Get(L.Casino.BingoCardLabel, hero + 1);
+        var labelWidth = Typography.Measure(label, TextStyles.FootnoteEmphasized).X;
+        Typography.Draw(drawList, new Vector2(card.Min.X, labelTop), label, CasinoColors.InkTitle,
+            TextStyles.FootnoteEmphasized);
+        var spare = card.Width - labelWidth - Metrics.Space.Sm * scale;
+        if (oneAway)
+        {
+            var chip = Typography.FitText(Loc.T(L.Casino.BingoOneAway), spare, TextStyles.FootnoteEmphasized);
+            var chipWidth = Typography.Measure(chip, TextStyles.FootnoteEmphasized).X;
+            Typography.Draw(drawList, new Vector2(card.Max.X - chipWidth, labelTop), chip,
+                CasinoColors.Money with { W = 0.6f + 0.4f * glow }, TextStyles.FootnoteEmphasized);
+        }
+        else if (ManualDaub && playback.Stage == BingoStage.Calling)
+        {
+            var hint = Typography.FitText(Loc.T(L.Bingo.DaubHint), spare, TextStyles.Caption2);
+            var hintWidth = Typography.Measure(hint, TextStyles.Caption2).X;
+            Typography.Draw(drawList, new Vector2(card.Max.X - hintWidth, labelTop), hint, CasinoColors.InkMuted,
+                TextStyles.Caption2);
+        }
+
+        if (ManualDaub && playback.Stage == BingoStage.Calling)
+        {
+            HandleDaubTaps(card, hero, visible & ~stamped);
+        }
     }
 
-    private void DrawCard(ImDrawListPtr drawList, AppSkin ui, Rect card, CasinoBingoCardsDto? mine, int cardIndex,
-        float labelHeight, bool hero, float scale)
+    private void HandleDaubTaps(Rect card, int cardIndex, int pending)
     {
-        var rounding = Metrics.Radius.Sm * scale;
-        var padding = new Vector2(CardPlatePadding * scale, CardPlatePadding * scale);
-        var plateMin = card.Min - padding;
-        var plateMax = card.Max + padding;
-        Elevation.Card(drawList, plateMin, plateMax, rounding, scale, hero ? 1f : 0.6f);
-        Squircle.Fill(drawList, plateMin, plateMax, rounding, ImGui.GetColorU32(ui.FieldSurface));
-        if (hero)
-        {
-            Squircle.Stroke(drawList, plateMin, plateMax, rounding,
-                ImGui.GetColorU32(Palette.WithAlpha(Gold, 0.55f)), 1.6f * scale);
-        }
-
-        var autoMask = playback.AutoMaskOf(cardIndex);
-        var stampedMask = playback.StampedMaskOf(cardIndex);
-        var label = Loc.T(L.Casino.BingoCardLabel, GameNumber.Label(cardIndex + 1));
-        var labelStyle = hero ? TextStyles.SubheadlineEmphasized : TextStyles.Footnote;
-        Typography.Draw(drawList, new Vector2(card.Min.X, card.Min.Y - labelHeight), label,
-            hero ? ui.TitleInk : ui.MutedInk, labelStyle);
-
-        var gap = BingoRules.NextGoalGap(autoMask, out _);
-        if (gap <= 2 && gap > 0)
-        {
-            var chip = gap == 1 ? Loc.T(L.Casino.BingoOneAway) : GameNumber.Label(gap);
-            var chipStyle = hero ? TextStyles.FootnoteEmphasized : TextStyles.Caption1;
-            var chipSize = Typography.Measure(chip, chipStyle);
-            var chipPad = 7f * scale;
-            var chipMax = new Vector2(card.Max.X, card.Min.Y - labelHeight * 0.12f);
-            var chipMin = new Vector2(chipMax.X - chipSize.X - chipPad * 2f, chipMax.Y - chipSize.Y - 3f * scale);
-            Squircle.Fill(drawList, chipMin, chipMax, (chipMax.Y - chipMin.Y) * 0.5f,
-                ImGui.GetColorU32(new Vector4(Gold.X, Gold.Y, Gold.Z, gap == 1 ? 0.26f : 0.14f)));
-            Typography.Draw(drawList, new Vector2(chipMin.X + chipPad, chipMin.Y + 1.5f * scale), chip, Gold,
-                chipStyle);
-        }
-
-        if (Settled(mine) && mine!.Payout > 0)
-        {
-            Squircle.Stroke(drawList, plateMin, plateMax, rounding, ImGui.GetColorU32(Gold), 1.6f * scale);
-        }
-
-        var numbers = BingoRoundPlayback.CardAt(mine, cardIndex);
-        BingoCardArt.Draw(drawList, ui, card, numbers, autoMask, stampedMask, playback, cardIndex, scale);
-        HandleCardTaps(card, cardIndex, autoMask, stampedMask);
-    }
-
-    private void HandleCardTaps(Rect card, int cardIndex, int autoMask, int stampedMask)
-    {
-        var pending = autoMask & ~stampedMask;
         if (pending == 0 || !UiInteract.Hover(card.Min, card.Max))
         {
             return;
         }
 
-        var cellSize = card.Width / BingoCardArt.Columns;
         for (var cellIndex = 0; cellIndex < BingoRules.Cells; cellIndex++)
         {
             if ((pending & (1 << cellIndex)) == 0)
@@ -993,12 +652,14 @@ internal sealed class BingoCabinet
                 continue;
             }
 
-            var column = BingoRules.ColumnOfCell(cellIndex);
-            var row = BingoRules.RowOfCell(cellIndex);
-            var min = new Vector2(card.Min.X + column * cellSize, card.Min.Y + row * cellSize);
-            var max = new Vector2(min.X + cellSize, min.Y + cellSize);
-            var hovered = UiInteract.Hover(min, max);
-            if (hovered && UiInteract.Click(min, max, hovered))
+            var cell = BingoCardArt.CellRect(card, cellIndex);
+            var hovered = UiInteract.Hover(cell.Min, cell.Max);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (UiInteract.Click(cell.Min, cell.Max, hovered, false))
             {
                 playback.Stamp(cardIndex, cellIndex);
                 return;
@@ -1006,79 +667,425 @@ internal sealed class BingoCabinet
         }
     }
 
-    private void DrawNote(AppSkin ui, string message, float width, float scale)
+    private void DrawRail(ImDrawListPtr drawList, CasinoBingoCardsDto? mine, int holding, int hero,
+        float deltaSeconds, float scale)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var inset = 12f * scale;
-        var block = Typography.MeasureWrappedBlock(message, TextStyles.Footnote, width - inset * 2f);
-        var height = block.Y + inset * 2f;
-        var min = origin;
-        var max = new Vector2(min.X + width, min.Y + height);
-        Squircle.Fill(drawList, min, max, Metrics.Radius.Grouped * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.10f)));
-        Squircle.Stroke(drawList, min, max, Metrics.Radius.Grouped * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.35f)), 1f * scale);
-        Typography.DrawWrappedLeft(new Vector2(min.X + inset, min.Y + inset), message, ui.TitleInk,
-            TextStyles.Footnote, width - inset * 2f);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Sm * scale));
-    }
-
-    private void DrawSeatMissing(AppSkin ui, float width, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var inset = 14f * scale;
-        var title = Loc.T(L.Casino.CabinetNoChipsTitle);
-        var hint = Loc.T(L.Casino.CabinetNoChipsHint);
-        var titleSize = Typography.Measure(title, TextStyles.SubheadlineEmphasized);
-        var block = Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, width - inset * 2f);
-        var height = titleSize.Y + block.Y + inset * 2f + 6f * scale + 44f * scale + Metrics.Space.Sm * scale;
-        var min = origin;
-        var max = new Vector2(min.X + width, min.Y + height);
-        ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
-        Typography.Draw(drawList, new Vector2(min.X + inset, min.Y + inset), title, ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        Typography.DrawWrappedLeft(new Vector2(min.X + inset, min.Y + inset + titleSize.Y + 6f * scale), hint,
-            ui.MutedInk, TextStyles.Footnote, width - inset * 2f);
-
-        var pillRect = new Rect(new Vector2(min.X + width * 0.2f, max.Y - inset - 44f * scale),
-            new Vector2(min.X + width * 0.8f, max.Y - inset));
-        if (ui.PillButton(pillRect, Loc.T(L.Casino.Cashier), true, true))
+        var rail = layout.Rail;
+        var side = rail.Width;
+        var step = side + (RailLabelHeight + RailGap) * scale;
+        var content = (holding - 1) * step - RailGap * scale;
+        var lowest = MathF.Min(0f, rail.Height - content);
+        PressSurface.Claim("##bingoRail", rail, out _);
+        var hovered = UiInteract.Hover(rail.Min, rail.Max);
+        var mouse = ImGui.GetMousePos();
+        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
-            openCashier();
+            railDragging = true;
+            railDragMoved = false;
+            railDragFrom = mouse.Y;
+            railDragStart = railOffset.Value;
         }
 
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Sm * scale));
+        if (railDragging)
+        {
+            if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
+            {
+                var travel = mouse.Y - railDragFrom;
+                if (MathF.Abs(travel) > DragThreshold * scale)
+                {
+                    railDragMoved = true;
+                    UiInteract.CancelPendingTap();
+                }
+
+                railOffset.SnapTo(railDragStart + travel);
+            }
+            else
+            {
+                railDragging = false;
+            }
+        }
+
+        if (hovered)
+        {
+            var wheel = ImGui.GetIO().MouseWheel;
+            if (wheel != 0f)
+            {
+                railOffset.SnapTo(railOffset.Value + wheel * WheelStep * scale);
+            }
+        }
+
+        if (!railDragging)
+        {
+            railOffset.Step(Math.Clamp(railOffset.Value, lowest, 0f), RailSettleSeconds, deltaSeconds);
+        }
+
+        drawList.PushClipRect(rail.Min, rail.Max, true);
+        var y = rail.Min.Y + railOffset.Value;
+        for (var cardIndex = 0; cardIndex < holding; cardIndex++)
+        {
+            if (cardIndex == hero)
+            {
+                continue;
+            }
+
+            DrawMini(drawList, new Rect(new Vector2(rail.Min.X, y), new Vector2(rail.Max.X, y + step)), cardIndex,
+                side, scale);
+            y += step;
+        }
+
+        drawList.PopClipRect();
     }
 
-    private void DrawClosed(Rect body, AppSkin ui, string reason, float scale)
+    private void DrawMini(ImDrawListPtr drawList, Rect slot, int cardIndex, float side, float scale)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var pad = Metrics.Space.Md * scale;
-        var left = body.Min.X + pad;
-        var width = body.Width - pad * 2f;
-        var inset = 14f * scale;
+        var label = Typography.FitText(cardLabels[cardIndex].Get(L.Casino.BingoCardLabel, cardIndex + 1), side,
+            TextStyles.Caption2);
+        Typography.Draw(drawList, slot.Min, label, CasinoColors.InkMuted, TextStyles.Caption2);
+        var top = slot.Min.Y + RailLabelHeight * scale;
+        var inset = 4f * scale;
+        var card = new Rect(new Vector2(slot.Min.X + inset, top + inset), new Vector2(slot.Max.X - inset, top + side - inset));
+        var oneAway = playback.Stage == BingoStage.Calling && playback.OneAway(cardIndex);
+        BingoCardArt.DrawPlate(drawList, card, false,
+            oneAway ? 0.35f + 0.65f * Pulse.Heartbeat(HeartbeatPeriod) : 0f, scale);
+        BingoCardArt.DrawMini(drawList, card, playback.VisibleMaskOf(cardIndex), playback.StampedMaskOf(cardIndex),
+            scale);
+        var hit = new Rect(slot.Min, new Vector2(slot.Max.X, top + side));
+        var hovered = UiInteract.Hover(hit.Min, hit.Max) && UiInteract.Hover(layout.Rail.Min, layout.Rail.Max);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (!UiInteract.Click(hit.Min, hit.Max, hovered, false) || railDragMoved)
+        {
+            return;
+        }
+
+        playback.Promote(cardIndex);
+        CasinoSfx.Play(UiSound.CardSnap);
+    }
+
+    private void DrawPodiums(ImDrawListPtr drawList, CasinoBingoRoomStateDto? board, float scale)
+    {
+        var row = layout.Podiums;
+        var gap = PodiumGap * scale;
+        var width = (row.Width - gap * (BingoRules.StageCount - 1)) / BingoRules.StageCount;
+        DisplayLadder(board, ladder);
+        playback.BestCard(out var gapToGoal, out var goal);
+        for (var stageIndex = 0; stageIndex < BingoRules.StageCount; stageIndex++)
+        {
+            var min = new Vector2(row.Min.X + stageIndex * (width + gap), row.Min.Y);
+            var rect = new Rect(min, new Vector2(min.X + width, row.Max.Y));
+            var chasing = playback.CardCount > 0 && playback.Stage == BingoStage.Calling && goal == stageIndex
+                && gapToGoal > 0;
+            DrawPodium(drawList, board, stageIndex, rect, chasing, scale);
+        }
+    }
+
+    private void DrawPodium(ImDrawListPtr drawList, CasinoBingoRoomStateDto? board, int stageIndex, Rect rect,
+        bool chasing, float scale)
+    {
+        var awarded = StageAwarded(board, stageIndex);
+        var mine = playback.WonStage(stageIndex);
+        var rounding = Metrics.Radius.Md * scale;
+        var lit = mine ? 1f : awarded is not null ? 0.55f : chasing ? 0.3f + 0.2f * Pulse.Wave(Pulse.Breath) : 0.15f;
+        var tint = mine ? CasinoColors.Money : CasinoColors.LightB;
+        Squircle.FillVerticalGradient(drawList, rect.Min, rect.Max, rounding,
+            ImGui.GetColorU32(Vector4.Lerp(CasinoColors.FeltBottom, tint, 0.25f * lit) with { W = 0.92f }),
+            ImGui.GetColorU32(new Vector4(0.03f, 0.02f, 0.06f, 0.92f)));
+        Squircle.Fill(drawList, rect.Min, new Vector2(rect.Max.X, rect.Min.Y + 3f * scale), rounding * 0.4f,
+            ImGui.GetColorU32(tint with { W = 0.4f + 0.6f * lit }));
+        if (mine)
+        {
+            CasinoLights.BulbChase(drawList, rect, rounding, scale, lightPhase, CasinoLights.BulbPitch, CasinoColors.Money, CasinoColors.LightA, 1f);
+        }
+
+        var pad = PodiumPad * scale;
+        var inner = rect.Width - pad * 2f;
+        var y = rect.Min.Y + pad;
+        var name = Typography.FitText(Loc.T(StageNames[stageIndex]), inner, TextStyles.Caption1);
+        var nameWidth = Typography.Measure(name, TextStyles.Caption1).X;
+        Typography.Draw(drawList, new Vector2(rect.Center.X - nameWidth * 0.5f, y), name,
+            awarded is null ? CasinoColors.InkBody : CasinoColors.InkTitle, TextStyles.Caption1);
+        y += Typography.LineHeight(TextStyles.Caption1);
+        var prize = NumberText.Compact(awarded?.Prize ?? ladder[stageIndex]);
+        var prizeSize = CurrencyGlyph.MeasureAmount(prize, TextStyles.SubheadlineEmphasized);
+        CurrencyGlyph.DrawAmount(drawList, new Vector2(rect.Center.X - prizeSize.X * 0.5f, y), prize,
+            CurrencyKind.Chips, awarded is null ? CasinoColors.Money with { W = 0.8f } : CasinoColors.Money,
+            TextStyles.SubheadlineEmphasized);
+        y += prizeSize.Y;
+        if (awarded is null)
+        {
+            return;
+        }
+
+        var status = mine
+            ? Loc.T(L.Bingo.You)
+            : stageBalls[stageIndex].Get(L.Casino.BingoLadderGone, awarded.Ball);
+        status = Typography.FitText(status, inner, TextStyles.Caption2);
+        var statusWidth = Typography.Measure(status, TextStyles.Caption2).X;
+        Typography.Draw(drawList, new Vector2(rect.Center.X - statusWidth * 0.5f, y), status,
+            mine ? CasinoColors.Money : CasinoColors.InkMuted, TextStyles.Caption2);
+    }
+
+    private void DrawResult(ImDrawListPtr drawList, CasinoBingoRoomStateDto? board, CasinoBingoCardsDto? mine,
+        int holding, bool calledOff, float scale)
+    {
+        var area = layout.Cards;
+        if (area.Height <= 0f)
+        {
+            return;
+        }
+
+        var rounding = Metrics.Radius.Grouped * scale;
+        Squircle.Fill(drawList, area.Min, area.Max, rounding,
+            ImGui.GetColorU32(new Vector4(0.02f, 0.015f, 0.05f, VeilAlpha)));
+        var pad = OverlayPad * scale;
+        var inner = area.Width - pad * 2f;
+        var left = area.Min.X + pad;
+        var y = area.Min.Y + pad;
+        drawList.PushClipRect(area.Min, area.Max, true);
+        var title = Typography.FitText(Loc.T(L.Casino.BingoRoomWrapped), inner, TextStyles.SubheadlineEmphasized);
+        Typography.Draw(drawList, new Vector2(left, y), title, CasinoColors.InkTitle, TextStyles.SubheadlineEmphasized);
+        y += Typography.LineHeight(TextStyles.SubheadlineEmphasized) + Metrics.Space.Xxs * scale;
+        var won = !calledOff && Settled(mine) && mine!.Payout > 0;
+        var outcome = OutcomeText(mine, holding, calledOff, won);
+        if (won)
+        {
+            var fitted = Typography.FitText(outcome, inner, TextStyles.Title3);
+            Typography.Draw(drawList, new Vector2(left, y), fitted, CasinoColors.Money, TextStyles.Title3);
+            y += Typography.LineHeight(TextStyles.Title3);
+        }
+        else
+        {
+            y += Typography.DrawWrappedLeft(new Vector2(left, y), outcome, CasinoColors.InkMuted, TextStyles.Footnote,
+                inner);
+        }
+
+        if (calledOff)
+        {
+            drawList.PopClipRect();
+            return;
+        }
+
+        y += Metrics.Space.Sm * scale;
+        var fullHouse = StageAwarded(board, BingoRules.StageFullHouse);
+        if (board is not null && board.EarlyBird && fullHouse is not null)
+        {
+            y = DrawEarlyBird(drawList, fullHouse.Ball, left, y, inner, scale);
+        }
+
+        for (var stageIndex = 0; stageIndex < BingoRules.StageCount; stageIndex++)
+        {
+            var awarded = StageAwarded(board, stageIndex);
+            if (awarded is null)
+            {
+                continue;
+            }
+
+            DrawWinnersRow(drawList, awarded, stageIndex, left, y, inner, scale);
+            y += RowHeight * scale;
+        }
+
+        drawList.PopClipRect();
+    }
+
+    private string OutcomeText(CasinoBingoCardsDto? mine, int holding, bool calledOff, bool won)
+    {
+        if (calledOff)
+        {
+            return Loc.T(L.Casino.BingoCalledOff);
+        }
+
+        if (holding == 0)
+        {
+            return Loc.T(L.Casino.BingoWatchedRoom);
+        }
+
+        if (!Settled(mine))
+        {
+            return Loc.T(L.Casino.BingoCardsPending);
+        }
+
+        if (!won)
+        {
+            return Loc.T(L.Casino.BingoNoWin);
+        }
+
+        var payout = mine!.Payout;
+        return outcomeLabel.Get(L.Casino.BingoYouWon, (int)Math.Min(payout, int.MaxValue));
+    }
+
+    private float DrawEarlyBird(ImDrawListPtr drawList, int ball, float left, float y, float width, float scale)
+    {
+        var banner = Typography.FitText(Loc.T(L.Bingo.EarlyBird), width * 0.5f, TextStyles.Headline);
+        var bannerSize = Typography.Measure(banner, TextStyles.Headline);
+        var height = bannerSize.Y + Metrics.Space.Xs * 2f * scale;
+        var pillMax = new Vector2(left + bannerSize.X + Metrics.Space.Md * 2f * scale, y + height);
+        var flicker = 0.75f + 0.25f * Pulse.Wave(Pulse.Fast);
+        Squircle.Fill(drawList, new Vector2(left, y), pillMax, height * 0.5f,
+            ImGui.GetColorU32(CasinoColors.LightA with { W = 0.18f * flicker }));
+        Squircle.Stroke(drawList, new Vector2(left, y), pillMax, height * 0.5f,
+            ImGui.GetColorU32(CasinoColors.LightA with { W = flicker }), 1.6f * scale);
+        Typography.Draw(drawList, new Vector2(left + Metrics.Space.Md * scale, y + Metrics.Space.Xs * scale), banner,
+            CasinoColors.InkTitle, TextStyles.Headline);
+        var hintLeft = pillMax.X + Metrics.Space.Sm * scale;
+        var hint = Typography.FitText(earlyBirdLabel.Get(L.Bingo.EarlyBirdHint, ball), left + width - hintLeft,
+            TextStyles.Caption1);
+        Typography.Draw(drawList,
+            new Vector2(hintLeft, y + (height - Typography.LineHeight(TextStyles.Caption1)) * 0.5f), hint,
+            CasinoColors.InkBody, TextStyles.Caption1);
+        return y + height + Metrics.Space.Sm * scale;
+    }
+
+    private void DrawWinnersRow(ImDrawListPtr drawList, CasinoBingoStageDto awarded, int stageIndex, float left,
+        float y, float width, float scale)
+    {
+        var centerY = y + RowHeight * scale * 0.5f;
+        var nameWidth = width * 0.32f;
+        var name = Typography.FitText(Loc.T(StageNames[stageIndex]), nameWidth, TextStyles.Footnote);
+        var lineHeight = Typography.LineHeight(TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(left, centerY - lineHeight * 0.5f), name, CasinoColors.InkTitle,
+            TextStyles.Footnote);
+        var winners = Math.Max(1, awarded.Winners);
+        var shown = Math.Min(MaxAvatars, winners);
+        var avatarLeft = left + nameWidth + Metrics.Space.Xs * scale;
+        var mine = playback.WonStage(stageIndex);
+        for (var avatar = 0; avatar < shown; avatar++)
+        {
+            var center = new Vector2(avatarLeft + AvatarRadius * scale + avatar * AvatarStep * scale, centerY);
+            var tint = mine && avatar == 0 ? CasinoColors.Money : AvatarTints[avatar % AvatarTints.Length];
+            drawList.AddCircleFilled(center, AvatarRadius * scale, ImGui.GetColorU32(tint with { W = 0.9f }), 16);
+            drawList.AddCircle(center, AvatarRadius * scale, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.55f)), 16,
+                MathF.Max(1f, scale));
+        }
+
+        var labelLeft = avatarLeft + AvatarRadius * 2f * scale + (shown - 1) * AvatarStep * scale
+            + Metrics.Space.Sm * scale;
+        var label = winners > 1
+            ? stageWinners[stageIndex].Get(L.Bingo.Winners, winners)
+            : Loc.T(L.Bingo.OneWinner);
+        if (mine)
+        {
+            label = Loc.T(L.Bingo.You);
+        }
+
+        label = Typography.FitText(label, MathF.Max(0f, left + width - labelLeft), TextStyles.Caption1);
+        Typography.Draw(drawList, new Vector2(labelLeft, centerY - Typography.LineHeight(TextStyles.Caption1) * 0.5f),
+            label, mine ? CasinoColors.Money : CasinoColors.InkBody, TextStyles.Caption1);
+    }
+
+    private void DrawDeck(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, CasinoStateDto state,
+        CasinoSittingDto sitting, int holding, bool calledOff, float scale)
+    {
+        var headroom = BingoRules.MaxCards - holding;
+        var selling = playback.Stage == BingoStage.Selling && !calledOff;
+        requestedCards = Math.Clamp(requestedCards, 1, Math.Max(1, headroom));
+        var stake = BingoRules.StakeFor(requestedCards);
+        composer.Reset(stake);
+        var enabled = selling && headroom > 0 && !state.StakesPaused && !state.Draining && !rooms.StakeInFlight
+            && !frame.Blocked;
+        var model = new BetComposerModel(stake, stake, sitting.Stack, L.Bingo.BuyAction, enabled, FixedAmount: true,
+            Knob: true, Repeat: enabled && stage.RepeatPressed(), Busy: rooms.StakeInFlight);
+        var action = composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds);
+        DrawKnob(ImGui.GetWindowDrawList(), composer.KnobRect, selling, headroom, holding, calledOff, enabled, scale);
+        if (action != BetComposerAction.Confirm)
+        {
+            return;
+        }
+
+        inlineReason = string.Empty;
+        rooms.BuyBingoCards(requestedCards);
+        CasinoSfx.Play(UiSound.ChipSlide);
+    }
+
+    private void DrawKnob(ImDrawListPtr drawList, Rect knob, bool selling, int headroom, int holding, bool calledOff,
+        bool enabled, float scale)
+    {
+        if (knob.Width <= 0f || knob.Height <= 0f)
+        {
+            return;
+        }
+
+        if (!selling || headroom <= 0)
+        {
+            var message = calledOff
+                ? Loc.T(L.Casino.BingoCalledOff)
+                : headroom <= 0 && selling
+                    ? holdingLabel.Get(L.Casino.BingoHoldingFull, holding)
+                    : Loc.T(playback.Stage == BingoStage.Calling ? L.Casino.BingoCardsFinal : L.Casino.BingoNextRoomSale);
+            var fitted = Typography.FitText(message, knob.Width, TextStyles.Footnote);
+            Typography.DrawCentered(drawList, knob.Center, fitted, CasinoColors.InkBody, TextStyles.Footnote);
+            return;
+        }
+
+        var label = Typography.FitText(Loc.T(L.Bingo.KnobCards), knob.Width * 0.25f, TextStyles.Caption1);
+        var labelWidth = Typography.Measure(label, TextStyles.Caption1).X;
+        Typography.Draw(drawList,
+            new Vector2(knob.Min.X, knob.Center.Y - Typography.LineHeight(TextStyles.Caption1) * 0.5f), label,
+            CasinoColors.InkMuted, TextStyles.Caption1);
+        var gap = KnobPillGap * scale;
+        var left = knob.Min.X + labelWidth + Metrics.Space.Sm * scale;
+        var pill = (knob.Max.X - left - gap * (BingoRules.MaxCards - 1)) / BingoRules.MaxCards;
+        for (var count = 1; count <= BingoRules.MaxCards; count++)
+        {
+            var min = new Vector2(left + (count - 1) * (pill + gap), knob.Min.Y);
+            var max = new Vector2(min.X + pill, knob.Max.Y);
+            var available = enabled && count <= headroom;
+            var selected = count == requestedCards;
+            var hovered = available && UiInteract.Hover(min, max);
+            var rounding = (max.Y - min.Y) * 0.5f;
+            var fill = selected ? CasinoColors.LightA with { W = 0.85f } : new Vector4(1f, 1f, 1f, hovered ? 0.14f : 0.07f);
+            Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(fill));
+            if (selected)
+            {
+                Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(CasinoColors.MoneyHighlight),
+                    MathF.Max(1f, scale));
+            }
+
+            var ink = selected ? CasinoColors.InkTitle : available ? CasinoColors.InkBody : CasinoColors.InkMuted;
+            Typography.DrawCentered(drawList, (min + max) * 0.5f, GameNumber.Label(count),
+                ink with { W = available || selected ? 1f : 0.45f }, TextStyles.SubheadlineEmphasized);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (available && UiInteract.Click(min, max, hovered, false))
+            {
+                requestedCards = count;
+                inlineReason = string.Empty;
+                CasinoSfx.Play(UiSound.ChipSlide);
+            }
+        }
+    }
+
+    private void DrawClosed(ImDrawListPtr drawList, AppSkin ui, string reason, Rect safe, float scale)
+    {
         var title = Loc.T(L.Casino.BingoClosedTitle);
         var hint = Loc.T(CasinoReasons.TryMessage(reason, out var known) ? known : L.Casino.BingoClosedHint);
-        var titleSize = Typography.Measure(title, TextStyles.SubheadlineEmphasized);
-        var block = Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, width - inset * 2f);
-        var height = titleSize.Y + block.Y + inset * 2f + 6f * scale;
-        var min = new Vector2(left, body.Min.Y + Metrics.Space.Lg * scale);
-        var max = new Vector2(left + width, min.Y + height);
-        ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
-        Typography.Draw(drawList, new Vector2(min.X + inset, min.Y + inset), title, ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        Typography.DrawWrappedLeft(new Vector2(min.X + inset, min.Y + inset + titleSize.Y + 6f * scale), hint,
-            ui.MutedInk, TextStyles.Footnote, width - inset * 2f);
-
-        var pillY = max.Y + Metrics.Space.Md * scale;
-        var pillRect = new Rect(new Vector2(left + width * 0.2f, pillY),
-            new Vector2(left + width * 0.8f, pillY + 44f * scale));
-        if (ui.PillButton(pillRect, Loc.T(L.Casino.WheelBackToFloor), true, true))
+        CasinoNotice.DrawWithAction(drawList, ui, CasinoNoticeKind.Card, title, hint, Loc.T(L.Casino.WheelBackToFloor),
+            safe.Min.X, safe.Min.Y + Metrics.Space.Lg * scale, safe.Width, scale, out var pressed);
+        if (pressed)
         {
             leaveRoom();
         }
     }
 
+    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect deck, float scale)
+    {
+        var inset = BetComposer.Pad * scale;
+        var title = Loc.T(L.Casino.CabinetNoChipsTitle);
+        var titleHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
+        Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
+            Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), ui.TitleInk,
+            TextStyles.SubheadlineEmphasized);
+        var top = deck.Min.Y + inset + titleHeight + Metrics.Space.Sm * scale;
+        var rect = new Rect(new Vector2(deck.Min.X + inset, top),
+            new Vector2(deck.Max.X - inset, top + Button.LargeHeight * scale));
+        if (Button.Draw(drawList, rect, Loc.T(L.Casino.Cashier), ui.Ink))
+        {
+            openCashier();
+        }
+    }
 }
