@@ -94,6 +94,11 @@ internal sealed partial class CasinoApp
             heroCards.Add(StripPage.Table);
         }
 
+        if (casino.HasFeature(CasinoFeatures.Challenges) && floor.LiveChallenge() is not null)
+        {
+            heroCards.Add(StripPage.Challenge);
+        }
+
         heroCards.Settle();
     }
 
@@ -167,6 +172,9 @@ internal sealed partial class CasinoApp
                 DrawHeroOverlay(drawList, shown, Loc.T(L.Strip.HeroTableEyebrow), TableName(hotTable),
                     texts.Counts(L.Casino.TableSeats, hotTable.SeatedCount, hotTable.MaxSeats), scale);
                 break;
+            case StripPage.Challenge:
+                DrawChallengePage(drawList, shown, radius, scale);
+                break;
         }
 
         if (!UiInteract.Click(card.Min, card.Max, hovered) || !interactive)
@@ -185,6 +193,9 @@ internal sealed partial class CasinoApp
                 break;
             case StripPage.Table when hotTable is not null:
                 OpenTable(hotTable.TableId);
+                break;
+            case StripPage.Challenge:
+                OpenChallenge(shown);
                 break;
         }
     }

@@ -110,6 +110,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
     {
         this.floor = floor;
         this.configuration = configuration;
+        fameView = new Strip.FameView(floor);
         this.session = session;
         this.coins = coins;
         this.casino = casino;
@@ -213,6 +214,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         jackpotRoll.Snap(casino.Jackpot);
         historyLoadFailed = false;
         ResetLaunch();
+        clubSheet.Close();
         heroCards.Reset();
         shelves.Reset();
         winsTicker.Reset();
@@ -337,6 +339,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         SyncRaceLandscape();
         floor.EnsureFresh();
         ConsumeFloorNotes();
+        ConsumeMissionNotes();
+        clubSheet.Gate();
         if (!DrawLaunchLayer(context.Content))
         {
             router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
@@ -360,6 +364,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         venueSheet.Draw(screenArea, ui);
         HandleVenueSheet();
         rulesSheet.Draw(screenArea, ui);
+        clubSheet.Draw(screenArea, ui);
         cashier.Draw(screenArea, ui, openLimits);
         tradePrompt.Draw(screenArea, ui);
         if (rulesSheet.TakePlayRequest() && !PlayingGame(rulesSheet.GameId))
@@ -631,6 +636,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
             case CasinoScreen.RoundDetail:
                 DrawRoundDetail(navBar.Body, route.RoundId);
                 break;
+            case CasinoScreen.Fame:
+                fameView.Draw(navBar.Body, ui);
+                break;
         }
 
         AppHeader.EndLargeTitle(in navBar, context, "casino.page.nav", RouteTitle(route), NavBarStyle.From(ui),
@@ -694,6 +702,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         CasinoScreen.History => Loc.T(L.Casino.HistoryRow),
         CasinoScreen.Fairness => Loc.T(L.Casino.FairnessRow),
         CasinoScreen.RoundDetail => Loc.T(L.Casino.RoundDetailTitle),
+        CasinoScreen.Fame => Loc.T(L.Club.FameTitle),
         CasinoScreen.DailySpin => Loc.T(L.Casino.GameDailySpin),
         CasinoScreen.Cabinet => Loc.T(GameName(route.GameId)),
         _ => TabTitle(routes.Tab),

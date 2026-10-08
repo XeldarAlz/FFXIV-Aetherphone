@@ -11033,6 +11033,58 @@ internal static class L
     internal static class Club
     {
         public static readonly LocString Hidden = new("casino.club.hidden", "Hidden");
+        public static readonly LocString MissionsTitle = new("casino.club.missionsTitle", "Today's missions");
+        public static readonly LocString MissionsReset = new("casino.club.missionsReset", "New in {0}");
+        public static readonly LocString MissionDone = new("casino.club.missionDone", "Done");
+        public static readonly LocString MissionReward = new("casino.club.missionReward", "+{0}");
+        public static readonly LocString MissionProgress = new("casino.club.missionProgress", "{0} of {1}");
+        public static readonly LocString MissionCompleteToast = new("casino.club.missionCompleteToast", "Mission complete. Claim your chips on the Floor.");
+        public static readonly LocString ReasonMissionIncomplete = new("casino.club.reasonMissionIncomplete", "That mission is not finished yet. Keep playing to complete it.");
+        public static readonly LocString MissionSpin = new("casino.club.missionSpin", "Spin {0} times");
+        public static readonly LocString MissionHands = new("casino.club.missionHands", "Play {0} hands of blackjack");
+        public static readonly LocString MissionWheel = new("casino.club.missionWheel", "Bet on {0} wheel spins");
+        public static readonly LocString MissionScratch = new("casino.club.missionScratch", "Scratch {0} cards");
+        public static readonly LocString MissionDrop = new("casino.club.missionDrop", "Drop {0} Plinko balls");
+        public static readonly LocString MissionRaces = new("casino.club.missionRaces", "Bet on {0} races");
+        public static readonly LocString MissionRoundsOf = new("casino.club.missionRoundsOf", "Play {0} rounds of {1}");
+        public static readonly LocString MissionRounds = new("casino.club.missionRounds", "Play {0} rounds of anything");
+        public static readonly LocString MissionGames = new("casino.club.missionGames", "Play {0} different games");
+        public static readonly LocString MissionWins = new("casino.club.missionWins", "Win {0} rounds");
+        public static readonly LocString MissionWinsOf = new("casino.club.missionWinsOf", "Win {0} rounds of {1}");
+        public static readonly LocString MissionHitOnce = new("casino.club.missionHitOnce", "Hit {0} on any game");
+        public static readonly LocString MissionHitOnceOf = new("casino.club.missionHitOnceOf", "Hit {0} on {1}");
+        public static readonly LocString MissionHits = new("casino.club.missionHits", "Hit {0} or more, {1} times");
+        public static readonly LocString MissionMaxBet = new("casino.club.missionMaxBet", "Bet your max once");
+        public static readonly LocString MissionMaxBets = new("casino.club.missionMaxBets", "Bet your max {0} times");
+        public static readonly LocString MissionHosted = new("casino.club.missionHosted", "Play a hand at a hosted table");
+        public static readonly LocString MissionHostedMany = new("casino.club.missionHostedMany", "Play {0} hands at hosted tables");
+        public static readonly LocString MissionGeneric = new("casino.club.missionGeneric", "Finish today's mission");
+        public static readonly LocString TiersTitle = new("casino.club.tiersTitle", "Gamba Club tiers");
+        public static readonly LocString TiersIntro = new("casino.club.tiersIntro", "Club points come from every chip you wager, counted in bet units. Tiers never reset.");
+        public static readonly LocString TierFloor = new("casino.club.tierFloor", "From {0} points");
+        public static readonly LocString PerksWithReload = new("casino.club.perksWithReload", "{0}, daily reload");
+        public static readonly LocString YouAreHere = new("casino.club.youAreHere", "You");
+        public static readonly LocString ChallengeEyebrow = new("casino.club.challengeEyebrow", "LIVE CHALLENGE");
+        public static readonly LocString ChallengeLeads = new("casino.club.challengeLeads", "{0} leads at {1}");
+        public static readonly LocString ChallengeLeadsCount = new("casino.club.challengeLeadsCount", "{0} leads with {1} hits");
+        public static readonly LocString ChallengeNoLeader = new("casino.club.challengeNoLeader", "No one has claimed it yet");
+        public static readonly LocString ChallengeEndsIn = new("casino.club.challengeEndsIn", "Ends in {0}");
+        public static readonly LocString ChallengeReward = new("casino.club.challengeReward", "Prize: {0} chips");
+        public static readonly LocString FameTitle = new("casino.club.fameTitle", "Hall of Fame");
+        public static readonly LocString FameSeeAll = new("casino.club.fameSeeAll", "See all");
+        public static readonly LocString FamePodiumTitle = new("casino.club.famePodiumTitle", "This week's top winners");
+        public static readonly LocString FameProfit = new("casino.club.fameProfit", "Profit");
+        public static readonly LocString FameMultiplier = new("casino.club.fameMultiplier", "Multiplier");
+        public static readonly LocString FameWin = new("casino.club.fameWin", "Biggest win");
+        public static readonly LocString FamePoker = new("casino.club.famePoker", "Poker");
+        public static readonly LocString FameThisWeek = new("casino.club.fameThisWeek", "This week");
+        public static readonly LocString FameLastWeek = new("casino.club.fameLastWeek", "Last week");
+        public static readonly LocString FameEmpty = new("casino.club.fameEmpty", "No one on this board yet. Players who allow leaderboards show here as they win.");
+        public static readonly LocString FameYourRank = new("casino.club.fameYourRank", "You are #{0}");
+        public static readonly LocString FameNotRanked = new("casino.club.fameNotRanked", "You are not on this board yet");
+        public static readonly LocString FameOptIn = new("casino.club.fameOptIn", "Only players who allow leaderboards in their profile are named. Everyone else shows as Hidden.");
+        public static readonly LocString FameChampionLine = new("casino.club.fameChampionLine", "Last week's champion: {0}");
+        public static readonly LocString FameChampionValue = new("casino.club.fameChampionValue", "Champion with {0} profit");
     }
 
     internal static class Machines

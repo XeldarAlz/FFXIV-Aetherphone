@@ -60,7 +60,19 @@ internal sealed partial class CasinoApp
             {
                 var clubTop = SectionTitle(drawList, new Vector2(origin.X, cursorY), width,
                     Loc.T(L.Strip.ClubHeading), scale);
+                var clubMin = new Vector2(origin.X, clubTop);
+                var clubMax = new Vector2(origin.X + width, clubTop + clubCard.Height(scale));
+                var overClub = UiInteract.Hover(clubMin, clubMax);
                 cursorY = clubCard.Draw(drawList, ui, club, origin.X, clubTop, width, scale);
+                if (overClub)
+                {
+                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                }
+
+                if (UiInteract.Click(clubMin, clubMax, overClub))
+                {
+                    clubSheet.Open(club.Tier);
+                }
             }
 
             if (state is not null)

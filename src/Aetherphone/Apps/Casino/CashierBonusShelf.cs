@@ -103,6 +103,15 @@ internal sealed class CashierBonusShelf
         UiFeedback.Play(UiSound.CasinoChips);
     }
 
+    public void Shower(Vector2 origin, float scale)
+    {
+        showerOrigin = origin;
+        shower.Emit(CasinoLights.CoinShower(scale), showerOrigin, ShowerBurst);
+        emitter = CasinoLights.CoinShowerEmitter(scale, ShowerRate);
+        showerLeft = ShowerSeconds;
+        UiFeedback.Play(UiSound.CoinShower);
+    }
+
     public string TakeRefusal()
     {
         var taken = refusal;
