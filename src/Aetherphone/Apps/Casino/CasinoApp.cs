@@ -340,7 +340,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 scratch.Draw(stage, frame, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Barkeep, StringComparison.Ordinal):
-                barkeep.Draw(body, ui);
+                barkeep.Draw(stage, frame, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Wheel, StringComparison.Ordinal):
                 wheel.Draw(stage, frame, ui);
@@ -384,7 +384,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 DeckHeight: Cabinets.ScratchCabinet.DeckHeight, BetsRail: true, InstantAvailable: true,
                 ReturnTenths: Core.Casino.ScratchRules.ReturnTenths(scratch.CurrentTier), Extra: L.Casino.ScratchOdds),
             CasinoGames.Barkeep => new CasinoStageSpec(route.GameId, L.Casino.GameBarkeep, Backdrop.Strip,
-                Warmth: 1f),
+                DeckHeight: Cabinets.BarkeepCabinet.DeckHeight, Practice: barkeep.Practicing, BetsRail: true,
+                ReturnTenths: Cabinets.BarkeepCabinet.ReturnTenths, Warmth: 1f),
             CasinoGames.Bingo => new CasinoStageSpec(route.GameId, L.Casino.GameBingo, Backdrop.Arena),
             CasinoGames.Wheel => new CasinoStageSpec(route.GameId, L.Casino.GameWheel, Backdrop.Strip, Room: true,
                 DeckHeight: Cabinets.WheelCabinet.DeckHeight),
@@ -718,7 +719,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             return;
         }
 
-        if (!casino.HasChips)
+        if (!casino.HasChips && !string.Equals(gameId, CasinoGames.Barkeep, StringComparison.Ordinal))
         {
             cashier.Open();
             return;

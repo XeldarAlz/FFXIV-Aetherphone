@@ -10659,6 +10659,15 @@ internal static class L
         public static readonly LocString TourTonightBody = new("casino.tour.tonightBody", "How your night is going sits right under your chips. Tap it any time to set a daily loss limit.");
     }
 
+    internal static class Barkeep
+    {
+        public static readonly LocString StartFor = new("casino.barkeep.startFor", "Start a shift {0}");
+        public static readonly LocString LadderShare = new("casino.barkeep.ladderShare", "{0}% of a perfect shift pays {1}");
+        public static readonly LocString Combo = new("casino.barkeep.combo", "Combo x{0}");
+        public static readonly LocString Fever = new("casino.barkeep.fever", "Fever");
+        public static readonly LocString Tips = new("casino.barkeep.tips", "Tips");
+        public static readonly LocString ScoreOf = new("casino.barkeep.scoreOf", "{0} of {1}");    }
+
     internal static class Strip
     {
         public static readonly LocString Practice = new("casino.strip.practice", "Practice");

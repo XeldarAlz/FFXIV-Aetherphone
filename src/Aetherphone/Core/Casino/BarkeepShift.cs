@@ -128,6 +128,11 @@ internal sealed class BarkeepShift
         return patrons[patronIndex].StepKinds[step];
     }
 
+    public int ArrivalOf(int patronIndex)
+    {
+        return patrons[patronIndex].ArrivalSecond;
+    }
+
     public int CurrentOrderGrade(int step)
     {
         return AllServed ? 0 : committedGrades[completedOrders][step];
