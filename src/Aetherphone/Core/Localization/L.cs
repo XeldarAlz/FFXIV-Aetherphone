@@ -11018,6 +11018,16 @@ internal static class L
         public static readonly LocString TourLiveBody = new("casino.strip.tourLiveBody", "The Live tab lists every room and table running right now, with seats and countdowns.");
         public static readonly LocString TourRecordsTitle = new("casino.strip.tourRecordsTitle", "On the record");
         public static readonly LocString TourRecordsBody = new("casino.strip.tourRecordsBody", "History, fairness checks and your limits are always one tap away.");
+        public static readonly LocString LiveOpenSeats = new("casino.strip.liveOpenSeats", "Open seats");
+        public static readonly LocString LiveFriends = new("casino.strip.liveFriends", "Friends");
+        public static readonly LocString LiveHighRoller = new("casino.strip.liveHighRoller", "High roller");
+        public static readonly LocString LiveJoin = new("casino.strip.liveJoin", "Join");
+        public static readonly LocString LiveWatch = new("casino.strip.liveWatch", "Watch");
+        public static readonly LocString LiveEmptyTitle = new("casino.strip.liveEmptyTitle", "Nothing live here");
+        public static readonly LocString LiveEmptyBody = new("casino.strip.liveEmptyBody", "No room or table matches this filter right now. Pick All, or host your own table.");
+        public static readonly LocString LiveNoFriends = new("casino.strip.liveNoFriends", "None of your friends is hosting a table right now. Your friend list is read from the game.");
+        public static readonly LocString LiveGilStakes = new("casino.strip.liveGilStakes", "Up to {0} gil");
+        public static readonly LocString LiveSeatsWatching = new("casino.strip.liveSeatsWatching", "{0} seated, {1} watching");
     }
 
     internal static class Club
