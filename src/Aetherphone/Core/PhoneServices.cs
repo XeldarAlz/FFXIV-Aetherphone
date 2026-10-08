@@ -127,6 +127,7 @@ internal sealed class PhoneServices : IDisposable
     public required Casino.CasinoHistoryStore CasinoHistory { get; init; }
     public required Casino.CasinoRoomsStore CasinoRooms { get; init; }
     public required Casino.CasinoTablesStore CasinoTables { get; init; }
+    public required Casino.HoldemStore Holdem { get; init; }
     public required Casino.CasinoSpinStore CasinoSpin { get; init; }
     public required Casino.CasinoTurnNotifier CasinoTurns { get; init; }
     public required Casino.CasinoLauncher CasinoLauncher { get; init; }
@@ -414,6 +415,7 @@ internal sealed class PhoneServices : IDisposable
         var casinoRooms = new Casino.CasinoRoomsStore(aethernetSession, casinoApi.Casino, casino, visibility,
             realtimeSignals);
         var casinoTables = new Casino.CasinoTablesStore(aethernetSession, casinoApi.Casino, casino, visibility);
+        var holdem = new Casino.HoldemStore(aethernetSession, casinoApi.Casino, casino);
         var casinoTurns = new Casino.CasinoTurnNotifier(aethernetSession, casinoRooms, notifications,
             Apps.AppAccents.For("casino"));
         var gameRooms = new Games.GameRoomsStore(aethernetSession, aethernet.Games, visibility,
@@ -525,6 +527,7 @@ internal sealed class PhoneServices : IDisposable
             CasinoHistory = casinoHistory,
             CasinoRooms = casinoRooms,
             CasinoTables = casinoTables,
+            Holdem = holdem,
             CasinoSpin = casinoSpin,
             CasinoTurns = casinoTurns,
             CasinoLauncher = new Casino.CasinoLauncher(),
@@ -703,6 +706,7 @@ internal sealed class PhoneServices : IDisposable
         Leaderboard.Dispose();
         GameRooms.Dispose();
         CasinoTurns.Dispose();
+        Holdem.Dispose();
         CasinoTables.Dispose();
         CasinoRooms.Dispose();
         CasinoSpin.Dispose();

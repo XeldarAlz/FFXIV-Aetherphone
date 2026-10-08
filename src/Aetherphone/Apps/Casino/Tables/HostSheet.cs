@@ -14,6 +14,19 @@ internal sealed class HostDraft
 {
     public static readonly long[] BuyInCoinSteps = { 20, 50, 100, 250, 500, 1_000, 2_500, 5_000 };
 
+    public static readonly long[] BuyInBigBlindSteps = { 10, 20, 30, 40, 50, 100, 200, 300, 500 };
+
+    public static readonly int[] AnteTenths = { 0, 1, 2, 5, 10 };
+
+    public const int DefaultMinBuyInStep = 1;
+
+    public const int DefaultMaxBuyInStep = 5;
+
+    public string GameKind = CasinoWire.BlackjackKind;
+    public long BigBlind = CasinoHostingRules.DefaultHoldemBigBlind;
+    public int AnteStep;
+    public int MinBigBlindsStep = DefaultMinBuyInStep;
+    public int MaxBigBlindsStep = DefaultMaxBuyInStep;
     public string Name = string.Empty;
     public int Seats = CasinoHostingRules.DefaultSeats;
     public int Listing = CasinoListings.Private;
@@ -46,8 +59,25 @@ internal sealed class HostDraft
 
     public bool SeatBanked => CasinoCurrencies.SeatBanked(Currency);
 
+    public bool Holdem => string.Equals(GameKind, HoldemRules.Kind, StringComparison.Ordinal);
+
+    public int MaxSeats => Holdem ? HoldemRules.MaxSeats : CasinoHostingRules.MaxSeats;
+
+    public void Reset(string gameKind)
+    {
+        Reset();
+        GameKind = string.Equals(gameKind, HoldemRules.Kind, StringComparison.Ordinal)
+            ? HoldemRules.Kind
+            : CasinoWire.BlackjackKind;
+    }
+
     public void Reset()
     {
+        GameKind = CasinoWire.BlackjackKind;
+        BigBlind = CasinoHostingRules.DefaultHoldemBigBlind;
+        AnteStep = 0;
+        MinBigBlindsStep = DefaultMinBuyInStep;
+        MaxBigBlindsStep = DefaultMaxBuyInStep;
         Name = string.Empty;
         Seats = CasinoHostingRules.DefaultSeats;
         Listing = CasinoListings.Private;
@@ -79,8 +109,35 @@ internal sealed class HostDraft
         Peek = true;
     }
 
+    public CasinoTableConfigDto BuildHoldem()
+    {
+        var practice = Currency == CasinoCurrencies.Practice;
+        var stack = Parse(PracticeStack);
+        return new CasinoTableConfigDto(
+            GameKind: HoldemRules.Kind,
+            Name: Name.Trim(),
+            Seats: Seats,
+            MinBuyIn: practice ? 0 : BigBlind * BuyInBigBlindSteps[MinBigBlindsStep],
+            MaxBuyIn: practice ? 0 : BigBlind * BuyInBigBlindSteps[MaxBigBlindsStep],
+            Practice: practice,
+            PracticeStack: practice && stack > 0 ? stack : CasinoHostingRules.DefaultPracticeStack,
+            PracticeRebuy: practice && PracticeRebuy,
+            TurnSeconds: TurnSeconds,
+            TimeBankUses: TimeBank ? CasinoHostingRules.TimeBankUses : CasinoHostingRules.TimeBankOff,
+            Listing: Listing,
+            Spectators: Spectators,
+            FaceUp: practice && FaceUp,
+            Poker: new CasinoPokerTableOptionsDto(BigBlind / 2, BigBlind * AnteTenths[AnteStep] / 10),
+            Currency: practice ? CasinoCurrencies.Practice : CasinoCurrencies.Chips);
+    }
+
     public CasinoTableConfigDto Build(long rate)
     {
+        if (Holdem)
+        {
+            return BuildHoldem();
+        }
+
         var practice = Currency == CasinoCurrencies.Practice;
         var gil = Currency == CasinoCurrencies.Gil;
         var rules = SeatBanked
@@ -174,6 +231,15 @@ internal sealed class HostSheet
     private readonly Action minBuyInUp;
     private readonly Action maxBuyInDown;
     private readonly Action maxBuyInUp;
+    private readonly Action blindDown;
+    private readonly Action blindUp;
+    private readonly Action anteDown;
+    private readonly Action anteUp;
+    private readonly Action minBigBlindsDown;
+    private readonly Action minBigBlindsUp;
+    private readonly Action maxBigBlindsDown;
+    private readonly Action maxBigBlindsUp;
+    private readonly string[] gameOptions = new string[2];
     private LanguageInfo? optionsLanguage;
     private string inlineReason = string.Empty;
 
@@ -182,7 +248,17 @@ internal sealed class HostSheet
         this.tables = tables;
         this.chips = chips;
         seatsDown = () => draft.Seats = Math.Max(CasinoHostingRules.MinSeats, draft.Seats - 1);
-        seatsUp = () => draft.Seats = Math.Min(CasinoHostingRules.MaxSeats, draft.Seats + 1);
+        seatsUp = () => draft.Seats = Math.Min(draft.MaxSeats, draft.Seats + 1);
+        blindDown = () => draft.BigBlind = Math.Max(CasinoHostingRules.MinHoldemBigBlind,
+            CasinoLadder.StepDown(draft.BigBlind));
+        blindUp = () => draft.BigBlind = CasinoLadder.StepUp(draft.BigBlind);
+        anteDown = () => draft.AnteStep = Math.Max(0, draft.AnteStep - 1);
+        anteUp = () => draft.AnteStep = Math.Min(HostDraft.AnteTenths.Length - 1, draft.AnteStep + 1);
+        minBigBlindsDown = () => draft.MinBigBlindsStep = Math.Max(0, draft.MinBigBlindsStep - 1);
+        minBigBlindsUp = () => draft.MinBigBlindsStep = Math.Min(draft.MaxBigBlindsStep, draft.MinBigBlindsStep + 1);
+        maxBigBlindsDown = () => draft.MaxBigBlindsStep = Math.Max(draft.MinBigBlindsStep, draft.MaxBigBlindsStep - 1);
+        maxBigBlindsUp = () =>
+            draft.MaxBigBlindsStep = Math.Min(HostDraft.BuyInBigBlindSteps.Length - 1, draft.MaxBigBlindsStep + 1);
         minBetDown = () => draft.ChipMinBet = Math.Max(BlackjackRules.MinBet, CasinoLadder.StepDown(draft.ChipMinBet));
         minBetUp = () => draft.ChipMinBet = Math.Min(draft.ChipMaxBet, CasinoLadder.StepUp(draft.ChipMinBet));
         maxBetDown = () => draft.ChipMaxBet = Math.Max(draft.ChipMinBet, CasinoLadder.StepDown(draft.ChipMaxBet));
@@ -199,13 +275,19 @@ internal sealed class HostSheet
         inlineReason = string.Empty;
     }
 
+    public void Enter(string gameKind)
+    {
+        draft.Reset(gameKind);
+        inlineReason = string.Empty;
+    }
+
     public void Draw(Rect body, AppSkin ui)
     {
         var scale = UiScale.Current;
         ConsumeOutcomes();
         RefreshOptions();
         using var surface = AppSurface.Begin(body);
-        var gilOpen = chips.HasFeature(CasinoFeatures.GilTables);
+        var gilOpen = chips.HasFeature(CasinoFeatures.GilTables) && !draft.Holdem;
         if (!gilOpen && draft.Currency == CasinoCurrencies.Gil)
         {
             draft.Currency = CasinoCurrencies.Chips;
@@ -216,13 +298,22 @@ internal sealed class HostSheet
         Hint(ui, Loc.T(ListingHints[draft.Listing]), scale);
 
         ui.SectionHeading(Loc.T(L.Tables.SectionMoney), Metrics.Space.Md);
-        DrawMoneyCard(ui, gilOpen, scale);
-        Hint(ui, Loc.T(CurrencyHints[draft.Currency]), scale);
+        if (draft.Holdem)
+        {
+            DrawHoldemMoneyCard(ui, scale);
+            Hint(ui, Loc.T(draft.Currency == CasinoCurrencies.Practice ? L.Tables.CurrencyPracticeHint
+                : L.Holdem.HostRakeHint), scale);
+        }
+        else
+        {
+            DrawMoneyCard(ui, gilOpen, scale);
+            Hint(ui, Loc.T(CurrencyHints[draft.Currency]), scale);
+        }
 
         ui.SectionHeading(Loc.T(L.Tables.SectionClock), Metrics.Space.Md);
         DrawClockCard(ui);
 
-        if (draft.SeatBanked)
+        if (draft.SeatBanked && !draft.Holdem)
         {
             ui.SectionHeading(Loc.T(L.Tables.SectionDealer), Metrics.Space.Md);
             DrawDealerCard(ui);
@@ -257,7 +348,14 @@ internal sealed class HostSheet
 
     private void DrawTableCard(AppSkin ui, float scale)
     {
-        var card = GroupCard.Begin(ui, RowUnits * 3 + SegmentRowUnits);
+        var card = GroupCard.Begin(ui, RowUnits * 3 + SegmentRowUnits * 2);
+        var game = Segment(ui, card.NextRow(SegmentRowUnits), "##hostGame", Loc.T(L.Holdem.HostGame), gameOptions,
+            draft.Holdem ? 1 : 0, scale);
+        if (game == 1 != draft.Holdem)
+        {
+            draft.Reset(game == 1 ? HoldemRules.Kind : CasinoWire.BlackjackKind);
+        }
+
         var nameRow = card.NextRow(RowUnits);
         Label(ui, nameRow, Loc.T(L.Tables.HostName), scale);
         Field(ui, FieldRect(nameRow, scale), "##hostName", Loc.T(L.Tables.HostNameHint), ref draft.Name,
@@ -323,6 +421,44 @@ internal sealed class HostSheet
                 break;
         }
 
+        card.End();
+    }
+
+    private void DrawHoldemMoneyCard(AppSkin ui, float scale)
+    {
+        if (draft.Currency == CasinoCurrencies.Gil)
+        {
+            draft.Currency = CasinoCurrencies.Chips;
+        }
+
+        var practice = draft.Currency == CasinoCurrencies.Practice;
+        var card = GroupCard.Begin(ui, SegmentRowUnits + (practice ? 5 : 4) * RowUnits);
+        draft.Currency = Segment(ui, card.NextRow(SegmentRowUnits), "##hostCurrency", Loc.T(L.Tables.HostCurrency),
+            chipCurrencyOptions, draft.Currency, scale);
+        StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Holdem.HostBlinds),
+            texts.Compacts(L.Holdem.BlindsShort, draft.BigBlind / 2, draft.BigBlind), blindDown, blindUp, scale);
+        var anteTenths = HostDraft.AnteTenths[draft.AnteStep];
+        StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Holdem.HostAnte),
+            anteTenths == 0 ? Loc.T(L.Tables.OptionOff) : NumberText.Compact(draft.BigBlind * anteTenths / 10),
+            anteDown, anteUp, scale);
+        if (practice)
+        {
+            FieldRow(ui, card.NextRow(RowUnits), "##hostStack", Loc.T(L.Tables.PracticeStack),
+                NumberText.Group(CasinoHostingRules.DefaultPracticeStack), ref draft.PracticeStack, scale);
+            draft.PracticeRebuy = ToggleRow(ui, card.NextRow(RowUnits), "host.rebuy", Loc.T(L.Tables.Rebuys),
+                draft.PracticeRebuy, scale);
+            draft.FaceUp = ToggleRow(ui, card.NextRow(RowUnits), "host.faceup", Loc.T(L.Tables.FaceUp),
+                draft.FaceUp, scale);
+            card.End();
+            return;
+        }
+
+        StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Tables.MinBuyIn),
+            texts.Number(L.Holdem.BigBlindsValue, HostDraft.BuyInBigBlindSteps[draft.MinBigBlindsStep]),
+            minBigBlindsDown, minBigBlindsUp, scale);
+        StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Tables.MaxBuyIn),
+            texts.Number(L.Holdem.BigBlindsValue, HostDraft.BuyInBigBlindSteps[draft.MaxBigBlindsStep]),
+            maxBigBlindsDown, maxBigBlindsUp, scale);
         card.End();
     }
 
@@ -527,6 +663,8 @@ internal sealed class HostSheet
 
         optionsLanguage = Loc.Current;
         Fill(currencyOptions, CurrencyLabels);
+        gameOptions[0] = Loc.T(L.Casino.GameBlackjack);
+        gameOptions[1] = Loc.T(L.Casino.GameHoldem);
         Fill(chipCurrencyOptions, CurrencyLabels);
         Fill(listingOptions, ListingLabels);
         Fill(dealerOptions, DealerLabels);

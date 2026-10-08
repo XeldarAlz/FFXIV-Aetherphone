@@ -56,6 +56,13 @@ internal static class CasinoReasons
     public const string InsufficientChips = "insufficient_chips";
     public const string TooLate = "too_late";
     public const string AtHandEnd = "at_hand_end";
+    public const string PairLimited = "pair_limited";
+    public const string PvpLossCap = "pvp_loss_cap";
+    public const string PvpWinCap = "pvp_win_cap";
+    public const string InHand = "in_hand";
+    public const string TitleRequired = "title_required";
+    public const string TimeBankEmpty = "time_bank_empty";
+    public const string HoldemClosed = "holdem_closed";
     public const string Kicked = "kicked";
     public const string BoundElsewhere = "bound_elsewhere";
     public const string NoTables = "no_tables";
@@ -161,6 +168,13 @@ internal static class CasinoReasons
         InsufficientChips,
         TooLate,
         AtHandEnd,
+        PairLimited,
+        PvpLossCap,
+        PvpWinCap,
+        InHand,
+        TitleRequired,
+        TimeBankEmpty,
+        HoldemClosed,
         Kicked,
         BoundElsewhere,
         NoTables,
@@ -243,6 +257,13 @@ internal static class CasinoReasons
         [InsufficientChips] = L.Casino.ReasonInsufficientChips,
         [TooLate] = L.Casino.ReasonTooLate,
         [AtHandEnd] = L.Casino.ReasonAtHandEnd,
+        [PairLimited] = L.Holdem.ReasonPairLimited,
+        [PvpLossCap] = L.Holdem.ReasonPvpLossCap,
+        [PvpWinCap] = L.Holdem.ReasonPvpWinCap,
+        [InHand] = L.Holdem.ReasonInHand,
+        [TitleRequired] = L.Holdem.ReasonTitleRequired,
+        [TimeBankEmpty] = L.Holdem.ReasonTimeBankEmpty,
+        [HoldemClosed] = L.Holdem.ReasonHoldemClosed,
         [Kicked] = L.Casino.ReasonKicked,
         [BoundElsewhere] = L.Casino.ReasonBoundElsewhere,
         [NoTables] = L.Casino.ReasonNoTables,

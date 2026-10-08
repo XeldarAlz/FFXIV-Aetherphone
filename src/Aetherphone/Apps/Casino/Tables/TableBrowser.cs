@@ -304,7 +304,8 @@ internal sealed class TableBrowser
             return;
         }
 
-        if (!string.Equals(row.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal))
+        if (!string.Equals(row.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal)
+            && !string.Equals(row.GameKind, HoldemRules.Kind, StringComparison.Ordinal))
         {
             inlineReason = CasinoReasons.Unavailable;
             return;
