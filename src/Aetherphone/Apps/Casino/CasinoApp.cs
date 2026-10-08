@@ -242,11 +242,13 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
         cashier.Gate();
         slots.Gate();
         scratch.Gate();
+        wheel.Gate();
         rulesSheet.Gate();
         stage.Gate();
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         slots.DrawOverlay(screenArea, ui);
         scratch.DrawOverlay(screenArea, ui);
+        wheel.DrawOverlay(screenArea, ui);
         if (IsStage(router.Current))
         {
             stage.DrawOverlays(screenArea, ui);
@@ -335,7 +337,7 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
                 barkeep.Draw(body, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Wheel, StringComparison.Ordinal):
-                wheel.Draw(body, ui);
+                wheel.Draw(stage, frame, ui);
                 break;
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Bingo, StringComparison.Ordinal):
                 bingo.Draw(body, ui);
@@ -375,6 +377,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource
             CasinoGames.Barkeep => new CasinoStageSpec(route.GameId, L.Casino.GameBarkeep, Backdrop.Strip,
                 Warmth: 1f),
             CasinoGames.Bingo => new CasinoStageSpec(route.GameId, L.Casino.GameBingo, Backdrop.Arena),
+            CasinoGames.Wheel => new CasinoStageSpec(route.GameId, L.Casino.GameWheel, Backdrop.Strip, Room: true,
+                DeckHeight: Cabinets.WheelCabinet.DeckHeight),
             _ => new CasinoStageSpec(route.GameId, GameName(route.GameId), Backdrop.Strip),
         };
     }
