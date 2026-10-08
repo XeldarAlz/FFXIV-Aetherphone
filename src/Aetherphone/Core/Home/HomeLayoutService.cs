@@ -306,6 +306,21 @@ internal sealed class HomeLayoutService
         Commit();
     }
 
+    public void MoveFolderMember(HomeTile folder, int fromIndex, int toIndex)
+    {
+        if (!folder.IsFolder || fromIndex == toIndex
+            || fromIndex < 0 || fromIndex >= folder.Members.Count
+            || toIndex < 0 || toIndex >= folder.Members.Count)
+        {
+            return;
+        }
+
+        var member = folder.Members[fromIndex];
+        folder.Members.RemoveAt(fromIndex);
+        folder.Members.Insert(toIndex, member);
+        Save();
+    }
+
     public void Rename(HomeTile folder, string name)
     {
         if (!folder.IsFolder)
