@@ -9089,6 +9089,7 @@
   "casino.originals.hiLoBusted": "猜错了。本局没有奖金。",
   "casino.originals.noWin": "本局未中奖",
   "casino.originals.reasonInvalidMove": "现在无法进行这一步。棋盘显示了本局的进度。",
+  "casino.scratch.fiveInARow": "连买5张",
   "conduct.casino.title": "以太赌场场馆规则",
   "conduct.casino.intro": "入座之前，请先阅读场馆规则。",
   "conduct.casino.playMoney.title": "仅限游戏币",

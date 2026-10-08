@@ -9089,6 +9089,7 @@
   "casino.originals.hiLoBusted": "Falsche Ansage. Diese Runde zahlt nichts.",
   "casino.originals.noWin": "Kein Gewinn in dieser Runde",
   "casino.originals.reasonInvalidMove": "Dieser Zug ist gerade nicht möglich. Das Brett zeigt, wo die Runde steht.",
+  "casino.scratch.fiveInARow": "5 hintereinander kaufen",
   "conduct.casino.title": "Gamba-Hausregeln",
   "conduct.casino.intro": "Bevor du an einem Tisch Platz nimmst, lies bitte die Hausregeln.",
   "conduct.casino.playMoney.title": "Nur Spielgeld",

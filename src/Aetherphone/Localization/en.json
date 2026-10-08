@@ -9089,6 +9089,7 @@
   "casino.originals.hiLoBusted": "Wrong call. This round pays nothing.",
   "casino.originals.noWin": "No win this round",
   "casino.originals.reasonInvalidMove": "That move is not open right now. The board shows where the round stands.",
+  "casino.scratch.fiveInARow": "Buy 5 in a row",
   "conduct.casino.title": "Gamba House Rules",
   "conduct.casino.intro": "Before you sit down at a table, please read the house rules.",
   "conduct.casino.playMoney.title": "Play Money Only",

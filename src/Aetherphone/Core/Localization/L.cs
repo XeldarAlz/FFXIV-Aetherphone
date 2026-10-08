@@ -10268,6 +10268,7 @@ internal static class L
         public static readonly LocString ScratchOddsChance = new("casino.scratch.oddsChance", "Chance");
         public static readonly LocString ScratchOddsChanceValue = new("casino.scratch.oddsChanceValue", "{0}%");
         public static readonly LocString ScratchLowStack = new("casino.scratch.lowStack", "Not enough chips for that card. Top up at the cashier.");
+        public static readonly LocString ScratchFiveInARow = new("casino.scratch.fiveInARow", "Buy 5 in a row");
         public static readonly LocString BarkeepWagerTitle = new("casino.barkeep.wagerTitle", "Paid shift");
         public static readonly LocString BarkeepWagerHint = new("casino.barkeep.wagerHint", "Entry {0}. Serve every patron well and the tip ladder pays out.");
         public static readonly LocString BarkeepStart = new("casino.barkeep.start", "Start a shift");

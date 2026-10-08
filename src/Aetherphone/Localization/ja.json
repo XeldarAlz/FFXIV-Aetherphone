@@ -9089,6 +9089,7 @@
   "casino.originals.hiLoBusted": "外れです。このラウンドの配当はありません。",
   "casino.originals.noWin": "このラウンドは配当なし",
   "casino.originals.reasonInvalidMove": "その操作は今はできません。盤面にラウンドの現状が表示されています。",
+  "casino.scratch.fiveInARow": "5枚続けて買う",
   "conduct.casino.title": "Gambaのハウスルール",
   "conduct.casino.intro": "テーブルに着く前に、ハウスルールをお読みください。",
   "conduct.casino.playMoney.title": "遊びのお金だけ",
