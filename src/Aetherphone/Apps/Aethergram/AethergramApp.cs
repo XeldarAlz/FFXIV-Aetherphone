@@ -1624,11 +1624,11 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             store.EnsureMe();
         }
 
-        tabItems[(int)AethergramTab.Home] = new TabItem(Loc.T(L.Aethergram.Home), PhoneIcons.Home,
-            PhoneIcons.HomeFilled);
-        tabItems[(int)AethergramTab.Search] = new TabItem(Loc.T(L.Aethergram.Search), PhoneIcons.Search);
-        tabItems[(int)AethergramTab.Messages] = new TabItem(Loc.T(L.Aethergram.InboxTitle), PhoneIcons.Send,
-            PhoneIcons.SendFilled, dmStore.UnreadCount, "aethergram.inbox");
+        tabItems[(int)AethergramTab.Home] = new TabItem(Loc.T(L.Aethergram.Home), HomeGlyph, HomeActiveGlyph);
+        tabItems[(int)AethergramTab.Search] = new TabItem(Loc.T(L.Aethergram.Search), SearchGlyph,
+            SearchActiveGlyph);
+        tabItems[(int)AethergramTab.Messages] = new TabItem(Loc.T(L.Aethergram.InboxTitle), MessagesGlyph,
+            MessagesActiveGlyph, dmStore.UnreadCount, "aethergram.inbox");
         tabItems[(int)AethergramTab.Profile] = new TabItem(Loc.T(L.Aethergram.Profile), PhoneIcons.User,
             PhoneIcons.UserFilled, CustomIcon: hasAvatar);
         var result = tabBar.Draw(area, ui, tabItems, (int)activeTab, null, this);

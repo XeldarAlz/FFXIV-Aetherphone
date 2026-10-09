@@ -537,9 +537,9 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var listTop = activeScope == SocialFeedScope.ForYou ? rowRect.Max.Y : DrawLatestScopeRow(area, rowRect.Max.Y);
         var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
-        if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##chirperComposeFab", ChirperInk.Accent,
+        if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##chirperComposeFab", FabTop,
                 PhoneIcons.Feather, Loc.T(L.Chirper.NewChirp), "chirper.compose",
-                ChirperInk.AccentDeep, FabRadius, true))
+                FabBottom, FabRadius, true, FabGlyph))
         {
             BeginCompose();
         }
@@ -664,10 +664,10 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             store.EnsureMe();
         }
 
-        tabItems[(int)HomeTab.Feed] = new TabItem(Loc.T(L.Chirper.TabHome), PhoneIcons.Home, PhoneIcons.HomeFilled);
-        tabItems[(int)HomeTab.Explore] = new TabItem(Loc.T(L.Chirper.TabExplore), PhoneIcons.Search);
-        tabItems[(int)HomeTab.Alerts] = new TabItem(Loc.T(L.Social.ActivityTitle), PhoneIcons.Bell,
-            PhoneIcons.BellFilled, social.UnseenCount(Id));
+        tabItems[(int)HomeTab.Feed] = new TabItem(Loc.T(L.Chirper.TabHome), HomeGlyph, HomeActiveGlyph);
+        tabItems[(int)HomeTab.Explore] = new TabItem(Loc.T(L.Chirper.TabExplore), ExploreGlyph);
+        tabItems[(int)HomeTab.Alerts] = new TabItem(Loc.T(L.Social.ActivityTitle), AlertsGlyph, AlertsActiveGlyph,
+            social.UnseenCount(Id));
         tabItems[(int)HomeTab.Profile] = new TabItem(Loc.T(L.Chirper.TabProfile), PhoneIcons.User,
             PhoneIcons.UserFilled, CustomIcon: hasAvatar);
         var result = tabBar.Draw(area, ui, tabItems, (int)homeTab, icons: this);

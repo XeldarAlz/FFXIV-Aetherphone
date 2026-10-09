@@ -20,8 +20,9 @@ internal static class ComposeFab
 
     public static bool Draw(Rect area, string childId, Vector4 accent, string glyph, string tooltip,
         string? anchorKey = null, Vector4? gradientBottom = null, float radiusUnscaled = DefaultRadius,
-        bool phoneGlyph = false)
+        bool phoneGlyph = false, Vector4? glyphInk = null)
     {
+        var ink = glyphInk ?? White;
         var scale = UiScale.Current;
         var radius = radiusUnscaled * scale;
         var glowPad = gradientBottom is null ? 0f : AccentGloss.GlowReach * scale;
@@ -65,11 +66,11 @@ internal static class ComposeFab
 
         if (phoneGlyph)
         {
-            PhoneIcon.Draw(drawList, center, glyph, White, drawRadius * 0.82f);
+            PhoneIcon.Draw(drawList, center, glyph, ink, drawRadius * 0.82f);
         }
         else
         {
-            AppSkin.Icon(center, glyph, White, 1.1f * drawRadius / radius);
+            AppSkin.Icon(center, glyph, ink, 1.1f * drawRadius / radius);
         }
 
         HoverTooltip.Show(fabRect, tooltip, HoverLabelSide.Above);

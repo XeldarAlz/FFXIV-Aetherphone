@@ -8,7 +8,20 @@ namespace Aetherphone.Apps.Chirper;
 
 internal sealed partial class ChirperApp
 {
+    private static readonly Vector4 MoonOrbTop = new(0.86f, 0.89f, 1f, 1f);
+    private static readonly Vector4 MoonOrbBottom = new(0.44f, 0.52f, 0.80f, 1f);
+    private static readonly Vector4 MoonOrbGlyph = new(0.05f, 0.07f, 0.21f, 1f);
+
     private int seasonApplied = -1;
+
+    private static string HomeGlyph => SeasonalTheme.Halloween ? PhoneIcons.Trees : PhoneIcons.Home;
+    private static string HomeActiveGlyph => SeasonalTheme.Halloween ? PhoneIcons.Trees : PhoneIcons.HomeFilled;
+    private static string ExploreGlyph => SeasonalTheme.Halloween ? PhoneIcons.CrystalBall : PhoneIcons.Search;
+    private static string AlertsGlyph => SeasonalTheme.Halloween ? PhoneIcons.Paw : PhoneIcons.Bell;
+    private static string AlertsActiveGlyph => SeasonalTheme.Halloween ? PhoneIcons.PawFilled : PhoneIcons.BellFilled;
+    private static Vector4 FabTop => SeasonalTheme.Halloween ? MoonOrbTop : ChirperInk.Accent;
+    private static Vector4 FabBottom => SeasonalTheme.Halloween ? MoonOrbBottom : ChirperInk.AccentDeep;
+    private static Vector4? FabGlyph => SeasonalTheme.Halloween ? MoonOrbGlyph : null;
 
     private void SyncSeason()
     {

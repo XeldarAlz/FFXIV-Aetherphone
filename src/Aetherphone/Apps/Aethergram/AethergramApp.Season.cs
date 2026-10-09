@@ -16,6 +16,13 @@ internal sealed partial class AethergramApp
 
     private int seasonApplied = -1;
 
+    private static string HomeGlyph => SeasonalTheme.Halloween ? PhoneIcons.BuildingCastle : PhoneIcons.Home;
+    private static string HomeActiveGlyph => SeasonalTheme.Halloween ? PhoneIcons.BuildingCastle : PhoneIcons.HomeFilled;
+    private static string SearchGlyph => SeasonalTheme.Halloween ? PhoneIcons.Eye : PhoneIcons.Search;
+    private static string SearchActiveGlyph => SeasonalTheme.Halloween ? PhoneIcons.EyeFilled : string.Empty;
+    private static string MessagesGlyph => SeasonalTheme.Halloween ? PhoneIcons.Bat : PhoneIcons.Send;
+    private static string MessagesActiveGlyph => SeasonalTheme.Halloween ? PhoneIcons.Bat : PhoneIcons.SendFilled;
+
     private void SyncSeason()
     {
         var season = SeasonalTheme.Halloween ? 1 : 0;
