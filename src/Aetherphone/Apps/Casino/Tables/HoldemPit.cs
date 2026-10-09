@@ -26,6 +26,9 @@ internal sealed class HoldemPit
     private const float RoomHeight = 102f;
     private const float RowGap = 10f;
     private const float HostRowHeight = 60f;
+    private const float SignHeight = 38f;
+    private const float BadgeHeight = 20f;
+    private const float DotsRow = 10f;
 
     private static readonly LocString[] RoomNames =
     {
@@ -182,21 +185,24 @@ internal sealed class HoldemPit
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
-        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + HeroHeight * scale));
+        var pad = Metrics.Space.Lg * scale;
+        var inner = width - pad * 2f;
+        var pitch = Loc.T(L.Holdem.PitHint);
+        var signHeight = CasinoSigns.HeightToFit(CasinoSign.Holdem, width * 0.7f, SignHeight * scale);
+        var height = MathF.Max(HeroHeight * scale,
+            pad * 2f + signHeight + Metrics.Space.Sm * scale + PitText.Height(pitch, TextStyles.Subheadline, inner));
+        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
         var rounding = Metrics.Radius.Grouped * scale;
         Squircle.FillVerticalGradient(drawList, rect.Min, rect.Max, rounding,
             ImGui.GetColorU32(CasinoColors.FeltTop), ImGui.GetColorU32(CasinoColors.FeltBottom));
         CasinoLights.BulbChase(drawList, rect, rounding, scale, phase, CasinoLights.BulbPitch, CasinoColors.Money,
             CasinoColors.LightA, 0.7f);
-        var signHeight = CasinoSigns.HeightToFit(CasinoSign.Holdem, rect.Width * 0.7f, rect.Height * 0.34f);
-        CasinoSigns.Draw(drawList, CasinoSign.Holdem, new Vector2(rect.Center.X, rect.Min.Y + rect.Height * 0.36f),
+        CasinoSigns.Draw(drawList, CasinoSign.Holdem, new Vector2(rect.Center.X, rect.Min.Y + pad + signHeight * 0.5f),
             signHeight, CasinoColors.LightA, 1f);
-        var pitch = Loc.T(L.Holdem.PitHint);
-        var pad = Metrics.Space.Lg * scale;
-        Typography.DrawWrappedCentered(drawList, pitch, TextStyles.Footnote, CasinoColors.InkBody,
-            new Vector2(rect.Center.X, rect.Min.Y + rect.Height * 0.62f), rect.Width - pad * 2f);
+        PitText.Draw(drawList, pitch, TextStyles.Subheadline, StageText.Strong, rect.Min.X + pad,
+            rect.Min.Y + pad + signHeight + Metrics.Space.Sm * scale, inner, true);
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, HeroHeight * scale + Metrics.Space.Sm * scale));
+        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Sm * scale));
     }
 
     private void DrawRoom(AppSkin ui, in HoldemRoomView view, int tier, float scale)
@@ -204,7 +210,18 @@ internal sealed class HoldemPit
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
-        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + RoomHeight * scale));
+        var pad = 14f * scale;
+        var textWidth = width - pad * 2f;
+        var badge = view.Locked ? Loc.T(L.Strip.TitleWhale) : string.Empty;
+        var badgeWidth = badge.Length > 0 ? Typography.Measure(badge, TextStyles.Footnote).X + 30f * scale : 0f;
+        var nameWidth = textWidth - (badgeWidth > 0f ? badgeWidth + Metrics.Space.Sm * scale : 0f);
+        var detail = view.Locked ? Loc.T(L.Holdem.RoyalLocked) : view.BuyIn;
+        var nameHeight = MathF.Max(PitText.Height(view.Name, TextStyles.SubheadlineEmphasized, nameWidth),
+            badgeWidth > 0f ? BadgeHeight * scale : 0f);
+        var height = pad * 2f + nameHeight + 2f * scale
+            + PitText.Height(view.Blinds, TextStyles.SubheadlineEmphasized, textWidth)
+            + PitText.Height(detail, TextStyles.Footnote, textWidth) + (3f + DotsRow) * scale;
+        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + MathF.Max(RoomHeight * scale, height)));
         var rounding = Metrics.Radius.Grouped * scale;
         var hovered = UiInteract.Hover(rect.Min, rect.Max);
         ui.Card(drawList, rect.Min, rect.Max, rounding);
@@ -220,18 +237,13 @@ internal sealed class HoldemPit
                 ImGui.GetColorU32(CasinoColors.Money with { W = 0.45f }), MathF.Max(1f, scale));
         }
 
-        var pad = 14f * scale;
         var left = rect.Min.X + pad;
-        var textWidth = rect.Width - pad * 2f;
-        var y = rect.Min.Y + 11f * scale;
-        var badge = view.Locked ? Loc.T(L.Strip.TitleWhale) : string.Empty;
-        var badgeWidth = 0f;
-        if (badge.Length > 0)
+        var y = rect.Min.Y + pad;
+        if (badgeWidth > 0f)
         {
-            badgeWidth = Typography.Measure(badge, TextStyles.Footnote).X + 30f * scale;
-            var badgeMax = new Vector2(rect.Max.X - pad, y + 20f * scale);
+            var badgeMax = new Vector2(rect.Max.X - pad, y + BadgeHeight * scale);
             var badgeMin = new Vector2(badgeMax.X - badgeWidth, y);
-            Squircle.Fill(drawList, badgeMin, badgeMax, 10f * scale,
+            Squircle.Fill(drawList, badgeMin, badgeMax, BadgeHeight * 0.5f * scale,
                 ImGui.GetColorU32(CasinoColors.Money with { W = 0.16f }));
             PhoneIcon.Draw(drawList, new Vector2(badgeMin.X + 11f * scale, (badgeMin.Y + badgeMax.Y) * 0.5f), LockGlyph,
                 CasinoColors.Money, 11f * scale);
@@ -240,21 +252,17 @@ internal sealed class HoldemPit
                 CasinoColors.Money, TextStyles.Footnote);
         }
 
-        Typography.Draw(drawList, new Vector2(left, y),
-            Typography.FitText(view.Name, textWidth - badgeWidth - Metrics.Space.Sm * scale,
-                TextStyles.SubheadlineEmphasized), ui.TitleInk, TextStyles.SubheadlineEmphasized);
-        y += Typography.LineHeight(TextStyles.SubheadlineEmphasized) + 2f * scale;
-        Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(view.Blinds, textWidth, TextStyles.Footnote),
-            CasinoColors.Money, TextStyles.Footnote);
-        y += Typography.LineHeight(TextStyles.Footnote);
-        var detail = view.Locked ? Loc.T(L.Holdem.RoyalLocked) : view.BuyIn;
-        Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(detail, textWidth, TextStyles.Footnote),
-            ui.BodyInk, TextStyles.Footnote);
-        y += Typography.LineHeight(TextStyles.Footnote) + 3f * scale;
-        var dotsWidth = CasinoArt.SeatDots(drawList, new Vector2(left, y + 4f * scale), view.Seated, view.MaxSeats,
+        PitText.Draw(drawList, view.Name, TextStyles.SubheadlineEmphasized, ui.TitleInk, left, y, nameWidth, false);
+        y += nameHeight + 2f * scale;
+        y = PitText.Draw(drawList, view.Blinds, TextStyles.SubheadlineEmphasized, CasinoColors.Money, left, y,
+            textWidth, false);
+        y = PitText.Draw(drawList, detail, TextStyles.Footnote, ui.BodyInk, left, y, textWidth, false);
+        y += 3f * scale;
+        var dotsY = y + DotsRow * 0.5f * scale;
+        var dotsWidth = CasinoArt.SeatDots(drawList, new Vector2(left, dotsY), view.Seated, view.MaxSeats,
             ui.Accent, ui.MutedInk with { W = 0.3f }, scale);
         Typography.Draw(drawList, new Vector2(left + dotsWidth + Metrics.Space.Sm * scale,
-                y + 4f * scale - Typography.LineHeight(TextStyles.Footnote) * 0.5f),
+                dotsY - Typography.LineHeight(TextStyles.Footnote) * 0.5f),
             Typography.FitText(view.Seats, textWidth - dotsWidth - Metrics.Space.Sm * scale, TextStyles.Footnote),
             ui.BodyInk, TextStyles.Footnote);
         if (UiInteract.Click(rect.Min, rect.Max, hovered))
@@ -264,7 +272,7 @@ internal sealed class HoldemPit
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, RoomHeight * scale + RowGap * scale));
+        ImGui.Dummy(new Vector2(width, rect.Height + RowGap * scale));
     }
 
     private void DrawHosted(AppSkin ui, float scale)
@@ -276,7 +284,7 @@ internal sealed class HoldemPit
             var origin = ImGui.GetCursorScreenPos();
             var text = Loc.T(store.Loaded ? L.Holdem.NoHostedTables : L.Casino.TablesLoading);
             var height = Typography.DrawWrappedLeft(new Vector2(origin.X + Metrics.Space.Md * scale, origin.Y), text,
-                ui.MutedInk, TextStyles.Footnote, width - Metrics.Space.Md * 2f * scale);
+                ui.BodyInk, TextStyles.Subheadline, width - Metrics.Space.Md * 2f * scale);
             ImGui.Dummy(new Vector2(width, height + RowGap * scale));
             return;
         }
@@ -310,7 +318,14 @@ internal sealed class HoldemPit
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
-        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + HostRowHeight * scale));
+        var textWidth = width - 62f * scale;
+        var title = Loc.T(L.Holdem.HostAction);
+        var hint = Loc.T(L.Holdem.HostHint);
+        var pad = 12f * scale;
+        var height = MathF.Max(HostRowHeight * scale, pad * 2f
+            + PitText.Height(title, TextStyles.SubheadlineEmphasized, textWidth)
+            + PitText.Height(hint, TextStyles.Footnote, textWidth));
+        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
         var rounding = Metrics.Radius.Grouped * scale;
         var hovered = UiInteract.Hover(rect.Min, rect.Max);
         ui.Card(drawList, rect.Min, rect.Max, rounding);
@@ -324,20 +339,16 @@ internal sealed class HoldemPit
         drawList.AddCircleFilled(iconCenter, 15f * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.16f)), 32);
         PhoneIcon.Draw(drawList, iconCenter, HostGlyph, ui.Accent, 15f * scale);
         var textLeft = rect.Min.X + 48f * scale;
-        var textWidth = rect.Width - 62f * scale;
-        Typography.Draw(drawList, new Vector2(textLeft, rect.Min.Y + 12f * scale),
-            Typography.FitText(Loc.T(L.Holdem.HostAction), textWidth, TextStyles.SubheadlineEmphasized), ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        Typography.Draw(drawList, new Vector2(textLeft, rect.Min.Y + 32f * scale),
-            Typography.FitText(Loc.T(L.Holdem.HostHint), textWidth, TextStyles.Footnote), ui.MutedInk,
-            TextStyles.Footnote);
+        var y = PitText.Draw(drawList, title, TextStyles.SubheadlineEmphasized, ui.TitleInk, textLeft,
+            rect.Min.Y + pad, textWidth, false);
+        PitText.Draw(drawList, hint, TextStyles.Footnote, ui.BodyInk, textLeft, y, textWidth, false);
         if (UiInteract.Click(rect.Min, rect.Max, hovered))
         {
             openHost();
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, HostRowHeight * scale + RowGap * scale));
+        ImGui.Dummy(new Vector2(width, height + RowGap * scale));
     }
 
     private void DrawReason(AppSkin ui, float scale)
