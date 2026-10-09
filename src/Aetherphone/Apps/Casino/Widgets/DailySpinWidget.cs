@@ -46,6 +46,8 @@ internal sealed class DailySpinWidget : IHomeWidget
     public string AppId => AppKey;
     public WidgetSizeSet Sizes => WidgetSizeSet.Small;
 
+    public WidgetRoute Target(in WidgetContext context) => WidgetRoute.Tab(AppId, CasinoGames.DailySpin);
+
     public float Relevance(string config) =>
         session.IsSignedIn && DailySpinStatus.Of(spin.Answer) == DailySpinClaim.Available ? 0.8f : 0f;
 
