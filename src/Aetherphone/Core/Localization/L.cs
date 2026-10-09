@@ -10513,7 +10513,6 @@ internal static class L
         public static readonly LocString TablesTitle = new("casino.tables.title", "Tables");
         public static readonly LocString TablesRow = new("casino.tables.row", "Browse tables");
         public static readonly LocString TablesRowHint = new("casino.tables.rowHint", "See who is playing and pick your felt");
-        public static readonly LocString TablesEmpty = new("casino.tables.empty", "No tables are open right now. Quick seat will open one for you.");
         public static readonly LocString TablesLoading = new("casino.tables.loading", "Looking for open tables");
         public static readonly LocString TableUnnamed = new("casino.tables.unnamed", "Blackjack table");
         public static readonly LocString TableHostedBy = new("casino.table.hostedBy", "{0}'s table");
@@ -10529,13 +10528,7 @@ internal static class L
         public static readonly LocString TableFilterHighStakes = new("casino.tables.filterHighStakes", "High stakes");
         public static readonly LocString TableFilterMine = new("casino.tables.filterMine", "Mine");
         public static readonly LocString QuickSeatTitle = new("casino.quickSeat.title", "Quick seat");
-        public static readonly LocString QuickSeatHint = new("casino.quickSeat.hint", "We find a table with room, you buy in and play.");
         public static readonly LocString QuickSeatAction = new("casino.quickSeat.action", "Find me a seat");
-        public static readonly LocString PrivateHeading = new("casino.private.heading", "Private tables");
-        public static readonly LocString HostTableAction = new("casino.private.hostAction", "Host a private table");
-        public static readonly LocString JoinByInvite = new("casino.private.joinByInvite", "Have an invite?");
-        public static readonly LocString JoinByInviteHint = new("casino.private.joinByInviteHint", "Paste the invite here");
-        public static readonly LocString JoinAction = new("casino.private.joinAction", "Join");
         public static readonly LocString DoorTitle = new("casino.door.title", "Your table");
         public static readonly LocString DoorInviteHeading = new("casino.door.inviteHeading", "Invite");
         public static readonly LocString DoorTokenPending = new("casino.door.tokenPending", "The invite is on its way.");
@@ -11007,8 +11000,6 @@ internal static class L
         public static readonly LocString LiveEmptyTitle = new("casino.strip.liveEmptyTitle", "Nothing live here");
         public static readonly LocString LiveEmptyBody = new("casino.strip.liveEmptyBody", "No room or table matches this filter right now. Pick All, or host your own table.");
         public static readonly LocString LiveNoFriends = new("casino.strip.liveNoFriends", "None of your friends is hosting a table right now. Your friend list is read from the game.");
-        public static readonly LocString LiveGilStakes = new("casino.strip.liveGilStakes", "Up to {0} gil");
-        public static readonly LocString LiveSeatsWatching = new("casino.strip.liveSeatsWatching", "{0} seated, {1} watching");
         public static readonly LocString BackToFloor = new("casino.strip.backToFloor", "Back to the Floor");
         public static readonly LocString IntroChipsTitle = new("casino.strip.introChipsTitle", "Big chips you can cash out");
         public static readonly LocString IntroChipsBody = new("casino.strip.introChipsBody", "1 coin buys {0} chips, and chips turn back into coins at the cashier. Up to {1} coins convert each day; the rest waits safely in your bankroll.");
@@ -11191,7 +11182,6 @@ internal static class L
         public static readonly LocString ReasonGilOnly = new("casino.tables.reasonGilOnly", "That only works at gil tables.");
         public static readonly LocString ReasonNotOwner = new("casino.tables.reasonNotOwner", "Only the host of this table can do that.");
         public static readonly LocString HostTitle = new("casino.tables.hostTitle", "Host a table");
-        public static readonly LocString HostRowHint = new("casino.tables.hostRowHint", "Chips, practice or gil, your stakes, your rules");
         public static readonly LocString SectionRules = new("casino.tables.sectionRules", "House rules");
         public static readonly LocString HostName = new("casino.tables.hostName", "Name");
         public static readonly LocString HostNameHint = new("casino.tables.hostNameHint", "Your name if empty");
@@ -11335,6 +11325,22 @@ internal static class L
         public static readonly LocString SummaryInvite = new("casino.tables.summaryInvite", "invite only");
         public static readonly LocString SummaryKnock = new("casino.tables.summaryKnock", "ask to join");
         public static readonly LocString SummaryOpen = new("casino.tables.summaryOpen", "open to all");
+        public static readonly LocString CodeHeading = new("casino.tables.codeHeading", "Room code");
+        public static readonly LocString CodeCopy = new("casino.tables.codeCopy", "Copy");
+        public static readonly LocString CodeCopied = new("casino.tables.codeCopied", "Copied");
+        public static readonly LocString CodeHint = new("casino.tables.codeHint", "Tell friends to enter this code in {0} > {1} > {2}.");
+        public static readonly LocString CodePending = new("casino.tables.codePending", "Getting your code");
+        public static readonly LocString JoinHeading = new("casino.tables.joinHeading", "Join with a code");
+        public static readonly LocString JoinFieldHint = new("casino.tables.joinFieldHint", "Enter code");
+        public static readonly LocString JoinAction = new("casino.tables.joinAction", "Join");
+        public static readonly LocString ReasonCodeUnknown = new("casino.tables.reasonCodeUnknown", "No open table uses that code. Check the letters and try again.");
+        public static readonly LocString EmptyTitle = new("casino.tables.emptyTitle", "No tables open");
+        public static readonly LocString EmptyBody = new("casino.tables.emptyBody", "Host one in a few taps and share the room code with your friends.");
+        public static readonly LocString EmptyFiltered = new("casino.tables.emptyFiltered", "Nothing matches this filter right now.");
+        public static readonly LocString HostCta = new("casino.tables.hostCta", "Host a table");
+        public static readonly LocString HostCtaLine = new("casino.tables.hostCtaLine", "Pick a game, set the stakes, share the code.");
+        public static readonly LocString PhaseOpen = new("casino.tables.phaseOpen", "Seats open");
+        public static readonly LocString HostedBy = new("casino.tables.hostedBy", "Hosted by {0}");
     }
 
     internal static class Race

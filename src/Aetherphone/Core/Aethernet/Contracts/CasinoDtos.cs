@@ -584,7 +584,16 @@ internal sealed record CasinoTableRowDto(
     bool Paused = false,
     CasinoTableConfigDto? Config = null,
     int Currency = 0,
-    CasinoHostReputationDto? Reputation = null);
+    CasinoHostReputationDto? Reputation = null,
+    string JoinCode = "");
+
+internal sealed record CasinoTableJoinRequest(string Code = "");
+
+internal sealed record CasinoTableJoinDto(
+    bool Granted = false,
+    string Reason = "",
+    string TableId = "",
+    CasinoTableRowDto? Table = null);
 
 internal sealed record CasinoTableListDto(
     CasinoTableRowDto[]? Tables = null,
@@ -858,7 +867,8 @@ internal sealed record CasinoTableDoorDto(
     string InviteToken = "",
     CasinoTableKnockDto[]? Knocks = null,
     CasinoTableSeatedDto[]? Seated = null,
-    long ServerNowUnixMs = 0);
+    long ServerNowUnixMs = 0,
+    string JoinCode = "");
 
 internal sealed record CasinoTableDoorRequest(string UserId, bool Approve);
 

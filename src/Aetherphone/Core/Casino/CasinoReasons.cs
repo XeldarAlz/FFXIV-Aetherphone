@@ -94,11 +94,13 @@ internal static class CasinoReasons
     public const string MachineUnknown = "machine_unknown";
     public const string MissionIncomplete = "mission_incomplete";
     public const string NotOwner = "not_owner";
+    public const string CodeUnknown = "code_unknown";
 
     public static readonly string[] All =
     {
         MissionIncomplete,
         NotOwner,
+        CodeUnknown,
         Ceiling,
         Ladder,
         BonusNotReady,
@@ -215,6 +217,7 @@ internal static class CasinoReasons
         [Settled] = L.Tables.ReasonSettled,
         [GilOnly] = L.Tables.ReasonGilOnly,
         [NotOwner] = L.Tables.ReasonNotOwner,
+        [CodeUnknown] = L.Tables.ReasonCodeUnknown,
         [StakesPaused] = L.Casino.ReasonStakesPaused,
         [LossLimit] = L.Casino.ReasonLossLimit,
         [Draining] = L.Casino.ReasonDraining,
