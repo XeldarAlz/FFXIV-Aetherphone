@@ -135,9 +135,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private static readonly TextStyle WordmarkStyle = TextStyles.Title2;
     private static readonly TextStyle FeedTabStyle = TextStyles.Headline;
     private static readonly TextStyle FeedTabIdleStyle = TextStyles.BodyEmphasized;
-    private static readonly UnderlineTabStyle FeedTabsStyle = new(FeedTabStyle, FeedTabIdleStyle,
-        AethergramInk.Shared.TitleInk, AethergramInk.Shared.SegmentIdleInk, AethergramInk.Shared.TitleInk,
-        FeedTabUnderline, CellPadX, Motion.Release);
+    private static UnderlineTabStyle FeedTabsStyle = FeedTabsStyleFor();
 
     private readonly Dictionary<SocialFeedScope, PullToRefresh> pullToRefresh = new()
     {
@@ -396,6 +394,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;
+        SyncSeason();
         postSheet.Gate();
         filterSheet.Gate();
         feedExplainer.Gate();
@@ -407,6 +406,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var screen = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
         screenRect = screen;
         ui.Backdrop(screen);
+        var appArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
+        DrawNight(screen, appArea.Min.Y);
         ConsumeSharedPhoto();
         AdvancePendingPhotoView();
         stories.Advance();
@@ -424,7 +425,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
         using (InputShield.Engage(avatarLightbox.Expanded))
         {
-            router.Draw(SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current), AppSkin.Transparent,
+            router.Draw(appArea, AppSkin.Transparent,
                 ImGui.GetIO().DeltaTime, drawView);
         }
 
@@ -448,6 +449,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private void DrawView(AethergramRoute route, Rect area, int depth)
     {
         ui.Body(area);
+        DrawNight(screenRect, area.Min.Y);
         switch (route.Screen)
         {
             case AethergramScreen.Compose:
@@ -1745,9 +1747,10 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var logoSize = LogoSize * scale;
         var logoCenter = new Vector2(area.Min.X + CellPadX * scale + logoSize * 0.5f, rowCenterY);
-        if (!AppIconTile.TryDrawGlyph(drawList, Id, logoCenter, logoSize, Ink.AccentLink))
+        var logoInk = LogoInk(drawList, logoCenter, logoSize);
+        if (!AppIconTile.TryDrawGlyph(drawList, Id, logoCenter, logoSize, logoInk))
         {
-            PhoneIcon.Draw(drawList, logoCenter, PhoneIcons.Camera, Ink.AccentLink, logoSize);
+            PhoneIcon.Draw(drawList, logoCenter, PhoneIcons.Camera, logoInk, logoSize);
         }
 
         var titleLeft = logoCenter.X + logoSize * 0.5f + LogoGap * scale;

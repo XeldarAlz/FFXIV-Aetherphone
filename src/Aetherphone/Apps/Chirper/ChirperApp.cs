@@ -125,8 +125,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private const float TintedAlpha = 0.20f;
     private const float TintedHoverAlpha = 0.28f;
 
-    private static readonly ControlInk ChipControls =
-        new(ChirperInk.Accent, ChirperInk.TitleInk, ChirperInk.MutedInk, ChirperInk.Danger);
+    private static ControlInk ChipControls = ChipControlsFor();
 
 
     private static readonly TextStyle NameStyle = TextStyles.Headline;
@@ -148,18 +147,14 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private static readonly TextStyle FeedTabStyle = TextStyles.Headline;
 
     private static readonly TextStyle FeedTabIdleStyle = TextStyles.BodyEmphasized;
-    private static readonly UnderlineTabStyle FeedTabsStyle = new(FeedTabStyle, FeedTabIdleStyle,
-        ChirperInk.AccentLink, ChirperInk.SegmentIdleInk, ChirperInk.Accent, FeedTabUnderline, CellPadX,
-        Motion.Release);
+    private static UnderlineTabStyle FeedTabsStyle = FeedTabsStyleFor();
     private static readonly TextStyle WordmarkStyle = TextStyles.Title2;
     private static readonly TextStyle BadgeStyle = TextStyles.Caption1;
     private static readonly TextStyle PopoverRowStyle = TextStyles.Headline;
 
-    private static readonly ActionSheetStyle SheetStyle = new(ChirperInk.GlassPanel, ChirperInk.GlassStroke,
-        AppPalettes.Chirper.TitleInk, ChirperInk.Danger, AppPalettes.Chirper.Accent, ChirperInk.Hairline);
+    private static ActionSheetStyle SheetStyle = SheetStyleFor();
 
-    private static readonly ScreenToastStyle ToastStyle = new(ChirperInk.GlassPanel, ChirperInk.GlassStroke,
-        AppPalettes.Chirper.TitleInk);
+    private static ScreenToastStyle ToastStyle = ToastStyleFor();
 
     public string Id => "chirper";
     public Vector4 Accent => AppAccents.For(Id);
@@ -389,6 +384,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;
+        SyncSeason();
         sheet.Gate();
         filterSheet.Gate();
         feedExplainer.Gate();
@@ -402,6 +398,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var screen = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
         screenRect = screen;
         ui.Backdrop(screen);
+        DrawNight(screen, context.Content.Min.Y);
         ConsumeSharedPhoto();
         if (photoViewer.Active)
         {
@@ -431,6 +428,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private void DrawView(ChirperRoute route, Rect area, int depth)
     {
         ui.Body(area);
+        DrawNight(screenRect, area.Min.Y);
         switch (route.Screen)
         {
             case ChirperScreen.Compose:
