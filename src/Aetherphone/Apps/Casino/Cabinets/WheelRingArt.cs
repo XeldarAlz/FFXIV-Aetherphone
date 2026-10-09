@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Casino;
@@ -24,21 +25,44 @@ internal static class WheelRingArt
     private static readonly Vector4 LightInk = new(0.96f, 0.97f, 0.98f, 1f);
     private static readonly Vector4 DarkInk = new(0.09f, 0.10f, 0.08f, 1f);
     private static readonly Vector4 Brass = new(0.85f, 0.72f, 0.42f, 1f);
+    private static readonly Vector4[] SpotInks =
+    {
+        InkOn(SpotColors[0]), InkOn(SpotColors[1]), InkOn(SpotColors[2]), InkOn(SpotColors[3]), InkOn(SpotColors[4]),
+    };
+
+    public static readonly Vector4[] SpotTextInks =
+    {
+        ReadableOnNight(SpotColors[0]), ReadableOnNight(SpotColors[1]), ReadableOnNight(SpotColors[2]),
+        ReadableOnNight(SpotColors[3]), ReadableOnNight(SpotColors[4]),
+    };
 
     private const int WedgeSegments = 6;
     private const float HubRadiusFactor = 0.34f;
     private const float LabelPadding = 3f;
     private const float LabelRimInset = 7f;
-    private const float LabelChordFraction = 0.9f;
+    private const float LabelChordFraction = 0.95f;
+    private const float ChipTintAlpha = 0.32f;
+    private const int LightenSteps = 10;
 
+    private static readonly TextStyle LabelStyle = TextStyles.Title3;
+    private static readonly float MinimumLabelScale = TextStyles.Caption2.Scale;
     private static readonly string[] SpotLabels = new string[WheelRules.SpotCount];
 
     private static LanguageInfo? spotLabelLanguage;
 
-    public static Vector4 InkOn(Vector4 fill)
+    public static Vector4 InkOn(Vector4 fill) =>
+        StageContrast.Ratio(DarkInk, fill) > StageContrast.Ratio(LightInk, fill) ? DarkInk : LightInk;
+
+    private static Vector4 ReadableOnNight(Vector4 color)
     {
-        var luminance = fill.X * 0.2126f + fill.Y * 0.7152f + fill.Z * 0.0722f;
-        return luminance > 0.55f ? DarkInk : LightInk;
+        var ground = StageContrast.Over(color with { W = ChipTintAlpha }, HubFill);
+        var ink = color;
+        for (var step = 1; step <= LightenSteps && StageContrast.Ratio(ink, ground) < StageContrast.Readable; step++)
+        {
+            ink = Vector4.Lerp(color, LightInk, step / (float)LightenSteps);
+        }
+
+        return ink with { W = 1f };
     }
 
     public static Vector2 Direction(float angle)
@@ -115,51 +139,50 @@ internal static class WheelRingArt
         RefreshSpotLabels();
         var hubEdge = radius * HubRadiusFactor + LabelPadding * scale;
         var rimEdge = radius - LabelRimInset * scale;
-        Span<Vector2> sizes = stackalloc Vector2[WheelRules.SpotCount];
-        Span<float> pivotRadii = stackalloc float[WheelRules.SpotCount];
-        Span<bool> fits = stackalloc bool[WheelRules.SpotCount];
-        var anyFits = false;
+        var chordPerRadius = 2f * MathF.Sin(WheelChoreography.SegmentSpan * 0.5f) * LabelChordFraction;
+        var weight = LabelStyle.Weight;
+        var textScale = LabelStyle.Scale;
         for (var spot = 0; spot < WheelRules.SpotCount; spot++)
         {
-            sizes[spot] = Typography.Measure(SpotLabels[spot], TextStyles.Caption2);
-            pivotRadii[spot] = rimEdge - sizes[spot].X * 0.5f;
-            var chord = 2f * pivotRadii[spot] * MathF.Sin(WheelChoreography.SegmentSpan * 0.5f);
-            fits[spot] = pivotRadii[spot] - sizes[spot].X * 0.5f >= hubEdge
-                && chord >= sizes[spot].Y * LabelChordFraction;
-            anyFits |= fits[spot];
+            var unit = Typography.Measure(SpotLabels[spot], 1f, weight);
+            if (unit.X <= 0f || unit.Y <= 0f)
+            {
+                continue;
+            }
+
+            textScale = MathF.Min(textScale, (rimEdge - hubEdge) / unit.X);
+            textScale = MathF.Min(textScale, chordPerRadius * rimEdge / (unit.Y + chordPerRadius * unit.X));
         }
 
-        if (!anyFits)
+        if (textScale < MinimumLabelScale)
         {
             return;
+        }
+
+        Span<Vector2> sizes = stackalloc Vector2[WheelRules.SpotCount];
+        for (var spot = 0; spot < WheelRules.SpotCount; spot++)
+        {
+            sizes[spot] = Typography.Measure(SpotLabels[spot], textScale, weight);
         }
 
         for (var segment = 0; segment < WheelRules.SegmentCount; segment++)
         {
             var spot = WheelRules.Segments[segment];
-            if (!fits[spot])
-            {
-                continue;
-            }
-
-            var fill = SpotColors[spot];
-            if (segment == highlightSegment && highlightGlow > 0f)
-            {
-                fill = Vector4.Lerp(fill, LightInk, 0.42f * highlightGlow);
-            }
-
+            var ink = segment == highlightSegment && highlightGlow > 0f
+                ? InkOn(Vector4.Lerp(SpotColors[spot], LightInk, 0.42f * highlightGlow))
+                : SpotInks[spot];
             var centreAngle = rotation + segment * WheelChoreography.SegmentSpan;
-            var pivot = center + Direction(centreAngle) * pivotRadii[spot];
+            var pivot = center + Direction(centreAngle) * (rimEdge - sizes[spot].X * 0.5f);
             DrawRadialLabel(drawList, pivot, centreAngle - MathF.PI * 0.5f, SpotLabels[spot], sizes[spot],
-                InkOn(fill));
+                ink, textScale, weight);
         }
     }
 
     private static void DrawRadialLabel(ImDrawListPtr drawList, Vector2 pivot, float angle, string label,
-        Vector2 size, Vector4 ink)
+        Vector2 size, Vector4 ink, float textScale, FontWeight weight)
     {
         var firstVertex = drawList.VtxBuffer.Size;
-        Typography.Draw(drawList, pivot - size * 0.5f, label, ink, TextStyles.Caption2);
+        Typography.Draw(drawList, pivot - size * 0.5f, label, ink, textScale, weight);
         var sine = MathF.Sin(angle);
         var cosine = MathF.Cos(angle);
         var vertices = drawList.VtxBuffer.AsSpan();

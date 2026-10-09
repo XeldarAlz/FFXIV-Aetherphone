@@ -362,7 +362,7 @@ internal sealed class WheelCabinet : ICabinetIdle
         if (playback.Stage == WheelStage.Settling && WheelRules.IsSegment(playback.Segment))
         {
             var spot = WheelRules.SpotAt(playback.Segment);
-            Typography.DrawCentered(drawList, ringCenter, MultiplierLabel(spot), WheelRingArt.SpotColors[spot],
+            Typography.DrawCentered(drawList, ringCenter, MultiplierLabel(spot), WheelRingArt.SpotTextInks[spot],
                 TextStyles.Title2);
             return;
         }
@@ -419,7 +419,7 @@ internal sealed class WheelCabinet : ICabinetIdle
                     MathF.Max(1f, scale));
             }
 
-            Typography.DrawCentered(drawList, chipCenter, text, Vector4.Lerp(color, Vector4.One, newest ? 0.35f : 0.55f),
+            Typography.DrawCentered(drawList, chipCenter, text, WheelRingArt.SpotTextInks[spot],
                 TextStyles.FootnoteEmphasized);
             x = max.X + RailChipGap * scale;
         }
@@ -471,7 +471,8 @@ internal sealed class WheelCabinet : ICabinetIdle
         var inner = rect.Width - pad;
         var centerX = rect.Center.X;
         var y = rect.Min.Y + pad;
-        y = PodiumLine(drawList, MultiplierLabel(spot), centerX, y, inner, color, TextStyles.Title3);
+        y = PodiumLine(drawList, MultiplierLabel(spot), centerX, y, inner, WheelRingArt.SpotTextInks[spot],
+            TextStyles.Title3);
         y = PodiumLine(drawList, NumberText.Compact(PoolOf(board, spot)), centerX, y, inner, CasinoColors.InkTitle,
             TextStyles.Footnote);
         y = DrawCrowd(drawList, board, spot, centerX, y, inner, scale);
