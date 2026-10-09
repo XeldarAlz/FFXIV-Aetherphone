@@ -25,7 +25,7 @@ internal sealed class CashierBonusShelf
     private const float StreakGap = 5f;
     private const float ShowerSeconds = 1.1f;
     private const float ShowerRate = 70f;
-    private const int ShowerBurst = 36;
+    private const int ShowerBurst = 22;
 
     private static readonly LocString[] Titles =
     {
@@ -106,7 +106,7 @@ internal sealed class CashierBonusShelf
     public void Shower(Vector2 origin, float scale)
     {
         showerOrigin = origin;
-        shower.Emit(CasinoLights.CoinShower(scale), showerOrigin, ShowerBurst);
+        shower.Emit(CasinoLights.CoinFountain(scale), showerOrigin, ShowerBurst);
         emitter = CasinoLights.CoinShowerEmitter(scale, ShowerRate);
         showerLeft = ShowerSeconds;
         UiFeedback.Play(UiSound.CoinShower);
@@ -371,7 +371,7 @@ internal sealed class CashierBonusShelf
         noteIsGrant = true;
         var kind = CasinoBonusKinds.IndexOf(result.Kind);
         showerOrigin = kind >= 0 ? claimCenters[kind] : showerOrigin;
-        shower.Emit(CasinoLights.CoinShower(scale), showerOrigin, ShowerBurst);
+        shower.Emit(CasinoLights.CoinFountain(scale), showerOrigin, ShowerBurst);
         emitter = CasinoLights.CoinShowerEmitter(scale, ShowerRate);
         showerLeft = ShowerSeconds;
         UiFeedback.Play(UiSound.CoinShower);

@@ -9,7 +9,7 @@ namespace Aetherphone.Apps.Casino.Stage;
 
 internal sealed class WinCelebration
 {
-    private const float ShowerRate = 70f;
+    private const float ShowerRate = 40f;
     private const float FlashAlpha = 0.38f;
     private const float PunchAmount = 0.05f;
     private const float SlowMoFactor = 0.6f;

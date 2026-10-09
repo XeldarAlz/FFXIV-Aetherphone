@@ -15,6 +15,7 @@ internal enum ParticleShape : byte
     Shard,
     Spark,
     Glyph,
+    Coin,
 }
 
 internal enum SizeCurve : byte
@@ -115,6 +116,13 @@ internal sealed class ParticleSystem
     public const float StreakGravity = 220f;
     public const float ConfettiGravity = 540f;
     private const float HaloScale = 2.4f;
+    private const float CoinEdgeWidth = 0.18f;
+    private const float CoinRimShade = 0.62f;
+    private const float CoinFaceScale = 0.78f;
+    private const float CoinShineThreshold = 0.35f;
+    private const float CoinShineOffset = 0.28f;
+    private const float CoinShineScale = 0.3f;
+    private const float CoinShineAlpha = 0.55f;
     private const float HaloAlpha = 0.22f;
     private const int FirstGlyph = 32;
     private const int LastGlyph = 126;
@@ -381,10 +389,32 @@ internal sealed class ParticleSystem
             case ParticleShape.Glyph:
                 DrawGlyph(drawList, particle.Glyph, position, radius, tint with { W = tint.W * alpha });
                 break;
+            case ParticleShape.Coin:
+                DrawCoin(drawList, particle.Rotation, position, radius, tint, alpha);
+                break;
             default:
                 drawList.AddCircleFilled(position, radius, color);
                 break;
         }
+    }
+
+    private static void DrawCoin(ImDrawListPtr drawList, float rotation, Vector2 position, float radius,
+        Vector4 tint, float alpha)
+    {
+        var face = MathF.Abs(MathF.Cos(rotation));
+        var width = radius * MathF.Max(CoinEdgeWidth, face);
+        var radii = new Vector2(width, radius);
+        var rim = new Vector4(tint.X * CoinRimShade, tint.Y * CoinRimShade, tint.Z * CoinRimShade, tint.W * alpha);
+        Shapes.FillEllipse(drawList, position, radii, ImGui.GetColorU32(rim));
+        Shapes.FillEllipse(drawList, position, radii * CoinFaceScale, ImGui.GetColorU32(tint with { W = tint.W * alpha }));
+        if (face < CoinShineThreshold)
+        {
+            return;
+        }
+
+        var shine = new Vector2(position.X - width * CoinShineOffset, position.Y - radius * CoinShineOffset);
+        Shapes.FillEllipse(drawList, shine, radii * CoinShineScale,
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, CoinShineAlpha * alpha * face)));
     }
 
     private static float SizeFactor(SizeCurve curve, float fade) => curve switch

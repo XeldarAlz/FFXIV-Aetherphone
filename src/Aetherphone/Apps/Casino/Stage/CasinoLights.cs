@@ -11,7 +11,17 @@ internal static class CasinoLights
     public const float ChaseBulbsPerSecond = 6f;
     public const float NeonHaloScale = 2.4f;
     public const float NeonHaloAlpha = 0.18f;
-    public const float CoinGravity = 180f;
+    public const float CoinGravity = 640f;
+    public const float CoinRadius = 3.4f;
+    public const float CoinLaunchSpeed = 300f;
+    public const float CoinLife = 1.15f;
+    public const float CoinDrag = 0.35f;
+    public const float CoinSpin = 14f;
+    public const float CoinSpread = 0.75f;
+    public const float CoinRainSpeed = 70f;
+    public const float CoinRainLife = 1.7f;
+    public const float CoinRainGravity = 360f;
+    public const float CoinRainSpread = 0.5f;
     public const int DarkEvery = 3;
 
     private const float DimBulbAlpha = 0.16f;
@@ -171,8 +181,14 @@ internal static class CasinoLights
     }
 
     public static ParticleSpec CoinShower(float scale) =>
-        new(CasinoColors.Money, CasinoColors.MoneyHighlight, 4.2f * scale, 70f * scale, 1.9f, CoinGravity * scale,
-            0.5f, 9f, 0.9f, MathF.PI * 0.5f, ParticleShape.Circle, SizeCurve.Pulse, true);
+        new(CasinoColors.Money, CasinoColors.MoneyHighlight, CoinRadius * scale, CoinRainSpeed * scale, CoinRainLife,
+            CoinRainGravity * scale, CoinDrag, CoinSpin, CoinRainSpread, MathF.PI * 0.5f, ParticleShape.Coin,
+            SizeCurve.Shrink, false);
+
+    public static ParticleSpec CoinFountain(float scale) =>
+        new(CasinoColors.Money, CasinoColors.MoneyHighlight, CoinRadius * scale, CoinLaunchSpeed * scale, CoinLife,
+            CoinGravity * scale, CoinDrag, CoinSpin, CoinSpread, -MathF.PI * 0.5f, ParticleShape.Coin, SizeCurve.Shrink,
+            false);
 
     public static ParticleSpec Sparkle(float scale) =>
         new(CasinoColors.MoneyHighlight, CasinoColors.Money, 3f * scale, 150f * scale, 0.8f, 40f * scale, 2.2f, 6f,

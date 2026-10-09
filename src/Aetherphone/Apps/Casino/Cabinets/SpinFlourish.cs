@@ -14,7 +14,7 @@ internal sealed class SpinFlourish
     private const float CardVeil = 0.55f;
     private const float AmountRise = 26f;
     private const float AmountGap = 22f;
-    private const float ShowerRate = 70f;
+    private const float ShowerRate = 40f;
     private const float FlashAlpha = 0.38f;
     private const float PunchAmount = 0.05f;
     private const float VignetteStrength = 0.5f;
