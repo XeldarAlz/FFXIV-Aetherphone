@@ -92,6 +92,8 @@ internal sealed class CasinoFloorStore : IDisposable
 
     public CasinoFeedDto? Feed(string tab) => Volatile.Read(ref feeds[FeedSlot(tab)]);
 
+    public string AccountId => session.CurrentUser?.Id ?? string.Empty;
+
     public CasinoMissionClaimDto? TakeMissionClaim() => Interlocked.Exchange(ref missionClaim, null);
 
     public bool TakeClaimFailure() => Interlocked.Exchange(ref claimFailed, 0) != 0;
