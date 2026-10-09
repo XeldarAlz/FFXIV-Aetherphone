@@ -107,6 +107,12 @@ internal static class HoldemArt
             ImGui.GetColorU32(fill));
     }
 
+    public static float AmountWidth(string text, in TextStyle style, float scale)
+    {
+        var lineHeight = Typography.LineHeight(style);
+        return Typography.Measure(text, style).X + CurrencyGlyph.Reserve(lineHeight) + 12f * scale;
+    }
+
     public static void DrawAmount(ImDrawListPtr drawList, Vector2 center, string text, Vector4 ink, bool practice,
         float scale, in TextStyle style)
     {

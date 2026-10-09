@@ -258,7 +258,7 @@ internal sealed partial class HoldemTable : ICabinetIdle
             flights.Advance(delta);
         }
 
-        layout.Compute(safe, SeatCountOf(board), mySeat >= 0 ? mySeat : 0, scale);
+        layout.Compute(safe, SeatCountOf(board), mySeat >= 0 ? mySeat : 0, mySeat >= 0, scale);
         DrainLaunches(board, scale);
         DrainCues(stage, frame, board, scale);
         AdvanceClocks(delta);
@@ -316,10 +316,9 @@ internal sealed partial class HoldemTable : ICabinetIdle
             return;
         }
 
-        var boardBottom = layout.BoardCenter.Y + PlayingCards.HeightFor(layout.BoardCardWidth) * 0.5f;
-        var center = new Vector2(layout.BoardCenter.X, boardBottom + 22f * scale);
+        var band = layout.StateBand;
         var ink = text.Key == L.Holdem.StateYourTurn.Key ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle;
-        StageText.StateLine(drawList, center, Loc.T(text), layout.Ring.Width * 0.8f, ink);
+        StageText.StateLine(drawList, band.Center, Loc.T(text), band.Width, ink);
     }
 
     internal static LocString StateText(CasinoHoldemRoomStateDto board, CasinoHoldemYouDto? mine,
@@ -460,8 +459,8 @@ internal sealed partial class HoldemTable : ICabinetIdle
             }
 
             var hero = launch.Seat == mySeat;
-            var target = hero ? HeroCardCenter(launch.Slot, scale) : SeatCardCenter(launch.Seat, launch.Slot, scale);
-            var width = hero ? HoldemTableLayout.HeroCardWidth * scale : HoldemTableLayout.SeatCardWidth * scale;
+            var target = hero ? HeroCardCenter(launch.Slot) : SeatCardCenter(launch.Seat, launch.Slot, scale);
+            var width = hero ? layout.HeroCardPixels : HoldemTableLayout.SeatCardWidth * scale;
             flights.Launch(HoldemRules.FaceDown, deck, new CardPose(target, width, 0f, false), launch.Delay, false,
                 launch.Tag, HoldemPlayback.FlightSeconds, CardFlight.DefaultArc, true);
         }

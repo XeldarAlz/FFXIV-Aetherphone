@@ -46,15 +46,15 @@ internal sealed class HoldemRaiseComposer
         L.Holdem.QuickAllIn,
     };
 
-    private static readonly string[] QuickIds =
-    {
-        "holdem.quick.min", "holdem.quick.half", "holdem.quick.threeQuarter", "holdem.quick.pot", "holdem.quick.allin",
-    };
-
     private readonly CasinoTextCache texts;
+    private readonly ChipRail quickRail = new();
+    private readonly string[] quickLabels = new string[QuickCount];
+    private readonly bool[] quickActive = new bool[QuickCount];
+    private readonly long[] quickTargets = new long[QuickCount];
 
     private long amount;
     private bool primed;
+    private LanguageInfo? quickLanguage;
 
     public HoldemRaiseComposer(CasinoTextCache texts)
     {
@@ -105,7 +105,7 @@ internal sealed class HoldemRaiseComposer
         var top = deck.Min.Y + Pad * scale;
         var row = RowHeight * scale;
         var gap = Gap * scale;
-        DrawQuickRow(ui, new Rect(new Vector2(left, top), new Vector2(right, top + row)), model, minimum, scale);
+        DrawQuickRow(ui, new Rect(new Vector2(left, top), new Vector2(right, top + row)), model, minimum);
         top += row + gap;
         DrawSliderRow(ui, drawList, new Rect(new Vector2(left, top), new Vector2(right, top + row)), model, minimum,
             scale);
@@ -120,11 +120,9 @@ internal sealed class HoldemRaiseComposer
         }
 
         var confirmRect = new Rect(new Vector2(backRect.Max.X + gap, actionRect.Min.Y), actionRect.Max);
-        var label = ConfirmLabel(model);
         var enabled = model.Enabled && amount > 0;
-        if (!Button.Draw(drawList, confirmRect, Typography.FitText(label, confirmRect.Width - confirmRect.Height,
-                Button.LabelStyle(confirmRect.Height)), ui.Ink, ButtonStyle.Prominent, enabled: enabled,
-                id: "holdem.raise.confirm"))
+        if (!TableButton.Draw(drawList, confirmRect, ConfirmLabel(model), string.Empty, ui.Ink,
+                ButtonStyle.Prominent, enabled, "holdem.raise.confirm"))
         {
             return HoldemComposerAction.None;
         }
@@ -143,26 +141,32 @@ internal sealed class HoldemRaiseComposer
         };
     }
 
-    private void DrawQuickRow(AppSkin ui, Rect row, in HoldemRaiseModel model, long minimum, float scale)
+    private void DrawQuickRow(AppSkin ui, Rect row, in HoldemRaiseModel model, long minimum)
     {
-        var gap = Gap * scale * 0.5f;
-        var width = (row.Width - gap * (QuickCount - 1)) / QuickCount;
-        var drawList = ImGui.GetWindowDrawList();
-        for (var index = 0; index < QuickCount; index++)
+        if (!ReferenceEquals(quickLanguage, Loc.Current))
         {
-            var min = new Vector2(row.Min.X + index * (width + gap), row.Min.Y);
-            var rect = new Rect(min, new Vector2(min.X + width, row.Max.Y));
-            var target = QuickAmount(index, model, minimum);
-            var label = Typography.FitText(Loc.T(QuickLabels[index]), width - rect.Height * 0.5f,
-                Button.LabelStyle(rect.Height));
-            var style = target == amount ? ButtonStyle.Tinted : ButtonStyle.Gray;
-            if (Button.Draw(drawList, rect, label, ui.Ink, style, enabled: model.Enabled && target > 0,
-                    id: QuickIds[index]))
+            quickLanguage = Loc.Current;
+            for (var index = 0; index < QuickCount; index++)
             {
-                amount = target;
-                CasinoSfx.Play(UiSound.ChipSlide);
+                quickLabels[index] = Loc.T(QuickLabels[index]);
             }
         }
+
+        for (var index = 0; index < QuickCount; index++)
+        {
+            quickTargets[index] = QuickAmount(index, model, minimum);
+            quickActive[index] = quickTargets[index] == amount;
+        }
+
+        var tapped = quickRail.Draw(row, ui, quickLabels, quickActive, centered: true,
+            labelPadding: ChipRail.CompactLabelPadding, interactive: model.Enabled);
+        if (tapped < 0 || quickTargets[tapped] <= 0)
+        {
+            return;
+        }
+
+        amount = quickTargets[tapped];
+        CasinoSfx.Play(UiSound.ChipSlide);
     }
 
     internal static long QuickAmount(int index, in HoldemRaiseModel model, long minimum)

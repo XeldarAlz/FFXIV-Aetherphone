@@ -15,9 +15,9 @@ namespace Aetherphone.Apps.Casino.Tables;
 internal sealed partial class HoldemTable
 {
     private const float TagLift = 10f;
-    private const float HeroCardOverlap = 0.66f;
-    private const float HeroHoverLift = 6f;
     private const float PotPanelWidth = 230f;
+    private const float TextPad = 6f;
+    private const float PipInset = 4f;
     private const int PotPanelMaxLines = 8;
 
     private static readonly string[] ReactionGlyphs =
@@ -32,7 +32,6 @@ internal sealed partial class HoldemTable
 
     private static readonly string PeekGlyph = IconGlyph.Of(FontAwesomeIcon.Eye);
 
-    private readonly int[] dealtSeats = new int[HoldemRules.MaxSeats];
     private readonly int[] heroCards = new int[HoldemRules.HoleCards + HoldemRules.BoardSize];
     private string[] potLines = Array.Empty<string>();
     private CasinoHoldemRoomStateDto? potLinesSource;
@@ -56,10 +55,9 @@ internal sealed partial class HoldemTable
         board.Phase >= HoldemPhases.Showdown && board.Phase != HoldemPhases.Voided
         && string.Equals(winnersHand, board.HandId, StringComparison.Ordinal);
 
-    private Vector2 HeroCardCenter(int slot, float scale)
+    private Vector2 HeroCardCenter(int slot)
     {
-        var width = HoldemTableLayout.HeroCardWidth * scale;
-        var step = width * HeroCardOverlap;
+        var step = layout.HeroCardPixels * HoldemTableLayout.HeroCardOverlap;
         return layout.HeroCardsCenter + new Vector2((slot - 0.5f) * step, 0f);
     }
 
@@ -105,9 +103,9 @@ internal sealed partial class HoldemTable
 
         var center = layout.PotCenter;
         var text = texts.Number(L.Holdem.PotTotal, board.PotTotal);
-        HoldemArt.DrawAmount(drawList, center, text, CasinoColors.Money, practice, scale, TextStyles.Headline);
-        var size = Typography.Measure(text, TextStyles.Headline);
-        var halfWidth = size.X * 0.5f + Typography.LineHeight(TextStyles.Headline) + 6f * scale;
+        HoldemArt.DrawAmount(drawList, center, text, CasinoColors.Money, practice, scale, TextStyles.Title3);
+        var size = Typography.Measure(text, TextStyles.Title3);
+        var halfWidth = size.X * 0.5f + Typography.LineHeight(TextStyles.Title3) + 6f * scale;
         DrawPotScatter(drawList, board, center, halfWidth, scale);
         var pots = board.Pots?.Length ?? 0;
         if (pots <= 1)
@@ -226,35 +224,32 @@ internal sealed partial class HoldemTable
     private void DrawSeats(ImDrawListPtr drawList, AppSkin ui, CasinoHoldemRoomStateDto board, long remaining,
         float phase, float scale)
     {
-        var count = 0;
-        var seats = board.Seats ?? Array.Empty<CasinoHoldemSeatDto>();
-        for (var index = 0; index < seats.Length && count < dealtSeats.Length; index++)
-        {
-            if (HoldemSeatStates.DealtIn(seats[index].State))
-            {
-                dealtSeats[count] = seats[index].SeatIndex;
-                count++;
-            }
-        }
-
-        HoldemRules.Blinds(new ReadOnlySpan<int>(dealtSeats, 0, count), board.Button, out var smallBlind,
-            out var bigBlind);
         var window = board.WindowSeconds > 0 ? board.WindowSeconds : HoldemRules.TurnSeconds;
         for (var seat = 0; seat < layout.SeatCount; seat++)
         {
             var dto = SeatAt(board, seat);
             if (dto is null)
             {
-                DrawEmptySeat(drawList, ui, seat, scale);
+                DrawEmptySeat(drawList, seat, scale);
                 continue;
             }
 
             var center = layout.SeatCenter(seat);
             var radius = layout.PuckFor(seat);
             var acting = board.CursorSeat == seat && HoldemPhases.Betting(board.Phase);
-            if (acting)
+            var hero = layout.IsHero(seat);
+            if (acting && !hero)
             {
                 BlackjackTableArt.DrawActingGlow(drawList, center, radius * 2.2f, CasinoColors.LightA);
+            }
+
+            if (hero)
+            {
+                DrawCapsule(drawList, board, dto, acting, scale);
+            }
+            else
+            {
+                DrawSeatCards(drawList, board, dto, false, scale);
             }
 
             var dim = dto.State is HoldemSeatStates.Folded or HoldemSeatStates.SittingOut or HoldemSeatStates.Waiting
@@ -263,7 +258,7 @@ internal sealed partial class HoldemTable
                 images, lodestone, 1f, 32, dim ? 0.45f : 1f, Frames.Of(dto.FrameId));
             if (acting)
             {
-                TurnTimerRing.Draw(drawList, center, radius + 4f * scale, remaining, window, CasinoColors.LightA,
+                TurnTimerRing.Draw(drawList, center, radius + 3.5f * scale, remaining, window, CasinoColors.LightA,
                     scale);
             }
 
@@ -273,24 +268,23 @@ internal sealed partial class HoldemTable
                     ImGui.GetColorU32(CasinoColors.InkMuted with { W = 0.5f + 0.4f * MathF.Sin(phase * 3f) }), 12);
             }
 
-            DrawSeatTop(drawList, board, dto, center, radius, scale);
-            DrawCapsule(drawList, dto, acting, scale);
+            if (!hero)
+            {
+                DrawSeatCards(drawList, board, dto, true, scale);
+                DrawCapsule(drawList, board, dto, acting, scale);
+                DrawSeatTop(drawList, board, dto, scale);
+            }
+
             if (board.Button == seat && board.HandId.Length > 0)
             {
                 HoldemArt.DrawDealerButton(drawList, layout.DealerButton(seat), scale);
             }
 
-            DrawSeatBet(drawList, board, dto, seat == smallBlind, seat == bigBlind, scale);
-            if (seat != mySeat)
-            {
-                DrawSeatCards(drawList, board, dto, scale);
-            }
-
-            DrawSeatResult(drawList, board, dto, scale);
+            DrawSeatBet(drawList, dto, scale);
         }
     }
 
-    private void DrawEmptySeat(ImDrawListPtr drawList, AppSkin ui, int seat, float scale)
+    private void DrawEmptySeat(ImDrawListPtr drawList, int seat, float scale)
     {
         var center = layout.SeatCenter(seat);
         var open = mySeat < 0 && !seatFlow.Busy;
@@ -301,17 +295,17 @@ internal sealed partial class HoldemTable
             return;
         }
 
-        var radius = MathF.Max(layout.PuckFor(seat), HoldemTableLayout.SitSpotRadius * scale);
-        if (SeatSpot.DrawEmpty(drawList, center, radius, Loc.T(L.Holdem.Sit), CasinoColors.LightA, true, scale))
+        if (SeatSpot.DrawEmpty(drawList, center, layout.SpotRadius, Loc.T(L.Holdem.Sit), CasinoColors.LightA, true,
+                layout.SpotScale))
         {
             BeginBuyIn(seat);
         }
     }
 
     private void DrawSeatTop(ImDrawListPtr drawList, CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto dto,
-        Vector2 center, float radius, float scale)
+        float scale)
     {
-        var top = new Vector2(center.X, center.Y - radius - TagLift * scale);
+        var top = layout.TagCenter(dto.SeatIndex);
         var action = ActionLabel(dto);
         if (action.Key is not null && HoldemPhases.Betting(board.Phase) && dto.LastAction.Length > 0)
         {
@@ -320,10 +314,15 @@ internal sealed partial class HoldemTable
             return;
         }
 
+        if (dto.Shown && board.Phase >= HoldemPhases.Showdown)
+        {
+            return;
+        }
+
         var title = TitleOf(dto.Title);
         if (title != BalanceTitle.None)
         {
-            StatusTitle.Draw(drawList, top, title, HoldemTableLayout.CapsuleWidth * scale, scale);
+            StatusTitle.Draw(drawList, top, title, layout.PodWidth, scale);
         }
     }
 
@@ -358,10 +357,12 @@ internal sealed partial class HoldemTable
         _ => BalanceTitle.None,
     };
 
-    private void DrawCapsule(ImDrawListPtr drawList, CasinoHoldemSeatDto dto, bool acting, float scale)
+    private void DrawCapsule(ImDrawListPtr drawList, CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto dto,
+        bool acting, float scale)
     {
         var seat = dto.SeatIndex;
-        var rect = layout.IsBottom(seat) ? HeroCapsuleRect(seat, scale) : layout.CapsuleRect(seat);
+        var hero = layout.IsHero(seat);
+        var rect = layout.CapsuleRect(seat);
         StageText.Capsule(drawList, rect.Min, rect.Max);
         if (acting)
         {
@@ -369,32 +370,60 @@ internal sealed partial class HoldemTable
                 MathF.Max(1f, 1.2f * scale));
         }
 
-        var inner = rect.Width - 8f * scale;
+        var pad = TextPad * scale;
+        var left = rect.Min.X + pad;
+        var right = rect.Max.X - pad;
+        if (hero)
+        {
+            left = layout.SeatCenter(seat).X + layout.PuckFor(seat) + pad;
+            if (board.Button == seat && board.HandId.Length > 0)
+            {
+                right -= HoldemTableLayout.DealerButtonRadius * 2f * scale + pad * 0.5f;
+            }
+        }
+
+        var inner = MathF.Max(1f, right - left);
+        var centerX = (left + right) * 0.5f;
         var nameStyle = TextStyles.Footnote;
-        var stackStyle = TextStyles.SubheadlineEmphasized;
-        var nameLine = Typography.FitText(seat == mySeat ? Loc.T(L.Holdem.You) : dto.DisplayName, inner, nameStyle);
-        var folded = dto.State is HoldemSeatStates.Folded or HoldemSeatStates.SittingOut;
-        Typography.DrawCentered(drawList,
-            new Vector2(rect.Center.X, rect.Min.Y + 1f * scale + Typography.LineHeight(nameStyle) * 0.5f), nameLine,
-            folded ? CasinoColors.InkBody : CasinoColors.InkTitle, nameStyle);
-        var second = SecondLine(dto, out var ink);
-        Typography.DrawCentered(drawList,
-            new Vector2(rect.Center.X, rect.Max.Y - 1f * scale - Typography.LineHeight(stackStyle) * 0.5f),
-            Typography.FitText(second, inner, stackStyle), ink, stackStyle);
+        var stackStyle = TextStyles.Title3;
+        var nameHeight = Typography.LineHeight(nameStyle);
+        var stackHeight = Typography.LineHeight(stackStyle);
+        var top = rect.Center.Y - (nameHeight + stackHeight) * 0.5f;
+        var first = FirstLine(board, dto, hero, out var firstInk);
+        Typography.DrawCentered(drawList, new Vector2(centerX, top + nameHeight * 0.5f),
+            Typography.FitText(first, inner, nameStyle), firstInk, nameStyle);
+        var second = SecondLine(board, dto, out var ink);
+        var fit = StageText.FitScale(second, inner, stackStyle, StageTextRole.Amount);
+        Typography.DrawCentered(drawList, new Vector2(centerX, top + nameHeight + stackHeight * 0.5f),
+            Typography.FitText(second, inner, fit, stackStyle.Weight), ink, fit, stackStyle.Weight);
         DrawTimeBankPips(drawList, dto, rect, acting, scale);
     }
 
-    private Rect HeroCapsuleRect(int seat, float scale)
+    private bool Paying(CasinoHoldemRoomStateDto board, int seat) =>
+        ShowingWinners(board) && HoldemPhases.Over(board.Phase) && payoutClock >= ChipFlightSeconds
+        && payoutAmounts[seat] > 0;
+
+    private string FirstLine(CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto dto, bool hero, out Vector4 ink)
     {
-        var center = layout.SeatCenter(seat);
-        var radius = layout.PuckFor(seat);
-        var half = new Vector2(HoldemTableLayout.CapsuleWidth, HoldemTableLayout.CapsuleHeight) * 0.5f * scale;
-        var capsuleCenter = new Vector2(center.X + radius + 6f * scale + half.X, center.Y);
-        return new Rect(capsuleCenter - half, capsuleCenter + half);
+        if (Paying(board, dto.SeatIndex) && dto.HandRank >= 0 && dto.Shown)
+        {
+            ink = CasinoColors.MoneyHighlight;
+            return HoldemHandNames.Describe(dto.HandRank);
+        }
+
+        var folded = dto.State is HoldemSeatStates.Folded or HoldemSeatStates.SittingOut;
+        ink = folded ? CasinoColors.InkBody : CasinoColors.InkTitle;
+        return hero ? Loc.T(L.Holdem.You) : dto.DisplayName;
     }
 
-    private string SecondLine(CasinoHoldemSeatDto dto, out Vector4 ink)
+    private string SecondLine(CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto dto, out Vector4 ink)
     {
+        if (Paying(board, dto.SeatIndex))
+        {
+            ink = CasinoColors.Money;
+            return texts.Signed(payoutAmounts[dto.SeatIndex]);
+        }
+
         switch (dto.State)
         {
             case HoldemSeatStates.AllIn:
@@ -423,7 +452,7 @@ internal sealed partial class HoldemTable
         var radius = 2.2f * scale;
         var step = radius * 2.8f;
         var left = capsule.Center.X - step * (HoldemRules.TimeBankUses - 1) * 0.5f;
-        var y = capsule.Max.Y + radius + 2f * scale;
+        var y = capsule.Max.Y - PipInset * scale;
         for (var pip = 0; pip < HoldemRules.TimeBankUses; pip++)
         {
             var filled = pip < dto.TimeBankLeft;
@@ -432,32 +461,29 @@ internal sealed partial class HoldemTable
         }
     }
 
-    private void DrawSeatBet(ImDrawListPtr drawList, CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto dto,
-        bool smallBlind, bool bigBlind, float scale)
+    private void DrawSeatBet(ImDrawListPtr drawList, CasinoHoldemSeatDto dto, float scale)
     {
-        var anchor = layout.BetAnchor(dto.SeatIndex);
-        if (board.Phase == HoldemPhases.Preflop && (smallBlind || bigBlind))
-        {
-            HoldemArt.DrawTag(drawList, anchor - new Vector2(0f, 14f * scale),
-                Loc.T(smallBlind ? L.Holdem.SmallBlindShort : L.Holdem.BigBlindShort), CasinoColors.LightB, scale);
-        }
-
         if (dto.Bet <= 0)
         {
             return;
         }
 
-        HoldemArt.DrawAmount(drawList, anchor, NumberText.Compact(dto.Bet), CasinoColors.Money, practice, scale,
-            TextStyles.FootnoteEmphasized);
+        var seat = dto.SeatIndex;
+        var text = NumberText.Compact(dto.Bet);
+        var width = layout.BetRect(seat).Width;
+        var style = HoldemArt.AmountWidth(text, TextStyles.SubheadlineEmphasized, scale) <= width
+            ? TextStyles.SubheadlineEmphasized
+            : TextStyles.FootnoteEmphasized;
+        HoldemArt.DrawAmount(drawList, layout.BetAnchor(seat), text, CasinoColors.Money, practice, scale, style);
     }
 
     private void DrawSeatCards(ImDrawListPtr drawList, CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto dto,
-        float scale)
+        bool front, float scale)
     {
         var seat = dto.SeatIndex;
         var cards = dto.Cards;
         var real = HoldemPlayback.HasRealCards(cards);
-        if (!HoldemSeatStates.Live(dto.State) && !(dto.Shown && real))
+        if (real != front || (!HoldemSeatStates.Live(dto.State) && !(dto.Shown && real)))
         {
             return;
         }
@@ -477,8 +503,9 @@ internal sealed partial class HoldemTable
 
             if (real && cards!.Length > slot)
             {
-                var width = HoldemTableLayout.ShownCardWidth * scale;
-                var center = layout.SeatCardsAnchor(seat) + new Vector2((slot - 0.5f) * width * 0.9f, 0f);
+                var width = layout.ShownCardPixels;
+                var center = layout.SeatCenter(seat)
+                    + new Vector2((slot - 0.5f) * width * HoldemTableLayout.ShownCardStep, 0f);
                 HoldemArt.DrawCard(drawList, center, width, cards[slot], true, 1f, scale, 1f,
                     winners && winningCards[cards[slot]]);
                 continue;
@@ -486,32 +513,6 @@ internal sealed partial class HoldemTable
 
             HoldemArt.DrawCard(drawList, SeatCardCenter(seat, slot, scale), HoldemTableLayout.SeatCardWidth * scale,
                 HoldemRules.FaceDown, false, 1f, scale);
-        }
-    }
-
-    private void DrawSeatResult(ImDrawListPtr drawList, CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto dto,
-        float scale)
-    {
-        if (!ShowingWinners(board) || !HoldemPhases.Over(board.Phase) || payoutClock < ChipFlightSeconds)
-        {
-            return;
-        }
-
-        var won = payoutAmounts[dto.SeatIndex];
-        if (won <= 0)
-        {
-            return;
-        }
-
-        var anchor = layout.BetAnchor(dto.SeatIndex);
-        var label = texts.Signed(won);
-        HoldemArt.DrawTag(drawList, anchor, label, CasinoColors.Money, scale);
-        if (dto.HandRank >= 0 && dto.Shown)
-        {
-            var name = HoldemHandNames.Describe(dto.HandRank);
-            var width = HoldemTableLayout.CapsuleWidth * 1.4f * scale;
-            Typography.DrawCentered(drawList, anchor + new Vector2(0f, 16f * scale),
-                Typography.FitText(name, width, TextStyles.Footnote), CasinoColors.MoneyHighlight, TextStyles.Footnote);
         }
     }
 
@@ -535,10 +536,10 @@ internal sealed partial class HoldemTable
             return;
         }
 
-        var width = HoldemTableLayout.HeroCardWidth * scale;
+        var width = layout.HeroCardPixels;
         var height = PlayingCards.HeightFor(width);
         var center = layout.HeroCardsCenter;
-        var half = new Vector2(width * (0.5f + HeroCardOverlap * 0.5f), height * 0.5f);
+        var half = new Vector2(width * (0.5f + HoldemTableLayout.HeroCardOverlap * 0.5f), height * 0.5f);
         var hovered = UiInteract.Hover(center - half, center + half);
         if (hovered)
         {
@@ -550,7 +551,7 @@ internal sealed partial class HoldemTable
         var value = peel.Step(target, PeelSmoothing, delta);
         var squash = MathF.Abs(MathF.Cos(value * MathF.PI));
         var faceUp = value > 0.5f;
-        var lift = new Vector2(0f, -HeroHoverLift * scale * value);
+        var lift = new Vector2(0f, -HoldemTableLayout.HeroLift * scale * value);
         var winners = ShowingWinners(board);
         for (var slot = 0; slot < HoldemRules.HoleCards && slot < cards.Length; slot++)
         {
@@ -559,7 +560,7 @@ internal sealed partial class HoldemTable
                 continue;
             }
 
-            HoldemArt.DrawCard(drawList, HeroCardCenter(slot, scale) + lift, width, cards[slot], faceUp, squash, scale,
+            HoldemArt.DrawCard(drawList, HeroCardCenter(slot) + lift, width, cards[slot], faceUp, squash, scale,
                 1f, winners && faceUp && winningCards[Math.Clamp(cards[slot], 0, PlayingCards.DeckSize - 1)]);
         }
 
@@ -571,7 +572,7 @@ internal sealed partial class HoldemTable
 
         if (!revealed && value < 0.05f)
         {
-            PhoneIcon.Draw(drawList, HeroCardCenter(1, scale), PeekGlyph, CasinoColors.InkTitle with { W = 0.75f },
+            PhoneIcon.Draw(drawList, HeroCardCenter(1), PeekGlyph, CasinoColors.InkTitle with { W = 0.75f },
                 width * 0.4f);
         }
     }
@@ -603,8 +604,7 @@ internal sealed partial class HoldemTable
         if (hero is null || cards is null || !HoldemSeatStates.Live(hero.State))
         {
             var message = Loc.T(hero is null ? L.Holdem.WatchingHint : StatusOf(board, hero));
-            Typography.DrawCentered(drawList, inner.Center, Typography.FitText(message, inner.Width,
-                TextStyles.Subheadline), CasinoColors.InkTitle, TextStyles.Subheadline);
+            DrawRowNote(drawList, inner, message, TextStyles.Subheadline, CasinoColors.InkTitle);
             return;
         }
 
