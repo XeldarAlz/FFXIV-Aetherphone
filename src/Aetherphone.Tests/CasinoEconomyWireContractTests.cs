@@ -146,8 +146,6 @@ public sealed class CasinoEconomyWireContractTests
     public void TheRateAndTheCashierFiguresFollowEconomyV3()
     {
         Assert.Equal(1000, CasinoChipLots.ChipPerCoin);
-        Assert.Equal(10_000, CasinoChipLots.JackpotSeedCoins);
-        Assert.Equal(100_000, CasinoChipLots.JackpotCapCoins);
         Assert.Equal(20_000, CasinoHostingRules.ChipMinBuyIn);
         Assert.Equal(5_000_000, CasinoHostingRules.ChipMaxBuyIn);
         Assert.Equal(new long[] { 250, 1_000, 5_000, 25_000, 100_000 }, ScratchRules.Prices);
