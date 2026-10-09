@@ -49,7 +49,7 @@ internal static class VenueArt
         var fitted = Typography.FitScale(number, tile.Width * 0.82f, style.Scale, TextStyles.Footnote.Scale,
             style.Weight);
         var size = Typography.Measure(number, fitted, style.Weight);
-        var ink = !settled ? CasinoColors.InkMuted : losing ? CasinoColors.Loss : CasinoColors.InkTitle;
+        var ink = !settled ? CasinoColors.InkBody : losing ? CasinoColors.Loss : CasinoColors.InkTitle;
         Typography.Draw(drawList, tile.Center - size * 0.5f, number, ink, fitted, style.Weight);
     }
 

@@ -315,7 +315,7 @@ internal sealed partial class HoldemTable
         var action = ActionLabel(dto);
         if (action.Key is not null && HoldemPhases.Betting(board.Phase) && dto.LastAction.Length > 0)
         {
-            var tint = dto.State == HoldemSeatStates.Folded ? CasinoColors.InkMuted : CasinoColors.InkTitle;
+            var tint = dto.State == HoldemSeatStates.Folded ? CasinoColors.InkBody : CasinoColors.InkTitle;
             HoldemArt.DrawTag(drawList, top, Loc.T(action), tint, scale);
             return;
         }

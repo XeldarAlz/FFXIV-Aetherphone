@@ -35,6 +35,12 @@ internal static class BingoCardArt
         new(0.612f, 0.460f, 0.840f, 1f),
     };
 
+    private static readonly Vector4[] LetterInks =
+    {
+        WheelRingArt.InkOn(ColumnTints[0]), WheelRingArt.InkOn(ColumnTints[1]), WheelRingArt.InkOn(ColumnTints[2]),
+        WheelRingArt.InkOn(ColumnTints[3]), WheelRingArt.InkOn(ColumnTints[4]),
+    };
+
     public static Rect CellRect(Rect card, int cellIndex)
     {
         var cell = card.Width / Columns;
@@ -167,7 +173,7 @@ internal static class BingoCardArt
             var rowCenterY = board.Min.Y + (column + 0.5f) * cell;
             var letterCenter = new Vector2(board.Min.X + cell * 0.5f, rowCenterY);
             drawList.AddCircleFilled(letterCenter, dot, ImGui.GetColorU32(tint with { W = 0.9f }), 16);
-            Typography.DrawCentered(drawList, letterCenter, Letters[column], CasinoColors.InkTitle,
+            Typography.DrawCentered(drawList, letterCenter, Letters[column], LetterInks[column],
                 ScaleForRadius(dot), FontWeight.Bold);
             for (var offset = 0; offset < BingoRules.NumbersPerColumn; offset++)
             {
@@ -190,8 +196,8 @@ internal static class BingoCardArt
                     continue;
                 }
 
-                Typography.DrawCentered(drawList, center, GameNumber.Label(ball),
-                    CasinoColors.InkMuted with { W = 0.55f }, ScaleForRadius(dot), FontWeight.Medium);
+                Typography.DrawCentered(drawList, center, GameNumber.Label(ball), CasinoColors.InkMuted,
+                    ScaleForRadius(dot), FontWeight.Medium);
             }
         }
     }
