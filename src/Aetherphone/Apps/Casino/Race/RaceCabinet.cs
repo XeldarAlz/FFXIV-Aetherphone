@@ -37,7 +37,7 @@ internal sealed class RaceCabinet : ICabinetIdle
     private readonly RaceRoundPlayback playback = new();
     private readonly RaceCommentary commentary = new();
     private readonly RaceTrackView view = new();
-    private readonly RaceBoards boards = new();
+    private readonly RaceResultCard result = new();
     private readonly RaceTicketBuilder builder = new();
     private readonly RaceTexts texts = new();
     private readonly RaceFieldList field = new();
@@ -48,6 +48,9 @@ internal sealed class RaceCabinet : ICabinetIdle
 
     private string inlineReason = string.Empty;
     private string settledKey = string.Empty;
+    private string nextText = string.Empty;
+    private int nextSeconds = -1;
+    private LanguageInfo? nextLanguage;
     private long roundSeen = -1;
     private int phaseSeen = -1;
     private int timerSecond = -1;
@@ -142,38 +145,32 @@ internal sealed class RaceCabinet : ICabinetIdle
         HandleCues(stage, runners);
         Gallop(delta, stretch);
         Settle(stage, frame, snapshot, bets);
-        var racing = snapshot.Phase == CasinoRoomPhases.Locked;
-        var open = snapshot.Phase == CasinoRoomPhases.Open;
-        if (!racing)
-        {
-            DrawCountdown(drawList, frame, snapshot.Phase, remaining, room.Attached, state, scale);
-        }
-
-        if (racing)
+        if (snapshot.Phase == CasinoRoomPhases.Locked)
         {
             DrawRace(drawList, frame, runners, landscape, delta, stretch, scale);
             return;
         }
 
+        DrawCountdown(drawList, frame, snapshot.Phase, remaining, room.Attached, state, scale);
         if (runners is not { Length: RaceRules.FieldSize })
         {
             DrawCenterPill(drawList, safe, Loc.T(L.Race.WaitingField), 1f, scale);
             return;
         }
 
-        if (open)
+        if (snapshot.Phase == CasinoRoomPhases.Open)
         {
             DrawOpen(stage, frame, ui, drawList, landscape, snapshot, runners, bets, state, scale);
             return;
         }
 
-        var layout = RaceLayout.Compute(safe, frame.Deck, landscape, false, false, 0f, scale);
-        if (layout.Landscape)
+        if (board?.Order is not { Length: RaceRules.FieldSize })
         {
-            DrawRail(drawList, frame.Full, new Vector2(layout.Side.Min.X, layout.Header.Max.Y), scale);
+            DrawCenterPill(drawList, safe, Loc.T(L.Race.WaitingField), 1f, scale);
+            return;
         }
 
-        DrawResult(drawList, layout, board!, runners, bets, stage.Phase, delta, scale);
+        result.Draw(drawList, safe, board, runners, bets, texts, NextLine(remaining), delta, scale);
     }
 
     public void DrawIdle(ImDrawListPtr drawList, Rect rect, float deltaSeconds)
@@ -204,7 +201,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         playback.Reset();
         commentary.Clear();
         view.Reset();
-        boards.Reset();
+        result.Reset();
         field.Reset();
         strip.Reset();
         settledKey = string.Empty;
@@ -596,28 +593,18 @@ internal sealed class RaceCabinet : ICabinetIdle
         }
     }
 
-    private void DrawResult(ImDrawListPtr drawList, in RaceLayout layout, CasinoRaceRoomStateDto board,
-        CasinoRaceRunnerDto[] runners, CasinoRaceBetsDto? bets, float phase, float deltaSeconds, float scale)
+    private string NextLine(long remainingMs)
     {
-        boards.DrawResult(drawList, layout.Main, board, runners, texts, board.RoundIndex, phase, deltaSeconds, scale);
-        var side = layout.Side;
-        var totalHeight = RaceLayout.RideHeight * scale;
-        var compact = !layout.Landscape;
-        if (compact)
+        var seconds = (int)((Math.Max(0, remainingMs) + 999) / 1000);
+        if (seconds == nextSeconds && ReferenceEquals(nextLanguage, Loc.Current))
         {
-            RaceBoards.DrawTotal(drawList, new Rect(side.Min, new Vector2(side.Max.X, side.Min.Y + totalHeight * 0.8f)),
-                bets, texts, scale);
-            boards.DrawTickets(drawList, new Rect(
-                    new Vector2(side.Min.X, side.Min.Y + totalHeight * 0.8f + 4f * scale), side.Max), bets?.Tickets,
-                texts, true, true, board.RoundIndex, deltaSeconds, scale);
-            return;
+            return nextText;
         }
 
-        RaceBoards.DrawTotal(drawList, new Rect(new Vector2(side.Min.X, side.Max.Y - totalHeight), side.Max), bets,
-            texts, scale);
-        boards.DrawTickets(drawList,
-            new Rect(side.Min, new Vector2(side.Max.X, side.Max.Y - totalHeight - 4f * scale)), bets?.Tickets, texts,
-            true, false, board.RoundIndex, deltaSeconds, scale);
+        nextSeconds = seconds;
+        nextLanguage = Loc.Current;
+        nextText = Loc.T(L.Casino.RoomNextIn, TimeText.Duration(seconds));
+        return nextText;
     }
 
     private void DrawCenterPill(ImDrawListPtr drawList, Rect area, string text, float alpha, float scale)

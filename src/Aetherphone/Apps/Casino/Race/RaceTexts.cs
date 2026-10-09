@@ -9,11 +9,7 @@ namespace Aetherphone.Apps.Casino.Race;
 
 internal sealed class RaceTexts
 {
-    private const int OddsCacheLimit = 512;
     private const char NoRun = '-';
-
-    private static readonly Dictionary<int, string> OddsCache = new();
-    private static LanguageInfo? oddsLanguage;
 
     private static readonly LocString[] ShortKinds =
     {
@@ -29,7 +25,6 @@ internal sealed class RaceTexts
 
     private readonly string[] kindLabels = new string[RaceRules.KindCount];
     private readonly string[] form = new string[RaceRules.FieldSize];
-    private readonly LabelSlot[] backers = new LabelSlot[RaceRules.FieldSize];
     private readonly string[] tickets = new string[RaceRules.MaxTickets];
     private readonly string[] results = new string[RaceRules.ResultRows];
     private readonly string[] places = new string[Places.Length];
@@ -40,9 +35,6 @@ internal sealed class RaceTexts
     private CasinoRaceRunnerDto[]? formSource;
     private CasinoRaceTicketDto[]? ticketSource;
     private CasinoRaceResultDto[]? resultSource;
-    private string payLine = string.Empty;
-    private int payKind = -1;
-    private long payValue = -1;
     private string rideLine = string.Empty;
     private long rideValue = -1;
     private string wonLine = string.Empty;
@@ -88,34 +80,10 @@ internal sealed class RaceTexts
         resultSource = null;
         paysSource = null;
         betKey = int.MinValue;
-        payKind = -1;
         rideValue = -1;
         wonValue = -1;
         countValue = -1;
         raceValue = -1;
-    }
-
-    public static string Odds(int hundredths)
-    {
-        if (!ReferenceEquals(oddsLanguage, Loc.Current))
-        {
-            oddsLanguage = Loc.Current;
-            OddsCache.Clear();
-        }
-
-        if (OddsCache.TryGetValue(hundredths, out var cached))
-        {
-            return cached;
-        }
-
-        if (OddsCache.Count >= OddsCacheLimit)
-        {
-            OddsCache.Clear();
-        }
-
-        var text = (hundredths / 100m).ToString("0.00", Loc.Culture);
-        OddsCache[hundredths] = text;
-        return text;
     }
 
     public string Place(int place) => place >= 0 && place < places.Length ? places[place] : string.Empty;
@@ -135,8 +103,6 @@ internal sealed class RaceTexts
 
         return slot >= 0 && slot < form.Length ? form[slot] : string.Empty;
     }
-
-    public string Backers(int slot, int count) => backers[slot].Get(L.Race.Backers, count);
 
     public string Ticket(CasinoRaceTicketDto[] list, int index)
     {
@@ -223,20 +189,6 @@ internal sealed class RaceTexts
         var pay = PayOf(ticket.Kind, ticket.Runner, ticket.RunnerB, runners);
         var amount = RaceAmounts.Text(RaceRules.Payout(ticket.Amount, pay));
         return Loc.T(ticket.Kind == RaceRules.KindReverse ? L.Race.PaysUpTo : L.Race.Pays, amount);
-    }
-
-    public string PayLine(int kind, long payHundredths)
-    {
-        if (kind == payKind && payHundredths == payValue)
-        {
-            return payLine;
-        }
-
-        payKind = kind;
-        payValue = payHundredths;
-        var multiple = CasinoMultiples.Label((int)Math.Min(int.MaxValue, payHundredths));
-        payLine = Loc.T(kind == RaceRules.KindReverse ? L.Race.PaysUpTo : L.Race.Pays, multiple);
-        return payLine;
     }
 
     public string Ride(long amount)
