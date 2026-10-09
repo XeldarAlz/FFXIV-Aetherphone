@@ -111,7 +111,8 @@ internal sealed class CasinoStage
         reality.Record(record.Stake, record.Payout, Environment.TickCount64);
     }
 
-    public CasinoStageFrame Begin(Rect content, in CasinoStageSpec next, long balanceValue, in CasinoCeiling ceiling)
+    public CasinoStageFrame Begin(Rect full, Rect content, in CasinoStageSpec next, long balanceValue,
+        in CasinoCeiling ceiling)
     {
         var scale = UiScale.Current;
         var now = Environment.TickCount64;
@@ -148,13 +149,11 @@ internal sealed class CasinoStage
         backdrop.SetWarmth(next.Warmth);
         backdrop.SetLampPool(next.LampPool);
         backdrop.SetFeltStyle(FeltStyle.Night, next.Rail);
-        layout = CasinoStageLayout.Compute(content, next.Room, next.Practice,
-            next.DeckHeight, scale);
+        layout = CasinoStageLayout.Compute(full, content, next.Room, next.Practice, next.DeckHeight, scale);
         actionRow = DeckActions.Row(layout.Deck, scale);
         actionCursor = actionRow.Min.X;
         actionSecondaries = 0;
         var drawList = ImGui.GetWindowDrawList();
-        var full = layout.Full;
         backdrop.Update(delta, full, ImGui.GetMousePos(), UiInteract.Hover(full.Min, full.Max));
         backdrop.Draw(drawList, full, AccentFor(next.Preset), scale);
         CasinoSfx.Arm(focused);
@@ -173,10 +172,10 @@ internal sealed class CasinoStage
 
         if (layout.HasDeck)
         {
-            var deck = layout.Deck;
+            var panel = layout.DeckPanel;
             var radius = DeckRadius * scale;
             drawList.PushClipRect(full.Min, full.Max, true);
-            Material.Frosted(drawList, deck.Min, new Vector2(deck.Max.X, deck.Max.Y + radius), radius, scale);
+            Material.Frosted(drawList, panel.Min, new Vector2(panel.Max.X, panel.Max.Y + radius), radius, scale);
             drawList.PopClipRect();
         }
 

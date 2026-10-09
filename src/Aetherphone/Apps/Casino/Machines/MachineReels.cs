@@ -481,10 +481,11 @@ internal sealed class MachineReels
     private static void DrawLabel(ImDrawListPtr drawList, string text, Vector2 center, float width, float alpha)
     {
         var style = TextStyles.FootnoteEmphasized;
-        var fitted = Typography.FitText(text, width, style);
+        var plate = new Vector2(4f, 1f) * UiScale.Current;
+        var fitted = Typography.FitText(text, MathF.Max(1f, width - plate.X * 2f), style);
         var size = Typography.Measure(fitted, style);
-        var min = center - size * 0.5f - new Vector2(4f, 1f) * UiScale.Current;
-        var max = center + size * 0.5f + new Vector2(4f, 1f) * UiScale.Current;
+        var min = center - size * 0.5f - plate;
+        var max = center + size * 0.5f + plate;
         Squircle.Fill(drawList, min, max, (max.Y - min.Y) * 0.5f,
             ImGui.GetColorU32(new Vector4(0.05f, 0.03f, 0.08f, 0.82f * alpha)));
         Typography.DrawCentered(drawList, center, fitted, StageInks.Strong with { W = alpha }, style);

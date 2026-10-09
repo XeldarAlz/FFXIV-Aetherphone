@@ -100,7 +100,7 @@ internal sealed class MachinePaySheet
         var left = origin.X;
         var y = origin.Y;
         var info = SlotsMachines.For(machineId);
-        y = Stat(drawList, left, y, width, Loc.T(L.Strip.Return), returnBase, scale);
+        y = Stat(drawList, left, y, width, Loc.T(L.Strip.PaysBack), returnBase, scale);
         if (info.OffersAnte)
         {
             y = Stat(drawList, left, y, width, Loc.T(L.Machines.ReturnAnte), returnAnte, scale);

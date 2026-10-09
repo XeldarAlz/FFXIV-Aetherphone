@@ -23,6 +23,7 @@ internal sealed class CasinoInfoSheet
     private CasinoStageSpec spec;
     private CasinoInfoRequest request;
     private string returnText = string.Empty;
+    private string explainText = string.Empty;
     private int returnTenths = -1;
     private LanguageInfo? returnLanguage;
     private string reasonText = string.Empty;
@@ -179,7 +180,7 @@ internal sealed class CasinoInfoSheet
     {
         var value = ReturnText(spec.ReturnTenths);
         var valueSize = Typography.Measure(value, TextStyles.SubheadlineEmphasized);
-        var label = Typography.FitText(Loc.T(L.Strip.Return), width - valueSize.X - Metrics.Space.Md * scale,
+        var label = Typography.FitText(Loc.T(L.Strip.PaysBack), width - valueSize.X - Metrics.Space.Md * scale,
             TextStyles.Footnote);
         var labelHeight = Typography.LineHeight(TextStyles.Footnote);
         var rowHeight = Metrics.Size.Row * scale;
@@ -188,9 +189,13 @@ internal sealed class CasinoInfoSheet
             TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(left + width - valueSize.X, center - valueSize.Y * 0.5f), value,
             CasinoColors.Money, TextStyles.SubheadlineEmphasized);
-        drawList.AddLine(new Vector2(left, y + rowHeight), new Vector2(left + width, y + rowHeight),
+        var explainTop = y + rowHeight;
+        var explainHeight = Typography.DrawWrappedLeft(new Vector2(left, explainTop), explainText, skin.MutedInk,
+            TextStyles.Footnote, width);
+        var bottom = explainTop + explainHeight + Metrics.Space.Xs * scale;
+        drawList.AddLine(new Vector2(left, bottom), new Vector2(left + width, bottom),
             ImGui.GetColorU32(Palette.WithAlpha(skin.TitleInk, 0.06f)), 1f);
-        return y + rowHeight;
+        return bottom;
     }
 
     private float DrawButtons(float left, float y, float width, float scale)
@@ -244,6 +249,7 @@ internal sealed class CasinoInfoSheet
         returnTenths = tenths;
         returnLanguage = Loc.Current;
         returnText = Loc.T(L.Strip.ReturnValue, (tenths / 10m).ToString("0.0", Loc.Culture));
+        explainText = Loc.T(L.Strip.PaysBackExplain, (tenths / 10m).ToString("0.#", Loc.Culture));
         return returnText;
     }
 }

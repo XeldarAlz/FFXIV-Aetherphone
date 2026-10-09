@@ -193,7 +193,7 @@ internal sealed partial class CasinoApp
             return cached;
         }
 
-        var label = Loc.T(L.Strip.ReturnValue, (tenths / 10m).ToString("0.#", Loc.Culture));
+        var label = Loc.T(L.Strip.PaysBackShort, (tenths / 10m).ToString("0.#", Loc.Culture));
         returnLabels[tenths] = label;
         return label;
     }

@@ -34,13 +34,11 @@ internal readonly record struct BetComposerModel(
 
 internal sealed class BetComposer
 {
-    public const float Pad = 12f;
-    public const float Gap = 8f;
-    public const float AmountHeight = 34f;
-    public const float ActionHeight = DeckActions.PrimaryHeight;
-    public const float KnobHeight = 36f;
-    public const float QuickWidth = 52f;
-    public const float ModeWidth = 112f;
+    public const float Pad = BetDeckLayout.Pad;
+    public const float Gap = BetDeckLayout.Gap;
+    public const float AmountHeight = BetDeckLayout.AmountHeight;
+    public const float ActionHeight = BetDeckLayout.ActionHeight;
+    public const float KnobHeight = BetDeckLayout.KnobHeight;
 
     private const int BufferLength = 16;
     private const float FlashSeconds = 0.5f;
@@ -82,21 +80,8 @@ internal sealed class BetComposer
 
     public bool SheetOpen => autoSheet.IsOpen;
 
-    public static float DeckHeightFor(bool knob, bool fixedAmount)
-    {
-        var height = Pad * 2f + ActionHeight;
-        if (!fixedAmount)
-        {
-            height += AmountHeight + Gap;
-        }
-
-        if (knob)
-        {
-            height += KnobHeight + Gap;
-        }
-
-        return MathF.Max(CasinoStageLayout.DeckHeight, height);
-    }
+    public static float DeckHeightFor(bool knob, bool fixedAmount) =>
+        BetDeckLayout.DeckHeightFor(knob, fixedAmount);
 
     public void Reset(long value)
     {
@@ -145,61 +130,37 @@ internal sealed class BetComposer
             amount = snapped;
         }
 
-        var left = deck.Min.X + Pad * scale;
-        var right = deck.Max.X - Pad * scale;
-        var top = deck.Min.Y + Pad * scale;
         var running = Auto.Running;
         var controlsEnabled = model.Enabled && !running && !model.Busy;
-        if (model.Knob)
+        var layout = BetDeckLayout.Compute(deck, model.Knob, model.FixedAmount, model.AutoAvailable, scale);
+        KnobRect = layout.Knob;
+        if (layout.HasAmount)
         {
-            KnobRect = new Rect(new Vector2(left, top), new Vector2(right, top + KnobHeight * scale));
-            top = KnobRect.Max.Y + Gap * scale;
-        }
-        else
-        {
-            KnobRect = new Rect(new Vector2(left, top), new Vector2(left, top));
+            DrawAmountRow(drawList, ui, layout, model, controlsEnabled);
         }
 
-        if (!model.FixedAmount)
-        {
-            DrawAmountRow(drawList, ui, new Rect(new Vector2(left, top), new Vector2(right, top + AmountHeight * scale)),
-                model, controlsEnabled, scale);
-            top += (AmountHeight + Gap) * scale;
-        }
-
-        var actionTop = MathF.Max(top, deck.Max.Y - (Pad + ActionHeight) * scale);
-        var actionRect = new Rect(new Vector2(left, actionTop), new Vector2(right, actionTop + ActionHeight * scale));
-        var result = DrawActionRow(drawList, ui, actionRect, model, scale);
+        var result = DrawActionRow(drawList, ui, layout, model);
         AnnounceAutoStop();
         return result;
     }
 
-    private void DrawAmountRow(ImDrawListPtr drawList, AppSkin ui, Rect row, in BetComposerModel model, bool enabled,
-        float scale)
+    private void DrawAmountRow(ImDrawListPtr drawList, AppSkin ui, in BetDeckLayout layout,
+        in BetComposerModel model, bool enabled)
     {
-        var quick = QuickWidth * scale;
-        var gap = Gap * scale * 0.75f;
-        var fieldRect = new Rect(row.Min, new Vector2(row.Max.X - quick * 3f - gap * 3f, row.Max.Y));
-        DrawField(drawList, ui, fieldRect, model, enabled, scale);
-        var x = fieldRect.Max.X + gap;
-        if (Quick(ui, new Rect(new Vector2(x, row.Min.Y), new Vector2(x + quick, row.Max.Y)), Loc.T(L.Casino.BetHalf),
-                enabled))
+        DrawField(drawList, ui, layout.Field, model, enabled, UiScale.Current);
+        if (Quick(ui, layout.Half, Loc.T(L.Casino.BetHalf), enabled))
         {
             amount = CasinoLadder.Half(amount, model.MinimumBet, model.MaximumBet, model.Stack);
             UiFeedback.Play(UiSound.ChipSlide);
         }
 
-        x += quick + gap;
-        if (Quick(ui, new Rect(new Vector2(x, row.Min.Y), new Vector2(x + quick, row.Max.Y)),
-                CasinoMultiples.Label(200), enabled))
+        if (Quick(ui, layout.Double, CasinoMultiples.Label(200), enabled))
         {
             amount = CasinoLadder.Double(amount, model.MinimumBet, model.MaximumBet, model.Stack);
             UiFeedback.Play(UiSound.ChipSlide);
         }
 
-        x += quick + gap;
-        if (Quick(ui, new Rect(new Vector2(x, row.Min.Y), new Vector2(x + quick, row.Max.Y)), Loc.T(L.Casino.BetMax),
-                enabled))
+        if (Quick(ui, layout.Max, Loc.T(L.Casino.BetMax), enabled))
         {
             amount = CasinoLadder.Top(model.MinimumBet, model.MaximumBet, model.Stack);
             UiFeedback.Play(UiSound.ChipSlide);
@@ -290,38 +251,15 @@ internal sealed class BetComposer
         amount = clamped;
     }
 
-    private BetComposerAction DrawActionRow(ImDrawListPtr drawList, AppSkin ui, Rect row, in BetComposerModel model,
-        float scale)
+    private BetComposerAction DrawActionRow(ImDrawListPtr drawList, AppSkin ui, in BetDeckLayout layout,
+        in BetComposerModel model)
     {
-        var cursor = row.Min.X;
-        if (model.AutoAvailable)
+        if (layout.HasMode)
         {
-            var modeRect = DeckActions.Secondary(row, cursor, ModeWidth * scale, scale);
-            modeLabels[ManualTab] = Loc.T(L.Strip.Manual);
-            modeLabels[AutoTab] = Loc.T(L.Strip.Auto);
-            var picked = SegmentStrip.Draw(modeId, modeRect, modeLabels, tab,
-                Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary), ui.Accent, ui.MutedInk, CasinoColors.InkTitle);
-            if (!Auto.Running && model.Enabled)
-            {
-                tab = picked;
-            }
-
-            cursor = DeckActions.Advance(modeRect, scale);
-            if (tab == AutoTab)
-            {
-                var gearRect = DeckActions.Secondary(row, cursor, row.Height, scale);
-                if (RoundButton.Icon(drawList, gearRect.Center, gearRect.Height * 0.5f,
-                        IconGlyph.Of(FontAwesomeIcon.SlidersH), ui.Ink, ButtonStyle.Gray, enabled: !Auto.Running))
-                {
-                    autoSheet.Open();
-                }
-
-                cursor = DeckActions.Advance(gearRect, scale);
-            }
+            DrawModeCluster(drawList, ui, layout, model);
         }
 
-        var actionRect = DeckActions.Primary(row, cursor);
-
+        var actionRect = layout.Action;
         if (Auto.Running)
         {
             var stopLabel = Auto.Remaining < 0
@@ -350,6 +288,40 @@ internal sealed class BetComposer
         }
 
         return BetComposerAction.Confirm;
+    }
+
+    private void DrawModeCluster(ImDrawListPtr drawList, AppSkin ui, in BetDeckLayout layout,
+        in BetComposerModel model)
+    {
+        modeLabels[ManualTab] = Loc.T(L.Strip.Manual);
+        modeLabels[AutoTab] = Loc.T(L.Strip.Auto);
+        var picked = SegmentStrip.Draw(modeId, layout.Mode, modeLabels, tab,
+            Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary), ui.Accent, ui.MutedInk, CasinoColors.InkTitle,
+            layout.Mode.Height / UiScale.Current);
+        var changeable = !Auto.Running && model.Enabled;
+        if (changeable)
+        {
+            tab = picked;
+        }
+
+        var gear = layout.Gear;
+        if (gear.Width <= 0f)
+        {
+            return;
+        }
+
+        if (!RoundButton.Icon(drawList, gear.Center, gear.Height * 0.5f, IconGlyph.Of(FontAwesomeIcon.SlidersH),
+                ui.Ink, ButtonStyle.Gray, enabled: !Auto.Running))
+        {
+            return;
+        }
+
+        if (changeable)
+        {
+            tab = AutoTab;
+        }
+
+        autoSheet.Open();
     }
 
     private BetComposerAction StopAuto()

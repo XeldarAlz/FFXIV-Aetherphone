@@ -98,6 +98,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private Rect screenArea;
+    private Rect frameArea;
     private string pendingTableId = string.Empty;
     private bool historyLoadFailed;
 
@@ -335,6 +336,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         }
 
         screenArea = context.Content;
+        frameArea = screen;
         barkeep.Tick();
         bonusShelf.Update(MathF.Min(ImGui.GetIO().DeltaTime, Core.Animation.TransitionTiming.MaxFrameSeconds), scale);
         cashier.Gate();
@@ -362,9 +364,9 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
             Strip.StripIntro.Gate();
             TourHolds.Hold(Id);
         }
-        if (!DrawLaunchLayer(context.Content))
+        if (!DrawLaunchLayer(screen))
         {
-            router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+            router.Draw(screen, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         }
 
         machines.DrawOverlay(screenArea, ui);
@@ -429,15 +431,24 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
             return;
         }
 
-        ui.Body(area);
-        var context = new PhoneContext(area, theme, navigation);
+        var content = ContentWithin(area);
+        ui.Body(content);
+        var context = new PhoneContext(content, theme, navigation);
         if (route.Screen == CasinoScreen.Floor)
         {
-            DrawRoot(context, area);
+            DrawRoot(context, content);
             return;
         }
 
         DrawPushedPage(context, route, depth);
+    }
+
+    private Rect ContentWithin(Rect frame)
+    {
+        var scale = UiScale.Current;
+        return new Rect(
+            new Vector2(frame.Min.X + theme.SidePadding * scale, frame.Min.Y + theme.TopZoneHeight * scale),
+            new Vector2(frame.Max.X - theme.SidePadding * scale, frame.Max.Y - theme.BottomZoneHeight * scale));
     }
 
     private static bool IsStage(CasinoRoute route) =>
@@ -451,7 +462,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         using (AppSurface.BeginEdgeToEdge(area, true))
         {
             ImGui.Dummy(new Vector2(area.Width, MathF.Max(1f, area.Height - StageSurfaceSlack * scale)));
-            var frame = stage.Begin(area, spec, StageBalance(route), casino.Ceiling);
+            var frame = stage.Begin(area, ContentWithin(area), spec, StageBalance(route), casino.Ceiling);
             DrawStageWorld(route, frame);
             var action = stage.End(ui);
             if (action == CasinoStageAction.Back)

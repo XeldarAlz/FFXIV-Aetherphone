@@ -137,7 +137,7 @@ internal sealed class ScratchOddsSheet
                 (ScratchRules.PrizeCountsPerMillion[prizeIndex] / 10_000.0).ToString("0.#", Loc.Culture));
         }
 
-        returnLine = Loc.T(L.Strip.Return) + ": " + Loc.T(L.Strip.ReturnValue,
+        returnLine = Loc.T(L.Strip.PaysBack) + ": " + Loc.T(L.Strip.ReturnValue,
             (ScratchRules.ReturnBasisPoints / 100m).ToString("0.#", Loc.Culture));
     }
 }
