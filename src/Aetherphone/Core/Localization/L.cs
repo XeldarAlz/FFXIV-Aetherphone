@@ -10446,6 +10446,9 @@ internal static class L
         public static readonly LocString WheelClosedTitle = new("casino.wheel.closedTitle", "This wheel has stopped");
         public static readonly LocString WheelClosedHint = new("casino.wheel.closedHint", "The table is not running right now. The rest of the floor is still open.");
         public static readonly LocString WheelBackToFloor = new("casino.wheel.backToFloor", "Back to the floor");
+        public static readonly LocString WheelWonOn = new("casino.wheel.wonOn", "You won {0} on {1}");
+        public static readonly LocString WheelLandedBack = new("casino.wheel.landedBack", "Landed on {0}, {1} back");
+        public static readonly LocString WheelLandedNoWin = new("casino.wheel.landedNoWin", "Landed on {0}, no win this round");
         public static readonly LocString ReasonClaimed = new("casino.reasonClaimed", "Today's spin is already yours. The wheel fills up again with the next coin day.");
         public static readonly LocString ReasonPaused = new("casino.reasonPaused", "Coin earning is paused right now, so the wheel is resting with it.");
         public static readonly LocString ReasonDailyCap = new("casino.reasonDailyCap", "You have earned every coin today has to give. The wheel comes back around tomorrow.");
