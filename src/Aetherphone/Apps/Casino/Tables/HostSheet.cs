@@ -351,7 +351,7 @@ internal sealed class HostSheet
         Label(ui, nameRow, Loc.T(L.Tables.HostName), scale);
         Field(ui, FieldRect(nameRow, scale), "##hostName", Loc.T(L.Tables.HostNameHint), ref draft.Name,
             NameMaxLength, false);
-        draft.Listing = Segment(ui, card.NextRow(SegmentRowUnits), "##hostListing", Loc.T(L.Tables.HostListing),
+        draft.Listing = Segment(ui, card.NextRow(SegmentRowUnits), "##venueListing", Loc.T(L.Tables.HostListing),
             listingOptions, draft.Listing, scale);
         card.End();
         Hint(ui, Loc.T(ListingHints[draft.Listing]), scale);
@@ -475,7 +475,7 @@ internal sealed class HostSheet
 
         var practice = draft.Currency == CasinoCurrencies.Practice;
         var card = GroupCard.Begin(ui, SegmentRowUnits + (practice ? 5 : 4) * RowUnits);
-        draft.Currency = Segment(ui, card.NextRow(SegmentRowUnits), "##hostCurrency", Loc.T(L.Tables.HostCurrency),
+        draft.Currency = Segment(ui, card.NextRow(SegmentRowUnits), "##holdemCurrency", Loc.T(L.Tables.HostCurrency),
             chipCurrencyOptions, draft.Currency, scale);
         StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Holdem.HostBlinds),
             texts.Compacts(L.Holdem.BlindsShort, draft.BigBlind / 2, draft.BigBlind), blindDown, blindUp, scale);

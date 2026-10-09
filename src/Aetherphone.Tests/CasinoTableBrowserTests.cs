@@ -135,6 +135,13 @@ public sealed class CasinoTableBrowserTests
     }
 
     [Fact]
+    public void ATokenTheServerAlreadyWrappedIsNeverWrappedTwice()
+    {
+        var token = CasinoShare.Compose("[aep.casino.v1:table-442d]");
+        Assert.Equal("[aep.casino.v1:table-442d]", token);
+    }
+
+    [Fact]
     public void ABareTableIdPastedWithoutItsWrapperStillNamesTheTable()
     {
         Assert.True(CasinoShare.TryParse("private-4f2a", out var tableId));

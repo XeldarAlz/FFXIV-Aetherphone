@@ -76,7 +76,7 @@ internal sealed class VenueHostOptions
     {
         Refresh();
         var card = GroupCard.Begin(ui, 1, VenueFields.SegmentRowUnits);
-        Game = VenueFields.Segment(ui, card.NextRow(VenueFields.SegmentRowUnits), "##hostGame",
+        Game = VenueFields.Segment(ui, card.NextRow(VenueFields.SegmentRowUnits), "##venueGame",
             Loc.T(L.Venue.HostGame), gameOptions, Game, scale);
         card.End();
         if (IsVenue)
