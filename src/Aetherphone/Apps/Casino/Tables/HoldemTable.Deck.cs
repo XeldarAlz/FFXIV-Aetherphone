@@ -21,6 +21,7 @@ internal sealed partial class HoldemTable
     private const float IconRadius = 22f;
     private const float IconGap = 14f;
     private const float FoldShare = 0.28f;
+    private const string StatusMarquee = "holdem.deck.status";
 
     private static readonly string HistoryGlyph = IconGlyph.Of(FontAwesomeIcon.History);
     private static readonly string ReactGlyph = IconGlyph.Of(FontAwesomeIcon.Smile);
@@ -63,7 +64,7 @@ internal sealed partial class HoldemTable
         {
             if (CasinoSeatMachine.Holds(seatFlow.Stage) || seatFlow.Stage == CasinoSeatStage.Sitting)
             {
-                DeckStatus(ui, deck, Loc.T(L.Holdem.Seating), scale);
+                DeckStatus(deck, Loc.T(L.Holdem.Seating), scale);
                 return;
             }
 
@@ -140,11 +141,14 @@ internal sealed partial class HoldemTable
             new Vector2(deck.Max.X - DeckPad * scale, bottom));
     }
 
-    private static void DeckStatus(AppSkin ui, Rect deck, string text, float scale)
+    private static void DeckStatus(Rect deck, string text, float scale) =>
+        StatusLine(StatusRect(deck, scale), text, 0f, scale);
+
+    private static void StatusLine(Rect status, string text, float trailing, float scale)
     {
-        var rect = StatusRect(deck, scale);
-        Typography.DrawCentered(ImGui.GetWindowDrawList(), rect.Center,
-            Typography.FitText(text, rect.Width, TextStyles.Footnote), CasinoColors.InkTitle, TextStyles.Footnote);
+        var width = MathF.Max(1f, status.Width - (trailing > 0f ? trailing + DeckGap * scale : 0f));
+        StageText.Status(ImGui.GetWindowDrawList(), new Vector2(status.Min.X + width * 0.5f, status.Center.Y), text,
+            width, StatusMarquee, TextStyles.Footnote, false);
     }
 
     private void DrawWatchDeck(AppSkin ui, Rect deck, CasinoHoldemRoomStateDto board, bool blocked, float scale)
@@ -167,9 +171,7 @@ internal sealed partial class HoldemTable
             return;
         }
 
-        var line = texts.Counts(L.Holdem.SeatedLine, Seated(board), SeatCountOf(board));
-        Typography.DrawCentered(drawList, status.Center, Typography.FitText(line, status.Width, TextStyles.Footnote),
-            CasinoColors.InkBody, TextStyles.Footnote);
+        StatusLine(status, texts.Counts(L.Holdem.SeatedLine, Seated(board), SeatCountOf(board)), 0f, scale);
         var historyCenter = new Vector2(action.Max.X - IconRadius * scale, action.Center.Y);
         if (RoundButton.Icon(drawList, historyCenter, IconRadius * scale, HistoryGlyph, ui.Ink, ButtonStyle.Gray,
                 Loc.T(L.Holdem.History), HoverLabelSide.Above, !blocked))
@@ -431,9 +433,7 @@ internal sealed partial class HoldemTable
         var line = prompt.ToCall > 0
             ? texts.Numbers(L.Holdem.ToCallLine, prompt.ToCall, seconds)
             : texts.Count(L.Holdem.YourMoveLine, seconds);
-        var lineWidth = status.Width - timeBankWidth - DeckGap * scale;
-        Typography.Draw(drawList, new Vector2(status.Min.X, status.Center.Y - Typography.LineHeight(TextStyles.Footnote) * 0.5f),
-            Typography.FitText(line, lineWidth, TextStyles.Footnote), ui.BodyInk, TextStyles.Footnote);
+        StatusLine(status, line, timeBankWidth, scale);
 
         var action = ActionRect(deck, scale);
         var gap = DeckGap * scale * 0.75f;
@@ -515,9 +515,8 @@ internal sealed partial class HoldemTable
         var status = StatusRect(deck, scale);
         var seconds = (int)((Math.Max(0, rooms.Room.RemainingMilliseconds(prompt.DeadlineUnixMs,
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())) + 999) / 1000);
-        var line = seconds > 0 ? texts.Count(L.Holdem.ShowPrompt, seconds) : Loc.T(L.Holdem.ShowPromptOpen);
-        Typography.DrawCentered(drawList, status.Center, Typography.FitText(line, status.Width, TextStyles.Footnote),
-            ui.BodyInk, TextStyles.Footnote);
+        StatusLine(status, seconds > 0 ? texts.Count(L.Holdem.ShowPrompt, seconds) : Loc.T(L.Holdem.ShowPromptOpen),
+            0f, scale);
         var action = ActionRect(deck, scale);
         var gap = DeckGap * scale;
         var half = (action.Width - gap) * 0.5f;
@@ -560,9 +559,7 @@ internal sealed partial class HoldemTable
             }
         }
 
-        Typography.Draw(drawList, new Vector2(status.Min.X, status.Center.Y - Typography.LineHeight(TextStyles.Footnote) * 0.5f),
-            Typography.FitText(message, status.Width - postWidth - DeckGap * scale, TextStyles.Footnote), ui.BodyInk,
-            TextStyles.Footnote);
+        StatusLine(status, message, postWidth, scale);
 
         var action = ActionRect(deck, scale);
         var radius = IconRadius * scale;
@@ -673,7 +670,7 @@ internal sealed partial class HoldemTable
     private void DrawReactionsDeck(AppSkin ui, Rect deck, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
-        DeckStatus(ui, deck, Loc.T(L.Holdem.ReactHint), scale);
+        DeckStatus(deck, Loc.T(L.Holdem.ReactHint), scale);
         var action = ActionRect(deck, scale);
         var radius = MathF.Min(IconRadius * scale, action.Width / (ReactionGlyphs.Length + 1) * 0.5f - 2f * scale);
         var backWidth = radius * 2f + DeckGap * scale;
