@@ -48,6 +48,7 @@ internal static class StripCatalog
     {
         new(CasinoGames.Blackjack, L.Casino.GameBlackjack, CasinoSign.TwentyOne),
         new(CasinoGames.Holdem, L.Casino.GameHoldem, CasinoSign.Holdem),
+        new(CasinoGames.DealerHoldem, L.DealerHoldem.Game, CasinoSign.DealerHoldem),
         new(CasinoGames.Blackjack, L.Tables.HostTitle, CasinoSign.Gamba, StripAction.HostTable),
     };
 

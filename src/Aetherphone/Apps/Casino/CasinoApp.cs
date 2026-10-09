@@ -60,6 +60,8 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
     private readonly Originals.OriginalsCabinet originals;
     private readonly Race.RaceCabinet race;
     private readonly Plinko.PlinkoCabinet plinko;
+    private readonly DealerHoldem.DealerHoldemCabinet dealerHoldem;
+    private readonly DealerHoldem.DealerHoldemPitCard dealerHoldemCard = new();
     private readonly Tables.BlackjackTable blackjack;
     private readonly Core.Casino.HoldemStore holdemStore;
     private readonly Tables.HoldemTable holdem;
@@ -140,6 +142,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         originals = new Originals.OriginalsCabinet(casino, casinoPlay.Originals, OpenCashier);
         race = new Race.RaceCabinet(casino, casinoRooms, OpenCashier, PopRoute);
         plinko = new Plinko.PlinkoCabinet(casino, casinoPlay.Plinko, OpenCashier, preferences);
+        dealerHoldem = new DealerHoldem.DealerHoldemCabinet(casino, casinoPlay.DealerHoldem, OpenCashier);
         blackjack = new Tables.BlackjackTable(casino, casinoRooms, casinoTables, history, casinoTurns, remoteImages,
             lodestone, OpenCashier, PopRoute, OpenLedger);
         playerLedger = new Tables.TableLedger(casinoTables, confirm);
@@ -156,6 +159,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         holdem = new Tables.HoldemTable(casino, casinoRooms, casinoTables, holdemStore, casinoTurns, remoteImages,
             lodestone, OpenCashier, PopRoute);
         holdemPit = new Tables.HoldemPit(holdemStore, casino, openTable, openDoorFromRow, OpenHoldemHostSheet);
+        holdemPit.Lead = DrawDealerHoldemLead;
         browser = new Tables.TableBrowser(casinoTables, casino, openTable, openDoorFromRow, OpenHostSheet,
             nearbyTables);
         tableHands = new Tables.TableHandsCard(history);
@@ -208,6 +212,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         originals.Reset();
         race.Reset();
         plinko.Reset();
+        dealerHoldem.Reset();
         blackjack.Reset();
         holdem.Reset();
         venueRoom.Reset();
@@ -249,6 +254,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         race.Reset();
         AppLandscape.Release(Id);
         plinko.Reset();
+        dealerHoldem.Reset();
         blackjack.Reset();
         holdem.Reset();
         venueRoom.Reset();
@@ -345,6 +351,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         originals.Gate();
         race.Gate();
         plinko.Gate();
+        dealerHoldem.Gate();
         holdem.Gate();
         rulesSheet.Gate();
         venueRoom.Gate();
@@ -374,6 +381,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         originals.DrawOverlay(screenArea, ui);
         race.DrawOverlay(screenArea, ui);
         plinko.DrawOverlay(screenArea, ui);
+        dealerHoldem.DrawOverlay(screenArea, ui);
         holdem.DrawOverlay(screenArea, ui);
         if (IsStage(router.Current))
         {
@@ -529,6 +537,10 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
             case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.Plinko, StringComparison.Ordinal):
                 plinko.Draw(stage, frame, ui);
                 break;
+            case CasinoScreen.Cabinet when string.Equals(route.GameId, CasinoGames.DealerHoldem,
+                StringComparison.Ordinal):
+                dealerHoldem.Draw(stage, frame, ui);
+                break;
             case CasinoScreen.Table when IsHoldem(route):
                 holdem.Draw(stage, frame, ui);
                 break;
@@ -602,6 +614,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
             _ when Originals.OriginalsCabinet.Owns(route.GameId) => originals.SpecFor(route.GameId),
             CasinoGames.Race => race.Spec(RaceLandscape()),
             CasinoGames.Plinko => plinko.Spec,
+            CasinoGames.DealerHoldem => dealerHoldem.Spec,
             _ when Machines.MachineCabinet.Owns(route.GameId) => machines.SpecFor(route.GameId),
             _ => new CasinoStageSpec(route.GameId, GameName(route.GameId), Backdrop.Strip),
         };
@@ -658,6 +671,10 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
             case CasinoInfoRequest.Extra when string.Equals(current.GameId, CasinoGames.Bingo,
                 StringComparison.Ordinal):
                 bingo.ToggleDaub();
+                break;
+            case CasinoInfoRequest.Extra when string.Equals(current.GameId, CasinoGames.DealerHoldem,
+                StringComparison.Ordinal):
+                dealerHoldem.OpenPayTables();
                 break;
             case CasinoInfoRequest.Extra when current.Screen is CasinoScreen.Table or CasinoScreen.VenueRoom:
                 OpenVenueSheet(current);
@@ -911,6 +928,12 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
             return;
         }
 
+        if (string.Equals(route.GameId, CasinoGames.DealerHoldem, StringComparison.Ordinal))
+        {
+            dealerHoldem.Reset();
+            return;
+        }
+
         if (string.Equals(route.GameId, CasinoGames.Race, StringComparison.Ordinal))
         {
             race.Reset();
@@ -1064,6 +1087,19 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
 
         holdemPit.Enter();
         router.Push(new CasinoRoute(CasinoScreen.Tables, CasinoGames.Holdem));
+    }
+
+    private void DrawDealerHoldemLead(AppSkin skin, float scale)
+    {
+        if (!CasinoGameGate.IsOpen(casino.Features, CasinoGames.DealerHoldem))
+        {
+            return;
+        }
+
+        if (dealerHoldemCard.Draw(skin, scale))
+        {
+            OpenGame(CasinoGames.DealerHoldem);
+        }
     }
 
     private bool IsHoldemTable(string tableId)
@@ -1373,6 +1409,10 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         else if (string.Equals(gameId, CasinoGames.Plinko, StringComparison.Ordinal))
         {
             plinko.Enter();
+        }
+        else if (string.Equals(gameId, CasinoGames.DealerHoldem, StringComparison.Ordinal))
+        {
+            dealerHoldem.Enter();
         }
 
         PushStage(new CasinoRoute(CasinoScreen.Cabinet, gameId), source);

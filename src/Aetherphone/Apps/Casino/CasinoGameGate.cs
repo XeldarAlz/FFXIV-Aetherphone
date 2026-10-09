@@ -7,6 +7,7 @@ internal static class CasinoGameGate
     public static string FlagFor(string gameId) => gameId switch
     {
         CasinoGames.Holdem => CasinoFeatures.Holdem,
+        CasinoGames.DealerHoldem => DealerHoldemRules.Feature,
         CasinoGames.SlotsBird or CasinoGames.SlotsCascade or CasinoGames.SlotsMoogle or CasinoGames.SlotsGamble
             or CasinoGames.Slots => CasinoFeatures.Machines,
         CasinoGames.Plinko => CasinoFeatures.Plinko,

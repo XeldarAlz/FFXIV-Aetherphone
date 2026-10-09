@@ -48,8 +48,8 @@ internal static class DealerHoldemRules
     public const int RiverMultiple = 1;
     public const int MaxPlayMultiple = PreFlopHigh;
     public const int TopMultiple = 250;
-    public const int ReturnTenths = 980;
-    public const int TripsReturnTenths = 966;
+    public const int ReturnTenths = 978;
+    public const int TripsReturnTenths = 965;
 
     public static readonly int[] BlindNumerators = { 0, 0, 0, 0, 1, 3, 3, 10, 50, 500 };
 

@@ -29,6 +29,7 @@ internal enum CasinoSign : byte
     Moogle,
     Deathroll,
     Raffle,
+    DealerHoldem,
 }
 
 internal static class CasinoSigns
@@ -47,7 +48,7 @@ internal static class CasinoSigns
     {
         "GAMBA", "SLOTS", "RACE", "HOLD'EM", "PLINKO", "MINES", "DICE", "BINGO", "WHEEL", "21", "BAR", "KENO",
         "SCRATCH", "LIMBO", "HI-LO", "FREE SPIN", "JACKPOT", "LIFTOFF",
-        "GOLDEN BIRD", "CASCADE", "MOOGLE", "DEATHROLL", "RAFFLE",
+        "GOLDEN BIRD", "CASCADE", "MOOGLE", "DEATHROLL", "RAFFLE", "DEALER HOLD'EM",
     };
 
     private static readonly Vector2[][]?[] Glyphs = new Vector2[][]?[LastChar - FirstChar + 1];

@@ -63,6 +63,8 @@ internal sealed class HoldemPit
         this.openHost = openHost;
     }
 
+    public Action<AppSkin, float>? Lead { get; set; }
+
     public void Enter()
     {
         inlineReason = string.Empty;
@@ -81,6 +83,7 @@ internal sealed class HoldemPit
 
         RefreshViews();
         using var surface = AppSurface.Begin(body);
+        Lead?.Invoke(ui, scale);
         DrawHero(ui, scale);
         if (inlineReason.Length > 0)
         {
