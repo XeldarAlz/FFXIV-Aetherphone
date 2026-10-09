@@ -21,12 +21,6 @@ internal sealed partial class MachineCabinet
         SlotsRules.MoogleId,
     };
 
-    private const float ChassisInset = 6f;
-    private const float ChassisPad = 12f;
-    private const float GlassShare = 0.24f;
-    private const float GlassMin = 104f;
-    private const float GlassMax = 140f;
-    private const float StripHeight = 72f;
     private const float SceneFadeSpeed = 2.5f;
     private const float AutoPauseSeconds = 0.6f;
     private const float RollupTickSeconds = 0.09f;
@@ -68,6 +62,7 @@ internal sealed partial class MachineCabinet
     private Rect window;
     private Rect strip;
     private Rect glass;
+    private Rect chassis;
 
     public MachineCabinet(CasinoStore store, CasinoPlayStore play, ConfirmService confirm, Action openCashier,
         CasinoPreferences preferences)
@@ -239,8 +234,6 @@ internal sealed partial class MachineCabinet
         Layout(frame, scale);
         sceneAmount = Approach(sceneAmount, playback.InFeature ? 1f : 0f, frame.DeltaSeconds * SceneFadeSpeed);
         MachineArt.SceneTint(drawList, frame.Full, machineId, sceneAmount, frame.Phase, scale);
-        var chassis = new Rect(new Vector2(frame.Full.Min.X + ChassisInset * scale, glass.Min.Y - ChassisPad * scale),
-            new Vector2(frame.Full.Max.X - ChassisInset * scale, strip.Max.Y + ChassisPad * 0.5f * scale));
         var lit = stage.Celebration.Active || playback.InFeature ? 1f : 0.55f;
         MachineArt.Chassis(drawList, chassis, machineId, frame.Phase, lit, playback.InFeature, scale);
         DrawGlass(drawList, ui, frame, scale);
@@ -538,17 +531,11 @@ internal sealed partial class MachineCabinet
 
     private void Layout(in CasinoStageFrame frame, float scale)
     {
-        var safe = frame.Safe;
-        var pad = ChassisPad * scale;
-        var glassHeight = Math.Clamp(safe.Height * GlassShare, GlassMin * scale, GlassMax * scale);
-        var left = frame.Full.Min.X + (ChassisInset + ChassisPad) * scale;
-        var right = frame.Full.Max.X - (ChassisInset + ChassisPad) * scale;
-        var top = safe.Min.Y + pad * 0.5f;
-        glass = new Rect(new Vector2(left, top), new Vector2(right, top + glassHeight));
-        var stripTop = MathF.Max(glass.Max.Y + pad, safe.Max.Y - StripHeight * scale);
-        strip = new Rect(new Vector2(left, stripTop), new Vector2(right, stripTop + StripHeight * scale));
-        window = new Rect(new Vector2(left, glass.Max.Y + pad * 0.75f),
-            new Vector2(right, MathF.Max(glass.Max.Y + pad, stripTop - pad * 0.5f)));
+        var layout = MachineStageLayout.Compute(frame.Full, frame.Safe, scale);
+        chassis = layout.Chassis;
+        glass = layout.Glass;
+        window = layout.Window;
+        strip = layout.Strip;
     }
 
     private void HandleWindowTap(in CasinoStageFrame frame)
