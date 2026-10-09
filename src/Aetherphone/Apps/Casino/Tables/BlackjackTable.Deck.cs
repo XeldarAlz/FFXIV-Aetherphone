@@ -61,12 +61,11 @@ internal sealed partial class BlackjackTable
         return seat is not null && seat.Committed == 0;
     }
 
-    private void DrawBetSpots(ImDrawListPtr drawList, AppSkin ui, CasinoBlackjackRoomStateDto board, in Rect felt,
-        Vector2 betSpot, float scale)
+    private void DrawBetSpots(ImDrawListPtr drawList, AppSkin ui, CasinoBlackjackRoomStateDto board, float scale)
     {
-        var mainRadius = BlackjackTableLayout.MainSpotRadius * scale;
+        var mainRadius = layout.BetSpotPixels;
         var ring = ImGui.GetColorU32(CasinoColors.Money with { W = sideTarget == MainTarget ? 0.7f : 0.35f });
-        drawList.AddCircle(betSpot, mainRadius, ring, 40, MathF.Max(1.2f, 1.6f * scale));
+        drawList.AddCircle(layout.BetSpot, mainRadius, ring, 40, MathF.Max(1.2f, 1.6f * scale));
         if (!BlackjackRecap.SideBetsOffered(board))
         {
             return;
@@ -78,7 +77,7 @@ internal sealed partial class BlackjackTable
         for (var index = 0; index < SideBets.Length; index++)
         {
             var bet = SideBets[index];
-            var center = BlackjackTableLayout.SideSpot(felt, bet, scale);
+            var center = layout.SideSpot(bet);
             var placed = bet == BlackjackSideBet.PerfectPairs
                 ? seat?.SideBets?.PerfectPairs ?? 0
                 : seat?.SideBets?.TwentyOnePlusThree ?? 0;
@@ -94,7 +93,7 @@ internal sealed partial class BlackjackTable
     private bool DrawSideSpot(ImDrawListPtr drawList, Vector2 center, BlackjackSideBet bet, long amount,
         bool interactive, bool targeted, bool paid, float scale)
     {
-        var radius = BlackjackTableLayout.SideSpotRadius * scale;
+        var radius = layout.BetSpotPixels;
         var corner = new Vector2(radius, radius);
         var hovered = interactive && UiInteract.Hover(center - corner, center + corner);
         var lit = paid ? 1f : targeted ? 0.9f : hovered ? 0.7f : 0.4f;

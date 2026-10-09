@@ -79,18 +79,24 @@ internal static class BlackjackTableArt
     }
 
     public static void DrawBetPlate(ImDrawListPtr drawList, Vector2 center, long amount, Vector4 ink, float entrance,
-        bool practice, float scale)
+        bool practice, float maxWidth, float scale)
     {
         if (amount <= 0 || entrance <= 0f)
         {
             return;
         }
 
+        var pad = 5f * scale;
         var label = NumberText.Compact(amount);
         var size = Typography.Measure(label, TextStyles.FootnoteEmphasized);
         var discRadius = PlateDiscRadius * scale;
-        var pad = 5f * scale;
         var halfWidth = (discRadius * 2f + pad * 2.5f + size.X) * 0.5f;
+        if (halfWidth * 2f > maxWidth)
+        {
+            DrawBareBetPlate(drawList, center, label, size, ink, entrance, maxWidth, pad, scale);
+            return;
+        }
+
         var halfHeight = MathF.Max(8.5f * scale, size.Y * 0.5f + 2.5f * scale);
         var bubble = BubblePop.For(entrance, scale, center);
         var min = bubble.Apply(new Vector2(center.X - halfWidth, center.Y - halfHeight));
@@ -112,6 +118,22 @@ internal static class BlackjackTableArt
         Typography.DrawCentered(drawList,
             new Vector2(min.X + pad * 1.5f + discRadius * 2f + size.X * 0.5f, middleY), label,
             Palette.WithAlpha(ink, alpha), TextStyles.FootnoteEmphasized);
+    }
+
+    private static void DrawBareBetPlate(ImDrawListPtr drawList, Vector2 center, string label, Vector2 size,
+        Vector4 ink, float entrance, float maxWidth, float pad, float scale)
+    {
+        var shown = Typography.FitText(label, MathF.Max(1f, maxWidth - pad * 2f), TextStyles.FootnoteEmphasized);
+        var shownWidth = MathF.Min(size.X, MathF.Max(1f, maxWidth - pad * 2f));
+        var halfWidth = shownWidth * 0.5f + pad;
+        var halfHeight = MathF.Max(8.5f * scale, size.Y * 0.5f + 2.5f * scale);
+        var bubble = BubblePop.For(entrance, scale, center);
+        var min = bubble.Apply(new Vector2(center.X - halfWidth, center.Y - halfHeight));
+        var max = bubble.Apply(new Vector2(center.X + halfWidth, center.Y + halfHeight));
+        Squircle.Fill(drawList, min, max, (max.Y - min.Y) * 0.5f,
+            ImGui.GetColorU32(Palette.WithAlpha(PlateFill, bubble.Alpha)));
+        Typography.DrawCentered(drawList, (min + max) * 0.5f, shown, Palette.WithAlpha(ink, bubble.Alpha),
+            TextStyles.FootnoteEmphasized);
     }
 
     public static void DrawChipColumn(ImDrawListPtr drawList, Vector2 baseCenter, long amount, bool practice,

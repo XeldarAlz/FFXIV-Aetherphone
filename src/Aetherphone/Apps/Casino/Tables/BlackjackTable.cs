@@ -45,6 +45,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
     private readonly BlackjackDealPlayback playback = new();
     private readonly BlackjackDealer dealer = new();
     private readonly BlackjackIdleScript idle = new();
+    private readonly BlackjackTableLayout layout = new();
     private readonly SeatView[] seatViews = new SeatView[BlackjackRules.SeatCount];
     private readonly SeatMotion[] motions = new SeatMotion[BlackjackRules.SeatCount];
     private readonly BlackjackSeatRecap[] recaps = new BlackjackSeatRecap[BlackjackRules.SeatCount];
@@ -246,9 +247,11 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         BuildSeatViews(board);
         BuildRecaps(board);
         UpdateMotions(delta);
-        DrawFelt(drawList, ui, board, felt, deadlineRemaining, delta, frame.Phase, scale);
+        layout.Compute(felt, BlackjackTableLayout.RailSeatCount(mySeat, SeatLimit(board)),
+            BlackjackRules.IsSeat(mySeat), scale);
+        DrawFelt(drawList, ui, board, deadlineRemaining, delta, frame.Phase, scale);
         SpeakForPhase(board);
-        SettleHand(stage, board, felt, frame, scale);
+        SettleHand(stage, board, frame);
         DrawInlineReason(drawList, ui, frame.Deck, safe, scale);
         DrawDeck(stage, frame, ui, state, board, snapshot, deadlineRemaining, veiled);
         if (veiled)

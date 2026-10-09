@@ -82,17 +82,17 @@ internal sealed partial class BlackjackTable
         announceCount++;
     }
 
-    private void DrawAnnouncement(ImDrawListPtr drawList, in Rect felt, float scale)
+    private bool DrawAnnouncement(ImDrawListPtr drawList, Vector2 center, float maxWidth, float scale)
     {
         if (!Announcing)
         {
-            return;
+            return false;
         }
 
-        var y = BlackjackTableLayout.StateLineY(felt, scale) + Typography.LineHeight(TextStyles.Title2);
         var fade = MathF.Min(1f, (AnnounceSeconds - announceClock) / 0.3f);
-        StageText.Plate(drawList, new Vector2(felt.Center.X, y), announcements[announceIndex], felt.Width * 0.9f,
-            CasinoColors.Money with { W = fade }, TextStyles.Title3, scale);
+        StageText.Plate(drawList, center, announcements[announceIndex], maxWidth, CasinoColors.Money with { W = fade },
+            TextStyles.Headline, scale);
+        return true;
     }
 
     private void SpeakForPhase(CasinoBlackjackRoomStateDto board)
@@ -139,8 +139,7 @@ internal sealed partial class BlackjackTable
         }
     }
 
-    private void SettleHand(CasinoStage stage, CasinoBlackjackRoomStateDto board, in Rect felt,
-        in CasinoStageFrame frame, float scale)
+    private void SettleHand(CasinoStage stage, CasinoBlackjackRoomStateDto board, in CasinoStageFrame frame)
     {
         if (board.HandId.Length == 0 || string.Equals(settledHandId, board.HandId, StringComparison.Ordinal))
         {
@@ -192,7 +191,7 @@ internal sealed partial class BlackjackTable
             return;
         }
 
-        var origin = new Vector2(felt.Center.X, BlackjackTableLayout.HeroFanY(felt));
+        var origin = new Vector2(layout.Felt.Center.X, layout.HeroFanY);
         stage.Celebration.Celebrate(recap.Staked, recap.Returned, origin, frame.Instant);
     }
 
