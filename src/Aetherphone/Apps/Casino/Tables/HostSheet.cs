@@ -26,7 +26,9 @@ internal sealed class HostSheet
 {
     private const string RailId = "##casino.host.games";
     private const float RowUnits = 52f;
-    private const float SegmentRowUnits = 80f;
+    private const float SegmentRowUnits = 100f;
+    private const float FieldRowUnits = 60f;
+    private const float SegmentTextScale = 0.86f;
     private const float SelectedRimAlpha = 0.95f;
     private const float RestRimAlpha = 0.30f;
     private const float DisabledAlpha = 0.42f;
@@ -621,16 +623,14 @@ internal sealed class HostSheet
     private void DrawMore(AppSkin ui, float scale)
     {
         var tableGame = HostGames.HasSeats(draft.Game);
-        var rows = 1 + (tableGame ? 2 : 0);
+        var rows = tableGame ? 2 : 0;
         var segments = tableGame ? 1 : 0;
-        var card = GroupCard.Begin(ui, RowUnits * rows + SegmentRowUnits * segments);
-        var nameRow = card.NextRow(RowUnits);
-        Venue.VenueFields.TextRow(ui, nameRow, "##hostName", Loc.T(L.Tables.HostName), Loc.T(L.Tables.HostNameHint),
-            ref draft.Name, NameMaxLength, false, scale);
+        var card = GroupCard.Begin(ui, FieldRowUnits + RowUnits * rows + SegmentRowUnits * segments);
+        NameRow(ui, card.NextRow(FieldRowUnits), scale);
         if (tableGame)
         {
             var selected = Array.IndexOf(CasinoHostingRules.TurnSeconds, draft.TurnSeconds);
-            var picked = Venue.VenueFields.Segment(ui, card.NextRow(SegmentRowUnits), "##hostTurnClock",
+            var picked = Segment(ui, card.NextRow(SegmentRowUnits), "##hostTurnClock",
                 Loc.T(L.Tables.TurnClock), turnOptions, selected < 0 ? 1 : selected, scale);
             draft.TurnSeconds = CasinoHostingRules.TurnSeconds[picked];
             draft.TimeBank = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.timebank",
@@ -643,6 +643,37 @@ internal sealed class HostSheet
         Gap(HostFlowLayout.CardGap, scale);
         DrawGameOptions(ui, scale);
         venueOptions.DrawLocation(ui, scale);
+    }
+
+    private void NameRow(AppSkin ui, in Rect row, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var fieldWidth = row.Width * 0.58f;
+        var labelHeight = Typography.LineHeight(TextStyles.Body);
+        Typography.Draw(drawList, new Vector2(row.Min.X, row.Center.Y - labelHeight * 0.5f),
+            Typography.FitText(Loc.T(L.Tables.HostName), row.Width - fieldWidth - Metrics.Space.Sm * scale,
+                TextStyles.Body), ui.TitleInk, TextStyles.Body);
+        var height = HostFlowLayout.Touch * scale;
+        var field = new Rect(new Vector2(row.Max.X - fieldWidth, row.Center.Y - height * 0.5f),
+            new Vector2(row.Max.X, row.Center.Y + height * 0.5f));
+        Squircle.Fill(drawList, field.Min, field.Max, field.Height * 0.5f,
+            ImGui.GetColorU32(Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary)));
+        GlassField.Text(field, "##hostName", Loc.T(L.Tables.HostNameHint), ref draft.Name, ui.Theme, scale,
+            NameMaxLength, false, ImGuiInputTextFlags.None);
+    }
+
+    private static int Segment(AppSkin ui, in Rect row, string id, string label, string[] options, int selected,
+        float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var top = row.Min.Y + Metrics.Space.Sm * scale;
+        Typography.Draw(drawList, new Vector2(row.Min.X, top), Typography.FitText(label, row.Width, TextStyles.Body),
+            ui.TitleInk, TextStyles.Body);
+        var stripTop = top + Typography.LineHeight(TextStyles.Body) + Metrics.Space.Sm * scale;
+        var strip = new Rect(new Vector2(row.Min.X, stripTop),
+            new Vector2(row.Max.X, stripTop + HostFlowLayout.Touch * scale));
+        return SegmentStrip.Draw(id, strip, options, Math.Clamp(selected, 0, options.Length - 1), ui.Palette,
+            HostFlowLayout.Touch, SegmentTextScale);
     }
 
     private void DrawGameOptions(AppSkin ui, float scale)
@@ -695,7 +726,7 @@ internal sealed class HostSheet
     {
         var hostDeals = draft.DealerMode == CasinoDealerModes.Host;
         var card = GroupCard.Begin(ui, SegmentRowUnits + (hostDeals ? RowUnits : 0f));
-        draft.DealerMode = Venue.VenueFields.Segment(ui, card.NextRow(SegmentRowUnits), "##hostDealerMode",
+        draft.DealerMode = Segment(ui, card.NextRow(SegmentRowUnits), "##hostDealerMode",
             Loc.T(L.Tables.DealerMode), dealerOptions, draft.DealerMode, scale);
         if (hostDeals)
         {
@@ -712,15 +743,15 @@ internal sealed class HostSheet
     {
         ui.SectionHeading(Loc.T(L.Tables.SectionRules), Metrics.Space.Sm);
         var card = GroupCard.Begin(ui, SegmentRowUnits * 4 + RowUnits * 3);
-        draft.Pays = Venue.VenueFields.Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesPays",
+        draft.Pays = Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesPays",
             Loc.T(L.Tables.RulesPays), paysOptions, draft.Pays, scale);
         var deck = Array.IndexOf(CasinoRuleSheet.Decks, draft.Decks);
-        var deckPicked = Venue.VenueFields.Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesDecks",
+        var deckPicked = Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesDecks",
             Loc.T(L.Tables.RulesDecks), deckOptions, deck < 0 ? 3 : deck, scale);
         draft.Decks = CasinoRuleSheet.Decks[deckPicked];
-        draft.Splits = Venue.VenueFields.Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesSplits",
+        draft.Splits = Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesSplits",
             Loc.T(L.Tables.RulesSplits), splitOptions, draft.Splits, scale);
-        draft.Doubles = Venue.VenueFields.Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesDoubles",
+        draft.Doubles = Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesDoubles",
             Loc.T(L.Tables.RulesDoubles), doubleOptions, draft.Doubles, scale);
         draft.HitsSoft17 = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.rules.soft17",
             Loc.T(L.Tables.RulesSoft17), draft.HitsSoft17, scale);
@@ -736,7 +767,7 @@ internal sealed class HostSheet
     {
         RefreshAnte();
         var card = GroupCard.Begin(ui, SegmentRowUnits);
-        draft.Ante = Venue.VenueFields.Segment(ui, card.NextRow(SegmentRowUnits), "##hostAnte",
+        draft.Ante = Segment(ui, card.NextRow(SegmentRowUnits), "##hostAnte",
             Loc.T(L.Holdem.HostAnte), anteOptions, draft.Ante, scale);
         card.End();
         Gap(HostFlowLayout.CardGap, scale);
@@ -747,7 +778,7 @@ internal sealed class HostSheet
         var card = GroupCard.Begin(ui, RowUnits + SegmentRowUnits);
         draft.HighestWins = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.highest",
             Loc.T(L.Venue.HighestWins), draft.HighestWins, scale);
-        draft.RoundSeconds = Venue.VenueFields.Segment(ui, card.NextRow(SegmentRowUnits), "##hostRoundSeconds",
+        draft.RoundSeconds = Segment(ui, card.NextRow(SegmentRowUnits), "##hostRoundSeconds",
             Loc.T(L.Venue.RoundSeconds), roundOptions, draft.RoundSeconds, scale);
         card.End();
         Gap(HostFlowLayout.CardGap, scale);
