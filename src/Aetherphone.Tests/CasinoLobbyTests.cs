@@ -13,8 +13,8 @@ public sealed class CasinoLobbyTests
     public void LimitBoundsMirrorTheServerInChips()
     {
         Assert.Equal(50_000, CasinoLimits.SelfLimitFloor);
-        Assert.Equal(25_000_000, CasinoLimits.FallbackCeiling);
-        Assert.Equal(25_000_000, CasinoLimitPicker.CeilingFor(0));
+        Assert.Equal(100_000_000, CasinoLimits.FallbackCeiling);
+        Assert.Equal(100_000_000, CasinoLimitPicker.CeilingFor(0));
         Assert.Equal(25_000_000, CasinoLimitPicker.CeilingFor(25_000_000));
     }
 
