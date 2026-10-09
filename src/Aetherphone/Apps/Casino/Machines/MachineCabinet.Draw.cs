@@ -529,9 +529,8 @@ internal sealed partial class MachineCabinet
         }
 
         var drawList = ImGui.GetWindowDrawList();
-        var gap = Metrics.Space.Sm * scale;
-        var turboWidth = rect.Width * 0.28f;
-        var turboRect = new Rect(rect.Min, new Vector2(rect.Min.X + turboWidth, rect.Max.Y));
+        var bonusRow = MachineBonusRow.Compute(rect, Metrics.Space.Sm * scale);
+        var turboRect = bonusRow.Turbo;
         var turboHover = UiInteract.Hover(turboRect.Min, turboRect.Max);
         ChipRail.PaintChip(drawList, turboRect, Loc.T(L.Machines.Turbo), turbo, turboHover, ui.Ink);
         if (UiInteract.Click(turboRect.Min, turboRect.Max, turboHover))
@@ -540,20 +539,19 @@ internal sealed partial class MachineCabinet
             UiFeedback.Play(turbo ? UiSound.ToggleOn : UiSound.ToggleOff);
         }
 
-        var restLeft = turboRect.Max.X + gap;
         if (machineIndex != 1)
         {
+            var infoRect = bonusRow.Info;
             var info = Typography.FitText(Loc.T(machineIndex == 2 ? L.Machines.MoogleKnobInfo : L.Machines.LinesInfo),
-                rect.Max.X - restLeft, TextStyles.Footnote);
+                infoRect.Width, TextStyles.Footnote);
             var size = Typography.Measure(info, TextStyles.Footnote);
-            Typography.Draw(drawList, new Vector2(restLeft, rect.Center.Y - size.Y * 0.5f), info, StageInks.Strong,
-                TextStyles.Footnote);
+            Typography.Draw(drawList, new Vector2(infoRect.Min.X, infoRect.Center.Y - size.Y * 0.5f), info,
+                StageInks.Strong, TextStyles.Footnote);
             return;
         }
 
         var bet = Composer.Amount;
-        var half = (rect.Max.X - restLeft - gap) * 0.5f;
-        var anteRect = new Rect(new Vector2(restLeft, rect.Min.Y), new Vector2(restLeft + half, rect.Max.Y));
+        var anteRect = bonusRow.Ante;
         var anteHover = changeable && UiInteract.Hover(anteRect.Min, anteRect.Max);
         ChipRail.PaintChip(drawList, anteRect, anteLabel.Get(L.Machines.AnteCost,
             SlotsRules.CostOf(SlotsRules.AnteMode, bet)), ante, anteHover, ui.Ink);
@@ -563,7 +561,7 @@ internal sealed partial class MachineCabinet
             UiFeedback.Play(ante ? UiSound.ToggleOn : UiSound.ToggleOff);
         }
 
-        var buyRect = new Rect(new Vector2(anteRect.Max.X + gap, rect.Min.Y), rect.Max);
+        var buyRect = bonusRow.Buy;
         var cost = SlotsRules.CostOf(SlotsRules.BuyMode, bet);
         var canBuy = changeable && cost <= sitting.Stack && !Composer.Auto.Running;
         if (Button.Draw(drawList, buyRect, buyLabel.Get(L.Machines.BuyBonus, cost), ui.Ink, ButtonStyle.Tinted,
