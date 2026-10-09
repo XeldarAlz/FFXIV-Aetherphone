@@ -1130,6 +1130,8 @@
   "settings.iconAppearanceTinted": "着色",
   "settings.iconAppearanceClear": "クリア",
   "settings.iconAppearanceHint": "ダークと着色はアイコンをグラファイトの上に描き直し、クリアは壁紙の上にガラスとして表示します。描き起こしのないアイコンは色付きタイルのままです。",
+  "settings.seasonalDecorations": "季節のデコレーション",
+  "settings.seasonalDecorationsHint": "ハロウィンなどの季節イベント中、Chirper、Aethergram、Velvetに季節の飾りを加えます。",
   "settings.searchHint": "設定を検索",
   "settings.noResults": "一致する設定はありません",
   "settings.phoneWidthReadout": "幅 {0} px",

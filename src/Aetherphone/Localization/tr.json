@@ -1130,6 +1130,8 @@
   "settings.iconAppearanceTinted": "Renk Tonlu",
   "settings.iconAppearanceClear": "Şeffaf",
   "settings.iconAppearanceHint": "Koyu ve Renk Tonlu her simgeyi grafit üzerine yeniden boyar, Şeffaf ise duvar kağıdının üzerinde cam gibi gösterir. Çizimi olmayan simgeler renkli karelerini korur.",
+  "settings.seasonalDecorations": "Mevsimsel Süslemeler",
+  "settings.seasonalDecorationsHint": "Cadılar Bayramı gibi mevsimsel etkinlikler sırasında Chirper, Aethergram ve Velvet'e tematik süslemeler ekler.",
   "settings.searchHint": "Ayarlarda ara",
   "settings.noResults": "Buna uyan ayar yok",
   "settings.phoneWidthReadout": "{0} px genişlik",

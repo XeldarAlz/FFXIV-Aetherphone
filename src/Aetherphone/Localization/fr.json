@@ -1130,6 +1130,8 @@
   "settings.iconAppearanceTinted": "Teinté",
   "settings.iconAppearanceClear": "Transparent",
   "settings.iconAppearanceHint": "Sombre et Teinté repeignent chaque icône sur du graphite, Transparent l'affiche en verre sur le fond d'écran. Les icônes sans illustration peinte gardent leur tuile colorée.",
+  "settings.seasonalDecorations": "Décorations saisonnières",
+  "settings.seasonalDecorationsHint": "Ajoute des touches festives à Chirper, Aethergram et Velvet pendant les événements saisonniers comme Halloween.",
   "settings.searchHint": "Rechercher dans les réglages",
   "settings.noResults": "Aucun réglage ne correspond",
   "settings.phoneWidthReadout": "{0} px de large",

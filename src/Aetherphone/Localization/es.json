@@ -1130,6 +1130,8 @@
   "settings.iconAppearanceTinted": "Tintado",
   "settings.iconAppearanceClear": "Transparente",
   "settings.iconAppearanceHint": "Oscuro y Tintado repintan cada icono sobre grafito, Transparente lo muestra como cristal sobre el fondo de pantalla. Los iconos sin ilustración pintada conservan su casilla de color.",
+  "settings.seasonalDecorations": "Decoraciones de temporada",
+  "settings.seasonalDecorationsHint": "Añade toques festivos a Chirper, Aethergram y Velvet durante eventos de temporada como Halloween.",
   "settings.searchHint": "Buscar ajustes",
   "settings.noResults": "Ningún ajuste coincide con eso",
   "settings.phoneWidthReadout": "{0} px de ancho",

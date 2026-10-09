@@ -1130,6 +1130,8 @@
   "settings.iconAppearanceTinted": "着色",
   "settings.iconAppearanceClear": "透明",
   "settings.iconAppearanceHint": "深色和着色会把图标重绘在石墨底上，透明则以玻璃效果显示在壁纸上。没有彩绘图稿的图标保留彩色底块。",
+  "settings.seasonalDecorations": "节日装饰",
+  "settings.seasonalDecorationsHint": "在万圣节等季节性活动期间，为 Chirper、Aethergram 和 Velvet 添加节日装饰。",
   "settings.searchHint": "搜索设置",
   "settings.noResults": "没有匹配的设置",
   "settings.phoneWidthReadout": "宽 {0} px",

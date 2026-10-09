@@ -1130,6 +1130,8 @@
   "settings.iconAppearanceTinted": "Тонированный",
   "settings.iconAppearanceClear": "Прозрачный",
   "settings.iconAppearanceHint": "Тёмный и Тонированный перерисовывают каждый значок на графите, Прозрачный показывает его стеклом поверх обоев. Значки без нарисованного рисунка сохраняют цветную плитку.",
+  "settings.seasonalDecorations": "Сезонные украшения",
+  "settings.seasonalDecorationsHint": "Добавляет праздничные детали в Chirper, Aethergram и Velvet во время сезонных событий, например на Хэллоуин.",
   "settings.searchHint": "Поиск настроек",
   "settings.noResults": "Ни одна настройка не подходит",
   "settings.phoneWidthReadout": "{0} px в ширину",

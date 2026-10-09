@@ -2154,6 +2154,8 @@ internal static class L
         public static readonly LocString IconAppearanceTinted = new("settings.iconAppearanceTinted", "Tinted");
         public static readonly LocString IconAppearanceClear = new("settings.iconAppearanceClear", "Clear");
         public static readonly LocString IconAppearanceHint = new("settings.iconAppearanceHint", "Dark and Tinted repaint each icon on graphite, Clear shows it as glass over the wallpaper. Icons without painted artwork keep their colored tile.");
+        public static readonly LocString SeasonalDecorations = new("settings.seasonalDecorations", "Seasonal Decorations");
+        public static readonly LocString SeasonalDecorationsHint = new("settings.seasonalDecorationsHint", "Adds holiday touches to Chirper, Aethergram, and Velvet during seasonal events like Halloween.");
         public static readonly LocString SearchHint = new("settings.searchHint", "Search settings");
         public static readonly LocString NoResults = new("settings.noResults", "No settings match that");
         public static readonly LocString PhoneWidthReadout = new("settings.phoneWidthReadout", "{0} px wide");

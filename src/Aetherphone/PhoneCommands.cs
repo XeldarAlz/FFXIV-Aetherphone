@@ -111,6 +111,9 @@ internal sealed class PhoneCommands
                 services.Configuration.ShowPerfHud = !services.Configuration.ShowPerfHud;
                 services.Configuration.Save();
                 break;
+            case "halloween" when AepConstants.IsPrerelease:
+                TogglePreviewHalloween();
+                break;
             case "help":
                 PrintHelp();
                 break;
@@ -229,6 +232,13 @@ internal sealed class PhoneCommands
         configuration.SilentMode = !configuration.SilentMode;
         configuration.Save();
         PrintState(L.Settings.SilentMode, configuration.SilentMode);
+    }
+
+    private void TogglePreviewHalloween()
+    {
+        var configuration = services.Configuration;
+        configuration.PreviewHalloween = !configuration.PreviewHalloween;
+        configuration.Save();
     }
 
     private void ControlMusic(string argument)

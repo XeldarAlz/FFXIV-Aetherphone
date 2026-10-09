@@ -1,0 +1,31 @@
+namespace Aetherphone.Core.Theme;
+
+internal static class SeasonalTheme
+{
+    private const int HalloweenStartMonth = 10;
+    private const int HalloweenStartDay = 17;
+    private const int HalloweenEndMonth = 11;
+    private const int HalloweenEndDay = 1;
+
+    private static long checkedMinute = -1;
+    private static bool halloweenDate;
+
+    public static bool Halloween { get; private set; }
+
+    public static bool IsHalloweenDate(DateTime date) =>
+        (date.Month == HalloweenStartMonth && date.Day >= HalloweenStartDay) ||
+        (date.Month == HalloweenEndMonth && date.Day <= HalloweenEndDay);
+
+    public static void Update(Configuration configuration, DateTime now)
+    {
+        var minute = now.Ticks / TimeSpan.TicksPerMinute;
+        if (minute != checkedMinute)
+        {
+            checkedMinute = minute;
+            halloweenDate = IsHalloweenDate(now);
+        }
+
+        var previewing = AepConstants.IsPrerelease && configuration.PreviewHalloween;
+        Halloween = configuration.SeasonalDecorations && (halloweenDate || previewing);
+    }
+}
