@@ -230,6 +230,20 @@ public sealed class DealerHoldemPlaybackTests
     }
 
     [Fact]
+    public void AFinishingViewOffersNoDecision()
+    {
+        var playback = new DealerHoldemPlayback();
+        playback.Apply(PreFlop() with { Actions = Array.Empty<string>(), Multiples = Array.Empty<int>() }, true);
+        while (playback.TryTake(out _))
+        {
+        }
+
+        Assert.True(playback.Finishing);
+        Assert.False(playback.Deciding);
+        Assert.True(playback.Open);
+    }
+
+    [Fact]
     public void ARoundWithoutAnIdIsIgnored()
     {
         var playback = new DealerHoldemPlayback();

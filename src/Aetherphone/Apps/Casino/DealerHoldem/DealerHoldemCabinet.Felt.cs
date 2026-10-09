@@ -279,7 +279,8 @@ internal sealed partial class DealerHoldemCabinet
     private string StateText()
     {
         var round = playback.Round;
-        if (dealing || round is not null && playback.Busy && !DealerHoldemRules.IsOver(round.Phase))
+        if (dealing || playback.Finishing
+            || round is not null && playback.Busy && !DealerHoldemRules.IsOver(round.Phase))
         {
             return Loc.T(L.DealerHoldem.Dealing);
         }

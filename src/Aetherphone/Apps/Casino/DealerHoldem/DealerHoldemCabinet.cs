@@ -25,6 +25,7 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
     private const float BannerSeconds = 2.2f;
     private const float FlightSeconds = 0.34f;
     private const float RevealSeconds = 0.42f;
+    private const float FinishRetrySeconds = 1f;
 
     private readonly CasinoStore store;
     private readonly CasinoDealerHoldemStore dealerStore;
@@ -54,6 +55,7 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
     private float bannerClock;
     private int resolvingSpot = -1;
     private float idleTime;
+    private float finishClock;
 
     public DealerHoldemCabinet(CasinoStore store, CasinoDealerHoldemStore dealerStore, Action openCashier)
     {
@@ -140,6 +142,7 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
         }
 
         Land();
+        RetryFinishing(frame.DeltaSeconds);
         DrawFelt(drawList, frame, scale);
         DrawStateLine(drawList, scale);
         var blocked = state.StakesPaused || state.Draining || frame.Blocked;
@@ -157,6 +160,24 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
         }
 
         DrawComposer(stage, ui, frame, sitting.Stack, blocked);
+    }
+
+    private void RetryFinishing(float deltaSeconds)
+    {
+        if (!playback.Finishing || dealerStore.InFlight)
+        {
+            finishClock = 0f;
+            return;
+        }
+
+        finishClock += deltaSeconds;
+        if (finishClock < FinishRetrySeconds)
+        {
+            return;
+        }
+
+        finishClock = 0f;
+        dealerStore.ResendDecision(playback.RoundId);
     }
 
     private void TickClocks(float deltaSeconds)

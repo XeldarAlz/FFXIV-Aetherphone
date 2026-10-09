@@ -106,6 +106,17 @@ public sealed class DealerHoldemRulesTests
     }
 
     [Fact]
+    public void ThePublishedPaysBackFiguresMatchTheWireDoc()
+    {
+        Assert.Equal(977, DealerHoldemRules.ReturnTenths);
+        Assert.Equal(965, DealerHoldemRules.TripsReturnTenths);
+        const long tripsReturned = 51L * 4324 + 41L * 37260 + 31L * 224848 + 9L * 3473184 + 8L * 4047644
+                                   + 5L * 6180020 + 4L * 6461620;
+        Assert.Equal(129_104_860, tripsReturned);
+        Assert.Equal(965, (int)(tripsReturned * 1000 / 133_784_560));
+    }
+
+    [Fact]
     public void TheActionsAreTheWireTokens()
     {
         Assert.True(DealerHoldemRules.IsAction("check"));

@@ -83,7 +83,7 @@ internal sealed partial class DealerHoldemCabinet
         var round = playback.Round;
         var ready = round is not null && playback.Deciding && !dealerStore.InFlight && !blocked && !cards.Busy
                     && !dealing;
-        if (round is null || !DealerHoldemRules.IsDecision(round.Phase))
+        if (round is null || !DealerHoldemRules.IsDecision(round.Phase) || playback.Finishing)
         {
             DeckActions.DrawPrimary(row, row.Min.X, StateText(), false, ui.Ink, id: "casino.dealerholdem.wait");
             return;

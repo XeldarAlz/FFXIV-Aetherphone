@@ -75,7 +75,11 @@ internal sealed class DealerHoldemPlayback
 
     public bool Settled => settled;
 
-    public bool Deciding => round is not null && !Busy && DealerHoldemRules.IsDecision(round.Phase);
+    public bool Deciding => round is not null && !Busy && DealerHoldemRules.IsDecision(round.Phase)
+                            && (round.Actions?.Length ?? 0) > 0;
+
+    public bool Finishing => round is not null && DealerHoldemRules.IsDecision(round.Phase)
+                             && (round.Actions?.Length ?? 0) == 0;
 
     public bool Open => round is not null && !DealerHoldemRules.IsOver(round.Phase);
 

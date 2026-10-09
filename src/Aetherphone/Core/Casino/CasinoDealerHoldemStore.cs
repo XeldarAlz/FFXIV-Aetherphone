@@ -16,6 +16,7 @@ internal sealed class CasinoDealerHoldemStore : IDisposable
     private CasinoDealerHoldemDto? result;
     private CasinoDealerHoldemOpenDto? openResult;
     private DealerHoldemDeal? pending;
+    private DealerHoldemDecision? lastDecision;
 
     public CasinoDealerHoldemStore(AethernetSession session, CasinoClient casino, CasinoStore store)
     {
@@ -76,6 +77,7 @@ internal sealed class CasinoDealerHoldemStore : IDisposable
         }
 
         var sittingId = SittingId();
+        lastDecision = new DealerHoldemDecision(roundId, step, action, multiple);
         inFlight = true;
         work.Run("dealer holdem decide", async token =>
         {
@@ -83,6 +85,17 @@ internal sealed class CasinoDealerHoldemStore : IDisposable
                 .ConfigureAwait(false);
             Deliver(sittingId, answer);
         }, () => inFlight = false);
+    }
+
+    public void ResendDecision(string roundId)
+    {
+        var held = lastDecision;
+        if (held is null || !string.Equals(held.RoundId, roundId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Decide(held.RoundId, held.Step, held.Action, held.Multiple);
     }
 
     public void LoadOpen()
@@ -136,3 +149,5 @@ internal sealed class CasinoDealerHoldemStore : IDisposable
 }
 
 internal sealed record DealerHoldemDeal(string SittingId, string ClientRoundId, long Ante, long Trips);
+
+internal sealed record DealerHoldemDecision(string RoundId, int Step, string Action, int Multiple);
