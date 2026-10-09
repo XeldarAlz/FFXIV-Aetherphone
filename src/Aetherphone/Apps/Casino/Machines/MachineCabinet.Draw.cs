@@ -85,13 +85,20 @@ internal sealed partial class MachineCabinet
         var eyebrow = Typography.FitText(Loc.T(L.Machines.FloorJackpot), width, TextStyles.Footnote);
         var eyebrowHeight = Typography.LineHeight(TextStyles.Footnote);
         var amount = NumberText.Compact(store.Jackpot);
-        var amountSize = CurrencyGlyph.MeasureAmount(amount, TextStyles.Headline);
+        var amountStyle = TextStyles.Title3;
+        var amountSize = CurrencyGlyph.MeasureAmount(amount, amountStyle);
+        if (amountSize.X > width || eyebrowHeight + amountSize.Y > area.Height)
+        {
+            amountStyle = TextStyles.Headline;
+            amountSize = CurrencyGlyph.MeasureAmount(amount, amountStyle);
+        }
+
         var top = area.Center.Y - (eyebrowHeight + amountSize.Y) * 0.5f;
         var eyebrowSize = Typography.Measure(eyebrow, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(area.Max.X - inset - eyebrowSize.X, top), eyebrow,
             CasinoColors.MoneyHighlight, TextStyles.Footnote);
         CurrencyGlyph.DrawAmount(drawList, new Vector2(area.Max.X - inset - amountSize.X, top + eyebrowHeight), amount,
-            CurrencyKind.Chips, CasinoColors.Money, TextStyles.Headline);
+            CurrencyKind.Chips, CasinoColors.Money, amountStyle);
     }
 
     private void DrawBirdRow(ImDrawListPtr drawList, Rect row, float phase, float scale)
@@ -180,10 +187,12 @@ internal sealed partial class MachineCabinet
             var labelHeight = Typography.LineHeight(TextStyles.Footnote);
             Typography.DrawCentered(drawList, new Vector2(cell.Center.X, cell.Min.Y + labelHeight * 0.5f), labelText,
                 tier == 3 ? CasinoColors.LightA : CasinoColors.MoneyHighlight, TextStyles.Footnote);
-            var amount = Typography.FitText(NumberText.Compact(value), column - 4f * scale, TextStyles.Headline);
+            var amountStyle = labelHeight + Typography.LineHeight(TextStyles.Title3) + MeterBarHeight * scale
+                <= cell.Height ? TextStyles.Title3 : TextStyles.Headline;
+            var amount = Typography.FitText(NumberText.Compact(value), column - 4f * scale, amountStyle);
             Typography.DrawCentered(drawList,
-                new Vector2(cell.Center.X, cell.Min.Y + labelHeight + Typography.LineHeight(TextStyles.Headline) * 0.5f),
-                amount, CasinoColors.Money, TextStyles.Headline);
+                new Vector2(cell.Center.X, cell.Min.Y + labelHeight + Typography.LineHeight(amountStyle) * 0.5f),
+                amount, CasinoColors.Money, amountStyle);
             if (fill < 0f)
             {
                 continue;

@@ -71,7 +71,10 @@ internal sealed class BetsRail
         var center = new Vector2(deck.Center.X, deck.Min.Y);
         var min = center - size * 0.5f;
         var max = center + size * 0.5f;
-        var hovered = UiInteract.Hover(min, max);
+        var reach = new Vector2(0f, MathF.Max(0f, (CasinoStageLayout.TouchTarget * scale - size.Y) * 0.5f));
+        var hitMin = min - reach;
+        var hitMax = max + reach;
+        var hovered = UiInteract.Hover(hitMin, hitMax);
         Material.LiquidGlass(drawList, min, max, size.Y * 0.5f, scale, GlassTone.Dark, hovered ? 0.4f : 0f);
         var label = Typography.FitText(Loc.T(L.Strip.Bets), size.X - size.Y, TextStyles.FootnoteEmphasized);
         Typography.DrawCentered(drawList, center, label, CasinoColors.InkTitle, TextStyles.FootnoteEmphasized);
@@ -80,7 +83,7 @@ internal sealed class BetsRail
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(min, max, hovered);
+        return UiInteract.Click(hitMin, hitMax, hovered);
     }
 
     public void Draw(Rect screen, AppSkin ui, CasinoBetsLog bets, CasinoFloorStore? floorFeed)
@@ -174,7 +177,7 @@ internal sealed class BetsRail
         var width = ScrollLayout.NativeScrollContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var height = Typography.DrawWrappedLeft(new Vector2(origin.X, origin.Y + Metrics.Space.Md * scale),
-            Loc.T(message), skin.BodyInk, TextStyles.Footnote, width);
+            Loc.T(message), skin.BodyInk, TextStyles.Subheadline, width);
         ImGui.Dummy(new Vector2(width, height + Metrics.Space.Lg * scale));
     }
 

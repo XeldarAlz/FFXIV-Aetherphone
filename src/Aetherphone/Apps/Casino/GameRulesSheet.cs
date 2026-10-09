@@ -124,7 +124,7 @@ internal sealed class GameRulesSheet
             var stepText = Loc.T(steps[index]);
             var stepOrigin = ImGui.GetCursorScreenPos();
             var stepWidth = width - textLeft;
-            var block = Typography.MeasureWrappedBlock(stepText, TextStyles.Footnote, stepWidth);
+            var block = Typography.MeasureWrappedBlock(stepText, TextStyles.Subheadline, stepWidth);
             var bulletCenter = new Vector2(stepOrigin.X + BulletRadius * scale,
                 stepOrigin.Y + BulletRadius * scale - 1f * scale);
             drawList.AddCircleFilled(bulletCenter, BulletRadius * scale,
@@ -132,7 +132,7 @@ internal sealed class GameRulesSheet
             Typography.DrawCentered(drawList, bulletCenter, Games.Framework.GameNumber.Label(index + 1), ui.Accent,
                 TextStyles.Footnote);
             Typography.DrawWrappedLeft(new Vector2(stepOrigin.X + textLeft, stepOrigin.Y), stepText, ui.BodyInk,
-                TextStyles.Footnote, stepWidth);
+                TextStyles.Subheadline, stepWidth);
             ImGui.Dummy(new Vector2(width, MathF.Max(block.Y, BulletRadius * 2f * scale) + StepGap * scale));
         }
 
@@ -187,9 +187,9 @@ internal sealed class GameRulesSheet
         var fairness = Loc.T(L.Casino.RulesFairness);
         ImGui.Dummy(new Vector2(width, Metrics.Space.Md * scale));
         var fairnessOrigin = ImGui.GetCursorScreenPos();
-        var fairnessBlock = Typography.MeasureWrappedBlock(fairness, TextStyles.Footnote, width);
+        var fairnessBlock = Typography.MeasureWrappedBlock(fairness, TextStyles.Subheadline, width);
         Typography.DrawWrappedLeft(fairnessOrigin, fairness, ui.BodyInk,
-            TextStyles.Footnote, width);
+            TextStyles.Subheadline, width);
         ImGui.Dummy(new Vector2(width, fairnessBlock.Y + Metrics.Space.Lg * scale));
     }
 }

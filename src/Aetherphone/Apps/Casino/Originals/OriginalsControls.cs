@@ -91,14 +91,13 @@ internal sealed class OriginalsStepper
         var minus = new Vector2(rect.Min.X + radius, center);
         var plus = new Vector2(rect.Max.X - radius, center);
         var next = value;
-        if (RoundButton.FontIcon(drawList, minusId, minus, radius, FontAwesomeIcon.Minus, radius * 0.8f, ui.Ink,
-                enabled: enabled && value > minimum))
+        if (StepButton(drawList, minusId, minus, radius, FontAwesomeIcon.Minus, ui, enabled && value > minimum,
+                scale))
         {
             next = Math.Max(minimum, value - 1);
         }
 
-        if (RoundButton.FontIcon(drawList, plusId, plus, radius, FontAwesomeIcon.Plus, radius * 0.8f, ui.Ink,
-                enabled: enabled && value < maximum))
+        if (StepButton(drawList, plusId, plus, radius, FontAwesomeIcon.Plus, ui, enabled && value < maximum, scale))
         {
             next = Math.Min(maximum, value + 1);
         }
@@ -161,5 +160,20 @@ internal sealed class OriginalsStepper
 
         var at = Math.Clamp((ImGui.GetMousePos().X - trackLeft) / MathF.Max(1f, trackRight - trackLeft), 0f, 1f);
         return minimum + (int)MathF.Round(at * (maximum - minimum));
+    }
+
+    private static bool StepButton(ImDrawListPtr drawList, string id, Vector2 center, float radius,
+        FontAwesomeIcon icon, AppSkin ui, bool enabled, float scale)
+    {
+        var face = new Vector2(radius, radius);
+        var reach = MathF.Max(radius, CasinoStageLayout.TouchTarget * 0.5f * scale);
+        var hitMin = center - new Vector2(reach, reach);
+        var hitMax = center + new Vector2(reach, reach);
+        var hovered = enabled && UiInteract.Hover(hitMin, hitMax);
+        var drawn = RoundButton.Surface(drawList, new Rect(center - face, center + face), ui.Ink, ButtonStyle.Gray,
+            enabled, hovered, ImGui.GetID(id));
+        ProgressRing.CenterIcon(drawList, center, icon, drawn.LabelInk,
+            radius * 0.8f * (drawn.Face.Width / MathF.Max(radius * 2f, 0.0001f)));
+        return enabled && UiInteract.Click(hitMin, hitMax, hovered);
     }
 }

@@ -27,7 +27,7 @@ internal static class ReconnectVeil
         var width = area.Width * PanelWidthFraction;
         var pad = 16f * scale;
         var titleSize = Typography.Measure(title, TextStyles.SubheadlineEmphasized);
-        var bodyBlock = Typography.MeasureWrappedBlock(body, TextStyles.Footnote, width - pad * 2f);
+        var bodyBlock = Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, width - pad * 2f);
         var height = titleSize.Y + bodyBlock.Y + pad * 2f + 8f * scale;
         var center = area.Center;
         var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
@@ -41,7 +41,7 @@ internal static class ReconnectVeil
         Typography.Draw(drawList, new Vector2(dotCenter.X + 10f * scale, min.Y + pad), title, ui.TitleInk,
             TextStyles.SubheadlineEmphasized);
         Typography.DrawWrappedLeft(new Vector2(min.X + pad, min.Y + pad + titleSize.Y + 8f * scale), body,
-            ui.MutedInk, TextStyles.Footnote, width - pad * 2f);
+            ui.BodyInk, TextStyles.Subheadline, width - pad * 2f);
     }
 
     internal static int SecondsOf(long remainingMilliseconds)
