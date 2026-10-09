@@ -28,6 +28,7 @@ internal static class CasinoArt
     {
         CasinoGames.Blackjack => AccentRing.Green,
         CasinoGames.Holdem => AccentRing.Red,
+        CasinoGames.DealerHoldem => AccentRing.Red,
         CasinoGames.Slots => AccentRing.Rose,
         CasinoGames.SlotsBird => AccentRing.Gold,
         CasinoGames.SlotsCascade => AccentRing.Cyan,

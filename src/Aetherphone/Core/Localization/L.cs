@@ -10287,6 +10287,71 @@ internal static class L
         public static readonly LocString ReturnRange = new("casino.plinko.returnRange", "{0} to {1}");
     }
 
+    internal static class DealerHoldem
+    {
+        public static readonly LocString Game = new("casino.dealerholdem.game", "Dealer Hold'em");
+        public static readonly LocString Pitch = new("casino.dealerholdem.pitch", "Hold'em heads up against the dealer. Bet big when you like your cards; the dealer needs a pair to qualify.");
+        public static readonly LocString RulesStep1 = new("casino.dealerholdem.rulesStep1", "Put down an Ante; the Blind matches it. Add the Trips side bet if you like.");
+        public static readonly LocString RulesStep2 = new("casino.dealerholdem.rulesStep2", "Before the flop, check or bet 3x or 4x your Ante. After the flop, check or bet 2x. After the river, bet 1x or fold.");
+        public static readonly LocString RulesStep3 = new("casino.dealerholdem.rulesStep3", "You make one Play bet per hand. Once you bet, the rest of the board is dealt and the dealer turns over.");
+        public static readonly LocString RulesStep4 = new("casino.dealerholdem.rulesStep4", "Beat the dealer and Play pays 1 to 1. Ante pays 1 to 1 when the dealer has a pair or better, and pushes when they do not.");
+        public static readonly LocString RulesStep5 = new("casino.dealerholdem.rulesStep5", "Blind pays on a winning straight or better and pushes on a smaller win. Trips pays on your final hand, even if you fold.");
+        public static readonly LocString PayTables = new("casino.dealerholdem.payTables", "Pay tables");
+        public static readonly LocString BlindPays = new("casino.dealerholdem.blindPays", "Blind pays");
+        public static readonly LocString TripsPays = new("casino.dealerholdem.tripsPays", "Trips pays");
+        public static readonly LocString SpotTrips = new("casino.dealerholdem.spotTrips", "Trips");
+        public static readonly LocString SpotAnte = new("casino.dealerholdem.spotAnte", "Ante");
+        public static readonly LocString SpotBlind = new("casino.dealerholdem.spotBlind", "Blind");
+        public static readonly LocString SpotPlay = new("casino.dealerholdem.spotPlay", "Play");
+        public static readonly LocString HandRoyal = new("casino.dealerholdem.handRoyal", "Royal flush");
+        public static readonly LocString HandStraightFlush = new("casino.dealerholdem.handStraightFlush", "Straight flush");
+        public static readonly LocString HandQuads = new("casino.dealerholdem.handQuads", "Four of a kind");
+        public static readonly LocString HandFullHouse = new("casino.dealerholdem.handFullHouse", "Full house");
+        public static readonly LocString HandFlush = new("casino.dealerholdem.handFlush", "Flush");
+        public static readonly LocString HandStraight = new("casino.dealerholdem.handStraight", "Straight");
+        public static readonly LocString HandTrips = new("casino.dealerholdem.handTrips", "Three of a kind");
+        public static readonly LocString NoQualify = new("casino.dealerholdem.noQualify", "Dealer does not qualify");
+        public static readonly LocString DealerHas = new("casino.dealerholdem.dealerHas", "Dealer: {0}");
+        public static readonly LocString SpotPays = new("casino.dealerholdem.spotPays", "{0} pays {1}");
+        public static readonly LocString SpotPush = new("casino.dealerholdem.spotPush", "{0} pushes");
+        public static readonly LocString SpotLoses = new("casino.dealerholdem.spotLoses", "{0} loses");
+        public static readonly LocString Push = new("casino.dealerholdem.push", "Push");
+        public static readonly LocString Odds = new("casino.dealerholdem.odds", "{0} to {1}");
+        public static readonly LocString Dealing = new("casino.dealerholdem.dealing", "Dealing");
+        public static readonly LocString PlaceAnte = new("casino.dealerholdem.placeAnte", "Place your ante");
+        public static readonly LocString Showdown = new("casino.dealerholdem.showdown", "Showdown");
+        public static readonly LocString DecidePreFlop = new("casino.dealerholdem.decidePreFlop", "Check, or bet 3x or 4x");
+        public static readonly LocString DecideFlop = new("casino.dealerholdem.decideFlop", "Check, or bet 2x");
+        public static readonly LocString DecideRiver = new("casino.dealerholdem.decideRiver", "Bet 1x, or fold");
+        public static readonly LocString Voided = new("casino.dealerholdem.voided", "Hand voided, stakes returned");
+        public static readonly LocString YouWin = new("casino.dealerholdem.youWin", "You win {0}");
+        public static readonly LocString YouWinCapped = new("casino.dealerholdem.youWinCapped", "You win {0}, max win reached");
+        public static readonly LocString PushLine = new("casino.dealerholdem.pushLine", "Push, stakes back");
+        public static readonly LocString Folded = new("casino.dealerholdem.folded", "You folded");
+        public static readonly LocString DealerWins = new("casino.dealerholdem.dealerWins", "Dealer wins");
+        public static readonly LocString DealFor = new("casino.dealerholdem.dealFor", "Deal, ante {0}");
+        public static readonly LocString NoTrips = new("casino.dealerholdem.noTrips", "No Trips");
+        public static readonly LocString TripsFor = new("casino.dealerholdem.tripsFor", "Trips {0}");
+        public static readonly LocString Fold = new("casino.dealerholdem.fold", "Fold");
+        public static readonly LocString Check = new("casino.dealerholdem.check", "Check");
+        public static readonly LocString BetFor = new("casino.dealerholdem.betFor", "Bet {0}x {1}");
+        public static readonly LocString HintPreFlop = new("casino.dealerholdem.hintPreFlop", "Like your cards? Bet big now.");
+        public static readonly LocString HintFlop = new("casino.dealerholdem.hintFlop", "Bet 2x now, or check to see the river.");
+        public static readonly LocString HintRiver = new("casino.dealerholdem.hintRiver", "Last call: bet 1x to see the dealer, or fold.");
+        public static readonly LocString PaysIntro = new("casino.dealerholdem.paysIntro", "Ante and Blind always match. The dealer needs a pair or better to qualify; when they do not, your Ante pushes.");
+        public static readonly LocString BlindPushNote = new("casino.dealerholdem.blindPushNote", "A win below a straight pushes the Blind.");
+        public static readonly LocString TripsNote = new("casino.dealerholdem.tripsNote", "Trips pays on your final hand whatever the dealer holds, even after a fold.");
+        public static readonly LocString MainGame = new("casino.dealerholdem.mainGame", "Ante, Blind and Play");
+        public static readonly LocString PaysBackValue = new("casino.dealerholdem.paysBackValue", "Pays back {0}%");
+        public static readonly LocString PaysBackExplain = new("casino.dealerholdem.paysBackExplain", "On average, every 100 coins bet pay back {0}.");
+        public static readonly LocString PlayAlone = new("casino.dealerholdem.playAlone", "Play alone vs the dealer");
+        public static readonly LocString PlayAloneHint = new("casino.dealerholdem.playAloneHint", "No table to find: you against the house, one decision per street.");
+        public static readonly LocString FactMinAnte = new("casino.dealerholdem.factMinAnte", "Minimum ante");
+        public static readonly LocString FactQualify = new("casino.dealerholdem.factQualify", "Dealer qualifies");
+        public static readonly LocString FactQualifyValue = new("casino.dealerholdem.factQualifyValue", "With a pair or better");
+        public static readonly LocString FactTopPay = new("casino.dealerholdem.factTopPay", "Top pay");
+    }
+
     internal static class Casino
     {
         public static readonly LocString SignInTitle = new("casino.signInTitle", "Sign in required");

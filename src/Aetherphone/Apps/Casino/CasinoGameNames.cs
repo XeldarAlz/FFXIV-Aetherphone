@@ -8,6 +8,7 @@ internal static class CasinoGameNames
     {
         CasinoGames.Blackjack => L.Casino.GameBlackjack,
         CasinoGames.Holdem => L.Casino.GameHoldem,
+        CasinoGames.DealerHoldem => L.DealerHoldem.Game,
         CasinoGames.Slots or CasinoGames.SlotsBird => L.Machines.GameBird,
         CasinoGames.SlotsCascade => L.Machines.GameCascade,
         CasinoGames.SlotsMoogle => L.Machines.GameMoogle,

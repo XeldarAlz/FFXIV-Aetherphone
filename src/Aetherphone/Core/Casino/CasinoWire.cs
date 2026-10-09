@@ -34,6 +34,8 @@ internal static class CasinoWire
 
     public const string PlinkoKind = "casino.plinko";
 
+    public const string DealerHoldemKind = DealerHoldemRules.Kind;
+
     private const string KindPrefix = "casino.";
 
     public static string Kind(string gameId)

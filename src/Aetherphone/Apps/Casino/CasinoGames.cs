@@ -4,6 +4,7 @@ internal static class CasinoGames
 {
     public const string Blackjack = "blackjack";
     public const string Holdem = "holdem";
+    public const string DealerHoldem = "dealerholdem";
     public const string Slots = "slots";
     public const string SlotsBird = "slots.bird";
     public const string SlotsCascade = "slots.cascade";

@@ -218,7 +218,8 @@ internal static class CasinoVerifier
         }
 
         TrySegmentBound(gameKind, out var segmentBound);
-        var holdem = string.Equals(gameKind, HoldemRules.Kind, StringComparison.Ordinal);
+        var holdem = string.Equals(gameKind, HoldemRules.Kind, StringComparison.Ordinal)
+                     || string.Equals(gameKind, DealerHoldemRules.Kind, StringComparison.Ordinal);
         var shoeCards = ShoeCardsOf(drawLog);
         var stream = new DrawStream(seed, streamKeyInfo);
         var shuffles = default(ShuffleRun);

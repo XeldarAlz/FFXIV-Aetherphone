@@ -1,0 +1,1229 @@
+{
+  "version": 1,
+  "hands": [
+    {
+      "seed": "3d59b16c31df84999ad6e2e004c740e4b90b0f807fca362ca3fa4ad9323ca822",
+      "roundId": "dealer-1",
+      "ante": 1000,
+      "trips": 500,
+      "moves": [
+        "c",
+        "b2"
+      ],
+      "dealt": [
+        37,
+        19,
+        11,
+        9,
+        45,
+        22,
+        16,
+        8,
+        40
+      ],
+      "playMultiple": 2,
+      "playerStrength": 1559184,
+      "dealerStrength": 1755504,
+      "dealerQualifies": true,
+      "outcome": 3,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 4500,
+      "playerBest": [
+        19,
+        45,
+        37,
+        22,
+        8
+      ],
+      "dealerBest": [
+        9,
+        22,
+        11,
+        8,
+        45
+      ],
+      "drawLog": "shuffle:24;shuffle:28;shuffle:49;shuffle:18;shuffle:44;shuffle:32;shuffle:25;shuffle:3;shuffle:2;shuffle:1;shuffle:35;shuffle:20;shuffle:17;shuffle:0;shuffle:23;shuffle:21;shuffle:28;shuffle:0;shuffle:10;shuffle:15;shuffle:10;shuffle:27;shuffle:7;shuffle:7;shuffle:5;shuffle:6;shuffle:10;shuffle:14;shuffle:1;shuffle:7;shuffle:17;shuffle:2;shuffle:12;shuffle:13;shuffle:14;shuffle:13;shuffle:14;shuffle:4;shuffle:4;shuffle:6;shuffle:3;shuffle:0;shuffle:5;shuffle:2;shuffle:2;shuffle:4;shuffle:2;shuffle:0;shuffle:2;shuffle:2;shuffle:0"
+    },
+    {
+      "seed": "7161ea109f4249e9ccdae6cc3a2ad26c00c84a26033c83cc2bab9e9992ff84c6",
+      "roundId": "dealer-2",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "c",
+        "b2"
+      ],
+      "dealt": [
+        40,
+        48,
+        28,
+        26,
+        1,
+        45,
+        34,
+        4,
+        31
+      ],
+      "playMultiple": 2,
+      "playerStrength": 1223024,
+      "dealerStrength": 956261,
+      "dealerQualifies": false,
+      "outcome": 1,
+      "antePayout": 1000,
+      "blindPayout": 1000,
+      "playPayout": 4000,
+      "tripsPayout": 0,
+      "payout": 6000,
+      "stake": 5000,
+      "playerBest": [
+        1,
+        40,
+        48,
+        34,
+        45
+      ],
+      "dealerBest": [
+        26,
+        34,
+        45,
+        31,
+        4
+      ],
+      "drawLog": "shuffle:37;shuffle:22;shuffle:44;shuffle:9;shuffle:21;shuffle:18;shuffle:23;shuffle:25;shuffle:39;shuffle:39;shuffle:36;shuffle:2;shuffle:12;shuffle:35;shuffle:21;shuffle:27;shuffle:5;shuffle:5;shuffle:22;shuffle:0;shuffle:21;shuffle:17;shuffle:19;shuffle:25;shuffle:18;shuffle:20;shuffle:22;shuffle:10;shuffle:11;shuffle:14;shuffle:3;shuffle:18;shuffle:10;shuffle:7;shuffle:17;shuffle:15;shuffle:15;shuffle:12;shuffle:0;shuffle:8;shuffle:0;shuffle:10;shuffle:6;shuffle:3;shuffle:4;shuffle:5;shuffle:0;shuffle:1;shuffle:1;shuffle:1;shuffle:0"
+    },
+    {
+      "seed": "1298ddd34edacbb2c740f77d3c63ec92f3a2c618674e52de98dfeb42652a661b",
+      "roundId": "dealer-3",
+      "ante": 1000,
+      "trips": 500,
+      "moves": [
+        "c",
+        "c",
+        "f"
+      ],
+      "dealt": [
+        32,
+        4,
+        9,
+        28,
+        16,
+        14,
+        26,
+        38,
+        49
+      ],
+      "playMultiple": 0,
+      "playerStrength": 973685,
+      "dealerStrength": 973732,
+      "dealerQualifies": false,
+      "outcome": 4,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 2500,
+      "playerBest": [
+        26,
+        38,
+        49,
+        32,
+        4
+      ],
+      "dealerBest": [
+        26,
+        38,
+        49,
+        9,
+        16
+      ],
+      "drawLog": "shuffle:17;shuffle:13;shuffle:20;shuffle:7;shuffle:23;shuffle:34;shuffle:10;shuffle:1;shuffle:23;shuffle:37;shuffle:39;shuffle:22;shuffle:39;shuffle:11;shuffle:7;shuffle:13;shuffle:31;shuffle:34;shuffle:6;shuffle:25;shuffle:3;shuffle:23;shuffle:5;shuffle:27;shuffle:5;shuffle:1;shuffle:12;shuffle:22;shuffle:19;shuffle:21;shuffle:6;shuffle:0;shuffle:17;shuffle:13;shuffle:10;shuffle:6;shuffle:2;shuffle:3;shuffle:8;shuffle:7;shuffle:8;shuffle:2;shuffle:2;shuffle:0;shuffle:0;shuffle:1;shuffle:3;shuffle:1;shuffle:3;shuffle:2;shuffle:1"
+    },
+    {
+      "seed": "c8abcf5d521fa16132aa3399c7a227225201347fca75dd36b93611aafb947d19",
+      "roundId": "dealer-4",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "c",
+        "c",
+        "f"
+      ],
+      "dealt": [
+        31,
+        47,
+        44,
+        7,
+        51,
+        27,
+        3,
+        11,
+        28
+      ],
+      "playMultiple": 0,
+      "playerStrength": 903524,
+      "dealerStrength": 903268,
+      "dealerQualifies": false,
+      "outcome": 4,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 3000,
+      "playerBest": [
+        51,
+        11,
+        47,
+        31,
+        3
+      ],
+      "dealerBest": [
+        51,
+        11,
+        7,
+        44,
+        3
+      ],
+      "drawLog": "shuffle:39;shuffle:35;shuffle:46;shuffle:22;shuffle:41;shuffle:15;shuffle:20;shuffle:0;shuffle:20;shuffle:13;shuffle:9;shuffle:4;shuffle:20;shuffle:32;shuffle:1;shuffle:19;shuffle:30;shuffle:10;shuffle:24;shuffle:21;shuffle:26;shuffle:30;shuffle:25;shuffle:17;shuffle:23;shuffle:2;shuffle:8;shuffle:8;shuffle:18;shuffle:1;shuffle:19;shuffle:5;shuffle:12;shuffle:15;shuffle:12;shuffle:13;shuffle:4;shuffle:8;shuffle:10;shuffle:6;shuffle:8;shuffle:1;shuffle:1;shuffle:6;shuffle:6;shuffle:3;shuffle:4;shuffle:4;shuffle:3;shuffle:0;shuffle:1"
+    },
+    {
+      "seed": "c5d6c7960afa567547b95532b25161115f80d2076c93cc5acb6d265862f17bd1",
+      "roundId": "dealer-5",
+      "ante": 1000,
+      "trips": 500,
+      "moves": [
+        "b4"
+      ],
+      "dealt": [
+        21,
+        37,
+        42,
+        29,
+        44,
+        26,
+        16,
+        25,
+        41
+      ],
+      "playMultiple": 4,
+      "playerStrength": 973974,
+      "dealerStrength": 3468544,
+      "dealerQualifies": true,
+      "outcome": 3,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 6500,
+      "playerBest": [
+        26,
+        25,
+        37,
+        21,
+        44
+      ],
+      "dealerBest": [
+        16,
+        29,
+        42,
+        26,
+        25
+      ],
+      "drawLog": "shuffle:20;shuffle:4;shuffle:19;shuffle:15;shuffle:23;shuffle:10;shuffle:1;shuffle:7;shuffle:6;shuffle:1;shuffle:14;shuffle:28;shuffle:8;shuffle:17;shuffle:19;shuffle:24;shuffle:32;shuffle:11;shuffle:10;shuffle:4;shuffle:15;shuffle:4;shuffle:9;shuffle:15;shuffle:0;shuffle:18;shuffle:15;shuffle:3;shuffle:10;shuffle:5;shuffle:2;shuffle:10;shuffle:10;shuffle:11;shuffle:17;shuffle:13;shuffle:3;shuffle:5;shuffle:6;shuffle:0;shuffle:0;shuffle:4;shuffle:8;shuffle:5;shuffle:3;shuffle:6;shuffle:0;shuffle:3;shuffle:0;shuffle:1;shuffle:0"
+    },
+    {
+      "seed": "9d0d50ba6ac6a7c8a0606d003210baffc53a0f5ff6794cb23b37231536545ace",
+      "roundId": "dealer-6",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "c",
+        "c",
+        "b1"
+      ],
+      "dealt": [
+        41,
+        32,
+        29,
+        33,
+        51,
+        24,
+        23,
+        2,
+        14
+      ],
+      "playMultiple": 1,
+      "playerStrength": 1301680,
+      "dealerStrength": 904068,
+      "dealerQualifies": false,
+      "outcome": 1,
+      "antePayout": 1000,
+      "blindPayout": 1000,
+      "playPayout": 2000,
+      "tripsPayout": 0,
+      "payout": 4000,
+      "stake": 4000,
+      "playerBest": [
+        2,
+        41,
+        51,
+        24,
+        23
+      ],
+      "dealerBest": [
+        51,
+        24,
+        23,
+        33,
+        29
+      ],
+      "drawLog": "shuffle:46;shuffle:22;shuffle:19;shuffle:25;shuffle:34;shuffle:15;shuffle:1;shuffle:0;shuffle:37;shuffle:36;shuffle:34;shuffle:27;shuffle:30;shuffle:31;shuffle:6;shuffle:9;shuffle:4;shuffle:7;shuffle:18;shuffle:27;shuffle:12;shuffle:17;shuffle:6;shuffle:10;shuffle:26;shuffle:11;shuffle:20;shuffle:5;shuffle:20;shuffle:17;shuffle:3;shuffle:0;shuffle:1;shuffle:17;shuffle:9;shuffle:1;shuffle:13;shuffle:4;shuffle:12;shuffle:1;shuffle:3;shuffle:8;shuffle:8;shuffle:4;shuffle:2;shuffle:0;shuffle:5;shuffle:1;shuffle:1;shuffle:0;shuffle:1"
+    },
+    {
+      "seed": "08e3eb506d208ba1802810c426c7112993697b21373b5611a6cb2525435ce51f",
+      "roundId": "dealer-7",
+      "ante": 1000,
+      "trips": 500,
+      "moves": [
+        "c",
+        "c",
+        "b1"
+      ],
+      "dealt": [
+        32,
+        43,
+        37,
+        18,
+        1,
+        27,
+        8,
+        51,
+        17
+      ],
+      "playMultiple": 1,
+      "playerStrength": 2436352,
+      "dealerStrength": 1236112,
+      "dealerQualifies": true,
+      "outcome": 1,
+      "antePayout": 2000,
+      "blindPayout": 1000,
+      "playPayout": 2000,
+      "tripsPayout": 0,
+      "payout": 5000,
+      "stake": 3500,
+      "playerBest": [
+        17,
+        43,
+        1,
+        27,
+        51
+      ],
+      "dealerBest": [
+        1,
+        27,
+        51,
+        37,
+        8
+      ],
+      "drawLog": "shuffle:2;shuffle:10;shuffle:34;shuffle:36;shuffle:12;shuffle:5;shuffle:16;shuffle:39;shuffle:19;shuffle:6;shuffle:22;shuffle:30;shuffle:24;shuffle:11;shuffle:28;shuffle:24;shuffle:20;shuffle:30;shuffle:22;shuffle:22;shuffle:21;shuffle:16;shuffle:23;shuffle:3;shuffle:21;shuffle:25;shuffle:10;shuffle:11;shuffle:12;shuffle:7;shuffle:11;shuffle:9;shuffle:15;shuffle:9;shuffle:5;shuffle:4;shuffle:13;shuffle:10;shuffle:12;shuffle:6;shuffle:0;shuffle:4;shuffle:4;shuffle:5;shuffle:2;shuffle:5;shuffle:0;shuffle:1;shuffle:1;shuffle:1;shuffle:0"
+    },
+    {
+      "seed": "aa7da41fc945c1be58e1c84651abfb58ba8c2e6e7f50e54a134db55469d9f123",
+      "roundId": "dealer-8",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "c",
+        "c",
+        "b1"
+      ],
+      "dealt": [
+        4,
+        40,
+        0,
+        33,
+        5,
+        46,
+        45,
+        41,
+        17
+      ],
+      "playMultiple": 1,
+      "playerStrength": 1410912,
+      "dealerStrength": 1632096,
+      "dealerQualifies": true,
+      "outcome": 3,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 4000,
+      "playerBest": [
+        4,
+        17,
+        46,
+        45,
+        5
+      ],
+      "dealerBest": [
+        33,
+        46,
+        0,
+        45,
+        5
+      ],
+      "drawLog": "shuffle:11;shuffle:29;shuffle:26;shuffle:10;shuffle:7;shuffle:30;shuffle:9;shuffle:1;shuffle:19;shuffle:29;shuffle:31;shuffle:13;shuffle:19;shuffle:28;shuffle:6;shuffle:3;shuffle:7;shuffle:18;shuffle:11;shuffle:19;shuffle:27;shuffle:21;shuffle:8;shuffle:3;shuffle:26;shuffle:18;shuffle:8;shuffle:15;shuffle:12;shuffle:22;shuffle:16;shuffle:3;shuffle:15;shuffle:6;shuffle:3;shuffle:12;shuffle:14;shuffle:1;shuffle:7;shuffle:8;shuffle:10;shuffle:1;shuffle:2;shuffle:3;shuffle:6;shuffle:2;shuffle:3;shuffle:3;shuffle:1;shuffle:0;shuffle:0"
+    },
+    {
+      "seed": "4fe6b24e258366fd4e5aa5bc50ca5a4246acd5d1ab76c704e5bc8c7889657f54",
+      "roundId": "dealer-9",
+      "ante": 1000,
+      "trips": 500,
+      "moves": [
+        "b3"
+      ],
+      "dealt": [
+        38,
+        33,
+        29,
+        32,
+        39,
+        6,
+        14,
+        22,
+        50
+      ],
+      "playMultiple": 3,
+      "playerStrength": 973992,
+      "dealerStrength": 1567904,
+      "dealerQualifies": true,
+      "outcome": 3,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 5500,
+      "playerBest": [
+        39,
+        38,
+        50,
+        22,
+        33
+      ],
+      "dealerBest": [
+        6,
+        32,
+        39,
+        50,
+        22
+      ],
+      "drawLog": "shuffle:41;shuffle:15;shuffle:27;shuffle:42;shuffle:24;shuffle:7;shuffle:45;shuffle:9;shuffle:10;shuffle:20;shuffle:5;shuffle:3;shuffle:10;shuffle:13;shuffle:1;shuffle:21;shuffle:34;shuffle:11;shuffle:20;shuffle:1;shuffle:2;shuffle:5;shuffle:5;shuffle:12;shuffle:2;shuffle:4;shuffle:24;shuffle:16;shuffle:8;shuffle:19;shuffle:2;shuffle:3;shuffle:4;shuffle:12;shuffle:0;shuffle:12;shuffle:2;shuffle:12;shuffle:7;shuffle:0;shuffle:9;shuffle:9;shuffle:8;shuffle:2;shuffle:4;shuffle:0;shuffle:0;shuffle:2;shuffle:1;shuffle:0;shuffle:1"
+    },
+    {
+      "seed": "2a433fd6fa05a1d19442f922ff6138ce5d6fa38ff68a574a6b17f3be65e4a83c",
+      "roundId": "dealer-10",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "c",
+        "c",
+        "f"
+      ],
+      "dealt": [
+        46,
+        31,
+        47,
+        49,
+        24,
+        35,
+        29,
+        17,
+        38
+      ],
+      "playMultiple": 0,
+      "playerStrength": 903814,
+      "dealerStrength": 5046272,
+      "dealerQualifies": true,
+      "outcome": 4,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 3000,
+      "playerBest": [
+        38,
+        24,
+        35,
+        46,
+        31
+      ],
+      "dealerBest": [
+        38,
+        24,
+        49,
+        35,
+        47
+      ],
+      "drawLog": "shuffle:8;shuffle:13;shuffle:4;shuffle:3;shuffle:1;shuffle:6;shuffle:16;shuffle:32;shuffle:13;shuffle:30;shuffle:3;shuffle:11;shuffle:7;shuffle:5;shuffle:23;shuffle:3;shuffle:9;shuffle:20;shuffle:26;shuffle:0;shuffle:22;shuffle:7;shuffle:25;shuffle:20;shuffle:21;shuffle:14;shuffle:18;shuffle:15;shuffle:10;shuffle:10;shuffle:11;shuffle:13;shuffle:13;shuffle:2;shuffle:12;shuffle:11;shuffle:11;shuffle:8;shuffle:8;shuffle:3;shuffle:8;shuffle:0;shuffle:7;shuffle:5;shuffle:3;shuffle:2;shuffle:3;shuffle:3;shuffle:3;shuffle:1;shuffle:0"
+    },
+    {
+      "seed": "4d8f63ad7c95cbc183157cfb461a0fd290003653cf00c5aa5568b4666ebe72de",
+      "roundId": "dealer-11",
+      "ante": 1000,
+      "trips": 500,
+      "moves": [
+        "c",
+        "b2"
+      ],
+      "dealt": [
+        33,
+        30,
+        11,
+        4,
+        17,
+        38,
+        43,
+        15,
+        46
+      ],
+      "playMultiple": 2,
+      "playerStrength": 6651904,
+      "dealerStrength": 3529728,
+      "dealerQualifies": true,
+      "outcome": 1,
+      "antePayout": 2000,
+      "blindPayout": 4000,
+      "playPayout": 4000,
+      "tripsPayout": 4500,
+      "payout": 14500,
+      "stake": 4500,
+      "playerBest": [
+        17,
+        30,
+        43,
+        33,
+        46
+      ],
+      "dealerBest": [
+        4,
+        17,
+        43,
+        38,
+        11
+      ],
+      "drawLog": "shuffle:26;shuffle:44;shuffle:12;shuffle:37;shuffle:34;shuffle:45;shuffle:19;shuffle:22;shuffle:41;shuffle:2;shuffle:24;shuffle:37;shuffle:5;shuffle:32;shuffle:35;shuffle:31;shuffle:35;shuffle:12;shuffle:14;shuffle:18;shuffle:9;shuffle:26;shuffle:25;shuffle:0;shuffle:10;shuffle:13;shuffle:22;shuffle:9;shuffle:23;shuffle:2;shuffle:10;shuffle:20;shuffle:6;shuffle:5;shuffle:3;shuffle:12;shuffle:1;shuffle:2;shuffle:10;shuffle:0;shuffle:7;shuffle:0;shuffle:8;shuffle:6;shuffle:1;shuffle:6;shuffle:5;shuffle:3;shuffle:3;shuffle:1;shuffle:0"
+    },
+    {
+      "seed": "061111d8d5587713e0d6aac22a2fe13630c4d8744bf6f0278b2a790058df42c0",
+      "roundId": "dealer-13",
+      "ante": 1000,
+      "trips": 500,
+      "moves": [
+        "c",
+        "c",
+        "b1"
+      ],
+      "dealt": [
+        7,
+        3,
+        1,
+        50,
+        0,
+        31,
+        19,
+        17,
+        45
+      ],
+      "playMultiple": 1,
+      "playerStrength": 4718592,
+      "dealerStrength": 1567840,
+      "dealerQualifies": true,
+      "outcome": 1,
+      "antePayout": 2000,
+      "blindPayout": 2000,
+      "playPayout": 2000,
+      "tripsPayout": 2500,
+      "payout": 8500,
+      "stake": 3500,
+      "playerBest": [
+        7,
+        19,
+        31,
+        17,
+        3
+      ],
+      "dealerBest": [
+        19,
+        45,
+        0,
+        50,
+        31
+      ],
+      "drawLog": "shuffle:23;shuffle:37;shuffle:8;shuffle:8;shuffle:46;shuffle:32;shuffle:39;shuffle:21;shuffle:24;shuffle:30;shuffle:36;shuffle:34;shuffle:15;shuffle:36;shuffle:10;shuffle:27;shuffle:8;shuffle:34;shuffle:4;shuffle:25;shuffle:25;shuffle:2;shuffle:27;shuffle:14;shuffle:20;shuffle:4;shuffle:22;shuffle:18;shuffle:2;shuffle:8;shuffle:5;shuffle:16;shuffle:14;shuffle:12;shuffle:12;shuffle:16;shuffle:11;shuffle:13;shuffle:6;shuffle:4;shuffle:5;shuffle:9;shuffle:2;shuffle:5;shuffle:4;shuffle:6;shuffle:5;shuffle:0;shuffle:2;shuffle:1;shuffle:1"
+    },
+    {
+      "seed": "0b4332b8ab6e1b151704d9017916df0754d0e9c35228940a48db934eafe54a55",
+      "roundId": "dealer-15",
+      "ante": 1000,
+      "trips": 500,
+      "moves": [
+        "b3"
+      ],
+      "dealt": [
+        9,
+        50,
+        21,
+        33,
+        29,
+        36,
+        30,
+        0,
+        31
+      ],
+      "playMultiple": 3,
+      "playerStrength": 969638,
+      "dealerStrength": 5998164,
+      "dealerQualifies": true,
+      "outcome": 3,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 5500,
+      "playerBest": [
+        0,
+        50,
+        36,
+        9,
+        31
+      ],
+      "dealerBest": [
+        36,
+        33,
+        31,
+        30,
+        29
+      ],
+      "drawLog": "shuffle:23;shuffle:19;shuffle:38;shuffle:37;shuffle:35;shuffle:32;shuffle:8;shuffle:16;shuffle:37;shuffle:4;shuffle:32;shuffle:20;shuffle:13;shuffle:32;shuffle:14;shuffle:24;shuffle:16;shuffle:5;shuffle:18;shuffle:26;shuffle:28;shuffle:23;shuffle:3;shuffle:13;shuffle:17;shuffle:4;shuffle:22;shuffle:14;shuffle:8;shuffle:4;shuffle:6;shuffle:7;shuffle:17;shuffle:15;shuffle:16;shuffle:12;shuffle:1;shuffle:4;shuffle:7;shuffle:5;shuffle:2;shuffle:2;shuffle:2;shuffle:7;shuffle:0;shuffle:0;shuffle:4;shuffle:3;shuffle:1;shuffle:0;shuffle:1"
+    },
+    {
+      "seed": "61145576f865abac78a9cca8756b4b7c9d895a4d11fc7bb06e61f73763ed273f",
+      "roundId": "dealer-16",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "b4"
+      ],
+      "dealt": [
+        51,
+        32,
+        19,
+        25,
+        36,
+        45,
+        15,
+        48,
+        5
+      ],
+      "playMultiple": 4,
+      "playerStrength": 1563552,
+      "dealerStrength": 1563552,
+      "dealerQualifies": true,
+      "outcome": 2,
+      "antePayout": 1000,
+      "blindPayout": 1000,
+      "playPayout": 4000,
+      "tripsPayout": 0,
+      "payout": 6000,
+      "stake": 7000,
+      "playerBest": [
+        32,
+        45,
+        51,
+        36,
+        48
+      ],
+      "dealerBest": [
+        19,
+        45,
+        25,
+        36,
+        48
+      ],
+      "drawLog": "shuffle:11;shuffle:29;shuffle:31;shuffle:37;shuffle:39;shuffle:1;shuffle:8;shuffle:40;shuffle:13;shuffle:31;shuffle:21;shuffle:33;shuffle:39;shuffle:12;shuffle:34;shuffle:24;shuffle:18;shuffle:4;shuffle:17;shuffle:14;shuffle:21;shuffle:16;shuffle:21;shuffle:12;shuffle:17;shuffle:26;shuffle:0;shuffle:23;shuffle:2;shuffle:9;shuffle:16;shuffle:1;shuffle:13;shuffle:18;shuffle:12;shuffle:9;shuffle:1;shuffle:12;shuffle:6;shuffle:9;shuffle:3;shuffle:10;shuffle:7;shuffle:5;shuffle:4;shuffle:1;shuffle:5;shuffle:2;shuffle:0;shuffle:1;shuffle:1"
+    },
+    {
+      "seed": "3b05f1b5769b2da8242b5bd20cbd1a2d14316f01929ed0eb6d97d4727cddc1fa",
+      "roundId": "dealer-17",
+      "ante": 1000,
+      "trips": 500,
+      "moves": [
+        "c",
+        "b2"
+      ],
+      "dealt": [
+        34,
+        20,
+        24,
+        46,
+        44,
+        28,
+        33,
+        4,
+        18
+      ],
+      "playMultiple": 2,
+      "playerStrength": 2648320,
+      "dealerStrength": 2649088,
+      "dealerQualifies": true,
+      "outcome": 3,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 4500,
+      "playerBest": [
+        20,
+        33,
+        18,
+        44,
+        34
+      ],
+      "dealerBest": [
+        33,
+        46,
+        18,
+        44,
+        24
+      ],
+      "drawLog": "shuffle:48;shuffle:32;shuffle:41;shuffle:11;shuffle:32;shuffle:21;shuffle:6;shuffle:32;shuffle:23;shuffle:41;shuffle:2;shuffle:31;shuffle:35;shuffle:22;shuffle:25;shuffle:17;shuffle:23;shuffle:30;shuffle:5;shuffle:19;shuffle:12;shuffle:23;shuffle:2;shuffle:13;shuffle:6;shuffle:14;shuffle:17;shuffle:2;shuffle:8;shuffle:14;shuffle:15;shuffle:11;shuffle:14;shuffle:12;shuffle:7;shuffle:1;shuffle:6;shuffle:1;shuffle:9;shuffle:7;shuffle:10;shuffle:3;shuffle:0;shuffle:7;shuffle:4;shuffle:5;shuffle:0;shuffle:1;shuffle:0;shuffle:2;shuffle:0"
+    },
+    {
+      "seed": "4c2ea344c07e3e9a403076b269cfdbf12992e58d51b37cb1ca3d44c6466938b6",
+      "roundId": "dealer-24",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "c",
+        "c",
+        "b1"
+      ],
+      "dealt": [
+        4,
+        42,
+        25,
+        8,
+        49,
+        47,
+        50,
+        44,
+        27
+      ],
+      "playMultiple": 1,
+      "playerStrength": 6076772,
+      "dealerStrength": 1694896,
+      "dealerQualifies": true,
+      "outcome": 1,
+      "antePayout": 2000,
+      "blindPayout": 2500,
+      "playPayout": 2000,
+      "tripsPayout": 8000,
+      "payout": 14500,
+      "stake": 4000,
+      "playerBest": [
+        50,
+        49,
+        47,
+        44,
+        42
+      ],
+      "dealerBest": [
+        8,
+        47,
+        25,
+        50,
+        49
+      ],
+      "drawLog": "shuffle:5;shuffle:6;shuffle:45;shuffle:9;shuffle:37;shuffle:21;shuffle:11;shuffle:15;shuffle:18;shuffle:17;shuffle:26;shuffle:7;shuffle:14;shuffle:30;shuffle:2;shuffle:18;shuffle:29;shuffle:29;shuffle:9;shuffle:28;shuffle:31;shuffle:26;shuffle:5;shuffle:10;shuffle:22;shuffle:23;shuffle:21;shuffle:18;shuffle:0;shuffle:20;shuffle:14;shuffle:16;shuffle:5;shuffle:12;shuffle:12;shuffle:7;shuffle:10;shuffle:1;shuffle:5;shuffle:5;shuffle:3;shuffle:9;shuffle:0;shuffle:7;shuffle:0;shuffle:6;shuffle:2;shuffle:3;shuffle:0;shuffle:1;shuffle:1"
+    },
+    {
+      "seed": "c50e988955bb7935e1dc00947d41007c54d333b13d2e90bc1e5e6dd426fbbdc8",
+      "roundId": "dealer-28",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "c",
+        "c",
+        "b1"
+      ],
+      "dealt": [
+        35,
+        43,
+        39,
+        41,
+        15,
+        31,
+        50,
+        18,
+        28
+      ],
+      "playMultiple": 1,
+      "playerStrength": 2505728,
+      "dealerStrength": 6512640,
+      "dealerQualifies": true,
+      "outcome": 3,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 4000,
+      "playerBest": [
+        18,
+        31,
+        15,
+        28,
+        50
+      ],
+      "dealerBest": [
+        15,
+        28,
+        41,
+        18,
+        31
+      ],
+      "drawLog": "shuffle:7;shuffle:38;shuffle:40;shuffle:25;shuffle:24;shuffle:26;shuffle:44;shuffle:4;shuffle:0;shuffle:37;shuffle:40;shuffle:26;shuffle:14;shuffle:7;shuffle:10;shuffle:2;shuffle:19;shuffle:3;shuffle:12;shuffle:8;shuffle:8;shuffle:16;shuffle:10;shuffle:23;shuffle:25;shuffle:11;shuffle:25;shuffle:20;shuffle:12;shuffle:16;shuffle:16;shuffle:2;shuffle:6;shuffle:10;shuffle:1;shuffle:5;shuffle:13;shuffle:9;shuffle:3;shuffle:4;shuffle:5;shuffle:2;shuffle:1;shuffle:4;shuffle:2;shuffle:2;shuffle:4;shuffle:3;shuffle:3;shuffle:1;shuffle:0"
+    },
+    {
+      "seed": "cfe4f7b5d4a75a9fefeed0743c22bd9f528549ba309b98982b9a9602ac2cfea4",
+      "roundId": "dealer-34",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "b4"
+      ],
+      "dealt": [
+        49,
+        36,
+        18,
+        37,
+        45,
+        20,
+        40,
+        11,
+        10
+      ],
+      "playMultiple": 4,
+      "playerStrength": 3917824,
+      "dealerStrength": 1882224,
+      "dealerQualifies": true,
+      "outcome": 1,
+      "antePayout": 2000,
+      "blindPayout": 1000,
+      "playPayout": 8000,
+      "tripsPayout": 4000,
+      "payout": 15000,
+      "stake": 7000,
+      "playerBest": [
+        10,
+        36,
+        49,
+        11,
+        20
+      ],
+      "dealerBest": [
+        11,
+        37,
+        10,
+        20,
+        45
+      ],
+      "drawLog": "shuffle:23;shuffle:39;shuffle:15;shuffle:24;shuffle:7;shuffle:8;shuffle:1;shuffle:30;shuffle:30;shuffle:23;shuffle:41;shuffle:12;shuffle:22;shuffle:8;shuffle:6;shuffle:34;shuffle:26;shuffle:19;shuffle:30;shuffle:7;shuffle:26;shuffle:16;shuffle:13;shuffle:16;shuffle:23;shuffle:25;shuffle:2;shuffle:14;shuffle:16;shuffle:3;shuffle:0;shuffle:4;shuffle:14;shuffle:9;shuffle:8;shuffle:8;shuffle:13;shuffle:7;shuffle:8;shuffle:5;shuffle:3;shuffle:2;shuffle:0;shuffle:2;shuffle:3;shuffle:5;shuffle:4;shuffle:1;shuffle:1;shuffle:0;shuffle:1"
+    },
+    {
+      "seed": "4fdc734306e9e25e4f9cad285f7b486efcc65b66c5470f2682c61d997ac08293",
+      "roundId": "dealer-50",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "c",
+        "c",
+        "b1"
+      ],
+      "dealt": [
+        29,
+        10,
+        19,
+        50,
+        43,
+        22,
+        26,
+        25,
+        34
+      ],
+      "playMultiple": 1,
+      "playerStrength": 973737,
+      "dealerStrength": 973993,
+      "dealerQualifies": false,
+      "outcome": 3,
+      "antePayout": 1000,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 1000,
+      "stake": 4000,
+      "playerBest": [
+        26,
+        25,
+        10,
+        22,
+        34
+      ],
+      "dealerBest": [
+        26,
+        25,
+        50,
+        22,
+        34
+      ],
+      "drawLog": "shuffle:30;shuffle:13;shuffle:3;shuffle:27;shuffle:24;shuffle:8;shuffle:4;shuffle:23;shuffle:23;shuffle:35;shuffle:9;shuffle:35;shuffle:16;shuffle:0;shuffle:18;shuffle:1;shuffle:3;shuffle:4;shuffle:0;shuffle:31;shuffle:30;shuffle:17;shuffle:5;shuffle:15;shuffle:11;shuffle:3;shuffle:14;shuffle:2;shuffle:8;shuffle:17;shuffle:0;shuffle:0;shuffle:18;shuffle:7;shuffle:6;shuffle:0;shuffle:1;shuffle:11;shuffle:2;shuffle:1;shuffle:1;shuffle:9;shuffle:0;shuffle:4;shuffle:1;shuffle:3;shuffle:3;shuffle:4;shuffle:2;shuffle:1;shuffle:0"
+    },
+    {
+      "seed": "a3eb00f5b8f387d5c3655f8636acdee77f34400f993dd8780e344c49ea674312",
+      "roundId": "dealer-228",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "b3"
+      ],
+      "dealt": [
+        4,
+        0,
+        13,
+        32,
+        48,
+        33,
+        12,
+        3,
+        47
+      ],
+      "playMultiple": 3,
+      "playerStrength": 973464,
+      "dealerStrength": 973464,
+      "dealerQualifies": false,
+      "outcome": 2,
+      "antePayout": 1000,
+      "blindPayout": 1000,
+      "playPayout": 3000,
+      "tripsPayout": 0,
+      "payout": 5000,
+      "stake": 6000,
+      "playerBest": [
+        0,
+        12,
+        48,
+        47,
+        33
+      ],
+      "dealerBest": [
+        13,
+        12,
+        48,
+        47,
+        33
+      ],
+      "drawLog": "shuffle:26;shuffle:2;shuffle:30;shuffle:29;shuffle:15;shuffle:2;shuffle:14;shuffle:21;shuffle:8;shuffle:8;shuffle:6;shuffle:10;shuffle:37;shuffle:38;shuffle:23;shuffle:14;shuffle:34;shuffle:7;shuffle:18;shuffle:23;shuffle:16;shuffle:6;shuffle:25;shuffle:21;shuffle:7;shuffle:8;shuffle:21;shuffle:14;shuffle:5;shuffle:22;shuffle:10;shuffle:1;shuffle:7;shuffle:14;shuffle:9;shuffle:8;shuffle:2;shuffle:1;shuffle:9;shuffle:6;shuffle:8;shuffle:8;shuffle:7;shuffle:2;shuffle:3;shuffle:6;shuffle:1;shuffle:2;shuffle:1;shuffle:1;shuffle:0"
+    },
+    {
+      "seed": "05f81decaffa5dc0fcaccb4f2ca5479155e6f82a15c3cf8c8cba8f5a8312f9f2",
+      "roundId": "dealer-1912",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "c",
+        "c",
+        "b1"
+      ],
+      "dealt": [
+        35,
+        40,
+        36,
+        41,
+        23,
+        49,
+        10,
+        24,
+        42
+      ],
+      "playMultiple": 1,
+      "playerStrength": 3918336,
+      "dealerStrength": 8110080,
+      "dealerQualifies": true,
+      "outcome": 3,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 4000,
+      "payout": 4000,
+      "stake": 4000,
+      "playerBest": [
+        10,
+        23,
+        49,
+        24,
+        35
+      ],
+      "dealerBest": [
+        10,
+        23,
+        36,
+        49,
+        24
+      ],
+      "drawLog": "shuffle:25;shuffle:5;shuffle:17;shuffle:6;shuffle:28;shuffle:8;shuffle:32;shuffle:30;shuffle:15;shuffle:13;shuffle:7;shuffle:30;shuffle:22;shuffle:28;shuffle:34;shuffle:21;shuffle:34;shuffle:3;shuffle:20;shuffle:16;shuffle:8;shuffle:29;shuffle:4;shuffle:25;shuffle:16;shuffle:6;shuffle:15;shuffle:11;shuffle:6;shuffle:15;shuffle:9;shuffle:12;shuffle:5;shuffle:18;shuffle:1;shuffle:2;shuffle:2;shuffle:8;shuffle:0;shuffle:12;shuffle:5;shuffle:8;shuffle:2;shuffle:0;shuffle:5;shuffle:0;shuffle:1;shuffle:0;shuffle:1;shuffle:2;shuffle:0"
+    },
+    {
+      "seed": "8323ecc05c0442135c03476f5c3cd7b80f6d45acca7aaf4fe31b321353205a43",
+      "roundId": "dealer-3978",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "b3"
+      ],
+      "dealt": [
+        39,
+        5,
+        31,
+        35,
+        29,
+        34,
+        32,
+        33,
+        24
+      ],
+      "playMultiple": 3,
+      "playerStrength": 969095,
+      "dealerStrength": 9043968,
+      "dealerQualifies": true,
+      "outcome": 3,
+      "antePayout": 0,
+      "blindPayout": 0,
+      "playPayout": 0,
+      "tripsPayout": 0,
+      "payout": 0,
+      "stake": 6000,
+      "playerBest": [
+        39,
+        24,
+        34,
+        33,
+        32
+      ],
+      "dealerBest": [
+        35,
+        34,
+        33,
+        32,
+        31
+      ],
+      "drawLog": "shuffle:10;shuffle:45;shuffle:14;shuffle:44;shuffle:12;shuffle:10;shuffle:11;shuffle:37;shuffle:28;shuffle:11;shuffle:1;shuffle:6;shuffle:1;shuffle:8;shuffle:37;shuffle:16;shuffle:20;shuffle:30;shuffle:16;shuffle:25;shuffle:15;shuffle:21;shuffle:0;shuffle:23;shuffle:9;shuffle:8;shuffle:23;shuffle:13;shuffle:3;shuffle:10;shuffle:18;shuffle:11;shuffle:17;shuffle:9;shuffle:17;shuffle:4;shuffle:12;shuffle:7;shuffle:7;shuffle:6;shuffle:2;shuffle:8;shuffle:8;shuffle:7;shuffle:4;shuffle:3;shuffle:4;shuffle:0;shuffle:2;shuffle:2;shuffle:0"
+    },
+    {
+      "seed": "b8b52bc4891426a6bc5a85727cd021bd7a2b7f071dac2d766c95da58c3d24b0c",
+      "roundId": "dealer-3982",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "c",
+        "b2"
+      ],
+      "dealt": [
+        15,
+        44,
+        30,
+        35,
+        18,
+        29,
+        40,
+        5,
+        31
+      ],
+      "playMultiple": 2,
+      "playerStrength": 7749632,
+      "dealerStrength": 3581184,
+      "dealerQualifies": true,
+      "outcome": 1,
+      "antePayout": 2000,
+      "blindPayout": 11000,
+      "playPayout": 4000,
+      "tripsPayout": 31000,
+      "payout": 48000,
+      "stake": 5000,
+      "playerBest": [
+        5,
+        18,
+        31,
+        44,
+        29
+      ],
+      "dealerBest": [
+        5,
+        18,
+        31,
+        35,
+        30
+      ],
+      "drawLog": "shuffle:17;shuffle:2;shuffle:32;shuffle:3;shuffle:14;shuffle:20;shuffle:42;shuffle:12;shuffle:33;shuffle:1;shuffle:27;shuffle:23;shuffle:0;shuffle:38;shuffle:25;shuffle:36;shuffle:13;shuffle:0;shuffle:8;shuffle:2;shuffle:11;shuffle:2;shuffle:0;shuffle:1;shuffle:21;shuffle:4;shuffle:19;shuffle:21;shuffle:19;shuffle:9;shuffle:3;shuffle:4;shuffle:9;shuffle:10;shuffle:16;shuffle:7;shuffle:1;shuffle:3;shuffle:8;shuffle:4;shuffle:7;shuffle:3;shuffle:6;shuffle:7;shuffle:5;shuffle:6;shuffle:0;shuffle:3;shuffle:0;shuffle:2;shuffle:0"
+    },
+    {
+      "seed": "8c6db4e7e86adbdd233b478b9f9c4252454a10670b9ca1c892c5e45ee89c1000",
+      "roundId": "dealer-5185",
+      "ante": 1000,
+      "trips": 500,
+      "moves": [
+        "c",
+        "b2"
+      ],
+      "dealt": [
+        46,
+        43,
+        29,
+        4,
+        10,
+        7,
+        11,
+        8,
+        9
+      ],
+      "playMultiple": 2,
+      "playerStrength": 9175040,
+      "dealerStrength": 9175040,
+      "dealerQualifies": true,
+      "outcome": 2,
+      "antePayout": 1000,
+      "blindPayout": 1000,
+      "playPayout": 2000,
+      "tripsPayout": 20500,
+      "payout": 24500,
+      "stake": 4500,
+      "playerBest": [
+        11,
+        10,
+        9,
+        8,
+        7
+      ],
+      "dealerBest": [
+        11,
+        10,
+        9,
+        8,
+        7
+      ],
+      "drawLog": "shuffle:0;shuffle:30;shuffle:24;shuffle:35;shuffle:20;shuffle:31;shuffle:15;shuffle:18;shuffle:35;shuffle:42;shuffle:27;shuffle:32;shuffle:25;shuffle:33;shuffle:0;shuffle:25;shuffle:26;shuffle:13;shuffle:0;shuffle:18;shuffle:18;shuffle:2;shuffle:2;shuffle:27;shuffle:0;shuffle:16;shuffle:12;shuffle:17;shuffle:0;shuffle:1;shuffle:12;shuffle:5;shuffle:6;shuffle:0;shuffle:14;shuffle:14;shuffle:6;shuffle:13;shuffle:1;shuffle:12;shuffle:6;shuffle:5;shuffle:3;shuffle:3;shuffle:3;shuffle:6;shuffle:3;shuffle:3;shuffle:3;shuffle:2;shuffle:1"
+    },
+    {
+      "seed": "3bbba0207ef570f7a57dff09b7555e301790e1521d8d54506febf3284c28ebb6",
+      "roundId": "dealer-6396",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "b3"
+      ],
+      "dealt": [
+        39,
+        50,
+        3,
+        33,
+        48,
+        49,
+        51,
+        23,
+        44
+      ],
+      "playMultiple": 3,
+      "playerStrength": 9306112,
+      "dealerStrength": 1825408,
+      "dealerQualifies": true,
+      "outcome": 1,
+      "antePayout": 2000,
+      "blindPayout": 501000,
+      "playPayout": 6000,
+      "tripsPayout": 51000,
+      "payout": 560000,
+      "stake": 6000,
+      "playerBest": [
+        39,
+        51,
+        50,
+        49,
+        48
+      ],
+      "dealerBest": [
+        23,
+        49,
+        51,
+        48,
+        33
+      ],
+      "drawLog": "shuffle:28;shuffle:37;shuffle:47;shuffle:1;shuffle:13;shuffle:26;shuffle:25;shuffle:10;shuffle:19;shuffle:21;shuffle:22;shuffle:2;shuffle:27;shuffle:12;shuffle:16;shuffle:7;shuffle:35;shuffle:22;shuffle:4;shuffle:7;shuffle:24;shuffle:18;shuffle:17;shuffle:0;shuffle:6;shuffle:12;shuffle:2;shuffle:18;shuffle:9;shuffle:7;shuffle:7;shuffle:7;shuffle:8;shuffle:5;shuffle:12;shuffle:11;shuffle:12;shuffle:7;shuffle:5;shuffle:12;shuffle:2;shuffle:7;shuffle:8;shuffle:7;shuffle:7;shuffle:0;shuffle:5;shuffle:1;shuffle:1;shuffle:1;shuffle:1"
+    },
+    {
+      "seed": "8e95a18d2c4c5842774b70ad9ea7a06ebe5b8f174352ef02b679945870bf66dd",
+      "roundId": "dealer-9236",
+      "ante": 1000,
+      "trips": 1000,
+      "moves": [
+        "b4"
+      ],
+      "dealt": [
+        47,
+        49,
+        11,
+        43,
+        16,
+        48,
+        13,
+        45,
+        46
+      ],
+      "playMultiple": 4,
+      "playerStrength": 9109504,
+      "dealerStrength": 969351,
+      "dealerQualifies": false,
+      "outcome": 1,
+      "antePayout": 1000,
+      "blindPayout": 51000,
+      "playPayout": 8000,
+      "tripsPayout": 41000,
+      "payout": 101000,
+      "stake": 7000,
+      "playerBest": [
+        49,
+        48,
+        47,
+        46,
+        45
+      ],
+      "dealerBest": [
+        13,
+        11,
+        48,
+        46,
+        45
+      ],
+      "drawLog": "shuffle:4;shuffle:31;shuffle:1;shuffle:27;shuffle:33;shuffle:39;shuffle:0;shuffle:6;shuffle:28;shuffle:14;shuffle:23;shuffle:31;shuffle:14;shuffle:23;shuffle:9;shuffle:6;shuffle:10;shuffle:23;shuffle:10;shuffle:26;shuffle:3;shuffle:5;shuffle:8;shuffle:20;shuffle:18;shuffle:5;shuffle:12;shuffle:12;shuffle:23;shuffle:4;shuffle:19;shuffle:15;shuffle:7;shuffle:12;shuffle:2;shuffle:8;shuffle:9;shuffle:2;shuffle:4;shuffle:6;shuffle:5;shuffle:7;shuffle:3;shuffle:2;shuffle:0;shuffle:4;shuffle:4;shuffle:2;shuffle:3;shuffle:2;shuffle:1"
+    }
+  ]
+}

@@ -77,6 +77,7 @@ public sealed class CasinoFloorLayoutTests
     [Theory]
     [InlineData(CasinoGames.Blackjack)]
     [InlineData(CasinoGames.Holdem)]
+    [InlineData(CasinoGames.DealerHoldem)]
     [InlineData(CasinoGames.SlotsBird)]
     [InlineData(CasinoGames.SlotsCascade)]
     [InlineData(CasinoGames.SlotsMoogle)]
@@ -113,7 +114,8 @@ public sealed class CasinoFloorLayoutTests
         }, StripCatalog.Shelves);
         Assert.Equal(3, StripCatalog.EntriesOf(StripShelf.Machines).Length);
         Assert.Equal(6, StripCatalog.EntriesOf(StripShelf.Originals).Length);
-        Assert.Equal(21, StripCatalog.EntryCount);
+        Assert.Equal(4, StripCatalog.EntriesOf(StripShelf.Tables).Length);
+        Assert.Equal(22, StripCatalog.EntryCount);
     }
 
     [Fact]

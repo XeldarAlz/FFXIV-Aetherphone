@@ -73,6 +73,15 @@ internal static class CasinoRules
         L.Holdem.RulesStep5,
     };
 
+    private static readonly LocString[] DealerHoldemSteps =
+    {
+        L.DealerHoldem.RulesStep1,
+        L.DealerHoldem.RulesStep2,
+        L.DealerHoldem.RulesStep3,
+        L.DealerHoldem.RulesStep4,
+        L.DealerHoldem.RulesStep5,
+    };
+
     private static readonly LocString[] BarkeepSteps =
     {
         L.Casino.RulesBarkeepStep1,
@@ -163,6 +172,7 @@ internal static class CasinoRules
         CasinoGames.Bingo => L.Casino.PitchBingo,
         CasinoGames.Blackjack => L.Casino.PitchBlackjack,
         CasinoGames.Holdem => L.Holdem.Pitch,
+        CasinoGames.DealerHoldem => L.DealerHoldem.Pitch,
         CasinoGames.Barkeep => L.Casino.PitchBarkeep,
         _ => L.Casino.PitchGeneric,
     };
@@ -184,6 +194,7 @@ internal static class CasinoRules
         CasinoGames.Bingo => L.Casino.GameBingo,
         CasinoGames.Blackjack => L.Casino.GameBlackjack,
         CasinoGames.Holdem => L.Casino.GameHoldem,
+        CasinoGames.DealerHoldem => L.DealerHoldem.Game,
         CasinoGames.Barkeep => L.Casino.GameBarkeep,
         _ => L.Apps.Casino,
     };
@@ -205,6 +216,7 @@ internal static class CasinoRules
         CasinoGames.Bingo => BingoSteps,
         CasinoGames.Blackjack => BlackjackSteps,
         CasinoGames.Holdem => HoldemSteps,
+        CasinoGames.DealerHoldem => DealerHoldemSteps,
         CasinoGames.Barkeep => BarkeepSteps,
         _ => NoSteps,
     };
@@ -232,6 +244,8 @@ internal static class CasinoRules
                 return BlackjackFact(index, ref label, ref value);
             case CasinoGames.Holdem:
                 return HoldemFact(index, ref label, ref value);
+            case CasinoGames.DealerHoldem:
+                return DealerHoldemFact(index, ref label, ref value);
             case CasinoGames.Barkeep:
                 return BarkeepFact(index, ref label, ref value);
             case CasinoGames.Mines:
@@ -480,6 +494,27 @@ internal static class CasinoRules
             case 1:
                 label = L.Casino.FactSkill;
                 value = Loc.T(L.Casino.FactSkillValue);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static bool DealerHoldemFact(int index, ref LocString label, ref string value)
+    {
+        switch (index)
+        {
+            case 0:
+                label = L.DealerHoldem.FactMinAnte;
+                value = Number(Core.Casino.DealerHoldemRules.MinAnte);
+                return true;
+            case 1:
+                label = L.DealerHoldem.FactQualify;
+                value = Loc.T(L.DealerHoldem.FactQualifyValue);
+                return true;
+            case 2:
+                label = L.DealerHoldem.FactTopPay;
+                value = DealerHoldem.DealerHoldemTexts.TopPay();
                 return true;
             default:
                 return false;
