@@ -12,6 +12,8 @@ internal static class ReconnectVeil
     private const float Dim = 0.55f;
     private const float PanelWidthFraction = 0.78f;
 
+    private static readonly CasinoTextCache Texts = new();
+
     public static void Draw(ImDrawListPtr drawList, in Rect area, AppSkin ui, long heldRemainingMilliseconds,
         float scale)
     {
@@ -19,7 +21,7 @@ internal static class ReconnectVeil
 
         var title = Loc.T(L.Casino.ReconnectTitle);
         var body = heldRemainingMilliseconds > 0
-            ? Loc.T(L.Casino.SeatHeldFor, TimeText.Duration(SecondsOf(heldRemainingMilliseconds)))
+            ? Texts.Duration(L.Casino.SeatHeldFor, SecondsOf(heldRemainingMilliseconds))
             : Loc.T(L.Casino.ReconnectHint);
 
         var width = area.Width * PanelWidthFraction;

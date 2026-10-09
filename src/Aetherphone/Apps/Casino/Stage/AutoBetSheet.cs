@@ -29,6 +29,9 @@ internal sealed class AutoBetSheet
     private readonly AutoBetPlan plan;
     private readonly string id;
     private readonly string childId;
+    private readonly string winId;
+    private readonly string lossId;
+    private readonly string bonusId;
     private readonly Action<Rect> drawSheetBody;
     private readonly string[] buffers = new string[FieldCount];
     private readonly string[] adjustLabels = new string[2];
@@ -43,6 +46,9 @@ internal sealed class AutoBetSheet
         this.id = id;
         this.plan = plan;
         childId = "##" + id;
+        winId = id + ".win";
+        lossId = id + ".loss";
+        bonusId = id + ".bonus";
         sheet = new SheetSurface(id);
         drawSheetBody = DrawSheetBody;
         for (var index = 0; index < FieldCount; index++)
@@ -143,7 +149,7 @@ internal sealed class AutoBetSheet
         var current = win ? plan.OnWin : plan.OnLoss;
         var segment = new Rect(new Vector2(left, rowTop),
             new Vector2(left + MathF.Min(AdjustWidth * scale, width * 0.55f), rowTop + rowHeight));
-        var picked = SegmentStrip.Draw(id + (win ? ".win" : ".loss"), segment, adjustLabels, (int)current,
+        var picked = SegmentStrip.Draw(win ? winId : lossId, segment, adjustLabels, (int)current,
             Surfaces.Fill(skin.TitleInk, FillLevel.Tertiary), skin.Accent, skin.MutedInk, CasinoColors.InkTitle,
             overlay: true);
         var adjust = (AutoAdjust)picked;
@@ -192,7 +198,7 @@ internal sealed class AutoBetSheet
         }
 
         var toggleTop = y + (height - toggleHeight) * 0.5f;
-        Toggle.Draw(id + ".bonus", new Rect(new Vector2(left + width - toggleWidth, toggleTop),
+        Toggle.Draw(bonusId, new Rect(new Vector2(left + width - toggleWidth, toggleTop),
             new Vector2(left + width, toggleTop + toggleHeight)), plan.StopOnBonus, skin.Theme, 1f, false);
         return y + height;
     }

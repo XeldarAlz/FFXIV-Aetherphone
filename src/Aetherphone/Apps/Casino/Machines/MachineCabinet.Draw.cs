@@ -28,6 +28,7 @@ internal sealed partial class MachineCabinet
     private static readonly Vector4 CardBlack = new(0.10f, 0.10f, 0.14f, 1f);
     private static readonly Vector4 CardPaper = new(0.97f, 0.95f, 0.90f, 1f);
     private static readonly Vector4 Veil = new(0.01f, 0.0f, 0.03f, 0.78f);
+    private static readonly CasinoSlotsCoinDto NoCoin = new();
 
     private AmountSlot betLabel;
     private AmountSlot anteLabel;
@@ -221,7 +222,7 @@ internal sealed partial class MachineCabinet
                     CasinoColors.Money, frame, scale);
                 return;
             case MachineBeat.Meter:
-                var coin = step.Coins is { Length: > 0 } coins ? coins[0] : new CasinoSlotsCoinDto();
+                var coin = step.Coins is { Length: > 0 } coins ? coins[0] : NoCoin;
                 Banner(drawList, MachineReels.CoinLabel(coin), meterHit.Get(L.Machines.MeterHit, coin.Value),
                     CasinoColors.Money, frame, scale);
                 return;
