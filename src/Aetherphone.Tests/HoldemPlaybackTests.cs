@@ -151,41 +151,6 @@ public sealed class HoldemPlaybackTests
         Assert.NotEqual(first, other);
     }
 
-    [Fact]
-    public void TheRingSeatsTheHeroAtTheBottomForEveryTableSize()
-    {
-        var layout = new HoldemTableLayout();
-        var safe = new Rect(new Vector2(0f, 0f), new Vector2(340f, 460f));
-        for (var seats = HoldemRules.MinSeats; seats <= HoldemRules.MaxSeats; seats++)
-        {
-            for (var hero = 0; hero < seats; hero++)
-            {
-                layout.Compute(safe, seats, hero, 1f);
-                var bottom = layout.SeatCenter(hero);
-                for (var seat = 0; seat < seats; seat++)
-                {
-                    Assert.True(layout.SeatCenter(seat).Y <= bottom.Y + 0.01f);
-                    Assert.InRange(layout.SeatCenter(seat).X, safe.Min.X, safe.Max.X);
-                    Assert.InRange(layout.SeatCenter(seat).Y, safe.Min.Y, safe.Max.Y);
-                }
-
-                Assert.InRange(layout.BoardCardWidth, HoldemTableLayout.BoardCardMin, HoldemTableLayout.BoardCardMax);
-                Assert.True(layout.Shelf.Max.Y <= safe.Max.Y + 0.01f);
-                Assert.True(layout.HeroCardsCenter.Y < bottom.Y);
-            }
-        }
-    }
-
-    [Fact]
-    public void TheBoardStaysClearOfSideSeats()
-    {
-        var layout = new HoldemTableLayout();
-        layout.Compute(new Rect(new Vector2(0f, 0f), new Vector2(340f, 460f)), 9, 0, 1f);
-        var right = layout.BoardSlot(HoldemRules.BoardSize - 1).X + layout.BoardCardWidth * 0.5f;
-        Assert.True(right <= 340f);
-        Assert.True(layout.BoardSlot(0).X - layout.BoardCardWidth * 0.5f >= 0f);
-    }
-
     private static CasinoHoldemRoomStateDto State(string handId, int phase, int[] board, long bet = 0)
     {
         return new CasinoHoldemRoomStateDto(

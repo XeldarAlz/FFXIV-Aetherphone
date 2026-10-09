@@ -12,7 +12,8 @@ namespace Aetherphone.Apps.Casino.Tables;
 
 internal sealed class BlackjackPit
 {
-    private const float CardHeight = 168f;
+    private const float CardHeight = 150f;
+    private const float DotsRow = 14f;
     private const float CardGap = 10f;
     private const float CardPad = 14f;
     private const float QuickHeight = 124f;
@@ -126,19 +127,19 @@ internal sealed class BlackjackPit
     private void DrawQuickSeat(ImDrawListPtr drawList, AppSkin ui, float width, float scale)
     {
         var origin = ImGui.GetCursorScreenPos();
-        var card = new Rect(origin, new Vector2(origin.X + width, origin.Y + QuickHeight * scale));
+        var pad = CardPad * scale;
+        var inner = width - pad * 2f;
+        var title = Loc.T(L.Casino.QuickSeatTitle);
+        var hint = Loc.T(L.Blackjack.PitQuickHint);
+        var height = pad * 2f + PitText.Height(title, TextStyles.Title3, inner)
+            + PitText.Height(hint, TextStyles.Subheadline, inner) + (Metrics.Space.Sm + Button.LargeHeight) * scale;
+        var card = new Rect(origin, new Vector2(origin.X + width, origin.Y + MathF.Max(QuickHeight * scale, height)));
         var rounding = Metrics.Radius.Grouped * scale;
         DrawLitCard(drawList, card, rounding, 1f, scale);
-        var pad = CardPad * scale;
-        var titleTop = card.Min.Y + pad;
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, titleTop),
-            Typography.FitText(Loc.T(L.Casino.QuickSeatTitle), card.Width - pad * 2f, TextStyles.Title3),
-            StageText.Strong, TextStyles.Title3);
-        var hintTop = titleTop + Typography.LineHeight(TextStyles.Title3);
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, hintTop),
-            Typography.FitText(Loc.T(L.Blackjack.PitQuickHint), card.Width - pad * 2f, TextStyles.Subheadline),
-            StageText.Body, TextStyles.Subheadline);
-        var pill = new Rect(new Vector2(card.Min.X + pad, card.Max.Y - pad - Button.LargeHeight * scale),
+        var left = card.Min.X + pad;
+        var y = PitText.Draw(drawList, title, TextStyles.Title3, StageText.Strong, left, card.Min.Y + pad, inner, false);
+        PitText.Draw(drawList, hint, TextStyles.Subheadline, StageText.Body, left, y, inner, false);
+        var pill = new Rect(new Vector2(left, card.Max.Y - pad - Button.LargeHeight * scale),
             new Vector2(card.Max.X - pad, card.Max.Y - pad));
         if (DeckActions.DrawPrimary(pill, Loc.T(L.Casino.QuickSeatAction), ui.Ink, !tables.IntentInFlight,
                 "blackjack.pit.quick"))
@@ -155,7 +156,13 @@ internal sealed class BlackjackPit
         var origin = ImGui.GetCursorScreenPos();
         var gap = CardGap * scale;
         var cardWidth = (width - gap * (Columns - 1)) / Columns;
+        var inner = cardWidth - CardPad * 2f * scale;
         var cardHeight = CardHeight * scale;
+        for (var tier = 0; tier < BlackjackRules.HouseTierCount; tier++)
+        {
+            cardHeight = MathF.Max(cardHeight, HouseCardHeight(tier, inner, scale));
+        }
+
         var rows = (BlackjackRules.HouseTierCount + Columns - 1) / Columns;
         for (var tier = 0; tier < BlackjackRules.HouseTierCount; tier++)
         {
@@ -170,6 +177,44 @@ internal sealed class BlackjackPit
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rows * (cardHeight + gap)));
+    }
+
+    private float HouseCardHeight(int tier, float inner, float scale)
+    {
+        return CardPad * 2f * scale + (PuckRadius * 2f + Metrics.Space.Sm + DotsRow) * scale
+            + PitText.Height(Loc.T(TierNames[tier]), TextStyles.Headline, inner)
+            + PitText.Height(StakeBand(tier), TextStyles.SubheadlineEmphasized, inner)
+            + PitText.Height(Occupancy(house[tier]), TextStyles.Footnote, inner)
+            + PitText.Height(StatusLine(tier), TextStyles.Footnote, inner);
+    }
+
+    private string StakeBand(int tier) => text.Compacts(L.Casino.TableStakes, BlackjackRules.HouseTierMinBets[tier],
+        BlackjackRules.HouseTierMaxBets[tier]);
+
+    private string Occupancy(CasinoTableRowDto? row)
+    {
+        if (row is null)
+        {
+            return Loc.T(L.Casino.TablesLoading);
+        }
+
+        var seats = row.MaxSeats > 0 ? row.MaxSeats : BlackjackRules.SeatCount;
+        return text.Counts(L.Casino.TableSeats, row.SeatedCount, seats);
+    }
+
+    private bool AboveCeiling(int tier) =>
+        chips.Ceiling.MaxBet > 0 && chips.Ceiling.MaxBet < BlackjackRules.HouseTierMinBets[tier];
+
+    private string StatusLine(int tier)
+    {
+        if (AboveCeiling(tier))
+        {
+            return Loc.T(L.Blackjack.PitAboveCeiling);
+        }
+
+        var row = house[tier];
+        var watching = row is null ? 0 : CasinoTableFilters.SpectatorsOf(row);
+        return watching > 0 ? text.Count(L.Casino.TableSpectators, watching) : string.Empty;
     }
 
     private void DrawHouseCard(ImDrawListPtr drawList, AppSkin ui, Rect card, int tier, float scale)
@@ -188,46 +233,24 @@ internal sealed class BlackjackPit
 
         var pad = CardPad * scale;
         var inner = card.Width - pad * 2f;
+        var left = card.Min.X + pad;
         var puck = new Vector2(card.Center.X, card.Min.Y + pad + PuckRadius * scale);
         BlackjackDealer.DrawPuck(drawList, puck, PuckRadius * scale, phase, scale);
         var y = puck.Y + PuckRadius * scale + Metrics.Space.Sm * scale;
-        y = Line(drawList, Loc.T(TierNames[tier]), card.Center.X, y, inner, StageText.Strong, TextStyles.Headline);
-        var band = text.Compacts(L.Casino.TableStakes, BlackjackRules.HouseTierMinBets[tier],
-            BlackjackRules.HouseTierMaxBets[tier]);
-        y = Line(drawList, band, card.Center.X, y, inner, CasinoColors.Money, TextStyles.FootnoteEmphasized);
+        y = PitText.Draw(drawList, Loc.T(TierNames[tier]), TextStyles.Headline, StageText.Strong, left, y, inner, true);
+        y = PitText.Draw(drawList, StakeBand(tier), TextStyles.SubheadlineEmphasized, CasinoColors.Money, left, y,
+            inner, true);
         var dotsWidth = MathF.Min(inner, seats * 10f * scale);
-        CasinoArt.SeatDots(drawList, new Vector2(card.Center.X - dotsWidth * 0.5f, y + 6f * scale), seated, seats,
-            CasinoColors.LightB, StageText.Body with { W = 0.35f }, scale);
-        y += 14f * scale;
-        var occupancy = row is null
-            ? Loc.T(L.Casino.TablesLoading)
-            : text.Counts(L.Casino.TableSeats, seated, seats);
-        y = Line(drawList, occupancy, card.Center.X, y, inner, StageText.Body, TextStyles.Footnote);
-        var watching = row is null ? 0 : CasinoTableFilters.SpectatorsOf(row);
-        if (chips.Ceiling.MaxBet > 0 && chips.Ceiling.MaxBet < BlackjackRules.HouseTierMinBets[tier])
-        {
-            Line(drawList, Loc.T(L.Blackjack.PitAboveCeiling), card.Center.X, y, inner, CasinoColors.LightA,
-                TextStyles.Footnote);
-        }
-        else if (watching > 0)
-        {
-            Line(drawList, text.Count(L.Casino.TableSpectators, watching), card.Center.X, y, inner, StageText.Body,
-                TextStyles.Footnote);
-        }
-
+        CasinoArt.SeatDots(drawList, new Vector2(card.Center.X - dotsWidth * 0.5f, y + DotsRow * 0.5f * scale), seated,
+            seats, CasinoColors.LightB, StageText.Body with { W = 0.35f }, scale);
+        y += DotsRow * scale;
+        y = PitText.Draw(drawList, Occupancy(row), TextStyles.Footnote, StageText.Strong, left, y, inner, true);
+        PitText.Draw(drawList, StatusLine(tier), TextStyles.Footnote,
+            AboveCeiling(tier) ? CasinoColors.LightA : StageText.Body, left, y, inner, true);
         if (row is not null && UiInteract.Click(card.Min, card.Max, hovered))
         {
             openTable(row.TableId);
         }
-    }
-
-    private static float Line(ImDrawListPtr drawList, string value, float centerX, float top, float width,
-        Vector4 ink, in TextStyle style)
-    {
-        var fitted = Typography.FitText(value, width, style);
-        var size = Typography.Measure(fitted, style);
-        Typography.Draw(drawList, new Vector2(centerX - size.X * 0.5f, top), fitted, ink, style);
-        return top + Typography.LineHeight(style);
     }
 
     private void DrawLitCard(ImDrawListPtr drawList, Rect card, float rounding, float lit, float scale)
