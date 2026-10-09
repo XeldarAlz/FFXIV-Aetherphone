@@ -422,6 +422,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         DrawSheet(screen);
         DrawFilterSheet(screen);
         DrawFeedExplainer(screen);
+        DrawClaw(screen);
         toast.Draw(screen, ToastStyle);
     }
 
@@ -649,7 +650,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
     private void DrawCaughtUpLine()
     {
-        if (CaughtUpDivider.Draw(ChirperInk.Shared, Loc.T(L.Social.FeedCaughtUp), Loc.T(L.Social.FeedCaughtUpHint),
+        if (CaughtUpDivider.Draw(ChirperInk.Shared, Loc.T(CaughtUpTitle), Loc.T(CaughtUpHint),
                 Loc.T(L.Social.FeedHowItWorks)))
         {
             feedExplainer.Open();
@@ -1910,10 +1911,11 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         PopoverSurface.DrawGlass(drawList, min, max, rounding, ChirperInk.Shared, scale, progress);
         var interactive = !actions.Closing && actions.Progress > 0.6f;
         var tint = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, progress));
-        for (var kind = 0; kind < count; kind++)
+        for (var slot = 0; slot < count; slot++)
         {
-            var row = kind / perRow;
-            var column = kind % perRow;
+            var kind = ChirperReactions.KindAt(slot, SeasonalTheme.Halloween);
+            var row = slot / perRow;
+            var column = slot % perRow;
             var rowSlots = Math.Min(perRow, count - row * perRow);
             var rowWidth = rowSlots * step * grow;
             var rowLeft = (min.X + max.X) * 0.5f - rowWidth * 0.5f;
@@ -1992,6 +1994,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             if (reposting)
             {
                 toast.Show(Loc.T(L.Chirper.RepostedToast));
+                StartClaw(new Vector2(left, bottom));
             }
 
             actions.Dismiss();

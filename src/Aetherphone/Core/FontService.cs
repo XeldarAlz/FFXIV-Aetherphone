@@ -58,6 +58,9 @@ internal sealed class FontService : IDisposable
     private const int LearnedGlyphCap = 2000;
     private const int LearnedIconCap = 512;
     private const string TablerIconFile = "TablerIcons.ttf";
+    private const string DisplayFontFile = "PirataOne-Regular.ttf";
+    private const float DisplayMultiplier = 1.90f;
+    private static readonly ushort[] DisplayRanges = { 0x0020, 0x024F, 0x0000 };
     private const long LearnRebuildDebounceMs = 600;
     private readonly Configuration configuration;
     private readonly LoadingScreen loading;
@@ -72,6 +75,7 @@ internal sealed class FontService : IDisposable
     private readonly GlyphCoverage iconCoverage = new();
     private readonly ImFontPtr[,] textFonts = new ImFontPtr[WeightFiles.Length, SizeMultipliers.Length];
     private readonly IFontHandle dalamudIconHandle;
+    private readonly IFontHandle displayHandle;
     private ushort[] nativeRanges;
     private ushort[] sharedRanges;
     private ushort[] iconRanges;
@@ -111,9 +115,14 @@ internal sealed class FontService : IDisposable
         ComposeSharedRanges();
         ComposeIconRanges();
         Build();
+        displayHandle = BuildDisplayHandle();
     }
 
     public float Zoom => zoom;
+
+    public bool DisplayReady => displayHandle.Available;
+
+    public FontToken PushDisplay() => new(displayHandle.Push());
 
     public int Generation => Volatile.Read(ref generation);
 
@@ -420,6 +429,23 @@ internal sealed class FontService : IDisposable
         }));
     }
 
+    private IFontHandle BuildDisplayHandle()
+    {
+        var pixels = baseSize * DisplayMultiplier * MaxZoom;
+        var path = Path.Combine(fontDirectory, DisplayFontFile);
+        return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
+        {
+            var config = new SafeFontConfig { SizePx = pixels, GlyphRanges = DisplayRanges, };
+            if (!File.Exists(path))
+            {
+                tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular, config);
+                return;
+            }
+
+            tk.AddFontFromFile(path, config);
+        }));
+    }
+
     private IFontHandle BuildTextHandle(string path, int weightIndex, int sizeIndex)
     {
         var pixels = baseSize * SizeMultipliers[sizeIndex] * MaxZoom;
@@ -690,7 +716,11 @@ internal sealed class FontService : IDisposable
         return true;
     }
 
-    public void Dispose() => DisposeHandles(textHandles, sharedHandles, iconHandles);
+    public void Dispose()
+    {
+        DisposeHandles(textHandles, sharedHandles, iconHandles);
+        displayHandle.Dispose();
+    }
 
     private static void DisposeHandles(IFontHandle[,] text, IFontHandle[] shared, IFontHandle[] icons)
     {

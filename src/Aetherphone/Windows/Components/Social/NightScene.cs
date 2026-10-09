@@ -20,6 +20,8 @@ internal static class NightScene
     private const float NearPineBase = 44f;
     private const float EyeBlinkStart = 0.955f;
     private const float EyeWakeEnd = 0.06f;
+    private const float RouseSeconds = 4f;
+    private const float RouseHaloBoost = 0.9f;
 
     private const float BloodMoonX = 0.16f;
     private const float BloodMoonRadius = 58f;
@@ -92,21 +94,34 @@ internal static class NightScene
     private static readonly Flyer[] Flyers = FlyersFrom(new Random(2030));
     private static readonly Puff[] BloodPuffs = PuffsFrom(new Random(2031));
 
+    private static float rousedAt = -100f;
+
+    public static Vector2 MoonlitMoonCenter(Rect frame, float moonY) =>
+        new(frame.Min.X + frame.Width * MoonlitMoonX, moonY);
+
+    public static float MoonlitMoonSize => MoonlitMoonRadius * UiScale.Current;
+
+    public static Vector2 BloodMoonCenter(Rect frame, float moonY) => new(frame.Min.X + frame.Width * BloodMoonX, moonY);
+
+    public static void Rouse() => rousedAt = (float)ImGui.GetTime();
+
     public static void Moonlit(ImDrawListPtr drawList, Rect frame, float moonY)
     {
         var scale = UiScale.Current;
         var time = (float)ImGui.GetTime();
+        var rouse = Math.Clamp(1f - (time - rousedAt) / RouseSeconds, 0f, 1f);
         DrawHorizon(drawList, frame, MoonlitHorizon);
         DrawStars(drawList, frame, MoonlitStars, MoonlitStarInk, time, scale);
-        var moon = new Vector2(frame.Min.X + frame.Width * MoonlitMoonX, moonY);
+        var moon = MoonlitMoonCenter(frame, moonY);
         var radius = MoonlitMoonRadius * scale;
-        Glow(drawList, moon, radius * HaloReach, MoonlitHalo, HaloCells);
+        Glow(drawList, moon, radius * HaloReach, MoonlitHalo with { W = MoonlitHalo.W * (1f + rouse * RouseHaloBoost) },
+            HaloCells);
         DrawDisc(drawList, moon, radius, MoonRim, MoonFace, MoonShine, MoonCrater, -1f);
         DrawClouds(drawList, frame, moon, time, scale);
         var farBase = frame.Max.Y - FarPineBase * scale;
         DrawPines(drawList, frame, FarPines, farBase, ImGui.GetColorU32(FarPineInk), scale);
         DrawPuffs(drawList, frame, MoonlitPuffs, farBase, MoonlitMist, time, scale);
-        DrawEyes(drawList, frame, farBase, time, scale);
+        DrawEyes(drawList, frame, farBase, time, rouse, scale);
         DrawPines(drawList, frame, NearPines, frame.Max.Y - NearPineBase * scale, ImGui.GetColorU32(NearPineInk),
             scale);
         DrawVeil(drawList, frame, MoonlitVeil, VeilReach * scale);
@@ -118,7 +133,7 @@ internal static class NightScene
         var time = (float)ImGui.GetTime();
         DrawHorizon(drawList, frame, BloodHorizon);
         DrawStars(drawList, frame, BloodStars, BloodStarInk, time, scale);
-        var moon = new Vector2(frame.Min.X + frame.Width * BloodMoonX, moonY);
+        var moon = BloodMoonCenter(frame, moonY);
         var radius = BloodMoonRadius * scale;
         Glow(drawList, moon, radius * HaloReach, BloodHalo, HaloCells);
         DrawDisc(drawList, moon, radius, BloodRim, BloodFace, BloodShine, BloodMottle, 1f);
@@ -170,7 +185,7 @@ internal static class NightScene
 
     public static void DrawBat(ImDrawListPtr drawList, Vector2 center, float size, float flap, uint ink)
     {
-        drawList.AddCircleFilled(center, 2.4f * size, ink, SmallSegments);
+        drawList.AddCircleFilled(center, MathF.Abs(2.4f * size), ink, SmallSegments);
         drawList.AddTriangleFilled(center + new Vector2(-1.6f, -2.2f) * size, center + new Vector2(-1.9f, -4.6f) * size,
             center + new Vector2(-0.4f, -2.6f) * size, ink);
         drawList.AddTriangleFilled(center + new Vector2(1.6f, -2.2f) * size, center + new Vector2(1.9f, -4.6f) * size,
@@ -299,15 +314,15 @@ internal static class NightScene
         }
     }
 
-    private static void DrawEyes(ImDrawListPtr drawList, Rect frame, float baseY, float time, float scale)
+    private static void DrawEyes(ImDrawListPtr drawList, Rect frame, float baseY, float time, float rouse, float scale)
     {
         for (var index = 0; index < Eyes.Length; index++)
         {
             var eye = Eyes[index];
             var phase = Wrap(time + eye.Offset, eye.Cycle) / eye.Cycle;
-            var wake = phase < EyeWakeEnd ? phase / EyeWakeEnd : 1f;
-            var closed = phase > EyeBlinkStart;
-            var glow = EyeGlow with { W = EyeGlow.W * wake };
+            var wake = MathF.Max(phase < EyeWakeEnd ? phase / EyeWakeEnd : 1f, rouse);
+            var closed = phase > EyeBlinkStart && rouse <= 0f;
+            var glow = EyeGlow with { W = MathF.Min(1f, EyeGlow.W * wake * (1f + rouse * 1.5f)) };
             var ink = ImGui.GetColorU32(EyeInk with { W = wake });
             var size = eye.Size * scale;
             var center = new Vector2(frame.Min.X + eye.X * frame.Width, baseY - eye.Lift * scale);

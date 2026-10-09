@@ -801,18 +801,28 @@ internal sealed partial class ChirperApp
         var filterCenter = new Vector2(refreshCenter.X - buttonRadius * 2f - 2f * scale, rowCenterY);
         var titleHeight = Typography.LineHeight(WordmarkStyle);
         var titleMaxWidth = MathF.Max(1f, filterCenter.X - buttonRadius - 8f * scale - titleLeft);
-        var title = Typography.FitText(DisplayName, titleMaxWidth, WordmarkStyle);
-        var titleSize = Typography.Measure(title, WordmarkStyle);
+        var gothic = NightWordmark.Fits(DisplayName, titleMaxWidth, titleHeight, out var gothicSize);
+        var title = gothic ? DisplayName : Typography.FitText(DisplayName, titleMaxWidth, WordmarkStyle);
+        var titleSize = gothic ? gothicSize : Typography.Measure(title, WordmarkStyle);
         var titleMin = new Vector2(titleLeft - 6f * scale, rowCenterY - titleHeight * 0.5f - 4f * scale);
         var titleMax = new Vector2(titleLeft + titleSize.X + 6f * scale, rowCenterY + titleHeight * 0.5f + 4f * scale);
         UiInteract.HoverHighlight(drawList, titleMin, titleMax, 8f * scale);
-        Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleHeight * 0.5f), title, ChirperInk.TitleInk,
-            WordmarkStyle);
+        if (gothic)
+        {
+            NightWordmark.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleSize.Y * 0.5f), title,
+                ChirperInk.TitleInk, titleHeight);
+        }
+        else
+        {
+            Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleHeight * 0.5f), title,
+                ChirperInk.TitleInk, WordmarkStyle);
+        }
         if (UiInteract.HoverClick(titleMin, titleMax))
         {
             RefreshActiveFeed();
         }
 
+        DrawMoonTap(rowCenterY);
         if (!store.IsSignedIn)
         {
             return;

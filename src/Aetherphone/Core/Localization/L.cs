@@ -2166,6 +2166,17 @@ internal static class L
         public static readonly LocString RemoveApp = new("settings.removeApp", "Remove App");
     }
 
+    internal static class Seasonal
+    {
+        public static readonly LocString PackAnswers = new("seasonal.packAnswers", "The pack answers");
+        public static readonly LocString NightTakesWing = new("seasonal.nightTakesWing", "The night takes wing");
+        public static readonly LocString SavedToCrypt = new("seasonal.savedToCrypt", "Saved to your crypt");
+        public static readonly LocString ChirperCaughtUp = new("seasonal.chirperCaughtUp", "The pack is asleep");
+        public static readonly LocString ChirperCaughtUpHint = new("seasonal.chirperCaughtUpHint", "Older howls continue below");
+        public static readonly LocString AethergramCaughtUp = new("seasonal.aethergramCaughtUp", "Nothing left but the night");
+        public static readonly LocString AethergramCaughtUpHint = new("seasonal.aethergramCaughtUpHint", "Older posts lurk below");
+    }
+
     internal static class Translate
     {
         public static readonly LocString Action = new("translate.action", "Translate");

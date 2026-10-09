@@ -443,6 +443,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         DrawProfileMenu(screen);
         DrawProfileActionSheet(screen);
         DrawInboxRowSheet(screen);
+        DrawFlights(screen);
         toast.Draw(screen, ScreenToastStyle.From(ui));
     }
 
@@ -1318,9 +1319,11 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             OpenDetail(post, true);
         }
 
+        var sendFrom = new Vector2(actionX + CardActionIconSize * scale * 0.5f, actionCenterY);
         if (DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.Send, Ink.TitleInk, 0,
                 Loc.T(L.Aethergram.SendTo)) != CardActionTap.None)
         {
+            SendByBat(sendFrom);
             OpenShare(post.Id);
         }
 
@@ -1344,6 +1347,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         HoverTooltip.Show(new Rect(bookmarkMin, bookmarkMax), Loc.T(L.Aethergram.Save), HoverLabelSide.Above);
         if (UiInteract.Click(bookmarkMin, bookmarkMax, bookmarkHovered))
         {
+            NoteSaved(!post.Saved);
             store.SetSaved(post.Id, !post.Saved);
         }
 
@@ -1753,16 +1757,28 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             PhoneIcon.Draw(drawList, logoCenter, PhoneIcons.Camera, logoInk, logoSize);
         }
 
+        DrawLogoTap(logoCenter, logoSize, rowCenterY);
+
         var titleLeft = logoCenter.X + logoSize * 0.5f + LogoGap * scale;
         var titleRight = SocialChrome.HeaderSlot(area, 1).X - SocialChrome.HeaderIconRadius * scale - 8f * scale;
         var titleHeight = Typography.LineHeight(WordmarkStyle);
-        var title = Typography.FitText(DisplayName, MathF.Max(1f, titleRight - titleLeft), WordmarkStyle);
-        var titleSize = Typography.Measure(title, WordmarkStyle);
+        var titleMaxWidth = MathF.Max(1f, titleRight - titleLeft);
+        var gothic = NightWordmark.Fits(DisplayName, titleMaxWidth, titleHeight, out var gothicSize);
+        var title = gothic ? DisplayName : Typography.FitText(DisplayName, titleMaxWidth, WordmarkStyle);
+        var titleSize = gothic ? gothicSize : Typography.Measure(title, WordmarkStyle);
         var titleMin = new Vector2(titleLeft - 6f * scale, rowCenterY - titleHeight * 0.5f - 4f * scale);
         var titleMax = new Vector2(titleLeft + titleSize.X + 6f * scale, rowCenterY + titleHeight * 0.5f + 4f * scale);
         UiInteract.HoverHighlight(drawList, titleMin, titleMax, 8f * scale);
-        Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleHeight * 0.5f), title, Ink.TitleInk,
-            WordmarkStyle);
+        if (gothic)
+        {
+            NightWordmark.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleSize.Y * 0.5f), title, Ink.TitleInk,
+                titleHeight);
+        }
+        else
+        {
+            Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleHeight * 0.5f), title, Ink.TitleInk,
+                WordmarkStyle);
+        }
         if (UiInteract.HoverClick(titleMin, titleMax))
         {
             RefreshActiveFeed();
@@ -1917,7 +1933,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
     private void DrawCaughtUpLine()
     {
-        if (CaughtUpDivider.Draw(Ink, Loc.T(L.Social.FeedCaughtUp), Loc.T(L.Social.FeedCaughtUpHint),
+        if (CaughtUpDivider.Draw(Ink, Loc.T(CaughtUpTitle), Loc.T(CaughtUpHint),
                 Loc.T(L.Social.FeedHowItWorks)))
         {
             feedExplainer.Open();
