@@ -10272,7 +10272,7 @@ internal static class L
         public static readonly LocString RulesStep1 = new("casino.plinko.rulesStep1", "Pick 8, 12 or 16 rows and a risk of Low, Medium or High. The slots along the bottom show what each one pays.");
         public static readonly LocString RulesStep2 = new("casino.plinko.rulesStep2", "Place your bet and drop. The ball bounces left or right at every row, and the server draws every bounce before it falls.");
         public static readonly LocString RulesStep3 = new("casino.plinko.rulesStep3", "The slot it lands in multiplies your bet. The middle pays least; the edges pay the most and land the least.");
-        public static readonly LocString RulesStep4 = new("casino.plinko.rulesStep4", "Drop as often as you like: up to ten balls fall at once. Every board returns about 99%.");
+        public static readonly LocString RulesStep4 = new("casino.plinko.rulesStep4", "Drop as often as you like: up to ten balls fall at once. Every board pays back about 99%.");
         public static readonly LocString DropFor = new("casino.plinko.dropFor", "Drop {0}");
         public static readonly LocString RowsOption = new("casino.plinko.rowsOption", "{0} rows");
         public static readonly LocString MaxWin = new("casino.plinko.maxWin", "Max win");
@@ -10844,8 +10844,10 @@ internal static class L
         public static readonly LocString CashierHint = new("casino.strip.cashierHint", "Open the cashier");
         public static readonly LocString Instant = new("casino.strip.instant", "Instant mode");
         public static readonly LocString InstantHint = new("casino.strip.instantHint", "Skip the show and land straight on the result");
-        public static readonly LocString Return = new("casino.strip.return", "Return to player");
+        public static readonly LocString PaysBack = new("casino.strip.paysBack", "Pays back");
         public static readonly LocString ReturnValue = new("casino.strip.returnValue", "{0}%");
+        public static readonly LocString PaysBackShort = new("casino.strip.paysBackShort", "{0}% back");
+        public static readonly LocString PaysBackExplain = new("casino.strip.paysBackExplain", "On average, every 100 coins bet pay back {0}.");
         public static readonly LocString HowToPlay = new("casino.strip.howToPlay", "How to play");
         public static readonly LocString Bets = new("casino.strip.bets", "Bets");
         public static readonly LocString MyBets = new("casino.strip.myBets", "My bets");
@@ -11104,8 +11106,8 @@ internal static class L
         public static readonly LocString RulesMoogleStep4 = new("casino.slots.moogle.rules4", "Three wings on the middle reels start 6 free games with a giant symbol, and a giant coin counts as nine coins.");
         public static readonly LocString SpinFor = new("casino.slots.machine.spinFor", "Spin {0}");
         public static readonly LocString PaysTitle = new("casino.slots.machine.paysTitle", "Pays and rules");
-        public static readonly LocString ReturnAnte = new("casino.slots.machine.returnAnte", "Return with Ante Bet");
-        public static readonly LocString ReturnBuy = new("casino.slots.machine.returnBuy", "Return on Bonus Buy");
+        public static readonly LocString ReturnAnte = new("casino.slots.machine.returnAnte", "Pays back with Ante Bet");
+        public static readonly LocString ReturnBuy = new("casino.slots.machine.returnBuy", "Pays back on Bonus Buy");
         public static readonly LocString HitFrequency = new("casino.slots.machine.hitFrequency", "Spins that beat the bet");
         public static readonly LocString BonusFrequency = new("casino.slots.machine.bonusFrequency", "Free spins");
         public static readonly LocString HoldFrequency = new("casino.slots.machine.holdFrequency", "Hold and spin");
@@ -11435,7 +11437,7 @@ internal static class L
         public static readonly LocString RulesSideBets = new("casino.blackjack.rulesSideBets", "Side bets ride from 100 chips up to your bet: Pairs pays up to 25 to 1 and 21+3 up to 100 to 1.");
         public static readonly LocString RulesInsurance = new("casino.blackjack.rulesInsurance", "When the dealer shows an ace, insure for half your bet. It pays 2 to 1 if the dealer has blackjack.");
         public static readonly LocString RulesSurrender = new("casino.blackjack.rulesSurrender", "On your first two cards you may surrender and take half your bet back.");
-        public static readonly LocString FactSideBets = new("casino.blackjack.factSideBets", "Side bet returns");
+        public static readonly LocString FactSideBets = new("casino.blackjack.factSideBets", "Side bets pay back");
         public static readonly LocString FactSideBetsValue = new("casino.blackjack.factSideBetsValue", "Pairs 93.89%, 21+3 95.38%");
     }
 

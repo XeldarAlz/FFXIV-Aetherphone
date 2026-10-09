@@ -267,7 +267,7 @@ internal static class CasinoRules
                     Core.Casino.OriginalsRules.TopMultiple(wireKind) * 100);
                 return true;
             case 2:
-                label = L.Strip.Return;
+                label = L.Strip.PaysBack;
                 value = Originals.OriginalsText.Percent(Core.Casino.OriginalsRules.ReturnTenths * 10);
                 return true;
             case 3 when mines:
@@ -297,7 +297,7 @@ internal static class CasinoRules
                     * Core.Casino.PlinkoRules.TenthsPerMultiple);
                 return true;
             case 3:
-                label = L.Strip.Return;
+                label = L.Strip.PaysBack;
                 value = PlinkoReturnRange();
                 return true;
             default:
@@ -341,7 +341,7 @@ internal static class CasinoRules
                 value = Number(Core.Casino.SlotsRules.MinStake);
                 return true;
             case 1:
-                label = L.Strip.Return;
+                label = L.Strip.PaysBack;
                 value = Originals.OriginalsText.Percent(info.ReturnBasisPoints);
                 return true;
             case 2:

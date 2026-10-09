@@ -476,7 +476,7 @@ internal sealed class WheelCabinet : ICabinetIdle
         PodiumText(drawList, rows.Header, MultiplierLabel(spot), WheelRingArt.SpotTextInks[spot], TextStyles.Title3);
         DrawPodiumBet(drawList, rows.Bet, mine, winning, scale);
         DrawCrowd(drawList, board, spot, rows.Crowd, scale);
-        PodiumText(drawList, rows.Back, returns[spot], StageInks.Strong, TextStyles.Footnote);
+        PodiumOptionalText(drawList, rows.Back, returns[spot], StageInks.Strong, TextStyles.Footnote);
         if (losing)
         {
             Squircle.Fill(drawList, rect.Min, rect.Max, rounding,
@@ -535,6 +535,18 @@ internal sealed class WheelCabinet : ICabinetIdle
         var fittedStyle = FitStyle(style, row.Height);
         var fitted = Typography.FitText(text, row.Width, fittedStyle);
         Typography.DrawCentered(drawList, row.Center, fitted, ink, fittedStyle);
+    }
+
+    private static void PodiumOptionalText(ImDrawListPtr drawList, Rect row, string text, Vector4 ink,
+        in TextStyle style)
+    {
+        var fittedStyle = FitStyle(style, row.Height);
+        if (Typography.Measure(text, fittedStyle).X > row.Width)
+        {
+            return;
+        }
+
+        Typography.DrawCentered(drawList, row.Center, text, ink, fittedStyle);
     }
 
     private static TextStyle FitStyle(in TextStyle style, float height)
@@ -645,7 +657,7 @@ internal sealed class WheelCabinet : ICabinetIdle
         for (var spot = 0; spot < WheelRules.SpotCount; spot++)
         {
             var tenths = ReturnTenths(board, spot);
-            returns[spot] = Loc.T(L.Strip.ReturnValue, (tenths / 10m).ToString("0.#", Loc.Culture));
+            returns[spot] = Loc.T(L.Strip.PaysBackShort, (tenths / 10m).ToString("0.#", Loc.Culture));
         }
     }
 
