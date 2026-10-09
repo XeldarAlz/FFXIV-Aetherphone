@@ -20,6 +20,11 @@ internal sealed class BroadcastView
     private const float MinCardWidth = 44f;
     private const float CardOverlap = 0.42f;
     private const float SeatRingInset = 0.16f;
+    private const string StateMarquee = "venue.broadcast.state";
+    private const string DealerMarquee = "venue.broadcast.dealer";
+    private const string PotMarquee = "venue.broadcast.pot";
+    private const string StackMarquee = "venue.broadcast.stack";
+    private const string BetMarquee = "venue.broadcast.bet";
 
     private readonly CasinoRoomsStore rooms;
     private readonly CasinoTextCache texts = new();
@@ -90,8 +95,7 @@ internal sealed class BroadcastView
         var safe = frame.Safe;
         if (table.Seats.Length == 0 && table.Waiting)
         {
-            VenueArt.StateLine(drawList, Loc.T(L.Venue.BroadcastWaiting), safe.Center, safe.Width,
-                CasinoColors.InkTitle, scale);
+            StageText.State(drawList, safe.Center, Loc.T(L.Venue.BroadcastWaiting), safe.Width, StateMarquee);
             return;
         }
 
@@ -104,8 +108,8 @@ internal sealed class BroadcastView
             var label = table.DealerTotal > 0
                 ? texts.Count(L.Venue.BroadcastDealerTotal, table.DealerTotal)
                 : Loc.T(L.Venue.BroadcastDealer);
-            VenueArt.Line(drawList, label, new Vector2(safe.Center.X, top + cardHeight * 0.5f + 16f * scale),
-                safe.Width * 0.4f, CasinoColors.InkTitle, TextStyles.Headline);
+            StageText.Label(drawList, new Vector2(safe.Center.X, top + cardHeight * 0.5f + 16f * scale), label,
+                safe.Width * 0.4f, DealerMarquee, TextStyles.Headline, false);
         }
         else
         {
@@ -113,9 +117,10 @@ internal sealed class BroadcastView
                 scale);
             if (table.Pot > 0)
             {
-                VenueArt.Line(drawList, texts.Number(L.Venue.BroadcastPot, table.Pot),
+                StageText.Amount(drawList,
                     new Vector2(safe.Center.X, safe.Min.Y + safe.Height * 0.36f + cardHeight * 0.5f + 20f * scale),
-                    safe.Width * 0.5f, CasinoColors.Money, TextStyles.Title2);
+                    texts.Number(L.Venue.BroadcastPot, table.Pot), safe.Width * 0.5f, PotMarquee, TextStyles.Title2,
+                    CasinoColors.Money);
             }
         }
 
@@ -198,14 +203,13 @@ internal sealed class BroadcastView
             VenueArt.Line(drawList, seat.Name, new Vector2(center.X, nameTop + nameHeight * 0.5f), nameWidth,
                 seat.Acting ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle, TextStyles.Headline);
             var stackHeight = Typography.LineHeight(TextStyles.Title3);
-            VenueArt.Line(drawList, amounts.Value(seat.Stack),
-                new Vector2(center.X, nameTop + nameHeight + stackHeight * 0.5f), nameWidth, CasinoColors.Money,
-                TextStyles.Title3);
+            StageText.Amount(drawList, new Vector2(center.X, nameTop + nameHeight + stackHeight * 0.5f),
+                amounts.Value(seat.Stack), nameWidth, new MarqueeId(StackMarquee, index));
             if (seat.Bet > 0)
             {
-                VenueArt.Line(drawList, texts.Number(L.Venue.BroadcastBet, seat.Bet),
-                    new Vector2(center.X, center.Y - cardHeight * 0.5f - 12f * scale), nameWidth,
-                    CasinoColors.InkBody, TextStyles.Subheadline);
+                StageText.Label(drawList, new Vector2(center.X, center.Y - cardHeight * 0.5f - 12f * scale),
+                    texts.Number(L.Venue.BroadcastBet, seat.Bet), nameWidth, new MarqueeId(BetMarquee, index),
+                    TextStyles.Subheadline, false);
             }
         }
     }

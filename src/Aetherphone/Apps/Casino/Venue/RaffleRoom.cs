@@ -13,6 +13,10 @@ internal sealed class RaffleRoom
 {
     private const float WheelShare = 0.62f;
     private const int SeedShown = 16;
+    private const string StateMarquee = "venue.raffle.state";
+    private const string EntrantsMarquee = "venue.raffle.entrants";
+    private const string PrizeMarquee = "venue.raffle.prize";
+    private const string SeedMarquee = "venue.raffle.seed";
 
     private readonly CasinoTextCache texts;
     private readonly RafflePlayback playback = new();
@@ -68,8 +72,8 @@ internal sealed class RaffleRoom
         var shown = live ?? playback.Replaying ?? board.Last;
         var top = VenueArt.DrawSign(drawList, CasinoSign.Raffle, world, room.Frame.Phase, scale);
         var stateHeight = Typography.LineHeight(TextStyles.Title2);
-        VenueArt.StateLine(drawList, StateText(shown), new Vector2(world.Center.X, top + stateHeight * 0.5f),
-            world.Width, CasinoColors.InkTitle, scale);
+        StageText.State(drawList, new Vector2(world.Center.X, top + stateHeight * 0.5f), StateText(shown),
+            world.Width, StateMarquee);
         top += stateHeight + VenueArt.LineGap * scale;
         top = DrawInfo(room, live, shown, top);
         var radius = MathF.Max(1f, MathF.Min(world.Width * 0.5f - 14f * scale, (world.Max.Y - top) * WheelShare * 0.5f));
@@ -108,8 +112,9 @@ internal sealed class RaffleRoom
         }
 
         var entrants = shown.Entrants?.Length ?? 0;
-        VenueArt.Status(room.DrawList, texts.Counts(L.Venue.Entrants, entrants, shown.Tickets),
-            new Vector2(room.World.Center.X, top + lineHeight * 0.5f), room.World.Width);
+        StageText.Label(room.DrawList, new Vector2(room.World.Center.X, top + lineHeight * 0.5f),
+            texts.Counts(L.Venue.Entrants, entrants, shown.Tickets), room.World.Width, EntrantsMarquee,
+            TextStyles.Subheadline, false);
         top += lineHeight + VenueArt.LineGap * scale;
         if (live is not null)
         {
@@ -123,9 +128,8 @@ internal sealed class RaffleRoom
         if (room.Gil && shown.Prize > 0)
         {
             var amountHeight = Typography.LineHeight(TextStyles.Title3);
-            VenueArt.Line(room.DrawList, texts.Number(L.Venue.PrizeGil, shown.Prize),
-                new Vector2(room.World.Center.X, top + amountHeight * 0.5f), room.World.Width, CasinoColors.Money,
-                TextStyles.Title3);
+            StageText.Amount(room.DrawList, new Vector2(room.World.Center.X, top + amountHeight * 0.5f),
+                texts.Number(L.Venue.PrizeGil, shown.Prize), room.World.Width, PrizeMarquee);
             top += amountHeight + VenueArt.LineGap * scale;
         }
 
@@ -185,8 +189,8 @@ internal sealed class RaffleRoom
             return;
         }
 
-        VenueArt.Line(room.DrawList, SeedText(shown.Seed), new Vector2(room.World.Center.X, seedTop + footnote * 0.5f),
-            room.World.Width, CasinoColors.InkBody, TextStyles.Footnote);
+        StageText.Label(room.DrawList, new Vector2(room.World.Center.X, seedTop + footnote * 0.5f),
+            SeedText(shown.Seed), room.World.Width, SeedMarquee, TextStyles.Footnote, false);
     }
 
     private void DrawMyTickets(in VenueRoomFrame room, CasinoRaffleDto? shown, float top)
@@ -272,20 +276,16 @@ internal sealed class RaffleRoom
             ? texts.Number(L.Venue.TicketPriceGil, live.TicketPrice)
             : Loc.T(L.Venue.RaffleFree);
         VenueArt.DeckCaption(drawList, deck, caption, scale);
-        var drawLabel = room.Hosting ? Loc.T(L.Venue.DrawNow) : string.Empty;
-        var drawWidth = VenueArt.SecondaryWidth(drawLabel);
+        if (room.Hosting && room.Stage.SecondaryAction(Loc.T(L.Venue.DrawNow), room.Enabled, room.Ui.Ink))
+        {
+            act(new VenueActDraft(VenueActions.RaffleDraw));
+        }
+
         var label = maxed ? Loc.T(L.Venue.TicketsMaxed) : Loc.T(L.Venue.TakeTicket);
-        if (Button.Draw(drawList, VenueArt.DeckPrimary(deck, drawWidth, scale), label, room.Ui.Ink,
-                enabled: room.Enabled && !maxed, id: "venue.raffle.ticket") && !maxed)
+        if (room.Stage.PrimaryAction(label, room.Enabled && !maxed, room.Ui.Ink) && !maxed)
         {
             CasinoSfx.Play(UiSound.Daub);
             act(new VenueActDraft(VenueActions.RaffleTicket, 1));
-        }
-
-        if (room.Hosting && Button.Draw(drawList, VenueArt.DeckSecondary(deck, drawWidth, scale), drawLabel,
-                room.Ui.Ink, ButtonStyle.Tinted, enabled: room.Enabled, id: "venue.raffle.draw"))
-        {
-            act(new VenueActDraft(VenueActions.RaffleDraw));
         }
     }
 
@@ -296,30 +296,25 @@ internal sealed class RaffleRoom
         var last = board.Last;
         var canReplay = last is not null && playback.CanReplay(board);
         var replayLabel = canReplay ? Loc.T(L.Venue.ReplayDraw) : string.Empty;
-        var replayWidth = room.Hosting ? VenueArt.SecondaryWidth(replayLabel) : 0f;
         VenueArt.DeckCaption(drawList, deck, Loc.T(room.Hosting ? L.Venue.RaffleHostHint : L.Venue.RaffleWaitHint),
             scale);
         if (room.Hosting)
         {
-            if (Button.Draw(drawList, VenueArt.DeckPrimary(deck, replayWidth, scale), Loc.T(L.Venue.RaffleOpenAction),
-                    room.Ui.Ink, enabled: room.Enabled, id: "venue.raffle.open"))
-            {
-                composer.Open(room.Gil);
-            }
-
-            if (canReplay && Button.Draw(drawList, VenueArt.DeckSecondary(deck, replayWidth, scale), replayLabel,
-                    room.Ui.Ink, ButtonStyle.Tinted, id: "venue.raffle.replay"))
+            if (canReplay && room.Stage.SecondaryAction(replayLabel, true, room.Ui.Ink))
             {
                 playback.Replay(last!);
+            }
+
+            if (room.Stage.PrimaryAction(Loc.T(L.Venue.RaffleOpenAction), room.Enabled, room.Ui.Ink))
+            {
+                composer.Open(room.Gil);
             }
 
             return;
         }
 
         var primaryLabel = canReplay ? replayLabel : Loc.T(L.Venue.WaitingHost);
-        if (Button.Draw(drawList, VenueArt.DeckPrimary(deck, 0f, scale), primaryLabel, room.Ui.Ink,
-                canReplay ? ButtonStyle.Tinted : ButtonStyle.Prominent, enabled: canReplay, id: "venue.raffle.replay")
-            && canReplay)
+        if (room.Stage.PrimaryAction(primaryLabel, canReplay, room.Ui.Ink) && canReplay)
         {
             playback.Replay(last!);
         }
