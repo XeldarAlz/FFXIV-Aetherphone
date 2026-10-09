@@ -186,13 +186,13 @@ public sealed class HoldemWireContractTests
     public void HostedHoldemConfigsFollowTheServerBands()
     {
         var draft = new HostDraft();
-        draft.Reset(HoldemRules.Kind);
+        draft.Reset(HostGame.Holdem);
         draft.Seats = 9;
-        var config = draft.Build(1_000);
+        var config = draft.Build(null);
         Assert.Equal("casino.holdem", config.GameKind);
         Assert.Equal(50, config.Poker!.SmallBlind);
-        Assert.Equal(2_000, config.MinBuyIn);
-        Assert.Equal(10_000, config.MaxBuyIn);
+        Assert.Equal(0, config.MinBuyIn);
+        Assert.Equal(0, config.MaxBuyIn);
         Assert.Equal(string.Empty, CasinoHostingRules.Check(config));
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(config with { Seats = 10 }));
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(config with { Currency = 2 }));
@@ -203,7 +203,7 @@ public sealed class HoldemWireContractTests
             CasinoHostingRules.Check(config with { MaxBuyIn = 100 * 600 }));
         draft.Currency = CasinoCurrencies.Practice;
         draft.FaceUp = true;
-        var practice = draft.Build(1_000);
+        var practice = draft.Build(null);
         Assert.True(practice.FaceUp);
         Assert.Equal(string.Empty, CasinoHostingRules.Check(practice));
     }

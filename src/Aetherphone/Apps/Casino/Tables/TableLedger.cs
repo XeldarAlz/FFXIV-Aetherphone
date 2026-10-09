@@ -465,7 +465,7 @@ internal sealed class TableLedger
                 AmountDigits + 1, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll);
         }
 
-        var amount = HostDraft.Parse(amountBuffer);
+        var amount = Venue.VenueFields.Parse(amountBuffer);
         var buttonHeight = Button.RegularHeight * scale;
         var buttonTop = field.Center.Y - buttonHeight * 0.5f;
         var rect = new Rect(new Vector2(origin.X + width - buttonWidth, buttonTop),
