@@ -1,203 +1,68 @@
-using System.Globalization;
+using Aetherphone.Apps.Casino.Stage;
+using Aetherphone.Apps.Casino.Strip;
+using Aetherphone.Apps.Games;
 using Aetherphone.Core;
-using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
-internal sealed class HostDraft
-{
-    public static readonly long[] BuyInCoinSteps = { 20, 50, 100, 250, 500, 1_000, 2_500, 5_000 };
-
-    public static readonly long[] BuyInBigBlindSteps = { 10, 20, 30, 40, 50, 100, 200, 300, 500 };
-
-    public static readonly int[] AnteTenths = { 0, 1, 2, 5, 10 };
-
-    public const int DefaultMinBuyInStep = 1;
-
-    public const int DefaultMaxBuyInStep = 5;
-
-    public string GameKind = CasinoWire.BlackjackKind;
-    public long BigBlind = CasinoHostingRules.DefaultHoldemBigBlind;
-    public int AnteStep;
-    public int MinBigBlindsStep = DefaultMinBuyInStep;
-    public int MaxBigBlindsStep = DefaultMaxBuyInStep;
-    public string Name = string.Empty;
-    public int Seats = CasinoHostingRules.DefaultSeats;
-    public int Listing = CasinoListings.Private;
-    public bool Spectators = true;
-    public bool FaceUp;
-    public int Currency = CasinoCurrencies.Chips;
-    public long ChipMinBet = BlackjackRules.MinBet;
-    public long ChipMaxBet = CasinoHostingRules.DefaultChipMaxBet;
-    public int MinBuyInStep;
-    public int MaxBuyInStep = BuyInCoinSteps.Length - 1;
-    public string PracticeStack = string.Empty;
-    public string PracticeMinBet = string.Empty;
-    public string PracticeMaxBet = string.Empty;
-    public bool PracticeRebuy = true;
-    public string Bank = string.Empty;
-    public string GilMinBet = string.Empty;
-    public string GilMaxBet = string.Empty;
-    public string MaxPayout = string.Empty;
-    public int TurnSeconds = CasinoHostingRules.DefaultTurnSeconds;
-    public bool TimeBank = true;
-    public int DealerMode = CasinoDealerModes.House;
-    public bool AutoDeal = true;
-    public int Pays = CasinoRuleSheet.PaysThreeToTwo;
-    public bool HitsSoft17;
-    public int Decks = 6;
-    public int Splits = CasinoRuleSheet.SplitsToFour;
-    public int Doubles = CasinoRuleSheet.DoublesAny;
-    public bool Charlie;
-    public bool Peek = true;
-
-    public bool SeatBanked => CasinoCurrencies.SeatBanked(Currency);
-
-    public bool Holdem => string.Equals(GameKind, HoldemRules.Kind, StringComparison.Ordinal);
-
-    public int MaxSeats => Holdem ? HoldemRules.MaxSeats : CasinoHostingRules.MaxSeats;
-
-    public void Reset(string gameKind)
-    {
-        Reset();
-        GameKind = string.Equals(gameKind, HoldemRules.Kind, StringComparison.Ordinal)
-            ? HoldemRules.Kind
-            : CasinoWire.BlackjackKind;
-    }
-
-    public void Reset()
-    {
-        GameKind = CasinoWire.BlackjackKind;
-        BigBlind = CasinoHostingRules.DefaultHoldemBigBlind;
-        AnteStep = 0;
-        MinBigBlindsStep = DefaultMinBuyInStep;
-        MaxBigBlindsStep = DefaultMaxBuyInStep;
-        Name = string.Empty;
-        Seats = CasinoHostingRules.DefaultSeats;
-        Listing = CasinoListings.Private;
-        Spectators = true;
-        FaceUp = false;
-        Currency = CasinoCurrencies.Chips;
-        ChipMinBet = BlackjackRules.MinBet;
-        ChipMaxBet = CasinoHostingRules.DefaultChipMaxBet;
-        MinBuyInStep = 0;
-        MaxBuyInStep = BuyInCoinSteps.Length - 1;
-        PracticeStack = string.Empty;
-        PracticeMinBet = string.Empty;
-        PracticeMaxBet = string.Empty;
-        PracticeRebuy = true;
-        Bank = string.Empty;
-        GilMinBet = string.Empty;
-        GilMaxBet = string.Empty;
-        MaxPayout = string.Empty;
-        TurnSeconds = CasinoHostingRules.DefaultTurnSeconds;
-        TimeBank = true;
-        DealerMode = CasinoDealerModes.House;
-        AutoDeal = true;
-        Pays = CasinoRuleSheet.PaysThreeToTwo;
-        HitsSoft17 = false;
-        Decks = 6;
-        Splits = CasinoRuleSheet.SplitsToFour;
-        Doubles = CasinoRuleSheet.DoublesAny;
-        Charlie = false;
-        Peek = true;
-    }
-
-    public CasinoTableConfigDto BuildHoldem()
-    {
-        var practice = Currency == CasinoCurrencies.Practice;
-        var stack = Parse(PracticeStack);
-        return new CasinoTableConfigDto(
-            GameKind: HoldemRules.Kind,
-            Name: Name.Trim(),
-            Seats: Seats,
-            MinBuyIn: practice ? 0 : BigBlind * BuyInBigBlindSteps[MinBigBlindsStep],
-            MaxBuyIn: practice ? 0 : BigBlind * BuyInBigBlindSteps[MaxBigBlindsStep],
-            Practice: practice,
-            PracticeStack: practice && stack > 0 ? stack : CasinoHostingRules.DefaultPracticeStack,
-            PracticeRebuy: practice && PracticeRebuy,
-            TurnSeconds: TurnSeconds,
-            TimeBankUses: TimeBank ? CasinoHostingRules.TimeBankUses : CasinoHostingRules.TimeBankOff,
-            Listing: Listing,
-            Spectators: Spectators,
-            FaceUp: practice && FaceUp,
-            Poker: new CasinoPokerTableOptionsDto(BigBlind / 2, BigBlind * AnteTenths[AnteStep] / 10),
-            Currency: practice ? CasinoCurrencies.Practice : CasinoCurrencies.Chips);
-    }
-
-    public CasinoTableConfigDto Build(long rate)
-    {
-        if (Holdem)
-        {
-            return BuildHoldem();
-        }
-
-        var practice = Currency == CasinoCurrencies.Practice;
-        var gil = Currency == CasinoCurrencies.Gil;
-        var rules = SeatBanked
-            ? new CasinoBlackjackRuleSheetDto(Pays, HitsSoft17, Decks, Splits, Doubles, Charlie, Peek)
-            : null;
-        var stack = Parse(PracticeStack);
-        return new CasinoTableConfigDto(
-            GameKind: CasinoWire.BlackjackKind,
-            Name: Name.Trim(),
-            Seats: Seats,
-            MinBet: practice ? Parse(PracticeMinBet) : gil ? Parse(GilMinBet) : ChipMinBet,
-            MaxBet: practice ? Parse(PracticeMaxBet) : gil ? Parse(GilMaxBet) : ChipMaxBet,
-            MinBuyIn: SeatBanked ? 0 : BuyInCoinSteps[MinBuyInStep] * rate,
-            MaxBuyIn: SeatBanked ? 0 : BuyInCoinSteps[MaxBuyInStep] * rate,
-            Practice: practice,
-            PracticeStack: practice && stack > 0 ? stack : CasinoHostingRules.DefaultPracticeStack,
-            PracticeRebuy: practice && PracticeRebuy,
-            TurnSeconds: TurnSeconds,
-            TimeBankUses: TimeBank ? CasinoHostingRules.TimeBankUses : CasinoHostingRules.TimeBankOff,
-            Listing: Listing,
-            Spectators: Spectators,
-            FaceUp: practice && FaceUp,
-            DealerMode: SeatBanked ? DealerMode : CasinoDealerModes.House,
-            CoDealers: null,
-            AutoDeal: !SeatBanked || DealerMode == CasinoDealerModes.House || AutoDeal,
-            HouseRules: rules,
-            Currency: Currency,
-            Bank: gil ? Parse(Bank) : 0,
-            MaxPayout: gil ? Parse(MaxPayout) : 0);
-    }
-
-    public static long Parse(string text)
-    {
-        return long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var value) && value > 0
-            ? value
-            : 0;
-    }
-}
+internal readonly record struct HostSummaryKey(
+    HostGame Game,
+    int Currency,
+    int Seats,
+    long Low,
+    long High,
+    int Listing,
+    LanguageInfo? Language);
 
 internal sealed class HostSheet
 {
+    private const string RailId = "##casino.host.games";
     private const float RowUnits = 52f;
-    private const float SegmentRowUnits = 80f;
-    private const float FieldWidthFraction = 0.46f;
-    private const float StepperWidth = 160f;
-    private const float FieldHeight = 36f;
+    private const float SegmentRowUnits = 100f;
+    private const float FieldRowUnits = 60f;
+    private const float SegmentTextScale = 0.86f;
+    private const float SelectedRimAlpha = 0.95f;
+    private const float RestRimAlpha = 0.30f;
+    private const float DisabledAlpha = 0.42f;
+    private const float ChoiceFillAlpha = 0.14f;
+    private const float IconFillAlpha = 0.20f;
+    private const float ScrimAlpha = 0.72f;
+    private const float FooterHairlineAlpha = 0.10f;
     private const int NameMaxLength = CasinoHostingRules.NameMaxLength;
-    private const int AmountDigits = 11;
 
-    private static readonly LocString[] CurrencyLabels =
-        { L.Tables.CurrencyChips, L.Tables.CurrencyPractice, L.Tables.CurrencyGil };
+    private static readonly Vector4 Night = new(0.027f, 0.020f, 0.055f, 1f);
 
-    private static readonly LocString[] CurrencyHints =
-        { L.Tables.CurrencyChipsHint, L.Tables.CurrencyPracticeHint, L.Tables.CurrencyGilHint };
+    private static readonly int[] Currencies =
+        { CasinoCurrencies.Chips, CasinoCurrencies.Practice, CasinoCurrencies.Gil };
 
-    private static readonly LocString[] ListingLabels =
-        { L.Tables.ListingPrivate, L.Tables.ListingKnock, L.Tables.ListingOpen };
+    private static readonly LocString[] CurrencyTitles =
+        { L.Tables.PlayCoins, L.Tables.CurrencyPractice, L.Tables.CurrencyGil };
 
-    private static readonly LocString[] ListingHints =
-        { L.Tables.ListingPrivateHint, L.Tables.ListingKnockHint, L.Tables.ListingOpenHint };
+    private static readonly LocString[] CurrencyLines =
+        { L.Tables.PlayCoinsLine, L.Tables.PlayPracticeLine, L.Tables.PlayGilLine };
+
+    private static readonly FontAwesomeIcon[] CurrencyIcons =
+        { FontAwesomeIcon.Coins, FontAwesomeIcon.GraduationCap, FontAwesomeIcon.Landmark };
+
+    private static readonly LocString[] JoinTitles =
+        { L.Tables.JoinInvite, L.Tables.JoinKnock, L.Tables.JoinOpen };
+
+    private static readonly LocString[] JoinLines =
+        { L.Tables.JoinInviteLine, L.Tables.JoinKnockLine, L.Tables.JoinOpenLine };
+
+    private static readonly LocString[] SummaryListings =
+        { L.Tables.SummaryInvite, L.Tables.SummaryKnock, L.Tables.SummaryOpen };
+
+    private static readonly FontAwesomeIcon[] JoinIcons =
+        { FontAwesomeIcon.Lock, FontAwesomeIcon.HandPaper, FontAwesomeIcon.DoorOpen };
 
     private static readonly LocString[] DealerLabels = { L.Tables.DealerHouse, L.Tables.DealerHost };
 
@@ -213,165 +78,766 @@ internal sealed class HostSheet
     private readonly Venue.VenueHostOptions venueOptions;
     private readonly HostDraft draft = new();
     private readonly CasinoTextCache texts = new();
-    private readonly string[] currencyOptions = new string[3];
-    private readonly string[] chipCurrencyOptions = new string[2];
-    private readonly string[] listingOptions = new string[3];
+    private readonly TileRail rail = new();
     private readonly string[] dealerOptions = new string[2];
     private readonly string[] paysOptions = new string[3];
     private readonly string[] splitOptions = new string[3];
     private readonly string[] doubleOptions = new string[3];
     private readonly string[] turnOptions = new string[CasinoHostingRules.TurnSeconds.Length];
     private readonly string[] deckOptions = new string[CasinoRuleSheet.Decks.Length];
-    private readonly Action seatsDown;
-    private readonly Action seatsUp;
-    private readonly Action minBetDown;
-    private readonly Action minBetUp;
-    private readonly Action maxBetDown;
-    private readonly Action maxBetUp;
-    private readonly Action minBuyInDown;
-    private readonly Action minBuyInUp;
-    private readonly Action maxBuyInDown;
-    private readonly Action maxBuyInUp;
-    private readonly Action blindDown;
-    private readonly Action blindUp;
-    private readonly Action anteDown;
-    private readonly Action anteUp;
-    private readonly Action minBigBlindsDown;
-    private readonly Action minBigBlindsUp;
-    private readonly Action maxBigBlindsDown;
-    private readonly Action maxBigBlindsUp;
-    private readonly string[] gameOptions = new string[2];
+    private readonly string[] roundOptions = new string[HostLadders.RoundSeconds.Length];
+    private readonly string[] anteOptions = new string[HostLadders.AnteTenths.Length];
     private LanguageInfo? optionsLanguage;
+    private long anteBigBlind = -1;
+    private HostSummaryKey summaryKey;
+    private string summary = string.Empty;
     private string inlineReason = string.Empty;
+    private bool moreOpen;
+    private bool revealGame;
 
     public HostSheet(CasinoTablesStore tables, CasinoStore chips, Venue.VenueHostOptions venueOptions)
     {
         this.tables = tables;
         this.chips = chips;
         this.venueOptions = venueOptions;
-        seatsDown = () => draft.Seats = Math.Max(CasinoHostingRules.MinSeats, draft.Seats - 1);
-        seatsUp = () => draft.Seats = Math.Min(draft.MaxSeats, draft.Seats + 1);
-        blindDown = () => draft.BigBlind = Math.Max(CasinoHostingRules.MinHoldemBigBlind,
-            CasinoLadder.StepDown(draft.BigBlind));
-        blindUp = () => draft.BigBlind = CasinoLadder.StepUp(draft.BigBlind);
-        anteDown = () => draft.AnteStep = Math.Max(0, draft.AnteStep - 1);
-        anteUp = () => draft.AnteStep = Math.Min(HostDraft.AnteTenths.Length - 1, draft.AnteStep + 1);
-        minBigBlindsDown = () => draft.MinBigBlindsStep = Math.Max(0, draft.MinBigBlindsStep - 1);
-        minBigBlindsUp = () => draft.MinBigBlindsStep = Math.Min(draft.MaxBigBlindsStep, draft.MinBigBlindsStep + 1);
-        maxBigBlindsDown = () => draft.MaxBigBlindsStep = Math.Max(draft.MinBigBlindsStep, draft.MaxBigBlindsStep - 1);
-        maxBigBlindsUp = () =>
-            draft.MaxBigBlindsStep = Math.Min(HostDraft.BuyInBigBlindSteps.Length - 1, draft.MaxBigBlindsStep + 1);
-        minBetDown = () => draft.ChipMinBet = Math.Max(BlackjackRules.MinBet, CasinoLadder.StepDown(draft.ChipMinBet));
-        minBetUp = () => draft.ChipMinBet = Math.Min(draft.ChipMaxBet, CasinoLadder.StepUp(draft.ChipMinBet));
-        maxBetDown = () => draft.ChipMaxBet = Math.Max(draft.ChipMinBet, CasinoLadder.StepDown(draft.ChipMaxBet));
-        maxBetUp = () => draft.ChipMaxBet = CasinoLadder.StepUp(draft.ChipMaxBet);
-        minBuyInDown = () => draft.MinBuyInStep = Math.Max(0, draft.MinBuyInStep - 1);
-        minBuyInUp = () => draft.MinBuyInStep = Math.Min(draft.MaxBuyInStep, draft.MinBuyInStep + 1);
-        maxBuyInDown = () => draft.MaxBuyInStep = Math.Max(draft.MinBuyInStep, draft.MaxBuyInStep - 1);
-        maxBuyInUp = () => draft.MaxBuyInStep = Math.Min(HostDraft.BuyInCoinSteps.Length - 1, draft.MaxBuyInStep + 1);
     }
 
-    public void Enter()
-    {
-        draft.Reset();
-        venueOptions.Reset();
-        inlineReason = string.Empty;
-    }
+    public void Enter() => Begin(HostGame.Blackjack);
 
-    public void Enter(string gameKind)
-    {
-        draft.Reset(gameKind);
-        inlineReason = string.Empty;
-    }
+    public void Enter(string gameKind) => Begin(HostGames.FromKind(gameKind));
 
-    public void EnterVenue(VenueRoomKind kind)
-    {
-        Enter();
-        venueOptions.Select(kind);
-    }
+    public void EnterVenue(VenueRoomKind kind) => Begin(HostGames.FromVenue(kind));
 
     public void Draw(Rect body, AppSkin ui)
     {
         var scale = UiScale.Current;
         ConsumeOutcomes();
         RefreshOptions();
-        using var surface = AppSurface.Begin(body);
-        var gilOpen = chips.HasFeature(CasinoFeatures.GilTables) && !draft.Holdem;
-        if (!gilOpen && draft.Currency == CasinoCurrencies.Gil)
+        var gilOpen = chips.HasFeature(CasinoFeatures.GilTables);
+        draft.Normalize(gilOpen);
+        var line = Summary();
+        var footerWidth = body.Width;
+        var summaryHeight = SummaryBlock(line, footerWidth, scale);
+        var footerHeight = HostFlowLayout.FooterHeight(scale, summaryHeight);
+        var scroll = new Rect(body.Min, new Vector2(body.Max.X, body.Max.Y - footerHeight));
+        using (ImRaii.PushId("casino.host"))
         {
-            draft.Currency = CasinoCurrencies.Chips;
+            using (AppSurface.Begin(scroll))
+            {
+                DrawSteps(ui, gilOpen, scale);
+            }
+
+            DrawFooter(ui, new Rect(new Vector2(body.Min.X, scroll.Max.Y), body.Max), line, summaryHeight, scale);
+        }
+    }
+
+    private void Begin(HostGame game)
+    {
+        draft.Reset(game);
+        venueOptions.Reset();
+        inlineReason = string.Empty;
+        moreOpen = false;
+        rail.Reset();
+        revealGame = game != HostGame.Blackjack;
+    }
+
+    private void DrawSteps(AppSkin ui, bool gilOpen, float scale)
+    {
+        var width = ScrollLayout.StableContentWidth();
+        StepHeader(ui, 1, Loc.T(L.Tables.StepGame), width, scale);
+        DrawGameRail(ui, gilOpen, width, scale);
+        Gap(HostFlowLayout.SectionGap, scale);
+        StepHeader(ui, 2, Loc.T(L.Tables.StepPlayFor), width, scale);
+        DrawPlayFor(ui, gilOpen, width, scale);
+        Gap(HostFlowLayout.SectionGap, scale);
+        StepHeader(ui, 3, Loc.T(L.Tables.StepTable), width, scale);
+        DrawEssentials(ui, width, scale);
+        Gap(HostFlowLayout.SectionGap, scale);
+        DrawMoreToggle(ui, width, scale);
+        if (moreOpen)
+        {
+            DrawMore(ui, scale);
         }
 
-        venueOptions.DrawGameCard(ui, scale);
-        if (venueOptions.IsVenue)
+        if (inlineReason.Length > 0)
         {
-            DrawVenue(ui, gilOpen, scale);
-            return;
+            Gap(HostFlowLayout.CardGap, scale);
+            DrawReason(ui, width, scale);
         }
 
-        ui.SectionHeading(Loc.T(L.Tables.SectionTable), Metrics.Space.Md);
-        DrawTableCard(ui, scale);
-        Hint(ui, Loc.T(ListingHints[draft.Listing]), scale);
+        Gap(HostFlowLayout.SectionGap, scale);
+    }
 
-        ui.SectionHeading(Loc.T(L.Tables.SectionMoney), Metrics.Space.Md);
-        if (draft.Holdem)
+    private static void Gap(float units, float scale) => ImGui.Dummy(new Vector2(0f, units * scale));
+
+    private static void StepHeader(AppSkin ui, int number, string title, float width, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        var titleHeight = Typography.LineHeight(TextStyles.Title3);
+        var height = HostFlowLayout.StepHeight(scale, titleHeight);
+        var disc = HostFlowLayout.StepDisc * scale;
+        var center = new Vector2(origin.X + disc * 0.5f, origin.Y + height * 0.5f);
+        drawList.AddCircleFilled(center, disc * 0.5f, ImGui.GetColorU32(ui.Accent), 32);
+        Typography.DrawCentered(drawList, center, StepNumber(number), CasinoArt.White, TextStyles.FootnoteEmphasized);
+        var left = origin.X + disc + Metrics.Space.Sm * scale;
+        Typography.Draw(drawList, new Vector2(left, origin.Y + (height - titleHeight) * 0.5f),
+            Typography.FitText(title, MathF.Max(1f, origin.X + width - left), TextStyles.Title3), ui.TitleInk,
+            TextStyles.Title3);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height + HostFlowLayout.StepGap * scale));
+    }
+
+    private static string StepNumber(int number) => number switch
+    {
+        1 => "1",
+        2 => "2",
+        _ => "3",
+    };
+
+    private void DrawGameRail(AppSkin ui, bool gilOpen, float width, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        var tileWidth = HostFlowLayout.TileWidth(width, scale);
+        var textWidth = HostFlowLayout.TileTextWidth(tileWidth, scale);
+        var lineBlock = 0f;
+        for (var index = 0; index < HostGames.All.Length; index++)
         {
-            DrawHoldemMoneyCard(ui, scale);
-            Hint(ui, Loc.T(draft.Currency == CasinoCurrencies.Practice ? L.Tables.CurrencyPracticeHint
-                : L.Holdem.HostRakeHint), scale);
+            lineBlock = MathF.Max(lineBlock,
+                Typography.MeasureWrappedBlock(Loc.T(HostGames.All[index].Line), TextStyles.Footnote, textWidth).Y);
+        }
+
+        var headline = Typography.LineHeight(TextStyles.Headline);
+        var tileHeight = HostFlowLayout.TileHeight(scale, headline, lineBlock);
+        var pad = HostFlowLayout.RailPad * scale;
+        var contentWidth = HostFlowLayout.RailWidth(HostGames.All.Length, tileWidth, scale);
+        var row = new Rect(new Vector2(origin.X - pad, origin.Y - pad),
+            new Vector2(origin.X + width + pad, origin.Y + tileHeight + pad));
+        if (revealGame)
+        {
+            revealGame = false;
+            var selected = HostFlowLayout.Tile(0f, 0f, (int)draft.Game, tileWidth, tileHeight, scale);
+            rail.SettleTo(MathF.Max(0f, MathF.Min(selected.Max.X - width, contentWidth - width)));
+        }
+
+        rail.Begin(drawList, RailId, row, row, contentWidth);
+        var interactive = rail.TapAllowed;
+        var phase = (float)ImGui.GetTime();
+        var tapped = -1;
+        for (var index = 0; index < HostGames.All.Length; index++)
+        {
+            var tile = HostFlowLayout.Tile(origin.X - rail.Offset, origin.Y, index, tileWidth, tileHeight, scale);
+            if (tile.Min.X > row.Max.X || tile.Max.X < row.Min.X)
+            {
+                continue;
+            }
+
+            using (ImRaii.PushId(index))
+            {
+                if (DrawGameTile(drawList, ui, HostGames.All[index], tile, textWidth, phase, interactive, scale))
+                {
+                    tapped = index;
+                }
+            }
+        }
+
+        rail.End(drawList, row, contentWidth, ui, tileWidth + HostFlowLayout.TileGap * scale);
+        if (tapped >= 0)
+        {
+            inlineReason = string.Empty;
+            draft.SelectGame(HostGames.All[tapped].Game, gilOpen);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, tileHeight));
+    }
+
+    private bool DrawGameTile(ImDrawListPtr drawList, AppSkin ui, in HostGameInfo info, Rect tile, float textWidth,
+        float phase, bool interactive, float scale)
+    {
+        var selected = info.Game == draft.Game;
+        var hovered = CasinoArt.PressCard(ImGui.GetID("tile"), tile.Min, tile.Max, out var pressedMin,
+            out var pressedMax, interactive);
+        var face = new Rect(pressedMin, pressedMax);
+        PosterTile.DrawFrame(drawList, face, info.Tint, scale);
+        var art = new Rect(face.Min, new Vector2(face.Max.X, face.Min.Y + HostFlowLayout.TileArt * scale));
+        PosterTile.DrawSign(drawList, face, info.Sign, phase, scale);
+        var artCenter = new Vector2(art.Center.X, art.Center.Y + PosterTile.SignHeight * scale * 0.5f);
+        if (info.HasGlyph)
+        {
+            CasinoGlyphs.Draw(drawList, info.GameId, artCenter, art.Height * 0.24f, ImGui.GetColorU32(CasinoArt.White),
+                ImGui.GetColorU32(Night));
         }
         else
         {
-            DrawMoneyCard(ui, gilOpen, scale);
-            Hint(ui, Loc.T(CurrencyHints[draft.Currency]), scale);
+            AppSkin.Icon(drawList, artCenter, IconGlyph.Of(info.Icon), CasinoArt.White, PosterTile.IconScale);
         }
 
-        ui.SectionHeading(Loc.T(L.Tables.SectionClock), Metrics.Space.Md);
-        DrawClockCard(ui);
-
-        if (draft.SeatBanked && !draft.Holdem)
+        var radius = Metrics.Radius.Widget * scale;
+        drawList.PushClipRect(new Vector2(face.Min.X, art.Max.Y), face.Max, true);
+        Squircle.Fill(drawList, face.Min, face.Max, radius, ImGui.GetColorU32(Night with { W = ScrimAlpha }));
+        drawList.PopClipRect();
+        var pad = HostFlowLayout.CardPad * scale;
+        var top = art.Max.Y + pad;
+        Typography.Draw(drawList, new Vector2(face.Min.X + pad, top),
+            Typography.FitText(Loc.T(info.Title), textWidth, TextStyles.Headline), CasinoColors.InkTitle,
+            TextStyles.Headline);
+        top += Typography.LineHeight(TextStyles.Headline) + HostFlowLayout.LineGap * scale;
+        Typography.DrawWrappedLeft(new Vector2(face.Min.X + pad, top), Loc.T(info.Line),
+            CasinoColors.InkBody, TextStyles.Footnote, textWidth);
+        var rim = selected ? ui.Accent with { W = SelectedRimAlpha } : info.Tint with { W = RestRimAlpha };
+        Squircle.Stroke(drawList, face.Min, face.Max, radius, ImGui.GetColorU32(rim),
+            (selected ? 2.4f : 1.2f) * scale);
+        if (selected)
         {
-            ui.SectionHeading(Loc.T(L.Tables.SectionDealer), Metrics.Space.Md);
-            DrawDealerCard(ui);
-            Hint(ui, Loc.T(L.Tables.CoDealersNote), scale);
-            ui.SectionHeading(Loc.T(L.Tables.SectionRules), Metrics.Space.Md);
-            DrawRulesCard(ui);
+            var check = HostFlowLayout.CheckSize * scale;
+            var center = new Vector2(face.Max.X - pad * 0.6f - check * 0.5f, face.Min.Y + pad * 0.6f + check * 0.5f);
+            CheckBadge(drawList, center, check, ui.Accent);
         }
 
-        ui.SectionHeading(Loc.T(L.Venue.Location), Metrics.Space.Md);
-        venueOptions.DrawLocation(ui, scale);
-        DrawFooter(ui, scale);
+        return interactive && UiInteract.Click(tile.Min, tile.Max, hovered);
     }
 
-    private void DrawVenue(AppSkin ui, bool gilOpen, float scale)
+    private static void CheckBadge(ImDrawListPtr drawList, Vector2 center, float size, Vector4 accent)
     {
-        ui.SectionHeading(Loc.T(L.Tables.SectionTable), Metrics.Space.Md);
-        var card = GroupCard.Begin(ui, RowUnits + SegmentRowUnits);
-        var nameRow = card.NextRow(RowUnits);
-        Label(ui, nameRow, Loc.T(L.Tables.HostName), scale);
-        Field(ui, FieldRect(nameRow, scale), "##hostName", Loc.T(L.Tables.HostNameHint), ref draft.Name,
-            NameMaxLength, false);
-        draft.Listing = Segment(ui, card.NextRow(SegmentRowUnits), "##hostListing", Loc.T(L.Tables.HostListing),
-            listingOptions, draft.Listing, scale);
+        drawList.AddCircleFilled(center, size * 0.5f, ImGui.GetColorU32(accent), 28);
+        ProgressRing.CenterIcon(drawList, center, FontAwesomeIcon.Check, CasinoArt.White, size * 0.5f);
+    }
+
+    private void DrawPlayFor(AppSkin ui, bool gilOpen, float width, float scale)
+    {
+        for (var index = 0; index < Currencies.Length; index++)
+        {
+            var currency = Currencies[index];
+            var enabled = HostGames.Accepts(draft.Game, currency, gilOpen);
+            var line = enabled ? Loc.T(CurrencyLines[index]) : Loc.T(RefusalFor(currency, gilOpen));
+            using (ImRaii.PushId(index))
+            {
+                if (ChoiceCard(ui, CurrencyIcons[index], Loc.T(CurrencyTitles[index]), line,
+                        draft.Currency == currency, enabled, TintOf(currency, ui.Accent), width, scale))
+                {
+                    inlineReason = string.Empty;
+                    draft.SelectCurrency(currency, gilOpen);
+                }
+            }
+
+            if (index < Currencies.Length - 1)
+            {
+                Gap(HostFlowLayout.CardGap, scale);
+            }
+        }
+    }
+
+    private LocString RefusalFor(int currency, bool gilOpen)
+    {
+        if (currency == CasinoCurrencies.Chips)
+        {
+            return L.Tables.PlayRoomsNoCoins;
+        }
+
+        return gilOpen ? L.Tables.PlayHoldemNoGil : L.Tables.PlayGilClosed;
+    }
+
+    private static Vector4 TintOf(int currency, Vector4 accent) => TableRow.CurrencyTint(currency, accent);
+
+    private static bool ChoiceCard(AppSkin ui, FontAwesomeIcon icon, string title, string line, bool selected,
+        bool enabled, Vector4 tint, float width, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        var titleHeight = Typography.LineHeight(TextStyles.Headline);
+        var textWidth = HostFlowLayout.ChoiceTextWidth(width, scale);
+        var lineHeight = Typography.MeasureWrappedBlock(line, TextStyles.Footnote, textWidth).Y;
+        var height = HostFlowLayout.ChoiceHeight(scale, titleHeight, lineHeight);
+        var card = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
+        var radius = Metrics.Radius.Grouped * scale;
+        var firstVertex = drawList.VtxBuffer.Size;
+        var hovered = enabled && CasinoArt.PressCard(ImGui.GetID("choice"), card.Min, card.Max, out _, out _);
+        ui.Card(drawList, card.Min, card.Max, radius);
+        if (selected)
+        {
+            Squircle.Fill(drawList, card.Min, card.Max, radius, ImGui.GetColorU32(tint with { W = ChoiceFillAlpha }));
+        }
+        else if (hovered)
+        {
+            Squircle.Fill(drawList, card.Min, card.Max, radius, ImGui.GetColorU32(ui.HoverTint));
+        }
+
+        Squircle.Stroke(drawList, card.Min, card.Max, radius,
+            ImGui.GetColorU32(selected ? tint : ui.Hairline), (selected ? 2f : 1f) * scale);
+        var iconRect = HostFlowLayout.ChoiceIconRect(card, scale);
+        drawList.AddCircleFilled(iconRect.Center, iconRect.Width * 0.5f,
+            ImGui.GetColorU32(tint with { W = IconFillAlpha }), 32);
+        ProgressRing.CenterIcon(drawList, iconRect.Center, icon, tint, iconRect.Width * 0.46f);
+        var left = HostFlowLayout.ChoiceTextLeft(card.Min.X, scale);
+        var top = card.Center.Y - (titleHeight + HostFlowLayout.LineGap * scale + lineHeight) * 0.5f;
+        Typography.Draw(drawList, new Vector2(left, top), Typography.FitText(title, textWidth, TextStyles.Headline),
+            ui.TitleInk, TextStyles.Headline);
+        Typography.DrawWrappedLeft(new Vector2(left, top + titleHeight + HostFlowLayout.LineGap * scale),
+            line, ui.BodyInk, TextStyles.Footnote, textWidth);
+        if (selected)
+        {
+            CheckBadge(drawList, HostFlowLayout.ChoiceCheck(card, scale), HostFlowLayout.CheckSize * scale, tint);
+        }
+
+        if (!enabled)
+        {
+            LayerCompositor.Fade(drawList, firstVertex, DisabledAlpha);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+        return enabled && !selected && UiInteract.Click(card.Min, card.Max, hovered);
+    }
+
+    private void DrawEssentials(AppSkin ui, float width, float scale)
+    {
+        switch (draft.Game)
+        {
+            case HostGame.Blackjack:
+                if (draft.Gil)
+                {
+                    LadderSingle(ui, "##hostBank", Loc.T(L.Tables.Bank),
+                        TableAmounts.Amount(texts, draft.BankValue, draft.Currency), HostLadders.All(HostLadders.Gil),
+                        ref draft.Bank, width, scale);
+                    Gap(HostFlowLayout.CardGap, scale);
+                }
+
+                LadderRange(ui, "##hostBets", Loc.T(L.Tables.Bets),
+                    TableAmounts.Range(texts, draft.MinBetValue, draft.MaxBetValue, draft.Currency), draft.BetSpan,
+                    ref draft.MinBet, ref draft.MaxBet, width, scale);
+                Gap(HostFlowLayout.CardGap, scale);
+                DrawSeats(ui, width, scale);
+                break;
+            case HostGame.Holdem:
+                LadderSingle(ui, "##hostBlinds", Loc.T(L.Holdem.HostBlinds),
+                    texts.Compacts(L.Holdem.BlindsShort, draft.BigBlindValue / 2, draft.BigBlindValue),
+                    HostLadders.BigBlinds, ref draft.BigBlind, width, scale);
+                Gap(HostFlowLayout.CardGap, scale);
+                DrawSeats(ui, width, scale);
+                break;
+            case HostGame.DiceTable:
+                LadderSingle(ui, "##hostSides", Loc.T(L.Venue.Sides), texts.Compact(L.Tables.DiceRange,
+                    draft.SidesValue), HostLadders.All(HostLadders.DiceSides), ref draft.Sides, width, scale);
+                break;
+            case HostGame.Deathroll:
+                LadderSingle(ui, "##hostStart", Loc.T(L.Venue.StartNumber), NumberText.Compact(draft.StartAtValue),
+                    HostLadders.All(HostLadders.StartNumbers), ref draft.StartAt, width, scale);
+                Gap(HostFlowLayout.CardGap, scale);
+                LadderSingle(ui, "##hostStake", Loc.T(L.Venue.Stake),
+                    TableAmounts.Amount(texts, draft.StakeValue, draft.Currency), draft.BetSpan, ref draft.Stake,
+                    width, scale);
+                break;
+        }
+
+        if (draft.Game != HostGame.Raffle)
+        {
+            Gap(HostFlowLayout.CardGap, scale);
+        }
+
+        DrawJoin(ui, width, scale);
+    }
+
+    private static void LadderSingle(AppSkin ui, string id, string label, string value, LadderSpan span, ref int index,
+        float width, float scale)
+    {
+        var row = LadderCard(ui, label, value, width, scale, out var origin, out var height);
+        LadderSlider.Single(ImGui.GetWindowDrawList(), id, row, span, ref index, ui.Accent,
+            Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary), scale);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+    }
+
+    private static void LadderRange(AppSkin ui, string id, string label, string value, LadderSpan span, ref int low,
+        ref int high, float width, float scale)
+    {
+        var row = LadderCard(ui, label, value, width, scale, out var origin, out var height);
+        LadderSlider.Range(ImGui.GetWindowDrawList(), id, row, span, ref low, ref high, ui.Accent,
+            Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary), scale);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+    }
+
+    private static Rect LadderCard(AppSkin ui, string label, string value, float width, float scale,
+        out Vector2 origin, out float height)
+    {
+        origin = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        var pad = HostFlowLayout.CardPad * scale;
+        var labelHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
+        var valueHeight = Typography.LineHeight(TextStyles.Title2);
+        height = pad * 2f + HostFlowLayout.LadderHeight(scale, labelHeight, valueHeight);
+        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), Metrics.Radius.Grouped * scale);
+        var inner = width - pad * 2f;
+        Typography.Draw(drawList, new Vector2(origin.X + pad, origin.Y + pad),
+            Typography.FitText(label, inner, TextStyles.FootnoteEmphasized), ui.MutedInk, TextStyles.FootnoteEmphasized);
+        Typography.Draw(drawList, new Vector2(origin.X + pad, origin.Y + pad + labelHeight),
+            Typography.FitText(value, inner, TextStyles.Title2), CasinoColors.Money, TextStyles.Title2);
+        return HostFlowLayout.LadderRow(origin.X + pad, origin.Y + pad, inner, scale, labelHeight, valueHeight);
+    }
+
+    private void DrawSeats(AppSkin ui, float width, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        var pad = HostFlowLayout.CardPad * scale;
+        var inner = width - pad * 2f;
+        var maxSeats = HostGames.MaxSeats(draft.Game);
+        var labelHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
+        var valueHeight = Typography.LineHeight(TextStyles.Title2);
+        var block = HostFlowLayout.SeatBlockHeight(inner, maxSeats, scale);
+        var height = pad * 2f + labelHeight + valueHeight + HostFlowLayout.LineGap * scale + block;
+        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), Metrics.Radius.Grouped * scale);
+        Typography.Draw(drawList, new Vector2(origin.X + pad, origin.Y + pad),
+            Typography.FitText(Loc.T(L.Tables.HostSeats), inner, TextStyles.FootnoteEmphasized), ui.MutedInk,
+            TextStyles.FootnoteEmphasized);
+        Typography.Draw(drawList, new Vector2(origin.X + pad, origin.Y + pad + labelHeight),
+            Typography.FitText(texts.Count(L.Tables.SeatsValue, draft.Seats), inner, TextStyles.Title2), ui.TitleInk,
+            TextStyles.Title2);
+        var top = origin.Y + pad + labelHeight + valueHeight + HostFlowLayout.LineGap * scale;
+        var disc = HostFlowLayout.SeatDisc * scale;
+        for (var seatIndex = 0; seatIndex < maxSeats; seatIndex++)
+        {
+            var target = HostFlowLayout.SeatTarget(origin.X + pad, top, inner, seatIndex, maxSeats, scale);
+            var filled = seatIndex < draft.Seats;
+            var hovered = UiInteract.Hover(target.Min, target.Max);
+            var center = target.Center;
+            if (filled)
+            {
+                drawList.AddCircleFilled(center, disc * 0.5f, ImGui.GetColorU32(ui.Accent), 32);
+                ProgressRing.CenterIcon(drawList, center, FontAwesomeIcon.User, CasinoArt.White, disc * 0.42f);
+            }
+            else
+            {
+                drawList.AddCircle(center, disc * 0.5f - scale, ImGui.GetColorU32(ui.MutedInk), 32, 1.5f * scale);
+            }
+
+            if (hovered)
+            {
+                drawList.AddCircleFilled(center, disc * 0.5f + 3f * scale, ImGui.GetColorU32(ui.HoverTint), 32);
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (seatIndex + 1 >= CasinoHostingRules.MinSeats && UiInteract.Click(target.Min, target.Max, hovered))
+            {
+                draft.Seats = seatIndex + 1;
+            }
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+    }
+
+    private void DrawJoin(AppSkin ui, float width, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        var count = JoinTitles.Length;
+        var columnWidth = HostFlowLayout.JoinColumnWidth(width, count, scale);
+        var textWidth = MathF.Max(1f, columnWidth - HostFlowLayout.CardPad * scale);
+        var titleBlock = 0f;
+        for (var index = 0; index < count; index++)
+        {
+            titleBlock = MathF.Max(titleBlock,
+                Typography.MeasureWrappedBlock(Loc.T(JoinTitles[index]), TextStyles.SubheadlineEmphasized, textWidth).Y);
+        }
+
+        var tileHeight = HostFlowLayout.JoinHeight(scale, titleBlock);
+        var labelHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
+        Typography.Draw(drawList, origin, Typography.FitText(Loc.T(L.Tables.HostListing), width,
+            TextStyles.FootnoteEmphasized), ui.MutedInk, TextStyles.FootnoteEmphasized);
+        var top = origin.Y + labelHeight + HostFlowLayout.LineGap * scale;
+        var radius = Metrics.Radius.Grouped * scale;
+        for (var index = 0; index < count; index++)
+        {
+            var tile = HostFlowLayout.JoinColumn(origin.X, top, width, index, count, tileHeight, scale);
+            var selected = draft.Listing == CasinoListings.All[index];
+            var hovered = CasinoArt.PressCard(ImGui.GetID($"join{index}"), tile.Min, tile.Max, out _, out _);
+            ui.Card(drawList, tile.Min, tile.Max, radius);
+            if (selected)
+            {
+                Squircle.Fill(drawList, tile.Min, tile.Max, radius,
+                    ImGui.GetColorU32(ui.Accent with { W = ChoiceFillAlpha }));
+            }
+            else if (hovered)
+            {
+                Squircle.Fill(drawList, tile.Min, tile.Max, radius, ImGui.GetColorU32(ui.HoverTint));
+            }
+
+            Squircle.Stroke(drawList, tile.Min, tile.Max, radius,
+                ImGui.GetColorU32(selected ? ui.Accent : ui.Hairline), (selected ? 2f : 1f) * scale);
+            var iconSize = HostFlowLayout.JoinIcon * scale;
+            var iconCenter = new Vector2(tile.Center.X, tile.Min.Y + HostFlowLayout.CardPad * scale + iconSize * 0.5f);
+            ProgressRing.CenterIcon(drawList, iconCenter, JoinIcons[index], selected ? ui.Accent : ui.BodyInk,
+                iconSize * 0.62f);
+            var textTop = iconCenter.Y + iconSize * 0.5f + HostFlowLayout.LineGap * scale;
+            Typography.DrawWrappedCentered(drawList, Loc.T(JoinTitles[index]), TextStyles.SubheadlineEmphasized,
+                selected ? ui.TitleInk : ui.BodyInk, new Vector2(tile.Center.X, textTop), textWidth);
+            if (UiInteract.Click(tile.Min, tile.Max, hovered))
+            {
+                draft.Listing = CasinoListings.All[index];
+            }
+        }
+
+        var hintTop = top + tileHeight + HostFlowLayout.CardGap * scale;
+        var hintHeight = Typography.DrawWrappedLeft(new Vector2(origin.X, hintTop),
+            Loc.T(JoinLines[Math.Clamp(draft.Listing, 0, JoinLines.Length - 1)]), ui.BodyInk, TextStyles.Footnote,
+            width);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, hintTop + hintHeight - origin.Y));
+    }
+
+    private void DrawMoreToggle(AppSkin ui, float width, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        var height = HostFlowLayout.Touch * scale;
+        var row = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
+        var hovered = UiInteract.Hover(row.Min, row.Max);
+        var radius = Metrics.Radius.Grouped * scale;
+        ui.Card(drawList, row.Min, row.Max, radius);
+        if (hovered)
+        {
+            Squircle.Fill(drawList, row.Min, row.Max, radius, ImGui.GetColorU32(ui.HoverTint));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        var pad = HostFlowLayout.CardPad * scale;
+        var glyph = moreOpen ? FontAwesomeIcon.ChevronUp : FontAwesomeIcon.ChevronDown;
+        var chevron = new Vector2(row.Max.X - pad - 6f * scale, row.Center.Y);
+        ProgressRing.CenterIcon(drawList, chevron, glyph, ui.MutedInk, 12f * scale);
+        var labelHeight = Typography.LineHeight(TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(row.Min.X + pad, row.Center.Y - labelHeight * 0.5f),
+            Typography.FitText(Loc.T(L.Tables.MoreOptions), width - pad * 3f - 12f * scale, TextStyles.Headline),
+            ui.TitleInk, TextStyles.Headline);
+        if (UiInteract.Click(row.Min, row.Max, hovered))
+        {
+            moreOpen = !moreOpen;
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height + HostFlowLayout.CardGap * scale));
+    }
+
+    private void DrawMore(AppSkin ui, float scale)
+    {
+        var tableGame = HostGames.HasSeats(draft.Game);
+        var rows = tableGame ? 2 : 0;
+        var segments = tableGame ? 1 : 0;
+        var card = GroupCard.Begin(ui, FieldRowUnits + RowUnits * rows + SegmentRowUnits * segments);
+        NameRow(ui, card.NextRow(FieldRowUnits), scale);
+        if (tableGame)
+        {
+            var selected = Array.IndexOf(CasinoHostingRules.TurnSeconds, draft.TurnSeconds);
+            var picked = Segment(ui, card.NextRow(SegmentRowUnits), "##hostTurnClock",
+                Loc.T(L.Tables.TurnClock), turnOptions, selected < 0 ? 1 : selected, scale);
+            draft.TurnSeconds = CasinoHostingRules.TurnSeconds[picked];
+            draft.TimeBank = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.timebank",
+                Loc.T(L.Tables.TimeBank), draft.TimeBank, scale);
+            draft.Spectators = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.spectators",
+                Loc.T(L.Tables.HostSpectators), draft.Spectators, scale);
+        }
+
         card.End();
-        Hint(ui, Loc.T(ListingHints[draft.Listing]), scale);
-        ui.SectionHeading(Loc.T(L.Tables.SectionMoney), Metrics.Space.Md);
-        venueOptions.DrawVenueCard(ui, gilOpen, scale);
-        ui.SectionHeading(Loc.T(L.Venue.Location), Metrics.Space.Md);
+        Gap(HostFlowLayout.CardGap, scale);
+        DrawGameOptions(ui, scale);
         venueOptions.DrawLocation(ui, scale);
-        DrawFooter(ui, scale);
     }
 
-    private void DrawFooter(AppSkin ui, float scale)
+    private void NameRow(AppSkin ui, in Rect row, float scale)
     {
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
-        if (inlineReason.Length > 0)
+        var drawList = ImGui.GetWindowDrawList();
+        var fieldWidth = row.Width * 0.58f;
+        var labelHeight = Typography.LineHeight(TextStyles.Body);
+        Typography.Draw(drawList, new Vector2(row.Min.X, row.Center.Y - labelHeight * 0.5f),
+            Typography.FitText(Loc.T(L.Tables.HostName), row.Width - fieldWidth - Metrics.Space.Sm * scale,
+                TextStyles.Body), ui.TitleInk, TextStyles.Body);
+        var height = HostFlowLayout.Touch * scale;
+        var field = new Rect(new Vector2(row.Max.X - fieldWidth, row.Center.Y - height * 0.5f),
+            new Vector2(row.Max.X, row.Center.Y + height * 0.5f));
+        Squircle.Fill(drawList, field.Min, field.Max, field.Height * 0.5f,
+            ImGui.GetColorU32(Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary)));
+        GlassField.Text(field, "##hostName", Loc.T(L.Tables.HostNameHint), ref draft.Name, ui.Theme, scale,
+            NameMaxLength, false, ImGuiInputTextFlags.None);
+    }
+
+    private static int Segment(AppSkin ui, in Rect row, string id, string label, string[] options, int selected,
+        float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var top = row.Min.Y + Metrics.Space.Sm * scale;
+        Typography.Draw(drawList, new Vector2(row.Min.X, top), Typography.FitText(label, row.Width, TextStyles.Body),
+            ui.TitleInk, TextStyles.Body);
+        var stripTop = top + Typography.LineHeight(TextStyles.Body) + Metrics.Space.Sm * scale;
+        var strip = new Rect(new Vector2(row.Min.X, stripTop),
+            new Vector2(row.Max.X, stripTop + HostFlowLayout.Touch * scale));
+        return SegmentStrip.Draw(id, strip, options, Math.Clamp(selected, 0, options.Length - 1), ui.Palette,
+            HostFlowLayout.Touch, SegmentTextScale);
+    }
+
+    private void DrawGameOptions(AppSkin ui, float scale)
+    {
+        var width = ScrollLayout.StableContentWidth();
+        if (draft.Practice)
         {
-            DrawReason(ui, scale);
+            LadderSingle(ui, "##hostStack", Loc.T(L.Tables.PracticeStack), NumberText.Compact(draft.StackValue),
+                HostLadders.All(HostLadders.PracticeStacks), ref draft.Stack, width, scale);
+            Gap(HostFlowLayout.CardGap, scale);
+            if (HostGames.HasSeats(draft.Game))
+            {
+                var card = GroupCard.Begin(ui, RowUnits * 2);
+                draft.PracticeRebuy = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.rebuy",
+                    Loc.T(L.Tables.Rebuys), draft.PracticeRebuy, scale);
+                draft.FaceUp = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.faceup",
+                    Loc.T(L.Tables.FaceUp), draft.FaceUp, scale);
+                card.End();
+                Gap(HostFlowLayout.CardGap, scale);
+            }
         }
 
-        DrawOpenButton(ui, scale);
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
+        if (draft.Gil && draft.Game == HostGame.Blackjack)
+        {
+            var index = draft.PayoutCapped ? draft.MaxPayout : draft.Bank;
+            LadderSingle(ui, "##hostPayout", Loc.T(L.Tables.MaxPayout),
+                TableAmounts.Amount(texts, draft.PayoutValue, draft.Currency), draft.PayoutSpan, ref index, width,
+                scale);
+            draft.PayoutCapped = index != draft.Bank;
+            draft.MaxPayout = index;
+            Gap(HostFlowLayout.CardGap, scale);
+        }
+
+        switch (draft.Game)
+        {
+            case HostGame.Blackjack when draft.SeatBanked:
+                DrawDealerCard(ui, scale);
+                DrawRulesCard(ui, scale);
+                break;
+            case HostGame.Holdem:
+                DrawAnteCard(ui, scale);
+                break;
+            case HostGame.DiceTable:
+                DrawDiceCard(ui, scale);
+                break;
+        }
+    }
+
+    private void DrawDealerCard(AppSkin ui, float scale)
+    {
+        var hostDeals = draft.DealerMode == CasinoDealerModes.Host;
+        var card = GroupCard.Begin(ui, SegmentRowUnits + (hostDeals ? RowUnits : 0f));
+        draft.DealerMode = Segment(ui, card.NextRow(SegmentRowUnits), "##hostDealerMode",
+            Loc.T(L.Tables.DealerMode), dealerOptions, draft.DealerMode, scale);
+        if (hostDeals)
+        {
+            draft.AutoDeal = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.autodeal",
+                Loc.T(L.Tables.AutoDeal), draft.AutoDeal, scale);
+        }
+
+        card.End();
+        Venue.VenueFields.Hint(ui, Loc.T(L.Tables.CoDealersNote), scale);
+        Gap(HostFlowLayout.CardGap, scale);
+    }
+
+    private void DrawRulesCard(AppSkin ui, float scale)
+    {
+        ui.SectionHeading(Loc.T(L.Tables.SectionRules), Metrics.Space.Sm);
+        var card = GroupCard.Begin(ui, SegmentRowUnits * 4 + RowUnits * 3);
+        draft.Pays = Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesPays",
+            Loc.T(L.Tables.RulesPays), paysOptions, draft.Pays, scale);
+        var deck = Array.IndexOf(CasinoRuleSheet.Decks, draft.Decks);
+        var deckPicked = Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesDecks",
+            Loc.T(L.Tables.RulesDecks), deckOptions, deck < 0 ? 3 : deck, scale);
+        draft.Decks = CasinoRuleSheet.Decks[deckPicked];
+        draft.Splits = Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesSplits",
+            Loc.T(L.Tables.RulesSplits), splitOptions, draft.Splits, scale);
+        draft.Doubles = Segment(ui, card.NextRow(SegmentRowUnits), "##hostRulesDoubles",
+            Loc.T(L.Tables.RulesDoubles), doubleOptions, draft.Doubles, scale);
+        draft.HitsSoft17 = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.rules.soft17",
+            Loc.T(L.Tables.RulesSoft17), draft.HitsSoft17, scale);
+        draft.Charlie = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.rules.charlie",
+            Loc.T(L.Tables.RulesCharlie), draft.Charlie, scale);
+        draft.Peek = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.rules.peek",
+            Loc.T(L.Tables.RulesPeek), draft.Peek, scale);
+        card.End();
+        Gap(HostFlowLayout.CardGap, scale);
+    }
+
+    private void DrawAnteCard(AppSkin ui, float scale)
+    {
+        RefreshAnte();
+        var card = GroupCard.Begin(ui, SegmentRowUnits);
+        draft.Ante = Segment(ui, card.NextRow(SegmentRowUnits), "##hostAnte",
+            Loc.T(L.Holdem.HostAnte), anteOptions, draft.Ante, scale);
+        card.End();
+        Gap(HostFlowLayout.CardGap, scale);
+    }
+
+    private void DrawDiceCard(AppSkin ui, float scale)
+    {
+        var card = GroupCard.Begin(ui, RowUnits + SegmentRowUnits);
+        draft.HighestWins = Venue.VenueFields.ToggleRow(ui, card.NextRow(RowUnits), "host.highest",
+            Loc.T(L.Venue.HighestWins), draft.HighestWins, scale);
+        draft.RoundSeconds = Segment(ui, card.NextRow(SegmentRowUnits), "##hostRoundSeconds",
+            Loc.T(L.Venue.RoundSeconds), roundOptions, draft.RoundSeconds, scale);
+        card.End();
+        Gap(HostFlowLayout.CardGap, scale);
+    }
+
+    private void DrawFooter(AppSkin ui, Rect footer, string line, float summaryHeight, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var bandMin = new Vector2(footer.Min.X - AppSurface.SidePadding * scale, footer.Min.Y);
+        var bandMax = new Vector2(footer.Max.X + AppSurface.SidePadding * scale, footer.Max.Y);
+        Material.ThemedGlass(drawList, bandMin, bandMax, 0f, scale, ui.BackdropColor, TabBar.GlassOpacity);
+        drawList.AddLine(bandMin, new Vector2(bandMax.X, bandMin.Y),
+            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, FooterHairlineAlpha)), MathF.Max(1f, 0.5f * scale));
+        var pad = HostFlowLayout.FooterPad * scale;
+        Typography.DrawWrappedLeft(new Vector2(footer.Min.X, footer.Min.Y + pad), line, ui.BodyInk,
+            TextStyles.Subheadline, footer.Width);
+        var button = HostFlowLayout.FooterButton(footer, scale);
+        if (Button.Draw(drawList, button, Loc.T(L.Tables.OpenTable), ui.Ink, ButtonStyle.Prominent,
+                enabled: !tables.IntentInFlight, id: "casino.host.open"))
+        {
+            Submit();
+        }
+    }
+
+    private static float SummaryBlock(string line, float width, float scale) =>
+        Typography.MeasureWrappedBlock(line, TextStyles.Subheadline, width).Y;
+
+    private string Summary()
+    {
+        var low = draft.Game switch
+        {
+            HostGame.Holdem => draft.BigBlindValue,
+            HostGame.DiceTable => draft.SidesValue,
+            HostGame.Deathroll => draft.StartAtValue,
+            _ => draft.MinBetValue,
+        };
+        var high = draft.Game == HostGame.Deathroll ? draft.StakeValue : draft.MaxBetValue;
+        var key = new HostSummaryKey(draft.Game, draft.Currency, draft.Seats, low, high, draft.Listing, Loc.Current);
+        if (key == summaryKey && summary.Length > 0)
+        {
+            return summary;
+        }
+
+        summaryKey = key;
+        var game = Loc.T(HostGames.Of(draft.Game).Title);
+        var listing = Loc.T(SummaryListings[Math.Clamp(draft.Listing, 0, SummaryListings.Length - 1)]);
+        var seats = draft.Seats.ToString(Loc.Culture);
+        summary = draft.Game switch
+        {
+            HostGame.Blackjack => Loc.T(L.Tables.SummaryBlackjack, game, seats,
+                TableAmounts.Range(texts, draft.MinBetValue, draft.MaxBetValue, draft.Currency), listing),
+            HostGame.Holdem => Loc.T(L.Tables.SummaryHoldem, game, seats,
+                texts.Compacts(L.Holdem.BlindsShort, draft.BigBlindValue / 2, draft.BigBlindValue), listing),
+            HostGame.DiceTable => Loc.T(L.Tables.SummaryDice, game, NumberText.Compact(draft.SidesValue), listing),
+            HostGame.Deathroll => Loc.T(L.Tables.SummaryDeathroll, game, NumberText.Compact(draft.StartAtValue),
+                TableAmounts.Amount(texts, draft.StakeValue, draft.Currency), listing),
+            _ => Loc.T(L.Tables.SummaryRaffle, game, listing),
+        };
+        return summary;
     }
 
     private void ConsumeOutcomes()
@@ -388,193 +854,10 @@ internal sealed class HostSheet
         }
     }
 
-    private void DrawTableCard(AppSkin ui, float scale)
-    {
-        var card = GroupCard.Begin(ui, RowUnits * 3 + SegmentRowUnits * 2);
-        var game = Segment(ui, card.NextRow(SegmentRowUnits), "##hostGame", Loc.T(L.Holdem.HostGame), gameOptions,
-            draft.Holdem ? 1 : 0, scale);
-        if (game == 1 != draft.Holdem)
-        {
-            draft.Reset(game == 1 ? HoldemRules.Kind : CasinoWire.BlackjackKind);
-        }
-
-        var nameRow = card.NextRow(RowUnits);
-        Label(ui, nameRow, Loc.T(L.Tables.HostName), scale);
-        Field(ui, FieldRect(nameRow, scale), "##hostName", Loc.T(L.Tables.HostNameHint), ref draft.Name,
-            NameMaxLength, false);
-        var seatsRow = card.NextRow(RowUnits);
-        Label(ui, seatsRow, Loc.T(L.Tables.HostSeats), scale);
-        StepperField.Draw(ui, StepperRect(seatsRow, scale), texts.Count(L.Tables.SeatsValue, draft.Seats), scale,
-            seatsDown, seatsUp);
-        draft.Listing = Segment(ui, card.NextRow(SegmentRowUnits), "##hostListing", Loc.T(L.Tables.HostListing),
-            listingOptions, draft.Listing, scale);
-        draft.Spectators = ToggleRow(ui, card.NextRow(RowUnits), "host.spectators", Loc.T(L.Tables.HostSpectators),
-            draft.Spectators, scale);
-        card.End();
-    }
-
-    private void DrawMoneyCard(AppSkin ui, bool gilOpen, float scale)
-    {
-        var rows = draft.Currency switch
-        {
-            CasinoCurrencies.Practice => 5,
-            CasinoCurrencies.Gil => 4,
-            _ => 4,
-        };
-        var card = GroupCard.Begin(ui, SegmentRowUnits + rows * RowUnits);
-        var options = gilOpen ? currencyOptions : chipCurrencyOptions;
-        draft.Currency = Segment(ui, card.NextRow(SegmentRowUnits), "##hostCurrency", Loc.T(L.Tables.HostCurrency),
-            options, Math.Min(draft.Currency, options.Length - 1), scale);
-        switch (draft.Currency)
-        {
-            case CasinoCurrencies.Practice:
-                FieldRow(ui, card.NextRow(RowUnits), "##hostStack", Loc.T(L.Tables.PracticeStack),
-                    NumberText.Group(CasinoHostingRules.DefaultPracticeStack), ref draft.PracticeStack, scale);
-                FieldRow(ui, card.NextRow(RowUnits), "##hostPracticeMin", Loc.T(L.Tables.MinBet),
-                    Loc.T(L.Tables.DefaultHint), ref draft.PracticeMinBet, scale);
-                FieldRow(ui, card.NextRow(RowUnits), "##hostPracticeMax", Loc.T(L.Tables.MaxBet),
-                    Loc.T(L.Tables.DefaultHint), ref draft.PracticeMaxBet, scale);
-                draft.PracticeRebuy = ToggleRow(ui, card.NextRow(RowUnits), "host.rebuy", Loc.T(L.Tables.Rebuys),
-                    draft.PracticeRebuy, scale);
-                draft.FaceUp = ToggleRow(ui, card.NextRow(RowUnits), "host.faceup", Loc.T(L.Tables.FaceUp),
-                    draft.FaceUp, scale);
-                break;
-            case CasinoCurrencies.Gil:
-                FieldRow(ui, card.NextRow(RowUnits), "##hostBank", Loc.T(L.Tables.Bank), Loc.T(L.Tables.GilHint),
-                    ref draft.Bank, scale);
-                FieldRow(ui, card.NextRow(RowUnits), "##hostGilMax", Loc.T(L.Tables.MaxBet), Loc.T(L.Tables.GilHint),
-                    ref draft.GilMaxBet, scale);
-                FieldRow(ui, card.NextRow(RowUnits), "##hostGilMin", Loc.T(L.Tables.MinBet),
-                    Loc.T(L.Tables.DefaultHint), ref draft.GilMinBet, scale);
-                FieldRow(ui, card.NextRow(RowUnits), "##hostPayout", Loc.T(L.Tables.MaxPayout),
-                    Loc.T(L.Tables.MaxPayoutHint), ref draft.MaxPayout, scale);
-                break;
-            default:
-                StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Tables.MinBet), NumberText.Compact(draft.ChipMinBet),
-                    minBetDown, minBetUp, scale);
-                StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Tables.MaxBet), NumberText.Compact(draft.ChipMaxBet),
-                    maxBetDown, maxBetUp, scale);
-                StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Tables.MinBuyIn),
-                    texts.Number(L.Strip.CoinsShort, HostDraft.BuyInCoinSteps[draft.MinBuyInStep]), minBuyInDown,
-                    minBuyInUp, scale);
-                StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Tables.MaxBuyIn),
-                    texts.Number(L.Strip.CoinsShort, HostDraft.BuyInCoinSteps[draft.MaxBuyInStep]), maxBuyInDown,
-                    maxBuyInUp, scale);
-                break;
-        }
-
-        card.End();
-    }
-
-    private void DrawHoldemMoneyCard(AppSkin ui, float scale)
-    {
-        if (draft.Currency == CasinoCurrencies.Gil)
-        {
-            draft.Currency = CasinoCurrencies.Chips;
-        }
-
-        var practice = draft.Currency == CasinoCurrencies.Practice;
-        var card = GroupCard.Begin(ui, SegmentRowUnits + (practice ? 5 : 4) * RowUnits);
-        draft.Currency = Segment(ui, card.NextRow(SegmentRowUnits), "##hostCurrency", Loc.T(L.Tables.HostCurrency),
-            chipCurrencyOptions, draft.Currency, scale);
-        StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Holdem.HostBlinds),
-            texts.Compacts(L.Holdem.BlindsShort, draft.BigBlind / 2, draft.BigBlind), blindDown, blindUp, scale);
-        var anteTenths = HostDraft.AnteTenths[draft.AnteStep];
-        StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Holdem.HostAnte),
-            anteTenths == 0 ? Loc.T(L.Tables.OptionOff) : NumberText.Compact(draft.BigBlind * anteTenths / 10),
-            anteDown, anteUp, scale);
-        if (practice)
-        {
-            FieldRow(ui, card.NextRow(RowUnits), "##hostStack", Loc.T(L.Tables.PracticeStack),
-                NumberText.Group(CasinoHostingRules.DefaultPracticeStack), ref draft.PracticeStack, scale);
-            draft.PracticeRebuy = ToggleRow(ui, card.NextRow(RowUnits), "host.rebuy", Loc.T(L.Tables.Rebuys),
-                draft.PracticeRebuy, scale);
-            draft.FaceUp = ToggleRow(ui, card.NextRow(RowUnits), "host.faceup", Loc.T(L.Tables.FaceUp),
-                draft.FaceUp, scale);
-            card.End();
-            return;
-        }
-
-        StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Tables.MinBuyIn),
-            texts.Number(L.Holdem.BigBlindsValue, HostDraft.BuyInBigBlindSteps[draft.MinBigBlindsStep]),
-            minBigBlindsDown, minBigBlindsUp, scale);
-        StepperRow(ui, card.NextRow(RowUnits), Loc.T(L.Tables.MaxBuyIn),
-            texts.Number(L.Holdem.BigBlindsValue, HostDraft.BuyInBigBlindSteps[draft.MaxBigBlindsStep]),
-            maxBigBlindsDown, maxBigBlindsUp, scale);
-        card.End();
-    }
-
-    private void DrawClockCard(AppSkin ui)
-    {
-        var scale = UiScale.Current;
-        var card = GroupCard.Begin(ui, SegmentRowUnits + RowUnits);
-        var selected = Array.IndexOf(CasinoHostingRules.TurnSeconds, draft.TurnSeconds);
-        var picked = Segment(ui, card.NextRow(SegmentRowUnits), "##hostTurn", Loc.T(L.Tables.TurnClock),
-            turnOptions, selected < 0 ? 1 : selected, scale);
-        draft.TurnSeconds = CasinoHostingRules.TurnSeconds[picked];
-        draft.TimeBank = ToggleRow(ui, card.NextRow(RowUnits), "host.timebank", Loc.T(L.Tables.TimeBank),
-            draft.TimeBank, scale);
-        card.End();
-    }
-
-    private void DrawDealerCard(AppSkin ui)
-    {
-        var scale = UiScale.Current;
-        var hostDeals = draft.DealerMode == CasinoDealerModes.Host;
-        var card = GroupCard.Begin(ui, SegmentRowUnits + (hostDeals ? RowUnits : 0f));
-        draft.DealerMode = Segment(ui, card.NextRow(SegmentRowUnits), "##hostDealer", Loc.T(L.Tables.DealerMode),
-            dealerOptions, draft.DealerMode, scale);
-        if (hostDeals)
-        {
-            draft.AutoDeal = ToggleRow(ui, card.NextRow(RowUnits), "host.autodeal", Loc.T(L.Tables.AutoDeal),
-                draft.AutoDeal, scale);
-        }
-
-        card.End();
-    }
-
-    private void DrawRulesCard(AppSkin ui)
-    {
-        var scale = UiScale.Current;
-        var card = GroupCard.Begin(ui, SegmentRowUnits * 4 + RowUnits * 3);
-        draft.Pays = Segment(ui, card.NextRow(SegmentRowUnits), "##rulesPays", Loc.T(L.Tables.RulesPays), paysOptions,
-            draft.Pays, scale);
-        var deck = Array.IndexOf(CasinoRuleSheet.Decks, draft.Decks);
-        var deckPicked = Segment(ui, card.NextRow(SegmentRowUnits), "##rulesDecks", Loc.T(L.Tables.RulesDecks),
-            deckOptions, deck < 0 ? 3 : deck, scale);
-        draft.Decks = CasinoRuleSheet.Decks[deckPicked];
-        draft.Splits = Segment(ui, card.NextRow(SegmentRowUnits), "##rulesSplits", Loc.T(L.Tables.RulesSplits),
-            splitOptions, draft.Splits, scale);
-        draft.Doubles = Segment(ui, card.NextRow(SegmentRowUnits), "##rulesDoubles", Loc.T(L.Tables.RulesDoubles),
-            doubleOptions, draft.Doubles, scale);
-        draft.HitsSoft17 = ToggleRow(ui, card.NextRow(RowUnits), "rules.soft17", Loc.T(L.Tables.RulesSoft17),
-            draft.HitsSoft17, scale);
-        draft.Charlie = ToggleRow(ui, card.NextRow(RowUnits), "rules.charlie", Loc.T(L.Tables.RulesCharlie),
-            draft.Charlie, scale);
-        draft.Peek = ToggleRow(ui, card.NextRow(RowUnits), "rules.peek", Loc.T(L.Tables.RulesPeek), draft.Peek,
-            scale);
-        card.End();
-    }
-
-    private void DrawOpenButton(AppSkin ui, float scale)
-    {
-        var width = ScrollLayout.StableContentWidth();
-        var origin = ImGui.GetCursorScreenPos();
-        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + Button.LargeHeight * scale));
-        if (Button.Draw(rect, Loc.T(L.Tables.OpenTable), ui.Ink, ButtonStyle.Prominent,
-                enabled: !tables.IntentInFlight, id: "host.open"))
-        {
-            Submit();
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, Button.LargeHeight * scale));
-    }
-
     private void Submit()
     {
-        var config = venueOptions.Apply(draft.Build(chips.Rate));
-        var reason = venueOptions.IsVenue ? VenueRules.Check(config) : CasinoHostingRules.Check(config);
+        var config = draft.Build(venueOptions.Location());
+        var reason = HostGames.IsVenue(draft.Game) ? VenueRules.Check(config) : CasinoHostingRules.Check(config);
         if (reason.Length > 0)
         {
             inlineReason = reason;
@@ -585,130 +868,46 @@ internal sealed class HostSheet
         tables.HostTable(config);
     }
 
-    private void DrawReason(AppSkin ui, float scale)
+    private void DrawReason(AppSkin ui, float width, float scale)
     {
-        var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
         var message = Loc.T(CasinoReasons.MessageFor(inlineReason));
-        var pad = 12f * scale;
-        var block = Typography.MeasureWrappedBlock(message, TextStyles.Footnote, width - pad * 2f);
+        var pad = HostFlowLayout.CardPad * scale;
+        var block = Typography.MeasureWrappedBlock(message, TextStyles.Subheadline, width - pad * 2f);
         var max = new Vector2(origin.X + width, origin.Y + block.Y + pad * 2f);
         Squircle.Fill(drawList, origin, max, Metrics.Radius.Grouped * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.10f)));
+            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.12f)));
         Typography.DrawWrappedLeft(new Vector2(origin.X + pad, origin.Y + pad), message, ui.TitleInk,
-            TextStyles.Footnote, width - pad * 2f);
+            TextStyles.Subheadline, width - pad * 2f);
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, max.Y - origin.Y + Metrics.Space.Sm * scale));
+        ImGui.Dummy(new Vector2(width, max.Y - origin.Y));
     }
 
-    private static void Hint(AppSkin ui, string text, float scale)
+    private void RefreshAnte()
     {
-        var width = ScrollLayout.StableContentWidth();
-        var origin = ImGui.GetCursorScreenPos();
-        var top = origin.Y + Metrics.Space.Xs * scale;
-        var height = Typography.DrawWrappedLeft(new Vector2(origin.X + Metrics.Space.Lg * scale, top), text,
-            ui.BodyInk, TextStyles.Footnote, width - Metrics.Space.Lg * 2f * scale);
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Xs * 2f * scale));
-    }
-
-    private static void Label(AppSkin ui, in Rect row, string label, float scale)
-    {
-        var width = row.Width * (1f - FieldWidthFraction) - Metrics.Space.Sm * scale;
-        var height = Typography.LineHeight(TextStyles.Body);
-        Typography.Draw(ImGui.GetWindowDrawList(), new Vector2(row.Min.X, row.Center.Y - height * 0.5f),
-            Typography.FitText(label, width, TextStyles.Body), ui.TitleInk, TextStyles.Body);
-    }
-
-    private static Rect FieldRect(in Rect row, float scale)
-    {
-        var height = FieldHeight * scale;
-        return new Rect(new Vector2(row.Max.X - row.Width * FieldWidthFraction, row.Center.Y - height * 0.5f),
-            new Vector2(row.Max.X, row.Center.Y + height * 0.5f));
-    }
-
-    private static Rect StepperRect(in Rect row, float scale)
-    {
-        var height = FieldHeight * scale;
-        var width = MathF.Min(StepperWidth * scale, row.Width * 0.55f);
-        return new Rect(new Vector2(row.Max.X - width, row.Center.Y - height * 0.5f),
-            new Vector2(row.Max.X, row.Center.Y + height * 0.5f));
-    }
-
-    private static void StepperRow(AppSkin ui, in Rect row, string label, string value, Action down, Action up,
-        float scale)
-    {
-        Label(ui, row, label, scale);
-        StepperField.Draw(ui, StepperRect(row, scale), value, scale, down, up);
-    }
-
-    private static void FieldRow(AppSkin ui, in Rect row, string id, string label, string hint, ref string buffer,
-        float scale)
-    {
-        Label(ui, row, label, scale);
-        Field(ui, FieldRect(row, scale), id, hint, ref buffer, AmountDigits, true);
-    }
-
-    private static bool ToggleRow(AppSkin ui, in Rect row, string id, string label, bool value, float scale)
-    {
-        var width = Metrics.Size.ToggleWidth * scale;
-        var height = Metrics.Size.ToggleHeight * scale;
-        var labelHeight = Typography.LineHeight(TextStyles.Body);
-        Typography.Draw(ImGui.GetWindowDrawList(), new Vector2(row.Min.X, row.Center.Y - labelHeight * 0.5f),
-            Typography.FitText(label, row.Width - width - Metrics.Space.Md * scale, TextStyles.Body), ui.TitleInk,
-            TextStyles.Body);
-        var toggleMin = new Vector2(row.Max.X - width, row.Center.Y - height * 0.5f);
-        return Toggle.Draw(id, new Rect(toggleMin, toggleMin + new Vector2(width, height)), value, ui.Theme);
-    }
-
-    private static int Segment(AppSkin ui, in Rect row, string id, string label, string[] options, int selected,
-        float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var top = row.Min.Y + Metrics.Space.Sm * scale;
-        Typography.Draw(drawList, new Vector2(row.Min.X, top),
-            Typography.FitText(label, row.Width, TextStyles.Body), ui.TitleInk, TextStyles.Body);
-        var stripTop = top + Typography.LineHeight(TextStyles.Body) + Metrics.Space.Sm * scale;
-        var strip = new Rect(new Vector2(row.Min.X, stripTop),
-            new Vector2(row.Max.X, MathF.Max(stripTop + 30f * scale, row.Max.Y - Metrics.Space.Sm * scale)));
-        return SegmentStrip.Draw(id, strip, options, Math.Clamp(selected, 0, options.Length - 1), ui.Palette);
-    }
-
-    private static void Field(AppSkin ui, Rect field, string id, string hint, ref string buffer, int maxLength,
-        bool numeric)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        SearchBar.Surface(drawList, field, ui.Ink);
-        var capsule = SearchBar.Capsule(field);
-        var inset = capsule.Height * 0.4f;
-        var cursor = ImGui.GetCursorScreenPos();
-        ImGui.SetCursorScreenPos(new Vector2(capsule.Min.X + inset, field.Center.Y - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(capsule.Width - inset * 2f);
-        var flags = numeric ? ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll
-            : ImGuiInputTextFlags.None;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        if (anteBigBlind == draft.BigBlindValue && ReferenceEquals(optionsLanguage, Loc.Current))
         {
-            ImGui.InputTextWithHint(id, hint, ref buffer, maxLength + 1, flags);
+            return;
         }
 
-        ImGui.SetCursorScreenPos(cursor);
+        anteBigBlind = draft.BigBlindValue;
+        anteOptions[0] = Loc.T(L.Tables.OptionOff);
+        for (var index = 1; index < anteOptions.Length; index++)
+        {
+            anteOptions[index] = NumberText.Compact(anteBigBlind * HostLadders.AnteTenths[index] / 10);
+        }
     }
 
     private void RefreshOptions()
     {
-        if (ReferenceEquals(optionsLanguage, Loc.Current) && currencyOptions[0] is not null)
+        if (ReferenceEquals(optionsLanguage, Loc.Current) && dealerOptions[0] is not null)
         {
             return;
         }
 
         optionsLanguage = Loc.Current;
-        Fill(currencyOptions, CurrencyLabels);
-        gameOptions[0] = Loc.T(L.Casino.GameBlackjack);
-        gameOptions[1] = Loc.T(L.Casino.GameHoldem);
-        Fill(chipCurrencyOptions, CurrencyLabels);
-        Fill(listingOptions, ListingLabels);
+        anteBigBlind = -1;
         Fill(dealerOptions, DealerLabels);
         Fill(paysOptions, PaysLabels);
         Fill(splitOptions, SplitLabels);
@@ -722,6 +921,11 @@ internal sealed class HostSheet
         for (var index = 0; index < deckOptions.Length; index++)
         {
             deckOptions[index] = CasinoRuleSheet.Decks[index].ToString(Loc.Culture);
+        }
+
+        for (var index = 0; index < roundOptions.Length; index++)
+        {
+            roundOptions[index] = Loc.T(L.Tables.SecondsValue, HostLadders.RoundSeconds[index].ToString(Loc.Culture));
         }
     }
 

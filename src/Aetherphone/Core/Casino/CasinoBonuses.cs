@@ -18,6 +18,8 @@ internal static class CasinoFeatures
 
     public const string GilTables = "gil.tables";
 
+    public const string RoomCodes = "roomcodes";
+
     public const string Machines = "machines";
 
     public const string Missions = "missions";

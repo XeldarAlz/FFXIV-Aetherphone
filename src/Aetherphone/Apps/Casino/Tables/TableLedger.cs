@@ -30,8 +30,10 @@ internal sealed class TableLedger
 
     private static readonly Vector4 SettledInk = new(0.36f, 0.84f, 0.52f, 1f);
 
+    private static readonly LocString[] ColumnLabels =
+        { L.Tables.ColumnBuyIns, L.Tables.ColumnStack, L.Tables.ColumnNet };
+
     private const float Pad = 14f;
-    private const float RowHeight = 60f;
     private const float EntryHeight = 74f;
     private const float FieldHeight = 38f;
     private const int AmountDigits = 11;
@@ -209,11 +211,9 @@ internal sealed class TableLedger
         for (var index = 0; index < source.Length; index++)
         {
             var row = source[index];
-            rows[index] = new LedgerRowView(row.DisplayName,
-                Loc.T(L.Tables.RowBuyIns, AmountText(row.BuyIns, ledger.Currency)),
-                Loc.T(L.Tables.RowStack, AmountText(row.Stack, ledger.Currency)),
-                CasinoTextCache.SignedText(row.Net), Loc.T(L.Tables.RowHands, row.Hands.ToString(Loc.Culture)),
-                row.Net, row.Seated);
+            rows[index] = new LedgerRowView(row.DisplayName, NumberText.Compact(row.BuyIns),
+                NumberText.Compact(row.Stack), SignedCompact(row.Net), row.Hands.ToString(Loc.Culture), row.Net,
+                row.Seated);
             if (row.Seated || row.BuyIns > 0)
             {
                 seated++;
@@ -262,16 +262,18 @@ internal sealed class TableLedger
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
-        var height = Typography.LineHeight(TextStyles.Headline) + Metrics.Space.Sm * scale;
-        var buttonHeight = Button.SmallHeight * scale;
+        var titleHeight = Typography.LineHeight(TextStyles.Title3);
+        var buttonHeight = Button.LargeHeight * scale;
+        var height = MathF.Max(titleHeight, buttonHeight);
         var copyLabel = Loc.T(L.Tables.CopyLedger);
-        var buttonWidth = Button.WidthFor(copyLabel, ButtonSize.Small);
-        Typography.Draw(drawList, origin + new Vector2(0f, Metrics.Space.Md * scale),
+        var buttonWidth = Button.WidthFor(copyLabel, ButtonSize.Large);
+        var top = origin.Y + Metrics.Space.Lg * scale;
+        Typography.Draw(drawList, new Vector2(origin.X, top + (height - titleHeight) * 0.5f),
             Typography.FitText(Loc.T(L.Tables.LedgerHeading), width - buttonWidth - Metrics.Space.Md * scale,
-                TextStyles.Headline), ui.HeaderInk, TextStyles.Headline);
-        var top = origin.Y + Metrics.Space.Md * scale + (Typography.LineHeight(TextStyles.Headline) - buttonHeight) * 0.5f;
-        var rect = new Rect(new Vector2(origin.X + width - buttonWidth, top),
-            new Vector2(origin.X + width, top + buttonHeight));
+                TextStyles.Title3), ui.TitleInk, TextStyles.Title3);
+        var buttonTop = top + (height - buttonHeight) * 0.5f;
+        var rect = new Rect(new Vector2(origin.X + width - buttonWidth, buttonTop),
+            new Vector2(origin.X + width, buttonTop + buttonHeight));
         if (Button.Draw(drawList, rect, copyLabel, ui.Ink, ButtonStyle.Tinted, enabled: (ledger.Rows?.Length ?? 0) > 0,
                 id: "ledger.copy"))
         {
@@ -280,7 +282,7 @@ internal sealed class TableLedger
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Md * scale));
+        ImGui.Dummy(new Vector2(width, top - origin.Y + height + Metrics.Space.Sm * scale));
     }
 
     private void DrawRows(AppSkin ui, int currency, float scale)
@@ -294,40 +296,74 @@ internal sealed class TableLedger
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
-        var rowHeight = RowHeight * scale;
-        var max = new Vector2(origin.X + width, origin.Y + rowHeight * rows.Length);
+        var headerHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized) + Pad * scale;
+        var rowHeight = MathF.Max(DoorLayout.Touch * scale,
+            Typography.LineHeight(TextStyles.SubheadlineEmphasized) + Pad * scale);
+        var max = new Vector2(origin.X + width, origin.Y + headerHeight + rowHeight * rows.Length);
         ui.Card(drawList, origin, max, Metrics.Radius.Grouped * scale);
+        var number = DoorLayout.LedgerNumberWidth(width, scale);
+        var nameRight = DoorLayout.LedgerNameRight(origin.X, width, scale);
         var pad = Pad * scale;
+        var headerTop = origin.Y + Pad * 0.5f * scale;
+        HeaderCell(drawList, ui, Loc.T(L.Tables.ColumnPlayer), origin.X + pad, nameRight, headerTop, false);
+        for (var column = 0; column < 3; column++)
+        {
+            var right = DoorLayout.LedgerColumnRight(origin.X, width, column, scale);
+            HeaderCell(drawList, ui, Loc.T(ColumnLabels[column]), right - number, right, headerTop, true);
+        }
+
+        var tableTop = origin.Y + headerHeight;
+        drawList.AddLine(new Vector2(origin.X + pad, tableTop), new Vector2(max.X - pad, tableTop),
+            ImGui.GetColorU32(ui.Hairline), Metrics.Stroke.Hairline);
+        var tint = TableRow.CurrencyTint(currency, ui.Accent);
         for (var index = 0; index < rows.Length; index++)
         {
             var view = rows[index];
-            var top = origin.Y + index * rowHeight;
+            var top = tableTop + index * rowHeight;
             if (index > 0)
             {
                 drawList.AddLine(new Vector2(origin.X + pad, top), new Vector2(max.X, top),
                     ImGui.GetColorU32(ui.Hairline), Metrics.Stroke.Hairline);
             }
 
-            var netInk = view.NetValue > 0 ? SettledInk : ui.MutedInk;
-            var netSize = Typography.Measure(view.Net, TextStyles.Headline);
-            Typography.Draw(drawList, new Vector2(max.X - pad - netSize.X, top + (rowHeight - netSize.Y) * 0.5f),
-                view.Net, netInk, TextStyles.Headline);
-            var textWidth = width - pad * 3f - netSize.X;
+            var centerY = top + rowHeight * 0.5f;
             var nameInk = view.Seated ? ui.TitleInk : ui.BodyInk;
-            Typography.Draw(drawList, new Vector2(origin.X + pad, top + 10f * scale),
-                Typography.FitText(view.Name, textWidth, TextStyles.SubheadlineEmphasized), nameInk,
-                TextStyles.SubheadlineEmphasized);
-            var detail = Typography.FitText(view.BuyIns, textWidth * 0.5f, TextStyles.Footnote);
-            Typography.Draw(drawList, new Vector2(origin.X + pad, top + 32f * scale), detail, ui.MutedInk,
-                TextStyles.Footnote);
-            var stack = Typography.FitText(view.Stack, textWidth * 0.5f, TextStyles.Footnote);
-            Typography.Draw(drawList, new Vector2(origin.X + pad + textWidth * 0.5f, top + 32f * scale), stack,
-                ui.BodyInk, TextStyles.Footnote);
+            Cell(drawList, view.Name, origin.X + pad, nameRight, centerY, nameInk, TextStyles.SubheadlineEmphasized,
+                false);
+            Cell(drawList, view.BuyIns, DoorLayout.LedgerColumnRight(origin.X, width, 0, scale) - number,
+                DoorLayout.LedgerColumnRight(origin.X, width, 0, scale), centerY, ui.BodyInk, TextStyles.Subheadline,
+                true);
+            Cell(drawList, view.Stack, DoorLayout.LedgerColumnRight(origin.X, width, 1, scale) - number,
+                DoorLayout.LedgerColumnRight(origin.X, width, 1, scale), centerY, tint, TextStyles.Subheadline, true);
+            var netInk = view.NetValue > 0 ? SettledInk : ui.MutedInk;
+            Cell(drawList, view.Net, DoorLayout.LedgerColumnRight(origin.X, width, 2, scale) - number,
+                DoorLayout.LedgerColumnRight(origin.X, width, 2, scale), centerY, netInk,
+                TextStyles.SubheadlineEmphasized, true);
         }
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, max.Y - origin.Y + Metrics.Space.Sm * scale));
     }
+
+    private static void HeaderCell(ImDrawListPtr drawList, AppSkin ui, string label, float left, float right,
+        float top, bool alignRight)
+    {
+        var fitted = Typography.FitText(label, MathF.Max(1f, right - left), TextStyles.FootnoteEmphasized);
+        var x = alignRight ? right - Typography.Measure(fitted, TextStyles.FootnoteEmphasized).X : left;
+        Typography.Draw(drawList, new Vector2(x, top), fitted, ui.MutedInk, TextStyles.FootnoteEmphasized);
+    }
+
+    private static void Cell(ImDrawListPtr drawList, string text, float left, float right, float centerY, Vector4 ink,
+        in TextStyle style, bool alignRight)
+    {
+        var fitted = Typography.FitText(text, MathF.Max(1f, right - left), style);
+        var size = Typography.Measure(fitted, style);
+        var x = alignRight ? right - size.X : left;
+        Typography.Draw(drawList, new Vector2(x, centerY - Typography.LineHeight(style) * 0.5f), fitted, ink, style);
+    }
+
+    internal static string SignedCompact(long value) =>
+        value > 0 ? Loc.T(L.Stage.Plus, NumberText.Compact(value)) : NumberText.Compact(value);
 
     private void DrawEntries(AppSkin ui, float scale)
     {
@@ -465,7 +501,7 @@ internal sealed class TableLedger
                 AmountDigits + 1, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll);
         }
 
-        var amount = HostDraft.Parse(amountBuffer);
+        var amount = Venue.VenueFields.Parse(amountBuffer);
         var buttonHeight = Button.RegularHeight * scale;
         var buttonTop = field.Center.Y - buttonHeight * 0.5f;
         var rect = new Rect(new Vector2(origin.X + width - buttonWidth, buttonTop),

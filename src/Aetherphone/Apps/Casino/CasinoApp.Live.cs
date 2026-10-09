@@ -1,11 +1,9 @@
-using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Apps.Casino.Strip;
 using Aetherphone.Apps.Coin;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -15,17 +13,17 @@ namespace Aetherphone.Apps.Casino;
 
 internal sealed partial class CasinoApp
 {
-    private const float LiveRowHeight = 84f;
-    private const float LiveRowTile = 44f;
-    private const float SeatEmptyAlpha = 0.22f;
-    private const int SeatDotLimit = 8;
+    private const float LiveCardGap = 10f;
 
     private readonly LiveRow[] liveRows = new LiveRow[LiveBoard.Capacity];
     private readonly LiveRow[] liveShown = new LiveRow[LiveBoard.Capacity];
+    private readonly CasinoTableRowDto?[] liveViewSources = new CasinoTableRowDto?[LiveBoard.Capacity];
+    private readonly TableRowView[] liveViews = new TableRowView[LiveBoard.Capacity];
     private readonly string[] liveFilterLabels = new string[LiveBoard.Filters.Length];
     private readonly bool[] liveFilterActive = new bool[LiveBoard.Filters.Length];
     private readonly ChipRail liveFilterRail = new();
     private readonly CasinoFriendNames friends = new();
+    private LanguageInfo? liveViewLanguage;
     private LiveFilter liveFilter;
 
     private void DrawLiveTab(Rect body)
@@ -50,6 +48,7 @@ internal sealed partial class CasinoApp
                     : Loc.T(L.Strip.LiveEmptyBody);
                 cursorY = CoinArt.DrawPanel(ui, new Vector2(origin.X, cursorY + CardGap * scale), width,
                     FontAwesomeIcon.BroadcastTower, ui.Accent, Loc.T(L.Strip.LiveEmptyTitle), empty, scale);
+                cursorY = DrawLiveHostButton(drawList, new Vector2(origin.X, cursorY + CardGap * scale), width, scale);
             }
             else
             {
@@ -103,11 +102,7 @@ internal sealed partial class CasinoApp
         }
 
         var top = SectionTitle(drawList, origin, width, title, scale);
-        var rowHeight = LiveRowHeight * scale;
-        var min = new Vector2(origin.X, top);
-        var max = new Vector2(origin.X + width, top + rowHeight * count);
-        ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
-        var drawn = 0;
+        var gap = LiveCardGap * scale;
         for (var index = 0; index < shown; index++)
         {
             if (liveShown[index].Kind != kind)
@@ -115,73 +110,65 @@ internal sealed partial class CasinoApp
                 continue;
             }
 
+            var view = LiveView(index, liveShown[index]);
+            var height = TableRow.HeightOf(view) * scale;
+            var card = new Rect(new Vector2(origin.X, top), new Vector2(origin.X + width, top + height));
             using (ImRaii.PushId(index))
             {
-                DrawLiveRow(drawList, RowAt(min, max.X, rowHeight, drawn), liveShown[index], drawn > 0, scale);
+                if (TableRow.Draw(drawList, card, ui, view, scale))
+                {
+                    EnterLiveRow(liveShown[index]);
+                }
             }
 
-            drawn++;
+            top = card.Max.Y + gap;
         }
 
-        return max.Y;
+        return top - gap;
     }
 
-    private void DrawLiveRow(ImDrawListPtr drawList, Rect row, in LiveRow item, bool hairline, float scale)
-    {
-        var pad = Metrics.Space.Lg * scale;
-        var tile = LiveRowTile * scale;
-        if (hairline)
-        {
-            CoinArt.Hairline(drawList, ui, row.Min.X + pad + tile + CoinArt.TextGap * scale, row.Max.X, row.Min.Y);
-        }
-
-        var table = item.Table;
-        var join = LiveJoins(item);
-        var label = join ? Loc.T(L.Strip.LiveJoin) : Loc.T(L.Strip.LiveWatch);
-        var buttonHeight = Button.LargeHeight * scale;
-        var buttonWidth = MathF.Max(Button.WidthFor(label, ButtonSize.Large), 76f * scale);
-        var button = new Rect(new Vector2(row.Max.X - pad - buttonWidth, row.Center.Y - buttonHeight * 0.5f),
-            new Vector2(row.Max.X - pad, row.Center.Y + buttonHeight * 0.5f));
-        var overButton = UiInteract.Hover(button.Min, button.Max);
-        var hovered = !overButton && CoinArt.RowInteraction(drawList, ui, row, scale);
-        var tileCenter = new Vector2(row.Min.X + pad + tile * 0.5f, row.Center.Y);
-        CasinoArt.GameTile(drawList, item.GameId, tileCenter, tile);
-        var textLeft = tileCenter.X + tile * 0.5f + CoinArt.TextGap * scale;
-        var textWidth = MathF.Max(1f, button.Min.X - CoinArt.ValueGap * scale - textLeft);
-        var headline = Typography.LineHeight(TextStyles.Headline);
-        var footnote = Typography.LineHeight(TextStyles.Footnote);
-        var top = row.Center.Y - (headline + footnote * 2f) * 0.5f;
-        Typography.Draw(drawList, new Vector2(textLeft, top),
-            Typography.FitText(LiveTitle(item), textWidth, TextStyles.Headline), ui.TitleInk, TextStyles.Headline);
-        top += headline;
-        var line = LiveLine(item, out var open);
-        Typography.Draw(drawList, new Vector2(textLeft, top), Typography.FitText(line, textWidth, TextStyles.Footnote),
-            open ? ui.Accent : ui.BodyInk, TextStyles.Footnote);
-        top += footnote;
-        DrawLiveOccupancy(drawList, item, new Vector2(textLeft, top), textWidth, scale);
-
-        if (Button.Draw(drawList, button, label, ui.Ink, join ? ButtonStyle.Tinted : ButtonStyle.Gray,
-                id: "casino.live.go"))
-        {
-            EnterLiveRow(item);
-            return;
-        }
-
-        if (UiInteract.Click(row.Min, row.Max, hovered))
-        {
-            EnterLiveRow(item);
-        }
-    }
-
-    private static bool LiveJoins(in LiveRow item)
+    private TableRowView LiveView(int slot, in LiveRow item)
     {
         if (item.Kind == LiveRowKind.Room)
         {
-            return true;
+            var phase = RoomPhaseLine(item.GameId, item.RoomId, out var open);
+            var crowd = casinoRooms.OccupancyOf(item.RoomId);
+            return new TableRowView(Loc.T(CasinoGameNames.Of(item.GameId)),
+                phase.Length > 0 ? phase : Loc.T(L.Casino.RoomIdle), texts.Count(L.Casino.LivePlayers, crowd),
+                string.Empty, false, false, false, false, CasinoCurrencies.Chips, string.Empty, string.Empty, false,
+                false, item.GameId, string.Empty, string.Empty, crowd, 0, VenueRoomKind.None,
+                Loc.T(open ? L.Strip.LiveJoin : L.Strip.LiveWatch), open);
         }
 
-        var table = item.Table!;
-        return VenueKinds.IsVenue(table.GameKind) || (CasinoTableFilters.HasOpenSeat(table) && !table.Paused);
+        if (!ReferenceEquals(liveViewLanguage, Loc.Current))
+        {
+            liveViewLanguage = Loc.Current;
+            Array.Clear(liveViewSources);
+        }
+
+        if (!ReferenceEquals(liveViewSources[slot], item.Table))
+        {
+            liveViewSources[slot] = item.Table;
+            var view = Tables.TableBrowser.ViewOf(item.Table!, casinoTables.AccountId);
+            liveViews[slot] = view with { Name = LiveTitle(item) };
+        }
+
+        return liveViews[slot];
+    }
+
+    private string JoinCodeOf(string tableId) => casinoTables.CardFor(tableId)?.JoinCode ?? string.Empty;
+
+    private float DrawLiveHostButton(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
+    {
+        var height = Button.LargeHeight * scale;
+        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
+        if (Button.Draw(drawList, rect, Loc.T(L.Tables.HostCta), ui.Ink, ButtonStyle.Prominent,
+                id: "casino.live.host"))
+        {
+            OpenHostSheet();
+        }
+
+        return rect.Max.Y;
     }
 
     private string LiveTitle(in LiveRow item)
@@ -196,60 +183,6 @@ internal sealed partial class CasinoApp
             && !string.Equals(table.GameKind, HoldemRules.Kind, StringComparison.Ordinal)
             ? Loc.T(TierLabel(table.StakeTier))
             : TableName(table);
-    }
-
-    private string LiveLine(in LiveRow item, out bool open)
-    {
-        open = false;
-        if (item.Kind == LiveRowKind.Room)
-        {
-            var phase = RoomPhaseLine(item.GameId, item.RoomId, out open);
-            return phase.Length > 0 ? phase : Loc.T(L.Casino.RoomIdle);
-        }
-
-        var table = item.Table!;
-        if (VenueKinds.IsVenue(table.GameKind))
-        {
-            return Loc.T(CasinoGameNames.Of(item.GameId));
-        }
-
-        return CasinoCurrencies.Of(table) switch
-        {
-            CasinoCurrencies.Practice => Loc.T(L.Tables.FilterPractice),
-            CasinoCurrencies.Gil => texts.Number(L.Strip.LiveGilStakes, table.MaxBet),
-            _ => texts.Compacts(L.Casino.TableStakes, table.MinBet, table.MaxBet),
-        };
-    }
-
-    private void DrawLiveOccupancy(ImDrawListPtr drawList, in LiveRow item, Vector2 origin, float width, float scale)
-    {
-        var footnote = Typography.LineHeight(TextStyles.Footnote);
-        if (item.Kind == LiveRowKind.Room || VenueKinds.IsVenue(item.Table!.GameKind))
-        {
-            var crowd = item.Kind == LiveRowKind.Room ? casinoRooms.OccupancyOf(item.RoomId) : item.Table!.Occupancy;
-            var live = crowd > 0;
-            var dot = new Vector2(origin.X + CasinoArt.LiveDotRadius * scale, origin.Y + footnote * 0.5f);
-            CasinoArt.LiveDot(drawList, dot, scale, live ? CasinoColors.LightA : ui.MutedInk, live);
-            var left = dot.X + (CasinoArt.LiveDotRadius + 5f) * scale;
-            Typography.Draw(drawList, new Vector2(left, origin.Y),
-                Typography.FitText(texts.Count(L.Casino.LivePlayers, crowd), MathF.Max(1f, origin.X + width - left),
-                    TextStyles.Footnote), live ? ui.TitleInk : ui.BodyInk, TextStyles.Footnote);
-            return;
-        }
-
-        var table = item.Table!;
-        var seatInk = table.SeatedCount > 0 ? CasinoColors.Money : ui.MutedInk;
-        var dotsWidth = CasinoArt.SeatDots(drawList, new Vector2(origin.X, origin.Y + footnote * 0.5f),
-            table.SeatedCount, Math.Min(table.MaxSeats, SeatDotLimit), seatInk,
-            Palette.WithAlpha(ui.TitleInk, SeatEmptyAlpha), scale);
-        var seatsLeft = origin.X + dotsWidth + (dotsWidth > 0f ? Metrics.Space.Sm * scale : 0f);
-        var watching = CasinoTableFilters.SpectatorsOf(table);
-        var seats = watching > 0
-            ? texts.Counts(L.Strip.LiveSeatsWatching, table.SeatedCount, watching)
-            : texts.Counts(L.Casino.TableSeats, table.SeatedCount, table.MaxSeats);
-        Typography.Draw(drawList, new Vector2(seatsLeft, origin.Y),
-            Typography.FitText(seats, MathF.Max(1f, origin.X + width - seatsLeft), TextStyles.Footnote), ui.BodyInk,
-            TextStyles.Footnote);
     }
 
     private void EnterLiveRow(in LiveRow item)

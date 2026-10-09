@@ -152,7 +152,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         this.casinoVenue = casinoVenue;
         venueRoom = new Venue.VenueCabinet(casinoVenue, PopRoute);
         broadcast = new Venue.BroadcastView(casinoRooms);
-        venueSheet = new Venue.VenueTableSheet(casinoVenue, tradeSync, report);
+        venueSheet = new Venue.VenueTableSheet(casinoVenue, tradeSync, report, JoinCodeOf);
         tradePrompt = new Venue.TradeSyncPrompt(tradeSync);
         nearbyTables = new Venue.NearbyTablesCard(casinoVenue);
         openNearbyRow = row => OpenTable(row.TableId);

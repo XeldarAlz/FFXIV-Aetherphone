@@ -606,6 +606,36 @@ internal sealed class CasinoTablesStore : IDisposable
         }, EndIntent);
     }
 
+    public void JoinByCode(string raw)
+    {
+        var code = CasinoRoomCodes.Normalized(raw);
+        if (code.Length == 0 || !Begin())
+        {
+            return;
+        }
+
+        work.Run("join by code", async token =>
+        {
+            var answer = await casino.JoinTableAsync(code, token).ConfigureAwait(false);
+            if (answer is null)
+            {
+                Interlocked.Exchange(ref intentFailed, 1);
+                return;
+            }
+
+            var admitted = answer.Granted && answer.Reason.Length == 0 && answer.Table is not null;
+            if (!admitted)
+            {
+                Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(false, Named(answer.Reason)));
+                RefreshNow();
+                return;
+            }
+
+            Interlocked.Exchange(ref resolvedTable, answer.Table);
+            RefreshNow();
+        }, EndIntent);
+    }
+
     public void Knock(string roomId)
     {
         if (roomId.Length == 0 || !Begin())

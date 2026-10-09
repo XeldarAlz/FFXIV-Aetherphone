@@ -134,6 +134,13 @@ public sealed class CasinoReasonCoverageTests
     }
 
     [Fact]
+    public void TheRoomCodeRefusalIsCovered()
+    {
+        Assert.Contains("code_unknown", CasinoReasons.All);
+        Assert.Equal(L.Tables.ReasonCodeUnknown.Key, CasinoReasons.MessageFor("code_unknown").Key);
+    }
+
+    [Fact]
     public void AnUnknownReasonStillSaysSomethingRatherThanNothing()
     {
         Assert.Equal(L.Casino.ReasonGeneric.Key, CasinoReasons.MessageFor("a_reason_from_the_future").Key);

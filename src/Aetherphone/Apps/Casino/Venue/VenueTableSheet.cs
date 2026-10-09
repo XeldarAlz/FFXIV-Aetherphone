@@ -26,16 +26,20 @@ internal sealed class VenueTableSheet
     private readonly CasinoVenueStore venue;
     private readonly CasinoTradeSync trade;
     private readonly ReportService report;
+    private readonly Func<string, string> codeOf;
+    private readonly Tables.RoomCodeCard code = new("casino.venue.sheet.code");
 
     private AppSkin skin = null!;
     private VenueSheetTarget target;
     private VenueSheetRequest request;
 
-    public VenueTableSheet(CasinoVenueStore venue, CasinoTradeSync trade, ReportService report)
+    public VenueTableSheet(CasinoVenueStore venue, CasinoTradeSync trade, ReportService report,
+        Func<string, string> codeOf)
     {
         this.venue = venue;
         this.trade = trade;
         this.report = report;
+        this.codeOf = codeOf;
         drawSheetBody = DrawSheetBody;
     }
 
@@ -133,6 +137,13 @@ internal sealed class VenueTableSheet
 
     private void DrawBody(AppSkin ui, float scale)
     {
+        var joinCode = codeOf(target.TableId);
+        if (joinCode.Length > 0)
+        {
+            code.Draw(ui, joinCode, string.Empty, ScrollLayout.StableContentWidth(), scale);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+        }
+
         var view = venue.ViewFor(target.TableId);
         if (view is not null)
         {

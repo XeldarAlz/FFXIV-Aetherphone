@@ -31,6 +31,7 @@ internal sealed partial class CasinoClient
     internal const string TablesPath = "/casino/tables";
     internal const string QuickSeatPath = "/casino/tables/quickseat";
     internal const string NearbyTablesPath = "/casino/tables/nearby";
+    internal const string JoinTablePath = "/casino/tables/join";
     internal const string BlackjackRebuyPath = "/casino/blackjack/rebuy";
     internal const string LedgerPath = "/casino/ledger";
     internal const string BonusPath = "/casino/bonus";
@@ -390,6 +391,14 @@ internal sealed partial class CasinoClient
         return net.PostAsync(TablesPath, new CasinoTableCreateRequest(clientTableId, 0, config),
             AethernetJsonContext.Default.CasinoTableCreateRequest,
             AethernetJsonContext.Default.CasinoTableResultDto, token, null, onFailure);
+    }
+
+    public Task<CasinoTableJoinDto?> JoinTableAsync(string code, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(JoinTablePath, new CasinoTableJoinRequest(code),
+            AethernetJsonContext.Default.CasinoTableJoinRequest,
+            AethernetJsonContext.Default.CasinoTableJoinDto, token, null, onFailure);
     }
 
     public Task<CasinoTableListDto?> NearbyTablesAsync(int world, int territory, int ward, CancellationToken token,
