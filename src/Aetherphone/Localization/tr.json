@@ -9717,8 +9717,6 @@
   "casino.venue.tradeConfirmEntry": "Defterde onayla",
   "casino.venue.notNow": "Şimdi değil",
   "casino.venue.atThisVenue": "Bu mekanda",
-  "casino.venue.nearbySeats": "{0}, {2} koltuktan {1}",
-  "casino.venue.nearbyRoom": "{0}, burada {1} kişi",
   "casino.venue.liveTableSeats": "Canlı masa, {1} koltuktan {0}",
   "casino.venue.liveRoomHere": "Canlı kumarhane odası",
   "casino.venue.sides": "Zar yüzü",

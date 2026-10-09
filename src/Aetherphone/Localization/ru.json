@@ -9717,8 +9717,6 @@
   "casino.venue.tradeConfirmEntry": "Подтвердить в журнале",
   "casino.venue.notNow": "Не сейчас",
   "casino.venue.atThisVenue": "В этом заведении",
-  "casino.venue.nearbySeats": "{0}, мест: {1} из {2}",
-  "casino.venue.nearbyRoom": "{0}, здесь: {1}",
   "casino.venue.liveTableSeats": "Стол идёт, мест: {0} из {1}",
   "casino.venue.liveRoomHere": "Казино-комната идёт",
   "casino.venue.sides": "Граней у кости",

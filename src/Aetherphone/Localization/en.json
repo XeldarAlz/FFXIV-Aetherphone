@@ -9717,8 +9717,6 @@
   "casino.venue.tradeConfirmEntry": "Confirm in ledger",
   "casino.venue.notNow": "Not now",
   "casino.venue.atThisVenue": "At this venue",
-  "casino.venue.nearbySeats": "{0}, {1} of {2} seats",
-  "casino.venue.nearbyRoom": "{0}, {1} here",
   "casino.venue.liveTableSeats": "Live table, {0} of {1} seats",
   "casino.venue.liveRoomHere": "Live casino room",
   "casino.venue.sides": "Die sides",

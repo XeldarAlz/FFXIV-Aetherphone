@@ -9717,8 +9717,6 @@
   "casino.venue.tradeConfirmEntry": "台帳で確認",
   "casino.venue.notNow": "後で",
   "casino.venue.atThisVenue": "この会場で",
-  "casino.venue.nearbySeats": "{0}、{2}席中{1}席",
-  "casino.venue.nearbyRoom": "{0}、{1}人が参加中",
   "casino.venue.liveTableSeats": "開催中のテーブル、{1}席中{0}席",
   "casino.venue.liveRoomHere": "開催中のカジノルーム",
   "casino.venue.sides": "ダイスの面数",

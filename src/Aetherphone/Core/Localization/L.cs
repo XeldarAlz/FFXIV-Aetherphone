@@ -11560,8 +11560,6 @@ internal static class L
         public static readonly LocString TradeConfirmEntry = new("casino.venue.tradeConfirmEntry", "Confirm in ledger");
         public static readonly LocString NotNow = new("casino.venue.notNow", "Not now");
         public static readonly LocString AtThisVenue = new("casino.venue.atThisVenue", "At this venue");
-        public static readonly LocString NearbySeats = new("casino.venue.nearbySeats", "{0}, {1} of {2} seats");
-        public static readonly LocString NearbyRoom = new("casino.venue.nearbyRoom", "{0}, {1} here");
         public static readonly LocString LiveTableSeats = new("casino.venue.liveTableSeats", "Live table, {0} of {1} seats");
         public static readonly LocString LiveRoomHere = new("casino.venue.liveRoomHere", "Live casino room");
         public static readonly LocString Sides = new("casino.venue.sides", "Die sides");

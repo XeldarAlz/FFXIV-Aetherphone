@@ -9717,8 +9717,6 @@
   "casino.venue.tradeConfirmEntry": "Im Kassenbuch bestätigen",
   "casino.venue.notNow": "Nicht jetzt",
   "casino.venue.atThisVenue": "An diesem Ort",
-  "casino.venue.nearbySeats": "{0}, {1} von {2} Plätzen",
-  "casino.venue.nearbyRoom": "{0}, {1} hier",
   "casino.venue.liveTableSeats": "Live-Tisch, {0} von {1} Plätzen",
   "casino.venue.liveRoomHere": "Live-Casinoraum",
   "casino.venue.sides": "Würfelseiten",

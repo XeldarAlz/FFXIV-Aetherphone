@@ -9717,8 +9717,6 @@
   "casino.venue.tradeConfirmEntry": "在账本中确认",
   "casino.venue.notNow": "暂不",
   "casino.venue.atThisVenue": "本场馆",
-  "casino.venue.nearbySeats": "{0}，{1}/{2} 座",
-  "casino.venue.nearbyRoom": "{0}，{1} 人在场",
   "casino.venue.liveTableSeats": "牌桌进行中，{0}/{1} 座",
   "casino.venue.liveRoomHere": "赌场房间进行中",
   "casino.venue.sides": "骰子面数",
