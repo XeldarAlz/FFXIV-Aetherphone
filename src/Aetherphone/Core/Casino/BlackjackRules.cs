@@ -248,11 +248,6 @@ internal static class BlackjackRules
         return sum;
     }
 
-    public static bool IsBust(int total)
-    {
-        return total > TargetTotal;
-    }
-
     public static bool IsNatural(ReadOnlySpan<int> cards, int splitIndex, bool seatSplit)
     {
         if (cards.Length != 2 || splitIndex != 0 || seatSplit)

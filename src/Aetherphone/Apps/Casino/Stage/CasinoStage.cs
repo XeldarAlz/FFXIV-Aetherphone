@@ -214,22 +214,38 @@ internal sealed class CasinoStage
         }
 
         var chip = layout.ChipRadiusPixels;
-        if (GlassCircle.Icon(drawList, ImGui.GetID("casino.stage.back"), layout.BackCenter, chip, GlyphSize * scale,
-                PhoneIcons.ChevronLeft, CasinoColors.InkTitle, scale, GlassTone.Dark, Loc.T(L.Strip.Back),
-                HoverLabelSide.Below))
+        var backPressed = GlassCircle.Icon(drawList, ImGui.GetID("casino.stage.back"), layout.BackCenter, chip,
+            GlyphSize * scale, PhoneIcons.ChevronLeft, CasinoColors.InkTitle, scale, GlassTone.Dark,
+            Loc.T(L.Strip.Back), HoverLabelSide.Below);
+        if (TouchTarget(layout.BackCenter) || backPressed)
         {
             action = CasinoStageAction.Back;
         }
 
-        if (GlassCircle.Icon(drawList, ImGui.GetID("casino.stage.info"), layout.InfoCenter, chip, GlyphSize * scale,
-                PhoneIcons.InfoCircle, CasinoColors.InkTitle, scale, GlassTone.Dark, Loc.T(L.Strip.Info),
-                HoverLabelSide.Below))
+        var infoPressed = GlassCircle.Icon(drawList, ImGui.GetID("casino.stage.info"), layout.InfoCenter, chip,
+            GlyphSize * scale, PhoneIcons.InfoCircle, CasinoColors.InkTitle, scale, GlassTone.Dark,
+            Loc.T(L.Strip.Info), HoverLabelSide.Below);
+        if (TouchTarget(layout.InfoCenter) || infoPressed)
         {
             info.Instant = InstantFor(spec.GameId);
             info.Open();
         }
 
         return action;
+    }
+
+    private bool TouchTarget(Vector2 center)
+    {
+        var reach = new Vector2(layout.TouchRadiusPixels, layout.TouchRadiusPixels);
+        var min = center - reach;
+        var max = center + reach;
+        var hovered = UiInteract.Hover(min, max);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return UiInteract.Click(min, max, hovered);
     }
 
     public bool SecondaryAction(string label, bool enabled, in ControlInk ink) =>
@@ -355,7 +371,10 @@ internal sealed class CasinoStage
         var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
         var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
         var interactive = !practice;
-        var hovered = interactive && UiInteract.Hover(min, max);
+        var reach = MathF.Max(0f, (CasinoStageLayout.TouchTarget * scale - height) * 0.5f);
+        var hitMin = new Vector2(min.X, min.Y - reach);
+        var hitMax = new Vector2(max.X, max.Y + reach);
+        var hovered = interactive && UiInteract.Hover(hitMin, hitMax);
         Material.ThemedGlass(drawList, min, max, height * 0.5f, scale, backdrop.Ground, hovered ? 1f : 0.92f);
         var glyphCenter = new Vector2(min.X + padX + glyph * 0.5f, center.Y);
         if (practice)
@@ -388,6 +407,6 @@ internal sealed class CasinoStage
             HoverTooltip.Show(new Rect(min, max), Loc.T(L.Strip.CashierHint), HoverLabelSide.Below);
         }
 
-        return UiInteract.Click(min, max, hovered);
+        return UiInteract.Click(hitMin, hitMax, hovered);
     }
 }

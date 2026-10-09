@@ -16,6 +16,8 @@ internal sealed class DiceTableRoom
     private const float LogTopGap = 14f;
     private const long MeasureMoment = 46_800_000;
     private const string Tumbling = "...";
+    private const string StateMarquee = "venue.dice.state";
+    private const string CaptionMarquee = "venue.dice.caption";
 
     private readonly CasinoTextCache texts;
     private readonly RollLabels labels = new();
@@ -69,8 +71,8 @@ internal sealed class DiceTableRoom
             ? texts.Duration(L.Venue.RoundEndsIn, (int)((remaining + 999) / 1000))
             : texts.Number(L.Venue.DiceRibbon, board.Sides);
         var stateHeight = Typography.LineHeight(TextStyles.Title2);
-        VenueArt.StateLine(drawList, state, new Vector2(world.Center.X, top + stateHeight * 0.5f), world.Width,
-            CasinoColors.InkTitle, scale);
+        StageText.State(drawList, new Vector2(world.Center.X, top + stateHeight * 0.5f), state, world.Width,
+            StateMarquee);
         top += stateHeight + VenueArt.SignGap * scale;
         var tileSide = MathF.Min(world.Width * TileWidthShare, (world.Max.Y - top) * TileShare);
         var tile = new Rect(new Vector2(world.Center.X - tileSide * 0.5f, top),
@@ -117,9 +119,9 @@ internal sealed class DiceTableRoom
                 ? Loc.T(L.Venue.LogEmpty)
                 : texts.NamedNumber(L.Venue.RolledOf, playback.HeroName, playback.HeroBound);
         var lineTop = tile.Max.Y + VenueArt.LineGap * scale;
-        VenueArt.Status(drawList, caption,
-            new Vector2(tile.Center.X, lineTop + Typography.LineHeight(TextStyles.Subheadline) * 0.5f),
-            room.World.Width);
+        StageText.Label(drawList,
+            new Vector2(tile.Center.X, lineTop + Typography.LineHeight(TextStyles.Subheadline) * 0.5f), caption,
+            room.World.Width, CaptionMarquee, TextStyles.Subheadline, false);
     }
 
     private float DrawRoundLine(in VenueRoomFrame room, CasinoDiceTableStateDto board, float top)
@@ -216,34 +218,23 @@ internal sealed class DiceTableRoom
     private void DrawDeck(in VenueRoomFrame room, CasinoDiceTableStateDto board, CasinoDiceRoundDto? round,
         Rect deck)
     {
-        var scale = room.Scale;
         var canOpenRound = room.Hosting && board.HighestWins && (round is null || round.Closed);
-        var secondaryLabel = canOpenRound ? Loc.T(L.Venue.RoundOpen) : string.Empty;
-        var secondaryWidth = VenueArt.SecondaryWidth(secondaryLabel);
         var caption = round is not null && !round.Closed
             ? Loc.T(L.Venue.RoundFirstRollCounts)
             : Loc.T(L.Venue.DiceHint);
-        VenueArt.DeckCaption(room.DrawList, deck, caption, scale);
-        var primary = VenueArt.DeckPrimary(deck, secondaryWidth, scale);
-        var label = texts.Number(L.Venue.RollAction, board.Sides);
-        if (Button.Draw(room.DrawList, primary, label, room.Ui.Ink, ButtonStyle.Prominent,
-                enabled: room.Enabled && !playback.AwaitingMine, id: "venue.dice.roll")
-            || (room.Enabled && !playback.AwaitingMine && room.Stage.RepeatPressed()))
+        VenueArt.DeckCaption(room.DrawList, deck, caption, room.Scale);
+        if (canOpenRound && room.Stage.SecondaryAction(Loc.T(L.Venue.RoundOpen), room.Enabled, room.Ui.Ink))
+        {
+            act(new VenueActDraft(VenueActions.RoundOpen));
+        }
+
+        var ready = room.Enabled && !playback.AwaitingMine;
+        if (room.Stage.PrimaryAction(texts.Number(L.Venue.RollAction, board.Sides), ready, room.Ui.Ink)
+            || (ready && room.Stage.RepeatPressed()))
         {
             playback.BeginMine(board.Sides);
             CasinoSfx.Play(UiSound.ChipSlide);
             act(new VenueActDraft(VenueActions.Roll));
-        }
-
-        if (!canOpenRound)
-        {
-            return;
-        }
-
-        if (Button.Draw(room.DrawList, VenueArt.DeckSecondary(deck, secondaryWidth, scale), secondaryLabel,
-                room.Ui.Ink, ButtonStyle.Tinted, enabled: room.Enabled, id: "venue.dice.round"))
-        {
-            act(new VenueActDraft(VenueActions.RoundOpen));
         }
     }
 }

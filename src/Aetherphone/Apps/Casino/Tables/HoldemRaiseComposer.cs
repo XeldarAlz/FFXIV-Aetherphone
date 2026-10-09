@@ -30,8 +30,8 @@ internal sealed class HoldemRaiseComposer
 {
     public const float Pad = 12f;
     public const float Gap = 8f;
-    public const float RowHeight = 34f;
-    public const float StepperRadius = 15f;
+    public const float RowHeight = Metrics.Size.Pill;
+    public const float StepperRadius = Metrics.Size.Pill * 0.5f;
     public const float BackShare = 0.30f;
 
     private const int QuickCount = 5;

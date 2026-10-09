@@ -16,8 +16,6 @@ internal static class VenueArt
     public const float RowPad = 12f;
     public const float LineGap = 4f;
     private const string CaptionMarquee = "venue.deck.caption";
-    private const string StateMarquee = "venue.state";
-    private const string StatusMarquee = "venue.status";
 
     public static float DrawSign(ImDrawListPtr drawList, CasinoSign sign, Rect area, float phase, float scale)
     {
@@ -48,16 +46,11 @@ internal static class VenueArt
         }
 
         var style = TextStyles.LargeTitle;
-        var fitted = FitScale(number, tile.Width * 0.82f, style);
+        var fitted = Typography.FitScale(number, tile.Width * 0.82f, style.Scale, TextStyles.Footnote.Scale,
+            style.Weight);
         var size = Typography.Measure(number, fitted, style.Weight);
-        var ink = !settled ? CasinoColors.InkMuted : losing ? CasinoColors.Loss : CasinoColors.InkTitle;
+        var ink = !settled ? CasinoColors.InkBody : losing ? CasinoColors.Loss : CasinoColors.InkTitle;
         Typography.Draw(drawList, tile.Center - size * 0.5f, number, ink, fitted, style.Weight);
-    }
-
-    public static float FitScale(string text, float width, in TextStyle style)
-    {
-        var size = Typography.Measure(text, style);
-        return size.X <= width || size.X <= 0f ? style.Scale : style.Scale * width / size.X;
     }
 
     public static void Line(ImDrawListPtr drawList, string text, Vector2 center, float width, Vector4 ink,
@@ -77,36 +70,6 @@ internal static class VenueArt
         Typography.Draw(drawList, topLeft, Typography.FitText(text, width, style), ink, style);
     }
 
-    public static Rect DeckPrimary(Rect deck, float secondaryWidth, float scale)
-    {
-        var row = DeckActions.Row(deck, scale);
-        if (secondaryWidth <= 0f)
-        {
-            return row;
-        }
-
-        var secondary = DeckActions.Secondary(row, row.Min.X, secondaryWidth, scale);
-        return DeckActions.Primary(row, DeckActions.Advance(secondary, scale));
-    }
-
-    public static Rect DeckSecondary(Rect deck, float width, float scale)
-    {
-        var row = DeckActions.Row(deck, scale);
-        return DeckActions.Secondary(row, row.Min.X, width, scale);
-    }
-
-    public static float SecondaryWidth(string label)
-    {
-        if (label.Length == 0)
-        {
-            return 0f;
-        }
-
-        var scale = UiScale.Current;
-        var height = DeckActions.PrimaryHeight * scale;
-        return DeckActions.PillWidth(Typography.Measure(label, Button.LabelStyle(height)).X, height, scale);
-    }
-
     public static float DeckCaption(ImDrawListPtr drawList, Rect deck, string text, float scale)
     {
         var row = DeckActions.Row(deck, scale);
@@ -115,16 +78,5 @@ internal static class VenueArt
         StageText.Label(drawList, above.Center, text, above.Width, CaptionMarquee, TextStyles.SubheadlineEmphasized,
             false);
         return above.Max.Y;
-    }
-
-    public static void StateLine(ImDrawListPtr drawList, string text, Vector2 center, float width, Vector4 ink,
-        float scale)
-    {
-        StageText.State(drawList, center, text, width, StateMarquee, TextStyles.Title2, ink);
-    }
-
-    public static void Status(ImDrawListPtr drawList, string text, Vector2 center, float width)
-    {
-        StageText.Label(drawList, center, text, width, StatusMarquee, TextStyles.Subheadline, false);
     }
 }

@@ -12,6 +12,8 @@ internal static class ReconnectVeil
     private const float Dim = 0.55f;
     private const float PanelWidthFraction = 0.78f;
 
+    private static readonly CasinoTextCache Texts = new();
+
     public static void Draw(ImDrawListPtr drawList, in Rect area, AppSkin ui, long heldRemainingMilliseconds,
         float scale)
     {
@@ -19,13 +21,13 @@ internal static class ReconnectVeil
 
         var title = Loc.T(L.Casino.ReconnectTitle);
         var body = heldRemainingMilliseconds > 0
-            ? Loc.T(L.Casino.SeatHeldFor, TimeText.Duration(SecondsOf(heldRemainingMilliseconds)))
+            ? Texts.Duration(L.Casino.SeatHeldFor, SecondsOf(heldRemainingMilliseconds))
             : Loc.T(L.Casino.ReconnectHint);
 
         var width = area.Width * PanelWidthFraction;
         var pad = 16f * scale;
         var titleSize = Typography.Measure(title, TextStyles.SubheadlineEmphasized);
-        var bodyBlock = Typography.MeasureWrappedBlock(body, TextStyles.Footnote, width - pad * 2f);
+        var bodyBlock = Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, width - pad * 2f);
         var height = titleSize.Y + bodyBlock.Y + pad * 2f + 8f * scale;
         var center = area.Center;
         var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
@@ -39,7 +41,7 @@ internal static class ReconnectVeil
         Typography.Draw(drawList, new Vector2(dotCenter.X + 10f * scale, min.Y + pad), title, ui.TitleInk,
             TextStyles.SubheadlineEmphasized);
         Typography.DrawWrappedLeft(new Vector2(min.X + pad, min.Y + pad + titleSize.Y + 8f * scale), body,
-            ui.MutedInk, TextStyles.Footnote, width - pad * 2f);
+            ui.BodyInk, TextStyles.Subheadline, width - pad * 2f);
     }
 
     internal static int SecondsOf(long remainingMilliseconds)

@@ -15,6 +15,11 @@ internal sealed class DeathrollRoom
     private const float TileWidthShare = 0.78f;
     private const int TrailShown = 6;
     private const string TrailArrow = " > ";
+    private const string StateMarquee = "venue.duel.state";
+    private const string MatchupMarquee = "venue.duel.matchup";
+    private const string StakeMarquee = "venue.duel.stake";
+    private const string BoundMarquee = "venue.duel.bound";
+    private const string TrailMarquee = "venue.duel.trail";
 
     private readonly CasinoTextCache texts;
     private readonly RollLabels labels = new();
@@ -63,8 +68,8 @@ internal sealed class DeathrollRoom
         var duel = playback.Duel;
         var top = VenueArt.DrawSign(drawList, CasinoSign.Deathroll, world, room.Frame.Phase, scale);
         var stateHeight = Typography.LineHeight(TextStyles.Title2);
-        VenueArt.StateLine(drawList, StateText(room, duel), new Vector2(world.Center.X, top + stateHeight * 0.5f),
-            world.Width, CasinoColors.InkTitle, scale);
+        StageText.State(drawList, new Vector2(world.Center.X, top + stateHeight * 0.5f), StateText(room, duel),
+            world.Width, StateMarquee);
         top += stateHeight + VenueArt.LineGap * scale;
         top = DrawMatchup(room, duel, board, top);
         var tileSide = MathF.Min(world.Width * TileWidthShare, (world.Max.Y - top) * TileShare);
@@ -124,12 +129,12 @@ internal sealed class DeathrollRoom
         var matchup = duel is null || duel.OpponentName.Length == 0
             ? texts.Number(L.Venue.StartsAt, board.StartAt)
             : Matchup(duel);
-        VenueArt.Status(room.DrawList, matchup, new Vector2(room.World.Center.X, top + lineHeight * 0.5f),
-            room.World.Width);
+        StageText.Label(room.DrawList, new Vector2(room.World.Center.X, top + lineHeight * 0.5f), matchup,
+            room.World.Width, MatchupMarquee, TextStyles.Subheadline, false);
         top += lineHeight + VenueArt.LineGap * scale;
         var amountHeight = Typography.LineHeight(TextStyles.Title3);
-        VenueArt.Line(room.DrawList, stakeText, new Vector2(room.World.Center.X, top + amountHeight * 0.5f),
-            room.World.Width, CasinoColors.Money, TextStyles.Title3);
+        StageText.Amount(room.DrawList, new Vector2(room.World.Center.X, top + amountHeight * 0.5f), stakeText,
+            room.World.Width, StakeMarquee);
         return top + amountHeight + VenueArt.SignGap * scale;
     }
 
@@ -162,9 +167,9 @@ internal sealed class DeathrollRoom
         }
 
         var lineHeight = Typography.LineHeight(TextStyles.Subheadline);
-        VenueArt.Status(room.DrawList, texts.Number(L.Venue.OutOf, playback.Bound),
+        StageText.Label(room.DrawList,
             new Vector2(tile.Center.X, tile.Max.Y + VenueArt.LineGap * room.Scale + lineHeight * 0.5f),
-            room.World.Width);
+            texts.Number(L.Venue.OutOf, playback.Bound), room.World.Width, BoundMarquee, TextStyles.Subheadline, false);
     }
 
     private void DrawTrail(in VenueRoomFrame room, CasinoDeathrollDuelDto? duel, CasinoDeathrollStateDto board,
@@ -178,8 +183,8 @@ internal sealed class DeathrollRoom
             return;
         }
 
-        VenueArt.Line(room.DrawList, text, new Vector2(room.World.Center.X, top + lineHeight * 0.5f),
-            room.World.Width, CasinoColors.InkBody, TextStyles.Subheadline);
+        StageText.Label(room.DrawList, new Vector2(room.World.Center.X, top + lineHeight * 0.5f), text,
+            room.World.Width, TrailMarquee, TextStyles.Subheadline, false);
     }
 
     private string TrailText(CasinoDeathrollDuelDto duel)
@@ -273,8 +278,7 @@ internal sealed class DeathrollRoom
             var label = room.Gil
                 ? texts.Number(L.Venue.ChallengeGil, board.Stake)
                 : texts.Number(L.Venue.ChallengePractice, board.Stake);
-            if (Button.Draw(drawList, VenueArt.DeckPrimary(deck, 0f, scale), label, room.Ui.Ink,
-                    enabled: room.Enabled && !playback.Rolling, id: "venue.duel.open"))
+            if (room.Stage.PrimaryAction(label, room.Enabled && !playback.Rolling, room.Ui.Ink))
             {
                 CasinoSfx.Play(UiSound.ChipSlide);
                 act(new VenueActDraft(VenueActions.DuelOpen));
@@ -295,9 +299,8 @@ internal sealed class DeathrollRoom
         var rollLabel = myTurn
             ? texts.Number(L.Venue.RollAction, duel.Current)
             : texts.Named(L.Venue.WaitingTurn, NameOf(duel, duel.TurnUserId));
-        if ((Button.Draw(drawList, VenueArt.DeckPrimary(deck, 0f, scale), rollLabel, room.Ui.Ink,
-                 enabled: room.Enabled && myTurn && !playback.Rolling, id: "venue.duel.roll")
-             || (myTurn && room.Enabled && !playback.Rolling && room.Stage.RepeatPressed())) && myTurn)
+        var canRoll = room.Enabled && myTurn && !playback.Rolling;
+        if (room.Stage.PrimaryAction(rollLabel, canRoll, room.Ui.Ink) || (canRoll && room.Stage.RepeatPressed()))
         {
             act(new VenueActDraft(VenueActions.DuelRoll));
         }
@@ -305,25 +308,20 @@ internal sealed class DeathrollRoom
 
     private void DrawOpenDeck(in VenueRoomFrame room, CasinoDeathrollDuelDto duel, Rect deck)
     {
-        var scale = room.Scale;
         var mine = room.IsMe(duel.ChallengerUserId);
         var named = duel.OpponentUserId.Length > 0;
         var canAccept = !mine && (!named || room.IsMe(duel.OpponentUserId));
         var canCancel = mine || room.Hosting;
-        var cancelLabel = canCancel ? Loc.T(L.Venue.CancelChallenge) : string.Empty;
-        var cancelWidth = VenueArt.SecondaryWidth(cancelLabel);
+        if (canCancel && room.Stage.SecondaryAction(Loc.T(L.Venue.CancelChallenge), room.Enabled, room.Ui.Ink))
+        {
+            act(new VenueActDraft(VenueActions.DuelCancel));
+        }
+
         var primaryLabel = canAccept ? Loc.T(L.Venue.AcceptDuel) : Loc.T(L.Venue.WaitingTaker);
-        if (Button.Draw(room.DrawList, VenueArt.DeckPrimary(deck, cancelWidth, scale), primaryLabel, room.Ui.Ink,
-                enabled: room.Enabled && canAccept, id: "venue.duel.accept") && canAccept)
+        if (room.Stage.PrimaryAction(primaryLabel, room.Enabled && canAccept, room.Ui.Ink) && canAccept)
         {
             CasinoSfx.Play(UiSound.ChipSlide);
             act(new VenueActDraft(VenueActions.DuelAccept));
-        }
-
-        if (canCancel && Button.Draw(room.DrawList, VenueArt.DeckSecondary(deck, cancelWidth, scale), cancelLabel,
-                room.Ui.Ink, ButtonStyle.Gray, enabled: room.Enabled, id: "venue.duel.cancel"))
-        {
-            act(new VenueActDraft(VenueActions.DuelCancel));
         }
     }
 

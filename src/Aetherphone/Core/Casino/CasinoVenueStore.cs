@@ -254,8 +254,7 @@ internal sealed class CasinoVenueStore : IDisposable
         }
 
         position = housing.Read();
-        var location = position.ToLocation();
-        if (location is null)
+        if (!position.InWard)
         {
             if (nearbyFor is not null)
             {
@@ -285,8 +284,14 @@ internal sealed class CasinoVenueStore : IDisposable
             return;
         }
 
+        var location = position.ToLocation()!;
         nearbyFor = location;
         Interlocked.Exchange(ref nearbyAtTick, now);
+        LoadNearby(location);
+    }
+
+    private void LoadNearby(CasinoTableLocationDto location)
+    {
         work.Run("nearby tables", async token =>
         {
             var answer = await casino.NearbyTablesAsync(location.World, location.Territory, location.Ward, token)

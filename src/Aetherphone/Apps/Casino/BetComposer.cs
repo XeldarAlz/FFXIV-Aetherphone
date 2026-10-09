@@ -48,6 +48,7 @@ internal sealed class BetComposer
     private const int AutoTab = 1;
 
     private readonly string fieldId;
+    private readonly string modeId;
     private readonly string[] modeLabels = new string[2];
     private readonly AutoBetSheet autoSheet;
 
@@ -67,6 +68,7 @@ internal sealed class BetComposer
     public BetComposer(string fieldId)
     {
         this.fieldId = fieldId;
+        modeId = fieldId + ".mode";
         autoSheet = new AutoBetSheet(fieldId + ".auto", Auto);
     }
 
@@ -297,7 +299,7 @@ internal sealed class BetComposer
             var modeRect = DeckActions.Secondary(row, cursor, ModeWidth * scale, scale);
             modeLabels[ManualTab] = Loc.T(L.Strip.Manual);
             modeLabels[AutoTab] = Loc.T(L.Strip.Auto);
-            var picked = SegmentStrip.Draw(fieldId + ".mode", modeRect, modeLabels, tab,
+            var picked = SegmentStrip.Draw(modeId, modeRect, modeLabels, tab,
                 Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary), ui.Accent, ui.MutedInk, CasinoColors.InkTitle);
             if (!Auto.Running && model.Enabled)
             {

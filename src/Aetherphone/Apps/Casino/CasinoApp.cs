@@ -17,7 +17,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
-internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, Strip.IStripFloor
+internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplateActivitySource, Strip.IStripFloor
 {
     private const int RulesButton = 0;
     private const float StageSurfaceSlack = 16f;
@@ -190,6 +190,8 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         }
     }
 
+    public void OpenTab(string tab) => launcher.RequestGame(tab);
+
     public void OnOpened()
     {
         configuration.MarkFeaturePinSeen(Core.Changelog.NewFeaturePins.Casino);
@@ -289,9 +291,9 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
             return;
         }
 
-        if (launch.Kind == Core.Casino.CasinoLaunchKind.Tables)
+        if (launch.Kind == Core.Casino.CasinoLaunchKind.Game && launch.GameId.Length > 0)
         {
-            SelectTab(CasinoTab.Tables);
+            OpenGame(launch.GameId);
         }
     }
 
@@ -327,6 +329,11 @@ internal sealed partial class CasinoApp : IPhoneApp, INameplateActivitySource, S
         casinoTables.EnsureFresh();
         casinoSpin.EnsureFresh();
         ConsumeTableAnswers();
+        if (launcher.HasPending && !router.IsTransitioning)
+        {
+            ConsumeLaunch();
+        }
+
         screenArea = context.Content;
         barkeep.Tick();
         bonusShelf.Update(MathF.Min(ImGui.GetIO().DeltaTime, Core.Animation.TransitionTiming.MaxFrameSeconds), scale);

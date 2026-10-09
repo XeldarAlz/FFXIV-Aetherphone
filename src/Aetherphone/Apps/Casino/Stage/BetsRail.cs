@@ -71,7 +71,10 @@ internal sealed class BetsRail
         var center = new Vector2(deck.Center.X, deck.Min.Y);
         var min = center - size * 0.5f;
         var max = center + size * 0.5f;
-        var hovered = UiInteract.Hover(min, max);
+        var reach = new Vector2(0f, MathF.Max(0f, (CasinoStageLayout.TouchTarget * scale - size.Y) * 0.5f));
+        var hitMin = min - reach;
+        var hitMax = max + reach;
+        var hovered = UiInteract.Hover(hitMin, hitMax);
         Material.LiquidGlass(drawList, min, max, size.Y * 0.5f, scale, GlassTone.Dark, hovered ? 0.4f : 0f);
         var label = Typography.FitText(Loc.T(L.Strip.Bets), size.X - size.Y, TextStyles.FootnoteEmphasized);
         Typography.DrawCentered(drawList, center, label, CasinoColors.InkTitle, TextStyles.FootnoteEmphasized);
@@ -80,7 +83,7 @@ internal sealed class BetsRail
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(min, max, hovered);
+        return UiInteract.Click(hitMin, hitMax, hovered);
     }
 
     public void Draw(Rect screen, AppSkin ui, CasinoBetsLog bets, CasinoFloorStore? floorFeed)
@@ -143,10 +146,21 @@ internal sealed class BetsRail
         var nameWidth = width - columnWidth * 3f - Metrics.Space.Sm * scale;
         var nameHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
         var gameHeight = Typography.LineHeight(TextStyles.Footnote);
+        var accountId = feed?.AccountId ?? string.Empty;
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
             var origin = ImGui.GetCursorScreenPos();
+            var min = origin;
+            var max = new Vector2(origin.X + width, origin.Y + rowHeight);
+            var openable = OwnRound(item, accountId);
+            var hovered = openable && UiInteract.HoverWindowOnly(min, max);
+            if (hovered)
+            {
+                Squircle.Fill(drawList, min, max, Metrics.Radius.Sm * scale, ImGui.GetColorU32(skin.HoverTint));
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
             var centerY = origin.Y + rowHeight * 0.5f;
             var won = item.Payout > item.Stake;
             var top = centerY - (nameHeight + gameHeight) * 0.5f;
@@ -165,8 +179,30 @@ internal sealed class BetsRail
                 won ? CasinoColors.Money : skin.BodyInk);
             drawList.AddLine(new Vector2(origin.X, origin.Y + rowHeight), new Vector2(origin.X + width, origin.Y + rowHeight),
                 ImGui.GetColorU32(Palette.WithAlpha(skin.TitleInk, 0.06f)), 1f);
+            if (openable && UiInteract.Click(min, max, hovered))
+            {
+                requestedRound = item.RoundId;
+                Close();
+            }
+
             ImGui.Dummy(new Vector2(width, rowHeight));
         }
+    }
+
+    private bool OwnRound(CasinoFeedItemDto item, string accountId)
+    {
+        if (item.RoundId.Length == 0)
+        {
+            return false;
+        }
+
+        if (accountId.Length > 0 && item.Player is not null
+            && string.Equals(item.Player.UserId, accountId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return item.Player is null && log.Contains(item.RoundId);
     }
 
     private void DrawEmpty(LocString message, float scale)
@@ -174,7 +210,7 @@ internal sealed class BetsRail
         var width = ScrollLayout.NativeScrollContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var height = Typography.DrawWrappedLeft(new Vector2(origin.X, origin.Y + Metrics.Space.Md * scale),
-            Loc.T(message), skin.BodyInk, TextStyles.Footnote, width);
+            Loc.T(message), skin.BodyInk, TextStyles.Subheadline, width);
         ImGui.Dummy(new Vector2(width, height + Metrics.Space.Lg * scale));
     }
 

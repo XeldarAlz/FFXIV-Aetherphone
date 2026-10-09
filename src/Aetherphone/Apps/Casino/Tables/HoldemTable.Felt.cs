@@ -315,7 +315,7 @@ internal sealed partial class HoldemTable
         var action = ActionLabel(dto);
         if (action.Key is not null && HoldemPhases.Betting(board.Phase) && dto.LastAction.Length > 0)
         {
-            var tint = dto.State == HoldemSeatStates.Folded ? CasinoColors.InkMuted : CasinoColors.InkTitle;
+            var tint = dto.State == HoldemSeatStates.Folded ? CasinoColors.InkBody : CasinoColors.InkTitle;
             HoldemArt.DrawTag(drawList, top, Loc.T(action), tint, scale);
             return;
         }
@@ -362,11 +362,10 @@ internal sealed partial class HoldemTable
     {
         var seat = dto.SeatIndex;
         var rect = layout.IsBottom(seat) ? HeroCapsuleRect(seat, scale) : layout.CapsuleRect(seat);
-        var radius = rect.Height * 0.4f;
-        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(new Vector4(0.03f, 0.03f, 0.06f, 0.78f)));
+        StageText.Capsule(drawList, rect.Min, rect.Max);
         if (acting)
         {
-            Squircle.Stroke(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(CasinoColors.LightA),
+            Squircle.Stroke(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(CasinoColors.LightA),
                 MathF.Max(1f, 1.2f * scale));
         }
 

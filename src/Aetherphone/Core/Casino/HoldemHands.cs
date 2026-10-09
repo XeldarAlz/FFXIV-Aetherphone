@@ -59,19 +59,6 @@ internal static class HoldemHands
     public static int Pack(int category, int k0, int k1, int k2, int k3, int k4) =>
         (category << CategoryShift) | (k0 << 16) | (k1 << 12) | (k2 << 8) | (k3 << 4) | k4;
 
-    public static bool AllCards(ReadOnlySpan<int> cards)
-    {
-        for (var index = 0; index < cards.Length; index++)
-        {
-            if (cards[index] < 0 || cards[index] >= RanksPerSuit * Suits)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     public static int Evaluate5(int card0, int card1, int card2, int card3, int card4)
     {
         Span<int> ranks = stackalloc int[HandSize];

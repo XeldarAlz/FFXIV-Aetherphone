@@ -92,6 +92,8 @@ internal sealed class CasinoFloorStore : IDisposable
 
     public CasinoFeedDto? Feed(string tab) => Volatile.Read(ref feeds[FeedSlot(tab)]);
 
+    public string AccountId => session.CurrentUser?.Id ?? string.Empty;
+
     public CasinoMissionClaimDto? TakeMissionClaim() => Interlocked.Exchange(ref missionClaim, null);
 
     public bool TakeClaimFailure() => Interlocked.Exchange(ref claimFailed, 0) != 0;
@@ -197,6 +199,11 @@ internal sealed class CasinoFloorStore : IDisposable
         }
 
         Interlocked.Exchange(ref fameLoadedAt[slot], Environment.TickCount64 - FameRefreshMilliseconds + RetryMilliseconds);
+        LoadFame(board, span, slot);
+    }
+
+    private void LoadFame(string board, string span, int slot)
+    {
         work.Run("fame", async token =>
         {
             var answer = await casino.FameAsync(board, span, CasinoFloorRules.FameDefaultLimit, token)
@@ -222,6 +229,11 @@ internal sealed class CasinoFloorStore : IDisposable
         }
 
         Interlocked.Exchange(ref feedLoadedAt[slot], Environment.TickCount64);
+        LoadFeed(tab, slot);
+    }
+
+    private void LoadFeed(string tab, int slot)
+    {
         work.Run("feed", async token =>
         {
             var feed = await casino.FeedAsync(tab, token).ConfigureAwait(false);

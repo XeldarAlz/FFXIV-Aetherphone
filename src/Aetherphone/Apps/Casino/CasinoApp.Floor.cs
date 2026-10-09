@@ -162,7 +162,7 @@ internal sealed partial class CasinoApp
     internal static int ReturnTenthsOf(string gameId) => gameId switch
     {
         CasinoGames.SlotsBird or CasinoGames.SlotsCascade or CasinoGames.SlotsMoogle =>
-            SlotsMachines.For(gameId).ReturnBasisPoints / 10,
+            (SlotsMachines.For(gameId).ReturnBasisPoints + 5) / 10,
         CasinoGames.Mines or CasinoGames.Dice or CasinoGames.Limbo or CasinoGames.Keno or CasinoGames.HiLo =>
             OriginalsRules.ReturnTenths,
         CasinoGames.Plinko => PlinkoRules.ReturnTenths(PlinkoRules.DefaultRows, PlinkoRules.DefaultRisk),

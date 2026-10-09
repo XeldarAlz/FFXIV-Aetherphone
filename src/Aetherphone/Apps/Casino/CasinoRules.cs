@@ -134,8 +134,17 @@ internal static class CasinoRules
         L.Plinko.RulesStep4,
     };
 
+    private const int RangeFact = 0;
+    private const int TimesBetFact = 1;
+    private const int OneInFact = 2;
+
+    private static readonly Dictionary<FactKey, string> FactTexts = new();
+
     private static string plinkoReturn = string.Empty;
     private static LanguageInfo? plinkoReturnLanguage;
+    private static LanguageInfo? factLanguage;
+
+    private readonly record struct FactKey(int Kind, long First, long Second);
 
     public static LocString PitchOf(string gameId) => gameId switch
     {
@@ -337,12 +346,12 @@ internal static class CasinoRules
                 return true;
             case 2:
                 label = L.Machines.MaxWin;
-                value = Loc.T(L.Machines.TimesBet, Number(info.MaxWinMultiple));
+                value = Fact(TimesBetFact, info.MaxWinMultiple, 0);
                 return true;
             case 3:
                 label = info.Layout == Core.Casino.SlotsLayout.Hold ? L.Machines.HoldFrequency
                     : L.Machines.BonusFrequency;
-                value = Loc.T(L.Machines.OneIn, Number(info.BonusOneIn));
+                value = Fact(OneInFact, info.BonusOneIn, 0);
                 return true;
             default:
                 return false;
@@ -499,8 +508,29 @@ internal static class CasinoRules
         return NumberText.Group(value);
     }
 
-    private static string Range(long low, long high)
+    private static string Range(long low, long high) => Fact(RangeFact, low, high);
+
+    private static string Fact(int kind, long first, long second)
     {
-        return string.Concat(Number(low), " - ", Number(high));
+        if (!ReferenceEquals(factLanguage, Loc.Current))
+        {
+            factLanguage = Loc.Current;
+            FactTexts.Clear();
+        }
+
+        var key = new FactKey(kind, first, second);
+        if (FactTexts.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var text = kind switch
+        {
+            TimesBetFact => Loc.T(L.Machines.TimesBet, Number(first)),
+            OneInFact => Loc.T(L.Machines.OneIn, Number(first)),
+            _ => string.Concat(Number(first), " - ", Number(second)),
+        };
+        FactTexts[key] = text;
+        return text;
     }
 }

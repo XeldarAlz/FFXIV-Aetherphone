@@ -373,6 +373,11 @@ internal sealed class HoldemStore : IDisposable
         }
 
         Interlocked.Exchange(ref handAttemptedAtTick, nowTick);
+        LoadHand(room, roomId);
+    }
+
+    private void LoadHand(CasinoRoomSession room, string roomId)
+    {
         work.Run("holdem hand", async token =>
         {
             var hand = await casino.MyHoldemHandAsync(roomId, token).ConfigureAwait(false);

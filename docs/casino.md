@@ -1,27 +1,63 @@
-# Gamba stage
+# Gamba
 
-Every play screen in Gamba (the casino app, id `casino`) draws inside one host frame, `CasinoStage`. The lobby, cashier, history, fairness and limits pages keep the normal app chrome; cabinets, tables and rooms go full bleed with no `AppHeader`. This page describes the stage kit as it ships. Everything lives in src/Aetherphone/Apps/Casino/Stage (namespace `Aetherphone.Apps.Casino.Stage`) unless noted.
+Gamba is the casino app (app id `casino`, route prefix `/casino`, key prefix `casino.`). Coins become chips at the cashier, and those chips play every house game on one floor-wide bankroll. Hosted tables can also run on practice chips or, for venues, on gil banked by the host. This page describes the client as it ships: the economy it mirrors, the stores, the stage kit every play screen runs on, the cabinets and their playback, hosting and the venue layer, the lobby, and how to add a game. The HTTP routes and realtime room kinds are listed in [Networking](networking.md#casino-routes).
+
+The server decides and the client performs. Every outcome is drawn by the server from a committed seed; the client only choreographs a result it has already been sent (reels decelerate onto it, the ball bounces along its path, the race script ends in its order) and never fabricates a near miss.
 
 ## Key files
 
+Paths are under src/Aetherphone. Namespaces follow the folders (`Aetherphone.Core.Casino`, `Aetherphone.Apps.Casino.Stage`, and so on).
+
 | Path | Role |
 | --- | --- |
-| Apps/Casino/Stage/CasinoStage.cs | The host frame: backdrop, chrome band, chips capsule, info chip, deck surface, bets rail, reality check, celebration, snap to truth |
-| Apps/Casino/Stage/CasinoStageLayout.cs | Pure geometry of the frame (band, chips, ribbon, practice ribbon, deck, Safe) |
-| Apps/Casino/Stage/CasinoStageSpec.cs | `CasinoStageSpec`, `CasinoStageFrame`, `CasinoStageAction`, `CasinoInfoRequest` |
-| Apps/Casino/Stage/WinCelebration.cs, WinLadder.cs | The six-tier win ladder |
-| Apps/Casino/Stage/CasinoLights.cs, CasinoColors.cs | Bulb chase, neon tube, spotlight, bokeh, coin shower and the Gamba colour tokens |
-| Apps/Casino/CasinoSigns.cs | Stroked neon lettering for every game sign |
-| Apps/Casino/BetComposer.cs | The v2 bet composer (amount, half, double, Max, knob slot, Manual and Auto) |
-| Apps/Casino/Stage/AutoBetPlan.cs, AutoBetSheet.cs, RealityCheck.cs | Auto play state, its settings sheet, and the 100 round or 30 minute check-in |
-| Core/Casino/CasinoLadder.cs | The global bet ladder, `LevelCap`, `MaxBet` and the ceiling read |
-| Apps/Games/Framework/StageBackdrop.cs | The `Strip` and `Arena` presets, the night felt and the felt lamp pool |
-| Apps/Casino/Stage/StageText.cs, StageContrast.cs | Stage text with enforced minimum sizes and contrast, and the WCAG contrast math behind it |
-| Apps/Casino/Stage/FeltTable.cs, FeltTableGeometry.cs | The stage as a card table: night cloth, rail, printed arc, betting circles and the seat geometry |
-| Apps/Casino/Stage/SeatSpot.cs | Large tappable Sit spots and the occupied seat puck |
-| Apps/Casino/Stage/DeckActions.cs | The bet deck action row: one 56 unit primary and up to two secondary pills |
+| Core/Aethernet/Clients/CasinoClient*.cs | Every casino route, split by area (`CasinoClient.Floor`, `.Machines`, `.Originals`, `.Plinko`) |
+| Core/Aethernet/Contracts/Casino*Dtos.cs | Wire records (`CasinoDtos`, `CasinoFloorDtos`, `CasinoHoldemDtos`, `CasinoOriginalsDtos`, `CasinoPlinkoDtos`), all registered in `AethernetJsonContext` |
+| Core/Casino/ | Stores, the room session, rules mirrors, the fairness verifier, the ladder, trade sync; Dalamud-free wherever it can be |
+| Apps/Casino/CasinoApp*.cs | The app: router, tabs (Floor, Live, Tables, Cashier), the stage host and the records pages (History, Fairness, Limits) |
+| Apps/Casino/Stage/ | The stage kit: frame, layout, celebration ladder, lights, stage text, felt, seats, bets rail, reality check |
+| Apps/Casino/Cabinets/ | Scratch, Wheel, Bingo, Barkeep and the daily spin |
+| Apps/Casino/Machines/ | The three slot machines on one shell |
+| Apps/Casino/Originals/ | Mines, Dice, Limbo, Keno and Hi-Lo on one cabinet with a skin per game |
+| Apps/Casino/Plinko/, Race/ | Plinko and the Chocobo race |
+| Apps/Casino/Tables/ | Blackjack and Hold'em tables, the pits, the table browser, the host sheet, the door and the session ledger |
+| Apps/Casino/Venue/ | Venue rooms (dice table, deathroll, raffle), the broadcast view, the tournament overlay, trade sync prompt |
+| Apps/Casino/Strip/ | The Floor tab: hero, carousel, wins ticker, live board, missions, club, shelves, Hall of Fame |
+| Apps/Casino/Cashier*.cs | The cashier drawer: buy-in, cash-out with the daily cap, bonus shelf, club card |
+| Apps/Games/Framework/StageBackdrop.cs | The `Strip` and `Arena` presets, the night felt and its lamp pool |
 
-## Frame
+## Economy on the client
+
+The client mirrors the economy for display only; every amount that moves money is checked by the server again.
+
+- **Rate.** `CasinoChipLots.ChipPerCoin` is 1,000 chips per coin, both ways. Buy-ins and cash-outs are whole coins.
+- **Daily cash-out cap.** Coins converted at the cashier minus coins bought in may not exceed the day's allowance (500 coins by default, policy data). `GET /casino` sends a `cashier` block (`allowanceCoins`, `queuedChips`, today's totals); a cash-out converts what fits, the rest stays in the bankroll and converts on later days, and the cashier and History show that queue. Nothing is ever lost.
+- **Ladder and ceiling.** `CasinoLadder` mirrors the global ladder (27 rungs from 100 to 50B), `LevelCap(level)` (geometric between the anchors, level 1 at 10K up to level 100 at 50B) and `MaxBet(level, balance) = max(LevelCap, balance / 20)` floored to a rung. `CasinoStore.Ceiling` returns the server's `ceiling` block when present and falls back to the local formula against an older floor. Every player-chosen stake snaps to the ladder; the server refuses the rest with `ladder` or `ceiling`.
+- **Bonuses.** `CasinoBonuses` and the cashier's bonus shelf claim `welcome`, `timed`, `reload`, `streak`, `levelup`, `broke` and `rebate` through `POST /casino/bonus/{kind}/claim`. Grants land as chips in the bankroll (opening one when none is live) and convert under the same cap.
+- **Levels, club, titles.** `GET /casino` carries `progress` (level, XP bounds, lifetime figures, balance title) and `club` (tier, points, multiplier, rebate rate). `LevelCapsule`, `StatusTitle` (Shark 1M, High Roller 10M, VIP 100M, Whale 1B, Legend 1T) and the club capsule and sheet render them; the client computes none of it.
+- **Feature flags.** `GET /casino` sends `features[]`, parsed once into a `CasinoFeatureSet` (`CasinoFeatures` holds the names: `economy.v3`, `bonus`, `levels`, `club`, `hosting.v2`, `venue`, `gil.tables`, `machines`, `missions`, `challenges`, `fame`, `feed`, `rain`, `holdem`, `race`, `plinko`, `originals`). `CasinoGameGate.FlagFor(gameId)` maps a game to its flag, and a game whose flag is missing shows a "Not open yet" tile instead of opening, so a new client degrades cleanly against an older server.
+- **Limits.** The self-set daily loss limit stays opt-in (0 on the wire means no limit); see the gotcha in [Networking](networking.md#gotchas).
+
+## Stores
+
+Every store follows the house pattern: requests run off the draw thread through `StoreWork`, results are parked in a field and the draw path takes them once with a `Take*` method (`TakeSpinResult`, `TakeSeatOutcome`, `TakeFailure`), so Draw never awaits and never allocates for a result. Built in `PhoneServices`.
+
+| Store | Owns |
+| --- | --- |
+| `CasinoStore` | `GET /casino` (state, sittings, features, ceiling, cashier, bonuses, club, progress), buy-in, top-up, cash-out, limits, bonus claims |
+| `CasinoPlayStore` | Solo machine routes: slot spins, the Golden Bird gamble, Moogle Money meters, scratch, Barkeep, and the pending-round recovery (`PendingCasinoRound`, per character); owns `Originals` (`CasinoOriginalsStore`) and `Plinko` (`CasinoPlinkoStore`) |
+| `CasinoRoomsStore` | The room list, the one live `CasinoRoomSession` (attach, snapshot, events with seq and epoch, private lanes, clock skew), wheel and race bets and bingo cards |
+| `CasinoTablesStore` | The table browser, quick seat, blackjack seats, hosting (create, door, invites, kick, rename, co-dealers, pause, deal, tournament, close), the session ledger, nearby tables |
+| `HoldemStore` | Hold'em seats and actions, time bank, sit out, top-up, hand history, the rejoin penalty |
+| `CasinoVenueStore` | Venue room GameState (`VenueRoomView`), venue acts, roll and raffle verification, tournaments, trade-sync proposals |
+| `CasinoFloorStore` | Missions and claims, challenges, Hall of Fame boards, the bets feed, the `casino-floor` watch with its ticker and rain notes |
+| `CasinoHistoryStore` | History pages, round verification, and hosted table hands recorded locally (practice and gil hands never reach the server's history) |
+| `CasinoSpinStore` | The free daily spin, which pays wallet coins rather than chips |
+
+`CasinoRoomSession` parses the snapshot's GameState into one typed slot per kind (`Wheel`, `Bingo`, `Blackjack`, `Race`, `Holdem`); venue GameState is parsed by `CasinoVenueStore`. A sequence gap or an epoch change triggers a resync. `CasinoSeatMachine` and `CasinoJoinGate` hold the seat states and the "joins next hand" rules shared by the tables, and `CasinoTurnNotifier` posts a notification when your turn comes while the table is not in view.
+
+## Stage frame
+
+Every play screen draws inside one host frame, `CasinoStage`. The lobby, cashier, history, fairness and limits pages keep the normal app chrome; cabinets, tables and rooms go full bleed with no `AppHeader`.
 
 The host (`CasinoApp.DrawStage`) opens `AppSurface.BeginEdgeToEdge(content, true)` and then, per frame:
 
@@ -33,11 +69,11 @@ var action = stage.End(ui);
 
 `Begin` draws the backdrop and the frosted deck, advances effects, and returns a `CasinoStageFrame`: `Layout`, `Safe`, `Deck`, `Body`, `Full`, `DeltaSeconds`, `Phase` (the lights clock), `Instant`, `Focused`, `Blocked` (a reality check is showing) and `SnapToTruth`. `End` draws particles, the celebration, screen effects, the practice ribbon, the reality-check card, the bets handle and the chrome, and returns `CasinoStageAction.Back` or `Cashier` for the host to act on. Overlays draw at window level through `stage.Gate()` and `stage.DrawOverlays(screen, ui)`; `TakeInfoRequest()` returns `Rules`, `Extra` or `Fairness`, and `TakeRoundRequest()` a round id tapped in the bets rail.
 
-`CasinoStageSpec(GameId, Title, Preset, Room, DeckHeight, Practice, BetsRail, InstantAvailable, ReturnTenths, Extra, Warmth, LampPool)` declares the screen: `Room` adds the 40 unit phase ribbon, `DeckHeight` reserves the bet deck (0 for layouts that draw their own controls), `Practice` swaps the capsule to grey Practice chips and adds the practice ribbon, `ReturnTenths` prints the return in the info sheet, `Extra` names a second info button (a pay table or odds sheet), `Warmth` tints the Strip toward amber, `LampPool` lights the felt.
+`CasinoStageSpec(GameId, Title, Preset, Room, DeckHeight, Practice, BetsRail, InstantAvailable, ReturnTenths, Extra, Warmth, LampPool)` declares the screen: `Room` adds the 40 unit phase ribbon, `DeckHeight` reserves the bet deck (0 for layouts that draw their own controls), `Practice` swaps the capsule to grey Practice chips and adds the practice ribbon, `ReturnTenths` prints the return in the info sheet, `Extra` names a second info button (a pay table, odds sheet or the table sheet), `Warmth` tints the Strip toward amber, `LampPool` lights the felt. `CasinoApp.StageSpecFor(route)` picks the spec per screen.
 
 Geometry, in design units times `UiScale.Current`: chrome band 52; back chip and info chip 36 glass circles centred 28 in from either side at y 26; the chips capsule centred on the band; ribbon 40 and practice ribbon 22 under the band; deck at the bottom (118 by default, `BetComposer.DeckHeightFor(knob, fixedAmount)` for more); `Safe` sits between them, inset 12. Worlds fit inside `Safe`; lights and backdrops use `Full`. `CasinoStageLayout.ChromeContains(point)` tells a cabinet whether a press landed on the chrome.
 
-Snap to truth: when the stage was not drawn for more than 2 seconds, or the phone regains focus after more than 2 seconds away, `frame.SnapToTruth` is true for one frame, the balance and the celebration snap to their final state, and cabinets finish their own animations (Scratch reveals the card, the wheel jumps to the landed segment).
+Snap to truth: when the stage was not drawn for more than 2 seconds, or the phone regains focus after more than 2 seconds away, `frame.SnapToTruth` is true for one frame, the balance and the celebration snap to their final state, and cabinets finish their own animations.
 
 `stage.RepeatPressed()` reports Space while the stage has focus, no overlay is open and no text field is active, claiming only the Space key through `GameInput`.
 
@@ -45,13 +81,13 @@ Snap to truth: when the stage was not drawn for more than 2 seconds, or the phon
 
 | Preset | Look | For |
 | --- | --- | --- |
-| `Strip` | Indigo night, a skyline with 40 twinkling windows, rose and cyan neon haze drifting opposite ways, rising bokeh; `SetWarmth(1)` shifts it amber | Lobby previews, slots, scratch, wheel, daily spin, barkeep |
-| `Arena` | Stadium night, two floodlight towers with four sweeping cones, a crowd band with 60 flickering phone lights, track dust | Bingo hall, the race, liftoff |
-| `Felt` | Night felt on every casino stage (`CasinoStage` calls `SetFeltStyle(FeltStyle.Night, spec.Rail)`): a desaturated emerald cloth whose lamp pool peaks at 0.22 luminance and falls to 0.08 at the edges, a fine cloth weave and a wooden rail along the stage edges (`CasinoStageSpec.Rail`, on by default). The Games app keeps the classic felt | Blackjack |
+| `Strip` | Indigo night, a skyline with 40 twinkling windows, rose and cyan neon haze drifting opposite ways, rising bokeh; `SetWarmth(1)` shifts it amber | Lobby previews, the slot machines, the originals, Plinko, scratch, wheel, daily spin, Barkeep (warm), Hold'em (under its own felt) and venue rooms |
+| `Arena` | Stadium night, two floodlight towers with four sweeping cones, a crowd band with 60 flickering phone lights, track dust | The bingo hall and the Chocobo race |
+| `Felt` | Night felt on every casino stage (`CasinoStage` calls `SetFeltStyle(FeltStyle.Night, spec.Rail)`): a desaturated emerald cloth whose lamp pool peaks at 0.22 luminance and falls to 0.08 at the edges, a fine cloth weave and a wooden rail along the stage edges (`CasinoStageSpec.Rail`, on by default). The Games app keeps the classic felt | Blackjack and the broadcast view |
 
 Every wash on every backdrop stays at or under 0.22 luminance (rec. 601 on the drawn colour): `StagePolishTests` stacks the Strip haze bands and blobs over the skyline glow, and all four Arena cones where they cross, against that ceiling. Point lights (windows, bokeh, phone lights, dust) are lights, not fills, and are not counted.
 
-## Full screen and legibility (standard 15b)
+## Full screen and legibility
 
 Binding for every cabinet, table and room:
 
@@ -65,7 +101,7 @@ Binding for every cabinet, table and room:
 
 ### Stage text
 
-`StageText` (Apps/Casino/Stage) is the one way to put words on the world. Each helper resolves the requested style up to its role minimum (`StageText.Minimum(role)`, never shrinking below it) and either fits or marquees against its container:
+`StageText` is the one way to put words on the world. Each helper resolves the requested style up to its role minimum (`StageText.Minimum(role)`, never shrinking below it) and either fits or marquees against its container:
 
 - `State(drawList, center, text, maxWidth, id)`: Title2 or larger in strong ink with a soft shadow; overflow moves onto a glass capsule and marquees. `StateLine(drawList, center, text, maxWidth, ink)` is the id-free form that ellipsizes.
 - `Status(drawList, center, text, maxWidth, id, overWorld)`: Footnote or larger in strong ink, on a dark glass capsule when it sits over the world. `Status(drawList, center, text, maxWidth, scale)` and `Plate(..., ink, style, scale)` are the id-free capsule forms.
@@ -79,7 +115,7 @@ Binding for every cabinet, table and room:
 
 `FeltTable.DrawCloth(drawList, full, rail, practice, scale)` paints the night cloth over any rect (a grey cloth for practice tables) for scenes that are not on a Felt stage, such as idle previews and Hold'em's own felt. A `FeltTable` instance draws the table layer over a Felt stage with `Draw(drawList, full, table, new FeltTableOptions(seats, print, cloth, rail, circles, practice), scale)`: a gold insurance arc, betting circles and an optional printed line such as "BLACKJACK PAYS 3 TO 2" set along an arc in low-contrast gold, and returns `FeltTableGeometry` (dealer anchor at the top centre, the seat arc, `Seat(index)`, `BettingCircle(index)`), all scaled to the table rect with seats of at least 28 units radius.
 
-`SeatSpot.DrawEmpty(drawList, center, radius, label, accent, invite, scale)` is the empty seat: a dark disc of at least 56 units across with a plus glyph and a "Sit" label, pulsing a glow while `invite` is set (you are not seated), returning true on a tap. `SeatSpot.DrawOccupied` draws the occupied ring and returns a `SeatPuck` whose `Bounds` is the avatar slot.
+`SeatSpot.DrawEmpty(drawList, center, radius, label, accent, invite, scale)` is the empty seat: a dark disc of at least 56 units across with a plus glyph and a "Sit" label, pulsing a glow while `invite` is set (you are not seated), returning true on a tap.
 
 `DeckActions.Row(deck, scale)` is the bottom row of the bet deck, 56 units tall and full width. `stage.SecondaryAction(label, enabled, ink)` lays out up to two pills from the left and `stage.PrimaryAction(label, enabled, ink)` takes the rest, the whole row when there are none. `BetComposer` uses the same row (the Manual and Auto switch and the auto gear are its secondary slots), `DeckActions.Above` places a status line over the row, and `DeckActions.Slice` splits it for two equal choices such as Insure and No insurance.
 
@@ -89,46 +125,115 @@ Binding for every cabinet, table and room:
 
 ## Win celebrations
 
-`stage.Celebration.Celebrate(stake, payout, origin, instant, jackpot)` picks a tier from the net win over the stake (`WinLadder.TierFor`): Win above 0, Nice from 3x, Big from 10x, Mega from 25x, Epic from 50x, Legendary from 100x or any jackpot. A payout at or below the stake returns `WinTier.None` and does nothing. Each tier carries its sparkles or confetti, coin shower seconds, light sweep, banner, bulb chase, full-screen card, sound and count-up seconds (`WinLadder.Spec`). Big and up flash, punch, vignette or slow the game as the standard table says. A tap on Safe skips after half a second; Instant mode shows the final amount with a 0.3 second pop. `Blocking` is true while an Epic or Legendary card covers the stage.
+`stage.Celebration.Celebrate(stake, payout, origin, instant, jackpot)` picks a tier from the net win over the stake (`WinLadder.TierFor`): Win above 0, Nice from 3x, Big from 10x, Mega from 25x, Epic from 50x, Legendary from 100x or any jackpot. A payout at or below the stake returns `WinTier.None` and does nothing: no light, no particles, no sound, the paying symbols simply light. Each tier carries its sparkles or confetti, coin shower seconds, light sweep, banner, bulb chase, full-screen card, sound and count-up seconds (`WinLadder.Spec`). Big and up flash, punch, vignette or slow the game. A tap on Safe skips after half a second; Instant mode shows the final amount with a 0.3 second pop. `Blocking` is true while an Epic or Legendary card covers the stage. `WinCelebration` is the only celebration path in the app.
 
 `CasinoSfx.Play(sound)`, `Pitched(sound, step)` and `Win(spec)` play only while the stage is drawn and focused, and WinBig, WinEpic and Fanfare share one 10 second slot (a throttled big win falls back to WinSmall). The casino cues (`UiSound.ReelTick` through `LevelUp`) are synthesized by tools/sound-generator (`python generate-sounds.py --casino`).
 
 ## Bet composer and the ceiling
 
-`BetComposer.Draw(ui, frame.Deck, model, delta)` returns `Confirm`, `StartAuto`, `StopAuto` or `None`. `BetComposerModel(MinimumBet, MaximumBet, Stack, Action, Enabled, AutoAvailable, FixedAmount, Knob, Repeat, Busy)`: `MaximumBet` is the game's own cap clamped to `casino.Ceiling.MaxBet`; `Action` is a one-argument template ("Buy {0}", "Bet {0}") that receives the compact amount; `Knob` reserves `composer.KnobRect` for the game's own control; `FixedAmount` hides the amount row. The field taps into free input and commits on Enter or blur; every value snaps to the ladder through `CasinoLadder.Clamp`, `Half`, `Double` and `Top`. The Auto tab drives `composer.Auto` (an `AutoBetPlan`): the cabinet starts the next round with `Auto.Next` while `Auto.Running`, and reports each settled round with `Auto.Settle(stake, payout, bonus, min, max, stack)`, which applies on-win and on-loss adjustments and stops on count, profit, loss, bonus or chips. The gear opens the auto settings sheet (`composer.Gate()` and `composer.DrawOverlay(screen, ui, bonusAvailable)`).
+`BetComposer.Draw(ui, frame.Deck, model, delta)` returns `Confirm`, `StartAuto`, `StopAuto` or `None`. `BetComposerModel(MinimumBet, MaximumBet, Stack, Action, Enabled, AutoAvailable, FixedAmount, Knob, Repeat, Busy)`: `MaximumBet` is the game's own cap clamped to `casino.Ceiling.MaxBet`; `Action` is a one-argument template ("Buy {0}", "Bet {0}") that receives the compact amount; `Knob` reserves `composer.KnobRect` for the game's own control (risk, rows, mines, target, runner, spot, card count); `FixedAmount` hides the amount row. The field taps into free input and commits on Enter or blur; every value snaps to the ladder through `CasinoLadder.Clamp`, `Half`, `Double` and `Top`. The Auto tab drives `composer.Auto` (an `AutoBetPlan`): the cabinet starts the next round with `Auto.Next` while `Auto.Running`, and reports each settled round with `Auto.Settle(stake, payout, bonus, min, max, stack)`, which applies on-win and on-loss adjustments and stops on count, profit, loss, bonus or chips. The gear opens the auto settings sheet (`composer.Gate()` and `composer.DrawOverlay(screen, ui, bonusAvailable)`). The info sheet prints the ceiling and its reason.
 
-`CasinoLadder` mirrors standard 7.3: 27 rungs from 100 to 50B, `LevelCap(level)` geometric between the anchors (L1 10K up to L100 50B), `MaxBet(level, balance) = max(LevelCap, balance / 20)` floored to a rung. `CasinoStore.Ceiling` returns the server's `CasinoCeilingDto` from `GET /casino` when present and falls back to the local formula (level from `Progress`, anchors from `LevelCapAnchors`) against an older floor. The info sheet prints the ceiling and its reason.
+Gil is not on the ladder, so gil blackjack tables bet through `ClassicBetComposer`, a plain amount field bounded by the host's limits. Hold'em raises use `HoldemRaiseComposer` (Min, half pot, three quarters, Pot, All in, a slider and a one big blind stepper, the button label always the exact amount).
 
-Every settled round goes through `stage.Settle(new CasinoBetRecord(game, stake, payout, roundId, settledAtUnixMs))`, which feeds the bets rail's My bets tab and the reality check (`RealityCheck`: a card every 100 rounds or 30 minutes of play showing rounds, minutes and session net, with Keep playing or Take a break).
+Every settled chip round goes through `stage.Settle(new CasinoBetRecord(game, stake, payout, roundId, settledAtUnixMs))`, which feeds the bets rail's My bets tab and the reality check (`RealityCheck`: a card every 100 rounds or 30 minutes of play showing rounds, minutes and session net, with Keep playing or Take a break). The bets rail's All bets and High rollers tabs read `GET /casino/feed`.
 
-## Other pieces
+## Playback
 
-- `CabinetPreview` plus `ICabinetIdle` (`IdleBackdrop`, `DrawIdle(drawList, rect, deltaSeconds)`): the live idle container for lobby tiles.
-- `PhaseRibbon.Draw(drawList, rect, label, remainingMs, windowSeconds, crowd, accent, scale)`: the room ribbon with a `TurnTimerRing`.
-- `StatusTitle.For(balance)` and `Draw`: Shark 1M, High Roller 10M, VIP 100M, Whale 1B, Legend 1T.
-- `LevelCapsule.Draw(drawList, rect, level, progress, cap, accent, scale)`: level ring, XP bar and cap.
-- `CasinoNotice.Draw` and `DrawWithAction`: the Reason, Info and Card notice shapes (Card bodies at Subheadline, the rest at Footnote).
-- `ChipStack` (Windows/Components/Layout): ten denominations from 100 to 100M with fixed colours, five discs a column, notched edges, a practice variant, and compact amounts.
-- `NumberText.Compact` reads K, M, B and T without ever rounding a balance up; `NumberText.Signed` caches the plus form.
+A playback class turns a server answer into choreography and is the only thing a cabinet animates from. The shape is the same everywhere: `Begin` or `Update` takes the DTO (or the room state plus the server clock), `Advance` moves time, the cabinet drains cues with `TryTake*` or `Take*` (a tick, a landing, a reveal, a settle) to fire sounds, particles and the celebration, and `Snap` or a snap flag jumps to the final state for a mid-event join, a reconnect or `frame.SnapToTruth`. Playbacks hold no ImGui state, so the tests drive them directly (`*PlaybackTests`). Client-side flourishes that need randomness (a ball's wobble, a patron's walk, commentary lines) draw from `GameRandom` seeded from the round, so the same round replays identically.
 
-## Reference cabinets
+| Playback | Replays |
+| --- | --- |
+| `MachineRoundPlayback`, `MachineRollup` | A spin's `steps[]` beat by beat (spin, tumble, expand, hold, respin, collect, meter), then the rollup at half the bet a second up to 20x |
+| `PlinkoFlight` | Each ball along its server `path`, a scripted bounce per row, up to ten balls in flight |
+| `DiceRollPlayback`, `LimboClimbPlayback`, `KenoDrawPlayback` | The instant originals: the sliding roll marker, the climbing multiplier, drawn tiles in sequence (Mines and Hi-Lo keep their open round in `MinesBoard` and `HiLoChain`) |
+| `ScratchCardPlayback` | The foil reveal of a bought ticket |
+| `WheelRoundPlayback`, `WheelChoreography`, `WheelPointer` | The wheel landing on the server's segment |
+| `BingoRoundPlayback` | Called balls, flights, daubs and stage wins (a burst of balls after a join jumps straight to the board) |
+| `RaceRoundPlayback` | The race from `RaceScript`, rebuilt from the order and seed revealed at Locked |
+| `BlackjackDealPlayback`, `BlackjackDealChoreography` | Card flights, the hole card reveal and per-seat settlement |
+| `HoldemPlayback` | Hole cards, board streets, reveals at showdown and chips sweeping to winners |
+| `DailySpinPlayback` | The sprung pointer of the free spin |
+| `DiceTablePlayback`, `DeathrollPlayback`, `RafflePlayback`, `TournamentPlayback` | Venue rolls, duels, the raffle draw and the blackjack tournament strip |
 
-`Cabinets/ScratchCabinet.cs` is the solo reference (fixed-price knob, Auto as buy five, Instant, bets rail) and `Cabinets/WheelCabinet.cs` the room reference (phase ribbon, podiums, ceiling-capped stakes). `Cabinets/BarkeepCabinet.cs` is the skill cabinet: a full-bleed bar scene (`BarkeepSceneArt`), patrons choreographed by `BarkeepBarFlow` (seeded from the round id, snapped on a mid-shift join), a cosmetic combo and fever meter (`BarkeepTipMeter`), and practice reachable without chips. Apps/Casino/Machines holds the three slot machines (Golden Bird Deluxe, Crystal Cascade, Moogle Money) on one shell, `MachineCabinet`: the chassis, top glass and reel window fill the stage, `MachineRoundPlayback` replays the server's `steps[]` beat by beat (spin, tumble, expand, hold, respin, collect, meter), `MachineRollup` counts wins at half the bet a second up to 20x and compresses the rest, and the celebration fires when the rollup lands.
+## Rules mirrors, vectors and fairness
 
-## Bingo hall
+Core/Casino holds one Dalamud-free mirror per game (`BlackjackRules`, `BlackjackSideBets`, `HoldemRules`, `HoldemHands`, `RaceRules`, `RaceScript`, `PlinkoRules`, `OriginalsRules`, `SlotsRules`, `SlotsMachines`, `GoldenBirdRules`, `CrystalCascadeRules`, `MoogleMoneyRules`, `ScratchRules`, `WheelRules`, `BingoRules`, `BarkeepRules`, `DailySpinRules`, `VenueRules`, `CasinoHostingRules`, `CasinoFloorRules`, `CasinoLadder`). They exist to print pay tables, returns, bands and odds, and to replay draws for verification; they never decide a payout. When a backend constant changes, the matching mirror and its `*RulesTests` change in the same release.
 
-`Cabinets/BingoCabinet.cs` is a non-scrolling room on the Arena backdrop, laid out by `BingoHallLayout` (tumbler and caller, 75-cell call board, hero card with a swipeable rail of the other cards, three prize podiums). `BingoTumbler` is a decorative `PhysicsWorld` drum of 20 balls kept aloft by a seeded blower; it decides nothing, and the called ball that pops out and flies to the board is always the server's latest call. `BingoRoundPlayback` turns the room state into choreography and cues (`BallPopped`, `BallLanded`, `Daubed`, `OneAway`, `StageWon`): a single new ball flies for `FlightSeconds` before the board lights it and auto-daub stamps it, while a first read or a burst of several balls (a mid-game join or a reconnect) jumps straight to the called balls with no flights and no sounds. Manual daub (the info sheet's Extra button) only stops the auto stamping; the prize is the server's either way, and the Result stamps every called number. A stage counts as the player's when one of their cards reached it on the stage's awarded ball (`BingoRules.CallReaching`); the payout and the celebration tier always come from the settled cards, with the Epic tier forced for the player who took an early-bird full house. Cards are bought through the bet deck knob (`BetComposer` with `FixedAmount` and `Knob`).
+Seeded games share vector files with the backend: `src/Aetherphone.Tests/Vectors/` holds `holdem.json`, `race.json`, `plinko.json`, `originals.json`, `slots-bird.json`, `slots-cascade.json`, `slots-moogle.json`, `blackjack-sidebets.json` and `venue.json`, each a byte-for-byte copy of the file in the backend's test project. Every vector test first pins the file's SHA-256, so a drifted copy fails loudly, then replays each case through the client mirror (`HoldemVectorTests`, `RaceVectors`, `PlinkoVectorTests`, `OriginalsVectorTests`, `SlotsVectorTests`, `BlackjackSideBetVectorTests`, `CasinoVenueVectorTests`). Never edit a vector by hand; copy the backend's file again.
 
-## Daily spin
+`CasinoVerifier.Verify` checks a settled round from `GET /casino/rounds/{roundId}/verify`: the revealed seed must hash to the commit, then the draw log must replay purpose by purpose (`segment`, `card`, `ball`, `shuffle`, `prize`, `patrons`, `jackpot`, `gamble`, `peg`, `field`, `strength`, `runner`, and the originals' float stream with `mine`, `roll`, `limbo`, `keno`, `card`). Hold'em hands and blackjack hands verify through the room's hand index (`GET /casino/rooms/{roomId}/verify/{index}`), and venue rolls and raffle draws through `VenueVerifier` over `VenueDraws`. Verification fails closed: anything it cannot replay is a mismatch, never a pass.
 
-`Cabinets/DailySpinCabinet.cs` runs on the Strip backdrop with no bet deck: the neon FREE SPIN sign, two crossing spotlights, a bulb rim, and a sprung pointer (`DailySpinPlayback`) that kicks on every peg and settles critically damped. The top wedge lands with the Epic tier and every other wedge with the Win tier through `SpinFlourish`, which mirrors `WinCelebration` with the coin glyph because the spin pays coins, not chips. `DailySpinIdle` is the turning idle wheel shared by `DrawIdle` and the home widget.
+## The games
+
+| Game | Code | Kind | Notes |
+| --- | --- | --- | --- |
+| Golden Bird Deluxe, Crystal Cascade, Moogle Money | Machines/MachineCabinet | solo, `casino.slots` with `machineId` `slots.bird`, `slots.cascade`, `slots.moogle` | One shell: chassis, top glass and reel window fill the stage; the Golden Bird gamble ladder (`GambleLadder`), the Crystal Cascade ante and bonus buy modes, the Moogle Money Mini and Minor meters; every machine also draws the floor jackpot |
+| Plinko | Plinko/PlinkoCabinet | solo, `casino.plinko` | 8, 12 or 16 rows, three risks, a result rail of recent drops |
+| Mines, Dice, Limbo, Keno, Hi-Lo | Originals/OriginalsCabinet | solo, `casino.mines` and the rest | One cabinet with an `IOriginalsSkin` per game; Mines and Hi-Lo keep an open round across picks and cash out |
+| Scratch | Cabinets/ScratchCabinet | solo, `casino.scratch` | Five ticket tiers, buy five in a row, the solo reference cabinet |
+| Barkeep | Cabinets/BarkeepCabinet | solo skill, `casino.bartender` | A full-bleed bar scene (`BarkeepSceneArt`), patrons choreographed by `BarkeepBarFlow`, a cosmetic tip meter, practice reachable without chips |
+| Wheel | Cabinets/WheelCabinet | room, `casino.wheel` | The room reference: phase ribbon, podiums, the printed return per spot |
+| Bingo | Cabinets/BingoCabinet | room, `casino.bingo` | `BingoHallLayout` with a decorative `PhysicsWorld` tumbler (`BingoTumbler`) that decides nothing; the payout always comes from the settled cards |
+| Chocobo race | Race/RaceCabinet | room `race-track`, `casino.race` | Arena backdrop, landscape track with a portrait layout (`RaceLayout`), Win, Place, Forecast and Reverse forecast tickets (`RaceTicketBuilder`), tote and result boards |
+| Blackjack | Tables/BlackjackTable | table, `casino.blackjack` | House pit (`BlackjackPit`), side bets, insurance, late surrender, a dealer puck, per-seat settlement made visible by `BlackjackRecap` |
+| Texas Hold'em | Tables/HoldemTable | table, `casino.holdem` | House rooms (`HoldemPit`), `SeatLayout.Ring` rotated to the hero, win chance from the private prompt, side pots (`HoldemPotScatter`), hand history sheet |
+| Daily spin | Cabinets/DailySpinCabinet | free, `casino.dailyspin` | Pays wallet coins, so it celebrates through `SpinFlourish` with the coin glyph; `DailySpinIdle` also drives the home widget |
+| Dice table, Deathroll, Raffle | Venue/VenueCabinet | hosted venue rooms | See the venue layer below |
+
+Every cabinet implements `ICabinetIdle` (`IdleBackdrop`, `DrawIdle(drawList, rect, deltaSeconds)`), which `CabinetPreview` uses for the lobby's live tiles and hero cards.
+
+## Tables, hosting, practice and gil
+
+House tables are furniture the server keeps open: the blackjack pit (`blackjack-pit`, `blackjack-parlour`, `blackjack-salon`, and `blackjack-vault` for the Whale title) and the Hold'em rooms (`holdem-low`, `holdem-mid`, `holdem-high`, and `holdem-royal` for the Whale title). Sitting at a chip table moves a rack from the bankroll chip-to-chip; leaving walks it home. One card-table seat per identity across blackjack and Hold'em.
+
+`HostSheet` builds a `CasinoTableConfig` for `POST /casino/tables`: game, name, seats, stakes, buy-in band, listing (Private, Knock, Open), spectators, turn clock, time bank, and for practice and gil tables the house rules sheet, dealer mode and co-dealers. `TableBrowser` lists house, mine, invited and listed tables with filters; `TableDoor` is the host panel (invites, knocks, kick, rename, pause, deal, tournament, close); `TableLedger` shows the session ledger and copies it as plain text.
+
+The table's currency (`CasinoCurrencies`) decides how money moves:
+
+- **Chips** (blackjack and Hold'em): the bank, every economy rule, standard rules only.
+- **Practice** (blackjack and Hold'em): the table never touches the bank. No sitting, rack, round, meter, XP, mission or jackpot; every seat starts at the practice stack and may rebuy when the host allows. The stage shows grey chips and the practice ribbon, the cashier never opens, and hands are recorded only in the local History group. Fairness is unchanged: hands still draw from the room's seed chain and verify.
+- **Gil** (blackjack and venue rooms): host-banked. The host declares a bank, a max bet and a max payout per hand, and a bet whose worst case the bank cannot cover is refused (`bank_limit`). The server never holds or converts gil; it keeps a two-sided ledger in which a buy-in, rebuy or payout settles only when both sides confirm it, unconfirmed entries show amber on both screens, and a payee can dispute a payout that never arrived. Gil tables touch no coin, chip, XP, mission, club point or Hall of Fame row. Gil tables take no side bets and offer neither insurance nor surrender.
+
+`CasinoCurrencies.SeatBanked(currency)` is true for practice and gil: the stage balance is the seat's own stack, not the bankroll.
 
 ## Venue layer
 
-Hosted venue rooms (`casino.dice-table`, `casino.deathroll`, `casino.raffle`) open from the table browser, the door or a deep link into `CasinoScreen.VenueRoom`, drawn by `Apps/Casino/Venue/VenueCabinet.cs` on the Strip with a room ribbon. Each room has a Dalamud-free playback (`DiceTablePlayback`, `DeathrollPlayback`, `RafflePlayback`) that takes the room's GameState and choreographs only what the server returned; a mid-event join snaps to the current state. `CasinoVenueStore` parses the GameState off the draw path (`VenueRoomView`), sends `POST /casino/venue/{roomId}/act` with an idempotent `clientActionId`, verifies the last roll or draw through `GET /casino/rooms/{roomId}/verify/{seq}` (`VenueVerifier` over `VenueDraws`, pinned by `venue.json`), polls `GET /casino/tables/nearby` from the housing position (`IHousingPositionSource`), and indexes listed tables by venue address for the Venues app pill.
+Hosted venue rooms (`casino.dice-table`, `casino.deathroll`, `casino.raffle`) run on practice chips or gil, open from the table browser, the door or a deep link into `CasinoScreen.VenueRoom`, and are drawn by `Venue/VenueCabinet.cs` on the Strip with a room ribbon. Each room has a Dalamud-free playback (`DiceTablePlayback`, `DeathrollPlayback`, `RafflePlayback`) that takes the room's GameState and choreographs only what the server returned; a mid-event join snaps to the current state. `CasinoVenueStore` parses the GameState off the draw path (`VenueRoomView`), sends `POST /casino/venue/{roomId}/act` with an idempotent `clientActionId`, verifies the last roll or draw through `GET /casino/rooms/{roomId}/verify/{seq}` (`VenueVerifier` over `VenueDraws`, pinned by `venue.json`), polls `GET /casino/tables/nearby` from the housing position (`IHousingPositionSource`), and indexes listed tables by venue address for the Venues app pill.
 
 The stage Extra button on blackjack tables and venue rooms opens `VenueTableSheet`: verify, trade sync settings (gil tables), the broadcast view for spectators and the report action (`Plugin.Report`, target `casino_table`).
 
-Trade sync is opt-in (`Configuration.CasinoTradeSync`). `TradeWindowReader` listens to the `Trade` addon lifecycle and only reads its text; `TradeSyncTracker` confirms a completed trade from the wallet delta, and `TradeLedgerMatcher` turns it into a buy-in or payout proposal or a confirmation of an existing ledger entry. The host always gets a one-tap prompt (`TradeSyncPrompt`) plus a notification; a player can let their own side confirm automatically.
+Trade sync is opt-in (`Configuration.CasinoTradeSync`). `TradeWindowReader` listens to the `Trade` addon lifecycle and only reads its text; `TradeSyncTracker` confirms a completed trade from the wallet delta, and `TradeLedgerMatcher` turns it into a buy-in or payout proposal or a confirmation of an existing ledger entry (`source: "trade"`). The host always gets a one-tap prompt (`TradeSyncPrompt`) plus a notification; a player can let their own side confirm automatically. Nothing in the game is automated.
 
 `BroadcastView` (`CasinoScreen.Broadcast`, landscape) projects the blackjack or Hold'em snapshot into `BroadcastTable` with large seats, stacks and cards and no controls. `TournamentOverlay` draws the practice blackjack tournament strip, leaderboard, eliminations and winner over the table; hosts start and stop it from `TournamentDoorCard` on the door.
+
+## Lobby
+
+The app has four tabs (`CasinoTab`: Floor, Live, Tables, Cashier); every other page is a `CasinoRoute` on the router (`CasinoScreen`: Cabinet, Table, Pit, TableDoor, HostTable, TableLedger, VenueRoom, Broadcast, DailySpin, History, Fairness, Limits, RoundDetail, Fame).
+
+- **Floor** (`CasinoApp.Lobby`, `Strip/`): the chips hero with balance title, `LevelCapsule` and bonus buttons (`StripHero`), the resume card when seated, the hero carousel (`StripCarousel`: jackpot marquee, a machine with live idle reels, the next race, a hot table, the live challenge), the wins ticker (`WinsTicker`, fed by the `casino-floor` room), "At this venue" tables (`NearbyTablesCard`), the live now rail, the missions card (`MissionsCard`) and club capsule (`ClubCapsule`), the shelves (`StripShelves` over `StripCatalog`: Tables, Machines, Originals, Live floor, Instant, Skill, For venues), the Hall of Fame podium (`FamePodium`, full boards in `FameView`) and the records row (History, Fairness, Limits). `StripIntro` is the first-visit walkthrough.
+- **Live** (`LiveBoard`): rooms and listed tables with phase, occupancy and Watch, filtered by All, Open seats, Practice, Friends and High roller.
+- **Tables**: the browser, quick seat, Host a table, join by token.
+- **Cashier** (`CashierDrawer`): buy-in in coin lots (`CashierBuyIn`), cash-out with today's allowance and the queued chips (`CashierCashOut`), the bonus shelf (`CashierBonusShelf`) and the club card (`CashierClubCard`). The chips capsule on every stage opens the same drawer.
+
+Missions, challenges, the Hall of Fame and the feed only count real-chip rounds. Hall of Fame boards only name players who opted in through the existing leaderboard flag.
+
+## Adding a game
+
+The server ships the game first: its kind, routes, feature flag, and a vector file when the game is seeded. Then, on the client:
+
+1. **Ids.** Add the game id to `Apps/Casino/CasinoGames.cs` and the wire kind to `Core/Casino/CasinoWire.cs`. Add the flag to `CasinoFeatures`, `CasinoFeatureSet.Known` and `CasinoGameGate.FlagFor`.
+2. **Wire.** Add the DTOs to a `Casino*Dtos.cs` file (every field defaulted) and register them in `AethernetJsonContext`; add the routes to `CasinoClient` (a new partial file for a new area); pin route and JSON shape in a `*WireContractTests` class. New refusal reasons go into `CasinoReasons` with a string and a `CasinoReasonCoverageTests` entry.
+3. **Rules and vectors.** Mirror the pay tables and draws in `Core/Casino/<Game>Rules.cs` with tests against the backend constants. Copy the backend vector file verbatim into `src/Aetherphone.Tests/Vectors/`, pin its SHA-256 and replay it. Teach `CasinoVerifier` the game's draw purposes.
+4. **Store.** Extend `CasinoPlayStore` for a solo game or `CasinoRoomsStore` for a room; results come back through `Take*`, never through a callback into Draw.
+5. **Cabinet.** A class under its own `Apps/Casino/<Game>/` folder with `Draw(stage, frame, ui)`, a `CasinoStageSpec`, a playback class, `BetComposer` for every stake, `stage.Celebration` for every win, `stage.Settle` for every settled round, and `ICabinetIdle`. Follow the full screen and legibility rules above.
+6. **Host wiring.** In `CasinoApp`: the cabinet field, its case in `DrawStage`, its spec in `StageSpecFor`, its branch in `ResetCabinetOf` (check after merges that no branch ends in a doubled `return;`), and `StageBalance` if it shows a stack other than the bankroll.
+7. **Lobby.** A `StripCatalog` entry on the right shelf, a `CasinoSign` word, the name in `CasinoGameNames`, the rules sheet steps and pitch in `CasinoRules`, a glyph in `CasinoGlyphs`, an accent in `CasinoArt`, the minimum bet and printed return in `CasinoApp.Floor`, and the mission sentence in `MissionText`.
+8. **Copy.** Every string as a `LocString` in its own nested class in `L.cs` plus all nine JSONs. Game names never take an "Aether" prefix.
+
+## Other pieces
+
+- `PhaseRibbon.Draw(drawList, rect, label, remainingMs, windowSeconds, crowd, accent, scale)`: the room ribbon with a `TurnTimerRing`, the only countdown in the app.
+- `CasinoNotice.Draw` and `DrawWithAction`: the Reason, Info and Card notice shapes (Card bodies at Subheadline, the rest at Footnote).
+- `ChipStack` (Windows/Components/Layout): ten denominations from 100 to 100M with fixed colours, five discs a column, notched edges, a practice variant, and compact amounts.
+- `NumberText.Compact` reads K, M, B and T without ever rounding a balance up; `NumberText.Signed` caches the plus form; `CasinoTextCache` caches every other label a cabinet formats.
+- `DailySpinWidget` (Apps/Casino/Widgets) puts the turning idle wheel on the home screen.

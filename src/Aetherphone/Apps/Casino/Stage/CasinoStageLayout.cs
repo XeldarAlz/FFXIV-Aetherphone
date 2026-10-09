@@ -6,6 +6,7 @@ internal readonly struct CasinoStageLayout
 {
     public const float ChromeBand = 52f;
     public const float ChipRadius = 18f;
+    public const float TouchTarget = 44f;
     public const float ChipInsetX = 28f;
     public const float ChipCenterY = 26f;
     public const float CapsuleHeight = 34f;
@@ -22,13 +23,14 @@ internal readonly struct CasinoStageLayout
     public readonly Vector2 CapsuleCenter;
     public readonly float CapsuleMaxWidth;
     public readonly float ChipRadiusPixels;
+    public readonly float TouchRadiusPixels;
     public readonly Rect Ribbon;
     public readonly Rect Practice;
     public readonly Rect Deck;
     public readonly Rect Safe;
 
     private CasinoStageLayout(Rect full, Rect band, Vector2 backCenter, Vector2 infoCenter, Vector2 capsuleCenter,
-        float capsuleMaxWidth, float chipRadius, Rect ribbon, Rect practice, Rect deck, Rect safe)
+        float capsuleMaxWidth, float chipRadius, float touchRadius, Rect ribbon, Rect practice, Rect deck, Rect safe)
     {
         Full = full;
         Band = band;
@@ -37,6 +39,7 @@ internal readonly struct CasinoStageLayout
         CapsuleCenter = capsuleCenter;
         CapsuleMaxWidth = capsuleMaxWidth;
         ChipRadiusPixels = chipRadius;
+        TouchRadiusPixels = touchRadius;
         Ribbon = ribbon;
         Practice = practice;
         Deck = deck;
@@ -80,12 +83,13 @@ internal readonly struct CasinoStageLayout
         var safeMax = new Vector2(full.Max.X - inset, deckTop - inset);
         var safe = new Rect(safeMin, new Vector2(MathF.Max(safeMin.X, safeMax.X), MathF.Max(safeMin.Y, safeMax.Y)));
         return new CasinoStageLayout(full, band, backCenter, infoCenter, capsuleCenter, capsuleMaxWidth,
-            ChipRadius * scale, ribbonRect, practiceRect, deck, safe);
+            ChipRadius * scale, MathF.Max(ChipRadius, TouchTarget * 0.5f) * scale, ribbonRect, practiceRect, deck,
+            safe);
     }
 
     public bool ChromeContains(Vector2 point)
     {
-        var radiusSquared = ChipRadiusPixels * ChipRadiusPixels;
+        var radiusSquared = TouchRadiusPixels * TouchRadiusPixels;
         if (Vector2.DistanceSquared(point, BackCenter) <= radiusSquared
             || Vector2.DistanceSquared(point, InfoCenter) <= radiusSquared)
         {

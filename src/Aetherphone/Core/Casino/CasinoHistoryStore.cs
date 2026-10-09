@@ -227,21 +227,6 @@ internal sealed class CasinoHistoryStore : IDisposable
         }, () => verifying = false);
     }
 
-    public void ForgetVerified(string roundId)
-    {
-        lock (verifiedSwapLock)
-        {
-            if (!verified.ContainsKey(roundId))
-            {
-                return;
-            }
-
-            var next = new Dictionary<string, VerifiedCasinoRound>(verified, StringComparer.Ordinal);
-            next.Remove(roundId);
-            verified = next;
-        }
-    }
-
     internal static CasinoRoundHistoryDto[] MergePage(CasinoRoundHistoryDto[] current,
         CasinoRoundHistoryDto[] incoming)
     {

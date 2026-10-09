@@ -62,7 +62,7 @@ internal sealed class CasinoBetsLog
         count = 0;
     }
 
-    private bool Contains(string roundId)
+    public bool Contains(string roundId)
     {
         for (var index = 0; index < count; index++)
         {

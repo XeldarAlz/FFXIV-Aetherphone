@@ -23,14 +23,6 @@ internal static class HoldemPhases
     public static bool Betting(int phase) => phase is >= Preflop and <= River;
 
     public static bool Over(int phase) => phase is Intermission or Settled;
-
-    public static int BoardCards(int phase) => phase switch
-    {
-        Flop => 3,
-        Turn => 4,
-        River or Showdown or Intermission or Settled => 5,
-        _ => 0,
-    };
 }
 
 internal static class HoldemSeatStates
@@ -120,8 +112,6 @@ internal static class HoldemActions
     };
 
     public static bool CarriesAmount(int action) => action is Bet or Raise;
-
-    public static bool IgnoresActionCount(int action) => action is Show or Muck;
 }
 
 internal static class HoldemRules
@@ -238,17 +228,6 @@ internal static class HoldemRules
 
         var rake = (long)((Int128)potTotal * RakeBasisPoints / 10_000);
         return Math.Min(rake, bigBlind * RakeCapBigBlinds);
-    }
-
-    public static long CallAmount(long toCall, long seatBet, long stack)
-    {
-        var owed = toCall - seatBet;
-        if (owed <= 0)
-        {
-            return 0;
-        }
-
-        return owed < stack ? owed : stack;
     }
 
     public static long SnapRaise(long amount, long bigBlind, long minimum, long maximum)
