@@ -7845,7 +7845,7 @@
   "changelog.r1300.31": "Added Pairs and 21+3 side bets to blackjack",
   "changelog.r1300.32": "Added the blackjack pit: pick a house table by stakes, a hosted table or a quick seat",
   "changelog.r1300.33": "Added Instant mode and Auto play with stops on profit and loss",
-  "changelog.r1300.34": "Added a Bets sheet with your bets, all bets and high rollers, where any round can be checked",
+  "changelog.r1300.34": "Added a Bets sheet with your bets, all bets and high rollers, where each of your rounds can be checked",
   "changelog.r1300.35": "Added a check-in every 100 rounds or 30 minutes with your session net",
   "changelog.r1300.36": "Overhauled the Floor: your chips, level and bonuses up top, then live rooms, missions and a shelf for every kind of game",
   "changelog.r1300.37": "Overhauled every game to fill the whole screen on a night backdrop, with bigger text and one clear action",

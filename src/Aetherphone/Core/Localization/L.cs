@@ -2264,7 +2264,7 @@ internal static class L
             new("changelog.r1300.33",
                 "Added Instant mode and Auto play with stops on profit and loss"),
             new("changelog.r1300.34",
-                "Added a Bets sheet with your bets, all bets and high rollers, where any round can be checked"),
+                "Added a Bets sheet with your bets, all bets and high rollers, where each of your rounds can be checked"),
             new("changelog.r1300.35",
                 "Added a check-in every 100 rounds or 30 minutes with your session net"),
             new("changelog.r1300.36",

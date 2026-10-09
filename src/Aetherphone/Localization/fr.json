@@ -7845,7 +7845,7 @@
   "changelog.r1300.31": "Ajout des paris annexes Paires et 21+3 au blackjack",
   "changelog.r1300.32": "Ajout de la salle de blackjack : choisis une table de la maison selon les mises, une table ouverte par un joueur ou une place rapide",
   "changelog.r1300.33": "Ajout du mode instantané et du jeu automatique avec arrêts sur gain et sur perte",
-  "changelog.r1300.34": "Ajout d'une feuille des mises avec tes mises, toutes les mises et les gros joueurs, où chaque manche peut être vérifiée",
+  "changelog.r1300.34": "Ajout d'une feuille des mises avec tes mises, toutes les mises et les gros joueurs, où chacune de tes manches peut être vérifiée",
   "changelog.r1300.35": "Ajout d'un point d'étape toutes les 100 manches ou 30 minutes avec le solde net de ta session",
   "changelog.r1300.36": "Refonte de la Salle : tes jetons, ton niveau et tes bonus en haut, puis les salles en direct, les missions et une rangée pour chaque type de jeu",
   "changelog.r1300.37": "Refonte de tous les jeux, qui remplissent l'écran entier sur un décor de nuit, avec un texte plus grand et une action claire",
