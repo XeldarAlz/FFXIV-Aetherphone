@@ -52,14 +52,18 @@ internal readonly struct CasinoStageLayout
 
     public bool HasPractice => Practice.Height > 0f;
 
-    public static CasinoStageLayout Compute(Rect full, bool ribbon, bool practice, float deckHeight, float scale)
+    public static CasinoStageLayout Compute(Rect full, bool ribbon, bool practice, float deckHeight, float scale) =>
+        Compute(full, full, ribbon, practice, deckHeight, scale);
+
+    public static CasinoStageLayout Compute(Rect full, Rect content, bool ribbon, bool practice, float deckHeight,
+        float scale)
     {
-        var bandBottom = full.Min.Y + ChromeBand * scale;
+        var bandBottom = content.Min.Y + ChromeBand * scale;
         var band = new Rect(full.Min, new Vector2(full.Max.X, MathF.Min(full.Max.Y, bandBottom)));
-        var backCenter = new Vector2(full.Min.X + ChipInsetX * scale, full.Min.Y + ChipCenterY * scale);
-        var infoCenter = new Vector2(full.Max.X - ChipInsetX * scale, full.Min.Y + ChipCenterY * scale);
-        var capsuleCenter = new Vector2(full.Center.X, full.Min.Y + ChipCenterY * scale);
-        var capsuleMaxWidth = MathF.Max(0f, full.Width - CapsuleReserve * 2f * scale);
+        var backCenter = new Vector2(content.Min.X + ChipInsetX * scale, content.Min.Y + ChipCenterY * scale);
+        var infoCenter = new Vector2(content.Max.X - ChipInsetX * scale, content.Min.Y + ChipCenterY * scale);
+        var capsuleCenter = new Vector2(content.Center.X, content.Min.Y + ChipCenterY * scale);
+        var capsuleMaxWidth = MathF.Max(0f, content.Width - CapsuleReserve * 2f * scale);
         var top = band.Max.Y;
         var ribbonRect = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, top));
         if (ribbon)
@@ -76,8 +80,9 @@ internal readonly struct CasinoStageLayout
             top = practiceRect.Max.Y;
         }
 
-        var deckTop = MathF.Max(top, full.Max.Y - MathF.Max(0f, deckHeight) * scale);
-        var deck = new Rect(new Vector2(full.Min.X, deckTop), full.Max);
+        var bottom = MathF.Max(top, content.Max.Y);
+        var deckTop = MathF.Max(top, bottom - MathF.Max(0f, deckHeight) * scale);
+        var deck = new Rect(new Vector2(content.Min.X, deckTop), new Vector2(content.Max.X, bottom));
         var inset = SafeInset * scale;
         var safeMin = new Vector2(full.Min.X + inset, top + inset);
         var safeMax = new Vector2(full.Max.X - inset, deckTop - inset);
@@ -86,6 +91,8 @@ internal readonly struct CasinoStageLayout
             ChipRadius * scale, MathF.Max(ChipRadius, TouchTarget * 0.5f) * scale, ribbonRect, practiceRect, deck,
             safe);
     }
+
+    public Rect DeckPanel => new(new Vector2(Full.Min.X, Deck.Min.Y), Full.Max);
 
     public bool ChromeContains(Vector2 point)
     {

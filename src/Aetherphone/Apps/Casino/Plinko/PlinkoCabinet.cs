@@ -15,11 +15,9 @@ namespace Aetherphone.Apps.Casino.Plinko;
 
 internal sealed class PlinkoCabinet : ICabinetIdle
 {
-    private const float SignHeight = 30f;
-    private const float RailHeight = 26f;
     private const float RailChipWidth = 52f;
     private const float RailGap = 4f;
-    private const float SectionGap = 8f;
+    private const string HintMarquee = "casino.plinko.hint";
     private const float RowsShare = 0.42f;
     private const float AutoSpacingSeconds = 0.3f;
     private const float SpotlightAlpha = 0.07f;
@@ -139,15 +137,8 @@ internal sealed class PlinkoCabinet : ICabinetIdle
             return;
         }
 
-        var safe = frame.Safe;
-        var signBottom = safe.Min.Y + SignHeight * scale;
-        var railRect = new Rect(new Vector2(safe.Min.X, signBottom + SectionGap * 0.5f * scale),
-            new Vector2(safe.Max.X, signBottom + (SectionGap * 0.5f + RailHeight) * scale));
-        var statusHeight = OriginalsControls.StatHeight * scale + Typography.LineHeight(TextStyles.Footnote)
-            + SectionGap * 2f * scale;
-        var boardTop = railRect.Max.Y + SectionGap * scale;
-        boardArea = new Rect(new Vector2(safe.Min.X, boardTop),
-            new Vector2(safe.Max.X, MathF.Max(boardTop, safe.Max.Y - statusHeight)));
+        var stageLayout = PlinkoStageLayout.Compute(frame.Safe, scale);
+        boardArea = stageLayout.Board;
         layout = BoardLayout(boardArea, rows, risk, scale);
         if (frame.SnapToTruth)
         {
@@ -164,11 +155,9 @@ internal sealed class PlinkoCabinet : ICabinetIdle
 
         fx.Advance(frame.DeltaSeconds);
         rail.Advance(frame.DeltaSeconds);
-        DrawSign(drawList, frame, new Rect(safe.Min, new Vector2(safe.Max.X, signBottom)), scale);
-        DrawRail(drawList, ui, railRect, scale);
+        DrawSign(drawList, frame, stageLayout.Sign, scale);
         DrawBoard(drawList, frame, scale);
-        DrawStatus(drawList, ui, state, new Rect(new Vector2(safe.Min.X, boardArea.Max.Y + SectionGap * scale),
-            safe.Max), scale);
+        DrawPlate(drawList, stage, ui, state, stageLayout, scale);
         DrawDeck(stage, frame, ui, state, scale);
     }
 
@@ -345,12 +334,34 @@ internal sealed class PlinkoCabinet : ICabinetIdle
         CasinoSigns.Draw(drawList, CasinoSign.Plinko, band.Center, height, CasinoColors.LightA, flicker);
     }
 
-    private void DrawRail(ImDrawListPtr drawList, AppSkin ui, Rect row, float scale)
+    private void DrawPlate(ImDrawListPtr drawList, CasinoStage stage, AppSkin ui, CasinoStateDto state,
+        in PlinkoStageLayout stageLayout, float scale)
+    {
+        var plate = stageLayout.Plate;
+        if (hasNotice)
+        {
+            var message = CasinoReasons.Text(noticeReason, noticeCeiling);
+            var height = CasinoNotice.Height(CasinoNoticeKind.Reason, string.Empty, message, plate.Width, scale);
+            CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Reason, string.Empty, message, plate.Min.X,
+                plate.Max.Y - height, plate.Width, scale);
+            return;
+        }
+
+        Material.ThemedGlass(drawList, plate.Min, plate.Max, PlinkoStageLayout.PlateRadius * scale, scale,
+            stage.Backdrop.Ground, 0.92f);
+        DrawRail(drawList, stageLayout.Rail, scale);
+        DrawStatus(drawList, ui, state, stageLayout.Stats, scale);
+    }
+
+    private void DrawRail(ImDrawListPtr drawList, Rect row, float scale)
     {
         if (rail.Count == 0)
         {
-            var empty = Typography.FitText(Loc.T(L.Plinko.RailEmpty), row.Width, TextStyles.Footnote);
-            Typography.DrawCentered(drawList, row.Center, empty, StageInks.Strong, TextStyles.Footnote);
+            var hintStyle = TextStyles.Footnote;
+            var text = Loc.T(flight.ActiveCount > 0 ? L.Plinko.RailEmpty : L.Plinko.Hint);
+            var top = row.Center.Y - Typography.LineHeight(hintStyle) * 0.5f;
+            Marquee.DrawCentered(drawList, new MarqueeId(HintMarquee, 0), text, row.Center.X, top, row.Width, hintStyle,
+                StageInks.Strong, UiInteract.Hover(row.Min, row.Max));
             return;
         }
 
@@ -415,18 +426,11 @@ internal sealed class PlinkoCabinet : ICabinetIdle
 
     private void DrawStatus(ImDrawListPtr drawList, AppSkin ui, CasinoStateDto state, Rect area, float scale)
     {
-        if (hasNotice)
-        {
-            CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Reason, string.Empty,
-                CasinoReasons.Text(noticeReason, noticeCeiling), area.Min.X, area.Min.Y, area.Width, scale);
-            return;
-        }
-
         if (state.StakesPaused || state.Draining)
         {
-            Typography.DrawWrappedCentered(drawList,
-                Loc.T(state.StakesPaused ? L.Casino.PausedTitle : L.Casino.DrainingTitle), TextStyles.Subheadline,
-                CasinoColors.InkBody, new Vector2(area.Center.X, area.Min.Y), area.Width);
+            var paused = Typography.FitText(Loc.T(state.StakesPaused ? L.Casino.PausedTitle : L.Casino.DrainingTitle),
+                area.Width, TextStyles.Subheadline);
+            Typography.DrawCentered(drawList, area.Center, paused, StageInks.Strong, TextStyles.Subheadline);
             return;
         }
 
@@ -436,18 +440,8 @@ internal sealed class PlinkoCabinet : ICabinetIdle
             ? NumberText.Compact(PlinkoRules.Payout(ceiling, edgeTenths))
             : CasinoMultiples.Label(edgeTenths * PlinkoRules.TenthsPerMultiple);
         var odds = edgeLabel.Get(L.Plinko.EdgeOdds, NumberText.Group(PlinkoRules.EdgeOneIn(rows)));
-        var statRow = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + OriginalsControls.StatHeight * scale));
-        OriginalsControls.StatRow(drawList, statRow, Loc.T(L.Plinko.MaxWin), maxWin, CasinoColors.Money,
+        OriginalsControls.StatRow(drawList, area, Loc.T(L.Plinko.MaxWin), maxWin, CasinoColors.Money,
             Loc.T(L.Plinko.Edge), odds, CasinoColors.InkTitle, ui, scale);
-        if (rail.Count > 0 || flight.ActiveCount > 0)
-        {
-            return;
-        }
-
-        var hint = Typography.FitText(Loc.T(L.Plinko.Hint), area.Width, TextStyles.Footnote);
-        Typography.DrawCentered(drawList, new Vector2(area.Center.X,
-                statRow.Max.Y + SectionGap * 0.5f * scale + Typography.LineHeight(TextStyles.Footnote) * 0.5f), hint,
-            StageInks.Strong, TextStyles.Footnote);
     }
 
     private void DrawDeck(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, CasinoStateDto state, float scale)

@@ -21,7 +21,7 @@ internal sealed partial class CasinoApp
         }
 
         launchRoute = router.Current;
-        launch.Begin(new Rect(source.Min - screenArea.Min, source.Max - screenArea.Min));
+        launch.Begin(new Rect(source.Min - frameArea.Min, source.Max - frameArea.Min));
     }
 
     private bool TryDismissLaunch()

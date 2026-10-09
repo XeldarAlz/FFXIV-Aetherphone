@@ -72,6 +72,40 @@ public sealed class CasinoStageLayoutTests
         Assert.True(layout.Safe.Max.Y >= layout.Safe.Min.Y);
     }
 
+    [Theory]
+    [InlineData(0.75f)]
+    [InlineData(1f)]
+    [InlineData(1.5f)]
+    public void TheStageIsFullBleedWhileChromeAndDeckStayInsideTheContent(float scale)
+    {
+        var screen = new Rect(new Vector2(84f, 2f), new Vector2(84f + 393f * scale, 2f + 852f * scale));
+        var content = new Rect(new Vector2(screen.Min.X + 16f * scale, screen.Min.Y + 48f * scale),
+            new Vector2(screen.Max.X - 16f * scale, screen.Max.Y - 30f * scale));
+        var layout = CasinoStageLayout.Compute(screen, content, false, false, CasinoStageLayout.DeckHeight, scale);
+        Assert.Equal(screen.Min, layout.Full.Min);
+        Assert.Equal(screen.Max, layout.Full.Max);
+        Assert.Equal(content.Min.Y + CasinoStageLayout.ChromeBand * scale, layout.Band.Max.Y, 3);
+        Assert.True(layout.BackCenter.Y - layout.ChipRadiusPixels >= content.Min.Y);
+        Assert.Equal(content.Max.Y, layout.Deck.Max.Y, 3);
+        Assert.Equal(content.Min.X, layout.Deck.Min.X, 3);
+        Assert.Equal(screen.Max.Y, layout.DeckPanel.Max.Y, 3);
+        Assert.Equal(screen.Min.X, layout.DeckPanel.Min.X, 3);
+        Assert.Equal(screen.Max.X, layout.DeckPanel.Max.X, 3);
+        Assert.Equal(screen.Min.X + CasinoStageLayout.SafeInset * scale, layout.Safe.Min.X, 3);
+        Assert.Equal(screen.Max.X - CasinoStageLayout.SafeInset * scale, layout.Safe.Max.X, 3);
+        Assert.Equal(layout.Deck.Min.Y - CasinoStageLayout.SafeInset * scale, layout.Safe.Max.Y, 3);
+    }
+
+    [Fact]
+    public void WithoutADeckSafeStopsAboveTheHomeIndicator()
+    {
+        var screen = new Rect(Vector2.Zero, new Vector2(393f, 852f));
+        var content = new Rect(new Vector2(16f, 48f), new Vector2(377f, 822f));
+        var layout = CasinoStageLayout.Compute(screen, content, true, false, 0f, 1f);
+        Assert.False(layout.HasDeck);
+        Assert.Equal(822f - CasinoStageLayout.SafeInset, layout.Safe.Max.Y, 3);
+    }
+
     [Fact]
     public void TheBetsLogKeepsTheNewestFiftyOncePerRound()
     {
