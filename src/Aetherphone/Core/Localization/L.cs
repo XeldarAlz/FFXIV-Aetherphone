@@ -10530,8 +10530,6 @@ internal static class L
         public static readonly LocString QuickSeatTitle = new("casino.quickSeat.title", "Quick seat");
         public static readonly LocString QuickSeatAction = new("casino.quickSeat.action", "Find me a seat");
         public static readonly LocString DoorTitle = new("casino.door.title", "Your table");
-        public static readonly LocString DoorInviteHeading = new("casino.door.inviteHeading", "Invite");
-        public static readonly LocString DoorTokenPending = new("casino.door.tokenPending", "The invite is on its way.");
         public static readonly LocString DoorCopyInvite = new("casino.door.copyInvite", "Copy invite");
         public static readonly LocString DoorOpenTable = new("casino.door.openTable", "Open the table");
         public static readonly LocString DoorKnocksHeading = new("casino.door.knocksHeading", "Asking to join");
@@ -11234,11 +11232,8 @@ internal static class L
         public static readonly LocString PausedBadge = new("casino.tables.pausedBadge", "Paused");
         public static readonly LocString HostPanelHeading = new("casino.tables.hostPanelHeading", "Host controls");
         public static readonly LocString Rename = new("casino.tables.rename", "Rename");
-        public static readonly LocString PauseTable = new("casino.tables.pauseTable", "Pause between hands");
-        public static readonly LocString DealNow = new("casino.tables.dealNow", "Start the next hand");
         public static readonly LocString Deal = new("casino.tables.deal", "Deal");
         public static readonly LocString CloseTable = new("casino.tables.closeTable", "Close");
-        public static readonly LocString CloseTableHint = new("casino.tables.closeTableHint", "Close the table");
         public static readonly LocString CloseConfirmTitle = new("casino.tables.closeConfirmTitle", "Close this table?");
         public static readonly LocString CloseConfirmBody = new("casino.tables.closeConfirmBody", "Every seat stands up. At a gil table each stack becomes a cash-out you still owe on the ledger.");
         public static readonly LocString CoDealerOn = new("casino.tables.coDealerOn", "Co-dealer");
@@ -11247,9 +11242,6 @@ internal static class L
         public static readonly LocString LedgerLoading = new("casino.tables.ledgerLoading", "Reading the ledger");
         public static readonly LocString LedgerEmpty = new("casino.tables.ledgerEmpty", "Nobody has played here yet.");
         public static readonly LocString CopyLedger = new("casino.tables.copyLedger", "Copy");
-        public static readonly LocString RowBuyIns = new("casino.tables.rowBuyIns", "In {0}");
-        public static readonly LocString RowStack = new("casino.tables.rowStack", "Stack {0}");
-        public static readonly LocString RowHands = new("casino.tables.rowHands", "{0} hands");
         public static readonly LocString CopyRow = new("casino.tables.copyRow", "{0}: in {1}, stack {2}, net {3}, {4} hands");
         public static readonly LocString CopyEntry = new("casino.tables.copyEntry", "{0}: {1} to {2}, {3}, {4}");
         public static readonly LocString GilLedgerHeading = new("casino.tables.gilLedgerHeading", "Gil ledger");
@@ -11341,6 +11333,14 @@ internal static class L
         public static readonly LocString HostCtaLine = new("casino.tables.hostCtaLine", "Pick a game, set the stakes, share the code.");
         public static readonly LocString PhaseOpen = new("casino.tables.phaseOpen", "Seats open");
         public static readonly LocString HostedBy = new("casino.tables.hostedBy", "Hosted by {0}");
+        public static readonly LocString ControlCoDealers = new("casino.tables.controlCoDealers", "Co-dealers");
+        public static readonly LocString KnockLine = new("casino.tables.knockLine", "Wants a seat");
+        public static readonly LocString SeatLabel = new("casino.tables.seatLabel", "Seat {0}");
+        public static readonly LocString ColumnPlayer = new("casino.tables.columnPlayer", "Player");
+        public static readonly LocString ColumnBuyIns = new("casino.tables.columnBuyIns", "Buy-ins");
+        public static readonly LocString ColumnStack = new("casino.tables.columnStack", "Stack");
+        public static readonly LocString ColumnNet = new("casino.tables.columnNet", "Net");
+        public static readonly LocString RenameSave = new("casino.tables.renameSave", "Save");
     }
 
     internal static class Race
