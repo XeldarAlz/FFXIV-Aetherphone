@@ -794,8 +794,11 @@ internal sealed partial class ChirperApp
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var featherSize = 26f * scale;
         var featherCenter = new Vector2(area.Min.X + CellPadX * scale + featherSize * 0.5f, rowCenterY);
-        PhoneIcon.Draw(drawList, featherCenter, PhoneIcons.Feather,
-            ChirperInk.AccentLink, featherSize);
+        if (!SeasonalTheme.Halloween ||
+            !AppIconTile.TryDrawGlyph(drawList, Id, featherCenter, featherSize * MoonLogoGrow, ChirperInk.TitleInk))
+        {
+            PhoneIcon.Draw(drawList, featherCenter, PhoneIcons.Feather, ChirperInk.AccentLink, featherSize);
+        }
         var titleLeft = featherCenter.X + featherSize * 0.5f + 12f * scale;
         var buttonRadius = TopBarButtonRadius * scale;
         var refreshCenter = new Vector2(area.Max.X - CellPadX * scale - buttonRadius, rowCenterY);

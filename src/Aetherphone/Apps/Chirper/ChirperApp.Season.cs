@@ -19,6 +19,7 @@ internal sealed partial class ChirperApp
     private const float ClawDrawTime = 0.14f;
     private const int ClawSegments = 12;
     private const float MoonTapReach = 0.6f;
+    private const float MoonLogoGrow = 1.2f;
 
     private static readonly Vector4 ClawInk = new(0.84f, 0.88f, 1f, 0.9f);
     private static readonly Vector4 ClawGlow = new(0.75f, 0.81f, 1f, 0.25f);

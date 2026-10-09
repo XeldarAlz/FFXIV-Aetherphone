@@ -364,11 +364,76 @@ async function paint(id, entry) {
   return `${entry.symbol} on ${entry.family} ${entry.hue}`;
 }
 
+const MOONLIT_STOPS = ["#1B2A6B", "#070B22"];
+const MOONLIT_STARS = [[180, 210, 7], [262, 150, 4], [820, 190, 6], [880, 330, 4], [150, 760, 5], [860, 820, 6], [700, 120, 4]];
+const MOONLIT_CRATERS = [[430, 400, 46], [610, 600, 62], [560, 330, 28], [380, 640, 34], [700, 430, 24]];
+const MOON_RADIUS = 360;
+const FEATHER_WIDTH_FRACTION = 0.5;
+const FEATHER_INK = "#0C1236";
+const BLOOD_STOPS = ["#D0203A", "#5C0612"];
+const APERTURE_WIDTH_FRACTION = 0.44;
+const APERTURE_DROP = 40;
+const BAT_WING =
+  "M 300 470 C 240 400, 150 340, 70 340 C 110 390, 118 430, 108 480 Q 150 460, 178 500 Q 206 474, 238 520 Q 266 500, 300 580 Z";
+const BAT_EAR = "M 440 330 L 462 232 L 494 316 Z";
+
+function circles(points, fill, opacity) {
+  return points.map(([x, y, radius]) => `<circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" fill-opacity="${opacity}"/>`).join("");
+}
+
+function scaledPlacement(bounds, widthFraction, dropY) {
+  const scale = (widthFraction * MASTER_SIZE) / bounds.width;
+  const translateX = MASTER_SIZE / 2 - scale * (bounds.left + bounds.width / 2);
+  const translateY = MASTER_SIZE / 2 + dropY - scale * (bounds.top + bounds.height / 2);
+  return `translate(${translateX.toFixed(3)} ${translateY.toFixed(3)}) scale(${scale.toFixed(5)})`;
+}
+
+function moonDisc() {
+  const center = MASTER_SIZE / 2;
+  return `<defs><radialGradient id="halo"><stop offset="55%" stop-color="#C9D6FF" stop-opacity="0.45"/><stop offset="100%" stop-color="#C9D6FF" stop-opacity="0"/></radialGradient>`
+    + `<radialGradient id="face" cx="40%" cy="38%" r="70%"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="60%" stop-color="#E3E8F8"/><stop offset="100%" stop-color="#B8C2E2"/></radialGradient></defs>`
+    + `<circle cx="${center}" cy="${center}" r="${MOON_RADIUS * 1.32}" fill="url(#halo)"/>`
+    + `<circle cx="${center}" cy="${center}" r="${MOON_RADIUS}" fill="url(#face)"/>`
+    + circles(MOONLIT_CRATERS, "#8C98C4", 0.22);
+}
+
+async function paintMoonlitFeather(id) {
+  const markup = await fetchSymbolMarkup("feather");
+  const transform = scaledPlacement(await measureSymbol(markup), FEATHER_WIDTH_FRACTION, 0);
+  const center = MASTER_SIZE / 2;
+  const tile = backgroundMarkup(MOONLIT_STOPS) + circles(MOONLIT_STARS, WHITE, 0.7) + moonDisc()
+    + symbolGroup(markup, FEATHER_INK, transform);
+  const symbol = `<defs><mask id="cut"><rect width="${MASTER_SIZE}" height="${MASTER_SIZE}" fill="#FFFFFF"/>${symbolGroup(markup, "#000000", transform)}</mask></defs>`
+    + `<circle cx="${center}" cy="${center}" r="${MOON_RADIUS}" fill="${WHITE}" mask="url(#cut)"/>`;
+  await writePair(id, svgDocument(tile), true);
+  await writePair(`${id}.fg`, svgDocument(symbol), false);
+  return "feather silhouetted on a full moon";
+}
+
+function batWings(ink) {
+  const mirror = `translate(${MASTER_SIZE} 0) scale(-1 1)`;
+  return `<g fill="${ink}"><path d="${BAT_WING}"/><path d="${BAT_EAR}"/><g transform="${mirror}"><path d="${BAT_WING}"/><path d="${BAT_EAR}"/></g></g>`;
+}
+
+async function paintBatAperture(id) {
+  const markup = await fetchSymbolMarkup("aperture");
+  const transform = scaledPlacement(await measureSymbol(markup), APERTURE_WIDTH_FRACTION, APERTURE_DROP);
+  const symbol = batWings(WHITE) + symbolGroup(markup, WHITE, transform);
+  await writePair(id, svgDocument(backgroundMarkup(BLOOD_STOPS) + symbol), true);
+  await writePair(`${id}.fg`, svgDocument(symbol), false);
+  return "aperture with bat wings on blood red";
+}
+
+const seasonal = {
+  "chirper.halloween": paintMoonlitFeather,
+  "aethergram.halloween": paintBatAperture,
+};
+
 mkdirSync(ICONS_OUT, { recursive: true });
 mkdirSync(MASTERS_OUT, { recursive: true });
 
 const only = new Set(process.argv.slice(2));
-const unknown = [...only].filter((id) => !(id in map));
+const unknown = [...only].filter((id) => !(id in map) && !(id in seasonal));
 if (unknown.length > 0) {
   console.error(`Unknown ids: ${unknown.join(", ")}`);
   process.exit(2);
@@ -386,6 +451,19 @@ for (const [id, entry] of Object.entries(map)) {
     console.log(`  ${id.padEnd(14)} <- ${summary}`);
   } catch (error) {
     failed.push(`${id} (${entry.symbol}): ${error.message}`);
+  }
+}
+
+for (const [id, paintSeasonal] of Object.entries(seasonal)) {
+  if (only.size > 0 && !only.has(id)) {
+    continue;
+  }
+  try {
+    const summary = await paintSeasonal(id);
+    written++;
+    console.log(`  ${id.padEnd(20)} <- ${summary}`);
+  } catch (error) {
+    failed.push(`${id}: ${error.message}`);
   }
 }
 
