@@ -9840,6 +9840,7 @@
   "casino.strip.introNext": "Next",
   "casino.strip.introSkip": "Skip",
   "casino.strip.introStart": "Start playing",
+  "casino.race.betOn": "Bet {0} on {1} ({2})",
   "conduct.casino.title": "Gamba House Rules",
   "conduct.casino.intro": "Before you sit down at a table, please read the house rules.",
   "conduct.casino.playMoney.title": "Play Money Only",

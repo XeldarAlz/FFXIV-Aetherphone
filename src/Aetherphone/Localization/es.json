@@ -9840,6 +9840,7 @@
   "casino.strip.introNext": "Siguiente",
   "casino.strip.introSkip": "Saltar",
   "casino.strip.introStart": "Empezar a jugar",
+  "casino.race.betOn": "Apostar {0} a {1} ({2})",
   "conduct.casino.title": "Reglas de la casa de Gamba",
   "conduct.casino.intro": "Antes de sentarte a una mesa, lee las reglas de la casa.",
   "conduct.casino.playMoney.title": "Solo dinero de juego",

@@ -33,6 +33,7 @@ internal sealed class RaceTexts
     private readonly string[] tickets = new string[RaceRules.MaxTickets];
     private readonly string[] results = new string[RaceRules.ResultRows];
     private readonly string[] places = new string[Places.Length];
+    private readonly string[] ticketPays = new string[RaceRules.MaxTickets];
     private readonly StringBuilder builder = new();
 
     private LanguageInfo? language;
@@ -50,6 +51,13 @@ internal sealed class RaceTexts
     private int countValue = -1;
     private string raceLine = string.Empty;
     private long raceValue = -1;
+    private CasinoRaceTicketDto[]? paysSource;
+    private CasinoRaceRunnerDto[]? paysRunners;
+    private string betLine = string.Empty;
+    private long betAmount = -1;
+    private int betKey = int.MinValue;
+    private long betPay = -1;
+    private CasinoRaceRunnerDto[]? betRunners;
 
     public RaceTexts()
     {
@@ -78,6 +86,8 @@ internal sealed class RaceTexts
 
         ticketSource = null;
         resultSource = null;
+        paysSource = null;
+        betKey = int.MinValue;
         payKind = -1;
         rideValue = -1;
         wonValue = -1;
@@ -160,6 +170,61 @@ internal sealed class RaceTexts
         return index >= 0 && index < results.Length ? results[index] : string.Empty;
     }
 
+    public string TicketPays(CasinoRaceTicketDto[] list, CasinoRaceRunnerDto[] runners, int index)
+    {
+        if (!ReferenceEquals(paysSource, list) || !ReferenceEquals(paysRunners, runners))
+        {
+            paysSource = list;
+            paysRunners = runners;
+            for (var row = 0; row < ticketPays.Length; row++)
+            {
+                ticketPays[row] = row < list.Length ? PaysFor(list[row], runners) : string.Empty;
+            }
+        }
+
+        return index >= 0 && index < ticketPays.Length ? ticketPays[index] : string.Empty;
+    }
+
+    public string BetLine(long amount, int kind, int first, int second, CasinoRaceRunnerDto[] runners)
+    {
+        var key = RaceRules.TicketKey(kind, first, second);
+        var pay = PayOf(kind, first, second, runners);
+        if (amount == betAmount && key == betKey && pay == betPay && ReferenceEquals(betRunners, runners))
+        {
+            return betLine;
+        }
+
+        betAmount = amount;
+        betKey = key;
+        betPay = pay;
+        betRunners = runners;
+        var target = RaceRules.IsPair(kind)
+            ? string.Concat(GameNumber.Label(first + 1), "-", GameNumber.Label(second + 1))
+            : runners[first].Name;
+        betLine = Loc.T(L.Race.BetOn, RaceAmounts.Text(amount), target,
+            CasinoMultiples.Label((int)Math.Min(int.MaxValue, pay)));
+        return betLine;
+    }
+
+    public static long PayOf(int kind, int first, int second, CasinoRaceRunnerDto[] runners)
+    {
+        if (!RaceRules.IsRunner(first) || first >= runners.Length)
+        {
+            return 0;
+        }
+
+        var partner = RaceRules.IsRunner(second) && second < runners.Length ? runners[second].OddsHundredths : 0;
+        return RaceRules.PotentialPayHundredths(kind, runners[first].OddsHundredths,
+            runners[first].PlaceOddsHundredths, partner);
+    }
+
+    private string PaysFor(CasinoRaceTicketDto ticket, CasinoRaceRunnerDto[] runners)
+    {
+        var pay = PayOf(ticket.Kind, ticket.Runner, ticket.RunnerB, runners);
+        var amount = RaceAmounts.Text(RaceRules.Payout(ticket.Amount, pay));
+        return Loc.T(ticket.Kind == RaceRules.KindReverse ? L.Race.PaysUpTo : L.Race.Pays, amount);
+    }
+
     public string PayLine(int kind, long payHundredths)
     {
         if (kind == payKind && payHundredths == payValue)
@@ -182,7 +247,7 @@ internal sealed class RaceTexts
         }
 
         rideValue = amount;
-        rideLine = Loc.T(L.Race.LetItRide, NumberText.Compact(amount));
+        rideLine = Loc.T(L.Race.LetItRide, RaceAmounts.Text(amount));
         return rideLine;
     }
 
@@ -194,7 +259,7 @@ internal sealed class RaceTexts
         }
 
         wonValue = amount;
-        wonLine = Loc.T(L.Race.YouWon, NumberText.Compact(amount));
+        wonLine = Loc.T(L.Race.YouWon, RaceAmounts.Text(amount));
         return wonLine;
     }
 

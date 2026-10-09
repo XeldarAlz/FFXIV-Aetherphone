@@ -41,8 +41,11 @@ internal sealed class RaceCabinet : ICabinetIdle
     private readonly RaceBoards boards = new();
     private readonly RaceTicketBuilder builder = new();
     private readonly RaceTexts texts = new();
-    private readonly BetComposer composer = new("##raceBet");
+    private readonly RaceFieldList field = new();
+    private readonly RaceTicketStrip strip = new();
+    private readonly RaceDeck deck = new();
     private readonly bool[] mine = new bool[RaceRules.FieldSize];
+    private readonly long[] stakes = new long[RaceRules.FieldSize];
 
     private string inlineReason = string.Empty;
     private string settledKey = string.Empty;
@@ -57,6 +60,7 @@ internal sealed class RaceCabinet : ICabinetIdle
     private bool entered;
     private float gallopClock;
     private float idleClock;
+    private Rect deckRect;
 
     public RaceCabinet(CasinoStore chips, CasinoRoomsStore rooms, Action openCashier, Action leaveRoom)
     {
@@ -66,7 +70,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         this.leaveRoom = leaveRoom;
     }
 
-    public static float DeckHeight => BetComposer.DeckHeightFor(true, false);
+    public static float DeckHeight => RaceDeckLayout.Height;
 
     public Backdrop IdleBackdrop => Backdrop.Arena;
 
@@ -75,16 +79,16 @@ internal sealed class RaceCabinet : ICabinetIdle
     public CasinoStageSpec Spec(bool landscape)
     {
         var phase = rooms.Room.State?.Snapshot?.Phase ?? CasinoRoomPhases.Open;
-        var deck = !landscape && phase == CasinoRoomPhases.Open ? DeckHeight : 0f;
-        return new CasinoStageSpec(CasinoGames.Race, L.Race.Title, Backdrop.Arena, Room: !landscape,
-            DeckHeight: deck, InstantAvailable: true, ReturnTenths: RaceRules.ReturnTenths);
+        var deckHeight = !landscape && phase == CasinoRoomPhases.Open ? DeckHeight : 0f;
+        return new CasinoStageSpec(CasinoGames.Race, L.Race.Title, Backdrop.Arena, DeckHeight: deckHeight,
+            InstantAvailable: true, ReturnTenths: RaceRules.ReturnTenths);
     }
 
     public void Enter()
     {
         entered = true;
         inlineReason = string.Empty;
-        composer.Reset(RaceRules.MinBet);
+        deck.Reset(RaceRules.MinBet);
         builder.Reset();
         ResetShow();
         rooms.Enter(CasinoRoomIds.RaceTrack);
@@ -101,16 +105,6 @@ internal sealed class RaceCabinet : ICabinetIdle
         inlineReason = string.Empty;
         builder.Reset();
         ResetShow();
-    }
-
-    public void Gate()
-    {
-        composer.Gate();
-    }
-
-    public void DrawOverlay(Rect screen, AppSkin ui)
-    {
-        composer.DrawOverlay(screen, ui, false);
     }
 
     public void Draw(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, bool landscape)
@@ -154,36 +148,41 @@ internal sealed class RaceCabinet : ICabinetIdle
         Settle(stage, frame, snapshot, bets);
         var racing = snapshot.Phase == CasinoRoomPhases.Locked;
         var open = snapshot.Phase == CasinoRoomPhases.Open;
-        var layout = RaceLayout.Compute(safe, frame.Deck, landscape, racing, open, DeckHeight, scale);
-        var ribbonRect = landscape ? layout.Header : frame.Layout.Ribbon;
-        PhaseRibbon.Draw(drawList, ribbonRect, RibbonLabel(snapshot.Phase, remaining), remaining,
-            CasinoRoomCadence.RaceWindow(snapshot.Phase), snapshot.Occupancy,
-            room.Attached ? CasinoColors.LightA : CasinoColors.InkMuted, scale);
+        if (!racing)
+        {
+            DrawCountdown(drawList, frame, snapshot.Phase, remaining, room.Attached, state, scale);
+        }
+
         if (racing)
         {
-            DrawRace(drawList, layout, runners, landscape, delta, stretch, scale);
+            var raceLayout = RaceLayout.Compute(safe, frame.Deck, landscape, true, false, 0f, scale);
+            if (landscape)
+            {
+                PhaseRibbon.Draw(drawList, raceLayout.Header, RibbonLabel(snapshot.Phase, remaining), remaining,
+                    CasinoRoomCadence.RaceWindow(snapshot.Phase), snapshot.Occupancy,
+                    room.Attached ? CasinoColors.LightA : CasinoColors.InkMuted, scale);
+            }
+
+            DrawRace(drawList, raceLayout, runners, landscape, delta, stretch, scale);
             return;
         }
 
         if (runners is not { Length: RaceRules.FieldSize })
         {
-            DrawCenterPill(drawList, layout.Main, Loc.T(L.Race.WaitingField), 1f, scale);
+            DrawCenterPill(drawList, safe, Loc.T(L.Race.WaitingField), 1f, scale);
             return;
-        }
-
-        if (layout.Landscape)
-        {
-            var railMin = new Vector2(layout.Side.Min.X - 6f * scale, layout.Header.Max.Y);
-            drawList.PushClipRect(frame.Full.Min, frame.Full.Max, true);
-            Material.Frosted(drawList, railMin, new Vector2(frame.Full.Max.X + RailRadius * scale,
-                frame.Full.Max.Y + RailRadius * scale), RailRadius * scale, scale);
-            drawList.PopClipRect();
         }
 
         if (open)
         {
-            DrawOpen(stage, frame, ui, drawList, layout, snapshot, runners, bets, state, scale);
+            DrawOpen(stage, frame, ui, drawList, landscape, snapshot, runners, bets, state, scale);
             return;
+        }
+
+        var layout = RaceLayout.Compute(safe, frame.Deck, landscape, false, false, 0f, scale);
+        if (layout.Landscape)
+        {
+            DrawRail(drawList, frame.Full, new Vector2(layout.Side.Min.X, layout.Header.Max.Y), scale);
         }
 
         DrawResult(drawList, layout, board!, runners, bets, stage.Phase, delta, scale);
@@ -218,6 +217,8 @@ internal sealed class RaceCabinet : ICabinetIdle
         commentary.Clear();
         view.Reset();
         boards.Reset();
+        field.Reset();
+        strip.Reset();
         settledKey = string.Empty;
         roundSeen = -1;
         phaseSeen = -1;
@@ -225,6 +226,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         planSeen = false;
         gallopClock = 0f;
         Array.Clear(mine);
+        Array.Clear(stakes);
     }
 
     private void TrackRound(CasinoStage stage, CasinoRoomSnapshotDto snapshot, long remainingMs)
@@ -290,6 +292,7 @@ internal sealed class RaceCabinet : ICabinetIdle
     private void CollectMine(CasinoRaceBetsDto? bets)
     {
         Array.Clear(mine);
+        Array.Clear(stakes);
         var tickets = bets?.Tickets;
         if (tickets is null)
         {
@@ -298,14 +301,17 @@ internal sealed class RaceCabinet : ICabinetIdle
 
         for (var index = 0; index < tickets.Length; index++)
         {
-            if (RaceRules.IsRunner(tickets[index].Runner))
+            var ticket = tickets[index];
+            if (RaceRules.IsRunner(ticket.Runner))
             {
-                mine[tickets[index].Runner] = true;
+                mine[ticket.Runner] = true;
+                stakes[ticket.Runner] += ticket.Amount;
             }
 
-            if (RaceRules.IsRunner(tickets[index].RunnerB))
+            if (RaceRules.IsRunner(ticket.RunnerB))
             {
-                mine[tickets[index].RunnerB] = true;
+                mine[ticket.RunnerB] = true;
+                stakes[ticket.RunnerB] += ticket.Amount;
             }
         }
     }
@@ -321,7 +327,7 @@ internal sealed class RaceCabinet : ICabinetIdle
             if (result.Granted)
             {
                 CasinoSfx.Play(UiSound.ChipSlide);
-                stage.Particles.Sparkle(composer.KnobRect.Center, 14, CasinoColors.Money, 90f * UiScale.Current,
+                stage.Particles.Sparkle(deckRect.Center, 14, CasinoColors.Money, 90f * UiScale.Current,
                     3f * UiScale.Current, 0.6f);
                 builder.Clear();
             }
@@ -465,6 +471,28 @@ internal sealed class RaceCabinet : ICabinetIdle
         return ribbonText;
     }
 
+    private void DrawCountdown(ImDrawListPtr drawList, in CasinoStageFrame frame, int phase, long remainingMs,
+        bool attached, CasinoStateDto state, float scale)
+    {
+        var stageLayout = frame.Layout;
+        var balance = RaceAmounts.Text(state.Sitting?.Stack ?? 0);
+        var capsuleWidth = RaceCountdownLayout.CapsuleWidth(Typography.Measure(balance, TextStyles.Headline).X,
+            stageLayout.CapsuleMaxWidth, scale);
+        var chip = RaceCountdownLayout.Compute(stageLayout.CapsuleCenter, capsuleWidth, stageLayout.InfoCenter,
+            stageLayout.ChipRadiusPixels, scale, out var wide);
+        RaceCountdownChip.Draw(drawList, chip, wide, remainingMs, CasinoRoomCadence.RaceWindow(phase),
+            attached ? CasinoColors.LightA : CasinoColors.InkMuted, scale);
+    }
+
+    private static void DrawRail(ImDrawListPtr drawList, Rect full, Vector2 corner, float scale)
+    {
+        var inset = RaceOpenLayout.RailInset * scale;
+        drawList.PushClipRect(full.Min, full.Max, true);
+        Material.Frosted(drawList, corner - new Vector2(inset, inset),
+            new Vector2(full.Max.X + RailRadius * scale, full.Max.Y + RailRadius * scale), RailRadius * scale, scale);
+        drawList.PopClipRect();
+    }
+
     private void DrawRace(ImDrawListPtr drawList, in RaceLayout layout, CasinoRaceRunnerDto[]? runners,
         bool landscape, float deltaSeconds, float stretch, float scale)
     {
@@ -501,16 +529,28 @@ internal sealed class RaceCabinet : ICabinetIdle
     }
 
     private void DrawOpen(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, ImDrawListPtr drawList,
-        in RaceLayout layout, CasinoRoomSnapshotDto snapshot, CasinoRaceRunnerDto[] runners, CasinoRaceBetsDto? bets,
+        bool landscape, CasinoRoomSnapshotDto snapshot, CasinoRaceRunnerDto[] runners, CasinoRaceBetsDto? bets,
         CasinoStateDto state, float scale)
     {
         var sitting = state.Sitting;
-        var tickets = bets?.Tickets;
-        var ticketCount = tickets?.Length ?? 0;
-        var full = ticketCount >= RaceRules.MaxTickets;
+        var tickets = bets?.Tickets ?? Array.Empty<CasinoRaceTicketDto>();
+        var full = tickets.Length >= RaceRules.MaxTickets;
         var selectable = sitting is not null && !frame.Blocked && !full;
-        var tapped = boards.DrawTote(drawList, ui, layout.Main, runners, builder, texts, selectable,
-            snapshot.RoundIndex, frame.DeltaSeconds, scale);
+        var safe = frame.Safe;
+        var message = inlineReason.Length > 0 ? Loc.T(CasinoReasons.MessageFor(inlineReason)) : string.Empty;
+        var noticeHeight = message.Length > 0
+            ? CasinoNotice.Height(CasinoNoticeKind.Reason, string.Empty, message,
+                RaceOpenLayout.ColumnWidth(safe, landscape, scale), scale)
+            : 0f;
+        var layout = RaceOpenLayout.Compute(safe, frame.Deck, landscape, tickets.Length, strip.Expanded, noticeHeight,
+            scale);
+        if (layout.HasRail)
+        {
+            DrawRail(drawList, frame.Full, layout.Rail.Min, scale);
+        }
+
+        var tapped = field.Draw(ui, layout.List, runners, builder, texts, stakes, selectable, snapshot.RoundIndex,
+            frame.DeltaSeconds, scale);
         if (tapped >= 0)
         {
             builder.Tap(tapped);
@@ -518,20 +558,16 @@ internal sealed class RaceCabinet : ICabinetIdle
             CasinoSfx.Play(UiSound.ChipSlide);
         }
 
-        var ride = RideAmount(bets, sitting);
-        var hint = full ? Loc.T(L.Race.TicketsFull) : HintLine(runners);
-        if (layout.Landscape)
+        strip.Draw(drawList, layout.Tickets, layout.TicketRows, tickets, runners, texts, snapshot.RoundIndex,
+            frame.DeltaSeconds, scale);
+        if (layout.HasNotice)
         {
-            DrawLandscapeRail(drawList, ui, layout, bets, ride, hint, snapshot.RoundIndex, frame.DeltaSeconds, scale);
-        }
-        else
-        {
-            DrawPortraitStrip(drawList, ui, layout.Side, bets, ride, hint, snapshot.RoundIndex, frame.DeltaSeconds,
-                scale);
+            CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Reason, string.Empty, message, layout.Notice.Min.X,
+                layout.Notice.Min.Y, layout.Notice.Width, scale);
         }
 
-        DrawReason(drawList, ui, layout, scale);
-        if (!layout.HasDeck)
+        deckRect = layout.Deck;
+        if (layout.Deck.Height <= 0f)
         {
             return;
         }
@@ -542,7 +578,7 @@ internal sealed class RaceCabinet : ICabinetIdle
             return;
         }
 
-        DrawDeck(stage, frame, ui, layout.Deck, state, sitting, full);
+        DrawDeck(stage, frame, ui, layout.Deck, state, sitting, runners, bets, full);
     }
 
     private long RideAmount(CasinoRaceBetsDto? bets, CasinoSittingDto? sitting)
@@ -555,124 +591,47 @@ internal sealed class RaceCabinet : ICabinetIdle
         return RaceTicketBuilder.RideAmount(bets.PreviousPayout, chips.Ceiling.MaxBet, sitting.Stack);
     }
 
-    private string HintLine(CasinoRaceRunnerDto[] runners)
+    private string PrimaryLabel(CasinoRaceRunnerDto[] runners, bool full)
     {
-        if (!RaceRules.IsRunner(builder.First))
+        if (full)
         {
-            return Loc.T(L.Race.PromptPick);
+            return Loc.T(L.Race.TicketsFull);
         }
 
-        if (builder.WantsSecond)
+        if (builder.Ready)
         {
-            return Loc.T(L.Race.PromptSecond);
+            return texts.BetLine(deck.Amount, builder.Kind, builder.First, builder.RunnerB, runners);
         }
 
-        var first = runners[builder.First];
-        var partner = RaceRules.IsRunner(builder.RunnerB) ? runners[builder.RunnerB].OddsHundredths : 0;
-        var pay = RaceRules.PotentialPayHundredths(builder.Kind, first.OddsHundredths, first.PlaceOddsHundredths,
-            partner);
-        return texts.PayLine(builder.Kind, pay);
+        return Loc.T(builder.WantsSecond ? L.Race.PromptSecond : L.Race.PromptPick);
     }
 
-    private void DrawLandscapeRail(ImDrawListPtr drawList, AppSkin ui, in RaceLayout layout, CasinoRaceBetsDto? bets,
-        long ride, string hint, long roundIndex, float deltaSeconds, float scale)
+    private void DrawDeck(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, Rect deckArea,
+        CasinoStateDto state, CasinoSittingDto sitting, CasinoRaceRunnerDto[] runners, CasinoRaceBetsDto? bets,
+        bool full)
     {
-        var side = layout.Side;
-        var rideHeight = RaceLayout.RideHeight * scale;
-        var hintHeight = Typography.LineHeight(TextStyles.Footnote);
-        var gap = RaceLayout.Gap * scale;
-        var bottom = side.Max.Y;
-        if (ride > 0)
+        var enabled = !state.StakesPaused && !state.Draining && !rooms.StakeInFlight && !frame.Blocked && !full;
+        var ride = RideAmount(bets, sitting);
+        var model = new RaceDeckModel(chips.Ceiling.MaxBet, sitting.Stack, builder.Kind, PrimaryLabel(runners, full),
+            builder.Ready, enabled, ride > 0 ? texts.Ride(ride) : string.Empty, stage.RepeatPressed());
+        var action = deck.Draw(ui, deckArea, texts.KindLabels, model, frame.DeltaSeconds);
+        switch (action)
         {
-            var rideRect = new Rect(new Vector2(side.Min.X, bottom - rideHeight), new Vector2(side.Max.X, bottom));
-            DrawRide(ui, rideRect, ride, bets!.RoundIndex);
-            bottom = rideRect.Min.Y - gap * 0.5f;
-        }
-
-        var hintTop = bottom - hintHeight;
-        Marquee.DrawLeftAuto(drawList, "casino.race.hint", hint, side.Min.X, hintTop, side.Width, TextStyles.Footnote,
-            builder.Ready ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle);
-        var list = new Rect(side.Min, new Vector2(side.Max.X, MathF.Max(side.Min.Y, hintTop - gap * 0.5f)));
-        boards.DrawTickets(drawList, list, bets?.Tickets, texts, false, false, roundIndex, deltaSeconds, scale);
-    }
-
-    private void DrawPortraitStrip(ImDrawListPtr drawList, AppSkin ui, Rect strip, CasinoRaceBetsDto? bets,
-        long ride, string hint, long roundIndex, float deltaSeconds, float scale)
-    {
-        var rowHeight = RaceLayout.RideHeight * scale * 0.8f;
-        var rideWidth = 0f;
-        if (ride > 0)
-        {
-            var label = texts.Ride(ride);
-            rideWidth = MathF.Min(strip.Width * 0.5f, Button.WidthFor(label, ButtonSize.Small));
-            DrawRide(ui, new Rect(new Vector2(strip.Max.X - rideWidth, strip.Min.Y),
-                new Vector2(strip.Max.X, strip.Min.Y + rowHeight)), ride, bets!.RoundIndex);
-            rideWidth += RaceLayout.Gap * scale;
-        }
-
-        var hintTop = strip.Min.Y + (rowHeight - Typography.LineHeight(TextStyles.Footnote)) * 0.5f;
-        Marquee.DrawLeftAuto(drawList, "casino.race.hint", hint, strip.Min.X, hintTop,
-            MathF.Max(1f, strip.Width - rideWidth), TextStyles.Footnote,
-            builder.Ready ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle);
-        var list = new Rect(new Vector2(strip.Min.X, strip.Min.Y + rowHeight + 4f * scale), strip.Max);
-        boards.DrawTickets(drawList, list, bets?.Tickets, texts, false, true, roundIndex, deltaSeconds, scale);
-    }
-
-    private void DrawRide(AppSkin ui, Rect rect, long ride, long roundIndex)
-    {
-        var enabled = builder.Ready && !rooms.StakeInFlight;
-        if (!Button.Draw(rect, texts.Ride(ride), ui.Ink, ButtonStyle.Tinted, enabled: enabled))
-        {
-            return;
-        }
-
-        builder.MarkRidden(roundIndex);
-        composer.Reset(ride);
-        inlineReason = string.Empty;
-        rooms.PlaceRaceBet(builder.Kind, builder.First, builder.RunnerB, ride);
-    }
-
-    private void DrawReason(ImDrawListPtr drawList, AppSkin ui, in RaceLayout layout, float scale)
-    {
-        if (inlineReason.Length == 0)
-        {
-            return;
-        }
-
-        var host = layout.Main;
-        var message = Loc.T(CasinoReasons.MessageFor(inlineReason));
-        var height = CasinoNotice.Height(CasinoNoticeKind.Reason, string.Empty, message, host.Width, scale);
-        CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Reason, string.Empty, message, host.Min.X,
-            host.Max.Y - height, host.Width, scale);
-    }
-
-    private void DrawDeck(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, Rect deck, CasinoStateDto state,
-        CasinoSittingDto sitting, bool full)
-    {
-        var enabled = !state.StakesPaused && !state.Draining && !rooms.StakeInFlight && !frame.Blocked
-                      && builder.Ready && !full;
-        var model = new BetComposerModel(RaceRules.MinBet, chips.Ceiling.MaxBet, sitting.Stack, L.Strip.BetFor,
-            enabled, Knob: true, Repeat: stage.RepeatPressed(), Busy: rooms.StakeInFlight);
-        var action = composer.Draw(ui, deck, model, frame.DeltaSeconds);
-        var knob = composer.KnobRect;
-        if (knob.Width > 0f)
-        {
-            var picked = SegmentStrip.Draw("##raceKind", knob, texts.KindLabels, builder.Kind,
-                Surfaces.Fill(ui.TitleInk, FillLevel.Tertiary), ui.Accent, ui.MutedInk, CasinoColors.InkTitle);
-            if (picked != builder.Kind)
-            {
-                builder.SetKind(picked);
+            case RaceDeckAction.Kind:
+                builder.SetKind(deck.PickedKind);
                 CasinoSfx.Play(UiSound.ChipSlide);
-            }
+                break;
+            case RaceDeckAction.Bet:
+                inlineReason = string.Empty;
+                rooms.PlaceRaceBet(builder.Kind, builder.First, builder.RunnerB, deck.Amount);
+                break;
+            case RaceDeckAction.Ride:
+                builder.MarkRidden(bets?.RoundIndex ?? -1);
+                deck.Reset(ride);
+                inlineReason = string.Empty;
+                rooms.PlaceRaceBet(builder.Kind, builder.First, builder.RunnerB, ride);
+                break;
         }
-
-        if (action != BetComposerAction.Confirm)
-        {
-            return;
-        }
-
-        inlineReason = string.Empty;
-        rooms.PlaceRaceBet(builder.Kind, builder.First, builder.RunnerB, composer.Amount);
     }
 
     private void DrawResult(ImDrawListPtr drawList, in RaceLayout layout, CasinoRaceRoomStateDto board,
@@ -759,16 +718,15 @@ internal sealed class RaceCabinet : ICabinetIdle
         }
     }
 
-    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect deck, float scale)
+    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect deckArea, float scale)
     {
-        var inset = BetComposer.Pad * scale;
+        var layout = RaceDeckLayout.Compute(deckArea, 0f, scale);
         var title = Loc.T(L.Casino.CabinetNoChipsTitle);
-        var titleHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
-        Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
-            Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        var row = DeckActions.Row(deck, scale);
-        if (DeckActions.DrawPrimary(row, row.Min.X, Loc.T(L.Casino.Cashier), true, ui.Ink))
+        var style = TextStyles.SubheadlineEmphasized;
+        var message = layout.Message;
+        Typography.Draw(drawList, new Vector2(message.Min.X, message.Center.Y - Typography.LineHeight(style) * 0.5f),
+            Typography.FitText(title, message.Width, style), ui.TitleInk, style);
+        if (Button.Draw(layout.Primary, Loc.T(L.Casino.Cashier), ui.Ink, ButtonStyle.Prominent))
         {
             openCashier();
         }

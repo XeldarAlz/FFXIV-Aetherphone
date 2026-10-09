@@ -16,15 +16,6 @@ internal sealed class RaceBoards
 
     private const float Pad = 8f;
     private const float HeaderRow = 20f;
-    private const float MaxRow = 46f;
-    private const float PoolColumn = 62f;
-    private const float PlaceColumn = 50f;
-    private const float OddsColumn = 58f;
-    private const float FormColumn = 58f;
-    private const float SwatchSize = 24f;
-    private const float PipRadius = 2.2f;
-    private const float PipGap = 3.4f;
-    private const float SlideShare = 0.35f;
     private const float TicketRow = 20f;
     private const float TicketCell = 28f;
     private const int StripColumns = 3;
@@ -33,8 +24,6 @@ internal sealed class RaceBoards
 
     private readonly float[] ticketAge = new float[RaceRules.MaxTickets];
 
-    private float toteEntrance;
-    private long toteRound = -1;
     private float resultEntrance;
     private long resultRound = -1;
     private int ticketsSeen;
@@ -42,59 +31,11 @@ internal sealed class RaceBoards
 
     public void Reset()
     {
-        toteEntrance = 0f;
-        toteRound = -1;
         resultEntrance = 0f;
         resultRound = -1;
         ticketsSeen = 0;
         ticketsRound = -1;
         Array.Clear(ticketAge);
-    }
-
-    public int DrawTote(ImDrawListPtr drawList, AppSkin ui, Rect rect, CasinoRaceRunnerDto[] runners,
-        RaceTicketBuilder builder, RaceTexts texts, bool selectable, long roundIndex, float deltaSeconds, float scale)
-    {
-        if (roundIndex != toteRound)
-        {
-            toteRound = roundIndex;
-            toteEntrance = 0f;
-        }
-
-        toteEntrance = GameJuice.Advance(toteEntrance, deltaSeconds);
-        var wide = rect.Width >= WideBoard * scale;
-        var headerHeight = HeaderRow * scale;
-        var rowHeight = MathF.Min(MaxRow * scale, (rect.Height - headerHeight) / RaceRules.FieldSize);
-        if (rowHeight <= 4f * scale)
-        {
-            return -1;
-        }
-
-        var columns = Columns.For(rect, wide, scale);
-        DrawToteHeader(drawList, new Rect(rect.Min, new Vector2(rect.Max.X, rect.Min.Y + headerHeight)), columns,
-            wide, scale);
-        var maxPool = 1L;
-        for (var slot = 0; slot < runners.Length; slot++)
-        {
-            maxPool = Math.Max(maxPool, runners[slot].Pool);
-        }
-
-        var tapped = -1;
-        var top = rect.Min.Y + headerHeight;
-        for (var slot = 0; slot < RaceRules.FieldSize && slot < runners.Length; slot++)
-        {
-            var share = GameJuice.Stagger(toteEntrance, slot, RaceRules.FieldSize);
-            var slide = (1f - GameJuice.PopIn(share)) * rect.Width * SlideShare;
-            var row = new Rect(new Vector2(rect.Min.X + slide, top), new Vector2(rect.Max.X + slide, top + rowHeight));
-            if (DrawRunnerRow(drawList, ui, row, runners, slot, builder.PickOf(slot), columns.Shift(slide), wide,
-                    maxPool, texts, selectable && share >= 1f, MathF.Min(1f, share * 1.5f), scale))
-            {
-                tapped = slot;
-            }
-
-            top += rowHeight;
-        }
-
-        return tapped;
     }
 
     public void DrawTickets(ImDrawListPtr drawList, Rect rect, CasinoRaceTicketDto[]? tickets,
@@ -278,171 +219,6 @@ internal sealed class RaceBoards
 
     private float Pop(int index) => GameJuice.PopIn(ticketAge[index] / TicketPopSeconds);
 
-    private static void DrawToteHeader(ImDrawListPtr drawList, Rect row, in Columns columns, bool wide, float scale)
-    {
-        var style = TextStyles.FootnoteEmphasized;
-        var ink = CasinoColors.InkBody;
-        var top = row.Center.Y - Typography.LineHeight(style) * 0.5f;
-        Typography.Draw(drawList, new Vector2(columns.NameLeft, top),
-            Typography.FitText(Loc.T(L.Race.ColumnRunner), MathF.Max(1f, columns.NameRight - columns.NameLeft), style),
-            ink, style);
-        if (wide)
-        {
-            HeaderCell(drawList, Loc.T(L.Race.ColumnForm), columns.FormCenter, FormColumn * scale, top, style, ink);
-            HeaderCell(drawList, Loc.T(L.Race.KindPlace), columns.PlaceCenter, PlaceColumn * scale, top, style, ink);
-        }
-
-        HeaderCell(drawList, Loc.T(L.Race.ColumnOdds), columns.OddsCenter, OddsColumn * scale, top, style, ink);
-        HeaderCell(drawList, Loc.T(L.Race.ColumnPool), columns.PoolCenter, PoolColumn * scale, top, style, ink);
-    }
-
-    private static void HeaderCell(ImDrawListPtr drawList, string text, float centerX, float width, float top,
-        in TextStyle style, Vector4 ink)
-    {
-        var fitted = Typography.FitText(text, width, style);
-        var size = Typography.Measure(fitted, style);
-        Typography.Draw(drawList, new Vector2(centerX - size.X * 0.5f, top), fitted, ink, style);
-    }
-
-    private static bool DrawRunnerRow(ImDrawListPtr drawList, AppSkin ui, Rect row, CasinoRaceRunnerDto[] runners,
-        int slot, int pick, in Columns columns, bool wide, long maxPool, RaceTexts texts, bool selectable,
-        float alpha, float scale)
-    {
-        var runner = runners[slot];
-        var inset = new Rect(row.Min + new Vector2(0f, 1.5f * scale), row.Max - new Vector2(0f, 1.5f * scale));
-        var radius = MathF.Min(10f * scale, inset.Height * 0.3f);
-        var hovered = selectable && UiInteract.Hover(inset.Min, inset.Max);
-        var picked = pick >= 0;
-        var fill = picked
-            ? Palette.Mix(new Vector4(0.05f, 0.05f, 0.09f, 0.78f), ui.Palette.Accent, 0.28f)
-            : new Vector4(0.03f, 0.04f, 0.08f, hovered ? 0.72f : 0.55f);
-        Squircle.Fill(drawList, inset.Min, inset.Max, radius, ImGui.GetColorU32(fill with { W = fill.W * alpha }));
-        if (picked)
-        {
-            Squircle.Stroke(drawList, inset.Min, inset.Max, radius, ImGui.GetColorU32(ui.Palette.Accent with { W = alpha }),
-                1.4f * scale);
-        }
-
-        var share = runner.Pool <= 0 ? 0f : runner.Pool / (float)maxPool;
-        if (share > 0f)
-        {
-            var barLeft = inset.Min.X + radius;
-            var barWidth = (inset.Width - radius * 2f) * share;
-            drawList.AddLine(new Vector2(barLeft, inset.Max.Y - 1f * scale),
-                new Vector2(barLeft + barWidth, inset.Max.Y - 1f * scale),
-                ImGui.GetColorU32(CasinoColors.Money with { W = 0.45f * alpha }), MathF.Max(1f, 2f * scale));
-        }
-
-        var swatch = MathF.Min(inset.Height * 0.66f, SwatchSize * scale);
-        var swatchMin = new Vector2(inset.Min.X + Pad * scale, inset.Center.Y - swatch * 0.5f);
-        var swatchMax = swatchMin + new Vector2(swatch, swatch);
-        var frame = 2f * scale;
-        var cloth = RaceBirdArt.ClothOf(slot);
-        Squircle.Fill(drawList, swatchMin - new Vector2(frame, frame), swatchMax + new Vector2(frame, frame),
-            swatch * 0.3f, ImGui.GetColorU32(RaceBirdArt.PlumageOf(runner.Colour) with { W = alpha }));
-        RaceBirdArt.DrawSilk(drawList, swatchMin, swatchMax, slot, runner.Silk, alpha);
-        var center = (swatchMin + swatchMax) * 0.5f;
-        var number = GameNumber.Label(slot + 1);
-        var ink = RaceBirdArt.InkOn(cloth);
-        Typography.DrawCentered(drawList, center + new Vector2(0f, 1f * scale), number,
-            RaceBirdArt.InkOn(ink) with { W = alpha * 0.6f }, TextStyles.FootnoteEmphasized);
-        Typography.DrawCentered(drawList, center, number, ink with { W = alpha }, TextStyles.FootnoteEmphasized);
-        if (picked)
-        {
-            DrawPickBadge(drawList, ui, new Vector2(swatchMax.X, inset.Min.Y + 1f * scale), texts.Place(pick), alpha,
-                scale);
-        }
-
-        var nameWidth = MathF.Max(1f, columns.NameRight - columns.NameLeft);
-        var nameStyle = TextStyles.SubheadlineEmphasized;
-        var subStyle = TextStyles.Footnote;
-        var nameHeight = Typography.LineHeight(nameStyle);
-        var subHeight = Typography.LineHeight(subStyle);
-        var blockTop = inset.Center.Y - (nameHeight + subHeight) * 0.5f;
-        Typography.Draw(drawList, new Vector2(columns.NameLeft, blockTop),
-            Typography.FitText(runner.Name, nameWidth, nameStyle), CasinoColors.InkTitle with { W = alpha }, nameStyle);
-        var subTop = blockTop + nameHeight;
-        var pipsWidth = DrawRating(drawList, new Vector2(columns.NameLeft, subTop + subHeight * 0.5f), runner.Rating,
-            alpha, scale);
-        var subLeft = columns.NameLeft + pipsWidth + 6f * scale;
-        var form = texts.Form(runners, slot);
-        var subText = wide ? texts.Backers(slot, runner.Backers) : form;
-        Typography.Draw(drawList, new Vector2(subLeft, subTop),
-            Typography.FitText(subText, MathF.Max(1f, columns.NameRight - subLeft), subStyle),
-            CasinoColors.InkBody with { W = alpha }, subStyle);
-        if (wide)
-        {
-            ValueCell(drawList, form, columns.FormCenter, FormColumn * scale,
-                inset.Center.Y, CasinoColors.InkBody with { W = alpha }, TextStyles.Footnote);
-            ValueCell(drawList, RaceTexts.Odds(runner.PlaceOddsHundredths), columns.PlaceCenter, PlaceColumn * scale,
-                inset.Center.Y, CasinoColors.InkBody with { W = alpha }, TextStyles.Footnote);
-            ValueCell(drawList, RaceTexts.Odds(runner.OddsHundredths), columns.OddsCenter, OddsColumn * scale,
-                inset.Center.Y, CasinoColors.Money with { W = alpha }, TextStyles.Headline);
-            ValueCell(drawList, NumberText.Compact(runner.Pool), columns.PoolCenter, PoolColumn * scale,
-                inset.Center.Y, CasinoColors.InkBody with { W = alpha }, TextStyles.Footnote);
-        }
-        else
-        {
-            var oddsHeight = Typography.LineHeight(TextStyles.Headline);
-            var stackTop = inset.Center.Y - (oddsHeight + subHeight) * 0.5f;
-            ValueCell(drawList, RaceTexts.Odds(runner.OddsHundredths), columns.OddsCenter, OddsColumn * scale,
-                stackTop + oddsHeight * 0.5f, CasinoColors.Money with { W = alpha }, TextStyles.Headline);
-            ValueCell(drawList, RaceTexts.Odds(runner.PlaceOddsHundredths), columns.OddsCenter, OddsColumn * scale,
-                stackTop + oddsHeight + subHeight * 0.5f, CasinoColors.InkBody with { W = alpha }, subStyle);
-            var poolHeight = Typography.LineHeight(TextStyles.Footnote);
-            var poolTop = inset.Center.Y - (poolHeight + subHeight) * 0.5f;
-            ValueCell(drawList, NumberText.Compact(runner.Pool), columns.PoolCenter, PoolColumn * scale,
-                poolTop + poolHeight * 0.5f, CasinoColors.InkBody with { W = alpha }, TextStyles.Footnote);
-            ValueCell(drawList, texts.Backers(slot, runner.Backers), columns.PoolCenter, PoolColumn * scale,
-                poolTop + poolHeight + subHeight * 0.5f, CasinoColors.InkBody with { W = alpha }, subStyle);
-        }
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return selectable && UiInteract.Click(inset.Min, inset.Max, hovered);
-    }
-
-    private static void DrawPickBadge(ImDrawListPtr drawList, AppSkin ui, Vector2 anchor, string label, float alpha,
-        float scale)
-    {
-        var style = TextStyles.FootnoteEmphasized;
-        var size = Typography.Measure(label, style);
-        var height = size.Y + 2f * scale;
-        var min = new Vector2(anchor.X - size.X * 0.5f - 4f * scale, anchor.Y);
-        var max = new Vector2(anchor.X + size.X * 0.5f + 4f * scale, anchor.Y + height);
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(ui.Palette.Accent with { W = alpha }));
-        Typography.DrawCentered(drawList, (min + max) * 0.5f, label, new Vector4(1f, 1f, 1f, alpha), style);
-    }
-
-    private static float DrawRating(ImDrawListPtr drawList, Vector2 leftCenter, int rating, float alpha, float scale)
-    {
-        var radius = PipRadius * scale;
-        var step = radius * 2f + PipGap * scale - radius;
-        for (var pip = 0; pip < RaceRules.MaxRating; pip++)
-        {
-            var center = new Vector2(leftCenter.X + radius + pip * step, leftCenter.Y);
-            var lit = pip < rating;
-            drawList.AddCircleFilled(center, radius,
-                ImGui.GetColorU32((lit ? CasinoColors.Money : CasinoColors.InkMuted with { W = 0.35f }) with
-                {
-                    W = (lit ? 1f : 0.35f) * alpha,
-                }), 8);
-        }
-
-        return radius * 2f + step * (RaceRules.MaxRating - 1);
-    }
-
-    private static void ValueCell(ImDrawListPtr drawList, string text, float centerX, float width, float centerY,
-        Vector4 ink, in TextStyle style)
-    {
-        var fitted = Typography.FitText(text, width, style);
-        var size = Typography.Measure(fitted, style);
-        Typography.Draw(drawList, new Vector2(centerX - size.X * 0.5f, centerY - size.Y * 0.5f), fitted, ink, style);
-    }
-
     private void DrawTicketGrid(ImDrawListPtr drawList, Rect rect, CasinoRaceTicketDto[] list,
         RaceTexts texts, bool showPayout, float scale)
     {
@@ -568,54 +344,5 @@ internal sealed class RaceBoards
         Typography.Draw(drawList, new Vector2(row.Min.X + slide, top),
             Typography.FitText(label, MathF.Max(1f, row.Width - multipleWidth - 8f * scale), style),
             CasinoColors.InkBody with { W = share }, style);
-    }
-
-    private readonly struct Columns
-    {
-        public readonly float NameLeft;
-        public readonly float NameRight;
-        public readonly float FormCenter;
-        public readonly float PlaceCenter;
-        public readonly float OddsCenter;
-        public readonly float PoolCenter;
-
-        private Columns(float nameLeft, float nameRight, float formCenter, float placeCenter, float oddsCenter,
-            float poolCenter)
-        {
-            NameLeft = nameLeft;
-            NameRight = nameRight;
-            FormCenter = formCenter;
-            PlaceCenter = placeCenter;
-            OddsCenter = oddsCenter;
-            PoolCenter = poolCenter;
-        }
-
-        public Columns Shift(float offset) => new(NameLeft + offset, NameRight + offset, FormCenter + offset,
-            PlaceCenter + offset, OddsCenter + offset, PoolCenter + offset);
-
-        public static Columns For(Rect rect, bool wide, float scale)
-        {
-            var pad = Pad * scale;
-            var right = rect.Max.X - pad;
-            var poolCenter = right - PoolColumn * scale * 0.5f;
-            right -= PoolColumn * scale;
-            var placeCenter = right - PlaceColumn * scale * 0.5f;
-            if (wide)
-            {
-                right -= PlaceColumn * scale;
-            }
-
-            var oddsCenter = right - OddsColumn * scale * 0.5f;
-            right -= OddsColumn * scale;
-            var formCenter = right - FormColumn * scale * 0.5f;
-            if (wide)
-            {
-                right -= FormColumn * scale;
-            }
-
-            var nameLeft = rect.Min.X + pad + 30f * scale;
-            return new Columns(nameLeft, MathF.Max(nameLeft, right - pad), formCenter, placeCenter, oddsCenter,
-                poolCenter);
-        }
     }
 }

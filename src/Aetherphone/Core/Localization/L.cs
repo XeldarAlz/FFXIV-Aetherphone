@@ -11381,6 +11381,7 @@ internal static class L
         public static readonly LocString LineStretch2 = new("casino.race.lineStretch2", "Here they come to the line!");
         public static readonly LocString LineWinner1 = new("casino.race.lineWinner1", "{0} wins it!");
         public static readonly LocString LineWinner2 = new("casino.race.lineWinner2", "{0} gets there first!");
+        public static readonly LocString BetOn = new("casino.race.betOn", "Bet {0} on {1} ({2})");
     }
 
     internal static class Blackjack

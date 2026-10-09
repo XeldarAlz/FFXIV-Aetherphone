@@ -9840,6 +9840,7 @@
   "casino.strip.introNext": "下一步",
   "casino.strip.introSkip": "跳过",
   "casino.strip.introStart": "开始游戏",
+  "casino.race.betOn": "在 {1} 上下注 {0}（{2}）",
   "conduct.casino.title": "以太赌场场馆规则",
   "conduct.casino.intro": "入座之前，请先阅读场馆规则。",
   "conduct.casino.playMoney.title": "仅限游戏币",

@@ -9840,6 +9840,7 @@
   "casino.strip.introNext": "İleri",
   "casino.strip.introSkip": "Geç",
   "casino.strip.introStart": "Oynamaya başla",
+  "casino.race.betOn": "{1} için {0} bahis yap ({2})",
   "conduct.casino.title": "Gamba Ev Kuralları",
   "conduct.casino.intro": "Bir masaya oturmadan önce lütfen ev kurallarını oku.",
   "conduct.casino.playMoney.title": "Yalnızca oyun parası",
