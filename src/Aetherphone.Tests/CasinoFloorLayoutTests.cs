@@ -144,6 +144,14 @@ public sealed class CasinoFloorLayoutTests
     }
 
     [Fact]
+    public void AMachineTilePrintsItsReturnRoundedLikeTheRulesSheet()
+    {
+        Assert.Equal(964, CasinoAppReturns(CasinoGames.SlotsBird));
+        Assert.Equal(962, CasinoAppReturns(CasinoGames.SlotsCascade));
+        Assert.Equal(968, CasinoAppReturns(CasinoGames.SlotsMoogle));
+    }
+
+    [Fact]
     public void TheIntroWalksThreeCardsThenFinishes()
     {
         Assert.Equal(3, StripIntro.PageCount);
