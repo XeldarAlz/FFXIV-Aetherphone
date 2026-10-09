@@ -118,9 +118,4 @@ internal static class SlotsRules
         return string.Equals(machineId, BirdId, StringComparison.Ordinal) && bet > 0 && totalWin > 0
             && totalWin < bet * GambleEligibleBelowBets;
     }
-
-    public static long JackpotSpinsPerHit(long cost)
-    {
-        return cost <= 0 ? 0 : JackpotChipsPerHit / cost;
-    }
 }

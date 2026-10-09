@@ -155,11 +155,6 @@ internal sealed class BarkeepVerbStage
         return true;
     }
 
-    public int TapGradeAt(int tapIndex)
-    {
-        return tapGrades[tapIndex];
-    }
-
     private void UpdatePour(float deltaSeconds, bool held)
     {
         pouring = held;

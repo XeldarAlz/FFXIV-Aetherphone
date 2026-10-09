@@ -70,8 +70,6 @@ internal static class BlackjackTableLayout
 
     public const float ShoeInsetY = 26f;
 
-    public const float FeltRoundingFraction = 0.32f;
-
     public static int RailSeatCount(int mySeat)
     {
         return BlackjackRules.IsSeat(mySeat) ? BlackjackRules.SeatCount - 1 : BlackjackRules.SeatCount;
@@ -195,11 +193,6 @@ internal static class BlackjackTableLayout
     public static Vector2 CapsuleCenter(in Rect felt, float scale)
     {
         return new Vector2(felt.Center.X, felt.Max.Y - CapsuleDrop * scale);
-    }
-
-    public static float FeltRounding(in Rect felt)
-    {
-        return MathF.Min(felt.Width, felt.Height) * FeltRoundingFraction;
     }
 
     public static float FanStep(float cardWidth, int cardCount, float maxWidth)

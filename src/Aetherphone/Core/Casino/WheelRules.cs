@@ -95,21 +95,6 @@ internal static class WheelRules
         return spot < round ? spot : round;
     }
 
-    public static long ClampOn(long amount, long stakedThisRound, long stakedOnSpot, long stack)
-    {
-        var ceiling = HeadroomOn(stakedThisRound, stakedOnSpot);
-        if (stack < ceiling)
-        {
-            ceiling = stack;
-        }
-
-        if (ceiling < MinStakePerSpot || amount < MinStakePerSpot)
-        {
-            return 0;
-        }
-
-        return amount > ceiling ? ceiling : amount;
-    }
 
     public static long Clamp(long amount, long stakedThisRound, long stack)
     {

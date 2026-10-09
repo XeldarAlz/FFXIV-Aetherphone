@@ -294,12 +294,6 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         if (launch.Kind == Core.Casino.CasinoLaunchKind.Game && launch.GameId.Length > 0)
         {
             OpenGame(launch.GameId);
-            return;
-        }
-
-        if (launch.Kind == Core.Casino.CasinoLaunchKind.Tables)
-        {
-            SelectTab(CasinoTab.Tables);
         }
     }
 

@@ -6,24 +6,6 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Casino.Stage;
 
-internal readonly struct SeatPuck
-{
-    public readonly Vector2 Center;
-    public readonly float Radius;
-    public readonly bool Hovered;
-    public readonly bool Clicked;
-
-    public SeatPuck(Vector2 center, float radius, bool hovered, bool clicked)
-    {
-        Center = center;
-        Radius = radius;
-        Hovered = hovered;
-        Clicked = clicked;
-    }
-
-    public Rect Bounds => new(Center - new Vector2(Radius, Radius), Center + new Vector2(Radius, Radius));
-}
-
 internal static class SeatSpot
 {
     public const float MinimumRadius = 28f;
@@ -31,7 +13,6 @@ internal static class SeatSpot
     public const float PlusStroke = 2.4f;
     public const float RingStroke = 2f;
     public const float GlowReach = 12f;
-    public const float PuckInset = 4f;
 
     private const int GlowLayers = 4;
     private const int Segments = 40;
@@ -75,25 +56,6 @@ internal static class SeatSpot
         }
 
         return UiInteract.Click(min, max, hovered);
-    }
-
-    public static SeatPuck DrawOccupied(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 ring,
-        bool highlight, float scale)
-    {
-        radius = RadiusFor(radius, scale);
-        var min = center - new Vector2(radius, radius);
-        var max = center + new Vector2(radius, radius);
-        var hovered = UiInteract.Hover(min, max) && Vector2.DistanceSquared(ImGui.GetMousePos(), center) <= radius * radius;
-        if (highlight)
-        {
-            DrawGlow(drawList, center, radius, ring, Pulse.Wave(Pulse.Breath), scale);
-        }
-
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(StageText.CapsuleFill), Segments);
-        drawList.AddCircle(center, radius - RingStroke * scale * 0.5f, ImGui.GetColorU32(ring), Segments,
-            RingStroke * scale);
-        var clicked = UiInteract.Click(min, max, hovered);
-        return new SeatPuck(center, MathF.Max(0f, radius - (RingStroke + PuckInset) * scale), hovered, clicked);
     }
 
     private static void DrawLabel(ImDrawListPtr drawList, float centerX, float top, string label, Vector2 size,

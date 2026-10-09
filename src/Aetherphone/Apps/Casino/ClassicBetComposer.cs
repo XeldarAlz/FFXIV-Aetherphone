@@ -67,11 +67,6 @@ internal sealed class ClassicBetComposer
         return (FieldHeight + QuickHeight + ConfirmHeight + RowGap * 2f) * scale;
     }
 
-    public static float AmountHeightFor(float scale)
-    {
-        return (FieldHeight + QuickHeight + RowGap) * scale;
-    }
-
     public void Reset(long value)
     {
         amount = value;

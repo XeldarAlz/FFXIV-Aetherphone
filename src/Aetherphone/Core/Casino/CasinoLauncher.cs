@@ -3,7 +3,6 @@ namespace Aetherphone.Core.Casino;
 internal enum CasinoLaunchKind
 {
     Floor,
-    Tables,
     Table,
     Game,
 }
@@ -34,11 +33,6 @@ internal sealed class CasinoLauncher
         }
 
         pending = new CasinoLaunch(CasinoLaunchKind.Table, tableId);
-    }
-
-    public void RequestTables()
-    {
-        pending = new CasinoLaunch(CasinoLaunchKind.Tables);
     }
 
     public bool TryConsume(out CasinoLaunch launch)

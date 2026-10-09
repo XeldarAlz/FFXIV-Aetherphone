@@ -69,11 +69,6 @@ internal static class CrystalCascadeRules
         return scatters < ScatterPays.Length ? ScatterPays[scatters] : ScatterPays[^1];
     }
 
-    public static int LadderRung(int tumble)
-    {
-        return TumbleLadder[Math.Clamp(tumble, 0, TumbleLadder.Length - 1)];
-    }
-
     public static int Total(int[] weights)
     {
         var total = 0;
