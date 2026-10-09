@@ -25,7 +25,7 @@ The csproj ships a few data folders the same way: `Words/` (word game dictionari
 | src/Aetherphone/Emoji/ | Twemoji PNGs (one per emoji sequence) plus catalog.json |
 | src/Aetherphone/Core/Emoji/EmojiCatalog.cs | Parses catalog.json, resolves shortcodes to image files |
 | src/Aetherphone/Core/Emoji/EmojiImages.cs | Draws an emoji PNG through the texture provider |
-| src/Aetherphone/Core/Emoji/EmojiScanner.cs | Finds `:shortcode:` spans in message text |
+| src/Aetherphone/Core/Emoji/EmojiScanner.cs | Finds `:shortcode:` and raw Unicode emoji spans in message text |
 | tools/emoji-generator/ | Downloads Twemoji images and rebuilds catalog.json |
 | src/Aetherphone/Icons/ | Painted app icons: `<id>.png` finished tile plus `<id>.fg.png` symbol, one pair per app id |
 | src/Aetherphone/Windows/Components/Chrome/AppIconTile.cs | Draws a painted icon cut to the squircle in the chosen appearance |
@@ -133,8 +133,8 @@ Follow the same pattern in any code that creates or disposes several handles: wi
 
 Emoji are not font glyphs. They are individual Twemoji PNG images (72x72, one file per emoji sequence, roughly 3,500 of them) in src/Aetherphone/Emoji/, plus a `catalog.json` describing them. The pieces:
 
-- **EmojiCatalog** (src/Aetherphone/Core/Emoji/EmojiCatalog.cs) loads catalog.json once at plugin boot (`EmojiCatalog.Load()` in src/Aetherphone/Plugin.cs). Each entry carries `file`, `short` (shortcode aliases), `group`, `order`, `label`, `tags`, and skin-tone variants under `tones`; the loader never reads `order`, so display ordering comes from each entry's position in the catalog array. `TryResolve` maps a shortcode like `smile` to its image file name.
-- **EmojiScanner** finds `:shortcode:` spans in a string. Messages store emoji as shortcode text, never as image references.
+- **EmojiCatalog** (src/Aetherphone/Core/Emoji/EmojiCatalog.cs) loads catalog.json once at plugin boot (`EmojiCatalog.Load()` in src/Aetherphone/Plugin.cs). Each entry carries `file`, `short` (shortcode aliases), `group`, `order`, `label`, `tags`, and skin-tone variants under `tones`; the loader never reads `order`, so display ordering comes from each entry's position in the catalog array. `TryResolve` maps a shortcode like `smile` to its image file name, and `TryResolveSequence` maps a codepoint key (every base and tone file, FE0F stripped on both sides) to the same files.
+- **EmojiScanner** finds `:shortcode:` spans and raw Unicode emoji (one grapheme cluster each) in a string, in order and without overlap. Messages store emoji as shortcode text, never as image references, but older phone builds, history and pasted text still carry raw Unicode. A cluster that starts with a surrogate and has no PNG (an emoji newer than the catalog, or a stray surrogate) becomes `EmojiScanner.MissingFile`, which **EmojiRender** draws as a muted outline box instead of question marks. Codepoints below the Arrows block (U+2190, so digits, ©, ®, ™) only become emoji with FE0F or a keycap mark.
 - **RichText** (src/Aetherphone/Windows/Components/Primitives/RichText.cs) turns those spans into `RichTextRunKind.Emoji` runs during layout, and **EmojiRender** draws each one inline at 1.2x the font size.
 - **EmojiImages** resolves `<file>.png` inside the Emoji folder and draws it through the texture provider. A missing file makes `TryDraw` return false and nothing is drawn.
 - **EmojiPicker** (src/Aetherphone/Windows/Components/Media/EmojiPicker.cs) browses the catalog by group, searches `label` plus `tags` plus shortcodes, and inserts `:shortcode:` into the active composer.

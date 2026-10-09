@@ -124,7 +124,7 @@ internal static class RunText
             var position = origin + piece.Offset;
             if (run.IsEmoji)
             {
-                EmojiRender.Draw(drawList, run.EmojiFile, position, fontSize, alpha);
+                EmojiRender.Draw(drawList, run.EmojiFile, position, fontSize, bodyInk, alpha);
                 continue;
             }
 

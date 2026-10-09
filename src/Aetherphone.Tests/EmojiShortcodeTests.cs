@@ -4,6 +4,7 @@ using Xunit;
 
 namespace Aetherphone.Tests;
 
+[Collection("EmojiCatalog")]
 public sealed class EmojiShortcodeTests
 {
     private const string Catalog = """

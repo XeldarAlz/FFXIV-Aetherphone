@@ -207,7 +207,8 @@ internal static class RichText
 
             if (run.Kind == RichTextRunKind.Emoji)
             {
-                EmojiRender.Draw(drawList, layout.EmojiFiles[run.TargetIndex], position, fontSize, ink.Alpha);
+                EmojiRender.Draw(drawList, layout.EmojiFiles[run.TargetIndex], position, fontSize, ink.Body,
+                    ink.Alpha);
                 continue;
             }
 

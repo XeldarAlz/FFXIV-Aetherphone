@@ -1,3 +1,6 @@
+using System.Buffers;
+using System.Globalization;
+using System.Runtime.InteropServices;
 using Newtonsoft.Json.Linq;
 
 namespace Aetherphone.Core.Emoji;
@@ -50,11 +53,24 @@ internal readonly struct EmojiGlyph
 
 internal static class EmojiCatalog
 {
+    public const int BareSequenceFloor = 0x2190;
+    public const char PresentationSelector = '\uFE0F';
+    public const char KeycapMark = '\u20E3';
+
+    private const string PresentationSegment = "-fe0f";
+    private const int TriggerCapacity = 2304;
+
     private static readonly EmojiTone[] NoTones = Array.Empty<EmojiTone>();
     private static readonly Dictionary<string, string> ShortcodeToFile = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, string> SequenceToFile = new(StringComparer.Ordinal);
 
     private static readonly Dictionary<string, string>.AlternateLookup<ReadOnlySpan<char>> ShortcodeSpans =
         ShortcodeToFile.GetAlternateLookup<ReadOnlySpan<char>>();
+
+    private static readonly Dictionary<string, string>.AlternateLookup<ReadOnlySpan<char>> SequenceSpans =
+        SequenceToFile.GetAlternateLookup<ReadOnlySpan<char>>();
+
+    private static readonly SearchValues<char> NoTriggers = SearchValues.Create(ReadOnlySpan<char>.Empty);
 
     private static readonly Comparison<EmojiShortcode> ShortcodeOrder = CompareShortcodes;
 
@@ -62,6 +78,7 @@ internal static class EmojiCatalog
     private static EmojiGlyph[] glyphs = Array.Empty<EmojiGlyph>();
     private static EmojiShortcode[] shortcodes = Array.Empty<EmojiShortcode>();
     private static int[] groupStart = Array.Empty<int>();
+    private static SearchValues<char> sequenceTriggers = NoTriggers;
     private static bool loaded;
 
     public static bool Ready => loaded && glyphs.Length > 0;
@@ -102,6 +119,8 @@ internal static class EmojiCatalog
     {
         loaded = true;
         ShortcodeToFile.Clear();
+        SequenceToFile.Clear();
+        sequenceTriggers = NoTriggers;
         groups = Array.Empty<string>();
         glyphs = Array.Empty<EmojiGlyph>();
         shortcodes = Array.Empty<EmojiShortcode>();
@@ -114,6 +133,11 @@ internal static class EmojiCatalog
 
     public static bool TryResolve(ReadOnlySpan<char> shortcode, out string file) =>
         ShortcodeSpans.TryGetValue(shortcode, out file!);
+
+    public static bool TryResolveSequence(ReadOnlySpan<char> key, out string file) =>
+        SequenceSpans.TryGetValue(key, out file!);
+
+    public static bool MightHaveSequence(ReadOnlySpan<char> text) => text.ContainsAny(sequenceTriggers);
 
     public static ReadOnlySpan<EmojiGlyph> GlyphsInGroup(int group)
     {
@@ -158,6 +182,43 @@ internal static class EmojiCatalog
         shortcodes = codes.ToArray();
         Array.Sort(shortcodes, ShortcodeOrder);
         BuildGroupIndex();
+        BuildSequenceIndex();
+    }
+
+    private static void BuildSequenceIndex()
+    {
+        var triggers = new List<char>(TriggerCapacity);
+        for (var surrogate = '\uD800'; surrogate <= '\uDFFF'; surrogate++)
+        {
+            triggers.Add(surrogate);
+        }
+
+        triggers.Add(PresentationSelector);
+        triggers.Add(KeycapMark);
+        for (var glyphIndex = 0; glyphIndex < glyphs.Length; glyphIndex++)
+        {
+            var glyph = glyphs[glyphIndex];
+            IndexSequence(glyph.File, triggers);
+            var tones = glyph.Tones;
+            for (var toneIndex = 0; toneIndex < tones.Length; toneIndex++)
+            {
+                IndexSequence(tones[toneIndex].File, triggers);
+            }
+        }
+
+        sequenceTriggers = SearchValues.Create(CollectionsMarshal.AsSpan(triggers));
+    }
+
+    private static void IndexSequence(string file, List<char> triggers)
+    {
+        SequenceToFile[file.Replace(PresentationSegment, string.Empty, StringComparison.Ordinal)] = file;
+        var separator = file.IndexOf('-');
+        var lead = int.Parse(separator < 0 ? file.AsSpan() : file.AsSpan(0, separator), NumberStyles.AllowHexSpecifier,
+            CultureInfo.InvariantCulture);
+        if (lead is >= BareSequenceFloor and <= char.MaxValue)
+        {
+            triggers.Add((char)lead);
+        }
     }
 
     private static int CompareShortcodes(EmojiShortcode left, EmojiShortcode right)

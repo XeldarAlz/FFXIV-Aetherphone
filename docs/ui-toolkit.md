@@ -340,10 +340,10 @@ The `Social` folder (src/Aetherphone/Windows/Components/Social/) is the chrome s
 
 ## Emoji in text
 
-Emoji are not font glyphs. Messages carry shortcodes like `:sparkles:`, and rendering resolves them to PNG images:
+Emoji are not font glyphs. Messages carry shortcodes like `:sparkles:` (or, from older phone builds and pasted text, raw Unicode emoji), and rendering resolves both to PNG images:
 
 - `EmojiCatalog` (src/Aetherphone/Core/Emoji/EmojiCatalog.cs) loads catalog.json from the plugin's Emoji asset folder and maps shortcodes to codepoint-named image files.
-- `EmojiScanner.Collect` (src/Aetherphone/Core/Emoji/EmojiScanner.cs) finds `:shortcode:` spans in a string.
+- `EmojiScanner.Collect` (src/Aetherphone/Core/Emoji/EmojiScanner.cs) finds `:shortcode:` spans and Unicode emoji clusters in a string. `EmojiScanner.MightContain` is the allocation-free reject that keeps plain text (CJK included) off the layout path.
 - `EmojiRender.Draw` (src/Aetherphone/Windows/Components/Media/EmojiRender.cs) draws one emoji image at text position, with `Advance` and `LineHeight` for layout; `EmojiImages` (src/Aetherphone/Core/Emoji/EmojiImages.cs) loads the textures.
 
 You rarely call these directly. `RichText.Build` (src/Aetherphone/Windows/Components/Primitives/RichText.cs) lays out a paragraph into plain, link, mention, and emoji runs, and `RichText.Draw` paints them; chat and social surfaces go through it. The images themselves are Twemoji assets fetched and cataloged by tools/emoji-generator; see [Assets and media](assets-and-media.md).
