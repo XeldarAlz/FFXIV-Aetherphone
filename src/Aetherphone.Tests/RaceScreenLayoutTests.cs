@@ -165,6 +165,68 @@ public sealed class RaceScreenLayoutTests
         Assert.Equal(0f, hidden.Width);
     }
 
+    [Theory]
+    [MemberData(nameof(AllScales))]
+    public void TheLandscapeTrackFillsTheStageWithBigBirds(float scale)
+    {
+        for (var phone = 0; phone < LandscapePhones.Length; phone++)
+        {
+            var full = Phone(LandscapePhones[phone], scale);
+            var stage = Stage(full, 0f, scale);
+            var layout = RaceTrackLayout.Compute(full, stage.Band.Max.Y, scale);
+            AssertRaceLayout(layout, full, stage, scale);
+            Assert.Equal(full.Width, layout.Track.Width, 2);
+            Assert.True(layout.Track.Height >= full.Height * 0.5f);
+            Assert.True(RaceTrackView.SideBirdHeight(layout.Track, scale) >= 36f * scale,
+                $"bird {RaceTrackView.SideBirdHeight(layout.Track, scale) / scale} on {LandscapePhones[phone]}");
+            RaceTrackView.SideBand(layout.Track, scale, out var farY, out var nearY);
+            Assert.True(farY >= layout.Track.Min.Y);
+            Assert.True(nearY <= layout.Track.Max.Y);
+            var crest = (nearY - farY) * RaceTrackView.FarScale / RaceTrackView.LaneScaleSum
+                * (RaceTrackView.CrestShare * RaceTrackView.BirdLaneFactor - RaceTrackView.GroundShare);
+            Assert.True(farY - crest >= layout.Track.Min.Y - Tolerance);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(AllScales))]
+    public void ThePortraitTrackRunsTallWithBigBirds(float scale)
+    {
+        for (var phone = 0; phone < PortraitPhones.Length; phone++)
+        {
+            var full = Phone(PortraitPhones[phone], scale);
+            var stage = Stage(full, 0f, scale);
+            var layout = RaceTrackLayout.Compute(full, stage.Band.Max.Y, scale);
+            AssertRaceLayout(layout, full, stage, scale);
+            Assert.True(layout.Track.Height >= full.Height * 0.7f);
+            Assert.True(RaceTrackView.VerticalBirdLength(layout.Track) >= 36f * scale);
+        }
+    }
+
+    private static void AssertRaceLayout(in RaceTrackLayout layout, Rect full, in CasinoStageLayout stage, float scale)
+    {
+        Assert.True(Inside(layout.Progress, full));
+        Assert.True(Inside(layout.Track, full));
+        Assert.True(Inside(layout.TopThree, full));
+        Assert.True(Inside(layout.Caption, full));
+        Assert.True(layout.Progress.Height <= 24f * scale + Tolerance);
+        Assert.True(layout.Progress.Min.Y >= stage.Band.Max.Y);
+        Assert.True(layout.Caption.Min.Y >= layout.Track.Max.Y);
+        Assert.True(layout.Caption.Width >= full.Width * 0.4f);
+        Assert.Equal(layout.Track.Min.Y, layout.Stand.Max.Y, 2);
+        AssertAllApart(layout.Progress, layout.Track, layout.TopThree, layout.Caption, stage.Band);
+    }
+
+    [Fact]
+    public void CommentaryFadesInAndOut()
+    {
+        Assert.Equal(0f, RaceHud.CaptionAlpha(0f, RaceCommentary.LineSeconds));
+        Assert.Equal(1f, RaceHud.CaptionAlpha(RaceCommentary.LineSeconds * 0.5f, RaceCommentary.LineSeconds));
+        Assert.InRange(RaceHud.CaptionAlpha(RaceCommentary.LineSeconds - 0.1f, RaceCommentary.LineSeconds), 0.01f,
+            0.5f);
+        Assert.Equal(0f, RaceHud.CaptionAlpha(RaceCommentary.LineSeconds, RaceCommentary.LineSeconds));
+    }
+
     [Fact]
     public void RunnerCardsMeetTheMinimumTouchHeight()
     {

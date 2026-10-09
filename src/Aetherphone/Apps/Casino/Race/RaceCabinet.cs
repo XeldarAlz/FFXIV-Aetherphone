@@ -23,7 +23,6 @@ internal sealed class RaceCabinet : ICabinetIdle
     private const float OffPunch = 0.05f;
     private const float PhotoShake = 0.3f;
     private const float PillHeight = 28f;
-    private const float PillFade = 0.4f;
     private const float RailRadius = 24f;
     private const float IdleBirds = 4f;
     private const float IdleSpeed = 0.18f;
@@ -49,10 +48,6 @@ internal sealed class RaceCabinet : ICabinetIdle
 
     private string inlineReason = string.Empty;
     private string settledKey = string.Empty;
-    private string ribbonText = string.Empty;
-    private int ribbonSeconds = -1;
-    private int ribbonStage = -1;
-    private LanguageInfo? ribbonLanguage;
     private long roundSeen = -1;
     private int phaseSeen = -1;
     private int timerSecond = -1;
@@ -74,7 +69,8 @@ internal sealed class RaceCabinet : ICabinetIdle
 
     public Backdrop IdleBackdrop => Backdrop.Arena;
 
-    public bool WantsLandscape => entered;
+    public bool WantsLandscape =>
+        entered && (rooms.Room.State?.Snapshot?.Phase ?? CasinoRoomPhases.Open) == CasinoRoomPhases.Locked;
 
     public CasinoStageSpec Spec(bool landscape)
     {
@@ -155,15 +151,7 @@ internal sealed class RaceCabinet : ICabinetIdle
 
         if (racing)
         {
-            var raceLayout = RaceLayout.Compute(safe, frame.Deck, landscape, true, false, 0f, scale);
-            if (landscape)
-            {
-                PhaseRibbon.Draw(drawList, raceLayout.Header, RibbonLabel(snapshot.Phase, remaining), remaining,
-                    CasinoRoomCadence.RaceWindow(snapshot.Phase), snapshot.Occupancy,
-                    room.Attached ? CasinoColors.LightA : CasinoColors.InkMuted, scale);
-            }
-
-            DrawRace(drawList, raceLayout, runners, landscape, delta, stretch, scale);
+            DrawRace(drawList, frame, runners, landscape, delta, stretch, scale);
             return;
         }
 
@@ -445,32 +433,6 @@ internal sealed class RaceCabinet : ICabinetIdle
         }
     }
 
-    private string RibbonLabel(int phase, long remainingMs)
-    {
-        var stageIndex = (int)playback.Stage;
-        var seconds = (int)((Math.Max(0, remainingMs) + 999) / 1000);
-        if (stageIndex == ribbonStage && seconds == ribbonSeconds && ReferenceEquals(ribbonLanguage, Loc.Current))
-        {
-            return ribbonText;
-        }
-
-        ribbonStage = stageIndex;
-        ribbonSeconds = seconds;
-        ribbonLanguage = Loc.Current;
-        ribbonText = playback.Stage switch
-        {
-            RaceStage.Paddock or RaceStage.Waiting when phase == CasinoRoomPhases.Open =>
-                Loc.T(L.Casino.WheelBetsCloseIn, TimeText.Duration(seconds)),
-            RaceStage.Running => Loc.T(L.Race.Running),
-            RaceStage.Replay => Loc.T(L.Race.Replay),
-            RaceStage.Gates => Loc.T(L.Casino.WheelBetsClosed),
-            _ => Loc.T(L.Casino.RoomNextIn, TimeText.Duration(phase == CasinoRoomPhases.Result
-                ? seconds
-                : seconds + CasinoRoomCadence.RaceResultSeconds)),
-        };
-        return ribbonText;
-    }
-
     private void DrawCountdown(ImDrawListPtr drawList, in CasinoStageFrame frame, int phase, long remainingMs,
         bool attached, CasinoStateDto state, float scale)
     {
@@ -493,38 +455,38 @@ internal sealed class RaceCabinet : ICabinetIdle
         drawList.PopClipRect();
     }
 
-    private void DrawRace(ImDrawListPtr drawList, in RaceLayout layout, CasinoRaceRunnerDto[]? runners,
+    private void DrawRace(ImDrawListPtr drawList, in CasinoStageFrame frame, CasinoRaceRunnerDto[]? runners,
         bool landscape, float deltaSeconds, float stretch, float scale)
     {
+        var layout = RaceTrackLayout.Compute(frame.Full, frame.Layout.Band.Max.Y, scale);
         if (landscape)
         {
-            view.DrawSide(drawList, layout.Main, playback, runners, deltaSeconds, stretch, scale);
+            view.DrawSide(drawList, layout.Stand, layout.Track, playback, runners, mine, deltaSeconds, stretch, scale);
         }
         else
         {
-            view.DrawVertical(drawList, layout.Main, playback, runners, deltaSeconds, stretch, scale);
+            view.DrawVertical(drawList, layout.Stand, layout.Track, playback, runners, mine, deltaSeconds, stretch,
+                scale);
         }
 
-        if (playback.HasOrder)
-        {
-            view.DrawTicker(drawList, layout.Ticker, playback, runners, mine, deltaSeconds, scale);
-        }
-
+        RaceHud.DrawProgress(drawList, layout.Progress, playback, runners, mine, scale);
+        RaceHud.DrawTopThree(drawList, layout.TopThree, playback, mine, scale);
         if (playback.Stage == RaceStage.Gates || !playback.HasOrder)
         {
-            DrawCenterPill(drawList, layout.Main, Loc.T(L.Race.Gates), 1f, scale);
+            RaceHud.DrawCaption(drawList, layout.Caption, Loc.T(L.Race.Gates), 1f, false, scale);
+            return;
+        }
+
+        if (commentary.Showing)
+        {
+            RaceHud.DrawCaption(drawList, layout.Caption, commentary.Line,
+                RaceHud.CaptionAlpha(commentary.Age, RaceCommentary.LineSeconds), false, scale);
             return;
         }
 
         if (playback.Stage == RaceStage.Replay)
         {
-            DrawReplayTag(drawList, layout.Main, scale);
-        }
-
-        if (commentary.Showing)
-        {
-            var alpha = Math.Clamp((RaceCommentary.LineSeconds - commentary.Age) / PillFade, 0f, 1f);
-            DrawTopPill(drawList, layout.Main, commentary.Line, alpha, scale);
+            RaceHud.DrawCaption(drawList, layout.Caption, Loc.T(L.Race.Replay), 1f, true, scale);
         }
     }
 
@@ -669,41 +631,6 @@ internal sealed class RaceCabinet : ICabinetIdle
         var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
         Material.FrostedGlass(drawList, min, min + new Vector2(width, height), height * 0.5f, scale, alpha);
         Typography.DrawCentered(drawList, center, fitted, CasinoColors.InkTitle with { W = alpha }, style);
-    }
-
-    private static void DrawTopPill(ImDrawListPtr drawList, Rect area, string text, float alpha, float scale)
-    {
-        if (alpha <= 0f || text.Length == 0)
-        {
-            return;
-        }
-
-        var height = PillHeight * scale;
-        var style = TextStyles.SubheadlineEmphasized;
-        var fitted = Typography.FitText(text, area.Width * 0.86f - height, style);
-        var width = Typography.Measure(fitted, style).X + height;
-        var center = new Vector2(area.Center.X, area.Min.Y + height * 0.5f + 6f * scale);
-        var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
-        Material.FrostedGlass(drawList, min, min + new Vector2(width, height), height * 0.5f, scale, alpha);
-        Typography.DrawCentered(drawList, center, fitted, CasinoColors.InkTitle with { W = alpha }, style);
-    }
-
-    private static void DrawReplayTag(ImDrawListPtr drawList, Rect area, float scale)
-    {
-        var style = TextStyles.FootnoteEmphasized;
-        var label = Loc.T(L.Race.Replay);
-        var height = 22f * scale;
-        var dot = 4f * scale;
-        var fitted = Typography.FitText(label, area.Width * 0.4f, style);
-        var width = Typography.Measure(fitted, style).X + height + dot * 2f;
-        var min = new Vector2(area.Min.X + 8f * scale, area.Max.Y - height - 8f * scale);
-        Material.FrostedGlass(drawList, min, min + new Vector2(width, height), height * 0.5f, scale);
-        var blink = 0.4f + 0.6f * Pulse.Wave(Pulse.Fast);
-        drawList.AddCircleFilled(new Vector2(min.X + height * 0.5f, min.Y + height * 0.5f), dot,
-            ImGui.GetColorU32(CasinoColors.LightA with { W = blink }), 12);
-        Typography.Draw(drawList,
-            new Vector2(min.X + height * 0.5f + dot * 2f, min.Y + (height - Typography.LineHeight(style)) * 0.5f),
-            fitted, CasinoColors.InkTitle, style);
     }
 
     private void DrawClosed(ImDrawListPtr drawList, AppSkin ui, string reason, Rect safe, float scale)

@@ -15,18 +15,24 @@ internal sealed class RaceTrackView
     public const float VisibleSpan = 210f;
     public const float ReplaySpan = 120f;
     public const float LeaderShare = 0.66f;
-    public const float FarScale = 0.62f;
+    public const float FarScale = 0.75f;
     public const float StrideUnits = 5f;
     public const float CoastUnits = 26f;
     public const float CoastTicks = 22f;
+    public const float BirdLaneFactor = 1.9f;
+    public const float GroundShare = 0.82f;
+    public const float CrestShare = 1.2f;
+    public const float NearMargin = 0.03f;
+    public const float HeadPad = 2f;
+    public const float VerticalLengthShare = 0.95f;
+    public const float VerticalHeightShare = 0.12f;
 
     private const float FollowSmoothSeconds = 0.32f;
     private const float LeadUnits = 6f;
     private const float StartShare = 0.36f;
-    private const float GrandstandShare = 0.24f;
-    private const float RailShare = 0.05f;
-    private const float BirdLaneFactor = 1.75f;
     private const float DustSpacingUnits = 0.9f;
+    private const float MineStroke = 2f;
+    private const float TagHeight = 18f;
     private const float StandParallax = 0.3f;
     private const int CrowdLights = 64;
     private const int CrowdHeads = 36;
@@ -35,7 +41,6 @@ internal sealed class RaceTrackView
     private const float CheckerRows = 8f;
     private const float VerticalAnchorShare = 0.3f;
     private const float VerticalSpanShare = 0.9f;
-    private const float RankSmoothing = 9f;
 
     private static readonly Vector4 DirtFar = new(0.27f, 0.19f, 0.13f, 1f);
     private static readonly Vector4 DirtNear = new(0.42f, 0.30f, 0.19f, 1f);
@@ -54,13 +59,11 @@ internal sealed class RaceTrackView
     private readonly float[] laneTop = new float[RaceRules.FieldSize];
     private readonly float[] laneHeight = new float[RaceRules.FieldSize];
     private readonly float[] laneScale = new float[RaceRules.FieldSize];
-    private readonly float[] tickerRank = new float[RaceRules.FieldSize];
 
     private Camera2D camera = Camera2D.Create();
     private float crowdPhase;
     private float sweepPhase;
     private bool replaying;
-    private bool tickerPlaced;
     private bool fresh = true;
     private bool vertical;
 
@@ -79,9 +82,28 @@ internal sealed class RaceTrackView
     public void Reset()
     {
         replaying = false;
-        tickerPlaced = false;
         Recut();
     }
+
+    public static float LaneScaleSum => RaceRules.FieldSize * FarScale + (1f - FarScale) * RaceRules.FieldSize * 0.5f;
+
+    public static void SideBand(Rect track, float scale, out float farY, out float nearY)
+    {
+        var bottom = track.Height * NearMargin;
+        var headroom = (CrestShare * BirdLaneFactor - GroundShare) * FarScale / LaneScaleSum;
+        var lanes = MathF.Max(0f, (track.Height - bottom - HeadPad * scale) / (1f + headroom));
+        nearY = track.Max.Y - bottom;
+        farY = nearY - lanes;
+    }
+
+    public static float SideBirdHeight(Rect track, float scale)
+    {
+        SideBand(track, scale, out var farY, out var nearY);
+        return (nearY - farY) * FarScale / LaneScaleSum * BirdLaneFactor;
+    }
+
+    public static float VerticalBirdLength(Rect track) =>
+        MathF.Min(track.Width / RaceRules.FieldSize * VerticalLengthShare, track.Height * VerticalHeightShare);
 
     private void Recut()
     {
@@ -147,20 +169,19 @@ internal sealed class RaceTrackView
         sweepPhase += deltaSeconds;
     }
 
-    public void DrawSide(ImDrawListPtr drawList, Rect area, RaceRoundPlayback playback,
-        CasinoRaceRunnerDto[]? runners, float deltaSeconds, float stretch, float scale)
+    public void DrawSide(ImDrawListPtr drawList, Rect stand, Rect track, RaceRoundPlayback playback,
+        CasinoRaceRunnerDto[]? runners, ReadOnlySpan<bool> mine, float deltaSeconds, float stretch, float scale)
     {
-        if (area.Width <= 1f || area.Height <= 1f)
+        if (track.Width <= 1f || track.Height <= 1f)
         {
             return;
         }
 
-        drawList.PushClipRect(area.Min, area.Max, true);
         var replay = Prepare(playback, false);
         var leaderUnits = LeaderUnits(playback);
         var span = replay ? ReplaySpan : VisibleSpan;
-        var anchor = new Vector2(area.Min.X + area.Width * (replay ? 0.5f : LeaderShare), area.Center.Y);
-        camera.Fit(area, span, 1f, FitMode.CoverWidth, anchor);
+        var anchor = new Vector2(track.Min.X + track.Width * (replay ? 0.5f : LeaderShare), track.Center.Y);
+        camera.Fit(track, span, 1f, FitMode.CoverWidth, anchor);
         if (replay)
         {
             camera.Place(new Vector2(TrackLength, 0f));
@@ -171,36 +192,41 @@ internal sealed class RaceTrackView
         }
 
         camera.Update(deltaSeconds, scale);
-        var standBottom = area.Min.Y + area.Height * GrandstandShare;
-        DrawGrandstand(drawList, new Rect(area.Min, new Vector2(area.Max.X, standBottom)), stretch, scale);
-        var farY = standBottom + area.Height * RailShare;
-        var nearY = area.Max.Y - area.Height * RailShare;
+        SideBand(track, scale, out var farY, out var nearY);
+        var world = new Rect(stand.Min, track.Max);
+        drawList.PushClipRect(world.Min, world.Max, true);
+        DrawGrandstand(drawList, new Rect(stand.Min, new Vector2(stand.Max.X, farY)), stretch, scale);
+        drawList.PopClipRect();
+        drawList.PushClipRect(track.Min, track.Max, true);
         LayLanes(farY, nearY);
-        DrawSurface(drawList, area, farY, nearY, scale);
-        DrawFloodlights(drawList, area, scale);
-        DrawBirdsSide(drawList, playback, runners, scale);
+        DrawSurface(drawList, track, farY, nearY, scale);
+        drawList.PopClipRect();
+        drawList.PushClipRect(world.Min, world.Max, true);
+        DrawFloodlights(drawList, world, scale);
+        drawList.PopClipRect();
+        drawList.PushClipRect(track.Min, track.Max, true);
+        DrawBirdsSide(drawList, playback, runners, mine, scale);
         if (replay)
         {
-            drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(ReplayTint));
+            drawList.AddRectFilled(track.Min, track.Max, ImGui.GetColorU32(ReplayTint));
         }
 
         FinishScreen = new Vector2(LaneX(TrackLength, laneScale[RaceRules.FieldSize - 1]), nearY);
         drawList.PopClipRect();
     }
 
-    public void DrawVertical(ImDrawListPtr drawList, Rect area, RaceRoundPlayback playback,
-        CasinoRaceRunnerDto[]? runners, float deltaSeconds, float stretch, float scale)
+    public void DrawVertical(ImDrawListPtr drawList, Rect stand, Rect track, RaceRoundPlayback playback,
+        CasinoRaceRunnerDto[]? runners, ReadOnlySpan<bool> mine, float deltaSeconds, float stretch, float scale)
     {
-        if (area.Width <= 1f || area.Height <= 1f)
+        if (track.Width <= 1f || track.Height <= 1f)
         {
             return;
         }
 
-        drawList.PushClipRect(area.Min, area.Max, true);
         var replay = Prepare(playback, true);
         var span = (replay ? ReplaySpan : VisibleSpan) * VerticalSpanShare;
-        var anchor = new Vector2(area.Center.X, area.Min.Y + area.Height * (replay ? 0.5f : VerticalAnchorShare));
-        camera.Fit(area, 1f, span, FitMode.CoverHeight, anchor);
+        var anchor = new Vector2(track.Center.X, track.Min.Y + track.Height * (replay ? 0.5f : VerticalAnchorShare));
+        camera.Fit(track, 1f, span, FitMode.CoverHeight, anchor);
         if (replay)
         {
             camera.Place(new Vector2(0f, -TrackLength));
@@ -211,9 +237,11 @@ internal sealed class RaceTrackView
         }
 
         camera.Update(deltaSeconds, scale);
-        var standHeight = area.Height * 0.08f;
-        DrawGrandstand(drawList, new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + standHeight)), stretch, scale);
-        var track = new Rect(new Vector2(area.Min.X, area.Min.Y + standHeight), area.Max);
+        var world = new Rect(stand.Min, track.Max);
+        drawList.PushClipRect(world.Min, world.Max, true);
+        DrawGrandstand(drawList, stand, stretch, scale);
+        drawList.PopClipRect();
+        drawList.PushClipRect(track.Min, track.Max, true);
         drawList.AddRectFilledMultiColor(track.Min, track.Max, ImGui.GetColorU32(DirtFar), ImGui.GetColorU32(DirtFar),
             ImGui.GetColorU32(DirtNear), ImGui.GetColorU32(DirtNear));
         var laneWidth = track.Width / RaceRules.FieldSize;
@@ -225,86 +253,21 @@ internal sealed class RaceTrackView
         }
 
         DrawVerticalMarkers(drawList, track, scale);
-        DrawFloodlights(drawList, area, scale);
-        DrawBirdsTop(drawList, playback, runners, track, laneWidth, scale);
+        DrawFloodlights(drawList, track, scale);
+        DrawBirdsTop(drawList, playback, runners, mine, track, laneWidth, scale);
         if (replay)
         {
-            drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(ReplayTint));
+            drawList.AddRectFilled(track.Min, track.Max, ImGui.GetColorU32(ReplayTint));
         }
 
         FinishScreen = new Vector2(track.Center.X, camera.ToScreen(new Vector2(0f, -TrackLength)).Y);
         drawList.PopClipRect();
     }
 
-    public float DrawTicker(ImDrawListPtr drawList, Rect row, RaceRoundPlayback playback,
-        CasinoRaceRunnerDto[]? runners, ReadOnlySpan<bool> mine, float deltaSeconds, float scale)
+    public static float ProgressOf(RaceRoundPlayback playback, int slot)
     {
-        if (runners is not { Length: RaceRules.FieldSize } || row.Width <= 0f)
-        {
-            return row.Min.Y;
-        }
-
-        var gap = 4f * scale;
-        var columns = row.Width >= 520f * scale ? RaceRules.FieldSize : RaceRules.FieldSize / 2;
-        var rows = RaceRules.FieldSize / columns;
-        var cellWidth = (row.Width - gap * (columns - 1)) / columns;
-        var cellHeight = (row.Height - gap * (rows - 1)) / rows;
-        var ranking = playback.Ranking;
-        var smoothing = MathF.Min(1f, deltaSeconds * RankSmoothing);
-        for (var place = 0; place < RaceRules.FieldSize; place++)
-        {
-            var slot = ranking[place];
-            tickerRank[slot] = tickerPlaced ? tickerRank[slot] + (place - tickerRank[slot]) * smoothing : place;
-        }
-
-        tickerPlaced = true;
-        for (var place = 0; place < RaceRules.FieldSize; place++)
-        {
-            var slot = ranking[place];
-            var shown = tickerRank[slot];
-            var line = Math.Clamp((int)MathF.Round(shown) / columns, 0, rows - 1);
-            var x = row.Min.X + (shown - line * columns) * (cellWidth + gap);
-            var top = row.Min.Y + line * (cellHeight + gap);
-            var cell = new Rect(new Vector2(x, top), new Vector2(x + cellWidth, top + cellHeight));
-            DrawTickerCell(drawList, cell, place, runners[slot], playback.Crossed(slot),
-                slot < mine.Length && mine[slot], scale);
-        }
-
-        return row.Max.Y;
-    }
-
-    private static void DrawTickerCell(ImDrawListPtr drawList, Rect cell, int place, CasinoRaceRunnerDto runner,
-        bool home, bool backed, float scale)
-    {
-        var radius = cell.Height * 0.5f;
-        var lead = place == 0;
-        Squircle.Fill(drawList, cell.Min, cell.Max, radius,
-            ImGui.GetColorU32(lead ? CasinoColors.Money with { W = 0.24f } : new Vector4(0f, 0f, 0f, 0.42f)));
-        if (backed || home)
-        {
-            Squircle.Stroke(drawList, cell.Min, cell.Max, radius,
-                ImGui.GetColorU32(backed ? CasinoColors.LightA : CasinoColors.Money with { W = 0.7f }),
-                MathF.Max(1f, (backed ? 1.6f : 1f) * scale));
-        }
-
-        var disc = cell.Height * 0.34f;
-        var discCenter = new Vector2(cell.Min.X + radius, cell.Center.Y);
-        var cloth = RaceBirdArt.ClothOf(runner.Slot);
-        drawList.AddCircleFilled(discCenter, disc, ImGui.GetColorU32(cloth), 16);
-        Typography.DrawCentered(drawList, discCenter, GameNumber.Label(runner.Slot + 1), RaceBirdArt.InkOn(cloth),
-            TextStyles.FootnoteEmphasized);
-        var textLeft = discCenter.X + disc + 4f * scale;
-        var available = cell.Max.X - radius * 0.6f - textLeft;
-        if (available <= 4f * scale)
-        {
-            return;
-        }
-
-        var style = TextStyles.FootnoteEmphasized;
-        var name = Typography.FitText(runner.Name, available, style);
-        var size = Typography.Measure(name, style);
-        Typography.Draw(drawList, new Vector2(textLeft, cell.Center.Y - size.Y * 0.5f), name,
-            lead ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle, style);
+        var units = VisualDistance(playback.Plan, slot, playback.Positions[slot], playback.DisplaySubTick);
+        return Math.Clamp(units / TrackLength, 0f, 1f);
     }
 
     private float LeaderUnits(RaceRoundPlayback playback)
@@ -388,7 +351,7 @@ internal sealed class RaceTrackView
 
     private void DrawSurface(ImDrawListPtr drawList, Rect area, float farY, float nearY, float scale)
     {
-        drawList.AddRectFilledMultiColor(new Vector2(area.Min.X, farY), new Vector2(area.Max.X, nearY),
+        drawList.AddRectFilledMultiColor(new Vector2(area.Min.X, farY), new Vector2(area.Max.X, area.Max.Y),
             ImGui.GetColorU32(DirtFar), ImGui.GetColorU32(DirtFar), ImGui.GetColorU32(DirtNear),
             ImGui.GetColorU32(DirtNear));
         var hairline = ImGui.GetColorU32(RailInk with { W = 0.07f });
@@ -501,7 +464,7 @@ internal sealed class RaceTrackView
     }
 
     private void DrawBirdsSide(ImDrawListPtr drawList, RaceRoundPlayback playback, CasinoRaceRunnerDto[]? runners,
-        float scale)
+        ReadOnlySpan<bool> mine, float scale)
     {
         var positions = playback.Positions;
         var plan = playback.Plan;
@@ -511,7 +474,7 @@ internal sealed class RaceTrackView
             var slot = lane;
             var runner = RunnerAt(runners, slot);
             var units = VisualDistance(plan, slot, positions[slot], playback.DisplaySubTick);
-            var groundY = laneTop[lane] + laneHeight[lane] * 0.82f;
+            var groundY = laneTop[lane] + laneHeight[lane] * GroundShare;
             var height = laneHeight[lane] * BirdLaneFactor;
             var laneCamera = LaneCamera(lane, groundY);
             var foot = laneCamera.ToScreen(new Vector2(units, 0f));
@@ -526,17 +489,29 @@ internal sealed class RaceTrackView
                 LeaderScreen = foot - new Vector2(0f, height * 0.6f);
             }
 
+            var backed = slot < mine.Length && mine[slot];
+            if (backed)
+            {
+                Shapes.StrokeEllipse(drawList, foot - new Vector2(0f, height * 0.5f),
+                    new Vector2(height * 0.56f, height * 0.6f), ImGui.GetColorU32(CasinoColors.Money),
+                    MathF.Max(1f, MineStroke * scale));
+            }
+
             var frame = Moving(playback, slot) ? (int)(units / (StrideUnits * 0.5f)) & 1 : 0;
             RaceBirdArt.DrawSide(drawList, foot, height, runner?.Colour ?? slot, runner?.Silk ?? 0, slot, frame, 1f);
+            if (backed)
+            {
+                DrawMineTag(drawList, foot - new Vector2(height * 0.78f, height * 0.62f), slot, scale);
+            }
         }
     }
 
     private void DrawBirdsTop(ImDrawListPtr drawList, RaceRoundPlayback playback, CasinoRaceRunnerDto[]? runners,
-        Rect track, float laneWidth, float scale)
+        ReadOnlySpan<bool> mine, Rect track, float laneWidth, float scale)
     {
         var positions = playback.Positions;
         var plan = playback.Plan;
-        var length = MathF.Min(laneWidth * 0.95f, track.Height * 0.12f);
+        var length = VerticalBirdLength(track);
         for (var slot = 0; slot < RaceRules.FieldSize; slot++)
         {
             var runner = RunnerAt(runners, slot);
@@ -557,9 +532,20 @@ internal sealed class RaceTrackView
                 LeaderScreen = new Vector2(centerX, screenY);
             }
 
+            var backed = slot < mine.Length && mine[slot];
+            if (backed)
+            {
+                drawList.AddCircle(new Vector2(centerX, screenY), length * 0.56f, ImGui.GetColorU32(CasinoColors.Money),
+                    24, MathF.Max(1f, MineStroke * scale));
+            }
+
             var frame = Moving(playback, slot) ? (int)(units / (StrideUnits * 0.5f)) & 1 : 0;
             RaceBirdArt.DrawTop(drawList, new Vector2(centerX, screenY), length, runner?.Colour ?? slot,
                 runner?.Silk ?? 0, slot, frame, 1f);
+            if (backed)
+            {
+                DrawMineTag(drawList, new Vector2(centerX, screenY + length * 0.62f), slot, scale);
+            }
         }
     }
 
@@ -597,6 +583,18 @@ internal sealed class RaceTrackView
         var startY = camera.ToScreen(new Vector2(0f, 3f)).Y;
         drawList.AddLine(new Vector2(track.Min.X, startY), new Vector2(track.Max.X, startY),
             ImGui.GetColorU32(Black with { W = 0.5f }), MathF.Max(1f, 3f * scale));
+    }
+
+    private static void DrawMineTag(ImDrawListPtr drawList, Vector2 center, int slot, float scale)
+    {
+        var style = TextStyles.FootnoteEmphasized;
+        var label = GameNumber.Label(slot + 1);
+        var height = TagHeight * scale;
+        var width = MathF.Max(height, Typography.Measure(label, style).X + height * 0.6f);
+        var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
+        var max = min + new Vector2(width, height);
+        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(CasinoColors.Money));
+        Typography.DrawCentered(drawList, center, label, RaceBirdArt.InkOn(CasinoColors.Money), style);
     }
 
     private static bool Moving(RaceRoundPlayback playback, int slot) =>
