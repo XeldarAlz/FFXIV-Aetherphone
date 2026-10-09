@@ -345,7 +345,6 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         wheel.Gate();
         bingo.Gate();
         originals.Gate();
-        race.Gate();
         plinko.Gate();
         holdem.Gate();
         rulesSheet.Gate();
@@ -374,7 +373,6 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         wheel.DrawOverlay(screenArea, ui);
         bingo.DrawOverlay(screenArea, ui);
         originals.DrawOverlay(screenArea, ui);
-        race.DrawOverlay(screenArea, ui);
         plinko.DrawOverlay(screenArea, ui);
         holdem.DrawOverlay(screenArea, ui);
         if (IsStage(router.Current))
