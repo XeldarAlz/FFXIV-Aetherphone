@@ -422,6 +422,134 @@ def spring(start, seed):
     return room(glide_tone(start, start * 2.2, 0.12, ((1, 1.0), (2, 0.12), (3, 0.04)), curve=0.5, attack=0.25), 0.08, decay=0.04, seed=seed)
 
 
+def lowpass(clip, cutoff):
+    return signal.sosfilt(signal.butter(2, cutoff, btype="lowpass", fs=SAMPLE_RATE, output="sos"), clip)
+
+
+def band(clip, low, high):
+    return signal.sosfilt(signal.butter(2, [low, high], btype="bandpass", fs=SAMPLE_RATE, output="sos"), clip)
+
+
+def howl(pitch=1.0, length=0.55, seed=0):
+    span = 2.6 * length
+    time = times(span)
+    progress = time / span
+    contour = np.interp(progress, [0, 0.3, 0.65, 1.0], [250, 430, 460, 310]) * pitch
+    vibrato = 1 + 0.012 * np.clip(progress / 0.6, 0, 1) * np.sin(2 * np.pi * 5 * time)
+    voice = signal.sawtooth(2 * np.pi * np.cumsum(contour * vibrato) / SAMPLE_RATE)
+    vowel = band(voice, 600, 1000) * (1 - progress) + band(voice, 350, 600) * progress + 0.35 * band(voice, 1050, 1400)
+    breath = noise(span, 700, 1200, 10.0, 0.05, seed)
+    envelope = np.interp(progress, [0, 0.025 / span, 0.25, 0.62, 1.0], [0, 0.3, 1, 1, 0])
+    return room(lowpass((vowel + breath) * envelope, 1500), 0.35, decay=0.25, seed=seed)
+
+
+def hoot(frequency, length, seed):
+    tone = glide_tone(frequency, frequency * 0.93, length, ((1, 1.0), (2, 0.06)), curve=0.6, attack=0.3)
+    breath = noise(length, frequency * 0.8, frequency * 2.5, length, 0.05, seed)
+    return lowpass(tone + breath * tone, 1100)
+
+
+def owl_hoot():
+    calls = place((0, hoot(410, 0.3, 471)), (0.42, 0.7 * hoot(392, 0.16, 472)), (0.62, 0.62 * hoot(380, 0.24, 473)))
+    return room(calls, 0.3, decay=0.2, seed=471)
+
+
+def pack_chorus():
+    return place((0, howl(1.0, 0.9, 401)), (0.8, 0.65 * howl(1.26, 0.8, 402)), (1.4, 0.45 * howl(0.84, 0.7, 403)))
+
+
+def moon_chime(frequency, seed):
+    tone = partial(frequency, 0.35, 1.0, attack=0.006) + partial(frequency * 2.76, 0.12, 0.12, attack=0.006)
+    return room(tone, 0.22, decay=0.12, seed=seed)
+
+
+def claw_swipe(seed):
+    return room(swept_noise(0.14, 2600, 1400, 0.6, 0.012, seed), 0.08, decay=0.04, seed=seed)
+
+
+def soft_knock(frequency, seed):
+    body = partial(frequency, 0.03, 1.0, glide=0.64, glide_time=0.02, attack=0.004)
+    return room(lowpass(body, 900), 0.05, decay=0.03, seed=seed)
+
+
+def leaf_rustle(seed):
+    generator = np.random.default_rng(seed)
+    layers = []
+    for index in range(4):
+        offset = index * 0.045 + generator.random() * 0.02
+        layers.append((offset, noise(0.07, 2400, 6000, 0.025, 0.6 + generator.random() * 0.4, seed + index)))
+    return room(place(*layers), 0.1, decay=0.05, seed=seed)
+
+
+def moon_rise():
+    tone = partial(note("C6"), 0.25, 1.0, attack=0.006) + partial(note("C6") * 2.76, 0.08, 0.1, attack=0.006)
+    return room(tone, 0.25, decay=0.12, seed=411)
+
+
+def heartbeat():
+    beat = lowpass(partial(62, 0.06, 1.0, duration=0.3, glide=0.65, glide_time=0.04, attack=0.008), 220)
+    return place((0, beat), (0.17, 0.6 * beat))
+
+
+def coffin_lid():
+    body = partial(140, 0.04, 1.0, glide=0.63, glide_time=0.015, attack=0.004)
+    wood = noise(0.1, 300, 550, 0.02, 0.5, 421)
+    return room(place((0, body), (0, wood)), 0.08, decay=0.04, seed=421)
+
+
+def bat_flutter(seed, beats=6, squeak=False):
+    layers = []
+    for index in range(beats):
+        layers.append((index * 0.045, noise(0.022, 700, 1100, 0.012, 1.0 - index / (beats + 1), seed + index)))
+    if squeak:
+        layers.append((0.1, 0.25 * glide_tone(4200, 5200, 0.035, ((1, 1.0),), curve=0.5, attack=0.2)))
+    return room(place(*layers), 0.12, decay=0.05, seed=seed)
+
+
+def candle_ignite():
+    return room(swept_noise(0.3, 600, 2400, 0.8, 0.03, 431), 0.12, decay=0.06, seed=431)
+
+
+def organ_swell():
+    span = 1.15
+    time = times(span)
+    chord = np.zeros(len(time))
+    for index, name in enumerate(("D3", "F3", "A3", "D4")):
+        frequency = note(name) * (1 + (index - 1.5) * 0.0012)
+        phase = 2 * np.pi * frequency * time
+        chord += np.sin(phase) + 0.33 * np.sin(3 * phase) + 0.2 * np.sin(5 * phase)
+    envelope = np.interp(time, [0, 0.14, 0.39, span], [0, 1, 1, 0])
+    return room(lowpass(chord * envelope, 900), 0.4, decay=0.3, seed=441)
+
+
+def bat_swarm():
+    layers = [(index * 0.18, bat_flutter(450 + index * 10, beats=8, squeak=True)) for index in range(3)]
+    layers.append((0, 0.35 * swept_noise(1.3, 300, 1600, 0.9, 0.4, 461)))
+    return place(*layers)
+
+
+def halloween_sounds():
+    sounds = {}
+    for index, frequency in enumerate((150, 158, 143), start=1):
+        sounds[f"halloween_knock_{index}"] = (soft_knock(frequency, 300 + index), "tick")
+    for index, frequency in enumerate((110, 116, 105), start=1):
+        sounds[f"halloween_thump_{index}"] = (soft_knock(frequency, 310 + index), "tick")
+    for index, name in enumerate(("G5", "A5", "C6", "D6"), start=1):
+        sounds[f"halloween_chime_{index}"] = (moon_chime(note(name), 320 + index), "tick")
+    sounds["halloween_claw"] = (claw_swipe(331), "air")
+    sounds["halloween_rustle"] = (leaf_rustle(341), "air")
+    sounds["halloween_rise"] = (moon_rise(), "tick")
+    sounds["halloween_hoot"] = (owl_hoot(), "air")
+    sounds["halloween_chorus"] = (pack_chorus(), "tick")
+    sounds["halloween_heartbeat"] = (heartbeat(), "tick")
+    sounds["halloween_coffin"] = (coffin_lid(), "tick")
+    sounds["halloween_flutter"] = (bat_flutter(361), "air")
+    sounds["halloween_ignite"] = (candle_ignite(), "air")
+    sounds["halloween_organ"] = (organ_swell(), "air")
+    sounds["halloween_swarm"] = (bat_swarm(), "tick")
+    return sounds
+
+
 def ringback():
     tone_time = times(2.0)
     tone = 0.5 * (np.sin(2 * np.pi * 440 * tone_time) + np.sin(2 * np.pi * 480 * tone_time))
@@ -561,6 +689,8 @@ def main():
     for name, source in RINGTONES.items():
         seed += 1
         write_mp3(os.path.join(output, "Ringtones", name + ".mp3"), master_ringtone(load_source(source)), seed)
+    for index, (name, (clip, category)) in enumerate(halloween_sounds().items()):
+        write_wav(os.path.join(output, "Ui", name + ".wav"), master(clip, category), 3000 + index)
 
 
 if __name__ == "__main__":

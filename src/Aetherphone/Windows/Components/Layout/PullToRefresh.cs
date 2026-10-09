@@ -11,12 +11,15 @@ internal sealed class PullToRefresh
     private const float MinSpinnerSeconds = 0.5f;
     private const float MaxSpinnerSeconds = 20f;
     private const float MoonRadius = 11f;
-    private const float MoonCycleSpeed = 0.9f;
+    private const float MoonCycleSpeed = 0.55f;
+    private const int MoonSegments = 32;
+    private const float MoonEdgeStroke = 1f;
+    private const float MoonFadeSeconds = 0.3f;
     private const float BatDrop = 28f;
     private const float BatSize = 1.1f;
 
     private static readonly Vector4 MoonLight = new(0.933f, 0.949f, 1f, 1f);
-    private static readonly Vector4 MoonShadow = new(0.039f, 0.063f, 0.188f, 1f);
+    private static readonly Vector4 MoonEarthshine = new(0.84f, 0.88f, 1f, 0.14f);
     private static readonly Vector4 MoonOutline = new(0.84f, 0.88f, 1f, 0.35f);
     private static readonly Vector4 MoonGlow = new(0.84f, 0.88f, 1f, 0.45f);
     private static readonly Vector4 BatInk = new(1f, 0.29f, 0.373f, 1f);
@@ -26,8 +29,14 @@ internal sealed class PullToRefresh
     private bool armed;
     private bool refreshing;
     private float spinnerElapsed;
+    private float moonPhase;
+    private float moonFade;
 
     public PullStyle Style { get; set; }
+
+    public UiSound RefreshSound { get; set; } = UiSound.Refresh;
+
+    public UiSound? ArmSound { get; set; }
 
     public void Draw(Rect area, float pull, bool dragging, bool loading, Vector4 ink, Action onRefresh)
     {
@@ -40,13 +49,20 @@ internal sealed class PullToRefresh
             if ((!loading && spinnerElapsed >= MinSpinnerSeconds) || spinnerElapsed >= MaxSpinnerSeconds)
             {
                 refreshing = false;
+                moonFade = 1f;
             }
         }
 
         if (dragging)
         {
             wasDragging = true;
-            armed = pull >= ArmThreshold * scale;
+            var reached = pull >= ArmThreshold * scale;
+            if (reached && !armed && ArmSound is { } armSound)
+            {
+                UiFeedback.Play(armSound);
+            }
+
+            armed = reached;
         }
         else if (wasDragging)
         {
@@ -55,7 +71,7 @@ internal sealed class PullToRefresh
             {
                 refreshing = true;
                 spinnerElapsed = 0f;
-                UiFeedback.Play(UiSound.Refresh);
+                UiFeedback.Play(RefreshSound);
                 onRefresh();
             }
 
@@ -68,17 +84,17 @@ internal sealed class PullToRefresh
     private void DrawIndicator(Rect area, float pull, float scale, Vector4 ink)
     {
         var progress = refreshing ? 1f : Math.Clamp(pull / (ArmThreshold * scale), 0f, 1f);
-        if (progress <= 0f)
-        {
-            return;
-        }
-
         var centerX = area.Center.X;
         var centerY = area.Min.Y + 20f * scale;
         var drawList = ImGui.GetWindowDrawList();
         if (Style == PullStyle.Moon)
         {
             DrawMoon(drawList, new Vector2(centerX, centerY + 4f * scale), progress, scale);
+            return;
+        }
+
+        if (progress <= 0f)
+        {
             return;
         }
 
@@ -112,29 +128,79 @@ internal sealed class PullToRefresh
 
     private void DrawMoon(ImDrawListPtr drawList, Vector2 center, float progress, float scale)
     {
-        var radius = MoonRadius * scale;
-        var sweep = radius * 2.1f;
-        float shadowOffset;
-        if (refreshing)
+        var deltaSeconds = ImGui.GetIO().DeltaTime;
+        float alpha;
+        if (progress > 0f)
         {
-            var phase = (float)ImGui.GetTime() * MoonCycleSpeed % 1f;
-            shadowOffset = phase < 0.5f ? -phase * 2f * sweep : (1f - (phase - 0.5f) * 2f) * sweep;
+            moonFade = 0f;
+            alpha = progress;
+            moonPhase = refreshing ? (moonPhase + deltaSeconds * MoonCycleSpeed) % 1f : progress * 0.5f;
+        }
+        else if (moonFade > 0f)
+        {
+            moonFade = MathF.Max(0f, moonFade - deltaSeconds / MoonFadeSeconds);
+            alpha = moonFade;
+            moonPhase = (moonPhase + deltaSeconds * MoonCycleSpeed) % 1f;
         }
         else
         {
-            shadowOffset = -progress * sweep;
+            return;
         }
 
+        var radius = MoonRadius * scale;
         if (!refreshing && progress >= 1f)
         {
             NightScene.Glow(drawList, center, radius * 2.6f, MoonGlow, 8);
         }
 
-        drawList.AddCircle(center, radius, ImGui.GetColorU32(MoonOutline with { W = MoonOutline.W * progress }), 32,
-            scale);
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(MoonLight with { W = progress }), 32);
-        drawList.AddCircleFilled(center + new Vector2(shadowOffset, 0f), radius * 1.04f,
-            ImGui.GetColorU32(MoonShadow), 32);
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(MoonEarthshine with { W = MoonEarthshine.W * alpha }),
+            32);
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(MoonOutline with { W = MoonOutline.W * alpha }), 32, scale);
+        DrawLitMoon(drawList, center, radius, moonPhase, ImGui.GetColorU32(MoonLight with { W = alpha }));
+    }
+
+    private static void DrawLitMoon(ImDrawListPtr drawList, Vector2 center, float radius, float phase, uint ink)
+    {
+        var waxing = phase < 0.5f;
+        var lit = waxing ? phase * 2f : (1f - phase) * 2f;
+        var side = waxing ? 1f : -1f;
+        var terminator = 1f - 2f * lit;
+        var flags = drawList.Flags;
+        drawList.Flags = flags & ~ImDrawListFlags.AntiAliasedFill;
+        var previousLimb = MoonPoint(center, radius, side, 0);
+        var previousEdge = previousLimb;
+        for (var step = 1; step <= MoonSegments; step++)
+        {
+            var limb = MoonPoint(center, radius, side, step);
+            var edge = MoonPoint(center, radius, side * terminator, step);
+            drawList.AddQuadFilled(previousLimb, limb, edge, previousEdge, ink);
+            previousLimb = limb;
+            previousEdge = edge;
+        }
+
+        drawList.Flags = flags;
+        TraceMoon(drawList, center, radius, side, terminator);
+        drawList.PathStroke(ink, ImDrawFlags.Closed, MoonEdgeStroke);
+    }
+
+    private static void TraceMoon(ImDrawListPtr drawList, Vector2 center, float radius, float side, float terminator)
+    {
+        drawList.PathClear();
+        for (var step = 0; step <= MoonSegments; step++)
+        {
+            drawList.PathLineTo(MoonPoint(center, radius, side, step));
+        }
+
+        for (var step = MoonSegments - 1; step > 0; step--)
+        {
+            drawList.PathLineTo(MoonPoint(center, radius, side * terminator, step));
+        }
+    }
+
+    private static Vector2 MoonPoint(Vector2 center, float radius, float reach, int step)
+    {
+        var angle = -MathF.PI * 0.5f + MathF.PI * step / MoonSegments;
+        return center + new Vector2(reach * radius * MathF.Cos(angle), radius * MathF.Sin(angle));
     }
 
     private void DrawBat(ImDrawListPtr drawList, Vector2 anchor, float progress, float scale)

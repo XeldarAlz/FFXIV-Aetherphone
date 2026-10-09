@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -64,12 +65,17 @@ internal sealed partial class AethergramApp
         ActivityUnreadWash = ActivityUnreadWashFor();
         doubleTapLike.Crimson = SeasonalTheme.Halloween;
         var pullStyle = SeasonalTheme.Halloween ? PullStyle.Bat : PullStyle.Dots;
+        var refreshSound = SeasonalTheme.Halloween ? UiSound.HalloweenOrgan : UiSound.Refresh;
         explorePull.Style = pullStyle;
+        explorePull.RefreshSound = refreshSound;
         foreach (var pull in pullToRefresh.Values)
         {
             pull.Style = pullStyle;
+            pull.RefreshSound = refreshSound;
         }
     }
+
+    private static UiSound Spooky(UiSound halloween) => SeasonalTheme.Halloween ? halloween : UiSound.Tap;
 
     private static void DrawNight(Rect screen, float top)
     {
@@ -89,7 +95,13 @@ internal sealed partial class AethergramApp
         }
 
         var reach = new Vector2(logoSize * LogoTapReach, logoSize * LogoTapReach);
-        if (!UiInteract.HoverClick(logoCenter - reach, logoCenter + reach))
+        bool tapped;
+        using (UiFeedback.ReplaceTap(UiSound.HalloweenSwarm))
+        {
+            tapped = UiInteract.HoverClick(logoCenter - reach, logoCenter + reach);
+        }
+
+        if (!tapped)
         {
             return;
         }

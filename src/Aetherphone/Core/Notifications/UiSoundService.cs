@@ -83,8 +83,20 @@ internal sealed class UiSoundService : IDisposable
 internal static class UiFeedback
 {
     private static UiSoundService? service;
+    private static UiSound tapSound = UiSound.Tap;
 
     public static void Bind(UiSoundService bound) => service = bound;
+
+    public static void PlayTap() => service?.Play(tapSound);
+
+    public static TapSoundScope ReplaceTap(UiSound sound)
+    {
+        var previous = tapSound;
+        tapSound = sound;
+        return new TapSoundScope(previous);
+    }
+
+    internal static void RestoreTap(UiSound previous) => tapSound = previous;
 
     public static void Unbind() => service = null;
 

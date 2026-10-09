@@ -164,7 +164,7 @@ internal static class UiInteract
             hasPendingTap = false;
             if (tapSound)
             {
-                UiFeedback.Play(UiSound.Tap);
+                UiFeedback.PlayTap();
             }
         }
 

@@ -4,6 +4,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Translation;
@@ -817,7 +818,14 @@ internal sealed partial class ChirperApp
             Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleHeight * 0.5f), title,
                 ChirperInk.TitleInk, WordmarkStyle);
         }
-        if (UiInteract.HoverClick(titleMin, titleMax))
+
+        bool titleTapped;
+        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenHoot)))
+        {
+            titleTapped = UiInteract.HoverClick(titleMin, titleMax);
+        }
+
+        if (titleTapped)
         {
             RefreshActiveFeed();
         }
@@ -838,9 +846,19 @@ internal sealed partial class ChirperApp
         {
             LoadingPulse.Spinner(refreshCenter, 8f * scale, ChirperInk.AccentLink);
         }
-        else if (DrawTopBarButton(drawList, refreshCenter, buttonRadius, Loc.T(L.Common.Refresh), false, false))
+        else
         {
-            RefreshActiveFeed();
+            bool refreshTapped;
+            using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenHoot)))
+            {
+                refreshTapped = DrawTopBarButton(drawList, refreshCenter, buttonRadius, Loc.T(L.Common.Refresh), false,
+                    false);
+            }
+
+            if (refreshTapped)
+            {
+                RefreshActiveFeed();
+            }
         }
     }
 

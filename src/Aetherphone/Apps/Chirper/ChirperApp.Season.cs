@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -58,8 +59,12 @@ internal sealed partial class ChirperApp
         foreach (var pull in pullToRefresh.Values)
         {
             pull.Style = pullStyle;
+            pull.RefreshSound = SeasonalTheme.Halloween ? UiSound.HalloweenHoot : UiSound.Refresh;
+            pull.ArmSound = SeasonalTheme.Halloween ? UiSound.HalloweenRise : null;
         }
     }
+
+    private static UiSound Spooky(UiSound halloween) => SeasonalTheme.Halloween ? halloween : UiSound.Tap;
 
     private static void DrawNight(Rect screen, float top)
     {
@@ -81,7 +86,13 @@ internal sealed partial class ChirperApp
         var center = NightScene.MoonlitMoonCenter(screenRect, moonY);
         var reach = NightScene.MoonlitMoonSize * MoonTapReach;
         var extent = new Vector2(reach, reach);
-        if (!UiInteract.HoverClick(center - extent, center + extent))
+        bool tapped;
+        using (UiFeedback.ReplaceTap(UiSound.HalloweenChorus))
+        {
+            tapped = UiInteract.HoverClick(center - extent, center + extent);
+        }
+
+        if (!tapped)
         {
             return;
         }

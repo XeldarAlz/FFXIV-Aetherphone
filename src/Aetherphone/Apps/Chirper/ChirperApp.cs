@@ -538,9 +538,15 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var listTop = activeScope == SocialFeedScope.ForYou ? rowRect.Max.Y : DrawLatestScopeRow(area, rowRect.Max.Y);
         var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
-        if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##chirperComposeFab", FabTop,
-                PhoneIcons.Feather, Loc.T(L.Chirper.NewChirp), "chirper.compose",
-                FabBottom, FabRadius, true, FabGlyph))
+        bool composing;
+        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenRustle)))
+        {
+            composing = ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##chirperComposeFab", FabTop,
+                PhoneIcons.Feather, Loc.T(L.Chirper.NewChirp), "chirper.compose", FabBottom, FabRadius, true,
+                FabGlyph);
+        }
+
+        if (composing)
         {
             BeginCompose();
         }
@@ -560,8 +566,13 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private void DrawFeedTabs(Rect row)
     {
         UiAnchors.Report("chirper.tabs", row);
-        var picked = UnderlineTabs.Draw(row, Loc.T(L.Chirper.ForYou), Loc.T(L.Social.FeedLatest),
-            activeScope != SocialFeedScope.ForYou, ref tabSegment, ChirperInk.Shared, FeedTabsStyle);
+        int picked;
+        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenKnock)))
+        {
+            picked = UnderlineTabs.Draw(row, Loc.T(L.Chirper.ForYou), Loc.T(L.Social.FeedLatest),
+                activeScope != SocialFeedScope.ForYou, ref tabSegment, ChirperInk.Shared, FeedTabsStyle);
+        }
+
         if (picked < 0)
         {
             return;
@@ -671,7 +682,12 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             social.UnseenCount(Id));
         tabItems[(int)HomeTab.Profile] = new TabItem(Loc.T(L.Chirper.TabProfile), PhoneIcons.User,
             PhoneIcons.UserFilled, CustomIcon: hasAvatar);
-        var result = tabBar.Draw(area, ui, tabItems, (int)homeTab, icons: this);
+        TabBarResult result;
+        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenKnock)))
+        {
+            result = tabBar.Draw(area, ui, tabItems, (int)homeTab, icons: this);
+        }
+
         UiAnchors.Report("chirper.tabbar", tabBar.Bounds);
         if (result.Tapped < 0)
         {
@@ -1945,6 +1961,11 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
                 HoverLabelSide.Above);
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
+                if (SeasonalTheme.Halloween && post.MyReaction != kind)
+                {
+                    UiFeedback.Play(UiSound.HalloweenChime);
+                }
+
                 store.ToggleReaction(post, kind);
                 actions.Dismiss();
             }
@@ -1986,8 +2007,14 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var secondMin = new Vector2(firstMin.X, firstMax.Y);
         var secondMax = new Vector2(firstMax.X, secondMin.Y + rowGrown);
         var repostInk = post.MyReposted ? ChirperInk.RechirpGreen : ChirperInk.TitleInk;
-        if (DrawPopoverRow(drawList, firstMin, firstMax, true,
-                Loc.T(post.MyReposted ? L.Chirper.Unrepost : L.Chirper.Repost), repostInk, progress, interactive))
+        bool repostPicked;
+        using (UiFeedback.ReplaceTap(post.MyReposted ? UiSound.Tap : Spooky(UiSound.HalloweenClaw)))
+        {
+            repostPicked = DrawPopoverRow(drawList, firstMin, firstMax, true,
+                Loc.T(post.MyReposted ? L.Chirper.Unrepost : L.Chirper.Repost), repostInk, progress, interactive);
+        }
+
+        if (repostPicked)
         {
             var reposting = !post.MyReposted;
             store.ToggleRepost(post);

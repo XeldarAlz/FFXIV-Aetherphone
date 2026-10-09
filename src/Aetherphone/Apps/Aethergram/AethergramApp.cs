@@ -585,8 +585,12 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var top = area.Min.Y + AppHeader.Height * scale;
         var rowRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + FeedTabRowHeight * scale));
         UiAnchors.Report("aethergram.feeds", rowRect);
-        var picked = UnderlineTabs.Draw(rowRect, Loc.T(L.Aethergram.ForYou), Loc.T(L.Social.FeedLatest),
-            activeScope != SocialFeedScope.ForYou, ref tabSegment, Ink, FeedTabsStyle);
+        int picked;
+        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenThump)))
+        {
+            picked = UnderlineTabs.Draw(rowRect, Loc.T(L.Aethergram.ForYou), Loc.T(L.Social.FeedLatest),
+                activeScope != SocialFeedScope.ForYou, ref tabSegment, Ink, FeedTabsStyle);
+        }
         if (picked >= 0)
         {
             SelectScope(picked == 1 ? latestScope : SocialFeedScope.ForYou);
@@ -595,8 +599,14 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var listTop = activeScope == SocialFeedScope.ForYou ? rowRect.Max.Y : DrawLatestScopeRow(area, rowRect.Max.Y);
         var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
-        if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##aethergramComposeFab", Ink.Accent, PhoneIcons.Plus,
-                Loc.T(L.Aethergram.NewPost), "aethergram.compose", Ink.AccentDeep, FabRadius, true))
+        bool composing;
+        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenIgnite)))
+        {
+            composing = ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##aethergramComposeFab", Ink.Accent,
+                PhoneIcons.Plus, Loc.T(L.Aethergram.NewPost), "aethergram.compose", Ink.AccentDeep, FabRadius, true);
+        }
+
+        if (composing)
         {
             StartCompose(false);
         }
@@ -1301,9 +1311,13 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
         var liked = post.MyReaction >= 0;
         var actionX = innerX + CardActionInset * scale - CardActionIconSize * scale * 0.5f;
-        var likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
-            liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? Ink.LikeRed : Ink.TitleInk,
-            post.TotalReactions, Loc.T(L.Aethergram.Like), Loc.T(L.Social.LikedByTitle));
+        CardActionTap likeTap;
+        using (UiFeedback.ReplaceTap(liked ? UiSound.Tap : Spooky(UiSound.HalloweenHeartbeat)))
+        {
+            likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
+                liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? Ink.LikeRed : Ink.TitleInk,
+                post.TotalReactions, Loc.T(L.Aethergram.Like), Loc.T(L.Social.LikedByTitle));
+        }
         if (likeTap == CardActionTap.Icon)
         {
             store.ToggleLike(post);
@@ -1320,8 +1334,14 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         }
 
         var sendFrom = new Vector2(actionX + CardActionIconSize * scale * 0.5f, actionCenterY);
-        if (DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.Send, Ink.TitleInk, 0,
-                Loc.T(L.Aethergram.SendTo)) != CardActionTap.None)
+        CardActionTap sendTap;
+        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenFlutter)))
+        {
+            sendTap = DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.Send, Ink.TitleInk, 0,
+                Loc.T(L.Aethergram.SendTo));
+        }
+
+        if (sendTap != CardActionTap.None)
         {
             SendByBat(sendFrom);
             OpenShare(post.Id);
@@ -1345,7 +1365,13 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         PhoneIcon.Draw(drawList, bookmarkCenter, post.Saved ? PhoneIcons.BookmarkFilled : PhoneIcons.Bookmark,
             Ink.TitleInk, iconSize);
         HoverTooltip.Show(new Rect(bookmarkMin, bookmarkMax), Loc.T(L.Aethergram.Save), HoverLabelSide.Above);
-        if (UiInteract.Click(bookmarkMin, bookmarkMax, bookmarkHovered))
+        bool bookmarkTapped;
+        using (UiFeedback.ReplaceTap(post.Saved ? UiSound.Tap : Spooky(UiSound.HalloweenCoffin)))
+        {
+            bookmarkTapped = UiInteract.Click(bookmarkMin, bookmarkMax, bookmarkHovered);
+        }
+
+        if (bookmarkTapped)
         {
             NoteSaved(!post.Saved);
             store.SetSaved(post.Id, !post.Saved);
@@ -1561,6 +1587,11 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         if (doubleTapLike.Tapped(imageRect, post.Id))
         {
             pendingPhotoTap.Cancel();
+            if (SeasonalTheme.Halloween)
+            {
+                UiFeedback.Play(UiSound.HalloweenHeartbeat);
+            }
+
             if (post.MyReaction < 0)
             {
                 store.ToggleLike(post);
@@ -1635,7 +1666,12 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             MessagesActiveGlyph, dmStore.UnreadCount, "aethergram.inbox");
         tabItems[(int)AethergramTab.Profile] = new TabItem(Loc.T(L.Aethergram.Profile), PhoneIcons.User,
             PhoneIcons.UserFilled, CustomIcon: hasAvatar);
-        var result = tabBar.Draw(area, ui, tabItems, (int)activeTab, null, this);
+        TabBarResult result;
+        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenThump)))
+        {
+            result = tabBar.Draw(area, ui, tabItems, (int)activeTab, null, this);
+        }
+
         UiAnchors.Report("aethergram.tabbar", tabBar.Bounds);
         if (result.Tapped < 0)
         {
@@ -1779,7 +1815,14 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleHeight * 0.5f), title, Ink.TitleInk,
                 WordmarkStyle);
         }
-        if (UiInteract.HoverClick(titleMin, titleMax))
+
+        bool titleTapped;
+        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenOrgan)))
+        {
+            titleTapped = UiInteract.HoverClick(titleMin, titleMax);
+        }
+
+        if (titleTapped)
         {
             RefreshActiveFeed();
         }

@@ -51,6 +51,20 @@ internal enum UiSound
     MessageReceived,
     CasinoChips,
     CasinoDeal,
+    HalloweenKnock,
+    HalloweenThump,
+    HalloweenChime,
+    HalloweenClaw,
+    HalloweenRustle,
+    HalloweenRise,
+    HalloweenHoot,
+    HalloweenChorus,
+    HalloweenHeartbeat,
+    HalloweenCoffin,
+    HalloweenFlutter,
+    HalloweenIgnite,
+    HalloweenOrgan,
+    HalloweenSwarm,
 }
 
 internal enum UiSoundChannel
@@ -185,6 +199,34 @@ internal static class UiSoundCatalog
 
     private static readonly string[] Deal = { "Games/deal_1.wav", "Games/deal_2.wav" };
 
+    private static readonly string[] HalloweenKnock =
+    {
+        "Ui/halloween_knock_1.wav", "Ui/halloween_knock_2.wav", "Ui/halloween_knock_3.wav",
+    };
+
+    private static readonly string[] HalloweenThump =
+    {
+        "Ui/halloween_thump_1.wav", "Ui/halloween_thump_2.wav", "Ui/halloween_thump_3.wav",
+    };
+
+    private static readonly string[] HalloweenChime =
+    {
+        "Ui/halloween_chime_1.wav", "Ui/halloween_chime_2.wav", "Ui/halloween_chime_3.wav",
+        "Ui/halloween_chime_4.wav",
+    };
+
+    private static readonly string[] HalloweenClaw = { "Ui/halloween_claw.wav" };
+    private static readonly string[] HalloweenRustle = { "Ui/halloween_rustle.wav" };
+    private static readonly string[] HalloweenRise = { "Ui/halloween_rise.wav" };
+    private static readonly string[] HalloweenHoot = { "Ui/halloween_hoot.wav" };
+    private static readonly string[] HalloweenChorus = { "Ui/halloween_chorus.wav" };
+    private static readonly string[] HalloweenHeartbeat = { "Ui/halloween_heartbeat.wav" };
+    private static readonly string[] HalloweenCoffin = { "Ui/halloween_coffin.wav" };
+    private static readonly string[] HalloweenFlutter = { "Ui/halloween_flutter.wav" };
+    private static readonly string[] HalloweenIgnite = { "Ui/halloween_ignite.wav" };
+    private static readonly string[] HalloweenOrgan = { "Ui/halloween_organ.wav" };
+    private static readonly string[] HalloweenSwarm = { "Ui/halloween_swarm.wav" };
+
     public static readonly UiSoundEntry[] Entries =
     {
         new(Lock, 0.8f, 120, UiSoundChannel.Event),
@@ -236,6 +278,20 @@ internal static class UiSoundCatalog
         new(Receive, 0.7f, 120, UiSoundChannel.Event),
         new(Chips, 0.6f, 40, UiSoundChannel.Game, SubtleVariance),
         new(Deal, 0.6f, 50, UiSoundChannel.Game, SubtleVariance),
+        new(HalloweenKnock, 0.55f, 35, UiSoundChannel.Tap, SubtleVariance),
+        new(HalloweenThump, 0.55f, 35, UiSoundChannel.Tap, SubtleVariance),
+        new(HalloweenChime, 0.5f, 60, UiSoundChannel.Tap),
+        new(HalloweenClaw, 0.6f, 80, UiSoundChannel.Tap),
+        new(HalloweenRustle, 0.6f, 80, UiSoundChannel.Tap),
+        new(HalloweenRise, 0.5f, 300, UiSoundChannel.Tap),
+        new(HalloweenHoot, 0.5f, 600, UiSoundChannel.Event),
+        new(HalloweenChorus, 0.6f, 2500, UiSoundChannel.Event),
+        new(HalloweenHeartbeat, 0.6f, 80, UiSoundChannel.Tap),
+        new(HalloweenCoffin, 0.6f, 80, UiSoundChannel.Tap),
+        new(HalloweenFlutter, 0.6f, 80, UiSoundChannel.Tap),
+        new(HalloweenIgnite, 0.6f, 80, UiSoundChannel.Tap),
+        new(HalloweenOrgan, 0.5f, 600, UiSoundChannel.Event),
+        new(HalloweenSwarm, 0.6f, 2500, UiSoundChannel.Event),
     };
 
     public static IReadOnlyList<string> Files()
