@@ -182,7 +182,7 @@ One Aethernet account signs you in to every social app, and each app can keep it
 
 **Make it yours.** Wallpapers, accent colors, icon looks, phone cases and your home layout, saved as a Look that follows each character.
 
-**Seasonal nights.** Around Halloween, Chirper becomes a moonlit forest and Aethergram a blood-moon castle, each with its own icons, moments and quiet sounds. Switch it off under Settings → Appearance → Seasonal Decorations.
+**Seasonal nights.** Around Halloween, Chirper becomes a moonlit forest and Aethergram a blood-moon castle, each with its own icons, moments and quiet sounds, and Skywatcher's skies fill with bats, ghosts, wisps and falling leaves. Switch it off under Settings → Appearance → Seasonal Decorations.
 
 **Speaks your language.** Nine interface languages and one-tap translation on posts, profiles and messages.
 

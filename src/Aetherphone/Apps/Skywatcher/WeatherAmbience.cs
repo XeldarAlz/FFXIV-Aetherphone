@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Apps.Skywatcher.Sky;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -24,6 +25,11 @@ internal static class WeatherAmbience
 
         var canvas = new SkyCanvas(drawList, bounds, rounding, scale, opacity);
         var ink = AmbienceInk.Natural(palette, daylight);
+        if (SeasonalTheme.Halloween)
+        {
+            ink = ink.Haunted();
+        }
+
         SkyScene.Draw(canvas, kind, daylight, ink, true);
     }
 

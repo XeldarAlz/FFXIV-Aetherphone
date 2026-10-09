@@ -1,3 +1,4 @@
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Skywatcher.Sky;
@@ -46,6 +47,11 @@ internal static class SkyScene
                 break;
         }
 
+        if (SeasonalTheme.Halloween)
+        {
+            SkyHaunt.Draw(canvas, kind, daylight, ink, natural);
+        }
+
         if (natural)
         {
             SkyLayers.Wash(canvas, 0.62f, 1f, Black, 0f, 0.12f);
@@ -65,7 +71,7 @@ internal static class SkyScene
             SkyParticles.ShootingStar(canvas, ink.Star, night);
         }
 
-        SkyParticles.Luminary(canvas, SunAnchor, daylight, ink, 1f);
+        SkyParticles.Luminary(canvas, SunAnchor, daylight, ink, 1f, SeasonalTheme.Halloween);
         if (daylight > 0.01f)
         {
             SkyParticles.SunRays(canvas, SunAnchor, ink.Glow, daylight);
