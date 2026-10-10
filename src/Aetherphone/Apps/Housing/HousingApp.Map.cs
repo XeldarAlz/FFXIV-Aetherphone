@@ -35,6 +35,7 @@ internal sealed partial class HousingApp
     private const float LegendRow = 22f;
     private const float PointOfInterestSize = 16f;
     private const float LegendIconSize = 14f;
+    private const float StateScrimAlpha = 0.72f;
     private const int ControlCount = 5;
 
     private readonly string[] controlGlyphs = new string[ControlCount];
@@ -126,7 +127,7 @@ internal sealed partial class HousingApp
         DrawPlan(drawList, plan, origin, mapSize, scale);
         DrawMarkers(drawList, plan, plots, origin, mapSize, area, scale);
         drawList.PopClipRect();
-        DrawStateOverlay(area, plots, scale);
+        DrawStateOverlay(drawList, area, plots, origin, mapSize, scale);
         DrawPlaceCapsule(area, scale);
         DrawDivisionSwitch(area, plan, scale);
         DrawMapControls(drawList, stackTop, stackRadius);
@@ -689,14 +690,15 @@ internal sealed partial class HousingApp
         }
     }
 
-    private void DrawStateOverlay(Rect viewport, List<HousingPlot> plots, float scale)
+    private void DrawStateOverlay(ImDrawListPtr drawList, Rect viewport, List<HousingPlot> plots, Vector2 origin,
+        float mapSize, float scale)
     {
         if (plots.Count > 0)
         {
             return;
         }
 
-        var drawList = ImGui.GetWindowDrawList();
+        DrawStateScrim(drawList, viewport, origin, mapSize, scale);
         if (housing.Snapshot is null)
         {
             if (housing.IsRefreshing || housing.State is HousingLoadState.Idle or HousingLoadState.Loading)
@@ -743,6 +745,15 @@ internal sealed partial class HousingApp
         {
             OpenLocationSheet();
         }
+    }
+
+    private void DrawStateScrim(ImDrawListPtr drawList, Rect viewport, Vector2 origin, float mapSize, float scale)
+    {
+        drawList.PushClipRect(viewport.Min, viewport.Max, true);
+        drawList.AddRectFilled(origin, origin + new Vector2(mapSize, mapSize),
+            ImGui.GetColorU32(Palette.WithAlpha(ui.Palette.BackdropBottom, StateScrimAlpha)),
+            Metrics.Radius.Widget * scale, ImDrawFlags.RoundCornersAll);
+        drawList.PopClipRect();
     }
 
     private bool WardHasReportedPlots()

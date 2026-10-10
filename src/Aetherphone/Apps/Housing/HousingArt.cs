@@ -30,7 +30,7 @@ internal static class HousingArt
     private const float StateHintGap = 6f;
     private const float StateActionGap = 20f;
     private const float StateActionHeight = Button.LargeHeight;
-    private const float StateActionPad = 44f;
+    private const float StateActionGutter = 24f;
     private const float StateActionMinWidth = 150f;
     private const float StateMaxText = 280f;
     private const float StateTextInset = 48f;
@@ -206,7 +206,7 @@ internal static class HousingArt
             return false;
         }
 
-        var natural = Typography.Measure(actionLabel, TextStyles.SubheadlineEmphasized).X + StateActionPad * scale;
+        var natural = Button.WidthFor(actionLabel, ButtonSize.Large) + StateActionGutter * scale;
         var width = Math.Clamp(natural, StateActionMinWidth * scale, MathF.Max(StateActionMinWidth * scale, maxWidth));
         var top = bottom + StateActionGap * scale;
         var rect = new Rect(new Vector2(centerX - width * 0.5f, top),

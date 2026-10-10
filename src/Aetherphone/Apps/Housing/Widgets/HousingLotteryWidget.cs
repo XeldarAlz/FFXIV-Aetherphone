@@ -254,7 +254,7 @@ internal sealed class HousingLotteryWidget : IHomeWidget
             }
 
             openPlots = Math.Max(openPlots, 0) + snapshot.OpenPlotCount;
-            lottery = HousingLottery.Prefer(lottery, HousingLottery.Resolve(snapshot.Plots));
+            lottery = HousingLottery.Prefer(lottery, HousingLottery.Resolve(snapshot.Plots, utcNow), utcNow);
             known = true;
         }
 
