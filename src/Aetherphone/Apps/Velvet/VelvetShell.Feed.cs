@@ -156,7 +156,8 @@ internal sealed partial class VelvetShell
     }
 
     private static CardActionTap DrawCardAction(ImDrawListPtr drawList, ref float x, float centerY, string glyph,
-        Vector4 ink, int count, string tooltip, int glowKey, string? countTooltip = null)
+        Vector4 ink, int count, string tooltip, int glowKey, string? countTooltip = null,
+        UiSound iconSound = UiSound.Tap)
     {
         var scale = UiScale.Current;
         var iconSize = VIcon.CardAction * scale;
@@ -193,7 +194,7 @@ internal sealed partial class VelvetShell
         }
 
         x += contentWidth + CardActionGap * scale;
-        if (UiInteract.Click(min, iconMax, iconHovered))
+        if (UiInteract.Click(min, iconMax, iconHovered, iconSound))
         {
             return CardActionTap.Icon;
         }
@@ -322,15 +323,10 @@ internal sealed partial class VelvetShell
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
         var liked = entry.MyReaction >= 0;
         var actionX = innerX + CardActionInset * scale - VIcon.CardAction * scale * 0.5f;
-        CardActionTap likeTap;
-        using (UiFeedback.ReplaceTap(LikeSound(liked)))
-        {
-            likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
-                liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk,
-                entry.TotalReactions, Loc.T(L.Velvet.Like), TapGlow.Key(entry.Id, TapGlow.Like),
-                Loc.T(L.Velvet.LikesTitle));
-        }
-
+        var likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
+            liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk,
+            entry.TotalReactions, Loc.T(L.Velvet.Like), TapGlow.Key(entry.Id, TapGlow.Like),
+            Loc.T(L.Velvet.LikesTitle), LikeSound(liked));
         if (likeTap == CardActionTap.Icon)
         {
             TapGlow.Toggle(TapGlow.Key(entry.Id, TapGlow.Like), liked);

@@ -132,15 +132,10 @@ internal sealed partial class VelvetShell
             var actionsY = imageRect.Max.Y + 22f * scale;
             var liked = post.MyReaction >= 0;
             var actionX = innerX + CardActionInset * scale - VIcon.CardAction * scale * 0.5f;
-            CardActionTap likeTap;
-            using (UiFeedback.ReplaceTap(LikeSound(liked)))
-            {
-                likeTap = DrawCardAction(drawList, ref actionX, actionsY,
-                    liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
-                    liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk, post.TotalReactions, Loc.T(L.Velvet.Like),
-                    TapGlow.Key(post.Id, TapGlow.Like), Loc.T(L.Velvet.LikesTitle));
-            }
-
+            var likeTap = DrawCardAction(drawList, ref actionX, actionsY,
+                liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
+                liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk, post.TotalReactions, Loc.T(L.Velvet.Like),
+                TapGlow.Key(post.Id, TapGlow.Like), Loc.T(L.Velvet.LikesTitle), LikeSound(liked));
             if (likeTap == CardActionTap.Icon)
             {
                 TapGlow.Toggle(TapGlow.Key(post.Id, TapGlow.Like), liked);

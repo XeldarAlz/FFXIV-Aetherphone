@@ -1316,14 +1316,10 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
         var liked = post.MyReaction >= 0;
         var actionX = innerX + CardActionInset * scale - CardActionIconSize * scale * 0.5f;
-        CardActionTap likeTap;
-        using (UiFeedback.ReplaceTap(liked ? UiSound.Tap : SocialSeason.Sound(UiSound.HalloweenHeartbeat)))
-        {
-            likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
-                liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? Ink.LikeRed : Ink.TitleInk,
-                post.TotalReactions, Loc.T(L.Aethergram.Like), TapGlow.Key(post.Id, TapGlow.Like),
-                Loc.T(L.Social.LikedByTitle));
-        }
+        var likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
+            liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? Ink.LikeRed : Ink.TitleInk,
+            post.TotalReactions, Loc.T(L.Aethergram.Like), TapGlow.Key(post.Id, TapGlow.Like),
+            Loc.T(L.Social.LikedByTitle), liked ? UiSound.Tap : SocialSeason.Sound(UiSound.HalloweenHeartbeat));
         if (likeTap == CardActionTap.Icon)
         {
             TapGlow.Toggle(TapGlow.Key(post.Id, TapGlow.Like), liked);
@@ -1344,14 +1340,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
         var sendFrom = new Vector2(actionX + CardActionIconSize * scale * 0.5f, actionCenterY);
         var shareKey = TapGlow.Key(post.Id, TapGlow.Share);
-        CardActionTap sendTap;
-        using (UiFeedback.ReplaceTap(SocialSeason.Sound(UiSound.HalloweenFlutter)))
-        {
-            sendTap = DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.Send, Ink.TitleInk, 0,
-                Loc.T(L.Aethergram.SendTo), shareKey);
-        }
-
-        if (sendTap != CardActionTap.None)
+        if (DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.Send, Ink.TitleInk, 0,
+                Loc.T(L.Aethergram.SendTo), shareKey, iconSound: SocialSeason.Sound(UiSound.HalloweenFlutter))
+            != CardActionTap.None)
         {
             TapGlow.Bloom(shareKey);
             SendByBat(sendFrom);
@@ -1477,7 +1468,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     }
 
     private static CardActionTap DrawCardAction(ImDrawListPtr drawList, ref float x, float centerY, string glyph,
-        Vector4 ink, int count, string tooltip, int glowKey, string? countTooltip = null)
+        Vector4 ink, int count, string tooltip, int glowKey, string? countTooltip = null,
+        UiSound iconSound = UiSound.Tap)
     {
         var scale = UiScale.Current;
         var iconSize = CardActionIconSize * scale;
@@ -1514,7 +1506,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         }
 
         x += contentWidth + CardActionGap * scale;
-        if (UiInteract.Click(min, iconMax, iconHovered))
+        if (UiInteract.Click(min, iconMax, iconHovered, iconSound))
         {
             return CardActionTap.Icon;
         }
