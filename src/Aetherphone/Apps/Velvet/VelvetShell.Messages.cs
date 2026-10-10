@@ -856,14 +856,8 @@ internal sealed partial class VelvetShell
             var sendOrigin = ImGui.GetCursorScreenPos();
             var send = new Rect(new Vector2(sendOrigin.X + inset, sendOrigin.Y),
                 new Vector2(sendOrigin.X + inset + contentWidth, sendOrigin.Y + IntroSendHeight * scale));
-            bool sent;
-            using (UiFeedback.ReplaceTap(ConnectSound))
-            {
-                sent = Button.Draw(drawList, send, Loc.T(L.Velvet.SendIntro), VelvetTheme.Ink,
-                    enabled: !string.IsNullOrWhiteSpace(introText) && !store.IntroBusy);
-            }
-
-            if (sent)
+            if (Button.Draw(drawList, send, Loc.T(L.Velvet.SendIntro), VelvetTheme.Ink,
+                    enabled: !string.IsNullOrWhiteSpace(introText) && !store.IntroBusy, tapSound: ConnectSound))
             {
                 SendIntro(userId);
             }
@@ -876,14 +870,8 @@ internal sealed partial class VelvetShell
             var skipOrigin = ImGui.GetCursorScreenPos();
             var skip = new Rect(new Vector2(skipOrigin.X + inset, skipOrigin.Y),
                 new Vector2(skipOrigin.X + inset + contentWidth, skipOrigin.Y + IntroSkipHeight * scale));
-            bool connected;
-            using (UiFeedback.ReplaceTap(ConnectSound))
-            {
-                connected = Button.Draw(drawList, skip, Loc.T(L.Velvet.JustConnectMe), VelvetTheme.Ink,
-                    ButtonStyle.Gray);
-            }
-
-            if (connected)
+            if (Button.Draw(drawList, skip, Loc.T(L.Velvet.JustConnectMe), VelvetTheme.Ink, ButtonStyle.Gray,
+                    tapSound: ConnectSound))
             {
                 ConnectWithoutIntro(userId);
             }

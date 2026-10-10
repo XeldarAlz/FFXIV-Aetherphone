@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
@@ -78,14 +79,14 @@ internal static class Button
 
     public static bool Draw(ImDrawListPtr drawList, Rect rect, string label, in ControlInk ink,
         ButtonStyle style = ButtonStyle.Prominent, ButtonRole role = ButtonRole.Normal, bool enabled = true,
-        bool overlay = false, string? id = null, float opacity = 1f)
+        bool overlay = false, string? id = null, float opacity = 1f, UiSound tapSound = UiSound.Tap)
     {
         var hovered = enabled && (overlay
             ? UiInteract.HoverWindowOnly(rect.Min, rect.Max)
             : UiInteract.Hover(rect.Min, rect.Max));
         var face = Surface(drawList, rect, ink, style, role, enabled, hovered, ImGui.GetID(id ?? label), opacity);
         DrawLabel(drawList, face, label, id);
-        return enabled && UiInteract.Click(rect.Min, rect.Max, hovered);
+        return enabled && UiInteract.Click(rect.Min, rect.Max, hovered, tapSound);
     }
 
     public static ButtonFace Surface(ImDrawListPtr drawList, Rect rect, in ControlInk ink, ButtonStyle style,

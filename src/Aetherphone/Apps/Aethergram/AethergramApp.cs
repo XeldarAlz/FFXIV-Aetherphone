@@ -598,12 +598,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var top = area.Min.Y + AppHeader.Height * scale;
         var rowRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + FeedTabRowHeight * scale));
         UiAnchors.Report("aethergram.feeds", rowRect);
-        int picked;
-        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenThump)))
-        {
-            picked = UnderlineTabs.Draw(rowRect, Loc.T(L.Aethergram.ForYou), Loc.T(L.Social.FeedLatest),
-                activeScope != SocialFeedScope.ForYou, ref tabSegment, Ink, FeedTabsStyle);
-        }
+        var picked = UnderlineTabs.Draw(rowRect, Loc.T(L.Aethergram.ForYou), Loc.T(L.Social.FeedLatest),
+            activeScope != SocialFeedScope.ForYou, ref tabSegment, Ink, FeedTabsStyle,
+            SocialSeason.Sound(UiSound.HalloweenThump));
         if (picked >= 0)
         {
             SelectScope(picked == 1 ? latestScope : SocialFeedScope.ForYou);
@@ -612,14 +609,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var listTop = activeScope == SocialFeedScope.ForYou ? rowRect.Max.Y : DrawLatestScopeRow(area, rowRect.Max.Y);
         var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
-        bool composing;
-        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenIgnite)))
-        {
-            composing = ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##aethergramComposeFab", Ink.Accent,
-                PhoneIcons.Plus, Loc.T(L.Aethergram.NewPost), "aethergram.compose", Ink.AccentDeep, FabRadius, true);
-        }
-
-        if (composing)
+        if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##aethergramComposeFab", Ink.Accent,
+                PhoneIcons.Plus, Loc.T(L.Aethergram.NewPost), "aethergram.compose", Ink.AccentDeep, FabRadius, true,
+                tapSound: SocialSeason.Sound(UiSound.HalloweenIgnite)))
         {
             StartCompose(false);
         }
@@ -1325,7 +1317,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var liked = post.MyReaction >= 0;
         var actionX = innerX + CardActionInset * scale - CardActionIconSize * scale * 0.5f;
         CardActionTap likeTap;
-        using (UiFeedback.ReplaceTap(liked ? UiSound.Tap : Spooky(UiSound.HalloweenHeartbeat)))
+        using (UiFeedback.ReplaceTap(liked ? UiSound.Tap : SocialSeason.Sound(UiSound.HalloweenHeartbeat)))
         {
             likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
                 liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? Ink.LikeRed : Ink.TitleInk,
@@ -1353,7 +1345,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var sendFrom = new Vector2(actionX + CardActionIconSize * scale * 0.5f, actionCenterY);
         var shareKey = TapGlow.Key(post.Id, TapGlow.Share);
         CardActionTap sendTap;
-        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenFlutter)))
+        using (UiFeedback.ReplaceTap(SocialSeason.Sound(UiSound.HalloweenFlutter)))
         {
             sendTap = DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.Send, Ink.TitleInk, 0,
                 Loc.T(L.Aethergram.SendTo), shareKey);
@@ -1386,13 +1378,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         PhoneIcon.Draw(drawList, bookmarkCenter, post.Saved ? PhoneIcons.BookmarkFilled : PhoneIcons.Bookmark,
             Ink.TitleInk, iconSize);
         HoverTooltip.Show(new Rect(bookmarkMin, bookmarkMax), Loc.T(L.Aethergram.Save), HoverLabelSide.Above);
-        bool bookmarkTapped;
-        using (UiFeedback.ReplaceTap(post.Saved ? UiSound.Tap : Spooky(UiSound.HalloweenCoffin)))
-        {
-            bookmarkTapped = UiInteract.Click(bookmarkMin, bookmarkMax, bookmarkHovered);
-        }
-
-        if (bookmarkTapped)
+        if (UiInteract.Click(bookmarkMin, bookmarkMax, bookmarkHovered,
+                post.Saved ? UiSound.Tap : SocialSeason.Sound(UiSound.HalloweenCoffin)))
         {
             TapGlow.Toggle(saveKey, post.Saved);
             NoteSaved(!post.Saved);
@@ -1691,12 +1678,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             MessagesActiveGlyph, dmStore.UnreadCount, "aethergram.inbox");
         tabItems[(int)AethergramTab.Profile] = new TabItem(Loc.T(L.Aethergram.Profile), PhoneIcons.User,
             PhoneIcons.UserFilled, CustomIcon: hasAvatar);
-        TabBarResult result;
-        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenThump)))
-        {
-            result = tabBar.Draw(area, ui, tabItems, (int)activeTab, null, this);
-        }
-
+        var result = tabBar.Draw(area, ui, tabItems, (int)activeTab, null, this);
         UiAnchors.Report("aethergram.tabbar", tabBar.Bounds);
         if (result.Tapped < 0)
         {
@@ -1841,13 +1823,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
                 WordmarkStyle);
         }
 
-        bool titleTapped;
-        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenOrgan)))
-        {
-            titleTapped = UiInteract.HoverClick(titleMin, titleMax);
-        }
-
-        if (titleTapped)
+        if (UiInteract.HoverClick(titleMin, titleMax, SocialSeason.Sound(UiSound.HalloweenOrgan)))
         {
             RefreshActiveFeed();
         }

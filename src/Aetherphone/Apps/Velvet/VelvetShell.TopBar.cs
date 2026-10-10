@@ -73,13 +73,7 @@ internal sealed partial class VelvetShell
         }
 
         PlaceMoon(titleLeft + titleSize.X, iconsLeft);
-        bool titleTapped;
-        using (UiFeedback.ReplaceTap(TitleSound))
-        {
-            titleTapped = UiInteract.HoverClick(titleMin, titleMax);
-        }
-
-        if (titleTapped)
+        if (UiInteract.HoverClick(titleMin, titleMax, TitleSound))
         {
             RefreshRootTab();
         }

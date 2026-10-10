@@ -11,7 +11,6 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetShell
 {
-    private const float LogoTapReach = 0.6f;
     private const float LogoFlareReach = 1.6f;
     private const float LogoFlareAlpha = 0.55f;
     private const int LogoFlareCells = 10;
@@ -26,25 +25,23 @@ internal sealed partial class VelvetShell
 
     private string OwnHandle => store.Me?.Handle ?? string.Empty;
 
-    private void OfferTreat(Rect area, int depth) =>
-        Treats.Offer(ImGui.GetWindowDrawList(), depth > 1 ? TreatSpot.VelvetDeep : TreatSpot.VelvetFeed,
-            TreatBand.Header(screenRect, area.Min.Y, VHeader.Height * UiScale.Current));
+    private void OfferTreat(Rect area, int depth) => SocialSeason.OfferTreat(screenRect, area, depth,
+        TreatSpot.VelvetFeed, TreatSpot.VelvetDeep, VHeader.Height);
+
     private Spring moonSlide;
     private bool moonPlaced;
 
     private static string DiscoverGlyph => SeasonalTheme.Halloween ? PhoneIcons.CrystalBall : PhoneIcons.Compass;
     private static string FeedGlyph => SeasonalTheme.Halloween ? PhoneIcons.Candle : PhoneIcons.Photo;
     private static LocString FeedNoneTitle => SeasonalTheme.Halloween ? L.Seasonal.VelvetFeedNone : L.Velvet.FeedNone;
-    private static UiSound ConnectSound => Spooky(UiSound.HalloweenHeartbeat);
+    private static UiSound ConnectSound => SocialSeason.Sound(UiSound.HalloweenHeartbeat);
 
-    private static UiSound Spooky(UiSound halloween) => SeasonalTheme.Halloween ? halloween : UiSound.Tap;
-
-    private static UiSound LikeSound(bool liked) => liked ? UiSound.Tap : Spooky(UiSound.HalloweenSparkle);
+    private static UiSound LikeSound(bool liked) => liked ? UiSound.Tap : SocialSeason.Sound(UiSound.HalloweenSparkle);
 
     private UiSound TitleSound => activeTab switch
     {
-        VelvetPage.Discover => Spooky(UiSound.HalloweenCrystal),
-        VelvetPage.Feed => Spooky(UiSound.HalloweenIgnite),
+        VelvetPage.Discover => SocialSeason.Sound(UiSound.HalloweenCrystal),
+        VelvetPage.Feed => SocialSeason.Sound(UiSound.HalloweenIgnite),
         _ => UiSound.Tap,
     };
 
@@ -71,20 +68,10 @@ internal sealed partial class VelvetShell
             return;
         }
 
-        var reach = new Vector2(logoSize * LogoTapReach, logoSize * LogoTapReach);
-        bool tapped;
-        using (UiFeedback.ReplaceTap(UiSound.HalloweenFlare))
+        if (SocialSeason.CharmTapped(logoCenter, logoSize, UiSound.HalloweenFlare, toast, L.Seasonal.CandlesFlare))
         {
-            tapped = UiInteract.HoverClick(logoCenter - reach, logoCenter + reach);
+            NightScene.Kindle();
         }
-
-        if (!tapped)
-        {
-            return;
-        }
-
-        NightScene.Kindle();
-        toast.Show(Loc.T(L.Seasonal.CandlesFlare));
     }
 
     private static void NoteDoubleTapLike()

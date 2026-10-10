@@ -18,7 +18,6 @@ internal sealed partial class ChirperApp
     private const float ClawHold = 0.4f;
     private const float ClawDrawTime = 0.14f;
     private const int ClawSegments = 12;
-    private const float MoonTapReach = 0.6f;
     private const float MoonLogoGrow = 1.2f;
 
     private static readonly Vector4 GlowInk = new(0.8f, 0.86f, 1f, 1f);
@@ -32,9 +31,9 @@ internal sealed partial class ChirperApp
 
     private string OwnHandle => store.Me?.Handle ?? string.Empty;
 
-    private void OfferTreat(Rect area, int depth) =>
-        Treats.Offer(ImGui.GetWindowDrawList(), depth > 1 ? TreatSpot.ChirperDeep : TreatSpot.ChirperFeed,
-            TreatBand.Header(screenRect, area.Min.Y, AppHeader.Height * UiScale.Current));
+    private void OfferTreat(Rect area, int depth) => SocialSeason.OfferTreat(screenRect, area, depth,
+        TreatSpot.ChirperFeed, TreatSpot.ChirperDeep, AppHeader.Height);
+
     private Vector2 clawAnchor;
     private double clawStart = -100d;
 
@@ -68,9 +67,9 @@ internal sealed partial class ChirperApp
             pull.RefreshSound = SeasonalTheme.Halloween ? UiSound.HalloweenHoot : UiSound.Refresh;
             pull.ArmSound = SeasonalTheme.Halloween ? UiSound.HalloweenRise : null;
         }
-    }
 
-    private static UiSound Spooky(UiSound halloween) => SeasonalTheme.Halloween ? halloween : UiSound.Tap;
+        tabBar.TapSound = SocialSeason.Sound(UiSound.HalloweenKnock);
+    }
 
     private void DrawNight(Rect screen, float top)
     {
@@ -99,21 +98,11 @@ internal sealed partial class ChirperApp
         }
 
         var center = NightScene.MoonlitMoonCenter(screenRect, moonY, intro.ViewFor(screenRect));
-        var reach = NightScene.MoonlitMoonSize * MoonTapReach;
-        var extent = new Vector2(reach, reach);
-        bool tapped;
-        using (UiFeedback.ReplaceTap(UiSound.HalloweenChorus))
+        if (SocialSeason.CharmTapped(center, NightScene.MoonlitMoonSize, UiSound.HalloweenChorus, toast,
+                L.Seasonal.PackAnswers))
         {
-            tapped = UiInteract.HoverClick(center - extent, center + extent);
+            NightScene.Rouse();
         }
-
-        if (!tapped)
-        {
-            return;
-        }
-
-        NightScene.Rouse();
-        toast.Show(Loc.T(L.Seasonal.PackAnswers));
     }
 
     private void StartClaw(Vector2 anchor)
@@ -125,6 +114,7 @@ internal sealed partial class ChirperApp
 
         clawAnchor = anchor;
         clawStart = ImGui.GetTime();
+        UiInteract.PlayTap(UiSound.HalloweenClaw);
     }
 
     private void DrawClaw(Rect screen)

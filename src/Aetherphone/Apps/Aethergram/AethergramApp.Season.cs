@@ -22,7 +22,6 @@ internal sealed partial class AethergramApp
     private const float FlightFlap = 22f;
     private const int SwarmSize = 22;
     private const int IntroSwarmSize = 7;
-    private const float LogoTapReach = 0.6f;
 
     private static readonly Vector4 GlowInk = new(1f, 0.29f, 0.37f, 1f);
     private static readonly Vector4 FlightInk = new(0.055f, 0.008f, 0.02f, 0.95f);
@@ -37,9 +36,8 @@ internal sealed partial class AethergramApp
 
     private string OwnHandle => store.Me?.Handle ?? string.Empty;
 
-    private void OfferTreat(Rect area, int depth) =>
-        Treats.Offer(ImGui.GetWindowDrawList(), depth > 1 ? TreatSpot.AethergramDeep : TreatSpot.AethergramFeed,
-            TreatBand.Header(screenRect, area.Min.Y, AppHeader.Height * UiScale.Current));
+    private void OfferTreat(Rect area, int depth) => SocialSeason.OfferTreat(screenRect, area, depth,
+        TreatSpot.AethergramFeed, TreatSpot.AethergramDeep, AppHeader.Height);
 
     private static LocString CaughtUpTitle =>
         SeasonalTheme.Halloween ? L.Seasonal.AethergramCaughtUp : L.Social.FeedCaughtUp;
@@ -83,9 +81,9 @@ internal sealed partial class AethergramApp
             pull.Style = pullStyle;
             pull.RefreshSound = refreshSound;
         }
-    }
 
-    private static UiSound Spooky(UiSound halloween) => SeasonalTheme.Halloween ? halloween : UiSound.Tap;
+        tabBar.TapSound = SocialSeason.Sound(UiSound.HalloweenThump);
+    }
 
     private void DrawNight(Rect screen, float top)
     {
@@ -131,20 +129,10 @@ internal sealed partial class AethergramApp
             return;
         }
 
-        var reach = new Vector2(logoSize * LogoTapReach, logoSize * LogoTapReach);
-        bool tapped;
-        using (UiFeedback.ReplaceTap(UiSound.HalloweenSwarm))
+        if (SocialSeason.CharmTapped(logoCenter, logoSize, UiSound.HalloweenSwarm, toast, L.Seasonal.NightTakesWing))
         {
-            tapped = UiInteract.HoverClick(logoCenter - reach, logoCenter + reach);
+            ReleaseSwarm(NightScene.BloodMoonCenter(screenRect, moonY, intro.ViewFor(screenRect)), SwarmSize);
         }
-
-        if (!tapped)
-        {
-            return;
-        }
-
-        ReleaseSwarm(NightScene.BloodMoonCenter(screenRect, moonY, intro.ViewFor(screenRect)), SwarmSize);
-        toast.Show(Loc.T(L.Seasonal.NightTakesWing));
     }
 
     private void SendByBat(Vector2 from)

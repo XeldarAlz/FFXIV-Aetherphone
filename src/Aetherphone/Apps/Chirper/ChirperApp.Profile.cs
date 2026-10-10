@@ -822,13 +822,7 @@ internal sealed partial class ChirperApp
                 ChirperInk.TitleInk, WordmarkStyle);
         }
 
-        bool titleTapped;
-        using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenHoot)))
-        {
-            titleTapped = UiInteract.HoverClick(titleMin, titleMax);
-        }
-
-        if (titleTapped)
+        if (UiInteract.HoverClick(titleMin, titleMax, SocialSeason.Sound(UiSound.HalloweenHoot)))
         {
             RefreshActiveFeed();
         }
@@ -840,7 +834,8 @@ internal sealed partial class ChirperApp
         }
 
         var filtersActive = FeedFiltersActive();
-        if (DrawTopBarButton(drawList, filterCenter, buttonRadius, Loc.T(L.Chirper.FeedFilters), true, filtersActive))
+        if (DrawTopBarButton(drawList, filterCenter, buttonRadius, Loc.T(L.Chirper.FeedFilters), true, filtersActive,
+                UiSound.Tap))
         {
             OpenFilterSheet();
         }
@@ -849,26 +844,17 @@ internal sealed partial class ChirperApp
         {
             LoadingPulse.Spinner(refreshCenter, 8f * scale, ChirperInk.AccentLink);
         }
-        else
+        else if (DrawTopBarButton(drawList, refreshCenter, buttonRadius, Loc.T(L.Common.Refresh), false, false,
+                     SocialSeason.Sound(UiSound.HalloweenHoot)))
         {
-            bool refreshTapped;
-            using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenHoot)))
-            {
-                refreshTapped = DrawTopBarButton(drawList, refreshCenter, buttonRadius, Loc.T(L.Common.Refresh), false,
-                    false);
-            }
-
-            if (refreshTapped)
-            {
-                RefreshActiveFeed();
-            }
+            RefreshActiveFeed();
         }
     }
 
     private static bool DrawTopBarButton(ImDrawListPtr drawList, Vector2 center, float radius, string tooltip,
-        bool filter, bool highlighted) =>
+        bool filter, bool highlighted, UiSound tapSound) =>
         SocialChrome.DrawHeaderIcon(drawList, center, radius,
             filter ? PhoneIcons.AdjustmentsHorizontal : PhoneIcons.Refresh, 18f, tooltip, ChirperInk.Shared,
-            ChirperInk.BodyInk, highlighted);
+            ChirperInk.BodyInk, highlighted, tapSound: tapSound);
 
 }

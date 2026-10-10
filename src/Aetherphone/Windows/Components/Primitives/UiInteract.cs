@@ -171,6 +171,25 @@ internal static class UiInteract
         return activated;
     }
 
+    public static bool Click(Vector2 min, Vector2 max, bool hovered, UiSound sound)
+    {
+        if (!Click(min, max, hovered, false))
+        {
+            return false;
+        }
+
+        PlayTap(sound);
+        return true;
+    }
+
+    public static void PlayTap(UiSound sound)
+    {
+        using (UiFeedback.ReplaceTap(sound))
+        {
+            UiFeedback.PlayTap();
+        }
+    }
+
     private static Vector2 ToContentSpace(Vector2 screen, Vector2 windowPos) =>
         screen - windowPos + new Vector2(ImGui.GetScrollX(), ImGui.GetScrollY());
 
@@ -179,7 +198,12 @@ internal static class UiInteract
 
     public static bool Click(Vector2 min, Vector2 max) => Click(min, max, Hover(min, max));
 
-    public static bool HoverClick(Vector2 min, Vector2 max)
+    public static bool HoverClick(Vector2 min, Vector2 max) => Click(min, max, HoverWithHand(min, max));
+
+    public static bool HoverClick(Vector2 min, Vector2 max, UiSound sound) =>
+        Click(min, max, HoverWithHand(min, max), sound);
+
+    private static bool HoverWithHand(Vector2 min, Vector2 max)
     {
         var hovering = Hover(min, max);
         if (hovering)
@@ -187,7 +211,7 @@ internal static class UiInteract
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return Click(min, max, hovering);
+        return hovering;
     }
 
     public static bool HoverClickCircle(Vector2 center, float radius)

@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -20,7 +21,7 @@ internal static class ComposeFab
 
     public static bool Draw(Rect area, string childId, Vector4 accent, string glyph, string tooltip,
         string? anchorKey = null, Vector4? gradientBottom = null, float radiusUnscaled = DefaultRadius,
-        bool phoneGlyph = false, Vector4? glyphInk = null)
+        bool phoneGlyph = false, Vector4? glyphInk = null, UiSound tapSound = UiSound.Tap)
     {
         var ink = glyphInk ?? White;
         var scale = UiScale.Current;
@@ -79,7 +80,7 @@ internal static class ComposeFab
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(fabRect.Min, fabRect.Max, hovered);
+        return UiInteract.Click(fabRect.Min, fabRect.Max, hovered, tapSound);
     }
 
     internal static Rect ComputeBoxRect(Rect area, float radiusUnscaled, float scale, float glowPad,
