@@ -54,6 +54,7 @@ internal enum NameEffectKind
     Bubbles,
     Confetti,
     Storm,
+    Witchfire,
 }
 
 internal readonly record struct TextEffect(

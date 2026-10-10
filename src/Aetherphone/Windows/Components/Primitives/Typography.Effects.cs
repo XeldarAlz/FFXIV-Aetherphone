@@ -392,6 +392,9 @@ internal static partial class Typography
                 frame.Fill();
                 DrawStorm(frame);
                 return;
+            case NameEffectKind.Witchfire:
+                DrawWitchfire(frame);
+                return;
             default:
                 frame.Fill();
                 return;
