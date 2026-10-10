@@ -2,7 +2,7 @@ namespace Aetherphone.Core.Animation;
 
 internal sealed class KineticScroller
 {
-    internal const float DragThreshold = 6f;
+    private const float DragThreshold = 6f;
     private const float MinFlingSpeed = 40f;
     private const float FlingDecayRate = 6f;
     private const float PullRubberFactor = 0.5f;
@@ -53,6 +53,9 @@ internal sealed class KineticScroller
         lastPointerY = pointerY;
     }
 
+    public bool ExceedsDragThreshold(float pointerY) =>
+        pressed && MathF.Abs(pointerY - pressStartY) >= DragThreshold * Scale;
+
     public void Move(float pointerY, float deltaSeconds)
     {
         if (!pressed)
@@ -64,7 +67,7 @@ internal sealed class KineticScroller
         lastPointerY = pointerY;
         if (!dragging)
         {
-            if (MathF.Abs(pointerY - pressStartY) < DragThreshold * Scale)
+            if (!ExceedsDragThreshold(pointerY))
             {
                 return;
             }

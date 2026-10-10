@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Aetherphone.Tests;
 
-public class ScrollThumbTests
+public sealed class ScrollThumbTests
 {
     private const float ViewTop = 100f;
     private const float ViewHeight = 600f;

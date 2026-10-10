@@ -56,7 +56,7 @@ internal static class DragScrollHost
 
         public bool Grabbing { get; }
 
-        public bool Scrolling => region is not null && region.Scroller.IsControlling;
+        public bool Scrolling => region is not null && (region.Scroller.IsControlling || region.Grabbing);
 
         public void JumpToTop() => JumpTo(0f);
 
@@ -95,6 +95,13 @@ internal static class DragScrollHost
 
     public static ImGuiWindowFlags ScrollFlags(ImGuiWindowFlags baseFlags) =>
         Enabled ? baseFlags | ImGuiWindowFlags.NoScrollbar : baseFlags;
+
+    public static bool HoversEdgeStrip(float stripWidth)
+    {
+        var windowMin = ImGui.GetWindowPos();
+        var windowMax = windowMin + ImGui.GetWindowSize();
+        return UiInteract.HoverWindowOnly(new Vector2(windowMax.X - stripWidth, windowMin.Y), windowMax, false);
+    }
 
     public static Surface Begin(uint key, float grabStripWidth = 0f)
     {
@@ -197,8 +204,7 @@ internal static class DragScrollHost
             scroller.Press(pointerY);
             region.Pressed = true;
             region.EdgePress = grabStripWidth > 0f && ImGui.GetScrollMaxY() > 0f &&
-                               io.MousePos.X >= ImGui.GetWindowPos().X + ImGui.GetWindowSize().X - grabStripWidth;
-            region.GrabPointerY = pointerY;
+                               HoversEdgeStrip(grabStripWidth);
         }
         else
         {
@@ -229,7 +235,7 @@ internal static class DragScrollHost
         var scrollY = ImGui.GetScrollY();
         if (!region.Grabbing)
         {
-            if (MathF.Abs(pointerY - region.GrabPointerY) < KineticScroller.DragThreshold * scale)
+            if (!region.Scroller.ExceedsDragThreshold(pointerY))
             {
                 return;
             }

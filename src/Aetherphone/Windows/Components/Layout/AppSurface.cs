@@ -128,8 +128,7 @@ internal static class AppSurface
         var windowMin = ImGui.GetWindowPos();
         var windowSize = ImGui.GetWindowSize();
         var windowMax = windowMin + windowSize;
-        if (grabbing ||
-            UiInteract.HoverWindowOnly(new Vector2(windowMax.X - IndicatorStripUnits * scale, windowMin.Y), windowMax))
+        if (grabbing || DragScrollHost.HoversEdgeStrip(IndicatorStripUnits * scale))
         {
             lastScrollMotion = now;
         }
