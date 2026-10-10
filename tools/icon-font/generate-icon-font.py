@@ -143,6 +143,14 @@ OUTLINE = [
     ("CrystalBall", "crystal-ball"),
     ("Paw", "paw"),
     ("BuildingCastle", "building-castle"),
+    ("Ghost", "ghost"),
+    ("Skull", "skull"),
+    ("Spider", "spider"),
+    ("Pumpkin", "pumpkin-scary"),
+    ("Cat", "cat"),
+    ("Candle", "candle"),
+    ("Wand", "wand"),
+    ("MoonStars", "moon-stars"),
 ]
 
 FILLED = [
