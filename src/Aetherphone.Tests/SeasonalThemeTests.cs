@@ -10,9 +10,9 @@ public sealed class SeasonalThemeTests
     private static readonly DateTime Midsummer = new(2026, 7, 1, 12, 0, 0);
 
     [Theory]
-    [InlineData(2026, 10, 17)]
+    [InlineData(2026, 10, 15)]
     [InlineData(2026, 10, 31)]
-    [InlineData(2026, 11, 1)]
+    [InlineData(2026, 11, 2)]
     [InlineData(2027, 10, 20)]
     public void DatesInsideTheWindowAreHalloween(int year, int month, int day)
     {
@@ -20,8 +20,8 @@ public sealed class SeasonalThemeTests
     }
 
     [Theory]
-    [InlineData(2026, 10, 16)]
-    [InlineData(2026, 11, 2)]
+    [InlineData(2026, 10, 14)]
+    [InlineData(2026, 11, 3)]
     [InlineData(2026, 1, 1)]
     [InlineData(2026, 12, 25)]
     public void DatesOutsideTheWindowAreNotHalloween(int year, int month, int day)

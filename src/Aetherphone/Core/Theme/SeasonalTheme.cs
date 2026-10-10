@@ -3,9 +3,9 @@ namespace Aetherphone.Core.Theme;
 internal static class SeasonalTheme
 {
     private const int HalloweenStartMonth = 10;
-    private const int HalloweenStartDay = 17;
+    private const int HalloweenStartDay = 15;
     private const int HalloweenEndMonth = 11;
-    private const int HalloweenEndDay = 1;
+    private const int HalloweenEndDay = 2;
     private const int HalloweenNightDay = 31;
 
     private static long checkedMinute = -1;
