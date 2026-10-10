@@ -175,11 +175,16 @@ internal sealed partial class AethergramApp
 
     private void DrawFlights(Rect screen)
     {
+        if (!AnyFlight())
+        {
+            return;
+        }
+
         var now = ImGui.GetTime();
         var delta = ImGui.GetIO().DeltaTime;
         var scale = UiScale.Current;
-        var drawList = ImGui.GetForegroundDrawList();
-        drawList.PushClipRect(screen.Min, screen.Max, false);
+        using var layer = ScreenLayer.BeginPassive("aethergramFlights", screen);
+        var drawList = ImGui.GetWindowDrawList();
         var ink = ImGui.GetColorU32(FlightInk);
         var rim = ImGui.GetColorU32(FlightRim);
         for (var index = 0; index < flights.Length; index++)
@@ -204,8 +209,19 @@ internal sealed partial class AethergramApp
             NightScene.DrawBat(drawList, flight.Position, flight.Size * 1.14f * scale, flap, rim);
             NightScene.DrawBat(drawList, flight.Position, flight.Size * scale, flap, ink);
         }
+    }
 
-        drawList.PopClipRect();
+    private bool AnyFlight()
+    {
+        for (var index = 0; index < flights.Length; index++)
+        {
+            if (flights[index].Active)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static Vector4 LogoInk(ImDrawListPtr drawList, Vector2 center, float size)

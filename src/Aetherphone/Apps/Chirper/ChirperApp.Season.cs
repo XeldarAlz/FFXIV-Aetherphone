@@ -124,8 +124,8 @@ internal sealed partial class ChirperApp
         }
 
         var scale = UiScale.Current;
-        var drawList = ImGui.GetForegroundDrawList();
-        drawList.PushClipRect(screen.Min, screen.Max, false);
+        using var layer = ScreenLayer.BeginPassive("chirperClaw", screen);
+        var drawList = ImGui.GetWindowDrawList();
         var reach = Math.Clamp(age / ClawDrawTime, 0f, 1f);
         var fade = age < ClawHold ? 1f : 1f - (age - ClawHold) / (ClawDuration - ClawHold);
         var ink = ImGui.GetColorU32(ClawInk with { W = ClawInk.W * fade });
@@ -139,8 +139,6 @@ internal sealed partial class ChirperApp
             DrawStroke(drawList, start, bend, end, reach, glow, thickness * 3f);
             DrawStroke(drawList, start, bend, end, reach, ink, thickness);
         }
-
-        drawList.PopClipRect();
     }
 
     private static void DrawStroke(ImDrawListPtr drawList, Vector2 start, Vector2 bend, Vector2 end, float reach,
