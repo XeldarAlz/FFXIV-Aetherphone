@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -11,8 +12,11 @@ internal sealed class DoubleTapLike
     private const float PopDuration = 0.22f;
     private const float RiseSpeed = 46f;
     private const float BackOvershoot = 2.70158f;
-    private const float GrowDuration = 0.12f;
     private const float BeatWidth = 0.06f;
+    private const float FirstBeat = 0.18f;
+    private const float SecondBeat = 0.39f;
+    private const float FirstBeatGlow = 0.8f;
+    private const float SecondBeatGlow = 0.5f;
     private const float DropLife = 0.9f;
     private const float DropGravity = 220f;
 
@@ -98,12 +102,13 @@ internal sealed class DoubleTapLike
 
     private static void DrawCrimson(ImDrawListPtr drawList, Rect rect, float elapsed, float scale)
     {
-        var grow = Math.Clamp(elapsed / GrowDuration, 0f, 1f);
-        var pulse = 1f + 0.18f * Beat(elapsed, 0.06f) + 0.12f * Beat(elapsed, 0.27f);
+        var grow = Spring.Settle(elapsed, Motion.Appear);
+        var beat = 1f + FirstBeatGlow * Beat(elapsed, FirstBeat) + SecondBeatGlow * Beat(elapsed, SecondBeat);
         var alpha = elapsed < BurstHold ? 1f : 1f - (elapsed - BurstHold) / (BurstDuration - BurstHold);
         var center = rect.Center;
-        var size = BurstSize * scale * grow * pulse;
-        NightScene.Glow(drawList, center, size * 0.95f, CrimsonGlow with { W = CrimsonGlow.W * alpha }, 10);
+        var size = BurstSize * scale * grow;
+        var glowAlpha = MathF.Min(1f, CrimsonGlow.W * alpha * beat);
+        NightScene.Glow(drawList, center, size * 0.95f, CrimsonGlow with { W = glowAlpha }, 10);
         PhoneIcon.Draw(drawList, center, PhoneIcons.HeartFilled, CrimsonInk with { W = alpha }, size);
         for (var index = 0; index < DropOffsets.Length; index++)
         {
