@@ -25,12 +25,7 @@ internal static class WeatherAmbience
 
         var canvas = new SkyCanvas(drawList, bounds, rounding, scale, opacity);
         var ink = AmbienceInk.Natural(palette, daylight);
-        if (SeasonalTheme.Halloween)
-        {
-            ink = ink.Haunted();
-        }
-
-        SkyScene.Draw(canvas, kind, daylight, ink, true);
+        SkyScene.Draw(canvas, kind, daylight, SeasonalTheme.Halloween ? ink.Haunted() : ink, true);
     }
 
     public static void DrawMono(ImDrawListPtr drawList, in Rect bounds, float rounding, WeatherKind kind, bool isDay,

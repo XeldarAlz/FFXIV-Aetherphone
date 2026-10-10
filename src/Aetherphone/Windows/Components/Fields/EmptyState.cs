@@ -104,10 +104,9 @@ internal static class EmptyState
     private static void DrawPeekingGhost(ImDrawListPtr drawList, Vector2 iconCenter, AppSkin ui, float scale)
     {
         var time = (float)ImGui.GetTime();
-        var bob = MathF.Sin(time * GhostBobSpeed) * GhostBob * scale;
         var reach = IconRadius * GhostPerch * scale;
         var perch = iconCenter + new Vector2(reach, -reach);
-        var center = perch + new Vector2(0f, bob);
+        var center = perch + new Vector2(0f, MathF.Sin(time * GhostBobSpeed) * GhostBob * scale);
         Treats.OfferAt(drawList, TreatSpot.EmptyState, perch + new Vector2(GhostSize * 1.5f, GhostSize * 0.6f) * scale,
             TreatSize * scale);
         Spooks.DrawGhost(drawList, center, GhostSize * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.2f)),

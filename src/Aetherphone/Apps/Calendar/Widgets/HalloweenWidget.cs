@@ -62,7 +62,7 @@ internal sealed class HalloweenWidget : IHomeWidget
         else
         {
             var days = DaysUntilHalloween(today);
-            var headline = days == 0 ? Loc.T(L.Seasonal.Tonight) : Number(days);
+            var headline = days == 0 ? Loc.T(L.Seasonal.Tonight) : WidgetText.Integer(ref number, days);
             var style = days == 0 ? WidgetType.DisplayCompact : WidgetType.Display;
             top += WidgetText.Draw(context.DrawList, new Vector2(content.Min.X, top), headline, ink.Primary, style,
                 content.Width);
@@ -108,8 +108,6 @@ internal sealed class HalloweenWidget : IHomeWidget
     private string Eyebrow() => eyebrow.IsCurrent(0)
         ? eyebrow.Value
         : eyebrow.Store(0, WidgetText.Upper(L.Seasonal.CountdownName));
-
-    private string Number(int days) => WidgetText.Integer(ref number, days);
 
     private string Caption(int days) => caption.IsCurrent(days)
         ? caption.Value

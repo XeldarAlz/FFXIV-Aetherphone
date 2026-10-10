@@ -8,20 +8,15 @@ internal static class SeasonalTheme
     private const int HalloweenEndDay = 2;
     private const int HalloweenNightDay = 31;
 
-    private static long checkedMinute = -1;
-    private static bool halloweenDate;
-
     public static bool Halloween { get; private set; }
+
+    public static bool HalloweenByDate { get; private set; }
 
     public static bool BlackletterNames { get; private set; }
 
     public static bool Parallax { get; private set; }
 
-    public static bool IsHalloweenDate(DateTime date) =>
-        (date.Month == HalloweenStartMonth && date.Day >= HalloweenStartDay) ||
-        (date.Month == HalloweenEndMonth && date.Day <= HalloweenEndDay);
-
-    public static bool HalloweenByDate => halloweenDate;
+    public static bool IsHalloweenDate(DateTime date) => DayOfHalloween(date) >= 0;
 
     public static int DayOfHalloween(DateTime date)
     {
@@ -30,12 +25,9 @@ internal static class SeasonalTheme
             return date.Day - HalloweenStartDay;
         }
 
-        if (date.Month == HalloweenEndMonth && date.Day <= HalloweenEndDay)
-        {
-            return DateTime.DaysInMonth(date.Year, HalloweenStartMonth) - HalloweenStartDay + date.Day;
-        }
-
-        return -1;
+        return IsAfterHalloweenNight(date)
+            ? DateTime.DaysInMonth(date.Year, HalloweenStartMonth) - HalloweenStartDay + date.Day
+            : -1;
     }
 
     public static DateTime HalloweenNightOf(int year) => new(year, HalloweenStartMonth, HalloweenNightDay);
@@ -48,15 +40,9 @@ internal static class SeasonalTheme
 
     public static void Update(Configuration configuration, DateTime now)
     {
-        var minute = now.Ticks / TimeSpan.TicksPerMinute;
-        if (minute != checkedMinute)
-        {
-            checkedMinute = minute;
-            halloweenDate = IsHalloweenDate(now);
-        }
-
+        HalloweenByDate = IsHalloweenDate(now);
         var previewing = AepConstants.IsPrerelease && configuration.PreviewHalloween;
-        Halloween = configuration.SeasonalDecorations && (halloweenDate || previewing);
+        Halloween = configuration.SeasonalDecorations && (HalloweenByDate || previewing);
         BlackletterNames = Halloween && configuration.SeasonalNameFont;
         Parallax = Halloween && configuration.SeasonalParallax;
     }

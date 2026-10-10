@@ -40,19 +40,10 @@ internal static class HomeHaunt
 
     public static void DrawTreats(Rect screen)
     {
-        if (!SeasonalTheme.Halloween)
-        {
-            return;
-        }
-
         var drawList = ImGui.GetWindowDrawList();
-        Treats.Offer(drawList, TreatSpot.HomeTop, Band(screen, 0.12f, 0.24f));
-        Treats.Offer(drawList, TreatSpot.HomeLow, Band(screen, 0.82f, 0.85f));
+        Treats.Offer(drawList, TreatSpot.HomeTop, TreatBand.Strip(screen, 0.12f, 0.24f));
+        Treats.Offer(drawList, TreatSpot.HomeLow, TreatBand.Strip(screen, 0.82f, 0.85f));
     }
-
-    private static Rect Band(Rect screen, float top, float bottom) =>
-        new(new Vector2(screen.Min.X, screen.Min.Y + screen.Height * top),
-            new Vector2(screen.Max.X, screen.Min.Y + screen.Height * bottom));
 
     private static void DrawMist(ImDrawListPtr drawList, Rect screen, float seconds, float scale)
     {

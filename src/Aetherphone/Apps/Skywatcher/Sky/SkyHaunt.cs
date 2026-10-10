@@ -15,7 +15,6 @@ internal static class SkyHaunt
     private const double GhostPeriodSeconds = 21.0;
     private const float GhostWindow = 0.6f;
 
-    private static readonly Vector4 BatShadow = Spooks.BatShadow;
     private static readonly Vector4 WispGreen = new(0.55f, 1.00f, 0.78f, 1f);
     private static readonly Vector4 EyeAmber = new(1.00f, 0.78f, 0.30f, 1f);
     private static readonly Vector4 GhostWhite = new(0.92f, 0.95f, 1.00f, 1f);
@@ -30,35 +29,33 @@ internal static class SkyHaunt
         switch (kind)
         {
             case WeatherKind.Clear:
-                Bats(canvas, natural ? BatShadow : mono, 0.04f, 0.12f);
+                Bats(canvas, natural ? Spooks.BatShadow : mono, 0.04f, 0.12f);
                 break;
             case WeatherKind.Clouds:
-                Bats(canvas, natural ? BatShadow : mono, 0.12f, 0.30f);
+                Bats(canvas, natural ? Spooks.BatShadow : mono, 0.12f, 0.30f);
                 break;
             case WeatherKind.Fog:
-                Ghost(canvas, natural ? GhostWhite : mono, natural ? BatShadow : mono);
+                Ghost(canvas, natural ? GhostWhite : mono, natural ? Spooks.BatShadow : mono);
                 Wisps(canvas, natural ? WispGreen : mono, 0.8f);
                 Eyes(canvas, natural ? EyeAmber : mono, night);
                 break;
             case WeatherKind.Rain:
+            case WeatherKind.Heat:
                 Eyes(canvas, natural ? EyeAmber : mono, night);
                 break;
             case WeatherKind.Thunder:
-                StormBats(canvas, natural ? BatShadow : mono);
+                StormBats(canvas, natural ? Spooks.BatShadow : mono);
                 Eyes(canvas, natural ? EyeAmber : mono, night);
                 break;
             case WeatherKind.Wind:
                 Leaves(canvas, natural, mono);
-                Bats(canvas, natural ? BatShadow : mono, 0.10f, 0.25f);
+                Bats(canvas, natural ? Spooks.BatShadow : mono, 0.10f, 0.25f);
                 break;
             case WeatherKind.Sand:
                 Leaves(canvas, natural, mono);
                 break;
-            case WeatherKind.Heat:
-                Eyes(canvas, natural ? EyeAmber : mono, night);
-                break;
             case WeatherKind.Snow:
-                Ghost(canvas, natural ? GhostWhite : mono, natural ? BatShadow : mono);
+                Ghost(canvas, natural ? GhostWhite : mono, natural ? Spooks.BatShadow : mono);
                 break;
             default:
                 Wisps(canvas, natural ? WispGreen : mono, 1f);

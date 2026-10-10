@@ -116,16 +116,13 @@ internal sealed class CoinTreatCard
         }
     }
 
-    private string Count(int found)
-    {
-        return count.IsCurrent(found)
-            ? count.Value
-            : count.Store(found, Loc.T(L.Seasonal.TreatsCount, found, Treats.Total));
-    }
+    private string Count(int found) => count.IsCurrent(found)
+        ? count.Value
+        : count.Store(found, Loc.T(L.Seasonal.TreatsCount, found, Treats.Total));
 
     private string Status(int found)
     {
-        var waiting = Treats.Waiting;
+        var waiting = Treats.ActiveSpot();
         var key = found >= Treats.Total ? StatusAllFound : waiting != Treats.NoSpot ? StatusHiding + waiting
             : found < Treats.Unlocked ? StatusLater : StatusTomorrow;
         if (status.IsCurrent(key))

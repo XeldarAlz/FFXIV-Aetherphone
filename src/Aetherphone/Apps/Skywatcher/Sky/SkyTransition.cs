@@ -65,8 +65,6 @@ internal sealed class SkyTransition
         }
 
         WeatherAmbience.Draw(drawList, screen, rounding, toKind, daylight, Palette, scale, amount);
-        Treats.Offer(drawList, TreatSpot.Skywatcher,
-            new Rect(new Vector2(screen.Min.X, screen.Min.Y + screen.Height * TreatTop),
-                new Vector2(screen.Max.X, screen.Min.Y + screen.Height * TreatBottom)));
+        Treats.Offer(drawList, TreatSpot.Skywatcher, TreatBand.Strip(screen, TreatTop, TreatBottom));
     }
 }
