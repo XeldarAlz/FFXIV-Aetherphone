@@ -39,12 +39,15 @@ internal static class AppSurface
     public static Vector4? ScrollbarInk { get; set; }
 
     private static float ambientBottomInset;
+    private static int outerScrollFrame = -1;
 
     public static BottomInsetScope ReserveBottom(float inset) => new(inset);
 
     public static bool NavBarConsumed { get; private set; }
 
     public static float NavBarScrollY { get; private set; }
+
+    public static float OuterScrollY { get; private set; }
 
     public static void ArmNavBar(float bodyTop, float topInset)
     {
@@ -96,6 +99,13 @@ internal static class AppSurface
         if (hostsNavBar)
         {
             ReserveNavBarBand(freshVisit);
+        }
+
+        var frame = ImGui.GetFrameCount();
+        if (depth == 0 && outerScrollFrame != frame)
+        {
+            outerScrollFrame = frame;
+            OuterScrollY = freshVisit ? 0f : ImGui.GetScrollY();
         }
 
         depth++;

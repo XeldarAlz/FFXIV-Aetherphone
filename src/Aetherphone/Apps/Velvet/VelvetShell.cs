@@ -209,6 +209,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
         avatarLightbox.Reset();
         store.ClearDiscover();
         ResetCards();
+        BeginIntro();
         RefreshAndConsumeLaunch();
     }
 
@@ -353,6 +354,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
         }
 
         using (InputShield.Engage(avatarLightbox.Expanded))
+        using (intro.FadeContent())
         {
             router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         }

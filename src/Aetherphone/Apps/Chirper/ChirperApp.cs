@@ -336,6 +336,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         composeSensitive = false;
         store.ClearDiscover();
         trendingRequested = false;
+        BeginIntro();
         RefreshAndConsumeLaunch();
     }
 
@@ -411,6 +412,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var appArea = new Rect(new Vector2(screen.Min.X, context.Content.Min.Y),
             new Vector2(screen.Max.X, context.Content.Max.Y));
         using (InputShield.Engage(avatarLightbox.Expanded))
+        using (intro.FadeContent())
         {
             router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         }

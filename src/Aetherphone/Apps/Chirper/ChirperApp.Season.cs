@@ -25,6 +25,7 @@ internal sealed partial class ChirperApp
     private static readonly Vector4 ClawInk = new(0.84f, 0.88f, 1f, 0.9f);
     private static readonly Vector4 ClawGlow = new(0.75f, 0.81f, 1f, 0.25f);
 
+    private readonly SeasonIntro intro = new();
     private int seasonApplied = -1;
     private Vector2 clawAnchor;
     private double clawStart = -100d;
@@ -68,14 +69,23 @@ internal sealed partial class ChirperApp
 
     private static UiSound Spooky(UiSound halloween) => SeasonalTheme.Halloween ? halloween : UiSound.Tap;
 
-    private static void DrawNight(Rect screen, float top)
+    private void DrawNight(Rect screen, float top)
     {
         if (!SeasonalTheme.Halloween)
         {
             return;
         }
 
-        NightScene.Moonlit(ImGui.GetWindowDrawList(), screen, top + AppHeader.Height * UiScale.Current * 0.5f);
+        NightScene.Moonlit(ImGui.GetWindowDrawList(), screen, top + AppHeader.Height * UiScale.Current * 0.5f,
+            intro.View);
+    }
+
+    private void BeginIntro()
+    {
+        if (intro.Begin(Id))
+        {
+            NightScene.Rouse();
+        }
     }
 
     private void DrawMoonTap(float moonY)
@@ -85,7 +95,7 @@ internal sealed partial class ChirperApp
             return;
         }
 
-        var center = NightScene.MoonlitMoonCenter(screenRect, moonY);
+        var center = NightScene.MoonlitMoonCenter(screenRect, moonY, intro.View);
         var reach = NightScene.MoonlitMoonSize * MoonTapReach;
         var extent = new Vector2(reach, reach);
         bool tapped;

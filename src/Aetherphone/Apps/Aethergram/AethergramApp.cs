@@ -320,6 +320,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         shareSearchDraft = string.Empty;
         shareSentUserIds.Clear();
         store.ClearDiscover();
+        BeginIntro();
         RefreshAndConsumeLaunch();
     }
 
@@ -426,6 +427,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         }
 
         using (InputShield.Engage(avatarLightbox.Expanded))
+        using (intro.FadeContent())
         {
             router.Draw(appArea, AppSkin.Transparent,
                 ImGui.GetIO().DeltaTime, drawView);

@@ -21,6 +21,7 @@ internal sealed partial class AethergramApp
     private const float FlightLift = 60f;
     private const float FlightFlap = 22f;
     private const int SwarmSize = 22;
+    private const int IntroSwarmSize = 7;
     private const float LogoTapReach = 0.6f;
 
     private static readonly Vector4 GlowInk = new(1f, 0.29f, 0.37f, 1f);
@@ -28,6 +29,8 @@ internal sealed partial class AethergramApp
     private static readonly Vector4 FlightRim = new(1f, 0.275f, 0.353f, 0.35f);
 
     private readonly Flight[] flights = new Flight[FlightCapacity];
+    private readonly SeasonIntro intro = new();
+    private bool introSwarmPending;
     private int seasonApplied = -1;
 
     private static LocString CaughtUpTitle =>
@@ -78,14 +81,41 @@ internal sealed partial class AethergramApp
 
     private static UiSound Spooky(UiSound halloween) => SeasonalTheme.Halloween ? halloween : UiSound.Tap;
 
-    private static void DrawNight(Rect screen, float top)
+    private void DrawNight(Rect screen, float top)
     {
         if (!SeasonalTheme.Halloween)
         {
             return;
         }
 
-        NightScene.BloodMoon(ImGui.GetWindowDrawList(), screen, top + AppHeader.Height * UiScale.Current * 0.5f);
+        var moonY = top + AppHeader.Height * UiScale.Current * 0.5f;
+        var view = intro.View;
+        NightScene.BloodMoon(ImGui.GetWindowDrawList(), screen, moonY, view);
+        if (!introSwarmPending)
+        {
+            return;
+        }
+
+        introSwarmPending = false;
+        ReleaseSwarm(NightScene.BloodMoonCenter(screen, moonY, view), IntroSwarmSize);
+    }
+
+    private void BeginIntro()
+    {
+        introSwarmPending = intro.Begin(Id);
+    }
+
+    private void ReleaseSwarm(Vector2 moon, int count)
+    {
+        var scale = UiScale.Current;
+        for (var index = 0; index < count; index++)
+        {
+            var angle = -MathF.PI * (0.05f + Random.Shared.NextSingle() * 0.55f);
+            var speed = 140f + Random.Shared.NextSingle() * 220f;
+            var velocity = new Vector2(MathF.Cos(angle) * speed + 60f, MathF.Sin(angle) * speed * 0.6f + 40f) * scale;
+            var scatter = new Vector2(Random.Shared.NextSingle() - 0.5f, Random.Shared.NextSingle() - 0.5f) * 30f * scale;
+            Launch(moon + scatter, velocity, 0.8f + Random.Shared.NextSingle() * 0.8f, Random.Shared.NextSingle() * 0.5f);
+        }
     }
 
     private void DrawLogoTap(Vector2 logoCenter, float logoSize, float moonY)
@@ -107,17 +137,7 @@ internal sealed partial class AethergramApp
             return;
         }
 
-        var scale = UiScale.Current;
-        var moon = NightScene.BloodMoonCenter(screenRect, moonY);
-        for (var index = 0; index < SwarmSize; index++)
-        {
-            var angle = -MathF.PI * (0.05f + Random.Shared.NextSingle() * 0.55f);
-            var speed = 140f + Random.Shared.NextSingle() * 220f;
-            var velocity = new Vector2(MathF.Cos(angle) * speed + 60f, MathF.Sin(angle) * speed * 0.6f + 40f) * scale;
-            var scatter = new Vector2(Random.Shared.NextSingle() - 0.5f, Random.Shared.NextSingle() - 0.5f) * 30f * scale;
-            Launch(moon + scatter, velocity, 0.8f + Random.Shared.NextSingle() * 0.8f, Random.Shared.NextSingle() * 0.5f);
-        }
-
+        ReleaseSwarm(NightScene.BloodMoonCenter(screenRect, moonY, intro.View), SwarmSize);
         toast.Show(Loc.T(L.Seasonal.NightTakesWing));
     }
 

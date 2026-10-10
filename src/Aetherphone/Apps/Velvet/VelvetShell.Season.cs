@@ -19,6 +19,7 @@ internal sealed partial class VelvetShell
 
     private static readonly Vector4 GlowInk = new(1f, 0.64f, 0.34f, 1f);
 
+    private readonly SeasonIntro intro = new();
     private int seasonApplied = -1;
     private Spring moonSlide;
     private bool moonPlaced;
@@ -95,7 +96,15 @@ internal sealed partial class VelvetShell
 
         var fraction = moonPlaced ? moonSlide.Value : DefaultMoonFraction;
         var moon = new Vector2(screen.Min.X + screen.Width * fraction, top + VHeader.Height * UiScale.Current * 0.5f);
-        NightScene.Witching(ImGui.GetWindowDrawList(), screen, moon);
+        NightScene.Witching(ImGui.GetWindowDrawList(), screen, moon, intro.View);
+    }
+
+    private void BeginIntro()
+    {
+        if (intro.Begin(Id))
+        {
+            NightScene.Kindle();
+        }
     }
 
     private void PlaceMoon(float titleRight, float iconsLeft)

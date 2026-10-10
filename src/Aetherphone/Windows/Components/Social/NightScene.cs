@@ -33,6 +33,13 @@ internal static class NightScene
     private const float WitchingVeilReach = 320f;
     private const float KindleSeconds = 3f;
     private const float KindleGlowBoost = 1.6f;
+    private const float FullMoonPhase = 0.5f;
+
+    private const float IntroRise = 90f;
+    private const float DayDip = 26f;
+    private const float StarParallax = 0.5f;
+    private const float HalloweenNightGrow = 1.15f;
+    private const float HalloweenNightHalo = 1.45f;
 
     private readonly record struct Star(float X, float Y, float Radius, float Alpha, float Speed, float Phase);
 
@@ -68,6 +75,8 @@ internal static class NightScene
     private static readonly Vector4 BloodStarInk = new(1f, 0.84f, 0.84f, 0.6f);
     private static readonly Vector4 BloodHalo = new(0.9f, 0.157f, 0.235f, 0.4f);
     private static readonly Vector4 BloodRim = new(0.427f, 0.027f, 0.086f, 1f);
+    private static readonly Vector4 EclipseRim = new(0.09f, 0.02f, 0.035f, 1f);
+    private static readonly Vector4 EclipseFace = new(0.16f, 0.03f, 0.05f, 1f);
     private static readonly Vector4 BloodFace = new(0.784f, 0.094f, 0.18f, 1f);
     private static readonly Vector4 BloodShine = new(1f, 0.42f, 0.333f, 0.6f);
     private static readonly Vector4 BloodMottle = new(0.275f, 0f, 0.04f, 0.28f);
@@ -124,60 +133,84 @@ internal static class NightScene
 
     public static void Kindle() => kindledAt = (float)ImGui.GetTime();
 
-    public static void Moonlit(ImDrawListPtr drawList, Rect frame, float moonY)
+    public static Vector2 MoonlitMoonCenter(Rect frame, float moonY, in NightView view) =>
+        MoonlitMoonCenter(frame, MoonY(moonY, view));
+
+    public static Vector2 BloodMoonCenter(Rect frame, float moonY, in NightView view) =>
+        BloodMoonCenter(frame, MoonY(moonY, view));
+
+    public static void Moonlit(ImDrawListPtr drawList, Rect frame, float moonY, in NightView view)
     {
         var scale = UiScale.Current;
         var time = (float)ImGui.GetTime();
         var rouse = Math.Clamp(1f - (time - rousedAt) / RouseSeconds, 0f, 1f);
-        DrawHorizon(drawList, frame, MoonlitHorizon);
-        DrawStars(drawList, frame, MoonlitStars, MoonlitStarInk, time, scale);
-        var moon = MoonlitMoonCenter(frame, moonY);
-        var radius = MoonlitMoonRadius * scale;
-        Glow(drawList, moon, radius * HaloReach, MoonlitHalo with { W = MoonlitHalo.W * (1f + rouse * RouseHaloBoost) },
-            HaloCells);
+        DrawHorizon(drawList, frame, MoonlitHorizon with { W = MoonlitHorizon.W * view.Reveal });
+        DrawStars(drawList, frame, MoonlitStars, MoonlitStarInk, time, scale, view);
+        var moon = MoonlitMoonCenter(frame, moonY, view);
+        var radius = MoonlitMoonRadius * scale * (view.HalloweenNight ? HalloweenNightGrow : 1f);
+        var halo = MoonlitHalo.W * (1f + rouse * RouseHaloBoost) * HaloStrength(view);
+        Glow(drawList, moon, radius * HaloReach, MoonlitHalo with { W = halo }, HaloCells);
         DrawDisc(drawList, moon, radius, MoonRim, MoonFace, MoonShine, MoonCrater, -1f);
         DrawClouds(drawList, frame, moon, time, scale);
         var farBase = frame.Max.Y - FarPineBase * scale;
-        DrawPines(drawList, frame, FarPines, farBase, ImGui.GetColorU32(FarPineInk), scale);
-        DrawPuffs(drawList, frame, MoonlitPuffs, farBase, MoonlitMist, time, scale);
+        DrawPines(drawList, frame, FarPines, farBase, Faded(FarPineInk, view.Reveal), scale);
+        DrawPuffs(drawList, frame, MoonlitPuffs, farBase, MoonlitMist with { W = MoonlitMist.W * view.Reveal }, time,
+            scale);
         DrawEyes(drawList, frame, farBase, time, rouse, scale);
-        DrawPines(drawList, frame, NearPines, frame.Max.Y - NearPineBase * scale, ImGui.GetColorU32(NearPineInk),
+        DrawPines(drawList, frame, NearPines, frame.Max.Y - NearPineBase * scale, Faded(NearPineInk, view.Reveal),
             scale);
         DrawVeil(drawList, frame, MoonlitVeil, VeilReach * scale);
     }
 
-    public static void BloodMoon(ImDrawListPtr drawList, Rect frame, float moonY)
+    public static void BloodMoon(ImDrawListPtr drawList, Rect frame, float moonY, in NightView view)
     {
         var scale = UiScale.Current;
         var time = (float)ImGui.GetTime();
-        DrawHorizon(drawList, frame, BloodHorizon);
-        DrawStars(drawList, frame, BloodStars, BloodStarInk, time, scale);
-        var moon = BloodMoonCenter(frame, moonY);
-        var radius = BloodMoonRadius * scale;
-        Glow(drawList, moon, radius * HaloReach, BloodHalo, HaloCells);
-        DrawDisc(drawList, moon, radius, BloodRim, BloodFace, BloodShine, BloodMottle, 1f);
+        DrawHorizon(drawList, frame, BloodHorizon with { W = BloodHorizon.W * view.Reveal });
+        DrawStars(drawList, frame, BloodStars, BloodStarInk, time, scale, view);
+        var moon = BloodMoonCenter(frame, moonY, view);
+        var radius = BloodMoonRadius * scale * (view.HalloweenNight ? HalloweenNightGrow : 1f);
+        Glow(drawList, moon, radius * HaloReach, BloodHalo with { W = BloodHalo.W * HaloStrength(view) }, HaloCells);
+        var face = Vector4.Lerp(EclipseFace, BloodFace, view.Reveal);
+        var rim = Vector4.Lerp(EclipseRim, BloodRim, view.Reveal);
+        DrawDisc(drawList, moon, radius, rim, face, BloodShine with { W = BloodShine.W * view.Reveal }, BloodMottle, 1f);
         DrawFlyers(drawList, moon, time, scale);
         DrawCandlelight(drawList, frame, scale);
         var castleBase = frame.Max.Y - CastleBase * scale;
-        DrawPuffs(drawList, frame, BloodPuffs, castleBase, BloodMist, time, scale);
+        DrawPuffs(drawList, frame, BloodPuffs, castleBase, BloodMist with { W = BloodMist.W * view.Reveal }, time,
+            scale);
         DrawCastle(drawList, frame, castleBase, time, scale);
         DrawVeil(drawList, frame, BloodVeil, BloodVeilReach * scale);
     }
 
+    private static float MoonY(float moonY, in NightView view)
+    {
+        var scale = UiScale.Current;
+        return moonY - view.Lift + (1f - view.Reveal) * IntroRise * scale + (1f - view.Nightness) * DayDip * scale;
+    }
+
+    private static float HaloStrength(in NightView view) =>
+        view.Reveal * (0.6f + 0.4f * view.Nightness) * (view.HalloweenNight ? HalloweenNightHalo : 1f);
+
+    private static uint Faded(Vector4 color, float alpha) => ImGui.GetColorU32(color with { W = color.W * alpha });
+
     public static float Kindling => Math.Clamp(1f - ((float)ImGui.GetTime() - kindledAt) / KindleSeconds, 0f, 1f);
 
-    public static void Witching(ImDrawListPtr drawList, Rect frame, Vector2 moon)
+    public static void Witching(ImDrawListPtr drawList, Rect frame, Vector2 moon, in NightView view)
     {
         var scale = UiScale.Current;
         var time = (float)ImGui.GetTime();
-        DrawHorizon(drawList, frame, WitchingHorizon);
-        DrawStars(drawList, frame, WitchingStars, WitchingStarInk, time, scale);
-        var radius = WitchingMoonRadius * scale;
-        var halo = WitchingHalo with { W = WitchingHalo.W * (1f + KindleGlowBoost * Kindling) };
-        Glow(drawList, moon, radius * HaloReach, halo, HaloCells);
-        drawList.AddCircleFilled(moon, radius, ImGui.GetColorU32(WitchingMoonShade), CircleSegments);
-        MoonPhase.Draw(drawList, moon, radius, WitchingMoonPhase, ImGui.GetColorU32(WitchingMoonLight));
-        DrawPuffs(drawList, frame, WitchingPuffs, frame.Max.Y - 60f * scale, WitchingMist, time, scale);
+        DrawHorizon(drawList, frame, WitchingHorizon with { W = WitchingHorizon.W * view.Reveal });
+        DrawStars(drawList, frame, WitchingStars, WitchingStarInk, time, scale, view);
+        moon.Y = MoonY(moon.Y, view);
+        var radius = WitchingMoonRadius * scale * (view.HalloweenNight ? HalloweenNightGrow : 1f);
+        var halo = WitchingHalo.W * (1f + KindleGlowBoost * Kindling) * HaloStrength(view);
+        Glow(drawList, moon, radius * HaloReach, WitchingHalo with { W = halo }, HaloCells);
+        drawList.AddCircleFilled(moon, radius, Faded(WitchingMoonShade, view.Reveal), CircleSegments);
+        var phase = view.HalloweenNight ? FullMoonPhase : WitchingMoonPhase;
+        MoonPhase.Draw(drawList, moon, radius, phase, Faded(WitchingMoonLight, view.Reveal));
+        DrawPuffs(drawList, frame, WitchingPuffs, frame.Max.Y - 60f * scale,
+            WitchingMist with { W = WitchingMist.W * view.Reveal }, time, scale);
         DrawVeil(drawList, frame, WitchingVeil, WitchingVeilReach * scale);
     }
 
@@ -258,15 +291,21 @@ internal static class NightScene
     }
 
     private static void DrawStars(ImDrawListPtr drawList, Rect frame, Star[] stars, Vector4 ink, float time,
-        float scale)
+        float scale, in NightView view)
     {
+        var drift = view.Lift * StarParallax;
         for (var index = 0; index < stars.Length; index++)
         {
             var star = stars[index];
             var twinkle = 0.55f + 0.45f * MathF.Sin(time * star.Speed + star.Phase);
-            var center = new Vector2(frame.Min.X + star.X * frame.Width, frame.Min.Y + star.Y * frame.Height);
-            drawList.AddCircleFilled(center, star.Radius * scale,
-                ImGui.GetColorU32(ink with { W = ink.W * star.Alpha * twinkle }), 8);
+            var alpha = ink.W * star.Alpha * twinkle * view.Dimming * view.StarSweep(star.X);
+            if (alpha <= 0.002f)
+            {
+                continue;
+            }
+
+            var center = new Vector2(frame.Min.X + star.X * frame.Width, frame.Min.Y + star.Y * frame.Height - drift);
+            drawList.AddCircleFilled(center, star.Radius * scale, ImGui.GetColorU32(ink with { W = alpha }), 8);
         }
     }
 
