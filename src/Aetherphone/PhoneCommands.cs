@@ -118,6 +118,9 @@ internal sealed class PhoneCommands
             case "treat" when AepConstants.IsPrerelease:
                 Treats.SummonNow();
                 break;
+            case "treats" when AepConstants.IsPrerelease:
+                Treats.SetAllFound(!rest.Trim().Equals("reset", StringComparison.OrdinalIgnoreCase));
+                break;
             case "help":
                 PrintHelp();
                 break;

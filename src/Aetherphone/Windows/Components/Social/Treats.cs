@@ -77,6 +77,16 @@ internal static class Treats
         appearsAt = Clock;
     }
 
+    public static void SetAllFound(bool found)
+    {
+        var configuration = Plugin.Cfg;
+        configuration.HalloweenTreatYear = DateTime.Today.Year;
+        configuration.HalloweenTreats = found ? (1 << Total) - 1 : 0;
+        configuration.Save();
+        activeSpot = NoSpot;
+        appearsAt = double.NaN;
+    }
+
     public static void Offer(ImDrawListPtr drawList, TreatSpot spot, Rect area)
     {
         if (ActiveSpot() != (int)spot)
