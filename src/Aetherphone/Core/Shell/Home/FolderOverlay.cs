@@ -28,6 +28,8 @@ internal sealed class FolderOverlay
     private const float InteractiveThreshold = 0.95f;
     private const float CloseSnap = 0.01f;
     private const float WheelStepUnits = 40f;
+    private const float DragThresholdUnits = 7f;
+    private const float DragLiftScale = 1.08f;
     private const int NameMaxLength = 64;
     private const int Columns = HomeTileView.FolderMiniColumns;
     private static readonly Vector4 NoTintSwatch = new(0.55f, 0.56f, 0.60f, 1f);
@@ -43,6 +45,14 @@ internal sealed class FolderOverlay
     private string nameBuffer = string.Empty;
     private float scrollY;
     private int openedFrame;
+    private int pressIndex = -1;
+    private Vector2 pressMouse;
+    private int dragIndex = -1;
+    private int dragTarget = -1;
+    private Vector2 dragGrab;
+    private Vector2 dragCenter;
+    private Spring[] slideX = Array.Empty<Spring>();
+    private Spring[] slideY = Array.Empty<Spring>();
 
     public FolderOverlay(HomeLayoutService layout, ShortcutStore shortcuts, ShortcutRunner runner,
         Configuration configuration)
@@ -66,12 +76,16 @@ internal sealed class FolderOverlay
         nameBuffer = tile.FolderName;
         scrollY = 0f;
         openedFrame = ImGui.GetFrameCount();
+        pressIndex = -1;
+        dragIndex = -1;
     }
 
     public void RequestClose()
     {
         ApplyRename();
         closing = true;
+        pressIndex = -1;
+        dragIndex = -1;
     }
 
     public void Draw(Rect screen, Rect content, in HomeMetrics metrics, PhoneTheme theme, INavigator navigation,
@@ -116,7 +130,7 @@ internal sealed class FolderOverlay
         DrawPanel(drawList, panel, current, theme, scale, progress);
         DrawHeader(drawList, header, target.Min.Y, theme, current, scale, progress, interactive);
         DrawMembers(drawList, panel, target, theme, navigation, current, editing, currentPage, scale, progress,
-            interactive);
+            interactive, delta);
         if (interactive && ImGui.GetFrameCount() != openedFrame &&
             UiInteract.ClickedOutside(header.Min, target.Max, false))
         {
@@ -169,7 +183,7 @@ internal sealed class FolderOverlay
 
     private void DrawMembers(ImDrawListPtr drawList, Rect panel, Rect target, PhoneTheme theme,
         INavigator navigation, HomeTile current, bool editing, int currentPage, float scale, float progress,
-        bool interactive)
+        bool interactive, float delta)
     {
         var pad = PanelPadUnits * scale;
         var cell = GridCell(target.Width, scale);
@@ -187,6 +201,20 @@ internal sealed class FolderOverlay
         var drawFactor = iconFraction * panel.Width / iconSize;
         var labelAlpha = Easing.Segment(progress, LabelFadeStart, 1f);
         var extent = cell * drawFactor;
+        var released = TrackDrag(current.Members.Count, editing && interactive, scale);
+        EnsureSlideSprings(current.Members.Count);
+        if (dragIndex >= 0)
+        {
+            dragTarget = SlotAt(dragCenter - target.Min + new Vector2(0f, scroll), pad, cell,
+                current.Members.Count);
+        }
+
+        if (released)
+        {
+            Drop(current, target.Min + new Vector2(pad + cell * 0.5f, pad + iconTop + iconSize * 0.5f - scroll),
+                cell);
+        }
+
         drawList.PushClipRect(panel.Min, panel.Max, true);
         for (var index = 0; index < current.Members.Count; index++)
         {
@@ -194,24 +222,19 @@ internal sealed class FolderOverlay
                 pad + index / Columns * cell + iconTop + iconSize * 0.5f - scroll) / target.Width;
             var center = panel.Min +
                          Vector2.Lerp(HomeTileView.FolderMiniCenter(index), openCenter, progress) * panel.Width;
+            center += SlideOffset(index, cell, delta);
+            if (index == dragIndex)
+            {
+                continue;
+            }
+
             if (center.Y + extent < panel.Min.Y || center.Y - extent > panel.Max.Y)
             {
                 continue;
             }
 
             var member = current.Members[index];
-            var vertexStart = drawList.VtxBuffer.Size;
-            if (member.IsShortcut)
-            {
-                HomeTileView.DrawShortcut(center, iconSize, member.Shortcut!, shortcuts.Icon(member.Shortcut!), theme,
-                    1f, labelAlpha, true, cell);
-            }
-            else
-            {
-                HomeTileView.DrawApp(center, iconSize, member.App!, theme, 1f, labelAlpha, true, cell, configuration);
-            }
-
-            VertexWarp.Scale(drawList, vertexStart, center, drawFactor);
+            DrawMember(drawList, member, center, iconSize, theme, labelAlpha, cell, drawFactor);
             if (!interactive)
             {
                 continue;
@@ -232,6 +255,14 @@ internal sealed class FolderOverlay
                     }
 
                     break;
+                }
+
+                if (dragIndex < 0 && pressIndex < 0 && UiInteract.Hover(iconRect.Min, iconRect.Max) &&
+                    ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    pressIndex = index;
+                    pressMouse = ImGui.GetMousePos();
+                    dragGrab = pressMouse - center;
                 }
             }
             else if (UiInteract.Hover(iconRect.Min, iconRect.Max))
@@ -254,7 +285,124 @@ internal sealed class FolderOverlay
             }
         }
 
+        if (dragIndex >= 0)
+        {
+            DrawMember(drawList, current.Members[dragIndex], dragCenter, iconSize, theme, labelAlpha, cell,
+                drawFactor * DragLiftScale);
+        }
+
         drawList.PopClipRect();
+    }
+
+    private bool TrackDrag(int count, bool enabled, float scale)
+    {
+        if (!enabled || pressIndex >= count || dragIndex >= count)
+        {
+            pressIndex = -1;
+            dragIndex = -1;
+            return false;
+        }
+
+        var mouse = ImGui.GetMousePos();
+        if (pressIndex >= 0)
+        {
+            if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
+            {
+                pressIndex = -1;
+            }
+            else if (Vector2.Distance(mouse, pressMouse) > DragThresholdUnits * scale)
+            {
+                dragIndex = pressIndex;
+                dragTarget = pressIndex;
+                pressIndex = -1;
+                UiInteract.CancelPendingTap();
+            }
+        }
+
+        if (dragIndex < 0)
+        {
+            return false;
+        }
+
+        dragCenter = mouse - dragGrab;
+        return !ImGui.IsMouseDown(ImGuiMouseButton.Left);
+    }
+
+    private void Drop(HomeTile current, Vector2 firstSlotCenter, float cell)
+    {
+        var from = dragIndex;
+        var to = dragTarget;
+        dragIndex = -1;
+        for (var index = 0; index < slideX.Length; index++)
+        {
+            slideX[index].SnapTo(0f);
+            slideY[index].SnapTo(0f);
+        }
+
+        var landing = dragCenter - (firstSlotCenter + SlotPosition(to, cell));
+        slideX[to].SnapTo(landing.X);
+        slideY[to].SnapTo(landing.Y);
+        if (from != to)
+        {
+            layout.MoveFolderMember(current, from, to);
+        }
+    }
+
+    private void EnsureSlideSprings(int count)
+    {
+        if (slideX.Length >= count)
+        {
+            return;
+        }
+
+        Array.Resize(ref slideX, count);
+        Array.Resize(ref slideY, count);
+    }
+
+    private Vector2 SlideOffset(int index, float cell, float delta)
+    {
+        var slot = index;
+        if (dragIndex >= 0 && index != dragIndex)
+        {
+            if (index > dragIndex && index <= dragTarget)
+            {
+                slot = index - 1;
+            }
+            else if (index < dragIndex && index >= dragTarget)
+            {
+                slot = index + 1;
+            }
+        }
+
+        var displacement = SlotPosition(slot, cell) - SlotPosition(index, cell);
+        return new Vector2(slideX[index].Step(displacement.X, Motion.PageSettle, delta),
+            slideY[index].Step(displacement.Y, Motion.PageSettle, delta));
+    }
+
+    private static Vector2 SlotPosition(int slot, float cell) => new(slot % Columns * cell, slot / Columns * cell);
+
+    private static int SlotAt(Vector2 point, float pad, float cell, int count)
+    {
+        var column = Math.Clamp((int)MathF.Floor((point.X - pad) / cell), 0, Columns - 1);
+        var row = Math.Max(0, (int)MathF.Floor((point.Y - pad) / cell));
+        return Math.Clamp(row * Columns + column, 0, count - 1);
+    }
+
+    private void DrawMember(ImDrawListPtr drawList, HomeTile member, Vector2 center, float iconSize,
+        PhoneTheme theme, float labelAlpha, float cell, float drawFactor)
+    {
+        var vertexStart = drawList.VtxBuffer.Size;
+        if (member.IsShortcut)
+        {
+            HomeTileView.DrawShortcut(center, iconSize, member.Shortcut!, shortcuts.Icon(member.Shortcut!), theme,
+                1f, labelAlpha, true, cell);
+        }
+        else
+        {
+            HomeTileView.DrawApp(center, iconSize, member.App!, theme, 1f, labelAlpha, true, cell, configuration);
+        }
+
+        VertexWarp.Scale(drawList, vertexStart, center, drawFactor);
     }
 
     private void DrawTintRow(ImDrawListPtr drawList, Rect header, HomeTile current, float rowY, float scale,
