@@ -73,8 +73,6 @@ internal sealed partial class AethergramApp
 
         seasonApplied = season;
         ui.Palette = AethergramInk.CurrentPalette;
-        FeedTabsStyle = FeedTabsStyleFor();
-        ActivityUnreadWash = ActivityUnreadWashFor();
         doubleTapLike.Crimson = SeasonalTheme.Halloween;
         var pullStyle = SeasonalTheme.Halloween ? PullStyle.Bat : PullStyle.Dots;
         var refreshSound = SeasonalTheme.Halloween ? UiSound.HalloweenOrgan : UiSound.Refresh;
@@ -235,9 +233,8 @@ internal sealed partial class AethergramApp
         return LogoBone;
     }
 
-    private static UnderlineTabStyle FeedTabsStyleFor() => new(FeedTabStyle, FeedTabIdleStyle,
-        AethergramInk.Shared.TitleInk, AethergramInk.Shared.SegmentIdleInk, AethergramInk.Shared.TitleInk,
-        FeedTabUnderline, CellPadX, Motion.Release);
+    private static UnderlineTabStyle FeedTabsStyleFor(SocialInk ink) => new(FeedTabStyle, FeedTabIdleStyle,
+        ink.TitleInk, ink.SegmentIdleInk, ink.TitleInk, FeedTabUnderline, CellPadX, Motion.Release);
 
-    private static Vector4 ActivityUnreadWashFor() => Palette.WithAlpha(AethergramInk.Shared.Accent, 0.06f);
+    private static Vector4 ActivityUnreadWashFor(SocialInk ink) => Palette.WithAlpha(ink.Accent, 0.06f);
 }

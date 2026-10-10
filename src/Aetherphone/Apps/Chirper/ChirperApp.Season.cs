@@ -61,11 +61,6 @@ internal sealed partial class ChirperApp
 
         seasonApplied = season;
         ui.Palette = ChirperInk.CurrentPalette;
-        ChipControls = ChipControlsFor();
-        FeedTabsStyle = FeedTabsStyleFor();
-        SheetStyle = SheetStyleFor();
-        ToastStyle = ToastStyleFor();
-        UnreadTint = UnreadTintFor();
         var pullStyle = SeasonalTheme.Halloween ? PullStyle.Moon : PullStyle.Dots;
         foreach (var pull in pullToRefresh.Values)
         {
@@ -174,17 +169,13 @@ internal sealed partial class ChirperApp
         }
     }
 
-    private static ControlInk ChipControlsFor() =>
-        new(ChirperInk.Accent, ChirperInk.TitleInk, ChirperInk.MutedInk, ChirperInk.Danger);
+    private static UnderlineTabStyle FeedTabsStyleFor(SocialInk ink) => new(FeedTabStyle, FeedTabIdleStyle,
+        ink.AccentLink, ink.SegmentIdleInk, ink.Accent, FeedTabUnderline, CellPadX, Motion.Release);
 
-    private static UnderlineTabStyle FeedTabsStyleFor() => new(FeedTabStyle, FeedTabIdleStyle, ChirperInk.AccentLink,
-        ChirperInk.SegmentIdleInk, ChirperInk.Accent, FeedTabUnderline, CellPadX, Motion.Release);
+    private static ActionSheetStyle SheetStyleFor(SocialInk ink) =>
+        new(ink.GlassPanel, ink.GlassStroke, ink.TitleInk, ink.Danger, ink.Accent, ink.Hairline);
 
-    private static ActionSheetStyle SheetStyleFor() => new(ChirperInk.GlassPanel, ChirperInk.GlassStroke,
-        ChirperInk.CurrentPalette.TitleInk, ChirperInk.Danger, ChirperInk.CurrentPalette.Accent, ChirperInk.Hairline);
+    private static ScreenToastStyle ToastStyleFor(SocialInk ink) => new(ink.GlassPanel, ink.GlassStroke, ink.TitleInk);
 
-    private static ScreenToastStyle ToastStyleFor() =>
-        new(ChirperInk.GlassPanel, ChirperInk.GlassStroke, ChirperInk.CurrentPalette.TitleInk);
-
-    private static Vector4 UnreadTintFor() => Palette.WithAlpha(ChirperInk.Accent, 0.045f);
+    private static Vector4 UnreadTintFor(SocialInk ink) => Palette.WithAlpha(ink.Accent, 0.045f);
 }

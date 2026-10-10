@@ -36,8 +36,12 @@ internal sealed partial class AethergramApp
     private static readonly TextStyle ActivityBodyStyle = TextStyles.Subheadline;
     private static readonly TextStyle ActivityTimeStyle = TextStyles.Footnote;
     private static readonly TextStyle ActivitySectionStyle = TextStyles.FootnoteEmphasized;
-    private static Vector4 ActivityUnreadWash = ActivityUnreadWashFor();
+    private static readonly Vector4 StandardActivityUnreadWash = ActivityUnreadWashFor(AethergramInk.Standard);
+    private static readonly Vector4 BloodMoonActivityUnreadWash = ActivityUnreadWashFor(AethergramInk.BloodMoon);
     private static readonly Vector4 ActivityBadgeRing = new(0f, 0f, 0f, 0.55f);
+
+    private static Vector4 ActivityUnreadWash =>
+        SeasonalTheme.Halloween ? BloodMoonActivityUnreadWash : StandardActivityUnreadWash;
 
     private void DrawActivity(Rect area)
     {

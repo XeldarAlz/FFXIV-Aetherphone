@@ -135,7 +135,10 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private static readonly TextStyle WordmarkStyle = TextStyles.Title2;
     private static readonly TextStyle FeedTabStyle = TextStyles.Headline;
     private static readonly TextStyle FeedTabIdleStyle = TextStyles.BodyEmphasized;
-    private static UnderlineTabStyle FeedTabsStyle = FeedTabsStyleFor();
+    private static readonly UnderlineTabStyle StandardFeedTabs = FeedTabsStyleFor(AethergramInk.Standard);
+    private static readonly UnderlineTabStyle BloodMoonFeedTabs = FeedTabsStyleFor(AethergramInk.BloodMoon);
+
+    private static UnderlineTabStyle FeedTabsStyle => SeasonalTheme.Halloween ? BloodMoonFeedTabs : StandardFeedTabs;
 
     private readonly Dictionary<SocialFeedScope, PullToRefresh> pullToRefresh = new()
     {

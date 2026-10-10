@@ -5,8 +5,8 @@ namespace Aetherphone.Apps.Chirper;
 
 internal static class ChirperInk
 {
-    private static readonly SocialInk Standard = new(AppPalettes.Chirper);
-    private static readonly SocialInk Moonlit = new(AppPalettes.ChirperMoonlit);
+    public static readonly SocialInk Standard = new(AppPalettes.Chirper);
+    public static readonly SocialInk Moonlit = new(AppPalettes.ChirperMoonlit);
     private static readonly Vector4 StandardMine = Palette.Lighten(AppPalettes.Chirper.Accent, 0.38f);
     private static readonly Vector4 MoonlitMine = Palette.Lighten(AppPalettes.ChirperMoonlit.Accent, 0.38f);
     private static readonly Vector4 StandardQuoteBody = Palette.WithAlpha(AppPalettes.Chirper.BodyInk, 0.85f);

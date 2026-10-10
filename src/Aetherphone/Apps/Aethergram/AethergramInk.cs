@@ -5,8 +5,8 @@ namespace Aetherphone.Apps.Aethergram;
 
 internal static class AethergramInk
 {
-    private static readonly SocialInk Standard = new(AppPalettes.Aethergram);
-    private static readonly SocialInk BloodMoon = new(AppPalettes.AethergramBloodMoon);
+    public static readonly SocialInk Standard = new(AppPalettes.Aethergram);
+    public static readonly SocialInk BloodMoon = new(AppPalettes.AethergramBloodMoon);
 
     public static SocialInk Shared => SeasonalTheme.Halloween ? BloodMoon : Standard;
     public static AppPalette CurrentPalette => SeasonalTheme.Halloween ? AppPalettes.AethergramBloodMoon : AppPalettes.Aethergram;

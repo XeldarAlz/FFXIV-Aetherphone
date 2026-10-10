@@ -125,9 +125,6 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private const float TintedAlpha = 0.20f;
     private const float TintedHoverAlpha = 0.28f;
 
-    private static ControlInk ChipControls = ChipControlsFor();
-
-
     private static readonly TextStyle NameStyle = TextStyles.Headline;
     private static readonly TextStyle MetaStyle = TextStyles.Subheadline;
     private static readonly TextStyle BodyStyle = TextStyles.Body;
@@ -147,14 +144,21 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private static readonly TextStyle FeedTabStyle = TextStyles.Headline;
 
     private static readonly TextStyle FeedTabIdleStyle = TextStyles.BodyEmphasized;
-    private static UnderlineTabStyle FeedTabsStyle = FeedTabsStyleFor();
     private static readonly TextStyle WordmarkStyle = TextStyles.Title2;
     private static readonly TextStyle BadgeStyle = TextStyles.Caption1;
     private static readonly TextStyle PopoverRowStyle = TextStyles.Headline;
 
-    private static ActionSheetStyle SheetStyle = SheetStyleFor();
+    private static readonly UnderlineTabStyle StandardFeedTabs = FeedTabsStyleFor(ChirperInk.Standard);
+    private static readonly UnderlineTabStyle MoonlitFeedTabs = FeedTabsStyleFor(ChirperInk.Moonlit);
+    private static readonly ActionSheetStyle StandardSheet = SheetStyleFor(ChirperInk.Standard);
+    private static readonly ActionSheetStyle MoonlitSheet = SheetStyleFor(ChirperInk.Moonlit);
+    private static readonly ScreenToastStyle StandardToast = ToastStyleFor(ChirperInk.Standard);
+    private static readonly ScreenToastStyle MoonlitToast = ToastStyleFor(ChirperInk.Moonlit);
 
-    private static ScreenToastStyle ToastStyle = ToastStyleFor();
+    private static ControlInk ChipControls => ChirperInk.Shared.Control;
+    private static UnderlineTabStyle FeedTabsStyle => SeasonalTheme.Halloween ? MoonlitFeedTabs : StandardFeedTabs;
+    private static ActionSheetStyle SheetStyle => SeasonalTheme.Halloween ? MoonlitSheet : StandardSheet;
+    private static ScreenToastStyle ToastStyle => SeasonalTheme.Halloween ? MoonlitToast : StandardToast;
 
     public string Id => "chirper";
     public Vector4 Accent => AppAccents.For(Id);

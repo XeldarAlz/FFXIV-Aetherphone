@@ -47,8 +47,10 @@ internal sealed partial class ChirperApp
     private static readonly Vector4 RowHover = new(1f, 1f, 1f, 0.03f);
     private static readonly Vector4 MentionInk = new(0.718f, 0.612f, 1f, 1f);
     private static readonly Vector4 ActivityBadgeRing = new(0f, 0f, 0f, 0.55f);
-    private static Vector4 UnreadTint = UnreadTintFor();
+    private static readonly Vector4 StandardUnreadTint = UnreadTintFor(ChirperInk.Standard);
+    private static readonly Vector4 MoonlitUnreadTint = UnreadTintFor(ChirperInk.Moonlit);
 
+    private static Vector4 UnreadTint => SeasonalTheme.Halloween ? MoonlitUnreadTint : StandardUnreadTint;
 
     private bool mentionsOnly;
     private Spring activitySegment;
