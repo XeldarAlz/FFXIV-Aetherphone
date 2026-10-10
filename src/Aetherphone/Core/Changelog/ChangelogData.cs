@@ -10,6 +10,7 @@ internal static class ChangelogData
         {
             new(L.Apps.Coin, L.Changelog.Release1201Coin),
             new(L.Apps.Games, L.Changelog.Release1201Games),
+            new(L.Apps.Housing, L.Changelog.Release1201Housing),
         }),
         new ChangelogEntry("1.2.0.0", "2026-10-08", new ChangelogSection[]
         {

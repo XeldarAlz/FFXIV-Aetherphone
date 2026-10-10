@@ -2471,6 +2471,16 @@ internal static class L
                 "Fixed the featured game switching at the wrong hour and lagging behind the day"),
         };
 
+        public static readonly LocString[] Release1201Housing =
+        {
+            new("changelog.r1201.8",
+                "Fixed the lottery countdown and its widget showing a past phase as expired instead of the one running now, contributed by YozoraCho"),
+            new("changelog.r1201.9",
+                "Fixed empty map screens being hard to read: the map now dims behind them, contributed by YozoraCho"),
+            new("changelog.r1201.10",
+                "Fixed buttons on empty screens cutting off longer labels, contributed by YozoraCho"),
+        };
+
         public static readonly LocString[] Release1104Music =
         {
             new("changelog.r1104.0",
