@@ -1132,6 +1132,8 @@
   "settings.iconAppearanceHint": "Oscuro y Tintado repintan cada icono sobre grafito, Transparente lo muestra como cristal sobre el fondo de pantalla. Los iconos sin ilustración pintada conservan su casilla de color.",
   "settings.seasonalDecorations": "Decoraciones de temporada",
   "settings.seasonalDecorationsHint": "Añade toques festivos a todo el teléfono durante eventos de temporada como Halloween.",
+  "settings.seasonalSounds": "Sonidos de temporada",
+  "settings.seasonalSoundsHint": "Reproduce los sonidos festivos que acompañan a las decoraciones de temporada. Desactívalo para mantener el aspecto con los sonidos de siempre.",
   "seasonal.packAnswers": "La manada responde",
   "seasonal.nightTakesWing": "La noche alza el vuelo",
   "seasonal.savedToCrypt": "Guardado en tu cripta",

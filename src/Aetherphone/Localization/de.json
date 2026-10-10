@@ -1132,6 +1132,8 @@
   "settings.iconAppearanceHint": "Dunkel und Getönt zeichnen jedes Symbol auf Graphit neu, Klar zeigt es als Glas über dem Hintergrundbild. Symbole ohne gemaltes Motiv behalten ihre farbige Kachel.",
   "settings.seasonalDecorations": "Saisonale Dekorationen",
   "settings.seasonalDecorationsHint": "Fügt dem ganzen Telefon während saisonaler Events wie Halloween festliche Akzente hinzu.",
+  "settings.seasonalSounds": "Saisonale Töne",
+  "settings.seasonalSoundsHint": "Spielt die festlichen Töne der saisonalen Dekorationen. Ausschalten, um den Look mit den üblichen Tönen zu behalten.",
   "seasonal.packAnswers": "Das Rudel antwortet",
   "seasonal.nightTakesWing": "Die Nacht breitet ihre Flügel aus",
   "seasonal.savedToCrypt": "In deiner Gruft gespeichert",

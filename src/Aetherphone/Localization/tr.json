@@ -1132,6 +1132,8 @@
   "settings.iconAppearanceHint": "Koyu ve Renk Tonlu her simgeyi grafit üzerine yeniden boyar, Şeffaf ise duvar kağıdının üzerinde cam gibi gösterir. Çizimi olmayan simgeler renkli karelerini korur.",
   "settings.seasonalDecorations": "Mevsimsel Süslemeler",
   "settings.seasonalDecorationsHint": "Cadılar Bayramı gibi mevsimsel etkinlikler sırasında telefonun her yerine tematik süslemeler ekler.",
+  "settings.seasonalSounds": "Mevsimsel Sesler",
+  "settings.seasonalSoundsHint": "Mevsimsel süslemelerle gelen özel sesleri çalar. Görünümü koruyup alışılmış sesleri duymak için kapatın.",
   "seasonal.packAnswers": "Sürü cevap veriyor",
   "seasonal.nightTakesWing": "Gece kanatlanıyor",
   "seasonal.savedToCrypt": "Mahzenine kaydedildi",

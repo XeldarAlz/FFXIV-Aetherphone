@@ -19,11 +19,25 @@ internal sealed class UiSoundService : IDisposable
 
     public void PlayPitched(UiSound sound, float rate) => Play(sound, rate, true);
 
+    public void PlayTap(UiSound sound) => Play(SeasonalMuted(sound) ? UiSound.Tap : sound, 0f, false);
+
+    private bool SeasonalMuted(UiSound sound) => !configuration.SeasonalSounds && UiSoundCatalog.IsSeasonal(sound);
+
     private void Play(UiSound sound, float rate, bool pitched)
     {
         if (configuration.SilentMode || !configuration.UiSounds)
         {
             return;
+        }
+
+        if (SeasonalMuted(sound))
+        {
+            if (UiSoundCatalog.PlainFor(sound) is not { } plain)
+            {
+                return;
+            }
+
+            sound = plain;
         }
 
         var index = (int)sound;
@@ -87,7 +101,7 @@ internal static class UiFeedback
 
     public static void Bind(UiSoundService bound) => service = bound;
 
-    public static void PlayTap() => service?.Play(tapSound);
+    public static void PlayTap() => service?.PlayTap(tapSound);
 
     public static TapSoundScope ReplaceTap(UiSound sound)
     {

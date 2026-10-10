@@ -1132,6 +1132,8 @@
   "settings.iconAppearanceHint": "深色和着色会把图标重绘在石墨底上，透明则以玻璃效果显示在壁纸上。没有彩绘图稿的图标保留彩色底块。",
   "settings.seasonalDecorations": "节日装饰",
   "settings.seasonalDecorationsHint": "在万圣节等季节性活动期间，为整部手机添加节日装饰。",
+  "settings.seasonalSounds": "季节音效",
+  "settings.seasonalSoundsHint": "播放随季节装饰而来的节日音效。关闭后保留外观，改用平常的音效。",
   "seasonal.packAnswers": "狼群回应了",
   "seasonal.nightTakesWing": "夜幕振翅而起",
   "seasonal.savedToCrypt": "已存入你的墓穴",

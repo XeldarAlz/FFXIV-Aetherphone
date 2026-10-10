@@ -1132,6 +1132,8 @@
   "settings.iconAppearanceHint": "ダークと着色はアイコンをグラファイトの上に描き直し、クリアは壁紙の上にガラスとして表示します。描き起こしのないアイコンは色付きタイルのままです。",
   "settings.seasonalDecorations": "季節のデコレーション",
   "settings.seasonalDecorationsHint": "ハロウィンなどの季節イベント中、スマホ全体に季節の飾りを加えます。",
+  "settings.seasonalSounds": "季節のサウンド",
+  "settings.seasonalSoundsHint": "季節の飾りに合わせた特別なサウンドを再生します。オフにすると、見た目はそのままでいつものサウンドになります。",
   "seasonal.packAnswers": "群れが応えた",
   "seasonal.nightTakesWing": "夜が羽ばたく",
   "seasonal.savedToCrypt": "地下墓所に保存しました",

@@ -216,6 +216,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public List<string> TranslatedConversations { get; set; } = new();
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public bool SeasonalDecorations { get; set; } = true;
+    public bool SeasonalSounds { get; set; } = true;
     public bool PreviewHalloween { get; set; }
     public bool LiveGlass { get; set; }
     public LiveGlassSource LiveGlassSource { get; set; } = LiveGlassSource.World;

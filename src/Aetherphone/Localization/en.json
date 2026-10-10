@@ -1132,6 +1132,8 @@
   "settings.iconAppearanceHint": "Dark and Tinted repaint each icon on graphite, Clear shows it as glass over the wallpaper. Icons without painted artwork keep their colored tile.",
   "settings.seasonalDecorations": "Seasonal Decorations",
   "settings.seasonalDecorationsHint": "Adds holiday touches across the phone during seasonal events like Halloween.",
+  "settings.seasonalSounds": "Seasonal Sounds",
+  "settings.seasonalSoundsHint": "Plays the holiday sounds that come with Seasonal Decorations. Turn off to keep the look with the usual sounds.",
   "seasonal.packAnswers": "The pack answers",
   "seasonal.nightTakesWing": "The night takes wing",
   "seasonal.savedToCrypt": "Saved to your crypt",
