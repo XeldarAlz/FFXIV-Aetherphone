@@ -47,7 +47,9 @@ internal sealed class HoldemTableLayout
     public const float PodWidthCompact = 64f;
     public const float PuckRadius = 17f;
     public const float CompactPuckRadius = 15f;
+    public const float MinPuckRadius = 10.5f;
     public const float TagReach = 12f;
+    public const float TagHalfHeight = 9f;
     public const float CapsuleGap = 2f;
     public const float CapsuleHeight = 44f;
     public const float BetGap = 2f;
@@ -70,11 +72,14 @@ internal sealed class HoldemTableLayout
     public const float PotHeight = 28f;
     public const float StateHeight = 28f;
     public const float ZoneGap = 6f;
-    public const float ZoneGapFloor = 1.5f;
+    public const float ZoneGapFloor = 1f;
     public const float SeatCardWidth = 14f;
     public const float ShownCardWidth = 26f;
     public const float ShownCardStep = 0.9f;
     public const float DealerButtonRadius = 9f;
+
+    private const int CardSteps = 24;
+    private const int PuckSteps = 12;
 
     private readonly Vector2[] pucks = new Vector2[HoldemRules.MaxSeats];
     private readonly HoldemPodSide[] sides = new HoldemPodSide[HoldemRules.MaxSeats];
@@ -207,11 +212,17 @@ internal sealed class HoldemTableLayout
         return new Rect(anchor - half, anchor + half);
     }
 
+    public float SeatCardPixels =>
+        SeatCardWidth * Scale * MathF.Min(1f, PodPuckRadius / (CompactPuckRadius * Scale));
+
     public Vector2 SeatCardsAnchor(int seat)
     {
         var puck = SeatCenter(seat);
-        var cardWidth = SeatCardWidth * Scale;
-        return new Vector2(puck.X - PodPuckRadius - cardWidth * 0.3f, puck.Y + PodPuckRadius * 0.3f);
+        var cardWidth = SeatCardPixels;
+        var half = PlayingCards.HeightFor(cardWidth) * 0.5f;
+        var clearOfTag = MathF.Max(PodPuckRadius * 0.3f, TagHalfHeight * Scale + half - PodPuckRadius);
+        var drop = MathF.Min(clearOfTag, PodPuckRadius + CapsuleGap * Scale - half);
+        return new Vector2(puck.X - PodPuckRadius - cardWidth * 0.3f, puck.Y + drop);
     }
 
     public float SpotRadius => MathF.Min(SitSpotRadius * Scale,
@@ -332,6 +343,9 @@ internal sealed class HoldemTableLayout
         return top + band + gap + BottomHeight(heroCard);
     }
 
+    private float SideColumnGap(float available) =>
+        UpperCount > 0 ? (available - PodBand() * 3f) * 0.5f : float.MaxValue;
+
     private void Solve(float scale)
     {
         var available = Felt.Height;
@@ -340,31 +354,46 @@ internal sealed class HoldemTableLayout
         var boardFloor = MathF.Min(boardCap, (UpperCount > 0 ? BoardCardFloor : BoardCardMin) * scale);
         var heroCap = MathF.Min(HeroCardWidth * scale, BottomInterior() / (1f + HeroCardOverlap));
         var heroFloor = MathF.Min(heroCap, HeroCardMin * scale);
-        Gap = ZoneGap * scale;
-        BoardCardWidth = boardCap;
-        HeroCardPixels = heroCap;
-        if (Required(boardCap, heroCap, Gap) <= available)
+        var fullPuck = PodPuckRadius;
+        var smallestPuck = MathF.Min(fullPuck, MinPuckRadius * scale);
+        for (var step = 0; step <= PuckSteps; step++)
         {
-            return;
-        }
-
-        var fit = 1f;
-        for (var step = 0; step < 24; step++)
-        {
-            fit -= 1f / 24f;
-            BoardCardWidth = boardFloor + (boardCap - boardFloor) * fit;
-            HeroCardPixels = heroFloor + (heroCap - heroFloor) * fit;
-            if (Required(BoardCardWidth, HeroCardPixels, Gap) <= available)
+            PodPuckRadius = fullPuck - (fullPuck - smallestPuck) * step / PuckSteps;
+            if (Fit(available, boardCap, boardFloor, heroCap, heroFloor, scale))
             {
                 return;
             }
         }
+    }
 
+    private bool Fit(float available, float boardCap, float boardFloor, float heroCap, float heroFloor, float scale)
+    {
+        var gapFloor = ZoneGapFloor * scale;
+        Gap = MathF.Min(ZoneGap * scale, SideColumnGap(available));
         BoardCardWidth = boardFloor;
         HeroCardPixels = heroFloor;
+        if (Gap < gapFloor)
+        {
+            Gap = gapFloor;
+            return false;
+        }
+
+        for (var step = 0; step <= CardSteps; step++)
+        {
+            var fit = 1f - (float)step / CardSteps;
+            BoardCardWidth = boardFloor + (boardCap - boardFloor) * fit;
+            HeroCardPixels = heroFloor + (heroCap - heroFloor) * fit;
+            if (Required(BoardCardWidth, HeroCardPixels, Gap) <= available)
+            {
+                return true;
+            }
+        }
+
         var over = Required(boardFloor, heroFloor, Gap) - available;
         var gapCount = (TopCount > 0 ? 1f : 0f) + 3f;
-        Gap = MathF.Max(ZoneGapFloor * scale, Gap - over / gapCount);
+        var tightened = Gap - over / gapCount;
+        Gap = MathF.Max(gapFloor, tightened);
+        return tightened >= gapFloor;
     }
 
     private void PlaceBottom(float scale)
@@ -420,8 +449,19 @@ internal sealed class HoldemTableLayout
         var tagTop = TagReach * scale + PodPuckRadius;
         var leftColumn = Felt.Min.X + SideInset * scale + PodWidth * 0.5f;
         var rightColumn = Felt.Max.X - SideInset * scale - PodWidth * 0.5f;
-        var lowerPuckY = BottomTop + tagTop;
-        var upperPuckY = BoardCenter.Y - (PodBand() * 0.5f) + tagTop;
+        var band = PodBand();
+        var lowerTop = BottomTop;
+        var upperTop = BoardCenter.Y - band * 0.5f;
+        if (UpperCount > 0)
+        {
+            var highest = Felt.Min.Y + band + Gap;
+            var lowest = Felt.Max.Y - band * 2f - Gap;
+            upperTop = MathF.Min(MathF.Max(upperTop, highest), lowest);
+            lowerTop = MathF.Max(BottomTop, upperTop + band + Gap);
+        }
+
+        var lowerPuckY = lowerTop + tagTop;
+        var upperPuckY = upperTop + tagTop;
         var slot = 1;
         if (LowerCount > 0)
         {

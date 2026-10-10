@@ -176,7 +176,7 @@ Seeded games share vector files with the backend: `src/Aetherphone.Tests/Vectors
 | Bingo | Cabinets/BingoCabinet | room, `casino.bingo` | `BingoHallLayout` with a decorative `PhysicsWorld` tumbler (`BingoTumbler`) that decides nothing; the payout always comes from the settled cards |
 | Chocobo race | Race/RaceCabinet | room `race-track`, `casino.race` | Arena backdrop, landscape track with a portrait layout (`RaceLayout`), Win, Place, Forecast and Reverse forecast tickets (`RaceTicketBuilder`), tote and result boards |
 | Blackjack | Tables/BlackjackTable | table, `casino.blackjack` | House pit (`BlackjackPit`), side bets, insurance, late surrender, a dealer puck, per-seat settlement made visible by `BlackjackRecap` |
-| Texas Hold'em | Tables/HoldemTable | table, `casino.holdem` | House rooms (`HoldemPit`), `SeatLayout.Ring` rotated to the hero, win chance from the private prompt, side pots (`HoldemPotScatter`), hand history sheet |
+| Texas Hold'em | Tables/HoldemTable | table, `casino.holdem` | House rooms (`HoldemPit`), seat pods rotated to the hero (`HoldemTableLayout`: on a short felt the board and hero cards shrink, then the gaps, then the pods, so nothing touches at up to nine seats), win chance from the private prompt, side pots (`HoldemPotScatter`), hand history sheet |
 | Daily spin | Cabinets/DailySpinCabinet | free, `casino.dailyspin` | Pays wallet coins, so it celebrates through `SpinFlourish` with the coin glyph; `DailySpinIdle` also drives the home widget |
 | Dice table, Deathroll, Raffle | Venue/VenueCabinet | hosted venue rooms | See the venue layer below |
 

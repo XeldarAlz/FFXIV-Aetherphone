@@ -1,7 +1,9 @@
 using System.Numerics;
+using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Apps.Casino.Tables;
 using Aetherphone.Core;
 using Aetherphone.Core.Casino;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Xunit;
 
@@ -13,6 +15,9 @@ public sealed class HoldemTableLayoutTests
     private const float StackPlateWidth = 60f;
     private const int CleanSeatLimit = 7;
     private const float TagHalfHeight = 9f;
+    private const float ScreenSidePadding = 16f;
+    private const float ScreenTopZone = 48f;
+    private const float ScreenBottomZone = 30f;
 
     private static readonly float[] Scales = { 0.75f, 1f, 1.5f };
 
@@ -22,6 +27,16 @@ public sealed class HoldemTableLayoutTests
         new(272f, 398f),
         new(272f, 376f),
         new(312f, 470f),
+    };
+
+    private static readonly PhoneCaseKind[] Cases = { PhoneCaseKind.Color, PhoneCaseKind.Art };
+
+    private static readonly (float DeckHeight, bool Seated)[] DeckStates =
+    {
+        (CasinoStageLayout.DeckHeight, false),
+        (CasinoStageLayout.DeckHeight, true),
+        (HoldemRaiseComposer.DeckHeight, true),
+        (HoldemTable.BuyInDeckHeight, false),
     };
 
     public static TheoryData<float, float, float, int, bool> Tables()
@@ -43,8 +58,33 @@ public sealed class HoldemTableLayoutTests
         return data;
     }
 
+    public static TheoryData<float, float, float, int, bool> CrowdedTables()
+    {
+        var data = new TheoryData<float, float, float, int, bool>();
+        for (var scaleIndex = 0; scaleIndex < Scales.Length; scaleIndex++)
+        {
+            for (var caseIndex = 0; caseIndex < Cases.Length; caseIndex++)
+            {
+                for (var stateIndex = 0; stateIndex < DeckStates.Length; stateIndex++)
+                {
+                    var state = DeckStates[stateIndex];
+                    for (var seats = CleanSeatLimit + 1; seats <= HoldemRules.MaxSeats; seats++)
+                    {
+                        var plain = StageSafe(Cases[caseIndex], state.DeckHeight, false);
+                        var practice = StageSafe(Cases[caseIndex], state.DeckHeight, true);
+                        data.Add(Scales[scaleIndex], plain.Width, plain.Height, seats, state.Seated);
+                        data.Add(Scales[scaleIndex], practice.Width, practice.Height, seats, state.Seated);
+                    }
+                }
+            }
+        }
+
+        return data;
+    }
+
     [Theory]
     [MemberData(nameof(Tables))]
+    [MemberData(nameof(CrowdedTables))]
     public void PodsAndBetsNeverTouchAndStayOnTheFelt(float scale, float width, float height, int seats,
         bool seated)
     {
@@ -70,6 +110,7 @@ public sealed class HoldemTableLayoutTests
 
     [Theory]
     [MemberData(nameof(Tables))]
+    [MemberData(nameof(CrowdedTables))]
     public void TheBoardPotAndStateLineStayClearOfEverySeat(float scale, float width, float height, int seats,
         bool seated)
     {
@@ -77,10 +118,11 @@ public sealed class HoldemTableLayoutTests
         var board = layout.BoardRect();
         var pot = layout.PotRect();
         var state = layout.StateBand;
+        var boardFloor = layout.UpperCount > 0 ? HoldemTableLayout.BoardCardFloor : HoldemTableLayout.BoardCardMin;
         Assert.True(Inside(layout.Felt, board));
         Assert.True(pot.Max.Y <= board.Min.Y + Epsilon);
         Assert.True(board.Max.Y <= state.Min.Y + Epsilon);
-        Assert.True(layout.BoardCardWidth >= HoldemTableLayout.BoardCardMin * scale - Epsilon);
+        Assert.True(layout.BoardCardWidth >= boardFloor * scale - Epsilon);
         for (var seat = 0; seat < seats; seat++)
         {
             Assert.False(Overlaps(board, layout.PodRect(seat)), Pair("board", seat, seat));
@@ -94,6 +136,7 @@ public sealed class HoldemTableLayoutTests
 
     [Theory]
     [MemberData(nameof(Tables))]
+    [MemberData(nameof(CrowdedTables))]
     public void TheHeroCardsCapsuleAndBetStackWithoutTouchingTheRing(float scale, float width, float height,
         int seats, bool seated)
     {
@@ -129,11 +172,13 @@ public sealed class HoldemTableLayoutTests
 
     [Theory]
     [MemberData(nameof(Tables))]
+    [MemberData(nameof(CrowdedTables))]
     public void PlatesFitAStackAndSpotsFitTheirPods(float scale, float width, float height, int seats, bool seated)
     {
         var layout = Compute(scale, width, height, seats, 0, seated);
         Assert.True(layout.PodWidth >= StackPlateWidth * scale - Epsilon);
         Assert.True(layout.SpotRadius * 2f >= 44f * scale - Epsilon);
+        Assert.True(layout.PodPuckRadius >= HoldemTableLayout.MinPuckRadius * scale - Epsilon);
         for (var seat = 0; seat < seats; seat++)
         {
             if (layout.IsHero(seat))
@@ -151,7 +196,7 @@ public sealed class HoldemTableLayoutTests
             Assert.True(button.X + HoldemTableLayout.DealerButtonRadius * scale <= pod.Max.X + Epsilon);
             Assert.True(button.Y + HoldemTableLayout.DealerButtonRadius * scale <= layout.CapsuleRect(seat).Min.Y);
             var cards = layout.SeatCardsAnchor(seat);
-            var cardWidth = HoldemTableLayout.SeatCardWidth * scale;
+            var cardWidth = layout.SeatCardPixels;
             var cardHalfHeight = PlayingCards.HeightFor(cardWidth) * 0.5f;
             Assert.True(cards.X - cardWidth * 0.8f >= pod.Min.X - Epsilon);
             Assert.True(cards.Y + cardHalfHeight <= layout.CapsuleRect(seat).Min.Y + Epsilon);
@@ -208,6 +253,57 @@ public sealed class HoldemTableLayoutTests
         {
             Assert.False(Overlaps(board, layout.PodRect(seat)), Pair("board", seat, seat));
         }
+    }
+
+    [Fact]
+    public void CrowdedPodsKeepTheirSizeUntilTheSideColumnRunsShort()
+    {
+        var roomy = StageSafe(PhoneCaseKind.Color, CasinoStageLayout.DeckHeight, false);
+        var full = Compute(1f, roomy.Width, roomy.Height, HoldemRules.MaxSeats, 0, true);
+        Assert.Equal(HoldemTableLayout.CompactPuckRadius, full.PodPuckRadius, 3);
+        var tight = StageSafe(PhoneCaseKind.Art, HoldemRaiseComposer.DeckHeight, true);
+        var shrunk = Compute(1f, tight.Width, tight.Height, HoldemRules.MaxSeats, 0, true);
+        Assert.True(shrunk.PodPuckRadius < HoldemTableLayout.CompactPuckRadius);
+        Assert.True(shrunk.PodPuckRadius >= HoldemTableLayout.MinPuckRadius - Epsilon);
+        Assert.True(shrunk.SeatCardPixels < HoldemTableLayout.SeatCardWidth);
+    }
+
+    [Fact]
+    public void TheSideSeatsBesideTheBoardSitBetweenTheTopRowAndTheLowerSeats()
+    {
+        var tight = StageSafe(PhoneCaseKind.Art, HoldemTable.BuyInDeckHeight, true);
+        var layout = Compute(1f, tight.Width, tight.Height, HoldemRules.MaxSeats, 0, false);
+        for (var seat = 0; seat < HoldemRules.MaxSeats; seat++)
+        {
+            if (layout.SideOf(seat) is not (HoldemPodSide.UpperLeft or HoldemPodSide.UpperRight))
+            {
+                continue;
+            }
+
+            for (var other = 0; other < HoldemRules.MaxSeats; other++)
+            {
+                var otherSide = layout.SideOf(other);
+                if (otherSide == HoldemPodSide.Top)
+                {
+                    Assert.True(layout.BetRect(other).Max.Y < layout.PodRect(seat).Min.Y, Pair("top", other, seat));
+                }
+                else if (otherSide is HoldemPodSide.LowerLeft or HoldemPodSide.LowerRight)
+                {
+                    Assert.True(layout.BetRect(seat).Max.Y < layout.PodRect(other).Min.Y, Pair("lower", seat, other));
+                }
+            }
+        }
+    }
+
+    private static Rect StageSafe(PhoneCaseKind kind, float deckHeight, bool practice)
+    {
+        var chassis = ChassisMetrics.For(kind, PhoneSizeCatalog.DesignWidth);
+        var bezel = chassis.MetalWidth + chassis.GlassWidth;
+        var screen = new Rect(Vector2.Zero, new Vector2(PhoneSizeCatalog.DesignWidth - (chassis.RailWidth + bezel) * 2f,
+            PhoneSizeCatalog.DesignHeight - bezel * 2f));
+        var content = new Rect(screen.Min + new Vector2(ScreenSidePadding, ScreenTopZone),
+            screen.Max - new Vector2(ScreenSidePadding, ScreenBottomZone));
+        return CasinoStageLayout.Compute(screen, content, true, practice, deckHeight, 1f).Safe;
     }
 
     private static HoldemTableLayout Compute(float scale, float width, float height, int seats, int bottom,
