@@ -121,18 +121,10 @@ internal sealed class UiSoundService : IDisposable
 internal static class UiFeedback
 {
     private static UiSoundService? service;
-    private static UiSound tapSound = UiSound.Tap;
 
     public static void Bind(UiSoundService bound) => service = bound;
 
-    public static void PlayTap() => service?.PlayTap(tapSound);
-
-    public static TapSoundScope ReplaceTap(UiSound sound)
-    {
-        var previous = tapSound;
-        tapSound = sound;
-        return new TapSoundScope(previous);
-    }
+    public static void PlayTap(UiSound sound) => service?.PlayTap(sound);
 
     public static void Unbind() => service = null;
 
@@ -140,8 +132,4 @@ internal static class UiFeedback
 
     public static void PlayPitched(UiSound sound, float rate) => service?.PlayPitched(sound, rate);
 
-    public readonly ref struct TapSoundScope(UiSound previous)
-    {
-        public void Dispose() => tapSound = previous;
-    }
 }

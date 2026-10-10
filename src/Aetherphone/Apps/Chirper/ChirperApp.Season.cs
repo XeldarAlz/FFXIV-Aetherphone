@@ -108,7 +108,7 @@ internal sealed partial class ChirperApp
 
         clawAnchor = anchor;
         clawStart = ImGui.GetTime();
-        UiInteract.PlayTap(UiSound.HalloweenClaw);
+        UiFeedback.PlayTap(UiSound.HalloweenClaw);
     }
 
     private void DrawClaw(Rect screen)

@@ -133,7 +133,10 @@ internal static class UiInteract
 
     public static bool Click(Vector2 min, Vector2 max, bool hovered) => Click(min, max, hovered, true);
 
-    public static bool Click(Vector2 min, Vector2 max, bool hovered, bool tapSound)
+    public static bool Click(Vector2 min, Vector2 max, bool hovered, bool tapSound) =>
+        Click(min, max, hovered, tapSound ? UiSound.Tap : null);
+
+    public static bool Click(Vector2 min, Vector2 max, bool hovered, UiSound? tapSound)
     {
         hovered = hovered && WindowHovered;
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) && !ImGui.IsMouseReleased(ImGuiMouseButton.Left))
@@ -162,30 +165,15 @@ internal static class UiInteract
         if (activated)
         {
             hasPendingTap = false;
-            if (tapSound)
+            if (tapSound is { } sound)
             {
-                UiFeedback.PlayTap();
+                UiFeedback.PlayTap(sound);
             }
         }
 
         return activated;
     }
 
-    public static bool Click(Vector2 min, Vector2 max, bool hovered, UiSound sound)
-    {
-        using (UiFeedback.ReplaceTap(sound))
-        {
-            return Click(min, max, hovered);
-        }
-    }
-
-    public static void PlayTap(UiSound sound)
-    {
-        using (UiFeedback.ReplaceTap(sound))
-        {
-            UiFeedback.PlayTap();
-        }
-    }
 
     private static Vector2 ToContentSpace(Vector2 screen, Vector2 windowPos) =>
         screen - windowPos + new Vector2(ImGui.GetScrollX(), ImGui.GetScrollY());
