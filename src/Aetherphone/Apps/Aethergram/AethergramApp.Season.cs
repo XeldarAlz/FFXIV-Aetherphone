@@ -38,7 +38,7 @@ internal sealed partial class AethergramApp
     private string OwnHandle => store.Me?.Handle ?? string.Empty;
 
     private void OfferTreat(Rect area, int depth) =>
-        Treats.Offer(ImGui.GetWindowDrawList(), depth > 0 ? TreatSpot.AethergramDeep : TreatSpot.AethergramFeed,
+        Treats.Offer(ImGui.GetWindowDrawList(), depth > 1 ? TreatSpot.AethergramDeep : TreatSpot.AethergramFeed,
             TreatBand.Header(screenRect, area.Min.Y, AppHeader.Height * UiScale.Current));
 
     private static LocString CaughtUpTitle =>

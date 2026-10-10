@@ -33,7 +33,7 @@ internal sealed partial class ChirperApp
     private string OwnHandle => store.Me?.Handle ?? string.Empty;
 
     private void OfferTreat(Rect area, int depth) =>
-        Treats.Offer(ImGui.GetWindowDrawList(), depth > 0 ? TreatSpot.ChirperDeep : TreatSpot.ChirperFeed,
+        Treats.Offer(ImGui.GetWindowDrawList(), depth > 1 ? TreatSpot.ChirperDeep : TreatSpot.ChirperFeed,
             TreatBand.Header(screenRect, area.Min.Y, AppHeader.Height * UiScale.Current));
     private Vector2 clawAnchor;
     private double clawStart = -100d;

@@ -27,7 +27,7 @@ internal sealed partial class VelvetShell
     private string OwnHandle => store.Me?.Handle ?? string.Empty;
 
     private void OfferTreat(Rect area, int depth) =>
-        Treats.Offer(ImGui.GetWindowDrawList(), depth > 0 ? TreatSpot.VelvetDeep : TreatSpot.VelvetFeed,
+        Treats.Offer(ImGui.GetWindowDrawList(), depth > 1 ? TreatSpot.VelvetDeep : TreatSpot.VelvetFeed,
             TreatBand.Header(screenRect, area.Min.Y, VHeader.Height * UiScale.Current));
     private Spring moonSlide;
     private bool moonPlaced;
