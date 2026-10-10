@@ -7,6 +7,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Shell.Spotlight;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Windows;
+using Aetherphone.Windows.Components;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 
@@ -113,6 +114,9 @@ internal sealed class PhoneCommands
                 break;
             case "halloween" when AepConstants.IsPrerelease:
                 TogglePreviewHalloween();
+                break;
+            case "treat" when AepConstants.IsPrerelease:
+                Treats.SummonNow();
                 break;
             case "help":
                 PrintHelp();

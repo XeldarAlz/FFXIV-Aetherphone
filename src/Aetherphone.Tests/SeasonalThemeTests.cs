@@ -89,6 +89,20 @@ public sealed class SeasonalThemeTests
         Assert.False(SeasonalTheme.IsHalloweenNight(new DateTime(2026, 11, 1)));
     }
 
+    [Theory]
+    [InlineData(10, 15, 0)]
+    [InlineData(10, 27, 12)]
+    [InlineData(10, 31, 16)]
+    [InlineData(11, 1, 17)]
+    [InlineData(11, 2, 18)]
+    [InlineData(10, 14, -1)]
+    [InlineData(11, 3, -1)]
+    [InlineData(7, 1, -1)]
+    public void DayOfHalloweenCountsFromTheFifteenth(int month, int day, int expected)
+    {
+        Assert.Equal(expected, SeasonalTheme.DayOfHalloween(new DateTime(2026, month, day)));
+    }
+
     [Fact]
     public void PreviewRespectsTheDecorationsToggle()
     {

@@ -19,6 +19,23 @@ internal static class SeasonalTheme
         (date.Month == HalloweenStartMonth && date.Day >= HalloweenStartDay) ||
         (date.Month == HalloweenEndMonth && date.Day <= HalloweenEndDay);
 
+    public static bool HalloweenByDate => halloweenDate;
+
+    public static int DayOfHalloween(DateTime date)
+    {
+        if (date.Month == HalloweenStartMonth && date.Day >= HalloweenStartDay)
+        {
+            return date.Day - HalloweenStartDay;
+        }
+
+        if (date.Month == HalloweenEndMonth && date.Day <= HalloweenEndDay)
+        {
+            return DateTime.DaysInMonth(date.Year, HalloweenStartMonth) - HalloweenStartDay + date.Day;
+        }
+
+        return -1;
+    }
+
     public static bool IsHalloweenNight(DateTime date) =>
         Halloween && date.Month == HalloweenStartMonth && date.Day == HalloweenNightDay;
 

@@ -26,10 +26,10 @@ internal enum TreatSpot : byte
 internal static class Treats
 {
     public const int Total = 13;
+    public const int NoSpot = -1;
 
-    private const double CycleSeconds = 45.0;
-    private const float VisibleWindow = 0.34f;
-    private const float FadeWindow = 0.04f;
+    private const double MinimumWaitSeconds = 30 * 60;
+    private const double MaximumWaitSeconds = 60 * 60;
     private const float CandySize = 9f;
     private const float PickReach = 2.2f;
     private const float BobHeight = 3f;
@@ -49,6 +49,9 @@ internal static class Treats
 
     private static readonly Vector4 Shine = new(1f, 1f, 1f, 0.55f);
 
+    private static double appearsAt = double.NaN;
+    private static int activeSpot = NoSpot;
+
     public static int Found
     {
         get
@@ -60,52 +63,115 @@ internal static class Treats
         }
     }
 
+    public static int Unlocked => SeasonalTheme.HalloweenByDate
+        ? Math.Clamp(SeasonalTheme.DayOfHalloween(DateTime.Today) + 1, 0, Total)
+        : Total;
+
     public static bool Rewarded => SeasonalTheme.Halloween && Found >= Total;
+
+    public static int Waiting => ActiveSpot();
+
+    public static void SummonNow()
+    {
+        activeSpot = NoSpot;
+        appearsAt = Clock;
+    }
 
     public static void Offer(ImDrawListPtr drawList, TreatSpot spot, Rect area)
     {
-        if (!Available(spot))
+        if (ActiveSpot() != (int)spot)
         {
             return;
         }
 
-        var salt = (int)spot;
-        var cycle = ImGui.GetTime() / CycleSeconds + Hash(salt, 0.37f);
-        var phase = (float)(cycle - Math.Floor(cycle));
-        if (phase > VisibleWindow)
-        {
-            return;
-        }
-
-        var round = (int)Math.Floor(cycle);
-        var across = AreaMargin + Hash(round * 31 + salt, 1.7f) * (1f - AreaMargin * 2f);
-        var down = AreaMargin + Hash(round * 17 + salt, 4.3f) * (1f - AreaMargin * 2f);
+        var salt = (int)spot * 31 + SeasonalTheme.DayOfHalloween(DateTime.Today);
+        var across = AreaMargin + Hash(salt, 1.7f) * (1f - AreaMargin * 2f);
+        var down = AreaMargin + Hash(salt, 4.3f) * (1f - AreaMargin * 2f);
         var center = new Vector2(area.Min.X + area.Width * across, area.Min.Y + area.Height * down);
-        var fade = MathF.Min(1f, MathF.Min(phase, VisibleWindow - phase) / FadeWindow);
-        Present(drawList, spot, center, CandySize * UiScale.Current, fade);
+        Present(drawList, spot, center, CandySize * UiScale.Current);
     }
 
     public static void OfferAt(ImDrawListPtr drawList, TreatSpot spot, Vector2 center, float size)
     {
-        if (Available(spot))
+        if (ActiveSpot() == (int)spot)
         {
-            Present(drawList, spot, center, size, 1f);
+            Present(drawList, spot, center, size);
         }
     }
 
-    private static bool Available(TreatSpot spot)
+    public static void DrawStill(ImDrawListPtr drawList, Vector2 center, float size, int index) =>
+        DrawCandy(drawList, center, size, Wrappers[index % Wrappers.Length], 0f);
+
+    private static double Clock => Environment.TickCount64 / 1000.0;
+
+    private static int ActiveSpot()
     {
-        if (!SeasonalTheme.Halloween)
+        if (!SeasonalTheme.Halloween || Found >= Unlocked)
         {
-            return false;
+            return NoSpot;
         }
 
-        var configuration = Plugin.Cfg;
-        return configuration.HalloweenTreatYear != DateTime.Today.Year
-            || (configuration.HalloweenTreats & (1 << (int)spot)) == 0;
+        if (activeSpot != NoSpot && !Collected(activeSpot))
+        {
+            return activeSpot;
+        }
+
+        if (double.IsNaN(appearsAt))
+        {
+            appearsAt = Clock + RandomWait();
+            return NoSpot;
+        }
+
+        if (Clock < appearsAt)
+        {
+            return NoSpot;
+        }
+
+        activeSpot = PickSpot();
+        return activeSpot;
     }
 
-    private static void Present(ImDrawListPtr drawList, TreatSpot spot, Vector2 center, float size, float alpha)
+    private static bool Collected(int spot)
+    {
+        var configuration = Plugin.Cfg;
+        return configuration.HalloweenTreatYear == DateTime.Today.Year
+            && (configuration.HalloweenTreats & (1 << spot)) != 0;
+    }
+
+    private static int PickSpot()
+    {
+        var remaining = 0;
+        for (var spot = 0; spot < Total; spot++)
+        {
+            if (!Collected(spot))
+            {
+                remaining++;
+            }
+        }
+
+        var pick = Random.Shared.Next(remaining);
+        for (var spot = 0; spot < Total; spot++)
+        {
+            if (Collected(spot))
+            {
+                continue;
+            }
+
+            if (pick == 0)
+            {
+                return spot;
+            }
+
+            pick--;
+        }
+
+        return NoSpot;
+    }
+
+    private static double RandomWait() =>
+        MinimumWaitSeconds + Random.Shared.NextDouble() * (MaximumWaitSeconds - MinimumWaitSeconds);
+
+    private static void Present(ImDrawListPtr drawList, TreatSpot spot, Vector2 center, float size)
     {
         var scale = UiScale.Current;
         var time = (float)ImGui.GetTime();
@@ -114,14 +180,14 @@ internal static class Treats
         var hovered = UiInteract.Hover(center - reach, center + reach);
         var drawn = hovered ? size * HoverGrow : size;
         var wrapper = Wrappers[(int)spot % Wrappers.Length];
-        NightScene.Glow(drawList, center, drawn * GlowReach, wrapper with { W = GlowAlpha * alpha }, GlowCells);
-        DrawCandy(drawList, center, drawn, wrapper with { W = alpha }, time + (int)spot);
+        NightScene.Glow(drawList, center, drawn * GlowReach, wrapper with { W = GlowAlpha }, GlowCells);
+        DrawCandy(drawList, center, drawn, wrapper, time + (int)spot);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        if (alpha < 0.5f || !UiInteract.Click(center - reach, center + reach, hovered))
+        if (!UiInteract.Click(center - reach, center + reach, hovered))
         {
             return;
         }
@@ -145,7 +211,7 @@ internal static class Treats
 
         drawList.AddCircleFilled(center, size, ink, 20);
         drawList.AddCircleFilled(center - normal * size * 0.35f - axis * size * 0.3f, size * 0.28f,
-            ImGui.GetColorU32(Shine with { W = Shine.W * wrapper.W }), 12);
+            ImGui.GetColorU32(Shine), 12);
     }
 
     private static void Collect(TreatSpot spot)
@@ -160,6 +226,8 @@ internal static class Treats
 
         configuration.HalloweenTreats |= 1 << (int)spot;
         configuration.Save();
+        activeSpot = NoSpot;
+        appearsAt = Clock + RandomWait();
         var found = Found;
         UiFeedback.Play(found >= Total ? UiSound.HalloweenFlare : UiSound.HalloweenSparkle);
         ShellToast.Show(found >= Total

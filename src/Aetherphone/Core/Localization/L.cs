@@ -2190,6 +2190,15 @@ internal static class L
         public static readonly LocPlural DaysToGo = new("seasonal.daysToGo", "day to go", "days to go");
         public static readonly LocString Tonight = new("seasonal.tonight", "Tonight");
         public static readonly LocString HalloweenNight = new("seasonal.halloweenNight", "Halloween night");
+        public static readonly LocString TreatsFoundLabel = new("seasonal.treatsFoundLabel", "Treats Found");
+        public static readonly LocString TreatsCount = new("seasonal.treatsCount", "{0} of {1}");
+        public static readonly LocString TreatHidingIn = new("seasonal.treatHidingIn", "A treat is hiding in {0}");
+        public static readonly LocString TreatHidingHome = new("seasonal.treatHidingHome", "A treat is hiding on the home screen");
+        public static readonly LocString TreatHidingEmpty = new("seasonal.treatHidingEmpty", "A treat is hiding on an empty screen");
+        public static readonly LocString TreatLater = new("seasonal.treatLater", "Another treat will turn up later");
+        public static readonly LocString TreatTomorrow = new("seasonal.treatTomorrow", "The next treat arrives tomorrow");
+        public static readonly LocString TreatsAllFound = new("seasonal.treatsAllFound", "All found. Enjoy the flame!");
+        public static readonly LocString TreatsRewardHint = new("seasonal.treatsRewardHint", "Find all 13 and your name burns with a hallowed flame until the season ends.");
     }
 
     internal static class Translate
