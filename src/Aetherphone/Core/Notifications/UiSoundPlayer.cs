@@ -17,6 +17,7 @@ internal sealed class UiSoundPlayer : IDisposable
 
     private readonly object gate = new();
     private readonly Dictionary<string, float[]> clips = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<(string FileName, HauntDepth Depth), float[]> hauntedClips = new();
     private readonly DirectoryInfo root;
     private MixingSampleProvider? mixer;
     private VolumeSampleProvider? bus;
@@ -31,11 +32,11 @@ internal sealed class UiSoundPlayer : IDisposable
         this.root = root;
     }
 
-    public void Play(string fileName, float gain, float rate)
+    public void Play(string fileName, float gain, float rate, HauntDepth haunt = HauntDepth.None)
     {
         lock (gate)
         {
-            if (disposed || Volatile.Read(ref activeVoices) >= MaxVoices || !TryLoadClip(fileName, out var clip))
+            if (disposed || Volatile.Read(ref activeVoices) >= MaxVoices || !TryLoadClip(fileName, haunt, out var clip))
             {
                 return;
             }
@@ -96,6 +97,24 @@ internal sealed class UiSoundPlayer : IDisposable
     private void OnMixerInputEnded(object? sender, SampleProviderEventArgs eventArgs)
     {
         Interlocked.Decrement(ref activeVoices);
+    }
+
+    private bool TryLoadClip(string fileName, HauntDepth haunt, out float[] clip)
+    {
+        if (haunt == HauntDepth.None)
+        {
+            return TryLoadClip(fileName, out clip);
+        }
+
+        var key = (fileName, haunt);
+        if (hauntedClips.TryGetValue(key, out clip!))
+        {
+            return clip.Length > 0;
+        }
+
+        clip = TryLoadClip(fileName, out var plain) ? HauntFilter.Apply(plain, haunt) : plain;
+        hauntedClips[key] = clip;
+        return clip.Length > 0;
     }
 
     private bool TryLoadClip(string fileName, out float[] clip)

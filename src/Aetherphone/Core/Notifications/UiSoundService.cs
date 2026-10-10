@@ -1,3 +1,5 @@
+using Aetherphone.Core.Theme;
+
 namespace Aetherphone.Core.Notifications;
 
 internal sealed class UiSoundService : IDisposable
@@ -66,8 +68,12 @@ internal sealed class UiSoundService : IDisposable
         var files = entry.Files;
         var cursor = variantCursor[index];
         variantCursor[index] = (cursor + 1) % files.Length;
-        player.Play(files[cursor], volume, pitched ? rate : PlaybackRate(entry.PitchVariance));
+        player.Play(files[cursor], volume, pitched ? rate : PlaybackRate(entry.PitchVariance), HauntFor(sound));
     }
+
+    private HauntDepth HauntFor(UiSound sound) => SeasonalTheme.Halloween && configuration.SeasonalSounds
+        ? UiSoundCatalog.HauntDepthFor(sound)
+        : HauntDepth.None;
 
     private static float PlaybackRate(float variance)
     {

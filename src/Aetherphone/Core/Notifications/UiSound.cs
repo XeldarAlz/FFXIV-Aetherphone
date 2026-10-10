@@ -312,6 +312,22 @@ internal static class UiSoundCatalog
         or UiSound.HalloweenFlutter or UiSound.HalloweenIgnite or UiSound.HalloweenOrgan or UiSound.HalloweenSwarm
         or UiSound.HalloweenSparkle or UiSound.HalloweenWhisper or UiSound.HalloweenFlare or UiSound.HalloweenCrystal;
 
+    public static HauntDepth HauntDepthFor(UiSound sound)
+    {
+        if (IsSeasonal(sound))
+        {
+            return HauntDepth.None;
+        }
+
+        return Entries[(int)sound].Channel switch
+        {
+            UiSoundChannel.Game => HauntDepth.None,
+            UiSoundChannel.Keyboard => HauntDepth.Faint,
+            UiSoundChannel.Tap or UiSoundChannel.Toggle => HauntDepth.Light,
+            _ => HauntDepth.Full,
+        };
+    }
+
     public static UiSound? PlainFor(UiSound sound) => sound switch
     {
         UiSound.HalloweenHoot or UiSound.HalloweenOrgan or UiSound.HalloweenIgnite => UiSound.Refresh,
