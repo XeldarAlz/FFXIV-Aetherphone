@@ -12,8 +12,6 @@ internal sealed class CoinTreatCard
 {
     private const float TileSize = 44f;
     private const float TileGlyph = 24f;
-    private const float TileGap = 12f;
-    private const float RowGap = 16f;
     private const float PipHeight = 22f;
     private const float CandySize = 4.5f;
     private const float RingRadius = 6.5f;
@@ -22,9 +20,6 @@ internal sealed class CoinTreatCard
     private const float RestAlpha = 0.14f;
     private const float BreathBase = 0.35f;
     private const float BreathRange = 0.40f;
-    private const float FootGap = 12f;
-    private const float ParagraphGap = 4f;
-    private const float NameGap = 8f;
     private const int StatusHiding = 100;
     private const int StatusLater = 200;
     private const int StatusTomorrow = 300;
@@ -37,55 +32,56 @@ internal sealed class CoinTreatCard
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var pad = Metrics.Space.Lg * scale;
+        var padding = Metrics.Space.Lg * scale;
         var tile = TileSize * scale;
         var found = Treats.Found;
         var complete = found >= Treats.Total;
         var rewarded = complete && Treats.Rewarded && ownName.Length > 0;
-        var textWidth = width - pad * 2f;
+        var textWidth = width - padding * 2f;
         var statusText = Status(found);
         var statusHeight = Typography.MeasureWrappedBlock(statusText, TextStyles.Footnote, textWidth).Y;
-        var hint = complete ? string.Empty : Loc.T(L.Seasonal.TreatsRewardHint);
+        var hint = complete ? string.Empty : Loc.T(L.Seasonal.TreatsRewardHint, Treats.Total);
         var hintHeight = hint.Length > 0
-            ? ParagraphGap * scale + Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, textWidth).Y
+            ? Metrics.Space.Xxs * scale + Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, textWidth).Y
             : 0f;
-        var nameHeight = rewarded ? NameGap * scale + Typography.LineHeight(TextStyles.Title3) : 0f;
+        var nameHeight = rewarded ? Metrics.Space.Sm * scale + Typography.LineHeight(TextStyles.Title3) : 0f;
         var pipsHeight = PipHeight * scale;
-        var height = pad + tile + RowGap * scale + pipsHeight + nameHeight + FootGap * scale + statusHeight +
-                     hintHeight + pad;
+        var height = padding + tile + Metrics.Space.Lg * scale + pipsHeight + nameHeight +
+                     Metrics.Space.Md * scale + statusHeight + hintHeight + padding;
         var min = origin;
         var max = new Vector2(origin.X + width, origin.Y + height);
         CoinArt.Card(drawList, ui, min, max, scale);
 
-        var tileMin = new Vector2(min.X + pad, min.Y + pad);
+        var tileMin = new Vector2(min.X + padding, min.Y + padding);
         var tileMax = tileMin + new Vector2(tile, tile);
         IconTile.FillShaded(drawList, tileMin, tileMax, tile * Metrics.Radius.TileFactor,
             IconTile.Surface(Spooks.Pumpkin));
         PhoneIcon.Draw(drawList, (tileMin + tileMax) * 0.5f, PhoneIcons.Pumpkin, CoinArt.White, TileGlyph * scale);
         var rowCenterY = tileMin.Y + tile * 0.5f;
-        CoinArt.Labels(drawList, tileMax.X + TileGap * scale, max.X - pad, rowCenterY,
+        CoinArt.Labels(drawList, tileMax.X + Metrics.Space.Md * scale, max.X - padding, rowCenterY,
             Loc.T(L.Seasonal.TreatsFoundLabel), Count(found), ui.TitleInk, ui.MutedInk, scale);
 
-        var pipsCenterY = tileMax.Y + RowGap * scale + pipsHeight * 0.5f;
-        DrawPips(drawList, ui, min.X + pad, max.X - pad, pipsCenterY, found, scale);
+        var pipsCenterY = tileMax.Y + Metrics.Space.Lg * scale + pipsHeight * 0.5f;
+        DrawPips(drawList, ui, min.X + padding, max.X - padding, pipsCenterY, found, scale);
         var cursorY = pipsCenterY + pipsHeight * 0.5f;
         if (rewarded)
         {
-            cursorY += NameGap * scale;
+            cursorY += Metrics.Space.Sm * scale;
             var light = Palette.Luminance(ui.TitleInk) < 0.5f;
             var name = Typography.FitText(ownName, textWidth, TextStyles.Title3);
-            Typography.Draw(drawList, new Vector2(min.X + pad, cursorY), name, NameEffects.HallowedInk(light),
+            Typography.Draw(drawList, new Vector2(min.X + padding, cursorY), name, NameEffects.HallowedInk(light),
                 TextStyles.Title3, NameEffects.Hallowed(light));
             cursorY += Typography.LineHeight(TextStyles.Title3);
         }
 
-        cursorY += FootGap * scale;
-        Typography.DrawWrappedLeft(new Vector2(min.X + pad, cursorY), statusText, ui.TitleInk, TextStyles.Footnote,
+        cursorY += Metrics.Space.Md * scale;
+        Typography.DrawWrappedLeft(new Vector2(min.X + padding, cursorY), statusText, ui.TitleInk, TextStyles.Footnote,
             textWidth);
         if (hint.Length > 0)
         {
-            Typography.DrawWrappedLeft(new Vector2(min.X + pad, cursorY + statusHeight + ParagraphGap * scale), hint,
-                ui.MutedInk, TextStyles.Footnote, textWidth);
+            var hintTop = cursorY + statusHeight + Metrics.Space.Xxs * scale;
+            Typography.DrawWrappedLeft(new Vector2(min.X + padding, hintTop), hint, ui.MutedInk, TextStyles.Footnote,
+                textWidth);
         }
 
         return max.Y;

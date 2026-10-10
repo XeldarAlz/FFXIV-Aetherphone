@@ -36,6 +36,16 @@ internal static class HomeHaunt
         DrawMist(drawList, screen, (float)seconds, scale);
         Spooks.DrawFlight(drawList, screen, seconds, FlightPeriodSeconds, FlightWindow, 0.10f, 0.16f,
             BatSize * scale, FlockInk);
+    }
+
+    public static void DrawTreats(Rect screen)
+    {
+        if (!SeasonalTheme.Halloween)
+        {
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
         Treats.Offer(drawList, TreatSpot.HomeTop, Band(screen, 0.12f, 0.24f));
         Treats.Offer(drawList, TreatSpot.HomeLow, Band(screen, 0.82f, 0.85f));
     }

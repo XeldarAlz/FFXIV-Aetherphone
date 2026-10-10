@@ -72,6 +72,7 @@ internal sealed class ShellScreenPainter
         DeviceChrome.DrawHomeScrim(screen, screenRadius, theme);
         HomeHaunt.Draw(screen);
         home.Draw(screen, ContentRect(screen, theme), theme, navigation, motion);
+        HomeHaunt.DrawTreats(screen);
     }
 
     public void PaintApp(Rect screen, float screenRadius, PhoneTheme theme, IPhoneApp app)

@@ -299,7 +299,8 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
             return;
         }
 
-        if (LocalRaceIsLalafell is true || store.AccessBlocked)
+        Treats.VelvetBarred = LocalRaceIsLalafell is true || store.AccessBlocked;
+        if (Treats.VelvetBarred)
         {
             TourHolds.Hold(Id);
             store.EnsureMe();

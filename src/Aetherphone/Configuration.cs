@@ -221,6 +221,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool SeasonalParallax { get; set; } = true;
     public int HalloweenTreatYear { get; set; }
     public int HalloweenTreats { get; set; }
+    public long HalloweenTreatDue { get; set; }
     public bool PreviewHalloween { get; set; }
     public bool LiveGlass { get; set; }
     public LiveGlassSource LiveGlassSource { get; set; } = LiveGlassSource.World;

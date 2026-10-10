@@ -310,6 +310,7 @@ internal sealed class PhoneServices : IDisposable
         Social.Frames.Use(frameCatalog);
         Windows.Components.UserName.Configure(badgeCatalog, remoteImages);
         Windows.Components.NowPlayingArt.Configure(remoteImages);
+        Windows.Components.Treats.Configure(installer, aethernetSession);
         Moderation.ModerationNoticeText.Configure(badgeCatalog, frameCatalog);
         var coinApi = new AethernetApi(http, aethernetSession, "coin");
         var coins = new Coins.CoinStore(aethernetSession, coinApi.Coins);
@@ -698,6 +699,7 @@ internal sealed class PhoneServices : IDisposable
         ShortcutRunner.Dispose();
         RemoteImages.Dispose();
         Windows.Components.UserName.Reset();
+        Windows.Components.Treats.Reset();
         Moderation.ModerationNoticeText.Reset();
         MoogleClicker.Dispose();
         Leaderboard.Dispose();

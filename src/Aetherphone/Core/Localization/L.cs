@@ -2185,7 +2185,7 @@ internal static class L
         public static readonly LocString VelvetConnected = new("seasonal.velvetConnected", "Sealed by candlelight");
         public static readonly LocString CandlesFlare = new("seasonal.candlesFlare", "The candles flare");
         public static readonly LocString TreatFound = new("seasonal.treatFound", "Treat found! {0} of {1}");
-        public static readonly LocString TreatsComplete = new("seasonal.treatsComplete", "All treats found! Your name burns with a hallowed flame for the rest of Halloween.");
+        public static readonly LocString TreatsComplete = new("seasonal.treatsComplete", "All {0} treats found! Your name burns with Witchfire until Halloween ends, visible only to you.");
         public static readonly LocString TreatsProgress = new("seasonal.treatsProgress", "Treats {0}/{1}");
         public static readonly LocString CountdownName = new("seasonal.countdownName", "Halloween");
         public static readonly LocString CountdownDescription = new("seasonal.countdownDescription", "Counts down to Halloween night and tracks the treats you find.");
@@ -2201,7 +2201,7 @@ internal static class L
         public static readonly LocString TreatLater = new("seasonal.treatLater", "Another treat will turn up later");
         public static readonly LocString TreatTomorrow = new("seasonal.treatTomorrow", "The next treat arrives tomorrow");
         public static readonly LocString TreatsAllFound = new("seasonal.treatsAllFound", "All found. Enjoy the flame!");
-        public static readonly LocString TreatsRewardHint = new("seasonal.treatsRewardHint", "Find all 13 and your name burns with a hallowed flame until the season ends.");
+        public static readonly LocString TreatsRewardHint = new("seasonal.treatsRewardHint", "Find all {0} and your name burns with Witchfire until the season ends, visible only to you.");
     }
 
     internal static class Translate

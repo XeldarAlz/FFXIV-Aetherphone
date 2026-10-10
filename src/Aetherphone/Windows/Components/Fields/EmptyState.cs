@@ -106,8 +106,9 @@ internal static class EmptyState
         var time = (float)ImGui.GetTime();
         var bob = MathF.Sin(time * GhostBobSpeed) * GhostBob * scale;
         var reach = IconRadius * GhostPerch * scale;
-        var center = iconCenter + new Vector2(reach, -reach + bob);
-        Treats.OfferAt(drawList, TreatSpot.EmptyState, center + new Vector2(GhostSize * 1.5f, GhostSize * 0.6f) * scale,
+        var perch = iconCenter + new Vector2(reach, -reach);
+        var center = perch + new Vector2(0f, bob);
+        Treats.OfferAt(drawList, TreatSpot.EmptyState, perch + new Vector2(GhostSize * 1.5f, GhostSize * 0.6f) * scale,
             TreatSize * scale);
         Spooks.DrawGhost(drawList, center, GhostSize * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.2f)),
             ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.34f)),

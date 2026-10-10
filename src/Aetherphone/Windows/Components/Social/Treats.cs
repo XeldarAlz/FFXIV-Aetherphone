@@ -1,4 +1,6 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
@@ -28,8 +30,10 @@ internal static class Treats
     public const int Total = 13;
     public const int NoSpot = -1;
 
-    private const double MinimumWaitSeconds = 30 * 60;
-    private const double MaximumWaitSeconds = 60 * 60;
+    private const int SpotCount = 13;
+    private const double MinimumWaitMilliseconds = 30 * 60 * 1000;
+    private const double MaximumWaitMilliseconds = 60 * 60 * 1000;
+    private const double CatchUpFactor = 0.3;
     private const float CandySize = 9f;
     private const float PickReach = 2.2f;
     private const float BobHeight = 3f;
@@ -38,6 +42,14 @@ internal static class Treats
     private const float GlowAlpha = 0.35f;
     private const int GlowCells = 8;
     private const float AreaMargin = 0.12f;
+    private const string ChirperAppId = "chirper";
+    private const string AethergramAppId = "aethergram";
+    private const string VelvetAppId = "velvet";
+    private const string SkywatcherAppId = "skywatcher";
+    private const string CalendarAppId = "calendar";
+    private const string ClockAppId = "clock";
+    private const string MessageAppId = "message";
+    private const string LinkpearlAppId = "messages";
 
     private static readonly Vector4[] Wrappers =
     {
@@ -49,8 +61,12 @@ internal static class Treats
 
     private static readonly Vector4 Shine = new(1f, 1f, 1f, 0.55f);
 
-    private static double appearsAt = double.NaN;
+    private static AppInstaller? installer;
+    private static AethernetSession? session;
     private static int activeSpot = NoSpot;
+    private static int lastSpot = NoSpot;
+
+    public static bool VelvetBarred { get; set; }
 
     public static int Found
     {
@@ -71,10 +87,25 @@ internal static class Treats
 
     public static int Waiting => ActiveSpot();
 
+    public static void Configure(AppInstaller appInstaller, AethernetSession aethernetSession)
+    {
+        installer = appInstaller;
+        session = aethernetSession;
+    }
+
+    public static void Reset()
+    {
+        installer = null;
+        session = null;
+        activeSpot = NoSpot;
+        lastSpot = NoSpot;
+        VelvetBarred = false;
+    }
+
     public static void SummonNow()
     {
         activeSpot = NoSpot;
-        appearsAt = Clock;
+        SetDue(Now);
     }
 
     public static void SetAllFound(bool found)
@@ -82,9 +113,9 @@ internal static class Treats
         var configuration = Plugin.Cfg;
         configuration.HalloweenTreatYear = DateTime.Today.Year;
         configuration.HalloweenTreats = found ? (1 << Total) - 1 : 0;
+        configuration.HalloweenTreatDue = 0;
         configuration.Save();
         activeSpot = NoSpot;
-        appearsAt = double.NaN;
     }
 
     public static void Offer(ImDrawListPtr drawList, TreatSpot spot, Rect area)
@@ -94,7 +125,7 @@ internal static class Treats
             return;
         }
 
-        var salt = (int)spot * 31 + SeasonalTheme.DayOfHalloween(DateTime.Today);
+        var salt = (int)spot * 31 + SeasonalTheme.DayOfHalloween(DateTime.Today) + Found * 7;
         var across = AreaMargin + Hash(salt, 1.7f) * (1f - AreaMargin * 2f);
         var down = AreaMargin + Hash(salt, 4.3f) * (1f - AreaMargin * 2f);
         var center = new Vector2(area.Min.X + area.Width * across, area.Min.Y + area.Height * down);
@@ -112,7 +143,7 @@ internal static class Treats
     public static void DrawStill(ImDrawListPtr drawList, Vector2 center, float size, int index) =>
         DrawCandy(drawList, center, size, Wrappers[index % Wrappers.Length], 0f);
 
-    private static double Clock => Environment.TickCount64 / 1000.0;
+    private static long Now => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     private static int ActiveSpot()
     {
@@ -121,18 +152,19 @@ internal static class Treats
             return NoSpot;
         }
 
-        if (activeSpot != NoSpot && !Collected(activeSpot))
+        if (activeSpot != NoSpot && Reachable((TreatSpot)activeSpot))
         {
             return activeSpot;
         }
 
-        if (double.IsNaN(appearsAt))
+        var due = Plugin.Cfg.HalloweenTreatDue;
+        if (due <= 0)
         {
-            appearsAt = Clock + RandomWait();
+            SetDue(Now + Wait());
             return NoSpot;
         }
 
-        if (Clock < appearsAt)
+        if (Now < due)
         {
             return NoSpot;
         }
@@ -141,28 +173,57 @@ internal static class Treats
         return activeSpot;
     }
 
-    private static bool Collected(int spot)
+    private static bool Reachable(TreatSpot spot) => spot switch
     {
-        var configuration = Plugin.Cfg;
-        return configuration.HalloweenTreatYear == DateTime.Today.Year
-            && (configuration.HalloweenTreats & (1 << spot)) != 0;
+        TreatSpot.HomeTop or TreatSpot.HomeLow or TreatSpot.EmptyState => true,
+        TreatSpot.ChirperFeed or TreatSpot.ChirperDeep => Installed(ChirperAppId) && SignedIn,
+        TreatSpot.AethergramFeed or TreatSpot.AethergramDeep => Installed(AethergramAppId) && SignedIn,
+        TreatSpot.VelvetFeed or TreatSpot.VelvetDeep => VelvetOpen,
+        TreatSpot.Skywatcher => Installed(SkywatcherAppId),
+        TreatSpot.Calendar => Installed(CalendarAppId),
+        TreatSpot.Clock => Installed(ClockAppId),
+        TreatSpot.ChatWallpaper => Installed(MessageAppId) || Installed(LinkpearlAppId),
+        _ => false,
+    };
+
+    private static bool Installed(string appId) => installer is not null && installer.IsInstalled(appId);
+
+    private static bool SignedIn => session is not null && session.IsSignedIn;
+
+    private static bool VelvetOpen
+    {
+        get
+        {
+            if (VelvetBarred || !Installed(VelvetAppId) || !SignedIn)
+            {
+                return false;
+            }
+
+            var configuration = Plugin.Cfg;
+            return configuration.VelvetAcknowledgedGate && configuration.IsVelvetOnboarded();
+        }
     }
 
     private static int PickSpot()
     {
-        var remaining = 0;
-        for (var spot = 0; spot < Total; spot++)
+        var reachable = 0;
+        for (var spot = 0; spot < SpotCount; spot++)
         {
-            if (!Collected(spot))
+            if (spot != lastSpot && Reachable((TreatSpot)spot))
             {
-                remaining++;
+                reachable++;
             }
         }
 
-        var pick = Random.Shared.Next(remaining);
-        for (var spot = 0; spot < Total; spot++)
+        if (reachable == 0)
         {
-            if (Collected(spot))
+            return NoSpot;
+        }
+
+        var pick = Random.Shared.Next(reachable);
+        for (var spot = 0; spot < SpotCount; spot++)
+        {
+            if (spot == lastSpot || !Reachable((TreatSpot)spot))
             {
                 continue;
             }
@@ -178,26 +239,38 @@ internal static class Treats
         return NoSpot;
     }
 
-    private static double RandomWait() =>
-        MinimumWaitSeconds + Random.Shared.NextDouble() * (MaximumWaitSeconds - MinimumWaitSeconds);
+    private static long Wait()
+    {
+        var wait = MinimumWaitMilliseconds +
+            Random.Shared.NextDouble() * (MaximumWaitMilliseconds - MinimumWaitMilliseconds);
+        return (long)(Unlocked - Found > 1 ? wait * CatchUpFactor : wait);
+    }
+
+    private static void SetDue(long due)
+    {
+        var configuration = Plugin.Cfg;
+        configuration.HalloweenTreatDue = due;
+        configuration.Save();
+    }
 
     private static void Present(ImDrawListPtr drawList, TreatSpot spot, Vector2 center, float size)
     {
-        var scale = UiScale.Current;
-        var time = (float)ImGui.GetTime();
-        center.Y += MathF.Sin(time * 2.2f + (int)spot) * BobHeight * scale;
         var reach = new Vector2(size * PickReach, size * PickReach);
-        var hovered = UiInteract.Hover(center - reach, center + reach);
+        var hitMin = center - reach;
+        var hitMax = center + reach;
+        var hovered = UiInteract.HoverOverlay(new Rect(hitMin, hitMax));
+        var time = (float)ImGui.GetTime();
         var drawn = hovered ? size * HoverGrow : size;
+        var bobbed = center + new Vector2(0f, MathF.Sin(time * 2.2f + (int)spot) * BobHeight * UiScale.Current);
         var wrapper = Wrappers[(int)spot % Wrappers.Length];
-        NightScene.Glow(drawList, center, drawn * GlowReach, wrapper with { W = GlowAlpha }, GlowCells);
-        DrawCandy(drawList, center, drawn, wrapper, time + (int)spot);
+        NightScene.Glow(drawList, bobbed, drawn * GlowReach, wrapper with { W = GlowAlpha }, GlowCells);
+        DrawCandy(drawList, bobbed, drawn, wrapper, time + (int)spot);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        if (!UiInteract.Click(center - reach, center + reach, hovered))
+        if (!UiInteract.Click(hitMin, hitMax, hovered, false))
         {
             return;
         }
@@ -234,14 +307,16 @@ internal static class Treats
             configuration.HalloweenTreats = 0;
         }
 
-        configuration.HalloweenTreats |= 1 << (int)spot;
-        configuration.Save();
+        var treats = configuration.HalloweenTreats;
+        configuration.HalloweenTreats = treats | (~treats & (treats + 1));
         activeSpot = NoSpot;
-        appearsAt = Clock + RandomWait();
+        lastSpot = (int)spot;
+        configuration.HalloweenTreatDue = Now + Wait();
+        configuration.Save();
         var found = Found;
         UiFeedback.Play(found >= Total ? UiSound.HalloweenFlare : UiSound.HalloweenSparkle);
         ShellToast.Show(found >= Total
-            ? Loc.T(L.Seasonal.TreatsComplete)
+            ? Loc.T(L.Seasonal.TreatsComplete, Total)
             : Loc.T(L.Seasonal.TreatFound, found, Total));
     }
 
