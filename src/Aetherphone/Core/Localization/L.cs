@@ -10424,14 +10424,10 @@ internal static class L
         public static readonly LocString Cashier = new("casino.cashier", "Cashier");
         public static readonly LocString WalletRow = new("casino.walletRow", "Wallet");
         public static readonly LocString ChipsRow = new("casino.chipsRow", "Chips");
-        public static readonly LocString TopUp = new("casino.topUp", "Top up");
         public static readonly LocString CashOut = new("casino.cashOut", "Cash out");
         public static readonly LocString NotEnoughCoins = new("casino.notEnoughCoins", "Not enough coins");
         public static readonly LocString PurseRow = new("casino.purseRow", "Chips on the floor");
         public static readonly LocString PurseHint = new("casino.purseHint", "Your chips wait here between visits.");
-        public static readonly LocString TonightEven = new("casino.tonightEven", "Tonight: even");
-        public static readonly LocString TonightUp = new("casino.tonightUp", "Tonight: {0} up");
-        public static readonly LocString TonightDown = new("casino.tonightDown", "Tonight: {0} down");
         public static readonly LocString PausedTitle = new("casino.pausedTitle", "The floor is closed right now");
         public static readonly LocString PausedHint = new("casino.pausedHint", "Hands in progress finish, and chips can still be cashed out.");
         public static readonly LocString DrainingTitle = new("casino.drainingTitle", "Tables are closing");
@@ -10463,7 +10459,6 @@ internal static class L
         public static readonly LocString LimitReachedTitle = new("casino.limitReachedTitle", "That is the felt for tonight");
         public static readonly LocString LimitReachedBody = new("casino.limitReachedBody", "You reached your daily loss limit. Tables reopen for you at {0}.");
         public static readonly LocString LimitReachedBodySoon = new("casino.limitReachedBodySoon", "You reached your daily loss limit. Tables reopen for you when the next day starts.");
-        public static readonly LocString RoomLeft = new("casino.roomLeft", "Room left tonight: {0}");
         public static readonly LocString NetHeading = new("casino.netHeading", "Tonight");
         public static readonly LocString CabinetNoChipsTitle = new("casino.cabinet.noChipsTitle", "You have no chips");
         public static readonly LocString CabinetNoChipsHint = new("casino.cabinet.noChipsHint", "Buy chips at the cashier and play them at any game on the floor.");
@@ -10707,8 +10702,6 @@ internal static class L
         public static readonly LocString TierPit = new("casino.tierPit", "The Pit");
         public static readonly LocString TierParlour = new("casino.tierParlour", "The Parlour");
         public static readonly LocString TierSalon = new("casino.tierSalon", "The Salon");
-        public static readonly LocString OpenWalletRow = new("casino.openWalletRow", "Open the wallet");
-        public static readonly LocString OpenWalletRowHint = new("casino.openWalletRowHint", "Every way to earn Aether Coin, in one place");
         public static readonly LocString RulesHowToPlay = new("casino.rules.howToPlay", "HOW IT PLAYS");
         public static readonly LocString RulesNumbers = new("casino.rules.numbers", "THE NUMBERS");
         public static readonly LocString RulesPlay = new("casino.rules.play", "Play");
@@ -10757,9 +10750,7 @@ internal static class L
         public static readonly LocString TonightResultUp = new("casino.tonight.up", "{0} up");
         public static readonly LocString TonightResultDown = new("casino.tonight.down", "{0} down");
         public static readonly LocString TonightResultEven = new("casino.tonight.even", "Even so far");
-        public static readonly LocString TonightLimit = new("casino.tonight.limit", "Limit {0}");
         public static readonly LocString TonightNoLimit = new("casino.tonight.noLimit", "No daily limit set");
-        public static readonly LocString TonightSetLimit = new("casino.tonight.setLimit", "Set one");
         public static readonly LocString LimitLeftCaption = new("casino.limits.leftCaption", "left tonight");
         public static readonly LocString LimitCoinEquivalent = new("casino.limits.coinEquivalent", "Worth {0} coins");
         public static readonly LocString LimitStartsNow = new("casino.limits.startsNow", "Takes effect right away");
@@ -11016,49 +11007,15 @@ internal static class L
         public static readonly LocString ReasonClubInsufficient = new("casino.strip.reasonClubInsufficient", "Your Gamba Club tier does not include that bonus yet. Keep playing to climb.");
         public static readonly LocString GetChips = new("casino.strip.getChips", "Get chips");
         public static readonly LocString CoinsFieldHint = new("casino.strip.coinsFieldHint", "How many coins?");
-        public static readonly LocString CoinsShort = new("casino.strip.coinsShort", "{0} coins");
         public static readonly LocString BecomesChips = new("casino.strip.becomesChips", "Becomes {0} chips");
         public static readonly LocString GetChipsFor = new("casino.strip.getChipsFor", "Get {0} chips");
         public static readonly LocString BuyInRange = new("casino.strip.buyInRange", "Any amount from {0} to {1} coins");
-        public static readonly LocString BuyInAtLeast = new("casino.strip.buyInAtLeast", "Start with at least {0} coins");
-        public static readonly LocString BuyInAtMost = new("casino.strip.buyInAtMost", "Up to {0} more coins on this bankroll");
-        public static readonly LocString GetChipsConfirmTitle = new("casino.strip.getChipsConfirmTitle", "Change {0} coins for chips?");
-        public static readonly LocString GetChipsConfirmBody = new("casino.strip.getChipsConfirmBody", "{0} chips land in your bankroll for every game on the floor. Cash out any time to bring them home.");
-        public static readonly LocString ConvertsNow = new("casino.strip.convertsNow", "Converts now");
-        public static readonly LocString WaitsTomorrow = new("casino.strip.waitsTomorrow", "Waits for tomorrow");
         public static readonly LocString CoinsAmount = new("casino.strip.coinsAmount", "{0} coins");
-        public static readonly LocString ChipsAmount = new("casino.strip.chipsAmount", "{0} chips");
-        public static readonly LocString AllowanceLeft = new("casino.strip.allowanceLeft", "{0} of {1} coins left to convert today");
-        public static readonly LocString AllowanceHint = new("casino.strip.allowanceHint", "Cash-outs are capped each day. Chips over the cap stay in your bankroll and convert on later days. Nothing is lost.");
-        public static readonly LocString AllowanceSpent = new("casino.strip.allowanceSpent", "Today's cash-out allowance is used up. Your chips start converting again tomorrow.");
-        public static readonly LocString CashOutConfirmTitle = new("casino.strip.cashOutConfirmTitle", "Cash out {0} chips?");
-        public static readonly LocString CashOutSplitBody = new("casino.strip.cashOutSplitBody", "{0} coins land in your wallet now. {1} chips wait in your bankroll and convert tomorrow.");
-        public static readonly LocString CashOutWholeBody = new("casino.strip.cashOutWholeBody", "{0} coins land in your wallet now. You do not have to cash out to stop playing.");
         public static readonly LocString CashedOut = new("casino.strip.cashedOut", "{0} coins are in your wallet.");
-        public static readonly LocString CashedOutQueued = new("casino.strip.cashedOutQueued", "{0} coins are in your wallet. {1} chips wait for tomorrow.");
-        public static readonly LocString FreeChips = new("casino.strip.freeChips", "Free chips");
-        public static readonly LocString BonusWelcome = new("casino.strip.bonusWelcome", "Welcome bonus");
-        public static readonly LocString BonusTimed = new("casino.strip.bonusTimed", "Timed bonus");
-        public static readonly LocString BonusReload = new("casino.strip.bonusReload", "Daily reload");
         public static readonly LocString BonusStreak = new("casino.strip.bonusStreak", "Daily streak");
-        public static readonly LocString BonusLevelUp = new("casino.strip.bonusLevelUp", "Level rewards");
-        public static readonly LocString BonusBroke = new("casino.strip.bonusBroke", "Back on your feet");
-        public static readonly LocString BonusRebate = new("casino.strip.bonusRebate", "Weekly rebate");
-        public static readonly LocString BonusWelcomeHint = new("casino.strip.bonusWelcomeHint", "A one-time gift to start you off");
-        public static readonly LocString BonusTimedHint = new("casino.strip.bonusTimedHint", "Every 3 hours, bigger with your club tier");
-        public static readonly LocString BonusReloadHint = new("casino.strip.bonusReloadHint", "A second timed bonus each day");
-        public static readonly LocString BonusStreakHint = new("casino.strip.bonusStreakHint", "Day {0} of 7. Miss a day and it starts over");
-        public static readonly LocString BonusLevelUpHint = new("casino.strip.bonusLevelUpHint", "Paid for every level you reach");
-        public static readonly LocString BonusBrokeHint = new("casino.strip.bonusBrokeHint", "Under 100 chips? A top-up every 30 minutes");
-        public static readonly LocString BonusRebateHint = new("casino.strip.bonusRebateHint", "Saturdays, part of the week's losses back");
         public static readonly LocString BonusClaim = new("casino.strip.bonusClaim", "Claim {0}");
         public static readonly LocString BonusReadyIn = new("casino.strip.bonusReadyIn", "In {0}");
-        public static readonly LocString BonusNeedsTier = new("casino.strip.bonusNeedsTier", "{0} and up");
-        public static readonly LocString BonusNeedsBroke = new("casino.strip.bonusNeedsBroke", "Under 100 chips");
-        public static readonly LocString BonusNeedsLevel = new("casino.strip.bonusNeedsLevel", "Next level");
-        public static readonly LocString BonusLocked = new("casino.strip.bonusLocked", "Not yet");
         public static readonly LocString BonusLanded = new("casino.strip.bonusLanded", "{0} chips landed in your bankroll.");
-        public static readonly LocString ClubHeading = new("casino.strip.clubHeading", "Gamba Club");
         public static readonly LocString ClubTierTitle = new("casino.strip.clubTierTitle", "{0} member");
         public static readonly LocString ClubBronze = new("casino.strip.clubBronze", "Bronze");
         public static readonly LocString ClubSilver = new("casino.strip.clubSilver", "Silver");
@@ -11071,7 +11028,6 @@ internal static class L
         public static readonly LocString ClubPerksNoRebate = new("casino.strip.clubPerksNoRebate", "Bonuses x{0}, weekly rebate from Silver");
         public static readonly LocString ClubTop = new("casino.strip.clubTop", "Top tier. Every perk is yours.");
         public static readonly LocString ClubPointsTo = new("casino.strip.clubPointsTo", "{1} points to {0}");
-        public static readonly LocString MaxBetLine = new("casino.strip.maxBetLine", "Your max bet right now: {0}");
         public static readonly LocString SeatSit = new("casino.strip.seatSit", "Sit");
         public static readonly LocString TabFloor = new("casino.strip.tabFloor", "Floor");
         public static readonly LocString YourChips = new("casino.strip.yourChips", "Your chips");
@@ -11131,6 +11087,14 @@ internal static class L
         public static readonly LocString IntroNext = new("casino.strip.introNext", "Next");
         public static readonly LocString IntroSkip = new("casino.strip.introSkip", "Skip");
         public static readonly LocString IntroStart = new("casino.strip.introStart", "Start playing");
+    }
+
+    internal static class Chips
+    {
+        public static readonly LocString BuyHeading = new("casino.chips.buyHeading", "Buy chips");
+        public static readonly LocString YouGet = new("casino.chips.youGet", "You get");
+        public static readonly LocString RoundOpenTitle = new("casino.chips.roundOpenTitle", "A round is still in play");
+        public static readonly LocString RoundOpenBody = new("casino.chips.roundOpenBody", "Its chips settle first. If it is still running, the cashier asks you to wait, so try again once it ends.");
     }
 
     internal static class Club

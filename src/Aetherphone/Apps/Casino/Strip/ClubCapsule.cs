@@ -28,7 +28,7 @@ internal sealed class ClubCapsule
         bottom = max.Y;
         var hovered = CasinoArt.PressCard(ImGui.GetID("casino.club.capsule"), origin, max, out var min, out var shown);
         var tier = CasinoClubTiers.Clamp(club.Tier);
-        var tint = CashierClubCard.TierTint(tier);
+        var tint = ClubTierArt.TierTint(tier);
         var radius = height * 0.5f;
         Squircle.Fill(drawList, min, shown, radius, ImGui.GetColorU32(Palette.Mix(ui.Palette.BackdropTop, tint, 0.16f)));
         Squircle.Stroke(drawList, min, shown, radius, ImGui.GetColorU32(tint with { W = 0.55f }), MathF.Max(1f, scale));
@@ -40,7 +40,7 @@ internal sealed class ClubCapsule
         CasinoArt.Chevron(drawList, chevron, ui.BodyInk);
         var textLeft = tileCenter.X + tile * 0.5f + CoinArt.TextGap * scale;
         var textWidth = MathF.Max(1f, chevron.X - CoinArt.ValueGap * scale - textLeft);
-        var title = texts.Named(L.Strip.ClubTierTitle, Loc.T(CashierClubCard.TierName(tier)));
+        var title = texts.Named(L.Strip.ClubTierTitle, Loc.T(ClubTierArt.TierName(tier)));
         var headline = Typography.LineHeight(TextStyles.Headline);
         var footnote = Typography.LineHeight(TextStyles.Footnote);
         var top = tileCenter.Y - (headline + BarHeight * scale + Metrics.Space.Xs * scale + footnote) * 0.5f;
@@ -52,7 +52,7 @@ internal sealed class ClubCapsule
         top += BarHeight * scale + Metrics.Space.Xs * scale;
         var line = tier >= CasinoClubTiers.Obsidian || club.NextTierPoints <= club.Points
             ? Loc.T(L.Strip.ClubTop)
-            : texts.NamedNumber(L.Strip.ClubPointsTo, Loc.T(CashierClubCard.TierName(tier + 1)),
+            : texts.NamedNumber(L.Strip.ClubPointsTo, Loc.T(ClubTierArt.TierName(tier + 1)),
                 Math.Max(0, club.NextTierPoints - club.Points));
         Typography.Draw(drawList, new Vector2(textLeft, top), Typography.FitText(line, textWidth, TextStyles.Footnote),
             ui.BodyInk, TextStyles.Footnote);

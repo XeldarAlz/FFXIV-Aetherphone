@@ -49,8 +49,6 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
     private readonly ConductGateService conduct;
     private readonly CashierDrawer cashier;
     private readonly CashierBonusShelf bonusShelf;
-    private readonly CashierCashOut cashierCashOut;
-    private readonly CashierClubCard clubCard = new();
     private readonly Machines.MachineCabinet machines;
     private readonly Cabinets.ScratchCabinet scratch;
     private readonly Cabinets.BarkeepCabinet barkeep;
@@ -130,8 +128,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         this.confirm = confirm;
         this.conduct = conduct;
         bonusShelf = new CashierBonusShelf(casino);
-        cashierCashOut = new CashierCashOut(casino, confirm);
-        cashier = new CashierDrawer(casino, coins, confirm, bonusShelf, cashierCashOut);
+        cashier = new CashierDrawer(casino, coins, confirm);
         preferences = new Core.Casino.CasinoPreferences(configuration);
         stage.Preferences = preferences;
         machines = new Machines.MachineCabinet(casino, casinoPlay, confirm, OpenCashier, preferences);

@@ -16,21 +16,15 @@ namespace Aetherphone.Apps.Casino;
 
 internal sealed partial class CasinoApp
 {
-    private const float TonightBarHeight = 8f;
-    private const float TonightPad = 16f;
-    private const float TonightRowGap = 10f;
-    private const float TonightTrackAlpha = 0.10f;
     private const float ResumeHeight = 76f;
     private const float ResumeTile = 46f;
     private const float FloorSectionGap = 22f;
 
-    private Spring tonightFill;
     private bool lobbyHistoryFailed;
 
     private void ResetLobby()
     {
         stripHero.Snap(FloorBalance());
-        tonightFill.SnapTo(0f);
         lobbyHistoryFailed = false;
     }
 
@@ -180,7 +174,7 @@ internal sealed partial class CasinoApp
     private void ConsumeFloorNotes()
     {
         var refusal = bonusShelf.TakeRefusal();
-        if (refusal.Length > 0 && !cashier.IsOpen && routes.Tab != CasinoTab.Cashier)
+        if (refusal.Length > 0)
         {
             ShellToast.Show(refusal);
         }
@@ -208,82 +202,6 @@ internal sealed partial class CasinoApp
 
         lobbyHistoryFailed = true;
         historyLoadFailed = true;
-    }
-
-    private float DrawTonight(ImDrawListPtr drawList, Vector2 origin, float width, in CasinoTonight tonight,
-        float scale)
-    {
-        var pad = TonightPad * scale;
-        var headline = Typography.LineHeight(TextStyles.Headline);
-        var footnote = Typography.LineHeight(TextStyles.Footnote);
-        var barHeight = TonightBarHeight * scale;
-        var rowGap = TonightRowGap * scale;
-        var barBlock = tonight.HasLimit ? barHeight + rowGap : 0f;
-        var height = pad * 2f + headline + rowGap + barBlock + footnote;
-        var min = origin;
-        var max = new Vector2(origin.X + width, origin.Y + height);
-        UiAnchors.Report("casino.tonight", new Rect(min, max));
-        var hovered = CasinoArt.PressCard(ImGui.GetID("casino.tonight"), min, max, out var cardMin, out var cardMax);
-        ui.Card(drawList, cardMin, cardMax, Metrics.Radius.Grouped * scale);
-
-        var left = min.X + pad;
-        var right = max.X - pad;
-        var result = TonightResult(tonight.NetLoss, out var resultInk);
-        var resultWidth = DrawTonightResult(drawList, new Vector2(right, min.Y + pad), result, resultInk,
-            tonight.NetLoss != 0, TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(left, min.Y + pad),
-            Typography.FitText(Loc.T(L.Casino.NetHeading), MathF.Max(1f, right - left - resultWidth - pad),
-                TextStyles.Headline), ui.TitleInk, TextStyles.Headline);
-
-        var footerTop = min.Y + pad + headline + rowGap;
-        if (tonight.HasLimit)
-        {
-            var shown = tonightFill.Step(tonight.Fraction, Motion.PageSettle,
-                MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
-            CoinArt.Bar(drawList, new Vector2(left, footerTop), new Vector2(right, footerTop + barHeight), shown,
-                Palette.WithAlpha(ui.TitleInk, TonightTrackAlpha), ToneInk(tonight.Tone));
-            footerTop += barBlock;
-        }
-
-        var chevronCenter = new Vector2(right - 4f * scale, footerTop + footnote * 0.5f);
-        CasinoArt.Chevron(drawList, chevronCenter, ui.MutedInk);
-        var trailing = tonight.HasLimit
-            ? texts.Number(L.Casino.TonightLimit, tonight.Limit)
-            : Loc.T(L.Casino.TonightSetLimit);
-        var trailingWidth = Typography.Measure(trailing, TextStyles.Footnote).X;
-        var trailingRight = chevronCenter.X - CoinArt.ValueGap * scale;
-        Typography.Draw(drawList, new Vector2(trailingRight - trailingWidth, footerTop), trailing,
-            tonight.HasLimit ? ui.BodyInk : ui.Accent, TextStyles.Footnote);
-        var leading = tonight.HasLimit
-            ? texts.Number(L.Casino.RoomLeft, tonight.Headroom)
-            : Loc.T(L.Casino.TonightNoLimit);
-        var leadingInk = tonight.HasLimit && tonight.Tone != TonightTone.Calm ? ToneInk(tonight.Tone) : ui.BodyInk;
-        Typography.Draw(drawList, new Vector2(left, footerTop),
-            Typography.FitText(leading, MathF.Max(1f, trailingRight - trailingWidth - pad - left),
-                TextStyles.Footnote), leadingInk, TextStyles.Footnote);
-
-        if (UiInteract.Click(min, max, hovered))
-        {
-            OpenLimits();
-        }
-
-        return max.Y;
-    }
-
-    private static float DrawTonightResult(ImDrawListPtr drawList, Vector2 topRight, string text, Vector4 ink,
-        bool withGlyph, in TextStyle style)
-    {
-        if (!withGlyph)
-        {
-            var width = Typography.Measure(text, style).X;
-            Typography.Draw(drawList, new Vector2(topRight.X - width, topRight.Y), text, ink, style);
-            return width;
-        }
-
-        var size = CurrencyGlyph.MeasureAmount(text, style);
-        CurrencyGlyph.DrawAmount(drawList, new Vector2(topRight.X - size.X, topRight.Y), text, CurrencyKind.Chips,
-            ink, style);
-        return size.X;
     }
 
     private string TonightResult(long netLoss, out Vector4 ink)

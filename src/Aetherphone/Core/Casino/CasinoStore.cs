@@ -324,6 +324,23 @@ internal sealed class CasinoStore : IDisposable
         }, () => toppingUp = false);
     }
 
+    public void BuyChips(long coins)
+    {
+        if (coins < ChipsAmounts.MinimumCoins)
+        {
+            return;
+        }
+
+        var chips = coins * Rate;
+        if (state?.Sitting is null)
+        {
+            OpenSitting(chips);
+            return;
+        }
+
+        TopUp(chips);
+    }
+
     public void CloseSitting()
     {
         var sittingId = state?.Sitting?.Id ?? string.Empty;
@@ -434,36 +451,7 @@ internal sealed class CasinoStore : IDisposable
 
     internal static CasinoStateDto CashOutAbsorbedInto(CasinoStateDto current, CasinoSittingResultDto result)
     {
-        if (!result.Granted)
-        {
-            return current;
-        }
-
-        var next = current;
-        if (result.QueuedChips > 0 && result.Sitting is { Id.Length: > 0 } kept)
-        {
-            next = next with { Sitting = kept };
-        }
-        else if (result.QueuedChips == 0)
-        {
-            next = next with { Sitting = null };
-        }
-
-        var cashier = next.Cashier;
-        if (cashier is null || result.ConvertedCoins <= 0)
-        {
-            return cashier is null ? next : next with { Cashier = cashier with { QueuedChips = result.QueuedChips } };
-        }
-
-        return next with
-        {
-            Cashier = cashier with
-            {
-                CashOutCoinsToday = cashier.CashOutCoinsToday + result.ConvertedCoins,
-                AllowanceCoins = Math.Max(0, cashier.AllowanceCoins - result.ConvertedCoins),
-                QueuedChips = result.QueuedChips,
-            },
-        };
+        return result.Granted ? current with { Sitting = null } : current;
     }
 
     internal static CasinoStateDto MergeLimits(CasinoStateDto current, CasinoLimitsDto limits)
