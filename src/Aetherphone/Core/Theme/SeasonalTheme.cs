@@ -6,6 +6,7 @@ internal static class SeasonalTheme
     private const int HalloweenStartDay = 17;
     private const int HalloweenEndMonth = 11;
     private const int HalloweenEndDay = 1;
+    private const int HalloweenNightDay = 31;
 
     private static long checkedMinute = -1;
     private static bool halloweenDate;
@@ -15,6 +16,9 @@ internal static class SeasonalTheme
     public static bool IsHalloweenDate(DateTime date) =>
         (date.Month == HalloweenStartMonth && date.Day >= HalloweenStartDay) ||
         (date.Month == HalloweenEndMonth && date.Day <= HalloweenEndDay);
+
+    public static bool IsHalloweenNight(DateTime date) =>
+        Halloween && date.Month == HalloweenStartMonth && date.Day == HalloweenNightDay;
 
     public static void Update(Configuration configuration, DateTime now)
     {
