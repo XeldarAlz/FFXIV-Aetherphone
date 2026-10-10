@@ -115,6 +115,7 @@ internal sealed class FontService : IDisposable
         SeedLearnedIcons();
         ComposeSharedRanges();
         ComposeIconRanges();
+        atlas.BuildStepChange += MeasureCrests;
         Build();
     }
 
@@ -249,6 +250,14 @@ internal sealed class FontService : IDisposable
         }
 
         return new FontToken(dalamudIconHandle.Push());
+    }
+
+    private static void MeasureCrests(IFontAtlasBuildToolkit toolkit)
+    {
+        if (toolkit.BuildStep == FontAtlasBuildStep.PostBuild)
+        {
+            GlyphCrests.Measure(toolkit);
+        }
     }
 
     private static unsafe bool HasGlyph(ImFontPtr font, char codepoint)
@@ -722,6 +731,7 @@ internal sealed class FontService : IDisposable
 
     public void Dispose()
     {
+        atlas.BuildStepChange -= MeasureCrests;
         DisposeHandles(textHandles, sharedHandles, iconHandles);
         displayHandle?.Dispose();
     }

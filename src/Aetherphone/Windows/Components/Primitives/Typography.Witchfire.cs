@@ -1,3 +1,4 @@
+using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
@@ -50,6 +51,8 @@ internal static partial class Typography
     private const float WitchfireFlameSwayRate = 1.3f;
     private const float WitchfireFlameSwaySpread = 3.7f;
     private const float WitchfireFlameLift = 0.02f;
+    private const float WitchfireTwinWidth = 0.65f;
+    private const float WitchfireTwinHeight = 0.8f;
     private const float WitchfireGustLean = 0.5f;
     private const float WitchfireGustFlameDip = 0.45f;
     private const int WitchfireFlameSegments = 7;
@@ -72,7 +75,7 @@ internal static partial class Typography
     private const float WitchfireDaySmokeAlpha = 0.06f;
 
     private readonly record struct WitchfireGlyph(float Center, float Top, float Bottom, float Width, float Heat,
-        float Gust);
+        float Gust, Vector2 Crest, Vector2 Twin, float CrestWidth, float TwinWidth);
 
     private readonly record struct WitchfireStop(float At, Vector4 Color);
 
@@ -168,10 +171,12 @@ internal static partial class Typography
             var first = quad * 4;
             var min = quads[first].Pos;
             var max = min;
+            var uvMin = quads[first].Uv;
             for (var corner = 1; corner < 4; corner++)
             {
                 min = Vector2.Min(min, quads[first + corner].Pos);
                 max = Vector2.Max(max, quads[first + corner].Pos);
+                uvMin = Vector2.Min(uvMin, quads[first + corner].Uv);
             }
 
             var center = (min.X + max.X) * 0.5f;
@@ -189,7 +194,7 @@ internal static partial class Typography
                         && max.X - min.X >= frame.FontSize * WitchfireInkMinimum;
             if (inked && count < glyphs.Length)
             {
-                glyphs[count] = new WitchfireGlyph(center, min.Y, max.Y, max.X - min.X, heat, local * gust);
+                glyphs[count] = Lit(min, max, uvMin, heat, local * gust);
                 count++;
             }
         }
@@ -219,6 +224,22 @@ internal static partial class Typography
         }
 
         return count;
+    }
+
+    private static WitchfireGlyph Lit(Vector2 min, Vector2 max, Vector2 uvMin, float heat, float gust)
+    {
+        var size = max - min;
+        var center = (min.X + max.X) * 0.5f;
+        if (!GlyphCrests.TryGet(uvMin, out var crest))
+        {
+            var top = new Vector2(center, min.Y);
+            return new WitchfireGlyph(center, min.Y, max.Y, size.X, heat, gust, top, top, size.X, 0f);
+        }
+
+        var first = new Vector2(min.X + size.X * crest.First, min.Y + size.Y * crest.FirstTop);
+        var second = crest.Twin ? new Vector2(min.X + size.X * crest.Second, min.Y + size.Y * crest.SecondTop) : first;
+        return new WitchfireGlyph(center, min.Y, max.Y, size.X, heat, gust, first, second,
+            size.X * crest.FirstWidth, crest.Twin ? size.X * crest.SecondWidth : 0f);
     }
 
     private static void DrawWitchfireGlow(in EffectFrame frame, in WitchfirePalette palette,
@@ -256,8 +277,8 @@ internal static partial class Typography
             var local = (float)(travel - cycle);
             var lit = glyphs[Math.Min((int)(Hash01(slot, cycle, 41) * glyphs.Length), glyphs.Length - 1)];
             var center = new Vector2(
-                lit.Center + MathF.Sin(local * 3f + slot) * frame.FontSize * 0.15f + gust * frame.FontSize * 0.3f * local,
-                lit.Top - local * frame.FontSize * 0.9f);
+                lit.Crest.X + MathF.Sin(local * 3f + slot) * frame.FontSize * 0.15f + gust * frame.FontSize * 0.3f * local,
+                lit.Crest.Y - local * frame.FontSize * 0.9f);
             var radius = frame.FontSize * (0.25f + 0.6f * local);
             NightScene.Glow(frame.DrawList, center, radius, Faded(palette.Smoke, strength * MathF.Sin(MathF.PI * local)),
                 WitchfireGlowCells);
@@ -281,26 +302,41 @@ internal static partial class Typography
             var lean = sway + WitchfireGustLean * lit.Gust;
             var width = MathF.Max(frame.FontSize * WitchfireFlameMinWidth, lit.Width * WitchfireFlameWidth);
             var alpha = flameAlpha * (0.6f + 0.4f * lit.Heat);
-            var baseline = new Vector2(lit.Center, lit.Top + frame.FontSize * WitchfireFlameLift);
+            if (lit.TwinWidth <= 0f)
+            {
+                DrawWitchfireFlame(frame, palette, stops, lit.Crest, width, height, lean, alpha);
+                continue;
+            }
 
-            stops[0] = new WitchfireStop(0f, Faded(palette.Hot, 0f));
-            stops[1] = new WitchfireStop(0.2f, Faded(palette.Hot, alpha * 0.22f));
-            stops[2] = new WitchfireStop(0.65f, Faded(palette.Mid, alpha * 0.12f));
-            stops[3] = new WitchfireStop(1f, Faded(palette.Shade, 0f));
-            FillFlame(frame.DrawList, baseline + new Vector2(0f, width * 0.2f), width * 1.8f, height * 1.25f,
-                lean * 1.1f, stops[..4]);
-
-            stops[0] = new WitchfireStop(0f, Faded(palette.Hot, 0f));
-            stops[1] = new WitchfireStop(0.18f, Faded(palette.Hot, alpha));
-            stops[2] = new WitchfireStop(0.45f, Faded(palette.Mid, alpha * 0.7f));
-            stops[3] = new WitchfireStop(0.8f, Faded(palette.Shade, alpha * 0.25f));
-            stops[4] = new WitchfireStop(1f, Faded(palette.Shade, 0f));
-            FillFlame(frame.DrawList, baseline, width, height, lean, stops);
-
-            stops[0] = new WitchfireStop(0f, Faded(palette.Core, alpha * 0.85f));
-            stops[1] = new WitchfireStop(1f, Faded(palette.Hot, 0f));
-            FillFlame(frame.DrawList, baseline, width * 0.45f, height * 0.55f, lean * 0.8f, stops[..2]);
+            var twinFlicker = FlickerNoise(seconds * 1.6, glyph + 211);
+            var twinWidth = width * WitchfireTwinWidth;
+            var twinHeight = height * WitchfireTwinHeight * (0.8f + 0.4f * twinFlicker);
+            DrawWitchfireFlame(frame, palette, stops, lit.Crest, twinWidth, height * WitchfireTwinHeight, lean, alpha);
+            DrawWitchfireFlame(frame, palette, stops, lit.Twin, twinWidth, twinHeight, lean * 0.9f, alpha);
         }
+    }
+
+    private static void DrawWitchfireFlame(in EffectFrame frame, in WitchfirePalette palette,
+        Span<WitchfireStop> stops, Vector2 crest, float width, float height, float lean, float alpha)
+    {
+        var baseline = new Vector2(crest.X, crest.Y + frame.FontSize * WitchfireFlameLift);
+        stops[0] = new WitchfireStop(0f, Faded(palette.Hot, 0f));
+        stops[1] = new WitchfireStop(0.2f, Faded(palette.Hot, alpha * 0.22f));
+        stops[2] = new WitchfireStop(0.65f, Faded(palette.Mid, alpha * 0.12f));
+        stops[3] = new WitchfireStop(1f, Faded(palette.Shade, 0f));
+        FillFlame(frame.DrawList, baseline + new Vector2(0f, width * 0.2f), width * 1.8f, height * 1.25f,
+            lean * 1.1f, stops[..4]);
+
+        stops[0] = new WitchfireStop(0f, Faded(palette.Hot, 0f));
+        stops[1] = new WitchfireStop(0.18f, Faded(palette.Hot, alpha));
+        stops[2] = new WitchfireStop(0.45f, Faded(palette.Mid, alpha * 0.7f));
+        stops[3] = new WitchfireStop(0.8f, Faded(palette.Shade, alpha * 0.25f));
+        stops[4] = new WitchfireStop(1f, Faded(palette.Shade, 0f));
+        FillFlame(frame.DrawList, baseline, width, height, lean, stops);
+
+        stops[0] = new WitchfireStop(0f, Faded(palette.Core, alpha * 0.85f));
+        stops[1] = new WitchfireStop(1f, Faded(palette.Hot, 0f));
+        FillFlame(frame.DrawList, baseline, width * 0.45f, height * 0.55f, lean * 0.8f, stops[..2]);
     }
 
     private static void FillFlame(ImDrawListPtr drawList, Vector2 baseline, float width, float height, float lean,
@@ -391,10 +427,11 @@ internal static partial class Typography
 
             var local = (float)(travel - cycle);
             var lit = glyphs[Math.Min((int)(Hash01(slot, cycle, 3) * glyphs.Length), glyphs.Length - 1)];
-            var origin = lit.Center + (Hash01(slot, cycle, 9) - 0.5f) * lit.Width * 0.6f;
+            var crest = lit.TwinWidth > 0f && Hash01(slot, cycle, 13) >= 0.5f ? lit.Twin : lit.Crest;
+            var origin = crest.X + (Hash01(slot, cycle, 9) - 0.5f) * MathF.Max(lit.CrestWidth, size * 0.2f);
             var drift = (Hash01(slot, cycle, 5) - 0.5f) * size * WitchfireEmberSpread;
-            var head = EmberAt(origin, lit.Top, local, slot, drift, gust, size);
-            var tail = EmberAt(origin, lit.Top, MathF.Max(0f, local - WitchfireEmberTrail), slot, drift, gust, size);
+            var head = EmberAt(origin, crest.Y, local, slot, drift, gust, size);
+            var tail = EmberAt(origin, crest.Y, MathF.Max(0f, local - WitchfireEmberTrail), slot, drift, gust, size);
             Vector4 color;
             if (palette.Daylight)
             {
