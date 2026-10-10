@@ -6,7 +6,7 @@ namespace Aetherphone.Windows.Components;
 internal static class NightWordmark
 {
     private const float HeightRatio = 1.3f;
-    private const int LatinLimit = 0x024F;
+    private const int LatinLimit = 0x017E;
     private const int RunCacheLimit = 512;
 
     private readonly record struct Run(string Text, bool Gothic);

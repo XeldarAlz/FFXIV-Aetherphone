@@ -1,5 +1,6 @@
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Shell;
+using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.GameFonts;
@@ -60,7 +61,7 @@ internal sealed class FontService : IDisposable
     private const string TablerIconFile = "TablerIcons.ttf";
     private const string DisplayFontFile = "PirataOne-Regular.ttf";
     private const float DisplayMultiplier = 1.90f;
-    private static readonly ushort[] DisplayRanges = { 0x0020, 0x024F, 0x0000 };
+    private static readonly ushort[] DisplayRanges = { 0x0020, 0x017E, 0x0000 };
     private const long LearnRebuildDebounceMs = 600;
     private readonly Configuration configuration;
     private readonly LoadingScreen loading;
@@ -75,7 +76,7 @@ internal sealed class FontService : IDisposable
     private readonly GlyphCoverage iconCoverage = new();
     private readonly ImFontPtr[,] textFonts = new ImFontPtr[WeightFiles.Length, SizeMultipliers.Length];
     private readonly IFontHandle dalamudIconHandle;
-    private readonly IFontHandle displayHandle;
+    private IFontHandle? displayHandle;
     private ushort[] nativeRanges;
     private ushort[] sharedRanges;
     private ushort[] iconRanges;
@@ -115,14 +116,13 @@ internal sealed class FontService : IDisposable
         ComposeSharedRanges();
         ComposeIconRanges();
         Build();
-        displayHandle = BuildDisplayHandle();
     }
 
     public float Zoom => zoom;
 
-    public bool DisplayReady => displayHandle.Available;
+    public bool DisplayReady => displayHandle is { Available: true };
 
-    public FontToken PushDisplay() => new(displayHandle.Push());
+    public FontToken PushDisplay() => new(displayHandle is null ? textHandles[0, 0].Push() : displayHandle.Push());
 
     public int Generation => Volatile.Read(ref generation);
 
@@ -401,6 +401,7 @@ internal sealed class FontService : IDisposable
             textHandles = text;
             sharedHandles = shared;
             iconHandles = icons;
+            displayHandle = SeasonalAtBoot() ? BuildDisplayHandle() : null;
         }
     }
 
@@ -428,6 +429,9 @@ internal sealed class FontService : IDisposable
             }
         }));
     }
+
+    private bool SeasonalAtBoot() => configuration.SeasonalDecorations
+        && (SeasonalTheme.IsHalloweenDate(DateTime.Now) || (AepConstants.IsPrerelease && configuration.PreviewHalloween));
 
     private IFontHandle BuildDisplayHandle()
     {
@@ -719,7 +723,7 @@ internal sealed class FontService : IDisposable
     public void Dispose()
     {
         DisposeHandles(textHandles, sharedHandles, iconHandles);
-        displayHandle.Dispose();
+        displayHandle?.Dispose();
     }
 
     private static void DisposeHandles(IFontHandle[,] text, IFontHandle[] shared, IFontHandle[] icons)
