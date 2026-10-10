@@ -410,7 +410,6 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         screenRect = screen;
         ui.Backdrop(screen);
         var appArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
-        DrawNight(screen, appArea.Min.Y);
         ConsumeSharedPhoto();
         AdvancePendingPhotoView();
         stories.Advance();
@@ -426,6 +425,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             return;
         }
 
+        DrawNight(screen, appArea.Min.Y);
         using (InputShield.Engage(avatarLightbox.Expanded))
         using (intro.FadeContent())
         {
@@ -453,8 +453,12 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
     private void DrawView(AethergramRoute route, Rect area, int depth)
     {
-        ui.Body(area);
-        DrawNight(screenRect, area.Min.Y);
+        if (router.IsTransitioning)
+        {
+            ui.Body(area);
+            DrawNight(screenRect, area.Min.Y);
+        }
+
         switch (route.Screen)
         {
             case AethergramScreen.Compose:

@@ -401,7 +401,6 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var screen = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
         screenRect = screen;
         ui.Backdrop(screen);
-        DrawNight(screen, context.Content.Min.Y);
         ConsumeSharedPhoto();
         if (photoViewer.Active)
         {
@@ -409,6 +408,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             return;
         }
 
+        DrawNight(screen, context.Content.Min.Y);
         var appArea = new Rect(new Vector2(screen.Min.X, context.Content.Min.Y),
             new Vector2(screen.Max.X, context.Content.Max.Y));
         using (InputShield.Engage(avatarLightbox.Expanded))
@@ -432,8 +432,12 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
     private void DrawView(ChirperRoute route, Rect area, int depth)
     {
-        ui.Body(area);
-        DrawNight(screenRect, area.Min.Y);
+        if (router.IsTransitioning)
+        {
+            ui.Body(area);
+            DrawNight(screenRect, area.Min.Y);
+        }
+
         switch (route.Screen)
         {
             case ChirperScreen.Compose:
