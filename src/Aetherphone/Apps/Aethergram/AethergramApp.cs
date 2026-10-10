@@ -390,6 +390,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
     public void Draw(in PhoneContext context)
     {
+        using var gothicNames = UserName.Gothic(SeasonalTheme.Halloween);
         dmStore.NoteInboxWatched();
         theme = context.Theme;
         navigation = context.Navigation;

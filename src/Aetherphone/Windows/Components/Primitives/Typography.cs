@@ -343,72 +343,82 @@ internal static class Typography
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
             Plugin.Fonts.NoticeText(text);
-            var font = ImGui.GetFont();
-            var fontSize = ImGui.GetFontSize();
-            var size = ImGui.CalcTextSize(text);
-            if (effect.Kind == NameEffectKind.Breath || effect.Kind == NameEffectKind.Heartbeat)
-            {
-                var beat = effect.Kind == NameEffectKind.Heartbeat ? Thump(effect.Phase) : Wave(effect.Phase);
-                var lit = Vector4.Lerp(color, effect.Crest, beat);
-                drawList.AddText(font, fontSize, position, ImGui.GetColorU32(lit), text);
-                return;
-            }
+            DrawEffect(drawList, ImGui.GetFont(), ImGui.GetFontSize(), position, text, ImGui.CalcTextSize(text), color,
+                effect);
+        }
+    }
 
-            if (effect.Kind == NameEffectKind.Pulse)
-            {
-                var lit = effect.Ramp.Count > 0
-                    ? effect.Ramp.Sample(effect.Phase)
-                    : Vector4.Lerp(color, effect.Crest, Wave(effect.Phase));
-                drawList.AddText(font, fontSize, position, ImGui.GetColorU32(lit), text);
-                return;
-            }
-
-            if (effect.Kind == NameEffectKind.Glow)
-            {
-                DrawRim(drawList, font, fontSize, position, text, effect, GlowRimAlpha);
-                drawList.AddText(font, fontSize, position, ImGui.GetColorU32(color), text);
-                return;
-            }
-
-            if (effect.Kind == NameEffectKind.Eclipse)
-            {
-                DrawHalo(drawList, font, fontSize, position, text, effect);
-                drawList.AddText(font, fontSize, position, ImGui.GetColorU32(color), text);
-                return;
-            }
-
-            if (RunsOnGradient(effect.Kind))
-            {
-                DrawGradient(drawList, font, fontSize, position, text, size.X, color, effect);
-                return;
-            }
-
+    public static void DrawEffect(ImDrawListPtr drawList, ImFontPtr font, float fontSize, Vector2 position, string text,
+        Vector2 size, Vector4 color, in TextEffect effect)
+    {
+        if (effect.Kind == NameEffectKind.None)
+        {
             drawList.AddText(font, fontSize, position, ImGui.GetColorU32(color), text);
-            var top = position.Y - size.Y * 0.5f;
-            var bottom = position.Y + size.Y * 1.5f;
-            if (effect.Kind == NameEffectKind.Frost)
-            {
-                DrawRim(drawList, font, fontSize, position, text, effect, RimAlpha);
-                DrawCrest(drawList, font, fontSize, position, text, size.X, effect, top, bottom);
-                return;
-            }
+            return;
+        }
 
-            if (effect.Kind == NameEffectKind.Sweep || effect.Kind == NameEffectKind.Glint)
-            {
-                DrawCrest(drawList, font, fontSize, position, text, size.X, effect, top, bottom);
-                return;
-            }
+        if (effect.Kind == NameEffectKind.Breath || effect.Kind == NameEffectKind.Heartbeat)
+        {
+            var beat = effect.Kind == NameEffectKind.Heartbeat ? Thump(effect.Phase) : Wave(effect.Phase);
+            var lit = Vector4.Lerp(color, effect.Crest, beat);
+            drawList.AddText(font, fontSize, position, ImGui.GetColorU32(lit), text);
+            return;
+        }
 
-            if (effect.Kind == NameEffectKind.Glitch)
-            {
-                DrawTear(drawList, font, fontSize, position, text, size, effect);
-                return;
-            }
+        if (effect.Kind == NameEffectKind.Pulse)
+        {
+            var lit = effect.Ramp.Count > 0
+                ? effect.Ramp.Sample(effect.Phase)
+                : Vector4.Lerp(color, effect.Crest, Wave(effect.Phase));
+            drawList.AddText(font, fontSize, position, ImGui.GetColorU32(lit), text);
+            return;
+        }
 
-            if (effect.Kind == NameEffectKind.Starfall)
-            {
-                DrawSparks(drawList, position, size, fontSize, effect);
-            }
+        if (effect.Kind == NameEffectKind.Glow)
+        {
+            DrawRim(drawList, font, fontSize, position, text, effect, GlowRimAlpha);
+            drawList.AddText(font, fontSize, position, ImGui.GetColorU32(color), text);
+            return;
+        }
+
+        if (effect.Kind == NameEffectKind.Eclipse)
+        {
+            DrawHalo(drawList, font, fontSize, position, text, effect);
+            drawList.AddText(font, fontSize, position, ImGui.GetColorU32(color), text);
+            return;
+        }
+
+        if (RunsOnGradient(effect.Kind))
+        {
+            DrawGradient(drawList, font, fontSize, position, text, size.X, color, effect);
+            return;
+        }
+
+        drawList.AddText(font, fontSize, position, ImGui.GetColorU32(color), text);
+        var top = position.Y - size.Y * 0.5f;
+        var bottom = position.Y + size.Y * 1.5f;
+        if (effect.Kind == NameEffectKind.Frost)
+        {
+            DrawRim(drawList, font, fontSize, position, text, effect, RimAlpha);
+            DrawCrest(drawList, font, fontSize, position, text, size.X, effect, top, bottom);
+            return;
+        }
+
+        if (effect.Kind == NameEffectKind.Sweep || effect.Kind == NameEffectKind.Glint)
+        {
+            DrawCrest(drawList, font, fontSize, position, text, size.X, effect, top, bottom);
+            return;
+        }
+
+        if (effect.Kind == NameEffectKind.Glitch)
+        {
+            DrawTear(drawList, font, fontSize, position, text, size, effect);
+            return;
+        }
+
+        if (effect.Kind == NameEffectKind.Starfall)
+        {
+            DrawSparks(drawList, position, size, fontSize, effect);
         }
     }
 

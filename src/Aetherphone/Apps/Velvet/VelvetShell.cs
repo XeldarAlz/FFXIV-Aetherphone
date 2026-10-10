@@ -281,6 +281,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
 
     public void Draw(in PhoneContext context)
     {
+        using var gothicNames = UserName.Gothic(SeasonalTheme.Halloween);
         store.NoteInboxWatched();
         theme = context.Theme;
         navigation = context.Navigation;

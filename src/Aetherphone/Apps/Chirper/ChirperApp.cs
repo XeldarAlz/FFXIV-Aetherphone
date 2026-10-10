@@ -381,6 +381,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
     public void Draw(in PhoneContext context)
     {
+        using var gothicNames = UserName.Gothic(SeasonalTheme.Halloween);
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;

@@ -14,6 +14,16 @@ internal static class UserName
 
     private static BadgeCatalogStore? communityCatalog;
     private static RemoteImageCache? communityImages;
+    private static bool gothic;
+
+    public static GothicNameScope Gothic(bool enabled)
+    {
+        var previous = gothic;
+        gothic = enabled;
+        return new GothicNameScope(previous);
+    }
+
+    public static void RestoreGothic(bool previous) => gothic = previous;
 
     public static void Configure(BadgeCatalogStore catalog, RemoteImageCache images)
     {
@@ -125,7 +135,16 @@ internal static class UserName
 
         var reserve = Reserve(badges, badgeIds, style, maxBadges);
         var textWidth = MathF.Max(1f, maxWidth - reserve);
-        var drawn = Marquee.DrawLeft(drawList, id, name, boxLeft, y, textWidth, style, ink, hovering, effect);
+        float drawn;
+        if (gothic && NightWordmark.FitsMixed(name, textWidth, lineHeight, style, out var gothicWidth))
+        {
+            NightWordmark.DrawMixed(drawList, new Vector2(boxLeft, y), name, ink, lineHeight, style, effect);
+            drawn = gothicWidth;
+        }
+        else
+        {
+            drawn = Marquee.DrawLeft(drawList, id, name, boxLeft, y, textWidth, style, ink, hovering, effect);
+        }
 
         if (fromCatalog)
         {
