@@ -23,6 +23,7 @@ internal sealed partial class AethergramApp
     private const int SwarmSize = 22;
     private const float LogoTapReach = 0.6f;
 
+    private static readonly Vector4 GlowInk = new(1f, 0.29f, 0.37f, 1f);
     private static readonly Vector4 FlightInk = new(0.055f, 0.008f, 0.02f, 0.95f);
     private static readonly Vector4 FlightRim = new(1f, 0.275f, 0.353f, 0.35f);
 

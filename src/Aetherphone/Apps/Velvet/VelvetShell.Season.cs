@@ -17,6 +17,8 @@ internal sealed partial class VelvetShell
     private const int LogoFlareCells = 10;
     private const float DefaultMoonFraction = 0.46f;
 
+    private static readonly Vector4 GlowInk = new(1f, 0.64f, 0.34f, 1f);
+
     private int seasonApplied = -1;
     private Spring moonSlide;
     private bool moonPlaced;

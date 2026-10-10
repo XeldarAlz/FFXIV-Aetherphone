@@ -156,7 +156,7 @@ internal sealed partial class VelvetShell
     }
 
     private static CardActionTap DrawCardAction(ImDrawListPtr drawList, ref float x, float centerY, string glyph,
-        Vector4 ink, int count, string tooltip, string? countTooltip = null)
+        Vector4 ink, int count, string tooltip, int glowKey, string? countTooltip = null)
     {
         var scale = UiScale.Current;
         var iconSize = VIcon.CardAction * scale;
@@ -176,7 +176,9 @@ internal sealed partial class VelvetShell
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        PhoneIcon.Draw(drawList, new Vector2(x + iconSize * 0.5f, centerY), glyph, ink, iconSize);
+        var iconCenter = new Vector2(x + iconSize * 0.5f, centerY);
+        TapGlow.Draw(drawList, glowKey, iconCenter, iconSize * 0.5f, iconHovered);
+        PhoneIcon.Draw(drawList, iconCenter, glyph, ink, iconSize);
         if (label.Length > 0)
         {
             var labelSize = Typography.Measure(label, CardCountStyle);
@@ -325,10 +327,13 @@ internal sealed partial class VelvetShell
         {
             likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
                 liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk,
-                entry.TotalReactions, Loc.T(L.Velvet.Like), Loc.T(L.Velvet.LikesTitle));
+                entry.TotalReactions, Loc.T(L.Velvet.Like), TapGlow.Key(entry.Id, TapGlow.Like),
+                Loc.T(L.Velvet.LikesTitle));
         }
+
         if (likeTap == CardActionTap.Icon)
         {
+            TapGlow.Toggle(TapGlow.Key(entry.Id, TapGlow.Like), liked);
             store.ToggleReaction(entry, 0);
         }
         else if (likeTap == CardActionTap.Count)
@@ -336,9 +341,11 @@ internal sealed partial class VelvetShell
             OpenLikers(entry.Id);
         }
 
+        var commentKey = TapGlow.Key(entry.Id, TapGlow.Comment);
         if (DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.MessageCircle, VelvetTheme.TitleInk,
-                entry.CommentCount, Loc.T(L.Velvet.Comments)) != CardActionTap.None)
+                entry.CommentCount, Loc.T(L.Velvet.Comments), commentKey) != CardActionTap.None)
         {
+            TapGlow.Bloom(commentKey);
             OpenPostDetail(entry.Id);
         }
 
@@ -434,6 +441,7 @@ internal sealed partial class VelvetShell
         {
             CancelPendingTaps();
             NoteDoubleTapLike();
+            TapGlow.Bloom(TapGlow.Key(entry.Id, TapGlow.Like));
             if (entry.MyReaction < 0)
             {
                 store.ToggleReaction(entry, 0);

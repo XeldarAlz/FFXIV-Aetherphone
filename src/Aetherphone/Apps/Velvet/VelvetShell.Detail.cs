@@ -138,10 +138,12 @@ internal sealed partial class VelvetShell
                 likeTap = DrawCardAction(drawList, ref actionX, actionsY,
                     liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
                     liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk, post.TotalReactions, Loc.T(L.Velvet.Like),
-                    Loc.T(L.Velvet.LikesTitle));
+                    TapGlow.Key(post.Id, TapGlow.Like), Loc.T(L.Velvet.LikesTitle));
             }
+
             if (likeTap == CardActionTap.Icon)
             {
+                TapGlow.Toggle(TapGlow.Key(post.Id, TapGlow.Like), liked);
                 store.ToggleReaction(post, 0);
             }
             else if (likeTap == CardActionTap.Count)
@@ -149,8 +151,12 @@ internal sealed partial class VelvetShell
                 OpenLikers(post.Id);
             }
 
-            DrawCardAction(drawList, ref actionX, actionsY, PhoneIcons.MessageCircle, VelvetTheme.TitleInk,
-                post.CommentCount, Loc.T(L.Velvet.Comments));
+            var commentKey = TapGlow.Key(post.Id, TapGlow.Comment);
+            if (DrawCardAction(drawList, ref actionX, actionsY, PhoneIcons.MessageCircle, VelvetTheme.TitleInk,
+                    post.CommentCount, Loc.T(L.Velvet.Comments), commentKey) != CardActionTap.None)
+            {
+                TapGlow.Bloom(commentKey);
+            }
             var actionsRight = actionX;
 
             var trailingCenter = new Vector2(origin.X + width - pad - 4f * scale, actionsY);

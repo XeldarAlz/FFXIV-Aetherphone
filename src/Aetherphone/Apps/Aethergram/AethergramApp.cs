@@ -391,6 +391,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     public void Draw(in PhoneContext context)
     {
         using var gothicNames = UserName.Gothic(SeasonalTheme.BlackletterNames);
+        using var tapGlow = TapGlow.Use(SeasonalTheme.Halloween, GlowInk);
         dmStore.NoteInboxWatched();
         theme = context.Theme;
         navigation = context.Navigation;
@@ -1317,10 +1318,12 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         {
             likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
                 liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? Ink.LikeRed : Ink.TitleInk,
-                post.TotalReactions, Loc.T(L.Aethergram.Like), Loc.T(L.Social.LikedByTitle));
+                post.TotalReactions, Loc.T(L.Aethergram.Like), TapGlow.Key(post.Id, TapGlow.Like),
+                Loc.T(L.Social.LikedByTitle));
         }
         if (likeTap == CardActionTap.Icon)
         {
+            TapGlow.Toggle(TapGlow.Key(post.Id, TapGlow.Like), liked);
             store.ToggleLike(post);
         }
         else if (likeTap == CardActionTap.Count)
@@ -1328,22 +1331,26 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             OpenUserList(post.Id, UserListKind.Likers);
         }
 
+        var commentKey = TapGlow.Key(post.Id, TapGlow.Comment);
         if (DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.MessageCircle, Ink.TitleInk,
-                post.CommentCount, Loc.T(L.Aethergram.Comment)) != CardActionTap.None)
+                post.CommentCount, Loc.T(L.Aethergram.Comment), commentKey) != CardActionTap.None)
         {
+            TapGlow.Bloom(commentKey);
             OpenDetail(post, true);
         }
 
         var sendFrom = new Vector2(actionX + CardActionIconSize * scale * 0.5f, actionCenterY);
+        var shareKey = TapGlow.Key(post.Id, TapGlow.Share);
         CardActionTap sendTap;
         using (UiFeedback.ReplaceTap(Spooky(UiSound.HalloweenFlutter)))
         {
             sendTap = DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.Send, Ink.TitleInk, 0,
-                Loc.T(L.Aethergram.SendTo));
+                Loc.T(L.Aethergram.SendTo), shareKey);
         }
 
         if (sendTap != CardActionTap.None)
         {
+            TapGlow.Bloom(shareKey);
             SendByBat(sendFrom);
             OpenShare(post.Id);
         }
@@ -1363,6 +1370,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
+        var saveKey = TapGlow.Key(post.Id, TapGlow.Save);
+        TapGlow.Draw(drawList, saveKey, bookmarkCenter, iconSize * 0.5f, bookmarkHovered);
         PhoneIcon.Draw(drawList, bookmarkCenter, post.Saved ? PhoneIcons.BookmarkFilled : PhoneIcons.Bookmark,
             Ink.TitleInk, iconSize);
         HoverTooltip.Show(new Rect(bookmarkMin, bookmarkMax), Loc.T(L.Aethergram.Save), HoverLabelSide.Above);
@@ -1374,6 +1383,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
         if (bookmarkTapped)
         {
+            TapGlow.Toggle(saveKey, post.Saved);
             NoteSaved(!post.Saved);
             store.SetSaved(post.Id, !post.Saved);
         }
@@ -1469,7 +1479,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     }
 
     private static CardActionTap DrawCardAction(ImDrawListPtr drawList, ref float x, float centerY, string glyph,
-        Vector4 ink, int count, string tooltip, string? countTooltip = null)
+        Vector4 ink, int count, string tooltip, int glowKey, string? countTooltip = null)
     {
         var scale = UiScale.Current;
         var iconSize = CardActionIconSize * scale;
@@ -1489,7 +1499,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        PhoneIcon.Draw(drawList, new Vector2(x + iconSize * 0.5f, centerY), glyph, ink, iconSize);
+        var iconCenter = new Vector2(x + iconSize * 0.5f, centerY);
+        TapGlow.Draw(drawList, glowKey, iconCenter, iconSize * 0.5f, iconHovered);
+        PhoneIcon.Draw(drawList, iconCenter, glyph, ink, iconSize);
         if (label.Length > 0)
         {
             var labelSize = Typography.Measure(label, CardCountStyle);
@@ -1591,6 +1603,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             if (SeasonalTheme.Halloween)
             {
                 UiFeedback.Play(UiSound.HalloweenHeartbeat);
+                TapGlow.Bloom(TapGlow.Key(post.Id, TapGlow.Like));
             }
 
             if (post.MyReaction < 0)

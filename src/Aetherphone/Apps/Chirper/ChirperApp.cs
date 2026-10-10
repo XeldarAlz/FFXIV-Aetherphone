@@ -382,6 +382,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     public void Draw(in PhoneContext context)
     {
         using var gothicNames = UserName.Gothic(SeasonalTheme.BlackletterNames);
+        using var tapGlow = TapGlow.Use(SeasonalTheme.Halloween, GlowInk);
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;
@@ -1423,9 +1424,11 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             ReportFeedActions(rowLeft, rowLeft + rowWidth, centerY, ActionHitHeight * scale * 0.5f);
         }
 
+        var replyKey = TapGlow.Key(post.Id, TapGlow.Comment);
         if (DrawActionTarget(cursorX, centerY, replyWidth, ActionGlyph.Reply, replyCount,
-                ChirperInk.MutedInk, ChirperInk.Accent, Loc.T(L.Chirper.Reply)))
+                ChirperInk.MutedInk, ChirperInk.Accent, Loc.T(L.Chirper.Reply), replyKey))
         {
+            TapGlow.Bloom(replyKey);
             if (isThreadHead)
             {
                 replyFocusPending = true;
@@ -1438,22 +1441,27 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
         cursorX += replyWidth + gap;
         var repostInk = post.MyReposted ? ChirperInk.RechirpGreen : ChirperInk.MutedInk;
+        var repostKey = TapGlow.Key(post.Id, TapGlow.Repost);
         if (DrawActionTarget(cursorX, centerY, repostWidth, ActionGlyph.Rechirp, repostCount, repostInk,
-                ChirperInk.RechirpGreen, Loc.T(post.MyReposted ? L.Chirper.Unrepost : L.Chirper.Repost)))
+                ChirperInk.RechirpGreen, Loc.T(post.MyReposted ? L.Chirper.Unrepost : L.Chirper.Repost), repostKey))
         {
+            TapGlow.Bloom(repostKey);
             actions.Open(post.Id, ChirperPanel.Repost);
         }
 
         cursorX += repostWidth + gap;
         if (DrawReactTarget(post, cursorX, centerY, plainWidth))
         {
+            TapGlow.Bloom(TapGlow.Key(post.Id, TapGlow.React));
             actions.Open(post.Id, ChirperPanel.Picker);
         }
 
         cursorX += plainWidth + gap;
+        var shareKey = TapGlow.Key(post.Id, TapGlow.Share);
         if (DrawActionTarget(cursorX, centerY, plainWidth, ActionGlyph.Share, string.Empty,
-                ChirperInk.MutedInk, ChirperInk.Accent, Loc.T(L.Chirper.CopyChirp)))
+                ChirperInk.MutedInk, ChirperInk.Accent, Loc.T(L.Chirper.CopyChirp), shareKey))
         {
+            TapGlow.Bloom(shareKey);
             CopyChirp(post);
         }
 
@@ -1495,7 +1503,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     }
 
     private static bool DrawActionTarget(float x, float centerY, float width, ActionGlyph glyph, string count,
-        Vector4 ink, Vector4 hoverInk, string tooltip)
+        Vector4 ink, Vector4 hoverInk, string tooltip, int glowKey)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -1506,6 +1514,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var color = hovered ? hoverInk : ink;
         var iconCenter = new Vector2(x + (8f + ActionIconSize * 0.5f) * scale, centerY);
         var iconSize = ActionIconSize * scale;
+        TapGlow.Draw(drawList, glowKey, iconCenter, iconSize * 0.5f, hovered);
         var packed = ImGui.GetColorU32(color);
         switch (glyph)
         {
@@ -1547,6 +1556,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var hovered = UiInteract.Hover(min, max);
         var ink = hovered ? ChirperInk.Warning : ChirperInk.MutedInk;
         var iconCenter = new Vector2(x + (8f + ActionIconSize * 0.5f) * scale, centerY);
+        TapGlow.Draw(drawList, TapGlow.Key(post.Id, TapGlow.React), iconCenter, ActionIconSize * scale * 0.5f, hovered);
         if (post.MyReaction >= 0)
         {
             var emojiHalf = 8f * scale * (hovered ? 1.12f : 1f);
