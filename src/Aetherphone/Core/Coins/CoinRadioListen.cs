@@ -12,6 +12,21 @@ internal enum RadioListenStep : byte
 
 internal static class CoinRadioListen
 {
+    public const long RetryMilliseconds = 30_000;
+    private const int NotFoundStatus = 404;
+    private const string OwnStationReason = "own_station";
+
+    public static long RetryDelayFor(bool started, string reason, int statusCode)
+    {
+        if (started || statusCode == NotFoundStatus
+            || string.Equals(reason, OwnStationReason, StringComparison.Ordinal))
+        {
+            return 0;
+        }
+
+        return RetryMilliseconds;
+    }
+
     public static RadioListenStep Decide(string listeningStationId, RadioPlaybackState state, string stationId,
         bool signedIn)
     {
