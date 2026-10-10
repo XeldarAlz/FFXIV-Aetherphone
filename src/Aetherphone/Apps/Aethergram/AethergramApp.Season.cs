@@ -97,7 +97,7 @@ internal sealed partial class AethergramApp
         }
 
         var moonY = top + AppHeader.Height * UiScale.Current * 0.5f;
-        var view = intro.View;
+        var view = intro.ViewFor(screen);
         NightScene.BloodMoon(ImGui.GetWindowDrawList(), screen, moonY, view);
         if (!introSwarmPending)
         {
@@ -145,7 +145,7 @@ internal sealed partial class AethergramApp
             return;
         }
 
-        ReleaseSwarm(NightScene.BloodMoonCenter(screenRect, moonY, intro.View), SwarmSize);
+        ReleaseSwarm(NightScene.BloodMoonCenter(screenRect, moonY, intro.ViewFor(screenRect)), SwarmSize);
         toast.Show(Loc.T(L.Seasonal.NightTakesWing));
     }
 

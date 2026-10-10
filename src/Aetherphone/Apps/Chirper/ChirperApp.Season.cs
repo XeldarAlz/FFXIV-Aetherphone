@@ -85,7 +85,7 @@ internal sealed partial class ChirperApp
         }
 
         NightScene.Moonlit(ImGui.GetWindowDrawList(), screen, top + AppHeader.Height * UiScale.Current * 0.5f,
-            intro.View);
+            intro.ViewFor(screen));
     }
 
     private void BeginIntro()
@@ -103,7 +103,7 @@ internal sealed partial class ChirperApp
             return;
         }
 
-        var center = NightScene.MoonlitMoonCenter(screenRect, moonY, intro.View);
+        var center = NightScene.MoonlitMoonCenter(screenRect, moonY, intro.ViewFor(screenRect));
         var reach = NightScene.MoonlitMoonSize * MoonTapReach;
         var extent = new Vector2(reach, reach);
         bool tapped;

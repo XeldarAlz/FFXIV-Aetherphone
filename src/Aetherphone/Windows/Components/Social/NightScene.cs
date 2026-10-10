@@ -134,10 +134,10 @@ internal static class NightScene
     public static void Kindle() => kindledAt = (float)ImGui.GetTime();
 
     public static Vector2 MoonlitMoonCenter(Rect frame, float moonY, in NightView view) =>
-        MoonlitMoonCenter(frame, MoonY(moonY, view));
+        MoonlitMoonCenter(frame, MoonY(moonY, view)) + new Vector2(view.MoonShift.X, 0f);
 
     public static Vector2 BloodMoonCenter(Rect frame, float moonY, in NightView view) =>
-        BloodMoonCenter(frame, MoonY(moonY, view));
+        BloodMoonCenter(frame, MoonY(moonY, view)) + new Vector2(view.MoonShift.X, 0f);
 
     public static void Moonlit(ImDrawListPtr drawList, Rect frame, float moonY, in NightView view)
     {
@@ -152,13 +152,14 @@ internal static class NightScene
         Glow(drawList, moon, radius * HaloReach, MoonlitHalo with { W = halo }, HaloCells);
         DrawDisc(drawList, moon, radius, MoonRim, MoonFace, MoonShine, MoonCrater, -1f);
         DrawClouds(drawList, frame, moon, time, scale);
+        var ground = Shifted(frame, view.GroundShift);
         var farBase = frame.Max.Y - FarPineBase * scale;
-        DrawPines(drawList, frame, FarPines, farBase, Faded(FarPineInk, view.Reveal), scale);
+        DrawPines(drawList, ground, FarPines, farBase, Faded(FarPineInk, view.Reveal), scale);
         DrawPuffs(drawList, frame, MoonlitPuffs, farBase, MoonlitMist with { W = MoonlitMist.W * view.Reveal }, time,
             scale);
         DrawEyes(drawList, frame, farBase, time, rouse, scale);
-        DrawPines(drawList, frame, NearPines, frame.Max.Y - NearPineBase * scale, Faded(NearPineInk, view.Reveal),
-            scale);
+        DrawPines(drawList, Shifted(frame, view.GroundShift * 1.6f), NearPines, frame.Max.Y - NearPineBase * scale,
+            Faded(NearPineInk, view.Reveal), scale);
         DrawVeil(drawList, frame, MoonlitVeil, VeilReach * scale);
     }
 
@@ -179,20 +180,24 @@ internal static class NightScene
         var castleBase = frame.Max.Y - CastleBase * scale;
         DrawPuffs(drawList, frame, BloodPuffs, castleBase, BloodMist with { W = BloodMist.W * view.Reveal }, time,
             scale);
-        DrawCastle(drawList, frame, castleBase, time, scale);
+        DrawCastle(drawList, Shifted(frame, view.GroundShift), castleBase, time, scale);
         DrawVeil(drawList, frame, BloodVeil, BloodVeilReach * scale);
     }
 
     private static float MoonY(float moonY, in NightView view)
     {
         var scale = UiScale.Current;
-        return moonY - view.Lift + (1f - view.Reveal) * IntroRise * scale + (1f - view.Nightness) * DayDip * scale;
+        return moonY - view.Lift + view.MoonShift.Y + (1f - view.Reveal) * IntroRise * scale +
+            (1f - view.Nightness) * DayDip * scale;
     }
 
     private static float HaloStrength(in NightView view) =>
         view.Reveal * (0.6f + 0.4f * view.Nightness) * (view.HalloweenNight ? HalloweenNightHalo : 1f);
 
     private static uint Faded(Vector4 color, float alpha) => ImGui.GetColorU32(color with { W = color.W * alpha });
+
+    private static Rect Shifted(Rect frame, float offset) =>
+        new(frame.Min + new Vector2(offset, 0f), frame.Max + new Vector2(offset, 0f));
 
     public static float Kindling => Math.Clamp(1f - ((float)ImGui.GetTime() - kindledAt) / KindleSeconds, 0f, 1f);
 
@@ -202,7 +207,7 @@ internal static class NightScene
         var time = (float)ImGui.GetTime();
         DrawHorizon(drawList, frame, WitchingHorizon with { W = WitchingHorizon.W * view.Reveal });
         DrawStars(drawList, frame, WitchingStars, WitchingStarInk, time, scale, view);
-        moon.Y = MoonY(moon.Y, view);
+        moon = new Vector2(moon.X + view.MoonShift.X, MoonY(moon.Y, view));
         var radius = WitchingMoonRadius * scale * (view.HalloweenNight ? HalloweenNightGrow : 1f);
         var halo = WitchingHalo.W * (1f + KindleGlowBoost * Kindling) * HaloStrength(view);
         Glow(drawList, moon, radius * HaloReach, WitchingHalo with { W = halo }, HaloCells);
@@ -294,6 +299,7 @@ internal static class NightScene
         float scale, in NightView view)
     {
         var drift = view.Lift * StarParallax;
+        var shift = view.StarShift;
         for (var index = 0; index < stars.Length; index++)
         {
             var star = stars[index];
@@ -304,7 +310,8 @@ internal static class NightScene
                 continue;
             }
 
-            var center = new Vector2(frame.Min.X + star.X * frame.Width, frame.Min.Y + star.Y * frame.Height - drift);
+            var center = new Vector2(frame.Min.X + star.X * frame.Width + shift.X,
+                frame.Min.Y + star.Y * frame.Height - drift + shift.Y);
             drawList.AddCircleFilled(center, star.Radius * scale, ImGui.GetColorU32(ink with { W = alpha }), 8);
         }
     }

@@ -1,3 +1,4 @@
+using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -36,7 +37,7 @@ internal sealed class SeasonIntro
 
     public float Reveal => Spring.Settle(Elapsed, Motion.Sheet);
 
-    public NightView View => NightView.Now(Reveal);
+    public NightView ViewFor(Rect frame) => NightView.Now(frame, Reveal);
 
     public IDisposable FadeContent()
     {

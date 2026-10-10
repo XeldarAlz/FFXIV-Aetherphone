@@ -104,7 +104,7 @@ internal sealed partial class VelvetShell
 
         var fraction = moonPlaced ? moonSlide.Value : DefaultMoonFraction;
         var moon = new Vector2(screen.Min.X + screen.Width * fraction, top + VHeader.Height * UiScale.Current * 0.5f);
-        NightScene.Witching(ImGui.GetWindowDrawList(), screen, moon, intro.View);
+        NightScene.Witching(ImGui.GetWindowDrawList(), screen, moon, intro.ViewFor(screen));
     }
 
     private void BeginIntro()
