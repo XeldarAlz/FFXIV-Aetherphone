@@ -18,6 +18,8 @@ internal sealed class UiSoundPlayer : IDisposable
     private readonly object gate = new();
     private readonly Dictionary<string, float[]> clips = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(string FileName, HauntDepth Depth), float[]> hauntedClips = new();
+    private readonly HashSet<(string FileName, HauntDepth Depth)> hauntPending = new();
+    private int hauntGeneration;
     private readonly DirectoryInfo root;
     private MixingSampleProvider? mixer;
     private VolumeSampleProvider? bus;
@@ -59,6 +61,16 @@ internal sealed class UiSoundPlayer : IDisposable
             }
 
             lastPlayTicks = Environment.TickCount64;
+        }
+    }
+
+    public void ClearHaunted()
+    {
+        lock (gate)
+        {
+            hauntedClips.Clear();
+            hauntPending.Clear();
+            hauntGeneration++;
         }
     }
 
@@ -112,9 +124,44 @@ internal sealed class UiSoundPlayer : IDisposable
             return clip.Length > 0;
         }
 
-        clip = TryLoadClip(fileName, out var plain) ? HauntFilter.Apply(plain, haunt) : plain;
-        hauntedClips[key] = clip;
-        return clip.Length > 0;
+        if (!TryLoadClip(fileName, out clip))
+        {
+            return false;
+        }
+
+        if (hauntPending.Add(key))
+        {
+            var plain = clip;
+            var generation = hauntGeneration;
+            _ = Task.Run(() => BuildHaunted(key, plain, generation));
+        }
+
+        return true;
+    }
+
+    private void BuildHaunted((string FileName, HauntDepth Depth) key, float[] plain, int generation)
+    {
+        float[] haunted;
+        try
+        {
+            haunted = HauntFilter.Apply(plain, key.Depth);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, $"[UiSound] haunting {key.FileName} failed");
+            haunted = plain;
+        }
+
+        lock (gate)
+        {
+            if (disposed || generation != hauntGeneration)
+            {
+                return;
+            }
+
+            hauntedClips[key] = haunted;
+            hauntPending.Remove(key);
+        }
     }
 
     private bool TryLoadClip(string fileName, out float[] clip)

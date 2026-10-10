@@ -8,6 +8,7 @@ internal sealed class UiSoundService : IDisposable
     private readonly UiSoundPlayer player;
     private readonly long[] lastPlayed;
     private readonly int[] variantCursor;
+    private bool hauntingWasOn;
 
     public UiSoundService(Configuration configuration, UiSoundPlayer player)
     {
@@ -21,7 +22,15 @@ internal sealed class UiSoundService : IDisposable
 
     public void PlayPitched(UiSound sound, float rate) => Play(sound, rate, true);
 
-    public void PlayTap(UiSound sound) => Play(SeasonalMuted(sound) ? UiSound.Tap : sound, 0f, false);
+    public void PlayTap(UiSound sound)
+    {
+        if (!configuration.UiSoundTaps)
+        {
+            return;
+        }
+
+        Play(SeasonalMuted(sound) ? UiSound.Tap : sound, 0f, false);
+    }
 
     private bool SeasonalMuted(UiSound sound) => !configuration.SeasonalSounds && UiSoundCatalog.IsSeasonal(sound);
 
@@ -71,9 +80,9 @@ internal sealed class UiSoundService : IDisposable
         player.Play(files[cursor], volume, pitched ? rate : PlaybackRate(entry.PitchVariance), HauntFor(sound));
     }
 
-    private HauntDepth HauntFor(UiSound sound) => SeasonalTheme.Halloween && configuration.SeasonalSounds
-        ? UiSoundCatalog.HauntDepthFor(sound)
-        : HauntDepth.None;
+    private bool HauntingOn => SeasonalTheme.Halloween && configuration.SeasonalSounds;
+
+    private HauntDepth HauntFor(UiSound sound) => HauntingOn ? UiSoundCatalog.HauntDepthFor(sound) : HauntDepth.None;
 
     private static float PlaybackRate(float variance)
     {
@@ -85,7 +94,17 @@ internal sealed class UiSoundService : IDisposable
         return 1f + (Random.Shared.NextSingle() * 2f - 1f) * variance;
     }
 
-    public void Maintain() => player.CloseIfIdle();
+    public void Maintain()
+    {
+        var haunting = HauntingOn;
+        if (hauntingWasOn && !haunting)
+        {
+            player.ClearHaunted();
+        }
+
+        hauntingWasOn = haunting;
+        player.CloseIfIdle();
+    }
 
     private bool ChannelEnabled(UiSoundChannel channel) => channel switch
     {

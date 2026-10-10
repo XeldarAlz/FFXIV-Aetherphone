@@ -1,6 +1,6 @@
 namespace Aetherphone.Core.Notifications;
 
-internal readonly struct TapSoundScope : IDisposable
+internal readonly ref struct TapSoundScope
 {
     private readonly UiSound previous;
 
