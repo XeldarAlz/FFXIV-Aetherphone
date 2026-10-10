@@ -2,7 +2,7 @@ namespace Aetherphone.Core.Animation;
 
 internal sealed class KineticScroller
 {
-    private const float DragThreshold = 6f;
+    internal const float DragThreshold = 6f;
     private const float MinFlingSpeed = 40f;
     private const float FlingDecayRate = 6f;
     private const float PullRubberFactor = 0.5f;

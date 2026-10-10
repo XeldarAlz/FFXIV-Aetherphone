@@ -10,17 +10,31 @@ internal static class DragScrollHost
         public readonly KineticScroller Scroller = new();
         public int LastFrame = -2;
         public bool Pressed;
+        public bool EdgePress;
+        public bool Grabbing;
+        public float GrabPointerY;
+        public float GrabScrollY;
 
         public void Reset()
         {
             Scroller.Reset();
             Pressed = false;
+            ClearGrab();
         }
 
         public void CancelGesture()
         {
             Scroller.CancelGesture();
             Pressed = false;
+            ClearGrab();
+        }
+
+        private void ClearGrab()
+        {
+            EdgePress = false;
+            Grabbing = false;
+            GrabPointerY = 0f;
+            GrabScrollY = 0f;
         }
     }
 
@@ -28,16 +42,19 @@ internal static class DragScrollHost
     {
         private readonly Region? region;
 
-        internal Surface(Region? region, float pull, bool dragging)
+        internal Surface(Region? region, float pull, bool dragging, bool grabbing)
         {
             this.region = region;
             Pull = pull;
-            Dragging = dragging;
+            Dragging = dragging || grabbing;
+            Grabbing = grabbing;
         }
 
         public float Pull { get; }
 
         public bool Dragging { get; }
+
+        public bool Grabbing { get; }
 
         public bool Scrolling => region is not null && region.Scroller.IsControlling;
 
@@ -66,7 +83,7 @@ internal static class DragScrollHost
             var frame = ImGui.GetFrameCount();
             foreach (var region in Regions.Values)
             {
-                if (frame - region.LastFrame <= 1 && region.Scroller.IsDragging)
+                if (frame - region.LastFrame <= 1 && (region.Scroller.IsDragging || region.Grabbing))
                 {
                     return true;
                 }
@@ -79,7 +96,7 @@ internal static class DragScrollHost
     public static ImGuiWindowFlags ScrollFlags(ImGuiWindowFlags baseFlags) =>
         Enabled ? baseFlags | ImGuiWindowFlags.NoScrollbar : baseFlags;
 
-    public static Surface Begin(uint key)
+    public static Surface Begin(uint key, float grabStripWidth = 0f)
     {
         var frame = ImGui.GetFrameCount();
         EvictStale(frame);
@@ -110,7 +127,7 @@ internal static class DragScrollHost
                 region.Reset();
             }
 
-            return new Surface(region, 0f, false);
+            return new Surface(region, 0f, false, false);
         }
 
         if (InputShield.Active)
@@ -120,7 +137,7 @@ internal static class DragScrollHost
                 region.CancelGesture();
             }
 
-            return new Surface(region, 0f, false);
+            return new Surface(region, 0f, false, false);
         }
 
         var io = ImGui.GetIO();
@@ -140,7 +157,20 @@ internal static class DragScrollHost
             }
         }
 
-        if (region.Pressed)
+        if (region.Pressed && region.EdgePress)
+        {
+            if (down)
+            {
+                DragThumb(region, pointerY);
+                shouldBlock = region.Grabbing;
+            }
+            else
+            {
+                shouldBlock = region.Grabbing;
+                region.CancelGesture();
+            }
+        }
+        else if (region.Pressed)
         {
             if (down)
             {
@@ -166,6 +196,9 @@ internal static class DragScrollHost
         {
             scroller.Press(pointerY);
             region.Pressed = true;
+            region.EdgePress = grabStripWidth > 0f && ImGui.GetScrollMaxY() > 0f &&
+                               io.MousePos.X >= ImGui.GetWindowPos().X + ImGui.GetWindowSize().X - grabStripWidth;
+            region.GrabPointerY = pointerY;
         }
         else
         {
@@ -187,7 +220,30 @@ internal static class DragScrollHost
             ImGui.Dummy(new Vector2(0f, scroller.PullDistance));
         }
 
-        return new Surface(region, scroller.PullDistance, scroller.IsDragging);
+        return new Surface(region, scroller.PullDistance, scroller.IsDragging, region.Grabbing);
+    }
+
+    private static void DragThumb(Region region, float pointerY)
+    {
+        var scale = UiScale.Current;
+        var scrollY = ImGui.GetScrollY();
+        if (!region.Grabbing)
+        {
+            if (MathF.Abs(pointerY - region.GrabPointerY) < KineticScroller.DragThreshold * scale)
+            {
+                return;
+            }
+
+            region.Grabbing = true;
+            region.GrabPointerY = pointerY;
+            region.GrabScrollY = scrollY;
+            UiInteract.CancelPendingTap();
+        }
+
+        var maxY = ImGui.GetScrollMaxY();
+        var thumb = ScrollThumb.Measure(ImGui.GetWindowPos().Y, ImGui.GetWindowSize().Y, scrollY, maxY, scale);
+        var target = region.GrabScrollY + thumb.ScrollDelta(pointerY - region.GrabPointerY);
+        ImGui.SetScrollY(Math.Clamp(target, 0f, MathF.Max(0f, maxY)));
     }
 
     private static void EvictStale(int frame)
