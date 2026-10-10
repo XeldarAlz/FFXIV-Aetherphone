@@ -7854,6 +7854,7 @@
   "changelog.r1201.8": "Fixed the lottery countdown and its widget showing a past phase as expired instead of the one running now, contributed by YozoraCho",
   "changelog.r1201.9": "Fixed empty map screens being hard to read: the map now dims behind them, contributed by YozoraCho",
   "changelog.r1201.10": "Fixed buttons on empty screens cutting off longer labels, contributed by YozoraCho",
+  "changelog.r1201.11": "Added reordering inside folders: in edit mode, drag an app to a new spot, contributed by hellovvn",
   "changelog.r1200.81": "Added /phone commands for macros: open an app or Settings, take a photo, toggle Do Not Disturb or mute, control music, start a tell or a call, and set the phone to mini, full or hidden",
   "changelog.r1200.82": "Settings > Commands now lists every slash command, and /phone help prints the same list in chat",
   "changelog.r1200.83": "Added a Show in Dynamic Island switch to the settings page of every app that puts activities on the island",

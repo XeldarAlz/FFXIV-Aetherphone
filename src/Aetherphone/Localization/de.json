@@ -7854,6 +7854,7 @@
   "changelog.r1201.8": "Behoben, dass der Lotterie-Countdown und sein Widget eine vergangene Phase als abgelaufen zeigten statt der laufenden, beigetragen von YozoraCho",
   "changelog.r1201.9": "Behoben, dass leere Kartenansichten schwer lesbar waren: die Karte wird dahinter jetzt abgedunkelt, beigetragen von YozoraCho",
   "changelog.r1201.10": "Behoben, dass Schaltflächen auf leeren Ansichten längere Beschriftungen abschnitten, beigetragen von YozoraCho",
+  "changelog.r1201.11": "Umordnen in Ordnern hinzugefügt: im Bearbeitungsmodus eine App an eine neue Stelle ziehen, beigetragen von hellovvn",
   "changelog.r1200.81": "/phone-Befehle für Makros hinzugefügt: eine App oder die Einstellungen öffnen, ein Foto machen, Nicht stören oder Stumm umschalten, Musik steuern, eine Tell oder einen Anruf starten und das Telefon auf Mini, Voll oder Ausgeblendet stellen",
   "changelog.r1200.82": "Einstellungen > Befehle listet jetzt jeden Slash-Befehl, und /phone help gibt dieselbe Liste im Chat aus",
   "changelog.r1200.83": "In der Dynamic Island zeigen hinzugefügt: ein Schalter auf der Einstellungsseite jeder App, die Aktivitäten auf der Insel zeigt",

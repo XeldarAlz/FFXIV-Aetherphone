@@ -2481,6 +2481,12 @@ internal static class L
                 "Fixed buttons on empty screens cutting off longer labels, contributed by YozoraCho"),
         };
 
+        public static readonly LocString[] Release1201Phone =
+        {
+            new("changelog.r1201.11",
+                "Added reordering inside folders: in edit mode, drag an app to a new spot, contributed by hellovvn"),
+        };
+
         public static readonly LocString[] Release1104Music =
         {
             new("changelog.r1104.0",
