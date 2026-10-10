@@ -2467,6 +2467,30 @@ internal static class L
                 "Fixed crackling and gaps in sounds and music while the game is busy"),
         };
 
+        public static readonly LocString[] Release1201Coin =
+        {
+            new("changelog.r1201.0",
+                "Added a hint under every daily quest saying exactly what counts"),
+            new("changelog.r1201.1",
+                "Changed daily quests to pay on their own once finished, with no Claim button to find"),
+            new("changelog.r1201.2",
+                "Changed game sessions to pay for the same game again, up to five sessions a day"),
+            new("changelog.r1201.3",
+                "Changed radio listening to count toward the quest while you listen instead of after you stop"),
+            new("changelog.r1201.4",
+                "Changed the explore quest to swap to one you can still do when every poll already has your vote or no public meetup is open"),
+            new("changelog.r1201.5",
+                "Fixed a finished quest paying nothing without a word: the reason now shows on the card"),
+            new("changelog.r1201.6",
+                "Fixed radio listening not counting when the station had only just gone live"),
+        };
+
+        public static readonly LocString[] Release1201Games =
+        {
+            new("changelog.r1201.7",
+                "Fixed the featured game switching at the wrong hour and lagging behind the day"),
+        };
+
         public static readonly LocString[] Release1104Music =
         {
             new("changelog.r1104.0",
@@ -9998,7 +10022,7 @@ internal static class L
         public static readonly LocString RuleChatHint = new("coin.ruleChatHint", "Send a message to someone in a private chat, up to four people a day");
         public static readonly LocString RulePostHint = new("coin.rulePostHint", "One chirp or gram that stays up for an hour, once a day");
         public static readonly LocString RuleCommentsDailyHint = new("coin.ruleCommentsDailyHint", "Comments on other people's posts that stay up for an hour, up to three authors a day");
-        public static readonly LocString RuleGameSessionHint = new("coin.ruleGameSessionHint", "Play any arcade game for three minutes, up to five games a day");
+        public static readonly LocString RuleGameSessionHint = new("coin.ruleGameSessionHint", "Play any arcade game for three minutes, up to five sessions a day");
         public static readonly LocString RuleGameDeepHint = new("coin.ruleGameDeepHint", "Stay in one game for fifteen minutes, up to twice a day");
         public static readonly LocString RuleGameFeaturedHint = new("coin.ruleGameFeaturedHint", "Finish a session of today's highlighted game");
         public static readonly LocString RuleChirpHint = new("coin.ruleChirpHint", "A chirp that stays up for an hour, once a week");
@@ -10071,8 +10095,7 @@ internal static class L
         public static readonly LocString TourTodayTitle = new("coin.tourTodayTitle", "Today at a glance");
         public static readonly LocString TourTodayBody = new("coin.tourTodayBody", "The ring fills as you earn toward today's limit, and the bars show what you earned on each of the last seven days. Every way to earn is listed further down.");
         public static readonly LocString QuestsTitle = new("coin.questsTitle", "Today's quests");
-        public static readonly LocString QuestClaim = new("coin.questClaim", "Claim");
-        public static readonly LocString QuestClaimed = new("coin.questClaimed", "Claimed");
+        public static readonly LocString QuestPaid = new("coin.questPaid", "Paid");
         public static readonly LocString QuestsReset = new("coin.questsReset", "New quests at {0}");
         public static readonly LocString QuestProgress = new("coin.questProgress", "{0} / {1}");
         public static readonly LocString QuestMinutes = new("coin.questMinutes", "{0} / {1} min");
@@ -10089,7 +10112,21 @@ internal static class L
         public static readonly LocString QuestExplorePoll = new("coin.questExplorePoll", "Vote in a poll");
         public static readonly LocString QuestExploreMuster = new("coin.questExploreMuster", "Say you're going to a meetup");
         public static readonly LocString RuleQuest = new("coin.ruleQuest", "Daily quest");
-        public static readonly LocString RuleQuestHint = new("coin.ruleQuestHint", "Finish one of today's three quests and tap Claim, up to three a day");
+        public static readonly LocString RuleQuestHint = new("coin.ruleQuestHint", "Finish one of today's three quests and the coins arrive on their own, up to three a day");
+        public static readonly LocString QuestPlayFeaturedHint = new("coin.questPlayFeaturedHint", "One session of three minutes or more in today's featured game, in the Games app");
+        public static readonly LocString QuestPlayThreeHint = new("coin.questPlayThreeHint", "Sessions of three minutes or more in the Games app, the same game or not; online rooms do not count");
+        public static readonly LocString QuestPlayLongHint = new("coin.questPlayLongHint", "Fifteen minutes in one game without leaving it");
+        public static readonly LocString QuestPlayMatchHint = new("coin.questPlayMatchHint", "Finish a round in an online room with at least one other person");
+        public static readonly LocString QuestSocialChatHint = new("coin.questSocialChatHint", "Send a message in two different private chats; it counts within fifteen minutes");
+        public static readonly LocString QuestSocialCommentHint = new("coin.questSocialCommentHint", "Comment on posts by two different people; a comment counts an hour after you post it");
+        public static readonly LocString QuestSocialPostHint = new("coin.questSocialPostHint", "One chirp or gram, not a repost; it counts an hour after you post it");
+        public static readonly LocString QuestSocialStoryHint = new("coin.questSocialStoryHint", "Post a story in Aethergram");
+        public static readonly LocString QuestSocialCallHint = new("coin.questSocialCallHint", "A private call of two minutes or more where both of you talk; it counts after you hang up");
+        public static readonly LocString QuestExploreRadioHint = new("coin.questExploreRadioHint", "Play a live community station that is not your own; the minutes count while you listen");
+        public static readonly LocString QuestExplorePollHint = new("coin.questExplorePollHint", "Vote in an open poll, or change a vote you already cast");
+        public static readonly LocString QuestExploreMusterHint = new("coin.questExploreMusterHint", "Say you're going to someone else's public meetup");
+        public static readonly LocString QuestLimitReached = new("coin.questLimitReached", "Three quests paid today");
+        public static readonly LocString QuestUnavailable = new("coin.questUnavailable", "Could not pay yet, trying again soon");
     }
 
     internal static class Casino

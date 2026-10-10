@@ -71,6 +71,37 @@ public sealed class CoinQuestsTests
     }
 
     [Fact]
+    public void EveryCatalogQuestHasItsOwnHintAndUnknownOnesHaveNone()
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < CatalogIds.Length; index++)
+        {
+            Assert.True(CoinQuests.TryHintFor(CatalogIds[index], out var hint));
+            Assert.True(seen.Add(hint.Key));
+        }
+
+        Assert.False(CoinQuests.TryHintFor("explore.unknown", out _));
+        Assert.Equal(string.Empty, CoinQuests.Hint(Quest("explore.unknown", 0, 1)));
+        Assert.Equal("Post a story in Aethergram", CoinQuests.Hint(Quest("social.story", 0, 1)));
+    }
+
+    [Fact]
+    public void ClaimReasonsMapToTheirOwnLinesAndStaleOnesRefreshInstead()
+    {
+        Assert.Equal(L.Coin.PausedTitle.Key, CoinQuests.ReasonFor(CoinQuests.PausedReason).Key);
+        Assert.Equal(L.Coin.FrozenTitle.Key, CoinQuests.ReasonFor(CoinQuests.FrozenReason).Key);
+        Assert.Equal(L.Coin.CapReached.Key, CoinQuests.ReasonFor(CoinQuests.DailyCapReason).Key);
+        Assert.Equal(L.Coin.QuestLimitReached.Key, CoinQuests.ReasonFor(CoinQuests.RuleCapReason).Key);
+        Assert.Equal(L.Coin.QuestUnavailable.Key, CoinQuests.ReasonFor("unavailable").Key);
+        Assert.Equal(L.Coin.QuestUnavailable.Key, CoinQuests.ReasonFor(string.Empty).Key);
+
+        Assert.True(CoinQuests.IsStale(CoinQuests.IncompleteReason));
+        Assert.True(CoinQuests.IsStale(CoinQuests.NotTodayReason));
+        Assert.False(CoinQuests.IsStale(CoinQuests.AlreadyClaimedReason));
+        Assert.False(CoinQuests.IsStale(CoinQuests.PausedReason));
+    }
+
+    [Fact]
     public void TitlesCarryTheServerTarget()
     {
         Assert.Equal("Listen to community radio for 20 minutes",

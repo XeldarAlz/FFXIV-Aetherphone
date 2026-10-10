@@ -21,6 +21,27 @@ internal static class NameEffects
     private const double EclipsePeriod = 3800.0;
     private const double HeartbeatPeriod = 2200.0;
     private const double PulsePeriod = 4800.0;
+    private const double SpectrumPeriod = 3600.0;
+    private const double CandyPeriod = 3200.0;
+    private const double StripesPeriod = 2600.0;
+    private const double ChromePeriod = 3600.0;
+    private const double BlazePeriod = 2400.0;
+    private const double BouncePeriod = 1600.0;
+    private const double ShiverPeriod = 3000.0;
+    private const double WobblePeriod = 2200.0;
+    private const double PopPeriod = 2600.0;
+    private const double FlipboardPeriod = 3800.0;
+    private const double TypewriterPeriod = 6000.0;
+    private const double ChromaticPeriod = 2600.0;
+    private const double NeonPeriod = 4000.0;
+    private const double UnderlinePeriod = 2800.0;
+    private const double ScanPeriod = 2400.0;
+    private const double CometPeriod = 2200.0;
+    private const double MotePeriod = 5000.0;
+    private const double StormPeriod = 1600.0;
+
+    private const int RainbowStops = 8;
+    private const float RainbowSaturation = 0.72f;
 
     public static TextEffect For(RoleKind role, bool light)
     {
@@ -46,18 +67,29 @@ internal static class NameEffects
         }
 
         var crest = RoleInk.Highlight(badge.Colors[badge.Colors.Length > 1 ? 1 : 0], light);
+        var seed = Seed(badge.Id);
         var phase = Phase(badge.Effect);
         if (Decorrelated(badge.Effect))
         {
-            phase = Fraction(phase + Seed(badge.Id));
+            phase = Fraction(phase + seed);
+        }
+
+        if (badge.Effect == NameEffectKind.Spectrum)
+        {
+            return new TextEffect(badge.Effect, crest, phase, RainbowRamp(light), seed);
+        }
+
+        if (SamplesAcross(badge.Effect, badge.Colors.Length))
+        {
+            return new TextEffect(badge.Effect, crest, phase, RampAcross(badge.Colors, light), seed);
         }
 
         if (UsesRamp(badge.Effect, badge.Colors.Length))
         {
-            return new TextEffect(badge.Effect, crest, phase, RampFrom(badge.Colors, light));
+            return new TextEffect(badge.Effect, crest, phase, RampFrom(badge.Colors, light), seed);
         }
 
-        return new TextEffect(badge.Effect, crest, phase);
+        return new TextEffect(badge.Effect, crest, phase, default, seed);
     }
 
     private static bool UsesRamp(NameEffectKind kind, int colorCount)
@@ -70,12 +102,37 @@ internal static class NameEffects
         return kind == NameEffectKind.Wave
             || kind == NameEffectKind.Aurora
             || kind == NameEffectKind.Prism
-            || kind == NameEffectKind.Glitch;
+            || kind == NameEffectKind.Glitch
+            || kind == NameEffectKind.Candy
+            || kind == NameEffectKind.Stripes
+            || kind == NameEffectKind.Confetti
+            || kind == NameEffectKind.Sakura
+            || kind == NameEffectKind.Hearts;
+    }
+
+    private static bool SamplesAcross(NameEffectKind kind, int colorCount)
+    {
+        return colorCount > 1 && (kind == NameEffectKind.Horizon || kind == NameEffectKind.Blaze);
     }
 
     private static bool Decorrelated(NameEffectKind kind)
     {
-        return kind == NameEffectKind.Glitch || kind == NameEffectKind.Starfall;
+        return kind switch
+        {
+            NameEffectKind.Glitch => true,
+            NameEffectKind.Starfall => true,
+            NameEffectKind.Bounce => true,
+            NameEffectKind.Shiver => true,
+            NameEffectKind.Wobble => true,
+            NameEffectKind.Pop => true,
+            NameEffectKind.Flipboard => true,
+            NameEffectKind.Typewriter => true,
+            NameEffectKind.Neon => true,
+            NameEffectKind.Scan => true,
+            NameEffectKind.Comet => true,
+            NameEffectKind.Storm => true,
+            _ => false,
+        };
     }
 
     private static float Seed(string badgeId)
@@ -107,6 +164,11 @@ internal static class NameEffects
             return new WaveRamp(first, second, first, second);
         }
 
+        return RampAcross(colors, light);
+    }
+
+    private static WaveRamp RampAcross(Vector4[] colors, bool light)
+    {
         Span<Vector4> stops = stackalloc Vector4[WaveRamp.MaxStops];
         var count = Math.Min(colors.Length, WaveRamp.MaxStops);
         for (var stopIndex = 0; stopIndex < count; stopIndex++)
@@ -115,6 +177,17 @@ internal static class NameEffects
         }
 
         return new WaveRamp(stops[..count]);
+    }
+
+    private static WaveRamp RainbowRamp(bool light)
+    {
+        Span<Vector4> stops = stackalloc Vector4[RainbowStops];
+        for (var stopIndex = 0; stopIndex < RainbowStops; stopIndex++)
+        {
+            stops[stopIndex] = RoleInk.For(Palette.FromHue(stopIndex / (float)RainbowStops, RainbowSaturation, 1f), light);
+        }
+
+        return new WaveRamp(stops);
     }
 
     public static NameEffectKind KindFor(RoleKind role)
@@ -152,6 +225,30 @@ internal static class NameEffects
             NameEffectKind.Eclipse => Pulse.Phase(EclipsePeriod),
             NameEffectKind.Heartbeat => Pulse.Phase(HeartbeatPeriod),
             NameEffectKind.Pulse => Pulse.Phase(PulsePeriod),
+            NameEffectKind.Spectrum => Pulse.Phase(SpectrumPeriod),
+            NameEffectKind.Candy => Pulse.Phase(CandyPeriod),
+            NameEffectKind.Stripes => Pulse.Phase(StripesPeriod),
+            NameEffectKind.Chrome => Pulse.Phase(ChromePeriod),
+            NameEffectKind.Blaze => Pulse.Phase(BlazePeriod),
+            NameEffectKind.Bounce => Pulse.Phase(BouncePeriod),
+            NameEffectKind.Shiver => Pulse.Phase(ShiverPeriod),
+            NameEffectKind.Wobble => Pulse.Phase(WobblePeriod),
+            NameEffectKind.Pop => Pulse.Phase(PopPeriod),
+            NameEffectKind.Flipboard => Pulse.Phase(FlipboardPeriod),
+            NameEffectKind.Typewriter => Pulse.Phase(TypewriterPeriod),
+            NameEffectKind.Chromatic => Pulse.Phase(ChromaticPeriod),
+            NameEffectKind.Neon => Pulse.Phase(NeonPeriod),
+            NameEffectKind.Underline => Pulse.Phase(UnderlinePeriod),
+            NameEffectKind.Scan => Pulse.Phase(ScanPeriod),
+            NameEffectKind.Comet => Pulse.Phase(CometPeriod),
+            NameEffectKind.Sakura => Pulse.Phase(MotePeriod),
+            NameEffectKind.Snowfall => Pulse.Phase(MotePeriod),
+            NameEffectKind.Fireflies => Pulse.Phase(MotePeriod),
+            NameEffectKind.Hearts => Pulse.Phase(MotePeriod),
+            NameEffectKind.Glitter => Pulse.Phase(MotePeriod),
+            NameEffectKind.Bubbles => Pulse.Phase(MotePeriod),
+            NameEffectKind.Confetti => Pulse.Phase(MotePeriod),
+            NameEffectKind.Storm => Pulse.Phase(StormPeriod),
             _ => 0f,
         };
     }

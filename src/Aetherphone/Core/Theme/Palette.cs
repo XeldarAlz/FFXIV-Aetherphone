@@ -43,4 +43,23 @@ internal static class Palette
 
     public static Vector4 Darken(Vector4 color, float amount) =>
         Vector4.Lerp(color, new Vector4(0f, 0f, 0f, color.W), amount);
+
+    public static Vector4 FromHue(float hue, float saturation, float value)
+    {
+        var sector = (hue - MathF.Floor(hue)) * 6f;
+        var slice = (int)sector % 6;
+        var fraction = sector - MathF.Floor(sector);
+        var low = value * (1f - saturation);
+        var falling = value * (1f - saturation * fraction);
+        var rising = value * (1f - saturation * (1f - fraction));
+        return slice switch
+        {
+            0 => new Vector4(value, rising, low, 1f),
+            1 => new Vector4(falling, value, low, 1f),
+            2 => new Vector4(low, value, rising, 1f),
+            3 => new Vector4(low, falling, value, 1f),
+            4 => new Vector4(rising, low, value, 1f),
+            _ => new Vector4(value, low, falling, 1f),
+        };
+    }
 }
