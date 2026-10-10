@@ -80,14 +80,15 @@ internal sealed class CasinoTablesStore : IDisposable
 
     public CasinoTableRowDto[] Listed => listed;
 
-    public CasinoTableRowDto? CardFor(string roomId)
+    public CasinoTableRowDto? CardFor(string roomId) => CardIn(listed, card, roomId);
+
+    internal static CasinoTableRowDto? CardIn(CasinoTableRowDto[] rows, CasinoTableRowDto? held, string roomId)
     {
         if (roomId.Length == 0)
         {
             return null;
         }
 
-        var rows = listed;
         for (var index = 0; index < rows.Length; index++)
         {
             if (string.Equals(rows[index].TableId, roomId, StringComparison.Ordinal))
@@ -96,7 +97,6 @@ internal sealed class CasinoTablesStore : IDisposable
             }
         }
 
-        var held = card;
         return held is not null && string.Equals(held.TableId, roomId, StringComparison.Ordinal) ? held : null;
     }
 
@@ -280,8 +280,7 @@ internal sealed class CasinoTablesStore : IDisposable
                 return;
             }
 
-            Interlocked.Exchange(ref hostedTable, answer.Table);
-            RefreshNow();
+            Hosted(answer.Table);
         }, EndIntent);
     }
 
@@ -321,8 +320,7 @@ internal sealed class CasinoTablesStore : IDisposable
                 return;
             }
 
-            Interlocked.Exchange(ref hostedTable, answer.Table);
-            RefreshNow();
+            Hosted(answer.Table);
         }, EndIntent);
     }
 
@@ -842,6 +840,13 @@ internal sealed class CasinoTablesStore : IDisposable
     private void EndIntent()
     {
         intentInFlight = false;
+    }
+
+    private void Hosted(CasinoTableRowDto table)
+    {
+        card = table;
+        Interlocked.Exchange(ref hostedTable, table);
+        RefreshNow();
     }
 
     private void OnTableStatus(int statusCode)
