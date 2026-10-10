@@ -101,7 +101,7 @@ internal sealed partial class VelvetShell
         moonSlide.Step(target, Motion.Release, ImGui.GetIO().DeltaTime);
     }
 
-    private static void DrawLogoFlare(ImDrawListPtr drawList, Vector2 logoCenter, float logoSize)
+    private void DrawLogoFlare(ImDrawListPtr drawList, Vector2 logoCenter, float logoSize)
     {
         var flare = NightScene.Kindling;
         if (flare <= 0f)
@@ -109,7 +109,9 @@ internal sealed partial class VelvetShell
             return;
         }
 
+        drawList.PushClipRect(screenRect.Min, screenRect.Max);
         NightScene.Glow(drawList, logoCenter, logoSize * LogoFlareReach, Spooks.Pumpkin with { W = LogoFlareAlpha * flare },
             LogoFlareCells);
+        drawList.PopClipRect();
     }
 }
