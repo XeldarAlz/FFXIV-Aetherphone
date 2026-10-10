@@ -1,5 +1,6 @@
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
@@ -11,8 +12,14 @@ namespace Aetherphone.Apps.Velvet;
 internal sealed partial class VelvetShell
 {
     private const float LogoTapReach = 0.6f;
+    private const float LogoFlareReach = 1.6f;
+    private const float LogoFlareAlpha = 0.55f;
+    private const int LogoFlareCells = 10;
+    private const float DefaultMoonFraction = 0.46f;
 
     private int seasonApplied = -1;
+    private Spring moonSlide;
+    private bool moonPlaced;
 
     private static string DiscoverGlyph => SeasonalTheme.Halloween ? PhoneIcons.CrystalBall : PhoneIcons.Compass;
     private static string FeedGlyph => SeasonalTheme.Halloween ? PhoneIcons.Candle : PhoneIcons.Photo;
@@ -77,14 +84,46 @@ internal sealed partial class VelvetShell
         }
     }
 
-    private static void DrawNight(Rect screen, float top)
+    private void DrawNight(Rect screen, float top)
     {
         if (!SeasonalTheme.Halloween)
         {
             return;
         }
 
-        NightScene.Witching(ImGui.GetWindowDrawList(), screen, top + VHeader.Height * UiScale.Current * 0.5f);
+        var fraction = moonPlaced ? moonSlide.Value : DefaultMoonFraction;
+        var moon = new Vector2(screen.Min.X + screen.Width * fraction, top + VHeader.Height * UiScale.Current * 0.5f);
+        NightScene.Witching(ImGui.GetWindowDrawList(), screen, moon);
+    }
+
+    private void PlaceMoon(float titleRight, float iconsLeft)
+    {
+        if (!SeasonalTheme.Halloween || screenRect.Width <= 0f)
+        {
+            return;
+        }
+
+        var target = ((titleRight + iconsLeft) * 0.5f - screenRect.Min.X) / screenRect.Width;
+        if (!moonPlaced)
+        {
+            moonSlide.SnapTo(target);
+            moonPlaced = true;
+            return;
+        }
+
+        moonSlide.Step(target, Motion.Release, ImGui.GetIO().DeltaTime);
+    }
+
+    private static void DrawLogoFlare(ImDrawListPtr drawList, Vector2 logoCenter, float logoSize)
+    {
+        var flare = NightScene.Kindling;
+        if (flare <= 0f)
+        {
+            return;
+        }
+
+        NightScene.Glow(drawList, logoCenter, logoSize * LogoFlareReach, Spooks.Pumpkin with { W = LogoFlareAlpha * flare },
+            LogoFlareCells);
     }
 
     private void NoteConnected()
