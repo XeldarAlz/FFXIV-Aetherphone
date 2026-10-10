@@ -17,8 +17,6 @@ internal static class AppSurface
     private const float IndicatorHoldSeconds = 0.8f;
     private const float IndicatorStripUnits = 16f;
     private const float IndicatorWidthUnits = 3f;
-    private const float IndicatorInsetUnits = 2f;
-    private const float IndicatorMinUnits = 24f;
     private const float IndicatorAlphaScale = 0.45f;
     private const float IndicatorMotionEpsilon = 0.5f;
     private const float MaxFrameSeconds = 0.1f;
@@ -92,7 +90,7 @@ internal static class AppSurface
         var child = ImRaii.Child("##appSurface", area.Size, false, flags);
         var freshVisit = ResetScrollOnNewVisit();
         ActiveFreshVisit = freshVisit;
-        var surface = DragScrollHost.Begin(key);
+        var surface = DragScrollHost.Begin(key, IndicatorStripUnits * scale);
         if (hostsNavBar)
         {
             ReserveNavBarBand(freshVisit);
@@ -112,7 +110,7 @@ internal static class AppSurface
         ImGui.Dummy(new Vector2(0f, reserve));
     }
 
-    private static void TrackIndicator()
+    private static void TrackIndicator(bool grabbing)
     {
         var frame = ImGui.GetFrameCount();
         var now = ImGui.GetTime();
@@ -130,7 +128,7 @@ internal static class AppSurface
         var windowMin = ImGui.GetWindowPos();
         var windowSize = ImGui.GetWindowSize();
         var windowMax = windowMin + windowSize;
-        if (UiInteract.HoverWindowOnly(new Vector2(windowMax.X - IndicatorStripUnits * scale, windowMin.Y), windowMax))
+        if (grabbing || DragScrollHost.HoversEdgeStrip(IndicatorStripUnits * scale))
         {
             lastScrollMotion = now;
         }
@@ -154,15 +152,12 @@ internal static class AppSurface
             return;
         }
 
-        var viewHeight = windowSize.Y;
-        var inset = IndicatorInsetUnits * scale;
-        var thumbHeight = MathF.Max(IndicatorMinUnits * scale, viewHeight * viewHeight / (viewHeight + maxY));
-        var travel = MathF.Max(0f, viewHeight - thumbHeight - inset * 2f);
-        var top = windowMin.Y + inset + travel * (scrollY / maxY);
-        var right = windowMax.X - inset;
+        var thumb = ScrollThumb.Measure(windowMin.Y, windowSize.Y, scrollY, maxY, scale);
+        var right = windowMax.X - ScrollThumb.InsetUnits * scale;
         var width = IndicatorWidthUnits * scale;
         var ink = ScrollbarInk ?? new Vector4(1f, 1f, 1f, 1f);
-        ImGui.GetWindowDrawList().AddRectFilled(new Vector2(right - width, top), new Vector2(right, top + thumbHeight),
+        ImGui.GetWindowDrawList().AddRectFilled(new Vector2(right - width, thumb.Top),
+            new Vector2(right, thumb.Top + thumb.Height),
             ImGui.GetColorU32(Palette.WithAlpha(ink, ink.W * IndicatorAlphaScale * IndicatorAlpha)), width * 0.5f);
     }
 
@@ -241,7 +236,7 @@ internal static class AppSurface
                 ImGui.Dummy(new Vector2(0f, bottomInset));
             }
 
-            TrackIndicator();
+            TrackIndicator(surface.Grabbing);
             depth = Math.Max(0, depth - 1);
             child.Dispose();
             padding?.Dispose();

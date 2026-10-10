@@ -24,6 +24,22 @@ public class KineticScrollerTests
     }
 
     [Fact]
+    public void ExceedsDragThreshold_MeasuresFromThePressPointAtTheCurrentScale()
+    {
+        var scroller = Scroller(1000f);
+        Assert.False(scroller.ExceedsDragThreshold(500f));
+        scroller.Press(100f);
+        Assert.False(scroller.ExceedsDragThreshold(105f));
+        Assert.True(scroller.ExceedsDragThreshold(106f));
+        Assert.True(scroller.ExceedsDragThreshold(94f));
+        scroller.Scale = 2f;
+        Assert.False(scroller.ExceedsDragThreshold(111f));
+        Assert.True(scroller.ExceedsDragThreshold(112f));
+        scroller.Release();
+        Assert.False(scroller.ExceedsDragThreshold(200f));
+    }
+
+    [Fact]
     public void MovementPastThreshold_DragsAndMovesOffset()
     {
         var scroller = Scroller(1000f);

@@ -348,7 +348,11 @@ internal sealed class ChatTranscript
                 return;
             }
 
-            SyncFollow(model.ThreadId, surface.FreshVisit);
+            if (SyncFollow(model.ThreadId, surface.FreshVisit) && surface.Scrolling)
+            {
+                surface.CancelDrag();
+            }
+
             MaybeLoadOlder(model);
             ImGui.Dummy(new Vector2(0f, 8f * scale));
             var drawList = ImGui.GetWindowDrawList();
@@ -468,7 +472,7 @@ internal sealed class ChatTranscript
             }
 
             ImGui.Dummy(new Vector2(0f, 8f * scale));
-            if (followBottom)
+            if (followBottom && !surface.Scrolling)
             {
                 ImGui.SetScrollHereY(1f);
             }
@@ -602,9 +606,10 @@ internal sealed class ChatTranscript
         }
     }
 
-    private void SyncFollow(string threadId, bool freshVisit)
+    private bool SyncFollow(string threadId, bool freshVisit)
     {
         var scale = UiScale.Current;
+        var forced = false;
         if (followThreadId == threadId)
         {
             followBottom = ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 4f * scale;
@@ -613,6 +618,7 @@ internal sealed class ChatTranscript
         {
             followThreadId = threadId;
             followBottom = true;
+            forced = true;
             olderAnchorFromBottom = -1f;
             rowLayouts.Clear();
         }
@@ -620,14 +626,18 @@ internal sealed class ChatTranscript
         if (freshVisit && scrollTargetId is null)
         {
             followBottom = true;
+            forced = true;
             olderAnchorFromBottom = -1f;
         }
 
         if (snapToBottom)
         {
             followBottom = true;
+            forced = true;
             snapToBottom = false;
         }
+
+        return forced;
     }
 
     private void DrawSenderLabel(TranscriptMessage message, PhoneTheme theme, bool mine)
