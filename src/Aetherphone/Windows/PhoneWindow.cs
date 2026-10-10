@@ -177,7 +177,6 @@ internal sealed class PhoneWindow : Window
     public override void PreDraw()
     {
         FrameClock.Advance(ImGui.GetFrameCount(), ImGui.GetIO().DeltaTime);
-        SeasonalTheme.Update(configuration, DateTime.Now);
         shell.PrepareFrame(FrameClock.Delta);
         Plugin.LiveBackdrop.Prepare();
         var portraitWidth = Components.PhoneBounds.ClampWidth(configuration.PhoneWidth);
