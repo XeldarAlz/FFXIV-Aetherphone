@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -39,12 +38,35 @@ internal sealed class SeasonIntro
 
     public NightView ViewFor(Rect frame) => NightView.Now(frame, Reveal);
 
-    public IDisposable FadeContent()
+    public ContentFade FadeContent()
     {
         var alpha = Spring.Settle(Elapsed - ContentDelaySeconds, Motion.Sheet);
-        return ImRaii.PushStyle(ImGuiStyleVar.Alpha,
-            ImGui.GetStyle().Alpha * MathF.Max(MinimumContentAlpha, alpha), alpha < Settled);
+        if (alpha >= Settled)
+        {
+            return default;
+        }
+
+        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * MathF.Max(MinimumContentAlpha, alpha));
+        return new ContentFade(true);
     }
 
     private float Elapsed => (float)(ImGui.GetTime() - startedAt);
+
+    public readonly struct ContentFade : IDisposable
+    {
+        private readonly bool pushed;
+
+        public ContentFade(bool pushed)
+        {
+            this.pushed = pushed;
+        }
+
+        public void Dispose()
+        {
+            if (pushed)
+            {
+                ImGui.PopStyleVar();
+            }
+        }
+    }
 }
