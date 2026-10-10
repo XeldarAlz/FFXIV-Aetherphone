@@ -9,8 +9,6 @@ namespace Aetherphone.Apps.Calendar.Widgets;
 
 internal sealed class HalloweenWidget : IHomeWidget
 {
-    private const int HalloweenMonth = 10;
-    private const int HalloweenDay = 31;
     private const float PumpkinUnits = 22f;
     private const float GlowReach = 2.4f;
     private const float GlowAlpha = 0.28f;
@@ -40,27 +38,39 @@ internal sealed class HalloweenWidget : IHomeWidget
         var ink = WidgetInk.From(context);
         var content = WidgetMetrics.Content(context);
         var scale = context.Scale;
-        var accent = ink.Accent(Spooks.Pumpkin);
+        var haunted = SeasonalTheme.Halloween;
+        var accent = haunted ? ink.Accent(Spooks.Pumpkin) : ink.Secondary;
         var pumpkinSize = PumpkinUnits * scale;
         var pumpkinCenter = new Vector2(content.Max.X - pumpkinSize * 0.5f, content.Min.Y + pumpkinSize * 0.5f);
-        if (SeasonalTheme.Halloween)
+        if (haunted)
         {
             NightScene.Glow(context.DrawList, pumpkinCenter, pumpkinSize * GlowReach,
                 accent with { W = accent.W * GlowAlpha }, GlowCells);
         }
 
-        PhoneIcon.Draw(context.DrawList, pumpkinCenter, PhoneIcons.Pumpkin, accent, pumpkinSize);
+        PhoneIcon.Draw(context.DrawList, pumpkinCenter, haunted ? PhoneIcons.Pumpkin : PhoneIcons.Calendar, accent,
+            pumpkinSize);
         WidgetText.EyebrowFit(context.DrawList, content.Min, Eyebrow(), content.Width - pumpkinSize, accent, scale);
 
-        var days = DaysUntilHalloween(DateTime.Today);
+        var today = DateTime.Today;
         var top = content.Min.Y + pumpkinSize + WidgetMetrics.Gutter * 0.5f * scale;
-        var headline = days == 0 ? Loc.T(L.Seasonal.Tonight) : Number(days);
-        var style = days == 0 ? WidgetType.DisplayCompact : WidgetType.Display;
-        top += WidgetText.Draw(context.DrawList, new Vector2(content.Min.X, top), headline, ink.Primary, style,
-            content.Width);
-        WidgetText.Draw(context.DrawList, new Vector2(content.Min.X, top), Caption(days), ink.Secondary,
-            WidgetType.Caption, content.Width);
-        if (!SeasonalTheme.Halloween)
+        if (SeasonalTheme.IsAfterHalloweenNight(today))
+        {
+            WidgetText.Draw(context.DrawList, new Vector2(content.Min.X, top), Loc.T(L.Seasonal.HalloweenPassed),
+                ink.Primary, WidgetType.DisplayCompact, content.Width);
+        }
+        else
+        {
+            var days = DaysUntilHalloween(today);
+            var headline = days == 0 ? Loc.T(L.Seasonal.Tonight) : Number(days);
+            var style = days == 0 ? WidgetType.DisplayCompact : WidgetType.Display;
+            top += WidgetText.Draw(context.DrawList, new Vector2(content.Min.X, top), headline, ink.Primary, style,
+                content.Width);
+            WidgetText.Draw(context.DrawList, new Vector2(content.Min.X, top), Caption(days), ink.Secondary,
+                WidgetType.Caption, content.Width);
+        }
+
+        if (!haunted)
         {
             return;
         }
@@ -72,13 +82,14 @@ internal sealed class HalloweenWidget : IHomeWidget
 
     public static int DaysUntilHalloween(DateTime today)
     {
-        var target = new DateTime(today.Year, HalloweenMonth, HalloweenDay);
-        if (today > target)
+        var date = today.Date;
+        var target = SeasonalTheme.HalloweenNightOf(date.Year);
+        if (date > target)
         {
-            target = target.AddYears(1);
+            target = SeasonalTheme.HalloweenNightOf(date.Year + 1);
         }
 
-        return (target - today).Days;
+        return (target - date).Days;
     }
 
     private void SyncLanguage()

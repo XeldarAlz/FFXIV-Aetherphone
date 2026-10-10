@@ -2192,6 +2192,7 @@ internal static class L
         public static readonly LocPlural DaysToGo = new("seasonal.daysToGo", "day to go", "days to go");
         public static readonly LocString Tonight = new("seasonal.tonight", "Tonight");
         public static readonly LocString HalloweenNight = new("seasonal.halloweenNight", "Halloween night");
+        public static readonly LocString HalloweenPassed = new("seasonal.halloweenPassed", "Until next year");
         public static readonly LocString TreatsFoundLabel = new("seasonal.treatsFoundLabel", "Treats Found");
         public static readonly LocString TreatsCount = new("seasonal.treatsCount", "{0} of {1}");
         public static readonly LocString TreatHidingIn = new("seasonal.treatHidingIn", "A treat is hiding in {0}");

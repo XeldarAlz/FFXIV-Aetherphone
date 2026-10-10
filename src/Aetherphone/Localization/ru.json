@@ -1157,6 +1157,7 @@
   "seasonal.daysToGo.other": "дн. до Хэллоуина",
   "seasonal.tonight": "Сегодня",
   "seasonal.halloweenNight": "Ночь Хэллоуина",
+  "seasonal.halloweenPassed": "До следующего года",
   "seasonal.treatsFoundLabel": "Найдено угощений",
   "seasonal.treatsCount": "{0} из {1}",
   "seasonal.treatHidingIn": "Угощение спрятано в приложении {0}",

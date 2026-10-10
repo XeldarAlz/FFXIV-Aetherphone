@@ -38,6 +38,11 @@ internal static class SeasonalTheme
         return -1;
     }
 
+    public static DateTime HalloweenNightOf(int year) => new(year, HalloweenStartMonth, HalloweenNightDay);
+
+    public static bool IsAfterHalloweenNight(DateTime date) =>
+        date.Month == HalloweenEndMonth && date.Day <= HalloweenEndDay;
+
     public static bool IsHalloweenNight(DateTime date) =>
         Halloween && date.Month == HalloweenStartMonth && date.Day == HalloweenNightDay;
 

@@ -1157,6 +1157,7 @@
   "seasonal.daysToGo.other": "days to go",
   "seasonal.tonight": "Tonight",
   "seasonal.halloweenNight": "Halloween night",
+  "seasonal.halloweenPassed": "Until next year",
   "seasonal.treatsFoundLabel": "Treats Found",
   "seasonal.treatsCount": "{0} of {1}",
   "seasonal.treatHidingIn": "A treat is hiding in {0}",
