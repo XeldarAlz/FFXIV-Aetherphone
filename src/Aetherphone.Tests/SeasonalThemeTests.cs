@@ -62,6 +62,16 @@ public sealed class SeasonalThemeTests
     }
 
     [Fact]
+    public void OnlyTheThirtyFirstIsHalloweenNight()
+    {
+        SeasonalTheme.Update(new Configuration(), HalloweenNight);
+
+        Assert.True(SeasonalTheme.IsHalloweenNight(new DateTime(2026, 10, 31)));
+        Assert.False(SeasonalTheme.IsHalloweenNight(new DateTime(2026, 10, 30)));
+        Assert.False(SeasonalTheme.IsHalloweenNight(new DateTime(2026, 11, 1)));
+    }
+
+    [Fact]
     public void PreviewRespectsTheDecorationsToggle()
     {
         SeasonalTheme.Update(new Configuration { PreviewHalloween = true, SeasonalDecorations = false }, Midsummer);
