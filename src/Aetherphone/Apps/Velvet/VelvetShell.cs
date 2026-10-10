@@ -441,7 +441,6 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
     {
         ui.Body(area);
         DrawNight(screenRect, area.Min.Y);
-        OfferTreat(area, depth);
         switch (view.Screen)
         {
             case VelvetScreenId.Root:
@@ -526,6 +525,8 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
                 DrawRoot(area);
                 break;
         }
+
+        OfferTreat(area, depth);
     }
 
     private void DrawRoot(Rect area)

@@ -434,7 +434,6 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     {
         ui.Body(area);
         DrawNight(screenRect, area.Min.Y);
-        OfferTreat(area, depth);
         switch (route.Screen)
         {
             case ChirperScreen.Compose:
@@ -474,6 +473,8 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
                 DrawHome(area);
                 break;
         }
+
+        OfferTreat(area, depth);
     }
 
     private void DrawHome(Rect area)

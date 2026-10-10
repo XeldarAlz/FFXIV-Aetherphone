@@ -455,7 +455,6 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     {
         ui.Body(area);
         DrawNight(screenRect, area.Min.Y);
-        OfferTreat(area, depth);
         switch (route.Screen)
         {
             case AethergramScreen.Compose:
@@ -531,6 +530,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
                 DrawRoot(area);
                 break;
         }
+
+        OfferTreat(area, depth);
     }
 
     private Rect ChatArea(Rect area)
