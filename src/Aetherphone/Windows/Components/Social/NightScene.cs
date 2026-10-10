@@ -299,13 +299,12 @@ internal static class NightScene
         var span = frame.Width + 300f * scale;
         for (var cloud = 0; cloud < 2; cloud++)
         {
-            var x = frame.Min.X - 150f * scale + Wrap((time * (5f + cloud * 3f) + cloud * 160f) * scale, span);
-            var y = moon.Y + (18f + cloud * 30f) * scale;
+            var drift = Wrap((time * (5f + cloud * 3f) + cloud * 160f) * scale, span);
+            var anchor = new Vector2(frame.Min.X - 150f * scale + drift, moon.Y + (18f + cloud * 30f) * scale);
             for (var index = 0; index < CloudBlobs.Length; index++)
             {
                 var blob = CloudBlobs[index];
-                Glow(drawList, new Vector2(x + blob.X * scale, y + blob.Y * scale), blob.Z * 1.4f * scale, CloudInk,
-                    6);
+                Glow(drawList, anchor + new Vector2(blob.X, blob.Y) * scale, blob.Z * 1.4f * scale, CloudInk, 6);
             }
         }
     }
@@ -317,24 +316,25 @@ internal static class NightScene
         for (var index = 0; index < pines.Length; index++)
         {
             var pine = pines[index];
-            var x = frame.Min.X + pine.X * scale;
+            var centerX = frame.Min.X + pine.X * scale;
             var width = pine.Width * scale;
-            if (x - width > frame.Max.X)
+            if (centerX - width > frame.Max.X)
             {
                 break;
             }
 
             var height = pine.Height * scale;
             var foot = baseY + pine.Drop * scale;
-            DrawTier(drawList, x, foot, width, height * 0.52f, ink);
-            DrawTier(drawList, x, foot - height * 0.3f, width * 0.72f, height * 0.48f, ink);
-            DrawTier(drawList, x, foot - height * 0.56f, width * 0.46f, height * 0.44f, ink);
+            DrawTier(drawList, centerX, foot, width, height * 0.52f, ink);
+            DrawTier(drawList, centerX, foot - height * 0.3f, width * 0.72f, height * 0.48f, ink);
+            DrawTier(drawList, centerX, foot - height * 0.56f, width * 0.46f, height * 0.44f, ink);
         }
     }
 
-    private static void DrawTier(ImDrawListPtr drawList, float x, float bottom, float width, float height, uint ink) =>
-        drawList.AddTriangleFilled(new Vector2(x - width * 0.5f, bottom), new Vector2(x, bottom - height),
-            new Vector2(x + width * 0.5f, bottom), ink);
+    private static void DrawTier(ImDrawListPtr drawList, float centerX, float bottom, float width, float height,
+        uint ink) =>
+        drawList.AddTriangleFilled(new Vector2(centerX - width * 0.5f, bottom), new Vector2(centerX, bottom - height),
+            new Vector2(centerX + width * 0.5f, bottom), ink);
 
     private static void DrawPuffs(ImDrawListPtr drawList, Rect frame, Puff[] puffs, float baseY, Vector4 tint,
         float time, float scale)
@@ -410,8 +410,8 @@ internal static class NightScene
         for (var index = 0; index < Towers.Length; index++)
         {
             var tower = Towers[index];
-            var x = frame.Min.X + tower.X * scale;
-            if (x > frame.Max.X)
+            var left = frame.Min.X + tower.X * scale;
+            if (left > frame.Max.X)
             {
                 break;
             }
@@ -419,25 +419,25 @@ internal static class NightScene
             var width = tower.Width * scale;
             var height = tower.Height * scale;
             var top = baseY - height;
-            drawList.AddRectFilled(new Vector2(x, top), new Vector2(x + width, baseY + 1f), ink);
+            drawList.AddRectFilled(new Vector2(left, top), new Vector2(left + width, baseY + 1f), ink);
             for (var merlon = 0f; merlon < tower.Width - 3f; merlon += 8f)
             {
-                drawList.AddRectFilled(new Vector2(x + merlon * scale, top - 6f * scale),
-                    new Vector2(x + (merlon + 4f) * scale, top + 1f), ink);
+                drawList.AddRectFilled(new Vector2(left + merlon * scale, top - 6f * scale),
+                    new Vector2(left + (merlon + 4f) * scale, top + 1f), ink);
             }
 
             if (tower.Spire)
             {
-                drawList.AddTriangleFilled(new Vector2(x - 2f * scale, top), new Vector2(x + width * 0.5f, top - height * 0.42f),
-                    new Vector2(x + width + 2f * scale, top), ink);
+                drawList.AddTriangleFilled(new Vector2(left - 2f * scale, top), new Vector2(left + width * 0.5f, top - height * 0.42f),
+                    new Vector2(left + width + 2f * scale, top), ink);
             }
         }
 
         for (var index = 0; index < Panes.Length; index++)
         {
             var pane = Panes[index];
-            var x = frame.Min.X + pane.X * scale;
-            if (x > frame.Max.X)
+            var left = frame.Min.X + pane.X * scale;
+            if (left > frame.Max.X)
             {
                 continue;
             }
@@ -446,9 +446,9 @@ internal static class NightScene
                 0.15f * MathF.Sin(time * pane.Speed * 2.7f);
             var color = ImGui.GetColorU32(PaneInk with { W = flicker });
             var top = baseY - pane.Lift * scale;
-            drawList.AddRectFilled(new Vector2(x, top + 3f * scale), new Vector2(x + 6f * scale, top + 11f * scale),
+            drawList.AddRectFilled(new Vector2(left, top + 3f * scale), new Vector2(left + 6f * scale, top + 11f * scale),
                 color);
-            drawList.AddCircleFilled(new Vector2(x + 3f * scale, top + 3f * scale), 3f * scale, color, 10);
+            drawList.AddCircleFilled(new Vector2(left + 3f * scale, top + 3f * scale), 3f * scale, color, 10);
         }
     }
 
@@ -469,13 +469,13 @@ internal static class NightScene
     private static Pine[] PinesFrom(Random random, float minimumHeight, float maximumHeight)
     {
         var pines = new List<Pine>();
-        var x = -12f;
-        while (x < SceneSpan)
+        var cursor = -12f;
+        while (cursor < SceneSpan)
         {
             var width = 16f + random.NextSingle() * 16f;
-            pines.Add(new Pine(x + width * 0.5f, width,
+            pines.Add(new Pine(cursor + width * 0.5f, width,
                 minimumHeight + random.NextSingle() * (maximumHeight - minimumHeight), random.NextSingle() * 6f));
-            x += width * (0.55f + random.NextSingle() * 0.35f);
+            cursor += width * (0.55f + random.NextSingle() * 0.35f);
         }
 
         return pines.ToArray();
@@ -508,14 +508,14 @@ internal static class NightScene
     private static Tower[] TowersFrom(Random random)
     {
         var towers = new List<Tower>();
-        var x = -6f;
-        while (x < SceneSpan)
+        var cursor = -6f;
+        while (cursor < SceneSpan)
         {
             var width = 22f + random.NextSingle() * 26f;
             var spire = random.NextSingle() < 0.3f;
             var height = spire ? 78f + random.NextSingle() * 40f : 30f + random.NextSingle() * 48f;
-            towers.Add(new Tower(x, width, height, spire));
-            x += width + random.NextSingle() * 5f;
+            towers.Add(new Tower(cursor, width, height, spire));
+            cursor += width + random.NextSingle() * 5f;
         }
 
         return towers.ToArray();
