@@ -10,6 +10,9 @@ internal static class NightScene
     private const int SmallSegments = 12;
     private const int MaxGlowCells = 16;
     private const int HaloCells = 16;
+    private const int GreenShift = 8;
+    private const int BlueShift = 16;
+    private const int AlphaShift = 24;
     private const float HaloReach = 3.1f;
     private const float VeilReach = 290f;
     private const float BloodVeilReach = 380f;
@@ -226,6 +229,8 @@ internal static class NightScene
         Span<uint> colors = stackalloc uint[(MaxGlowCells + 1) * (MaxGlowCells + 1)];
         var origin = center - new Vector2(radius, radius);
         var step = radius * 2f / count;
+        var channels = PackChannels(color);
+        var styleAlpha = ImGui.GetStyle().Alpha;
         for (var row = 0; row < columns; row++)
         {
             for (var column = 0; column < columns; column++)
@@ -233,7 +238,7 @@ internal static class NightScene
                 var point = origin + new Vector2(column * step, row * step);
                 var falloff = Math.Clamp(1f - Vector2.Distance(point, center) / radius, 0f, 1f);
                 falloff = falloff * falloff * (3f - 2f * falloff);
-                colors[row * columns + column] = ImGui.GetColorU32(color with { W = color.W * falloff });
+                colors[row * columns + column] = channels | Channel(color.W * falloff * styleAlpha) << AlphaShift;
             }
         }
 
@@ -300,6 +305,8 @@ internal static class NightScene
     {
         var drift = view.Lift * StarParallax;
         var shift = view.StarShift;
+        var channels = PackChannels(ink);
+        var styleAlpha = ImGui.GetStyle().Alpha;
         for (var index = 0; index < stars.Length; index++)
         {
             var star = stars[index];
@@ -312,7 +319,8 @@ internal static class NightScene
 
             var center = new Vector2(frame.Min.X + star.X * frame.Width + shift.X,
                 frame.Min.Y + star.Y * frame.Height - drift + shift.Y);
-            drawList.AddCircleFilled(center, star.Radius * scale, ImGui.GetColorU32(ink with { W = alpha }), 8);
+            drawList.AddCircleFilled(center, star.Radius * scale,
+                channels | Channel(alpha * styleAlpha) << AlphaShift, 8);
         }
     }
 
@@ -499,6 +507,11 @@ internal static class NightScene
     }
 
     private static float Wrap(float value, float span) => value - MathF.Floor(value / span) * span;
+
+    private static uint PackChannels(Vector4 color) =>
+        Channel(color.X) | Channel(color.Y) << GreenShift | Channel(color.Z) << BlueShift;
+
+    private static uint Channel(float value) => (uint)(Math.Clamp(value, 0f, 1f) * 255f + 0.5f);
 
     private static Star[] StarsFrom(Random random, int count)
     {
