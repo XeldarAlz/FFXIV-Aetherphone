@@ -98,9 +98,9 @@ internal static class BootScreen
 
     private static Vector4 Accent => SeasonalTheme.Halloween ? Spooks.Pumpkin : BrandMark.Lilac;
 
-    private static void DrawHaunting(ImDrawListPtr dl, Vector2 center, float markSize, float alpha, float scale)
+    private static void DrawHaunting(ImDrawListPtr drawList, Vector2 center, float markSize, float alpha, float scale)
     {
-        NightScene.Glow(dl, center, markSize * HaloReach, Spooks.Pumpkin with { W = HaloAlpha * alpha }, 12);
+        NightScene.Glow(drawList, center, markSize * HaloReach, Spooks.Pumpkin with { W = HaloAlpha * alpha }, 12);
         var time = (float)ImGui.GetTime();
         var ink = ImGui.GetColorU32(Spooks.BatShadow with { W = alpha });
         for (var batIndex = 0; batIndex < BatCount; batIndex++)
@@ -109,7 +109,7 @@ internal static class BootScreen
             var orbit = markSize * (0.78f + batIndex * 0.1f);
             var position = center + new Vector2(MathF.Cos(angle) * orbit, MathF.Sin(angle) * orbit * 0.45f);
             var flap = MathF.Sin(time * 14f + batIndex * 1.3f);
-            NightScene.DrawBat(dl, position, (0.9f + batIndex * 0.12f) * scale, flap, ink);
+            NightScene.DrawBat(drawList, position, (0.9f + batIndex * 0.12f) * scale, flap, ink);
         }
     }
 
