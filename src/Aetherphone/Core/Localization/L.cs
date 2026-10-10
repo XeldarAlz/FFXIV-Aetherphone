@@ -2155,7 +2155,7 @@ internal static class L
         public static readonly LocString IconAppearanceClear = new("settings.iconAppearanceClear", "Clear");
         public static readonly LocString IconAppearanceHint = new("settings.iconAppearanceHint", "Dark and Tinted repaint each icon on graphite, Clear shows it as glass over the wallpaper. Icons without painted artwork keep their colored tile.");
         public static readonly LocString SeasonalDecorations = new("settings.seasonalDecorations", "Seasonal Decorations");
-        public static readonly LocString SeasonalDecorationsHint = new("settings.seasonalDecorationsHint", "Adds holiday touches to Chirper, Aethergram, and Velvet during seasonal events like Halloween.");
+        public static readonly LocString SeasonalDecorationsHint = new("settings.seasonalDecorationsHint", "Adds holiday touches across the phone during seasonal events like Halloween.");
         public static readonly LocString SearchHint = new("settings.searchHint", "Search settings");
         public static readonly LocString NoResults = new("settings.noResults", "No settings match that");
         public static readonly LocString PhoneWidthReadout = new("settings.phoneWidthReadout", "{0} px wide");
@@ -2175,6 +2175,8 @@ internal static class L
         public static readonly LocString ChirperCaughtUpHint = new("seasonal.chirperCaughtUpHint", "Older howls continue below");
         public static readonly LocString AethergramCaughtUp = new("seasonal.aethergramCaughtUp", "Nothing left but the night");
         public static readonly LocString AethergramCaughtUpHint = new("seasonal.aethergramCaughtUpHint", "Older posts lurk below");
+        public static readonly LocString VelvetFeedNone = new("seasonal.velvetFeedNone", "Not a candle lit yet");
+        public static readonly LocString VelvetConnected = new("seasonal.velvetConnected", "Sealed by candlelight");
     }
 
     internal static class Translate

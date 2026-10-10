@@ -47,7 +47,7 @@ internal sealed partial class VelvetShell
             {
                 var emptyRect = new Rect(new Vector2(area.Min.X, ImGui.GetCursorScreenPos().Y), area.Max);
                 var filtered = feedInclude.Any || mutes.Any;
-                DrawEmpty(emptyRect, store.LoadingFeed ? Loc.T(L.Common.Loading) : Loc.T(L.Velvet.FeedNone),
+                DrawEmpty(emptyRect, store.LoadingFeed ? Loc.T(L.Common.Loading) : Loc.T(FeedNoneTitle),
                     store.LoadingFeed
                         ? string.Empty
                         : Loc.T(filtered ? L.Velvet.FeedNoneFiltered : L.Velvet.FeedNoneHint));

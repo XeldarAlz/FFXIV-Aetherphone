@@ -285,6 +285,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;
+        SyncSeason();
         SyncLocalRace();
 
         if (!store.IsSignedIn)
@@ -332,6 +333,8 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
         var screen = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
         screenRect = screen;
         ui.Backdrop(screen);
+        var appArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
+        DrawNight(screen, appArea.Min.Y);
         ConsumeSharedPhoto();
         AdvancePendingTaps();
         stories.Advance();
@@ -347,7 +350,6 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
             return;
         }
 
-        var appArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
         using (InputShield.Engage(avatarLightbox.Expanded))
         {
             router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
@@ -433,6 +435,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
     private void DrawView(VelvetView view, Rect area, int depth)
     {
         ui.Body(area);
+        DrawNight(screenRect, area.Min.Y);
         switch (view.Screen)
         {
             case VelvetScreenId.Root:

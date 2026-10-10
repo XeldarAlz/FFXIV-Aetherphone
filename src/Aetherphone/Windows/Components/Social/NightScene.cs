@@ -28,6 +28,19 @@ internal static class NightScene
     private const float CastleBase = 40f;
     private const float CandleReach = 300f;
 
+    private const float WitchingMoonX = 0.46f;
+    private const float WitchingMoonRadius = 22f;
+    private const float WitchingMoonPhase = 0.87f;
+    private const float WitchingVeilReach = 320f;
+    private const int TaperCount = 9;
+    private const float TaperUnit = 8f;
+    private const float TaperFadeDepth = 0.75f;
+    private const float WitchingWarmthReach = 220f;
+    private const float KindleSeconds = 3f;
+    private const float KindleGrowth = 0.7f;
+    private const float KindleGlowBoost = 1.6f;
+    private const float KindleWarmthBoost = 2.5f;
+
     private readonly record struct Star(float X, float Y, float Radius, float Alpha, float Speed, float Phase);
 
     private readonly record struct Pine(float X, float Width, float Height, float Drop);
@@ -42,6 +55,8 @@ internal static class NightScene
         float Size);
 
     private readonly record struct Puff(float Lift, float Speed, float Offset, float Radius);
+
+    private readonly record struct Taper(float X, float Height, float Width, float Lift, float Phase);
 
     private static readonly Vector4 MoonlitHorizon = new(0.059f, 0.086f, 0.259f, 0.7f);
     private static readonly Vector4 MoonlitStarInk = new(0.894f, 0.918f, 1f, 1f);
@@ -72,6 +87,20 @@ internal static class NightScene
     private static readonly Vector4 CastleInk = new(0.027f, 0.004f, 0.012f, 1f);
     private static readonly Vector4 PaneInk = new(1f, 0.549f, 0.235f, 1f);
 
+    private static readonly Vector4 WitchingHorizon = new(0.22f, 0.07f, 0.32f, 0.6f);
+    private static readonly Vector4 WitchingStarInk = new(1f, 0.9f, 0.96f, 0.8f);
+    private static readonly Vector4 WitchingHalo = new(0.78f, 0.62f, 1f, 0.3f);
+    private static readonly Vector4 WitchingMoonLight = new(0.94f, 0.89f, 1f, 1f);
+    private static readonly Vector4 WitchingMoonShade = new(0.94f, 0.89f, 1f, 0.12f);
+    private static readonly Vector4 WaxInk = new(0.96f, 0.9f, 0.93f, 1f);
+    private static readonly Vector4 WaxShade = new(0.7f, 0.58f, 0.72f, 1f);
+    private static readonly Vector4 FlameCore = new(1f, 0.96f, 0.8f, 1f);
+    private static readonly Vector4 FlameOuter = new(1f, 0.6f, 0.2f, 1f);
+    private static readonly Vector4 TaperGlow = new(1f, 0.6f, 0.26f, 0.3f);
+    private static readonly Vector4 WitchingMist = new(0.62f, 0.4f, 0.86f, 0.09f);
+    private static readonly Vector4 WitchingVeil = new(0.03f, 0.012f, 0.05f, 0.88f);
+    private static readonly Vector4 WitchingWarmth = new(1f, 0.5f, 0.2f, 0.07f);
+
     private static readonly Vector3[] Craters =
     [
         new(-0.28f, -0.16f, 0.18f), new(0.24f, 0.2f, 0.24f), new(-0.08f, 0.4f, 0.12f), new(0.36f, -0.32f, 0.1f),
@@ -93,8 +122,12 @@ internal static class NightScene
     private static readonly Pane[] Panes = PanesFrom(Towers, new Random(2029));
     private static readonly Flyer[] Flyers = FlyersFrom(new Random(2030));
     private static readonly Puff[] BloodPuffs = PuffsFrom(new Random(2031));
+    private static readonly Star[] WitchingStars = StarsFrom(new Random(3031), 60);
+    private static readonly Taper[] Tapers = TapersFrom(new Random(3032));
+    private static readonly Puff[] WitchingPuffs = PuffsFrom(new Random(3033));
 
     private static float rousedAt = -100f;
+    private static float kindledAt = -100f;
 
     public static Vector2 MoonlitMoonCenter(Rect frame, float moonY) =>
         new(frame.Min.X + frame.Width * MoonlitMoonX, moonY);
@@ -104,6 +137,8 @@ internal static class NightScene
     public static Vector2 BloodMoonCenter(Rect frame, float moonY) => new(frame.Min.X + frame.Width * BloodMoonX, moonY);
 
     public static void Rouse() => rousedAt = (float)ImGui.GetTime();
+
+    public static void Kindle() => kindledAt = (float)ImGui.GetTime();
 
     public static void Moonlit(ImDrawListPtr drawList, Rect frame, float moonY)
     {
@@ -143,6 +178,23 @@ internal static class NightScene
         DrawPuffs(drawList, frame, BloodPuffs, castleBase, BloodMist, time, scale);
         DrawCastle(drawList, frame, castleBase, time, scale);
         DrawVeil(drawList, frame, BloodVeil, BloodVeilReach * scale);
+    }
+
+    public static void Witching(ImDrawListPtr drawList, Rect frame, float moonY)
+    {
+        var scale = UiScale.Current;
+        var time = (float)ImGui.GetTime();
+        DrawHorizon(drawList, frame, WitchingHorizon);
+        DrawStars(drawList, frame, WitchingStars, WitchingStarInk, time, scale);
+        var moon = new Vector2(frame.Min.X + frame.Width * WitchingMoonX, moonY);
+        var radius = WitchingMoonRadius * scale;
+        Glow(drawList, moon, radius * HaloReach, WitchingHalo, HaloCells);
+        drawList.AddCircleFilled(moon, radius, ImGui.GetColorU32(WitchingMoonShade), CircleSegments);
+        MoonPhase.Draw(drawList, moon, radius, WitchingMoonPhase, ImGui.GetColorU32(WitchingMoonLight));
+        DrawTaperBodies(drawList, frame, scale);
+        DrawPuffs(drawList, frame, WitchingPuffs, frame.Max.Y - 60f * scale, WitchingMist, time, scale);
+        DrawVeil(drawList, frame, WitchingVeil, WitchingVeilReach * scale);
+        DrawTaperFlames(drawList, frame, time, scale);
     }
 
     public static void Glow(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 color, int cells)
@@ -359,6 +411,70 @@ internal static class NightScene
         }
     }
 
+    private static Vector2 TaperTop(Rect frame, in Taper taper, float scale) =>
+        new(frame.Min.X + taper.X * frame.Width, frame.Max.Y - (taper.Height + taper.Lift) * scale);
+
+    private static void DrawTaperBodies(ImDrawListPtr drawList, Rect frame, float scale)
+    {
+        var wax = ImGui.GetColorU32(WaxInk);
+        var waxFaded = ImGui.GetColorU32(WaxInk with { W = 0f });
+        var shade = ImGui.GetColorU32(WaxShade with { W = 0.55f });
+        var shadeFaded = ImGui.GetColorU32(WaxShade with { W = 0f });
+        var wick = ImGui.GetColorU32(WaxShade);
+        for (var index = 0; index < Tapers.Length; index++)
+        {
+            var taper = Tapers[index];
+            var top = TaperTop(frame, taper, scale);
+            var width = taper.Width * scale;
+            var size = width / TaperUnit;
+            var fadeEnd = new Vector2(top.X + width * 0.5f, top.Y + taper.Height * scale * TaperFadeDepth);
+            drawList.AddRectFilledMultiColor(new Vector2(top.X - width * 0.5f, top.Y), fadeEnd, wax, wax, waxFaded,
+                waxFaded);
+            drawList.AddRectFilledMultiColor(new Vector2(top.X + width * 0.15f, top.Y), fadeEnd, shade, shade,
+                shadeFaded, shadeFaded);
+            drawList.AddRectFilled(new Vector2(top.X - width * 0.5f - 1.4f * size, top.Y),
+                new Vector2(top.X - width * 0.5f, top.Y + taper.Height * scale * 0.22f), wax, 0.7f * size);
+            drawList.AddLine(top, top - new Vector2(0f, 3f * size), wick, MathF.Max(1f, size));
+        }
+    }
+
+    private static void DrawTaperFlames(ImDrawListPtr drawList, Rect frame, float time, float scale)
+    {
+        var flare = Math.Clamp(1f - (time - kindledAt) / KindleSeconds, 0f, 1f);
+        var warmth = WitchingWarmth with { W = WitchingWarmth.W * (1f + KindleWarmthBoost * flare) };
+        drawList.AddRectFilledMultiColor(new Vector2(frame.Min.X, frame.Max.Y - WitchingWarmthReach * scale), frame.Max,
+            ImGui.GetColorU32(warmth with { W = 0f }), ImGui.GetColorU32(warmth with { W = 0f }),
+            ImGui.GetColorU32(warmth), ImGui.GetColorU32(warmth));
+        for (var index = 0; index < Tapers.Length; index++)
+        {
+            var taper = Tapers[index];
+            var top = TaperTop(frame, taper, scale);
+            var size = taper.Width * scale / TaperUnit * (1f + KindleGrowth * flare);
+            var flicker = 0.85f + 0.15f * MathF.Sin(time * 9f + taper.Phase * 3f);
+            var flame = top - new Vector2(0f, 4.5f * size);
+            Glow(drawList, flame, 24f * size * flicker,
+                TaperGlow with { W = MathF.Min(1f, TaperGlow.W * (1f + KindleGlowBoost * flare)) }, 8);
+            DrawFlame(drawList, flame, size, flicker, MathF.Sin(time * 3.1f + taper.Phase) * 0.8f * size, 1f);
+        }
+    }
+
+    private static void DrawFlame(ImDrawListPtr drawList, Vector2 center, float size, float flicker, float sway,
+        float alpha)
+    {
+        Teardrop(drawList, center, 3.4f * size, center + new Vector2(sway, -9f * size * flicker),
+            ImGui.GetColorU32(FlameOuter with { W = alpha }));
+        Teardrop(drawList, center + new Vector2(0f, 0.8f * size), 1.8f * size,
+            center + new Vector2(sway * 0.6f, -4.5f * size), ImGui.GetColorU32(FlameCore with { W = alpha }));
+    }
+
+    private static void Teardrop(ImDrawListPtr drawList, Vector2 center, float radius, Vector2 tip, uint ink)
+    {
+        drawList.PathClear();
+        drawList.PathArcTo(center, radius, 0f, MathF.PI, SmallSegments);
+        drawList.PathLineTo(tip);
+        drawList.PathFillConvex(ink);
+    }
+
     private static void DrawCandlelight(ImDrawListPtr drawList, Rect frame, float scale)
     {
         var clear = ImGui.GetColorU32(CandleInk with { W = 0f });
@@ -467,6 +583,20 @@ internal static class NightScene
         }
 
         return puffs;
+    }
+
+    private static Taper[] TapersFrom(Random random)
+    {
+        var tapers = new Taper[TaperCount];
+        for (var index = 0; index < tapers.Length; index++)
+        {
+            var lane = (index + 0.5f) / TaperCount;
+            tapers[index] = new Taper(0.05f + lane * 0.9f + (random.NextSingle() - 0.5f) * 0.08f,
+                64f + random.NextSingle() * 100f, 11f + random.NextSingle() * 7f, random.NextSingle() * 20f,
+                random.NextSingle() * 7f);
+        }
+
+        return tapers;
     }
 
     private static Tower[] TowersFrom(Random random)

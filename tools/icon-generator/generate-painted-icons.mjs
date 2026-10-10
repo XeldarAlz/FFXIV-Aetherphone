@@ -424,9 +424,40 @@ async function paintBatAperture(id) {
   return "aperture with bat wings on blood red";
 }
 
+const WITCHING_BOTTOM = "#240628";
+const CANDLE_WAX = "#F7E6EF";
+const CANDLE_GLOW = "#FFB45C";
+const FLAME_WIDTH_FRACTION = 0.28;
+const FLAME_DROP = -178;
+const CANDLE_PARTS = [
+  `<rect x="412" y="548" width="200" height="320"/>`,
+  `<rect x="396" y="528" width="232" height="48" rx="24"/>`,
+  `<rect x="396" y="552" width="34" height="112" rx="17"/>`,
+  `<rect x="590" y="552" width="34" height="70" rx="17"/>`,
+  `<ellipse cx="512" cy="872" rx="176" ry="34"/>`,
+].join("");
+
+function candle(ink, wick) {
+  return `<g fill="${ink}">${CANDLE_PARTS}</g>`
+    + `<line x1="512" y1="532" x2="512" y2="490" stroke="${wick}" stroke-width="12" stroke-linecap="round"/>`;
+}
+
+async function paintCandleFlame(id) {
+  const markup = await fetchSymbolMarkup("fire");
+  const transform = scaledPlacement(await measureSymbol(markup), FLAME_WIDTH_FRACTION, FLAME_DROP);
+  const glow = `<defs><radialGradient id="candle"><stop offset="0%" stop-color="${CANDLE_GLOW}" stop-opacity="0.6"/><stop offset="100%" stop-color="${CANDLE_GLOW}" stop-opacity="0"/></radialGradient></defs>`
+    + `<circle cx="512" cy="380" r="330" fill="url(#candle)"/>`;
+  const stops = [shiftLightness(hues.Velvet, GRADIENT_TOP_LIGHTNESS), WITCHING_BOTTOM];
+  const tile = backgroundMarkup(stops) + glow + candle(CANDLE_WAX, WITCHING_BOTTOM) + symbolGroup(markup, WHITE, transform);
+  await writePair(id, svgDocument(tile), true);
+  await writePair(`${id}.fg`, svgDocument(candle(WHITE, WHITE) + symbolGroup(markup, WHITE, transform)), false);
+  return "flame lit on a dripping candle";
+}
+
 const seasonal = {
   "chirper.halloween": paintMoonlitFeather,
   "aethergram.halloween": paintBatAperture,
+  "velvet.halloween": paintCandleFlame,
 };
 
 mkdirSync(ICONS_OUT, { recursive: true });

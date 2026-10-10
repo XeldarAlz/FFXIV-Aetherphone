@@ -70,6 +70,14 @@ internal static class VelvetTheme
         HoverWash = HoverWash,
     };
 
+    public static readonly AppPalette WitchingPalette = Palette with
+    {
+        BackdropTop = new(0.075f, 0.027f, 0.118f, 1f),
+        BackdropBottom = new(0.016f, 0.008f, 0.027f, 1f),
+        BloomTop = new(0.48f, 0.18f, 0.66f, 0.16f),
+        BloomBottom = new(0.36f, 0.09f, 0.44f, 0f),
+    };
+
     public static readonly ControlInk Ink = new(Rose, TitleInk, MutedInk, Danger);
 
     public static Vector4 Alpha(Vector4 color, float alpha) => new(color.X, color.Y, color.Z, alpha);
