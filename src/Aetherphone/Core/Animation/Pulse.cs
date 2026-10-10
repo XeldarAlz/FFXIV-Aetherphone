@@ -8,6 +8,10 @@ internal static class Pulse
     public const double Calm = 1900.0;
     public const double Orbit = 3400.0;
 
+    private const long ClockWrapMilliseconds = 3_600_000L;
+
+    public static double Seconds => (Environment.TickCount64 % ClockWrapMilliseconds) / 1000.0;
+
     public static float Wave(double periodMs = Medium)
     {
         var t = (Environment.TickCount % periodMs) / periodMs;

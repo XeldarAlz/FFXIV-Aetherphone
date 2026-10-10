@@ -14,12 +14,26 @@ public sealed class NameEffectSyncTests
         "none", "gradient", "breath", "ripple", "flow", "glint", "sweep", "wave",
         "ember", "frost", "aurora", "prism", "glitch", "starfall", "eclipse", "heartbeat",
         "pulse", "glow",
+        "spectrum", "candy", "stripes", "horizon", "chrome", "blaze",
+        "bounce", "shiver", "wobble", "pop", "flipboard", "typewriter",
+        "outline", "shadow", "longshadow", "emboss", "chromatic", "neon", "underline", "scan", "comet",
+        "sakura", "snowfall", "fireflies", "hearts", "glitter", "bubbles", "confetti", "storm",
     };
 
     private static readonly string[] SellableEffectKeys =
     {
         "gradient", "flow", "wave", "ember", "frost", "aurora", "prism", "glitch",
         "starfall", "eclipse", "heartbeat", "pulse", "glow",
+        "spectrum", "candy", "stripes", "horizon", "chrome", "blaze",
+        "bounce", "shiver", "wobble", "pop", "flipboard", "typewriter",
+        "outline", "shadow", "longshadow", "emboss", "chromatic", "neon", "underline", "scan", "comet",
+        "sakura", "snowfall", "fireflies", "hearts", "glitter", "bubbles", "confetti", "storm",
+    };
+
+    private static readonly string[] SeededEffectKeys =
+    {
+        "glitch", "starfall", "bounce", "shiver", "wobble", "pop", "flipboard", "typewriter",
+        "neon", "scan", "comet", "storm",
     };
 
     private static readonly string[] RoleSignatureKeys =
@@ -207,5 +221,77 @@ public sealed class NameEffectSyncTests
         var second = BadgeStyle.From(new BadgeDescriptorDto("shop-flair-b", "B", "0xF06D", string.Empty, string.Empty,
             new[] { "0xFF8A3D" }, "glitch"));
         Assert.NotEqual(NameEffects.For(first, false).Phase, NameEffects.For(second, false).Phase);
+    }
+
+    [Fact]
+    public void EverySeededEffectStaggersAcrossBadges()
+    {
+        for (var index = 0; index < SeededEffectKeys.Length; index++)
+        {
+            var key = SeededEffectKeys[index];
+            var first = BadgeStyle.From(new BadgeDescriptorDto("shop-flair-a", "A", "0xF06D", string.Empty,
+                string.Empty, new[] { "0xFF8A3D" }, key));
+            var second = BadgeStyle.From(new BadgeDescriptorDto("shop-flair-b", "B", "0xF06D", string.Empty,
+                string.Empty, new[] { "0xFF8A3D" }, key));
+            Assert.NotEqual(NameEffects.For(first, false).Phase, NameEffects.For(second, false).Phase);
+        }
+    }
+
+    [Fact]
+    public void EveryBadgeEffectCarriesTheSameSeedForTheSameBadge()
+    {
+        for (var index = 1; index < ServerEffectKeys.Length; index++)
+        {
+            var key = ServerEffectKeys[index];
+            var badge = BadgeStyle.From(new BadgeDescriptorDto("shop-flair-seeded", key, "0xF06D", string.Empty,
+                string.Empty, new[] { "0xFF8A3D", "0x0000EF" }, key));
+            var effect = NameEffects.For(badge, false);
+            Assert.True(effect.Seed >= 0f && effect.Seed < 1f, key + " seed out of range");
+            Assert.Equal(NameEffects.For(badge, true).Seed, effect.Seed);
+        }
+    }
+
+    [Fact]
+    public void SpectrumIgnoresTheBadgeColoursAndCarriesAFullRainbow()
+    {
+        var rainbow = NameEffects.For(Badge("spectrum", "0xFF8A3D"), false);
+        Assert.Equal(8, rainbow.Ramp.Count);
+        Assert.NotEqual(rainbow.Ramp.Stop(0), rainbow.Ramp.Stop(4));
+    }
+
+    [Fact]
+    public void HorizonWithTwoColoursSpansTopToBottomWithoutRepeating()
+    {
+        var horizon = NameEffects.For(Badge("horizon", "0xFF0000", "0x0000FF"), false);
+        Assert.Equal(2, horizon.Ramp.Count);
+        Assert.Equal(horizon.Ramp.Stop(0), horizon.Ramp.SampleAcross(0f));
+        Assert.Equal(horizon.Ramp.Stop(1), horizon.Ramp.SampleAcross(1f));
+    }
+
+    [Fact]
+    public void HorizonWithOneColourLeavesTheRampToTheCrest()
+    {
+        var horizon = NameEffects.For(Badge("horizon", "0xFF0000"), false);
+        Assert.Equal(0, horizon.Ramp.Count);
+        Assert.True(horizon.Crest.W > 0f);
+    }
+
+    [Fact]
+    public void CandyAndConfettiAlwaysCarryARampToStepThrough()
+    {
+        Assert.Equal(4, NameEffects.For(Badge("candy", "0xFF8A3D"), false).Ramp.Count);
+        Assert.Equal(4, NameEffects.For(Badge("confetti", "0xFF8A3D", "0x0000EF"), false).Ramp.Count);
+        Assert.Equal(3, NameEffects.For(Badge("stripes", "0xFF0000", "0x00FF00", "0x0000FF"), false).Ramp.Count);
+    }
+
+    [Fact]
+    public void StaticDecorationsStayStill()
+    {
+        string[] still = { "horizon", "outline", "shadow", "longshadow", "emboss" };
+        for (var index = 0; index < still.Length; index++)
+        {
+            var effect = NameEffects.For(Badge(still[index], "0xFFFFFF", "0x00B8FF"), false);
+            Assert.Equal(0f, effect.Phase);
+        }
     }
 }

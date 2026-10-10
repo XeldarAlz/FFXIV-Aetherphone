@@ -88,6 +88,40 @@ public sealed class HomeLayoutServiceFolderTests
         Assert.Equal(new[] { "a" }, stored.AppIds);
     }
 
+    [Fact]
+    public void MovingAFolderMember_KeepsTheNewOrderAfterAReload()
+    {
+        var apps = MakeApps("a", "b", "c", "d");
+        var shortcuts = new FakeShortcutSource();
+        var configuration = ConfigurationWith(AppItem("a"),
+            new HomeItem { Kind = "folder", FolderName = "Stuff", AppIds = new List<string> { "b", "c", "d" } });
+
+        var layout = BuildLayout(apps, shortcuts, configuration);
+        layout.MoveFolderMember(FolderTile(layout), 0, 2);
+
+        var reloaded = FolderTile(BuildLayout(apps, shortcuts, configuration));
+
+        Assert.Equal("c", reloaded.Members[0].App!.Id);
+        Assert.Equal("d", reloaded.Members[1].App!.Id);
+        Assert.Equal("b", reloaded.Members[2].App!.Id);
+    }
+
+    [Fact]
+    public void MovingAFolderMemberOutOfRange_LeavesTheOrderAlone()
+    {
+        var apps = MakeApps("a", "b", "c");
+        var shortcuts = new FakeShortcutSource();
+        var configuration = ConfigurationWith(AppItem("a"),
+            new HomeItem { Kind = "folder", FolderName = "Stuff", AppIds = new List<string> { "b", "c" } });
+
+        var layout = BuildLayout(apps, shortcuts, configuration);
+        var folder = FolderTile(layout);
+        layout.MoveFolderMember(folder, 0, 5);
+
+        Assert.Equal("b", folder.Members[0].App!.Id);
+        Assert.Equal("c", folder.Members[1].App!.Id);
+    }
+
     private static HomeLayoutService BuildLayout(List<IPhoneApp> apps, FakeShortcutSource shortcuts,
         FakeHomeConfiguration configuration) =>
         new(apps, new WidgetRegistry(Array.Empty<IHomeWidget>(), apps), shortcuts, configuration);

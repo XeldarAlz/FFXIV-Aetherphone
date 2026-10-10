@@ -110,7 +110,6 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private const float CoinChipGap = 5f;
     private const string CoinChipTooltipId = "games.coinChip";
     private const float ResultAppearSpeed = 3.4f;
-    private const int FeaturedStep = 5;
 
     private static readonly string[] TabIds = [HomeTabRoute, TogetherTabRoute, LibraryTabRoute, ProfileTabRoute];
 
@@ -119,6 +118,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private readonly Core.Coins.CoinStore coins;
     private readonly Core.Coins.CoinGameSessionTracker coinSessions;
     private readonly Windows.Components.CoinFloat coinFloats = new();
+    private int featuredDay = -1;
+    private string featuredSource = string.Empty;
     private readonly GameRoomsStore gameRooms;
     private readonly LeaderboardStore leaderboard;
     private readonly RemoteImageCache images;
@@ -297,6 +298,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     private void RebuildLayout()
     {
+        featuredDay = Core.Coins.CoinDay.Index(DateTime.UtcNow);
+        featuredSource = coins.Wallet?.FeaturedGameId ?? string.Empty;
         featuredIndex = FeaturedIndex();
         stats.DailyGameId = games[featuredIndex].Id;
         library.Rebuild();
@@ -304,19 +307,31 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     private int FeaturedIndex()
     {
-        var serverFeatured = coins.Wallet?.FeaturedGameId;
-        if (!string.IsNullOrEmpty(serverFeatured))
+        if (featuredSource.Length > 0)
         {
             for (var index = 0; index < games.Length; index++)
             {
-                if (string.Equals(games[index].Id, serverFeatured, StringComparison.Ordinal))
+                if (string.Equals(games[index].Id, featuredSource, StringComparison.Ordinal))
                 {
                     return index;
                 }
             }
         }
 
-        return GameStatsStore.TodayIndex * FeaturedStep % games.Length;
+        return featuredDay % games.Length;
+    }
+
+    private void SyncFeatured()
+    {
+        coins.EnsureFresh();
+        var day = Core.Coins.CoinDay.Index(DateTime.UtcNow);
+        var source = coins.Wallet?.FeaturedGameId ?? string.Empty;
+        if (day == featuredDay && string.Equals(source, featuredSource, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        RebuildLayout();
     }
 
     public void OnOpened()
@@ -324,6 +339,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         configuration.MarkFeaturePinSeen(NewFeaturePins.Games);
         router.Reset();
         tab = GamesTab.Home;
+        coins.EnsureFresh();
         RebuildLayout();
         ResetLaunch();
         ResetHome();
@@ -363,6 +379,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         navigation = context.Navigation;
         ui.Theme = theme;
         frameSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
+        SyncFeatured();
         library.EnsureLanguage();
         SyncCountLabels();
         SyncLeaderboardVersion();

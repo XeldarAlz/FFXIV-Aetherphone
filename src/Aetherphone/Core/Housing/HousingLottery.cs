@@ -43,10 +43,9 @@ internal static class HousingLottery
         return (float)Math.Clamp(fraction, 0d, 1d);
     }
 
-    public static HousingLotteryState Resolve(IReadOnlyList<HousingPlot> plots)
+    public static HousingLotteryState Resolve(IReadOnlyList<HousingPlot> plots, DateTime nowUtc)
     {
         var best = HousingLotteryState.Unknown;
-        var bestIsCycle = false;
         for (var index = 0; index < plots.Count; index++)
         {
             var plot = plots[index];
@@ -55,44 +54,47 @@ internal static class HousingLottery
                 continue;
             }
 
-            var isCycle = IsCycle(plot.Phase);
-            if (bestIsCycle && !isCycle)
+            var candidate = new HousingLotteryState(plot.Phase, ends);
+            if (Beats(candidate, best, nowUtc))
             {
-                continue;
+                best = candidate;
             }
-
-            if (best.EndsUtc is { } current && isCycle == bestIsCycle && ends >= current)
-            {
-                continue;
-            }
-
-            best = new HousingLotteryState(plot.Phase, ends);
-            bestIsCycle = isCycle;
         }
 
         return best;
     }
 
-    public static HousingLotteryState Prefer(HousingLotteryState current, HousingLotteryState candidate)
+    public static HousingLotteryState Prefer(HousingLotteryState current, HousingLotteryState candidate,
+        DateTime nowUtc) =>
+        Beats(candidate, current, nowUtc) ? candidate : current;
+    
+    private static bool Beats(HousingLotteryState candidate, HousingLotteryState current, DateTime nowUtc)
     {
         if (!candidate.IsKnown)
         {
-            return current;
+            return false;
         }
 
         if (!current.IsKnown)
         {
-            return candidate;
+            return true;
         }
 
-        var currentCycle = IsCycle(current.Phase);
         var candidateCycle = IsCycle(candidate.Phase);
-        if (currentCycle != candidateCycle)
+        if (candidateCycle != IsCycle(current.Phase))
         {
-            return candidateCycle ? candidate : current;
+            return candidateCycle;
         }
 
-        return candidate.EndsUtc < current.EndsUtc ? candidate : current;
+        var candidateEnds = candidate.EndsUtc!.Value;
+        var currentEnds = current.EndsUtc!.Value;
+        var candidateLive = candidateEnds > nowUtc;
+        if (candidateLive != currentEnds > nowUtc)
+        {
+            return candidateLive;
+        }
+
+        return candidateLive ? candidateEnds < currentEnds : candidateEnds > currentEnds;
     }
 
     private static bool IsCycle(HousingLotteryPhase phase) =>

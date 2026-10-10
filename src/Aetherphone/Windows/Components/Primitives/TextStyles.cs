@@ -25,9 +25,43 @@ internal enum NameEffectKind
     Heartbeat,
     Pulse,
     Glow,
+    Spectrum,
+    Candy,
+    Stripes,
+    Horizon,
+    Chrome,
+    Blaze,
+    Bounce,
+    Shiver,
+    Wobble,
+    Pop,
+    Flipboard,
+    Typewriter,
+    Outline,
+    Shadow,
+    Longshadow,
+    Emboss,
+    Chromatic,
+    Neon,
+    Underline,
+    Scan,
+    Comet,
+    Sakura,
+    Snowfall,
+    Fireflies,
+    Hearts,
+    Glitter,
+    Bubbles,
+    Confetti,
+    Storm,
 }
 
-internal readonly record struct TextEffect(NameEffectKind Kind, Vector4 Crest, float Phase, WaveRamp Ramp = default);
+internal readonly record struct TextEffect(
+    NameEffectKind Kind,
+    Vector4 Crest,
+    float Phase,
+    WaveRamp Ramp = default,
+    float Seed = 0f);
 
 internal static class TextStyles
 {
