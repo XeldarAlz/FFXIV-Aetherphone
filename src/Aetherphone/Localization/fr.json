@@ -1135,6 +1135,8 @@
   "settings.seasonalNameFont": "Police saisonnière des noms",
   "settings.seasonalNameFontHint": "Affiche les noms dans Chirper, Aethergram et Velvet avec la police saisonnière.",
   "settings.seasonalSounds": "Sons saisonniers",
+  "settings.seasonalParallax": "Parallaxe de l'arrière-plan",
+  "settings.seasonalParallaxHint": "Fait dériver doucement les scènes nocturnes quand vous faites défiler et bougez le curseur. Désactivez pour les garder immobiles.",
   "settings.seasonalSoundsHint": "Joue les sons festifs qui accompagnent les décorations saisonnières. Désactivez-les pour garder le style avec les sons habituels.",
   "seasonal.packAnswers": "La meute répond",
   "seasonal.nightTakesWing": "La nuit prend son envol",

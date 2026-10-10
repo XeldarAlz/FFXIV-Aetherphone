@@ -2159,6 +2159,8 @@ internal static class L
         public static readonly LocString SeasonalNameFont = new("settings.seasonalNameFont", "Seasonal Name Font");
         public static readonly LocString SeasonalNameFontHint = new("settings.seasonalNameFontHint", "Writes display names in Chirper, Aethergram and Velvet in the seasonal font.");
         public static readonly LocString SeasonalSounds = new("settings.seasonalSounds", "Seasonal Sounds");
+        public static readonly LocString SeasonalParallax = new("settings.seasonalParallax", "Background Parallax");
+        public static readonly LocString SeasonalParallaxHint = new("settings.seasonalParallaxHint", "Lets the night scenes drift gently as you scroll and move the cursor. Turn off to keep them still.");
         public static readonly LocString SeasonalSoundsHint = new("settings.seasonalSoundsHint", "Plays the holiday sounds that come with Seasonal Decorations. Turn off to keep the look with the usual sounds.");
         public static readonly LocString SearchHint = new("settings.searchHint", "Search settings");
         public static readonly LocString NoResults = new("settings.noResults", "No settings match that");

@@ -1135,6 +1135,8 @@
   "settings.seasonalNameFont": "Seasonal Name Font",
   "settings.seasonalNameFontHint": "Writes display names in Chirper, Aethergram and Velvet in the seasonal font.",
   "settings.seasonalSounds": "Seasonal Sounds",
+  "settings.seasonalParallax": "Background Parallax",
+  "settings.seasonalParallaxHint": "Lets the night scenes drift gently as you scroll and move the cursor. Turn off to keep them still.",
   "settings.seasonalSoundsHint": "Plays the holiday sounds that come with Seasonal Decorations. Turn off to keep the look with the usual sounds.",
   "seasonal.packAnswers": "The pack answers",
   "seasonal.nightTakesWing": "The night takes wing",

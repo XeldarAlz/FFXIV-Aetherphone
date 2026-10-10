@@ -1135,6 +1135,8 @@
   "settings.seasonalNameFont": "Saisonale Namensschrift",
   "settings.seasonalNameFontHint": "Zeigt Anzeigenamen in Chirper, Aethergram und Velvet in der saisonalen Schrift.",
   "settings.seasonalSounds": "Saisonale Töne",
+  "settings.seasonalParallax": "Hintergrund-Parallaxe",
+  "settings.seasonalParallaxHint": "Lässt die Nachtszenen beim Scrollen und Bewegen des Mauszeigers sanft mitwandern. Ausschalten, damit sie stillstehen.",
   "settings.seasonalSoundsHint": "Spielt die festlichen Töne der saisonalen Dekorationen. Ausschalten, um den Look mit den üblichen Tönen zu behalten.",
   "seasonal.packAnswers": "Das Rudel antwortet",
   "seasonal.nightTakesWing": "Die Nacht breitet ihre Flügel aus",

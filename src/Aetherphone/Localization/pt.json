@@ -1135,6 +1135,8 @@
   "settings.seasonalNameFont": "Fonte sazonal dos nomes",
   "settings.seasonalNameFontHint": "Mostra os nomes no Chirper, Aethergram e Velvet com a fonte sazonal.",
   "settings.seasonalSounds": "Sons sazonais",
+  "settings.seasonalParallax": "Paralaxe do fundo",
+  "settings.seasonalParallaxHint": "Faz as cenas noturnas se moverem suavemente ao rolar e mover o cursor. Desative para mantê-las paradas.",
   "settings.seasonalSoundsHint": "Toca os sons festivos que acompanham as decorações sazonais. Desative para manter o visual com os sons de sempre.",
   "seasonal.packAnswers": "A matilha responde",
   "seasonal.nightTakesWing": "A noite levanta voo",

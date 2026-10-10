@@ -1135,6 +1135,8 @@
   "settings.seasonalNameFont": "季节名称字体",
   "settings.seasonalNameFontHint": "在 Chirper、Aethergram 和 Velvet 中以季节字体显示用户名。",
   "settings.seasonalSounds": "季节音效",
+  "settings.seasonalParallax": "背景视差",
+  "settings.seasonalParallaxHint": "滚动和移动光标时，夜景会轻轻漂移。关闭后保持静止。",
   "settings.seasonalSoundsHint": "播放随季节装饰而来的节日音效。关闭后保留外观，改用平常的音效。",
   "seasonal.packAnswers": "狼群回应了",
   "seasonal.nightTakesWing": "夜幕振翅而起",

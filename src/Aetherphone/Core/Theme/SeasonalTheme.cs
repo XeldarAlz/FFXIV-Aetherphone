@@ -15,6 +15,8 @@ internal static class SeasonalTheme
 
     public static bool BlackletterNames { get; private set; }
 
+    public static bool Parallax { get; private set; }
+
     public static bool IsHalloweenDate(DateTime date) =>
         (date.Month == HalloweenStartMonth && date.Day >= HalloweenStartDay) ||
         (date.Month == HalloweenEndMonth && date.Day <= HalloweenEndDay);
@@ -51,5 +53,6 @@ internal static class SeasonalTheme
         var previewing = AepConstants.IsPrerelease && configuration.PreviewHalloween;
         Halloween = configuration.SeasonalDecorations && (halloweenDate || previewing);
         BlackletterNames = Halloween && configuration.SeasonalNameFont;
+        Parallax = Halloween && configuration.SeasonalParallax;
     }
 }

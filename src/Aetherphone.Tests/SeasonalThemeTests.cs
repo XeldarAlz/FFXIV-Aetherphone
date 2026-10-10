@@ -72,6 +72,24 @@ public sealed class SeasonalThemeTests
     }
 
     [Fact]
+    public void ParallaxFollowsItsSwitch()
+    {
+        SeasonalTheme.Update(new Configuration(), HalloweenNight);
+        Assert.True(SeasonalTheme.Parallax);
+
+        SeasonalTheme.Update(new Configuration { SeasonalParallax = false }, HalloweenNight);
+        Assert.False(SeasonalTheme.Parallax);
+    }
+
+    [Fact]
+    public void ParallaxNeedsHalloween()
+    {
+        SeasonalTheme.Update(new Configuration(), Midsummer);
+
+        Assert.False(SeasonalTheme.Parallax);
+    }
+
+    [Fact]
     public void BlackletterNamesNeedHalloween()
     {
         SeasonalTheme.Update(new Configuration(), Midsummer);

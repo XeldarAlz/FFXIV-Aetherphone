@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -29,6 +30,14 @@ internal static class SceneDrift
 
     private static void Step(Rect frame)
     {
+        if (!SeasonalTheme.Parallax)
+        {
+            lift.SnapTo(0f);
+            swayX.SnapTo(0f);
+            swayY.SnapTo(0f);
+            return;
+        }
+
         var deltaSeconds = ImGui.GetIO().DeltaTime;
         var liftTarget = MathF.Min(AppSurface.OuterScrollY * LiftPerScroll, MaxLift * UiScale.Current);
         lift.Step(liftTarget, Motion.PageSettle, deltaSeconds);

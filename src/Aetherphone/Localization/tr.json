@@ -1135,6 +1135,8 @@
   "settings.seasonalNameFont": "Mevsimsel İsim Yazı Tipi",
   "settings.seasonalNameFontHint": "Chirper, Aethergram ve Velvet'teki görünen adları mevsimsel yazı tipiyle gösterir.",
   "settings.seasonalSounds": "Mevsimsel Sesler",
+  "settings.seasonalParallax": "Arka Plan Paralaksı",
+  "settings.seasonalParallaxHint": "Kaydırırken ve imleci hareket ettirirken gece sahnelerinin hafifçe kaymasını sağlar. Sabit kalmaları için kapatın.",
   "settings.seasonalSoundsHint": "Mevsimsel süslemelerle gelen özel sesleri çalar. Görünümü koruyup alışılmış sesleri duymak için kapatın.",
   "seasonal.packAnswers": "Sürü cevap veriyor",
   "seasonal.nightTakesWing": "Gece kanatlanıyor",

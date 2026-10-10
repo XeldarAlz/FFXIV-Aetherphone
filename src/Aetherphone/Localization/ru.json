@@ -1135,6 +1135,8 @@
   "settings.seasonalNameFont": "Сезонный шрифт имён",
   "settings.seasonalNameFontHint": "Показывает имена в Chirper, Aethergram и Velvet сезонным шрифтом.",
   "settings.seasonalSounds": "Сезонные звуки",
+  "settings.seasonalParallax": "Параллакс фона",
+  "settings.seasonalParallaxHint": "Ночные сцены плавно смещаются при прокрутке и движении курсора. Выключите, чтобы они оставались неподвижными.",
   "settings.seasonalSoundsHint": "Воспроизводит праздничные звуки, которые идут вместе с сезонным оформлением. Выключите, чтобы оставить оформление с обычными звуками.",
   "seasonal.packAnswers": "Стая отвечает",
   "seasonal.nightTakesWing": "Ночь расправляет крылья",

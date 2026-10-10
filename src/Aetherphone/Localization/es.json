@@ -1135,6 +1135,8 @@
   "settings.seasonalNameFont": "Fuente de temporada para nombres",
   "settings.seasonalNameFontHint": "Muestra los nombres en Chirper, Aethergram y Velvet con la fuente de temporada.",
   "settings.seasonalSounds": "Sonidos de temporada",
+  "settings.seasonalParallax": "Paralaje del fondo",
+  "settings.seasonalParallaxHint": "Hace que las escenas nocturnas se desplacen suavemente al hacer scroll y mover el cursor. Desactívalo para que se queden quietas.",
   "settings.seasonalSoundsHint": "Reproduce los sonidos festivos que acompañan a las decoraciones de temporada. Desactívalo para mantener el aspecto con los sonidos de siempre.",
   "seasonal.packAnswers": "La manada responde",
   "seasonal.nightTakesWing": "La noche alza el vuelo",
