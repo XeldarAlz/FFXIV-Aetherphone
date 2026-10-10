@@ -12,6 +12,7 @@ internal static class LoadingPulse
     private const float CometArcRadians = 2.0f;
     private const float CorePulsePeriodMs = 2600f;
     private const float WordBreathPeriodMs = 2600f;
+    private const double MoonCyclesPerSecond = 0.55;
 
     public static string SafeLabel() => Plugin.Fonts.Ready ? Loc.T(L.Common.Loading) : "Loading";
 
@@ -37,6 +38,12 @@ internal static class LoadingPulse
         }
 
         var dl = drawList ?? ImGui.GetWindowDrawList();
+        if (SeasonalTheme.Halloween)
+        {
+            MoonSpinner(dl, center, radius, accent, alpha);
+            return;
+        }
+
         var thickness = MathF.Max(2f * UiScale.Current, radius * 0.10f);
         dl.AddCircleFilled(center, radius * 1.9f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.06f * alpha)), 48);
         dl.AddCircleFilled(center, radius * 1.25f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.10f * alpha)), 48);
@@ -45,6 +52,20 @@ internal static class LoadingPulse
         var core = Palette.Mix(accent, Vector4.One, 0.7f);
         var pulse = 0.9f + 0.1f * Pulse.Wave(CorePulsePeriodMs);
         dl.AddCircleFilled(center, radius * 0.26f * pulse, ImGui.GetColorU32(Palette.WithAlpha(core, alpha)), 32);
+    }
+
+    private static void MoonSpinner(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 accent, float alpha)
+    {
+        var moon = radius * 0.72f;
+        var light = Palette.Mix(accent, Vector4.One, 0.35f);
+        var phase = (float)(ImGui.GetTime() * MoonCyclesPerSecond % 1.0);
+        drawList.AddCircleFilled(center, radius * 1.9f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.06f * alpha)), 48);
+        drawList.AddCircleFilled(center, radius * 1.25f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.10f * alpha)),
+            48);
+        drawList.AddCircleFilled(center, moon, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.16f * alpha)), 48);
+        drawList.AddCircle(center, moon, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.40f * alpha)), 48,
+            UiScale.Current);
+        MoonPhase.Draw(drawList, center, moon, phase, ImGui.GetColorU32(Palette.WithAlpha(light, alpha)));
     }
 
     public static void Caption(Vector2 center, Vector4 textColor, Vector4 accent, string label, float alpha,

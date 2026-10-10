@@ -8,18 +8,14 @@ internal static class SkyHaunt
     private const float GoldenStep = 0.618034f;
     private const double FlightPeriodSeconds = 17.0;
     private const float FlightWindow = 0.34f;
-    private const int FlightSize = 3;
     private const int StormBatCount = 4;
     private const int WispCount = 5;
     private const int LeafCount = 9;
     private const int EyePairCount = 3;
     private const double GhostPeriodSeconds = 21.0;
     private const float GhostWindow = 0.6f;
-    private const int GhostArcSegments = 12;
-    private const int GhostHemSegments = 18;
-    private const int GhostPointCount = GhostArcSegments + GhostHemSegments + 2;
 
-    private static readonly Vector4 BatShadow = new(0.03f, 0.02f, 0.06f, 1f);
+    private static readonly Vector4 BatShadow = Spooks.BatShadow;
     private static readonly Vector4 WispGreen = new(0.55f, 1.00f, 0.78f, 1f);
     private static readonly Vector4 EyeAmber = new(1.00f, 0.78f, 0.30f, 1f);
     private static readonly Vector4 GhostWhite = new(0.92f, 0.95f, 1.00f, 1f);
@@ -73,31 +69,9 @@ internal static class SkyHaunt
 
     private static float BatSize(in SkyCanvas canvas) => MathF.Min(1.15f * canvas.Scale, canvas.Width * 0.0034f);
 
-    private static void Bats(in SkyCanvas canvas, Vector4 color, float laneTop, float laneSpan)
-    {
-        var cycle = SkyLayers.Phase(FlightPeriodSeconds);
-        if (cycle > FlightWindow)
-        {
-            return;
-        }
-
-        var travel = cycle / FlightWindow;
-        var flight = (int)(SkyLayers.Seconds / FlightPeriodSeconds);
-        var leftward = SkyLayers.Hash(flight, 2.3f) < 0.5f;
-        var laneY = laneTop + SkyLayers.Hash(flight, 5.9f) * laneSpan;
-        var size = BatSize(canvas);
-        var alpha = 0.85f * canvas.Opacity;
-        for (var batIndex = 0; batIndex < FlightSize; batIndex++)
-        {
-            var along = travel * 1.4f - 0.2f - batIndex * 0.08f;
-            var fractionX = leftward ? 1f - along : along;
-            var offsetY = (batIndex % 2 == 0 ? 1f : -1f) * batIndex * 0.035f;
-            var fractionY = laneY + offsetY + MathF.Sin((along * 3f + batIndex) * MathF.PI) * 0.025f;
-            var flap = MathF.Sin((float)(SkyLayers.Seconds * (11.0 + batIndex * 1.7)));
-            NightScene.DrawBat(canvas.DrawList, canvas.At(fractionX, fractionY), size * (1f - batIndex * 0.18f), flap,
-                SkyLayers.Color(color, alpha));
-        }
-    }
+    private static void Bats(in SkyCanvas canvas, Vector4 color, float laneTop, float laneSpan) =>
+        Spooks.DrawFlight(canvas.DrawList, canvas.Bounds, SkyLayers.Seconds, FlightPeriodSeconds, FlightWindow,
+            laneTop, laneSpan, BatSize(canvas), color with { W = color.W * 0.85f * canvas.Opacity });
 
     private static void StormBats(in SkyCanvas canvas, Vector4 color)
     {
@@ -193,49 +167,10 @@ internal static class SkyHaunt
         var center = canvas.At(leftward ? 1f - along : along, fractionY);
         var size = MathF.Min(14f * canvas.Scale, canvas.Width * 0.045f);
         var alpha = MathF.Sin(travel * MathF.PI) * canvas.Opacity;
-        var drawList = canvas.DrawList;
         SkyLayers.Glow(canvas, center + new Vector2(0f, size * 0.4f), new Vector2(size * 2.6f), color, 0.22f * alpha);
-
-        Span<Vector2> outline = stackalloc Vector2[GhostPointCount];
-        TraceGhost(outline, center, size, (float)SkyLayers.Seconds * 2.5f);
-        var fill = SkyLayers.Color(color, 0.20f * alpha);
-        var hub = center + new Vector2(0f, size * 0.4f);
-        var flags = drawList.Flags;
-        drawList.Flags = flags & ~ImDrawListFlags.AntiAliasedFill;
-        for (var pointIndex = 0; pointIndex < outline.Length; pointIndex++)
-        {
-            drawList.AddTriangleFilled(hub, outline[pointIndex], outline[(pointIndex + 1) % outline.Length], fill);
-        }
-
-        drawList.Flags = flags;
-        drawList.PathClear();
-        for (var pointIndex = 0; pointIndex < outline.Length; pointIndex++)
-        {
-            drawList.PathLineTo(outline[pointIndex]);
-        }
-
-        drawList.PathStroke(SkyLayers.Color(color, 0.30f * alpha), ImDrawFlags.Closed, canvas.Scale);
-        var eyeInk = SkyLayers.Color(eyes, 0.45f * alpha);
-        var gaze = leftward ? -0.12f : 0.12f;
-        drawList.AddCircleFilled(center + new Vector2((gaze - 0.32f) * size, -0.05f * size), size * 0.14f, eyeInk, 10);
-        drawList.AddCircleFilled(center + new Vector2((gaze + 0.32f) * size, -0.05f * size), size * 0.14f, eyeInk, 10);
-    }
-
-    private static void TraceGhost(Span<Vector2> outline, Vector2 center, float size, float sway)
-    {
-        for (var step = 0; step <= GhostArcSegments; step++)
-        {
-            var angle = MathF.PI + MathF.PI * step / GhostArcSegments;
-            outline[step] = center + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * size;
-        }
-
-        var hemY = center.Y + size * 1.15f;
-        for (var step = 0; step <= GhostHemSegments; step++)
-        {
-            var across = step / (float)GhostHemSegments;
-            var ripple = MathF.Abs(MathF.Sin(across * MathF.PI * 3f + sway)) * size * 0.28f;
-            outline[GhostArcSegments + 1 + step] = new Vector2(center.X + size * (1f - 2f * across), hemY + ripple);
-        }
+        Spooks.DrawGhost(canvas.DrawList, center, size, SkyLayers.Color(color, 0.20f * alpha),
+            SkyLayers.Color(color, 0.30f * alpha), SkyLayers.Color(eyes, 0.45f * alpha),
+            (float)SkyLayers.Seconds * 2.5f, leftward ? -0.12f : 0.12f);
     }
 
     private static void Leaves(in SkyCanvas canvas, bool natural, Vector4 mono)

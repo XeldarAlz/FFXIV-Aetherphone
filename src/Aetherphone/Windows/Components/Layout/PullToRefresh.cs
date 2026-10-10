@@ -12,8 +12,6 @@ internal sealed class PullToRefresh
     private const float MaxSpinnerSeconds = 20f;
     private const float MoonRadius = 11f;
     private const float MoonCycleSpeed = 0.55f;
-    private const int MoonSegments = 32;
-    private const float MoonEdgeStroke = 1f;
     private const float MoonFadeSeconds = 0.3f;
     private const float BatDrop = 28f;
     private const float BatSize = 1.1f;
@@ -156,51 +154,7 @@ internal sealed class PullToRefresh
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(MoonEarthshine with { W = MoonEarthshine.W * alpha }),
             32);
         drawList.AddCircle(center, radius, ImGui.GetColorU32(MoonOutline with { W = MoonOutline.W * alpha }), 32, scale);
-        DrawLitMoon(drawList, center, radius, moonPhase, ImGui.GetColorU32(MoonLight with { W = alpha }));
-    }
-
-    private static void DrawLitMoon(ImDrawListPtr drawList, Vector2 center, float radius, float phase, uint ink)
-    {
-        var waxing = phase < 0.5f;
-        var lit = waxing ? phase * 2f : (1f - phase) * 2f;
-        var side = waxing ? 1f : -1f;
-        var terminator = 1f - 2f * lit;
-        var flags = drawList.Flags;
-        drawList.Flags = flags & ~ImDrawListFlags.AntiAliasedFill;
-        var previousLimb = MoonPoint(center, radius, side, 0);
-        var previousEdge = previousLimb;
-        for (var step = 1; step <= MoonSegments; step++)
-        {
-            var limb = MoonPoint(center, radius, side, step);
-            var edge = MoonPoint(center, radius, side * terminator, step);
-            drawList.AddQuadFilled(previousLimb, limb, edge, previousEdge, ink);
-            previousLimb = limb;
-            previousEdge = edge;
-        }
-
-        drawList.Flags = flags;
-        TraceMoon(drawList, center, radius, side, terminator);
-        drawList.PathStroke(ink, ImDrawFlags.Closed, MoonEdgeStroke);
-    }
-
-    private static void TraceMoon(ImDrawListPtr drawList, Vector2 center, float radius, float side, float terminator)
-    {
-        drawList.PathClear();
-        for (var step = 0; step <= MoonSegments; step++)
-        {
-            drawList.PathLineTo(MoonPoint(center, radius, side, step));
-        }
-
-        for (var step = MoonSegments - 1; step > 0; step--)
-        {
-            drawList.PathLineTo(MoonPoint(center, radius, side * terminator, step));
-        }
-    }
-
-    private static Vector2 MoonPoint(Vector2 center, float radius, float reach, int step)
-    {
-        var angle = -MathF.PI * 0.5f + MathF.PI * step / MoonSegments;
-        return center + new Vector2(reach * radius * MathF.Cos(angle), radius * MathF.Sin(angle));
+        MoonPhase.Draw(drawList, center, radius, moonPhase, ImGui.GetColorU32(MoonLight with { W = alpha }));
     }
 
     private void DrawBat(ImDrawListPtr drawList, Vector2 anchor, float progress, float scale)
