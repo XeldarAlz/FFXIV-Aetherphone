@@ -86,7 +86,7 @@ internal static class Spooks
 
     private static double Fraction(double value) => value - Math.Floor(value);
 
-    private static float Hash(int index, float salt)
+    public static float Hash(int index, float salt)
     {
         var value = MathF.Sin(index * 127.1f + salt) * 43758.547f;
         return value - MathF.Floor(value);

@@ -109,8 +109,8 @@ internal static class Treats
         }
 
         var salt = (int)spot * 31 + SeasonalTheme.DayOfHalloween(DateTime.Today) + Found * 7;
-        var across = AreaMargin + Hash(salt, 1.7f) * (1f - AreaMargin * 2f);
-        var down = AreaMargin + Hash(salt, 4.3f) * (1f - AreaMargin * 2f);
+        var across = AreaMargin + Spooks.Hash(salt, 1.7f) * (1f - AreaMargin * 2f);
+        var down = AreaMargin + Spooks.Hash(salt, 4.3f) * (1f - AreaMargin * 2f);
         var center = new Vector2(area.Min.X + area.Width * across, area.Min.Y + area.Height * down);
         Present(drawList, spot, center, CandySize * UiScale.Current);
     }
@@ -268,11 +268,5 @@ internal static class Treats
         ShellToast.Show(found >= Total
             ? Loc.T(L.Seasonal.TreatsComplete, Total)
             : Loc.T(L.Seasonal.TreatFound, found, Total));
-    }
-
-    private static float Hash(int index, float salt)
-    {
-        var value = MathF.Sin(index * 127.1f + salt) * 43758.547f;
-        return value - MathF.Floor(value);
     }
 }
