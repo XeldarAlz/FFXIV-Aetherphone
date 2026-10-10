@@ -173,13 +173,10 @@ internal static class UiInteract
 
     public static bool Click(Vector2 min, Vector2 max, bool hovered, UiSound sound)
     {
-        if (!Click(min, max, hovered, false))
+        using (UiFeedback.ReplaceTap(sound))
         {
-            return false;
+            return Click(min, max, hovered);
         }
-
-        PlayTap(sound);
-        return true;
     }
 
     public static void PlayTap(UiSound sound)

@@ -323,7 +323,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         shareSearchDraft = string.Empty;
         shareSentUserIds.Clear();
         store.ClearDiscover();
-        BeginIntro();
+        introSwarmPending = intro.Begin(Id);
         RefreshAndConsumeLaunch();
     }
 
@@ -412,7 +412,6 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var screen = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
         screenRect = screen;
         ui.Backdrop(screen);
-        var appArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
         ConsumeSharedPhoto();
         AdvancePendingPhotoView();
         stories.Advance();
@@ -428,11 +427,11 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             return;
         }
 
-        DrawNight(screen, appArea.Min.Y);
+        DrawNight(screen, context.Content.Min.Y);
         using (InputShield.Engage(avatarLightbox.Expanded))
         using (intro.FadeContent())
         {
-            router.Draw(appArea, AppSkin.Transparent,
+            router.Draw(SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current), AppSkin.Transparent,
                 ImGui.GetIO().DeltaTime, drawView);
         }
 
@@ -538,7 +537,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
                 break;
         }
 
-        OfferTreat(area, depth);
+        SocialSeason.OfferTreat(screenRect, area, depth, TreatSpot.AethergramFeed, TreatSpot.AethergramDeep,
+            AppHeader.Height);
     }
 
     private Rect ChatArea(Rect area)
@@ -609,8 +609,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var listTop = activeScope == SocialFeedScope.ForYou ? rowRect.Max.Y : DrawLatestScopeRow(area, rowRect.Max.Y);
         var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
-        if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##aethergramComposeFab", Ink.Accent,
-                PhoneIcons.Plus, Loc.T(L.Aethergram.NewPost), "aethergram.compose", Ink.AccentDeep, FabRadius, true,
+        if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##aethergramComposeFab", Ink.Accent, PhoneIcons.Plus,
+                Loc.T(L.Aethergram.NewPost), "aethergram.compose", Ink.AccentDeep, FabRadius, true,
                 tapSound: SocialSeason.Sound(UiSound.HalloweenIgnite)))
         {
             StartCompose(false);
@@ -1374,7 +1374,11 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
                 post.Saved ? UiSound.Tap : SocialSeason.Sound(UiSound.HalloweenCoffin)))
         {
             TapGlow.Toggle(saveKey, post.Saved);
-            NoteSaved(!post.Saved);
+            if (!post.Saved)
+            {
+                SocialSeason.Toast(toast, L.Seasonal.SavedToCrypt);
+            }
+
             store.SetSaved(post.Id, !post.Saved);
         }
 
@@ -1591,12 +1595,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         if (doubleTapLike.Tapped(imageRect, post.Id))
         {
             pendingPhotoTap.Cancel();
-            if (SeasonalTheme.Halloween)
-            {
-                UiFeedback.Play(UiSound.HalloweenHeartbeat);
-                TapGlow.Bloom(TapGlow.Key(post.Id, TapGlow.Like));
-            }
-
+            SocialSeason.Play(UiSound.HalloweenHeartbeat);
+            TapGlow.Bloom(TapGlow.Key(post.Id, TapGlow.Like));
             if (post.MyReaction < 0)
             {
                 store.ToggleLike(post);
@@ -1799,23 +1799,14 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var titleRight = SocialChrome.HeaderSlot(area, 1).X - SocialChrome.HeaderIconRadius * scale - 8f * scale;
         var titleHeight = Typography.LineHeight(WordmarkStyle);
         var titleMaxWidth = MathF.Max(1f, titleRight - titleLeft);
-        var gothic = NightWordmark.Fits(DisplayName, titleMaxWidth, titleHeight, out var gothicSize);
-        var title = gothic ? DisplayName : Typography.FitText(DisplayName, titleMaxWidth, WordmarkStyle);
-        var titleSize = gothic ? gothicSize : Typography.Measure(title, WordmarkStyle);
+        var titleSize = SocialSeason.FitWordmark(DisplayName, titleMaxWidth, titleHeight, WordmarkStyle, out var title,
+            out var gothic);
         var titleMin = new Vector2(titleLeft - 6f * scale, rowCenterY - titleHeight * 0.5f - 4f * scale);
         var titleMax = new Vector2(titleLeft + titleSize.X + 6f * scale, rowCenterY + titleHeight * 0.5f + 4f * scale);
         UiInteract.HoverHighlight(drawList, titleMin, titleMax, 8f * scale);
-        if (gothic)
-        {
-            NightWordmark.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleSize.Y * 0.5f), title, Ink.TitleInk,
-                titleHeight);
-        }
-        else
-        {
-            Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleHeight * 0.5f), title, Ink.TitleInk,
-                WordmarkStyle);
-        }
-
+        var titleTop = rowCenterY - (gothic ? titleSize.Y : titleHeight) * 0.5f;
+        SocialSeason.DrawWordmark(drawList, new Vector2(titleLeft, titleTop), title, Ink.TitleInk, titleHeight,
+            WordmarkStyle, gothic);
         if (UiInteract.HoverClick(titleMin, titleMax, SocialSeason.Sound(UiSound.HalloweenOrgan)))
         {
             RefreshActiveFeed();

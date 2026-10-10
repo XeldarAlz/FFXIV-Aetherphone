@@ -25,12 +25,9 @@ internal sealed partial class ChirperApp
     private static readonly Vector4 ClawGlow = new(0.75f, 0.81f, 1f, 0.25f);
 
     private readonly SeasonIntro intro = new();
-    private int seasonApplied = -1;
+    private bool? halloweenApplied;
 
     private bool RewardedSelf(string userId) => SocialSeason.RewardedSelf(store.Me?.Id, userId);
-
-    private void OfferTreat(Rect area, int depth) => SocialSeason.OfferTreat(screenRect, area, depth,
-        TreatSpot.ChirperFeed, TreatSpot.ChirperDeep, AppHeader.Height);
 
     private Vector2 clawAnchor;
     private double clawStart = -100d;
@@ -50,13 +47,12 @@ internal sealed partial class ChirperApp
 
     private void SyncSeason()
     {
-        var season = SeasonalTheme.Halloween ? 1 : 0;
-        if (season == seasonApplied)
+        if (halloweenApplied == SeasonalTheme.Halloween)
         {
             return;
         }
 
-        seasonApplied = season;
+        halloweenApplied = SeasonalTheme.Halloween;
         ui.Palette = ChirperInk.CurrentPalette;
         var pullStyle = SeasonalTheme.Halloween ? PullStyle.Moon : PullStyle.Dots;
         foreach (var pull in pullToRefresh.Values)

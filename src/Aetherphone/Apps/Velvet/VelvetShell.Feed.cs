@@ -437,7 +437,7 @@ internal sealed partial class VelvetShell
         else if (doubleTapLike.Tapped(rect, entry.Id))
         {
             CancelPendingTaps();
-            NoteDoubleTapLike();
+            SocialSeason.Play(UiSound.HalloweenSparkle);
             TapGlow.Bloom(TapGlow.Key(entry.Id, TapGlow.Like));
             if (entry.MyReaction < 0)
             {

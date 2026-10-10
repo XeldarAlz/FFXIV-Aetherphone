@@ -482,7 +482,8 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
                 break;
         }
 
-        OfferTreat(area, depth);
+        SocialSeason.OfferTreat(screenRect, area, depth, TreatSpot.ChirperFeed, TreatSpot.ChirperDeep,
+            AppHeader.Height);
     }
 
     private void DrawHome(Rect area)

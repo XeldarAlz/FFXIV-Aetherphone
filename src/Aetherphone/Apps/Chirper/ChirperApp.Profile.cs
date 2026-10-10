@@ -805,23 +805,14 @@ internal sealed partial class ChirperApp
         var filterCenter = new Vector2(refreshCenter.X - buttonRadius * 2f - 2f * scale, rowCenterY);
         var titleHeight = Typography.LineHeight(WordmarkStyle);
         var titleMaxWidth = MathF.Max(1f, filterCenter.X - buttonRadius - 8f * scale - titleLeft);
-        var gothic = NightWordmark.Fits(DisplayName, titleMaxWidth, titleHeight, out var gothicSize);
-        var title = gothic ? DisplayName : Typography.FitText(DisplayName, titleMaxWidth, WordmarkStyle);
-        var titleSize = gothic ? gothicSize : Typography.Measure(title, WordmarkStyle);
+        var titleSize = SocialSeason.FitWordmark(DisplayName, titleMaxWidth, titleHeight, WordmarkStyle, out var title,
+            out var gothic);
         var titleMin = new Vector2(titleLeft - 6f * scale, rowCenterY - titleHeight * 0.5f - 4f * scale);
         var titleMax = new Vector2(titleLeft + titleSize.X + 6f * scale, rowCenterY + titleHeight * 0.5f + 4f * scale);
         UiInteract.HoverHighlight(drawList, titleMin, titleMax, 8f * scale);
-        if (gothic)
-        {
-            NightWordmark.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleSize.Y * 0.5f), title,
-                ChirperInk.TitleInk, titleHeight);
-        }
-        else
-        {
-            Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleHeight * 0.5f), title,
-                ChirperInk.TitleInk, WordmarkStyle);
-        }
-
+        var titleTop = rowCenterY - (gothic ? titleSize.Y : titleHeight) * 0.5f;
+        SocialSeason.DrawWordmark(drawList, new Vector2(titleLeft, titleTop), title, ChirperInk.TitleInk, titleHeight,
+            WordmarkStyle, gothic);
         if (UiInteract.HoverClick(titleMin, titleMax, SocialSeason.Sound(UiSound.HalloweenHoot)))
         {
             RefreshActiveFeed();
@@ -834,8 +825,7 @@ internal sealed partial class ChirperApp
         }
 
         var filtersActive = FeedFiltersActive();
-        if (DrawTopBarButton(drawList, filterCenter, buttonRadius, Loc.T(L.Chirper.FeedFilters), true, filtersActive,
-                UiSound.Tap))
+        if (DrawTopBarButton(drawList, filterCenter, buttonRadius, Loc.T(L.Chirper.FeedFilters), true, filtersActive))
         {
             OpenFilterSheet();
         }
@@ -844,17 +834,17 @@ internal sealed partial class ChirperApp
         {
             LoadingPulse.Spinner(refreshCenter, 8f * scale, ChirperInk.AccentLink);
         }
-        else if (DrawTopBarButton(drawList, refreshCenter, buttonRadius, Loc.T(L.Common.Refresh), false, false,
-                     SocialSeason.Sound(UiSound.HalloweenHoot)))
+        else if (DrawTopBarButton(drawList, refreshCenter, buttonRadius, Loc.T(L.Common.Refresh), false, false))
         {
             RefreshActiveFeed();
         }
     }
 
     private static bool DrawTopBarButton(ImDrawListPtr drawList, Vector2 center, float radius, string tooltip,
-        bool filter, bool highlighted, UiSound tapSound) =>
+        bool filter, bool highlighted) =>
         SocialChrome.DrawHeaderIcon(drawList, center, radius,
             filter ? PhoneIcons.AdjustmentsHorizontal : PhoneIcons.Refresh, 18f, tooltip, ChirperInk.Shared,
-            ChirperInk.BodyInk, highlighted, tapSound: tapSound);
+            ChirperInk.BodyInk, highlighted,
+            tapSound: filter ? UiSound.Tap : SocialSeason.Sound(UiSound.HalloweenHoot));
 
 }

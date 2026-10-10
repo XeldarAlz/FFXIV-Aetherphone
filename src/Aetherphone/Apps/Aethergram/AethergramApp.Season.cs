@@ -30,12 +30,9 @@ internal sealed partial class AethergramApp
     private readonly Flight[] flights = new Flight[FlightCapacity];
     private readonly SeasonIntro intro = new();
     private bool introSwarmPending;
-    private int seasonApplied = -1;
+    private bool? halloweenApplied;
 
     private bool RewardedSelf(string userId) => SocialSeason.RewardedSelf(store.Me?.Id, userId);
-
-    private void OfferTreat(Rect area, int depth) => SocialSeason.OfferTreat(screenRect, area, depth,
-        TreatSpot.AethergramFeed, TreatSpot.AethergramDeep, AppHeader.Height);
 
     private static LocString CaughtUpTitle =>
         SeasonalTheme.Halloween ? L.Seasonal.AethergramCaughtUp : L.Social.FeedCaughtUp;
@@ -61,13 +58,12 @@ internal sealed partial class AethergramApp
 
     private void SyncSeason()
     {
-        var season = SeasonalTheme.Halloween ? 1 : 0;
-        if (season == seasonApplied)
+        if (halloweenApplied == SeasonalTheme.Halloween)
         {
             return;
         }
 
-        seasonApplied = season;
+        halloweenApplied = SeasonalTheme.Halloween;
         ui.Palette = AethergramInk.CurrentPalette;
         doubleTapLike.Crimson = SeasonalTheme.Halloween;
         var pullStyle = SeasonalTheme.Halloween ? PullStyle.Bat : PullStyle.Dots;
@@ -102,11 +98,6 @@ internal sealed partial class AethergramApp
         ReleaseSwarm(NightScene.BloodMoonCenter(screen, moonY, view), IntroSwarmSize);
     }
 
-    private void BeginIntro()
-    {
-        introSwarmPending = intro.Begin(Id);
-    }
-
     private void ReleaseSwarm(Vector2 moon, int count)
     {
         var scale = UiScale.Current;
@@ -122,11 +113,6 @@ internal sealed partial class AethergramApp
 
     private void DrawLogoTap(Vector2 logoCenter, float logoSize, float moonY)
     {
-        if (!SeasonalTheme.Halloween)
-        {
-            return;
-        }
-
         if (SocialSeason.CharmTapped(logoCenter, logoSize, UiSound.HalloweenSwarm, toast, L.Seasonal.NightTakesWing))
         {
             ReleaseSwarm(NightScene.BloodMoonCenter(screenRect, moonY, intro.ViewFor(screenRect)), SwarmSize);
@@ -141,14 +127,6 @@ internal sealed partial class AethergramApp
         }
 
         Launch(from, new Vector2(300f, -260f) * UiScale.Current, 1.3f, 0f);
-    }
-
-    private void NoteSaved(bool saving)
-    {
-        if (saving && SeasonalTheme.Halloween)
-        {
-            toast.Show(Loc.T(L.Seasonal.SavedToCrypt));
-        }
     }
 
     private void Launch(Vector2 from, Vector2 velocity, float size, float delay)

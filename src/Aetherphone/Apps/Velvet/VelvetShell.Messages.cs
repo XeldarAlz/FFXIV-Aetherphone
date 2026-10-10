@@ -4,7 +4,6 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
@@ -988,7 +987,7 @@ internal sealed partial class VelvetShell
         store.SendIntro(userId, introText.Trim(), _ => { });
         introText = string.Empty;
         router.Pop();
-        NoteConnected();
+        SocialSeason.Toast(toast, L.Seasonal.VelvetConnected);
     }
 
     private void ConnectWithoutIntro(string userId)
@@ -996,7 +995,7 @@ internal sealed partial class VelvetShell
         store.Connect(userId);
         introText = string.Empty;
         router.Pop();
-        NoteConnected();
+        SocialSeason.Toast(toast, L.Seasonal.VelvetConnected);
     }
 
     private static string IntroLineOf(VelvetConnectionDto request) =>

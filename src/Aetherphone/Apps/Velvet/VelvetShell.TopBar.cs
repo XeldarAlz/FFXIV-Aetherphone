@@ -3,7 +3,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -55,23 +54,15 @@ internal sealed partial class VelvetShell
         var titleRight = iconsLeft - TitleIconGap * scale;
         var titleHeight = Typography.LineHeight(WordmarkStyle);
         var titleMaxWidth = MathF.Max(1f, titleRight - titleLeft);
-        var gothic = NightWordmark.Fits(DisplayName, titleMaxWidth, titleHeight, out var gothicSize);
-        var title = gothic ? DisplayName : Typography.FitText(DisplayName, titleMaxWidth, WordmarkStyle);
-        var titleSize = gothic ? gothicSize : Typography.Measure(title, WordmarkStyle);
+        var titleSize = SocialSeason.FitWordmark(DisplayName, titleMaxWidth, titleHeight, WordmarkStyle, out var title,
+            out var gothic);
         var titleTop = rowCenterY - titleSize.Y * 0.5f;
         var titleMin = new Vector2(titleLeft - TitleHitPad * scale, titleTop - TitleHitPadY * scale);
         var titleMax = new Vector2(titleLeft + titleSize.X + TitleHitPad * scale,
             titleTop + titleSize.Y + TitleHitPadY * scale);
         UiInteract.HoverHighlight(drawList, titleMin, titleMax, TitleHitRounding * scale);
-        if (gothic)
-        {
-            NightWordmark.Draw(drawList, new Vector2(titleLeft, titleTop), title, VelvetTheme.TitleInk, titleHeight);
-        }
-        else
-        {
-            Typography.Draw(drawList, new Vector2(titleLeft, titleTop), title, VelvetTheme.TitleInk, WordmarkStyle);
-        }
-
+        SocialSeason.DrawWordmark(drawList, new Vector2(titleLeft, titleTop), title, VelvetTheme.TitleInk, titleHeight,
+            WordmarkStyle, gothic);
         PlaceMoon(titleLeft + titleSize.X, iconsLeft);
         if (UiInteract.HoverClick(titleMin, titleMax, TitleSound))
         {

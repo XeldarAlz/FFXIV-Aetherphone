@@ -19,12 +19,9 @@ internal sealed partial class VelvetShell
     private static readonly Vector4 GlowInk = new(1f, 0.64f, 0.34f, 1f);
 
     private readonly SeasonIntro intro = new();
-    private int seasonApplied = -1;
+    private bool? halloweenApplied;
 
     private bool RewardedSelf(string userId) => SocialSeason.RewardedSelf(store.Me?.UserId, userId);
-
-    private void OfferTreat(Rect area, int depth) => SocialSeason.OfferTreat(screenRect, area, depth,
-        TreatSpot.VelvetFeed, TreatSpot.VelvetDeep, VHeader.Height);
 
     private Spring moonSlide;
     private bool moonPlaced;
@@ -45,13 +42,12 @@ internal sealed partial class VelvetShell
 
     private void SyncSeason()
     {
-        var season = SeasonalTheme.Halloween ? 1 : 0;
-        if (season == seasonApplied)
+        if (halloweenApplied == SeasonalTheme.Halloween)
         {
             return;
         }
 
-        seasonApplied = season;
+        halloweenApplied = SeasonalTheme.Halloween;
         ui.Palette = SeasonalTheme.Halloween ? VelvetTheme.WitchingPalette : VelvetTheme.Palette;
         doubleTapLike.Crimson = SeasonalTheme.Halloween;
         pullToRefresh.Style = SeasonalTheme.Halloween ? PullStyle.Moon : PullStyle.Dots;
@@ -61,22 +57,9 @@ internal sealed partial class VelvetShell
 
     private void DrawLogoTap(Vector2 logoCenter, float logoSize)
     {
-        if (!SeasonalTheme.Halloween)
-        {
-            return;
-        }
-
         if (SocialSeason.CharmTapped(logoCenter, logoSize, UiSound.HalloweenFlare, toast, L.Seasonal.CandlesFlare))
         {
             NightScene.Kindle();
-        }
-    }
-
-    private static void NoteDoubleTapLike()
-    {
-        if (SeasonalTheme.Halloween)
-        {
-            UiFeedback.Play(UiSound.HalloweenSparkle);
         }
     }
 
@@ -128,13 +111,5 @@ internal sealed partial class VelvetShell
 
         NightScene.Glow(drawList, logoCenter, logoSize * LogoFlareReach, Spooks.Pumpkin with { W = LogoFlareAlpha * flare },
             LogoFlareCells);
-    }
-
-    private void NoteConnected()
-    {
-        if (SeasonalTheme.Halloween)
-        {
-            toast.Show(Loc.T(L.Seasonal.VelvetConnected));
-        }
     }
 }
