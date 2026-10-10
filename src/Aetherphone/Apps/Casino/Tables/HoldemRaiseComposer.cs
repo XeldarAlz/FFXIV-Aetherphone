@@ -26,11 +26,15 @@ internal readonly record struct HoldemRaiseModel(
     long BigBlind,
     bool Enabled);
 
+internal readonly record struct HoldemRaiseRows(Rect Quick, Rect Slider, Rect Action);
+
 internal sealed class HoldemRaiseComposer
 {
     public const float Pad = 12f;
     public const float Gap = 8f;
     public const float RowHeight = Metrics.Size.Pill;
+    public const float QuickChipHeight = Metrics.Size.Pill;
+    public const float QuickLabelPadding = ChipRail.DefaultLabelPadding;
     public const float StepperRadius = Metrics.Size.Pill * 0.5f;
     public const float BackShare = 0.30f;
 
@@ -64,6 +68,21 @@ internal sealed class HoldemRaiseComposer
     public long Amount => amount;
 
     public static float DeckHeight => Pad * 2f + RowHeight * 2f + Gap * 2f + Button.LargeHeight;
+
+    public static HoldemRaiseRows RowsFor(Rect deck, float scale)
+    {
+        var left = deck.Min.X + Pad * scale;
+        var right = deck.Max.X - Pad * scale;
+        var top = deck.Min.Y + Pad * scale;
+        var row = RowHeight * scale;
+        var gap = Gap * scale;
+        var quick = new Rect(new Vector2(left, top), new Vector2(right, top + row));
+        top += row + gap;
+        var slider = new Rect(new Vector2(left, top), new Vector2(right, top + row));
+        top += row + gap;
+        var action = new Rect(new Vector2(left, top), new Vector2(right, top + Button.LargeHeight * scale));
+        return new HoldemRaiseRows(quick, slider, action);
+    }
 
     public void Open(in HoldemRaiseModel model)
     {
@@ -100,17 +119,11 @@ internal sealed class HoldemRaiseComposer
         }
 
         amount = HoldemRules.SnapRaise(amount, model.BigBlind, minimum, model.MaxRaiseTo);
-        var left = deck.Min.X + Pad * scale;
-        var right = deck.Max.X - Pad * scale;
-        var top = deck.Min.Y + Pad * scale;
-        var row = RowHeight * scale;
+        var rows = RowsFor(deck, scale);
         var gap = Gap * scale;
-        DrawQuickRow(ui, new Rect(new Vector2(left, top), new Vector2(right, top + row)), model, minimum);
-        top += row + gap;
-        DrawSliderRow(ui, drawList, new Rect(new Vector2(left, top), new Vector2(right, top + row)), model, minimum,
-            scale);
-        top += row + gap;
-        var actionRect = new Rect(new Vector2(left, top), new Vector2(right, top + Button.LargeHeight * scale));
+        DrawQuickRow(ui, rows.Quick, model, minimum);
+        DrawSliderRow(ui, drawList, rows.Slider, model, minimum, scale);
+        var actionRect = rows.Action;
         var backWidth = actionRect.Width * BackShare;
         var backRect = new Rect(actionRect.Min, new Vector2(actionRect.Min.X + backWidth, actionRect.Max.Y));
         if (Button.Draw(drawList, backRect, Loc.T(L.Holdem.Back), ui.Ink, ButtonStyle.Gray, id: "holdem.raise.back"))
@@ -159,7 +172,7 @@ internal sealed class HoldemRaiseComposer
         }
 
         var tapped = quickRail.Draw(row, ui, quickLabels, quickActive, centered: true,
-            labelPadding: ChipRail.CompactLabelPadding, interactive: model.Enabled);
+            labelPadding: QuickLabelPadding, interactive: model.Enabled, chipHeight: QuickChipHeight);
         if (tapped < 0 || quickTargets[tapped] <= 0)
         {
             return;

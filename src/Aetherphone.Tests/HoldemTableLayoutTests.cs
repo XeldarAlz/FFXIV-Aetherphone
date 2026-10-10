@@ -295,6 +295,34 @@ public sealed class HoldemTableLayoutTests
         }
     }
 
+    [Theory]
+    [InlineData(0.75f)]
+    [InlineData(1f)]
+    [InlineData(1.5f)]
+    public void TheRaisePresetsAreTouchSizedAndStackInsideTheDeck(float scale)
+    {
+        var origin = new Vector2(30f, 500f);
+        var deck = new Rect(origin, origin + new Vector2(296f, HoldemRaiseComposer.DeckHeight) * scale);
+        var rows = HoldemRaiseComposer.RowsFor(deck, scale);
+        var touch = 44f * scale;
+        var chipHeight = HoldemRaiseComposer.QuickChipHeight * scale;
+        Assert.True(chipHeight >= touch - Epsilon);
+        Assert.True(chipHeight <= rows.Quick.Height + Epsilon);
+        Assert.True(rows.Slider.Height >= touch - Epsilon);
+        Assert.True(rows.Action.Height >= touch - Epsilon);
+        Assert.True(Inside(deck, rows.Quick));
+        Assert.True(Inside(deck, rows.Slider));
+        Assert.True(Inside(deck, rows.Action));
+        Assert.True(rows.Quick.Max.Y <= rows.Slider.Min.Y + Epsilon);
+        Assert.True(rows.Slider.Max.Y <= rows.Action.Min.Y + Epsilon);
+        for (var labelWidth = 10f; labelWidth <= 120f; labelWidth += 10f)
+        {
+            var width = ChipRail.WidthFor(labelWidth * scale, HoldemRaiseComposer.QuickLabelPadding, scale);
+            var chip = new Rect(rows.Quick.Min, rows.Quick.Min + new Vector2(width, chipHeight));
+            Assert.True(ChipRail.LabelRoom(chip) >= labelWidth * scale);
+        }
+    }
+
     private static Rect StageSafe(PhoneCaseKind kind, float deckHeight, bool practice)
     {
         var chassis = ChassisMetrics.For(kind, PhoneSizeCatalog.DesignWidth);
