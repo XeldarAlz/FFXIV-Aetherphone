@@ -18,6 +18,7 @@ public sealed class NameEffectSyncTests
         "bounce", "shiver", "wobble", "pop", "flipboard", "typewriter",
         "outline", "shadow", "longshadow", "emboss", "chromatic", "neon", "underline", "scan", "comet",
         "sakura", "snowfall", "fireflies", "hearts", "glitter", "bubbles", "confetti", "storm",
+        "witchfire",
     };
 
     private static readonly string[] SellableEffectKeys =
@@ -33,7 +34,7 @@ public sealed class NameEffectSyncTests
     private static readonly string[] SeededEffectKeys =
     {
         "glitch", "starfall", "bounce", "shiver", "wobble", "pop", "flipboard", "typewriter",
-        "neon", "scan", "comet", "storm",
+        "neon", "scan", "comet", "storm", "witchfire",
     };
 
     private static readonly string[] RoleSignatureKeys =
@@ -282,6 +283,22 @@ public sealed class NameEffectSyncTests
         Assert.Equal(4, NameEffects.For(Badge("candy", "0xFF8A3D"), false).Ramp.Count);
         Assert.Equal(4, NameEffects.For(Badge("confetti", "0xFF8A3D", "0x0000EF"), false).Ramp.Count);
         Assert.Equal(3, NameEffects.For(Badge("stripes", "0xFF0000", "0x00FF00", "0x0000FF"), false).Ramp.Count);
+    }
+
+    [Fact]
+    public void WitchfireBurnsThroughEveryBadgeColour()
+    {
+        var witchfire = NameEffects.For(Badge("witchfire", "0x8FE69A", "0x4CC060", "0x2A8A3E", "0x14451F"), false);
+        Assert.Equal(NameEffectKind.Witchfire, witchfire.Kind);
+        Assert.Equal(4, witchfire.Ramp.Count);
+        Assert.True(witchfire.Crest.W > 0f);
+    }
+
+    [Fact]
+    public void TheHallowedRewardWearsWitchfire()
+    {
+        Assert.Equal(NameEffectKind.Witchfire, NameEffects.Hallowed(false).Kind);
+        Assert.Equal(4, NameEffects.Hallowed(true).Ramp.Count);
     }
 
     [Fact]

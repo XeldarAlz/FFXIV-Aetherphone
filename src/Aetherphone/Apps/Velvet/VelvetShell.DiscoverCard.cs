@@ -224,7 +224,7 @@ internal sealed partial class VelvetShell
         var textBlock = new Rect(new Vector2(textLeft, nameY), new Vector2(textLeft + textWidth, cover.Max.Y - pad));
         var textHovered = interactive && UiInteract.Hover(textBlock.Min, textBlock.Max);
         UserName.Draw(drawList, nameId, name, profile.Badges, profile.BadgeIds, textLeft, nameY, textWidth,
-            CardNameStyle, VelvetTheme.TitleInk, textHovered, false);
+            CardNameStyle, VelvetTheme.TitleInk, textHovered, false, self: RewardedSelf(profile.UserId));
         Typography.Draw(drawList, new Vector2(textLeft, metaY),
             Typography.FitText(metaLine, textWidth, CardMetaStyle), VelvetTheme.BodyInk, CardMetaStyle);
         Typography.Draw(drawList, new Vector2(textLeft, intentY),

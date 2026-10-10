@@ -59,10 +59,17 @@ internal static class AppPalettes
 
     private static AppPalette For(string id) => Tinted(AppAccents.For(id));
 
+    private static AppPalette Night(Vector4 accent, Vector4 top, Vector4 bottom, Vector4 bloom) =>
+        Tinted(accent) with { BackdropTop = top, BackdropBottom = bottom, BloomTop = bloom, BloomBottom = bloom with { W = 0f } };
+
     public static readonly AppPalette Health = Neutral(AppAccents.For("health"));
     public static readonly AppPalette Chirper = For("chirper");
+    public static readonly AppPalette ChirperMoonlit = Night(new(0.498f, 0.596f, 0.918f, 1f),
+        new(0.039f, 0.063f, 0.188f, 1f), new(0.024f, 0.027f, 0.102f, 1f), new(0.80f, 0.85f, 1f, 0.08f));
     public static readonly AppPalette Market = For("market");
     public static readonly AppPalette Aethergram = For("aethergram");
+    public static readonly AppPalette AethergramBloodMoon = Night(new(0.878f, 0.149f, 0.243f, 1f),
+        new(0.110f, 0.016f, 0.031f, 1f), new(0.039f, 0.004f, 0.012f, 1f), new(0.878f, 0.149f, 0.243f, 0.14f));
     public static readonly AppPalette Velvet = For("velvet");
     public static readonly AppPalette Message = MessageChrome(AppAccents.For("message"));
     public static readonly AppPalette Venues = For("venues");

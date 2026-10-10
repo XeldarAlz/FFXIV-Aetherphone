@@ -12,6 +12,7 @@ internal static class AppIconCache
 {
     public const string ForegroundSuffix = ".fg.png";
     public const string FinishedSuffix = ".png";
+    private const string HalloweenSuffix = ".halloween";
     public const long IdleDropMilliseconds = 120_000;
     public const long SweepIntervalMilliseconds = 5_000;
     private const long FailureRetryMilliseconds = 60_000;
@@ -62,6 +63,7 @@ internal static class AppIconCache
         Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Icons");
 
     private static readonly Dictionary<string, IconEntry> Entries = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, string?> HalloweenKeys = new(StringComparer.Ordinal);
     private static readonly ConcurrentQueue<Completion> Completions = new();
     private static int preparedFrame = -1;
     private static long lastSweepTicks;
@@ -79,6 +81,7 @@ internal static class AppIconCache
             return false;
         }
 
+        appId = KeyFor(appId);
         if (Entries.TryGetValue(appId, out var entry))
         {
             return entry.Painted;
@@ -123,6 +126,7 @@ internal static class AppIconCache
 
     public static IDalamudTextureWrap? Resolve(string appId, IconAppearance appearance, int level, Vector4 accent)
     {
+        appId = KeyFor(appId);
         if (!Entries.TryGetValue(appId, out var entry) || !entry.Painted)
         {
             return null;
@@ -156,6 +160,7 @@ internal static class AppIconCache
 
     public static void Disable(string appId)
     {
+        appId = KeyFor(appId);
         if (!Entries.TryGetValue(appId, out var entry))
         {
             return;
@@ -190,6 +195,26 @@ internal static class AppIconCache
         {
             completion.Wrap?.Dispose();
         }
+    }
+
+    private static string KeyFor(string appId)
+    {
+        if (!SeasonalTheme.Halloween)
+        {
+            return appId;
+        }
+
+        if (!HalloweenKeys.TryGetValue(appId, out var key))
+        {
+            var candidate = appId + HalloweenSuffix;
+            key = File.Exists(Path.Combine(IconDirectory, candidate + FinishedSuffix))
+                && File.Exists(Path.Combine(IconDirectory, candidate + ForegroundSuffix))
+                    ? candidate
+                    : null;
+            HalloweenKeys[appId] = key;
+        }
+
+        return key ?? appId;
     }
 
     private static void StartBuild(IconEntry entry, string appId, int slot, IconAppearance appearance, int level,

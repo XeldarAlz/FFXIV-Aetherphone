@@ -7,6 +7,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Shell.Spotlight;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Windows;
+using Aetherphone.Windows.Components;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 
@@ -110,6 +111,16 @@ internal sealed class PhoneCommands
             case "perfhud":
                 services.Configuration.ShowPerfHud = !services.Configuration.ShowPerfHud;
                 services.Configuration.Save();
+                break;
+            case "halloween" when AepConstants.IsPrerelease:
+                services.Configuration.PreviewHalloween = !services.Configuration.PreviewHalloween;
+                services.Configuration.Save();
+                break;
+            case "treat" when AepConstants.IsPrerelease:
+                Treats.SummonNow();
+                break;
+            case "treats" when AepConstants.IsPrerelease:
+                Treats.SetAllFound(!rest.Trim().Equals("reset", StringComparison.OrdinalIgnoreCase));
                 break;
             case "help":
                 PrintHelp();

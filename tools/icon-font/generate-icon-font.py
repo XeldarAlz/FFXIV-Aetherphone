@@ -138,6 +138,19 @@ OUTLINE = [
     ("ToolsKitchen", "tools-kitchen-2"),
     ("Navigation", "navigation"),
     ("Sofa", "sofa"),
+    ("Bat", "bat"),
+    ("Trees", "trees"),
+    ("CrystalBall", "crystal-ball"),
+    ("Paw", "paw"),
+    ("BuildingCastle", "building-castle"),
+    ("Ghost", "ghost"),
+    ("Skull", "skull"),
+    ("Spider", "spider"),
+    ("Pumpkin", "pumpkin-scary"),
+    ("Cat", "cat"),
+    ("Candle", "candle"),
+    ("Wand", "wand"),
+    ("MoonStars", "moon-stars"),
 ]
 
 FILLED = [
@@ -157,6 +170,9 @@ FILLED = [
     ("FlameFilled", "flame"),
     ("CalendarFilled", "calendar-event"),
     ("NavigationFilled", "navigation"),
+    ("PawFilled", "paw"),
+    ("EyeFilled", "eye"),
+    ("DropletFilled", "droplet"),
 ]
 
 

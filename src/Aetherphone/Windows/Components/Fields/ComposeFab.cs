@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -20,7 +21,7 @@ internal static class ComposeFab
 
     public static bool Draw(Rect area, string childId, Vector4 accent, string glyph, string tooltip,
         string? anchorKey = null, Vector4? gradientBottom = null, float radiusUnscaled = DefaultRadius,
-        bool phoneGlyph = false)
+        bool phoneGlyph = false, Vector4? glyphInk = null, UiSound tapSound = UiSound.Tap)
     {
         var scale = UiScale.Current;
         var radius = radiusUnscaled * scale;
@@ -65,11 +66,11 @@ internal static class ComposeFab
 
         if (phoneGlyph)
         {
-            PhoneIcon.Draw(drawList, center, glyph, White, drawRadius * 0.82f);
+            PhoneIcon.Draw(drawList, center, glyph, glyphInk ?? White, drawRadius * 0.82f);
         }
         else
         {
-            AppSkin.Icon(center, glyph, White, 1.1f * drawRadius / radius);
+            AppSkin.Icon(center, glyph, glyphInk ?? White, 1.1f * drawRadius / radius);
         }
 
         HoverTooltip.Show(fabRect, tooltip, HoverLabelSide.Above);
@@ -78,7 +79,7 @@ internal static class ComposeFab
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(fabRect.Min, fabRect.Max, hovered);
+        return UiInteract.Click(fabRect.Min, fabRect.Max, hovered, tapSound);
     }
 
     internal static Rect ComputeBoxRect(Rect area, float radiusUnscaled, float scale, float glowPad,

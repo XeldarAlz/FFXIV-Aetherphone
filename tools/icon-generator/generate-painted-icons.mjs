@@ -364,11 +364,201 @@ async function paint(id, entry) {
   return `${entry.symbol} on ${entry.family} ${entry.hue}`;
 }
 
+const MOONLIT_STOPS = ["#1B2A6B", "#070B22"];
+const MOONLIT_STARS = [[180, 210, 7], [262, 150, 4], [820, 190, 6], [880, 330, 4], [150, 760, 5], [860, 820, 6], [700, 120, 4]];
+const MOONLIT_CRATERS = [[430, 400, 46], [610, 600, 62], [560, 330, 28], [380, 640, 34], [700, 430, 24]];
+const MOON_RADIUS = 360;
+const FEATHER_WIDTH_FRACTION = 0.5;
+const FEATHER_INK = "#0C1236";
+const BLOOD_STOPS = ["#D0203A", "#5C0612"];
+const APERTURE_WIDTH_FRACTION = 0.44;
+const APERTURE_DROP = 40;
+const BAT_WING =
+  "M 300 470 C 240 400, 150 340, 70 340 C 110 390, 118 430, 108 480 Q 150 460, 178 500 Q 206 474, 238 520 Q 266 500, 300 580 Z";
+const BAT_EAR = "M 440 330 L 462 232 L 494 316 Z";
+
+function circles(points, fill, opacity) {
+  return points.map(([x, y, radius]) => `<circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" fill-opacity="${opacity}"/>`).join("");
+}
+
+function scaledPlacement(bounds, widthFraction, dropY) {
+  const scale = (widthFraction * MASTER_SIZE) / bounds.width;
+  const translateX = MASTER_SIZE / 2 - scale * (bounds.left + bounds.width / 2);
+  const translateY = MASTER_SIZE / 2 + dropY - scale * (bounds.top + bounds.height / 2);
+  return `translate(${translateX.toFixed(3)} ${translateY.toFixed(3)}) scale(${scale.toFixed(5)})`;
+}
+
+function moonDisc() {
+  const center = MASTER_SIZE / 2;
+  return `<defs><radialGradient id="halo"><stop offset="55%" stop-color="#C9D6FF" stop-opacity="0.45"/><stop offset="100%" stop-color="#C9D6FF" stop-opacity="0"/></radialGradient>`
+    + `<radialGradient id="face" cx="40%" cy="38%" r="70%"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="60%" stop-color="#E3E8F8"/><stop offset="100%" stop-color="#B8C2E2"/></radialGradient></defs>`
+    + `<circle cx="${center}" cy="${center}" r="${MOON_RADIUS * 1.32}" fill="url(#halo)"/>`
+    + `<circle cx="${center}" cy="${center}" r="${MOON_RADIUS}" fill="url(#face)"/>`
+    + circles(MOONLIT_CRATERS, "#8C98C4", 0.22);
+}
+
+async function paintMoonlitFeather(id) {
+  const markup = await fetchSymbolMarkup("feather");
+  const transform = scaledPlacement(await measureSymbol(markup), FEATHER_WIDTH_FRACTION, 0);
+  const center = MASTER_SIZE / 2;
+  const tile = backgroundMarkup(MOONLIT_STOPS) + circles(MOONLIT_STARS, WHITE, 0.7) + moonDisc()
+    + symbolGroup(markup, FEATHER_INK, transform);
+  const symbol = `<defs><mask id="cut"><rect width="${MASTER_SIZE}" height="${MASTER_SIZE}" fill="#FFFFFF"/>${symbolGroup(markup, "#000000", transform)}</mask></defs>`
+    + `<circle cx="${center}" cy="${center}" r="${MOON_RADIUS}" fill="${WHITE}" mask="url(#cut)"/>`;
+  await writePair(id, svgDocument(tile), true);
+  await writePair(`${id}.fg`, svgDocument(symbol), false);
+  return "feather silhouetted on a full moon";
+}
+
+function batWings(ink) {
+  const mirror = `translate(${MASTER_SIZE} 0) scale(-1 1)`;
+  return `<g fill="${ink}"><path d="${BAT_WING}"/><path d="${BAT_EAR}"/><g transform="${mirror}"><path d="${BAT_WING}"/><path d="${BAT_EAR}"/></g></g>`;
+}
+
+async function paintBatAperture(id) {
+  const markup = await fetchSymbolMarkup("aperture");
+  const transform = scaledPlacement(await measureSymbol(markup), APERTURE_WIDTH_FRACTION, APERTURE_DROP);
+  const symbol = batWings(WHITE) + symbolGroup(markup, WHITE, transform);
+  await writePair(id, svgDocument(backgroundMarkup(BLOOD_STOPS) + symbol), true);
+  await writePair(`${id}.fg`, svgDocument(symbol), false);
+  return "aperture with bat wings on blood red";
+}
+
+const WITCHING_BOTTOM = "#240628";
+const CANDLE_WAX = "#F7E6EF";
+const CANDLE_GLOW = "#FFB45C";
+const FLAME_WIDTH_FRACTION = 0.28;
+const FLAME_DROP = -178;
+const CANDLE_PARTS = [
+  `<rect x="412" y="548" width="200" height="320"/>`,
+  `<rect x="396" y="528" width="232" height="48" rx="24"/>`,
+  `<rect x="396" y="552" width="34" height="112" rx="17"/>`,
+  `<rect x="590" y="552" width="34" height="70" rx="17"/>`,
+  `<ellipse cx="512" cy="872" rx="176" ry="34"/>`,
+].join("");
+
+function candle(ink, wick) {
+  return `<g fill="${ink}">${CANDLE_PARTS}</g>`
+    + `<line x1="512" y1="532" x2="512" y2="490" stroke="${wick}" stroke-width="12" stroke-linecap="round"/>`;
+}
+
+async function paintCandleFlame(id) {
+  const markup = await fetchSymbolMarkup("fire");
+  const transform = scaledPlacement(await measureSymbol(markup), FLAME_WIDTH_FRACTION, FLAME_DROP);
+  const glow = `<defs><radialGradient id="candle"><stop offset="0%" stop-color="${CANDLE_GLOW}" stop-opacity="0.6"/><stop offset="100%" stop-color="${CANDLE_GLOW}" stop-opacity="0"/></radialGradient></defs>`
+    + `<circle cx="512" cy="380" r="330" fill="url(#candle)"/>`;
+  const stops = [shiftLightness(hues.Velvet, GRADIENT_TOP_LIGHTNESS), WITCHING_BOTTOM];
+  const tile = backgroundMarkup(stops) + glow + candle(CANDLE_WAX, WITCHING_BOTTOM) + symbolGroup(markup, WHITE, transform);
+  await writePair(id, svgDocument(tile), true);
+  await writePair(`${id}.fg`, svgDocument(candle(WHITE, WHITE) + symbolGroup(markup, WHITE, transform)), false);
+  return "flame lit on a dripping candle";
+}
+
+const PUMPKIN_ORANGE = "#F2861E";
+const PUMPKIN_STEM = "#3E7A2C";
+const PUMPKIN_CARVE = "#5A2304";
+const COBWEB_THREADS = 5;
+const COBWEB_RINGS = [150, 255, 360];
+const GHOST_WIDTH_FRACTION = 0.24;
+
+function pumpkinLobes(cx, cy, radius) {
+  return [[-0.42, 0.62], [0.42, 0.62], [0, 0.7]]
+    .map(([shift, width]) => `<ellipse cx="${cx + radius * shift}" cy="${cy}" rx="${radius * width}" ry="${radius * 0.86}"/>`)
+    .join("");
+}
+
+function pumpkinStalk(cx, cy, radius) {
+  return `<rect x="${cx - radius * 0.09}" y="${cy - radius * 1.12}" width="${radius * 0.18}" height="${radius * 0.36}" rx="${radius * 0.07}"/>`;
+}
+
+function pumpkinMask(cx, cy, radius) {
+  const cut = `<defs><mask id="carve"><rect width="${MASTER_SIZE}" height="${MASTER_SIZE}" fill="#FFFFFF"/><g fill="#000000">${pumpkinFace(cx, cy, radius)}</g></mask></defs>`;
+  return cut + `<g fill="${WHITE}" mask="url(#carve)">${pumpkinLobes(cx, cy, radius)}${pumpkinStalk(cx, cy, radius)}</g>`;
+}
+
+function pumpkin(cx, cy, radius, fill, stem, carve, ring, ringWidth) {
+  const lobes = pumpkinLobes(cx, cy, radius);
+  const halo = ring ? `<g fill="${ring}" stroke="${ring}" stroke-width="${ringWidth}">${lobes}</g>` : "";
+  return halo + `<g fill="${stem}">${pumpkinStalk(cx, cy, radius)}</g><g fill="${fill}">${lobes}</g><g fill="${carve}">${pumpkinFace(cx, cy, radius)}</g>`;
+}
+
+function pumpkinFace(cx, cy, radius) {
+  return [
+    `M ${cx - radius * 0.46} ${cy - radius * 0.05} L ${cx - radius * 0.24} ${cy - radius * 0.38} L ${cx - radius * 0.06} ${cy - radius * 0.05} Z`,
+    `M ${cx + radius * 0.06} ${cy - radius * 0.05} L ${cx + radius * 0.24} ${cy - radius * 0.38} L ${cx + radius * 0.46} ${cy - radius * 0.05} Z`,
+    `M ${cx - radius * 0.5} ${cy + radius * 0.22} Q ${cx} ${cy + radius * 0.68} ${cx + radius * 0.5} ${cy + radius * 0.22} L ${cx + radius * 0.25} ${cy + radius * 0.34} L ${cx} ${cy + radius * 0.24} L ${cx - radius * 0.25} ${cy + radius * 0.34} Z`,
+  ].map((path) => `<path d="${path}"/>`).join("");
+}
+
+function cobweb(ink, opacity, width) {
+  const threads = [];
+  for (let thread = 0; thread < COBWEB_THREADS; thread++) {
+    const angle = (thread / (COBWEB_THREADS - 1)) * (Math.PI / 2);
+    threads.push(`<line x1="0" y1="0" x2="${(Math.cos(angle) * 430).toFixed(1)}" y2="${(Math.sin(angle) * 430).toFixed(1)}"/>`);
+  }
+  const rings = COBWEB_RINGS.map((radius) => {
+    let path = "";
+    for (let thread = 0; thread < COBWEB_THREADS; thread++) {
+      const angle = (thread / (COBWEB_THREADS - 1)) * (Math.PI / 2);
+      const x = (Math.cos(angle) * radius).toFixed(1);
+      const y = (Math.sin(angle) * radius).toFixed(1);
+      if (thread === 0) {
+        path += `M ${x} ${y}`;
+        continue;
+      }
+      const middle = ((thread - 0.5) / (COBWEB_THREADS - 1)) * (Math.PI / 2);
+      const sag = radius * 0.8;
+      path += ` Q ${(Math.cos(middle) * sag).toFixed(1)} ${(Math.sin(middle) * sag).toFixed(1)} ${x} ${y}`;
+    }
+    return `<path d="${path}"/>`;
+  }).join("");
+  return `<g fill="none" stroke="${ink}" stroke-opacity="${opacity}" stroke-width="${width}" stroke-linecap="round">${threads.join("")}${rings}</g>`;
+}
+
+async function paintDecorated(id, baseId, decorate, summary) {
+  const entry = map[baseId];
+  const markup = await fetchSymbolMarkup(entry.symbol);
+  const transform = placementFor(await measureSymbol(markup), entry.round);
+  const tile = tileFor(entry);
+  const symbol = symbolGroup(markup, tile.ink, transform);
+  const extra = await decorate(tile);
+  await writePair(id, svgDocument(backgroundMarkup(tile.stops) + extra.under + symbol + extra.over), true);
+  await writePair(`${id}.fg`, svgDocument(symbol + extra.mask), false);
+  return summary;
+}
+
+const paintPumpkinCalendar = (id) => paintDecorated(id, "calendar", (tile) => ({
+  under: "",
+  over: pumpkin(740, 742, 168, PUMPKIN_ORANGE, PUMPKIN_STEM, PUMPKIN_CARVE, tile.stops[1], 44),
+  mask: pumpkinMask(740, 742, 168),
+}), "calendar with a carved pumpkin");
+
+const paintCobwebCamera = (id) => paintDecorated(id, "camera", () => ({
+  under: cobweb(WHITE, 0.42, 9),
+  over: "",
+  mask: cobweb(WHITE, 0.6, 9),
+}), "camera under a corner cobweb");
+
+const paintGhostMusic = (id) => paintDecorated(id, "music", async () => {
+  const ghost = await fetchSymbolMarkup("ghost");
+  const placement = `translate(${-MASTER_SIZE * 0.26} ${-MASTER_SIZE * 0.2}) ` + scaledPlacement(await measureSymbol(ghost), GHOST_WIDTH_FRACTION, 0);
+  return { under: "", over: symbolGroup(ghost, WHITE, placement), mask: symbolGroup(ghost, WHITE, placement) };
+}, "music note with a ghost beside it");
+
+const seasonal = {
+  "chirper.halloween": paintMoonlitFeather,
+  "aethergram.halloween": paintBatAperture,
+  "velvet.halloween": paintCandleFlame,
+  "calendar.halloween": paintPumpkinCalendar,
+  "camera.halloween": paintCobwebCamera,
+  "music.halloween": paintGhostMusic,
+};
+
 mkdirSync(ICONS_OUT, { recursive: true });
 mkdirSync(MASTERS_OUT, { recursive: true });
 
 const only = new Set(process.argv.slice(2));
-const unknown = [...only].filter((id) => !(id in map));
+const unknown = [...only].filter((id) => !(id in map) && !(id in seasonal));
 if (unknown.length > 0) {
   console.error(`Unknown ids: ${unknown.join(", ")}`);
   process.exit(2);
@@ -386,6 +576,19 @@ for (const [id, entry] of Object.entries(map)) {
     console.log(`  ${id.padEnd(14)} <- ${summary}`);
   } catch (error) {
     failed.push(`${id} (${entry.symbol}): ${error.message}`);
+  }
+}
+
+for (const [id, paintSeasonal] of Object.entries(seasonal)) {
+  if (only.size > 0 && !only.has(id)) {
+    continue;
+  }
+  try {
+    const summary = await paintSeasonal(id);
+    written++;
+    console.log(`  ${id.padEnd(20)} <- ${summary}`);
+  } catch (error) {
+    failed.push(`${id}: ${error.message}`);
   }
 }
 

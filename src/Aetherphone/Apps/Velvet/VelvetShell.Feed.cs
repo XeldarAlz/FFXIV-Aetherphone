@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Translation;
 using Aetherphone.Windows.Components;
@@ -47,7 +48,7 @@ internal sealed partial class VelvetShell
             {
                 var emptyRect = new Rect(new Vector2(area.Min.X, ImGui.GetCursorScreenPos().Y), area.Max);
                 var filtered = feedInclude.Any || mutes.Any;
-                DrawEmpty(emptyRect, store.LoadingFeed ? Loc.T(L.Common.Loading) : Loc.T(L.Velvet.FeedNone),
+                DrawEmpty(emptyRect, store.LoadingFeed ? Loc.T(L.Common.Loading) : Loc.T(FeedNoneTitle),
                     store.LoadingFeed
                         ? string.Empty
                         : Loc.T(filtered ? L.Velvet.FeedNoneFiltered : L.Velvet.FeedNoneHint));
@@ -155,7 +156,8 @@ internal sealed partial class VelvetShell
     }
 
     private static CardActionTap DrawCardAction(ImDrawListPtr drawList, ref float x, float centerY, string glyph,
-        Vector4 ink, int count, string tooltip, string? countTooltip = null)
+        Vector4 ink, int count, string tooltip, int glowKey, string? countTooltip = null,
+        UiSound iconSound = UiSound.Tap)
     {
         var scale = UiScale.Current;
         var iconSize = VIcon.CardAction * scale;
@@ -175,7 +177,9 @@ internal sealed partial class VelvetShell
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        PhoneIcon.Draw(drawList, new Vector2(x + iconSize * 0.5f, centerY), glyph, ink, iconSize);
+        var iconCenter = new Vector2(x + iconSize * 0.5f, centerY);
+        TapGlow.Draw(drawList, glowKey, iconCenter, iconSize * 0.5f, iconHovered);
+        PhoneIcon.Draw(drawList, iconCenter, glyph, ink, iconSize);
         if (label.Length > 0)
         {
             var labelSize = Typography.Measure(label, CardCountStyle);
@@ -190,7 +194,7 @@ internal sealed partial class VelvetShell
         }
 
         x += contentWidth + CardActionGap * scale;
-        if (UiInteract.Click(min, iconMax, iconHovered))
+        if (UiInteract.Click(min, iconMax, iconHovered, iconSound))
         {
             return CardActionTap.Icon;
         }
@@ -271,7 +275,8 @@ internal sealed partial class VelvetShell
         var nameHovering = UiInteract.Hover(new Vector2(nameLeft, nameTop),
             new Vector2(nameLeft + headerTextMaxWidth, nameTop + nameSize.Y));
         UserName.Draw("velvet.feed.author." + entry.Id, authorName, entry.OwnerBadges, entry.OwnerBadgeIds, nameLeft, nameTop,
-            headerTextMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, nameHovering, false);
+            headerTextMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, nameHovering, false,
+            self: RewardedSelf(entry.OwnerId));
         var ownerSub = SocialIdentity.FeedMeta(entry.OwnerHandle, PostTimestamp(entry));
         var ownerSubY = nameTop + PostCardMetrics.SublineTop * scale;
         var ownerSubLeft = nameLeft;
@@ -321,9 +326,11 @@ internal sealed partial class VelvetShell
         var actionX = innerX + CardActionInset * scale - VIcon.CardAction * scale * 0.5f;
         var likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
             liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk,
-            entry.TotalReactions, Loc.T(L.Velvet.Like), Loc.T(L.Velvet.LikesTitle));
+            entry.TotalReactions, Loc.T(L.Velvet.Like), TapGlow.Key(entry.Id, TapGlow.Like),
+            Loc.T(L.Velvet.LikesTitle), LikeSound(liked));
         if (likeTap == CardActionTap.Icon)
         {
+            TapGlow.Toggle(TapGlow.Key(entry.Id, TapGlow.Like), liked);
             store.ToggleReaction(entry, 0);
         }
         else if (likeTap == CardActionTap.Count)
@@ -331,9 +338,11 @@ internal sealed partial class VelvetShell
             OpenLikers(entry.Id);
         }
 
+        var commentKey = TapGlow.Key(entry.Id, TapGlow.Comment);
         if (DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.MessageCircle, VelvetTheme.TitleInk,
-                entry.CommentCount, Loc.T(L.Velvet.Comments)) != CardActionTap.None)
+                entry.CommentCount, Loc.T(L.Velvet.Comments), commentKey) != CardActionTap.None)
         {
+            TapGlow.Bloom(commentKey);
             OpenPostDetail(entry.Id);
         }
 
@@ -428,6 +437,8 @@ internal sealed partial class VelvetShell
         else if (doubleTapLike.Tapped(rect, entry.Id))
         {
             CancelPendingTaps();
+            SocialSeason.Play(UiSound.HalloweenSparkle);
+            TapGlow.Bloom(TapGlow.Key(entry.Id, TapGlow.Like));
             if (entry.MyReaction < 0)
             {
                 store.ToggleReaction(entry, 0);

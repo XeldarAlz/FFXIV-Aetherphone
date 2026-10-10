@@ -125,10 +125,6 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private const float TintedAlpha = 0.20f;
     private const float TintedHoverAlpha = 0.28f;
 
-    private static readonly ControlInk ChipControls =
-        new(ChirperInk.Accent, ChirperInk.TitleInk, ChirperInk.MutedInk, ChirperInk.Danger);
-
-
     private static readonly TextStyle NameStyle = TextStyles.Headline;
     private static readonly TextStyle MetaStyle = TextStyles.Subheadline;
     private static readonly TextStyle BodyStyle = TextStyles.Body;
@@ -148,18 +144,21 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private static readonly TextStyle FeedTabStyle = TextStyles.Headline;
 
     private static readonly TextStyle FeedTabIdleStyle = TextStyles.BodyEmphasized;
-    private static readonly UnderlineTabStyle FeedTabsStyle = new(FeedTabStyle, FeedTabIdleStyle,
-        ChirperInk.AccentLink, ChirperInk.SegmentIdleInk, ChirperInk.Accent, FeedTabUnderline, CellPadX,
-        Motion.Release);
     private static readonly TextStyle WordmarkStyle = TextStyles.Title2;
     private static readonly TextStyle BadgeStyle = TextStyles.Caption1;
     private static readonly TextStyle PopoverRowStyle = TextStyles.Headline;
 
-    private static readonly ActionSheetStyle SheetStyle = new(ChirperInk.GlassPanel, ChirperInk.GlassStroke,
-        AppPalettes.Chirper.TitleInk, ChirperInk.Danger, AppPalettes.Chirper.Accent, ChirperInk.Hairline);
+    private static readonly UnderlineTabStyle StandardFeedTabs = FeedTabsStyleFor(ChirperInk.Standard);
+    private static readonly UnderlineTabStyle MoonlitFeedTabs = FeedTabsStyleFor(ChirperInk.Moonlit);
+    private static readonly ActionSheetStyle StandardSheet = SheetStyleFor(ChirperInk.Standard);
+    private static readonly ActionSheetStyle MoonlitSheet = SheetStyleFor(ChirperInk.Moonlit);
+    private static readonly ScreenToastStyle StandardToast = ToastStyleFor(ChirperInk.Standard);
+    private static readonly ScreenToastStyle MoonlitToast = ToastStyleFor(ChirperInk.Moonlit);
 
-    private static readonly ScreenToastStyle ToastStyle = new(ChirperInk.GlassPanel, ChirperInk.GlassStroke,
-        AppPalettes.Chirper.TitleInk);
+    private static ControlInk ChipControls => ChirperInk.Shared.Control;
+    private static UnderlineTabStyle FeedTabsStyle => SeasonalTheme.Halloween ? MoonlitFeedTabs : StandardFeedTabs;
+    private static ActionSheetStyle SheetStyle => SeasonalTheme.Halloween ? MoonlitSheet : StandardSheet;
+    private static ScreenToastStyle ToastStyle => SeasonalTheme.Halloween ? MoonlitToast : StandardToast;
 
     public string Id => "chirper";
     public Vector4 Accent => AppAccents.For(Id);
@@ -341,6 +340,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         composeSensitive = false;
         store.ClearDiscover();
         trendingRequested = false;
+        BeginIntro();
         RefreshAndConsumeLaunch();
     }
 
@@ -386,9 +386,12 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
     public void Draw(in PhoneContext context)
     {
+        using var names = UserName.Style(SeasonalTheme.BlackletterNames);
+        using var tapGlow = TapGlow.Use(SeasonalTheme.Halloween, GlowInk);
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;
+        SyncSeason();
         sheet.Gate();
         filterSheet.Gate();
         feedExplainer.Gate();
@@ -409,9 +412,11 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             return;
         }
 
+        DrawNight(screen, context.Content.Min.Y);
         var appArea = new Rect(new Vector2(screen.Min.X, context.Content.Min.Y),
             new Vector2(screen.Max.X, context.Content.Max.Y));
         using (InputShield.Engage(avatarLightbox.Expanded))
+        using (intro.FadeContent())
         {
             router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         }
@@ -425,12 +430,18 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         DrawSheet(screen);
         DrawFilterSheet(screen);
         DrawFeedExplainer(screen);
+        DrawClaw(screen);
         toast.Draw(screen, ToastStyle);
     }
 
     private void DrawView(ChirperRoute route, Rect area, int depth)
     {
-        ui.Body(area);
+        if (router.IsTransitioning)
+        {
+            ui.Body(area);
+            DrawNight(screenRect, area.Min.Y);
+        }
+
         switch (route.Screen)
         {
             case ChirperScreen.Compose:
@@ -470,6 +481,9 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
                 DrawHome(area);
                 break;
         }
+
+        SocialSeason.OfferTreat(screenRect, area, depth, TreatSpot.ChirperFeed, TreatSpot.ChirperDeep,
+            AppHeader.Height);
     }
 
     private void DrawHome(Rect area)
@@ -539,9 +553,9 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var listTop = activeScope == SocialFeedScope.ForYou ? rowRect.Max.Y : DrawLatestScopeRow(area, rowRect.Max.Y);
         var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
-        if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##chirperComposeFab", ChirperInk.Accent,
-                PhoneIcons.Feather, Loc.T(L.Chirper.NewChirp), "chirper.compose",
-                ChirperInk.AccentDeep, FabRadius, true))
+        if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##chirperComposeFab", FabTop, PhoneIcons.Feather,
+                Loc.T(L.Chirper.NewChirp), "chirper.compose", FabBottom, FabRadius, true, FabGlyph,
+                SocialSeason.Sound(UiSound.HalloweenRustle)))
         {
             BeginCompose();
         }
@@ -562,7 +576,8 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     {
         UiAnchors.Report("chirper.tabs", row);
         var picked = UnderlineTabs.Draw(row, Loc.T(L.Chirper.ForYou), Loc.T(L.Social.FeedLatest),
-            activeScope != SocialFeedScope.ForYou, ref tabSegment, ChirperInk.Shared, FeedTabsStyle);
+            activeScope != SocialFeedScope.ForYou, ref tabSegment, ChirperInk.Shared, FeedTabsStyle,
+            SocialSeason.Sound(UiSound.HalloweenKnock));
         if (picked < 0)
         {
             return;
@@ -651,7 +666,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
     private void DrawCaughtUpLine()
     {
-        if (CaughtUpDivider.Draw(ChirperInk.Shared, Loc.T(L.Social.FeedCaughtUp), Loc.T(L.Social.FeedCaughtUpHint),
+        if (CaughtUpDivider.Draw(ChirperInk.Shared, Loc.T(CaughtUpTitle), Loc.T(CaughtUpHint),
                 Loc.T(L.Social.FeedHowItWorks)))
         {
             feedExplainer.Open();
@@ -666,10 +681,10 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             store.EnsureMe();
         }
 
-        tabItems[(int)HomeTab.Feed] = new TabItem(Loc.T(L.Chirper.TabHome), PhoneIcons.Home, PhoneIcons.HomeFilled);
-        tabItems[(int)HomeTab.Explore] = new TabItem(Loc.T(L.Chirper.TabExplore), PhoneIcons.Search);
-        tabItems[(int)HomeTab.Alerts] = new TabItem(Loc.T(L.Social.ActivityTitle), PhoneIcons.Bell,
-            PhoneIcons.BellFilled, social.UnseenCount(Id));
+        tabItems[(int)HomeTab.Feed] = new TabItem(Loc.T(L.Chirper.TabHome), HomeGlyph, HomeActiveGlyph);
+        tabItems[(int)HomeTab.Explore] = new TabItem(Loc.T(L.Chirper.TabExplore), ExploreGlyph);
+        tabItems[(int)HomeTab.Alerts] = new TabItem(Loc.T(L.Social.ActivityTitle), AlertsGlyph, AlertsActiveGlyph,
+            social.UnseenCount(Id));
         tabItems[(int)HomeTab.Profile] = new TabItem(Loc.T(L.Chirper.TabProfile), PhoneIcons.User,
             PhoneIcons.UserFilled, CustomIcon: hasAvatar);
         var result = tabBar.Draw(area, ui, tabItems, (int)homeTab, icons: this);
@@ -1214,7 +1229,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var rawDisplayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
         var drawnNameWidth = UserName.DrawAuto(drawList, "chirper.post.author." + post.Id, rawDisplayName,
             post.AuthorBadges, post.AuthorBadgeIds, contentLeft, headerTop, headerWidth * 0.45f, NameStyle,
-            ChirperInk.TitleInk, theme);
+            ChirperInk.TitleInk, theme, self: RewardedSelf(post.AuthorId));
         var nameMin = new Vector2(contentLeft, headerTop);
         var nameMax = new Vector2(contentLeft + drawnNameWidth, headerTop + nameHeight);
         if (UiInteract.Hover(nameMin, nameMax))
@@ -1407,9 +1422,11 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             ReportFeedActions(rowLeft, rowLeft + rowWidth, centerY, ActionHitHeight * scale * 0.5f);
         }
 
+        var replyKey = TapGlow.Key(post.Id, TapGlow.Comment);
         if (DrawActionTarget(cursorX, centerY, replyWidth, ActionGlyph.Reply, replyCount,
-                ChirperInk.MutedInk, ChirperInk.Accent, Loc.T(L.Chirper.Reply)))
+                ChirperInk.MutedInk, ChirperInk.Accent, Loc.T(L.Chirper.Reply), replyKey))
         {
+            TapGlow.Bloom(replyKey);
             if (isThreadHead)
             {
                 replyFocusPending = true;
@@ -1422,22 +1439,27 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
         cursorX += replyWidth + gap;
         var repostInk = post.MyReposted ? ChirperInk.RechirpGreen : ChirperInk.MutedInk;
+        var repostKey = TapGlow.Key(post.Id, TapGlow.Repost);
         if (DrawActionTarget(cursorX, centerY, repostWidth, ActionGlyph.Rechirp, repostCount, repostInk,
-                ChirperInk.RechirpGreen, Loc.T(post.MyReposted ? L.Chirper.Unrepost : L.Chirper.Repost)))
+                ChirperInk.RechirpGreen, Loc.T(post.MyReposted ? L.Chirper.Unrepost : L.Chirper.Repost), repostKey))
         {
+            TapGlow.Bloom(repostKey);
             actions.Open(post.Id, ChirperPanel.Repost);
         }
 
         cursorX += repostWidth + gap;
         if (DrawReactTarget(post, cursorX, centerY, plainWidth))
         {
+            TapGlow.Bloom(TapGlow.Key(post.Id, TapGlow.React));
             actions.Open(post.Id, ChirperPanel.Picker);
         }
 
         cursorX += plainWidth + gap;
+        var shareKey = TapGlow.Key(post.Id, TapGlow.Share);
         if (DrawActionTarget(cursorX, centerY, plainWidth, ActionGlyph.Share, string.Empty,
-                ChirperInk.MutedInk, ChirperInk.Accent, Loc.T(L.Chirper.CopyChirp)))
+                ChirperInk.MutedInk, ChirperInk.Accent, Loc.T(L.Chirper.CopyChirp), shareKey))
         {
+            TapGlow.Bloom(shareKey);
             CopyChirp(post);
         }
 
@@ -1479,7 +1501,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     }
 
     private static bool DrawActionTarget(float x, float centerY, float width, ActionGlyph glyph, string count,
-        Vector4 ink, Vector4 hoverInk, string tooltip)
+        Vector4 ink, Vector4 hoverInk, string tooltip, int glowKey)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -1490,6 +1512,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var color = hovered ? hoverInk : ink;
         var iconCenter = new Vector2(x + (8f + ActionIconSize * 0.5f) * scale, centerY);
         var iconSize = ActionIconSize * scale;
+        TapGlow.Draw(drawList, glowKey, iconCenter, iconSize * 0.5f, hovered);
         var packed = ImGui.GetColorU32(color);
         switch (glyph)
         {
@@ -1531,6 +1554,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var hovered = UiInteract.Hover(min, max);
         var ink = hovered ? ChirperInk.Warning : ChirperInk.MutedInk;
         var iconCenter = new Vector2(x + (8f + ActionIconSize * 0.5f) * scale, centerY);
+        TapGlow.Draw(drawList, TapGlow.Key(post.Id, TapGlow.React), iconCenter, ActionIconSize * scale * 0.5f, hovered);
         if (post.MyReaction >= 0)
         {
             var emojiHalf = 8f * scale * (hovered ? 1.12f : 1f);
@@ -1912,10 +1936,11 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         PopoverSurface.DrawGlass(drawList, min, max, rounding, ChirperInk.Shared, scale, progress);
         var interactive = !actions.Closing && actions.Progress > 0.6f;
         var tint = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, progress));
-        for (var kind = 0; kind < count; kind++)
+        for (var slot = 0; slot < count; slot++)
         {
-            var row = kind / perRow;
-            var column = kind % perRow;
+            var kind = ChirperReactions.KindAt(slot, SeasonalTheme.Halloween);
+            var row = slot / perRow;
+            var column = slot % perRow;
             var rowSlots = Math.Min(perRow, count - row * perRow);
             var rowWidth = rowSlots * step * grow;
             var rowLeft = (min.X + max.X) * 0.5f - rowWidth * 0.5f;
@@ -1945,6 +1970,11 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
                 HoverLabelSide.Above);
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
+                if (SeasonalTheme.Halloween && post.MyReaction != kind)
+                {
+                    UiFeedback.Play(UiSound.HalloweenChime);
+                }
+
                 store.ToggleReaction(post, kind);
                 actions.Dismiss();
             }
@@ -1994,6 +2024,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             if (reposting)
             {
                 toast.Show(Loc.T(L.Chirper.RepostedToast));
+                StartClaw(new Vector2(left, bottom));
             }
 
             actions.Dismiss();
@@ -2121,7 +2152,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var nameMaxWidth = MathF.Max(1f, (min.X + padX + innerWidth - nameLeft) * 0.6f);
         var drawnNameWidth = UserName.DrawAuto(drawList, "chirper.quote.author." + hostId, rawName,
             quoted.AuthorBadges, quoted.AuthorBadgeIds, nameLeft, nameTop, nameMaxWidth, QuoteNameStyle,
-            ChirperInk.TitleInk, theme);
+            ChirperInk.TitleInk, theme, self: RewardedSelf(quoted.AuthorId));
         var meta = SocialIdentity.FeedMeta(quoted.AuthorHandle, TimeText.Short(quoted.CreatedAtUnix));
         var metaLeft = nameLeft + drawnNameWidth + 6f * scale;
         var clippedMeta = Typography.FitText(meta, MathF.Max(1f, min.X + padX + innerWidth - metaLeft),

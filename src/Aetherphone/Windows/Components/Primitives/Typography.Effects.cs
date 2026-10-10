@@ -255,6 +255,18 @@ internal static partial class Typography
         }
     }
 
+    public static void DrawEffect(ImDrawListPtr drawList, ImFontPtr font, float fontSize, Vector2 position,
+        string text, Vector2 size, Vector4 color, in TextEffect effect)
+    {
+        if (effect.Kind == NameEffectKind.None)
+        {
+            drawList.AddText(font, fontSize, position, ImGui.GetColorU32(color), text);
+            return;
+        }
+
+        Paint(new EffectFrame(drawList, font, fontSize, position, size, text, color, effect));
+    }
+
     private static void Paint(in EffectFrame frame)
     {
         switch (frame.Effect.Kind)
@@ -379,6 +391,9 @@ internal static partial class Typography
             case NameEffectKind.Storm:
                 frame.Fill();
                 DrawStorm(frame);
+                return;
+            case NameEffectKind.Witchfire:
+                DrawWitchfire(frame);
                 return;
             default:
                 frame.Fill();

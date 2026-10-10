@@ -135,9 +135,10 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private static readonly TextStyle WordmarkStyle = TextStyles.Title2;
     private static readonly TextStyle FeedTabStyle = TextStyles.Headline;
     private static readonly TextStyle FeedTabIdleStyle = TextStyles.BodyEmphasized;
-    private static readonly UnderlineTabStyle FeedTabsStyle = new(FeedTabStyle, FeedTabIdleStyle,
-        AethergramInk.Shared.TitleInk, AethergramInk.Shared.SegmentIdleInk, AethergramInk.Shared.TitleInk,
-        FeedTabUnderline, CellPadX, Motion.Release);
+    private static readonly UnderlineTabStyle StandardFeedTabs = FeedTabsStyleFor(AethergramInk.Standard);
+    private static readonly UnderlineTabStyle BloodMoonFeedTabs = FeedTabsStyleFor(AethergramInk.BloodMoon);
+
+    private static UnderlineTabStyle FeedTabsStyle => SeasonalTheme.Halloween ? BloodMoonFeedTabs : StandardFeedTabs;
 
     private readonly Dictionary<SocialFeedScope, PullToRefresh> pullToRefresh = new()
     {
@@ -322,6 +323,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         shareSearchDraft = string.Empty;
         shareSentUserIds.Clear();
         store.ClearDiscover();
+        introSwarmPending = intro.Begin(Id);
         RefreshAndConsumeLaunch();
     }
 
@@ -392,10 +394,13 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
     public void Draw(in PhoneContext context)
     {
+        using var names = UserName.Style(SeasonalTheme.BlackletterNames);
+        using var tapGlow = TapGlow.Use(SeasonalTheme.Halloween, GlowInk);
         dmStore.NoteInboxWatched();
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;
+        SyncSeason();
         postSheet.Gate();
         filterSheet.Gate();
         feedExplainer.Gate();
@@ -422,7 +427,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             return;
         }
 
+        DrawNight(screen, context.Content.Min.Y);
         using (InputShield.Engage(avatarLightbox.Expanded))
+        using (intro.FadeContent())
         {
             router.Draw(SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current), AppSkin.Transparent,
                 ImGui.GetIO().DeltaTime, drawView);
@@ -442,12 +449,18 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         DrawProfileMenu(screen);
         DrawProfileActionSheet(screen);
         DrawInboxRowSheet(screen);
+        DrawFlights(screen);
         toast.Draw(screen, ScreenToastStyle.From(ui));
     }
 
     private void DrawView(AethergramRoute route, Rect area, int depth)
     {
-        ui.Body(area);
+        if (router.IsTransitioning)
+        {
+            ui.Body(area);
+            DrawNight(screenRect, area.Min.Y);
+        }
+
         switch (route.Screen)
         {
             case AethergramScreen.Compose:
@@ -523,6 +536,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
                 DrawRoot(area);
                 break;
         }
+
+        SocialSeason.OfferTreat(screenRect, area, depth, TreatSpot.AethergramFeed, TreatSpot.AethergramDeep,
+            AppHeader.Height);
     }
 
     private Rect ChatArea(Rect area)
@@ -583,7 +599,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var rowRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + FeedTabRowHeight * scale));
         UiAnchors.Report("aethergram.feeds", rowRect);
         var picked = UnderlineTabs.Draw(rowRect, Loc.T(L.Aethergram.ForYou), Loc.T(L.Social.FeedLatest),
-            activeScope != SocialFeedScope.ForYou, ref tabSegment, Ink, FeedTabsStyle);
+            activeScope != SocialFeedScope.ForYou, ref tabSegment, Ink, FeedTabsStyle,
+            SocialSeason.Sound(UiSound.HalloweenThump));
         if (picked >= 0)
         {
             SelectScope(picked == 1 ? latestScope : SocialFeedScope.ForYou);
@@ -593,7 +610,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
         if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##aethergramComposeFab", Ink.Accent, PhoneIcons.Plus,
-                Loc.T(L.Aethergram.NewPost), "aethergram.compose", Ink.AccentDeep, FabRadius, true))
+                Loc.T(L.Aethergram.NewPost), "aethergram.compose", Ink.AccentDeep, FabRadius, true,
+                tapSound: SocialSeason.Sound(UiSound.HalloweenIgnite)))
         {
             StartCompose(false);
         }
@@ -1238,7 +1256,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var metaHeight = Typography.LineHeight(CardMetaStyle);
         var nameTop = avatarCenter.Y - (nameHeight + metaHeight + 1f * scale) * 0.5f;
         var drawnNameWidth = UserName.DrawAuto(drawList, "aethergram.card." + post.Id, displayName, post.AuthorBadges,
-            post.AuthorBadgeIds, nameLeft, nameTop, headerTextMaxWidth, CardNameStyle, Ink.TitleInk, theme);
+            post.AuthorBadgeIds, nameLeft, nameTop, headerTextMaxWidth, CardNameStyle, Ink.TitleInk, theme,
+            self: RewardedSelf(post.AuthorId));
         var nameMin = new Vector2(nameLeft, nameTop);
         var nameMax = new Vector2(nameLeft + drawnNameWidth, nameTop + nameHeight);
         if (UiInteract.Hover(nameMin, nameMax))
@@ -1300,9 +1319,11 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var actionX = innerX + CardActionInset * scale - CardActionIconSize * scale * 0.5f;
         var likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
             liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? Ink.LikeRed : Ink.TitleInk,
-            post.TotalReactions, Loc.T(L.Aethergram.Like), Loc.T(L.Social.LikedByTitle));
+            post.TotalReactions, Loc.T(L.Aethergram.Like), TapGlow.Key(post.Id, TapGlow.Like),
+            Loc.T(L.Social.LikedByTitle), liked ? UiSound.Tap : SocialSeason.Sound(UiSound.HalloweenHeartbeat));
         if (likeTap == CardActionTap.Icon)
         {
+            TapGlow.Toggle(TapGlow.Key(post.Id, TapGlow.Like), liked);
             store.ToggleLike(post);
         }
         else if (likeTap == CardActionTap.Count)
@@ -1310,15 +1331,22 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             OpenUserList(post.Id, UserListKind.Likers);
         }
 
+        var commentKey = TapGlow.Key(post.Id, TapGlow.Comment);
         if (DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.MessageCircle, Ink.TitleInk,
-                post.CommentCount, Loc.T(L.Aethergram.Comment)) != CardActionTap.None)
+                post.CommentCount, Loc.T(L.Aethergram.Comment), commentKey) != CardActionTap.None)
         {
+            TapGlow.Bloom(commentKey);
             OpenDetail(post, true);
         }
 
+        var sendFrom = new Vector2(actionX + CardActionIconSize * scale * 0.5f, actionCenterY);
+        var shareKey = TapGlow.Key(post.Id, TapGlow.Share);
         if (DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.Send, Ink.TitleInk, 0,
-                Loc.T(L.Aethergram.SendTo)) != CardActionTap.None)
+                Loc.T(L.Aethergram.SendTo), shareKey, iconSound: SocialSeason.Sound(UiSound.HalloweenFlutter))
+            != CardActionTap.None)
         {
+            TapGlow.Bloom(shareKey);
+            SendByBat(sendFrom);
             OpenShare(post.Id);
         }
 
@@ -1337,11 +1365,20 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
+        var saveKey = TapGlow.Key(post.Id, TapGlow.Save);
+        TapGlow.Draw(drawList, saveKey, bookmarkCenter, iconSize * 0.5f, bookmarkHovered);
         PhoneIcon.Draw(drawList, bookmarkCenter, post.Saved ? PhoneIcons.BookmarkFilled : PhoneIcons.Bookmark,
             Ink.TitleInk, iconSize);
         HoverTooltip.Show(new Rect(bookmarkMin, bookmarkMax), Loc.T(L.Aethergram.Save), HoverLabelSide.Above);
-        if (UiInteract.Click(bookmarkMin, bookmarkMax, bookmarkHovered))
+        if (UiInteract.Click(bookmarkMin, bookmarkMax, bookmarkHovered,
+                post.Saved ? UiSound.Tap : SocialSeason.Sound(UiSound.HalloweenCoffin)))
         {
+            TapGlow.Toggle(saveKey, post.Saved);
+            if (!post.Saved)
+            {
+                SocialSeason.Toast(toast, L.Seasonal.SavedToCrypt);
+            }
+
             store.SetSaved(post.Id, !post.Saved);
         }
 
@@ -1436,7 +1473,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     }
 
     private static CardActionTap DrawCardAction(ImDrawListPtr drawList, ref float x, float centerY, string glyph,
-        Vector4 ink, int count, string tooltip, string? countTooltip = null)
+        Vector4 ink, int count, string tooltip, int glowKey, string? countTooltip = null,
+        UiSound iconSound = UiSound.Tap)
     {
         var scale = UiScale.Current;
         var iconSize = CardActionIconSize * scale;
@@ -1456,7 +1494,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        PhoneIcon.Draw(drawList, new Vector2(x + iconSize * 0.5f, centerY), glyph, ink, iconSize);
+        var iconCenter = new Vector2(x + iconSize * 0.5f, centerY);
+        TapGlow.Draw(drawList, glowKey, iconCenter, iconSize * 0.5f, iconHovered);
+        PhoneIcon.Draw(drawList, iconCenter, glyph, ink, iconSize);
         if (label.Length > 0)
         {
             var labelSize = Typography.Measure(label, CardCountStyle);
@@ -1471,7 +1511,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         }
 
         x += contentWidth + CardActionGap * scale;
-        if (UiInteract.Click(min, iconMax, iconHovered))
+        if (UiInteract.Click(min, iconMax, iconHovered, iconSound))
         {
             return CardActionTap.Icon;
         }
@@ -1555,6 +1595,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         if (doubleTapLike.Tapped(imageRect, post.Id))
         {
             pendingPhotoTap.Cancel();
+            SocialSeason.Play(UiSound.HalloweenHeartbeat);
+            TapGlow.Bloom(TapGlow.Key(post.Id, TapGlow.Like));
             if (post.MyReaction < 0)
             {
                 store.ToggleLike(post);
@@ -1622,11 +1664,11 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             store.EnsureMe();
         }
 
-        tabItems[(int)AethergramTab.Home] = new TabItem(Loc.T(L.Aethergram.Home), PhoneIcons.Home,
-            PhoneIcons.HomeFilled);
-        tabItems[(int)AethergramTab.Search] = new TabItem(Loc.T(L.Aethergram.Search), PhoneIcons.Search);
-        tabItems[(int)AethergramTab.Messages] = new TabItem(Loc.T(L.Aethergram.InboxTitle), PhoneIcons.Send,
-            PhoneIcons.SendFilled, dmStore.UnreadCount, "aethergram.inbox");
+        tabItems[(int)AethergramTab.Home] = new TabItem(Loc.T(L.Aethergram.Home), HomeGlyph, HomeActiveGlyph);
+        tabItems[(int)AethergramTab.Search] = new TabItem(Loc.T(L.Aethergram.Search), SearchGlyph,
+            SearchActiveGlyph);
+        tabItems[(int)AethergramTab.Messages] = new TabItem(Loc.T(L.Aethergram.InboxTitle), MessagesGlyph,
+            MessagesActiveGlyph, dmStore.UnreadCount, "aethergram.inbox");
         tabItems[(int)AethergramTab.Profile] = new TabItem(Loc.T(L.Aethergram.Profile), PhoneIcons.User,
             PhoneIcons.UserFilled, CustomIcon: hasAvatar);
         var result = tabBar.Draw(area, ui, tabItems, (int)activeTab, null, this);
@@ -1745,22 +1787,27 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var logoSize = LogoSize * scale;
         var logoCenter = new Vector2(area.Min.X + CellPadX * scale + logoSize * 0.5f, rowCenterY);
-        if (!AppIconTile.TryDrawGlyph(drawList, Id, logoCenter, logoSize, Ink.AccentLink))
+        var logoInk = LogoInk(drawList, logoCenter, logoSize);
+        if (!AppIconTile.TryDrawGlyph(drawList, Id, logoCenter, logoSize, logoInk))
         {
-            PhoneIcon.Draw(drawList, logoCenter, PhoneIcons.Camera, Ink.AccentLink, logoSize);
+            PhoneIcon.Draw(drawList, logoCenter, PhoneIcons.Camera, logoInk, logoSize);
         }
+
+        DrawLogoTap(logoCenter, logoSize, rowCenterY);
 
         var titleLeft = logoCenter.X + logoSize * 0.5f + LogoGap * scale;
         var titleRight = SocialChrome.HeaderSlot(area, 1).X - SocialChrome.HeaderIconRadius * scale - 8f * scale;
         var titleHeight = Typography.LineHeight(WordmarkStyle);
-        var title = Typography.FitText(DisplayName, MathF.Max(1f, titleRight - titleLeft), WordmarkStyle);
-        var titleSize = Typography.Measure(title, WordmarkStyle);
+        var titleMaxWidth = MathF.Max(1f, titleRight - titleLeft);
+        var titleSize = SocialSeason.FitWordmark(DisplayName, titleMaxWidth, titleHeight, WordmarkStyle, out var title,
+            out var gothic);
         var titleMin = new Vector2(titleLeft - 6f * scale, rowCenterY - titleHeight * 0.5f - 4f * scale);
         var titleMax = new Vector2(titleLeft + titleSize.X + 6f * scale, rowCenterY + titleHeight * 0.5f + 4f * scale);
         UiInteract.HoverHighlight(drawList, titleMin, titleMax, 8f * scale);
-        Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleHeight * 0.5f), title, Ink.TitleInk,
-            WordmarkStyle);
-        if (UiInteract.HoverClick(titleMin, titleMax))
+        var titleTop = rowCenterY - (gothic ? titleSize.Y : titleHeight) * 0.5f;
+        SocialSeason.DrawWordmark(drawList, new Vector2(titleLeft, titleTop), title, Ink.TitleInk, titleHeight,
+            WordmarkStyle, gothic);
+        if (UiInteract.HoverClick(titleMin, titleMax, SocialSeason.Sound(UiSound.HalloweenOrgan)))
         {
             RefreshActiveFeed();
         }
@@ -1914,7 +1961,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
     private void DrawCaughtUpLine()
     {
-        if (CaughtUpDivider.Draw(Ink, Loc.T(L.Social.FeedCaughtUp), Loc.T(L.Social.FeedCaughtUpHint),
+        if (CaughtUpDivider.Draw(Ink, Loc.T(CaughtUpTitle), Loc.T(CaughtUpHint),
                 Loc.T(L.Social.FeedHowItWorks)))
         {
             feedExplainer.Open();

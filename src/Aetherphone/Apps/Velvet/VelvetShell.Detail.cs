@@ -106,7 +106,8 @@ internal sealed partial class VelvetShell
             var authorHovering = UiInteract.Hover(new Vector2(nameLeft, authorY),
                 new Vector2(nameLeft + nameMaxWidth, authorY + authorSize.Y));
             UserName.Draw("velvet.detail.author." + post.Id, authorName, post.OwnerBadges, post.OwnerBadgeIds, nameLeft,
-                authorY, nameMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, authorHovering, false);
+                authorY, nameMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, authorHovering, false,
+                self: RewardedSelf(post.OwnerId));
             var ownerSubY = avatarCenter.Y + 3f * scale;
             var ownerSubSize = Typography.Measure(ownerSub, TextStyles.Subheadline);
             var ownerSubHovering = UiInteract.Hover(new Vector2(nameLeft, ownerSubY),
@@ -134,9 +135,10 @@ internal sealed partial class VelvetShell
             var likeTap = DrawCardAction(drawList, ref actionX, actionsY,
                 liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
                 liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk, post.TotalReactions, Loc.T(L.Velvet.Like),
-                Loc.T(L.Velvet.LikesTitle));
+                TapGlow.Key(post.Id, TapGlow.Like), Loc.T(L.Velvet.LikesTitle), LikeSound(liked));
             if (likeTap == CardActionTap.Icon)
             {
+                TapGlow.Toggle(TapGlow.Key(post.Id, TapGlow.Like), liked);
                 store.ToggleReaction(post, 0);
             }
             else if (likeTap == CardActionTap.Count)
@@ -144,8 +146,12 @@ internal sealed partial class VelvetShell
                 OpenLikers(post.Id);
             }
 
-            DrawCardAction(drawList, ref actionX, actionsY, PhoneIcons.MessageCircle, VelvetTheme.TitleInk,
-                post.CommentCount, Loc.T(L.Velvet.Comments));
+            var commentKey = TapGlow.Key(post.Id, TapGlow.Comment);
+            if (DrawCardAction(drawList, ref actionX, actionsY, PhoneIcons.MessageCircle, VelvetTheme.TitleInk,
+                    post.CommentCount, Loc.T(L.Velvet.Comments), commentKey) != CardActionTap.None)
+            {
+                TapGlow.Bloom(commentKey);
+            }
             var actionsRight = actionX;
 
             var trailingCenter = new Vector2(origin.X + width - pad - 4f * scale, actionsY);
@@ -300,7 +306,8 @@ internal sealed partial class VelvetShell
             new Vector2(nameLeft + nameMaxWidth, origin.Y + 16f * scale));
         var nameWidth = UserName.Draw(drawList, "velvet.comment.author." + comment.Id, authorName,
             comment.AuthorBadges, comment.AuthorBadgeIds, nameLeft, origin.Y, nameMaxWidth,
-            TextStyles.SubheadlineEmphasized, VelvetTheme.TitleInk, nameHovering, false);
+            TextStyles.SubheadlineEmphasized, VelvetTheme.TitleInk, nameHovering, false,
+            self: RewardedSelf(comment.AuthorId));
         var time = TimeText.Short(comment.CreatedAtUnix);
         if (time.Length > 0)
         {

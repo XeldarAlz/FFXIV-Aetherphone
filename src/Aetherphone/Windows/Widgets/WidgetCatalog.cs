@@ -47,6 +47,7 @@ internal static class WidgetCatalog
             new TimerWidget(phone.Configuration, phone.AlarmRinger),
             new UpNextWidget(calendarFeed),
             new MonthWidget(),
+            new HalloweenWidget(),
             new FeaturedPhotoWidget(services.Photos),
             new ResetsWidget(phone.GameTimers),
             new VenturesWidget(phone.GameTimers),

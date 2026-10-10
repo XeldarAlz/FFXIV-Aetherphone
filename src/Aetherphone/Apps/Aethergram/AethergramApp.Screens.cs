@@ -36,8 +36,12 @@ internal sealed partial class AethergramApp
     private static readonly TextStyle ActivityBodyStyle = TextStyles.Subheadline;
     private static readonly TextStyle ActivityTimeStyle = TextStyles.Footnote;
     private static readonly TextStyle ActivitySectionStyle = TextStyles.FootnoteEmphasized;
-    private static readonly Vector4 ActivityUnreadWash = Palette.WithAlpha(AethergramInk.Shared.Accent, 0.06f);
+    private static readonly Vector4 StandardActivityUnreadWash = ActivityUnreadWashFor(AethergramInk.Standard);
+    private static readonly Vector4 BloodMoonActivityUnreadWash = ActivityUnreadWashFor(AethergramInk.BloodMoon);
     private static readonly Vector4 ActivityBadgeRing = new(0f, 0f, 0f, 0.55f);
+
+    private static Vector4 ActivityUnreadWash =>
+        SeasonalTheme.Halloween ? BloodMoonActivityUnreadWash : StandardActivityUnreadWash;
 
     private void DrawActivity(Rect area)
     {
@@ -203,7 +207,8 @@ internal sealed partial class AethergramApp
         DrawActivityBadge(drawList, avatarCenter + new Vector2(badgeOffset, badgeOffset), item.Type, scale);
         var textTop = origin.Y + (rowHeight - contentHeight) * 0.5f;
         var actorWidth = UserName.DrawAuto(drawList, "aethergram.activity.actor." + item.Id, actor, item.ActorBadges,
-            item.ActorBadgeIds, textLeft, textTop, textWidth, ActivityActorStyle, Ink.TitleInk, theme);
+            item.ActorBadgeIds, textLeft, textTop, textWidth, ActivityActorStyle, Ink.TitleInk, theme,
+            self: RewardedSelf(item.ActorId));
         var actorMin = new Vector2(textLeft, textTop);
         var actorMax = new Vector2(textLeft + actorWidth, textTop + actorHeight);
         if (UiInteract.Hover(actorMin, actorMax))

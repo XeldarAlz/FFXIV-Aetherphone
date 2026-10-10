@@ -1,5 +1,6 @@
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Shell;
+using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.GameFonts;
@@ -58,6 +59,9 @@ internal sealed class FontService : IDisposable
     private const int LearnedGlyphCap = 2000;
     private const int LearnedIconCap = 512;
     private const string TablerIconFile = "TablerIcons.ttf";
+    private const string DisplayFontFile = "PirataOne-Regular.ttf";
+    private const float DisplayMultiplier = 1.90f;
+    private static readonly ushort[] DisplayRanges = { 0x0020, 0x017E, 0x0000 };
     private const long LearnRebuildDebounceMs = 600;
     private readonly Configuration configuration;
     private readonly LoadingScreen loading;
@@ -72,6 +76,7 @@ internal sealed class FontService : IDisposable
     private readonly GlyphCoverage iconCoverage = new();
     private readonly ImFontPtr[,] textFonts = new ImFontPtr[WeightFiles.Length, SizeMultipliers.Length];
     private readonly IFontHandle dalamudIconHandle;
+    private IFontHandle? displayHandle;
     private ushort[] nativeRanges;
     private ushort[] sharedRanges;
     private ushort[] iconRanges;
@@ -110,10 +115,15 @@ internal sealed class FontService : IDisposable
         SeedLearnedIcons();
         ComposeSharedRanges();
         ComposeIconRanges();
+        atlas.BuildStepChange += MeasureCrests;
         Build();
     }
 
     public float Zoom => zoom;
+
+    public bool DisplayReady => displayHandle is { Available: true };
+
+    public FontToken PushDisplay() => new(displayHandle is null ? textHandles[0, 0].Push() : displayHandle.Push());
 
     public int Generation => Volatile.Read(ref generation);
 
@@ -240,6 +250,14 @@ internal sealed class FontService : IDisposable
         }
 
         return new FontToken(dalamudIconHandle.Push());
+    }
+
+    private static void MeasureCrests(IFontAtlasBuildToolkit toolkit)
+    {
+        if (toolkit.BuildStep == FontAtlasBuildStep.PostBuild)
+        {
+            GlyphCrests.Measure(toolkit);
+        }
     }
 
     private static unsafe bool HasGlyph(ImFontPtr font, char codepoint)
@@ -392,6 +410,7 @@ internal sealed class FontService : IDisposable
             textHandles = text;
             sharedHandles = shared;
             iconHandles = icons;
+            displayHandle = SeasonalAtBoot() ? BuildDisplayHandle() : null;
         }
     }
 
@@ -417,6 +436,26 @@ internal sealed class FontService : IDisposable
             {
                 AepLog.Warning(exception, $"[Fonts] skipped merging '{TablerIconFile}' at {pixels}px.");
             }
+        }));
+    }
+
+    private bool SeasonalAtBoot() => configuration.SeasonalDecorations
+        && (SeasonalTheme.IsHalloweenDate(DateTime.Now) || (AepConstants.IsPrerelease && configuration.PreviewHalloween));
+
+    private IFontHandle BuildDisplayHandle()
+    {
+        var pixels = baseSize * DisplayMultiplier * MaxZoom;
+        var path = Path.Combine(fontDirectory, DisplayFontFile);
+        return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
+        {
+            var config = new SafeFontConfig { SizePx = pixels, GlyphRanges = DisplayRanges, };
+            if (!File.Exists(path))
+            {
+                tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular, config);
+                return;
+            }
+
+            tk.AddFontFromFile(path, config);
         }));
     }
 
@@ -690,7 +729,12 @@ internal sealed class FontService : IDisposable
         return true;
     }
 
-    public void Dispose() => DisposeHandles(textHandles, sharedHandles, iconHandles);
+    public void Dispose()
+    {
+        atlas.BuildStepChange -= MeasureCrests;
+        DisposeHandles(textHandles, sharedHandles, iconHandles);
+        displayHandle?.Dispose();
+    }
 
     private static void DisposeHandles(IFontHandle[,] text, IFontHandle[] shared, IFontHandle[] icons)
     {

@@ -209,6 +209,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
         avatarLightbox.Reset();
         store.ClearDiscover();
         ResetCards();
+        BeginIntro();
         RefreshAndConsumeLaunch();
     }
 
@@ -281,10 +282,13 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
 
     public void Draw(in PhoneContext context)
     {
+        using var names = UserName.Style(SeasonalTheme.BlackletterNames);
+        using var tapGlow = TapGlow.Use(SeasonalTheme.Halloween, GlowInk);
         store.NoteInboxWatched();
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;
+        SyncSeason();
         SyncLocalRace();
 
         if (!store.IsSignedIn)
@@ -295,7 +299,8 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
             return;
         }
 
-        if (LocalRaceIsLalafell is true || store.AccessBlocked)
+        Treats.VelvetBarred = LocalRaceIsLalafell is true || store.AccessBlocked;
+        if (Treats.VelvetBarred)
         {
             TourHolds.Hold(Id);
             store.EnsureMe();
@@ -347,8 +352,10 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
             return;
         }
 
+        DrawNight(screen, context.Content.Min.Y);
         var appArea = SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current);
         using (InputShield.Engage(avatarLightbox.Expanded))
+        using (intro.FadeContent())
         {
             router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
         }
@@ -432,7 +439,12 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
 
     private void DrawView(VelvetView view, Rect area, int depth)
     {
-        ui.Body(area);
+        if (router.IsTransitioning)
+        {
+            ui.Body(area);
+            DrawNight(screenRect, area.Min.Y);
+        }
+
         switch (view.Screen)
         {
             case VelvetScreenId.Root:
@@ -517,6 +529,8 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
                 DrawRoot(area);
                 break;
         }
+
+        SocialSeason.OfferTreat(screenRect, area, depth, TreatSpot.VelvetFeed, TreatSpot.VelvetDeep, VHeader.Height);
     }
 
     private void DrawRoot(Rect area)

@@ -47,8 +47,10 @@ internal sealed partial class ChirperApp
     private static readonly Vector4 RowHover = new(1f, 1f, 1f, 0.03f);
     private static readonly Vector4 MentionInk = new(0.718f, 0.612f, 1f, 1f);
     private static readonly Vector4 ActivityBadgeRing = new(0f, 0f, 0f, 0.55f);
-    private static readonly Vector4 UnreadTint = Palette.WithAlpha(ChirperInk.Accent, 0.045f);
+    private static readonly Vector4 StandardUnreadTint = UnreadTintFor(ChirperInk.Standard);
+    private static readonly Vector4 MoonlitUnreadTint = UnreadTintFor(ChirperInk.Moonlit);
 
+    private static Vector4 UnreadTint => SeasonalTheme.Halloween ? MoonlitUnreadTint : StandardUnreadTint;
 
     private bool mentionsOnly;
     private Spring activitySegment;
@@ -528,7 +530,8 @@ internal sealed partial class ChirperApp
         DrawActivityBadge(drawList, avatarCenter + new Vector2(badgeOffset, badgeOffset), item.Type, scale);
         var textTop = origin.Y + padY;
         var actorWidth = UserName.DrawAuto(drawList, "chirper.activity.actor." + item.Id, actor, item.ActorBadges,
-            item.ActorBadgeIds, textLeft, textTop, textWidth, ActivityActorStyle, ChirperInk.TitleInk, theme);
+            item.ActorBadgeIds, textLeft, textTop, textWidth, ActivityActorStyle, ChirperInk.TitleInk, theme,
+            self: RewardedSelf(item.ActorId));
         var actorMin = new Vector2(textLeft, textTop);
         var actorMax = new Vector2(textLeft + actorWidth, textTop + actorHeight);
         if (UiInteract.Hover(actorMin, actorMax))

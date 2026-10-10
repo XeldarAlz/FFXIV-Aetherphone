@@ -215,6 +215,14 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool AutoTranslatePosts { get; set; }
     public List<string> TranslatedConversations { get; set; } = new();
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
+    public bool SeasonalDecorations { get; set; } = true;
+    public bool SeasonalSounds { get; set; } = true;
+    public bool SeasonalNameFont { get; set; } = true;
+    public bool SeasonalParallax { get; set; } = true;
+    public int HalloweenTreatYear { get; set; }
+    public int HalloweenTreats { get; set; }
+    public long HalloweenTreatDue { get; set; }
+    public bool PreviewHalloween { get; set; }
     public bool LiveGlass { get; set; }
     public LiveGlassSource LiveGlassSource { get; set; } = LiveGlassSource.World;
     public string AccentName { get; set; } = "Violet";

@@ -182,6 +182,8 @@ One Aethernet account signs you in to every social app, and each app can keep it
 
 **Make it yours.** Wallpapers, accent colors, icon looks, phone cases and your home layout, saved as a Look that follows each character.
 
+**Seasonal nights.** Around Halloween, Chirper becomes a moonlit forest, Aethergram a blood-moon castle and Velvet a candlelit witching hour, each with its own icons, moments and quiet sounds, while the phone's everyday sounds trail off into a faint ghostly moan. Bats cross the home screen through a low mist, Skywatcher's skies fill with ghosts, wisps and falling leaves, and the calendar marks the night itself. Thirteen treats hide around the phone during All Saints' Wake, one more each day (miss a day and you can catch up later), each turning up a while into your session; the Aether Coin wallet tracks how many you have found and where the next one is hiding. Find them all and your name burns with a hallowed flame until the season ends, and the Halloween widget counts down to the night. Switch it off under Settings → Appearance → Seasonal Decorations, or keep the look and turn off just the blackletter names (Seasonal Name Font, right below it) or the sounds (Settings → Sounds → Seasonal Sounds). The night scenes drift gently as you scroll and move the cursor; Background Parallax, under Seasonal Decorations, keeps them still.
+
 **Speaks your language.** Nine interface languages and one-tap translation on posts, profiles and messages.
 
 **Private by design.** Messages, photos and voice notes are end-to-end encrypted. A Velvet intro is sent as plain text. A human moderation team reviews reported content.

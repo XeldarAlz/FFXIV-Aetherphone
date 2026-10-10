@@ -157,7 +157,7 @@ internal sealed partial class VelvetShell
         var nameY = bottom - nameHeight;
         UserName.Draw(drawList, label.NameId, name, profile.Badges, profile.BadgeIds, textLeft, nameY,
             GridTextWidth(nameY, nameHeight, actionTop, wideWidth, narrowWidth), CardNameStyle, VelvetTheme.TitleInk,
-            bodyHovered, false);
+            bodyHovered, false, self: RewardedSelf(profile.UserId));
         if (bodyHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

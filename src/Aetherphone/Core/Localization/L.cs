@@ -2154,6 +2154,14 @@ internal static class L
         public static readonly LocString IconAppearanceTinted = new("settings.iconAppearanceTinted", "Tinted");
         public static readonly LocString IconAppearanceClear = new("settings.iconAppearanceClear", "Clear");
         public static readonly LocString IconAppearanceHint = new("settings.iconAppearanceHint", "Dark and Tinted repaint each icon on graphite, Clear shows it as glass over the wallpaper. Icons without painted artwork keep their colored tile.");
+        public static readonly LocString SeasonalDecorations = new("settings.seasonalDecorations", "Seasonal Decorations");
+        public static readonly LocString SeasonalDecorationsHint = new("settings.seasonalDecorationsHint", "Adds holiday touches across the phone during seasonal events like Halloween.");
+        public static readonly LocString SeasonalNameFont = new("settings.seasonalNameFont", "Seasonal Name Font");
+        public static readonly LocString SeasonalNameFontHint = new("settings.seasonalNameFontHint", "Writes display names in Chirper, Aethergram and Velvet in the seasonal font.");
+        public static readonly LocString SeasonalSounds = new("settings.seasonalSounds", "Seasonal Sounds");
+        public static readonly LocString SeasonalParallax = new("settings.seasonalParallax", "Background Parallax");
+        public static readonly LocString SeasonalParallaxHint = new("settings.seasonalParallaxHint", "Lets the night scenes drift gently as you scroll and move the cursor. Turn off to keep them still.");
+        public static readonly LocString SeasonalSoundsHint = new("settings.seasonalSoundsHint", "Plays the holiday sounds that come with Seasonal Decorations. Turn off to keep the look with the usual sounds.");
         public static readonly LocString SearchHint = new("settings.searchHint", "Search settings");
         public static readonly LocString NoResults = new("settings.noResults", "No settings match that");
         public static readonly LocString PhoneWidthReadout = new("settings.phoneWidthReadout", "{0} px wide");
@@ -2162,6 +2170,38 @@ internal static class L
         public static readonly LocString DynamicIsland = new("settings.dynamicIsland", "Dynamic Island");
         public static readonly LocString ShowInIsland = new("settings.showInIsland", "Show in Dynamic Island");
         public static readonly LocString RemoveApp = new("settings.removeApp", "Remove App");
+    }
+
+    internal static class Seasonal
+    {
+        public static readonly LocString PackAnswers = new("seasonal.packAnswers", "The pack answers");
+        public static readonly LocString NightTakesWing = new("seasonal.nightTakesWing", "The night takes wing");
+        public static readonly LocString SavedToCrypt = new("seasonal.savedToCrypt", "Saved to your crypt");
+        public static readonly LocString ChirperCaughtUp = new("seasonal.chirperCaughtUp", "The pack is asleep");
+        public static readonly LocString ChirperCaughtUpHint = new("seasonal.chirperCaughtUpHint", "Older howls continue below");
+        public static readonly LocString AethergramCaughtUp = new("seasonal.aethergramCaughtUp", "Nothing left but the night");
+        public static readonly LocString AethergramCaughtUpHint = new("seasonal.aethergramCaughtUpHint", "Older posts lurk below");
+        public static readonly LocString VelvetFeedNone = new("seasonal.velvetFeedNone", "Not a candle lit yet");
+        public static readonly LocString VelvetConnected = new("seasonal.velvetConnected", "Sealed by candlelight");
+        public static readonly LocString CandlesFlare = new("seasonal.candlesFlare", "The candles flare");
+        public static readonly LocString TreatFound = new("seasonal.treatFound", "Treat found! {0} of {1}");
+        public static readonly LocString TreatsComplete = new("seasonal.treatsComplete", "All {0} treats found! Your name burns with Witchfire until Halloween ends, visible only to you.");
+        public static readonly LocString TreatsProgress = new("seasonal.treatsProgress", "Treats {0}/{1}");
+        public static readonly LocString CountdownName = new("seasonal.countdownName", "Halloween");
+        public static readonly LocString CountdownDescription = new("seasonal.countdownDescription", "Counts down to Halloween night and tracks the treats you find.");
+        public static readonly LocPlural DaysToGo = new("seasonal.daysToGo", "day to go", "days to go");
+        public static readonly LocString Tonight = new("seasonal.tonight", "Tonight");
+        public static readonly LocString HalloweenNight = new("seasonal.halloweenNight", "Halloween night");
+        public static readonly LocString HalloweenPassed = new("seasonal.halloweenPassed", "Until next year");
+        public static readonly LocString TreatsFoundLabel = new("seasonal.treatsFoundLabel", "Treats Found");
+        public static readonly LocString TreatsCount = new("seasonal.treatsCount", "{0} of {1}");
+        public static readonly LocString TreatHidingIn = new("seasonal.treatHidingIn", "A treat is hiding in {0}");
+        public static readonly LocString TreatHidingHome = new("seasonal.treatHidingHome", "A treat is hiding on the home screen");
+        public static readonly LocString TreatHidingEmpty = new("seasonal.treatHidingEmpty", "A treat is hiding on an empty screen");
+        public static readonly LocString TreatLater = new("seasonal.treatLater", "Another treat will turn up later");
+        public static readonly LocString TreatTomorrow = new("seasonal.treatTomorrow", "The next treat arrives tomorrow");
+        public static readonly LocString TreatsAllFound = new("seasonal.treatsAllFound", "All found. Enjoy the flame!");
+        public static readonly LocString TreatsRewardHint = new("seasonal.treatsRewardHint", "Find all {0} and your name burns with Witchfire until the season ends, visible only to you.");
     }
 
     internal static class Translate

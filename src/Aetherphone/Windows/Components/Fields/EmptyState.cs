@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -17,6 +18,11 @@ internal static class EmptyState
     private const float BaseLift = 40f;
     private const float TitleOffset = 58f;
     private const float HintOffset = 84f;
+    private const float GhostSize = 12f;
+    private const float GhostPerch = 0.62f;
+    private const float GhostBob = 2.5f;
+    private const float GhostBobSpeed = 1.6f;
+    private const float TreatSize = 6f;
 
     public static void Draw(Rect body, AppSkin ui, FontAwesomeIcon icon, string title, string hint) =>
         DrawBody(body, ui, IconGlyph.Of(icon), title, hint, 0f);
@@ -68,6 +74,11 @@ internal static class EmptyState
 
         var drawList = ImGui.GetWindowDrawList();
         var iconCenter = new Vector2(centerX, baseY);
+        if (SeasonalTheme.Halloween)
+        {
+            DrawPeekingGhost(drawList, iconCenter, ui, scale);
+        }
+
         drawList.AddCircleFilled(iconCenter, IconRadius * scale, ImGui.GetColorU32(ui.FieldSurface), 32);
         if (glyphHeight > 0f)
         {
@@ -88,6 +99,19 @@ internal static class EmptyState
         Typography.DrawWrappedCentered(new Vector2(centerX, baseY + HintOffset * scale), hint, ui.MutedInk,
             TextStyles.Subheadline, maxWidth);
         return fullBottom;
+    }
+
+    private static void DrawPeekingGhost(ImDrawListPtr drawList, Vector2 iconCenter, AppSkin ui, float scale)
+    {
+        var time = (float)ImGui.GetTime();
+        var reach = IconRadius * GhostPerch * scale;
+        var perch = iconCenter + new Vector2(reach, -reach);
+        var center = perch + new Vector2(0f, MathF.Sin(time * GhostBobSpeed) * GhostBob * scale);
+        Treats.OfferAt(drawList, TreatSpot.EmptyState, perch + new Vector2(GhostSize * 1.5f, GhostSize * 0.6f) * scale,
+            TreatSize * scale);
+        Spooks.DrawGhost(drawList, center, GhostSize * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.2f)),
+            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.34f)),
+            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.7f)), time * 2f, -0.12f);
     }
 
     private static float DrawCompact(Rect body, AppSkin ui, string title, string hint, float maxWidth,

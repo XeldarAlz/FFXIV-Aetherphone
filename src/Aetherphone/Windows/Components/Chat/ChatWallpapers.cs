@@ -35,6 +35,14 @@ internal static class ChatWallpapers
         PhoneIcons.Bookmark,
     };
 
+    private static readonly string[] HalloweenGlyphs =
+    {
+        PhoneIcons.Bat, PhoneIcons.Moon, PhoneIcons.Ghost, PhoneIcons.Pumpkin, PhoneIcons.Spider,
+        PhoneIcons.CrystalBall, PhoneIcons.Cat, PhoneIcons.Candle, PhoneIcons.Skull, PhoneIcons.MoonStars,
+        PhoneIcons.Eye, PhoneIcons.Wand, PhoneIcons.BuildingCastle, PhoneIcons.Sparkles, PhoneIcons.Trees,
+        PhoneIcons.Paw,
+    };
+
     public static readonly ChatWallpaperColor[] Colors =
     {
         new("default", ChatThemes.Body),
@@ -115,6 +123,7 @@ internal static class ChatWallpapers
             }
         }
 
+        Treats.Offer(drawList, TreatSpot.ChatWallpaper, area);
         drawList.PopClipRect();
     }
 
@@ -126,6 +135,7 @@ internal static class ChatWallpapers
         var ink = ImGui.GetColorU32(Palette.WithAlpha(PatternInk, PatternAlpha));
         var columns = (int)MathF.Ceiling(area.Width / cell) + 2;
         var rows = (int)MathF.Ceiling(area.Height / cell) + 2;
+        var glyphs = SeasonalTheme.Halloween ? HalloweenGlyphs : PatternGlyphs;
         for (var row = 0; row < rows; row++)
         {
             var offset = row % 2 == 0 ? 0f : cell * 0.5f;
@@ -139,7 +149,7 @@ internal static class ChatWallpapers
                     continue;
                 }
 
-                var glyph = PatternGlyphs[(row * 7 + column * 3) % PatternGlyphs.Length];
+                var glyph = glyphs[(row * 7 + column * 3) % glyphs.Length];
                 PhoneIcon.Draw(drawList, center, glyph, ink, glyphSize);
             }
         }

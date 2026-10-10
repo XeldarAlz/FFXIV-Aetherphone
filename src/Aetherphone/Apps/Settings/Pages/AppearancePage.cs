@@ -18,6 +18,9 @@ internal sealed class AppearancePage : ISettingsPage
     private static readonly SettingsEntry[] Searchable =
     {
         new(L.Settings.Theme),
+        new(L.Settings.SeasonalDecorations),
+        new(L.Settings.SeasonalNameFont, L.Settings.SeasonalDecorations),
+        new(L.Settings.SeasonalParallax, L.Settings.SeasonalDecorations),
         new(L.Settings.Accent),
         new(L.Settings.IconAppearance),
         new(L.Settings.Wallpaper),
@@ -111,11 +114,31 @@ internal sealed class AppearancePage : ISettingsPage
     private void DrawThemeCard(PhoneTheme theme)
     {
         SettingsSection.Header(Loc.T(L.Settings.Theme), theme);
-        var card = GroupCard.Begin(theme, 1);
+        var decorated = configuration.SeasonalDecorations;
+        var card = GroupCard.Begin(theme, decorated ? 4 : 2);
         var modeRow = card.NextRow();
         UiAnchors.Report("settings.appearance.theme", modeRow);
         var modeIndex = SegmentStrip.Draw("settings.themeMode", modeRow, modeLabels, CurrentModeIndex(), theme);
+        var seasonal = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.SeasonalDecorations),
+            configuration.SeasonalDecorations, theme, hint: Loc.T(L.Settings.SeasonalDecorationsHint));
+        var nameFont = decorated
+            ? SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.SeasonalNameFont), configuration.SeasonalNameFont,
+                theme, hint: Loc.T(L.Settings.SeasonalNameFontHint))
+            : configuration.SeasonalNameFont;
+        var parallax = decorated
+            ? SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.SeasonalParallax), configuration.SeasonalParallax,
+                theme, hint: Loc.T(L.Settings.SeasonalParallaxHint))
+            : configuration.SeasonalParallax;
         card.End();
+        if (seasonal != configuration.SeasonalDecorations || nameFont != configuration.SeasonalNameFont ||
+            parallax != configuration.SeasonalParallax)
+        {
+            configuration.SeasonalDecorations = seasonal;
+            configuration.SeasonalNameFont = nameFont;
+            configuration.SeasonalParallax = parallax;
+            configuration.Save();
+        }
+
         var mode = ModeOrder[modeIndex];
         if (mode == configuration.ThemeMode)
         {
