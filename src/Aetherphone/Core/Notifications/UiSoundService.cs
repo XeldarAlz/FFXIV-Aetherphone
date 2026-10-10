@@ -77,12 +77,11 @@ internal sealed class UiSoundService : IDisposable
         var files = entry.Files;
         var cursor = variantCursor[index];
         variantCursor[index] = (cursor + 1) % files.Length;
-        player.Play(files[cursor], volume, pitched ? rate : PlaybackRate(entry.PitchVariance), HauntFor(sound));
+        var haunt = HauntingOn ? UiSoundCatalog.HauntDepthFor(sound) : HauntDepth.None;
+        player.Play(files[cursor], volume, pitched ? rate : PlaybackRate(entry.PitchVariance), haunt);
     }
 
     private bool HauntingOn => SeasonalTheme.Halloween && configuration.SeasonalSounds;
-
-    private HauntDepth HauntFor(UiSound sound) => HauntingOn ? UiSoundCatalog.HauntDepthFor(sound) : HauntDepth.None;
 
     private static float PlaybackRate(float variance)
     {
@@ -135,11 +134,14 @@ internal static class UiFeedback
         return new TapSoundScope(previous);
     }
 
-    internal static void RestoreTap(UiSound previous) => tapSound = previous;
-
     public static void Unbind() => service = null;
 
     public static void Play(UiSound sound) => service?.Play(sound);
 
     public static void PlayPitched(UiSound sound, float rate) => service?.PlayPitched(sound, rate);
+
+    public readonly ref struct TapSoundScope(UiSound previous)
+    {
+        public void Dispose() => tapSound = previous;
+    }
 }

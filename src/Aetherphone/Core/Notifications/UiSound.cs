@@ -306,11 +306,7 @@ internal static class UiSoundCatalog
         new(HalloweenCrystal, 0.5f, 600, UiSoundChannel.Event),
     };
 
-    public static bool IsSeasonal(UiSound sound) => sound is UiSound.HalloweenKnock or UiSound.HalloweenThump
-        or UiSound.HalloweenChime or UiSound.HalloweenClaw or UiSound.HalloweenRustle or UiSound.HalloweenRise
-        or UiSound.HalloweenHoot or UiSound.HalloweenChorus or UiSound.HalloweenHeartbeat or UiSound.HalloweenCoffin
-        or UiSound.HalloweenFlutter or UiSound.HalloweenIgnite or UiSound.HalloweenOrgan or UiSound.HalloweenSwarm
-        or UiSound.HalloweenSparkle or UiSound.HalloweenWhisper or UiSound.HalloweenFlare or UiSound.HalloweenCrystal;
+    public static bool IsSeasonal(UiSound sound) => sound is >= UiSound.HalloweenKnock and <= UiSound.HalloweenCrystal;
 
     public static HauntDepth HauntDepthFor(UiSound sound)
     {

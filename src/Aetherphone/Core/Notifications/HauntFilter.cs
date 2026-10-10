@@ -51,18 +51,10 @@ internal static class HauntFilter
         var output = new float[totalFrames * ChannelCount];
         Array.Copy(clip, output, frames * ChannelCount);
         AddShadow(clip, output, recipe.Shadow);
-        if (recipe.FirstMoan > 0f)
-        {
-            AddMoan(clip, output, new MoanVoice(FirstMoanDelaySeconds, FirstMoanStartRate, FirstMoanEndRate,
-                FirstMoanCutoffHertz, recipe.FirstMoan));
-        }
-
-        if (recipe.SecondMoan > 0f)
-        {
-            AddMoan(clip, output, new MoanVoice(SecondMoanDelaySeconds, SecondMoanStartRate, SecondMoanEndRate,
-                SecondMoanCutoffHertz, recipe.SecondMoan));
-        }
-
+        AddMoan(clip, output, new MoanVoice(FirstMoanDelaySeconds, FirstMoanStartRate, FirstMoanEndRate,
+            FirstMoanCutoffHertz, recipe.FirstMoan));
+        AddMoan(clip, output, new MoanVoice(SecondMoanDelaySeconds, SecondMoanStartRate, SecondMoanEndRate,
+            SecondMoanCutoffHertz, recipe.SecondMoan));
         FadeEnd(output);
         Limit(output, MathF.Min(Ceiling, originalPeak * PeakHeadroom));
         return output;
@@ -106,6 +98,11 @@ internal static class HauntFilter
 
     private static void AddMoan(float[] clip, float[] output, in MoanVoice voice)
     {
+        if (voice.Gain <= 0f)
+        {
+            return;
+        }
+
         var frames = clip.Length / ChannelCount;
         var totalFrames = output.Length / ChannelCount;
         var smoothing = Smoothing(voice.CutoffHertz);

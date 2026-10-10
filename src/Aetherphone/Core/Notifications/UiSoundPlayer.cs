@@ -18,7 +18,6 @@ internal sealed class UiSoundPlayer : IDisposable
     private readonly object gate = new();
     private readonly Dictionary<string, float[]> clips = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(string FileName, HauntDepth Depth), float[]> hauntedClips = new();
-    private readonly HashSet<(string FileName, HauntDepth Depth)> hauntPending = new();
     private int hauntGeneration;
     private readonly DirectoryInfo root;
     private MixingSampleProvider? mixer;
@@ -34,7 +33,7 @@ internal sealed class UiSoundPlayer : IDisposable
         this.root = root;
     }
 
-    public void Play(string fileName, float gain, float rate, HauntDepth haunt = HauntDepth.None)
+    public void Play(string fileName, float gain, float rate, HauntDepth haunt)
     {
         lock (gate)
         {
@@ -69,7 +68,6 @@ internal sealed class UiSoundPlayer : IDisposable
         lock (gate)
         {
             hauntedClips.Clear();
-            hauntPending.Clear();
             hauntGeneration++;
         }
     }
@@ -129,13 +127,10 @@ internal sealed class UiSoundPlayer : IDisposable
             return false;
         }
 
-        if (hauntPending.Add(key))
-        {
-            var plain = clip;
-            var generation = hauntGeneration;
-            _ = Task.Run(() => BuildHaunted(key, plain, generation));
-        }
-
+        var plain = clip;
+        var generation = hauntGeneration;
+        hauntedClips[key] = plain;
+        _ = Task.Run(() => BuildHaunted(key, plain, generation));
         return true;
     }
 
@@ -160,7 +155,6 @@ internal sealed class UiSoundPlayer : IDisposable
             }
 
             hauntedClips[key] = haunted;
-            hauntPending.Remove(key);
         }
     }
 
