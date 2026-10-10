@@ -17,19 +17,20 @@ internal sealed partial class CoinApp
 {
     private const float QuestPad = 12f;
     private const float QuestLineGap = 6f;
+    private const float QuestHintGap = 2f;
     private const float QuestBarHeight = 4f;
     private const float QuestCheckSize = 18f;
     private const float QuestFooterGap = 8f;
-    private const string FrozenReason = "frozen";
-    private const string PausedReason = "paused";
-    private const string DailyCapReason = "daily_cap";
-    private const string RuleCapReason = "rule_cap";
+    private const float QuestReasonShare = 0.7f;
+    private const float QuestFloatLift = 6f;
 
     private CachedText[] questTitles = Array.Empty<CachedText>();
+    private CachedText[] questHints = Array.Empty<CachedText>();
     private CachedText[] questProgress = Array.Empty<CachedText>();
     private Spring[] questFill = Array.Empty<Spring>();
+    private Vector2[] questAnchors = Array.Empty<Vector2>();
     private CachedText questResetText;
-    private Vector2 questClaimAnchor;
+    private Vector2 questCardAnchor;
 
     private void PrimeQuests()
     {
@@ -41,37 +42,45 @@ internal sealed partial class CoinApp
 
     private void ConsumeQuestClaim()
     {
-        var claim = quests.TakeClaimResult();
-        if (claim is null)
+        while (quests.TakeClaimResult() is { } claim)
         {
-            return;
+            var award = claim.Award;
+            var anchor = QuestAnchor(claim.QuestId);
+            if (award is { Granted: true, Amount: > 0 })
+            {
+                UiFeedback.Play(UiSound.Payout);
+                floats.Spawn(Loc.T(L.Coin.CheckInReward, NumberText.Group(award.Amount)), anchor);
+                continue;
+            }
+
+            if (string.Equals(award.Reason, CoinQuests.FrozenReason, StringComparison.Ordinal))
+            {
+                confirm.Alert(Loc.T(L.Coin.FrozenAlertTitle), Loc.T(L.Coin.FrozenAlertBody), Loc.T(L.Common.Close));
+                continue;
+            }
+
+            floats.Spawn(Loc.T(CoinQuests.ReasonFor(award.Reason)), anchor, true);
+        }
+    }
+
+    private Vector2 QuestAnchor(string questId)
+    {
+        var board = quests.Board;
+        if (board is null)
+        {
+            return questCardAnchor;
         }
 
-        var award = claim.Award;
-        if (award is { Granted: true, Amount: > 0 })
+        var items = board.Quests;
+        for (var index = 0; index < items.Length && index < questAnchors.Length; index++)
         {
-            UiFeedback.Play(UiSound.Payout);
-            floats.Spawn(Loc.T(L.Coin.CheckInReward, NumberText.Group(award.Amount)), questClaimAnchor);
-            return;
+            if (string.Equals(items[index].Id, questId, StringComparison.Ordinal))
+            {
+                return questAnchors[index];
+            }
         }
 
-        if (string.Equals(award.Reason, FrozenReason, StringComparison.Ordinal))
-        {
-            confirm.Alert(Loc.T(L.Coin.FrozenAlertTitle), Loc.T(L.Coin.FrozenAlertBody), Loc.T(L.Common.Close));
-            return;
-        }
-
-        if (string.Equals(award.Reason, PausedReason, StringComparison.Ordinal))
-        {
-            floats.Spawn(Loc.T(L.Coin.PausedTitle), questClaimAnchor, true);
-            return;
-        }
-
-        if (string.Equals(award.Reason, DailyCapReason, StringComparison.Ordinal)
-            || string.Equals(award.Reason, RuleCapReason, StringComparison.Ordinal))
-        {
-            floats.Spawn(Loc.T(L.Coin.CapReached), questClaimAnchor, true);
-        }
+        return questCardAnchor;
     }
 
     private float DrawQuests(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
@@ -96,6 +105,7 @@ internal sealed partial class CoinApp
 
         var min = new Vector2(origin.X, cursorY);
         var max = new Vector2(origin.X + width, cursorY + total);
+        questCardAnchor = new Vector2(origin.X + width * 0.5f, min.Y);
         var footHeight = Typography.LineHeight(TextStyles.Footnote);
         var bottom = max.Y + QuestFooterGap * scale + footHeight;
         if (!ImGui.IsRectVisible(min, new Vector2(max.X, bottom)))
@@ -131,18 +141,28 @@ internal sealed partial class CoinApp
         }
 
         questTitles = new CachedText[count];
+        questHints = new CachedText[count];
         questProgress = new CachedText[count];
         questFill = new Spring[count];
+        questAnchors = new Vector2[count];
     }
 
     private float QuestRowHeight(CoinQuestDto quest, int index, float width, float scale)
     {
         var textWidth = QuestTextWidth(quest, width, scale);
+        var content = MathF.Max(CoinArt.RowTile * scale, QuestBlockHeight(quest, index, textWidth, scale));
+        return MathF.Max(content + QuestPad * scale * 2f, CoinArt.RowHeight * scale);
+    }
+
+    private float QuestBlockHeight(CoinQuestDto quest, int index, float textWidth, float scale)
+    {
         var titleHeight = Typography.MeasureWrappedBlock(QuestTitle(quest, index), TextStyles.BodyEmphasized,
             textWidth).Y;
-        var lineHeight = Typography.LineHeight(TextStyles.Footnote);
-        var content = MathF.Max(CoinArt.RowTile * scale, titleHeight + QuestLineGap * scale + lineHeight);
-        return MathF.Max(content + QuestPad * scale * 2f, CoinArt.RowHeight * scale);
+        var hint = QuestHint(quest, index);
+        var hintHeight = hint.Length == 0
+            ? 0f
+            : Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, textWidth).Y + QuestHintGap * scale;
+        return titleHeight + hintHeight + QuestLineGap * scale + Typography.LineHeight(TextStyles.Footnote);
     }
 
     private float QuestTextWidth(CoinQuestDto quest, float width, float scale)
@@ -153,16 +173,11 @@ internal sealed partial class CoinApp
                              reserve);
     }
 
-    private float QuestTrailingWidth(CoinQuestDto quest, float scale)
+    private static float QuestTrailingWidth(CoinQuestDto quest, float scale)
     {
         if (quest.Claimed)
         {
             return QuestCheckSize * scale;
-        }
-
-        if (CoinQuests.IsClaimable(quest))
-        {
-            return CoinArt.CapsuleWidth(Loc.T(L.Coin.QuestClaim), Button.SmallHeight * scale);
         }
 
         return quest.Amount > 0
@@ -175,14 +190,7 @@ internal sealed partial class CoinApp
         var pad = Metrics.Space.Lg * scale;
         var appId = quest.App.Length == 0 ? Id : quest.App;
         var openable = !string.Equals(appId, Id, StringComparison.Ordinal) && navigation.IsAvailable(appId);
-        var claimable = CoinQuests.IsClaimable(quest);
-        var trailingWidth = QuestTrailingWidth(quest, scale);
-        var trailingRight = row.Max.X - pad;
-        var capsuleHeight = Button.SmallHeight * scale;
-        var capsule = new Rect(new Vector2(trailingRight - trailingWidth, row.Center.Y - capsuleHeight * 0.5f),
-            new Vector2(trailingRight, row.Center.Y + capsuleHeight * 0.5f));
-        var overCapsule = claimable && UiInteract.Hover(capsule.Min, capsule.Max);
-        var hovered = openable && !overCapsule && CoinArt.RowInteraction(drawList, ui, row, scale);
+        var hovered = openable && CoinArt.RowInteraction(drawList, ui, row, scale);
 
         var tile = CoinArt.RowTile * scale;
         var tileCenter = new Vector2(row.Min.X + pad + tile * 0.5f, row.Center.Y);
@@ -193,19 +201,29 @@ internal sealed partial class CoinApp
         var textRight = textLeft + textWidth;
         var title = QuestTitle(quest, index);
         var titleHeight = Typography.MeasureWrappedBlock(title, TextStyles.BodyEmphasized, textWidth).Y;
+        var hint = QuestHint(quest, index);
+        var hintHeight = hint.Length == 0 ? 0f : Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, textWidth).Y;
         var lineHeight = Typography.LineHeight(TextStyles.Footnote);
-        var blockHeight = titleHeight + QuestLineGap * scale + lineHeight;
+        var blockHeight = QuestBlockHeight(quest, index, textWidth, scale);
         var top = row.Center.Y - blockHeight * 0.5f;
         Typography.DrawWrappedLeft(new Vector2(textLeft, top), title, ui.TitleInk, TextStyles.BodyEmphasized,
             textWidth);
 
-        var lineTop = top + titleHeight + QuestLineGap * scale;
-        var complete = CoinQuests.IsComplete(quest);
-        var progress = quest.Claimed ? Loc.T(L.Coin.QuestClaimed) : QuestProgressText(quest, index);
+        var cursor = top + titleHeight;
+        if (hint.Length > 0)
+        {
+            cursor += QuestHintGap * scale;
+            Typography.DrawWrappedLeft(new Vector2(textLeft, cursor), hint, ui.MutedInk, TextStyles.Footnote,
+                textWidth);
+            cursor += hintHeight;
+        }
+
+        var lineTop = cursor + QuestLineGap * scale;
         var progressStyle = TextStyles.FootnoteEmphasized;
+        var progress = QuestLineText(quest, index, textWidth, progressStyle, out var progressInk);
         var progressWidth = WidgetText.TabularWidth(progress, progressStyle);
-        WidgetText.Tabular(drawList, new Vector2(textRight - progressWidth, lineTop), progress,
-            complete ? ui.Accent : ui.MutedInk, progressStyle);
+        WidgetText.Tabular(drawList, new Vector2(textRight - progressWidth, lineTop), progress, progressInk,
+            progressStyle);
         var barRight = textRight - progressWidth - CoinArt.ValueGap * scale;
         if (barRight > textLeft)
         {
@@ -216,7 +234,12 @@ internal sealed partial class CoinApp
                 Palette.WithAlpha(ui.TitleInk, EarnBarTrackAlpha), ui.Accent);
         }
 
-        DrawQuestTrailing(drawList, quest, index, capsule, claimable, scale);
+        var trailingWidth = QuestTrailingWidth(quest, scale);
+        var trailingRight = row.Max.X - pad;
+        var trailing = new Rect(new Vector2(trailingRight - trailingWidth, row.Center.Y - lineHeight * 0.5f),
+            new Vector2(trailingRight, row.Center.Y + lineHeight * 0.5f));
+        questAnchors[index] = new Vector2(trailing.Center.X, trailing.Min.Y - QuestFloatLift * scale);
+        DrawQuestTrailing(drawList, quest, trailing);
         if (UiInteract.Click(row.Min, row.Max, hovered))
         {
             UiFeedback.Play(UiSound.Tap);
@@ -224,29 +247,31 @@ internal sealed partial class CoinApp
         }
     }
 
-    private void DrawQuestTrailing(ImDrawListPtr drawList, CoinQuestDto quest, int index, Rect capsule,
-        bool claimable, float scale)
+    private string QuestLineText(CoinQuestDto quest, int index, float textWidth, TextStyle style, out Vector4 ink)
     {
         if (quest.Claimed)
         {
-            ProgressRing.CenterIcon(drawList, capsule.Center, FontAwesomeIcon.CheckCircle, ui.Accent,
-                QuestCheckSize * scale);
-            return;
+            ink = ui.Accent;
+            return Loc.T(L.Coin.QuestPaid);
         }
 
-        if (claimable)
+        var reason = quests.ReasonFor(quest.Id);
+        if (reason.Length > 0)
         {
-            var claiming = quests.IsClaiming(quest.Id);
-            var pressed = CoinArt.Capsule(drawList, ui, ImGui.GetID($"coin.quest.claim{index}"), capsule,
-                Loc.T(L.Coin.QuestClaim), CapsuleTone.Filled, !quests.AnyClaiming);
-            if (claiming || !pressed)
-            {
-                return;
-            }
+            ink = ui.MutedInk;
+            return Typography.FitText(Loc.T(CoinQuests.ReasonFor(reason)), textWidth * QuestReasonShare, style);
+        }
 
-            questClaimAnchor = new Vector2(capsule.Center.X, capsule.Min.Y - 6f * scale);
-            UiFeedback.Play(UiSound.Tap);
-            quests.Claim(quest.Id);
+        ink = CoinQuests.IsComplete(quest) ? ui.Accent : ui.MutedInk;
+        return QuestProgressText(quest, index);
+    }
+
+    private void DrawQuestTrailing(ImDrawListPtr drawList, CoinQuestDto quest, Rect trailing)
+    {
+        if (quest.Claimed)
+        {
+            ProgressRing.CenterIcon(drawList, trailing.Center, FontAwesomeIcon.CheckCircle, ui.Accent,
+                trailing.Width);
             return;
         }
 
@@ -258,8 +283,8 @@ internal sealed partial class CoinApp
         var style = TextStyles.SubheadlineEmphasized;
         var lineHeight = Typography.LineHeight(style);
         var amount = NumberText.Group(quest.Amount);
-        CoinArt.Price(drawList, new Vector2(capsule.Max.X - CoinArt.PriceWidth(amount, style),
-            capsule.Center.Y - lineHeight * 0.5f), amount, ui.MutedInk, style);
+        CoinArt.Price(drawList, new Vector2(trailing.Max.X - CoinArt.PriceWidth(amount, style),
+            trailing.Center.Y - lineHeight * 0.5f), amount, ui.MutedInk, style);
     }
 
     private void DrawQuestFooter(ImDrawListPtr drawList, Vector2 topLeft, float right, long resetsAtUnix,
@@ -288,6 +313,13 @@ internal sealed partial class CoinApp
         ref var cache = ref questTitles[index];
         var key = ((long)quest.Id.GetHashCode() << 32) | (uint)quest.Target;
         return cache.IsCurrent(key) ? cache.Value : cache.Store(key, CoinQuests.Title(quest));
+    }
+
+    private string QuestHint(CoinQuestDto quest, int index)
+    {
+        ref var cache = ref questHints[index];
+        var key = ((long)quest.Id.GetHashCode() << 32) | (uint)Loc.Current.GetHashCode();
+        return cache.IsCurrent(key) ? cache.Value : cache.Store(key, CoinQuests.Hint(quest));
     }
 
     private string QuestProgressText(CoinQuestDto quest, int index)

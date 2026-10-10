@@ -25,6 +25,7 @@ internal sealed class CoinRadioListenTracker : IDisposable
     private volatile string? openSessionId;
     private int generation;
     private long blockedUntilTick;
+    private long retryAtTick;
 
     public CoinRadioListenTracker(AethernetSession session, CoinsClient coins, RadioPlayer radio, IFramework framework)
     {
@@ -49,7 +50,28 @@ internal sealed class CoinRadioListenTracker : IDisposable
             case RadioListenStep.End:
                 Finish();
                 return;
+            default:
+                RetryRefusedStart(stationId);
+                return;
         }
+    }
+
+    private void RetryRefusedStart(string stationId)
+    {
+        var retryAt = Interlocked.Read(ref retryAtTick);
+        if (retryAt == 0 || Environment.TickCount64 < retryAt || openSessionId is not null)
+        {
+            return;
+        }
+
+        if (!string.Equals(listeningStationId, stationId, StringComparison.Ordinal)
+            || radio.State != RadioPlaybackState.Playing)
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref retryAtTick, 0);
+        Begin(stationId);
     }
 
     private void TrackAccount()
@@ -63,6 +85,7 @@ internal sealed class CoinRadioListenTracker : IDisposable
         accountKey = key;
         listeningStationId = string.Empty;
         Interlocked.Increment(ref generation);
+        Interlocked.Exchange(ref retryAtTick, 0);
         openSessionId = null;
     }
 
@@ -84,6 +107,7 @@ internal sealed class CoinRadioListenTracker : IDisposable
     {
         listeningStationId = string.Empty;
         Interlocked.Increment(ref generation);
+        Interlocked.Exchange(ref retryAtTick, 0);
         work.Run("listen end", EndOpenAsync);
     }
 
@@ -106,7 +130,10 @@ internal sealed class CoinRadioListenTracker : IDisposable
                 Interlocked.Exchange(ref blockedUntilTick, Environment.TickCount64 + MissingBackoffMilliseconds);
             }
 
-            if (started is not { Started: true } || string.IsNullOrEmpty(started.SessionId))
+            var accepted = started is { Started: true } && !string.IsNullOrEmpty(started.SessionId);
+            var retryDelay = CoinRadioListen.RetryDelayFor(accepted, started?.Reason ?? string.Empty, status);
+            Interlocked.Exchange(ref retryAtTick, retryDelay > 0 ? Environment.TickCount64 + retryDelay : 0);
+            if (started is null || !accepted)
             {
                 return;
             }

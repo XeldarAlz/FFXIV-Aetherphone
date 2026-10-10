@@ -10,6 +10,17 @@ public sealed class CoinRadioListenTests
     private const string OtherStation = "station-b";
 
     [Fact]
+    public void ARefusedStartRetriesUnlessTheStationIsOwnOrGone()
+    {
+        Assert.Equal(CoinRadioListen.RetryMilliseconds, CoinRadioListen.RetryDelayFor(false, "offline", 0));
+        Assert.Equal(CoinRadioListen.RetryMilliseconds, CoinRadioListen.RetryDelayFor(false, "unavailable", 0));
+        Assert.Equal(CoinRadioListen.RetryMilliseconds, CoinRadioListen.RetryDelayFor(false, string.Empty, 500));
+        Assert.Equal(0, CoinRadioListen.RetryDelayFor(false, "own_station", 0));
+        Assert.Equal(0, CoinRadioListen.RetryDelayFor(false, string.Empty, 404));
+        Assert.Equal(0, CoinRadioListen.RetryDelayFor(true, string.Empty, 0));
+    }
+
+    [Fact]
     public void StartsOnlyOncePlaybackIsActuallyPlaying()
     {
         Assert.Equal(RadioListenStep.None,
