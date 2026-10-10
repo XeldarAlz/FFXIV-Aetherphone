@@ -62,6 +62,24 @@ public sealed class SeasonalThemeTests
     }
 
     [Fact]
+    public void BlackletterNamesFollowTheNameFontSwitch()
+    {
+        SeasonalTheme.Update(new Configuration(), HalloweenNight);
+        Assert.True(SeasonalTheme.BlackletterNames);
+
+        SeasonalTheme.Update(new Configuration { SeasonalNameFont = false }, HalloweenNight);
+        Assert.False(SeasonalTheme.BlackletterNames);
+    }
+
+    [Fact]
+    public void BlackletterNamesNeedHalloween()
+    {
+        SeasonalTheme.Update(new Configuration(), Midsummer);
+
+        Assert.False(SeasonalTheme.BlackletterNames);
+    }
+
+    [Fact]
     public void OnlyTheThirtyFirstIsHalloweenNight()
     {
         SeasonalTheme.Update(new Configuration(), HalloweenNight);

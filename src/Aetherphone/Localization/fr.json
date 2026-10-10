@@ -1132,6 +1132,8 @@
   "settings.iconAppearanceHint": "Sombre et Teinté repeignent chaque icône sur du graphite, Transparent l'affiche en verre sur le fond d'écran. Les icônes sans illustration peinte gardent leur tuile colorée.",
   "settings.seasonalDecorations": "Décorations saisonnières",
   "settings.seasonalDecorationsHint": "Ajoute des touches festives à tout le téléphone pendant les événements saisonniers comme Halloween.",
+  "settings.seasonalNameFont": "Police saisonnière des noms",
+  "settings.seasonalNameFontHint": "Affiche les noms dans Chirper, Aethergram et Velvet avec la police saisonnière.",
   "settings.seasonalSounds": "Sons saisonniers",
   "settings.seasonalSoundsHint": "Joue les sons festifs qui accompagnent les décorations saisonnières. Désactivez-les pour garder le style avec les sons habituels.",
   "seasonal.packAnswers": "La meute répond",

@@ -2156,6 +2156,8 @@ internal static class L
         public static readonly LocString IconAppearanceHint = new("settings.iconAppearanceHint", "Dark and Tinted repaint each icon on graphite, Clear shows it as glass over the wallpaper. Icons without painted artwork keep their colored tile.");
         public static readonly LocString SeasonalDecorations = new("settings.seasonalDecorations", "Seasonal Decorations");
         public static readonly LocString SeasonalDecorationsHint = new("settings.seasonalDecorationsHint", "Adds holiday touches across the phone during seasonal events like Halloween.");
+        public static readonly LocString SeasonalNameFont = new("settings.seasonalNameFont", "Seasonal Name Font");
+        public static readonly LocString SeasonalNameFontHint = new("settings.seasonalNameFontHint", "Writes display names in Chirper, Aethergram and Velvet in the seasonal font.");
         public static readonly LocString SeasonalSounds = new("settings.seasonalSounds", "Seasonal Sounds");
         public static readonly LocString SeasonalSoundsHint = new("settings.seasonalSoundsHint", "Plays the holiday sounds that come with Seasonal Decorations. Turn off to keep the look with the usual sounds.");
         public static readonly LocString SearchHint = new("settings.searchHint", "Search settings");

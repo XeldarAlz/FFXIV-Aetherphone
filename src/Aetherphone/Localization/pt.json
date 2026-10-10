@@ -1132,6 +1132,8 @@
   "settings.iconAppearanceHint": "Escuro e Colorido repintam cada ícone sobre grafite, Transparente o mostra como vidro sobre o papel de parede. Ícones sem arte pintada mantêm o bloco colorido.",
   "settings.seasonalDecorations": "Decorações sazonais",
   "settings.seasonalDecorationsHint": "Adiciona toques festivos a todo o telefone durante eventos sazonais como o Halloween.",
+  "settings.seasonalNameFont": "Fonte sazonal dos nomes",
+  "settings.seasonalNameFontHint": "Mostra os nomes no Chirper, Aethergram e Velvet com a fonte sazonal.",
   "settings.seasonalSounds": "Sons sazonais",
   "settings.seasonalSoundsHint": "Toca os sons festivos que acompanham as decorações sazonais. Desative para manter o visual com os sons de sempre.",
   "seasonal.packAnswers": "A matilha responde",
