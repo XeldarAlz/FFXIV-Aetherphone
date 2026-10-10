@@ -5,6 +5,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -27,6 +28,8 @@ internal sealed partial class VelvetShell
         {
             this.app = app;
         }
+
+        public void UseSendSound(UiSound sound) => composer.SendSound = sound;
 
         protected override PhoneTheme Theme => app.theme;
         protected override IPhoneApp Owner => app;

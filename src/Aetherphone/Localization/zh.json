@@ -1141,6 +1141,7 @@
   "seasonal.aethergramCaughtUpHint": "更早的帖子潜伏在下方",
   "seasonal.velvetFeedNone": "还没有点亮一根蜡烛",
   "seasonal.velvetConnected": "烛光为证",
+  "seasonal.candlesFlare": "烛火骤然燃起",
   "settings.searchHint": "搜索设置",
   "settings.noResults": "没有匹配的设置",
   "settings.phoneWidthReadout": "宽 {0} px",

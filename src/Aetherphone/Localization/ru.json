@@ -1141,6 +1141,7 @@
   "seasonal.aethergramCaughtUpHint": "Ниже таятся более старые посты",
   "seasonal.velvetFeedNone": "Ещё ни одна свеча не зажжена",
   "seasonal.velvetConnected": "Скреплено при свечах",
+  "seasonal.candlesFlare": "Свечи вспыхивают",
   "settings.searchHint": "Поиск настроек",
   "settings.noResults": "Ни одна настройка не подходит",
   "settings.phoneWidthReadout": "{0} px в ширину",

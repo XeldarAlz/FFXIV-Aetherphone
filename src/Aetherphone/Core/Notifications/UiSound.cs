@@ -65,6 +65,10 @@ internal enum UiSound
     HalloweenIgnite,
     HalloweenOrgan,
     HalloweenSwarm,
+    HalloweenSparkle,
+    HalloweenWhisper,
+    HalloweenFlare,
+    HalloweenCrystal,
 }
 
 internal enum UiSoundChannel
@@ -226,6 +230,10 @@ internal static class UiSoundCatalog
     private static readonly string[] HalloweenIgnite = { "Ui/halloween_ignite.wav" };
     private static readonly string[] HalloweenOrgan = { "Ui/halloween_organ.wav" };
     private static readonly string[] HalloweenSwarm = { "Ui/halloween_swarm.wav" };
+    private static readonly string[] HalloweenSparkle = { "Ui/halloween_sparkle.wav" };
+    private static readonly string[] HalloweenWhisper = { "Ui/halloween_whisper.wav" };
+    private static readonly string[] HalloweenFlare = { "Ui/halloween_flare.wav" };
+    private static readonly string[] HalloweenCrystal = { "Ui/halloween_crystal.wav" };
 
     public static readonly UiSoundEntry[] Entries =
     {
@@ -292,6 +300,10 @@ internal static class UiSoundCatalog
         new(HalloweenIgnite, 0.6f, 80, UiSoundChannel.Tap),
         new(HalloweenOrgan, 0.5f, 600, UiSoundChannel.Event),
         new(HalloweenSwarm, 0.6f, 2500, UiSoundChannel.Event),
+        new(HalloweenSparkle, 0.5f, 80, UiSoundChannel.Tap, SubtleVariance),
+        new(HalloweenWhisper, 0.55f, 120, UiSoundChannel.Event),
+        new(HalloweenFlare, 0.6f, 2500, UiSoundChannel.Event),
+        new(HalloweenCrystal, 0.5f, 600, UiSoundChannel.Event),
     };
 
     public static IReadOnlyList<string> Files()

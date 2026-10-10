@@ -1141,6 +1141,7 @@
   "seasonal.aethergramCaughtUpHint": "Les publications plus anciennes rôdent ci-dessous",
   "seasonal.velvetFeedNone": "Aucune bougie allumée pour l'instant",
   "seasonal.velvetConnected": "Scellé à la lueur des bougies",
+  "seasonal.candlesFlare": "Les bougies s'embrasent",
   "settings.searchHint": "Rechercher dans les réglages",
   "settings.noResults": "Aucun réglage ne correspond",
   "settings.phoneWidthReadout": "{0} px de large",

@@ -10,12 +10,25 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetShell
 {
+    private const float LogoTapReach = 0.6f;
+
     private int seasonApplied = -1;
 
     private static string DiscoverGlyph => SeasonalTheme.Halloween ? PhoneIcons.CrystalBall : PhoneIcons.Compass;
     private static string FeedGlyph => SeasonalTheme.Halloween ? PhoneIcons.Candle : PhoneIcons.Photo;
     private static LocString FeedNoneTitle => SeasonalTheme.Halloween ? L.Seasonal.VelvetFeedNone : L.Velvet.FeedNone;
-    private static UiSound ConnectSound => SeasonalTheme.Halloween ? UiSound.HalloweenHeartbeat : UiSound.Tap;
+    private static UiSound ConnectSound => Spooky(UiSound.HalloweenHeartbeat);
+
+    private static UiSound Spooky(UiSound halloween) => SeasonalTheme.Halloween ? halloween : UiSound.Tap;
+
+    private static UiSound LikeSound(bool liked) => liked ? UiSound.Tap : Spooky(UiSound.HalloweenSparkle);
+
+    private UiSound TitleSound => activeTab switch
+    {
+        VelvetPage.Discover => Spooky(UiSound.HalloweenCrystal),
+        VelvetPage.Feed => Spooky(UiSound.HalloweenIgnite),
+        _ => UiSound.Tap,
+    };
 
     private void SyncSeason()
     {
@@ -30,6 +43,38 @@ internal sealed partial class VelvetShell
         doubleTapLike.Crimson = SeasonalTheme.Halloween;
         pullToRefresh.Style = SeasonalTheme.Halloween ? PullStyle.Moon : PullStyle.Dots;
         pullToRefresh.RefreshSound = SeasonalTheme.Halloween ? UiSound.HalloweenIgnite : UiSound.Refresh;
+        threadView.UseSendSound(SeasonalTheme.Halloween ? UiSound.HalloweenWhisper : UiSound.MessageSent);
+    }
+
+    private void DrawLogoTap(Vector2 logoCenter, float logoSize)
+    {
+        if (!SeasonalTheme.Halloween)
+        {
+            return;
+        }
+
+        var reach = new Vector2(logoSize * LogoTapReach, logoSize * LogoTapReach);
+        bool tapped;
+        using (UiFeedback.ReplaceTap(UiSound.HalloweenFlare))
+        {
+            tapped = UiInteract.HoverClick(logoCenter - reach, logoCenter + reach);
+        }
+
+        if (!tapped)
+        {
+            return;
+        }
+
+        NightScene.Kindle();
+        toast.Show(Loc.T(L.Seasonal.CandlesFlare));
+    }
+
+    private static void NoteDoubleTapLike()
+    {
+        if (SeasonalTheme.Halloween)
+        {
+            UiFeedback.Play(UiSound.HalloweenSparkle);
+        }
     }
 
     private static void DrawNight(Rect screen, float top)

@@ -2177,6 +2177,7 @@ internal static class L
         public static readonly LocString AethergramCaughtUpHint = new("seasonal.aethergramCaughtUpHint", "Older posts lurk below");
         public static readonly LocString VelvetFeedNone = new("seasonal.velvetFeedNone", "Not a candle lit yet");
         public static readonly LocString VelvetConnected = new("seasonal.velvetConnected", "Sealed by candlelight");
+        public static readonly LocString CandlesFlare = new("seasonal.candlesFlare", "The candles flare");
     }
 
     internal static class Translate

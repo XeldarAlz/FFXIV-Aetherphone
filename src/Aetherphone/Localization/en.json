@@ -1141,6 +1141,7 @@
   "seasonal.aethergramCaughtUpHint": "Older posts lurk below",
   "seasonal.velvetFeedNone": "Not a candle lit yet",
   "seasonal.velvetConnected": "Sealed by candlelight",
+  "seasonal.candlesFlare": "The candles flare",
   "settings.searchHint": "Search settings",
   "settings.noResults": "No settings match that",
   "settings.phoneWidthReadout": "{0} px wide",

@@ -528,6 +528,35 @@ def bat_swarm():
     return place(*layers)
 
 
+def spell_sparkle():
+    layers = [(index * 0.04, (0.8 - index * 0.14) * partial(note(name), 0.1, 1.0, attack=0.003))
+              for index, name in enumerate(("E6", "G#6", "B6", "E7"))]
+    layers.append((0, noise(0.28, 5000, 11000, 0.09, 0.04, 481)))
+    return room(place(*layers), 0.25, decay=0.12, seed=481)
+
+
+def whisper():
+    return room(swept_noise(0.32, 1800, 900, 0.7, 0.08, 491), 0.18, decay=0.08, seed=491)
+
+
+def candle_flare():
+    rush = swept_noise(0.55, 300, 1800, 0.9, 0.02, 501)
+    warmth = lowpass(partial(note("A3"), 0.25, 0.5, duration=0.7, attack=0.05)
+                     + partial(note("E4"), 0.22, 0.3, duration=0.7, attack=0.05), 900)
+    crackle = place(*[(0.08 + index * 0.07, noise(0.012, 2000, 7000, 0.004, 0.25, 502 + index)) for index in range(4)])
+    return room(place((0, rush), (0.04, warmth), (0, crackle)), 0.2, decay=0.1, seed=501)
+
+
+def crystal_shimmer():
+    span = 0.8
+    time = times(span)
+    base = note("A5")
+    tone = sum(amplitude * np.sin(2 * np.pi * base * ratio * time) for ratio, amplitude in ((1, 1.0), (2.76, 0.25), (5.4, 0.08)))
+    shimmer = 1 + 0.35 * np.sin(2 * np.pi * 7 * time)
+    envelope = (1 - np.exp(-time / 0.01)) * np.exp(-time / 0.28)
+    return room(tone * shimmer * envelope, 0.3, decay=0.15, seed=511)
+
+
 def halloween_sounds():
     sounds = {}
     for index, frequency in enumerate((150, 158, 143), start=1):
@@ -547,6 +576,10 @@ def halloween_sounds():
     sounds["halloween_ignite"] = (candle_ignite(), "air")
     sounds["halloween_organ"] = (organ_swell(), "air")
     sounds["halloween_swarm"] = (bat_swarm(), "tick")
+    sounds["halloween_sparkle"] = (spell_sparkle(), "tick")
+    sounds["halloween_whisper"] = (whisper(), "air")
+    sounds["halloween_flare"] = (candle_flare(), "air")
+    sounds["halloween_crystal"] = (crystal_shimmer(), "tick")
     return sounds
 
 

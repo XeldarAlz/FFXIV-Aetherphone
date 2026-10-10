@@ -5,6 +5,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Translation;
 using Aetherphone.Windows.Components;
@@ -131,10 +132,14 @@ internal sealed partial class VelvetShell
             var actionsY = imageRect.Max.Y + 22f * scale;
             var liked = post.MyReaction >= 0;
             var actionX = innerX + CardActionInset * scale - VIcon.CardAction * scale * 0.5f;
-            var likeTap = DrawCardAction(drawList, ref actionX, actionsY,
-                liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
-                liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk, post.TotalReactions, Loc.T(L.Velvet.Like),
-                Loc.T(L.Velvet.LikesTitle));
+            CardActionTap likeTap;
+            using (UiFeedback.ReplaceTap(LikeSound(liked)))
+            {
+                likeTap = DrawCardAction(drawList, ref actionX, actionsY,
+                    liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
+                    liked ? VelvetInk.Shared.LikeRed : VelvetTheme.TitleInk, post.TotalReactions, Loc.T(L.Velvet.Like),
+                    Loc.T(L.Velvet.LikesTitle));
+            }
             if (likeTap == CardActionTap.Icon)
             {
                 store.ToggleReaction(post, 0);

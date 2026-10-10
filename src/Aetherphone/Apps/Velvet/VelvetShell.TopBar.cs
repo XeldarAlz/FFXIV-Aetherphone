@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -45,6 +46,8 @@ internal sealed partial class VelvetShell
             PhoneIcon.Draw(drawList, logoCenter, PhoneIcons.Moon, VelvetTheme.RoseInk, logoSize);
         }
 
+        DrawLogoTap(logoCenter, logoSize);
+
         var titleLeft = logoCenter.X + logoSize * 0.5f + LogoGap * scale;
         var titleRight = SocialChrome.HeaderSlot(area, RootTrailingSlots(activeTab) - 1).X
             - SocialChrome.HeaderIconRadius * scale - TitleIconGap * scale;
@@ -56,7 +59,13 @@ internal sealed partial class VelvetShell
             titleTop + titleSize.Y + TitleHitPadY * scale);
         UiInteract.HoverHighlight(drawList, titleMin, titleMax, TitleHitRounding * scale);
         Typography.Draw(drawList, new Vector2(titleLeft, titleTop), title, VelvetTheme.TitleInk, WordmarkStyle);
-        if (UiInteract.HoverClick(titleMin, titleMax))
+        bool titleTapped;
+        using (UiFeedback.ReplaceTap(TitleSound))
+        {
+            titleTapped = UiInteract.HoverClick(titleMin, titleMax);
+        }
+
+        if (titleTapped)
         {
             RefreshRootTab();
         }
