@@ -11,12 +11,13 @@ internal enum StripPage : byte
     Machine,
     Race,
     Table,
+    Dealer,
     Challenge,
 }
 
 internal sealed class StripCarousel
 {
-    public const int MaxPages = 5;
+    public const int MaxPages = 6;
     public const float AdvanceSeconds = 6f;
     public const float CardGap = 12f;
     public const float DotsGap = 10f;

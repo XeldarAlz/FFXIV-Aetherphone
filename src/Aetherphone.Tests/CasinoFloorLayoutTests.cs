@@ -137,12 +137,53 @@ public sealed class CasinoFloorLayoutTests
         {
             CasinoGames.Blackjack, CasinoGames.SlotsBird, CasinoGames.SlotsCascade, CasinoGames.SlotsMoogle,
             CasinoGames.Plinko, CasinoGames.Mines, CasinoGames.Race, CasinoGames.Wheel, CasinoGames.Bingo,
-            CasinoGames.Scratch, CasinoGames.Barkeep,
+            CasinoGames.Scratch, CasinoGames.Barkeep, CasinoGames.DealerHoldem,
         };
         for (var index = 0; index < printed.Length; index++)
         {
             Assert.InRange(CasinoAppReturns(printed[index]), 900, 999);
         }
+    }
+
+    [Fact]
+    public void EveryPaidGamePosterPrintsAMinimumBet()
+    {
+        for (var shelfIndex = 0; shelfIndex < StripCatalog.Shelves.Length; shelfIndex++)
+        {
+            var entries = StripCatalog.EntriesOf(StripCatalog.Shelves[shelfIndex]);
+            for (var index = 0; index < entries.Length; index++)
+            {
+                var entry = entries[index];
+                if (entry.Action != StripAction.Game || entry.GameId == CasinoGames.DailySpin)
+                {
+                    continue;
+                }
+
+                Assert.True(CasinoApp.MinimumStakeOf(entry.GameId) > 0, entry.GameId);
+            }
+        }
+    }
+
+    [Fact]
+    public void TheDealerHoldemPosterPrintsTheMinimumAnteAndThePublishedReturn()
+    {
+        Assert.Equal(DealerHoldemRules.MinAnte, CasinoApp.MinimumStakeOf(CasinoGames.DealerHoldem));
+        Assert.Equal(DealerHoldemRules.ReturnTenths, CasinoAppReturns(CasinoGames.DealerHoldem));
+    }
+
+    [Fact]
+    public void TheHeroCarouselHoldsEveryPageAtOnce()
+    {
+        var pages = Enum.GetValues<StripPage>();
+        Assert.Equal(StripCarousel.MaxPages, pages.Length);
+        var carousel = new StripCarousel();
+        for (var index = 0; index < pages.Length; index++)
+        {
+            carousel.Add(pages[index]);
+        }
+
+        Assert.Equal(StripCarousel.MaxPages, carousel.Count);
+        Assert.Equal(StripPage.Dealer, carousel.PageAt((int)StripPage.Dealer));
     }
 
     [Fact]

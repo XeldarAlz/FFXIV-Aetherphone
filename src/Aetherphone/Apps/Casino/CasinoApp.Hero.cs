@@ -22,7 +22,7 @@ internal sealed partial class CasinoApp
     private static readonly Vector4 JackpotBed = new(0.07f, 0.02f, 0.05f, 1f);
     private static readonly Vector4 HeroScrim = new(0.02f, 0.015f, 0.04f, 0.92f);
 
-    private readonly CabinetPreview[] heroPreviews = { new(), new(), new() };
+    private readonly CabinetPreview[] heroPreviews = { new(), new(), new(), new() };
     private RollingAmount jackpotRoll;
     private CasinoTableRowDto? hotTable;
     private CasinoTableRowDto? namedTable;
@@ -92,6 +92,11 @@ internal sealed partial class CasinoApp
         if (hotTable is not null)
         {
             heroCards.Add(StripPage.Table);
+        }
+
+        if (CasinoGameGate.IsOpen(features, CasinoGames.DealerHoldem))
+        {
+            heroCards.Add(StripPage.Dealer);
         }
 
         if (casino.HasFeature(CasinoFeatures.Challenges) && floor.LiveChallenge() is not null)
@@ -172,6 +177,12 @@ internal sealed partial class CasinoApp
                 DrawHeroOverlay(drawList, shown, Loc.T(L.Strip.HeroTableEyebrow), TableName(hotTable),
                     texts.Counts(L.Casino.TableSeats, hotTable.SeatedCount, hotTable.MaxSeats), scale);
                 break;
+            case StripPage.Dealer:
+                DrawPreviewPage(drawList, shown, radius, 3, dealerHoldem, CasinoArt.TintOf(CasinoGames.DealerHoldem),
+                    live, hovered, delta, scale);
+                DrawHeroOverlay(drawList, shown, Loc.T(L.Strip.HeroDealerEyebrow), Loc.T(L.DealerHoldem.Game),
+                    MinimumStakeLine(CasinoGames.DealerHoldem), scale);
+                break;
             case StripPage.Challenge:
                 DrawChallengePage(drawList, shown, radius, scale);
                 break;
@@ -193,6 +204,9 @@ internal sealed partial class CasinoApp
                 break;
             case StripPage.Table when hotTable is not null:
                 OpenTable(hotTable.TableId);
+                break;
+            case StripPage.Dealer:
+                OpenGame(CasinoGames.DealerHoldem, shown);
                 break;
             case StripPage.Challenge:
                 OpenChallenge(shown);

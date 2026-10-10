@@ -142,7 +142,7 @@ internal sealed partial class CasinoApp
         return minimum > 0 ? texts.Compact(L.Strip.FromChips, minimum) : string.Empty;
     }
 
-    private static long MinimumStakeOf(string gameId) => gameId switch
+    internal static long MinimumStakeOf(string gameId) => gameId switch
     {
         CasinoGames.Slots or CasinoGames.SlotsBird or CasinoGames.SlotsCascade or CasinoGames.SlotsMoogle =>
             SlotsRules.MinStake,
@@ -156,6 +156,7 @@ internal sealed partial class CasinoApp
         CasinoGames.Barkeep => BarkeepRules.EntryChips,
         CasinoGames.Blackjack => BlackjackRules.HouseFloor,
         CasinoGames.Holdem => HoldemRules.BigBlindFor(0),
+        CasinoGames.DealerHoldem => DealerHoldemRules.MinAnte,
         _ => 0,
     };
 
@@ -172,6 +173,7 @@ internal sealed partial class CasinoApp
         CasinoGames.Scratch => ScratchRules.ReturnBasisPoints / 10,
         CasinoGames.Barkeep => Cabinets.BarkeepCabinet.ReturnTenths,
         CasinoGames.Blackjack => BlackjackRules.ReturnTenths,
+        CasinoGames.DealerHoldem => DealerHoldemRules.ReturnTenths,
         _ => 0,
     };
 
