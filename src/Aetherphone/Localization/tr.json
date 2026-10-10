@@ -1146,6 +1146,8 @@
   "seasonal.velvetFeedNone": "Henüz tek bir mum bile yanmadı",
   "seasonal.velvetConnected": "Mum ışığında mühürlendi",
   "seasonal.candlesFlare": "Mumlar alevleniyor",
+  "seasonal.treatFound": "Şeker bulundu! {1} içinden {0}",
+  "seasonal.treatsComplete": "Tüm şekerler bulundu! Adın Cadılar Bayramı boyunca kutsal bir alevle yanacak.",
   "settings.searchHint": "Ayarlarda ara",
   "settings.noResults": "Buna uyan ayar yok",
   "settings.phoneWidthReadout": "{0} px genişlik",

@@ -15,15 +15,41 @@ internal static class UserName
     private static BadgeCatalogStore? communityCatalog;
     private static RemoteImageCache? communityImages;
     private static bool gothic;
+    private static string selfDisplay = string.Empty;
+    private static string selfHandle = string.Empty;
 
-    public static GothicNameScope Gothic(bool enabled)
+    public static NameStyleScope Style(bool blackletter, string ownDisplayName, string ownHandle)
     {
-        var previous = gothic;
-        gothic = enabled;
-        return new GothicNameScope(previous);
+        var scope = new NameStyleScope(gothic, selfDisplay, selfHandle);
+        gothic = blackletter;
+        selfDisplay = ownDisplayName;
+        selfHandle = ownHandle;
+        return scope;
     }
 
-    public static void RestoreGothic(bool previous) => gothic = previous;
+    public static void Restore(bool previousGothic, string previousDisplay, string previousHandle)
+    {
+        gothic = previousGothic;
+        selfDisplay = previousDisplay;
+        selfHandle = previousHandle;
+    }
+
+    private static bool IsSelf(string name)
+    {
+        if (selfHandle.Length == 0)
+        {
+            return false;
+        }
+
+        if (string.Equals(name, selfDisplay, StringComparison.Ordinal)
+            || string.Equals(name, selfHandle, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return name.Length == selfHandle.Length + 1 && name[0] == '@'
+            && name.AsSpan(1).SequenceEqual(selfHandle.AsSpan());
+    }
 
     public static void Configure(BadgeCatalogStore catalog, RemoteImageCache images)
     {
@@ -131,6 +157,12 @@ internal static class UserName
                 ink = RoleInk.For(top.Value.Kind, light);
                 effect = NameEffects.For(top.Value.Kind, light);
             }
+        }
+
+        if (IsSelf(name) && Treats.Rewarded)
+        {
+            ink = NameEffects.HallowedInk(light);
+            effect = NameEffects.Hallowed(light);
         }
 
         var reserve = Reserve(badges, badgeIds, style, maxBadges);

@@ -1146,6 +1146,8 @@
   "seasonal.velvetFeedNone": "还没有点亮一根蜡烛",
   "seasonal.velvetConnected": "烛光为证",
   "seasonal.candlesFlare": "烛火骤然燃起",
+  "seasonal.treatFound": "找到糖果！{0}/{1}",
+  "seasonal.treatsComplete": "找到了全部糖果！在万圣节剩下的日子里，你的名字将燃起神圣之火。",
   "settings.searchHint": "搜索设置",
   "settings.noResults": "没有匹配的设置",
   "settings.phoneWidthReadout": "宽 {0} px",

@@ -43,6 +43,18 @@ internal static class NameEffects
     private const int RainbowStops = 8;
     private const float RainbowSaturation = 0.72f;
 
+    private static readonly Vector4[] HallowedColors =
+    {
+        new(1f, 0.74f, 0.32f, 1f),
+        new(0.96f, 0.45f, 0.12f, 1f),
+        new(0.58f, 0.25f, 0.86f, 1f),
+    };
+
+    public static Vector4 HallowedInk(bool light) => RoleInk.For(HallowedColors[1], light);
+
+    public static TextEffect Hallowed(bool light) => new(NameEffectKind.Blaze,
+        RoleInk.Highlight(HallowedColors[0], light), Phase(NameEffectKind.Blaze), RampAcross(HallowedColors, light));
+
     public static TextEffect For(RoleKind role, bool light)
     {
         var kind = KindFor(role);

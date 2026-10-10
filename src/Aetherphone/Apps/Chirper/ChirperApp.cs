@@ -382,7 +382,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
     public void Draw(in PhoneContext context)
     {
-        using var gothicNames = UserName.Gothic(SeasonalTheme.BlackletterNames);
+        using var names = UserName.Style(SeasonalTheme.BlackletterNames, OwnDisplayName, OwnHandle);
         using var tapGlow = TapGlow.Use(SeasonalTheme.Halloween, GlowInk);
         theme = context.Theme;
         navigation = context.Navigation;
@@ -434,6 +434,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     {
         ui.Body(area);
         DrawNight(screenRect, area.Min.Y);
+        OfferTreat(area, depth);
         switch (route.Screen)
         {
             case ChirperScreen.Compose:

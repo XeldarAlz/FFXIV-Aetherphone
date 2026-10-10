@@ -123,6 +123,7 @@ internal static class ChatWallpapers
             }
         }
 
+        Treats.Offer(drawList, TreatSpot.ChatWallpaper, area);
         drawList.PopClipRect();
     }
 

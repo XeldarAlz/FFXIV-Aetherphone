@@ -1146,6 +1146,8 @@
   "seasonal.velvetFeedNone": "Aún no arde ninguna vela",
   "seasonal.velvetConnected": "Sellado a la luz de las velas",
   "seasonal.candlesFlare": "Las velas se avivan",
+  "seasonal.treatFound": "¡Dulce encontrado! {0} de {1}",
+  "seasonal.treatsComplete": "¡Todos los dulces encontrados! Tu nombre arde con una llama sagrada durante el resto de Halloween.",
   "settings.searchHint": "Buscar ajustes",
   "settings.noResults": "Ningún ajuste coincide con eso",
   "settings.phoneWidthReadout": "{0} px de ancho",

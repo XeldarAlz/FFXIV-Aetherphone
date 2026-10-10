@@ -1146,6 +1146,8 @@
   "seasonal.velvetFeedNone": "まだ一本の蝋燭も灯っていない",
   "seasonal.velvetConnected": "蝋燭の灯りに誓って",
   "seasonal.candlesFlare": "蝋燭の炎が燃え上がった",
+  "seasonal.treatFound": "お菓子を見つけた！{0}/{1}",
+  "seasonal.treatsComplete": "お菓子をすべて見つけた！ハロウィンが終わるまで、あなたの名前が聖なる炎で燃え上がります。",
   "settings.searchHint": "設定を検索",
   "settings.noResults": "一致する設定はありません",
   "settings.phoneWidthReadout": "幅 {0} px",

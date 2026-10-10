@@ -218,6 +218,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool SeasonalDecorations { get; set; } = true;
     public bool SeasonalSounds { get; set; } = true;
     public bool SeasonalNameFont { get; set; } = true;
+    public int HalloweenTreatYear { get; set; }
+    public int HalloweenTreats { get; set; }
     public bool PreviewHalloween { get; set; }
     public bool LiveGlass { get; set; }
     public LiveGlassSource LiveGlassSource { get; set; } = LiveGlassSource.World;

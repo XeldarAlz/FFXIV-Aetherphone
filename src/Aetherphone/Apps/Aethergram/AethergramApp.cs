@@ -391,7 +391,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
     public void Draw(in PhoneContext context)
     {
-        using var gothicNames = UserName.Gothic(SeasonalTheme.BlackletterNames);
+        using var names = UserName.Style(SeasonalTheme.BlackletterNames, OwnDisplayName, OwnHandle);
         using var tapGlow = TapGlow.Use(SeasonalTheme.Halloween, GlowInk);
         dmStore.NoteInboxWatched();
         theme = context.Theme;
@@ -455,6 +455,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     {
         ui.Body(area);
         DrawNight(screenRect, area.Min.Y);
+        OfferTreat(area, depth);
         switch (route.Screen)
         {
             case AethergramScreen.Compose:

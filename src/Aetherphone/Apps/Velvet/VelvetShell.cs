@@ -282,7 +282,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
 
     public void Draw(in PhoneContext context)
     {
-        using var gothicNames = UserName.Gothic(SeasonalTheme.BlackletterNames);
+        using var names = UserName.Style(SeasonalTheme.BlackletterNames, OwnDisplayName, OwnHandle);
         using var tapGlow = TapGlow.Use(SeasonalTheme.Halloween, GlowInk);
         store.NoteInboxWatched();
         theme = context.Theme;
@@ -440,6 +440,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
     {
         ui.Body(area);
         DrawNight(screenRect, area.Min.Y);
+        OfferTreat(area, depth);
         switch (view.Screen)
         {
             case VelvetScreenId.Root:

@@ -9,6 +9,8 @@ internal sealed class SkyTransition
 {
     private const float SmoothSeconds = 0.55f;
     private const float SettledThreshold = 0.995f;
+    private const float TreatTop = 0.08f;
+    private const float TreatBottom = 0.16f;
     private WeatherKind fromKind;
     private WeatherKind toKind;
     private Spring progress = new(1f);
@@ -63,5 +65,8 @@ internal sealed class SkyTransition
         }
 
         WeatherAmbience.Draw(drawList, screen, rounding, toKind, daylight, Palette, scale, amount);
+        Treats.Offer(drawList, TreatSpot.Skywatcher,
+            new Rect(new Vector2(screen.Min.X, screen.Min.Y + screen.Height * TreatTop),
+                new Vector2(screen.Max.X, screen.Min.Y + screen.Height * TreatBottom)));
     }
 }

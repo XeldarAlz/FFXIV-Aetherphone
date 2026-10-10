@@ -159,6 +159,7 @@ internal sealed partial class ClockApp
             Spooks.DrawFlight(drawList, new Rect(origin, max), ImGui.GetTime(), HeroFlightPeriodSeconds,
                 HeroFlightWindow, 0.18f, 0.25f, HeroBatSize * scale, Spooks.BatShadow with { W = 0.85f });
             drawList.PopClipRect();
+            Treats.Offer(drawList, TreatSpot.Clock, new Rect(origin, max));
         }
 
         var trackTop = clockTop + clockHeight + HeroTrackGap * scale;

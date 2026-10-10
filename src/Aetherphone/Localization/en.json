@@ -1146,6 +1146,8 @@
   "seasonal.velvetFeedNone": "Not a candle lit yet",
   "seasonal.velvetConnected": "Sealed by candlelight",
   "seasonal.candlesFlare": "The candles flare",
+  "seasonal.treatFound": "Treat found! {0} of {1}",
+  "seasonal.treatsComplete": "All treats found! Your name burns with a hallowed flame for the rest of Halloween.",
   "settings.searchHint": "Search settings",
   "settings.noResults": "No settings match that",
   "settings.phoneWidthReadout": "{0} px wide",

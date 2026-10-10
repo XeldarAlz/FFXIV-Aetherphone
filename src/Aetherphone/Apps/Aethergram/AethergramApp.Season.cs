@@ -33,6 +33,14 @@ internal sealed partial class AethergramApp
     private bool introSwarmPending;
     private int seasonApplied = -1;
 
+    private string OwnDisplayName => store.Me?.DisplayName ?? string.Empty;
+
+    private string OwnHandle => store.Me?.Handle ?? string.Empty;
+
+    private void OfferTreat(Rect area, int depth) =>
+        Treats.Offer(ImGui.GetWindowDrawList(), depth > 0 ? TreatSpot.AethergramDeep : TreatSpot.AethergramFeed,
+            TreatBand.Header(screenRect, area.Min.Y, AppHeader.Height * UiScale.Current));
+
     private static LocString CaughtUpTitle =>
         SeasonalTheme.Halloween ? L.Seasonal.AethergramCaughtUp : L.Social.FeedCaughtUp;
     private static LocString CaughtUpHint =>

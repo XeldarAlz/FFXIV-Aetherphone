@@ -1146,6 +1146,8 @@
   "seasonal.velvetFeedNone": "Noch keine Kerze entzündet",
   "seasonal.velvetConnected": "Im Kerzenschein besiegelt",
   "seasonal.candlesFlare": "Die Kerzen lodern auf",
+  "seasonal.treatFound": "Süßigkeit gefunden! {0} von {1}",
+  "seasonal.treatsComplete": "Alle Süßigkeiten gefunden! Dein Name brennt für den Rest von Halloween in einer geweihten Flamme.",
   "settings.searchHint": "Einstellungen durchsuchen",
   "settings.noResults": "Keine Einstellung passt dazu",
   "settings.phoneWidthReadout": "{0} px breit",

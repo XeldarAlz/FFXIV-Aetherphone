@@ -2182,6 +2182,8 @@ internal static class L
         public static readonly LocString VelvetFeedNone = new("seasonal.velvetFeedNone", "Not a candle lit yet");
         public static readonly LocString VelvetConnected = new("seasonal.velvetConnected", "Sealed by candlelight");
         public static readonly LocString CandlesFlare = new("seasonal.candlesFlare", "The candles flare");
+        public static readonly LocString TreatFound = new("seasonal.treatFound", "Treat found! {0} of {1}");
+        public static readonly LocString TreatsComplete = new("seasonal.treatsComplete", "All treats found! Your name burns with a hallowed flame for the rest of Halloween.");
     }
 
     internal static class Translate

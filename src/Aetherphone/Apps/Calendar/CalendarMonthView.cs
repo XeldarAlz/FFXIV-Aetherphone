@@ -23,6 +23,7 @@ internal static class CalendarMonthView
     private const float HoverWashAlpha = 0.07f;
     private const float PumpkinPerch = 0.78f;
     private const float PumpkinSize = 1.05f;
+    private const float TreatSize = 0.38f;
 
     private static readonly LocString[] WeekdayInitials =
     {
@@ -117,6 +118,11 @@ internal static class CalendarMonthView
                     var perch = discRadius * PumpkinPerch;
                     PhoneIcon.Draw(drawList, center + new Vector2(perch, -perch), PhoneIcons.Pumpkin,
                         Spooks.Pumpkin with { W = alpha }, discRadius * PumpkinSize);
+                    if (!picker && interactive)
+                    {
+                        Treats.OfferAt(drawList, TreatSpot.Calendar, center + new Vector2(-perch, -perch),
+                            discRadius * TreatSize);
+                    }
                 }
 
                 if (!picker && events is not null)

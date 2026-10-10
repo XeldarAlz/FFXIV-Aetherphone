@@ -1146,6 +1146,8 @@
   "seasonal.velvetFeedNone": "Aucune bougie allumée pour l'instant",
   "seasonal.velvetConnected": "Scellé à la lueur des bougies",
   "seasonal.candlesFlare": "Les bougies s'embrasent",
+  "seasonal.treatFound": "Friandise trouvée ! {0} sur {1}",
+  "seasonal.treatsComplete": "Toutes les friandises trouvées ! Votre nom brûle d'une flamme sacrée jusqu'à la fin d'Halloween.",
   "settings.searchHint": "Rechercher dans les réglages",
   "settings.noResults": "Aucun réglage ne correspond",
   "settings.phoneWidthReadout": "{0} px de large",
