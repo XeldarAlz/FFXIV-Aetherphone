@@ -13,28 +13,12 @@ internal static class NightWordmark
 
     private static readonly Dictionary<string, Run[]> RunCache = new(StringComparer.Ordinal);
 
-    public static bool Usable(string text)
-    {
-        if (!SeasonalTheme.Halloween || !Plugin.Fonts.DisplayReady)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < text.Length; index++)
-        {
-            if (text[index] > LatinLimit)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
+    private static bool Ready => SeasonalTheme.Halloween && Plugin.Fonts.DisplayReady;
 
     public static bool Fits(string text, float maxWidth, float lineHeight, out Vector2 size)
     {
         size = default;
-        if (!Usable(text))
+        if (!Ready || text.AsSpan().IndexOfAnyExceptInRange('\0', (char)LatinLimit) >= 0)
         {
             return false;
         }
@@ -69,12 +53,7 @@ internal static class NightWordmark
     public static bool FitsMixed(string text, float maxWidth, float lineHeight, in TextStyle fallback, out float width)
     {
         width = 0f;
-        if (!SeasonalTheme.Halloween || !Plugin.Fonts.DisplayReady)
-        {
-            return false;
-        }
-
-        var runs = RunsOf(text);
+        var runs = Ready ? RunsOf(text) : Array.Empty<Run>();
         if (runs.Length == 0)
         {
             return false;
@@ -131,37 +110,21 @@ internal static class NightWordmark
 
     private static Run[] Split(string text)
     {
+        var runs = new List<Run>();
         var hasLetter = false;
-        var count = 0;
-        for (var index = 0; index < text.Length; index++)
-        {
-            var gothic = text[index] <= LatinLimit;
-            hasLetter |= gothic && char.IsLetterOrDigit(text[index]);
-            if (index == 0 || gothic != (text[index - 1] <= LatinLimit))
-            {
-                count++;
-            }
-        }
-
-        if (!hasLetter)
-        {
-            return Array.Empty<Run>();
-        }
-
-        var runs = new Run[count];
         var start = 0;
-        var slot = 0;
         for (var index = 1; index <= text.Length; index++)
         {
+            hasLetter |= text[index - 1] <= LatinLimit && char.IsLetterOrDigit(text[index - 1]);
             if (index < text.Length && (text[index] <= LatinLimit) == (text[start] <= LatinLimit))
             {
                 continue;
             }
 
-            runs[slot++] = new Run(text.Substring(start, index - start), text[start] <= LatinLimit);
+            runs.Add(new Run(text[start..index], text[start] <= LatinLimit));
             start = index;
         }
 
-        return runs;
+        return hasLetter ? runs.ToArray() : Array.Empty<Run>();
     }
 }

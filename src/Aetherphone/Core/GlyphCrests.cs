@@ -3,8 +3,7 @@ using Dalamud.Interface.ManagedFontAtlas;
 
 namespace Aetherphone.Core;
 
-internal readonly record struct GlyphCrest(float First, float FirstWidth, float FirstTop, float Second,
-    float SecondWidth, float SecondTop)
+internal readonly record struct GlyphCrest(Vector2 First, float FirstWidth, Vector2 Second, float SecondWidth)
 {
     public bool Twin => SecondWidth > 0f;
 }
@@ -18,11 +17,7 @@ internal static class GlyphCrests
     private const int MaximumSpan = 512;
     private const float KeyPrecision = 65536f;
 
-    private static readonly (int Low, int High)[] MeasuredRanges =
-    {
-        (0x0021, 0x052F),
-        (0x1E00, 0x1EFF),
-    };
+    private static readonly (int Low, int High)[] MeasuredRanges = { (0x0021, 0x052F), (0x1E00, 0x1EFF) };
 
     private static Dictionary<long, GlyphCrest> crests = new();
 
@@ -34,58 +29,36 @@ internal static class GlyphCrests
         var atlas = toolkit.NewImAtlas;
         var width = atlas.TexWidth;
         var height = atlas.TexHeight;
-        if (width <= 0 || height <= 0)
-        {
-            return;
-        }
-
         var measured = new Dictionary<long, GlyphCrest>();
         var fonts = toolkit.Fonts;
         for (var fontIndex = 0; fontIndex < fonts.Length; fontIndex++)
         {
-            var font = fonts[fontIndex];
-            for (var rangeIndex = 0; rangeIndex < MeasuredRanges.Length; rangeIndex++)
+            foreach (var (low, high) in MeasuredRanges)
             {
-                var (low, high) = MeasuredRanges[rangeIndex];
                 for (var codepoint = low; codepoint <= high; codepoint++)
                 {
-                    ImFontGlyphPtr glyph = font.FindGlyphNoFallback((char)codepoint);
-                    if (glyph.IsNull || glyph.Visible == 0)
-                    {
-                        continue;
-                    }
-
-                    var key = Key(glyph.U0, glyph.V0);
-                    if (measured.ContainsKey(key) || glyph.TextureIndex >= atlas.Textures.Size)
+                    ImFontGlyphPtr glyph = fonts[fontIndex].FindGlyphNoFallback((char)codepoint);
+                    if (glyph.IsNull || glyph.Visible == 0 || glyph.TextureIndex >= atlas.Textures.Size)
                     {
                         continue;
                     }
 
                     var texture = atlas.Textures[(int)glyph.TextureIndex];
+                    var bytesPerPixel = texture.TexPixelsAlpha8 != null ? 1 : 4;
+                    var pixels = bytesPerPixel == 1 ? texture.TexPixelsAlpha8 : (byte*)texture.TexPixelsRGBA32;
                     var left = (int)MathF.Round(glyph.U0 * width);
                     var top = (int)MathF.Round(glyph.V0 * height);
                     var right = (int)MathF.Round(glyph.U1 * width);
                     var bottom = (int)MathF.Round(glyph.V1 * height);
-                    if (left < 0 || top < 0 || right > width || bottom > height)
+                    if (pixels == null || left < 0 || top < 0 || right > width || bottom > height)
                     {
                         continue;
                     }
 
-                    if (texture.TexPixelsAlpha8 != null)
+                    var span = new ReadOnlySpan<byte>(pixels, width * height * bytesPerPixel);
+                    if (TryFind(span, bytesPerPixel, width, left, top, right - left, bottom - top, out var crest))
                     {
-                        var pixels = new ReadOnlySpan<byte>(texture.TexPixelsAlpha8, width * height);
-                        if (TryFind(pixels, width, left, top, right - left, bottom - top, out var crest))
-                        {
-                            measured[key] = crest;
-                        }
-                    }
-                    else if (texture.TexPixelsRGBA32 != null)
-                    {
-                        var pixels = new ReadOnlySpan<uint>(texture.TexPixelsRGBA32, width * height);
-                        if (TryFind(pixels, width, left, top, right - left, bottom - top, out var crest))
-                        {
-                            measured[key] = crest;
-                        }
+                        measured.TryAdd(Key(glyph.U0, glyph.V0), crest);
                     }
                 }
             }
@@ -94,8 +67,8 @@ internal static class GlyphCrests
         Volatile.Write(ref crests, measured);
     }
 
-    public static bool TryFind(ReadOnlySpan<byte> pixels, int stride, int left, int top, int columns, int rows,
-        out GlyphCrest crest)
+    public static bool TryFind(ReadOnlySpan<byte> pixels, int bytesPerPixel, int stride, int left, int top,
+        int columns, int rows, out GlyphCrest crest)
     {
         crest = default;
         if (columns <= 0 || rows <= 0 || columns > MaximumSpan)
@@ -104,57 +77,18 @@ internal static class GlyphCrests
         }
 
         Span<int> peaks = stackalloc int[columns];
-        for (var column = 0; column < columns; column++)
-        {
-            peaks[column] = -1;
-            for (var row = 0; row < rows; row++)
-            {
-                if (pixels[(top + row) * stride + left + column] >= InkThreshold)
-                {
-                    peaks[column] = row;
-                    break;
-                }
-            }
-        }
-
-        return TryFindInPeaks(peaks, rows, out crest);
-    }
-
-    public static bool TryFind(ReadOnlySpan<uint> pixels, int stride, int left, int top, int columns, int rows,
-        out GlyphCrest crest)
-    {
-        crest = default;
-        if (columns <= 0 || rows <= 0 || columns > MaximumSpan)
-        {
-            return false;
-        }
-
-        Span<int> peaks = stackalloc int[columns];
-        for (var column = 0; column < columns; column++)
-        {
-            peaks[column] = -1;
-            for (var row = 0; row < rows; row++)
-            {
-                if (pixels[(top + row) * stride + left + column] >> 24 >= InkThreshold)
-                {
-                    peaks[column] = row;
-                    break;
-                }
-            }
-        }
-
-        return TryFindInPeaks(peaks, rows, out crest);
-    }
-
-    public static bool TryFindInPeaks(ReadOnlySpan<int> peaks, int rows, out GlyphCrest crest)
-    {
-        crest = default;
         var highest = int.MaxValue;
-        for (var column = 0; column < peaks.Length; column++)
+        for (var column = 0; column < columns; column++)
         {
-            if (peaks[column] >= 0 && peaks[column] < highest)
+            peaks[column] = -1;
+            for (var row = 0; row < rows; row++)
             {
-                highest = peaks[column];
+                if (pixels[((top + row) * stride + left + column) * bytesPerPixel + bytesPerPixel - 1] >= InkThreshold)
+                {
+                    peaks[column] = row;
+                    highest = Math.Min(highest, row);
+                    break;
+                }
             }
         }
 
@@ -164,21 +98,14 @@ internal static class GlyphCrests
         }
 
         var limit = highest + Math.Max(1, (int)(rows * PeakTolerance));
-        var bestStart = -1;
-        var bestLength = 0;
-        var nextStart = -1;
-        var nextLength = 0;
+        var best = (Start: 0, Length: 0);
+        var next = (Start: 0, Length: 0);
         var runStart = -1;
-        for (var column = 0; column <= peaks.Length; column++)
+        for (var column = 0; column <= columns; column++)
         {
-            var peaked = column < peaks.Length && peaks[column] >= 0 && peaks[column] <= limit;
-            if (peaked)
+            if (column < columns && peaks[column] >= 0 && peaks[column] <= limit)
             {
-                if (runStart < 0)
-                {
-                    runStart = column;
-                }
-
+                runStart = runStart < 0 ? column : runStart;
                 continue;
             }
 
@@ -187,58 +114,41 @@ internal static class GlyphCrests
                 continue;
             }
 
-            var length = column - runStart;
-            if (length > bestLength)
+            var run = (Start: runStart, Length: column - runStart);
+            if (run.Length > best.Length)
             {
-                nextStart = bestStart;
-                nextLength = bestLength;
-                bestStart = runStart;
-                bestLength = length;
+                (next, best) = (best, run);
             }
-            else if (length > nextLength)
+            else if (run.Length > next.Length)
             {
-                nextStart = runStart;
-                nextLength = length;
+                next = run;
             }
 
             runStart = -1;
         }
 
-        var columns = (float)peaks.Length;
-        var twin = nextLength > 0 && nextLength >= bestLength * TwinBalance &&
-                   Gap(bestStart, bestLength, nextStart, nextLength) >= Math.Max(2f, columns * TwinGap);
-        if (!twin)
+        var gap = Math.Abs(next.Start - best.Start) - (next.Start > best.Start ? best.Length : next.Length);
+        if (next.Length < Math.Max(1f, best.Length * TwinBalance) || gap < Math.Max(2f, columns * TwinGap))
         {
-            crest = new GlyphCrest(Middle(bestStart, bestLength, columns), bestLength / columns,
-                RunTop(peaks, bestStart, bestLength, rows), 0f, 0f, 0f);
+            crest = new GlyphCrest(Point(peaks, best, rows), best.Length / (float)columns, default, 0f);
             return true;
         }
 
-        var (leftStart, leftLength, rightStart, rightLength) = bestStart < nextStart
-            ? (bestStart, bestLength, nextStart, nextLength)
-            : (nextStart, nextLength, bestStart, bestLength);
-        crest = new GlyphCrest(Middle(leftStart, leftLength, columns), leftLength / columns,
-            RunTop(peaks, leftStart, leftLength, rows), Middle(rightStart, rightLength, columns),
-            rightLength / columns, RunTop(peaks, rightStart, rightLength, rows));
+        var (first, second) = best.Start < next.Start ? (best, next) : (next, best);
+        crest = new GlyphCrest(Point(peaks, first, rows), first.Length / (float)columns, Point(peaks, second, rows),
+            second.Length / (float)columns);
         return true;
     }
 
-    private static float Gap(int firstStart, int firstLength, int secondStart, int secondLength) =>
-        firstStart < secondStart
-            ? secondStart - (firstStart + firstLength)
-            : firstStart - (secondStart + secondLength);
-
-    private static float Middle(int start, int length, float columns) => (start + length * 0.5f) / columns;
-
-    private static float RunTop(ReadOnlySpan<int> peaks, int start, int length, int rows)
+    private static Vector2 Point(ReadOnlySpan<int> peaks, (int Start, int Length) run, int rows)
     {
         var top = int.MaxValue;
-        for (var column = start; column < start + length; column++)
+        for (var column = run.Start; column < run.Start + run.Length; column++)
         {
             top = Math.Min(top, peaks[column]);
         }
 
-        return top / (float)rows;
+        return new Vector2((run.Start + run.Length * 0.5f) / peaks.Length, top / (float)rows);
     }
 
     private static long Key(float u, float v) =>

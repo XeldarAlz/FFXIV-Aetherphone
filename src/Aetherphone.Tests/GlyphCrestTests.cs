@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Aetherphone.Core;
 using Xunit;
 
@@ -20,8 +21,8 @@ public sealed class GlyphCrestTests
             "..######");
 
         Assert.False(crest.Twin);
-        Assert.Equal(7f / 8f, crest.First, 3);
-        Assert.Equal(0f, crest.FirstTop, 3);
+        Assert.Equal(7f / 8f, crest.First.X, 3);
+        Assert.Equal(0f, crest.First.Y, 3);
     }
 
     [Fact]
@@ -37,7 +38,7 @@ public sealed class GlyphCrestTests
             "######..");
 
         Assert.False(crest.Twin);
-        Assert.Equal(1f / 8f, crest.First, 3);
+        Assert.Equal(1f / 8f, crest.First.X, 3);
     }
 
     [Fact]
@@ -51,8 +52,8 @@ public sealed class GlyphCrestTests
             "##....##");
 
         Assert.True(crest.Twin);
-        Assert.Equal(1f / 8f, crest.First, 3);
-        Assert.Equal(7f / 8f, crest.Second, 3);
+        Assert.Equal(1f / 8f, crest.First.X, 3);
+        Assert.Equal(7f / 8f, crest.Second.X, 3);
     }
 
     [Fact]
@@ -65,7 +66,7 @@ public sealed class GlyphCrestTests
             "....#....");
 
         Assert.False(crest.Twin);
-        Assert.Equal(0.5f, crest.First, 3);
+        Assert.Equal(0.5f, crest.First.X, 3);
         Assert.Equal(1f, crest.FirstWidth, 3);
     }
 
@@ -80,7 +81,7 @@ public sealed class GlyphCrestTests
             "..####..");
 
         Assert.False(crest.Twin);
-        Assert.Equal(0.5f, crest.First, 3);
+        Assert.Equal(0.5f, crest.First.X, 3);
     }
 
     [Fact]
@@ -92,14 +93,14 @@ public sealed class GlyphCrestTests
             "#################");
 
         Assert.False(crest.Twin);
-        Assert.Equal(2.5f / 17f, crest.First, 3);
+        Assert.Equal(2.5f / 17f, crest.First.X, 3);
     }
 
     [Fact]
     public void ReportsNothingForAnEmptyGlyph()
     {
         var pixels = new byte[16];
-        Assert.False(GlyphCrests.TryFind(pixels, 4, 0, 0, 4, 4, out _));
+        Assert.False(GlyphCrests.TryFind(pixels, 1, 4, 0, 0, 4, 4, out _));
     }
 
     [Fact]
@@ -112,8 +113,8 @@ public sealed class GlyphCrestTests
             0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
         };
 
-        Assert.True(GlyphCrests.TryFind(pixels, 3, 0, 0, 3, 3, out var crest));
-        Assert.Equal(2.5f / 3f, crest.First, 3);
+        Assert.True(GlyphCrests.TryFind(MemoryMarshal.AsBytes(pixels.AsSpan()), 4, 3, 0, 0, 3, 3, out var crest));
+        Assert.Equal(2.5f / 3f, crest.First.X, 3);
     }
 
     [Fact]
@@ -132,13 +133,13 @@ public sealed class GlyphCrestTests
         var stride = rows[0].Length;
         var pixels = Pixels(rows);
 
-        Assert.True(GlyphCrests.TryFind(pixels, stride, 3, 1, 4, 5, out var crest));
-        Assert.Equal(3.5f / 4f, crest.First, 3);
+        Assert.True(GlyphCrests.TryFind(pixels, 1, stride, 3, 1, 4, 5, out var crest));
+        Assert.Equal(3.5f / 4f, crest.First.X, 3);
     }
 
     private static GlyphCrest Find(params string[] rows)
     {
-        Assert.True(GlyphCrests.TryFind(Pixels(rows), rows[0].Length, 0, 0, rows[0].Length, rows.Length,
+        Assert.True(GlyphCrests.TryFind(Pixels(rows), 1, rows[0].Length, 0, 0, rows[0].Length, rows.Length,
             out var crest));
         return crest;
     }

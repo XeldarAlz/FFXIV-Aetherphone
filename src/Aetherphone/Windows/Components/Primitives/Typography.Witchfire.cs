@@ -24,7 +24,6 @@ internal static partial class Typography
     private const float WitchfireHeatFloor = 0.3f;
     private const float WitchfireFlareFrom = 0.72f;
     private const float WitchfireFlareWeight = 0.45f;
-    private const float WitchfireDayFlareWeight = 0.45f;
     private const float WitchfireDayCrest = 0.33f;
     private const float WitchfireCoolest = 0.45f;
     private const float WitchfireCrownCool = 0.2f;
@@ -89,25 +88,19 @@ internal static partial class Typography
         public readonly Vector4 Ember;
         public readonly Vector4 Glow;
         public readonly Vector4 Smoke;
-        public readonly Vector4 Flare;
-        public readonly float FlareWeight;
 
         public WitchfirePalette(in EffectFrame frame, bool daylight)
         {
             var ramp = frame.Effect.Ramp;
-            var first = ramp.Count > 0 ? ramp.Stop(0) : frame.Crest;
-            var second = ramp.Count > 1 ? ramp.Stop(1) : frame.Crest;
             var third = ramp.Count > 2 ? ramp.Stop(2) : frame.Color;
             Daylight = daylight;
+            Ember = ramp.Count > 0 ? ramp.Stop(0) : frame.Crest;
+            Mid = ramp.Count > 1 ? ramp.Stop(1) : frame.Crest;
             Shade = ramp.Count > 0 ? ramp.Stop(ramp.Count - 1) : frame.Color;
-            Mid = second;
-            Ember = first;
             Core = daylight ? WitchfireDayFlare : WitchfireCore;
-            Hot = daylight ? WitchfireDayFlare : Vector4.Lerp(first, WitchfireCore, 0.4f);
-            Glow = daylight ? WitchfireDayGlow : Vector4.Lerp(first, WitchfireDayGlow, 0.5f);
+            Hot = daylight ? WitchfireDayFlare : Vector4.Lerp(Ember, WitchfireCore, 0.4f);
+            Glow = daylight ? WitchfireDayGlow : Vector4.Lerp(Ember, WitchfireDayGlow, 0.5f);
             Smoke = daylight ? third : Vector4.Lerp(third, White, 0.15f);
-            Flare = daylight ? WitchfireDayFlare : WitchfireCore;
-            FlareWeight = daylight ? WitchfireDayFlareWeight : WitchfireFlareWeight;
         }
     }
 
@@ -210,8 +203,8 @@ internal static partial class Typography
             var color = ramp.Count > 1 ? ramp.SampleAcross(cool) : Vector4.Lerp(frame.Crest, frame.Color, cool);
             if (heat > WitchfireFlareFrom)
             {
-                var flare = (heat - WitchfireFlareFrom) / (1f - WitchfireFlareFrom) * palette.FlareWeight;
-                color = Vector4.Lerp(color, palette.Flare, flare);
+                var flare = (heat - WitchfireFlareFrom) / (1f - WitchfireFlareFrom) * WitchfireFlareWeight;
+                color = Vector4.Lerp(color, palette.Core, flare);
             }
 
             if (!palette.Daylight)
@@ -230,16 +223,11 @@ internal static partial class Typography
     {
         var size = max - min;
         var center = (min.X + max.X) * 0.5f;
-        if (!GlyphCrests.TryGet(uvMin, out var crest))
-        {
-            var top = new Vector2(center, min.Y);
-            return new WitchfireGlyph(center, min.Y, max.Y, size.X, heat, gust, top, top, size.X, 0f);
-        }
-
-        var first = new Vector2(min.X + size.X * crest.First, min.Y + size.Y * crest.FirstTop);
-        var second = crest.Twin ? new Vector2(min.X + size.X * crest.Second, min.Y + size.Y * crest.SecondTop) : first;
-        return new WitchfireGlyph(center, min.Y, max.Y, size.X, heat, gust, first, second,
-            size.X * crest.FirstWidth, crest.Twin ? size.X * crest.SecondWidth : 0f);
+        var measured = GlyphCrests.TryGet(uvMin, out var crest);
+        var first = measured ? min + size * crest.First : new Vector2(center, min.Y);
+        return new WitchfireGlyph(center, min.Y, max.Y, size.X, heat, gust, first,
+            crest.Twin ? min + size * crest.Second : first, measured ? size.X * crest.FirstWidth : size.X,
+            size.X * crest.SecondWidth);
     }
 
     private static void DrawWitchfireGlow(in EffectFrame frame, in WitchfirePalette palette,
@@ -432,20 +420,9 @@ internal static partial class Typography
             var drift = (Hash01(slot, cycle, 5) - 0.5f) * size * WitchfireEmberSpread;
             var head = EmberAt(origin, crest.Y, local, slot, drift, gust, size);
             var tail = EmberAt(origin, crest.Y, MathF.Max(0f, local - WitchfireEmberTrail), slot, drift, gust, size);
-            Vector4 color;
-            if (palette.Daylight)
-            {
-                color = Vector4.Lerp(WitchfireDayFlare, palette.Shade, local);
-            }
-            else if (local < 0.4f)
-            {
-                color = Vector4.Lerp(WitchfireCore, palette.Ember, local / 0.4f);
-            }
-            else
-            {
-                color = Vector4.Lerp(palette.Ember, palette.Shade, (local - 0.4f) / 0.6f);
-            }
-
+            var color = palette.Daylight ? Vector4.Lerp(WitchfireDayFlare, palette.Shade, local)
+                : local < 0.4f ? Vector4.Lerp(WitchfireCore, palette.Ember, local / 0.4f)
+                : Vector4.Lerp(palette.Ember, palette.Shade, (local - 0.4f) / 0.6f);
             var alpha = MathF.Min(1f, local * 6f) * MathF.Pow(1f - local, 1.2f)
                         * (0.75f + 0.25f * MathF.Sin((float)(seconds * 23.0) + slot * 7f));
             NightScene.Glow(frame.DrawList, head, size * WitchfireEmberGlow * 1.6f,
@@ -458,13 +435,10 @@ internal static partial class Typography
     }
 
     private static Vector2 EmberAt(float origin, float top, float amount, int slot, float drift, float gust,
-        float size)
-    {
-        return new Vector2(
-            origin + MathF.Sin(amount * WitchfireEmberCurlRate + slot) * size * WitchfireEmberCurl * amount
-                   + drift * amount + gust * size * WitchfireEmberGustPush * amount,
-            top - amount * size * WitchfireEmberRise);
-    }
+        float size) => new(
+        origin + MathF.Sin(amount * WitchfireEmberCurlRate + slot) * size * WitchfireEmberCurl * amount
+               + drift * amount + gust * size * WitchfireEmberGustPush * amount,
+        top - amount * size * WitchfireEmberRise);
 
     private static float FlickerNoise(double seconds, int glyph)
     {
