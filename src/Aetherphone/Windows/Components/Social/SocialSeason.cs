@@ -12,6 +12,10 @@ internal static class SocialSeason
 
     public static UiSound Sound(UiSound halloween) => SeasonalTheme.Halloween ? halloween : UiSound.Tap;
 
+    public static bool RewardedSelf(string? signedInId, string userId) =>
+        Treats.Rewarded && !string.IsNullOrEmpty(signedInId) &&
+        string.Equals(signedInId, userId, StringComparison.Ordinal);
+
     public static void OfferTreat(Rect screen, Rect area, int depth, TreatSpot home, TreatSpot deep,
         float headerHeight) =>
         Treats.Offer(ImGui.GetWindowDrawList(), depth > 1 ? deep : home,

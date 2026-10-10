@@ -21,9 +21,7 @@ internal sealed partial class VelvetShell
     private readonly SeasonIntro intro = new();
     private int seasonApplied = -1;
 
-    private string OwnDisplayName => store.Me?.DisplayName ?? string.Empty;
-
-    private string OwnHandle => store.Me?.Handle ?? string.Empty;
+    private bool RewardedSelf(string userId) => SocialSeason.RewardedSelf(store.Me?.UserId, userId);
 
     private void OfferTreat(Rect area, int depth) => SocialSeason.OfferTreat(screenRect, area, depth,
         TreatSpot.VelvetFeed, TreatSpot.VelvetDeep, VHeader.Height);

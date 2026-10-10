@@ -172,7 +172,7 @@ internal sealed partial class VelvetShell
 
         var nameTop = statsInline ? statsRowTop : statsRowTop + statsHeight + ProfileBlockGap * scale;
         UserName.DrawAuto(drawList, "velvet.profile.name." + user.UserId, name, user.Badges, user.BadgeIds, innerLeft,
-            nameTop, innerWidth, ProfileNameStyle, VelvetTheme.TitleInk, theme, 2);
+            nameTop, innerWidth, ProfileNameStyle, VelvetTheme.TitleInk, theme, 2, RewardedSelf(user.UserId));
 
         var handleTop = nameTop + Typography.LineHeight(ProfileNameStyle);
         var handle = SocialIdentity.ProfileMeta(user.Handle, RegionCodeOf(user));

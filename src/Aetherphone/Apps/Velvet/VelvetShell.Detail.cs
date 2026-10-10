@@ -107,7 +107,8 @@ internal sealed partial class VelvetShell
             var authorHovering = UiInteract.Hover(new Vector2(nameLeft, authorY),
                 new Vector2(nameLeft + nameMaxWidth, authorY + authorSize.Y));
             UserName.Draw("velvet.detail.author." + post.Id, authorName, post.OwnerBadges, post.OwnerBadgeIds, nameLeft,
-                authorY, nameMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, authorHovering, false);
+                authorY, nameMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, authorHovering, false,
+                self: RewardedSelf(post.OwnerId));
             var ownerSubY = avatarCenter.Y + 3f * scale;
             var ownerSubSize = Typography.Measure(ownerSub, TextStyles.Subheadline);
             var ownerSubHovering = UiInteract.Hover(new Vector2(nameLeft, ownerSubY),
@@ -306,7 +307,8 @@ internal sealed partial class VelvetShell
             new Vector2(nameLeft + nameMaxWidth, origin.Y + 16f * scale));
         var nameWidth = UserName.Draw(drawList, "velvet.comment.author." + comment.Id, authorName,
             comment.AuthorBadges, comment.AuthorBadgeIds, nameLeft, origin.Y, nameMaxWidth,
-            TextStyles.SubheadlineEmphasized, VelvetTheme.TitleInk, nameHovering, false);
+            TextStyles.SubheadlineEmphasized, VelvetTheme.TitleInk, nameHovering, false,
+            self: RewardedSelf(comment.AuthorId));
         var time = TimeText.Short(comment.CreatedAtUnix);
         if (time.Length > 0)
         {

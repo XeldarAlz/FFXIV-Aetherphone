@@ -207,7 +207,8 @@ internal sealed partial class AethergramApp
         DrawActivityBadge(drawList, avatarCenter + new Vector2(badgeOffset, badgeOffset), item.Type, scale);
         var textTop = origin.Y + (rowHeight - contentHeight) * 0.5f;
         var actorWidth = UserName.DrawAuto(drawList, "aethergram.activity.actor." + item.Id, actor, item.ActorBadges,
-            item.ActorBadgeIds, textLeft, textTop, textWidth, ActivityActorStyle, Ink.TitleInk, theme);
+            item.ActorBadgeIds, textLeft, textTop, textWidth, ActivityActorStyle, Ink.TitleInk, theme,
+            self: RewardedSelf(item.ActorId));
         var actorMin = new Vector2(textLeft, textTop);
         var actorMax = new Vector2(textLeft + actorWidth, textTop + actorHeight);
         if (UiInteract.Hover(actorMin, actorMax))

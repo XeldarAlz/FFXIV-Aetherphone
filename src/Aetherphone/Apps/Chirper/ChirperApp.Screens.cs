@@ -530,7 +530,8 @@ internal sealed partial class ChirperApp
         DrawActivityBadge(drawList, avatarCenter + new Vector2(badgeOffset, badgeOffset), item.Type, scale);
         var textTop = origin.Y + padY;
         var actorWidth = UserName.DrawAuto(drawList, "chirper.activity.actor." + item.Id, actor, item.ActorBadges,
-            item.ActorBadgeIds, textLeft, textTop, textWidth, ActivityActorStyle, ChirperInk.TitleInk, theme);
+            item.ActorBadgeIds, textLeft, textTop, textWidth, ActivityActorStyle, ChirperInk.TitleInk, theme,
+            self: RewardedSelf(item.ActorId));
         var actorMin = new Vector2(textLeft, textTop);
         var actorMax = new Vector2(textLeft + actorWidth, textTop + actorHeight);
         if (UiInteract.Hover(actorMin, actorMax))

@@ -394,7 +394,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
     public void Draw(in PhoneContext context)
     {
-        using var names = UserName.Style(SeasonalTheme.BlackletterNames, OwnDisplayName, OwnHandle);
+        using var names = UserName.Style(SeasonalTheme.BlackletterNames);
         using var tapGlow = TapGlow.Use(SeasonalTheme.Halloween, GlowInk);
         dmStore.NoteInboxWatched();
         theme = context.Theme;
@@ -1256,7 +1256,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var metaHeight = Typography.LineHeight(CardMetaStyle);
         var nameTop = avatarCenter.Y - (nameHeight + metaHeight + 1f * scale) * 0.5f;
         var drawnNameWidth = UserName.DrawAuto(drawList, "aethergram.card." + post.Id, displayName, post.AuthorBadges,
-            post.AuthorBadgeIds, nameLeft, nameTop, headerTextMaxWidth, CardNameStyle, Ink.TitleInk, theme);
+            post.AuthorBadgeIds, nameLeft, nameTop, headerTextMaxWidth, CardNameStyle, Ink.TitleInk, theme,
+            self: RewardedSelf(post.AuthorId));
         var nameMin = new Vector2(nameLeft, nameTop);
         var nameMax = new Vector2(nameLeft + drawnNameWidth, nameTop + nameHeight);
         if (UiInteract.Hover(nameMin, nameMax))

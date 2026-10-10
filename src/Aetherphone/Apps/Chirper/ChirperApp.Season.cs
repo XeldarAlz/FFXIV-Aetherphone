@@ -27,9 +27,7 @@ internal sealed partial class ChirperApp
     private readonly SeasonIntro intro = new();
     private int seasonApplied = -1;
 
-    private string OwnDisplayName => store.Me?.DisplayName ?? string.Empty;
-
-    private string OwnHandle => store.Me?.Handle ?? string.Empty;
+    private bool RewardedSelf(string userId) => SocialSeason.RewardedSelf(store.Me?.Id, userId);
 
     private void OfferTreat(Rect area, int depth) => SocialSeason.OfferTreat(screenRect, area, depth,
         TreatSpot.ChirperFeed, TreatSpot.ChirperDeep, AppHeader.Height);

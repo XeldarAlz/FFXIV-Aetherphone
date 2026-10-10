@@ -142,7 +142,7 @@ internal sealed partial class ChirperApp
         var nameTop = origin.Y + 3f * scale;
         var drawnNameWidth = UserName.DrawAuto(drawList, "chirper.head.author." + post.Id, rawDisplayName,
             post.AuthorBadges, post.AuthorBadgeIds, nameLeft, nameTop, MathF.Max(1f, headerRight - nameLeft),
-            HeadNameStyle, ChirperInk.TitleInk, theme);
+            HeadNameStyle, ChirperInk.TitleInk, theme, self: RewardedSelf(post.AuthorId));
         if (UiInteract.HoverClick(new Vector2(nameLeft, nameTop), new Vector2(nameLeft + drawnNameWidth, nameTop + nameHeight)))
         {
             OpenProfile(post.AuthorId);
@@ -526,7 +526,7 @@ internal sealed partial class ChirperApp
         var headerWidth = MathF.Max(1f, headerRight - textLeft);
         var drawnNameWidth = UserName.DrawAuto(drawList, "chirper.reply.author." + comment.Id, rawDisplayName,
             comment.AuthorBadges, comment.AuthorBadgeIds, textLeft, headerTop, headerWidth * 0.55f, ReplyNameStyle,
-            ChirperInk.TitleInk, theme);
+            ChirperInk.TitleInk, theme, self: RewardedSelf(comment.AuthorId));
         if (UiInteract.HoverClick(new Vector2(textLeft, headerTop), new Vector2(textLeft + drawnNameWidth, headerTop + nameHeight)))
         {
             OpenProfile(comment.AuthorId);

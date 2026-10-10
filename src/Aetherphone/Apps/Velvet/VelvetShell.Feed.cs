@@ -275,7 +275,8 @@ internal sealed partial class VelvetShell
         var nameHovering = UiInteract.Hover(new Vector2(nameLeft, nameTop),
             new Vector2(nameLeft + headerTextMaxWidth, nameTop + nameSize.Y));
         UserName.Draw("velvet.feed.author." + entry.Id, authorName, entry.OwnerBadges, entry.OwnerBadgeIds, nameLeft, nameTop,
-            headerTextMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, nameHovering, false);
+            headerTextMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, nameHovering, false,
+            self: RewardedSelf(entry.OwnerId));
         var ownerSub = SocialIdentity.FeedMeta(entry.OwnerHandle, PostTimestamp(entry));
         var ownerSubY = nameTop + PostCardMetrics.SublineTop * scale;
         var ownerSubLeft = nameLeft;
