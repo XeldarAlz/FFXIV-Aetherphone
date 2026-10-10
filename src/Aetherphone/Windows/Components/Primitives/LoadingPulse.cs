@@ -38,15 +38,15 @@ internal static class LoadingPulse
         }
 
         var dl = drawList ?? ImGui.GetWindowDrawList();
+        var thickness = MathF.Max(2f * UiScale.Current, radius * 0.10f);
+        dl.AddCircleFilled(center, radius * 1.9f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.06f * alpha)), 48);
+        dl.AddCircleFilled(center, radius * 1.25f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.10f * alpha)), 48);
         if (SeasonalTheme.Halloween)
         {
             MoonSpinner(dl, center, radius, accent, alpha);
             return;
         }
 
-        var thickness = MathF.Max(2f * UiScale.Current, radius * 0.10f);
-        dl.AddCircleFilled(center, radius * 1.9f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.06f * alpha)), 48);
-        dl.AddCircleFilled(center, radius * 1.25f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.10f * alpha)), 48);
         dl.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.18f * alpha)), 72, thickness);
         ProgressRing.Sweep(center, radius, thickness, accent, CometPeriodMs, CometArcRadians, alpha, dl);
         var core = Palette.Mix(accent, Vector4.One, 0.7f);
@@ -59,9 +59,6 @@ internal static class LoadingPulse
         var moon = radius * 0.72f;
         var light = Palette.Mix(accent, Vector4.One, 0.35f);
         var phase = (float)(ImGui.GetTime() * MoonCyclesPerSecond % 1.0);
-        drawList.AddCircleFilled(center, radius * 1.9f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.06f * alpha)), 48);
-        drawList.AddCircleFilled(center, radius * 1.25f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.10f * alpha)),
-            48);
         drawList.AddCircleFilled(center, moon, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.16f * alpha)), 48);
         drawList.AddCircle(center, moon, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.40f * alpha)), 48,
             UiScale.Current);

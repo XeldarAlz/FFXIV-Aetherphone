@@ -52,15 +52,8 @@ internal sealed class SeasonIntro
 
     private float Elapsed => (float)(ImGui.GetTime() - startedAt);
 
-    public readonly struct ContentFade : IDisposable
+    public readonly struct ContentFade(bool pushed) : IDisposable
     {
-        private readonly bool pushed;
-
-        public ContentFade(bool pushed)
-        {
-            this.pushed = pushed;
-        }
-
         public void Dispose()
         {
             if (pushed)

@@ -109,38 +109,33 @@ internal static class NightScene
         new(-34f, 4f, 22f), new(-12f, -6f, 28f), new(14f, -2f, 30f), new(36f, 6f, 22f), new(4f, 10f, 26f),
     ];
 
-    private static readonly Star[] MoonlitStars = StarsFrom(new Random(1031), 80);
-    private static readonly Star[] BloodStars = StarsFrom(new Random(2027), 40);
+    private static readonly Star[] MoonlitStars = Scatter(new Random(1031), 80, StarFrom);
+    private static readonly Star[] BloodStars = Scatter(new Random(2027), 40, StarFrom);
     private static readonly Pine[] FarPines = PinesFrom(new Random(1032), 40f, 85f);
     private static readonly Pine[] NearPines = PinesFrom(new Random(1033), 55f, 115f);
-    private static readonly Eye[] Eyes = EyesFrom(new Random(1034));
-    private static readonly Puff[] MoonlitPuffs = PuffsFrom(new Random(1035));
+    private static readonly Eye[] Eyes = Scatter(new Random(1034), 5, EyeFrom);
+    private static readonly Puff[] MoonlitPuffs = Scatter(new Random(1035), 6, PuffFrom);
     private static readonly Tower[] Towers = TowersFrom(new Random(2028));
     private static readonly Pane[] Panes = PanesFrom(Towers, new Random(2029));
-    private static readonly Flyer[] Flyers = FlyersFrom(new Random(2030));
-    private static readonly Puff[] BloodPuffs = PuffsFrom(new Random(2031));
-    private static readonly Star[] WitchingStars = StarsFrom(new Random(3031), 60);
-    private static readonly Puff[] WitchingPuffs = PuffsFrom(new Random(3033));
+    private static readonly Flyer[] Flyers = Scatter(new Random(2030), 6, FlyerFrom);
+    private static readonly Puff[] BloodPuffs = Scatter(new Random(2031), 6, PuffFrom);
+    private static readonly Star[] WitchingStars = Scatter(new Random(3031), 60, StarFrom);
+    private static readonly Puff[] WitchingPuffs = Scatter(new Random(3033), 6, PuffFrom);
 
     private static float rousedAt = -100f;
     private static float kindledAt = -100f;
 
-    public static Vector2 MoonlitMoonCenter(Rect frame, float moonY) =>
-        new(frame.Min.X + frame.Width * MoonlitMoonX, moonY);
-
     public static float MoonlitMoonSize => MoonlitMoonRadius * UiScale.Current;
-
-    public static Vector2 BloodMoonCenter(Rect frame, float moonY) => new(frame.Min.X + frame.Width * BloodMoonX, moonY);
 
     public static void Rouse() => rousedAt = (float)ImGui.GetTime();
 
     public static void Kindle() => kindledAt = (float)ImGui.GetTime();
 
     public static Vector2 MoonlitMoonCenter(Rect frame, float moonY, in NightView view) =>
-        MoonlitMoonCenter(frame, MoonY(moonY, view)) + new Vector2(view.MoonShift.X, 0f);
+        new(frame.Min.X + frame.Width * MoonlitMoonX + view.MoonShift.X, MoonY(moonY, view));
 
     public static Vector2 BloodMoonCenter(Rect frame, float moonY, in NightView view) =>
-        BloodMoonCenter(frame, MoonY(moonY, view)) + new Vector2(view.MoonShift.X, 0f);
+        new(frame.Min.X + frame.Width * BloodMoonX + view.MoonShift.X, MoonY(moonY, view));
 
     public static void Moonlit(ImDrawListPtr drawList, Rect frame, float moonY, in NightView view)
     {
@@ -179,7 +174,7 @@ internal static class NightScene
         var rim = Vector4.Lerp(EclipseRim, BloodRim, view.Reveal);
         DrawDisc(drawList, moon, radius, rim, face, BloodShine with { W = BloodShine.W * view.Reveal }, BloodMottle, 1f);
         DrawFlyers(drawList, moon, time, scale);
-        DrawCandlelight(drawList, frame, scale);
+        DrawVeil(drawList, frame, CandleInk, CandleReach * scale);
         var castleBase = frame.Max.Y - CastleBase * scale;
         DrawPuffs(drawList, frame, BloodPuffs, castleBase, BloodMist with { W = BloodMist.W * view.Reveal }, time,
             scale);
@@ -449,14 +444,6 @@ internal static class NightScene
         }
     }
 
-    private static void DrawCandlelight(ImDrawListPtr drawList, Rect frame, float scale)
-    {
-        var clear = ImGui.GetColorU32(CandleInk with { W = 0f });
-        var warm = ImGui.GetColorU32(CandleInk);
-        drawList.AddRectFilledMultiColor(new Vector2(frame.Min.X, frame.Max.Y - CandleReach * scale), frame.Max, clear,
-            clear, warm, warm);
-    }
-
     private static void DrawCastle(ImDrawListPtr drawList, Rect frame, float baseY, float time, float scale)
     {
         var ink = ImGui.GetColorU32(CastleInk);
@@ -513,17 +500,31 @@ internal static class NightScene
 
     private static uint Channel(float value) => (uint)(Math.Clamp(value, 0f, 1f) * 255f + 0.5f);
 
-    private static Star[] StarsFrom(Random random, int count)
+    private static T[] Scatter<T>(Random random, int count, Func<Random, T> create)
     {
-        var stars = new Star[count];
+        var items = new T[count];
         for (var index = 0; index < count; index++)
         {
-            stars[index] = new Star(random.NextSingle(), random.NextSingle() * 0.6f, 0.4f + random.NextSingle() * 1.1f,
-                0.25f + random.NextSingle() * 0.6f, 0.6f + random.NextSingle() * 2.2f, random.NextSingle() * 7f);
+            items[index] = create(random);
         }
 
-        return stars;
+        return items;
     }
+
+    private static Star StarFrom(Random random) => new(random.NextSingle(), random.NextSingle() * 0.6f,
+        0.4f + random.NextSingle() * 1.1f, 0.25f + random.NextSingle() * 0.6f, 0.6f + random.NextSingle() * 2.2f,
+        random.NextSingle() * 7f);
+
+    private static Eye EyeFrom(Random random) => new(0.08f + random.NextSingle() * 0.84f,
+        4f + random.NextSingle() * 30f, 3f + random.NextSingle() * 5f, random.NextSingle() * 10f,
+        0.7f + random.NextSingle() * 0.6f);
+
+    private static Puff PuffFrom(Random random) => new(-20f + random.NextSingle() * 60f, 4f + random.NextSingle() * 6f,
+        random.NextSingle() * SceneSpan, 60f + random.NextSingle() * 40f);
+
+    private static Flyer FlyerFrom(Random random) => new(20f + random.NextSingle() * 160f,
+        16f + random.NextSingle() * 120f, 40f + random.NextSingle() * 90f, 16f + random.NextSingle() * 40f,
+        0.25f + random.NextSingle() * 0.35f, random.NextSingle() * 7f, 0.7f + random.NextSingle() * 0.5f);
 
     private static Pine[] PinesFrom(Random random, float minimumHeight, float maximumHeight)
     {
@@ -538,30 +539,6 @@ internal static class NightScene
         }
 
         return pines.ToArray();
-    }
-
-    private static Eye[] EyesFrom(Random random)
-    {
-        var eyes = new Eye[5];
-        for (var index = 0; index < eyes.Length; index++)
-        {
-            eyes[index] = new Eye(0.08f + random.NextSingle() * 0.84f, 4f + random.NextSingle() * 30f,
-                3f + random.NextSingle() * 5f, random.NextSingle() * 10f, 0.7f + random.NextSingle() * 0.6f);
-        }
-
-        return eyes;
-    }
-
-    private static Puff[] PuffsFrom(Random random)
-    {
-        var puffs = new Puff[6];
-        for (var index = 0; index < puffs.Length; index++)
-        {
-            puffs[index] = new Puff(-20f + random.NextSingle() * 60f, 4f + random.NextSingle() * 6f,
-                random.NextSingle() * SceneSpan, 60f + random.NextSingle() * 40f);
-        }
-
-        return puffs;
     }
 
     private static Tower[] TowersFrom(Random random)
@@ -603,18 +580,5 @@ internal static class NightScene
         }
 
         return panes.ToArray();
-    }
-
-    private static Flyer[] FlyersFrom(Random random)
-    {
-        var flyers = new Flyer[6];
-        for (var index = 0; index < flyers.Length; index++)
-        {
-            flyers[index] = new Flyer(20f + random.NextSingle() * 160f, 16f + random.NextSingle() * 120f,
-                40f + random.NextSingle() * 90f, 16f + random.NextSingle() * 40f, 0.25f + random.NextSingle() * 0.35f,
-                random.NextSingle() * 7f, 0.7f + random.NextSingle() * 0.5f);
-        }
-
-        return flyers;
     }
 }

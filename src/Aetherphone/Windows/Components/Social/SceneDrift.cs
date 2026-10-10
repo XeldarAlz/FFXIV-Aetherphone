@@ -42,8 +42,7 @@ internal static class SceneDrift
         var liftTarget = MathF.Min(AppSurface.OuterScrollY * LiftPerScroll, MaxLift * UiScale.Current);
         lift.Step(liftTarget, Motion.PageSettle, deltaSeconds);
         var pointer = ImGui.GetIO().MousePos;
-        var inside = pointer.X >= frame.Min.X && pointer.X <= frame.Max.X && pointer.Y >= frame.Min.Y &&
-                     pointer.Y <= frame.Max.Y;
+        var inside = frame.Contains(pointer);
         var targetX = inside ? Math.Clamp((pointer.X - frame.Center.X) / (frame.Width * 0.5f), -1f, 1f) : 0f;
         var targetY = inside ? Math.Clamp((pointer.Y - frame.Center.Y) / (frame.Height * 0.5f), -1f, 1f) : 0f;
         swayX.Step(targetX, Motion.Sheet, deltaSeconds);

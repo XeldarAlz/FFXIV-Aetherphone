@@ -82,12 +82,9 @@ internal sealed class PullToRefresh
     private void DrawIndicator(Rect area, float pull, float scale, Vector4 ink)
     {
         var progress = refreshing ? 1f : Math.Clamp(pull / (ArmThreshold * scale), 0f, 1f);
-        var centerX = area.Center.X;
-        var centerY = area.Min.Y + 20f * scale;
-        var drawList = ImGui.GetWindowDrawList();
         if (Style == PullStyle.Moon)
         {
-            DrawMoon(drawList, new Vector2(centerX, centerY + 4f * scale), progress, scale);
+            DrawMoon(ImGui.GetWindowDrawList(), new Vector2(area.Center.X, area.Min.Y + 24f * scale), progress, scale);
             return;
         }
 
@@ -96,6 +93,9 @@ internal sealed class PullToRefresh
             return;
         }
 
+        var centerX = area.Center.X;
+        var centerY = area.Min.Y + 20f * scale;
+        var drawList = ImGui.GetWindowDrawList();
         if (Style == PullStyle.Bat)
         {
             DrawBat(drawList, new Vector2(centerX, area.Min.Y), progress, scale);

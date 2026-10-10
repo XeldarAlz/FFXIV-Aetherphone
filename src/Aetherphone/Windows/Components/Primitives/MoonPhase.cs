@@ -27,12 +27,6 @@ internal static class MoonPhase
         }
 
         drawList.Flags = flags;
-        Trace(drawList, center, radius, side, terminator);
-        drawList.PathStroke(ink, ImDrawFlags.Closed, EdgeStroke);
-    }
-
-    private static void Trace(ImDrawListPtr drawList, Vector2 center, float radius, float side, float terminator)
-    {
         drawList.PathClear();
         for (var step = 0; step <= Segments; step++)
         {
@@ -43,6 +37,8 @@ internal static class MoonPhase
         {
             drawList.PathLineTo(Point(center, radius, side * terminator, step));
         }
+
+        drawList.PathStroke(ink, ImDrawFlags.Closed, EdgeStroke);
     }
 
     private static Vector2 Point(Vector2 center, float radius, float reach, int step)

@@ -37,25 +37,17 @@ internal static class TapGlow
     private static bool enabled;
     private static Vector4 ink;
 
-    public static TapGlowScope Use(bool on, Vector4 color)
+    public static Scope Use(bool on, Vector4 color)
     {
-        var scope = new TapGlowScope(enabled, ink);
+        var scope = new Scope(enabled, ink);
         enabled = on;
         ink = color;
         return scope;
     }
 
-    public static void Restore(bool previousEnabled, Vector4 previousInk)
-    {
-        enabled = previousEnabled;
-        ink = previousInk;
-    }
-
     public static int Key(string id, int action) => HashCode.Combine(id, action);
 
     public static void Bloom(int key) => Start(key, false);
-
-    public static void Snuff(int key) => Start(key, true);
 
     public static void Toggle(int key, bool wasOn) => Start(key, wasOn);
 
@@ -135,5 +127,14 @@ internal static class TapGlow
         }
 
         return free >= 0 ? free : oldest;
+    }
+
+    public readonly struct Scope(bool previousEnabled, Vector4 previousInk) : IDisposable
+    {
+        public void Dispose()
+        {
+            enabled = previousEnabled;
+            ink = previousInk;
+        }
     }
 }
