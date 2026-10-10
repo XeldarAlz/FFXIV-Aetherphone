@@ -454,10 +454,104 @@ async function paintCandleFlame(id) {
   return "flame lit on a dripping candle";
 }
 
+const PUMPKIN_ORANGE = "#F2861E";
+const PUMPKIN_STEM = "#3E7A2C";
+const PUMPKIN_CARVE = "#5A2304";
+const COBWEB_THREADS = 5;
+const COBWEB_RINGS = [150, 255, 360];
+const GHOST_WIDTH_FRACTION = 0.24;
+
+function pumpkinLobes(cx, cy, radius) {
+  return [[-0.42, 0.62], [0.42, 0.62], [0, 0.7]]
+    .map(([shift, width]) => `<ellipse cx="${cx + radius * shift}" cy="${cy}" rx="${radius * width}" ry="${radius * 0.86}"/>`)
+    .join("");
+}
+
+function pumpkinStalk(cx, cy, radius) {
+  return `<rect x="${cx - radius * 0.09}" y="${cy - radius * 1.12}" width="${radius * 0.18}" height="${radius * 0.36}" rx="${radius * 0.07}"/>`;
+}
+
+function pumpkinMask(cx, cy, radius) {
+  const cut = `<defs><mask id="carve"><rect width="${MASTER_SIZE}" height="${MASTER_SIZE}" fill="#FFFFFF"/><g fill="#000000">${pumpkinFace(cx, cy, radius)}</g></mask></defs>`;
+  return cut + `<g fill="${WHITE}" mask="url(#carve)">${pumpkinLobes(cx, cy, radius)}${pumpkinStalk(cx, cy, radius)}</g>`;
+}
+
+function pumpkin(cx, cy, radius, fill, stem, carve, ring, ringWidth) {
+  const lobes = pumpkinLobes(cx, cy, radius);
+  const halo = ring ? `<g fill="${ring}" stroke="${ring}" stroke-width="${ringWidth}">${lobes}</g>` : "";
+  return halo + `<g fill="${stem}">${pumpkinStalk(cx, cy, radius)}</g><g fill="${fill}">${lobes}</g><g fill="${carve}">${pumpkinFace(cx, cy, radius)}</g>`;
+}
+
+function pumpkinFace(cx, cy, radius) {
+  return [
+    `M ${cx - radius * 0.46} ${cy - radius * 0.05} L ${cx - radius * 0.24} ${cy - radius * 0.38} L ${cx - radius * 0.06} ${cy - radius * 0.05} Z`,
+    `M ${cx + radius * 0.06} ${cy - radius * 0.05} L ${cx + radius * 0.24} ${cy - radius * 0.38} L ${cx + radius * 0.46} ${cy - radius * 0.05} Z`,
+    `M ${cx - radius * 0.5} ${cy + radius * 0.22} Q ${cx} ${cy + radius * 0.68} ${cx + radius * 0.5} ${cy + radius * 0.22} L ${cx + radius * 0.25} ${cy + radius * 0.34} L ${cx} ${cy + radius * 0.24} L ${cx - radius * 0.25} ${cy + radius * 0.34} Z`,
+  ].map((path) => `<path d="${path}"/>`).join("");
+}
+
+function cobweb(ink, opacity, width) {
+  const threads = [];
+  for (let thread = 0; thread < COBWEB_THREADS; thread++) {
+    const angle = (thread / (COBWEB_THREADS - 1)) * (Math.PI / 2);
+    threads.push(`<line x1="0" y1="0" x2="${(Math.cos(angle) * 430).toFixed(1)}" y2="${(Math.sin(angle) * 430).toFixed(1)}"/>`);
+  }
+  const rings = COBWEB_RINGS.map((radius) => {
+    let path = "";
+    for (let thread = 0; thread < COBWEB_THREADS; thread++) {
+      const angle = (thread / (COBWEB_THREADS - 1)) * (Math.PI / 2);
+      const x = (Math.cos(angle) * radius).toFixed(1);
+      const y = (Math.sin(angle) * radius).toFixed(1);
+      if (thread === 0) {
+        path += `M ${x} ${y}`;
+        continue;
+      }
+      const middle = ((thread - 0.5) / (COBWEB_THREADS - 1)) * (Math.PI / 2);
+      const sag = radius * 0.8;
+      path += ` Q ${(Math.cos(middle) * sag).toFixed(1)} ${(Math.sin(middle) * sag).toFixed(1)} ${x} ${y}`;
+    }
+    return `<path d="${path}"/>`;
+  }).join("");
+  return `<g fill="none" stroke="${ink}" stroke-opacity="${opacity}" stroke-width="${width}" stroke-linecap="round">${threads.join("")}${rings}</g>`;
+}
+
+async function paintDecorated(id, baseId, decorate, summary) {
+  const entry = map[baseId];
+  const markup = await fetchSymbolMarkup(entry.symbol);
+  const transform = placementFor(await measureSymbol(markup), entry.round);
+  const tile = tileFor(entry);
+  const symbol = symbolGroup(markup, tile.ink, transform);
+  const extra = await decorate(tile);
+  await writePair(id, svgDocument(backgroundMarkup(tile.stops) + extra.under + symbol + extra.over), true);
+  await writePair(`${id}.fg`, svgDocument(symbol + extra.mask), false);
+  return summary;
+}
+
+const paintPumpkinCalendar = (id) => paintDecorated(id, "calendar", (tile) => ({
+  under: "",
+  over: pumpkin(740, 742, 168, PUMPKIN_ORANGE, PUMPKIN_STEM, PUMPKIN_CARVE, tile.stops[1], 44),
+  mask: pumpkinMask(740, 742, 168),
+}), "calendar with a carved pumpkin");
+
+const paintCobwebCamera = (id) => paintDecorated(id, "camera", () => ({
+  under: cobweb(WHITE, 0.42, 9),
+  over: "",
+  mask: cobweb(WHITE, 0.6, 9),
+}), "camera under a corner cobweb");
+
+const paintGhostMusic = (id) => paintDecorated(id, "music", async () => {
+  const ghost = await fetchSymbolMarkup("ghost");
+  const placement = `translate(${-MASTER_SIZE * 0.26} ${-MASTER_SIZE * 0.2}) ` + scaledPlacement(await measureSymbol(ghost), GHOST_WIDTH_FRACTION, 0);
+  return { under: "", over: symbolGroup(ghost, WHITE, placement), mask: symbolGroup(ghost, WHITE, placement) };
+}, "music note with a ghost beside it");
+
 const seasonal = {
   "chirper.halloween": paintMoonlitFeather,
   "aethergram.halloween": paintBatAperture,
   "velvet.halloween": paintCandleFlame,
+  "calendar.halloween": paintPumpkinCalendar,
+  "camera.halloween": paintCobwebCamera,
+  "music.halloween": paintGhostMusic,
 };
 
 mkdirSync(ICONS_OUT, { recursive: true });
