@@ -80,18 +80,18 @@ internal static class HousingLottery
             return true;
         }
 
-        var candidateCycle = IsCycle(candidate.Phase);
-        if (candidateCycle != IsCycle(current.Phase))
-        {
-            return candidateCycle;
-        }
-
         var candidateEnds = candidate.EndsUtc!.Value;
         var currentEnds = current.EndsUtc!.Value;
         var candidateLive = candidateEnds > nowUtc;
         if (candidateLive != currentEnds > nowUtc)
         {
             return candidateLive;
+        }
+
+        var candidateCycle = IsCycle(candidate.Phase);
+        if (candidateCycle != IsCycle(current.Phase))
+        {
+            return candidateCycle;
         }
 
         return candidateLive ? candidateEnds < currentEnds : candidateEnds > currentEnds;

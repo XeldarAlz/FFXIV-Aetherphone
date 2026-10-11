@@ -135,6 +135,31 @@ public sealed class HousingLotteryTests
     }
 
     [Fact]
+    public void ResolvePrefersRunningUnavailableOverEndedLottery()
+    {
+        var plots = new[]
+        {
+            Plot(1, 50, HousingLotteryPhase.Results, NowUtc.AddDays(-2)),
+            Plot(3, 21, HousingLotteryPhase.Unavailable, NowUtc.AddHours(6)),
+        };
+
+        var state = HousingLottery.Resolve(plots, NowUtc);
+
+        Assert.Equal(HousingLotteryPhase.Unavailable, state.Phase);
+        Assert.Equal(NowUtc.AddHours(6), state.EndsUtc);
+    }
+
+    [Fact]
+    public void PreferRunningUnavailableOverEndedLottery()
+    {
+        var ended = new HousingLotteryState(HousingLotteryPhase.Results, NowUtc.AddDays(-2));
+        var running = new HousingLotteryState(HousingLotteryPhase.Unavailable, NowUtc.AddHours(6));
+
+        Assert.Equal(running, HousingLottery.Prefer(ended, running, NowUtc));
+        Assert.Equal(running, HousingLottery.Prefer(running, ended, NowUtc));
+    }
+
+    [Fact]
     public void SummarizeCountsPlots()
     {
         var plots = new[]
