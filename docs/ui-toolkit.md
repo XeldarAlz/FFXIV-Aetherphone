@@ -312,7 +312,7 @@ if (tapped >= 0)
 }
 ```
 
-A tap only registers if the pointer traveled less than the drag slop, so panning does not select chips. Pass `centered: true` to the `Rect` overload to center the chips inside the row when they all fit; an overflowing rail still starts at the left edge and pans.
+A tap only registers if the pointer traveled less than the drag slop, so panning does not select chips. Pass `centered: true` to the `Rect` overload to center the chips inside the row when they all fit; an overflowing rail still starts at the left edge and pans. Chips are 30 units tall; pass `chipHeight` (for example `Metrics.Size.Pill`) for a touch-sized rail of action presets, with a `labelPadding` of at least half that height so the round ends never clip a label (`ChipRail.LabelRoom`).
 
 ### Other frequently used widgets
 

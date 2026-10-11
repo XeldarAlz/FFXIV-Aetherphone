@@ -10,3 +10,10 @@
 *.mp3 binary
 *.wav binary
 *.zip binary
+
+# Shared casino vectors are hashed byte for byte against the backend copy.
+src/Aetherphone.Tests/Vectors/plinko.json -text
+
+# The slot machine vectors are hashed byte for byte here and in the backend, so they never get a
+# line-ending conversion on checkout.
+src/Aetherphone.Tests/Vectors/slots-*.json -text

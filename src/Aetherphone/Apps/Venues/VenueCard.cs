@@ -632,5 +632,5 @@ internal static class VenueCard
 
     private static bool HasStatusRow(in VenueCardText text) => text.Status.Label.Length > 0 || text.Stat.Length > 0;
 
-    private static float HeroHeight(float width, float scale) => MathF.Min(width * HeroAspect, HeroMaxHeight * scale);
+    internal static float HeroHeight(float width, float scale) => MathF.Min(width * HeroAspect, HeroMaxHeight * scale);
 }

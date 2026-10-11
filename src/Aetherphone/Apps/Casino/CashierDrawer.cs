@@ -1,12 +1,10 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Coins;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
@@ -18,65 +16,52 @@ internal sealed class CashierDrawer
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground;
 
+    private const ImGuiWindowFlags BodyFlags = ImGuiWindowFlags.NoBackground;
+
     private const float MaxDim = 0.45f;
     private const float GrabberTop = 8f;
     private const float PadX = 18f;
-    private const float SectionGap = 10f;
-    private const float SummaryRowHeight = 22f;
-    private const float CardPad = 12f;
-    private const float PillHeight = Button.LargeHeight;
-    private const float HintGap = 6f;
-    private const float LotHeight = 42f;
-    private const float LotGap = 8f;
-    private const int LotColumns = 2;
-    private const long FallbackMinBuyIn = 2_000;
-    private const long FallbackMaxBuyIn = 200_000;
-    private const long MinTopUp = CasinoChipLots.ChipPerCoin;
+    private const float SectionGap = 12f;
+    private const float BottomPad = 18f;
 
     private readonly CasinoStore store;
     private readonly CoinStore coins;
     private readonly ConfirmService confirm;
+    private readonly CashierPanel panel;
 
     private Spring reveal;
     private bool open;
     private int openedFrame;
-    private long selectedLot;
-    private bool lotPinned;
-    private string inlineReason = string.Empty;
 
     public CashierDrawer(CasinoStore store, CoinStore coins, ConfirmService confirm)
     {
         this.store = store;
         this.coins = coins;
         this.confirm = confirm;
+        panel = new CashierPanel(store, coins, confirm);
     }
+
+    public bool IsOpen => open;
+
+    public CashierPanel Panel => panel;
 
     public void Open()
     {
-        if (open)
-        {
-            return;
-        }
-
-        open = true;
-        openedFrame = ImGui.GetFrameCount();
-        UiFeedback.Play(UiSound.SheetPresent);
-        selectedLot = 0;
-        lotPinned = false;
-        inlineReason = string.Empty;
-        store.RefreshNow();
-        coins.EnsureFresh();
+        Open(0);
     }
 
-    public void Open(long suggestedAmount)
+    public void Open(long suggestedChips)
     {
-        Open();
-        var suggested = CasinoChipLots.ToWholeCoins(suggestedAmount);
-        if (suggested > 0)
+        if (!open)
         {
-            selectedLot = suggested;
-            lotPinned = true;
+            open = true;
+            openedFrame = ImGui.GetFrameCount();
+            UiFeedback.Play(UiSound.SheetPresent);
+            store.RefreshNow();
+            coins.EnsureFresh();
         }
+
+        panel.Reset(suggestedChips);
     }
 
     public void Close()
@@ -116,13 +101,13 @@ internal sealed class CashierDrawer
             var drawList = ImGui.GetWindowDrawList();
             Material.Veil(drawList, screen.Min, screen.Max, MaxDim * opacity);
             var interactive = open && confirm.Active is null && opacity > 0.5f;
-            var panel = DrawPanel(screen, ui, drawList, opacity, interactive);
+            var panelRect = DrawPanel(screen, ui, drawList, opacity, interactive);
             if (!interactive)
             {
                 return;
             }
 
-            if (ImGui.GetFrameCount() != openedFrame && UiInteract.ClickedOutside(panel.Min, panel.Max))
+            if (ImGui.GetFrameCount() != openedFrame && UiInteract.ClickedOutside(panelRect.Min, panelRect.Max))
             {
                 Close();
             }
@@ -131,45 +116,39 @@ internal sealed class CashierDrawer
 
     private void ConsumeResults(Action openLimits)
     {
-        var sitting = store.TakeSittingResult();
-        if (sitting is not null)
-        {
-            if (sitting.Granted)
-            {
-                UiFeedback.Play(UiSound.CasinoChips);
-            }
-
-            HandleOutcome(sitting.Reason, openLimits, true);
-        }
-
         var closed = store.TakeCloseResult();
         if (closed is not null)
         {
             if (closed.Granted)
             {
                 UiFeedback.Play(UiSound.Payout);
+                Announce(panel.CashOutLine(closed));
             }
 
-            HandleOutcome(closed.Reason, openLimits, false);
+            HandleOutcome(closed.Reason, openLimits);
         }
 
         if (store.TakeMoneyMoveFailure())
         {
-            HandleOutcome(CasinoReasons.Unreachable, openLimits, false);
+            HandleOutcome(CasinoReasons.Unreachable, openLimits);
         }
     }
 
-    private void HandleOutcome(string reason, Action openLimits, bool clearAmount)
+    private void Announce(string line)
+    {
+        if (open || panel.Visible)
+        {
+            panel.ShowNote(line, true);
+            return;
+        }
+
+        ShellToast.Show(line);
+    }
+
+    private void HandleOutcome(string reason, Action openLimits)
     {
         if (reason.Length == 0)
         {
-            inlineReason = string.Empty;
-            if (clearAmount)
-            {
-                selectedLot = 0;
-                lotPinned = false;
-            }
-
             return;
         }
 
@@ -180,76 +159,25 @@ internal sealed class CashierDrawer
             return;
         }
 
-        if (open)
+        var message = CasinoReasons.Text(reason, store.Ceiling.MaxBet);
+        if (open || panel.Visible)
         {
-            inlineReason = reason;
+            panel.ShowNote(message, false);
             return;
         }
 
-        confirm.Alert(null, Loc.T(CasinoReasons.MessageFor(reason)), Loc.T(L.Common.Close));
+        confirm.Alert(null, message, Loc.T(L.Common.Close));
     }
 
     private Rect DrawPanel(Rect screen, AppSkin ui, ImDrawListPtr drawList, float slide, bool interactive)
     {
         var scale = UiScale.Current;
-        var state = store.State;
-        var wallet = coins.Wallet;
-        var sittingOpen = state?.Sitting is not null;
-        var frozen = wallet?.FrozenUntilUnix is not null;
-        var paused = state?.StakesPaused == true;
-        var draining = state?.Draining == true;
-        var stakeBlocked = frozen || paused || draining;
         var innerWidth = screen.Width - PadX * 2f * scale;
-
-        var noticeTitle = string.Empty;
-        var noticeHint = string.Empty;
-        if (frozen)
-        {
-            noticeTitle = Loc.T(L.Coin.FrozenTitle);
-            noticeHint = Loc.T(L.Coin.FrozenHint);
-        }
-        else if (paused)
-        {
-            noticeTitle = Loc.T(L.Casino.PausedTitle);
-            noticeHint = Loc.T(L.Casino.PausedHint);
-        }
-        else if (draining)
-        {
-            noticeTitle = Loc.T(L.Casino.DrainingTitle);
-            noticeHint = Loc.T(L.Casino.DrainingHint);
-        }
-
-        var reasonText = inlineReason.Length > 0 ? Loc.T(CasinoReasons.MessageFor(inlineReason)) : string.Empty;
-
-        var titleHeight = Typography.Measure(Loc.T(L.Casino.Cashier), TextStyles.Headline).Y;
-        var summaryRows = sittingOpen ? 3 : 2;
-        var summaryHeight = summaryRows * SummaryRowHeight * scale + CardPad * 2f * scale;
-        var noticeHeight = 0f;
-        if (noticeTitle.Length > 0)
-        {
-            var hintBlock = Typography.MeasureWrappedBlock(noticeHint, TextStyles.Footnote, innerWidth - CardPad * 2f * scale);
-            noticeHeight = Typography.Measure(noticeTitle, TextStyles.FootnoteEmphasized).Y + hintBlock.Y
-                + CardPad * 2f * scale + 6f * scale + SectionGap * scale;
-        }
-
-        var reasonHeight = 0f;
-        if (reasonText.Length > 0)
-        {
-            var reasonBlock = Typography.MeasureWrappedBlock(reasonText, TextStyles.Footnote, innerWidth - CardPad * 2f * scale);
-            reasonHeight = reasonBlock.Y + CardPad * 2f * scale + SectionGap * scale;
-        }
-
-        var lotRows = (CasinoChipLots.Chips.Length + LotColumns) / LotColumns;
-        var stakeHeight = stakeBlocked
-            ? 0f
-            : (18f + 6f + lotRows * LotHeight + (lotRows - 1) * LotGap + SectionGap + PillHeight) * scale;
-        var cashOutHeight = sittingOpen
-            ? (SectionGap + PillHeight + HintGap) * scale +
-              Typography.MeasureWrappedBlock(Loc.T(L.Casino.CashOutHint), TextStyles.Footnote, innerWidth).Y
-            : 0f;
+        var titleHeight = Typography.LineHeight(TextStyles.Headline);
         var grabberBlock = (GrabberTop + Metrics.Size.GrabberHeight + Metrics.Space.Md) * scale;
-        var panelHeight = grabberBlock + titleHeight + SectionGap * scale + summaryHeight + SectionGap * scale
-            + noticeHeight + reasonHeight + stakeHeight + cashOutHeight + 18f * scale;
+        var head = grabberBlock + titleHeight + SectionGap * scale;
+        var bodyHeight = panel.Height(innerWidth, scale);
+        var panelHeight = MathF.Min(head + bodyHeight + BottomPad * scale, screen.Height - Metrics.Space.Xl * scale);
 
         var panelBottom = screen.Max.Y + panelHeight * (1f - slide);
         var panelTop = panelBottom - panelHeight;
@@ -266,292 +194,23 @@ internal sealed class CashierDrawer
         drawList.AddRectFilled(grabberMin, grabberMin + new Vector2(grabberWidth, grabberHeight),
             ImGui.GetColorU32(skin.Grabber), grabberHeight * 0.5f);
 
-        var left = panelMin.X + PadX * scale;
-        var y = panelTop + grabberBlock;
-        Typography.DrawCentered(drawList, new Vector2(screen.Center.X, y + titleHeight * 0.5f),
+        var titleTop = panelTop + grabberBlock;
+        Typography.DrawCentered(drawList, new Vector2(screen.Center.X, titleTop + titleHeight * 0.5f),
             Loc.T(L.Casino.Cashier), ui.TitleInk, TextStyles.Headline);
-        y += titleHeight + SectionGap * scale;
 
-        y = DrawSummary(drawList, ui, state, wallet, sittingOpen, left, y, innerWidth, scale);
-        y += SectionGap * scale;
-
-        if (noticeTitle.Length > 0)
+        var bodyMin = new Vector2(panelMin.X + PadX * scale, panelTop + head);
+        var bodySize = new Vector2(innerWidth, MathF.Max(1f, panelBottom - BottomPad * scale - bodyMin.Y));
+        ImGui.SetCursorScreenPos(bodyMin);
+        using (ImRaii.Child("##cashierBody", bodySize, false, BodyFlags))
         {
-            y = DrawNotice(drawList, ui, noticeTitle, noticeHint, left, y, innerWidth, scale);
-            y += SectionGap * scale;
-        }
-
-        if (reasonText.Length > 0)
-        {
-            y = DrawReason(drawList, ui, reasonText, left, y, innerWidth, scale);
-            y += SectionGap * scale;
-        }
-
-        if (!stakeBlocked)
-        {
-            y = DrawStakeEntry(drawList, ui, state, wallet, sittingOpen, left, y, innerWidth, scale,
-                interactive);
-        }
-
-        if (sittingOpen)
-        {
-            y += SectionGap * scale;
-            DrawCashOut(drawList, ui, state!.Sitting!, left, y, innerWidth, scale, interactive);
+            var origin = ImGui.GetCursorScreenPos();
+            var width = ScrollLayout.NativeScrollContentWidth();
+            var bottom = panel.Draw(ImGui.GetWindowDrawList(), ui, origin.X, origin.Y, width, scale, interactive,
+                true);
+            ImGui.SetCursorScreenPos(origin);
+            ImGui.Dummy(new Vector2(width, MathF.Max(1f, bottom - origin.Y)));
         }
 
         return new Rect(panelMin, panelMax);
-    }
-
-    private static float DrawSummary(ImDrawListPtr drawList, AppSkin ui, CasinoStateDto? state,
-        CoinWalletDto? wallet, bool sittingOpen, float left, float y, float innerWidth, float scale)
-    {
-        var rows = sittingOpen ? 3 : 2;
-        var height = rows * SummaryRowHeight * scale + CardPad * 2f * scale;
-        var min = new Vector2(left, y);
-        var max = new Vector2(left + innerWidth, y + height);
-        ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
-
-        var rowY = min.Y + CardPad * scale;
-        var balanceText = NumberText.Group(wallet?.Balance ?? 0);
-        DrawSummaryRow(drawList, ui, Loc.T(L.Casino.WalletRow), balanceText, CurrencyKind.Coins, left, rowY,
-            innerWidth, scale, ui.TitleInk);
-        rowY += SummaryRowHeight * scale;
-
-        if (sittingOpen)
-        {
-            var stackText = NumberText.Group(state?.Sitting?.Stack ?? 0);
-            DrawSummaryRow(drawList, ui, Loc.T(L.Casino.ChipsRow), stackText, CurrencyKind.Chips, left, rowY,
-                innerWidth, scale, ui.Accent);
-            rowY += SummaryRowHeight * scale;
-        }
-
-        var net = state?.NetLossToday ?? 0;
-        var tonight = net switch
-        {
-            > 0 => Loc.T(L.Casino.TonightDown, NumberText.Group(net)),
-            < 0 => Loc.T(L.Casino.TonightUp, NumberText.Group(-net)),
-            _ => Loc.T(L.Casino.TonightEven),
-        };
-        Typography.Draw(drawList, new Vector2(left + CardPad * scale, rowY + 2f * scale), tonight, ui.MutedInk,
-            TextStyles.Footnote);
-        return max.Y;
-    }
-
-    private static void DrawSummaryRow(ImDrawListPtr drawList, AppSkin ui, string label, string value,
-        CurrencyKind kind, float left, float rowY, float innerWidth, float scale, Vector4 valueInk)
-    {
-        Typography.Draw(drawList, new Vector2(left + CardPad * scale, rowY), label, ui.BodyInk,
-            TextStyles.Subheadline);
-        var valueSize = CurrencyGlyph.MeasureAmount(value, TextStyles.SubheadlineEmphasized);
-        CurrencyGlyph.DrawAmount(drawList, new Vector2(left + innerWidth - CardPad * scale - valueSize.X, rowY),
-            value, kind, valueInk, TextStyles.SubheadlineEmphasized);
-    }
-
-    private static float DrawNotice(ImDrawListPtr drawList, AppSkin ui, string title, string hint, float left,
-        float y, float innerWidth, float scale)
-    {
-        var pad = CardPad * scale;
-        var titleSize = Typography.Measure(title, TextStyles.FootnoteEmphasized);
-        var hintBlock = Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, innerWidth - pad * 2f);
-        var height = titleSize.Y + hintBlock.Y + pad * 2f + 6f * scale;
-        var min = new Vector2(left, y);
-        var max = new Vector2(left + innerWidth, y + height);
-        ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
-        Typography.Draw(drawList, new Vector2(min.X + pad, min.Y + pad), title, ui.Accent,
-            TextStyles.FootnoteEmphasized);
-        Typography.DrawWrappedLeft(new Vector2(min.X + pad, min.Y + pad + titleSize.Y + 6f * scale), hint,
-            ui.MutedInk, TextStyles.Footnote, innerWidth - pad * 2f);
-        return max.Y;
-    }
-
-    private static float DrawReason(ImDrawListPtr drawList, AppSkin ui, string message, float left, float y,
-        float innerWidth, float scale)
-    {
-        var pad = CardPad * scale;
-        var block = Typography.MeasureWrappedBlock(message, TextStyles.Footnote, innerWidth - pad * 2f);
-        var height = block.Y + pad * 2f;
-        var min = new Vector2(left, y);
-        var max = new Vector2(left + innerWidth, y + height);
-        Squircle.Fill(drawList, min, max, Metrics.Radius.Grouped * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.10f)));
-        Squircle.Stroke(drawList, min, max, Metrics.Radius.Grouped * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.35f)), 1f * scale);
-        Typography.DrawWrappedLeft(new Vector2(min.X + pad, min.Y + pad), message, ui.TitleInk,
-            TextStyles.Footnote, innerWidth - pad * 2f);
-        return max.Y;
-    }
-
-    private float DrawStakeEntry(ImDrawListPtr drawList, AppSkin ui, CasinoStateDto? state,
-        CoinWalletDto? wallet, bool sittingOpen, float left, float y, float innerWidth, float scale,
-        bool interactive)
-    {
-        var minBuyIn = state is { MinBuyIn: > 0 } ? state.MinBuyIn : FallbackMinBuyIn;
-        var maxBuyIn = state is { MaxBuyIn: > 0 } ? state.MaxBuyIn : FallbackMaxBuyIn;
-        var minAmount = sittingOpen ? MinTopUp : minBuyIn;
-        var room = sittingOpen ? Math.Max(0, maxBuyIn - (state?.Sitting?.ChipsIn ?? 0)) : maxBuyIn;
-
-        var walletChips = (wallet?.Balance ?? 0) * CasinoChipLots.ChipPerCoin;
-        var effectiveMax = CasinoChipLots.ToWholeCoins(Math.Min(room, walletChips));
-
-        var heading = sittingOpen ? Loc.T(L.Casino.TopUp) : Loc.T(L.Casino.BuyIn);
-        Typography.Draw(drawList, new Vector2(left, y), heading, ui.MutedInk, TextStyles.FootnoteEmphasized);
-        var rate = Loc.T(L.Casino.ChipRate);
-        var rateSize = Typography.Measure(rate, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(left + innerWidth - rateSize.X, y), rate, ui.MutedInk,
-            TextStyles.Footnote);
-        y += (18f + 6f) * scale;
-
-        var remainder = CasinoChipLots.RemainderFor(minAmount, effectiveMax);
-        if (!lotPinned || !CasinoChipLots.IsAffordable(selectedLot, minAmount, effectiveMax))
-        {
-            var preselect = CasinoChipLots.PreselectFor(minAmount, effectiveMax);
-            selectedLot = preselect > 0 ? preselect : remainder;
-        }
-
-        var lotWidth = (innerWidth - (LotColumns - 1) * LotGap * scale) / LotColumns;
-        var lots = CasinoChipLots.Chips;
-        var gridTop = y;
-        for (var index = 0; index < lots.Length; index++)
-        {
-            var lot = lots[index];
-            var column = index % LotColumns;
-            var row = index / LotColumns;
-            var shown = lot;
-            var lotMin = new Vector2(left + column * (lotWidth + LotGap * scale),
-                gridTop + row * (LotHeight + LotGap) * scale);
-            var lotMax = new Vector2(lotMin.X + lotWidth, lotMin.Y + LotHeight * scale);
-            var lotAffordable = CasinoChipLots.IsAffordable(shown, minAmount, effectiveMax);
-            if (DrawLot(drawList, ui, new Rect(lotMin, lotMax), shown, shown == selectedLot, lotAffordable,
-                    interactive, scale))
-            {
-                selectedLot = shown;
-                lotPinned = true;
-            }
-        }
-
-        if (remainder > 0)
-        {
-            var column = lots.Length % LotColumns;
-            var row = lots.Length / LotColumns;
-            var lotMin = new Vector2(left + column * (lotWidth + LotGap * scale),
-                gridTop + row * (LotHeight + LotGap) * scale);
-            var lotMax = new Vector2(lotMin.X + lotWidth, lotMin.Y + LotHeight * scale);
-            if (DrawLot(drawList, ui, new Rect(lotMin, lotMax), remainder, remainder == selectedLot, true,
-                    interactive, scale))
-            {
-                selectedLot = remainder;
-                lotPinned = true;
-            }
-        }
-
-        var lotRows = (lots.Length + LotColumns) / LotColumns;
-        y += (lotRows * LotHeight + (lotRows - 1) * LotGap) * scale + SectionGap * scale;
-
-        var amount = selectedLot;
-        var amountValid = CasinoChipLots.IsAffordable(amount, minAmount, effectiveMax);
-        var busy = store.MovingMoney;
-        var label = amountValid
-            ? Loc.T(sittingOpen ? L.Casino.TopUpFor : L.Casino.BuyInFor,
-                NumberText.Group(amount))
-            : Loc.T(L.Casino.NotEnoughCoins);
-        var confirmRect = new Rect(new Vector2(left, y), new Vector2(left + innerWidth, y + PillHeight * scale));
-        var canConfirm = interactive && amountValid && !busy;
-        if (Button.Draw(drawList, confirmRect, label, ui.Ink, ButtonStyle.Prominent, enabled: canConfirm,
-                overlay: true, id: "cashier.confirm"))
-        {
-            AskStake(sittingOpen, amount);
-        }
-
-        return y + PillHeight * scale;
-    }
-
-    private static bool DrawLot(ImDrawListPtr drawList, AppSkin ui, Rect rect, long chips, bool selected,
-        bool affordable, bool interactive, float scale)
-    {
-        var live = interactive && affordable;
-        var rounding = Metrics.Radius.Sm * scale;
-        var hovered = live && UiInteract.HoverWindowOnly(rect.Min, rect.Max);
-        var fill = selected && affordable
-            ? Palette.WithAlpha(ui.Accent, 0.16f)
-            : Palette.WithAlpha(ui.FieldSurface, affordable ? 1f : 0.4f);
-        Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(fill));
-        if (selected && affordable)
-        {
-            Squircle.Stroke(drawList, rect.Min, rect.Max, rounding,
-                ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.65f)), 1.5f * scale);
-        }
-
-        if (hovered)
-        {
-            Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(ui.HoverTint));
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        var chipInk = affordable ? (selected ? ui.Accent : ui.TitleInk) : Palette.WithAlpha(ui.MutedInk, 0.6f);
-        var costInk = Palette.WithAlpha(ui.MutedInk, affordable ? 1f : 0.6f);
-        var glyphAlpha = affordable ? 1f : 0.45f;
-        var chipText = NumberText.Group(chips);
-        var costText = Loc.T(L.Casino.LotCost, NumberText.Group(CasinoChipLots.CoinsFor(chips)));
-        var chipSize = CurrencyGlyph.MeasureAmount(chipText, TextStyles.SubheadlineEmphasized);
-        var costSize = CurrencyGlyph.MeasureAmount(costText, TextStyles.Caption1);
-        var stackHeight = chipSize.Y + costSize.Y;
-        var top = rect.Center.Y - stackHeight * 0.5f;
-        CurrencyGlyph.DrawAmount(drawList, new Vector2(rect.Center.X - chipSize.X * 0.5f, top), chipText,
-            CurrencyKind.Chips, chipInk, TextStyles.SubheadlineEmphasized, glyphAlpha);
-        CurrencyGlyph.DrawAmount(drawList, new Vector2(rect.Center.X - costSize.X * 0.5f, top + chipSize.Y),
-            costText, CurrencyKind.Coins, costInk, TextStyles.Caption1, glyphAlpha);
-        return UiInteract.Click(rect.Min, rect.Max, hovered);
-    }
-
-    private void AskStake(bool sittingOpen, long amount)
-    {
-        var amountText = NumberText.Group(amount);
-        if (sittingOpen)
-        {
-            confirm.Ask(new ConfirmRequest
-            {
-                Title = Loc.T(L.Casino.TopUpConfirmTitle, amountText),
-                Message = Loc.T(L.Casino.TopUpConfirmBody, amountText),
-                ConfirmLabel = Loc.T(L.Casino.TopUp),
-                CancelLabel = Loc.T(L.Common.Cancel),
-                Danger = false,
-                Confirm = () => store.TopUp(amount),
-            });
-            return;
-        }
-
-        confirm.Ask(new ConfirmRequest
-        {
-            Title = Loc.T(L.Casino.BuyInConfirmTitle, amountText),
-            Message = Loc.T(L.Casino.BuyInConfirmBody, amountText),
-            ConfirmLabel = Loc.T(L.Casino.BuyIn),
-            CancelLabel = Loc.T(L.Common.Cancel),
-            Danger = false,
-            Confirm = () => store.OpenSitting(amount),
-        });
-    }
-
-    private void DrawCashOut(ImDrawListPtr drawList, AppSkin ui, CasinoSittingDto sitting,
-        float left, float y, float innerWidth, float scale, bool interactive)
-    {
-        var stackText = NumberText.Group(sitting.Stack);
-        var rect = new Rect(new Vector2(left, y), new Vector2(left + innerWidth, y + PillHeight * scale));
-        var canCashOut = interactive && !store.MovingMoney;
-        if (Button.Draw(drawList, rect, Loc.T(L.Casino.CashOutFor, stackText), ui.Ink, ButtonStyle.Tinted,
-                enabled: canCashOut, overlay: true, id: "cashier.cashout"))
-        {
-            confirm.Ask(new ConfirmRequest
-            {
-                Title = Loc.T(L.Casino.CashOutConfirmTitle, stackText),
-                Message = Loc.T(L.Casino.CashOutConfirmBody),
-                ConfirmLabel = Loc.T(L.Casino.CashOut),
-                CancelLabel = Loc.T(L.Common.Cancel),
-                Danger = false,
-                Confirm = store.CloseSitting,
-            });
-        }
-
-        Typography.DrawWrappedLeft(new Vector2(left, y + (PillHeight + HintGap) * scale), Loc.T(L.Casino.CashOutHint),
-            ui.MutedInk, TextStyles.Footnote, innerWidth);
     }
 }

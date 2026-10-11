@@ -1,5 +1,7 @@
+using Aetherphone.Apps.Casino.Cabinets;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Home;
@@ -20,6 +22,9 @@ internal sealed class DailySpinWidget : IHomeWidget
     private const long DaySeconds = 86_400;
     private const long SampleRemaining = 5 * 3600 + 42 * 60;
     private const long SampleAward = 250;
+    private const float WheelShare = 0.46f;
+
+    private readonly DailySpinIdle wheel = new();
 
     private readonly CasinoSpinStore spin;
     private readonly AethernetSession session;
@@ -40,6 +45,8 @@ internal sealed class DailySpinWidget : IHomeWidget
     public string Description => Loc.T(L.WidgetsUtility.DailySpinDescription);
     public string AppId => AppKey;
     public WidgetSizeSet Sizes => WidgetSizeSet.Small;
+
+    public WidgetRoute Target(in WidgetContext context) => WidgetRoute.Tab(AppId, CasinoGames.DailySpin);
 
     public float Relevance(string config) =>
         session.IsSignedIn && DailySpinStatus.Of(spin.Answer) == DailySpinClaim.Available ? 0.8f : 0f;
@@ -105,10 +112,16 @@ internal sealed class DailySpinWidget : IHomeWidget
         var drawList = context.DrawList;
         var scale = context.Scale;
         var titleHeight = WidgetText.SpacedLineHeight(WidgetType.Title);
-        var lines = WidgetText.Clamp(Loc.T(L.WidgetsUtility.SpinReady), WidgetType.Title, body.Width, 2);
-        WidgetText.Lines(drawList, lines, body.Min, ink.Primary, WidgetType.Title, titleHeight);
         var buttonHeight = ButtonUnits * scale;
         var button = new Rect(new Vector2(body.Min.X, body.Max.Y - buttonHeight), body.Max);
+        var gutter = WidgetMetrics.Gutter * scale;
+        var side = MathF.Max(0f, MathF.Min(body.Width * WheelShare, button.Min.Y - gutter - body.Min.Y));
+        var wheelRect = new Rect(new Vector2(body.Max.X - side, body.Min.Y),
+            new Vector2(body.Max.X, body.Min.Y + side));
+        wheel.Draw(drawList, wheelRect, MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds), scale);
+        var lines = WidgetText.Clamp(Loc.T(L.WidgetsUtility.SpinReady), WidgetType.Title,
+            MathF.Max(0f, body.Width - side - gutter), 2);
+        WidgetText.Lines(drawList, lines, body.Min, ink.Primary, WidgetType.Title, titleHeight);
         var claiming = spin.Claiming;
         var label = Loc.T(claiming ? L.WidgetsUtility.Spinning : L.WidgetsUtility.Spin);
         var fired = WidgetControls.Button(context, ink, 0, button, claiming ? FontAwesomeIcon.Sync : FontAwesomeIcon.Gift,

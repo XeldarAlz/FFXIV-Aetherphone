@@ -286,7 +286,7 @@ The main networking folders under Core/, Aethernet-backed first, third-party las
 | src/Aetherphone/Core/Muster/ | Muster events store |
 | src/Aetherphone/Core/YellowPages/ | Yellow Pages ads and their encrypted inquiry threads |
 | src/Aetherphone/Core/Coins/ | Coin balance, quests, and shop over `CoinsClient` |
-| src/Aetherphone/Core/Casino/ | Casino state store, the money endpoints, and the seat machine behind the Gamba app |
+| src/Aetherphone/Core/Casino/ | The Gamba stores over `CasinoClient`, the `casino.` room session, rules mirrors and the fairness verifier (see [Casino routes](#casino-routes)) |
 | src/Aetherphone/Core/Games/ | Online game rooms over `GamesClient` and `game.` signals; the global leaderboard over `ScoresClient` |
 | src/Aetherphone/Core/Jam/ | Music listening parties over `jam.` signals |
 | src/Aetherphone/Core/Video/ | AetherStream watch-along over `stream.` signals |
@@ -343,6 +343,87 @@ The live room rides the realtime socket under the `game.` prefix (`game.attach`,
 
 `game.motion` is the one unsequenced room signal. During a Crater turn the walker sends its whole walk so far (tag, turn count, moogle, facing, aim in milliradians, then the signed tick runs) at most every 66 ms; opponents replay the runs through the same `CraterMotion` code the server uses, a few ticks behind to absorb jitter, so the walk they watch is the walk the server will play. The server relays each packet to the room's other sockets and keeps the newest one per member, so a turn that times out mid-walk keeps the walk instead of snapping the moogle back.
 
+### Casino routes
+
+`CasinoClient` (src/Aetherphone/Core/Aethernet/Clients/CasinoClient*.cs) carries the Gamba app; its callers are the casino stores described in [Gamba](casino.md#stores). Every route needs a signed-in session. Routes that put chips or players in (buy-ins, bets, claims, sits, creating and admitting to a table) also need the Gamba app switched on for the account; reads, leaving, acting in a hand already staked and cashing out stay open, so a player can always get their chips home. Domain refusals are HTTP 200 with `granted: false` and a `reason` (mirrored in `CasinoReasons`); only malformed ids are 400. Amounts are chips at 1,000 per coin unless the route says coins or gil. Every DTO field is defaulted, and `GET /casino` lists `features[]` so a newer client can grey out a game an older server does not run.
+
+Floor, cashier and progression:
+
+| Route | Client method | Shape |
+| --- | --- | --- |
+| `GET /casino` | `GetStateAsync()` | `CasinoStateDto`: bankroll `sitting` and card-table `tableSitting`, limits, `features[]`, `rateChipsPerCoin`, `progress` (level, XP, title), `ceiling` (`maxBet`, `levelCap`, `balanceCap`, `maxWinCap`, `reason`: `level`, `balance` or `max_win`), `maxWinPerBet` (chips), `ladder[]`, `levelCapAnchors[]`, `bonuses[]`, `club` |
+| `POST /casino/chips/buy` | `BuyChipsAsync(coins, clientActionId)` | One call to get chips: opens the bankroll or tops up the live one, idempotent on `clientActionId`, from 1 coin up to the wallet (`insufficient` past it). `CasinoBuyChipsDto { granted, reason, coins, chips, stack, balance, sitting, ceiling }` |
+| `POST /casino/sittings/close` | `CloseSittingAsync(sittingId)` | Cash-out. Converts the whole bankroll at once (`convertedCoins`, whole coins); `round_open` while a round is still in play |
+| `POST /casino/limits` | `SetLimitsAsync(selfLossLimit)` | `CasinoLimitRequest` to `CasinoLimitsDto` |
+| `POST /casino/bonus/{kind}/claim` | `ClaimBonusAsync(kind, clientActionId)` | `kind` is `welcome`, `timed`, `reload`, `streak`, `levelup`, `broke` or `rebate`; `CasinoBonusClaimDto { granted, reason, kind, amount, stack, sitting, nextAtUnix, streakDay, level }` |
+| `GET /casino/missions` | `MissionsAsync()` | `CasinoMissionsDto { dayIndex, resetsAtUnix, missions[] }`, today's three missions with server-verified progress |
+| `POST /casino/missions/{id}/claim` | `ClaimMissionAsync(missionId, clientActionId)` | `CasinoMissionClaimDto`; `mission_incomplete` before the target |
+| `GET /casino/challenges` | `ChallengesAsync()` | `CasinoChallengesDto`: live, scheduled and recently settled floor challenges with their leader |
+| `GET /casino/fame?board=&span=&limit=` | `FameAsync(board, span, limit)` | `board` is `profit`, `multiplier`, `win` or `poker`; `span` is `week` or `last`; `CasinoFameBoardDto` names only players who opted in to leaderboards |
+| `GET /casino/feed?tab=` | `FeedAsync(tab)` | `tab` is `all` or `high`; the last 50 settled real-chip rounds floor-wide for the bets rail |
+| `GET /casino/rounds?cursor=` | `RoundsPageAsync(cursor)` | `CasinoRoundHistoryPage` |
+| `GET /casino/rounds/{roundId}/verify` | `VerifyRoundAsync(roundId)` | `CasinoRoundVerifyDto` with the revealed seed and draw log, replayed by `CasinoVerifier` |
+| `GET /casino/dailyspin`, `POST /casino/dailyspin` | `DailySpinStatusAsync()`, `ClaimDailySpinAsync()` | `CasinoDailySpinDto`; the free spin pays wallet coins |
+
+Solo games. Every stake is a ladder rung up to the player's ceiling (`ladder` and `ceiling` refusals, the cap echoed in `ceiling`), and resending the same `clientRoundId` replays the stored result:
+
+| Route | Client method | Shape |
+| --- | --- | --- |
+| `POST /casino/slots/spin` | `SpinSlotsAsync(sittingId, clientRoundId, bet, machineId, mode)` | `machineId` is `slots.bird`, `slots.cascade` or `slots.moogle` (empty means `slots.bird`); `mode` is `base`, or `ante` and `buy` on `slots.cascade`. `CasinoSlotsSpinDto` carries `steps[]` for tumbles, expansions and respins |
+| `POST /casino/slots/gamble` | `GambleSlotsAsync(sittingId, clientRoundId, parentRoundId, pick)` | One 50/50 step of the Golden Bird gamble ladder |
+| `GET /casino/slots/meters?machineId=&bet=` | `SlotsMetersAsync(machineId, bet)` | The Moogle Money Mini and Minor meters at that bet |
+| `POST /casino/plinko/drop` | `DropPlinkoAsync(sittingId, clientRoundId, rows, risk, stake)` | `rows` 8, 12 or 16, `risk` 0 to 2; `CasinoPlinkoDropDto { path[], slot, multiplierTenths, payout, stack }` |
+| `POST /casino/mines/start`, `/reveal`, `/cashout` | `StartMinesAsync`, `RevealMineAsync(roundId, tile)`, `CashOutMinesAsync(roundId)` | `CasinoMinesDto`; the round stays open across picks |
+| `POST /casino/dice/roll` | `RollDiceAsync(sittingId, clientRoundId, stake, target, over)` | `CasinoDiceDto`; target in hundredths |
+| `POST /casino/limbo/play` | `PlayLimboAsync(sittingId, clientRoundId, stake, target)` | `CasinoLimboDto`; target multiplier in hundredths |
+| `POST /casino/keno/draw` | `DrawKenoAsync(sittingId, clientRoundId, stake, risk, picks)` | `CasinoKenoDto`; 1 to 10 picks of 40 tiles |
+| `POST /casino/hilo/start`, `/guess`, `/skip`, `/cashout` | `StartHiLoAsync`, `GuessHiLoAsync(roundId, step, call)`, `SkipHiLoAsync(roundId, step)`, `CashOutHiLoAsync(roundId)` | `CasinoHiLoDto`; the round stays open across calls |
+| `GET /casino/originals/open` | `OpenOriginalsAsync()` | `CasinoOriginalsOpenDto`, the player's open Mines or Hi-Lo round to resume |
+| `POST /casino/scratch/buy` | `BuyScratchAsync(sittingId, clientRoundId, tier)` | `tier` 0 to 4; the cheapest ticket is always allowed |
+| `POST /casino/barkeep/start`, `/finish` | `StartBarkeepAsync`, `FinishBarkeepAsync(roundId, orders)` | The shift script, then the graded orders |
+
+Rooms and tables. Communal rooms and tables are read over HTTP and live on the socket (below):
+
+| Route | Client method | Shape |
+| --- | --- | --- |
+| `GET /casino/rooms`, `GET /casino/rooms/{roomId}` | `RoomsAsync()`, `RoomStateAsync(roomId)` | The room list and one room's snapshot, the HTTP fallback while the socket is down |
+| `GET /casino/rooms/{roomId}/verify/{index}` | `VerifyRoomIndexAsync(roomId, index)` | A blackjack or Hold'em hand by hand index, or a venue roll or draw by log seq |
+| `POST /casino/wheel/bet`, `GET /casino/wheel/{roomId}/bets` | `PlaceWheelBetAsync`, `MyWheelBetsAsync(roomId)` | `CasinoWheelBetRequest { roomId, roundIndex, clientRoundId, clientBetId, spot, amount }` |
+| `POST /casino/bingo/cards`, `GET /casino/bingo/{roomId}/cards` | `BuyBingoCardsAsync`, `MyBingoCardsAsync(roomId)` | 1 to 6 cards a game |
+| `POST /casino/race/bet`, `GET /casino/race/{roomId}/bets` | `PlaceRaceBetAsync(request)`, `MyRaceBetsAsync(roomId)` | `CasinoRaceBetRequest { roomId, roundIndex, clientRoundId, clientBetId, kind, runner, runnerB, amount }`; `kind` 0 Win, 1 Place, 2 Forecast, 3 Reverse forecast; at most 6 tickets a race |
+| `POST /casino/blackjack/sit`, `/leave`, `/rebuy` | `SitAsync`, `StandAsync(roomId)`, `RebuyAsync(roomId)` | `CasinoBlackjackSeatResultDto`; a chip seat moves a rack from the bankroll; rebuy is practice only |
+| `POST /casino/blackjack/bet` | `PlaceBlackjackBetAsync(...)` | `CasinoBlackjackBetRequest { roomId, clientRoundId, clientActionId, amount, perfectPairs, twentyOnePlusThree }`; side bets from 100 up to the main bet |
+| `POST /casino/blackjack/act`, `/wager` | `SendBlackjackActionAsync(...)` | `action` is `hit`, `stand`, `double`, `split`, `insurance`, `no_insurance` or `surrender`; actions that stake chips go to `/wager` |
+| `GET /casino/blackjack/{roomId}/hand` | `MyBlackjackHandAsync(roomId)` | The caller's private `you.cards` lane over HTTP |
+| `POST /casino/holdem/sit`, `/leave`, `/topup`, `/sitout`, `/timebank` | `SitHoldemAsync`, `LeaveHoldemAsync`, `TopUpHoldemAsync`, `HoldemSitOutAsync`, `HoldemTimeBankAsync` | Hold'em seats; leaving mid-hand answers `at_hand_end` and stands at the boundary |
+| `POST /casino/holdem/act` | `ActHoldemAsync(request)` | `CasinoHoldemActRequest { roomId, handId, actionCount, clientActionId, action, amount }` |
+| `GET /casino/holdem/{roomId}/hand`, `/history` | `MyHoldemHandAsync`, `HoldemHistoryAsync` | The private lane (hole cards and the action prompt) and the last 20 hands the caller was dealt into |
+| `GET /casino/tables?game=` | `TablesAsync(gameKind)` | House, mine, invited and listed (Knock and Open) tables and venue rooms |
+| `GET /casino/tables/nearby?world=&territory=&ward=` | `NearbyTablesAsync(world, territory, ward)` | Listed tables and rooms at that housing ward |
+| `POST /casino/tables/quickseat` | `QuickSeatAsync(gameKind, stakeTier)` | A house table with a free seat and the suggested buy-in |
+| `POST /casino/tables` | `CreateTableAsync(clientTableId, stakeTier)`, `HostTableAsync(clientTableId, config)` | `CasinoTableCreateRequest { clientTableId, stakeTier, config }`; `config` is the `CasinoTableConfigDto` (game kind, name, seats, stakes, buy-ins, currency 0 chips, 1 practice, 2 gil, listing, turn clock, house rules, dealer mode, location, dice and deathroll options, gil bank and max payout) |
+| `GET /casino/tables/{tableId}`, `/door` | `TableAsync`, `TableDoorAsync` | The table card and the door (seats, knocks, invites) |
+| `POST /casino/tables/{tableId}/knock`, `/door`, `/invites`, `/kick` | `KnockAsync`, `AnswerKnockAsync(roomId, userId, approve)`, `InviteAsync`, `KickAsync` | Admission |
+| `POST /casino/tables/{tableId}/rename`, `/codealers`, `/pause`, `/deal`, `/tournament`, `/tournament/stop`, `/close` | `RenameTableAsync`, `SetCoDealersAsync`, `PauseTableAsync`, `DealAsync`, `StartTournamentAsync`, `StopTournamentAsync`, `CloseTableAsync` | Host and co-dealer controls; pause, deal and the tournament are practice or gil only |
+| `GET /casino/tables/{tableId}/ledger`, `POST` the same | `TableLedgerAsync`, `ProposeLedgerEntryAsync(roomId, request)` | The session ledger; proposing an entry (`buyin`, `rebuy`, `payout`, `source` `manual` or `trade`) is gil only |
+| `POST /casino/ledger/{entryId}/confirm`, `/dispute` | `ConfirmLedgerEntryAsync`, `DisputeLedgerEntryAsync` | Each side stamps its own confirmation; an entry settles when both have. Dispute is the payee's "Payout not received" |
+| `GET /casino/ledger` | `MyLedgerAsync()` | The caller's gil ledger entries from the last 30 days |
+| `POST /casino/venue/{roomId}/act` | `VenueActAsync(roomId, request)` | `CasinoVenueActRequest { clientActionId, action, count, title, winners, durationSeconds, opponentUserId, ticketPrice, prize }`; `action` is `roll`, `round.open`, `duel.open`, `duel.accept`, `duel.roll`, `duel.cancel`, `raffle.open`, `raffle.ticket` or `raffle.draw` |
+
+The live rooms ride the realtime socket under the `casino.` prefix: the client sends `casino.attach`, `casino.detach`, `casino.resync` and `casino.claim` (take a seat over from another connection), and receives `casino.attached`, `casino.declined`, `casino.snapshot`, `casino.event`, `casino.private` and `casino.ended`. Every event carries `seq` and `epoch`; a gap or an epoch change means resync. A socket attaches to one game room at a time, and may also watch the floor feed. The snapshot's `gameKind` names the room:
+
+| Room kind | Rooms | Private lane |
+| --- | --- | --- |
+| `casino.wheel` | `wheel-floor` | none |
+| `casino.bingo` | `bingo-hall` | none |
+| `casino.race` | `race-track` (Open 60 s, Locked 35 s, Result 15 s) | none |
+| `casino.blackjack` | house tables `blackjack-pit`, `blackjack-parlour`, `blackjack-salon`, `blackjack-vault`, plus hosted tables | `you.cards` (the seat's cards and its legal actions) |
+| `casino.holdem` | house rooms `holdem-low`, `holdem-mid`, `holdem-high`, `holdem-royal`, plus hosted tables | `you.cards` (hole cards, the action prompt and the win chance) |
+| `casino.dice-table`, `casino.deathroll`, `casino.raffle` | hosted venue rooms (practice or gil) | none |
+| `casino.floor` | `casino-floor`, a join-free broadcast: attach and detach with that room id watch it without leaving the game room; `floor.tick` events feed the wins ticker and `floor.rain` arrives as a private note to rain recipients | `floor.rain` |
+
+Snapshots and room list items carry `practice: true` for practice tables and practice venue rooms; gil rooms report their currency in GameState.
+
 ## Gotchas
 
 - Typed clients never throw on HTTP failure. A `null` return can mean network error, non-2xx, an active rate-limit pause, or a signed-out session (`AethernetTransport` short-circuits to `default` when `Session.IsSignedIn` is false). Pass an `onFailure` callback and switch on `AepFailure.Kind` when the difference matters.
@@ -355,7 +436,7 @@ The live room rides the realtime socket under the `game.` prefix (`game.attach`,
 - `EtagCache` keys include the bearer token and the app scope, so two app-scoped `AethernetApi` instances requesting the same URL maintain separate cache entries. That is intentional; do not dedupe them.
 - `HttpService` caps response bodies at 32 MB (`MaxResponseBytes`). Anything larger fails the request rather than streaming.
 - Casino money endpoints never answer a denial with a non-2xx status. A refused buy-in, bet or top-up is HTTP 200 with `Granted: false` and a `Reason` string, because a typed client reads non-2xx as `null`, which would make a rule denial indistinguishable from a transport failure. Treat `Granted` as the verdict and `Reason` as the message key; a `null` return is a transport problem, never a rule.
-- Loss limits are opt-in. Since 2026-08-14 the backend ships with no house loss limit: a `LossLimit` of `0` on `/casino/` means **no limit is set**, and the server sends zero unless the player set their own or an operator set one. Every limit value on the wire is in chips: a self limit must sit between `CasinoEconomy.MinSelfLossLimit` (5,000 chips) and `MaxDailyLossLimit` (the daily buy-in cap, 2,500,000 chips), mirrored client-side by `CasinoLimits` and `CasinoLimitPicker.CeilingFor(state.DailyBuyInCap)`. The client reads 0 as "no limit" everywhere (`CasinoTonight.HasLimit`), so a zero headroom from `CasinoStore.MergeLimits` never renders as "0 room left". Lowering a self limit applies at once; raising or removing it (`SelfLossLimit: null`) waits for the next coin day and comes back as `PendingRaiseAtUnix`.
+- Loss limits are opt-in. Since 2026-08-14 the backend ships with no house loss limit: a `LossLimit` of `0` on `/casino/` means **no limit is set**, and the server sends zero unless the player set their own or an operator set one. Every limit value on the wire is in chips: a self limit must sit between `CasinoEconomy.MinSelfLossLimit` (50,000 chips, 50 coins) and `MaxDailyLossLimit` (100,000,000 chips, 100,000 coins), mirrored client-side by `CasinoLimits.MaxLossLimit` and `CasinoLimitPicker.Ceiling`. The client reads 0 as "no limit" everywhere (`CasinoTonight.HasLimit`), so a zero headroom from `CasinoStore.MergeLimits` never renders as "0 room left". Lowering a self limit applies at once; raising or removing it (`SelfLossLimit: null`) waits for the next coin day and comes back as `PendingRaiseAtUnix`.
 
 ## Related docs
 

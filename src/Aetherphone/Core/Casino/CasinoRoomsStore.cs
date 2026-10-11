@@ -7,7 +7,7 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Casino;
 
-internal sealed record CasinoStakeOutcome(bool Granted, string Reason);
+internal sealed record CasinoStakeOutcome(bool Granted, string Reason, long Ceiling = 0);
 
 internal sealed class CasinoRoomsStore : IDisposable
 {
@@ -34,6 +34,7 @@ internal sealed class CasinoRoomsStore : IDisposable
     private volatile CasinoRoomListItemDto[] rooms = Array.Empty<CasinoRoomListItemDto>();
     private volatile CasinoWheelBetsDto? wheelBets;
     private volatile CasinoBingoCardsDto? bingoCards;
+    private volatile CasinoRaceBetsDto? raceBets;
     private volatile bool loadingRooms;
     private volatile bool loadedRooms;
     private volatile bool stakeInFlight;
@@ -44,6 +45,8 @@ internal sealed class CasinoRoomsStore : IDisposable
     private int unansweredBetSpot = -1;
     private long unansweredBetAmount;
     private long unansweredBetRoundIndex = -1;
+    private long unansweredBetPairs;
+    private long unansweredBetThree;
     private string unansweredPurchaseId = string.Empty;
     private long unansweredPurchaseRoundIndex = -1;
     private int unansweredPurchaseCardCount = -1;
@@ -137,6 +140,83 @@ internal sealed class CasinoRoomsStore : IDisposable
         }
 
         return held;
+    }
+
+    public CasinoRaceBetsDto? RaceBetsFor(string roomId, long roundIndex)
+    {
+        var held = raceBets;
+        if (held is null || held.RoundIndex != roundIndex
+            || !string.Equals(held.RoomId, roomId, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return held;
+    }
+
+    public void PlaceRaceBet(int kind, int runner, int runnerB, long amount)
+    {
+        var roomId = room.RoomId;
+        var snapshot = room.State?.Snapshot;
+        if (stakeInFlight || !session.IsSignedIn || roomId.Length == 0 || snapshot is null)
+        {
+            return;
+        }
+
+        if (!string.Equals(snapshot.GameKind, CasinoWire.RaceKind, StringComparison.Ordinal)
+            || !RaceRules.IsTicket(kind, runner, runnerB) || amount < RaceRules.MinBet)
+        {
+            return;
+        }
+
+        var roundIndex = snapshot.RoundIndex;
+        var sittingId = chips.State?.Sitting?.Id ?? string.Empty;
+        var ticketKey = RaceRules.TicketKey(kind, runner, runnerB);
+        string betId;
+        string clientRoundId;
+        lock (stakeGate)
+        {
+            clientRoundId = ChipRoundFor(roundIndex);
+            betId = ReusableBetId(roundIndex, ticketKey, amount);
+            if (betId.Length == 0)
+            {
+                betId = Guid.NewGuid().ToString("N");
+            }
+
+            unansweredBetId = betId;
+            unansweredBetSpot = ticketKey;
+            unansweredBetAmount = amount;
+            unansweredBetRoundIndex = roundIndex;
+        }
+
+        var request = new CasinoRaceBetRequest(roomId, roundIndex, clientRoundId, betId, kind, runner, runnerB,
+            amount);
+        stakeInFlight = true;
+        work.Run("race bet", async token =>
+        {
+            var result = await casino.PlaceRaceBetAsync(request, token).ConfigureAwait(false);
+            if (result is null)
+            {
+                Interlocked.Exchange(ref stakeFailed, 1);
+                return;
+            }
+
+            ForgetUnansweredBet(betId);
+            Interlocked.Exchange(ref stakeResult, new CasinoStakeOutcome(result.Granted, result.Reason));
+            if (!result.Granted)
+            {
+                chips.RefreshNow();
+                InvalidatePersonal();
+                return;
+            }
+
+            if (sittingId.Length > 0)
+            {
+                chips.AbsorbStack(sittingId, result.Stack);
+            }
+
+            InvalidatePersonal();
+        }, () => stakeInFlight = false);
     }
 
     public int OccupancyOf(string roomId)
@@ -234,9 +314,11 @@ internal sealed class CasinoRoomsStore : IDisposable
             }
 
             ForgetUnansweredBet(betId);
-            Interlocked.Exchange(ref stakeResult, new CasinoStakeOutcome(result.Granted, result.Reason));
+            Interlocked.Exchange(ref stakeResult,
+                new CasinoStakeOutcome(result.Granted, result.Reason, result.Ceiling));
             if (!result.Granted)
             {
+                chips.AbsorbCeiling(result.Ceiling);
                 chips.RefreshNow();
                 InvalidatePersonal();
                 return;
@@ -295,9 +377,11 @@ internal sealed class CasinoRoomsStore : IDisposable
             }
 
             ForgetUnansweredPurchase(purchaseId);
-            Interlocked.Exchange(ref stakeResult, new CasinoStakeOutcome(result.Granted, result.Reason));
+            Interlocked.Exchange(ref stakeResult,
+                new CasinoStakeOutcome(result.Granted, result.Reason, result.Ceiling));
             if (!result.Granted)
             {
+                chips.AbsorbCeiling(result.Ceiling);
                 chips.RefreshNow();
                 InvalidatePersonal();
                 return;
@@ -313,7 +397,7 @@ internal sealed class CasinoRoomsStore : IDisposable
         }, () => stakeInFlight = false);
     }
 
-    public void PlaceBlackjackBet(long amount)
+    public void PlaceBlackjackBet(long amount, long perfectPairs = 0, long twentyOnePlusThree = 0)
     {
         var roomId = room.RoomId;
         var snapshot = room.State?.Snapshot;
@@ -330,13 +414,17 @@ internal sealed class CasinoRoomsStore : IDisposable
         }
 
         var roundIndex = board.HandIndex;
-        var sittingId = chips.State?.TableSitting?.Id ?? string.Empty;
+        var sittingId = CasinoCurrencies.SeatBanked(CasinoCurrencies.Of(board))
+            ? string.Empty
+            : chips.State?.TableSitting?.Id ?? string.Empty;
         string betId;
         string clientRoundId;
         lock (stakeGate)
         {
             clientRoundId = ChipRoundFor(roundIndex);
-            betId = ReusableBetId(roundIndex, HandBetSpot, amount);
+            betId = unansweredBetPairs == perfectPairs && unansweredBetThree == twentyOnePlusThree
+                ? ReusableBetId(roundIndex, HandBetSpot, amount)
+                : string.Empty;
             if (betId.Length == 0)
             {
                 betId = Guid.NewGuid().ToString("N");
@@ -346,13 +434,16 @@ internal sealed class CasinoRoomsStore : IDisposable
             unansweredBetSpot = HandBetSpot;
             unansweredBetAmount = amount;
             unansweredBetRoundIndex = roundIndex;
+            unansweredBetPairs = perfectPairs;
+            unansweredBetThree = twentyOnePlusThree;
         }
 
         stakeInFlight = true;
         work.Run("blackjack bet", async token =>
         {
             var result = await casino
-                .PlaceBlackjackBetAsync(roomId, clientRoundId, betId, amount, token)
+                .PlaceBlackjackBetAsync(roomId, clientRoundId, betId, amount, perfectPairs, twentyOnePlusThree,
+                    token)
                 .ConfigureAwait(false);
             if (result is null)
             {
@@ -401,7 +492,9 @@ internal sealed class CasinoRoomsStore : IDisposable
 
         var handId = board.HandId;
         var actionSeq = mine.ActionCount;
-        var sittingId = chips.State?.TableSitting?.Id ?? string.Empty;
+        var sittingId = CasinoCurrencies.SeatBanked(CasinoCurrencies.Of(board))
+            ? string.Empty
+            : chips.State?.TableSitting?.Id ?? string.Empty;
         string actionId;
         lock (stakeGate)
         {
@@ -704,6 +797,7 @@ internal sealed class CasinoRoomsStore : IDisposable
         Interlocked.Increment(ref personalGeneration);
         wheelBets = null;
         bingoCards = null;
+        raceBets = null;
         Interlocked.Exchange(ref personalRoundIndex, -1);
         Volatile.Write(ref personalPhase, -1);
         personalAskedRoundIndex = -1;
@@ -846,6 +940,20 @@ internal sealed class CasinoRoomsStore : IDisposable
                 return;
             }
 
+            if (string.Equals(gameKind, CasinoWire.RaceKind, StringComparison.Ordinal))
+            {
+                var tickets = await casino.MyRaceBetsAsync(target, token).ConfigureAwait(false);
+                if (tickets is null)
+                {
+                    return;
+                }
+
+                Interlocked.Exchange(ref personalAttemptedAtTick, 0);
+                AbsorbRaceBets(target, tickets);
+                MarkPersonalLoaded(target, generation, roundIndex, phase);
+                return;
+            }
+
             if (handNeedsReading && string.Equals(gameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal))
             {
                 var hand = await casino.MyBlackjackHandAsync(target, token).ConfigureAwait(false);
@@ -885,6 +993,16 @@ internal sealed class CasinoRoomsStore : IDisposable
         }
 
         wheelBets = fresh;
+    }
+
+    private void AbsorbRaceBets(string requestedRoomId, CasinoRaceBetsDto fresh)
+    {
+        if (!string.Equals(room.RoomId, requestedRoomId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        raceBets = fresh;
     }
 
     private void AbsorbBingoCards(string requestedRoomId, CasinoBingoCardsDto fresh)

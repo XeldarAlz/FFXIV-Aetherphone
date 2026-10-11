@@ -14,7 +14,10 @@ internal sealed class CasinoPlayStore : IDisposable
     private readonly object pendingRoundsSwapLock = new();
 
     private volatile bool roundInFlight;
+    private volatile bool metersInFlight;
     private CasinoSlotsSpinDto? spinResult;
+    private CasinoSlotsGambleDto? gambleResult;
+    private CasinoSlotsMetersDto? metersResult;
     private CasinoScratchCardDto? scratchResult;
     private CasinoBarkeepStartDto? barkeepStartResult;
     private CasinoBarkeepFinishDto? barkeepFinishResult;
@@ -27,7 +30,16 @@ internal sealed class CasinoPlayStore : IDisposable
         this.session = session;
         this.casino = casino;
         this.store = store;
+        Originals = new CasinoOriginalsStore(session, casino, store);
+        Plinko = new CasinoPlinkoStore(session, casino, store);
+        DealerHoldem = new CasinoDealerHoldemStore(session, casino, store);
     }
+
+    public CasinoOriginalsStore Originals { get; }
+
+    public CasinoPlinkoStore Plinko { get; }
+
+    public CasinoDealerHoldemStore DealerHoldem { get; }
 
     public bool RoundInFlight => roundInFlight;
 
@@ -51,6 +63,16 @@ internal sealed class CasinoPlayStore : IDisposable
         return Interlocked.Exchange(ref spinResult, null);
     }
 
+    public CasinoSlotsGambleDto? TakeGambleResult()
+    {
+        return Interlocked.Exchange(ref gambleResult, null);
+    }
+
+    public CasinoSlotsMetersDto? TakeMeters()
+    {
+        return Interlocked.Exchange(ref metersResult, null);
+    }
+
     public CasinoScratchCardDto? TakeScratchResult()
     {
         return Interlocked.Exchange(ref scratchResult, null);
@@ -71,17 +93,18 @@ internal sealed class CasinoPlayStore : IDisposable
         return Interlocked.Exchange(ref roundFailed, 0) != 0;
     }
 
-    public void SpinSlots(long stake)
+    public bool SpinMachine(string machineId, string mode, long bet)
     {
         var sittingId = store.State?.Sitting?.Id ?? string.Empty;
-        if (roundInFlight || !session.IsSignedIn || sittingId.Length == 0 || !SlotsRules.IsStakeInRange(stake))
+        if (roundInFlight || !session.IsSignedIn || sittingId.Length == 0 || !SlotsRules.IsBet(bet)
+            || !SlotsRules.Offers(machineId, mode))
         {
-            return;
+            return false;
         }
 
         if (ReplayedPendingRound(sittingId))
         {
-            return;
+            return false;
         }
 
         roundInFlight = true;
@@ -91,9 +114,59 @@ internal sealed class CasinoPlayStore : IDisposable
             GameKind = CasinoWire.SlotsKind,
             SittingId = sittingId,
             RoundId = roundId,
-            Stake = stake,
+            Stake = bet,
+            MachineId = machineId,
+            Mode = mode,
         });
-        IssueSpin(sittingId, roundId, stake);
+        IssueSpin(sittingId, roundId, bet, machineId, mode);
+        return true;
+    }
+
+    public bool GambleSlots(string parentRoundId, int pick, long stake)
+    {
+        var sittingId = store.State?.Sitting?.Id ?? string.Empty;
+        if (roundInFlight || !session.IsSignedIn || sittingId.Length == 0 || parentRoundId.Length == 0
+            || (pick != SlotsRules.GambleRed && pick != SlotsRules.GambleBlack))
+        {
+            return false;
+        }
+
+        if (ReplayedPendingRound(sittingId))
+        {
+            return false;
+        }
+
+        roundInFlight = true;
+        var roundId = Guid.NewGuid().ToString("N");
+        RememberPendingRound(new PendingCasinoRound
+        {
+            GameKind = CasinoWire.SlotsGambleKind,
+            SittingId = sittingId,
+            RoundId = roundId,
+            Stake = stake,
+            ParentRoundId = parentRoundId,
+            Pick = pick,
+        });
+        IssueGamble(sittingId, roundId, parentRoundId, pick);
+        return true;
+    }
+
+    public void RequestMeters(string machineId, long bet)
+    {
+        if (metersInFlight || !session.IsSignedIn || !SlotsRules.IsBet(bet))
+        {
+            return;
+        }
+
+        metersInFlight = true;
+        work.Run("slots meters", async token =>
+        {
+            var result = await casino.SlotsMetersAsync(machineId, bet, token).ConfigureAwait(false);
+            if (result is not null)
+            {
+                Interlocked.Exchange(ref metersResult, result);
+            }
+        }, () => metersInFlight = false);
     }
 
     public void BuyScratch(int tier)
@@ -195,7 +268,16 @@ internal sealed class CasinoPlayStore : IDisposable
         if (string.Equals(pending.GameKind, CasinoWire.SlotsKind, StringComparison.Ordinal))
         {
             roundInFlight = true;
-            IssueSpin(pending.SittingId, pending.RoundId, pending.Stake);
+            var machineId = SlotsRules.IsMachine(pending.MachineId) ? pending.MachineId : SlotsRules.BirdId;
+            var mode = pending.Mode.Length > 0 ? pending.Mode : SlotsRules.BaseMode;
+            IssueSpin(pending.SittingId, pending.RoundId, pending.Stake, machineId, mode);
+            return;
+        }
+
+        if (string.Equals(pending.GameKind, CasinoWire.SlotsGambleKind, StringComparison.Ordinal))
+        {
+            roundInFlight = true;
+            IssueGamble(pending.SittingId, pending.RoundId, pending.ParentRoundId, pending.Pick);
             return;
         }
 
@@ -220,11 +302,12 @@ internal sealed class CasinoPlayStore : IDisposable
         }
     }
 
-    private void IssueSpin(string sittingId, string roundId, long stake)
+    private void IssueSpin(string sittingId, string roundId, long bet, string machineId, string mode)
     {
         work.Run("slots spin", async token =>
         {
-            var result = await casino.SpinSlotsAsync(sittingId, roundId, stake, token).ConfigureAwait(false);
+            var result = await casino.SpinSlotsAsync(sittingId, roundId, bet, machineId, mode, token)
+                .ConfigureAwait(false);
             if (result is null)
             {
                 Interlocked.Exchange(ref roundFailed, 1);
@@ -234,6 +317,32 @@ internal sealed class CasinoPlayStore : IDisposable
             ClearPendingRound(roundId);
             Interlocked.Exchange(ref spinResult, result);
             if (result.Granted && result.Jackpot == 0)
+            {
+                store.AbsorbStack(sittingId, result.Stack);
+            }
+            else
+            {
+                store.AbsorbCeiling(result.Ceiling);
+                store.RefreshNow();
+            }
+        }, () => roundInFlight = false);
+    }
+
+    private void IssueGamble(string sittingId, string roundId, string parentRoundId, int pick)
+    {
+        work.Run("slots gamble", async token =>
+        {
+            var result = await casino.GambleSlotsAsync(sittingId, roundId, parentRoundId, pick, token)
+                .ConfigureAwait(false);
+            if (result is null)
+            {
+                Interlocked.Exchange(ref roundFailed, 1);
+                return;
+            }
+
+            ClearPendingRound(roundId);
+            Interlocked.Exchange(ref gambleResult, result);
+            if (result.Granted)
             {
                 store.AbsorbStack(sittingId, result.Stack);
             }
@@ -263,6 +372,7 @@ internal sealed class CasinoPlayStore : IDisposable
             }
             else
             {
+                store.AbsorbCeiling(result.Ceiling);
                 store.RefreshNow();
             }
         }, () => roundInFlight = false);
@@ -394,6 +504,9 @@ internal sealed class CasinoPlayStore : IDisposable
 
     public void Dispose()
     {
+        Originals.Dispose();
+        Plinko.Dispose();
+        DealerHoldem.Dispose();
         work.Dispose();
     }
 }

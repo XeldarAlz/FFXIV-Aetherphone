@@ -23,6 +23,7 @@ internal sealed partial class CasinoApp
     private const float StepPad = 16f;
     private const float ActionHeight = Button.LargeHeight;
     private const int FairnessRecentRoundLimit = 8;
+    private const float DayCoinsShare = 0.4f;
 
     private readonly struct HistoryRowText
     {
@@ -50,11 +51,13 @@ internal sealed partial class CasinoApp
     private readonly List<HistoryDay> historyDays = new();
     private readonly List<string> historyDayLabels = new();
     private readonly List<string> historyDayNets = new();
+    private readonly List<string> historyDayCoins = new();
     private CasinoRoundHistoryDto[]? historySource;
     private bool historySourceHasMore;
     private LanguageInfo? historyLanguage;
     private int historyTimeFormat = -1;
     private DateTime historyDay;
+    private long historyRate;
     private string detailRoundId = string.Empty;
     private string detailPlayed = string.Empty;
     private string detailSettled = string.Empty;
@@ -68,10 +71,12 @@ internal sealed partial class CasinoApp
         var today = DateTime.Now.Date;
         if (ReferenceEquals(rounds, historySource) && historySourceHasMore == history.HasMore
             && ReferenceEquals(historyLanguage, Loc.Current) && historyTimeFormat == TimeText.FormatVersion
-            && historyDay == today)
+            && historyDay == today && historyRate == casino.Rate)
         {
             return;
         }
+
+        historyRate = casino.Rate;
 
         historySource = rounds;
         historySourceHasMore = history.HasMore;
@@ -87,11 +92,16 @@ internal sealed partial class CasinoApp
         CasinoHistoryDays.Group(rounds, history.HasMore, SameDay, historyDays);
         historyDayLabels.Clear();
         historyDayNets.Clear();
+        historyDayCoins.Clear();
         for (var dayIndex = 0; dayIndex < historyDays.Count; dayIndex++)
         {
             var day = historyDays[dayIndex];
+            var shown = day.Complete && day.Settled;
             historyDayLabels.Add(TimeText.DayLabel(rounds[day.Start].CreatedAtUnix));
-            historyDayNets.Add(day.Complete && day.Settled ? CasinoTextCache.SignedText(day.Net) : string.Empty);
+            historyDayNets.Add(shown ? CasinoTextCache.SignedText(day.Net) : string.Empty);
+            historyDayCoins.Add(shown
+                ? Loc.T(L.Strip.CoinsAmount, CasinoTextCache.SignedText(ChipValue.Coins(day.Net, historyRate)))
+                : string.Empty);
         }
     }
 
@@ -213,9 +223,26 @@ internal sealed partial class CasinoApp
             var ink = sign > 0 ? CoinArt.GainInk : sign < 0 ? ui.BodyInk : ui.MutedInk;
             CurrencyGlyph.DrawAmount(drawList, new Vector2(origin.X + width - netSize.X,
                 origin.Y + (height - netSize.Y) * 0.5f), net, CurrencyKind.Chips, ink, TextStyles.Headline);
+            reserve += DrawDayCoins(drawList, historyDayCoins[dayIndex], origin.X + width - reserve,
+                origin.Y + height * 0.5f, width - reserve, scale);
         }
 
         return CardSectionHeader.Draw(drawList, origin, width, historyDayLabels[dayIndex], ui.TitleInk, reserve);
+    }
+
+    private float DrawDayCoins(ImDrawListPtr drawList, string coins, float right, float centerY, float room,
+        float scale)
+    {
+        var size = Typography.Measure(coins, TextStyles.Footnote);
+        var gap = CoinArt.ValueGap * scale;
+        if (coins.Length == 0 || size.X + gap > room * DayCoinsShare)
+        {
+            return 0f;
+        }
+
+        Typography.Draw(drawList, new Vector2(right - size.X, centerY - size.Y * 0.5f), coins, ui.MutedInk,
+            TextStyles.Footnote);
+        return size.X + gap;
     }
 
     private void DrawHistoryRow(ImDrawListPtr drawList, Rect row, int roundIndex, bool hairline, float scale)
@@ -272,12 +299,15 @@ internal sealed partial class CasinoApp
             var stepsMax = DrawFairnessSteps(drawList, new Vector2(origin.X, stepTop), width, scale);
             cursorY = stepsMax + CardGap * scale;
             cursorY += Typography.DrawWrappedLeft(new Vector2(origin.X + Metrics.Space.Lg * scale, cursorY),
-                Loc.T(L.Casino.FairnessChainNote), ui.MutedInk, TextStyles.Footnote,
+                Loc.T(L.Casino.FairnessChainNote), ui.BodyInk, TextStyles.Footnote,
                 width - Metrics.Space.Lg * 2f * scale);
 
             var listTop = SectionTitle(drawList, new Vector2(origin.X, cursorY), width,
                 Loc.T(L.Casino.FairnessRecentHeading), scale);
             cursorY = DrawFairnessRounds(drawList, new Vector2(origin.X, listTop), width, scale);
+            var handsTop = SectionTitle(drawList, new Vector2(origin.X, cursorY), width,
+                Loc.T(L.Blackjack.TableHandsHeading), scale);
+            cursorY = tableHands.Draw(drawList, ui, new Vector2(origin.X, handsTop), width, scale);
             CoinArt.Reserve(origin, width, cursorY + CoinArt.BottomPad * scale);
         }
     }
@@ -565,7 +595,7 @@ internal sealed partial class CasinoApp
         var pad = ReferencePad * scale;
         var gap = ReferenceGap * scale;
         var inner = width - pad * 2f;
-        var caption = Typography.LineHeight(TextStyles.Caption1);
+        var caption = Typography.LineHeight(TextStyles.FootnoteEmphasized);
         var height = pad * 2f + caption + Typography.MeasureWrappedBlock(roundId, TextStyles.Footnote, inner).Y;
         if (commit.Length > 0)
         {
@@ -598,8 +628,8 @@ internal sealed partial class CasinoApp
     private float DrawReferenceField(ImDrawListPtr drawList, float left, float top, float width, string label,
         string value)
     {
-        Typography.Draw(drawList, new Vector2(left, top), Loc.Upper(label), ui.MutedInk, TextStyles.Caption1);
-        top += Typography.LineHeight(TextStyles.Caption1);
+        Typography.Draw(drawList, new Vector2(left, top), Loc.Upper(label), ui.BodyInk, TextStyles.FootnoteEmphasized);
+        top += Typography.LineHeight(TextStyles.FootnoteEmphasized);
         return top + Typography.DrawWrappedLeft(new Vector2(left, top), value, ui.BodyInk, TextStyles.Footnote, width);
     }
 

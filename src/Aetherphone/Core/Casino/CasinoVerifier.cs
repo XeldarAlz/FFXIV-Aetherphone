@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Core.Casino;
 
@@ -18,12 +19,24 @@ internal static class CasinoVerifier
     private const string ScratchPrizePurpose = "prize";
     private const string BarkeepPatronsPurpose = "patrons";
     private const string SlotsJackpotPurpose = "jackpot";
+    private const string GamblePurpose = "gamble";
     private const string SegmentPurpose = "segment";
     private const string BingoCardPurpose = "card";
     private const string BingoBallPurpose = "ball";
     private const string BlackjackShufflePurpose = "shuffle";
+    private const string BlackjackShuffleEntry = "shuffle:";
+    private const string MinePurpose = "mine";
+    private const string RollPurpose = "roll";
+    private const string LimboPurpose = "limbo";
+    private const string KenoPurpose = "keno";
+    private const string CardPurpose = "card";
+    private const string RaceFieldPurpose = "field";
+    private const string RaceStrengthPurpose = "strength";
+    private const string RaceRunnerPurpose = "runner";
     private const uint BarkeepJitterBound = 3;
     private const uint BarkeepStepCountBound = 3;
+    private const uint PegBound = 2;
+    private const int PlayingCardsDeck = 52;
 
     private static readonly uint ScratchWinnerBagSize = (ScratchRules.SymbolCount - 1) * 2;
     private static readonly uint ScratchLoserBagSize = ScratchRules.SymbolCount * 2;
@@ -68,9 +81,108 @@ internal static class CasinoVerifier
         }
 
         var streamKeyInfo = string.IsNullOrEmpty(streamBinding) ? roundId : streamBinding;
-        return ReplaysDrawLog(gameKind, seed, streamKeyInfo, drawLog)
-            ? CasinoRoundVerdict.Match
-            : CasinoRoundVerdict.Mismatch;
+        var replays = IsOriginalsKind(gameKind)
+            ? ReplaysFloatDrawLog(seed, streamKeyInfo, drawLog)
+            : string.Equals(gameKind, CasinoWire.SlotsKind, StringComparison.Ordinal)
+                ? SlotsDrawLog.Replays(seed, streamKeyInfo, drawLog)
+                : ReplaysDrawLog(gameKind, seed, streamKeyInfo, drawLog);
+        return replays ? CasinoRoundVerdict.Match : CasinoRoundVerdict.Mismatch;
+    }
+
+    internal static bool IsOriginalsKind(string gameKind) => gameKind switch
+    {
+        CasinoWire.MinesKind or CasinoWire.DiceKind or CasinoWire.LimboKind or CasinoWire.KenoKind
+            or CasinoWire.HiLoKind => true,
+        _ => false,
+    };
+
+    internal static bool ReplaysFloatDrawLog(byte[] seed, string streamKeyInfo, string drawLog)
+    {
+        if (drawLog.Length == 0)
+        {
+            return false;
+        }
+
+        var stream = new DrawStream(seed, streamKeyInfo);
+        var mines = 0;
+        var keno = 0;
+        var cursor = 0;
+        while (cursor < drawLog.Length)
+        {
+            var separator = drawLog.IndexOf(';', cursor);
+            var end = separator < 0 ? drawLog.Length : separator;
+            var pair = drawLog.AsSpan(cursor, end - cursor);
+            var colon = pair.IndexOf(':');
+            if (colon <= 0 || colon == pair.Length - 1)
+            {
+                return false;
+            }
+
+            var purpose = pair[..colon];
+            if (!uint.TryParse(pair[(colon + 1)..], NumberStyles.None, CultureInfo.InvariantCulture,
+                    out var loggedValue))
+            {
+                return false;
+            }
+
+            if (!TryFloatBoundFor(purpose, ref mines, ref keno, out var bound) || loggedValue >= bound
+                || stream.NextFloatBelow(bound) != loggedValue)
+            {
+                return false;
+            }
+
+            cursor = end + 1;
+        }
+
+        return true;
+    }
+
+    private static bool TryFloatBoundFor(ReadOnlySpan<char> purpose, ref int mines, ref int keno, out uint bound)
+    {
+        bound = 0;
+        if (purpose.SequenceEqual(MinePurpose))
+        {
+            if (mines >= OriginalsRules.MaxMines)
+            {
+                return false;
+            }
+
+            bound = (uint)(OriginalsRules.MinesTiles - mines);
+            mines++;
+            return true;
+        }
+
+        if (purpose.SequenceEqual(KenoPurpose))
+        {
+            if (keno >= OriginalsRules.KenoDraws)
+            {
+                return false;
+            }
+
+            bound = (uint)(OriginalsRules.KenoTiles - keno);
+            keno++;
+            return true;
+        }
+
+        if (purpose.SequenceEqual(RollPurpose))
+        {
+            bound = OriginalsRules.DiceRollBound;
+            return true;
+        }
+
+        if (purpose.SequenceEqual(LimboPurpose))
+        {
+            bound = OriginalsRules.LimboBound;
+            return true;
+        }
+
+        if (purpose.SequenceEqual(CardPurpose))
+        {
+            bound = OriginalsRules.HiLoDeck;
+            return true;
+        }
+
+        return false;
     }
 
     internal static bool TrySegmentBound(string gameKind, out uint bound)
@@ -98,7 +210,17 @@ internal static class CasinoVerifier
             return false;
         }
 
+        if (string.Equals(gameKind, CasinoWire.RaceKind, StringComparison.Ordinal))
+        {
+            Span<int> order = stackalloc int[RaceRules.FieldSize];
+            Span<int> birds = stackalloc int[RaceRules.FieldSize];
+            return ReplaysRaceLog(seed, streamKeyInfo, drawLog, birds, order);
+        }
+
         TrySegmentBound(gameKind, out var segmentBound);
+        var holdem = string.Equals(gameKind, HoldemRules.Kind, StringComparison.Ordinal)
+                     || string.Equals(gameKind, DealerHoldemRules.Kind, StringComparison.Ordinal);
+        var shoeCards = ShoeCardsOf(drawLog);
         var stream = new DrawStream(seed, streamKeyInfo);
         var shuffles = default(ShuffleRun);
         var cursor = 0;
@@ -120,8 +242,11 @@ internal static class CasinoVerifier
                 return false;
             }
 
-            if (!TryBoundFor(purpose, shuffles.Next(purpose), segmentBound, out var bound)
-                || loggedValue >= bound)
+            var occurrence = shuffles.Next(purpose);
+            var bounded = holdem && purpose.SequenceEqual(BlackjackShufflePurpose)
+                ? TryHoldemShuffleBound(occurrence, out var bound)
+                : TryBoundFor(purpose, occurrence, segmentBound, shoeCards, out bound);
+            if (!bounded || loggedValue >= bound)
             {
                 return false;
             }
@@ -137,12 +262,198 @@ internal static class CasinoVerifier
         return true;
     }
 
+    internal static bool ReplaysRaceLog(byte[] seed, string streamKeyInfo, string drawLog, Span<int> birds,
+        Span<int> order)
+    {
+        if (drawLog.Length == 0 || birds.Length < RaceRules.FieldSize || order.Length < RaceRules.FieldSize)
+        {
+            return false;
+        }
+
+        var stream = new DrawStream(seed, streamKeyInfo);
+        Span<int> bank = stackalloc int[RaceRules.BirdBank];
+        for (var bird = 0; bird < bank.Length; bird++)
+        {
+            bank[bird] = bird;
+        }
+
+        Span<int> strengths = stackalloc int[RaceRules.FieldSize];
+        Span<bool> placed = stackalloc bool[RaceRules.FieldSize];
+        var fields = 0;
+        var strengthCount = 0;
+        var runners = 0;
+        var remaining = 0L;
+        var cursor = 0;
+        while (cursor < drawLog.Length)
+        {
+            var separator = drawLog.IndexOf(';', cursor);
+            var end = separator < 0 ? drawLog.Length : separator;
+            var pair = drawLog.AsSpan(cursor, end - cursor);
+            var colon = pair.IndexOf(':');
+            if (colon <= 0 || colon == pair.Length - 1
+                || !uint.TryParse(pair[(colon + 1)..], NumberStyles.None, CultureInfo.InvariantCulture,
+                    out var logged))
+            {
+                return false;
+            }
+
+            var purpose = pair[..colon];
+            if (purpose.SequenceEqual(RaceFieldPurpose))
+            {
+                if (fields >= RaceRules.FieldSize || strengthCount > 0)
+                {
+                    return false;
+                }
+
+                var bound = (uint)(RaceRules.BirdBank - fields);
+                if (logged >= bound || stream.NextBelow(bound) != logged)
+                {
+                    return false;
+                }
+
+                var pick = fields + (int)logged;
+                (bank[fields], bank[pick]) = (bank[pick], bank[fields]);
+                birds[fields] = bank[fields];
+                fields++;
+            }
+            else if (purpose.SequenceEqual(RaceStrengthPurpose))
+            {
+                if (fields != RaceRules.FieldSize || strengthCount >= RaceRules.FieldSize || runners > 0)
+                {
+                    return false;
+                }
+
+                const uint bound = RaceRules.StrengthSpread;
+                if (logged >= bound || stream.NextBelow(bound) != logged)
+                {
+                    return false;
+                }
+
+                strengths[strengthCount] = RaceRules.StrengthBase + (int)logged;
+                remaining += strengths[strengthCount];
+                strengthCount++;
+            }
+            else if (purpose.SequenceEqual(RaceRunnerPurpose))
+            {
+                if (strengthCount != RaceRules.FieldSize || runners >= RaceRules.FieldSize - 1 || remaining <= 0)
+                {
+                    return false;
+                }
+
+                var bound = (uint)remaining;
+                if (logged >= bound || stream.NextBelow(bound) != logged)
+                {
+                    return false;
+                }
+
+                var slot = WalkToRunner(strengths, placed, logged);
+                placed[slot] = true;
+                order[runners] = slot;
+                remaining -= strengths[slot];
+                runners++;
+            }
+            else
+            {
+                return false;
+            }
+
+            cursor = end + 1;
+        }
+
+        if (fields != RaceRules.FieldSize || strengthCount != RaceRules.FieldSize
+            || runners != RaceRules.FieldSize - 1)
+        {
+            return false;
+        }
+
+        for (var slot = 0; slot < RaceRules.FieldSize; slot++)
+        {
+            if (!placed[slot])
+            {
+                order[runners] = slot;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int WalkToRunner(ReadOnlySpan<int> strengths, ReadOnlySpan<bool> placed, uint pick)
+    {
+        var left = (long)pick;
+        var last = -1;
+        for (var slot = 0; slot < strengths.Length; slot++)
+        {
+            if (placed[slot])
+            {
+                continue;
+            }
+
+            last = slot;
+            if (left < strengths[slot])
+            {
+                return slot;
+            }
+
+            left -= strengths[slot];
+        }
+
+        return last;
+    }
+
+    internal static bool TryHoldemShuffleBound(int occurrence, out uint bound)
+    {
+        var deck = PlayingCardsDeck;
+        if (occurrence < 0 || occurrence >= deck - 1)
+        {
+            bound = 0;
+            return false;
+        }
+
+        bound = (uint)(deck - occurrence);
+        return true;
+    }
+
     internal static bool TryBoundFor(ReadOnlySpan<char> purpose, uint segmentBound, out uint bound)
     {
         return TryBoundFor(purpose, 0, segmentBound, out bound);
     }
 
+    internal static int ShoeCardsOf(string drawLog)
+    {
+        var shuffles = 0;
+        var cursor = drawLog.IndexOf(BlackjackShuffleEntry, StringComparison.Ordinal);
+        while (cursor >= 0)
+        {
+            if (cursor == 0 || drawLog[cursor - 1] == ';')
+            {
+                shuffles++;
+            }
+
+            cursor = drawLog.IndexOf(BlackjackShuffleEntry, cursor + BlackjackShuffleEntry.Length,
+                StringComparison.Ordinal);
+        }
+
+        var shoeCards = shuffles + 1;
+        var decks = CasinoRuleSheet.Decks;
+        for (var index = 0; index < decks.Length; index++)
+        {
+            if (decks[index] * PlayingCards.DeckSize == shoeCards)
+            {
+                return shoeCards;
+            }
+        }
+
+        return BlackjackRules.ShoeCards;
+    }
+
     internal static bool TryBoundFor(ReadOnlySpan<char> purpose, int occurrence, uint segmentBound, out uint bound)
+    {
+        return TryBoundFor(purpose, occurrence, segmentBound, BlackjackRules.ShoeCards, out bound);
+    }
+
+    internal static bool TryBoundFor(ReadOnlySpan<char> purpose, int occurrence, uint segmentBound, int shoeCards,
+        out uint bound)
     {
         bound = 0;
         if (occurrence < 0)
@@ -164,7 +475,13 @@ internal static class CasinoVerifier
 
         if (purpose.SequenceEqual(SlotsJackpotPurpose))
         {
-            bound = (uint)SlotsRules.JackpotChipsPerHit;
+            bound = (uint)SlotsRules.LegacyJackpotChipsPerHit;
+            return true;
+        }
+
+        if (purpose.SequenceEqual(GamblePurpose))
+        {
+            bound = 2;
             return true;
         }
 
@@ -193,12 +510,23 @@ internal static class CasinoVerifier
 
         if (purpose.SequenceEqual(BlackjackShufflePurpose))
         {
-            if (occurrence >= BlackjackRules.ShoeCards - 1)
+            if (occurrence >= shoeCards - 1)
             {
                 return false;
             }
 
-            bound = (uint)(BlackjackRules.ShoeCards - occurrence);
+            bound = (uint)(shoeCards - occurrence);
+            return true;
+        }
+
+        if (purpose.SequenceEqual(PlinkoRules.PegPurpose))
+        {
+            if (occurrence >= PlinkoRules.MaxRows)
+            {
+                return false;
+            }
+
+            bound = PegBound;
             return true;
         }
 
@@ -217,12 +545,12 @@ internal static class CasinoVerifier
                 if (reelSplit <= 0 || reelSplit == argument.Length - 1
                     || !TryParseIndex(argument[..reelSplit], out var spinIndex)
                     || !TryParseIndex(argument[(reelSplit + 1)..], out var reelIndex)
-                    || spinIndex > SlotsRules.FreeSpinCap || reelIndex >= SlotsRules.ReelCount)
+                    || spinIndex > SlotsRules.LegacyFreeSpinCap || reelIndex >= SlotsRules.ReelCount)
                 {
                     return false;
                 }
 
-                bound = SlotsRules.StopsPerReel;
+                bound = SlotsRules.LegacyStopsPerReel;
                 return true;
             }
             case 'w':
@@ -309,8 +637,17 @@ internal static class CasinoVerifier
 
         private int shoeSwaps;
 
+        private int pegs;
+
         public int Next(ReadOnlySpan<char> purpose)
         {
+            if (purpose.SequenceEqual(PlinkoRules.PegPurpose))
+            {
+                var taken = pegs;
+                pegs++;
+                return taken;
+            }
+
             if (purpose.SequenceEqual(BingoCardPurpose))
             {
                 var taken = cards;
@@ -368,6 +705,11 @@ internal static class CasinoVerifier
 
                 return raw % bound;
             }
+        }
+
+        public uint NextFloatBelow(uint bound)
+        {
+            return (uint)((ulong)NextUInt32() * bound >> 32);
         }
 
         private uint NextUInt32()

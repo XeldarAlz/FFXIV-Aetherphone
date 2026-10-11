@@ -1,8 +1,14 @@
+using Aetherphone.Core.Aethernet.Contracts;
+
 namespace Aetherphone.Core.Casino;
 
 internal static class CasinoWire
 {
+    public static readonly CasinoSittingDto NoBankroll = new();
+
     public const string SlotsKind = "casino.slots";
+
+    public const string SlotsGambleKind = "casino.slots.gamble";
 
     public const string ScratchKind = "casino.scratch";
 
@@ -14,9 +20,25 @@ internal static class CasinoWire
 
     public const string BlackjackKind = "casino.blackjack";
 
+    public const string RaceKind = "casino.race";
+
     public const string BlackjackHandEvent = "you.cards";
 
     public const string DailySpinKind = "casino.dailyspin";
+
+    public const string MinesKind = "casino.mines";
+
+    public const string DiceKind = "casino.dice";
+
+    public const string LimboKind = "casino.limbo";
+
+    public const string KenoKind = "casino.keno";
+
+    public const string HiLoKind = "casino.hilo";
+
+    public const string PlinkoKind = "casino.plinko";
+
+    public const string DealerHoldemKind = DealerHoldemRules.Kind;
 
     private const string KindPrefix = "casino.";
 

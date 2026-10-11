@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Core;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
@@ -15,8 +16,14 @@ internal sealed class ScratchOddsSheet
     private readonly SheetSurface sheet = new("casino.scratchOdds");
     private readonly Action<Rect> drawSheetBody;
 
+    private readonly string[] priceLines = new string[ScratchRules.TierCount];
+    private readonly string[] chances = new string[ScratchRules.PrizeSymbolCount];
+
     private AppSkin skin = null!;
     private int tier;
+    private string returnLine = string.Empty;
+    private string maxWin = string.Empty;
+    private LanguageInfo? labelsLanguage;
 
     public ScratchOddsSheet()
     {
@@ -43,8 +50,9 @@ internal sealed class ScratchOddsSheet
         }
     }
 
-    public void Draw(Rect screen, AppSkin ui, int tier)
+    public void Draw(Rect screen, AppSkin ui, int tier, string maxWinLine)
     {
+        maxWin = maxWinLine;
         skin = ui;
         this.tier = tier;
         sheet.Draw(screen, ui.Theme, Loc.T(L.Casino.ScratchOdds), PanelHeightShare, drawSheetBody);
@@ -59,29 +67,30 @@ internal sealed class ScratchOddsSheet
         }
     }
 
-    private static void DrawRows(AppSkin ui, float scale, int tier)
+    private void DrawRows(AppSkin ui, float scale, int tier)
     {
+        RefreshLabels();
         var drawList = ImGui.GetWindowDrawList();
         var width = ScrollLayout.NativeScrollContentWidth();
         var intro = Loc.T(L.Casino.ScratchOddsIntro);
         var introOrigin = ImGui.GetCursorScreenPos();
         var introBlock = Typography.MeasureWrappedBlock(intro, TextStyles.Footnote, width);
-        Typography.DrawWrappedLeft(introOrigin, intro, ui.MutedInk, TextStyles.Footnote, width);
+        Typography.DrawWrappedLeft(introOrigin, intro, ui.BodyInk, TextStyles.Footnote, width);
         ImGui.Dummy(new Vector2(width, introBlock.Y + 10f * scale));
 
-        var priceLine = Loc.T(L.Casino.ScratchPrice) + ": "
-            + NumberText.Group(ScratchRules.Prices[tier]);
         var priceOrigin = ImGui.GetCursorScreenPos();
-        Typography.Draw(drawList, priceOrigin, priceLine, ui.TitleInk, TextStyles.SubheadlineEmphasized);
+        Typography.Draw(drawList, priceOrigin, Typography.FitText(priceLines[tier], width, TextStyles.SubheadlineEmphasized),
+            ui.TitleInk, TextStyles.SubheadlineEmphasized);
         ImGui.Dummy(new Vector2(width, 26f * scale));
 
         var headerOrigin = ImGui.GetCursorScreenPos();
-        Typography.Draw(drawList, new Vector2(headerOrigin.X + 44f * scale, headerOrigin.Y + 6f * scale),
-            Loc.T(L.Casino.ScratchOddsPrize), ui.MutedInk, TextStyles.FootnoteEmphasized);
         var chanceHeader = Loc.T(L.Casino.ScratchOddsChance);
         var chanceHeaderSize = Typography.Measure(chanceHeader, TextStyles.FootnoteEmphasized);
+        Typography.Draw(drawList, new Vector2(headerOrigin.X + 44f * scale, headerOrigin.Y + 6f * scale),
+            Typography.FitText(Loc.T(L.Casino.ScratchOddsPrize), width - chanceHeaderSize.X - 52f * scale,
+                TextStyles.FootnoteEmphasized), ui.BodyInk, TextStyles.FootnoteEmphasized);
         Typography.Draw(drawList, new Vector2(headerOrigin.X + width - chanceHeaderSize.X, headerOrigin.Y + 6f * scale),
-            chanceHeader, ui.MutedInk, TextStyles.FootnoteEmphasized);
+            chanceHeader, ui.BodyInk, TextStyles.FootnoteEmphasized);
         ImGui.Dummy(new Vector2(width, 24f * scale));
 
         var table = ScratchRules.PrizeTables[tier];
@@ -91,20 +100,49 @@ internal sealed class ScratchOddsSheet
             var rowCenterY = rowOrigin.Y + RowHeight * scale * 0.5f;
             ScratchSymbolArt.Draw(drawList, prizeIndex, new Vector2(rowOrigin.X + 18f * scale, rowCenterY),
                 13f * scale);
-            Typography.Draw(drawList, new Vector2(rowOrigin.X + 44f * scale, rowCenterY - 9f * scale),
-                NumberText.Group(table[prizeIndex].Chips), ui.TitleInk, TextStyles.SubheadlineEmphasized);
-            var chance = Loc.T(L.Casino.ScratchOddsChanceValue, ChancePercent(table[prizeIndex].CountPerMillion));
+            var multiple = CasinoMultiples.Label(ScratchRules.PrizeMultiples[prizeIndex] * 100);
+            var multipleSize = Typography.Measure(multiple, TextStyles.FootnoteEmphasized);
+            Typography.Draw(drawList, new Vector2(rowOrigin.X + 44f * scale, rowCenterY - multipleSize.Y * 0.5f),
+                multiple, CasinoColors.Money, TextStyles.FootnoteEmphasized);
+            var amount = NumberText.Group(table[prizeIndex].Chips);
+            Typography.Draw(drawList, new Vector2(rowOrigin.X + 44f * scale + multipleSize.X + 10f * scale,
+                rowCenterY - 9f * scale), amount, ui.TitleInk, TextStyles.SubheadlineEmphasized);
+            var chance = chances[prizeIndex];
             var chanceSize = Typography.Measure(chance, TextStyles.Subheadline);
             Typography.Draw(drawList, new Vector2(rowOrigin.X + width - chanceSize.X, rowCenterY - 9f * scale),
                 chance, ui.BodyInk, TextStyles.Subheadline);
             ImGui.Dummy(new Vector2(width, RowHeight * scale));
         }
 
-        ImGui.Dummy(new Vector2(width, Metrics.Space.Lg * scale));
+        var returnOrigin = ImGui.GetCursorScreenPos();
+        Typography.Draw(drawList, returnOrigin, Typography.FitText(returnLine, width, TextStyles.Footnote), ui.MutedInk,
+            TextStyles.Footnote);
+        ImGui.Dummy(new Vector2(width, Typography.LineHeight(TextStyles.Footnote) + Metrics.Space.Sm * scale));
+        var maxWinOrigin = ImGui.GetCursorScreenPos();
+        var maxWinHeight = Typography.DrawWrappedLeft(maxWinOrigin, maxWin, ui.BodyInk, TextStyles.Footnote, width);
+        ImGui.Dummy(new Vector2(width, maxWinHeight + Metrics.Space.Lg * scale));
     }
 
-    private static string ChancePercent(long countPerMillion)
+    private void RefreshLabels()
     {
-        return (countPerMillion / 10_000.0).ToString("0.#", Loc.Culture);
+        if (ReferenceEquals(labelsLanguage, Loc.Current))
+        {
+            return;
+        }
+
+        labelsLanguage = Loc.Current;
+        for (var tierIndex = 0; tierIndex < ScratchRules.TierCount; tierIndex++)
+        {
+            priceLines[tierIndex] = Loc.T(L.Casino.ScratchPrice) + ": " + NumberText.Group(ScratchRules.Prices[tierIndex]);
+        }
+
+        for (var prizeIndex = 0; prizeIndex < chances.Length; prizeIndex++)
+        {
+            chances[prizeIndex] = Loc.T(L.Casino.ScratchOddsChanceValue,
+                (ScratchRules.PrizeCountsPerMillion[prizeIndex] / 10_000.0).ToString("0.#", Loc.Culture));
+        }
+
+        returnLine = Loc.T(L.Strip.PaysBack) + ": " + Loc.T(L.Strip.ReturnValue,
+            (ScratchRules.ReturnBasisPoints / 100m).ToString("0.#", Loc.Culture));
     }
 }

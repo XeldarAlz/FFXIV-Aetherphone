@@ -12,14 +12,17 @@ internal sealed record CasinoRoomState(
     CasinoRoomSnapshotDto Snapshot,
     CasinoWheelRoomStateDto? Wheel,
     CasinoBingoRoomStateDto? Bingo,
-    CasinoBlackjackRoomStateDto? Blackjack);
+    CasinoBlackjackRoomStateDto? Blackjack,
+    CasinoRaceRoomStateDto? Race = null,
+    CasinoHoldemRoomStateDto? Holdem = null);
 
 internal sealed record CasinoRoomPrivate(
     string RoomId,
     int Epoch,
     long Seq,
     CasinoPrivateDto Payload,
-    CasinoBlackjackYouDto? Blackjack);
+    CasinoBlackjackYouDto? Blackjack,
+    CasinoHoldemYouDto? Holdem = null);
 
 internal enum CasinoRoomApply
 {
@@ -46,6 +49,7 @@ internal sealed class CasinoRoomSession
     private volatile string closedReason = string.Empty;
     private volatile bool attached;
     private volatile bool awaitingSnapshot;
+    private volatile bool handedOff;
     private long skewMilliseconds;
     private long resyncAskedAtUnixMs;
     private long touchedAtTick;
@@ -67,6 +71,8 @@ internal sealed class CasinoRoomSession
     public bool AwaitingSnapshot => awaitingSnapshot;
 
     public string ClosedReason => closedReason;
+
+    public bool HandedOff => handedOff;
 
     public long SkewMilliseconds => Volatile.Read(ref skewMilliseconds);
 
@@ -153,6 +159,21 @@ internal sealed class CasinoRoomSession
         }
     }
 
+    public void Claim()
+    {
+        lock (gate)
+        {
+            var current = roomId;
+            if (current.Length == 0)
+            {
+                return;
+            }
+
+            handedOff = false;
+            Send(SignalType.CasinoClaim, current);
+        }
+    }
+
     public void OnRealtimeConnected(bool connected)
     {
         lock (gate)
@@ -205,7 +226,11 @@ internal sealed class CasinoRoomSession
                 AbsorbEvent(payload, localNowUnixMs);
                 return;
             case SignalType.CasinoPrivate:
+                handedOff = false;
                 AbsorbPrivate(payload, localNowUnixMs);
+                return;
+            case SignalType.CasinoHandled:
+                handedOff = true;
                 return;
             case SignalType.CasinoDeclined:
             case SignalType.CasinoEnded:
@@ -239,6 +264,21 @@ internal sealed class CasinoRoomSession
 
             privateState = new CasinoRoomPrivate(requestedRoomId, epoch, seq,
                 new CasinoPrivateDto(CasinoWire.BlackjackHandEvent, string.Empty), hand);
+        }
+    }
+
+    public void AbsorbHttpHoldemPrivate(string requestedRoomId, int epoch, long seq, CasinoHoldemYouDto hand)
+    {
+        lock (gate)
+        {
+            if (!string.Equals(roomId, requestedRoomId, StringComparison.Ordinal)
+                || !AcceptsPrivate(privateState, epoch, seq))
+            {
+                return;
+            }
+
+            privateState = new CasinoRoomPrivate(requestedRoomId, epoch, seq,
+                new CasinoPrivateDto(CasinoWire.BlackjackHandEvent, string.Empty), null, hand);
         }
     }
 
@@ -333,10 +373,22 @@ internal sealed class CasinoRoomSession
                 Parse(snapshot.GameState, AethernetJsonContext.Default.CasinoBingoRoomStateDto), null);
         }
 
+        if (string.Equals(snapshot.GameKind, HoldemRules.Kind, StringComparison.Ordinal))
+        {
+            return new CasinoRoomState(roomId, epoch, seq, snapshot, null, null, null,
+                Holdem: Parse(snapshot.GameState, AethernetJsonContext.Default.CasinoHoldemRoomStateDto));
+        }
+
         if (string.Equals(snapshot.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal))
         {
             return new CasinoRoomState(roomId, epoch, seq, snapshot, null, null,
                 Parse(snapshot.GameState, AethernetJsonContext.Default.CasinoBlackjackRoomStateDto));
+        }
+
+        if (string.Equals(snapshot.GameKind, CasinoWire.RaceKind, StringComparison.Ordinal))
+        {
+            return new CasinoRoomState(roomId, epoch, seq, snapshot, null, null, null,
+                Parse(snapshot.GameState, AethernetJsonContext.Default.CasinoRaceRoomStateDto));
         }
 
         return new CasinoRoomState(roomId, epoch, seq, snapshot, null, null, null);
@@ -453,8 +505,12 @@ internal sealed class CasinoRoomSession
                 return;
             }
 
-            privateState = new CasinoRoomPrivate(payload.RoomId, payload.Epoch, payload.PairSeq, personal,
-                BuildPrivate(personal));
+            var holdem = string.Equals(state?.Snapshot.GameKind, HoldemRules.Kind, StringComparison.Ordinal);
+            privateState = holdem
+                ? new CasinoRoomPrivate(payload.RoomId, payload.Epoch, payload.PairSeq, personal, null,
+                    BuildHoldemPrivate(personal))
+                : new CasinoRoomPrivate(payload.RoomId, payload.Epoch, payload.PairSeq, personal,
+                    BuildPrivate(personal));
         }
     }
 
@@ -466,6 +522,16 @@ internal sealed class CasinoRoomSession
         }
 
         return Parse(personal.Payload, AethernetJsonContext.Default.CasinoBlackjackYouDto);
+    }
+
+    internal static CasinoHoldemYouDto? BuildHoldemPrivate(CasinoPrivateDto personal)
+    {
+        if (!string.Equals(personal.EventKind, CasinoWire.BlackjackHandEvent, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return Parse(personal.Payload, AethernetJsonContext.Default.CasinoHoldemYouDto);
     }
 
     private bool AsksForResync(long localNowUnixMs)
@@ -516,6 +582,7 @@ internal sealed class CasinoRoomSession
         closedReason = string.Empty;
         attached = false;
         awaitingSnapshot = false;
+        handedOff = false;
         resyncAskedAtUnixMs = 0;
         Volatile.Write(ref touchedAtTick, 0);
     }

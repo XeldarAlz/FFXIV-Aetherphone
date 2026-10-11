@@ -57,10 +57,12 @@ public sealed class BingoRulesTests
         Assert.Equal(75, BingoRules.Balls);
         Assert.Equal(24, BingoRules.CardNumbers);
         Assert.Equal(12, BingoRules.FreeCell);
-        Assert.Equal(2000, BingoRules.CardPrice);
-        Assert.Equal(4, BingoRules.MaxCards);
+        Assert.Equal(1000, BingoRules.CardPrice);
+        Assert.Equal(6, BingoRules.MaxCards);
         Assert.Equal(125, BingoRules.PrizeCardCap);
-        Assert.Equal(2, BingoRules.BallIntervalSeconds);
+        Assert.Equal(1400, BingoRules.BallIntervalMs);
+        Assert.Equal(45, BingoRules.EarlyBirdBall);
+        Assert.Equal(940, BingoRules.ReturnTenths);
         Assert.Equal(BingoRules.CardNumbers, BingoRules.CardCells.Length);
         Assert.Equal(12, BingoRules.LineMasks.Length);
         Assert.Equal(1, BingoRules.ColumnFloorFor(0));
@@ -171,12 +173,12 @@ public sealed class BingoRulesTests
     [Fact]
     public void ThePrizeLadderIsTheEnginesRateTimesTheCardsInPlay()
     {
-        Assert.Equal(2981, BingoRules.PrizeFor(BingoRules.StageLine, 10));
-        Assert.Equal(3959, BingoRules.PrizeFor(BingoRules.StageTwoLines, 10));
-        Assert.Equal(8535, BingoRules.PrizeFor(BingoRules.StageFullHouse, 10));
-        Assert.Equal(351, BingoRules.PrizeFor(BingoRules.StageLine, 1));
-        Assert.Equal(466, BingoRules.PrizeFor(BingoRules.StageTwoLines, 1));
-        Assert.Equal(1004, BingoRules.PrizeFor(BingoRules.StageFullHouse, 1));
+        Assert.Equal(1530, BingoRules.PrizeFor(BingoRules.StageLine, 10));
+        Assert.Equal(2032, BingoRules.PrizeFor(BingoRules.StageTwoLines, 10));
+        Assert.Equal(4381, BingoRules.PrizeFor(BingoRules.StageFullHouse, 10));
+        Assert.Equal(180, BingoRules.PrizeFor(BingoRules.StageLine, 1));
+        Assert.Equal(239, BingoRules.PrizeFor(BingoRules.StageTwoLines, 1));
+        Assert.Equal(516, BingoRules.PrizeFor(BingoRules.StageFullHouse, 1));
     }
 
     [Fact]
@@ -192,25 +194,27 @@ public sealed class BingoRulesTests
     public void PrizesStopGrowingAtTheDisclosedCardCap()
     {
         var atCap = BingoRules.PrizeFor(BingoRules.StageFullHouse, BingoRules.PrizeCardCap);
-        Assert.Equal(101_363, atCap);
+        Assert.Equal(52_025, atCap);
         Assert.Equal(atCap, BingoRules.PrizeFor(BingoRules.StageFullHouse, BingoRules.PrizeCardCap + 1));
         Assert.Equal(atCap, BingoRules.PrizeFor(BingoRules.StageFullHouse, 100_000));
-        Assert.True(atCap < BingoRules.MaxSingleWin);
 
         var lineAtCap = BingoRules.PrizeFor(BingoRules.StageLine, BingoRules.PrizeCardCap);
-        Assert.Equal(35_413, lineAtCap);
+        Assert.Equal(18_175, lineAtCap);
+        Assert.Equal(24_138, BingoRules.PrizeFor(BingoRules.StageTwoLines, BingoRules.PrizeCardCap));
         Assert.Equal(lineAtCap, BingoRules.PrizeFor(BingoRules.StageLine, BingoRules.PrizeCardCap * 4));
-        Assert.True(lineAtCap < BingoRules.MaxSingleWin);
     }
 
     [Fact]
-    public void NoPrizeAtAnyHallSizeCrossesTheSingleWinCeiling()
+    public void AStagePrizeNeverShrinksAsTheHallGrows()
     {
-        for (var cards = 1; cards <= 400; cards++)
+        for (var stage = 0; stage < BingoRules.StageCount; stage++)
         {
-            for (var stage = 0; stage < BingoRules.StageCount; stage++)
+            var previous = 0L;
+            for (var cards = 1; cards <= 400; cards++)
             {
-                Assert.True(BingoRules.PrizeFor(stage, cards) <= BingoRules.MaxSingleWin);
+                var prize = BingoRules.PrizeFor(stage, cards);
+                Assert.True(prize >= previous);
+                previous = prize;
             }
         }
     }
@@ -299,7 +303,7 @@ public sealed class BingoRulesTests
         Assert.True(BingoRules.IsValidCardCount(1));
         Assert.True(BingoRules.IsValidCardCount(BingoRules.MaxCards));
         Assert.False(BingoRules.IsValidCardCount(BingoRules.MaxCards + 1));
-        Assert.Equal(8000, BingoRules.StakeFor(BingoRules.MaxCards));
+        Assert.Equal(6000, BingoRules.StakeFor(BingoRules.MaxCards));
     }
 
     [Fact]
@@ -308,7 +312,8 @@ public sealed class BingoRulesTests
         Assert.Equal(0, BingoCabinet.HeldCards(null));
         Assert.Equal(2, BingoCabinet.HeldCards(Mine(7, SequentialCard(), SequentialCard())));
         Assert.Equal(BingoRules.MaxCards, BingoCabinet.HeldCards(Mine(7,
-            SequentialCard(), SequentialCard(), SequentialCard(), SequentialCard(), SequentialCard())));
+            SequentialCard(), SequentialCard(), SequentialCard(), SequentialCard(), SequentialCard(), SequentialCard(),
+            SequentialCard())));
     }
 
     [Fact]
@@ -353,6 +358,9 @@ public sealed class BingoRulesTests
         playback.Update(Snapshot(7), Board(7, new[] { 1, 2 }), mine, 0.016f);
         var freshCell = BingoRules.CellForSlot(1);
         Assert.True(BingoRules.IsMarked(playback.AutoMaskOf(0), freshCell));
+        Assert.False(playback.Stamp(0, freshCell));
+
+        playback.Update(Snapshot(7), Board(7, new[] { 1, 2 }), mine, BingoRoundPlayback.FlightSeconds);
         Assert.False(BingoRules.IsMarked(playback.StampedMaskOf(0), freshCell));
 
         Assert.True(playback.Stamp(0, freshCell));
@@ -368,7 +376,7 @@ public sealed class BingoRulesTests
         var mine = Mine(7, card);
         playback.Update(Snapshot(7), Board(7, new[] { 1 }), mine, 0.016f);
         playback.Update(Snapshot(7), Board(7, new[] { 1, 2 }), mine, 0.016f);
-        playback.Update(Snapshot(7), Board(7, new[] { 1, 2 }), mine, BingoRoundPlayback.StampDelaySeconds);
+        playback.Update(Snapshot(7), Board(7, new[] { 1, 2 }), mine, BingoRoundPlayback.StampAfterSeconds);
 
         Assert.Equal(playback.AutoMaskOf(0), playback.StampedMaskOf(0));
         Assert.Equal(2, playback.LatestBall);

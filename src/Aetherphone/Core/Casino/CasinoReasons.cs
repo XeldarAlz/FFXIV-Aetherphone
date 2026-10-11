@@ -12,7 +12,6 @@ internal static class CasinoReasons
     public const string StakeRange = "stake_range";
     public const string BuyInRange = "buyin_range";
 
-    public const string DailyBuyIn = "daily_buyin";
     public const string SittingOpen = "sitting_open";
     public const string Insufficient = "insufficient";
     public const string Frozen = "frozen";
@@ -56,19 +55,81 @@ internal static class CasinoReasons
     public const string InsufficientChips = "insufficient_chips";
     public const string TooLate = "too_late";
     public const string AtHandEnd = "at_hand_end";
+    public const string PairLimited = "pair_limited";
+    public const string PvpLossCap = "pvp_loss_cap";
+    public const string PvpWinCap = "pvp_win_cap";
+    public const string InHand = "in_hand";
+    public const string TitleRequired = "title_required";
+    public const string TimeBankEmpty = "time_bank_empty";
+    public const string HoldemClosed = "holdem_closed";
     public const string Kicked = "kicked";
     public const string BoundElsewhere = "bound_elsewhere";
     public const string NoTables = "no_tables";
+    public const string Ceiling = "ceiling";
+    public const string Ladder = "ladder";
+    public const string InvalidMove = "invalid_move";
+    public const string BonusNotReady = "bonus_not_ready";
+    public const string ClubInsufficient = "club_insufficient";
+    public const string ConfigInvalid = "config_invalid";
+    public const string PracticeOnly = "practice_only";
+    public const string NotDealer = "not_dealer";
+    public const string RebuyOff = "rebuy_off";
+    public const string TournamentLive = "tournament_live";
+    public const string NoTournament = "no_tournament";
+    public const string NothingToDeal = "nothing_to_deal";
+    public const string NoSpectators = "no_spectators";
+    public const string DuelLive = "duel_live";
+    public const string NoDuel = "no_duel";
+    public const string RaffleLive = "raffle_live";
+    public const string NoRaffle = "no_raffle";
+    public const string TicketLimit = "ticket_limit";
+    public const string RoundLive = "round_live";
+    public const string BankLimit = "bank_limit";
+    public const string HostFrozen = "host_frozen";
+    public const string NotParty = "not_party";
+    public const string AlreadyConfirmed = "already_confirmed";
+    public const string Settled = "settled";
+    public const string GilOnly = "gil_only";
+    public const string MachineUnknown = "machine_unknown";
+    public const string MissionIncomplete = "mission_incomplete";
+    public const string NotOwner = "not_owner";
+    public const string CodeUnknown = "code_unknown";
 
     public static readonly string[] All =
     {
+        MissionIncomplete,
+        NotOwner,
+        CodeUnknown,
+        Ceiling,
+        Ladder,
+        BonusNotReady,
+        ClubInsufficient,
+        ConfigInvalid,
+        PracticeOnly,
+        NotDealer,
+        RebuyOff,
+        TournamentLive,
+        NoTournament,
+        NothingToDeal,
+        NoSpectators,
+        DuelLive,
+        NoDuel,
+        RaffleLive,
+        NoRaffle,
+        TicketLimit,
+        RoundLive,
+        BankLimit,
+        HostFrozen,
+        NotParty,
+        AlreadyConfirmed,
+        Settled,
+        GilOnly,
         StakesPaused,
         LossLimit,
         Draining,
         Cooldown,
         StakeRange,
         BuyInRange,
-        DailyBuyIn,
         SittingOpen,
         Insufficient,
         Frozen,
@@ -112,20 +173,55 @@ internal static class CasinoReasons
         InsufficientChips,
         TooLate,
         AtHandEnd,
+        PairLimited,
+        PvpLossCap,
+        PvpWinCap,
+        InHand,
+        TitleRequired,
+        TimeBankEmpty,
+        HoldemClosed,
         Kicked,
         BoundElsewhere,
         NoTables,
+        InvalidMove,
+        MachineUnknown,
     };
 
     private static readonly FrozenDictionary<string, LocString> Messages = new Dictionary<string, LocString>
     {
+        [Ceiling] = L.Strip.ReasonCeiling,
+        [Ladder] = L.Strip.ReasonLadder,
+        [BonusNotReady] = L.Strip.ReasonBonusNotReady,
+        [MissionIncomplete] = L.Club.ReasonMissionIncomplete,
+        [ClubInsufficient] = L.Strip.ReasonClubInsufficient,
+        [ConfigInvalid] = L.Tables.ReasonConfigInvalid,
+        [PracticeOnly] = L.Tables.ReasonPracticeOnly,
+        [NotDealer] = L.Tables.ReasonNotDealer,
+        [RebuyOff] = L.Tables.ReasonRebuyOff,
+        [TournamentLive] = L.Tables.ReasonTournamentLive,
+        [NoTournament] = L.Tables.ReasonNoTournament,
+        [NothingToDeal] = L.Tables.ReasonNothingToDeal,
+        [NoSpectators] = L.Tables.ReasonNoSpectators,
+        [DuelLive] = L.Tables.ReasonDuelLive,
+        [NoDuel] = L.Tables.ReasonNoDuel,
+        [RaffleLive] = L.Tables.ReasonRaffleLive,
+        [NoRaffle] = L.Tables.ReasonNoRaffle,
+        [TicketLimit] = L.Tables.ReasonTicketLimit,
+        [RoundLive] = L.Tables.ReasonRoundLive,
+        [BankLimit] = L.Tables.ReasonBankLimit,
+        [HostFrozen] = L.Tables.ReasonHostFrozen,
+        [NotParty] = L.Tables.ReasonNotParty,
+        [AlreadyConfirmed] = L.Tables.ReasonAlreadyConfirmed,
+        [Settled] = L.Tables.ReasonSettled,
+        [GilOnly] = L.Tables.ReasonGilOnly,
+        [NotOwner] = L.Tables.ReasonNotOwner,
+        [CodeUnknown] = L.Tables.ReasonCodeUnknown,
         [StakesPaused] = L.Casino.ReasonStakesPaused,
         [LossLimit] = L.Casino.ReasonLossLimit,
         [Draining] = L.Casino.ReasonDraining,
         [Cooldown] = L.Casino.ReasonCooldown,
         [StakeRange] = L.Casino.ReasonStakeRange,
         [BuyInRange] = L.Casino.ReasonBuyInRange,
-        [DailyBuyIn] = L.Casino.ReasonDailyBuyIn,
         [SittingOpen] = L.Casino.ReasonSittingOpen,
         [Insufficient] = L.Casino.ReasonInsufficient,
         [Frozen] = L.Casino.ReasonFrozen,
@@ -169,10 +265,23 @@ internal static class CasinoReasons
         [InsufficientChips] = L.Casino.ReasonInsufficientChips,
         [TooLate] = L.Casino.ReasonTooLate,
         [AtHandEnd] = L.Casino.ReasonAtHandEnd,
+        [PairLimited] = L.Holdem.ReasonPairLimited,
+        [PvpLossCap] = L.Holdem.ReasonPvpLossCap,
+        [PvpWinCap] = L.Holdem.ReasonPvpWinCap,
+        [InHand] = L.Holdem.ReasonInHand,
+        [TitleRequired] = L.Holdem.ReasonTitleRequired,
+        [TimeBankEmpty] = L.Holdem.ReasonTimeBankEmpty,
+        [HoldemClosed] = L.Holdem.ReasonHoldemClosed,
         [Kicked] = L.Casino.ReasonKicked,
         [BoundElsewhere] = L.Casino.ReasonBoundElsewhere,
         [NoTables] = L.Casino.ReasonNoTables,
+        [InvalidMove] = L.Originals.ReasonInvalidMove,
+        [MachineUnknown] = L.Machines.ReasonMachineUnknown,
     }.ToFrozenDictionary(StringComparer.Ordinal);
+
+    private static long ceilingTextValue;
+    private static LanguageInfo? ceilingTextLanguage;
+    private static string ceilingText = string.Empty;
 
     public static bool TryMessage(string reason, out LocString message)
     {
@@ -182,5 +291,23 @@ internal static class CasinoReasons
     public static LocString MessageFor(string reason)
     {
         return Messages.TryGetValue(reason, out var message) ? message : L.Casino.ReasonGeneric;
+    }
+
+    public static string Text(string reason, long ceiling)
+    {
+        if (ceiling <= 0 || !string.Equals(reason, Ceiling, StringComparison.Ordinal))
+        {
+            return Loc.T(MessageFor(reason));
+        }
+
+        if (ceiling == ceilingTextValue && ReferenceEquals(Loc.Current, ceilingTextLanguage))
+        {
+            return ceilingText;
+        }
+
+        ceilingTextValue = ceiling;
+        ceilingTextLanguage = Loc.Current;
+        ceilingText = Loc.T(L.Strip.ReasonCeilingAt, NumberText.Compact(ceiling));
+        return ceilingText;
     }
 }
