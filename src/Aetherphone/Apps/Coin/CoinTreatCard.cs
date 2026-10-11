@@ -76,7 +76,7 @@ internal sealed class CoinTreatCard
         }
 
         cursorY += Metrics.Space.Md * scale;
-        Typography.DrawWrappedLeft(new Vector2(min.X + padding, cursorY), statusText, ui.TitleInk, TextStyles.Footnote,
+        Typography.DrawWrappedLeft(new Vector2(min.X + padding, cursorY), statusText, ui.MutedInk, TextStyles.Footnote,
             textWidth);
         if (hint.Length > 0)
         {
