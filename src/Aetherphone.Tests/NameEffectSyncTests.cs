@@ -28,7 +28,7 @@ public sealed class NameEffectSyncTests
         "spectrum", "candy", "stripes", "horizon", "chrome", "blaze",
         "bounce", "shiver", "wobble", "pop", "flipboard", "typewriter",
         "outline", "shadow", "longshadow", "emboss", "chromatic", "neon", "underline", "scan", "comet",
-        "sakura", "snowfall", "fireflies", "hearts", "glitter", "bubbles", "confetti", "storm",
+        "sakura", "snowfall", "fireflies", "hearts", "glitter", "bubbles", "confetti", "storm", "witchfire",
     };
 
     private static readonly string[] SeededEffectKeys =
