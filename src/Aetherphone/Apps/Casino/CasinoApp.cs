@@ -397,9 +397,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         clubSheet.Draw(screenArea, ui);
         cashier.Draw(screenArea, ui, openLimits);
         tradePrompt.Draw(screenArea, ui);
-        if (introShowing && intro.Draw(screenArea, ui, casino.Rate, casino.Cashier?.DailyNetCashOutCoins is > 0
-                ? casino.Cashier.DailyNetCashOutCoins
-                : Core.Casino.CasinoCashier.DailyNetCashOutCoinsFallback,
+        if (introShowing && intro.Draw(screenArea, ui, casino.Rate,
                 MathF.Min(ImGui.GetIO().DeltaTime, Core.Animation.TransitionTiming.MaxFrameSeconds))
             == Strip.StripIntroResult.Finished)
         {

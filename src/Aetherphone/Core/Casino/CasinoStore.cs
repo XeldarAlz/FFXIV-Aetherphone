@@ -142,8 +142,6 @@ internal sealed class CasinoStore : IDisposable
 
     public CasinoProgressDto? Progress => state?.Progress;
 
-    public CasinoCashierDto? Cashier => state?.Cashier;
-
     public CasinoClubDto? Club => state?.Club;
 
     public CasinoBonusDto[] Bonuses => state?.Bonuses ?? Array.Empty<CasinoBonusDto>();

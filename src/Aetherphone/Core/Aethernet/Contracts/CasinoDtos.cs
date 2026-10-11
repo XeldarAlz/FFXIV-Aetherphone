@@ -32,17 +32,9 @@ internal sealed record CasinoStateDto(
     string[]? Features = null,
     long RateChipsPerCoin = 0,
     long[]? Ladder = null,
-    CasinoCashierDto? Cashier = null,
     CasinoBonusDto[]? Bonuses = null,
     CasinoClubDto? Club = null,
     long MaxWinPerBet = 0);
-
-internal sealed record CasinoCashierDto(
-    long DailyNetCashOutCoins = 0,
-    long CashOutCoinsToday = 0,
-    long BuyInCoinsToday = 0,
-    long AllowanceCoins = 0,
-    long QueuedChips = 0);
 
 internal sealed record CasinoBonusDto(
     string Kind = "",
@@ -112,8 +104,7 @@ internal sealed record CasinoSittingResultDto(
     string Reason = "",
     CasinoSittingDto? Sitting = null,
     long Balance = 0,
-    long ConvertedCoins = 0,
-    long QueuedChips = 0);
+    long ConvertedCoins = 0);
 
 internal sealed record CasinoLimitRequest(long? SelfLossLimit);
 

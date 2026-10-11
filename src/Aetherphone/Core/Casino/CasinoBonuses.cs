@@ -181,8 +181,6 @@ internal static class CasinoClubTiers
 
 internal static class CasinoCashier
 {
-    public const long DailyNetCashOutCoinsFallback = 500;
-
     public static long Rate(CasinoStateDto? state)
     {
         if (state is null)

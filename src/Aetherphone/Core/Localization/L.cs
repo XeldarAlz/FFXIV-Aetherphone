@@ -2267,6 +2267,10 @@ internal static class L
                 "Added a Bets sheet with your bets, all bets and high rollers, where each of your rounds can be checked"),
             new("changelog.r1300.35",
                 "Added a check-in every 100 rounds or 30 minutes with your session net"),
+            new("changelog.r1300.48",
+                "Added Get chips: when a bet is bigger than your chips, buy more in one tap without leaving the game, or let auto top-up do it"),
+            new("changelog.r1300.49",
+                "Added a max win per bet, shown in every game's info, with a clear line when a result reaches it"),
             new("changelog.r1300.36",
                 "Overhauled the Floor: your chips, level and bonuses up top, then live rooms, missions and a shelf for every kind of game"),
             new("changelog.r1300.37",
@@ -2286,9 +2290,11 @@ internal static class L
             new("changelog.r1300.44",
                 "Changed chips to 1,000 per coin, and your chips kept their coin value"),
             new("changelog.r1300.45",
-                "Changed cash-out: up to 500 coins convert each day, and chips over that wait in your bankroll for later days"),
+                "Changed the cashier to three things: buy chips, cash out every chip in one tap, and see both balances"),
             new("changelog.r1300.46",
                 "Changed bet limits: your ceiling now grows with your level and your balance"),
+            new("changelog.r1300.50",
+                "Changed every chip balance to show its value in coins"),
             new("changelog.r1300.47",
                 "Fixed Barkeep practice shifts needing chips to open"),
         };
@@ -10445,7 +10451,7 @@ internal static class L
         public static readonly LocString ReasonExpired = new("casino.reasonExpired", "That table already settled and sent the chips home to your wallet.");
         public static readonly LocString ReasonTableClosed = new("casino.reasonTableClosed", "That table is not open right now. Another game will happily deal you in.");
         public static readonly LocString ReasonRoundOpen = new("casino.reasonRoundOpen", "There is still a round in play. Wrap it up, then cash out.");
-        public static readonly LocString ReasonCapReached = new("casino.reasonCapReached", "Tonight's win cap stepped in, so the payout stops at the cap.");
+        public static readonly LocString ReasonCapReached = new("casino.reasonCapReached", "That hit its cap, so it stops at the limit.");
         public static readonly LocString ReasonUnreachable = new("casino.reasonUnreachable", "Gamba could not be reached. Check your connection and try again.");
         public static readonly LocString HouseLimitTitle = new("casino.houseLimitTitle", "House limit");
         public static readonly LocString HouseLimitLine = new("casino.houseLimitLine", "Everyone's night stops at {0} down. House rule, no exceptions.");
@@ -10468,7 +10474,7 @@ internal static class L
         public static readonly LocString ScratchOddsPrize = new("casino.scratch.oddsPrize", "Prize");
         public static readonly LocString ScratchOddsChance = new("casino.scratch.oddsChance", "Chance");
         public static readonly LocString ScratchOddsChanceValue = new("casino.scratch.oddsChanceValue", "{0}%");
-        public static readonly LocString ScratchLowStack = new("casino.scratch.lowStack", "Not enough chips for that card. Top up at the cashier.");
+        public static readonly LocString ScratchLowStack = new("casino.scratch.lowStack", "Not enough chips for that card. Tap Get chips to buy more.");
         public static readonly LocString ScratchFiveInARow = new("casino.scratch.fiveInARow", "Buy 5 in a row");
         public static readonly LocString BarkeepWagerHint = new("casino.barkeep.wagerHint", "Entry {0}. Serve every patron well and the tip ladder pays out.");
         public static readonly LocString BarkeepPracticeTitle = new("casino.barkeep.practiceTitle", "Practice shift");
@@ -10499,7 +10505,7 @@ internal static class L
         public static readonly LocString BarkeepNoTips = new("casino.barkeep.noTips", "No tips tonight. The ladder starts at {0} points.");
         public static readonly LocString BarkeepNewBest = new("casino.barkeep.newBest", "New best!");
         public static readonly LocString BarkeepExpired = new("casino.barkeep.expired", "The shift ran past close, so the entry stayed behind the bar.");
-        public static readonly LocString BarkeepNeedSeat = new("casino.barkeep.needSeat", "Buy in at the cashier to work a paid shift.");
+        public static readonly LocString BarkeepNeedSeat = new("casino.barkeep.needSeat", "Get chips to work a paid shift.");
         public static readonly LocString BarkeepDone = new("casino.barkeep.done", "Done");
         public static readonly LocString RecordsHeading = new("casino.recordsHeading", "On the record");
         public static readonly LocString HistoryRow = new("casino.historyRow", "Round history");
@@ -11074,7 +11080,7 @@ internal static class L
         public static readonly LocString LiveNoFriends = new("casino.strip.liveNoFriends", "None of your friends is hosting a table right now. Your friend list is read from the game.");
         public static readonly LocString BackToFloor = new("casino.strip.backToFloor", "Back to the Floor");
         public static readonly LocString IntroChipsTitle = new("casino.strip.introChipsTitle", "Big chips you can cash out");
-        public static readonly LocString IntroChipsBody = new("casino.strip.introChipsBody", "1 coin buys {0} chips, and chips turn back into coins at the cashier. Up to {1} coins convert each day; the rest waits safely in your bankroll.");
+        public static readonly LocString IntroChipsBody = new("casino.strip.introChipsBody", "1 coin buys {0} chips, and one tap at the cashier turns every chip back into coins.");
         public static readonly LocString IntroBonusTitle = new("casino.strip.introBonusTitle", "Free chips and levels");
         public static readonly LocString IntroBonusBody = new("casino.strip.introBonusBody", "Claim a timed bonus every 3 hours, keep a daily streak, finish missions and level up. Higher levels raise your max bet.");
         public static readonly LocString IntroHostTitle = new("casino.strip.introHostTitle", "Host your own table");
