@@ -182,23 +182,29 @@ internal sealed class ChatComposer : IDisposable
         replyBarPreview = string.Empty;
         editTargetId = null;
         pendingImage = null;
+        intake.Discard();
     }
 
-    public bool ClipboardHasImage() => intake.ClipboardHasImage();
+    public bool OfferPaste(ref Rect importRect, out Rect pasteRect) =>
+        intake.OfferPaste(ref importRect, out pasteRect);
 
     public void PasteImage(PhotoLibrary library) => intake.Paste(library);
 
     public void AcceptImageDrop(PhotoLibrary library, Vector4 highlight) => intake.AcceptDrop(library, highlight);
 
-    private void AttachImage(string path)
+    public void AttachImage(string path)
     {
+        if (editTargetId is not null)
+        {
+            return;
+        }
+
         if (GifMedia.IsGif(path) && !GifMedia.FitsSizeCap(path))
         {
             ShellToast.Show(Loc.T(L.Common.GifTooLarge));
             return;
         }
 
-        ClearEdit();
         pendingImage = path;
         focus = true;
     }
@@ -232,12 +238,11 @@ internal sealed class ChatComposer : IDisposable
             AttachImage(taken);
         }
 
-        var imageStrip = ImageStripHeight;
-        if (imageStrip > 0f)
+        if (pendingImage is { } image)
         {
             var stripTop = composerRect.Min.Y - AccessoryHeight;
             DrawImageBar(new Rect(new Vector2(composerRect.Min.X, stripTop),
-                new Vector2(composerRect.Max.X, stripTop + imageStrip)), model);
+                new Vector2(composerRect.Max.X, stripTop + ImageStripHeight)), image, model);
         }
 
         var accessory = TargetBarHeight;
@@ -312,7 +317,7 @@ internal sealed class ChatComposer : IDisposable
             submitted = editor.Draw("##chatComposerInput", new Vector2(fieldWidth, fieldHeight), model.MaxLength, 0);
         }
 
-        if (model.CanImage && model.Library is { } library)
+        if (model.CanImage && editTargetId is null && model.Library is { } library)
         {
             if (ImGui.IsItemActive() && ImageIntake.PasteRequested())
             {
@@ -626,7 +631,7 @@ internal sealed class ChatComposer : IDisposable
         var submitted = DrawField(new Rect(pillMin, pillMax), textLeft, textRight, model);
         var hasDraft = ReadyToSend;
         var canSend = hasDraft && !model.Sending;
-        var sendRect =new Rect(sendCenter - new Vector2(buttonRadius, buttonRadius),
+        var sendRect = new Rect(sendCenter - new Vector2(buttonRadius, buttonRadius),
             sendCenter + new Vector2(buttonRadius, buttonRadius));
         if (hasDraft)
         {
@@ -956,7 +961,7 @@ internal sealed class ChatComposer : IDisposable
         }
     }
 
-    private void DrawImageBar(Rect area, in ChatComposerModel model)
+    private void DrawImageBar(Rect area, string path, in ChatComposerModel model)
     {
         var ui = model.Ui;
         var theme = ui.Theme;
@@ -964,12 +969,11 @@ internal sealed class ChatComposer : IDisposable
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(BarFill));
         drawList.AddLine(area.Min, new Vector2(area.Max.X, area.Min.Y), ImGui.GetColorU32(theme.Separator), 1f);
-        var path = pendingImage!;
-        var pad = 8f * scale;
+        var pad = Metrics.Space.Sm * scale;
         var tile = area.Height - pad * 2f;
         var min = new Vector2(area.Min.X + 14f * scale, area.Min.Y + pad);
         var max = min + new Vector2(tile, tile);
-        var rounding = 8f * scale;
+        var rounding = Metrics.Radius.Sm * scale;
         var texture = model.Thumbnails?.Get(path);
         if (texture is null)
         {

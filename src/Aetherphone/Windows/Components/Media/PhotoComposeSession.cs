@@ -529,9 +529,9 @@ internal sealed class PhotoComposeSession : IDisposable
                 continue;
             }
 
-            if (cellIndex < leadingTiles)
+            if (cellIndex == 1 && pasteLabel is not null)
             {
-                DrawImportTile(min, max, scale, style, PhoneIcons.Download, pasteLabel!, hovered);
+                DrawImportTile(min, max, scale, style, PhoneIcons.Copy, pasteLabel, hovered);
                 pasteClicked |= UiInteract.Click(min, max, hovered);
                 continue;
             }

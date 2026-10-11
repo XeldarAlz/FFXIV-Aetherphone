@@ -9,7 +9,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
@@ -29,7 +28,6 @@ internal sealed partial class ChirperApp
     private static readonly TextStyle RemainingStyle = TextStyles.SubheadlineEmphasized;
     private static readonly Vector4 RingTrack = new(1f, 1f, 1f, 0.14f);
     private static readonly Vector4 RemoveChipFill = new(0f, 0f, 0f, 0.6f);
-    private static readonly VirtualKey[] PasteKeys = { VirtualKey.V };
 
     private void DrawCompose(Rect area)
     {
@@ -68,8 +66,8 @@ internal sealed partial class ChirperApp
             AddComposeAttachment(taken);
         }
 
-        if (ImGui.GetIO().KeyCtrl && (composeFieldActive || UiInteract.Hover(area.Min, area.Max))
-            && GameInput.Claim(PasteKeys) && ImageIntake.PasteRequested())
+        if ((composeFieldActive || UiInteract.Hover(area.Min, area.Max)) && GameFocus.Active
+            && ImageIntake.PasteRequested())
         {
             composeIntake.Paste(library);
         }
@@ -418,15 +416,7 @@ internal sealed partial class ChirperApp
         var importHeight = Button.LargeHeight * scale;
         var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
             new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
-        var canPaste = composeIntake.ClipboardHasImage();
-        var pasteRect = importRect;
-        if (canPaste)
-        {
-            var split = importRect.Center.X - 4f * scale;
-            pasteRect = new Rect(new Vector2(split + 8f * scale, importRect.Min.Y), importRect.Max);
-            importRect = new Rect(importRect.Min, new Vector2(split, importRect.Max.Y));
-        }
-
+        var canPaste = composeIntake.OfferPaste(ref importRect, out var pasteRect);
         if (Button.Draw(importRect, Loc.T(L.Chirper.ImportFromPc), ui.Ink, ButtonStyle.Prominent))
         {
             FilePicker.PickImage(Loc.T(L.Chirper.AddPhotos),

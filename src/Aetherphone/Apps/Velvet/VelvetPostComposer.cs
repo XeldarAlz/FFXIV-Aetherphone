@@ -11,7 +11,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
@@ -55,8 +54,6 @@ internal sealed class VelvetPostComposer
     private const int CounterWarning = 50;
     private const int CircleSegments = 24;
 
-    private static readonly VirtualKey[] PasteKeys = { VirtualKey.V };
-
     private readonly VelvetStore store;
     private readonly StoryPresenter stories;
     private readonly RemoteImageCache images;
@@ -83,7 +80,6 @@ internal sealed class VelvetPostComposer
     private int counterLength = -1;
     private string status = string.Empty;
     private int audience = VelvetPostAudience.Connections;
-    private bool captionFieldActive;
 
     public VelvetPostComposer(VelvetStore store, StoryPresenter stories, PhotoLibrary library,
         RemoteImageCache images, LodestoneService lodestone, WallpaperImageCache wallpaperImages, Action openTags)
@@ -180,6 +176,7 @@ internal sealed class VelvetPostComposer
         ClearTags();
         captionEmoji.Close();
         session.Open(story);
+        intake.Discard();
     }
 
     public void OpenEdit(VelvetPostDto post)
@@ -235,13 +232,6 @@ internal sealed class VelvetPostComposer
             session.TakeImported(taken);
         }
 
-        if (ImGui.GetIO().KeyCtrl && (captionFieldActive || UiInteract.Hover(area.Min, area.Max))
-            && GameInput.Claim(PasteKeys) && ImageIntake.PasteRequested())
-        {
-            intake.Paste(library);
-        }
-
-        captionFieldActive = false;
         switch (session.Stage)
         {
             case PhotoComposeStage.Edit:
@@ -270,6 +260,11 @@ internal sealed class VelvetPostComposer
 
     private void DrawPick(Rect area, AppSkin ui)
     {
+        if (UiInteract.Hover(area.Min, area.Max) && GameFocus.Active && ImageIntake.PasteRequested())
+        {
+            intake.Paste(library);
+        }
+
         var scale = UiScale.Current;
         if (VHeader.Push(area, Title, HeaderActionSlots))
         {
@@ -452,8 +447,6 @@ internal sealed class VelvetPostComposer
                 SoftWrapField.Paragraphs("##velvetCaption", ref caption, CaptionLimit, field.Size, wrapWidth,
                     captionMentions);
             }
-
-            captionFieldActive = ImGui.IsItemActive();
         }
 
         if (caption.Length > 0)

@@ -554,6 +554,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         quoteTarget = null;
         quoteTargetId = null;
         composeAttachments.Clear();
+        composeIntake.Discard();
         composePicking = false;
         composeSensitive = false;
         composeFocus = true;
@@ -2344,6 +2345,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         draft = string.Empty;
         composeStatus = string.Empty;
         composeAttachments.Clear();
+        composeIntake.Discard();
         composePicking = false;
         composeSensitive = false;
         composeFocus = true;
@@ -2437,6 +2439,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         draft = string.Empty;
         composeStatus = string.Empty;
         composeAttachments.Clear();
+        composeIntake.Discard();
         composePicking = false;
         composeSensitive = false;
         AddComposeAttachment(path);

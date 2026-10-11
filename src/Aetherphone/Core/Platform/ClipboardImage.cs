@@ -23,7 +23,7 @@ internal static class ClipboardImage
     private const int MaxIndexedBitCount = 8;
     private const int PaletteEntryBytes = 4;
     private const int HeaderAllowanceBytes = 4096;
-    private const long MaxReadBytes = ImageProcessor.MaxDecodePixels * 4 + HeaderAllowanceBytes;
+    private const long MaxReadBytes = ImageProcessor.MaxLocalDecodePixels * 4 + HeaderAllowanceBytes;
 
     public static bool HasImage()
     {

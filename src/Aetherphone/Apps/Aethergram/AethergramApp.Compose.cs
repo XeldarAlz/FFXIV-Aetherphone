@@ -10,7 +10,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
@@ -43,7 +42,6 @@ internal sealed partial class AethergramApp
     private static readonly TextStyle ComposeActionStyle = TextStyles.Headline;
     private static readonly TextStyle ComposeRowStyle = TextStyles.Body;
     private static readonly TextStyle ComposeCounterStyle = TextStyles.Caption1;
-    private static readonly VirtualKey[] PasteKeys = { VirtualKey.V };
 
     private readonly Action composeEditBack;
     private readonly Action composeCaptionBack;
@@ -123,6 +121,7 @@ internal sealed partial class AethergramApp
         captionEmoji.Close();
         personPicker.Close();
         composeSession.Open(avatarMode || storyMode, !avatarMode && !storyMode);
+        composeIntake.Discard();
         router.Push(AethergramRoute.Compose);
     }
 
@@ -159,13 +158,6 @@ internal sealed partial class AethergramApp
             composeSession.TakeImported(taken);
         }
 
-        if (ImGui.GetIO().KeyCtrl && (captionFieldActive || UiInteract.Hover(area.Min, area.Max))
-            && GameInput.Claim(PasteKeys) && ImageIntake.PasteRequested())
-        {
-            composeIntake.Paste(library);
-        }
-
-        captionFieldActive = false;
         switch (composeSession.Stage)
         {
             case PhotoComposeStage.Edit:
@@ -232,6 +224,11 @@ internal sealed partial class AethergramApp
 
     private void DrawComposePick(Rect area)
     {
+        if (UiInteract.Hover(area.Min, area.Max) && GameFocus.Active && ImageIntake.PasteRequested())
+        {
+            composeIntake.Paste(library);
+        }
+
         var scale = UiScale.Current;
         var actionLabel = composeAvatarMode
             ? (store.Posting ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.Use))
@@ -439,8 +436,6 @@ internal sealed partial class AethergramApp
             {
                 SoftWrapField.Multiline(fieldId, ref text, MaxCaptionLength, field.Size, wrapWidth, mentions);
             }
-
-            captionFieldActive = ImGui.IsItemActive();
         }
 
         var pickedMention = mentionPopup.Draw(mentions, screen, theme, images, lodestone);

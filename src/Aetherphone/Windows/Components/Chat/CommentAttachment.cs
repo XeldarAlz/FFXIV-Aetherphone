@@ -17,12 +17,12 @@ internal sealed class CommentAttachment
     private const float StripHeightUnits = 64f;
     private const int PickerColumns = 4;
 
+    private readonly ImageIntake intake = new();
     private string? path;
     private bool panelOpen;
     private string[] pickerPaths = Array.Empty<string>();
     private string notice = string.Empty;
     private string? pendingImport;
-    private readonly ImageIntake intake = new();
 
     public string? Path => path;
 
@@ -33,6 +33,7 @@ internal sealed class CommentAttachment
         path = null;
         panelOpen = false;
         notice = string.Empty;
+        intake.Discard();
     }
 
     public void Restore(string restoredPath)
@@ -206,15 +207,7 @@ internal sealed class CommentAttachment
             var importHeight = 34f * scale;
             var importRect = new Rect(new Vector2(panel.Min.X + pad, panel.Min.Y + pad),
                 new Vector2(panel.Max.X - pad, panel.Min.Y + pad + importHeight));
-            var canPaste = intake.ClipboardHasImage();
-            var pasteRect = importRect;
-            if (canPaste)
-            {
-                var split = importRect.Center.X - 3f * scale;
-                pasteRect = new Rect(new Vector2(split + 6f * scale, importRect.Min.Y), importRect.Max);
-                importRect = new Rect(importRect.Min, new Vector2(split, importRect.Max.Y));
-            }
-
+            var canPaste = intake.OfferPaste(ref importRect, out var pasteRect);
             if (DrawPill(drawList, importRect, Loc.T(L.Common.ImportFromPc), ui, theme))
             {
                 FilePicker.PickImage(Loc.T(L.Common.AddPhoto),
@@ -332,6 +325,11 @@ internal sealed class CommentAttachment
         if (GifMedia.IsGif(picked) && !GifMedia.FitsSizeCap(picked))
         {
             notice = Loc.T(L.Common.GifTooLarge);
+            if (!panelOpen)
+            {
+                ShellToast.Show(notice);
+            }
+
             return;
         }
 

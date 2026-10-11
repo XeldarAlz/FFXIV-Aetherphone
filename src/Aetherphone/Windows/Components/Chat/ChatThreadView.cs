@@ -53,6 +53,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     private readonly Dictionary<string, string> sessionDrafts = new(StringComparer.Ordinal);
     private volatile string? failedSendThreadId;
     private volatile string? failedSendText;
+    private volatile string? failedSendImage;
     private AepFailure failedSendFailure;
     private static readonly TimeSpan VoiceFailureRetryFor = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan SyncBannerFloor = TimeSpan.FromSeconds(2);
@@ -802,7 +803,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     private void ComposerSendImage(string threadId, string path, string caption)
     {
-        store.SendImageMessage(threadId, path, caption, _ => { });
+        store.SendImageMessage(threadId, path, caption,
+            succeeded => NoteSendOutcome(succeeded, threadId, caption, path));
         transcript.RequestSnapToBottom();
         lastTypingDraft = string.Empty;
         OnDraftConsumed(threadId);
@@ -815,7 +817,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         OnDraftConsumed(threadId);
     }
 
-    private void NoteSendOutcome(bool succeeded, string threadId, string text)
+    private void NoteSendOutcome(bool succeeded, string threadId, string text, string? imagePath = null)
     {
         if (succeeded)
         {
@@ -824,6 +826,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
         failedSendThreadId = threadId;
         failedSendFailure = store.LastSendFailure;
+        failedSendImage = imagePath;
         failedSendText = text;
     }
 
@@ -835,12 +838,24 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             return;
         }
 
+        var image = failedSendImage;
         failedSendText = null;
         failedSendThreadId = null;
+        failedSendImage = null;
         var reason = FailureText.Resolve(failedSendFailure);
         ShellToast.Show(reason.Length == 0
             ? Loc.T(L.Message.SendFailed)
             : Loc.T(L.Message.SendFailedReason, reason));
+        if (image is not null)
+        {
+            composer.AttachImage(image);
+        }
+
+        if (text.Length == 0)
+        {
+            return;
+        }
+
         var draft = composer.Draft;
         composer.Draft = draft.Length == 0 ? text : $"{text} {draft}";
     }
@@ -1125,15 +1140,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         var importHeight = 46f * scale;
         var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
             new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
-        var canPaste = composer.ClipboardHasImage();
-        var pasteRect = importRect;
-        if (canPaste)
-        {
-            var split = importRect.Center.X - 4f * scale;
-            pasteRect = new Rect(new Vector2(split + 8f * scale, importRect.Min.Y), importRect.Max);
-            importRect = new Rect(importRect.Min, new Vector2(split, importRect.Max.Y));
-        }
-
+        var canPaste = composer.OfferPaste(ref importRect, out var pasteRect);
         if (ui.PillButton(importRect, ImportLabel, true))
         {
             FilePicker.PickImage(PickerTitle, path => Interlocked.Exchange(ref pendingPickedPath, path));

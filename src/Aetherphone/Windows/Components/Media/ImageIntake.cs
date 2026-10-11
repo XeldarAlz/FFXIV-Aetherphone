@@ -6,7 +6,6 @@ using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.DragDrop;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -16,6 +15,7 @@ internal sealed class ImageIntake
     private const int NoFailure = 0;
     private const int Unreadable = 1;
     private const int NotDownloaded = 2;
+    private const int PastedMaxDimension = 4096;
 
     private static readonly string[] Extensions = { ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp" };
     private static readonly Func<IDragDropManager, bool> CarriesImage = static manager => AnyImage(manager.Files);
@@ -23,6 +23,7 @@ internal sealed class ImageIntake
     private readonly ConcurrentQueue<string> ready = new();
     private int busy;
     private int failure;
+    private int generation;
     private uint clipboardSequence = ClipboardWatch.UnseenSequence;
     private bool clipboardHasImage;
 
@@ -42,9 +43,30 @@ internal sealed class ImageIntake
         return clipboardHasImage;
     }
 
+    public bool OfferPaste(ref Rect importRect, out Rect pasteRect)
+    {
+        pasteRect = importRect;
+        if (!ClipboardHasImage())
+        {
+            return false;
+        }
+
+        var half = (importRect.Width - Metrics.Space.Sm * UiScale.Current) * 0.5f;
+        pasteRect = new Rect(new Vector2(importRect.Max.X - half, importRect.Min.Y), importRect.Max);
+        importRect = new Rect(importRect.Min, new Vector2(importRect.Min.X + half, importRect.Max.Y));
+        return true;
+    }
+
     public void Paste(PhotoLibrary library)
     {
         Start(null, library);
+    }
+
+    public void Discard()
+    {
+        Interlocked.Increment(ref generation);
+        ready.Clear();
+        Volatile.Write(ref failure, NoFailure);
     }
 
     public void AcceptDrop(PhotoLibrary library, Vector4 highlight)
@@ -56,19 +78,18 @@ internal sealed class ImageIntake
         }
 
         dragDrop.CreateImGuiSource(PayloadLabel, CarriesImage);
-        IReadOnlyList<string> dropped;
-        using (ImRaii.PushColor(ImGuiCol.DragDropTarget, highlight))
+        ImGui.PushStyleColor(ImGuiCol.DragDropTarget, highlight);
+        var dropped = dragDrop.CreateImGuiTarget(PayloadLabel, out var droppedFiles, out _);
+        ImGui.PopStyleColor();
+        if (!dropped)
         {
-            if (!dragDrop.CreateImGuiTarget(PayloadLabel, out dropped, out _))
-            {
-                return;
-            }
+            return;
         }
 
-        var files = new string[dropped.Count];
+        var files = new string[droppedFiles.Count];
         for (var index = 0; index < files.Length; index++)
         {
-            files[index] = dropped[index];
+            files[index] = droppedFiles[index];
         }
 
         Start(files, library);
@@ -99,59 +120,71 @@ internal sealed class ImageIntake
             return;
         }
 
+        var startedGeneration = Volatile.Read(ref generation);
         _ = Task.Run(() =>
         {
+            var taken = new List<string>();
+            var outcome = Unreadable;
             try
             {
-                if (files is null)
-                {
-                    ReadClipboard(library);
-                }
-                else
-                {
-                    Resolve(files);
-                }
+                outcome = files is null ? ReadClipboard(library, taken) : Resolve(files, taken);
             }
             catch (Exception exception)
             {
                 AepLog.Warning(exception, "[Images] could not take a pasted or dropped image");
-                Volatile.Write(ref failure, Unreadable);
             }
             finally
             {
+                Deliver(taken, outcome, startedGeneration);
                 Volatile.Write(ref busy, 0);
             }
         });
     }
 
-    private void ReadClipboard(PhotoLibrary library)
+    private void Deliver(List<string> taken, int outcome, int startedGeneration)
+    {
+        if (Volatile.Read(ref generation) != startedGeneration)
+        {
+            return;
+        }
+
+        for (var index = 0; index < taken.Count; index++)
+        {
+            ready.Enqueue(taken[index]);
+        }
+
+        if (outcome != NoFailure)
+        {
+            Volatile.Write(ref failure, outcome);
+        }
+    }
+
+    private static int ReadClipboard(PhotoLibrary library, List<string> taken)
     {
         if (!ClipboardImage.TryRead(out var encoded, out var files))
         {
-            Volatile.Write(ref failure, Unreadable);
-            return;
+            return Unreadable;
         }
 
         if (files is not null)
         {
-            Resolve(files);
-            return;
+            return Resolve(files, taken);
         }
 
-        var (pixels, width, height) = ImageProcessor.DecodeRgba32(encoded!);
+        var (pixels, width, height) =
+            ImageProcessor.DecodeRgba32(encoded!, PastedMaxDimension, ImageProcessor.MaxLocalDecodePixels);
         var path = library.SavePasted(pixels, width, height);
         if (path is null)
         {
-            Volatile.Write(ref failure, Unreadable);
-            return;
+            return Unreadable;
         }
 
-        ready.Enqueue(path);
+        taken.Add(path);
+        return NoFailure;
     }
 
-    private void Resolve(string[] files)
+    private static int Resolve(string[] files, List<string> taken)
     {
-        var accepted = false;
         var online = false;
         for (var index = 0; index < files.Length; index++)
         {
@@ -166,14 +199,10 @@ internal sealed class ImageIntake
                 continue;
             }
 
-            ready.Enqueue(files[index]);
-            accepted = true;
+            taken.Add(files[index]);
         }
 
-        if (online || !accepted)
-        {
-            Volatile.Write(ref failure, online ? NotDownloaded : Unreadable);
-        }
+        return online ? NotDownloaded : taken.Count > 0 ? NoFailure : Unreadable;
     }
 
     private static bool AnyImage(IReadOnlyList<string> files)

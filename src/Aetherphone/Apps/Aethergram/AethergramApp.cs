@@ -217,7 +217,6 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private bool commentFocusPending;
     private readonly PhotoComposeSession composeSession;
     private readonly ImageIntake composeIntake = new();
-    private bool captionFieldActive;
     private bool composeAvatarMode;
     private bool composeStoryMode;
     private string? pendingSharedPhoto;
