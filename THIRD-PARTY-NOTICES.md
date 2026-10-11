@@ -427,6 +427,35 @@ Every file taken from these downloads is checked against a pinned SHA-256 checks
 place their own commercial IWAD (`DOOM.WAD`, `DOOM2.WAD`, `PLUTONIA.WAD`, `TNT.WAD`) or a Freedoom IWAD in the
 same folder instead.
 
+## libretro cores (downloaded on demand)
+
+The Allagan Pocket game plays cartridges through libretro emulator modules. No module, console firmware or
+game is bundled. The first time a player opens a system, `src/Aetherphone/Core/Emulation/EmulatorCoreProvisioner.cs`
+asks for confirmation, names the download size, fetches that one module from the libretro buildbot
+(https://buildbot.libretro.com/nightly/windows/x86_64/latest/) into the player's own Aetherphone data folder and
+verifies it against the CRC-32 the buildbot publishes beside it. Modules are loaded at runtime through the public
+libretro ABI and remain separate works under their own licenses (MIT, MPL-2.0, GPL-2.0-or-later, GPL-3.0 and
+AGPL-3.0 among them); they are not relicensed as part of this plugin. The full list of modules, with each
+project's license and the upstream commit it was reviewed at, ships with the plugin in
+`src/Aetherphone/Cores/CORE-SOURCES.txt`, alongside the license texts the projects require. Console BIOS and
+firmware files are never downloaded; where a system can use one, the player supplies their own copy.
+
+## Homebrew starter games (downloaded on demand)
+
+Allagan Pocket can offer one free homebrew game per system when a library is empty. Nothing is bundled: each
+title is downloaded straight from its author's own GitHub release, only when the player asks, and is checked
+against a pinned SHA-256 checksum before it is installed. The titles, authors, licenses and download addresses
+are listed in `src/Aetherphone/Core/Emulation/EmulatorStarterGames.cs` and in `src/Aetherphone/Cores/CORE-SOURCES.txt`:
+
+- µCity by Antonio Niño Díaz (Game Boy Color); GPL-3.0-or-later, media under CC BY-SA 4.0.
+  Source: https://github.com/AntonioND/ucity
+- Nova the Squirrel by NovaSquirrel (NES); GPL-3.0. Source: https://github.com/NovaSquirrel/NovaTheSquirrel
+- Skyland by Evan Bowman (Game Boy Advance); MPL-2.0. Source: https://github.com/evanbowman/skyland-gba
+- N64brew Game Jam 2024 by N64brew and the jam entrants (Nintendo 64); MIT.
+  Source: https://github.com/n64brew/N64brew-GameJam2024
+- KleleAtoms by Nightwolf-47 (Mega Drive); MIT. Source: https://github.com/Nightwolf-47/KleleAtoms-MD
+- Berta and Butterflies by vandalton (Atari 2600); MIT. Source: https://github.com/vandalton/BertaAndButterflies
+
 ## SCOWL word lists
 
 The English word bank of the Word Run mini-game (`src/Aetherphone/Words/en.answers.txt` and
