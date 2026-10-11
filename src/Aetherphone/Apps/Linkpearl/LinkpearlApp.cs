@@ -167,6 +167,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
     {
         if (launcher.TryConsume(out var conversationKey))
         {
+            regionMenu.Close();
             inbox.Sync();
             if (inbox.Find(conversationKey) is null)
             {
@@ -188,6 +189,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
             return;
         }
 
+        regionMenu.Close();
         if (router.Current.Screen != LinkpearlScreen.Root)
         {
             router.Reset();
@@ -203,6 +205,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
         conversationSheet.Close();
         editorMenu.Close();
         settingsMenu.Close();
+        regionMenu.Close();
         newChatSheet.Close();
         chatThread.Close();
         inbox.ClearViewing();
@@ -220,6 +223,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
         conversationSheet.Gate();
         editorMenu.Gate();
         settingsMenu.Gate();
+        regionMenu.Gate();
         chatThread.Gate();
         ConsumeLaunchRequests();
         var scale = UiScale.Current;

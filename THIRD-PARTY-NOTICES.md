@@ -303,13 +303,13 @@ once at the end of this section:
 | Vortice.Mathematics | 2.1.0 | Amer Koleci (https://github.com/amerkoleci/Vortice.Mathematics) |
 | SharpGen.Runtime / SharpGen.Runtime.COM | 2.4.2-beta | SharpGenTools contributors (https://github.com/SharpGenTools/SharpGenTools) |
 | SharpDX / SharpDX.Direct3D11 / SharpDX.DXGI / SharpDX.D3DCompiler | 4.2.0 | Alexandre Mutel (https://github.com/sharpdx/SharpDX) |
-| SharpCompress | 0.48.1 | Adam Hathcock (https://github.com/adamhathcock/sharpcompress) |
-| YoutubeExplode | 6.6.1 | Oleksii Holub (https://github.com/Tyrrrz/YoutubeExplode) |
+| SharpCompress | 0.50.5 | Adam Hathcock (https://github.com/adamhathcock/sharpcompress) |
+| YoutubeExplode | 6.6.2 | Oleksii Holub (https://github.com/Tyrrrz/YoutubeExplode) |
 | HtmlAgilityPack | 1.11.46 | ZZZ Projects and contributors (https://github.com/zzzprojects/html-agility-pack) |
-| System.Security.Cryptography.ProtectedData | 10.0.11 | Microsoft Corporation (https://github.com/dotnet/runtime) |
+| System.Security.Cryptography.ProtectedData | 10.0.12 | Microsoft Corporation (https://github.com/dotnet/runtime) |
 | NEbml | 1.1.0.5 | Oleg Zee (https://github.com/OlegZee/NEbml) |
 | NLayer / NLayer.NAudioSupport | 2.0.1 | Mark Heath, Andrew Ward (https://github.com/naudio/NLayer) |
-| Net.Codecrete.QrCodeGenerator | 2.0.6 | Manuel Bleichenbacher and Project Nayuki (https://github.com/manuelbl/QrCodeGenerator) |
+| Net.Codecrete.QrCodeGenerator | 3.2.1 | Manuel Bleichenbacher and Project Nayuki (https://github.com/manuelbl/QrCodeGenerator) |
 | MeltySynth | 2.4.1 | 2021 Nobuaki Tanaka; 2017, 2018 Bernhard Schelling (TinySoundFont); 2014 Alex Veltsistas (C# Synth); 2012 Steve Folta (SFZero) (https://github.com/sinshu/meltysynth) |
 | FF14 Fish Tracker App fish data (derived) | 2026-10 | 2019 icykoneko (https://github.com/icykoneko/ff14-fish-tracker-app) |
 

@@ -332,6 +332,22 @@ public sealed class CasinoTableWireContractTests
     }
 
     [Fact]
+    public void AWidgetTapAsksForItsGameAndTheLauncherHandsItOverOnce()
+    {
+        var launcher = new CasinoLauncher();
+        launcher.RequestGame(string.Empty);
+        Assert.False(launcher.HasPending);
+
+        launcher.RequestGame("dailyspin");
+        Assert.True(launcher.HasPending);
+        Assert.True(launcher.TryConsume(out var launch));
+        Assert.Equal(CasinoLaunchKind.Game, launch.Kind);
+        Assert.Equal("dailyspin", launch.GameId);
+        Assert.False(launcher.HasPending);
+        Assert.False(launcher.TryConsume(out _));
+    }
+
+    [Fact]
     public void OneTurnKeyPerHandPerSplitSoAResyncCannotRingTwice()
     {
         var first = CasinoTurnNotifier.TurnKeyFor("hand-12", 1, 0);

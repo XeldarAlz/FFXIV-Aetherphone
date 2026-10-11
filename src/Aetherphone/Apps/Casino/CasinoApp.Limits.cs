@@ -23,7 +23,6 @@ internal sealed partial class CasinoApp
     private const float GaugeThickness = 10f;
     private const float GaugeTrackAlpha = 0.10f;
     private const float GaugeTextGap = 18f;
-    private const float GaugeInnerFraction = 0.72f;
     private const float PickerPad = 18f;
     private const float StepperSize = 44f;
     private const float StepperAlpha = 0.10f;
@@ -91,11 +90,11 @@ internal sealed partial class CasinoApp
                 surface.CancelDrag();
             }
 
-            var ceiling = CasinoLimitPicker.CeilingFor(state.DailyBuyInCap);
+            var ceiling = CasinoLimitPicker.Ceiling;
             var hint = texts.Numbers(L.Casino.SelfLimitHint, CasinoLimitPicker.Floor, ceiling);
             var hintTop = cursorY + Metrics.Space.Sm * scale;
             var hintHeight = Typography.DrawWrappedLeft(new Vector2(origin.X + Metrics.Space.Lg * scale, hintTop),
-                hint, ui.MutedInk, TextStyles.Footnote, width - Metrics.Space.Lg * 2f * scale);
+                hint, ui.BodyInk, TextStyles.Footnote, width - Metrics.Space.Lg * 2f * scale);
             CoinArt.Reserve(origin, width, hintTop + hintHeight + CoinArt.BottomPad * scale);
         }
     }
@@ -157,25 +156,8 @@ internal sealed partial class CasinoApp
         var shown = gaugeFill.Step(tonight.Fraction, Motion.PageSettle,
             MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         ProgressRing.Fill(drawList, center, ringRadius, thickness, shown, ToneInk(tonight.Tone));
-        if (tonight.HasLimit && !tonight.Reached)
-        {
-            var inner = (ringRadius - thickness) * 2f * GaugeInnerFraction;
-            var room = NumberText.Group(tonight.Headroom);
-            var roomStyle = WidgetText.FitStyle(room, TextStyles.Title2, inner, true);
-            var roomHeight = Typography.LineHeight(roomStyle);
-            var captionHeight = Typography.LineHeight(TextStyles.Caption1);
-            var blockTop = center.Y - (roomHeight + captionHeight) * 0.5f;
-            WidgetText.TabularCentered(drawList, new Vector2(center.X, blockTop + roomHeight * 0.5f), room,
-                ui.TitleInk, roomStyle, inner);
-            Typography.DrawCentered(drawList, new Vector2(center.X, blockTop + roomHeight + captionHeight * 0.5f),
-                Typography.FitText(Loc.T(L.Casino.LimitLeftCaption), inner, TextStyles.Caption1), ui.MutedInk,
-                TextStyles.Caption1);
-        }
-        else
-        {
-            ProgressRing.CenterIcon(drawList, center, FontAwesomeIcon.HandHoldingHeart,
-                tonight.Reached ? theme.Danger : ui.MutedInk, radius * 0.62f);
-        }
+        var iconInk = tonight.Reached ? theme.Danger : tonight.HasLimit ? ToneInk(tonight.Tone) : ui.MutedInk;
+        ProgressRing.CenterIcon(drawList, center, FontAwesomeIcon.HandHoldingHeart, iconInk, radius * 0.62f);
 
         var textLeft = center.X + radius + GaugeTextGap * scale;
         var textWidth = MathF.Max(1f, max.X - pad - textLeft);
@@ -203,11 +185,13 @@ internal sealed partial class CasinoApp
         }
 
         top += title3;
-        var limitLine = tonight.HasLimit
-            ? texts.Number(L.Casino.SelfLimitCurrent, tonight.Limit)
-            : Loc.T(L.Casino.TonightNoLimit);
+        var limitLine = !tonight.HasLimit
+            ? Loc.T(L.Casino.TonightNoLimit)
+            : tonight.Reached
+                ? texts.Number(L.Casino.SelfLimitCurrent, tonight.Limit)
+                : texts.Compacts(L.Casino.LimitLeftOf, tonight.Headroom, tonight.Limit);
         Typography.Draw(drawList, new Vector2(textLeft, top),
-            Typography.FitText(limitLine, textWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
+            Typography.FitText(limitLine, textWidth, TextStyles.Footnote), ui.BodyInk, TextStyles.Footnote);
         if (pending.Length > 0)
         {
             Typography.Draw(drawList, new Vector2(textLeft, top + footnote),
@@ -248,13 +232,19 @@ internal sealed partial class CasinoApp
         var buttonHeight = PickerButtonHeight * scale;
         var hasSelf = state.SelfLossLimit is not null;
         var flash = Environment.TickCount64 - limitsSavedAtTick < SavedFlashMilliseconds;
+        var gap = CardGap * scale;
+        var secondaryLabel = hasSelf ? Loc.T(L.Casino.LimitRemove) : Loc.T(L.Common.Cancel);
+        var secondaryWidth = Button.WidthFor(secondaryLabel, ButtonSize.Large);
+        var saveLabel = Loc.T(L.Casino.SelfLimitSave);
+        var stacked = LimitButtonsStack(width - pad * 2f, Button.WidthFor(saveLabel, ButtonSize.Large),
+            secondaryWidth, gap);
         var height = pad * 2f + MathF.Max(stepper, valueHeight) + footnote + lineGap + sliderHeight + footnote +
-                     lineGap + footnote + lineGap + buttonHeight;
+                     lineGap + footnote + lineGap + buttonHeight + (stacked ? buttonHeight + gap : 0f);
         var min = origin;
         var max = new Vector2(origin.X + width, origin.Y + height);
         ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
 
-        var ceiling = CasinoLimitPicker.CeilingFor(state.DailyBuyInCap);
+        var ceiling = CasinoLimitPicker.Ceiling;
         var left = min.X + pad;
         var right = max.X - pad;
         var rowCenterY = min.Y + pad + MathF.Max(stepper, valueHeight) * 0.5f;
@@ -285,8 +275,8 @@ internal sealed partial class CasinoApp
             valueText, ui.TitleInk, fittedStyle);
         var top = min.Y + pad + MathF.Max(stepper, valueHeight);
         Typography.DrawCentered(drawList, new Vector2((left + right) * 0.5f, top + footnote * 0.5f),
-            texts.Number(L.Casino.LimitCoinEquivalent, CasinoChipLots.CoinsFor(chosen)), ui.MutedInk,
-            TextStyles.Footnote);
+            Typography.FitText(texts.Number(L.Casino.LimitCoinEquivalent, CasinoChipLots.CoinsFor(chosen)),
+                right - left, TextStyles.Footnote), ui.BodyInk, TextStyles.Footnote);
         top += footnote + lineGap;
 
         var sliderRow = new Rect(new Vector2(left, top), new Vector2(right, top + sliderHeight));
@@ -303,7 +293,7 @@ internal sealed partial class CasinoApp
             TextStyles.Footnote);
         var ceilingText = NumberText.Group(ceiling);
         Typography.Draw(drawList, new Vector2(right - Typography.Measure(ceilingText, TextStyles.Footnote).X, top),
-            ceilingText, ui.MutedInk, TextStyles.Footnote);
+            ceilingText, ui.BodyInk, TextStyles.Footnote);
         top += footnote + lineGap;
 
         limitChoice = chosen;
@@ -314,18 +304,20 @@ internal sealed partial class CasinoApp
             Typography.FitText(changeText, right - left, TextStyles.Footnote), changeInk, TextStyles.Footnote);
         top += footnote + lineGap;
 
-        var gap = CardGap * scale;
-        var secondaryLabel = hasSelf ? Loc.T(L.Casino.LimitRemove) : Loc.T(L.Common.Cancel);
-        var secondaryWidth = Button.WidthFor(secondaryLabel, ButtonSize.Large);
-        var saveRect = new Rect(new Vector2(left, top), new Vector2(right - secondaryWidth - gap, top + buttonHeight));
+        var saveRect = stacked
+            ? new Rect(new Vector2(left, top), new Vector2(right, top + buttonHeight))
+            : new Rect(new Vector2(left, top), new Vector2(right - secondaryWidth - gap, top + buttonHeight));
         var canSave = change != LimitChange.None && !casino.SavingLimits;
-        if (Button.Draw(drawList, saveRect, Loc.T(L.Casino.SelfLimitSave), ui.Ink, ButtonStyle.Prominent,
-                enabled: canSave, id: "casino.limits.save"))
+        if (Button.Draw(drawList, saveRect, saveLabel, ui.Ink, ButtonStyle.Prominent, enabled: canSave,
+                id: "casino.limits.save"))
         {
             casino.SetLimits(chosen);
         }
 
-        var secondaryRect = new Rect(new Vector2(right - secondaryWidth, top), new Vector2(right, top + buttonHeight));
+        var secondaryTop = stacked ? saveRect.Max.Y + gap : top;
+        var secondaryRect = stacked
+            ? new Rect(new Vector2(left, secondaryTop), new Vector2(right, secondaryTop + buttonHeight))
+            : new Rect(new Vector2(right - secondaryWidth, top), new Vector2(right, top + buttonHeight));
         if (Button.Draw(drawList, secondaryRect, secondaryLabel, ui.Ink, ButtonStyle.Gray,
                 enabled: !casino.SavingLimits, id: "casino.limits.secondary"))
         {
@@ -341,6 +333,9 @@ internal sealed partial class CasinoApp
 
         return max.Y;
     }
+
+    internal static bool LimitButtonsStack(float rowWidth, float saveWidth, float secondaryWidth, float gap) =>
+        saveWidth + gap + secondaryWidth > rowWidth + 0.5f;
 
     private string ChangeLine(LimitChange change, bool flash, out Vector4 ink)
     {
@@ -383,7 +378,7 @@ internal sealed partial class CasinoApp
                 enabled: !casino.SavingLimits, id: "casino.limits.set"))
         {
             limitChoice = CasinoLimitPicker.Snap(CasinoLimits.SuggestedLimit,
-                CasinoLimitPicker.CeilingFor(state.DailyBuyInCap));
+                CasinoLimitPicker.Ceiling);
         }
 
         return max.Y;

@@ -16,13 +16,20 @@ internal sealed class CasinoStore : IDisposable
     private readonly CoinStore coins;
     private readonly StoreWork work = new("Casino");
     private readonly object pendingSittingsSwapLock = new();
+    private readonly object bonusGate = new();
 
     private volatile CasinoStateDto? state;
-    private volatile bool openingSitting;
-    private volatile bool toppingUp;
+    private volatile CasinoFeatureSet features = CasinoFeatureSet.Empty;
+    private volatile string claimingBonus = string.Empty;
+    private CasinoBonusClaimDto? bonusResult;
+    private int bonusFailed;
+    private string bonusIntentKind = string.Empty;
+    private string bonusIntentId = string.Empty;
+    private volatile bool buyingChips;
     private volatile bool closingSitting;
     private volatile bool savingLimits;
-    private CasinoSittingResultDto? sittingResult;
+    private CasinoBuyChipsDto? buyResult;
+    private int buyFailed;
     private CasinoSittingResultDto? closeResult;
     private CasinoLimitsDto? limitsResult;
     private int moneyMoveFailed;
@@ -43,15 +50,13 @@ internal sealed class CasinoStore : IDisposable
 
     public CasinoStateDto? State => state;
 
-    public bool OpeningSitting => openingSitting;
-
-    public bool ToppingUp => toppingUp;
+    public bool BuyingChips => buyingChips;
 
     public bool ClosingSitting => closingSitting;
 
     public bool SavingLimits => savingLimits;
 
-    public bool MovingMoney => openingSitting || toppingUp || closingSitting;
+    public bool MovingMoney => buyingChips || closingSitting;
 
     public string PendingSittingId
     {
@@ -95,9 +100,14 @@ internal sealed class CasinoStore : IDisposable
         RefreshState(0);
     }
 
-    public CasinoSittingResultDto? TakeSittingResult()
+    public CasinoBuyChipsDto? TakeBuyResult()
     {
-        return Interlocked.Exchange(ref sittingResult, null);
+        return Interlocked.Exchange(ref buyResult, null);
+    }
+
+    public bool TakeBuyFailure()
+    {
+        return Interlocked.Exchange(ref buyFailed, 0) != 0;
     }
 
     public CasinoSittingResultDto? TakeCloseResult()
@@ -120,44 +130,259 @@ internal sealed class CasinoStore : IDisposable
         return Interlocked.Exchange(ref limitsSaveFailed, 0) != 0;
     }
 
-    public void OpenSitting(long amount)
-    {
-        if (MovingMoney || !session.IsSignedIn || amount <= 0)
-        {
-            return;
-        }
-
-        openingSitting = true;
-        var clientSittingId = Guid.NewGuid().ToString("N");
-        var clientActionId = Guid.NewGuid().ToString("N");
-        RememberPendingSitting(clientSittingId);
-        work.Run("open sitting", async token =>
-        {
-            var result = await casino.OpenSittingAsync(clientSittingId, clientActionId, amount, token)
-                .ConfigureAwait(false);
-            AbsorbMoneyMove(result, ref sittingResult);
-        }, () => openingSitting = false);
-    }
-
     public bool HasChips => (state?.Sitting?.Stack ?? 0) > 0;
 
     public long Jackpot => state?.Jackpot ?? 0;
 
-    public void TopUp(long amount)
+    public CasinoCeiling Ceiling => CasinoLadder.CeilingFor(state);
+
+    public long Rate => CasinoCashier.Rate(state);
+
+    public long MaxWinPerBet => CasinoLadder.MaxWinOf(state);
+
+    public CasinoProgressDto? Progress => state?.Progress;
+
+    public CasinoClubDto? Club => state?.Club;
+
+    public CasinoBonusDto[] Bonuses => state?.Bonuses ?? Array.Empty<CasinoBonusDto>();
+
+    public long[] Ladder => state?.Ladder is { Length: > 0 } ladder ? ladder : CasinoLadder.Rungs;
+
+    public string ClaimingBonus => claimingBonus;
+
+    public bool HasFeature(string feature) => features.Has(feature);
+
+    public CasinoFeatureSet Features => features;
+
+    public CasinoBonusDto? BonusFor(string kind)
     {
-        var sittingId = state?.Sitting?.Id ?? string.Empty;
-        if (MovingMoney || !session.IsSignedIn || amount <= 0 || sittingId.Length == 0)
+        var bonuses = state?.Bonuses;
+        if (bonuses is null)
+        {
+            return null;
+        }
+
+        for (var index = 0; index < bonuses.Length; index++)
+        {
+            if (string.Equals(bonuses[index].Kind, kind, StringComparison.Ordinal))
+            {
+                return bonuses[index];
+            }
+        }
+
+        return null;
+    }
+
+    public CasinoBonusClaimDto? TakeBonusResult()
+    {
+        return Interlocked.Exchange(ref bonusResult, null);
+    }
+
+    public bool TakeBonusFailure()
+    {
+        return Interlocked.Exchange(ref bonusFailed, 0) != 0;
+    }
+
+    public void ClaimBonus(string kind)
+    {
+        if (claimingBonus.Length > 0 || !session.IsSignedIn || CasinoBonusKinds.IndexOf(kind) < 0)
         {
             return;
         }
 
-        toppingUp = true;
-        var clientActionId = Guid.NewGuid().ToString("N");
-        work.Run("top up", async token =>
+        claimingBonus = kind;
+        string clientActionId;
+        lock (bonusGate)
         {
-            var result = await casino.TopUpAsync(sittingId, clientActionId, amount, token).ConfigureAwait(false);
-            AbsorbMoneyMove(result, ref sittingResult);
-        }, () => toppingUp = false);
+            if (!string.Equals(bonusIntentKind, kind, StringComparison.Ordinal) || bonusIntentId.Length == 0)
+            {
+                bonusIntentKind = kind;
+                bonusIntentId = Guid.NewGuid().ToString("N");
+            }
+
+            clientActionId = bonusIntentId;
+        }
+
+        work.Run("claim bonus", async token =>
+        {
+            var result = await casino.ClaimBonusAsync(kind, clientActionId, token).ConfigureAwait(false);
+            if (result is null)
+            {
+                Interlocked.Exchange(ref bonusFailed, 1);
+                return;
+            }
+
+            lock (bonusGate)
+            {
+                if (string.Equals(bonusIntentId, clientActionId, StringComparison.Ordinal))
+                {
+                    bonusIntentId = string.Empty;
+                    bonusIntentKind = string.Empty;
+                }
+            }
+
+            Interlocked.Exchange(ref bonusResult, result);
+            var current = state;
+            if (current is not null)
+            {
+                state = BonusAbsorbedInto(current, result);
+            }
+
+            RefreshNow();
+        }, () => claimingBonus = string.Empty);
+    }
+
+    internal static CasinoStateDto BonusAbsorbedInto(CasinoStateDto current, CasinoBonusClaimDto claim)
+    {
+        if (!claim.Granted)
+        {
+            return current;
+        }
+
+        var next = current;
+        if (claim.Sitting is { Id.Length: > 0 } sitting)
+        {
+            next = next with { Sitting = sitting };
+        }
+        else if (next.Sitting is { } bankroll && claim.Stack > 0)
+        {
+            next = next with { Sitting = bankroll with { Stack = claim.Stack } };
+        }
+
+        var bonuses = next.Bonuses;
+        if (bonuses is null)
+        {
+            return next;
+        }
+
+        var updated = new CasinoBonusDto[bonuses.Length];
+        for (var index = 0; index < bonuses.Length; index++)
+        {
+            var bonus = bonuses[index];
+            updated[index] = string.Equals(bonus.Kind, claim.Kind, StringComparison.Ordinal)
+                ? bonus with { Ready = false, NextAtUnix = claim.NextAtUnix }
+                : bonus;
+        }
+
+        return next with { Bonuses = updated };
+    }
+
+    public void AbsorbGrant(CasinoSittingDto? sitting, long stack)
+    {
+        var current = state;
+        if (current is not null)
+        {
+            state = GrantAbsorbedInto(current, sitting, stack);
+        }
+    }
+
+    internal static CasinoStateDto GrantAbsorbedInto(CasinoStateDto current, CasinoSittingDto? sitting, long stack)
+    {
+        if (sitting is { Id.Length: > 0 })
+        {
+            return current with { Sitting = sitting };
+        }
+
+        if (current.Sitting is { } bankroll && stack > 0)
+        {
+            return current with { Sitting = bankroll with { Stack = stack } };
+        }
+
+        return current;
+    }
+
+    public bool BuyChips(long coinAmount)
+    {
+        if (MovingMoney || !session.IsSignedIn || coinAmount < ChipsAmounts.MinimumCoins)
+        {
+            return false;
+        }
+
+        buyingChips = true;
+        var clientActionId = Guid.NewGuid().ToString("N");
+        work.Run("buy chips", async token =>
+        {
+            var result = await casino.BuyChipsAsync(coinAmount, clientActionId, token).ConfigureAwait(false);
+            if (result is null)
+            {
+                Interlocked.Exchange(ref buyFailed, 1);
+                return;
+            }
+
+            var current = state;
+            if (current is not null)
+            {
+                state = BuyAbsorbedInto(current, result);
+            }
+
+            if (result.Granted)
+            {
+                coins.AbsorbLocalAward(result.Balance);
+                if (result.Sitting is { Id.Length: > 0 } sitting)
+                {
+                    RememberPendingSitting(sitting.Id);
+                }
+            }
+
+            Interlocked.Exchange(ref buyResult, result);
+            RefreshNow();
+        }, () => buyingChips = false);
+        return true;
+    }
+
+    internal static CasinoStateDto BuyAbsorbedInto(CasinoStateDto current, CasinoBuyChipsDto result)
+    {
+        if (!result.Granted)
+        {
+            return current;
+        }
+
+        var next = current with { Balance = result.Balance };
+        if (result.Sitting is { Id.Length: > 0 } sitting)
+        {
+            next = next with { Sitting = sitting };
+        }
+        else if (next.Sitting is { } bankroll)
+        {
+            next = next with { Sitting = bankroll with { Stack = result.Stack } };
+        }
+
+        return result.Ceiling is { MaxBet: > 0 } ceiling ? next with { Ceiling = ceiling } : next;
+    }
+
+    public bool AutoTopUp
+    {
+        get
+        {
+            var contentId = session.ActiveContentId;
+            return contentId != 0 && configuration.CasinoAutoTopUp.Contains(contentId);
+        }
+    }
+
+    public void SetAutoTopUp(bool enabled)
+    {
+        var contentId = session.ActiveContentId;
+        if (contentId == 0 || AutoTopUp == enabled)
+        {
+            return;
+        }
+
+        lock (pendingSittingsSwapLock)
+        {
+            var next = new HashSet<ulong>(configuration.CasinoAutoTopUp);
+            if (enabled)
+            {
+                next.Add(contentId);
+            }
+            else
+            {
+                next.Remove(contentId);
+            }
+
+            configuration.CasinoAutoTopUp = next;
+        }
+
+        configuration.Save();
     }
 
     public void CloseSitting()
@@ -177,6 +402,12 @@ internal sealed class CasinoStore : IDisposable
         work.Run("close sitting", async token =>
         {
             var result = await casino.CloseSittingAsync(sittingId, token).ConfigureAwait(false);
+            var current = state;
+            if (result is not null && current is not null)
+            {
+                state = CashOutAbsorbedInto(current, result);
+            }
+
             AbsorbMoneyMove(result, ref closeResult);
         }, () => closingSitting = false);
     }
@@ -218,6 +449,28 @@ internal sealed class CasinoStore : IDisposable
         state = next;
     }
 
+    public void AbsorbCeiling(long ceiling)
+    {
+        var next = CeilingAbsorbedInto(state, ceiling);
+        if (next is null)
+        {
+            return;
+        }
+
+        state = next;
+    }
+
+    internal static CasinoStateDto? CeilingAbsorbedInto(CasinoStateDto? current, long ceiling)
+    {
+        if (current is null || ceiling <= 0)
+        {
+            return null;
+        }
+
+        var held = current.Ceiling ?? new CasinoCeilingDto();
+        return held.MaxBet == ceiling ? null : current with { Ceiling = held with { MaxBet = ceiling } };
+    }
+
     internal static CasinoStateDto? StackAbsorbedInto(CasinoStateDto? current, string sittingId, long stack)
     {
         if (current is null || sittingId.Length == 0)
@@ -238,6 +491,11 @@ internal sealed class CasinoStore : IDisposable
         }
 
         return null;
+    }
+
+    internal static CasinoStateDto CashOutAbsorbedInto(CasinoStateDto current, CasinoSittingResultDto result)
+    {
+        return result.Granted ? current with { Sitting = null } : current;
     }
 
     internal static CasinoStateDto MergeLimits(CasinoStateDto current, CasinoLimitsDto limits)
@@ -276,9 +534,19 @@ internal sealed class CasinoStore : IDisposable
         {
             lastAccountId = accountId;
             state = null;
-            Interlocked.Exchange(ref sittingResult, null);
+            features = CasinoFeatureSet.Empty;
+            Interlocked.Exchange(ref buyResult, null);
+            Interlocked.Exchange(ref buyFailed, 0);
             Interlocked.Exchange(ref closeResult, null);
             Interlocked.Exchange(ref limitsResult, null);
+            Interlocked.Exchange(ref bonusResult, null);
+            Interlocked.Exchange(ref bonusFailed, 0);
+            lock (bonusGate)
+            {
+                bonusIntentKind = string.Empty;
+                bonusIntentId = string.Empty;
+            }
+
             Interlocked.Exchange(ref moneyMoveFailed, 0);
             Interlocked.Exchange(ref limitsSaveFailed, 0);
             Interlocked.Exchange(ref stateLoadedAtTick, 0);
@@ -331,6 +599,7 @@ internal sealed class CasinoStore : IDisposable
                 return;
             }
 
+            features = CasinoFeatureSet.From(fresh.Features);
             state = fresh;
             Interlocked.Exchange(ref stateLoadedAtTick, Environment.TickCount64);
             ReconcilePendingSitting(fresh);
@@ -339,7 +608,7 @@ internal sealed class CasinoStore : IDisposable
 
     private void ReconcilePendingSitting(CasinoStateDto fresh)
     {
-        if (openingSitting)
+        if (buyingChips)
         {
             return;
         }

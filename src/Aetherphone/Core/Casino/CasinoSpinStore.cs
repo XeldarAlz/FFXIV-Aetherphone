@@ -115,7 +115,11 @@ internal sealed class CasinoSpinStore : IDisposable
         }
 
         Interlocked.Exchange(ref statusAttemptedAtTick, now);
-        var generation = Interlocked.CompareExchange(ref claimGeneration, 0, 0);
+        LoadStatus(Interlocked.CompareExchange(ref claimGeneration, 0, 0));
+    }
+
+    private void LoadStatus(int generation)
+    {
         work.Run("daily spin status", async token =>
         {
             var status = await casino.DailySpinStatusAsync(token).ConfigureAwait(false);

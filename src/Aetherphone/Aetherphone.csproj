@@ -87,18 +87,18 @@
     <PackageReference Include="NAudio.Wasapi" Version="2.3.0" />
     <PackageReference Include="MeltySynth" Version="2.4.1" />
     <PackageReference Include="NetStone" Version="1.4.1" />
-    <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="2.0.6" />
+    <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.11" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
     <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
     <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
-    <PackageReference Include="YoutubeExplode" Version="6.6.1" />
+    <PackageReference Include="YoutubeExplode" Version="6.6.2" />
     <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
     <PackageReference Include="SharpDX.D3DCompiler" Version="4.2.0" />
-    <PackageReference Include="SharpCompress" Version="0.48.1" />
+    <PackageReference Include="SharpCompress" Version="0.50.5" />
   </ItemGroup>
 
   <ItemGroup>

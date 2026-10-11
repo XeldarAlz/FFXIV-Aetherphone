@@ -20,7 +20,7 @@ public sealed class UiSoundCatalogTests
             var entry = UiSoundCatalog.Entries[entryIndex];
             Assert.NotEmpty(entry.Files);
             Assert.InRange(entry.Gain, 0f, 1f);
-            Assert.InRange(entry.MinimumIntervalMilliseconds, 1, 5000);
+            Assert.InRange(entry.MinimumIntervalMilliseconds, 1, 10000);
             for (var fileIndex = 0; fileIndex < entry.Files.Length; fileIndex++)
             {
                 Assert.EndsWith(".wav", entry.Files[fileIndex], StringComparison.Ordinal);
@@ -53,6 +53,18 @@ public sealed class UiSoundCatalogTests
         Assert.Equal(UiSoundChannel.Event, UiSoundCatalog.Entries[(int)UiSound.GameWin].Channel);
         Assert.Equal(UiSoundChannel.Game, UiSoundCatalog.Entries[(int)UiSound.GameHitSoft].Channel);
         Assert.Equal(UiSoundChannel.Game, UiSoundCatalog.Entries[(int)UiSound.SimonTone4].Channel);
+    }
+
+    [Fact]
+    public void CasinoCuesAreGameChannelAndBigWinsThrottle()
+    {
+        Assert.True(UiSoundCatalog.Entries[(int)UiSound.WinBig].MinimumIntervalMilliseconds >= 10000);
+        Assert.True(UiSoundCatalog.Entries[(int)UiSound.WinEpic].MinimumIntervalMilliseconds >= 10000);
+        Assert.True(UiSoundCatalog.Entries[(int)UiSound.Fanfare].MinimumIntervalMilliseconds >= 10000);
+        for (var sound = (int)UiSound.ReelTick; sound <= (int)UiSound.LevelUp; sound++)
+        {
+            Assert.Equal(UiSoundChannel.Game, UiSoundCatalog.Entries[sound].Channel);
+        }
     }
 
     [Fact]

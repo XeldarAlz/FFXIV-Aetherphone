@@ -53,6 +53,9 @@ internal sealed class KineticScroller
         lastPointerY = pointerY;
     }
 
+    public bool ExceedsDragThreshold(float pointerY) =>
+        pressed && MathF.Abs(pointerY - pressStartY) >= DragThreshold * Scale;
+
     public void Move(float pointerY, float deltaSeconds)
     {
         if (!pressed)
@@ -64,7 +67,7 @@ internal sealed class KineticScroller
         lastPointerY = pointerY;
         if (!dragging)
         {
-            if (MathF.Abs(pointerY - pressStartY) < DragThreshold * Scale)
+            if (!ExceedsDragThreshold(pointerY))
             {
                 return;
             }

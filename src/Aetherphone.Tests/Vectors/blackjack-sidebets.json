@@ -1,0 +1,667 @@
+{
+  "version": 1,
+  "perfectPairsPays": [
+    0,
+    6,
+    12,
+    25
+  ],
+  "twentyOnePlusThreePays": [
+    0,
+    5,
+    10,
+    30,
+    40,
+    100
+  ],
+  "perfectPairsReturn": {
+    "numerator": 91104,
+    "denominator": 97032,
+    "basisPoints": 9389
+  },
+  "twentyOnePlusThreeReturn": {
+    "numerator": 28689936,
+    "denominator": 30079920,
+    "basisPoints": 9537
+  },
+  "cases": [
+    {
+      "hero": [
+        0,
+        14
+      ],
+      "upCard": 41,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 2
+    },
+    {
+      "hero": [
+        11,
+        12
+      ],
+      "upCard": 0,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 4
+    },
+    {
+      "hero": [
+        12,
+        13
+      ],
+      "upCard": 40,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "hero": [
+        30,
+        35
+      ],
+      "upCard": 38,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 1
+    },
+    {
+      "hero": [
+        20,
+        7
+      ],
+      "upCard": 46,
+      "perfectPairsKind": 1,
+      "twentyOnePlusThreeKind": 3
+    },
+    {
+      "hero": [
+        20,
+        20
+      ],
+      "upCard": 20,
+      "perfectPairsKind": 3,
+      "twentyOnePlusThreeKind": 5
+    },
+    {
+      "hero": [
+        20,
+        33
+      ],
+      "upCard": 2,
+      "perfectPairsKind": 2,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "hero": [
+        44,
+        45
+      ],
+      "upCard": 43,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 4
+    },
+    {
+      "hero": [
+        48,
+        10
+      ],
+      "upCard": 24,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 2
+    },
+    {
+      "hero": [
+        48,
+        9
+      ],
+      "upCard": 49,
+      "perfectPairsKind": 2,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "hero": [
+        1,
+        1
+      ],
+      "upCard": 16,
+      "perfectPairsKind": 3,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "hero": [
+        36,
+        37
+      ],
+      "upCard": 35,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 4
+    }
+  ],
+  "hands": [
+    {
+      "seed": "62ee1c7aaa770299b41d3a136b5d8343809b5339ec587a76c698214ca7641ae4",
+      "binding": "blackjack-vectors#0",
+      "hero": [
+        37,
+        27
+      ],
+      "upCard": 28,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 1
+    },
+    {
+      "seed": "63e089761fe59d31aa801862e9d79e9ba6a25fdd02a402f11ab01b6242f4743c",
+      "binding": "blackjack-vectors#1",
+      "hero": [
+        16,
+        51
+      ],
+      "upCard": 0,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "8a1561954fc18a6c177b293163ade3239b00023352d0d301194b44b21ba4d6fd",
+      "binding": "blackjack-vectors#2",
+      "hero": [
+        1,
+        15
+      ],
+      "upCard": 21,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "b0fe4e0978ad7191247c4ac8a2f648705cd9e8a5793881896d1e6d9617767080",
+      "binding": "blackjack-vectors#3",
+      "hero": [
+        34,
+        11
+      ],
+      "upCard": 8,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "2b1a57e1204d4148d3527481e5b985530eb046fb1fa37913e0dba1070ca66f49",
+      "binding": "blackjack-vectors#4",
+      "hero": [
+        50,
+        40
+      ],
+      "upCard": 27,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "ed6b926721638d70f8289cc477dac9ada5e9061311ad68b71ece0871634b8db9",
+      "binding": "blackjack-vectors#5",
+      "hero": [
+        51,
+        16
+      ],
+      "upCard": 41,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "f9224b6540242f9374a4236c821cb5758e03ad4678c05016e4d32eee16d06ee2",
+      "binding": "blackjack-vectors#6",
+      "hero": [
+        1,
+        32
+      ],
+      "upCard": 26,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "87ffac2e57e3e83321298624ccc94f397c16a71621b2a19252f0c43d4c851ea3",
+      "binding": "blackjack-vectors#7",
+      "hero": [
+        20,
+        18
+      ],
+      "upCard": 20,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 1
+    },
+    {
+      "seed": "9bd92cc1f18a8fb17d4e46d33b5f3b52bf51df986cfd1c07dce941d46f21f084",
+      "binding": "blackjack-vectors#8",
+      "hero": [
+        41,
+        8
+      ],
+      "upCard": 40,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "09dbd2edf32008ee8b29e52ed108bbbab8f1d29a61c66fff19905964b4ad5094",
+      "binding": "blackjack-vectors#9",
+      "hero": [
+        15,
+        3
+      ],
+      "upCard": 37,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "5f7a276910b4bdfb40e4c66ebb4e438c85badd2ac4c3e6fb3eae803d9fe7fc77",
+      "binding": "blackjack-vectors#10",
+      "hero": [
+        7,
+        0
+      ],
+      "upCard": 5,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 1
+    },
+    {
+      "seed": "988c12b879c46b5a57e5c9d0ae1375b3b06a324ab00857756ec7889c90434a10",
+      "binding": "blackjack-vectors#11",
+      "hero": [
+        38,
+        39
+      ],
+      "upCard": 11,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 2
+    },
+    {
+      "seed": "d29e0a749ad834ecb1aa889080c8f76ae3b8955874679746a6d8387d32115dd3",
+      "binding": "blackjack-vectors#12",
+      "hero": [
+        41,
+        25
+      ],
+      "upCard": 45,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "48b8a003844a87ce5ac1454926f3aa7510ee0764c581709a089f0a15e65b9271",
+      "binding": "blackjack-vectors#13",
+      "hero": [
+        23,
+        8
+      ],
+      "upCard": 42,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "7672d624c86f6c67b420d50278f0cd33e90545d3a38c0286150193681b29eb7a",
+      "binding": "blackjack-vectors#14",
+      "hero": [
+        49,
+        30
+      ],
+      "upCard": 9,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "cc3f55a0bf353c4debc99085852675c8105cec72ff54556de7b1f5c6146dca74",
+      "binding": "blackjack-vectors#15",
+      "hero": [
+        7,
+        17
+      ],
+      "upCard": 27,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "d0244022655a944931040737752c87f3bec42c4df1806818c26578e9afd5ba5d",
+      "binding": "blackjack-vectors#16",
+      "hero": [
+        48,
+        24
+      ],
+      "upCard": 41,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "c2013576ac8549dbcd6dd0fc9b738ce2f8843bf1a67a3926440d0b5dd521a3cc",
+      "binding": "blackjack-vectors#17",
+      "hero": [
+        45,
+        48
+      ],
+      "upCard": 6,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "d2fbd34d3c8b3b6ced883c0d730ffec8ce6f403c15ccf44a59b7d863706078e1",
+      "binding": "blackjack-vectors#18",
+      "hero": [
+        47,
+        51
+      ],
+      "upCard": 39,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 1
+    },
+    {
+      "seed": "760b448e0d4a359ee235f4a59a7c3b7c0633c70f032ff4ba90fcf928b093bcf2",
+      "binding": "blackjack-vectors#19",
+      "hero": [
+        20,
+        7
+      ],
+      "upCard": 3,
+      "perfectPairsKind": 1,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "219fd1adc8a7e8b68bc5d728db821e463f5fdb6f5fc4e3d36fbe70f92c60d7e6",
+      "binding": "blackjack-vectors#20",
+      "hero": [
+        16,
+        24
+      ],
+      "upCard": 12,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "745528269c1e8e205c388812056c2f4d7ea98d2c19f88baf36bc771d17e61f0a",
+      "binding": "blackjack-vectors#21",
+      "hero": [
+        5,
+        33
+      ],
+      "upCard": 8,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "74402d7e32b80ef024262f7ea23637b4614ff08b0e473d8ea5991fb936a688d6",
+      "binding": "blackjack-vectors#22",
+      "hero": [
+        39,
+        13
+      ],
+      "upCard": 48,
+      "perfectPairsKind": 1,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "7bafde712d99364b67a534d7fd339fe5d9750842702b9fd8448e89cb4bdab78f",
+      "binding": "blackjack-vectors#23",
+      "hero": [
+        5,
+        4
+      ],
+      "upCard": 40,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "de830b9d695c10cfa39949eeacc261fa74bbd198d3299d2e90f65922fbd32175",
+      "binding": "blackjack-vectors#24",
+      "hero": [
+        42,
+        23
+      ],
+      "upCard": 18,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "d3b585b71c20b198c9b9eb50be55ee440a7f11a0bfe93d8274a610a0bdc9717d",
+      "binding": "blackjack-vectors#25",
+      "hero": [
+        12,
+        0
+      ],
+      "upCard": 21,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "286c3f9da7d3f61775f192a1124865eee404ac8164fec5a92693d3aee2fe3882",
+      "binding": "blackjack-vectors#26",
+      "hero": [
+        45,
+        51
+      ],
+      "upCard": 19,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "53237c8de35241baf7c7b0fd972fb5c05600d1fa0b4cf68bda0e8579e45a5b26",
+      "binding": "blackjack-vectors#27",
+      "hero": [
+        17,
+        30
+      ],
+      "upCard": 42,
+      "perfectPairsKind": 2,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "172369ff8e2a5077bc33f3b765abe2c1c8f140df2ec4168fe1cfda2ce34874ae",
+      "binding": "blackjack-vectors#28",
+      "hero": [
+        32,
+        22
+      ],
+      "upCard": 51,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "2d963bf3fdc5980a0c9bd80cb5dce6c277ac85ac5d9507cc69879f68e2b3d721",
+      "binding": "blackjack-vectors#29",
+      "hero": [
+        41,
+        42
+      ],
+      "upCard": 19,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "0c58a4e4a947f304bdc890b225be42e4d7d35236d05b7eef66a6ac6b3bdc15a7",
+      "binding": "blackjack-vectors#30",
+      "hero": [
+        29,
+        21
+      ],
+      "upCard": 13,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "f6555c75a7645a2d05d438f873196aab43f971e717888d212eb699a87ebc74d8",
+      "binding": "blackjack-vectors#31",
+      "hero": [
+        43,
+        0
+      ],
+      "upCard": 37,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "fa45dbe032ddcb0579fe23acae928c35d4230f9d9357deedecdc554805e78c8e",
+      "binding": "blackjack-vectors#32",
+      "hero": [
+        3,
+        28
+      ],
+      "upCard": 11,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "b797e95755d994870d66d58e669d638ca877b6386f8914e33aae1bdb15efbd5d",
+      "binding": "blackjack-vectors#33",
+      "hero": [
+        26,
+        24
+      ],
+      "upCard": 20,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "1001d1ef37d1d39deb9d1c7d99c3412ff7ac10d0088ad1733806e693137b431d",
+      "binding": "blackjack-vectors#34",
+      "hero": [
+        46,
+        2
+      ],
+      "upCard": 17,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "b1b566f39ef8cab9639329f5d21666c6e48d1fbe429d1d76b7e9509610787d99",
+      "binding": "blackjack-vectors#35",
+      "hero": [
+        2,
+        34
+      ],
+      "upCard": 16,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "58062e54f0f878193c77869f9d5205322811b6632b4c0685e95604b209e23790",
+      "binding": "blackjack-vectors#36",
+      "hero": [
+        6,
+        37
+      ],
+      "upCard": 40,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "d8327752bf9ca053b39132925d1816bc859b649d75a0b97f66bc03b5f42a4767",
+      "binding": "blackjack-vectors#37",
+      "hero": [
+        4,
+        49
+      ],
+      "upCard": 42,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "3679fc5ef810e96611e0853d2ef0c8d49e5eecd6e0078d68fc59f86d45c95570",
+      "binding": "blackjack-vectors#38",
+      "hero": [
+        42,
+        48
+      ],
+      "upCard": 9,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "d1eed1a73568faf7de9c131f7442f2dd3174efffbb7ea3520b9b880b0fd3a21d",
+      "binding": "blackjack-vectors#39",
+      "hero": [
+        41,
+        9
+      ],
+      "upCard": 13,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "8fc4836d3815aa5ce1ae0b6105f46c73254e3797cfb101a9f9550595ccb68b66",
+      "binding": "blackjack-vectors#40",
+      "hero": [
+        20,
+        3
+      ],
+      "upCard": 11,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "01e210c67e3a8606fd647b985da14cc7087bd86ef197094c5fd7b4bc0bdf1677",
+      "binding": "blackjack-vectors#41",
+      "hero": [
+        1,
+        11
+      ],
+      "upCard": 29,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "a466674d570528a66aad49ddd258fa9b86e0cf51a0d7b0e8227ae2f3242657be",
+      "binding": "blackjack-vectors#42",
+      "hero": [
+        3,
+        8
+      ],
+      "upCard": 15,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "e21d35ac8031a0b2f154cfb751a8b748be05f281fe63bbaf43425e20de4c5931",
+      "binding": "blackjack-vectors#43",
+      "hero": [
+        1,
+        12
+      ],
+      "upCard": 10,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 1
+    },
+    {
+      "seed": "ac3f85148134dea3a23795fb392210e4a52c7cc8fc5ef4c762d09c55b010964f",
+      "binding": "blackjack-vectors#44",
+      "hero": [
+        32,
+        24
+      ],
+      "upCard": 18,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "457ad48591f8cead9c688492447db30bff76a86c6d4e84467204f51a805f02f8",
+      "binding": "blackjack-vectors#45",
+      "hero": [
+        2,
+        30
+      ],
+      "upCard": 30,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "4c2b51adb65bc08ad25789b5b7e111d50b172ad1a913a0c2e1cda8081ccfe9b6",
+      "binding": "blackjack-vectors#46",
+      "hero": [
+        41,
+        26
+      ],
+      "upCard": 33,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    },
+    {
+      "seed": "60f8f6512bb2f95e5ed4c77bff25e628e0167f8284ef2d33b67ca54d944d90d3",
+      "binding": "blackjack-vectors#47",
+      "hero": [
+        42,
+        51
+      ],
+      "upCard": 29,
+      "perfectPairsKind": 0,
+      "twentyOnePlusThreeKind": 0
+    }
+  ]
+}

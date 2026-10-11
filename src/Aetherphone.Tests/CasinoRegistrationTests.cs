@@ -9,9 +9,9 @@ namespace Aetherphone.Tests;
 public sealed class CasinoRegistrationTests
 {
     [Fact]
-    public void CasinoAccentIsTheEmeraldRingMember()
+    public void CasinoAccentIsTheRoseRingMember()
     {
-        Assert.Equal(AccentRing.Emerald, AppAccents.For("casino"));
+        Assert.Equal(AccentRing.Rose, AppAccents.For("casino"));
         Assert.Equal(AccentRing.Ink, AppAccents.InkFor("casino"));
         Assert.False(AppAccents.IsBrandLocked("casino"));
     }

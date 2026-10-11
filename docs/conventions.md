@@ -201,7 +201,7 @@ Every new, renamed, or deleted user-visible string changes src/Aetherphone/Core/
 
 Open pull requests against `dev`, the default branch. `master` is the release branch: it only moves when a maintainer cuts a release (see [Testing and release](testing-and-release.md)), so never target it.
 
-This repo uses conventional-commit style for hand-written commits: a type, a scope in parentheses, a colon, then a lowercase summary. Workflow-generated commits are the exception and keep their own fixed subjects: release.yml's "Release vX.Y.Z.W: bump repo.json", Dependabot's `ci:` and `deps:` bumps, and dependabot-lockfiles.yml's "deps: regenerate the NuGet lock files". Merge commits keep their default subjects. Older history also carries "Update issue template versions for vX.Y.Z.W" commits from a workflow that now normally finds nothing to change.
+This repo uses conventional-commit style for hand-written commits: a type, a scope in parentheses, a colon, then a lowercase summary. Workflow-generated commits are the exception and keep their own fixed subjects: release.yml's "Release vX.Y.Z.W: bump repo.json" and Dependabot's `ci:` and `deps:` bumps. Merge commits keep their default subjects. Older history also carries "Update issue template versions for vX.Y.Z.W" commits from a workflow that now normally finds nothing to change.
 
 ```
 feat(account): link Patreon and wear the member badge automatically

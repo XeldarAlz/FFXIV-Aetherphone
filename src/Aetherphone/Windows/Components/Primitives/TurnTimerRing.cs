@@ -14,7 +14,7 @@ internal static class TurnTimerRing
     private const float Thickness = 3.2f;
     private const float TrackAlpha = 0.16f;
 
-    private static readonly Vector4 Warn = new(1f, 0.63f, 0.28f, 1f);
+    public static readonly Vector4 Warn = new(1f, 0.63f, 0.28f, 1f);
 
     public static float Fraction(long remainingMilliseconds, int windowSeconds)
     {

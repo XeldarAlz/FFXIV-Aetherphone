@@ -22,13 +22,55 @@ updates:
     labels:
       - dependencies
     open-pull-requests-limit: 5
+    groups:
+      test-stack:
+        patterns:
+          - "xunit*"
+          - "Microsoft.NET.Test.Sdk"
+      audio:
+        patterns:
+          - "NAudio*"
+          - "NLayer*"
+      vortice:
+        patterns:
+          - "Vortice.*"
+    ignore:
+      # NAudio 3 is a breaking migration that needs an in-game audio pass; NLayer 3 requires it.
+      - dependency-name: "NAudio*"
+        update-types:
+          - version-update:semver-major
+      - dependency-name: "NLayer*"
+        update-types:
+          - version-update:semver-major
+      # Tracks the .NET runtime major that Dalamud ships.
+      - dependency-name: "System.Security.Cryptography.ProtectedData"
+        update-types:
+          - version-update:semver-major
+      # Compile-only reference (ExcludeAssets runtime); Dalamud's own copy is the one that loads.
+      - dependency-name: "Newtonsoft.Json"
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: npm
-    directory: /tools/icon-generator
+    directories:
+      - /tools/emoji-generator
+      - /tools/icon-generator
+      - /tools/readme-media
     schedule:
-      interval: weekly
+      interval: monthly
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: deps
     labels:
       - dependencies
     open-pull-requests-limit: 5
+    groups:
+      tools:
+        patterns:
+          - "*"
+    ignore:
+      # Must move together with TWEMOJI_VERSION in generate-emoji.mjs, or the newer emoji 404 and drop out.
+      - dependency-name: "emojibase-data"
+        update-types:
+          - version-update:semver-major

@@ -154,8 +154,7 @@ internal sealed partial class LinkpearlApp
             filterActive[index] = (int)chatFilter == index;
         }
 
-        var tapped = filterRail.Draw(rail, ui, filterLabels, filterActive, false, "messages.filters",
-            ChipRail.CompactLabelPadding);
+        var tapped = filterRail.Draw(rail, ui, filterLabels, filterActive, false, "messages.filters");
         if (tapped >= 0)
         {
             chatFilter = (ChatFilter)tapped;

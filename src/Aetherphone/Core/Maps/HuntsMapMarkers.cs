@@ -10,8 +10,8 @@ namespace Aetherphone.Core.Maps;
 
 internal sealed class HuntsMapMarkers : IDisposable
 {
-    private const int MarkerScale = 600;
-    private const int FateMarkerScale = 200;
+    private const int MarkerScale = 35;
+    private const int FateMarkerScale = 35;
     private const string AreaMapAddonName = "AreaMap";
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(2);
 

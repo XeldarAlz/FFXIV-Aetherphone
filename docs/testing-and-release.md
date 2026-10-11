@@ -14,8 +14,7 @@ This page explains how Aetherphone code gets validated and shipped: the unit tes
 | .github/workflows/announce-commits.yml | Posts commits pushed to dev to Discord, never pings anyone |
 | .github/workflows/update-issue-template-versions.yml | Backfills the version dropdown in issue templates after a release |
 | .github/ISSUE_TEMPLATE/bug_report.yml | Holds the "Plugin version" dropdown, bumped by hand in each release commit |
-| .github/dependabot.yml | Weekly Dependabot updates for Actions, NuGet, and the icon generator's npm packages |
-| .github/workflows/dependabot-lockfiles.yml | Regenerates packages.lock.json on Dependabot NuGet branches so the locked restore passes |
+| .github/dependabot.yml | Dependabot updates: Actions and NuGet weekly, the three npm tools monthly |
 | .github/workflows/uptime.yml | Polls the backend health endpoint every five minutes |
 | Directory.Build.props | Single source of truth for the plugin version; also turns CI warnings into errors |
 | repo.json | This plugin's Dalamud repository manifest entry: version, download links, install count |
@@ -99,7 +98,7 @@ Pull requests target `dev`, the default branch; `master` only moves when a relea
    [Conventions](conventions.md) explains the rule behind each one.
 2. **Build (Windows)**, after guards pass. Downloads the latest Dalamud distribution to the standard dev-hooks path, then runs `dotnet restore Aetherphone.sln --locked-mode`, `dotnet build --configuration Release`, and the test suite. Directory.Build.props runs the .editorconfig code-style rules and the .NET analyzers in every build, and on CI (where `GITHUB_ACTIONS` is `true`) it also turns on `TreatWarningsAsErrors` and deterministic builds. Every compiler, analyzer, and code-style warning is therefore an error in CI, while a local build only prints it, so build Release and clear every warning before you push. Every green run uploads the SDK-built plugin zip (`src/Aetherphone/bin/Release/Aetherphone/latest.zip`) as the `Aetherphone-plugin` artifact, kept for 14 days, so every pull request that passes gets a loadable build for in-game review. When the test suite fails, the trx log (`TestResults/test-results.trx`) is uploaded as a `test-results` artifact instead.
 
-Restore runs in locked mode because Directory.Build.props sets `RestorePackagesWithLockFile`. All three projects in the solution (Aetherphone, Aetherphone.Tests, and the vendored ManagedDoom) commit a packages.lock.json; if you add or bump a NuGet package, run `dotnet restore` locally and commit the updated lock files, or CI restore fails. Dependabot (.github/dependabot.yml) opens weekly NuGet bumps for the plugin and test projects only, not ManagedDoom. Its NuGet branches are handled by .github/workflows/dependabot-lockfiles.yml, which regenerates the lock files on the Dependabot branch (it needs the `HUB_REPO_PAT` secret in the Dependabot scope; without it, it skips quietly).
+Restore runs in locked mode because Directory.Build.props sets `RestorePackagesWithLockFile`. The plugin (Aetherphone) and the vendored ManagedDoom commit a packages.lock.json; if you add or bump a NuGet package, run `dotnet restore` locally and commit the updated lock file, or CI restore fails. The test project opts out with `RestorePackagesWithLockFile` set to false in its csproj: it ships nothing, and a lock file there would repeat every plugin package, so a plugin bump would leave it stale and fail the locked restore with NU1004. Dependabot (.github/dependabot.yml) opens weekly NuGet bumps for the plugin and test projects only, not ManagedDoom, and rewrites the plugin's lock file itself, so its pull requests pass the locked restore without any help.
 
 ## Versioning and the release pipeline
 

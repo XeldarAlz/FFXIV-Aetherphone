@@ -42,6 +42,84 @@ public sealed class CasinoReasonCoverageTests
     }
 
     [Fact]
+    public void TheEconomyV3RefusalsAreCovered()
+    {
+        Assert.Contains("ceiling", CasinoReasons.All);
+        Assert.Contains("ladder", CasinoReasons.All);
+        Assert.Equal(L.Strip.ReasonCeiling.Key, CasinoReasons.MessageFor("ceiling").Key);
+        Assert.Equal(L.Strip.ReasonLadder.Key, CasinoReasons.MessageFor("ladder").Key);
+    }
+
+    [Fact]
+    public void TheOriginalsRefusalIsCovered()
+    {
+        Assert.Contains("invalid_move", CasinoReasons.All);
+        Assert.Equal(L.Originals.ReasonInvalidMove.Key, CasinoReasons.MessageFor("invalid_move").Key);
+    }
+
+    [Fact]
+    public void TheMissionRefusalIsCovered()
+    {
+        Assert.Contains("mission_incomplete", CasinoReasons.All);
+        Assert.Equal(L.Club.ReasonMissionIncomplete.Key, CasinoReasons.MessageFor("mission_incomplete").Key);
+    }
+
+    [Fact]
+    public void TheBonusAndHostingRefusalsAreCovered()
+    {
+        var reasons = new[]
+        {
+            "bonus_not_ready", "club_insufficient", "config_invalid", "practice_only", "not_dealer", "rebuy_off",
+            "tournament_live", "no_tournament", "nothing_to_deal", "no_spectators", "duel_live", "no_duel",
+            "raffle_live", "no_raffle", "ticket_limit", "round_live", "bank_limit", "host_frozen", "not_party",
+            "already_confirmed", "settled", "gil_only", "not_owner",
+        };
+        for (var index = 0; index < reasons.Length; index++)
+        {
+            Assert.Contains(reasons[index], CasinoReasons.All);
+            Assert.True(CasinoReasons.TryMessage(reasons[index], out _), reasons[index]);
+        }
+
+        Assert.Equal(L.Tables.ReasonBankLimit.Key, CasinoReasons.MessageFor("bank_limit").Key);
+        Assert.Equal(L.Strip.ReasonBonusNotReady.Key, CasinoReasons.MessageFor("bonus_not_ready").Key);
+    }
+
+    [Fact]
+    public void EveryReasonTheCasinoRoutesSendIsInTheList()
+    {
+        var serverReasons = new[]
+        {
+            "already_claimed", "bonus_not_ready", "buyin_range", "cap_reached", "ceiling", "closed",
+            "club_insufficient", "cooldown", "daily_cap", "rule_cap", "draining", "expired", "frozen",
+            "insufficient", "invalid_move", "ladder", "loss_limit", "machine_unknown", "mission_incomplete",
+            "pair_limited", "paused", "round_open", "sitting_open", "sold_out", "stake_range", "stakes_paused",
+            "table_closed", "unavailable", "seat_taken", "already_seated", "seated_elsewhere", "not_seated",
+            "not_your_turn", "stale_action", "invalid_action", "too_late", "stale_hand", "hand_over", "at_hand_end",
+            "pvp_loss_cap", "pvp_win_cap", "in_hand", "title_required", "time_bank_empty", "holdem_closed",
+            "config_invalid", "practice_only", "not_dealer", "rebuy_off", "tournament_live", "no_tournament",
+            "nothing_to_deal", "no_spectators", "duel_live", "no_duel", "raffle_live", "no_raffle", "ticket_limit",
+            "round_live", "bank_limit", "host_frozen", "not_party", "already_confirmed", "settled", "gil_only",
+            "ended", "restarting", "full", "private", "denied", "knock_pending", "banned_from_table", "blocked",
+            "not_member", "already_hosting", "not_owner", "kicked",
+        };
+        for (var index = 0; index < serverReasons.Length; index++)
+        {
+            Assert.Contains(serverReasons[index], CasinoReasons.All);
+            Assert.NotEqual(L.Casino.ReasonGeneric.Key, CasinoReasons.MessageFor(serverReasons[index]).Key);
+        }
+    }
+
+    [Fact]
+    public void ACeilingRefusalNamesTheCapItCarried()
+    {
+        var text = CasinoReasons.Text(CasinoReasons.Ceiling, 25_000);
+
+        Assert.Contains("25", text, StringComparison.Ordinal);
+        Assert.Equal(Loc.T(L.Strip.ReasonCeiling), CasinoReasons.Text(CasinoReasons.Ceiling, 0));
+        Assert.Equal(Loc.T(L.Strip.ReasonLadder), CasinoReasons.Text(CasinoReasons.Ladder, 25_000));
+    }
+
+    [Fact]
     public void TheTableVocabularyIsInTheList()
     {
         Assert.Contains(CasinoReasons.Full, CasinoReasons.All);
@@ -53,6 +131,13 @@ public sealed class CasinoReasonCoverageTests
         Assert.Contains(CasinoReasons.BoundElsewhere, CasinoReasons.All);
         Assert.Contains(CasinoReasons.AtHandEnd, CasinoReasons.All);
         Assert.Contains(CasinoReasons.Kicked, CasinoReasons.All);
+    }
+
+    [Fact]
+    public void TheRoomCodeRefusalIsCovered()
+    {
+        Assert.Contains("code_unknown", CasinoReasons.All);
+        Assert.Equal(L.Tables.ReasonCodeUnknown.Key, CasinoReasons.MessageFor("code_unknown").Key);
     }
 
     [Fact]

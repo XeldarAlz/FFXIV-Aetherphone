@@ -30,6 +30,7 @@ internal sealed partial class VenuesApp : IResumableApp, ISpotlightVenues
     public int BadgeCount => 0;
 
     private readonly VenuesService venues;
+    private readonly VenueCasinoPill casinoPill;
     private readonly RemoteImageCache images;
     private readonly ArtworkCache artwork;
     private readonly GameData gameData;
@@ -74,8 +75,10 @@ internal sealed partial class VenuesApp : IResumableApp, ISpotlightVenues
     private CachedText filtersLabel;
 
     public VenuesApp(VenuesService venues, RemoteImageCache images, ArtworkCache artwork, GameData gameData,
-        Configuration configuration, ConfirmService confirm, TranslationService translation)
+        Configuration configuration, ConfirmService confirm, TranslationService translation,
+        VenueCasinoPill casinoPill)
     {
+        this.casinoPill = casinoPill;
         this.venues = venues;
         this.images = images;
         this.artwork = artwork;
@@ -119,6 +122,7 @@ internal sealed partial class VenuesApp : IResumableApp, ISpotlightVenues
         navigation = context.Navigation;
         ui.Theme = theme;
         venues.EnsureFresh(false);
+        casinoPill.Refresh();
         var scale = UiScale.Current;
         ui.Backdrop(SceneChrome.ScreenFrom(context.Content, theme, scale));
         ConsumePendingVenue();

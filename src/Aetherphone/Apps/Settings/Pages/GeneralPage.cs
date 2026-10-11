@@ -15,6 +15,7 @@ internal sealed class GeneralPage : ISettingsPage
     private static readonly SettingsEntry[] Searchable =
     {
         new(L.Settings.ShowInGpose),
+        new(L.Settings.ShowInCutscenes),
         new(L.Settings.ImportScreenshots),
         new(L.Settings.MonthlyAlbums),
         new(L.Settings.NativeFileDialog),
@@ -51,9 +52,11 @@ internal sealed class GeneralPage : ISettingsPage
         {
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
             var translationRow = translation.Enabled ? 1 : 0;
-            var card = GroupCard.Begin(theme, 7 + translationRow);
+            var card = GroupCard.Begin(theme, 8 + translationRow);
             var showInGpose = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ShowInGpose),
                 configuration.ShowInGpose, theme, null, Loc.T(L.Settings.ShowInGposeHint));
+            var showInCutscenes = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ShowInCutscenes),
+                configuration.ShowInCutscenes, theme, null, Loc.T(L.Settings.ShowInCutscenesHint));
             var importScreenshots = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ImportScreenshots),
                 configuration.ImportScreenshots, theme, null, Loc.T(L.Settings.ImportScreenshotsHint));
             var monthlyAlbums = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.MonthlyAlbums),
@@ -84,6 +87,13 @@ internal sealed class GeneralPage : ISettingsPage
             {
                 configuration.ShowInGpose = showInGpose;
                 Plugin.PluginInterface.UiBuilder.DisableGposeUiHide = showInGpose;
+                configuration.Save();
+            }
+
+            if (showInCutscenes != configuration.ShowInCutscenes)
+            {
+                configuration.ShowInCutscenes = showInCutscenes;
+                Plugin.PluginInterface.UiBuilder.DisableCutsceneUiHide = showInCutscenes;
                 configuration.Save();
             }
 

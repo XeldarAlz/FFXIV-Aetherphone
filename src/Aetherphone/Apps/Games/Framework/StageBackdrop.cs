@@ -11,8 +11,44 @@ internal enum StageInk : byte
     Dark,
 }
 
+internal enum FeltStyle : byte
+{
+    Classic,
+    Night,
+}
+
 internal sealed class StageBackdrop
 {
+    public const float NightFeltLampY = 0.42f;
+    public const float NightWeaveAlpha = 0.02f;
+    public const float NightWeaveShadeAlpha = 0.05f;
+    public const float RailWidth = 12f;
+    public const float ConeAlpha = 0.03f;
+    public const int ConeLayers = 5;
+    public const float ConeLayerGain = 1.6f;
+    public const float RoseHazeAlpha = 0.07f;
+    public const float CyanHazeAlpha = 0.055f;
+    public const float HazeBlobShare = 0.45f;
+    public const float SkylineGlowAlpha = 0.10f;
+
+    public static readonly Vector4 NightFeltCenter = new(0.14f, 0.235f, 0.185f, 1f);
+    public static readonly Vector4 NightFeltEdge = new(0.05f, 0.095f, 0.075f, 1f);
+    public static readonly Vector4 RailWood = new(0.15f, 0.085f, 0.045f, 1f);
+    public static readonly Vector4 RailShine = new(0.86f, 0.62f, 0.34f, 1f);
+    public static readonly Vector4 StripTop = new(0.039f, 0.027f, 0.086f, 1f);
+    public static readonly Vector4 StripWarmTop = new(0.085f, 0.040f, 0.035f, 1f);
+    public static readonly Vector4 WindowLit = new(1f, 0.80f, 0.48f, 1f);
+    public static readonly Vector4 NeonRose = new(1f, 0.239f, 0.604f, 1f);
+    public static readonly Vector4 NeonCyan = new(0.180f, 0.902f, 1f, 1f);
+    public static readonly Vector4 ArenaTop = new(0.024f, 0.063f, 0.110f, 1f);
+    public static readonly Vector4 Floodlight = new(0.93f, 0.96f, 1f, 1f);
+    private const int NightPoolLayers = 16;
+    private const int EllipseSegments = 48;
+    private const float NightWeavePitch = 7f;
+    private const float RailShadowWidth = 14f;
+    private const float RailShadowAlpha = 0.45f;
+    private const float RailShineAlpha = 0.22f;
+
     private const int LayerCount = 3;
     private const float PointerSmoothSeconds = 0.35f;
     private const float SweepSeconds = 0.6f;
@@ -35,6 +71,18 @@ internal sealed class StageBackdrop
     private const int GridLines = 9;
     private const float GridScrollSpeed = 18f;
     private const int SkyBands = 5;
+    private const int BuildingCount = 15;
+    private const int WindowCount = 40;
+    private const int BokehCount = 24;
+    private const int CrowdHeads = 30;
+    private const int PhoneLightCount = 60;
+    private const float SkylineBase = 0.80f;
+    private const float CrowdTop = 0.66f;
+    private const float CrowdBottom = 0.82f;
+    private const float TowerTop = 0.16f;
+    private const float TowerBase = 0.70f;
+    private const float HazeDrift = 7f;
+    private const float BokehRise = 9f;
     private const ulong TableSeed = 0x5747A6E1C0FFEEUL;
 
     private static readonly float[] LayerParallax = { 0.05f, 0.15f, 0.35f };
@@ -60,6 +108,36 @@ internal sealed class StageBackdrop
     private static readonly float[] StalactiteX = { 0.18f, 0.52f, 0.81f };
     private static readonly float[] StalactiteWidth = { 0.12f, 0.08f, 0.15f };
     private static readonly float[] StalactiteDepth = { 0.22f, 0.15f, 0.27f };
+    private static readonly float[] BuildingX = new float[BuildingCount];
+    private static readonly float[] BuildingWidth = new float[BuildingCount];
+    private static readonly float[] BuildingHeight = new float[BuildingCount];
+    private static readonly byte[] WindowBuilding = new byte[WindowCount];
+    private static readonly float[] WindowX = new float[WindowCount];
+    private static readonly float[] WindowY = new float[WindowCount];
+    private static readonly float[] WindowPhase = new float[WindowCount];
+    private static readonly float[] BokehX = new float[BokehCount];
+    private static readonly float[] BokehY = new float[BokehCount];
+    private static readonly float[] BokehSize = new float[BokehCount];
+    private static readonly float[] BokehSpeed = new float[BokehCount];
+    private static readonly byte[] BokehTint = new byte[BokehCount];
+    private static readonly float[] HeadX = new float[CrowdHeads];
+    private static readonly float[] HeadSize = new float[CrowdHeads];
+    private static readonly float[] PhoneX = new float[PhoneLightCount];
+    private static readonly float[] PhoneY = new float[PhoneLightCount];
+    private static readonly float[] PhonePhase = new float[PhoneLightCount];
+    private static readonly float[] TowerX = { 0.10f, 0.90f };
+
+    private static readonly Vector4 StripBottom = new(0.016f, 0.012f, 0.035f, 1f);
+    private static readonly Vector4 StripWarmBottom = new(0.030f, 0.014f, 0.012f, 1f);
+    private static readonly Vector4 StripSkyline = new(0.075f, 0.055f, 0.13f, 1f);
+    private static readonly Vector4 BokehGold = new(1f, 0.788f, 0.290f, 1f);
+    private static readonly Vector4 ArenaBottom = new(0.008f, 0.024f, 0.047f, 1f);
+    private static readonly Vector4 ArenaSteel = new(0.10f, 0.14f, 0.20f, 1f);
+    private static readonly Vector4 CrowdShade = new(0.020f, 0.035f, 0.060f, 1f);
+    private static readonly Vector4 PhoneGlow = new(0.82f, 0.90f, 1f, 1f);
+    private static readonly Vector4 TrackDust = new(0.86f, 0.72f, 0.52f, 1f);
+    private static readonly Vector4 LampWarm = new(1f, 0.78f, 0.45f, 1f);
+    private static readonly Vector4[] BokehTints = { BokehGold, NeonRose, NeonCyan };
 
     private static readonly Vector4[] SkyTops =
     {
@@ -111,6 +189,10 @@ internal sealed class StageBackdrop
     private float sweepProgress = 1f;
     private float sweepStrength;
     private float skyProgress;
+    private float lampPool;
+    private float warmth;
+    private FeltStyle feltStyle;
+    private bool feltRail;
     private Vector4 ground = NearBlack;
 
     static StageBackdrop()
@@ -153,6 +235,44 @@ internal sealed class StageBackdrop
             BladeHeight[index] = 14f + random.NextFloat() * 16f;
             BladePhase[index] = random.NextFloat() * MathF.Tau;
         }
+
+        for (var index = 0; index < BuildingCount; index++)
+        {
+            BuildingWidth[index] = 0.055f + random.NextFloat() * 0.045f;
+            BuildingX[index] = (index + 0.5f) / BuildingCount - BuildingWidth[index] * 0.5f
+                + (random.NextFloat() - 0.5f) * 0.02f;
+            BuildingHeight[index] = 0.06f + random.NextFloat() * 0.18f;
+        }
+
+        for (var index = 0; index < WindowCount; index++)
+        {
+            WindowBuilding[index] = (byte)random.Next(BuildingCount);
+            WindowX[index] = 0.18f + random.NextFloat() * 0.64f;
+            WindowY[index] = 0.12f + random.NextFloat() * 0.76f;
+            WindowPhase[index] = random.NextFloat() * MathF.Tau;
+        }
+
+        for (var index = 0; index < BokehCount; index++)
+        {
+            BokehX[index] = random.NextFloat();
+            BokehY[index] = random.NextFloat();
+            BokehSize[index] = 5f + random.NextFloat() * 9f;
+            BokehSpeed[index] = 0.5f + random.NextFloat();
+            BokehTint[index] = (byte)random.Next(BokehTints.Length);
+        }
+
+        for (var index = 0; index < CrowdHeads; index++)
+        {
+            HeadX[index] = (index + random.NextFloat() * 0.6f) / CrowdHeads;
+            HeadSize[index] = 0.6f + random.NextFloat() * 0.5f;
+        }
+
+        for (var index = 0; index < PhoneLightCount; index++)
+        {
+            PhoneX[index] = random.NextFloat();
+            PhoneY[index] = 0.08f + random.NextFloat() * 0.8f;
+            PhonePhase[index] = random.NextFloat() * MathF.Tau;
+        }
     }
 
     public Backdrop Preset { get; private set; }
@@ -171,11 +291,31 @@ internal sealed class StageBackdrop
         sweepProgress = 1f;
         sweepStrength = 0f;
         cameraSeen = false;
+        lampPool = 0f;
+        warmth = 0f;
+        feltStyle = FeltStyle.Classic;
+        feltRail = false;
+    }
+
+    public void SetFeltStyle(FeltStyle style, bool rail)
+    {
+        feltStyle = style;
+        feltRail = rail;
     }
 
     public void SetSky(float progress)
     {
         skyProgress = Math.Clamp(progress, 0f, 1f);
+    }
+
+    public void SetLampPool(float strength)
+    {
+        lampPool = Math.Clamp(strength, 0f, 1f);
+    }
+
+    public void SetWarmth(float amount)
+    {
+        warmth = Math.Clamp(amount, 0f, 1f);
     }
 
     public void Sweep(float strength)
@@ -236,6 +376,12 @@ internal sealed class StageBackdrop
                 break;
             case Backdrop.Slate:
                 DrawSlate(drawList, full, accent, scale);
+                break;
+            case Backdrop.Strip:
+                DrawStrip(drawList, full, scale);
+                break;
+            case Backdrop.Arena:
+                DrawArena(drawList, full, scale);
                 break;
             default:
                 DrawNebula(drawList, full, accent, scale);
@@ -405,6 +551,14 @@ internal sealed class StageBackdrop
 
     private void DrawFelt(ImDrawListPtr drawList, Rect full, Vector4 accent, float scale)
     {
+        if (feltStyle == FeltStyle.Night)
+        {
+            var lamp = new Vector2(full.Center.X, full.Min.Y + full.Height * NightFeltLampY) + LayerOffset(1, scale) * 0.5f;
+            NightFelt(drawList, full, lamp, LayerOffset(0, scale), feltRail, scale);
+            ground = Vector4.Lerp(NightFeltEdge, NightFeltCenter, 0.5f);
+            return;
+        }
+
         Gradient(drawList, full, Palette.ShadeToLuminance(accent, 0.35f), Palette.ShadeToLuminance(accent, 0.22f));
         var far = LayerOffset(0, scale);
         var spot = new Vector2(full.Center.X, full.Min.Y - full.Width * 0.25f) + far;
@@ -424,6 +578,259 @@ internal sealed class StageBackdrop
             drawList.AddQuadFilled(new Vector2(left, full.Min.Y), new Vector2(left + bandWidth, full.Min.Y),
                 new Vector2(left + bandWidth + full.Height * 0.35f, full.Max.Y),
                 new Vector2(left + full.Height * 0.35f, full.Max.Y), weave);
+        }
+
+        if (lampPool <= 0f)
+        {
+            return;
+        }
+
+        var pool = new Vector2(full.Center.X, full.Min.Y + full.Height * 0.52f) + mid * 0.5f;
+        for (var layer = 4; layer >= 1; layer--)
+        {
+            drawList.AddCircleFilled(pool, full.Width * (0.18f + layer * 0.12f),
+                ImGui.GetColorU32(LampWarm with { W = 0.055f * lampPool / layer }), 48);
+        }
+    }
+
+    public static void NightFelt(ImDrawListPtr drawList, Rect rect, Vector2 lamp, Vector2 weaveOffset, bool rail,
+        float scale) =>
+        NightFelt(drawList, rect, lamp, weaveOffset, rail, NightFeltCenter, NightFeltEdge, scale);
+
+    public static void NightFelt(ImDrawListPtr drawList, Rect rect, Vector2 lamp, Vector2 weaveOffset, bool rail,
+        Vector4 center, Vector4 edge, float scale)
+    {
+        drawList.PushClipRect(rect.Min, rect.Max, true);
+        drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(edge));
+        var reach = new Vector2(MathF.Max(lamp.X - rect.Min.X, rect.Max.X - lamp.X),
+            MathF.Max(lamp.Y - rect.Min.Y, rect.Max.Y - lamp.Y));
+        for (var layer = 0; layer < NightPoolLayers; layer++)
+        {
+            var share = layer / (float)(NightPoolLayers - 1);
+            var radii = reach * (1f - layer / (float)NightPoolLayers);
+            FillEllipse(drawList, lamp, radii,
+                ImGui.GetColorU32(Vector4.Lerp(edge, center, Easing.SmoothStep(share))));
+        }
+
+        DrawWeave(drawList, rect, weaveOffset, scale);
+        if (rail)
+        {
+            DrawRail(drawList, rect, scale);
+        }
+
+        drawList.PopClipRect();
+    }
+
+    private static void FillEllipse(ImDrawListPtr drawList, Vector2 center, Vector2 radii, uint color)
+    {
+        for (var step = 0; step < EllipseSegments; step++)
+        {
+            var angle = step * MathF.Tau / EllipseSegments;
+            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radii.X, MathF.Sin(angle) * radii.Y));
+        }
+
+        drawList.PathFillConvex(color);
+    }
+
+    private static void DrawWeave(ImDrawListPtr drawList, Rect rect, Vector2 offset, float scale)
+    {
+        var pitch = NightWeavePitch * scale;
+        var light = ImGui.GetColorU32(White with { W = NightWeaveAlpha });
+        var shade = ImGui.GetColorU32(Black with { W = NightWeaveShadeAlpha });
+        var thickness = MathF.Max(1f, scale);
+        var start = rect.Min.X - rect.Height + Wrap(offset.X + offset.Y, pitch);
+        for (var x = start; x < rect.Max.X; x += pitch)
+        {
+            drawList.AddLine(new Vector2(x, rect.Max.Y), new Vector2(x + rect.Height, rect.Min.Y), light, thickness);
+            drawList.AddLine(new Vector2(x + pitch * 0.5f, rect.Min.Y),
+                new Vector2(x + pitch * 0.5f + rect.Height, rect.Max.Y), shade, thickness);
+        }
+    }
+
+    private static void DrawRail(ImDrawListPtr drawList, Rect rect, float scale)
+    {
+        var width = RailWidth * scale;
+        var wood = ImGui.GetColorU32(RailWood);
+        var inner = new Rect(rect.Min + new Vector2(width, width), rect.Max - new Vector2(width, width));
+        drawList.AddRectFilled(rect.Min, new Vector2(rect.Max.X, inner.Min.Y), wood);
+        drawList.AddRectFilled(new Vector2(rect.Min.X, inner.Max.Y), rect.Max, wood);
+        drawList.AddRectFilled(new Vector2(rect.Min.X, inner.Min.Y), new Vector2(inner.Min.X, inner.Max.Y), wood);
+        drawList.AddRectFilled(new Vector2(inner.Max.X, inner.Min.Y), new Vector2(rect.Max.X, inner.Max.Y), wood);
+        var shadow = RailShadowWidth * scale;
+        var dark = ImGui.GetColorU32(Black with { W = RailShadowAlpha });
+        var clear = ImGui.GetColorU32(Black with { W = 0f });
+        drawList.AddRectFilledMultiColor(inner.Min, new Vector2(inner.Max.X, inner.Min.Y + shadow), dark, dark, clear,
+            clear);
+        drawList.AddRectFilledMultiColor(new Vector2(inner.Min.X, inner.Max.Y - shadow), inner.Max, clear, clear, dark,
+            dark);
+        drawList.AddRectFilledMultiColor(inner.Min, new Vector2(inner.Min.X + shadow, inner.Max.Y), dark, clear, clear,
+            dark);
+        drawList.AddRectFilledMultiColor(new Vector2(inner.Max.X - shadow, inner.Min.Y), inner.Max, clear, dark, dark,
+            clear);
+        drawList.AddRect(inner.Min, inner.Max, ImGui.GetColorU32(RailShine with { W = RailShineAlpha }), 0f,
+            ImDrawFlags.None, MathF.Max(1f, scale));
+    }
+
+    private void DrawStrip(ImDrawListPtr drawList, Rect full, float scale)
+    {
+        Gradient(drawList, full, Vector4.Lerp(StripTop, StripWarmTop, warmth),
+            Vector4.Lerp(StripBottom, StripWarmBottom, warmth));
+        var far = LayerOffset(0, scale);
+        var horizon = full.Min.Y + full.Height * SkylineBase + far.Y;
+        var glowColor = Vector4.Lerp(NeonRose, WindowLit, warmth);
+        drawList.AddRectFilledMultiColor(new Vector2(full.Min.X, horizon - full.Height * 0.22f),
+            new Vector2(full.Max.X, horizon), ImGui.GetColorU32(glowColor with { W = 0f }),
+            ImGui.GetColorU32(glowColor with { W = 0f }), ImGui.GetColorU32(glowColor with { W = SkylineGlowAlpha }),
+            ImGui.GetColorU32(glowColor with { W = SkylineGlowAlpha }));
+        var skyline = ImGui.GetColorU32(StripSkyline);
+        for (var index = 0; index < BuildingCount; index++)
+        {
+            var left = full.Min.X + BuildingX[index] * full.Width + far.X;
+            var top = horizon - BuildingHeight[index] * full.Height;
+            drawList.AddRectFilled(new Vector2(left, top),
+                new Vector2(left + BuildingWidth[index] * full.Width, full.Max.Y), skyline);
+        }
+
+        var pane = new Vector2(2f, 3f) * scale;
+        for (var index = 0; index < WindowCount; index++)
+        {
+            var building = WindowBuilding[index];
+            var left = full.Min.X + BuildingX[building] * full.Width + far.X;
+            var height = BuildingHeight[building] * full.Height;
+            var center = new Vector2(left + WindowX[index] * BuildingWidth[building] * full.Width,
+                horizon - height + WindowY[index] * height);
+            var twinkle = 0.45f + 0.4f * MathF.Sin(time * 0.7f + WindowPhase[index])
+                + 0.15f * MathF.Sin(time * 2.3f + WindowPhase[index] * 1.7f);
+            drawList.AddRectFilled(center - pane, center + pane,
+                ImGui.GetColorU32(WindowLit with { W = Math.Clamp(twinkle, 0.12f, 0.95f) }));
+        }
+
+        var mid = LayerOffset(1, scale);
+        DrawHaze(drawList, full, mid, NeonRose, 0.30f, HazeDrift * scale, RoseHazeAlpha);
+        DrawHaze(drawList, full, mid, NeonCyan, 0.50f, -HazeDrift * scale, CyanHazeAlpha);
+        Bokeh(drawList, full, time, 1f, LayerOffset(2, scale), scale);
+    }
+
+    private void DrawHaze(ImDrawListPtr drawList, Rect full, Vector2 offset, Vector4 tint, float rowFraction,
+        float speed, float alpha)
+    {
+        var y = full.Min.Y + full.Height * rowFraction + offset.Y
+            + MathF.Sin(time * 0.21f + rowFraction * 9f) * full.Height * 0.01f;
+        var height = full.Height * 0.08f;
+        var lit = ImGui.GetColorU32(tint with { W = alpha });
+        var clear = ImGui.GetColorU32(tint with { W = 0f });
+        drawList.AddRectFilledMultiColor(new Vector2(full.Min.X, y - height), new Vector2(full.Max.X, y), clear, clear,
+            lit, lit);
+        drawList.AddRectFilledMultiColor(new Vector2(full.Min.X, y), new Vector2(full.Max.X, y + height), lit, lit,
+            clear, clear);
+        var span = full.Width * 1.5f;
+        for (var blob = 0; blob < 3; blob++)
+        {
+            var travel = Wrap(blob * span / 3f + time * speed + offset.X, span);
+            var center = new Vector2(full.Min.X - full.Width * 0.25f + travel, y);
+            for (var layer = 3; layer >= 1; layer--)
+            {
+                drawList.AddCircleFilled(center, full.Width * (0.10f + layer * 0.07f),
+                    ImGui.GetColorU32(tint with { W = alpha * HazeBlobShare / layer }), 32);
+            }
+        }
+    }
+
+    public static void Bokeh(ImDrawListPtr drawList, Rect rect, float time, float density, Vector2 offset,
+        float scale)
+    {
+        if (density <= 0f || rect.Width <= 0f || rect.Height <= 0f)
+        {
+            return;
+        }
+
+        var shown = Math.Min(BokehCount, (int)MathF.Ceiling(BokehCount * Math.Clamp(density, 0f, 1f)));
+        for (var index = 0; index < shown; index++)
+        {
+            var rise = time * BokehRise * BokehSpeed[index] * scale;
+            var x = rect.Min.X + Wrap(BokehX[index] * rect.Width + offset.X + MathF.Sin(time * 0.3f + index) * 5f * scale,
+                rect.Width);
+            var y = rect.Min.Y + Wrap(BokehY[index] * rect.Height - rise + offset.Y, rect.Height);
+            var radius = BokehSize[index] * scale;
+            var breath = 0.6f + 0.4f * MathF.Sin(time * 0.8f + index * 1.3f);
+            var tint = BokehTints[BokehTint[index]];
+            drawList.AddCircleFilled(new Vector2(x, y), radius * 1.8f, ImGui.GetColorU32(tint with { W = 0.025f * breath }),
+                20);
+            drawList.AddCircleFilled(new Vector2(x, y), radius, ImGui.GetColorU32(tint with { W = 0.07f * breath }), 20);
+        }
+    }
+
+    private void DrawArena(ImDrawListPtr drawList, Rect full, float scale)
+    {
+        Gradient(drawList, full, ArenaTop, ArenaBottom);
+        var far = LayerOffset(0, scale);
+        var steel = ImGui.GetColorU32(ArenaSteel);
+        for (var tower = 0; tower < TowerX.Length; tower++)
+        {
+            var x = full.Min.X + TowerX[tower] * full.Width + far.X;
+            var top = new Vector2(x, full.Min.Y + full.Height * TowerTop + far.Y);
+            var bottom = new Vector2(x, full.Min.Y + full.Height * TowerBase + far.Y);
+            drawList.AddLine(top, bottom, steel, MathF.Max(1f, 3f * scale));
+            var bank = new Vector2(14f, 6f) * scale;
+            drawList.AddRectFilled(top - bank, top + new Vector2(bank.X, bank.Y * 0.4f), steel, 2f * scale);
+            for (var lamp = 0; lamp < 4; lamp++)
+            {
+                var lampCenter = new Vector2(top.X - bank.X * 0.75f + lamp * bank.X * 0.5f, top.Y - bank.Y * 0.3f);
+                drawList.AddCircleFilled(lampCenter, 2.4f * scale, ImGui.GetColorU32(Floodlight with { W = 0.9f }), 10);
+                drawList.AddCircleFilled(lampCenter, 6f * scale, ImGui.GetColorU32(Floodlight with { W = 0.08f }), 12);
+            }
+
+            var inward = tower == 0 ? 1f : -1f;
+            for (var cone = 0; cone < 2; cone++)
+            {
+                var sweep = MathF.Sin(time * (0.18f + cone * 0.07f) + tower * 1.9f + cone) * 0.12f;
+                var angle = MathF.PI * 0.5f - inward * (0.42f + cone * 0.30f) + sweep;
+                Cone(drawList, top, angle, full.Height * 0.85f, 0.10f + cone * 0.02f, Floodlight, ConeAlpha);
+            }
+        }
+
+        var mid = LayerOffset(1, scale);
+        var crowdTop = full.Min.Y + full.Height * CrowdTop + mid.Y;
+        var crowdBottom = full.Min.Y + full.Height * CrowdBottom + mid.Y;
+        var shade = ImGui.GetColorU32(CrowdShade);
+        drawList.AddRectFilled(new Vector2(full.Min.X, crowdTop), new Vector2(full.Max.X, full.Max.Y), shade);
+        var headRadius = full.Width / CrowdHeads * 0.62f;
+        for (var index = 0; index < CrowdHeads; index++)
+        {
+            var x = full.Min.X + Wrap(HeadX[index] * full.Width + mid.X, full.Width);
+            drawList.AddCircleFilled(new Vector2(x, crowdTop), headRadius * HeadSize[index], shade, 14);
+        }
+
+        var crowdHeight = crowdBottom - crowdTop;
+        for (var index = 0; index < PhoneLightCount; index++)
+        {
+            var flicker = MathF.Sin(time * (1.4f + (index % 5) * 0.37f) + PhonePhase[index]);
+            if (flicker < 0.35f)
+            {
+                continue;
+            }
+
+            var x = full.Min.X + Wrap(PhoneX[index] * full.Width + mid.X, full.Width);
+            var center = new Vector2(x, crowdTop + PhoneY[index] * crowdHeight);
+            var alpha = (flicker - 0.35f) / 0.65f;
+            drawList.AddCircleFilled(center, 1.3f * scale, ImGui.GetColorU32(PhoneGlow with { W = 0.85f * alpha }), 6);
+            drawList.AddCircleFilled(center, 3.4f * scale, ImGui.GetColorU32(PhoneGlow with { W = 0.10f * alpha }), 8);
+        }
+
+        DrawDust(drawList, full, LayerOffset(2, scale), scale, TrackDust, 0.14f);
+    }
+
+    public static void Cone(ImDrawListPtr drawList, Vector2 origin, float angle, float length, float spread,
+        Vector4 color, float alpha)
+    {
+        for (var layer = 0; layer < ConeLayers; layer++)
+        {
+            var share = 1f - layer / (float)ConeLayers;
+            var half = spread * share;
+            var reach = length * (0.7f + 0.3f * share);
+            var left = origin + new Vector2(MathF.Cos(angle - half), MathF.Sin(angle - half)) * reach;
+            var right = origin + new Vector2(MathF.Cos(angle + half), MathF.Sin(angle + half)) * reach;
+            drawList.AddTriangleFilled(origin, left, right, ImGui.GetColorU32(color with { W = alpha / ConeLayers * ConeLayerGain }));
         }
     }
 

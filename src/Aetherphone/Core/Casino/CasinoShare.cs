@@ -9,7 +9,8 @@ internal static class CasinoShare
 
     public static string Compose(string tableId)
     {
-        return string.Concat(TokenPrefix, tableId, TokenSuffix);
+        var bare = TryParse(tableId, out var parsed) ? parsed : tableId;
+        return string.Concat(TokenPrefix, bare, TokenSuffix);
     }
 
     public static bool IsToken(string? body)

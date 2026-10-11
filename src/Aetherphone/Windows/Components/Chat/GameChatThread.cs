@@ -450,7 +450,11 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
                 return;
             }
 
-            SyncFollow();
+            if (SyncFollow() && surface.Scrolling)
+            {
+                surface.CancelDrag();
+            }
+
             SettleCompactRestore();
             var seamId = MaybeGrowCompact(surface.Scrolling);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
@@ -556,7 +560,7 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
             }
 
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
-            if (followBottom)
+            if (followBottom && !surface.Scrolling)
             {
                 ImGui.SetScrollHereY(1f);
             }
@@ -1150,9 +1154,10 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         return false;
     }
 
-    private void SyncFollow()
+    private bool SyncFollow()
     {
         var scale = UiScale.Current;
+        var forced = false;
         if (string.Equals(trackedKey, target.Key, StringComparison.Ordinal))
         {
             followBottom = ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 4f * scale;
@@ -1161,15 +1166,18 @@ internal sealed class GameChatThread : IChatTranscriptInteractions, IChatTranscr
         {
             trackedKey = target.Key;
             followBottom = true;
+            forced = true;
         }
 
         if (snapToBottom)
         {
             followBottom = true;
+            forced = true;
             snapToBottom = false;
         }
 
         atBottom = followBottom;
+        return forced;
     }
 
     private string LocalName() => gameData.LocalPlayer?.Name.TextValue ?? string.Empty;

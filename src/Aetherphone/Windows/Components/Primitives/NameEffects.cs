@@ -15,7 +15,7 @@ internal static class NameEffects
     private const double EmberPeriod = 2100.0;
     private const double FrostPeriod = 4600.0;
     private const double AuroraPeriod = 6500.0;
-    private const double PrismPeriod = 1900.0;
+    private const double PrismPeriod = 3800.0;
     private const double GlitchPeriod = 2400.0;
     private const double StarfallPeriod = 2600.0;
     private const double EclipsePeriod = 3800.0;

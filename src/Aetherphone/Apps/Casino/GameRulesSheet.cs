@@ -112,35 +112,41 @@ internal sealed class GameRulesSheet
         Typography.DrawWrappedLeft(pitchOrigin, pitch, ui.BodyInk, TextStyles.Subheadline, width);
         ImGui.Dummy(new Vector2(width, pitchBlock.Y + Metrics.Space.Md * scale));
 
-        var headingOrigin = ImGui.GetCursorScreenPos();
-        Typography.Draw(drawList, headingOrigin, Loc.T(L.Casino.RulesHowToPlay), ui.MutedInk,
-            TextStyles.FootnoteEmphasized);
-        ImGui.Dummy(new Vector2(width, 24f * scale));
-
         var steps = CasinoRules.StepsOf(gameId);
+        if (steps.Length > 0)
+        {
+            var headingOrigin = ImGui.GetCursorScreenPos();
+            Typography.Draw(drawList, headingOrigin, Loc.T(L.Casino.RulesHowToPlay), ui.MutedInk,
+                TextStyles.FootnoteEmphasized);
+            ImGui.Dummy(new Vector2(width, 24f * scale));
+        }
+
         var textLeft = BulletRadius * 2f + 12f * scale;
         for (var index = 0; index < steps.Length; index++)
         {
             var stepText = Loc.T(steps[index]);
             var stepOrigin = ImGui.GetCursorScreenPos();
             var stepWidth = width - textLeft;
-            var block = Typography.MeasureWrappedBlock(stepText, TextStyles.Footnote, stepWidth);
+            var block = Typography.MeasureWrappedBlock(stepText, TextStyles.Subheadline, stepWidth);
             var bulletCenter = new Vector2(stepOrigin.X + BulletRadius * scale,
                 stepOrigin.Y + BulletRadius * scale - 1f * scale);
             drawList.AddCircleFilled(bulletCenter, BulletRadius * scale,
                 ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.18f)), 24);
             Typography.DrawCentered(drawList, bulletCenter, Games.Framework.GameNumber.Label(index + 1), ui.Accent,
-                TextStyles.Caption1);
+                TextStyles.Footnote);
             Typography.DrawWrappedLeft(new Vector2(stepOrigin.X + textLeft, stepOrigin.Y), stepText, ui.BodyInk,
-                TextStyles.Footnote, stepWidth);
+                TextStyles.Subheadline, stepWidth);
             ImGui.Dummy(new Vector2(width, MathF.Max(block.Y, BulletRadius * 2f * scale) + StepGap * scale));
         }
 
         ImGui.Dummy(new Vector2(width, Metrics.Space.Sm * scale));
-        var factsOrigin = ImGui.GetCursorScreenPos();
-        Typography.Draw(drawList, factsOrigin, Loc.T(L.Casino.RulesNumbers), ui.MutedInk,
-            TextStyles.FootnoteEmphasized);
-        ImGui.Dummy(new Vector2(width, 24f * scale));
+        if (CasinoRules.FactsOf(gameId, 0, out _, out _))
+        {
+            var factsOrigin = ImGui.GetCursorScreenPos();
+            Typography.Draw(drawList, factsOrigin, Loc.T(L.Casino.RulesNumbers), ui.MutedInk,
+                TextStyles.FootnoteEmphasized);
+            ImGui.Dummy(new Vector2(width, 24f * scale));
+        }
 
         for (var index = 0; CasinoRules.FactsOf(gameId, index, out var label, out var value); index++)
         {
@@ -153,7 +159,7 @@ internal sealed class GameRulesSheet
             {
                 var rowCenterY = rowOrigin.Y + rowHeight * 0.5f;
                 Typography.Draw(drawList, new Vector2(rowOrigin.X, rowCenterY - labelSize.Y * 0.5f), labelText,
-                    ui.MutedInk, TextStyles.Footnote);
+                    ui.BodyInk, TextStyles.Footnote);
                 Typography.Draw(drawList,
                     new Vector2(rowOrigin.X + width - valueSize.X, rowCenterY - valueSize.Y * 0.5f),
                     value, ui.TitleInk, TextStyles.SubheadlineEmphasized);
@@ -187,9 +193,9 @@ internal sealed class GameRulesSheet
         var fairness = Loc.T(L.Casino.RulesFairness);
         ImGui.Dummy(new Vector2(width, Metrics.Space.Md * scale));
         var fairnessOrigin = ImGui.GetCursorScreenPos();
-        var fairnessBlock = Typography.MeasureWrappedBlock(fairness, TextStyles.Caption1, width);
-        Typography.DrawWrappedLeft(fairnessOrigin, fairness, Palette.WithAlpha(ui.MutedInk, 0.85f),
-            TextStyles.Caption1, width);
+        var fairnessBlock = Typography.MeasureWrappedBlock(fairness, TextStyles.Subheadline, width);
+        Typography.DrawWrappedLeft(fairnessOrigin, fairness, ui.BodyInk,
+            TextStyles.Subheadline, width);
         ImGui.Dummy(new Vector2(width, fairnessBlock.Y + Metrics.Space.Lg * scale));
     }
 }

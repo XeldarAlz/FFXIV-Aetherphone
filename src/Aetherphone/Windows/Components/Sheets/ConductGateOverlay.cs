@@ -3,6 +3,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -15,34 +16,61 @@ internal sealed class ConductGateOverlay
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground;
 
-    private const float MaxDim = 0.74f;
-    private const float MinPanelScale = 0.96f;
+    private const string LineProbe = "Ay";
+    private const float MaxDim = 0.5f;
     private const float PanelRounding = 28f;
-    private const float SideMargin = 14f;
-    private const float TopMargin = 52f;
-    private const float BottomMargin = 34f;
-    private const float Padding = 22f;
-    private const float ButtonHeight = 50f;
-    private const float BarGap = 12f;
-    private const float BarHeight = 4f;
-    private const float CloseRadius = 13f;
-    private const float CardPad = 14f;
-    private const float ChipSize = 26f;
-    private const float SectionGap = 12f;
-    private const float ItemGap = 7f;
+    private const float PanelTopGap = 8f;
+    private const float ContentClipInset = 6f;
+    private const float BarHeight = 56f;
+    private const float EdgeFade = 20f;
+    private const float BottomFadeSpan = 1.5f;
+    private const float WashHeight = 300f;
+    private const float WashAlpha = 0.22f;
+    private const float HeroTop = 40f;
+    private const float HeroIcon = 76f;
+    private const float HeroIconRest = 0.86f;
+    private const float HeroGlyphFraction = 0.44f;
+    private const float IntroInset = 12f;
+    private const float TileSize = 30f;
+    private const float TileGlyph = 15f;
+    private const float TileGap = 12f;
+    private const float MarkColumn = 20f;
+    private const float MarkGlyph = 11f;
+    private const float DotRadius = 2.5f;
+    private const float RowPad = 8f;
+    private const float CloseGlyph = 12f;
+    private const float CompactTitleRise = 6f;
+    private const float CollapseRange = 18f;
+    private const float FooterBottomInset = 44f;
+    private const float PendingFillAlpha = 0.24f;
+    private const float PendingLabelAlpha = 0.78f;
+    private const float GrabberAlpha = 0.35f;
     private const float EndOfRulesFraction = 0.99f;
     private const float MinimumReadSeconds = 4f;
+    private const float RevealDelay = 0.12f;
+    private const float RevealStagger = 0.06f;
+    private const float RevealRise = 14f;
+    private const int RevealStaggerCap = 8;
+    private const int HeroBeats = 3;
 
-    private static readonly Vector4 EncouragedColor = new(0.34f, 0.74f, 0.48f, 1f);
+    private static readonly Vector4 EncouragedColor = new(0.204f, 0.780f, 0.349f, 1f);
+    private static readonly Vector4 RestrictedColor = new(1f, 0.584f, 0f, 1f);
+    private static readonly Vector4 GlyphInk = new(1f, 1f, 1f, 1f);
 
     private readonly ConductGateService service;
     private Spring reveal;
+    private Spring readiness;
+    private Spring progressShown;
     private ConductGate? shown;
+    private bool shownIsReview;
     private bool wasActive;
     private bool scrollTopPending;
+    private int openedFrame;
     private float elapsed;
     private bool reachedEnd;
     private float readProgress;
+    private int waitSeconds;
+    private string waitLabel = string.Empty;
 
     public ConductGateOverlay(ConductGateService service)
     {
@@ -56,17 +84,16 @@ internal sealed class ConductGateOverlay
         var active = service.Active;
         if (active is not null && (!wasActive || !ReferenceEquals(shown, active)))
         {
-            shown = active;
-            elapsed = 0f;
-            reachedEnd = false;
-            readProgress = 0f;
-            scrollTopPending = true;
+            Present(active);
+        }
+        else if (active is null && wasActive)
+        {
+            UiFeedback.Play(UiSound.SheetDismiss);
         }
 
         wasActive = active is not null;
-
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        reveal.Step(active is not null ? 1f : 0f, Motion.Appear, delta);
+        reveal.Step(active is not null ? 1f : 0f, Motion.Sheet, delta);
         if (shown is null)
         {
             return;
@@ -84,136 +111,370 @@ internal sealed class ConductGateOverlay
             elapsed += delta;
         }
 
-        var opacity = Math.Clamp(reveal.Value, 0f, 1f);
+        var presence = Math.Clamp(reveal.Value, 0f, 1f);
+        var interactive = active is not null && presence > 0.5f;
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##conductOverlay", screen.Size, false, OverlayFlags))
         {
             var drawList = ImGui.GetWindowDrawList();
             drawList.AddRectFilled(screen.Min, screen.Max,
-                ImGui.GetColorU32(new Vector4(0f, 0f, 0f, MaxDim * opacity)));
-            DrawPanel(screen, theme, shown, opacity, active is not null);
+                ImGui.GetColorU32(new Vector4(0f, 0f, 0f, MaxDim * presence)));
+            var panel = PanelRect(screen, theme, presence);
+            DrawPanel(panel, theme, shown, delta, interactive);
+            if (!interactive || !shownIsReview || ImGui.GetFrameCount() == openedFrame)
+            {
+                return;
+            }
+
+            if (UiInteract.ClickedOutside(panel.Min, panel.Max))
+            {
+                service.Dismiss();
+            }
         }
     }
 
-    private void DrawPanel(Rect screen, PhoneTheme theme, ConductGate gate, float opacity, bool interactive)
+    private void Present(ConductGate gate)
+    {
+        shown = gate;
+        shownIsReview = service.ActiveIsReview;
+        openedFrame = ImGui.GetFrameCount();
+        elapsed = 0f;
+        reachedEnd = false;
+        readProgress = 0f;
+        waitSeconds = 0;
+        scrollTopPending = true;
+        readiness.SnapTo(0f);
+        progressShown.SnapTo(0f);
+        UiFeedback.Play(UiSound.SheetPresent);
+    }
+
+    private static Rect PanelRect(Rect screen, PhoneTheme theme, float presence)
     {
         var scale = UiScale.Current;
-        var accent = AppAccents.For(gate.AppId);
+        var restTop = screen.Min.Y + (theme.TopZoneHeight + PanelTopGap) * scale;
+        var height = screen.Max.Y - restTop;
+        var top = restTop + height * (1f - presence);
+        return new Rect(new Vector2(screen.Min.X, top), new Vector2(screen.Max.X, top + height));
+    }
+
+    private void DrawPanel(Rect panel, PhoneTheme theme, ConductGate gate, float delta, bool interactive)
+    {
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var reviewing = service.ActiveIsReview;
+        var accent = AppAccents.For(gate.AppId) with { W = 1f };
+        var rounding = PanelRounding * scale;
+        var surface = theme.AppBackground with { W = 1f };
+        Squircle.Fill(drawList, panel.Min, panel.Max, rounding, ImGui.GetColorU32(surface));
+        Squircle.FillVerticalGradient(drawList, panel.Min,
+            new Vector2(panel.Max.X, panel.Min.Y + WashHeight * scale), rounding,
+            ImGui.GetColorU32(accent with { W = WashAlpha }), ImGui.GetColorU32(accent with { W = 0f }));
+        Squircle.Stroke(drawList, panel.Min, panel.Max, rounding, ImGui.GetColorU32(theme.Hairline),
+            Metrics.Stroke.Hairline);
 
-        var panel = new Rect(
-            new Vector2(screen.Min.X + SideMargin * scale, screen.Min.Y + TopMargin * scale),
-            new Vector2(screen.Max.X - SideMargin * scale, screen.Max.Y - BottomMargin * scale));
-        Squircle.Fill(drawList, panel.Min, panel.Max, PanelRounding * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.Surface, opacity)));
-        Squircle.Stroke(drawList, panel.Min, panel.Max, PanelRounding * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f * opacity)), 1f);
-
-        var pad = Padding * scale;
-        var innerLeft = panel.Min.X + pad;
-        var innerWidth = panel.Width - pad * 2f;
-        var centerX = panel.Center.X;
-
-        var ack = reviewing ? string.Empty : Loc.T(L.Conduct.Acknowledge);
-        var ackHeight = reviewing ? 0f : Typography.MeasureWrappedBlock(ack, TextStyles.Footnote, innerWidth).Y;
-        var footerHeight = reviewing
-            ? 0f
-            : ackHeight + BarGap * scale + BarHeight * scale + BarGap * scale + ButtonHeight * scale;
-        var footerTop = panel.Max.Y - pad - footerHeight;
-        var listBottom = reviewing ? footerTop : footerTop - 12f * scale;
-
-        var headerBottom = DrawHeader(panel, theme, gate, accent, opacity, centerX, innerWidth, pad);
-
-        var listRect = new Rect(new Vector2(innerLeft, headerBottom + 10f * scale),
-            new Vector2(innerLeft + innerWidth, listBottom));
-        DrawRules(listRect, theme, gate, accent, opacity);
-
-        if (reviewing)
+        var listBottom = shownIsReview
+            ? panel.Max.Y - Metrics.Space.Xl * scale
+            : panel.Max.Y - (Metrics.Space.Md + Button.LargeHeight + FooterBottomInset) * scale;
+        var listRect = new Rect(new Vector2(panel.Min.X, panel.Min.Y + ContentClipInset * scale),
+            new Vector2(panel.Max.X, listBottom));
+        DrawRules(listRect, panel, theme, gate, accent, surface, interactive);
+        if (shownIsReview)
         {
-            DrawCloseButton(new Vector2(panel.Max.X - pad * 0.85f, panel.Min.Y + pad * 0.85f), theme, opacity,
-                interactive);
             return;
         }
 
-        drawList.AddLine(new Vector2(innerLeft, listBottom), new Vector2(innerLeft + innerWidth, listBottom),
-            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f * opacity)), 1f);
-
-        DrawFooter(theme, gate, accent, opacity, interactive, centerX, innerLeft, innerWidth, footerTop, ack,
-            ackHeight);
+        DrawFooter(drawList, panel, listBottom, theme, accent, delta, interactive);
     }
 
-    private void DrawCloseButton(Vector2 center, PhoneTheme theme, float opacity, bool interactive)
+    private void DrawRules(Rect listRect, Rect panel, PhoneTheme theme, ConductGate gate, Vector4 accent,
+        Vector4 surface, bool interactive)
     {
-        var pressed = AppSkin.IconButton(center, CloseRadius * UiScale.Current,
-            IconGlyph.Of(FontAwesomeIcon.Times), Palette.WithAlpha(theme.TextStrong, opacity),
-            Palette.WithAlpha(theme.TextStrong, 0.10f * opacity), 0.5f, theme);
-        if (pressed && interactive && opacity > 0.5f)
-        {
-            service.Dismiss();
-        }
-    }
-
-    private static float DrawHeader(Rect panel, PhoneTheme theme, ConductGate gate, Vector4 accent, float opacity,
-        float centerX, float innerWidth, float pad)
-    {
-        var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
-
-        var tileSize = 48f * scale;
-        var tileMin = new Vector2(centerX - tileSize * 0.5f, panel.Min.Y + pad);
-        var tileMax = tileMin + new Vector2(tileSize, tileSize);
-        Squircle.Fill(drawList, tileMin, tileMax, tileSize * 0.30f,
-            ImGui.GetColorU32(Palette.WithAlpha(accent, opacity)));
-        AppSkin.Icon(drawList, new Vector2(centerX, (tileMin.Y + tileMax.Y) * 0.5f), IconGlyph.Of(gate.Icon),
-            new Vector4(1f, 1f, 1f, opacity), 0.95f);
-
-        var y = tileMax.Y + 12f * scale;
-        var eyebrow = Loc.T(L.Conduct.Eyebrow);
-        var eyebrowHeight = Typography.Measure(eyebrow, TextStyles.FootnoteEmphasized).Y;
-        Typography.DrawCentered(drawList, new Vector2(centerX, y + eyebrowHeight * 0.5f), eyebrow,
-            Palette.WithAlpha(accent, opacity), TextStyles.FootnoteEmphasized);
-        y += eyebrowHeight + 6f * scale;
-
-        y += Typography.DrawWrappedCentered(new Vector2(centerX, y), Loc.T(gate.Title),
-            Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.Title2, innerWidth);
-        y += 8f * scale;
-
-        y += Typography.DrawWrappedCentered(new Vector2(centerX, y), Loc.T(gate.Intro),
-            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Subheadline, innerWidth);
-        return y;
-    }
-
-    private void DrawRules(Rect listRect, PhoneTheme theme, ConductGate gate, Vector4 accent, float opacity)
-    {
-        var scale = UiScale.Current;
         if (listRect.Height <= 0f)
         {
             return;
         }
 
+        var scale = UiScale.Current;
         var rulesKey = ImGui.GetID("##conductRules");
         ImGui.SetCursorScreenPos(listRect.Min);
         using (ImRaii.Child("##conductRules", listRect.Size, false,
                    DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
-            var surface = DragScrollHost.Begin(rulesKey);
+            var scrollSurface = DragScrollHost.Begin(rulesKey);
             if (scrollTopPending)
             {
-                surface.JumpToTop();
+                scrollSurface.JumpToTop();
                 scrollTopPending = false;
             }
 
-            var width = ScrollLayout.StableContentWidth();
+            var drawList = ImGui.GetWindowDrawList();
+            var origin = ImGui.GetCursorScreenPos();
+            var fullWidth = ScrollLayout.StableContentWidth();
+            var gutter = Metrics.Space.Lg * scale;
+            var left = origin.X + gutter;
+            var width = fullWidth - gutter * 2f;
+            var centerX = origin.X + fullWidth * 0.5f;
+
+            var y = DrawHero(gate, theme, accent, centerX, origin.Y + (HeroTop - ContentClipInset) * scale, width,
+                out var titleBottom);
+            y += Metrics.Space.Xl * scale;
             for (var index = 0; index < gate.Sections.Length; index++)
             {
-                DrawSection(gate.Sections[index], width, theme, accent, opacity);
+                y += DrawSection(drawList, gate.Sections[index], index, left, y, width, theme, accent);
+                y += Metrics.Space.Md * scale;
             }
 
-            ImGui.Dummy(new Vector2(width, 4f * scale));
+            if (!shownIsReview)
+            {
+                y += Metrics.Space.Xs * scale;
+                y += DrawClosing(centerX, y, width, theme, gate.Sections.Length);
+            }
+
+            y += Metrics.Space.Xl * scale;
+            ImGui.SetCursorScreenPos(origin);
+            ImGui.Dummy(new Vector2(fullWidth, y - origin.Y));
             TrackReading();
+
+            var collapseStart = titleBottom - origin.Y + (ContentClipInset - BarHeight) * scale;
+            var cover = new Rect(new Vector2(left, listRect.Min.Y), new Vector2(left + width, listRect.Max.Y));
+            DrawScrollEdges(drawList, cover, panel, gate, theme, accent, surface, collapseStart);
+            if (!shownIsReview)
+            {
+                return;
+            }
+
+            DrawGrabber(drawList, panel, theme);
+            DrawCloseButton(drawList, panel, theme, interactive);
         }
     }
+
+    private float DrawHero(ConductGate gate, PhoneTheme theme, Vector4 accent, float centerX, float top, float width,
+        out float titleBottom)
+    {
+        var scale = UiScale.Current;
+        var trim = ImGui.GetStyle().ItemSpacing.Y;
+        var iconSize = HeroIcon * scale;
+        var iconReveal = Reveal(0);
+        var iconCenter = new Vector2(centerX, top + iconSize * 0.5f + Rise(iconReveal));
+        DrawAppIcon(ImGui.GetWindowDrawList(), gate, accent, iconCenter,
+            iconSize * (HeroIconRest + (1f - HeroIconRest) * iconReveal), iconReveal);
+
+        var y = top + iconSize + Metrics.Space.Lg * scale;
+        var titleReveal = Reveal(1);
+        var titleRise = Rise(titleReveal);
+        var eyebrowInk = ControlInk.From(theme).WithAccent(accent).AccentInk;
+        y += Typography.DrawWrappedCentered(new Vector2(centerX, y + titleRise), Loc.T(L.Conduct.Eyebrow),
+            eyebrowInk with { W = titleReveal }, TextStyles.FootnoteEmphasized, width) - trim;
+        y += Metrics.Space.Xxs * scale;
+        y += Typography.DrawWrappedCentered(new Vector2(centerX, y + titleRise), Loc.T(gate.Title),
+            theme.TextStrong with { W = titleReveal }, TextStyles.Title1, width) - trim;
+        titleBottom = y;
+
+        y += Metrics.Space.Sm * scale;
+        var introReveal = Reveal(2);
+        y += Typography.DrawWrappedCentered(new Vector2(centerX, y + Rise(introReveal)), Loc.T(gate.Intro),
+            theme.TextMuted with { W = introReveal }, TextStyles.Subheadline, width - IntroInset * 2f * scale) - trim;
+        return y;
+    }
+
+    private static void DrawAppIcon(ImDrawListPtr drawList, ConductGate gate, Vector4 accent, Vector2 center,
+        float size, float alpha)
+    {
+        var scale = UiScale.Current;
+        var half = new Vector2(size * 0.5f, size * 0.5f);
+        var min = center - half;
+        var max = center + half;
+        var radius = size * Metrics.Radius.HomeTileFactor;
+        if (AppIconTile.TryDraw(drawList, gate.AppId, accent, min, max, radius, alpha, true, scale))
+        {
+            return;
+        }
+
+        Elevation.IconRest(drawList, min, max, radius, scale, alpha);
+        IconTile.FillShaded(drawList, min, max, radius, IconTile.Surface(accent), alpha);
+        ProgressRing.CenterIcon(drawList, center, gate.Icon, GlyphInk with { W = alpha }, size * HeroGlyphFraction);
+    }
+
+    private float DrawSection(ImDrawListPtr drawList, in ConductSection section, int order, float left, float top,
+        float width, PhoneTheme theme, Vector4 accent)
+    {
+        var scale = UiScale.Current;
+        var alpha = Reveal(order + HeroBeats);
+        var cardTop = top + Rise(alpha);
+        if (section.Heading is null && section.Items.Length == 0)
+        {
+            return section.Lead is { } closingNote
+                ? DrawNote(Loc.T(closingNote), left, cardTop, width, theme, alpha)
+                : 0f;
+        }
+
+        var trim = ImGui.GetStyle().ItemSpacing.Y;
+        var pad = Metrics.Space.Lg * scale;
+        var tile = TileSize * scale;
+        var rowPad = RowPad * scale;
+        var markColumn = MarkColumn * scale;
+        var textLeft = left + pad + tile + TileGap * scale;
+        var textWidth = left + width - pad - textLeft;
+        var itemWidth = textWidth - markColumn;
+        var items = section.Items;
+
+        var heading = section.Heading is { } headingKey ? Loc.T(headingKey) : null;
+        var headingHeight = heading is null
+            ? 0f
+            : Typography.MeasureWrappedBlock(heading, TextStyles.Headline, textWidth).Y - trim;
+        var headerHeight = heading is null ? 0f : MathF.Max(tile, headingHeight);
+        var lead = section.Lead is { } leadKey ? Loc.T(leadKey) : null;
+        var leadHeight = lead is null
+            ? 0f
+            : Typography.MeasureWrappedBlock(lead, TextStyles.Subheadline, textWidth).Y - trim;
+        var note = section.Note is { } noteKey ? Loc.T(noteKey) : null;
+        var noteHeight = note is null
+            ? 0f
+            : Typography.MeasureWrappedBlock(note, TextStyles.Footnote, itemWidth).Y - trim;
+
+        var itemHeights = items.Length > 0 ? stackalloc float[items.Length] : default;
+        var itemsHeight = 0f;
+        for (var index = 0; index < items.Length; index++)
+        {
+            itemHeights[index] =
+                Typography.MeasureWrappedBlock(Loc.T(items[index]), TextStyles.Subheadline, itemWidth).Y - trim;
+            itemsHeight += itemHeights[index] + rowPad * 2f;
+        }
+
+        var leadGap = heading is null ? 0f : Metrics.Space.Xs * scale;
+        var itemsGap = Metrics.Space.Xxs * scale;
+        var noteGap = items.Length > 0 ? 0f : Metrics.Space.Md * scale;
+        var cardHeight = pad + headerHeight;
+        if (lead is not null)
+        {
+            cardHeight += leadGap + leadHeight;
+        }
+
+        if (items.Length > 0)
+        {
+            cardHeight += itemsGap + itemsHeight;
+        }
+
+        if (note is not null)
+        {
+            cardHeight += noteGap + rowPad + noteHeight;
+        }
+
+        cardHeight += items.Length > 0 && note is null ? pad - rowPad : pad;
+
+        var min = new Vector2(left, cardTop);
+        var max = new Vector2(left + width, cardTop + cardHeight);
+        Squircle.Fill(drawList, min, max, Metrics.Radius.Grouped * scale,
+            ImGui.GetColorU32(theme.GroupedCard with { W = theme.GroupedCard.W * alpha }));
+
+        var tone = ToneColor(section.Tone, theme, accent);
+        var cursorY = cardTop + pad;
+        if (heading is not null)
+        {
+            var tileMin = new Vector2(left + pad, cursorY + (headerHeight - tile) * 0.5f);
+            var tileMax = tileMin + new Vector2(tile, tile);
+            IconTile.FillShaded(drawList, tileMin, tileMax, tile * Metrics.Radius.TileFactor, tone, alpha);
+            ProgressRing.CenterIcon(drawList, (tileMin + tileMax) * 0.5f, section.Icon ?? ToneIcon(section.Tone),
+                GlyphInk with { W = alpha }, TileGlyph * scale);
+            Typography.DrawWrappedLeft(new Vector2(textLeft, cursorY + (headerHeight - headingHeight) * 0.5f),
+                heading, theme.TextStrong with { W = alpha }, TextStyles.Headline, textWidth);
+            cursorY += headerHeight;
+        }
+
+        if (lead is not null)
+        {
+            cursorY += leadGap;
+            Typography.DrawWrappedLeft(new Vector2(textLeft, cursorY), lead, theme.TextMuted with { W = alpha },
+                TextStyles.Subheadline, textWidth);
+            cursorY += leadHeight;
+        }
+
+        if (items.Length > 0)
+        {
+            cursorY += itemsGap;
+            var markY = Typography.Measure(LineProbe, TextStyles.Subheadline).Y * 0.5f;
+            for (var index = 0; index < items.Length; index++)
+            {
+                if (index > 0)
+                {
+                    DrawSeparator(drawList, textLeft, max.X, cursorY, theme, alpha);
+                }
+
+                var textTop = cursorY + rowPad;
+                DrawMark(drawList, section.Tone, tone, new Vector2(textLeft + MarkGlyph * scale * 0.5f, textTop + markY),
+                    theme, alpha);
+                Typography.DrawWrappedLeft(new Vector2(textLeft + markColumn, textTop), Loc.T(items[index]),
+                    theme.TextStrong with { W = alpha }, TextStyles.Subheadline, itemWidth);
+                cursorY += itemHeights[index] + rowPad * 2f;
+            }
+        }
+
+        if (note is not null)
+        {
+            cursorY += noteGap;
+            DrawSeparator(drawList, textLeft, max.X, cursorY, theme, alpha);
+            var noteTop = cursorY + rowPad;
+            var noteMarkY = Typography.Measure(LineProbe, TextStyles.Footnote).Y * 0.5f;
+            ProgressRing.CenterIcon(drawList, new Vector2(textLeft + MarkGlyph * scale * 0.5f, noteTop + noteMarkY),
+                FontAwesomeIcon.InfoCircle, theme.TextMuted with { W = alpha }, MarkGlyph * scale);
+            Typography.DrawWrappedLeft(new Vector2(textLeft + markColumn, noteTop), note,
+                theme.TextMuted with { W = alpha }, TextStyles.Footnote, itemWidth);
+        }
+
+        return cardHeight;
+    }
+
+    private static float DrawNote(string text, float left, float top, float width, PhoneTheme theme, float alpha)
+    {
+        var inset = Metrics.Space.Lg * UiScale.Current;
+        return Typography.DrawWrappedLeft(new Vector2(left + inset, top), text, theme.TextMuted with { W = alpha },
+            TextStyles.Footnote, width - inset * 2f) - ImGui.GetStyle().ItemSpacing.Y;
+    }
+
+    private float DrawClosing(float centerX, float top, float width, PhoneTheme theme, int order)
+    {
+        var inset = Metrics.Space.Lg * UiScale.Current;
+        var alpha = Reveal(order + HeroBeats);
+        return Typography.DrawWrappedCentered(new Vector2(centerX, top + Rise(alpha)), Loc.T(L.Conduct.Acknowledge),
+            theme.TextMuted with { W = alpha }, TextStyles.Footnote, width - inset * 2f) - ImGui.GetStyle().ItemSpacing.Y;
+    }
+
+    private static void DrawSeparator(ImDrawListPtr drawList, float left, float right, float y, PhoneTheme theme,
+        float alpha)
+    {
+        var top = MathF.Floor(y);
+        drawList.AddRectFilled(new Vector2(left, top), new Vector2(right, top + Metrics.Stroke.Hairline),
+            ImGui.GetColorU32(theme.Separator with { W = theme.Separator.W * alpha }));
+    }
+
+    private static void DrawMark(ImDrawListPtr drawList, ConductTone tone, Vector4 toneColor, Vector2 center,
+        PhoneTheme theme, float alpha)
+    {
+        if (tone == ConductTone.Neutral)
+        {
+            drawList.AddCircleFilled(center, DotRadius * UiScale.Current,
+                ImGui.GetColorU32(theme.TextMuted with { W = alpha }), 12);
+            return;
+        }
+
+        var glyph = tone == ConductTone.Encouraged ? FontAwesomeIcon.Check : FontAwesomeIcon.Times;
+        ProgressRing.CenterIcon(drawList, center, glyph, toneColor with { W = alpha }, MarkGlyph * UiScale.Current);
+    }
+
+    private static Vector4 ToneColor(ConductTone tone, PhoneTheme theme, Vector4 accent) => tone switch
+    {
+        ConductTone.Encouraged => EncouragedColor,
+        ConductTone.Prohibited => theme.Danger with { W = 1f },
+        ConductTone.Restricted => RestrictedColor,
+        _ => accent,
+    };
+
+    private static FontAwesomeIcon ToneIcon(ConductTone tone) => tone switch
+    {
+        ConductTone.Encouraged => FontAwesomeIcon.Check,
+        ConductTone.Prohibited => FontAwesomeIcon.Ban,
+        ConductTone.Restricted => FontAwesomeIcon.Ban,
+        _ => FontAwesomeIcon.InfoCircle,
+    };
 
     private void TrackReading()
     {
@@ -233,221 +494,158 @@ internal sealed class ConductGateOverlay
         }
     }
 
-    private static void DrawSection(in ConductSection section, float width, PhoneTheme theme, Vector4 accent,
-        float opacity)
+    private static void DrawScrollEdges(ImDrawListPtr drawList, Rect cover, Rect panel, ConductGate gate,
+        PhoneTheme theme, Vector4 accent, Vector4 surface, float collapseStart)
     {
-        if (section.Heading is null && section.Items.Length == 0)
+        var scale = UiScale.Current;
+        var fade = EdgeFade * scale;
+        var scrollY = ImGui.GetScrollY();
+        var collapse = Math.Clamp((scrollY - collapseStart) / (CollapseRange * scale), 0f, 1f);
+        var topEdge = Math.Clamp(scrollY / fade, 0f, 1f);
+        if (topEdge > 0.001f)
         {
-            if (section.Lead is { } note)
+            var solidTop = cover.Min.Y;
+            var solidBottom = solidTop + (panel.Min.Y + BarHeight * scale - solidTop) * collapse;
+            var fadeBottom = solidBottom + fade;
+            var top = ImGui.GetColorU32(Backdrop(surface, accent, panel, solidTop) with { W = topEdge });
+            var middle = ImGui.GetColorU32(Backdrop(surface, accent, panel, solidBottom) with { W = topEdge });
+            var clear = ImGui.GetColorU32(Backdrop(surface, accent, panel, fadeBottom) with { W = 0f });
+            if (solidBottom > solidTop + 0.5f)
             {
-                DrawNote(Loc.T(note), width, theme, opacity);
+                drawList.AddRectFilledMultiColor(new Vector2(cover.Min.X, solidTop),
+                    new Vector2(cover.Max.X, solidBottom), top, top, middle, middle);
             }
 
+            drawList.AddRectFilledMultiColor(new Vector2(cover.Min.X, solidBottom),
+                new Vector2(cover.Max.X, fadeBottom), middle, middle, clear, clear);
+        }
+
+        if (collapse > 0.001f)
+        {
+            DrawCompactTitle(drawList, panel, gate, theme, collapse);
+        }
+
+        var bottomEdge = Math.Clamp((ImGui.GetScrollMaxY() - scrollY) / fade, 0f, 1f);
+        if (bottomEdge <= 0.001f)
+        {
             return;
         }
 
-        var scale = UiScale.Current;
-        var toneColor = section.Tone switch
-        {
-            ConductTone.Encouraged => EncouragedColor,
-            ConductTone.Prohibited => theme.Danger,
-            ConductTone.Restricted => theme.TextMuted,
-            _ => accent,
-        };
-
-        var pad = CardPad * scale;
-        var innerWidth = width - pad * 2f;
-        var chip = ChipSize * scale;
-        var chipGap = 10f * scale;
-        var blockGap = 9f * scale;
-        var itemIndent = 22f * scale;
-        var itemGap = ItemGap * scale;
-        var itemTextWidth = innerWidth - itemIndent;
-
-        var headingText = section.Heading is { } heading ? Loc.T(heading) : null;
-        var headingHeight = headingText is null
-            ? 0f
-            : Typography.MeasureWrappedBlock(headingText, TextStyles.SubheadlineEmphasized,
-                innerWidth - chip - chipGap).Y;
-        var headerHeight = headingText is null ? 0f : MathF.Max(chip, headingHeight);
-
-        var leadText = section.Lead is { } lead ? Loc.T(lead) : null;
-        var leadHeight = leadText is null
-            ? 0f
-            : Typography.MeasureWrappedBlock(leadText, TextStyles.Subheadline, innerWidth).Y;
-        var noteText = section.Note is { } trailingNote ? Loc.T(trailingNote) : null;
-        var noteHeight = noteText is null
-            ? 0f
-            : Typography.MeasureWrappedBlock(noteText, TextStyles.Footnote, innerWidth).Y;
-
-        var itemHeights = section.Items.Length > 0 ? stackalloc float[section.Items.Length] : default;
-        var itemsHeight = 0f;
-        for (var index = 0; index < section.Items.Length; index++)
-        {
-            var text = Loc.T(section.Items[index]);
-            var lineHeight = Typography.Measure(text, TextStyles.Subheadline).Y;
-            var wrapped = Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, itemTextWidth).Y;
-            itemHeights[index] = MathF.Max(wrapped, lineHeight);
-            itemsHeight += itemHeights[index];
-            if (index > 0)
-            {
-                itemsHeight += itemGap;
-            }
-        }
-
-        var cardHeight = pad + headerHeight + pad;
-        if (leadText is not null)
-        {
-            cardHeight += blockGap + leadHeight;
-        }
-
-        if (section.Items.Length > 0)
-        {
-            cardHeight += blockGap + itemsHeight;
-        }
-
-        if (noteText is not null)
-        {
-            cardHeight += blockGap + noteHeight;
-        }
-
-        var origin = ImGui.GetCursorScreenPos();
-        var drawList = ImGui.GetWindowDrawList();
-        var cardMax = origin + new Vector2(width, cardHeight);
-        var rounding = Metrics.Radius.Card * scale;
-        var cardColor = section.Tone switch
-        {
-            ConductTone.Encouraged => Palette.Mix(theme.GroupedCard, EncouragedColor, 0.10f),
-            ConductTone.Prohibited => Palette.Mix(theme.GroupedCard, theme.Danger, 0.08f),
-            _ => theme.GroupedCard,
-        };
-        Squircle.Fill(drawList, origin, cardMax, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(cardColor, theme.GroupedCard.W * opacity)));
-        Material.EdgeSquircle(drawList, origin, cardMax, rounding, scale, opacity);
-
-        var left = origin.X + pad;
-        var cursorY = origin.Y + pad;
-        if (headingText is not null)
-        {
-            var chipMin = new Vector2(left, cursorY + (headerHeight - chip) * 0.5f);
-            var chipMax = chipMin + new Vector2(chip, chip);
-            var chipFill = section.Tone == ConductTone.Restricted
-                ? Palette.WithAlpha(theme.TextStrong, 0.10f * opacity)
-                : Palette.WithAlpha(toneColor, 0.16f * opacity);
-            Squircle.Fill(drawList, chipMin, chipMax, chip * Metrics.Radius.TileFactor,
-                ImGui.GetColorU32(chipFill));
-            var chipIcon = section.Icon ?? section.Tone switch
-            {
-                ConductTone.Encouraged => FontAwesomeIcon.Check,
-                ConductTone.Prohibited => FontAwesomeIcon.Ban,
-                ConductTone.Restricted => FontAwesomeIcon.Ban,
-                _ => FontAwesomeIcon.InfoCircle,
-            };
-            AppSkin.Icon(drawList, (chipMin + chipMax) * 0.5f, IconGlyph.Of(chipIcon),
-                Palette.WithAlpha(toneColor, opacity), 0.55f);
-
-            Typography.DrawWrappedLeft(new Vector2(left + chip + chipGap, cursorY + (headerHeight - headingHeight) * 0.5f),
-                headingText, Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.SubheadlineEmphasized,
-                innerWidth - chip - chipGap);
-            cursorY += headerHeight;
-        }
-
-        if (leadText is not null)
-        {
-            cursorY += blockGap;
-            Typography.DrawWrappedLeft(new Vector2(left, cursorY), leadText,
-                Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Subheadline, innerWidth);
-            cursorY += leadHeight;
-        }
-
-        if (section.Items.Length > 0)
-        {
-            cursorY += blockGap;
-            for (var index = 0; index < section.Items.Length; index++)
-            {
-                var text = Loc.T(section.Items[index]);
-                var lineHeight = Typography.Measure(text, TextStyles.Subheadline).Y;
-                var markCenter = new Vector2(left + 8f * scale, cursorY + lineHeight * 0.5f);
-                if (section.Tone == ConductTone.Neutral)
-                {
-                    drawList.AddCircleFilled(markCenter, 2.5f * scale,
-                        ImGui.GetColorU32(Palette.WithAlpha(theme.TextMuted, opacity)));
-                }
-                else
-                {
-                    var mark = section.Tone == ConductTone.Encouraged ? FontAwesomeIcon.Check : FontAwesomeIcon.Times;
-                    AppSkin.Icon(drawList, markCenter, IconGlyph.Of(mark), Palette.WithAlpha(toneColor, opacity),
-                        0.58f);
-                }
-
-                Typography.DrawWrappedLeft(new Vector2(left + itemIndent, cursorY), text,
-                    Palette.WithAlpha(theme.TextStrong, 0.92f * opacity), TextStyles.Subheadline, itemTextWidth);
-                cursorY += itemHeights[index];
-                if (index < section.Items.Length - 1)
-                {
-                    cursorY += itemGap;
-                }
-            }
-        }
-
-        if (noteText is not null)
-        {
-            cursorY += blockGap;
-            Typography.DrawWrappedLeft(new Vector2(left, cursorY), noteText,
-                Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Footnote, innerWidth);
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, cardHeight + SectionGap * scale));
+        var fadeTop = cover.Max.Y - fade * BottomFadeSpan;
+        var bottomClear = ImGui.GetColorU32(Backdrop(surface, accent, panel, fadeTop) with { W = 0f });
+        var bottomSolid = ImGui.GetColorU32(Backdrop(surface, accent, panel, cover.Max.Y) with { W = bottomEdge });
+        drawList.AddRectFilledMultiColor(new Vector2(cover.Min.X, fadeTop), cover.Max, bottomClear, bottomClear,
+            bottomSolid, bottomSolid);
     }
 
-    private static void DrawNote(string text, float width, PhoneTheme theme, float opacity)
+    private static Vector4 Backdrop(Vector4 surface, Vector4 accent, Rect panel, float y)
     {
-        var scale = UiScale.Current;
-        var origin = ImGui.GetCursorScreenPos();
-        var inset = 4f * scale;
-        var height = Typography.DrawWrappedLeft(new Vector2(origin.X + inset, origin.Y), text,
-            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Footnote, width - inset * 2f);
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height + SectionGap * scale));
+        var depth = Math.Clamp((y - panel.Min.Y) / (WashHeight * UiScale.Current), 0f, 1f);
+        return Palette.Mix(surface, accent, WashAlpha * (1f - depth));
     }
 
-    private void DrawFooter(PhoneTheme theme, ConductGate gate, Vector4 accent, float opacity, bool interactive,
-        float centerX, float innerLeft, float innerWidth, float footerTop, string ack, float ackHeight)
+    private static void DrawCompactTitle(ImDrawListPtr drawList, Rect panel, ConductGate gate, PhoneTheme theme,
+        float collapse)
     {
         var scale = UiScale.Current;
-        var drawList = ImGui.GetWindowDrawList();
+        var reserve = (Metrics.Space.Lg * 2f + RoundButton.SmallRadius * 2f) * scale;
+        var title = Typography.FitText(Loc.T(gate.Title), panel.Width - reserve * 2f, TextStyles.Headline);
+        var center = new Vector2(panel.Center.X,
+            panel.Min.Y + BarHeight * scale * 0.5f + (1f - collapse) * CompactTitleRise * scale);
+        Typography.DrawCentered(drawList, center, title, theme.TextStrong with { W = collapse }, TextStyles.Headline);
+    }
 
-        Typography.DrawWrappedCentered(new Vector2(centerX, footerTop), ack,
-            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Footnote, innerWidth);
+    private static void DrawGrabber(ImDrawListPtr drawList, Rect panel, PhoneTheme theme)
+    {
+        var scale = UiScale.Current;
+        var width = Metrics.Size.GrabberWidth * scale;
+        var height = Metrics.Size.GrabberHeight * scale;
+        var min = new Vector2(panel.Center.X - width * 0.5f, panel.Min.Y + Metrics.Space.Sm * scale);
+        drawList.AddRectFilled(min, min + new Vector2(width, height),
+            ImGui.GetColorU32(theme.TextMuted with { W = GrabberAlpha }), height * 0.5f);
+    }
 
-        var barY = footerTop + ackHeight + BarGap * scale;
-        var barMin = new Vector2(innerLeft, barY);
-        var barMax = new Vector2(innerLeft + innerWidth, barY + BarHeight * scale);
-        Squircle.Fill(drawList, barMin, barMax, BarHeight * scale * 0.5f,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.10f * opacity)));
-        var progress = reachedEnd ? 1f : readProgress;
-        if (progress > 0.001f)
+    private void DrawCloseButton(ImDrawListPtr drawList, Rect panel, PhoneTheme theme, bool interactive)
+    {
+        var scale = UiScale.Current;
+        var radius = RoundButton.SmallRadius * scale;
+        var center = new Vector2(panel.Max.X - Metrics.Space.Lg * scale - radius,
+            panel.Min.Y + BarHeight * scale * 0.5f);
+        if (RoundButton.FontIcon(drawList, "conduct.close", center, radius, FontAwesomeIcon.Times,
+                CloseGlyph * scale, ControlInk.From(theme)) && interactive)
         {
-            Squircle.Fill(drawList, barMin, new Vector2(innerLeft + innerWidth * progress, barMax.Y),
-                BarHeight * scale * 0.5f, ImGui.GetColorU32(Palette.WithAlpha(accent, opacity)));
+            service.Dismiss();
         }
+    }
 
+    private void DrawFooter(ImDrawListPtr drawList, Rect panel, float footerTop, PhoneTheme theme, Vector4 accent,
+        float delta, bool interactive)
+    {
+        var scale = UiScale.Current;
+        var gutter = Metrics.Space.Lg * scale;
+        var buttonTop = footerTop + Metrics.Space.Md * scale;
+        var rect = new Rect(new Vector2(panel.Min.X + gutter, buttonTop),
+            new Vector2(panel.Max.X - gutter, buttonTop + Button.LargeHeight * scale));
         var floorRemaining = MathF.Max(0f, MinimumReadSeconds - elapsed);
         var ready = reachedEnd && floorRemaining <= 0.001f;
-        var label = ready
-            ? Loc.T(L.Conduct.AgreeAction)
-            : reachedEnd
-                ? Loc.T(L.Conduct.WaitAction, (int)MathF.Ceiling(floorRemaining))
-                : Loc.T(L.Conduct.ReadToEndAction);
-        var buttonY = barMax.Y + BarGap * scale;
-        var buttonRect = new Rect(new Vector2(innerLeft, buttonY),
-            new Vector2(innerLeft + innerWidth, buttonY + ButtonHeight * scale));
-        var enabled = ready && interactive && opacity > 0.5f;
-        if (ConfirmDialog.DrawPillButton(buttonRect, label, enabled, theme, 1f, opacity, ConfirmButtonTone.Primary) &&
-            enabled)
+        var blend = Math.Clamp(readiness.Step(ready ? 1f : 0f, Motion.Sheet, delta), 0f, 1f);
+        var progress = Math.Clamp(progressShown.Step(reachedEnd ? 1f : readProgress, Motion.Sheet, delta), 0f, 1f);
+        var ink = ControlInk.From(theme).WithAccent(accent);
+        if (blend < 0.999f)
+        {
+            DrawPendingButton(drawList, rect, ink, progress, PendingLabel(floorRemaining), 1f - blend);
+        }
+
+        if (blend <= 0.001f)
+        {
+            return;
+        }
+
+        if (Button.Draw(drawList, rect, Loc.T(L.Conduct.AgreeAction), ink, enabled: ready, id: "conduct.agree",
+                opacity: blend) && interactive)
         {
             service.Acknowledge();
         }
     }
+
+    private string PendingLabel(float floorRemaining)
+    {
+        if (!reachedEnd)
+        {
+            return Loc.T(L.Conduct.ReadToEndAction);
+        }
+
+        var seconds = Math.Max(1, (int)MathF.Ceiling(floorRemaining));
+        if (seconds != waitSeconds)
+        {
+            waitSeconds = seconds;
+            waitLabel = Loc.T(L.Conduct.WaitAction, seconds);
+        }
+
+        return waitLabel;
+    }
+
+    private static void DrawPendingButton(ImDrawListPtr drawList, Rect rect, in ControlInk ink, float progress,
+        string label, float alpha)
+    {
+        var radius = rect.Height * 0.5f;
+        var track = Surfaces.Fill(ink, FillLevel.Secondary);
+        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(track with { W = track.W * alpha }));
+        if (progress > 0.001f)
+        {
+            drawList.PushClipRect(rect.Min, new Vector2(rect.Min.X + rect.Width * progress, rect.Max.Y), true);
+            Squircle.Fill(drawList, rect.Min, rect.Max, radius,
+                ImGui.GetColorU32(ink.Accent with { W = PendingFillAlpha * alpha }));
+            drawList.PopClipRect();
+        }
+
+        var style = Button.LabelStyle(rect.Height);
+        Typography.DrawCentered(drawList, rect.Center, Typography.FitText(label, rect.Width - rect.Height, style),
+            ink.Ink with { W = PendingLabelAlpha * alpha }, style);
+    }
+
+    private float Reveal(int order) =>
+        Spring.Settle(elapsed - RevealDelay - Math.Min(order, RevealStaggerCap) * RevealStagger, Motion.Sheet);
+
+    private static float Rise(float revealAmount) => (1f - revealAmount) * RevealRise * UiScale.Current;
 }

@@ -25,6 +25,7 @@ const GAMUT_SEARCH_STEPS = 32;
 
 const WHITE = "#FFFFFF";
 const SETTINGS_INK = "#D8D8DC";
+const GAMBA_GOLD = "#FFD36B";
 const GRAPHITE_STOPS = ["#3A3A3C", "#1C1C1E"];
 const PAPER_STOPS = ["#FFFFFF", "#F2F2F7"];
 const PHOTOS_STOPS = ["#F0B445", "#F77B6B", "#4E9FF0"];
@@ -42,6 +43,7 @@ const hues = {
   Violet: "#A778F9",
   Orchid: "#EC42F8",
   Rose: "#F95589",
+  GambaRose: "#D4246A",
   Red: "#F95C53",
   Slate: "#8A8F9C",
   Chirper: "#2985F0",
@@ -92,7 +94,7 @@ const map = {
   aetherstream: icon("monitor-play", "colour", "Violet"),
   muster: icon("flag-banner", "colour", "Cyan"),
   yellowpages: icon("book-open", "colour", "Gold"),
-  casino: icon("poker-chip", "colour", "Emerald", { round: true }),
+  casino: icon("poker-chip", "colour", "GambaRose", { round: true, ink: GAMBA_GOLD }),
   housing: icon("house", "colour", "Emerald"),
   hunts: icon("crosshair", "colour", "Red", { round: true }),
   coin: icon("coin", "colour", "Gold", { round: true }),
@@ -245,7 +247,7 @@ function tileFor(entry) {
   const hue = hues[entry.hue];
   switch (entry.family) {
     case "colour":
-      return { stops: [shiftLightness(hue, GRADIENT_TOP_LIGHTNESS), shiftLightness(hue, GRADIENT_BOTTOM_LIGHTNESS)], ink: WHITE };
+      return { stops: [shiftLightness(hue, GRADIENT_TOP_LIGHTNESS), shiftLightness(hue, GRADIENT_BOTTOM_LIGHTNESS)], ink: entry.ink ?? WHITE };
     case "paper":
       return { stops: PAPER_STOPS, ink: hue };
     case "graphite":

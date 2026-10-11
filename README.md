@@ -172,7 +172,7 @@ One Aethernet account signs you in to every social app, and each app can keep it
 
 ## Built like the phone in your pocket
 
-**Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music and calls.
+**Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music and calls. Keep it on screen through Group Pose and cutscenes if it lives on a second monitor.
 
 **Widgets and Smart Stacks.** Widgets for most apps, resized from the corner and stacked by dropping one onto another.
 

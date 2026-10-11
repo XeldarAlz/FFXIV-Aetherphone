@@ -224,7 +224,7 @@ Web links that other users supplied (post bodies, chat bubbles, venue and ad but
 
 `DragScrollHost` (src/Aetherphone/Windows/Components/Layout/DragScrollHost.cs) gives child windows phone-style kinetic scrolling: press and drag anywhere to scroll, release to coast, mouse wheel still works. Call `DragScrollHost.Begin(key)` at the top of a scrollable child region (key from `ImGui.GetID`), and pass your window flags through `DragScrollHost.ScrollFlags` so the native scrollbar is hidden while drag scrolling is enabled. While a drag is in progress it calls `UiInteract.BlockThisFrame()` and cancels pending taps, so rows do not fire when the user was scrolling.
 
-Most apps never call it directly. `AppSurface.Begin(area)` (src/Aetherphone/Windows/Components/Layout/AppSurface.cs) wraps the standard app body: a padded child window with `DragScrollHost` attached, returning a scope with `Pull` (overscroll distance for `PullToRefresh`), `Dragging`, and `JumpToTop()`.
+Most apps never call it directly. `AppSurface.Begin(area)` (src/Aetherphone/Windows/Components/Layout/AppSurface.cs) wraps the standard app body: a padded child window with `DragScrollHost` attached, returning a scope with `Pull` (overscroll distance for `PullToRefresh`), `Dragging`, and `JumpToTop()`. It also passes the width of its right-edge indicator strip to `DragScrollHost.Begin(key, grabStripWidth)`, so a press-drag that starts on the scroll indicator moves it like a scrollbar thumb (same direction as the pointer, proportional speed, no fling) instead of touch dragging the content; the geometry is shared with the paint through `ScrollThumb` (src/Aetherphone/Windows/Components/Layout/ScrollThumb.cs).
 
 ### StableContentWidth
 
@@ -312,7 +312,7 @@ if (tapped >= 0)
 }
 ```
 
-A tap only registers if the pointer traveled less than the drag slop, so panning does not select chips. Pass `centered: true` to the `Rect` overload to center the chips inside the row when they all fit; an overflowing rail still starts at the left edge and pans.
+A tap only registers if the pointer traveled less than the drag slop, so panning does not select chips. Pass `centered: true` to the `Rect` overload to center the chips inside the row when they all fit; an overflowing rail still starts at the left edge and pans. Chips are 30 units tall; pass `chipHeight` (for example `Metrics.Size.Pill`) for a touch-sized rail of action presets, with a `labelPadding` of at least half that height so the round ends never clip a label (`ChipRail.LabelRoom`).
 
 ### Other frequently used widgets
 

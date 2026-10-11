@@ -27,12 +27,24 @@ internal static class CasinoArt
     public static Vector4 TintOf(string gameId) => gameId switch
     {
         CasinoGames.Blackjack => AccentRing.Green,
+        CasinoGames.Holdem => AccentRing.Red,
+        CasinoGames.DealerHoldem => AccentRing.Red,
         CasinoGames.Slots => AccentRing.Rose,
+        CasinoGames.SlotsBird => AccentRing.Gold,
+        CasinoGames.SlotsCascade => AccentRing.Cyan,
+        CasinoGames.SlotsMoogle => AccentRing.Rose,
         CasinoGames.Scratch => AccentRing.Gold,
         CasinoGames.Barkeep => AccentRing.Orange,
         CasinoGames.Bingo => AccentRing.Azure,
         CasinoGames.Wheel => AccentRing.Violet,
         CasinoGames.DailySpin => AccentRing.Teal,
+        CasinoGames.Mines => AccentRing.Emerald,
+        CasinoGames.Dice => AccentRing.Indigo,
+        CasinoGames.Limbo => AccentRing.Cyan,
+        CasinoGames.Keno => AccentRing.Lime,
+        CasinoGames.HiLo => AccentRing.Orchid,
+        CasinoGames.Race => AccentRing.Lime,
+        CasinoGames.Plinko => AccentRing.Cyan,
         _ => AccentRing.Emerald,
     };
 

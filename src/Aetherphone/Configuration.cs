@@ -128,6 +128,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Dictionary<string, int> OnboardingCompleted { get; set; } = new();
     public bool LockPosition { get; set; }
     public bool ShowInGpose { get; set; } = true;
+    public bool ShowInCutscenes { get; set; }
     public Vector2? MaximizedPosition { get; set; }
     public Vector2? MinimizedPosition { get; set; }
     public Vector2? LandscapePosition { get; set; }
@@ -376,6 +377,14 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Dictionary<ulong, string> PendingCasinoSittings { get; set; } = new();
     public Dictionary<ulong, long> CasinoSittingSeenAtUnix { get; set; } = new();
     public Dictionary<ulong, PendingCasinoRound> PendingCasinoRounds { get; set; } = new();
+    public bool CasinoTradeSync { get; set; }
+    public bool CasinoTradeAutoConfirm { get; set; }
+    public Dictionary<string, long> CasinoMachineBets { get; set; } = new();
+    public int CasinoPlinkoRows { get; set; } = PlinkoRules.DefaultRows;
+    public int CasinoPlinkoRisk { get; set; } = PlinkoRules.DefaultRisk;
+    public HashSet<string> CasinoInstantGames { get; set; } = new();
+    public bool CasinoStripIntroSeen { get; set; }
+    public HashSet<ulong> CasinoAutoTopUp { get; set; } = new();
     public HomeLayout? Home { get; set; }
     public Dictionary<string, bool> AppFlags { get; set; } = new();
     public int HomeGridRows { get; set; } = 6;

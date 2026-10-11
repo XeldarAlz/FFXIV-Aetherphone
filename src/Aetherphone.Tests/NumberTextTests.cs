@@ -43,6 +43,38 @@ public sealed class NumberTextTests
     }
 
     [Fact]
+    public void CompactReadsInThousandsMillionsBillionsAndTrillions()
+    {
+        Assert.Equal("0", NumberText.Compact(0));
+        Assert.Equal("999", NumberText.Compact(999));
+        Assert.Equal("1K", NumberText.Compact(1000));
+        Assert.Equal(Decimal(12.5m) + "K", NumberText.Compact(12_560));
+        Assert.Equal("125K", NumberText.Compact(125_999));
+        Assert.Equal(Decimal(3.2m) + "M", NumberText.Compact(3_200_000));
+        Assert.Equal(Decimal(1.1m) + "B", NumberText.Compact(1_100_000_000));
+        Assert.Equal("4T", NumberText.Compact(4_000_000_000_000));
+        Assert.Equal("-" + Decimal(2.5m) + "K", NumberText.Compact(-2_500));
+    }
+
+    [Fact]
+    public void CompactNeverRoundsABalanceUp()
+    {
+        Assert.Equal("999K", NumberText.Compact(999_999));
+        Assert.Equal(Decimal(9.9m) + "M", NumberText.Compact(9_999_999));
+    }
+
+    [Fact]
+    public void SignedPutsAPlusOnGainsOnly()
+    {
+        Assert.Equal("+" + Expected(1234), NumberText.Signed(1234));
+        Assert.Equal(Expected(-1234), NumberText.Signed(-1234));
+        Assert.Equal(Expected(0), NumberText.Signed(0));
+        Assert.Same(NumberText.Signed(5000), NumberText.Signed(5000));
+    }
+
+    private static string Decimal(decimal value) => value.ToString("0.0", Loc.Culture);
+
+    [Fact]
     public void GroupSeparatesNeighbouringValues()
     {
         Assert.NotEqual(NumberText.Group(1000), NumberText.Group(1001));

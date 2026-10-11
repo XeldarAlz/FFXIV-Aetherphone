@@ -214,6 +214,7 @@ public sealed class Plugin : IDalamudPlugin
             PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
             PluginInterface.UiBuilder.OpenConfigUi += phoneWindow.OpenSettings;
             PluginInterface.UiBuilder.DisableGposeUiHide = Cfg.ShowInGpose;
+            PluginInterface.UiBuilder.DisableCutsceneUiHide = Cfg.ShowInCutscenes;
             ClientState.Login += OnLogin;
 
             if (Cfg.OpenOnStartup && ClientState.IsLoggedIn)

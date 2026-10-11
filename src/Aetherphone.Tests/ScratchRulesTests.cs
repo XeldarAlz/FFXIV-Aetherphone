@@ -8,59 +8,90 @@ public sealed class ScratchRulesTests
     [Fact]
     public void ConstantsMatchTheBackendEngine()
     {
-        Assert.Equal(4, ScratchRules.TierCount);
+        Assert.Equal(5, ScratchRules.TierCount);
         Assert.Equal(9, ScratchRules.CellCount);
         Assert.Equal(3, ScratchRules.GridSide);
         Assert.Equal(4, ScratchRules.PrizeSymbolCount);
         Assert.Equal(7, ScratchRules.SymbolCount);
         Assert.Equal(1_000_000, ScratchRules.TableScale);
         Assert.Equal(3, ScratchRules.MatchesToWin);
-        Assert.Equal(new long[] { 500, 1_000, 2_500, 5_000 }, ScratchRules.Prices);
+        Assert.Equal(9_500, ScratchRules.ReturnBasisPoints);
+        Assert.Equal(new long[] { 250, 1_000, 5_000, 25_000, 100_000 }, ScratchRules.Prices);
+        Assert.Equal(new[] { 2, 5, 10, 20 }, ScratchRules.PrizeMultiples);
+        Assert.Equal(new[] { 285_000, 52_000, 8_000, 2_000 }, ScratchRules.PrizeCountsPerMillion);
     }
 
     [Fact]
-    public void PrizeTablesMatchTheBackendLiterals()
+    public void EveryTierPaysTheSameMultiplesOfItsOwnPrice()
     {
-        var expected = new (long Chips, int CountPerMillion)[][]
-        {
-            new[] { (1_000L, 285_000), (2_500L, 50_000), (5_000L, 7_500), (10_000L, 1_400) },
-            new[] { (2_000L, 285_000), (5_000L, 50_000), (10_000L, 7_500), (20_000L, 1_400) },
-            new[] { (5_000L, 285_000), (12_500L, 51_000), (25_000L, 7_600), (50_000L, 1_450) },
-            new[] { (10_000L, 286_000), (25_000L, 52_000), (50_000L, 7_800), (100_000L, 1_500) },
-        };
         for (var tier = 0; tier < ScratchRules.TierCount; tier++)
         {
-            Assert.Equal(expected[tier].Length, ScratchRules.PrizeTables[tier].Length);
-            for (var prizeIndex = 0; prizeIndex < expected[tier].Length; prizeIndex++)
+            var table = ScratchRules.PrizeTables[tier];
+            Assert.Equal(ScratchRules.PrizeSymbolCount, table.Length);
+            for (var prizeIndex = 0; prizeIndex < table.Length; prizeIndex++)
             {
-                Assert.Equal(expected[tier][prizeIndex].Chips, ScratchRules.PrizeTables[tier][prizeIndex].Chips);
-                Assert.Equal(expected[tier][prizeIndex].CountPerMillion,
-                    ScratchRules.PrizeTables[tier][prizeIndex].CountPerMillion);
+                Assert.Equal(ScratchRules.Prices[tier] * ScratchRules.PrizeMultiples[prizeIndex],
+                    table[prizeIndex].Chips);
+                Assert.Equal(ScratchRules.PrizeCountsPerMillion[prizeIndex], table[prizeIndex].CountPerMillion);
             }
         }
+
+        Assert.Equal(2_000_000, ScratchRules.PrizeTables[4][3].Chips);
+        Assert.Equal(500, ScratchRules.PrizeTables[0][0].Chips);
     }
 
     [Fact]
-    public void WinCountsSumTheTierTables()
+    public void EveryTierReturnsNinetyFivePercentExactly()
     {
-        Assert.Equal(343_900, ScratchRules.WinCountPerMillion(0));
-        Assert.Equal(343_900, ScratchRules.WinCountPerMillion(1));
-        Assert.Equal(345_050, ScratchRules.WinCountPerMillion(2));
-        Assert.Equal(347_300, ScratchRules.WinCountPerMillion(3));
+        for (var tier = 0; tier < ScratchRules.TierCount; tier++)
+        {
+            var returned = 0L;
+            var table = ScratchRules.PrizeTables[tier];
+            for (var prizeIndex = 0; prizeIndex < table.Length; prizeIndex++)
+            {
+                returned += table[prizeIndex].Chips * table[prizeIndex].CountPerMillion;
+            }
+
+            Assert.Equal(ScratchRules.Prices[tier] * ScratchRules.TableScale / 10_000 * ScratchRules.ReturnBasisPoints,
+                returned);
+            Assert.Equal(950, ScratchRules.ReturnTenths(tier));
+            Assert.Equal(347_000, ScratchRules.WinCountPerMillion(tier));
+        }
+
+        Assert.Equal(0, ScratchRules.ReturnTenths(9));
     }
 
     [Fact]
     public void TierForPriceRoundTripsAndRejectsUnknownPrices()
     {
-        Assert.Equal(0, ScratchRules.TierForPrice(500));
+        Assert.Equal(0, ScratchRules.TierForPrice(250));
         Assert.Equal(1, ScratchRules.TierForPrice(1_000));
-        Assert.Equal(2, ScratchRules.TierForPrice(2_500));
-        Assert.Equal(3, ScratchRules.TierForPrice(5_000));
-        Assert.Equal(-1, ScratchRules.TierForPrice(750));
+        Assert.Equal(2, ScratchRules.TierForPrice(5_000));
+        Assert.Equal(3, ScratchRules.TierForPrice(25_000));
+        Assert.Equal(4, ScratchRules.TierForPrice(100_000));
+        Assert.Equal(-1, ScratchRules.TierForPrice(500));
         Assert.True(ScratchRules.IsValidTier(0));
-        Assert.True(ScratchRules.IsValidTier(3));
+        Assert.True(ScratchRules.IsValidTier(4));
         Assert.False(ScratchRules.IsValidTier(-1));
-        Assert.False(ScratchRules.IsValidTier(4));
+        Assert.False(ScratchRules.IsValidTier(5));
+    }
+
+    [Fact]
+    public void EveryPriceSitsOnTheGlobalLadder()
+    {
+        for (var tier = 0; tier < ScratchRules.TierCount; tier++)
+        {
+            Assert.Equal(ScratchRules.Prices[tier], CasinoLadder.FloorToRung(ScratchRules.Prices[tier]));
+        }
+    }
+
+    [Fact]
+    public void TheWinStampReadsThePrizeOverThePrice()
+    {
+        Assert.Equal(20, ScratchRules.MultipleOf(4, 2_000_000));
+        Assert.Equal(2, ScratchRules.MultipleOf(0, 500));
+        Assert.Equal(0, ScratchRules.MultipleOf(0, 0));
+        Assert.Equal(0, ScratchRules.MultipleOf(7, 500));
     }
 
     [Fact]

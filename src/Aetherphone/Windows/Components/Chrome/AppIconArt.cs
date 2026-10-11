@@ -4,6 +4,11 @@ namespace Aetherphone.Windows.Components;
 
 internal static class AppIconArt
 {
+    private const int ChipSpokes = 8;
+    private const float ChipRimInner = 0.84f;
+    private const float ChipCoreRadius = 0.58f;
+    private const float ChipSpokeThickness = 0.12f;
+
     public static bool TryDraw(string id, Vector2 center, float size, Vector4 ink, Vector4 hole) =>
         TryDraw(ImGui.GetWindowDrawList(), id, center, size, ink, hole);
 
@@ -206,47 +211,19 @@ internal static class AppIconArt
 
     private static void DrawCasinoChip(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
     {
-        var rimRadius = extent * 0.95f;
+        var rimRadius = extent * 0.98f;
         drawList.AddCircleFilled(center, rimRadius, ink, 48);
-        var radialHalf = extent * 0.24f;
-        var tangentialHalf = extent * 0.16f;
-        Span<Vector2> quad = stackalloc Vector2[4];
-        for (var notch = 0; notch < 4; notch++)
+        drawList.AddCircleFilled(center, rimRadius * ChipRimInner, hole, 48);
+        var spokeThickness = rimRadius * ChipSpokeThickness;
+        for (var spoke = 0; spoke < ChipSpokes; spoke++)
         {
-            var angle = MathF.PI * 0.25f + notch * (MathF.PI * 0.5f);
+            var angle = spoke * (MathF.PI * 2f / ChipSpokes);
             var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-            var perpendicular = new Vector2(-direction.Y, direction.X);
-            var notchCenter = center + direction * rimRadius;
-            quad[0] = notchCenter - direction * radialHalf - perpendicular * tangentialHalf;
-            quad[1] = notchCenter - direction * radialHalf + perpendicular * tangentialHalf;
-            quad[2] = notchCenter + direction * radialHalf + perpendicular * tangentialHalf;
-            quad[3] = notchCenter + direction * radialHalf - perpendicular * tangentialHalf;
-            FillConvex(drawList, hole, quad);
+            drawList.AddLine(center + direction * rimRadius * ChipCoreRadius * 0.9f,
+                center + direction * rimRadius * ChipRimInner * 1.04f, ink, spokeThickness);
         }
 
-        drawList.AddCircle(center, extent * 0.60f, hole, 40, extent * 0.10f);
-        DrawInsetSpade(drawList, center, extent * 0.34f, hole);
-    }
-
-    private static void DrawInsetSpade(ImDrawListPtr drawList, Vector2 center, float radius, uint packed)
-    {
-        var lobe = radius * 0.5f;
-        drawList.AddCircleFilled(new Vector2(center.X - lobe, center.Y + radius * 0.2f), lobe, packed, 20);
-        drawList.AddCircleFilled(new Vector2(center.X + lobe, center.Y + radius * 0.2f), lobe, packed, 20);
-        Span<Vector2> triangle = stackalloc Vector2[3]
-        {
-            new(center.X - radius * 0.98f, center.Y + radius * 0.08f),
-            new(center.X + radius * 0.98f, center.Y + radius * 0.08f), new(center.X, center.Y - radius),
-        };
-        FillConvex(drawList, packed, triangle);
-        Span<Vector2> stem = stackalloc Vector2[4]
-        {
-            new(center.X - radius * 0.12f, center.Y + radius * 0.18f),
-            new(center.X + radius * 0.12f, center.Y + radius * 0.18f),
-            new(center.X + radius * 0.26f, center.Y + radius * 0.98f),
-            new(center.X - radius * 0.26f, center.Y + radius * 0.98f),
-        };
-        FillConvex(drawList, packed, stem);
+        drawList.AddCircleFilled(center, rimRadius * ChipCoreRadius, ink, 40);
     }
 
     private static void DrawMine(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

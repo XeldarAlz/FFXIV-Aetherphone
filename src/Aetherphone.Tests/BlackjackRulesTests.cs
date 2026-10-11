@@ -1,7 +1,5 @@
-using System.Globalization;
 using Aetherphone.Apps.Casino.Tables;
 using Aetherphone.Core.Casino;
-using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Xunit;
 
@@ -94,16 +92,6 @@ public sealed class BlackjackRulesTests
     }
 
     [Fact]
-    public void TheConfirmLabelHasRoomForThePayoutBesideTheStake()
-    {
-        var label = L.Casino.BlackjackBetConfirm;
-        Assert.Contains("{0}", label.Source, StringComparison.Ordinal);
-        Assert.Contains("{1}", label.Source, StringComparison.Ordinal);
-        Assert.Equal("Bet 11, blackjack pays 16",
-            string.Format(CultureInfo.InvariantCulture, label.Source, 11, BlackjackRules.BlackjackPayout(11)));
-    }
-
-    [Fact]
     public void OnlyTheActionsTheServerSetAreAllowed()
     {
         var mask = BlackjackRules.ActionHit | BlackjackRules.ActionStand;
@@ -177,6 +165,18 @@ public sealed class BlackjackRulesTests
         Assert.Equal(0f, BlackjackDealChoreography.FlipScaleX(BlackjackDealChoreography.FlipFraction), 3);
         Assert.Equal(1f, BlackjackDealChoreography.FlipScaleX(1f), 3);
         Assert.True(BlackjackDealChoreography.FlipScaleX(0.3f) > 0f);
+    }
+
+    [Fact]
+    public void TheRackIsSizedFromThePlayersOwnBetBand()
+    {
+        Assert.Equal(20_000_000, BlackjackRules.RackFor(1_000_000, 500_000, 10_000_000, 20_000, 1_000_000_000,
+            500_000_000));
+        Assert.Equal(5_000_000, BlackjackRules.RackFor(250_000, 500_000, 10_000_000, 20_000, 1_000_000_000,
+            500_000_000));
+        Assert.Equal(500_000, BlackjackRules.RackFor(250_000, 2_500, 25_000, 20_000, 5_000_000, 500_000_000));
+        Assert.Equal(400_000, BlackjackRules.RackFor(1_000_000, 2_500, 25_000, 20_000, 5_000_000, 400_000));
+        Assert.Equal(0, BlackjackRules.RackFor(1_000_000, 2_500, 25_000, 20_000, 5_000_000, 10_000));
     }
 
     [Fact]

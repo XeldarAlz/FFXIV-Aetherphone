@@ -10,7 +10,6 @@ namespace Aetherphone.Apps.Linkpearl;
 
 internal sealed partial class LinkpearlApp
 {
-    private const float FindFieldRowHeight = 44f;
     private const float FindResultRowHeight = 60f;
     private const float FindResultAvatarRadius = 20f;
     private const float FindPromptGlyph = 36f;
@@ -27,7 +26,7 @@ internal sealed partial class LinkpearlApp
     private readonly string[] findSegmentLabels = new string[2];
     private LookupKind findKind = LookupKind.Character;
     private string findNameInput = string.Empty;
-    private string findWorldInput = string.Empty;
+    private string findRegion = string.Empty;
     private string submittedName = string.Empty;
     private string submittedRegion = string.Empty;
     private bool submittedRegionIsDataCenter;
@@ -39,7 +38,7 @@ internal sealed partial class LinkpearlApp
     {
         findKind = LookupKind.Character;
         findNameInput = string.Empty;
-        findWorldInput = gameData.DataCenterName(gameData.LocalHomeWorldId);
+        findRegion = gameData.DataCenterName(gameData.LocalHomeWorldId);
         submittedName = string.Empty;
         submittedRegion = string.Empty;
         submittedRegionIsDataCenter = false;
@@ -51,7 +50,7 @@ internal sealed partial class LinkpearlApp
     private void SubmitSearch()
     {
         submittedName = findNameInput.Trim();
-        submittedRegion = findWorldInput.Trim();
+        submittedRegion = findRegion;
         submittedRegionIsDataCenter = gameData.IsDataCenterName(submittedRegion);
         hasQuery = submittedName.Length > 0;
         forceSearch = false;

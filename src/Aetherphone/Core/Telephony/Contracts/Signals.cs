@@ -43,6 +43,8 @@ internal static class SignalType
     public const string CasinoAttach = "casino.attach";
     public const string CasinoDetach = "casino.detach";
     public const string CasinoResync = "casino.resync";
+    public const string CasinoClaim = "casino.claim";
+    public const string CasinoHandled = "casino.handled";
     public const string CasinoAttached = "casino.attached";
     public const string CasinoDeclined = "casino.declined";
     public const string CasinoSnapshot = "casino.snapshot";
