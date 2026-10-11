@@ -163,6 +163,8 @@
   "common.savedToGallery": "Сохранено в галерею",
   "common.noPhotos": "В вашей галерее пока нет фото",
   "common.addPhoto": "Добавить фото",
+  "common.pasteImage": "Вставить изображение",
+  "common.pasteFailed": "Не удалось вставить это изображение",
   "common.gifTooLarge": "GIF слишком большой (макс. 4 МБ)",
   "common.gifRidesAlone": "GIF публикуется отдельно, без других фото.",
   "common.fileKindImages": "Изображения",

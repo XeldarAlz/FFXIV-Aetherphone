@@ -163,6 +163,8 @@
   "common.savedToGallery": "ギャラリーに保存しました",
   "common.noPhotos": "ギャラリーに写真がありません",
   "common.addPhoto": "写真を追加",
+  "common.pasteImage": "画像を貼り付け",
+  "common.pasteFailed": "この画像は貼り付けできません",
   "common.gifTooLarge": "GIFが大きすぎます（最大4MB）",
   "common.gifRidesAlone": "GIFは他の写真と一緒にできず、単独で投稿します。",
   "common.fileKindImages": "画像",

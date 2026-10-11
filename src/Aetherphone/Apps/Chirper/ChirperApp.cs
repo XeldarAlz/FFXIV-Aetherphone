@@ -263,6 +263,8 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private bool composePicking;
     private string[] composePickerPaths = Array.Empty<string>();
     private string? pendingComposePickedPath;
+    private readonly ImageIntake composeIntake = new();
+    private bool composeFieldActive;
     private string? pendingSharedPhoto;
     private readonly FeedVirtualizer hashtagVirtualizer = new(400f);
     private string hashtagTitle = string.Empty;

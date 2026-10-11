@@ -163,6 +163,8 @@
   "common.savedToGallery": "已保存到图库",
   "common.noPhotos": "图库中还没有照片",
   "common.addPhoto": "添加照片",
+  "common.pasteImage": "粘贴图片",
+  "common.pasteFailed": "无法粘贴该图片",
   "common.gifTooLarge": "GIF太大（最大4MB）",
   "common.gifRidesAlone": "GIF只能单独发布，不能与其他照片一起发布。",
   "common.fileKindImages": "图片",

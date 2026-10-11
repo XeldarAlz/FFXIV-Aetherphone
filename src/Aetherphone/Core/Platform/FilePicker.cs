@@ -67,7 +67,7 @@ internal static class FilePicker
         onPicked(path);
     };
 
-    private static bool NotYetDownloaded(string path)
+    internal static bool NotYetDownloaded(string path)
     {
         try
         {

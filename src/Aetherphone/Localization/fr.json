@@ -163,6 +163,8 @@
   "common.savedToGallery": "Enregistré dans la galerie",
   "common.noPhotos": "Aucune photo dans ta galerie pour l'instant",
   "common.addPhoto": "Ajouter une photo",
+  "common.pasteImage": "Coller l'image",
+  "common.pasteFailed": "Impossible de coller cette image",
   "common.gifTooLarge": "Le GIF est trop volumineux (4 Mo max)",
   "common.gifRidesAlone": "Un GIF doit être publié seul, sans autres photos.",
   "common.fileKindImages": "Images",

@@ -163,6 +163,8 @@
   "common.savedToGallery": "Galeriye kaydedildi",
   "common.noPhotos": "Galerinde henüz fotoğraf yok",
   "common.addPhoto": "Fotoğraf ekle",
+  "common.pasteImage": "Görseli yapıştır",
+  "common.pasteFailed": "Bu görsel yapıştırılamıyor",
   "common.gifTooLarge": "GIF çok büyük (en fazla 4 MB)",
   "common.gifRidesAlone": "GIF tek başına paylaşılır, başka fotoğraflarla birleştirilemez.",
   "common.fileKindImages": "Görseller",
