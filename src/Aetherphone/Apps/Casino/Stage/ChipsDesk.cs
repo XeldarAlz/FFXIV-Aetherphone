@@ -23,7 +23,7 @@ internal sealed class ChipsDesk
 {
     public const string GetChipsId = "casino.deck.getchips";
 
-    private const long PendingTimeoutMilliseconds = 20_000;
+    private const long PendingTimeoutMilliseconds = 10_000;
 
     private readonly CasinoStore store;
     private readonly CoinStore coins;
@@ -85,13 +85,14 @@ internal sealed class ChipsDesk
     {
         if (pending.Active)
         {
-            if (Buying && Environment.TickCount64 - pending.StartedAt < PendingTimeoutMilliseconds)
+            var fresh = Environment.TickCount64 - pending.StartedAt < PendingTimeoutMilliseconds;
+            if (fresh && Buying)
             {
                 Button.Draw(rect, betLabel, ink, ButtonStyle.Prominent, enabled: false, id: id);
                 return ChipsPress.None;
             }
 
-            var covered = stack >= pending.Need;
+            var covered = fresh && stack >= pending.Need;
             pending = default;
             if (covered && enabled)
             {
