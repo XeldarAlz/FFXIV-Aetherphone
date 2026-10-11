@@ -95,7 +95,7 @@ const map = {
   muster: icon("flag-banner", "colour", "Cyan"),
   yellowpages: icon("book-open", "colour", "Gold"),
   casino: icon("poker-chip", "colour", "GambaRose", { round: true, ink: GAMBA_GOLD }),
-  housing: icon("house", "colour", "Emerald"),
+  housing: icon("house", "colour", "Teal"),
   hunts: icon("crosshair", "colour", "Red", { round: true }),
   coin: icon("coin", "colour", "Gold", { round: true }),
   phone: icon("phone", "colour", "Green"),
