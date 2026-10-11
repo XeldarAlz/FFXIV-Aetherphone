@@ -57,6 +57,7 @@ internal sealed partial class MinimizedPhone : IDisposable
     private const float CalmWallpaperScrim = 0.30f;
     private const float HarshWallpaperScrim = 0.58f;
     private const float MutedInk = 0.72f;
+    private const float FpsRefreshSeconds = 0.5f;
     private const string MusicAppId = "music";
     private const string CallAppId = "message";
     private static readonly TimeSpan ShowingGrace = TimeSpan.FromSeconds(0.5);
@@ -120,6 +121,9 @@ internal sealed partial class MinimizedPhone : IDisposable
     private int timeKey = -1;
     private int timeFormat = -1;
     private int dateKey = -1;
+    private string fpsLabel = string.Empty;
+    private int fpsValue = -1;
+    private float fpsDue;
     private float measuredWidth = -1f;
     private CultureInfo? textCulture;
     private float clockScale;
@@ -707,6 +711,17 @@ internal sealed partial class MinimizedPhone : IDisposable
             }
 
             dateSize = Typography.Measure(dateLabel, MinimizedPhoneRenderer.DateStyle());
+        }
+
+        if (configuration.MinimizedFps && (clock >= fpsDue || cultureChanged))
+        {
+            fpsDue = clock + FpsRefreshSeconds;
+            var fps = (int)MathF.Round(ImGui.GetIO().Framerate);
+            if (fps != fpsValue || cultureChanged)
+            {
+                fpsValue = fps;
+                fpsLabel = Loc.T(L.Minimized.FpsValue, fps);
+            }
         }
 
         textCulture = Loc.Culture;

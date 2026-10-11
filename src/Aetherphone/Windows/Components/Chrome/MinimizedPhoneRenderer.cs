@@ -154,7 +154,7 @@ internal static partial class MinimizedPhoneRenderer
     }
 
     public static void DrawHero(ImDrawListPtr drawList, Rect screen, float top, string date, Vector2 dateSize,
-        string time, float clockScale, in FaceInk ink, float alpha)
+        string time, float clockScale, string fps, in FaceInk ink, float alpha)
     {
         var centerX = screen.Center.X;
         if (date.Length > 0)
@@ -163,14 +163,23 @@ internal static partial class MinimizedPhoneRenderer
                 Palette.WithAlpha(ink.Muted, ink.Muted.W * alpha), DateStyle());
         }
 
-        if (time.Length == 0)
+        var y = top + dateSize.Y;
+        if (time.Length > 0)
+        {
+            var clockSize = Typography.Measure(time, clockScale, FontWeight.Bold);
+            Typography.Draw(drawList, new Vector2(centerX - clockSize.X * 0.5f, y), time,
+                Palette.WithAlpha(ink.Strong, alpha), clockScale, FontWeight.Bold);
+            y += clockSize.Y;
+        }
+
+        if (fps.Length == 0)
         {
             return;
         }
 
-        var clockSize = Typography.Measure(time, clockScale, FontWeight.Bold);
-        Typography.Draw(drawList, new Vector2(centerX - clockSize.X * 0.5f, top + dateSize.Y), time,
-            Palette.WithAlpha(ink.Strong, alpha), clockScale, FontWeight.Bold);
+        var fpsSize = Typography.Measure(fps, DateStyle());
+        Typography.Draw(drawList, new Vector2(centerX - fpsSize.X * 0.5f, y), fps,
+            Palette.WithAlpha(ink.Muted, ink.Muted.W * alpha), DateStyle());
     }
 
     public static Rect MusicArtRect(Rect inner, float scale)
