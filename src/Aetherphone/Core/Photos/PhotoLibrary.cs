@@ -140,6 +140,11 @@ internal sealed class PhotoLibrary
 
     private void PrunePasted()
     {
+        if (!Directory.Exists(pastedDirectory))
+        {
+            return;
+        }
+
         var cutoff = DateTime.UtcNow - PastedLifetime;
         var files = Directory.GetFiles(pastedDirectory);
         for (var index = 0; index < files.Length; index++)
@@ -328,6 +333,8 @@ internal sealed class PhotoLibrary
                 DeletePermanently(trashed[index]);
             }
         }
+
+        PrunePasted();
     }
 
     private static string FreeSibling(string folder, string fileName)
