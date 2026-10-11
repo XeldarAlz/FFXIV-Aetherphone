@@ -149,13 +149,11 @@ internal sealed class MinimizedPhonePage : ISettingsPage
             configuration.MinimizedWallpaper, theme, "minimized.wallpaper");
         DrawPartToggle(faceCard.NextRow(), MinimizedPart.Clock, theme);
         DrawPartToggle(faceCard.NextRow(), MinimizedPart.Date, theme);
-        var fps = SettingsRow.Bool(faceCard.NextRow(), Loc.T(L.Minimized.Fps), configuration.MinimizedFps, theme,
-            "minimized.fps");
+        DrawPartToggle(faceCard.NextRow(), MinimizedPart.Fps, theme);
         faceCard.End();
-        if (wallpaper != configuration.MinimizedWallpaper || fps != configuration.MinimizedFps)
+        if (wallpaper != configuration.MinimizedWallpaper)
         {
             configuration.MinimizedWallpaper = wallpaper;
-            configuration.MinimizedFps = fps;
             configuration.Save();
         }
 

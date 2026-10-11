@@ -6,6 +6,7 @@ internal enum MinimizedPart : byte
 {
     Clock,
     Date,
+    Fps,
     NowPlaying,
     Calls,
     Alerts,
@@ -21,31 +22,31 @@ internal enum MinimizedPart : byte
 
 internal static class MinimizedParts
 {
-    public const int Count = 13;
+    public const int Count = 14;
 
     private static readonly MinimizedPart[] DefaultOrder =
     {
-        MinimizedPart.Clock, MinimizedPart.Date, MinimizedPart.NowPlaying, MinimizedPart.Calls, MinimizedPart.Alerts,
-        MinimizedPart.EorzeaClock, MinimizedPart.Weather, MinimizedPart.Resets, MinimizedPart.Gil, MinimizedPart.Coin,
-        MinimizedPart.Ventures, MinimizedPart.Rings, MinimizedPart.Badge,
+        MinimizedPart.Clock, MinimizedPart.Date, MinimizedPart.Fps, MinimizedPart.NowPlaying, MinimizedPart.Calls,
+        MinimizedPart.Alerts, MinimizedPart.EorzeaClock, MinimizedPart.Weather, MinimizedPart.Resets, MinimizedPart.Gil,
+        MinimizedPart.Coin, MinimizedPart.Ventures, MinimizedPart.Rings, MinimizedPart.Badge,
     };
 
     private static readonly string[] Ids =
     {
-        "clock", "date", "nowPlaying", "calls", "alerts", "badge", "eorzeaClock", "weather", "resets", "gil", "coin",
-        "ventures", "rings",
+        "clock", "date", "fps", "nowPlaying", "calls", "alerts", "badge", "eorzeaClock", "weather", "resets", "gil",
+        "coin", "ventures", "rings",
     };
 
     private static readonly bool[] Defaults =
     {
-        true, true, true, true, true, true, true, true, false, false, false, false, false,
+        true, true, false, true, true, true, true, true, true, false, false, false, false, false,
     };
 
     private static readonly LocString[] Labels =
     {
-        L.Minimized.Clock, L.Minimized.Date, L.Minimized.NowPlaying, L.Minimized.Calls, L.Minimized.Banners,
-        L.Minimized.Badge, L.Minimized.EorzeaClock, L.Minimized.Weather, L.Minimized.Resets, L.Minimized.Gil,
-        L.Minimized.Coin, L.Minimized.Ventures, L.Minimized.Rings,
+        L.Minimized.Clock, L.Minimized.Date, L.Minimized.Fps, L.Minimized.NowPlaying, L.Minimized.Calls,
+        L.Minimized.Banners, L.Minimized.Badge, L.Minimized.EorzeaClock, L.Minimized.Weather, L.Minimized.Resets,
+        L.Minimized.Gil, L.Minimized.Coin, L.Minimized.Ventures, L.Minimized.Rings,
     };
 
     public static ReadOnlySpan<MinimizedPart> Default => DefaultOrder;

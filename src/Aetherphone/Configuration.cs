@@ -136,7 +136,6 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public MinimizedShape MinimizedShape { get; set; } = MinimizedShape.Phone;
     public int MinimizedMapZoom { get; set; } = MinimizedShapes.DefaultMapZoom;
     public bool MinimizedWallpaper { get; set; } = true;
-    public bool MinimizedFps { get; set; }
     public float MinimizedScale { get; set; } = 1f;
     public bool DoNotDisturb { get; set; }
     public bool QuietWhileBusy { get; set; } = true;

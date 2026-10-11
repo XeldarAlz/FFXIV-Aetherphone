@@ -50,7 +50,7 @@ internal sealed partial class MinimizedPhone
         MinimizedPhoneRenderer.DrawHero(drawList, screen, screen.Min.Y + HeroTop * scale,
             showDate ? dateLabel : string.Empty, showDate ? dateSize : Vector2.Zero,
             layout.IsEnabled(MinimizedPart.Clock) ? timeLabel : string.Empty, clockScale,
-            configuration.MinimizedFps ? fpsLabel : string.Empty, frameInk, heroAlpha);
+            layout.IsEnabled(MinimizedPart.Fps) ? fpsLabel : string.Empty, frameInk, heroAlpha);
         DrawSlot(drawList, screen);
         MinimizedPhoneRenderer.DrawIndicator(drawList, screen, frameInk, frameAlpha, scale);
     }

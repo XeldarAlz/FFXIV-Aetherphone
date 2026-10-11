@@ -713,7 +713,7 @@ internal sealed partial class MinimizedPhone : IDisposable
             dateSize = Typography.Measure(dateLabel, MinimizedPhoneRenderer.DateStyle());
         }
 
-        if (configuration.MinimizedFps && (clock >= fpsDue || cultureChanged))
+        if (layout.IsEnabled(MinimizedPart.Fps) && (clock >= fpsDue || cultureChanged))
         {
             fpsDue = clock + FpsRefreshSeconds;
             var fps = (int)MathF.Round(ImGui.GetIO().Framerate);

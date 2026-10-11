@@ -5305,7 +5305,7 @@
   "minimized.shapeHint": "Choose what the phone collapses into. The minimap draws the zone map around you, so it can sit where the game minimap does.",
   "minimized.wallpaper": "Show wallpaper",
   "minimized.wallpaperHint": "Paints your home wallpaper behind the mini phone, dimmed so the clock stays readable.",
-  "minimized.fps": "Show FPS",
+  "minimized.fps": "FPS",
   "minimized.fpsValue": "{0} FPS",
   "minimized.minimapHint": "The map faces north and shows your heading, the zone name and your coordinates. Tap it to open the phone.",
   "minimized.minimapZoomHint": "Scroll the wheel over the map to zoom, or use the plus and minus buttons that fade in when you hover it.",
