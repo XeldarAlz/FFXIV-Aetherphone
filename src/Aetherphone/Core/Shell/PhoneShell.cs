@@ -405,6 +405,8 @@ internal sealed class PhoneShell : IDisposable
         {
             DeviceChrome.DrawLiveBand(ImGui.GetForegroundDrawList(), chassis, UiScale.Current);
         }
+
+        HoverTooltip.Flush();
     }
 
     private Rect? TransparentBand(Rect screen)
