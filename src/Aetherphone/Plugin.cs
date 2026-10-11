@@ -353,7 +353,11 @@ public sealed class Plugin : IDalamudPlugin
     private void OnCallsTick(IFramework framework) =>
         services.Calls.Advance((float)framework.UpdateDelta.TotalSeconds);
 
-    private static void OnSeasonTick(IFramework framework) => SeasonalTheme.Update(Cfg, DateTime.Now);
+    private static void OnSeasonTick(IFramework framework)
+    {
+        SeasonalTheme.Update(Cfg, DateTime.Now);
+        Fonts.SyncDisplay(SeasonalTheme.Halloween);
+    }
 
     private void OnDeviceLinkTick(IFramework framework)
     {

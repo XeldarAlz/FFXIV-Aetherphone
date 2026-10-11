@@ -38,11 +38,18 @@ internal static class SeasonalTheme
     public static bool IsHalloweenNight(DateTime date) =>
         Halloween && date.Month == HalloweenStartMonth && date.Day == HalloweenNightDay;
 
+    public static bool ResolveHalloween(Configuration configuration, DateTime now) =>
+        configuration.SeasonalThemeMode switch
+        {
+            SeasonalThemeMode.Halloween => true,
+            SeasonalThemeMode.Off => false,
+            _ => IsHalloweenDate(now),
+        };
+
     public static void Update(Configuration configuration, DateTime now)
     {
         HalloweenByDate = IsHalloweenDate(now);
-        var previewing = AepConstants.IsPrerelease && configuration.PreviewHalloween;
-        Halloween = configuration.SeasonalDecorations && (HalloweenByDate || previewing);
+        Halloween = ResolveHalloween(configuration, now);
         BlackletterNames = Halloween && configuration.SeasonalNameFont;
         Parallax = Halloween && configuration.SeasonalParallax;
     }

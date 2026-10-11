@@ -410,7 +410,7 @@ internal sealed class FontService : IDisposable
             textHandles = text;
             sharedHandles = shared;
             iconHandles = icons;
-            displayHandle = SeasonalAtBoot() ? BuildDisplayHandle() : null;
+            displayHandle ??= SeasonalTheme.ResolveHalloween(configuration, DateTime.Now) ? BuildDisplayHandle() : null;
         }
     }
 
@@ -439,8 +439,22 @@ internal sealed class FontService : IDisposable
         }));
     }
 
-    private bool SeasonalAtBoot() => configuration.SeasonalDecorations
-        && (SeasonalTheme.IsHalloweenDate(DateTime.Now) || (AepConstants.IsPrerelease && configuration.PreviewHalloween));
+    public void SyncDisplay(bool wanted)
+    {
+        if (wanted == displayHandle is not null)
+        {
+            return;
+        }
+
+        if (wanted)
+        {
+            displayHandle = BuildDisplayHandle();
+            return;
+        }
+
+        displayHandle?.Dispose();
+        displayHandle = null;
+    }
 
     private IFontHandle BuildDisplayHandle()
     {

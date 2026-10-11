@@ -38,9 +38,9 @@ public sealed class SeasonalThemeTests
     }
 
     [Fact]
-    public void TurningDecorationsOffHidesHalloween()
+    public void TheOffModeHidesHalloween()
     {
-        SeasonalTheme.Update(new Configuration { SeasonalDecorations = false }, HalloweenNight);
+        SeasonalTheme.Update(new Configuration { SeasonalThemeMode = SeasonalThemeMode.Off }, HalloweenNight);
 
         Assert.False(SeasonalTheme.Halloween);
     }
@@ -54,11 +54,12 @@ public sealed class SeasonalThemeTests
     }
 
     [Fact]
-    public void PreviewOnlyForcesHalloweenOnPrereleaseBuilds()
+    public void TheHalloweenModeKeepsTheThemeAllYear()
     {
-        SeasonalTheme.Update(new Configuration { PreviewHalloween = true }, Midsummer);
+        SeasonalTheme.Update(new Configuration { SeasonalThemeMode = SeasonalThemeMode.Halloween }, Midsummer);
 
-        Assert.Equal(AepConstants.IsPrerelease, SeasonalTheme.Halloween);
+        Assert.True(SeasonalTheme.Halloween);
+        Assert.False(SeasonalTheme.HalloweenByDate);
     }
 
     [Fact]
@@ -122,10 +123,8 @@ public sealed class SeasonalThemeTests
     }
 
     [Fact]
-    public void PreviewRespectsTheDecorationsToggle()
+    public void AutomaticIsTheDefault()
     {
-        SeasonalTheme.Update(new Configuration { PreviewHalloween = true, SeasonalDecorations = false }, Midsummer);
-
-        Assert.False(SeasonalTheme.Halloween);
+        Assert.Equal(SeasonalThemeMode.Automatic, new Configuration().SeasonalThemeMode);
     }
 }

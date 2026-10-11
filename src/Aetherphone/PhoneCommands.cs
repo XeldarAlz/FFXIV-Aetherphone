@@ -112,10 +112,7 @@ internal sealed class PhoneCommands
                 services.Configuration.ShowPerfHud = !services.Configuration.ShowPerfHud;
                 services.Configuration.Save();
                 break;
-            case "halloween" when AepConstants.IsPrerelease:
-                services.Configuration.PreviewHalloween = !services.Configuration.PreviewHalloween;
-                services.Configuration.Save();
-                break;
+
             case "treat" when AepConstants.IsPrerelease:
                 Treats.SummonNow();
                 break;
