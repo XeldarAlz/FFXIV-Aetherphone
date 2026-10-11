@@ -122,7 +122,6 @@ internal sealed partial class MinimizedPhone : IDisposable
     private int dateKey = -1;
     private float measuredWidth = -1f;
     private int fontGeneration = -1;
-    private bool fontsReady;
     private CultureInfo? textCulture;
     private float clockScale;
     private float mapClockScale;
@@ -698,7 +697,7 @@ internal sealed partial class MinimizedPhone : IDisposable
                         ChassisGeometry.PuckBand(MinimizedShapes.BodyWidth * scale, CaseKind) -
                         HeroInset * 2f * scale;
         var dayKey = now.Year * 400 + now.DayOfYear;
-        var layoutChanged = MathF.Abs(textWidth - measuredWidth) > 0.5f || FontsChanged();
+        var layoutChanged = FontsChanged() || MathF.Abs(textWidth - measuredWidth) > 0.5f;
         if (dayKey != dateKey || cultureChanged || layoutChanged)
         {
             dateKey = dayKey;
@@ -726,14 +725,13 @@ internal sealed partial class MinimizedPhone : IDisposable
 
     private bool FontsChanged()
     {
-        var fonts = Plugin.Fonts;
-        if (fonts.Generation == fontGeneration && (fontsReady || !fonts.Ready))
+        var generation = Plugin.Fonts.Generation;
+        if (generation == fontGeneration)
         {
             return false;
         }
 
-        fontGeneration = fonts.Generation;
-        fontsReady = fonts.Ready;
+        fontGeneration = generation;
         return true;
     }
 

@@ -93,6 +93,8 @@ No language bakes the whole Han block. Anything outside the native and shared se
 3. The next `Push` or `PushIcon` calls `MaybeRebuildLearned`. Once no new character has arrived for `LearnRebuildDebounceMs` (600 ms), it recomposes the shared and icon ranges, persists the learned sets, rebuilds the atlas asynchronously with `BuildFontsAsync`, and bumps `FontService.Generation` so cached text layouts invalidate.
 4. The learned glyphs persist in `Configuration.FontGlyphCache` (learned icons in `Configuration.IconGlyphCache`), so a returning user does not see tofu (the hollow box shown for a missing glyph) again on the same conversations. `SeedLearned` reloads them at startup and drops anything the shared base already covers.
 
+`Generation` also moves when a `Build` lands: `Push` and `PushIcon` check once per frame whether every handle reports `Available` and bump `Generation` the first time they all do, so text measured under Dalamud's fallback font while the atlas was still building is laid out again.
+
 ### Icon font
 
 Icons are glyphs in the icon handles. `FontService.BuildIconHandle` adds Dalamud's FontAwesome Free Solid and merges src/Aetherphone/Fonts/TablerIcons.ttf on top at each size in `IconSizeMultipliers`. When the Tabler file is missing or fails to merge, the handle keeps FontAwesome alone and logs a warning.

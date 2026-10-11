@@ -84,6 +84,8 @@ internal sealed class FontService : IDisposable
     private long learnDirtySince;
     private volatile bool learnRebuildInFlight;
     private int lastRebuildCheckFrame = -1;
+    private int lastReadyCheckFrame = -1;
+    private bool buildLanded;
     private int generation;
 
     public FontService(IDalamudPluginInterface pluginInterface, Configuration configuration, LoadingScreen loading,
@@ -214,6 +216,7 @@ internal sealed class FontService : IDisposable
 
     public FontToken Push(float scale, FontWeight weight)
     {
+        NoticeBuildLanded();
         MaybeRebuildLearned();
         return new FontToken(textHandles[(int)weight, NearestSize(scale)].Push());
     }
@@ -222,6 +225,7 @@ internal sealed class FontService : IDisposable
 
     public FontToken PushIcon(float pixelHeight, string glyph)
     {
+        NoticeBuildLanded();
         MaybeRebuildLearned();
         if (glyph.Length > 0)
         {
@@ -332,6 +336,29 @@ internal sealed class FontService : IDisposable
         }
     }
 
+    private void NoticeBuildLanded()
+    {
+        if (buildLanded)
+        {
+            return;
+        }
+
+        var frame = ImGui.GetFrameCount();
+        if (frame == lastReadyCheckFrame)
+        {
+            return;
+        }
+
+        lastReadyCheckFrame = frame;
+        if (!Ready)
+        {
+            return;
+        }
+
+        buildLanded = true;
+        Interlocked.Increment(ref generation);
+    }
+
     private void MaybeRebuildLearned()
     {
         if (learnDirtySince == 0 || learnRebuildInFlight)
@@ -392,6 +419,7 @@ internal sealed class FontService : IDisposable
             textHandles = text;
             sharedHandles = shared;
             iconHandles = icons;
+            buildLanded = false;
         }
     }
 
