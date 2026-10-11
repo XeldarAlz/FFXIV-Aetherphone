@@ -57,6 +57,7 @@ internal static class Treats
     private static AethernetSession? session;
     private static int activeSpot = NoSpot;
     private static int lastSpot = NoSpot;
+    private static bool devHunt;
 
     public static bool VelvetBarred { get; set; }
 
@@ -64,11 +65,13 @@ internal static class Treats
         ? BitOperations.PopCount((uint)Plugin.Cfg.HalloweenTreats)
         : 0;
 
+    public static bool HuntOpen => SeasonalTheme.Halloween && (SeasonalTheme.HalloweenByDate || devHunt);
+
     public static int Unlocked => SeasonalTheme.HalloweenByDate
         ? Math.Clamp(SeasonalTheme.DayOfHalloween(DateTime.Today) + 1, 0, Total)
-        : Total;
+        : devHunt ? Total : 0;
 
-    public static bool Rewarded => SeasonalTheme.Halloween && Found >= Total;
+    public static bool Rewarded => HuntOpen && Found >= Total;
 
     public static void Configure(AppInstaller appInstaller, AethernetSession aethernetSession)
     {
@@ -82,17 +85,20 @@ internal static class Treats
         session = null;
         activeSpot = NoSpot;
         lastSpot = NoSpot;
+        devHunt = false;
         VelvetBarred = false;
     }
 
     public static void SummonNow()
     {
+        devHunt = true;
         activeSpot = NoSpot;
         SetDue(Now);
     }
 
     public static void SetAllFound(bool found)
     {
+        devHunt = true;
         var configuration = Plugin.Cfg;
         configuration.HalloweenTreatYear = DateTime.Today.Year;
         configuration.HalloweenTreats = found ? (1 << Total) - 1 : 0;
@@ -128,7 +134,7 @@ internal static class Treats
 
     public static int ActiveSpot()
     {
-        if (!SeasonalTheme.Halloween || Found >= Unlocked)
+        if (!HuntOpen || Found >= Unlocked)
         {
             return NoSpot;
         }

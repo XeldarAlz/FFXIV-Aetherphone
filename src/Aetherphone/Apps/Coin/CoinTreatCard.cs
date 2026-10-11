@@ -24,6 +24,7 @@ internal sealed class CoinTreatCard
     private const int StatusLater = 200;
     private const int StatusTomorrow = 300;
     private const int StatusAllFound = 1000;
+    private const int StatusOffSeason = 2000;
 
     private CachedText count;
     private CachedText status;
@@ -40,7 +41,7 @@ internal sealed class CoinTreatCard
         var textWidth = width - padding * 2f;
         var statusText = Status(found);
         var statusHeight = Typography.MeasureWrappedBlock(statusText, TextStyles.Footnote, textWidth).Y;
-        var hint = complete ? string.Empty : Loc.T(L.Seasonal.TreatsRewardHint, Treats.Total);
+        var hint = complete || !Treats.HuntOpen ? string.Empty : Loc.T(L.Seasonal.TreatsRewardHint, Treats.Total);
         var hintHeight = hint.Length > 0
             ? Metrics.Space.Xxs * scale + Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, textWidth).Y
             : 0f;
@@ -123,8 +124,8 @@ internal sealed class CoinTreatCard
     private string Status(int found)
     {
         var waiting = Treats.ActiveSpot();
-        var key = found >= Treats.Total ? StatusAllFound : waiting != Treats.NoSpot ? StatusHiding + waiting
-            : found < Treats.Unlocked ? StatusLater : StatusTomorrow;
+        var key = !Treats.HuntOpen ? StatusOffSeason : found >= Treats.Total ? StatusAllFound
+            : waiting != Treats.NoSpot ? StatusHiding + waiting : found < Treats.Unlocked ? StatusLater : StatusTomorrow;
         if (status.IsCurrent(key))
         {
             return status.Value;
@@ -133,6 +134,7 @@ internal sealed class CoinTreatCard
         var text = key switch
         {
             StatusAllFound => Loc.T(L.Seasonal.TreatsAllFound),
+            StatusOffSeason => Loc.T(L.Seasonal.HalloweenPassed),
             StatusLater => Loc.T(L.Seasonal.TreatLater),
             StatusTomorrow => Loc.T(L.Seasonal.TreatTomorrow),
             _ => HidingText((TreatSpot)waiting),
