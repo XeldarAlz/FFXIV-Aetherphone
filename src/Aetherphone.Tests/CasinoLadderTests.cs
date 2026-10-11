@@ -53,29 +53,32 @@ public sealed class CasinoLadderTests
     }
 
     [Fact]
-    public void TheMaxWinPerBetHoldsTheCeiling()
+    public void ATenthOfTheMaxWinPerBetHoldsTheCeiling()
     {
         var anchors = CasinoLadder.DefaultAnchors;
         var maxWin = CasinoLadder.DefaultMaxWinPerBet;
 
-        Assert.Equal(50_000_000, CasinoLadder.MaxBet(60, 0, anchors, maxWin));
+        Assert.Equal(5_000_000, CasinoLadder.MaxBet(60, 0, anchors, maxWin));
         Assert.Equal(CeilingReason.MaxWin, CasinoLadder.ReasonFor(60, 0, anchors, maxWin));
-        Assert.Equal(50_000_000, CasinoLadder.MaxBet(1, 5_000_000_000, anchors, maxWin));
+        Assert.Equal(5_000_000, CasinoLadder.MaxBet(1, 5_000_000_000, anchors, maxWin));
         Assert.Equal(CeilingReason.MaxWin, CasinoLadder.ReasonFor(1, 5_000_000_000, anchors, maxWin));
-        Assert.Equal(25_000_000, CasinoLadder.MaxBet(50, 0, anchors, maxWin));
-        Assert.Equal(CeilingReason.Level, CasinoLadder.ReasonFor(50, 0, anchors, maxWin));
-        Assert.Equal(25_000_000, CasinoLadder.MaxBet(1, 500_000_000, anchors, 30_000_000));
+        Assert.Equal(5_000_000, CasinoLadder.MaxBet(40, 0, anchors, maxWin));
+        Assert.Equal(CeilingReason.Level, CasinoLadder.ReasonFor(40, 0, anchors, maxWin));
+        Assert.Equal(1_000_000, CasinoLadder.MaxBet(30, 0, anchors, maxWin));
+        Assert.Equal(CeilingReason.Level, CasinoLadder.ReasonFor(30, 0, anchors, maxWin));
+        Assert.Equal(2_500_000, CasinoLadder.MaxBet(1, 500_000_000, anchors, 30_000_000));
         Assert.Equal(100_000_000, CasinoLadder.MaxBet(60, 0, anchors, 0));
     }
 
     [Fact]
-    public void AnEvenMoneyWinAtTheCeilingNeverPassesTheMaxWin()
+    public void ATenfoldWinAtTheCeilingNeverPassesTheMaxWin()
     {
         var anchors = CasinoLadder.DefaultAnchors;
         var maxWin = CasinoLadder.DefaultMaxWinPerBet;
         for (var level = 1; level <= 100; level += 9)
         {
-            Assert.True(CasinoLadder.MaxBet(level, 900_000_000_000, anchors, maxWin) <= maxWin);
+            Assert.True(CasinoLadder.MaxBet(level, 900_000_000_000, anchors, maxWin) * CasinoLadder.MaxWinBetMultiple
+                <= maxWin);
         }
     }
 

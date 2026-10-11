@@ -30,6 +30,8 @@ internal static class CasinoLadder
 
     public const long DefaultMaxWinPerBet = 50_000 * CasinoChipLots.ChipPerCoin;
 
+    public const long MaxWinBetMultiple = 10;
+
     public static readonly long[] Rungs =
     {
         100, 250, 500, 1_000, 2_500, 5_000, 10_000, 25_000, 50_000, 100_000, 250_000, 500_000,
@@ -160,19 +162,22 @@ internal static class CasinoLadder
 
     public static long MaxBet(int level, long balance) => MaxBet(level, balance, DefaultAnchors, DefaultMaxWinPerBet);
 
+    public static long BetBoundFor(long maxWin) => maxWin / MaxWinBetMultiple;
+
     public static long MaxBet(int level, long balance, long[] anchors, long maxWin)
     {
         var levelCap = LevelCap(level, anchors);
         var balanceCap = BalanceCap(balance);
         var larger = levelCap > balanceCap ? levelCap : balanceCap;
-        return FloorToRung(maxWin > 0 && maxWin < larger ? maxWin : larger);
+        var bound = BetBoundFor(maxWin);
+        return FloorToRung(maxWin > 0 && bound < larger ? bound : larger);
     }
 
     public static CeilingReason ReasonFor(int level, long balance, long[] anchors, long maxWin)
     {
         var levelCap = LevelCap(level, anchors);
         var balanceCap = BalanceCap(balance);
-        if (maxWin > 0 && Math.Max(levelCap, balanceCap) > maxWin)
+        if (maxWin > 0 && Math.Max(levelCap, balanceCap) > BetBoundFor(maxWin))
         {
             return CeilingReason.MaxWin;
         }

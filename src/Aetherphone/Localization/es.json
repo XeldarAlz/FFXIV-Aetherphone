@@ -9899,7 +9899,7 @@
   "casino.chips.autoTopUpHint": "Cuando una apuesta supera tus fichas, compra con tu cartera lo suficiente para 10 apuestas y la realiza.",
   "casino.chips.maxWinLine": "Ganancia máxima por apuesta: {0} fichas ({1} monedas)",
   "casino.chips.maxWinReached": "Ganancia máxima por apuesta alcanzada",
-  "casino.chips.ceilingMaxWin": "Limitada a la ganancia máxima por apuesta de {0}, así una ganancia a la par siempre se paga completa",
+  "casino.chips.ceilingMaxWin": "Limitada a una décima parte de la ganancia máxima por apuesta ({0}), así cualquier ganancia de hasta 10x se paga completa",
   "conduct.casino.title": "Reglas de la casa de Gamba",
   "conduct.casino.intro": "Antes de sentarte a una mesa, lee las reglas de la casa.",
   "conduct.casino.playMoney.title": "Solo dinero de juego",

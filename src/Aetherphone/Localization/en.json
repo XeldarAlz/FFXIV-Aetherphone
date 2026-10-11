@@ -9899,7 +9899,7 @@
   "casino.chips.autoTopUpHint": "When a bet is bigger than your chips, buy enough for 10 bets from your wallet and place it.",
   "casino.chips.maxWinLine": "Max win per bet: {0} chips ({1} coins)",
   "casino.chips.maxWinReached": "Max win per bet reached",
-  "casino.chips.ceilingMaxWin": "Held at the max win per bet of {0}, so an even-money win always pays in full",
+  "casino.chips.ceilingMaxWin": "Held at a tenth of the max win per bet ({0}), so every win up to 10x pays in full",
   "conduct.casino.title": "Gamba House Rules",
   "conduct.casino.intro": "Before you sit down at a table, please read the house rules.",
   "conduct.casino.playMoney.title": "Play Money Only",

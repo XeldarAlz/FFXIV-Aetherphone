@@ -11097,7 +11097,7 @@ internal static class L
         public static readonly LocString AutoTopUpHint = new("casino.chips.autoTopUpHint", "When a bet is bigger than your chips, buy enough for 10 bets from your wallet and place it.");
         public static readonly LocString MaxWinLine = new("casino.chips.maxWinLine", "Max win per bet: {0} chips ({1} coins)");
         public static readonly LocString MaxWinReached = new("casino.chips.maxWinReached", "Max win per bet reached");
-        public static readonly LocString CeilingMaxWin = new("casino.chips.ceilingMaxWin", "Held at the max win per bet of {0}, so an even-money win always pays in full");
+        public static readonly LocString CeilingMaxWin = new("casino.chips.ceilingMaxWin", "Held at a tenth of the max win per bet ({0}), so every win up to 10x pays in full");
     }
 
     internal static class Club

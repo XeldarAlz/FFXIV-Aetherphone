@@ -9899,7 +9899,7 @@
   "casino.chips.autoTopUpHint": "Bir bahis fişlerinden büyükse cüzdanından 10 bahislik fiş alınır ve bahis yapılır.",
   "casino.chips.maxWinLine": "Bahis başına en yüksek kazanç: {0} fiş ({1} Coin)",
   "casino.chips.maxWinReached": "Bahis başına en yüksek kazanca ulaşıldı",
-  "casino.chips.ceilingMaxWin": "Bahis başına en yüksek kazanç olan {0} ile sınırlı, böylece eşit oranlı bir kazanç her zaman tam ödenir",
+  "casino.chips.ceilingMaxWin": "Bahis başına en yüksek kazancın ({0}) onda biriyle sınırlı, böylece 10 katına kadar her kazanç tam ödenir",
   "conduct.casino.title": "Gamba Ev Kuralları",
   "conduct.casino.intro": "Bir masaya oturmadan önce lütfen ev kurallarını oku.",
   "conduct.casino.playMoney.title": "Yalnızca oyun parası",

@@ -9899,7 +9899,7 @@
   "casino.chips.autoTopUpHint": "ベットが手持ちのチップを上回ると、ウォレットから10回分のチップを購入してそのままベットします。",
   "casino.chips.maxWinLine": "1ベットの最大勝利額：{0}チップ（{1}コイン）",
   "casino.chips.maxWinReached": "1ベットの最大勝利額に到達",
-  "casino.chips.ceilingMaxWin": "1ベットの最大勝利額{0}が上限なので、等倍の勝ちは必ず全額支払われます",
+  "casino.chips.ceilingMaxWin": "1ベットの最大勝利額（{0}）の10分の1が上限なので、10倍までの勝ちは必ず全額支払われます",
   "conduct.casino.title": "Gambaのハウスルール",
   "conduct.casino.intro": "テーブルに着く前に、ハウスルールをお読みください。",
   "conduct.casino.playMoney.title": "遊びのお金だけ",

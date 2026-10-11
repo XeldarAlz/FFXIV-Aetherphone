@@ -9899,7 +9899,7 @@
   "casino.chips.autoTopUpHint": "Ist ein Einsatz größer als deine Chips, wird aus deinem Geldbeutel genug für 10 Einsätze gekauft und der Einsatz gesetzt.",
   "casino.chips.maxWinLine": "Höchstgewinn pro Einsatz: {0} Chips ({1} Münzen)",
   "casino.chips.maxWinReached": "Höchstgewinn pro Einsatz erreicht",
-  "casino.chips.ceilingMaxWin": "Begrenzt auf den Höchstgewinn pro Einsatz von {0}, damit ein Gewinn 1:1 immer voll ausgezahlt wird",
+  "casino.chips.ceilingMaxWin": "Begrenzt auf ein Zehntel des Höchstgewinns pro Einsatz ({0}), damit jeder Gewinn bis zum 10-Fachen voll ausgezahlt wird",
   "conduct.casino.title": "Gamba-Hausregeln",
   "conduct.casino.intro": "Bevor du an einem Tisch Platz nimmst, lies bitte die Hausregeln.",
   "conduct.casino.playMoney.title": "Nur Spielgeld",

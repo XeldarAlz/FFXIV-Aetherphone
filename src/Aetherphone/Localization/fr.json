@@ -9899,7 +9899,7 @@
   "casino.chips.autoTopUpHint": "Quand une mise dépasse tes jetons, achète de quoi faire 10 mises avec ton porte-monnaie et la place.",
   "casino.chips.maxWinLine": "Gain maximal par mise : {0} jetons ({1} pièces)",
   "casino.chips.maxWinReached": "Gain maximal par mise atteint",
-  "casino.chips.ceilingMaxWin": "Limitée au gain maximal par mise de {0}, pour qu'un gain à égalité soit toujours payé en entier",
+  "casino.chips.ceilingMaxWin": "Limitée à un dixième du gain maximal par mise ({0}), pour que tout gain jusqu'à 10x soit payé en entier",
   "conduct.casino.title": "Règles de la maison de Gamba",
   "conduct.casino.intro": "Avant de t'asseoir à une table, lis les règles de la maison.",
   "conduct.casino.playMoney.title": "Argent fictif uniquement",

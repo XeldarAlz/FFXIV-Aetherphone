@@ -9899,7 +9899,7 @@
   "casino.chips.autoTopUpHint": "当下注超过你的筹码时,从钱包买入够 10 次下注的筹码并完成下注。",
   "casino.chips.maxWinLine": "每注最高赢取：{0} 筹码（{1} 硬币）",
   "casino.chips.maxWinReached": "已达每注最高赢取",
-  "casino.chips.ceilingMaxWin": "以每注最高赢取 {0} 为上限，所以 1 赔 1 的赢取总能全额支付",
+  "casino.chips.ceilingMaxWin": "以每注最高赢取（{0}）的十分之一为上限，所以 10 倍以内的赢取总能全额支付",
   "conduct.casino.title": "以太赌场场馆规则",
   "conduct.casino.intro": "入座之前，请先阅读场馆规则。",
   "conduct.casino.playMoney.title": "仅限游戏币",
