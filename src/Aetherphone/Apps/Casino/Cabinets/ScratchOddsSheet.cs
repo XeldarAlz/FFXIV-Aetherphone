@@ -22,6 +22,7 @@ internal sealed class ScratchOddsSheet
     private AppSkin skin = null!;
     private int tier;
     private string returnLine = string.Empty;
+    private string maxWin = string.Empty;
     private LanguageInfo? labelsLanguage;
 
     public ScratchOddsSheet()
@@ -49,8 +50,9 @@ internal sealed class ScratchOddsSheet
         }
     }
 
-    public void Draw(Rect screen, AppSkin ui, int tier)
+    public void Draw(Rect screen, AppSkin ui, int tier, string maxWinLine)
     {
+        maxWin = maxWinLine;
         skin = ui;
         this.tier = tier;
         sheet.Draw(screen, ui.Theme, Loc.T(L.Casino.ScratchOdds), PanelHeightShare, drawSheetBody);
@@ -115,7 +117,10 @@ internal sealed class ScratchOddsSheet
         var returnOrigin = ImGui.GetCursorScreenPos();
         Typography.Draw(drawList, returnOrigin, Typography.FitText(returnLine, width, TextStyles.Footnote), ui.MutedInk,
             TextStyles.Footnote);
-        ImGui.Dummy(new Vector2(width, Typography.LineHeight(TextStyles.Footnote) + Metrics.Space.Lg * scale));
+        ImGui.Dummy(new Vector2(width, Typography.LineHeight(TextStyles.Footnote) + Metrics.Space.Sm * scale));
+        var maxWinOrigin = ImGui.GetCursorScreenPos();
+        var maxWinHeight = Typography.DrawWrappedLeft(maxWinOrigin, maxWin, ui.BodyInk, TextStyles.Footnote, width);
+        ImGui.Dummy(new Vector2(width, maxWinHeight + Metrics.Space.Lg * scale));
     }
 
     private void RefreshLabels()

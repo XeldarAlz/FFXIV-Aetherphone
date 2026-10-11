@@ -90,7 +90,7 @@ public sealed class CasinoReasonCoverageTests
         var serverReasons = new[]
         {
             "already_claimed", "bonus_not_ready", "buyin_range", "cap_reached", "ceiling", "closed",
-            "club_insufficient", "cooldown", "daily_buyin", "daily_cap", "rule_cap", "draining", "expired", "frozen",
+            "club_insufficient", "cooldown", "daily_cap", "rule_cap", "draining", "expired", "frozen",
             "insufficient", "invalid_move", "ladder", "loss_limit", "machine_unknown", "mission_incomplete",
             "pair_limited", "paused", "round_open", "sitting_open", "sold_out", "stake_range", "stakes_paused",
             "table_closed", "unavailable", "seat_taken", "already_seated", "seated_elsewhere", "not_seated",

@@ -232,7 +232,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
             hasNotice = false;
             var path = result.Path ?? Array.Empty<int>();
             var drop = new PlinkoDrop(result.Rows, result.Risk, result.Slot, result.MultiplierTenths, result.Stake,
-                result.Payout, result.RoundId);
+                result.Payout, result.RoundId, result.Capped);
             var valid = PlinkoRules.IsValidRisk(result.Risk) && PlinkoRules.IsPath(path, result.Rows, result.Slot);
             if (valid && flight.ActiveCount == 0 && (result.Rows != rows || result.Risk != risk))
             {
@@ -286,7 +286,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
 
         rail.Push(new PlinkoResult(drop.Tenths, drop.Rows, drop.Risk, drop.Edge));
         stage.Settle(new CasinoBetRecord(L.Plinko.Game, drop.Stake, drop.Payout, drop.RoundId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), drop.Capped));
         var origin = onBoard ? layout.SlotCenter(drop.Slot) : layout.Bounds.Center;
         var tier = WinLadder.TierFor(drop.Stake, drop.Payout);
         var celebration = stage.Celebration;

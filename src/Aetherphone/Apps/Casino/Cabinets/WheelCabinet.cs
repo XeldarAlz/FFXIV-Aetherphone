@@ -262,9 +262,11 @@ internal sealed class WheelCabinet : ICabinetIdle
             return;
         }
 
-        var returned = ReturnOn(playback.Segment);
+        var mine = rooms.WheelBetsFor(snapshot.RoomId, snapshot.RoundIndex);
+        var capped = mine is { Capped: true };
+        var returned = capped ? mine!.Payout : ReturnOn(playback.Segment);
         stage.Settle(new CasinoBetRecord(L.Casino.GameWheel, staked, returned, string.Empty,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), capped));
         if (playback.SpunLive)
         {
             stage.Celebration.Celebrate(staked, returned, ringCenter, frame.Instant);

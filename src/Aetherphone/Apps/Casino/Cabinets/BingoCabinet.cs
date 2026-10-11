@@ -418,7 +418,7 @@ internal sealed class BingoCabinet : ICabinetIdle
         if (stake > 0)
         {
             stage.Settle(new CasinoBetRecord(L.Casino.GameBingo, stake, payout, mine.RoundId,
-                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), mine.Capped));
         }
 
         if (!playback.CalledLive)

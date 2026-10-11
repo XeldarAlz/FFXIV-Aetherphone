@@ -71,7 +71,7 @@ internal sealed class LimboClimbPlayback
         target = dto.Target;
         won = dto.Won;
         hasResult = true;
-        outcome = new OriginalsOutcome(dto.Stake, dto.Payout, dto.RoundId);
+        outcome = new OriginalsOutcome(dto.Stake, dto.Payout, dto.RoundId, dto.Capped);
         settlePending = true;
         seconds = DurationFor(result);
         elapsed = 0f;

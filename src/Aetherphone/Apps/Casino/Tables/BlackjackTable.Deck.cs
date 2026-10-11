@@ -463,12 +463,18 @@ internal sealed partial class BlackjackTable
     }
 
     private static long RackNeed(CasinoStateDto state, CasinoBlackjackRoomStateDto board) =>
-        BlackjackRules.RackFor(CasinoLadder.CeilingFor(state).MaxBet, board.MinBet, board.MaxBet, state.MinBuyIn,
-            state.MaxBuyIn, long.MaxValue);
+        BlackjackRules.RackFor(CasinoLadder.CeilingFor(state).MaxBet, board.MinBet, board.MaxBet, RackMinimum(board),
+            RackMaximum(board), long.MaxValue);
+
+    private static long RackMinimum(CasinoBlackjackRoomStateDto board) =>
+        board.MinBuyIn > 0 ? board.MinBuyIn : CasinoHostingRules.ChipMinBuyIn;
+
+    private static long RackMaximum(CasinoBlackjackRoomStateDto board) =>
+        board.MaxBuyIn > 0 ? board.MaxBuyIn : CasinoHostingRules.ChipMaxBuyIn;
 
     private static long RackFor(CasinoStateDto state, CasinoBlackjackRoomStateDto board)
     {
         return BlackjackRules.RackFor(CasinoLadder.CeilingFor(state).MaxBet, board.MinBet, board.MaxBet,
-            state.MinBuyIn, state.MaxBuyIn, state.Sitting?.Stack ?? 0);
+            RackMinimum(board), RackMaximum(board), state.Sitting?.Stack ?? 0);
     }
 }

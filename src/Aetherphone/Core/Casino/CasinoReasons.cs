@@ -12,7 +12,6 @@ internal static class CasinoReasons
     public const string StakeRange = "stake_range";
     public const string BuyInRange = "buyin_range";
 
-    public const string DailyBuyIn = "daily_buyin";
     public const string SittingOpen = "sitting_open";
     public const string Insufficient = "insufficient";
     public const string Frozen = "frozen";
@@ -131,7 +130,6 @@ internal static class CasinoReasons
         Cooldown,
         StakeRange,
         BuyInRange,
-        DailyBuyIn,
         SittingOpen,
         Insufficient,
         Frozen,
@@ -224,7 +222,6 @@ internal static class CasinoReasons
         [Cooldown] = L.Casino.ReasonCooldown,
         [StakeRange] = L.Casino.ReasonStakeRange,
         [BuyInRange] = L.Casino.ReasonBuyInRange,
-        [DailyBuyIn] = L.Casino.ReasonDailyBuyIn,
         [SittingOpen] = L.Casino.ReasonSittingOpen,
         [Insufficient] = L.Casino.ReasonInsufficient,
         [Frozen] = L.Casino.ReasonFrozen,

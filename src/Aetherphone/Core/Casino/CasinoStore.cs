@@ -138,6 +138,8 @@ internal sealed class CasinoStore : IDisposable
 
     public long Rate => CasinoCashier.Rate(state);
 
+    public long MaxWinPerBet => CasinoLadder.MaxWinOf(state);
+
     public CasinoProgressDto? Progress => state?.Progress;
 
     public CasinoCashierDto? Cashier => state?.Cashier;

@@ -23,7 +23,8 @@ internal readonly record struct PlinkoDrop(
     int Tenths,
     long Stake,
     long Payout,
-    string RoundId)
+    string RoundId,
+    bool Capped = false)
 {
     public bool Edge => Slot == 0 || Slot == Rows;
 

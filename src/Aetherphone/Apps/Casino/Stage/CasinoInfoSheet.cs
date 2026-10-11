@@ -29,6 +29,7 @@ internal sealed class CasinoInfoSheet
     private string reasonText = string.Empty;
     private CasinoCeiling reasonCeiling;
     private LanguageInfo? reasonLanguage;
+    private readonly MaxWinText maxWin = new();
 
     public CasinoInfoSheet()
     {
@@ -40,6 +41,8 @@ internal sealed class CasinoInfoSheet
     public bool Instant { get; set; }
 
     public CasinoCeiling Ceiling { get; set; }
+
+    public long Rate { get; set; } = CasinoChipLots.ChipPerCoin;
 
     public void Open()
     {
@@ -97,6 +100,13 @@ internal sealed class CasinoInfoSheet
         if (spec.Deck && Ceiling.MaxBet > 0)
         {
             y = DrawCeiling(drawList, origin.X, y, width, scale);
+            y += RowGap * scale;
+        }
+
+        if (spec.HouseBanked && !spec.Practice)
+        {
+            y += Typography.DrawWrappedLeft(new Vector2(origin.X, y), maxWin.For(Ceiling.MaxWinCap, Rate),
+                skin.BodyInk, TextStyles.Footnote, width);
             y += RowGap * scale;
         }
 
@@ -170,9 +180,12 @@ internal sealed class CasinoInfoSheet
         reasonLanguage = Loc.Current;
         reasonCeiling = Ceiling;
         var level = Games.Framework.GameNumber.Label(Ceiling.Level);
-        reasonText = Ceiling.Reason == CeilingReason.Balance
-            ? Loc.T(L.Strip.CeilingBalance, level, NumberText.Compact(Ceiling.LevelCap))
-            : Loc.T(L.Strip.CeilingLevel, level, NumberText.Compact(Ceiling.LevelCap));
+        reasonText = Ceiling.Reason switch
+        {
+            CeilingReason.MaxWin => Loc.T(L.Chips.CeilingMaxWin, NumberText.Compact(Ceiling.MaxWinCap)),
+            CeilingReason.Balance => Loc.T(L.Strip.CeilingBalance, level, NumberText.Compact(Ceiling.LevelCap)),
+            _ => Loc.T(L.Strip.CeilingLevel, level, NumberText.Compact(Ceiling.LevelCap)),
+        };
         return reasonText;
     }
 

@@ -25,6 +25,7 @@ internal sealed class DealerHoldemPaySheet
     private string mainReturn = string.Empty;
     private string tripsReturn = string.Empty;
     private string mainExplain = string.Empty;
+    private string maxWin = string.Empty;
     private LanguageInfo? language;
 
     public DealerHoldemPaySheet()
@@ -52,8 +53,9 @@ internal sealed class DealerHoldemPaySheet
         }
     }
 
-    public void Draw(Rect screen, AppSkin ui, DealerHoldemTexts labels)
+    public void Draw(Rect screen, AppSkin ui, DealerHoldemTexts labels, string maxWinLine)
     {
+        maxWin = maxWinLine;
         skin = ui;
         texts = labels;
         sheet.Draw(screen, CasinoArt.Sheet(ui), Loc.T(L.DealerHoldem.PayTables), PanelHeightShare, drawSheetBody);
@@ -85,6 +87,7 @@ internal sealed class DealerHoldemPaySheet
         y = ReturnRow(drawList, origin.X, y + SectionGap * scale, width, Loc.T(L.DealerHoldem.MainGame), mainReturn);
         y = ReturnRow(drawList, origin.X, y, width, Loc.T(L.DealerHoldem.SpotTrips), tripsReturn);
         y = Paragraph(drawList, origin.X, y + Metrics.Space.Xs * scale, width, mainExplain, scale);
+        y = Paragraph(drawList, origin.X, y + Metrics.Space.Xs * scale, width, maxWin, scale);
         ImGui.Dummy(new Vector2(width, y - origin.Y + Metrics.Space.Lg * scale));
     }
 

@@ -29,6 +29,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private const string MalformedReason = "malformed";
 
     private readonly CasinoStore store;
+    private readonly MaxWinText maxWinText = new();
     private readonly CasinoPlayStore play;
     private readonly ScratchCardPlayback playback = new();
     private readonly ScratchOddsSheet oddsSheet = new();
@@ -38,6 +39,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private ScratchPhase seenPhase;
     private string inlineReason = string.Empty;
     private string roundId = string.Empty;
+    private bool roundCapped;
     private string stampLabel = string.Empty;
     private Rect ticketArea;
     private float autoPause;
@@ -83,7 +85,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
     public void DrawOverlay(Rect screen, AppSkin ui)
     {
-        oddsSheet.Draw(screen, ui, tierIndex);
+        oddsSheet.Draw(screen, ui, tierIndex, maxWinText.For(store.MaxWinPerBet, store.Rate));
         composer.DrawOverlay(screen, ui, false);
     }
 
@@ -169,6 +171,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
             {
                 inlineReason = string.Empty;
                 roundId = card.RoundId;
+                roundCapped = card.Capped;
                 stroked = false;
                 stampSeconds = -1f;
                 stage.Celebration.Clear();
@@ -216,7 +219,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
         var stake = ScratchRules.Prices[playback.Tier];
         var payout = playback.PrizeOnceRevealed;
         stage.Settle(new CasinoBetRecord(L.Casino.GameScratch, stake, payout, roundId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), roundCapped));
         var stack = store.State?.Sitting?.Stack ?? 0;
         if (composer.Auto.Running)
         {

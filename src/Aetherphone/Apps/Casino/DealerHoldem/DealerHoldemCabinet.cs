@@ -28,6 +28,7 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
     private const float FinishRetrySeconds = 1f;
 
     private readonly CasinoStore store;
+    private readonly MaxWinText maxWinText = new();
     private readonly CasinoDealerHoldemStore dealerStore;
     private readonly BetComposer composer = new("##dealerHoldemAnte");
     private readonly DealerHoldemPlayback playback = new();
@@ -104,7 +105,7 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
     public void DrawOverlay(Rect screen, AppSkin ui)
     {
         composer.DrawOverlay(screen, ui, false);
-        paySheet.Draw(screen, ui, texts);
+        paySheet.Draw(screen, ui, texts, maxWinText.For(store.MaxWinPerBet, store.Rate));
     }
 
     public void Draw(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui)
@@ -430,7 +431,8 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
         }
 
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        stage.Settle(new CasinoBetRecord(L.DealerHoldem.Game, round.Stake, round.Payout, round.RoundId, now));
+        stage.Settle(new CasinoBetRecord(L.DealerHoldem.Game, round.Stake, round.Payout, round.RoundId, now,
+            round.Capped));
         if (round.Payout > round.Stake)
         {
             stage.Celebration.Celebrate(round.Stake, round.Payout, layout.Hero.Center, instant);

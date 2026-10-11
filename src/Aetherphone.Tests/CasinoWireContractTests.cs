@@ -70,8 +70,6 @@ public sealed class CasinoWireContractTests
         Assert.Equal(140, state.Sitting.Stack);
         Assert.Equal(200, state.Sitting.ChipsIn);
         Assert.Equal(100, state.MinBuyIn);
-        Assert.Equal(2000, state.MaxBuyIn);
-        Assert.Equal(5000, state.DailyBuyInCap);
         Assert.Equal(500, state.LossLimit);
         Assert.Equal(440, state.LossHeadroom);
         Assert.Null(state.SelfLossLimit);
@@ -189,8 +187,6 @@ public sealed class CasinoWireContractTests
             Draining: true,
             Sitting: sitting,
             MinBuyIn: 100,
-            MaxBuyIn: 2000,
-            DailyBuyInCap: 5000,
             LossLimit: 500,
             LossHeadroom: 440,
             SelfLossLimit: null,
@@ -208,7 +204,6 @@ public sealed class CasinoWireContractTests
         Assert.True(merged.StakesPaused);
         Assert.True(merged.Draining);
         Assert.Equal(100, merged.MinBuyIn);
-        Assert.Equal(2000, merged.MaxBuyIn);
         Assert.Equal(60, merged.NetLossToday);
         Assert.Equal(50, merged.LossLimit);
         Assert.Equal(50L, merged.SelfLossLimit);

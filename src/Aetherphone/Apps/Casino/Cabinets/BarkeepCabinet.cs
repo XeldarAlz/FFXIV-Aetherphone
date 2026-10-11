@@ -813,7 +813,7 @@ internal sealed class BarkeepCabinet : ICabinetIdle
         }
 
         stage.Settle(new CasinoBetRecord(L.Casino.GameBarkeep, BarkeepRules.EntryChips, result.Payout, result.RoundId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), result.Capped));
         stage.Celebration.Celebrate(BarkeepRules.EntryChips, result.Payout, frame.Safe.Center, frame.Instant);
     }
 

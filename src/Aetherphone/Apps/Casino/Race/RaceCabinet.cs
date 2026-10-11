@@ -419,7 +419,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         }
 
         stage.Settle(new CasinoBetRecord(L.Race.Title, staked, bets.MyPayout, bets.RoundId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), bets.Capped));
         chips.RefreshNow();
         var live = playback.WatchedLive || (frame.Instant && snapshot.Phase == CasinoRoomPhases.Locked);
         if (live)

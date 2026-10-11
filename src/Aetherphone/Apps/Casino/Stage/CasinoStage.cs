@@ -21,6 +21,9 @@ internal sealed class CasinoStage
     private const float CapsulePadX = 14f;
     private const float RealityVeil = 0.6f;
     private const float RealityCardWidth = 300f;
+    private const float CappedSeconds = 4f;
+    private const float CappedFadeSeconds = 0.4f;
+    private const float CappedPillHeight = 34f;
 
     private static readonly VirtualKey[] RepeatKeys = { VirtualKey.SPACE };
 
@@ -51,6 +54,7 @@ internal sealed class CasinoStage
     private Rect actionRow;
     private float actionCursor;
     private int actionSecondaries;
+    private float cappedLeft;
 
     public CasinoStage()
     {
@@ -98,6 +102,7 @@ internal sealed class CasinoStage
         hasSpec = false;
         lastFrameTick = 0;
         unfocusedSeconds = 0f;
+        cappedLeft = 0f;
     }
 
     public bool RealityDue => reality.Due;
@@ -113,6 +118,7 @@ internal sealed class CasinoStage
     {
         bets.Record(record);
         reality.Record(record.Stake, record.Payout, Environment.TickCount64);
+        cappedLeft = record.Capped ? CappedSeconds : 0f;
     }
 
     public CasinoStageFrame Begin(Rect full, Rect content, in CasinoStageSpec next, long balanceValue,
@@ -121,6 +127,7 @@ internal sealed class CasinoStage
         var scale = UiScale.Current;
         var now = Environment.TickCount64;
         info.Ceiling = ceiling;
+        info.Rate = Chips?.Rate ?? CasinoChipLots.ChipPerCoin;
         reality.Tick(now);
         var gap = lastFrameTick == 0 ? 0 : now - lastFrameTick;
         lastFrameTick = now;
@@ -165,6 +172,7 @@ internal sealed class CasinoStage
         particles.Update(delta);
         celebration.Update(delta, layout, snap);
         phase += delta;
+        cappedLeft = MathF.Max(0f, cappedLeft - delta);
         if (snap)
         {
             balance.Snap(balanceValue);
@@ -195,6 +203,10 @@ internal sealed class CasinoStage
         celebration.Draw(drawList, layout, phase, scale);
         celebration.HandleSkip(layout);
         fx.Draw(drawList, full, AccentFor(spec.Preset));
+        if (cappedLeft > 0f)
+        {
+            DrawCappedPill(drawList, scale);
+        }
         if (layout.HasPractice)
         {
             PracticeRibbon.Draw(drawList, layout.Practice, scale);
@@ -426,6 +438,26 @@ internal sealed class CasinoStage
         }
 
         return UiInteract.Click(hitMin, hitMax, hovered);
+    }
+
+    private void DrawCappedPill(ImDrawListPtr drawList, float scale)
+    {
+        var text = Loc.T(L.Chips.MaxWinReached);
+        var style = TextStyles.SubheadlineEmphasized;
+        var safe = layout.Safe;
+        var height = CappedPillHeight * scale;
+        var padX = height * 0.5f;
+        var textScale = Typography.FitScale(text, MathF.Max(1f, safe.Width - padX * 2f), style.Scale,
+            TextStyles.Footnote.Scale, style.Weight);
+        var size = Typography.Measure(text, textScale, style.Weight);
+        var width = MathF.Min(safe.Width, size.X + padX * 2f);
+        var center = new Vector2(safe.Center.X, safe.Min.Y + height * 0.5f);
+        var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
+        var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
+        var alpha = Math.Clamp(cappedLeft / CappedFadeSeconds, 0f, 1f);
+        Material.FrostedGlass(drawList, min, max, height * 0.5f, scale, alpha);
+        Typography.Draw(drawList, new Vector2(center.X - size.X * 0.5f, center.Y - size.Y * 0.5f), text,
+            CasinoColors.Money with { W = alpha }, textScale, style.Weight);
     }
 
     private string CapsuleCoins(float room, out float width)

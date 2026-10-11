@@ -6,6 +6,7 @@ internal enum CeilingReason : byte
 {
     Level,
     Balance,
+    MaxWin,
 }
 
 internal readonly record struct CasinoCeiling(
@@ -14,7 +15,8 @@ internal readonly record struct CasinoCeiling(
     long BalanceCap,
     int Level,
     CeilingReason Reason,
-    bool FromServer);
+    bool FromServer,
+    long MaxWinCap = CasinoLadder.DefaultMaxWinPerBet);
 
 internal static class CasinoLadder
 {
@@ -23,6 +25,10 @@ internal static class CasinoLadder
     public const string ReasonLevelKey = "level";
 
     public const string ReasonBalanceKey = "balance";
+
+    public const string ReasonMaxWinKey = "max_win";
+
+    public const long DefaultMaxWinPerBet = 50_000 * CasinoChipLots.ChipPerCoin;
 
     public static readonly long[] Rungs =
     {
@@ -152,35 +158,59 @@ internal static class CasinoLadder
 
     public static long BalanceCap(long balance) => balance <= 0 ? 0 : balance / BalanceDivisor;
 
-    public static long MaxBet(int level, long balance) => MaxBet(level, balance, DefaultAnchors);
+    public static long MaxBet(int level, long balance) => MaxBet(level, balance, DefaultAnchors, DefaultMaxWinPerBet);
 
-    public static long MaxBet(int level, long balance, long[] anchors)
+    public static long MaxBet(int level, long balance, long[] anchors, long maxWin)
     {
         var levelCap = LevelCap(level, anchors);
         var balanceCap = BalanceCap(balance);
-        return FloorToRung(levelCap > balanceCap ? levelCap : balanceCap);
+        var larger = levelCap > balanceCap ? levelCap : balanceCap;
+        return FloorToRung(maxWin > 0 && maxWin < larger ? maxWin : larger);
     }
 
-    public static CeilingReason ReasonFor(int level, long balance, long[] anchors) =>
-        LevelCap(level, anchors) >= BalanceCap(balance) ? CeilingReason.Level : CeilingReason.Balance;
+    public static CeilingReason ReasonFor(int level, long balance, long[] anchors, long maxWin)
+    {
+        var levelCap = LevelCap(level, anchors);
+        var balanceCap = BalanceCap(balance);
+        if (maxWin > 0 && Math.Max(levelCap, balanceCap) > maxWin)
+        {
+            return CeilingReason.MaxWin;
+        }
+
+        return levelCap >= balanceCap ? CeilingReason.Level : CeilingReason.Balance;
+    }
+
+    public static long MaxWinOf(CasinoStateDto? state) =>
+        state is { MaxWinPerBet: > 0 } ? state.MaxWinPerBet : DefaultMaxWinPerBet;
+
+    public static CeilingReason ReasonOf(string key)
+    {
+        if (string.Equals(key, ReasonMaxWinKey, StringComparison.Ordinal))
+        {
+            return CeilingReason.MaxWin;
+        }
+
+        return string.Equals(key, ReasonBalanceKey, StringComparison.Ordinal)
+            ? CeilingReason.Balance
+            : CeilingReason.Level;
+    }
 
     public static CasinoCeiling CeilingFor(CasinoStateDto? state)
     {
         var balance = state?.Sitting?.Stack ?? 0;
+        var maxWin = MaxWinOf(state);
         var server = state?.Ceiling;
         if (server is not null && server.MaxBet > 0)
         {
-            var reason = string.Equals(server.Reason, ReasonBalanceKey, StringComparison.Ordinal)
-                ? CeilingReason.Balance
-                : CeilingReason.Level;
             return new CasinoCeiling(server.MaxBet, server.LevelCap, server.BalanceCap,
-                Math.Max(1, state?.Progress?.Level ?? 1), reason, true);
+                Math.Max(1, state?.Progress?.Level ?? 1), ReasonOf(server.Reason), true,
+                server.MaxWinCap > 0 ? server.MaxWinCap : maxWin);
         }
 
         var level = Math.Max(1, state?.Progress?.Level ?? 1);
         var anchors = state?.LevelCapAnchors is { Length: > 0 } stored ? stored : DefaultAnchors;
-        return new CasinoCeiling(MaxBet(level, balance, anchors), LevelCap(level, anchors), BalanceCap(balance), level,
-            ReasonFor(level, balance, anchors), false);
+        return new CasinoCeiling(MaxBet(level, balance, anchors, maxWin), LevelCap(level, anchors),
+            BalanceCap(balance), level, ReasonFor(level, balance, anchors, maxWin), false, maxWin);
     }
 
     public static long Clamp(long amount, long minimumBet, long maximumBet, long stack)

@@ -28,6 +28,7 @@ internal sealed partial class MachineCabinet
     private const string MalformedReason = "malformed";
 
     private readonly CasinoStore store;
+    private readonly MaxWinText maxWinText = new();
     private readonly CasinoPlayStore play;
     private readonly ConfirmService confirm;
     private readonly CasinoPreferences preferences;
@@ -179,7 +180,7 @@ internal sealed partial class MachineCabinet
 
     public void DrawOverlay(Rect screen, AppSkin ui)
     {
-        paySheet.Draw(screen, ui, machineId, Composer.Amount);
+        paySheet.Draw(screen, ui, machineId, Composer.Amount, maxWinText.For(store.MaxWinPerBet, store.Rate));
         Composer.DrawOverlay(screen, ui, true);
     }
 
@@ -283,7 +284,7 @@ internal sealed partial class MachineCabinet
             if (gamble.Absorb(gambled))
             {
                 stage.Settle(new CasinoBetRecord(L.Machines.GambleTitle, gambled.Stake, gambled.Payout,
-                    gambled.RoundId, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+                    gambled.RoundId, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), gambled.Capped));
                 CasinoSfx.Play(UiSound.CardSnap);
             }
             else if (!gambled.Granted)
@@ -496,7 +497,7 @@ internal sealed partial class MachineCabinet
         settled = true;
         var payout = playback.TotalWin + playback.Jackpot;
         stage.Settle(new CasinoBetRecord(TitleOf(machineId), playback.Cost, payout, playback.RoundId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), playback.Capped));
         stage.Celebration.Celebrate(playback.Cost, payout, window.Center, frame.Instant, playback.Jackpot > 0);
         resultNet = payout - playback.Cost;
         resultTick = Environment.TickCount64;

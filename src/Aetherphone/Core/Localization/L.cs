@@ -10438,7 +10438,6 @@ internal static class L
         public static readonly LocString ReasonCooldown = new("casino.reasonCooldown", "One breath between moves. Try again in a moment.");
         public static readonly LocString ReasonStakeRange = new("casino.reasonStakeRange", "That stake does not fit this table. Try an amount within the range.");
         public static readonly LocString ReasonBuyInRange = new("casino.reasonBuyInRange", "That buy-in is outside the table's range. Try a different amount.");
-        public static readonly LocString ReasonDailyBuyIn = new("casino.reasonDailyBuyIn", "You have brought as much to the floor as the house allows today. What you cash out frees this up again, and it resets with the coin day.");
         public static readonly LocString ReasonSittingOpen = new("casino.reasonSittingOpen", "You already have chips at a table. Cash out there to start fresh.");
         public static readonly LocString ReasonInsufficient = new("casino.reasonInsufficient", "Not enough coins in the wallet for that.");
         public static readonly LocString ReasonFrozen = new("casino.reasonFrozen", "Your wallet is frozen right now, so the chips have to wait.");
@@ -11098,6 +11097,9 @@ internal static class L
         public static readonly LocPlural BuyIns = new("casino.chips.buyIns", "{0} buy-in", "{0} buy-ins");
         public static readonly LocString AutoTopUp = new("casino.chips.autoTopUp", "Auto top-up");
         public static readonly LocString AutoTopUpHint = new("casino.chips.autoTopUpHint", "When a bet is bigger than your chips, buy enough for 10 bets from your wallet and place it.");
+        public static readonly LocString MaxWinLine = new("casino.chips.maxWinLine", "Max win per bet: {0} chips ({1} coins)");
+        public static readonly LocString MaxWinReached = new("casino.chips.maxWinReached", "Max win per bet reached");
+        public static readonly LocString CeilingMaxWin = new("casino.chips.ceilingMaxWin", "Held at the max win per bet of {0}, so an even-money win always pays in full");
     }
 
     internal static class Club

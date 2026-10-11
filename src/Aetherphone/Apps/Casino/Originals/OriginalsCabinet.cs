@@ -214,7 +214,7 @@ internal sealed class OriginalsCabinet
 
         hasNotice = false;
         stage.Settle(new CasinoBetRecord(skin.Title, outcome.Stake, outcome.Payout, outcome.RoundId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), outcome.Capped));
         stage.Celebration.Celebrate(outcome.Stake, outcome.Payout, skin.Focus, frame.Instant);
         if (!Composer.Auto.Running)
         {

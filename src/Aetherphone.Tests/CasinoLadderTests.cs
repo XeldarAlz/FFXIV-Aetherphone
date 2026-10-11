@@ -46,8 +46,10 @@ public sealed class CasinoLadderTests
         Assert.Equal(10_000, CasinoLadder.MaxBet(1, 150_000));
         Assert.Equal(250_000, CasinoLadder.MaxBet(1, 5_000_000));
         Assert.Equal(250_000, CasinoLadder.MaxBet(23, 1_000_000));
-        Assert.Equal(CeilingReason.Balance, CasinoLadder.ReasonFor(1, 5_000_000, CasinoLadder.DefaultAnchors));
-        Assert.Equal(CeilingReason.Level, CasinoLadder.ReasonFor(1, 150_000, CasinoLadder.DefaultAnchors));
+        Assert.Equal(CeilingReason.Balance, CasinoLadder.ReasonFor(1, 5_000_000, CasinoLadder.DefaultAnchors,
+            CasinoLadder.DefaultMaxWinPerBet));
+        Assert.Equal(CeilingReason.Level, CasinoLadder.ReasonFor(1, 150_000, CasinoLadder.DefaultAnchors,
+            CasinoLadder.DefaultMaxWinPerBet));
     }
 
     [Fact]

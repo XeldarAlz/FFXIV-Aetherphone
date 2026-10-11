@@ -8,7 +8,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Casino.Originals;
 
-internal readonly record struct OriginalsOutcome(long Stake, long Payout, string RoundId);
+internal readonly record struct OriginalsOutcome(long Stake, long Payout, string RoundId, bool Capped = false);
 
 internal readonly struct OriginalsFrame
 {

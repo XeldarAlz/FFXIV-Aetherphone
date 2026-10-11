@@ -582,7 +582,8 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         if (route.Screen == CasinoScreen.Table && IsHoldem(route))
         {
             return new CasinoStageSpec(CasinoGames.Holdem, L.Casino.GameHoldem, Backdrop.Strip, Room: true,
-                DeckHeight: holdem.DeckHeight, Practice: holdem.Practice, LampPool: 1f, Extra: L.Venue.TableSheet);
+                DeckHeight: holdem.DeckHeight, Practice: holdem.Practice, LampPool: 1f, Extra: L.Venue.TableSheet,
+                HouseBanked: false);
         }
 
         if (route.Screen == CasinoScreen.Table)
@@ -590,7 +591,8 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
             return new CasinoStageSpec(CasinoGames.Blackjack, L.Casino.GameBlackjack, Backdrop.Felt,
                 DeckHeight: blackjack.DeckHeight,
                 Practice: blackjack.Currency == Core.Casino.CasinoCurrencies.Practice,
-                ReturnTenths: Core.Casino.BlackjackRules.ReturnTenths, Extra: L.Venue.TableSheet);
+                ReturnTenths: Core.Casino.BlackjackRules.ReturnTenths, Extra: L.Venue.TableSheet,
+                HouseBanked: blackjack.Currency == Core.Casino.CasinoCurrencies.Chips);
         }
 
         if (route.Screen == CasinoScreen.VenueRoom)
@@ -605,7 +607,8 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
 
         if (route.Screen == CasinoScreen.DailySpin)
         {
-            return new CasinoStageSpec(CasinoGames.DailySpin, L.Casino.GameDailySpin, Backdrop.Strip);
+            return new CasinoStageSpec(CasinoGames.DailySpin, L.Casino.GameDailySpin, Backdrop.Strip,
+                HouseBanked: false);
         }
 
         return route.GameId switch
