@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -10,6 +11,7 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
@@ -53,6 +55,8 @@ internal sealed class VelvetPostComposer
     private const int CounterWarning = 50;
     private const int CircleSegments = 24;
 
+    private static readonly VirtualKey[] PasteKeys = { VirtualKey.V };
+
     private readonly VelvetStore store;
     private readonly StoryPresenter stories;
     private readonly RemoteImageCache images;
@@ -61,6 +65,8 @@ internal sealed class VelvetPostComposer
     private readonly MentionAutocomplete captionMentions;
     private readonly EmojiComposer captionEmoji = new();
     private readonly PhotoComposeSession session;
+    private readonly PhotoLibrary library;
+    private readonly ImageIntake intake = new();
     private readonly PhotoCarousel carousel = new();
     private readonly Action<ImDrawListPtr, Vector2, Vector2, float, string?> editPreviewPage;
     private readonly Action openTags;
@@ -77,6 +83,7 @@ internal sealed class VelvetPostComposer
     private int counterLength = -1;
     private string status = string.Empty;
     private int audience = VelvetPostAudience.Connections;
+    private bool captionFieldActive;
 
     public VelvetPostComposer(VelvetStore store, StoryPresenter stories, PhotoLibrary library,
         RemoteImageCache images, LodestoneService lodestone, WallpaperImageCache wallpaperImages, Action openTags)
@@ -86,6 +93,7 @@ internal sealed class VelvetPostComposer
         this.images = images;
         this.lodestone = lodestone;
         this.openTags = openTags;
+        this.library = library;
         captionMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         session = new PhotoComposeSession(library, wallpaperImages);
         editPreviewPage = DrawEditPreviewPage;
@@ -222,6 +230,18 @@ internal sealed class VelvetPostComposer
         }
 
         session.ConsumePendingImport();
+        while (intake.TryTake(out var taken))
+        {
+            session.TakeImported(taken);
+        }
+
+        if (ImGui.GetIO().KeyCtrl && (captionFieldActive || UiInteract.Hover(area.Min, area.Max))
+            && GameInput.Claim(PasteKeys) && ImageIntake.PasteRequested())
+        {
+            intake.Paste(library);
+        }
+
+        captionFieldActive = false;
         switch (session.Stage)
         {
             case PhotoComposeStage.Edit:
@@ -284,8 +304,14 @@ internal sealed class VelvetPostComposer
         var gridRect = new Rect(new Vector2(area.Min.X, gridTop), area.Max);
         using (AppSurface.BeginEdgeToEdge(gridRect))
         {
-            session.DrawPickGrid(gridRect, scale, Style, true, Loc.T(L.Velvet.ImportFromPc), Title);
+            if (session.DrawPickGrid(gridRect, scale, Style, true, Loc.T(L.Velvet.ImportFromPc), Title,
+                    intake.ClipboardHasImage() ? Loc.T(L.Common.PasteImage) : null))
+            {
+                intake.Paste(library);
+            }
         }
+
+        intake.AcceptDrop(library, VelvetTheme.Rose);
     }
 
     private void DrawEdit(Rect area)
@@ -426,6 +452,8 @@ internal sealed class VelvetPostComposer
                 SoftWrapField.Paragraphs("##velvetCaption", ref caption, CaptionLimit, field.Size, wrapWidth,
                     captionMentions);
             }
+
+            captionFieldActive = ImGui.IsItemActive();
         }
 
         if (caption.Length > 0)
