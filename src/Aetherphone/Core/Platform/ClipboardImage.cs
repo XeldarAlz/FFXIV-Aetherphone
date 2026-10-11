@@ -25,13 +25,15 @@ internal static class ClipboardImage
     private const int HeaderAllowanceBytes = 4096;
     private const long MaxReadBytes = ImageProcessor.MaxLocalDecodePixels * 4 + HeaderAllowanceBytes;
 
+    private static readonly char[] ProbePath = new char[MaxPathChars];
+
     public static bool HasImage()
     {
         try
         {
             return IsClipboardFormatAvailable(RegisterClipboardFormatW(PngFormatName))
                 || IsClipboardFormatAvailable(DibFormat)
-                || IsClipboardFormatAvailable(DropFilesFormat);
+                || (IsClipboardFormatAvailable(DropFilesFormat) && CopiedFilesIncludeImage());
         }
         catch (Exception exception)
         {
@@ -79,6 +81,34 @@ internal static class ClipboardImage
             var dib = ReadFormat(DibFormat);
             encoded = dib is null ? null : DibToBmp(dib);
             return encoded is not null;
+        }
+        finally
+        {
+            CloseClipboard();
+        }
+    }
+
+    private static bool CopiedFilesIncludeImage()
+    {
+        if (!OpenClipboard(IntPtr.Zero))
+        {
+            return true;
+        }
+
+        try
+        {
+            var handle = GetClipboardData(DropFilesFormat);
+            var count = handle == IntPtr.Zero ? 0u : DragQueryFileW(handle, QueryFileCount, null, 0);
+            for (var index = 0u; index < count; index++)
+            {
+                var length = DragQueryFileW(handle, index, ProbePath, (uint)ProbePath.Length);
+                if (ImageFiles.IsImage(ProbePath.AsSpan(0, (int)length)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
         finally
         {

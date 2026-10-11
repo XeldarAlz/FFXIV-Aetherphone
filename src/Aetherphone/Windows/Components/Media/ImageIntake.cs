@@ -17,7 +17,6 @@ internal sealed class ImageIntake
     private const int NotDownloaded = 2;
     private const int PastedMaxDimension = 4096;
 
-    private static readonly string[] Extensions = { ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp" };
     private static readonly Func<IDragDropManager, bool> CarriesImage = static manager => AnyImage(manager.Files);
 
     private readonly ConcurrentQueue<string> ready = new();
@@ -188,7 +187,7 @@ internal sealed class ImageIntake
         var online = false;
         for (var index = 0; index < files.Length; index++)
         {
-            if (!IsImage(files[index]))
+            if (!ImageFiles.IsImage(files[index]))
             {
                 continue;
             }
@@ -209,21 +208,7 @@ internal sealed class ImageIntake
     {
         for (var index = 0; index < files.Count; index++)
         {
-            if (IsImage(files[index]))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsImage(string path)
-    {
-        var extension = Path.GetExtension(path);
-        for (var index = 0; index < Extensions.Length; index++)
-        {
-            if (string.Equals(extension, Extensions[index], StringComparison.OrdinalIgnoreCase))
+            if (ImageFiles.IsImage(files[index]))
             {
                 return true;
             }
