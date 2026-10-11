@@ -70,7 +70,7 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
       <h3><img src="docs/media/readme/icons/aethergram.png" width="28" align="top" alt="" /> Aethergram</h3>
       <em>Shot in game. Shared on Aethergram.</em>
       <ul>
-        <li>Up to eight photos straight from your gallery</li>
+        <li>Up to eight photos straight from your gallery, or pasted and dragged in</li>
         <li>Stories that last a day</li>
         <li>Tag the people in frame</li>
         <li>A built-in photo editor before you share</li>
@@ -88,6 +88,7 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
       <ul>
         <li>Message players on any world or data center</li>
         <li>Voice notes, photos and group chats</li>
+        <li>Paste or drag in a photo and add a caption before it sends</li>
         <li>Voice calls, one-on-one or in groups</li>
         <li>End-to-end encrypted</li>
       </ul>

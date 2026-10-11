@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -9,6 +10,7 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
@@ -41,6 +43,7 @@ internal sealed partial class AethergramApp
     private static readonly TextStyle ComposeActionStyle = TextStyles.Headline;
     private static readonly TextStyle ComposeRowStyle = TextStyles.Body;
     private static readonly TextStyle ComposeCounterStyle = TextStyles.Caption1;
+    private static readonly VirtualKey[] PasteKeys = { VirtualKey.V };
 
     private readonly Action composeEditBack;
     private readonly Action composeCaptionBack;
@@ -151,6 +154,18 @@ internal sealed partial class AethergramApp
         }
 
         composeSession.ConsumePendingImport();
+        while (composeIntake.TryTake(out var taken))
+        {
+            composeSession.TakeImported(taken);
+        }
+
+        if (ImGui.GetIO().KeyCtrl && (captionFieldActive || UiInteract.Hover(area.Min, area.Max))
+            && GameInput.Claim(PasteKeys) && ImageIntake.PasteRequested())
+        {
+            composeIntake.Paste(library);
+        }
+
+        captionFieldActive = false;
         switch (composeSession.Stage)
         {
             case PhotoComposeStage.Edit:
@@ -251,9 +266,14 @@ internal sealed partial class AethergramApp
         UiAnchors.Report("aethergram.compose.grid", gridRect);
         using (AppSurface.BeginEdgeToEdge(gridRect))
         {
-            composeSession.DrawPickGrid(gridRect, scale, ComposeStyle, true, Loc.T(L.Aethergram.ImportFromPc),
-                ComposeTitle);
+            if (composeSession.DrawPickGrid(gridRect, scale, ComposeStyle, true, Loc.T(L.Aethergram.ImportFromPc),
+                    ComposeTitle, composeIntake.ClipboardHasImage() ? Loc.T(L.Common.PasteImage) : null))
+            {
+                composeIntake.Paste(library);
+            }
         }
+
+        composeIntake.AcceptDrop(library, Accent);
     }
 
     private void PickAdvance()
@@ -419,6 +439,8 @@ internal sealed partial class AethergramApp
             {
                 SoftWrapField.Multiline(fieldId, ref text, MaxCaptionLength, field.Size, wrapWidth, mentions);
             }
+
+            captionFieldActive = ImGui.IsItemActive();
         }
 
         var pickedMention = mentionPopup.Draw(mentions, screen, theme, images, lodestone);
