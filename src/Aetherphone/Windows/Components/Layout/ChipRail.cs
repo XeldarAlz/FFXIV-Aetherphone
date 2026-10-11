@@ -46,7 +46,7 @@ internal sealed class ChipRail
 
     public int Draw(Rect row, AppSkin ui, ReadOnlySpan<string> labels, ReadOnlySpan<bool> active, bool overlay = false,
         string? anchorKey = null, float labelPadding = DefaultLabelPadding, bool centered = false,
-        bool interactive = true)
+        bool interactive = true, float chipHeight = ChipHeight)
     {
         if (labels.Length == 0)
         {
@@ -85,7 +85,8 @@ internal sealed class ChipRail
             var width = ChipWidth(labels[index], scale, labelPadding);
             if (cursorX + width >= row.Min.X && cursorX <= row.Max.X
                 && DrawChip(drawList, ui, labels[index], active[index],
-                    new Vector2(cursorX, row.Center.Y), width, scale, overlay, arrowHovered, interactive))
+                    new Vector2(cursorX, row.Center.Y), width, chipHeight * scale, scale, overlay, arrowHovered,
+                    interactive))
             {
                 tapped = index;
             }
@@ -154,12 +155,15 @@ internal sealed class ChipRail
     }
 
     private static float ChipWidth(string label, float scale, float labelPadding) =>
-        Typography.Measure(label, LabelStyle).X + labelPadding * scale;
+        WidthFor(Typography.Measure(label, LabelStyle).X, labelPadding, scale);
+
+    public static float WidthFor(float labelWidth, float labelPadding, float scale) => labelWidth + labelPadding * scale;
+
+    public static float LabelRoom(Rect chip) => chip.Width - chip.Height * 0.5f;
 
     private bool DrawChip(ImDrawListPtr drawList, AppSkin ui, string label, bool active, Vector2 leftCenter,
-        float width, float scale, bool overlay, bool shadowed, bool interactive = true)
+        float width, float height, float scale, bool overlay, bool shadowed, bool interactive = true)
     {
-        var height = ChipHeight * scale;
         var min = new Vector2(leftCenter.X, leftCenter.Y - height * 0.5f);
         var max = new Vector2(leftCenter.X + width, leftCenter.Y + height * 0.5f);
         var hovered = interactive && !shadowed && Hovered(min, max, overlay);
@@ -176,7 +180,7 @@ internal sealed class ChipRail
             : Surfaces.Fill(ink, highlighted ? FillLevel.Secondary : FillLevel.Tertiary);
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         var labelInk = active ? White : ink.Ink;
-        var fitted = Typography.FitText(label, MathF.Max(1f, rect.Width - rect.Height * 0.5f), LabelStyle);
+        var fitted = Typography.FitText(label, MathF.Max(1f, LabelRoom(rect)), LabelStyle);
         Typography.DrawCentered(drawList, rect.Center, fitted, labelInk, LabelStyle);
         if (highlighted)
         {

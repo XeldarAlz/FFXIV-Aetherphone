@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Casino.Tables;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Casino;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -117,5 +118,19 @@ public sealed class CasinoDoorLayoutTests
         Assert.Equal("ABCDEF", TableDoor.JoinCode(door, card));
         Assert.Equal("GHJKMN", TableDoor.JoinCode(new CasinoTableDoorDto(RoomId: "t1"), card));
         Assert.Equal(string.Empty, TableDoor.JoinCode(null, null));
+    }
+
+    [Fact]
+    public void TheHostedAnswerShowsTheCodeBeforeTheDoorOrListingLoads()
+    {
+        var hosted = new CasinoTableRowDto(TableId: "t1", JoinCode: "ABCDEF");
+        var nothingListed = Array.Empty<CasinoTableRowDto>();
+        var card = CasinoTablesStore.CardIn(nothingListed, hosted, "t1");
+        Assert.Same(hosted, card);
+        Assert.Equal("ABCDEF", TableDoor.JoinCode(null, card));
+        Assert.Null(CasinoTablesStore.CardIn(nothingListed, hosted, "t2"));
+        Assert.Null(CasinoTablesStore.CardIn(nothingListed, hosted, string.Empty));
+        var listed = new[] { new CasinoTableRowDto(TableId: "t1", SeatedCount: 1, JoinCode: "ABCDEF") };
+        Assert.Same(listed[0], CasinoTablesStore.CardIn(listed, hosted, "t1"));
     }
 }

@@ -10612,8 +10612,6 @@ internal static class L
         public static readonly LocString BetMin = new("casino.bet.min", "Min");
         public static readonly LocString BetHalf = new("casino.bet.half", "Half");
         public static readonly LocString BetMax = new("casino.bet.max", "Max");
-        public static readonly LocString BlackjackBetConfirm =
-            new("casino.blackjack.betConfirm", "Bet {0}, blackjack pays {1}");
         public static readonly LocString BlackjackBetsCloseIn = new("casino.blackjack.betsCloseIn", "Bets close in {0}");
         public static readonly LocString BlackjackWaitingForBets = new("casino.blackjack.waitingForBets", "Place your bets");
         public static readonly LocString BlackjackDealing = new("casino.blackjack.dealing", "Dealing");
@@ -10797,13 +10795,10 @@ internal static class L
         public static readonly LocString Back = new("casino.holdem.back", "Back");
         public static readonly LocString BetFor = new("casino.holdem.betFor", "Bet {0}");
         public static readonly LocString BigBlindShort = new("casino.holdem.bigBlindShort", "BB");
-        public static readonly LocString BigBlindsValue = new("casino.holdem.bigBlindsValue", "{0} BB");
         public static readonly LocString BlindsLine = new("casino.holdem.blindsLine", "Blinds {0} / {1}");
         public static readonly LocString BlindsShort = new("casino.holdem.blindsShort", "{0} / {1}");
         public static readonly LocString BlindsValue = new("casino.holdem.blindsValue", "Blinds {0} / {1}");
-        public static readonly LocString BuyIn = new("casino.holdem.buyIn", "Buy-in");
         public static readonly LocString BuyInValue = new("casino.holdem.buyInValue", "Buy-in {0} to {1}");
-        public static readonly LocString CallFor = new("casino.holdem.callFor", "Call {0}");
         public static readonly LocString ClosedHint = new("casino.holdem.closedHint", "This table is not open right now. Pick another one from the Hold'em pit.");
         public static readonly LocString ClosedTitle = new("casino.holdem.closedTitle", "Table closed");
         public static readonly LocString Committed = new("casino.holdem.committed", "In: {0}");
@@ -10838,9 +10833,7 @@ internal static class L
         public static readonly LocString HostAction = new("casino.holdem.hostAction", "Host a Hold'em table");
         public static readonly LocString HostAnte = new("casino.holdem.hostAnte", "Ante");
         public static readonly LocString HostBlinds = new("casino.holdem.hostBlinds", "Blinds");
-        public static readonly LocString HostGame = new("casino.holdem.hostGame", "Game");
         public static readonly LocString HostHint = new("casino.holdem.hostHint", "Pick the blinds, seats and buy-in. Chips or practice.");
-        public static readonly LocString HostRakeHint = new("casino.holdem.hostRakeHint", "Chip tables take 5% of the pot, capped at 3 big blinds. Buy-ins sit between 10 and 500 big blinds.");
         public static readonly LocString HostedTables = new("casino.holdem.hostedTables", "Hosted tables");
         public static readonly LocString HouseTables = new("casino.holdem.houseTables", "House tables");
         public static readonly LocString ImBack = new("casino.holdem.imBack", "I'm back");
@@ -10922,8 +10915,6 @@ internal static class L
         public static readonly LocString StatusWaitingBigBlind = new("casino.holdem.statusWaitingBigBlind", "Waiting for the big blind");
         public static readonly LocString StepDown = new("casino.holdem.stepDown", "One big blind less");
         public static readonly LocString StepFlop = new("casino.holdem.stepFlop", "Flop");
-        public static readonly LocString StepLess = new("casino.holdem.stepLess", "Less");
-        public static readonly LocString StepMore = new("casino.holdem.stepMore", "More");
         public static readonly LocString StepPreflop = new("casino.holdem.stepPreflop", "Preflop");
         public static readonly LocString StepRiver = new("casino.holdem.stepRiver", "River");
         public static readonly LocString StepShowdown = new("casino.holdem.stepShowdown", "Showdown");
@@ -11086,6 +11077,7 @@ internal static class L
         public static readonly LocString HeroTableEyebrow = new("casino.strip.heroTableEyebrow", "HOTTEST TABLE");
         public static readonly LocString HeroJackpotHint = new("casino.strip.heroJackpotHint", "Every paid spin on the machines can hit it");
         public static readonly LocString HeroRaceIdle = new("casino.strip.heroRaceIdle", "The birds are warming up");
+        public static readonly LocString HeroDealerEyebrow = new("casino.strip.heroDealerEyebrow", "YOU VS THE HOUSE");
         public static readonly LocString RaceBetsClose = new("casino.strip.raceBetsClose", "Bets close in {0}");
         public static readonly LocString FromChips = new("casino.strip.fromChips", "From {0}");
         public static readonly LocString HostMeta = new("casino.strip.hostMeta", "Your table, your rules");
@@ -11313,7 +11305,6 @@ internal static class L
         public static readonly LocString CurrencyChips = new("casino.tables.currencyChips", "Chips");
         public static readonly LocString CurrencyPractice = new("casino.tables.currencyPractice", "Practice");
         public static readonly LocString CurrencyGil = new("casino.tables.currencyGil", "Gil");
-        public static readonly LocString CurrencyChipsHint = new("casino.tables.currencyChipsHint", "House chips with the floor bank behind every hand and every casino rule.");
         public static readonly LocString PracticeStack = new("casino.tables.practiceStack", "Starting stack");
         public static readonly LocString DefaultHint = new("casino.tables.defaultHint", "Default");
         public static readonly LocString Rebuys = new("casino.tables.rebuys", "Allow rebuys");

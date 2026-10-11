@@ -61,11 +61,8 @@ internal sealed partial class HoldemTable
         return layout.HeroCardsCenter + new Vector2((slot - 0.5f) * step, 0f);
     }
 
-    private Vector2 SeatCardCenter(int seat, int slot, float scale)
-    {
-        var width = HoldemTableLayout.SeatCardWidth * scale;
-        return layout.SeatCardsAnchor(seat) + new Vector2((slot - 0.5f) * width * 0.6f, 0f);
-    }
+    private Vector2 SeatCardCenter(int seat, int slot) =>
+        layout.SeatCardsAnchor(seat) + new Vector2((slot - 0.5f) * layout.SeatCardPixels * 0.6f, 0f);
 
     private void DrawBoard(ImDrawListPtr drawList, CasinoHoldemRoomStateDto board, float scale)
     {
@@ -511,8 +508,8 @@ internal sealed partial class HoldemTable
                 continue;
             }
 
-            HoldemArt.DrawCard(drawList, SeatCardCenter(seat, slot, scale), HoldemTableLayout.SeatCardWidth * scale,
-                HoldemRules.FaceDown, false, 1f, scale);
+            HoldemArt.DrawCard(drawList, SeatCardCenter(seat, slot), layout.SeatCardPixels, HoldemRules.FaceDown, false,
+                1f, scale);
         }
     }
 

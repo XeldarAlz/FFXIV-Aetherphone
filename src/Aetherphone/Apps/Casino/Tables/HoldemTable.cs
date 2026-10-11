@@ -459,8 +459,8 @@ internal sealed partial class HoldemTable : ICabinetIdle
             }
 
             var hero = launch.Seat == mySeat;
-            var target = hero ? HeroCardCenter(launch.Slot) : SeatCardCenter(launch.Seat, launch.Slot, scale);
-            var width = hero ? layout.HeroCardPixels : HoldemTableLayout.SeatCardWidth * scale;
+            var target = hero ? HeroCardCenter(launch.Slot) : SeatCardCenter(launch.Seat, launch.Slot);
+            var width = hero ? layout.HeroCardPixels : layout.SeatCardPixels;
             flights.Launch(HoldemRules.FaceDown, deck, new CardPose(target, width, 0f, false), launch.Delay, false,
                 launch.Tag, HoldemPlayback.FlightSeconds, CardFlight.DefaultArc, true);
         }
