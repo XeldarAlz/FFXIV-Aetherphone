@@ -24,6 +24,7 @@ internal sealed class HiLoChain
     private readonly HiLoOption[] options = new HiLoOption[MaxOptions];
 
     private string roundId = string.Empty;
+    private bool capped;
     private int count;
     private int optionCount;
     private int phase = OriginalsRules.PhaseLive;
@@ -200,7 +201,7 @@ internal sealed class HiLoChain
         }
 
         settlePending = false;
-        outcome = new OriginalsOutcome(stake, payout, roundId);
+        outcome = new OriginalsOutcome(stake, payout, roundId, capped);
         return true;
     }
 
@@ -212,6 +213,7 @@ internal sealed class HiLoChain
         phase = OriginalsRules.PhaseLive;
         stake = 0;
         payout = 0;
+        capped = false;
         multiplier = 0;
         flip = 1f;
         settlePending = false;
@@ -225,6 +227,7 @@ internal sealed class HiLoChain
         phase = dto.Phase;
         stake = dto.Stake;
         payout = dto.Payout;
+        capped = dto.Capped;
         multiplier = dto.MultiplierTenThousandths;
         var dealt = dto.Cards!;
         var played = dto.Moves ?? Array.Empty<string>();

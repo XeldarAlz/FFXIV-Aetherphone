@@ -85,7 +85,7 @@ internal sealed class KenoDrawPlayback
 
         pickCount = picks.Length;
         risk = dto.Risk;
-        outcome = new OriginalsOutcome(dto.Stake, dto.Payout, dto.RoundId);
+        outcome = new OriginalsOutcome(dto.Stake, dto.Payout, dto.RoundId, dto.Capped);
         hasDraw = true;
         settlePending = true;
         elapsed = 0f;

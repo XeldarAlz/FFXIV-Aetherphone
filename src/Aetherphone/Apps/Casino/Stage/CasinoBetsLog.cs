@@ -7,7 +7,8 @@ internal readonly record struct CasinoBetRecord(
     long Stake,
     long Payout,
     string RoundId,
-    long SettledAtUnixMs)
+    long SettledAtUnixMs,
+    bool Capped = false)
 {
     public int MultipleHundredths => Stake <= 0 ? 0 : (int)Math.Min(int.MaxValue, Payout * 100 / Stake);
 

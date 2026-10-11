@@ -32,7 +32,6 @@ internal sealed class RaceCabinet : ICabinetIdle
 
     private readonly CasinoStore chips;
     private readonly CasinoRoomsStore rooms;
-    private readonly Action openCashier;
     private readonly Action leaveRoom;
     private readonly RaceRoundPlayback playback = new();
     private readonly RaceCommentary commentary = new();
@@ -60,11 +59,10 @@ internal sealed class RaceCabinet : ICabinetIdle
     private float idleClock;
     private Rect deckRect;
 
-    public RaceCabinet(CasinoStore chips, CasinoRoomsStore rooms, Action openCashier, Action leaveRoom)
+    public RaceCabinet(CasinoStore chips, CasinoRoomsStore rooms, Action leaveRoom)
     {
         this.chips = chips;
         this.rooms = rooms;
-        this.openCashier = openCashier;
         this.leaveRoom = leaveRoom;
     }
 
@@ -421,7 +419,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         }
 
         stage.Settle(new CasinoBetRecord(L.Race.Title, staked, bets.MyPayout, bets.RoundId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), bets.Capped));
         chips.RefreshNow();
         var live = playback.WatchedLive || (frame.Instant && snapshot.Phase == CasinoRoomPhases.Locked);
         if (live)
@@ -531,13 +529,7 @@ internal sealed class RaceCabinet : ICabinetIdle
             return;
         }
 
-        if (sitting is null)
-        {
-            DrawSeatMissing(drawList, ui, layout.Deck, scale);
-            return;
-        }
-
-        DrawDeck(stage, frame, ui, layout.Deck, state, sitting, runners, bets, full);
+        DrawDeck(stage, frame, ui, layout.Deck, state, sitting ?? CasinoWire.NoBankroll, runners, bets, full);
     }
 
     private long RideAmount(CasinoRaceBetsDto? bets, CasinoSittingDto? sitting)
@@ -573,7 +565,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         var ride = RideAmount(bets, sitting);
         var model = new RaceDeckModel(chips.Ceiling.MaxBet, sitting.Stack, builder.Kind, PrimaryLabel(runners, full),
             builder.Ready, enabled, ride > 0 ? texts.Ride(ride) : string.Empty, stage.RepeatPressed());
-        var action = deck.Draw(ui, deckArea, texts.KindLabels, model, frame.DeltaSeconds);
+        var action = deck.Draw(stage.Chips, ui, deckArea, texts.KindLabels, model, frame.DeltaSeconds);
         switch (action)
         {
             case RaceDeckAction.Kind:
@@ -629,20 +621,6 @@ internal sealed class RaceCabinet : ICabinetIdle
         if (pressed)
         {
             leaveRoom();
-        }
-    }
-
-    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect deckArea, float scale)
-    {
-        var layout = RaceDeckLayout.Compute(deckArea, 0f, scale);
-        var title = Loc.T(L.Casino.CabinetNoChipsTitle);
-        var style = TextStyles.SubheadlineEmphasized;
-        var message = layout.Message;
-        Typography.Draw(drawList, new Vector2(message.Min.X, message.Center.Y - Typography.LineHeight(style) * 0.5f),
-            Typography.FitText(title, message.Width, style), ui.TitleInk, style);
-        if (Button.Draw(layout.Primary, Loc.T(L.Casino.Cashier), ui.Ink, ButtonStyle.Prominent))
-        {
-            openCashier();
         }
     }
 }

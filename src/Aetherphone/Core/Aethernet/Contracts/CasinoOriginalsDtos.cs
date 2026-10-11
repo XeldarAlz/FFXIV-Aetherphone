@@ -20,7 +20,8 @@ internal sealed record CasinoMinesDto(
     long Payout = 0,
     string NextSeedHash = "",
     long Stack = 0,
-    long Ceiling = 0);
+    long Ceiling = 0,
+    bool Capped = false);
 
 internal sealed record CasinoDiceRollRequest(string SittingId, string ClientRoundId, long Stake, int Target,
     bool Over);
@@ -39,7 +40,8 @@ internal sealed record CasinoDiceDto(
     long Payout = 0,
     string NextSeedHash = "",
     long Stack = 0,
-    long Ceiling = 0);
+    long Ceiling = 0,
+    bool Capped = false);
 
 internal sealed record CasinoLimboPlayRequest(string SittingId, string ClientRoundId, long Stake, int Target);
 
@@ -54,7 +56,8 @@ internal sealed record CasinoLimboDto(
     long Payout = 0,
     string NextSeedHash = "",
     long Stack = 0,
-    long Ceiling = 0);
+    long Ceiling = 0,
+    bool Capped = false);
 
 internal sealed record CasinoKenoDrawRequest(string SittingId, string ClientRoundId, long Stake, int Risk,
     int[] Picks);
@@ -72,7 +75,8 @@ internal sealed record CasinoKenoDto(
     long Payout = 0,
     string NextSeedHash = "",
     long Stack = 0,
-    long Ceiling = 0);
+    long Ceiling = 0,
+    bool Capped = false);
 
 internal sealed record CasinoHiLoStartRequest(string SittingId, string ClientRoundId, long Stake);
 
@@ -97,6 +101,7 @@ internal sealed record CasinoHiLoDto(
     long Payout = 0,
     string NextSeedHash = "",
     long Stack = 0,
-    long Ceiling = 0);
+    long Ceiling = 0,
+    bool Capped = false);
 
 internal sealed record CasinoOriginalsOpenDto(CasinoMinesDto? Mines = null, CasinoHiLoDto? HiLo = null);

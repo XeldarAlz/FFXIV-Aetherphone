@@ -100,7 +100,7 @@ internal sealed class ClubSheet
 
     private void DrawTier(ImDrawListPtr drawList, Rect row, int tier, float scale)
     {
-        var tint = CashierClubCard.TierTint(tier);
+        var tint = ClubTierArt.TierTint(tier);
         var radius = Metrics.Radius.Grouped * scale;
         var current = tier == currentTier;
         skin.Card(drawList, row.Min, row.Max, radius);
@@ -122,7 +122,7 @@ internal sealed class ClubSheet
         var footnote = Typography.LineHeight(TextStyles.Footnote);
         var top = row.Center.Y - (headline + footnote * 2f) * 0.5f;
         Typography.Draw(drawList, new Vector2(textLeft, top),
-            Typography.FitText(Loc.T(CashierClubCard.TierName(tier)), textWidth, TextStyles.Headline), skin.TitleInk,
+            Typography.FitText(Loc.T(ClubTierArt.TierName(tier)), textWidth, TextStyles.Headline), skin.TitleInk,
             TextStyles.Headline);
         if (badgeWidth > 0f)
         {

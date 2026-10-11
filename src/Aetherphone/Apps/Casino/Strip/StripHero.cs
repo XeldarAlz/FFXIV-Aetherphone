@@ -30,7 +30,8 @@ internal readonly record struct StripHeroModel(
     CasinoBonusDto? Timed,
     CasinoBonusDto? Streak,
     bool Claiming,
-    long NowUnix);
+    long NowUnix,
+    long Rate = CasinoChipLots.ChipPerCoin);
 
 internal sealed class StripHero
 {
@@ -53,6 +54,7 @@ internal sealed class StripHero
 
     private readonly CasinoTextCache texts = new();
     private readonly string[] dayLabels = new string[StreakDays];
+    private readonly ChipValueText worth = new();
     private RollingAmount balance;
     private LevelCapsule level;
     private Vector2 timedCenter;
@@ -69,7 +71,8 @@ internal sealed class StripHero
         var pad = Pad * scale;
         var gap = RowGap * scale;
         var height = pad * 2f + MathF.Max(GlyphSize * scale, Typography.LineHeight(TextStyles.SubheadlineEmphasized))
-                     + Typography.LineHeight(AmountStyle) + gap + Button.LargeHeight * scale;
+                     + Typography.LineHeight(AmountStyle) + Typography.LineHeight(TextStyles.Footnote) + gap
+                     + Button.LargeHeight * scale;
         if (model.ShowsLevel)
         {
             height += gap + LevelCapsule.Height * scale;
@@ -143,6 +146,12 @@ internal sealed class StripHero
         }
 
         top += amountHeight;
+        var coins = worth.Full(model.Balance, model.Rate);
+        var coinsScale = Typography.FitScale(coins, right - left, TextStyles.Footnote.Scale, TextStyles.Caption2.Scale,
+            TextStyles.Footnote.Weight);
+        Typography.Draw(drawList, new Vector2(left, top), coins, Palette.WithAlpha(CasinoArt.White, SubAlpha),
+            coinsScale, TextStyles.Footnote.Weight);
+        top += Typography.LineHeight(TextStyles.Footnote);
         if (model.ShowsLevel)
         {
             top += gap;

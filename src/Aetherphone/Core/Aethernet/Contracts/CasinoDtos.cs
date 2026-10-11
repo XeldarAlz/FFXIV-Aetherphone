@@ -15,8 +15,6 @@ internal sealed record CasinoStateDto(
     bool Draining = false,
     CasinoSittingDto? Sitting = null,
     long MinBuyIn = 0,
-    long MaxBuyIn = 0,
-    long DailyBuyInCap = 0,
     long LossLimit = 0,
     long LossHeadroom = 0,
     long? SelfLossLimit = null,
@@ -34,16 +32,9 @@ internal sealed record CasinoStateDto(
     string[]? Features = null,
     long RateChipsPerCoin = 0,
     long[]? Ladder = null,
-    CasinoCashierDto? Cashier = null,
     CasinoBonusDto[]? Bonuses = null,
-    CasinoClubDto? Club = null);
-
-internal sealed record CasinoCashierDto(
-    long DailyNetCashOutCoins = 0,
-    long CashOutCoinsToday = 0,
-    long BuyInCoinsToday = 0,
-    long AllowanceCoins = 0,
-    long QueuedChips = 0);
+    CasinoClubDto? Club = null,
+    long MaxWinPerBet = 0);
 
 internal sealed record CasinoBonusDto(
     string Kind = "",
@@ -91,15 +82,20 @@ internal sealed record CasinoCeilingDto(
     long BalanceCap = 0,
     long Balance = 0,
     string Reason = "",
-    long NextLevelCap = 0);
+    long NextLevelCap = 0,
+    long MaxWinCap = 0);
 
-internal sealed record CasinoOpenSittingRequest(
-    string ClientSittingId,
-    string ClientActionId,
-    int TableKind,
-    long Amount);
+internal sealed record CasinoBuyChipsRequest(long Coins = 0, string ClientActionId = "");
 
-internal sealed record CasinoTopUpRequest(string SittingId, string ClientActionId, long Amount);
+internal sealed record CasinoBuyChipsDto(
+    bool Granted = false,
+    string Reason = "",
+    long Coins = 0,
+    long Chips = 0,
+    long Stack = 0,
+    long Balance = 0,
+    CasinoSittingDto? Sitting = null,
+    CasinoCeilingDto? Ceiling = null);
 
 internal sealed record CasinoCloseSittingRequest(string SittingId);
 
@@ -108,8 +104,7 @@ internal sealed record CasinoSittingResultDto(
     string Reason = "",
     CasinoSittingDto? Sitting = null,
     long Balance = 0,
-    long ConvertedCoins = 0,
-    long QueuedChips = 0);
+    long ConvertedCoins = 0);
 
 internal sealed record CasinoLimitRequest(long? SelfLossLimit);
 
@@ -157,7 +152,8 @@ internal sealed record CasinoSlotsSpinDto(
     int FreeSpinsPlayed = 0,
     int Expander = -1,
     int FeatureMultiplier = 0,
-    CasinoSlotsMeterDto[]? Meters = null);
+    CasinoSlotsMeterDto[]? Meters = null,
+    bool Capped = false);
 
 internal sealed record CasinoSlotsWinDto(int Line = 0, int Symbol = 0, int Count = 0, int[]? Cells = null,
     long Pay = 0);
@@ -203,7 +199,8 @@ internal sealed record CasinoSlotsGambleDto(
     long Payout = 0,
     bool CanContinue = false,
     string NextSeedHash = "",
-    long Stack = 0);
+    long Stack = 0,
+    bool Capped = false);
 
 internal sealed record CasinoScratchBuyRequest(string SittingId, string ClientRoundId, int Tier);
 
@@ -216,7 +213,8 @@ internal sealed record CasinoScratchCardDto(
     long Prize = 0,
     string NextSeedHash = "",
     long Stack = 0,
-    long Ceiling = 0);
+    long Ceiling = 0,
+    bool Capped = false);
 
 internal sealed record CasinoBarkeepStartRequest(string SittingId, string ClientRoundId);
 
@@ -244,7 +242,8 @@ internal sealed record CasinoBarkeepFinishDto(
     int Score = 0,
     long Payout = 0,
     long NetWinToday = 0,
-    long Stack = 0);
+    long Stack = 0,
+    bool Capped = false);
 
 internal sealed record CasinoRoundVerifyDto(
     bool Granted = false,
@@ -398,7 +397,9 @@ internal sealed record CasinoWheelBetsDto(
     string RoundId = "",
     CasinoWheelMyBetDto[]? Bets = null,
     long MyStake = 0,
-    long Stack = 0);
+    long Stack = 0,
+    long Payout = 0,
+    bool Capped = false);
 
 internal sealed record CasinoBlackjackHandDto(
     int[]? Cards = null,
@@ -440,7 +441,8 @@ internal sealed record CasinoBlackjackSeatDto(
     CasinoBlackjackSideBetsDto? SideBets = null,
     long Insurance = 0,
     bool InsuranceDecided = false,
-    long InsuranceWin = 0);
+    long InsuranceWin = 0,
+    bool Capped = false);
 
 internal sealed record CasinoBlackjackRoomStateDto(
     string HandId = "",
@@ -897,7 +899,8 @@ internal sealed record CasinoBingoCardsDto(
     string SeedCommitHash = "",
     string NextSeedHash = "",
     long Stack = 0,
-    long Ceiling = 0);
+    long Ceiling = 0,
+    bool Capped = false);
 
 internal sealed record CasinoDailySpinDto(
     bool Granted = false,
@@ -994,4 +997,6 @@ internal sealed record CasinoRaceBetsDto(
     long MyPayout = 0,
     long Stack = 0,
     long PreviousRoundIndex = -1,
-    long PreviousPayout = 0);
+    long PreviousPayout = 0,
+    bool Capped = false,
+    bool PreviousCapped = false);

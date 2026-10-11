@@ -18,8 +18,7 @@ internal static class CasinoLimitPicker
     public const long MediumFrom = 500 * CasinoChipLots.ChipPerCoin;
     public const long CoarseFrom = 5_000 * CasinoChipLots.ChipPerCoin;
 
-    public static long CeilingFor(long dailyBuyInCap) =>
-        dailyBuyInCap > Floor ? dailyBuyInCap : CasinoLimits.FallbackCeiling;
+    public const long Ceiling = CasinoLimits.MaxLossLimit;
 
     public static long StepFor(long value)
     {

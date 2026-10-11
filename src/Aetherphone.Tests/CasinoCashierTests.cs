@@ -8,17 +8,6 @@ namespace Aetherphone.Tests;
 public sealed class CasinoCashierTests
 {
     [Fact]
-    public void TheAllowanceSplitsACashOutIntoNowAndTomorrow()
-    {
-        Assert.Equal(400, CasinoCashier.ConvertsNow(1_000_000, 400, 1000));
-        Assert.Equal(600_000, CasinoCashier.WaitsChips(1_000_000, 400, 1000));
-        Assert.Equal(150, CasinoCashier.ConvertsNow(150_500, 400, 1000));
-        Assert.Equal(0, CasinoCashier.WaitsChips(150_500, 400, 1000));
-        Assert.Equal(0, CasinoCashier.ConvertsNow(150_000, 0, 1000));
-        Assert.Equal(150_000, CasinoCashier.WaitsChips(150_000, 0, 1000));
-    }
-
-    [Fact]
     public void TheRateComesFromTheServerAndFallsBackToTheSitting()
     {
         Assert.Equal(1000, CasinoCashier.Rate(null));
@@ -27,33 +16,15 @@ public sealed class CasinoCashierTests
     }
 
     [Fact]
-    public void APartialCashOutKeepsTheSittingAndSpendsTheAllowance()
+    public void ACashOutConvertsTheWholeStackAndClosesTheSitting()
     {
-        var state = new CasinoStateDto(Sitting: new CasinoSittingDto(Id: "s1", State: 1, Stack: 1_000_000),
-            Cashier: new CasinoCashierDto(500, 100, 0, 400, 0));
-        var result = new CasinoSittingResultDto(true, string.Empty, new CasinoSittingDto(Id: "s1", State: 1,
-            Stack: 600_000), 900, 400, 600_000);
-
-        var next = CasinoStore.CashOutAbsorbedInto(state, result);
-
-        Assert.Equal(600_000, next.Sitting!.Stack);
-        Assert.Equal(0, next.Cashier!.AllowanceCoins);
-        Assert.Equal(500, next.Cashier.CashOutCoinsToday);
-        Assert.Equal(600_000, next.Cashier.QueuedChips);
-    }
-
-    [Fact]
-    public void AWholeCashOutClosesTheSitting()
-    {
-        var state = new CasinoStateDto(Sitting: new CasinoSittingDto(Id: "s1", State: 1, Stack: 150_000),
-            Cashier: new CasinoCashierDto(500, 0, 0, 500, 0));
-        var result = new CasinoSittingResultDto(true, string.Empty, new CasinoSittingDto(Id: "s1", State: 3), 650,
-            150, 0);
+        var state = new CasinoStateDto(Sitting: new CasinoSittingDto(Id: "s1", State: 1, Stack: 5_111_825));
+        var result = new CasinoSittingResultDto(true, string.Empty, new CasinoSittingDto(Id: "s1", State: 3), 6_111,
+            5_111);
 
         var next = CasinoStore.CashOutAbsorbedInto(state, result);
 
         Assert.Null(next.Sitting);
-        Assert.Equal(350, next.Cashier!.AllowanceCoins);
     }
 
     [Fact]
@@ -117,57 +88,27 @@ public sealed class CasinoCashierTests
     }
 
     [Fact]
-    public void TheCashierCardSplitsTheStackAgainstTheAllowance()
+    public void BuyingChipsTakesAnyWholeCoinsUpToTheWallet()
     {
-        var capped = CashOutSplit.Of(new CasinoStateDto(RateChipsPerCoin: 1000,
-            Sitting: new CasinoSittingDto(Id: "s1", Stack: 1_000_000),
-            Cashier: new CasinoCashierDto(500, 100, 0, 400, 600_000)));
+        var bounds = BuyInBounds.Of(new CasinoStateDto(RateChipsPerCoin: 1000), 1_016_251);
 
-        Assert.True(capped.Capped);
-        Assert.Equal(400, capped.NowCoins);
-        Assert.Equal(600_000, capped.WaitChips);
-        Assert.Equal(0.8f, capped.AllowanceFraction, 3);
+        Assert.True(bounds.Allows(1));
+        Assert.True(bounds.Allows(5_001));
+        Assert.True(bounds.Allows(1_016_251));
+        Assert.False(bounds.Allows(0));
+        Assert.False(bounds.Allows(1_016_252));
+        Assert.Equal(137_000, bounds.ChipsFor(137));
 
-        var uncapped = CashOutSplit.Of(new CasinoStateDto(Sitting: new CasinoSittingDto(Id: "s1", Stack: 150_500)));
-        Assert.False(uncapped.Capped);
-        Assert.Equal(150, uncapped.NowCoins);
-        Assert.Equal(0, uncapped.WaitChips);
+        var broke = BuyInBounds.Of(new CasinoStateDto(RateChipsPerCoin: 1000), 0);
+        Assert.False(broke.Allows(1));
     }
 
     [Fact]
-    public void GettingChipsTakesAnyWholeCoinsInsideTheBand()
-    {
-        var fresh = BuyInBounds.Of(new CasinoStateDto(RateChipsPerCoin: 1000, MinBuyIn: 20_000,
-            MaxBuyIn: 5_000_000), 300);
-
-        Assert.False(fresh.TopUp);
-        Assert.Equal(20, fresh.MinCoins);
-        Assert.Equal(300, fresh.MaxCoins);
-        Assert.True(fresh.Allows(137));
-        Assert.False(fresh.Allows(19));
-        Assert.False(fresh.Allows(301));
-        Assert.Equal(137_000, fresh.ChipsFor(137));
-
-        var topUp = BuyInBounds.Of(new CasinoStateDto(RateChipsPerCoin: 1000, MinBuyIn: 20_000, MaxBuyIn: 5_000_000,
-            Sitting: new CasinoSittingDto(Id: "s1", ChipsIn: 4_990_000)), 300);
-        Assert.True(topUp.TopUp);
-        Assert.Equal(1, topUp.MinCoins);
-        Assert.Equal(10, topUp.MaxCoins);
-    }
-
-    [Fact]
-    public void TheShelfShowsWhatCanBeClaimedAndCountsDownTheRest()
+    public void TheTimedBonusCountsDownToItsNextClaim()
     {
         var ready = new CasinoBonusDto(CasinoBonusKinds.Timed, true, 5_000, 0, 0, true);
         var waiting = new CasinoBonusDto(CasinoBonusKinds.Timed, false, 5_000, 1_000_600, 0, true);
-        var spentWelcome = new CasinoBonusDto(CasinoBonusKinds.Welcome, false, 50_000, 0, 0, false);
-        var unknown = new CasinoBonusDto("mystery", true, 1, 0, 0, true);
 
-        Assert.True(CashierBonusShelf.Shows(ready, true));
-        Assert.False(CashierBonusShelf.Shows(waiting, true));
-        Assert.True(CashierBonusShelf.Shows(waiting, false));
-        Assert.False(CashierBonusShelf.Shows(spentWelcome, false));
-        Assert.False(CashierBonusShelf.Shows(unknown, false));
         Assert.Equal(600, CashierBonusShelf.SecondsUntil(waiting, 1_000_000));
         Assert.Equal(0, CashierBonusShelf.SecondsUntil(ready, 1_000_000));
     }

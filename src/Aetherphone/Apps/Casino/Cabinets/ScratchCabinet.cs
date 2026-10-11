@@ -29,8 +29,8 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private const string MalformedReason = "malformed";
 
     private readonly CasinoStore store;
+    private readonly MaxWinText maxWinText = new();
     private readonly CasinoPlayStore play;
-    private readonly Action openCashier;
     private readonly ScratchCardPlayback playback = new();
     private readonly ScratchOddsSheet oddsSheet = new();
     private readonly BetComposer composer = new("##scratchBuy");
@@ -39,6 +39,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private ScratchPhase seenPhase;
     private string inlineReason = string.Empty;
     private string roundId = string.Empty;
+    private bool roundCapped;
     private string stampLabel = string.Empty;
     private Rect ticketArea;
     private float autoPause;
@@ -48,11 +49,10 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private int rasp;
     private bool stroked;
 
-    public ScratchCabinet(CasinoStore store, CasinoPlayStore play, Action openCashier)
+    public ScratchCabinet(CasinoStore store, CasinoPlayStore play)
     {
         this.store = store;
         this.play = play;
-        this.openCashier = openCashier;
         composer.Auto.Rounds = RunLength;
         composer.Auto.StopOnBonus = false;
     }
@@ -85,7 +85,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
     public void DrawOverlay(Rect screen, AppSkin ui)
     {
-        oddsSheet.Draw(screen, ui, tierIndex);
+        oddsSheet.Draw(screen, ui, tierIndex, maxWinText.For(store.MaxWinPerBet, store.Rate));
         composer.DrawOverlay(screen, ui, false);
     }
 
@@ -136,13 +136,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
         DrawTicket(drawList, stage, ui, frame, scale);
         var status = new Rect(new Vector2(safe.Min.X, ticketArea.Max.Y + StatusGap * scale), safe.Max);
         DrawStatus(drawList, stage, ui, state, sitting, status, scale);
-        if (sitting is null)
-        {
-            DrawSeatMissing(drawList, ui, safe, scale);
-            return;
-        }
-
-        DrawDeck(stage, frame, ui, state, sitting, scale);
+        DrawDeck(stage, frame, ui, state, sitting ?? CasinoWire.NoBankroll, scale);
     }
 
     public void DrawIdle(ImDrawListPtr drawList, Rect rect, float deltaSeconds)
@@ -177,6 +171,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
             {
                 inlineReason = string.Empty;
                 roundId = card.RoundId;
+                roundCapped = card.Capped;
                 stroked = false;
                 stampSeconds = -1f;
                 stage.Celebration.Clear();
@@ -224,7 +219,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
         var stake = ScratchRules.Prices[playback.Tier];
         var payout = playback.PrizeOnceRevealed;
         stage.Settle(new CasinoBetRecord(L.Casino.GameScratch, stake, payout, roundId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), roundCapped));
         var stack = store.State?.Sitting?.Stack ?? 0;
         if (composer.Auto.Running)
         {
@@ -468,25 +463,21 @@ internal sealed class ScratchCabinet : ICabinetIdle
             autoPause -= frame.DeltaSeconds;
         }
 
-        var enabled = !play.RoundInFlight && !scratching && !blocked && sitting.Stack >= price;
+        var enabled = !play.RoundInFlight && !scratching && !blocked;
         var model = new BetComposerModel(price, price, sitting.Stack, L.Strip.BuyFor, enabled, AutoAvailable: true,
             FixedAmount: true, Knob: true, Repeat: stage.RepeatPressed(), Busy: play.RoundInFlight || scratching);
-        var action = composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds);
+        var action = composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds);
         DrawTierKnob(ui, composer.KnobRect, !scratching && !play.RoundInFlight && !composer.Auto.Running, scale);
         if (blocked && composer.Auto.Running)
         {
             composer.Auto.Stop(AutoStop.Manual);
         }
 
-        var autoReady = composer.Auto.Running && autoPause <= 0f && enabled && !stage.Celebration.Blocking;
+        var autoReady = composer.Auto.Running && autoPause <= 0f && enabled && !stage.Celebration.Blocking
+            && composer.Covers(stage, price, sitting.Stack);
         if (action is BetComposerAction.Confirm or BetComposerAction.StartAuto || autoReady)
         {
             Buy(stage);
-        }
-
-        if (sitting.Stack < price && !scratching && !play.RoundInFlight && composer.Auto.Running)
-        {
-            composer.Auto.Stop(AutoStop.Chips);
         }
     }
 
@@ -531,21 +522,6 @@ internal sealed class ScratchCabinet : ICabinetIdle
                 stampSeconds = -1f;
                 CasinoSfx.Play(UiSound.ChipSlide);
             }
-        }
-    }
-
-    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect safe, float scale)
-    {
-        var title = Loc.T(L.Casino.CabinetNoChipsTitle);
-        var hint = Loc.T(L.Casino.CabinetNoChipsHint);
-        var width = safe.Width;
-        var height = CasinoNotice.Height(CasinoNoticeKind.Card, title, hint, width, scale);
-        var top = safe.Max.Y - height - Button.LargeHeight * scale - Metrics.Space.Md * scale;
-        CasinoNotice.DrawWithAction(drawList, ui, CasinoNoticeKind.Card, title, hint, Loc.T(L.Casino.Cashier),
-            safe.Min.X, top, width, scale, out var pressed);
-        if (pressed)
-        {
-            openCashier();
         }
     }
 }

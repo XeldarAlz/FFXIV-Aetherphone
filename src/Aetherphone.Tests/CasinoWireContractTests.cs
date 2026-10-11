@@ -14,11 +14,9 @@ public sealed class CasinoWireContractTests
     public void RoutesMatchTheBackendCasinoEndpoints()
     {
         Assert.Equal("/casino", CasinoClient.StatePath);
-        Assert.Equal("/casino/sittings", CasinoClient.OpenSittingPath);
-        Assert.Equal("/casino/sittings/topup", CasinoClient.TopUpPath);
+        Assert.Equal("/casino/chips/buy", CasinoClient.BuyChipsPath);
         Assert.Equal("/casino/sittings/close", CasinoClient.CloseSittingPath);
         Assert.Equal("/casino/limits", CasinoClient.LimitsPath);
-        Assert.Equal(0, CasinoClient.SoloTableKind);
     }
 
     [Fact]
@@ -30,24 +28,6 @@ public sealed class CasinoWireContractTests
         Assert.Equal("casino.blackjack", CasinoWire.Kind(CasinoGames.Blackjack));
         Assert.Equal("casino.bingo", CasinoWire.Kind(CasinoGames.Bingo));
         Assert.Equal("casino.wheel", CasinoWire.Kind(CasinoGames.Wheel));
-    }
-
-    [Fact]
-    public void OpenSittingRequestSerializesTheBackendShape()
-    {
-        var request = new CasinoOpenSittingRequest("sit1", "act1", 0, 100);
-        var json = JsonSerializer.Serialize(request, AethernetJsonContext.Default.CasinoOpenSittingRequest);
-        Assert.Equal(
-            "{\"clientSittingId\":\"sit1\",\"clientActionId\":\"act1\",\"tableKind\":0,\"amount\":100}",
-            json);
-    }
-
-    [Fact]
-    public void TopUpRequestSerializesTheBackendShape()
-    {
-        var request = new CasinoTopUpRequest("sit1", "act2", 50);
-        var json = JsonSerializer.Serialize(request, AethernetJsonContext.Default.CasinoTopUpRequest);
-        Assert.Equal("{\"sittingId\":\"sit1\",\"clientActionId\":\"act2\",\"amount\":50}", json);
     }
 
     [Fact]
@@ -90,8 +70,6 @@ public sealed class CasinoWireContractTests
         Assert.Equal(140, state.Sitting.Stack);
         Assert.Equal(200, state.Sitting.ChipsIn);
         Assert.Equal(100, state.MinBuyIn);
-        Assert.Equal(2000, state.MaxBuyIn);
-        Assert.Equal(5000, state.DailyBuyInCap);
         Assert.Equal(500, state.LossLimit);
         Assert.Equal(440, state.LossHeadroom);
         Assert.Null(state.SelfLossLimit);
@@ -209,8 +187,6 @@ public sealed class CasinoWireContractTests
             Draining: true,
             Sitting: sitting,
             MinBuyIn: 100,
-            MaxBuyIn: 2000,
-            DailyBuyInCap: 5000,
             LossLimit: 500,
             LossHeadroom: 440,
             SelfLossLimit: null,
@@ -228,7 +204,6 @@ public sealed class CasinoWireContractTests
         Assert.True(merged.StakesPaused);
         Assert.True(merged.Draining);
         Assert.Equal(100, merged.MinBuyIn);
-        Assert.Equal(2000, merged.MaxBuyIn);
         Assert.Equal(60, merged.NetLossToday);
         Assert.Equal(50, merged.LossLimit);
         Assert.Equal(50L, merged.SelfLossLimit);

@@ -22,6 +22,7 @@ internal sealed class MinesBoard
     private readonly float[] delays = new float[OriginalsRules.MinesTiles];
 
     private string roundId = string.Empty;
+    private bool capped;
     private int phase = OriginalsRules.PhaseLive;
     private int mines;
     private int safePicks;
@@ -225,7 +226,7 @@ internal sealed class MinesBoard
         }
 
         settlePending = false;
-        outcome = new OriginalsOutcome(stake, payout, roundId);
+        outcome = new OriginalsOutcome(stake, payout, roundId, capped);
         return true;
     }
 
@@ -240,6 +241,7 @@ internal sealed class MinesBoard
         safePicks = 0;
         stake = 0;
         payout = 0;
+        capped = false;
         multiplier = 0;
         nextMultiplier = 0;
         settlePending = false;
@@ -254,6 +256,7 @@ internal sealed class MinesBoard
         mines = dto.Mines;
         stake = dto.Stake;
         payout = dto.Payout;
+        capped = dto.Capped;
         multiplier = dto.MultiplierTenThousandths;
         nextMultiplier = dto.NextMultiplierTenThousandths;
         var revealed = dto.Revealed ?? Array.Empty<int>();

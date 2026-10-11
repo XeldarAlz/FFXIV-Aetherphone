@@ -21,6 +21,9 @@ internal sealed class CasinoStage
     private const float CapsulePadX = 14f;
     private const float RealityVeil = 0.6f;
     private const float RealityCardWidth = 300f;
+    private const float CappedSeconds = 4f;
+    private const float CappedFadeSeconds = 0.4f;
+    private const float CappedPillHeight = 34f;
 
     private static readonly VirtualKey[] RepeatKeys = { VirtualKey.SPACE };
 
@@ -33,6 +36,7 @@ internal sealed class CasinoStage
     private readonly CasinoBetsLog bets = new();
     private readonly HashSet<string> instantGames = new(StringComparer.Ordinal);
     private readonly RealityCheck reality = new();
+    private readonly ChipValueText capsuleValue = new();
 
     private string realityText = string.Empty;
     private int realityRounds = -1;
@@ -50,6 +54,7 @@ internal sealed class CasinoStage
     private Rect actionRow;
     private float actionCursor;
     private int actionSecondaries;
+    private float cappedLeft;
 
     public CasinoStage()
     {
@@ -75,7 +80,9 @@ internal sealed class CasinoStage
 
     public Rect ActionRow => actionRow;
 
-    public bool OverlayOpen => info.IsOpen || betsRail.IsOpen;
+    public bool OverlayOpen => info.IsOpen || betsRail.IsOpen || (Chips?.SheetOpen ?? false);
+
+    public ChipsDesk? Chips { get; set; }
 
     public static Vector4 AccentFor(Backdrop preset) =>
         preset == Games.Framework.Backdrop.Felt ? AccentRing.Emerald : AppAccents.For("casino");
@@ -91,9 +98,11 @@ internal sealed class CasinoStage
         fx.Clear();
         info.Close();
         betsRail.Close();
+        Chips?.Close();
         hasSpec = false;
         lastFrameTick = 0;
         unfocusedSeconds = 0f;
+        cappedLeft = 0f;
     }
 
     public bool RealityDue => reality.Due;
@@ -109,6 +118,7 @@ internal sealed class CasinoStage
     {
         bets.Record(record);
         reality.Record(record.Stake, record.Payout, Environment.TickCount64);
+        cappedLeft = record.Capped ? CappedSeconds : 0f;
     }
 
     public CasinoStageFrame Begin(Rect full, Rect content, in CasinoStageSpec next, long balanceValue,
@@ -117,6 +127,7 @@ internal sealed class CasinoStage
         var scale = UiScale.Current;
         var now = Environment.TickCount64;
         info.Ceiling = ceiling;
+        info.Rate = Chips?.Rate ?? CasinoChipLots.ChipPerCoin;
         reality.Tick(now);
         var gap = lastFrameTick == 0 ? 0 : now - lastFrameTick;
         lastFrameTick = now;
@@ -161,6 +172,7 @@ internal sealed class CasinoStage
         particles.Update(delta);
         celebration.Update(delta, layout, snap);
         phase += delta;
+        cappedLeft = MathF.Max(0f, cappedLeft - delta);
         if (snap)
         {
             balance.Snap(balanceValue);
@@ -191,6 +203,10 @@ internal sealed class CasinoStage
         celebration.Draw(drawList, layout, phase, scale);
         celebration.HandleSkip(layout);
         fx.Draw(drawList, full, AccentFor(spec.Preset));
+        if (cappedLeft > 0f)
+        {
+            DrawCappedPill(drawList, scale);
+        }
         if (layout.HasPractice)
         {
             PracticeRibbon.Draw(drawList, layout.Practice, scale);
@@ -268,6 +284,7 @@ internal sealed class CasinoStage
     {
         info.Gate();
         betsRail.Gate();
+        Chips?.Gate();
     }
 
     public void DrawOverlays(Rect screen, AppSkin ui)
@@ -280,6 +297,7 @@ internal sealed class CasinoStage
         info.Draw(screen, ui, spec);
         SetInstant(spec.GameId, info.Instant);
         betsRail.Draw(screen, ui, bets, Feed);
+        Chips?.Draw(screen, ui);
     }
 
     public CasinoInfoRequest TakeInfoRequest() => info.TakeRequest();
@@ -290,6 +308,7 @@ internal sealed class CasinoStage
     {
         info.Close();
         betsRail.Close();
+        Chips?.Close();
     }
 
     private void SetInstant(string gameId, bool instant)
@@ -365,7 +384,12 @@ internal sealed class CasinoStage
         var textSize = Typography.Measure(text, textScale, style.Weight);
         var glyph = GlyphSize * scale;
         var padX = CapsulePadX * scale;
-        var width = MathF.Min(layout.CapsuleMaxWidth, padX * 2f + glyph + Metrics.Space.Xs * scale + textSize.X);
+        var coinGap = Metrics.Space.Sm * scale;
+        var core = padX * 2f + glyph + Metrics.Space.Xs * scale + textSize.X;
+        var coinWidth = 0f;
+        var coins = practice ? string.Empty : CapsuleCoins(layout.CapsuleMaxWidth - core - coinGap, out coinWidth);
+        var trailing = coins.Length > 0 ? coinGap + coinWidth : 0f;
+        var width = MathF.Min(layout.CapsuleMaxWidth, core + trailing);
         var center = layout.CapsuleCenter;
         var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
         var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
@@ -386,7 +410,7 @@ internal sealed class CasinoStage
         }
 
         var textLeft = glyphCenter.X + glyph * 0.5f + Metrics.Space.Xs * scale;
-        var available = max.X - padX - textLeft;
+        var available = max.X - padX - trailing - textLeft;
         if (textSize.X > available)
         {
             text = Typography.FitText(text, available, textScale, style.Weight);
@@ -395,6 +419,13 @@ internal sealed class CasinoStage
 
         Typography.Draw(drawList, new Vector2(textLeft, center.Y - textSize.Y * 0.5f), text,
             practice ? CasinoColors.Practice : CasinoColors.Money, textScale, style.Weight);
+        if (coins.Length > 0)
+        {
+            var footnote = Typography.LineHeight(TextStyles.Footnote);
+            Typography.Draw(drawList, new Vector2(max.X - padX - coinWidth, center.Y - footnote * 0.5f), coins,
+                CasinoColors.InkBody, TextStyles.Footnote);
+        }
+
         if (!interactive)
         {
             return false;
@@ -407,5 +438,53 @@ internal sealed class CasinoStage
         }
 
         return UiInteract.Click(hitMin, hitMax, hovered);
+    }
+
+    private void DrawCappedPill(ImDrawListPtr drawList, float scale)
+    {
+        var text = Loc.T(L.Chips.MaxWinReached);
+        var style = TextStyles.SubheadlineEmphasized;
+        var safe = layout.Safe;
+        var height = CappedPillHeight * scale;
+        var padX = height * 0.5f;
+        var textScale = Typography.FitScale(text, MathF.Max(1f, safe.Width - padX * 2f), style.Scale,
+            TextStyles.Footnote.Scale, style.Weight);
+        var size = Typography.Measure(text, textScale, style.Weight);
+        var width = MathF.Min(safe.Width, size.X + padX * 2f);
+        var center = new Vector2(safe.Center.X, safe.Min.Y + height * 0.5f);
+        var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
+        var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
+        var alpha = Math.Clamp(cappedLeft / CappedFadeSeconds, 0f, 1f);
+        Material.FrostedGlass(drawList, min, max, height * 0.5f, scale, alpha);
+        Typography.Draw(drawList, new Vector2(center.X - size.X * 0.5f, center.Y - size.Y * 0.5f), text,
+            CasinoColors.Money with { W = alpha }, textScale, style.Weight);
+    }
+
+    private string CapsuleCoins(float room, out float width)
+    {
+        width = 0f;
+        if (room <= 0f)
+        {
+            return string.Empty;
+        }
+
+        var rate = Chips?.Rate ?? CasinoChipLots.ChipPerCoin;
+        var full = capsuleValue.Full(balance.Target, rate);
+        var fullWidth = Typography.Measure(full, TextStyles.Footnote).X;
+        if (fullWidth <= room)
+        {
+            width = fullWidth;
+            return full;
+        }
+
+        var compact = capsuleValue.Compact(balance.Target, rate);
+        var compactWidth = Typography.Measure(compact, TextStyles.Footnote).X;
+        if (compactWidth > room)
+        {
+            return string.Empty;
+        }
+
+        width = compactWidth;
+        return compact;
     }
 }

@@ -33,7 +33,6 @@ internal sealed class PlinkoCabinet : ICabinetIdle
 
     private readonly CasinoStore store;
     private readonly CasinoPlinkoStore plinko;
-    private readonly Action openCashier;
     private readonly CasinoPreferences preferences;
     private readonly BetComposer composer = new("##plinkoDrop");
     private readonly PlinkoFlight flight = new();
@@ -61,7 +60,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
     private int autoLaunched;
     private float idleTimer;
 
-    public PlinkoCabinet(CasinoStore store, CasinoPlinkoStore plinko, Action openCashier,
+    public PlinkoCabinet(CasinoStore store, CasinoPlinkoStore plinko,
         CasinoPreferences preferences)
     {
         this.preferences = preferences;
@@ -69,7 +68,6 @@ internal sealed class PlinkoCabinet : ICabinetIdle
         risk = preferences.PlinkoRisk;
         this.store = store;
         this.plinko = plinko;
-        this.openCashier = openCashier;
         composer.Auto.StopOnBonus = false;
         for (var index = 0; index < trails.Length; index++)
         {
@@ -234,7 +232,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
             hasNotice = false;
             var path = result.Path ?? Array.Empty<int>();
             var drop = new PlinkoDrop(result.Rows, result.Risk, result.Slot, result.MultiplierTenths, result.Stake,
-                result.Payout, result.RoundId);
+                result.Payout, result.RoundId, result.Capped);
             var valid = PlinkoRules.IsValidRisk(result.Risk) && PlinkoRules.IsPath(path, result.Rows, result.Slot);
             if (valid && flight.ActiveCount == 0 && (result.Rows != rows || result.Risk != risk))
             {
@@ -288,7 +286,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
 
         rail.Push(new PlinkoResult(drop.Tenths, drop.Rows, drop.Risk, drop.Edge));
         stage.Settle(new CasinoBetRecord(L.Plinko.Game, drop.Stake, drop.Payout, drop.RoundId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), drop.Capped));
         var origin = onBoard ? layout.SlotCenter(drop.Slot) : layout.Bounds.Center;
         var tier = WinLadder.TierFor(drop.Stake, drop.Payout);
         var celebration = stage.Celebration;
@@ -453,21 +451,15 @@ internal sealed class PlinkoCabinet : ICabinetIdle
             return;
         }
 
-        var sitting = state.Sitting;
-        if (sitting is null)
-        {
-            DrawSeatMissing(drawList, ui, frame.Deck, scale);
-            return;
-        }
-
+        var sitting = state.Sitting ?? CasinoWire.NoBankroll;
         var blocked = state.StakesPaused || state.Draining || frame.Blocked;
         var stack = Math.Max(0, sitting.Stack - plinko.QueuedStake);
         var inFlight = flight.ActiveCount + plinko.Outstanding;
         var full = inFlight >= PlinkoRules.MaxInFlight;
-        var enabled = !blocked && stack >= PlinkoRules.MinBet;
+        var enabled = !blocked;
         var model = new BetComposerModel(PlinkoRules.MinBet, store.Ceiling.MaxBet, stack, L.Plinko.DropFor, enabled,
             AutoAvailable: true, Knob: true, Repeat: stage.RepeatPressed(), Busy: full);
-        var action = composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds);
+        var action = composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds);
         DrawKnobs(composer.KnobRect, ui, enabled && inFlight == 0 && !composer.Auto.Running);
         if (blocked && composer.Auto.Running)
         {
@@ -508,7 +500,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
         {
             if (inFlight == 0)
             {
-                auto.Stop(AutoStop.Chips);
+                composer.Covers(stage, auto.Next, stack);
             }
 
             return;
@@ -587,22 +579,5 @@ internal sealed class PlinkoCabinet : ICabinetIdle
         var inset = BetComposer.Pad * scale;
         CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Card, Loc.T(L.Plinko.NotOpenTitle),
             Loc.T(L.Plinko.NotOpenBody), deck.Min.X + inset, deck.Min.Y + inset, deck.Width - inset * 2f, scale);
-    }
-
-    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect deck, float scale)
-    {
-        var inset = BetComposer.Pad * scale;
-        var title = Loc.T(L.Casino.CabinetNoChipsTitle);
-        var titleHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
-        Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
-            Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        var top = deck.Min.Y + inset + titleHeight + Metrics.Space.Sm * scale;
-        var rect = new Rect(new Vector2(deck.Min.X + inset, top),
-            new Vector2(deck.Max.X - inset, top + Button.LargeHeight * scale));
-        if (Button.Draw(drawList, rect, Loc.T(L.Casino.Cashier), ui.Ink))
-        {
-            openCashier();
-        }
     }
 }

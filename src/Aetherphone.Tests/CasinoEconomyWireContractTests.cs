@@ -53,8 +53,6 @@ public sealed class CasinoEconomyWireContractTests
         Assert.Equal(1000, state.Sitting!.RateChipsPerCoin);
         Assert.Contains("gil.tables", state.Features!);
         Assert.Equal(new long[] { 100, 250, 500 }, state.Ladder);
-        Assert.Equal(400, state.Cashier!.AllowanceCoins);
-        Assert.Equal(500, state.Cashier.DailyNetCashOutCoins);
         var bonus = Assert.Single(state.Bonuses!);
         Assert.Equal(CasinoBonusKinds.Timed, bonus.Kind);
         Assert.Equal(6250, bonus.Amount);
@@ -73,27 +71,26 @@ public sealed class CasinoEconomyWireContractTests
 
         Assert.NotNull(state);
         Assert.Null(state!.Features);
-        Assert.Null(state.Cashier);
         Assert.Null(state.Bonuses);
         Assert.Null(state.Club);
         Assert.Equal(0, state.RateChipsPerCoin);
     }
 
     [Fact]
-    public void TheCashOutAnswerSaysWhatConvertedAndWhatWaits()
+    public void TheCashOutAnswerConvertsTheWholeStack()
     {
         const string json = """
-        { "granted": true, "reason": "", "balance": 920, "convertedCoins": 400, "queuedChips": 600000,
-          "sitting": { "id": "s1", "state": 1, "stack": 600000, "rateChipsPerCoin": 1000 } }
+        { "granted": true, "reason": "", "balance": 1021362, "convertedCoins": 5111,
+          "sitting": { "id": "s1", "state": 3, "stack": 0, "rateChipsPerCoin": 1000 } }
         """;
 
         var result = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.CasinoSittingResultDto);
 
         Assert.NotNull(result);
         Assert.True(result!.Granted);
-        Assert.Equal(400, result.ConvertedCoins);
-        Assert.Equal(600000, result.QueuedChips);
-        Assert.Equal(1, result.Sitting!.State);
+        Assert.Equal(5111, result.ConvertedCoins);
+        Assert.Equal(1021362, result.Balance);
+        Assert.Equal(3, result.Sitting!.State);
     }
 
     [Fact]

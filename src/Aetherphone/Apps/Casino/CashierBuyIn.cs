@@ -3,7 +3,6 @@ using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
-using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -11,49 +10,30 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
-internal readonly record struct BuyInBounds(long MinCoins, long MaxCoins, long WalletCoins, long RoomCoins,
-    long Rate, bool TopUp)
+internal readonly record struct BuyInBounds(long WalletCoins, long Rate)
 {
-    public static BuyInBounds Of(CasinoStateDto? state, long walletCoins)
-    {
-        var rate = CasinoCashier.Rate(state);
-        var topUp = state?.Sitting is not null;
-        var minBuyIn = state is { MinBuyIn: > 0 } ? state.MinBuyIn : CasinoHostingRules.ChipMinBuyIn;
-        var maxBuyIn = state is { MaxBuyIn: > 0 } ? state.MaxBuyIn : CasinoHostingRules.ChipMaxBuyIn;
-        var minCoins = topUp ? 1 : (minBuyIn + rate - 1) / rate;
-        var room = topUp ? Math.Max(0, maxBuyIn - (state?.Sitting?.ChipsIn ?? 0)) : maxBuyIn;
-        var roomCoins = room / rate;
-        var wallet = Math.Max(0, walletCoins);
-        return new BuyInBounds(minCoins, Math.Min(wallet, roomCoins), wallet, roomCoins, rate, topUp);
-    }
+    public static BuyInBounds Of(CasinoStateDto? state, long walletCoins) =>
+        new(Math.Max(0, walletCoins), CasinoCashier.Rate(state));
 
-    public bool Allows(long coins) => coins >= MinCoins && coins <= MaxCoins;
+    public bool Allows(long coins) => coins >= ChipsAmounts.MinimumCoins && coins <= WalletCoins;
 
     public long ChipsFor(long coins) => coins <= 0 ? 0 : coins * Rate;
 }
 
 internal sealed class CashierBuyIn
 {
-    private const float FieldHeight = 40f;
-    private const float Gap = 8f;
-    private const float ButtonHeight = Button.LargeHeight;
-    private const int FieldDigits = 9;
-
-    private static readonly long[] QuickCoins = { 20, 50, 100, 250, 500, 1_000, 5_000 };
+    private const int FieldDigits = 12;
 
     private readonly CasinoStore store;
-    private readonly ConfirmService confirm;
     private readonly CasinoTextCache texts = new();
-    private readonly ChipRail rail = new();
-    private readonly string[] quickLabels = new string[QuickCoins.Length];
-    private readonly bool[] quickActive = new bool[QuickCoins.Length];
-    private LanguageInfo? quickLanguage;
+    private readonly long[] quick = new long[ChipsAmounts.QuickCount];
+    private int quickCount;
+    private long quickWallet = -1;
     private string buffer = string.Empty;
 
-    public CashierBuyIn(CasinoStore store, ConfirmService confirm)
+    public CashierBuyIn(CasinoStore store)
     {
         this.store = store;
-        this.confirm = confirm;
     }
 
     public long Coins =>
@@ -61,8 +41,7 @@ internal sealed class CashierBuyIn
 
     public void Reset(long suggestedChips)
     {
-        rail.Reset();
-        var coins = suggestedChips <= 0 ? 0 : (suggestedChips + store.Rate - 1) / store.Rate;
+        var coins = ChipsAmounts.CoinsFor(suggestedChips, store.Rate);
         buffer = coins > 0 ? coins.ToString(CultureInfo.InvariantCulture) : string.Empty;
     }
 
@@ -71,66 +50,84 @@ internal sealed class CashierBuyIn
         buffer = string.Empty;
     }
 
-    public float Height(float scale)
+    public int TileCount(long walletCoins)
     {
-        return Typography.LineHeight(TextStyles.FootnoteEmphasized) + Gap * scale + FieldHeight * scale
-            + Gap * scale + ChipRail.RowHeight * scale + Gap * scale + Typography.LineHeight(TextStyles.Footnote)
-            + Gap * scale + ButtonHeight * scale;
+        if (walletCoins != quickWallet)
+        {
+            quickWallet = walletCoins;
+            quickCount = ChipsAmounts.Quick(walletCoins, quick);
+        }
+
+        return quickCount;
     }
 
-    public float Draw(ImDrawListPtr drawList, AppSkin ui, in BuyInBounds bounds, float left, float top, float width,
-        float scale, bool interactive)
+    public void Draw(ImDrawListPtr drawList, AppSkin ui, in CashierLayout layout, in BuyInBounds bounds,
+        bool interactive, bool overlay)
     {
-        var y = top;
-        var heading = bounds.TopUp ? Loc.T(L.Casino.TopUp) : Loc.T(L.Strip.GetChips);
-        Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(heading, width * 0.5f,
-            TextStyles.FootnoteEmphasized), ui.BodyInk, TextStyles.FootnoteEmphasized);
-        DrawRate(drawList, ui, bounds.Rate, new Vector2(left + width, y));
-        y += Typography.LineHeight(TextStyles.FootnoteEmphasized) + Gap * scale;
+        var heading = layout.BuyHeading;
+        Typography.Draw(drawList, heading.Min, Typography.FitText(Loc.T(L.Chips.BuyHeading), heading.Width,
+            TextStyles.SubheadlineEmphasized), ui.TitleInk, TextStyles.SubheadlineEmphasized);
+        DrawField(drawList, ui, layout.Field, interactive);
+        if (layout.HasTiles)
+        {
+            DrawTiles(drawList, ui, layout, interactive, overlay);
+        }
 
-        var field = new Rect(new Vector2(left, y), new Vector2(left + width, y + FieldHeight * scale));
-        DrawField(drawList, ui, field, interactive);
-        y = field.Max.Y + Gap * scale;
-
-        RefreshQuickLabels();
         var coins = Coins;
-        for (var index = 0; index < QuickCoins.Length; index++)
-        {
-            quickActive[index] = QuickCoins[index] == coins;
-        }
+        var line = LineFor(bounds, coins, out var warning);
+        var status = layout.Status;
+        Typography.Draw(drawList, status.Min, Typography.FitText(line, status.Width, TextStyles.Footnote),
+            warning ? ui.Accent : ui.BodyInk, TextStyles.Footnote);
 
-        var railRect = new Rect(new Vector2(left, y), new Vector2(left + width, y + ChipRail.RowHeight * scale));
-        var tapped = rail.Draw(railRect, ui, quickLabels, quickActive, true, null, ChipRail.CompactLabelPadding,
-            interactive: interactive);
-        if (tapped >= 0)
-        {
-            buffer = QuickCoins[tapped].ToString(CultureInfo.InvariantCulture);
-            coins = QuickCoins[tapped];
-        }
-
-        y = railRect.Max.Y + Gap * scale;
         var allowed = bounds.Allows(coins);
-        var line = LineFor(bounds, coins, out var lineIsWarning);
-        Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(line, width, TextStyles.Footnote),
-            lineIsWarning ? ui.Accent : ui.BodyInk, TextStyles.Footnote);
-        y += Typography.LineHeight(TextStyles.Footnote) + Gap * scale;
-
-        var chips = bounds.ChipsFor(coins);
-        var label = allowed ? texts.Compact(L.Strip.GetChipsFor, chips) : Loc.T(L.Strip.GetChips);
-        var rect = new Rect(new Vector2(left, y), new Vector2(left + width, y + ButtonHeight * scale));
-        if (Button.Draw(drawList, rect, label, ui.Ink, ButtonStyle.Prominent,
-                enabled: interactive && allowed && !store.MovingMoney, overlay: true, id: "cashier.getchips"))
+        var label = allowed ? texts.Compact(L.Strip.GetChipsFor, bounds.ChipsFor(coins)) : Loc.T(L.Chips.BuyHeading);
+        if (Button.Draw(drawList, layout.Buy, label, ui.Ink, ButtonStyle.Prominent,
+                enabled: interactive && allowed && !store.MovingMoney, overlay: overlay, id: "cashier.getchips"))
         {
-            Ask(bounds, coins);
+            store.BuyChips(coins);
         }
+    }
 
-        return rect.Max.Y;
+    private void DrawTiles(ImDrawListPtr drawList, AppSkin ui, in CashierLayout layout, bool interactive,
+        bool overlay)
+    {
+        var enabled = interactive && !store.MovingMoney;
+        var style = Button.LabelStyle(layout.TileRow.Height);
+        for (var index = 0; index < layout.TileCount && index < quickCount; index++)
+        {
+            var rect = layout.Tile(index);
+            var hovered = enabled && (overlay
+                ? UiInteract.HoverWindowOnly(rect.Min, rect.Max)
+                : UiInteract.Hover(rect.Min, rect.Max));
+            var face = Button.Surface(drawList, rect, ui.Ink, ButtonStyle.Gray, ButtonRole.Normal, enabled, hovered,
+                ImGui.GetID($"cashier.quick{index}"));
+            var text = NumberText.Compact(quick[index]);
+            var size = CurrencyGlyph.MeasureAmount(text, style);
+            var room = face.Face.Width - face.Face.Height * 0.5f;
+            var origin = new Vector2(face.Face.Center.X - MathF.Min(size.X, room) * 0.5f,
+                face.Face.Center.Y - size.Y * 0.5f);
+            if (size.X <= room)
+            {
+                CurrencyGlyph.DrawAmount(drawList, origin, text, CurrencyKind.Coins, face.LabelInk, style,
+                    face.LabelInk.W);
+            }
+            else
+            {
+                Typography.DrawCentered(drawList, face.Face.Center, text, face.LabelInk, style);
+            }
+
+            if (enabled && UiInteract.Click(rect.Min, rect.Max, hovered))
+            {
+                buffer = quick[index].ToString(CultureInfo.InvariantCulture);
+                store.BuyChips(quick[index]);
+            }
+        }
     }
 
     private string LineFor(in BuyInBounds bounds, long coins, out bool warning)
     {
         warning = false;
-        if (bounds.MaxCoins < bounds.MinCoins)
+        if (bounds.WalletCoins < ChipsAmounts.MinimumCoins)
         {
             warning = true;
             return Loc.T(L.Casino.NotEnoughCoins);
@@ -138,13 +135,7 @@ internal sealed class CashierBuyIn
 
         if (coins <= 0)
         {
-            return texts.Numbers(L.Strip.BuyInRange, bounds.MinCoins, bounds.MaxCoins);
-        }
-
-        if (coins < bounds.MinCoins)
-        {
-            warning = true;
-            return texts.Number(L.Strip.BuyInAtLeast, bounds.MinCoins);
+            return texts.Numbers(L.Strip.BuyInRange, ChipsAmounts.MinimumCoins, bounds.WalletCoins);
         }
 
         if (coins > bounds.WalletCoins)
@@ -153,37 +144,7 @@ internal sealed class CashierBuyIn
             return Loc.T(L.Casino.NotEnoughCoins);
         }
 
-        if (coins > bounds.RoomCoins)
-        {
-            warning = true;
-            return texts.Number(L.Strip.BuyInAtMost, bounds.RoomCoins);
-        }
-
         return texts.Number(L.Strip.BecomesChips, bounds.ChipsFor(coins));
-    }
-
-    private void Ask(in BuyInBounds bounds, long coins)
-    {
-        var chips = bounds.ChipsFor(coins);
-        var topUp = bounds.TopUp;
-        confirm.Ask(new ConfirmRequest
-        {
-            Title = Loc.T(L.Strip.GetChipsConfirmTitle, NumberText.Group(coins)),
-            Message = Loc.T(L.Strip.GetChipsConfirmBody, NumberText.Group(chips)),
-            ConfirmLabel = topUp ? Loc.T(L.Casino.TopUp) : Loc.T(L.Strip.GetChips),
-            CancelLabel = Loc.T(L.Common.Cancel),
-            Danger = false,
-            Confirm = () =>
-            {
-                if (topUp)
-                {
-                    store.TopUp(chips);
-                    return;
-                }
-
-                store.OpenSitting(chips);
-            },
-        });
     }
 
     private void DrawField(ImDrawListPtr drawList, AppSkin ui, Rect field, bool interactive)
@@ -207,36 +168,5 @@ internal sealed class CashierBuyIn
         }
 
         ImGui.SetCursorScreenPos(cursor);
-    }
-
-    private static void DrawRate(ImDrawListPtr drawList, AppSkin ui, long rate, Vector2 topRight)
-    {
-        var chipsText = NumberText.Group(rate);
-        var coinsText = NumberText.Group(1L);
-        const string equalsText = " = ";
-        var chipsSize = CurrencyGlyph.MeasureAmount(chipsText, TextStyles.Footnote);
-        var equalsSize = Typography.Measure(equalsText, TextStyles.Footnote);
-        var coinsSize = CurrencyGlyph.MeasureAmount(coinsText, TextStyles.Footnote);
-        var x = topRight.X - chipsSize.X - equalsSize.X - coinsSize.X;
-        x += CurrencyGlyph.DrawAmount(drawList, new Vector2(x, topRight.Y), chipsText, CurrencyKind.Chips,
-            ui.BodyInk, TextStyles.Footnote).X;
-        Typography.Draw(drawList, new Vector2(x, topRight.Y), equalsText, ui.BodyInk, TextStyles.Footnote);
-        x += equalsSize.X;
-        CurrencyGlyph.DrawAmount(drawList, new Vector2(x, topRight.Y), coinsText, CurrencyKind.Coins, ui.MutedInk,
-            TextStyles.Footnote);
-    }
-
-    private void RefreshQuickLabels()
-    {
-        if (ReferenceEquals(quickLanguage, Loc.Current) && quickLabels[0] is not null)
-        {
-            return;
-        }
-
-        quickLanguage = Loc.Current;
-        for (var index = 0; index < QuickCoins.Length; index++)
-        {
-            quickLabels[index] = Loc.T(L.Strip.CoinsShort, NumberText.Compact(QuickCoins[index]));
-        }
     }
 }

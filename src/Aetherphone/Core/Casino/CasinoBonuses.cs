@@ -181,34 +181,6 @@ internal static class CasinoClubTiers
 
 internal static class CasinoCashier
 {
-    public const long DailyNetCashOutCoinsFallback = 500;
-
-    public static long WholeCoins(long chips, long rate)
-    {
-        return chips <= 0 || rate <= 0 ? 0 : chips / rate;
-    }
-
-    public static long ConvertsNow(long stack, long allowanceCoins, long rate)
-    {
-        if (rate <= 0)
-        {
-            return 0;
-        }
-
-        return Math.Min(WholeCoins(stack, rate), Math.Max(0, allowanceCoins));
-    }
-
-    public static long WaitsChips(long stack, long allowanceCoins, long rate)
-    {
-        var converts = ConvertsNow(stack, allowanceCoins, rate);
-        if (converts >= WholeCoins(stack, rate))
-        {
-            return 0;
-        }
-
-        return Math.Max(0, stack - converts * rate);
-    }
-
     public static long Rate(CasinoStateDto? state)
     {
         if (state is null)

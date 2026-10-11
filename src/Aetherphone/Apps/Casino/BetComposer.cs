@@ -30,7 +30,9 @@ internal readonly record struct BetComposerModel(
     bool FixedAmount = false,
     bool Knob = false,
     bool Repeat = false,
-    bool Busy = false);
+    bool Busy = false,
+    long Cost = 0,
+    bool Rack = false);
 
 internal sealed class BetComposer
 {
@@ -44,6 +46,7 @@ internal sealed class BetComposer
     private const float FlashSeconds = 0.5f;
     private const int ManualTab = 0;
     private const int AutoTab = 1;
+    private const string ActionId = "casino.deck.action";
 
     private readonly string fieldId;
     private readonly string modeId;
@@ -62,6 +65,7 @@ internal sealed class BetComposer
     private int actionRemaining = int.MinValue;
     private LanguageInfo? actionLanguage;
     private AutoStop announced;
+    private ChipsPending pending;
 
     public BetComposer(string fieldId)
     {
@@ -110,7 +114,8 @@ internal sealed class BetComposer
         autoSheet.Draw(screen, ui, bonusAvailable);
     }
 
-    public BetComposerAction Draw(AppSkin ui, Rect deck, in BetComposerModel model, float deltaSeconds)
+    public BetComposerAction Draw(CasinoStage stage, AppSkin ui, Rect deck, in BetComposerModel model,
+        float deltaSeconds)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -119,7 +124,8 @@ internal sealed class BetComposer
             flash -= deltaSeconds;
         }
 
-        var snapped = CasinoLadder.Clamp(amount, model.MinimumBet, model.MaximumBet, model.Stack);
+        var bound = Bound(model);
+        var snapped = CasinoLadder.Clamp(amount, model.MinimumBet, model.MaximumBet, bound);
         if (!model.FixedAmount && snapped != amount && !editing)
         {
             if (amount > 0)
@@ -139,10 +145,29 @@ internal sealed class BetComposer
             DrawAmountRow(drawList, ui, layout, model, controlsEnabled);
         }
 
-        var result = DrawActionRow(drawList, ui, layout, model);
+        var result = DrawActionRow(drawList, ui, layout, model, stage.Chips);
         AnnounceAutoStop();
         return result;
     }
+
+    public bool Covers(CasinoStage stage, long need, long stack)
+    {
+        if (need <= stack)
+        {
+            return true;
+        }
+
+        var desk = stage.Chips;
+        if (desk is not null && (desk.Buying || desk.TryAutoBuy(need, stack)))
+        {
+            return false;
+        }
+
+        Auto.Stop(AutoStop.Chips);
+        return false;
+    }
+
+    private static long Bound(in BetComposerModel model) => model.Rack ? model.Stack : long.MaxValue;
 
     private void DrawAmountRow(ImDrawListPtr drawList, AppSkin ui, in BetDeckLayout layout,
         in BetComposerModel model, bool enabled)
@@ -150,19 +175,19 @@ internal sealed class BetComposer
         DrawField(drawList, ui, layout.Field, model, enabled, UiScale.Current);
         if (Quick(ui, layout.Half, Loc.T(L.Casino.BetHalf), enabled))
         {
-            amount = CasinoLadder.Half(amount, model.MinimumBet, model.MaximumBet, model.Stack);
+            amount = CasinoLadder.Half(amount, model.MinimumBet, model.MaximumBet, Bound(model));
             UiFeedback.Play(UiSound.ChipSlide);
         }
 
         if (Quick(ui, layout.Double, CasinoMultiples.Label(200), enabled))
         {
-            amount = CasinoLadder.Double(amount, model.MinimumBet, model.MaximumBet, model.Stack);
+            amount = CasinoLadder.Double(amount, model.MinimumBet, model.MaximumBet, Bound(model));
             UiFeedback.Play(UiSound.ChipSlide);
         }
 
         if (Quick(ui, layout.Max, Loc.T(L.Casino.BetMax), enabled))
         {
-            amount = CasinoLadder.Top(model.MinimumBet, model.MaximumBet, model.Stack);
+            amount = CasinoLadder.Top(model.MinimumBet, model.MaximumBet, Bound(model));
             UiFeedback.Play(UiSound.ChipSlide);
         }
     }
@@ -242,7 +267,7 @@ internal sealed class BetComposer
         var typed = long.TryParse(buffer, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
             ? value
             : amount;
-        var clamped = CasinoLadder.Clamp(typed, model.MinimumBet, model.MaximumBet, model.Stack);
+        var clamped = CasinoLadder.Clamp(typed, model.MinimumBet, model.MaximumBet, Bound(model));
         if (clamped != typed)
         {
             flash = FlashSeconds;
@@ -252,7 +277,7 @@ internal sealed class BetComposer
     }
 
     private BetComposerAction DrawActionRow(ImDrawListPtr drawList, AppSkin ui, in BetDeckLayout layout,
-        in BetComposerModel model)
+        in BetComposerModel model, ChipsDesk? desk)
     {
         if (layout.HasMode)
         {
@@ -270,12 +295,16 @@ internal sealed class BetComposer
                 : BetComposerAction.None;
         }
 
-        var canBet = model.Enabled && !model.Busy && amount > 0 && amount <= model.Stack
-            && amount >= model.MinimumBet;
+        var need = model.Cost > 0 ? model.Cost : amount;
+        var ready = model.Enabled && !model.Busy && amount > 0 && amount >= model.MinimumBet;
+        var canBet = ready && need <= model.Stack;
         var label = tab == AutoTab
             ? ActionLabel(L.Strip.AutoFor, amount, int.MinValue)
             : ActionLabel(model.Action, amount, int.MinValue);
-        var pressed = Button.Draw(actionRect, label, ui.Ink, ButtonStyle.Prominent, enabled: canBet);
+        var pressed = desk is null || model.Rack
+            ? Button.Draw(actionRect, label, ui.Ink, ButtonStyle.Prominent, enabled: canBet, id: ActionId)
+            : desk.Primary(actionRect, label, need, model.Stack, ready, ui.Ink, ActionId, ref pending)
+              == ChipsPress.Place;
         if (!pressed && !(model.Repeat && canBet && tab == ManualTab))
         {
             return BetComposerAction.None;

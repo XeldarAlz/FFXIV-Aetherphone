@@ -163,9 +163,12 @@ internal sealed partial class BlackjackTable
         announceClock = 0f;
         var currency = CasinoCurrencies.Of(board);
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var capped = projection.SeatAt(mySeat)?.Capped ?? false;
+        var returned = capped ? Math.Min(recap.Returned, recap.Staked + chips.MaxWinPerBet) : recap.Returned;
         if (currency == CasinoCurrencies.Chips)
         {
-            stage.Settle(new CasinoBetRecord(L.Casino.GameBlackjack, recap.Staked, recap.Returned, board.HandId, now));
+            stage.Settle(new CasinoBetRecord(L.Casino.GameBlackjack, recap.Staked, returned, board.HandId, now,
+                capped));
         }
 
         if (!CasinoRoomIds.IsBlackjackHouse(roomId))
@@ -192,7 +195,7 @@ internal sealed partial class BlackjackTable
         }
 
         var origin = new Vector2(layout.Felt.Center.X, layout.HeroFanY);
-        stage.Celebration.Celebrate(recap.Staked, recap.Returned, origin, frame.Instant);
+        stage.Celebration.Celebrate(recap.Staked, returned, origin, frame.Instant);
     }
 
     private void QueueSideAnnouncements(in BlackjackSeatRecap recap)

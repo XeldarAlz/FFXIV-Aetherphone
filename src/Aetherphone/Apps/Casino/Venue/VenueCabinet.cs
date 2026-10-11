@@ -65,7 +65,8 @@ internal sealed class VenueCabinet : ICabinetIdle
     public CasinoStageSpec Spec()
     {
         return new CasinoStageSpec(GameIdOf(kind), NameOf(kind), Backdrop.Strip, Room: true, DeckHeight: DeckHeight,
-            Practice: Currency == CasinoCurrencies.Practice, InstantAvailable: true, Extra: L.Venue.TableSheet);
+            Practice: Currency == CasinoCurrencies.Practice, InstantAvailable: true, Extra: L.Venue.TableSheet,
+            HouseBanked: false);
     }
 
     public void Enter(string tableId, VenueRoomKind roomKind)

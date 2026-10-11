@@ -84,7 +84,7 @@ internal sealed class BroadcastView
     public CasinoStageSpec Spec()
     {
         return new CasinoStageSpec(game == BroadcastGame.Holdem ? CasinoGames.Holdem : CasinoGames.Blackjack,
-            L.Venue.BroadcastTitle, Backdrop.Felt, LampPool: 1f);
+            L.Venue.BroadcastTitle, Backdrop.Felt, LampPool: 1f, HouseBanked: false);
     }
 
     public void Draw(in CasinoStageFrame frame, AppSkin ui)

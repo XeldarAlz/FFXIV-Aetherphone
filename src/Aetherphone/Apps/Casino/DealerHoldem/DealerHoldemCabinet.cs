@@ -28,8 +28,8 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
     private const float FinishRetrySeconds = 1f;
 
     private readonly CasinoStore store;
+    private readonly MaxWinText maxWinText = new();
     private readonly CasinoDealerHoldemStore dealerStore;
-    private readonly Action openCashier;
     private readonly BetComposer composer = new("##dealerHoldemAnte");
     private readonly DealerHoldemPlayback playback = new();
     private readonly CardFlight cards = new(12);
@@ -57,11 +57,10 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
     private float idleTime;
     private float finishClock;
 
-    public DealerHoldemCabinet(CasinoStore store, CasinoDealerHoldemStore dealerStore, Action openCashier)
+    public DealerHoldemCabinet(CasinoStore store, CasinoDealerHoldemStore dealerStore)
     {
         this.store = store;
         this.dealerStore = dealerStore;
-        this.openCashier = openCashier;
     }
 
     public static float DeckHeight => BetComposer.DeckHeightFor(true, false);
@@ -106,7 +105,7 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
     public void DrawOverlay(Rect screen, AppSkin ui)
     {
         composer.DrawOverlay(screen, ui, false);
-        paySheet.Draw(screen, ui, texts);
+        paySheet.Draw(screen, ui, texts, maxWinText.For(store.MaxWinPerBet, store.Rate));
     }
 
     public void Draw(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui)
@@ -146,13 +145,7 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
         DrawFelt(drawList, frame, scale);
         DrawStateLine(drawList, scale);
         var blocked = state.StakesPaused || state.Draining || frame.Blocked;
-        var sitting = state.Sitting;
-        if (sitting is null)
-        {
-            DrawSeatMissing(drawList, ui, frame.Deck, scale);
-            return;
-        }
-
+        var sitting = state.Sitting ?? CasinoWire.NoBankroll;
         if (playback.Open || dealing)
         {
             DrawDecisions(ui, frame.Deck, sitting.Stack, blocked, scale);
@@ -438,7 +431,8 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
         }
 
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        stage.Settle(new CasinoBetRecord(L.DealerHoldem.Game, round.Stake, round.Payout, round.RoundId, now));
+        stage.Settle(new CasinoBetRecord(L.DealerHoldem.Game, round.Stake, round.Payout, round.RoundId, now,
+            round.Capped));
         if (round.Payout > round.Stake)
         {
             stage.Celebration.Celebrate(round.Stake, round.Payout, layout.Hero.Center, instant);

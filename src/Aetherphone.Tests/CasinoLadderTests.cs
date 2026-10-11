@@ -46,8 +46,46 @@ public sealed class CasinoLadderTests
         Assert.Equal(10_000, CasinoLadder.MaxBet(1, 150_000));
         Assert.Equal(250_000, CasinoLadder.MaxBet(1, 5_000_000));
         Assert.Equal(250_000, CasinoLadder.MaxBet(23, 1_000_000));
-        Assert.Equal(CeilingReason.Balance, CasinoLadder.ReasonFor(1, 5_000_000, CasinoLadder.DefaultAnchors));
-        Assert.Equal(CeilingReason.Level, CasinoLadder.ReasonFor(1, 150_000, CasinoLadder.DefaultAnchors));
+        Assert.Equal(CeilingReason.Balance, CasinoLadder.ReasonFor(1, 5_000_000, CasinoLadder.DefaultAnchors,
+            CasinoLadder.DefaultMaxWinPerBet));
+        Assert.Equal(CeilingReason.Level, CasinoLadder.ReasonFor(1, 150_000, CasinoLadder.DefaultAnchors,
+            CasinoLadder.DefaultMaxWinPerBet));
+    }
+
+    [Fact]
+    public void TheMaxWinPerBetHoldsTheCeiling()
+    {
+        var anchors = CasinoLadder.DefaultAnchors;
+        var maxWin = CasinoLadder.DefaultMaxWinPerBet;
+
+        Assert.Equal(50_000_000, CasinoLadder.MaxBet(60, 0, anchors, maxWin));
+        Assert.Equal(CeilingReason.MaxWin, CasinoLadder.ReasonFor(60, 0, anchors, maxWin));
+        Assert.Equal(50_000_000, CasinoLadder.MaxBet(1, 5_000_000_000, anchors, maxWin));
+        Assert.Equal(CeilingReason.MaxWin, CasinoLadder.ReasonFor(1, 5_000_000_000, anchors, maxWin));
+        Assert.Equal(25_000_000, CasinoLadder.MaxBet(50, 0, anchors, maxWin));
+        Assert.Equal(CeilingReason.Level, CasinoLadder.ReasonFor(50, 0, anchors, maxWin));
+        Assert.Equal(25_000_000, CasinoLadder.MaxBet(1, 500_000_000, anchors, 30_000_000));
+        Assert.Equal(100_000_000, CasinoLadder.MaxBet(60, 0, anchors, 0));
+    }
+
+    [Fact]
+    public void AnEvenMoneyWinAtTheCeilingNeverPassesTheMaxWin()
+    {
+        var anchors = CasinoLadder.DefaultAnchors;
+        var maxWin = CasinoLadder.DefaultMaxWinPerBet;
+        for (var level = 1; level <= 100; level += 9)
+        {
+            Assert.True(CasinoLadder.MaxBet(level, 900_000_000_000, anchors, maxWin) <= maxWin);
+        }
+    }
+
+    [Fact]
+    public void TheServerMaxWinReasonReadsBack()
+    {
+        Assert.Equal(CeilingReason.MaxWin, CasinoLadder.ReasonOf("max_win"));
+        Assert.Equal(CeilingReason.Balance, CasinoLadder.ReasonOf("balance"));
+        Assert.Equal(CeilingReason.Level, CasinoLadder.ReasonOf("level"));
+        Assert.Equal(CeilingReason.Level, CasinoLadder.ReasonOf(string.Empty));
     }
 
     [Fact]

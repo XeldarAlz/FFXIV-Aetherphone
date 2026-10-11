@@ -37,7 +37,6 @@ internal sealed class StripIntro
     private readonly string[] bodies = new string[PageCount];
     private LanguageInfo? bodiesLanguage;
     private long bodiesRate;
-    private long bodiesAllowance;
     private Spring reveal;
     private int page;
 
@@ -58,20 +57,20 @@ internal sealed class StripIntro
         UiInteract.BlockThisFrame();
     }
 
-    public StripIntroResult Draw(Rect screen, AppSkin ui, long rate, long allowance, float deltaSeconds)
+    public StripIntroResult Draw(Rect screen, AppSkin ui, long rate, float deltaSeconds)
     {
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##casinoIntro", screen.Size, false, OverlayFlags))
         {
-            return DrawCard(screen, ui, rate, allowance, deltaSeconds);
+            return DrawCard(screen, ui, rate, deltaSeconds);
         }
     }
 
-    private StripIntroResult DrawCard(Rect screen, AppSkin ui, long rate, long allowance, float deltaSeconds)
+    private StripIntroResult DrawCard(Rect screen, AppSkin ui, long rate, float deltaSeconds)
     {
         var scale = UiScale.Current;
         var shown = reveal.Step(1f, Motion.Sheet, deltaSeconds);
-        RefreshBodies(rate, allowance);
+        RefreshBodies(rate);
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, Veil * shown)));
         var width = MathF.Min(screen.Width - Pad * 2f * scale, CardWidth * scale);
@@ -132,17 +131,16 @@ internal sealed class StripIntro
         return result;
     }
 
-    private void RefreshBodies(long rate, long allowance)
+    private void RefreshBodies(long rate)
     {
-        if (ReferenceEquals(bodiesLanguage, Loc.Current) && bodiesRate == rate && bodiesAllowance == allowance)
+        if (ReferenceEquals(bodiesLanguage, Loc.Current) && bodiesRate == rate)
         {
             return;
         }
 
         bodiesLanguage = Loc.Current;
         bodiesRate = rate;
-        bodiesAllowance = allowance;
-        bodies[0] = Loc.T(L.Strip.IntroChipsBody, NumberText.Group(rate), NumberText.Group(allowance));
+        bodies[0] = Loc.T(L.Strip.IntroChipsBody, NumberText.Group(rate));
         bodies[1] = Loc.T(L.Strip.IntroBonusBody);
         bodies[2] = Loc.T(L.Strip.IntroHostBody);
     }

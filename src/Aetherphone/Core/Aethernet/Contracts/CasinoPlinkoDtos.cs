@@ -20,4 +20,5 @@ internal sealed record CasinoPlinkoDropDto(
     long Payout = 0,
     string NextSeedHash = "",
     long Stack = 0,
-    long Ceiling = 0);
+    long Ceiling = 0,
+    bool Capped = false);

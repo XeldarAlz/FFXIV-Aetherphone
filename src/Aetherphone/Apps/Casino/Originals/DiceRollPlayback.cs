@@ -53,7 +53,7 @@ internal sealed class DiceRollPlayback
         over = dto.Over;
         won = dto.Won;
         hasRoll = true;
-        outcome = new OriginalsOutcome(dto.Stake, dto.Payout, dto.RoundId);
+        outcome = new OriginalsOutcome(dto.Stake, dto.Payout, dto.RoundId, dto.Capped);
         settlePending = true;
         lastTickBand = Band(from);
         elapsed = 0f;

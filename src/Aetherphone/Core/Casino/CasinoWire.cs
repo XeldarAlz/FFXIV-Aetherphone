@@ -1,7 +1,11 @@
+using Aetherphone.Core.Aethernet.Contracts;
+
 namespace Aetherphone.Core.Casino;
 
 internal static class CasinoWire
 {
+    public static readonly CasinoSittingDto NoBankroll = new();
+
     public const string SlotsKind = "casino.slots";
 
     public const string SlotsGambleKind = "casino.slots.gamble";

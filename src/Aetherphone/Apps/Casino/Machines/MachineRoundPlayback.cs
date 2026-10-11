@@ -74,6 +74,8 @@ internal sealed class MachineRoundPlayback
 
     public bool CapApplied { get; private set; }
 
+    public bool Capped { get; private set; }
+
     public bool BonusTriggered { get; private set; }
 
     public int Expander { get; private set; } = -1;
@@ -160,6 +162,7 @@ internal sealed class MachineRoundPlayback
         TotalWin = round.TotalWin;
         Jackpot = round.Jackpot;
         CapApplied = round.CapApplied;
+        Capped = round.Capped;
         BonusTriggered = round.BonusTriggered;
         Expander = round.Expander;
         FeatureMultiplier = round.FeatureMultiplier;

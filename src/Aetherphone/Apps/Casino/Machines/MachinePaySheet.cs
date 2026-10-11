@@ -43,6 +43,7 @@ internal sealed class MachinePaySheet
     private string hit = string.Empty;
     private string bonus = string.Empty;
     private string bonusTwo = string.Empty;
+    private string maxWinMultiple = string.Empty;
     private string maxWin = string.Empty;
     private string mini = string.Empty;
     private string minor = string.Empty;
@@ -74,8 +75,9 @@ internal sealed class MachinePaySheet
         }
     }
 
-    public void Draw(Rect screen, AppSkin ui, string machine, long currentBet)
+    public void Draw(Rect screen, AppSkin ui, string machine, long currentBet, string maxWinLine)
     {
+        maxWin = maxWinLine;
         skin = ui;
         machineId = machine;
         bet = Math.Max(SlotsRules.MinStake, currentBet);
@@ -119,7 +121,8 @@ internal sealed class MachinePaySheet
             y = Stat(drawList, left, y, width, Loc.T(L.Machines.FreeGamesFrequency), bonusTwo, scale);
         }
 
-        y = Stat(drawList, left, y, width, Loc.T(L.Machines.MaxWin), maxWin, scale);
+        y = Stat(drawList, left, y, width, Loc.T(L.Machines.MaxWin), maxWinMultiple, scale);
+        y = Paragraph(drawList, left, y, width, maxWin, scale);
         y = VolatilityRow(drawList, left, y, width, info.VolatilityBars, scale);
         y += Metrics.Space.Lg * scale;
         y = Heading(drawList, left, y, width, Loc.T(L.Machines.PaysAtBet), scale);
@@ -339,7 +342,7 @@ internal sealed class MachinePaySheet
 
         bonusTwo = info.SecondBonusOneIn > 0 ? Loc.T(L.Machines.OneIn, NumberText.Group(info.SecondBonusOneIn))
             : string.Empty;
-        maxWin = Loc.T(L.Machines.TimesBet, NumberText.Group(info.MaxWinMultiple));
+        maxWinMultiple = Loc.T(L.Machines.TimesBet, NumberText.Group(info.MaxWinMultiple));
         Array.Fill(pays, string.Empty);
         Array.Fill(scatters, string.Empty);
         Array.Fill(coins, string.Empty);

@@ -91,7 +91,7 @@ internal sealed partial class CasinoApp
                 surface.CancelDrag();
             }
 
-            var ceiling = CasinoLimitPicker.CeilingFor(state.DailyBuyInCap);
+            var ceiling = CasinoLimitPicker.Ceiling;
             var hint = texts.Numbers(L.Casino.SelfLimitHint, CasinoLimitPicker.Floor, ceiling);
             var hintTop = cursorY + Metrics.Space.Sm * scale;
             var hintHeight = Typography.DrawWrappedLeft(new Vector2(origin.X + Metrics.Space.Lg * scale, hintTop),
@@ -254,7 +254,7 @@ internal sealed partial class CasinoApp
         var max = new Vector2(origin.X + width, origin.Y + height);
         ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
 
-        var ceiling = CasinoLimitPicker.CeilingFor(state.DailyBuyInCap);
+        var ceiling = CasinoLimitPicker.Ceiling;
         var left = min.X + pad;
         var right = max.X - pad;
         var rowCenterY = min.Y + pad + MathF.Max(stepper, valueHeight) * 0.5f;
@@ -383,7 +383,7 @@ internal sealed partial class CasinoApp
                 enabled: !casino.SavingLimits, id: "casino.limits.set"))
         {
             limitChoice = CasinoLimitPicker.Snap(CasinoLimits.SuggestedLimit,
-                CasinoLimitPicker.CeilingFor(state.DailyBuyInCap));
+                CasinoLimitPicker.Ceiling);
         }
 
         return max.Y;

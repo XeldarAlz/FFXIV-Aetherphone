@@ -17,7 +17,8 @@ internal readonly record struct CasinoStageSpec(
     LocString Extra = default,
     float Warmth = 0f,
     float LampPool = 0f,
-    bool Rail = true)
+    bool Rail = true,
+    bool HouseBanked = true)
 {
     public bool Deck => DeckHeight > 0f;
 }

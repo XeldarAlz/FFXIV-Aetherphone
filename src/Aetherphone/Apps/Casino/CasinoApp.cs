@@ -49,8 +49,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
     private readonly ConductGateService conduct;
     private readonly CashierDrawer cashier;
     private readonly CashierBonusShelf bonusShelf;
-    private readonly CashierCashOut cashierCashOut;
-    private readonly CashierClubCard clubCard = new();
+    private readonly ChipsDesk chipsDesk;
     private readonly Machines.MachineCabinet machines;
     private readonly Cabinets.ScratchCabinet scratch;
     private readonly Cabinets.BarkeepCabinet barkeep;
@@ -130,22 +129,23 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         this.confirm = confirm;
         this.conduct = conduct;
         bonusShelf = new CashierBonusShelf(casino);
-        cashierCashOut = new CashierCashOut(casino, confirm);
-        cashier = new CashierDrawer(casino, coins, confirm, bonusShelf, cashierCashOut);
+        cashier = new CashierDrawer(casino, coins, confirm);
+        chipsDesk = new ChipsDesk(casino, coins) { Cashier = cashier.Panel };
+        stage.Chips = chipsDesk;
         preferences = new Core.Casino.CasinoPreferences(configuration);
         stage.Preferences = preferences;
-        machines = new Machines.MachineCabinet(casino, casinoPlay, confirm, OpenCashier, preferences);
-        scratch = new Cabinets.ScratchCabinet(casino, casinoPlay, OpenCashier);
-        barkeep = new Cabinets.BarkeepCabinet(casino, casinoPlay, gameStats, OpenCashier);
-        wheel = new Cabinets.WheelCabinet(casino, casinoRooms, OpenCashier, PopRoute);
-        bingo = new Cabinets.BingoCabinet(casino, casinoRooms, OpenCashier, PopRoute);
+        machines = new Machines.MachineCabinet(casino, casinoPlay, confirm, preferences);
+        scratch = new Cabinets.ScratchCabinet(casino, casinoPlay);
+        barkeep = new Cabinets.BarkeepCabinet(casino, casinoPlay, gameStats);
+        wheel = new Cabinets.WheelCabinet(casino, casinoRooms, PopRoute);
+        bingo = new Cabinets.BingoCabinet(casino, casinoRooms, PopRoute);
         dailySpin = new Cabinets.DailySpinCabinet(casinoSpin);
-        originals = new Originals.OriginalsCabinet(casino, casinoPlay.Originals, OpenCashier);
-        race = new Race.RaceCabinet(casino, casinoRooms, OpenCashier, PopRoute);
-        plinko = new Plinko.PlinkoCabinet(casino, casinoPlay.Plinko, OpenCashier, preferences);
-        dealerHoldem = new DealerHoldem.DealerHoldemCabinet(casino, casinoPlay.DealerHoldem, OpenCashier);
+        originals = new Originals.OriginalsCabinet(casino, casinoPlay.Originals);
+        race = new Race.RaceCabinet(casino, casinoRooms, PopRoute);
+        plinko = new Plinko.PlinkoCabinet(casino, casinoPlay.Plinko, preferences);
+        dealerHoldem = new DealerHoldem.DealerHoldemCabinet(casino, casinoPlay.DealerHoldem);
         blackjack = new Tables.BlackjackTable(casino, casinoRooms, casinoTables, history, casinoTurns, remoteImages,
-            lodestone, OpenCashier, PopRoute, OpenLedger);
+            lodestone, PopRoute, OpenLedger);
         playerLedger = new Tables.TableLedger(casinoTables, confirm);
         openTable = OpenTable;
         openDoorFromRow = OpenDoor;
@@ -158,7 +158,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         openNearbyRow = row => OpenTable(row.TableId);
         this.holdemStore = holdemStore;
         holdem = new Tables.HoldemTable(casino, casinoRooms, casinoTables, holdemStore, casinoTurns, remoteImages,
-            lodestone, OpenCashier, PopRoute);
+            lodestone, PopRoute);
         holdemPit = new Tables.HoldemPit(holdemStore, casino, openTable, openDoorFromRow, OpenHoldemHostSheet);
         holdemPit.Lead = DrawDealerHoldemLead;
         browser = new Tables.TableBrowser(casinoTables, casino, openTable, openDoorFromRow, OpenHostSheet,
@@ -336,6 +336,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         casinoTables.EnsureFresh();
         casinoSpin.EnsureFresh();
         ConsumeTableAnswers();
+        chipsDesk.Update();
         if (launcher.HasPending && !router.IsTransitioning)
         {
             ConsumeLaunch();
@@ -396,9 +397,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         clubSheet.Draw(screenArea, ui);
         cashier.Draw(screenArea, ui, openLimits);
         tradePrompt.Draw(screenArea, ui);
-        if (introShowing && intro.Draw(screenArea, ui, casino.Rate, casino.Cashier?.DailyNetCashOutCoins is > 0
-                ? casino.Cashier.DailyNetCashOutCoins
-                : Core.Casino.CasinoCashier.DailyNetCashOutCoinsFallback,
+        if (introShowing && intro.Draw(screenArea, ui, casino.Rate,
                 MathF.Min(ImGui.GetIO().DeltaTime, Core.Animation.TransitionTiming.MaxFrameSeconds))
             == Strip.StripIntroResult.Finished)
         {
@@ -581,7 +580,8 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         if (route.Screen == CasinoScreen.Table && IsHoldem(route))
         {
             return new CasinoStageSpec(CasinoGames.Holdem, L.Casino.GameHoldem, Backdrop.Strip, Room: true,
-                DeckHeight: holdem.DeckHeight, Practice: holdem.Practice, LampPool: 1f, Extra: L.Venue.TableSheet);
+                DeckHeight: holdem.DeckHeight, Practice: holdem.Practice, LampPool: 1f, Extra: L.Venue.TableSheet,
+                HouseBanked: false);
         }
 
         if (route.Screen == CasinoScreen.Table)
@@ -589,7 +589,8 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
             return new CasinoStageSpec(CasinoGames.Blackjack, L.Casino.GameBlackjack, Backdrop.Felt,
                 DeckHeight: blackjack.DeckHeight,
                 Practice: blackjack.Currency == Core.Casino.CasinoCurrencies.Practice,
-                ReturnTenths: Core.Casino.BlackjackRules.ReturnTenths, Extra: L.Venue.TableSheet);
+                ReturnTenths: Core.Casino.BlackjackRules.ReturnTenths, Extra: L.Venue.TableSheet,
+                HouseBanked: blackjack.Currency == Core.Casino.CasinoCurrencies.Chips);
         }
 
         if (route.Screen == CasinoScreen.VenueRoom)
@@ -604,7 +605,8 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
 
         if (route.Screen == CasinoScreen.DailySpin)
         {
-            return new CasinoStageSpec(CasinoGames.DailySpin, L.Casino.GameDailySpin, Backdrop.Strip);
+            return new CasinoStageSpec(CasinoGames.DailySpin, L.Casino.GameDailySpin, Backdrop.Strip,
+                HouseBanked: false);
         }
 
         return route.GameId switch
@@ -1378,12 +1380,6 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         if (string.Equals(gameId, CasinoGames.Holdem, StringComparison.Ordinal))
         {
             OpenHoldemPit();
-            return;
-        }
-
-        if (!casino.HasChips && !string.Equals(gameId, CasinoGames.Barkeep, StringComparison.Ordinal))
-        {
-            cashier.Open();
             return;
         }
 
