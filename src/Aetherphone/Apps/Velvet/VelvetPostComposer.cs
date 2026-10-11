@@ -1,4 +1,3 @@
-using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -7,6 +6,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;

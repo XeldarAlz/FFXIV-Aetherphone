@@ -4,6 +4,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
