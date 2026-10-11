@@ -25,9 +25,9 @@
       },
       "xunit.runner.visualstudio": {
         "type": "Direct",
-        "requested": "[3.1.5, )",
-        "resolved": "3.1.5",
-        "contentHash": "tKi7dSTwP4m5m9eXPM2Ime4Kn7xNf4x4zT9sdLO/G4hZVnQCRiMTWoSZqI/pYTVeI27oPPqHBKYI/DjJ9GsYgA=="
+        "requested": "[4.0.1, )",
+        "resolved": "4.0.1",
+        "contentHash": "8CoAaZkniVekR1ycJyxn+hOz+6ZQCDPcoIsIs6ujd4WyFcBMlxGNU15Qb8Uxd4iO4UmOuETb0M6vzBbwX/mfLA=="
       },
       "BouncyCastle.Cryptography": {
         "type": "Transitive",
@@ -311,7 +311,7 @@
           "BouncyCastle.Cryptography": "[2.7.0, )",
           "Concentus": "[2.2.2, )",
           "DalamudPackager": "[15.0.0, )",
-          "ManagedDoom": "[1.0.1.9, )",
+          "ManagedDoom": "[1.2.0, )",
           "MeltySynth": "[2.4.1, )",
           "NAudio.Wasapi": "[2.3.0, )",
           "NAudio.WinMM": "[2.3.0, )",
