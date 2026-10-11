@@ -29,7 +29,7 @@ internal sealed partial class BlackjackTable
 
     private static readonly Vector4 PillFill = new(0f, 0f, 0f, 0.35f);
 
-    private void DrawFelt(ImDrawListPtr drawList, AppSkin ui, CasinoBlackjackRoomStateDto board,
+    private void DrawFelt(CasinoStage stage, ImDrawListPtr drawList, AppSkin ui, CasinoBlackjackRoomStateDto board,
         long turnRemaining, float delta, float phase, float scale)
     {
         var shoe = layout.ShoeAnchor;
@@ -42,7 +42,7 @@ internal sealed partial class BlackjackTable
         if (state is not null && BlackjackRules.IsSeat(tapped) && tapped < SeatLimit(board)
             && seatViews[tapped].Phase == SeatPhase.Empty)
         {
-            TapEmptySeat(tapped, state, board);
+            TapEmptySeat(stage, tapped, state, board);
         }
 
         DrawHero(drawList, ui, board, turnRemaining, delta, scale);

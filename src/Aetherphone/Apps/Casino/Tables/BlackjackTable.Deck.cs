@@ -153,7 +153,7 @@ internal sealed partial class BlackjackTable
         var onBoard = BlackjackRules.IsSeat(mySeat);
         if (!bought || (!onBoard && !CasinoSeatMachine.Holds(seatFlow.Stage)))
         {
-            DrawSitAction(ui, state, board, bought, row);
+            DrawSitAction(stage, ui, state, board, bought, row);
             return;
         }
 
@@ -257,15 +257,15 @@ internal sealed partial class BlackjackTable
         var maximum = currency == CasinoCurrencies.Chips ? Math.Min(tableMax, chips.Ceiling.MaxBet) : tableMax;
         if (sideTarget != MainTarget)
         {
-            DrawSideComposer(frame, ui, seatStack, blocked);
+            DrawSideComposer(stage, frame, ui, seatStack, blocked);
             return;
         }
 
         composer.Prefill(minimum);
         var sides = pendingSides[0] + pendingSides[1];
         var model = new BetComposerModel(minimum, maximum, Math.Max(0, seatStack - sides), L.Strip.BetFor,
-            !blocked, Repeat: stage.RepeatPressed(), Busy: rooms.StakeInFlight);
-        var action = composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds);
+            !blocked, Repeat: stage.RepeatPressed(), Busy: rooms.StakeInFlight, Rack: true);
+        var action = composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds);
         ClampSidesTo(composer.Amount);
         if (action != BetComposerAction.Confirm)
         {
@@ -276,13 +276,14 @@ internal sealed partial class BlackjackTable
         rooms.PlaceBlackjackBet(composer.Amount, pendingSides[0], pendingSides[1]);
     }
 
-    private void DrawSideComposer(in CasinoStageFrame frame, AppSkin ui, long seatStack, bool blocked)
+    private void DrawSideComposer(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, long seatStack,
+        bool blocked)
     {
         var other = pendingSides[sideTarget == 0 ? 1 : 0];
         var model = new BetComposerModel(BlackjackSideBets.SideBetMin, heldMainAmount,
             Math.Max(0, seatStack - heldMainAmount - other), L.Blackjack.SideStake, !blocked,
-            Busy: rooms.StakeInFlight);
-        if (composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds) != BetComposerAction.Confirm)
+            Busy: rooms.StakeInFlight, Rack: true);
+        if (composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds) != BetComposerAction.Confirm)
         {
             return;
         }
@@ -407,8 +408,8 @@ internal sealed partial class BlackjackTable
         };
     }
 
-    private void DrawSitAction(AppSkin ui, CasinoStateDto state, CasinoBlackjackRoomStateDto board, bool bought,
-        Rect row)
+    private void DrawSitAction(CasinoStage stage, AppSkin ui, CasinoStateDto state,
+        CasinoBlackjackRoomStateDto board, bool bought, Rect row)
     {
         var banked = BlackjackHosting.SeatBanked(board);
         var buyIn = banked
@@ -418,11 +419,7 @@ internal sealed partial class BlackjackTable
                 : RackFor(state, board);
         if (!banked && !bought && buyIn <= 0)
         {
-            if (DeckActions.DrawPrimary(row, Loc.T(L.Casino.BlackjackTakeSeat), ui.Ink, true, "blackjack.cashier"))
-            {
-                openCashier();
-            }
-
+            stage.Chips?.DrawGetChips(row, RackNeed(state, board), ChipsNeedKind.BuyIn, ui.Ink);
             return;
         }
 
@@ -435,7 +432,8 @@ internal sealed partial class BlackjackTable
         }
     }
 
-    private void TapEmptySeat(int seatIndex, CasinoStateDto state, CasinoBlackjackRoomStateDto board)
+    private void TapEmptySeat(CasinoStage stage, int seatIndex, CasinoStateDto state,
+        CasinoBlackjackRoomStateDto board)
     {
         CasinoSfx.Play(UiSound.ChipSlide);
         if (BlackjackHosting.SeatBanked(board))
@@ -456,13 +454,17 @@ internal sealed partial class BlackjackTable
         var buyIn = RackFor(state, board);
         if (buyIn <= 0)
         {
-            openCashier();
+            stage.Chips?.Request(RackNeed(state, board), ChipsNeedKind.BuyIn);
             return;
         }
 
         inlineReason = string.Empty;
         seatFlow.Sit(roomId, seatIndex, buyIn, board.Phase);
     }
+
+    private static long RackNeed(CasinoStateDto state, CasinoBlackjackRoomStateDto board) =>
+        BlackjackRules.RackFor(CasinoLadder.CeilingFor(state).MaxBet, board.MinBet, board.MaxBet, state.MinBuyIn,
+            state.MaxBuyIn, long.MaxValue);
 
     private static long RackFor(CasinoStateDto state, CasinoBlackjackRoomStateDto board)
     {

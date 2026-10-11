@@ -34,6 +34,7 @@ internal sealed class RaceDeck
 
     private long amount = RaceRules.MinBet;
     private float flash;
+    private ChipsPending pending;
 
     public long Amount => amount;
 
@@ -45,13 +46,13 @@ internal sealed class RaceDeck
         flash = 0f;
     }
 
-    public RaceDeckAction Draw(AppSkin ui, Rect deck, string[] kindLabels, in RaceDeckModel model,
+    public RaceDeckAction Draw(ChipsDesk? chips, AppSkin ui, Rect deck, string[] kindLabels, in RaceDeckModel model,
         float deltaSeconds)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         flash = MathF.Max(0f, flash - deltaSeconds);
-        var snapped = CasinoLadder.Clamp(amount, RaceRules.MinBet, model.MaximumBet, model.Stack);
+        var snapped = CasinoLadder.Clamp(amount, RaceRules.MinBet, model.MaximumBet, long.MaxValue);
         if (snapped != amount)
         {
             flash = amount > 0 ? FlashSeconds : 0f;
@@ -81,9 +82,12 @@ internal sealed class RaceDeck
             result = RaceDeckAction.Ride;
         }
 
-        var canBet = model.Enabled && model.Ready && amount >= RaceRules.MinBet && amount <= model.Stack;
-        var pressed = Button.Draw(layout.Primary, model.Primary, ui.Ink, ButtonStyle.Prominent, enabled: canBet,
-            id: PrimaryId);
+        var ready = model.Enabled && model.Ready && amount >= RaceRules.MinBet;
+        var canBet = ready && amount <= model.Stack;
+        var pressed = chips is null || !model.Ready
+            ? Button.Draw(layout.Primary, model.Primary, ui.Ink, ButtonStyle.Prominent, enabled: canBet, id: PrimaryId)
+            : chips.Primary(layout.Primary, model.Primary, amount, model.Stack, ready, ui.Ink, PrimaryId, ref pending)
+              == ChipsPress.Place;
         if (pressed || (model.Repeat && canBet))
         {
             result = RaceDeckAction.Bet;
@@ -114,13 +118,13 @@ internal sealed class RaceDeck
         var enabled = model.Enabled;
         if (Button.Draw(layout.Half, Loc.T(L.Casino.BetHalf), ui.Ink, ButtonStyle.Gray, enabled: enabled))
         {
-            amount = CasinoLadder.Half(amount, RaceRules.MinBet, model.MaximumBet, model.Stack);
+            amount = CasinoLadder.Half(amount, RaceRules.MinBet, model.MaximumBet, long.MaxValue);
             UiFeedback.Play(UiSound.ChipSlide);
         }
 
         if (Button.Draw(layout.Double, CasinoMultiples.Label(200), ui.Ink, ButtonStyle.Gray, enabled: enabled))
         {
-            amount = CasinoLadder.Double(amount, RaceRules.MinBet, model.MaximumBet, model.Stack);
+            amount = CasinoLadder.Double(amount, RaceRules.MinBet, model.MaximumBet, long.MaxValue);
             UiFeedback.Play(UiSound.ChipSlide);
         }
 
@@ -129,7 +133,7 @@ internal sealed class RaceDeck
             return;
         }
 
-        amount = CasinoLadder.Top(RaceRules.MinBet, model.MaximumBet, model.Stack);
+        amount = CasinoLadder.Top(RaceRules.MinBet, model.MaximumBet, long.MaxValue);
         UiFeedback.Play(UiSound.ChipSlide);
     }
 }

@@ -30,7 +30,6 @@ internal sealed partial class MachineCabinet
     private readonly CasinoStore store;
     private readonly CasinoPlayStore play;
     private readonly ConfirmService confirm;
-    private readonly Action openCashier;
     private readonly CasinoPreferences preferences;
     private readonly MachineRoundPlayback playback = new();
     private readonly MachineReels reels = new();
@@ -64,14 +63,13 @@ internal sealed partial class MachineCabinet
     private Rect glass;
     private Rect chassis;
 
-    public MachineCabinet(CasinoStore store, CasinoPlayStore play, ConfirmService confirm, Action openCashier,
+    public MachineCabinet(CasinoStore store, CasinoPlayStore play, ConfirmService confirm,
         CasinoPreferences preferences)
     {
         this.preferences = preferences;
         this.store = store;
         this.play = play;
         this.confirm = confirm;
-        this.openCashier = openCashier;
         for (var index = 0; index < MachineIds.Length; index++)
         {
             composers[index] = new BetComposer("##machineBet." + MachineIds[index]);
@@ -245,14 +243,7 @@ internal sealed partial class MachineCabinet
         DrawGamble(drawList, ui, frame, scale);
         DrawStrip(drawList, ui, frame, scale);
         HandleWindowTap(frame);
-        var sitting = state.Sitting;
-        if (sitting is null)
-        {
-            DrawSeatMissing(drawList, ui, frame.Deck, scale);
-            return;
-        }
-
-        DrawDeck(stage, frame, ui, state, sitting, scale);
+        DrawDeck(stage, frame, ui, state, state.Sitting ?? CasinoWire.NoBankroll, scale);
     }
 
     internal static int IndexOf(string id)
@@ -576,11 +567,11 @@ internal sealed partial class MachineCabinet
         var bet = Composer.Amount;
         var cost = SlotsRules.CostOf(Mode, bet);
         var busy = Busy;
-        var enabled = !blocked && sitting.Stack >= SlotsRules.CostOf(Mode, SlotsRules.MinStake);
+        var enabled = !blocked;
         var model = new BetComposerModel(SlotsRules.MinStake, store.Ceiling.MaxBet, sitting.Stack,
-            L.Machines.SpinFor, enabled && cost <= sitting.Stack, AutoAvailable: true, Knob: true,
-            Repeat: stage.RepeatPressed(), Busy: busy);
-        var action = Composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds);
+            L.Machines.SpinFor, enabled, AutoAvailable: true, Knob: true, Repeat: stage.RepeatPressed(), Busy: busy,
+            Cost: cost);
+        var action = Composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds);
         DrawKnob(ui, Composer.KnobRect, sitting, !busy && !Composer.Auto.Running && !blocked, scale);
         if (blocked && Composer.Auto.Running)
         {
@@ -614,9 +605,8 @@ internal sealed partial class MachineCabinet
         }
 
         var next = Composer.Auto.Next;
-        if (sitting.Stack < SlotsRules.CostOf(Mode, next))
+        if (!Composer.Covers(stage, SlotsRules.CostOf(Mode, next), sitting.Stack))
         {
-            Composer.Auto.Stop(AutoStop.Chips);
             return;
         }
 
@@ -652,23 +642,6 @@ internal sealed partial class MachineCabinet
             Danger = false,
             Confirm = () => buyConfirmed = true,
         });
-    }
-
-    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect deck, float scale)
-    {
-        var inset = BetComposer.Pad * scale;
-        var title = Loc.T(L.Casino.CabinetNoChipsTitle);
-        var titleHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
-        Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
-            Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), StageInks.Strong,
-            TextStyles.SubheadlineEmphasized);
-        var top = deck.Min.Y + inset + titleHeight + Metrics.Space.Sm * scale;
-        var rect = new Rect(new Vector2(deck.Min.X + inset, top),
-            new Vector2(deck.Max.X - inset, top + Button.LargeHeight * scale));
-        if (Button.Draw(drawList, rect, Loc.T(L.Casino.Cashier), ui.Ink))
-        {
-            openCashier();
-        }
     }
 
     private static void DrawNotOpen(ImDrawListPtr drawList, AppSkin ui, Rect safe, float scale)

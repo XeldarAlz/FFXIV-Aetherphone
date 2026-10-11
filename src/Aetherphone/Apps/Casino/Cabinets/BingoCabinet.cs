@@ -58,7 +58,6 @@ internal sealed class BingoCabinet : ICabinetIdle
 
     private readonly CasinoStore chips;
     private readonly CasinoRoomsStore rooms;
-    private readonly Action openCashier;
     private readonly Action leaveRoom;
     private readonly BingoRoundPlayback playback = new();
     private readonly BingoTumbler tumbler = new();
@@ -90,11 +89,10 @@ internal sealed class BingoCabinet : ICabinetIdle
     private bool railDragMoved;
     private bool entered;
 
-    public BingoCabinet(CasinoStore chips, CasinoRoomsStore rooms, Action openCashier, Action leaveRoom)
+    public BingoCabinet(CasinoStore chips, CasinoRoomsStore rooms, Action leaveRoom)
     {
         this.chips = chips;
         this.rooms = rooms;
-        this.openCashier = openCashier;
         this.leaveRoom = leaveRoom;
     }
 
@@ -213,14 +211,7 @@ internal sealed class BingoCabinet : ICabinetIdle
                 layout.Podiums.Min.Y - height - PodiumGap * scale, safe.Width, scale);
         }
 
-        var sitting = state.Sitting;
-        if (sitting is null)
-        {
-            DrawSeatMissing(drawList, ui, frame.Deck, scale);
-            return;
-        }
-
-        DrawDeck(stage, frame, ui, state, sitting, holding, calledOff, scale);
+        DrawDeck(stage, frame, ui, state, state.Sitting ?? CasinoWire.NoBankroll, holding, calledOff, scale);
     }
 
     public void DrawIdle(ImDrawListPtr drawList, Rect rect, float deltaSeconds)
@@ -988,7 +979,7 @@ internal sealed class BingoCabinet : ICabinetIdle
             && !frame.Blocked;
         var model = new BetComposerModel(stake, stake, sitting.Stack, L.Bingo.BuyAction, enabled, FixedAmount: true,
             Knob: true, Repeat: enabled && stage.RepeatPressed(), Busy: rooms.StakeInFlight);
-        var action = composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds);
+        var action = composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds);
         DrawKnob(ImGui.GetWindowDrawList(), composer.KnobRect, selling, headroom, holding, calledOff, enabled, scale);
         if (action != BetComposerAction.Confirm)
         {
@@ -1070,21 +1061,6 @@ internal sealed class BingoCabinet : ICabinetIdle
         if (pressed)
         {
             leaveRoom();
-        }
-    }
-
-    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect deck, float scale)
-    {
-        var inset = BetComposer.Pad * scale;
-        var title = Loc.T(L.Casino.CabinetNoChipsTitle);
-        var titleHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
-        Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
-            Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        var row = DeckActions.Row(deck, scale);
-        if (DeckActions.DrawPrimary(row, row.Min.X, Loc.T(L.Casino.Cashier), true, ui.Ink))
-        {
-            openCashier();
         }
     }
 }

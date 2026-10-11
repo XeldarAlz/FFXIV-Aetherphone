@@ -43,7 +43,6 @@ internal sealed partial class HoldemTable : ICabinetIdle
     private readonly CasinoTurnNotifier turns;
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
-    private readonly Action openCashier;
     private readonly Action leaveRoom;
     private readonly HoldemPlayback playback = new();
     private readonly HoldemTableLayout layout = new();
@@ -87,7 +86,7 @@ internal sealed partial class HoldemTable : ICabinetIdle
     private Spring peel = new(0f);
 
     public HoldemTable(CasinoStore chips, CasinoRoomsStore rooms, CasinoTablesStore tables, HoldemStore store,
-        CasinoTurnNotifier turns, RemoteImageCache images, LodestoneService lodestone, Action openCashier,
+        CasinoTurnNotifier turns, RemoteImageCache images, LodestoneService lodestone,
         Action leaveRoom)
     {
         this.chips = chips;
@@ -97,7 +96,6 @@ internal sealed partial class HoldemTable : ICabinetIdle
         this.turns = turns;
         this.images = images;
         this.lodestone = lodestone;
-        this.openCashier = openCashier;
         this.leaveRoom = leaveRoom;
         seatFlow = new HoldemSeatFlow(store);
         composer = new HoldemRaiseComposer(texts);

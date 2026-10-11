@@ -116,19 +116,6 @@ internal sealed class CashierDrawer
 
     private void ConsumeResults(Action openLimits)
     {
-        var sitting = store.TakeSittingResult();
-        if (sitting is not null)
-        {
-            if (sitting.Granted)
-            {
-                UiFeedback.Play(UiSound.CasinoChips);
-                panel.ClearBuy();
-                panel.ClearNote();
-            }
-
-            HandleOutcome(sitting.Reason, openLimits);
-        }
-
         var closed = store.TakeCloseResult();
         if (closed is not null)
         {

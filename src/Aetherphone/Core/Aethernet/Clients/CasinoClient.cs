@@ -7,8 +7,7 @@ namespace Aetherphone.Core.Aethernet.Clients;
 internal sealed partial class CasinoClient
 {
     internal const string StatePath = "/casino";
-    internal const string OpenSittingPath = "/casino/sittings";
-    internal const string TopUpPath = "/casino/sittings/topup";
+    internal const string BuyChipsPath = "/casino/chips/buy";
     internal const string CloseSittingPath = "/casino/sittings/close";
     internal const string LimitsPath = "/casino/limits";
     internal const string SpinSlotsPath = "/casino/slots/spin";
@@ -140,8 +139,6 @@ internal sealed partial class CasinoClient
             : string.Concat(RoundsPath, "?cursor=", Uri.EscapeDataString(cursor));
     }
 
-    internal const int SoloTableKind = 0;
-
     private readonly AethernetTransport net;
 
     public CasinoClient(AethernetTransport net)
@@ -154,21 +151,12 @@ internal sealed partial class CasinoClient
         return net.GetAsync(StatePath, AethernetJsonContext.Default.CasinoStateDto, token, null, onFailure);
     }
 
-    public Task<CasinoSittingResultDto?> OpenSittingAsync(string clientSittingId, string clientActionId,
-        long amount, CancellationToken token, Action<AepFailure>? onFailure = null)
+    public Task<CasinoBuyChipsDto?> BuyChipsAsync(long coins, string clientActionId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
     {
-        return net.PostAsync(OpenSittingPath,
-            new CasinoOpenSittingRequest(clientSittingId, clientActionId, SoloTableKind, amount),
-            AethernetJsonContext.Default.CasinoOpenSittingRequest,
-            AethernetJsonContext.Default.CasinoSittingResultDto, token, null, onFailure);
-    }
-
-    public Task<CasinoSittingResultDto?> TopUpAsync(string sittingId, string clientActionId, long amount,
-        CancellationToken token, Action<AepFailure>? onFailure = null)
-    {
-        return net.PostAsync(TopUpPath, new CasinoTopUpRequest(sittingId, clientActionId, amount),
-            AethernetJsonContext.Default.CasinoTopUpRequest,
-            AethernetJsonContext.Default.CasinoSittingResultDto, token, null, onFailure);
+        return net.PostAsync(BuyChipsPath, new CasinoBuyChipsRequest(coins, clientActionId),
+            AethernetJsonContext.Default.CasinoBuyChipsRequest, AethernetJsonContext.Default.CasinoBuyChipsDto, token,
+            null, onFailure);
     }
 
     public Task<CasinoSittingResultDto?> CloseSittingAsync(string sittingId, CancellationToken token,

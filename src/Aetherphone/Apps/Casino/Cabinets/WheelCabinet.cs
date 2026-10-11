@@ -33,7 +33,6 @@ internal sealed class WheelCabinet : ICabinetIdle
 
     private readonly CasinoStore chips;
     private readonly CasinoRoomsStore rooms;
-    private readonly Action openCashier;
     private readonly Action leaveRoom;
     private readonly WheelRoundPlayback playback = new();
     private readonly BetComposer composer = new("##wheelBet");
@@ -64,11 +63,10 @@ internal sealed class WheelCabinet : ICabinetIdle
     private Vector2 ringCenter;
     private float ringRadius;
 
-    public WheelCabinet(CasinoStore chips, CasinoRoomsStore rooms, Action openCashier, Action leaveRoom)
+    public WheelCabinet(CasinoStore chips, CasinoRoomsStore rooms, Action leaveRoom)
     {
         this.chips = chips;
         this.rooms = rooms;
-        this.openCashier = openCashier;
         this.leaveRoom = leaveRoom;
     }
 
@@ -173,13 +171,7 @@ internal sealed class WheelCabinet : ICabinetIdle
                 podiumTop - height - PodiumGap * scale, safe.Width, scale);
         }
 
-        if (sitting is null)
-        {
-            DrawSeatMissing(drawList, ui, frame.Deck, scale);
-            return;
-        }
-
-        DrawDeck(stage, frame, ui, state, sitting, snapshot);
+        DrawDeck(stage, frame, ui, state, sitting ?? CasinoWire.NoBankroll, snapshot);
     }
 
     public void DrawIdle(ImDrawListPtr drawList, Rect rect, float deltaSeconds)
@@ -705,7 +697,7 @@ internal sealed class WheelCabinet : ICabinetIdle
             && maximum >= WheelRules.MinStakePerSpot;
         var model = new BetComposerModel(WheelRules.MinStakePerSpot, maximum, sitting.Stack, L.Strip.BetFor, enabled,
             Repeat: stage.RepeatPressed(), Busy: rooms.StakeInFlight);
-        if (composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds) != BetComposerAction.Confirm)
+        if (composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds) != BetComposerAction.Confirm)
         {
             return;
         }
@@ -723,24 +715,6 @@ internal sealed class WheelCabinet : ICabinetIdle
         if (pressed)
         {
             leaveRoom();
-        }
-    }
-
-    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect deck, float scale)
-    {
-        var inset = BetComposer.Pad * scale;
-        var title = Loc.T(L.Casino.CabinetNoChipsTitle);
-        var label = Loc.T(L.Casino.Cashier);
-        var titleHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
-        Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
-            Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        var top = deck.Min.Y + inset + titleHeight + Metrics.Space.Sm * scale;
-        var rect = new Rect(new Vector2(deck.Min.X + inset, top),
-            new Vector2(deck.Max.X - inset, top + Button.LargeHeight * scale));
-        if (Button.Draw(drawList, rect, label, ui.Ink))
-        {
-            openCashier();
         }
     }
 }

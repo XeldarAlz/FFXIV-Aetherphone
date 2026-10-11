@@ -36,7 +36,6 @@ internal sealed partial class BlackjackTable : ICabinetIdle
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
     private readonly BlackjackSeatFlow seatFlow;
-    private readonly Action openCashier;
     private readonly Action leaveRoom;
     private readonly Action<string> openLedger;
     private readonly BlackjackHostedText hostedText = new();
@@ -59,7 +58,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
 
     public BlackjackTable(CasinoStore chips, CasinoRoomsStore rooms, CasinoTablesStore tables,
         CasinoHistoryStore history, CasinoTurnNotifier turns, RemoteImageCache images, LodestoneService lodestone,
-        Action openCashier, Action leaveRoom, Action<string> openLedger)
+        Action leaveRoom, Action<string> openLedger)
     {
         this.chips = chips;
         this.rooms = rooms;
@@ -68,7 +67,6 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         this.turns = turns;
         this.images = images;
         this.lodestone = lodestone;
-        this.openCashier = openCashier;
         this.leaveRoom = leaveRoom;
         this.openLedger = openLedger;
         seatFlow = new BlackjackSeatFlow(tables);
@@ -249,7 +247,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         UpdateMotions(delta);
         layout.Compute(felt, BlackjackTableLayout.RailSeatCount(mySeat, SeatLimit(board)),
             BlackjackRules.IsSeat(mySeat), scale);
-        DrawFelt(drawList, ui, board, deadlineRemaining, delta, frame.Phase, scale);
+        DrawFelt(stage, drawList, ui, board, deadlineRemaining, delta, frame.Phase, scale);
         SpeakForPhase(board);
         SettleHand(stage, board, frame);
         DrawInlineReason(drawList, ui, frame.Deck, safe, scale);

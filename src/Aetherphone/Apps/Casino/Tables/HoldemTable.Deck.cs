@@ -75,7 +75,7 @@ internal sealed partial class HoldemTable
                 return;
             }
 
-            DrawWatchDeck(ui, deck, board, blocked, scale);
+            DrawWatchDeck(stage, ui, deck, board, blocked, scale);
             return;
         }
 
@@ -152,7 +152,8 @@ internal sealed partial class HoldemTable
             width, StatusMarquee, TextStyles.Footnote, false);
     }
 
-    private void DrawWatchDeck(AppSkin ui, Rect deck, CasinoHoldemRoomStateDto board, bool blocked, float scale)
+    private void DrawWatchDeck(CasinoStage stage, AppSkin ui, Rect deck, CasinoHoldemRoomStateDto board, bool blocked,
+        float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var status = StatusRect(deck, scale);
@@ -186,12 +187,7 @@ internal sealed partial class HoldemTable
         if (!practice && !HoldemRules.CanBuyIn(MinBuyIn(board), MaxBuyIn(board), Bankroll(), chips.Ceiling.MaxBet,
                 false))
         {
-            if (Button.Draw(drawList, sitRect, Loc.T(L.Holdem.GetChips), ui.Ink, ButtonStyle.Tinted,
-                    enabled: !blocked, id: "holdem.watch.chips"))
-            {
-                openCashier();
-            }
-
+            stage.Chips?.DrawGetChips(sitRect, MinBuyIn(board), ChipsNeedKind.BuyIn, ui.Ink);
             return;
         }
 

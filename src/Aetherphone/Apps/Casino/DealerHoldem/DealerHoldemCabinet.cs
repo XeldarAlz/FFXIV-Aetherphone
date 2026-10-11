@@ -29,7 +29,6 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
 
     private readonly CasinoStore store;
     private readonly CasinoDealerHoldemStore dealerStore;
-    private readonly Action openCashier;
     private readonly BetComposer composer = new("##dealerHoldemAnte");
     private readonly DealerHoldemPlayback playback = new();
     private readonly CardFlight cards = new(12);
@@ -57,11 +56,10 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
     private float idleTime;
     private float finishClock;
 
-    public DealerHoldemCabinet(CasinoStore store, CasinoDealerHoldemStore dealerStore, Action openCashier)
+    public DealerHoldemCabinet(CasinoStore store, CasinoDealerHoldemStore dealerStore)
     {
         this.store = store;
         this.dealerStore = dealerStore;
-        this.openCashier = openCashier;
     }
 
     public static float DeckHeight => BetComposer.DeckHeightFor(true, false);
@@ -146,13 +144,7 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
         DrawFelt(drawList, frame, scale);
         DrawStateLine(drawList, scale);
         var blocked = state.StakesPaused || state.Draining || frame.Blocked;
-        var sitting = state.Sitting;
-        if (sitting is null)
-        {
-            DrawSeatMissing(drawList, ui, frame.Deck, scale);
-            return;
-        }
-
+        var sitting = state.Sitting ?? CasinoWire.NoBankroll;
         if (playback.Open || dealing)
         {
             DrawDecisions(ui, frame.Deck, sitting.Stack, blocked, scale);

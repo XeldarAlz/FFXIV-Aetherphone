@@ -93,13 +93,17 @@ internal sealed record CasinoCeilingDto(
     string Reason = "",
     long NextLevelCap = 0);
 
-internal sealed record CasinoOpenSittingRequest(
-    string ClientSittingId,
-    string ClientActionId,
-    int TableKind,
-    long Amount);
+internal sealed record CasinoBuyChipsRequest(long Coins = 0, string ClientActionId = "");
 
-internal sealed record CasinoTopUpRequest(string SittingId, string ClientActionId, long Amount);
+internal sealed record CasinoBuyChipsDto(
+    bool Granted = false,
+    string Reason = "",
+    long Coins = 0,
+    long Chips = 0,
+    long Stack = 0,
+    long Balance = 0,
+    CasinoSittingDto? Sitting = null,
+    CasinoCeilingDto? Ceiling = null);
 
 internal sealed record CasinoCloseSittingRequest(string SittingId);
 

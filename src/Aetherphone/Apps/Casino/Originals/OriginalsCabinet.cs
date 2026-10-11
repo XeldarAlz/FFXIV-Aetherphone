@@ -30,7 +30,6 @@ internal sealed class OriginalsCabinet
 
     private readonly CasinoStore store;
     private readonly CasinoOriginalsStore originals;
-    private readonly Action openCashier;
     private readonly IOriginalsSkin[] skins;
     private readonly BetComposer[] composers = new BetComposer[GameIds.Length];
     private readonly LadderStep[] ladder = new LadderStep[OriginalsLadder.Capacity];
@@ -42,11 +41,10 @@ internal sealed class OriginalsCabinet
     private bool hasNotice;
     private float autoPause;
 
-    public OriginalsCabinet(CasinoStore store, CasinoOriginalsStore originals, Action openCashier)
+    public OriginalsCabinet(CasinoStore store, CasinoOriginalsStore originals)
     {
         this.store = store;
         this.originals = originals;
-        this.openCashier = openCashier;
         skins = new IOriginalsSkin[] { new MinesSkin(), new DiceSkin(), new LimboSkin(), new KenoSkin(), new HiLoSkin() };
         for (var index = 0; index < composers.Length; index++)
         {
@@ -154,12 +152,6 @@ internal sealed class OriginalsCabinet
         skin.DrawWorld(drawList, new OriginalsFrame(stage, originals, world, frame.DeltaSeconds, frame.Phase,
             frame.Instant, interactive, Composer.AutoTabSelected), ui);
         DrawStatus(drawList, ui, state, new Rect(new Vector2(safe.Min.X, world.Max.Y), safe.Max), scale);
-        if (sitting is null)
-        {
-            DrawSeatMissing(drawList, ui, frame.Deck, scale);
-            return;
-        }
-
         if (skin.Live)
         {
             DrawLiveDeck(drawList, ui, frame.Deck, blocked, scale);
@@ -167,7 +159,7 @@ internal sealed class OriginalsCabinet
             return;
         }
 
-        DrawComposer(stage, frame, ui, sitting, blocked);
+        DrawComposer(stage, frame, ui, sitting ?? CasinoWire.NoBankroll, blocked);
         skin.Step(originals, Composer.Auto.Running && !blocked);
     }
 
@@ -314,11 +306,11 @@ internal sealed class OriginalsCabinet
         }
 
         var ceiling = store.Ceiling.MaxBet;
-        var enabled = !blocked && sitting.Stack >= OriginalsRules.MinBet;
+        var enabled = !blocked;
         var busy = originals.InFlight || skin.Busy;
         var model = new BetComposerModel(OriginalsRules.MinBet, ceiling, sitting.Stack, skin.Action, enabled,
             AutoAvailable: skin.AutoAvailable, Knob: skin.Knob, Repeat: stage.RepeatPressed(), Busy: busy);
-        var action = Composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds);
+        var action = Composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds);
         if (skin.Knob)
         {
             skin.DrawKnob(ImGui.GetWindowDrawList(), Composer.KnobRect, ui,
@@ -347,9 +339,8 @@ internal sealed class OriginalsCabinet
             return;
         }
 
-        if (sitting.Stack < Composer.Auto.Next)
+        if (!Composer.Covers(stage, Composer.Auto.Next, sitting.Stack))
         {
-            Composer.Auto.Stop(AutoStop.Chips);
             return;
         }
 
@@ -368,21 +359,6 @@ internal sealed class OriginalsCabinet
         if (Composer.Auto.Running)
         {
             Composer.Auto.Stop(AutoStop.Refused);
-        }
-    }
-
-    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect deck, float scale)
-    {
-        var inset = BetComposer.Pad * scale;
-        var title = Loc.T(L.Casino.CabinetNoChipsTitle);
-        var titleHeight = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
-        Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
-            Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        var row = DeckActions.Row(deck, scale);
-        if (DeckActions.DrawPrimary(row, row.Min.X, Loc.T(L.Casino.Cashier), true, ui.Ink))
-        {
-            openCashier();
         }
     }
 }

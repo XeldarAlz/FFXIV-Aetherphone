@@ -376,6 +376,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int CasinoPlinkoRisk { get; set; } = PlinkoRules.DefaultRisk;
     public HashSet<string> CasinoInstantGames { get; set; } = new();
     public bool CasinoStripIntroSeen { get; set; }
+    public HashSet<ulong> CasinoAutoTopUp { get; set; } = new();
     public HomeLayout? Home { get; set; }
     public Dictionary<string, bool> AppFlags { get; set; } = new();
     public int HomeGridRows { get; set; } = 6;

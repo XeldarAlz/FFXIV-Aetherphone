@@ -24,10 +24,10 @@ internal sealed partial class DealerHoldemCabinet
         var ceiling = store.Ceiling.MaxBet;
         var share = trips ? 3 : 2;
         var busy = dealerStore.InFlight || playback.Busy || cards.Busy || chips.Busy;
-        var enabled = !blocked && stack >= DealerHoldemRules.StakeAtDeal(DealerHoldemRules.MinAnte, 0);
-        var model = new BetComposerModel(DealerHoldemRules.MinAnte, ceiling, stack / share, L.DealerHoldem.DealFor,
-            enabled, Knob: true, Repeat: stage.RepeatPressed(), Busy: busy);
-        var action = composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds);
+        var enabled = !blocked;
+        var model = new BetComposerModel(DealerHoldemRules.MinAnte, ceiling, stack, L.DealerHoldem.DealFor,
+            enabled, Knob: true, Repeat: stage.RepeatPressed(), Busy: busy, Cost: composer.Amount * share);
+        var action = composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds);
         DrawTripsKnob(ui, composer.KnobRect, enabled && !busy);
         if (action != BetComposerAction.Confirm)
         {
@@ -198,19 +198,5 @@ internal sealed partial class DealerHoldemCabinet
         var drawList = ImGui.GetWindowDrawList();
         Typography.DrawWrappedCentered(drawList, text, TextStyles.Subheadline, CasinoColors.InkBody,
             new Vector2(deck.Center.X, top), deck.Width - BetComposer.Pad * 2f * scale);
-    }
-
-    private void DrawSeatMissing(ImDrawListPtr drawList, AppSkin ui, Rect deck, float scale)
-    {
-        var inset = BetComposer.Pad * scale;
-        var title = Loc.T(L.Casino.CabinetNoChipsTitle);
-        Typography.Draw(drawList, new Vector2(deck.Min.X + inset, deck.Min.Y + inset),
-            Typography.FitText(title, deck.Width - inset * 2f, TextStyles.SubheadlineEmphasized), ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
-        var row = DeckActions.Row(deck, scale);
-        if (DeckActions.DrawPrimary(row, row.Min.X, Loc.T(L.Casino.Cashier), true, ui.Ink))
-        {
-            openCashier();
-        }
     }
 }

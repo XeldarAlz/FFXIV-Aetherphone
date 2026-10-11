@@ -49,6 +49,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
     private readonly ConductGateService conduct;
     private readonly CashierDrawer cashier;
     private readonly CashierBonusShelf bonusShelf;
+    private readonly ChipsDesk chipsDesk;
     private readonly Machines.MachineCabinet machines;
     private readonly Cabinets.ScratchCabinet scratch;
     private readonly Cabinets.BarkeepCabinet barkeep;
@@ -129,20 +130,22 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         this.conduct = conduct;
         bonusShelf = new CashierBonusShelf(casino);
         cashier = new CashierDrawer(casino, coins, confirm);
+        chipsDesk = new ChipsDesk(casino, coins) { Cashier = cashier.Panel };
+        stage.Chips = chipsDesk;
         preferences = new Core.Casino.CasinoPreferences(configuration);
         stage.Preferences = preferences;
-        machines = new Machines.MachineCabinet(casino, casinoPlay, confirm, OpenCashier, preferences);
-        scratch = new Cabinets.ScratchCabinet(casino, casinoPlay, OpenCashier);
-        barkeep = new Cabinets.BarkeepCabinet(casino, casinoPlay, gameStats, OpenCashier);
-        wheel = new Cabinets.WheelCabinet(casino, casinoRooms, OpenCashier, PopRoute);
-        bingo = new Cabinets.BingoCabinet(casino, casinoRooms, OpenCashier, PopRoute);
+        machines = new Machines.MachineCabinet(casino, casinoPlay, confirm, preferences);
+        scratch = new Cabinets.ScratchCabinet(casino, casinoPlay);
+        barkeep = new Cabinets.BarkeepCabinet(casino, casinoPlay, gameStats);
+        wheel = new Cabinets.WheelCabinet(casino, casinoRooms, PopRoute);
+        bingo = new Cabinets.BingoCabinet(casino, casinoRooms, PopRoute);
         dailySpin = new Cabinets.DailySpinCabinet(casinoSpin);
-        originals = new Originals.OriginalsCabinet(casino, casinoPlay.Originals, OpenCashier);
-        race = new Race.RaceCabinet(casino, casinoRooms, OpenCashier, PopRoute);
-        plinko = new Plinko.PlinkoCabinet(casino, casinoPlay.Plinko, OpenCashier, preferences);
-        dealerHoldem = new DealerHoldem.DealerHoldemCabinet(casino, casinoPlay.DealerHoldem, OpenCashier);
+        originals = new Originals.OriginalsCabinet(casino, casinoPlay.Originals);
+        race = new Race.RaceCabinet(casino, casinoRooms, PopRoute);
+        plinko = new Plinko.PlinkoCabinet(casino, casinoPlay.Plinko, preferences);
+        dealerHoldem = new DealerHoldem.DealerHoldemCabinet(casino, casinoPlay.DealerHoldem);
         blackjack = new Tables.BlackjackTable(casino, casinoRooms, casinoTables, history, casinoTurns, remoteImages,
-            lodestone, OpenCashier, PopRoute, OpenLedger);
+            lodestone, PopRoute, OpenLedger);
         playerLedger = new Tables.TableLedger(casinoTables, confirm);
         openTable = OpenTable;
         openDoorFromRow = OpenDoor;
@@ -155,7 +158,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         openNearbyRow = row => OpenTable(row.TableId);
         this.holdemStore = holdemStore;
         holdem = new Tables.HoldemTable(casino, casinoRooms, casinoTables, holdemStore, casinoTurns, remoteImages,
-            lodestone, OpenCashier, PopRoute);
+            lodestone, PopRoute);
         holdemPit = new Tables.HoldemPit(holdemStore, casino, openTable, openDoorFromRow, OpenHoldemHostSheet);
         holdemPit.Lead = DrawDealerHoldemLead;
         browser = new Tables.TableBrowser(casinoTables, casino, openTable, openDoorFromRow, OpenHostSheet,
@@ -333,6 +336,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         casinoTables.EnsureFresh();
         casinoSpin.EnsureFresh();
         ConsumeTableAnswers();
+        chipsDesk.Update();
         if (launcher.HasPending && !router.IsTransitioning)
         {
             ConsumeLaunch();
@@ -1375,12 +1379,6 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         if (string.Equals(gameId, CasinoGames.Holdem, StringComparison.Ordinal))
         {
             OpenHoldemPit();
-            return;
-        }
-
-        if (!casino.HasChips && !string.Equals(gameId, CasinoGames.Barkeep, StringComparison.Ordinal))
-        {
-            cashier.Open();
             return;
         }
 

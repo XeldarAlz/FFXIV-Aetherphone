@@ -75,7 +75,9 @@ internal sealed class CasinoStage
 
     public Rect ActionRow => actionRow;
 
-    public bool OverlayOpen => info.IsOpen || betsRail.IsOpen;
+    public bool OverlayOpen => info.IsOpen || betsRail.IsOpen || (Chips?.SheetOpen ?? false);
+
+    public ChipsDesk? Chips { get; set; }
 
     public static Vector4 AccentFor(Backdrop preset) =>
         preset == Games.Framework.Backdrop.Felt ? AccentRing.Emerald : AppAccents.For("casino");
@@ -91,6 +93,7 @@ internal sealed class CasinoStage
         fx.Clear();
         info.Close();
         betsRail.Close();
+        Chips?.Close();
         hasSpec = false;
         lastFrameTick = 0;
         unfocusedSeconds = 0f;
@@ -268,6 +271,7 @@ internal sealed class CasinoStage
     {
         info.Gate();
         betsRail.Gate();
+        Chips?.Gate();
     }
 
     public void DrawOverlays(Rect screen, AppSkin ui)
@@ -280,6 +284,7 @@ internal sealed class CasinoStage
         info.Draw(screen, ui, spec);
         SetInstant(spec.GameId, info.Instant);
         betsRail.Draw(screen, ui, bets, Feed);
+        Chips?.Draw(screen, ui);
     }
 
     public CasinoInfoRequest TakeInfoRequest() => info.TakeRequest();
@@ -290,6 +295,7 @@ internal sealed class CasinoStage
     {
         info.Close();
         betsRail.Close();
+        Chips?.Close();
     }
 
     private void SetInstant(string gameId, bool instant)

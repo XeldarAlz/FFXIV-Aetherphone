@@ -14,11 +14,9 @@ public sealed class CasinoWireContractTests
     public void RoutesMatchTheBackendCasinoEndpoints()
     {
         Assert.Equal("/casino", CasinoClient.StatePath);
-        Assert.Equal("/casino/sittings", CasinoClient.OpenSittingPath);
-        Assert.Equal("/casino/sittings/topup", CasinoClient.TopUpPath);
+        Assert.Equal("/casino/chips/buy", CasinoClient.BuyChipsPath);
         Assert.Equal("/casino/sittings/close", CasinoClient.CloseSittingPath);
         Assert.Equal("/casino/limits", CasinoClient.LimitsPath);
-        Assert.Equal(0, CasinoClient.SoloTableKind);
     }
 
     [Fact]
@@ -30,24 +28,6 @@ public sealed class CasinoWireContractTests
         Assert.Equal("casino.blackjack", CasinoWire.Kind(CasinoGames.Blackjack));
         Assert.Equal("casino.bingo", CasinoWire.Kind(CasinoGames.Bingo));
         Assert.Equal("casino.wheel", CasinoWire.Kind(CasinoGames.Wheel));
-    }
-
-    [Fact]
-    public void OpenSittingRequestSerializesTheBackendShape()
-    {
-        var request = new CasinoOpenSittingRequest("sit1", "act1", 0, 100);
-        var json = JsonSerializer.Serialize(request, AethernetJsonContext.Default.CasinoOpenSittingRequest);
-        Assert.Equal(
-            "{\"clientSittingId\":\"sit1\",\"clientActionId\":\"act1\",\"tableKind\":0,\"amount\":100}",
-            json);
-    }
-
-    [Fact]
-    public void TopUpRequestSerializesTheBackendShape()
-    {
-        var request = new CasinoTopUpRequest("sit1", "act2", 50);
-        var json = JsonSerializer.Serialize(request, AethernetJsonContext.Default.CasinoTopUpRequest);
-        Assert.Equal("{\"sittingId\":\"sit1\",\"clientActionId\":\"act2\",\"amount\":50}", json);
     }
 
     [Fact]

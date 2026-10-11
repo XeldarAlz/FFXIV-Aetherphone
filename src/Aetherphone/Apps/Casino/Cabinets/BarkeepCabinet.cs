@@ -59,7 +59,6 @@ internal sealed class BarkeepCabinet : ICabinetIdle
     private readonly CasinoStore store;
     private readonly CasinoPlayStore play;
     private readonly GameStatsStore stats;
-    private readonly Action openCashier;
     private readonly BarkeepVerbStage verbStage = new();
     private readonly BarkeepBarFlow flow = new();
     private readonly BarkeepBarFlow idleFlow = new();
@@ -108,12 +107,11 @@ internal sealed class BarkeepCabinet : ICabinetIdle
     private int pointMaxScore = -1;
     private string wagerHint = string.Empty;
 
-    public BarkeepCabinet(CasinoStore store, CasinoPlayStore play, GameStatsStore stats, Action openCashier)
+    public BarkeepCabinet(CasinoStore store, CasinoPlayStore play, GameStatsStore stats)
     {
         this.store = store;
         this.play = play;
         this.stats = stats;
-        this.openCashier = openCashier;
         idleFlow.Begin(IdleSeed, BarkeepBarFlow.VisibleQueue + 1);
     }
 
@@ -1010,7 +1008,7 @@ internal sealed class BarkeepCabinet : ICabinetIdle
             return;
         }
 
-        DrawLobbyDeck(stage, frame, ui, row, action);
+        DrawLobbyDeck(stage, frame, ui, row);
     }
 
     private void DrawShiftDeck(AppSkin ui, Rect row, Rect action, float scale)
@@ -1067,7 +1065,7 @@ internal sealed class BarkeepCabinet : ICabinetIdle
         Line(drawList, value, centerX, top + captionHeight, width, CasinoColors.Money, TextStyles.Title3);
     }
 
-    private void DrawLobbyDeck(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, Rect row, Rect action)
+    private void DrawLobbyDeck(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, Rect row)
     {
         var state = store.State;
         var busy = startRequested || play.RoundInFlight;
@@ -1079,32 +1077,18 @@ internal sealed class BarkeepCabinet : ICabinetIdle
             StartPractice();
         }
 
-        if (state?.Sitting is not { } sitting)
+        if (state is null)
         {
-            if (Button.Draw(action, Loc.T(L.Casino.Cashier), ui.Ink, ButtonStyle.Gray))
-            {
-                openCashier();
-            }
-
             return;
         }
 
+        var sitting = state.Sitting ?? CasinoWire.NoBankroll;
         var blocked = state.StakesPaused || state.Draining || frame.Blocked;
-        var enabled = !blocked && !busy && sitting.Stack >= BarkeepRules.EntryChips;
+        var enabled = !blocked && !busy;
         composer.Reset(BarkeepRules.EntryChips);
         var model = new BetComposerModel(BarkeepRules.EntryChips, BarkeepRules.EntryChips, sitting.Stack,
             L.Barkeep.StartFor, enabled, FixedAmount: true, Knob: true, Repeat: stage.RepeatPressed(), Busy: busy);
-        if (sitting.Stack < BarkeepRules.EntryChips && !busy)
-        {
-            if (Button.Draw(action, Loc.T(L.Casino.Cashier), ui.Ink, ButtonStyle.Gray))
-            {
-                openCashier();
-            }
-
-            return;
-        }
-
-        if (composer.Draw(ui, frame.Deck, model, frame.DeltaSeconds) != BetComposerAction.Confirm)
+        if (composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds) != BetComposerAction.Confirm)
         {
             return;
         }

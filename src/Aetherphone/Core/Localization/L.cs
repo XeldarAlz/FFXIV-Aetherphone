@@ -10460,8 +10460,6 @@ internal static class L
         public static readonly LocString LimitReachedBody = new("casino.limitReachedBody", "You reached your daily loss limit. Tables reopen for you at {0}.");
         public static readonly LocString LimitReachedBodySoon = new("casino.limitReachedBodySoon", "You reached your daily loss limit. Tables reopen for you when the next day starts.");
         public static readonly LocString NetHeading = new("casino.netHeading", "Tonight");
-        public static readonly LocString CabinetNoChipsTitle = new("casino.cabinet.noChipsTitle", "You have no chips");
-        public static readonly LocString CabinetNoChipsHint = new("casino.cabinet.noChipsHint", "Buy chips at the cashier and play them at any game on the floor.");
         public static readonly LocString ScratchPrice = new("casino.scratch.price", "Card price");
         public static readonly LocString ScratchRevealAll = new("casino.scratch.revealAll", "Reveal all");
         public static readonly LocString ScratchHint = new("casino.scratch.hint", "Rub the foil away. Three matching symbols win the prize.");
@@ -10620,7 +10618,6 @@ internal static class L
         public static readonly LocString BlackjackActionDouble = new("casino.blackjack.actionDouble", "Double");
         public static readonly LocString BlackjackActionSplit = new("casino.blackjack.actionSplit", "Split");
         public static readonly LocString BlackjackHandOver = new("casino.blackjack.handOver", "Hand over");
-        public static readonly LocString BlackjackTakeSeat = new("casino.blackjack.takeSeat", "Take a seat");
         public static readonly LocString BlackjackRules = new("casino.blackjack.rules", "Blackjack pays 3 to 2. The dealer stands on 17.");
         public static readonly LocString BlackjackClosedTitle = new("casino.blackjack.closedTitle", "This table has closed");
         public static readonly LocString BlackjackClosedHint = new("casino.blackjack.closedHint", "The table is not running right now. The rest of the floor is still open.");
@@ -10808,7 +10805,6 @@ internal static class L
         public static readonly LocString FactClockValue = new("casino.holdem.factClockValue", "20 s plus a 3 x 10 s time bank");
         public static readonly LocString FactRake = new("casino.holdem.factRake", "Rake");
         public static readonly LocString FactRakeValue = new("casino.holdem.factRakeValue", "5% of the pot, capped at 3 big blinds, no flop no rake");
-        public static readonly LocString GetChips = new("casino.holdem.getChips", "Get chips");
         public static readonly LocString HandFlush = new("casino.holdem.handFlush", "Flush, {0} high");
         public static readonly LocString HandFullHouse = new("casino.holdem.handFullHouse", "Full house, {0} over {1}");
         public static readonly LocString HandHighCard = new("casino.holdem.handHighCard", "High card {0}");
@@ -11095,6 +11091,13 @@ internal static class L
         public static readonly LocString YouGet = new("casino.chips.youGet", "You get");
         public static readonly LocString RoundOpenTitle = new("casino.chips.roundOpenTitle", "A round is still in play");
         public static readonly LocString RoundOpenBody = new("casino.chips.roundOpenBody", "Its chips settle first. If it is still running, the cashier asks you to wait, so try again once it ends.");
+        public static readonly LocString Bought = new("casino.chips.bought", "Bought {0} chips for {1} coins");
+        public static readonly LocString NeedBet = new("casino.chips.needBet", "This bet needs {0} chips, and you have {1}.");
+        public static readonly LocString NeedBuyIn = new("casino.chips.needBuyIn", "This table needs {0} chips to sit, and you have {1}.");
+        public static readonly LocPlural Bets = new("casino.chips.bets", "{0} bet", "{0} bets");
+        public static readonly LocPlural BuyIns = new("casino.chips.buyIns", "{0} buy-in", "{0} buy-ins");
+        public static readonly LocString AutoTopUp = new("casino.chips.autoTopUp", "Auto top-up");
+        public static readonly LocString AutoTopUpHint = new("casino.chips.autoTopUpHint", "When a bet is bigger than your chips, buy enough for 10 bets from your wallet and place it.");
     }
 
     internal static class Club
