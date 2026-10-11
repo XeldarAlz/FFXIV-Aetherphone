@@ -199,7 +199,7 @@ internal sealed partial class AethergramApp
             }
 
             DrawPostGrid(store.TaggedPosts, L.PhotoTag.NoTagged, store.HasMoreTagged, store.TaggedLoadingMore,
-                store.LoadMoreTaggedPosts, SquareGrid, PostSource.Tagged);
+                SquareGrid, PostSource.Tagged);
         }
     }
 
@@ -531,7 +531,7 @@ internal sealed partial class AethergramApp
         if (posts.Length > 0 || !user.IsMe || store.ProfileLoading)
         {
             DrawPostGrid(posts, L.Aethergram.Empty, store.HasMoreProfilePosts, store.ProfileLoadingMore,
-                store.LoadMoreProfilePosts, SquareGrid, PostSource.Profile);
+                SquareGrid, PostSource.Profile);
             return;
         }
 
@@ -611,14 +611,14 @@ internal sealed partial class AethergramApp
     }
 
     private void DrawLiked(Rect area) =>
-        DrawPostGridScreen(area, PostSource.Liked, L.Aethergram.LikedEmpty, L.Aethergram.LikedEmptyHint);
+        DrawPostGridScreen(area, PostSource.Liked, L.Social.LikedEmpty, L.Social.LikedEmptyHint);
 
     private void OpenProfileMenu()
     {
         profileMenuCount = 0;
         AddProfileMenuItem(Loc.T(L.Aethergram.Settings), ProfileMenuAction.Settings);
         AddProfileMenuItem(Loc.T(L.Aethergram.SavedTitle), ProfileMenuAction.Saved);
-        AddProfileMenuItem(Loc.T(L.Aethergram.LikedTitle), ProfileMenuAction.Liked);
+        AddProfileMenuItem(Loc.T(L.Social.LikedTitle), ProfileMenuAction.Liked);
         AddProfileMenuItem(Loc.T(L.Social.ArchiveTitle), ProfileMenuAction.Archive);
         AddProfileMenuItem(Loc.T(L.Social.BadgeProgress), ProfileMenuAction.BadgeProgress);
         var pending = store.PendingFollowRequestCount;

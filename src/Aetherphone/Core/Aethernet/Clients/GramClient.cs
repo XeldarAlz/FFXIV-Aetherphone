@@ -49,17 +49,6 @@ internal sealed class GramClient
         return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token, null, onFailure);
     }
 
-    public Task<FeedPage?> LikedAsync(string? cursor, CancellationToken token, Action<AepFailure>? onFailure = null)
-    {
-        var path = "/me/liked?kind=1";
-        if (cursor is not null)
-        {
-            path += $"&cursor={Uri.EscapeDataString(cursor)}";
-        }
-
-        return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token, null, onFailure);
-    }
-
     public Task<FeedPage?> FeedAsync(string scope, string? cursor, string? regions, bool includeSensitive, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {

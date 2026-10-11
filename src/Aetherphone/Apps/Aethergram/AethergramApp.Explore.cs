@@ -32,7 +32,6 @@ internal sealed partial class AethergramApp
     private string exploreDraft = string.Empty;
     private double exploreDirtyAt = -1d;
     private Action? refreshExplore;
-    private Action? loadMoreExplore;
 
     private void OpenSaved()
     {
@@ -137,7 +136,6 @@ internal sealed partial class AethergramApp
         const SocialFeedScope scope = SocialFeedScope.Latest;
         profile.EnsureLoaded(scope);
         refreshExplore ??= RefreshExploreFeed;
-        loadMoreExplore ??= LoadMoreExploreFeed;
         var posts = store.Feed(scope);
         using (var surface = AppSurface.BeginEdgeToEdge(listRect))
         {
@@ -147,7 +145,7 @@ internal sealed partial class AethergramApp
             {
                 ImGui.Dummy(new Vector2(0f, 2f * scale));
                 DrawPostGrid(posts, L.Aethergram.ExploreEmpty, store.HasMoreFeed(scope), store.LoadingMore(scope),
-                    loadMoreExplore, ExploreGrid, PostSource.Explore);
+                    ExploreGrid, PostSource.Explore);
                 return;
             }
 
@@ -169,8 +167,6 @@ internal sealed partial class AethergramApp
     }
 
     private void RefreshExploreFeed() => RefreshFeed(SocialFeedScope.Latest);
-
-    private void LoadMoreExploreFeed() => store.LoadMoreFeed(SocialFeedScope.Latest);
 
     private static void DrawExploreSkeleton(Rect listRect)
     {
@@ -279,7 +275,7 @@ internal sealed partial class AethergramApp
             if (posts.Length > 0)
             {
                 DrawPostGrid(posts, L.Social.HashtagEmpty, store.HasMoreHashtagPosts, store.HashtagLoadingMore,
-                    store.LoadMoreHashtagPosts, SquareGrid, PostSource.Hashtag);
+                    SquareGrid, PostSource.Hashtag);
                 return;
             }
 

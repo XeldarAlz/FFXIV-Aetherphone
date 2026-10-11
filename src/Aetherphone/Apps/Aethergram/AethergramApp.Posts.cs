@@ -13,8 +13,6 @@ internal sealed partial class AethergramApp
 
     private readonly FeedVirtualizer postsVirtualizer = new(400f);
     private bool postsJumpPending;
-    private PostSource gridScreenSource;
-    private Action? loadMoreGridScreen;
 
     private void OpenPosts(string postId, PostSource source)
     {
@@ -98,11 +96,8 @@ internal sealed partial class AethergramApp
         {
             if (posts.Length > 0)
             {
-                gridScreenSource = source;
-                loadMoreGridScreen ??= LoadMoreGridScreen;
                 ImGui.Dummy(new Vector2(0f, 2f * scale));
-                DrawPostGrid(posts, emptyTitle, PostsHasMore(source), PostsLoadingMore(source), loadMoreGridScreen,
-                    SquareGrid, source);
+                DrawPostGrid(posts, emptyTitle, PostsHasMore(source), PostsLoadingMore(source), SquareGrid, source);
                 return;
             }
 
@@ -115,8 +110,6 @@ internal sealed partial class AethergramApp
             DrawEmptyState(listRect, Loc.T(emptyTitle), Loc.T(emptyHint));
         }
     }
-
-    private void LoadMoreGridScreen() => LoadMorePosts(gridScreenSource);
 
     private static LocString PostsTitle(PostSource source) => source switch
     {
@@ -143,7 +136,7 @@ internal sealed partial class AethergramApp
             case PostSource.Saved:
                 return Loc.T(L.Aethergram.SavedTitle);
             case PostSource.Liked:
-                return Loc.T(L.Aethergram.LikedTitle);
+                return Loc.T(L.Social.LikedTitle);
             case PostSource.Archive:
                 return Loc.T(L.Social.ArchiveTitle);
             case PostSource.Hashtag:

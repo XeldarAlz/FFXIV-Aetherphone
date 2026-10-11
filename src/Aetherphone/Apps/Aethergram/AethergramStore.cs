@@ -58,9 +58,6 @@ internal sealed class AethergramStore : SocialFeedStore
     protected override Task<FeedPage?> FetchTaggedPostsAsync(string userId, string? cursor, CancellationToken token) =>
         grams.UserTaggedAsync(userId, cursor, token);
 
-    protected override Task<FeedPage?> FetchLikedAsync(string? cursor, CancellationToken token) =>
-        grams.LikedAsync(cursor, token);
-
     protected override Task<FeedPage?> FetchHashtagPostsAsync(string tag, string? cursor, CancellationToken token) =>
         grams.TagPostsAsync(tag, cursor, token);
 
