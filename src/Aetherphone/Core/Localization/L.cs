@@ -6769,6 +6769,9 @@ internal static class L
         public static readonly LocString PrivateSubtitle = new("aethergram.privateSubtitle", "Follow this account to see their photos");
         public static readonly LocString SavedTitle = new("aethergram.savedTitle", "Saved");
         public static readonly LocString SavedEmpty = new("aethergram.savedEmpty", "Nothing saved yet");
+        public static readonly LocString LikedTitle = new("aethergram.likedTitle", "Liked");
+        public static readonly LocString LikedEmpty = new("aethergram.likedEmpty", "No liked posts yet");
+        public static readonly LocString LikedEmptyHint = new("aethergram.likedEmptyHint", "Posts you like will show up here");
         public static readonly LocString PrivateAccount = new("aethergram.privateAccount", "Private account");
         public static readonly LocString PrivateAccountHint = new("aethergram.privateAccountHint", "Only followers can see your photos and stories. New followers must send a request.");
     }

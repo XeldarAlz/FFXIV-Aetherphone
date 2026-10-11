@@ -15,6 +15,7 @@ internal enum PostSource
     Profile,
     Tagged,
     Saved,
+    Liked,
     Hashtag,
     Explore,
     Archive,
@@ -40,6 +41,7 @@ internal enum AethergramScreen
     Share,
     FollowRequests,
     Saved,
+    Liked,
     Encryption,
     Hashtag,
     Activity,
@@ -64,6 +66,7 @@ internal readonly record struct AethergramRoute(
     public static readonly AethergramRoute Settings = new(AethergramScreen.Settings);
     public static readonly AethergramRoute FollowRequests = new(AethergramScreen.FollowRequests);
     public static readonly AethergramRoute Saved = new(AethergramScreen.Saved);
+    public static readonly AethergramRoute Liked = new(AethergramScreen.Liked);
     public static readonly AethergramRoute Encryption = new(AethergramScreen.Encryption);
     public static readonly AethergramRoute Activity = new(AethergramScreen.Activity);
     public static readonly AethergramRoute BadgeProgress = new(AethergramScreen.BadgeProgress);

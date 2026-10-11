@@ -504,6 +504,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             case AethergramScreen.Saved:
                 DrawSaved(area);
                 break;
+            case AethergramScreen.Liked:
+                DrawLiked(area);
+                break;
             case AethergramScreen.Encryption:
                 threadView.DrawEncryptionScreen(ChatArea(area));
                 break;

@@ -13,6 +13,8 @@ internal sealed partial class AethergramApp
 
     private readonly FeedVirtualizer postsVirtualizer = new(400f);
     private bool postsJumpPending;
+    private PostSource gridScreenSource;
+    private Action? loadMoreGridScreen;
 
     private void OpenPosts(string postId, PostSource source)
     {
@@ -86,6 +88,36 @@ internal sealed partial class AethergramApp
         }
     }
 
+    private void DrawPostGridScreen(Rect area, PostSource source, LocString emptyTitle, LocString emptyHint)
+    {
+        var scale = UiScale.Current;
+        DrawScreenHeader(area, PostsSubtitle(source));
+        var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
+        var posts = PostsOf(source);
+        using (AppSurface.BeginEdgeToEdge(listRect))
+        {
+            if (posts.Length > 0)
+            {
+                gridScreenSource = source;
+                loadMoreGridScreen ??= LoadMoreGridScreen;
+                ImGui.Dummy(new Vector2(0f, 2f * scale));
+                DrawPostGrid(posts, emptyTitle, PostsHasMore(source), PostsLoadingMore(source), loadMoreGridScreen,
+                    SquareGrid, source);
+                return;
+            }
+
+            if (PostsLoading(source))
+            {
+                DrawEmptyState(listRect, Loc.T(L.Common.Loading), string.Empty);
+                return;
+            }
+
+            DrawEmptyState(listRect, Loc.T(emptyTitle), Loc.T(emptyHint));
+        }
+    }
+
+    private void LoadMoreGridScreen() => LoadMorePosts(gridScreenSource);
+
     private static LocString PostsTitle(PostSource source) => source switch
     {
         PostSource.Tagged => L.PhotoTag.TaggedTab,
@@ -110,6 +142,8 @@ internal sealed partial class AethergramApp
                 return user.Handle.Length > 0 ? user.Handle : user.DisplayName;
             case PostSource.Saved:
                 return Loc.T(L.Aethergram.SavedTitle);
+            case PostSource.Liked:
+                return Loc.T(L.Aethergram.LikedTitle);
             case PostSource.Archive:
                 return Loc.T(L.Social.ArchiveTitle);
             case PostSource.Hashtag:
@@ -123,6 +157,7 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.TaggedPosts,
         PostSource.Saved => store.SavedPosts,
+        PostSource.Liked => store.LikedPosts,
         PostSource.Archive => store.ArchivedPosts,
         PostSource.PendingTags => store.PendingTagPosts,
         PostSource.Hashtag => store.HashtagPosts,
@@ -134,6 +169,7 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.TaggedLoading,
         PostSource.Saved => store.SavedLoading,
+        PostSource.Liked => store.LikedLoading,
         PostSource.Archive => store.ArchivedLoading,
         PostSource.PendingTags => store.PendingTagsLoading,
         PostSource.Hashtag => store.HashtagLoading,
@@ -145,6 +181,7 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.TaggedLoadingMore,
         PostSource.Saved => store.SavedLoadingMore,
+        PostSource.Liked => store.LikedLoadingMore,
         PostSource.Archive => store.ArchivedLoadingMore,
         PostSource.PendingTags => store.PendingTagsLoadingMore,
         PostSource.Hashtag => store.HashtagLoadingMore,
@@ -156,6 +193,7 @@ internal sealed partial class AethergramApp
     {
         PostSource.Tagged => store.HasMoreTagged,
         PostSource.Saved => store.HasMoreSaved,
+        PostSource.Liked => store.HasMoreLiked,
         PostSource.Archive => store.HasMoreArchived,
         PostSource.PendingTags => store.HasMorePendingTags,
         PostSource.Hashtag => store.HasMoreHashtagPosts,
@@ -172,6 +210,9 @@ internal sealed partial class AethergramApp
                 break;
             case PostSource.Saved:
                 store.LoadMoreSaved();
+                break;
+            case PostSource.Liked:
+                store.LoadMoreLiked();
                 break;
             case PostSource.Archive:
                 store.LoadMoreArchived();

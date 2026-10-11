@@ -401,6 +401,9 @@ internal abstract class SocialFeedStore : IDisposable
     protected virtual Task<FeedPage?> FetchTaggedPostsAsync(string userId, string? cursor, CancellationToken token) =>
         Task.FromResult<FeedPage?>(null);
 
+    protected virtual Task<FeedPage?> FetchLikedAsync(string? cursor, CancellationToken token) =>
+        client.LikedAsync(cursor, token);
+
     public PostDto[] TaggedPosts => taggedLane.Items;
 
     public bool TaggedLoading => taggedLane.Loading;
@@ -1115,7 +1118,7 @@ internal abstract class SocialFeedStore : IDisposable
         likedLane.Loading = true;
         work.Run("liked refresh", async token =>
         {
-            var page = await client.LikedAsync(null, token).ConfigureAwait(false);
+            var page = await FetchLikedAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
                 likedLane.ApplyRefresh(page.Items, page.NextCursor);
@@ -1134,7 +1137,7 @@ internal abstract class SocialFeedStore : IDisposable
         likedLane.LoadingMore = true;
         work.Run("liked more", async token =>
         {
-            var page = await client.LikedAsync(cursor, token).ConfigureAwait(false);
+            var page = await FetchLikedAsync(cursor, token).ConfigureAwait(false);
             if (page is not null)
             {
                 likedLane.ApplyMore(page.Items, page.NextCursor);

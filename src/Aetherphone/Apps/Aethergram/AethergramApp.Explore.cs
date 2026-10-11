@@ -323,29 +323,6 @@ internal sealed partial class AethergramApp
         ImGui.Dummy(new Vector2(width, height + GridGap * scale));
     }
 
-    private void DrawSaved(Rect area)
-    {
-        var scale = UiScale.Current;
-        DrawScreenHeader(area, Loc.T(L.Aethergram.SavedTitle));
-        var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        var posts = store.SavedPosts;
-        using (AppSurface.BeginEdgeToEdge(listRect))
-        {
-            if (posts.Length > 0)
-            {
-                ImGui.Dummy(new Vector2(0f, 2f * scale));
-                DrawPostGrid(posts, L.Aethergram.SavedEmpty, store.HasMoreSaved, store.SavedLoadingMore,
-                    store.LoadMoreSaved, SquareGrid, PostSource.Saved);
-                return;
-            }
-
-            if (store.SavedLoading)
-            {
-                DrawEmptyState(listRect, Loc.T(L.Common.Loading), string.Empty);
-                return;
-            }
-
-            DrawEmptyState(listRect, Loc.T(L.Aethergram.SavedEmpty), Loc.T(L.Aethergram.SavedEmptyHint));
-        }
-    }
+    private void DrawSaved(Rect area) =>
+        DrawPostGridScreen(area, PostSource.Saved, L.Aethergram.SavedEmpty, L.Aethergram.SavedEmptyHint);
 }
