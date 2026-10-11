@@ -121,6 +121,8 @@ internal sealed partial class MinimizedPhone : IDisposable
     private int timeFormat = -1;
     private int dateKey = -1;
     private float measuredWidth = -1f;
+    private int fontGeneration = -1;
+    private bool fontsReady;
     private CultureInfo? textCulture;
     private float clockScale;
     private float mapClockScale;
@@ -696,8 +698,8 @@ internal sealed partial class MinimizedPhone : IDisposable
                         ChassisGeometry.PuckBand(MinimizedShapes.BodyWidth * scale, CaseKind) -
                         HeroInset * 2f * scale;
         var dayKey = now.Year * 400 + now.DayOfYear;
-        var widthChanged = MathF.Abs(textWidth - measuredWidth) > 0.5f;
-        if (dayKey != dateKey || cultureChanged || widthChanged)
+        var layoutChanged = MathF.Abs(textWidth - measuredWidth) > 0.5f || FontsChanged();
+        if (dayKey != dateKey || cultureChanged || layoutChanged)
         {
             dateKey = dayKey;
             dateLabel = now.ToString("dddd d", Loc.Culture);
@@ -710,7 +712,7 @@ internal sealed partial class MinimizedPhone : IDisposable
         }
 
         textCulture = Loc.Culture;
-        if (!timeChanged && !widthChanged)
+        if (!timeChanged && !layoutChanged)
         {
             return;
         }
@@ -720,6 +722,19 @@ internal sealed partial class MinimizedPhone : IDisposable
             FontWeight.Bold);
         mapClockScale = Typography.FitScale(timeLabel, textWidth, TextScale(MapClockMaxScale),
             TextScale(MapClockMinScale), FontWeight.Bold);
+    }
+
+    private bool FontsChanged()
+    {
+        var fonts = Plugin.Fonts;
+        if (fonts.Generation == fontGeneration && (fontsReady || !fonts.Ready))
+        {
+            return false;
+        }
+
+        fontGeneration = fonts.Generation;
+        fontsReady = fonts.Ready;
+        return true;
     }
 
     private string DurationLabel(in CallView view)
