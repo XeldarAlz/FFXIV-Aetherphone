@@ -233,9 +233,10 @@ internal sealed class ChatComposer : IDisposable
 
     public void Draw(Rect composerRect, in ChatComposerModel model)
     {
-        while (intake.TryTake(out var taken))
+        if (intake.TryTake(out var taken))
         {
             AttachImage(taken);
+            intake.Discard();
         }
 
         if (pendingImage is { } image)

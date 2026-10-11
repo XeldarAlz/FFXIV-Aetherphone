@@ -59,9 +59,10 @@ internal sealed class CommentAttachment
             Take(picked);
         }
 
-        while (intake.TryTake(out var taken))
+        if (intake.TryTake(out var taken))
         {
             Take(taken);
+            intake.Discard();
         }
     }
 
