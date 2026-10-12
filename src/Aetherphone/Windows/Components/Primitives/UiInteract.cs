@@ -44,7 +44,7 @@ internal static class UiInteract
         windowHoveredFrame = ImGui.GetFrameCount();
     }
 
-    private static bool WindowHovered => windowHoveredFrame != ImGui.GetFrameCount() || windowHovered;
+    public static bool WindowHovered => windowHoveredFrame != ImGui.GetFrameCount() || windowHovered;
 
     public static void SetWindowFocused(bool focused)
     {

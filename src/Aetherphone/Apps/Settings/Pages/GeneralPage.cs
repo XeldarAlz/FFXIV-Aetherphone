@@ -1,3 +1,4 @@
+using System.Globalization;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -23,6 +24,7 @@ internal sealed class GeneralPage : ISettingsPage
         new(L.Settings.MarketContextMenu),
         new(L.Settings.LinkpearlContextMenu),
         new(L.Settings.ArrowKeysStepPosts),
+        new(L.Settings.AutoAdvancePosts),
         new(L.Settings.AutoTranslate),
         new(L.Settings.Use24HourClock, L.Settings.ClockFormat),
         new(L.Settings.OpenOnStartup, L.Settings.Startup),
@@ -37,12 +39,19 @@ internal sealed class GeneralPage : ISettingsPage
     private readonly Configuration configuration;
     private readonly TranslationService translation;
     private readonly ConfirmService confirm;
+    private readonly Action stepAutoAdvanceDown;
+    private readonly Action stepAutoAdvanceUp;
+    private string autoAdvanceLabel = string.Empty;
+    private int autoAdvanceLabelSeconds = -1;
+    private CultureInfo? autoAdvanceLabelCulture;
 
     public GeneralPage(Configuration configuration, TranslationService translation, ConfirmService confirm)
     {
         this.configuration = configuration;
         this.translation = translation;
         this.confirm = confirm;
+        stepAutoAdvanceDown = () => StepAutoAdvanceSeconds(-1);
+        stepAutoAdvanceUp = () => StepAutoAdvanceSeconds(1);
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -53,7 +62,8 @@ internal sealed class GeneralPage : ISettingsPage
         {
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
             var translationRow = translation.Enabled ? 1 : 0;
-            var card = GroupCard.Begin(theme, 9 + translationRow);
+            var autoAdvanceRow = configuration.FeedAutoAdvance ? 1 : 0;
+            var card = GroupCard.Begin(theme, 10 + translationRow + autoAdvanceRow);
             var showInGpose = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ShowInGpose),
                 configuration.ShowInGpose, theme, null, Loc.T(L.Settings.ShowInGposeHint));
             var showInCutscenes = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ShowInCutscenes),
@@ -73,6 +83,14 @@ internal sealed class GeneralPage : ISettingsPage
                 configuration.LinkpearlContextMenu, theme, null, Loc.T(L.Settings.LinkpearlContextMenuHint));
             var arrowKeysStepPosts = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ArrowKeysStepPosts),
                 configuration.ArrowKeysStepPosts, theme, null, Loc.T(L.Settings.ArrowKeysStepPostsHint));
+            var autoAdvance = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.AutoAdvancePosts),
+                configuration.FeedAutoAdvance, theme, null, Loc.T(L.Settings.AutoAdvancePostsHint));
+            if (autoAdvanceRow > 0)
+            {
+                StepperField.Draw(theme, card.NextRow(), AutoAdvanceLabel(), scale, stepAutoAdvanceDown,
+                    stepAutoAdvanceUp);
+            }
+
             var autoTranslate = configuration.AutoTranslatePosts;
             if (translationRow > 0)
             {
@@ -143,6 +161,12 @@ internal sealed class GeneralPage : ISettingsPage
                 configuration.Save();
             }
 
+            if (autoAdvance != configuration.FeedAutoAdvance)
+            {
+                configuration.FeedAutoAdvance = autoAdvance;
+                configuration.Save();
+            }
+
             SettingsSection.Header(Loc.T(L.Settings.ClockFormat), theme);
             var clockCard = GroupCard.Begin(theme, 1);
             var use24Hour = SettingsRow.Bool(clockCard.NextRow(), Loc.T(L.Settings.Use24HourClock),
@@ -175,6 +199,32 @@ internal sealed class GeneralPage : ISettingsPage
             }
         }
     }
+    private string AutoAdvanceLabel()
+    {
+        var seconds = configuration.FeedAutoAdvanceSeconds;
+        if (seconds != autoAdvanceLabelSeconds || !ReferenceEquals(autoAdvanceLabelCulture, Loc.Culture))
+        {
+            autoAdvanceLabelSeconds = seconds;
+            autoAdvanceLabelCulture = Loc.Culture;
+            autoAdvanceLabel = Loc.T(L.Settings.AutoAdvanceEvery, seconds);
+        }
+
+        return autoAdvanceLabel;
+    }
+
+    private void StepAutoAdvanceSeconds(int delta)
+    {
+        var seconds = Math.Clamp(configuration.FeedAutoAdvanceSeconds + delta, FeedVirtualizer.MinAutoAdvanceSeconds,
+            FeedVirtualizer.MaxAutoAdvanceSeconds);
+        if (seconds == configuration.FeedAutoAdvanceSeconds)
+        {
+            return;
+        }
+
+        configuration.FeedAutoAdvanceSeconds = seconds;
+        configuration.Save();
+    }
+
     private void SetAutoTranslate(bool enabled)
     {
         if (!enabled)

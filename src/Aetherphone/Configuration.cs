@@ -156,6 +156,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int AethergramFeedScope { get; set; }
     public bool ShowSensitiveContent { get; set; }
     public bool ArrowKeysStepPosts { get; set; } = true;
+    public bool FeedAutoAdvance { get; set; }
+    public int FeedAutoAdvanceSeconds { get; set; } = 8;
     public Dictionary<string, AppNotificationSetting> NotificationSettings { get; set; } = new();
     public bool NotifyDailyReset { get; set; }
     public bool NotifyWeeklyReset { get; set; }

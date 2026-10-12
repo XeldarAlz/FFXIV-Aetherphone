@@ -52,7 +52,7 @@ internal sealed partial class VelvetShell
 
             var width = ScrollLayout.StableContentWidth();
             Gap(6f);
-            tagPostsVirtualizer.BeginFrame(store.TagPostsSource, configuration.ArrowKeysStepPosts);
+            tagPostsVirtualizer.BeginFrame(store.TagPostsSource, configuration);
             for (var index = 0; index < posts.Length; index++)
             {
                 if (tagPostsVirtualizer.Skip(posts[index].Id))

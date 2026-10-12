@@ -56,7 +56,7 @@ internal sealed partial class VelvetShell
             else
             {
                 Gap(6f);
-                feedVirtualizer.BeginFrame(store.FeedSource, configuration.ArrowKeysStepPosts);
+                feedVirtualizer.BeginFrame(store.FeedSource, configuration);
                 var viewportTop = ImGui.GetWindowPos().Y;
                 store.BeginImpressions(viewportTop, viewportTop + ImGui.GetWindowSize().Y, ImGui.GetIO().DeltaTime);
                 for (var index = 0; index < feed.Length; index++)

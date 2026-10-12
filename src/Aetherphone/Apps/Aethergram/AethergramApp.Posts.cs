@@ -38,7 +38,7 @@ internal sealed partial class AethergramApp
 
             var contentTop = ImGui.GetCursorPosY();
             var jumpY = -1f;
-            postsVirtualizer.BeginFrame(arrowSteps: configuration.ArrowKeysStepPosts);
+            postsVirtualizer.BeginFrame(stepping: configuration);
             for (var index = 0; index < posts.Length; index++)
             {
                 var post = posts[index];

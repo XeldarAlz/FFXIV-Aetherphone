@@ -8,6 +8,8 @@ namespace Aetherphone.Windows.Components;
 internal sealed class FeedVirtualizer
 {
     public const int DefaultRowCap = 400;
+    public const int MinAutoAdvanceSeconds = 3;
+    public const int MaxAutoAdvanceSeconds = 30;
 
     private const float ParkedAtTop = 1f;
     private const float StepEpsilon = 1f;
@@ -23,11 +25,12 @@ internal sealed class FeedVirtualizer
     private float windowBottom;
     private float rowStartY;
     private float contentTop;
-    private bool arrowSteps;
+    private Configuration? stepping;
     private int rowTopsFrame = -2;
     private Spring glide;
     private float glideTarget;
     private bool gliding;
+    private double idleSince;
 
     public FeedVirtualizer(float cullMargin, int rowCap = DefaultRowCap)
     {
@@ -35,7 +38,7 @@ internal sealed class FeedVirtualizer
         this.rowCap = rowCap;
     }
 
-    public void BeginFrame(ITrimmable? source = null, bool arrowSteps = false)
+    public void BeginFrame(ITrimmable? source = null, Configuration? stepping = null)
     {
         var width = ImGui.GetContentRegionAvail().X;
         if (rowWidth != width || fontGeneration != Plugin.Fonts.Generation)
@@ -53,15 +56,16 @@ internal sealed class FeedVirtualizer
         windowTop = ImGui.GetWindowPos().Y;
         windowBottom = windowTop + ImGui.GetWindowSize().Y;
         contentTop = windowTop - ImGui.GetScrollY();
-        this.arrowSteps = arrowSteps;
+        this.stepping = stepping is { ArrowKeysStepPosts: true } or { FeedAutoAdvance: true } ? stepping : null;
         var frame = ImGui.GetFrameCount();
-        if (arrowSteps && rowTopsFrame == frame - 1)
+        if (this.stepping is not null && rowTopsFrame == frame - 1)
         {
-            StepWithArrows();
+            Step(this.stepping);
         }
         else
         {
             gliding = false;
+            idleSince = ImGui.GetTime();
         }
 
         rowTops.Clear();
@@ -72,7 +76,7 @@ internal sealed class FeedVirtualizer
     {
         var cursor = ImGui.GetCursorScreenPos();
         rowStartY = cursor.Y;
-        if (arrowSteps)
+        if (stepping is not null)
         {
             rowTops.Add(cursor.Y - contentTop);
         }
@@ -93,7 +97,7 @@ internal sealed class FeedVirtualizer
         rows[rowId] = (ImGui.GetCursorScreenPos().Y - rowStartY, revision);
     }
 
-    private void StepWithArrows()
+    private void Step(Configuration settings)
     {
         var io = ImGui.GetIO();
         var scrollY = ImGui.GetScrollY();
@@ -102,7 +106,16 @@ internal sealed class FeedVirtualizer
             gliding = false;
         }
 
-        var direction = ArrowKeyCapture.Take();
+        var direction = settings.ArrowKeysStepPosts ? ArrowKeyCapture.Take() : 0;
+        if (direction != 0)
+        {
+            idleSince = ImGui.GetTime();
+        }
+        else if (settings.FeedAutoAdvance)
+        {
+            direction = AutoAdvance(settings.FeedAutoAdvanceSeconds);
+        }
+
         if (direction != 0)
         {
             DragScrollHost.CancelMomentum();
@@ -134,6 +147,22 @@ internal sealed class FeedVirtualizer
         }
 
         ImGui.SetScrollY(next);
+    }
+
+    private int AutoAdvance(int seconds)
+    {
+        var io = ImGui.GetIO();
+        var now = ImGui.GetTime();
+        var touched = UiInteract.WindowHovered &&
+            (io.MouseDelta != Vector2.Zero || io.MouseWheel != 0f || ImGui.IsMouseDown(ImGuiMouseButton.Left));
+        var busy = touched || io.WantTextInput || UiInteract.InputBlocked || InputShield.Active;
+        if (!busy && now - idleSince < Math.Clamp(seconds, MinAutoAdvanceSeconds, MaxAutoAdvanceSeconds))
+        {
+            return 0;
+        }
+
+        idleSince = now;
+        return busy ? 0 : 1;
     }
 
     private float NextStop(float from)
