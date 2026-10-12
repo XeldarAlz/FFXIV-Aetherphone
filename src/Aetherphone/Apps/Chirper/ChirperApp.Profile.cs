@@ -71,7 +71,8 @@ internal sealed partial class ChirperApp
 
         using (AppSurface.BeginEdgeToEdge(area))
         {
-            DrawProfileBanner(user, root);
+            var bannerOrigin = ImGui.GetCursorScreenPos() + new Vector2(0f, ImGui.GetScrollY());
+            DrawProfileBanner(user);
             DrawProfileIdentity(user);
             DrawProfileTabs(user.IsMe);
             switch (profileTab)
@@ -98,10 +99,40 @@ internal sealed partial class ChirperApp
             {
                 store.LoadMoreProfilePosts();
             }
+
+            if (!root)
+            {
+                DrawProfileBackChip(bannerOrigin);
+            }
         }
     }
 
-    private void DrawProfileBanner(UserDto user, bool root)
+    private void DrawProfileBackChip(Vector2 bannerOrigin)
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var chipRadius = BackChipRadius * scale;
+        var chipCenter = new Vector2(bannerOrigin.X + 12f * scale + chipRadius,
+            bannerOrigin.Y + 10f * scale + chipRadius);
+        var hitHalf = 22f * scale;
+        var hitMin = chipCenter - new Vector2(hitHalf, hitHalf);
+        var hitMax = chipCenter + new Vector2(hitHalf, hitHalf);
+        var hovered = UiInteract.HoverOverlay(new Rect(hitMin, hitMax));
+        drawList.AddCircleFilled(chipCenter, chipRadius,
+            ImGui.GetColorU32(hovered ? new Vector4(0f, 0f, 0f, 0.6f) : new Vector4(0f, 0f, 0f, 0.4f)), 32);
+        PhoneIcon.Draw(drawList, chipCenter, PhoneIcons.ChevronLeft, ChirperInk.White, 17f * scale);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(hitMin, hitMax, hovered))
+        {
+            back();
+        }
+    }
+
+    private void DrawProfileBanner(UserDto user)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -155,29 +186,6 @@ internal sealed partial class ChirperApp
             if (UiInteract.Click(badgeCenter - badgeExtent, badgeCenter + badgeExtent, badgeHovered))
             {
                 OpenBannerComposer();
-            }
-        }
-
-        if (!root)
-        {
-            var chipRadius = BackChipRadius * scale;
-            var chipCenter = new Vector2(min.X + 12f * scale + chipRadius, min.Y + 10f * scale + chipRadius);
-            var hitHalf = 22f * scale;
-            var hitMin = chipCenter - new Vector2(hitHalf, hitHalf);
-            var hitMax = chipCenter + new Vector2(hitHalf, hitHalf);
-            var hovered = UiInteract.Hover(hitMin, hitMax);
-            drawList.AddCircleFilled(chipCenter, chipRadius,
-                ImGui.GetColorU32(hovered ? new Vector4(0f, 0f, 0f, 0.6f) : new Vector4(0f, 0f, 0f, 0.4f)), 32);
-            PhoneIcon.Draw(drawList, chipCenter, PhoneIcons.ChevronLeft,
-                ChirperInk.White, 17f * scale);
-            if (hovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
-
-            if (UiInteract.Click(hitMin, hitMax, hovered))
-            {
-                back();
             }
         }
 
