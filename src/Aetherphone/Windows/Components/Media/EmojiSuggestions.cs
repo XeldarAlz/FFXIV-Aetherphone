@@ -18,23 +18,31 @@ internal sealed class EmojiSuggestions
     private readonly string[] labels = new string[SuggestionLimit];
     private string query = string.Empty;
     private int suggestionCount;
+    private int selected;
+    private int shownFrame = int.MinValue / 2;
+
+    public bool Showing => ImGui.GetFrameCount() - shownFrame <= 1;
 
     public void Reset()
     {
         query = string.Empty;
         suggestionCount = 0;
+        selected = 0;
     }
 
     public bool Draw(Rect bar, Rect host, PhoneTheme theme, ref string draft)
     {
-        if (!EmojiCatalog.Ready || !EmojiAutocomplete.TryToken(draft, draft.Length, out var start, out var length) ||
+        var accepting = Showing && (ImGui.IsKeyPressed(ImGuiKey.Enter) || ImGui.IsKeyPressed(ImGuiKey.KeypadEnter) ||
+                                    ImGui.IsKeyPressed(ImGuiKey.Tab));
+        var text = accepting && draft.EndsWith('\n') ? draft.AsSpan(0, draft.Length - 1) : draft.AsSpan();
+        if (!EmojiCatalog.Ready || !EmojiAutocomplete.TryToken(text, text.Length, out var start, out var length) ||
             length < EmojiAutocomplete.MinimumQuery)
         {
             Reset();
             return false;
         }
 
-        Refresh(draft.AsSpan(start + 1, length));
+        Refresh(text.Slice(start + 1, length));
         var scale = UiScale.Current;
         var rowHeight = SuggestionRowUnits * scale;
         var pad = SuggestionPadUnits * scale;
@@ -46,15 +54,32 @@ internal sealed class EmojiSuggestions
             return false;
         }
 
+        shownFrame = ImGui.GetFrameCount();
+        selected = Math.Min(selected, rows - 1);
+        if (ImGui.IsKeyPressed(ImGuiKey.DownArrow, true))
+        {
+            selected = (selected + 1) % rows;
+        }
+
+        if (ImGui.IsKeyPressed(ImGuiKey.UpArrow, true))
+        {
+            selected = (selected + rows - 1) % rows;
+        }
+
         var popup = new Rect(new Vector2(bar.Min.X + Metrics.Space.Md * scale, bottom - rows * rowHeight - pad * 2f),
             new Vector2(bar.Max.X - Metrics.Space.Md * scale, bottom));
         var picked = DrawPopup(popup, theme, rows, rowHeight, pad);
+        if (picked < 0 && accepting)
+        {
+            picked = selected;
+        }
+
         if (picked < 0)
         {
             return false;
         }
 
-        draft = string.Concat(draft.AsSpan(0, start), labels[picked], draft.AsSpan(start + 1 + length));
+        draft = string.Concat(text[..start], labels[picked], text[(start + 1 + length)..]);
         Reset();
         return true;
     }
@@ -67,6 +92,7 @@ internal sealed class EmojiSuggestions
         }
 
         query = new string(current);
+        selected = 0;
         suggestionCount = EmojiAutocomplete.Rank(current, suggestions);
         for (var index = 0; index < suggestionCount; index++)
         {
@@ -103,9 +129,18 @@ internal sealed class EmojiSuggestions
                 var hovered = !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(min, max);
                 if (hovered)
                 {
+                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                    if (ImGui.GetIO().MouseDelta != Vector2.Zero)
+                    {
+                        selected = index;
+                    }
+                }
+
+                var lit = index == selected;
+                if (lit)
+                {
                     Squircle.Fill(drawList, min, max, Metrics.Radius.Sm * scale,
                         ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.10f)));
-                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 }
 
                 var iconMin = new Vector2(popup.Min.X + pad, min.Y + (rowHeight - icon) * 0.5f);
@@ -114,7 +149,7 @@ internal sealed class EmojiSuggestions
                 var label = Typography.FitText(labels[index], max.X - textLeft - pad, TextStyles.Caption1);
                 var textTop = min.Y + (rowHeight - Typography.LineHeight(TextStyles.Caption1)) * 0.5f;
                 Typography.Draw(drawList, new Vector2(textLeft, textTop), label,
-                    hovered ? theme.TextStrong : theme.TextMuted, TextStyles.Caption1);
+                    lit ? theme.TextStrong : theme.TextMuted, TextStyles.Caption1);
                 if (UiInteract.Click(min, max, hovered))
                 {
                     picked = index;

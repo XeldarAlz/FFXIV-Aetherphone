@@ -17,6 +17,8 @@ internal sealed class EmojiComposer
 
     public bool Open => open;
 
+    public bool Suggesting => suggestions.Showing;
+
     public Action<ImDrawListPtr, Vector2, float, Vector4>? IconPainter { get; set; }
 
     public void Close()

@@ -97,7 +97,8 @@ internal static class CommentComposerBar
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, style.TextInk))
         {
-            submitted = MentionField.SingleLineWithHint(inputId, hint, ref draft, maxLength, mentions);
+            submitted = MentionField.SingleLineWithHint(inputId, hint, ref draft, maxLength, mentions)
+                        && !emoji.Suggesting;
         }
 
         if (attachmentActive)

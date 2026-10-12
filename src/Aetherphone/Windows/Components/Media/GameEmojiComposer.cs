@@ -29,6 +29,8 @@ internal sealed class GameEmojiComposer
 
     public bool Open => open;
 
+    public bool Suggesting => suggestions.Showing;
+
     public void Close()
     {
         open = false;

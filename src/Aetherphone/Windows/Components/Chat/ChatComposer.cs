@@ -317,7 +317,8 @@ internal sealed class ChatComposer : IDisposable
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, model.Ui.Theme.TextStrong))
         {
-            submitted = editor.Draw("##chatComposerInput", new Vector2(fieldWidth, fieldHeight), model.MaxLength, 0);
+            submitted = editor.Draw("##chatComposerInput", new Vector2(fieldWidth, fieldHeight), model.MaxLength, 0)
+                        && !suggestions.Showing;
         }
 
         if (model.CanImage && editTargetId is null && model.Library is { } library)

@@ -253,11 +253,17 @@ internal sealed class GameComposer
         }
 
         FocusOnFieldPress(fieldMin, fieldMax, emojiCenter, emojiRadius);
+        if (emoji.Suggesting)
+        {
+            enterPressed = false;
+        }
+
         var suggested = editor.Text;
-        emoji.DrawSuggestions(bar, model.Screen, theme, ref suggested);
-        if (!string.Equals(suggested, editor.Text, StringComparison.Ordinal))
+        if (emoji.DrawSuggestions(bar, model.Screen, theme, ref suggested))
         {
             editor.Adopt(suggested);
+            editor.MoveCursor(editor.Text.Length);
+            focus = true;
         }
 
         var pickedEmoji = emoji.DrawPanel(bar, model.Screen, theme);
