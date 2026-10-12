@@ -28,7 +28,6 @@ internal sealed class FolderOverlay
     private const float InteractiveThreshold = 0.95f;
     private const float CloseSnap = 0.01f;
     private const float WheelStepUnits = 40f;
-    private const float DragThresholdUnits = 7f;
     private const float DragLiftScale = 1.08f;
     private const int NameMaxLength = 64;
     private const int Columns = HomeTileView.FolderMiniColumns;
@@ -51,6 +50,8 @@ internal sealed class FolderOverlay
     private int dragTarget = -1;
     private Vector2 dragGrab;
     private Vector2 dragCenter;
+    private Spring lift = new(1f);
+    private int settleIndex = -1;
     private Spring[] slideX = Array.Empty<Spring>();
     private Spring[] slideY = Array.Empty<Spring>();
 
@@ -78,6 +79,7 @@ internal sealed class FolderOverlay
         openedFrame = ImGui.GetFrameCount();
         pressIndex = -1;
         dragIndex = -1;
+        settleIndex = -1;
     }
 
     public void RequestClose()
@@ -86,6 +88,7 @@ internal sealed class FolderOverlay
         closing = true;
         pressIndex = -1;
         dragIndex = -1;
+        settleIndex = -1;
     }
 
     public void Draw(Rect screen, Rect content, in HomeMetrics metrics, PhoneTheme theme, INavigator navigation,
@@ -215,6 +218,15 @@ internal sealed class FolderOverlay
                 cell);
         }
 
+        if (dragIndex >= 0)
+        {
+            lift.Step(DragLiftScale, Motion.HoverLift, delta);
+        }
+        else
+        {
+            lift.Step(1f, Motion.PageSettle, delta);
+        }
+
         drawList.PushClipRect(panel.Min, panel.Max, true);
         for (var index = 0; index < current.Members.Count; index++)
         {
@@ -234,7 +246,8 @@ internal sealed class FolderOverlay
             }
 
             var member = current.Members[index];
-            DrawMember(drawList, member, center, iconSize, theme, labelAlpha, cell, drawFactor);
+            DrawMember(drawList, member, center, iconSize, theme, labelAlpha, cell,
+                index == settleIndex ? drawFactor * lift.Value : drawFactor);
             if (!interactive)
             {
                 continue;
@@ -285,13 +298,12 @@ internal sealed class FolderOverlay
             }
         }
 
+        drawList.PopClipRect();
         if (dragIndex >= 0)
         {
             DrawMember(drawList, current.Members[dragIndex], dragCenter, iconSize, theme, labelAlpha, cell,
-                drawFactor * DragLiftScale);
+                drawFactor * lift.Value);
         }
-
-        drawList.PopClipRect();
     }
 
     private bool TrackDrag(int count, bool enabled, float scale)
@@ -310,11 +322,13 @@ internal sealed class FolderOverlay
             {
                 pressIndex = -1;
             }
-            else if (Vector2.Distance(mouse, pressMouse) > DragThresholdUnits * scale)
+            else if (Vector2.Distance(mouse, pressMouse) > HomeInteractionController.DragThreshold * scale)
             {
                 dragIndex = pressIndex;
                 dragTarget = pressIndex;
                 pressIndex = -1;
+                settleIndex = -1;
+                lift.SnapTo(1f);
                 UiInteract.CancelPendingTap();
             }
         }
@@ -333,18 +347,29 @@ internal sealed class FolderOverlay
         var from = dragIndex;
         var to = dragTarget;
         dragIndex = -1;
-        for (var index = 0; index < slideX.Length; index++)
+        settleIndex = to;
+        if (from != to)
         {
-            slideX[index].SnapTo(0f);
-            slideY[index].SnapTo(0f);
+            CarrySlideSprings(from, to, cell);
+            layout.MoveFolderMember(current, from, to);
         }
 
         var landing = dragCenter - (firstSlotCenter + SlotPosition(to, cell));
         slideX[to].SnapTo(landing.X);
         slideY[to].SnapTo(landing.Y);
-        if (from != to)
+    }
+
+    private void CarrySlideSprings(int from, int to, float cell)
+    {
+        var step = from < to ? 1 : -1;
+        for (var index = from; index != to; index += step)
         {
-            layout.MoveFolderMember(current, from, to);
+            var next = index + step;
+            var shift = SlotPosition(next, cell) - SlotPosition(index, cell);
+            slideX[index] = slideX[next];
+            slideY[index] = slideY[next];
+            slideX[index].Value += shift.X;
+            slideY[index].Value += shift.Y;
         }
     }
 
