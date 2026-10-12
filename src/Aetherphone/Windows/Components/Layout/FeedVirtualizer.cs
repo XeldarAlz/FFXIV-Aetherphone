@@ -105,6 +105,7 @@ internal sealed class FeedVirtualizer
         var direction = ArrowKeyCapture.Take();
         if (direction != 0)
         {
+            DragScrollHost.CancelMomentum();
             var from = gliding ? glideTarget : scrollY;
             var target = direction > 0 ? NextStop(from) : PreviousStop(from);
             if (MathF.Abs(target - from) > StepEpsilon)
