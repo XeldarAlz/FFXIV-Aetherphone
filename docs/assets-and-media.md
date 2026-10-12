@@ -140,7 +140,7 @@ Emoji are not font glyphs. They are individual Twemoji PNG images (72x72, one fi
 - **RichText** (src/Aetherphone/Windows/Components/Primitives/RichText.cs) turns those spans into `RichTextRunKind.Emoji` runs during layout, and **EmojiRender** draws each one inline at 1.2x the font size.
 - **EmojiImages** resolves `<file>.png` inside the Emoji folder and draws it through the texture provider. A missing file makes `TryDraw` return false and nothing is drawn.
 - **EmojiPicker** (src/Aetherphone/Windows/Components/Media/EmojiPicker.cs) browses the catalog by group, searches `label` plus `tags` plus shortcodes, and inserts `:shortcode:` into the active composer.
-- **EmojiSuggestions** (src/Aetherphone/Windows/Components/Media/EmojiSuggestions.cs) is the popup that appears while you type `:` plus two or more letters at the end of a draft, ranked by `EmojiAutocomplete`; picking a row completes the shortcode. `ChatComposer` and Linkpearl's `GameEmojiComposer` both use it.
+- **EmojiSuggestions** (src/Aetherphone/Windows/Components/Media/EmojiSuggestions.cs) is the popup that appears while you type `:` plus two or more letters at the end of a draft, ranked by `EmojiAutocomplete`; picking a row completes the shortcode. `ChatComposer`, Linkpearl's `GameEmojiComposer`, and `EmojiComposer` (captions, comments and chirps) all use it.
 
 File names follow Twemoji's codepoint convention (`1f600.png`, `1f1e6-1f1e8.png` for flag pairs; the FE0F variation selector is stripped except inside ZWJ joins).
 
