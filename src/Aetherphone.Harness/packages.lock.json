@@ -120,8 +120,8 @@
       },
       "Net.Codecrete.QrCodeGenerator": {
         "type": "Transitive",
-        "resolved": "2.0.6",
-        "contentHash": "2Go9wbHKqpNkU3E/RGMOLx0icLGjRxZklS/CHM2Zy+iGymK+lBEJnacxouhAGQrhesYa+NG1s0dnYbIIIYGlbQ=="
+        "resolved": "3.2.1",
+        "contentHash": "MLseDo4x2T8+7gbXDt5vLjC4b6v4SavtrwoM+adKjlicnTHAqII4zAWy8VL5D94oB3VA8qz7bvMyOxfVLJnARg=="
       },
       "NETStandard.Library": {
         "type": "Transitive",
@@ -157,8 +157,8 @@
       },
       "SharpCompress": {
         "type": "Transitive",
-        "resolved": "0.48.1",
-        "contentHash": "SqGaVniGG943Gph/gHhUQUiZPyC7y0tXZyMf0/B2oGsMav9dqs7JJOuUA+xOkwKYaWM2TM7aZQjNK91f4bX71A=="
+        "resolved": "0.50.5",
+        "contentHash": "wAEAxPV67rmS3IlIm+tvGNPJXEtZNqlwkZrwJZAvz0AagZP0qLtT4mM2hk8S+uO0Kx+wYoy/FsADQpHwsN5y3g=="
       },
       "SharpDX": {
         "type": "Transitive",
@@ -269,8 +269,8 @@
       },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
-        "resolved": "10.0.11",
-        "contentHash": "PNoxCTPb+Tlux+GJyq4c89ddYdpioVSqfGx8pqOF6shCSKwUNNctXhQtRkCICjbJmGrJJsW8NY52kVYO/b8mlQ=="
+        "resolved": "10.0.12",
+        "contentHash": "wO0W8VDMeRJZakRySOmemAnrBZMwEFRlbfBtATxUiLf2I3IhSRnCp1Vt157NWptdE4IJ7eftd5n8q9LtaKHFTQ=="
       },
       "Ultz.Native.GLFW": {
         "type": "Transitive",
@@ -321,8 +321,8 @@
       },
       "YoutubeExplode": {
         "type": "Transitive",
-        "resolved": "6.6.1",
-        "contentHash": "9sVVl1n/YqzVN4olebZuZgMdhNCuYXOUt9KPhyivi90QIfm8QQt7GoTQtPpMJCtON6QUCUGZubBxK2xwlGHRMg=="
+        "resolved": "6.6.2",
+        "contentHash": "BN12ipOeTX1157Jx2uvFZGhR6dyHnji+8oM37NqXyu7nCL0rrSrxruea8lTSlUGewoxyvdC1owzRLThBI5Wj9Q=="
       },
       "aetherphone": {
         "type": "Project",
@@ -330,23 +330,23 @@
           "BouncyCastle.Cryptography": "[2.7.0, )",
           "Concentus": "[2.2.2, )",
           "DalamudPackager": "[15.0.0, )",
-          "ManagedDoom": "[1.1.0.4, )",
+          "ManagedDoom": "[1.2.0, )",
           "MeltySynth": "[2.4.1, )",
           "NAudio.Wasapi": "[2.3.0, )",
           "NAudio.WinMM": "[2.3.0, )",
           "NEbml": "[1.1.0.5, )",
           "NLayer.NAudioSupport": "[2.0.1, )",
-          "Net.Codecrete.QrCodeGenerator": "[2.0.6, )",
+          "Net.Codecrete.QrCodeGenerator": "[3.2.1, )",
           "NetStone": "[1.4.1, )",
           "Newtonsoft.Json": "[13.0.4, )",
-          "SharpCompress": "[0.48.1, )",
+          "SharpCompress": "[0.50.5, )",
           "SharpDX.D3DCompiler": "[4.2.0, )",
           "SharpDX.Direct3D11": "[4.2.0, )",
           "SixLabors.ImageSharp": "[3.1.12, )",
-          "System.Security.Cryptography.ProtectedData": "[10.0.11, )",
+          "System.Security.Cryptography.ProtectedData": "[10.0.12, )",
           "Vortice.D3DCompiler": "[3.8.3, )",
           "Vortice.Direct3D11": "[3.8.3, )",
-          "YoutubeExplode": "[6.6.1, )"
+          "YoutubeExplode": "[6.6.2, )"
         }
       },
       "manageddoom": {
