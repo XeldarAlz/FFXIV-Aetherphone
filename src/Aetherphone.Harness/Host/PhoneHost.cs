@@ -7,6 +7,7 @@ using Aetherphone.Harness.Fonts;
 using Aetherphone.Harness.Native;
 using Aetherphone.Harness.Rendering;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.DragDrop;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
@@ -86,6 +87,7 @@ internal sealed unsafe class PhoneHost : IDisposable
         Plugin.GamepadState = NullProxy.Create<IGamepadState>();
         Plugin.AetheryteList = NullProxy.Create<IAetheryteList>();
         Plugin.AddonLifecycle = NullProxy.Create<IAddonLifecycle>();
+        Plugin.DragDrop = NullProxy.Create<IDragDropManager>();
         fontAtlas.RebuildIfDirty();
         plugin = new Plugin();
         uiBuilder.PinWindow(plugin.MainWindow, new Vector2(PhoneMargin, PhoneMargin));
