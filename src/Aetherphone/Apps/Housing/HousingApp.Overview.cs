@@ -21,8 +21,6 @@ internal sealed partial class HousingApp
     private const int OverviewButtonCount = 2;
     private const float HeaderGlyphScale = 1.3f;
     private const float HeaderIconWidth = 26f;
-    private const float HeaderIconGap = 10f;
-    private const float HeaderTrailingGap = 8f;
     private const float RingMaxFraction = 0.5f;
     private const float RingMinSize = 150f;
     private const float RingThickness = 10f;
@@ -32,43 +30,38 @@ internal sealed partial class HousingApp
     private const float RingTextFraction = 0.84f;
     private const float RingIconSize = 18f;
     private const float RingLineGap = 3f;
-    private const int RingSegments = 96;
-    private const float HeroGap = 12f;
     private const float StatIconSize = 20f;
-    private const float StatIconGap = 8f;
     private const float StatPad = 14f;
-    private const float StatLineGap = 4f;
     private const float DistrictsGap = 14f;
-    private const float FooterGap = 12f;
-    private const float TileGap = 10f;
     private const float TileMinAspect = 0.6f;
     private const float TileMaxAspect = 0.82f;
     private const float WideTileMinAspect = 0.26f;
     private const float WideTileMaxAspect = 0.36f;
-    private const float TilePad = 10f;
     private const float TileIconSize = 30f;
     private const float TileLineGap = 1f;
-    private const float TileStackGap = 4f;
     private const float TileChevronScale = 0.85f;
     private const float TileChevronWidth = 14f;
     private const float TileStrokeAlpha = 0.16f;
     private const float TileHoverAlpha = 0.08f;
-    private const float TilePressedAlpha = 0.14f;
     private const float ScrimTopAlpha = 0.04f;
     private const float ScrimBottomAlpha = 0.86f;
     private const float FallbackTopDarken = 0.2f;
     private const float FallbackBottomDarken = 0.62f;
     private const float TileSubAlpha = 0.84f;
-    private const float SwatchGap = 4f;
-    private const float SwatchSpacing = 10f;
     private const float FooterDot = 3.5f;
     private const float BackdropHeightFraction = 0.55f;
     private const float BackdropAlpha = 0.55f;
-    private const float StatBreakdownGap = 10f;
 
     private static readonly Vector4 TileInk = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 ScrimInk = new(0.02f, 0.03f, 0.05f, 1f);
     private static readonly Vector4 BackdropTint = new(0.72f, 0.78f, 0.88f, 1f);
+    private static readonly HousingDistrictStats NoWorldStats = new(0, 0, 0, 0, 0, -1, 0);
+
+    private static readonly string[] DistrictTileIds =
+    [
+        "housing.district.0", "housing.district.1", "housing.district.2", "housing.district.3",
+        "housing.district.4",
+    ];
 
     private readonly NavBarButton[] overviewButtons = new NavBarButton[OverviewButtonCount];
     private readonly CachedText[] districtTexts = new CachedText[DistrictCount];
@@ -86,23 +79,19 @@ internal sealed partial class HousingApp
     private HousingLotteryState worldLottery = HousingLotteryState.Unknown;
     private readonly HousingDistrictStats[] districtStats = new HousingDistrictStats[DistrictCount];
     private readonly bool[] districtLoaded = new bool[DistrictCount];
-    private int worldOpen;
+    private HousingDistrictStats worldStats = NoWorldStats;
+    private CachedText worldOpenText;
     private DateTime worldFetchedUtc;
     private Spring heroFill;
-    private float overviewLeft = float.NaN;
     private Spring backdropFade;
     private IDalamudTextureWrap? backdropTexture;
     private uint backdropDistrict;
     private CachedText headerSubtitle;
-    private int worldSmall;
-    private int worldMedium;
-    private int worldLarge;
 
     private void DrawOverviewTab(in PhoneContext context)
     {
         var navBar = AppHeader.BeginLargeTitle(context, false);
         var scale = UiScale.Current;
-        overviewLeft = float.NaN;
         if (!housing.HasWorldSelected)
         {
             if (HousingArt.StateScreen(ImGui.GetWindowDrawList(), ui, navBar.Body, FontAwesomeIcon.Globe,
@@ -121,13 +110,13 @@ internal sealed partial class HousingApp
             }
             else
             {
-                using (AppSurface.Begin(navBar.Body))
+                using (var surface = AppSurface.Begin(navBar.Body))
                 {
                     var drawList = ImGui.GetWindowDrawList();
                     var origin = ImGui.GetCursorScreenPos();
                     var width = ScrollLayout.StableContentWidth();
-                    overviewLeft = origin.X;
-                    var visibleHeight = navBar.Body.Max.Y - TabBar.ContentInset(scale) - origin.Y;
+                    var restingTop = origin.Y + ImGui.GetScrollY() - surface.Pull;
+                    var visibleHeight = navBar.Body.Max.Y - TabBar.ContentInset(scale) - restingTop;
                     var layout = FitOverview(width, visibleHeight, scale);
                     var cursorY = DrawLotteryHero(drawList, origin, width, layout.RingBox, scale);
                     cursorY = DrawDistricts(drawList, new Vector2(origin.X, cursorY), width, in layout, scale);
@@ -205,9 +194,9 @@ internal sealed partial class HousingApp
     private void DrawOverviewHeader(Rect content, float scale)
     {
         var inset = (Metrics.Space.GlassInset + NavBarMetrics.ButtonPad) * scale;
-        var left = float.IsNaN(overviewLeft) ? content.Min.X + inset : overviewLeft;
+        var left = content.Min.X + inset;
         var right = content.Max.X - inset - NavBarMetrics.ButtonsWidth(OverviewButtonCount, scale) -
-                    HeaderTrailingGap * scale;
+                    Metrics.Space.Sm * scale;
         var rowHeight = (NavBarMetrics.InlineHeight + NavBarMetrics.UntitledTopGap) * scale;
         if (right - left <= HeaderIconWidth * scale)
         {
@@ -222,7 +211,7 @@ internal sealed partial class HousingApp
             var iconWidth = HeaderIconWidth * scale;
             AppSkin.Icon(drawList, new Vector2(left + iconWidth * 0.5f, centerY), PhoneIcons.Home, ui.TitleInk,
                 HeaderGlyphScale);
-            var textLeft = left + iconWidth + HeaderIconGap * scale;
+            var textLeft = left + iconWidth + Metrics.Space.Glass * scale;
             var textWidth = MathF.Max(1f, right - textLeft);
             var subtitle = HeaderSubtitle();
             var titleHeight = Typography.LineHeight(TextStyles.Title3);
@@ -281,10 +270,7 @@ internal sealed partial class HousingApp
         worldStateRevision = housing.Revision;
         worldStateWorld = world;
         worldLottery = HousingLotteryState.Unknown;
-        worldOpen = 0;
-        worldSmall = 0;
-        worldMedium = 0;
-        worldLarge = 0;
+        worldStats = NoWorldStats;
         worldFetchedUtc = default;
         var now = DateTime.UtcNow;
         var districts = HousingDistricts.All;
@@ -300,10 +286,7 @@ internal sealed partial class HousingApp
 
             districtLoaded[index] = true;
             districtStats[index] = HousingLottery.Summarize(snapshot.Plots);
-            worldOpen += snapshot.Plots.Count;
-            worldSmall += districtStats[index].Small;
-            worldMedium += districtStats[index].Medium;
-            worldLarge += districtStats[index].Large;
+            worldStats = Combine(worldStats, districtStats[index]);
             if (snapshot.FetchedUtc > worldFetchedUtc)
             {
                 worldFetchedUtc = snapshot.FetchedUtc;
@@ -313,17 +296,30 @@ internal sealed partial class HousingApp
         }
     }
 
+    private static HousingDistrictStats Combine(in HousingDistrictStats total, in HousingDistrictStats district)
+    {
+        var fewest = !total.HasFewestEntries
+            ? district.FewestEntries
+            : district.HasFewestEntries
+                ? Math.Min(total.FewestEntries, district.FewestEntries)
+                : total.FewestEntries;
+        return new HousingDistrictStats(total.Open + district.Open, total.Small + district.Small,
+            total.Medium + district.Medium, total.Large + district.Large, total.Wards + district.Wards, fewest,
+            total.Lottery + district.Lottery);
+    }
+
     private readonly record struct OverviewLayout(float RingBox, float TileHeight, float WideHeight);
 
     private OverviewLayout FitOverview(float width, float visibleHeight, float scale)
     {
-        var gap = TileGap * scale;
+        var gap = Metrics.Space.Glass * scale;
         var halfWidth = (width - gap) * 0.5f;
         var tileHeight = MathF.Max(TileNaturalHeight(scale), halfWidth * TileMinAspect);
-        var wideHeight = MathF.Max(TileStackHeight(scale) + TilePad * scale * 2f, width * WideTileMinAspect);
-        var footerHeight = FooterGap * scale +
-                           MathF.Max(Metrics.Size.TapTarget * scale, Typography.LineHeight(TextStyles.Subheadline));
-        var fixedHeight = DistrictsGap * scale + tileHeight * 2f + wideHeight + gap * 2f + footerHeight;
+        var wideHeight = MathF.Max(TileStackHeight(scale) + Metrics.Space.Glass * scale * 2f,
+            width * WideTileMinAspect);
+        var belowTiles = WatchPreviewHeight(scale) + DataFooterHeight(width, DateTime.UtcNow, scale) +
+                         BottomPad * scale;
+        var fixedHeight = DistrictsGap * scale + tileHeight * 2f + wideHeight + gap * 2f + belowTiles;
         var ringMax = MathF.Floor(width * RingMaxFraction);
         var ringBox = Math.Clamp(visibleHeight - fixedHeight, MathF.Min(RingMinSize * scale, ringMax), ringMax);
         var spare = visibleHeight - fixedHeight - ringBox;
@@ -354,43 +350,23 @@ internal sealed partial class HousingApp
         var thickness = RingThickness * scale;
         var center = new Vector2(origin.X + ringBox * 0.5f, origin.Y + ringBox * 0.5f);
         var radius = ringBox * 0.5f - thickness * RingGlowThickness * 0.5f;
-        drawList.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(ui.MutedInk, RingTrackAlpha)),
-            RingSegments, thickness);
+        ProgressRing.Track(drawList, center, radius, thickness, Palette.WithAlpha(ui.MutedInk, RingTrackAlpha));
         var progress = lottery.IsKnown ? HousingLottery.Progress(lottery.Phase, lottery.EndsUtc, now) : -1f;
         var remaining = progress >= 0f ? 1f - progress : 0f;
         var shown = heroFill.Step(remaining, Motion.Sheet, deltaSeconds);
         if (progress >= 0f)
         {
-            DrawRingArc(drawList, center, radius, thickness, Math.Clamp(shown, 0f, 1f), hue);
+            var fraction = Math.Clamp(shown, 0f, 1f);
+            ProgressRing.Fill(drawList, center, radius, thickness * RingGlowThickness, fraction,
+                Palette.WithAlpha(hue, RingGlowAlpha));
+            ProgressRing.Fill(drawList, center, radius, thickness, fraction, hue);
         }
 
         DrawRingCenter(drawList, center, (radius - thickness * 0.5f) * 2f * RingTextFraction, lottery, expired,
             hue, now, scale);
-        var statMin = new Vector2(origin.X + ringBox + HeroGap * scale, origin.Y);
+        var statMin = new Vector2(origin.X + ringBox + Metrics.Space.Md * scale, origin.Y);
         DrawOpenStat(drawList, new Rect(statMin, max), hue, scale);
         return max.Y;
-    }
-
-    private static void DrawRingArc(ImDrawListPtr drawList, Vector2 center, float radius, float thickness,
-        float fraction, Vector4 hue)
-    {
-        if (fraction <= 0f)
-        {
-            return;
-        }
-
-        var start = -MathF.PI * 0.5f;
-        var end = start + fraction * MathF.PI * 2f;
-        var segments = Math.Max(2, (int)MathF.Ceiling(RingSegments * fraction));
-        drawList.PathArcTo(center, radius, start, end, segments);
-        drawList.PathStroke(ImGui.GetColorU32(Palette.WithAlpha(hue, RingGlowAlpha)), ImDrawFlags.None,
-            thickness * RingGlowThickness);
-        drawList.PathArcTo(center, radius, start, end, segments);
-        drawList.PathStroke(ImGui.GetColorU32(hue), ImDrawFlags.None, thickness);
-        var cap = thickness * 0.5f;
-        var packed = ImGui.GetColorU32(hue);
-        drawList.AddCircleFilled(center + new Vector2(MathF.Cos(start), MathF.Sin(start)) * radius, cap, packed);
-        drawList.AddCircleFilled(center + new Vector2(MathF.Cos(end), MathF.Sin(end)) * radius, cap, packed);
     }
 
     private void DrawRingCenter(ImDrawListPtr drawList, Vector2 center, float textWidth,
@@ -458,64 +434,40 @@ internal sealed partial class HousingApp
         var pad = StatPad * scale;
         var innerWidth = MathF.Max(1f, card.Width - pad * 2f);
         var iconSize = StatIconSize * scale;
-        var iconGap = StatIconGap * scale;
-        var number = HousingText.Count(worldOpen);
+        var iconGap = Metrics.Space.Sm * scale;
+        var open = worldStats.Open;
+        var number = worldOpenText.IsCurrent(open)
+            ? worldOpenText.Value
+            : worldOpenText.Store(open, HousingText.Count(open));
         var numberStyle = WidgetText.FitStyle(number, TextStyles.Title1,
             MathF.Max(1f, innerWidth - iconSize - iconGap), true);
         var caption = Loc.T(L.Housing.OpenPlotsReported);
         var captionStyle = WidgetText.FitStyle(caption, TextStyles.Footnote, innerWidth, false);
         var numberHeight = Typography.LineHeight(numberStyle);
         var captionHeight = Typography.LineHeight(captionStyle);
-        var breakdownWidth = SizeBreakdownWidth(scale);
-        var showBreakdown = worldOpen > 0 && breakdownWidth <= innerWidth;
+        var breakdownWidth = LayoutTileSwatches(drawList, Vector2.Zero, float.MaxValue, in worldStats, ui.Accent,
+            ui.MutedInk, scale, false);
+        var showBreakdown = open > 0 && breakdownWidth <= innerWidth;
         var breakdownHeight = showBreakdown ? Typography.LineHeight(TextStyles.Footnote) : 0f;
-        var breakdownGap = showBreakdown ? StatBreakdownGap * scale : 0f;
+        var breakdownGap = showBreakdown ? Metrics.Space.Glass * scale : 0f;
         var top = card.Center.Y -
-                  (numberHeight + StatLineGap * scale + captionHeight + breakdownGap + breakdownHeight) * 0.5f;
+                  (numberHeight + Metrics.Space.Xxs * scale + captionHeight + breakdownGap + breakdownHeight) * 0.5f;
         var numberWidth = WidgetText.TabularWidth(number, numberStyle);
         var rowLeft = card.Center.X - (iconSize + iconGap + numberWidth) * 0.5f;
         ProgressRing.CenterIcon(drawList, new Vector2(rowLeft + iconSize * 0.5f, top + numberHeight * 0.5f),
             FontAwesomeIcon.Home, hue, iconSize);
         WidgetText.Tabular(drawList, new Vector2(rowLeft + iconSize + iconGap, top), number, ui.TitleInk,
             numberStyle);
-        var captionTop = top + numberHeight + StatLineGap * scale;
+        var captionTop = top + numberHeight + Metrics.Space.Xxs * scale;
         var captionWidth = Typography.Measure(caption, captionStyle).X;
         Typography.Draw(drawList, new Vector2(card.Center.X - captionWidth * 0.5f, captionTop), caption,
             ui.MutedInk, captionStyle);
         if (showBreakdown)
         {
             var rowCenterY = captionTop + captionHeight + breakdownGap + breakdownHeight * 0.5f;
-            DrawSizeBreakdown(drawList, new Vector2(card.Center.X - breakdownWidth * 0.5f, rowCenterY), scale);
+            LayoutTileSwatches(drawList, new Vector2(card.Center.X - breakdownWidth * 0.5f, rowCenterY),
+                float.MaxValue, in worldStats, ui.Accent, ui.MutedInk, scale, true);
         }
-    }
-
-    private float SizeBreakdownWidth(float scale)
-    {
-        Span<int> counts = [worldSmall, worldMedium, worldLarge];
-        var swatchWidth = HousingMarkers.Radius * scale * 1.4f + SwatchGap * scale;
-        var width = 0f;
-        for (var index = 0; index < counts.Length; index++)
-        {
-            if (counts[index] == 0)
-            {
-                continue;
-            }
-
-            if (width > 0f)
-            {
-                width += SwatchSpacing * scale;
-            }
-
-            width += swatchWidth + Typography.Measure(HousingText.Count(counts[index]), TextStyles.Footnote).X;
-        }
-
-        return width;
-    }
-
-    private void DrawSizeBreakdown(ImDrawListPtr drawList, Vector2 leftCenter, float scale)
-    {
-        var stats = new HousingDistrictStats(worldOpen, worldSmall, worldMedium, worldLarge, 0, -1, 0);
-        DrawTileSwatches(drawList, leftCenter, float.MaxValue, stats, ui.Accent, ui.MutedInk, scale);
     }
 
     private Vector4 HeroHue(HousingLotteryState lottery, bool expired)
@@ -537,7 +489,7 @@ internal sealed partial class HousingApp
         float scale)
     {
         var districts = HousingDistricts.All;
-        var gap = TileGap * scale;
+        var gap = Metrics.Space.Glass * scale;
         var halfWidth = (width - gap) * 0.5f;
         var tileHeight = layout.TileHeight;
         var wideHeight = layout.WideHeight;
@@ -584,24 +536,28 @@ internal sealed partial class HousingApp
     }
 
     private static float TileNaturalHeight(float scale) =>
-        TilePad * scale * 2f + TileIconSize * scale + TileStackGap * scale + TileStackHeight(scale);
+        (Metrics.Space.Glass * 2f + TileIconSize + Metrics.Space.Xxs) * scale + TileStackHeight(scale);
 
-    private bool DrawDistrictTile(ImDrawListPtr drawList, Rect tile, int index, uint districtId, bool wide,
+    private bool DrawDistrictTile(ImDrawListPtr drawList, Rect rest, int index, uint districtId, bool wide,
         float scale)
     {
-        var radius = Metrics.Radius.Grouped * scale;
-        var hovered = HousingChrome.Hover(tile.Min, tile.Max, false);
+        var hovered = HousingChrome.Hover(rest.Min, rest.Max, false);
+        var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left) && !DragScrollHost.AnyDragging;
+        var press = PressFx.Scale(ImGui.GetID(DistrictTileIds[index]), pressed, PressFx.CardPressedScale);
+        var half = rest.Size * 0.5f * press;
+        var tile = new Rect(rest.Center - half, rest.Center + half);
+        var radius = Metrics.Radius.Grouped * scale * press;
         DrawTileBackdrop(drawList, tile, districtId, radius, wide);
         if (hovered)
         {
-            var wash = ImGui.IsMouseDown(ImGuiMouseButton.Left) ? TilePressedAlpha : TileHoverAlpha;
-            Squircle.Fill(drawList, tile.Min, tile.Max, radius, ImGui.GetColorU32(Palette.WithAlpha(TileInk, wash)));
+            Squircle.Fill(drawList, tile.Min, tile.Max, radius,
+                ImGui.GetColorU32(Palette.WithAlpha(TileInk, TileHoverAlpha)));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
         Squircle.Stroke(drawList, tile.Min, tile.Max, radius,
             ImGui.GetColorU32(Palette.WithAlpha(TileInk, TileStrokeAlpha)), Metrics.Stroke.Hairline);
-        var pad = TilePad * scale;
+        var pad = Metrics.Space.Glass * scale;
         var iconSize = TileIconSize * scale;
         var stackHeight = TileStackHeight(scale);
         float textLeft;
@@ -624,7 +580,7 @@ internal sealed partial class HousingApp
         }
 
         DrawTileText(drawList, textLeft, tile.Max.X - pad, stackBottom, index, districtId, scale);
-        return hovered && UiInteract.Click(tile.Min, tile.Max, hovered);
+        return hovered && UiInteract.Click(rest.Min, rest.Max, hovered);
     }
 
     private void DrawTileBackdrop(ImDrawListPtr drawList, Rect tile, uint districtId, float radius, bool wide)
@@ -688,8 +644,8 @@ internal sealed partial class HousingApp
         var hasOpenings = loaded && stats.Open > 0;
         if (hasOpenings)
         {
-            DrawTileSwatches(drawList, new Vector2(left, swatchCenterY), right - chevronWidth, stats, ui.Accent,
-                subInk, scale);
+            LayoutTileSwatches(drawList, new Vector2(left, swatchCenterY), right - chevronWidth, in stats, ui.Accent,
+                subInk, scale, true);
         }
 
         if (ShowsFewestEntries(index))
@@ -720,10 +676,11 @@ internal sealed partial class HousingApp
             TextStyles.Headline);
     }
 
-    private static void DrawTileSwatches(ImDrawListPtr drawList, Vector2 leftCenter, float right,
-        in HousingDistrictStats stats, Vector4 shapeInk, Vector4 labelInk, float scale)
+    private static float LayoutTileSwatches(ImDrawListPtr drawList, Vector2 leftCenter, float right,
+        in HousingDistrictStats stats, Vector4 shapeInk, Vector4 labelInk, float scale, bool draw)
     {
         var x = leftCenter.X;
+        var end = leftCenter.X;
         Span<int> counts = [stats.Small, stats.Medium, stats.Large];
         Span<HousingPlotSize> sizes = [HousingPlotSize.Small, HousingPlotSize.Medium, HousingPlotSize.Large];
         var swatchRadius = HousingMarkers.Radius * scale * 0.7f;
@@ -737,18 +694,29 @@ internal sealed partial class HousingApp
 
             var label = HousingText.Count(counts[sizeIndex]);
             var labelWidth = Typography.Measure(label, TextStyles.Footnote).X;
-            if (x + swatchRadius * 2f + SwatchGap * scale + labelWidth > right)
+            if (x + swatchRadius * 2f + Metrics.Space.Xxs * scale + labelWidth > right)
             {
                 break;
             }
 
-            HousingMarkers.DrawSwatch(drawList, new Vector2(x + swatchRadius, leftCenter.Y), sizes[sizeIndex],
-                shapeInk, scale * 0.8f);
-            x += swatchRadius * 2f + SwatchGap * scale;
-            Typography.Draw(drawList, new Vector2(x, leftCenter.Y - lineHeight * 0.5f), label, labelInk,
-                TextStyles.Footnote);
-            x += labelWidth + SwatchSpacing * scale;
+            if (draw)
+            {
+                HousingMarkers.DrawSwatch(drawList, new Vector2(x + swatchRadius, leftCenter.Y), sizes[sizeIndex],
+                    shapeInk, scale * 0.8f);
+            }
+
+            x += swatchRadius * 2f + Metrics.Space.Xxs * scale;
+            if (draw)
+            {
+                Typography.Draw(drawList, new Vector2(x, leftCenter.Y - lineHeight * 0.5f), label, labelInk,
+                    TextStyles.Footnote);
+            }
+
+            end = x + labelWidth;
+            x = end + Metrics.Space.Glass * scale;
         }
+
+        return end - leftCenter.X;
     }
 
     private void OpenDistrictOnMap(uint districtId)
@@ -760,6 +728,18 @@ internal sealed partial class HousingApp
         InvalidateCache();
         activeTab = HousingTab.Map;
         UiFeedback.Play(UiSound.Tap);
+    }
+
+    private float WatchPreviewHeight(float scale)
+    {
+        var count = Math.Min(WatchPreviewRows, housing.Watch.Watched.Count);
+        if (count == 0)
+        {
+            return 0f;
+        }
+
+        return (HousingArt.SectionGap + CardSectionHeader.HeightUnits + HousingArt.HeaderGap +
+                HousingArt.RowHeight * count) * scale;
     }
 
     private float DrawWatchPreview(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
@@ -842,7 +822,7 @@ internal sealed partial class HousingApp
 
     private float DrawDataFooter(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
     {
-        var top = origin.Y + FooterGap * scale;
+        var top = origin.Y + Metrics.Space.Md * scale;
         var now = DateTime.UtcNow;
         var freshness = SnapshotFreshness();
         var text = Refreshing
@@ -850,7 +830,7 @@ internal sealed partial class HousingApp
             : HousingText.Updated(ref footerText, worldFetchedUtc, now);
         var refreshLabel = Loc.T(L.Housing.Refresh);
         var refreshSize = Typography.Measure(refreshLabel, TextStyles.Subheadline);
-        var lineHeight = MathF.Max(Metrics.Size.TapTarget * scale, refreshSize.Y);
+        var lineHeight = FooterRowHeight(refreshSize, scale);
         var centerY = top + lineHeight * 0.5f;
         var dot = FooterDot * scale;
         drawList.AddCircleFilled(new Vector2(origin.X + dot, centerY), dot,
@@ -883,11 +863,31 @@ internal sealed partial class HousingApp
             return bottom;
         }
 
+        return bottom + Typography.DrawWrappedLeft(new Vector2(origin.X, bottom), CachedBannerText(now),
+            AppPalettes.HousingParchment, TextStyles.Footnote, width);
+    }
+
+    private float DataFooterHeight(float width, DateTime now, float scale)
+    {
+        var refreshSize = Typography.Measure(Loc.T(L.Housing.Refresh), TextStyles.Subheadline);
+        var height = Metrics.Space.Md * scale + FooterRowHeight(refreshSize, scale);
+        if (housing.ActiveSource != HousingProviderKind.Cache)
+        {
+            return height;
+        }
+
+        return height + Typography.MeasureWrappedBlock(CachedBannerText(now), TextStyles.Footnote, width).Y;
+    }
+
+    private static float FooterRowHeight(Vector2 refreshSize, float scale) =>
+        MathF.Max(Metrics.Size.TapTarget * scale, refreshSize.Y);
+
+    private string CachedBannerText(DateTime now)
+    {
         var minutes = (long)Math.Max(0d, (now - worldFetchedUtc).TotalMinutes);
-        var banner = cachedBanner.IsCurrent(minutes)
+        return cachedBanner.IsCurrent(minutes)
             ? cachedBanner.Value
-            : cachedBanner.Store(minutes, Loc.T(L.Housing.CachedBanner, HousingFormat.AgeRelative(worldFetchedUtc, now)));
-        return bottom + Typography.DrawWrappedLeft(new Vector2(origin.X, bottom), banner, AppPalettes.HousingParchment,
-            TextStyles.Footnote, width);
+            : cachedBanner.Store(minutes,
+                Loc.T(L.Housing.CachedBanner, HousingFormat.AgeRelative(worldFetchedUtc, now)));
     }
 }

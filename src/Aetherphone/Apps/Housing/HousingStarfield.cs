@@ -56,10 +56,12 @@ internal static class HousingStarfield
 
     private static bool InsideCorners(Vector2 point, Rect screen, float rounding, float margin)
     {
-        var dx = MathF.Max(MathF.Max(screen.Min.X + rounding - point.X, point.X - (screen.Max.X - rounding)), 0f);
-        var dy = MathF.Max(MathF.Max(screen.Min.Y + rounding - point.Y, point.Y - (screen.Max.Y - rounding)), 0f);
+        var cornerOffsetX =
+            MathF.Max(MathF.Max(screen.Min.X + rounding - point.X, point.X - (screen.Max.X - rounding)), 0f);
+        var cornerOffsetY =
+            MathF.Max(MathF.Max(screen.Min.Y + rounding - point.Y, point.Y - (screen.Max.Y - rounding)), 0f);
         var limit = MathF.Max(0f, rounding - margin);
-        return dx * dx + dy * dy <= limit * limit;
+        return cornerOffsetX * cornerOffsetX + cornerOffsetY * cornerOffsetY <= limit * limit;
     }
 
     private static Star[] Build()
