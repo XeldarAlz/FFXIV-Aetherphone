@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace Aetherphone.Core.Casino;
@@ -15,6 +16,11 @@ internal sealed unsafe class CasinoFriendNames
 
     public void Refresh()
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var now = Environment.TickCount64;
         if (readAtTick != 0 && now - readAtTick < RefreshMilliseconds)
         {

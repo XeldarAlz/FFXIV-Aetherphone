@@ -1,4 +1,5 @@
 using System.Text;
+using Aetherphone.Core.Game;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -208,6 +209,11 @@ internal sealed unsafe class TradeWindowReader : ITradeWindowReader
 
     private static long WalletGil()
     {
+        if (!GameMemory.Attached)
+        {
+            return 0;
+        }
+
         var manager = InventoryManager.Instance();
         return manager == null ? 0 : manager->GetGil();
     }
