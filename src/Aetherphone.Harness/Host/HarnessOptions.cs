@@ -1,9 +1,15 @@
+using System.Text.Json;
+using Aetherphone.Harness.Scenarios;
+
 namespace Aetherphone.Harness.Host;
 
 internal sealed class HarnessOptions
 {
     private const string CacheEnvironmentVariable = "AETHERPHONE_HARNESS_CACHE";
     private const string SqpackEnvironmentVariable = "AETHERPHONE_SQPACK";
+    private const string LauncherConfigFile = "launcherConfigV3.json";
+    private const string LauncherGamePathKey = "GamePath";
+    private const string ExdIndexFile = "0a0000.win32.index";
     private const int DefaultWidth = 1600;
     private const int DefaultHeight = 1200;
     private const int DefaultFrames = 90;
@@ -16,6 +22,8 @@ internal sealed class HarnessOptions
     public string AssetDirectory { get; private set; } = string.Empty;
 
     public string SqpackDirectory { get; private set; } = string.Empty;
+
+    public string Scenario { get; private set; } = ScenarioCatalog.Default;
 
     public string OutputPath { get; private set; } = Path.Combine(Environment.CurrentDirectory, "phone.png");
 
@@ -45,6 +53,9 @@ internal sealed class HarnessOptions
                     break;
                 case "--sqpack":
                     options.SqpackDirectory = Value(arguments, ref index);
+                    break;
+                case "--scenario":
+                    options.Scenario = Value(arguments, ref index);
                     break;
                 case "--out":
                     options.OutputPath = Value(arguments, ref index);
@@ -84,7 +95,35 @@ internal sealed class HarnessOptions
 
         if (SqpackDirectory.Length == 0)
         {
-            SqpackDirectory = Environment.GetEnvironmentVariable(SqpackEnvironmentVariable) ?? Path.Combine(CacheDirectory, "sqpack");
+            SqpackDirectory = Environment.GetEnvironmentVariable(SqpackEnvironmentVariable) ??
+                              InstalledGameSqpack() ?? Path.Combine(CacheDirectory, "sqpack");
+        }
+    }
+
+    private static string? InstalledGameSqpack()
+    {
+        var launcherConfig = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "XIVLauncher", LauncherConfigFile);
+        if (!File.Exists(launcherConfig))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(launcherConfig));
+            if (!document.RootElement.TryGetProperty(LauncherGamePathKey, out var gamePath) ||
+                gamePath.GetString() is not { Length: > 0 } installation)
+            {
+                return null;
+            }
+
+            var sqpack = Path.Combine(installation, "game", "sqpack");
+            return File.Exists(Path.Combine(sqpack, "ffxiv", ExdIndexFile)) ? sqpack : null;
+        }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return null;
         }
     }
 

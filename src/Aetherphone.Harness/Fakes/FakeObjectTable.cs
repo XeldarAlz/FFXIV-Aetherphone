@@ -11,7 +11,7 @@ internal sealed class FakeObjectTable : IObjectTable
 
     public int Length => 0;
 
-    public IPlayerCharacter? LocalPlayer => null;
+    public IPlayerCharacter? LocalPlayer { get; set; }
 
     public IEnumerable<IBattleChara> PlayerObjects => Array.Empty<IBattleChara>();
 

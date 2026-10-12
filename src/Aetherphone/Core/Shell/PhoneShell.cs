@@ -181,6 +181,8 @@ internal sealed class PhoneShell : IDisposable
 
     public string? CurrentAppId => navigation.Current?.Id;
 
+    public IReadOnlyList<IPhoneApp> Apps => apps;
+
     public void GoHome() => navigation.GoHome();
 
     private static bool BezelDoubleClicked(Rect device, in ChassisGeometry chassis)

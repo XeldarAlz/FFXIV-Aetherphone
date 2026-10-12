@@ -6,6 +6,7 @@ using System.Text.Json;
 using Aetherphone.Core;
 using Aetherphone.Harness.Fakes;
 using Aetherphone.Harness.Host;
+using Aetherphone.Harness.Scenarios;
 
 namespace Aetherphone.Harness.Driver;
 
@@ -231,6 +232,12 @@ internal sealed class DriverServer
                 var handled = host.RunCommand(query["text"] ?? string.Empty);
                 host.Step(Int(query, "settle", DefaultSettleFrames));
                 return Json(handled ? 200 : 404, new { ok = handled, state = State() });
+            case "/scenario":
+                return Scenario(query);
+            case "/install":
+                var installed = host.InstallApps(query["app"] is { Length: > 0 } wanted ? wanted : "all");
+                host.Step(Int(query, "settle", DefaultSettleFrames));
+                return Json(200, new { ok = true, installed, state = State() });
             case "/quit":
                 jobs.CompleteAdding();
                 return Json(200, new { ok = true });
@@ -290,6 +297,34 @@ internal sealed class DriverServer
         return Json(200, new { ok = true });
     }
 
+    private Response Scenario(System.Collections.Specialized.NameValueCollection query)
+    {
+        var name = query["name"] ?? string.Empty;
+        if (name.Length == 0)
+        {
+            return Json(200, new { ok = true, current = host.ScenarioName, available = host.AvailableScenarios() });
+        }
+
+        if (string.Equals(name, ScenarioCatalog.None, StringComparison.Ordinal))
+        {
+            host.ClearScenario();
+            host.Step(Int(query, "settle", DefaultSettleFrames));
+            return Json(200, new { ok = true, state = State() });
+        }
+
+        try
+        {
+            var loaded = host.LoadScenario(name);
+            host.Step(Int(query, "settle", DefaultSettleFrames));
+            return Json(200, new { ok = true, warnings = loaded.Warnings, state = State() });
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or
+                                              InvalidOperationException or Newtonsoft.Json.JsonException)
+        {
+            return Json(400, new { ok = false, error = exception.Message, available = host.AvailableScenarios() });
+        }
+    }
+
     private Response Tap(System.Collections.Specialized.NameValueCollection query)
     {
         Vector2 screen;
@@ -330,6 +365,7 @@ internal sealed class DriverServer
             homeEditing = host.HomeEditing,
             loggedIn = host.IsLoggedIn,
             gameData = host.HasGameData,
+            scenario = host.ScenarioName,
             phone = new { x = rect.Min.X, y = rect.Min.Y, width = rect.Width, height = rect.Height },
             display = new { width = host.Width, height = host.Height },
             latestLog = HarnessLog.LatestSequence,

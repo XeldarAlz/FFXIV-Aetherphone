@@ -1,0 +1,33 @@
+{
+  "name": "fresh",
+  "character": {
+    "name": "Wren Ashby",
+    "world": "Gilgamesh",
+    "job": "ARC",
+    "race": "Hyur",
+    "gender": "male"
+  },
+  "location": {
+    "territory": 132,
+    "weather": "Clouds"
+  },
+  "gil": 2140,
+  "collected": 0.02,
+  "maxLevel": 100,
+  "jobs": {
+    "ARC": [15, 4200],
+    "CNJ": 3
+  },
+  "gearsets": [
+    { "job": "ARC", "name": "Archer", "itemLevel": 12 }
+  ],
+  "inventory": {
+    "bags": [
+      { "item": "Potion", "quantity": 8 },
+      { "item": "Phoenix Down", "quantity": 1 }
+    ],
+    "crystals": [
+      { "item": "Wind Shard", "quantity": 34 }
+    ]
+  }
+}

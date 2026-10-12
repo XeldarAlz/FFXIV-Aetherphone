@@ -6,6 +6,7 @@ using Aetherphone.Harness.Fakes;
 using Aetherphone.Harness.Fonts;
 using Aetherphone.Harness.Native;
 using Aetherphone.Harness.Rendering;
+using Aetherphone.Harness.Scenarios;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.DragDrop;
 using Dalamud.Interface.ManagedFontAtlas;
@@ -20,6 +21,7 @@ internal sealed unsafe class PhoneHost : IDisposable
     private const float DalamudDefaultFontPx = 16.5f;
     private const int HomeReturnFrames = 20;
     private const float PhoneMargin = 40f;
+    private const string AllApps = "all";
     private readonly TextureStore textures = new();
     private FrameRenderer renderer;
     private int rasterizedFrame = -1;
@@ -29,9 +31,13 @@ internal sealed unsafe class PhoneHost : IDisposable
     private readonly FakeClientState clientState;
     private readonly FakeCommandManager commands;
     private readonly FakeDataManager data;
+    private readonly FakeObjectTable objectTable = new();
+    private readonly IUnlockState unlockState = UnlockStateProxy.Create();
+    private readonly string cacheDirectory;
     private readonly Plugin plugin;
     private readonly Stopwatch stopwatch = new();
     private readonly List<KeyValuePair<string, Rect>> anchorScratch = new();
+    private Scenario? scenario;
 
     public PhoneHost(HarnessOptions options)
     {
@@ -57,7 +63,9 @@ internal sealed unsafe class PhoneHost : IDisposable
         var pluginInterface = new FakePluginInterface(options.ConfigDirectory, options.AssetDirectory, uiBuilder,
             typeof(Plugin).Assembly);
         HarnessLog.Note(data.HasGameData ? "game data: " + options.SqpackDirectory : "game data: none, sheet-bound apps disabled");
+        cacheDirectory = options.CacheDirectory;
         GameMemory.Detach();
+        GameMemory.ActionSimulated += description => HarnessLog.Note("game action: " + description);
         if (!data.HasGameData)
         {
             GameSheets.MarkUnavailable();
@@ -69,7 +77,7 @@ internal sealed unsafe class PhoneHost : IDisposable
         Plugin.DtrBar = new FakeDtrBar();
         Plugin.ChatGui = new FakeChatGui();
         Plugin.DataManager = data;
-        Plugin.ObjectTable = new FakeObjectTable();
+        Plugin.ObjectTable = objectTable;
         Plugin.ClientState = clientState;
         Plugin.Framework = framework;
         Plugin.Condition = new FakeCondition();
@@ -81,7 +89,7 @@ internal sealed unsafe class PhoneHost : IDisposable
         Plugin.ContextMenu = NullProxy.Create<IContextMenu>();
         Plugin.Log = new FakePluginLog();
         Plugin.GameConfig = NullProxy.Create<IGameConfig>();
-        Plugin.UnlockState = NullProxy.Create<IUnlockState>();
+        Plugin.UnlockState = unlockState;
         Plugin.InteropProvider = NullProxy.Create<IGameInteropProvider>();
         Plugin.KeyState = NullProxy.Create<IKeyState>();
         Plugin.GamepadState = NullProxy.Create<IGamepadState>();
@@ -92,6 +100,91 @@ internal sealed unsafe class PhoneHost : IDisposable
         plugin = new Plugin();
         uiBuilder.PinWindow(plugin.MainWindow, new Vector2(PhoneMargin, PhoneMargin));
         HarnessLog.Note("plugin constructed");
+        StartScenario(options.Scenario);
+    }
+
+    public string? ScenarioName => scenario?.Name;
+
+    public List<string> AvailableScenarios() => ScenarioCatalog.Names(cacheDirectory);
+
+    public Scenario LoadScenario(string nameOrPath)
+    {
+        if (!data.HasGameData)
+        {
+            throw new InvalidOperationException("scenarios need game data; pass --sqpack or install the game");
+        }
+
+        var path = ScenarioCatalog.Resolve(nameOrPath, cacheDirectory) ??
+                   throw new FileNotFoundException($"no scenario named '{nameOrPath}'");
+        var loaded = new ScenarioLoader(data.Excel).Load(path);
+        for (var index = 0; index < loaded.Warnings.Count; index++)
+        {
+            HarnessLog.Note($"scenario {loaded.Name}: {loaded.Warnings[index]}");
+        }
+
+        SwapScenario(loaded);
+        HarnessLog.Note($"scenario {loaded.Name} loaded from {path}");
+        return loaded;
+    }
+
+    public void ClearScenario()
+    {
+        SwapScenario(null);
+        HarnessLog.Note("scenario cleared, no character state");
+    }
+
+    public List<string> InstallApps(string appId)
+    {
+        var installed = new List<string>();
+        var apps = plugin.Shell.Apps;
+        for (var index = 0; index < apps.Count; index++)
+        {
+            var id = apps[index].Id;
+            var wanted = string.Equals(appId, AllApps, StringComparison.Ordinal) ||
+                         string.Equals(appId, id, StringComparison.Ordinal);
+            if (wanted && plugin.Installer.Install(id))
+            {
+                installed.Add(id);
+            }
+        }
+
+        return installed;
+    }
+
+    private void StartScenario(string nameOrPath)
+    {
+        if (string.Equals(nameOrPath, ScenarioCatalog.None, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (!data.HasGameData)
+        {
+            HarnessLog.Note("scenario skipped: no game data, the phone runs without a character");
+            return;
+        }
+
+        try
+        {
+            LoadScenario(nameOrPath);
+            Login();
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or
+                                              Newtonsoft.Json.JsonException)
+        {
+            HarnessLog.Note($"scenario {nameOrPath} failed to load: {exception.Message}");
+        }
+    }
+
+    private void SwapScenario(Scenario? next)
+    {
+        var wasLoggedIn = clientState.IsLoggedIn;
+        Logout();
+        scenario = next;
+        if (wasLoggedIn)
+        {
+            Login();
+        }
     }
 
     public int FrameIndex { get; private set; }
@@ -213,9 +306,26 @@ internal sealed unsafe class PhoneHost : IDisposable
 
     public void OpenSettings() => uiBuilder.InvokeOpenConfigUi();
 
-    public void Login() => clientState.SimulateLogin();
+    public void Login()
+    {
+        if (!clientState.IsLoggedIn && scenario is { } active)
+        {
+            GameMemory.Simulate(active.Game);
+            objectTable.LocalPlayer = new FakePlayerCharacter(active.Character, data.Excel);
+            UnlockStateProxy.Apply(unlockState, active.QuestsCompleted, active.Collected);
+            clientState.MoveTo(active.TerritoryId, active.MapId);
+        }
 
-    public void Logout() => clientState.SimulateLogout();
+        clientState.SimulateLogin();
+    }
+
+    public void Logout()
+    {
+        clientState.SimulateLogout();
+        objectTable.LocalPlayer = null;
+        UnlockStateProxy.Apply(unlockState, false, 0d);
+        GameMemory.Simulate(null);
+    }
 
     public bool RunCommand(string text) => commands.ProcessCommand(text);
 

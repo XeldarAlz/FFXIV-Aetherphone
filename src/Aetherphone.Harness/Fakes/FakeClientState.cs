@@ -13,9 +13,9 @@ internal sealed class FakeClientState : IClientState
 
     public event Action<ZoneInitEventArgs>? ZoneInit { add { } remove { } }
 
-    public event Action<uint>? TerritoryChanged { add { } remove { } }
+    public event Action<uint>? TerritoryChanged;
 
-    public event Action<uint>? MapIdChanged { add { } remove { } }
+    public event Action<uint>? MapIdChanged;
 
     public event Action<uint>? InstanceChanged { add { } remove { } }
 
@@ -59,13 +59,40 @@ internal sealed class FakeClientState : IClientState
 
     public void SimulateLogin()
     {
+        if (IsLoggedIn)
+        {
+            return;
+        }
+
         IsLoggedIn = true;
         Login?.Invoke();
     }
 
     public void SimulateLogout()
     {
+        if (!IsLoggedIn)
+        {
+            return;
+        }
+
         IsLoggedIn = false;
         Logout?.Invoke(0, 0);
+    }
+
+    public void MoveTo(uint territoryType, uint mapId)
+    {
+        var territoryChanged = territoryType != TerritoryType;
+        var mapChanged = mapId != MapId;
+        TerritoryType = territoryType;
+        MapId = mapId;
+        if (territoryChanged)
+        {
+            TerritoryChanged?.Invoke(territoryType);
+        }
+
+        if (mapChanged)
+        {
+            MapIdChanged?.Invoke(mapId);
+        }
     }
 }

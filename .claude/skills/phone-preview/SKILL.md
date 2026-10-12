@@ -16,6 +16,8 @@ dotnet build src/Aetherphone.Harness -c Release
 
 The bootstrap fills `~/.aetherphone-harness` (Dalamud dev build, native ImGui, fonts). Rebuild the harness after every plugin change; it rebuilds the plugin too.
 
+With game data available (found automatically on a Windows machine with the game installed, see docs/harness.md) the harness logs in the `endgame` scenario character: a level 100 White Mage with inventory, wallet, jobs, retainers, friends, timers, and dailies, so the game apps show real screens. `--scenario fresh` starts a near-empty level 15 character, and `--scenario none` starts with no character at all.
+
 ## Start the server
 
 Run it in the background and wait for `~/.aetherphone-harness/driver.json` to appear:
@@ -49,6 +51,8 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 | `settings` | Open the Settings app the way Dalamud's config button would |
 | `log [--since N]` | Plugin warnings, errors, and harness notes since a sequence number |
 | `login` / `logout` | Simulate the character logging in or out |
+| `scenario [NAME]` | List scenarios, or switch to another character (logs out, then in) |
+| `install [APPID]` | Put an app, or every available app, on the home screen |
 | `command "/aep ..."` | Run a chat command through the plugin's handler |
 | `quit` | Stop the server |
 
@@ -56,11 +60,12 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 
 1. `tools/harness/aep open settings` then `tools/harness/aep shot /tmp/settings.png`, then Read the PNG.
 2. Find targets with `anchors`; tap by name when one exists, by pixel otherwise.
-3. After each action, `shot` again and check `log` for warnings.
+3. After each action, `shot` again and check `log` for warnings. Buttons that drive the game (invites, chat sends, gearset swaps, item links) succeed and log a `game action: ...` line instead of touching a game.
 
 ## What the harness cannot show
 
-- No game memory: inventory, retainers, chat send, friend list, and hooks return empty results.
-- No game data unless an exd pack is present in `~/.aetherphone-harness/sqpack/ffxiv/`. Without it the sheet-bound apps (Skywatcher, Dailies, Wallet, Jobs, Inventory, Market, Hunts, Maps, Housing, Collections) are hidden and world or item names are blank.
-- No audio, no video screen, no camera capture.
+- Real game memory: every game value comes from the scenario file, so a reader bug (a moved offset, a missed container) never shows here. Reader changes still need an in-game check.
+- Without game data the sheet-bound apps (Skywatcher, Dailies, Wallet, Jobs, Inventory, Market, Hunts, Maps, Housing, Collections) are hidden, world or item names are blank, and no scenario loads.
+- A config created before game data was available has no sheet-bound apps on the home screen; run `install` once.
+- No audio, no video screen, no camera capture, no hooks, and no incoming game chat.
 - A fresh config runs the first-run boot and onboarding tour. `step 1000` gets past the boot; the tour has buttons to tap. Config persists in `~/.aetherphone-harness/config`, so this happens once.

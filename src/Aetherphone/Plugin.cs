@@ -68,6 +68,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static PhotoWindow PhotoWindow { get; set; } = null!;
     internal PhoneShell Shell => shell;
     internal PhoneWindow MainWindow => phoneWindow;
+    internal AppInstaller Installer => services.Installer;
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
     private readonly PhoneServices services;
     private readonly PhoneShell shell;

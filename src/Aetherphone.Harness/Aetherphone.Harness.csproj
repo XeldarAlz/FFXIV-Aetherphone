@@ -61,6 +61,7 @@
 
   <ItemGroup>
     <Content Include="$(NativeImGuiSource)" Link="cimgui.dll" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\tools\harness\scenarios\*.json" Link="scenarios\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

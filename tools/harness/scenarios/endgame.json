@@ -1,0 +1,198 @@
+{
+  "name": "endgame",
+  "character": {
+    "name": "Mira Solace",
+    "world": "Phoenix",
+    "job": "WHM",
+    "race": "Miqote",
+    "gender": "female",
+    "grandCompany": "Maelstrom",
+    "freeCompanyTag": "MOON"
+  },
+  "location": {
+    "territory": 129,
+    "weather": "Fair Skies"
+  },
+  "gil": 18450230,
+  "questsCompleted": true,
+  "collected": 0.65,
+  "maxLevel": 100,
+  "restedExperience": 2460000,
+  "jobs": {
+    "PLD": 100, "WAR": 100, "DRK": 100, "GNB": 100,
+    "WHM": 100, "SCH": 100, "AST": 100, "SGE": 100,
+    "MNK": 100, "DRG": 100, "NIN": 100, "SAM": 100, "RPR": 100, "VPR": [94, 2150000],
+    "BRD": 100, "MCH": 90, "DNC": 100,
+    "BLM": 100, "SMN": 100, "RDM": 100, "PCT": [92, 1250000], "BLU": 80,
+    "CRP": 100, "BSM": 100, "ARM": 100, "GSM": 100, "LTW": 100, "WVR": 100, "ALC": 100, "CUL": 100,
+    "MIN": 100, "BTN": 100, "FSH": [97, 3100000]
+  },
+  "gearsets": [
+    { "job": "WHM", "name": "White Mage", "itemLevel": 790 },
+    { "job": "BLM", "name": "Black Mage", "itemLevel": 790 },
+    { "job": "PLD", "name": "Paladin", "itemLevel": 785 },
+    { "job": "DNC", "name": "Dancer", "itemLevel": 770 },
+    { "job": "SCH", "name": "Scholar", "itemLevel": 760 },
+    { "job": "CRP", "name": "Carpenter", "itemLevel": 750 },
+    { "job": "MIN", "name": "Miner", "itemLevel": 750 }
+  ],
+  "currencies": {
+    "Allagan Tomestone of Poetics": 1450,
+    "Allagan Tomestone of Mathematics": 1800,
+    "Allagan Tomestone of Mnemonics": 320,
+    "Storm Seal": 72000,
+    "Wolf Mark": 12000,
+    "Trophy Crystal": 3400,
+    "MGP": 1250000,
+    "Allied Seal": 1800,
+    "Centurio Seal": 640,
+    "Bicolor Gemstone": 950,
+    "Venture": 312,
+    "Skybuilders' Scrip": 4200,
+    "Purple Crafters' Scrip": 2600,
+    "Purple Gatherers' Scrip": 1900,
+    "Orange Crafters' Scrip": 3100,
+    "Orange Gatherers' Scrip": 850
+  },
+  "weeklyTomestones": 300,
+  "weeklyTomestoneLimit": 450,
+  "inventory": {
+    "bags": [
+      { "item": "Grade 4 Gemdraught of Mind", "quantity": 42, "hq": true },
+      { "item": "Grade 3 Gemdraught of Mind", "quantity": 18, "hq": true },
+      { "item": "Mate Cookie", "quantity": 25, "hq": true },
+      { "item": "Moqueca", "quantity": 12, "hq": true },
+      { "item": "Pumpkin Ratatouille", "quantity": 6 },
+      { "item": "Phoenix Down", "quantity": 99 },
+      { "item": "Elixir", "quantity": 3 },
+      { "item": "Hi-Potion", "quantity": 20 },
+      { "item": "Ether", "quantity": 15 },
+      { "item": "Echo Drops", "quantity": 40 },
+      { "item": "Grade 8 Dark Matter", "quantity": 230 },
+      { "item": "Quickarm Materia XII", "quantity": 7 },
+      { "item": "Savage Might Materia XII", "quantity": 4 },
+      { "item": "Heavens' Eye Materia XII", "quantity": 2 },
+      { "item": "Ra'Kaznar Ingot", "quantity": 36, "hq": true },
+      { "item": "Mythril Ingot", "quantity": 99 },
+      { "item": "Cobalt Ingot", "quantity": 54 }
+    ],
+    "crystals": [
+      { "item": "Fire Shard", "quantity": 4210 },
+      { "item": "Ice Shard", "quantity": 3880 },
+      { "item": "Wind Shard", "quantity": 9999 },
+      { "item": "Earth Shard", "quantity": 2650 },
+      { "item": "Lightning Shard", "quantity": 1720 },
+      { "item": "Water Shard", "quantity": 5100 },
+      { "item": "Fire Crystal", "quantity": 812 },
+      { "item": "Wind Crystal", "quantity": 640 },
+      { "item": "Water Crystal", "quantity": 330 },
+      { "item": "Earth Cluster", "quantity": 96 },
+      { "item": "Lightning Cluster", "quantity": 41 }
+    ],
+    "saddlebag": [
+      { "item": "Potion", "quantity": 60 },
+      { "item": "Dark Matter Cluster", "quantity": 12 }
+    ],
+    "equipped": [
+      "Augmented Bygone Brass Cane",
+      "Augmented Bygone Brass Calot of Healing",
+      "Augmented Bygone Brass Shirt of Healing",
+      "Augmented Bygone Brass Gloves of Healing",
+      "Augmented Bygone Brass Halfslops of Healing",
+      "Augmented Bygone Brass Boots of Healing",
+      "Augmented Bygone Brass Earrings of Healing",
+      "Augmented Bygone Brass Choker of Healing",
+      "Augmented Bygone Brass Bracelet of Healing",
+      "Augmented Bygone Brass Ring of Healing",
+      "Augmented Bygone Brass Ring of Healing",
+      "Soul of the White Mage"
+    ],
+    "armoury": [
+      "Augmented Bygone Brass Staff",
+      "Augmented Bygone Brass Calot of Casting",
+      "Augmented Bygone Brass Shirt of Casting",
+      "Augmented Bygone Brass Gloves of Casting",
+      "Augmented Bygone Brass Halfslops of Casting",
+      "Augmented Bygone Brass Boots of Casting",
+      "Augmented Bygone Brass Earrings of Casting",
+      "Augmented Bygone Brass Choker of Casting",
+      "Augmented Bygone Brass Bracelet of Casting",
+      "Augmented Bygone Brass Ring of Casting",
+      "Augmented Bygone Brass Cap of Fending",
+      "Augmented Bygone Brass Coat of Fending",
+      "Augmented Bygone Brass Gloves of Fending",
+      "Augmented Bygone Brass Brais of Fending",
+      "Augmented Bygone Brass Greaves of Fending",
+      "Soul of the Black Mage",
+      "Soul of the Paladin",
+      "Soul of the Dancer"
+    ]
+  },
+  "retainers": [
+    {
+      "name": "Pomelo",
+      "gil": 284000,
+      "selling": 6,
+      "venture": { "hours": 18, "minutesLeft": 245 },
+      "items": [
+        { "item": "Ra'Kaznar Ingot", "quantity": 99 },
+        { "item": "Grade 3 Gemdraught of Mind", "quantity": 30, "hq": true },
+        { "item": "Quickarm Materia XII", "quantity": 12 }
+      ],
+      "crystals": [
+        { "item": "Fire Crystal", "quantity": 2400 },
+        { "item": "Ice Crystal", "quantity": 1800 }
+      ]
+    },
+    {
+      "name": "Kiwi",
+      "gil": 51200,
+      "selling": 2,
+      "venture": { "hours": 1, "minutesLeft": -12 },
+      "items": [
+        { "item": "Cobalt Ingot", "quantity": 99 },
+        { "item": "Echo Drops", "quantity": 99 }
+      ]
+    }
+  ],
+  "activeRetainer": 0,
+  "freeCompany": {
+    "name": "Moonlit Tea House",
+    "items": [
+      { "item": "Grade 8 Dark Matter", "quantity": 999 },
+      { "item": "Mythril Ingot", "quantity": 999 }
+    ],
+    "crystals": [
+      { "item": "Water Cluster", "quantity": 400 }
+    ]
+  },
+  "vessels": [
+    { "name": "Kupo Explorer", "hours": 36, "minutesLeft": 610 },
+    { "name": "Tea Clipper", "hours": 24, "minutesLeft": -30 },
+    { "name": "Moonlit Skiff", "airship": true, "hours": 12, "minutesLeft": 95 }
+  ],
+  "mapAllowanceMinutesLeft": 380,
+  "friends": [
+    { "name": "Ash Varn", "world": "Phoenix", "job": "DRG", "territory": 129, "freeCompany": "MOON" },
+    { "name": "Lyse Rowan", "world": "Phoenix", "job": "SGE", "territory": 1185, "freeCompany": "MOON" },
+    { "name": "Tobi Tobi", "world": "Odin", "currentWorld": "Phoenix", "job": "BLM", "territory": 1186 },
+    { "name": "Ser Aldric Vane", "world": "Shiva", "job": "PLD", "territory": 962 },
+    { "name": "Kaede Mori", "world": "Twintania", "job": "SAM", "territory": 132, "freeCompany": "KOI" },
+    { "name": "Rhea Halden", "world": "Phoenix", "online": false },
+    { "name": "Quill Ostrander", "world": "Lich", "online": false },
+    { "name": "Nanaya Pipi", "world": "Raiden", "online": false }
+  ],
+  "linkshells": ["Raid Night", "Crafting Circle", "Hunt Train"],
+  "crossWorldLinkshells": ["Light Hunts", "Tea House Regulars"],
+  "dailies": {
+    "beastTribeAllowances": 6,
+    "customDeliveries": 7,
+    "leveAllowances": 82,
+    "wondrousTailsStickers": 5,
+    "domanDonated": 0,
+    "domanAllowance": 0,
+    "dutyRouletteComplete": false,
+    "huntBillsUnlocked": 3,
+    "huntBillsComplete": 1
+  }
+}
